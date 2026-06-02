@@ -203,6 +203,10 @@ export function createXRPanelHost(options = {}) {
   function unmountPanel(panelId) {
     let record = panels.get(panelId);
     if (!record) return false;
+    if (record.element?._snObserver) {
+      record.element._snObserver.disconnect();
+      if (record.element._snDebounceTimeout) clearTimeout(record.element._snDebounceTimeout);
+    }
     record.container.replaceChildren();
     panels.delete(panelId);
     return true;

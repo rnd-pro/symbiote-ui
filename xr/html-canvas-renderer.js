@@ -366,6 +366,35 @@ export function createXRHtmlCanvasRenderer(options = {}) {
         reason: 'panel-outside-canvas-direct-child',
       };
     }
+    if (panelElement && typeof MutationObserver === 'function') {
+      if (panelElement._snObserver) {
+        panelElement._snObserver.disconnect();
+        if (panelElement._snDebounceTimeout) clearTimeout(panelElement._snDebounceTimeout);
+      }
+      let debounceTimeout = null;
+      let observer = new MutationObserver(() => {
+        if (debounceTimeout) clearTimeout(debounceTimeout);
+        debounceTimeout = setTimeout(() => {
+          panelElement._snDebounceTimeout = null;
+          let nextKey = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+          panelElement.dataset.textureKey = nextKey;
+          panelElement.setAttribute('data-texture-key', nextKey);
+          if (prepareOptions.canvas) {
+            adapter.requestPaint(prepareOptions.canvas);
+          }
+        }, 150);
+        panelElement._snDebounceTimeout = debounceTimeout;
+      });
+      observer.observe(panelElement, {
+        attributes: true,
+        childList: true,
+        subtree: true,
+        characterData: true,
+      });
+      panelElement._snObserver = observer;
+      panelElement._snDebounceTimeout = debounceTimeout;
+    }
+
     panels.set(panel.id, {
       panel,
       element: panelElement,

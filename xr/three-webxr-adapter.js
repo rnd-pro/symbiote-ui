@@ -397,6 +397,12 @@ function removePanelFrameVisuals(mesh) {
       let index = mesh.children.indexOf(object);
       if (index >= 0) mesh.children.splice(index, 1);
     }
+    if (typeof object?.geometry?.dispose === 'function') {
+      object.geometry.dispose();
+    }
+    if (typeof object?.material?.dispose === 'function') {
+      object.material.dispose();
+    }
   }
 }
 
@@ -1190,6 +1196,11 @@ export function createXRThreeHtmlCanvasTextureResolver(options = {}) {
       };
     },
     dispose() {
+      for (let entry of textures.values()) {
+        if (typeof entry?.texture?.dispose === 'function') {
+          entry.texture.dispose();
+        }
+      }
       records.clear();
       textures.clear();
     },
@@ -1391,6 +1402,7 @@ export function createXRThreePanelSceneAdapter(options = {}) {
   let scene = check.ok ? new THREE.Scene() : null;
   let panels = new Map();
   let textureBridge = options.textureBridge || null;
+  let activeTextureBridge = null;
   let textureRecords = new Map();
   let rootGroup = null;
   let rootTransform = null;
@@ -1423,6 +1435,7 @@ export function createXRThreePanelSceneAdapter(options = {}) {
     textureRecords.clear();
     activeXRScene = xrScene || null;
     activeSetOptions = { ...setOptions };
+    activeTextureBridge = setOptions.textureBridge || textureBridge || null;
     rootTransform = createXRSceneRootTransform(xrScene, {
       mode: setOptions.mode,
       referenceSpaceType: setOptions.referenceSpaceType,
@@ -1495,6 +1508,22 @@ export function createXRThreePanelSceneAdapter(options = {}) {
     },
     listPanelMeshes() {
       return [...panels.values()];
+    },
+    updatePanelTextureQuality(panelId, qualityOptions = {}) {
+      let mesh = panels.get(panelId);
+      let panel = mesh?.userData?.panel;
+      if (mesh && panel && activeTextureBridge?.applyPanelTexture) {
+        let record = activeTextureBridge.applyPanelTexture(mesh, panel, {
+          ...activeSetOptions.textureOptions,
+          textureQuality: {
+            ...activeSetOptions.textureOptions?.textureQuality,
+            ...qualityOptions,
+          }
+        });
+        textureRecords.set(panelId, record);
+        return { ok: true, record };
+      }
+      return { ok: false, reason: 'bridge-or-panel-missing' };
     },
     getState() {
       let meshList = [...panels.values()];
@@ -1908,7 +1937,7 @@ export function createXRThreeControllerRayAdapter(options = {}) {
       startPosition: mesh.position.clone?.() || null,
       startSize: readPanelSize(mesh),
       lastPosition: mesh.position.clone?.() || null,
-      lastRawPosition: mesh.position.clone?.() || null,
+      lastRawPosition: intersection.clone?.() || mesh.position.clone?.() || null,
     };
     counters.dragStarts += 1;
     diagnostics.lastMissReason = null;
@@ -1954,6 +1983,13 @@ export function createXRThreeControllerRayAdapter(options = {}) {
     }
     let previousPosition = dragging.mesh.position.clone?.() || dragging.lastPosition;
     let rawPosition = intersection.clone?.() || new THREE.Vector3(intersection.x, intersection.y, intersection.z);
+    if (dragging.lastRawPosition && typeof THREE.Vector3.prototype.lerp === 'function') {
+      let smoothed = new THREE.Vector3().copy(dragging.lastRawPosition).lerp(rawPosition, dragResponse.smoothing);
+      rawPosition.copy(smoothed);
+    }
+    if (dragging.lastRawPosition && typeof dragging.lastRawPosition.copy === 'function') {
+      dragging.lastRawPosition.copy(rawPosition);
+    }
     let resize = resizePanelFromDrag(THREE, dragging, rawPosition, options.resize || options);
     let filtered = null;
     if (!resize) {
@@ -2115,6 +2151,7 @@ export function createXRThreeWebXRAdapter(options = {}) {
     applyViewerPose: sceneAdapter.applyViewerPose,
     getPanelMesh: sceneAdapter.getPanelMesh,
     listPanelMeshes: sceneAdapter.listPanelMeshes,
+    updatePanelTextureQuality: sceneAdapter.updatePanelTextureQuality,
     createControllerRayVisual(controller, visualOptions = {}) {
       let visual = buildControllerRayVisual(THREE, visualOptions);
       if (visual.ok && controller?.add) {
@@ -2204,7 +2241,11 @@ export function createXRThreeRenderHost(options = {}) {
     targetScene.userData ||= {};
     targetScene.userData.snSpatialDecorated = true;
     if (THREE?.Color) {
-      targetScene.background = new THREE.Color(decorateOptions.background ?? 0x11151d);
+      if (decorateOptions.mode === 'immersive-ar') {
+        targetScene.background = null;
+      } else {
+        targetScene.background = new THREE.Color(decorateOptions.background ?? 0x11151d);
+      }
     }
     if (THREE?.HemisphereLight && hasFn(targetScene, 'add')) {
       targetScene.add(new THREE.HemisphereLight(
@@ -2282,7 +2323,10 @@ export function createXRThreeRenderHost(options = {}) {
       return sceneResult;
     }
     scene = sceneResult.scene;
-    decorateScene(scene, hostOptions.decoration || options.decoration || {});
+    decorateScene(scene, {
+      mode: hostOptions.mode || options.mode || null,
+      ...(hostOptions.decoration || options.decoration || {})
+    });
     diagnostics = {
       ...diagnostics,
       renderer: true,
@@ -2437,6 +2481,13 @@ export function createXRThreeSessionController(options = {}) {
   let controllers = [];
   let hitReticle = null;
   let lastHoverPanelId = null;
+  let lastHoverState = {
+    panelId: null,
+    point: null,
+    uv: null,
+  };
+  const HOVER_SMOOTHING = 0.35;
+  let originalBackground = null;
   let diagnostics = {
     version: 'xr-three-session-controller-v1',
     status: 'idle',
@@ -2550,6 +2601,35 @@ export function createXRThreeSessionController(options = {}) {
       hit = adapter.controllerRays.getHits(controller, adapter.listPanelMeshes())[0] || null;
       if (hit) break;
     }
+    if (hit && hit.point) {
+      let panelId = hit.object?.userData?.panelId || null;
+      if (lastHoverState.panelId !== panelId) {
+        lastHoverState.panelId = panelId;
+        lastHoverState.point = hit.point.clone();
+        if (hit.uv) lastHoverState.uv = { x: hit.uv.x, y: hit.uv.y };
+      } else {
+        if (lastHoverState.point && typeof lastHoverState.point.lerp === 'function') {
+          lastHoverState.point.lerp(hit.point, HOVER_SMOOTHING);
+          hit.point.copy(lastHoverState.point);
+        }
+        if (lastHoverState.uv && hit.uv) {
+          lastHoverState.uv.x = lastHoverState.uv.x + HOVER_SMOOTHING * (hit.uv.x - lastHoverState.uv.x);
+          lastHoverState.uv.y = lastHoverState.uv.y + HOVER_SMOOTHING * (hit.uv.y - lastHoverState.uv.y);
+          hit.uv.x = lastHoverState.uv.x;
+          hit.uv.y = lastHoverState.uv.y;
+        }
+      }
+      let frameTarget = resolveHitFrameTarget(hit, options.panelFrameHitTest || {});
+      if (frameTarget) {
+        hit.frameTarget = frameTarget;
+        hit.object.userData ||= {};
+        hit.object.userData.lastFrameTarget = frameTarget;
+      }
+    } else {
+      lastHoverState.panelId = null;
+      lastHoverState.point = null;
+      lastHoverState.uv = null;
+    }
     let reticle = adapter.updatePanelHitReticleVisual?.(hitReticle, hit) || null;
     let panelId = hit?.object?.userData?.panelId || null;
     diagnostics.hover = {
@@ -2604,6 +2684,10 @@ export function createXRThreeSessionController(options = {}) {
 
   function cleanupSession() {
     activeTarget?.renderer?.setAnimationLoop?.(null);
+    if (activeTarget?.scene) {
+      activeTarget.scene.background = originalBackground;
+    }
+    originalBackground = null;
     activeSession = null;
     if (adapter.controllerRays.getState?.().dragging === true) {
       adapter.controllerRays.endDrag();
@@ -2727,6 +2811,10 @@ export function createXRThreeSessionController(options = {}) {
         return { handled: true, ok: false, reason: diagnostics.lastError, failureStage: 'set-session' };
       }
       activeSession = sessionResult.session;
+      originalBackground = activeTarget.scene?.background || null;
+      if (mode === 'immersive-ar' && activeTarget.scene) {
+        activeTarget.scene.background = null;
+      }
       diagnostics.status = 'running';
       updateSessionRuntimeDiagnostics();
       setupControllers(activeTarget.scene, activeTarget.renderer, activeTarget.camera, startOptions);
@@ -2750,6 +2838,35 @@ export function createXRThreeSessionController(options = {}) {
         }, frameContext);
         captureFrameStage('hover', () => updateHover(), frameContext);
         captureFrameStage('drag', () => updateDrag(), frameContext);
+
+        if (diagnostics.frames % 45 === 0 && activeTarget.camera && activeTarget.scene) {
+          let tempCameraPosition = activeTarget.camera.position.clone();
+          let tempPanelPosition = activeTarget.camera.position.clone();
+          activeTarget.camera.getWorldPosition?.(tempCameraPosition);
+          let meshes = adapter.listPanelMeshes?.() || [];
+          let updatedThisInterval = false;
+          for (let mesh of meshes) {
+            if (!mesh?.userData?.panelId) continue;
+            mesh.getWorldPosition?.(tempPanelPosition);
+            let distance = tempCameraPosition.distanceTo(tempPanelPosition);
+            let currentLod = mesh.userData.lodState || 'high';
+            let nextLod = currentLod;
+            if (currentLod === 'high' && distance > 2.4) {
+              nextLod = 'low';
+            } else if (currentLod === 'low' && distance < 2.0) {
+              nextLod = 'high';
+            }
+            if (nextLod !== currentLod) {
+              mesh.userData.lodState = nextLod;
+              if (!updatedThisInterval && typeof adapter.updatePanelTextureQuality === 'function') {
+                let ratio = nextLod === 'high' ? 1.0 : 0.5;
+                adapter.updatePanelTextureQuality(mesh.userData.panelId, { texturePixelRatio: ratio });
+                updatedThisInterval = true;
+              }
+            }
+          }
+        }
+
         captureFrameStage('frame-callback', () => {
           options.onFrame?.({ time, frame, target: activeTarget, session: activeSession });
         }, frameContext);
