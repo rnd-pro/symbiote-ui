@@ -431,8 +431,9 @@ chat-composer.drag-over .composer-body {
 
 .btn-voice-language {
   width: auto;
-  min-width: 42px;
-  padding: 0 10px;
+  min-width: 86px;
+  padding: 2px;
+  gap: 2px;
   border-radius: 999px;
   font-size: 11px;
   font-weight: 650;
@@ -441,9 +442,19 @@ chat-composer.drag-over .composer-body {
   background: var(--sn-node-bg);
 }
 
-.btn-voice-language[data-mode="ru"],
-.btn-voice-language[data-mode="es"],
-.btn-voice-language[data-mode="en"] {
+.voice-language-option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: calc(var(--sn-composer-send-size) - 4px);
+  padding: 0 7px;
+  border-radius: 999px;
+  color: var(--sn-text-dim);
+  line-height: 1;
+}
+
+.voice-language-option.active {
   color: var(--sn-text);
   background: var(--sn-node-hover);
 }
