@@ -2,6 +2,12 @@
 
 All notable changes to `symbiote-ui` will be documented in this file.
 
+## [0.3.0-alpha.5] - 2026-06-03
+
+### Fixed
+
+- Kept browser UI exports off the `symbiote-engine` barrel so browser bundlers do not pull Node-only engine modules into UI builds.
+
 ## [0.3.0-alpha.4] - 2026-06-03
 
 ### Added
