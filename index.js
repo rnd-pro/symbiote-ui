@@ -37,7 +37,6 @@ export { CARBON, CARBON_PALETTE } from './themes/carbon.js';
 export { PCB_DARK } from './themes/pcb.js';
 export { EBOOK, EBOOK_PALETTE } from './themes/ebook.js';
 export { NEON_PALETTE } from './themes/neon.js';
-export { GraphHistory } from 'symbiote-engine';
 export { Readonly } from './plugins/Readonly.js';
 export { History } from './plugins/History.js';
 export { computeAutoLayout, computeTreeLayout } from './canvas/AutoLayout.js';

@@ -437,10 +437,10 @@ export class NodeEditor {
    * Convert editor state to an engine Graph instance for server-side execution.
    * The Graph can be passed directly to Executor.run().
    * @param {Object<string, number[]>} [positions] - Node positions
-   * @returns {Promise<import('symbiote-engine').Graph>}
+   * @returns {Promise<import('symbiote-engine/Graph.js').Graph>}
    */
   async toGraph(positions = {}) {
-    let { Graph } = await import('symbiote-engine');
+    let { Graph } = await import('symbiote-engine/Graph.js');
     let json = this.toJSON(positions);
     return new Graph(json);
   }

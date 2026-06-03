@@ -53,7 +53,7 @@ export { EBOOK, EBOOK_PALETTE } from '../themes/ebook.js';
 export { NEON_PALETTE } from '../themes/neon.js';
 export { configureMaterialSymbols, ensureMaterialSymbols } from '../icons/MaterialSymbols.js';
 
-export { FocusController, GraphHistory } from 'symbiote-engine';
+export { FocusController } from 'symbiote-engine/FocusController.js';
 export { Readonly } from '../plugins/Readonly.js';
 export { History } from '../plugins/History.js';
 
