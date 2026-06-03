@@ -1,0 +1,3 @@
+[submodule ".agent-portal"]
+	path = .agent-portal
+	url = ../team-memory.git
