@@ -155,7 +155,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/RND-PRO/symbiote-node.git"
+    "url": "git+https://github.com/RND-PRO/symbiote-node.git",
+    "directory": "packages/symbiote-ui"
+  },
+  "homepage": "https://github.com/RND-PRO/symbiote-node/tree/main/packages/symbiote-ui",
+  "bugs": {
+    "url": "https://github.com/RND-PRO/symbiote-node/issues"
   },
   "author": "RND-PRO <nicothin@gmail.com>",
   "license": "MIT",

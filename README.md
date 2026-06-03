@@ -31,6 +31,12 @@ npm install jsda-kit linkedom
 
 Use `symbiote-node` only as the terminal migration facade for older consumers.
 
+## Related Packages
+
+- [`symbiote-engine`](https://github.com/RND-PRO/symbiote-node/tree/main/packages/symbiote-engine) - runtime execution, CLI commands, server helpers, persistence, and handlers.
+- [`symbiote-node`](https://github.com/RND-PRO/symbiote-node/tree/main/packages/symbiote-node) - terminal migration facade for older imports.
+- [Package split guide](https://github.com/RND-PRO/symbiote-node/blob/main/docs/package-split.md)
+
 ## Browser Registration
 
 ```js
