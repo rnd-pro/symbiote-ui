@@ -1230,6 +1230,11 @@
               "name": "path-style",
               "type": "string",
               "description": "Bridge path style, such as bezier or pcb."
+            },
+            {
+              "name": "obstacle-selector",
+              "type": "string",
+              "description": "Optional CSS selector for elements the shared PCB router should avoid."
             }
           ],
           "members": [
@@ -1269,6 +1274,10 @@
             },
             {
               "name": "--sn-portal-bridge-stub",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-portal-bridge-clearance",
               "description": "Theme CSS custom property consumed by this component."
             },
             {

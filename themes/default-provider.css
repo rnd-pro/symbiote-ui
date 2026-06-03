@@ -54,6 +54,7 @@
   --sn-portal-bridge-dot: var(--sn-node-selected);
   --sn-portal-bridge-grid: 20;
   --sn-portal-bridge-stub: 36;
+  --sn-portal-bridge-clearance: 28;
   --sn-portal-bridge-chamfer: 8;
   --sn-xr-panel-bg: var(--sn-panel-bg);
   --sn-xr-panel-border: var(--sn-node-border);

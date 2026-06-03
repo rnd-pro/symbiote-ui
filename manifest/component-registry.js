@@ -666,6 +666,7 @@ export let COMPONENTS = [
         { name: 'source-side', type: 'string', description: 'Source anchor side.' },
         { name: 'target-side', type: 'string', description: 'Target anchor side.' },
         { name: 'path-style', type: 'string', description: 'Bridge path style, such as bezier or pcb.' },
+        { name: 'obstacle-selector', type: 'string', description: 'Optional CSS selector for elements the shared PCB router should avoid.' },
       ],
       methods: [
         { name: 'requestUpdate', type: 'function', description: 'Schedules bridge geometry refresh.' },
@@ -679,6 +680,7 @@ export let COMPONENTS = [
         '--sn-portal-bridge-dot',
         '--sn-portal-bridge-grid',
         '--sn-portal-bridge-stub',
+        '--sn-portal-bridge-clearance',
         '--sn-portal-bridge-chamfer',
       ],
     },
