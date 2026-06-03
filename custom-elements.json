@@ -3630,6 +3630,14 @@
               "description": "Theme CSS custom property consumed by this component."
             },
             {
+              "name": "--sn-chat-user-message-bg",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-agent-message-bg",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
               "name": "--sn-chat-message-radius",
               "description": "Theme CSS custom property consumed by this component."
             },
