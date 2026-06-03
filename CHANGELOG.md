@@ -2,6 +2,13 @@
 
 All notable changes to `symbiote-ui` will be documented in this file.
 
+## [0.3.0-alpha.6] - 2026-06-03
+
+### Changed
+
+- Updated package metadata to point at the standalone `symbiote-ui` repository.
+- Updated the `symbiote-engine` dependency to `0.3.0-alpha.6`.
+
 ## [0.3.0-alpha.5] - 2026-06-03
 
 ### Fixed
