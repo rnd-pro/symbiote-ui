@@ -83,8 +83,8 @@ const EXPORT_ENTRYPOINTS = [
   },
   {
     specifier: 'symbiote-ui/webmcp',
-    kind: 'browser',
-    description: 'Explicit WebMCP ToolDescriptor helpers and provider metadata integration.',
+    kind: 'ssr-entry-safe',
+    description: 'Explicit WebMCP descriptor helpers and native registration utilities that no-op without a model context.',
   },
   {
     specifier: 'symbiote-ui/custom-elements.json',

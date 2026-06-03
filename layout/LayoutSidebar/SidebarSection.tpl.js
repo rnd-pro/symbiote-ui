@@ -1,6 +1,6 @@
 /**
  * SidebarSection template
- * @module symbiote-node/layout/LayoutSidebar/SidebarSection.tpl
+ * @module symbiote-ui/layout/LayoutSidebar/SidebarSection.tpl
  */
 import { html } from '@symbiotejs/symbiote';
 

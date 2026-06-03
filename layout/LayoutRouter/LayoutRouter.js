@@ -14,7 +14,7 @@
  * Usage in code: this.$['ROUTER/panel'], this.sub('ROUTER/panel', cb)
  * Global params: this.sub('ROUTER/globalParams', cb)
  *
- * @module symbiote-node/layout/LayoutRouter
+ * @module symbiote-ui/layout/LayoutRouter
  */
 import { PubSub } from '@symbiotejs/symbiote/core/PubSub.js';
 

@@ -5,7 +5,7 @@
  * Edit mode: shows visibility toggle + drag handle.
  * Shows sub-panel list with close buttons for non-master panels.
  *
- * @module symbiote-node/layout/LayoutSidebar/SidebarSection
+ * @module symbiote-ui/layout/LayoutSidebar/SidebarSection
  */
 import Symbiote, { html } from '@symbiotejs/symbiote';
 import { ensureMaterialSymbols } from '../../icons/MaterialSymbols.js';

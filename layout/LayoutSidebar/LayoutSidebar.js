@@ -4,7 +4,7 @@
  * Normal mode: shows only visible sections
  * Edit mode (Blender-style): shows all sections with eye toggles + drag handles
  *
- * @module symbiote-node/layout/LayoutSidebar
+ * @module symbiote-ui/layout/LayoutSidebar
  */
 import Symbiote from '@symbiotejs/symbiote';
 import { ensureMaterialSymbols } from '../../icons/MaterialSymbols.js';

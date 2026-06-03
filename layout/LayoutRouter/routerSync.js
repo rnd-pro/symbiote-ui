@@ -22,7 +22,7 @@
  *   currentPage: { param: 'page', default: 1, type: 'number' },
  * });
  *
- * @module symbiote-node/layout/LayoutRouter/routerSync
+ * @module symbiote-ui/layout/LayoutRouter/routerSync
  */
 import { parseQuery, updateParams } from './LayoutRouter.js';
 

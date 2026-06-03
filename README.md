@@ -28,6 +28,17 @@ npm install jsda-kit linkedom
 - `symbiote-ui/ui` - browser Web Component registration and UI runtime.
 - `symbiote-ui/webmcp` - WebMCP descriptor helpers and registration utilities.
 - `symbiote-ui/xr` - WebXR provider helpers.
+- `symbiote-ui/locale` - Node-safe locale catalogs and translation helpers.
+- `symbiote-ui/discover` - provider discovery JSON API used by the CLI.
+- `symbiote-ui/custom-elements.json` - Custom Elements manifest.
+- `symbiote-ui/schemas/*`, `symbiote-ui/tokens/*`, `symbiote-ui/rules/*` - machine-readable provider contracts.
+- `symbiote-ui/display/*` - reusable display utilities exposed by package export map.
+
+For the complete export map and provider catalog, run:
+
+```sh
+symbiote-ui discover
+```
 
 Use `symbiote-node` only as the terminal migration facade for older consumers.
 
@@ -36,21 +47,19 @@ Use `symbiote-node` only as the terminal migration facade for older consumers.
 - [`symbiote-engine`](https://github.com/RND-PRO/symbiote-node/tree/main/packages/symbiote-engine) - runtime execution, CLI commands, server helpers, persistence, and handlers.
 - [`symbiote-node`](https://github.com/RND-PRO/symbiote-node/tree/main/packages/symbiote-node) - terminal migration facade for older imports.
 - [Package split guide](https://github.com/RND-PRO/symbiote-node/blob/main/docs/package-split.md)
+- [Agent contract index](https://github.com/RND-PRO/symbiote-node/blob/main/docs/agent-contracts.md)
 
 ## Browser Registration
 
 ```js
-import {
-  registerSymbioteComponents,
-  getSymbioteComponentCatalog,
-} from 'symbiote-ui/ui';
+import { defineModule, listModules } from 'symbiote-ui/ui';
 
-registerSymbioteComponents();
+defineModule('chat-composer');
 
-console.log(getSymbioteComponentCatalog());
+console.log(listModules());
 ```
 
-The root package and Node-safe entry points must not require DOM globals. Browser-only custom elements belong behind `symbiote-ui/ui`.
+The root package and Node-safe entry points must import without creating DOM globals. Import safety does not mean every exported helper is useful without host data, a DOM adapter, browser hydration, or runtime-provided objects. Browser-only custom elements and module definition helpers belong behind `symbiote-ui/ui`.
 
 ## WebMCP
 

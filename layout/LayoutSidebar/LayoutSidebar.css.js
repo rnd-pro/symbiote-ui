@@ -1,6 +1,6 @@
 /**
  * LayoutSidebar styles
- * @module symbiote-node/layout/LayoutSidebar
+ * @module symbiote-ui/layout/LayoutSidebar
  */
 import { css } from '@symbiotejs/symbiote';
 

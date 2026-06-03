@@ -6,7 +6,7 @@
  * layout-sidebar[collapsed] scoping). Move here when refactoring
  * context-dependent selectors into component state attributes.
  *
- * @module symbiote-node/layout/LayoutSidebar/SidebarSection.css
+ * @module symbiote-ui/layout/LayoutSidebar/SidebarSection.css
  */
 import { css } from '@symbiotejs/symbiote';
 
