@@ -71,7 +71,6 @@ export class CrossLayoutPortalBridge extends HTMLElement {
     this.#resizeObserver = new ResizeObserver(() => this.requestUpdate());
     this.#mutationObserver = new MutationObserver(() => this.requestUpdate());
     this.#mutationObserver.observe(document.documentElement, {
-      attributes: true,
       childList: true,
       subtree: true,
     });

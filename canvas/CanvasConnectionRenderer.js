@@ -88,6 +88,7 @@ export class CanvasConnectionRenderer {
   #connectionData = new Map();
   #ctx;
   #resizeObserver;
+  #resizeParent;
   #animationFrameId;
   #batchMode = false;
   #batchDirty = false;
@@ -135,9 +136,6 @@ export class CanvasConnectionRenderer {
     this.#ctx = this.#canvasLayer.getContext('2d', { alpha: true, desynchronized: false });
     this.#initResizeObserver();
     this.#updateStyles();
-
-
-    this.#animationFrameId = requestAnimationFrame(this.#renderLoop);
   }
 
   /**
@@ -146,18 +144,27 @@ export class CanvasConnectionRenderer {
   #initResizeObserver() {
     let parent = this.#canvasLayer.parentElement;
     if (!parent) return;
+    if (this.#resizeObserver && this.#resizeParent === parent) return;
+    this.#resizeObserver?.disconnect();
+    this.#resizeParent = parent;
 
     this.#resizeObserver = new ResizeObserver((entries) => {
       let rect = entries[0].contentRect;
-      let dpr = window.devicePixelRatio || 1;
-
-      this.#canvasLayer.width = rect.width * dpr;
-      this.#canvasLayer.height = rect.height * dpr;
-
+      this.#resizeCanvas(rect.width, rect.height);
       this.redraw();
     });
 
     this.#resizeObserver.observe(parent);
+    let rect = parent.getBoundingClientRect();
+    this.#resizeCanvas(rect.width, rect.height);
+  }
+
+  #resizeCanvas(width, height) {
+    let dpr = window.devicePixelRatio || 1;
+    let nextWidth = Math.max(1, Math.round(width * dpr));
+    let nextHeight = Math.max(1, Math.round(height * dpr));
+    if (this.#canvasLayer.width !== nextWidth) this.#canvasLayer.width = nextWidth;
+    if (this.#canvasLayer.height !== nextHeight) this.#canvasLayer.height = nextHeight;
   }
 
   #updateStyles() {
@@ -235,13 +242,19 @@ export class CanvasConnectionRenderer {
 
   setFlowing(connId, active) {
     let conn = this.#connectionData.get(connId);
-    if (conn) conn.flowing = active;
+    if (!conn || conn.flowing === active) return;
+    conn.flowing = active;
+    this.redraw();
   }
 
   setAllFlowing(active) {
+    let changed = false;
     for (const conn of this.#connectionData.values()) {
+      if (conn.flowing === active) continue;
       conn.flowing = active;
+      changed = true;
     }
+    if (changed) this.redraw();
   }
 
   highlightDotsForNodes(_compatibleNodeIds) {}
@@ -299,6 +312,17 @@ export class CanvasConnectionRenderer {
 
   #invalidatePathCache() {
     this.#pathCache.clear();
+  }
+
+  #scheduleRenderLoop() {
+    if (this.#animationFrameId) return;
+    this.#animationFrameId = requestAnimationFrame(this.#renderLoop);
+  }
+
+  #stopRenderLoop() {
+    if (!this.#animationFrameId) return;
+    cancelAnimationFrame(this.#animationFrameId);
+    this.#animationFrameId = null;
   }
 
   /**
@@ -419,6 +443,7 @@ export class CanvasConnectionRenderer {
       this.#batchDirty = true;
       return;
     }
+    this.#initResizeObserver();
     let ctx = this.#ctx;
     if (!ctx) return;
 
@@ -613,12 +638,8 @@ export class CanvasConnectionRenderer {
     this.#drawPhantomDots(ctx, zoom);
 
 
-    if (!hasFlowing && this.#animationFrameId) {
-      cancelAnimationFrame(this.#animationFrameId);
-      this.#animationFrameId = null;
-    } else if (hasFlowing && !this.#animationFrameId) {
-      this.#animationFrameId = requestAnimationFrame(this.#renderLoop);
-    }
+    if (hasFlowing) this.#scheduleRenderLoop();
+    else this.#stopRenderLoop();
   }
 
   /**
@@ -707,8 +728,8 @@ export class CanvasConnectionRenderer {
   }
 
   #renderLoop = () => {
+    this.#animationFrameId = null;
     this.redraw();
-    this.#animationFrameId = requestAnimationFrame(this.#renderLoop);
   };
 
   #plotPath(ctx, conn) {
@@ -963,7 +984,9 @@ export class CanvasConnectionRenderer {
 
   destroy() {
     if (this.#resizeObserver) this.#resizeObserver.disconnect();
-    if (this.#animationFrameId) cancelAnimationFrame(this.#animationFrameId);
+    this.#resizeObserver = null;
+    this.#resizeParent = null;
+    this.#stopRenderLoop();
     this.#connectionData.clear();
     this.#phantomSignature = '';
     this.#invalidatePathCache();
