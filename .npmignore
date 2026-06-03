@@ -1,0 +1,13 @@
+node_modules/
+TMP/
+tmp/
+.DS_Store
+*.log
+.agent/
+.agents/
+.gemini/
+.github/
+demo/
+tests/
+test-ssr.js
+engine/extensions/

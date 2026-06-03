@@ -1,0 +1,29 @@
+{
+  "$schema": "https://design-tokens.github.io/community-group/format/",
+  "color": {
+    "background": { "$type": "color", "$value": "var(--sn-bg)" },
+    "surface": { "$type": "color", "$value": "var(--sn-node-bg)" },
+    "border": { "$type": "color", "$value": "var(--sn-node-border)" },
+    "text": { "$type": "color", "$value": "var(--sn-text)" },
+    "textDim": { "$type": "color", "$value": "var(--sn-text-dim)" },
+    "accent": { "$type": "color", "$value": "var(--sn-node-selected)" },
+    "success": { "$type": "color", "$value": "var(--sn-success-color)" },
+    "warning": { "$type": "color", "$value": "var(--sn-warning-color)" },
+    "danger": { "$type": "color", "$value": "var(--sn-danger-color)" }
+  },
+  "size": {
+    "grid": { "$type": "dimension", "$value": "var(--sn-grid-size)" },
+    "socket": { "$type": "dimension", "$value": "var(--sn-socket-size)" },
+    "socketBorder": { "$type": "dimension", "$value": "var(--sn-socket-border-width)" }
+  },
+  "radius": {
+    "node": { "$type": "dimension", "$value": "var(--sn-node-radius)" },
+    "comment": { "$type": "dimension", "$value": "var(--sn-comment-radius)" }
+  },
+  "shadow": {
+    "node": { "$type": "shadow", "$value": "var(--sn-node-shadow)" }
+  },
+  "font": {
+    "family": { "$type": "fontFamily", "$value": "var(--sn-font)" }
+  }
+}

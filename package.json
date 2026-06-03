@@ -1,0 +1,165 @@
+{
+  "name": "symbiote-ui",
+  "version": "0.3.0-alpha.4",
+  "type": "module",
+  "description": "Symbiote provider UI, Web Components, themes, manifests, schemas, graph layout helpers, WebMCP metadata, and SSR-safe UI contracts.",
+  "main": "index.js",
+  "customElements": "custom-elements.json",
+  "exports": {
+    ".": {
+      "import": "./index.js",
+      "default": "./index.js"
+    },
+    "./core": {
+      "import": "./core/index.js",
+      "default": "./core/index.js"
+    },
+    "./core/*": "./core/*",
+    "./graph": {
+      "import": "./graph/index.js",
+      "default": "./graph/index.js"
+    },
+    "./locale": {
+      "import": "./locale/index.js",
+      "default": "./locale/index.js"
+    },
+    "./manifest": {
+      "import": "./manifest/index.js",
+      "default": "./manifest/index.js"
+    },
+    "./manifest/*": "./manifest/*",
+    "./layout": {
+      "import": "./layout/index.js",
+      "default": "./layout/index.js"
+    },
+    "./xr": {
+      "import": "./xr/index.js",
+      "default": "./xr/index.js"
+    },
+    "./tokens/*": "./tokens/*",
+    "./rules/*": "./rules/*",
+    "./schemas/*": "./schemas/*",
+    "./custom-elements.json": "./custom-elements.json",
+    "./display/output-preview": "./display/output-preview.js",
+    "./display/highlight": "./display/highlight.js",
+    "./display/markdown-formatter": "./display/markdown-formatter.js",
+    "./display/format-utils": "./display/format-utils.js",
+    "./display/icons": "./display/icons.js",
+    "./display/network-approval-page": "./display/network-approval-page.js",
+    "./display/event-feed-adapter": "./display/event-feed-adapter.js",
+    "./themes/default-provider.js": "./themes/default-provider.js",
+    "./shapes/*": "./shapes/*",
+    "./plugins/*": "./plugins/*",
+    "./chat/chat-context.js": "./chat/chat-context.js",
+    "./package.json": "./package.json",
+    "./ui": {
+      "import": "./ui/index.js",
+      "default": "./ui/index.js"
+    },
+    "./webmcp": {
+      "import": "./webmcp.js",
+      "default": "./webmcp.js"
+    },
+    "./discover": {
+      "import": "./discover.js",
+      "default": "./discover.js"
+    }
+  },
+  "files": [
+    "index.js",
+    "custom-elements.json",
+    "core/",
+    "graph/",
+    "icons/",
+    "discover.js",
+    "cli.js",
+    "webmcp.js",
+    "manifest/",
+    "tokens/",
+    "rules/",
+    "schemas/",
+    "shapes/",
+    "themes/",
+    "plugins/",
+    "canvas/",
+    "node/",
+    "interactions/",
+    "layout/",
+    "locale/",
+    "xr/",
+    "navigation/",
+    "display/",
+    "effects/",
+    "control/",
+    "surface/",
+    "chat/",
+    "list/",
+    "tree/",
+    "toolbar/",
+    "inspector/",
+    "palette/",
+    "menu/",
+    "ui/",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "sideEffects": [
+    "**/*.css.js",
+    "**/*.tpl.js",
+    "core/base-path.js",
+    "ui/index.js",
+    "canvas/**/*.js",
+    "node/**/*.js",
+    "layout/**/*.js",
+    "xr/**/*.js",
+    "display/**/*.js",
+    "effects/**/*.js",
+    "control/**/*.js",
+    "surface/**/*.js",
+    "chat/**/*.js",
+    "list/**/*.js",
+    "tree/**/*.js",
+    "navigation/**/*.js",
+    "toolbar/**/*.js",
+    "inspector/**/*.js",
+    "palette/**/*.js",
+    "menu/**/*.js"
+  ],
+  "bin": {
+    "symbiote-ui": "cli.js"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "test": "node --test ../../tests/*.test.js"
+  },
+  "keywords": [
+    "node-editor",
+    "graph-editor",
+    "visual-programming",
+    "node-graph",
+    "symbiote",
+    "web-components",
+    "data-flow",
+    "dag",
+    "webmcp",
+    "ssr"
+  ],
+  "dependencies": {
+    "symbiote-engine": "0.3.0-alpha.4"
+  },
+  "peerDependencies": {
+    "@symbiotejs/symbiote": "3.8.0-webmcp.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RND-PRO/symbiote-node.git"
+  },
+  "author": "RND-PRO <nicothin@gmail.com>",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
