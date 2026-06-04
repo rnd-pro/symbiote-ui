@@ -97,10 +97,14 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   assert.match(source, /data-layout-command/);
   assert.match(source, /voice command/);
   assert.match(html, /layout module/);
-  assert.match(html, /class="lab-main-menu"/);
+  assert.match(html, /class="app-shell lab-shell"/);
+  assert.match(html, /class="app-topbar lab-topbar"/);
+  assert.match(html, /class="topbar-center lab-main-menu"/);
+  assert.match(html, /class="follow-btn lab-menu-button"/);
   assert.match(html, /<project-tabs class="lab-layout-tabs">/);
   assert.match(html, /data-layout-group="responsive"/);
   assert.match(html, /data-layout-command="scroll"/);
+  assert.doesNotMatch(html, /class="lab-toolbar"/);
   assert.doesNotMatch(source, /extends HTMLElement/);
   assert.doesNotMatch(source, /\.setTheme\(/);
   assert.doesNotMatch(source, /10 \+ brightness \* 0\.18/);

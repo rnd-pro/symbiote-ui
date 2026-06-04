@@ -35,61 +35,118 @@
     }
 
     .lab-shell {
-      display: grid;
-      grid-template-rows: auto auto 1fr;
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: 100vh;
       min-height: 100vh;
       background:
-        radial-gradient(circle, var(--sn-grid-dot, rgb(255 255 255 / 0.06)) 1.2px, transparent 1.2px) 0 0 / var(--sn-grid-size, 20px) var(--sn-grid-size, 20px),
-        var(--sn-bg);
+        linear-gradient(to bottom, var(--sn-node-bg, #202020), transparent 78px),
+        var(--sn-bg, #1a1a1a);
+      overflow: hidden;
     }
 
-    .lab-toolbar {
+    .app-topbar {
       display: flex;
       align-items: center;
-      gap: var(--sn-lab-toolbar-gap, 12px);
+      justify-content: space-between;
+      position: relative;
+      z-index: 10;
+      flex: 0 0 auto;
+      height: var(--sn-app-topbar-height, 40px);
       min-width: 0;
-      padding: var(--sn-lab-toolbar-padding, 10px 12px);
-      border-bottom: 1px solid var(--sn-node-border);
-      background: color-mix(in srgb, var(--sn-panel-bg) 92%, transparent);
+      padding: var(--sn-app-topbar-padding, 0 16px);
+      background: transparent;
     }
 
-    .lab-main-menu {
+    .topbar-left,
+    .topbar-right,
+    .topbar-center {
       display: flex;
       align-items: center;
+      min-width: 0;
+    }
+
+    .topbar-left {
+      gap: var(--sn-app-title-gap, 8px);
+      flex: 0 0 auto;
+    }
+
+    .topbar-right {
+      justify-content: flex-end;
+      gap: var(--sn-app-topbar-right-gap, 8px);
+      flex: 0 1 210px;
+      color: var(--sn-text-dim);
+      font-size: var(--sn-app-topbar-meta-size, 11px);
+      white-space: nowrap;
+    }
+
+    .topbar-center {
+      position: absolute;
+      left: 50%;
       gap: var(--sn-lab-menu-gap, 4px);
-      min-width: 0;
+      max-width: min(58vw, 720px);
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding: 2px 0;
+      transform: translateX(-50%);
+      scrollbar-width: none;
     }
 
-    .lab-menu-separator {
+    .topbar-center::-webkit-scrollbar {
+      display: none;
+    }
+
+    .app-title-icon {
+      flex: 0 0 auto;
+      color: var(--sn-node-selected);
+      font-size: var(--sn-app-title-icon-size, 16px);
+    }
+
+    .app-title {
+      margin: 0;
+      min-width: 0;
+      color: var(--sn-text);
+      font-size: var(--sn-app-title-size, 13px);
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .topbar-sep {
       width: 1px;
       height: var(--sn-lab-menu-separator-height, 20px);
       background: var(--sn-node-border);
     }
 
-    .lab-menu-button {
+    .follow-btn {
       display: inline-flex;
       align-items: center;
+      justify-content: center;
       gap: var(--sn-lab-menu-button-gap, 5px);
-      min-height: var(--sn-lab-menu-button-height, 28px);
-      padding: var(--sn-lab-menu-button-padding, 0 10px);
+      flex: 0 0 auto;
+      min-height: var(--sn-lab-menu-button-height, 26px);
+      padding: var(--sn-lab-menu-button-padding, 4px 10px);
       border: 1px solid transparent;
       border-radius: var(--sn-layout-header-button-radius, 4px);
       background: transparent;
       color: var(--sn-text-dim);
       font: inherit;
-      font-size: var(--sn-lab-menu-button-size, 12px);
+      font-size: var(--sn-lab-menu-button-size, 11px);
+      font-weight: 600;
       cursor: pointer;
       white-space: nowrap;
     }
 
-    .lab-menu-button:hover,
-    .lab-menu-button[active] {
+    .follow-btn:hover,
+    .follow-btn[active] {
       border-color: var(--sn-node-border);
       background: var(--sn-node-hover);
       color: var(--sn-text);
     }
 
-    .lab-menu-button .material-symbols-outlined {
+    .follow-btn .material-symbols-outlined {
       font-size: var(--sn-lab-menu-icon-size, 16px);
     }
 
@@ -107,28 +164,17 @@
       --sn-tabs-accent: var(--sn-node-selected);
     }
 
-    .lab-title {
-      margin: 0;
-      min-width: 180px;
-      font-size: var(--sn-lab-title-size, 14px);
-      font-weight: 700;
-      line-height: 1.2;
-    }
-
-    .lab-meta {
-      color: var(--sn-text-dim);
-      font-size: var(--sn-lab-control-font-size, 12px);
-      white-space: nowrap;
-    }
-
     .lab-content {
+      display: flex;
+      flex: 1 1 auto;
       min-height: 0;
-      padding: var(--sn-lab-content-padding, 12px);
+      padding: 0;
+      overflow: hidden;
     }
 
     .lab-layout {
       width: 100%;
-      height: calc(100vh - 102px);
+      height: 100%;
       min-height: 0;
     }
 
@@ -241,49 +287,63 @@
         overflow: auto;
       }
 
-      .lab-toolbar {
+      .app-topbar {
         align-items: stretch;
         flex-direction: column;
+        height: auto;
+        min-height: var(--sn-app-topbar-height, 40px);
+        padding: 8px 10px;
       }
 
-      .lab-main-menu {
-        overflow-x: auto;
-        padding-bottom: 2px;
+      .topbar-center {
+        position: static;
+        order: 3;
+        width: 100%;
+        max-width: 100%;
+        transform: none;
       }
 
-      .lab-layout {
-        height: 980px;
+      .topbar-right {
+        justify-content: flex-start;
+        flex-basis: auto;
       }
     }
   </style>
 </head>
 
 <body>
-  <main class="lab-shell">
-    <header class="lab-toolbar">
-      <h1 class="lab-title">Cascade Theme Lab</h1>
-      <nav class="lab-main-menu" aria-label="Main menu">
-        <button class="lab-menu-button" type="button" data-layout-group="overview">
+  <main class="app-shell lab-shell">
+    <header class="app-topbar lab-topbar">
+      <div class="topbar-left">
+        <span class="material-symbols-outlined app-title-icon" aria-hidden="true">hub</span>
+        <h1 class="app-title">Cascade Theme Lab</h1>
+      </div>
+      <nav class="topbar-center lab-main-menu" aria-label="Main menu">
+        <button class="follow-btn lab-menu-button" type="button" data-layout-group="overview">
           <span class="material-symbols-outlined">view_quilt</span><span>Overview</span>
         </button>
-        <button class="lab-menu-button" type="button" data-layout-group="graph">
+        <button class="follow-btn lab-menu-button" type="button" data-layout-group="graph">
           <span class="material-symbols-outlined">hub</span><span>Graph</span>
         </button>
-        <button class="lab-menu-button" type="button" data-layout-group="chat">
+        <button class="follow-btn lab-menu-button" type="button" data-layout-group="chat">
           <span class="material-symbols-outlined">forum</span><span>Chat</span>
         </button>
-        <button class="lab-menu-button" type="button" data-layout-group="responsive">
+        <button class="follow-btn lab-menu-button" type="button" data-layout-group="responsive">
           <span class="material-symbols-outlined">view_agenda</span><span>Responsive</span>
         </button>
-        <span class="lab-menu-separator" aria-hidden="true"></span>
-        <button class="lab-menu-button" type="button" data-layout-command="reset">
+        <span class="topbar-sep" aria-hidden="true"></span>
+        <button class="follow-btn lab-menu-button" type="button" data-layout-command="reset">
           <span class="material-symbols-outlined">restart_alt</span><span>Reset</span>
         </button>
-        <button class="lab-menu-button" type="button" data-layout-command="scroll">
+        <button class="follow-btn lab-menu-button" type="button" data-layout-command="scroll">
           <span class="material-symbols-outlined">swap_horiz</span><span>Scroll</span>
         </button>
       </nav>
-      <span class="lab-meta">layout module</span>
+      <div class="topbar-right" aria-label="Current module">
+        <span class="project-name">symbiote-ui</span>
+        <span class="topbar-sep" aria-hidden="true"></span>
+        <span class="project-files">layout module</span>
+      </div>
     </header>
     <project-tabs class="lab-layout-tabs"></project-tabs>
     <section class="lab-content" aria-label="Cascade theme visual surface">
