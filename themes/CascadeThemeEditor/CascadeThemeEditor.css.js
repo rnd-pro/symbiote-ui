@@ -182,7 +182,68 @@ export default css`
     .cte-control input {
       width: 100%;
       min-width: 0;
+      height: var(--sn-theme-editor-range-hit-size, var(--sn-socket-hit-size, 44px));
       accent-color: var(--sn-node-selected);
+    }
+
+    .cte-control input[type="range"] {
+      --cte-range-progress: 0%;
+      --cte-range-track-height: var(--sn-theme-editor-range-track-height, calc(4px * var(--sn-theme-density, 1)));
+      --cte-range-thumb-size: var(--sn-theme-editor-range-thumb-size, calc(14px * var(--sn-theme-density, 1)));
+      --cte-range-border-width: calc(1px * var(--sn-theme-outline-strength, 0));
+      appearance: none;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .cte-control input[type="range"]::-webkit-slider-runnable-track {
+      height: var(--cte-range-track-height);
+      border: var(--cte-range-border-width) solid var(--sn-node-border);
+      border-radius: var(--sn-scrollbar-radius, 999px);
+      background:
+        linear-gradient(
+          to right,
+          var(--sn-node-selected) 0 var(--cte-range-progress),
+          color-mix(in srgb, var(--sn-text) 22%, transparent) var(--cte-range-progress) 100%
+        );
+    }
+
+    .cte-control input[type="range"]::-webkit-slider-thumb {
+      appearance: none;
+      width: var(--cte-range-thumb-size);
+      height: var(--cte-range-thumb-size);
+      margin-top: calc((var(--cte-range-track-height) - var(--cte-range-thumb-size)) / 2 - var(--cte-range-border-width));
+      border: var(--cte-range-border-width) solid var(--sn-node-border);
+      border-radius: 50%;
+      background: var(--sn-node-selected);
+      box-shadow: none;
+    }
+
+    .cte-control input[type="range"]::-moz-range-track {
+      height: var(--cte-range-track-height);
+      border: var(--cte-range-border-width) solid var(--sn-node-border);
+      border-radius: var(--sn-scrollbar-radius, 999px);
+      background: color-mix(in srgb, var(--sn-text) 22%, transparent);
+    }
+
+    .cte-control input[type="range"]::-moz-range-progress {
+      height: var(--cte-range-track-height);
+      border-radius: var(--sn-scrollbar-radius, 999px);
+      background: var(--sn-node-selected);
+    }
+
+    .cte-control input[type="range"]::-moz-range-thumb {
+      width: var(--cte-range-thumb-size);
+      height: var(--cte-range-thumb-size);
+      border: var(--cte-range-border-width) solid var(--sn-node-border);
+      border-radius: 50%;
+      background: var(--sn-node-selected);
+      box-shadow: none;
+    }
+
+    .cte-control input[type="range"]:disabled {
+      cursor: not-allowed;
+      opacity: var(--sn-button-disabled-opacity, 0.6);
     }
 
     .cte-control output {

@@ -237,7 +237,9 @@ export class CascadeThemeEditor extends Symbiote {
 
     for (let input of this.querySelectorAll('[data-theme-control]')) {
       let name = input.dataset.themeControl;
-      input.value = String(this.#state[name]);
+      let value = this.#state[name];
+      input.value = String(value);
+      this.#syncRangeProgress(input, value);
     }
 
     for (let output of this.querySelectorAll('[data-theme-output]')) {
@@ -256,6 +258,14 @@ export class CascadeThemeEditor extends Symbiote {
       return document.querySelector(this.targetSelector) || document.documentElement;
     }
     return document.documentElement;
+  }
+
+  #syncRangeProgress(input, value) {
+    let min = Number(input.min || 0);
+    let max = Number(input.max || 100);
+    let range = max - min;
+    let progress = range <= 0 ? 0 : ((Number(value) - min) / range) * 100;
+    input.style.setProperty('--cte-range-progress', `${Math.min(100, Math.max(0, progress)).toFixed(2)}%`);
   }
 
   #setStatus(value) {

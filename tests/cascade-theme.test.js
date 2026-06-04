@@ -124,10 +124,17 @@ test('cascade theme editor is a reusable browser module', async () => {
   assert.match(editor, /storage\.setItem\(this\.storageKey/);
   assert.match(editor, /copyParameters\(\)/);
   assert.match(editor, /reset\(\)/);
+  assert.match(editor, /#syncRangeProgress/);
+  assert.match(editor, /--cte-range-progress/);
   assert.match(editor, /new CustomEvent\('cascade-theme-change'/);
   assert.match(editor, /CascadeThemeEditor\.reg\('cascade-theme-editor'\)/);
   assert.match(styles, /cascade-theme-editor/);
   assert.match(styles, /--sn-scrollbar-thumb/);
+  assert.match(styles, /input\[type="range"\]/);
+  assert.match(styles, /appearance: none/);
+  assert.match(styles, /--sn-theme-outline-strength/);
+  assert.match(styles, /::-webkit-slider-thumb/);
+  assert.match(styles, /::-moz-range-thumb/);
   assert.match(uiIndex, /CascadeThemeEditor/);
   assert.match(uiIndex, /themes\/CascadeThemeEditor\/CascadeThemeEditor\.js/);
   assert.match(registry, /tagName: 'cascade-theme-editor'/);
