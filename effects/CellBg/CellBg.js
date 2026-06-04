@@ -1,6 +1,7 @@
 import Symbiote from '@symbiotejs/symbiote';
 import template from './CellBg.tpl.js';
 import css from './CellBg.css.js';
+import { CELL_BG_DEFAULTS, readCellBgTheme } from './cell-bg-theme.js';
 
 /**
  * Cellular Automaton Background Component
@@ -15,13 +16,7 @@ import css from './CellBg.css.js';
 
 const RULE_B = [3];
 const RULE_S = [2, 3];
-const CELL_SIZE = 14;
-const STEP_MS = 75;
-const MIN_RADIUS = 2;
-const MAX_RADIUS = 5;
-const FADE_RATE = 0.04;
-
-const PALETTE_SIZE = 32;
+const PALETTE_SIZE = CELL_BG_DEFAULTS.paletteSize;
 const now = () => globalThis.performance?.now?.() ?? Date.now();
 const requestFrame = (callback) => {
   if (typeof globalThis.requestAnimationFrame === 'function') {
@@ -113,11 +108,6 @@ export class CellBg extends Symbiote {
     this.lastTime = now();
     this.isAnimating = false;
     this._stagnantCount = 0;
-    this._cellSize = CELL_SIZE;
-    this._minRadius = MIN_RADIUS;
-    this._maxRadius = MAX_RADIUS;
-    this._stepMs = STEP_MS;
-    this._fadeRate = FADE_RATE;
 
     // We only redraw on rAF if running, or if a single frame is needed after resize
     this.resize = this.resize.bind(this);
@@ -209,7 +199,6 @@ export class CellBg extends Symbiote {
     let previousCellSize = this._cellSize;
     let previousMinRadius = this._minRadius;
     let previousMaxRadius = this._maxRadius;
-    this._readThemeMetrics();
     this._buildPalette();
 
     let geometryChanged = previousCellSize !== this._cellSize
@@ -233,33 +222,28 @@ export class CellBg extends Symbiote {
   }
 
   _readThemeMetrics() {
-    this._cellSize = Math.max(4, readCssNumber(this, '--sn-cell-size', CELL_SIZE));
-    this._minRadius = Math.max(0.5, readCssNumber(this, '--sn-cell-min-radius', MIN_RADIUS));
-    this._maxRadius = Math.max(this._minRadius + 0.5, readCssNumber(this, '--sn-cell-max-radius', MAX_RADIUS));
-    this._stepMs = Math.max(24, readCssNumber(this, '--sn-cell-step-ms', STEP_MS));
-    this._fadeRate = Math.min(0.18, Math.max(0.01, readCssNumber(this, '--sn-cell-fade-rate', FADE_RATE)));
+    this._applyThemeState();
   }
 
   _buildPalette() {
-    this._readThemeMetrics();
-    let bg = readCssToken(this, '--sn-cell-bg') || readCssToken(this, '--sn-bg');
-    let dot = readCssToken(this, '--sn-cell-dot') || readCssToken(this, '--sn-text-dim');
-    let bgRgb = parseCssRgb(this, bg) || [0, 0, 0];
-    let dotRgb = parseCssRgb(this, dot) || bgRgb;
-    let baseAlpha = Number.parseFloat(readCssToken(this, '--sn-cell-base-alpha')) || 0;
-    let alphaSpan = Number.parseFloat(readCssToken(this, '--sn-cell-alpha-span')) || 0;
+    this._applyThemeState();
+  }
 
-    this._bgFill = normalizeCssColor(this, bg) || 'transparent';
-
-    this.palette = [];
-    for (let i = 0; i < PALETTE_SIZE; i++) {
-      let t = i / (PALETTE_SIZE - 1);
-      let alpha = baseAlpha + t * alphaSpan;
-      let r = Math.round(bgRgb[0] * (1 - alpha) + dotRgb[0] * alpha);
-      let g = Math.round(bgRgb[1] * (1 - alpha) + dotRgb[1] * alpha);
-      let b = Math.round(bgRgb[2] * (1 - alpha) + dotRgb[2] * alpha);
-      this.palette.push(`#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`);
-    }
+  _applyThemeState() {
+    let theme = readCellBgTheme(this, {
+      readToken: readCssToken,
+      readNumber: readCssNumber,
+      normalizeColor: normalizeCssColor,
+      parseRgb: parseCssRgb,
+    });
+    this._cellSize = theme.cellSize;
+    this._minRadius = theme.minRadius;
+    this._maxRadius = theme.maxRadius;
+    this._stepMs = theme.stepMs;
+    this._fadeRate = theme.fadeRate;
+    this._bgFill = theme.bgFill;
+    this.palette = theme.palette;
+    return theme;
   }
 
   resize() {

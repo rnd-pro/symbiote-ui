@@ -38,10 +38,22 @@ const chatSidebarItemSource = new URL('../chat/ChatSidebarItem/ChatSidebarItem.j
 const chatSidebarItemStyles = new URL('../chat/ChatSidebarItem/ChatSidebarItem.css.js', import.meta.url);
 const cellBgSource = new URL('../effects/CellBg/CellBg.js', import.meta.url);
 const cellBgStyles = new URL('../effects/CellBg/CellBg.css.js', import.meta.url);
+const cellBgThemeSource = new URL('../effects/CellBg/cell-bg-theme.js', import.meta.url);
 const uiIndexSource = new URL('../ui/index.js', import.meta.url);
 const componentRegistrySource = new URL('../manifest/component-registry.js', import.meta.url);
 const customElementsSource = new URL('../custom-elements.json', import.meta.url);
 const componentDescriptorV2Source = new URL('../schemas/component-descriptor-v2.json', import.meta.url);
+
+function parseRgbToken(_source, value) {
+  let match = value.match(/rgba?\(([^)]+)\)/);
+  assert.ok(match, `expected rgb token, got ${value}`);
+  return match[1]
+    .replaceAll(',', ' ')
+    .split(/[ /\t]+/)
+    .filter(Boolean)
+    .slice(0, 3)
+    .map(Number);
+}
 
 test('theme scrollbar normal state uses the normal thumb token', async () => {
   const source = await readFile(scrollbarSource, 'utf8');
@@ -392,6 +404,58 @@ test('cascade theme derives distinct dark and light branches', async () => {
   assert.equal(lightTheme.tokens['--sn-button-success-color'], 'hsl(0 0% 18.9%)');
 });
 
+test('cell background derives runtime palette and metrics from cascade tokens', async () => {
+  const [{ readCellBgTheme }, componentSource] = await Promise.all([
+    import(cellBgThemeSource.href),
+    readFile(cellBgSource, 'utf8'),
+  ]);
+  const makeReaders = (tokens, numbers = {}) => ({
+    readToken: (_source, token) => tokens[token] || '',
+    readNumber: (_source, token, fallback) => numbers[token] ?? fallback,
+    normalizeColor: (_source, value) => value || null,
+    parseRgb: parseRgbToken,
+  });
+  const darkTokens = {
+    '--sn-cell-bg': 'rgb(0 0 0)',
+    '--sn-cell-dot': 'rgb(255 255 255)',
+    '--sn-cell-base-alpha': '0.10',
+    '--sn-cell-alpha-span': '0.50',
+  };
+  const lightTokens = {
+    '--sn-cell-bg': 'rgb(250 250 250)',
+    '--sn-cell-dot': 'rgb(30 30 30)',
+    '--sn-cell-base-alpha': '0.05',
+    '--sn-cell-alpha-span': '0.40',
+  };
+  const metrics = {
+    '--sn-cell-size': 18,
+    '--sn-cell-min-radius': 3,
+    '--sn-cell-max-radius': 7,
+    '--sn-cell-step-ms': 60,
+    '--sn-cell-fade-rate': 0.08,
+  };
+
+  const darkState = readCellBgTheme(null, makeReaders(darkTokens, metrics));
+  const lightState = readCellBgTheme(null, makeReaders(lightTokens, {
+    ...metrics,
+    '--sn-cell-size': 22,
+  }));
+
+  assert.equal(darkState.cellSize, 18);
+  assert.equal(darkState.minRadius, 3);
+  assert.equal(darkState.maxRadius, 7);
+  assert.equal(darkState.stepMs, 60);
+  assert.equal(darkState.fadeRate, 0.08);
+  assert.equal(darkState.bgFill, 'rgb(0 0 0)');
+  assert.equal(darkState.palette[0], '#1a1a1a');
+  assert.equal(darkState.palette.at(-1), '#999999');
+  assert.equal(lightState.cellSize, 22);
+  assert.equal(lightState.bgFill, 'rgb(250 250 250)');
+  assert.notEqual(lightState.palette[0], darkState.palette[0]);
+  assert.match(componentSource, /readCellBgTheme/);
+  assert.match(componentSource, /_applyThemeState/);
+});
+
 test('cascade theme controls reach canvas objects and layout chrome', async () => {
   const [
     graphNode,
@@ -421,6 +485,7 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
     chatSidebarItem,
     cellBgComponent,
     cellBg,
+    cellBgTheme,
     registry,
     customElements,
   ] = await Promise.all([
@@ -451,6 +516,7 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
     readFile(chatSidebarItemStyles, 'utf8'),
     readFile(cellBgSource, 'utf8'),
     readFile(cellBgStyles, 'utf8'),
+    readFile(cellBgThemeSource, 'utf8'),
     readFile(componentRegistrySource, 'utf8'),
     readFile(customElementsSource, 'utf8'),
   ]);
@@ -552,7 +618,9 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(cellBgComponent, /_scheduleThemeRefresh/);
   assert.match(cellBgComponent, /cascade-theme-change/);
   assert.match(cellBgComponent, /MutationObserver/);
-  assert.match(cellBgComponent, /--sn-cell-size/);
+  assert.match(cellBgComponent, /readCellBgTheme/);
+  assert.match(cellBgTheme, /--sn-cell-size/);
+  assert.match(cellBgTheme, /--sn-cell-dot/);
   assert.match(cellBg, /--sn-cell-bg/);
   assert.match(cellBg, /--sn-cell-glare/);
   assert.match(cellBg, /--sn-cell-noise/);
