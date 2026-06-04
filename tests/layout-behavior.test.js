@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   DEFAULT_LAYOUT_BEHAVIOR,
+  branchFitsExpandedState,
   createPanel,
   createSplit,
   getBehaviorImportance,
@@ -43,4 +44,22 @@ test('layout tree stores behavior per insertion point', () => {
   assert.equal(getNodeBehavior(chat).importance, 5);
   assert.equal(getNodeBehavior(chat).collapse, 'never');
   assert.equal(getNodeBehavior(chat).minBlockSize, DEFAULT_LAYOUT_BEHAVIOR.minBlockSize);
+});
+
+test('layout restore guard rejects expanded states that would immediately collapse again', () => {
+  let graph = createPanel('graph', {}, { minInlineSize: 650, minBlockSize: 260 });
+  let inspector = createPanel('inspector', {}, { minInlineSize: 300, minBlockSize: 220 });
+  let root = createSplit('horizontal', graph, inspector, 0.68);
+
+  inspector.collapsed = true;
+  inspector.autoCollapsed = true;
+
+  assert.equal(
+    branchFitsExpandedState(root, 900, 420, { restoringNodeId: inspector.id }),
+    false
+  );
+  assert.equal(
+    branchFitsExpandedState(root, 1160, 420, { restoringNodeId: inspector.id }),
+    true
+  );
 });

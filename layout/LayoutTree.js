@@ -66,6 +66,11 @@ export const DEFAULT_LAYOUT_BEHAVIOR = Object.freeze({
   responsiveBreakpoint: 720,
 })
 
+export const COLLAPSED_PANEL_INLINE_SIZE = 32
+export const COLLAPSED_PANEL_BLOCK_SIZE = 28
+export const RESTORE_FIT_FACTOR = 1.18
+export const STABLE_FIT_FACTOR = 1.02
+
 const COLLAPSE_POLICIES = new Set(['auto', 'manual', 'never'])
 const OVERFLOW_POLICIES = new Set(['collapse', 'scroll-inline', 'scroll-block', 'scroll'])
 const RESPONSIVE_MODES = new Set(['preserve', 'stack', 'scroll-inline'])
@@ -470,6 +475,93 @@ export function getNodeBehavior(node, fallback = DEFAULT_LAYOUT_BEHAVIOR) {
  */
 export function getBehaviorImportance(node, fallback = DEFAULT_LAYOUT_BEHAVIOR) {
   return getNodeBehavior(node, fallback).importance
+}
+
+/**
+ * Check whether an expanded layout state can fit without immediately violating
+ * descendant panel minimum sizes. Used to keep auto-collapse restore stable.
+ * @param {LayoutNode | null} root
+ * @param {number} inlineSize
+ * @param {number} blockSize
+ * @param {Object} [options]
+ * @param {string} [options.restoringNodeId]
+ * @param {LayoutBehavior} [options.fallbackBehavior]
+ * @param {(node: PanelNode, branchBehavior: LayoutBehavior) => LayoutBehavior} [options.resolvePanelBehavior]
+ * @param {number} [options.restoreFactor]
+ * @param {number} [options.stableFactor]
+ * @returns {boolean}
+ */
+export function branchFitsExpandedState(root, inlineSize, blockSize, options = {}) {
+  let {
+    restoringNodeId = '',
+    fallbackBehavior = DEFAULT_LAYOUT_BEHAVIOR,
+    resolvePanelBehavior = (node, branchBehavior) => getNodeBehavior(node, branchBehavior),
+    restoreFactor = RESTORE_FIT_FACTOR,
+    stableFactor = STABLE_FIT_FACTOR,
+  } = options
+
+  function isCollapsedPanelForRestore(node) {
+    return isPanelNode(node) && node.collapsed && node.id !== restoringNodeId
+  }
+
+  function walk(node, availableInlineSize, availableBlockSize, fallback) {
+    if (!node) return true
+    let branchBehavior = getNodeBehavior(node, fallback)
+
+    if (isPanelNode(node)) {
+      if (node.collapsed && node.id !== restoringNodeId) return true
+      let behavior = resolvePanelBehavior(node, branchBehavior)
+      let factor = node.id === restoringNodeId ? restoreFactor : stableFactor
+      return (
+        availableInlineSize >= behavior.minInlineSize * factor &&
+        availableBlockSize >= behavior.minBlockSize * factor
+      )
+    }
+
+    let ratio = node.ratio || 0.5
+    let first = node.first
+    let second = node.second
+
+    if (node.direction === 'horizontal') {
+      let firstCollapsed = isCollapsedPanelForRestore(first)
+      let secondCollapsed = isCollapsedPanelForRestore(second)
+      let firstInlineSize = firstCollapsed
+        ? COLLAPSED_PANEL_INLINE_SIZE
+        : secondCollapsed
+          ? Math.max(0, availableInlineSize - COLLAPSED_PANEL_INLINE_SIZE)
+          : availableInlineSize * ratio
+      let secondInlineSize = secondCollapsed
+        ? COLLAPSED_PANEL_INLINE_SIZE
+        : firstCollapsed
+          ? Math.max(0, availableInlineSize - COLLAPSED_PANEL_INLINE_SIZE)
+          : availableInlineSize * (1 - ratio)
+
+      return (
+        walk(first, firstInlineSize, availableBlockSize, branchBehavior) &&
+        walk(second, secondInlineSize, availableBlockSize, branchBehavior)
+      )
+    }
+
+    let firstCollapsed = isCollapsedPanelForRestore(first)
+    let secondCollapsed = isCollapsedPanelForRestore(second)
+    let firstBlockSize = firstCollapsed
+      ? COLLAPSED_PANEL_BLOCK_SIZE
+      : secondCollapsed
+        ? Math.max(0, availableBlockSize - COLLAPSED_PANEL_BLOCK_SIZE)
+        : availableBlockSize * ratio
+    let secondBlockSize = secondCollapsed
+      ? COLLAPSED_PANEL_BLOCK_SIZE
+      : firstCollapsed
+        ? Math.max(0, availableBlockSize - COLLAPSED_PANEL_BLOCK_SIZE)
+        : availableBlockSize * (1 - ratio)
+
+    return (
+      walk(first, availableInlineSize, firstBlockSize, branchBehavior) &&
+      walk(second, availableInlineSize, secondBlockSize, branchBehavior)
+    )
+  }
+
+  return walk(root, inlineSize, blockSize, normalizeLayoutBehavior(fallbackBehavior))
 }
 
 /**

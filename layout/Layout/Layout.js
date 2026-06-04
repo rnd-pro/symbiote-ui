@@ -334,7 +334,12 @@ export class Layout extends Symbiote {
       if (node.type === 'panel') {
         let typeBehavior = this.$.panelTypes[node.panelType]?.behavior || {};
         let behavior = LayoutTree.getNodeBehavior(node, LayoutTree.normalizeLayoutBehavior(typeBehavior, branchBehavior));
-        if (node.collapsed && node.autoCollapsed && this._hasExpandedSpace(tree, node, behavior)) {
+        if (
+          node.collapsed &&
+          node.autoCollapsed &&
+          this._hasExpandedSpace(tree, node, behavior) &&
+          this._canRestoreAutoCollapsedPanel(tree, node)
+        ) {
           node.collapsed = false;
           node.autoCollapsed = false;
           changed = true;
@@ -398,6 +403,24 @@ export class Layout extends Symbiote {
     }
 
     return inlineSize >= behavior.minInlineSize * 1.08 && blockSize >= behavior.minBlockSize * 1.08;
+  }
+
+  _canRestoreAutoCollapsedPanel(tree, targetNode) {
+    let rect = this.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return false;
+    return LayoutTree.branchFitsExpandedState(
+      tree,
+      rect.width,
+      rect.height,
+      {
+        fallbackBehavior: this._getRootBehavior(),
+        restoringNodeId: targetNode.id,
+        resolvePanelBehavior: (node, branchBehavior) => {
+          let typeBehavior = this.$.panelTypes[node.panelType]?.behavior || {};
+          return LayoutTree.getNodeBehavior(node, LayoutTree.normalizeLayoutBehavior(typeBehavior, branchBehavior));
+        },
+      }
+    );
   }
 
 
