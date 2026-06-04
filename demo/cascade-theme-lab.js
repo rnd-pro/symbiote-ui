@@ -676,7 +676,7 @@ function applyLayoutGroup(id = activeLayoutGroupId) {
 setShellTabs();
 if (sidebar) {
   sidebar.routerSync = false;
-  sidebar.$.collapsed = false;
+  sidebar.$.collapsed = true;
   sidebar.setSections(sidebarSections);
   sidebar.setActiveSection(activeLayoutGroupId);
 }

@@ -146,7 +146,7 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   assert.match(html, /slot="actions" type="button" data-layout-command="reset"/);
   assert.match(html, /slot="actions" type="button" data-layout-command="scroll"/);
   assert.match(source, /sidebar\.setSections\(sidebarSections\)/);
-  assert.match(source, /sidebar\.\$\.collapsed = false/);
+  assert.match(source, /sidebar\.\$\.collapsed = true/);
   assert.match(source, /sidebar\.setActiveSection\(activeLayoutGroupId\)/);
   assert.match(source, /Agent Chat/);
   assert.match(source, /Live Monitor/);
