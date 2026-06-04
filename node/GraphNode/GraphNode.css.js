@@ -495,27 +495,11 @@ export let styles = css`
         cursor: default;
       }
 
-      & .sn-node-header {
-        display: none;
-      }
+      & .sn-node-header,
       & .sn-node-body {
-        padding: var(--sn-node-svg-body-padding, 4px 0);
-        align-items: center;
-      }
-      & .controls {
         display: none;
       }
-      & .sn-shape-watermark {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        font-size: var(--sn-shape-watermark-size, 40px);
-        color: var(--sn-node-accent, var(--sn-text-dim));
-        pointer-events: none;
-        z-index: 0;
-      }
-      /* Hide DOM port items — ConnectionRenderer computes positions mathematically */
+      /* Hide DOM port items - ConnectionRenderer computes positions mathematically */
       & .inputs,
       & .outputs {
         display: none;
@@ -552,11 +536,6 @@ export let styles = css`
         }
 
         & .sn-node-body {
-          padding: 0;
-        }
-
-        & .sn-node-icon,
-        & .sn-shape-watermark {
           display: none;
         }
       }
@@ -565,10 +544,6 @@ export let styles = css`
     &[data-svg-shape][data-node-tone='inverse'] {
       --sn-shape-fill: var(--sn-node-accent);
       --sn-shape-stroke: var(--sn-node-accent);
-
-      & .sn-shape-watermark {
-        color: var(--sn-node-bg);
-      }
     }
 
     /* SVG shape states — target inline svg > path directly.

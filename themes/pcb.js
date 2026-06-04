@@ -129,14 +129,6 @@ export let PCB_DARK = {
   extraCSS: `
     /* ── IC Chip Decorations (SVG shape nodes only) ── */
 
-    /* Hide Material icons only on SVG shape nodes (they use watermarks) */
-    graph-node[data-svg-shape] .sn-node-icon {
-      display: none;
-    }
-    graph-node[data-svg-shape] .sn-shape-watermark {
-      display: none;
-    }
-
     /* IC chip notch marker — SVG shape nodes only */
     graph-node[data-svg-shape]::before {
       content: '';
@@ -165,52 +157,6 @@ export let PCB_DARK = {
       border-radius: 50%;
       transform: translateY(-50%);
       box-shadow: calc(100% + 6px) 0 0 0 var(--sn-conn-color, #c87533);
-    }
-
-    /* ── Label Visibility Modes ── */
-
-    /* SVG shape label positioning */
-    graph-node[data-svg-shape] .sn-node-header {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: transparent;
-      border: none;
-      border-radius: 0;
-      border-bottom: none;
-      padding: 4px 10px;
-      white-space: nowrap;
-      opacity: 1;
-      pointer-events: none;
-      z-index: 1;
-      font-size: 11px;
-      letter-spacing: 0.3px;
-      transition: opacity 0.2s ease-in-out;
-    }
-
-    /* HOVER MODE */
-    node-canvas[data-label-mode="hover"] graph-node[data-svg-shape] .sn-node-header {
-      opacity: 0;
-    }
-    node-canvas[data-label-mode="hover"] graph-node[data-svg-shape]:hover .sn-node-header,
-    node-canvas[data-label-mode="hover"] graph-node[data-svg-shape][data-selected] .sn-node-header,
-    node-canvas[data-label-mode="hover"] graph-node[data-svg-shape][data-neighbor-focused] .sn-node-header {
-      opacity: 1;
-    }
-
-    /* FOCUS MODE */
-    node-canvas[data-label-mode="focus"] graph-node[data-svg-shape] .sn-node-header {
-      opacity: 0;
-    }
-    node-canvas[data-label-mode="focus"] graph-node[data-svg-shape][data-selected] .sn-node-header,
-    node-canvas[data-label-mode="focus"] graph-node[data-svg-shape][data-neighbor-focused] .sn-node-header {
-      opacity: 1;
-    }
-
-    /* ALWAYS: selected always visible */
-    graph-node[data-svg-shape][data-selected] .sn-node-header {
-      opacity: 1 !important;
     }
 
     /* ── Connection Focus States ── */

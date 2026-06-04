@@ -8,6 +8,7 @@ const cascadeThemeEditorSource = new URL('../themes/CascadeThemeEditor/CascadeTh
 const cascadeDemoSource = new URL('../demo/cascade-theme-lab.js', import.meta.url);
 const cascadeDemoHtml = new URL('../demo/cascade-theme-lab.html', import.meta.url);
 const graphNodeStyles = new URL('../node/GraphNode/GraphNode.css.js', import.meta.url);
+const nodeViewManagerSource = new URL('../canvas/NodeViewManager.js', import.meta.url);
 const portItemStyles = new URL('../node/PortItem/PortItem.css.js', import.meta.url);
 const ctrlItemStyles = new URL('../node/CtrlItem/CtrlItem.css.js', import.meta.url);
 const nodeSocketStyles = new URL('../node/NodeSocket/NodeSocket.css.js', import.meta.url);
@@ -62,7 +63,6 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   assert.match(source, /--sn-chat-markdown-h1-size/);
   assert.match(source, /--sn-node-icon-size/);
   assert.match(source, /--sn-port-label-size/);
-  assert.match(source, /--sn-shape-watermark-size/);
   assert.match(source, /--sn-layout-header-icon-size/);
   assert.match(source, /--sn-action-zone-size/);
   assert.match(html, /layout module/);
@@ -143,9 +143,21 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.match(source, /--sn-node-summary-size/);
   assert.match(source, /--sn-node-pill-body-padding/);
   assert.match(source, /--sn-node-circle-body-padding/);
-  assert.match(source, /--sn-node-svg-body-padding/);
   assert.match(source, /--sn-control-input-size/);
   assert.match(source, /--sn-panel-menu-icon-size/);
+});
+
+test('svg shape nodes do not render internal labels or watermarks', async () => {
+  const [graphNode, nodeViewManager] = await Promise.all([
+    readFile(graphNodeStyles, 'utf8'),
+    readFile(nodeViewManagerSource, 'utf8'),
+  ]);
+
+  assert.match(graphNode, /& \.sn-node-header,\n      & \.sn-node-body \{\n        display: none;/);
+  assert.doesNotMatch(graphNode, /sn-shape-watermark/);
+  assert.doesNotMatch(graphNode, /--sn-shape-watermark-size/);
+  assert.doesNotMatch(nodeViewManager, /sn-shape-watermark/);
+  assert.doesNotMatch(nodeViewManager, /ensureMaterialSymbols\(\[iconEl\.textContent\]\)/);
 });
 
 test('cascade theme editor is a reusable browser module', async () => {
@@ -258,11 +270,9 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(graphNode, /--sn-node-label-size/);
   assert.match(graphNode, /--sn-node-summary-size/);
   assert.match(graphNode, /--sn-node-icon-size/);
-  assert.match(graphNode, /--sn-shape-watermark-size/);
   assert.match(graphNode, /--sn-node-pill-body-padding/);
   assert.match(graphNode, /--sn-node-circle-body-padding/);
   assert.match(graphNode, /--sn-node-comment-body-padding/);
-  assert.match(graphNode, /--sn-node-svg-body-padding/);
   assert.match(graphNode, /stroke: var\(--sn-shape-stroke/);
   assert.match(graphNode, /stroke-width: var\(--sn-shape-stroke-width/);
   assert.match(graphNode, /--sn-shape-port-hint-stroke-width/);

@@ -178,7 +178,6 @@ class CascadeUiPanel extends Symbiote {
       '--sn-markdown-h1-size',
       '--sn-chat-markdown-h1-size',
       '--sn-node-icon-size',
-      '--sn-shape-watermark-size',
       '--sn-port-label-size',
       '--sn-layout-header-icon-size',
       '--sn-action-zone-size',

@@ -122,7 +122,7 @@ export let styles = css`
       overflow: visible;
     }
 
-    & graph-node[data-svg-shape] > :not(.sn-node-shape-svg):not(.sn-node-media):not(.sn-shape-watermark) {
+    & graph-node[data-svg-shape] > :not(.sn-node-shape-svg):not(.sn-node-media) {
       position: relative;
     }
 

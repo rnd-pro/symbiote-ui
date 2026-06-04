@@ -175,7 +175,6 @@ export const CASCADE_THEME_TOKEN_TARGETS = Object.freeze({
     '--sn-chat-markdown-h4-size',
     '--sn-layout-header-icon-size',
     '--sn-panel-menu-icon-size',
-    '--sn-shape-watermark-size',
   ],
   density: [
     '--sn-theme-density',
@@ -547,7 +546,6 @@ export function createCascadeTheme(options = {}) {
     '--sn-control-label-size': typeToken(10),
     '--sn-control-input-size': typeToken(12),
     '--sn-node-preview-text-size': typeToken(11),
-    '--sn-shape-watermark-size': typeToken(40),
     '--sn-button-font-size': typeToken(12),
     '--sn-button-icon-font-size': typeToken(16),
     '--sn-card-title-size': headingToken(11),
@@ -634,7 +632,6 @@ export function createCascadeTheme(options = {}) {
     '--sn-node-circle-header-padding': densityToken(6),
     '--sn-node-circle-body-padding': `0 ${densityToken(8)} ${densityToken(8)}`,
     '--sn-node-comment-body-padding': `${densityToken(12)} ${densityToken(16)}`,
-    '--sn-node-svg-body-padding': `${densityToken(4)} 0`,
     '--sn-node-content-padding': `${densityToken(8)} ${densityToken(12)} ${densityToken(10)}`,
     '--sn-node-link-gap': densityToken(5),
     '--sn-node-link-margin-block-start': densityToken(8),
