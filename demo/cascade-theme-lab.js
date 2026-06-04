@@ -1,3 +1,4 @@
+import Symbiote, { html } from '@symbiotejs/symbiote';
 import {
   Connection,
   DEFAULT_PROVIDER_THEME,
@@ -62,25 +63,25 @@ function updateCascadeTheme() {
   let hue = clamp(controls.hue.value, 0, 360);
   let dark = mode === 'dark';
   let bg = dark
-    ? 6 + brightness * 0.22
+    ? 10 + brightness * 0.18
     : 98 - brightness * 0.32;
   let surface = dark
-    ? Math.min(34, bg + 3 + contrast * 0.06)
+    ? Math.min(34, bg + 3 + (contrast - 58) * 0.05)
     : Math.max(72, bg - 4 - contrast * 0.10);
   let text = dark
-    ? Math.min(98, 72 + contrast * 0.26)
+    ? Math.min(98, Math.max(72, 94 + (contrast - 58) * 0.12))
     : Math.max(8, 34 - contrast * 0.26);
   let dim = dark
-    ? Math.min(78, 46 + contrast * 0.18)
+    ? Math.min(78, Math.max(46, 60 + (contrast - 58) * 0.18))
     : Math.max(24, 66 - contrast * 0.22);
   let border = dark
-    ? Math.min(46, surface + 4 + contrast * 0.10)
+    ? Math.min(46, Math.max(12, 17 + (contrast - 58) * 0.10))
     : Math.max(50, surface - 5 - contrast * 0.08);
   let hover = dark
-    ? Math.min(58, surface + 8 + contrast * 0.14)
+    ? Math.min(58, Math.max(18, 27 + (contrast - 58) * 0.10))
     : Math.max(42, surface - 8 - contrast * 0.12);
   let accentLight = dark
-    ? Math.min(72, 48 + contrast * 0.16)
+    ? Math.min(72, Math.max(48, 63 + (contrast - 58) * 0.12))
     : Math.max(36, 62 - contrast * 0.10);
   let neutralChroma = `${chroma}%`;
   let accent = `hsl(${hue} ${neutralChroma} ${accentLight}%)`;
@@ -99,8 +100,10 @@ function updateCascadeTheme() {
   setToken('--sn-cat-data', accent);
   setToken('--sn-node-active-border', `color-mix(in srgb, ${accent} 54%, transparent)`);
   setToken('--sn-node-hover', accentSoft);
-  setToken('--sn-scrollbar-thumb', `hsl(0 0% ${text.toFixed(1)}% / ${dark ? 0.16 : 0.24})`);
-  setToken('--sn-scrollbar-thumb-hover', `hsl(${hue} ${neutralChroma} ${accentLight}% / 0.55)`);
+  setToken('--sn-scrollbar-thumb', `hsl(0 0% ${text.toFixed(1)}% / ${dark ? 0.08 : 0.24})`);
+  setToken('--sn-scrollbar-thumb-hover', dark
+    ? `hsl(0 0% ${text.toFixed(1)}% / 0.25)`
+    : `hsl(${hue} ${neutralChroma} ${accentLight}% / 0.55)`);
   setToken('--sn-scrollbar-track', 'transparent');
 
   for (const [key, output] of Object.entries(outputs)) {
@@ -136,12 +139,11 @@ for (const control of Object.values(controls)) {
   control.addEventListener('input', updateCascadeTheme);
 }
 
-class CascadeGraphPanel extends HTMLElement {
-  connectedCallback() {
+class CascadeGraphPanel extends Symbiote {
+  renderCallback() {
     if (this._ready) return;
     this._ready = true;
-    this.innerHTML = '<node-canvas class="lab-canvas"></node-canvas>';
-    const canvas = this.querySelector('node-canvas');
+    const canvas = this.ref.canvas;
     const socket = new Socket('flow', {
       color: 'var(--sn-node-selected)',
     });
@@ -230,39 +232,36 @@ class CascadeGraphPanel extends HTMLElement {
     };
 
     place();
-    new ResizeObserver(place).observe(canvas);
+    this._resizeObserver = new ResizeObserver(place);
+    this._resizeObserver.observe(canvas);
+  }
+
+  disconnectedCallback() {
+    this._resizeObserver?.disconnect();
+    super.disconnectedCallback?.();
   }
 }
 
-class CascadeUiPanel extends HTMLElement {
-  connectedCallback() {
+CascadeGraphPanel.template = html`
+  <node-canvas class="lab-canvas" ${{ ref: 'canvas' }}></node-canvas>
+`;
+
+CascadeGraphPanel.rootStyles = `
+  cascade-graph-panel {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+`;
+
+CascadeGraphPanel.reg('cascade-graph-panel');
+
+class CascadeUiPanel extends Symbiote {
+  renderCallback() {
     if (this._ready) return;
     this._ready = true;
-    this.innerHTML = `
-      <section class="sample-panel">
-        <sn-banner variant="info">Cascade tokens update this banner without component-local theme calls.</sn-banner>
-        <div class="sample-row">
-          <sn-button variant="primary">primary</sn-button>
-          <sn-button>default</sn-button>
-          <sn-button variant="icon" title="Icon button"><span class="material-symbols-outlined">bolt</span></sn-button>
-          <sn-badge>agent</sn-badge>
-          <sn-badge variant="success">live</sn-badge>
-        </div>
-        <div class="sample-scroll">
-          <div class="sample-stack">
-            <sn-card>
-              <strong>Provider surface</strong>
-              <p>Cards, controls, graph nodes, and scrollbars read the same inherited variables.</p>
-            </sn-card>
-            <div class="token-grid" data-token-grid></div>
-            <sn-tree-panel title="Cascade tree" title-icon="account_tree"></sn-tree-panel>
-          </div>
-        </div>
-      </section>
-    `;
-
-    const grid = this.querySelector('[data-token-grid]');
-    const tree = this.querySelector('sn-tree-panel');
+    const grid = this.ref.grid;
+    const tree = this.ref.tree;
     const tokenNames = [
       '--sn-bg',
       '--sn-panel-bg',
@@ -295,13 +294,51 @@ class CascadeUiPanel extends HTMLElement {
       ] },
     ]);
     tree.selectedId = 'cascade';
+    this._renderTokens = renderTokens;
     renderTokens();
     document.addEventListener('cascade-theme-change', renderTokens);
   }
+
+  disconnectedCallback() {
+    if (this._renderTokens) {
+      document.removeEventListener('cascade-theme-change', this._renderTokens);
+    }
+    super.disconnectedCallback?.();
+  }
 }
 
-customElements.define('cascade-graph-panel', CascadeGraphPanel);
-customElements.define('cascade-ui-panel', CascadeUiPanel);
+CascadeUiPanel.template = html`
+      <section class="sample-panel">
+        <sn-banner variant="info">Cascade tokens update this banner without component-local theme calls.</sn-banner>
+        <div class="sample-row">
+          <sn-button variant="primary">primary</sn-button>
+          <sn-button>default</sn-button>
+          <sn-button variant="icon" title="Icon button"><span class="material-symbols-outlined">bolt</span></sn-button>
+          <sn-badge>agent</sn-badge>
+          <sn-badge variant="success">live</sn-badge>
+        </div>
+        <div class="sample-scroll">
+          <div class="sample-stack">
+            <sn-card>
+              <strong>Provider surface</strong>
+              <p>Cards, controls, graph nodes, and scrollbars read the same inherited variables.</p>
+            </sn-card>
+            <div class="token-grid" data-token-grid ${{ ref: 'grid' }}></div>
+            <sn-tree-panel title="Cascade tree" title-icon="account_tree" ${{ ref: 'tree' }}></sn-tree-panel>
+          </div>
+        </div>
+      </section>
+`;
+
+CascadeUiPanel.rootStyles = `
+  cascade-ui-panel {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+`;
+
+CascadeUiPanel.reg('cascade-ui-panel');
 
 const layout = document.querySelector('.lab-layout');
 layout.registerPanelType('graph', {

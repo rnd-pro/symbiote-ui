@@ -18,7 +18,15 @@ test('theme scrollbar normal state uses the normal thumb token', async () => {
 test('cascade theme lab mutates root tokens instead of applying local component themes', async () => {
   const source = await readFile(cascadeDemoSource, 'utf8');
 
+  assert.match(source, /import Symbiote, \{ html \} from '@symbiotejs\/symbiote'/);
+  assert.match(source, /class CascadeGraphPanel extends Symbiote/);
+  assert.match(source, /class CascadeUiPanel extends Symbiote/);
   assert.match(source, /applyTheme\(document\.documentElement, DEFAULT_PROVIDER_THEME\)/);
+  assert.match(source, /10 \+ brightness \* 0\.18/);
+  assert.match(source, /94 \+ \(contrast - 58\) \* 0\.12/);
+  assert.match(source, /63 \+ \(contrast - 58\) \* 0\.12/);
+  assert.match(source, /0\.08 : 0\.24/);
+  assert.doesNotMatch(source, /extends HTMLElement/);
   assert.doesNotMatch(source, /\.setTheme\(/);
 });
 
