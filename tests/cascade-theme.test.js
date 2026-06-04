@@ -26,6 +26,11 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   assert.match(source, /94 \+ \(contrast - 58\) \* 0\.12/);
   assert.match(source, /63 \+ \(contrast - 58\) \* 0\.12/);
   assert.match(source, /0\.08 : 0\.24/);
+  assert.match(source, /--sn-theme-outline-strength/);
+  assert.match(source, /--sn-theme-type-scale/);
+  assert.match(source, /--sn-theme-spacing-scale/);
+  assert.match(source, /--sn-effect-focus-ring/);
+  assert.match(source, /--sn-xr-panel-border/);
   assert.doesNotMatch(source, /extends HTMLElement/);
   assert.doesNotMatch(source, /\.setTheme\(/);
 });

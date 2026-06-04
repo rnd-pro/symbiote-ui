@@ -38,12 +38,18 @@ const controls = {
   contrast: document.querySelector('[data-control="contrast"]'),
   chroma: document.querySelector('[data-control="chroma"]'),
   hue: document.querySelector('[data-control="hue"]'),
+  outline: document.querySelector('[data-control="outline"]'),
+  type: document.querySelector('[data-control="type"]'),
+  density: document.querySelector('[data-control="density"]'),
 };
 const outputs = {
   brightness: document.querySelector('[data-output="brightness"]'),
   contrast: document.querySelector('[data-output="contrast"]'),
   chroma: document.querySelector('[data-output="chroma"]'),
   hue: document.querySelector('[data-output="hue"]'),
+  outline: document.querySelector('[data-output="outline"]'),
+  type: document.querySelector('[data-output="type"]'),
+  density: document.querySelector('[data-output="density"]'),
 };
 
 let mode = 'dark';
@@ -61,7 +67,13 @@ function updateCascadeTheme() {
   let contrast = clamp(controls.contrast.value, 0, 100);
   let chroma = clamp(controls.chroma.value, 0, 100);
   let hue = clamp(controls.hue.value, 0, 360);
+  let outline = clamp(controls.outline.value, 0, 100);
+  let type = clamp(controls.type.value, 80, 130);
+  let density = clamp(controls.density.value, 75, 140);
   let dark = mode === 'dark';
+  let outlineStrength = outline / 100;
+  let typeScale = type / 100;
+  let densityScale = density / 100;
   let bg = dark
     ? 10 + brightness * 0.18
     : 98 - brightness * 0.32;
@@ -86,20 +98,105 @@ function updateCascadeTheme() {
   let neutralChroma = `${chroma}%`;
   let accent = `hsl(${hue} ${neutralChroma} ${accentLight}%)`;
   let accentSoft = `hsl(${hue} ${neutralChroma} ${accentLight}% / 0.18)`;
+  let outlineAlpha = outline === 0
+    ? 0
+    : dark
+      ? 0.02 + outlineStrength * 0.21
+      : 0.04 + outlineStrength * 0.28;
+  let outlineLit = dark
+    ? Math.min(62, text - 10 + outlineStrength * 28)
+    : Math.max(32, text + 42 - outlineStrength * 26);
+  let outlineColor = `hsl(0 0% ${outlineLit.toFixed(1)}% / ${outlineAlpha.toFixed(3)})`;
+  let softOutlineColor = `hsl(0 0% ${text.toFixed(1)}% / ${(outlineAlpha * 0.55).toFixed(3)})`;
+  let nodeBorderWidth = `${(1 + outlineStrength).toFixed(2)}px`;
+  let focusRingWidth = `${(1 + outlineStrength * 2).toFixed(1)}px`;
+  let typeToken = (px) => `calc(${px}px * var(--sn-theme-type-scale))`;
+  let densityToken = (px) => `calc(${px}px * var(--sn-theme-density))`;
 
   setToken('--sn-theme-hue', String(hue));
   setToken('--sn-theme-chroma', neutralChroma);
   setToken('--sn-theme-bg-lightness', `${bg.toFixed(1)}%`);
   setToken('--sn-theme-surface-lightness', `${surface.toFixed(1)}%`);
   setToken('--sn-theme-text-lightness', `${text.toFixed(1)}%`);
+  setToken('--sn-theme-outline-strength', outlineStrength.toFixed(2));
+  setToken('--sn-theme-type-scale', typeScale.toFixed(2));
+  setToken('--sn-theme-density', densityScale.toFixed(2));
+  setToken('--sn-theme-spacing-scale', densityScale.toFixed(2));
   setToken('--sn-lit-border', `${border.toFixed(1)}%`);
   setToken('--sn-lit-hover', `${hover.toFixed(1)}%`);
   setToken('--sn-lit-text-dim', `${dim.toFixed(1)}%`);
   setToken('--sn-lit-accent', `${accentLight.toFixed(1)}%`);
+  setToken('--sn-outline-color', outlineColor);
+  setToken('--sn-outline-color-soft', softOutlineColor);
   setToken('--sn-node-selected', accent);
   setToken('--sn-cat-data', accent);
   setToken('--sn-node-active-border', `color-mix(in srgb, ${accent} 54%, transparent)`);
   setToken('--sn-node-hover', accentSoft);
+  setToken('--sn-node-border', outlineColor);
+  setToken('--sn-node-border-width', nodeBorderWidth);
+  setToken('--sn-layout-border', outlineColor);
+  setToken('--sn-xr-panel-border', outlineColor);
+  setToken('--sn-card-border', outlineColor);
+  setToken('--sn-button-border', outlineColor);
+  setToken('--sn-banner-border', outlineColor);
+  setToken('--sn-badge-border', outlineColor);
+  setToken('--sn-field-control-border', outlineColor);
+  setToken('--sn-tree-row-selected-border', outline === 0 ? 'transparent' : softOutlineColor);
+  setToken('--sn-effect-focus-ring', `${focusRingWidth} solid var(--sn-node-selected)`);
+  setToken('--sn-node-font-size', typeToken(13));
+  setToken('--sn-button-font-size', typeToken(12));
+  setToken('--sn-button-icon-font-size', typeToken(16));
+  setToken('--sn-card-title-size', typeToken(11));
+  setToken('--sn-banner-font-size', typeToken(12));
+  setToken('--sn-banner-icon-size', typeToken(18));
+  setToken('--sn-badge-font-size', typeToken(11));
+  setToken('--sn-tree-label-size', typeToken(12));
+  setToken('--sn-tree-icon-size', typeToken(15));
+  setToken('--sn-tree-kind-size', typeToken(10));
+  setToken('--sn-tree-badge-size', typeToken(10));
+  setToken('--sn-tree-panel-font-size', typeToken(12));
+  setToken('--sn-tree-panel-title-size', typeToken(11));
+  setToken('--sn-tree-panel-input-size', typeToken(11));
+  setToken('--sn-card-padding', densityToken(14));
+  setToken('--sn-card-title-margin-block-end', densityToken(12));
+  setToken('--sn-card-footer-gap', densityToken(8));
+  setToken('--sn-button-padding', `${densityToken(6)} ${densityToken(14)}`);
+  setToken('--sn-button-gap', densityToken(6));
+  setToken('--sn-button-min-height', densityToken(30));
+  setToken('--sn-button-icon-size', densityToken(28));
+  setToken('--sn-banner-padding', `${densityToken(10)} ${densityToken(14)}`);
+  setToken('--sn-banner-gap', densityToken(8));
+  setToken('--sn-badge-padding', `${densityToken(2)} ${densityToken(8)}`);
+  setToken('--sn-badge-gap', densityToken(4));
+  setToken('--sn-tree-gap', densityToken(4));
+  setToken('--sn-tree-row-min-height', densityToken(22));
+  setToken('--sn-tree-row-padding-block', densityToken(2));
+  setToken('--sn-tree-panel-title-gap', densityToken(5));
+  setToken('--sn-tree-panel-title-padding', `${densityToken(6)} ${densityToken(8)}`);
+  setToken('--sn-tree-panel-toolbar-gap', densityToken(6));
+  setToken('--sn-tree-panel-toolbar-padding', `${densityToken(6)} ${densityToken(8)}`);
+  setToken('--sn-tree-panel-input-padding', `${densityToken(4)} ${densityToken(8)}`);
+  setToken('--sn-tree-panel-content-padding', densityToken(4));
+  setToken('--sn-lab-toolbar-gap', densityToken(12));
+  setToken('--sn-lab-toolbar-padding', `${densityToken(10)} ${densityToken(12)}`);
+  setToken('--sn-lab-title-size', typeToken(14));
+  setToken('--sn-lab-control-font-size', typeToken(12));
+  setToken('--sn-lab-control-height', densityToken(30));
+  setToken('--sn-lab-control-gap', densityToken(8));
+  setToken('--sn-lab-toggle-padding', `0 ${densityToken(10)}`);
+  setToken('--sn-lab-mode-button-padding', `0 ${densityToken(9)}`);
+  setToken('--sn-lab-tuners-gap', densityToken(12));
+  setToken('--sn-lab-slider-width', densityToken(128));
+  setToken('--sn-lab-content-padding', densityToken(12));
+  setToken('--sn-lab-panel-gap', densityToken(12));
+  setToken('--sn-lab-panel-padding', densityToken(12));
+  setToken('--sn-lab-row-gap', densityToken(8));
+  setToken('--sn-lab-scroll-padding', densityToken(8));
+  setToken('--sn-lab-stack-gap', densityToken(10));
+  setToken('--sn-lab-token-gap', densityToken(8));
+  setToken('--sn-lab-token-padding', densityToken(10));
+  setToken('--sn-lab-token-label-size', typeToken(12));
+  setToken('--sn-lab-token-value-size', typeToken(11));
   setToken('--sn-scrollbar-thumb', `hsl(0 0% ${text.toFixed(1)}% / ${dark ? 0.08 : 0.24})`);
   setToken('--sn-scrollbar-thumb-hover', dark
     ? `hsl(0 0% ${text.toFixed(1)}% / 0.25)`
@@ -111,7 +208,7 @@ function updateCascadeTheme() {
   }
 
   document.dispatchEvent(new CustomEvent('cascade-theme-change', {
-    detail: { mode, brightness, contrast, chroma, hue },
+    detail: { mode, brightness, contrast, chroma, hue, outline, type, density },
   }));
 }
 
@@ -271,6 +368,9 @@ class CascadeUiPanel extends Symbiote {
       '--sn-text',
       '--sn-text-dim',
       '--sn-scrollbar-thumb',
+      '--sn-theme-outline-strength',
+      '--sn-theme-type-scale',
+      '--sn-theme-density',
     ];
     const renderTokens = () => {
       const computed = getComputedStyle(document.documentElement);

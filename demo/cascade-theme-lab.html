@@ -46,9 +46,9 @@
     .lab-toolbar {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: var(--sn-lab-toolbar-gap, 12px);
       min-width: 0;
-      padding: 10px 12px;
+      padding: var(--sn-lab-toolbar-padding, 10px 12px);
       border-bottom: 1px solid var(--sn-node-border);
       background: color-mix(in srgb, var(--sn-panel-bg) 92%, transparent);
     }
@@ -56,7 +56,7 @@
     .lab-title {
       margin: 0;
       min-width: 180px;
-      font-size: 14px;
+      font-size: var(--sn-lab-title-size, 14px);
       font-weight: 700;
       line-height: 1.2;
     }
@@ -64,8 +64,8 @@
     .lab-mode {
       display: inline-grid;
       grid-auto-flow: column;
-      gap: 6px;
-      padding: 3px;
+      gap: var(--sn-lab-segment-gap, 6px);
+      padding: var(--sn-lab-segment-padding, 3px);
       border: 1px solid var(--sn-node-border);
       border-radius: 8px;
       background: var(--sn-node-bg);
@@ -73,7 +73,7 @@
 
     .lab-mode button,
     .lab-toggle {
-      height: 30px;
+      height: var(--sn-lab-control-height, 30px);
       border: 0;
       border-radius: 6px;
       background: transparent;
@@ -84,7 +84,7 @@
 
     .lab-mode button {
       min-width: 34px;
-      padding: 0 9px;
+      padding: var(--sn-lab-mode-button-padding, 0 9px);
     }
 
     .lab-mode button[aria-pressed="true"],
@@ -96,8 +96,8 @@
     .lab-toggle {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      padding: 0 10px;
+      gap: var(--sn-lab-control-gap, 6px);
+      padding: var(--sn-lab-toggle-padding, 0 10px);
       border: 1px solid var(--sn-node-border);
       background: var(--sn-node-bg);
     }
@@ -105,7 +105,7 @@
     .lab-tuners {
       display: none;
       align-items: center;
-      gap: 12px;
+      gap: var(--sn-lab-tuners-gap, 12px);
       min-width: 0;
     }
 
@@ -115,11 +115,11 @@
 
     .lab-control {
       display: grid;
-      grid-template-columns: auto minmax(80px, 128px) 38px;
+      grid-template-columns: auto minmax(80px, var(--sn-lab-slider-width, 128px)) 38px;
       align-items: center;
-      gap: 8px;
+      gap: var(--sn-lab-control-gap, 8px);
       color: var(--sn-text-dim);
-      font-size: 12px;
+      font-size: var(--sn-lab-control-font-size, 12px);
       white-space: nowrap;
     }
 
@@ -136,7 +136,7 @@
 
     .lab-content {
       min-height: 0;
-      padding: 12px;
+      padding: var(--sn-lab-content-padding, 12px);
     }
 
     .lab-layout {
@@ -161,9 +161,9 @@
     .sample-panel {
       display: grid;
       grid-template-rows: auto auto 1fr;
-      gap: 12px;
+      gap: var(--sn-lab-panel-gap, 12px);
       height: 100%;
-      padding: 12px;
+      padding: var(--sn-lab-panel-padding, 12px);
       background: var(--sn-panel-bg);
       color: var(--sn-text);
       overflow: hidden;
@@ -172,14 +172,14 @@
     .sample-row {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
+      gap: var(--sn-lab-row-gap, 8px);
       align-items: center;
     }
 
     .sample-scroll {
       min-height: 0;
       overflow: auto;
-      padding: 8px;
+      padding: var(--sn-lab-scroll-padding, 8px);
       border: 1px solid var(--sn-node-border);
       border-radius: var(--sn-node-radius);
       background: var(--sn-bg);
@@ -211,19 +211,19 @@
 
     .sample-stack {
       display: grid;
-      gap: 10px;
+      gap: var(--sn-lab-stack-gap, 10px);
       min-height: 720px;
     }
 
     .token-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 8px;
+      gap: var(--sn-lab-token-gap, 8px);
     }
 
     .token-chip {
       min-width: 0;
-      padding: 10px;
+      padding: var(--sn-lab-token-padding, 10px);
       border: 1px solid var(--sn-node-border);
       border-radius: var(--sn-node-radius);
       background: var(--sn-node-bg);
@@ -239,13 +239,13 @@
 
     .token-chip strong {
       color: var(--sn-text);
-      font-size: 12px;
+      font-size: var(--sn-lab-token-label-size, 12px);
     }
 
     .token-chip span {
       margin-top: 4px;
       color: var(--sn-text-dim);
-      font-size: 11px;
+      font-size: var(--sn-lab-token-value-size, 11px);
       font-variant-numeric: tabular-nums;
     }
 
@@ -308,13 +308,28 @@
           <input type="range" min="0" max="360" value="218" data-control="hue">
           <output data-output="hue">218</output>
         </label>
+        <label class="lab-control">
+          <span>outline</span>
+          <input type="range" min="0" max="100" value="38" data-control="outline">
+          <output data-output="outline">38</output>
+        </label>
+        <label class="lab-control">
+          <span>type</span>
+          <input type="range" min="80" max="130" value="100" data-control="type">
+          <output data-output="type">100</output>
+        </label>
+        <label class="lab-control">
+          <span>density</span>
+          <input type="range" min="75" max="140" value="100" data-control="density">
+          <output data-output="density">100</output>
+        </label>
       </div>
     </header>
     <section class="lab-content" aria-label="Cascade theme visual surface">
       <panel-layout class="lab-layout"></panel-layout>
     </section>
   </main>
-  <script type="module" src="./cascade-theme-lab.js?v=20260604-symbiote"></script>
+  <script type="module" src="./cascade-theme-lab.js?v=20260604-scene-controls"></script>
 </body>
 
 </html>
