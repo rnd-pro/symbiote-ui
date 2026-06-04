@@ -4,6 +4,7 @@ const CASCADE_THEME_CONTROL_LIST = [
     type: 'enum',
     values: ['dark', 'light'],
     default: 'dark',
+    icon: 'routine',
     description: 'Neutral luminance branch used to derive background, surface, text, border, and hover tokens.',
   },
   {
@@ -12,6 +13,7 @@ const CASCADE_THEME_CONTROL_LIST = [
     min: 0,
     max: 100,
     default: 0,
+    icon: 'brightness_6',
     description: 'Global neutral brightness control. Dark mode moves surfaces upward; light mode moves them downward.',
   },
   {
@@ -20,6 +22,7 @@ const CASCADE_THEME_CONTROL_LIST = [
     min: 0,
     max: 100,
     default: 58,
+    icon: 'contrast',
     description: 'Contrast control for text, borders, hover surfaces, and accent lightness.',
   },
   {
@@ -28,6 +31,7 @@ const CASCADE_THEME_CONTROL_LIST = [
     min: 0,
     max: 100,
     default: 89,
+    icon: 'opacity',
     description: 'Accent saturation from grayscale to vivid color.',
   },
   {
@@ -36,6 +40,7 @@ const CASCADE_THEME_CONTROL_LIST = [
     min: 0,
     max: 360,
     default: 218,
+    icon: 'palette',
     description: 'Accent hue in native CSS HSL space.',
   },
   {
@@ -44,6 +49,7 @@ const CASCADE_THEME_CONTROL_LIST = [
     min: 0,
     max: 100,
     default: 38,
+    icon: 'border_outer',
     description: 'Outline visibility and emphasis for DOM borders, SVG shapes, split resizers, focus rings, sockets, and graph connections.',
   },
   {
@@ -52,6 +58,7 @@ const CASCADE_THEME_CONTROL_LIST = [
     min: 80,
     max: 130,
     default: 100,
+    icon: 'text_fields',
     description: 'Typography scale for graph nodes, controls, layout chrome, menus, tree rows, and demo labels.',
   },
   {
@@ -60,6 +67,7 @@ const CASCADE_THEME_CONTROL_LIST = [
     min: 80,
     max: 140,
     default: 100,
+    icon: 'title',
     description: 'Heading-to-body type balance for titles, graph labels, panel headings, cards, and markdown headings.',
   },
   {
@@ -68,6 +76,7 @@ const CASCADE_THEME_CONTROL_LIST = [
     min: 75,
     max: 140,
     default: 100,
+    icon: 'density_medium',
     description: 'Spacing and hit-target scale for graph nodes, ports, controls, layout chrome, action zones, and tree rows.',
   },
 ];

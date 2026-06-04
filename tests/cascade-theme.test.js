@@ -98,6 +98,8 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.equal(theme.tokens['--sn-theme-text-lightness'], '94.0%');
   assert.equal(theme.tokens['--sn-theme-heading-scale'], '1.00');
   assert.equal(balancedHeadingTheme.tokens['--sn-theme-heading-scale'], '1.20');
+  assert.equal(theme.descriptor.controls.find((control) => control.name === 'brightness')?.icon, 'brightness_6');
+  assert.equal(theme.descriptor.controls.find((control) => control.name === 'heading')?.icon, 'title');
   assert.equal(theme.tokens['--sn-bg'], 'hsl(0 0% 10.0%)');
   assert.equal(theme.tokens['--sn-text'], 'hsl(0 0% 94.0%)');
   assert.equal(theme.tokens['--sn-node-bg'], 'var(--sn-panel-bg)');
@@ -160,6 +162,9 @@ test('cascade theme editor is a reusable browser module', async () => {
   assert.match(editor, /applyCascadeTheme\(this\.\#resolveTarget\(\), this\.\#state\)/);
   assert.match(editor, /CASCADE_THEME_DEFAULTS/);
   assert.match(editor, /getCascadeThemeControls\(\)/);
+  assert.match(editor, /CONTROL_ICONS/);
+  assert.match(editor, /control\.icon/);
+  assert.match(editor, /cte-control-icon material-symbols-outlined/);
   assert.match(editor, /getStorage\(\)/);
   assert.match(editor, /storage\.setItem\(this\.storageKey/);
   assert.match(editor, /copyParameters\(\)/);
@@ -173,6 +178,8 @@ test('cascade theme editor is a reusable browser module', async () => {
   assert.match(styles, /input\[type="range"\]/);
   assert.match(styles, /appearance: none/);
   assert.match(styles, /--sn-theme-outline-strength/);
+  assert.match(styles, /cte-control-icon/);
+  assert.match(styles, /--sn-theme-editor-control-icon-size/);
   assert.match(styles, /::-webkit-slider-thumb/);
   assert.match(styles, /::-moz-range-thumb/);
   assert.match(uiIndex, /CascadeThemeEditor/);

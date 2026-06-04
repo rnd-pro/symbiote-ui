@@ -10,7 +10,10 @@ import template from './CascadeThemeEditor.tpl.js';
 import css from './CascadeThemeEditor.css.js';
 
 const DEFAULT_STORAGE_KEY = 'symbiote-ui:cascade-theme-editor';
-const ICONS = ['palette', 'content_copy', 'restart_alt', 'data_object'];
+const CONTROL_ICONS = getCascadeThemeControls()
+  .map((control) => control.icon)
+  .filter(Boolean);
+const ICONS = [...new Set(['palette', 'content_copy', 'restart_alt', 'data_object', ...CONTROL_ICONS])];
 
 function canUseStorage() {
   return getStorage() !== null;
@@ -173,10 +176,12 @@ export class CascadeThemeEditor extends Symbiote {
       .filter((control) => control.type !== 'enum')
       .map((control) => {
         let name = escapeHtml(control.name);
+        let icon = escapeHtml(control.icon || 'tune');
         let description = escapeHtml(control.description || control.name);
         return `
           <div class="cte-control" title="${description}">
             <div class="cte-control-head">
+              <span class="cte-control-icon material-symbols-outlined" aria-hidden="true">${icon}</span>
               <label for="cte-${name}">${name}</label>
             </div>
             <input

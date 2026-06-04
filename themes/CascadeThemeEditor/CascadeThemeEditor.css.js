@@ -158,7 +158,7 @@ export default css`
 
     .cte-control {
       display: grid;
-      grid-template-columns: minmax(76px, 0.6fr) minmax(96px, 1fr) minmax(38px, auto);
+      grid-template-columns: minmax(92px, 0.65fr) minmax(96px, 1fr) minmax(38px, auto);
       gap: var(--sn-theme-editor-control-gap, var(--sn-lab-control-gap, 8px));
       min-width: 0;
       color: var(--sn-text-dim);
@@ -166,9 +166,17 @@ export default css`
     }
 
     .cte-control-head {
-      justify-content: space-between;
       gap: var(--sn-theme-editor-control-gap, var(--sn-lab-control-gap, 8px));
       min-width: 0;
+    }
+
+    .cte-control-icon {
+      flex: 0 0 auto;
+      width: var(--sn-theme-editor-control-icon-box, calc(18px * var(--sn-theme-density, 1)));
+      color: var(--sn-node-selected);
+      font-size: var(--sn-theme-editor-control-icon-size, var(--sn-layout-header-icon-size, 16px));
+      line-height: 1;
+      text-align: center;
     }
 
     .cte-control label {
