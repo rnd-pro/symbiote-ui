@@ -141,6 +141,7 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   assert.match(html, /class="lab-shell"/);
   assert.match(html, /100dvh/);
   assert.doesNotMatch(html, /100vh/);
+  assert.doesNotMatch(html, /--sn-tabs-bg/);
   assert.match(html, /project-path="symbiote-ui \/ layout module"/);
   assert.match(html, /<layout-sidebar id="lab-sidebar" slot="sidebar"/);
   assert.match(html, /slot="actions" type="button" data-layout-command="reset"/);
@@ -182,6 +183,8 @@ test('layout shell menu mirrors the Agent Portal topbar, tabs, sidebar, and work
   assert.match(styles, /background-size: 100% var\(--sn-shell-top-gradient-size, 78px\)/);
   assert.match(styles, /height: var\(--sn-app-topbar-height, 40px\)/);
   assert.match(styles, /\.shell-tabs-row/);
+  assert.match(styles, /\.shell-tabs-row \{[\s\S]*?background: transparent;/);
+  assert.match(styles, /--sn-tabs-bg: var\(--sn-shell-tabs-bg, transparent\)/);
   assert.match(styles, /::slotted\(\[slot='sidebar'\]\)/);
   assert.match(styles, /letter-spacing: var\(--sn-app-title-letter-spacing, 0\.5px\)/);
   assert.doesNotMatch(source, /sideMenuItems/);

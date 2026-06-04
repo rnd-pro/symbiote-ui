@@ -130,12 +130,13 @@ layout-shell-menu {
   align-items: stretch;
   min-width: 0;
   min-height: var(--sn-tabs-height, 34px);
-  background: var(--sn-tabs-bg, transparent);
+  background: transparent;
 }
 
 .shell-tabs {
   flex: 1 1 auto;
   min-width: 0;
+  --sn-tabs-bg: var(--sn-shell-tabs-bg, transparent);
 }
 
 .app-workspace {
