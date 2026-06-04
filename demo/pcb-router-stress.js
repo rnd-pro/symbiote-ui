@@ -601,8 +601,17 @@ function getCachedAgentSamples() {
   const key = currentAgentSampleCacheKey();
   if (agentSampleCache && agentSampleCacheKey === key) return agentSampleCache;
   agentSampleCacheKey = key;
-  agentSampleCache = runOrbitSamples({ samples: agentSampleCount, includeRoutes: false });
-  return agentSampleCache;
+  agentSampleCache = null;
+  return {
+    schema: 'symbiote-ui.pcb-orbit-samples.v1',
+    status: 'pending',
+    samples: 0,
+    requestedSamples: agentSampleCount,
+    diagnosticsOptions,
+    aggregate: null,
+    worstFrames: [],
+    frames: [],
+  };
 }
 
 function captureSnapshotAtPhase(phase) {

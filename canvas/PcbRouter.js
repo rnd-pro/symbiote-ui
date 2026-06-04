@@ -22,14 +22,6 @@ function snapDir(deg) {
   return { dx: 0, dy: -1 };
 }
 
-function dirAngle(dir) {
-  if (dir.dx > 0) return 0;
-  if (dir.dx < 0) return 180;
-  if (dir.dy > 0) return 90;
-  if (dir.dy < 0) return 270;
-  return 0;
-}
-
 function parallelGroup(connections, conn) {
   return connections.filter((candidate) =>
     candidate.from === conn.from ||
@@ -75,49 +67,14 @@ function endpointStub(point, rect, dir, distance) {
   return { ...point };
 }
 
-const ORTHOGONAL_DIRECTIONS = [
-  { dx: 1, dy: 0 },
-  { dx: 0, dy: 1 },
-  { dx: -1, dy: 0 },
-  { dx: 0, dy: -1 },
-];
-
-function directionKey(dir) {
-  return `${dir.dx},${dir.dy}`;
-}
-
-function addDirection(result, seen, dir) {
-  const key = directionKey(dir);
-  if (seen.has(key)) return;
-  seen.add(key);
-  result.push(dir);
-}
-
-function orderedDirections(preferred, fromPoint, toPoint) {
-  const result = [];
-  const seen = new Set();
-  const delta = {
-    x: toPoint.x - fromPoint.x,
-    y: toPoint.y - fromPoint.y,
-  };
-
-  addDirection(result, seen, preferred);
-  if (preferred.dx !== 0) {
-    const verticalSign = Math.sign(delta.y) || 1;
-    addDirection(result, seen, { dx: 0, dy: verticalSign });
-    addDirection(result, seen, { dx: 0, dy: -verticalSign });
-  } else {
-    const horizontalSign = Math.sign(delta.x) || 1;
-    addDirection(result, seen, { dx: horizontalSign, dy: 0 });
-    addDirection(result, seen, { dx: -horizontalSign, dy: 0 });
-  }
-  addDirection(result, seen, { dx: -preferred.dx, dy: -preferred.dy });
-
-  for (const dir of ORTHOGONAL_DIRECTIONS) {
-    addDirection(result, seen, dir);
-  }
-
-  return result;
+function endpointNormal(point, rect, fallback) {
+  const distances = [
+    { dir: { dx: -1, dy: 0 }, value: Math.abs(point.x - rect.x) },
+    { dir: { dx: 1, dy: 0 }, value: Math.abs(point.x - (rect.x + rect.w)) },
+    { dir: { dx: 0, dy: -1 }, value: Math.abs(point.y - rect.y) },
+    { dir: { dx: 0, dy: 1 }, value: Math.abs(point.y - (rect.y + rect.h)) },
+  ].sort((a, b) => a.value - b.value);
+  return distances[0].value <= 2 ? distances[0].dir : fallback;
 }
 
 function compactPoints(points) {
@@ -301,29 +258,6 @@ function segmentHitsAnyRect(a, b, rects, pad) {
   return rects.some((rect) => segmentIntersectsRect(a, b, rect, pad));
 }
 
-function segmentHitsBlockingRect(a, b, rects, allowedId, pad) {
-  return rects.some((rect) => rect.id !== allowedId && segmentIntersectsRect(a, b, rect, pad));
-}
-
-function directionDeviation(preferred, dir) {
-  return 1 - (preferred.dx * dir.dx + preferred.dy * dir.dy);
-}
-
-function chooseCleanStubDirection(point, targetPoint, rect, preferred, distance, rects, pad) {
-  let best = null;
-  for (const dir of orderedDirections(preferred, point, targetPoint)) {
-    const stubPoint = endpointStub(point, rect, dir, distance);
-    const selfBlocked = segmentCrossesRectInterior(point, stubPoint, rect);
-    const blocked = segmentHitsBlockingRect(point, stubPoint, rects, rect.id, pad);
-    const score = (selfBlocked ? 2000 : 0) + (blocked ? 1000 : 0) + directionDeviation(preferred, dir) * 10;
-    if (!best || score < best.score) {
-      best = { dir, score };
-    }
-    if (!selfBlocked && !blocked && directionDeviation(preferred, dir) === 0) break;
-  }
-  return best?.dir || preferred;
-}
-
 function routeLength(points) {
   let length = 0;
   for (let index = 0; index < points.length - 1; index += 1) {
@@ -402,7 +336,46 @@ function hasHardGeometryIssue(points, grid) {
   return countReversals(points, grid) > 0 || countSelfIntersections(points) > 0;
 }
 
-function chooseBestRoute(candidates, rects, fromRect, toRect, grid, pad) {
+function segmentFollowsDirection(from, to, dir, minLength = 0) {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  if (dir.dx !== 0) {
+    return Math.abs(dy) < 0.5 && Math.sign(dx) === dir.dx && Math.abs(dx) + 0.5 >= minLength;
+  }
+  if (dir.dy !== 0) {
+    return Math.abs(dx) < 0.5 && Math.sign(dy) === dir.dy && Math.abs(dy) + 0.5 >= minLength;
+  }
+  return false;
+}
+
+function routeHasEndpointStubs(points, fromDir, toDir, minLength) {
+  if (points.length < 3) return false;
+  const last = points.length - 1;
+  return (
+    segmentFollowsDirection(points[0], points[1], fromDir, minLength) &&
+    segmentFollowsDirection(points[last], points[last - 1], toDir, minLength)
+  );
+}
+
+function routeHasDirectEndpointAlignment(points, fromDir, toDir) {
+  if (points.length !== 2) return false;
+  return (
+    segmentFollowsDirection(points[0], points[1], fromDir, 0) &&
+    segmentFollowsDirection(points[1], points[0], toDir, 0)
+  );
+}
+
+function routeSatisfiesEndpointRule(points, rule) {
+  if (!rule) return true;
+  if (rule.allowDirect && routeHasDirectEndpointAlignment(points, rule.fromDir, rule.toDir)) return true;
+  return routeHasEndpointStubs(points, rule.fromDir, rule.toDir, rule.minLength);
+}
+
+function createEndpointRule(fromDir, toDir, minLength, allowDirect = false) {
+  return { fromDir, toDir, minLength, allowDirect };
+}
+
+function chooseBestRoute(candidates, rects, fromRect, toRect, grid, pad, endpointRule = null) {
   let best = null;
   for (const candidate of candidates) {
     const rawPoints = compactPoints(candidate);
@@ -410,6 +383,7 @@ function chooseBestRoute(candidates, rects, fromRect, toRect, grid, pad) {
     if (routeHitsBlockedArea(rawPoints, rects, fromRect, toRect, pad)) continue;
     const points = simplifyCollinear(rawPoints);
     if (points.length < 2) continue;
+    if (!routeSatisfiesEndpointRule(points, endpointRule)) continue;
     if (routeHitsBlockedArea(points, rects, fromRect, toRect, pad)) continue;
     if (hasHardGeometryIssue(points, grid)) continue;
     const score = routeScore(points, grid);
@@ -420,11 +394,12 @@ function chooseBestRoute(candidates, rects, fromRect, toRect, grid, pad) {
   return best?.points || null;
 }
 
-function chooseFallbackRoute(candidates, rects, fromRect, toRect, grid, pad) {
+function chooseFallbackRoute(candidates, rects, fromRect, toRect, grid, pad, endpointRule = null) {
   let best = null;
   for (const candidate of candidates) {
     const points = simplifyCollinear(compactPoints(candidate));
     if (points.length < 2) continue;
+    if (!routeSatisfiesEndpointRule(points, endpointRule)) continue;
     const hardPenalty = hasHardGeometryIssue(points, grid) ? 1_000_000_000 : 0;
     const blockedPenalty = routeHitsBlockedArea(points, rects, fromRect, toRect, pad) ? 10_000_000 : 0;
     const score = hardPenalty + blockedPenalty + routeScore(points, grid);
@@ -575,90 +550,6 @@ function addLaneCandidates(addCandidate, start, stubFrom, stubTo, end, xLanes, y
   }
 }
 
-function findGridLaneRoute({ stubFrom, stubTo, obstacleRects, xLanes, yLanes, pad }) {
-  const xs = uniqueSorted([stubFrom.x, stubTo.x, ...xLanes]);
-  const ys = uniqueSorted([stubFrom.y, stubTo.y, ...yLanes]);
-  const keyOf = (x, y) => `${x},${y}`;
-  const parseKey = (key) => {
-    const [x, y] = key.split(',').map(Number);
-    return { x, y };
-  };
-  const startKey = keyOf(stubFrom.x, stubFrom.y);
-  const endKey = keyOf(stubTo.x, stubTo.y);
-  const keys = [];
-
-  for (const x of xs) {
-    for (const y of ys) {
-      keys.push(keyOf(x, y));
-    }
-  }
-
-  const dist = new Map(keys.map((key) => [key, Number.POSITIVE_INFINITY]));
-  const prev = new Map();
-  const visited = new Set();
-  dist.set(startKey, 0);
-
-  const neighbors = (key) => {
-    const point = parseKey(key);
-    const xIndex = xs.indexOf(point.x);
-    const yIndex = ys.indexOf(point.y);
-    const result = [];
-    for (const nextXIndex of [xIndex - 1, xIndex + 1]) {
-      if (nextXIndex < 0 || nextXIndex >= xs.length) continue;
-      const next = { x: xs[nextXIndex], y: point.y };
-      if (!segmentHitsAnyRect(point, next, obstacleRects, pad)) {
-        result.push({ key: keyOf(next.x, next.y), cost: Math.abs(next.x - point.x) });
-      }
-    }
-    for (const nextYIndex of [yIndex - 1, yIndex + 1]) {
-      if (nextYIndex < 0 || nextYIndex >= ys.length) continue;
-      const next = { x: point.x, y: ys[nextYIndex] };
-      if (!segmentHitsAnyRect(point, next, obstacleRects, pad)) {
-        result.push({ key: keyOf(next.x, next.y), cost: Math.abs(next.y - point.y) });
-      }
-    }
-    return result;
-  };
-
-  while (visited.size < keys.length) {
-    let current = null;
-    let currentDist = Number.POSITIVE_INFINITY;
-    for (const key of keys) {
-      if (visited.has(key)) continue;
-      const value = dist.get(key);
-      if (value < currentDist) {
-        current = key;
-        currentDist = value;
-      }
-    }
-
-    if (!current || currentDist === Number.POSITIVE_INFINITY) break;
-    if (current === endKey) break;
-    visited.add(current);
-
-    for (const next of neighbors(current)) {
-      if (visited.has(next.key)) continue;
-      const nextDist = currentDist + next.cost;
-      if (nextDist < dist.get(next.key)) {
-        dist.set(next.key, nextDist);
-        prev.set(next.key, current);
-      }
-    }
-  }
-
-  if (!prev.has(endKey) && startKey !== endKey) return null;
-
-  const route = [];
-  let current = endKey;
-  route.unshift(parseKey(current));
-  while (current !== startKey) {
-    current = prev.get(current);
-    if (!current) return null;
-    route.unshift(parseKey(current));
-  }
-  return simplifyCollinear(route);
-}
-
 function shortOrthogonalCandidates(start, end, fDir, tDir, shift, grid, snapToGrid) {
   const startHorizontal = fDir.dx !== 0;
   const endHorizontal = tDir.dx !== 0;
@@ -678,14 +569,14 @@ function shortOrthogonalCandidates(start, end, fDir, tDir, shift, grid, snapToGr
     : [[start, { x: start.x, y: end.y }, end]];
 }
 
-function localOrthogonalCandidates(start, end, grid, snapToGrid) {
-  const midX = alignGrid((start.x + end.x) / 2, grid, snapToGrid);
-  const midY = alignGrid((start.y + end.y) / 2, grid, snapToGrid);
+function localEndpointCandidates(start, stubFrom, stubTo, end, grid, snapToGrid) {
+  const midX = alignGrid((stubFrom.x + stubTo.x) / 2, grid, snapToGrid);
+  const midY = alignGrid((stubFrom.y + stubTo.y) / 2, grid, snapToGrid);
   return [
-    [start, { x: end.x, y: start.y }, end],
-    [start, { x: start.x, y: end.y }, end],
-    [start, { x: midX, y: start.y }, { x: midX, y: end.y }, end],
-    [start, { x: start.x, y: midY }, { x: end.x, y: midY }, end],
+    [start, stubFrom, { x: stubTo.x, y: stubFrom.y }, stubTo, end],
+    [start, stubFrom, { x: stubFrom.x, y: stubTo.y }, stubTo, end],
+    [start, stubFrom, { x: midX, y: stubFrom.y }, { x: midX, y: stubTo.y }, stubTo, end],
+    [start, stubFrom, { x: stubFrom.x, y: midY }, { x: stubTo.x, y: midY }, stubTo, end],
   ];
 }
 
@@ -694,6 +585,8 @@ function compactTraceRoute({
   end,
   fDir,
   tDir,
+  stubFrom,
+  stubTo,
   shift,
   routeFromRect,
   routeToRect,
@@ -709,6 +602,7 @@ function compactTraceRoute({
   const manhattanLength = dx + dy;
   const compactLimit = Math.max(stub * 2, grid * 5);
   const minKneeSegment = Math.max(grid * 1.5, chamfer * 2);
+  const endpointRule = createEndpointRule(fDir, tDir, minKneeSegment, true);
 
   if (directLength > compactLimit && manhattanLength > compactLimit + grid) return null;
 
@@ -716,7 +610,10 @@ function compactTraceRoute({
   const directObstacleRects = obstacleRects.filter(
     (rect) => rect.id !== routeFromRect.id && rect.id !== routeToRect.id
   );
-  if (!routeHitsBlockedArea(directPoints, directObstacleRects, routeFromRect, routeToRect, 2)) {
+  if (
+    routeSatisfiesEndpointRule(directPoints, endpointRule) &&
+    !routeHitsBlockedArea(directPoints, directObstacleRects, routeFromRect, routeToRect, 2)
+  ) {
     const routed = buildPath(directPoints, 0);
 
     return {
@@ -728,12 +625,19 @@ function compactTraceRoute({
   }
 
   const limitedShift = Math.max(-grid, Math.min(grid, shift));
-  const candidates = shortOrthogonalCandidates(start, end, fDir, tDir, limitedShift, grid, snapToGrid)
+  const candidates = [
+    ...localEndpointCandidates(start, stubFrom, stubTo, end, grid, snapToGrid),
+    ...shortOrthogonalCandidates(start, end, fDir, tDir, limitedShift, grid, snapToGrid),
+  ]
     .map((candidate) => simplifyCollinear(candidate))
-    .filter((candidate) => candidate.length > 2 && pointsHaveMinimumSegments(candidate, minKneeSegment));
+    .filter((candidate) => (
+      candidate.length > 2 &&
+      pointsHaveMinimumSegments(candidate, minKneeSegment) &&
+      routeSatisfiesEndpointRule(candidate, endpointRule)
+    ));
 
   if (candidates.length) {
-    const points = chooseBestRoute(candidates, obstacleRects, routeFromRect, routeToRect, grid, 2);
+    const points = chooseBestRoute(candidates, obstacleRects, routeFromRect, routeToRect, grid, 2, endpointRule);
     if (points) {
       const routed = buildPath(points, 0);
 
@@ -749,72 +653,38 @@ function compactTraceRoute({
   return null;
 }
 
-function findAlternateDirectionRoute({
+function compactDirectRoute({
   start,
   end,
-  fromRect,
-  toRect,
-  preferredFDir,
-  preferredTDir,
-  rects,
-  connections,
-  conn,
-  grid,
-  stub,
-  clearance,
-  chamfer,
-  snapToGrid,
+  fDir,
+  tDir,
   routeFromRect,
   routeToRect,
   obstacleRects,
+  grid,
+  stub,
 }) {
-  let best = null;
-  const fromDirs = orderedDirections(preferredFDir, start, end);
-  const toDirs = orderedDirections(preferredTDir, end, start);
+  const dx = Math.abs(end.x - start.x);
+  const dy = Math.abs(end.y - start.y);
+  const directLength = Math.hypot(dx, dy);
+  const manhattanLength = dx + dy;
+  const compactLimit = Math.max(stub * 2, grid * 5);
+  if (directLength > compactLimit && manhattanLength > compactLimit + grid) return null;
 
-  for (const fromDirection of fromDirs) {
-    for (const toDirection of toDirs) {
-      if (
-        fromDirection.dx === preferredFDir.dx &&
-        fromDirection.dy === preferredFDir.dy &&
-        toDirection.dx === preferredTDir.dx &&
-        toDirection.dy === preferredTDir.dy
-      ) {
-        continue;
-      }
+  const directPoints = [start, end];
+  if (!routeHasDirectEndpointAlignment(directPoints, fDir, tDir)) return null;
+  const directObstacleRects = obstacleRects.filter(
+    (rect) => rect.id !== routeFromRect.id && rect.id !== routeToRect.id
+  );
+  if (routeHitsBlockedArea(directPoints, directObstacleRects, routeFromRect, routeToRect, 2)) return null;
 
-      const routed = routePcbTrace({
-        start,
-        end,
-        fromRect,
-        toRect,
-        fromAngle: dirAngle(fromDirection),
-        toAngle: dirAngle(toDirection),
-        rects,
-        connections,
-        conn,
-        grid,
-        stub,
-        clearance,
-        chamfer,
-        snapToGrid,
-        fromDirection,
-        toDirection,
-        allowDirectionAlternates: false,
-      });
-
-      if (routeHitsBlockedArea(routed.points, obstacleRects, routeFromRect, routeToRect, 2)) continue;
-      if (hasHardGeometryIssue(routed.points, grid)) continue;
-      const score = routeScore(routed.points, grid);
-      if (!best || score < best.score) {
-        best = { ...routed, score };
-      }
-    }
-  }
-
-  if (!best) return null;
-  const { score, ...routed } = best;
-  return { ...routed, alternateDirections: true };
+  const routed = buildPath(directPoints, 0);
+  return {
+    path: routed.path,
+    points: routed.points,
+    arrow: midpointArrow(routed.points),
+    strategy: 'compact-direct',
+  };
 }
 
 export function routePcbTrace({
@@ -834,47 +704,35 @@ export function routePcbTrace({
   snapToGrid = true,
   fromDirection = null,
   toDirection = null,
-  allowDirectionAlternates = true,
 }) {
-  const preferredFDir = snapDir(fromAngle);
-  const preferredTDir = snapDir(toAngle);
   const shift = parallelShift(connections, conn, grid);
   const absShift = Math.abs(shift);
   const laneSpread = parallelSpread(connections, conn, grid);
   const rectById = new Map(rects.map((rect) => [rect.id, rect]));
   const routeFromRect = rectById.get(fromRect.id) || fromRect;
   const routeToRect = rectById.get(toRect.id) || toRect;
-  if (rectsOverlap(routeFromRect, routeToRect, 0)) {
-    const routed = buildPath([start, end], 0);
-    return {
-      path: routed.path,
-      points: routed.points,
-      arrow: midpointArrow(routed.points),
-      strategy: 'overlap-direct',
-    };
-  }
+  const preferredFDir = endpointNormal(start, routeFromRect, fromDirection || snapDir(fromAngle));
+  const preferredTDir = endpointNormal(end, routeToRect, toDirection || snapDir(toAngle));
   const stubDistance = stub + absShift;
   const obstacleRects = mergeEndpointRects(rects, routeFromRect, routeToRect);
-  const fDir = fromDirection || chooseCleanStubDirection(
+  const directRoute = compactDirectRoute({
     start,
     end,
+    fDir: preferredFDir,
+    tDir: preferredTDir,
     routeFromRect,
-    preferredFDir,
-    stubDistance,
-    obstacleRects,
-    2
-  );
-  const tDir = toDirection || chooseCleanStubDirection(
-    end,
-    start,
     routeToRect,
-    preferredTDir,
-    stubDistance,
     obstacleRects,
-    2
-  );
+    grid,
+    stub,
+  });
+  if (directRoute) return directRoute;
+
+  const fDir = preferredFDir;
+  const tDir = preferredTDir;
   const stubFrom = endpointStub(start, routeFromRect, fDir, stubDistance);
   const stubTo = endpointStub(end, routeToRect, tDir, stubDistance);
+  const endpointRule = createEndpointRule(fDir, tDir, Math.max(grid * 1.5, chamfer * 2));
   const localRouteLimit = Math.max(stub * 4, clearance * 3, grid * 12);
   const endpointManhattanLength = Math.abs(end.x - start.x) + Math.abs(end.y - start.y);
   const compactRoute = compactTraceRoute({
@@ -882,6 +740,8 @@ export function routePcbTrace({
     end,
     fDir,
     tDir,
+    stubFrom,
+    stubTo,
     shift,
     routeFromRect,
     routeToRect,
@@ -964,36 +824,17 @@ export function routePcbTrace({
     laneCandidates.yLanes
   );
 
-  let points = chooseBestRoute(candidates, obstacleRects, routeFromRect, routeToRect, grid, 6);
-
-  if (!points) {
-    const gridRoute = findGridLaneRoute({
-      stubFrom,
-      stubTo,
-      obstacleRects,
-      xLanes: uniqueSorted([leftLaneX, rightLaneX, ...laneCandidates.xLanes]),
-      yLanes: laneCandidates.yLanes,
-      pad: 2,
-    });
-    if (gridRoute) {
-      const candidate = simplifyCollinear([start, ...gridRoute, end]);
-      if (
-        !routeHitsBlockedArea(candidate, obstacleRects, routeFromRect, routeToRect, 2) &&
-        !hasHardGeometryIssue(candidate, grid)
-      ) {
-        points = candidate;
-      }
-    }
-  }
+  let points = chooseBestRoute(candidates, obstacleRects, routeFromRect, routeToRect, grid, 6, endpointRule);
 
   if (!points && endpointManhattanLength <= localRouteLimit) {
     points = chooseBestRoute(
-      localOrthogonalCandidates(start, end, grid, snapToGrid),
+      localEndpointCandidates(start, stubFrom, stubTo, end, grid, snapToGrid),
       obstacleRects,
       routeFromRect,
       routeToRect,
       grid,
-      2
+      2,
+      endpointRule
     );
   }
 
@@ -1014,38 +855,11 @@ export function routePcbTrace({
       end,
     ]);
     if (
+      routeSatisfiesEndpointRule(localGapRoute, endpointRule) &&
       !routeHitsBlockedArea(localGapRoute, obstacleRects, routeFromRect, routeToRect, 2) &&
       !hasHardGeometryIssue(localGapRoute, grid)
     ) {
       points = localGapRoute;
-    }
-  }
-
-  if (!points) {
-    for (let attempt = 0; attempt < 8; attempt += 1) {
-      const lanePad = clearance + laneSpread + attempt * grid * 4;
-      const minObstacleX = Math.min(...obstacleRects.map((rect) => rect.x));
-      const maxObstacleX = Math.max(...obstacleRects.map((rect) => rect.x + rect.w));
-      const minObstacleY = Math.min(...obstacleRects.map((rect) => rect.y));
-      const maxObstacleY = Math.max(...obstacleRects.map((rect) => rect.y + rect.h));
-      const rescueCandidates = [];
-      addLaneCandidates(
-        (candidate) => rescueCandidates.push(candidate),
-        start,
-        stubFrom,
-        stubTo,
-        end,
-        [
-          alignOutside(minObstacleX - lanePad, grid, -1, snapToGrid) + shift,
-          alignOutside(maxObstacleX + lanePad, grid, 1, snapToGrid) + shift,
-        ],
-        [
-          alignOutside(minObstacleY - lanePad, grid, -1, snapToGrid) + shift,
-          alignOutside(maxObstacleY + lanePad, grid, 1, snapToGrid) + shift,
-        ]
-      );
-      points = chooseBestRoute(rescueCandidates, obstacleRects, routeFromRect, routeToRect, grid, 2);
-      if (points) break;
     }
   }
 
@@ -1061,6 +875,7 @@ export function routePcbTrace({
       end,
     ]);
     if (
+      routeSatisfiesEndpointRule(bottomRoute, endpointRule) &&
       !routeHitsBlockedArea(bottomRoute, obstacleRects, routeFromRect, routeToRect, 2) &&
       !hasHardGeometryIssue(bottomRoute, grid)
     ) {
@@ -1077,45 +892,25 @@ export function routePcbTrace({
         end,
       ]);
       if (
+        routeSatisfiesEndpointRule(topRoute, endpointRule) &&
         !routeHitsBlockedArea(topRoute, obstacleRects, routeFromRect, routeToRect, 2) &&
         !hasHardGeometryIssue(topRoute, grid)
       ) {
         points = topRoute;
-      } else if (allowDirectionAlternates) {
-        const alternate = findAlternateDirectionRoute({
-          start,
-          end,
-          fromRect,
-          toRect,
-          preferredFDir,
-          preferredTDir,
-          rects,
-          connections,
-          conn,
-          grid,
-          stub,
-          clearance,
-          chamfer,
-          snapToGrid,
-          routeFromRect,
-          routeToRect,
-          obstacleRects,
-        });
-        if (alternate) return alternate;
+      } else {
         points = chooseFallbackRoute(
           [
             topRoute,
             bottomRoute,
-            ...localOrthogonalCandidates(start, end, grid, snapToGrid),
+            ...localEndpointCandidates(start, stubFrom, stubTo, end, grid, snapToGrid),
           ],
           obstacleRects,
           routeFromRect,
           routeToRect,
           grid,
-          2
+          2,
+          endpointRule
         ) || bottomRoute;
-      } else {
-        points = chooseFallbackRoute([topRoute, bottomRoute], obstacleRects, routeFromRect, routeToRect, grid, 2) || bottomRoute;
       }
     }
   }
