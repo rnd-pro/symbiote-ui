@@ -74,7 +74,7 @@ const CSS_TOKEN_CLASSIFIERS = [
   { kind: 'component-alias', group: 'syntax', pattern: /^--sn-syntax-/ },
   { kind: 'component-alias', group: 'diagnostic', pattern: /^--sn-diagnostic-/ },
   { kind: 'component-alias', group: 'loading', pattern: /^--sn-loading-/ },
-  { kind: 'component-alias', group: 'graph', pattern: /^--sn-(socket|conn|grid|shape|dot|graph-explorer|graph-type|graph-cluster|minimap)-/ },
+  { kind: 'component-alias', group: 'graph', pattern: /^--sn-(socket|conn|grid|shape|dot|graph-explorer|type|graph-type|graph-cluster|minimap)-/ },
   { kind: 'component-alias', group: 'context-menu', pattern: /^--sn-ctx-/ },
   { kind: 'component-alias', group: 'toolbar', pattern: /^--sn-toolbar-/ },
   { kind: 'component-alias', group: 'comment', pattern: /^--sn-comment-/ },
@@ -164,7 +164,7 @@ export let THEME_ELEMENT_GROUPS = [
   {
     name: 'graph',
     description: 'Graph nodes, edges, clusters, pins, sockets, and graph canvas feedback.',
-    tokens: ['--sn-node-bg', '--sn-node-border', '--sn-node-selected', '--sn-conn-color', '--sn-graph-type-data', '--sn-graph-type-action', '--sn-graph-cluster-0', '--sn-graph-cluster-1', '--sn-minimap-bg', '--sn-minimap-node', '--sn-minimap-viewport', '--sn-cat-server', '--sn-cat-control', '--sn-cat-data', '--sn-subgraph-accent'],
+    tokens: ['--sn-node-bg', '--sn-node-border', '--sn-node-selected', '--sn-conn-color', '--sn-type-data', '--sn-type-action', '--sn-graph-type-data', '--sn-graph-type-action', '--sn-graph-cluster-0', '--sn-graph-cluster-1', '--sn-minimap-bg', '--sn-minimap-node', '--sn-minimap-viewport', '--sn-cat-server', '--sn-cat-control', '--sn-cat-data', '--sn-subgraph-accent'],
     usedBy: ['node-canvas', 'canvas-graph', 'graph-explorer-shell', 'node-minimap'],
   },
   {
@@ -1833,6 +1833,82 @@ export let THEME_TOKENS = {
       "typeDefault": {
         "$type": "color",
         "$value": "var(--sn-node-category-accent)"
+      },
+      "typeAction": {
+        "$type": "color",
+        "$value": "hsl(var(--sn-hue-danger) var(--sn-sat-vivid) 78%)"
+      },
+      "typeOutput": {
+        "$type": "color",
+        "$value": "hsl(var(--sn-hue-success) var(--sn-sat-vivid) 65%)"
+      },
+      "typeData": {
+        "$type": "color",
+        "$value": "hsl(var(--sn-hue-accent) var(--sn-sat-vivid) 74%)"
+      },
+      "typeConfig": {
+        "$type": "color",
+        "$value": "hsl(var(--sn-hue-warning) var(--sn-sat-vivid) 68%)"
+      },
+      "typeExternal": {
+        "$type": "color",
+        "$value": "hsl(var(--sn-hue-data) var(--sn-sat-vivid) 76%)"
+      },
+      "typeStyle": {
+        "$type": "color",
+        "$value": "hsl(calc(var(--sn-hue-danger) + 315) var(--sn-sat-vivid) 78%)"
+      },
+      "typeDocs": {
+        "$type": "color",
+        "$value": "hsl(var(--sn-hue-base) var(--sn-sat-muted) 81%)"
+      },
+      "typeAsset": {
+        "$type": "color",
+        "$value": "hsl(calc(var(--sn-hue-accent) - 40) var(--sn-sat-vivid) 74%)"
+      },
+      "typeGroup": {
+        "$type": "color",
+        "$value": "hsl(calc(var(--sn-hue-warning) + 8) var(--sn-sat-vivid) 67%)"
+      },
+      "typeDirectory": {
+        "$type": "color",
+        "$value": "var(--sn-cat-directory)"
+      },
+      "typeFile": {
+        "$type": "color",
+        "$value": "var(--sn-cat-file)"
+      },
+      "typeFunction": {
+        "$type": "color",
+        "$value": "var(--sn-cat-function)"
+      },
+      "typeClass": {
+        "$type": "color",
+        "$value": "var(--sn-cat-class)"
+      },
+      "typeModule": {
+        "$type": "color",
+        "$value": "var(--sn-cat-module)"
+      },
+      "typeControl": {
+        "$type": "color",
+        "$value": "var(--sn-cat-control)"
+      },
+      "typeControls": {
+        "$type": "color",
+        "$value": "var(--sn-cat-control)"
+      },
+      "typeSource": {
+        "$type": "color",
+        "$value": "var(--sn-cat-server)"
+      },
+      "typeCanvas": {
+        "$type": "color",
+        "$value": "var(--sn-cat-module)"
+      },
+      "typeLayout": {
+        "$type": "color",
+        "$value": "var(--sn-cat-data)"
       },
       "typeProfile": {
         "$type": "color",

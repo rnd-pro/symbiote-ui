@@ -4,6 +4,7 @@ import { test } from 'node:test';
 
 const scrollbarSource = new URL('../themes/scrollbar-styles.js', import.meta.url);
 const cascadeThemeSource = new URL('../themes/cascade-theme.js', import.meta.url);
+const defaultProviderThemeSource = new URL('../themes/default-provider.js', import.meta.url);
 const cascadeThemeEditorSource = new URL('../themes/CascadeThemeEditor/CascadeThemeEditor.js', import.meta.url);
 const cascadeDemoSource = new URL('../demo/cascade-theme-lab.js', import.meta.url);
 const cascadeDemoHtml = new URL('../demo/cascade-theme-lab.html', import.meta.url);
@@ -65,6 +66,8 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   assert.match(source, /--sn-shape-stroke/);
   assert.match(source, /--sn-shape-stroke-width/);
   assert.match(source, /--sn-node-label-size/);
+  assert.match(source, /--sn-type-source/);
+  assert.match(source, /--sn-type-action/);
   assert.match(source, /--sn-cat-control/);
   assert.match(source, /--sn-cat-data/);
   assert.match(source, /--sn-tab-accent-1/);
@@ -156,10 +159,18 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.equal(theme.tokens['--sn-hue-danger'], '4');
   assert.equal(theme.tokens['--sn-cat-control'], 'hsl(36 89% 58%)');
   assert.equal(theme.tokens['--sn-cat-data'], 'hsl(188 89% 42.0%)');
-  assert.equal(theme.tokens['--sn-graph-type-action'], 'hsl(4 89% 78.0%)');
+  assert.equal(theme.tokens['--sn-type-action'], 'hsl(4 89% 78.0%)');
+  assert.equal(theme.tokens['--sn-type-data'], 'hsl(218 89% 74.0%)');
+  assert.equal(theme.tokens['--sn-type-source'], 'var(--sn-cat-server)');
+  assert.equal(theme.tokens['--sn-type-canvas'], 'var(--sn-cat-module)');
+  assert.equal(theme.tokens['--sn-type-layout'], 'var(--sn-cat-data)');
+  assert.equal(theme.tokens['--sn-type-controls'], 'var(--sn-cat-control)');
+  assert.equal(theme.tokens['--sn-graph-type-action'], 'var(--sn-type-action)');
+  assert.equal(theme.tokens['--sn-graph-type-data'], 'var(--sn-type-data)');
   assert.equal(theme.tokens['--sn-tab-accent-0'], 'var(--sn-cat-server)');
   assert.equal(theme.tokens['--sn-tab-accent-1'], 'var(--sn-cat-data)');
   assert.equal(theme.tokens['--sn-tab-accent-2'], 'var(--sn-cat-control)');
+  assert.equal(theme.tokens['--sn-tab-accent-4'], 'var(--sn-type-action)');
   assert.equal(theme.tokens['--sn-button-primary-bg'], 'var(--sn-node-selected)');
   assert.equal(theme.tokens['--sn-button-primary-color'], 'hsl(0 0% 8.0%)');
   assert.equal(theme.tokens['--sn-button-success-color'], 'hsl(0 0% 8.0%)');
@@ -209,6 +220,25 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.match(source, /--sn-control-input-size/);
   assert.match(source, /--sn-panel-menu-icon-size/);
   assert.match(source, /--sn-shape-icon-size/);
+});
+
+test('node type color tokens are canonical across themes and graph aliases', async () => {
+  const [cascadeSource, defaultProviderTheme] = await Promise.all([
+    readFile(cascadeThemeSource, 'utf8'),
+    import(defaultProviderThemeSource.href),
+  ]);
+  const themeModule = await import(cascadeThemeSource.href);
+  const theme = themeModule.createCascadeTheme();
+
+  assert.match(cascadeSource, /'--sn-type-action': typeAction/);
+  assert.match(cascadeSource, /'--sn-graph-type-action': 'var\(--sn-type-action\)'/);
+  assert.match(cascadeSource, /'--sn-type-source': 'var\(--sn-cat-server\)'/);
+  assert.equal(theme.tokens['--sn-type-output'].startsWith('hsl('), true);
+  assert.equal(theme.tokens['--sn-type-config'].startsWith('hsl('), true);
+  assert.equal(theme.tokens['--sn-graph-type-output'], 'var(--sn-type-output)');
+  assert.equal(defaultProviderTheme.DEFAULT_PROVIDER_THEME.tokens['--sn-graph-type-action'], 'var(--sn-type-action)');
+  assert.equal(defaultProviderTheme.DEFAULT_PROVIDER_THEME.tokens['--sn-type-action'], 'hsl(var(--sn-hue-danger) var(--sn-sat-vivid) 78%)');
+  assert.equal(defaultProviderTheme.DEFAULT_PROVIDER_THEME.tokens['--sn-type-source'], 'var(--sn-cat-server)');
 });
 
 test('svg shape nodes keep visual icons without internal labels or watermarks', async () => {
