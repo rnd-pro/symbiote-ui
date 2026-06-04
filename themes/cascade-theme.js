@@ -186,6 +186,12 @@ function densityToken(px) {
   return `calc(${px}px * var(--sn-theme-density))`;
 }
 
+function svgStrokeToken(px, outlineStrength) {
+  let defaultOutlineStrength = CASCADE_THEME_DEFAULTS.outline / 100;
+  let scale = defaultOutlineStrength <= 0 ? outlineStrength : outlineStrength / defaultOutlineStrength;
+  return (px * scale).toFixed(2);
+}
+
 export function getCascadeThemeControls() {
   return CASCADE_THEME_CONTROL_LIST.map((control) => ({ ...control }));
 }
@@ -251,7 +257,8 @@ export function createCascadeTheme(options = {}) {
   let softOutlineColor = `hsl(0 0% ${text.toFixed(1)}% / ${(outlineAlpha * 0.55).toFixed(3)})`;
   let nodeBorderWidth = `${(1 + outlineStrength).toFixed(2)}px`;
   let focusRingWidth = `${(1 + outlineStrength * 2).toFixed(1)}px`;
-  let shapeStrokeWidth = (0.4 + outlineStrength * 1.2).toFixed(2);
+  let shapeStrokeWidth = svgStrokeToken(0.4, outlineStrength);
+  let shapePortHintStrokeWidth = svgStrokeToken(0.5, outlineStrength);
   let connectionWidth = (1.5 + outlineStrength * 0.8).toFixed(2);
   let connectionHoverWidth = (2.4 + outlineStrength * 1.2).toFixed(2);
 
@@ -297,7 +304,7 @@ export function createCascadeTheme(options = {}) {
     '--sn-shape-fill': 'var(--sn-node-bg)',
     '--sn-shape-stroke': outlineColor,
     '--sn-shape-stroke-width': shapeStrokeWidth,
-    '--sn-shape-port-hint-stroke-width': (0.5 + outlineStrength * 1.6).toFixed(2),
+    '--sn-shape-port-hint-stroke-width': shapePortHintStrokeWidth,
     '--sn-conn-width': connectionWidth,
     '--sn-conn-hover-width': connectionHoverWidth,
     '--sn-conn-selected-width': connectionHoverWidth,

@@ -77,6 +77,8 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
     type: 100,
     density: 100,
   });
+  const noOutlineTheme = themeModule.createCascadeTheme({ outline: 0 });
+  const fullOutlineTheme = themeModule.createCascadeTheme({ outline: 100 });
 
   assert.equal(theme.name, 'cascade-theme');
   assert.equal(theme.state.mode, 'dark');
@@ -87,10 +89,16 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.equal(theme.tokens['--sn-text'], 'hsl(0 0% 94.0%)');
   assert.equal(theme.tokens['--sn-node-bg'], 'var(--sn-panel-bg)');
   assert.equal(theme.tokens['--sn-field-control-bg'], 'var(--sn-bg)');
-  assert.equal(theme.tokens['--sn-shape-stroke-width'], '0.86');
+  assert.equal(theme.tokens['--sn-shape-stroke-width'], '0.40');
+  assert.equal(theme.tokens['--sn-shape-port-hint-stroke-width'], '0.50');
+  assert.equal(noOutlineTheme.tokens['--sn-shape-stroke-width'], '0.00');
+  assert.equal(noOutlineTheme.tokens['--sn-shape-port-hint-stroke-width'], '0.00');
+  assert.equal(fullOutlineTheme.tokens['--sn-shape-stroke-width'], '1.05');
+  assert.equal(fullOutlineTheme.tokens['--sn-shape-port-hint-stroke-width'], '1.32');
   assert.equal(theme.tokens['--sn-node-label-size'], 'calc(13px * var(--sn-theme-type-scale))');
   assert.equal(theme.tokens['--sn-action-zone-size'], 'calc(16px * var(--sn-theme-density))');
   assert.match(source, /CASCADE_THEME_DESCRIPTOR/);
+  assert.match(source, /svgStrokeToken/);
   assert.match(source, /symbiote-ui\.createCascadeTheme/);
   assert.match(source, /theme:compose/);
   assert.match(source, /--sn-shape-stroke/);
