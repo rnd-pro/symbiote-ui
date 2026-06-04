@@ -23,6 +23,9 @@ const actionZoneStyles = new URL('../layout/ActionZone/ActionZone.css.js', impor
 const treeViewStyles = new URL('../tree/TreeView/TreeView.css.js', import.meta.url);
 const codeBlockStyles = new URL('../display/CodeBlock/CodeBlock.css.js', import.meta.url);
 const chatMessageItemStyles = new URL('../chat/ChatMessageItem/ChatMessageItem.css.js', import.meta.url);
+const chatTranscriptStyles = new URL('../chat/ChatTranscript/ChatTranscript.css.js', import.meta.url);
+const chatComposerStyles = new URL('../chat/ChatComposer/ChatComposer.css.js', import.meta.url);
+const cellBgStyles = new URL('../effects/CellBg/CellBg.css.js', import.meta.url);
 const uiIndexSource = new URL('../ui/index.js', import.meta.url);
 const componentRegistrySource = new URL('../manifest/component-registry.js', import.meta.url);
 const customElementsSource = new URL('../custom-elements.json', import.meta.url);
@@ -49,6 +52,7 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   assert.match(source, /'storage-key': 'symbiote-ui:cascade-theme-lab'/);
   assert.match(source, /class CascadeGraphPanel extends Symbiote/);
   assert.match(source, /class CascadeUiPanel extends Symbiote/);
+  assert.match(source, /class CascadeChatPanel extends Symbiote/);
   assert.match(source, /applyTheme\(document\.documentElement, DEFAULT_PROVIDER_THEME\)/);
   assert.match(source, /--sn-theme-outline-strength/);
   assert.match(source, /--sn-theme-type-scale/);
@@ -61,10 +65,20 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   assert.match(source, /--sn-tab-accent-1/);
   assert.match(source, /--sn-markdown-h1-size/);
   assert.match(source, /--sn-chat-markdown-h1-size/);
+  assert.match(source, /--sn-chat-user-message-bg/);
+  assert.match(source, /--sn-composer-bg/);
+  assert.match(source, /--sn-syntax-keyword/);
+  assert.match(source, /--sn-cell-dot/);
   assert.match(source, /--sn-node-icon-size/);
   assert.match(source, /--sn-port-label-size/);
   assert.match(source, /--sn-layout-header-icon-size/);
   assert.match(source, /--sn-action-zone-size/);
+  assert.match(source, /'chat-transcript'/);
+  assert.match(source, /'chat-composer'/);
+  assert.match(source, /'cell-bg'/);
+  assert.match(source, /component: 'cascade-chat-panel'/);
+  assert.match(source, /setMessageItems\(/);
+  assert.match(source, /setContent\(/);
   assert.match(html, /layout module/);
   assert.doesNotMatch(source, /extends HTMLElement/);
   assert.doesNotMatch(source, /\.setTheme\(/);
@@ -104,6 +118,9 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.equal(theme.tokens['--sn-text'], 'hsl(0 0% 94.0%)');
   assert.equal(theme.tokens['--sn-node-bg'], 'var(--sn-panel-bg)');
   assert.equal(theme.tokens['--sn-field-control-bg'], 'var(--sn-bg)');
+  assert.equal(theme.tokens['--sn-chat-user-message-bg'], 'color-mix(in srgb, var(--sn-panel-bg) 88%, var(--sn-node-selected) 12%)');
+  assert.equal(theme.tokens['--sn-composer-bg'], 'color-mix(in srgb, var(--sn-panel-bg) 90%, var(--sn-text) 4%)');
+  assert.equal(theme.tokens['--sn-cell-dot'], 'hsl(0 0% 60.0%)');
   assert.equal(theme.tokens['--sn-hue-accent'], '218');
   assert.equal(theme.tokens['--sn-hue-warning'], '36');
   assert.equal(theme.tokens['--sn-hue-data'], '188');
@@ -127,6 +144,7 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.equal(theme.tokens['--sn-node-label-size'], 'calc(13px * var(--sn-theme-type-scale) * var(--sn-theme-heading-scale))');
   assert.equal(theme.tokens['--sn-markdown-h1-size'], 'calc(24px * var(--sn-theme-type-scale) * var(--sn-theme-heading-scale))');
   assert.equal(theme.tokens['--sn-chat-markdown-h2-size'], 'calc(18px * var(--sn-theme-type-scale) * var(--sn-theme-heading-scale))');
+  assert.equal(theme.tokens['--sn-composer-send-size'], 'calc(32px * var(--sn-theme-density))');
   assert.equal(theme.tokens['--sn-action-zone-size'], 'calc(16px * var(--sn-theme-density))');
   assert.match(source, /CASCADE_THEME_DESCRIPTOR/);
   assert.match(source, /svgStrokeToken/);
@@ -139,6 +157,10 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.match(source, /--sn-bg/);
   assert.match(source, /--sn-text-dim/);
   assert.match(source, /--sn-field-control-bg/);
+  assert.match(source, /--sn-chat-user-message-bg/);
+  assert.match(source, /--sn-composer-bg/);
+  assert.match(source, /--sn-syntax-keyword/);
+  assert.match(source, /--sn-cell-dot/);
   assert.match(source, /--sn-layout-header-icon-size/);
   assert.match(source, /--sn-node-summary-size/);
   assert.match(source, /--sn-node-pill-body-padding/);
@@ -255,6 +277,9 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
     treeView,
     codeBlock,
     chatMessage,
+    chatTranscript,
+    chatComposer,
+    cellBg,
   ] = await Promise.all([
     readFile(graphNodeStyles, 'utf8'),
     readFile(portItemStyles, 'utf8'),
@@ -270,6 +295,9 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
     readFile(treeViewStyles, 'utf8'),
     readFile(codeBlockStyles, 'utf8'),
     readFile(chatMessageItemStyles, 'utf8'),
+    readFile(chatTranscriptStyles, 'utf8'),
+    readFile(chatComposerStyles, 'utf8'),
+    readFile(cellBgStyles, 'utf8'),
   ]);
 
   assert.match(graphNode, /--sn-node-label-size/);
@@ -301,6 +329,15 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(codeBlock, /--sn-markdown-h4-size/);
   assert.match(chatMessage, /--sn-chat-markdown-h1-size/);
   assert.match(chatMessage, /--sn-chat-markdown-h4-size/);
+  assert.match(chatMessage, /--sn-chat-user-message-bg/);
+  assert.match(chatMessage, /--sn-chat-agent-message-bg/);
+  assert.match(chatMessage, /--sn-syntax-keyword/);
+  assert.match(chatTranscript, /--sn-chat-bg/);
+  assert.match(chatTranscript, /--sn-chat-transcript-padding/);
+  assert.match(chatComposer, /--sn-composer-bg/);
+  assert.match(chatComposer, /--sn-composer-send-size/);
+  assert.match(cellBg, /--sn-cell-bg/);
+  assert.match(cellBg, /--sn-cell-glare/);
 });
 
 test('cascade theme lab declares browser import map for bare package imports', async () => {
