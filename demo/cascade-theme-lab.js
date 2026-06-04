@@ -11,11 +11,12 @@ import {
   applyTheme,
   configureMaterialSymbols,
   defineModule,
-} from '../ui/index.js';
+} from '../ui/index.js?v=layout-shell-menu';
 
 configureMaterialSymbols();
 
 for (const tagName of [
+  'layout-shell-menu',
   'panel-layout',
   'project-tabs',
   'node-canvas',
@@ -34,6 +35,7 @@ for (const tagName of [
 }
 
 await Promise.all([
+  customElements.whenDefined('layout-shell-menu'),
   customElements.whenDefined('panel-layout'),
   customElements.whenDefined('layout-node'),
   customElements.whenDefined('project-tabs'),
@@ -422,9 +424,8 @@ CascadeChatPanel.rootStyles = `
 
 CascadeChatPanel.reg('cascade-chat-panel');
 
+const shellMenu = document.querySelector('layout-shell-menu');
 const layout = document.querySelector('.lab-layout');
-const layoutTabs = document.querySelector('.lab-layout-tabs');
-const mainMenu = document.querySelector('.lab-main-menu');
 layout.setLayoutBehavior({
   minInlineSize: 240,
   minBlockSize: 180,
@@ -596,11 +597,14 @@ function getActiveLayoutGroup() {
 }
 
 function setMainMenuActive() {
-  mainMenu?.querySelectorAll('[data-layout-group]').forEach((button) => {
-    button.toggleAttribute('active', button.dataset.layoutGroup === activeLayoutGroupId);
-  });
-  mainMenu?.querySelector('[data-layout-command="scroll"]')
+  shellMenu?.querySelector('[data-layout-command="scroll"]')
     ?.toggleAttribute('active', scrollFallback);
+}
+
+function setShellTabs() {
+  let tabGroups = layoutGroups.filter((group) => group.id !== 'overview');
+  let activeTabId = activeLayoutGroupId === 'overview' ? null : activeLayoutGroupId;
+  shellMenu?.setTabs(tabGroups, activeTabId);
 }
 
 function applyLayoutGroup(id = activeLayoutGroupId) {
@@ -613,20 +617,15 @@ function applyLayoutGroup(id = activeLayoutGroupId) {
     overflow: scrollFallback ? 'scroll-inline' : group.behavior.overflow,
   });
   layout.setLayout(group.createLayout());
-  layoutTabs.setTabs(layoutGroups, activeLayoutGroupId);
+  setShellTabs();
   setMainMenuActive();
 }
 
-layoutTabs.setTabs(layoutGroups, activeLayoutGroupId);
-layoutTabs.addEventListener('project-tabs-home', () => applyLayoutGroup('overview'));
-layoutTabs.addEventListener('project-tabs-add', () => applyLayoutGroup('responsive'));
-layoutTabs.addEventListener('project-tabs-select', (event) => applyLayoutGroup(event.detail?.id));
-mainMenu?.addEventListener('click', (event) => {
-  let groupButton = event.target.closest('[data-layout-group]');
-  if (groupButton) {
-    applyLayoutGroup(groupButton.dataset.layoutGroup);
-    return;
-  }
+setShellTabs();
+shellMenu?.addEventListener('project-tabs-home', () => applyLayoutGroup('overview'));
+shellMenu?.addEventListener('project-tabs-add', () => applyLayoutGroup('responsive'));
+shellMenu?.addEventListener('project-tabs-select', (event) => applyLayoutGroup(event.detail?.id));
+shellMenu?.addEventListener('click', (event) => {
   let commandButton = event.target.closest('[data-layout-command]');
   if (!commandButton) return;
   if (commandButton.dataset.layoutCommand === 'reset') {

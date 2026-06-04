@@ -167,6 +167,7 @@ export let NodeSearch;
 export let Layout;
 export let LayoutNode;
 export let LayoutSidebar;
+export let LayoutShellMenu;
 export let CrossLayoutPortalBridge;
 export let ProjectTabs;
 export let CodeBlock;
@@ -450,6 +451,7 @@ if (hasDOMGlobals) {
     layout,
     layoutNode,
     layoutSidebar,
+    layoutShellMenu,
     crossLayoutPortalBridge,
     projectTabs,
     codeBlock,
@@ -503,6 +505,7 @@ if (hasDOMGlobals) {
     import('../layout/Layout/Layout.js'),
     import('../layout/LayoutNode/LayoutNode.js'),
     import('../layout/LayoutSidebar/LayoutSidebar.js'),
+    import('../layout/LayoutShellMenu/LayoutShellMenu.js'),
     import('../layout/CrossLayoutPortalBridge/CrossLayoutPortalBridge.js'),
     import('../layout/ProjectTabs/ProjectTabs.js'),
     import('../display/CodeBlock/CodeBlock.js'),
@@ -557,6 +560,7 @@ if (hasDOMGlobals) {
   ({ Layout } = layout);
   ({ LayoutNode } = layoutNode);
   ({ LayoutSidebar } = layoutSidebar);
+  ({ LayoutShellMenu } = layoutShellMenu);
   ({ CrossLayoutPortalBridge } = crossLayoutPortalBridge);
   ({ ProjectTabs } = projectTabs);
   ({ CodeBlock } = codeBlock);
@@ -621,6 +625,7 @@ if (hasDOMGlobals) {
     Layout,
     LayoutNode,
     LayoutSidebar,
+    LayoutShellMenu,
     CrossLayoutPortalBridge,
     ProjectTabs,
     CodeBlock,

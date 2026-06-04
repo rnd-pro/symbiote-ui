@@ -1613,6 +1613,148 @@
       ]
     },
     {
+      "path": "layout/LayoutShellMenu/LayoutShellMenu.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "customElement": true,
+          "name": "LayoutShellMenu",
+          "tagName": "layout-shell-menu",
+          "description": "Global application shell menu that binds topbar context, layout group tabs, and workspace content.",
+          "attributes": [
+            {
+              "name": "title",
+              "type": "string",
+              "description": "Shell title rendered in the topbar."
+            },
+            {
+              "name": "title-icon",
+              "type": "string",
+              "description": "Material Symbols icon rendered next to the title."
+            },
+            {
+              "name": "project-path",
+              "type": "string",
+              "description": "Current project, workspace, or layout path label rendered in the topbar center."
+            },
+            {
+              "name": "path-label",
+              "type": "string",
+              "description": "Alias for project-path."
+            },
+            {
+              "name": "path-icon",
+              "type": "string",
+              "description": "Material Symbols icon rendered next to the path label."
+            }
+          ],
+          "members": [
+            {
+              "kind": "field",
+              "name": "tabs",
+              "type": {
+                "text": "array"
+              },
+              "description": "Layout group tab descriptors forwarded to the embedded project-tabs component."
+            },
+            {
+              "kind": "field",
+              "name": "activeId",
+              "type": {
+                "text": "string"
+              },
+              "description": "Active layout group tab id. Null leaves the Home tab active."
+            },
+            {
+              "kind": "method",
+              "name": "setTabs",
+              "type": {
+                "text": "function"
+              },
+              "description": "Replaces layout group tab data and active group id."
+            }
+          ],
+          "slots": [
+            {
+              "name": "default",
+              "description": "Workspace content, typically panel-layout or a shell workspace container."
+            },
+            {
+              "name": "actions",
+              "description": "Topbar action controls such as reset, overflow fallback, or host commands."
+            }
+          ],
+          "events": [
+            {
+              "name": "project-tabs-home",
+              "description": "Bubbles from embedded project-tabs when the Home layout group is selected."
+            },
+            {
+              "name": "project-tabs-add",
+              "description": "Bubbles from embedded project-tabs when a host wants to open or create a layout group."
+            },
+            {
+              "name": "project-tabs-select",
+              "description": "Bubbles from embedded project-tabs when a layout group tab is selected.",
+              "type": {
+                "text": "CustomEvent"
+              }
+            },
+            {
+              "name": "project-tabs-close",
+              "description": "Bubbles from embedded project-tabs when a tab close is requested.",
+              "type": {
+                "text": "CustomEvent"
+              }
+            }
+          ],
+          "cssProperties": [
+            {
+              "name": "--sn-bg",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-bg",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-border",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-hover",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-selected",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-tabs-height",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-tabs-bg",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-tabs-active-bg",
+              "description": "Theme CSS custom property consumed by this component."
+            }
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "kind": "custom-element-definition",
+          "name": "layout-shell-menu",
+          "declaration": {
+            "name": "LayoutShellMenu"
+          }
+        }
+      ]
+    },
+    {
       "path": "layout/ProjectTabs/ProjectTabs.js",
       "declarations": [
         {

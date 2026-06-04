@@ -25,11 +25,16 @@ test('discover exposes the standalone package contract', async () => {
   assert.equal(entrypoints.get('symbiote-ui/webmcp')?.kind, 'ssr-entry-safe');
   let component = data.manifest.components.find((item) => item.tagName === 'cascade-theme-editor');
   let agentCatalogItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'cascade-theme-editor');
+  let shellMenu = data.manifest.components.find((item) => item.tagName === 'layout-shell-menu');
+  let shellMenuAgentItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'layout-shell-menu');
   assert.ok(component.componentDescription.includes('cascade theme editor'));
   assert.equal(component.agent.webmcp.mode, 'explicit-descriptor');
   assert.ok(component.agent.webmcp.references.includes('https://rnd-pro.com/pulse/symbiote-webmcp-support/'));
   assert.ok(agentCatalogItem.componentDescription.includes('WebMCP tools: cascade_theme_editor_apply'));
   assert.equal(agentCatalogItem.webmcp.toolNames[0], 'cascade_theme_editor_apply');
+  assert.ok(shellMenu.componentDescription.includes('layout group tabs'));
+  assert.equal(shellMenu.agent.webmcp.mode, 'explicit-descriptor');
+  assert.equal(shellMenuAgentItem.webmcp.toolNames[0], 'layout_shell_menu_select');
   assert.ok(data.manifest.themeRuntimeDescriptors.some((descriptor) => (
     descriptor.name === 'cascade-theme'
     && descriptor.webmcp?.name === 'symbiote-ui.createCascadeTheme'
