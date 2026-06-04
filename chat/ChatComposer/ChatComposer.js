@@ -41,6 +41,28 @@ export class ChatComposer extends Symbiote {
       emit(this, 'chat-composer-send');
     },
 
+    onVoiceInput: () => {
+      emit(this, 'chat-composer-voice-input');
+    },
+
+    onWakeListen: () => {
+      emit(this, 'chat-composer-wake-listen');
+    },
+
+    onVoiceResponse: () => {
+      emit(this, 'chat-composer-voice-response-toggle');
+    },
+
+    onVoiceCommand: () => {
+      emit(this, 'chat-composer-voice-command-toggle');
+    },
+
+    onVoiceLanguageClick: (event) => {
+      let option = event.target?.closest?.('[data-voice-language]');
+      if (!option) return;
+      emit(this, 'chat-composer-voice-language-change', { mode: option.dataset.voiceLanguage });
+    },
+
     onVoiceApprove: () => {
       emit(this, 'chat-composer-voice-approve');
     },
@@ -101,6 +123,7 @@ export class ChatComposer extends Symbiote {
     queueMicrotask(() => {
       this._syncSendingState();
       this._syncDisabledState();
+      this._syncVoiceControls();
     });
   }
 
@@ -122,6 +145,16 @@ export class ChatComposer extends Symbiote {
 
   getVoicePreviewBody() {
     return this.ref.voicePreviewBody || null;
+  }
+
+  getVoiceControlElements() {
+    return {
+      input: this.ref.voiceInputBtn || null,
+      wakeListen: this.ref.wakeListenBtn || null,
+      response: this.ref.voiceResponseBtn || null,
+      command: this.ref.voiceCommandBtn || null,
+      language: this.ref.voiceLanguageBtn || null,
+    };
   }
 
   setValue(value) {
@@ -146,6 +179,38 @@ export class ChatComposer extends Symbiote {
 
   setSending(active) {
     this.$.isSending = Boolean(active);
+  }
+
+  setVoiceControls(config = {}) {
+    let current = this._voiceControls || {};
+    this._voiceControls = {
+      input: { ...(current.input || {}), ...(config.input || {}) },
+      wakeListen: { ...(current.wakeListen || {}), ...(config.wakeListen || {}) },
+      response: { ...(current.response || {}), ...(config.response || {}) },
+      command: { ...(current.command || {}), ...(config.command || {}) },
+      language: { ...(current.language || {}), ...(config.language || {}) },
+    };
+    this._syncVoiceControls();
+  }
+
+  setVoiceInputState(state = 'idle', options = {}) {
+    this.setVoiceControls({ input: { ...(this._voiceControls?.input || {}), ...options, state } });
+  }
+
+  setWakeListenState(options = {}) {
+    this.setVoiceControls({ wakeListen: { ...(this._voiceControls?.wakeListen || {}), ...options } });
+  }
+
+  setVoiceResponseState(options = {}) {
+    this.setVoiceControls({ response: { ...(this._voiceControls?.response || {}), ...options } });
+  }
+
+  setVoiceCommandState(options = {}) {
+    this.setVoiceControls({ command: { ...(this._voiceControls?.command || {}), ...options } });
+  }
+
+  setVoiceLanguageState(options = {}) {
+    this.setVoiceControls({ language: { ...(this._voiceControls?.language || {}), ...options } });
   }
 
   setVoicePreview({ mode = 'recording', text = '', status = '', elapsed = false, editable = false, commandHints = [] } = {}) {
@@ -233,6 +298,80 @@ export class ChatComposer extends Symbiote {
     let input = this.getInputElement();
     if (input) input.disabled = Boolean(this.$.disabled);
     if (this.ref.btnSend) this.ref.btnSend.disabled = Boolean(this.$.disabled);
+    for (let btn of Object.values(this.getVoiceControlElements())) {
+      if (btn) btn.disabled = Boolean(this.$.disabled);
+    }
+    if (this.ref.voiceResponseBtn && this._voiceControls?.response?.enabled === false) {
+      this.ref.voiceResponseBtn.disabled = true;
+    }
+  }
+
+  _syncVoiceControls() {
+    this._syncVoiceInput(this._voiceControls?.input || {});
+    this._syncWakeListen(this._voiceControls?.wakeListen || {});
+    this._syncVoiceResponse(this._voiceControls?.response || {});
+    this._syncVoiceCommand(this._voiceControls?.command || {});
+    this._syncVoiceLanguage(this._voiceControls?.language || {});
+    this._syncDisabledState();
+  }
+
+  _syncVoiceInput({ visible = false, state = 'idle' } = {}) {
+    let btn = this.ref.voiceInputBtn;
+    let icon = this.ref.voiceInputIcon;
+    if (!btn) return;
+    btn.hidden = !visible;
+    btn.classList.toggle('recording', state === 'recording');
+    btn.classList.toggle('processing', state === 'processing');
+    if (icon) icon.textContent = state === 'processing' ? 'hourglass_top' : state === 'recording' ? 'stop_circle' : 'mic';
+  }
+
+  _syncWakeListen({ visible = false, active = false, commandText = '' } = {}) {
+    let btn = this.ref.wakeListenBtn;
+    let text = this.ref.wakeCommandText;
+    if (!btn) return;
+    btn.hidden = !visible;
+    btn.classList.toggle('listening', Boolean(active));
+    btn.classList.toggle('has-command', Boolean(commandText));
+    if (text) text.textContent = commandText || '';
+  }
+
+  _syncVoiceResponse({ visible = false, enabled = true, speaking = false } = {}) {
+    let btn = this.ref.voiceResponseBtn;
+    if (!btn) return;
+    btn.hidden = !visible;
+    btn.disabled = Boolean(this.$.disabled) || !enabled;
+    btn.classList.toggle('enabled', Boolean(enabled));
+    btn.classList.toggle('speaking', Boolean(speaking));
+  }
+
+  _syncVoiceCommand({ visible = false, active = false, text = '' } = {}) {
+    let btn = this.ref.voiceCommandBtn;
+    let label = this.ref.voiceCommandText;
+    if (!btn) return;
+    btn.hidden = !visible;
+    btn.classList.toggle('active', Boolean(active));
+    if (label) label.textContent = text || '';
+  }
+
+  _syncVoiceLanguage({ visible = false, mode = 'auto', options } = {}) {
+    let btn = this.ref.voiceLanguageBtn;
+    if (!btn) return;
+    btn.hidden = !visible;
+    let normalized = Array.isArray(options) && options.length
+      ? options
+      : [
+        { mode: 'auto', label: 'auto' },
+        { mode: 'ru', label: 'RU' },
+        { mode: 'en', label: 'EN' },
+      ];
+    btn.replaceChildren(...normalized.map((option) => {
+      let item = document.createElement('span');
+      item.className = 'voice-language-option';
+      item.dataset.voiceLanguage = option.mode;
+      item.textContent = option.label || option.mode;
+      item.classList.toggle('active', option.mode === mode);
+      return item;
+    }));
   }
 }
 
@@ -269,6 +408,21 @@ ChatComposer.template = html`
     <textarea ref="chatInput" rows="1"
       ${{ value: 'value', disabled: 'disabled', placeholder: 'placeholder',
           oninput: 'onInput', onkeydown: 'onKeyDown' }}></textarea>
+    <button class="btn-mic" ref="voiceInputBtn" type="button" title="Voice input" hidden ${{ onclick: 'onVoiceInput' }}>
+      <span class="material-symbols-outlined" ref="voiceInputIcon">mic</span>
+    </button>
+    <button class="btn-wake-listen" ref="wakeListenBtn" type="button" title="Wake listening" hidden ${{ onclick: 'onWakeListen' }}>
+      <span class="material-symbols-outlined">hearing</span>
+      <span class="wake-command-text" ref="wakeCommandText"></span>
+    </button>
+    <button class="btn-voice-response" ref="voiceResponseBtn" type="button" title="Voice response" hidden ${{ onclick: 'onVoiceResponse' }}>
+      <span class="material-symbols-outlined">record_voice_over</span>
+    </button>
+    <button class="btn-voice-command" ref="voiceCommandBtn" type="button" title="Voice command mode" hidden ${{ onclick: 'onVoiceCommand' }}>
+      <span class="material-symbols-outlined">keyboard_voice</span>
+      <span class="voice-command-button-text" ref="voiceCommandText"></span>
+    </button>
+    <button class="btn-voice-language" ref="voiceLanguageBtn" type="button" title="Voice language" hidden ${{ onclick: 'onVoiceLanguageClick' }}></button>
     <sn-button class="btn-send" ref="btnSend" variant="icon" ${{ onclick: 'onSend' }}>
       <span class="material-symbols-outlined" ref="sendIcon">arrow_upward</span>
     </sn-button>

@@ -310,6 +310,21 @@ class CascadeChatPanel extends Symbiote {
       { key: 'theme', name: 'cascade-theme', title: 'Cascade theme contract', icon: 'palette' },
       { key: 'chat', name: 'chat-surface', title: 'Chat components', icon: 'forum' },
     ]);
+    this.ref.composer.setVoiceControls({
+      input: { visible: true, state: 'idle' },
+      wakeListen: { visible: true, active: true, commandText: 'OK Agent' },
+      response: { visible: true, enabled: true, speaking: false },
+      command: { visible: true, active: true, text: 'voice command' },
+      language: {
+        visible: true,
+        mode: 'ru',
+        options: [
+          { mode: 'auto', label: 'auto' },
+          { mode: 'ru', label: 'RU' },
+          { mode: 'en', label: 'EN' },
+        ],
+      },
+    });
     this.ref.composer.setFooterHtml(`
       <button class="composer-footer-btn composer-priority-1" type="button">
         <span class="material-symbols-outlined">palette</span><span class="composer-footer-label">theme</span>

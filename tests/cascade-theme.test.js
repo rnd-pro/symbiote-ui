@@ -24,6 +24,7 @@ const treeViewStyles = new URL('../tree/TreeView/TreeView.css.js', import.meta.u
 const codeBlockStyles = new URL('../display/CodeBlock/CodeBlock.css.js', import.meta.url);
 const chatMessageItemStyles = new URL('../chat/ChatMessageItem/ChatMessageItem.css.js', import.meta.url);
 const chatTranscriptStyles = new URL('../chat/ChatTranscript/ChatTranscript.css.js', import.meta.url);
+const chatComposerSource = new URL('../chat/ChatComposer/ChatComposer.js', import.meta.url);
 const chatComposerStyles = new URL('../chat/ChatComposer/ChatComposer.css.js', import.meta.url);
 const cellBgStyles = new URL('../effects/CellBg/CellBg.css.js', import.meta.url);
 const uiIndexSource = new URL('../ui/index.js', import.meta.url);
@@ -79,6 +80,8 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   assert.match(source, /component: 'cascade-chat-panel'/);
   assert.match(source, /setMessageItems\(/);
   assert.match(source, /setContent\(/);
+  assert.match(source, /setVoiceControls\(/);
+  assert.match(source, /voice command/);
   assert.match(html, /layout module/);
   assert.doesNotMatch(source, /extends HTMLElement/);
   assert.doesNotMatch(source, /\.setTheme\(/);
@@ -338,6 +341,42 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(chatComposer, /--sn-composer-send-size/);
   assert.match(cellBg, /--sn-cell-bg/);
   assert.match(cellBg, /--sn-cell-glare/);
+});
+
+test('chat composer exposes reusable voice controls and agent-facing metadata', async () => {
+  const [composer, styles, registry, customElements] = await Promise.all([
+    readFile(chatComposerSource, 'utf8'),
+    readFile(chatComposerStyles, 'utf8'),
+    readFile(componentRegistrySource, 'utf8'),
+    readFile(customElementsSource, 'utf8'),
+  ]);
+
+  assert.match(composer, /setVoiceControls\(config = \{\}\)/);
+  assert.match(composer, /setVoiceInputState/);
+  assert.match(composer, /setWakeListenState/);
+  assert.match(composer, /setVoiceResponseState/);
+  assert.match(composer, /setVoiceCommandState/);
+  assert.match(composer, /setVoiceLanguageState/);
+  assert.match(composer, /getVoiceControlElements/);
+  assert.match(composer, /chat-composer-voice-input/);
+  assert.match(composer, /chat-composer-wake-listen/);
+  assert.match(composer, /chat-composer-voice-response-toggle/);
+  assert.match(composer, /chat-composer-voice-command-toggle/);
+  assert.match(composer, /chat-composer-voice-language-change/);
+  assert.match(composer, /class="btn-mic"/);
+  assert.match(composer, /class="btn-wake-listen"/);
+  assert.match(composer, /class="btn-voice-response"/);
+  assert.match(composer, /class="btn-voice-command"/);
+  assert.match(composer, /class="btn-voice-language"/);
+  assert.match(styles, /\.btn-mic\[hidden\]/);
+  assert.match(styles, /\.btn-wake-listen\[hidden\]/);
+  assert.match(registry, /component-descriptor-v2/);
+  assert.match(registry, /voice-controls/);
+  assert.match(registry, /chat_composer_voice_control/);
+  assert.match(registry, /chat-composer-voice-language-change/);
+  assert.match(customElements, /"name": "setVoiceControls"/);
+  assert.match(customElements, /"name": "chat-composer-voice-input"/);
+  assert.match(customElements, /"name": "--sn-composer-send-icon-size"/);
 });
 
 test('cascade theme lab declares browser import map for bare package imports', async () => {

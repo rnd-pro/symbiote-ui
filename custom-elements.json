@@ -3775,7 +3775,7 @@
           "customElement": true,
           "name": "ChatComposer",
           "tagName": "chat-composer",
-          "description": "Generic chat composer with input, context chips, footer controls, and autocomplete host.",
+          "description": "Generic chat composer with input, voice controls, context chips, footer controls, and autocomplete host.",
           "members": [
             {
               "kind": "field",
@@ -3826,6 +3826,14 @@
               "description": "Switches send button into stop state."
             },
             {
+              "kind": "field",
+              "name": "voiceControls",
+              "type": {
+                "text": "object"
+              },
+              "description": "Host-owned voice control state rendered by setVoiceControls."
+            },
+            {
               "kind": "method",
               "name": "setValue",
               "type": {
@@ -3864,6 +3872,78 @@
                 "text": "function"
               },
               "description": "Sets sending state."
+            },
+            {
+              "kind": "method",
+              "name": "setVoiceControls",
+              "type": {
+                "text": "function"
+              },
+              "description": "Sets visible voice buttons and their host-owned state."
+            },
+            {
+              "kind": "method",
+              "name": "setVoiceInputState",
+              "type": {
+                "text": "function"
+              },
+              "description": "Sets mic button state: idle, recording, or processing."
+            },
+            {
+              "kind": "method",
+              "name": "setWakeListenState",
+              "type": {
+                "text": "function"
+              },
+              "description": "Sets wake listening visibility, active state, and command text."
+            },
+            {
+              "kind": "method",
+              "name": "setVoiceResponseState",
+              "type": {
+                "text": "function"
+              },
+              "description": "Sets voice response visibility, enabled state, and speaking state."
+            },
+            {
+              "kind": "method",
+              "name": "setVoiceCommandState",
+              "type": {
+                "text": "function"
+              },
+              "description": "Sets voice command visibility, active state, and label."
+            },
+            {
+              "kind": "method",
+              "name": "setVoiceLanguageState",
+              "type": {
+                "text": "function"
+              },
+              "description": "Sets visible language mode options and active mode."
+            },
+            {
+              "kind": "method",
+              "name": "setVoicePreview",
+              "type": {
+                "text": "function"
+              },
+              "description": "Shows recording, processing, or result preview text and actions."
+            },
+            {
+              "kind": "method",
+              "name": "clearVoicePreview",
+              "type": {
+                "text": "function"
+              },
+              "description": "Hides the voice preview surface."
+            },
+            {
+              "kind": "method",
+              "name": "getVoiceControlElements",
+              "type": {
+                "text": "function"
+              },
+              "description": "Returns rendered voice control button elements for host adapters."
             }
           ],
           "events": [
@@ -3878,6 +3958,38 @@
             {
               "name": "chat-composer-send",
               "description": "Requests send or stop from the send button."
+            },
+            {
+              "name": "chat-composer-voice-input",
+              "description": "Requests host-owned voice input capture."
+            },
+            {
+              "name": "chat-composer-wake-listen",
+              "description": "Requests host-owned wake listening toggle."
+            },
+            {
+              "name": "chat-composer-voice-response-toggle",
+              "description": "Requests host-owned voice response toggle."
+            },
+            {
+              "name": "chat-composer-voice-command-toggle",
+              "description": "Requests host-owned voice command mode toggle."
+            },
+            {
+              "name": "chat-composer-voice-language-change",
+              "description": "Requests host-owned voice language mode change."
+            },
+            {
+              "name": "chat-composer-voice-approve",
+              "description": "Approves a recording preview."
+            },
+            {
+              "name": "chat-composer-voice-cancel",
+              "description": "Cancels a recording preview."
+            },
+            {
+              "name": "chat-composer-voice-send",
+              "description": "Requests sending a voice preview result."
             },
             {
               "name": "chat-composer-key",
@@ -3927,6 +4039,14 @@
             },
             {
               "name": "--sn-composer-input-min-height",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-composer-send-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-composer-send-icon-size",
               "description": "Theme CSS custom property consumed by this component."
             }
           ]

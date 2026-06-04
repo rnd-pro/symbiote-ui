@@ -409,6 +409,14 @@ chat-composer.drag-over .composer-body {
   font-size: var(--sn-composer-send-icon-size);
 }
 
+.btn-mic[hidden],
+.btn-wake-listen[hidden],
+.btn-voice-response[hidden],
+.btn-voice-command[hidden],
+.btn-voice-language[hidden] {
+  display: none;
+}
+
 .btn-wake-listen.has-command {
   width: auto;
   max-width: 164px;
@@ -462,10 +470,6 @@ chat-composer.drag-over .composer-body {
   background: var(--sn-node-hover);
 }
 
-.btn-voice-language[hidden] {
-  display: none;
-}
-
 .btn-voice-command {
   width: auto;
   max-width: min(170px, 28vw);
@@ -491,14 +495,8 @@ chat-composer.drag-over .composer-body {
   letter-spacing: 0;
 }
 
-.btn-voice-command[hidden] {
-  display: none;
-}
-
-.btn-voice-response[hidden] {
-  display: none;
-}
-
+.btn-mic[disabled],
+.btn-wake-listen[disabled],
 .btn-voice-response[disabled] {
   opacity: 0.45;
   cursor: not-allowed;
