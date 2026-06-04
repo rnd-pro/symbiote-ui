@@ -1022,6 +1022,8 @@ export let COMPONENTS = [
         { name: 'responsive-mode', type: 'string', description: 'Responsive mode: preserve, stack, or scroll-inline.' },
         { name: 'responsive-breakpoint', type: 'number', description: 'Inline size where responsive mode activates.' },
         { name: 'overflow-mode', type: 'string', description: 'Overflow fallback: collapse, scroll-inline, scroll-block, or scroll.' },
+        { name: 'scroll-inline-active', type: 'boolean', description: 'Read-only runtime marker set when resolved behavior requires inline-axis scrolling.' },
+        { name: 'scroll-block-active', type: 'boolean', description: 'Read-only runtime marker set when resolved behavior requires block-axis scrolling.' },
         { name: 'auto-collapse', type: 'boolean', description: 'Whether panels may auto-collapse when space is insufficient.' },
       ],
       properties: [

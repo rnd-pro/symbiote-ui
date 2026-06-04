@@ -28,6 +28,8 @@ const projectTabsSource = new URL('../layout/ProjectTabs/ProjectTabs.js', import
 const projectTabsStyles = new URL('../layout/ProjectTabs/ProjectTabs.css.js', import.meta.url);
 const panelMenuStyles = new URL('../layout/PanelMenu/PanelMenu.css.js', import.meta.url);
 const treeViewStyles = new URL('../tree/TreeView/TreeView.css.js', import.meta.url);
+const listDetailShellStyles = new URL('../list/ListDetailShell/ListDetailShell.css.js', import.meta.url);
+const dataTableStyles = new URL('../display/DataTable/DataTable.css.js', import.meta.url);
 const codeBlockStyles = new URL('../display/CodeBlock/CodeBlock.css.js', import.meta.url);
 const chatMessageItemStyles = new URL('../chat/ChatMessageItem/ChatMessageItem.css.js', import.meta.url);
 const chatTranscriptStyles = new URL('../chat/ChatTranscript/ChatTranscript.css.js', import.meta.url);
@@ -634,7 +636,8 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(nodeCanvas, /--sn-pseudo-conn-width/);
   assert.match(nodeCanvas, /--sn-plus-indicator-stroke-width/);
   assert.match(layout, /--sn-fullscreen-tab-icon-size/);
-  assert.match(layout, /overflow-mode='scroll-inline'/);
+  assert.match(layout, /scroll-inline-active/);
+  assert.match(layout, /scroll-block-active/);
   assert.match(layout, /responsive-active/);
   assert.match(layout, /responsive-mode='stack'/);
   assert.match(layout, /--sn-layout-responsive-panel-min-block-size/);
@@ -647,6 +650,8 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(layoutSourceText, /closeUiPanel\(panelType\)/);
   assert.match(layoutSourceText, /layout-ui-panel-open/);
   assert.match(layoutSourceText, /layout-ui-panel-close/);
+  assert.match(layoutSourceText, /Array\.from\(this\.ref\.root\.children\)/);
+  assert.match(layoutSourceText, /this\._restoreAutoCollapsedPanels\(tree\)[\s\S]*?this\._scheduleResponsiveLayout\(\);[\s\S]*?return;/);
   assert.match(layoutSourceText, /duplicatePanel/);
   assert.match(layoutSourceText, /panel-close/);
   assert.match(layoutSourceText, /_onPanelClose/);
@@ -673,6 +678,8 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(layoutNodeSourceText, /button\.toggleAttribute\('disabled', disabled\)/);
   assert.match(layoutNodeSourceText, /button\.disabled = disabled/);
   assert.match(layoutNodeSourceText, /this\.ref\.panelContent\) this\.ref\.panelContent\.replaceChildren\(\)/);
+  assert.match(layoutNodeSourceText, /Array\.from\(container\.children\)/);
+  assert.match(layoutNodeSourceText, /querySelector\(':scope > layout-node'\)/);
   assert.match(layoutNodeSourceText, /LAYOUT_UI_PANEL_MENU_ACTIONS/);
   assert.match(layoutNodeSourceText, /getLayoutPanelMenuActions/);
   assert.match(layoutNodeSourceText, /panelState\?\.uiInvoked/);
@@ -770,7 +777,13 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(registry, /--sn-layout-overflow-inline-size/);
   assert.match(layoutSourceText, /resolveResponsiveLayoutState/);
   assert.match(layoutSourceText, /resolveLayoutMinSize/);
-  assert.match(layoutSourceText, /style\.setProperty/);
+  assert.match(layoutSourceText, /scroll-inline-active/);
+  assert.match(layoutSourceText, /scroll-block-active/);
+  assert.match(layoutSourceText, /setStylePropertyIfChanged/);
+  assert.match(layout, /\[scroll-inline-active\]/);
+  assert.match(layout, /\[scroll-block-active\]/);
+  assert.match(layout, /\[scroll-inline-active\]\[scroll-block-active\]/);
+  assert.doesNotMatch(layout, /\[responsive-active\]\[responsive-mode='stack'\]\s*\{\s*overflow-x: hidden;/);
   assert.match(registry, /preview-approve/);
   assert.match(registry, /--sn-cell-noise/);
   assert.match(registry, /--sn-composer-collapsed-control-width/);
@@ -792,6 +805,8 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(customElements, /"min-size-fit"/);
   assert.match(customElements, /"mobile-stack"/);
   assert.match(customElements, /not persisted into saved layout trees/);
+  assert.match(customElements, /"name": "scroll-inline-active"/);
+  assert.match(customElements, /"name": "scroll-block-active"/);
   assert.match(customElements, /"name": "panel-menu-action"/);
   assert.match(customElements, /"name": "layout-ui-panel-open"/);
   assert.match(customElements, /"name": "layout-ui-panel-close"/);
@@ -809,6 +824,60 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(customElements, /"name": "--sn-node-pill-body-padding"/);
   assert.match(customElements, /"name": "--sn-node-circle-body-padding"/);
   assert.match(customElements, /"name": "--sn-node-comment-body-padding"/);
+});
+
+test('side-scroll contracts are explicit across reusable surfaces', async () => {
+  let [
+    layout,
+    layoutSourceText,
+    nodeCanvas,
+    graphNode,
+    chatComposer,
+    chatTranscript,
+    chatMessage,
+    treeView,
+    listDetailShell,
+    dataTable,
+    codeBlock,
+  ] = await Promise.all([
+    readFile(layoutStyles, 'utf8'),
+    readFile(layoutSource, 'utf8'),
+    readFile(nodeCanvasStyles, 'utf8'),
+    readFile(graphNodeStyles, 'utf8'),
+    readFile(chatComposerStyles, 'utf8'),
+    readFile(chatTranscriptStyles, 'utf8'),
+    readFile(chatMessageItemStyles, 'utf8'),
+    readFile(treeViewStyles, 'utf8'),
+    readFile(listDetailShellStyles, 'utf8'),
+    readFile(dataTableStyles, 'utf8'),
+    readFile(codeBlockStyles, 'utf8'),
+  ]);
+
+  assert.match(layoutSourceText, /scroll-inline-active/);
+  assert.match(layoutSourceText, /scroll-block-active/);
+  assert.match(layoutSourceText, /setStylePropertyIfChanged/);
+  assert.match(layout, /\[scroll-inline-active\]/);
+  assert.match(layout, /\[scroll-block-active\]/);
+  assert.match(layout, /\[scroll-inline-active\]\[scroll-block-active\]/);
+  assert.doesNotMatch(layout, /\[responsive-active\]\[responsive-mode='stack'\]\s*\{\s*overflow-x: hidden;/);
+  assert.match(nodeCanvas, /contain: size layout paint/);
+  assert.match(nodeCanvas, /\[data-flow-scroll='horizontal'\][\s\S]*overflow-x: auto/);
+  assert.match(graphNode, /min-width: var\(--sn-node-min-width/);
+  assert.match(graphNode, /overflow-y: auto/);
+  assert.match(chatComposer, /container: composer-body \/ inline-size/);
+  assert.match(chatComposer, /flex-wrap: wrap/);
+  assert.match(chatComposer, /max-width: min\(var\(--sn-composer-voice-command-max/);
+  assert.match(chatTranscript, /overflow-y: auto/);
+  assert.match(chatMessage, /max-width: 100%/);
+  assert.match(chatMessage, /overflow-x: auto/);
+  assert.match(treeView, /grid-template-columns: var\(--sn-tree-toggle-width\) var\(--sn-tree-icon-width\) minmax\(0, 1fr\)/);
+  assert.match(treeView, /text-overflow: ellipsis/);
+  assert.match(listDetailShell, /grid-template-columns: var\(--sn-list-detail-sidebar-width\) minmax\(0, 1fr\)/);
+  assert.match(listDetailShell, /overflow: auto/);
+  assert.match(dataTable, /\.sn-data-table-scroll[\s\S]*overflow: auto/);
+  assert.match(dataTable, /min-width: var\(--sn-data-table-min-width\)/);
+  assert.match(codeBlock, /\.cb-scroll[\s\S]*overflow: auto/);
+  assert.match(codeBlock, /\.md-code-block[\s\S]*overflow-x: auto/);
 });
 
 test('chat composer exposes reusable voice controls and agent-facing metadata', async () => {

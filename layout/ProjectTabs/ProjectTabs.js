@@ -30,7 +30,7 @@ export class ProjectTabs extends Symbiote {
       name: tab.name || tab.id,
       color: tab.color || tab.accent || `var(--sn-tab-accent-${index % 6})`,
       icon: tab.icon || 'folder',
-      closeable: tab.closeable !== false,
+      closeable: tab.closeable === true,
       disabled: Boolean(tab.disabled),
       isActive: tab.id === this.$.activeId,
     }));
@@ -54,7 +54,7 @@ class ProjectTabItem extends Symbiote {
     },
     onCloseClick: (e) => {
       e.stopPropagation();
-      if (this.$.disabled) return;
+      if (this.$.disabled || !this.$.closeable) return;
       emit(this, 'project-tabs-close', { id: this.$.id });
     },
   };

@@ -515,7 +515,12 @@ export class LayoutNode extends Symbiote {
    * @param {Object} nodeData
    */
   _ensureChildNode(container, nodeData) {
-    let child = container.querySelector('layout-node');
+    let children = Array.from(container.children)
+      .filter((item) => item.localName === 'layout-node');
+    let child = children[0];
+    for (let node of children.slice(1)) {
+      node.remove();
+    }
     if (!child) {
       child = document.createElement('layout-node');
       container.appendChild(child);
@@ -557,8 +562,8 @@ export class LayoutNode extends Symbiote {
       let rawRatio = (currentPos - startOffset) / containerSize;
 
 
-      let firstChild = this.ref.first?.querySelector('layout-node');
-      let secondChild = this.ref.second?.querySelector('layout-node');
+      let firstChild = this.ref.first?.querySelector(':scope > layout-node');
+      let secondChild = this.ref.second?.querySelector(':scope > layout-node');
 
 
       if (rawRatio < COLLAPSE_THRESHOLD && firstChild && !firstChild.$.isCollapsed) {

@@ -216,3 +216,15 @@ test('layout shell menu emits normalized group intents without host executable s
   assert.equal(closes[0].id, 'graph');
   assert.equal(closes[0].source, 'tabs-close');
 });
+
+test('project tabs require explicit closeable flag for close affordances', async () => {
+  let [source, styles] = await Promise.all([
+    readFile(new URL('../layout/ProjectTabs/ProjectTabs.js', import.meta.url), 'utf8'),
+    readFile(new URL('../layout/ProjectTabs/ProjectTabs.css.js', import.meta.url), 'utf8'),
+  ]);
+
+  assert.match(source, /closeable:\s*tab\.closeable === true/);
+  assert.match(source, /this\.\$\.disabled \|\| !this\.\$\.closeable/);
+  assert.doesNotMatch(source, /closeable:\s*tab\.closeable !== false/);
+  assert.match(styles, /\.tab-close\[hidden\]\s*\{[\s\S]*?display: none;/);
+});

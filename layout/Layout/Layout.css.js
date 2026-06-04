@@ -22,18 +22,19 @@ export let styles = css`
       background: var(--sn-layout-gap-bg);
     }
 
-    &[overflow-mode='scroll-inline'],
-    &[responsive-active][responsive-mode='scroll-inline'] {
+    &[scroll-inline-active] {
       overflow-x: auto;
-      overflow-y: hidden;
 
       .layout-root {
         min-width: var(--sn-layout-overflow-inline-size, 960px);
       }
     }
 
-    &[overflow-mode='scroll-block'] {
-      overflow-x: hidden;
+    &[scroll-inline-active]:not([scroll-block-active]) {
+      overflow-y: hidden;
+    }
+
+    &[scroll-block-active] {
       overflow-y: auto;
 
       .layout-root {
@@ -41,7 +42,11 @@ export let styles = css`
       }
     }
 
-    &[overflow-mode='scroll'] {
+    &[scroll-block-active]:not([scroll-inline-active]) {
+      overflow-x: hidden;
+    }
+
+    &[scroll-inline-active][scroll-block-active] {
       overflow: auto;
 
       .layout-root {
@@ -51,9 +56,6 @@ export let styles = css`
     }
 
     &[responsive-active][responsive-mode='stack'] {
-      overflow-x: hidden;
-      overflow-y: auto;
-
       .layout-root {
         display: block;
         height: auto;

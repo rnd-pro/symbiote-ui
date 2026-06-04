@@ -610,17 +610,27 @@ export function resolveLayoutMinSize(root, options = {}) {
 
     let first = walk(node.first, branchBehavior)
     let second = walk(node.second, branchBehavior)
+    let ratio = finiteNumber(node.ratio, 0.5, 0.1)
+    ratio = Math.max(0.1, Math.min(0.9, ratio))
 
     if (node.direction === 'horizontal') {
       return {
-        inlineSize: first.inlineSize + second.inlineSize,
+        inlineSize: Math.max(
+          first.inlineSize + second.inlineSize,
+          first.inlineSize / ratio,
+          second.inlineSize / (1 - ratio)
+        ),
         blockSize: Math.max(first.blockSize, second.blockSize),
       }
     }
 
     return {
       inlineSize: Math.max(first.inlineSize, second.inlineSize),
-      blockSize: first.blockSize + second.blockSize,
+      blockSize: Math.max(
+        first.blockSize + second.blockSize,
+        first.blockSize / ratio,
+        second.blockSize / (1 - ratio)
+      ),
     }
   }
 

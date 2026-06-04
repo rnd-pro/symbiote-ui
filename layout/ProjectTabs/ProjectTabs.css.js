@@ -155,6 +155,10 @@ project-tab-item:not([active]):not(:hover):last-child::after,
   transition: opacity 0.15s, background 0.15s, color 0.15s;
 }
 
+.tab-close[hidden] {
+  display: none;
+}
+
 .tab:hover .tab-close,
 .tab[active] .tab-close,
 project-tab-item:hover .tab-close,

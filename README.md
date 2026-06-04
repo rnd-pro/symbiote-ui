@@ -142,7 +142,12 @@ persisted with the tree. `importance` decides auto-collapse order, minimum
 inline/block sizes decide when panels no longer fit, `collapse` controls
 whether a panel may auto-collapse, `overflow` selects collapse versus
 horizontal/vertical scroll fallback, and `responsiveMode` selects mobile
-preserve, vertical stack, or horizontal scroll behavior.
+preserve, vertical stack, or horizontal scroll behavior. Minimum footprint
+resolution accounts for split ratios, so a skewed split still reserves enough
+scrollable space for both child branches.
+At runtime `panel-layout` exposes resolved scroll axes through
+`scroll-inline-active` and `scroll-block-active` attributes so CSS, browser
+smoke tests, and agents can distinguish requested policy from active fallback.
 
 ## Demos
 

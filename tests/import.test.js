@@ -52,6 +52,8 @@ test('discover exposes the standalone package contract', async () => {
   assert.ok(layoutAgentItem.webmcp.toolNames.includes('panel_layout_set_behavior'));
   assert.ok(layout.componentDescription.includes('min-size-fit'));
   assert.ok(layout.contract.capabilities.includes('mobile-stack'));
+  assert.ok(layout.contract.attributes.some((attribute) => attribute.name === 'scroll-inline-active'));
+  assert.ok(layout.contract.attributes.some((attribute) => attribute.name === 'scroll-block-active'));
   assert.ok(layout.contract.properties.find((property) => (
     property.name === 'layoutBehavior' &&
     property.description.includes('not persisted')

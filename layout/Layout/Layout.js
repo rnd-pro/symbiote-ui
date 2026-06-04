@@ -12,6 +12,26 @@ import { styles } from './Layout.css.js';
 import './../LayoutNode/LayoutNode.js';
 import './../PanelMenu/PanelMenu.js';
 
+function setAttributeIfChanged(element, name, value) {
+  let next = String(value);
+  if (element.getAttribute(name) !== next) {
+    element.setAttribute(name, next);
+  }
+}
+
+function toggleAttributeIfChanged(element, name, value) {
+  let next = Boolean(value);
+  if (element.hasAttribute(name) !== next) {
+    element.toggleAttribute(name, next);
+  }
+}
+
+function setStylePropertyIfChanged(style, name, value) {
+  if (style.getPropertyValue(name) !== value) {
+    style.setProperty(name, value);
+  }
+}
+
 export class Layout extends Symbiote {
   static isoMode = true;
 
@@ -205,7 +225,12 @@ export class Layout extends Symbiote {
     if (!this.$.layoutTree || !this.ref.root) return;
 
 
-    let rootNode = this.ref.root.querySelector('layout-node');
+    let rootNodes = Array.from(this.ref.root.children)
+      .filter((child) => child.localName === 'layout-node');
+    let rootNode = rootNodes[0];
+    for (let node of rootNodes.slice(1)) {
+      node.remove();
+    }
     if (!rootNode) {
       rootNode = document.createElement('layout-node');
       this.ref.root.appendChild(rootNode);
@@ -248,11 +273,13 @@ export class Layout extends Symbiote {
       layoutMinSize,
     });
 
-    this.setAttribute('responsive-mode', behavior.responsiveMode);
-    this.setAttribute('overflow-mode', behavior.overflow);
-    this.toggleAttribute('responsive-active', responsiveState.responsiveActive);
+    setAttributeIfChanged(this, 'responsive-mode', behavior.responsiveMode);
+    setAttributeIfChanged(this, 'overflow-mode', behavior.overflow);
+    toggleAttributeIfChanged(this, 'responsive-active', responsiveState.responsiveActive);
+    toggleAttributeIfChanged(this, 'scroll-inline-active', responsiveState.scrollInline);
+    toggleAttributeIfChanged(this, 'scroll-block-active', responsiveState.scrollBlock);
     for (let [name, value] of Object.entries(responsiveState.cssVars)) {
-      this.style.setProperty(name, value);
+      setStylePropertyIfChanged(this.style, name, value);
     }
 
     if (this.$.fullscreenPanelId) return;
@@ -265,7 +292,14 @@ export class Layout extends Symbiote {
       return;
     }
 
-    let changed = this._restoreAutoCollapsedPanels(tree);
+    if (this._restoreAutoCollapsedPanels(tree)) {
+      this.$.layoutTree = { ...tree };
+      this._saveLayout();
+      this._scheduleResponsiveLayout();
+      return;
+    }
+
+    let changed = false;
     let candidates = this._collectAutoCollapseCandidates(tree, behavior)
       .sort((a, b) => a.behavior.importance - b.behavior.importance);
 

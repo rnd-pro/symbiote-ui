@@ -121,6 +121,19 @@ test('layout behavior resolves responsive state and scroll fallback axes', () =>
   assert.equal(stack.scrollInline, false);
   assert.equal(stack.scrollBlock, true);
 
+  let stackedInlineScroll = resolveResponsiveLayoutState(
+    { collapse: 'auto', overflow: 'scroll-inline', responsiveMode: 'stack', responsiveBreakpoint: 640 },
+    { inlineSize: 480, blockSize: 300, layoutMinSize: { inlineSize: 900, blockSize: 760 } }
+  );
+
+  assert.equal(stackedInlineScroll.responsiveActive, true);
+  assert.equal(stackedInlineScroll.effectiveResponsiveMode, 'stack');
+  assert.equal(stackedInlineScroll.collapseAllowed, false);
+  assert.equal(stackedInlineScroll.scrollInline, true);
+  assert.equal(stackedInlineScroll.scrollBlock, true);
+  assert.equal(stackedInlineScroll.cssVars['--sn-layout-overflow-inline-size'], '900px');
+  assert.equal(stackedInlineScroll.cssVars['--sn-layout-overflow-block-size'], '760px');
+
   let blockScroll = resolveResponsiveLayoutState(
     { collapse: 'never', overflow: 'scroll-block', responsiveMode: 'preserve' },
     { inlineSize: 900, blockSize: 300, layoutMinSize: { inlineSize: 500, blockSize: 760 } }
@@ -152,14 +165,32 @@ test('layout minimum size estimate follows split direction and node behavior', (
 
   let size = resolveLayoutMinSize(root);
 
-  assert.equal(size.inlineSize, 740);
-  assert.equal(size.blockSize, 640);
+  assert.equal(Math.round(size.inlineSize), 764);
+  assert.equal(size.blockSize, 720);
 
   chat.collapsed = true;
   let collapsedSize = resolveLayoutMinSize(root);
 
-  assert.equal(collapsedSize.inlineSize, 700);
-  assert.equal(collapsedSize.blockSize, 388);
+  assert.equal(Math.round(collapsedSize.inlineSize), 764);
+  assert.equal(collapsedSize.blockSize, 720);
+});
+
+test('layout minimum size estimate respects split ratios', () => {
+  let primary = createPanel('primary', {}, { minInlineSize: 520, minBlockSize: 240 });
+  let side = createPanel('side', {}, { minInlineSize: 300, minBlockSize: 220 });
+  let root = createSplit('horizontal', primary, side, 0.68);
+  let size = resolveLayoutMinSize(root);
+
+  assert.equal(Math.round(size.inlineSize), 938);
+  assert.equal(size.blockSize, 240);
+
+  let top = createPanel('top', {}, { minInlineSize: 260, minBlockSize: 280 });
+  let bottom = createPanel('bottom', {}, { minInlineSize: 280, minBlockSize: 360 });
+  let vertical = createSplit('vertical', top, bottom, 0.44);
+  let verticalSize = resolveLayoutMinSize(vertical);
+
+  assert.equal(verticalSize.inlineSize, 280);
+  assert.equal(Math.round(verticalSize.blockSize), 643);
 });
 
 test('layout tree opens and closes UI-invoked panels without owning host layout policy', () => {
