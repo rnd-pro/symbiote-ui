@@ -361,6 +361,30 @@
       "$type": "color",
       "$value": "hsl(var(--sn-hue-base) var(--sn-sat-muted) var(--sn-lit-text) / 0.25)"
     },
+    "scrollbarTrack": {
+      "$type": "color",
+      "$value": "transparent"
+    },
+    "scrollbarWidth": {
+      "$type": "string",
+      "$value": "thin"
+    },
+    "scrollbarSize": {
+      "$type": "dimension",
+      "$value": "10px"
+    },
+    "scrollbarRadius": {
+      "$type": "dimension",
+      "$value": "999px"
+    },
+    "scrollbarThumbBorder": {
+      "$type": "border",
+      "$value": "3px solid transparent"
+    },
+    "scrollbarThumbMinSize": {
+      "$type": "dimension",
+      "$value": "36px"
+    },
     "nodeActiveBorder": {
       "$type": "color",
       "$value": "color-mix(in srgb, var(--sn-node-selected) 50%, transparent)"

@@ -1,5 +1,5 @@
 import { css } from '@symbiotejs/symbiote';
-import { themedScrollbarStyles } from '../../ui/scrollbar-styles.js';
+import { themedScrollbarStyles } from '../../themes/scrollbar-styles.js';
 
 export let styles = css`
   node-canvas {
