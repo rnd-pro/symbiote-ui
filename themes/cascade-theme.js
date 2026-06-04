@@ -90,6 +90,15 @@ export const CASCADE_THEME_TOKEN_TARGETS = Object.freeze({
     '--sn-lit-accent',
     '--sn-node-selected',
     '--sn-node-hover',
+    '--sn-button-primary-bg',
+    '--sn-button-primary-border',
+    '--sn-button-primary-color',
+    '--sn-button-success-bg',
+    '--sn-button-success-border',
+    '--sn-button-success-color',
+    '--sn-button-danger-hover-bg',
+    '--sn-button-danger-hover-border',
+    '--sn-button-danger-hover-color',
     '--sn-scrollbar-thumb',
     '--sn-scrollbar-thumb-hover',
   ],
@@ -192,6 +201,60 @@ function svgStrokeToken(px, outlineStrength) {
   return (px * scale).toFixed(2);
 }
 
+function hslToRgb(hue, saturation, lightness) {
+  let h = (((Number(hue) % 360) + 360) % 360) / 360;
+  let s = clamp(saturation, 0, 100) / 100;
+  let l = clamp(lightness, 0, 100) / 100;
+
+  if (s === 0) {
+    let value = l * 255;
+    return [value, value, value];
+  }
+
+  let q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+  let p = 2 * l - q;
+  let channel = (t) => {
+    if (t < 0) t += 1;
+    if (t > 1) t -= 1;
+    if (t < 1 / 6) return p + (q - p) * 6 * t;
+    if (t < 1 / 2) return q;
+    if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+    return p;
+  };
+
+  return [channel(h + 1 / 3) * 255, channel(h) * 255, channel(h - 1 / 3) * 255];
+}
+
+function relativeLuminance(rgb) {
+  let channels = rgb.map((channel) => {
+    let value = channel / 255;
+    return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  });
+  return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+}
+
+function contrastRatio(a, b) {
+  let lighter = Math.max(a, b);
+  let darker = Math.min(a, b);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+function readableTextForHsl(hue, saturation, lightness, preferredLightness) {
+  let bgLum = relativeLuminance(hslToRgb(hue, saturation, lightness));
+  let preferred = { hue: 0, saturation: 0, lightness: preferredLightness };
+  let inverted = { hue: 0, saturation: 0, lightness: preferredLightness > 50 ? 8 : 98 };
+  let candidates = [preferred, inverted].map((candidate) => ({
+    ...candidate,
+    ratio: contrastRatio(bgLum, relativeLuminance(hslToRgb(
+      candidate.hue,
+      candidate.saturation,
+      candidate.lightness
+    ))),
+  }));
+  let winner = candidates.sort((a, b) => b.ratio - a.ratio)[0];
+  return `hsl(${winner.hue} ${winner.saturation}% ${winner.lightness.toFixed(1)}%)`;
+}
+
 export function getCascadeThemeControls() {
   return CASCADE_THEME_CONTROL_LIST.map((control) => ({ ...control }));
 }
@@ -245,6 +308,9 @@ export function createCascadeTheme(options = {}) {
   let textDimColor = `hsl(0 0% ${dim.toFixed(1)}%)`;
   let accent = `hsl(${state.hue} ${neutralChroma} ${accentLight}%)`;
   let accentSoft = `hsl(${state.hue} ${neutralChroma} ${accentLight}% / 0.18)`;
+  let primaryButtonColor = readableTextForHsl(state.hue, state.chroma, accentLight, text);
+  let successButtonColor = readableTextForHsl(122, state.chroma, 57, text);
+  let dangerButtonColor = readableTextForHsl(4, state.chroma, 58, text);
   let outlineAlpha = state.outline === 0
     ? 0
     : dark
@@ -326,6 +392,21 @@ export function createCascadeTheme(options = {}) {
     '--sn-button-bg': 'var(--sn-node-bg)',
     '--sn-button-color': 'var(--sn-text)',
     '--sn-button-hover-bg': 'color-mix(in srgb, var(--sn-node-bg) 86%, var(--sn-node-selected) 14%)',
+    '--sn-button-primary-bg': 'var(--sn-node-selected)',
+    '--sn-button-primary-border': 'var(--sn-node-selected)',
+    '--sn-button-primary-color': primaryButtonColor,
+    '--sn-button-success-bg': 'var(--sn-success-color)',
+    '--sn-button-success-border': 'var(--sn-success-color)',
+    '--sn-button-success-color': successButtonColor,
+    '--sn-button-success-hover-bg': 'color-mix(in srgb, var(--sn-success-color) 85%, var(--sn-text))',
+    '--sn-button-success-hover-border': 'color-mix(in srgb, var(--sn-success-color) 85%, var(--sn-text))',
+    '--sn-button-success-hover-color': successButtonColor,
+    '--sn-button-danger-bg': 'transparent',
+    '--sn-button-danger-border': 'var(--sn-danger-color)',
+    '--sn-button-danger-color': 'var(--sn-danger-color)',
+    '--sn-button-danger-hover-bg': 'var(--sn-danger-color)',
+    '--sn-button-danger-hover-border': 'var(--sn-danger-color)',
+    '--sn-button-danger-hover-color': dangerButtonColor,
     '--sn-banner-border': outlineColor,
     '--sn-banner-bg': 'var(--sn-node-bg)',
     '--sn-banner-color': 'var(--sn-text)',

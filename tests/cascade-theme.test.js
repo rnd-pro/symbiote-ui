@@ -89,6 +89,10 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.equal(theme.tokens['--sn-text'], 'hsl(0 0% 94.0%)');
   assert.equal(theme.tokens['--sn-node-bg'], 'var(--sn-panel-bg)');
   assert.equal(theme.tokens['--sn-field-control-bg'], 'var(--sn-bg)');
+  assert.equal(theme.tokens['--sn-button-primary-bg'], 'var(--sn-node-selected)');
+  assert.equal(theme.tokens['--sn-button-primary-color'], 'hsl(0 0% 8.0%)');
+  assert.equal(theme.tokens['--sn-button-success-color'], 'hsl(0 0% 8.0%)');
+  assert.equal(theme.tokens['--sn-button-danger-hover-color'], 'hsl(0 0% 8.0%)');
   assert.equal(theme.tokens['--sn-shape-stroke-width'], '0.40');
   assert.equal(theme.tokens['--sn-shape-port-hint-stroke-width'], '0.50');
   assert.equal(noOutlineTheme.tokens['--sn-shape-stroke-width'], '0.00');
@@ -99,6 +103,7 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.equal(theme.tokens['--sn-action-zone-size'], 'calc(16px * var(--sn-theme-density))');
   assert.match(source, /CASCADE_THEME_DESCRIPTOR/);
   assert.match(source, /svgStrokeToken/);
+  assert.match(source, /readableTextForHsl/);
   assert.match(source, /symbiote-ui\.createCascadeTheme/);
   assert.match(source, /theme:compose/);
   assert.match(source, /--sn-shape-stroke/);
@@ -179,6 +184,8 @@ test('cascade theme derives distinct dark and light branches', async () => {
   assert.equal(darkTheme.tokens['--sn-theme-outline-strength'], lightTheme.tokens['--sn-theme-outline-strength']);
   assert.equal(darkTheme.tokens['--sn-field-control-bg'], 'var(--sn-bg)');
   assert.equal(lightTheme.tokens['--sn-field-control-bg'], 'var(--sn-bg)');
+  assert.equal(lightTheme.tokens['--sn-button-primary-color'], 'hsl(0 0% 98.0%)');
+  assert.equal(lightTheme.tokens['--sn-button-success-color'], 'hsl(0 0% 18.9%)');
 });
 
 test('cascade theme controls reach canvas objects and layout chrome', async () => {
