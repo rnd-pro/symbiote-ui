@@ -125,6 +125,8 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   assert.match(html, /<layout-shell-menu/);
   assert.match(html, /<cascade-theme-widget/);
   assert.match(html, /class="lab-shell"/);
+  assert.match(html, /100dvh/);
+  assert.doesNotMatch(html, /100vh/);
   assert.match(html, /project-path="symbiote-ui \/ layout module"/);
   assert.match(html, /data-layout-command="scroll"/);
   assert.doesNotMatch(html, /class="lab-toolbar"/);
@@ -205,6 +207,7 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.equal(theme.tokens['--sn-chat-markdown-h2-size'], 'calc(18px * var(--sn-theme-type-scale) * var(--sn-theme-heading-scale))');
   assert.equal(theme.tokens['--sn-chat-message-font-size'], 'calc(13px * var(--sn-theme-type-scale))');
   assert.equal(theme.tokens['--sn-composer-input-size'], 'calc(13px * var(--sn-theme-type-scale))');
+  assert.equal(theme.tokens['--sn-composer-input-min-inline-size'], 'calc(160px * var(--sn-theme-density))');
   assert.equal(theme.tokens['--sn-code-font-size'], 'calc(12px * var(--sn-theme-type-scale))');
   assert.equal(theme.tokens['--sn-composer-send-size'], 'calc(32px * var(--sn-theme-density))');
   assert.equal(theme.tokens['--sn-cell-size'], 'calc(14px * var(--sn-theme-density))');
@@ -524,6 +527,7 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(chatComposer, /--sn-composer-bg/);
   assert.match(chatComposer, /--sn-composer-send-size/);
   assert.match(chatComposer, /--sn-composer-input-size/);
+  assert.match(chatComposer, /--sn-composer-input-min-inline-size/);
   assert.match(chatComposer, /--sn-composer-footer-size/);
   assert.match(chatComposer, /--sn-composer-voice-label-size/);
   assert.match(chatComposer, /--sn-composer-collapsed-control-width/);
@@ -562,6 +566,7 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(registry, /preview-approve/);
   assert.match(registry, /--sn-cell-noise/);
   assert.match(registry, /--sn-composer-collapsed-control-width/);
+  assert.match(registry, /--sn-composer-input-min-inline-size/);
   assert.match(registry, /--sn-chat-list-header-padding/);
   assert.match(registry, /--sn-chat-list-item-padding/);
   assert.match(registry, /--sn-chat-list-delete-size/);
@@ -577,6 +582,7 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(customElements, /"name": "panel-menu-action"/);
   assert.match(customElements, /"name": "--sn-cell-noise"/);
   assert.match(customElements, /"name": "--sn-composer-collapsed-control-width"/);
+  assert.match(customElements, /"name": "--sn-composer-input-min-inline-size"/);
   assert.match(customElements, /"name": "--sn-chat-list-header-padding"/);
   assert.match(customElements, /"name": "--sn-chat-list-item-padding"/);
   assert.match(customElements, /"name": "--sn-chat-list-delete-size"/);
@@ -615,7 +621,16 @@ test('chat composer exposes reusable voice controls and agent-facing metadata', 
   assert.match(composer, /class="btn-voice-language"/);
   assert.match(styles, /\.btn-mic\[hidden\]/);
   assert.match(styles, /\.btn-wake-listen\[hidden\]/);
+  assert.match(styles, /container: composer-body \/ inline-size/);
+  assert.match(styles, /flex-wrap: wrap/);
+  assert.match(styles, /flex: 0 0 var\(--sn-composer-send-size\)/);
+  assert.match(styles, /@container composer-body \(width <= 460px\)/);
+  assert.match(styles, /@container composer-body \(width <= 340px\)/);
+  assert.match(styles, /36cqi/);
+  assert.match(styles, /38cqi/);
+  assert.match(styles, /--sn-composer-input-min-inline-size/);
   assert.match(styles, /--sn-composer-wake-command-max/);
+  assert.doesNotMatch(styles, /28vw/);
   assert.match(registry, /component-descriptor-v2/);
   assert.match(registry, /voice-controls/);
   assert.match(registry, /chat_composer_voice_control/);

@@ -11,7 +11,9 @@ chat-composer {
 
 .composer-body,
 .voice-preview {
+  container: composer-body / inline-size;
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-end;
   gap: var(--sn-composer-control-gap);
   background: var(--chat-composer-bg);
@@ -27,6 +29,7 @@ chat-composer {
 
 .composer-body textarea {
   flex: 1;
+  min-width: min(100%, var(--sn-composer-input-min-inline-size, 160px));
   background: transparent;
   border: none;
   color: var(--sn-text);
@@ -57,6 +60,11 @@ sn-button.btn-send[variant="icon"] {
   background: var(--sn-button-bg);
   border: 0;
   color: var(--sn-button-color);
+  flex: 0 0 var(--sn-composer-send-size);
+  width: var(--sn-composer-send-size);
+  height: var(--sn-composer-send-size);
+  min-width: var(--sn-composer-send-size);
+  min-height: var(--sn-composer-send-size);
   box-shadow: var(--sn-shadow-sm);
   transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
 }
@@ -419,7 +427,7 @@ chat-composer.drag-over .composer-body {
 
 .btn-wake-listen.has-command {
   width: auto;
-  max-width: var(--sn-composer-wake-command-max, 164px);
+  max-width: min(var(--sn-composer-wake-command-max, 164px), 36cqi);
   padding: 0 var(--sn-composer-control-gap, 10px);
   gap: var(--sn-composer-footer-gap, 6px);
   border-radius: 999px;
@@ -443,6 +451,8 @@ chat-composer.drag-over .composer-body {
 .btn-voice-language {
   width: auto;
   min-width: calc(var(--sn-composer-send-size) * 2.7);
+  max-width: min(var(--sn-composer-voice-command-max, 170px), 38cqi);
+  overflow: hidden;
   padding: calc(var(--sn-composer-send-size) * 0.0625);
   gap: calc(var(--sn-composer-send-size) * 0.0625);
   border-radius: 999px;
@@ -472,7 +482,7 @@ chat-composer.drag-over .composer-body {
 
 .btn-voice-command {
   width: auto;
-  max-width: min(var(--sn-composer-voice-command-max, 170px), 28vw);
+  max-width: min(var(--sn-composer-voice-command-max, 170px), 36cqi);
   padding: 0 var(--sn-composer-control-gap, 10px);
   gap: var(--sn-composer-footer-gap, 6px);
   border-radius: 999px;
@@ -515,6 +525,49 @@ chat-composer.drag-over .composer-body {
 
 .btn-wake-listen.listening .material-symbols-outlined {
   font-variation-settings: 'FILL' 1;
+}
+
+@container composer-body (width <= 460px) {
+  .btn-wake-listen.has-command,
+  .btn-voice-command {
+    width: var(--sn-composer-send-size);
+    max-width: var(--sn-composer-send-size);
+    padding: 0;
+    border-radius: 50%;
+  }
+
+  .btn-wake-listen.has-command .wake-command-text,
+  .btn-voice-command .voice-command-button-text {
+    display: none;
+  }
+
+  .btn-voice-language {
+    min-width: calc(var(--sn-composer-send-size) * 2.2);
+    max-width: calc(var(--sn-composer-send-size) * 2.6);
+  }
+
+  .voice-language-option {
+    min-width: calc(var(--sn-composer-send-size) * 0.62);
+    padding-inline: calc(var(--sn-composer-control-gap, 8px) * 0.5);
+  }
+}
+
+@container composer-body (width <= 340px) {
+  .composer-body textarea {
+    flex-basis: 100%;
+  }
+
+  .btn-voice-language {
+    width: var(--sn-composer-send-size);
+    min-width: var(--sn-composer-send-size);
+    max-width: var(--sn-composer-send-size);
+    border-radius: 50%;
+    padding: 0;
+  }
+
+  .btn-voice-language .voice-language-option:not(.active) {
+    display: none;
+  }
 }
 
 .btn-mic.recording {

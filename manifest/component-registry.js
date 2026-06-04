@@ -2014,6 +2014,7 @@ export let COMPONENTS = [
         '--sn-composer-footer-icon-size',
         '--sn-composer-footer-toggle-icon-size',
         '--sn-composer-input-min-height',
+        '--sn-composer-input-min-inline-size',
         '--sn-composer-send-size',
         '--sn-composer-send-icon-size',
         '--sn-composer-input-size',

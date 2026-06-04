@@ -72,11 +72,27 @@
               "description": "Theme CSS custom property consumed by this component."
             },
             {
+              "name": "--sn-text-dim",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-border",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
               "name": "--sn-node-selected",
               "description": "Theme CSS custom property consumed by this component."
             },
             {
               "name": "--sn-scrollbar-thumb",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-theme-density",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-theme-type-scale",
               "description": "Theme CSS custom property consumed by this component."
             }
           ],
@@ -197,6 +213,14 @@
             },
             {
               "name": "--sn-node-selected",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-theme-density",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-theme-type-scale",
               "description": "Theme CSS custom property consumed by this component."
             }
           ],
@@ -2192,6 +2216,14 @@
               "description": "Theme CSS custom property consumed by this component."
             },
             {
+              "name": "--sn-text",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-text-dim",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
               "name": "--sn-tabs-height",
               "description": "Theme CSS custom property consumed by this component."
             },
@@ -2201,6 +2233,10 @@
             },
             {
               "name": "--sn-tabs-active-bg",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-tabs-border",
               "description": "Theme CSS custom property consumed by this component."
             }
           ],
@@ -5421,6 +5457,10 @@
               "description": "Theme CSS custom property consumed by this component."
             },
             {
+              "name": "--sn-composer-input-min-inline-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
               "name": "--sn-composer-send-size",
               "description": "Theme CSS custom property consumed by this component."
             },
@@ -6633,6 +6673,118 @@
             },
             {
               "name": "--sn-danger-color",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-row-gap",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-icon-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-icon-box-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-title-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-status-icon-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-status-margin",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-meta-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-meta-margin",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-type-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-type-radius",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-delete-box-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-delete-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-delete-radius",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-delete-icon-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-expand-icon-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-child-gap",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-child-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-child-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-child-min-height",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-child-line-left",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-child-deep-padding-left",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-child-active-padding-left",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-child-deep-active-padding-left",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-child-deep-line-left",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-compact-label-inset",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-compact-label-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-compact-label-offset",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-compact-delete-width",
               "description": "Theme CSS custom property consumed by this component."
             }
           ],
