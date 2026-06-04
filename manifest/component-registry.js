@@ -175,6 +175,39 @@ const WEBMCP_TOOLS = {
       annotations: { readOnlyHint: false, destructiveHint: false },
       exposedTo: ['agent', 'assistant'],
     },
+    {
+      name: 'panel_layout_open_panel',
+      description: 'Open or reuse a host-approved panel type inside the current layout tree; use uiInvoked when the panel should be closeable as a temporary UI surface.',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          panelType: { type: 'string' },
+          direction: { enum: ['horizontal', 'vertical'] },
+          ratio: { type: 'number', minimum: 0.1, maximum: 0.9 },
+          uiInvoked: { type: 'boolean' },
+          reuseExisting: { type: 'boolean' },
+          source: { type: 'string' },
+        },
+        required: ['panelType'],
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
+      exposedTo: ['agent', 'assistant'],
+    },
+    {
+      name: 'panel_layout_close_ui_panel',
+      description: 'Close a panel only when it was opened as a UI-invoked temporary surface, leaving host-owned panels and layout groups intact.',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          panelType: { type: 'string' },
+        },
+        required: ['panelType'],
+      },
+      annotations: { readOnlyHint: false, destructiveHint: true },
+      exposedTo: ['agent', 'assistant'],
+    },
   ],
   'layout-sidebar': [
     {
@@ -980,7 +1013,7 @@ export let COMPONENTS = [
       status: 'draft',
       schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
-      capabilities: ['layout-tree', 'split-panels', 'panel-registry', 'panel-menu-actions', 'responsive-behavior', 'importance-auto-collapse', 'scroll-fallback', 'local-storage'],
+      capabilities: ['layout-tree', 'split-panels', 'panel-registry', 'panel-menu-actions', 'ui-invoked-panels', 'responsive-behavior', 'importance-auto-collapse', 'scroll-fallback', 'local-storage'],
       attributes: [
         { name: 'storage-key', type: 'string', description: 'Optional key for persisted layout state.' },
         { name: 'min-panel-size', type: 'number', description: 'Minimum panel size in pixels.' },
@@ -1000,12 +1033,16 @@ export let COMPONENTS = [
       methods: [
         { name: 'registerPanelType', type: 'function', description: 'Registers a renderable panel type descriptor.' },
         { name: 'setPanelMenuActions', type: 'function', description: 'Sets fold-down header menu actions for a panel.' },
+        { name: 'openPanel', type: 'function', description: 'Opens or reuses a host-approved panel type inside the current layout tree.' },
+        { name: 'closeUiPanel', type: 'function', description: 'Closes a panel only when it was opened as a UI-invoked temporary panel.' },
         { name: 'setLayoutBehavior', type: 'function', description: 'Sets root responsive behavior for auto-collapse, overflow, and mobile stacking.' },
         { name: 'setNodeBehavior', type: 'function', description: 'Sets behavior for a concrete layout insertion point.' },
       ],
       events: [
         { name: 'layout-change', description: 'Bubbles when the layout tree changes.' },
         { name: 'panel-menu-action', description: 'Emits when a fold-down panel menu action is selected.' },
+        { name: 'layout-ui-panel-open', description: 'Emits after a temporary UI/agent-invoked panel is opened or reused.' },
+        { name: 'layout-ui-panel-close', description: 'Emits after a UI-invoked panel is removed from the layout tree.' },
       ],
       themeAliases: [
         '--sn-layout-bg',

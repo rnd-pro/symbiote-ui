@@ -347,6 +347,64 @@ export function isSplitNode(node) {
   return !!node && node.type === 'split'
 }
 
+export function findPanel(root, predicate) {
+  let panels = collectPanels(root)
+  return panels.find((panel) => predicate(panel)) || null
+}
+
+export function findPanelByType(root, panelType, options = {}) {
+  let { uiInvoked } = options
+  return findPanel(root, (panel) => (
+    panel.panelType === panelType &&
+    (uiInvoked === undefined || Boolean(panel.panelState?.uiInvoked) === Boolean(uiInvoked))
+  ))
+}
+
+export function openPanel(root, panelType, options = {}) {
+  let {
+    behavior,
+    direction = 'horizontal',
+    panelState = {},
+    ratio = 0.68,
+    reuseExisting = true,
+    source = '',
+    uiInvoked = false,
+  } = options
+
+  if (!panelType) {
+    return { root, panel: null, created: false }
+  }
+
+  if (reuseExisting) {
+    let existing = findPanelByType(root, panelType, uiInvoked ? { uiInvoked: true } : {})
+    if (existing) {
+      return { root, panel: existing, created: false }
+    }
+  }
+
+  let state = {
+    ...panelState,
+    ...(uiInvoked ? { uiInvoked: true, source } : {}),
+  }
+  let panel = createPanel(panelType, state, behavior)
+  let nextRoot = root
+    ? createSplit(direction, root, panel, ratio)
+    : panel
+
+  return { root: nextRoot, panel, created: true }
+}
+
+export function closeUiPanel(root, panelType) {
+  let panel = findPanelByType(root, panelType, { uiInvoked: true })
+  if (!panel) {
+    return { root, panel: null, removed: false }
+  }
+  if (root?.id === panel.id) {
+    return { root: null, panel, removed: true }
+  }
+  return { root: joinPanels(root, panel.id), panel, removed: true }
+}
+
 /**
  * Collect panel nodes from a layout tree.
  * @param {LayoutNode | Object | null} root

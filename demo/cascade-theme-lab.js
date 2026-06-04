@@ -683,7 +683,23 @@ shellMenu?.setGroups?.(layoutGroups, activeLayoutGroupId);
 if (sidebar) sidebar.$.collapsed = true;
 shellMenu?.addEventListener('layout-group-change', (event) => applyLayoutGroup(event.detail?.id));
 shellMenu?.addEventListener('layout-group-add', () => applyLayoutGroup('responsive'));
-shellMenu?.addEventListener('cascade-theme-open-full', () => shellMenu?.selectGroup?.('theme', 'theme-widget'));
+shellMenu?.addEventListener('cascade-theme-open-full', (event) => {
+  layout.openPanel('theme', {
+    behavior: {
+      importance: 100,
+      minInlineSize: 320,
+      minBlockSize: 280,
+      collapse: 'manual',
+    },
+    direction: 'horizontal',
+    panelState: {
+      storageKey: event.detail?.storageKey || 'symbiote-ui:cascade-theme-lab',
+    },
+    ratio: 0.66,
+    source: 'theme-widget',
+    uiInvoked: true,
+  });
+});
 window.addEventListener('hashchange', () => {
   let id = String(location.hash || '').replace(/^#\/?/, '').split(/[/?#]/)[0];
   if (layoutGroups.some((group) => group.id === id)) {

@@ -7,6 +7,12 @@
 
 export * as LayoutTree from './LayoutTree.js';
 export {
+  closeUiPanel,
+  findPanel,
+  findPanelByType,
+  openPanel,
+} from './LayoutTree.js';
+export {
   buildHash,
   buildQuery,
   getRoute,

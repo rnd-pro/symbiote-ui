@@ -712,6 +712,72 @@ export class Layout extends Symbiote {
   }
 
   /**
+   * Open a panel type inside the current layout tree.
+   * @param {string} panelType
+   * @param {Object} [options]
+   * @param {'horizontal' | 'vertical'} [options.direction]
+   * @param {number} [options.ratio]
+   * @param {Object} [options.panelState]
+   * @param {import('./../LayoutTree.js').LayoutBehavior} [options.behavior]
+   * @param {boolean} [options.reuseExisting]
+   * @param {boolean} [options.uiInvoked]
+   * @param {string} [options.source]
+   * @returns {string|null} opened or reused panel id
+   */
+  openPanel(panelType, options = {}) {
+    let result = LayoutTree.openPanel(
+      LayoutTree.clone(this.$.layoutTree),
+      panelType,
+      options
+    );
+
+    if (!result.panel) return null;
+    if (result.root) this.$.layoutTree = result.root;
+    this._saveLayout();
+    this._scheduleResponsiveLayout();
+    this.dispatchEvent(new CustomEvent('layout-ui-panel-open', {
+      bubbles: true,
+      composed: true,
+      detail: {
+        panelId: result.panel.id,
+        panelType,
+        created: result.created,
+        source: options.source || '',
+        uiInvoked: Boolean(result.panel.panelState?.uiInvoked),
+        panelState: result.panel.panelState || {},
+      },
+    }));
+    return result.panel.id;
+  }
+
+  /**
+   * Close a panel previously opened by UI/agent intent.
+   * @param {string} panelType
+   * @returns {boolean}
+   */
+  closeUiPanel(panelType) {
+    let result = LayoutTree.closeUiPanel(LayoutTree.clone(this.$.layoutTree), panelType);
+    if (!result.removed) return false;
+    if (result.root) {
+      this.$.layoutTree = result.root;
+    } else {
+      this.$.layoutTree = LayoutTree.createPanel('default');
+    }
+    this._saveLayout();
+    this._scheduleResponsiveLayout();
+    this.dispatchEvent(new CustomEvent('layout-ui-panel-close', {
+      bubbles: true,
+      composed: true,
+      detail: {
+        panelId: result.panel.id,
+        panelType,
+        source: result.panel.panelState?.source || '',
+      },
+    }));
+    return true;
+  }
+
+  /**
    * Set the fold-down header menu actions for a panel.
    * @param {string} panelId
    * @param {Array<{id: string, label?: string, icon?: string, title?: string, active?: boolean, disabled?: boolean}>} actions

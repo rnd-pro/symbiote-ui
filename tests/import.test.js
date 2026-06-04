@@ -49,6 +49,8 @@ test('discover exposes the standalone package contract', async () => {
   assert.ok(layoutAgentItem.webmcp.toolNames.includes('panel_layout_set_behavior'));
   assert.ok(layoutAgentItem.webmcp.toolNames.includes('panel_layout_register_panel_type'));
   assert.ok(layoutAgentItem.webmcp.toolNames.includes('panel_layout_set_panel_menu_actions'));
+  assert.ok(layoutAgentItem.webmcp.toolNames.includes('panel_layout_open_panel'));
+  assert.ok(layoutAgentItem.webmcp.toolNames.includes('panel_layout_close_ui_panel'));
   assert.ok(sidebarAgentItem.webmcp.toolNames.includes('layout_sidebar_set_sections'));
   assert.ok(sidebarAgentItem.webmcp.toolNames.includes('layout_sidebar_set_active_section'));
   assert.ok(data.manifest.themeRuntimeDescriptors.some((descriptor) => (

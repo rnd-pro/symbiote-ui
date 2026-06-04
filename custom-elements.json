@@ -2845,7 +2845,7 @@
           "name": "Layout",
           "tagName": "panel-layout",
           "description": "Panel-based application layout shell.",
-          "componentDescription": "Panel-based application layout shell. Use this layout composition and navigation surface when composing layout UI. Capabilities: layout-tree, split-panels, panel-registry, panel-menu-actions, responsive-behavior, importance-auto-collapse, scroll-fallback, local-storage. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: panel_layout_set_behavior, panel_layout_register_panel_type, panel_layout_set_panel_menu_actions.",
+          "componentDescription": "Panel-based application layout shell. Use this layout composition and navigation surface when composing layout UI. Capabilities: layout-tree, split-panels, panel-registry, panel-menu-actions, ui-invoked-panels, responsive-behavior, importance-auto-collapse, scroll-fallback, local-storage. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: panel_layout_set_behavior, panel_layout_register_panel_type, panel_layout_set_panel_menu_actions, panel_layout_open_panel, panel_layout_close_ui_panel.",
           "attributes": [
             {
               "name": "storage-key",
@@ -2939,6 +2939,22 @@
             },
             {
               "kind": "method",
+              "name": "openPanel",
+              "type": {
+                "text": "function"
+              },
+              "description": "Opens or reuses a host-approved panel type inside the current layout tree."
+            },
+            {
+              "kind": "method",
+              "name": "closeUiPanel",
+              "type": {
+                "text": "function"
+              },
+              "description": "Closes a panel only when it was opened as a UI-invoked temporary panel."
+            },
+            {
+              "kind": "method",
               "name": "setLayoutBehavior",
               "type": {
                 "text": "function"
@@ -2965,6 +2981,20 @@
             {
               "name": "panel-menu-action",
               "description": "Emits when a fold-down panel menu action is selected.",
+              "type": {
+                "text": "CustomEvent"
+              }
+            },
+            {
+              "name": "layout-ui-panel-open",
+              "description": "Emits after a temporary UI/agent-invoked panel is opened or reused.",
+              "type": {
+                "text": "CustomEvent"
+              }
+            },
+            {
+              "name": "layout-ui-panel-close",
+              "description": "Emits after a UI-invoked panel is removed from the layout tree.",
               "type": {
                 "text": "CustomEvent"
               }
@@ -3048,6 +3078,7 @@
                 "split-panels",
                 "panel-registry",
                 "panel-menu-actions",
+                "ui-invoked-panels",
                 "responsive-behavior",
                 "importance-auto-collapse",
                 "scroll-fallback",
@@ -3129,6 +3160,16 @@
                   "description": "Sets fold-down header menu actions for a panel."
                 },
                 {
+                  "name": "openPanel",
+                  "type": "function",
+                  "description": "Opens or reuses a host-approved panel type inside the current layout tree."
+                },
+                {
+                  "name": "closeUiPanel",
+                  "type": "function",
+                  "description": "Closes a panel only when it was opened as a UI-invoked temporary panel."
+                },
+                {
                   "name": "setLayoutBehavior",
                   "type": "function",
                   "description": "Sets root responsive behavior for auto-collapse, overflow, and mobile stacking."
@@ -3147,6 +3188,14 @@
                 {
                   "name": "panel-menu-action",
                   "description": "Emits when a fold-down panel menu action is selected."
+                },
+                {
+                  "name": "layout-ui-panel-open",
+                  "description": "Emits after a temporary UI/agent-invoked panel is opened or reused."
+                },
+                {
+                  "name": "layout-ui-panel-close",
+                  "description": "Emits after a UI-invoked panel is removed from the layout tree."
                 }
               ],
               "themeAliases": [
@@ -3312,12 +3361,81 @@
                       "agent",
                       "assistant"
                     ]
+                  },
+                  {
+                    "name": "panel_layout_open_panel",
+                    "description": "Open or reuse a host-approved panel type inside the current layout tree; use uiInvoked when the panel should be closeable as a temporary UI surface.",
+                    "inputSchema": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "panelType": {
+                          "type": "string"
+                        },
+                        "direction": {
+                          "enum": [
+                            "horizontal",
+                            "vertical"
+                          ]
+                        },
+                        "ratio": {
+                          "type": "number",
+                          "minimum": 0.1,
+                          "maximum": 0.9
+                        },
+                        "uiInvoked": {
+                          "type": "boolean"
+                        },
+                        "reuseExisting": {
+                          "type": "boolean"
+                        },
+                        "source": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "panelType"
+                      ]
+                    },
+                    "annotations": {
+                      "readOnlyHint": false,
+                      "destructiveHint": false,
+                      "idempotentHint": true
+                    },
+                    "exposedTo": [
+                      "agent",
+                      "assistant"
+                    ]
+                  },
+                  {
+                    "name": "panel_layout_close_ui_panel",
+                    "description": "Close a panel only when it was opened as a UI-invoked temporary surface, leaving host-owned panels and layout groups intact.",
+                    "inputSchema": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "panelType": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "panelType"
+                      ]
+                    },
+                    "annotations": {
+                      "readOnlyHint": false,
+                      "destructiveHint": true
+                    },
+                    "exposedTo": [
+                      "agent",
+                      "assistant"
+                    ]
                   }
                 ]
               }
             },
             "agent": {
-              "componentDescription": "Panel-based application layout shell. Use this layout composition and navigation surface when composing layout UI. Capabilities: layout-tree, split-panels, panel-registry, panel-menu-actions, responsive-behavior, importance-auto-collapse, scroll-fallback, local-storage. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: panel_layout_set_behavior, panel_layout_register_panel_type, panel_layout_set_panel_menu_actions.",
+              "componentDescription": "Panel-based application layout shell. Use this layout composition and navigation surface when composing layout UI. Capabilities: layout-tree, split-panels, panel-registry, panel-menu-actions, ui-invoked-panels, responsive-behavior, importance-auto-collapse, scroll-fallback, local-storage. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: panel_layout_set_behavior, panel_layout_register_panel_type, panel_layout_set_panel_menu_actions, panel_layout_open_panel, panel_layout_close_ui_panel.",
               "semanticRole": "layout composition and navigation surface",
               "usage": "Render or compose <panel-layout> when the host needs panel-based application layout shell.",
               "dataOwnership": "host-owned model; component renders and emits intent events",
@@ -3326,7 +3444,9 @@
                 "toolNames": [
                   "panel_layout_set_behavior",
                   "panel_layout_register_panel_type",
-                  "panel_layout_set_panel_menu_actions"
+                  "panel_layout_set_panel_menu_actions",
+                  "panel_layout_open_panel",
+                  "panel_layout_close_ui_panel"
                 ],
                 "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
                 "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
@@ -3340,7 +3460,7 @@
             }
           },
           "agent": {
-            "componentDescription": "Panel-based application layout shell. Use this layout composition and navigation surface when composing layout UI. Capabilities: layout-tree, split-panels, panel-registry, panel-menu-actions, responsive-behavior, importance-auto-collapse, scroll-fallback, local-storage. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: panel_layout_set_behavior, panel_layout_register_panel_type, panel_layout_set_panel_menu_actions.",
+            "componentDescription": "Panel-based application layout shell. Use this layout composition and navigation surface when composing layout UI. Capabilities: layout-tree, split-panels, panel-registry, panel-menu-actions, ui-invoked-panels, responsive-behavior, importance-auto-collapse, scroll-fallback, local-storage. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: panel_layout_set_behavior, panel_layout_register_panel_type, panel_layout_set_panel_menu_actions, panel_layout_open_panel, panel_layout_close_ui_panel.",
             "semanticRole": "layout composition and navigation surface",
             "usage": "Render or compose <panel-layout> when the host needs panel-based application layout shell.",
             "dataOwnership": "host-owned model; component renders and emits intent events",
@@ -3349,7 +3469,9 @@
               "toolNames": [
                 "panel_layout_set_behavior",
                 "panel_layout_register_panel_type",
-                "panel_layout_set_panel_menu_actions"
+                "panel_layout_set_panel_menu_actions",
+                "panel_layout_open_panel",
+                "panel_layout_close_ui_panel"
               ],
               "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
               "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
