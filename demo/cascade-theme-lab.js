@@ -1,5 +1,6 @@
 import Symbiote, { html } from '@symbiotejs/symbiote';
 import {
+  applyCascadeTheme,
   Connection,
   DEFAULT_PROVIDER_THEME,
   Input,
@@ -54,260 +55,28 @@ const outputs = {
 
 let mode = 'dark';
 
-function clamp(value, min, max) {
-  return Math.min(max, Math.max(min, Number(value)));
-}
-
-function setToken(name, value) {
-  root.style.setProperty(name, value);
+function readThemeState() {
+  return {
+    mode,
+    brightness: Number(controls.brightness.value),
+    contrast: Number(controls.contrast.value),
+    chroma: Number(controls.chroma.value),
+    hue: Number(controls.hue.value),
+    outline: Number(controls.outline.value),
+    type: Number(controls.type.value),
+    density: Number(controls.density.value),
+  };
 }
 
 function updateCascadeTheme() {
-  let brightness = clamp(controls.brightness.value, 0, 100);
-  let contrast = clamp(controls.contrast.value, 0, 100);
-  let chroma = clamp(controls.chroma.value, 0, 100);
-  let hue = clamp(controls.hue.value, 0, 360);
-  let outline = clamp(controls.outline.value, 0, 100);
-  let type = clamp(controls.type.value, 80, 130);
-  let density = clamp(controls.density.value, 75, 140);
-  let dark = mode === 'dark';
-  let outlineStrength = outline / 100;
-  let typeScale = type / 100;
-  let densityScale = density / 100;
-  let bg = dark
-    ? 10 + brightness * 0.18
-    : 98 - brightness * 0.32;
-  let surface = dark
-    ? Math.min(34, bg + 3 + (contrast - 58) * 0.05)
-    : Math.max(72, bg - 4 - contrast * 0.10);
-  let text = dark
-    ? Math.min(98, Math.max(72, 94 + (contrast - 58) * 0.12))
-    : Math.max(8, 34 - contrast * 0.26);
-  let dim = dark
-    ? Math.min(78, Math.max(46, 60 + (contrast - 58) * 0.18))
-    : Math.max(24, 66 - contrast * 0.22);
-  let border = dark
-    ? Math.min(46, Math.max(12, 17 + (contrast - 58) * 0.10))
-    : Math.max(50, surface - 5 - contrast * 0.08);
-  let hover = dark
-    ? Math.min(58, Math.max(18, 27 + (contrast - 58) * 0.10))
-    : Math.max(42, surface - 8 - contrast * 0.12);
-  let accentLight = dark
-    ? Math.min(72, Math.max(48, 63 + (contrast - 58) * 0.12))
-    : Math.max(36, 62 - contrast * 0.10);
-  let neutralChroma = `${chroma}%`;
-  let accent = `hsl(${hue} ${neutralChroma} ${accentLight}%)`;
-  let accentSoft = `hsl(${hue} ${neutralChroma} ${accentLight}% / 0.18)`;
-  let outlineAlpha = outline === 0
-    ? 0
-    : dark
-      ? 0.02 + outlineStrength * 0.21
-      : 0.04 + outlineStrength * 0.28;
-  let outlineLit = dark
-    ? Math.min(62, text - 10 + outlineStrength * 28)
-    : Math.max(32, text + 42 - outlineStrength * 26);
-  let outlineColor = `hsl(0 0% ${outlineLit.toFixed(1)}% / ${outlineAlpha.toFixed(3)})`;
-  let softOutlineColor = `hsl(0 0% ${text.toFixed(1)}% / ${(outlineAlpha * 0.55).toFixed(3)})`;
-  let nodeBorderWidth = `${(1 + outlineStrength).toFixed(2)}px`;
-  let focusRingWidth = `${(1 + outlineStrength * 2).toFixed(1)}px`;
-  let shapeStrokeWidth = (0.4 + outlineStrength * 1.2).toFixed(2);
-  let connectionWidth = (1.5 + outlineStrength * 0.8).toFixed(2);
-  let connectionHoverWidth = (2.4 + outlineStrength * 1.2).toFixed(2);
-  let typeToken = (px) => `calc(${px}px * var(--sn-theme-type-scale))`;
-  let densityToken = (px) => `calc(${px}px * var(--sn-theme-density))`;
-
-  setToken('--sn-theme-hue', String(hue));
-  setToken('--sn-theme-chroma', neutralChroma);
-  setToken('--sn-theme-bg-lightness', `${bg.toFixed(1)}%`);
-  setToken('--sn-theme-surface-lightness', `${surface.toFixed(1)}%`);
-  setToken('--sn-theme-text-lightness', `${text.toFixed(1)}%`);
-  setToken('--sn-theme-outline-strength', outlineStrength.toFixed(2));
-  setToken('--sn-theme-type-scale', typeScale.toFixed(2));
-  setToken('--sn-theme-density', densityScale.toFixed(2));
-  setToken('--sn-theme-spacing-scale', densityScale.toFixed(2));
-  setToken('--sn-lit-border', `${border.toFixed(1)}%`);
-  setToken('--sn-lit-hover', `${hover.toFixed(1)}%`);
-  setToken('--sn-lit-text-dim', `${dim.toFixed(1)}%`);
-  setToken('--sn-lit-accent', `${accentLight.toFixed(1)}%`);
-  setToken('--sn-outline-color', outlineColor);
-  setToken('--sn-outline-color-soft', softOutlineColor);
-  setToken('--sn-node-selected', accent);
-  setToken('--sn-cat-data', accent);
-  setToken('--sn-node-active-border', `color-mix(in srgb, ${accent} 54%, transparent)`);
-  setToken('--sn-node-hover', accentSoft);
-  setToken('--sn-node-border', outlineColor);
-  setToken('--sn-node-border-width', nodeBorderWidth);
-  setToken('--sn-node-header-border', outline === 0 ? 'transparent' : softOutlineColor);
-  setToken('--sn-node-item-border', outline === 0 ? 'transparent' : softOutlineColor);
-  setToken('--sn-shape-stroke', outlineColor);
-  setToken('--sn-shape-stroke-width', shapeStrokeWidth);
-  setToken('--sn-shape-port-hint-stroke-width', (0.5 + outlineStrength * 1.6).toFixed(2));
-  setToken('--sn-conn-width', connectionWidth);
-  setToken('--sn-conn-hover-width', connectionHoverWidth);
-  setToken('--sn-conn-selected-width', connectionHoverWidth);
-  setToken('--sn-pseudo-conn-width', connectionWidth);
-  setToken('--sn-plus-indicator-stroke-width', connectionWidth);
-  setToken('--sn-conn-dot-stroke-width', `${(1.4 + outlineStrength * 1.2).toFixed(2)}px`);
-  setToken('--sn-layout-border', outlineColor);
-  setToken('--sn-layout-resizer-hover-bg', outline === 0 ? 'transparent' : softOutlineColor);
-  setToken('--sn-ctx-border', outlineColor);
-  setToken('--sn-panel-menu-border-width', nodeBorderWidth);
-  setToken('--sn-xr-panel-border', outlineColor);
-  setToken('--sn-card-border', outlineColor);
-  setToken('--sn-button-border', outlineColor);
-  setToken('--sn-banner-border', outlineColor);
-  setToken('--sn-badge-border', outlineColor);
-  setToken('--sn-field-control-border', outlineColor);
-  setToken('--sn-tree-row-selected-border', outline === 0 ? 'transparent' : softOutlineColor);
-  setToken('--sn-effect-focus-ring', `${focusRingWidth} solid var(--sn-node-selected)`);
-  setToken('--sn-node-font-size', typeToken(13));
-  setToken('--sn-node-label-size', typeToken(13));
-  setToken('--sn-node-summary-size', typeToken(12));
-  setToken('--sn-node-icon-size', typeToken(18));
-  setToken('--sn-node-link-size', typeToken(12));
-  setToken('--sn-node-link-icon-size', typeToken(15));
-  setToken('--sn-node-error-frame-header-size', typeToken(12));
-  setToken('--sn-node-error-frame-icon-size', typeToken(14));
-  setToken('--sn-node-error-frame-body-size', typeToken(11));
-  setToken('--sn-node-item-kicker-size', typeToken(10));
-  setToken('--sn-node-item-title-size', typeToken(13));
-  setToken('--sn-node-item-summary-size', typeToken(11));
-  setToken('--sn-port-label-size', typeToken(12));
-  setToken('--sn-control-label-size', typeToken(10));
-  setToken('--sn-control-input-size', typeToken(12));
-  setToken('--sn-node-preview-text-size', typeToken(11));
-  setToken('--sn-shape-watermark-size', typeToken(40));
-  setToken('--sn-button-font-size', typeToken(12));
-  setToken('--sn-button-icon-font-size', typeToken(16));
-  setToken('--sn-card-title-size', typeToken(11));
-  setToken('--sn-banner-font-size', typeToken(12));
-  setToken('--sn-banner-icon-size', typeToken(18));
-  setToken('--sn-badge-font-size', typeToken(11));
-  setToken('--sn-tree-label-size', typeToken(12));
-  setToken('--sn-tree-icon-size', typeToken(15));
-  setToken('--sn-tree-kind-size', typeToken(10));
-  setToken('--sn-tree-badge-size', typeToken(10));
-  setToken('--sn-tree-panel-font-size', typeToken(12));
-  setToken('--sn-tree-panel-title-size', typeToken(11));
-  setToken('--sn-tree-panel-input-size', typeToken(11));
-  setToken('--sn-layout-header-button-size', typeToken(12));
-  setToken('--sn-layout-header-icon-size', typeToken(16));
-  setToken('--sn-layout-header-dropdown-size', typeToken(18));
-  setToken('--sn-layout-collapsed-icon-size', typeToken(18));
-  setToken('--sn-layout-collapsed-horizontal-icon-size', typeToken(20));
-  setToken('--sn-fullscreen-tab-size', typeToken(12));
-  setToken('--sn-fullscreen-tab-icon-size', typeToken(16));
-  setToken('--sn-panel-menu-item-size', typeToken(12));
-  setToken('--sn-panel-menu-icon-size', typeToken(18));
-  setToken('--sn-socket-size', densityToken(12));
-  setToken('--sn-socket-border-width', `${(1.5 + outlineStrength * 0.8).toFixed(2)}px`);
-  setToken('--sn-socket-hit-size', densityToken(44));
-  setToken('--sn-card-padding', densityToken(14));
-  setToken('--sn-card-title-margin-block-end', densityToken(12));
-  setToken('--sn-card-footer-gap', densityToken(8));
-  setToken('--sn-button-padding', `${densityToken(6)} ${densityToken(14)}`);
-  setToken('--sn-button-gap', densityToken(6));
-  setToken('--sn-button-min-height', densityToken(30));
-  setToken('--sn-button-icon-size', densityToken(28));
-  setToken('--sn-banner-padding', `${densityToken(10)} ${densityToken(14)}`);
-  setToken('--sn-banner-gap', densityToken(8));
-  setToken('--sn-badge-padding', `${densityToken(2)} ${densityToken(8)}`);
-  setToken('--sn-badge-gap', densityToken(4));
-  setToken('--sn-tree-gap', densityToken(4));
-  setToken('--sn-tree-row-min-height', densityToken(22));
-  setToken('--sn-tree-row-padding-block', densityToken(2));
-  setToken('--sn-tree-badge-gap', densityToken(4));
-  setToken('--sn-tree-badge-padding', `${densityToken(1)} ${densityToken(5)}`);
-  setToken('--sn-tree-panel-title-gap', densityToken(5));
-  setToken('--sn-tree-panel-title-padding', `${densityToken(6)} ${densityToken(8)}`);
-  setToken('--sn-tree-panel-toolbar-gap', densityToken(6));
-  setToken('--sn-tree-panel-toolbar-padding', `${densityToken(6)} ${densityToken(8)}`);
-  setToken('--sn-tree-panel-input-padding', `${densityToken(4)} ${densityToken(8)}`);
-  setToken('--sn-tree-panel-content-padding', densityToken(4));
-  setToken('--sn-lab-toolbar-gap', densityToken(12));
-  setToken('--sn-lab-toolbar-padding', `${densityToken(10)} ${densityToken(12)}`);
-  setToken('--sn-lab-title-size', typeToken(14));
-  setToken('--sn-lab-control-font-size', typeToken(12));
-  setToken('--sn-lab-control-height', densityToken(30));
-  setToken('--sn-lab-control-gap', densityToken(8));
-  setToken('--sn-lab-toggle-padding', `0 ${densityToken(10)}`);
-  setToken('--sn-lab-mode-button-padding', `0 ${densityToken(9)}`);
-  setToken('--sn-lab-tuners-gap', densityToken(12));
-  setToken('--sn-lab-slider-width', densityToken(128));
-  setToken('--sn-lab-content-padding', densityToken(12));
-  setToken('--sn-lab-panel-gap', densityToken(12));
-  setToken('--sn-lab-panel-padding', densityToken(12));
-  setToken('--sn-lab-row-gap', densityToken(8));
-  setToken('--sn-lab-scroll-padding', densityToken(8));
-  setToken('--sn-lab-stack-gap', densityToken(10));
-  setToken('--sn-lab-token-gap', densityToken(8));
-  setToken('--sn-lab-token-padding', densityToken(10));
-  setToken('--sn-lab-token-label-size', typeToken(12));
-  setToken('--sn-lab-token-value-size', typeToken(11));
-  setToken('--sn-node-header-gap', densityToken(6));
-  setToken('--sn-node-header-padding', `${densityToken(8)} ${densityToken(12)}`);
-  setToken('--sn-node-collapsed-body-padding', `${densityToken(4)} 0`);
-  setToken('--sn-node-lod-body-padding', `${densityToken(2)} 0`);
-  setToken('--sn-node-body-padding', `${densityToken(8)} 0`);
-  setToken('--sn-node-body-gap', densityToken(4));
-  setToken('--sn-node-pill-body-padding', `${densityToken(8)} ${densityToken(20)}`);
-  setToken('--sn-node-pill-body-gap', densityToken(8));
-  setToken('--sn-node-circle-header-padding', densityToken(6));
-  setToken('--sn-node-circle-body-padding', `0 ${densityToken(8)} ${densityToken(8)}`);
-  setToken('--sn-node-comment-body-padding', `${densityToken(12)} ${densityToken(16)}`);
-  setToken('--sn-node-svg-body-padding', `${densityToken(4)} 0`);
-  setToken('--sn-node-content-padding', `${densityToken(8)} ${densityToken(12)} ${densityToken(10)}`);
-  setToken('--sn-node-link-gap', densityToken(5));
-  setToken('--sn-node-link-margin-block-start', densityToken(8));
-  setToken('--sn-node-items-padding', densityToken(6));
-  setToken('--sn-node-items-gap', densityToken(6));
-  setToken('--sn-node-item-gap', densityToken(3));
-  setToken('--sn-node-item-padding', `${densityToken(8)} ${densityToken(9)}`);
-  setToken('--sn-node-controls-padding', `0 ${densityToken(12)}`);
-  setToken('--sn-node-error-frame-header-gap', densityToken(6));
-  setToken('--sn-node-error-frame-header-padding', `${densityToken(5)} ${densityToken(10)}`);
-  setToken('--sn-node-error-frame-body-padding', `${densityToken(6)} ${densityToken(10)}`);
-  setToken('--sn-node-preview-text-padding', `${densityToken(6)} ${densityToken(10)}`);
-  setToken('--sn-port-gap', densityToken(6));
-  setToken('--sn-port-padding', `${densityToken(3)} ${densityToken(12)}`);
-  setToken('--sn-port-min-height', densityToken(28));
-  setToken('--sn-control-gap', densityToken(2));
-  setToken('--sn-control-margin', `${densityToken(4)} 0`);
-  setToken('--sn-control-padding', `${densityToken(4)} ${densityToken(12)}`);
-  setToken('--sn-control-input-padding', `${densityToken(4)} ${densityToken(8)}`);
-  setToken('--sn-layout-header-gap', densityToken(2));
-  setToken('--sn-layout-header-padding', `${densityToken(2)} ${densityToken(4)}`);
-  setToken('--sn-layout-header-min-height', densityToken(28));
-  setToken('--sn-layout-header-button-gap', densityToken(4));
-  setToken('--sn-layout-header-button-padding', `${densityToken(4)} ${densityToken(6)}`);
-  setToken('--sn-layout-collapsed-vertical-size', densityToken(28));
-  setToken('--sn-layout-collapsed-type-padding', `${densityToken(4)} ${densityToken(8)}`);
-  setToken('--sn-layout-collapsed-button-padding', densityToken(4));
-  setToken('--sn-layout-collapsed-horizontal-size', densityToken(32));
-  setToken('--sn-layout-collapsed-horizontal-type-padding', `${densityToken(6)} ${densityToken(4)}`);
-  setToken('--sn-layout-collapsed-horizontal-button-padding', `${densityToken(8)} ${densityToken(4)}`);
-  setToken('--sn-layout-resizer-thickness', `${(1 + outlineStrength * 2).toFixed(2)}px`);
-  setToken('--sn-fullscreen-tab-bar-height', densityToken(28));
-  setToken('--sn-fullscreen-tab-gap', densityToken(6));
-  setToken('--sn-fullscreen-tab-padding', `0 ${densityToken(12)}`);
-  setToken('--sn-fullscreen-tab-height', densityToken(28));
-  setToken('--sn-fullscreen-tab-active-height', densityToken(29));
-  setToken('--sn-panel-menu-padding', `${densityToken(4)} 0`);
-  setToken('--sn-panel-menu-item-gap', densityToken(8));
-  setToken('--sn-panel-menu-item-padding', `${densityToken(8)} ${densityToken(12)}`);
-  setToken('--sn-action-zone-size', densityToken(16));
-  setToken('--sn-scrollbar-thumb', `hsl(0 0% ${text.toFixed(1)}% / ${dark ? 0.08 : 0.24})`);
-  setToken('--sn-scrollbar-thumb-hover', dark
-    ? `hsl(0 0% ${text.toFixed(1)}% / 0.25)`
-    : `hsl(${hue} ${neutralChroma} ${accentLight}% / 0.55)`);
-  setToken('--sn-scrollbar-track', 'transparent');
+  let theme = applyCascadeTheme(root, readThemeState());
 
   for (const [key, output] of Object.entries(outputs)) {
-    output.textContent = controls[key].value;
+    output.textContent = String(theme.state[key]);
   }
 
   document.dispatchEvent(new CustomEvent('cascade-theme-change', {
-    detail: { mode, brightness, contrast, chroma, hue, outline, type, density },
+    detail: theme.state,
   }));
 }
 

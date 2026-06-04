@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
 
 const scrollbarSource = new URL('../themes/scrollbar-styles.js', import.meta.url);
+const cascadeThemeSource = new URL('../themes/cascade-theme.js', import.meta.url);
 const cascadeDemoSource = new URL('../demo/cascade-theme-lab.js', import.meta.url);
 const cascadeDemoHtml = new URL('../demo/cascade-theme-lab.html', import.meta.url);
 const graphNodeStyles = new URL('../node/GraphNode/GraphNode.css.js', import.meta.url);
@@ -29,35 +30,58 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   const source = await readFile(cascadeDemoSource, 'utf8');
 
   assert.match(source, /import Symbiote, \{ html \} from '@symbiotejs\/symbiote'/);
+  assert.match(source, /applyCascadeTheme\(root, readThemeState\(\)\)/);
   assert.match(source, /class CascadeGraphPanel extends Symbiote/);
   assert.match(source, /class CascadeUiPanel extends Symbiote/);
   assert.match(source, /applyTheme\(document\.documentElement, DEFAULT_PROVIDER_THEME\)/);
-  assert.match(source, /10 \+ brightness \* 0\.18/);
-  assert.match(source, /94 \+ \(contrast - 58\) \* 0\.12/);
-  assert.match(source, /63 \+ \(contrast - 58\) \* 0\.12/);
-  assert.match(source, /0\.08 : 0\.24/);
   assert.match(source, /--sn-theme-outline-strength/);
   assert.match(source, /--sn-theme-type-scale/);
-  assert.match(source, /--sn-theme-spacing-scale/);
-  assert.match(source, /--sn-effect-focus-ring/);
-  assert.match(source, /--sn-xr-panel-border/);
   assert.match(source, /--sn-shape-stroke/);
   assert.match(source, /--sn-shape-stroke-width/);
   assert.match(source, /--sn-node-label-size/);
   assert.match(source, /--sn-node-icon-size/);
-  assert.match(source, /--sn-node-summary-size/);
   assert.match(source, /--sn-port-label-size/);
   assert.match(source, /--sn-shape-watermark-size/);
+  assert.match(source, /--sn-layout-header-icon-size/);
+  assert.match(source, /--sn-action-zone-size/);
+  assert.doesNotMatch(source, /extends HTMLElement/);
+  assert.doesNotMatch(source, /\.setTheme\(/);
+  assert.doesNotMatch(source, /10 \+ brightness \* 0\.18/);
+  assert.doesNotMatch(source, /setToken\(/);
+});
+
+test('cascade theme is a reusable library contract with WebMCP metadata', async () => {
+  const source = await readFile(cascadeThemeSource, 'utf8');
+  const themeModule = await import(cascadeThemeSource.href);
+  const theme = themeModule.createCascadeTheme({
+    mode: 'dark',
+    brightness: 0,
+    contrast: 58,
+    chroma: 89,
+    hue: 218,
+    outline: 38,
+    type: 100,
+    density: 100,
+  });
+
+  assert.equal(theme.name, 'cascade-theme');
+  assert.equal(theme.state.mode, 'dark');
+  assert.equal(theme.tokens['--sn-theme-bg-lightness'], '10.0%');
+  assert.equal(theme.tokens['--sn-theme-text-lightness'], '94.0%');
+  assert.equal(theme.tokens['--sn-shape-stroke-width'], '0.86');
+  assert.equal(theme.tokens['--sn-node-label-size'], 'calc(13px * var(--sn-theme-type-scale))');
+  assert.equal(theme.tokens['--sn-action-zone-size'], 'calc(16px * var(--sn-theme-density))');
+  assert.match(source, /CASCADE_THEME_DESCRIPTOR/);
+  assert.match(source, /symbiote-ui\.createCascadeTheme/);
+  assert.match(source, /theme:compose/);
+  assert.match(source, /--sn-shape-stroke/);
+  assert.match(source, /--sn-layout-header-icon-size/);
+  assert.match(source, /--sn-node-summary-size/);
   assert.match(source, /--sn-node-pill-body-padding/);
   assert.match(source, /--sn-node-circle-body-padding/);
   assert.match(source, /--sn-node-svg-body-padding/);
   assert.match(source, /--sn-control-input-size/);
-  assert.match(source, /--sn-layout-header-icon-size/);
   assert.match(source, /--sn-panel-menu-icon-size/);
-  assert.match(source, /--sn-action-zone-size/);
-  assert.match(source, /--sn-socket-hit-size/);
-  assert.doesNotMatch(source, /extends HTMLElement/);
-  assert.doesNotMatch(source, /\.setTheme\(/);
 });
 
 test('cascade theme controls reach canvas objects and layout chrome', async () => {

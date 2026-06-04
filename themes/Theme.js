@@ -16,6 +16,15 @@
 
 export { DEFAULT_PROVIDER_THEME } from './default-provider.js';
 export { DEFAULT_PROVIDER_THEME as DEFAULT_THEME } from './default-provider.js';
+export {
+  applyCascadeTheme,
+  CASCADE_THEME_DEFAULTS,
+  CASCADE_THEME_DESCRIPTOR,
+  CASCADE_THEME_TOKEN_TARGETS,
+  createCascadeTheme,
+  getCascadeThemeControls,
+  normalizeCascadeThemeOptions,
+} from './cascade-theme.js';
 
 /**
  * Mapping from layout global tokens to symbiote-node tokens.

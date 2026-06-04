@@ -7,7 +7,9 @@ test('root and metadata entrypoints import in Node', async () => {
   let webmcp = await import('../webmcp.js');
 
   assert.equal(typeof root.NodeEditor, 'function');
+  assert.equal(typeof root.createCascadeTheme, 'function');
   assert.equal(typeof manifest.listComponents, 'function');
+  assert.equal(typeof manifest.listThemeRuntimeDescriptors, 'function');
   assert.equal(typeof webmcp.createToolDescriptor, 'function');
 });
 
@@ -19,4 +21,9 @@ test('discover exposes the standalone package contract', async () => {
   assert.equal(data.package.name, 'symbiote-ui');
   assert.equal(entrypoints.get('symbiote-ui')?.kind, 'node-safe');
   assert.equal(entrypoints.get('symbiote-ui/webmcp')?.kind, 'ssr-entry-safe');
+  assert.ok(data.manifest.themeRuntimeDescriptors.some((descriptor) => (
+    descriptor.name === 'cascade-theme'
+    && descriptor.webmcp?.name === 'symbiote-ui.createCascadeTheme'
+  )));
+  assert.equal(data.manifest.themeControls['cascade-theme'].length, 8);
 });

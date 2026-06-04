@@ -34,10 +34,17 @@ export {
 } from '../shapes/index.js';
 
 export {
+  applyCascadeTheme,
+  CASCADE_THEME_DEFAULTS,
+  CASCADE_THEME_DESCRIPTOR,
+  CASCADE_THEME_TOKEN_TARGETS,
   applyTheme,
+  createCascadeTheme,
   extractTheme,
   DEFAULT_PROVIDER_THEME,
   DEFAULT_THEME,
+  getCascadeThemeControls,
+  normalizeCascadeThemeOptions,
 } from '../themes/Theme.js';
 
 export {
