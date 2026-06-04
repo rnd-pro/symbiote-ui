@@ -1053,12 +1053,24 @@
                 "text": "function"
               },
               "description": "Registers a renderable panel type descriptor."
+            },
+            {
+              "kind": "method",
+              "name": "setPanelMenuActions",
+              "type": {
+                "text": "function"
+              },
+              "description": "Sets fold-down header menu actions for a panel."
             }
           ],
           "events": [
             {
               "name": "layout-change",
               "description": "Bubbles when the layout tree changes."
+            },
+            {
+              "name": "panel-menu-action",
+              "description": "Emits when a fold-down panel menu action is selected."
             }
           ],
           "cssProperties": [
@@ -1076,6 +1088,38 @@
             },
             {
               "name": "--sn-layout-resizer-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-layout-menu-action-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-layout-menu-icon-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-layout-menu-min-height",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-layout-menu-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-layout-menu-gap",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-layout-menu-action-gap",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-layout-menu-action-height",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-layout-menu-action-padding",
               "description": "Theme CSS custom property consumed by this component."
             }
           ]
@@ -1252,6 +1296,14 @@
             {
               "name": "panel-type-menu",
               "description": "Requests opening panel type selection UI."
+            },
+            {
+              "name": "panel-menu-action",
+              "description": "Emits when a fold-down panel menu action is selected."
+            },
+            {
+              "name": "panel-menu-actions",
+              "description": "Accepts bubbled action descriptors from the active panel component."
             }
           ],
           "cssProperties": [
@@ -1282,6 +1334,64 @@
             {
               "name": "--sn-layout-gap-bg",
               "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-layout-menu-action-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-layout-menu-icon-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-layout-menu-min-height",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-layout-menu-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-layout-menu-gap",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-layout-menu-action-gap",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-layout-menu-action-height",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-layout-menu-action-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            }
+          ],
+          "members": [
+            {
+              "kind": "field",
+              "name": "panelMenuActions",
+              "type": {
+                "text": "array"
+              },
+              "description": "Fold-down header menu action descriptors."
+            },
+            {
+              "kind": "field",
+              "name": "isPanelMenuOpen",
+              "type": {
+                "text": "boolean"
+              },
+              "description": "Whether the fold-down panel menu is open."
+            },
+            {
+              "kind": "method",
+              "name": "setPanelMenuActions",
+              "type": {
+                "text": "function"
+              },
+              "description": "Replaces fold-down header menu action descriptors."
             }
           ]
         }

@@ -21,6 +21,9 @@ const LAYOUT_NODE_ICONS = [
   'expand_more',
   'fullscreen',
   'fullscreen_exit',
+  'keyboard_arrow_down',
+  'keyboard_arrow_up',
+  'more_horiz',
 ];
 
 export class LayoutNode extends Symbiote {
@@ -43,6 +46,11 @@ export class LayoutNode extends Symbiote {
     panelTitle: 'Panel',
     panelIcon: 'dashboard',
     panelChrome: true,
+    panelMenuActions: [],
+    hasPanelMenuActions: false,
+    isPanelMenuOpen: false,
+    panelMenuIcon: 'keyboard_arrow_down',
+    panelMenuTitle: 'Panel actions',
 
 
     isCollapsed: false,
@@ -67,6 +75,8 @@ export class LayoutNode extends Symbiote {
 
     onResizerDown: (e) => this._startResize(e),
     onTypeClick: (e) => this._showTypeMenu(e),
+    onPanelMenuToggle: () => this._togglePanelMenu(),
+    onPanelMenuAction: (e) => this._runPanelMenuAction(e),
     onCollapseClick: () => this._toggleCollapse(),
     onExpandClick: () => this._toggleCollapse(),
     onFullscreenClick: () => this._toggleFullscreen(),
@@ -128,6 +138,15 @@ export class LayoutNode extends Symbiote {
     }
   }
 
+  initCallback() {
+    this.addEventListener('panel-menu-actions', this._onPanelMenuActions);
+  }
+
+  disconnectedCallback() {
+    this.removeEventListener('panel-menu-actions', this._onPanelMenuActions);
+    super.disconnectedCallback?.();
+  }
+
   _updateStyles() {
     let ratio = this.$.ratio;
     let dir = this.$.direction;
@@ -179,6 +198,7 @@ export class LayoutNode extends Symbiote {
 
 
     this._injectPanelComponent(config);
+    this._setPanelMenuActions(config.menuActions || []);
 
 
     let container = this.parentElement;
@@ -292,6 +312,75 @@ export class LayoutNode extends Symbiote {
     }
   }
 
+  /**
+   * Replaces the fold-down panel menu actions for this panel.
+   * @param {Array<{id: string, label?: string, icon?: string, title?: string, active?: boolean, disabled?: boolean}>} actions
+   */
+  setPanelMenuActions(actions = []) {
+    this._setPanelMenuActions(actions);
+  }
+
+  _setPanelMenuActions(actions = []) {
+    let normalized = Array.isArray(actions)
+      ? actions
+        .filter((action) => action && action.hidden !== true && action.id)
+        .map((action) => ({
+          id: String(action.id),
+          label: action.label || action.title || action.id,
+          icon: action.icon || 'radio_button_unchecked',
+          title: action.title || action.label || action.id,
+          active: Boolean(action.active),
+          disabled: Boolean(action.disabled),
+        }))
+      : [];
+
+    ensureMaterialSymbols(normalized.map((action) => action.icon));
+    this.$.panelMenuActions = normalized;
+    this.$.hasPanelMenuActions = normalized.length > 0;
+    if (!normalized.length) {
+      this.$.isPanelMenuOpen = false;
+      this.$.panelMenuIcon = 'keyboard_arrow_down';
+    }
+  }
+
+  _togglePanelMenu() {
+    if (this.$.panelChrome === false || this.$['^panelChrome'] === false) return;
+    if (this.$.isCollapsed || !this.$.hasPanelMenuActions) return;
+    this.$.isPanelMenuOpen = !this.$.isPanelMenuOpen;
+    this.$.panelMenuIcon = this.$.isPanelMenuOpen ? 'keyboard_arrow_up' : 'keyboard_arrow_down';
+  }
+
+  _runPanelMenuAction(event) {
+    let id = event.target.closest('[data-menu-action-id]')?.dataset.menuActionId;
+    if (!id) return;
+    let action = this.$.panelMenuActions.find((item) => item.id === id);
+    if (!action || action.disabled) return;
+    let detail = {
+      panelId: this.$.nodeId,
+      panelType: this.$.panelType,
+      actionId: action.id,
+      action,
+    };
+
+    let component = this._getActivePanelComponent();
+    component?.dispatchEvent(new CustomEvent('panel-menu-action', {
+      bubbles: false,
+      composed: false,
+      detail,
+    }));
+
+    this.dispatchEvent(new CustomEvent('panel-menu-action', {
+      bubbles: true,
+      composed: true,
+      detail,
+    }));
+  }
+
+  _getActivePanelComponent() {
+    return Array.from(this.ref.panelContent?.children || [])
+      .find((child) => child.style.display !== 'none') || null;
+  }
+
   _renderNode(data) {
     this.$.panelChrome = this.$.panelChrome !== false && this.$['^panelChrome'] !== false;
     this.setAttribute('panel-chrome', this.$.panelChrome ? 'default' : 'none');
@@ -304,6 +393,8 @@ export class LayoutNode extends Symbiote {
       this._renderSplit(data);
     } else {
       this.removeAttribute('direction');
+      this.$.isPanelMenuOpen = false;
+      this.$.panelMenuIcon = 'keyboard_arrow_down';
 
 
       if (prevType === 'split') {
@@ -356,6 +447,14 @@ export class LayoutNode extends Symbiote {
       zone.$.panelId = panelId;
     });
   }
+
+  _onPanelMenuActions = (event) => {
+    if (event.target === this) return;
+    let panelId = event.detail?.panelId || event.target?.dataset?.panelId;
+    if (panelId && panelId !== this.$.nodeId) return;
+    this.setPanelMenuActions(event.detail?.actions || []);
+    event.stopPropagation();
+  };
 
   _startResize(e) {
     if (this.$.panelChrome === false || this.$['^panelChrome'] === false) return;

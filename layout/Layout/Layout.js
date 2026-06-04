@@ -57,6 +57,7 @@ export class Layout extends Symbiote {
    * @param {string} [config.title] - Default title
    * @param {string} [config.icon] - Material Symbols icon name
    * @param {string} [config.component] - Custom element tag name
+   * @param {Array} [config.menuActions] - Fold-down header menu action descriptors
    */
   registerPanelType(name, config) {
     ensureMaterialSymbols([config.icon || 'dashboard']);
@@ -561,6 +562,16 @@ export class Layout extends Symbiote {
       this.$.layoutTree = newTree;
       this._saveLayout();
     }
+  }
+
+  /**
+   * Set the fold-down header menu actions for a panel.
+   * @param {string} panelId
+   * @param {Array<{id: string, label?: string, icon?: string, title?: string, active?: boolean, disabled?: boolean}>} actions
+   */
+  setPanelMenuActions(panelId, actions = []) {
+    let panelNode = this._findPanelNode(panelId);
+    panelNode?.setPanelMenuActions?.(actions);
   }
 
   /**

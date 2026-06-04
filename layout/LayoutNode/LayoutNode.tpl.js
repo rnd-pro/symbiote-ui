@@ -10,6 +10,13 @@ export let template = html`
       </button>
       <div class="header-spacer"></div>
       <button
+        class="header-btn panel-menu-toggle"
+        ${{ onclick: 'onPanelMenuToggle', '@hidden': '!hasPanelMenuActions', '@active': 'isPanelMenuOpen', title: 'panelMenuTitle' }}
+      >
+        <span class="material-symbols-outlined">more_horiz</span>
+        <span class="material-symbols-outlined" ${{ textContent: 'panelMenuIcon' }}></span>
+      </button>
+      <button
         class="header-btn collapse-btn"
         ${{ onclick: 'onCollapseClick', '@hidden': '!canCollapse', title: 'collapseTitle' }}
       >
@@ -21,6 +28,26 @@ export let template = html`
       >
         <span class="material-symbols-outlined" ${{ textContent: 'fullscreenIcon' }}></span>
       </button>
+    </div>
+    <div class="panel-menu-drawer" ${{ '@hidden': '!isPanelMenuOpen' }}>
+      <div class="panel-menu-actions" itemize="panelMenuActions">
+        <template>
+          <button
+            class="panel-menu-action"
+            type="button"
+            ${{
+              onclick: '^onPanelMenuAction',
+              '@data-menu-action-id': 'id',
+              '@active': 'active',
+              '@disabled': 'disabled',
+              title: 'title',
+            }}
+          >
+            <span class="material-symbols-outlined">{{icon}}</span>
+            <span>{{label}}</span>
+          </button>
+        </template>
+      </div>
     </div>
     <div class="panel-content" ref="panelContent" ${{ '@hidden': 'isCollapsed' }}></div>
 

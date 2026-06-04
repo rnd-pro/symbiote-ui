@@ -35,6 +35,21 @@ for (const tagName of [
 applyTheme(document.documentElement, DEFAULT_PROVIDER_THEME);
 
 class CascadeGraphPanel extends Symbiote {
+  initCallback() {
+    this._pathStyle = 'pcb';
+    this.addEventListener('panel-menu-action', (event) => {
+      if (event.detail?.actionId?.startsWith('path:')) {
+        this._pathStyle = event.detail.actionId.slice(5);
+        this.ref.canvas?.setPathStyle(this._pathStyle);
+        this.dispatchEvent(new CustomEvent('panel-menu-actions', {
+          bubbles: true,
+          composed: true,
+          detail: { actions: this._pathActions() },
+        }));
+      }
+    });
+  }
+
   renderCallback() {
     if (this._ready) return;
     this._ready = true;
@@ -108,7 +123,7 @@ class CascadeGraphPanel extends Symbiote {
     canvas.setReadonlyNodeDragging(true);
     canvas.setPanels(false);
     canvas.setViewportLocked(false);
-    canvas.setPathStyle('pcb');
+    canvas.setPathStyle(this._pathStyle);
     canvas.$.zoom = 1;
     canvas.$.panX = 0;
     canvas.$.panY = 0;
@@ -129,6 +144,14 @@ class CascadeGraphPanel extends Symbiote {
     place();
     this._resizeObserver = new ResizeObserver(place);
     this._resizeObserver.observe(canvas);
+  }
+
+  _pathActions() {
+    return [
+      { id: 'path:pcb', label: 'PCB', icon: 'conversion_path', active: this._pathStyle === 'pcb' },
+      { id: 'path:bezier', label: 'Bezier', icon: 'gesture', active: this._pathStyle === 'bezier' },
+      { id: 'path:straight', label: 'Straight', icon: 'horizontal_rule', active: this._pathStyle === 'straight' },
+    ];
   }
 
   disconnectedCallback() {
@@ -397,6 +420,11 @@ layout.registerPanelType('graph', {
   title: 'Graph',
   icon: 'hub',
   component: 'cascade-graph-panel',
+  menuActions: [
+    { id: 'path:pcb', label: 'PCB', icon: 'conversion_path', active: true },
+    { id: 'path:bezier', label: 'Bezier', icon: 'gesture' },
+    { id: 'path:straight', label: 'Straight', icon: 'horizontal_rule' },
+  ],
 });
 layout.registerPanelType('ui', {
   title: 'UI',

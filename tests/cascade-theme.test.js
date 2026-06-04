@@ -14,7 +14,9 @@ const ctrlItemStyles = new URL('../node/CtrlItem/CtrlItem.css.js', import.meta.u
 const nodeSocketStyles = new URL('../node/NodeSocket/NodeSocket.css.js', import.meta.url);
 const nodeCanvasStyles = new URL('../canvas/NodeCanvas/NodeCanvas.css.js', import.meta.url);
 const layoutStyles = new URL('../layout/Layout/Layout.css.js', import.meta.url);
+const layoutSource = new URL('../layout/Layout/Layout.js', import.meta.url);
 const layoutNodeSource = new URL('../layout/LayoutNode/LayoutNode.js', import.meta.url);
+const layoutNodeTemplate = new URL('../layout/LayoutNode/LayoutNode.tpl.js', import.meta.url);
 const layoutNodeStyles = new URL('../layout/LayoutNode/LayoutNode.css.js', import.meta.url);
 const projectTabsSource = new URL('../layout/ProjectTabs/ProjectTabs.js', import.meta.url);
 const projectTabsStyles = new URL('../layout/ProjectTabs/ProjectTabs.css.js', import.meta.url);
@@ -82,6 +84,9 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   assert.match(source, /setMessageItems\(/);
   assert.match(source, /setContent\(/);
   assert.match(source, /setVoiceControls\(/);
+  assert.match(source, /menuActions/);
+  assert.match(source, /path:pcb/);
+  assert.match(source, /panel-menu-actions/);
   assert.match(source, /voice command/);
   assert.match(html, /layout module/);
   assert.doesNotMatch(source, /extends HTMLElement/);
@@ -174,6 +179,7 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.match(source, /--sn-composer-input-size/);
   assert.match(source, /--sn-code-font-size/);
   assert.match(source, /--sn-layout-header-icon-size/);
+  assert.match(source, /--sn-layout-menu-action-size/);
   assert.match(source, /--sn-node-summary-size/);
   assert.match(source, /--sn-node-pill-body-padding/);
   assert.match(source, /--sn-node-circle-body-padding/);
@@ -281,7 +287,10 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
     nodeSocket,
     nodeCanvas,
     layout,
+    layoutSourceText,
+    layoutNodeSourceText,
     layoutNode,
+    layoutNodeTpl,
     projectTabs,
     projectTabsCss,
     panelMenu,
@@ -293,6 +302,8 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
     chatComposer,
     cellBgComponent,
     cellBg,
+    registry,
+    customElements,
   ] = await Promise.all([
     readFile(graphNodeStyles, 'utf8'),
     readFile(portItemStyles, 'utf8'),
@@ -300,7 +311,10 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
     readFile(nodeSocketStyles, 'utf8'),
     readFile(nodeCanvasStyles, 'utf8'),
     readFile(layoutStyles, 'utf8'),
+    readFile(layoutSource, 'utf8'),
+    readFile(layoutNodeSource, 'utf8'),
     readFile(layoutNodeStyles, 'utf8'),
+    readFile(layoutNodeTemplate, 'utf8'),
     readFile(projectTabsSource, 'utf8'),
     readFile(projectTabsStyles, 'utf8'),
     readFile(panelMenuStyles, 'utf8'),
@@ -312,6 +326,8 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
     readFile(chatComposerStyles, 'utf8'),
     readFile(cellBgSource, 'utf8'),
     readFile(cellBgStyles, 'utf8'),
+    readFile(componentRegistrySource, 'utf8'),
+    readFile(customElementsSource, 'utf8'),
   ]);
 
   assert.match(graphNode, /--sn-node-label-size/);
@@ -331,6 +347,16 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(nodeCanvas, /--sn-pseudo-conn-width/);
   assert.match(nodeCanvas, /--sn-plus-indicator-stroke-width/);
   assert.match(layout, /--sn-fullscreen-tab-icon-size/);
+  assert.match(layoutSourceText, /setPanelMenuActions/);
+  assert.match(layoutNodeSourceText, /setPanelMenuActions/);
+  assert.match(layoutNodeSourceText, /panel-menu-actions/);
+  assert.match(layoutNodeSourceText, /panel-menu-action/);
+  assert.match(layoutNode, /--sn-layout-menu-action-size/);
+  assert.match(layoutNode, /--sn-layout-menu-action-height/);
+  assert.match(layoutNode, /--sn-layout-menu-icon-size/);
+  assert.match(layoutNodeTpl, /panel-menu-drawer/);
+  assert.match(layoutNodeTpl, /panelMenuActions/);
+  assert.match(layoutNodeTpl, /onPanelMenuAction/);
   assert.match(layoutNode, /--sn-layout-header-icon-size/);
   assert.match(layoutNode, /--sn-layout-resizer-thickness/);
   assert.match(projectTabs, /--sn-tab-accent-\$\{index % 6\}/);
@@ -365,6 +391,11 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(cellBgComponent, /--sn-cell-size/);
   assert.match(cellBg, /--sn-cell-bg/);
   assert.match(cellBg, /--sn-cell-glare/);
+  assert.match(registry, /panel-menu-actions/);
+  assert.match(registry, /fold-down-panel-actions/);
+  assert.match(registry, /--sn-layout-menu-action-height/);
+  assert.match(customElements, /"name": "setPanelMenuActions"/);
+  assert.match(customElements, /"name": "panel-menu-action"/);
 });
 
 test('chat composer exposes reusable voice controls and agent-facing metadata', async () => {

@@ -84,9 +84,84 @@ export let styles = css`
       flex: 1;
     }
 
+    .panel-menu-toggle {
+      &[active] {
+        background: var(--sn-node-hover);
+        color: var(--sn-text);
+      }
+
+      .material-symbols-outlined + .material-symbols-outlined {
+        margin-left: calc(var(--sn-layout-header-gap, 2px) * -1);
+        opacity: 0.68;
+      }
+    }
+
     .panel-title {
       font-weight: 500;
       white-space: nowrap;
+    }
+
+    .panel-menu-drawer {
+      flex: 0 0 auto;
+      min-height: var(--sn-layout-menu-min-height, calc(var(--sn-layout-header-min-height, 28px) * 1.18));
+      padding: var(--sn-layout-menu-padding, var(--sn-layout-header-padding, 2px 4px));
+      border-bottom: 1px solid var(--sn-layout-border);
+      background: color-mix(in srgb, var(--sn-node-header-bg) 88%, var(--sn-bg) 12%);
+      overflow-x: auto;
+      overflow-y: hidden;
+      ${themedScrollbarStyles}
+    }
+
+    .panel-menu-drawer[hidden] {
+      display: none;
+    }
+
+    .panel-menu-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--sn-layout-menu-gap, var(--sn-layout-header-button-gap, 4px));
+      min-width: min-content;
+    }
+
+    .panel-menu-action {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--sn-layout-menu-action-gap, var(--sn-layout-header-button-gap, 4px));
+      min-height: var(--sn-layout-menu-action-height, var(--sn-layout-header-min-height, 28px));
+      padding: var(--sn-layout-menu-action-padding, var(--sn-layout-header-button-padding, 4px 6px));
+      border: 1px solid transparent;
+      border-radius: var(--sn-layout-header-button-radius, 4px);
+      background: transparent;
+      color: var(--sn-text-dim);
+      font: inherit;
+      font-size: var(--sn-layout-menu-action-size, var(--sn-layout-header-button-size, 0.75rem));
+      white-space: nowrap;
+      cursor: pointer;
+      transition:
+        background 0.1s,
+        border-color 0.1s,
+        color 0.1s;
+
+      &:hover {
+        background: var(--sn-node-hover);
+        color: var(--sn-text);
+      }
+
+      &[active] {
+        border-color: var(--sn-node-selected);
+        background: color-mix(in srgb, var(--sn-node-selected) 14%, transparent);
+        color: var(--sn-text);
+      }
+
+      &[disabled] {
+        opacity: var(--sn-button-disabled-opacity, 0.45);
+        cursor: not-allowed;
+      }
+
+      .material-symbols-outlined {
+        font-size: var(--sn-layout-menu-icon-size, var(--sn-layout-header-icon-size, 16px));
+      }
     }
 
     .panel-content {
@@ -104,6 +179,7 @@ export let styles = css`
       max-height: var(--sn-layout-collapsed-vertical-size, 28px) !important;
 
       .panel-content,
+      .panel-menu-drawer,
       action-zone {
         display: none !important;
       }
@@ -114,6 +190,7 @@ export let styles = css`
 
       /* Hide fullscreen button, dropdown, and spacer */
       .fullscreen-btn,
+      .panel-menu-toggle,
       .dropdown-arrow,
       .panel-title,
       .header-spacer {
@@ -156,6 +233,7 @@ export let styles = css`
       }
 
       .panel-content,
+      .panel-menu-drawer,
       action-zone {
         display: none !important;
       }
@@ -173,6 +251,7 @@ export let styles = css`
 
       /* Hide fullscreen button, dropdown, and spacer */
       .fullscreen-btn,
+      .panel-menu-toggle,
       .dropdown-arrow,
       .panel-title,
       .header-spacer {
