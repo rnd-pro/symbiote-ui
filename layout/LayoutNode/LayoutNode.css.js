@@ -1,4 +1,5 @@
 import { css } from '@symbiotejs/symbiote';
+import { themedScrollbarStyles } from '../../ui/scrollbar-styles.js';
 
 export let styles = css`
   layout-node {
@@ -92,6 +93,7 @@ export let styles = css`
       flex: 1;
       overflow: auto;
       position: relative;
+      ${themedScrollbarStyles}
     }
 
     /* Collapsed state - vertical (bottom/top panels) */

@@ -1,4 +1,5 @@
 import { css } from '@symbiotejs/symbiote';
+import { themedScrollbarStyles } from '../../ui/scrollbar-styles.js';
 
 export let styles = css`
   graph-node {
@@ -261,6 +262,7 @@ export let styles = css`
       gap: 6px;
       max-block-size: var(--sn-node-items-max-height);
       overflow-y: auto;
+      ${themedScrollbarStyles}
     }
 
     & .sn-node-item {

@@ -1,4 +1,5 @@
 import { css } from '@symbiotejs/symbiote';
+import { themedScrollbarStyles } from '../../ui/scrollbar-styles.js';
 
 export let styles = css`
   node-canvas {
@@ -20,6 +21,7 @@ export let styles = css`
      - layout: internal layout changes don't trigger parent reflow
      - paint: clips painting to element box */
     contain: size layout paint;
+    ${themedScrollbarStyles}
 
     &:active {
       cursor: grabbing;
