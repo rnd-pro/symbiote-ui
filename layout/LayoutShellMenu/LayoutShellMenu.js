@@ -23,7 +23,7 @@ function emit(el, type, detail = {}) {
 
 export class LayoutShellMenu extends Symbiote {
   init$ = {
-    title: 'Agent Portal',
+    title: 'Workspace',
     titleIcon: 'hub',
     pathLabel: '',
     pathIcon: 'folder_open',

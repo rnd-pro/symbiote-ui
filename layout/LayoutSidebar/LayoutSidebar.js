@@ -32,6 +32,7 @@ export class LayoutSidebar extends Symbiote {
   init$ = {
     '@disabled': false,
     '@sidebar-disabled': false,
+    activeSection: '',
     collapsed: false,
     editMode: false,
     sections: [],
@@ -48,27 +49,19 @@ export class LayoutSidebar extends Symbiote {
     },
 
     onResetAllLayouts: () => {
-
       this.resetConfig();
-
-
       if (typeof localStorage !== 'undefined') {
-        for (let i = localStorage.length - 1; i >= 0; i--) {
-          let key = localStorage.key(i);
-          if (key && key.startsWith('pg-layout-v2-')) {
-            localStorage.removeItem(key);
-          }
-        }
         localStorage.removeItem(STORAGE_KEY_WIDTH);
       }
-
-
       this.#clearSidebarWidth();
-
-
-      if (typeof window !== 'undefined') {
-        window.location.reload();
-      }
+      this.dispatchEvent(new CustomEvent('layout-sidebar-reset', {
+        bubbles: true,
+        composed: true,
+        detail: {
+          resetConfig: true,
+          resetWidth: true,
+        },
+      }));
     },
   };
 
@@ -226,6 +219,7 @@ export class LayoutSidebar extends Symbiote {
    * @param {string} sectionId — section ID to mark active
    */
   setActiveSection(sectionId) {
+    this.$.activeSection = sectionId || '';
     this.$.sections = this.$.sections.map((s) => ({
       ...s,
       isActive: s.sectionId === sectionId,

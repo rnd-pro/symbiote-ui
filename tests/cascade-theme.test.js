@@ -200,6 +200,8 @@ test('layout shell menu mirrors the Agent Portal topbar, tabs, sidebar, and work
   ]);
 
   assert.match(source, /setTabs\(tabs = \[\], activeId = this\.\$\.activeId\)/);
+  assert.match(source, /title: 'Workspace'/);
+  assert.doesNotMatch(source, /title: 'Agent Portal'/);
   assert.match(template, /class="app-topbar"/);
   assert.match(template, /class="shell-tabs-row"/);
   assert.match(template, /<project-tabs class="shell-tabs"/);
@@ -727,6 +729,10 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.doesNotMatch(layoutNodeSourceText, /showActionZones/);
   assert.doesNotMatch(layoutNodeSourceText, /layoutActionZones/);
   assert.match(layoutSidebarSourceText, /isDisabled: Boolean\(item\.disabled\)/);
+  assert.match(layoutSidebarSourceText, /layout-sidebar-reset/);
+  assert.match(layoutSidebarSourceText, /activeSection/);
+  assert.doesNotMatch(layoutSidebarSourceText, /pg-layout-v2-/);
+  assert.doesNotMatch(layoutSidebarSourceText, /window\.location\.reload/);
   assert.match(layoutNode, /--sn-layout-menu-action-size/);
   assert.match(layoutNode, /--sn-layout-menu-action-height/);
   assert.match(layoutNode, /--sn-layout-menu-icon-size/);
@@ -824,6 +830,9 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(layout, /\[scroll-inline-active\]\[scroll-block-active\]/);
   assert.doesNotMatch(layout, /\[responsive-active\]\[responsive-mode='stack'\]\s*\{\s*overflow-x: hidden;/);
   assert.match(registry, /preview-approve/);
+  assert.match(registry, /sidebar-disabled/);
+  assert.match(registry, /layout-sidebar-reset/);
+  assert.match(registry, /Active sidebar section id reflected by setActiveSection/);
   assert.match(registry, /--sn-cell-noise/);
   assert.match(registry, /--sn-composer-collapsed-control-width/);
   assert.match(registry, /--sn-composer-input-min-inline-size/);
@@ -858,6 +867,9 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(customElements, /"name": "layout-ui-panel-open"/);
   assert.match(customElements, /"name": "layout-ui-panel-close"/);
   assert.match(customElements, /"name": "layout-ui-panel-remove"/);
+  assert.match(customElements, /"name": "sidebar-disabled"/);
+  assert.match(customElements, /"name": "layout-sidebar-reset"/);
+  assert.match(customElements, /Active sidebar section id reflected by setActiveSection/);
   assert.doesNotMatch(customElements, /action-zone/);
   assert.doesNotMatch(customElements, /layout-preview/);
   assert.match(customElements, /"name": "--sn-cell-noise"/);

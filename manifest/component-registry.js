@@ -1129,17 +1129,21 @@ export let COMPONENTS = [
     agent: {
       semanticRole: 'layout sidebar and group navigation surface',
       usage: 'Use as the left navigation surface for host-owned layout groups, panel sections, or workspace navigation. Disable routerSync when the host or layout-shell-menu owns selection.',
-      dataOwnership: 'host-owned sections and active section id; component emits selection and panel-close intents',
+      dataOwnership: 'host-owned sections and active section id; component emits selection, panel-close, and reset intents',
     },
     contract: {
       status: 'draft',
       schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
       capabilities: ['sidebar-sections', 'section-select-intent', 'router-sync-opt-out', 'panel-drag', 'collapse-state', 'local-storage'],
+      attributes: [
+        { name: 'disabled', type: 'boolean', description: 'Disables and hides sidebar interactions.' },
+        { name: 'sidebar-disabled', type: 'boolean', description: 'Host alias for disabling sidebar interactions without colliding with nested controls.' },
+      ],
       properties: [
         { name: 'disabled', type: 'boolean', description: 'Disables and hides sidebar interactions.' },
         { name: 'sections', type: 'array', description: 'Sidebar section descriptors with nested panel entries.' },
-        { name: 'activeSection', type: 'string', description: 'Active sidebar section id.' },
+        { name: 'activeSection', type: 'string', description: 'Active sidebar section id reflected by setActiveSection().' },
         { name: 'disabledSections', type: 'array', description: 'Disabled section ids.' },
         { name: 'routerSync', type: 'boolean', description: 'When false, section clicks emit sidebar-section-select without navigating through LayoutRouter.' },
       ],
@@ -1152,6 +1156,7 @@ export let COMPONENTS = [
       events: [
         { name: 'sidebar-section-select', description: 'Cancelable section selection intent emitted before router navigation.', detail: [{ name: 'id', type: 'string', required: true }, { name: 'sectionId', type: 'string', required: true }] },
         { name: 'panel-close', description: 'Requests closing a panel from the sidebar.' },
+        { name: 'layout-sidebar-reset', description: 'Requests host-level reset actions after sidebar-owned config and width are cleared; the sidebar does not reload the page or clear host layout storage.' },
       ],
       themeAliases: [
         '--sn-bg',

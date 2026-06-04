@@ -3737,7 +3737,19 @@
           "name": "LayoutSidebar",
           "tagName": "layout-sidebar",
           "description": "Sidebar navigation component for the panel layout.",
-          "componentDescription": "Sidebar navigation component for the panel layout. Use this layout sidebar and group navigation surface when composing layout UI. Capabilities: sidebar-sections, section-select-intent, router-sync-opt-out, panel-drag, collapse-state, local-storage. Data ownership: host-owned sections and active section id; component emits selection and panel-close intents. WebMCP tools: layout_sidebar_set_sections, layout_sidebar_set_active_section.",
+          "componentDescription": "Sidebar navigation component for the panel layout. Use this layout sidebar and group navigation surface when composing layout UI. Capabilities: sidebar-sections, section-select-intent, router-sync-opt-out, panel-drag, collapse-state, local-storage. Data ownership: host-owned sections and active section id; component emits selection, panel-close, and reset intents. WebMCP tools: layout_sidebar_set_sections, layout_sidebar_set_active_section.",
+          "attributes": [
+            {
+              "name": "disabled",
+              "type": "boolean",
+              "description": "Disables and hides sidebar interactions."
+            },
+            {
+              "name": "sidebar-disabled",
+              "type": "boolean",
+              "description": "Host alias for disabling sidebar interactions without colliding with nested controls."
+            }
+          ],
           "members": [
             {
               "kind": "field",
@@ -3761,7 +3773,7 @@
               "type": {
                 "text": "string"
               },
-              "description": "Active sidebar section id."
+              "description": "Active sidebar section id reflected by setActiveSection()."
             },
             {
               "kind": "field",
@@ -3838,6 +3850,13 @@
               "type": {
                 "text": "CustomEvent"
               }
+            },
+            {
+              "name": "layout-sidebar-reset",
+              "description": "Requests host-level reset actions after sidebar-owned config and width are cleared; the sidebar does not reload the page or clear host layout storage.",
+              "type": {
+                "text": "CustomEvent"
+              }
             }
           ],
           "cssProperties": [
@@ -3882,7 +3901,18 @@
                 "collapse-state",
                 "local-storage"
               ],
-              "attributes": [],
+              "attributes": [
+                {
+                  "name": "disabled",
+                  "type": "boolean",
+                  "description": "Disables and hides sidebar interactions."
+                },
+                {
+                  "name": "sidebar-disabled",
+                  "type": "boolean",
+                  "description": "Host alias for disabling sidebar interactions without colliding with nested controls."
+                }
+              ],
               "properties": [
                 {
                   "name": "disabled",
@@ -3897,7 +3927,7 @@
                 {
                   "name": "activeSection",
                   "type": "string",
-                  "description": "Active sidebar section id."
+                  "description": "Active sidebar section id reflected by setActiveSection()."
                 },
                 {
                   "name": "disabledSections",
@@ -3952,6 +3982,10 @@
                 {
                   "name": "panel-close",
                   "description": "Requests closing a panel from the sidebar."
+                },
+                {
+                  "name": "layout-sidebar-reset",
+                  "description": "Requests host-level reset actions after sidebar-owned config and width are cleared; the sidebar does not reload the page or clear host layout storage."
                 }
               ],
               "slots": [],
@@ -4054,10 +4088,10 @@
               }
             },
             "agent": {
-              "componentDescription": "Sidebar navigation component for the panel layout. Use this layout sidebar and group navigation surface when composing layout UI. Capabilities: sidebar-sections, section-select-intent, router-sync-opt-out, panel-drag, collapse-state, local-storage. Data ownership: host-owned sections and active section id; component emits selection and panel-close intents. WebMCP tools: layout_sidebar_set_sections, layout_sidebar_set_active_section.",
+              "componentDescription": "Sidebar navigation component for the panel layout. Use this layout sidebar and group navigation surface when composing layout UI. Capabilities: sidebar-sections, section-select-intent, router-sync-opt-out, panel-drag, collapse-state, local-storage. Data ownership: host-owned sections and active section id; component emits selection, panel-close, and reset intents. WebMCP tools: layout_sidebar_set_sections, layout_sidebar_set_active_section.",
               "semanticRole": "layout sidebar and group navigation surface",
               "usage": "Use as the left navigation surface for host-owned layout groups, panel sections, or workspace navigation. Disable routerSync when the host or layout-shell-menu owns selection.",
-              "dataOwnership": "host-owned sections and active section id; component emits selection and panel-close intents",
+              "dataOwnership": "host-owned sections and active section id; component emits selection, panel-close, and reset intents",
               "webmcp": {
                 "mode": "explicit-descriptor",
                 "toolNames": [
@@ -4076,10 +4110,10 @@
             }
           },
           "agent": {
-            "componentDescription": "Sidebar navigation component for the panel layout. Use this layout sidebar and group navigation surface when composing layout UI. Capabilities: sidebar-sections, section-select-intent, router-sync-opt-out, panel-drag, collapse-state, local-storage. Data ownership: host-owned sections and active section id; component emits selection and panel-close intents. WebMCP tools: layout_sidebar_set_sections, layout_sidebar_set_active_section.",
+            "componentDescription": "Sidebar navigation component for the panel layout. Use this layout sidebar and group navigation surface when composing layout UI. Capabilities: sidebar-sections, section-select-intent, router-sync-opt-out, panel-drag, collapse-state, local-storage. Data ownership: host-owned sections and active section id; component emits selection, panel-close, and reset intents. WebMCP tools: layout_sidebar_set_sections, layout_sidebar_set_active_section.",
             "semanticRole": "layout sidebar and group navigation surface",
             "usage": "Use as the left navigation surface for host-owned layout groups, panel sections, or workspace navigation. Disable routerSync when the host or layout-shell-menu owns selection.",
-            "dataOwnership": "host-owned sections and active section id; component emits selection and panel-close intents",
+            "dataOwnership": "host-owned sections and active section id; component emits selection, panel-close, and reset intents",
             "webmcp": {
               "mode": "explicit-descriptor",
               "toolNames": [

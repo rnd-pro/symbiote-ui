@@ -151,6 +151,9 @@ scrollable space for both child branches.
 At runtime `panel-layout` exposes resolved scroll axes through
 `scroll-inline-active` and `scroll-block-active` attributes so CSS, browser
 smoke tests, and agents can distinguish requested policy from active fallback.
+`layout-sidebar` owns only its sidebar configuration and width persistence; its
+reset control clears that state and emits `layout-sidebar-reset` for host-owned
+layout resets instead of clearing host storage or reloading the page.
 
 ## Demos
 
