@@ -13,6 +13,7 @@ import { Drag } from '../interactions/Drag.js';
 import { Selector } from '../interactions/Selector.js';
 import { animateOut } from '@symbiotejs/symbiote';
 import { getShape } from '../shapes/index.js';
+import { ensureMaterialSymbols } from '../icons/MaterialSymbols.js';
 
 let svgMediaClipSeq = 0;
 let svgPathBoundsCache = new Map();
@@ -407,6 +408,16 @@ export class NodeViewManager {
         setSvgMediaClip(el, svg, shape);
         el.prepend(svg);
         el.setAttribute('data-svg-shape', shape.name);
+
+        let iconEl = el.querySelector('.sn-node-icon');
+        let iconName = iconEl?.textContent?.trim();
+        if (iconName) {
+          let shapeIcon = document.createElement('span');
+          shapeIcon.className = 'sn-node-shape-icon material-symbols-outlined';
+          shapeIcon.textContent = iconName;
+          ensureMaterialSymbols([iconName]);
+          el.appendChild(shapeIcon);
+        }
 
         if (this.#onSvgShapeReady) this.#onSvgShapeReady(node.id);
       } else if (shape) {

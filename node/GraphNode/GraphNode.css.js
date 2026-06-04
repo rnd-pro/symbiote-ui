@@ -504,6 +504,17 @@ export let styles = css`
       & .outputs {
         display: none;
       }
+      & .sn-node-shape-icon {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: var(--sn-shape-icon-size, 40px);
+        line-height: 1;
+        color: var(--sn-node-accent, var(--sn-text-dim));
+        pointer-events: none;
+        z-index: 1;
+      }
 
       &[data-has-media] {
         overflow: visible !important;
@@ -538,12 +549,20 @@ export let styles = css`
         & .sn-node-body {
           display: none;
         }
+
+        & .sn-node-shape-icon {
+          display: none;
+        }
       }
     }
 
     &[data-svg-shape][data-node-tone='inverse'] {
       --sn-shape-fill: var(--sn-node-accent);
       --sn-shape-stroke: var(--sn-node-accent);
+
+      & .sn-node-shape-icon {
+        color: var(--sn-node-bg);
+      }
     }
 
     /* SVG shape states — target inline svg > path directly.

@@ -175,6 +175,7 @@ export const CASCADE_THEME_TOKEN_TARGETS = Object.freeze({
     '--sn-chat-markdown-h4-size',
     '--sn-layout-header-icon-size',
     '--sn-panel-menu-icon-size',
+    '--sn-shape-icon-size',
   ],
   density: [
     '--sn-theme-density',
@@ -546,6 +547,7 @@ export function createCascadeTheme(options = {}) {
     '--sn-control-label-size': typeToken(10),
     '--sn-control-input-size': typeToken(12),
     '--sn-node-preview-text-size': typeToken(11),
+    '--sn-shape-icon-size': typeToken(40),
     '--sn-button-font-size': typeToken(12),
     '--sn-button-icon-font-size': typeToken(16),
     '--sn-card-title-size': headingToken(11),

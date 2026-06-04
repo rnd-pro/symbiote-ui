@@ -145,17 +145,22 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.match(source, /--sn-node-circle-body-padding/);
   assert.match(source, /--sn-control-input-size/);
   assert.match(source, /--sn-panel-menu-icon-size/);
+  assert.match(source, /--sn-shape-icon-size/);
 });
 
-test('svg shape nodes do not render internal labels or watermarks', async () => {
+test('svg shape nodes keep visual icons without internal labels or watermarks', async () => {
   const [graphNode, nodeViewManager] = await Promise.all([
     readFile(graphNodeStyles, 'utf8'),
     readFile(nodeViewManagerSource, 'utf8'),
   ]);
 
   assert.match(graphNode, /& \.sn-node-header,\n      & \.sn-node-body \{\n        display: none;/);
+  assert.match(graphNode, /& \.sn-node-shape-icon \{/);
+  assert.match(graphNode, /font-size: var\(--sn-shape-icon-size, 40px\)/);
+  assert.match(graphNode, /& \.sn-node-shape-icon \{\n          display: none;/);
   assert.doesNotMatch(graphNode, /sn-shape-watermark/);
   assert.doesNotMatch(graphNode, /--sn-shape-watermark-size/);
+  assert.match(nodeViewManager, /sn-node-shape-icon material-symbols-outlined/);
   assert.doesNotMatch(nodeViewManager, /sn-shape-watermark/);
   assert.doesNotMatch(nodeViewManager, /ensureMaterialSymbols\(\[iconEl\.textContent\]\)/);
 });
@@ -270,6 +275,7 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(graphNode, /--sn-node-label-size/);
   assert.match(graphNode, /--sn-node-summary-size/);
   assert.match(graphNode, /--sn-node-icon-size/);
+  assert.match(graphNode, /--sn-shape-icon-size/);
   assert.match(graphNode, /--sn-node-pill-body-padding/);
   assert.match(graphNode, /--sn-node-circle-body-padding/);
   assert.match(graphNode, /--sn-node-comment-body-padding/);
