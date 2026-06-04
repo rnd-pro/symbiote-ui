@@ -87,6 +87,9 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   assert.match(source, /menuActions/);
   assert.match(source, /path:pcb/);
   assert.match(source, /panel-menu-actions/);
+  assert.match(source, /setLayoutBehavior/);
+  assert.match(source, /responsiveMode: 'stack'/);
+  assert.match(source, /importance: 95/);
   assert.match(source, /voice command/);
   assert.match(html, /layout module/);
   assert.doesNotMatch(source, /extends HTMLElement/);
@@ -180,6 +183,8 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.match(source, /--sn-code-font-size/);
   assert.match(source, /--sn-layout-header-icon-size/);
   assert.match(source, /--sn-layout-menu-action-size/);
+  assert.match(source, /--sn-layout-overflow-inline-size/);
+  assert.match(source, /--sn-layout-responsive-panel-min-block-size/);
   assert.match(source, /--sn-node-summary-size/);
   assert.match(source, /--sn-node-pill-body-padding/);
   assert.match(source, /--sn-node-circle-body-padding/);
@@ -347,7 +352,17 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(nodeCanvas, /--sn-pseudo-conn-width/);
   assert.match(nodeCanvas, /--sn-plus-indicator-stroke-width/);
   assert.match(layout, /--sn-fullscreen-tab-icon-size/);
+  assert.match(layout, /overflow-mode='scroll-inline'/);
+  assert.match(layout, /responsive-active/);
+  assert.match(layout, /responsive-mode='stack'/);
+  assert.match(layout, /--sn-layout-responsive-panel-min-block-size/);
+  assert.match(layoutSourceText, /ResizeObserver/);
+  assert.match(layoutSourceText, /setLayoutBehavior/);
+  assert.match(layoutSourceText, /setNodeBehavior/);
+  assert.match(layoutSourceText, /autoCollapsed/);
   assert.match(layoutSourceText, /setPanelMenuActions/);
+  assert.match(layoutNodeSourceText, /layoutCollapsePolicy/);
+  assert.match(layoutNodeSourceText, /collapse-policy/);
   assert.match(layoutNodeSourceText, /setPanelMenuActions/);
   assert.match(layoutNodeSourceText, /panel-menu-actions/);
   assert.match(layoutNodeSourceText, /panel-menu-action/);
@@ -393,8 +408,14 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(cellBg, /--sn-cell-glare/);
   assert.match(registry, /panel-menu-actions/);
   assert.match(registry, /fold-down-panel-actions/);
+  assert.match(registry, /responsive-behavior/);
+  assert.match(registry, /setLayoutBehavior/);
+  assert.match(registry, /setNodeBehavior/);
   assert.match(registry, /--sn-layout-menu-action-height/);
+  assert.match(registry, /--sn-layout-overflow-inline-size/);
   assert.match(customElements, /"name": "setPanelMenuActions"/);
+  assert.match(customElements, /"name": "setLayoutBehavior"/);
+  assert.match(customElements, /"name": "setNodeBehavior"/);
   assert.match(customElements, /"name": "panel-menu-action"/);
 });
 

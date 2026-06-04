@@ -1,4 +1,5 @@
 import { css } from '@symbiotejs/symbiote';
+import { themedScrollbarStyles } from '../../themes/scrollbar-styles.js';
 
 export let styles = css`
   panel-layout {
@@ -8,6 +9,7 @@ export let styles = css`
     overflow: hidden;
     position: relative;
     font-family: var(--sn-font);
+    ${themedScrollbarStyles}
 
     &[hidden] {
       display: none;
@@ -18,6 +20,73 @@ export let styles = css`
       width: 100%;
       height: 100%;
       background: var(--sn-layout-gap-bg);
+    }
+
+    &[overflow-mode='scroll-inline'],
+    &[responsive-active][responsive-mode='scroll-inline'] {
+      overflow-x: auto;
+      overflow-y: hidden;
+
+      .layout-root {
+        min-width: var(--sn-layout-overflow-inline-size, 960px);
+      }
+    }
+
+    &[overflow-mode='scroll-block'] {
+      overflow-x: hidden;
+      overflow-y: auto;
+
+      .layout-root {
+        min-height: var(--sn-layout-overflow-block-size, 720px);
+      }
+    }
+
+    &[overflow-mode='scroll'] {
+      overflow: auto;
+
+      .layout-root {
+        min-width: var(--sn-layout-overflow-inline-size, 960px);
+        min-height: var(--sn-layout-overflow-block-size, 720px);
+      }
+    }
+
+    &[responsive-active][responsive-mode='stack'] {
+      overflow-x: hidden;
+      overflow-y: auto;
+
+      .layout-root {
+        display: block;
+        height: auto;
+        min-height: 100%;
+      }
+
+      layout-node[node-type='split'] {
+        display: block;
+        height: auto !important;
+        min-height: 0;
+        overflow: visible;
+      }
+
+      layout-node[node-type='split'] > .split-view {
+        display: block;
+        height: auto;
+      }
+
+      layout-node[node-type='split'] > .split-view > .split-first,
+      layout-node[node-type='split'] > .split-view > .split-second {
+        display: block;
+        width: 100% !important;
+        height: auto !important;
+        min-height: var(--sn-layout-responsive-panel-min-block-size, 260px);
+      }
+
+      layout-node[node-type='split'] > .split-view > .split-resizer {
+        display: none;
+      }
+
+      layout-node[node-type='panel'] {
+        min-height: var(--sn-layout-responsive-panel-min-block-size, 260px);
+      }
     }
 
     /* Fullscreen tab bar */

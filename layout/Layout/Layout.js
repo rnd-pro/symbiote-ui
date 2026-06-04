@@ -20,9 +20,16 @@ export class Layout extends Symbiote {
 
     '@storage-key': '',
     '@min-panel-size': 50,
+    '@min-panel-inline-size': 220,
+    '@min-panel-block-size': 160,
+    '@responsive-mode': 'preserve',
+    '@responsive-breakpoint': 720,
+    '@overflow-mode': 'collapse',
+    '@auto-collapse': true,
 
 
     layoutTree: null,
+    layoutBehavior: null,
 
 
     panelTypes: {},
@@ -58,6 +65,7 @@ export class Layout extends Symbiote {
    * @param {string} [config.icon] - Material Symbols icon name
    * @param {string} [config.component] - Custom element tag name
    * @param {Array} [config.menuActions] - Fold-down header menu action descriptors
+   * @param {import('./../LayoutTree.js').LayoutBehavior} [config.behavior] - Default behavior for panels of this type
    */
   registerPanelType(name, config) {
     ensureMaterialSymbols([config.icon || 'dashboard']);
@@ -87,6 +95,15 @@ export class Layout extends Symbiote {
     this.addEventListener('panel-collapse-toggle', (e) => this._onPanelCollapseToggle(e));
 
 
+    this._resizeFallback = () => this._scheduleResponsiveLayout();
+    if (typeof ResizeObserver !== 'undefined') {
+      this._resizeObserver = new ResizeObserver(() => this._scheduleResponsiveLayout());
+      this._resizeObserver.observe(this);
+    } else if (typeof window !== 'undefined') {
+      window.addEventListener('resize', this._resizeFallback);
+    }
+
+
     this._globalPointerFallback = () => {
       if (this.$.activeGesture) {
         this.$.activeGesture = null;
@@ -106,12 +123,23 @@ export class Layout extends Symbiote {
       document.removeEventListener('pointerup', this._globalPointerFallback);
       document.removeEventListener('pointercancel', this._globalPointerFallback);
     }
+    this._resizeObserver?.disconnect();
+    if (this._resizeFallback && typeof window !== 'undefined') {
+      window.removeEventListener('resize', this._resizeFallback);
+    }
+    if (this._responsiveFrame && typeof cancelAnimationFrame !== 'undefined') {
+      cancelAnimationFrame(this._responsiveFrame);
+      this._responsiveFrame = 0;
+    }
+    super.disconnectedCallback?.();
   }
 
   renderCallback() {
     this._renderRoot();
+    this._scheduleResponsiveLayout();
     this.sub('layoutTree', () => {
       this._renderRoot();
+      this._scheduleResponsiveLayout();
 
       if (this.$.fullscreenPanelId) {
 
@@ -179,6 +207,25 @@ export class Layout extends Symbiote {
     }
   }
 
+  _getAttributeBehavior() {
+    let autoCollapseAttr = this.getAttribute('auto-collapse');
+    let autoCollapse = autoCollapseAttr === null
+      ? this.$['@auto-collapse'] !== false
+      : autoCollapseAttr !== 'false' && autoCollapseAttr !== 'never';
+    return LayoutTree.normalizeLayoutBehavior({
+      minInlineSize: this.getAttribute('min-panel-inline-size') || this.$['@min-panel-inline-size'],
+      minBlockSize: this.getAttribute('min-panel-block-size') || this.$['@min-panel-block-size'],
+      collapse: autoCollapse ? 'auto' : 'never',
+      overflow: this.getAttribute('overflow-mode') || this.$['@overflow-mode'],
+      responsiveMode: this.getAttribute('responsive-mode') || this.$['@responsive-mode'],
+      responsiveBreakpoint: this.getAttribute('responsive-breakpoint') || this.$['@responsive-breakpoint'],
+    });
+  }
+
+  _getRootBehavior() {
+    return LayoutTree.normalizeLayoutBehavior(this.$.layoutBehavior || {}, this._getAttributeBehavior());
+  }
+
   _renderRoot() {
     if (!this.$.layoutTree || !this.ref.root) return;
 
@@ -194,6 +241,163 @@ export class Layout extends Symbiote {
     rootNode.$.panelChrome = chromeEnabled;
     rootNode.setAttribute('panel-chrome', chromeEnabled ? 'default' : 'none');
     rootNode.$.nodeData = this.$.layoutTree;
+  }
+
+  _scheduleResponsiveLayout() {
+    if (typeof requestAnimationFrame === 'undefined') {
+      this._applyResponsiveLayout();
+      return;
+    }
+    if (this._responsiveFrame) return;
+    this._responsiveFrame = requestAnimationFrame(() => {
+      this._responsiveFrame = 0;
+      this._applyResponsiveLayout();
+    });
+  }
+
+  _applyResponsiveLayout() {
+    if (!this.$.layoutTree || !this.isConnected) return;
+    let behavior = this._getRootBehavior();
+    let rect = this.getBoundingClientRect();
+    let responsiveActive =
+      behavior.responsiveMode !== 'preserve' &&
+      rect.width > 0 &&
+      rect.width <= behavior.responsiveBreakpoint;
+
+    this.setAttribute('responsive-mode', behavior.responsiveMode);
+    this.setAttribute('overflow-mode', behavior.overflow);
+    this.toggleAttribute('responsive-active', responsiveActive);
+
+    if (this.$.fullscreenPanelId) return;
+
+    let tree = this.$.layoutTree;
+    let collapseAllowed =
+      behavior.collapse === 'auto' &&
+      behavior.overflow === 'collapse' &&
+      !responsiveActive;
+
+    if (!collapseAllowed) {
+      if (this._clearAutoCollapsedPanels(tree)) {
+        this.$.layoutTree = { ...tree };
+        this._saveLayout();
+      }
+      return;
+    }
+
+    let changed = this._restoreAutoCollapsedPanels(tree);
+    let candidates = this._collectAutoCollapseCandidates(tree, behavior)
+      .sort((a, b) => a.behavior.importance - b.behavior.importance);
+
+    for (let candidate of candidates) {
+      let node = LayoutTree.findNode(tree, candidate.node.id);
+      if (!node || node.collapsed || !this._canAutoCollapseNode(tree, node, candidate.behavior)) continue;
+      node.collapsed = true;
+      node.autoCollapsed = true;
+      changed = true;
+    }
+
+    if (changed) {
+      this.$.layoutTree = { ...tree };
+      this._saveLayout();
+    }
+  }
+
+  _collectAutoCollapseCandidates(tree, fallbackBehavior) {
+    let candidates = [];
+    let walk = (node, fallback) => {
+      if (!node) return;
+      let branchBehavior = LayoutTree.getNodeBehavior(node, fallback);
+      if (node.type === 'panel') {
+        let typeBehavior = this.$.panelTypes[node.panelType]?.behavior || {};
+        let behavior = LayoutTree.getNodeBehavior(node, LayoutTree.normalizeLayoutBehavior(typeBehavior, branchBehavior));
+        let panelNode = this._findPanelNode(node.id);
+        if (!panelNode || node.collapsed) return;
+        let rect = panelNode.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) return;
+        if (rect.width < behavior.minInlineSize || rect.height < behavior.minBlockSize) {
+          candidates.push({ node, behavior, rect });
+        }
+        return;
+      }
+      walk(node.first, branchBehavior);
+      walk(node.second, branchBehavior);
+    };
+    walk(tree, fallbackBehavior);
+    return candidates;
+  }
+
+  _restoreAutoCollapsedPanels(tree) {
+    let changed = false;
+    let walk = (node, fallback) => {
+      if (!node) return;
+      let branchBehavior = LayoutTree.getNodeBehavior(node, fallback);
+      if (node.type === 'panel') {
+        let typeBehavior = this.$.panelTypes[node.panelType]?.behavior || {};
+        let behavior = LayoutTree.getNodeBehavior(node, LayoutTree.normalizeLayoutBehavior(typeBehavior, branchBehavior));
+        if (node.collapsed && node.autoCollapsed && this._hasExpandedSpace(tree, node, behavior)) {
+          node.collapsed = false;
+          node.autoCollapsed = false;
+          changed = true;
+        }
+        return;
+      }
+      walk(node.first, branchBehavior);
+      walk(node.second, branchBehavior);
+    };
+    walk(tree, this._getRootBehavior());
+    return changed;
+  }
+
+  _clearAutoCollapsedPanels(tree) {
+    let changed = false;
+    let walk = (node) => {
+      if (!node) return;
+      if (node.type === 'panel') {
+        if (node.autoCollapsed) {
+          node.collapsed = false;
+          node.autoCollapsed = false;
+          changed = true;
+        }
+        return;
+      }
+      walk(node.first);
+      walk(node.second);
+    };
+    walk(tree);
+    return changed;
+  }
+
+  _canAutoCollapseNode(tree, node, behavior) {
+    if (behavior.collapse !== 'auto') return false;
+    let parentInfo = LayoutTree.findParent(tree, node.id);
+    if (!parentInfo) return false;
+    let sibling = parentInfo.which === 'first' ? parentInfo.parent.second : parentInfo.parent.first;
+    return !sibling?.collapsed;
+  }
+
+  _hasExpandedSpace(tree, node, behavior) {
+    let parentInfo = LayoutTree.findParent(tree, node.id);
+    let rect = this.getBoundingClientRect();
+    let inlineSize = rect.width;
+    let blockSize = rect.height;
+
+    if (parentInfo) {
+      let parentNode = this._findLayoutNode(parentInfo.parent.id);
+      let parentRect = parentNode?.getBoundingClientRect();
+      if (parentRect?.width > 0 && parentRect?.height > 0) {
+        let ratio = parentInfo.parent.ratio || 0.5;
+        let share = parentInfo.which === 'first' ? ratio : 1 - ratio;
+        if (parentInfo.parent.direction === 'horizontal') {
+          inlineSize = parentRect.width * share;
+          blockSize = parentRect.height;
+        } else {
+          inlineSize = parentRect.width;
+          blockSize = parentRect.height * share;
+        }
+      }
+    }
+
+    return inlineSize >= behavior.minInlineSize * 1.08 && blockSize >= behavior.minBlockSize * 1.08;
   }
 
 
@@ -329,7 +533,7 @@ export class Layout extends Symbiote {
     if (!tree) return;
 
 
-    LayoutTree.updateNode(tree, panelId, { collapsed });
+    LayoutTree.updateNode(tree, panelId, { collapsed, autoCollapsed: false });
 
 
     this.$.layoutTree = { ...tree };
@@ -493,6 +697,16 @@ export class Layout extends Symbiote {
     return null;
   }
 
+  _findLayoutNode(nodeId) {
+    let nodes = this.querySelectorAll('layout-node');
+    for (const node of nodes) {
+      if (node.$.nodeId === nodeId) {
+        return node;
+      }
+    }
+    return null;
+  }
+
   /**
    * Find the neighbor panel for join operation
    * @param {string} panelId
@@ -575,6 +789,31 @@ export class Layout extends Symbiote {
   }
 
   /**
+   * Set root layout behavior used for auto-collapse and responsive overflow.
+   * @param {import('./../LayoutTree.js').LayoutBehavior} behavior
+   */
+  setLayoutBehavior(behavior = {}) {
+    this.$.layoutBehavior = LayoutTree.normalizeLayoutBehavior(behavior, this._getAttributeBehavior());
+    this._scheduleResponsiveLayout();
+  }
+
+  /**
+   * Set responsive behavior for a concrete layout tree insertion point.
+   * @param {string} nodeId
+   * @param {import('./../LayoutTree.js').LayoutBehavior} behavior
+   * @returns {boolean}
+   */
+  setNodeBehavior(nodeId, behavior = {}) {
+    let tree = LayoutTree.clone(this.$.layoutTree);
+    let updated = LayoutTree.setNodeBehavior(tree, nodeId, behavior, this._getRootBehavior());
+    if (!updated) return false;
+    this.$.layoutTree = tree;
+    this._saveLayout();
+    this._scheduleResponsiveLayout();
+    return true;
+  }
+
+  /**
    * Get current layout
    * @returns {import('./../LayoutTree.js').LayoutNode}
    */
@@ -629,6 +868,7 @@ export class Layout extends Symbiote {
 
     this.$.layoutTree = layout;
     this._saveLayout();
+    this._scheduleResponsiveLayout();
   }
 
   #setPanelVisible(panel, visible) {

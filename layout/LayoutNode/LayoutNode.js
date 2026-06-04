@@ -11,6 +11,7 @@ import { template } from './LayoutNode.tpl.js';
 import { styles } from './LayoutNode.css.js';
 import './../ActionZone/ActionZone.js';
 import { translate } from '../../locale/index.js';
+import * as LayoutTree from './../LayoutTree.js';
 
 const LAYOUT_NODE_ICONS = [
   'arrow_drop_down',
@@ -51,6 +52,11 @@ export class LayoutNode extends Symbiote {
     isPanelMenuOpen: false,
     panelMenuIcon: 'keyboard_arrow_down',
     panelMenuTitle: 'Panel actions',
+    layoutImportance: 50,
+    layoutMinInlineSize: 220,
+    layoutMinBlockSize: 160,
+    layoutCollapsePolicy: 'auto',
+    layoutOverflowPolicy: 'collapse',
 
 
     isCollapsed: false,
@@ -95,11 +101,13 @@ export class LayoutNode extends Symbiote {
       this.$.ratio = data.ratio || 0.5;
       this.$.panelType = data.panelType || 'default';
       this.$.nodeId = data.id || '';
+      this._syncBehaviorInfo(data);
 
 
       if (data.type === 'panel') {
         this.$.isCollapsed = data.collapsed || false;
         this.toggleAttribute('collapsed', this.$.isCollapsed);
+        this.toggleAttribute('auto-collapsed', data.autoCollapsed || false);
         this.#syncHostAttribute('collapse-dir', this.$.isCollapsed ? this.$.collapseDirection : '');
 
         if (this.$.isCollapsed) {
@@ -195,6 +203,7 @@ export class LayoutNode extends Symbiote {
     this.$.panelTitle = config.title || this.$.panelType;
     this.$.panelIcon = config.icon || 'dashboard';
     ensureMaterialSymbols([this.$.panelIcon]);
+    this._syncBehaviorInfo(this.$.nodeData, config.behavior);
 
 
     this._injectPanelComponent(config);
@@ -233,7 +242,11 @@ export class LayoutNode extends Symbiote {
 
     if (this.$.nodeType === 'panel') {
 
-      this.$.canCollapse = !!isSplitChild && siblingExists && !siblingCollapsed;
+      this.$.canCollapse =
+        this.$.layoutCollapsePolicy !== 'never' &&
+        !!isSplitChild &&
+        siblingExists &&
+        !siblingCollapsed;
 
       if (isSplitChild) {
 
@@ -310,6 +323,24 @@ export class LayoutNode extends Symbiote {
     for (let [name, value] of Object.entries(config.properties || {})) {
       component[name] = value;
     }
+  }
+
+  _syncBehaviorInfo(nodeData, fallback = {}) {
+    let behavior = LayoutTree.getNodeBehavior(
+      nodeData,
+      LayoutTree.normalizeLayoutBehavior(fallback)
+    );
+    this.$.layoutImportance = behavior.importance;
+    this.$.layoutMinInlineSize = behavior.minInlineSize;
+    this.$.layoutMinBlockSize = behavior.minBlockSize;
+    this.$.layoutCollapsePolicy = behavior.collapse;
+    this.$.layoutOverflowPolicy = behavior.overflow;
+    this.#syncHostAttribute('importance', behavior.importance);
+    this.#syncHostAttribute('collapse-policy', behavior.collapse);
+    this.#syncHostAttribute('overflow-policy', behavior.overflow);
+    this.style.setProperty('--sn-layout-panel-importance', String(behavior.importance));
+    this.style.setProperty('--sn-layout-panel-min-inline-size', `${behavior.minInlineSize}px`);
+    this.style.setProperty('--sn-layout-panel-min-block-size', `${behavior.minBlockSize}px`);
   }
 
   /**
@@ -550,6 +581,7 @@ export class LayoutNode extends Symbiote {
 
   _toggleCollapse() {
     if (this.$.panelChrome === false || this.$['^panelChrome'] === false) return;
+    if (this.$.layoutCollapsePolicy === 'never') return;
 
 
     this.dispatchEvent(
@@ -570,6 +602,7 @@ export class LayoutNode extends Symbiote {
    */
   _setCollapsed(collapsed) {
     if (this.$.panelChrome === false || this.$['^panelChrome'] === false) return;
+    if (this.$.layoutCollapsePolicy === 'never') return;
     if (this.$.isCollapsed === collapsed) return;
 
 

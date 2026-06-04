@@ -8,11 +8,36 @@
  */
 
 /**
+ * @typedef {'auto' | 'manual' | 'never'} LayoutCollapsePolicy
+ */
+
+/**
+ * @typedef {'collapse' | 'scroll-inline' | 'scroll-block' | 'scroll'} LayoutOverflowPolicy
+ */
+
+/**
+ * @typedef {'preserve' | 'stack' | 'scroll-inline'} LayoutResponsiveMode
+ */
+
+/**
+ * @typedef {Object} LayoutBehavior
+ * @property {number} [importance] Higher values resist auto-collapse.
+ * @property {number} [minInlineSize] Minimum inline size before auto-collapse.
+ * @property {number} [minBlockSize] Minimum block size before auto-collapse.
+ * @property {LayoutCollapsePolicy} [collapse] Auto-collapse policy.
+ * @property {LayoutOverflowPolicy} [overflow] Overflow fallback when collapse is disabled.
+ * @property {LayoutResponsiveMode} [responsiveMode] Root responsive behavior.
+ * @property {number} [responsiveBreakpoint] Inline size where responsiveMode activates.
+ */
+
+/**
  * @typedef {Object} PanelNode
  * @property {string} id - Unique node ID
  * @property {'panel'} type - Node type
  * @property {string} panelType - Panel content type (e.g., 'viewport', 'timeline')
  * @property {boolean} [collapsed] - Whether panel is collapsed
+ * @property {boolean} [autoCollapsed] - Whether panel was collapsed by responsive layout behavior.
+ * @property {LayoutBehavior} [behavior] Responsive behavior at this insertion point.
  * @property {Object} [panelState] - Panel-specific state
  */
 
@@ -22,6 +47,7 @@
  * @property {'split'} type - Node type
  * @property {SplitDirection} direction - Split direction
  * @property {number} ratio - Split ratio (0-1), size of first child
+ * @property {LayoutBehavior} [behavior] Responsive behavior for this branch.
  * @property {LayoutNode} first - First child node
  * @property {LayoutNode} second - Second child node
  */
@@ -30,7 +56,61 @@
  * @typedef {PanelNode | SplitNode} LayoutNode
  */
 
+export const DEFAULT_LAYOUT_BEHAVIOR = Object.freeze({
+  importance: 50,
+  minInlineSize: 220,
+  minBlockSize: 160,
+  collapse: 'auto',
+  overflow: 'collapse',
+  responsiveMode: 'preserve',
+  responsiveBreakpoint: 720,
+})
+
+const COLLAPSE_POLICIES = new Set(['auto', 'manual', 'never'])
+const OVERFLOW_POLICIES = new Set(['collapse', 'scroll-inline', 'scroll-block', 'scroll'])
+const RESPONSIVE_MODES = new Set(['preserve', 'stack', 'scroll-inline'])
+
 let idCounter = 0
+
+function finiteNumber(value, fallback, min = -Infinity, max = Infinity) {
+  let number = Number(value)
+  if (!Number.isFinite(number)) return fallback
+  return Math.min(max, Math.max(min, number))
+}
+
+function optionalBehavior(behavior) {
+  return behavior && typeof behavior === 'object' && Object.keys(behavior).length
+    ? normalizeLayoutBehavior(behavior, {})
+    : undefined
+}
+
+export function normalizeLayoutBehavior(behavior = {}, fallback = DEFAULT_LAYOUT_BEHAVIOR) {
+  let base = fallback && typeof fallback === 'object' ? fallback : DEFAULT_LAYOUT_BEHAVIOR
+  let input = behavior && typeof behavior === 'object' ? behavior : {}
+  let collapse = COLLAPSE_POLICIES.has(input.collapse)
+    ? input.collapse
+    : base.collapse || DEFAULT_LAYOUT_BEHAVIOR.collapse
+  let overflow = OVERFLOW_POLICIES.has(input.overflow)
+    ? input.overflow
+    : base.overflow || DEFAULT_LAYOUT_BEHAVIOR.overflow
+  let responsiveMode = RESPONSIVE_MODES.has(input.responsiveMode)
+    ? input.responsiveMode
+    : base.responsiveMode || DEFAULT_LAYOUT_BEHAVIOR.responsiveMode
+
+  return {
+    importance: finiteNumber(input.importance, base.importance ?? DEFAULT_LAYOUT_BEHAVIOR.importance, 0, 100),
+    minInlineSize: finiteNumber(input.minInlineSize, base.minInlineSize ?? DEFAULT_LAYOUT_BEHAVIOR.minInlineSize, 0),
+    minBlockSize: finiteNumber(input.minBlockSize, base.minBlockSize ?? DEFAULT_LAYOUT_BEHAVIOR.minBlockSize, 0),
+    collapse,
+    overflow,
+    responsiveMode,
+    responsiveBreakpoint: finiteNumber(
+      input.responsiveBreakpoint,
+      base.responsiveBreakpoint ?? DEFAULT_LAYOUT_BEHAVIOR.responsiveBreakpoint,
+      0
+    ),
+  }
+}
 
 /**
  * Generate unique node ID
@@ -46,14 +126,17 @@ export function generateId() {
  * @param {Object} [panelState] - Initial panel state
  * @returns {PanelNode}
  */
-export function createPanel(panelType, panelState = {}) {
-  return {
+export function createPanel(panelType, panelState = {}, behavior = undefined) {
+  let panel = {
     id: generateId(),
     type: 'panel',
     panelType,
     panelState,
     collapsed: false,
   }
+  let normalizedBehavior = optionalBehavior(behavior || panelState?.behavior)
+  if (normalizedBehavior) panel.behavior = normalizedBehavior
+  return panel
 }
 
 /**
@@ -64,8 +147,8 @@ export function createPanel(panelType, panelState = {}) {
  * @param {number} [ratio=0.5] - Split ratio
  * @returns {SplitNode}
  */
-export function createSplit(direction, first, second, ratio = 0.5) {
-  return {
+export function createSplit(direction, first, second, ratio = 0.5, behavior = undefined) {
+  let split = {
     id: generateId(),
     type: 'split',
     direction,
@@ -73,6 +156,9 @@ export function createSplit(direction, first, second, ratio = 0.5) {
     first,
     second,
   }
+  let normalizedBehavior = optionalBehavior(behavior)
+  if (normalizedBehavior) split.behavior = normalizedBehavior
+  return split
 }
 
 /**
@@ -347,6 +433,43 @@ export function updateNode(root, nodeId, updates) {
   if (!node) return false
   Object.assign(node, updates)
   return true
+}
+
+/**
+ * Set normalized layout behavior on a node.
+ * @param {LayoutNode} root
+ * @param {string} nodeId
+ * @param {LayoutBehavior} behavior
+ * @param {LayoutBehavior} [fallback]
+ * @returns {boolean}
+ */
+export function setNodeBehavior(root, nodeId, behavior, fallback = DEFAULT_LAYOUT_BEHAVIOR) {
+  let node = findNode(root, nodeId)
+  if (!node) return false
+  node.behavior = normalizeLayoutBehavior(behavior, fallback)
+  return true
+}
+
+/**
+ * Resolve node behavior against a fallback.
+ * @param {LayoutNode | null} node
+ * @param {LayoutBehavior} [fallback]
+ * @returns {LayoutBehavior}
+ */
+export function getNodeBehavior(node, fallback = DEFAULT_LAYOUT_BEHAVIOR) {
+  let panelStateBehavior = node?.panelState?.behavior
+  let mergedFallback = normalizeLayoutBehavior(panelStateBehavior || {}, fallback)
+  return normalizeLayoutBehavior(node?.behavior || {}, mergedFallback)
+}
+
+/**
+ * Return normalized behavior importance for sorting collapse candidates.
+ * @param {LayoutNode | null} node
+ * @param {LayoutBehavior} [fallback]
+ * @returns {number}
+ */
+export function getBehaviorImportance(node, fallback = DEFAULT_LAYOUT_BEHAVIOR) {
+  return getNodeBehavior(node, fallback).importance
 }
 
 /**

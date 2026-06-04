@@ -32,6 +32,11 @@ for (const tagName of [
   defineModule(tagName);
 }
 
+await Promise.all([
+  customElements.whenDefined('panel-layout'),
+  customElements.whenDefined('layout-node'),
+]);
+
 applyTheme(document.documentElement, DEFAULT_PROVIDER_THEME);
 
 class CascadeGraphPanel extends Symbiote {
@@ -416,10 +421,23 @@ CascadeChatPanel.rootStyles = `
 CascadeChatPanel.reg('cascade-chat-panel');
 
 const layout = document.querySelector('.lab-layout');
+layout.setLayoutBehavior({
+  minInlineSize: 240,
+  minBlockSize: 180,
+  responsiveMode: 'stack',
+  responsiveBreakpoint: 760,
+  overflow: 'collapse',
+});
 layout.registerPanelType('graph', {
   title: 'Graph',
   icon: 'hub',
   component: 'cascade-graph-panel',
+  behavior: {
+    importance: 95,
+    minInlineSize: 360,
+    minBlockSize: 260,
+    collapse: 'auto',
+  },
   menuActions: [
     { id: 'path:pcb', label: 'PCB', icon: 'conversion_path', active: true },
     { id: 'path:bezier', label: 'Bezier', icon: 'gesture' },
@@ -430,31 +448,50 @@ layout.registerPanelType('ui', {
   title: 'UI',
   icon: 'widgets',
   component: 'cascade-ui-panel',
+  behavior: {
+    importance: 55,
+    minInlineSize: 300,
+    minBlockSize: 220,
+    collapse: 'auto',
+  },
 });
 layout.registerPanelType('chat', {
   title: 'Chat',
   icon: 'forum',
   component: 'cascade-chat-panel',
+  behavior: {
+    importance: 25,
+    minInlineSize: 300,
+    minBlockSize: 220,
+    collapse: 'auto',
+  },
 });
 layout.registerPanelType('theme', {
   title: 'Theme',
   icon: 'palette',
   component: 'cascade-theme-editor',
+  behavior: {
+    importance: 80,
+    minInlineSize: 280,
+    minBlockSize: 240,
+    collapse: 'manual',
+  },
   attributes: {
     'storage-key': 'symbiote-ui:cascade-theme-lab',
   },
 });
 layout.$.panelChrome = true;
+const createPanel = (panelType, behavior) => LayoutTree.createPanel(panelType, {}, behavior);
 layout.$.layoutTree = LayoutTree.createSplit(
   'horizontal',
-  LayoutTree.createPanel('theme'),
+  createPanel('theme', { importance: 80, collapse: 'manual' }),
   LayoutTree.createSplit(
     'horizontal',
-    LayoutTree.createPanel('graph'),
+    createPanel('graph', { importance: 95 }),
     LayoutTree.createSplit(
       'vertical',
-      LayoutTree.createPanel('ui'),
-      LayoutTree.createPanel('chat'),
+      createPanel('ui', { importance: 55 }),
+      createPanel('chat', { importance: 25 }),
       0.48
     ),
     0.52
