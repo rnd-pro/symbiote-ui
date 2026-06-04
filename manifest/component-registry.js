@@ -112,10 +112,117 @@ const WEBMCP_TOOLS = {
       exposedTo: ['agent', 'assistant'],
     },
   ],
+  'panel-layout': [
+    {
+      name: 'panel_layout_set_behavior',
+      description: 'Set host-approved responsive layout behavior such as importance, minimum sizes, collapse policy, overflow fallback, and mobile mode.',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          importance: { type: 'number', minimum: 0, maximum: 100 },
+          minInlineSize: { type: 'number', minimum: 0 },
+          minBlockSize: { type: 'number', minimum: 0 },
+          collapse: { enum: ['auto', 'manual', 'never'] },
+          overflow: { enum: ['collapse', 'scroll-inline', 'scroll-block', 'scroll'] },
+          responsiveMode: { enum: ['preserve', 'stack', 'scroll-inline'] },
+          responsiveBreakpoint: { type: 'number', minimum: 0 },
+        },
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
+      exposedTo: ['agent', 'assistant'],
+    },
+    {
+      name: 'panel_layout_register_panel_type',
+      description: 'Register a host-owned panel type descriptor; rendering policy and data loading remain outside symbiote-ui.',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          panelType: { type: 'string' },
+          title: { type: 'string' },
+          icon: { type: 'string' },
+        },
+        required: ['panelType'],
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
+      exposedTo: ['agent', 'assistant'],
+    },
+    {
+      name: 'panel_layout_set_panel_menu_actions',
+      description: 'Set explicit fold-down panel menu actions such as remove, horizontal split, vertical split, or duplicate for a panel surface.',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          panelId: { type: 'string' },
+          actions: {
+            type: 'array',
+            items: {
+              type: 'object',
+              additionalProperties: true,
+              properties: {
+                id: { type: 'string' },
+                label: { type: 'string' },
+                icon: { type: 'string' },
+              },
+              required: ['id'],
+            },
+          },
+        },
+        required: ['actions'],
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false },
+      exposedTo: ['agent', 'assistant'],
+    },
+  ],
+  'layout-sidebar': [
+    {
+      name: 'layout_sidebar_set_sections',
+      description: 'Set reusable sidebar section descriptors for a host-owned layout group or navigation model without taking over route policy.',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          sections: {
+            type: 'array',
+            items: {
+              type: 'object',
+              additionalProperties: true,
+              properties: {
+                id: { type: 'string' },
+                label: { type: 'string' },
+                icon: { type: 'string' },
+                disabled: { type: 'boolean' },
+              },
+              required: ['id'],
+            },
+          },
+        },
+        required: ['sections'],
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
+      exposedTo: ['agent', 'assistant'],
+    },
+    {
+      name: 'layout_sidebar_set_active_section',
+      description: 'Set the active sidebar section for a host-owned layout group without forcing router navigation.',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          sectionId: { type: 'string' },
+        },
+        required: ['sectionId'],
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
+      exposedTo: ['agent', 'assistant'],
+    },
+  ],
   'layout-shell-menu': [
     {
       name: 'layout_shell_menu_select',
-      description: 'Select a host-owned layout group through the global shell menu tab surface.',
+      description: 'Select a host-owned layout group through the synchronized shell tabs and sidebar menu without applying product routes.',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -125,6 +232,42 @@ const WEBMCP_TOOLS = {
         required: ['groupId'],
       },
       annotations: { readOnlyHint: false, destructiveHint: false },
+      exposedTo: ['agent', 'assistant'],
+    },
+    {
+      name: 'layout_shell_menu_set_groups',
+      description: 'Set host-owned layout group metadata that derives project tabs and sidebar sections from one normalized contract.',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          activeId: { type: 'string' },
+          groups: {
+            type: 'array',
+            items: {
+              type: 'object',
+              additionalProperties: true,
+              properties: {
+                id: { type: 'string' },
+                name: { type: 'string' },
+                icon: { type: 'string' },
+                color: { type: 'string' },
+                sidebarLabel: { type: 'string' },
+                sidebarIcon: { type: 'string' },
+                tabsVisible: { type: 'boolean' },
+                sidebarVisible: { type: 'boolean' },
+                disabled: { type: 'boolean' },
+                closeable: { type: 'boolean' },
+                behavior: { type: 'object' },
+                host: { type: 'object' },
+              },
+              required: ['id'],
+            },
+          },
+        },
+        required: ['groups'],
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
       exposedTo: ['agent', 'assistant'],
     },
   ],
@@ -835,7 +978,7 @@ export let COMPONENTS = [
     description: 'Panel-based application layout shell.',
     contract: {
       status: 'draft',
-      schemaVersion: 'component-descriptor-v1',
+      schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
       capabilities: ['layout-tree', 'split-panels', 'panel-registry', 'panel-menu-actions', 'responsive-behavior', 'importance-auto-collapse', 'scroll-fallback', 'local-storage'],
       attributes: [
@@ -889,16 +1032,22 @@ export let COMPONENTS = [
     module: 'layout/LayoutSidebar/LayoutSidebar.js',
     category: 'layout',
     description: 'Sidebar navigation component for the panel layout.',
+    agent: {
+      semanticRole: 'layout sidebar and group navigation surface',
+      usage: 'Use as the left navigation surface for host-owned layout groups, panel sections, or workspace navigation. Disable routerSync when the host or layout-shell-menu owns selection.',
+      dataOwnership: 'host-owned sections and active section id; component emits selection and panel-close intents',
+    },
     contract: {
       status: 'draft',
-      schemaVersion: 'component-descriptor-v1',
+      schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
-      capabilities: ['sidebar-sections', 'panel-drag', 'collapse-state', 'local-storage'],
+      capabilities: ['sidebar-sections', 'section-select-intent', 'router-sync-opt-out', 'panel-drag', 'collapse-state', 'local-storage'],
       properties: [
         { name: 'disabled', type: 'boolean', description: 'Disables and hides sidebar interactions.' },
         { name: 'sections', type: 'array', description: 'Sidebar section descriptors with nested panel entries.' },
         { name: 'activeSection', type: 'string', description: 'Active sidebar section id.' },
         { name: 'disabledSections', type: 'array', description: 'Disabled section ids.' },
+        { name: 'routerSync', type: 'boolean', description: 'When false, section clicks emit sidebar-section-select without navigating through LayoutRouter.' },
       ],
       methods: [
         { name: 'setSections', type: 'function', description: 'Replaces sidebar section data.' },
@@ -907,6 +1056,7 @@ export let COMPONENTS = [
         { name: 'resetConfig', type: 'function', description: 'Clears persisted sidebar configuration.' },
       ],
       events: [
+        { name: 'sidebar-section-select', description: 'Cancelable section selection intent emitted before router navigation.', detail: [{ name: 'id', type: 'string', required: true }, { name: 'sectionId', type: 'string', required: true }] },
         { name: 'panel-close', description: 'Requests closing a panel from the sidebar.' },
       ],
       themeAliases: [
@@ -924,17 +1074,17 @@ export let COMPONENTS = [
     className: 'LayoutShellMenu',
     module: 'layout/LayoutShellMenu/LayoutShellMenu.js',
     category: 'layout',
-    description: 'Agent Portal-style application shell that binds topbar context, project tabs, sidebar navigation, and workspace content.',
+    description: 'Application shell that binds topbar context, project tabs, sidebar navigation, and workspace content through one layout group contract.',
     agent: {
       semanticRole: 'application shell with topbar, project tabs, sidebar navigation, and workspace slot',
-      usage: 'Use as the host shell around layout-sidebar and panel-layout when agents or users need Agent Portal-style project tabs, left-side navigation, and dynamic workspace layouts.',
-      dataOwnership: 'host-owned project tab and sidebar section models; component renders topbar context, project-tabs, sidebar slot, action slot, and workspace slot',
+      usage: 'Use as the host shell around layout-sidebar and panel-layout when agents or users need project tabs, left-side navigation, and dynamic workspace layouts derived from shared layout group metadata.',
+      dataOwnership: 'host-owned layout group model; component derives project-tabs and layout-sidebar sections, emits selection/close/add intents, and leaves panel-layout trees/routes to the host',
     },
     contract: {
       status: 'draft',
       schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
-      capabilities: ['global-shell-menu', 'agent-portal-shell', 'layout-group-tabs', 'sidebar-slot', 'topbar-context', 'workspace-slot', 'action-slot'],
+      capabilities: ['global-shell-menu', 'layout-group-controller', 'layout-group-tabs', 'layout-group-sidebar-sync', 'sidebar-slot', 'topbar-context', 'workspace-slot', 'action-slot'],
       attributes: [
         { name: 'title', type: 'string', description: 'Shell title rendered in the topbar.' },
         { name: 'title-icon', type: 'string', description: 'Material Symbols icon rendered next to the title.' },
@@ -943,11 +1093,15 @@ export let COMPONENTS = [
         { name: 'path-icon', type: 'string', description: 'Material Symbols icon rendered next to the path label.' },
       ],
       properties: [
-        { name: 'tabs', type: 'array', description: 'Layout group tab descriptors forwarded to the embedded project-tabs component.' },
-        { name: 'activeId', type: 'string', description: 'Active layout group tab id. Null leaves the Home tab active.' },
+        { name: 'groups', type: 'array', description: 'Layout group descriptors with id, name, icon, color, sidebar labels, visibility, disabled, closeable, behavior, and host metadata.' },
+        { name: 'tabs', type: 'array', description: 'Derived tab descriptors forwarded to embedded project-tabs.' },
+        { name: 'activeId', type: 'string', description: 'Active layout group id. The home group is used when activeId is missing or disabled.' },
       ],
       methods: [
-        { name: 'setTabs', type: 'function', description: 'Replaces layout group tab data and active group id.' },
+        { name: 'setGroups', type: 'function', description: 'Normalizes layout groups and synchronizes project-tabs plus layout-sidebar.' },
+        { name: 'setActiveGroup', type: 'function', description: 'Updates active tab/sidebar state without emitting layout-group-change.' },
+        { name: 'selectGroup', type: 'function', description: 'Selects a group and emits layout-group-change when the group is enabled.' },
+        { name: 'setTabs', type: 'function', description: 'Low-level project-tabs passthrough for hosts that do not use layout groups.' },
       ],
       slots: [
         { name: 'default', description: 'Workspace content, typically a panel-layout or a shell workspace container.' },
@@ -956,6 +1110,21 @@ export let COMPONENTS = [
         { name: 'tab-actions', description: 'Optional controls aligned with the project tab row.' },
       ],
       events: [
+        {
+          name: 'layout-group-change',
+          description: 'Emits when tabs, sidebar, or API selection chooses an enabled layout group. Host applies panel-layout trees/routes.',
+          detail: [{ name: 'id', type: 'string', required: true }, { name: 'source', type: 'string' }, { name: 'group', type: 'object' }],
+        },
+        {
+          name: 'layout-group-add',
+          description: 'Requests opening or creating a host-owned layout group.',
+          detail: [{ name: 'source', type: 'string' }],
+        },
+        {
+          name: 'layout-group-close',
+          description: 'Requests closing a closeable host-owned layout group.',
+          detail: [{ name: 'id', type: 'string', required: true }, { name: 'source', type: 'string' }, { name: 'group', type: 'object' }],
+        },
         { name: 'project-tabs-home', description: 'Bubbles from embedded project-tabs when the Home layout group is selected.' },
         { name: 'project-tabs-add', description: 'Bubbles from embedded project-tabs when a host wants to open or create a layout group.' },
         {
@@ -1092,11 +1261,11 @@ export let COMPONENTS = [
     description: 'Generic project/workspace tab strip with add, select, and close events.',
     contract: {
       status: 'draft',
-      schemaVersion: 'component-descriptor-v1',
+      schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
-      capabilities: ['tab-list', 'select', 'close', 'create'],
+      capabilities: ['tab-list', 'select', 'close', 'create', 'disabled-tabs', 'metadata-pass-through'],
       properties: [
-        { name: 'tabs', type: 'array', description: 'Array of tab descriptors with id, name, color, icon, and closeable fields.' },
+        { name: 'tabs', type: 'array', description: 'Array of tab descriptors with id, name, color, icon, closeable, disabled, and host metadata fields.' },
         { name: 'activeId', type: 'string', description: 'Active tab id.' },
         { name: 'homeIcon', type: 'string', description: 'Material Symbols icon for the home tab.' },
         { name: 'homeLabel', type: 'string', description: 'Accessible home tab label.' },

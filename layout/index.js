@@ -38,3 +38,12 @@ export {
   hasSection,
   clearSections,
 } from './LayoutRouter/SectionRegistry.js';
+export {
+  createLayoutGroupModel,
+  createLayoutGroupSections,
+  createLayoutGroupTabs,
+  getActiveLayoutGroup,
+  getHomeLayoutGroup,
+  normalizeLayoutGroup,
+  normalizeLayoutGroups,
+} from './LayoutShellMenu/layout-groups.js';

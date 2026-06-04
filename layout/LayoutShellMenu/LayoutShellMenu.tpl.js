@@ -19,7 +19,7 @@ export default html`
   <slot name="tab-actions"></slot>
 </section>
 <div class="app-workspace">
-  <slot name="sidebar"></slot>
+  <slot name="sidebar" ${{ ref: 'sidebarSlot', onslotchange: 'onSidebarSlotChange' }}></slot>
   <main class="app-workspace-content">
     <slot></slot>
   </main>

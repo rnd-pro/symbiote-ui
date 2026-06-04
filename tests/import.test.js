@@ -27,18 +27,30 @@ test('discover exposes the standalone package contract', async () => {
   let agentCatalogItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'cascade-theme-editor');
   let shellMenu = data.manifest.components.find((item) => item.tagName === 'layout-shell-menu');
   let shellMenuAgentItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'layout-shell-menu');
+  let layout = data.manifest.components.find((item) => item.tagName === 'panel-layout');
+  let sidebar = data.manifest.components.find((item) => item.tagName === 'layout-sidebar');
+  let layoutAgentItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'panel-layout');
+  let sidebarAgentItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'layout-sidebar');
   assert.ok(component.componentDescription.includes('cascade theme editor'));
   assert.equal(component.agent.webmcp.mode, 'explicit-descriptor');
   assert.ok(component.agent.webmcp.references.includes('https://rnd-pro.com/pulse/symbiote-webmcp-support/'));
   assert.ok(agentCatalogItem.componentDescription.includes('WebMCP tools: cascade_theme_editor_apply'));
   assert.equal(agentCatalogItem.webmcp.toolNames[0], 'cascade_theme_editor_apply');
   assert.ok(shellMenu.componentDescription.includes('project tabs'));
-  assert.ok(shellMenu.componentDescription.includes('agent-portal-shell'));
+  assert.ok(shellMenu.componentDescription.includes('layout-group-controller'));
   assert.equal(shellMenu.agent.webmcp.mode, 'explicit-descriptor');
   assert.ok(shellMenu.contract.capabilities.includes('sidebar-slot'));
-  assert.ok(shellMenu.contract.methods.some((method) => method.name === 'setTabs'));
+  assert.ok(shellMenu.contract.methods.some((method) => method.name === 'setGroups'));
   assert.ok(shellMenu.contract.slots.some((slot) => slot.name === 'sidebar'));
   assert.equal(shellMenuAgentItem.webmcp.toolNames[0], 'layout_shell_menu_select');
+  assert.equal(shellMenuAgentItem.webmcp.toolNames[1], 'layout_shell_menu_set_groups');
+  assert.equal(layout.contract.schemaVersion, 'component-descriptor-v2');
+  assert.equal(sidebar.contract.schemaVersion, 'component-descriptor-v2');
+  assert.ok(layoutAgentItem.webmcp.toolNames.includes('panel_layout_set_behavior'));
+  assert.ok(layoutAgentItem.webmcp.toolNames.includes('panel_layout_register_panel_type'));
+  assert.ok(layoutAgentItem.webmcp.toolNames.includes('panel_layout_set_panel_menu_actions'));
+  assert.ok(sidebarAgentItem.webmcp.toolNames.includes('layout_sidebar_set_sections'));
+  assert.ok(sidebarAgentItem.webmcp.toolNames.includes('layout_sidebar_set_active_section'));
   assert.ok(data.manifest.themeRuntimeDescriptors.some((descriptor) => (
     descriptor.name === 'cascade-theme'
     && descriptor.webmcp?.name === 'symbiote-ui.createCascadeTheme'

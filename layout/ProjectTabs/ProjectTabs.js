@@ -25,11 +25,13 @@ export class ProjectTabs extends Symbiote {
   setTabs(tabs = [], activeId = this.$.activeId) {
     this.$.activeId = activeId || null;
     this.$.tabs = tabs.map((tab, index) => ({
+      ...tab,
       id: tab.id,
       name: tab.name || tab.id,
       color: tab.color || tab.accent || `var(--sn-tab-accent-${index % 6})`,
       icon: tab.icon || 'folder',
       closeable: tab.closeable !== false,
+      disabled: Boolean(tab.disabled),
       isActive: tab.id === this.$.activeId,
     }));
   }
@@ -42,14 +44,17 @@ class ProjectTabItem extends Symbiote {
     color: '',
     icon: 'folder',
     closeable: true,
+    disabled: false,
     isActive: false,
     closeTitle: translate('tabs.close'),
     onClick: (e) => {
       if (e.target.closest('.tab-close')) return;
+      if (this.$.disabled) return;
       emit(this, 'project-tabs-select', { id: this.$.id });
     },
     onCloseClick: (e) => {
       e.stopPropagation();
+      if (this.$.disabled) return;
       emit(this, 'project-tabs-close', { id: this.$.id });
     },
   };
@@ -60,6 +65,10 @@ class ProjectTabItem extends Symbiote {
       else this.style.removeProperty('--tab-accent');
     });
     this.sub('isActive', (value) => this.toggleAttribute('active', value));
+    this.sub('disabled', (value) => {
+      this.toggleAttribute('disabled', value);
+      this.setAttribute('aria-disabled', value ? 'true' : 'false');
+    });
     this.onclick = this.$.onClick;
   }
 }

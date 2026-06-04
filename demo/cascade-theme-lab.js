@@ -579,67 +579,79 @@ const layoutGroups = [
     id: 'overview',
     name: 'Overview',
     icon: 'view_quilt',
+    sidebarLabel: 'Agent Chat',
+    sidebarIcon: 'smart_toy',
     color: 'var(--sn-tab-accent-0)',
     closeable: false,
+    tabsVisible: false,
     behavior: { responsiveMode: 'stack', responsiveBreakpoint: 760, overflow: 'collapse' },
-    createLayout: createOverviewLayout,
   },
   {
     id: 'graph',
     name: 'Graph',
     icon: 'hub',
+    sidebarLabel: 'Explorer',
+    sidebarIcon: 'folder_open',
     color: 'var(--sn-tab-accent-1)',
     closeable: false,
     behavior: { responsiveMode: 'scroll-inline', responsiveBreakpoint: 860, overflow: 'collapse' },
-    createLayout: createGraphLayout,
   },
   {
     id: 'chat',
     name: 'Chat',
     icon: 'forum',
+    sidebarLabel: 'Follow',
+    sidebarIcon: 'smart_toy',
     color: 'var(--sn-tab-accent-2)',
     closeable: false,
     behavior: { responsiveMode: 'stack', responsiveBreakpoint: 780, overflow: 'collapse' },
-    createLayout: createChatLayout,
   },
   {
     id: 'theme',
     name: 'Theme',
     icon: 'palette',
+    sidebarLabel: 'Skills',
+    sidebarIcon: 'school',
     color: 'var(--sn-tab-accent-4)',
     closeable: false,
     behavior: { responsiveMode: 'stack', responsiveBreakpoint: 820, overflow: 'collapse' },
-    createLayout: createThemeLayout,
   },
   {
     id: 'responsive',
     name: 'Responsive',
     icon: 'view_agenda',
+    sidebarLabel: 'Graph',
+    sidebarIcon: 'developer_board',
     color: 'var(--sn-tab-accent-3)',
     closeable: false,
     behavior: { responsiveMode: 'stack', responsiveBreakpoint: 980, overflow: 'scroll-inline' },
-    createLayout: createResponsiveLayout,
   },
+  { id: 'analysis', name: 'Analysis', icon: 'analytics', tabsVisible: false, disabled: true },
+  { id: 'monitor', name: 'Live Monitor', icon: 'monitor_heart', tabsVisible: false, disabled: true },
+  { id: 'runtime', name: 'Runtime', icon: 'memory', tabsVisible: false, disabled: true },
+  { id: 'spatial', name: 'Spatial', icon: 'view_in_ar', tabsVisible: false, disabled: true },
+  { id: 'settings', name: 'Settings', icon: 'settings', tabsVisible: false, disabled: true },
 ];
+
+const layoutFactories = new Map([
+  ['overview', createOverviewLayout],
+  ['graph', createGraphLayout],
+  ['chat', createChatLayout],
+  ['theme', createThemeLayout],
+  ['responsive', createResponsiveLayout],
+]);
 
 let activeLayoutGroupId = 'overview';
 let scrollFallback = false;
 const FORCED_SCROLL_INLINE_SIZE = 'max(calc(100% + var(--sn-layout-scroll-inline-extra, 320px)), calc(960px * var(--sn-theme-density, 1)))';
-const sidebarSections = [
-  { id: 'overview', label: 'Agent Chat', icon: 'smart_toy' },
-  { id: 'theme', label: 'Skills', icon: 'school' },
-  { id: 'graph', label: 'Explorer', icon: 'folder_open' },
-  { id: 'responsive', label: 'Graph', icon: 'developer_board' },
-  { id: 'chat', label: 'Follow', icon: 'smart_toy' },
-  { id: 'analysis', label: 'Analysis', icon: 'analytics', disabled: true },
-  { id: 'monitor', label: 'Live Monitor', icon: 'monitor_heart', disabled: true },
-  { id: 'runtime', label: 'Runtime', icon: 'memory', disabled: true },
-  { id: 'spatial', label: 'Spatial', icon: 'view_in_ar', disabled: true },
-  { id: 'settings', label: 'Settings', icon: 'settings', disabled: true },
-];
+
+function canApplyLayoutGroup(group) {
+  return Boolean(group && !group.disabled && layoutFactories.has(group.id));
+}
 
 function getActiveLayoutGroup() {
-  return layoutGroups.find((group) => group.id === activeLayoutGroupId) || layoutGroups[0];
+  let group = layoutGroups.find((item) => item.id === activeLayoutGroupId);
+  return canApplyLayoutGroup(group) ? group : layoutGroups[0];
 }
 
 function setMainMenuActive() {
@@ -652,15 +664,9 @@ function setMainMenuActive() {
   }
 }
 
-function setShellTabs() {
-  let tabGroups = layoutGroups.filter((group) => group.id !== 'overview');
-  let activeTabId = activeLayoutGroupId === 'overview' ? null : activeLayoutGroupId;
-  shellMenu?.setTabs(tabGroups, activeTabId);
-  sidebar?.setActiveSection(activeLayoutGroupId);
-}
-
 function applyLayoutGroup(id = activeLayoutGroupId) {
-  activeLayoutGroupId = layoutGroups.some((group) => group.id === id) ? id : 'overview';
+  let nextGroup = layoutGroups.find((group) => group.id === id);
+  activeLayoutGroupId = canApplyLayoutGroup(nextGroup) ? nextGroup.id : 'overview';
   let group = getActiveLayoutGroup();
   layout.setLayoutBehavior({
     minInlineSize: 240,
@@ -668,22 +674,16 @@ function applyLayoutGroup(id = activeLayoutGroupId) {
     ...group.behavior,
     overflow: scrollFallback ? 'scroll-inline' : group.behavior.overflow,
   });
-  layout.setLayout(group.createLayout());
-  setShellTabs();
+  layout.setLayout(layoutFactories.get(group.id)());
+  shellMenu?.setActiveGroup?.(activeLayoutGroupId);
   setMainMenuActive();
 }
 
-setShellTabs();
-if (sidebar) {
-  sidebar.routerSync = false;
-  sidebar.$.collapsed = true;
-  sidebar.setSections(sidebarSections);
-  sidebar.setActiveSection(activeLayoutGroupId);
-}
-shellMenu?.addEventListener('project-tabs-home', () => applyLayoutGroup('overview'));
-shellMenu?.addEventListener('project-tabs-add', () => applyLayoutGroup('responsive'));
-shellMenu?.addEventListener('project-tabs-select', (event) => applyLayoutGroup(event.detail?.id));
-shellMenu?.addEventListener('cascade-theme-open-full', () => applyLayoutGroup('theme'));
+shellMenu?.setGroups?.(layoutGroups, activeLayoutGroupId);
+if (sidebar) sidebar.$.collapsed = true;
+shellMenu?.addEventListener('layout-group-change', (event) => applyLayoutGroup(event.detail?.id));
+shellMenu?.addEventListener('layout-group-add', () => applyLayoutGroup('responsive'));
+shellMenu?.addEventListener('cascade-theme-open-full', () => shellMenu?.selectGroup?.('theme', 'theme-widget'));
 window.addEventListener('hashchange', () => {
   let id = String(location.hash || '').replace(/^#\/?/, '').split(/[/?#]/)[0];
   if (layoutGroups.some((group) => group.id === id)) {

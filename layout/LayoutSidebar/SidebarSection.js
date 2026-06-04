@@ -32,6 +32,18 @@ export class SidebarSection extends Symbiote {
 
     onSectionClick: () => {
       if (!this.$.isVisible || this.$.isDisabled) return;
+      let sidebar = this.closest('layout-sidebar');
+      let event = new CustomEvent('sidebar-section-select', {
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+        detail: {
+          id: this.$.sectionId,
+          sectionId: this.$.sectionId,
+        },
+      });
+      let shouldNavigate = this.dispatchEvent(event);
+      if (!shouldNavigate || sidebar?.routerSync === false) return;
       navigate(this.$.sectionId);
     },
 

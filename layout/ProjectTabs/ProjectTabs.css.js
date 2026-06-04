@@ -70,6 +70,16 @@ project-tab-item:hover {
   color: var(--sn-text);
 }
 
+project-tab-item[disabled] {
+  cursor: not-allowed;
+  opacity: 0.46;
+}
+
+project-tab-item[disabled]:hover {
+  background: transparent;
+  color: var(--sn-text-dim);
+}
+
 .tab[active],
 project-tab-item[active] {
   background: var(--sn-tabs-active-bg);
