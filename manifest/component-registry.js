@@ -93,6 +93,28 @@ const WEBMCP_TOOLS = {
       exposedTo: ['agent', 'assistant'],
     },
   ],
+  'cascade-theme-editor': [
+    {
+      name: 'cascade_theme_editor_apply',
+      description: 'Apply bounded cascade theme parameters to a host-selected root while preserving host layout ownership.',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          mode: { enum: ['dark', 'light'] },
+          brightness: { type: 'number', minimum: 0, maximum: 100 },
+          contrast: { type: 'number', minimum: 0, maximum: 100 },
+          chroma: { type: 'number', minimum: 0, maximum: 100 },
+          hue: { type: 'number', minimum: 0, maximum: 360 },
+          outline: { type: 'number', minimum: 0, maximum: 100 },
+          type: { type: 'number', minimum: 80, maximum: 130 },
+          density: { type: 'number', minimum: 75, maximum: 140 },
+        },
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
+      exposedTo: ['agent', 'assistant'],
+    },
+  ],
   'sn-list-item': [
     {
       name: 'list_item_select',
@@ -257,6 +279,7 @@ const UI_NAMED_EXPORTS = new Set([
   'EmptyState',
   'GraphFrame',
   'StatusRibbon',
+  'CascadeThemeEditor',
 ]);
 
 const COMPONENT_VISIBILITY = {
@@ -266,6 +289,54 @@ const COMPONENT_VISIBILITY = {
 };
 
 export let COMPONENTS = [
+  {
+    tagName: 'cascade-theme-editor',
+    className: 'CascadeThemeEditor',
+    module: 'themes/CascadeThemeEditor/CascadeThemeEditor.js',
+    category: 'theme',
+    description: 'Reusable cascade theme editor module for host layouts.',
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['cascade-theme-controls', 'copy-parameters', 'reset-defaults', 'local-storage', 'layout-panel'],
+      attributes: [
+        { name: 'storage-key', type: 'string', description: 'Optional localStorage key used for automatic theme parameter persistence.' },
+        { name: 'target-selector', type: 'string', description: 'Optional CSS selector for the theme cascade target. Defaults to documentElement.' },
+      ],
+      properties: [
+        { name: 'state', type: 'object', description: 'Normalized cascade theme state.' },
+      ],
+      methods: [
+        { name: 'setState', type: 'function', description: 'Applies normalized cascade theme parameters.' },
+        { name: 'reset', type: 'function', description: 'Restores cascade theme defaults.' },
+        { name: 'copyParameters', type: 'function', description: 'Copies normalized theme parameters as JSON.' },
+      ],
+      events: [
+        { name: 'cascade-theme-change', description: 'Emits after theme parameters are applied.', detail: [{ name: 'state', type: 'object' }] },
+        { name: 'cascade-theme-copy', description: 'Emits after the copy action succeeds.', detail: [{ name: 'text', type: 'string' }] },
+      ],
+      themeAliases: [
+        '--sn-bg',
+        '--sn-panel-bg',
+        '--sn-text',
+        '--sn-text-dim',
+        '--sn-node-border',
+        '--sn-node-selected',
+        '--sn-scrollbar-thumb',
+        '--sn-theme-density',
+        '--sn-theme-type-scale',
+      ],
+      ssr: {
+        mode: 'hydrate-only',
+        importSafe: false,
+        jsdaRenderable: false,
+        requiresDom: true,
+        browserApis: ['events', 'localStorage', 'clipboard'],
+        notes: 'Browser layout module; the root theme contract remains available through Node-safe theme helpers.',
+      },
+    },
+  },
   {
     tagName: 'graph-node',
     className: 'GraphNode',

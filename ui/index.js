@@ -216,6 +216,7 @@ export let SurfaceCard;
 export let OutputListPreview;
 export let OutputGraphPreview;
 export let StatusRibbon;
+export let CascadeThemeEditor;
 export let stringifyBlock;
 export let truncateResult;
 export { sharedUiStyles } from './shared-styles.js';
@@ -485,6 +486,7 @@ if (hasDOMGlobals) {
     outputListPreview,
     outputGraphPreview,
     statusRibbon,
+    cascadeThemeEditor,
   ] = await Promise.all([
     import('../canvas/NodeCanvas/NodeCanvas.js'),
     import('../canvas/CanvasGraph/CanvasGraph.js'),
@@ -537,6 +539,7 @@ if (hasDOMGlobals) {
     import('../display/OutputListPreview/OutputListPreview.js'),
     import('../display/OutputGraphPreview/OutputGraphPreview.js'),
     import('../display/StatusRibbon/StatusRibbon.js'),
+    import('../themes/CascadeThemeEditor/CascadeThemeEditor.js'),
   ]);
 
   ({ NodeCanvas } = nodeCanvas);
@@ -600,6 +603,7 @@ if (hasDOMGlobals) {
   ({ OutputListPreview } = outputListPreview);
   ({ OutputGraphPreview } = outputGraphPreview);
   ({ StatusRibbon } = statusRibbon);
+  ({ CascadeThemeEditor } = cascadeThemeEditor);
 
   registerCatalogModules({
     NodeCanvas,
@@ -652,6 +656,7 @@ if (hasDOMGlobals) {
     OutputListPreview,
     OutputGraphPreview,
     StatusRibbon,
+    CascadeThemeEditor,
   });
 }
 

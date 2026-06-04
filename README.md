@@ -55,6 +55,7 @@ Use `symbiote-node` only as the terminal migration facade for older consumers.
 import { defineModule, listModules } from 'symbiote-ui/ui';
 
 defineModule('chat-composer');
+defineModule('cascade-theme-editor');
 
 console.log(listModules());
 ```
@@ -90,9 +91,24 @@ The contract writes both low-level controls such as `--sn-theme-bg-lightness`,
 `--sn-text`, `--sn-node-bg`, `--sn-panel-bg`, `--sn-ctx-bg`,
 `--sn-button-bg`, and `--sn-field-control-bg`.
 
+Browser hosts can mount the reusable editor module inside a layout panel:
+
+```html
+<cascade-theme-editor
+  storage-key="my-app:cascade-theme"
+  target-selector="#app-shell"
+></cascade-theme-editor>
+```
+
+The editor reuses the same bounded cascade controls, auto-saves normalized
+parameters to `localStorage`, can reset to defaults, copies the current
+parameter JSON, and emits `cascade-theme-change` after applying tokens. The
+layout owns where the module is shown; `panel-layout` can register it as a
+panel type while keeping the panel menu closed by default.
+
 ## Demos
 
-- [`demo/cascade-theme-lab.html`](./demo/cascade-theme-lab.html) - cascade theme controls for dark/light mode, brightness, contrast, accent chroma, and graph/UI token inheritance.
+- [`demo/cascade-theme-lab.html`](./demo/cascade-theme-lab.html) - layout-hosted cascade theme editor with dark/light mode, brightness, contrast, accent chroma, graph/UI token inheritance, copy/reset, and local persistence.
 - [`demo/pcb-router-stress.html`](./demo/pcb-router-stress.html) - animated PCB route diagnostics with orbit metrics, keyframes, and agent-readable JSON samples.
 
 ## WebMCP

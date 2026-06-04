@@ -2,6 +2,17 @@
 
 All notable changes to `symbiote-ui` will be documented in this file.
 
+## Unreleased
+
+### Added
+
+- Added the reusable `cascade-theme-editor` browser module for layout-hosted cascade theme editing.
+- Added copy parameters, reset defaults, and automatic `localStorage` persistence for cascade theme controls.
+
+### Changed
+
+- Updated the cascade theme lab to show the editor as a layout panel instead of owning local toolbar controls.
+
 ## [0.3.0-alpha.11] - 2026-06-04
 
 ### Fixed

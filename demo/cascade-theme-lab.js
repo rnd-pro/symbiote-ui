@@ -1,6 +1,5 @@
 import Symbiote, { html } from '@symbiotejs/symbiote';
 import {
-  applyCascadeTheme,
   Connection,
   DEFAULT_PROVIDER_THEME,
   Input,
@@ -24,85 +23,12 @@ for (const tagName of [
   'sn-badge',
   'sn-card',
   'sn-tree-panel',
+  'cascade-theme-editor',
 ]) {
   defineModule(tagName);
 }
 
 applyTheme(document.documentElement, DEFAULT_PROVIDER_THEME);
-
-const root = document.documentElement;
-const modeButtons = [...document.querySelectorAll('[data-mode]')];
-const tuners = document.querySelector('.lab-tuners');
-const tuneButton = document.querySelector('.lab-toggle');
-const controls = {
-  brightness: document.querySelector('[data-control="brightness"]'),
-  contrast: document.querySelector('[data-control="contrast"]'),
-  chroma: document.querySelector('[data-control="chroma"]'),
-  hue: document.querySelector('[data-control="hue"]'),
-  outline: document.querySelector('[data-control="outline"]'),
-  type: document.querySelector('[data-control="type"]'),
-  density: document.querySelector('[data-control="density"]'),
-};
-const outputs = {
-  brightness: document.querySelector('[data-output="brightness"]'),
-  contrast: document.querySelector('[data-output="contrast"]'),
-  chroma: document.querySelector('[data-output="chroma"]'),
-  hue: document.querySelector('[data-output="hue"]'),
-  outline: document.querySelector('[data-output="outline"]'),
-  type: document.querySelector('[data-output="type"]'),
-  density: document.querySelector('[data-output="density"]'),
-};
-
-let mode = 'dark';
-
-function readThemeState() {
-  return {
-    mode,
-    brightness: Number(controls.brightness.value),
-    contrast: Number(controls.contrast.value),
-    chroma: Number(controls.chroma.value),
-    hue: Number(controls.hue.value),
-    outline: Number(controls.outline.value),
-    type: Number(controls.type.value),
-    density: Number(controls.density.value),
-  };
-}
-
-function updateCascadeTheme() {
-  let theme = applyCascadeTheme(root, readThemeState());
-
-  for (const [key, output] of Object.entries(outputs)) {
-    output.textContent = String(theme.state[key]);
-  }
-
-  document.dispatchEvent(new CustomEvent('cascade-theme-change', {
-    detail: theme.state,
-  }));
-}
-
-function setMode(nextMode) {
-  mode = nextMode;
-  for (const button of modeButtons) {
-    button.setAttribute('aria-pressed', String(button.dataset.mode === mode));
-  }
-  controls.brightness.value = mode === 'dark' ? '0' : '0';
-  controls.contrast.value = mode === 'dark' ? '58' : '62';
-  updateCascadeTheme();
-}
-
-tuneButton.addEventListener('click', () => {
-  let open = !tuners.hasAttribute('data-open');
-  tuners.toggleAttribute('data-open', open);
-  tuneButton.setAttribute('aria-expanded', String(open));
-});
-
-for (const button of modeButtons) {
-  button.addEventListener('click', () => setMode(button.dataset.mode));
-}
-
-for (const control of Object.values(controls)) {
-  control.addEventListener('input', updateCascadeTheme);
-}
 
 class CascadeGraphPanel extends Symbiote {
   renderCallback() {
@@ -327,12 +253,23 @@ layout.registerPanelType('ui', {
   icon: 'widgets',
   component: 'cascade-ui-panel',
 });
+layout.registerPanelType('theme', {
+  title: 'Theme',
+  icon: 'palette',
+  component: 'cascade-theme-editor',
+  attributes: {
+    'storage-key': 'symbiote-ui:cascade-theme-lab',
+  },
+});
 layout.$.panelChrome = true;
 layout.$.layoutTree = LayoutTree.createSplit(
   'horizontal',
-  LayoutTree.createPanel('graph'),
-  LayoutTree.createPanel('ui'),
-  0.55
+  LayoutTree.createPanel('theme'),
+  LayoutTree.createSplit(
+    'horizontal',
+    LayoutTree.createPanel('graph'),
+    LayoutTree.createPanel('ui'),
+    0.55
+  ),
+  0.28
 );
-
-setMode('dark');

@@ -4,6 +4,7 @@ import { test } from 'node:test';
 
 const scrollbarSource = new URL('../themes/scrollbar-styles.js', import.meta.url);
 const cascadeThemeSource = new URL('../themes/cascade-theme.js', import.meta.url);
+const cascadeThemeEditorSource = new URL('../themes/CascadeThemeEditor/CascadeThemeEditor.js', import.meta.url);
 const cascadeDemoSource = new URL('../demo/cascade-theme-lab.js', import.meta.url);
 const cascadeDemoHtml = new URL('../demo/cascade-theme-lab.html', import.meta.url);
 const graphNodeStyles = new URL('../node/GraphNode/GraphNode.css.js', import.meta.url);
@@ -12,10 +13,14 @@ const ctrlItemStyles = new URL('../node/CtrlItem/CtrlItem.css.js', import.meta.u
 const nodeSocketStyles = new URL('../node/NodeSocket/NodeSocket.css.js', import.meta.url);
 const nodeCanvasStyles = new URL('../canvas/NodeCanvas/NodeCanvas.css.js', import.meta.url);
 const layoutStyles = new URL('../layout/Layout/Layout.css.js', import.meta.url);
+const layoutNodeSource = new URL('../layout/LayoutNode/LayoutNode.js', import.meta.url);
 const layoutNodeStyles = new URL('../layout/LayoutNode/LayoutNode.css.js', import.meta.url);
 const panelMenuStyles = new URL('../layout/PanelMenu/PanelMenu.css.js', import.meta.url);
 const actionZoneStyles = new URL('../layout/ActionZone/ActionZone.css.js', import.meta.url);
 const treeViewStyles = new URL('../tree/TreeView/TreeView.css.js', import.meta.url);
+const uiIndexSource = new URL('../ui/index.js', import.meta.url);
+const componentRegistrySource = new URL('../manifest/component-registry.js', import.meta.url);
+const customElementsSource = new URL('../custom-elements.json', import.meta.url);
 
 test('theme scrollbar normal state uses the normal thumb token', async () => {
   const source = await readFile(scrollbarSource, 'utf8');
@@ -27,10 +32,15 @@ test('theme scrollbar normal state uses the normal thumb token', async () => {
 });
 
 test('cascade theme lab mutates root tokens instead of applying local component themes', async () => {
-  const source = await readFile(cascadeDemoSource, 'utf8');
+  const [source, html] = await Promise.all([
+    readFile(cascadeDemoSource, 'utf8'),
+    readFile(cascadeDemoHtml, 'utf8'),
+  ]);
 
   assert.match(source, /import Symbiote, \{ html \} from '@symbiotejs\/symbiote'/);
-  assert.match(source, /applyCascadeTheme\(root, readThemeState\(\)\)/);
+  assert.match(source, /'cascade-theme-editor'/);
+  assert.match(source, /component: 'cascade-theme-editor'/);
+  assert.match(source, /'storage-key': 'symbiote-ui:cascade-theme-lab'/);
   assert.match(source, /class CascadeGraphPanel extends Symbiote/);
   assert.match(source, /class CascadeUiPanel extends Symbiote/);
   assert.match(source, /applyTheme\(document\.documentElement, DEFAULT_PROVIDER_THEME\)/);
@@ -44,10 +54,13 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   assert.match(source, /--sn-shape-watermark-size/);
   assert.match(source, /--sn-layout-header-icon-size/);
   assert.match(source, /--sn-action-zone-size/);
+  assert.match(html, /layout module/);
   assert.doesNotMatch(source, /extends HTMLElement/);
   assert.doesNotMatch(source, /\.setTheme\(/);
   assert.doesNotMatch(source, /10 \+ brightness \* 0\.18/);
   assert.doesNotMatch(source, /setToken\(/);
+  assert.doesNotMatch(source, /querySelector\('\[data-control/);
+  assert.doesNotMatch(html, /data-control=/);
 });
 
 test('cascade theme is a reusable library contract with WebMCP metadata', async () => {
@@ -90,6 +103,38 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.match(source, /--sn-node-svg-body-padding/);
   assert.match(source, /--sn-control-input-size/);
   assert.match(source, /--sn-panel-menu-icon-size/);
+});
+
+test('cascade theme editor is a reusable browser module', async () => {
+  const [editor, styles, uiIndex, registry, customElements, layoutNode] = await Promise.all([
+    readFile(cascadeThemeEditorSource, 'utf8'),
+    readFile(new URL('../themes/CascadeThemeEditor/CascadeThemeEditor.css.js', import.meta.url), 'utf8'),
+    readFile(uiIndexSource, 'utf8'),
+    readFile(componentRegistrySource, 'utf8'),
+    readFile(customElementsSource, 'utf8'),
+    readFile(layoutNodeSource, 'utf8'),
+  ]);
+
+  assert.match(editor, /class CascadeThemeEditor extends Symbiote/);
+  assert.match(editor, /applyCascadeTheme\(this\.\#resolveTarget\(\), this\.\#state\)/);
+  assert.match(editor, /CASCADE_THEME_DEFAULTS/);
+  assert.match(editor, /getCascadeThemeControls\(\)/);
+  assert.match(editor, /getStorage\(\)/);
+  assert.match(editor, /storage\.setItem\(this\.storageKey/);
+  assert.match(editor, /copyParameters\(\)/);
+  assert.match(editor, /reset\(\)/);
+  assert.match(editor, /new CustomEvent\('cascade-theme-change'/);
+  assert.match(editor, /CascadeThemeEditor\.reg\('cascade-theme-editor'\)/);
+  assert.match(styles, /cascade-theme-editor/);
+  assert.match(styles, /--sn-scrollbar-thumb/);
+  assert.match(uiIndex, /CascadeThemeEditor/);
+  assert.match(uiIndex, /themes\/CascadeThemeEditor\/CascadeThemeEditor\.js/);
+  assert.match(registry, /tagName: 'cascade-theme-editor'/);
+  assert.match(registry, /cascade_theme_editor_apply/);
+  assert.match(customElements, /"tagName": "cascade-theme-editor"/);
+  assert.match(layoutNode, /_applyPanelComponentConfig/);
+  assert.match(layoutNode, /config\.attributes/);
+  assert.match(layoutNode, /config\.properties/);
 });
 
 test('cascade theme derives distinct dark and light branches', async () => {

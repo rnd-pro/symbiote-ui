@@ -3,6 +3,105 @@
   "readme": "README.md",
   "modules": [
     {
+      "path": "themes/CascadeThemeEditor/CascadeThemeEditor.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "customElement": true,
+          "name": "CascadeThemeEditor",
+          "tagName": "cascade-theme-editor",
+          "description": "Reusable cascade theme editor module for host layouts.",
+          "attributes": [
+            {
+              "name": "storage-key",
+              "type": "string",
+              "description": "Optional localStorage key used for automatic theme parameter persistence."
+            },
+            {
+              "name": "target-selector",
+              "type": "string",
+              "description": "Optional CSS selector for the theme cascade target. Defaults to documentElement."
+            }
+          ],
+          "members": [
+            {
+              "kind": "field",
+              "name": "state",
+              "type": {
+                "text": "object"
+              },
+              "description": "Normalized cascade theme state."
+            },
+            {
+              "kind": "method",
+              "name": "setState",
+              "type": {
+                "text": "function"
+              },
+              "description": "Applies normalized cascade theme parameters."
+            },
+            {
+              "kind": "method",
+              "name": "reset",
+              "type": {
+                "text": "function"
+              },
+              "description": "Restores cascade theme defaults."
+            },
+            {
+              "kind": "method",
+              "name": "copyParameters",
+              "type": {
+                "text": "function"
+              },
+              "description": "Copies normalized theme parameters as JSON."
+            }
+          ],
+          "cssProperties": [
+            {
+              "name": "--sn-bg",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-panel-bg",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-text",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-selected",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-scrollbar-thumb",
+              "description": "Theme CSS custom property consumed by this component."
+            }
+          ],
+          "events": [
+            {
+              "name": "cascade-theme-change",
+              "description": "Emits after theme parameters are applied."
+            },
+            {
+              "name": "cascade-theme-copy",
+              "description": "Emits after the copy action succeeds."
+            }
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "kind": "custom-element-definition",
+          "name": "cascade-theme-editor",
+          "declaration": {
+            "name": "CascadeThemeEditor"
+          }
+        }
+      ]
+    },
+    {
       "path": "node/GraphNode/GraphNode.js",
       "declarations": [
         {

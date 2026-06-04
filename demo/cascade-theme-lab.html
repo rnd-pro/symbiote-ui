@@ -61,77 +61,10 @@
       line-height: 1.2;
     }
 
-    .lab-mode {
-      display: inline-grid;
-      grid-auto-flow: column;
-      gap: var(--sn-lab-segment-gap, 6px);
-      padding: var(--sn-lab-segment-padding, 3px);
-      border: 1px solid var(--sn-node-border);
-      border-radius: 8px;
-      background: var(--sn-node-bg);
-    }
-
-    .lab-mode button,
-    .lab-toggle {
-      height: var(--sn-lab-control-height, 30px);
-      border: 0;
-      border-radius: 6px;
-      background: transparent;
-      color: var(--sn-text-dim);
-      font: inherit;
-      cursor: pointer;
-    }
-
-    .lab-mode button {
-      min-width: 34px;
-      padding: var(--sn-lab-mode-button-padding, 0 9px);
-    }
-
-    .lab-mode button[aria-pressed="true"],
-    .lab-toggle[aria-expanded="true"] {
-      background: var(--sn-node-selected);
-      color: var(--sn-bg);
-    }
-
-    .lab-toggle {
-      display: inline-flex;
-      align-items: center;
-      gap: var(--sn-lab-control-gap, 6px);
-      padding: var(--sn-lab-toggle-padding, 0 10px);
-      border: 1px solid var(--sn-node-border);
-      background: var(--sn-node-bg);
-    }
-
-    .lab-tuners {
-      display: none;
-      align-items: center;
-      gap: var(--sn-lab-tuners-gap, 12px);
-      min-width: 0;
-    }
-
-    .lab-tuners[data-open] {
-      display: flex;
-    }
-
-    .lab-control {
-      display: grid;
-      grid-template-columns: auto minmax(80px, var(--sn-lab-slider-width, 128px)) 38px;
-      align-items: center;
-      gap: var(--sn-lab-control-gap, 8px);
+    .lab-meta {
       color: var(--sn-text-dim);
       font-size: var(--sn-lab-control-font-size, 12px);
       white-space: nowrap;
-    }
-
-    .lab-control input {
-      width: 100%;
-      accent-color: var(--sn-node-selected);
-    }
-
-    .lab-control output {
-      color: var(--sn-text);
-      font-variant-numeric: tabular-nums;
-      text-align: right;
     }
 
     .lab-content {
@@ -259,15 +192,6 @@
         flex-direction: column;
       }
 
-      .lab-tuners[data-open] {
-        align-items: stretch;
-        flex-direction: column;
-      }
-
-      .lab-control {
-        grid-template-columns: 78px minmax(0, 1fr) 38px;
-      }
-
       .lab-layout {
         height: 980px;
       }
@@ -279,57 +203,13 @@
   <main class="lab-shell">
     <header class="lab-toolbar">
       <h1 class="lab-title">Cascade Theme Lab</h1>
-      <div class="lab-mode" aria-label="Theme mode">
-        <button type="button" data-mode="dark" aria-pressed="true" title="Dark theme">dark</button>
-        <button type="button" data-mode="light" aria-pressed="false" title="Light theme">light</button>
-      </div>
-      <button class="lab-toggle" type="button" aria-expanded="false">
-        <span class="material-symbols-outlined" aria-hidden="true">tune</span>
-        tune
-      </button>
-      <div class="lab-tuners" aria-label="Theme controls">
-        <label class="lab-control">
-          <span>brightness</span>
-          <input type="range" min="0" max="100" value="0" data-control="brightness">
-          <output data-output="brightness">0</output>
-        </label>
-        <label class="lab-control">
-          <span>contrast</span>
-          <input type="range" min="0" max="100" value="58" data-control="contrast">
-          <output data-output="contrast">58</output>
-        </label>
-        <label class="lab-control">
-          <span>accent</span>
-          <input type="range" min="0" max="100" value="89" data-control="chroma">
-          <output data-output="chroma">89</output>
-        </label>
-        <label class="lab-control">
-          <span>hue</span>
-          <input type="range" min="0" max="360" value="218" data-control="hue">
-          <output data-output="hue">218</output>
-        </label>
-        <label class="lab-control">
-          <span>outline</span>
-          <input type="range" min="0" max="100" value="38" data-control="outline">
-          <output data-output="outline">38</output>
-        </label>
-        <label class="lab-control">
-          <span>type</span>
-          <input type="range" min="80" max="130" value="100" data-control="type">
-          <output data-output="type">100</output>
-        </label>
-        <label class="lab-control">
-          <span>density</span>
-          <input type="range" min="75" max="140" value="100" data-control="density">
-          <output data-output="density">100</output>
-        </label>
-      </div>
+      <span class="lab-meta">layout module</span>
     </header>
     <section class="lab-content" aria-label="Cascade theme visual surface">
       <panel-layout class="lab-layout"></panel-layout>
     </section>
   </main>
-  <script type="module" src="./cascade-theme-lab.js?v=20260604-cascade-api"></script>
+  <script type="module" src="./cascade-theme-lab.js?v=20260604-theme-editor"></script>
 </body>
 
 </html>

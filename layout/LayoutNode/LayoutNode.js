@@ -264,6 +264,7 @@ export class LayoutNode extends Symbiote {
 
     let existing = contentEl.querySelector(componentTag);
     if (existing) {
+      this._applyPanelComponentConfig(existing, config);
       existing.style.display = '';
       return;
     }
@@ -271,7 +272,24 @@ export class LayoutNode extends Symbiote {
 
     let component = document.createElement(componentTag);
     component.dataset.panelId = this.$.nodeData?.id || '';
+    this._applyPanelComponentConfig(component, config);
     contentEl.appendChild(component);
+  }
+
+  _applyPanelComponentConfig(component, config) {
+    for (let [name, value] of Object.entries(config.attributes || {})) {
+      if (value === false || value === null || value === undefined) {
+        component.removeAttribute(name);
+      } else if (value === true) {
+        component.setAttribute(name, '');
+      } else {
+        component.setAttribute(name, String(value));
+      }
+    }
+
+    for (let [name, value] of Object.entries(config.properties || {})) {
+      component[name] = value;
+    }
   }
 
   _renderNode(data) {
