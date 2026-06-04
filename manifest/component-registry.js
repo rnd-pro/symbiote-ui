@@ -934,26 +934,39 @@ export let COMPONENTS = [
       status: 'draft',
       schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
-      capabilities: ['global-shell-menu', 'layout-group-tabs', 'topbar-context', 'workspace-slot', 'action-slot'],
+      capabilities: ['global-shell-menu', 'fold-down-menu', 'layout-group-tabs', 'topbar-context', 'workspace-slot', 'action-slot', 'menu-action-slot'],
       attributes: [
         { name: 'title', type: 'string', description: 'Shell title rendered in the topbar.' },
         { name: 'title-icon', type: 'string', description: 'Material Symbols icon rendered next to the title.' },
         { name: 'project-path', type: 'string', description: 'Current project, workspace, or layout path label rendered in the topbar center.' },
         { name: 'path-label', type: 'string', description: 'Alias for project-path.' },
         { name: 'path-icon', type: 'string', description: 'Material Symbols icon rendered next to the path label.' },
+        { name: 'menu-open', type: 'boolean', description: 'Opens the fold-down global layout menu when present.' },
+        { name: 'menu-title', type: 'string', description: 'Accessible title for the global layout menu toggle.' },
       ],
       properties: [
         { name: 'tabs', type: 'array', description: 'Layout group tab descriptors forwarded to the embedded project-tabs component.' },
         { name: 'activeId', type: 'string', description: 'Active layout group tab id. Null leaves the Home tab active.' },
+        { name: 'isMenuOpen', type: 'boolean', description: 'Current fold-down global menu visibility state.' },
       ],
       methods: [
         { name: 'setTabs', type: 'function', description: 'Replaces layout group tab data and active group id.' },
+        { name: 'toggleMenu', type: 'function', description: 'Opens or closes the global layout menu drawer.' },
+        { name: 'openMenu', type: 'function', description: 'Opens the global layout menu drawer.' },
+        { name: 'closeMenu', type: 'function', description: 'Closes the global layout menu drawer.' },
       ],
       slots: [
         { name: 'default', description: 'Workspace content, typically panel-layout or a shell workspace container.' },
         { name: 'actions', description: 'Topbar action controls such as reset, overflow fallback, or host commands.' },
+        { name: 'menu-actions', description: 'Global menu command controls that should not permanently occupy the topbar.' },
+        { name: 'menu', description: 'Additional host-owned menu content below the layout group tab surface.' },
       ],
       events: [
+        {
+          name: 'layout-shell-menu-toggle',
+          description: 'Emits when the fold-down global layout menu opens or closes.',
+          detail: [{ name: 'open', type: 'boolean', required: true }],
+        },
         { name: 'project-tabs-home', description: 'Bubbles from embedded project-tabs when the Home layout group is selected.' },
         { name: 'project-tabs-add', description: 'Bubbles from embedded project-tabs when a host wants to open or create a layout group.' },
         {
@@ -979,6 +992,8 @@ export let COMPONENTS = [
         '--sn-tabs-bg',
         '--sn-tabs-active-bg',
         '--sn-tabs-border',
+        '--sn-shell-menu-toggle-size',
+        '--sn-shell-menu-drawer-max-block-size',
       ],
       ssr: {
         mode: 'hydrate-only',

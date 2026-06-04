@@ -20,6 +20,9 @@ const layoutSource = new URL('../layout/Layout/Layout.js', import.meta.url);
 const layoutNodeSource = new URL('../layout/LayoutNode/LayoutNode.js', import.meta.url);
 const layoutNodeTemplate = new URL('../layout/LayoutNode/LayoutNode.tpl.js', import.meta.url);
 const layoutNodeStyles = new URL('../layout/LayoutNode/LayoutNode.css.js', import.meta.url);
+const layoutShellMenuSource = new URL('../layout/LayoutShellMenu/LayoutShellMenu.js', import.meta.url);
+const layoutShellMenuTemplate = new URL('../layout/LayoutShellMenu/LayoutShellMenu.tpl.js', import.meta.url);
+const layoutShellMenuStyles = new URL('../layout/LayoutShellMenu/LayoutShellMenu.css.js', import.meta.url);
 const projectTabsSource = new URL('../layout/ProjectTabs/ProjectTabs.js', import.meta.url);
 const projectTabsStyles = new URL('../layout/ProjectTabs/ProjectTabs.css.js', import.meta.url);
 const panelMenuStyles = new URL('../layout/PanelMenu/PanelMenu.css.js', import.meta.url);
@@ -140,7 +143,9 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   assert.match(html, /100dvh/);
   assert.doesNotMatch(html, /100vh/);
   assert.match(html, /project-path="symbiote-ui \/ layout module"/);
-  assert.match(html, /data-layout-command="scroll"/);
+  assert.match(html, /menu-open/);
+  assert.match(html, /slot="menu-actions" type="button" data-layout-command="reset"/);
+  assert.match(html, /slot="menu-actions" type="button" data-layout-command="scroll"/);
   assert.doesNotMatch(html, /class="lab-toolbar"/);
   assert.doesNotMatch(html, /lab-main-menu/);
   assert.doesNotMatch(html, /<project-tabs/);
@@ -151,6 +156,32 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   assert.doesNotMatch(source, /setToken\(/);
   assert.doesNotMatch(source, /querySelector\('\[data-control/);
   assert.doesNotMatch(html, /data-control=/);
+});
+
+test('layout shell menu owns fold-down layout tabs and host action slots', async () => {
+  const [source, template, styles] = await Promise.all([
+    readFile(layoutShellMenuSource, 'utf8'),
+    readFile(layoutShellMenuTemplate, 'utf8'),
+    readFile(layoutShellMenuStyles, 'utf8'),
+  ]);
+
+  assert.match(source, /isMenuOpen: false/);
+  assert.match(source, /toggleMenu\(open = !this\.\$\.isMenuOpen\)/);
+  assert.match(source, /openMenu\(\)/);
+  assert.match(source, /closeMenu\(\)/);
+  assert.match(source, /_menuStateInitialized/);
+  assert.match(source, /layout-shell-menu-toggle/);
+  assert.match(template, /class="shell-menu-toggle"/);
+  assert.match(template, /@aria-expanded': 'isMenuOpen'/);
+  assert.match(template, /class="shell-menu-drawer"/);
+  assert.match(template, /<project-tabs class="shell-tabs"/);
+  assert.match(template, /slot name="menu-actions"/);
+  assert.match(template, /slot name="menu"/);
+  assert.match(styles, /--sn-shell-menu-toggle-size/);
+  assert.match(styles, /--sn-shell-menu-drawer-max-block-size/);
+  assert.match(styles, /\.shell-menu-drawer\[hidden\]/);
+  assert.match(styles, /scrollbar-color: var\(--sn-scrollbar-thumb/);
+  assert.match(styles, /letter-spacing: 0;/);
 });
 
 test('cascade theme is a reusable library contract with WebMCP metadata', async () => {

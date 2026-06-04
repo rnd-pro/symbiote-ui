@@ -196,22 +196,23 @@
     title="Cascade Theme Lab"
     title-icon="hub"
     project-path="symbiote-ui / layout module"
+    menu-open
   >
     <cascade-theme-widget
       slot="actions"
       storage-key="symbiote-ui:cascade-theme-lab"
     ></cascade-theme-widget>
-    <button class="lab-shell-action" slot="actions" type="button" data-layout-command="reset">
+    <button class="lab-shell-action" slot="menu-actions" type="button" data-layout-command="reset">
       <span class="material-symbols-outlined">restart_alt</span><span>Reset</span>
     </button>
-    <button class="lab-shell-action" slot="actions" type="button" data-layout-command="scroll">
+    <button class="lab-shell-action" slot="menu-actions" type="button" data-layout-command="scroll">
       <span class="material-symbols-outlined">swap_horiz</span><span>Scroll</span>
     </button>
     <section class="lab-content" aria-label="Cascade theme visual surface">
       <panel-layout class="lab-layout"></panel-layout>
     </section>
   </layout-shell-menu>
-  <script type="module" src="./cascade-theme-lab.js?v=theme-widget-layout-actions"></script>
+  <script type="module" src="./cascade-theme-lab.js?v=shell-menu-drawer"></script>
 </body>
 
 </html>

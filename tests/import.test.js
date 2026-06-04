@@ -33,7 +33,11 @@ test('discover exposes the standalone package contract', async () => {
   assert.ok(agentCatalogItem.componentDescription.includes('WebMCP tools: cascade_theme_editor_apply'));
   assert.equal(agentCatalogItem.webmcp.toolNames[0], 'cascade_theme_editor_apply');
   assert.ok(shellMenu.componentDescription.includes('layout group tabs'));
+  assert.ok(shellMenu.componentDescription.includes('fold-down-menu'));
   assert.equal(shellMenu.agent.webmcp.mode, 'explicit-descriptor');
+  assert.ok(shellMenu.contract.capabilities.includes('menu-action-slot'));
+  assert.ok(shellMenu.contract.methods.some((method) => method.name === 'toggleMenu'));
+  assert.ok(shellMenu.contract.slots.some((slot) => slot.name === 'menu-actions'));
   assert.equal(shellMenuAgentItem.webmcp.toolNames[0], 'layout_shell_menu_select');
   assert.ok(data.manifest.themeRuntimeDescriptors.some((descriptor) => (
     descriptor.name === 'cascade-theme'

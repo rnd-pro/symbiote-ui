@@ -2132,6 +2132,16 @@
               "name": "path-icon",
               "type": "string",
               "description": "Material Symbols icon rendered next to the path label."
+            },
+            {
+              "name": "menu-open",
+              "type": "boolean",
+              "description": "Opens the fold-down global layout menu when present."
+            },
+            {
+              "name": "menu-title",
+              "type": "string",
+              "description": "Accessible title for the global layout menu toggle."
             }
           ],
           "members": [
@@ -2152,12 +2162,44 @@
               "description": "Active layout group tab id. Null leaves the Home tab active."
             },
             {
+              "kind": "field",
+              "name": "isMenuOpen",
+              "type": {
+                "text": "boolean"
+              },
+              "description": "Current fold-down global menu visibility state."
+            },
+            {
               "kind": "method",
               "name": "setTabs",
               "type": {
                 "text": "function"
               },
               "description": "Replaces layout group tab data and active group id."
+            },
+            {
+              "kind": "method",
+              "name": "toggleMenu",
+              "type": {
+                "text": "function"
+              },
+              "description": "Opens or closes the global layout menu drawer."
+            },
+            {
+              "kind": "method",
+              "name": "openMenu",
+              "type": {
+                "text": "function"
+              },
+              "description": "Opens the global layout menu drawer."
+            },
+            {
+              "kind": "method",
+              "name": "closeMenu",
+              "type": {
+                "text": "function"
+              },
+              "description": "Closes the global layout menu drawer."
             }
           ],
           "slots": [
@@ -2168,9 +2210,24 @@
             {
               "name": "actions",
               "description": "Topbar action controls such as reset, overflow fallback, or host commands."
+            },
+            {
+              "name": "menu-actions",
+              "description": "Global menu command controls that should not permanently occupy the topbar."
+            },
+            {
+              "name": "menu",
+              "description": "Additional host-owned menu content below the layout group tab surface."
             }
           ],
           "events": [
+            {
+              "name": "layout-shell-menu-toggle",
+              "description": "Emits when the fold-down global layout menu opens or closes.",
+              "type": {
+                "text": "CustomEvent"
+              }
+            },
             {
               "name": "project-tabs-home",
               "description": "Bubbles from embedded project-tabs when the Home layout group is selected."
@@ -2238,11 +2295,19 @@
             {
               "name": "--sn-tabs-border",
               "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-shell-menu-toggle-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-shell-menu-drawer-max-block-size",
+              "description": "Theme CSS custom property consumed by this component."
             }
           ],
-          "componentDescription": "Global application shell menu that binds topbar context, layout group tabs, and workspace content. Use this global layout group navigation shell when composing layout UI. Capabilities: global-shell-menu, layout-group-tabs, topbar-context, workspace-slot, action-slot. Data ownership: host-owned layout group and tab model; component renders topbar context, project-tabs, action slot, and workspace slot. WebMCP tools: layout_shell_menu_select.",
+          "componentDescription": "Global application shell menu that binds topbar context, layout group tabs, and workspace content. Use this global layout group navigation shell when composing layout UI. Capabilities: global-shell-menu, fold-down-menu, layout-group-tabs, topbar-context, workspace-slot, action-slot, menu-action-slot. Data ownership: host-owned layout group and tab model; component renders topbar context, project-tabs, action slot, and workspace slot. WebMCP tools: layout_shell_menu_select.",
           "agent": {
-            "componentDescription": "Global application shell menu that binds topbar context, layout group tabs, and workspace content. Use this global layout group navigation shell when composing layout UI. Capabilities: global-shell-menu, layout-group-tabs, topbar-context, workspace-slot, action-slot. Data ownership: host-owned layout group and tab model; component renders topbar context, project-tabs, action slot, and workspace slot. WebMCP tools: layout_shell_menu_select.",
+            "componentDescription": "Global application shell menu that binds topbar context, layout group tabs, and workspace content. Use this global layout group navigation shell when composing layout UI. Capabilities: global-shell-menu, fold-down-menu, layout-group-tabs, topbar-context, workspace-slot, action-slot, menu-action-slot. Data ownership: host-owned layout group and tab model; component renders topbar context, project-tabs, action slot, and workspace slot. WebMCP tools: layout_shell_menu_select.",
             "semanticRole": "global layout group navigation shell",
             "usage": "Use as the host shell around panel-layout when agents or users need to switch layout groups, open workspace tabs, and keep tab navigation attached to the global menu.",
             "dataOwnership": "host-owned layout group and tab model; component renders topbar context, project-tabs, action slot, and workspace slot",
