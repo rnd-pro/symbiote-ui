@@ -6,6 +6,7 @@ const scrollbarSource = new URL('../themes/scrollbar-styles.js', import.meta.url
 const cascadeThemeSource = new URL('../themes/cascade-theme.js', import.meta.url);
 const defaultProviderThemeSource = new URL('../themes/default-provider.js', import.meta.url);
 const cascadeThemeEditorSource = new URL('../themes/CascadeThemeEditor/CascadeThemeEditor.js', import.meta.url);
+const cascadeThemeWidgetSource = new URL('../themes/CascadeThemeWidget/CascadeThemeWidget.js', import.meta.url);
 const cascadeDemoSource = new URL('../demo/cascade-theme-lab.js', import.meta.url);
 const cascadeDemoHtml = new URL('../demo/cascade-theme-lab.html', import.meta.url);
 const graphNodeStyles = new URL('../node/GraphNode/GraphNode.css.js', import.meta.url);
@@ -53,6 +54,7 @@ test('cascade theme lab mutates root tokens instead of applying local component 
 
   assert.match(source, /import Symbiote, \{ html \} from '@symbiotejs\/symbiote'/);
   assert.match(source, /'cascade-theme-editor'/);
+  assert.match(source, /'cascade-theme-widget'/);
   assert.match(source, /'project-tabs'/);
   assert.match(source, /component: 'cascade-theme-editor'/);
   assert.match(source, /'storage-key': 'symbiote-ui:cascade-theme-lab'/);
@@ -77,7 +79,11 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   assert.match(source, /--sn-composer-bg/);
   assert.match(source, /--sn-syntax-keyword/);
   assert.match(source, /--sn-cell-dot/);
+  assert.match(source, /--sn-cell-noise/);
   assert.match(source, /--sn-node-icon-size/);
+  assert.match(source, /--sn-node-pill-body-padding/);
+  assert.match(source, /--sn-node-circle-body-padding/);
+  assert.match(source, /--sn-node-comment-body-padding/);
   assert.match(source, /--sn-port-label-size/);
   assert.match(source, /--sn-layout-header-icon-size/);
   assert.match(source, /--sn-action-zone-size/);
@@ -99,12 +105,15 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   assert.match(source, /project-tabs-select/);
   assert.match(source, /'layout-shell-menu'/);
   assert.match(source, /setShellTabs/);
+  assert.match(source, /cascade-theme-open-full/);
+  assert.match(source, /createThemeLayout/);
   assert.match(source, /FORCED_SCROLL_INLINE_SIZE/);
   assert.match(source, /100% \+ var\(--sn-layout-scroll-inline-extra/);
   assert.match(source, /data-layout-command/);
   assert.match(source, /voice command/);
   assert.match(html, /layout module/);
   assert.match(html, /<layout-shell-menu/);
+  assert.match(html, /<cascade-theme-widget/);
   assert.match(html, /class="lab-shell"/);
   assert.match(html, /project-path="symbiote-ui \/ layout module"/);
   assert.match(html, /data-layout-command="scroll"/);
@@ -259,8 +268,10 @@ test('svg shape nodes keep visual icons without internal labels or watermarks', 
 });
 
 test('cascade theme editor is a reusable browser module', async () => {
-  const [editor, styles, uiIndex, registry, customElements, layoutNode] = await Promise.all([
+  const [editor, widget, widgetStyles, styles, uiIndex, registry, customElements, layoutNode] = await Promise.all([
     readFile(cascadeThemeEditorSource, 'utf8'),
+    readFile(cascadeThemeWidgetSource, 'utf8'),
+    readFile(new URL('../themes/CascadeThemeWidget/CascadeThemeWidget.css.js', import.meta.url), 'utf8'),
     readFile(new URL('../themes/CascadeThemeEditor/CascadeThemeEditor.css.js', import.meta.url), 'utf8'),
     readFile(uiIndexSource, 'utf8'),
     readFile(componentRegistrySource, 'utf8'),
@@ -283,6 +294,13 @@ test('cascade theme editor is a reusable browser module', async () => {
   assert.match(editor, /--cte-range-progress/);
   assert.match(editor, /new CustomEvent\('cascade-theme-change'/);
   assert.match(editor, /CascadeThemeEditor\.reg\('cascade-theme-editor'\)/);
+  assert.match(widget, /class CascadeThemeWidget extends Symbiote/);
+  assert.match(widget, /COMPACT_CONTROLS = \['brightness', 'contrast', 'chroma', 'hue'\]/);
+  assert.match(widget, /applyCascadeTheme\(this\.\#resolveTarget\(\), this\.\#state\)/);
+  assert.match(widget, /cascade-theme-open-full/);
+  assert.match(widget, /CascadeThemeWidget\.reg\('cascade-theme-widget'\)/);
+  assert.match(widgetStyles, /cascade-theme-widget/);
+  assert.match(widgetStyles, /--sn-theme-widget-width/);
   assert.match(styles, /cascade-theme-editor/);
   assert.match(styles, /--sn-scrollbar-thumb/);
   assert.match(styles, /input\[type="range"\]/);
@@ -293,12 +311,18 @@ test('cascade theme editor is a reusable browser module', async () => {
   assert.match(styles, /::-webkit-slider-thumb/);
   assert.match(styles, /::-moz-range-thumb/);
   assert.match(uiIndex, /CascadeThemeEditor/);
+  assert.match(uiIndex, /CascadeThemeWidget/);
   assert.match(uiIndex, /themes\/CascadeThemeEditor\/CascadeThemeEditor\.js/);
+  assert.match(uiIndex, /themes\/CascadeThemeWidget\/CascadeThemeWidget\.js/);
   assert.match(registry, /tagName: 'cascade-theme-editor'/);
+  assert.match(registry, /tagName: 'cascade-theme-widget'/);
   assert.match(registry, /componentDescription/);
   assert.match(registry, /WEBMCP_SUPPORT_REFERENCE/);
   assert.match(registry, /cascade_theme_editor_apply/);
+  assert.match(registry, /cascade_theme_widget_open_full/);
+  assert.match(registry, /cascade_theme_widget_apply_quick/);
   assert.match(customElements, /"tagName": "cascade-theme-editor"/);
+  assert.match(customElements, /"tagName": "cascade-theme-widget"/);
   assert.match(customElements, /"componentDescription"/);
   assert.match(layoutNode, /_applyPanelComponentConfig/);
   assert.match(layoutNode, /config\.attributes/);
@@ -409,17 +433,27 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(layoutSourceText, /setNodeBehavior/);
   assert.match(layoutSourceText, /autoCollapsed/);
   assert.match(layoutSourceText, /setPanelMenuActions/);
+  assert.match(layoutSourceText, /duplicatePanel/);
+  assert.match(layoutSourceText, /panel-close/);
+  assert.match(layoutSourceText, /_onPanelClose/);
+  assert.match(layoutSourceText, /#setPanelVisible\(panelNode, true\)/);
+  assert.match(layoutSourceText, /layout:split-horizontal/);
+  assert.match(layoutSourceText, /_getActionZonesEnabled/);
   assert.match(layoutNodeSourceText, /layoutCollapsePolicy/);
   assert.match(layoutNodeSourceText, /collapse-policy/);
   assert.match(layoutNodeSourceText, /setPanelMenuActions/);
   assert.match(layoutNodeSourceText, /panel-menu-actions/);
   assert.match(layoutNodeSourceText, /panel-menu-action/);
+  assert.match(layoutNodeSourceText, /LAYOUT_PANEL_MENU_ACTIONS/);
+  assert.match(layoutNodeSourceText, /layout:duplicate/);
+  assert.match(layoutNodeSourceText, /showActionZones/);
   assert.match(layoutNode, /--sn-layout-menu-action-size/);
   assert.match(layoutNode, /--sn-layout-menu-action-height/);
   assert.match(layoutNode, /--sn-layout-menu-icon-size/);
   assert.match(layoutNodeTpl, /panel-menu-drawer/);
   assert.match(layoutNodeTpl, /panelMenuActions/);
   assert.match(layoutNodeTpl, /onPanelMenuAction/);
+  assert.match(layoutNodeTpl, /!showActionZones/);
   assert.match(layoutNode, /--sn-layout-header-icon-size/);
   assert.match(layoutNode, /--sn-layout-resizer-thickness/);
   assert.match(projectTabs, /--sn-tab-accent-\$\{index % 6\}/);
@@ -447,6 +481,8 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(chatComposer, /--sn-composer-input-size/);
   assert.match(chatComposer, /--sn-composer-footer-size/);
   assert.match(chatComposer, /--sn-composer-voice-label-size/);
+  assert.match(chatComposer, /--sn-composer-collapsed-control-width/);
+  assert.match(chatComposer, /--sn-composer-collapsed-control-padding/);
   assert.match(cellBgComponent, /refreshTheme/);
   assert.match(cellBgComponent, /_scheduleThemeRefresh/);
   assert.match(cellBgComponent, /cascade-theme-change/);
@@ -454,6 +490,7 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(cellBgComponent, /--sn-cell-size/);
   assert.match(cellBg, /--sn-cell-bg/);
   assert.match(cellBg, /--sn-cell-glare/);
+  assert.match(cellBg, /--sn-cell-noise/);
   assert.match(registry, /panel-menu-actions/);
   assert.match(registry, /fold-down-panel-actions/);
   assert.match(registry, /responsive-behavior/);
@@ -461,10 +498,21 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(registry, /setNodeBehavior/);
   assert.match(registry, /--sn-layout-menu-action-height/);
   assert.match(registry, /--sn-layout-overflow-inline-size/);
+  assert.match(registry, /preview-approve/);
+  assert.match(registry, /--sn-cell-noise/);
+  assert.match(registry, /--sn-composer-collapsed-control-width/);
+  assert.match(registry, /--sn-node-pill-body-padding/);
+  assert.match(registry, /--sn-node-circle-body-padding/);
+  assert.match(registry, /--sn-node-comment-body-padding/);
   assert.match(customElements, /"name": "setPanelMenuActions"/);
   assert.match(customElements, /"name": "setLayoutBehavior"/);
   assert.match(customElements, /"name": "setNodeBehavior"/);
   assert.match(customElements, /"name": "panel-menu-action"/);
+  assert.match(customElements, /"name": "--sn-cell-noise"/);
+  assert.match(customElements, /"name": "--sn-composer-collapsed-control-width"/);
+  assert.match(customElements, /"name": "--sn-node-pill-body-padding"/);
+  assert.match(customElements, /"name": "--sn-node-circle-body-padding"/);
+  assert.match(customElements, /"name": "--sn-node-comment-body-padding"/);
 });
 
 test('chat composer exposes reusable voice controls and agent-facing metadata', async () => {
@@ -497,10 +545,14 @@ test('chat composer exposes reusable voice controls and agent-facing metadata', 
   assert.match(registry, /component-descriptor-v2/);
   assert.match(registry, /voice-controls/);
   assert.match(registry, /chat_composer_voice_control/);
+  assert.match(registry, /preview-approve/);
+  assert.match(registry, /preview-cancel/);
+  assert.match(registry, /preview-send/);
   assert.match(registry, /chat-composer-voice-language-change/);
   assert.match(customElements, /"name": "setVoiceControls"/);
   assert.match(customElements, /"name": "chat-composer-voice-input"/);
   assert.match(customElements, /"name": "--sn-composer-send-icon-size"/);
+  assert.match(customElements, /"name": "--sn-composer-collapsed-control-padding"/);
 });
 
 test('cascade theme lab declares browser import map for bare package imports', async () => {

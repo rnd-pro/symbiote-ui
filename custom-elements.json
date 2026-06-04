@@ -103,6 +103,110 @@
       ]
     },
     {
+      "path": "themes/CascadeThemeWidget/CascadeThemeWidget.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "customElement": true,
+          "name": "CascadeThemeWidget",
+          "tagName": "cascade-theme-widget",
+          "description": "Compact global header widget for cascade theme quick controls.",
+          "componentDescription": "Compact global header widget for cascade theme quick controls. Use this global shell cascade theme quick control when the full theme editor should stay out of the default layout but remain reachable.",
+          "attributes": [
+            {
+              "name": "storage-key",
+              "type": "string",
+              "description": "Optional localStorage key shared with cascade-theme-editor for automatic theme parameter persistence."
+            },
+            {
+              "name": "target-selector",
+              "type": "string",
+              "description": "Optional CSS selector for the theme cascade target. Defaults to documentElement."
+            }
+          ],
+          "members": [
+            {
+              "kind": "field",
+              "name": "state",
+              "type": {
+                "text": "object"
+              },
+              "description": "Normalized cascade theme state."
+            },
+            {
+              "kind": "method",
+              "name": "setState",
+              "type": {
+                "text": "function"
+              },
+              "description": "Applies normalized cascade theme parameters."
+            },
+            {
+              "kind": "method",
+              "name": "reset",
+              "type": {
+                "text": "function"
+              },
+              "description": "Restores cascade theme defaults."
+            },
+            {
+              "kind": "method",
+              "name": "copyParameters",
+              "type": {
+                "text": "function"
+              },
+              "description": "Copies normalized theme parameters as JSON."
+            }
+          ],
+          "cssProperties": [
+            {
+              "name": "--sn-panel-bg",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-text",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-text-dim",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-border",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-selected",
+              "description": "Theme CSS custom property consumed by this component."
+            }
+          ],
+          "events": [
+            {
+              "name": "cascade-theme-change",
+              "description": "Emits after quick theme parameters are applied."
+            },
+            {
+              "name": "cascade-theme-copy",
+              "description": "Emits after the copy action succeeds."
+            },
+            {
+              "name": "cascade-theme-open-full",
+              "description": "Requests the host to open the full theme editor layout."
+            }
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "kind": "custom-element-definition",
+          "name": "cascade-theme-widget",
+          "declaration": {
+            "name": "CascadeThemeWidget"
+          }
+        }
+      ]
+    },
+    {
       "path": "node/GraphNode/GraphNode.js",
       "declarations": [
         {
@@ -209,6 +313,114 @@
             },
             {
               "name": "--sn-node-header-bg",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-font-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-label-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-summary-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-icon-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-header-gap",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-header-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-collapsed-body-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-lod-body-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-body-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-body-gap",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-pill-body-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-pill-body-gap",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-circle-header-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-circle-body-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-comment-body-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-content-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-link-gap",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-link-margin-block-start",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-items-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-items-gap",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-item-gap",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-item-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-controls-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-error-frame-header-gap",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-error-frame-header-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-error-frame-body-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-preview-text-padding",
               "description": "Theme CSS custom property consumed by this component."
             },
             {
@@ -2922,6 +3134,10 @@
               "description": "Theme CSS custom property consumed by this component."
             },
             {
+              "name": "--sn-cell-noise",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
               "name": "--sn-cell-size",
               "description": "Theme CSS custom property consumed by this component."
             },
@@ -4628,6 +4844,14 @@
             },
             {
               "name": "--sn-composer-footer-btn-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-composer-collapsed-control-width",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-composer-collapsed-control-padding",
               "description": "Theme CSS custom property consumed by this component."
             },
             {

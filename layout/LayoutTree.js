@@ -228,6 +228,39 @@ export function splitPanel(root, panelId, direction, ratio = 0.5, newPanelType) 
 }
 
 /**
+ * Duplicate a panel by splitting its current area and cloning panel metadata.
+ * @param {LayoutNode} root - Root node
+ * @param {string} panelId - Panel ID to duplicate
+ * @param {SplitDirection} [direction='horizontal'] - Split direction
+ * @param {number} [ratio=0.5] - Split ratio
+ * @returns {LayoutNode} - New root node
+ */
+export function duplicatePanel(root, panelId, direction = 'horizontal', ratio = 0.5) {
+  let node = findNode(root, panelId)
+  if (!node || node.type !== 'panel') {
+    return root
+  }
+
+  let newPanel = createPanel(
+    node.panelType,
+    clone(node.panelState || {}),
+    node.behavior ? clone(node.behavior) : undefined
+  )
+  let splitNode = createSplit(direction, node, newPanel, ratio)
+
+  if (root.id === panelId) {
+    return splitNode
+  }
+
+  let parentInfo = findParent(root, panelId)
+  if (parentInfo) {
+    parentInfo.parent[parentInfo.which] = splitNode
+  }
+
+  return root
+}
+
+/**
  * Join two panels (remove one panel and its parent split)
  * @param {LayoutNode} root - Root node
  * @param {string} panelToRemove - Panel ID to remove

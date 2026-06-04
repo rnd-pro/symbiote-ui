@@ -111,6 +111,7 @@
     "**/*.tpl.js",
     "core/base-path.js",
     "themes/CascadeThemeEditor/CascadeThemeEditor.js",
+    "themes/CascadeThemeWidget/CascadeThemeWidget.js",
     "ui/index.js",
     "canvas/**/*.js",
     "node/**/*.js",

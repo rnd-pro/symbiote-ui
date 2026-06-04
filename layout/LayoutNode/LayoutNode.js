@@ -25,7 +25,19 @@ const LAYOUT_NODE_ICONS = [
   'keyboard_arrow_down',
   'keyboard_arrow_up',
   'more_horiz',
+  'close',
+  'call_split',
+  'horizontal_split',
+  'vertical_split',
+  'control_point_duplicate',
 ];
+
+const LAYOUT_PANEL_MENU_ACTIONS = Object.freeze([
+  { id: 'layout:split-horizontal', label: 'Split H', icon: 'horizontal_split', title: 'Split panel horizontally' },
+  { id: 'layout:split-vertical', label: 'Split V', icon: 'vertical_split', title: 'Split panel vertically' },
+  { id: 'layout:duplicate', label: 'Duplicate', icon: 'control_point_duplicate', title: 'Duplicate panel' },
+  { id: 'layout:remove', label: 'Remove', icon: 'close', title: 'Remove panel' },
+]);
 
 export class LayoutNode extends Symbiote {
   static isoMode = true;
@@ -47,6 +59,8 @@ export class LayoutNode extends Symbiote {
     panelTitle: 'Panel',
     panelIcon: 'dashboard',
     panelChrome: true,
+    layoutActionZones: false,
+    showActionZones: false,
     panelMenuActions: [],
     hasPanelMenuActions: false,
     isPanelMenuOpen: false,
@@ -77,6 +91,7 @@ export class LayoutNode extends Symbiote {
     '^panelTypes': {},
     '^fullscreenPanelId': null,
     '^panelChrome': true,
+    '^layoutActionZones': false,
 
 
     onResizerDown: (e) => this._startResize(e),
@@ -352,7 +367,7 @@ export class LayoutNode extends Symbiote {
   }
 
   _setPanelMenuActions(actions = []) {
-    let normalized = Array.isArray(actions)
+    let customActions = Array.isArray(actions)
       ? actions
         .filter((action) => action && action.hidden !== true && action.id)
         .map((action) => ({
@@ -364,6 +379,7 @@ export class LayoutNode extends Symbiote {
           disabled: Boolean(action.disabled),
         }))
       : [];
+    let normalized = [...LAYOUT_PANEL_MENU_ACTIONS, ...customActions];
 
     ensureMaterialSymbols(normalized.map((action) => action.icon));
     this.$.panelMenuActions = normalized;
@@ -414,7 +430,10 @@ export class LayoutNode extends Symbiote {
 
   _renderNode(data) {
     this.$.panelChrome = this.$.panelChrome !== false && this.$['^panelChrome'] !== false;
+    this.$.layoutActionZones = this.$.layoutActionZones === true || this.$['^layoutActionZones'] === true;
+    this.$.showActionZones = this.$.panelChrome && this.$.layoutActionZones;
     this.setAttribute('panel-chrome', this.$.panelChrome ? 'default' : 'none');
+    this.setAttribute('action-zones', this.$.showActionZones ? 'enabled' : 'disabled');
 
     let prevType = this.getAttribute('node-type');
     this.#syncHostAttribute('node-type', data.type);
@@ -467,7 +486,9 @@ export class LayoutNode extends Symbiote {
     }
 
     child.$.panelChrome = this.$.panelChrome !== false;
+    child.$.layoutActionZones = this.$.layoutActionZones === true;
     child.setAttribute('panel-chrome', this.$.panelChrome ? 'default' : 'none');
+    child.setAttribute('action-zones', this.$.layoutActionZones ? 'enabled' : 'disabled');
     child.$.nodeData = { ...nodeData };
   }
 

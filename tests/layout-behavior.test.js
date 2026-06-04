@@ -5,6 +5,8 @@ import {
   branchFitsExpandedState,
   createPanel,
   createSplit,
+  duplicatePanel,
+  findNode,
   getBehaviorImportance,
   getNodeBehavior,
   normalizeLayoutBehavior,
@@ -29,6 +31,19 @@ test('layout behavior normalizes responsive collapse and overflow policy', () =>
   assert.equal(behavior.overflow, 'scroll-inline');
   assert.equal(behavior.responsiveMode, 'stack');
   assert.equal(behavior.responsiveBreakpoint, 640);
+});
+
+test('layout tree duplicates panel metadata for explicit menu duplicate action', () => {
+  let theme = createPanel('theme', { view: 'full' }, { importance: 80, collapse: 'manual' });
+  let graph = createPanel('graph');
+  let root = createSplit('horizontal', theme, graph, 0.4);
+  let duplicated = duplicatePanel(root, theme.id, 'vertical', 0.5);
+  let parent = findNode(duplicated, theme.id);
+
+  assert.equal(parent.panelType, 'theme');
+  assert.equal(parent.panelState.view, 'full');
+  assert.equal(getNodeBehavior(parent).importance, 80);
+  assert.equal(getNodeBehavior(parent).collapse, 'manual');
 });
 
 test('layout tree stores behavior per insertion point', () => {

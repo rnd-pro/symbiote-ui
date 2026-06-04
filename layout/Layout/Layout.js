@@ -26,6 +26,7 @@ export class Layout extends Symbiote {
     '@responsive-breakpoint': 720,
     '@overflow-mode': 'collapse',
     '@auto-collapse': true,
+    '@action-zones': false,
 
 
     layoutTree: null,
@@ -35,6 +36,7 @@ export class Layout extends Symbiote {
     panelTypes: {},
 
     panelChrome: true,
+    layoutActionZones: false,
 
     activeGesture: null,
 
@@ -93,6 +95,8 @@ export class Layout extends Symbiote {
     this.addEventListener('panel-type-select', (e) => this._onPanelTypeSelect(e));
     this.addEventListener('panel-fullscreen', (e) => this._onPanelFullscreen(e));
     this.addEventListener('panel-collapse-toggle', (e) => this._onPanelCollapseToggle(e));
+    this.addEventListener('panel-menu-action', (e) => this._onPanelMenuAction(e));
+    this.addEventListener('panel-close', (e) => this._onPanelClose(e));
 
 
     this._resizeFallback = () => this._scheduleResponsiveLayout();
@@ -238,9 +242,18 @@ export class Layout extends Symbiote {
 
 
     let chromeEnabled = this.$.panelChrome !== false;
+    let actionZonesEnabled = this._getActionZonesEnabled();
     rootNode.$.panelChrome = chromeEnabled;
+    rootNode.$.layoutActionZones = actionZonesEnabled;
     rootNode.setAttribute('panel-chrome', chromeEnabled ? 'default' : 'none');
+    rootNode.setAttribute('action-zones', actionZonesEnabled ? 'enabled' : 'disabled');
     rootNode.$.nodeData = this.$.layoutTree;
+  }
+
+  _getActionZonesEnabled() {
+    let attr = this.getAttribute('action-zones');
+    if (attr !== null) return attr === 'true' || attr === 'enabled';
+    return this.$['@action-zones'] === true || this.$.layoutActionZones === true;
   }
 
   _scheduleResponsiveLayout() {
@@ -596,6 +609,32 @@ export class Layout extends Symbiote {
     }
   }
 
+  _onPanelMenuAction(e) {
+    if (this.$.panelChrome === false) return;
+    let { panelId, actionId } = e.detail || {};
+    if (!panelId || !String(actionId || '').startsWith('layout:')) return;
+
+    e.stopPropagation();
+
+    if (actionId === 'layout:split-horizontal') {
+      this.splitPanel(panelId, 'horizontal', 0.5);
+    } else if (actionId === 'layout:split-vertical') {
+      this.splitPanel(panelId, 'vertical', 0.5);
+    } else if (actionId === 'layout:duplicate') {
+      this.duplicatePanel(panelId, 'horizontal', 0.5);
+    } else if (actionId === 'layout:remove') {
+      this.joinPanels(panelId);
+    }
+  }
+
+  _onPanelClose(e) {
+    if (this.$.panelChrome === false) return;
+    let panelId = e.detail?.panelId;
+    if (!panelId) return;
+    e.stopPropagation();
+    this.joinPanels(panelId);
+  }
+
   /**
    * Toggle panel fullscreen
    * @param {CustomEvent} e
@@ -802,6 +841,26 @@ export class Layout extends Symbiote {
   }
 
   /**
+   * Duplicate a panel.
+   * @param {string} panelId - Panel ID to duplicate
+   * @param {'horizontal' | 'vertical'} [direction='horizontal'] - Split direction
+   * @param {number} [ratio=0.5] - Split ratio
+   */
+  duplicatePanel(panelId, direction = 'horizontal', ratio = 0.5) {
+    let newTree = LayoutTree.duplicatePanel(
+      LayoutTree.clone(this.$.layoutTree),
+      panelId,
+      direction,
+      ratio
+    );
+
+    if (newTree) {
+      this.$.layoutTree = newTree;
+      this._saveLayout();
+    }
+  }
+
+  /**
    * Set the fold-down header menu actions for a panel.
    * @param {string} panelId
    * @param {Array<{id: string, label?: string, icon?: string, title?: string, active?: boolean, disabled?: boolean}>} actions
@@ -849,6 +908,14 @@ export class Layout extends Symbiote {
    * @param {import('./../LayoutTree.js').LayoutNode} layout
    */
   setLayout(layout) {
+    let allPanels = this.querySelectorAll('layout-node[node-type="panel"]');
+    allPanels.forEach((panelNode) => {
+      panelNode.removeAttribute('fullscreen');
+      panelNode.$.isFullscreen = false;
+      panelNode.$.fullscreenIcon = 'fullscreen';
+      this.#setPanelVisible(panelNode, true);
+      this.#clearInlineProperties(panelNode, ['left', 'width']);
+    });
 
     if (this.$.fullscreenPanelId) {
       let panelNode = this._findPanelNode(this.$.fullscreenPanelId);

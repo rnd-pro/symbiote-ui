@@ -11,7 +11,7 @@ import {
   applyTheme,
   configureMaterialSymbols,
   defineModule,
-} from '../ui/index.js?v=layout-shell-menu';
+} from '../ui/index.js?v=theme-widget-layout-actions';
 
 configureMaterialSymbols();
 
@@ -30,6 +30,7 @@ for (const tagName of [
   'chat-composer',
   'code-block',
   'cascade-theme-editor',
+  'cascade-theme-widget',
 ]) {
   defineModule(tagName);
 }
@@ -39,6 +40,7 @@ await Promise.all([
   customElements.whenDefined('panel-layout'),
   customElements.whenDefined('layout-node'),
   customElements.whenDefined('project-tabs'),
+  customElements.whenDefined('cascade-theme-widget'),
 ]);
 
 applyTheme(document.documentElement, DEFAULT_PROVIDER_THEME);
@@ -223,7 +225,11 @@ class CascadeUiPanel extends Symbiote {
       '--sn-composer-bg',
       '--sn-syntax-keyword',
       '--sn-cell-dot',
+      '--sn-cell-noise',
       '--sn-node-icon-size',
+      '--sn-node-pill-body-padding',
+      '--sn-node-circle-body-padding',
+      '--sn-node-comment-body-padding',
       '--sn-shape-icon-size',
       '--sn-port-label-size',
       '--sn-layout-header-icon-size',
@@ -494,19 +500,14 @@ layout.$.panelChrome = true;
 const createPanel = (panelType, behavior) => LayoutTree.createPanel(panelType, {}, behavior);
 const createOverviewLayout = () => LayoutTree.createSplit(
   'horizontal',
-  createPanel('theme', { importance: 80, collapse: 'manual' }),
+  createPanel('graph', { importance: 95 }),
   LayoutTree.createSplit(
-    'horizontal',
-    createPanel('graph', { importance: 95 }),
-    LayoutTree.createSplit(
-      'vertical',
-      createPanel('ui', { importance: 55 }),
-      createPanel('chat', { importance: 25 }),
-      0.48
-    ),
-    0.52
+    'vertical',
+    createPanel('ui', { importance: 55 }),
+    createPanel('chat', { importance: 25 }),
+    0.48
   ),
-  0.28
+  0.56
 );
 
 const createGraphLayout = () => LayoutTree.createSplit(
@@ -555,6 +556,18 @@ const createResponsiveLayout = () => LayoutTree.createSplit(
   0.42
 );
 
+const createThemeLayout = () => LayoutTree.createSplit(
+  'horizontal',
+  createPanel('theme', { importance: 100, collapse: 'manual', minInlineSize: 320, minBlockSize: 280 }),
+  LayoutTree.createSplit(
+    'vertical',
+    createPanel('graph', { importance: 72 }),
+    createPanel('ui', { importance: 48 }),
+    0.5
+  ),
+  0.34
+);
+
 const layoutGroups = [
   {
     id: 'overview',
@@ -582,6 +595,15 @@ const layoutGroups = [
     closeable: false,
     behavior: { responsiveMode: 'stack', responsiveBreakpoint: 780, overflow: 'collapse' },
     createLayout: createChatLayout,
+  },
+  {
+    id: 'theme',
+    name: 'Theme',
+    icon: 'palette',
+    color: 'var(--sn-tab-accent-4)',
+    closeable: false,
+    behavior: { responsiveMode: 'stack', responsiveBreakpoint: 820, overflow: 'collapse' },
+    createLayout: createThemeLayout,
   },
   {
     id: 'responsive',
@@ -636,6 +658,7 @@ setShellTabs();
 shellMenu?.addEventListener('project-tabs-home', () => applyLayoutGroup('overview'));
 shellMenu?.addEventListener('project-tabs-add', () => applyLayoutGroup('responsive'));
 shellMenu?.addEventListener('project-tabs-select', (event) => applyLayoutGroup(event.detail?.id));
+shellMenu?.addEventListener('cascade-theme-open-full', () => applyLayoutGroup('theme'));
 shellMenu?.addEventListener('click', (event) => {
   let commandButton = event.target.closest('[data-layout-command]');
   if (!commandButton) return;
