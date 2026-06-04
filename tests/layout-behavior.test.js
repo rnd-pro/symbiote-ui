@@ -14,6 +14,7 @@ import {
   joinPanels,
   normalizeLayoutBehavior,
   openPanel,
+  removeUiPanel,
   resolveLayoutMinSize,
   resolveResponsiveLayoutState,
   setNodeBehavior,
@@ -224,12 +225,23 @@ test('layout tree opens and closes UI-invoked panels without owning host layout 
   assert.equal(reused.panel.id, opened.panel.id);
 
   let closed = closeUiPanel(reused.root, 'theme');
-  assert.equal(closed.removed, true);
-  assert.equal(findPanelByType(closed.root, 'theme'), null);
+  assert.equal(closed.closed, true);
+  assert.equal(closed.removed, false);
+  assert.equal(findPanelByType(closed.root, 'theme').collapsed, true);
+  assert.equal(findPanelByType(closed.root, 'theme').panelState.closed, true);
   assert.equal(findPanelByType(closed.root, 'graph').panelType, 'graph');
+
+  let reopened = openPanel(closed.root, 'theme', {
+    source: 'theme-widget',
+    uiInvoked: true,
+  });
+  assert.equal(reopened.created, false);
+  assert.equal(reopened.panel.id, opened.panel.id);
+  assert.equal(reopened.panel.collapsed, false);
+  assert.equal(reopened.panel.panelState.closed, false);
 });
 
-test('layout tree closeUiPanel restores captured host layout for the last temporary panel', () => {
+test('layout tree removeUiPanel restores captured host layout for the last temporary panel', () => {
   let graph = createPanel('graph');
   let ui = createPanel('ui');
   let chat = createPanel('chat');
@@ -245,14 +257,14 @@ test('layout tree closeUiPanel restores captured host layout for the last tempor
     ratio: 0.66,
   });
 
-  let closed = closeUiPanel(opened.root, 'theme', { fallbackRoot: hostRoot });
+  let removed = removeUiPanel(opened.root, 'theme', { fallbackRoot: hostRoot });
 
-  assert.equal(closed.removed, true);
-  assert.equal(closed.restored, true);
-  assert.equal(closed.root.id, hostRoot.id);
-  assert.equal(closed.root.ratio, 0.58);
-  assert.equal(closed.root.second.ratio, 0.48);
-  assert.equal(findPanelByType(closed.root, 'theme'), null);
+  assert.equal(removed.removed, true);
+  assert.equal(removed.restored, true);
+  assert.equal(removed.root.id, hostRoot.id);
+  assert.equal(removed.root.ratio, 0.58);
+  assert.equal(removed.root.second.ratio, 0.48);
+  assert.equal(findPanelByType(removed.root, 'theme'), null);
 });
 
 test('layout tree expands promoted survivor after panel removal', () => {
@@ -304,10 +316,11 @@ test('layout tree closeUiPanel refuses to remove host-owned panels', () => {
   let result = closeUiPanel(root, 'theme');
 
   assert.equal(result.removed, false);
+  assert.equal(result.closed, false);
   assert.equal(findPanelByType(result.root, 'theme').panelState.source, 'host-layout');
 });
 
-test('layout tree closeUiPanel can restore host layout when temporary panel is root', () => {
+test('layout tree removeUiPanel can restore host layout when temporary panel is root', () => {
   let hostRoot = createSplit(
     'horizontal',
     createPanel('graph'),
@@ -319,7 +332,7 @@ test('layout tree closeUiPanel can restore host layout when temporary panel is r
     uiInvoked: true,
   });
 
-  let result = closeUiPanel(temporaryRoot, 'theme', { fallbackRoot: hostRoot });
+  let result = removeUiPanel(temporaryRoot, 'theme', { fallbackRoot: hostRoot });
 
   assert.equal(result.removed, true);
   assert.equal(result.restored, true);
@@ -349,8 +362,14 @@ test('layout tree opens UI-invoked panels separately from host-owned panels of t
   assert.equal(findPanelByType(opened.root, 'theme', { uiInvoked: true }).panelState.source, 'theme-widget');
 
   let closed = closeUiPanel(opened.root, 'theme');
-  assert.equal(closed.removed, true);
-  assert.equal(findPanelByType(closed.root, 'theme').panelState.source, 'host-layout');
+  assert.equal(closed.closed, true);
+  assert.equal(closed.removed, false);
+  assert.equal(findPanelByType(closed.root, 'theme', { uiInvoked: false }).panelState.source, 'host-layout');
+  assert.equal(findPanelByType(closed.root, 'theme', { uiInvoked: true }).panelState.closed, true);
+
+  let removed = removeUiPanel(closed.root, 'theme');
+  assert.equal(removed.removed, true);
+  assert.equal(findPanelByType(removed.root, 'theme').panelState.source, 'host-layout');
 });
 
 test('layout restore guard rejects expanded states that would immediately collapse again', () => {

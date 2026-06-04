@@ -553,6 +553,10 @@ export class Layout extends Symbiote {
       let panelNode = this._findPanelNode(panelId);
       let panelType = panelNode?.$?.nodeData?.panelType;
       if (panelType) this.closeUiPanel(panelType);
+    } else if (actionId === 'layout:remove-ui-panel') {
+      let panelNode = this._findPanelNode(panelId);
+      let panelType = panelNode?.$?.nodeData?.panelType;
+      if (panelType) this.removeUiPanel(panelType);
     } else if (actionId === 'layout:remove') {
       let panelNode = this._findPanelNode(panelId);
       if (panelNode?.$?.nodeData?.panelState?.removable === true) {
@@ -566,7 +570,14 @@ export class Layout extends Symbiote {
     let panelId = e.detail?.panelId;
     if (!panelId) return;
     e.stopPropagation();
-    this.joinPanels(panelId);
+    let panelNode = this._findPanelNode(panelId);
+    let panelState = panelNode?.$?.nodeData?.panelState || {};
+    if (panelState.uiInvoked) {
+      let panelType = panelNode?.$?.nodeData?.panelType;
+      if (panelType) this.closeUiPanel(panelType);
+    } else if (panelState.removable === true) {
+      this.joinPanels(panelId);
+    }
   }
 
   /**
@@ -807,15 +818,9 @@ export class Layout extends Symbiote {
    * @returns {boolean}
    */
   closeUiPanel(panelType) {
-    let result = LayoutTree.closeUiPanel(LayoutTree.clone(this.$.layoutTree), panelType, {
-      fallbackRoot: this._uiPanelRestoreTree,
-    });
-    if (!result.removed) return false;
-    if (result.root) {
-      this.$.layoutTree = result.root;
-    } else {
-      this.$.layoutTree = LayoutTree.createPanel('default');
-    }
+    let result = LayoutTree.closeUiPanel(LayoutTree.clone(this.$.layoutTree), panelType);
+    if (!result.closed) return false;
+    this.$.layoutTree = result.root || LayoutTree.createPanel('default');
     this._saveLayout();
     this._scheduleResponsiveLayout();
     this.dispatchEvent(new CustomEvent('layout-ui-panel-close', {
@@ -824,6 +829,36 @@ export class Layout extends Symbiote {
       detail: {
         panelId: result.panel.id,
         panelType,
+        closed: true,
+        removed: false,
+        restored: false,
+        source: result.panel.panelState?.source || '',
+      },
+    }));
+    return true;
+  }
+
+  /**
+   * Remove a panel previously opened by UI/agent intent.
+   * @param {string} panelType
+   * @returns {boolean}
+   */
+  removeUiPanel(panelType) {
+    let result = LayoutTree.removeUiPanel(LayoutTree.clone(this.$.layoutTree), panelType, {
+      fallbackRoot: this._uiPanelRestoreTree,
+    });
+    if (!result.removed) return false;
+    this.$.layoutTree = result.root || LayoutTree.createPanel('default');
+    this._saveLayout();
+    this._scheduleResponsiveLayout();
+    this.dispatchEvent(new CustomEvent('layout-ui-panel-remove', {
+      bubbles: true,
+      composed: true,
+      detail: {
+        panelId: result.panel.id,
+        panelType,
+        closed: false,
+        removed: true,
         restored: Boolean(result.restored),
         source: result.panel.panelState?.source || '',
       },

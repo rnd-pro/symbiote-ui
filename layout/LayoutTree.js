@@ -394,13 +394,22 @@ export function openPanel(root, panelType, options = {}) {
   if (reuseExisting) {
     let existing = findPanelByType(root, panelType, uiInvoked ? { uiInvoked: true } : {})
     if (existing) {
+      if (uiInvoked) {
+        existing.collapsed = false
+        existing.autoCollapsed = false
+        existing.panelState = {
+          ...(existing.panelState || {}),
+          closed: false,
+          ...(source ? { source } : {}),
+        }
+      }
       return { root, panel: existing, created: false }
     }
   }
 
   let state = {
     ...panelState,
-    ...(uiInvoked ? { uiInvoked: true, source } : {}),
+    ...(uiInvoked ? { uiInvoked: true, closed: false, source } : {}),
   }
   let panel = createPanel(panelType, state, behavior)
   let nextRoot = root
@@ -411,10 +420,25 @@ export function openPanel(root, panelType, options = {}) {
 }
 
 export function closeUiPanel(root, panelType, options = {}) {
+  void options
+  let panel = findPanelByType(root, panelType, { uiInvoked: true })
+  if (!panel) {
+    return { root, panel: null, closed: false, removed: false }
+  }
+  panel.collapsed = true
+  panel.autoCollapsed = false
+  panel.panelState = {
+    ...(panel.panelState || {}),
+    closed: true,
+  }
+  return { root, panel, closed: true, removed: false, restored: false }
+}
+
+export function removeUiPanel(root, panelType, options = {}) {
   let { fallbackRoot = null } = options
   let panel = findPanelByType(root, panelType, { uiInvoked: true })
   if (!panel) {
-    return { root, panel: null, removed: false }
+    return { root, panel: null, closed: false, removed: false }
   }
   let uiPanelCount = collectPanels(root)
     .filter((item) => item.panelState?.uiInvoked)
@@ -423,6 +447,7 @@ export function closeUiPanel(root, panelType, options = {}) {
     return {
       root: clone(fallbackRoot),
       panel,
+      closed: false,
       removed: true,
       restored: true,
     }
@@ -431,11 +456,12 @@ export function closeUiPanel(root, panelType, options = {}) {
     return {
       root: fallbackRoot ? clone(fallbackRoot) : null,
       panel,
+      closed: false,
       removed: true,
       restored: Boolean(fallbackRoot),
     }
   }
-  return { root: joinPanels(root, panel.id), panel, removed: true, restored: false }
+  return { root: joinPanels(root, panel.id), panel, closed: false, removed: true, restored: false }
 }
 
 /**

@@ -10,6 +10,8 @@ function emit(el, type, detail = {}) {
 export class ProjectTabs extends Symbiote {
   init$ = {
     activeId: null,
+    homeId: null,
+    isHomeActive: true,
     tabs: [],
     homeIcon: 'home',
     homeLabel: translate('tabs.home'),
@@ -22,8 +24,12 @@ export class ProjectTabs extends Symbiote {
     this.sub('activeId', (id) => this.setAttribute('active-id', id || ''));
   }
 
-  setTabs(tabs = [], activeId = this.$.activeId) {
+  setTabs(tabs = [], activeId = this.$.activeId, options = {}) {
+    if (Object.hasOwn(options, 'homeId')) {
+      this.$.homeId = options.homeId || null;
+    }
     this.$.activeId = activeId || null;
+    this.$.isHomeActive = !this.$.activeId || this.$.activeId === this.$.homeId;
     this.$.tabs = tabs.map((tab, index) => ({
       ...tab,
       id: tab.id,

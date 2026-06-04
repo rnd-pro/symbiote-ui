@@ -228,3 +228,22 @@ test('project tabs require explicit closeable flag for close affordances', async
   assert.doesNotMatch(source, /closeable:\s*tab\.closeable !== false/);
   assert.match(styles, /\.tab-close\[hidden\]\s*\{[\s\S]*?display: none;/);
 });
+
+test('project tabs mark the home button active when active group is hidden from tabs', async () => {
+  let { ProjectTabs } = await import('../layout/ProjectTabs/ProjectTabs.js');
+  let tabs = { $: { activeId: null, homeId: null, isHomeActive: false, tabs: [] } };
+
+  ProjectTabs.prototype.setTabs.call(tabs, [{ id: 'graph', name: 'Graph' }], 'overview', { homeId: 'overview' });
+
+  assert.equal(tabs.$.activeId, 'overview');
+  assert.equal(tabs.$.homeId, 'overview');
+  assert.equal(tabs.$.isHomeActive, true);
+  assert.deepEqual(tabs.$.tabs.map((tab) => [tab.id, tab.isActive]), [
+    ['graph', false],
+  ]);
+
+  ProjectTabs.prototype.setTabs.call(tabs, [{ id: 'graph', name: 'Graph' }], 'graph', { homeId: 'overview' });
+
+  assert.equal(tabs.$.isHomeActive, false);
+  assert.equal(tabs.$.tabs[0].isActive, true);
+});

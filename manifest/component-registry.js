@@ -150,7 +150,7 @@ const WEBMCP_TOOLS = {
     },
     {
       name: 'panel_layout_set_panel_menu_actions',
-      description: 'Set explicit fold-down panel menu actions; built-in actions distinguish Close for temporary UI-invoked panels from Remove for persistent split-tree panels, plus horizontal split, vertical split, and duplicate.',
+      description: 'Set explicit fold-down panel menu actions; built-in actions distinguish Close for minimizing temporary UI-invoked panels from Remove for physical split-tree removal, plus horizontal split, vertical split, and duplicate.',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -177,7 +177,7 @@ const WEBMCP_TOOLS = {
     },
     {
       name: 'panel_layout_open_panel',
-      description: 'Open or reuse a host-approved panel type inside the current layout tree; use uiInvoked when the panel should be closeable as a temporary UI surface.',
+      description: 'Open or reuse a host-approved panel type inside the current layout tree; use uiInvoked when the panel should be closeable/minimizable as a temporary UI surface.',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -196,7 +196,21 @@ const WEBMCP_TOOLS = {
     },
     {
       name: 'panel_layout_close_ui_panel',
-      description: 'Close a panel only when it was opened as a UI-invoked temporary surface; closing the last temporary panel restores the captured host layout and leaves host-owned panels and layout groups intact.',
+      description: 'Close a panel only when it was opened as a UI-invoked temporary surface; close marks the panel closed/collapsed and leaves host-owned panels and layout groups intact.',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          panelType: { type: 'string' },
+        },
+        required: ['panelType'],
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
+      exposedTo: ['agent', 'assistant'],
+    },
+    {
+      name: 'panel_layout_remove_ui_panel',
+      description: 'Physically remove a UI-invoked temporary panel from the layout tree; the last temporary panel may restore the captured host layout.',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -714,7 +728,7 @@ export let COMPONENTS = [
     description: 'Interactive graph node component for the node canvas.',
     contract: {
       status: 'draft',
-      schemaVersion: 'component-descriptor-v1',
+      schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/graph-model-v1.json',
       capabilities: ['node-card', 'ports', 'controls', 'category-accent', 'type-accent', 'error-state'],
       attributes: [
@@ -807,7 +821,7 @@ export let COMPONENTS = [
     description: 'Socket endpoint component for graph node inputs and outputs.',
     contract: {
       status: 'draft',
-      schemaVersion: 'component-descriptor-v1',
+      schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/graph-model-v1.json',
       capabilities: ['socket-endpoint', 'shape-variant', 'accent-color', 'connection-target'],
       attributes: [
@@ -829,7 +843,7 @@ export let COMPONENTS = [
     description: 'Floating node callout anchored to a graph node or DOM element.',
     contract: {
       status: 'draft',
-      schemaVersion: 'component-descriptor-v1',
+      schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
       capabilities: ['floating-callout', 'anchor-tracking', 'node-label'],
       attributes: [
@@ -877,7 +891,7 @@ export let COMPONENTS = [
     description: 'Primary graph canvas custom element.',
     contract: {
       status: 'draft',
-      schemaVersion: 'component-descriptor-v1',
+      schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/graph-model-v1.json',
       capabilities: ['node-editor-canvas', 'connections', 'frames', 'subgraphs', 'viewport', 'selection'],
       attributes: [
@@ -928,7 +942,7 @@ export let COMPONENTS = [
     description: 'Generic hierarchical canvas graph renderer with force layout and selection events.',
     contract: {
       status: 'draft',
-      schemaVersion: 'component-descriptor-v1',
+      schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/graph-model-v1.json',
       capabilities: ['hierarchical-graph', 'force-layout', 'semantic-clusters', 'focus-selection', 'layout-snapshot'],
       properties: [
@@ -976,7 +990,7 @@ export let COMPONENTS = [
     description: 'Generic graph explorer shell with toolbar, canvas, overlay, legend, and stats slots.',
     contract: {
       status: 'draft',
-      schemaVersion: 'component-descriptor-v1',
+      schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
       capabilities: ['graph-toolbar', 'graph-slots', 'canvas-host', 'overlay-host', 'stats-host'],
       properties: [
@@ -1011,7 +1025,7 @@ export let COMPONENTS = [
     description: 'Generic context menu custom element for graph and canvas actions.',
     contract: {
       status: 'draft',
-      schemaVersion: 'component-descriptor-v1',
+      schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
       capabilities: ['context-menu', 'positioned-overlay', 'action-list', 'backdrop-dismiss'],
       properties: [
@@ -1075,7 +1089,8 @@ export let COMPONENTS = [
         { name: 'registerPanelType', type: 'function', description: 'Registers a renderable panel type descriptor.' },
         { name: 'setPanelMenuActions', type: 'function', description: 'Sets fold-down header menu actions for a panel.' },
         { name: 'openPanel', type: 'function', description: 'Opens or reuses a host-approved panel type inside the current layout tree.' },
-        { name: 'closeUiPanel', type: 'function', description: 'Closes a panel only when it was opened as a UI-invoked temporary panel; the last temporary panel restores the captured host layout.' },
+        { name: 'closeUiPanel', type: 'function', description: 'Closes a UI-invoked temporary panel by marking it closed/collapsed without removing its layout node.' },
+        { name: 'removeUiPanel', type: 'function', description: 'Physically removes a UI-invoked temporary panel; the last temporary panel may restore the captured host layout.' },
         { name: 'setLayoutBehavior', type: 'function', description: 'Sets host-applied root responsive behavior for auto-collapse, overflow, and mobile stacking.' },
         { name: 'setNodeBehavior', type: 'function', description: 'Sets persisted behavior for a concrete layout insertion point.' },
       ],
@@ -1083,7 +1098,8 @@ export let COMPONENTS = [
         { name: 'layout-change', description: 'Bubbles when the layout tree changes.' },
         { name: 'panel-menu-action', description: 'Emits when a fold-down panel menu action is selected.' },
         { name: 'layout-ui-panel-open', description: 'Emits after a temporary UI/agent-invoked panel is opened or reused.' },
-        { name: 'layout-ui-panel-close', description: 'Emits after a UI-invoked panel is closed; detail.restored is true when the captured host layout was restored.' },
+        { name: 'layout-ui-panel-close', description: 'Emits after a UI-invoked panel is closed/collapsed without physical removal.' },
+        { name: 'layout-ui-panel-remove', description: 'Emits after a UI-invoked panel is physically removed; detail.restored is true when the captured host layout was restored.' },
       ],
       themeAliases: [
         '--sn-layout-bg',
@@ -1248,7 +1264,7 @@ export let COMPONENTS = [
     description: 'Resizable and dockable layout node component.',
     contract: {
       status: 'draft',
-      schemaVersion: 'component-descriptor-v1',
+      schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
       capabilities: ['layout-branch', 'layout-panel', 'resize', 'collapse', 'fullscreen', 'panel-menu', 'fold-down-panel-actions', 'responsive-behavior'],
       attributes: [
@@ -1296,7 +1312,7 @@ export let COMPONENTS = [
     description: 'Viewport bridge component for connecting anchors across independent layouts.',
     contract: {
       status: 'draft',
-      schemaVersion: 'component-descriptor-v1',
+      schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
       capabilities: ['portal-bridge', 'cross-layout-connection', 'viewport-tracking'],
       attributes: [
@@ -1404,7 +1420,7 @@ export let COMPONENTS = [
     description: 'Code, markdown, image, and diagnostics display component.',
     contract: {
       status: 'draft',
-      schemaVersion: 'component-descriptor-v1',
+      schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
       capabilities: ['syntax-highlight', 'markdown-render', 'image-render', 'line-gutter', 'diagnostics'],
       attributes: [
@@ -1465,7 +1481,7 @@ export let COMPONENTS = [
     description: 'Source file viewer with code, markdown, image, metadata, actions, and transform modes.',
     contract: {
       status: 'draft',
-      schemaVersion: 'component-descriptor-v1',
+      schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
       capabilities: ['source-code', 'markdown-preview', 'image-preview', 'diagnostics', 'transform-toggle'],
       attributes: [
@@ -1516,7 +1532,7 @@ export let COMPONENTS = [
     description: 'Generic source text editor with content, dirty state, readonly, disabled, focus, and tab handling.',
     contract: {
       status: 'draft',
-      schemaVersion: 'component-descriptor-v1',
+      schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
       capabilities: ['source-editing', 'dirty-state', 'keyboard-tab-indent'],
       properties: [
@@ -1569,7 +1585,7 @@ export let COMPONENTS = [
     description: 'Generic loading overlay with label, phase, progress, and secondary status text.',
     contract: {
       status: 'draft',
-      schemaVersion: 'component-descriptor-v1',
+      schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
       capabilities: ['loading-state', 'progress', 'hide-transition'],
       properties: [
@@ -1601,7 +1617,7 @@ export let COMPONENTS = [
     description: 'Generic normalized list preview for arbitrary output values.',
     contract: {
       status: 'draft',
-      schemaVersion: 'component-descriptor-v1',
+      schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
       capabilities: ['normalized-output-list', 'scalar-to-item', 'record-to-items', 'truncation', 'empty-state'],
       properties: [
@@ -1637,7 +1653,7 @@ export let COMPONENTS = [
     description: 'Generic normalized graph preview for node and edge output values.',
     contract: {
       status: 'draft',
-      schemaVersion: 'component-descriptor-v1',
+      schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
       capabilities: ['normalized-preview-graph', 'node-edge-preview', 'connection-normalization', 'truncation', 'empty-state'],
       properties: [
@@ -1674,7 +1690,7 @@ export let COMPONENTS = [
     description: 'Floating notification ribbon that auto-fades and displays active status.',
     contract: {
       status: 'draft',
-      schemaVersion: 'component-descriptor-v1',
+      schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
       capabilities: ['status', 'ribbon', 'auto-fade', 'themeable'],
       attributes: [
@@ -1743,7 +1759,7 @@ export let COMPONENTS = [
     description: 'Floating quick action toolbar for graph editing.',
     contract: {
       status: 'draft',
-      schemaVersion: 'component-descriptor-v1',
+      schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/graph-model-v1.json',
       capabilities: ['floating-toolbar', 'node-actions', 'position-follow', 'action-callback'],
       properties: [
@@ -1791,7 +1807,7 @@ export let COMPONENTS = [
     description: 'Inspector panel for selected graph node properties.',
     contract: {
       status: 'draft',
-      schemaVersion: 'component-descriptor-v1',
+      schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/graph-model-v1.json',
       capabilities: ['node-inspector', 'port-summary', 'control-editing', 'subgraph-enter', 'fire-action', 'resizable-panel'],
       properties: [
@@ -1855,7 +1871,7 @@ export let COMPONENTS = [
     description: 'Node palette browser for adding graph nodes.',
     contract: {
       status: 'draft',
-      schemaVersion: 'component-descriptor-v1',
+      schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/graph-model-v1.json',
       capabilities: ['node-palette', 'category-list', 'search-filter', 'factory-select'],
       properties: [
@@ -1899,7 +1915,7 @@ export let COMPONENTS = [
     description: 'Canvas minimap for graph navigation.',
     contract: {
       status: 'draft',
-      schemaVersion: 'component-descriptor-v1',
+      schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/graph-model-v1.json',
       capabilities: ['graph-minimap', 'viewport-overview', 'drag-navigation', 'state-getter'],
       properties: [
@@ -1936,7 +1952,7 @@ export let COMPONENTS = [
     description: 'Search component for graph nodes and actions.',
     contract: {
       status: 'draft',
-      schemaVersion: 'component-descriptor-v1',
+      schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/graph-model-v1.json',
       capabilities: ['node-search', 'query-filter', 'keyboard-dismiss', 'focus-callback'],
       properties: [
@@ -1976,7 +1992,7 @@ export let COMPONENTS = [
     description: 'Tab strip component for multiple graph views.',
     contract: {
       status: 'draft',
-      schemaVersion: 'component-descriptor-v1',
+      schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
       capabilities: ['graph-tab-strip', 'add-tab', 'switch-tab', 'close-tab', 'tab-state'],
       properties: [
@@ -2019,7 +2035,7 @@ export let COMPONENTS = [
     description: 'Breadcrumb component for graph and subgraph navigation.',
     contract: {
       status: 'draft',
-      schemaVersion: 'component-descriptor-v1',
+      schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/graph-model-v1.json',
       capabilities: ['graph-breadcrumb', 'path-render', 'level-navigation', 'auto-hide-root'],
       properties: [
@@ -2057,7 +2073,7 @@ export let COMPONENTS = [
     description: 'Generic fuzzy quick-open dialog for selecting files or application items.',
     contract: {
       status: 'draft',
-      schemaVersion: 'component-descriptor-v1',
+      schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
       capabilities: ['fuzzy-search', 'keyboard-navigation', 'modal-overlay', 'item-select'],
       properties: [
@@ -2633,7 +2649,7 @@ export let COMPONENTS = [
     description: 'Generic selectable list item with label, description, icon, meta text, and item payload event.',
     contract: {
       status: 'draft',
-      schemaVersion: 'component-descriptor-v1',
+      schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
       capabilities: ['selectable-list-item', 'keyboard-select', 'payload-event'],
       properties: [
@@ -2672,7 +2688,7 @@ export let COMPONENTS = [
     description: 'Generic two-pane list and detail shell with host-owned content slots.',
     contract: {
       status: 'draft',
-      schemaVersion: 'component-descriptor-v1',
+      schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
       capabilities: ['list-detail-layout', 'slot-composition', 'responsive-stack', 'theme-aliases'],
       attributes: [
@@ -2727,7 +2743,7 @@ export let COMPONENTS = [
     description: 'Generic tree view with selection, expansion, filtering, drag payloads, and host-owned item data.',
     contract: {
       status: 'draft',
-      schemaVersion: 'component-descriptor-v1',
+      schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
       capabilities: ['tree-data', 'select', 'expand-collapse', 'filter', 'drag-payload', 'local-storage'],
       properties: [
@@ -2777,7 +2793,7 @@ export let COMPONENTS = [
     description: 'Generic tree panel with filter input, collapse action, placeholder state, and an embedded tree view.',
     contract: {
       status: 'draft',
-      schemaVersion: 'component-descriptor-v1',
+      schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
       capabilities: ['tree-data', 'tree-panel-chrome', 'filter', 'expand-collapse', 'placeholder', 'local-storage'],
       attributes: [
@@ -2851,7 +2867,7 @@ export let COMPONENTS = [
     description: 'Generic themeable action control for buttons, icon buttons, and command rows.',
     contract: {
       status: 'draft',
-      schemaVersion: 'component-descriptor-v1',
+      schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
       capabilities: ['control', 'button', 'slots', 'keyboard-activation', 'themeable'],
       attributes: [
@@ -2902,7 +2918,7 @@ export let COMPONENTS = [
     description: 'Themeable form field wrapper for native inputs, selects, textareas, labels, and hints.',
     contract: {
       status: 'draft',
-      schemaVersion: 'component-descriptor-v1',
+      schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
       capabilities: ['form-field', 'native-controls', 'slots', 'themeable'],
       attributes: [
@@ -2951,7 +2967,7 @@ export let COMPONENTS = [
     description: 'Generic themeable surface card for dashboard, list, detail, and settings UI composition.',
     contract: {
       status: 'draft',
-      schemaVersion: 'component-descriptor-v1',
+      schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
       capabilities: ['surface', 'card', 'slots', 'interactive-state', 'themeable'],
       attributes: [
@@ -2990,7 +3006,7 @@ export let COMPONENTS = [
     description: 'Generic themeable status badge for compact state, type, and metadata labels.',
     contract: {
       status: 'draft',
-      schemaVersion: 'component-descriptor-v1',
+      schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
       capabilities: ['status', 'badge', 'slots', 'themeable'],
       attributes: [
@@ -3029,7 +3045,7 @@ export let COMPONENTS = [
     description: 'Generic themeable label/value metric row for dashboard stats, health summaries, and settings metadata.',
     contract: {
       status: 'draft',
-      schemaVersion: 'component-descriptor-v1',
+      schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
       capabilities: ['metric', 'stat', 'label-value', 'slots', 'status', 'themeable'],
       attributes: [
@@ -3067,7 +3083,7 @@ export let COMPONENTS = [
     description: 'Generic themeable data table for provider-neutral tabular records.',
     contract: {
       status: 'draft',
-      schemaVersion: 'component-descriptor-v1',
+      schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
       capabilities: ['data-table', 'column-schema', 'row-records', 'structured-cells', 'empty-state', 'themeable'],
       properties: [
@@ -3113,7 +3129,7 @@ export let COMPONENTS = [
     description: 'Generic themeable event feed for provider-neutral runtime and tool events.',
     contract: {
       status: 'draft',
-      schemaVersion: 'component-descriptor-v1',
+      schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
       capabilities: ['event-feed', 'structured-events', 'preview-routing', 'empty-state', 'themeable'],
       properties: [
@@ -3160,7 +3176,7 @@ export let COMPONENTS = [
     description: 'Generic themeable status banner for inline feedback and transient process state.',
     contract: {
       status: 'draft',
-      schemaVersion: 'component-descriptor-v1',
+      schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
       capabilities: ['status', 'banner', 'feedback', 'slots', 'themeable'],
       attributes: [
@@ -3202,7 +3218,7 @@ export let COMPONENTS = [
     description: 'Generic themeable placeholder for empty lists, loading gaps, and unavailable content.',
     contract: {
       status: 'draft',
-      schemaVersion: 'component-descriptor-v1',
+      schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
       capabilities: ['empty-state', 'placeholder', 'slots', 'themeable'],
       attributes: [
@@ -3248,7 +3264,7 @@ export let COMPONENTS = [
     description: 'Graph canvas frame primitive for grouped node regions.',
     contract: {
       status: 'draft',
-      schemaVersion: 'component-descriptor-v1',
+      schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/graph-model-v1.json',
       capabilities: ['node-group-frame', 'label', 'accent-color', 'resize-affordance'],
       properties: [

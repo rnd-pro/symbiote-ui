@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
 
 test('root and metadata entrypoints import in Node', async () => {
@@ -121,4 +122,10 @@ test('component registry follows the agent-facing WebMCP documentation standard'
     assert.ok(Array.isArray(component.contract?.events), `${component.tagName} events contract`);
     assert.ok(Array.isArray(component.contract?.slots), `${component.tagName} slots contract`);
   }
+});
+
+test('source component registry does not keep legacy descriptor-v1 contracts', async () => {
+  let source = await readFile(new URL('../manifest/component-registry.js', import.meta.url), 'utf8');
+
+  assert.doesNotMatch(source, /component-descriptor-v1/);
 });

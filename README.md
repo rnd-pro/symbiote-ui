@@ -106,10 +106,11 @@ parameter JSON, and emits `cascade-theme-change` after applying tokens. The
 layout owns where the module is shown; `panel-layout` can register it as a
 panel type while keeping the panel menu closed by default.
 Temporary UI-invoked panels use the built-in `Close` action and
-`closeUiPanel()` contract; closing the last temporary panel restores the
-captured host layout instead of treating the close as a split-tree remove.
-Persistent host layout panels use `Remove` when the host deliberately edits the
-split tree.
+`closeUiPanel()` contract; close marks the panel closed/collapsed so the layout
+surface remains recoverable. `removeUiPanel()` is the destructive operation that
+physically removes a temporary panel and may restore the captured host layout
+when the last temporary panel is removed. Persistent host layout panels use
+`Remove` when the host deliberately edits the split tree.
 
 ## Layout Behavior
 

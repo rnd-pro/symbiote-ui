@@ -25,6 +25,7 @@ const LAYOUT_NODE_ICONS = [
   'keyboard_arrow_up',
   'more_horiz',
   'close',
+  'delete',
   'call_split',
   'horizontal_split',
   'vertical_split',
@@ -49,6 +50,7 @@ const LAYOUT_REMOVABLE_PANEL_MENU_ACTIONS = Object.freeze([
 const LAYOUT_UI_PANEL_MENU_ACTIONS = Object.freeze([
   ...LAYOUT_PANEL_TREE_ACTIONS,
   { id: 'layout:close-ui-panel', label: 'Close', icon: 'close', title: 'Close temporary UI panel' },
+  { id: 'layout:remove-ui-panel', label: 'Remove', icon: 'delete', title: 'Remove temporary UI panel from the layout' },
 ]);
 
 function getLayoutPanelMenuActions(nodeData) {

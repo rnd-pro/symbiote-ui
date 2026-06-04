@@ -11,6 +11,7 @@ export {
   findPanel,
   findPanelByType,
   openPanel,
+  removeUiPanel,
   resolveLayoutMinSize,
   resolveResponsiveLayoutState,
 } from './LayoutTree.js';

@@ -677,8 +677,10 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(layoutSourceText, /setPanelMenuActions/);
   assert.match(layoutSourceText, /openPanel\(panelType, options = \{\}\)/);
   assert.match(layoutSourceText, /closeUiPanel\(panelType\)/);
+  assert.match(layoutSourceText, /removeUiPanel\(panelType\)/);
   assert.match(layoutSourceText, /layout-ui-panel-open/);
   assert.match(layoutSourceText, /layout-ui-panel-close/);
+  assert.match(layoutSourceText, /layout-ui-panel-remove/);
   assert.match(layoutSourceText, /Array\.from\(this\.ref\.root\.children\)/);
   assert.match(layoutSourceText, /this\._restoreAutoCollapsedPanels\(tree\)[\s\S]*?this\._scheduleResponsiveLayout\(\);[\s\S]*?return;/);
   assert.match(layoutSourceText, /duplicatePanel/);
@@ -689,8 +691,10 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(layoutSourceText, /layout:split-vertical/);
   assert.match(layoutSourceText, /layout:duplicate/);
   assert.match(layoutSourceText, /layout:close-ui-panel/);
+  assert.match(layoutSourceText, /layout:remove-ui-panel/);
   assert.match(layoutSourceText, /layout:remove/);
   assert.match(layoutSourceText, /panelState\?\.removable === true[\s\S]*?this\.joinPanels\(panelId\)/);
+  assert.match(layoutSourceText, /_onPanelClose\(e\)[\s\S]*?panelState\.uiInvoked[\s\S]*?this\.closeUiPanel\(panelType\)[\s\S]*?panelState\.removable === true[\s\S]*?this\.joinPanels\(panelId\)/);
   assert.doesNotMatch(layoutSourceText, /_getActionZonesEnabled/);
   assert.doesNotMatch(layoutSourceText, /action-zone-/);
   assert.doesNotMatch(layoutSourceText, /LayoutPreview|layout-preview/);
@@ -717,6 +721,7 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(layoutNodeSourceText, /panelState\?\.removable === true/);
   assert.match(layoutNodeSourceText, /layout:duplicate/);
   assert.match(layoutNodeSourceText, /layout:close-ui-panel/);
+  assert.match(layoutNodeSourceText, /layout:remove-ui-panel/);
   assert.match(layoutNodeSourceText, /layout:remove/);
   assert.doesNotMatch(layoutNodeSourceText, /onPanelMenuAction:/);
   assert.doesNotMatch(layoutNodeSourceText, /showActionZones/);
@@ -800,9 +805,11 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(registry, /setNodeBehavior/);
   assert.match(registry, /openPanel/);
   assert.match(registry, /closeUiPanel/);
-  assert.match(registry, /temporary UI-invoked panels from Remove/);
+  assert.match(registry, /removeUiPanel/);
+  assert.match(registry, /minimizing temporary UI-invoked panels from Remove/);
   assert.match(registry, /layout-ui-panel-open/);
   assert.match(registry, /layout-ui-panel-close/);
+  assert.match(registry, /layout-ui-panel-remove/);
   assert.doesNotMatch(registry, /action-zone/);
   assert.doesNotMatch(registry, /layout-preview/);
   assert.match(registry, /--sn-layout-menu-action-height/);
@@ -839,6 +846,7 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(customElements, /"name": "setPanelMenuActions"/);
   assert.match(customElements, /"name": "openPanel"/);
   assert.match(customElements, /"name": "closeUiPanel"/);
+  assert.match(customElements, /"name": "removeUiPanel"/);
   assert.match(customElements, /"name": "setLayoutBehavior"/);
   assert.match(customElements, /"name": "setNodeBehavior"/);
   assert.match(customElements, /"min-size-fit"/);
@@ -849,6 +857,7 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(customElements, /"name": "panel-menu-action"/);
   assert.match(customElements, /"name": "layout-ui-panel-open"/);
   assert.match(customElements, /"name": "layout-ui-panel-close"/);
+  assert.match(customElements, /"name": "layout-ui-panel-remove"/);
   assert.doesNotMatch(customElements, /action-zone/);
   assert.doesNotMatch(customElements, /layout-preview/);
   assert.match(customElements, /"name": "--sn-cell-noise"/);

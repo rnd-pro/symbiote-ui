@@ -98,7 +98,7 @@ export class LayoutShellMenu extends Symbiote {
   }
 
   _syncTabs() {
-    this.ref.tabs?.setTabs?.(this.$.tabs, this.$.activeId);
+    this.ref.tabs?.setTabs?.(this.$.tabs, this.$.activeId, { homeId: this.#homeGroupId });
   }
 
   _syncSidebar() {
