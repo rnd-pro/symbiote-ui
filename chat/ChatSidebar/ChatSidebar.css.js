@@ -3,9 +3,9 @@ export default `
 chat-sidebar-shell {
   display: flex;
   height: 100%;
-  width: var(--chat-nav-width, 200px);
-  min-width: var(--chat-nav-width, 200px);
-  flex: 0 0 var(--chat-nav-width, 200px);
+  width: var(--chat-nav-width, var(--sn-chat-sidebar-width, 200px));
+  min-width: var(--chat-nav-width, var(--sn-chat-sidebar-width, 200px));
+  flex: 0 0 var(--chat-nav-width, var(--sn-chat-sidebar-width, 200px));
   position: relative;
   z-index: 10;
   transition: width 0.2s ease, min-width 0.2s ease, flex-basis 0.2s ease;
@@ -23,8 +23,8 @@ chat-sidebar-shell[resizing] .chat-nav  {
 
 .chat-nav {
   height: 100%;
-  width: var(--chat-nav-width, 200px);
-  min-width: var(--chat-nav-width, 200px);
+  width: var(--chat-nav-width, var(--sn-chat-sidebar-width, 200px));
+  min-width: var(--chat-nav-width, var(--sn-chat-sidebar-width, 200px));
   flex-shrink: 0;
   position: relative;
   display: flex;
@@ -37,8 +37,8 @@ chat-sidebar-shell[resizing] .chat-nav  {
 }
 
 .chat-nav[collapsed]  {
-  width: var(--chat-nav-width, 48px);
-  min-width: var(--chat-nav-width, 48px);
+  width: var(--chat-nav-width, var(--sn-chat-sidebar-collapsed-width, 48px));
+  min-width: var(--chat-nav-width, var(--sn-chat-sidebar-collapsed-width, 48px));
   overflow: visible;
 }
 
@@ -52,7 +52,7 @@ chat-sidebar-shell[resizing] .chat-nav  {
   top: 0;
   right: -1px;
   bottom: 0;
-  width: 4px;
+  width: var(--sn-chat-sidebar-resize-hit-size, 4px);
   cursor: col-resize;
   background: transparent;
   z-index: 20;
@@ -68,9 +68,9 @@ chat-sidebar-shell[resizing] .chat-nav  {
 .chat-nav-header {
   display: flex;
   align-items: center;
-  gap: 2px;
-  padding: 2px 4px;
-  min-height: 28px;
+  gap: var(--sn-chat-sidebar-header-gap, 2px);
+  padding: var(--sn-chat-sidebar-header-padding, 2px 4px);
+  min-height: var(--sn-chat-sidebar-header-min-height, 28px);
   background: var(--sn-node-bg);
   border-bottom: none;
   flex-shrink: 0;
@@ -79,8 +79,8 @@ chat-sidebar-shell[resizing] .chat-nav  {
 .chat-nav[collapsed] .chat-nav-header  {
   flex-direction: column-reverse;
   justify-content: flex-start;
-  padding: 4px 0;
-  gap: 8px;
+  padding: var(--sn-chat-sidebar-collapsed-header-padding, 4px 0);
+  gap: var(--sn-chat-sidebar-collapsed-header-gap, 8px);
 }
 
 .chat-nav-header .nav-spacer {
@@ -92,7 +92,7 @@ chat-sidebar-shell[resizing] .chat-nav  {
 }
 
 .chat-nav-header .nav-title {
-  font-size: 11px;
+  font-size: var(--sn-chat-sidebar-title-size, 11px);
   font-weight: 600;
   color: var(--sn-text-dim);
   text-transform: uppercase;
@@ -117,19 +117,19 @@ chat-sidebar-shell[resizing] .chat-nav  {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 4px 6px;
+  padding: var(--sn-chat-sidebar-button-padding, 4px 6px);
   background: transparent;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--sn-chat-sidebar-button-radius, 4px);
   cursor: pointer;
   color: var(--sn-text-dim);
-  font-size: 0.75rem;
+  font-size: var(--sn-chat-sidebar-button-size, 0.75rem);
   transition: background 0.1s, color 0.1s;
   flex-shrink: 0;
 }
 
 .nav-btn .material-symbols-outlined {
-  font-size: 16px;
+  font-size: var(--sn-chat-sidebar-button-icon-size, 16px);
 }
 
 .nav-btn:hover {
@@ -140,7 +140,7 @@ chat-sidebar-shell[resizing] .chat-nav  {
 .chat-items {
   flex: 1;
   overflow-y: auto;
-  padding: 4px 0;
+  padding: var(--sn-chat-sidebar-items-padding, 4px 0);
 }
 
 .chat-nav[collapsed] .chat-items  {

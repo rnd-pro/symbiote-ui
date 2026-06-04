@@ -5,12 +5,12 @@ chat-list-item {
 }
 
 .chat-list-item {
-  padding: 10px 14px;
+  padding: var(--sn-chat-list-item-padding, 10px 14px);
   background: transparent;
   cursor: pointer;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--sn-chat-list-item-gap, 4px);
   border-bottom: 1px solid var(--sn-node-hover);
   transition: background 0.15s;
 }
@@ -22,20 +22,20 @@ chat-list-item {
 :host([active]) .chat-list-item,
 chat-list-item[active] .chat-list-item {
   background: var(--sn-node-bg);
-  border-left: 3px solid var(--sn-node-selected);
-  padding-left: 11px;
+  border-left: var(--sn-chat-list-item-active-border-width, 3px) solid var(--sn-node-selected);
+  padding-left: var(--sn-chat-list-item-active-padding-left, 11px);
 }
 
 .chat-item-top {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sn-chat-list-item-top-gap, 6px);
 }
 
 :host([nested]) .chat-list-item,
 chat-list-item[nested] .chat-list-item {
-  margin-left: 16px;
-  border-left: 2px solid var(--sn-node-border);
+  margin-left: var(--sn-chat-list-item-nested-margin, 16px);
+  border-left: var(--sn-chat-list-item-nested-border-width, 2px) solid var(--sn-node-border);
   position: relative;
 }
 
@@ -43,18 +43,18 @@ chat-list-item[nested] .chat-list-item {
 chat-list-item[nested] .chat-list-item::before {
   content: '';
   position: absolute;
-  top: 14px;
-  left: -2px;
-  width: 10px;
-  height: 2px;
+  top: var(--sn-chat-list-item-branch-top, 14px);
+  left: calc(-1 * var(--sn-chat-list-item-nested-border-width, 2px));
+  width: var(--sn-chat-list-item-branch-width, 10px);
+  height: var(--sn-chat-list-item-nested-border-width, 2px);
   background: var(--sn-node-border);
 }
 
 .chat-project-badge {
-  font-size: 9px;
+  font-size: var(--sn-chat-list-badge-size, 9px);
   font-weight: 600;
-  padding: 1px 5px;
-  border-radius: 3px;
+  padding: var(--sn-chat-list-badge-padding, 1px 5px);
+  border-radius: var(--sn-chat-list-badge-radius, 3px);
   background: color-mix(in srgb, var(--sn-node-selected) 18%, transparent);
   color: var(--sn-node-selected);
   text-transform: uppercase;
@@ -63,7 +63,7 @@ chat-list-item[nested] .chat-list-item::before {
 }
 
 .chat-name {
-  font-size: 12px;
+  font-size: var(--sn-chat-list-name-size, 12px);
   font-weight: 500;
   color: var(--sn-text);
   flex: 1;
@@ -73,13 +73,13 @@ chat-list-item[nested] .chat-list-item::before {
 }
 
 .chat-adapter {
-  font-size: 10px;
+  font-size: var(--sn-chat-list-adapter-size, 10px);
   color: var(--sn-text-dim);
   font-family: var(--sn-font-mono, monospace);
 }
 
 .chat-preview {
-  font-size: 11px;
+  font-size: var(--sn-chat-list-preview-size, 11px);
   color: var(--sn-text-dim);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -90,8 +90,8 @@ chat-list-item[nested] .chat-list-item::before {
 .chat-meta {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 10px;
+  gap: var(--sn-chat-list-meta-gap, 6px);
+  font-size: var(--sn-chat-list-meta-size, 10px);
   color: var(--sn-text-dim);
 }
 
@@ -101,8 +101,8 @@ chat-list-item[nested] .chat-list-item::before {
   border: none;
   color: var(--sn-text-dim);
   cursor: pointer;
-  font-size: 14px;
-  padding: 0 2px;
+  font-size: var(--sn-chat-list-delete-size, 14px);
+  padding: var(--sn-chat-list-delete-padding, 0 2px);
   margin-left: auto;
   transition: color 0.15s;
 }

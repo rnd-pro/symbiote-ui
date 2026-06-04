@@ -30,6 +30,12 @@ const chatMessageItemStyles = new URL('../chat/ChatMessageItem/ChatMessageItem.c
 const chatTranscriptStyles = new URL('../chat/ChatTranscript/ChatTranscript.css.js', import.meta.url);
 const chatComposerSource = new URL('../chat/ChatComposer/ChatComposer.js', import.meta.url);
 const chatComposerStyles = new URL('../chat/ChatComposer/ChatComposer.css.js', import.meta.url);
+const chatListStyles = new URL('../chat/ChatList/ChatList.css.js', import.meta.url);
+const chatListItemStyles = new URL('../chat/ChatListItem/ChatListItem.css.js', import.meta.url);
+const chatSidebarSource = new URL('../chat/ChatSidebar/ChatSidebar.js', import.meta.url);
+const chatSidebarStyles = new URL('../chat/ChatSidebar/ChatSidebar.css.js', import.meta.url);
+const chatSidebarItemSource = new URL('../chat/ChatSidebarItem/ChatSidebarItem.js', import.meta.url);
+const chatSidebarItemStyles = new URL('../chat/ChatSidebarItem/ChatSidebarItem.css.js', import.meta.url);
 const cellBgSource = new URL('../effects/CellBg/CellBg.js', import.meta.url);
 const cellBgStyles = new URL('../effects/CellBg/CellBg.css.js', import.meta.url);
 const uiIndexSource = new URL('../ui/index.js', import.meta.url);
@@ -77,6 +83,10 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   assert.match(source, /--sn-chat-markdown-h1-size/);
   assert.match(source, /--sn-chat-user-message-bg/);
   assert.match(source, /--sn-composer-bg/);
+  assert.match(source, /--sn-chat-list-header-padding/);
+  assert.match(source, /--sn-chat-list-item-padding/);
+  assert.match(source, /--sn-chat-sidebar-header-padding/);
+  assert.match(source, /--sn-chat-sidebar-row-padding/);
   assert.match(source, /--sn-syntax-keyword/);
   assert.match(source, /--sn-cell-dot/);
   assert.match(source, /--sn-cell-noise/);
@@ -377,6 +387,12 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
     chatMessage,
     chatTranscript,
     chatComposer,
+    chatList,
+    chatListItem,
+    chatSidebarSourceText,
+    chatSidebar,
+    chatSidebarItemSourceText,
+    chatSidebarItem,
     cellBgComponent,
     cellBg,
     registry,
@@ -401,6 +417,12 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
     readFile(chatMessageItemStyles, 'utf8'),
     readFile(chatTranscriptStyles, 'utf8'),
     readFile(chatComposerStyles, 'utf8'),
+    readFile(chatListStyles, 'utf8'),
+    readFile(chatListItemStyles, 'utf8'),
+    readFile(chatSidebarSource, 'utf8'),
+    readFile(chatSidebarStyles, 'utf8'),
+    readFile(chatSidebarItemSource, 'utf8'),
+    readFile(chatSidebarItemStyles, 'utf8'),
     readFile(cellBgSource, 'utf8'),
     readFile(cellBgStyles, 'utf8'),
     readFile(componentRegistrySource, 'utf8'),
@@ -483,6 +505,22 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(chatComposer, /--sn-composer-voice-label-size/);
   assert.match(chatComposer, /--sn-composer-collapsed-control-width/);
   assert.match(chatComposer, /--sn-composer-collapsed-control-padding/);
+  assert.match(chatList, /--sn-chat-list-header-padding/);
+  assert.match(chatList, /--sn-chat-list-filter-button-size/);
+  assert.match(chatListItem, /--sn-chat-list-item-padding/);
+  assert.match(chatListItem, /--sn-chat-list-badge-size/);
+  assert.match(chatListItem, /--sn-chat-list-delete-size/);
+  assert.match(chatSidebarSourceText, /--sn-chat-sidebar-width/);
+  assert.match(chatSidebarSourceText, /--sn-chat-sidebar-collapsed-width/);
+  assert.match(chatSidebarSourceText, /_hasExplicitNavWidth/);
+  assert.match(chatSidebar, /--sn-chat-sidebar-header-padding/);
+  assert.match(chatSidebar, /--sn-chat-sidebar-button-icon-size/);
+  assert.match(chatSidebarItemSourceText, /--sn-chat-sidebar-title-size/);
+  assert.match(chatSidebarItemSourceText, /--sn-chat-sidebar-compact-label-extra/);
+  assert.match(chatSidebarItem, /--sn-chat-sidebar-row-padding/);
+  assert.match(chatSidebarItem, /--sn-chat-sidebar-child-padding/);
+  assert.match(chatSidebarItem, /--sn-chat-sidebar-delete-box-size/);
+  assert.match(chatSidebarItem, /--sn-chat-sidebar-compact-label-inset/);
   assert.match(cellBgComponent, /refreshTheme/);
   assert.match(cellBgComponent, /_scheduleThemeRefresh/);
   assert.match(cellBgComponent, /cascade-theme-change/);
@@ -501,6 +539,12 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(registry, /preview-approve/);
   assert.match(registry, /--sn-cell-noise/);
   assert.match(registry, /--sn-composer-collapsed-control-width/);
+  assert.match(registry, /--sn-chat-list-header-padding/);
+  assert.match(registry, /--sn-chat-list-item-padding/);
+  assert.match(registry, /--sn-chat-list-delete-size/);
+  assert.match(registry, /--sn-chat-sidebar-header-padding/);
+  assert.match(registry, /--sn-chat-sidebar-row-padding/);
+  assert.match(registry, /--sn-chat-sidebar-delete-box-size/);
   assert.match(registry, /--sn-node-pill-body-padding/);
   assert.match(registry, /--sn-node-circle-body-padding/);
   assert.match(registry, /--sn-node-comment-body-padding/);
@@ -510,6 +554,12 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(customElements, /"name": "panel-menu-action"/);
   assert.match(customElements, /"name": "--sn-cell-noise"/);
   assert.match(customElements, /"name": "--sn-composer-collapsed-control-width"/);
+  assert.match(customElements, /"name": "--sn-chat-list-header-padding"/);
+  assert.match(customElements, /"name": "--sn-chat-list-item-padding"/);
+  assert.match(customElements, /"name": "--sn-chat-list-delete-size"/);
+  assert.match(customElements, /"name": "--sn-chat-sidebar-header-padding"/);
+  assert.match(customElements, /"name": "--sn-chat-sidebar-row-padding"/);
+  assert.match(customElements, /"name": "--sn-chat-sidebar-delete-box-size"/);
   assert.match(customElements, /"name": "--sn-node-pill-body-padding"/);
   assert.match(customElements, /"name": "--sn-node-circle-body-padding"/);
   assert.match(customElements, /"name": "--sn-node-comment-body-padding"/);
@@ -542,6 +592,7 @@ test('chat composer exposes reusable voice controls and agent-facing metadata', 
   assert.match(composer, /class="btn-voice-language"/);
   assert.match(styles, /\.btn-mic\[hidden\]/);
   assert.match(styles, /\.btn-wake-listen\[hidden\]/);
+  assert.match(styles, /--sn-composer-wake-command-max/);
   assert.match(registry, /component-descriptor-v2/);
   assert.match(registry, /voice-controls/);
   assert.match(registry, /chat_composer_voice_control/);
@@ -553,6 +604,28 @@ test('chat composer exposes reusable voice controls and agent-facing metadata', 
   assert.match(customElements, /"name": "chat-composer-voice-input"/);
   assert.match(customElements, /"name": "--sn-composer-send-icon-size"/);
   assert.match(customElements, /"name": "--sn-composer-collapsed-control-padding"/);
+  assert.match(customElements, /"name": "--sn-composer-wake-command-max"/);
+});
+
+test('static custom elements catalog carries agent-facing descriptions for chat surfaces', async () => {
+  const catalog = JSON.parse(await readFile(customElementsSource, 'utf8'));
+  const descriptions = new Map();
+  for (const moduleRecord of catalog.modules) {
+    for (const declaration of moduleRecord.declarations || []) {
+      if (declaration.tagName) descriptions.set(declaration.tagName, declaration.componentDescription || '');
+    }
+  }
+
+  for (const tagName of [
+    'chat-composer',
+    'chat-list',
+    'chat-list-item',
+    'chat-sidebar-shell',
+    'chat-sidebar-item',
+    'cell-bg',
+  ]) {
+    assert.match(descriptions.get(tagName) || '', /Use this/);
+  }
 });
 
 test('cascade theme lab declares browser import map for bare package imports', async () => {

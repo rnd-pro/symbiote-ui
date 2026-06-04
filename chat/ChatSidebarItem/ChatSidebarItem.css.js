@@ -3,17 +3,17 @@ export default `
 chat-sidebar-item,
 chat-sidebar-sub-item {
   display: block;
-  --sn-chat-compact-label-width: clamp(72px, calc(var(--sn-chat-compact-label-ch, 18) * 5px + 20px), 320px);
-  --sn-chat-compact-delete-width: 44px;
+  --sn-chat-compact-label-width: clamp(var(--sn-chat-sidebar-compact-label-min, 72px), calc(var(--sn-chat-compact-label-ch, 18) * var(--sn-chat-sidebar-compact-label-ch-width, 5px) + var(--sn-chat-sidebar-compact-label-extra, 20px)), var(--sn-chat-sidebar-compact-label-max, 320px));
+  --sn-chat-compact-delete-width: var(--sn-chat-sidebar-compact-delete-width, 44px);
   --sn-chat-compact-flyout-width: calc(var(--sn-chat-compact-label-width) + var(--sn-chat-compact-delete-width));
 }
 
 .chat-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 6px 14px;
-  min-height: 28px;
+  gap: var(--sn-chat-sidebar-row-gap, 10px);
+  padding: var(--sn-chat-sidebar-row-padding, 6px 14px);
+  min-height: var(--sn-chat-sidebar-row-min-height, 28px);
   cursor: pointer;
   color: var(--sn-text-dim);
   transition: background 0.12s, color 0.12s;
@@ -32,8 +32,8 @@ chat-sidebar-item[data-active] > .chat-item,
 chat-sidebar-sub-item[data-active] > .chat-item-child {
   color: var(--sn-text);
   background: color-mix(in srgb, var(--sn-chat-item-icon-color, var(--sn-cat-server)) 14%, var(--sn-node-hover));
-  border-left: 2px solid var(--sn-chat-item-icon-color, var(--sn-cat-server));
-  padding-left: 12px;
+  border-left: var(--sn-chat-sidebar-active-border-width, 2px) solid var(--sn-chat-item-icon-color, var(--sn-cat-server));
+  padding-left: var(--sn-chat-sidebar-active-padding-left, 12px);
 }
 
 :host([data-group]) > .chat-item,
@@ -44,17 +44,17 @@ chat-sidebar-item[data-group] > .chat-item {
 
 .chat-nav[data-group-dividers] chat-sidebar-item[data-group] + chat-sidebar-item[data-group] {
   position: relative;
-  margin-block-start: 4px;
-  padding-block-start: 4px;
+  margin-block-start: var(--sn-chat-sidebar-group-divider-margin, 4px);
+  padding-block-start: var(--sn-chat-sidebar-group-divider-padding, 4px);
 }
 
 .chat-nav[data-group-dividers] chat-sidebar-item[data-group] + chat-sidebar-item[data-group]::before {
   content: '';
   position: absolute;
   inset-block-start: 0;
-  inset-inline-start: 16px;
-  inline-size: 16px;
-  block-size: 1px;
+  inset-inline-start: var(--sn-chat-sidebar-group-divider-inset, 16px);
+  inline-size: var(--sn-chat-sidebar-group-divider-width, 16px);
+  block-size: var(--sn-chat-sidebar-group-divider-height, 1px);
   background: var(--sn-tabs-divider);
 }
 
@@ -70,15 +70,15 @@ chat-sidebar-item[data-group] > .chat-item .chat-item-delete {
 
 .chat-item .material-symbols-outlined,
 .chat-item-child .material-symbols-outlined {
-  font-size: 16px;
+  font-size: var(--sn-chat-sidebar-icon-size, 16px);
   flex-shrink: 0;
 }
 
 .chat-item-icon-slot {
   position: relative;
-  width: 16px;
-  height: 16px;
-  flex: 0 0 16px;
+  width: var(--sn-chat-sidebar-icon-box-size, 16px);
+  height: var(--sn-chat-sidebar-icon-box-size, 16px);
+  flex: 0 0 var(--sn-chat-sidebar-icon-box-size, 16px);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -90,7 +90,7 @@ chat-sidebar-item[data-group] > .chat-item .chat-item-delete {
 }
 
 .chat-item-label {
-  font-size: 11px;
+  font-size: var(--sn-chat-sidebar-title-size, 11px);
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -99,7 +99,7 @@ chat-sidebar-item[data-group] > .chat-item .chat-item-delete {
 }
 
 .chat-status-icon {
-  margin-left: 4px;
+  margin-left: var(--sn-chat-sidebar-status-margin, 4px);
   font-size: var(--sn-chat-status-icon-size);
 }
 
@@ -128,10 +128,10 @@ chat-sidebar-item[data-group] > .chat-item .chat-item-delete {
 }
 
 .chat-item-adapter {
-  font-size: 9px;
+  font-size: var(--sn-chat-sidebar-meta-size, 9px);
   color: var(--sn-text-dim);
   font-family: var(--sn-font-mono, monospace);
-  margin-left: 6px;
+  margin-left: var(--sn-chat-sidebar-meta-margin, 6px);
 }
 
 .chat-item-adapter:empty,
@@ -140,13 +140,13 @@ chat-sidebar-item[data-group] > .chat-item .chat-item-delete {
 }
 
 .chat-item-type {
-  font-size: 9px;
+  font-size: var(--sn-chat-sidebar-meta-size, 9px);
   color: var(--sn-cat-server);
   background: color-mix(in srgb, var(--sn-cat-server) 10%, transparent);
   font-family: var(--sn-font-mono, monospace);
   margin-left: auto;
-  padding: 2px 4px;
-  border-radius: 3px;
+  padding: var(--sn-chat-sidebar-type-padding, 2px 4px);
+  border-radius: var(--sn-chat-sidebar-type-radius, 3px);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -155,17 +155,17 @@ chat-sidebar-item[data-group] > .chat-item .chat-item-delete {
   position: absolute;
   inset: 0;
   display: flex;
-  width: 16px;
-  height: 16px;
+  width: var(--sn-chat-sidebar-delete-box-size, 16px);
+  height: var(--sn-chat-sidebar-delete-box-size, 16px);
   border: none;
   background: transparent;
   color: var(--sn-text-dim);
   cursor: pointer;
-  font-size: 14px;
+  font-size: var(--sn-chat-sidebar-delete-size, 14px);
   padding: 0;
   align-items: center;
   justify-content: center;
-  border-radius: 3px;
+  border-radius: var(--sn-chat-sidebar-delete-radius, 3px);
   margin: 0;
   opacity: 0;
   pointer-events: none;
@@ -173,7 +173,7 @@ chat-sidebar-item[data-group] > .chat-item .chat-item-delete {
 }
 
 .chat-item-delete .material-symbols-outlined {
-  font-size: 15px;
+  font-size: var(--sn-chat-sidebar-delete-icon-size, 15px);
 }
 
 .chat-item:hover .chat-item-icon,
@@ -199,7 +199,7 @@ chat-sidebar-item[data-group] > .chat-item .chat-item-delete {
 
 .chat-expand-icon {
   margin-left: auto;
-  font-size: 14px !important;
+  font-size: var(--sn-chat-sidebar-expand-icon-size, 14px) !important;
   transition: transform 0.15s ease, opacity 0.15s ease;
   cursor: pointer;
   flex-shrink: 0;
@@ -240,10 +240,10 @@ chat-sidebar-sub-item[data-expanded] > .chat-sub-items {
 .chat-item-child {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px 14px 4px 38px;
-  font-size: 12px;
-  min-height: 24px;
+  gap: var(--sn-chat-sidebar-child-gap, 8px);
+  padding: var(--sn-chat-sidebar-child-padding, 4px 14px 4px 38px);
+  font-size: var(--sn-chat-sidebar-child-size, 12px);
+  min-height: var(--sn-chat-sidebar-child-min-height, 24px);
   position: relative;
   color: var(--sn-text-dim);
   cursor: pointer;
@@ -258,7 +258,7 @@ chat-sidebar-sub-item[data-expanded] > .chat-sub-items {
 .chat-item-child::before {
   content: '';
   position: absolute;
-  left: 20px;
+  left: var(--sn-chat-sidebar-child-line-left, 20px);
   top: 0;
   bottom: 0;
   width: 1px;
@@ -266,20 +266,20 @@ chat-sidebar-sub-item[data-expanded] > .chat-sub-items {
 }
 
 chat-sidebar-sub-item .chat-sub-items chat-sidebar-sub-item .chat-item-child {
-  padding-left: 58px;
+  padding-left: var(--sn-chat-sidebar-child-deep-padding-left, 58px);
 }
 
 :host([data-active]) > .chat-item-child,
 chat-sidebar-sub-item[data-active] > .chat-item-child {
-  padding-left: 36px;
+  padding-left: var(--sn-chat-sidebar-child-active-padding-left, 36px);
 }
 
 chat-sidebar-sub-item .chat-sub-items chat-sidebar-sub-item[data-active] > .chat-item-child {
-  padding-left: 56px;
+  padding-left: var(--sn-chat-sidebar-child-deep-active-padding-left, 56px);
 }
 
 chat-sidebar-sub-item .chat-sub-items chat-sidebar-sub-item .chat-item-child::before {
-  left: 40px;
+  left: var(--sn-chat-sidebar-child-deep-line-left, 40px);
 }
 
 :host-context(.chat-nav[collapsed]) .chat-item-child::before,
@@ -353,18 +353,18 @@ chat-sidebar-sub-item .chat-sub-items chat-sidebar-sub-item .chat-item-child::be
 .chat-nav[collapsed] chat-sidebar-sub-item .chat-item-label {
   position: absolute;
   inset-block: 0;
-  inset-inline-start: 46px;
+  inset-inline-start: var(--sn-chat-sidebar-compact-label-inset, 46px);
   inline-size: var(--sn-chat-compact-label-width);
   display: flex;
   align-items: center;
-  padding-inline: 10px 0;
+  padding-inline: var(--sn-chat-sidebar-compact-label-padding, 10px 0);
   background: var(--sn-node-bg);
   color: var(--sn-text);
   box-shadow: var(--sn-chat-item-child-shadow);
   z-index: 29;
   opacity: 0;
   pointer-events: none;
-  transform: translateX(-4px);
+  transform: translateX(calc(-1 * var(--sn-chat-sidebar-compact-label-offset, 4px)));
   transition: opacity 0.12s, transform 0.12s;
 }
 
@@ -410,7 +410,7 @@ chat-sidebar-sub-item .chat-sub-items chat-sidebar-sub-item .chat-item-child::be
 :host-context(.chat-nav[collapsed]) .chat-item-delete,
 .chat-nav[collapsed] chat-sidebar-item .chat-item-delete,
 .chat-nav[collapsed] chat-sidebar-sub-item .chat-item-delete {
-  inset: 0 auto 0 calc(46px + var(--sn-chat-compact-label-width));
+  inset: 0 auto 0 calc(var(--sn-chat-sidebar-compact-label-inset, 46px) + var(--sn-chat-compact-label-width));
   width: var(--sn-chat-compact-delete-width);
   height: 100%;
   background: var(--sn-node-bg);

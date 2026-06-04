@@ -419,7 +419,7 @@ chat-composer.drag-over .composer-body {
 
 .btn-wake-listen.has-command {
   width: auto;
-  max-width: 164px;
+  max-width: var(--sn-composer-wake-command-max, 164px);
   padding: 0 var(--sn-composer-control-gap, 10px);
   gap: var(--sn-composer-footer-gap, 6px);
   border-radius: 999px;

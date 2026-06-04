@@ -6,8 +6,8 @@ const COMPACT_LABEL_MIN_CH = 6;
 const COMPACT_LABEL_MAX_CH = 32;
 const COMPACT_LABEL_MIN_PX = 72;
 const COMPACT_LABEL_MAX_PX = 320;
-const COMPACT_LABEL_PADDING_PX = 10;
-const COMPACT_LABEL_FONT = '11px Inter, -apple-system, system-ui, sans-serif';
+const COMPACT_LABEL_EXTRA_PX = 20;
+const COMPACT_LABEL_FONT_SIZE_PX = 11;
 let compactLabelMeasureContext;
 
 function emit(el, type, detail = {}) {
@@ -19,15 +19,31 @@ export function getCompactChatLabelCh(value = '') {
   return Math.min(COMPACT_LABEL_MAX_CH, Math.max(COMPACT_LABEL_MIN_CH, length));
 }
 
-export function getCompactChatLabelWidthPx(value = '') {
+function readCssPixelValue(element, name, fallback) {
+  if (!element || typeof getComputedStyle !== 'function') return fallback;
+  let raw = getComputedStyle(element).getPropertyValue(name).trim();
+  let calcMatch = raw.match(/(-?\d+(?:\.\d+)?)px(?:\s*\*\s*(-?\d+(?:\.\d+)?))?/);
+  let value = calcMatch
+    ? Number(calcMatch[1]) * Number(calcMatch[2] || 1)
+    : Number.parseFloat(raw);
+  return Number.isFinite(value) ? value : fallback;
+}
+
+export function getCompactChatLabelWidthPx(value = '', element = null) {
   let label = String(value || '').trim();
   if (!label || typeof document === 'undefined' || typeof document.createElement !== 'function') return null;
   try {
     compactLabelMeasureContext ||= document.createElement('canvas').getContext('2d');
     if (!compactLabelMeasureContext) return null;
-    compactLabelMeasureContext.font = COMPACT_LABEL_FONT;
-    let measured = Math.ceil(compactLabelMeasureContext.measureText(label).width + COMPACT_LABEL_PADDING_PX);
-    return Math.min(COMPACT_LABEL_MAX_PX, Math.max(COMPACT_LABEL_MIN_PX, measured));
+    let styles = element && typeof getComputedStyle === 'function' ? getComputedStyle(element) : null;
+    let fontSize = readCssPixelValue(element, '--sn-chat-sidebar-title-size', COMPACT_LABEL_FONT_SIZE_PX);
+    let fontFamily = styles?.fontFamily || 'Inter, -apple-system, system-ui, sans-serif';
+    let minWidth = readCssPixelValue(element, '--sn-chat-sidebar-compact-label-min', COMPACT_LABEL_MIN_PX);
+    let maxWidth = readCssPixelValue(element, '--sn-chat-sidebar-compact-label-max', COMPACT_LABEL_MAX_PX);
+    let extra = readCssPixelValue(element, '--sn-chat-sidebar-compact-label-extra', COMPACT_LABEL_EXTRA_PX);
+    compactLabelMeasureContext.font = `${fontSize}px ${fontFamily}`;
+    let measured = Math.ceil(compactLabelMeasureContext.measureText(label).width + extra);
+    return Math.min(maxWidth, Math.max(minWidth, measured));
   } catch {
     return null;
   }
@@ -35,7 +51,7 @@ export function getCompactChatLabelWidthPx(value = '') {
 
 function syncCompactLabelWidth(element, value) {
   element.style.setProperty('--sn-chat-compact-label-ch', String(getCompactChatLabelCh(value)));
-  let width = getCompactChatLabelWidthPx(value);
+  let width = getCompactChatLabelWidthPx(value, element);
   if (width) {
     element.style.setProperty('--sn-chat-compact-label-width', `${width}px`);
   } else {

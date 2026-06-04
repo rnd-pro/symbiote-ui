@@ -3157,7 +3157,8 @@
               "name": "--sn-cell-fade-rate",
               "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Animated cellular automaton background effect. Use this effects UI component when composing effects UI. Capabilities: animated-background, canvas-effect, pulse, resize-aware, reduced-motion-friendly. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared."
         }
       ],
       "exports": [
@@ -4879,10 +4880,15 @@
               "description": "Theme CSS custom property consumed by this component."
             },
             {
+              "name": "--sn-composer-wake-command-max",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
               "name": "--sn-composer-voice-command-max",
               "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Generic chat composer with input, voice controls, context chips, footer controls, and autocomplete host. Use this chat and conversation surface when composing chat UI. Capabilities: chat-input, voice-controls, voice-preview, wake-listening, voice-response-toggle, voice-command-mode, voice-language-mode, context-chips, footer-controls, autocomplete-host, drag-drop-context. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: chat_composer_submit, chat_composer_voice_control."
         }
       ],
       "exports": [
@@ -5012,8 +5018,69 @@
             {
               "name": "--sn-text-dim",
               "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-list-header-gap",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-list-header-min-height",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-list-header-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-list-title-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-list-icon-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-list-empty-icon-margin",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-list-empty-icon-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-list-new-icon-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-list-items-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-list-filter-gap",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-list-filter-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-list-filter-button-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-list-filter-button-radius",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-list-filter-button-min-height",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-list-filter-button-size",
+              "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Generic chat list shell with filters, creation action, item list, and selection/delete events. Use this chat and conversation surface when composing chat UI. Capabilities: chat-list, filter-tabs, create-action, select, delete. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared."
         }
       ],
       "exports": [
@@ -5129,8 +5196,85 @@
             {
               "name": "--sn-danger-color",
               "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-list-item-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-list-item-gap",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-list-item-active-border-width",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-list-item-active-padding-left",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-list-item-top-gap",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-list-item-nested-margin",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-list-item-nested-border-width",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-list-item-branch-top",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-list-item-branch-width",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-list-badge-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-list-badge-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-list-badge-radius",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-list-name-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-list-adapter-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-list-preview-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-list-meta-gap",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-list-meta-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-list-delete-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-list-delete-padding",
+              "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Generic chat list item with project badge, adapter, preview, metadata, nesting, and delete action. Use this chat and conversation surface when composing chat UI. Capabilities: chat-list-row, active-state, nested-depth, delete-action, metadata. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared."
         }
       ],
       "exports": [
@@ -5260,8 +5404,65 @@
             {
               "name": "--sn-text-dim",
               "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-width",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-collapsed-width",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-resize-hit-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-header-gap",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-header-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-header-min-height",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-collapsed-header-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-collapsed-header-gap",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-title-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-button-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-button-radius",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-button-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-button-icon-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-items-padding",
+              "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Generic collapsible and resizable chat navigation shell. Use this chat and conversation surface when composing chat UI. Capabilities: chat-sidebar, collapse, resize, nested-chat-list, responsive-auto-collapse. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared."
         }
       ],
       "exports": [
@@ -5403,8 +5604,173 @@
             {
               "name": "--sn-danger-color",
               "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-compact-label-min",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-compact-label-ch-width",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-compact-label-extra",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-compact-label-max",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-compact-delete-width",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-row-gap",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-row-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-row-min-height",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-active-border-width",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-active-padding-left",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-group-divider-margin",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-group-divider-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-group-divider-inset",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-group-divider-width",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-group-divider-height",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-icon-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-icon-box-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-title-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-status-icon-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-status-margin",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-meta-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-meta-margin",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-type-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-type-radius",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-delete-box-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-delete-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-delete-radius",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-delete-icon-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-expand-icon-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-child-gap",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-child-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-child-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-child-min-height",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-child-line-left",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-child-deep-padding-left",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-child-active-padding-left",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-child-deep-active-padding-left",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-child-deep-line-left",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-compact-label-inset",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-compact-label-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-sidebar-compact-label-offset",
+              "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Generic chat sidebar root item with nested child chat rendering. Use this chat and conversation surface when composing chat UI. Capabilities: chat-sidebar-row, nested-children, active-state, delete-action, status-slot. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared."
         }
       ],
       "exports": [

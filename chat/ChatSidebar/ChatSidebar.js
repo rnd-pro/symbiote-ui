@@ -29,6 +29,16 @@ function emit(el, type, detail = {}) {
   el.dispatchEvent(new CustomEvent(type, { bubbles: true, composed: true, detail }));
 }
 
+function readCssPixelValue(element, name, fallback) {
+  if (typeof getComputedStyle !== 'function') return fallback;
+  let raw = getComputedStyle(element).getPropertyValue(name).trim();
+  let calcMatch = raw.match(/(-?\d+(?:\.\d+)?)px(?:\s*\*\s*(-?\d+(?:\.\d+)?))?/);
+  let value = calcMatch
+    ? Number(calcMatch[1]) * Number(calcMatch[2] || 1)
+    : Number.parseFloat(raw);
+  return Number.isFinite(value) ? value : fallback;
+}
+
 export class ChatSidebarShell extends Symbiote {
   static isoMode = true;
 
@@ -104,6 +114,7 @@ export class ChatSidebarShell extends Symbiote {
   }
 
   setWidth(width) {
+    this._hasExplicitNavWidth = true;
     this.$.navWidth = clampChatSidebarWidth(Number(width) || DEFAULT_NAV_WIDTH);
   }
 
@@ -112,8 +123,13 @@ export class ChatSidebarShell extends Symbiote {
   }
 
   _applyNavWidth() {
-    let width = this.$.navCollapsed ? COLLAPSED_NAV_WIDTH : clampChatSidebarWidth(this.$.navWidth);
-    this.style.setProperty('--chat-nav-width', `${width}px`);
+    if (this.$.navCollapsed) {
+      this.style.setProperty('--chat-nav-width', 'var(--sn-chat-sidebar-collapsed-width, 48px)');
+    } else if (this._hasExplicitNavWidth) {
+      this.style.setProperty('--chat-nav-width', `${clampChatSidebarWidth(this.$.navWidth)}px`);
+    } else {
+      this.style.setProperty('--chat-nav-width', 'var(--sn-chat-sidebar-width, 200px)');
+    }
     let nav = this.querySelector('.chat-nav');
     if (nav) nav.toggleAttribute('collapsed', this.$.navCollapsed);
     this.toggleAttribute('collapsed', this.$.navCollapsed);
@@ -145,7 +161,9 @@ export class ChatSidebarShell extends Symbiote {
     if (!nav) return;
 
     let startX = event.clientX;
-    let startWidth = this.$.navCollapsed ? COLLAPSED_NAV_WIDTH : nav.getBoundingClientRect().width;
+    let startWidth = this.$.navCollapsed
+      ? readCssPixelValue(this, '--sn-chat-sidebar-collapsed-width', COLLAPSED_NAV_WIDTH)
+      : nav.getBoundingClientRect().width;
     let wasCollapsed = this.$.navCollapsed;
     this._isResizing = true;
     this.setAttribute('resizing', '');
