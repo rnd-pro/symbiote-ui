@@ -1184,10 +1184,22 @@ export function createCascadeTheme(options = {}) {
   };
 }
 
-export function applyCascadeTheme(element, options = {}) {
+export function applyCascadeTheme(element, options = {}, eventOptions = {}) {
   let theme = createCascadeTheme(options);
   for (let [key, value] of Object.entries(theme.tokens)) {
     element?.style?.setProperty(key, value);
+  }
+  if (eventOptions.notify !== false && typeof CustomEvent === 'function') {
+    element?.dispatchEvent?.(new CustomEvent('cascade-theme-change', {
+      bubbles: true,
+      composed: true,
+      detail: {
+        source: eventOptions.source || 'applyCascadeTheme',
+        state: theme.state,
+        theme,
+        targetSelector: eventOptions.targetSelector || null,
+      },
+    }));
   }
   return theme;
 }

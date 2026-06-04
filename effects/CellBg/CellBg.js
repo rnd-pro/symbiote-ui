@@ -24,6 +24,7 @@ const requestFrame = (callback) => {
   }
   return setTimeout(() => callback(now()), 16);
 };
+const getReducedMotionQuery = () => globalThis.matchMedia?.('(prefers-reduced-motion: reduce)') || null;
 
 function normalizeCssColor(source, value) {
   let doc = source?.ownerDocument || globalThis.document;
@@ -97,6 +98,24 @@ export class CellBg extends Symbiote {
     this._available = Boolean(this.canvas && this.ctx);
 
     this._buildPalette();
+    this._motionQuery = getReducedMotionQuery();
+    this._prefersReducedMotion = Boolean(this._motionQuery?.matches);
+    this._motionChangeHandler = (event) => {
+      this._prefersReducedMotion = Boolean(event.matches);
+      if (this._prefersReducedMotion) {
+        if (this._pulseTimer) clearTimeout(this._pulseTimer);
+        this._pulseTimer = null;
+        this._stop();
+        this._draw();
+      } else if (this._toggled) {
+        this._start();
+      }
+    };
+    if (typeof this._motionQuery?.addEventListener === 'function') {
+      this._motionQuery.addEventListener('change', this._motionChangeHandler);
+    } else {
+      this._motionQuery?.addListener?.(this._motionChangeHandler);
+    }
 
     this.cols = 0;
     this.rows = 0;
@@ -162,6 +181,10 @@ export class CellBg extends Symbiote {
    */
   toggle(state) {
     this._toggled = !!state;
+    if (state && this._prefersReducedMotion) {
+      this._draw();
+      return;
+    }
     if (state) {
       this._start();
     } else if (!this._pulseTimer) {
@@ -178,6 +201,10 @@ export class CellBg extends Symbiote {
    */
   pulse(duration = 10000) {
     if (this._toggled) return; // Already running persistently
+    if (this._prefersReducedMotion) {
+      this._draw();
+      return;
+    }
     if (this._pulseTimer) clearTimeout(this._pulseTimer);
     this._start();
     this._pulseTimer = setTimeout(() => {
@@ -191,6 +218,11 @@ export class CellBg extends Symbiote {
     if (this.ro) this.ro.disconnect();
     this._themeObserver?.disconnect();
     this.ownerDocument?.removeEventListener?.('cascade-theme-change', this._themeChangeHandler);
+    if (typeof this._motionQuery?.removeEventListener === 'function') {
+      this._motionQuery.removeEventListener('change', this._motionChangeHandler);
+    } else {
+      this._motionQuery?.removeListener?.(this._motionChangeHandler);
+    }
     this._removeResizeFallback?.();
     this._stop();
   }

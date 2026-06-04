@@ -256,6 +256,51 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.match(source, /--sn-shape-icon-size/);
 });
 
+test('applyCascadeTheme notifies subtree targets by default', async () => {
+  const themeModule = await import(cascadeThemeSource.href);
+  const NativeCustomEvent = globalThis.CustomEvent;
+  const events = [];
+  const styles = new Map();
+  const target = new EventTarget();
+  target.style = {
+    setProperty(name, value) {
+      styles.set(name, value);
+    },
+  };
+  target.addEventListener('cascade-theme-change', (event) => events.push(event));
+
+  globalThis.CustomEvent = class CustomEvent extends Event {
+    constructor(type, init = {}) {
+      super(type, init);
+      this.detail = init.detail;
+    }
+  };
+  try {
+    const theme = themeModule.applyCascadeTheme(target, { mode: 'light' }, {
+      source: 'unit-test',
+      targetSelector: '#panel',
+    });
+    themeModule.applyCascadeTheme(target, { mode: 'dark' }, { notify: false });
+
+    assert.equal(styles.get('--sn-bg'), 'hsl(0 0% 10.0%)');
+    assert.equal(events.length, 1);
+    assert.equal(events[0].type, 'cascade-theme-change');
+    assert.equal(events[0].bubbles, true);
+    assert.equal(events[0].composed, true);
+    assert.equal(events[0].detail.source, 'unit-test');
+    assert.equal(events[0].detail.targetSelector, '#panel');
+    assert.equal(events[0].detail.theme.name, 'cascade-theme');
+    assert.equal(events[0].detail.state.mode, 'light');
+    assert.equal(theme.state.mode, 'light');
+  } finally {
+    if (NativeCustomEvent) {
+      globalThis.CustomEvent = NativeCustomEvent;
+    } else {
+      delete globalThis.CustomEvent;
+    }
+  }
+});
+
 test('node type color tokens are canonical across themes and graph aliases', async () => {
   const [cascadeSource, defaultProviderTheme] = await Promise.all([
     readFile(cascadeThemeSource, 'utf8'),
@@ -305,7 +350,7 @@ test('cascade theme editor is a reusable browser module', async () => {
   ]);
 
   assert.match(editor, /class CascadeThemeEditor extends Symbiote/);
-  assert.match(editor, /applyCascadeTheme\(this\.\#resolveTarget\(\), this\.\#state\)/);
+  assert.match(editor, /applyCascadeTheme\(this\.\#resolveTarget\(\), this\.\#state, \{ notify: false \}\)/);
   assert.match(editor, /CASCADE_THEME_DEFAULTS/);
   assert.match(editor, /getCascadeThemeControls\(\)/);
   assert.match(editor, /CONTROL_ICONS/);
@@ -321,7 +366,7 @@ test('cascade theme editor is a reusable browser module', async () => {
   assert.match(editor, /CascadeThemeEditor\.reg\('cascade-theme-editor'\)/);
   assert.match(widget, /class CascadeThemeWidget extends Symbiote/);
   assert.match(widget, /COMPACT_CONTROLS = \['brightness', 'contrast', 'chroma', 'hue'\]/);
-  assert.match(widget, /applyCascadeTheme\(this\.\#resolveTarget\(\), this\.\#state\)/);
+  assert.match(widget, /applyCascadeTheme\(this\.\#resolveTarget\(\), this\.\#state, \{ notify: false \}\)/);
   assert.match(widget, /cascade-theme-open-full/);
   assert.match(widget, /CascadeThemeWidget\.reg\('cascade-theme-widget'\)/);
   assert.match(widgetStyles, /cascade-theme-widget/);
@@ -618,6 +663,8 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(cellBgComponent, /_scheduleThemeRefresh/);
   assert.match(cellBgComponent, /cascade-theme-change/);
   assert.match(cellBgComponent, /MutationObserver/);
+  assert.match(cellBgComponent, /prefers-reduced-motion: reduce/);
+  assert.match(cellBgComponent, /_prefersReducedMotion/);
   assert.match(cellBgComponent, /readCellBgTheme/);
   assert.match(cellBgTheme, /--sn-cell-size/);
   assert.match(cellBgTheme, /--sn-cell-dot/);

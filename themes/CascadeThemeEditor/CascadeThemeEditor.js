@@ -216,7 +216,7 @@ export class CascadeThemeEditor extends Symbiote {
   }
 
   #apply(source) {
-    let theme = applyCascadeTheme(this.#resolveTarget(), this.#state);
+    let theme = applyCascadeTheme(this.#resolveTarget(), this.#state, { notify: false });
     this.#state = theme.state;
     this.#persistState();
     this.#syncControls();
