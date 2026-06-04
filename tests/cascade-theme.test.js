@@ -52,6 +52,7 @@ test('cascade theme lab mutates root tokens instead of applying local component 
 
   assert.match(source, /import Symbiote, \{ html \} from '@symbiotejs\/symbiote'/);
   assert.match(source, /'cascade-theme-editor'/);
+  assert.match(source, /'project-tabs'/);
   assert.match(source, /component: 'cascade-theme-editor'/);
   assert.match(source, /'storage-key': 'symbiote-ui:cascade-theme-lab'/);
   assert.match(source, /class CascadeGraphPanel extends Symbiote/);
@@ -90,8 +91,16 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   assert.match(source, /setLayoutBehavior/);
   assert.match(source, /responsiveMode: 'stack'/);
   assert.match(source, /importance: 95/);
+  assert.match(source, /const layoutGroups = \[/);
+  assert.match(source, /createGraphLayout/);
+  assert.match(source, /project-tabs-select/);
+  assert.match(source, /data-layout-command/);
   assert.match(source, /voice command/);
   assert.match(html, /layout module/);
+  assert.match(html, /class="lab-main-menu"/);
+  assert.match(html, /<project-tabs class="lab-layout-tabs">/);
+  assert.match(html, /data-layout-group="responsive"/);
+  assert.match(html, /data-layout-command="scroll"/);
   assert.doesNotMatch(source, /extends HTMLElement/);
   assert.doesNotMatch(source, /\.setTheme\(/);
   assert.doesNotMatch(source, /10 \+ brightness \* 0\.18/);

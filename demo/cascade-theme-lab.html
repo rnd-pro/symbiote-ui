@@ -36,7 +36,7 @@
 
     .lab-shell {
       display: grid;
-      grid-template-rows: auto 1fr;
+      grid-template-rows: auto auto 1fr;
       min-height: 100vh;
       background:
         radial-gradient(circle, var(--sn-grid-dot, rgb(255 255 255 / 0.06)) 1.2px, transparent 1.2px) 0 0 / var(--sn-grid-size, 20px) var(--sn-grid-size, 20px),
@@ -51,6 +51,60 @@
       padding: var(--sn-lab-toolbar-padding, 10px 12px);
       border-bottom: 1px solid var(--sn-node-border);
       background: color-mix(in srgb, var(--sn-panel-bg) 92%, transparent);
+    }
+
+    .lab-main-menu {
+      display: flex;
+      align-items: center;
+      gap: var(--sn-lab-menu-gap, 4px);
+      min-width: 0;
+    }
+
+    .lab-menu-separator {
+      width: 1px;
+      height: var(--sn-lab-menu-separator-height, 20px);
+      background: var(--sn-node-border);
+    }
+
+    .lab-menu-button {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--sn-lab-menu-button-gap, 5px);
+      min-height: var(--sn-lab-menu-button-height, 28px);
+      padding: var(--sn-lab-menu-button-padding, 0 10px);
+      border: 1px solid transparent;
+      border-radius: var(--sn-layout-header-button-radius, 4px);
+      background: transparent;
+      color: var(--sn-text-dim);
+      font: inherit;
+      font-size: var(--sn-lab-menu-button-size, 12px);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .lab-menu-button:hover,
+    .lab-menu-button[active] {
+      border-color: var(--sn-node-border);
+      background: var(--sn-node-hover);
+      color: var(--sn-text);
+    }
+
+    .lab-menu-button .material-symbols-outlined {
+      font-size: var(--sn-lab-menu-icon-size, 16px);
+    }
+
+    .lab-layout-tabs {
+      --sn-tabs-height: var(--sn-lab-tabs-height, 34px);
+      --sn-tabs-item-height: var(--sn-lab-tabs-item-height, 30px);
+      --sn-tabs-bg: color-mix(in srgb, var(--sn-panel-bg) 88%, var(--sn-bg) 12%);
+      --sn-tabs-border: var(--sn-node-border);
+      --sn-tabs-active-bg: var(--sn-panel-bg);
+      --sn-tabs-hover-bg: var(--sn-node-hover);
+      --sn-tabs-divider: var(--sn-node-border);
+      --sn-tabs-radius: 6px 6px 0 0;
+      --sn-tabs-corner-size: 8px;
+      --sn-tabs-corner-cut: 7px;
+      --sn-tabs-accent: var(--sn-node-selected);
     }
 
     .lab-title {
@@ -74,7 +128,7 @@
 
     .lab-layout {
       width: 100%;
-      height: calc(100vh - 68px);
+      height: calc(100vh - 102px);
       min-height: 0;
     }
 
@@ -192,6 +246,11 @@
         flex-direction: column;
       }
 
+      .lab-main-menu {
+        overflow-x: auto;
+        padding-bottom: 2px;
+      }
+
       .lab-layout {
         height: 980px;
       }
@@ -203,8 +262,30 @@
   <main class="lab-shell">
     <header class="lab-toolbar">
       <h1 class="lab-title">Cascade Theme Lab</h1>
+      <nav class="lab-main-menu" aria-label="Main menu">
+        <button class="lab-menu-button" type="button" data-layout-group="overview">
+          <span class="material-symbols-outlined">view_quilt</span><span>Overview</span>
+        </button>
+        <button class="lab-menu-button" type="button" data-layout-group="graph">
+          <span class="material-symbols-outlined">hub</span><span>Graph</span>
+        </button>
+        <button class="lab-menu-button" type="button" data-layout-group="chat">
+          <span class="material-symbols-outlined">forum</span><span>Chat</span>
+        </button>
+        <button class="lab-menu-button" type="button" data-layout-group="responsive">
+          <span class="material-symbols-outlined">view_agenda</span><span>Responsive</span>
+        </button>
+        <span class="lab-menu-separator" aria-hidden="true"></span>
+        <button class="lab-menu-button" type="button" data-layout-command="reset">
+          <span class="material-symbols-outlined">restart_alt</span><span>Reset</span>
+        </button>
+        <button class="lab-menu-button" type="button" data-layout-command="scroll">
+          <span class="material-symbols-outlined">swap_horiz</span><span>Scroll</span>
+        </button>
+      </nav>
       <span class="lab-meta">layout module</span>
     </header>
+    <project-tabs class="lab-layout-tabs"></project-tabs>
     <section class="lab-content" aria-label="Cascade theme visual surface">
       <panel-layout class="lab-layout"></panel-layout>
     </section>

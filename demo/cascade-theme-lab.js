@@ -17,6 +17,7 @@ configureMaterialSymbols();
 
 for (const tagName of [
   'panel-layout',
+  'project-tabs',
   'node-canvas',
   'sn-button',
   'sn-banner',
@@ -35,6 +36,7 @@ for (const tagName of [
 await Promise.all([
   customElements.whenDefined('panel-layout'),
   customElements.whenDefined('layout-node'),
+  customElements.whenDefined('project-tabs'),
 ]);
 
 applyTheme(document.documentElement, DEFAULT_PROVIDER_THEME);
@@ -421,6 +423,8 @@ CascadeChatPanel.rootStyles = `
 CascadeChatPanel.reg('cascade-chat-panel');
 
 const layout = document.querySelector('.lab-layout');
+const layoutTabs = document.querySelector('.lab-layout-tabs');
+const mainMenu = document.querySelector('.lab-main-menu');
 layout.setLayoutBehavior({
   minInlineSize: 240,
   minBlockSize: 180,
@@ -482,7 +486,7 @@ layout.registerPanelType('theme', {
 });
 layout.$.panelChrome = true;
 const createPanel = (panelType, behavior) => LayoutTree.createPanel(panelType, {}, behavior);
-layout.$.layoutTree = LayoutTree.createSplit(
+const createOverviewLayout = () => LayoutTree.createSplit(
   'horizontal',
   createPanel('theme', { importance: 80, collapse: 'manual' }),
   LayoutTree.createSplit(
@@ -498,3 +502,140 @@ layout.$.layoutTree = LayoutTree.createSplit(
   ),
   0.28
 );
+
+const createGraphLayout = () => LayoutTree.createSplit(
+  'horizontal',
+  createPanel('graph', { importance: 100, minInlineSize: 520, minBlockSize: 360 }),
+  LayoutTree.createSplit(
+    'vertical',
+    createPanel('theme', { importance: 70, collapse: 'manual' }),
+    createPanel('ui', { importance: 45 }),
+    0.44
+  ),
+  0.68
+);
+
+const createChatLayout = () => LayoutTree.createSplit(
+  'horizontal',
+  LayoutTree.createSplit(
+    'vertical',
+    createPanel('graph', { importance: 60 }),
+    createPanel('ui', { importance: 45 }),
+    0.46
+  ),
+  LayoutTree.createSplit(
+    'vertical',
+    createPanel('chat', { importance: 100, minInlineSize: 420, minBlockSize: 360 }),
+    createPanel('theme', { importance: 76, collapse: 'manual' }),
+    0.66
+  ),
+  0.44
+);
+
+const createResponsiveLayout = () => LayoutTree.createSplit(
+  'vertical',
+  LayoutTree.createSplit(
+    'horizontal',
+    createPanel('theme', { importance: 82, collapse: 'manual' }),
+    createPanel('ui', { importance: 50 }),
+    0.5
+  ),
+  LayoutTree.createSplit(
+    'horizontal',
+    createPanel('graph', { importance: 95 }),
+    createPanel('chat', { importance: 40 }),
+    0.52
+  ),
+  0.42
+);
+
+const layoutGroups = [
+  {
+    id: 'overview',
+    name: 'Overview',
+    icon: 'view_quilt',
+    color: 'var(--sn-tab-accent-0)',
+    closeable: false,
+    behavior: { responsiveMode: 'stack', responsiveBreakpoint: 760, overflow: 'collapse' },
+    createLayout: createOverviewLayout,
+  },
+  {
+    id: 'graph',
+    name: 'Graph',
+    icon: 'hub',
+    color: 'var(--sn-tab-accent-1)',
+    closeable: false,
+    behavior: { responsiveMode: 'scroll-inline', responsiveBreakpoint: 860, overflow: 'collapse' },
+    createLayout: createGraphLayout,
+  },
+  {
+    id: 'chat',
+    name: 'Chat',
+    icon: 'forum',
+    color: 'var(--sn-tab-accent-2)',
+    closeable: false,
+    behavior: { responsiveMode: 'stack', responsiveBreakpoint: 780, overflow: 'collapse' },
+    createLayout: createChatLayout,
+  },
+  {
+    id: 'responsive',
+    name: 'Responsive',
+    icon: 'view_agenda',
+    color: 'var(--sn-tab-accent-3)',
+    closeable: false,
+    behavior: { responsiveMode: 'stack', responsiveBreakpoint: 980, overflow: 'scroll-inline' },
+    createLayout: createResponsiveLayout,
+  },
+];
+
+let activeLayoutGroupId = 'overview';
+let scrollFallback = false;
+
+function getActiveLayoutGroup() {
+  return layoutGroups.find((group) => group.id === activeLayoutGroupId) || layoutGroups[0];
+}
+
+function setMainMenuActive() {
+  mainMenu?.querySelectorAll('[data-layout-group]').forEach((button) => {
+    button.toggleAttribute('active', button.dataset.layoutGroup === activeLayoutGroupId);
+  });
+  mainMenu?.querySelector('[data-layout-command="scroll"]')
+    ?.toggleAttribute('active', scrollFallback);
+}
+
+function applyLayoutGroup(id = activeLayoutGroupId) {
+  activeLayoutGroupId = layoutGroups.some((group) => group.id === id) ? id : 'overview';
+  let group = getActiveLayoutGroup();
+  layout.setLayoutBehavior({
+    minInlineSize: 240,
+    minBlockSize: 180,
+    ...group.behavior,
+    overflow: scrollFallback ? 'scroll-inline' : group.behavior.overflow,
+  });
+  layout.setLayout(group.createLayout());
+  layoutTabs.setTabs(layoutGroups, activeLayoutGroupId);
+  setMainMenuActive();
+}
+
+layoutTabs.setTabs(layoutGroups, activeLayoutGroupId);
+layoutTabs.addEventListener('project-tabs-home', () => applyLayoutGroup('overview'));
+layoutTabs.addEventListener('project-tabs-add', () => applyLayoutGroup('responsive'));
+layoutTabs.addEventListener('project-tabs-select', (event) => applyLayoutGroup(event.detail?.id));
+mainMenu?.addEventListener('click', (event) => {
+  let groupButton = event.target.closest('[data-layout-group]');
+  if (groupButton) {
+    applyLayoutGroup(groupButton.dataset.layoutGroup);
+    return;
+  }
+  let commandButton = event.target.closest('[data-layout-command]');
+  if (!commandButton) return;
+  if (commandButton.dataset.layoutCommand === 'reset') {
+    scrollFallback = false;
+    applyLayoutGroup(activeLayoutGroupId);
+  } else if (commandButton.dataset.layoutCommand === 'scroll') {
+    scrollFallback = !scrollFallback;
+    applyLayoutGroup(activeLayoutGroupId);
+  }
+});
+
+applyLayoutGroup(activeLayoutGroupId);
