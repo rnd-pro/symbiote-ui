@@ -348,6 +348,29 @@ test('component descriptor v2 includes agent-facing WebMCP context', async () =>
   assert.match(schema, /"globalToolMode"/);
 });
 
+test('static custom elements catalog mirrors agent-facing WebMCP metadata', async () => {
+  const [customElements, registry] = await Promise.all([
+    readFile(customElementsSource, 'utf8').then((source) => JSON.parse(source)),
+    import(componentRegistrySource.href),
+  ]);
+  const declarations = new Map(
+    customElements.modules
+      .flatMap((module) => module.declarations || [])
+      .filter((declaration) => declaration.tagName)
+      .map((declaration) => [declaration.tagName, declaration])
+  );
+
+  for (let component of registry.listComponents()) {
+    let declaration = declarations.get(component.tagName);
+    assert.ok(declaration, `missing static declaration for ${component.tagName}`);
+    assert.equal(declaration.componentDescription, component.componentDescription);
+    assert.deepEqual(declaration.agent, component.agent);
+    assert.equal(declaration.agent.webmcp.globalToolMode.includes('Do not enable global Symbiote.mcpToolMode'), true);
+    assert.equal(declaration.agent.webmcp.references.includes(registry.WEBMCP_SUPPORT_REFERENCE), true);
+    assert.equal(declaration.agent.webmcp.references.includes(registry.WEBMCP_FEATURE_REFERENCE), true);
+  }
+});
+
 test('cascade theme derives distinct dark and light branches', async () => {
   const themeModule = await import(cascadeThemeSource.href);
   const darkTheme = themeModule.createCascadeTheme({ mode: 'dark' });

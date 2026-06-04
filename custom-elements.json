@@ -11,7 +11,7 @@
           "name": "CascadeThemeEditor",
           "tagName": "cascade-theme-editor",
           "description": "Reusable cascade theme editor module for host layouts.",
-          "componentDescription": "Reusable cascade theme editor module for host layouts. Use this layout-hosted cascade theme control surface when an agent or user needs bounded live theme controls for a host shell.",
+          "componentDescription": "Reusable cascade theme editor module for host layouts. Use this layout-hosted cascade theme control surface when composing theme UI. Capabilities: cascade-theme-controls, copy-parameters, reset-defaults, local-storage, layout-panel. Data ownership: component-owned normalized theme state persisted through host-selected localStorage key. WebMCP tools: cascade_theme_editor_apply.",
           "attributes": [
             {
               "name": "storage-key",
@@ -89,7 +89,27 @@
               "name": "cascade-theme-copy",
               "description": "Emits after the copy action succeeds."
             }
-          ]
+          ],
+          "agent": {
+            "componentDescription": "Reusable cascade theme editor module for host layouts. Use this layout-hosted cascade theme control surface when composing theme UI. Capabilities: cascade-theme-controls, copy-parameters, reset-defaults, local-storage, layout-panel. Data ownership: component-owned normalized theme state persisted through host-selected localStorage key. WebMCP tools: cascade_theme_editor_apply.",
+            "semanticRole": "layout-hosted cascade theme control surface",
+            "usage": "Mount as a layout panel when an agent or user needs bounded live theme controls for a host shell.",
+            "dataOwnership": "component-owned normalized theme state persisted through host-selected localStorage key",
+            "webmcp": {
+              "mode": "explicit-descriptor",
+              "toolNames": [
+                "cascade_theme_editor_apply"
+              ],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -111,7 +131,7 @@
           "name": "CascadeThemeWidget",
           "tagName": "cascade-theme-widget",
           "description": "Compact global header widget for cascade theme quick controls.",
-          "componentDescription": "Compact global header widget for cascade theme quick controls. Use this global shell cascade theme quick control when the full theme editor should stay out of the default layout but remain reachable.",
+          "componentDescription": "Compact global header widget for cascade theme quick controls. Use this global shell cascade theme quick control when composing theme UI. Capabilities: cascade-theme-quick-controls, copy-parameters, reset-defaults, open-full-editor, local-storage, global-shell-action. Data ownership: component-owned normalized quick theme state persisted through the same host-selected localStorage key as cascade-theme-editor. WebMCP tools: cascade_theme_widget_open_full, cascade_theme_widget_apply_quick.",
           "attributes": [
             {
               "name": "storage-key",
@@ -193,7 +213,28 @@
               "name": "cascade-theme-open-full",
               "description": "Requests the host to open the full theme editor layout."
             }
-          ]
+          ],
+          "agent": {
+            "componentDescription": "Compact global header widget for cascade theme quick controls. Use this global shell cascade theme quick control when composing theme UI. Capabilities: cascade-theme-quick-controls, copy-parameters, reset-defaults, open-full-editor, local-storage, global-shell-action. Data ownership: component-owned normalized quick theme state persisted through the same host-selected localStorage key as cascade-theme-editor. WebMCP tools: cascade_theme_widget_open_full, cascade_theme_widget_apply_quick.",
+            "semanticRole": "global shell cascade theme quick control",
+            "usage": "Mount in a layout shell action slot when the full theme editor should stay out of the default layout but remain reachable.",
+            "dataOwnership": "component-owned normalized quick theme state persisted through the same host-selected localStorage key as cascade-theme-editor",
+            "webmcp": {
+              "mode": "explicit-descriptor",
+              "toolNames": [
+                "cascade_theme_widget_open_full",
+                "cascade_theme_widget_apply_quick"
+              ],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -427,7 +468,26 @@
               "name": "--sn-node-items-max-height",
               "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Interactive graph node component for the node canvas. Use this graph node presentation primitive when composing node UI. Capabilities: node-card, ports, controls, category-accent, type-accent, error-state. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "agent": {
+            "componentDescription": "Interactive graph node component for the node canvas. Use this graph node presentation primitive when composing node UI. Capabilities: node-card, ports, controls, category-accent, type-accent, error-state. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "graph node presentation primitive",
+            "usage": "Render or compose <graph-node> when the host needs interactive graph node component for the node canvas.",
+            "dataOwnership": "host-owned props and attributes; component owns presentation state",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -574,7 +634,26 @@
               "name": "--sn-node-callout-arrow-size",
               "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Floating node callout anchored to a graph node or DOM element. Use this graph node presentation primitive when composing node UI. Capabilities: floating-callout, anchor-tracking, node-label. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "agent": {
+            "componentDescription": "Floating node callout anchored to a graph node or DOM element. Use this graph node presentation primitive when composing node UI. Capabilities: floating-callout, anchor-tracking, node-label. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "graph node presentation primitive",
+            "usage": "Render or compose <node-callout> when the host needs floating node callout anchored to a graph node or dom element.",
+            "dataOwnership": "host-owned props and attributes; component owns presentation state",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -617,7 +696,26 @@
               "name": "--sn-node-bg",
               "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Socket endpoint component for graph node inputs and outputs. Use this graph node presentation primitive when composing node UI. Capabilities: socket-endpoint, shape-variant, accent-color, connection-target. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "agent": {
+            "componentDescription": "Socket endpoint component for graph node inputs and outputs. Use this graph node presentation primitive when composing node UI. Capabilities: socket-endpoint, shape-variant, accent-color, connection-target. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "graph node presentation primitive",
+            "usage": "Render or compose <node-socket> when the host needs socket endpoint component for graph node inputs and outputs.",
+            "dataOwnership": "host-owned props and attributes; component owns presentation state",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -829,7 +927,26 @@
               "name": "--sn-node-border",
               "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Primary graph canvas custom element. Use this interactive visual graph surface when composing canvas UI. Capabilities: node-editor-canvas, connections, frames, subgraphs, viewport, selection. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "agent": {
+            "componentDescription": "Primary graph canvas custom element. Use this interactive visual graph surface when composing canvas UI. Capabilities: node-editor-canvas, connections, frames, subgraphs, viewport, selection. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "interactive visual graph surface",
+            "usage": "Render or compose <node-canvas> when the host needs primary graph canvas custom element.",
+            "dataOwnership": "host-owned model; component renders and emits intent events",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -1017,7 +1134,26 @@
               "name": "--sn-effect-focus-ring",
               "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Generic hierarchical canvas graph renderer with force layout and selection events. Use this interactive visual graph surface when composing canvas UI. Capabilities: hierarchical-graph, force-layout, semantic-clusters, focus-selection, layout-snapshot. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "agent": {
+            "componentDescription": "Generic hierarchical canvas graph renderer with force layout and selection events. Use this interactive visual graph surface when composing canvas UI. Capabilities: hierarchical-graph, force-layout, semantic-clusters, focus-selection, layout-snapshot. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "interactive visual graph surface",
+            "usage": "Render or compose <canvas-graph> when the host needs generic hierarchical canvas graph renderer with force layout and selection events.",
+            "dataOwnership": "host-owned model; component renders and emits intent events",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -1110,7 +1246,26 @@
               "name": "--sn-toolbar-hover",
               "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Generic graph explorer shell with toolbar, canvas, overlay, legend, and stats slots. Use this interactive visual graph surface when composing canvas UI. Capabilities: graph-toolbar, graph-slots, canvas-host, overlay-host, stats-host. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "agent": {
+            "componentDescription": "Generic graph explorer shell with toolbar, canvas, overlay, legend, and stats slots. Use this interactive visual graph surface when composing canvas UI. Capabilities: graph-toolbar, graph-slots, canvas-host, overlay-host, stats-host. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "interactive visual graph surface",
+            "usage": "Render or compose <graph-explorer-shell> when the host needs generic graph explorer shell with toolbar, canvas, overlay, legend, and stats slots.",
+            "dataOwnership": "host-owned model; component renders and emits intent events",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -1199,7 +1354,26 @@
               "name": "--sn-font",
               "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Generic context menu custom element for graph and canvas actions. Use this menu UI component when composing menu UI. Capabilities: context-menu, positioned-overlay, action-list, backdrop-dismiss. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "agent": {
+            "componentDescription": "Generic context menu custom element for graph and canvas actions. Use this menu UI component when composing menu UI. Capabilities: context-menu, positioned-overlay, action-list, backdrop-dismiss. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "menu UI component",
+            "usage": "Render or compose <context-menu> when the host needs generic context menu custom element for graph and canvas actions.",
+            "dataOwnership": "host-owned props and attributes; component owns presentation state",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -1400,7 +1574,26 @@
               "name": "--sn-layout-responsive-panel-min-block-size",
               "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Panel-based application layout shell. Use this layout composition and navigation surface when composing layout UI. Capabilities: layout-tree, split-panels, panel-registry, panel-menu-actions, responsive-behavior, importance-auto-collapse, scroll-fallback, local-storage. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "agent": {
+            "componentDescription": "Panel-based application layout shell. Use this layout composition and navigation surface when composing layout UI. Capabilities: layout-tree, split-panels, panel-registry, panel-menu-actions, responsive-behavior, importance-auto-collapse, scroll-fallback, local-storage. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "layout composition and navigation surface",
+            "usage": "Render or compose <panel-layout> when the host needs panel-based application layout shell.",
+            "dataOwnership": "host-owned model; component renders and emits intent events",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -1519,7 +1712,26 @@
               "name": "--sn-text-dim",
               "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Sidebar navigation component for the panel layout. Use this layout composition and navigation surface when composing layout UI. Capabilities: sidebar-sections, panel-drag, collapse-state, local-storage. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "agent": {
+            "componentDescription": "Sidebar navigation component for the panel layout. Use this layout composition and navigation surface when composing layout UI. Capabilities: sidebar-sections, panel-drag, collapse-state, local-storage. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "layout composition and navigation surface",
+            "usage": "Render or compose <layout-sidebar> when the host needs sidebar navigation component for the panel layout.",
+            "dataOwnership": "host-owned model; component renders and emits intent events",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -1710,7 +1922,26 @@
               },
               "description": "Collapse policy for this layout node."
             }
-          ]
+          ],
+          "componentDescription": "Resizable and dockable layout node component. Use this layout composition and navigation surface when composing layout UI. Capabilities: layout-branch, layout-panel, resize, collapse, fullscreen, panel-menu, fold-down-panel-actions, responsive-behavior. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "agent": {
+            "componentDescription": "Resizable and dockable layout node component. Use this layout composition and navigation surface when composing layout UI. Capabilities: layout-branch, layout-panel, resize, collapse, fullscreen, panel-menu, fold-down-panel-actions, responsive-behavior. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "layout composition and navigation surface",
+            "usage": "Render or compose <layout-node> when the host needs resizable and dockable layout node component.",
+            "dataOwnership": "host-owned model; component renders and emits intent events",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -1811,7 +2042,26 @@
               "name": "--sn-portal-bridge-chamfer",
               "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Viewport bridge component for connecting anchors across independent layouts. Use this layout composition and navigation surface when composing layout UI. Capabilities: portal-bridge, cross-layout-connection, viewport-tracking. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "agent": {
+            "componentDescription": "Viewport bridge component for connecting anchors across independent layouts. Use this layout composition and navigation surface when composing layout UI. Capabilities: portal-bridge, cross-layout-connection, viewport-tracking. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "layout composition and navigation surface",
+            "usage": "Render or compose <cross-layout-portal-bridge> when the host needs viewport bridge component for connecting anchors across independent layouts.",
+            "dataOwnership": "host-owned model; component renders and emits intent events",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -1953,7 +2203,28 @@
               "name": "--sn-tabs-active-bg",
               "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Global application shell menu that binds topbar context, layout group tabs, and workspace content. Use this global layout group navigation shell when composing layout UI. Capabilities: global-shell-menu, layout-group-tabs, topbar-context, workspace-slot, action-slot. Data ownership: host-owned layout group and tab model; component renders topbar context, project-tabs, action slot, and workspace slot. WebMCP tools: layout_shell_menu_select.",
+          "agent": {
+            "componentDescription": "Global application shell menu that binds topbar context, layout group tabs, and workspace content. Use this global layout group navigation shell when composing layout UI. Capabilities: global-shell-menu, layout-group-tabs, topbar-context, workspace-slot, action-slot. Data ownership: host-owned layout group and tab model; component renders topbar context, project-tabs, action slot, and workspace slot. WebMCP tools: layout_shell_menu_select.",
+            "semanticRole": "global layout group navigation shell",
+            "usage": "Use as the host shell around panel-layout when agents or users need to switch layout groups, open workspace tabs, and keep tab navigation attached to the global menu.",
+            "dataOwnership": "host-owned layout group and tab model; component renders topbar context, project-tabs, action slot, and workspace slot",
+            "webmcp": {
+              "mode": "explicit-descriptor",
+              "toolNames": [
+                "layout_shell_menu_select"
+              ],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -2070,7 +2341,28 @@
               "name": "--sn-tabs-radius",
               "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Generic project/workspace tab strip with add, select, and close events. Use this layout composition and navigation surface when composing layout UI. Capabilities: tab-list, select, close, create. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: project_tabs_select.",
+          "agent": {
+            "componentDescription": "Generic project/workspace tab strip with add, select, and close events. Use this layout composition and navigation surface when composing layout UI. Capabilities: tab-list, select, close, create. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: project_tabs_select.",
+            "semanticRole": "layout composition and navigation surface",
+            "usage": "Render or compose <project-tabs> when the host needs generic project/workspace tab strip with add, select, and close events.",
+            "dataOwnership": "host-owned model; component renders and emits intent events",
+            "webmcp": {
+              "mode": "explicit-descriptor",
+              "toolNames": [
+                "project_tabs_select"
+              ],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -2266,7 +2558,26 @@
               "name": "--sn-code-table-cell-padding",
               "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Code, markdown, image, and diagnostics display component. Use this data and content presentation surface when composing display UI. Capabilities: syntax-highlight, markdown-render, image-render, line-gutter, diagnostics. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "agent": {
+            "componentDescription": "Code, markdown, image, and diagnostics display component. Use this data and content presentation surface when composing display UI. Capabilities: syntax-highlight, markdown-render, image-render, line-gutter, diagnostics. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "data and content presentation surface",
+            "usage": "Render or compose <code-block> when the host needs code, markdown, image, and diagnostics display component.",
+            "dataOwnership": "host-owned props and attributes; component owns presentation state",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -2406,7 +2717,26 @@
               "name": "--sn-source-action-icon-size",
               "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Source file viewer with code, markdown, image, metadata, actions, and transform modes. Use this data and content presentation surface when composing display UI. Capabilities: source-code, markdown-preview, image-preview, diagnostics, transform-toggle. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "agent": {
+            "componentDescription": "Source file viewer with code, markdown, image, metadata, actions, and transform modes. Use this data and content presentation surface when composing display UI. Capabilities: source-code, markdown-preview, image-preview, diagnostics, transform-toggle. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "data and content presentation surface",
+            "usage": "Render or compose <source-viewer> when the host needs source file viewer with code, markdown, image, metadata, actions, and transform modes.",
+            "dataOwnership": "host-owned props and attributes; component owns presentation state",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -2588,7 +2918,28 @@
               "name": "--sn-editor-font",
               "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Generic source text editor with content, dirty state, readonly, disabled, focus, and tab handling. Use this data and content presentation surface when composing display UI. Capabilities: source-editing, dirty-state, keyboard-tab-indent. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: source_editor_content.",
+          "agent": {
+            "componentDescription": "Generic source text editor with content, dirty state, readonly, disabled, focus, and tab handling. Use this data and content presentation surface when composing display UI. Capabilities: source-editing, dirty-state, keyboard-tab-indent. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: source_editor_content.",
+            "semanticRole": "data and content presentation surface",
+            "usage": "Render or compose <source-editor> when the host needs generic source text editor with content, dirty state, readonly, disabled, focus, and tab handling.",
+            "dataOwnership": "host-owned props and attributes; component owns presentation state",
+            "webmcp": {
+              "mode": "explicit-descriptor",
+              "toolNames": [
+                "source_editor_content"
+              ],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -2693,7 +3044,26 @@
               "name": "--sn-loading-radius",
               "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Generic loading overlay with label, phase, progress, and secondary status text. Use this data and content presentation surface when composing display UI. Capabilities: loading-state, progress, hide-transition. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "agent": {
+            "componentDescription": "Generic loading overlay with label, phase, progress, and secondary status text. Use this data and content presentation surface when composing display UI. Capabilities: loading-state, progress, hide-transition. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "data and content presentation surface",
+            "usage": "Render or compose <sn-loading-overlay> when the host needs generic loading overlay with label, phase, progress, and secondary status text.",
+            "dataOwnership": "host-owned props and attributes; component owns presentation state",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -2822,7 +3192,26 @@
               "name": "--sn-node-border",
               "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Generic normalized list preview for arbitrary output values. Use this data and content presentation surface when composing display UI. Capabilities: normalized-output-list, scalar-to-item, record-to-items, truncation, empty-state. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "agent": {
+            "componentDescription": "Generic normalized list preview for arbitrary output values. Use this data and content presentation surface when composing display UI. Capabilities: normalized-output-list, scalar-to-item, record-to-items, truncation, empty-state. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "data and content presentation surface",
+            "usage": "Render or compose <output-list-preview> when the host needs generic normalized list preview for arbitrary output values.",
+            "dataOwnership": "host-owned props and attributes; component owns presentation state",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -2955,7 +3344,26 @@
               "name": "--sn-node-hover",
               "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Generic normalized graph preview for node and edge output values. Use this data and content presentation surface when composing display UI. Capabilities: normalized-preview-graph, node-edge-preview, connection-normalization, truncation, empty-state. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "agent": {
+            "componentDescription": "Generic normalized graph preview for node and edge output values. Use this data and content presentation surface when composing display UI. Capabilities: normalized-preview-graph, node-edge-preview, connection-normalization, truncation, empty-state. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "data and content presentation surface",
+            "usage": "Render or compose <output-graph-preview> when the host needs generic normalized graph preview for node and edge output values.",
+            "dataOwnership": "host-owned props and attributes; component owns presentation state",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -3036,7 +3444,26 @@
               "name": "--sn-text-dim",
               "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Floating notification ribbon that auto-fades and displays active status. Use this data and content presentation surface when composing display UI. Capabilities: status, ribbon, auto-fade, themeable. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "agent": {
+            "componentDescription": "Floating notification ribbon that auto-fades and displays active status. Use this data and content presentation surface when composing display UI. Capabilities: status, ribbon, auto-fade, themeable. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "data and content presentation surface",
+            "usage": "Render or compose <sn-status-ribbon> when the host needs floating notification ribbon that auto-fades and displays active status.",
+            "dataOwnership": "host-owned props and attributes; component owns presentation state",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -3158,7 +3585,25 @@
               "description": "Theme CSS custom property consumed by this component."
             }
           ],
-          "componentDescription": "Animated cellular automaton background effect. Use this effects UI component when composing effects UI. Capabilities: animated-background, canvas-effect, pulse, resize-aware, reduced-motion-friendly. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared."
+          "componentDescription": "Animated cellular automaton background effect. Use this effects UI component when composing effects UI. Capabilities: animated-background, canvas-effect, pulse, resize-aware, reduced-motion-friendly. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "agent": {
+            "componentDescription": "Animated cellular automaton background effect. Use this effects UI component when composing effects UI. Capabilities: animated-background, canvas-effect, pulse, resize-aware, reduced-motion-friendly. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "effects UI component",
+            "usage": "Render or compose <cell-bg> when the host needs animated cellular automaton background effect.",
+            "dataOwnership": "host-owned props and attributes; component owns presentation state",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -3331,7 +3776,26 @@
               "name": "--sn-cat-data",
               "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Floating quick action toolbar for graph editing. Use this toolbar UI component when composing toolbar UI. Capabilities: floating-toolbar, node-actions, position-follow, action-callback. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "agent": {
+            "componentDescription": "Floating quick action toolbar for graph editing. Use this toolbar UI component when composing toolbar UI. Capabilities: floating-toolbar, node-actions, position-follow, action-callback. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "toolbar UI component",
+            "usage": "Render or compose <quick-toolbar> when the host needs floating quick action toolbar for graph editing.",
+            "dataOwnership": "host-owned props and attributes; component owns presentation state",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -3496,7 +3960,26 @@
               "name": "--sn-success-color",
               "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Inspector panel for selected graph node properties. Use this inspector UI component when composing inspector UI. Capabilities: node-inspector, port-summary, control-editing, subgraph-enter, fire-action, resizable-panel. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "agent": {
+            "componentDescription": "Inspector panel for selected graph node properties. Use this inspector UI component when composing inspector UI. Capabilities: node-inspector, port-summary, control-editing, subgraph-enter, fire-action, resizable-panel. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "inspector UI component",
+            "usage": "Render or compose <inspector-panel> when the host needs inspector panel for selected graph node properties.",
+            "dataOwnership": "host-owned props and attributes; component owns presentation state",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -3573,7 +4056,26 @@
               "name": "--sn-text-dim",
               "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Node palette browser for adding graph nodes. Use this palette UI component when composing palette UI. Capabilities: node-palette, category-list, search-filter, factory-select. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "agent": {
+            "componentDescription": "Node palette browser for adding graph nodes. Use this palette UI component when composing palette UI. Capabilities: node-palette, category-list, search-filter, factory-select. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "palette UI component",
+            "usage": "Render or compose <palette-browser> when the host needs node palette browser for adding graph nodes.",
+            "dataOwnership": "host-owned props and attributes; component owns presentation state",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -3647,7 +4149,26 @@
               "name": "--sn-text-dim",
               "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Canvas minimap for graph navigation. Use this interactive visual graph surface when composing canvas UI. Capabilities: graph-minimap, viewport-overview, drag-navigation, state-getter. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "agent": {
+            "componentDescription": "Canvas minimap for graph navigation. Use this interactive visual graph surface when composing canvas UI. Capabilities: graph-minimap, viewport-overview, drag-navigation, state-getter. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "interactive visual graph surface",
+            "usage": "Render or compose <node-minimap> when the host needs canvas minimap for graph navigation.",
+            "dataOwnership": "host-owned model; component renders and emits intent events",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -3752,7 +4273,26 @@
               "name": "--sn-text-dim",
               "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Search component for graph nodes and actions. Use this interactive visual graph surface when composing canvas UI. Capabilities: node-search, query-filter, keyboard-dismiss, focus-callback. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "agent": {
+            "componentDescription": "Search component for graph nodes and actions. Use this interactive visual graph surface when composing canvas UI. Capabilities: node-search, query-filter, keyboard-dismiss, focus-callback. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "interactive visual graph surface",
+            "usage": "Render or compose <node-search> when the host needs search component for graph nodes and actions.",
+            "dataOwnership": "host-owned model; component renders and emits intent events",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -3877,7 +4417,26 @@
               "name": "--sn-text-dim",
               "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Tab strip component for multiple graph views. Use this interactive visual graph surface when composing canvas UI. Capabilities: graph-tab-strip, add-tab, switch-tab, close-tab, tab-state. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "agent": {
+            "componentDescription": "Tab strip component for multiple graph views. Use this interactive visual graph surface when composing canvas UI. Capabilities: graph-tab-strip, add-tab, switch-tab, close-tab, tab-state. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "interactive visual graph surface",
+            "usage": "Render or compose <graph-tabs> when the host needs tab strip component for multiple graph views.",
+            "dataOwnership": "host-owned model; component renders and emits intent events",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -3962,7 +4521,26 @@
               "name": "--sn-text-dim",
               "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Breadcrumb component for graph and subgraph navigation. Use this interactive visual graph surface when composing canvas UI. Capabilities: graph-breadcrumb, path-render, level-navigation, auto-hide-root. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "agent": {
+            "componentDescription": "Breadcrumb component for graph and subgraph navigation. Use this interactive visual graph surface when composing canvas UI. Capabilities: graph-breadcrumb, path-render, level-navigation, auto-hide-root. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "interactive visual graph surface",
+            "usage": "Render or compose <graph-breadcrumb> when the host needs breadcrumb component for graph and subgraph navigation.",
+            "dataOwnership": "host-owned model; component renders and emits intent events",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -4097,7 +4675,28 @@
               "name": "--sn-text-dim",
               "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Generic fuzzy quick-open dialog for selecting files or application items. Use this navigation UI component when composing navigation UI. Capabilities: fuzzy-search, keyboard-navigation, modal-overlay, item-select. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: quick_open_select.",
+          "agent": {
+            "componentDescription": "Generic fuzzy quick-open dialog for selecting files or application items. Use this navigation UI component when composing navigation UI. Capabilities: fuzzy-search, keyboard-navigation, modal-overlay, item-select. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: quick_open_select.",
+            "semanticRole": "navigation UI component",
+            "usage": "Render or compose <quick-open> when the host needs generic fuzzy quick-open dialog for selecting files or application items.",
+            "dataOwnership": "host-owned props and attributes; component owns presentation state",
+            "webmcp": {
+              "mode": "explicit-descriptor",
+              "toolNames": [
+                "quick_open_select"
+              ],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -4342,7 +4941,26 @@
               "name": "--sn-chat-status-card-gap",
               "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Generic chat message renderer for text, tool, board, and thinking messages. Use this chat and conversation surface when composing chat UI. Capabilities: chat-message-render, markdown-text, tool-card, status-board, thinking-state, copy-action. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "agent": {
+            "componentDescription": "Generic chat message renderer for text, tool, board, and thinking messages. Use this chat and conversation surface when composing chat UI. Capabilities: chat-message-render, markdown-text, tool-card, status-board, thinking-state, copy-action. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "chat and conversation surface",
+            "usage": "Render or compose <chat-message-item> when the host needs generic chat message renderer for text, tool, board, and thinking messages.",
+            "dataOwnership": "host-owned props and attributes; component owns presentation state",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -4496,7 +5114,26 @@
               "name": "--sn-composer-send-icon-size",
               "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Generic chat transcript shell with message rendering, scroll controls, live status, and status card events. Use this chat and conversation surface when composing chat UI. Capabilities: chat-transcript, message-list, scroll-state, status-card-events. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "agent": {
+            "componentDescription": "Generic chat transcript shell with message rendering, scroll controls, live status, and status card events. Use this chat and conversation surface when composing chat UI. Capabilities: chat-transcript, message-list, scroll-state, status-card-events. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "chat and conversation surface",
+            "usage": "Render or compose <chat-transcript> when the host needs generic chat transcript shell with message rendering, scroll controls, live status, and status card events.",
+            "dataOwnership": "host-owned props and attributes; component owns presentation state",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -4888,7 +5525,28 @@
               "description": "Theme CSS custom property consumed by this component."
             }
           ],
-          "componentDescription": "Generic chat composer with input, voice controls, context chips, footer controls, and autocomplete host. Use this chat and conversation surface when composing chat UI. Capabilities: chat-input, voice-controls, voice-preview, wake-listening, voice-response-toggle, voice-command-mode, voice-language-mode, context-chips, footer-controls, autocomplete-host, drag-drop-context. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: chat_composer_submit, chat_composer_voice_control."
+          "componentDescription": "Generic chat composer with input, voice controls, context chips, footer controls, and autocomplete host. Use this chat and conversation surface when composing chat UI. Capabilities: chat-input, voice-controls, voice-preview, wake-listening, voice-response-toggle, voice-command-mode, voice-language-mode, context-chips, footer-controls, autocomplete-host, drag-drop-context. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: chat_composer_submit, chat_composer_voice_control.",
+          "agent": {
+            "componentDescription": "Generic chat composer with input, voice controls, context chips, footer controls, and autocomplete host. Use this chat and conversation surface when composing chat UI. Capabilities: chat-input, voice-controls, voice-preview, wake-listening, voice-response-toggle, voice-command-mode, voice-language-mode, context-chips, footer-controls, autocomplete-host, drag-drop-context. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: chat_composer_submit, chat_composer_voice_control.",
+            "semanticRole": "chat and conversation surface",
+            "usage": "Render or compose <chat-composer> when the host needs generic chat composer with input, voice controls, context chips, footer controls, and autocomplete host.",
+            "dataOwnership": "host-owned props and attributes; component owns presentation state",
+            "webmcp": {
+              "mode": "explicit-descriptor",
+              "toolNames": [
+                "chat_composer_submit",
+                "chat_composer_voice_control"
+              ],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -5080,7 +5738,25 @@
               "description": "Theme CSS custom property consumed by this component."
             }
           ],
-          "componentDescription": "Generic chat list shell with filters, creation action, item list, and selection/delete events. Use this chat and conversation surface when composing chat UI. Capabilities: chat-list, filter-tabs, create-action, select, delete. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared."
+          "componentDescription": "Generic chat list shell with filters, creation action, item list, and selection/delete events. Use this chat and conversation surface when composing chat UI. Capabilities: chat-list, filter-tabs, create-action, select, delete. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "agent": {
+            "componentDescription": "Generic chat list shell with filters, creation action, item list, and selection/delete events. Use this chat and conversation surface when composing chat UI. Capabilities: chat-list, filter-tabs, create-action, select, delete. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "chat and conversation surface",
+            "usage": "Render or compose <chat-list> when the host needs generic chat list shell with filters, creation action, item list, and selection/delete events.",
+            "dataOwnership": "host-owned props and attributes; component owns presentation state",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -5274,7 +5950,25 @@
               "description": "Theme CSS custom property consumed by this component."
             }
           ],
-          "componentDescription": "Generic chat list item with project badge, adapter, preview, metadata, nesting, and delete action. Use this chat and conversation surface when composing chat UI. Capabilities: chat-list-row, active-state, nested-depth, delete-action, metadata. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared."
+          "componentDescription": "Generic chat list item with project badge, adapter, preview, metadata, nesting, and delete action. Use this chat and conversation surface when composing chat UI. Capabilities: chat-list-row, active-state, nested-depth, delete-action, metadata. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "agent": {
+            "componentDescription": "Generic chat list item with project badge, adapter, preview, metadata, nesting, and delete action. Use this chat and conversation surface when composing chat UI. Capabilities: chat-list-row, active-state, nested-depth, delete-action, metadata. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "chat and conversation surface",
+            "usage": "Render or compose <chat-list-item> when the host needs generic chat list item with project badge, adapter, preview, metadata, nesting, and delete action.",
+            "dataOwnership": "host-owned props and attributes; component owns presentation state",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -5462,7 +6156,25 @@
               "description": "Theme CSS custom property consumed by this component."
             }
           ],
-          "componentDescription": "Generic collapsible and resizable chat navigation shell. Use this chat and conversation surface when composing chat UI. Capabilities: chat-sidebar, collapse, resize, nested-chat-list, responsive-auto-collapse. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared."
+          "componentDescription": "Generic collapsible and resizable chat navigation shell. Use this chat and conversation surface when composing chat UI. Capabilities: chat-sidebar, collapse, resize, nested-chat-list, responsive-auto-collapse. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "agent": {
+            "componentDescription": "Generic collapsible and resizable chat navigation shell. Use this chat and conversation surface when composing chat UI. Capabilities: chat-sidebar, collapse, resize, nested-chat-list, responsive-auto-collapse. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "chat and conversation surface",
+            "usage": "Render or compose <chat-sidebar-shell> when the host needs generic collapsible and resizable chat navigation shell.",
+            "dataOwnership": "host-owned props and attributes; component owns presentation state",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -5770,7 +6482,25 @@
               "description": "Theme CSS custom property consumed by this component."
             }
           ],
-          "componentDescription": "Generic chat sidebar root item with nested child chat rendering. Use this chat and conversation surface when composing chat UI. Capabilities: chat-sidebar-row, nested-children, active-state, delete-action, status-slot. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared."
+          "componentDescription": "Generic chat sidebar root item with nested child chat rendering. Use this chat and conversation surface when composing chat UI. Capabilities: chat-sidebar-row, nested-children, active-state, delete-action, status-slot. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "agent": {
+            "componentDescription": "Generic chat sidebar root item with nested child chat rendering. Use this chat and conversation surface when composing chat UI. Capabilities: chat-sidebar-row, nested-children, active-state, delete-action, status-slot. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "chat and conversation surface",
+            "usage": "Render or compose <chat-sidebar-item> when the host needs generic chat sidebar root item with nested child chat rendering.",
+            "dataOwnership": "host-owned props and attributes; component owns presentation state",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -5905,7 +6635,26 @@
               "name": "--sn-danger-color",
               "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Generic chat sidebar child item. Use this chat and conversation surface when composing chat UI. Capabilities: chat-sidebar-child-row, active-state, delete-action, status-slot. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "agent": {
+            "componentDescription": "Generic chat sidebar child item. Use this chat and conversation surface when composing chat UI. Capabilities: chat-sidebar-child-row, active-state, delete-action, status-slot. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "chat and conversation surface",
+            "usage": "Render or compose <chat-sidebar-sub-item> when the host needs generic chat sidebar child item.",
+            "dataOwnership": "host-owned props and attributes; component owns presentation state",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -6023,7 +6772,28 @@
               "name": "--sn-list-item-gap",
               "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Generic selectable list item with label, description, icon, meta text, and item payload event. Use this list UI component when composing list UI. Capabilities: selectable-list-item, keyboard-select, payload-event. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: list_item_select.",
+          "agent": {
+            "componentDescription": "Generic selectable list item with label, description, icon, meta text, and item payload event. Use this list UI component when composing list UI. Capabilities: selectable-list-item, keyboard-select, payload-event. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: list_item_select.",
+            "semanticRole": "list UI component",
+            "usage": "Render or compose <sn-list-item> when the host needs generic selectable list item with label, description, icon, meta text, and item payload event.",
+            "dataOwnership": "host-owned props and attributes; component owns presentation state",
+            "webmcp": {
+              "mode": "explicit-descriptor",
+              "toolNames": [
+                "list_item_select"
+              ],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -6219,7 +6989,26 @@
               "name": "--sn-list-detail-title-color",
               "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Generic two-pane list and detail shell with host-owned content slots. Use this list UI component when composing list UI. Capabilities: list-detail-layout, slot-composition, responsive-stack, theme-aliases. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "agent": {
+            "componentDescription": "Generic two-pane list and detail shell with host-owned content slots. Use this list UI component when composing list UI. Capabilities: list-detail-layout, slot-composition, responsive-stack, theme-aliases. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "list UI component",
+            "usage": "Render or compose <sn-list-detail-shell> when the host needs generic two-pane list and detail shell with host-owned content slots.",
+            "dataOwnership": "host-owned props and attributes; component owns presentation state",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -6368,7 +7157,26 @@
               "name": "--sn-tree-row-selected-bg",
               "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Generic tree view with selection, expansion, filtering, drag payloads, and host-owned item data. Use this hierarchical navigation surface when composing tree UI. Capabilities: tree-data, select, expand-collapse, filter, drag-payload, local-storage. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "agent": {
+            "componentDescription": "Generic tree view with selection, expansion, filtering, drag payloads, and host-owned item data. Use this hierarchical navigation surface when composing tree UI. Capabilities: tree-data, select, expand-collapse, filter, drag-payload, local-storage. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "hierarchical navigation surface",
+            "usage": "Render or compose <sn-tree-view> when the host needs generic tree view with selection, expansion, filtering, drag payloads, and host-owned item data.",
+            "dataOwnership": "host-owned props and attributes; component owns presentation state",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -6595,7 +7403,28 @@
               "name": "--sn-tree-row-selected-bg",
               "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Generic tree panel with filter input, collapse action, placeholder state, and an embedded tree view. Use this hierarchical navigation surface when composing tree UI. Capabilities: tree-data, tree-panel-chrome, filter, expand-collapse, placeholder, local-storage. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: tree_panel_select.",
+          "agent": {
+            "componentDescription": "Generic tree panel with filter input, collapse action, placeholder state, and an embedded tree view. Use this hierarchical navigation surface when composing tree UI. Capabilities: tree-data, tree-panel-chrome, filter, expand-collapse, placeholder, local-storage. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: tree_panel_select.",
+            "semanticRole": "hierarchical navigation surface",
+            "usage": "Render or compose <sn-tree-panel> when the host needs generic tree panel with filter input, collapse action, placeholder state, and an embedded tree view.",
+            "dataOwnership": "host-owned props and attributes; component owns presentation state",
+            "webmcp": {
+              "mode": "explicit-descriptor",
+              "toolNames": [
+                "tree_panel_select"
+              ],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -6751,7 +7580,26 @@
               "name": "--sn-button-focus-ring",
               "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Generic themeable action control for buttons, icon buttons, and command rows. Use this form and command control when composing control UI. Capabilities: control, button, slots, keyboard-activation, themeable. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "agent": {
+            "componentDescription": "Generic themeable action control for buttons, icon buttons, and command rows. Use this form and command control when composing control UI. Capabilities: control, button, slots, keyboard-activation, themeable. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "form and command control",
+            "usage": "Render or compose <sn-button> when the host needs generic themeable action control for buttons, icon buttons, and command rows.",
+            "dataOwnership": "host-owned props and attributes; component owns presentation state",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -6907,7 +7755,26 @@
               "name": "--sn-field-compact-control-padding",
               "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Themeable form field wrapper for native inputs, selects, textareas, labels, and hints. Use this form and command control when composing control UI. Capabilities: form-field, native-controls, slots, themeable. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "agent": {
+            "componentDescription": "Themeable form field wrapper for native inputs, selects, textareas, labels, and hints. Use this form and command control when composing control UI. Capabilities: form-field, native-controls, slots, themeable. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "form and command control",
+            "usage": "Render or compose <sn-field> when the host needs themeable form field wrapper for native inputs, selects, textareas, labels, and hints.",
+            "dataOwnership": "host-owned props and attributes; component owns presentation state",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -7027,7 +7894,26 @@
               "name": "--sn-card-footer-padding-block-start",
               "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Generic themeable surface card for dashboard, list, detail, and settings UI composition. Use this surface UI component when composing surface UI. Capabilities: surface, card, slots, interactive-state, themeable. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "agent": {
+            "componentDescription": "Generic themeable surface card for dashboard, list, detail, and settings UI composition. Use this surface UI component when composing surface UI. Capabilities: surface, card, slots, interactive-state, themeable. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "surface UI component",
+            "usage": "Render or compose <sn-card> when the host needs generic themeable surface card for dashboard, list, detail, and settings ui composition.",
+            "dataOwnership": "host-owned props and attributes; component owns presentation state",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -7135,7 +8021,26 @@
               "name": "--sn-badge-error-border",
               "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Generic themeable status badge for compact state, type, and metadata labels. Use this data and content presentation surface when composing display UI. Capabilities: status, badge, slots, themeable. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "agent": {
+            "componentDescription": "Generic themeable status badge for compact state, type, and metadata labels. Use this data and content presentation surface when composing display UI. Capabilities: status, badge, slots, themeable. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "data and content presentation surface",
+            "usage": "Render or compose <sn-badge> when the host needs generic themeable status badge for compact state, type, and metadata labels.",
+            "dataOwnership": "host-owned props and attributes; component owns presentation state",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -7242,7 +8147,26 @@
               "name": "--sn-metric-error-color",
               "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Generic themeable label/value metric row for dashboard stats, health summaries, and settings metadata. Use this data and content presentation surface when composing display UI. Capabilities: metric, stat, label-value, slots, status, themeable. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "agent": {
+            "componentDescription": "Generic themeable label/value metric row for dashboard stats, health summaries, and settings metadata. Use this data and content presentation surface when composing display UI. Capabilities: metric, stat, label-value, slots, status, themeable. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "data and content presentation surface",
+            "usage": "Render or compose <sn-metric> when the host needs generic themeable label/value metric row for dashboard stats, health summaries, and settings metadata.",
+            "dataOwnership": "host-owned props and attributes; component owns presentation state",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -7396,7 +8320,26 @@
               "name": "--sn-data-table-empty-color",
               "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Generic themeable data table for provider-neutral tabular records. Use this data and content presentation surface when composing display UI. Capabilities: data-table, column-schema, row-records, structured-cells, empty-state, themeable. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "agent": {
+            "componentDescription": "Generic themeable data table for provider-neutral tabular records. Use this data and content presentation surface when composing display UI. Capabilities: data-table, column-schema, row-records, structured-cells, empty-state, themeable. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "data and content presentation surface",
+            "usage": "Render or compose <sn-data-table> when the host needs generic themeable data table for provider-neutral tabular records.",
+            "dataOwnership": "host-owned props and attributes; component owns presentation state",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -7530,7 +8473,26 @@
               "name": "--sn-text-dim",
               "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Generic themeable event feed for provider-neutral runtime and tool events. Use this data and content presentation surface when composing display UI. Capabilities: event-feed, structured-events, preview-routing, empty-state, themeable. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "agent": {
+            "componentDescription": "Generic themeable event feed for provider-neutral runtime and tool events. Use this data and content presentation surface when composing display UI. Capabilities: event-feed, structured-events, preview-routing, empty-state, themeable. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "data and content presentation surface",
+            "usage": "Render or compose <sn-event-feed> when the host needs generic themeable event feed for provider-neutral runtime and tool events.",
+            "dataOwnership": "host-owned props and attributes; component owns presentation state",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -7610,7 +8572,26 @@
               "name": "--sn-empty-state-icon-size",
               "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Generic themeable placeholder for empty lists, loading gaps, and unavailable content. Use this data and content presentation surface when composing display UI. Capabilities: empty-state, placeholder, slots, themeable. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "agent": {
+            "componentDescription": "Generic themeable placeholder for empty lists, loading gaps, and unavailable content. Use this data and content presentation surface when composing display UI. Capabilities: empty-state, placeholder, slots, themeable. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "data and content presentation surface",
+            "usage": "Render or compose <sn-empty-state> when the host needs generic themeable placeholder for empty lists, loading gaps, and unavailable content.",
+            "dataOwnership": "host-owned props and attributes; component owns presentation state",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -7730,7 +8711,26 @@
               "name": "--sn-banner-running-spin-duration",
               "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Generic themeable status banner for inline feedback and transient process state. Use this data and content presentation surface when composing display UI. Capabilities: status, banner, feedback, slots, themeable. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "agent": {
+            "componentDescription": "Generic themeable status banner for inline feedback and transient process state. Use this data and content presentation surface when composing display UI. Capabilities: status, banner, feedback, slots, themeable. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "data and content presentation surface",
+            "usage": "Render or compose <sn-banner> when the host needs generic themeable status banner for inline feedback and transient process state.",
+            "dataOwnership": "host-owned props and attributes; component owns presentation state",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
@@ -7791,7 +8791,26 @@
               "name": "--sn-frame-font-size",
               "description": "Theme CSS custom property consumed by this component."
             }
-          ]
+          ],
+          "componentDescription": "Graph canvas frame primitive for grouped node regions. Use this graph node presentation primitive when composing node UI. Capabilities: node-group-frame, label, accent-color, resize-affordance. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "agent": {
+            "componentDescription": "Graph canvas frame primitive for grouped node regions. Use this graph node presentation primitive when composing node UI. Capabilities: node-group-frame, label, accent-color, resize-affordance. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "graph node presentation primitive",
+            "usage": "Render or compose <graph-frame> when the host needs graph canvas frame primitive for grouped node regions.",
+            "dataOwnership": "host-owned props and attributes; component owns presentation state",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
         }
       ],
       "exports": [
