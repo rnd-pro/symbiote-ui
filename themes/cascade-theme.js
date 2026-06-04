@@ -96,8 +96,28 @@ export const CASCADE_THEME_TOKEN_TARGETS = Object.freeze({
     '--sn-lit-hover',
     '--sn-lit-text-dim',
     '--sn-lit-accent',
+    '--sn-hue-accent',
+    '--sn-hue-success',
+    '--sn-hue-warning',
+    '--sn-hue-danger',
+    '--sn-hue-data',
     '--sn-node-selected',
     '--sn-node-hover',
+    '--sn-cat-server',
+    '--sn-cat-instance',
+    '--sn-cat-control',
+    '--sn-cat-data',
+    '--sn-cat-default',
+    '--sn-subgraph-accent',
+    '--sn-graph-type-data',
+    '--sn-graph-type-action',
+    '--sn-tabs-accent',
+    '--sn-tab-accent-0',
+    '--sn-tab-accent-1',
+    '--sn-tab-accent-2',
+    '--sn-tab-accent-3',
+    '--sn-tab-accent-4',
+    '--sn-tab-accent-5',
     '--sn-button-primary-bg',
     '--sn-button-primary-border',
     '--sn-button-primary-color',
@@ -214,6 +234,10 @@ function headingToken(px) {
   return `calc(${px}px * var(--sn-theme-type-scale) * var(--sn-theme-heading-scale))`;
 }
 
+function hueRotate(hue, offset) {
+  return String((((Number(hue) + offset) % 360) + 360) % 360);
+}
+
 function densityToken(px) {
   return `calc(${px}px * var(--sn-theme-density))`;
 }
@@ -326,6 +350,19 @@ export function createCascadeTheme(options = {}) {
   let accentLight = dark
     ? Math.min(72, Math.max(48, 63 + (state.contrast - 58) * 0.12))
     : Math.max(36, 62 - state.contrast * 0.10);
+  let dataLight = dark
+    ? Math.max(34, accentLight - 21)
+    : Math.max(34, accentLight - 10);
+  let actionLight = dark
+    ? Math.min(82, accentLight + 15)
+    : Math.max(42, accentLight - 4);
+  let semanticHues = {
+    accent: hueRotate(state.hue, 0),
+    success: hueRotate(state.hue, -96),
+    warning: hueRotate(state.hue, 178),
+    danger: hueRotate(state.hue, 146),
+    data: hueRotate(state.hue, -30),
+  };
   let neutralChroma = percent(state.chroma);
   let bgColor = `hsl(0 0% ${bg.toFixed(1)}%)`;
   let panelColor = `hsl(0 0% ${surface.toFixed(1)}%)`;
@@ -365,6 +402,11 @@ export function createCascadeTheme(options = {}) {
     '--sn-theme-heading-scale': headingScale.toFixed(2),
     '--sn-theme-density': densityScale.toFixed(2),
     '--sn-theme-spacing-scale': densityScale.toFixed(2),
+    '--sn-hue-accent': semanticHues.accent,
+    '--sn-hue-success': semanticHues.success,
+    '--sn-hue-warning': semanticHues.warning,
+    '--sn-hue-danger': semanticHues.danger,
+    '--sn-hue-data': semanticHues.data,
     '--sn-lit-border': `${border.toFixed(1)}%`,
     '--sn-lit-hover': `${hover.toFixed(1)}%`,
     '--sn-lit-text-dim': `${dim.toFixed(1)}%`,
@@ -383,7 +425,26 @@ export function createCascadeTheme(options = {}) {
     '--sn-outline-color-soft': softOutlineColor,
     '--sn-node-selected': accent,
     '--sn-node-accent': accent,
-    '--sn-cat-data': accent,
+    '--sn-cat-server': 'var(--sn-node-selected)',
+    '--sn-cat-instance': `hsl(${semanticHues.success} ${neutralChroma} 57%)`,
+    '--sn-cat-control': `hsl(${semanticHues.warning} ${neutralChroma} 58%)`,
+    '--sn-cat-data': `hsl(${semanticHues.data} ${neutralChroma} ${dataLight.toFixed(1)}%)`,
+    '--sn-cat-default': `hsl(0 0% ${dim.toFixed(1)}%)`,
+    '--sn-cat-directory': `hsl(${semanticHues.warning} ${neutralChroma} 60%)`,
+    '--sn-cat-file': `hsl(${semanticHues.accent} ${neutralChroma} 66%)`,
+    '--sn-cat-function': 'var(--sn-success-color)',
+    '--sn-cat-class': `hsl(${semanticHues.data} ${neutralChroma} 72%)`,
+    '--sn-cat-module': `hsl(${semanticHues.danger} ${neutralChroma} 70%)`,
+    '--sn-subgraph-accent': 'var(--sn-cat-data)',
+    '--sn-graph-type-data': `hsl(${semanticHues.accent} ${neutralChroma} ${Math.min(86, accentLight + 11).toFixed(1)}%)`,
+    '--sn-graph-type-action': `hsl(${semanticHues.danger} ${neutralChroma} ${actionLight.toFixed(1)}%)`,
+    '--sn-tabs-accent': 'var(--sn-cat-server)',
+    '--sn-tab-accent-0': 'var(--sn-cat-server)',
+    '--sn-tab-accent-1': 'var(--sn-cat-data)',
+    '--sn-tab-accent-2': 'var(--sn-cat-control)',
+    '--sn-tab-accent-3': 'var(--sn-cat-instance)',
+    '--sn-tab-accent-4': 'var(--sn-graph-type-action)',
+    '--sn-tab-accent-5': 'var(--sn-cat-class)',
     '--sn-node-active-border': `color-mix(in srgb, ${accent} 54%, transparent)`,
     '--sn-node-hover': accentSoft,
     '--sn-node-border': outlineColor,

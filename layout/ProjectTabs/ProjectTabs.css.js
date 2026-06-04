@@ -73,6 +73,8 @@ project-tab-item:hover {
 .tab[active],
 project-tab-item[active] {
   background: var(--sn-tabs-active-bg);
+  border-color: color-mix(in srgb, var(--tab-accent, var(--sn-tabs-accent)) 44%, transparent);
+  border-bottom: none;
   color: var(--sn-text);
 }
 

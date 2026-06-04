@@ -24,10 +24,10 @@ export class ProjectTabs extends Symbiote {
 
   setTabs(tabs = [], activeId = this.$.activeId) {
     this.$.activeId = activeId || null;
-    this.$.tabs = tabs.map((tab) => ({
+    this.$.tabs = tabs.map((tab, index) => ({
       id: tab.id,
       name: tab.name || tab.id,
-      color: tab.color || '',
+      color: tab.color || tab.accent || `var(--sn-tab-accent-${index % 6})`,
       icon: tab.icon || 'folder',
       closeable: tab.closeable !== false,
       isActive: tab.id === this.$.activeId,

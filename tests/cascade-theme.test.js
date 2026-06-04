@@ -15,6 +15,8 @@ const nodeCanvasStyles = new URL('../canvas/NodeCanvas/NodeCanvas.css.js', impor
 const layoutStyles = new URL('../layout/Layout/Layout.css.js', import.meta.url);
 const layoutNodeSource = new URL('../layout/LayoutNode/LayoutNode.js', import.meta.url);
 const layoutNodeStyles = new URL('../layout/LayoutNode/LayoutNode.css.js', import.meta.url);
+const projectTabsSource = new URL('../layout/ProjectTabs/ProjectTabs.js', import.meta.url);
+const projectTabsStyles = new URL('../layout/ProjectTabs/ProjectTabs.css.js', import.meta.url);
 const panelMenuStyles = new URL('../layout/PanelMenu/PanelMenu.css.js', import.meta.url);
 const actionZoneStyles = new URL('../layout/ActionZone/ActionZone.css.js', import.meta.url);
 const treeViewStyles = new URL('../tree/TreeView/TreeView.css.js', import.meta.url);
@@ -53,6 +55,9 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   assert.match(source, /--sn-shape-stroke/);
   assert.match(source, /--sn-shape-stroke-width/);
   assert.match(source, /--sn-node-label-size/);
+  assert.match(source, /--sn-cat-control/);
+  assert.match(source, /--sn-cat-data/);
+  assert.match(source, /--sn-tab-accent-1/);
   assert.match(source, /--sn-markdown-h1-size/);
   assert.match(source, /--sn-chat-markdown-h1-size/);
   assert.match(source, /--sn-node-icon-size/);
@@ -97,6 +102,16 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.equal(theme.tokens['--sn-text'], 'hsl(0 0% 94.0%)');
   assert.equal(theme.tokens['--sn-node-bg'], 'var(--sn-panel-bg)');
   assert.equal(theme.tokens['--sn-field-control-bg'], 'var(--sn-bg)');
+  assert.equal(theme.tokens['--sn-hue-accent'], '218');
+  assert.equal(theme.tokens['--sn-hue-warning'], '36');
+  assert.equal(theme.tokens['--sn-hue-data'], '188');
+  assert.equal(theme.tokens['--sn-hue-danger'], '4');
+  assert.equal(theme.tokens['--sn-cat-control'], 'hsl(36 89% 58%)');
+  assert.equal(theme.tokens['--sn-cat-data'], 'hsl(188 89% 42.0%)');
+  assert.equal(theme.tokens['--sn-graph-type-action'], 'hsl(4 89% 78.0%)');
+  assert.equal(theme.tokens['--sn-tab-accent-0'], 'var(--sn-cat-server)');
+  assert.equal(theme.tokens['--sn-tab-accent-1'], 'var(--sn-cat-data)');
+  assert.equal(theme.tokens['--sn-tab-accent-2'], 'var(--sn-cat-control)');
   assert.equal(theme.tokens['--sn-button-primary-bg'], 'var(--sn-node-selected)');
   assert.equal(theme.tokens['--sn-button-primary-color'], 'hsl(0 0% 8.0%)');
   assert.equal(theme.tokens['--sn-button-success-color'], 'hsl(0 0% 8.0%)');
@@ -114,6 +129,7 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.match(source, /CASCADE_THEME_DESCRIPTOR/);
   assert.match(source, /svgStrokeToken/);
   assert.match(source, /headingToken/);
+  assert.match(source, /hueRotate/);
   assert.match(source, /readableTextForHsl/);
   assert.match(source, /symbiote-ui\.createCascadeTheme/);
   assert.match(source, /theme:compose/);
@@ -208,6 +224,8 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
     nodeCanvas,
     layout,
     layoutNode,
+    projectTabs,
+    projectTabsCss,
     panelMenu,
     actionZone,
     treeView,
@@ -221,6 +239,8 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
     readFile(nodeCanvasStyles, 'utf8'),
     readFile(layoutStyles, 'utf8'),
     readFile(layoutNodeStyles, 'utf8'),
+    readFile(projectTabsSource, 'utf8'),
+    readFile(projectTabsStyles, 'utf8'),
     readFile(panelMenuStyles, 'utf8'),
     readFile(actionZoneStyles, 'utf8'),
     readFile(treeViewStyles, 'utf8'),
@@ -248,6 +268,9 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(layout, /--sn-fullscreen-tab-icon-size/);
   assert.match(layoutNode, /--sn-layout-header-icon-size/);
   assert.match(layoutNode, /--sn-layout-resizer-thickness/);
+  assert.match(projectTabs, /--sn-tab-accent-\$\{index % 6\}/);
+  assert.match(projectTabsCss, /--tab-accent, var\(--sn-tabs-accent/);
+  assert.match(projectTabsCss, /border-color: color-mix\(in srgb, var\(--tab-accent/);
   assert.match(panelMenu, /--sn-panel-menu-item-size/);
   assert.match(actionZone, /--sn-action-zone-size/);
   assert.match(treeView, /--sn-tree-badge-padding/);
