@@ -39,6 +39,10 @@ const LAYOUT_PANEL_TREE_ACTIONS = Object.freeze([
 
 const LAYOUT_PANEL_MENU_ACTIONS = Object.freeze([
   ...LAYOUT_PANEL_TREE_ACTIONS,
+]);
+
+const LAYOUT_REMOVABLE_PANEL_MENU_ACTIONS = Object.freeze([
+  ...LAYOUT_PANEL_TREE_ACTIONS,
   { id: 'layout:remove', label: 'Remove', icon: 'close', title: 'Remove panel' },
 ]);
 
@@ -48,9 +52,9 @@ const LAYOUT_UI_PANEL_MENU_ACTIONS = Object.freeze([
 ]);
 
 function getLayoutPanelMenuActions(nodeData) {
-  return nodeData?.panelState?.uiInvoked
-    ? LAYOUT_UI_PANEL_MENU_ACTIONS
-    : LAYOUT_PANEL_MENU_ACTIONS;
+  if (nodeData?.panelState?.uiInvoked) return LAYOUT_UI_PANEL_MENU_ACTIONS;
+  if (nodeData?.panelState?.removable === true) return LAYOUT_REMOVABLE_PANEL_MENU_ACTIONS;
+  return LAYOUT_PANEL_MENU_ACTIONS;
 }
 
 export class LayoutNode extends Symbiote {

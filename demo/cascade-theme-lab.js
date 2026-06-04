@@ -47,6 +47,9 @@ await Promise.all([
 
 applyTheme(document.documentElement, DEFAULT_PROVIDER_THEME);
 
+const urlParams = new URLSearchParams(location.search);
+const chatSmokeWidth = Number(urlParams.get('chatSmokeWidth') || 0);
+
 const CIRCLE_SAMPLE_IMAGE = [
   'data:image/svg+xml;utf8,',
   encodeURIComponent(`
@@ -410,6 +413,11 @@ class CascadeChatPanel extends Symbiote {
     if (this._ready) return;
     this._ready = true;
 
+    if (Number.isFinite(chatSmokeWidth) && chatSmokeWidth >= 220) {
+      this.toggleAttribute('data-chat-smoke', true);
+      this.style.setProperty('--stage7-chat-smoke-width', `${chatSmokeWidth}px`);
+    }
+
     this.ref.bg.$.active = true;
     this.ref.transcript.setMessageItems([
       {
@@ -517,6 +525,12 @@ CascadeChatPanel.rootStyles = `
     flex-direction: column;
     width: 100%;
     min-height: 0;
+  }
+
+  cascade-chat-panel[data-chat-smoke] .chat-lab-content {
+    align-self: flex-start;
+    inline-size: min(100%, var(--stage7-chat-smoke-width));
+    max-inline-size: min(100%, var(--stage7-chat-smoke-width));
   }
 
   cascade-chat-panel chat-transcript {

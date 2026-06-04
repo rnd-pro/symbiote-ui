@@ -96,3 +96,29 @@ test('webmcp helpers append component context to explicit tool descriptors', asy
   assert.equal(descriptor.annotations.componentRole, 'sample surface');
   assert.equal(descriptor.annotations.readOnlyHint, false);
 });
+
+test('component registry follows the agent-facing WebMCP documentation standard', async () => {
+  let { listComponents } = await import('../manifest/index.js');
+
+  for (const component of listComponents()) {
+    assert.match(component.componentDescription, /Use this/);
+    assert.ok(component.agent?.semanticRole, `${component.tagName} semantic role`);
+    assert.ok(component.agent?.usage, `${component.tagName} usage`);
+    assert.ok(component.agent?.dataOwnership, `${component.tagName} data ownership`);
+    let toolCount = component.contract?.webmcp?.tools?.length || 0;
+    assert.equal(
+      component.agent?.webmcp?.mode,
+      toolCount ? 'explicit-descriptor' : 'described-only'
+    );
+    assert.ok(
+      component.agent?.webmcp?.globalToolMode.includes('Do not enable global Symbiote.mcpToolMode'),
+      `${component.tagName} explicit-first WebMCP guidance`
+    );
+    assert.ok(component.visibility, `${component.tagName} visibility`);
+    assert.equal(component.contract?.schemaVersion, 'component-descriptor-v2');
+    assert.ok(component.contract?.ssr?.mode, `${component.tagName} SSR mode`);
+    assert.ok(Array.isArray(component.contract?.properties), `${component.tagName} properties contract`);
+    assert.ok(Array.isArray(component.contract?.events), `${component.tagName} events contract`);
+    assert.ok(Array.isArray(component.contract?.slots), `${component.tagName} slots contract`);
+  }
+});

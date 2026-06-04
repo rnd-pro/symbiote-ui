@@ -518,12 +518,22 @@ function normalizeAgentContext(component, contract) {
 
 function normalizeContract(component) {
   if (!component.contract) return null;
-  return {
+  let contract = {
+    capabilities: [],
+    attributes: [],
+    properties: [],
+    methods: [],
+    events: [],
+    slots: [],
+    themeAliases: [],
     ...component.contract,
+  };
+  return {
+    ...contract,
     schemaVersion: 'component-descriptor-v2',
-    ssr: component.contract.ssr || getSsrContract(component),
-    ...(component.contract.webmcp || getWebMcpContract(component)
-      ? { webmcp: component.contract.webmcp || getWebMcpContract(component) }
+    ssr: contract.ssr || getSsrContract(component),
+    ...(contract.webmcp || getWebMcpContract(component)
+      ? { webmcp: contract.webmcp || getWebMcpContract(component) }
       : {}),
   };
 }

@@ -554,7 +554,10 @@ export class Layout extends Symbiote {
       let panelType = panelNode?.$?.nodeData?.panelType;
       if (panelType) this.closeUiPanel(panelType);
     } else if (actionId === 'layout:remove') {
-      this.joinPanels(panelId);
+      let panelNode = this._findPanelNode(panelId);
+      if (panelNode?.$?.nodeData?.panelState?.removable === true) {
+        this.joinPanels(panelId);
+      }
     }
   }
 

@@ -137,9 +137,6 @@
             "exportName": "CascadeThemeWidget",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/runtime-ui-v1.json",
               "capabilities": [
                 "cascade-theme-quick-controls",
                 "copy-parameters",
@@ -216,6 +213,7 @@
                   ]
                 }
               ],
+              "slots": [],
               "themeAliases": [
                 "--sn-panel-bg",
                 "--sn-text",
@@ -225,6 +223,9 @@
                 "--sn-theme-density",
                 "--sn-theme-type-scale"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
               "ssr": {
                 "mode": "hydrate-only",
                 "importSafe": false,
@@ -491,9 +492,6 @@
             "exportName": "CascadeThemeEditor",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/runtime-ui-v1.json",
               "capabilities": [
                 "cascade-theme-controls",
                 "copy-parameters",
@@ -559,6 +557,7 @@
                   ]
                 }
               ],
+              "slots": [],
               "themeAliases": [
                 "--sn-bg",
                 "--sn-panel-bg",
@@ -570,6 +569,9 @@
                 "--sn-theme-density",
                 "--sn-theme-type-scale"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
               "ssr": {
                 "mode": "hydrate-only",
                 "importSafe": false,
@@ -1048,9 +1050,6 @@
             "exportName": "GraphNode",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/graph-model-v1.json",
               "capabilities": [
                 "node-card",
                 "ports",
@@ -1113,7 +1112,9 @@
                   "description": "Control descriptors rendered inside the node body."
                 }
               ],
+              "methods": [],
               "events": [],
+              "slots": [],
               "themeAliases": [
                 "--sn-node-bg",
                 "--sn-node-border",
@@ -1179,6 +1180,9 @@
                 "--sn-control-input-padding",
                 "--sn-node-controls-padding"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/graph-model-v1.json",
               "ssr": {
                 "mode": "client-only",
                 "importSafe": false,
@@ -1282,9 +1286,6 @@
             "exportName": "NodeSocket",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/graph-model-v1.json",
               "capabilities": [
                 "socket-endpoint",
                 "shape-variant",
@@ -1303,11 +1304,17 @@
                   "description": "Socket shape: circle, square, diamond, or triangle."
                 }
               ],
+              "properties": [],
+              "methods": [],
               "events": [],
+              "slots": [],
               "themeAliases": [
                 "--sn-node-accent",
                 "--sn-node-bg"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/graph-model-v1.json",
               "ssr": {
                 "mode": "client-only",
                 "importSafe": false,
@@ -1515,9 +1522,6 @@
             "exportName": "NodeCallout",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/runtime-ui-v1.json",
               "capabilities": [
                 "floating-callout",
                 "anchor-tracking",
@@ -1579,13 +1583,13 @@
                   "description": "Refreshes callout geometry."
                 }
               ],
+              "events": [],
               "slots": [
                 {
                   "name": "default",
                   "description": "Callout content."
                 }
               ],
-              "events": [],
               "themeAliases": [
                 "--sn-overlay-z-base",
                 "--sn-node-callout-z",
@@ -1601,6 +1605,9 @@
                 "--sn-node-callout-line-height",
                 "--sn-node-callout-arrow-size"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
               "ssr": {
                 "mode": "client-only",
                 "importSafe": false,
@@ -1891,9 +1898,6 @@
             "exportName": "NodeCanvas",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/graph-model-v1.json",
               "capabilities": [
                 "node-editor-canvas",
                 "connections",
@@ -2023,6 +2027,7 @@
                   "description": "Emits after user-driven viewport changes."
                 }
               ],
+              "slots": [],
               "themeAliases": [
                 "--sn-bg",
                 "--sn-grid-dot",
@@ -2032,6 +2037,9 @@
                 "--sn-node-bg",
                 "--sn-node-border"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/graph-model-v1.json",
               "ssr": {
                 "mode": "client-only",
                 "importSafe": false,
@@ -2313,9 +2321,6 @@
             "exportName": "CanvasGraph",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/graph-model-v1.json",
               "capabilities": [
                 "hierarchical-graph",
                 "force-layout",
@@ -2323,6 +2328,7 @@
                 "focus-selection",
                 "layout-snapshot"
               ],
+              "attributes": [],
               "properties": [
                 {
                   "name": "graphDB",
@@ -2434,6 +2440,7 @@
                   "description": "Emits selected toolbar action for the active node."
                 }
               ],
+              "slots": [],
               "themeAliases": [
                 "--sn-bg",
                 "--sn-node-bg",
@@ -2444,6 +2451,9 @@
                 "--sn-cat-data",
                 "--sn-effect-focus-ring"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/graph-model-v1.json",
               "ssr": {
                 "mode": "client-only",
                 "importSafe": false,
@@ -2600,9 +2610,6 @@
             "exportName": "GraphExplorerShell",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/runtime-ui-v1.json",
               "capabilities": [
                 "graph-toolbar",
                 "graph-slots",
@@ -2610,6 +2617,7 @@
                 "overlay-host",
                 "stats-host"
               ],
+              "attributes": [],
               "properties": [
                 {
                   "name": "title",
@@ -2620,6 +2628,13 @@
                   "name": "mode",
                   "type": "string",
                   "description": "Current graph view mode supplied by the host adapter."
+                }
+              ],
+              "methods": [],
+              "events": [
+                {
+                  "name": "graph-explorer-action",
+                  "description": "Host-level graph toolbar action request."
                 }
               ],
               "slots": [
@@ -2644,12 +2659,6 @@
                   "description": "Optional graph statistics and metadata summary."
                 }
               ],
-              "events": [
-                {
-                  "name": "graph-explorer-action",
-                  "description": "Host-level graph toolbar action request."
-                }
-              ],
               "themeAliases": [
                 "--sn-panel-bg",
                 "--sn-node-border",
@@ -2658,6 +2667,9 @@
                 "--sn-toolbar-color",
                 "--sn-toolbar-hover"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
               "ssr": {
                 "mode": "client-only",
                 "importSafe": false,
@@ -2807,15 +2819,13 @@
             "exportName": "ContextMenu",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/runtime-ui-v1.json",
               "capabilities": [
                 "context-menu",
                 "positioned-overlay",
                 "action-list",
                 "backdrop-dismiss"
               ],
+              "attributes": [],
               "properties": [
                 {
                   "name": "items",
@@ -2841,6 +2851,7 @@
                 }
               ],
               "events": [],
+              "slots": [],
               "themeAliases": [
                 "--sn-overlay-z-base",
                 "--sn-ctx-bg",
@@ -2851,6 +2862,9 @@
                 "--sn-shadow-color",
                 "--sn-font"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
               "ssr": {
                 "mode": "client-only",
                 "importSafe": false,
@@ -2931,7 +2945,7 @@
             "specifier": "symbiote-ui/ui",
             "exportName": null,
             "importKind": "side-effect",
-            "contract": {},
+            "contract": null,
             "agent": {
               "componentDescription": "Internal item used by context-menu. Use this menu UI component when composing menu UI. Data ownership: host-owned content or slotted DOM. WebMCP tools are not enabled unless an explicit descriptor is declared.",
               "semanticRole": "menu UI component",
@@ -3225,9 +3239,6 @@
             "exportName": "Layout",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/runtime-ui-v1.json",
               "capabilities": [
                 "layout-tree",
                 "split-panels",
@@ -3365,6 +3376,7 @@
                   "description": "Emits after a UI-invoked panel is closed; detail.restored is true when the captured host layout was restored."
                 }
               ],
+              "slots": [],
               "themeAliases": [
                 "--sn-layout-bg",
                 "--sn-layout-gap-bg",
@@ -3382,6 +3394,9 @@
                 "--sn-layout-overflow-block-size",
                 "--sn-layout-responsive-panel-min-block-size"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
               "ssr": {
                 "mode": "hydrate-only",
                 "importSafe": false,
@@ -3808,9 +3823,6 @@
             "exportName": "LayoutSidebar",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/runtime-ui-v1.json",
               "capabilities": [
                 "sidebar-sections",
                 "section-select-intent",
@@ -3819,6 +3831,7 @@
                 "collapse-state",
                 "local-storage"
               ],
+              "attributes": [],
               "properties": [
                 {
                   "name": "disabled",
@@ -3890,6 +3903,7 @@
                   "description": "Requests closing a panel from the sidebar."
                 }
               ],
+              "slots": [],
               "themeAliases": [
                 "--sn-bg",
                 "--sn-node-border",
@@ -3898,6 +3912,9 @@
                 "--sn-text",
                 "--sn-text-dim"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
               "ssr": {
                 "mode": "hydrate-only",
                 "importSafe": false,
@@ -4312,9 +4329,6 @@
             "exportName": "LayoutShellMenu",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/runtime-ui-v1.json",
               "capabilities": [
                 "global-shell-menu",
                 "layout-group-controller",
@@ -4389,24 +4403,6 @@
                   "name": "setTabs",
                   "type": "function",
                   "description": "Low-level project-tabs passthrough for hosts that do not use layout groups."
-                }
-              ],
-              "slots": [
-                {
-                  "name": "default",
-                  "description": "Workspace content, typically a panel-layout or a shell workspace container."
-                },
-                {
-                  "name": "sidebar",
-                  "description": "Left navigation surface, typically layout-sidebar configured with host-owned sections."
-                },
-                {
-                  "name": "actions",
-                  "description": "Topbar action controls such as reset, overflow fallback, or host commands."
-                },
-                {
-                  "name": "tab-actions",
-                  "description": "Optional controls aligned with the project tab row."
                 }
               ],
               "events": [
@@ -4489,6 +4485,24 @@
                   ]
                 }
               ],
+              "slots": [
+                {
+                  "name": "default",
+                  "description": "Workspace content, typically a panel-layout or a shell workspace container."
+                },
+                {
+                  "name": "sidebar",
+                  "description": "Left navigation surface, typically layout-sidebar configured with host-owned sections."
+                },
+                {
+                  "name": "actions",
+                  "description": "Topbar action controls such as reset, overflow fallback, or host commands."
+                },
+                {
+                  "name": "tab-actions",
+                  "description": "Optional controls aligned with the project tab row."
+                }
+              ],
               "themeAliases": [
                 "--sn-bg",
                 "--sn-node-bg",
@@ -4503,6 +4517,9 @@
                 "--sn-tabs-border",
                 "--sn-shell-top-gradient-size"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
               "ssr": {
                 "mode": "hydrate-only",
                 "importSafe": false,
@@ -4837,9 +4854,6 @@
             "exportName": "LayoutNode",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/runtime-ui-v1.json",
               "capabilities": [
                 "layout-branch",
                 "layout-panel",
@@ -4882,6 +4896,8 @@
                   "description": "Overflow fallback inherited by this layout node."
                 }
               ],
+              "properties": [],
+              "methods": [],
               "events": [
                 {
                   "name": "layout-change",
@@ -4908,6 +4924,7 @@
                   "description": "Accepts bubbled action descriptors from the active panel component."
                 }
               ],
+              "slots": [],
               "themeAliases": [
                 "--sn-node-bg",
                 "--sn-node-border",
@@ -4927,6 +4944,9 @@
                 "--sn-layout-panel-min-inline-size",
                 "--sn-layout-panel-min-block-size"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
               "ssr": {
                 "mode": "hydrate-only",
                 "importSafe": false,
@@ -5085,9 +5105,6 @@
             "exportName": "CrossLayoutPortalBridge",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/runtime-ui-v1.json",
               "capabilities": [
                 "portal-bridge",
                 "cross-layout-connection",
@@ -5125,6 +5142,7 @@
                   "description": "Optional CSS selector for elements the shared PCB router should avoid."
                 }
               ],
+              "properties": [],
               "methods": [
                 {
                   "name": "requestUpdate",
@@ -5133,6 +5151,7 @@
                 }
               ],
               "events": [],
+              "slots": [],
               "themeAliases": [
                 "--sn-portal-bridge-z",
                 "--sn-portal-bridge-stroke",
@@ -5144,6 +5163,9 @@
                 "--sn-portal-bridge-clearance",
                 "--sn-portal-bridge-chamfer"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
               "ssr": {
                 "mode": "hydrate-only",
                 "importSafe": false,
@@ -5221,7 +5243,7 @@
             "specifier": "symbiote-ui/ui",
             "exportName": null,
             "importKind": "side-effect",
-            "contract": {},
+            "contract": null,
             "agent": {
               "componentDescription": "Internal panel type menu used by panel-layout. Use this layout composition and navigation surface when composing layout UI. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools are not enabled unless an explicit descriptor is declared.",
               "semanticRole": "layout composition and navigation surface",
@@ -5461,9 +5483,6 @@
             "exportName": "ProjectTabs",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/runtime-ui-v1.json",
               "capabilities": [
                 "tab-list",
                 "select",
@@ -5472,6 +5491,7 @@
                 "disabled-tabs",
                 "metadata-pass-through"
               ],
+              "attributes": [],
               "properties": [
                 {
                   "name": "tabs",
@@ -5538,6 +5558,7 @@
                   ]
                 }
               ],
+              "slots": [],
               "themeAliases": [
                 "--sn-tabs-height",
                 "--sn-tabs-item-height",
@@ -5559,6 +5580,9 @@
                 "--sn-text",
                 "--sn-text-dim"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
               "ssr": {
                 "mode": "hydrate-only",
                 "importSafe": false,
@@ -5671,7 +5695,7 @@
             "specifier": "symbiote-ui/ui",
             "exportName": null,
             "importKind": "side-effect",
-            "contract": {},
+            "contract": null,
             "agent": {
               "componentDescription": "Internal tab item used by project-tabs. Use this layout composition and navigation surface when composing layout UI. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools are not enabled unless an explicit descriptor is declared.",
               "semanticRole": "layout composition and navigation surface",
@@ -5914,9 +5938,6 @@
             "exportName": "CodeBlock",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/runtime-ui-v1.json",
               "capabilities": [
                 "syntax-highlight",
                 "markdown-render",
@@ -5986,6 +6007,7 @@
                 }
               ],
               "events": [],
+              "slots": [],
               "themeAliases": [
                 "--sn-bg",
                 "--sn-text",
@@ -6009,6 +6031,9 @@
                 "--sn-code-markdown-padding",
                 "--sn-code-table-cell-padding"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
               "ssr": {
                 "mode": "jsda-ssr-renderable",
                 "importSafe": false,
@@ -6084,7 +6109,7 @@
             "specifier": "symbiote-ui/ui",
             "exportName": null,
             "importKind": "side-effect",
-            "contract": {},
+            "contract": null,
             "agent": {
               "componentDescription": "Internal diagnostic squiggle marker used by code-block. Use this data and content presentation surface when composing display UI. Data ownership: host-owned content or slotted DOM. WebMCP tools are not enabled unless an explicit descriptor is declared.",
               "semanticRole": "data and content presentation surface",
@@ -6287,9 +6312,6 @@
             "exportName": "SourceViewer",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/runtime-ui-v1.json",
               "capabilities": [
                 "source-code",
                 "markdown-preview",
@@ -6379,6 +6401,7 @@
                   ]
                 }
               ],
+              "slots": [],
               "themeAliases": [
                 "--sn-source-bg",
                 "--sn-source-header-bg",
@@ -6386,6 +6409,9 @@
                 "--sn-source-toolbar-gap",
                 "--sn-source-action-icon-size"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
               "ssr": {
                 "mode": "jsda-ssr-renderable",
                 "importSafe": false,
@@ -6640,14 +6666,12 @@
             "exportName": "SourceEditor",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/runtime-ui-v1.json",
               "capabilities": [
                 "source-editing",
                 "dirty-state",
                 "keyboard-tab-indent"
               ],
+              "attributes": [],
               "properties": [
                 {
                   "name": "value",
@@ -6745,6 +6769,7 @@
                   ]
                 }
               ],
+              "slots": [],
               "themeAliases": [
                 "--sn-source-editor-bg",
                 "--sn-source-editor-color",
@@ -6756,6 +6781,9 @@
                 "--sn-editor-radius",
                 "--sn-editor-font"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
               "ssr": {
                 "mode": "hydrate-only",
                 "importSafe": false,
@@ -6959,14 +6987,12 @@
             "exportName": "LoadingOverlay",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/runtime-ui-v1.json",
               "capabilities": [
                 "loading-state",
                 "progress",
                 "hide-transition"
               ],
+              "attributes": [],
               "properties": [
                 {
                   "name": "label",
@@ -7012,12 +7038,16 @@
                 }
               ],
               "events": [],
+              "slots": [],
               "themeAliases": [
                 "--sn-loading-bg",
                 "--sn-loading-text",
                 "--sn-loading-accent",
                 "--sn-loading-radius"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
               "ssr": {
                 "mode": "hydrate-only",
                 "importSafe": false,
@@ -7204,9 +7234,6 @@
             "exportName": "OutputListPreview",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/runtime-ui-v1.json",
               "capabilities": [
                 "normalized-output-list",
                 "scalar-to-item",
@@ -7214,6 +7241,7 @@
                 "truncation",
                 "empty-state"
               ],
+              "attributes": [],
               "properties": [
                 {
                   "name": "title",
@@ -7269,6 +7297,7 @@
                 }
               ],
               "events": [],
+              "slots": [],
               "themeAliases": [
                 "--sn-text",
                 "--sn-text-dim",
@@ -7277,6 +7306,9 @@
                 "--sn-node-bg",
                 "--sn-node-border"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
               "ssr": {
                 "mode": "hydrate-only",
                 "importSafe": false,
@@ -7467,9 +7499,6 @@
             "exportName": "OutputGraphPreview",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/runtime-ui-v1.json",
               "capabilities": [
                 "normalized-preview-graph",
                 "node-edge-preview",
@@ -7477,6 +7506,7 @@
                 "truncation",
                 "empty-state"
               ],
+              "attributes": [],
               "properties": [
                 {
                   "name": "title",
@@ -7532,6 +7562,7 @@
                 }
               ],
               "events": [],
+              "slots": [],
               "themeAliases": [
                 "--sn-text",
                 "--sn-text-dim",
@@ -7541,6 +7572,9 @@
                 "--sn-node-border",
                 "--sn-node-hover"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
               "ssr": {
                 "mode": "hydrate-only",
                 "importSafe": false,
@@ -7672,9 +7706,6 @@
             "exportName": "StatusRibbon",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/runtime-ui-v1.json",
               "capabilities": [
                 "status",
                 "ribbon",
@@ -7705,7 +7736,9 @@
                   "description": "Target object to listen for events on."
                 }
               ],
+              "methods": [],
               "events": [],
+              "slots": [],
               "themeAliases": [
                 "--sn-bg-overlay",
                 "--sn-shadow-lg",
@@ -7714,6 +7747,9 @@
                 "--sn-text",
                 "--sn-text-dim"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
               "ssr": {
                 "mode": "hydrate-only",
                 "importSafe": false,
@@ -7892,9 +7928,6 @@
             "exportName": "CellBg",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/runtime-ui-v1.json",
               "capabilities": [
                 "animated-background",
                 "canvas-effect",
@@ -7902,6 +7935,7 @@
                 "resize-aware",
                 "reduced-motion-friendly"
               ],
+              "attributes": [],
               "properties": [
                 {
                   "name": "active",
@@ -7932,6 +7966,7 @@
                 }
               ],
               "events": [],
+              "slots": [],
               "themeAliases": [
                 "--sn-bg",
                 "--sn-cell-bg",
@@ -7948,6 +7983,9 @@
                 "--sn-cell-step-ms",
                 "--sn-cell-fade-rate"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
               "ssr": {
                 "mode": "client-only",
                 "importSafe": false,
@@ -8181,15 +8219,13 @@
             "exportName": "QuickToolbar",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/graph-model-v1.json",
               "capabilities": [
                 "floating-toolbar",
                 "node-actions",
                 "position-follow",
                 "action-callback"
               ],
+              "attributes": [],
               "properties": [
                 {
                   "name": "items",
@@ -8240,6 +8276,7 @@
                 }
               ],
               "events": [],
+              "slots": [],
               "themeAliases": [
                 "--sn-overlay-z-base",
                 "--sn-toolbar-bg",
@@ -8261,6 +8298,9 @@
                 "--sn-shadow-color",
                 "--sn-cat-data"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/graph-model-v1.json",
               "ssr": {
                 "mode": "client-only",
                 "importSafe": false,
@@ -8502,9 +8542,6 @@
             "exportName": "InspectorPanel",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/graph-model-v1.json",
               "capabilities": [
                 "node-inspector",
                 "port-summary",
@@ -8513,6 +8550,7 @@
                 "fire-action",
                 "resizable-panel"
               ],
+              "attributes": [],
               "properties": [
                 {
                   "name": "visible",
@@ -8598,6 +8636,7 @@
                   ]
                 }
               ],
+              "slots": [],
               "themeAliases": [
                 "--sn-node-bg",
                 "--sn-node-border",
@@ -8609,6 +8648,9 @@
                 "--sn-subgraph-accent",
                 "--sn-success-color"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/graph-model-v1.json",
               "ssr": {
                 "mode": "client-only",
                 "importSafe": false,
@@ -8689,7 +8731,7 @@
             "specifier": "symbiote-ui/ui",
             "exportName": null,
             "importKind": "side-effect",
-            "contract": {},
+            "contract": null,
             "agent": {
               "componentDescription": "Internal port inspector item used by inspector-panel. Use this inspector UI component when composing inspector UI. Data ownership: host-owned content or slotted DOM. WebMCP tools are not enabled unless an explicit descriptor is declared.",
               "semanticRole": "inspector UI component",
@@ -8756,7 +8798,7 @@
             "specifier": "symbiote-ui/ui",
             "exportName": null,
             "importKind": "side-effect",
-            "contract": {},
+            "contract": null,
             "agent": {
               "componentDescription": "Internal control inspector item used by inspector-panel. Use this inspector UI component when composing inspector UI. Data ownership: host-owned content or slotted DOM. WebMCP tools are not enabled unless an explicit descriptor is declared.",
               "semanticRole": "inspector UI component",
@@ -8823,7 +8865,7 @@
             "specifier": "symbiote-ui/ui",
             "exportName": null,
             "importKind": "side-effect",
-            "contract": {},
+            "contract": null,
             "agent": {
               "componentDescription": "Internal template preview used by inspector-panel. Use this inspector UI component when composing inspector UI. Data ownership: host-owned content or slotted DOM. WebMCP tools are not enabled unless an explicit descriptor is declared.",
               "semanticRole": "inspector UI component",
@@ -8947,15 +8989,13 @@
             "exportName": "PaletteBrowser",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/graph-model-v1.json",
               "capabilities": [
                 "node-palette",
                 "category-list",
                 "search-filter",
                 "factory-select"
               ],
+              "attributes": [],
               "properties": [
                 {
                   "name": "categories",
@@ -8976,6 +9016,7 @@
                 }
               ],
               "events": [],
+              "slots": [],
               "themeAliases": [
                 "--sn-ctx-bg",
                 "--sn-ctx-hover",
@@ -8985,6 +9026,9 @@
                 "--sn-text",
                 "--sn-text-dim"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/graph-model-v1.json",
               "ssr": {
                 "mode": "client-only",
                 "importSafe": false,
@@ -9065,7 +9109,7 @@
             "specifier": "symbiote-ui/ui",
             "exportName": null,
             "importKind": "side-effect",
-            "contract": {},
+            "contract": null,
             "agent": {
               "componentDescription": "Internal palette item used by palette-browser. Use this palette UI component when composing palette UI. Data ownership: host-owned content or slotted DOM. WebMCP tools are not enabled unless an explicit descriptor is declared.",
               "semanticRole": "palette UI component",
@@ -9132,7 +9176,7 @@
             "specifier": "symbiote-ui/ui",
             "exportName": null,
             "importKind": "side-effect",
-            "contract": {},
+            "contract": null,
             "agent": {
               "componentDescription": "Internal palette category used by palette-browser. Use this palette UI component when composing palette UI. Data ownership: host-owned content or slotted DOM. WebMCP tools are not enabled unless an explicit descriptor is declared.",
               "semanticRole": "palette UI component",
@@ -9263,15 +9307,13 @@
             "exportName": "Minimap",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/graph-model-v1.json",
               "capabilities": [
                 "graph-minimap",
                 "viewport-overview",
                 "drag-navigation",
                 "state-getter"
               ],
+              "attributes": [],
               "properties": [
                 {
                   "name": "visible",
@@ -9302,6 +9344,7 @@
                   ]
                 }
               ],
+              "slots": [],
               "themeAliases": [
                 "--sn-node-bg",
                 "--sn-node-border",
@@ -9310,6 +9353,9 @@
                 "--sn-text",
                 "--sn-text-dim"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/graph-model-v1.json",
               "ssr": {
                 "mode": "client-only",
                 "importSafe": false,
@@ -9475,15 +9521,13 @@
             "exportName": "NodeSearch",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/graph-model-v1.json",
               "capabilities": [
                 "node-search",
                 "query-filter",
                 "keyboard-dismiss",
                 "focus-callback"
               ],
+              "attributes": [],
               "properties": [
                 {
                   "name": "query",
@@ -9524,6 +9568,7 @@
                 }
               ],
               "events": [],
+              "slots": [],
               "themeAliases": [
                 "--sn-font",
                 "--sn-node-bg",
@@ -9532,6 +9577,9 @@
                 "--sn-text",
                 "--sn-text-dim"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/graph-model-v1.json",
               "ssr": {
                 "mode": "client-only",
                 "importSafe": false,
@@ -9612,7 +9660,7 @@
             "specifier": "symbiote-ui/ui",
             "exportName": null,
             "importKind": "side-effect",
-            "contract": {},
+            "contract": null,
             "agent": {
               "componentDescription": "Internal result item used by node-search. Use this interactive visual graph surface when composing canvas UI. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools are not enabled unless an explicit descriptor is declared.",
               "semanticRole": "interactive visual graph surface",
@@ -9784,9 +9832,6 @@
             "exportName": "GraphTabs",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/runtime-ui-v1.json",
               "capabilities": [
                 "graph-tab-strip",
                 "add-tab",
@@ -9794,6 +9839,7 @@
                 "close-tab",
                 "tab-state"
               ],
+              "attributes": [],
               "properties": [
                 {
                   "name": "tabItems",
@@ -9846,6 +9892,7 @@
                 }
               ],
               "events": [],
+              "slots": [],
               "themeAliases": [
                 "--sn-ctx-bg",
                 "--sn-node-bg",
@@ -9855,6 +9902,9 @@
                 "--sn-text",
                 "--sn-text-dim"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
               "ssr": {
                 "mode": "client-only",
                 "importSafe": false,
@@ -9935,7 +9985,7 @@
             "specifier": "symbiote-ui/ui",
             "exportName": null,
             "importKind": "side-effect",
-            "contract": {},
+            "contract": null,
             "agent": {
               "componentDescription": "Internal tab item used by graph-tabs. Use this interactive visual graph surface when composing canvas UI. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools are not enabled unless an explicit descriptor is declared.",
               "semanticRole": "interactive visual graph surface",
@@ -10067,15 +10117,13 @@
             "exportName": "Breadcrumb",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/graph-model-v1.json",
               "capabilities": [
                 "graph-breadcrumb",
                 "path-render",
                 "level-navigation",
                 "auto-hide-root"
               ],
+              "attributes": [],
               "properties": [
                 {
                   "name": "crumbs",
@@ -10101,6 +10149,7 @@
                 }
               ],
               "events": [],
+              "slots": [],
               "themeAliases": [
                 "--sn-ctx-bg",
                 "--sn-ctx-hover",
@@ -10110,6 +10159,9 @@
                 "--sn-text",
                 "--sn-text-dim"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/graph-model-v1.json",
               "ssr": {
                 "mode": "client-only",
                 "importSafe": false,
@@ -10190,7 +10242,7 @@
             "specifier": "symbiote-ui/ui",
             "exportName": null,
             "importKind": "side-effect",
-            "contract": {},
+            "contract": null,
             "agent": {
               "componentDescription": "Internal breadcrumb item used by graph-breadcrumb. Use this interactive visual graph surface when composing canvas UI. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools are not enabled unless an explicit descriptor is declared.",
               "semanticRole": "interactive visual graph surface",
@@ -10375,15 +10427,13 @@
             "exportName": "QuickOpen",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/runtime-ui-v1.json",
               "capabilities": [
                 "fuzzy-search",
                 "keyboard-navigation",
                 "modal-overlay",
                 "item-select"
               ],
+              "attributes": [],
               "properties": [
                 {
                   "name": "visible",
@@ -10444,6 +10494,7 @@
                   "description": "Emits selected item data."
                 }
               ],
+              "slots": [],
               "themeAliases": [
                 "--sn-bg-overlay",
                 "--sn-panel-bg",
@@ -10452,6 +10503,9 @@
                 "--sn-text",
                 "--sn-text-dim"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
               "ssr": {
                 "mode": "hydrate-only",
                 "importSafe": false,
@@ -10789,9 +10843,6 @@
             "exportName": "ChatMessageItem",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/runtime-ui-v1.json",
               "capabilities": [
                 "chat-message-render",
                 "markdown-text",
@@ -10800,6 +10851,7 @@
                 "thinking-state",
                 "copy-action"
               ],
+              "attributes": [],
               "properties": [
                 {
                   "name": "type",
@@ -10877,7 +10929,9 @@
                   "description": "Status card descriptors rendered inside board messages."
                 }
               ],
+              "methods": [],
               "events": [],
+              "slots": [],
               "themeAliases": [
                 "--sn-bg",
                 "--sn-text",
@@ -10905,6 +10959,9 @@
                 "--sn-chat-status-card-padding",
                 "--sn-chat-status-card-gap"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
               "ssr": {
                 "mode": "hydrate-only",
                 "importSafe": false,
@@ -11133,15 +11190,13 @@
             "exportName": "ChatTranscript",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/runtime-ui-v1.json",
               "capabilities": [
                 "chat-transcript",
                 "message-list",
                 "scroll-state",
                 "status-card-events"
               ],
+              "attributes": [],
               "properties": [
                 {
                   "name": "messageItems",
@@ -11205,6 +11260,7 @@
                   "description": "Reports copy result for message text."
                 }
               ],
+              "slots": [],
               "themeAliases": [
                 "--sn-chat-bg",
                 "--sn-chat-message-bg",
@@ -11220,6 +11276,9 @@
                 "--sn-composer-send-size",
                 "--sn-composer-send-icon-size"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
               "ssr": {
                 "mode": "hydrate-only",
                 "importSafe": false,
@@ -11725,9 +11784,6 @@
             "exportName": "ChatComposer",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/runtime-ui-v1.json",
               "capabilities": [
                 "chat-input",
                 "voice-controls",
@@ -11741,6 +11797,7 @@
                 "autocomplete-host",
                 "drag-drop-context"
               ],
+              "attributes": [],
               "properties": [
                 {
                   "name": "value",
@@ -11918,6 +11975,7 @@
                   "description": "Requests dropped context attachment."
                 }
               ],
+              "slots": [],
               "themeAliases": [
                 "--sn-composer-bg",
                 "--sn-composer-border",
@@ -11955,6 +12013,9 @@
                 "--sn-composer-wake-command-max",
                 "--sn-composer-voice-command-max"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
               "ssr": {
                 "mode": "hydrate-only",
                 "importSafe": false,
@@ -12294,9 +12355,6 @@
             "exportName": "ChatList",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/runtime-ui-v1.json",
               "capabilities": [
                 "chat-list",
                 "filter-tabs",
@@ -12304,6 +12362,7 @@
                 "select",
                 "delete"
               ],
+              "attributes": [],
               "properties": [
                 {
                   "name": "chatItems",
@@ -12366,6 +12425,7 @@
                   "description": "Emits active filter changes."
                 }
               ],
+              "slots": [],
               "themeAliases": [
                 "--sn-node-bg",
                 "--sn-node-border",
@@ -12389,6 +12449,9 @@
                 "--sn-chat-list-filter-button-min-height",
                 "--sn-chat-list-filter-button-size"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
               "ssr": {
                 "mode": "hydrate-only",
                 "importSafe": false,
@@ -12649,9 +12712,6 @@
             "exportName": "ChatListItem",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/runtime-ui-v1.json",
               "capabilities": [
                 "chat-list-row",
                 "active-state",
@@ -12659,6 +12719,7 @@
                 "delete-action",
                 "metadata"
               ],
+              "attributes": [],
               "properties": [
                 {
                   "name": "id",
@@ -12686,6 +12747,11 @@
                   "description": "Chat status label."
                 },
                 {
+                  "name": "time",
+                  "type": "string",
+                  "description": "Rendered time or relative timestamp label."
+                },
+                {
                   "name": "lastMessage",
                   "type": "string",
                   "description": "Preview text."
@@ -12701,7 +12767,9 @@
                   "description": "Active row state."
                 }
               ],
+              "methods": [],
               "events": [],
+              "slots": [],
               "themeAliases": [
                 "--sn-node-bg",
                 "--sn-node-border",
@@ -12730,6 +12798,9 @@
                 "--sn-chat-list-delete-size",
                 "--sn-chat-list-delete-padding"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
               "ssr": {
                 "mode": "hydrate-only",
                 "importSafe": false,
@@ -13096,9 +13167,6 @@
             "exportName": "ChatSidebarShell",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/runtime-ui-v1.json",
               "capabilities": [
                 "chat-sidebar",
                 "collapse",
@@ -13106,6 +13174,7 @@
                 "nested-chat-list",
                 "responsive-auto-collapse"
               ],
+              "attributes": [],
               "properties": [
                 {
                   "name": "chats",
@@ -13176,6 +13245,7 @@
                   "description": "Emits width changes."
                 }
               ],
+              "slots": [],
               "themeAliases": [
                 "--sn-node-bg",
                 "--sn-node-hover",
@@ -13196,6 +13266,9 @@
                 "--sn-chat-sidebar-button-icon-size",
                 "--sn-chat-sidebar-items-padding"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
               "ssr": {
                 "mode": "hydrate-only",
                 "importSafe": false,
@@ -13619,9 +13692,6 @@
             "exportName": "ChatSidebarItem",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/runtime-ui-v1.json",
               "capabilities": [
                 "chat-sidebar-row",
                 "nested-children",
@@ -13629,11 +13699,17 @@
                 "delete-action",
                 "status-slot"
               ],
+              "attributes": [],
               "properties": [
                 {
                   "name": "id",
                   "type": "string",
                   "description": "Chat id."
+                },
+                {
+                  "name": "name",
+                  "type": "string",
+                  "description": "Raw chat name supplied by the host."
                 },
                 {
                   "name": "cleanName",
@@ -13644,6 +13720,16 @@
                   "name": "adapter",
                   "type": "string",
                   "description": "Provider adapter label."
+                },
+                {
+                  "name": "icon",
+                  "type": "string",
+                  "description": "Material Symbols icon rendered for the row."
+                },
+                {
+                  "name": "metaLabel",
+                  "type": "string",
+                  "description": "Compact metadata label rendered after the status icon."
                 },
                 {
                   "name": "agentColor",
@@ -13666,6 +13752,16 @@
                   "description": "Accessible status tooltip text."
                 },
                 {
+                  "name": "hasChildren",
+                  "type": "boolean",
+                  "description": "Whether the row has child chat descriptors."
+                },
+                {
+                  "name": "isGroup",
+                  "type": "boolean",
+                  "description": "Whether clicking the row toggles it as a group header."
+                },
+                {
                   "name": "subChats",
                   "type": "array",
                   "description": "Child chat descriptors."
@@ -13679,8 +13775,14 @@
                   "name": "isActive",
                   "type": "boolean",
                   "description": "Active row state."
+                },
+                {
+                  "name": "isRunning",
+                  "type": "boolean",
+                  "description": "Generic running-state hint used for reusable auto-expansion."
                 }
               ],
+              "methods": [],
               "events": [
                 {
                   "name": "chat-sidebar-select",
@@ -13695,6 +13797,7 @@
                   "description": "Requests deletion."
                 }
               ],
+              "slots": [],
               "themeAliases": [
                 "--sn-node-bg",
                 "--sn-node-hover",
@@ -13744,6 +13847,9 @@
                 "--sn-chat-sidebar-compact-label-padding",
                 "--sn-chat-sidebar-compact-label-offset"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
               "ssr": {
                 "mode": "hydrate-only",
                 "importSafe": false,
@@ -14281,9 +14387,6 @@
             "exportName": "ChatSidebarSubItem",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/runtime-ui-v1.json",
               "capabilities": [
                 "chat-sidebar-child-row",
                 "nested-children",
@@ -14291,6 +14394,7 @@
                 "delete-action",
                 "status-slot"
               ],
+              "attributes": [],
               "properties": [
                 {
                   "name": "id",
@@ -14368,6 +14472,7 @@
                   "description": "Generic running-state hint used for reusable auto-expansion."
                 }
               ],
+              "methods": [],
               "events": [
                 {
                   "name": "chat-sidebar-select",
@@ -14382,6 +14487,7 @@
                   "description": "Requests child chat deletion."
                 }
               ],
+              "slots": [],
               "themeAliases": [
                 "--sn-node-bg",
                 "--sn-node-hover",
@@ -14419,6 +14525,9 @@
                 "--sn-chat-sidebar-compact-label-offset",
                 "--sn-chat-sidebar-compact-delete-width"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
               "ssr": {
                 "mode": "hydrate-only",
                 "importSafe": false,
@@ -14651,7 +14760,7 @@
             "specifier": "symbiote-ui/ui",
             "exportName": null,
             "importKind": "side-effect",
-            "contract": {},
+            "contract": null,
             "agent": {
               "componentDescription": "Internal section item used by layout-sidebar. Use this layout composition and navigation surface when composing layout UI. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools are not enabled unless an explicit descriptor is declared.",
               "semanticRole": "layout composition and navigation surface",
@@ -14718,7 +14827,7 @@
             "specifier": "symbiote-ui/ui",
             "exportName": null,
             "importKind": "side-effect",
-            "contract": {},
+            "contract": null,
             "agent": {
               "componentDescription": "Internal sidebar child item used by layout-sidebar. Use this layout composition and navigation surface when composing layout UI. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools are not enabled unless an explicit descriptor is declared.",
               "semanticRole": "layout composition and navigation surface",
@@ -14889,14 +14998,12 @@
             "exportName": "ListItem",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/runtime-ui-v1.json",
               "capabilities": [
                 "selectable-list-item",
                 "keyboard-select",
                 "payload-event"
               ],
+              "attributes": [],
               "properties": [
                 {
                   "name": "label",
@@ -14953,6 +15060,7 @@
                   ]
                 }
               ],
+              "slots": [],
               "themeAliases": [
                 "--sn-list-item-bg",
                 "--sn-list-item-hover-bg",
@@ -14960,6 +15068,9 @@
                 "--sn-list-item-radius",
                 "--sn-list-item-gap"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
               "ssr": {
                 "mode": "hydrate-only",
                 "importSafe": false,
@@ -15248,9 +15359,6 @@
             "exportName": "ListDetailShell",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/runtime-ui-v1.json",
               "capabilities": [
                 "list-detail-layout",
                 "slot-composition",
@@ -15331,6 +15439,8 @@
                   "description": "Detail availability reflected by the has-detail attribute."
                 }
               ],
+              "methods": [],
+              "events": [],
               "slots": [
                 {
                   "name": "list-header",
@@ -15365,7 +15475,6 @@
                   "description": "Host-owned detail empty state."
                 }
               ],
-              "events": [],
               "themeAliases": [
                 "--sn-list-detail-bg",
                 "--sn-list-detail-border",
@@ -15379,6 +15488,9 @@
                 "--sn-list-detail-title-size",
                 "--sn-list-detail-title-color"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
               "ssr": {
                 "mode": "hydrate-only",
                 "importSafe": false,
@@ -15603,9 +15715,6 @@
             "exportName": "TreeView",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/runtime-ui-v1.json",
               "capabilities": [
                 "tree-data",
                 "select",
@@ -15614,6 +15723,7 @@
                 "drag-payload",
                 "local-storage"
               ],
+              "attributes": [],
               "properties": [
                 {
                   "name": "items",
@@ -15701,6 +15811,7 @@
                   ]
                 }
               ],
+              "slots": [],
               "themeAliases": [
                 "--sn-tree-row-height",
                 "--sn-tree-indent",
@@ -15708,6 +15819,9 @@
                 "--sn-tree-row-radius",
                 "--sn-tree-row-selected-bg"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
               "ssr": {
                 "mode": "hydrate-only",
                 "importSafe": false,
@@ -16012,9 +16126,6 @@
             "exportName": "TreePanel",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/runtime-ui-v1.json",
               "capabilities": [
                 "tree-data",
                 "tree-panel-chrome",
@@ -16171,6 +16282,7 @@
                   "description": "Emits after the panel collapse-all action is requested."
                 }
               ],
+              "slots": [],
               "themeAliases": [
                 "--sn-tree-panel-font-size",
                 "--sn-tree-panel-toolbar-gap",
@@ -16179,6 +16291,9 @@
                 "--sn-tree-panel-label-weight",
                 "--sn-tree-row-selected-bg"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
               "ssr": {
                 "mode": "hydrate-only",
                 "importSafe": false,
@@ -16423,9 +16538,6 @@
             "exportName": "ActionButton",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/runtime-ui-v1.json",
               "capabilities": [
                 "control",
                 "button",
@@ -16445,16 +16557,18 @@
                   "description": "Disables pointer and keyboard activation."
                 }
               ],
-              "slots": [
-                {
-                  "name": "default",
-                  "description": "Button label and optional icon content."
-                }
-              ],
+              "properties": [],
+              "methods": [],
               "events": [
                 {
                   "name": "click",
                   "description": "Native click event emitted by pointer or keyboard activation."
+                }
+              ],
+              "slots": [
+                {
+                  "name": "default",
+                  "description": "Button label and optional icon content."
                 }
               ],
               "themeAliases": [
@@ -16485,6 +16599,9 @@
                 "--sn-button-icon-font-size",
                 "--sn-button-focus-ring"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
               "ssr": {
                 "mode": "hydrate-only",
                 "importSafe": false,
@@ -16686,9 +16803,6 @@
             "exportName": "FormField",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/runtime-ui-v1.json",
               "capabilities": [
                 "form-field",
                 "native-controls",
@@ -16702,6 +16816,9 @@
                   "description": "Field density/layout variant: default, compact, or inline."
                 }
               ],
+              "properties": [],
+              "methods": [],
+              "events": [],
               "slots": [
                 {
                   "name": "default",
@@ -16716,7 +16833,6 @@
                   "description": "Optional helper text rendered under the control."
                 }
               ],
-              "events": [],
               "themeAliases": [
                 "--sn-field-margin-block-end",
                 "--sn-field-label-margin-block-end",
@@ -16744,6 +16860,9 @@
                 "--sn-field-compact-margin-block-end",
                 "--sn-field-compact-control-padding"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
               "ssr": {
                 "mode": "jsda-ssr-renderable",
                 "importSafe": false,
@@ -16904,9 +17023,6 @@
             "exportName": "SurfaceCard",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/runtime-ui-v1.json",
               "capabilities": [
                 "surface",
                 "card",
@@ -16926,6 +17042,9 @@
                   "description": "Enables hover affordance for clickable cards."
                 }
               ],
+              "properties": [],
+              "methods": [],
+              "events": [],
               "slots": [
                 {
                   "name": "default",
@@ -16940,7 +17059,6 @@
                   "description": "Optional footer/action row content."
                 }
               ],
-              "events": [],
               "themeAliases": [
                 "--sn-card-bg",
                 "--sn-card-border",
@@ -16957,6 +17075,9 @@
                 "--sn-card-footer-margin-block-start",
                 "--sn-card-footer-padding-block-start"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
               "ssr": {
                 "mode": "jsda-ssr-renderable",
                 "importSafe": false,
@@ -17116,9 +17237,6 @@
             "exportName": "StatusBadge",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/runtime-ui-v1.json",
               "capabilities": [
                 "status",
                 "badge",
@@ -17132,13 +17250,15 @@
                   "description": "Status variant: default, success, info, warning, or error."
                 }
               ],
+              "properties": [],
+              "methods": [],
+              "events": [],
               "slots": [
                 {
                   "name": "default",
                   "description": "Badge label and optional icon content."
                 }
               ],
-              "events": [],
               "themeAliases": [
                 "--sn-badge-bg",
                 "--sn-badge-color",
@@ -17158,6 +17278,9 @@
                 "--sn-badge-error-color",
                 "--sn-badge-error-border"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
               "ssr": {
                 "mode": "jsda-ssr-renderable",
                 "importSafe": false,
@@ -17314,9 +17437,6 @@
             "exportName": "MetricItem",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/runtime-ui-v1.json",
               "capabilities": [
                 "metric",
                 "stat",
@@ -17337,6 +17457,9 @@
                   "description": "Value status: default, success, warning, or error."
                 }
               ],
+              "properties": [],
+              "methods": [],
+              "events": [],
               "slots": [
                 {
                   "name": "label",
@@ -17351,7 +17474,6 @@
                   "description": "Fallback metric value content."
                 }
               ],
-              "events": [],
               "themeAliases": [
                 "--sn-metric-gap",
                 "--sn-metric-padding",
@@ -17367,6 +17489,9 @@
                 "--sn-metric-warning-color",
                 "--sn-metric-error-color"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
               "ssr": {
                 "mode": "jsda-ssr-renderable",
                 "importSafe": false,
@@ -17575,9 +17700,6 @@
             "exportName": "DataTable",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/runtime-ui-v1.json",
               "capabilities": [
                 "data-table",
                 "column-schema",
@@ -17586,6 +17708,7 @@
                 "empty-state",
                 "themeable"
               ],
+              "attributes": [],
               "properties": [
                 {
                   "name": "emptyText",
@@ -17621,6 +17744,7 @@
                 }
               ],
               "events": [],
+              "slots": [],
               "themeAliases": [
                 "--sn-data-table-bg",
                 "--sn-data-table-border",
@@ -17643,6 +17767,9 @@
                 "--sn-data-table-empty-padding",
                 "--sn-data-table-empty-color"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
               "ssr": {
                 "mode": "jsda-ssr-renderable",
                 "importSafe": false,
@@ -17831,9 +17958,6 @@
             "exportName": "EventFeed",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/runtime-ui-v1.json",
               "capabilities": [
                 "event-feed",
                 "structured-events",
@@ -17841,6 +17965,7 @@
                 "empty-state",
                 "themeable"
               ],
+              "attributes": [],
               "properties": [
                 {
                   "name": "eventsList",
@@ -17881,6 +18006,7 @@
                 }
               ],
               "events": [],
+              "slots": [],
               "themeAliases": [
                 "--sn-bg-overlay",
                 "--sn-card-radius",
@@ -17896,6 +18022,9 @@
                 "--sn-text",
                 "--sn-text-dim"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
               "ssr": {
                 "mode": "jsda-ssr-renderable",
                 "importSafe": false,
@@ -17971,7 +18100,7 @@
             "specifier": "symbiote-ui/ui",
             "exportName": null,
             "importKind": "side-effect",
-            "contract": {},
+            "contract": null,
             "agent": {
               "componentDescription": "Internal event feed item used by sn-event-feed. Use this data and content presentation surface when composing display UI. Data ownership: host-owned content or slotted DOM. WebMCP tools are not enabled unless an explicit descriptor is declared.",
               "semanticRole": "data and content presentation surface",
@@ -18134,9 +18263,6 @@
             "exportName": "StatusBanner",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/runtime-ui-v1.json",
               "capabilities": [
                 "status",
                 "banner",
@@ -18151,13 +18277,15 @@
                   "description": "Banner variant: default, info, running, success, warning, or error."
                 }
               ],
+              "properties": [],
+              "methods": [],
+              "events": [],
               "slots": [
                 {
                   "name": "default",
                   "description": "Banner message and optional icon content."
                 }
               ],
-              "events": [],
               "themeAliases": [
                 "--sn-banner-bg",
                 "--sn-banner-color",
@@ -18180,6 +18308,9 @@
                 "--sn-banner-error-border",
                 "--sn-banner-running-spin-duration"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
               "ssr": {
                 "mode": "jsda-ssr-renderable",
                 "importSafe": false,
@@ -18311,9 +18442,6 @@
             "exportName": "EmptyState",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/runtime-ui-v1.json",
               "capabilities": [
                 "empty-state",
                 "placeholder",
@@ -18327,13 +18455,15 @@
                   "description": "Placeholder variant: default or error."
                 }
               ],
+              "properties": [],
+              "methods": [],
+              "events": [],
               "slots": [
                 {
                   "name": "default",
                   "description": "Placeholder label and optional icon content."
                 }
               ],
-              "events": [],
               "themeAliases": [
                 "--sn-empty-state-color",
                 "--sn-empty-state-error-color",
@@ -18346,6 +18476,9 @@
                 "--sn-empty-state-line-height",
                 "--sn-empty-state-icon-size"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
               "ssr": {
                 "mode": "jsda-ssr-renderable",
                 "importSafe": false,
@@ -18421,7 +18554,7 @@
             "specifier": "symbiote-ui/ui",
             "exportName": null,
             "importKind": "side-effect",
-            "contract": {},
+            "contract": null,
             "agent": {
               "componentDescription": "Internal control item used by graph-node. Use this graph node presentation primitive when composing node UI. Data ownership: host-owned content or slotted DOM. WebMCP tools are not enabled unless an explicit descriptor is declared.",
               "semanticRole": "graph node presentation primitive",
@@ -18488,7 +18621,7 @@
             "specifier": "symbiote-ui/ui",
             "exportName": null,
             "importKind": "side-effect",
-            "contract": {},
+            "contract": null,
             "agent": {
               "componentDescription": "Internal port item used by graph-node. Use this graph node presentation primitive when composing node UI. Data ownership: host-owned content or slotted DOM. WebMCP tools are not enabled unless an explicit descriptor is declared.",
               "semanticRole": "graph node presentation primitive",
@@ -18596,15 +18729,13 @@
             "exportName": "GraphFrame",
             "importKind": "named",
             "contract": {
-              "status": "draft",
-              "schemaVersion": "component-descriptor-v2",
-              "dataSchema": "schemas/graph-model-v1.json",
               "capabilities": [
                 "node-group-frame",
                 "label",
                 "accent-color",
                 "resize-affordance"
               ],
+              "attributes": [],
               "properties": [
                 {
                   "name": "label",
@@ -18617,7 +18748,9 @@
                   "description": "Frame accent color."
                 }
               ],
+              "methods": [],
               "events": [],
+              "slots": [],
               "themeAliases": [
                 "--sn-frame-border-width",
                 "--sn-frame-border-style",
@@ -18625,6 +18758,9 @@
                 "--sn-frame-font",
                 "--sn-frame-font-size"
               ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/graph-model-v1.json",
               "ssr": {
                 "mode": "client-only",
                 "importSafe": false,

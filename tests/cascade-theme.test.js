@@ -690,6 +690,7 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(layoutSourceText, /layout:duplicate/);
   assert.match(layoutSourceText, /layout:close-ui-panel/);
   assert.match(layoutSourceText, /layout:remove/);
+  assert.match(layoutSourceText, /panelState\?\.removable === true[\s\S]*?this\.joinPanels\(panelId\)/);
   assert.doesNotMatch(layoutSourceText, /_getActionZonesEnabled/);
   assert.doesNotMatch(layoutSourceText, /action-zone-/);
   assert.doesNotMatch(layoutSourceText, /LayoutPreview|layout-preview/);
@@ -710,8 +711,10 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(layoutNodeSourceText, /Array\.from\(container\.children\)/);
   assert.match(layoutNodeSourceText, /querySelector\(':scope > layout-node'\)/);
   assert.match(layoutNodeSourceText, /LAYOUT_UI_PANEL_MENU_ACTIONS/);
+  assert.match(layoutNodeSourceText, /LAYOUT_REMOVABLE_PANEL_MENU_ACTIONS/);
   assert.match(layoutNodeSourceText, /getLayoutPanelMenuActions/);
   assert.match(layoutNodeSourceText, /panelState\?\.uiInvoked/);
+  assert.match(layoutNodeSourceText, /panelState\?\.removable === true/);
   assert.match(layoutNodeSourceText, /layout:duplicate/);
   assert.match(layoutNodeSourceText, /layout:close-ui-panel/);
   assert.match(layoutNodeSourceText, /layout:remove/);
@@ -1083,4 +1086,14 @@ test('cascade theme lab declares browser import map for bare package imports', a
   assert.match(source, /<script type="importmap">/);
   assert.match(source, /"@symbiotejs\/symbiote": "\.\.\/node_modules\/@symbiotejs\/symbiote\/core\/index\.js"/);
   assert.match(source, /"symbiote-engine\/": "\.\.\/node_modules\/symbiote-engine\/"/);
+});
+
+test('cascade theme lab exposes constrained chat smoke width for browser responsive verification', async () => {
+  const source = await readFile(cascadeDemoSource, 'utf8');
+
+  assert.match(source, /new URLSearchParams\(location\.search\)/);
+  assert.match(source, /urlParams\.get\('chatSmokeWidth'\)/);
+  assert.match(source, /chatSmokeWidth >= 220/);
+  assert.match(source, /data-chat-smoke/);
+  assert.match(source, /--stage7-chat-smoke-width/);
 });
