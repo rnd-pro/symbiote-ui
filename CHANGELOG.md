@@ -2,6 +2,13 @@
 
 All notable changes to `symbiote-ui` will be documented in this file.
 
+## [0.3.0-alpha.11] - 2026-06-04
+
+### Fixed
+
+- Extended the cascade theme contract to write public Symbiote theme aliases such as `--sn-bg`, `--sn-text`, `--sn-node-bg`, `--sn-panel-bg`, `--sn-ctx-bg`, `--sn-button-bg`, and `--sn-field-control-bg`.
+- Documented the alias coverage so downstream apps can apply `applyCascadeTheme()` once at the root instead of duplicating theme formulas or component-local theme setters.
+
 ## [0.3.0-alpha.10] - 2026-06-04
 
 ### Added

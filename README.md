@@ -84,6 +84,12 @@ applyCascadeTheme(document.documentElement, theme.state);
 
 Apply the cascade once at `:root`, an app shell, or a subtree boundary. Components inherit `--sn-*` tokens; host projects should not duplicate the formulas in app-local CSS or JS.
 
+The contract writes both low-level controls such as `--sn-theme-bg-lightness`,
+`--sn-theme-outline-strength`, `--sn-theme-type-scale`, and
+`--sn-theme-density`, and public component aliases such as `--sn-bg`,
+`--sn-text`, `--sn-node-bg`, `--sn-panel-bg`, `--sn-ctx-bg`,
+`--sn-button-bg`, and `--sn-field-control-bg`.
+
 ## Demos
 
 - [`demo/cascade-theme-lab.html`](./demo/cascade-theme-lab.html) - cascade theme controls for dark/light mode, brightness, contrast, accent chroma, and graph/UI token inheritance.

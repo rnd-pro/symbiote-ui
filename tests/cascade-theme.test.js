@@ -66,8 +66,13 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
 
   assert.equal(theme.name, 'cascade-theme');
   assert.equal(theme.state.mode, 'dark');
+  assert.equal(theme.tokens['--sn-theme-name'], 'cascade-theme');
   assert.equal(theme.tokens['--sn-theme-bg-lightness'], '10.0%');
   assert.equal(theme.tokens['--sn-theme-text-lightness'], '94.0%');
+  assert.equal(theme.tokens['--sn-bg'], 'hsl(0 0% 10.0%)');
+  assert.equal(theme.tokens['--sn-text'], 'hsl(0 0% 94.0%)');
+  assert.equal(theme.tokens['--sn-node-bg'], 'var(--sn-panel-bg)');
+  assert.equal(theme.tokens['--sn-field-control-bg'], 'var(--sn-bg)');
   assert.equal(theme.tokens['--sn-shape-stroke-width'], '0.86');
   assert.equal(theme.tokens['--sn-node-label-size'], 'calc(13px * var(--sn-theme-type-scale))');
   assert.equal(theme.tokens['--sn-action-zone-size'], 'calc(16px * var(--sn-theme-density))');
@@ -75,6 +80,9 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.match(source, /symbiote-ui\.createCascadeTheme/);
   assert.match(source, /theme:compose/);
   assert.match(source, /--sn-shape-stroke/);
+  assert.match(source, /--sn-bg/);
+  assert.match(source, /--sn-text-dim/);
+  assert.match(source, /--sn-field-control-bg/);
   assert.match(source, /--sn-layout-header-icon-size/);
   assert.match(source, /--sn-node-summary-size/);
   assert.match(source, /--sn-node-pill-body-padding/);
