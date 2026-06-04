@@ -164,12 +164,12 @@ export let styles = css`
 
     &:hover {
       opacity: 1;
-      stroke-width: 3;
+      stroke-width: var(--sn-conn-hover-width, 3);
     }
 
     &[data-selected] {
       stroke: var(--sn-conn-selected);
-      stroke-width: 3;
+      stroke-width: var(--sn-conn-selected-width, 3);
       opacity: 1;
     }
   }
@@ -275,7 +275,7 @@ export let styles = css`
   .pseudo-path {
     fill: none;
     stroke: var(--sn-conn-color);
-    stroke-width: 2;
+    stroke-width: var(--sn-pseudo-conn-width, 2);
     opacity: 0.5;
     stroke-dasharray: 8 4;
   }
@@ -301,12 +301,12 @@ export let styles = css`
     circle {
       fill: var(--sn-node-bg);
       stroke: var(--sn-conn-color);
-      stroke-width: 1.5;
+      stroke-width: var(--sn-plus-indicator-stroke-width, 1.5);
       opacity: 0.9;
     }
     line {
       stroke: var(--sn-conn-color);
-      stroke-width: 1.5;
+      stroke-width: var(--sn-plus-indicator-stroke-width, 1.5);
       stroke-linecap: round;
     }
   }

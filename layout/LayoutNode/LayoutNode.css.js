@@ -28,12 +28,12 @@ export let styles = css`
     .panel-header {
       display: flex;
       align-items: center;
-      gap: 2px;
-      padding: 2px 4px;
+      gap: var(--sn-layout-header-gap, 2px);
+      padding: var(--sn-layout-header-padding, 2px 4px);
       background: var(--sn-node-header-bg);
       border-bottom: 1px solid var(--sn-layout-border);
       flex-shrink: 0;
-      min-height: 28px;
+      min-height: var(--sn-layout-header-min-height, 28px);
     }
 
     &[panel-chrome='none'] {
@@ -46,14 +46,14 @@ export let styles = css`
     .header-btn {
       display: flex;
       align-items: center;
-      gap: 4px;
-      padding: 4px 6px;
+      gap: var(--sn-layout-header-button-gap, 4px);
+      padding: var(--sn-layout-header-button-padding, 4px 6px);
       background: transparent;
       border: none;
-      border-radius: 4px;
+      border-radius: var(--sn-layout-header-button-radius, 4px);
       cursor: pointer;
       color: var(--sn-text-dim);
-      font-size: 0.75rem;
+      font-size: var(--sn-layout-header-button-size, 0.75rem);
       transition:
         background 0.1s,
         color 0.1s;
@@ -68,13 +68,13 @@ export let styles = css`
       }
 
       .material-symbols-outlined {
-        font-size: 16px;
+        font-size: var(--sn-layout-header-icon-size, 16px);
       }
     }
 
     .type-btn {
       .dropdown-arrow {
-        font-size: 18px;
+        font-size: var(--sn-layout-header-dropdown-size, 18px);
         margin-left: -2px;
         opacity: 0.6;
       }
@@ -99,9 +99,9 @@ export let styles = css`
     /* Collapsed state - vertical (bottom/top panels) */
     &[collapsed][collapse-dir='vertical'] {
       flex: 0 0 auto !important;
-      height: 28px !important;
-      min-height: 28px !important;
-      max-height: 28px !important;
+      height: var(--sn-layout-collapsed-vertical-size, 28px) !important;
+      min-height: var(--sn-layout-collapsed-vertical-size, 28px) !important;
+      max-height: var(--sn-layout-collapsed-vertical-size, 28px) !important;
 
       .panel-content,
       action-zone {
@@ -122,13 +122,13 @@ export let styles = css`
 
       /* Panel icon at left */
       .type-btn {
-        padding: 4px 8px;
+        padding: var(--sn-layout-collapsed-type-padding, 4px 8px);
         background: none;
         cursor: default;
         pointer-events: none;
 
         .panel-icon {
-          font-size: 18px;
+          font-size: var(--sn-layout-collapsed-icon-size, 18px);
         }
       }
 
@@ -138,18 +138,18 @@ export let styles = css`
         left: 50%;
         top: 50%;
         transform: translate(-50%, -50%);
-        padding: 4px;
+        padding: var(--sn-layout-collapsed-button-padding, 4px);
       }
     }
 
     /* Collapsed state - horizontal (side panels) */
     &[collapsed][collapse-dir='horizontal'] {
-      width: 32px !important;
-      min-width: 32px !important;
-      max-width: 32px !important;
+      width: var(--sn-layout-collapsed-horizontal-size, 32px) !important;
+      min-width: var(--sn-layout-collapsed-horizontal-size, 32px) !important;
+      max-width: var(--sn-layout-collapsed-horizontal-size, 32px) !important;
 
       .panel-view {
-        width: 32px;
+        width: var(--sn-layout-collapsed-horizontal-size, 32px);
         display: flex;
         flex-direction: column;
         height: 100%;
@@ -168,7 +168,7 @@ export let styles = css`
         gap: 0;
         align-items: center;
         justify-content: flex-start;
-        width: 32px;
+        width: var(--sn-layout-collapsed-horizontal-size, 32px);
       }
 
       /* Hide fullscreen button, dropdown, and spacer */
@@ -182,21 +182,21 @@ export let styles = css`
       /* Panel icon at top */
       .type-btn {
         order: 1;
-        padding: 6px 4px;
+        padding: var(--sn-layout-collapsed-horizontal-type-padding, 6px 4px);
         background: none;
         cursor: default;
         pointer-events: none;
         flex: 0 0 auto;
 
         .panel-icon {
-          font-size: 20px;
+          font-size: var(--sn-layout-collapsed-horizontal-icon-size, 20px);
         }
       }
 
       /* Expand button centered via flex-grow */
       .collapse-btn {
         order: 2;
-        padding: 8px 4px;
+        padding: var(--sn-layout-collapsed-horizontal-button-padding, 8px 4px);
         flex: 1;
         display: flex;
         align-items: center;
@@ -274,12 +274,12 @@ export let styles = css`
     }
 
     .split-view[direction='horizontal'] > .split-resizer {
-      width: 2px;
+      width: var(--sn-layout-resizer-thickness, 2px);
       cursor: col-resize;
     }
 
     .split-view[direction='vertical'] > .split-resizer {
-      height: 2px;
+      height: var(--sn-layout-resizer-thickness, 2px);
       cursor: row-resize;
     }
 

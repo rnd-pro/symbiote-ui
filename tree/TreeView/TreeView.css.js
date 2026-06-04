@@ -103,14 +103,14 @@ sn-tree-view[hidden] {
 .sn-tree-badges {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--sn-tree-badge-gap, 4px);
   min-width: 0;
 }
 
 .sn-tree-badge {
   max-width: var(--sn-tree-badge-max-width);
   overflow: hidden;
-  padding: 1px 5px;
+  padding: var(--sn-tree-badge-padding, 1px 5px);
   border-radius: var(--sn-tree-badge-radius);
   background: var(--sn-tree-badge-bg, var(--sn-node-hover));
   color: var(--sn-tree-badge-color, var(--sn-text-dim));

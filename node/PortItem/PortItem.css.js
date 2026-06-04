@@ -8,9 +8,9 @@ export let styles = css`
   port-item {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 3px 12px;
-    min-height: 28px;
+    gap: var(--sn-port-gap, 6px);
+    padding: var(--sn-port-padding, 3px 12px);
+    min-height: var(--sn-port-min-height, 28px);
 
     &[data-side='input'] {
       flex-direction: row;
@@ -86,7 +86,7 @@ export let styles = css`
 
     & .port-label {
       color: var(--sn-text-dim);
-      font-size: 12px;
+      font-size: var(--sn-port-label-size, 12px);
       white-space: nowrap;
     }
   }

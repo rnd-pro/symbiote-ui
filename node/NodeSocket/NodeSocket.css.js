@@ -25,8 +25,8 @@ export let styles = css`
       position: absolute;
       top: 50%;
       left: 50%;
-      width: 44px;
-      height: 44px;
+      width: var(--sn-socket-hit-size, 44px);
+      height: var(--sn-socket-hit-size, 44px);
       transform: translate(-50%, -50%);
     }
 

@@ -26,7 +26,7 @@ export let styles = css`
       top: 0;
       left: 0;
       right: 0;
-      height: 28px;
+      height: var(--sn-fullscreen-tab-bar-height, 28px);
       background: var(--sn-bg);
       display: flex;
       align-items: stretch;
@@ -46,23 +46,23 @@ export let styles = css`
     .fullscreen-tab {
       display: flex;
       align-items: center;
-      gap: 6px;
-      padding: 0 12px;
-      height: 28px;
+      gap: var(--sn-fullscreen-tab-gap, 6px);
+      padding: var(--sn-fullscreen-tab-padding, 0 12px);
+      height: var(--sn-fullscreen-tab-height, 28px);
       border: none;
       border-left: none;
       border-right: none;
       background: var(--sn-bg);
       color: var(--sn-text-dim);
       cursor: pointer;
-      font-size: 12px;
+      font-size: var(--sn-fullscreen-tab-size, 12px);
       font-family: inherit;
       transition:
         background 0.15s,
         color 0.15s;
 
       .material-symbols-outlined {
-        font-size: 16px;
+        font-size: var(--sn-fullscreen-tab-icon-size, 16px);
       }
 
       &:hover {
@@ -71,7 +71,7 @@ export let styles = css`
       }
 
       &[active] {
-        height: 29px;
+        height: var(--sn-fullscreen-tab-active-height, 29px);
         margin-bottom: -1px;
         position: relative;
         z-index: 1;
@@ -84,7 +84,7 @@ export let styles = css`
 
     .tab-filler {
       flex: 1;
-      height: 28px;
+      height: var(--sn-fullscreen-tab-bar-height, 28px);
       background: var(--sn-bg);
     }
   }

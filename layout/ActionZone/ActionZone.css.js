@@ -12,8 +12,8 @@ export let ZONE_SIZE = 16;
 export let styles = css`
   action-zone {
     position: absolute;
-    width: ${ZONE_SIZE}px;
-    height: ${ZONE_SIZE}px;
+    width: var(--sn-action-zone-size, ${ZONE_SIZE}px);
+    height: var(--sn-action-zone-size, ${ZONE_SIZE}px);
     z-index: 100;
     cursor: crosshair;
     opacity: 0;

@@ -46,7 +46,7 @@ export let styles = css`
         display: none;
       }
       & .sn-node-body {
-        padding: 4px 0;
+        padding: var(--sn-node-collapsed-body-padding, 4px 0);
       }
       & .port-label {
         display: none;
@@ -123,7 +123,7 @@ export let styles = css`
       }
 
       & .sn-node-body {
-        padding: 2px 0;
+        padding: var(--sn-node-lod-body-padding, 2px 0);
       }
 
       & node-socket {
@@ -185,9 +185,9 @@ export let styles = css`
     & .error-frame-header {
       display: flex;
       align-items: center;
-      gap: 6px;
-      padding: 5px 10px;
-      font-size: 12px;
+      gap: var(--sn-node-error-frame-header-gap, 6px);
+      padding: var(--sn-node-error-frame-header-padding, 5px 10px);
+      font-size: var(--sn-node-error-frame-header-size, 12px);
       font-weight: 600;
       color: color-mix(in srgb, var(--sn-danger-color) 90%, white);
       border-bottom: 1px solid color-mix(in srgb, var(--sn-danger-color) 20%, transparent);
@@ -195,13 +195,13 @@ export let styles = css`
     }
 
     & .error-frame-header .material-symbols-outlined {
-      font-size: 14px;
+      font-size: var(--sn-node-error-frame-icon-size, 14px);
       opacity: 0.8;
     }
 
     & .error-frame-body {
-      padding: 6px 10px;
-      font-size: 11px;
+      padding: var(--sn-node-error-frame-body-padding, 6px 10px);
+      font-size: var(--sn-node-error-frame-body-size, 11px);
       line-height: 1.4;
       color: color-mix(in srgb, var(--sn-danger-color) 75%, white);
       word-wrap: break-word;
@@ -225,24 +225,24 @@ export let styles = css`
     }
 
     & .sn-node-content {
-      padding: 8px 12px 10px;
+      padding: var(--sn-node-content-padding, 8px 12px 10px);
       min-width: 0;
     }
 
     & .sn-node-summary {
       margin: 0;
       color: var(--sn-text-dim);
-      font-size: 12px;
+      font-size: var(--sn-node-summary-size, 12px);
       line-height: 1.45;
     }
 
     & .sn-node-link {
       display: inline-flex;
       align-items: center;
-      gap: 5px;
-      margin-top: 8px;
+      gap: var(--sn-node-link-gap, 5px);
+      margin-top: var(--sn-node-link-margin-block-start, 8px);
       color: var(--sn-node-selected);
-      font-size: 12px;
+      font-size: var(--sn-node-link-size, 12px);
       font-weight: 700;
       text-decoration: none;
     }
@@ -252,14 +252,14 @@ export let styles = css`
     }
 
     & .sn-node-link .material-symbols-outlined {
-      font-size: 15px;
+      font-size: var(--sn-node-link-icon-size, 15px);
     }
 
     & .sn-node-items {
       display: flex;
       flex-direction: column;
-      padding: 6px;
-      gap: 6px;
+      padding: var(--sn-node-items-padding, 6px);
+      gap: var(--sn-node-items-gap, 6px);
       max-block-size: var(--sn-node-items-max-height);
       overflow-y: auto;
       ${themedScrollbarStyles}
@@ -268,10 +268,10 @@ export let styles = css`
     & .sn-node-item {
       display: flex;
       flex-direction: column;
-      gap: 3px;
-      padding: 8px 9px;
-      border: 1px solid color-mix(in srgb, currentColor 8%, transparent);
-      border-radius: 6px;
+      gap: var(--sn-node-item-gap, 3px);
+      padding: var(--sn-node-item-padding, 8px 9px);
+      border: 1px solid var(--sn-node-item-border, color-mix(in srgb, currentColor 8%, transparent));
+      border-radius: var(--sn-node-item-radius, 6px);
       background: color-mix(in srgb, var(--sn-node-accent) 8%, transparent);
       color: inherit;
       text-decoration: none;
@@ -284,7 +284,7 @@ export let styles = css`
 
     & .sn-node-item-kicker {
       color: var(--sn-node-accent);
-      font-size: 10px;
+      font-size: var(--sn-node-item-kicker-size, 10px);
       font-weight: 800;
       letter-spacing: 0.04em;
       text-transform: uppercase;
@@ -292,7 +292,7 @@ export let styles = css`
 
     & .sn-node-item-title {
       color: var(--sn-text);
-      font-size: 13px;
+      font-size: var(--sn-node-item-title-size, 13px);
       font-weight: 700;
       line-height: 1.25;
     }
@@ -301,7 +301,7 @@ export let styles = css`
       display: -webkit-box;
       overflow: hidden;
       color: var(--sn-text-dim);
-      font-size: 11px;
+      font-size: var(--sn-node-item-summary-size, 11px);
       line-height: 1.35;
       -webkit-box-orient: vertical;
       -webkit-line-clamp: 2;
@@ -357,11 +357,11 @@ export let styles = css`
         display: none;
       }
       & .sn-node-body {
-        padding: 8px 20px;
+        padding: var(--sn-node-pill-body-padding, 8px 20px);
         align-items: center;
         justify-content: center;
         flex-direction: row;
-        gap: 8px;
+        gap: var(--sn-node-pill-body-gap, 8px);
       }
       & .inputs,
       & .outputs {
@@ -393,10 +393,10 @@ export let styles = css`
         background: transparent;
         border-bottom: none;
         justify-content: center;
-        padding: 6px;
+        padding: var(--sn-node-circle-header-padding, 6px);
       }
       & .sn-node-body {
-        padding: 0 8px 8px;
+        padding: var(--sn-node-circle-body-padding, 0 8px 8px);
         flex-direction: row;
         align-items: center;
         gap: 0;
@@ -458,7 +458,7 @@ export let styles = css`
         display: none;
       }
       & .sn-node-body {
-        padding: 12px 16px;
+        padding: var(--sn-node-comment-body-padding, 12px 16px);
       }
       & .inputs,
       & .outputs {
@@ -484,6 +484,8 @@ export let styles = css`
         & > path {
           pointer-events: visibleFill;
           cursor: move;
+          stroke: var(--sn-shape-stroke, var(--sn-node-border));
+          stroke-width: var(--sn-shape-stroke-width, 0.4);
           transition: stroke 0.2s ease;
         }
       }
@@ -497,7 +499,7 @@ export let styles = css`
         display: none;
       }
       & .sn-node-body {
-        padding: 4px 0;
+        padding: var(--sn-node-svg-body-padding, 4px 0);
         align-items: center;
       }
       & .controls {
@@ -508,7 +510,7 @@ export let styles = css`
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        font-size: 40px;
+        font-size: var(--sn-shape-watermark-size, 40px);
         color: var(--sn-node-accent, var(--sn-text-dim));
         pointer-events: none;
         z-index: 0;
@@ -604,18 +606,18 @@ export let styles = css`
     & .sn-node-header {
       display: flex;
       align-items: center;
-      gap: 6px;
-      padding: 8px 12px;
+      gap: var(--sn-node-header-gap, 6px);
+      padding: var(--sn-node-header-padding, 8px 12px);
       background: var(
         --sn-node-header-bg,
         color-mix(in srgb, var(--sn-node-accent) 15%, transparent)
       );
-      border-bottom: 1px solid color-mix(in srgb, currentColor 6%, transparent);
+      border-bottom: 1px solid var(--sn-node-header-border, color-mix(in srgb, currentColor 6%, transparent));
       border-radius: var(--sn-node-radius) var(--sn-node-radius) 0 0;
     }
 
     & .sn-node-icon {
-      font-size: 18px;
+      font-size: var(--sn-node-icon-size, 18px);
       color: var(--sn-node-accent);
       opacity: 1;
     }
@@ -631,10 +633,10 @@ export let styles = css`
     }
 
     & .sn-node-body {
-      padding: 8px 0;
+      padding: var(--sn-node-body-padding, 8px 0);
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: var(--sn-node-body-gap, 4px);
     }
 
     & .inputs,
@@ -656,7 +658,7 @@ export let styles = css`
     /* Compatible SVG node during drag: subtle outline hint only — dots handle highlight */
     &[data-svg-shape][data-port-hint] > svg > path {
       stroke: var(--sn-node-selected);
-      stroke-width: 0.5;
+      stroke-width: var(--sn-shape-port-hint-stroke-width, 0.5);
       opacity: 0.8;
       transition:
         stroke 0.15s ease,
@@ -672,9 +674,9 @@ export let styles = css`
     & .sn-port {
       display: flex;
       align-items: center;
-      gap: 6px;
-      padding: 3px 12px;
-      min-height: 24px;
+      gap: var(--sn-port-gap, 6px);
+      padding: var(--sn-port-padding, 3px 12px);
+      min-height: var(--sn-port-min-height, 24px);
     }
 
     & .sn-port-in {
@@ -696,23 +698,23 @@ export let styles = css`
 
     & .port-label {
       color: var(--sn-text-dim);
-      font-size: 12px;
+      font-size: var(--sn-port-label-size, 12px);
       white-space: nowrap;
     }
 
     & .controls {
-      padding: 0 12px;
+      padding: var(--sn-node-controls-padding, 0 12px);
     }
 
     & .sn-control-item {
       display: flex;
       flex-direction: column;
-      gap: 2px;
-      margin: 4px 0;
+      gap: var(--sn-control-gap, 2px);
+      margin: var(--sn-control-margin, 4px 0);
     }
 
     & .sn-control-label {
-      font-size: 10px;
+      font-size: var(--sn-control-label-size, 10px);
       text-transform: uppercase;
       color: var(--sn-text-dim);
       letter-spacing: 0.5px;
@@ -720,11 +722,11 @@ export let styles = css`
 
     & .sn-control-input {
       background: color-mix(in srgb, var(--sn-bg) 70%, transparent);
-      border: 1px solid color-mix(in srgb, currentColor 10%, transparent);
-      border-radius: 4px;
-      padding: 4px 8px;
+      border: 1px solid var(--sn-control-input-border, color-mix(in srgb, currentColor 10%, transparent));
+      border-radius: var(--sn-control-input-radius, 4px);
+      padding: var(--sn-control-input-padding, 4px 8px);
       color: var(--sn-text);
-      font-size: 12px;
+      font-size: var(--sn-control-input-size, 12px);
       outline: none;
       font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
 
@@ -739,10 +741,40 @@ export let styles = css`
     }
   }
 
+  graph-node[data-svg-shape] > svg > path {
+    stroke: var(--sn-shape-stroke, var(--sn-node-border));
+    stroke-width: var(--sn-shape-stroke-width, 0.4);
+  }
+
+  graph-node[data-svg-shape][data-node-tone='inverse'] > svg > path {
+    stroke: var(--sn-node-accent);
+  }
+
+  graph-node[data-svg-shape][data-selected] > svg > path {
+    stroke: var(--sn-node-selected);
+  }
+
+  graph-node[data-svg-shape][data-error] > svg > path {
+    stroke: var(--sn-danger-color);
+  }
+
+  graph-node[data-svg-shape][data-processing] > svg > path {
+    stroke: var(--sn-node-accent, var(--sn-node-selected));
+  }
+
+  graph-node[data-svg-shape][data-completed] > svg > path {
+    stroke: var(--sn-success-color);
+  }
+
+  graph-node[data-svg-shape][data-port-hint] > svg > path {
+    stroke: var(--sn-node-selected);
+    stroke-width: var(--sn-shape-port-hint-stroke-width, 0.5);
+  }
+
   /* Preview Area — image/text preview at bottom of node */
   .sn-preview {
     border-top: 1px solid var(--sn-node-border);
-    border-radius: 0 0 8px 8px;
+    border-radius: 0 0 var(--sn-node-radius) var(--sn-node-radius);
     overflow: hidden;
     max-height: 120px;
     background: color-mix(in srgb, var(--sn-bg) 55%, transparent);
@@ -760,8 +792,8 @@ export let styles = css`
     }
 
     & .sn-preview-text {
-      padding: 6px 10px;
-      font-size: 11px;
+      padding: var(--sn-node-preview-text-padding, 6px 10px);
+      font-size: var(--sn-node-preview-text-size, 11px);
       color: var(--sn-text-dim);
       font-family: 'JetBrains Mono', 'Fira Code', monospace;
       white-space: pre-wrap;

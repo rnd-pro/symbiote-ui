@@ -8,11 +8,11 @@ export let styles = css`
   ctrl-item {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    padding: 4px 12px;
+    gap: var(--sn-control-gap, 2px);
+    padding: var(--sn-control-padding, 4px 12px);
 
     & .sn-ctrl-label {
-      font-size: 10px;
+      font-size: var(--sn-control-label-size, 10px);
       text-transform: uppercase;
       color: var(--sn-text-dim);
       letter-spacing: 0.5px;
@@ -20,11 +20,11 @@ export let styles = css`
 
     & .sn-ctrl-input {
       background: var(--sn-field-control-bg);
-      border: 1px solid color-mix(in srgb, currentColor 10%, transparent);
-      border-radius: 4px;
-      padding: 4px 8px;
+      border: 1px solid var(--sn-control-input-border, color-mix(in srgb, currentColor 10%, transparent));
+      border-radius: var(--sn-control-input-radius, 4px);
+      padding: var(--sn-control-input-padding, 4px 8px);
       color: var(--sn-text);
-      font-size: 12px;
+      font-size: var(--sn-control-input-size, 12px);
       outline: none;
       font-family: inherit;
 

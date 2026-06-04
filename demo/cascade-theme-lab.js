@@ -110,6 +110,9 @@ function updateCascadeTheme() {
   let softOutlineColor = `hsl(0 0% ${text.toFixed(1)}% / ${(outlineAlpha * 0.55).toFixed(3)})`;
   let nodeBorderWidth = `${(1 + outlineStrength).toFixed(2)}px`;
   let focusRingWidth = `${(1 + outlineStrength * 2).toFixed(1)}px`;
+  let shapeStrokeWidth = (0.4 + outlineStrength * 1.2).toFixed(2);
+  let connectionWidth = (1.5 + outlineStrength * 0.8).toFixed(2);
+  let connectionHoverWidth = (2.4 + outlineStrength * 1.2).toFixed(2);
   let typeToken = (px) => `calc(${px}px * var(--sn-theme-type-scale))`;
   let densityToken = (px) => `calc(${px}px * var(--sn-theme-density))`;
 
@@ -134,7 +137,21 @@ function updateCascadeTheme() {
   setToken('--sn-node-hover', accentSoft);
   setToken('--sn-node-border', outlineColor);
   setToken('--sn-node-border-width', nodeBorderWidth);
+  setToken('--sn-node-header-border', outline === 0 ? 'transparent' : softOutlineColor);
+  setToken('--sn-node-item-border', outline === 0 ? 'transparent' : softOutlineColor);
+  setToken('--sn-shape-stroke', outlineColor);
+  setToken('--sn-shape-stroke-width', shapeStrokeWidth);
+  setToken('--sn-shape-port-hint-stroke-width', (0.5 + outlineStrength * 1.6).toFixed(2));
+  setToken('--sn-conn-width', connectionWidth);
+  setToken('--sn-conn-hover-width', connectionHoverWidth);
+  setToken('--sn-conn-selected-width', connectionHoverWidth);
+  setToken('--sn-pseudo-conn-width', connectionWidth);
+  setToken('--sn-plus-indicator-stroke-width', connectionWidth);
+  setToken('--sn-conn-dot-stroke-width', `${(1.4 + outlineStrength * 1.2).toFixed(2)}px`);
   setToken('--sn-layout-border', outlineColor);
+  setToken('--sn-layout-resizer-hover-bg', outline === 0 ? 'transparent' : softOutlineColor);
+  setToken('--sn-ctx-border', outlineColor);
+  setToken('--sn-panel-menu-border-width', nodeBorderWidth);
   setToken('--sn-xr-panel-border', outlineColor);
   setToken('--sn-card-border', outlineColor);
   setToken('--sn-button-border', outlineColor);
@@ -144,6 +161,22 @@ function updateCascadeTheme() {
   setToken('--sn-tree-row-selected-border', outline === 0 ? 'transparent' : softOutlineColor);
   setToken('--sn-effect-focus-ring', `${focusRingWidth} solid var(--sn-node-selected)`);
   setToken('--sn-node-font-size', typeToken(13));
+  setToken('--sn-node-label-size', typeToken(13));
+  setToken('--sn-node-summary-size', typeToken(12));
+  setToken('--sn-node-icon-size', typeToken(18));
+  setToken('--sn-node-link-size', typeToken(12));
+  setToken('--sn-node-link-icon-size', typeToken(15));
+  setToken('--sn-node-error-frame-header-size', typeToken(12));
+  setToken('--sn-node-error-frame-icon-size', typeToken(14));
+  setToken('--sn-node-error-frame-body-size', typeToken(11));
+  setToken('--sn-node-item-kicker-size', typeToken(10));
+  setToken('--sn-node-item-title-size', typeToken(13));
+  setToken('--sn-node-item-summary-size', typeToken(11));
+  setToken('--sn-port-label-size', typeToken(12));
+  setToken('--sn-control-label-size', typeToken(10));
+  setToken('--sn-control-input-size', typeToken(12));
+  setToken('--sn-node-preview-text-size', typeToken(11));
+  setToken('--sn-shape-watermark-size', typeToken(40));
   setToken('--sn-button-font-size', typeToken(12));
   setToken('--sn-button-icon-font-size', typeToken(16));
   setToken('--sn-card-title-size', typeToken(11));
@@ -157,6 +190,18 @@ function updateCascadeTheme() {
   setToken('--sn-tree-panel-font-size', typeToken(12));
   setToken('--sn-tree-panel-title-size', typeToken(11));
   setToken('--sn-tree-panel-input-size', typeToken(11));
+  setToken('--sn-layout-header-button-size', typeToken(12));
+  setToken('--sn-layout-header-icon-size', typeToken(16));
+  setToken('--sn-layout-header-dropdown-size', typeToken(18));
+  setToken('--sn-layout-collapsed-icon-size', typeToken(18));
+  setToken('--sn-layout-collapsed-horizontal-icon-size', typeToken(20));
+  setToken('--sn-fullscreen-tab-size', typeToken(12));
+  setToken('--sn-fullscreen-tab-icon-size', typeToken(16));
+  setToken('--sn-panel-menu-item-size', typeToken(12));
+  setToken('--sn-panel-menu-icon-size', typeToken(18));
+  setToken('--sn-socket-size', densityToken(12));
+  setToken('--sn-socket-border-width', `${(1.5 + outlineStrength * 0.8).toFixed(2)}px`);
+  setToken('--sn-socket-hit-size', densityToken(44));
   setToken('--sn-card-padding', densityToken(14));
   setToken('--sn-card-title-margin-block-end', densityToken(12));
   setToken('--sn-card-footer-gap', densityToken(8));
@@ -171,6 +216,8 @@ function updateCascadeTheme() {
   setToken('--sn-tree-gap', densityToken(4));
   setToken('--sn-tree-row-min-height', densityToken(22));
   setToken('--sn-tree-row-padding-block', densityToken(2));
+  setToken('--sn-tree-badge-gap', densityToken(4));
+  setToken('--sn-tree-badge-padding', `${densityToken(1)} ${densityToken(5)}`);
   setToken('--sn-tree-panel-title-gap', densityToken(5));
   setToken('--sn-tree-panel-title-padding', `${densityToken(6)} ${densityToken(8)}`);
   setToken('--sn-tree-panel-toolbar-gap', densityToken(6));
@@ -197,6 +244,58 @@ function updateCascadeTheme() {
   setToken('--sn-lab-token-padding', densityToken(10));
   setToken('--sn-lab-token-label-size', typeToken(12));
   setToken('--sn-lab-token-value-size', typeToken(11));
+  setToken('--sn-node-header-gap', densityToken(6));
+  setToken('--sn-node-header-padding', `${densityToken(8)} ${densityToken(12)}`);
+  setToken('--sn-node-collapsed-body-padding', `${densityToken(4)} 0`);
+  setToken('--sn-node-lod-body-padding', `${densityToken(2)} 0`);
+  setToken('--sn-node-body-padding', `${densityToken(8)} 0`);
+  setToken('--sn-node-body-gap', densityToken(4));
+  setToken('--sn-node-pill-body-padding', `${densityToken(8)} ${densityToken(20)}`);
+  setToken('--sn-node-pill-body-gap', densityToken(8));
+  setToken('--sn-node-circle-header-padding', densityToken(6));
+  setToken('--sn-node-circle-body-padding', `0 ${densityToken(8)} ${densityToken(8)}`);
+  setToken('--sn-node-comment-body-padding', `${densityToken(12)} ${densityToken(16)}`);
+  setToken('--sn-node-svg-body-padding', `${densityToken(4)} 0`);
+  setToken('--sn-node-content-padding', `${densityToken(8)} ${densityToken(12)} ${densityToken(10)}`);
+  setToken('--sn-node-link-gap', densityToken(5));
+  setToken('--sn-node-link-margin-block-start', densityToken(8));
+  setToken('--sn-node-items-padding', densityToken(6));
+  setToken('--sn-node-items-gap', densityToken(6));
+  setToken('--sn-node-item-gap', densityToken(3));
+  setToken('--sn-node-item-padding', `${densityToken(8)} ${densityToken(9)}`);
+  setToken('--sn-node-controls-padding', `0 ${densityToken(12)}`);
+  setToken('--sn-node-error-frame-header-gap', densityToken(6));
+  setToken('--sn-node-error-frame-header-padding', `${densityToken(5)} ${densityToken(10)}`);
+  setToken('--sn-node-error-frame-body-padding', `${densityToken(6)} ${densityToken(10)}`);
+  setToken('--sn-node-preview-text-padding', `${densityToken(6)} ${densityToken(10)}`);
+  setToken('--sn-port-gap', densityToken(6));
+  setToken('--sn-port-padding', `${densityToken(3)} ${densityToken(12)}`);
+  setToken('--sn-port-min-height', densityToken(28));
+  setToken('--sn-control-gap', densityToken(2));
+  setToken('--sn-control-margin', `${densityToken(4)} 0`);
+  setToken('--sn-control-padding', `${densityToken(4)} ${densityToken(12)}`);
+  setToken('--sn-control-input-padding', `${densityToken(4)} ${densityToken(8)}`);
+  setToken('--sn-layout-header-gap', densityToken(2));
+  setToken('--sn-layout-header-padding', `${densityToken(2)} ${densityToken(4)}`);
+  setToken('--sn-layout-header-min-height', densityToken(28));
+  setToken('--sn-layout-header-button-gap', densityToken(4));
+  setToken('--sn-layout-header-button-padding', `${densityToken(4)} ${densityToken(6)}`);
+  setToken('--sn-layout-collapsed-vertical-size', densityToken(28));
+  setToken('--sn-layout-collapsed-type-padding', `${densityToken(4)} ${densityToken(8)}`);
+  setToken('--sn-layout-collapsed-button-padding', densityToken(4));
+  setToken('--sn-layout-collapsed-horizontal-size', densityToken(32));
+  setToken('--sn-layout-collapsed-horizontal-type-padding', `${densityToken(6)} ${densityToken(4)}`);
+  setToken('--sn-layout-collapsed-horizontal-button-padding', `${densityToken(8)} ${densityToken(4)}`);
+  setToken('--sn-layout-resizer-thickness', `${(1 + outlineStrength * 2).toFixed(2)}px`);
+  setToken('--sn-fullscreen-tab-bar-height', densityToken(28));
+  setToken('--sn-fullscreen-tab-gap', densityToken(6));
+  setToken('--sn-fullscreen-tab-padding', `0 ${densityToken(12)}`);
+  setToken('--sn-fullscreen-tab-height', densityToken(28));
+  setToken('--sn-fullscreen-tab-active-height', densityToken(29));
+  setToken('--sn-panel-menu-padding', `${densityToken(4)} 0`);
+  setToken('--sn-panel-menu-item-gap', densityToken(8));
+  setToken('--sn-panel-menu-item-padding', `${densityToken(8)} ${densityToken(12)}`);
+  setToken('--sn-action-zone-size', densityToken(16));
   setToken('--sn-scrollbar-thumb', `hsl(0 0% ${text.toFixed(1)}% / ${dark ? 0.08 : 0.24})`);
   setToken('--sn-scrollbar-thumb-hover', dark
     ? `hsl(0 0% ${text.toFixed(1)}% / 0.25)`
@@ -371,6 +470,14 @@ class CascadeUiPanel extends Symbiote {
       '--sn-theme-outline-strength',
       '--sn-theme-type-scale',
       '--sn-theme-density',
+      '--sn-shape-stroke',
+      '--sn-shape-stroke-width',
+      '--sn-node-label-size',
+      '--sn-node-icon-size',
+      '--sn-shape-watermark-size',
+      '--sn-port-label-size',
+      '--sn-layout-header-icon-size',
+      '--sn-action-zone-size',
     ];
     const renderTokens = () => {
       const computed = getComputedStyle(document.documentElement);
