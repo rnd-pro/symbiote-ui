@@ -229,6 +229,32 @@ test('layout tree opens and closes UI-invoked panels without owning host layout 
   assert.equal(findPanelByType(closed.root, 'graph').panelType, 'graph');
 });
 
+test('layout tree closeUiPanel restores captured host layout for the last temporary panel', () => {
+  let graph = createPanel('graph');
+  let ui = createPanel('ui');
+  let chat = createPanel('chat');
+  let hostRoot = createSplit(
+    'horizontal',
+    graph,
+    createSplit('vertical', ui, chat, 0.48),
+    0.58
+  );
+  let opened = openPanel(hostRoot, 'theme', {
+    source: 'theme-widget',
+    uiInvoked: true,
+    ratio: 0.66,
+  });
+
+  let closed = closeUiPanel(opened.root, 'theme', { fallbackRoot: hostRoot });
+
+  assert.equal(closed.removed, true);
+  assert.equal(closed.restored, true);
+  assert.equal(closed.root.id, hostRoot.id);
+  assert.equal(closed.root.ratio, 0.58);
+  assert.equal(closed.root.second.ratio, 0.48);
+  assert.equal(findPanelByType(closed.root, 'theme'), null);
+});
+
 test('layout tree expands promoted survivor after panel removal', () => {
   let graph = createPanel('graph');
   let chat = createPanel('chat');

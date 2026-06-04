@@ -1040,6 +1040,43 @@ test('static custom elements catalog carries agent-facing descriptions for chat 
   }
 });
 
+test('chat sidebar metadata matches rendered reusable fields without product task policy', async () => {
+  const [sidebarItem, registry, customElementsSourceText] = await Promise.all([
+    readFile(new URL('../chat/ChatSidebarItem/ChatSidebarItem.js', import.meta.url), 'utf8'),
+    readFile(componentRegistrySource, 'utf8'),
+    readFile(customElementsSource, 'utf8'),
+  ]);
+  const catalog = JSON.parse(customElementsSourceText);
+  const declarations = new Map(
+    catalog.modules
+      .flatMap((moduleRecord) => moduleRecord.declarations || [])
+      .filter((declaration) => declaration.tagName)
+      .map((declaration) => [declaration.tagName, declaration])
+  );
+  const subItemDeclaration = declarations.get('chat-sidebar-sub-item');
+  const subItemMemberNames = new Set((subItemDeclaration?.members || []).map((member) => member.name));
+
+  assert.doesNotMatch(sidebarItem, /pendingTaskId/);
+  assert.match(sidebarItem, /isRunning/);
+  assert.match(sidebarItem, /statusKind === 'running'/);
+
+  for (const propName of ['time', 'icon', 'metaLabel', 'hasChildren', 'isGroup', 'isRunning', 'subChats']) {
+    assert.match(registry, new RegExp(`name: '${propName}'`));
+    assert.match(customElementsSourceText, new RegExp(`"name": "${propName}"`));
+  }
+
+  assert.match(
+    registry,
+    /\{\s*tagName: 'chat-sidebar-sub-item'[\s\S]*?schemaVersion: 'component-descriptor-v2'/
+  );
+  assert.doesNotMatch(registry, /agentType/);
+  assert.equal(subItemDeclaration?.contract?.schemaVersion, 'component-descriptor-v2');
+  assert.equal(subItemMemberNames.has('agentType'), false);
+  assert.equal(subItemMemberNames.has('metaLabel'), true);
+  assert.equal(subItemMemberNames.has('isRunning'), true);
+  assert.equal(subItemMemberNames.has('subChats'), true);
+});
+
 test('cascade theme lab declares browser import map for bare package imports', async () => {
   const source = await readFile(cascadeDemoHtml, 'utf8');
 

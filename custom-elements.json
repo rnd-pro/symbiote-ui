@@ -3106,7 +3106,7 @@
               "type": {
                 "text": "function"
               },
-              "description": "Closes a panel only when it was opened as a UI-invoked temporary panel."
+              "description": "Closes a panel only when it was opened as a UI-invoked temporary panel; the last temporary panel restores the captured host layout."
             },
             {
               "kind": "method",
@@ -3149,7 +3149,7 @@
             },
             {
               "name": "layout-ui-panel-close",
-              "description": "Emits after a UI-invoked panel is removed from the layout tree.",
+              "description": "Emits after a UI-invoked panel is closed; detail.restored is true when the captured host layout was restored.",
               "type": {
                 "text": "CustomEvent"
               }
@@ -3334,7 +3334,7 @@
                 {
                   "name": "closeUiPanel",
                   "type": "function",
-                  "description": "Closes a panel only when it was opened as a UI-invoked temporary panel."
+                  "description": "Closes a panel only when it was opened as a UI-invoked temporary panel; the last temporary panel restores the captured host layout."
                 },
                 {
                   "name": "setLayoutBehavior",
@@ -3362,7 +3362,7 @@
                 },
                 {
                   "name": "layout-ui-panel-close",
-                  "description": "Emits after a UI-invoked panel is removed from the layout tree."
+                  "description": "Emits after a UI-invoked panel is closed; detail.restored is true when the captured host layout was restored."
                 }
               ],
               "themeAliases": [
@@ -3576,7 +3576,7 @@
                   },
                   {
                     "name": "panel_layout_close_ui_panel",
-                    "description": "Close a panel only when it was opened as a UI-invoked temporary surface, leaving host-owned panels and layout groups intact.",
+                    "description": "Close a panel only when it was opened as a UI-invoked temporary surface; closing the last temporary panel restores the captured host layout and leaves host-owned panels and layout groups intact.",
                     "inputSchema": {
                       "type": "object",
                       "additionalProperties": false,
@@ -12504,6 +12504,14 @@
             },
             {
               "kind": "field",
+              "name": "time",
+              "type": {
+                "text": "string"
+              },
+              "description": "Rendered time or relative timestamp label."
+            },
+            {
+              "kind": "field",
               "name": "lastMessage",
               "type": {
                 "text": "string"
@@ -12771,7 +12779,109 @@
                 "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
               ]
             }
-          }
+          },
+          "contract": {
+            "status": "draft",
+            "schemaVersion": "component-descriptor-v2",
+            "dataSchema": "schemas/runtime-ui-v1.json",
+            "capabilities": [
+              "chat-list-row",
+              "active-state",
+              "nested-depth",
+              "delete-action",
+              "metadata"
+            ],
+            "properties": [
+              {
+                "name": "id",
+                "type": "string",
+                "description": "Chat id."
+              },
+              {
+                "name": "name",
+                "type": "string",
+                "description": "Chat display name."
+              },
+              {
+                "name": "project",
+                "type": "string",
+                "description": "Project label."
+              },
+              {
+                "name": "adapter",
+                "type": "string",
+                "description": "Provider adapter label."
+              },
+              {
+                "name": "status",
+                "type": "string",
+                "description": "Chat status label."
+              },
+              {
+                "name": "time",
+                "type": "string",
+                "description": "Rendered time or relative timestamp label."
+              },
+              {
+                "name": "lastMessage",
+                "type": "string",
+                "description": "Preview text."
+              },
+              {
+                "name": "depth",
+                "type": "number",
+                "description": "Nested visual depth."
+              },
+              {
+                "name": "isActive",
+                "type": "boolean",
+                "description": "Active row state."
+              }
+            ],
+            "events": [],
+            "themeAliases": [
+              "--sn-node-bg",
+              "--sn-node-border",
+              "--sn-node-hover",
+              "--sn-node-selected",
+              "--sn-text",
+              "--sn-text-dim",
+              "--sn-danger-color",
+              "--sn-chat-list-item-padding",
+              "--sn-chat-list-item-gap",
+              "--sn-chat-list-item-active-border-width",
+              "--sn-chat-list-item-active-padding-left",
+              "--sn-chat-list-item-top-gap",
+              "--sn-chat-list-item-nested-margin",
+              "--sn-chat-list-item-nested-border-width",
+              "--sn-chat-list-item-branch-top",
+              "--sn-chat-list-item-branch-width",
+              "--sn-chat-list-badge-size",
+              "--sn-chat-list-badge-padding",
+              "--sn-chat-list-badge-radius",
+              "--sn-chat-list-name-size",
+              "--sn-chat-list-adapter-size",
+              "--sn-chat-list-preview-size",
+              "--sn-chat-list-meta-gap",
+              "--sn-chat-list-meta-size",
+              "--sn-chat-list-delete-size",
+              "--sn-chat-list-delete-padding"
+            ],
+            "ssr": {
+              "mode": "hydrate-only",
+              "importSafe": false,
+              "jsdaRenderable": false,
+              "requiresDom": true,
+              "browserApis": [
+                "events",
+                "selection",
+                "focus"
+              ],
+              "notes": "May render shell markup under SSR, but interactive behavior belongs to browser hydration."
+            }
+          },
+          "attributes": [],
+          "events": []
         }
       ],
       "exports": [
@@ -13169,6 +13279,14 @@
             },
             {
               "kind": "field",
+              "name": "name",
+              "type": {
+                "text": "string"
+              },
+              "description": "Raw chat name supplied by the host."
+            },
+            {
+              "kind": "field",
               "name": "cleanName",
               "type": {
                 "text": "string"
@@ -13182,6 +13300,22 @@
                 "text": "string"
               },
               "description": "Provider adapter label."
+            },
+            {
+              "kind": "field",
+              "name": "icon",
+              "type": {
+                "text": "string"
+              },
+              "description": "Material Symbols icon rendered for the row."
+            },
+            {
+              "kind": "field",
+              "name": "metaLabel",
+              "type": {
+                "text": "string"
+              },
+              "description": "Compact metadata label rendered after the status icon."
             },
             {
               "kind": "field",
@@ -13217,6 +13351,22 @@
             },
             {
               "kind": "field",
+              "name": "hasChildren",
+              "type": {
+                "text": "boolean"
+              },
+              "description": "Whether the row has child chat descriptors."
+            },
+            {
+              "kind": "field",
+              "name": "isGroup",
+              "type": {
+                "text": "boolean"
+              },
+              "description": "Whether clicking the row toggles it as a group header."
+            },
+            {
+              "kind": "field",
               "name": "subChats",
               "type": {
                 "text": "array"
@@ -13238,6 +13388,14 @@
                 "text": "boolean"
               },
               "description": "Active row state."
+            },
+            {
+              "kind": "field",
+              "name": "isRunning",
+              "type": {
+                "text": "boolean"
+              },
+              "description": "Generic running-state hint used for reusable auto-expansion."
             }
           ],
           "events": [
@@ -13635,7 +13793,177 @@
                 "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
               ]
             }
-          }
+          },
+          "contract": {
+            "status": "draft",
+            "schemaVersion": "component-descriptor-v2",
+            "dataSchema": "schemas/runtime-ui-v1.json",
+            "capabilities": [
+              "chat-sidebar-row",
+              "nested-children",
+              "active-state",
+              "delete-action",
+              "status-slot"
+            ],
+            "properties": [
+              {
+                "name": "id",
+                "type": "string",
+                "description": "Chat id."
+              },
+              {
+                "name": "name",
+                "type": "string",
+                "description": "Raw chat name supplied by the host."
+              },
+              {
+                "name": "cleanName",
+                "type": "string",
+                "description": "Rendered chat name."
+              },
+              {
+                "name": "adapter",
+                "type": "string",
+                "description": "Provider adapter label."
+              },
+              {
+                "name": "icon",
+                "type": "string",
+                "description": "Material Symbols icon rendered for the row."
+              },
+              {
+                "name": "metaLabel",
+                "type": "string",
+                "description": "Compact metadata label rendered after the status icon."
+              },
+              {
+                "name": "agentColor",
+                "type": "string",
+                "description": "Optional row icon accent color."
+              },
+              {
+                "name": "statusKind",
+                "type": "string",
+                "description": "Status visual kind: running, done, or error."
+              },
+              {
+                "name": "statusIcon",
+                "type": "string",
+                "description": "Material Symbols status icon name."
+              },
+              {
+                "name": "statusTitle",
+                "type": "string",
+                "description": "Accessible status tooltip text."
+              },
+              {
+                "name": "hasChildren",
+                "type": "boolean",
+                "description": "Whether the row has child chat descriptors."
+              },
+              {
+                "name": "isGroup",
+                "type": "boolean",
+                "description": "Whether clicking the row toggles it as a group header."
+              },
+              {
+                "name": "subChats",
+                "type": "array",
+                "description": "Child chat descriptors."
+              },
+              {
+                "name": "isExpanded",
+                "type": "boolean",
+                "description": "Child list expanded state."
+              },
+              {
+                "name": "isActive",
+                "type": "boolean",
+                "description": "Active row state."
+              },
+              {
+                "name": "isRunning",
+                "type": "boolean",
+                "description": "Generic running-state hint used for reusable auto-expansion."
+              }
+            ],
+            "events": [
+              {
+                "name": "chat-sidebar-select",
+                "description": "Emits selected chat id and item data."
+              },
+              {
+                "name": "chat-sidebar-toggle",
+                "description": "Emits child expansion changes."
+              },
+              {
+                "name": "chat-sidebar-delete",
+                "description": "Requests deletion."
+              }
+            ],
+            "themeAliases": [
+              "--sn-node-bg",
+              "--sn-node-hover",
+              "--sn-text",
+              "--sn-text-dim",
+              "--sn-cat-server",
+              "--sn-danger-color",
+              "--sn-chat-sidebar-compact-label-min",
+              "--sn-chat-sidebar-compact-label-ch-width",
+              "--sn-chat-sidebar-compact-label-extra",
+              "--sn-chat-sidebar-compact-label-max",
+              "--sn-chat-sidebar-compact-delete-width",
+              "--sn-chat-sidebar-row-gap",
+              "--sn-chat-sidebar-row-padding",
+              "--sn-chat-sidebar-row-min-height",
+              "--sn-chat-sidebar-active-border-width",
+              "--sn-chat-sidebar-active-padding-left",
+              "--sn-chat-sidebar-group-divider-margin",
+              "--sn-chat-sidebar-group-divider-padding",
+              "--sn-chat-sidebar-group-divider-inset",
+              "--sn-chat-sidebar-group-divider-width",
+              "--sn-chat-sidebar-group-divider-height",
+              "--sn-chat-sidebar-icon-size",
+              "--sn-chat-sidebar-icon-box-size",
+              "--sn-chat-sidebar-title-size",
+              "--sn-chat-status-icon-size",
+              "--sn-chat-sidebar-status-margin",
+              "--sn-chat-sidebar-meta-size",
+              "--sn-chat-sidebar-meta-margin",
+              "--sn-chat-sidebar-type-padding",
+              "--sn-chat-sidebar-type-radius",
+              "--sn-chat-sidebar-delete-box-size",
+              "--sn-chat-sidebar-delete-size",
+              "--sn-chat-sidebar-delete-radius",
+              "--sn-chat-sidebar-delete-icon-size",
+              "--sn-chat-sidebar-expand-icon-size",
+              "--sn-chat-sidebar-child-gap",
+              "--sn-chat-sidebar-child-padding",
+              "--sn-chat-sidebar-child-size",
+              "--sn-chat-sidebar-child-min-height",
+              "--sn-chat-sidebar-child-line-left",
+              "--sn-chat-sidebar-child-deep-padding-left",
+              "--sn-chat-sidebar-child-active-padding-left",
+              "--sn-chat-sidebar-child-deep-active-padding-left",
+              "--sn-chat-sidebar-child-deep-line-left",
+              "--sn-chat-sidebar-compact-label-inset",
+              "--sn-chat-sidebar-compact-label-padding",
+              "--sn-chat-sidebar-compact-label-offset"
+            ],
+            "ssr": {
+              "mode": "hydrate-only",
+              "importSafe": false,
+              "jsdaRenderable": false,
+              "requiresDom": true,
+              "browserApis": [
+                "events",
+                "selection",
+                "focus"
+              ],
+              "notes": "May render shell markup under SSR, but interactive behavior belongs to browser hydration."
+            }
+          },
+          "attributes": []
         }
       ],
       "exports": [
@@ -13657,7 +13985,7 @@
           "name": "ChatSidebarSubItem",
           "tagName": "chat-sidebar-sub-item",
           "description": "Generic chat sidebar child item.",
-          "componentDescription": "Generic chat sidebar child item. Use this chat and conversation surface when composing chat UI. Capabilities: chat-sidebar-child-row, active-state, delete-action, status-slot. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "componentDescription": "Generic chat sidebar child item. Use this chat and conversation surface when composing chat UI. Capabilities: chat-sidebar-child-row, nested-children, active-state, delete-action, status-slot. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
           "members": [
             {
               "kind": "field",
@@ -13666,6 +13994,14 @@
                 "text": "string"
               },
               "description": "Child chat id."
+            },
+            {
+              "kind": "field",
+              "name": "name",
+              "type": {
+                "text": "string"
+              },
+              "description": "Raw child chat name supplied by the host."
             },
             {
               "kind": "field",
@@ -13685,11 +14021,19 @@
             },
             {
               "kind": "field",
-              "name": "agentType",
+              "name": "icon",
               "type": {
                 "text": "string"
               },
-              "description": "Child agent type label."
+              "description": "Material Symbols icon rendered for the child row."
+            },
+            {
+              "kind": "field",
+              "name": "metaLabel",
+              "type": {
+                "text": "string"
+              },
+              "description": "Compact metadata label rendered in the child row."
             },
             {
               "kind": "field",
@@ -13725,17 +14069,56 @@
             },
             {
               "kind": "field",
+              "name": "hasChildren",
+              "type": {
+                "text": "boolean"
+              },
+              "description": "Whether the child row has nested child descriptors."
+            },
+            {
+              "kind": "field",
+              "name": "subChats",
+              "type": {
+                "text": "array"
+              },
+              "description": "Nested child chat descriptors."
+            },
+            {
+              "kind": "field",
+              "name": "isExpanded",
+              "type": {
+                "text": "boolean"
+              },
+              "description": "Nested child list expanded state."
+            },
+            {
+              "kind": "field",
               "name": "isActive",
               "type": {
                 "text": "boolean"
               },
               "description": "Active row state."
+            },
+            {
+              "kind": "field",
+              "name": "isRunning",
+              "type": {
+                "text": "boolean"
+              },
+              "description": "Generic running-state hint used for reusable auto-expansion."
             }
           ],
           "events": [
             {
               "name": "chat-sidebar-select",
               "description": "Emits selected child chat id and item data.",
+              "type": {
+                "text": "CustomEvent"
+              }
+            },
+            {
+              "name": "chat-sidebar-toggle",
+              "description": "Emits nested child expansion changes.",
               "type": {
                 "text": "CustomEvent"
               }
@@ -13903,6 +14286,7 @@
               "dataSchema": "schemas/runtime-ui-v1.json",
               "capabilities": [
                 "chat-sidebar-child-row",
+                "nested-children",
                 "active-state",
                 "delete-action",
                 "status-slot"
@@ -13912,6 +14296,11 @@
                   "name": "id",
                   "type": "string",
                   "description": "Child chat id."
+                },
+                {
+                  "name": "name",
+                  "type": "string",
+                  "description": "Raw child chat name supplied by the host."
                 },
                 {
                   "name": "cleanName",
@@ -13924,9 +14313,14 @@
                   "description": "Provider adapter label."
                 },
                 {
-                  "name": "agentType",
+                  "name": "icon",
                   "type": "string",
-                  "description": "Child agent type label."
+                  "description": "Material Symbols icon rendered for the child row."
+                },
+                {
+                  "name": "metaLabel",
+                  "type": "string",
+                  "description": "Compact metadata label rendered in the child row."
                 },
                 {
                   "name": "agentColor",
@@ -13949,15 +14343,39 @@
                   "description": "Accessible status tooltip text."
                 },
                 {
+                  "name": "hasChildren",
+                  "type": "boolean",
+                  "description": "Whether the child row has nested child descriptors."
+                },
+                {
+                  "name": "subChats",
+                  "type": "array",
+                  "description": "Nested child chat descriptors."
+                },
+                {
+                  "name": "isExpanded",
+                  "type": "boolean",
+                  "description": "Nested child list expanded state."
+                },
+                {
                   "name": "isActive",
                   "type": "boolean",
                   "description": "Active row state."
+                },
+                {
+                  "name": "isRunning",
+                  "type": "boolean",
+                  "description": "Generic running-state hint used for reusable auto-expansion."
                 }
               ],
               "events": [
                 {
                   "name": "chat-sidebar-select",
                   "description": "Emits selected child chat id and item data."
+                },
+                {
+                  "name": "chat-sidebar-toggle",
+                  "description": "Emits nested child expansion changes."
                 },
                 {
                   "name": "chat-sidebar-delete",
@@ -14015,7 +14433,7 @@
               }
             },
             "agent": {
-              "componentDescription": "Generic chat sidebar child item. Use this chat and conversation surface when composing chat UI. Capabilities: chat-sidebar-child-row, active-state, delete-action, status-slot. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+              "componentDescription": "Generic chat sidebar child item. Use this chat and conversation surface when composing chat UI. Capabilities: chat-sidebar-child-row, nested-children, active-state, delete-action, status-slot. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
               "semanticRole": "chat and conversation surface",
               "usage": "Render or compose <chat-sidebar-sub-item> when the host needs generic chat sidebar child item.",
               "dataOwnership": "host-owned props and attributes; component owns presentation state",
@@ -14034,7 +14452,7 @@
             }
           },
           "agent": {
-            "componentDescription": "Generic chat sidebar child item. Use this chat and conversation surface when composing chat UI. Capabilities: chat-sidebar-child-row, active-state, delete-action, status-slot. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "componentDescription": "Generic chat sidebar child item. Use this chat and conversation surface when composing chat UI. Capabilities: chat-sidebar-child-row, nested-children, active-state, delete-action, status-slot. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
             "semanticRole": "chat and conversation surface",
             "usage": "Render or compose <chat-sidebar-sub-item> when the host needs generic chat sidebar child item.",
             "dataOwnership": "host-owned props and attributes; component owns presentation state",
@@ -14050,7 +14468,160 @@
                 "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
               ]
             }
-          }
+          },
+          "contract": {
+            "status": "draft",
+            "schemaVersion": "component-descriptor-v2",
+            "dataSchema": "schemas/runtime-ui-v1.json",
+            "capabilities": [
+              "chat-sidebar-child-row",
+              "nested-children",
+              "active-state",
+              "delete-action",
+              "status-slot"
+            ],
+            "properties": [
+              {
+                "name": "id",
+                "type": "string",
+                "description": "Child chat id."
+              },
+              {
+                "name": "name",
+                "type": "string",
+                "description": "Raw child chat name supplied by the host."
+              },
+              {
+                "name": "cleanName",
+                "type": "string",
+                "description": "Rendered child chat name."
+              },
+              {
+                "name": "adapter",
+                "type": "string",
+                "description": "Provider adapter label."
+              },
+              {
+                "name": "icon",
+                "type": "string",
+                "description": "Material Symbols icon rendered for the child row."
+              },
+              {
+                "name": "metaLabel",
+                "type": "string",
+                "description": "Compact metadata label rendered in the child row."
+              },
+              {
+                "name": "agentColor",
+                "type": "string",
+                "description": "Optional row icon accent color."
+              },
+              {
+                "name": "statusKind",
+                "type": "string",
+                "description": "Status visual kind: running, done, or error."
+              },
+              {
+                "name": "statusIcon",
+                "type": "string",
+                "description": "Material Symbols status icon name."
+              },
+              {
+                "name": "statusTitle",
+                "type": "string",
+                "description": "Accessible status tooltip text."
+              },
+              {
+                "name": "hasChildren",
+                "type": "boolean",
+                "description": "Whether the child row has nested child descriptors."
+              },
+              {
+                "name": "subChats",
+                "type": "array",
+                "description": "Nested child chat descriptors."
+              },
+              {
+                "name": "isExpanded",
+                "type": "boolean",
+                "description": "Nested child list expanded state."
+              },
+              {
+                "name": "isActive",
+                "type": "boolean",
+                "description": "Active row state."
+              },
+              {
+                "name": "isRunning",
+                "type": "boolean",
+                "description": "Generic running-state hint used for reusable auto-expansion."
+              }
+            ],
+            "events": [
+              {
+                "name": "chat-sidebar-select",
+                "description": "Emits selected child chat id and item data."
+              },
+              {
+                "name": "chat-sidebar-toggle",
+                "description": "Emits nested child expansion changes."
+              },
+              {
+                "name": "chat-sidebar-delete",
+                "description": "Requests child chat deletion."
+              }
+            ],
+            "themeAliases": [
+              "--sn-node-bg",
+              "--sn-node-hover",
+              "--sn-text",
+              "--sn-text-dim",
+              "--sn-font-mono",
+              "--sn-cat-server",
+              "--sn-danger-color",
+              "--sn-chat-sidebar-row-gap",
+              "--sn-chat-sidebar-icon-size",
+              "--sn-chat-sidebar-icon-box-size",
+              "--sn-chat-sidebar-title-size",
+              "--sn-chat-status-icon-size",
+              "--sn-chat-sidebar-status-margin",
+              "--sn-chat-sidebar-meta-size",
+              "--sn-chat-sidebar-meta-margin",
+              "--sn-chat-sidebar-type-padding",
+              "--sn-chat-sidebar-type-radius",
+              "--sn-chat-sidebar-delete-box-size",
+              "--sn-chat-sidebar-delete-size",
+              "--sn-chat-sidebar-delete-radius",
+              "--sn-chat-sidebar-delete-icon-size",
+              "--sn-chat-sidebar-expand-icon-size",
+              "--sn-chat-sidebar-child-gap",
+              "--sn-chat-sidebar-child-padding",
+              "--sn-chat-sidebar-child-size",
+              "--sn-chat-sidebar-child-min-height",
+              "--sn-chat-sidebar-child-line-left",
+              "--sn-chat-sidebar-child-deep-padding-left",
+              "--sn-chat-sidebar-child-active-padding-left",
+              "--sn-chat-sidebar-child-deep-active-padding-left",
+              "--sn-chat-sidebar-child-deep-line-left",
+              "--sn-chat-sidebar-compact-label-inset",
+              "--sn-chat-sidebar-compact-label-padding",
+              "--sn-chat-sidebar-compact-label-offset",
+              "--sn-chat-sidebar-compact-delete-width"
+            ],
+            "ssr": {
+              "mode": "hydrate-only",
+              "importSafe": false,
+              "jsdaRenderable": false,
+              "requiresDom": true,
+              "browserApis": [
+                "events",
+                "selection",
+                "focus"
+              ],
+              "notes": "May render shell markup under SSR, but interactive behavior belongs to browser hydration."
+            }
+          },
+          "attributes": []
         }
       ],
       "exports": [

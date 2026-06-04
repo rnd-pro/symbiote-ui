@@ -59,6 +59,10 @@ function syncCompactLabelWidth(element, value) {
   }
 }
 
+function isRunningChatItem(chat = {}) {
+  return Boolean(chat.isRunning || chat.statusKind === 'running');
+}
+
 export class ChatSidebarItem extends Symbiote {
   init$ = {
     id: '',
@@ -75,6 +79,7 @@ export class ChatSidebarItem extends Symbiote {
     isGroup: false,
     isExpanded: false,
     isActive: false,
+    isRunning: false,
     subChats: [],
     deleteTitle: translate('chat.sidebar.delete'),
     deleteChatLabel: translate('chat.sidebar.deleteChat'),
@@ -117,6 +122,7 @@ export class ChatSidebarItem extends Symbiote {
       this.toggleAttribute('data-active', value);
       this._syncAutoExpanded();
     });
+    this.sub('isRunning', () => this._syncAutoExpanded());
 
     this.sub('isExpanded', (value) => {
       this.toggleAttribute('data-expanded', value);
@@ -148,8 +154,8 @@ export class ChatSidebarItem extends Symbiote {
   _syncAutoExpanded() {
     let chats = this.$.subChats || [];
     let hasActiveChild = chats.some((chat) => chat.isActive);
-    let hasRunningChild = chats.some((chat) => chat.pendingTaskId);
-    if (chats.length && (this.$.isActive || hasActiveChild || hasRunningChild)) {
+    let hasRunningChild = chats.some(isRunningChatItem);
+    if (chats.length && (this.$.isActive || this.$.isRunning || this.$.statusKind === 'running' || hasActiveChild || hasRunningChild)) {
       this.$.isExpanded = true;
     }
   }
@@ -211,6 +217,8 @@ export class ChatSidebarSubItem extends Symbiote {
     hasChildren: false,
     isExpanded: false,
     isActive: false,
+    isRunning: false,
+    subChats: [],
     deleteTitle: translate('chat.sidebar.delete'),
     deleteChatLabel: translate('chat.sidebar.deleteChat'),
 
@@ -242,6 +250,7 @@ export class ChatSidebarSubItem extends Symbiote {
       this.toggleAttribute('data-active', value);
       this._syncAutoExpanded();
     });
+    this.sub('isRunning', () => this._syncAutoExpanded());
     this.sub('isExpanded', (value) => {
       this.toggleAttribute('data-expanded', value);
     });
@@ -266,8 +275,8 @@ export class ChatSidebarSubItem extends Symbiote {
   _syncAutoExpanded() {
     let chats = this.$.subChats || [];
     let hasActiveChild = chats.some((chat) => chat.isActive);
-    let hasRunningChild = chats.some((chat) => chat.pendingTaskId);
-    if (chats.length && (this.$.isActive || hasActiveChild || hasRunningChild)) {
+    let hasRunningChild = chats.some(isRunningChatItem);
+    if (chats.length && (this.$.isActive || this.$.isRunning || this.$.statusKind === 'running' || hasActiveChild || hasRunningChild)) {
       this.$.isExpanded = true;
     }
   }

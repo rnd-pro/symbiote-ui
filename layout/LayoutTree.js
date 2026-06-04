@@ -416,6 +416,17 @@ export function closeUiPanel(root, panelType, options = {}) {
   if (!panel) {
     return { root, panel: null, removed: false }
   }
+  let uiPanelCount = collectPanels(root)
+    .filter((item) => item.panelState?.uiInvoked)
+    .length
+  if (fallbackRoot && uiPanelCount <= 1) {
+    return {
+      root: clone(fallbackRoot),
+      panel,
+      removed: true,
+      restored: true,
+    }
+  }
   if (root?.id === panel.id) {
     return {
       root: fallbackRoot ? clone(fallbackRoot) : null,

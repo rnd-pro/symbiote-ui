@@ -821,6 +821,7 @@ export class Layout extends Symbiote {
       detail: {
         panelId: result.panel.id,
         panelType,
+        restored: Boolean(result.restored),
         source: result.panel.panelState?.source || '',
       },
     }));
