@@ -61,6 +61,10 @@ console.log(listModules());
 
 The root package and Node-safe entry points must import without creating DOM globals. Import safety does not mean every exported helper is useful without host data, a DOM adapter, browser hydration, or runtime-provided objects. Browser-only custom elements and module definition helpers belong behind `symbiote-ui/ui`.
 
+## Demos
+
+- [`demo/pcb-router-stress.html`](./demo/pcb-router-stress.html) - animated PCB route diagnostics with orbit metrics, keyframes, and agent-readable JSON samples.
+
 ## WebMCP
 
 Component metadata uses `component-descriptor-v2` with bounded agent-facing contracts:
