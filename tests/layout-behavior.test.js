@@ -242,6 +242,29 @@ test('layout tree closeUiPanel refuses to remove host-owned panels', () => {
   assert.equal(findPanelByType(result.root, 'theme').panelState.source, 'host-layout');
 });
 
+test('layout tree closeUiPanel can restore host layout when temporary panel is root', () => {
+  let hostRoot = createSplit(
+    'horizontal',
+    createPanel('graph'),
+    createPanel('chat'),
+    0.58
+  );
+  let temporaryRoot = createPanel('theme', {
+    source: 'theme-widget',
+    uiInvoked: true,
+  });
+
+  let result = closeUiPanel(temporaryRoot, 'theme', { fallbackRoot: hostRoot });
+
+  assert.equal(result.removed, true);
+  assert.equal(result.restored, true);
+  assert.equal(result.root.type, 'split');
+  assert.equal(result.root.ratio, 0.58);
+  assert.equal(findPanelByType(result.root, 'graph').panelType, 'graph');
+  assert.equal(findPanelByType(result.root, 'chat').panelType, 'chat');
+  assert.equal(findPanelByType(result.root, 'theme'), null);
+});
+
 test('layout tree opens UI-invoked panels separately from host-owned panels of the same type', () => {
   let root = createSplit(
     'horizontal',

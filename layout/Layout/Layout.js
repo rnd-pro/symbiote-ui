@@ -769,6 +769,10 @@ export class Layout extends Symbiote {
    * @returns {string|null} opened or reused panel id
    */
   openPanel(panelType, options = {}) {
+    if (options.uiInvoked) {
+      this._captureUiPanelRestoreTree();
+    }
+
     let result = LayoutTree.openPanel(
       LayoutTree.clone(this.$.layoutTree),
       panelType,
@@ -800,7 +804,9 @@ export class Layout extends Symbiote {
    * @returns {boolean}
    */
   closeUiPanel(panelType) {
-    let result = LayoutTree.closeUiPanel(LayoutTree.clone(this.$.layoutTree), panelType);
+    let result = LayoutTree.closeUiPanel(LayoutTree.clone(this.$.layoutTree), panelType, {
+      fallbackRoot: this._uiPanelRestoreTree,
+    });
     if (!result.removed) return false;
     if (result.root) {
       this.$.layoutTree = result.root;
@@ -818,7 +824,26 @@ export class Layout extends Symbiote {
         source: result.panel.panelState?.source || '',
       },
     }));
+    this._clearUiPanelRestoreTreeWhenSettled();
     return true;
+  }
+
+  _captureUiPanelRestoreTree() {
+    if (this._uiPanelRestoreTree || !this.$.layoutTree) return;
+    let hasUiPanel = LayoutTree.collectPanels(this.$.layoutTree)
+      .some((panel) => panel.panelState?.uiInvoked);
+    if (!hasUiPanel) {
+      this._uiPanelRestoreTree = LayoutTree.clone(this.$.layoutTree);
+    }
+  }
+
+  _clearUiPanelRestoreTreeWhenSettled() {
+    if (!this._uiPanelRestoreTree || !this.$.layoutTree) return;
+    let hasUiPanel = LayoutTree.collectPanels(this.$.layoutTree)
+      .some((panel) => panel.panelState?.uiInvoked);
+    if (!hasUiPanel) {
+      this._uiPanelRestoreTree = null;
+    }
   }
 
   /**
@@ -918,6 +943,7 @@ export class Layout extends Symbiote {
     });
 
     this.$.layoutTree = layout;
+    this._uiPanelRestoreTree = null;
     this._saveLayout();
     this._scheduleResponsiveLayout();
   }

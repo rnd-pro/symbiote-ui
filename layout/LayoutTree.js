@@ -394,15 +394,21 @@ export function openPanel(root, panelType, options = {}) {
   return { root: nextRoot, panel, created: true }
 }
 
-export function closeUiPanel(root, panelType) {
+export function closeUiPanel(root, panelType, options = {}) {
+  let { fallbackRoot = null } = options
   let panel = findPanelByType(root, panelType, { uiInvoked: true })
   if (!panel) {
     return { root, panel: null, removed: false }
   }
   if (root?.id === panel.id) {
-    return { root: null, panel, removed: true }
+    return {
+      root: fallbackRoot ? clone(fallbackRoot) : null,
+      panel,
+      removed: true,
+      restored: Boolean(fallbackRoot),
+    }
   }
-  return { root: joinPanels(root, panel.id), panel, removed: true }
+  return { root: joinPanels(root, panel.id), panel, removed: true, restored: false }
 }
 
 /**
