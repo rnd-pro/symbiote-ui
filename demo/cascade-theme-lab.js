@@ -591,6 +591,7 @@ const layoutGroups = [
 
 let activeLayoutGroupId = 'overview';
 let scrollFallback = false;
+const FORCED_SCROLL_INLINE_SIZE = 'max(calc(100% + var(--sn-layout-scroll-inline-extra, 320px)), calc(960px * var(--sn-theme-density, 1)))';
 
 function getActiveLayoutGroup() {
   return layoutGroups.find((group) => group.id === activeLayoutGroupId) || layoutGroups[0];
@@ -599,6 +600,11 @@ function getActiveLayoutGroup() {
 function setMainMenuActive() {
   shellMenu?.querySelector('[data-layout-command="scroll"]')
     ?.toggleAttribute('active', scrollFallback);
+  if (scrollFallback) {
+    layout.style.setProperty('--sn-layout-overflow-inline-size', FORCED_SCROLL_INLINE_SIZE);
+  } else {
+    layout.style.removeProperty('--sn-layout-overflow-inline-size');
+  }
 }
 
 function setShellTabs() {

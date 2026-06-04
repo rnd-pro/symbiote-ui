@@ -96,6 +96,8 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   assert.match(source, /project-tabs-select/);
   assert.match(source, /'layout-shell-menu'/);
   assert.match(source, /setShellTabs/);
+  assert.match(source, /FORCED_SCROLL_INLINE_SIZE/);
+  assert.match(source, /100% \+ var\(--sn-layout-scroll-inline-extra/);
   assert.match(source, /data-layout-command/);
   assert.match(source, /voice command/);
   assert.match(html, /layout module/);
@@ -199,6 +201,7 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.match(source, /--sn-layout-header-icon-size/);
   assert.match(source, /--sn-layout-menu-action-size/);
   assert.match(source, /--sn-layout-overflow-inline-size/);
+  assert.match(source, /--sn-layout-scroll-inline-extra/);
   assert.match(source, /--sn-layout-responsive-panel-min-block-size/);
   assert.match(source, /--sn-node-summary-size/);
   assert.match(source, /--sn-node-pill-body-padding/);
