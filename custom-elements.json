@@ -2845,7 +2845,7 @@
           "name": "Layout",
           "tagName": "panel-layout",
           "description": "Panel-based application layout shell.",
-          "componentDescription": "Panel-based application layout shell. Use this layout composition and navigation surface when composing layout UI. Capabilities: layout-tree, split-panels, panel-registry, panel-menu-actions, ui-invoked-panels, responsive-behavior, importance-auto-collapse, scroll-fallback, local-storage. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: panel_layout_set_behavior, panel_layout_register_panel_type, panel_layout_set_panel_menu_actions, panel_layout_open_panel, panel_layout_close_ui_panel.",
+          "componentDescription": "Panel-based application layout shell. Use this layout composition and navigation surface when composing layout UI. Capabilities: layout-tree, split-panels, panel-registry, panel-menu-actions, ui-invoked-panels, responsive-behavior, importance-auto-collapse, min-size-fit, scroll-fallback, mobile-stack, local-storage. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: panel_layout_set_behavior, panel_layout_register_panel_type, panel_layout_set_panel_menu_actions, panel_layout_open_panel, panel_layout_close_ui_panel.",
           "attributes": [
             {
               "name": "storage-key",
@@ -2903,7 +2903,7 @@
               "type": {
                 "text": "object"
               },
-              "description": "Root responsive behavior controlling auto-collapse and overflow fallback."
+              "description": "Host-applied root responsive behavior controlling auto-collapse, overflow fallback, and mobile mode; not persisted into saved layout trees."
             },
             {
               "kind": "field",
@@ -2959,7 +2959,7 @@
               "type": {
                 "text": "function"
               },
-              "description": "Sets root responsive behavior for auto-collapse, overflow, and mobile stacking."
+              "description": "Sets host-applied root responsive behavior for auto-collapse, overflow, and mobile stacking."
             },
             {
               "kind": "method",
@@ -2967,7 +2967,7 @@
               "type": {
                 "text": "function"
               },
-              "description": "Sets behavior for a concrete layout insertion point."
+              "description": "Sets persisted behavior for a concrete layout insertion point."
             }
           ],
           "events": [
@@ -3081,7 +3081,9 @@
                 "ui-invoked-panels",
                 "responsive-behavior",
                 "importance-auto-collapse",
+                "min-size-fit",
                 "scroll-fallback",
+                "mobile-stack",
                 "local-storage"
               ],
               "attributes": [
@@ -3135,7 +3137,7 @@
                 {
                   "name": "layoutBehavior",
                   "type": "object",
-                  "description": "Root responsive behavior controlling auto-collapse and overflow fallback."
+                  "description": "Host-applied root responsive behavior controlling auto-collapse, overflow fallback, and mobile mode; not persisted into saved layout trees."
                 },
                 {
                   "name": "panelTypes",
@@ -3172,12 +3174,12 @@
                 {
                   "name": "setLayoutBehavior",
                   "type": "function",
-                  "description": "Sets root responsive behavior for auto-collapse, overflow, and mobile stacking."
+                  "description": "Sets host-applied root responsive behavior for auto-collapse, overflow, and mobile stacking."
                 },
                 {
                   "name": "setNodeBehavior",
                   "type": "function",
-                  "description": "Sets behavior for a concrete layout insertion point."
+                  "description": "Sets persisted behavior for a concrete layout insertion point."
                 }
               ],
               "events": [
@@ -3230,7 +3232,7 @@
                 "tools": [
                   {
                     "name": "panel_layout_set_behavior",
-                    "description": "Set host-approved responsive layout behavior such as importance, minimum sizes, collapse policy, overflow fallback, and mobile mode.",
+                    "description": "Set host-approved root responsive layout behavior such as importance, minimum sizes, collapse policy, overflow fallback, and mobile mode; root behavior is runtime policy and node behavior is persisted in the layout tree.",
                     "inputSchema": {
                       "type": "object",
                       "additionalProperties": false,
@@ -3319,7 +3321,7 @@
                   },
                   {
                     "name": "panel_layout_set_panel_menu_actions",
-                    "description": "Set explicit fold-down panel menu actions such as remove, horizontal split, vertical split, or duplicate for a panel surface.",
+                    "description": "Set explicit fold-down panel menu actions; built-in actions distinguish Close for temporary UI-invoked panels from Remove for persistent split-tree panels, plus horizontal split, vertical split, and duplicate.",
                     "inputSchema": {
                       "type": "object",
                       "additionalProperties": false,
@@ -3435,7 +3437,7 @@
               }
             },
             "agent": {
-              "componentDescription": "Panel-based application layout shell. Use this layout composition and navigation surface when composing layout UI. Capabilities: layout-tree, split-panels, panel-registry, panel-menu-actions, ui-invoked-panels, responsive-behavior, importance-auto-collapse, scroll-fallback, local-storage. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: panel_layout_set_behavior, panel_layout_register_panel_type, panel_layout_set_panel_menu_actions, panel_layout_open_panel, panel_layout_close_ui_panel.",
+              "componentDescription": "Panel-based application layout shell. Use this layout composition and navigation surface when composing layout UI. Capabilities: layout-tree, split-panels, panel-registry, panel-menu-actions, ui-invoked-panels, responsive-behavior, importance-auto-collapse, min-size-fit, scroll-fallback, mobile-stack, local-storage. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: panel_layout_set_behavior, panel_layout_register_panel_type, panel_layout_set_panel_menu_actions, panel_layout_open_panel, panel_layout_close_ui_panel.",
               "semanticRole": "layout composition and navigation surface",
               "usage": "Render or compose <panel-layout> when the host needs panel-based application layout shell.",
               "dataOwnership": "host-owned model; component renders and emits intent events",
@@ -3460,7 +3462,7 @@
             }
           },
           "agent": {
-            "componentDescription": "Panel-based application layout shell. Use this layout composition and navigation surface when composing layout UI. Capabilities: layout-tree, split-panels, panel-registry, panel-menu-actions, ui-invoked-panels, responsive-behavior, importance-auto-collapse, scroll-fallback, local-storage. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: panel_layout_set_behavior, panel_layout_register_panel_type, panel_layout_set_panel_menu_actions, panel_layout_open_panel, panel_layout_close_ui_panel.",
+            "componentDescription": "Panel-based application layout shell. Use this layout composition and navigation surface when composing layout UI. Capabilities: layout-tree, split-panels, panel-registry, panel-menu-actions, ui-invoked-panels, responsive-behavior, importance-auto-collapse, min-size-fit, scroll-fallback, mobile-stack, local-storage. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: panel_layout_set_behavior, panel_layout_register_panel_type, panel_layout_set_panel_menu_actions, panel_layout_open_panel, panel_layout_close_ui_panel.",
             "semanticRole": "layout composition and navigation surface",
             "usage": "Render or compose <panel-layout> when the host needs panel-based application layout shell.",
             "dataOwnership": "host-owned model; component renders and emits intent events",

@@ -234,24 +234,30 @@ export class Layout extends Symbiote {
     if (!this.$.layoutTree || !this.isConnected) return;
     let behavior = this._getRootBehavior();
     let rect = this.getBoundingClientRect();
-    let responsiveActive =
-      behavior.responsiveMode !== 'preserve' &&
-      rect.width > 0 &&
-      rect.width <= behavior.responsiveBreakpoint;
+    let tree = this.$.layoutTree;
+    let layoutMinSize = LayoutTree.resolveLayoutMinSize(tree, {
+      fallbackBehavior: behavior,
+      resolvePanelBehavior: (node, branchBehavior) => {
+        let typeBehavior = this.$.panelTypes[node.panelType]?.behavior || {};
+        return LayoutTree.getNodeBehavior(node, LayoutTree.normalizeLayoutBehavior(typeBehavior, branchBehavior));
+      },
+    });
+    let responsiveState = LayoutTree.resolveResponsiveLayoutState(behavior, {
+      inlineSize: rect.width,
+      blockSize: rect.height,
+      layoutMinSize,
+    });
 
     this.setAttribute('responsive-mode', behavior.responsiveMode);
     this.setAttribute('overflow-mode', behavior.overflow);
-    this.toggleAttribute('responsive-active', responsiveActive);
+    this.toggleAttribute('responsive-active', responsiveState.responsiveActive);
+    for (let [name, value] of Object.entries(responsiveState.cssVars)) {
+      this.style.setProperty(name, value);
+    }
 
     if (this.$.fullscreenPanelId) return;
 
-    let tree = this.$.layoutTree;
-    let collapseAllowed =
-      behavior.collapse === 'auto' &&
-      behavior.overflow === 'collapse' &&
-      !responsiveActive;
-
-    if (!collapseAllowed) {
+    if (!responsiveState.collapseAllowed) {
       if (this._clearAutoCollapsedPanels(tree)) {
         this.$.layoutTree = { ...tree };
         this._saveLayout();
@@ -509,6 +515,10 @@ export class Layout extends Symbiote {
       this.splitPanel(panelId, 'vertical', 0.5);
     } else if (actionId === 'layout:duplicate') {
       this.duplicatePanel(panelId, 'horizontal', 0.5);
+    } else if (actionId === 'layout:close-ui-panel') {
+      let panelNode = this._findPanelNode(panelId);
+      let panelType = panelNode?.$?.nodeData?.panelType;
+      if (panelType) this.closeUiPanel(panelType);
     } else if (actionId === 'layout:remove') {
       this.joinPanels(panelId);
     }

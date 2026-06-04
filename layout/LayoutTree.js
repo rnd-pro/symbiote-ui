@@ -568,6 +568,142 @@ export function getBehaviorImportance(node, fallback = DEFAULT_LAYOUT_BEHAVIOR) 
   return getNodeBehavior(node, fallback).importance
 }
 
+function readInlineSize(size, fallback = 0) {
+  return finiteNumber(size?.inlineSize ?? size?.width, fallback, 0)
+}
+
+function readBlockSize(size, fallback = 0) {
+  return finiteNumber(size?.blockSize ?? size?.height, fallback, 0)
+}
+
+/**
+ * Resolve the minimum expanded footprint of a layout tree.
+ * @param {LayoutNode | null} root
+ * @param {Object} [options]
+ * @param {LayoutBehavior} [options.fallbackBehavior]
+ * @param {(node: PanelNode, branchBehavior: LayoutBehavior) => LayoutBehavior} [options.resolvePanelBehavior]
+ * @returns {{inlineSize: number, blockSize: number}}
+ */
+export function resolveLayoutMinSize(root, options = {}) {
+  let {
+    fallbackBehavior = DEFAULT_LAYOUT_BEHAVIOR,
+    resolvePanelBehavior = (node, branchBehavior) => getNodeBehavior(node, branchBehavior),
+  } = options
+
+  function walk(node, fallback) {
+    if (!node) return { inlineSize: 0, blockSize: 0 }
+    let branchBehavior = getNodeBehavior(node, fallback)
+
+    if (isPanelNode(node)) {
+      if (node.collapsed) {
+        return {
+          inlineSize: COLLAPSED_PANEL_INLINE_SIZE,
+          blockSize: COLLAPSED_PANEL_BLOCK_SIZE,
+        }
+      }
+      let behavior = resolvePanelBehavior(node, branchBehavior)
+      return {
+        inlineSize: behavior.minInlineSize,
+        blockSize: behavior.minBlockSize,
+      }
+    }
+
+    let first = walk(node.first, branchBehavior)
+    let second = walk(node.second, branchBehavior)
+
+    if (node.direction === 'horizontal') {
+      return {
+        inlineSize: first.inlineSize + second.inlineSize,
+        blockSize: Math.max(first.blockSize, second.blockSize),
+      }
+    }
+
+    return {
+      inlineSize: Math.max(first.inlineSize, second.inlineSize),
+      blockSize: first.blockSize + second.blockSize,
+    }
+  }
+
+  return walk(root, normalizeLayoutBehavior(fallbackBehavior))
+}
+
+/**
+ * Resolve root responsive layout state for browser and agent consumers.
+ * @param {LayoutBehavior} [behavior]
+ * @param {Object} [viewport]
+ * @param {number} [viewport.inlineSize]
+ * @param {number} [viewport.blockSize]
+ * @param {number} [viewport.width]
+ * @param {number} [viewport.height]
+ * @param {{inlineSize?: number, blockSize?: number, width?: number, height?: number}} [viewport.layoutMinSize]
+ * @param {LayoutBehavior} [fallback]
+ * @returns {{
+ *   behavior: LayoutBehavior,
+ *   inlineSize: number,
+ *   blockSize: number,
+ *   layoutMinSize: {inlineSize: number, blockSize: number},
+ *   responsiveActive: boolean,
+ *   effectiveResponsiveMode: LayoutResponsiveMode,
+ *   collapseAllowed: boolean,
+ *   scrollInline: boolean,
+ *   scrollBlock: boolean,
+ *   cssVars: Record<string, string>
+ * }}
+ */
+export function resolveResponsiveLayoutState(
+  behavior = {},
+  viewport = {},
+  fallback = DEFAULT_LAYOUT_BEHAVIOR
+) {
+  let normalized = normalizeLayoutBehavior(behavior, fallback)
+  let inlineSize = readInlineSize(viewport)
+  let blockSize = readBlockSize(viewport)
+  let layoutMinSize = {
+    inlineSize: readInlineSize(viewport.layoutMinSize, normalized.minInlineSize),
+    blockSize: readBlockSize(viewport.layoutMinSize, normalized.minBlockSize),
+  }
+  let responsiveActive = (
+    normalized.responsiveMode !== 'preserve' &&
+    inlineSize > 0 &&
+    inlineSize <= normalized.responsiveBreakpoint
+  )
+  let effectiveResponsiveMode = responsiveActive ? normalized.responsiveMode : 'preserve'
+  let collapseAllowed = (
+    normalized.collapse === 'auto' &&
+    normalized.overflow === 'collapse' &&
+    !responsiveActive
+  )
+  let scrollInline = (
+    normalized.overflow === 'scroll-inline' ||
+    normalized.overflow === 'scroll' ||
+    effectiveResponsiveMode === 'scroll-inline'
+  )
+  let scrollBlock = (
+    normalized.overflow === 'scroll-block' ||
+    normalized.overflow === 'scroll' ||
+    effectiveResponsiveMode === 'stack'
+  )
+  let overflowInlineSize = Math.max(inlineSize, layoutMinSize.inlineSize)
+  let overflowBlockSize = Math.max(blockSize, layoutMinSize.blockSize)
+
+  return {
+    behavior: normalized,
+    inlineSize,
+    blockSize,
+    layoutMinSize,
+    responsiveActive,
+    effectiveResponsiveMode,
+    collapseAllowed,
+    scrollInline,
+    scrollBlock,
+    cssVars: {
+      '--sn-layout-overflow-inline-size': `${overflowInlineSize}px`,
+      '--sn-layout-overflow-block-size': `${overflowBlockSize}px`,
+      '--sn-layout-responsive-panel-min-block-size': `${normalized.minBlockSize}px`,
+    },
+  }
+}
+
 /**
  * Check whether an expanded layout state can fit without immediately violating
  * descendant panel minimum sizes. Used to keep auto-collapse restore stable.

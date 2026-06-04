@@ -3,6 +3,7 @@ import { test } from 'node:test';
 
 test('root and metadata entrypoints import in Node', async () => {
   let root = await import('../index.js');
+  let layout = await import('../layout/index.js');
   let manifest = await import('../manifest/index.js');
   let webmcp = await import('../webmcp.js');
 
@@ -13,6 +14,8 @@ test('root and metadata entrypoints import in Node', async () => {
   assert.equal(typeof manifest.listThemeRuntimeDescriptors, 'function');
   assert.equal(typeof webmcp.createToolDescriptor, 'function');
   assert.equal(typeof webmcp.createComponentToolDescriptor, 'function');
+  assert.equal(typeof layout.resolveLayoutMinSize, 'function');
+  assert.equal(typeof layout.resolveResponsiveLayoutState, 'function');
 });
 
 test('discover exposes the standalone package contract', async () => {
@@ -47,6 +50,12 @@ test('discover exposes the standalone package contract', async () => {
   assert.equal(layout.contract.schemaVersion, 'component-descriptor-v2');
   assert.equal(sidebar.contract.schemaVersion, 'component-descriptor-v2');
   assert.ok(layoutAgentItem.webmcp.toolNames.includes('panel_layout_set_behavior'));
+  assert.ok(layout.componentDescription.includes('min-size-fit'));
+  assert.ok(layout.contract.capabilities.includes('mobile-stack'));
+  assert.ok(layout.contract.properties.find((property) => (
+    property.name === 'layoutBehavior' &&
+    property.description.includes('not persisted')
+  )));
   assert.ok(layoutAgentItem.webmcp.toolNames.includes('panel_layout_register_panel_type'));
   assert.ok(layoutAgentItem.webmcp.toolNames.includes('panel_layout_set_panel_menu_actions'));
   assert.ok(layoutAgentItem.webmcp.toolNames.includes('panel_layout_open_panel'));

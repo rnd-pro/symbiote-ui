@@ -115,7 +115,7 @@ const WEBMCP_TOOLS = {
   'panel-layout': [
     {
       name: 'panel_layout_set_behavior',
-      description: 'Set host-approved responsive layout behavior such as importance, minimum sizes, collapse policy, overflow fallback, and mobile mode.',
+      description: 'Set host-approved root responsive layout behavior such as importance, minimum sizes, collapse policy, overflow fallback, and mobile mode; root behavior is runtime policy and node behavior is persisted in the layout tree.',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -150,7 +150,7 @@ const WEBMCP_TOOLS = {
     },
     {
       name: 'panel_layout_set_panel_menu_actions',
-      description: 'Set explicit fold-down panel menu actions such as remove, horizontal split, vertical split, or duplicate for a panel surface.',
+      description: 'Set explicit fold-down panel menu actions; built-in actions distinguish Close for temporary UI-invoked panels from Remove for persistent split-tree panels, plus horizontal split, vertical split, and duplicate.',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -1013,7 +1013,7 @@ export let COMPONENTS = [
       status: 'draft',
       schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
-      capabilities: ['layout-tree', 'split-panels', 'panel-registry', 'panel-menu-actions', 'ui-invoked-panels', 'responsive-behavior', 'importance-auto-collapse', 'scroll-fallback', 'local-storage'],
+      capabilities: ['layout-tree', 'split-panels', 'panel-registry', 'panel-menu-actions', 'ui-invoked-panels', 'responsive-behavior', 'importance-auto-collapse', 'min-size-fit', 'scroll-fallback', 'mobile-stack', 'local-storage'],
       attributes: [
         { name: 'storage-key', type: 'string', description: 'Optional key for persisted layout state.' },
         { name: 'min-panel-size', type: 'number', description: 'Minimum panel size in pixels.' },
@@ -1026,7 +1026,7 @@ export let COMPONENTS = [
       ],
       properties: [
         { name: 'layoutTree', type: 'object', description: 'Pure layout tree data rendered by layout-node children.' },
-        { name: 'layoutBehavior', type: 'object', description: 'Root responsive behavior controlling auto-collapse and overflow fallback.' },
+        { name: 'layoutBehavior', type: 'object', description: 'Host-applied root responsive behavior controlling auto-collapse, overflow fallback, and mobile mode; not persisted into saved layout trees.' },
         { name: 'panelTypes', type: 'object', description: 'Host-provided panel type descriptors keyed by panel type.' },
         { name: 'panelChrome', type: 'boolean', description: 'Whether panel headers and explicit panel menu controls are visible.' },
       ],
@@ -1035,8 +1035,8 @@ export let COMPONENTS = [
         { name: 'setPanelMenuActions', type: 'function', description: 'Sets fold-down header menu actions for a panel.' },
         { name: 'openPanel', type: 'function', description: 'Opens or reuses a host-approved panel type inside the current layout tree.' },
         { name: 'closeUiPanel', type: 'function', description: 'Closes a panel only when it was opened as a UI-invoked temporary panel.' },
-        { name: 'setLayoutBehavior', type: 'function', description: 'Sets root responsive behavior for auto-collapse, overflow, and mobile stacking.' },
-        { name: 'setNodeBehavior', type: 'function', description: 'Sets behavior for a concrete layout insertion point.' },
+        { name: 'setLayoutBehavior', type: 'function', description: 'Sets host-applied root responsive behavior for auto-collapse, overflow, and mobile stacking.' },
+        { name: 'setNodeBehavior', type: 'function', description: 'Sets persisted behavior for a concrete layout insertion point.' },
       ],
       events: [
         { name: 'layout-change', description: 'Bubbles when the layout tree changes.' },

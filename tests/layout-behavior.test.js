@@ -13,6 +13,8 @@ import {
   getNodeBehavior,
   normalizeLayoutBehavior,
   openPanel,
+  resolveLayoutMinSize,
+  resolveResponsiveLayoutState,
   setNodeBehavior,
 } from '../layout/LayoutTree.js';
 
@@ -62,6 +64,102 @@ test('layout tree stores behavior per insertion point', () => {
   assert.equal(getNodeBehavior(chat).importance, 5);
   assert.equal(getNodeBehavior(chat).collapse, 'never');
   assert.equal(getNodeBehavior(chat).minBlockSize, DEFAULT_LAYOUT_BEHAVIOR.minBlockSize);
+});
+
+test('layout behavior resolves responsive state and scroll fallback axes', () => {
+  let wide = resolveResponsiveLayoutState(
+    {
+      collapse: 'auto',
+      overflow: 'collapse',
+      responsiveMode: 'stack',
+      responsiveBreakpoint: 640,
+      minInlineSize: 300,
+      minBlockSize: 180,
+    },
+    { inlineSize: 900, blockSize: 520, layoutMinSize: { inlineSize: 740, blockSize: 360 } }
+  );
+
+  assert.equal(wide.responsiveActive, false);
+  assert.equal(wide.effectiveResponsiveMode, 'preserve');
+  assert.equal(wide.collapseAllowed, true);
+  assert.equal(wide.scrollInline, false);
+  assert.equal(wide.scrollBlock, false);
+
+  let state = resolveResponsiveLayoutState(
+    {
+      collapse: 'auto',
+      overflow: 'collapse',
+      responsiveMode: 'scroll-inline',
+      responsiveBreakpoint: 640,
+      minInlineSize: 320,
+      minBlockSize: 180,
+    },
+    {
+      inlineSize: 520,
+      blockSize: 420,
+      layoutMinSize: { inlineSize: 940, blockSize: 360 },
+    }
+  );
+
+  assert.equal(state.responsiveActive, true);
+  assert.equal(state.effectiveResponsiveMode, 'scroll-inline');
+  assert.equal(state.collapseAllowed, false);
+  assert.equal(state.scrollInline, true);
+  assert.equal(state.scrollBlock, false);
+  assert.equal(state.cssVars['--sn-layout-overflow-inline-size'], '940px');
+  assert.equal(state.cssVars['--sn-layout-overflow-block-size'], '420px');
+  assert.equal(state.cssVars['--sn-layout-responsive-panel-min-block-size'], '180px');
+
+  let stack = resolveResponsiveLayoutState(
+    { collapse: 'auto', overflow: 'collapse', responsiveMode: 'stack', responsiveBreakpoint: 640 },
+    { inlineSize: 480, blockSize: 300, layoutMinSize: { inlineSize: 900, blockSize: 760 } }
+  );
+
+  assert.equal(stack.responsiveActive, true);
+  assert.equal(stack.effectiveResponsiveMode, 'stack');
+  assert.equal(stack.collapseAllowed, false);
+  assert.equal(stack.scrollInline, false);
+  assert.equal(stack.scrollBlock, true);
+
+  let blockScroll = resolveResponsiveLayoutState(
+    { collapse: 'never', overflow: 'scroll-block', responsiveMode: 'preserve' },
+    { inlineSize: 900, blockSize: 300, layoutMinSize: { inlineSize: 500, blockSize: 760 } }
+  );
+
+  assert.equal(blockScroll.responsiveActive, false);
+  assert.equal(blockScroll.collapseAllowed, false);
+  assert.equal(blockScroll.scrollInline, false);
+  assert.equal(blockScroll.scrollBlock, true);
+  assert.equal(blockScroll.cssVars['--sn-layout-overflow-inline-size'], '900px');
+  assert.equal(blockScroll.cssVars['--sn-layout-overflow-block-size'], '760px');
+
+  let bothAxes = resolveResponsiveLayoutState(
+    { collapse: 'never', overflow: 'scroll' },
+    { inlineSize: 300, blockSize: 200, layoutMinSize: { inlineSize: 640, blockSize: 480 } }
+  );
+
+  assert.equal(bothAxes.scrollInline, true);
+  assert.equal(bothAxes.scrollBlock, true);
+  assert.equal(bothAxes.collapseAllowed, false);
+});
+
+test('layout minimum size estimate follows split direction and node behavior', () => {
+  let graph = createPanel('graph', {}, { minInlineSize: 420, minBlockSize: 260 });
+  let chat = createPanel('chat', {}, { minInlineSize: 320, minBlockSize: 280 });
+  let inspector = createPanel('inspector', {}, { minInlineSize: 280, minBlockSize: 360 });
+  let right = createSplit('vertical', chat, inspector, 0.5);
+  let root = createSplit('horizontal', graph, right, 0.55);
+
+  let size = resolveLayoutMinSize(root);
+
+  assert.equal(size.inlineSize, 740);
+  assert.equal(size.blockSize, 640);
+
+  chat.collapsed = true;
+  let collapsedSize = resolveLayoutMinSize(root);
+
+  assert.equal(collapsedSize.inlineSize, 700);
+  assert.equal(collapsedSize.blockSize, 388);
 });
 
 test('layout tree opens and closes UI-invoked panels without owning host layout policy', () => {
@@ -151,5 +249,14 @@ test('layout restore guard rejects expanded states that would immediately collap
   assert.equal(
     branchFitsExpandedState(root, 1160, 420, { restoringNodeId: inspector.id }),
     true
+  );
+
+  assert.equal(
+    branchFitsExpandedState(root, 1120, 420, {
+      restoringNodeId: inspector.id,
+      stableFactor: 1,
+      restoreFactor: 1.25,
+    }),
+    false
   );
 });

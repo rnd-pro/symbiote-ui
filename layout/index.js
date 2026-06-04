@@ -11,6 +11,8 @@ export {
   findPanel,
   findPanelByType,
   openPanel,
+  resolveLayoutMinSize,
+  resolveResponsiveLayoutState,
 } from './LayoutTree.js';
 export {
   buildHash,

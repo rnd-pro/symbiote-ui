@@ -105,6 +105,44 @@ parameters to `localStorage`, can reset to defaults, copies the current
 parameter JSON, and emits `cascade-theme-change` after applying tokens. The
 layout owns where the module is shown; `panel-layout` can register it as a
 panel type while keeping the panel menu closed by default.
+Temporary UI-invoked panels use the built-in `Close` action and
+`closeUiPanel()` contract; persistent host layout panels use `Remove` when the
+host deliberately edits the split tree.
+
+## Layout Behavior
+
+`symbiote-ui/layout` exposes SSR-safe layout behavior helpers for hosts and
+agents that compose dynamic workspaces:
+
+```js
+import {
+  LayoutTree,
+  resolveLayoutMinSize,
+  resolveResponsiveLayoutState,
+} from 'symbiote-ui/layout';
+
+let root = LayoutTree.createSplit(
+  'horizontal',
+  LayoutTree.createPanel('graph', {}, { importance: 90, minInlineSize: 420 }),
+  LayoutTree.createPanel('chat', {}, { importance: 40, minInlineSize: 320 }),
+  0.58
+);
+
+let minSize = resolveLayoutMinSize(root);
+let state = resolveResponsiveLayoutState(
+  { collapse: 'auto', overflow: 'scroll-inline', responsiveMode: 'scroll-inline' },
+  { inlineSize: 520, blockSize: 420, layoutMinSize: minSize }
+);
+```
+
+`panel-layout` uses the same contract at runtime. Root `layoutBehavior`
+is host-applied responsive policy and is not persisted into the saved layout
+tree; per-panel or per-branch `behavior` belongs on layout nodes and is
+persisted with the tree. `importance` decides auto-collapse order, minimum
+inline/block sizes decide when panels no longer fit, `collapse` controls
+whether a panel may auto-collapse, `overflow` selects collapse versus
+horizontal/vertical scroll fallback, and `responsiveMode` selects mobile
+preserve, vertical stack, or horizontal scroll behavior.
 
 ## Demos
 

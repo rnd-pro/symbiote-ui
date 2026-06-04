@@ -31,12 +31,27 @@ const LAYOUT_NODE_ICONS = [
   'control_point_duplicate',
 ];
 
-const LAYOUT_PANEL_MENU_ACTIONS = Object.freeze([
+const LAYOUT_PANEL_TREE_ACTIONS = Object.freeze([
   { id: 'layout:split-horizontal', label: 'Split H', icon: 'horizontal_split', title: 'Split panel horizontally' },
   { id: 'layout:split-vertical', label: 'Split V', icon: 'vertical_split', title: 'Split panel vertically' },
   { id: 'layout:duplicate', label: 'Duplicate', icon: 'control_point_duplicate', title: 'Duplicate panel' },
+]);
+
+const LAYOUT_PANEL_MENU_ACTIONS = Object.freeze([
+  ...LAYOUT_PANEL_TREE_ACTIONS,
   { id: 'layout:remove', label: 'Remove', icon: 'close', title: 'Remove panel' },
 ]);
+
+const LAYOUT_UI_PANEL_MENU_ACTIONS = Object.freeze([
+  ...LAYOUT_PANEL_TREE_ACTIONS,
+  { id: 'layout:close-ui-panel', label: 'Close', icon: 'close', title: 'Close temporary UI panel' },
+]);
+
+function getLayoutPanelMenuActions(nodeData) {
+  return nodeData?.panelState?.uiInvoked
+    ? LAYOUT_UI_PANEL_MENU_ACTIONS
+    : LAYOUT_PANEL_MENU_ACTIONS;
+}
 
 export class LayoutNode extends Symbiote {
   static isoMode = true;
@@ -376,7 +391,7 @@ export class LayoutNode extends Symbiote {
           disabled: Boolean(action.disabled),
         }))
       : [];
-    let normalized = [...LAYOUT_PANEL_MENU_ACTIONS, ...customActions];
+    let normalized = [...getLayoutPanelMenuActions(this.$.nodeData), ...customActions];
 
     ensureMaterialSymbols(normalized.map((action) => action.icon));
     this.$.panelMenuActions = normalized;
