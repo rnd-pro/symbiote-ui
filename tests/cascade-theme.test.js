@@ -26,6 +26,7 @@ const chatMessageItemStyles = new URL('../chat/ChatMessageItem/ChatMessageItem.c
 const chatTranscriptStyles = new URL('../chat/ChatTranscript/ChatTranscript.css.js', import.meta.url);
 const chatComposerSource = new URL('../chat/ChatComposer/ChatComposer.js', import.meta.url);
 const chatComposerStyles = new URL('../chat/ChatComposer/ChatComposer.css.js', import.meta.url);
+const cellBgSource = new URL('../effects/CellBg/CellBg.js', import.meta.url);
 const cellBgStyles = new URL('../effects/CellBg/CellBg.css.js', import.meta.url);
 const uiIndexSource = new URL('../ui/index.js', import.meta.url);
 const componentRegistrySource = new URL('../manifest/component-registry.js', import.meta.url);
@@ -147,7 +148,11 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.equal(theme.tokens['--sn-node-label-size'], 'calc(13px * var(--sn-theme-type-scale) * var(--sn-theme-heading-scale))');
   assert.equal(theme.tokens['--sn-markdown-h1-size'], 'calc(24px * var(--sn-theme-type-scale) * var(--sn-theme-heading-scale))');
   assert.equal(theme.tokens['--sn-chat-markdown-h2-size'], 'calc(18px * var(--sn-theme-type-scale) * var(--sn-theme-heading-scale))');
+  assert.equal(theme.tokens['--sn-chat-message-font-size'], 'calc(13px * var(--sn-theme-type-scale))');
+  assert.equal(theme.tokens['--sn-composer-input-size'], 'calc(13px * var(--sn-theme-type-scale))');
+  assert.equal(theme.tokens['--sn-code-font-size'], 'calc(12px * var(--sn-theme-type-scale))');
   assert.equal(theme.tokens['--sn-composer-send-size'], 'calc(32px * var(--sn-theme-density))');
+  assert.equal(theme.tokens['--sn-cell-size'], 'calc(14px * var(--sn-theme-density))');
   assert.equal(theme.tokens['--sn-action-zone-size'], 'calc(16px * var(--sn-theme-density))');
   assert.match(source, /CASCADE_THEME_DESCRIPTOR/);
   assert.match(source, /svgStrokeToken/);
@@ -164,6 +169,10 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.match(source, /--sn-composer-bg/);
   assert.match(source, /--sn-syntax-keyword/);
   assert.match(source, /--sn-cell-dot/);
+  assert.match(source, /--sn-cell-size/);
+  assert.match(source, /--sn-chat-message-font-size/);
+  assert.match(source, /--sn-composer-input-size/);
+  assert.match(source, /--sn-code-font-size/);
   assert.match(source, /--sn-layout-header-icon-size/);
   assert.match(source, /--sn-node-summary-size/);
   assert.match(source, /--sn-node-pill-body-padding/);
@@ -282,6 +291,7 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
     chatMessage,
     chatTranscript,
     chatComposer,
+    cellBgComponent,
     cellBg,
   ] = await Promise.all([
     readFile(graphNodeStyles, 'utf8'),
@@ -300,6 +310,7 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
     readFile(chatMessageItemStyles, 'utf8'),
     readFile(chatTranscriptStyles, 'utf8'),
     readFile(chatComposerStyles, 'utf8'),
+    readFile(cellBgSource, 'utf8'),
     readFile(cellBgStyles, 'utf8'),
   ]);
 
@@ -330,8 +341,13 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(treeView, /--sn-tree-badge-padding/);
   assert.match(codeBlock, /--sn-markdown-h1-size/);
   assert.match(codeBlock, /--sn-markdown-h4-size/);
+  assert.match(codeBlock, /--sn-code-font-size/);
+  assert.match(codeBlock, /--sn-code-padding/);
   assert.match(chatMessage, /--sn-chat-markdown-h1-size/);
   assert.match(chatMessage, /--sn-chat-markdown-h4-size/);
+  assert.match(chatMessage, /--sn-chat-message-font-size/);
+  assert.match(chatMessage, /--sn-chat-message-padding/);
+  assert.match(chatMessage, /--sn-chat-status-card-size/);
   assert.match(chatMessage, /--sn-chat-user-message-bg/);
   assert.match(chatMessage, /--sn-chat-agent-message-bg/);
   assert.match(chatMessage, /--sn-syntax-keyword/);
@@ -339,6 +355,14 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(chatTranscript, /--sn-chat-transcript-padding/);
   assert.match(chatComposer, /--sn-composer-bg/);
   assert.match(chatComposer, /--sn-composer-send-size/);
+  assert.match(chatComposer, /--sn-composer-input-size/);
+  assert.match(chatComposer, /--sn-composer-footer-size/);
+  assert.match(chatComposer, /--sn-composer-voice-label-size/);
+  assert.match(cellBgComponent, /refreshTheme/);
+  assert.match(cellBgComponent, /_scheduleThemeRefresh/);
+  assert.match(cellBgComponent, /cascade-theme-change/);
+  assert.match(cellBgComponent, /MutationObserver/);
+  assert.match(cellBgComponent, /--sn-cell-size/);
   assert.match(cellBg, /--sn-cell-bg/);
   assert.match(cellBg, /--sn-cell-glare/);
 });

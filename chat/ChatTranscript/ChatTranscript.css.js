@@ -28,8 +28,8 @@ chat-message-item {
   left: 50%;
   bottom: var(--sn-chat-scroll-bottom);
   z-index: 30;
-  width: 32px;
-  height: 32px;
+  width: var(--sn-composer-send-size, 32px);
+  height: var(--sn-composer-send-size, 32px);
   border: none;
   border-radius: 50%;
   background: var(--sn-node-bg);
@@ -57,15 +57,15 @@ chat-message-item {
 }
 
 .scroll-bottom-btn .material-symbols-outlined {
-  font-size: 18px;
+  font-size: var(--sn-composer-send-icon-size, 18px);
 }
 
 .live-status-indicator {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  font-size: 12px;
+  gap: var(--sn-chat-gap, 8px);
+  padding: var(--sn-chat-tool-padding, 8px 16px);
+  font-size: var(--sn-chat-tool-font-size, 12px);
   color: var(--sn-text-dim);
   animation: status-fade-in 0.2s ease;
 }

@@ -1664,6 +1664,38 @@
             {
               "name": "--sn-diagnostic-warning-bg",
               "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-code-font-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-code-markdown-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-code-table-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-code-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-code-gutter-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-code-gutter-width",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-code-markdown-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-code-table-cell-padding",
+              "description": "Theme CSS custom property consumed by this component."
             }
           ]
         }
@@ -2489,11 +2521,67 @@
                 "text": "function"
               },
               "description": "Resizes the canvas to its host bounds."
+            },
+            {
+              "kind": "method",
+              "name": "refreshTheme",
+              "type": {
+                "text": "function"
+              },
+              "description": "Refreshes canvas colors and geometry from inherited cascade tokens."
             }
           ],
           "cssProperties": [
             {
               "name": "--sn-bg",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-cell-bg",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-cell-dot",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-cell-base-alpha",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-cell-alpha-span",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-cell-glare",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-cell-vignette-mid",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-cell-vignette-edge",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-cell-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-cell-min-radius",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-cell-max-radius",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-cell-step-ms",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-cell-fade-rate",
               "description": "Theme CSS custom property consumed by this component."
             }
           ]
@@ -3627,6 +3715,58 @@
             {
               "name": "--sn-danger-color",
               "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-message-font-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-small-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-tool-font-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-tool-label-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-code-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-table-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-status-card-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-status-icon-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-message-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-tool-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-code-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-status-card-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-status-card-gap",
+              "description": "Theme CSS custom property consumed by this component."
             }
           ]
         }
@@ -3752,6 +3892,34 @@
             },
             {
               "name": "--sn-chat-gap",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-transcript-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-scroll-bottom",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-tool-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-tool-font-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-chat-live-icon-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-composer-send-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-composer-send-icon-size",
               "description": "Theme CSS custom property consumed by this component."
             }
           ]
@@ -4047,6 +4215,90 @@
             },
             {
               "name": "--sn-composer-send-icon-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-composer-input-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-composer-footer-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-composer-chip-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-composer-popup-header-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-composer-popup-item-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-composer-popup-hint-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-composer-voice-label-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-composer-voice-preview-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-composer-voice-status-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-composer-input-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-composer-footer-gap",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-composer-footer-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-composer-footer-btn-min-height",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-composer-footer-btn-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-composer-chip-gap",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-composer-chip-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-composer-autocomplete-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-composer-autocomplete-item-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-composer-popup-inset",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-composer-voice-label-max",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-composer-voice-command-max",
               "description": "Theme CSS custom property consumed by this component."
             }
           ]

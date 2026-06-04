@@ -29,7 +29,7 @@ chat-message-item {
 
 .message.system {
   align-self: center;
-  font-size: 11px;
+  font-size: var(--sn-chat-small-size, 11px);
   max-width: 90%;
   color: var(--sn-text-dim);
 }
@@ -42,9 +42,10 @@ chat-message-item {
 }
 
 .msg-content {
-  padding: 12px 16px;
+  padding: var(--sn-chat-message-padding, 12px 16px);
   border-radius: 16px;
   width: 100%;
+  font-size: var(--sn-chat-message-font-size, 13px);
   line-height: 1.5;
   word-break: break-word;
 }
@@ -73,9 +74,9 @@ chat-message-item {
 .tool-header {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  font-size: 12px;
+  gap: var(--sn-chat-status-card-gap, 6px);
+  padding: var(--sn-chat-tool-padding, 8px 12px);
+  font-size: var(--sn-chat-tool-font-size, 12px);
   font-weight: 600;
   color: var(--sn-text-dim);
   cursor: pointer;
@@ -89,7 +90,7 @@ chat-message-item {
 
 .tool-header::before {
   content: '>';
-  font-size: 10px;
+  font-size: var(--sn-chat-tool-label-size, 10px);
   transition: transform 0.15s ease;
   color: var(--sn-text-dim);
 }
@@ -133,11 +134,11 @@ chat-message-item {
 }
 
 .tool-section {
-  padding: 8px 12px;
+  padding: var(--sn-chat-tool-padding, 8px 12px);
 }
 
 .tool-label {
-  font-size: 10px;
+  font-size: var(--sn-chat-tool-label-size, 10px);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -148,9 +149,9 @@ chat-message-item {
 .tool-code {
   background: var(--sn-bg);
   border-radius: 6px;
-  padding: 8px;
+  padding: var(--sn-chat-code-padding, 8px);
   font-family: var(--sn-font-mono);
-  font-size: 11px;
+  font-size: var(--sn-chat-code-size, 11px);
   color: var(--sn-text-dim);
   white-space: pre-wrap;
   word-break: break-all;
@@ -161,7 +162,7 @@ chat-message-item {
 .tool-waiting {
   color: var(--sn-text-dim);
   font-style: italic;
-  font-size: 11px;
+  font-size: var(--sn-chat-small-size, 11px);
 }
 
 .spin-icon {
@@ -189,11 +190,11 @@ chat-message-item {
 .md-code-block {
   background: var(--sn-bg);
   border-radius: 8px;
-  padding: 12px;
+  padding: var(--sn-chat-code-padding, 12px);
   overflow-x: auto;
   margin: 6px 0;
   font-family: var(--sn-font-mono);
-  font-size: 12px;
+  font-size: var(--sn-chat-code-size, 12px);
   white-space: pre;
 }
 
@@ -202,7 +203,7 @@ chat-message-item {
   padding: 2px 5px;
   border-radius: 4px;
   font-family: var(--sn-font-mono);
-  font-size: 11px;
+  font-size: var(--sn-chat-code-size, 11px);
   color: var(--sn-text);
 }
 
@@ -292,7 +293,7 @@ h4.md-h {
   width: 100%;
   border-collapse: collapse;
   margin: 12px 0;
-  font-size: 12px;
+  font-size: var(--sn-chat-table-size, 12px);
 }
 
 .md-table th,
@@ -354,7 +355,7 @@ h4.md-h {
 
 .thinking-block,
 .work-summary {
-  font-size: 12px;
+  font-size: var(--sn-chat-tool-font-size, 12px);
   color: var(--sn-text-dim);
 }
 
@@ -398,10 +399,10 @@ h4.md-h {
 }
 
 .work-copy-btn {
-  flex: 0 0 24px;
+  flex: 0 0 calc(var(--sn-chat-summary-icon-size, 16px) * 1.5);
   margin-top: 1px;
-  width: 24px;
-  height: 24px;
+  width: calc(var(--sn-chat-summary-icon-size, 16px) * 1.5);
+  height: calc(var(--sn-chat-summary-icon-size, 16px) * 1.5);
   border: none;
   border-radius: 8px;
   background: transparent;
@@ -421,7 +422,7 @@ h4.md-h {
 }
 
 .work-copy-btn .material-symbols-outlined {
-  font-size: 15px;
+  font-size: var(--sn-chat-summary-icon-size, 15px);
 }
 
 .work-copy-btn.copied {
@@ -455,7 +456,7 @@ h4.md-h {
 }
 
 .meta-chip {
-  font-size: 10px;
+  font-size: var(--sn-chat-tool-label-size, 10px);
   font-weight: 500;
   padding: 2px 7px;
   border-radius: 4px;
@@ -490,7 +491,7 @@ h4.md-h {
 .thinking-status {
   display: inline-block;
   margin-left: 8px;
-  font-size: 11px;
+  font-size: var(--sn-chat-small-size, 11px);
   font-weight: 400;
   color: var(--sn-text-dim);
   font-style: italic;
@@ -499,7 +500,7 @@ h4.md-h {
 .status-board {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--sn-chat-status-card-gap, 8px);
   padding: 4px 0;
   width: 100%;
 }
@@ -510,10 +511,10 @@ h4.md-h {
   background: var(--sn-node-hover);
   border: 1px solid var(--sn-node-hover);
   border-radius: 8px;
-  padding: 10px 12px;
+  padding: var(--sn-chat-status-card-padding, 10px 12px);
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--sn-chat-status-card-gap, 6px);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
   position: relative;
   overflow: hidden;
@@ -566,14 +567,14 @@ h4.md-h {
 .status-card-header {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12px;
+  gap: var(--sn-chat-status-card-gap, 6px);
+  font-size: var(--sn-chat-status-card-size, 12px);
   font-weight: 500;
   color: var(--sn-text);
 }
 
 .status-card-header .material-symbols-outlined {
-  font-size: 16px;
+  font-size: var(--sn-chat-status-icon-size, 16px);
 }
 
 .status-card-header .spin-icon {
@@ -581,7 +582,7 @@ h4.md-h {
 }
 
 .status-card-status {
-  font-size: 11px;
+  font-size: var(--sn-chat-small-size, 11px);
   color: var(--sn-text-dim);
   display: flex;
   align-items: center;
@@ -591,16 +592,16 @@ h4.md-h {
 .status-card-events {
   display: flex;
   flex-wrap: wrap;
-  gap: 3px;
+  gap: calc(var(--sn-chat-status-card-gap, 6px) * 0.5);
 }
 
 .status-card-event {
   display: inline-block;
   background: var(--sn-node-bg);
   color: var(--sn-text-dim);
-  padding: 2px 6px;
+  padding: var(--sn-composer-footer-btn-padding, 2px 6px);
   border-radius: 4px;
-  font-size: 11px;
+  font-size: var(--sn-chat-small-size, 11px);
   white-space: nowrap;
   max-width: 120px;
   overflow: hidden;

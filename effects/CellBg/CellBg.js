@@ -72,6 +72,25 @@ function readCssToken(source, token) {
   return computed?.getPropertyValue(token).trim() || '';
 }
 
+function readCssNumber(source, token, fallback) {
+  let raw = readCssToken(source, token);
+  let value = Number.parseFloat(raw);
+  if (Number.isFinite(value) && !raw.startsWith('calc(')) return value;
+
+  let doc = source?.ownerDocument || globalThis.document;
+  if (!doc || !raw) return fallback;
+  let probe = doc.createElement('span');
+  probe.style.position = 'absolute';
+  probe.style.visibility = 'hidden';
+  probe.style.pointerEvents = 'none';
+  probe.style.width = raw;
+  let target = typeof source?.append === 'function' ? source : doc.documentElement;
+  target.append(probe);
+  let resolved = Number.parseFloat(globalThis.getComputedStyle(probe).width);
+  probe.remove();
+  return Number.isFinite(resolved) ? resolved : fallback;
+}
+
 export class CellBg extends Symbiote {
   init$ = {
     active: false,
@@ -94,6 +113,11 @@ export class CellBg extends Symbiote {
     this.lastTime = now();
     this.isAnimating = false;
     this._stagnantCount = 0;
+    this._cellSize = CELL_SIZE;
+    this._minRadius = MIN_RADIUS;
+    this._maxRadius = MAX_RADIUS;
+    this._stepMs = STEP_MS;
+    this._fadeRate = FADE_RATE;
 
     // We only redraw on rAF if running, or if a single frame is needed after resize
     this.resize = this.resize.bind(this);
@@ -115,6 +139,17 @@ export class CellBg extends Symbiote {
     } else if (typeof globalThis.addEventListener === 'function') {
       globalThis.addEventListener('resize', onResize);
       this._removeResizeFallback = () => globalThis.removeEventListener?.('resize', onResize);
+    }
+
+    this._themeChangeHandler = () => this._scheduleThemeRefresh();
+    this.ownerDocument?.addEventListener?.('cascade-theme-change', this._themeChangeHandler);
+    if (typeof globalThis.MutationObserver === 'function') {
+      this._themeObserver = new MutationObserver(() => this._scheduleThemeRefresh());
+      let root = this.ownerDocument?.documentElement;
+      if (root) {
+        this._themeObserver.observe(root, { attributes: true, attributeFilter: ['class', 'style'] });
+      }
+      this._themeObserver.observe(this, { attributes: true, attributeFilter: ['class', 'style'] });
     }
 
     // Defer observation to allow DOM to settle
@@ -164,11 +199,49 @@ export class CellBg extends Symbiote {
   disconnectedCallback() {
     super.disconnectedCallback();
     if (this.ro) this.ro.disconnect();
+    this._themeObserver?.disconnect();
+    this.ownerDocument?.removeEventListener?.('cascade-theme-change', this._themeChangeHandler);
     this._removeResizeFallback?.();
     this._stop();
   }
 
+  refreshTheme({ pulse = false } = {}) {
+    let previousCellSize = this._cellSize;
+    let previousMinRadius = this._minRadius;
+    let previousMaxRadius = this._maxRadius;
+    this._readThemeMetrics();
+    this._buildPalette();
+
+    let geometryChanged = previousCellSize !== this._cellSize
+      || previousMinRadius !== this._minRadius
+      || previousMaxRadius !== this._maxRadius;
+    if (geometryChanged) {
+      this.resize();
+    } else {
+      this._draw();
+    }
+    if (pulse) this.pulse(3000);
+  }
+
+  _scheduleThemeRefresh() {
+    if (this._themeRefreshQueued) return;
+    this._themeRefreshQueued = true;
+    requestFrame(() => {
+      this._themeRefreshQueued = false;
+      this.refreshTheme({ pulse: true });
+    });
+  }
+
+  _readThemeMetrics() {
+    this._cellSize = Math.max(4, readCssNumber(this, '--sn-cell-size', CELL_SIZE));
+    this._minRadius = Math.max(0.5, readCssNumber(this, '--sn-cell-min-radius', MIN_RADIUS));
+    this._maxRadius = Math.max(this._minRadius + 0.5, readCssNumber(this, '--sn-cell-max-radius', MAX_RADIUS));
+    this._stepMs = Math.max(24, readCssNumber(this, '--sn-cell-step-ms', STEP_MS));
+    this._fadeRate = Math.min(0.18, Math.max(0.01, readCssNumber(this, '--sn-cell-fade-rate', FADE_RATE)));
+  }
+
   _buildPalette() {
+    this._readThemeMetrics();
     let bg = readCssToken(this, '--sn-cell-bg') || readCssToken(this, '--sn-bg');
     let dot = readCssToken(this, '--sn-cell-dot') || readCssToken(this, '--sn-text-dim');
     let bgRgb = parseCssRgb(this, bg) || [0, 0, 0];
@@ -212,12 +285,12 @@ export class CellBg extends Symbiote {
     let oldCols = this.cols;
     let oldRows = this.rows;
 
-    this.cols = Math.ceil(w / CELL_SIZE) + 1;
-    this.rows = Math.ceil(h / CELL_SIZE) + 1;
+    this.cols = Math.ceil(w / this._cellSize) + 1;
+    this.rows = Math.ceil(h / this._cellSize) + 1;
 
     this.grid = new Uint8Array(this.cols * this.rows);
     this.radii = new Float32Array(this.cols * this.rows);
-    this.radii.fill(MIN_RADIUS);
+    this.radii.fill(this._minRadius);
 
     if (oldGrid && oldGrid.length > 0) {
       let mc = Math.min(this.cols, oldCols);
@@ -242,7 +315,7 @@ export class CellBg extends Symbiote {
     if (!this.grid || this.grid.length === 0) return;
     for (let i = 0; i < this.grid.length; i++) {
       this.grid[i] = Math.random() < 0.15 ? 1 : 0;
-      if (this.grid[i]) this.radii[i] = MIN_RADIUS;
+      if (this.grid[i]) this.radii[i] = this._minRadius;
     }
   }
 
@@ -321,7 +394,7 @@ export class CellBg extends Symbiote {
         if (Math.random() < 0.15) {
           let idx = y * this.cols + x;
           this.grid[idx] = 1;
-          this.radii[idx] = MIN_RADIUS;
+          this.radii[idx] = this._minRadius;
         }
       }
     }
@@ -348,9 +421,9 @@ export class CellBg extends Symbiote {
     this.accumulator += dt * this.currentSpeed;
 
     let maxSteps = 5;
-    while (this.accumulator >= STEP_MS && maxSteps > 0) {
+    while (this.accumulator >= this._stepMs && maxSteps > 0) {
       this._step();
-      this.accumulator -= STEP_MS;
+      this.accumulator -= this._stepMs;
       maxSteps--;
     }
 
@@ -377,20 +450,20 @@ export class CellBg extends Symbiote {
         let idx = y * this.cols + x;
         let alive = this.grid[idx];
 
-        let targetR = alive ? MAX_RADIUS : MIN_RADIUS;
+        let targetR = alive ? this._maxRadius : this._minRadius;
         let currentR = this.radii[idx];
 
         if (alive) {
           this.radii[idx] = currentR + (targetR - currentR) * 0.2;
         } else {
-          this.radii[idx] = currentR + (targetR - currentR) * FADE_RATE;
+          this.radii[idx] = currentR + (targetR - currentR) * this._fadeRate;
         }
 
         let r = this.radii[idx];
-        let cx = x * CELL_SIZE;
-        let cy = y * CELL_SIZE;
+        let cx = x * this._cellSize;
+        let cy = y * this._cellSize;
 
-        let t = (r - MIN_RADIUS) / (MAX_RADIUS - MIN_RADIUS);
+        let t = (r - this._minRadius) / (this._maxRadius - this._minRadius);
         if (t < 0) t = 0;
         if (t > 1) t = 1;
 

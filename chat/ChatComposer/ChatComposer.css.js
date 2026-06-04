@@ -30,10 +30,10 @@ chat-composer {
   background: transparent;
   border: none;
   color: var(--sn-text);
-  padding: 4px 0;
+  padding: var(--sn-composer-input-padding, 4px 0);
   outline: none;
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--sn-composer-input-size, 13px);
   line-height: 1.4;
   resize: none;
   min-height: var(--sn-composer-input-min-height);
@@ -111,8 +111,8 @@ sn-button.btn-send[variant="icon"].btn-stop::after {
   container: composer-footer / inline-size;
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 6px 16px 0;
+  gap: var(--sn-composer-footer-gap, 4px);
+  padding: var(--sn-composer-footer-padding, 6px 16px 0);
   min-height: 0;
   overflow: hidden;
 }
@@ -124,14 +124,14 @@ sn-button.btn-send[variant="icon"].btn-stop::after {
 .composer-footer-btn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  min-height: 24px;
-  padding: 3px 8px;
+  gap: var(--sn-composer-footer-gap, 4px);
+  min-height: var(--sn-composer-footer-btn-min-height, 24px);
+  padding: var(--sn-composer-footer-btn-padding, 3px 8px);
   border-radius: 8px;
   border: none;
   background: transparent;
   color: var(--sn-text-dim);
-  font-size: 11px;
+  font-size: var(--sn-composer-footer-size, 11px);
   font-family: inherit;
   cursor: pointer;
   transition: background 0.12s, color 0.12s;
@@ -159,7 +159,7 @@ sn-button.btn-send[variant="icon"].btn-stop::after {
   background: transparent;
   border: none;
   color: var(--sn-text-dim);
-  font-size: 11px;
+  font-size: var(--sn-composer-footer-size, 11px);
   font-family: inherit;
   font-weight: 500;
   outline: none;
@@ -252,8 +252,8 @@ sn-button.btn-send[variant="icon"].btn-stop::after {
 .chat-context-bar {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  padding: 0 8px 8px;
+  gap: var(--sn-composer-chip-gap, 6px);
+  padding: 0 var(--sn-composer-control-gap, 8px) var(--sn-composer-control-gap, 8px);
   min-height: 0;
 }
 
@@ -264,11 +264,11 @@ sn-button.btn-send[variant="icon"].btn-stop::after {
 .context-chip {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--sn-composer-chip-gap, 4px);
   background: var(--sn-node-hover);
   border-radius: 6px;
-  padding: 3px 8px;
-  font-size: 11px;
+  padding: var(--sn-composer-chip-padding, 3px 8px);
+  font-size: var(--sn-composer-chip-size, 11px);
   color: var(--sn-text-dim);
 }
 
@@ -280,8 +280,8 @@ sn-button.btn-send[variant="icon"].btn-stop::after {
 }
 
 .context-remove {
-  --sn-button-icon-size: 16px;
-  --sn-button-icon-font-size: 13px;
+  --sn-button-icon-size: calc(var(--sn-composer-send-size) * 0.5);
+  --sn-button-icon-font-size: var(--sn-composer-input-size, 13px);
   --sn-button-border: transparent;
   --sn-button-radius: 4px;
   --sn-button-bg: transparent;
@@ -308,15 +308,15 @@ chat-composer.drag-over .composer-body {
   display: none;
   position: absolute;
   bottom: 100%;
-  left: 20px;
-  right: 20px;
+  left: var(--sn-composer-popup-inset, 20px);
+  right: var(--sn-composer-popup-inset, 20px);
   max-height: 240px;
   overflow-y: auto;
   background: color-mix(in srgb, var(--sn-node-bg) 95%, transparent);
   border: 1px solid color-mix(in srgb, var(--sn-node-hover) 45%, transparent);
   border-radius: 16px;
-  padding: 4px;
-  margin-bottom: 6px;
+  padding: var(--sn-composer-autocomplete-padding, 4px);
+  margin-bottom: var(--sn-composer-footer-gap, 6px);
   box-shadow: var(--sn-shadow-xl);
   z-index: 10;
   backdrop-filter: blur(8px);
@@ -327,8 +327,8 @@ chat-composer.drag-over .composer-body {
 }
 
 .autocomplete-header {
-  padding: 6px 10px 4px;
-  font-size: 10px;
+  padding: var(--sn-composer-autocomplete-item-padding, 6px 10px);
+  font-size: var(--sn-composer-popup-header-size, 10px);
   font-weight: 600;
   color: var(--sn-text-dim);
   text-transform: uppercase;
@@ -338,11 +338,11 @@ chat-composer.drag-over .composer-body {
 .autocomplete-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
+  gap: var(--sn-composer-control-gap, 8px);
+  padding: var(--sn-composer-autocomplete-item-padding, 6px 10px);
   border-radius: 8px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--sn-composer-popup-item-size, 12px);
   color: var(--sn-text);
   opacity: 0.75;
   transition: background 0.1s, opacity 0.1s, color 0.1s;
@@ -356,7 +356,7 @@ chat-composer.drag-over .composer-body {
 }
 
 .autocomplete-item .material-symbols-outlined {
-  font-size: 16px;
+  font-size: var(--sn-composer-send-icon-size, 16px);
   color: var(--sn-text-dim);
 }
 
@@ -368,7 +368,7 @@ chat-composer.drag-over .composer-body {
 }
 
 .autocomplete-item-hint {
-  font-size: 10px;
+  font-size: var(--sn-composer-popup-hint-size, 10px);
   color: var(--sn-text-dim);
 }
 
@@ -420,18 +420,18 @@ chat-composer.drag-over .composer-body {
 .btn-wake-listen.has-command {
   width: auto;
   max-width: 164px;
-  padding: 0 10px;
-  gap: 6px;
+  padding: 0 var(--sn-composer-control-gap, 10px);
+  gap: var(--sn-composer-footer-gap, 6px);
   border-radius: 999px;
 }
 
 .wake-command-text {
   display: none;
-  max-width: 118px;
+  max-width: var(--sn-composer-voice-label-max, 118px);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 11px;
+  font-size: var(--sn-composer-voice-label-size, 11px);
   font-weight: 650;
   letter-spacing: 0;
 }
@@ -442,11 +442,11 @@ chat-composer.drag-over .composer-body {
 
 .btn-voice-language {
   width: auto;
-  min-width: 86px;
-  padding: 2px;
-  gap: 2px;
+  min-width: calc(var(--sn-composer-send-size) * 2.7);
+  padding: calc(var(--sn-composer-send-size) * 0.0625);
+  gap: calc(var(--sn-composer-send-size) * 0.0625);
   border-radius: 999px;
-  font-size: 11px;
+  font-size: var(--sn-composer-voice-label-size, 11px);
   font-weight: 650;
   letter-spacing: 0;
   color: var(--sn-text-dim);
@@ -457,9 +457,9 @@ chat-composer.drag-over .composer-body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 24px;
-  height: calc(var(--sn-composer-send-size) - 4px);
-  padding: 0 7px;
+  min-width: calc(var(--sn-composer-send-size) * 0.75);
+  height: calc(var(--sn-composer-send-size) - var(--sn-composer-footer-gap, 4px));
+  padding: 0 calc(var(--sn-composer-control-gap, 8px) * 0.875);
   border-radius: 999px;
   color: var(--sn-text-dim);
   line-height: 1;
@@ -472,9 +472,9 @@ chat-composer.drag-over .composer-body {
 
 .btn-voice-command {
   width: auto;
-  max-width: min(170px, 28vw);
-  padding: 0 10px;
-  gap: 6px;
+  max-width: min(var(--sn-composer-voice-command-max, 170px), 28vw);
+  padding: 0 var(--sn-composer-control-gap, 10px);
+  gap: var(--sn-composer-footer-gap, 6px);
   border-radius: 999px;
   background: color-mix(in srgb, var(--sn-node-bg) 88%, var(--sn-text) 12%);
   color: var(--sn-text-dim);
@@ -490,7 +490,7 @@ chat-composer.drag-over .composer-body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 11px;
+  font-size: var(--sn-composer-voice-label-size, 11px);
   font-weight: 650;
   letter-spacing: 0;
 }
@@ -547,7 +547,7 @@ chat-composer.drag-over .composer-body {
 /* ── Voice Input — Preview Banner ── */
 
 .voice-preview {
-  margin: 0 0 4px;
+  margin: 0 0 var(--sn-composer-footer-gap, 4px);
   animation: voice-preview-in 0.15s ease;
 }
 
@@ -573,11 +573,11 @@ chat-composer.drag-over .composer-body {
 }
 
 .voice-preview-body {
-  font-size: 13px;
+  font-size: var(--sn-composer-voice-preview-size, 13px);
   line-height: 1.4;
   color: var(--sn-text);
   min-height: var(--sn-composer-input-min-height);
-  padding: 4px 0;
+  padding: var(--sn-composer-input-padding, 4px 0);
   outline: none;
   word-break: break-word;
 }
@@ -592,7 +592,7 @@ chat-composer.drag-over .composer-body {
 
 .voice-preview-status {
   color: var(--sn-text-dim);
-  font-size: 12px;
+  font-size: var(--sn-composer-voice-status-size, 12px);
   line-height: 1.4;
   font-family: var(--sn-font-mono);
 }
@@ -620,8 +620,8 @@ chat-composer.drag-over .composer-body {
 .voice-command-hints {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 6px;
+  gap: var(--sn-composer-footer-gap, 4px);
+  margin-top: var(--sn-composer-footer-gap, 6px);
 }
 
 .voice-command-hints[hidden] {
@@ -631,12 +631,12 @@ chat-composer.drag-over .composer-body {
 .voice-command-hint {
   display: inline-flex;
   align-items: center;
-  min-height: 20px;
-  padding: 2px 7px;
+  min-height: var(--sn-composer-input-min-height, 20px);
+  padding: var(--sn-composer-footer-btn-padding, 2px 7px);
   border-radius: 999px;
   background: color-mix(in srgb, var(--sn-node-bg) 86%, var(--sn-text) 14%);
   color: var(--sn-text-dim);
-  font-size: 11px;
+  font-size: var(--sn-composer-voice-label-size, 11px);
   font-weight: 600;
   line-height: 1.2;
 }
@@ -672,7 +672,7 @@ chat-composer.drag-over .composer-body {
 }
 
 .voice-preview-btn .material-symbols-outlined {
-  font-size: 16px;
+  font-size: var(--sn-composer-send-icon-size, 16px);
 }
 
 `;
