@@ -2,6 +2,17 @@
 
 All notable changes to `symbiote-ui` will be documented in this file.
 
+## [0.3.0-alpha.10] - 2026-06-04
+
+### Added
+
+- Added a reusable cascade theme contract with `createCascadeTheme()` and `applyCascadeTheme()`.
+- Exposed cascade theme controls and WebMCP metadata through provider discovery.
+
+### Changed
+
+- Updated the cascade theme lab to consume the library API instead of owning local theme formulas.
+
 ## [0.3.0-alpha.6] - 2026-06-03
 
 ### Changed
