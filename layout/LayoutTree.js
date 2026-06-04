@@ -1,6 +1,6 @@
 /**
  * @fileoverview BSP (Binary Space Partitioning) Layout Tree
- * Implements Blender-style area splitting/joining mechanics.
+ * Implements explicit panel splitting and joining mechanics.
  */
 
 /**

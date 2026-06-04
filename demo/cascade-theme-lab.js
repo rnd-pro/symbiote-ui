@@ -17,6 +17,7 @@ configureMaterialSymbols();
 
 for (const tagName of [
   'layout-shell-menu',
+  'layout-sidebar',
   'panel-layout',
   'project-tabs',
   'node-canvas',
@@ -37,6 +38,7 @@ for (const tagName of [
 
 await Promise.all([
   customElements.whenDefined('layout-shell-menu'),
+  customElements.whenDefined('layout-sidebar'),
   customElements.whenDefined('panel-layout'),
   customElements.whenDefined('layout-node'),
   customElements.whenDefined('project-tabs'),
@@ -237,7 +239,6 @@ class CascadeUiPanel extends Symbiote {
       '--sn-shape-icon-size',
       '--sn-port-label-size',
       '--sn-layout-header-icon-size',
-      '--sn-action-zone-size',
     ];
     const renderTokens = () => {
       const computed = getComputedStyle(document.documentElement);
@@ -440,6 +441,7 @@ CascadeChatPanel.rootStyles = `
 CascadeChatPanel.reg('cascade-chat-panel');
 
 const shellMenu = document.querySelector('layout-shell-menu');
+const sidebar = document.querySelector('#lab-sidebar');
 const layout = document.querySelector('.lab-layout');
 layout.setLayoutBehavior({
   minInlineSize: 240,
@@ -623,6 +625,18 @@ const layoutGroups = [
 let activeLayoutGroupId = 'overview';
 let scrollFallback = false;
 const FORCED_SCROLL_INLINE_SIZE = 'max(calc(100% + var(--sn-layout-scroll-inline-extra, 320px)), calc(960px * var(--sn-theme-density, 1)))';
+const sidebarSections = [
+  { id: 'overview', label: 'Agent Chat', icon: 'smart_toy' },
+  { id: 'theme', label: 'Skills', icon: 'school' },
+  { id: 'graph', label: 'Explorer', icon: 'folder_open' },
+  { id: 'responsive', label: 'Graph', icon: 'developer_board' },
+  { id: 'chat', label: 'Follow', icon: 'smart_toy' },
+  { id: 'analysis', label: 'Analysis', icon: 'analytics', disabled: true },
+  { id: 'monitor', label: 'Live Monitor', icon: 'monitor_heart', disabled: true },
+  { id: 'runtime', label: 'Runtime', icon: 'memory', disabled: true },
+  { id: 'spatial', label: 'Spatial', icon: 'view_in_ar', disabled: true },
+  { id: 'settings', label: 'Settings', icon: 'settings', disabled: true },
+];
 
 function getActiveLayoutGroup() {
   return layoutGroups.find((group) => group.id === activeLayoutGroupId) || layoutGroups[0];
@@ -642,6 +656,7 @@ function setShellTabs() {
   let tabGroups = layoutGroups.filter((group) => group.id !== 'overview');
   let activeTabId = activeLayoutGroupId === 'overview' ? null : activeLayoutGroupId;
   shellMenu?.setTabs(tabGroups, activeTabId);
+  sidebar?.setActiveSection(activeLayoutGroupId);
 }
 
 function applyLayoutGroup(id = activeLayoutGroupId) {
@@ -659,10 +674,22 @@ function applyLayoutGroup(id = activeLayoutGroupId) {
 }
 
 setShellTabs();
+if (sidebar) {
+  sidebar.routerSync = false;
+  sidebar.$.collapsed = false;
+  sidebar.setSections(sidebarSections);
+  sidebar.setActiveSection(activeLayoutGroupId);
+}
 shellMenu?.addEventListener('project-tabs-home', () => applyLayoutGroup('overview'));
 shellMenu?.addEventListener('project-tabs-add', () => applyLayoutGroup('responsive'));
 shellMenu?.addEventListener('project-tabs-select', (event) => applyLayoutGroup(event.detail?.id));
 shellMenu?.addEventListener('cascade-theme-open-full', () => applyLayoutGroup('theme'));
+window.addEventListener('hashchange', () => {
+  let id = String(location.hash || '').replace(/^#\/?/, '').split(/[/?#]/)[0];
+  if (layoutGroups.some((group) => group.id === id)) {
+    applyLayoutGroup(id);
+  }
+});
 shellMenu?.addEventListener('click', (event) => {
   let commandButton = event.target.closest('[data-layout-command]');
   if (!commandButton) return;

@@ -77,7 +77,7 @@ const CASCADE_THEME_CONTROL_LIST = [
     max: 140,
     default: 100,
     icon: 'density_medium',
-    description: 'Spacing and hit-target scale for graph nodes, ports, chat composer, controls, layout chrome, action zones, and tree rows.',
+    description: 'Spacing and hit-target scale for graph nodes, ports, chat composer, controls, layout chrome, panel menus, and tree rows.',
   },
 ];
 
@@ -435,7 +435,6 @@ export const CASCADE_THEME_TOKEN_TARGETS = Object.freeze({
     '--sn-cell-max-radius',
     '--sn-cell-step-ms',
     '--sn-cell-fade-rate',
-    '--sn-action-zone-size',
     '--sn-socket-hit-size',
   ],
 });
@@ -1168,7 +1167,6 @@ export function createCascadeTheme(options = {}) {
     '--sn-panel-menu-padding': `${densityToken(4)} 0`,
     '--sn-panel-menu-item-gap': densityToken(8),
     '--sn-panel-menu-item-padding': `${densityToken(8)} ${densityToken(12)}`,
-    '--sn-action-zone-size': densityToken(16),
     '--sn-scrollbar-thumb': `hsl(0 0% ${text.toFixed(1)}% / ${dark ? 0.08 : 0.24})`,
     '--sn-scrollbar-thumb-hover': dark
       ? `hsl(0 0% ${text.toFixed(1)}% / 0.25)`

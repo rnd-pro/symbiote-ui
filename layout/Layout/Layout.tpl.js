@@ -2,7 +2,6 @@ import { html } from '@symbiotejs/symbiote';
 
 export let template = html`
   <div class="layout-root" ref="root"></div>
-  <layout-preview ref="preview"></layout-preview>
   <panel-menu ref="menu"></panel-menu>
 
   <!-- Fullscreen tab bar (hidden by default) -->

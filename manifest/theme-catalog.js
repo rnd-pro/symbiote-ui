@@ -168,12 +168,6 @@ export let THEME_ELEMENT_GROUPS = [
     usedBy: ['node-canvas', 'canvas-graph', 'graph-explorer-shell', 'node-minimap'],
   },
   {
-    name: 'layout-preview',
-    description: 'Drag preview overlays and split indicators used by reusable layout composition.',
-    tokens: ['--sn-layout-preview-join-bg', '--sn-layout-preview-join-border', '--sn-layout-preview-line', '--sn-layout-preview-line-shadow'],
-    usedBy: ['panel-layout'],
-  },
-  {
     name: 'xr',
     description: 'Spatial panel material aliases derived from the default provider theme.',
     tokens: ['--sn-xr-panel-bg', '--sn-xr-panel-border', '--sn-xr-panel-radius', '--sn-xr-panel-shadow', '--sn-xr-pointer-color'],
@@ -455,10 +449,6 @@ export let THEME_RULE_BLOCKS = [
       '--sn-subgraph-bg-hover',
       '--sn-subgraph-border',
       '--sn-subgraph-border-hover',
-      '--sn-layout-preview-join-bg',
-      '--sn-layout-preview-join-border',
-      '--sn-layout-preview-line',
-      '--sn-layout-preview-line-shadow',
       '--sn-xr-panel-bg',
       '--sn-xr-panel-border',
       '--sn-xr-panel-radius',
@@ -504,8 +494,6 @@ export let THEME_RULE_BLOCKS = [
       { output: '--sn-subgraph-bg-hover', inputs: ['component.subgraphBackgroundHover'], expression: 'var(--sn-subgraph-accent) hover gradient token', description: 'Subgraph action hover backgrounds are provider-owned gradient tokens.' },
       { output: '--sn-subgraph-border', inputs: ['component.subgraphBorder'], expression: 'color-mix(in srgb, var(--sn-subgraph-accent) 30%, transparent)', description: 'Subgraph action borders follow the data accent branch.' },
       { output: '--sn-subgraph-border-hover', inputs: ['component.subgraphBorderHover'], expression: 'color-mix(in srgb, var(--sn-subgraph-accent) 50%, transparent)', description: 'Subgraph action hover borders follow the data accent branch.' },
-      { output: '--sn-layout-preview-join-bg', inputs: ['component.layoutPreviewJoinBackground'], expression: 'color-mix(in srgb, var(--sn-danger-color) 30%, transparent)', description: 'Layout join previews use a provider-owned danger overlay token.' },
-      { output: '--sn-layout-preview-line', inputs: ['--sn-node-selected'], expression: 'var(--sn-node-selected)', description: 'Layout split preview lines follow the shared selected/accent color.' },
       { output: '--sn-xr-panel-bg', inputs: ['--sn-panel-bg'], expression: 'var(--sn-panel-bg)', description: 'XR panel materials inherit provider panel surfaces.' },
       { output: '--sn-xr-panel-border', inputs: ['--sn-node-border'], expression: 'var(--sn-node-border)', description: 'XR panel edges follow the shared provider border.' },
       { output: '--sn-xr-panel-radius', inputs: ['--sn-node-radius'], expression: 'var(--sn-node-radius)', description: 'XR panel geometry follows the provider radius cascade.' },
@@ -675,22 +663,6 @@ export let THEME_TOKENS = {
       "layoutResizerHoverBackground": {
         "$type": "color",
         "$value": "hsl(var(--sn-hue-base) var(--sn-sat-muted) var(--sn-lit-text) / 0.08)"
-      },
-      "layoutPreviewJoinBackground": {
-        "$type": "color",
-        "$value": "color-mix(in srgb, var(--sn-danger-color) 30%, transparent)"
-      },
-      "layoutPreviewJoinBorder": {
-        "$type": "color",
-        "$value": "color-mix(in srgb, var(--sn-danger-color) 60%, transparent)"
-      },
-      "layoutPreviewLine": {
-        "$type": "color",
-        "$value": "var(--sn-node-selected)"
-      },
-      "layoutPreviewLineShadow": {
-        "$type": "shadow",
-        "$value": "0 0 8px var(--sn-layout-preview-line)"
       },
       "xrPanelBackground": {
         "$type": "color",

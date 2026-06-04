@@ -23,10 +23,10 @@ const layoutNodeStyles = new URL('../layout/LayoutNode/LayoutNode.css.js', impor
 const layoutShellMenuSource = new URL('../layout/LayoutShellMenu/LayoutShellMenu.js', import.meta.url);
 const layoutShellMenuTemplate = new URL('../layout/LayoutShellMenu/LayoutShellMenu.tpl.js', import.meta.url);
 const layoutShellMenuStyles = new URL('../layout/LayoutShellMenu/LayoutShellMenu.css.js', import.meta.url);
+const layoutSidebarSource = new URL('../layout/LayoutSidebar/LayoutSidebar.js', import.meta.url);
 const projectTabsSource = new URL('../layout/ProjectTabs/ProjectTabs.js', import.meta.url);
 const projectTabsStyles = new URL('../layout/ProjectTabs/ProjectTabs.css.js', import.meta.url);
 const panelMenuStyles = new URL('../layout/PanelMenu/PanelMenu.css.js', import.meta.url);
-const actionZoneStyles = new URL('../layout/ActionZone/ActionZone.css.js', import.meta.url);
 const treeViewStyles = new URL('../tree/TreeView/TreeView.css.js', import.meta.url);
 const codeBlockStyles = new URL('../display/CodeBlock/CodeBlock.css.js', import.meta.url);
 const chatMessageItemStyles = new URL('../chat/ChatMessageItem/ChatMessageItem.css.js', import.meta.url);
@@ -111,7 +111,6 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   assert.match(source, /--sn-node-comment-body-padding/);
   assert.match(source, /--sn-port-label-size/);
   assert.match(source, /--sn-layout-header-icon-size/);
-  assert.match(source, /--sn-action-zone-size/);
   assert.match(source, /'chat-transcript'/);
   assert.match(source, /'chat-composer'/);
   assert.match(source, /'cell-bg'/);
@@ -143,12 +142,20 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   assert.match(html, /100dvh/);
   assert.doesNotMatch(html, /100vh/);
   assert.match(html, /project-path="symbiote-ui \/ layout module"/);
-  assert.match(html, /menu-open/);
-  assert.match(html, /slot="menu-actions" type="button" data-layout-command="reset"/);
-  assert.match(html, /slot="menu-actions" type="button" data-layout-command="scroll"/);
+  assert.match(html, /<layout-sidebar id="lab-sidebar" slot="sidebar"/);
+  assert.match(html, /slot="actions" type="button" data-layout-command="reset"/);
+  assert.match(html, /slot="actions" type="button" data-layout-command="scroll"/);
+  assert.match(source, /sidebar\.setSections\(sidebarSections\)/);
+  assert.match(source, /sidebar\.\$\.collapsed = false/);
+  assert.match(source, /sidebar\.setActiveSection\(activeLayoutGroupId\)/);
+  assert.match(source, /Agent Chat/);
+  assert.match(source, /Live Monitor/);
+  assert.match(source, /disabled: true/);
   assert.doesNotMatch(html, /class="lab-toolbar"/);
   assert.doesNotMatch(html, /lab-main-menu/);
   assert.doesNotMatch(html, /<project-tabs/);
+  assert.doesNotMatch(html, /menu-open/);
+  assert.doesNotMatch(html, /slot="menu-actions"/);
   assert.doesNotMatch(html, /data-layout-group=/);
   assert.doesNotMatch(source, /extends HTMLElement/);
   assert.doesNotMatch(source, /\.setTheme\(/);
@@ -158,30 +165,29 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   assert.doesNotMatch(html, /data-control=/);
 });
 
-test('layout shell menu owns fold-down layout tabs and host action slots', async () => {
+test('layout shell menu mirrors the Agent Portal topbar, tabs, sidebar, and workspace shell', async () => {
   const [source, template, styles] = await Promise.all([
     readFile(layoutShellMenuSource, 'utf8'),
     readFile(layoutShellMenuTemplate, 'utf8'),
     readFile(layoutShellMenuStyles, 'utf8'),
   ]);
 
-  assert.match(source, /isMenuOpen: false/);
-  assert.match(source, /toggleMenu\(open = !this\.\$\.isMenuOpen\)/);
-  assert.match(source, /openMenu\(\)/);
-  assert.match(source, /closeMenu\(\)/);
-  assert.match(source, /_menuStateInitialized/);
-  assert.match(source, /layout-shell-menu-toggle/);
-  assert.match(template, /class="shell-menu-toggle"/);
-  assert.match(template, /@aria-expanded': 'isMenuOpen'/);
-  assert.match(template, /class="shell-menu-drawer"/);
+  assert.match(source, /setTabs\(tabs = \[\], activeId = this\.\$\.activeId\)/);
+  assert.match(template, /class="app-topbar"/);
+  assert.match(template, /class="shell-tabs-row"/);
   assert.match(template, /<project-tabs class="shell-tabs"/);
-  assert.match(template, /slot name="menu-actions"/);
-  assert.match(template, /slot name="menu"/);
-  assert.match(styles, /--sn-shell-menu-toggle-size/);
-  assert.match(styles, /--sn-shell-menu-drawer-max-block-size/);
-  assert.match(styles, /\.shell-menu-drawer\[hidden\]/);
-  assert.match(styles, /scrollbar-color: var\(--sn-scrollbar-thumb/);
-  assert.match(styles, /letter-spacing: 0;/);
+  assert.match(template, /slot name="sidebar"/);
+  assert.match(template, /class="app-workspace-content"/);
+  assert.match(styles, /background-image: linear-gradient\(to bottom, var\(--sn-node-bg/);
+  assert.match(styles, /background-size: 100% var\(--sn-shell-top-gradient-size, 78px\)/);
+  assert.match(styles, /height: var\(--sn-app-topbar-height, 40px\)/);
+  assert.match(styles, /\.shell-tabs-row/);
+  assert.match(styles, /::slotted\(\[slot='sidebar'\]\)/);
+  assert.match(styles, /letter-spacing: var\(--sn-app-title-letter-spacing, 0\.5px\)/);
+  assert.doesNotMatch(source, /sideMenuItems/);
+  assert.doesNotMatch(source, /layout-shell-menu-item/);
+  assert.doesNotMatch(template, /shell-menu-drawer/);
+  assert.doesNotMatch(template, /slot name="menu-actions"/);
 });
 
 test('cascade theme is a reusable library contract with WebMCP metadata', async () => {
@@ -254,7 +260,6 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.equal(theme.tokens['--sn-code-font-size'], 'calc(12px * var(--sn-theme-type-scale))');
   assert.equal(theme.tokens['--sn-composer-send-size'], 'calc(32px * var(--sn-theme-density))');
   assert.equal(theme.tokens['--sn-cell-size'], 'calc(14px * var(--sn-theme-density))');
-  assert.equal(theme.tokens['--sn-action-zone-size'], 'calc(16px * var(--sn-theme-density))');
   assert.match(source, /CASCADE_THEME_DESCRIPTOR/);
   assert.match(source, /svgStrokeToken/);
   assert.match(source, /headingToken/);
@@ -544,10 +549,10 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
     layoutNodeSourceText,
     layoutNode,
     layoutNodeTpl,
+    layoutSidebarSourceText,
     projectTabs,
     projectTabsCss,
     panelMenu,
-    actionZone,
     treeView,
     codeBlock,
     chatMessage,
@@ -575,10 +580,10 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
     readFile(layoutNodeSource, 'utf8'),
     readFile(layoutNodeStyles, 'utf8'),
     readFile(layoutNodeTemplate, 'utf8'),
+    readFile(layoutSidebarSource, 'utf8'),
     readFile(projectTabsSource, 'utf8'),
     readFile(projectTabsStyles, 'utf8'),
     readFile(panelMenuStyles, 'utf8'),
-    readFile(actionZoneStyles, 'utf8'),
     readFile(treeViewStyles, 'utf8'),
     readFile(codeBlockStyles, 'utf8'),
     readFile(chatMessageItemStyles, 'utf8'),
@@ -628,7 +633,12 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(layoutSourceText, /_onPanelClose/);
   assert.match(layoutSourceText, /#setPanelVisible\(panelNode, true\)/);
   assert.match(layoutSourceText, /layout:split-horizontal/);
-  assert.match(layoutSourceText, /_getActionZonesEnabled/);
+  assert.match(layoutSourceText, /layout:split-vertical/);
+  assert.match(layoutSourceText, /layout:duplicate/);
+  assert.match(layoutSourceText, /layout:remove/);
+  assert.doesNotMatch(layoutSourceText, /_getActionZonesEnabled/);
+  assert.doesNotMatch(layoutSourceText, /action-zone-/);
+  assert.doesNotMatch(layoutSourceText, /LayoutPreview|layout-preview/);
   assert.match(layoutNodeSourceText, /layoutCollapsePolicy/);
   assert.match(layoutNodeSourceText, /collapse-policy/);
   assert.match(layoutNodeSourceText, /setPanelMenuActions/);
@@ -636,21 +646,24 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(layoutNodeSourceText, /panel-menu-action/);
   assert.match(layoutNodeSourceText, /LAYOUT_PANEL_MENU_ACTIONS/);
   assert.match(layoutNodeSourceText, /layout:duplicate/);
-  assert.match(layoutNodeSourceText, /showActionZones/);
+  assert.match(layoutNodeSourceText, /layout:remove/);
+  assert.doesNotMatch(layoutNodeSourceText, /showActionZones/);
+  assert.doesNotMatch(layoutNodeSourceText, /layoutActionZones/);
+  assert.match(layoutSidebarSourceText, /isDisabled: Boolean\(item\.disabled\)/);
   assert.match(layoutNode, /--sn-layout-menu-action-size/);
   assert.match(layoutNode, /--sn-layout-menu-action-height/);
   assert.match(layoutNode, /--sn-layout-menu-icon-size/);
   assert.match(layoutNodeTpl, /panel-menu-drawer/);
   assert.match(layoutNodeTpl, /panelMenuActions/);
   assert.match(layoutNodeTpl, /onPanelMenuAction/);
-  assert.match(layoutNodeTpl, /!showActionZones/);
+  assert.doesNotMatch(layoutNodeTpl, /<action-zone/);
+  assert.doesNotMatch(layoutNodeTpl, /showActionZones/);
   assert.match(layoutNode, /--sn-layout-header-icon-size/);
   assert.match(layoutNode, /--sn-layout-resizer-thickness/);
   assert.match(projectTabs, /--sn-tab-accent-\$\{index % 6\}/);
   assert.match(projectTabsCss, /--tab-accent, var\(--sn-tabs-accent/);
   assert.match(projectTabsCss, /border-color: color-mix\(in srgb, var\(--tab-accent/);
   assert.match(panelMenu, /--sn-panel-menu-item-size/);
-  assert.match(actionZone, /--sn-action-zone-size/);
   assert.match(treeView, /--sn-tree-badge-padding/);
   assert.match(codeBlock, /--sn-markdown-h1-size/);
   assert.match(codeBlock, /--sn-markdown-h4-size/);
@@ -707,6 +720,8 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(registry, /responsive-behavior/);
   assert.match(registry, /setLayoutBehavior/);
   assert.match(registry, /setNodeBehavior/);
+  assert.doesNotMatch(registry, /action-zone/);
+  assert.doesNotMatch(registry, /layout-preview/);
   assert.match(registry, /--sn-layout-menu-action-height/);
   assert.match(registry, /--sn-layout-overflow-inline-size/);
   assert.match(registry, /preview-approve/);
@@ -726,6 +741,8 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(customElements, /"name": "setLayoutBehavior"/);
   assert.match(customElements, /"name": "setNodeBehavior"/);
   assert.match(customElements, /"name": "panel-menu-action"/);
+  assert.doesNotMatch(customElements, /action-zone/);
+  assert.doesNotMatch(customElements, /layout-preview/);
   assert.match(customElements, /"name": "--sn-cell-noise"/);
   assert.match(customElements, /"name": "--sn-composer-collapsed-control-width"/);
   assert.match(customElements, /"name": "--sn-composer-input-min-inline-size"/);

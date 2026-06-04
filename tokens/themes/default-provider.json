@@ -149,22 +149,6 @@
       "$type": "color",
       "$value": "hsl(var(--sn-hue-base) var(--sn-sat-muted) var(--sn-lit-text) / 0.08)"
     },
-    "layoutPreviewJoinBackground": {
-      "$type": "color",
-      "$value": "color-mix(in srgb, var(--sn-danger-color) 30%, transparent)"
-    },
-    "layoutPreviewJoinBorder": {
-      "$type": "color",
-      "$value": "color-mix(in srgb, var(--sn-danger-color) 60%, transparent)"
-    },
-    "layoutPreviewLine": {
-      "$type": "color",
-      "$value": "var(--sn-node-selected)"
-    },
-    "layoutPreviewLineShadow": {
-      "$type": "shadow",
-      "$value": "0 0 8px var(--sn-layout-preview-line)"
-    },
     "xrPanelBackground": {
       "$type": "color",
       "$value": "var(--sn-panel-bg)"

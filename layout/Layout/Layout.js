@@ -1,7 +1,7 @@
 /**
- * @fileoverview Layout - Root container for Blender-style panel layout
+ * @fileoverview Layout - Root container for panel layouts.
  * Uses LayoutNode for recursive BSP tree rendering.
- * Handles action zone events for split/join operations.
+ * Handles explicit panel menu events for split/remove operations.
  */
 
 import Symbiote from '@symbiotejs/symbiote';
@@ -10,7 +10,6 @@ import * as LayoutTree from './../LayoutTree.js';
 import { template } from './Layout.tpl.js';
 import { styles } from './Layout.css.js';
 import './../LayoutNode/LayoutNode.js';
-import './../LayoutPreview/LayoutPreview.js';
 import './../PanelMenu/PanelMenu.js';
 
 export class Layout extends Symbiote {
@@ -26,7 +25,6 @@ export class Layout extends Symbiote {
     '@responsive-breakpoint': 720,
     '@overflow-mode': 'collapse',
     '@auto-collapse': true,
-    '@action-zones': false,
 
 
     layoutTree: null,
@@ -36,9 +34,6 @@ export class Layout extends Symbiote {
     panelTypes: {},
 
     panelChrome: true,
-    layoutActionZones: false,
-
-    activeGesture: null,
 
 
     fullscreenPanelId: null,
@@ -85,12 +80,6 @@ export class Layout extends Symbiote {
     this.addEventListener('layout-change', () => this._saveLayout());
 
 
-    this.addEventListener('action-zone-start', (e) => this._onActionZoneStart(e));
-    this.addEventListener('action-zone-gesture', (e) => this._onActionZoneGesture(e));
-    this.addEventListener('action-zone-execute', (e) => this._onActionZoneExecute(e));
-    this.addEventListener('action-zone-end', (e) => this._onActionZoneEnd(e));
-
-
     this.addEventListener('panel-type-menu', (e) => this._onPanelTypeMenu(e));
     this.addEventListener('panel-type-select', (e) => this._onPanelTypeSelect(e));
     this.addEventListener('panel-fullscreen', (e) => this._onPanelFullscreen(e));
@@ -106,27 +95,9 @@ export class Layout extends Symbiote {
     } else if (typeof window !== 'undefined') {
       window.addEventListener('resize', this._resizeFallback);
     }
-
-
-    this._globalPointerFallback = () => {
-      if (this.$.activeGesture) {
-        this.$.activeGesture = null;
-        if (this.ref.preview) {
-          this.ref.preview.hide();
-        }
-      }
-    };
-    if (typeof document !== 'undefined') {
-      document.addEventListener('pointerup', this._globalPointerFallback);
-      document.addEventListener('pointercancel', this._globalPointerFallback);
-    }
   }
 
   disconnectedCallback() {
-    if (this._globalPointerFallback && typeof document !== 'undefined') {
-      document.removeEventListener('pointerup', this._globalPointerFallback);
-      document.removeEventListener('pointercancel', this._globalPointerFallback);
-    }
     this._resizeObserver?.disconnect();
     if (this._resizeFallback && typeof window !== 'undefined') {
       window.removeEventListener('resize', this._resizeFallback);
@@ -242,18 +213,9 @@ export class Layout extends Symbiote {
 
 
     let chromeEnabled = this.$.panelChrome !== false;
-    let actionZonesEnabled = this._getActionZonesEnabled();
     rootNode.$.panelChrome = chromeEnabled;
-    rootNode.$.layoutActionZones = actionZonesEnabled;
     rootNode.setAttribute('panel-chrome', chromeEnabled ? 'default' : 'none');
-    rootNode.setAttribute('action-zones', actionZonesEnabled ? 'enabled' : 'disabled');
     rootNode.$.nodeData = this.$.layoutTree;
-  }
-
-  _getActionZonesEnabled() {
-    let attr = this.getAttribute('action-zones');
-    if (attr !== null) return attr === 'true' || attr === 'enabled';
-    return this.$['@action-zones'] === true || this.$.layoutActionZones === true;
   }
 
   _scheduleResponsiveLayout() {
@@ -434,81 +396,6 @@ export class Layout extends Symbiote {
         },
       }
     );
-  }
-
-
-  /**
-   * Called when action zone drag starts
-   * @param {CustomEvent} e
-   */
-  _onActionZoneStart(e) {
-    if (this.$.panelChrome === false) return;
-    let { panelId, corner } = e.detail;
-    this.$.activeGesture = { panelId, corner };
-  }
-
-  /**
-   * Called during action zone drag with gesture type
-   * @param {CustomEvent} e
-   */
-  _onActionZoneGesture(e) {
-    if (this.$.panelChrome === false) return;
-    let { panelId, gesture, dx, dy } = e.detail;
-
-
-    let panelNode = this._findPanelNode(panelId);
-    if (!panelNode) return;
-
-    let panelRect = panelNode.getBoundingClientRect();
-
-
-    let preview = this.ref.preview;
-    if (!preview) return;
-
-    if (gesture === 'split-h' || gesture === 'split-v') {
-      preview.showSplit(gesture, panelRect, 0.5);
-    } else if (gesture === 'join') {
-
-      let neighborInfo = this._findJoinTarget(panelId, dx, dy);
-      if (neighborInfo) {
-        let neighborNode = this._findPanelNode(neighborInfo.id);
-        if (neighborNode) {
-          preview.showJoin(neighborNode.getBoundingClientRect());
-        }
-      }
-    }
-  }
-
-  /**
-   * Called when action zone gesture is completed
-   * @param {CustomEvent} e
-   */
-  _onActionZoneExecute(e) {
-    if (this.$.panelChrome === false) return;
-    let { panelId, corner: _corner, gesture } = e.detail;
-
-    if (gesture === 'split-h') {
-      this.splitPanel(panelId, 'horizontal', 0.5);
-    } else if (gesture === 'split-v') {
-      this.splitPanel(panelId, 'vertical', 0.5);
-    } else if (gesture === 'join') {
-
-      this.joinPanels(panelId);
-    }
-  }
-
-   /**
-   * Called when action zone drag ends
-   * @param {CustomEvent} _e
-   */
-  _onActionZoneEnd(_e) {
-    this.$.activeGesture = null;
-
-
-    let preview = this.ref.preview;
-    if (preview) {
-      preview.hide();
-    }
   }
 
   /**
@@ -768,42 +655,6 @@ export class Layout extends Symbiote {
     }
     return null;
   }
-
-  /**
-   * Find the neighbor panel for join operation
-   * @param {string} panelId
-   * @param {number} _dx
-   * @param {number} _dy
-   * @returns {{id: string, direction: string}|null}
-   */
-  _findJoinTarget(panelId, _dx, _dy) {
-
-    let parentInfo = LayoutTree.findParent(this.$.layoutTree, panelId);
-    if (!parentInfo) return null;
-
-    let { parent, which } = parentInfo;
-
-
-    let sibling = which === 'first' ? parent.second : parent.first;
-    if (!sibling) return null;
-
-
-    let siblingId = this._getFirstPanelId(sibling);
-
-    return { id: siblingId, direction: parent.direction };
-  }
-
-  /**
-   * Get the first panel ID from a node (handles nested splits)
-   * @param {Object} node
-   * @returns {string}
-   */
-  _getFirstPanelId(node) {
-    if (node.type === 'panel') return node.id;
-
-    return this._getFirstPanelId(node.first);
-  }
-
 
   /**
    * Split a panel

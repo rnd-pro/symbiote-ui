@@ -37,8 +37,7 @@ export let styles = css`
     }
 
     &[panel-chrome='none'] {
-      .panel-header,
-      action-zone {
+      .panel-header {
         display: none !important;
       }
     }
@@ -179,8 +178,7 @@ export let styles = css`
       max-height: var(--sn-layout-collapsed-vertical-size, 28px) !important;
 
       .panel-content,
-      .panel-menu-drawer,
-      action-zone {
+      .panel-menu-drawer {
         display: none !important;
       }
 
@@ -233,8 +231,7 @@ export let styles = css`
       }
 
       .panel-content,
-      .panel-menu-drawer,
-      action-zone {
+      .panel-menu-drawer {
         display: none !important;
       }
 
@@ -292,10 +289,9 @@ export let styles = css`
       box-shadow: 0 0 40px var(--sn-shadow-color);
     }
 
-    /* Fullscreen: hide panel type selector, collapse btn, action zones */
+    /* Fullscreen: hide panel type selector and collapse btn */
     &[fullscreen] .type-btn,
-    &[fullscreen] .collapse-btn,
-    &[fullscreen] action-zone {
+    &[fullscreen] .collapse-btn {
       display: none !important;
     }
 

@@ -2,14 +2,13 @@
  * @fileoverview LayoutNode - Universal recursive layout node
  * Renders panel or split based on node type.
  * Split nodes recursively create child LayoutNodes.
- * Panels include action zones for split/join gestures.
+ * Panels expose explicit fold-down actions for split/remove operations.
  */
 
 import Symbiote from '@symbiotejs/symbiote';
 import { ensureMaterialSymbols } from '../../icons/MaterialSymbols.js';
 import { template } from './LayoutNode.tpl.js';
 import { styles } from './LayoutNode.css.js';
-import './../ActionZone/ActionZone.js';
 import { translate } from '../../locale/index.js';
 import * as LayoutTree from './../LayoutTree.js';
 
@@ -59,8 +58,6 @@ export class LayoutNode extends Symbiote {
     panelTitle: 'Panel',
     panelIcon: 'dashboard',
     panelChrome: true,
-    layoutActionZones: false,
-    showActionZones: false,
     panelMenuActions: [],
     hasPanelMenuActions: false,
     isPanelMenuOpen: false,
@@ -91,7 +88,6 @@ export class LayoutNode extends Symbiote {
     '^panelTypes': {},
     '^fullscreenPanelId': null,
     '^panelChrome': true,
-    '^layoutActionZones': false,
 
 
     onResizerDown: (e) => this._startResize(e),
@@ -430,10 +426,7 @@ export class LayoutNode extends Symbiote {
 
   _renderNode(data) {
     this.$.panelChrome = this.$.panelChrome !== false && this.$['^panelChrome'] !== false;
-    this.$.layoutActionZones = this.$.layoutActionZones === true || this.$['^layoutActionZones'] === true;
-    this.$.showActionZones = this.$.panelChrome && this.$.layoutActionZones;
     this.setAttribute('panel-chrome', this.$.panelChrome ? 'default' : 'none');
-    this.setAttribute('action-zones', this.$.showActionZones ? 'enabled' : 'disabled');
 
     let prevType = this.getAttribute('node-type');
     this.#syncHostAttribute('node-type', data.type);
@@ -451,9 +444,6 @@ export class LayoutNode extends Symbiote {
         if (this.ref.first) this.ref.first.replaceChildren();
         if (this.ref.second) this.ref.second.replaceChildren();
       }
-
-
-      this._setupActionZones(data.id);
 
       this._updatePanelInfo();
     }
@@ -486,18 +476,8 @@ export class LayoutNode extends Symbiote {
     }
 
     child.$.panelChrome = this.$.panelChrome !== false;
-    child.$.layoutActionZones = this.$.layoutActionZones === true;
     child.setAttribute('panel-chrome', this.$.panelChrome ? 'default' : 'none');
-    child.setAttribute('action-zones', this.$.layoutActionZones ? 'enabled' : 'disabled');
     child.$.nodeData = { ...nodeData };
-  }
-
-  _setupActionZones(panelId) {
-
-    let zones = this.querySelectorAll('action-zone');
-    zones.forEach((zone) => {
-      zone.$.panelId = panelId;
-    });
   }
 
   _onPanelMenuActions = (event) => {

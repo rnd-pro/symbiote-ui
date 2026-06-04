@@ -2,7 +2,7 @@
  * LayoutSidebar — collapsible workspace navigation with edit mode
  *
  * Normal mode: shows only visible sections
- * Edit mode (Blender-style): shows all sections with eye toggles + drag handles
+ * Edit mode: shows all sections with eye toggles and drag handles
  *
  * @module symbiote-ui/layout/LayoutSidebar
  */
@@ -186,7 +186,7 @@ export class LayoutSidebar extends Symbiote {
 
   /**
    * Configure sidebar sections
-   * @param {Array<{id: string, icon: string, label: string}>} items
+   * @param {Array<{id: string, icon: string, label: string, disabled?: boolean}>} items
    * @returns {void}
    */
   setSections(items) {
@@ -234,7 +234,7 @@ export class LayoutSidebar extends Symbiote {
 
   /**
    * Build sections array from ordered items + config
-   * @param {Array<{id: string, icon: string, label: string}>} items
+   * @param {Array<{id: string, icon: string, label: string, disabled?: boolean}>} items
    * @param {Array<{id: string, visible: boolean}>|null} config
    */
   #buildSections(items, config) {
@@ -246,6 +246,7 @@ export class LayoutSidebar extends Symbiote {
       label: item.label,
       isActive: false,
       isVisible: visibilityMap ? (visibilityMap.get(item.id) ?? true) : true,
+      isDisabled: Boolean(item.disabled),
       isExpanded: false,
       subPanels: item.subPanels || [],
     }));

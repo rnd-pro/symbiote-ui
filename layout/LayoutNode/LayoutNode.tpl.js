@@ -50,12 +50,6 @@ export let template = html`
       </div>
     </div>
     <div class="panel-content" ref="panelContent" ${{ '@hidden': 'isCollapsed' }}></div>
-
-    <!-- Action zones for split/join -->
-    <action-zone corner="tl" ${{ '@hidden': '!showActionZones' }}></action-zone>
-    <action-zone corner="tr" ${{ '@hidden': '!showActionZones' }}></action-zone>
-    <action-zone corner="bl" ${{ '@hidden': '!showActionZones' }}></action-zone>
-    <action-zone corner="br" ${{ '@hidden': '!showActionZones' }}></action-zone>
   </div>
 
   <div class="split-view" ${{ '@hidden': '!isSplit', '@direction': 'direction' }}>
