@@ -708,10 +708,24 @@ function compactTraceRoute({
   const directLength = Math.hypot(dx, dy);
   const manhattanLength = dx + dy;
   const compactLimit = Math.max(stub * 2, grid * 5);
-  const straightLimit = Math.max(grid * 2, chamfer * 2.5);
   const minKneeSegment = Math.max(grid * 1.5, chamfer * 2);
 
   if (directLength > compactLimit && manhattanLength > compactLimit + grid) return null;
+
+  const directPoints = [start, end];
+  const directObstacleRects = obstacleRects.filter(
+    (rect) => rect.id !== routeFromRect.id && rect.id !== routeToRect.id
+  );
+  if (!routeHitsBlockedArea(directPoints, directObstacleRects, routeFromRect, routeToRect, 2)) {
+    const routed = buildPath(directPoints, 0);
+
+    return {
+      path: routed.path,
+      points: routed.points,
+      arrow: midpointArrow(routed.points),
+      strategy: 'compact-direct',
+    };
+  }
 
   const limitedShift = Math.max(-grid, Math.min(grid, shift));
   const candidates = shortOrthogonalCandidates(start, end, fDir, tDir, limitedShift, grid, snapToGrid)
@@ -732,18 +746,7 @@ function compactTraceRoute({
     }
   }
 
-  if (directLength > straightLimit && manhattanLength > straightLimit + grid) return null;
-
-  const directPoints = [start, end];
-  if (routeHitsBlockedArea(directPoints, obstacleRects, routeFromRect, routeToRect, 2)) return null;
-  const routed = buildPath(directPoints, 0);
-
-  return {
-    path: routed.path,
-    points: routed.points,
-    arrow: midpointArrow(routed.points),
-    strategy: 'compact-direct',
-  };
+  return null;
 }
 
 function findAlternateDirectionRoute({
