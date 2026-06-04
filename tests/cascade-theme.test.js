@@ -978,6 +978,8 @@ test('chat composer exposes reusable voice controls and agent-facing metadata', 
   assert.match(composer, /class="btn-voice-language"/);
   assert.match(styles, /\.btn-mic\[hidden\]/);
   assert.match(styles, /\.btn-wake-listen\[hidden\]/);
+  assert.match(styles, /\.btn-voice-command\[disabled\]/);
+  assert.match(styles, /\.btn-voice-language\[disabled\]/);
   assert.match(styles, /container: composer-body \/ inline-size/);
   assert.match(styles, /flex-wrap: wrap/);
   assert.match(styles, /flex: 0 0 var\(--sn-composer-send-size\)/);
@@ -989,6 +991,21 @@ test('chat composer exposes reusable voice controls and agent-facing metadata', 
   assert.match(styles, /--sn-composer-wake-command-max/);
   assert.doesNotMatch(styles, /28vw/);
   assert.match(registry, /component-descriptor-v2/);
+  for (const tagName of [
+    'chat-message-item',
+    'chat-transcript',
+    'chat-composer',
+    'chat-list',
+    'chat-list-item',
+    'chat-sidebar-shell',
+    'chat-sidebar-item',
+    'cell-bg',
+  ]) {
+    assert.match(
+      registry,
+      new RegExp(`\\{\\s*tagName: '${tagName}'[\\s\\S]*?schemaVersion: 'component-descriptor-v2'`)
+    );
+  }
   assert.match(registry, /voice-controls/);
   assert.match(registry, /chat_composer_voice_control/);
   assert.match(registry, /preview-approve/);

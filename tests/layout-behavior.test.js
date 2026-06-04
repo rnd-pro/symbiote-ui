@@ -11,6 +11,7 @@ import {
   findNode,
   getBehaviorImportance,
   getNodeBehavior,
+  joinPanels,
   normalizeLayoutBehavior,
   openPanel,
   resolveLayoutMinSize,
@@ -226,6 +227,44 @@ test('layout tree opens and closes UI-invoked panels without owning host layout 
   assert.equal(closed.removed, true);
   assert.equal(findPanelByType(closed.root, 'theme'), null);
   assert.equal(findPanelByType(closed.root, 'graph').panelType, 'graph');
+});
+
+test('layout tree expands promoted survivor after panel removal', () => {
+  let graph = createPanel('graph');
+  let chat = createPanel('chat');
+  let inspector = createPanel('inspector');
+  let root = createSplit(
+    'horizontal',
+    createSplit('vertical', graph, chat, 0.55),
+    inspector,
+    0.64
+  );
+
+  inspector.collapsed = true;
+  inspector.autoCollapsed = true;
+
+  let promotedPanel = joinPanels(root, root.first.id);
+
+  assert.equal(promotedPanel.id, inspector.id);
+  assert.equal(promotedPanel.collapsed, false);
+  assert.equal(promotedPanel.autoCollapsed, false);
+
+  let canvas = createPanel('canvas');
+  let toolbar = createPanel('toolbar');
+  let status = createPanel('status');
+  let branch = createSplit('vertical', toolbar, status, 0.5);
+  let nested = createSplit('horizontal', canvas, branch, 0.7);
+
+  toolbar.collapsed = true;
+  toolbar.autoCollapsed = true;
+  status.collapsed = true;
+
+  let promotedBranch = joinPanels(nested, canvas.id);
+
+  assert.equal(promotedBranch.id, branch.id);
+  assert.equal(toolbar.collapsed, false);
+  assert.equal(toolbar.autoCollapsed, false);
+  assert.equal(status.collapsed, true);
 });
 
 test('layout tree closeUiPanel refuses to remove host-owned panels', () => {

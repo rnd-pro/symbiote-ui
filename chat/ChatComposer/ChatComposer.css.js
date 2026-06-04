@@ -507,7 +507,9 @@ chat-composer.drag-over .composer-body {
 
 .btn-mic[disabled],
 .btn-wake-listen[disabled],
-.btn-voice-response[disabled] {
+.btn-voice-response[disabled],
+.btn-voice-command[disabled],
+.btn-voice-language[disabled] {
   opacity: 0.45;
   cursor: not-allowed;
 }

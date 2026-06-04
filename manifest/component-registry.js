@@ -1694,7 +1694,7 @@ export let COMPONENTS = [
     description: 'Animated cellular automaton background effect.',
     contract: {
       status: 'draft',
-      schemaVersion: 'component-descriptor-v1',
+      schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
       capabilities: ['animated-background', 'canvas-effect', 'pulse', 'resize-aware', 'reduced-motion-friendly'],
       properties: [
@@ -2085,7 +2085,7 @@ export let COMPONENTS = [
     description: 'Generic chat message renderer for text, tool, board, and thinking messages.',
     contract: {
       status: 'draft',
-      schemaVersion: 'component-descriptor-v1',
+      schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
       capabilities: ['chat-message-render', 'markdown-text', 'tool-card', 'status-board', 'thinking-state', 'copy-action'],
       properties: [
@@ -2143,7 +2143,7 @@ export let COMPONENTS = [
     description: 'Generic chat transcript shell with message rendering, scroll controls, live status, and status card events.',
     contract: {
       status: 'draft',
-      schemaVersion: 'component-descriptor-v1',
+      schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
       capabilities: ['chat-transcript', 'message-list', 'scroll-state', 'status-card-events'],
       properties: [
@@ -2292,7 +2292,7 @@ export let COMPONENTS = [
     description: 'Generic chat list shell with filters, creation action, item list, and selection/delete events.',
     contract: {
       status: 'draft',
-      schemaVersion: 'component-descriptor-v1',
+      schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
       capabilities: ['chat-list', 'filter-tabs', 'create-action', 'select', 'delete'],
       properties: [
@@ -2346,7 +2346,7 @@ export let COMPONENTS = [
     description: 'Generic chat list item with project badge, adapter, preview, metadata, nesting, and delete action.',
     contract: {
       status: 'draft',
-      schemaVersion: 'component-descriptor-v1',
+      schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
       capabilities: ['chat-list-row', 'active-state', 'nested-depth', 'delete-action', 'metadata'],
       properties: [
@@ -2398,7 +2398,7 @@ export let COMPONENTS = [
     description: 'Generic collapsible and resizable chat navigation shell.',
     contract: {
       status: 'draft',
-      schemaVersion: 'component-descriptor-v1',
+      schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
       capabilities: ['chat-sidebar', 'collapse', 'resize', 'nested-chat-list', 'responsive-auto-collapse'],
       properties: [
@@ -2451,7 +2451,7 @@ export let COMPONENTS = [
     description: 'Generic chat sidebar root item with nested child chat rendering.',
     contract: {
       status: 'draft',
-      schemaVersion: 'component-descriptor-v1',
+      schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
       capabilities: ['chat-sidebar-row', 'nested-children', 'active-state', 'delete-action', 'status-slot'],
       properties: [

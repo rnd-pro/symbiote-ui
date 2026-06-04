@@ -274,6 +274,7 @@ export function joinPanels(root, panelToRemove) {
 
   let { parent, which } = parentInfo
   let survivor = which === 'first' ? parent.second : parent.first
+  restorePromotedBranch(survivor, { forceRoot: true })
 
 
   let grandparentInfo = findParent(root, parent.id)
@@ -284,6 +285,21 @@ export function joinPanels(root, panelToRemove) {
 
   grandparentInfo.parent[grandparentInfo.which] = survivor
   return root
+}
+
+function restorePromotedBranch(node, options = {}) {
+  if (!node) return
+  if (node.type === 'panel') {
+    if (options.forceRoot || node.autoCollapsed) {
+      node.collapsed = false
+      node.autoCollapsed = false
+    }
+    return
+  }
+  if (node.type === 'split') {
+    restorePromotedBranch(node.first)
+    restorePromotedBranch(node.second)
+  }
 }
 
 /**
