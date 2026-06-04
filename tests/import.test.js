@@ -34,7 +34,8 @@ test('discover exposes the standalone package contract', async () => {
     descriptor.name === 'cascade-theme'
     && descriptor.webmcp?.name === 'symbiote-ui.createCascadeTheme'
   )));
-  assert.equal(data.manifest.themeControls['cascade-theme'].length, 8);
+  assert.equal(data.manifest.themeControls['cascade-theme'].length, 9);
+  assert.ok(data.manifest.themeControls['cascade-theme'].some((control) => control.name === 'heading'));
 });
 
 test('webmcp helpers append component context to explicit tool descriptors', async () => {

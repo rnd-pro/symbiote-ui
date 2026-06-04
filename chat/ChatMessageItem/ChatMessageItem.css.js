@@ -232,23 +232,23 @@ chat-message-item {
 }
 
 h1.md-h {
-  font-size: 20px;
+  font-size: var(--sn-chat-markdown-h1-size, 20px);
   border-bottom: 1px solid var(--sn-node-border);
   padding-bottom: 6px;
 }
 
 h2.md-h {
-  font-size: 18px;
+  font-size: var(--sn-chat-markdown-h2-size, 18px);
   border-bottom: 1px solid var(--sn-node-border);
   padding-bottom: 4px;
 }
 
 h3.md-h {
-  font-size: 16px;
+  font-size: var(--sn-chat-markdown-h3-size, 16px);
 }
 
 h4.md-h {
-  font-size: 14px;
+  font-size: var(--sn-chat-markdown-h4-size, 14px);
 }
 
 .md-p {

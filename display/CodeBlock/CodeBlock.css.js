@@ -86,10 +86,10 @@ export default `
 
   /* Markdown styles */
   code-block .md-h { margin: 20px 0 8px; color: var(--sn-text); font-weight: 700; }
-  code-block h1.md-h { font-size: 24px; border-bottom: 2px solid var(--sn-node-border); padding-bottom: 8px; }
-  code-block h2.md-h { font-size: 20px; border-bottom: 1px solid var(--sn-node-border); padding-bottom: 6px; }
-  code-block h3.md-h { font-size: 16px; }
-  code-block h4.md-h { font-size: 14px; }
+  code-block h1.md-h { font-size: var(--sn-markdown-h1-size, 24px); border-bottom: 2px solid var(--sn-node-border); padding-bottom: 8px; }
+  code-block h2.md-h { font-size: var(--sn-markdown-h2-size, 20px); border-bottom: 1px solid var(--sn-node-border); padding-bottom: 6px; }
+  code-block h3.md-h { font-size: var(--sn-markdown-h3-size, 16px); }
+  code-block h4.md-h { font-size: var(--sn-markdown-h4-size, 14px); }
   code-block .md-p { margin: 8px 0; }
   code-block .md-quote {
     margin: 8px 0;

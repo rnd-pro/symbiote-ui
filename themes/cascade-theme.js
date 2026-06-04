@@ -55,6 +55,14 @@ const CASCADE_THEME_CONTROL_LIST = [
     description: 'Typography scale for graph nodes, controls, layout chrome, menus, tree rows, and demo labels.',
   },
   {
+    name: 'heading',
+    type: 'number',
+    min: 80,
+    max: 140,
+    default: 100,
+    description: 'Heading-to-body type balance for titles, graph labels, panel headings, cards, and markdown headings.',
+  },
+  {
     name: 'density',
     type: 'number',
     min: 75,
@@ -119,12 +127,23 @@ export const CASCADE_THEME_TOKEN_TARGETS = Object.freeze({
   ],
   typography: [
     '--sn-theme-type-scale',
+    '--sn-theme-heading-scale',
     '--sn-node-font-size',
     '--sn-node-label-size',
+    '--sn-node-item-title-size',
     '--sn-node-summary-size',
     '--sn-node-icon-size',
     '--sn-port-label-size',
     '--sn-control-input-size',
+    '--sn-card-title-size',
+    '--sn-markdown-h1-size',
+    '--sn-markdown-h2-size',
+    '--sn-markdown-h3-size',
+    '--sn-markdown-h4-size',
+    '--sn-chat-markdown-h1-size',
+    '--sn-chat-markdown-h2-size',
+    '--sn-chat-markdown-h3-size',
+    '--sn-chat-markdown-h4-size',
     '--sn-layout-header-icon-size',
     '--sn-panel-menu-icon-size',
     '--sn-shape-watermark-size',
@@ -189,6 +208,10 @@ function percent(value) {
 
 function typeToken(px) {
   return `calc(${px}px * var(--sn-theme-type-scale))`;
+}
+
+function headingToken(px) {
+  return `calc(${px}px * var(--sn-theme-type-scale) * var(--sn-theme-heading-scale))`;
 }
 
 function densityToken(px) {
@@ -270,6 +293,7 @@ export function normalizeCascadeThemeOptions(options = {}) {
     hue: clamp(merged.hue, 0, 360),
     outline: clamp(merged.outline, 0, 100),
     type: clamp(merged.type, 80, 130),
+    heading: clamp(merged.heading, 80, 140),
     density: clamp(merged.density, 75, 140),
   };
 }
@@ -279,6 +303,7 @@ export function createCascadeTheme(options = {}) {
   let dark = state.mode === 'dark';
   let outlineStrength = state.outline / 100;
   let typeScale = state.type / 100;
+  let headingScale = state.heading / 100;
   let densityScale = state.density / 100;
   let bg = dark
     ? 10 + state.brightness * 0.18
@@ -337,6 +362,7 @@ export function createCascadeTheme(options = {}) {
     '--sn-theme-text-lightness': `${text.toFixed(1)}%`,
     '--sn-theme-outline-strength': outlineStrength.toFixed(2),
     '--sn-theme-type-scale': typeScale.toFixed(2),
+    '--sn-theme-heading-scale': headingScale.toFixed(2),
     '--sn-theme-density': densityScale.toFixed(2),
     '--sn-theme-spacing-scale': densityScale.toFixed(2),
     '--sn-lit-border': `${border.toFixed(1)}%`,
@@ -436,7 +462,7 @@ export function createCascadeTheme(options = {}) {
     '--sn-source-editor-color': 'var(--sn-text)',
     '--sn-effect-focus-ring': `${focusRingWidth} solid var(--sn-node-selected)`,
     '--sn-node-font-size': typeToken(13),
-    '--sn-node-label-size': typeToken(13),
+    '--sn-node-label-size': headingToken(13),
     '--sn-node-summary-size': typeToken(12),
     '--sn-node-icon-size': typeToken(18),
     '--sn-node-link-size': typeToken(12),
@@ -445,7 +471,7 @@ export function createCascadeTheme(options = {}) {
     '--sn-node-error-frame-icon-size': typeToken(14),
     '--sn-node-error-frame-body-size': typeToken(11),
     '--sn-node-item-kicker-size': typeToken(10),
-    '--sn-node-item-title-size': typeToken(13),
+    '--sn-node-item-title-size': headingToken(13),
     '--sn-node-item-summary-size': typeToken(11),
     '--sn-port-label-size': typeToken(12),
     '--sn-control-label-size': typeToken(10),
@@ -454,7 +480,7 @@ export function createCascadeTheme(options = {}) {
     '--sn-shape-watermark-size': typeToken(40),
     '--sn-button-font-size': typeToken(12),
     '--sn-button-icon-font-size': typeToken(16),
-    '--sn-card-title-size': typeToken(11),
+    '--sn-card-title-size': headingToken(11),
     '--sn-banner-font-size': typeToken(12),
     '--sn-banner-icon-size': typeToken(18),
     '--sn-badge-font-size': typeToken(11),
@@ -463,8 +489,16 @@ export function createCascadeTheme(options = {}) {
     '--sn-tree-kind-size': typeToken(10),
     '--sn-tree-badge-size': typeToken(10),
     '--sn-tree-panel-font-size': typeToken(12),
-    '--sn-tree-panel-title-size': typeToken(11),
+    '--sn-tree-panel-title-size': headingToken(11),
     '--sn-tree-panel-input-size': typeToken(11),
+    '--sn-markdown-h1-size': headingToken(24),
+    '--sn-markdown-h2-size': headingToken(20),
+    '--sn-markdown-h3-size': headingToken(16),
+    '--sn-markdown-h4-size': headingToken(14),
+    '--sn-chat-markdown-h1-size': headingToken(20),
+    '--sn-chat-markdown-h2-size': headingToken(18),
+    '--sn-chat-markdown-h3-size': headingToken(16),
+    '--sn-chat-markdown-h4-size': headingToken(14),
     '--sn-layout-header-button-size': typeToken(12),
     '--sn-layout-header-icon-size': typeToken(16),
     '--sn-layout-header-dropdown-size': typeToken(18),
@@ -501,7 +535,7 @@ export function createCascadeTheme(options = {}) {
     '--sn-tree-panel-content-padding': densityToken(4),
     '--sn-lab-toolbar-gap': densityToken(12),
     '--sn-lab-toolbar-padding': `${densityToken(10)} ${densityToken(12)}`,
-    '--sn-lab-title-size': typeToken(14),
+    '--sn-lab-title-size': headingToken(14),
     '--sn-lab-control-font-size': typeToken(12),
     '--sn-lab-control-height': densityToken(30),
     '--sn-lab-control-gap': densityToken(8),
