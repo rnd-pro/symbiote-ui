@@ -271,6 +271,42 @@ export let UI_SCHEMAS = {
 UI_SCHEMAS['component-descriptor-v2'] = JSON.parse(JSON.stringify(UI_SCHEMAS['component-descriptor-v1']));
 UI_SCHEMAS['component-descriptor-v2'].$id = 'https://rnd-pro.github.io/symbiote-ui/schemas/component-descriptor-v2.json';
 UI_SCHEMAS['component-descriptor-v2'].title = 'Symbiote UI Component Descriptor';
+UI_SCHEMAS['component-descriptor-v2'].properties.componentDescription = { type: 'string', minLength: 1 };
+UI_SCHEMAS['component-descriptor-v2'].properties.agent = { $ref: '#/$defs/agentContext' };
+UI_SCHEMAS['component-descriptor-v2'].$defs.agentContext = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['componentDescription', 'semanticRole', 'usage', 'dataOwnership', 'webmcp'],
+  properties: {
+    componentDescription: { type: 'string', minLength: 1 },
+    semanticRole: { type: 'string', minLength: 1 },
+    usage: { type: 'string', minLength: 1 },
+    dataOwnership: { type: 'string', minLength: 1 },
+    webmcp: { $ref: '#/$defs/webMcpAgentContext' },
+  },
+};
+UI_SCHEMAS['component-descriptor-v2'].$defs.webMcpAgentContext = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['mode', 'toolNames', 'toolNaming', 'componentContext', 'bindVisibility', 'globalToolMode', 'references'],
+  properties: {
+    mode: { enum: ['explicit-descriptor', 'described-only'] },
+    toolNames: {
+      type: 'array',
+      items: { type: 'string', minLength: 1 },
+      uniqueItems: true,
+    },
+    toolNaming: { type: 'string', minLength: 1 },
+    componentContext: { type: 'string', minLength: 1 },
+    bindVisibility: { type: 'string', minLength: 1 },
+    globalToolMode: { type: 'string', minLength: 1 },
+    references: {
+      type: 'array',
+      items: { type: 'string', format: 'uri' },
+      uniqueItems: true,
+    },
+  },
+};
 UI_SCHEMAS['component-descriptor-v2'].$defs.componentContract.properties.schemaVersion = { const: 'component-descriptor-v2' };
 UI_SCHEMAS['component-descriptor-v2'].$defs.componentContract.properties.ssr = { $ref: '#/$defs/ssrContract' };
 UI_SCHEMAS['component-descriptor-v2'].$defs.componentContract.properties.webmcp = { $ref: '#/$defs/webMcpContract' };

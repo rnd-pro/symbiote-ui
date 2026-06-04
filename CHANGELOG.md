@@ -8,6 +8,8 @@ All notable changes to `symbiote-ui` will be documented in this file.
 
 - Added the reusable `cascade-theme-editor` browser module for layout-hosted cascade theme editing.
 - Added copy parameters, reset defaults, and automatic `localStorage` persistence for cascade theme controls.
+- Added `componentDescription` and agent-facing WebMCP context to component descriptors and discovery output.
+- Added `createComponentToolDescriptor()` for explicit WebMCP tools with component context.
 
 ### Changed
 

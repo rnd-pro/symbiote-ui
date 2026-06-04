@@ -1,5 +1,7 @@
 export const COMPONENT_UI_SPECIFIER = 'symbiote-ui/ui';
 export const COMPONENT_DESCRIPTOR_SCHEMA = 'schemas/component-descriptor-v2.json';
+export const WEBMCP_SUPPORT_REFERENCE = 'https://rnd-pro.com/pulse/symbiote-webmcp-support/';
+export const WEBMCP_FEATURE_REFERENCE = 'https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md';
 
 const STATIC_RENDERABLE_TAGS = new Set([
   'code-block',
@@ -216,6 +218,65 @@ function getWebMcpContract(component) {
   };
 }
 
+function getComponentAgentRole(component) {
+  if (component.agent?.semanticRole) return component.agent.semanticRole;
+  if (component.category === 'canvas') return 'interactive visual graph surface';
+  if (component.category === 'layout') return 'layout composition and navigation surface';
+  if (component.category === 'node') return 'graph node presentation primitive';
+  if (component.category === 'display') return 'data and content presentation surface';
+  if (component.category === 'chat') return 'chat and conversation surface';
+  if (component.category === 'tree') return 'hierarchical navigation surface';
+  if (component.category === 'control') return 'form and command control';
+  if (component.category === 'theme') return 'theme configuration surface';
+  return `${component.category} UI component`;
+}
+
+function getComponentDataOwnership(component) {
+  if (component.agent?.dataOwnership) return component.agent.dataOwnership;
+  if (component.category === 'canvas' || component.category === 'layout') {
+    return 'host-owned model; component renders and emits intent events';
+  }
+  if (component.category === 'theme') {
+    return 'component-owned normalized UI state with host-selectable cascade target';
+  }
+  if (component.contract?.properties?.length || component.contract?.attributes?.length) {
+    return 'host-owned props and attributes; component owns presentation state';
+  }
+  return 'host-owned content or slotted DOM';
+}
+
+function buildComponentDescription(component, contract) {
+  if (component.componentDescription) return component.componentDescription;
+  if (component.agent?.componentDescription) return component.agent.componentDescription;
+  let capabilities = contract?.capabilities?.length
+    ? ` Capabilities: ${contract.capabilities.join(', ')}.`
+    : '';
+  let tools = contract?.webmcp?.tools?.length
+    ? ` WebMCP tools: ${contract.webmcp.tools.map((tool) => tool.name).join(', ')}.`
+    : ' WebMCP tools are not enabled unless an explicit descriptor is declared.';
+  return `${component.description} Use this ${getComponentAgentRole(component)} when composing ${component.category} UI.${capabilities} Data ownership: ${getComponentDataOwnership(component)}.${tools}`;
+}
+
+function normalizeAgentContext(component, contract) {
+  let componentDescription = buildComponentDescription(component, contract);
+  let tools = contract?.webmcp?.tools || [];
+  return {
+    componentDescription,
+    semanticRole: getComponentAgentRole(component),
+    usage: component.agent?.usage || `Render or compose <${component.tagName}> when the host needs ${component.description.toLowerCase()}`,
+    dataOwnership: getComponentDataOwnership(component),
+    webmcp: {
+      mode: tools.length ? 'explicit-descriptor' : 'described-only',
+      toolNames: tools.map((tool) => tool.name),
+      toolNaming: 'Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.',
+      componentContext: 'componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.',
+      bindVisibility: 'Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.',
+      globalToolMode: 'Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.',
+      references: [WEBMCP_SUPPORT_REFERENCE, WEBMCP_FEATURE_REFERENCE],
+    },
+  };
+}
+
 function normalizeContract(component) {
   if (!component.contract) return null;
   return {
@@ -295,6 +356,11 @@ export let COMPONENTS = [
     module: 'themes/CascadeThemeEditor/CascadeThemeEditor.js',
     category: 'theme',
     description: 'Reusable cascade theme editor module for host layouts.',
+    agent: {
+      semanticRole: 'layout-hosted cascade theme control surface',
+      usage: 'Mount as a layout panel when an agent or user needs bounded live theme controls for a host shell.',
+      dataOwnership: 'component-owned normalized theme state persisted through host-selected localStorage key',
+    },
     contract: {
       status: 'draft',
       schemaVersion: 'component-descriptor-v2',
@@ -2471,9 +2537,13 @@ export let COMPONENTS = [
   let exportName = UI_NAMED_EXPORTS.has(component.className) ? component.className : null;
   let visibility = component.visibility || (exportName ? COMPONENT_VISIBILITY.public : COMPONENT_VISIBILITY.internal);
   let internal = visibility === COMPONENT_VISIBILITY.internal;
+  let contract = normalizeContract(component);
+  let agent = normalizeAgentContext(component, contract);
   return {
     ...component,
-    contract: normalizeContract(component),
+    componentDescription: agent.componentDescription,
+    agent,
+    contract,
     visibility,
     internal,
     specifier: COMPONENT_UI_SPECIFIER,
@@ -2516,4 +2586,19 @@ export function getComponentExportName(tagName) {
 
 export function getComponentTags(filter = {}) {
   return listComponents(filter).map((component) => component.tagName);
+}
+
+export function listAgentComponentDescriptions(filter = {}) {
+  return listComponents(filter).map((component) => ({
+    tagName: component.tagName,
+    className: component.className,
+    category: component.category,
+    description: component.description,
+    componentDescription: component.componentDescription,
+    semanticRole: component.agent.semanticRole,
+    usage: component.agent.usage,
+    dataOwnership: component.agent.dataOwnership,
+    webmcp: component.agent.webmcp,
+    tools: component.contract?.webmcp?.tools || [],
+  }));
 }

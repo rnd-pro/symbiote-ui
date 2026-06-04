@@ -11,6 +11,7 @@
           "name": "CascadeThemeEditor",
           "tagName": "cascade-theme-editor",
           "description": "Reusable cascade theme editor module for host layouts.",
+          "componentDescription": "Reusable cascade theme editor module for host layouts. Use this layout-hosted cascade theme control surface when an agent or user needs bounded live theme controls for a host shell.",
           "attributes": [
             {
               "name": "storage-key",

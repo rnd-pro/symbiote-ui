@@ -6,6 +6,30 @@ export function createToolDescriptor(options) {
   return { ...options };
 }
 
+export function getComponentDescription(component) {
+  return component?.componentDescription
+    || component?.agent?.componentDescription
+    || component?.description
+    || '';
+}
+
+export function createComponentToolDescriptor(component, tool) {
+  let componentDescription = getComponentDescription(component);
+  return createToolDescriptor({
+    ...tool,
+    description: [
+      componentDescription,
+      tool?.description,
+    ].filter(Boolean).join('\n\n'),
+    annotations: {
+      componentTag: component?.tagName,
+      componentClass: component?.className,
+      componentRole: component?.agent?.semanticRole,
+      ...(tool?.annotations || {}),
+    },
+  });
+}
+
 export async function createNativeToolDescriptor(options) {
   let { ToolDescriptor } = await import('@symbiotejs/symbiote/webmcp');
   return new ToolDescriptor(options);

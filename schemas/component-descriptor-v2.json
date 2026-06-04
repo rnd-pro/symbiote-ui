@@ -14,10 +14,46 @@
     "importKind": { "enum": ["named", "side-effect"] },
     "category": { "type": "string", "minLength": 1 },
     "description": { "type": "string", "minLength": 1 },
+    "componentDescription": { "type": "string", "minLength": 1 },
+    "agent": { "$ref": "#/$defs/agentContext" },
     "internal": { "type": "boolean" },
     "contract": { "$ref": "#/$defs/componentContract" }
   },
   "$defs": {
+    "agentContext": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["componentDescription", "semanticRole", "usage", "dataOwnership", "webmcp"],
+      "properties": {
+        "componentDescription": { "type": "string", "minLength": 1 },
+        "semanticRole": { "type": "string", "minLength": 1 },
+        "usage": { "type": "string", "minLength": 1 },
+        "dataOwnership": { "type": "string", "minLength": 1 },
+        "webmcp": { "$ref": "#/$defs/webMcpAgentContext" }
+      }
+    },
+    "webMcpAgentContext": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "toolNames", "toolNaming", "componentContext", "bindVisibility", "globalToolMode", "references"],
+      "properties": {
+        "mode": { "enum": ["explicit-descriptor", "described-only"] },
+        "toolNames": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "toolNaming": { "type": "string", "minLength": 1 },
+        "componentContext": { "type": "string", "minLength": 1 },
+        "bindVisibility": { "type": "string", "minLength": 1 },
+        "globalToolMode": { "type": "string", "minLength": 1 },
+        "references": {
+          "type": "array",
+          "items": { "type": "string", "format": "uri" },
+          "uniqueItems": true
+        }
+      }
+    },
     "componentContract": {
       "type": "object",
       "additionalProperties": false,

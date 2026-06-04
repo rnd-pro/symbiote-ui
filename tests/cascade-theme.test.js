@@ -21,6 +21,7 @@ const treeViewStyles = new URL('../tree/TreeView/TreeView.css.js', import.meta.u
 const uiIndexSource = new URL('../ui/index.js', import.meta.url);
 const componentRegistrySource = new URL('../manifest/component-registry.js', import.meta.url);
 const customElementsSource = new URL('../custom-elements.json', import.meta.url);
+const componentDescriptorV2Source = new URL('../schemas/component-descriptor-v2.json', import.meta.url);
 
 test('theme scrollbar normal state uses the normal thumb token', async () => {
   const source = await readFile(scrollbarSource, 'utf8');
@@ -130,11 +131,23 @@ test('cascade theme editor is a reusable browser module', async () => {
   assert.match(uiIndex, /CascadeThemeEditor/);
   assert.match(uiIndex, /themes\/CascadeThemeEditor\/CascadeThemeEditor\.js/);
   assert.match(registry, /tagName: 'cascade-theme-editor'/);
+  assert.match(registry, /componentDescription/);
+  assert.match(registry, /WEBMCP_SUPPORT_REFERENCE/);
   assert.match(registry, /cascade_theme_editor_apply/);
   assert.match(customElements, /"tagName": "cascade-theme-editor"/);
+  assert.match(customElements, /"componentDescription"/);
   assert.match(layoutNode, /_applyPanelComponentConfig/);
   assert.match(layoutNode, /config\.attributes/);
   assert.match(layoutNode, /config\.properties/);
+});
+
+test('component descriptor v2 includes agent-facing WebMCP context', async () => {
+  const schema = await readFile(componentDescriptorV2Source, 'utf8');
+
+  assert.match(schema, /"componentDescription"/);
+  assert.match(schema, /"agentContext"/);
+  assert.match(schema, /"webMcpAgentContext"/);
+  assert.match(schema, /"globalToolMode"/);
 });
 
 test('cascade theme derives distinct dark and light branches', async () => {
