@@ -1,6 +1,6 @@
 import { DEFAULT_PROVIDER_THEME } from '../themes/default-provider.js';
 import {
-  CASCADE_THEME_DESCRIPTOR,
+  createCascadeTheme,
   getCascadeThemeControls,
 } from '../themes/cascade-theme.js';
 
@@ -44,7 +44,7 @@ export let TOKEN_FILES = [
 ];
 
 export let THEME_RUNTIME_DESCRIPTORS = [
-  CASCADE_THEME_DESCRIPTOR,
+  createCascadeTheme().descriptor,
 ];
 
 const RUNTIME_THEMES = {

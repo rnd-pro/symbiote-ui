@@ -47,6 +47,25 @@ await Promise.all([
 
 applyTheme(document.documentElement, DEFAULT_PROVIDER_THEME);
 
+const CIRCLE_SAMPLE_IMAGE = [
+  'data:image/svg+xml;utf8,',
+  encodeURIComponent(`
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+      <defs>
+        <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#8bd3ff"/>
+          <stop offset="0.48" stop-color="#72f0bd"/>
+          <stop offset="1" stop-color="#f8c96a"/>
+        </linearGradient>
+      </defs>
+      <rect width="120" height="120" fill="#161816"/>
+      <circle cx="60" cy="60" r="47" fill="url(#g)"/>
+      <path d="M36 66 55 41l29 42H43z" fill="#121512" opacity=".82"/>
+      <circle cx="82" cy="38" r="9" fill="#fff" opacity=".72"/>
+    </svg>
+  `),
+].join('');
+
 class CascadeGraphPanel extends Symbiote {
   initCallback() {
     this._pathStyle = 'pcb';
@@ -125,11 +144,78 @@ class CascadeGraphPanel extends Symbiote {
       summary: 'Buttons, banners, cards, and tree rows follow brightness, contrast, and accent chroma.',
     };
     controlsNode.addInput('in', new Input(socket, 'in'));
+    controlsNode.addOutput('next', new Output(socket, 'next'));
     editor.addNode(controlsNode);
+
+    let circleIconNode = new Node('Circle icon', {
+      id: 'circle-icon-sample',
+      type: 'agent',
+      category: 'control',
+      shape: 'circle',
+      icon: 'smart_toy',
+    });
+    circleIconNode.addInput('in', new Input(socket, 'in'));
+    circleIconNode.addOutput('next', new Output(socket, 'next'));
+    editor.addNode(circleIconNode);
+
+    let circleImageNode = new Node('Circle image', {
+      id: 'circle-image-sample',
+      type: 'media',
+      category: 'data',
+      shape: 'circle',
+      icon: 'image',
+    });
+    circleImageNode.params = {
+      image: CIRCLE_SAMPLE_IMAGE,
+      imageAlt: 'Circular media sample',
+    };
+    circleImageNode.addInput('in', new Input(socket, 'in'));
+    circleImageNode.addOutput('next', new Output(socket, 'next'));
+    editor.addNode(circleImageNode);
+
+    let pillNode = new Node('Pill route', {
+      id: 'pill-sample',
+      type: 'route',
+      category: 'instance',
+      shape: 'pill',
+      icon: 'route',
+    });
+    pillNode.addInput('in', new Input(socket, 'in'));
+    pillNode.addOutput('next', new Output(socket, 'next'));
+    editor.addNode(pillNode);
+
+    let diamondNode = new Node('Decision', {
+      id: 'diamond-sample',
+      type: 'decision',
+      category: 'function',
+      shape: 'diamond',
+      icon: 'account_tree',
+    });
+    diamondNode.addInput('in', new Input(socket, 'in'));
+    diamondNode.addOutput('next', new Output(socket, 'next'));
+    editor.addNode(diamondNode);
+
+    let commentNode = new Node('Comment', {
+      id: 'comment-sample',
+      type: 'note',
+      category: 'default',
+      shape: 'comment',
+      icon: 'sticky_note_2',
+    });
+    commentNode.params = {
+      summary: 'Comment surfaces follow the same text, spacing, and outline cascade.',
+    };
+    commentNode.addInput('in', new Input(socket, 'in'));
+    editor.addNode(commentNode);
 
     editor.addConnection(new Connection(source, 'tokens', canvasNode, 'in'));
     editor.addConnection(new Connection(canvasNode, 'next', layoutNode, 'in'));
     editor.addConnection(new Connection(layoutNode, 'next', controlsNode, 'in'));
+    editor.addConnection(new Connection(controlsNode, 'next', circleIconNode, 'in'));
+    editor.addConnection(new Connection(circleIconNode, 'next', circleImageNode, 'in'));
+    editor.addConnection(new Connection(circleImageNode, 'next', pillNode, 'in'));
+    editor.addConnection(new Connection(pillNode, 'next', diamondNode, 'in'));
+    editor.addConnection(new Connection(diamondNode, 'next', commentNode, 'in'));
 
     canvas.setEditor(editor);
     canvas.setReadonly(true);
@@ -144,7 +230,17 @@ class CascadeGraphPanel extends Symbiote {
     const place = () => {
       requestAnimationFrame(() => {
         canvas.setFlowLayout({
-          nodeIds: [source.id, canvasNode.id, layoutNode.id, controlsNode.id],
+          nodeIds: [
+            source.id,
+            canvasNode.id,
+            layoutNode.id,
+            controlsNode.id,
+            circleIconNode.id,
+            circleImageNode.id,
+            pillNode.id,
+            diamondNode.id,
+            commentNode.id,
+          ],
           direction: 'vertical',
           gap: 76,
           padding: { top: 42, right: 28, bottom: 42, left: 28 },

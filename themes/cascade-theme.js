@@ -472,6 +472,43 @@ export const CASCADE_THEME_DESCRIPTOR = Object.freeze({
   },
 });
 
+const CASCADE_TOKEN_TARGET_CLASSIFIERS = [
+  { group: 'color', pattern: /^--sn-(theme-|hue-|lit-|bg|panel-bg|layout-bg|node-bg|surface|text|text-dim|cat-|type-|graph-type-|tab|tabs|button|cell|chat-bg|chat-message|chat-user|chat-agent|composer-bg|composer-action|composer-send|syntax-|field-|tree-|data-table|list-|card|banner|badge|source|ctx-|xr-)/ },
+  { group: 'outline', pattern: /^--sn-(theme-outline|outline|node-border|shape-|conn-|pseudo-conn|plus-indicator|layout-border|layout-resizer|ctx-border|composer-border|effect-focus|panel-menu-border|card-border|field-control-border)/ },
+  { group: 'typography', pattern: /-(size|font-size)$/ },
+  { group: 'density', pattern: /-(padding|gap|height|width|size|radius|margin|inset|offset|extra|min|top|left|step-ms|fade-rate|line-left|ch-width|hit-size)$/ },
+];
+
+function cloneTokenTargets(tokenTargets) {
+  return Object.fromEntries(
+    Object.entries(tokenTargets).map(([group, tokens]) => [group, Array.from(new Set(tokens))])
+  );
+}
+
+function getTokenTargetGroup(token) {
+  for (let [group, tokens] of Object.entries(CASCADE_THEME_TOKEN_TARGETS)) {
+    if (tokens.includes(token)) return group;
+  }
+  return CASCADE_TOKEN_TARGET_CLASSIFIERS.find((item) => item.pattern.test(token))?.group || 'density';
+}
+
+function completeCascadeThemeDescriptor(tokens = {}) {
+  let tokenTargets = cloneTokenTargets(CASCADE_THEME_TOKEN_TARGETS);
+  for (let token of Object.keys(tokens)) {
+    let group = getTokenTargetGroup(token);
+    tokenTargets[group] ||= [];
+    if (!tokenTargets[group].includes(token)) tokenTargets[group].push(token);
+  }
+  for (let group of Object.keys(tokenTargets)) {
+    tokenTargets[group] = Array.from(new Set(tokenTargets[group])).sort();
+  }
+  return Object.freeze({
+    ...CASCADE_THEME_DESCRIPTOR,
+    controls: CASCADE_THEME_CONTROL_LIST.map((control) => ({ ...control })),
+    tokenTargets,
+  });
+}
+
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, Number(value)));
 }
@@ -1115,6 +1152,10 @@ export function createCascadeTheme(options = {}) {
     '--sn-node-body-gap': densityToken(4),
     '--sn-node-pill-body-padding': `${densityToken(8)} ${densityToken(20)}`,
     '--sn-node-pill-body-gap': densityToken(8),
+    '--sn-node-circle-size': densityToken(100),
+    '--sn-node-circle-icon-size': typeToken(44),
+    '--sn-node-circle-media-size': '100%',
+    '--sn-node-circle-port-offset': `calc(-6px * var(--sn-theme-density))`,
     '--sn-node-circle-header-padding': densityToken(6),
     '--sn-node-circle-body-padding': `0 ${densityToken(8)} ${densityToken(8)}`,
     '--sn-node-comment-body-padding': `${densityToken(12)} ${densityToken(16)}`,
@@ -1172,11 +1213,16 @@ export function createCascadeTheme(options = {}) {
       ? `hsl(0 0% ${text.toFixed(1)}% / 0.25)`
       : `hsl(${state.hue} ${neutralChroma} ${accentLight}% / 0.55)`,
     '--sn-scrollbar-track': 'transparent',
+    '--sn-scrollbar-width': 'thin',
+    '--sn-scrollbar-size': '10px',
+    '--sn-scrollbar-radius': '999px',
+    '--sn-scrollbar-thumb-border': '3px solid transparent',
+    '--sn-scrollbar-thumb-min-size': '36px',
   };
 
   return {
     name: 'cascade-theme',
-    descriptor: CASCADE_THEME_DESCRIPTOR,
+    descriptor: completeCascadeThemeDescriptor(tokens),
     state,
     tokens,
   };

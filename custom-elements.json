@@ -796,6 +796,10 @@
               "description": "Theme CSS custom property consumed by this component."
             },
             {
+              "name": "--sn-node-border-width",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
               "name": "--sn-node-selected",
               "description": "Theme CSS custom property consumed by this component."
             },
@@ -812,6 +816,14 @@
               "description": "Theme CSS custom property consumed by this component."
             },
             {
+              "name": "--sn-node-header-border",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-item-border",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
               "name": "--sn-node-font-size",
               "description": "Theme CSS custom property consumed by this component."
             },
@@ -825,6 +837,54 @@
             },
             {
               "name": "--sn-node-icon-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-link-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-link-icon-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-item-kicker-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-item-title-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-item-summary-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-error-frame-header-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-error-frame-icon-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-error-frame-body-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-shape-icon-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-shape-stroke",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-shape-stroke-width",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-shape-port-hint-stroke-width",
               "description": "Theme CSS custom property consumed by this component."
             },
             {
@@ -857,6 +917,26 @@
             },
             {
               "name": "--sn-node-pill-body-gap",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-circle-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-circle-icon-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-circle-media-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-circle-media-fit",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-circle-port-offset",
               "description": "Theme CSS custom property consumed by this component."
             },
             {
@@ -921,6 +1001,42 @@
             },
             {
               "name": "--sn-node-items-max-height",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-port-gap",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-port-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-port-min-height",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-port-label-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-control-gap",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-control-margin",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-control-input-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-control-input-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-node-controls-padding",
               "description": "Theme CSS custom property consumed by this component."
             }
           ],
@@ -1001,14 +1117,29 @@
               "themeAliases": [
                 "--sn-node-bg",
                 "--sn-node-border",
+                "--sn-node-border-width",
                 "--sn-node-selected",
                 "--sn-node-radius",
                 "--sn-node-accent",
                 "--sn-node-header-bg",
+                "--sn-node-header-border",
+                "--sn-node-item-border",
                 "--sn-node-font-size",
                 "--sn-node-label-size",
                 "--sn-node-summary-size",
                 "--sn-node-icon-size",
+                "--sn-node-link-size",
+                "--sn-node-link-icon-size",
+                "--sn-node-item-kicker-size",
+                "--sn-node-item-title-size",
+                "--sn-node-item-summary-size",
+                "--sn-node-error-frame-header-size",
+                "--sn-node-error-frame-icon-size",
+                "--sn-node-error-frame-body-size",
+                "--sn-shape-icon-size",
+                "--sn-shape-stroke",
+                "--sn-shape-stroke-width",
+                "--sn-shape-port-hint-stroke-width",
                 "--sn-node-header-gap",
                 "--sn-node-header-padding",
                 "--sn-node-collapsed-body-padding",
@@ -1017,6 +1148,11 @@
                 "--sn-node-body-gap",
                 "--sn-node-pill-body-padding",
                 "--sn-node-pill-body-gap",
+                "--sn-node-circle-size",
+                "--sn-node-circle-icon-size",
+                "--sn-node-circle-media-size",
+                "--sn-node-circle-media-fit",
+                "--sn-node-circle-port-offset",
                 "--sn-node-circle-header-padding",
                 "--sn-node-circle-body-padding",
                 "--sn-node-comment-body-padding",
@@ -1032,7 +1168,16 @@
                 "--sn-node-error-frame-header-padding",
                 "--sn-node-error-frame-body-padding",
                 "--sn-node-preview-text-padding",
-                "--sn-node-items-max-height"
+                "--sn-node-items-max-height",
+                "--sn-port-gap",
+                "--sn-port-padding",
+                "--sn-port-min-height",
+                "--sn-port-label-size",
+                "--sn-control-gap",
+                "--sn-control-margin",
+                "--sn-control-input-size",
+                "--sn-control-input-padding",
+                "--sn-node-controls-padding"
               ],
               "ssr": {
                 "mode": "client-only",
@@ -5236,6 +5381,10 @@
               "description": "Theme CSS custom property consumed by this component."
             },
             {
+              "name": "--sn-tabs-item-height",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
               "name": "--sn-tabs-bg",
               "description": "Theme CSS custom property consumed by this component."
             },
@@ -5244,11 +5393,63 @@
               "description": "Theme CSS custom property consumed by this component."
             },
             {
+              "name": "--sn-tabs-hover-bg",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
               "name": "--sn-tabs-border",
               "description": "Theme CSS custom property consumed by this component."
             },
             {
+              "name": "--sn-tabs-divider",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-tabs-accent",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
               "name": "--sn-tabs-radius",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-tabs-corner-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-tabs-corner-cut",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-tab-accent-0",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-tab-accent-1",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-tab-accent-2",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-tab-accent-3",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-tab-accent-4",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-tab-accent-5",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-text",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-text-dim",
               "description": "Theme CSS custom property consumed by this component."
             }
           ],
@@ -5339,10 +5540,24 @@
               ],
               "themeAliases": [
                 "--sn-tabs-height",
+                "--sn-tabs-item-height",
                 "--sn-tabs-bg",
                 "--sn-tabs-active-bg",
+                "--sn-tabs-hover-bg",
                 "--sn-tabs-border",
-                "--sn-tabs-radius"
+                "--sn-tabs-divider",
+                "--sn-tabs-accent",
+                "--sn-tabs-radius",
+                "--sn-tabs-corner-size",
+                "--sn-tabs-corner-cut",
+                "--sn-tab-accent-0",
+                "--sn-tab-accent-1",
+                "--sn-tab-accent-2",
+                "--sn-tab-accent-3",
+                "--sn-tab-accent-4",
+                "--sn-tab-accent-5",
+                "--sn-text",
+                "--sn-text-dim"
               ],
               "ssr": {
                 "mode": "hydrate-only",

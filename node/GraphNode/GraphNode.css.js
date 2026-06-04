@@ -380,38 +380,72 @@ export let styles = css`
 
     /* Shape: circle — hub/connector node */
     &[node-shape='circle'] {
-      min-width: 100px;
-      min-height: 100px;
+      position: relative;
+      inline-size: var(--sn-node-circle-size, 100px);
+      min-width: var(--sn-node-circle-size, 100px);
+      min-height: var(--sn-node-circle-size, 100px);
       border-radius: 50%;
       aspect-ratio: 1;
       display: flex;
-      flex-direction: column;
       align-items: center;
       justify-content: center;
 
       & .sn-node-header {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
         background: transparent;
         border-bottom: none;
+        align-items: center;
         justify-content: center;
         padding: var(--sn-node-circle-header-padding, 6px);
       }
+      & .sn-node-icon {
+        font-size: var(--sn-node-circle-icon-size, var(--sn-shape-icon-size, 40px));
+      }
+      & .sn-node-label {
+        display: none;
+      }
       & .sn-node-body {
-        padding: var(--sn-node-circle-body-padding, 0 8px 8px);
-        flex-direction: row;
-        align-items: center;
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        padding: var(--sn-node-circle-body-padding, 0);
+        display: block;
         gap: 0;
       }
       & .inputs {
         position: absolute;
-        left: -6px;
+        left: var(--sn-node-circle-port-offset, -6px);
         top: 50%;
         transform: translateY(-50%);
       }
       & .outputs {
         position: absolute;
-        right: -6px;
+        right: var(--sn-node-circle-port-offset, -6px);
         top: 50%;
         transform: translateY(-50%);
+      }
+      &[data-has-media] .sn-node-media {
+        position: absolute;
+        inset: 50% auto auto 50%;
+        z-index: 0;
+        inline-size: var(--sn-node-circle-media-size, 100%);
+        block-size: var(--sn-node-circle-media-size, 100%);
+        transform: translate(-50%, -50%);
+        border: 0;
+        border-radius: 50%;
+        clip-path: circle(50% at 50% 50%);
+      }
+      &[data-has-media] .sn-node-media-img {
+        inline-size: 100%;
+        block-size: 100%;
+        aspect-ratio: 1;
+        object-fit: var(--sn-node-circle-media-fit, cover);
+      }
+      &[data-has-media] .sn-node-header {
+        opacity: 0;
+        pointer-events: none;
       }
       & .port-label {
         display: none;

@@ -60,6 +60,10 @@ function parseRgbToken(_source, value) {
     .map(Number);
 }
 
+function flattenTokenTargets(tokenTargets = {}) {
+  return new Set(Object.values(tokenTargets).flat());
+}
+
 test('theme scrollbar normal state uses the normal thumb token', async () => {
   const source = await readFile(scrollbarSource, 'utf8');
 
@@ -110,6 +114,17 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   assert.match(source, /--sn-node-icon-size/);
   assert.match(source, /--sn-node-pill-body-padding/);
   assert.match(source, /--sn-node-circle-body-padding/);
+  assert.match(source, /CIRCLE_SAMPLE_IMAGE/);
+  assert.match(source, /id: 'circle-icon-sample'/);
+  assert.match(source, /id: 'circle-image-sample'/);
+  assert.match(source, /id: 'pill-sample'/);
+  assert.match(source, /id: 'diamond-sample'/);
+  assert.match(source, /id: 'comment-sample'/);
+  assert.match(source, /shape: 'circle'/);
+  assert.match(source, /shape: 'pill'/);
+  assert.match(source, /shape: 'diamond'/);
+  assert.match(source, /shape: 'comment'/);
+  assert.match(source, /image: CIRCLE_SAMPLE_IMAGE/);
   assert.match(source, /--sn-node-comment-body-padding/);
   assert.match(source, /--sn-port-label-size/);
   assert.match(source, /--sn-layout-header-icon-size/);
@@ -274,6 +289,14 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.equal(theme.tokens['--sn-code-font-size'], 'calc(12px * var(--sn-theme-type-scale))');
   assert.equal(theme.tokens['--sn-composer-send-size'], 'calc(32px * var(--sn-theme-density))');
   assert.equal(theme.tokens['--sn-cell-size'], 'calc(14px * var(--sn-theme-density))');
+  assert.equal(theme.tokens['--sn-scrollbar-width'], 'thin');
+  assert.equal(theme.tokens['--sn-scrollbar-size'], '10px');
+  assert.equal(theme.tokens['--sn-scrollbar-radius'], '999px');
+  assert.equal(theme.tokens['--sn-scrollbar-thumb-border'], '3px solid transparent');
+  assert.equal(theme.tokens['--sn-scrollbar-thumb-min-size'], '36px');
+  let tokenTargets = flattenTokenTargets(theme.descriptor.tokenTargets);
+  let missingTargets = Object.keys(theme.tokens).filter((token) => !tokenTargets.has(token));
+  assert.deepEqual(missingTargets, []);
   assert.match(source, /CASCADE_THEME_DESCRIPTOR/);
   assert.match(source, /svgStrokeToken/);
   assert.match(source, /headingToken/);
@@ -625,6 +648,12 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(graphNode, /--sn-shape-icon-size/);
   assert.match(graphNode, /--sn-node-pill-body-padding/);
   assert.match(graphNode, /--sn-node-circle-body-padding/);
+  assert.match(graphNode, /--sn-node-circle-icon-size/);
+  assert.match(graphNode, /--sn-node-circle-media-size/);
+  assert.match(graphNode, /--sn-node-circle-port-offset/);
+  assert.match(graphNode, /&\[data-has-media\] .sn-node-media/);
+  assert.match(graphNode, /clip-path: circle\(50% at 50% 50%\)/);
+  assert.match(graphNode, /object-fit: var\(--sn-node-circle-media-fit, cover\)/);
   assert.match(graphNode, /--sn-node-comment-body-padding/);
   assert.match(graphNode, /stroke: var\(--sn-shape-stroke/);
   assert.match(graphNode, /stroke-width: var\(--sn-shape-stroke-width/);
@@ -796,7 +825,14 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(registry, /--sn-chat-sidebar-delete-box-size/);
   assert.match(registry, /--sn-node-pill-body-padding/);
   assert.match(registry, /--sn-node-circle-body-padding/);
+  assert.match(registry, /--sn-node-circle-icon-size/);
+  assert.match(registry, /--sn-node-circle-media-size/);
+  assert.match(registry, /--sn-shape-icon-size/);
+  assert.match(registry, /--sn-shape-stroke-width/);
+  assert.match(registry, /--sn-shape-port-hint-stroke-width/);
   assert.match(registry, /--sn-node-comment-body-padding/);
+  assert.match(registry, /--sn-tabs-accent/);
+  assert.match(registry, /--sn-tab-accent-5/);
   assert.match(customElements, /"name": "setPanelMenuActions"/);
   assert.match(customElements, /"name": "openPanel"/);
   assert.match(customElements, /"name": "closeUiPanel"/);
@@ -823,7 +859,42 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(customElements, /"name": "--sn-chat-sidebar-delete-box-size"/);
   assert.match(customElements, /"name": "--sn-node-pill-body-padding"/);
   assert.match(customElements, /"name": "--sn-node-circle-body-padding"/);
+  assert.match(customElements, /"name": "--sn-node-circle-icon-size"/);
+  assert.match(customElements, /"name": "--sn-node-circle-media-size"/);
+  assert.match(customElements, /"name": "--sn-shape-icon-size"/);
+  assert.match(customElements, /"name": "--sn-shape-stroke-width"/);
+  assert.match(customElements, /"name": "--sn-shape-port-hint-stroke-width"/);
   assert.match(customElements, /"name": "--sn-node-comment-body-padding"/);
+  assert.match(customElements, /"name": "--sn-tabs-accent"/);
+  assert.match(customElements, /"name": "--sn-tab-accent-5"/);
+});
+
+test('default provider exposes cascade control and scrollbar parity tokens', async () => {
+  let [themeModule, css] = await Promise.all([
+    import(defaultProviderThemeSource.href),
+    readFile(new URL('../themes/default-provider.css', import.meta.url), 'utf8'),
+  ]);
+  let tokens = themeModule.DEFAULT_PROVIDER_THEME.tokens;
+
+  assert.equal(tokens['--sn-theme-outline-strength'], '0.38');
+  assert.equal(tokens['--sn-theme-type-scale'], '1');
+  assert.equal(tokens['--sn-theme-heading-scale'], '1');
+  assert.equal(tokens['--sn-theme-spacing-scale'], 'var(--sn-theme-density)');
+  assert.equal(tokens['--sn-button-primary-color'], 'hsl(0 0% 8%)');
+  assert.equal(tokens['--sn-button-success-color'], 'hsl(0 0% 8%)');
+  assert.equal(tokens['--sn-button-danger-hover-color'], 'hsl(0 0% 8%)');
+  assert.equal(tokens['--sn-scrollbar-width'], 'thin');
+  assert.equal(tokens['--sn-scrollbar-size'], '10px');
+  assert.equal(tokens['--sn-scrollbar-radius'], '999px');
+  assert.equal(tokens['--sn-scrollbar-thumb-border'], '3px solid transparent');
+  assert.equal(tokens['--sn-scrollbar-thumb-min-size'], '36px');
+  assert.match(css, /--sn-theme-outline-strength: 0\.38;/);
+  assert.match(css, /--sn-theme-type-scale: 1;/);
+  assert.match(css, /--sn-theme-heading-scale: 1;/);
+  assert.match(css, /--sn-theme-spacing-scale: var\(--sn-theme-density\);/);
+  assert.match(css, /--sn-button-primary-color: hsl\(0 0% 8%\);/);
+  assert.match(css, /--sn-button-success-color: hsl\(0 0% 8%\);/);
+  assert.match(css, /--sn-button-danger-hover-color: hsl\(0 0% 8%\);/);
 });
 
 test('side-scroll contracts are explicit across reusable surfaces', async () => {
