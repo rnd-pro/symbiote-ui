@@ -664,8 +664,17 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(layoutNodeSourceText, /panel-menu-actions/);
   assert.match(layoutNodeSourceText, /panel-menu-action/);
   assert.match(layoutNodeSourceText, /LAYOUT_PANEL_MENU_ACTIONS/);
+  assert.match(layoutNodeSourceText, /_onPanelMenuClick/);
+  assert.ok(layoutNodeSourceText.includes("closest('.panel-menu-action[data-menu-action-id]')"));
+  assert.match(layoutNodeSourceText, /button\.closest\('layout-node'\) !== this/);
+  assert.match(layoutNodeSourceText, /event\.stopPropagation\(\)/);
+  assert.match(layoutNodeSourceText, /_syncPanelMenuActionState/);
+  assert.match(layoutNodeSourceText, /button\.toggleAttribute\('disabled', disabled\)/);
+  assert.match(layoutNodeSourceText, /button\.disabled = disabled/);
+  assert.match(layoutNodeSourceText, /this\.ref\.panelContent\) this\.ref\.panelContent\.replaceChildren\(\)/);
   assert.match(layoutNodeSourceText, /layout:duplicate/);
   assert.match(layoutNodeSourceText, /layout:remove/);
+  assert.doesNotMatch(layoutNodeSourceText, /onPanelMenuAction:/);
   assert.doesNotMatch(layoutNodeSourceText, /showActionZones/);
   assert.doesNotMatch(layoutNodeSourceText, /layoutActionZones/);
   assert.match(layoutSidebarSourceText, /isDisabled: Boolean\(item\.disabled\)/);
@@ -674,7 +683,9 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(layoutNode, /--sn-layout-menu-icon-size/);
   assert.match(layoutNodeTpl, /panel-menu-drawer/);
   assert.match(layoutNodeTpl, /panelMenuActions/);
-  assert.match(layoutNodeTpl, /onPanelMenuAction/);
+  assert.doesNotMatch(layoutNodeTpl, /onPanelMenuAction/);
+  assert.doesNotMatch(layoutNodeTpl, /'@disabled': 'disabled'/);
+  assert.doesNotMatch(layoutNodeTpl, /'@active': 'active'/);
   assert.doesNotMatch(layoutNodeTpl, /<action-zone/);
   assert.doesNotMatch(layoutNodeTpl, /showActionZones/);
   assert.match(layoutNode, /--sn-layout-header-icon-size/);

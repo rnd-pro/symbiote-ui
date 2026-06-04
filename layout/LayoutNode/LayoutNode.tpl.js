@@ -36,10 +36,7 @@ export let template = html`
             class="panel-menu-action"
             type="button"
             ${{
-              onclick: '^onPanelMenuAction',
               '@data-menu-action-id': 'id',
-              '@active': 'active',
-              '@disabled': 'disabled',
               title: 'title',
             }}
           >

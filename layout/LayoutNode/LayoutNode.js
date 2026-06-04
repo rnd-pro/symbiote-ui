@@ -93,7 +93,6 @@ export class LayoutNode extends Symbiote {
     onResizerDown: (e) => this._startResize(e),
     onTypeClick: (e) => this._showTypeMenu(e),
     onPanelMenuToggle: () => this._togglePanelMenu(),
-    onPanelMenuAction: (e) => this._runPanelMenuAction(e),
     onCollapseClick: () => this._toggleCollapse(),
     onExpandClick: () => this._toggleCollapse(),
     onFullscreenClick: () => this._toggleFullscreen(),
@@ -159,10 +158,12 @@ export class LayoutNode extends Symbiote {
 
   initCallback() {
     this.addEventListener('panel-menu-actions', this._onPanelMenuActions);
+    this.addEventListener('click', this._onPanelMenuClick);
   }
 
   disconnectedCallback() {
     this.removeEventListener('panel-menu-actions', this._onPanelMenuActions);
+    this.removeEventListener('click', this._onPanelMenuClick);
     super.disconnectedCallback?.();
   }
 
@@ -380,17 +381,46 @@ export class LayoutNode extends Symbiote {
     ensureMaterialSymbols(normalized.map((action) => action.icon));
     this.$.panelMenuActions = normalized;
     this.$.hasPanelMenuActions = normalized.length > 0;
+    this._schedulePanelMenuActionStateSync();
     if (!normalized.length) {
       this.$.isPanelMenuOpen = false;
       this.$.panelMenuIcon = 'keyboard_arrow_down';
     }
   }
 
+  _schedulePanelMenuActionStateSync() {
+    this._syncPanelMenuActionState();
+    if (typeof requestAnimationFrame !== 'undefined') {
+      requestAnimationFrame(() => this._syncPanelMenuActionState());
+    }
+  }
+
+  _syncPanelMenuActionState() {
+    let actions = new Map(this.$.panelMenuActions.map((action) => [action.id, action]));
+    for (let button of this.querySelectorAll('.panel-menu-action[data-menu-action-id]')) {
+      let action = actions.get(button.dataset.menuActionId);
+      let active = Boolean(action?.active);
+      let disabled = Boolean(action?.disabled);
+      button.toggleAttribute('active', active);
+      button.toggleAttribute('disabled', disabled);
+      button.disabled = disabled;
+    }
+  }
+
+  _onPanelMenuClick = (event) => {
+    let button = event.target.closest('.panel-menu-action[data-menu-action-id]');
+    if (!button || button.closest('layout-node') !== this) return;
+    event.preventDefault();
+    event.stopPropagation();
+    this._runPanelMenuAction(event);
+  };
+
   _togglePanelMenu() {
     if (this.$.panelChrome === false || this.$['^panelChrome'] === false) return;
     if (this.$.isCollapsed || !this.$.hasPanelMenuActions) return;
     this.$.isPanelMenuOpen = !this.$.isPanelMenuOpen;
     this.$.panelMenuIcon = this.$.isPanelMenuOpen ? 'keyboard_arrow_up' : 'keyboard_arrow_down';
+    this._schedulePanelMenuActionStateSync();
   }
 
   _runPanelMenuAction(event) {
@@ -432,6 +462,11 @@ export class LayoutNode extends Symbiote {
     this.#syncHostAttribute('node-type', data.type);
 
     if (data.type === 'split') {
+      if (prevType === 'panel') {
+        if (this.ref.panelContent) this.ref.panelContent.replaceChildren();
+        this.$.isPanelMenuOpen = false;
+        this.$.panelMenuIcon = 'keyboard_arrow_down';
+      }
       this.#syncHostAttribute('direction', data.direction);
       this._renderSplit(data);
     } else {
