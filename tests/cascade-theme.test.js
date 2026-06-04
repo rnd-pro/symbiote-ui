@@ -92,6 +92,22 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.match(source, /--sn-panel-menu-icon-size/);
 });
 
+test('cascade theme derives distinct dark and light branches', async () => {
+  const themeModule = await import(cascadeThemeSource.href);
+  const darkTheme = themeModule.createCascadeTheme({ mode: 'dark' });
+  const lightTheme = themeModule.createCascadeTheme({ mode: 'light' });
+
+  assert.equal(darkTheme.state.mode, 'dark');
+  assert.equal(lightTheme.state.mode, 'light');
+  assert.equal(darkTheme.tokens['--sn-bg'], 'hsl(0 0% 10.0%)');
+  assert.equal(lightTheme.tokens['--sn-bg'], 'hsl(0 0% 98.0%)');
+  assert.equal(darkTheme.tokens['--sn-text'], 'hsl(0 0% 94.0%)');
+  assert.equal(lightTheme.tokens['--sn-text'], 'hsl(0 0% 18.9%)');
+  assert.equal(darkTheme.tokens['--sn-theme-outline-strength'], lightTheme.tokens['--sn-theme-outline-strength']);
+  assert.equal(darkTheme.tokens['--sn-field-control-bg'], 'var(--sn-bg)');
+  assert.equal(lightTheme.tokens['--sn-field-control-bg'], 'var(--sn-bg)');
+});
+
 test('cascade theme controls reach canvas objects and layout chrome', async () => {
   const [
     graphNode,
