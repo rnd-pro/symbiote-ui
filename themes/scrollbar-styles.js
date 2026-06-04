@@ -1,4 +1,4 @@
-const SCROLLBAR_COLOR = 'var(--sn-scrollbar-thumb-hover, currentColor) var(--sn-scrollbar-track, transparent)';
+const SCROLLBAR_COLOR = 'var(--sn-scrollbar-thumb, currentColor) var(--sn-scrollbar-track, transparent)';
 const SCROLLBAR_WIDTH = 'var(--sn-scrollbar-width, thin)';
 const SCROLLBAR_SIZE = 'var(--sn-scrollbar-size, 10px)';
 const SCROLLBAR_THUMB = 'var(--sn-scrollbar-thumb, currentColor)';
@@ -71,4 +71,3 @@ export let themedScrollbarRootStyles = `
     background: ${SCROLLBAR_TRACK};
   }
 `;
-

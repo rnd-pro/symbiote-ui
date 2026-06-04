@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>symbiote-ui Cascade Theme Lab</title>
+  <script type="importmap">
+    {
+      "imports": {
+        "@symbiotejs/symbiote": "../node_modules/@symbiotejs/symbiote/core/index.js",
+        "@symbiotejs/symbiote/": "../node_modules/@symbiotejs/symbiote/",
+        "symbiote-engine": "../node_modules/symbiote-engine/index.js",
+        "symbiote-engine/": "../node_modules/symbiote-engine/"
+      }
+    }
+  </script>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background: var(--sn-bg, #1a1a1a);
+      color: var(--sn-text, #f0f0f0);
+      font-family: var(--sn-font, Inter, system-ui, sans-serif);
+    }
+
+    body {
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .lab-shell {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle, var(--sn-grid-dot, rgb(255 255 255 / 0.06)) 1.2px, transparent 1.2px) 0 0 / var(--sn-grid-size, 20px) var(--sn-grid-size, 20px),
+        var(--sn-bg);
+    }
+
+    .lab-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--sn-node-border);
+      background: color-mix(in srgb, var(--sn-panel-bg) 92%, transparent);
+    }
+
+    .lab-title {
+      margin: 0;
+      min-width: 180px;
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    .lab-mode {
+      display: inline-grid;
+      grid-auto-flow: column;
+      gap: 6px;
+      padding: 3px;
+      border: 1px solid var(--sn-node-border);
+      border-radius: 8px;
+      background: var(--sn-node-bg);
+    }
+
+    .lab-mode button,
+    .lab-toggle {
+      height: 30px;
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--sn-text-dim);
+      font: inherit;
+      cursor: pointer;
+    }
+
+    .lab-mode button {
+      min-width: 34px;
+      padding: 0 9px;
+    }
+
+    .lab-mode button[aria-pressed="true"],
+    .lab-toggle[aria-expanded="true"] {
+      background: var(--sn-node-selected);
+      color: var(--sn-bg);
+    }
+
+    .lab-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 10px;
+      border: 1px solid var(--sn-node-border);
+      background: var(--sn-node-bg);
+    }
+
+    .lab-tuners {
+      display: none;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .lab-tuners[data-open] {
+      display: flex;
+    }
+
+    .lab-control {
+      display: grid;
+      grid-template-columns: auto minmax(80px, 128px) 38px;
+      align-items: center;
+      gap: 8px;
+      color: var(--sn-text-dim);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .lab-control input {
+      width: 100%;
+      accent-color: var(--sn-node-selected);
+    }
+
+    .lab-control output {
+      color: var(--sn-text);
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+    }
+
+    .lab-content {
+      min-height: 0;
+      padding: 12px;
+    }
+
+    .lab-layout {
+      width: 100%;
+      height: calc(100vh - 68px);
+      min-height: 0;
+    }
+
+    cascade-graph-panel,
+    cascade-ui-panel {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .lab-canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .sample-panel {
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      gap: 12px;
+      height: 100%;
+      padding: 12px;
+      background: var(--sn-panel-bg);
+      color: var(--sn-text);
+      overflow: hidden;
+    }
+
+    .sample-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .sample-scroll {
+      min-height: 0;
+      overflow: auto;
+      padding: 8px;
+      border: 1px solid var(--sn-node-border);
+      border-radius: var(--sn-node-radius);
+      background: var(--sn-bg);
+      scrollbar-color: var(--sn-scrollbar-thumb) var(--sn-scrollbar-track);
+      scrollbar-width: var(--sn-scrollbar-width, thin);
+    }
+
+    .sample-scroll::-webkit-scrollbar {
+      width: var(--sn-scrollbar-size, 10px);
+      height: var(--sn-scrollbar-size, 10px);
+    }
+
+    .sample-scroll::-webkit-scrollbar-track {
+      background: var(--sn-scrollbar-track, transparent);
+    }
+
+    .sample-scroll::-webkit-scrollbar-thumb {
+      min-height: var(--sn-scrollbar-thumb-min-size, 36px);
+      border: var(--sn-scrollbar-thumb-border, 3px solid transparent);
+      border-radius: var(--sn-scrollbar-radius, 999px);
+      background: var(--sn-scrollbar-thumb);
+      background-clip: content-box;
+    }
+
+    .sample-scroll::-webkit-scrollbar-thumb:hover {
+      background: var(--sn-scrollbar-thumb-hover);
+      background-clip: content-box;
+    }
+
+    .sample-stack {
+      display: grid;
+      gap: 10px;
+      min-height: 720px;
+    }
+
+    .token-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .token-chip {
+      min-width: 0;
+      padding: 10px;
+      border: 1px solid var(--sn-node-border);
+      border-radius: var(--sn-node-radius);
+      background: var(--sn-node-bg);
+    }
+
+    .token-chip strong,
+    .token-chip span {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .token-chip strong {
+      color: var(--sn-text);
+      font-size: 12px;
+    }
+
+    .token-chip span {
+      margin-top: 4px;
+      color: var(--sn-text-dim);
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    @media (max-width: 860px) {
+      body {
+        overflow: auto;
+      }
+
+      .lab-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .lab-tuners[data-open] {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .lab-control {
+        grid-template-columns: 78px minmax(0, 1fr) 38px;
+      }
+
+      .lab-layout {
+        height: 980px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="lab-shell">
+    <header class="lab-toolbar">
+      <h1 class="lab-title">Cascade Theme Lab</h1>
+      <div class="lab-mode" aria-label="Theme mode">
+        <button type="button" data-mode="dark" aria-pressed="true" title="Dark theme">dark</button>
+        <button type="button" data-mode="light" aria-pressed="false" title="Light theme">light</button>
+      </div>
+      <button class="lab-toggle" type="button" aria-expanded="false">
+        <span class="material-symbols-outlined" aria-hidden="true">tune</span>
+        tune
+      </button>
+      <div class="lab-tuners" aria-label="Theme controls">
+        <label class="lab-control">
+          <span>brightness</span>
+          <input type="range" min="0" max="100" value="0" data-control="brightness">
+          <output data-output="brightness">0</output>
+        </label>
+        <label class="lab-control">
+          <span>contrast</span>
+          <input type="range" min="0" max="100" value="58" data-control="contrast">
+          <output data-output="contrast">58</output>
+        </label>
+        <label class="lab-control">
+          <span>accent</span>
+          <input type="range" min="0" max="100" value="89" data-control="chroma">
+          <output data-output="chroma">89</output>
+        </label>
+        <label class="lab-control">
+          <span>hue</span>
+          <input type="range" min="0" max="360" value="218" data-control="hue">
+          <output data-output="hue">218</output>
+        </label>
+      </div>
+    </header>
+    <section class="lab-content" aria-label="Cascade theme visual surface">
+      <panel-layout class="lab-layout"></panel-layout>
+    </section>
+  </main>
+  <script type="module" src="./cascade-theme-lab.js?v=20260604"></script>
+</body>
+
+</html>

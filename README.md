@@ -63,6 +63,7 @@ The root package and Node-safe entry points must import without creating DOM glo
 
 ## Demos
 
+- [`demo/cascade-theme-lab.html`](./demo/cascade-theme-lab.html) - cascade theme controls for dark/light mode, brightness, contrast, accent chroma, and graph/UI token inheritance.
 - [`demo/pcb-router-stress.html`](./demo/pcb-router-stress.html) - animated PCB route diagnostics with orbit metrics, keyframes, and agent-readable JSON samples.
 
 ## WebMCP
