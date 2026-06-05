@@ -962,6 +962,11 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(layoutNodeSourceText, /setPanelMenuActions/);
   assert.match(layoutNodeSourceText, /panel-menu-actions/);
   assert.match(layoutNodeSourceText, /panel-menu-action/);
+  assert.match(layoutNodeSourceText, /PANEL_MENU_GROUPS/);
+  assert.match(layoutNodeSourceText, /groupPanelMenuActions/);
+  assert.match(layoutNodeSourceText, /panelMenuRows/);
+  assert.match(layoutNodeSourceText, /groupLabel/);
+  assert.match(layoutNodeSourceText, /rowSpan/);
   assert.match(layoutNodeSourceText, /LAYOUT_PANEL_MENU_ACTIONS/);
   assert.match(layoutNodeSourceText, /_onPanelMenuClick/);
   assert.ok(layoutNodeSourceText.includes("closest('.panel-menu-action[data-menu-action-id]')"));
@@ -999,8 +1004,14 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(layoutNode, /--sn-layout-menu-action-size/);
   assert.match(layoutNode, /--sn-layout-menu-action-height/);
   assert.match(layoutNode, /--sn-layout-menu-icon-size/);
+  assert.match(layoutNode, /--sn-layout-menu-row-span/);
+  assert.match(layoutNode, /calc\(var\(--sn-layout-header-min-height, 28px\) \* var\(--sn-layout-menu-row-span\)\)/);
+  assert.match(layoutNode, /panel-menu-row-label/);
   assert.match(layoutNodeTpl, /panel-menu-drawer/);
-  assert.match(layoutNodeTpl, /panelMenuActions/);
+  assert.match(layoutNodeTpl, /panelMenuRows/);
+  assert.match(layoutNodeTpl, /panel-menu-actions/);
+  assert.match(layoutNodeTpl, /data-menu-group/);
+  assert.match(layoutNodeTpl, /panel-menu-row-label/);
   assert.doesNotMatch(layoutNodeTpl, /onPanelMenuAction/);
   assert.doesNotMatch(layoutNodeTpl, /'@disabled': 'disabled'/);
   assert.doesNotMatch(layoutNodeTpl, /'@active': 'active'/);

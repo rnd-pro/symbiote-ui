@@ -1561,7 +1561,7 @@ export let COMPONENTS = [
       status: 'draft',
       schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
-      capabilities: ['layout-branch', 'layout-panel', 'resize', 'collapse', 'fullscreen', 'panel-menu', 'fold-down-panel-actions', 'responsive-behavior'],
+      capabilities: ['layout-branch', 'layout-panel', 'resize', 'collapse', 'fullscreen', 'panel-menu', 'fold-down-panel-actions', 'grouped-panel-menu-rows', 'responsive-behavior'],
       attributes: [
         { name: 'node-type', type: 'string', description: 'Layout node type: panel or split.' },
         { name: 'direction', type: 'string', description: 'Split direction.' },
@@ -1576,7 +1576,7 @@ export let COMPONENTS = [
         { name: 'panel-fullscreen', description: 'Requests fullscreen for a panel node.' },
         { name: 'panel-type-menu', description: 'Requests opening panel type selection UI.' },
         { name: 'panel-menu-action', description: 'Emits when a fold-down panel menu action is selected.' },
-        { name: 'panel-menu-actions', description: 'Accepts bubbled action descriptors from the active panel component.' },
+        { name: 'panel-menu-actions', description: 'Accepts bubbled action descriptors from the active panel component, including optional group, groupLabel, groupOrder, and rowSpan fields for thematic drawer rows.' },
       ],
       themeAliases: [
         '--sn-node-bg',
@@ -1594,6 +1594,9 @@ export let COMPONENTS = [
         '--sn-layout-menu-action-gap',
         '--sn-layout-menu-action-height',
         '--sn-layout-menu-action-padding',
+        '--sn-layout-menu-row-label-width',
+        '--sn-layout-menu-label-padding',
+        '--sn-layout-menu-label-size',
         '--sn-layout-panel-min-inline-size',
         '--sn-layout-panel-min-block-size',
       ],

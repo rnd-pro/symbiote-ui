@@ -34,27 +34,81 @@ const LAYOUT_NODE_ICONS = [
 ];
 
 const LAYOUT_PANEL_TREE_ACTIONS = Object.freeze([
-  { id: 'layout:split-horizontal', label: 'Split H', icon: 'horizontal_split', title: 'Split panel horizontally' },
-  { id: 'layout:split-vertical', label: 'Split V', icon: 'vertical_split', title: 'Split panel vertically' },
-  { id: 'layout:duplicate', label: 'Duplicate', icon: 'control_point_duplicate', title: 'Duplicate panel' },
+  { id: 'layout:split-horizontal', label: 'Split H', icon: 'horizontal_split', title: 'Split panel horizontally', group: 'layout' },
+  { id: 'layout:split-vertical', label: 'Split V', icon: 'vertical_split', title: 'Split panel vertically', group: 'layout' },
+  { id: 'layout:duplicate', label: 'Duplicate', icon: 'control_point_duplicate', title: 'Duplicate panel', group: 'layout' },
 ]);
 
 function getLayoutPanelViewActions({ canCollapse = false } = {}) {
   return canCollapse
-    ? [{ id: 'layout:collapse-toggle', label: 'Collapse', icon: 'unfold_less', title: 'Collapse panel' }]
+    ? [{ id: 'layout:collapse-toggle', label: 'Collapse', icon: 'unfold_less', title: 'Collapse panel', group: 'layout' }]
     : [];
 }
 
 const LAYOUT_PANEL_MENU_ACTIONS = Object.freeze([...LAYOUT_PANEL_TREE_ACTIONS]);
 
 const LAYOUT_REMOVABLE_PANEL_MENU_ACTIONS = Object.freeze([
-  { id: 'layout:remove', label: 'Remove', icon: 'close', title: 'Remove panel' },
+  { id: 'layout:remove', label: 'Remove', icon: 'close', title: 'Remove panel', group: 'layout' },
 ]);
 
 const LAYOUT_UI_PANEL_MENU_ACTIONS = Object.freeze([
-  { id: 'layout:close-ui-panel', label: 'Close', icon: 'close', title: 'Close temporary UI panel' },
-  { id: 'layout:remove-ui-panel', label: 'Remove', icon: 'delete', title: 'Remove temporary UI panel from the layout' },
+  { id: 'layout:close-ui-panel', label: 'Close', icon: 'close', title: 'Close temporary UI panel', group: 'layout' },
+  { id: 'layout:remove-ui-panel', label: 'Remove', icon: 'delete', title: 'Remove temporary UI panel from the layout', group: 'layout' },
 ]);
+
+const PANEL_MENU_GROUPS = Object.freeze({
+  layout: { id: 'layout', label: 'Layout', order: 10 },
+  path: { id: 'path', label: 'Connections', order: 20 },
+  graph: { id: 'graph', label: 'Graph', order: 30 },
+  panel: { id: 'panel', label: 'Panel', order: 40 },
+});
+
+function inferPanelMenuGroup(action) {
+  let id = String(action?.id || '');
+  if (id.startsWith('layout:')) return 'layout';
+  if (id.startsWith('path:')) return 'path';
+  if (id.startsWith('graph:')) return 'graph';
+  return action?.group || 'panel';
+}
+
+function normalizePanelMenuAction(action) {
+  let group = String(action.group || inferPanelMenuGroup(action));
+  let groupInfo = PANEL_MENU_GROUPS[group] || { id: group, label: action.groupLabel || group, order: 50 };
+  return {
+    id: String(action.id),
+    label: action.label || action.title || action.id,
+    icon: action.icon || 'radio_button_unchecked',
+    title: action.title || action.label || action.id,
+    active: Boolean(action.active),
+    disabled: Boolean(action.disabled),
+    group,
+    groupLabel: action.groupLabel || groupInfo.label,
+    groupOrder: Number.isFinite(Number(action.groupOrder)) ? Number(action.groupOrder) : groupInfo.order,
+    rowSpan: Math.max(1, Number(action.rowSpan) || 1),
+  };
+}
+
+function groupPanelMenuActions(actions) {
+  let rows = new Map();
+  for (let action of actions) {
+    let row = rows.get(action.group);
+    if (!row) {
+      row = {
+        id: action.group,
+        label: action.groupLabel,
+        order: action.groupOrder,
+        rowSpan: action.rowSpan,
+        rowStyle: `--sn-layout-menu-row-span: ${action.rowSpan};`,
+        actions: [],
+      };
+      rows.set(action.group, row);
+    }
+    row.rowSpan = Math.max(row.rowSpan, action.rowSpan);
+    row.rowStyle = `--sn-layout-menu-row-span: ${row.rowSpan};`;
+    row.actions.push(action);
+  }
+  return [...rows.values()].sort((a, b) => a.order - b.order || a.label.localeCompare(b.label));
+}
 
 function getLayoutPanelMenuActions(nodeData, state = {}) {
   let actions = [
@@ -87,6 +141,7 @@ export class LayoutNode extends Symbiote {
     panelIcon: 'dashboard',
     panelChrome: true,
     panelMenuActions: [],
+    panelMenuRows: [],
     hasPanelMenuActions: false,
     isPanelMenuOpen: false,
     panelMenuIcon: 'keyboard_arrow_down',
@@ -386,7 +441,7 @@ export class LayoutNode extends Symbiote {
 
   /**
    * Replaces the fold-down panel menu actions for this panel.
-   * @param {Array<{id: string, label?: string, icon?: string, title?: string, active?: boolean, disabled?: boolean}>} actions
+   * @param {Array<{id: string, label?: string, icon?: string, title?: string, active?: boolean, disabled?: boolean, group?: string, groupLabel?: string, groupOrder?: number, rowSpan?: number}>} actions
    */
   setPanelMenuActions(actions = []) {
     this._setPanelMenuActions(actions);
@@ -396,22 +451,16 @@ export class LayoutNode extends Symbiote {
     let customActions = Array.isArray(actions)
       ? actions
         .filter((action) => action && action.hidden !== true && action.id)
-        .map((action) => ({
-          id: String(action.id),
-          label: action.label || action.title || action.id,
-          icon: action.icon || 'radio_button_unchecked',
-          title: action.title || action.label || action.id,
-          active: Boolean(action.active),
-          disabled: Boolean(action.disabled),
-        }))
+        .map(normalizePanelMenuAction)
       : [];
     let normalized = [
       ...getLayoutPanelMenuActions(this.$.nodeData, { canCollapse: this.$.canCollapse }),
       ...customActions,
-    ];
+    ].map(normalizePanelMenuAction);
 
     ensureMaterialSymbols(normalized.map((action) => action.icon));
     this.$.panelMenuActions = normalized;
+    this.$.panelMenuRows = groupPanelMenuActions(normalized);
     this.$.hasPanelMenuActions = normalized.length > 0;
     this._schedulePanelMenuActionStateSync();
     if (!normalized.length) {

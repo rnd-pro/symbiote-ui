@@ -108,12 +108,11 @@ export let styles = css`
 
     .panel-menu-drawer {
       flex: 0 0 auto;
-      min-height: var(--sn-layout-menu-min-height, calc(var(--sn-layout-header-min-height, 28px) * 1.18));
-      padding: var(--sn-layout-menu-padding, var(--sn-layout-header-padding, 2px 4px));
+      min-height: var(--sn-layout-menu-min-height, var(--sn-layout-header-min-height, 28px));
+      padding: 0;
       border-bottom: 1px solid var(--sn-layout-border);
       background: color-mix(in oklab, var(--sn-node-header-bg) 88%, var(--sn-bg) 12%);
-      overflow-x: auto;
-      overflow-y: hidden;
+      overflow: hidden;
       ${themedScrollbarStyles}
     }
 
@@ -121,11 +120,49 @@ export let styles = css`
       display: none;
     }
 
+    .panel-menu-rows {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .panel-menu-row {
+      --sn-layout-menu-row-span: 1;
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      align-items: stretch;
+      min-height: calc(var(--sn-layout-header-min-height, 28px) * var(--sn-layout-menu-row-span));
+      border-top: 1px solid color-mix(in oklab, var(--sn-layout-border) 56%, transparent);
+    }
+
+    .panel-menu-row:first-child {
+      border-top: 0;
+    }
+
+    .panel-menu-row-label {
+      display: flex;
+      align-items: center;
+      min-width: var(--sn-layout-menu-row-label-width, calc(var(--sn-layout-header-min-height, 28px) * 2.35));
+      padding: var(--sn-layout-menu-label-padding, 0 calc(var(--sn-layout-header-min-height, 28px) * 0.32));
+      border-inline-end: 1px solid color-mix(in oklab, var(--sn-layout-border) 64%, transparent);
+      color: var(--sn-text-dim);
+      font-size: var(--sn-layout-menu-label-size, calc(var(--sn-layout-header-button-size, 0.75rem) * 0.92));
+      letter-spacing: 0;
+      text-transform: uppercase;
+      white-space: nowrap;
+      opacity: 0.72;
+    }
+
     .panel-menu-actions {
       display: flex;
       align-items: center;
       gap: var(--sn-layout-menu-gap, var(--sn-layout-header-button-gap, 4px));
+      min-height: calc(var(--sn-layout-header-min-height, 28px) * var(--sn-layout-menu-row-span));
       min-width: min-content;
+      padding: var(--sn-layout-menu-padding, var(--sn-layout-header-padding, 2px 4px));
+      overflow-x: auto;
+      overflow-y: hidden;
+      ${themedScrollbarStyles}
     }
 
     .panel-menu-action {

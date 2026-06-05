@@ -30,19 +30,32 @@ export let template = html`
       </button>
     </div>
     <div class="panel-menu-drawer" ${{ '@hidden': '!isPanelMenuOpen' }}>
-      <div class="panel-menu-actions" itemize="panelMenuActions">
+      <div class="panel-menu-rows" itemize="panelMenuRows">
         <template>
-          <button
-            class="panel-menu-action"
-            type="button"
+          <div
+            class="panel-menu-row"
             ${{
-              '@data-menu-action-id': 'id',
-              title: 'title',
+              '@data-menu-group': 'id',
+              '@style': 'rowStyle',
             }}
           >
-            <span class="material-symbols-outlined">{{icon}}</span>
-            <span>{{label}}</span>
-          </button>
+            <span class="panel-menu-row-label">{{label}}</span>
+            <div class="panel-menu-actions" itemize="actions">
+              <template>
+                <button
+                  class="panel-menu-action"
+                  type="button"
+                  ${{
+                    '@data-menu-action-id': 'id',
+                    title: 'title',
+                  }}
+                >
+                  <span class="material-symbols-outlined">{{icon}}</span>
+                  <span>{{label}}</span>
+                </button>
+              </template>
+            </div>
+          </div>
         </template>
       </div>
     </div>

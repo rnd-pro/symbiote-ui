@@ -5207,7 +5207,7 @@
           "name": "LayoutNode",
           "tagName": "layout-node",
           "description": "Resizable and dockable layout node component.",
-          "componentDescription": "Resizable and dockable layout node component. Use this layout composition and navigation surface when composing layout UI. Capabilities: layout-branch, layout-panel, resize, collapse, fullscreen, panel-menu, fold-down-panel-actions, responsive-behavior. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "componentDescription": "Resizable and dockable layout node component. Use this layout composition and navigation surface when composing layout UI. Capabilities: layout-branch, layout-panel, resize, collapse, fullscreen, panel-menu, fold-down-panel-actions, grouped-panel-menu-rows, responsive-behavior. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools are not enabled unless an explicit descriptor is declared.",
           "attributes": [
             {
               "name": "node-type",
@@ -5278,7 +5278,7 @@
             },
             {
               "name": "panel-menu-actions",
-              "description": "Accepts bubbled action descriptors from the active panel component.",
+              "description": "Accepts bubbled action descriptors from the active panel component, including optional group, groupLabel, groupOrder, and rowSpan fields for thematic drawer rows.",
               "type": {
                 "text": "CustomEvent"
               }
@@ -5346,6 +5346,18 @@
               "description": "Theme CSS custom property consumed by this component."
             },
             {
+              "name": "--sn-layout-menu-row-label-width",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-layout-menu-label-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-layout-menu-label-size",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
               "name": "--sn-layout-panel-min-inline-size",
               "description": "Theme CSS custom property consumed by this component."
             },
@@ -5370,6 +5382,7 @@
                 "fullscreen",
                 "panel-menu",
                 "fold-down-panel-actions",
+                "grouped-panel-menu-rows",
                 "responsive-behavior"
               ],
               "attributes": [
@@ -5429,7 +5442,7 @@
                 },
                 {
                   "name": "panel-menu-actions",
-                  "description": "Accepts bubbled action descriptors from the active panel component."
+                  "description": "Accepts bubbled action descriptors from the active panel component, including optional group, groupLabel, groupOrder, and rowSpan fields for thematic drawer rows."
                 }
               ],
               "slots": [],
@@ -5449,6 +5462,9 @@
                 "--sn-layout-menu-action-gap",
                 "--sn-layout-menu-action-height",
                 "--sn-layout-menu-action-padding",
+                "--sn-layout-menu-row-label-width",
+                "--sn-layout-menu-label-padding",
+                "--sn-layout-menu-label-size",
                 "--sn-layout-panel-min-inline-size",
                 "--sn-layout-panel-min-block-size"
               ],
@@ -5467,7 +5483,7 @@
               }
             },
             "agent": {
-              "componentDescription": "Resizable and dockable layout node component. Use this layout composition and navigation surface when composing layout UI. Capabilities: layout-branch, layout-panel, resize, collapse, fullscreen, panel-menu, fold-down-panel-actions, responsive-behavior. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+              "componentDescription": "Resizable and dockable layout node component. Use this layout composition and navigation surface when composing layout UI. Capabilities: layout-branch, layout-panel, resize, collapse, fullscreen, panel-menu, fold-down-panel-actions, grouped-panel-menu-rows, responsive-behavior. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools are not enabled unless an explicit descriptor is declared.",
               "semanticRole": "layout composition and navigation surface",
               "usage": "Render or compose <layout-node> when the host needs resizable and dockable layout node component.",
               "dataOwnership": "host-owned model; component renders and emits intent events",
@@ -5486,7 +5502,7 @@
             }
           },
           "agent": {
-            "componentDescription": "Resizable and dockable layout node component. Use this layout composition and navigation surface when composing layout UI. Capabilities: layout-branch, layout-panel, resize, collapse, fullscreen, panel-menu, fold-down-panel-actions, responsive-behavior. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "componentDescription": "Resizable and dockable layout node component. Use this layout composition and navigation surface when composing layout UI. Capabilities: layout-branch, layout-panel, resize, collapse, fullscreen, panel-menu, fold-down-panel-actions, grouped-panel-menu-rows, responsive-behavior. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools are not enabled unless an explicit descriptor is declared.",
             "semanticRole": "layout composition and navigation surface",
             "usage": "Render or compose <layout-node> when the host needs resizable and dockable layout node component.",
             "dataOwnership": "host-owned model; component renders and emits intent events",

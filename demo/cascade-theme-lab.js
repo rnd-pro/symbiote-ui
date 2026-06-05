@@ -359,18 +359,18 @@ class CascadeGraphPanel extends Symbiote {
 
   _pathActions() {
     return [
-      { id: 'path:pcb', label: 'PCB', icon: 'conversion_path', active: this._pathStyle === 'pcb' },
-      { id: 'path:bezier', label: 'Bezier', icon: 'gesture', active: this._pathStyle === 'bezier' },
-      { id: 'path:straight', label: 'Straight', icon: 'horizontal_rule', active: this._pathStyle === 'straight' },
+      { id: 'path:pcb', label: 'PCB', icon: 'conversion_path', active: this._pathStyle === 'pcb', group: 'path', groupLabel: 'Links' },
+      { id: 'path:bezier', label: 'Bezier', icon: 'gesture', active: this._pathStyle === 'bezier', group: 'path', groupLabel: 'Links' },
+      { id: 'path:straight', label: 'Straight', icon: 'horizontal_rule', active: this._pathStyle === 'straight', group: 'path', groupLabel: 'Links' },
     ];
   }
 
   _graphActions() {
     return [
-      { id: 'graph:insert-node', label: 'Add node', icon: 'add_circle' },
-      { id: 'graph:insert-edge', label: 'Add edge', icon: 'add_link' },
-      { id: 'graph:fit-view', label: 'Fit', icon: 'fit_screen' },
-      { id: 'graph:reset-view', label: 'Reset view', icon: 'center_focus_strong' },
+      { id: 'graph:insert-node', label: 'Add node', icon: 'add_circle', group: 'graph', groupLabel: 'Graph' },
+      { id: 'graph:insert-edge', label: 'Add edge', icon: 'add_link', group: 'graph', groupLabel: 'Graph' },
+      { id: 'graph:fit-view', label: 'Fit', icon: 'fit_screen', group: 'graph', groupLabel: 'Graph' },
+      { id: 'graph:reset-view', label: 'Reset view', icon: 'center_focus_strong', group: 'graph', groupLabel: 'Graph' },
     ];
   }
 
@@ -1300,13 +1300,13 @@ layout.registerPanelType('graph', {
     collapse: 'auto',
   },
   menuActions: [
-    { id: 'path:pcb', label: 'PCB', icon: 'conversion_path', active: true },
-    { id: 'path:bezier', label: 'Bezier', icon: 'gesture' },
-    { id: 'path:straight', label: 'Straight', icon: 'horizontal_rule' },
-    { id: 'graph:insert-node', label: 'Add node', icon: 'add_circle' },
-    { id: 'graph:insert-edge', label: 'Add edge', icon: 'add_link' },
-    { id: 'graph:fit-view', label: 'Fit', icon: 'fit_screen' },
-    { id: 'graph:reset-view', label: 'Reset view', icon: 'center_focus_strong' },
+    { id: 'path:pcb', label: 'PCB', icon: 'conversion_path', active: true, group: 'path', groupLabel: 'Links' },
+    { id: 'path:bezier', label: 'Bezier', icon: 'gesture', group: 'path', groupLabel: 'Links' },
+    { id: 'path:straight', label: 'Straight', icon: 'horizontal_rule', group: 'path', groupLabel: 'Links' },
+    { id: 'graph:insert-node', label: 'Add node', icon: 'add_circle', group: 'graph', groupLabel: 'Graph' },
+    { id: 'graph:insert-edge', label: 'Add edge', icon: 'add_link', group: 'graph', groupLabel: 'Graph' },
+    { id: 'graph:fit-view', label: 'Fit', icon: 'fit_screen', group: 'graph', groupLabel: 'Graph' },
+    { id: 'graph:reset-view', label: 'Reset view', icon: 'center_focus_strong', group: 'graph', groupLabel: 'Graph' },
   ],
 });
 layout.registerPanelType('ui', {
