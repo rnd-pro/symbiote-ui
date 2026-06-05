@@ -1594,6 +1594,7 @@ export let COMPONENTS = [
         '--sn-layout-menu-action-gap',
         '--sn-layout-menu-action-height',
         '--sn-layout-menu-action-padding',
+        '--sn-layout-menu-row-padding',
         '--sn-layout-menu-row-label-width',
         '--sn-layout-menu-label-padding',
         '--sn-layout-menu-label-size',

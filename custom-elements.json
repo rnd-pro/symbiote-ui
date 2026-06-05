@@ -5346,6 +5346,10 @@
               "description": "Theme CSS custom property consumed by this component."
             },
             {
+              "name": "--sn-layout-menu-row-padding",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
               "name": "--sn-layout-menu-row-label-width",
               "description": "Theme CSS custom property consumed by this component."
             },
@@ -5462,6 +5466,7 @@
                 "--sn-layout-menu-action-gap",
                 "--sn-layout-menu-action-height",
                 "--sn-layout-menu-action-padding",
+                "--sn-layout-menu-row-padding",
                 "--sn-layout-menu-row-label-width",
                 "--sn-layout-menu-label-padding",
                 "--sn-layout-menu-label-size",
