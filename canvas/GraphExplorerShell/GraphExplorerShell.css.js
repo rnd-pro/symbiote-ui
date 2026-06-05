@@ -67,7 +67,7 @@ graph-explorer-shell .graph-explorer-btn {
   font-family: var(--sn-font);
   font-size: var(--sn-graph-explorer-button-size, 10px);
   white-space: nowrap;
-  transition: background 150ms, border-color 150ms;
+  transition: background var(--sn-transition-fast) var(--sn-transition-easing), border-color var(--sn-transition-fast) var(--sn-transition-easing);
 }
 
 graph-explorer-shell .graph-explorer-btn:focus-visible,

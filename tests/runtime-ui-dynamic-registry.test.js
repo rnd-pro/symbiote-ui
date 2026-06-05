@@ -34,6 +34,13 @@ test('validateComponentCode verifies safe code and blocks bad patterns', () => {
     validateComponentCode('let x = localStorage.getItem("key")');
   }, /Security violation/);
 
+  // Caller-provided blockedKeywords extend the default deny-list; they do not replace it.
+  assert.throws(() => {
+    validateComponentCode('eval("still dangerous")', {
+      blockedKeywords: [],
+    });
+  }, /Security violation/);
+
   // Custom validate callback
   assert.throws(() => {
     validateComponentCode('const x = 1;', {

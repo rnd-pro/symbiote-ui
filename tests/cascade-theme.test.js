@@ -55,6 +55,7 @@ const cellBgThemeSource = new URL('../effects/CellBg/cell-bg-theme.js', import.m
 const cascadeThemeEditorStyles = new URL('../themes/CascadeThemeEditor/CascadeThemeEditor.css.js', import.meta.url);
 const uiIndexSource = new URL('../ui/index.js', import.meta.url);
 const componentRegistrySource = new URL('../manifest/component-registry.js', import.meta.url);
+const themeCatalogSource = new URL('../manifest/theme-catalog.js', import.meta.url);
 const customElementsSource = new URL('../custom-elements.json', import.meta.url);
 const componentDescriptorV2Source = new URL('../schemas/component-descriptor-v2.json', import.meta.url);
 const cascadeThemeVisualFixtureSource = new URL('./fixtures/cascade-theme-visual-states.js', import.meta.url);
@@ -342,6 +343,7 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
     density: 100,
   });
   const motionScaleTheme = themeModule.createCascadeTheme({ motion: 60 });
+  const disabledMotionTheme = themeModule.createCascadeTheme({ motion: 0 });
   const noOutlineTheme = themeModule.createCascadeTheme({ outline: 0 });
   const fullOutlineTheme = themeModule.createCascadeTheme({ outline: 100 });
   const balancedHeadingTheme = themeModule.createCascadeTheme({ type: 100, heading: 120 });
@@ -355,12 +357,26 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.equal(balancedHeadingTheme.tokens['--sn-theme-heading-scale'], '1.20');
   assert.equal(theme.state.motion, 100);
   assert.equal(theme.tokens['--sn-theme-motion-scale'], '1.00');
+  assert.equal(theme.tokens['--sn-motion-enabled'], '1');
+  assert.equal(theme.tokens['--sn-animation-play-state'], 'running');
+  assert.equal(theme.tokens['--sn-animation-duration-scale'], '1.00');
+  assert.equal(theme.tokens['--sn-animation-duration-fast'], '600ms');
+  assert.equal(theme.tokens['--sn-animation-duration-normal'], '1000ms');
+  assert.equal(theme.tokens['--sn-animation-duration-slow'], '1500ms');
+  assert.equal(theme.tokens['--sn-animation-duration-slower'], '2000ms');
+  assert.equal(theme.tokens['--sn-transition-easing'], 'ease');
   assert.equal(theme.tokens['--sn-transition-fast'], '120ms');
   assert.equal(theme.tokens['--sn-transition-normal'], '240ms');
   assert.equal(theme.tokens['--sn-transition-slow'], '400ms');
   assert.equal(motionScaleTheme.state.motion, 60);
   assert.equal(motionScaleTheme.tokens['--sn-theme-motion-scale'], '0.60');
   assert.equal(motionScaleTheme.tokens['--sn-transition-fast'], '72ms');
+  assert.equal(disabledMotionTheme.tokens['--sn-theme-motion-scale'], '0.00');
+  assert.equal(disabledMotionTheme.tokens['--sn-motion-enabled'], '0');
+  assert.equal(disabledMotionTheme.tokens['--sn-animation-play-state'], 'paused');
+  assert.equal(disabledMotionTheme.tokens['--sn-animation-duration-slow'], '0ms');
+  assert.equal(disabledMotionTheme.tokens['--sn-transition-fast'], '0ms');
+  assert.equal(disabledMotionTheme.tokens['--sn-transition-easing'], 'linear');
   assert.equal(theme.descriptor.controls.find((control) => control.name === 'brightness')?.icon, 'brightness_6');
   assert.equal(theme.descriptor.controls.find((control) => control.name === 'heading')?.icon, 'title');
   assert.equal(theme.tokens['--sn-bg'], 'hsl(0 0% 10.0%)');
@@ -638,6 +654,14 @@ test('README documents the public agent UI constructor flow', async () => {
   assert.match(readme, /chat-composer-permission-intent/);
   assert.match(readme, /chat-composer-recorder-intent/);
   assert.match(readme, /chat-composer-transcription-intent/);
+  assert.match(readme, /heading: 100/);
+  assert.match(readme, /motion: 100/);
+  assert.match(readme, /--sn-theme-heading-scale/);
+  assert.match(readme, /--sn-motion-enabled/);
+  assert.match(readme, /data-engine-state="idle"/);
+  assert.match(readme, /"running"/);
+  assert.match(readme, /resolveThemePresetsForTask/);
+  assert.match(readme, /applyThemePresets/);
 });
 
 test('static custom elements catalog mirrors agent-facing WebMCP metadata', async () => {
@@ -1269,6 +1293,15 @@ test('default provider exposes cascade control and scrollbar parity tokens', asy
   assert.equal(tokens['--sn-theme-type-scale'], '1');
   assert.equal(tokens['--sn-theme-heading-scale'], '1');
   assert.equal(tokens['--sn-theme-spacing-scale'], 'var(--sn-theme-density)');
+  assert.equal(tokens['--sn-motion-enabled'], '1');
+  assert.equal(tokens['--sn-animation-play-state'], 'running');
+  assert.equal(tokens['--sn-animation-duration-scale'], '1');
+  assert.equal(tokens['--sn-animation-duration-fast'], 'calc(600ms * var(--sn-animation-duration-scale))');
+  assert.equal(tokens['--sn-animation-duration-slow'], 'calc(1500ms * var(--sn-animation-duration-scale))');
+  assert.equal(tokens['--sn-transition-easing'], 'ease');
+  assert.equal(tokens['--sn-engine-state-color'], 'var(--sn-engine-idle-color)');
+  assert.equal(tokens['--sn-engine-state-bg'], 'var(--sn-node-bg)');
+  assert.equal(tokens['--sn-engine-state-border'], 'var(--sn-node-border)');
   assert.equal(tokens['--sn-button-primary-color'], 'hsl(0 0% 8%)');
   assert.equal(tokens['--sn-button-success-color'], 'hsl(0 0% 8%)');
   assert.equal(tokens['--sn-button-danger-hover-color'], 'hsl(0 0% 8%)');
@@ -1280,6 +1313,7 @@ test('default provider exposes cascade control and scrollbar parity tokens', asy
   assert.equal(tokens['--sn-transition-fast'], 'calc(120ms * var(--sn-theme-motion-scale))');
   assert.equal(tokens['--sn-transition-normal'], 'calc(240ms * var(--sn-theme-motion-scale))');
   assert.equal(tokens['--sn-transition-slow'], 'calc(400ms * var(--sn-theme-motion-scale))');
+  assert.equal(tokens['--sn-effect-hover-transition'], 'background-color var(--sn-transition-fast) var(--sn-transition-easing), border-color var(--sn-transition-fast) var(--sn-transition-easing), color var(--sn-transition-fast) var(--sn-transition-easing)');
   assert.match(css, /--sn-theme-outline-strength: 0\.38;/);
   assert.match(css, /--sn-theme-type-scale: 1;/);
   assert.match(css, /--sn-theme-heading-scale: 1;/);
@@ -1290,6 +1324,17 @@ test('default provider exposes cascade control and scrollbar parity tokens', asy
   assert.match(css, /--sn-transition-fast: calc\(120ms \* var\(--sn-theme-motion-scale\)\);/);
   assert.match(css, /--sn-transition-normal: calc\(240ms \* var\(--sn-theme-motion-scale\)\);/);
   assert.match(css, /--sn-transition-slow: calc\(400ms \* var\(--sn-theme-motion-scale\)\);/);
+  assert.match(css, /--sn-motion-enabled: 1;/);
+  assert.match(css, /--sn-animation-play-state: running;/);
+  assert.match(css, /--sn-animation-duration-fast: calc\(600ms \* var\(--sn-animation-duration-scale\)\);/);
+  assert.match(css, /--sn-animation-duration-slow: calc\(1500ms \* var\(--sn-animation-duration-scale\)\);/);
+  assert.match(css, /--sn-transition-easing: ease;/);
+  assert.match(css, /\[data-engine-state="idle"\]/);
+  assert.match(css, /\[data-engine-state="running"\]/);
+  assert.match(css, /animation-play-state: var\(--sn-animation-play-state, running\);/);
+  assert.match(css, /\[data-engine-state="success"\]/);
+  assert.match(css, /\[data-engine-state="error"\]/);
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
 });
 
 test('motion preset layer has default, smooth, fast, and disabled configurations', async () => {
@@ -1297,6 +1342,9 @@ test('motion preset layer has default, smooth, fast, and disabled configurations
 
   assert.equal(themeModule.DEFAULT_MOTION.name, 'default');
   assert.equal(themeModule.DEFAULT_MOTION.motion['--sn-theme-motion-scale'], '1.00');
+  assert.equal(themeModule.DEFAULT_MOTION.motion['--sn-motion-enabled'], '1');
+  assert.equal(themeModule.DEFAULT_MOTION.motion['--sn-animation-play-state'], 'running');
+  assert.equal(themeModule.DEFAULT_MOTION.motion['--sn-animation-duration-slow'], '1500ms');
   assert.equal(themeModule.DEFAULT_MOTION.motion['--sn-transition-fast'], '120ms');
 
   assert.equal(themeModule.SMOOTH_MOTION.name, 'smooth');
@@ -1308,6 +1356,10 @@ test('motion preset layer has default, smooth, fast, and disabled configurations
 
   assert.equal(themeModule.DISABLED_MOTION.name, 'disabled');
   assert.equal(themeModule.DISABLED_MOTION.motion['--sn-theme-motion-scale'], '0.00');
+  assert.equal(themeModule.DISABLED_MOTION.motion['--sn-motion-enabled'], '0');
+  assert.equal(themeModule.DISABLED_MOTION.motion['--sn-animation-play-state'], 'paused');
+  assert.equal(themeModule.DISABLED_MOTION.motion['--sn-animation-duration-scale'], '0.00');
+  assert.equal(themeModule.DISABLED_MOTION.motion['--sn-animation-duration-slow'], '0ms');
   assert.equal(themeModule.DISABLED_MOTION.motion['--sn-transition-fast'], '0ms');
 
   const element = {
@@ -1321,6 +1373,26 @@ test('motion preset layer has default, smooth, fast, and disabled configurations
   themeModule.applyMotion(element, themeModule.SMOOTH_MOTION);
   assert.equal(element.styles.get('--sn-theme-motion-scale'), '1.20');
   assert.equal(element.styles.get('--sn-transition-easing'), 'cubic-bezier(0.25, 1, 0.5, 1)');
+});
+
+test('theme metadata exposes provider-neutral motion and engine state contracts', async () => {
+  const [source, catalog] = await Promise.all([
+    readFile(themeCatalogSource, 'utf8'),
+    import(themeCatalogSource.href),
+  ]);
+
+  let metadata = catalog.THEME_METADATA['default-provider'];
+  assert.equal(metadata.description.includes('Agent Portal'), false);
+  assert.equal(metadata.origin.includes('Symbiote Node'), false);
+  assert.deepEqual(metadata.engineStates, ['idle', 'running', 'success', 'error']);
+  assert.ok(metadata.controlTokens.includes('--sn-motion-enabled'));
+  assert.ok(metadata.controlTokens.includes('--sn-animation-play-state'));
+  assert.ok(metadata.controlTokens.includes('--sn-animation-duration-slow'));
+  assert.ok(catalog.THEME_ELEMENT_GROUPS.some((group) => group.name === 'engine-state'));
+  assert.ok(catalog.THEME_RULE_BLOCKS.some((block) => block.name === 'default-provider-engine-state-cascade'));
+  assert.match(source, /"symbioteUi"/);
+  assert.doesNotMatch(source, /Agent Portal shell values/);
+  assert.doesNotMatch(source, /Symbiote Node tokens/);
 });
 
 test('side-scroll contracts are explicit across reusable surfaces', async () => {
@@ -1611,6 +1683,7 @@ test('cascade theme lab exposes constrained chat smoke width for browser respons
 });
 
 test('ThemeFactory resolves presets, resolves task mapping, and applies to elements', async () => {
+  let source = await readFile(new URL('../themes/ThemeFactory.js', import.meta.url), 'utf8');
   let {
     resolveThemePresets,
     resolveThemePresetsForTask,
@@ -1623,9 +1696,12 @@ test('ThemeFactory resolves presets, resolves task mapping, and applies to eleme
   assert.equal(resolved.chroma, 0);
   assert.equal(resolved.density, 80);
   assert.equal(resolved.motion, 60);
+  assert.match(source, /MOTION_PRESET_DEFINITIONS/);
+  assert.match(source, /getMotionPresetOptions/);
 
   assert.deepEqual(resolveThemePresetsForTask('editor'), { color: 'carbon', skin: 'compact', motion: 'fast' });
   assert.deepEqual(resolveThemePresetsForTask('monitor'), { color: 'pcb', skin: 'compact', motion: 'fast' });
+  assert.deepEqual(resolveThemePresetsForTask('terminal'), { color: 'carbon', skin: 'compact', motion: 'disabled' });
   assert.deepEqual(resolveThemePresetsForTask('unknown'), { color: 'dark', skin: 'modern', motion: 'smooth' });
 
   let styles = new Map();
@@ -1641,4 +1717,8 @@ test('ThemeFactory resolves presets, resolves task mapping, and applies to eleme
   assert.equal(styles.get('--sn-theme-hue'), '218');
   assert.equal(styles.get('--sn-theme-motion-scale'), '0.60');
   assert.equal(styles.get('--sn-transition-fast'), '72ms');
+  styles.clear();
+  applyThemePresets(element, { color: 'carbon', skin: 'compact', motion: 'disabled' });
+  assert.equal(styles.get('--sn-motion-enabled'), '0');
+  assert.equal(styles.get('--sn-animation-play-state'), 'paused');
 });

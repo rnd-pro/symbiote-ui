@@ -11,7 +11,7 @@ export default `
     z-index: 9999;
     pointer-events: none;
     opacity: 0;
-    transition: opacity 0.4s ease, transform 0.4s ease;
+    transition: opacity var(--sn-transition-slow) var(--sn-transition-easing), transform var(--sn-transition-slow) var(--sn-transition-easing);
   }
 
   sn-status-ribbon[visible] {
@@ -42,7 +42,8 @@ export default `
     font-family: var(--sn-icon-font, 'Material Symbols Outlined');
     font-size: var(--sn-status-ribbon-icon-size, 16px);
     color: var(--sn-cat-server);
-    animation: fr-pulse 2s ease-in-out infinite;
+    animation: fr-pulse var(--sn-animation-duration-slower) var(--sn-transition-easing) infinite;
+    animation-play-state: var(--sn-animation-play-state);
   }
 
   .fr-text {
@@ -52,7 +53,8 @@ export default `
 
   .fr-dots::after {
     content: '...';
-    animation: fr-dots 1.5s steps(3) infinite;
+    animation: fr-dots var(--sn-animation-duration-slow) steps(3) infinite;
+    animation-play-state: var(--sn-animation-play-state);
     display: inline-block;
     width: var(--sn-status-ribbon-dots-width, 16px);
     text-align: left;

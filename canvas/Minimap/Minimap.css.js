@@ -18,7 +18,7 @@ export let styles = css`
     z-index: 90;
     cursor: crosshair;
     opacity: 1;
-    transition: opacity 0.4s ease;
+    transition: opacity var(--sn-transition-slow) var(--sn-transition-easing);
 
     &[hidden] {
       display: none;

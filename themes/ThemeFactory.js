@@ -1,4 +1,8 @@
 import { applyCascadeTheme } from './cascade-theme.js';
+import {
+  MOTION_PRESET_DEFINITIONS,
+  getMotionPresetOptions,
+} from './Motion.js';
 
 export const COLOR_PRESETS = Object.freeze({
   carbon: { mode: 'dark', hue: 218, chroma: 0, brightness: 0, contrast: 58 },
@@ -15,12 +19,9 @@ export const SKIN_PRESETS = Object.freeze({
   rounded: { density: 120, outline: 30, type: 110, heading: 110 },
 });
 
-export const MOTION_PRESETS = Object.freeze({
-  default: { motion: 100 },
-  smooth: { motion: 120 },
-  fast: { motion: 60 },
-  disabled: { motion: 0 },
-});
+export const MOTION_PRESETS = Object.freeze(Object.fromEntries(
+  Object.keys(MOTION_PRESET_DEFINITIONS).map((name) => [name, getMotionPresetOptions(name)])
+));
 
 export const PANEL_THEME_PRESETS = Object.freeze({
   chat: { color: 'dark', skin: 'modern', motion: 'smooth' },

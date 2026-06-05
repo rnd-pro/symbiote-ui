@@ -235,7 +235,9 @@ let theme = createCascadeTheme({
   hue: 218,
   outline: 38,
   type: 100,
+  heading: 100,
   density: 100,
+  motion: 100,
 });
 
 applyCascadeTheme(document.documentElement, theme.state);
@@ -245,9 +247,13 @@ Apply the cascade once at `:root`, an app shell, or a subtree boundary. Componen
 
 The contract writes both low-level controls such as `--sn-theme-bg-lightness`,
 `--sn-theme-outline-strength`, `--sn-theme-type-scale`, and
-`--sn-theme-density`, and public component aliases such as `--sn-bg`,
+`--sn-theme-heading-scale`, `--sn-theme-density`, and
+`--sn-theme-motion-scale`, and public component aliases such as `--sn-bg`,
 `--sn-text`, `--sn-node-bg`, `--sn-panel-bg`, `--sn-ctx-bg`,
-`--sn-button-bg`, and `--sn-field-control-bg`.
+`--sn-button-bg`, and `--sn-field-control-bg`. Motion also exposes
+`--sn-motion-enabled`, `--sn-animation-play-state`,
+`--sn-animation-duration-scale`, and `--sn-transition-easing`; disabled
+motion sets transition durations to zero and pauses cascade-driven animations.
 
 `createCascadeTheme()` also derives readable foreground tokens for colored
 controls. The same Node-safe formula is exposed as `getReadableTextForHsl()`;
@@ -255,6 +261,19 @@ agents should use it when they construct custom accent surfaces instead of
 hard-coding light or dark button text. Tab and content-group accents rotate
 through `--sn-tab-accent-0` ... `--sn-tab-accent-5`, which lets hosts separate
 layout groups while still inheriting the same root cascade.
+
+Runtime hosts can set `data-engine-state="idle"`, `"running"`, `"success"`,
+or `"error"` on a reusable surface. The default provider maps those states to
+`--sn-engine-state-color`, `--sn-engine-state-bg`, and
+`--sn-engine-state-border`; running state animation uses
+`--sn-animation-play-state` so reduced or disabled motion pauses it without
+component-local JavaScript.
+
+Preset composition is available through `ThemeFactory` exports. Agents can use
+`resolveThemePresetsForTask('chat' | 'editor' | 'monitor' | 'terminal')` for
+task defaults, then call `applyThemePresets(element, { color, skin, motion })`.
+The motion preset comes from the same `Motion.js` definitions as direct
+`applyMotion()` usage.
 
 Browser hosts can mount the reusable editor module inside a layout panel:
 

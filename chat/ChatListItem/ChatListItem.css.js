@@ -12,7 +12,7 @@ chat-list-item {
   flex-direction: column;
   gap: var(--sn-chat-list-item-gap, 4px);
   border-bottom: 1px solid var(--sn-node-hover);
-  transition: background 0.15s;
+  transition: background var(--sn-transition-fast) var(--sn-transition-easing);
 }
 
 .chat-list-item:hover {
@@ -104,7 +104,7 @@ chat-list-item[nested] .chat-list-item::before {
   font-size: var(--sn-chat-list-delete-size, 14px);
   padding: var(--sn-chat-list-delete-padding, 0 2px);
   margin-left: auto;
-  transition: color 0.15s;
+  transition: color var(--sn-transition-fast) var(--sn-transition-easing);
 }
 
 .chat-list-item:hover .chat-delete {

@@ -64,7 +64,7 @@ chat-message-item {
   border-radius: 12px;
   background: var(--sn-node-hover);
   overflow: hidden;
-  transition: background 0.15s ease;
+  transition: background var(--sn-transition-fast) var(--sn-transition-easing);
 }
 
 .tool-card[open] {
@@ -91,7 +91,7 @@ chat-message-item {
 .tool-header::before {
   content: '>';
   font-size: var(--sn-chat-tool-label-size, 10px);
-  transition: transform 0.15s ease;
+  transition: transform var(--sn-transition-fast) var(--sn-transition-easing);
   color: var(--sn-text-dim);
 }
 
@@ -166,7 +166,8 @@ chat-message-item {
 }
 
 .spin-icon {
-  animation: spin 1s linear infinite;
+  animation: spin var(--sn-animation-duration-normal) linear infinite;
+  animation-play-state: var(--sn-animation-play-state);
 }
 
 @keyframes spin {
@@ -180,7 +181,8 @@ chat-message-item {
   background-color: var(--sn-text-dim);
   vertical-align: middle;
   margin-left: 4px;
-  animation: blink 1s step-end infinite;
+  animation: blink var(--sn-animation-duration-normal) step-end infinite;
+  animation-play-state: var(--sn-animation-play-state);
 }
 
 @keyframes blink {
@@ -343,7 +345,7 @@ h4.md-h {
   max-width: 100%;
   opacity: 0;
   transform: translateY(-2px);
-  transition: opacity 0.12s ease, transform 0.12s ease;
+  transition: opacity var(--sn-transition-fast) var(--sn-transition-easing), transform var(--sn-transition-fast) var(--sn-transition-easing);
 }
 
 .message.agent:hover .work-summary-wrap,
@@ -377,7 +379,8 @@ h4.md-h {
 }
 
 .thinking-block summary .material-symbols-outlined {
-  animation: thinking-pulse 1.2s ease-in-out infinite;
+  animation: thinking-pulse var(--sn-animation-duration-normal) var(--sn-transition-easing) infinite;
+  animation-play-state: var(--sn-animation-play-state);
 }
 
 .thinking-icon {
@@ -412,7 +415,7 @@ h4.md-h {
   justify-content: center;
   cursor: pointer;
   opacity: 0.75;
-  transition: background 0.12s ease, color 0.12s ease, opacity 0.12s ease;
+  transition: background var(--sn-transition-fast) var(--sn-transition-easing), color var(--sn-transition-fast) var(--sn-transition-easing), opacity var(--sn-transition-fast) var(--sn-transition-easing);
 }
 
 .work-copy-btn:hover {
@@ -515,7 +518,7 @@ h4.md-h {
   display: flex;
   flex-direction: column;
   gap: var(--sn-chat-status-card-gap, 6px);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: border-color var(--sn-transition-normal) var(--sn-transition-easing), box-shadow var(--sn-transition-normal) var(--sn-transition-easing);
   position: relative;
   overflow: hidden;
 }
@@ -528,7 +531,7 @@ h4.md-h {
   right: 0;
   height: 2px;
   background: var(--card-accent, var(--sn-node-hover));
-  transition: background 0.3s ease;
+  transition: background var(--sn-transition-normal) var(--sn-transition-easing);
 }
 
 .status-card[data-status="running"] {
@@ -537,7 +540,8 @@ h4.md-h {
 }
 
 .status-card[data-status="running"]::before {
-  animation: card-progress 1.8s ease-in-out infinite;
+  animation: card-progress var(--sn-animation-duration-slow) var(--sn-transition-easing) infinite;
+  animation-play-state: var(--sn-animation-play-state);
 }
 
 @keyframes card-progress {
@@ -578,7 +582,8 @@ h4.md-h {
 }
 
 .status-card-header .spin-icon {
-  animation: spin 1.2s linear infinite;
+  animation: spin var(--sn-animation-duration-normal) linear infinite;
+  animation-play-state: var(--sn-animation-play-state);
 }
 
 .status-card-status {

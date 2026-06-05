@@ -392,7 +392,7 @@ export let styles = css`
     .split-resizer {
       flex-shrink: 0;
       background: var(--sn-layout-gap-bg);
-      transition: background 0.15s ease;
+      transition: background var(--sn-transition-fast) var(--sn-transition-easing);
       z-index: 10;
     }
 

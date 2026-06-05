@@ -1,3 +1,16 @@
+export const DEFAULT_BLOCKED_COMPONENT_CODE_PATTERNS = Object.freeze([
+  'document.cookie',
+  'document.write',
+  'localStorage',
+  'sessionStorage',
+  'IndexedDB',
+  'eval(',
+  'new Function(',
+  'process.env',
+  'process.exit',
+  'require(',
+]);
+
 /**
  * Validate JavaScript code for dynamic component registration against security policies.
  * @param {string} code - JavaScript code string
@@ -9,17 +22,9 @@ export function validateComponentCode(code, options = {}) {
     throw new Error('Component code must be a string.');
   }
 
-  let blocked = options.blockedKeywords || [
-    'document.cookie',
-    'document.write',
-    'localStorage',
-    'sessionStorage',
-    'IndexedDB',
-    'eval(',
-    'new Function(',
-    'process.env',
-    'process.exit',
-    'require(',
+  let blocked = [
+    ...DEFAULT_BLOCKED_COMPONENT_CODE_PATTERNS,
+    ...(Array.isArray(options.blockedKeywords) ? options.blockedKeywords : []),
   ];
 
   for (let keyword of blocked) {

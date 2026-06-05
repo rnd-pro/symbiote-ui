@@ -150,7 +150,8 @@ export let styles = css`
       box-shadow:
         0 0 16px color-mix(in oklab, var(--sn-node-accent) 40%, transparent),
         0 0 4px color-mix(in oklab, var(--sn-node-accent) 60%, transparent);
-      animation: sn-node-pulse 1s ease-in-out infinite;
+      animation: sn-node-pulse var(--sn-animation-duration-normal) var(--sn-transition-easing) infinite;
+      animation-play-state: var(--sn-animation-play-state);
     }
 
     &[data-completed] {
@@ -179,7 +180,7 @@ export let styles = css`
       background: color-mix(in oklab, var(--sn-danger-color) 8%, transparent);
       pointer-events: none;
       z-index: 10;
-      transition: bottom 0.15s ease;
+      transition: bottom var(--sn-transition-fast) var(--sn-transition-easing);
     }
 
     & .error-frame-header {
@@ -520,7 +521,7 @@ export let styles = css`
           cursor: move;
           stroke: var(--sn-shape-stroke, var(--sn-node-border));
           stroke-width: var(--sn-shape-stroke-width, 0.4);
-          transition: stroke 0.2s ease;
+          transition: stroke var(--sn-transition-normal) var(--sn-transition-easing);
         }
       }
 
@@ -605,12 +606,12 @@ export let styles = css`
      matching HTML nodes where border-width stays 1px on selection. */
     &[data-svg-shape][data-selected] > svg > path {
       stroke: var(--sn-node-selected);
-      transition: stroke 0.2s ease;
+      transition: stroke var(--sn-transition-normal) var(--sn-transition-easing);
     }
 
     &[data-svg-shape][data-error] > svg > path {
       stroke: var(--sn-danger-color);
-      transition: stroke 0.2s ease;
+      transition: stroke var(--sn-transition-normal) var(--sn-transition-easing);
     }
 
     &[data-svg-shape][data-muted] > svg > path {
@@ -623,12 +624,13 @@ export let styles = css`
 
     &[data-svg-shape][data-processing] > svg > path {
       stroke: var(--sn-node-accent, var(--sn-node-selected));
-      animation: sn-svg-pulse 1s ease-in-out infinite;
+      animation: sn-svg-pulse var(--sn-animation-duration-normal) var(--sn-transition-easing) infinite;
+      animation-play-state: var(--sn-animation-play-state);
     }
 
     &[data-svg-shape][data-completed] > svg > path {
       stroke: var(--sn-success-color);
-      transition: stroke 0.2s ease;
+      transition: stroke var(--sn-transition-normal) var(--sn-transition-easing);
     }
 
     & .sn-node-header {
@@ -671,7 +673,7 @@ export let styles = css`
     & .outputs {
       display: flex;
       flex-direction: column;
-      transition: transform 0.15s ease;
+      transition: transform var(--sn-transition-fast) var(--sn-transition-easing);
     }
 
     /* Port hint: slide ports to nearest side during connector drag */

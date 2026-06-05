@@ -24,7 +24,7 @@ export function createComponentToolDescriptor(component, tool) {
     annotations: {
       componentTag: component?.tagName,
       componentClass: component?.className,
-      componentRole: component?.agent?.semanticRole,
+      semanticRole: component?.agent?.semanticRole,
       ...(tool?.annotations || {}),
     },
   });
@@ -68,4 +68,3 @@ export function triggerWebMcpCommand(element, command, args = {}) {
     detail: { command, args },
   }));
 }
-

@@ -24,7 +24,7 @@ export let styles = css`
     z-index: 50;
     box-shadow: 0 2px 8px var(--sn-shadow-color);
     border: 1px solid var(--sn-node-border);
-    transition: opacity 0.2s ease-out;
+    transition: opacity var(--sn-transition-normal) var(--sn-transition-easing);
 
     &[hidden] {
       display: none;

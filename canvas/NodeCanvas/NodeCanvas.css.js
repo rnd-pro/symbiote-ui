@@ -230,7 +230,8 @@ export let styles = css`
         ) + 1px
     );
     /* PERF: removed filter:drop-shadow — GPU layer per dot */
-    animation: sn-dot-pulse 0.6s ease-in-out infinite;
+    animation: sn-dot-pulse var(--sn-animation-duration-fast) var(--sn-transition-easing) infinite;
+    animation-play-state: var(--sn-animation-play-state);
   }
 
   @keyframes sn-dot-pulse {
@@ -257,19 +258,20 @@ export let styles = css`
 
   node-canvas graph-node[data-fire-state='pending'] {
     opacity: 0.4;
-    transition: opacity 0.15s;
+    transition: opacity var(--sn-transition-fast) var(--sn-transition-easing);
   }
 
   node-canvas graph-node[data-fire-state='active'] {
     opacity: 1;
     border-color: var(--sn-success-color);
-    animation: sn-fire-pulse 0.6s ease-out;
+    animation: sn-fire-pulse var(--sn-animation-duration-fast) var(--sn-transition-easing);
+    animation-play-state: var(--sn-animation-play-state);
     z-index: 50;
   }
 
   node-canvas graph-node[data-fire-state='complete'] {
     border-color: var(--sn-success-border);
-    transition: border-color 2s ease-out;
+    transition: border-color var(--sn-animation-duration-slower) var(--sn-transition-easing);
   }
 
   .pseudo-path {
@@ -292,7 +294,8 @@ export let styles = css`
 
   .sn-conn-path[data-flowing] {
     stroke-dasharray: 10 5;
-    animation: sn-flow 0.6s linear infinite;
+    animation: sn-flow var(--sn-animation-duration-fast) linear infinite;
+    animation-play-state: var(--sn-animation-play-state);
     opacity: 0.9;
   }
 
@@ -325,7 +328,8 @@ export let styles = css`
   }
 
   .sn-socket[data-compatible] {
-    animation: sn-socket-glow 1s ease-in-out infinite;
+    animation: sn-socket-glow var(--sn-animation-duration-normal) var(--sn-transition-easing) infinite;
+    animation-play-state: var(--sn-animation-play-state);
     transform: scale(1.3);
     z-index: 10;
   }
@@ -384,17 +388,18 @@ export let styles = css`
 
   graph-node[data-fire-state='active'] {
     border-color: var(--sn-success-color) !important;
-    animation: sn-fire-pulse 0.6s ease-out;
+    animation: sn-fire-pulse var(--sn-animation-duration-fast) var(--sn-transition-easing);
+    animation-play-state: var(--sn-animation-play-state);
     z-index: 50;
   }
 
   graph-node[data-fire-state='done'] {
     border-color: color-mix(in oklab, var(--sn-success-color) 40%, transparent) !important;
-    transition: border-color 2s ease-out;
+    transition: border-color var(--sn-animation-duration-slower) var(--sn-transition-easing);
   }
 
   graph-node[data-fire-state='pending'] {
     opacity: 0.5;
-    transition: opacity 0.15s;
+    transition: opacity var(--sn-transition-fast) var(--sn-transition-easing);
   }
 `;

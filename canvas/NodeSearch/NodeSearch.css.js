@@ -80,7 +80,7 @@ export let styles = css`
     cursor: pointer;
     color: var(--sn-text);
     font-size: 13px;
-    transition: background 0.1s;
+    transition: background var(--sn-transition-fast) var(--sn-transition-easing);
 
     &:hover {
       background: color-mix(in oklab, currentColor 6%, transparent);

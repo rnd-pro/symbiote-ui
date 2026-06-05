@@ -962,3 +962,110 @@ test('cascade lab chat composer keeps voice controls inside the input surface re
     await rm(userDataDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
   }
 });
+
+test('node-canvas setEditorModel renders the advertised serializable WebMCP model path', { timeout: 45000 }, async (t) => {
+  const chromePath = findChrome();
+  if (!chromePath || typeof WebSocket !== 'function') {
+    t.skip('Chrome or WebSocket is not available for node-canvas adapter smoke');
+    return;
+  }
+
+  const server = await createStaticServer();
+  const userDataDir = await mkdtemp(path.join(tmpdir(), 'symbiote-ui-chrome-'));
+  const chrome = spawn(chromePath, [
+    '--headless=new',
+    '--disable-background-networking',
+    '--disable-gpu',
+    '--disable-sync',
+    '--hide-scrollbars',
+    '--no-default-browser-check',
+    '--no-first-run',
+    '--remote-debugging-port=0',
+    `--user-data-dir=${userDataDir}`,
+    'about:blank',
+  ], { stdio: ['ignore', 'ignore', 'pipe'] });
+
+  let page;
+  try {
+    const endpoint = await withTimeout(waitForChromeEndpoint(chrome), 12000, 'Chrome DevTools endpoint');
+    page = await withTimeout(
+      openPage(endpoint, `${server.url}/demo/cascade-theme-lab.html?v=node-canvas-model-adapter#graph`),
+      22000,
+      'node-canvas adapter page open'
+    );
+    const expression = String.raw`
+    (async () => {
+      const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+      await customElements.whenDefined('node-canvas');
+      await customElements.whenDefined('graph-node');
+      const canvas = document.createElement('node-canvas');
+      canvas.style.cssText = 'display:block;width:640px;height:360px;';
+      document.body.append(canvas);
+      const editor = canvas.setEditorModel({
+        readonly: true,
+        nodes: [
+          {
+            id: 'source',
+            type: 'agent/source',
+            name: 'Source',
+            outputs: [{ name: 'out', type: 'signal', label: 'out' }]
+          },
+          {
+            id: 'target',
+            type: 'agent/target',
+            name: 'Target',
+            inputs: [{ name: 'in', type: 'signal', label: 'in' }]
+          }
+        ],
+        connections: [{ id: 'c1', from: 'source', out: 'out', to: 'target', in: 'in' }],
+        positions: {
+          source: [32, 48],
+          target: { x: 260, y: 48 }
+        }
+      });
+      for (let index = 0; index < 8; index += 1) await frame();
+      const nodes = [...canvas.querySelectorAll('graph-node')];
+      const boxes = nodes.map((node) => {
+        const rect = node.getBoundingClientRect();
+        return {
+          id: node.id,
+          width: rect.width,
+          height: rect.height,
+          x: rect.x,
+          y: rect.y,
+          text: node.textContent
+        };
+      });
+      return {
+        readonly: canvas.hasAttribute('data-readonly'),
+        editorNodeCount: editor.getNodes().length,
+        editorConnectionCount: editor.getConnections().length,
+        domNodeCount: nodes.length,
+        boxes
+      };
+    })()
+    `;
+    const evaluation = await withTimeout(page.send('Runtime.evaluate', {
+      expression,
+      awaitPromise: true,
+      returnByValue: true,
+    }), 15000, 'node-canvas adapter Runtime.evaluate');
+    if (evaluation.exceptionDetails) {
+      throw new Error(evaluation.exceptionDetails.text || 'NodeCanvas adapter evaluation failed');
+    }
+    const result = evaluation.result.value;
+
+    assert.equal(result.readonly, true);
+    assert.equal(result.editorNodeCount, 2);
+    assert.equal(result.editorConnectionCount, 1);
+    assert.equal(result.domNodeCount, 2);
+    assert.ok(result.boxes.every((box) => box.width > 1 && box.height > 1));
+    assert.ok(result.boxes.some((box) => box.text.includes('Source')));
+    assert.ok(result.boxes.some((box) => box.text.includes('Target')));
+  } finally {
+    page?.close();
+    if (!chrome.killed) chrome.kill('SIGTERM');
+    await server.close();
+    await rm(userDataDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
+  }
+});

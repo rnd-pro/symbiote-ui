@@ -28,7 +28,7 @@ loading-overlay[hidden] {
   height: 100%;
   background: var(--sn-loading-overlay-bg);
   opacity: 1;
-  transition: opacity 0.3s ease-out;
+  transition: opacity var(--sn-transition-normal) var(--sn-transition-easing);
 }
 
 :host([hidden-state]) .sn-loading-overlay,
@@ -79,7 +79,7 @@ loading-overlay[hidden-state] .sn-loading-overlay {
   border-radius: inherit;
   background: var(--sn-loading-bar-bg);
   box-shadow: var(--sn-loading-bar-shadow);
-  transition: width 0.35s ease-out;
+  transition: width var(--sn-transition-normal) var(--sn-transition-easing);
 }
 
 .sn-loading-sub {

@@ -41,6 +41,7 @@ import '../Minimap/Minimap.js';
 import '../NodeSearch/NodeSearch.js';
 import '../Breadcrumb/Breadcrumb.js';
 import { computeAutoLayout } from '../AutoLayout.js';
+import { NodeEditor } from '../../core/Editor.js';
 import { translate } from '../../locale/index.js';
 
 const FLOW_DIRECTIONS = new Set(['vertical', 'horizontal']);
@@ -857,6 +858,34 @@ export class NodeCanvas extends Symbiote {
 
   refreshFlowLayout() {
     if (this._flowLayout) this.setFlowLayout(this._flowLayout);
+  }
+
+  /**
+   * Load a serializable graph model through the public agent-facing adapter.
+   * @param {object} model
+   * @returns {NodeEditor}
+   */
+  setEditorModel(model = {}) {
+    let positions = { ...(model.positions || {}) };
+    let editor = new NodeEditor().fromJSON({
+      ...model,
+      ui: {
+        ...(model.ui || {}),
+        positions: model.ui?.positions || positions,
+      },
+    }, positions);
+    this.setEditor(editor);
+    this.setReadonly(model.readonly === true);
+
+    for (let [nodeId, position] of Object.entries(positions)) {
+      let x = Array.isArray(position) ? position[0] : position?.x;
+      let y = Array.isArray(position) ? position[1] : position?.y;
+      if (Number.isFinite(Number(x)) && Number.isFinite(Number(y))) {
+        this.setNodePosition(nodeId, Number(x), Number(y));
+      }
+    }
+    this.refreshConnections();
+    return editor;
   }
 
   #setFlowContentSize(width, height) {

@@ -252,7 +252,8 @@
                     "annotations": {
                       "readOnlyHint": false,
                       "destructiveHint": false,
-                      "idempotentHint": true
+                      "idempotentHint": true,
+                      "intentEvent": "cascade-theme-open-full"
                     },
                     "exposedTo": [
                       "agent",
@@ -297,7 +298,8 @@
                     "annotations": {
                       "readOnlyHint": false,
                       "destructiveHint": false,
-                      "idempotentHint": true
+                      "idempotentHint": true,
+                      "runtimeMethod": "setState"
                     },
                     "exposedTo": [
                       "agent",
@@ -640,7 +642,8 @@
                     "annotations": {
                       "readOnlyHint": false,
                       "destructiveHint": false,
-                      "idempotentHint": true
+                      "idempotentHint": true,
+                      "runtimeMethod": "setState"
                     },
                     "exposedTo": [
                       "agent",
@@ -1937,6 +1940,11 @@
                   "description": "Connects a host-provided editor model to the canvas."
                 },
                 {
+                  "name": "setEditorModel",
+                  "type": "function",
+                  "description": "Loads a serializable graph model and binds it through a host-owned NodeEditor adapter."
+                },
+                {
                   "name": "setSnapGrid",
                   "type": "function",
                   "description": "Toggles snap grid and size."
@@ -2071,6 +2079,15 @@
                         },
                         "readonly": {
                           "type": "boolean"
+                        },
+                        "frames": {
+                          "type": "array"
+                        },
+                        "positions": {
+                          "type": "object"
+                        },
+                        "ui": {
+                          "type": "object"
                         }
                       },
                       "required": [
@@ -2080,7 +2097,8 @@
                     "annotations": {
                       "readOnlyHint": false,
                       "destructiveHint": false,
-                      "idempotentHint": true
+                      "idempotentHint": true,
+                      "runtimeMethod": "setEditorModel"
                     },
                     "exposedTo": [
                       "agent",
@@ -2109,7 +2127,8 @@
                     "annotations": {
                       "readOnlyHint": false,
                       "destructiveHint": false,
-                      "idempotentHint": true
+                      "idempotentHint": true,
+                      "runtimeMethod": "setPathStyle"
                     },
                     "exposedTo": [
                       "agent",
@@ -2150,7 +2169,8 @@
                     "annotations": {
                       "readOnlyHint": false,
                       "destructiveHint": false,
-                      "idempotentHint": true
+                      "idempotentHint": true,
+                      "runtimeMethod": "setFlowLayout"
                     },
                     "exposedTo": [
                       "agent",
@@ -2606,7 +2626,8 @@
                     "annotations": {
                       "readOnlyHint": false,
                       "destructiveHint": false,
-                      "idempotentHint": true
+                      "idempotentHint": true,
+                      "runtimeMethod": "setGraphModel"
                     },
                     "exposedTo": [
                       "agent",
@@ -2630,7 +2651,8 @@
                     },
                     "annotations": {
                       "readOnlyHint": false,
-                      "destructiveHint": false
+                      "destructiveHint": false,
+                      "runtimeMethod": "flyToNode"
                     },
                     "exposedTo": [
                       "agent",
@@ -2654,7 +2676,8 @@
                     },
                     "annotations": {
                       "readOnlyHint": false,
-                      "destructiveHint": false
+                      "destructiveHint": false,
+                      "runtimeMethod": "setPath"
                     },
                     "exposedTo": [
                       "agent",
@@ -2896,7 +2919,23 @@
                   "description": "Current graph view mode supplied by the host adapter."
                 }
               ],
-              "methods": [],
+              "methods": [
+                {
+                  "name": "setMode",
+                  "type": "function",
+                  "description": "Sets the shell view mode."
+                },
+                {
+                  "name": "setPathStyle",
+                  "type": "function",
+                  "description": "Sets the shell path style button state."
+                },
+                {
+                  "name": "setStats",
+                  "type": "function",
+                  "description": "Sets visible graph statistics text from host-owned metadata."
+                }
+              ],
               "events": [
                 {
                   "name": "graph-shell-mode-change",
@@ -3027,7 +3066,11 @@
                     "annotations": {
                       "readOnlyHint": false,
                       "destructiveHint": false,
-                      "idempotentHint": true
+                      "idempotentHint": true,
+                      "runtimeMethods": [
+                        "setMode",
+                        "setPathStyle"
+                      ]
                     },
                     "exposedTo": [
                       "agent",
@@ -3062,7 +3105,8 @@
                     "annotations": {
                       "readOnlyHint": false,
                       "destructiveHint": false,
-                      "idempotentHint": true
+                      "idempotentHint": true,
+                      "runtimeMethod": "setStats"
                     },
                     "exposedTo": [
                       "agent",
@@ -3089,7 +3133,8 @@
                     },
                     "annotations": {
                       "readOnlyHint": false,
-                      "destructiveHint": false
+                      "destructiveHint": false,
+                      "intentEvent": "graph-shell-action"
                     },
                     "exposedTo": [
                       "agent",
@@ -3908,7 +3953,8 @@
                     "annotations": {
                       "readOnlyHint": false,
                       "destructiveHint": false,
-                      "idempotentHint": true
+                      "idempotentHint": true,
+                      "runtimeMethod": "setLayoutBehavior"
                     },
                     "exposedTo": [
                       "agent",
@@ -3939,7 +3985,8 @@
                     "annotations": {
                       "readOnlyHint": false,
                       "destructiveHint": false,
-                      "idempotentHint": true
+                      "idempotentHint": true,
+                      "runtimeMethod": "registerPanelType"
                     },
                     "exposedTo": [
                       "agent",
@@ -3984,7 +4031,8 @@
                     },
                     "annotations": {
                       "readOnlyHint": false,
-                      "destructiveHint": false
+                      "destructiveHint": false,
+                      "runtimeMethod": "setPanelMenuActions"
                     },
                     "exposedTo": [
                       "agent",
@@ -4029,7 +4077,8 @@
                     "annotations": {
                       "readOnlyHint": false,
                       "destructiveHint": false,
-                      "idempotentHint": true
+                      "idempotentHint": true,
+                      "runtimeMethod": "openPanel"
                     },
                     "exposedTo": [
                       "agent",
@@ -4054,7 +4103,8 @@
                     "annotations": {
                       "readOnlyHint": false,
                       "destructiveHint": false,
-                      "idempotentHint": true
+                      "idempotentHint": true,
+                      "runtimeMethod": "closeUiPanel"
                     },
                     "exposedTo": [
                       "agent",
@@ -4078,7 +4128,8 @@
                     },
                     "annotations": {
                       "readOnlyHint": false,
-                      "destructiveHint": true
+                      "destructiveHint": true,
+                      "runtimeMethod": "removeUiPanel"
                     },
                     "exposedTo": [
                       "agent",
@@ -4475,7 +4526,8 @@
                     "annotations": {
                       "readOnlyHint": false,
                       "destructiveHint": false,
-                      "idempotentHint": true
+                      "idempotentHint": true,
+                      "runtimeMethod": "setSections"
                     },
                     "exposedTo": [
                       "agent",
@@ -4500,7 +4552,8 @@
                     "annotations": {
                       "readOnlyHint": false,
                       "destructiveHint": false,
-                      "idempotentHint": true
+                      "idempotentHint": true,
+                      "runtimeMethod": "setActiveSection"
                     },
                     "exposedTo": [
                       "agent",
@@ -5060,7 +5113,8 @@
                     },
                     "annotations": {
                       "readOnlyHint": false,
-                      "destructiveHint": false
+                      "destructiveHint": false,
+                      "runtimeMethod": "selectGroup"
                     },
                     "exposedTo": [
                       "agent",
@@ -5133,7 +5187,8 @@
                     "annotations": {
                       "readOnlyHint": false,
                       "destructiveHint": false,
-                      "idempotentHint": true
+                      "idempotentHint": true,
+                      "runtimeMethod": "setGroups"
                     },
                     "exposedTo": [
                       "agent",
@@ -6149,7 +6204,8 @@
                     },
                     "annotations": {
                       "readOnlyHint": false,
-                      "destructiveHint": false
+                      "destructiveHint": false,
+                      "intentEvent": "project-tabs-select"
                     },
                     "exposedTo": [
                       "agent",
@@ -7356,7 +7412,11 @@
                     },
                     "annotations": {
                       "readOnlyHint": false,
-                      "destructiveHint": false
+                      "destructiveHint": false,
+                      "runtimeMethods": [
+                        "getContent",
+                        "setContent"
+                      ]
                     },
                     "exposedTo": [
                       "agent",
@@ -8681,7 +8741,8 @@
                     "annotations": {
                       "readOnlyHint": false,
                       "destructiveHint": false,
-                      "idempotentHint": false
+                      "idempotentHint": false,
+                      "runtimeMethod": "trigger"
                     },
                     "exposedTo": [
                       "agent",
@@ -8699,7 +8760,8 @@
                     "annotations": {
                       "readOnlyHint": false,
                       "destructiveHint": false,
-                      "idempotentHint": true
+                      "idempotentHint": true,
+                      "runtimeMethod": "start"
                     },
                     "exposedTo": [
                       "agent",
@@ -8717,7 +8779,8 @@
                     "annotations": {
                       "readOnlyHint": false,
                       "destructiveHint": false,
-                      "idempotentHint": true
+                      "idempotentHint": true,
+                      "runtimeMethod": "stop"
                     },
                     "exposedTo": [
                       "agent",
@@ -11273,7 +11336,8 @@
                     },
                     "annotations": {
                       "readOnlyHint": false,
-                      "destructiveHint": false
+                      "destructiveHint": false,
+                      "intentEvent": "quick-open-select"
                     },
                     "exposedTo": [
                       "agent",
@@ -13255,7 +13319,8 @@
                     },
                     "annotations": {
                       "readOnlyHint": false,
-                      "destructiveHint": false
+                      "destructiveHint": false,
+                      "intentEvent": "chat-composer-send"
                     },
                     "exposedTo": [
                       "agent",
@@ -13300,7 +13365,14 @@
                     },
                     "annotations": {
                       "readOnlyHint": false,
-                      "destructiveHint": false
+                      "destructiveHint": false,
+                      "intentEvents": [
+                        "chat-composer-voice-input",
+                        "chat-composer-wake-listen",
+                        "chat-composer-voice-response-toggle",
+                        "chat-composer-voice-command-toggle",
+                        "chat-composer-voice-language-change"
+                      ]
                     },
                     "exposedTo": [
                       "agent",
@@ -13363,7 +13435,12 @@
                     },
                     "annotations": {
                       "readOnlyHint": false,
-                      "destructiveHint": false
+                      "destructiveHint": false,
+                      "intentEvents": [
+                        "chat-composer-permission-intent",
+                        "chat-composer-recorder-intent",
+                        "chat-composer-transcription-intent"
+                      ]
                     },
                     "exposedTo": [
                       "agent",
@@ -13412,7 +13489,11 @@
                     },
                     "annotations": {
                       "readOnlyHint": false,
-                      "destructiveHint": false
+                      "destructiveHint": false,
+                      "intentEvents": [
+                        "chat-composer-footer-control",
+                        "chat-composer-footer-control-change"
+                      ]
                     },
                     "exposedTo": [
                       "agent",
@@ -14178,9 +14259,6 @@
             }
           },
           "contract": {
-            "status": "draft",
-            "schemaVersion": "component-descriptor-v2",
-            "dataSchema": "schemas/runtime-ui-v1.json",
             "capabilities": [
               "chat-list-row",
               "active-state",
@@ -14188,6 +14266,7 @@
               "delete-action",
               "metadata"
             ],
+            "attributes": [],
             "properties": [
               {
                 "name": "id",
@@ -14235,7 +14314,9 @@
                 "description": "Active row state."
               }
             ],
+            "methods": [],
             "events": [],
+            "slots": [],
             "themeAliases": [
               "--sn-node-bg",
               "--sn-node-border",
@@ -14264,6 +14345,9 @@
               "--sn-chat-list-delete-size",
               "--sn-chat-list-delete-padding"
             ],
+            "status": "draft",
+            "schemaVersion": "component-descriptor-v2",
+            "dataSchema": "schemas/runtime-ui-v1.json",
             "ssr": {
               "mode": "hydrate-only",
               "importSafe": false,
@@ -14690,7 +14774,8 @@
                     "annotations": {
                       "readOnlyHint": false,
                       "destructiveHint": false,
-                      "idempotentHint": true
+                      "idempotentHint": true,
+                      "runtimeMethod": "setChats"
                     },
                     "exposedTo": [
                       "agent",
@@ -14714,7 +14799,8 @@
                     },
                     "annotations": {
                       "readOnlyHint": false,
-                      "destructiveHint": false
+                      "destructiveHint": false,
+                      "intentEvent": "chat-sidebar-select"
                     },
                     "exposedTo": [
                       "agent",
@@ -14739,7 +14825,8 @@
                     "annotations": {
                       "readOnlyHint": false,
                       "destructiveHint": false,
-                      "idempotentHint": true
+                      "idempotentHint": true,
+                      "runtimeMethod": "setCollapsed"
                     },
                     "exposedTo": [
                       "agent",
@@ -15383,9 +15470,6 @@
             }
           },
           "contract": {
-            "status": "draft",
-            "schemaVersion": "component-descriptor-v2",
-            "dataSchema": "schemas/runtime-ui-v1.json",
             "capabilities": [
               "chat-sidebar-row",
               "nested-children",
@@ -15393,6 +15477,7 @@
               "delete-action",
               "status-slot"
             ],
+            "attributes": [],
             "properties": [
               {
                 "name": "id",
@@ -15475,6 +15560,7 @@
                 "description": "Generic running-state hint used for reusable auto-expansion."
               }
             ],
+            "methods": [],
             "events": [
               {
                 "name": "chat-sidebar-select",
@@ -15489,6 +15575,7 @@
                 "description": "Requests deletion."
               }
             ],
+            "slots": [],
             "themeAliases": [
               "--sn-node-bg",
               "--sn-node-hover",
@@ -15538,6 +15625,9 @@
               "--sn-chat-sidebar-compact-label-padding",
               "--sn-chat-sidebar-compact-label-offset"
             ],
+            "status": "draft",
+            "schemaVersion": "component-descriptor-v2",
+            "dataSchema": "schemas/runtime-ui-v1.json",
             "ssr": {
               "mode": "hydrate-only",
               "importSafe": false,
@@ -16061,9 +16151,6 @@
             }
           },
           "contract": {
-            "status": "draft",
-            "schemaVersion": "component-descriptor-v2",
-            "dataSchema": "schemas/runtime-ui-v1.json",
             "capabilities": [
               "chat-sidebar-child-row",
               "nested-children",
@@ -16071,6 +16158,7 @@
               "delete-action",
               "status-slot"
             ],
+            "attributes": [],
             "properties": [
               {
                 "name": "id",
@@ -16148,6 +16236,7 @@
                 "description": "Generic running-state hint used for reusable auto-expansion."
               }
             ],
+            "methods": [],
             "events": [
               {
                 "name": "chat-sidebar-select",
@@ -16162,6 +16251,7 @@
                 "description": "Requests child chat deletion."
               }
             ],
+            "slots": [],
             "themeAliases": [
               "--sn-node-bg",
               "--sn-node-hover",
@@ -16199,6 +16289,9 @@
               "--sn-chat-sidebar-compact-label-offset",
               "--sn-chat-sidebar-compact-delete-width"
             ],
+            "status": "draft",
+            "schemaVersion": "component-descriptor-v2",
+            "dataSchema": "schemas/runtime-ui-v1.json",
             "ssr": {
               "mode": "hydrate-only",
               "importSafe": false,
@@ -16585,7 +16678,8 @@
                     },
                     "annotations": {
                       "readOnlyHint": false,
-                      "destructiveHint": false
+                      "destructiveHint": false,
+                      "intentEvent": "sn-list-item-select"
                     },
                     "exposedTo": [
                       "agent",
@@ -17806,7 +17900,8 @@
                     },
                     "annotations": {
                       "readOnlyHint": false,
-                      "destructiveHint": false
+                      "destructiveHint": false,
+                      "intentEvent": "sn-tree-select"
                     },
                     "exposedTo": [
                       "agent",

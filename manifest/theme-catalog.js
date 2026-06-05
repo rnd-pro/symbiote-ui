@@ -13,10 +13,11 @@ export let THEME_METADATA = {
     role: 'neutral-default',
     aliases: ['symbiote-default', 'default-provider', 'DEFAULT_PROVIDER_THEME'],
     defaultExport: 'DEFAULT_PROVIDER_THEME',
-    description: 'Cascadeable neutral provider default aligned with the current Agent Portal shell values.',
-    origin: 'Agent Portal shell values generalized into provider-neutral Symbiote Node tokens.',
+    description: 'Cascadeable neutral provider default for symbiote-ui reusable components.',
+    origin: 'Provider-neutral Symbiote UI tokens generalized for agent-built interfaces.',
     cascade: 'Apply once at :root, an app shell, or a subtree boundary; components inherit --sn-* tokens through the CSS cascade.',
     colorModel: ['native-css-hsl', 'alpha-hsl', 'color-mix'],
+    engineStates: ['idle', 'running', 'success', 'error'],
     controlTokens: [
       '--sn-theme-hue',
       '--sn-theme-chroma',
@@ -26,6 +27,14 @@ export let THEME_METADATA = {
       '--sn-theme-density',
       '--sn-theme-radius-scale',
       '--sn-theme-motion-scale',
+      '--sn-motion-enabled',
+      '--sn-animation-play-state',
+      '--sn-animation-duration-scale',
+      '--sn-animation-duration-fast',
+      '--sn-animation-duration-normal',
+      '--sn-animation-duration-slow',
+      '--sn-animation-duration-slower',
+      '--sn-transition-easing',
       '--sn-theme-elevation-scale',
     ],
     tokenFamilies: ['source-control', 'source-accent', 'color-cascade', 'geometry-cascade', 'semantic-alias', 'component-alias', 'motion-effects'],
@@ -57,7 +66,7 @@ const CSS_TOKEN_CLASSIFIERS = [
   { kind: 'color-cascade', group: 'color', pattern: /^--sn-(sat($|-)|lit-|alpha-)/ },
   { kind: 'color-cascade', group: 'accent', pattern: /^--sn-accent-/ },
   { kind: 'semantic-alias', group: 'surface', pattern: /^--sn-(bg|panel-bg|surface|border|node-bg|node-border|node-selected|node-accent|node-hover|node-header-bg|node-radius|node-shadow|node-min-width|node-max-width|node-border-width|node-font-size|node-items-|node-callout-|node-active-border|node-error-frame-|text|text-dim|bg-overlay|overlay-z-base|shadow-color)/ },
-  { kind: 'semantic-alias', group: 'status', pattern: /^--sn-(success|warning|danger|status|cat|type|subgraph|accent-warn|message-event)-/ },
+  { kind: 'semantic-alias', group: 'status', pattern: /^--sn-(success|warning|danger|status|engine|cat|type|subgraph|accent-warn|message-event)-/ },
   { kind: 'semantic-alias', group: 'provider-accent', pattern: /^--sn-provider-/ },
   { kind: 'component-alias', group: 'layout', pattern: /^--sn-(layout|portal-bridge|panel-menu)-/ },
   { kind: 'component-alias', group: 'xr', pattern: /^--sn-xr-/ },
@@ -80,7 +89,7 @@ const CSS_TOKEN_CLASSIFIERS = [
   { kind: 'component-alias', group: 'comment', pattern: /^--sn-comment-/ },
   { kind: 'component-alias', group: 'frame', pattern: /^--sn-frame-/ },
   { kind: 'typography-cascade', group: 'typography', pattern: /^--sn-(font|icon-font)/ },
-  { kind: 'motion-effects', group: 'effect', pattern: /^--sn-(effect|shadow|cell)-/ },
+  { kind: 'motion-effects', group: 'effect', pattern: /^--sn-(effect|shadow|cell|motion|animation|transition)-/ },
   { kind: 'motion-effects', group: 'scrollbar', pattern: /^--sn-scrollbar-/ },
   { kind: 'host-bridge-alias', group: 'host-bridge', pattern: /^--(bg-level-2|border-color|text-color|text-color-muted)$/ },
 ];
@@ -146,8 +155,15 @@ export let THEME_ELEMENT_GROUPS = [
   {
     name: 'status',
     description: 'Badges, loading, success, warning, danger, and transient status feedback.',
-    tokens: ['--sn-success-color', '--sn-success-bg', '--sn-success-border', '--sn-success-bg-hover', '--sn-success-border-hover', '--sn-warning-color', '--sn-danger-color', '--sn-danger-bg', '--sn-danger-border', '--sn-subgraph-bg', '--sn-subgraph-bg-hover', '--sn-subgraph-border', '--sn-subgraph-border-hover', '--sn-badge-bg', '--sn-badge-border', '--sn-badge-color', '--sn-banner-bg', '--sn-banner-border', '--sn-banner-color', '--sn-empty-state-color', '--sn-loading-bar-bg', '--sn-effect-loading-pulse'],
+    tokens: ['--sn-success-color', '--sn-success-bg', '--sn-success-border', '--sn-success-bg-hover', '--sn-success-border-hover', '--sn-warning-color', '--sn-danger-color', '--sn-danger-bg', '--sn-danger-border', '--sn-engine-idle-color', '--sn-engine-running-color', '--sn-engine-success-color', '--sn-engine-error-color', '--sn-engine-state-color', '--sn-engine-state-bg', '--sn-engine-state-border', '--sn-subgraph-bg', '--sn-subgraph-bg-hover', '--sn-subgraph-border', '--sn-subgraph-border-hover', '--sn-badge-bg', '--sn-badge-border', '--sn-badge-color', '--sn-banner-bg', '--sn-banner-border', '--sn-banner-color', '--sn-empty-state-color', '--sn-loading-bar-bg', '--sn-effect-loading-pulse'],
     usedBy: ['sn-loading-overlay', 'chat-transcript', 'chat-composer', 'inspector-panel'],
+  },
+  {
+    name: 'engine-state',
+    description: 'Runtime engine states that cascade into node, status, loading, and host-selected surfaces.',
+    tokens: ['--sn-engine-idle-color', '--sn-engine-running-color', '--sn-engine-success-color', '--sn-engine-error-color', '--sn-engine-state-color', '--sn-engine-state-bg', '--sn-engine-state-border', '--sn-animation-play-state', '--sn-animation-duration-scale', '--sn-animation-duration-fast', '--sn-animation-duration-normal', '--sn-animation-duration-slow', '--sn-animation-duration-slower'],
+    states: ['idle', 'running', 'success', 'error'],
+    usedBy: ['node-canvas', 'graph-node', 'sn-loading-overlay', 'sn-status-ribbon', 'host runtime shells'],
   },
   {
     name: 'metric',
@@ -326,19 +342,37 @@ export let THEME_RULE_BLOCKS = [
     name: 'default-provider-motion-effects',
     theme: 'default-provider',
     kind: 'motion-effects',
-    description: 'Defines transition and shadow aliases for hover, active, focus, drag, and loading states.',
+    description: 'Defines transition, animation, and shadow aliases for hover, active, focus, drag, loading, and engine states.',
     parameters: [
       { name: 'motion.duration.fast', type: 'time', default: '120ms', description: 'Fast hover/focus response duration.' },
       { name: 'motion.easing.standard', type: 'easing', default: 'ease', description: 'Default easing for small UI state changes.' },
+      { name: 'motion.enabled', type: 'boolean', default: 'true', description: 'Global motion enablement exposed as --sn-motion-enabled and --sn-animation-play-state.' },
       { name: 'focus.alpha', type: 'alpha', default: '0.35', description: 'Focus ring strength derived from the primary accent.' },
     ],
-    inputs: ['motion.duration.fast', 'motion.easing.standard', 'shadow.node'],
-    outputs: ['effect.hoverTransition', 'effect.focusRing', 'effect.dragShadow', 'effect.loadingPulse'],
-    formula: 'Interactive effects reuse fast duration and a single focus/accent ring family.',
+    inputs: ['motion.duration.fast', 'motion.easing.standard', 'motion.enabled', 'shadow.node'],
+    outputs: ['effect.hoverTransition', 'effect.focusRing', 'effect.dragShadow', 'effect.loadingPulse', 'animation.playState', 'animation.durationScale'],
+    formula: 'Interactive effects reuse fast duration, a shared easing token, and explicit animation play-state tokens.',
     derivations: [
-      { output: 'effect.hoverTransition', inputs: ['motion.duration.fast', 'motion.easing.standard'], expression: 'background-color duration.fast easing.standard, border-color duration.fast easing.standard', description: 'Hover transitions affect only inexpensive paint properties.' },
+      { output: 'effect.hoverTransition', inputs: ['motion.duration.fast', 'motion.easing.standard'], expression: 'background-color var(--sn-transition-fast) var(--sn-transition-easing), border-color var(--sn-transition-fast) var(--sn-transition-easing)', description: 'Hover transitions affect only inexpensive paint properties and inherit disabled motion through transition duration and easing tokens.' },
+      { output: 'animation.playState', inputs: ['motion.enabled'], expression: 'running when enabled, paused when disabled', description: 'Animated runtime states can pause without requiring each component to branch in JavaScript.' },
       { output: 'effect.focusRing', inputs: ['color.accent', 'focus.alpha'], expression: '0 0 0 2px hsl(accent.h accent.s accent.l / focus.alpha)', description: 'Focus rings derive from the same primary accent as selected states.' },
       { output: 'effect.loadingPulse', inputs: ['color.accent'], expression: 'linear-gradient(90deg, transparent, hsl(accent.h accent.s accent.l / 0.6), transparent)', description: 'Loading effects reuse accent color without new component-specific colors.' },
+    ],
+  },
+  {
+    name: 'default-provider-engine-state-cascade',
+    theme: 'default-provider',
+    kind: 'semantic-alias',
+    description: 'Maps standardized engine states to inherited status colors, state backgrounds, borders, and animation play state.',
+    states: ['idle', 'running', 'success', 'error'],
+    inputs: ['color.accent', 'color.success', 'color.danger', 'color.textDim', 'motion.enabled'],
+    outputs: ['--sn-engine-state-color', '--sn-engine-state-bg', '--sn-engine-state-border', '--sn-node-bg', '--sn-node-border'],
+    formula: 'Hosts set data-engine-state on a reusable surface; CSS variables cascade state color and motion without product-owned style branches.',
+    derivations: [
+      { output: 'engine.idle', inputs: ['color.textDim'], expression: 'var(--sn-text-dim)', description: 'Idle state keeps neutral muted status styling.' },
+      { output: 'engine.running', inputs: ['color.accent', 'motion.enabled'], expression: 'accent border plus pulse animation with var(--sn-animation-play-state)', description: 'Running state uses the primary accent and pauses when motion is disabled.' },
+      { output: 'engine.success', inputs: ['color.success'], expression: 'success color mixed into surface and border', description: 'Success state inherits the success semantic branch.' },
+      { output: 'engine.error', inputs: ['color.danger'], expression: 'danger color mixed into surface and border', description: 'Error state inherits the danger semantic branch.' },
     ],
   },
   {
@@ -347,7 +381,7 @@ export let THEME_RULE_BLOCKS = [
     kind: 'semantic-alias',
     description: 'Maps cascade outputs to semantic application aliases without component ownership.',
     parameters: [
-      { name: 'semantic.scope', type: 'string', default: '--sn-*', description: 'Public CSS custom property namespace exposed by symbiote-node.' },
+      { name: 'semantic.scope', type: 'string', default: '--sn-*', description: 'Public CSS custom property namespace exposed by symbiote-ui.' },
     ],
     inputs: ['color.*', 'size.*', 'radius.*', 'shadow.*', 'font.*'],
     outputs: ['--sn-bg', '--sn-panel-bg', '--sn-node-bg', '--sn-node-border', '--sn-text', '--sn-text-dim', '--sn-success-bg', '--sn-success-border', '--sn-danger-bg', '--sn-danger-border'],
@@ -368,7 +402,7 @@ export let THEME_RULE_BLOCKS = [
     name: 'default-provider-component-aliases',
     theme: 'default-provider',
     kind: 'component-alias',
-    description: 'Maps semantic theme aliases to reusable Symbiote Node component surfaces.',
+    description: 'Maps semantic theme aliases to reusable symbiote-ui component surfaces.',
     parameters: [
       { name: 'component.scope', type: 'string', default: 'layout|surface|control|status|metric|tree|chat|tabs|source|list|loading', description: 'Component token domains served by the default provider theme.' },
     ],
@@ -516,12 +550,18 @@ export let THEME_TOKENS = {
   "default-provider": {
     "name": "default-provider",
     "extends": "../base.json",
-    "$description": "Cascadeable neutral provider default aligned with the current Agent Portal shell values. Runtime CSS variables derive neutral surfaces, accents, controls, geometry, motion, and elevation from native HSL controls and color-mix aliases.",
+    "$description": "Cascadeable neutral provider default for symbiote-ui reusable components. Runtime CSS variables derive neutral surfaces, accents, controls, geometry, motion, engine state, and elevation from native HSL controls and color-mix aliases.",
     "$extensions": {
-      "symbioteNode": {
+      "symbioteUi": {
         "role": "neutral-default",
-        "origin": "Agent Portal shell values generalized into provider-neutral Symbiote Node tokens.",
+        "origin": "Provider-neutral Symbiote UI tokens generalized for agent-built interfaces.",
         "cascade": "Apply once at :root, an app shell, or a subtree boundary; components inherit --sn-* tokens through the CSS cascade.",
+        "engineStates": [
+          "idle",
+          "running",
+          "success",
+          "error"
+        ],
         "colorModel": [
           "native-css-hsl",
           "alpha-hsl",
@@ -536,6 +576,14 @@ export let THEME_TOKENS = {
           "--sn-theme-density",
           "--sn-theme-radius-scale",
           "--sn-theme-motion-scale",
+          "--sn-motion-enabled",
+          "--sn-animation-play-state",
+          "--sn-animation-duration-scale",
+          "--sn-animation-duration-fast",
+          "--sn-animation-duration-normal",
+          "--sn-animation-duration-slow",
+          "--sn-animation-duration-slower",
+          "--sn-transition-easing",
           "--sn-theme-elevation-scale"
         ],
         "geometryFamilies": [
@@ -2076,7 +2124,7 @@ export let THEME_TOKENS = {
     "effect": {
       "hoverTransition": {
         "$type": "transition",
-        "$value": "background-color calc(120ms * var(--sn-theme-motion-scale)) ease, border-color calc(120ms * var(--sn-theme-motion-scale)) ease"
+        "$value": "background-color var(--sn-transition-fast) var(--sn-transition-easing), border-color var(--sn-transition-fast) var(--sn-transition-easing), color var(--sn-transition-fast) var(--sn-transition-easing)"
       },
       "focusRing": {
         "$type": "shadow",

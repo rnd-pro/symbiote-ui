@@ -89,7 +89,7 @@ function methodAllowed(element, name, options = {}) {
   if (Array.isArray(options.allowedMethods)) {
     return options.allowedMethods.includes(name);
   }
-  return true;
+  return false;
 }
 
 export function applyRuntimeUiState(element, state = {}, options = {}) {
@@ -187,8 +187,11 @@ export function createRuntimeUiInstance(node, options = {}) {
     element,
     node: normalized,
     children: childInstances,
-    update(nextState = {}) {
-      applyRuntimeUiState(element, nextState, options);
+    update(nextState = {}, updateOptions = {}) {
+      applyRuntimeUiState(element, nextState, {
+        ...options,
+        ...updateOptions,
+      });
       return element;
     },
     destroy({ remove = true } = {}) {
@@ -260,10 +263,10 @@ export function createRuntimeUiController(options = {}) {
       indexInstance(instance);
       return instance;
     },
-    update(id, state = {}) {
+    update(id, state = {}, updateOptions = {}) {
       let instance = instances.get(id);
       if (!instance) return null;
-      instance.update(state);
+      instance.update(state, updateOptions);
       return instance;
     },
     destroy(id, destroyOptions = {}) {
@@ -334,7 +337,7 @@ export function createRuntimeUiController(options = {}) {
               }
             }
           } else if (method === 'update') {
-            controller.update(params.id, params.state);
+            controller.update(params.id, params.state, params.options);
           } else if (method === 'destroy') {
             controller.destroy(params.id, params.options);
           } else if (method === 'clear') {
@@ -468,6 +471,133 @@ export {
   validateComponentCode,
 } from './dynamic-registry.js';
 
+const AGENT_INTENT_OPERATION_TYPES = new Set([
+  'register-driver',
+  'register-component',
+  'layout',
+  'ui',
+  'theme',
+  'state',
+]);
+
+const IRREVERSIBLE_AGENT_INTENT_OPERATIONS = new Set([
+  'register-component',
+  'register-driver',
+]);
+
+const IRREVERSIBLE_UI_ACTIONS = new Set(['destroy']);
+const IRREVERSIBLE_LAYOUT_ACTIONS = new Set(['remove-ui-panel']);
+
+function listAllows(list, value) {
+  return !Array.isArray(list) || list.includes(value);
+}
+
+function requireListAllows(list, value, label) {
+  if (!value || !Array.isArray(list)) return;
+  if (!list.includes(value)) {
+    throw new Error(`Agent intent policy denied ${label}: "${value}".`);
+  }
+}
+
+function getAgentIntentPolicy(options = {}) {
+  return options.intentPolicy || options.policy || {};
+}
+
+function isIrreversibleOperation(op = {}) {
+  let type = op.type;
+  let params = op.params || {};
+  if (IRREVERSIBLE_AGENT_INTENT_OPERATIONS.has(type)) return true;
+  if (type === 'ui') {
+    let action = params.action || 'create';
+    return IRREVERSIBLE_UI_ACTIONS.has(action);
+  }
+  if (type === 'layout') {
+    let action = params.action || params;
+    let actionType = action.type || action.action;
+    return IRREVERSIBLE_LAYOUT_ACTIONS.has(actionType);
+  }
+  return false;
+}
+
+function assertIrreversibleAllowed(op, intent, options = {}) {
+  if (!isIrreversibleOperation(op)) return;
+  let policy = getAgentIntentPolicy(options);
+  let allowed = options.allowIrreversible === true || policy.allowIrreversible === true;
+  if (!allowed) {
+    throw new Error(`Agent intent operation "${op.type}" is irreversible and requires host allowIrreversible policy.`);
+  }
+  if (Array.isArray(intent.operations) && intent.operations.length > 1) {
+    throw new Error(`Irreversible agent intent operation "${op.type}" must run in a dedicated intent.`);
+  }
+}
+
+function assertAgentIntentPolicy(type, params = {}, options = {}) {
+  let policy = getAgentIntentPolicy(options);
+  if (Array.isArray(policy.denyOperations) && policy.denyOperations.includes(type)) {
+    throw new Error(`Agent intent policy denied operation "${type}".`);
+  }
+  if (Array.isArray(policy.allowOperations) && !policy.allowOperations.includes(type)) {
+    throw new Error(`Agent intent policy denied operation "${type}".`);
+  }
+  if (typeof policy.allowOperation === 'function' && !policy.allowOperation(type, params)) {
+    throw new Error(`Agent intent policy denied operation "${type}".`);
+  }
+
+  if (type === 'register-component') {
+    requireListAllows(policy.allowedComponents, params.tagName, 'component');
+  } else if (type === 'layout') {
+    let action = params.action || params;
+    let panelType = action.panelType || action.component || action.panel;
+    requireListAllows(policy.allowedLayoutPanelTypes, panelType, 'layout panel type');
+  } else if (type === 'ui') {
+    let action = params.action || 'create';
+    if (!['create', 'destroy'].includes(action)) {
+      throw new Error(`Unsupported agent UI action: "${action}".`);
+    }
+    if (action === 'create') {
+      requireListAllows(policy.allowedComponents, params.node?.component || params.node?.tagName || params.node?.tag, 'component');
+      if (typeof params.targetSelector === 'string' || typeof params.target === 'string') {
+        requireListAllows(policy.allowedTargetSelectors, params.targetSelector || params.target, 'target selector');
+      }
+    }
+  } else if (type === 'theme') {
+    let target = params.targetSelector || params.target;
+    if (typeof target === 'string') {
+      requireListAllows(policy.allowedThemeTargets || policy.allowedTargetSelectors, target, 'theme target');
+    }
+  } else if (type === 'state') {
+    requireListAllows(policy.allowedStateIds, params.id, 'state id');
+    let state = normalizeRuntimeUiState(params.state);
+    for (let methodName of Object.keys(state.methods)) {
+      if (!listAllows(policy.allowedMethods, methodName)) {
+        throw new Error(`Agent intent policy denied method update: "${methodName}".`);
+      }
+    }
+    for (let propName of Object.keys(state.props)) {
+      if (!listAllows(policy.allowedStateProps, propName)) {
+        throw new Error(`Agent intent policy denied prop update: "${propName}".`);
+      }
+    }
+    for (let attrName of Object.keys(state.attrs)) {
+      if (!listAllows(policy.allowedStateAttrs, attrName)) {
+        throw new Error(`Agent intent policy denied attribute update: "${attrName}".`);
+      }
+    }
+  }
+}
+
+function assertAgentIntentOperation(op = {}, intent = {}, options = {}) {
+  let type = op.type;
+  if (!AGENT_INTENT_OPERATION_TYPES.has(type)) {
+    throw new Error(`Unsupported agent intent operation: "${type}".`);
+  }
+  if (!isObject(op.params)) {
+    throw new Error(`Agent intent operation "${type}" requires params.`);
+  }
+  assertIrreversibleAllowed(op, intent, options);
+  assertAgentIntentPolicy(type, op.params, options);
+}
+
 export async function executeAgentIntent(controller, intent = {}, options = {}) {
   if (intent.version !== 'agent-intent-v1') {
     throw new Error(`Unsupported agent intent version: "${intent.version}". Expected "agent-intent-v1".`);
@@ -475,6 +605,29 @@ export async function executeAgentIntent(controller, intent = {}, options = {}) 
 
   let executed = [];
   let doc = options.document || (typeof globalThis.document !== 'undefined' ? globalThis.document : null);
+  let dryRun = options.dryRun === true || options.validateOnly === true || intent.dryRun === true || intent.validateOnly === true;
+  let policy = getAgentIntentPolicy(options);
+  let updateOptions = {
+    allowedMethods: policy.allowedMethods || options.allowedMethods,
+    allowMethod: policy.allowMethod || options.allowMethod,
+  };
+
+  if (!Array.isArray(intent.operations) || intent.operations.length === 0) {
+    throw new Error('Agent intent requires at least one operation.');
+  }
+
+  for (let op of intent.operations) {
+    assertAgentIntentOperation(op, intent, options);
+  }
+
+  if (dryRun) {
+    return {
+      success: true,
+      dryRun: true,
+      executedCount: 0,
+      validatedCount: intent.operations.length,
+    };
+  }
 
   try {
     for (let op of intent.operations || []) {
@@ -485,19 +638,29 @@ export async function executeAgentIntent(controller, intent = {}, options = {}) 
         if (!controller.dynamicRegistry) {
           throw new Error('Controller dynamicRegistry is not initialized.');
         }
-        await controller.dynamicRegistry.register(params.tagName, params.codeOrClass || params.code, params.options);
-        executed.push({ type: 'register-component', tagName: params.tagName });
+        await controller.dynamicRegistry.register(params.tagName, params.codeOrClass || params.code, {
+          ...(params.options || {}),
+          blockedKeywords: [
+            ...((params.options && Array.isArray(params.options.blockedKeywords)) ? params.options.blockedKeywords : []),
+            ...((policy && Array.isArray(policy.blockedKeywords)) ? policy.blockedKeywords : []),
+          ],
+          validate: params.options?.validate || policy.validateComponentCode,
+        });
+        executed.push({ type: 'register-component', tagName: params.tagName, irreversible: true });
 
       } else if (type === 'register-driver') {
         if (typeof options.onRegisterDriver === 'function') {
           await options.onRegisterDriver(params);
         }
-        executed.push({ type: 'register-driver', params });
+        executed.push({ type: 'register-driver', params, irreversible: true });
 
       } else if (type === 'layout') {
         let root = options.root || controller.root || null;
         let action = params.action || params;
         let res = applyRuntimeLayoutAction(root, action, params.options);
+        if (!res || res.handled === false) {
+          throw new Error(`Agent intent layout action was not handled: "${action.type || action.action || 'unknown'}".`);
+        }
 
         let rollbackAction = null;
         let actionType = action.type || action.action;
@@ -591,14 +754,22 @@ export async function executeAgentIntent(controller, intent = {}, options = {}) 
           }
         }
 
-        controller.update(id, params.state);
+        let updateResult = controller.update(id, params.state, updateOptions);
+        if (!updateResult) {
+          throw new Error(`Agent intent state target not found: "${id}".`);
+        }
         executed.push({ type: 'state', id, originalState });
+      } else {
+        throw new Error(`Unsupported agent intent operation: "${type}".`);
       }
     }
   } catch (err) {
     for (let i = executed.length - 1; i >= 0; i--) {
       let op = executed[i];
       try {
+        if (op.irreversible) {
+          continue;
+        }
         if (op.type === 'ui-create') {
           controller.destroy(op.id);
         } else if (op.type === 'layout' && op.rollbackAction) {
@@ -613,7 +784,7 @@ export async function executeAgentIntent(controller, intent = {}, options = {}) 
             }
           }
         } else if (op.type === 'state' && op.originalState) {
-          controller.update(op.id, op.originalState);
+          controller.update(op.id, op.originalState, updateOptions);
         }
       } catch (rollbackErr) {
         console.error('[executeAgentIntent] rollback failed for operation:', op, rollbackErr);

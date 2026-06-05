@@ -21,7 +21,7 @@ chat-composer {
   background: var(--chat-composer-bg);
   border-radius: var(--sn-composer-radius);
   padding: var(--sn-composer-body-padding);
-  transition: background 0.15s;
+  transition: background var(--sn-transition-fast) var(--sn-transition-easing);
 }
 
 .voice-preview {
@@ -33,7 +33,7 @@ chat-composer {
   background: var(--chat-composer-bg);
   border-radius: var(--sn-composer-radius);
   padding: var(--sn-composer-body-padding);
-  transition: background 0.15s;
+  transition: background var(--sn-transition-fast) var(--sn-transition-easing);
 }
 
 .composer-body:focus-within,
@@ -106,7 +106,7 @@ sn-button.btn-send[variant="icon"] {
   min-width: var(--sn-composer-send-size);
   min-height: var(--sn-composer-send-size);
   box-shadow: var(--sn-shadow-sm);
-  transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+  transition: background var(--sn-transition-fast) var(--sn-transition-easing), box-shadow var(--sn-transition-fast) var(--sn-transition-easing), transform var(--sn-transition-fast) var(--sn-transition-easing);
 }
 
 sn-button.btn-send[variant="icon"] .material-symbols-outlined {
@@ -183,7 +183,7 @@ sn-button.btn-send[variant="icon"].btn-stop::after {
   font-size: var(--sn-composer-footer-size, 11px);
   font-family: inherit;
   cursor: pointer;
-  transition: background 0.12s, color 0.12s;
+  transition: background var(--sn-transition-fast) var(--sn-transition-easing), color var(--sn-transition-fast) var(--sn-transition-easing);
   white-space: nowrap;
   min-width: 0;
   max-width: 100%;
@@ -434,7 +434,7 @@ chat-composer.drag-over .composer-body {
   font-size: var(--sn-composer-popup-item-size, 12px);
   color: var(--sn-text);
   opacity: 0.75;
-  transition: background 0.1s, opacity 0.1s, color 0.1s;
+  transition: background var(--sn-transition-fast) var(--sn-transition-easing), opacity var(--sn-transition-fast) var(--sn-transition-easing), color var(--sn-transition-fast) var(--sn-transition-easing);
 }
 
 .autocomplete-item:hover,
@@ -478,7 +478,7 @@ chat-composer.drag-over .composer-body {
   background: transparent;
   color: var(--sn-text-dim);
   cursor: pointer;
-  transition: color 0.15s, background 0.15s;
+  transition: color var(--sn-transition-fast) var(--sn-transition-easing), background var(--sn-transition-fast) var(--sn-transition-easing);
   flex: 0 0 auto;
 }
 
@@ -678,7 +678,8 @@ chat-composer.drag-over .composer-body {
 
 .btn-mic.recording {
   color: var(--sn-danger-color);
-  animation: mic-pulse 1.5s ease-in-out infinite;
+  animation: mic-pulse var(--sn-animation-duration-slow) var(--sn-transition-easing) infinite;
+  animation-play-state: var(--sn-animation-play-state);
 }
 
 .btn-mic.recording .material-symbols-outlined {
@@ -691,7 +692,8 @@ chat-composer.drag-over .composer-body {
 }
 
 .btn-mic.processing .material-symbols-outlined {
-  animation: mic-spin 1s linear infinite;
+  animation: mic-spin var(--sn-animation-duration-normal) linear infinite;
+  animation-play-state: var(--sn-animation-play-state);
 }
 
 @keyframes mic-pulse {
@@ -707,7 +709,8 @@ chat-composer.drag-over .composer-body {
 
 .voice-preview {
   margin: 0 0 var(--sn-composer-footer-gap, 4px);
-  animation: voice-preview-in 0.15s ease;
+  animation: voice-preview-in var(--sn-transition-fast) var(--sn-transition-easing);
+  animation-play-state: var(--sn-animation-play-state);
 }
 
 .voice-preview[hidden] {
@@ -818,7 +821,7 @@ chat-composer.drag-over .composer-body {
   padding: 0;
   border-radius: 50%;
   box-shadow: var(--sn-shadow-sm);
-  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+  transition: background var(--sn-transition-fast) var(--sn-transition-easing), border-color var(--sn-transition-fast) var(--sn-transition-easing), box-shadow var(--sn-transition-fast) var(--sn-transition-easing), transform var(--sn-transition-fast) var(--sn-transition-easing);
 }
 
 .voice-preview-btn:hover {

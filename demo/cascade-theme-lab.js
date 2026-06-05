@@ -1230,7 +1230,8 @@ CascadeChatPanel.rootStyles = `
   }
 
   cascade-chat-panel .voice-state-chip.transcribing .material-symbols-outlined {
-    animation: lab-spin 1s linear infinite;
+    animation: lab-spin var(--sn-animation-duration-normal) linear infinite;
+    animation-play-state: var(--sn-animation-play-state);
   }
 
   cascade-chat-panel .voice-state-chip:disabled {

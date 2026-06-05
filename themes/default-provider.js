@@ -1,10 +1,10 @@
 /**
- * Default Provider — default production theme for symbiote-node UI
+ * Default Provider — default production theme for symbiote-ui
  *
- * Cascadeable neutral shell aligned with the current Agent Portal theme.
+ * Cascadeable neutral shell for provider-owned reusable UI.
  * Host applications can override the source controls at :root or a subtree.
  *
- * @module symbiote-node/themes/default-provider
+ * @module symbiote-ui/themes/default-provider
  */
 
 import { themedScrollbarRootStyles } from './scrollbar-styles.js';
@@ -22,6 +22,14 @@ const DEFAULT_PROVIDER_THEME_TOKENS = {
   '--sn-theme-spacing-scale': 'var(--sn-theme-density)',
   '--sn-theme-radius-scale': '1',
   '--sn-theme-motion-scale': '1',
+  '--sn-motion-enabled': '1',
+  '--sn-animation-play-state': 'running',
+  '--sn-animation-duration-scale': '1',
+  '--sn-animation-duration-fast': 'calc(600ms * var(--sn-animation-duration-scale))',
+  '--sn-animation-duration-normal': 'calc(1000ms * var(--sn-animation-duration-scale))',
+  '--sn-animation-duration-slow': 'calc(1500ms * var(--sn-animation-duration-scale))',
+  '--sn-animation-duration-slower': 'calc(2000ms * var(--sn-animation-duration-scale))',
+  '--sn-transition-easing': 'ease',
   '--sn-theme-elevation-scale': '1',
   '--sn-transition-fast': 'calc(120ms * var(--sn-theme-motion-scale))',
   '--sn-transition-normal': 'calc(240ms * var(--sn-theme-motion-scale))',
@@ -56,6 +64,13 @@ const DEFAULT_PROVIDER_THEME_TOKENS = {
   '--sn-warning-color': 'hsl(var(--sn-hue-warning) var(--sn-sat-vivid) 58%)',
   '--sn-status-ok-bg': 'color-mix(in oklab, var(--sn-success-color) 12%, transparent)',
   '--sn-status-error-bg': 'color-mix(in oklab, var(--sn-danger-color) 12%, transparent)',
+  '--sn-engine-idle-color': 'var(--sn-text-dim)',
+  '--sn-engine-running-color': 'var(--sn-node-selected)',
+  '--sn-engine-success-color': 'var(--sn-success-color)',
+  '--sn-engine-error-color': 'var(--sn-danger-color)',
+  '--sn-engine-state-color': 'var(--sn-engine-idle-color)',
+  '--sn-engine-state-bg': 'var(--sn-node-bg)',
+  '--sn-engine-state-border': 'var(--sn-node-border)',
 
   '--sn-bg': 'hsl(0 0% var(--sn-lit-bg))',
   '--sn-panel-bg': 'hsl(0 0% var(--sn-lit-surface))',
@@ -685,7 +700,7 @@ const DEFAULT_PROVIDER_THEME_TOKENS = {
   '--sn-loading-sub-color': 'var(--sn-text-dim)',
   '--sn-loading-sub-size': '9px',
 
-  '--sn-effect-hover-transition': 'background-color calc(120ms * var(--sn-theme-motion-scale)) ease, border-color calc(120ms * var(--sn-theme-motion-scale)) ease',
+  '--sn-effect-hover-transition': 'background-color var(--sn-transition-fast) var(--sn-transition-easing), border-color var(--sn-transition-fast) var(--sn-transition-easing), color var(--sn-transition-fast) var(--sn-transition-easing)',
   '--sn-effect-focus-ring': '0 0 0 2px hsl(var(--sn-hue-accent) var(--sn-sat-vivid) var(--sn-lit-accent) / 0.35)',
   '--sn-effect-drag-shadow': '0 14px calc(32px * var(--sn-theme-elevation-scale)) hsl(var(--sn-hue-base) var(--sn-sat-muted) 0% / 0.35)',
   '--sn-effect-loading-pulse': 'linear-gradient(90deg, transparent, hsl(var(--sn-hue-accent) var(--sn-sat-vivid) var(--sn-lit-accent) / 0.6), transparent)',
@@ -714,6 +729,14 @@ const DEFAULT_PROVIDER_PALETTE_COLORS = {
   '--sn-theme-density': '1',
   '--sn-theme-radius-scale': '1',
   '--sn-theme-motion-scale': '1',
+  '--sn-motion-enabled': '1',
+  '--sn-animation-play-state': 'running',
+  '--sn-animation-duration-scale': '1',
+  '--sn-animation-duration-fast': 'calc(600ms * var(--sn-animation-duration-scale))',
+  '--sn-animation-duration-normal': 'calc(1000ms * var(--sn-animation-duration-scale))',
+  '--sn-animation-duration-slow': 'calc(1500ms * var(--sn-animation-duration-scale))',
+  '--sn-animation-duration-slower': 'calc(2000ms * var(--sn-animation-duration-scale))',
+  '--sn-transition-easing': 'ease',
   '--sn-theme-elevation-scale': '1',
   '--sn-hue-base': '0',
   '--sn-hue-accent': 'var(--sn-theme-hue)',

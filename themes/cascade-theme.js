@@ -453,9 +453,17 @@ export const CASCADE_THEME_TOKEN_TARGETS = Object.freeze({
   ],
   motion: [
     '--sn-theme-motion-scale',
+    '--sn-motion-enabled',
+    '--sn-animation-play-state',
+    '--sn-animation-duration-scale',
+    '--sn-animation-duration-fast',
+    '--sn-animation-duration-normal',
+    '--sn-animation-duration-slow',
+    '--sn-animation-duration-slower',
     '--sn-transition-fast',
     '--sn-transition-normal',
     '--sn-transition-slow',
+    '--sn-transition-easing',
   ],
 });
 
@@ -649,6 +657,7 @@ export function createCascadeTheme(options = {}) {
   let headingScale = state.heading / 100;
   let densityScale = state.density / 100;
   let motionScale = state.motion / 100;
+  let motionEnabled = motionScale > 0;
   let bg = dark
     ? 10 + state.brightness * 0.18
     : 98 - state.brightness * 0.32;
@@ -733,9 +742,17 @@ export function createCascadeTheme(options = {}) {
     '--sn-theme-density': densityScale.toFixed(2),
     '--sn-theme-spacing-scale': densityScale.toFixed(2),
     '--sn-theme-motion-scale': motionScale.toFixed(2),
+    '--sn-motion-enabled': motionEnabled ? '1' : '0',
+    '--sn-animation-play-state': motionEnabled ? 'running' : 'paused',
+    '--sn-animation-duration-scale': motionScale.toFixed(2),
+    '--sn-animation-duration-fast': `${Math.round(600 * motionScale)}ms`,
+    '--sn-animation-duration-normal': `${Math.round(1000 * motionScale)}ms`,
+    '--sn-animation-duration-slow': `${Math.round(1500 * motionScale)}ms`,
+    '--sn-animation-duration-slower': `${Math.round(2000 * motionScale)}ms`,
     '--sn-transition-fast': `${Math.round(120 * motionScale)}ms`,
     '--sn-transition-normal': `${Math.round(240 * motionScale)}ms`,
     '--sn-transition-slow': `${Math.round(400 * motionScale)}ms`,
+    '--sn-transition-easing': motionEnabled ? 'ease' : 'linear',
     '--sn-hue-accent': semanticHues.accent,
     '--sn-hue-success': semanticHues.success,
     '--sn-hue-warning': semanticHues.warning,

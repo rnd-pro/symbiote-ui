@@ -52,7 +52,7 @@ project-tab-item {
   font-size: var(--sn-tabs-item-font-size, 12px);
   font-family: inherit;
   white-space: nowrap;
-  transition: background 0.15s, color 0.15s;
+  transition: background var(--sn-transition-fast) var(--sn-transition-easing), color var(--sn-transition-fast) var(--sn-transition-easing);
   position: relative;
   border-radius: var(--sn-tabs-radius);
   margin: 0 var(--sn-tabs-item-margin-inline, 2px);
@@ -152,7 +152,7 @@ project-tab-item:not([active]):not(:hover):last-child::after,
   padding: 0;
   line-height: 1;
   opacity: 0;
-  transition: opacity 0.15s, background 0.15s, color 0.15s;
+  transition: opacity var(--sn-transition-fast) var(--sn-transition-easing), background var(--sn-transition-fast) var(--sn-transition-easing), color var(--sn-transition-fast) var(--sn-transition-easing);
 }
 
 .tab-close[hidden] {
@@ -183,7 +183,7 @@ project-tab-item[active] .tab-close {
   color: var(--sn-text-dim);
   cursor: pointer;
   font-size: var(--sn-tabs-add-font-size, 18px);
-  transition: background 0.15s, color 0.15s;
+  transition: background var(--sn-transition-fast) var(--sn-transition-easing), color var(--sn-transition-fast) var(--sn-transition-easing);
   margin-left: var(--sn-tabs-add-margin-left, 4px);
   margin-bottom: var(--sn-tabs-add-margin-bottom, 2px);
 }

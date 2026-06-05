@@ -67,7 +67,7 @@ sn-tree-panel[hidden] {
   --sn-button-color: var(--sn-text);
   --sn-button-focus-ring: var(--sn-effect-focus-ring);
   color: var(--sn-text);
-  transition: background 100ms ease;
+  transition: background var(--sn-transition-fast) var(--sn-transition-easing);
 }
 
 .sn-tree-panel-content {

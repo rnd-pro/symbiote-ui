@@ -27,6 +27,7 @@ import {
   listThemeRuntimeDescriptors,
   listThemeRuleBlocks,
   listTokenFiles,
+  hasComponent,
   RULESETS,
   THEME_NAMES,
   UI_SCHEMA_VERSIONS,
@@ -134,6 +135,52 @@ function listPackageExportSubpaths() {
   });
 }
 
+function inferDriverSuggestedComponents(driverRecord) {
+  let driver = driverRecord?.driver || {};
+  let category = String(driverRecord?.category || '').toLowerCase();
+  let type = String(driverRecord?.type || '').toLowerCase();
+  let portTypes = [
+    ...(driver.inputs || []).map((input) => input.type),
+    ...(driver.outputs || []).map((output) => output.type),
+  ].map((value) => String(value || '').toLowerCase());
+  let suggestions = new Set(['graph-node', 'sn-card', 'sn-status-badge']);
+
+  if (category.includes('compound') || type.includes('compound')) {
+    suggestions.add('node-canvas');
+    suggestions.add('graph-explorer-shell');
+  }
+  if (category.includes('chat') || type.includes('chat')) {
+    suggestions.add('chat-composer');
+    suggestions.add('chat-transcript');
+  }
+  if (category.includes('data') || portTypes.some((value) => ['json', 'object', 'array', 'table'].includes(value))) {
+    suggestions.add('sn-data-table');
+    suggestions.add('sn-event-feed');
+  }
+  if (category.includes('tree') || portTypes.includes('tree')) {
+    suggestions.add('sn-tree-panel');
+  }
+  if (Object.keys(driver.params || {}).length) {
+    suggestions.add('sn-field');
+  }
+
+  return [...suggestions].filter((tagName) => hasComponent(tagName));
+}
+
+function normalizeDriverAgent(driverRecord) {
+  let agent = driverRecord?.driver?.agent || {};
+  let explicitSuggestions = Array.isArray(agent.suggestedComponents)
+    ? agent.suggestedComponents.filter(Boolean)
+    : [];
+  if (explicitSuggestions.length) return agent;
+  let suggestedComponents = inferDriverSuggestedComponents(driverRecord);
+  return {
+    ...agent,
+    suggestedComponents,
+    suggestedComponentsSource: 'symbiote-ui-defaults',
+  };
+}
+
 async function loadRuntimePacks(packs) {
   let packList = Array.isArray(packs) ? packs : String(packs).split(',');
   for (let pack of packList) {
@@ -185,7 +232,7 @@ export async function cmdDiscover(options = {}) {
         outputs: (d.driver.outputs || []).map((out) => ({ name: out.name, type: out.type, label: out.label })),
         description: d.driver.description,
         params: Object.entries(d.driver.params || {}).map(([name, p]) => ({ name, type: p.type, required: p.required, default: p.default })),
-        agent: d.driver.agent || null,
+        agent: normalizeDriverAgent(d),
       })),
       menu: menu.map((group) => ({
         category: group.category,
@@ -297,4 +344,3 @@ export function watchDiscover(options = {}, callback) {
 
   return watcher;
 }
-

@@ -90,7 +90,7 @@ export default css`
       color: var(--sn-button-color, var(--sn-text));
       font: inherit;
       cursor: pointer;
-      transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
+      transition: var(--sn-effect-hover-transition);
     }
 
     .cte-icon-button:hover,

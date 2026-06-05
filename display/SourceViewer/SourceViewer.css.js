@@ -55,7 +55,7 @@ export default `
     cursor: pointer;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    transition: all 120ms ease;
+    transition: background var(--sn-transition-fast) var(--sn-transition-easing), border-color var(--sn-transition-fast) var(--sn-transition-easing), color var(--sn-transition-fast) var(--sn-transition-easing), opacity var(--sn-transition-fast) var(--sn-transition-easing);
   }
   .sv-action .material-symbols-outlined {
     font-size: var(--sn-source-action-icon-size);

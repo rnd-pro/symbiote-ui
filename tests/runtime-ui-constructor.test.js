@@ -102,6 +102,7 @@ test('runtime UI contract creates components, applies state, routes intents, and
     },
     {
       document: new FakeDocument(),
+      allowedMethods: ['setItems'],
       onIntent: (intent) => intents.push(intent),
     }
   );
@@ -168,6 +169,14 @@ test('runtime UI controller tracks created components and removes dynamic instan
 
 test('runtime UI state method calls are host-gated when an allowlist is provided', () => {
   let element = new FakeElement('sn-data-table');
+
+  applyRuntimeUiState(element, {
+    methods: {
+      unsafeMethod: ['blocked-by-default'],
+    },
+  });
+
+  assert.deepEqual(element.calls, []);
 
   applyRuntimeUiState(element, {
     methods: {

@@ -24,7 +24,7 @@ export let styles = css`
       cursor: pointer;
       color: var(--sn-text);
       font-size: var(--sn-panel-menu-item-size, 0.85rem);
-      transition: background 0.1s;
+      transition: background var(--sn-transition-fast) var(--sn-transition-easing);
 
       &:hover {
         background: var(--sn-node-hover);

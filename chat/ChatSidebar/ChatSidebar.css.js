@@ -8,7 +8,7 @@ chat-sidebar-shell {
   flex: 0 0 var(--chat-nav-width, var(--sn-chat-sidebar-width, 200px));
   position: relative;
   z-index: 10;
-  transition: width 0.2s ease, min-width 0.2s ease, flex-basis 0.2s ease;
+  transition: width var(--sn-transition-normal) var(--sn-transition-easing), min-width var(--sn-transition-normal) var(--sn-transition-easing), flex-basis var(--sn-transition-normal) var(--sn-transition-easing);
 }
 
 :host([resizing]),
@@ -32,7 +32,7 @@ chat-sidebar-shell[resizing] .chat-nav  {
   border-right: none;
   background: var(--sn-node-bg);
   overflow: hidden;
-  transition: width 0.2s ease, min-width 0.2s ease;
+  transition: width var(--sn-transition-normal) var(--sn-transition-easing), min-width var(--sn-transition-normal) var(--sn-transition-easing);
   user-select: none;
 }
 
@@ -56,7 +56,7 @@ chat-sidebar-shell[resizing] .chat-nav  {
   cursor: col-resize;
   background: transparent;
   z-index: 20;
-  transition: background 0.15s ease;
+  transition: background var(--sn-transition-fast) var(--sn-transition-easing);
 }
 
 .chat-nav-resize-handle:hover,
@@ -106,7 +106,7 @@ chat-sidebar-shell[resizing] .chat-nav  {
 }
 
 .chat-nav-collapse-icon {
-  transition: transform 0.2s ease;
+  transition: transform var(--sn-transition-normal) var(--sn-transition-easing);
 }
 
 .chat-nav[collapsed] .chat-nav-collapse-icon  {
@@ -124,7 +124,7 @@ chat-sidebar-shell[resizing] .chat-nav  {
   cursor: pointer;
   color: var(--sn-text-dim);
   font-size: var(--sn-chat-sidebar-button-size, 0.75rem);
-  transition: background 0.1s, color 0.1s;
+  transition: background var(--sn-transition-fast) var(--sn-transition-easing), color var(--sn-transition-fast) var(--sn-transition-easing);
   flex-shrink: 0;
 }
 

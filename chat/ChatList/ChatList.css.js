@@ -87,7 +87,7 @@ chat-list {
   --sn-button-font-size: var(--sn-chat-list-filter-button-size, 11px);
   --sn-button-font-weight: 500;
   color: var(--sn-text-dim);
-  transition: color 0.15s, background 0.15s, border-color 0.15s;
+  transition: color var(--sn-transition-fast) var(--sn-transition-easing), background var(--sn-transition-fast) var(--sn-transition-easing), border-color var(--sn-transition-fast) var(--sn-transition-easing);
 }
 
 .chat-list-filter-btn:hover {

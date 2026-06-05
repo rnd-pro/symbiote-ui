@@ -137,8 +137,24 @@ test('webmcp helpers append component context to explicit tool descriptors', asy
   assert.match(descriptor.description, /Sample panel explains/);
   assert.match(descriptor.description, /Run the visible action/);
   assert.equal(descriptor.annotations.componentTag, 'sample-panel');
-  assert.equal(descriptor.annotations.componentRole, 'sample surface');
+  assert.equal(descriptor.annotations.semanticRole, 'sample surface');
   assert.equal(descriptor.annotations.readOnlyHint, false);
+});
+
+test('discover provides agent component defaults for drivers without explicit metadata', async () => {
+  let { cmdDiscover } = await import('../discover.js');
+  let data = await cmdDiscover({});
+
+  assert.ok(data.registry.drivers.length > 0);
+  for (const driver of data.registry.drivers) {
+    assert.ok(Array.isArray(driver.agent?.suggestedComponents), `${driver.type} suggestedComponents`);
+    if (driver.agent.suggestedComponentsSource) {
+      assert.equal(driver.agent.suggestedComponentsSource, 'symbiote-ui-defaults', `${driver.type} suggestedComponentsSource`);
+      assert.ok(driver.agent.suggestedComponents.includes('graph-node'), `${driver.type} graph-node suggestion`);
+    } else {
+      assert.ok(driver.agent.suggestedComponents.length > 0, `${driver.type} explicit suggestedComponents`);
+    }
+  }
 });
 
 test('component registry follows the agent-facing WebMCP documentation standard', async () => {
@@ -165,6 +181,51 @@ test('component registry follows the agent-facing WebMCP documentation standard'
     assert.ok(Array.isArray(component.contract?.events), `${component.tagName} events contract`);
     assert.ok(Array.isArray(component.contract?.slots), `${component.tagName} slots contract`);
   }
+});
+
+test('explicit WebMCP tools map to public component methods or intent events', async () => {
+  let { listComponents } = await import('../manifest/index.js');
+
+  for (const component of listComponents()) {
+    let tools = component.contract?.webmcp?.tools || [];
+    let methods = new Set((component.contract?.methods || []).map((method) => method.name));
+    let events = new Set((component.contract?.events || []).map((event) => event.name));
+    for (const tool of tools) {
+      let annotations = tool.annotations || {};
+      let runtimeMethods = [
+        annotations.runtimeMethod,
+        ...(annotations.runtimeMethods || []),
+      ].filter(Boolean);
+      let intentEvents = [
+        annotations.intentEvent,
+        ...(annotations.intentEvents || []),
+      ].filter(Boolean);
+      assert.ok(
+        runtimeMethods.length || intentEvents.length,
+        `${component.tagName}:${tool.name} must declare runtimeMethod/runtimeMethods or intentEvent/intentEvents`
+      );
+      for (const method of runtimeMethods) {
+        assert.ok(methods.has(method), `${component.tagName}:${tool.name} references missing public method ${method}`);
+      }
+      for (const event of intentEvents) {
+        assert.ok(events.has(event), `${component.tagName}:${tool.name} references missing public event ${event}`);
+      }
+    }
+  }
+});
+
+test('node-canvas exposes the agent-facing serializable model adapter promised by WebMCP', async () => {
+  let source = await readFile(new URL('../canvas/NodeCanvas/NodeCanvas.js', import.meta.url), 'utf8');
+  let { getComponent } = await import('../manifest/index.js');
+  let component = getComponent('node-canvas');
+  let tool = component.contract.webmcp.tools.find((item) => item.name === 'node_canvas_set_editor_model');
+
+  assert.match(source, /setEditorModel\(model = \{\}\)/);
+  assert.equal(tool.annotations.runtimeMethod, 'setEditorModel');
+  assert.ok(component.contract.methods.some((method) => method.name === 'setEditorModel'));
+  assert.ok(tool.inputSchema.properties.nodes);
+  assert.ok(tool.inputSchema.properties.connections);
+  assert.ok(tool.inputSchema.properties.positions);
 });
 
 test('source component registry does not keep legacy descriptor-v1 contracts', async () => {

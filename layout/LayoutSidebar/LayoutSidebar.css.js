@@ -34,7 +34,7 @@ export let sidebarStyles = css`
     height: 100%;
     cursor: col-resize;
     z-index: 10;
-    transition: background 0.15s;
+    transition: background var(--sn-transition-fast) var(--sn-transition-easing);
 
     &:hover,
     &.dragging {
@@ -129,7 +129,7 @@ export let sidebarStyles = css`
 
   /* Collapse icon rotation */
   layout-sidebar .sb-collapse-icon {
-    transition: transform 0.2s ease;
+    transition: transform var(--sn-transition-normal) var(--sn-transition-easing);
   }
 
   layout-sidebar[collapsed] .sb-collapse-icon {
@@ -329,7 +329,7 @@ export let sidebarStyles = css`
     width: 100%;
     overflow: hidden;
     max-height: 0;
-    transition: max-height 0.2s ease;
+    transition: max-height var(--sn-transition-normal) var(--sn-transition-easing);
 
     layout-sidebar[collapsed] & {
       display: none;

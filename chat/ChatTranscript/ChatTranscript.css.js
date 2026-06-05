@@ -65,7 +65,7 @@ chat-message-item {
   pointer-events: none;
   transform: translateX(-50%) translateY(4px);
   box-shadow: var(--sn-shadow-lg);
-  transition: opacity 0.15s ease, transform 0.15s ease, background 0.12s ease, color 0.12s ease;
+  transition: opacity var(--sn-transition-fast) var(--sn-transition-easing), transform var(--sn-transition-fast) var(--sn-transition-easing), background var(--sn-transition-fast) var(--sn-transition-easing), color var(--sn-transition-fast) var(--sn-transition-easing);
 }
 
 .scroll-bottom-btn.visible {
@@ -90,7 +90,8 @@ chat-message-item {
   padding: var(--sn-chat-tool-padding, 8px 16px);
   font-size: var(--sn-chat-tool-font-size, 12px);
   color: var(--sn-text-dim);
-  animation: status-fade-in 0.2s ease;
+  animation: status-fade-in var(--sn-transition-normal) var(--sn-transition-easing);
+  animation-play-state: var(--sn-animation-play-state);
 }
 
 .live-status-indicator .material-symbols-outlined {

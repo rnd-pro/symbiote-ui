@@ -64,7 +64,7 @@ export let styles = css`
     & .tab-close {
       font-size: 14px;
       opacity: 0;
-      transition: opacity 0.15s;
+      transition: opacity var(--sn-transition-fast) var(--sn-transition-easing);
       padding: 2px;
       border-radius: 3px;
 
