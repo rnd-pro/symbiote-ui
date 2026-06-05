@@ -8,6 +8,7 @@ test('root and metadata entrypoints import in Node', async () => {
   let runtime = await import('../runtime/index.js');
   let manifest = await import('../manifest/index.js');
   let webmcp = await import('../webmcp.js');
+  let xr = await import('../xr/index.js');
 
   assert.equal(typeof root.NodeEditor, 'function');
   assert.equal(typeof root.createCascadeTheme, 'function');
@@ -22,6 +23,14 @@ test('root and metadata entrypoints import in Node', async () => {
   assert.equal(typeof webmcp.createComponentToolDescriptor, 'function');
   assert.equal(typeof layout.resolveLayoutMinSize, 'function');
   assert.equal(typeof layout.resolveResponsiveLayoutState, 'function');
+
+  assert.equal(typeof xr.createOctree, 'function');
+  assert.equal(typeof xr.createSpatialGraphModel, 'function');
+  assert.equal(typeof xr.createSphericalGraphLayout, 'function');
+  assert.equal(typeof xr.createSpatialDragController, 'function');
+  assert.equal(typeof xr.createSimulation, 'function');
+  assert.equal(typeof xr.createForceLayoutAdapter, 'function');
+  assert.equal(typeof xr.createDualViewController, 'function');
 });
 
 test('discover exposes the standalone package contract', async () => {

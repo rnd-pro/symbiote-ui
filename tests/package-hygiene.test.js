@@ -43,6 +43,21 @@ function assertNoPrivatePackFiles(files) {
   }
 }
 
+function listTrackedFiles() {
+  let result = run('git', ['ls-files']);
+  return result.stdout
+    .split(/\r?\n/)
+    .map((file) => file.trim())
+    .filter(Boolean);
+}
+
+function isTextScanCandidate(file) {
+  if (file === '.agent-portal') return false;
+  if (file === '.gitmodules') return false;
+  if (file === 'tests/package-hygiene.test.js') return false;
+  return !/\.(?:avif|gif|jpe?g|png|svgz|tgz|ttf|woff2?|zip)$/i.test(file);
+}
+
 async function listTextFiles(root, dir = root) {
   let entries = await readdir(dir, { withFileTypes: true });
   let files = [];
@@ -78,6 +93,30 @@ async function assertNoPrivatePackContent(packageDir) {
     }
   }
 }
+
+test('tracked public repository files pass private hygiene scan', async () => {
+  let gitmodules = await readFile(join(repoRoot, '.gitmodules'), 'utf8');
+  assert.match(gitmodules, /url = \.\.\/team-memory\.git/);
+  assert.doesNotMatch(gitmodules, /https?:\/\/|git@/);
+
+  let blockedPatterns = [
+    { pattern: /\/Users\//, label: 'absolute local path' },
+    { pattern: /\.agent-portal\//, label: 'private memory path' },
+    { pattern: /team-memory/i, label: 'private memory repository name' },
+    { pattern: /Bearer\s+[A-Za-z0-9._-]+/, label: 'bearer token' },
+    { pattern: /(?:api[_-]?key|secret|token)\s*[:=]\s*['"][A-Za-z0-9._-]{12,}/i, label: 'secret-looking assignment' },
+    { pattern: /-----BEGIN (?:RSA |OPENSSH |EC |DSA )?PRIVATE KEY-----/, label: 'private key' },
+    { pattern: /\bgh[pousr]_[A-Za-z0-9_]{20,}\b/, label: 'GitHub token' },
+    { pattern: /\bnpm_[A-Za-z0-9]{20,}\b/, label: 'npm token' },
+  ];
+
+  for (let file of listTrackedFiles().filter(isTextScanCandidate)) {
+    let text = await readFile(join(repoRoot, file), 'utf8');
+    for (let { pattern, label } of blockedPatterns) {
+      assert.equal(pattern.test(text), false, `${file} contains ${label}`);
+    }
+  }
+});
 
 test('npm pack output excludes private memory and scratch artifacts', async () => {
   let result = run('npm', ['pack', '--dry-run', '--json', '--ignore-scripts']);
@@ -125,12 +164,31 @@ test('packed package imports from a consumer project with SSR-safe entrypoints',
       const runtime = await import('symbiote-ui/runtime');
       const manifest = await import('symbiote-ui/manifest');
       const webmcp = await import('symbiote-ui/webmcp');
+
+      const xr = await import('symbiote-ui/xr');
+      const spatialIndex = await import('symbiote-ui/xr/spatial-index');
+      const spatialGraph = await import('symbiote-ui/xr/spatial-graph');
+      const sphericalLayout = await import('symbiote-ui/xr/spherical-layout');
+      const spatialDrag = await import('symbiote-ui/xr/spatial-drag-controller');
+      const forceLayout = await import('symbiote-ui/xr/force-layout');
+      const forceLayoutAdapter = await import('symbiote-ui/xr/force-layout-adapter');
+      const dualView = await import('symbiote-ui/xr/dual-view-controller');
+
       if (typeof root.NodeEditor !== 'function') throw new Error('missing root NodeEditor');
       if (typeof core.NodeEditor !== 'function') throw new Error('missing core NodeEditor');
       if (typeof basePath.withAppBasePath !== 'function') throw new Error('missing core base-path helper');
       if (runtime.RUNTIME_UI_CONTRACT.version !== 'runtime-ui-v1') throw new Error('bad runtime contract');
       if (typeof manifest.listComponents !== 'function') throw new Error('missing manifest listComponents');
       if (typeof webmcp.createToolDescriptor !== 'function') throw new Error('missing webmcp helper');
+
+      if (typeof xr.createOctree !== 'function') throw new Error('missing xr.createOctree');
+      if (typeof spatialIndex.createOctree !== 'function') throw new Error('missing spatialIndex.createOctree');
+      if (typeof spatialGraph.createSpatialGraphModel !== 'function') throw new Error('missing spatialGraph.createSpatialGraphModel');
+      if (typeof sphericalLayout.createSphericalGraphLayout !== 'function') throw new Error('missing sphericalLayout.createSphericalGraphLayout');
+      if (typeof spatialDrag.createSpatialDragController !== 'function') throw new Error('missing spatialDrag.createSpatialDragController');
+      if (typeof forceLayout.createSimulation !== 'function') throw new Error('missing forceLayout.createSimulation');
+      if (typeof forceLayoutAdapter.createForceLayoutAdapter !== 'function') throw new Error('missing forceLayoutAdapter.createForceLayoutAdapter');
+      if (typeof dualView.createDualViewController !== 'function') throw new Error('missing dualView.createDualViewController');
     `;
     run(process.execPath, ['--input-type=module', '-e', smoke], { cwd: consumerDir });
   } finally {

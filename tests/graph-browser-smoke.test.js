@@ -106,32 +106,140 @@ async function createStaticServer() {
   };
 }
 
-function waitForChromeEndpoint(chrome, timeoutMs = 10000) {
+async function reservePort() {
+  const server = createServer();
+  await new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', resolve);
+  });
+  const port = server.address().port;
+  await new Promise((resolve) => server.close(resolve));
+  return port;
+}
+
+function waitForChromeEndpoint(chrome, timeoutMs = 10000, remoteDebuggingPort = 0) {
   return new Promise((resolve, reject) => {
-    let stderr = '';
+    let output = '';
+    let done = false;
+    const finish = (callback, value) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      callback(value);
+    };
     const timer = setTimeout(() => {
-      reject(new Error(`Chrome DevTools endpoint was not reported. stderr:\n${stderr}`));
+      finish(reject, new Error(`Chrome DevTools endpoint was not reported. output:\n${output}`));
     }, timeoutMs);
 
-    chrome.stderr.on('data', (chunk) => {
-      stderr += chunk.toString();
-      const match = stderr.match(/DevTools listening on (ws:\/\/[^\s]+)/);
+    const onData = (chunk) => {
+      output += chunk.toString();
+      const match = output.match(/DevTools listening on (ws:\/\/[^\s]+)/);
       if (!match) return;
-      clearTimeout(timer);
-      resolve(match[1]);
-    });
+      finish(resolve, match[1]);
+    };
+
+    chrome.stdout?.on('data', onData);
+    chrome.stderr?.on('data', onData);
+
+    const pollEndpoint = async () => {
+      if (!remoteDebuggingPort || done) return;
+      try {
+        const response = await fetch(`http://127.0.0.1:${remoteDebuggingPort}/json/version`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.webSocketDebuggerUrl) {
+            finish(resolve, data.webSocketDebuggerUrl);
+            return;
+          }
+        }
+      } catch {
+        // Chrome is still starting.
+      }
+      if (!done) setTimeout(pollEndpoint, 80);
+    };
+    pollEndpoint();
 
     chrome.once('error', (error) => {
-      clearTimeout(timer);
-      reject(error);
+      finish(reject, error);
     });
 
-    chrome.once('exit', (code) => {
-      if (code === 0) return;
-      clearTimeout(timer);
-      reject(new Error(`Chrome exited before DevTools endpoint was ready: ${code}\n${stderr}`));
+    chrome.once('exit', (code, signal) => {
+      finish(
+        reject,
+        new Error(`Chrome exited before DevTools endpoint was ready: code=${code ?? 'null'} signal=${signal ?? 'none'}\n${output}`)
+      );
     });
   });
+}
+
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function waitForChromeExit(chrome, timeoutMs = 2500) {
+  if (!chrome || chrome.exitCode !== null || chrome.signalCode) {
+    return Promise.resolve();
+  }
+  return new Promise((resolve) => {
+    const timer = setTimeout(resolve, timeoutMs);
+    chrome.once('exit', () => {
+      clearTimeout(timer);
+      resolve();
+    });
+  });
+}
+
+async function stopChrome(chrome) {
+  if (!chrome) return;
+  if (chrome.exitCode === null && !chrome.signalCode) {
+    chrome.kill('SIGTERM');
+    await waitForChromeExit(chrome, 2500);
+  }
+  if (chrome.exitCode === null && !chrome.signalCode) {
+    chrome.kill('SIGKILL');
+    await waitForChromeExit(chrome, 1000);
+  }
+}
+
+async function launchChromeSession(chromePath, label, attempts = 2) {
+  let lastError;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    const userDataDir = await mkdtemp(path.join(tmpdir(), 'symbiote-ui-chrome-'));
+    const remoteDebuggingPort = await reservePort();
+    const chrome = spawn(chromePath, [
+      '--headless=new',
+      '--disable-background-networking',
+      '--disable-gpu',
+      '--disable-sync',
+      '--hide-scrollbars',
+      '--no-default-browser-check',
+      '--no-first-run',
+      `--remote-debugging-port=${remoteDebuggingPort}`,
+      `--user-data-dir=${userDataDir}`,
+      'about:blank',
+    ], { stdio: ['ignore', 'pipe', 'pipe'] });
+
+    try {
+      const endpoint = await withTimeout(
+        waitForChromeEndpoint(chrome, 20000, remoteDebuggingPort),
+        20000,
+        `${label} Chrome DevTools endpoint`
+      );
+      return { chrome, userDataDir, endpoint };
+    } catch (error) {
+      lastError = error;
+      await stopChrome(chrome);
+      await rm(userDataDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
+      if (attempt < attempts) await delay(250 * attempt);
+    }
+  }
+  throw lastError;
+}
+
+async function closeChromeSession(session) {
+  if (!session) return;
+  await stopChrome(session.chrome);
+  await rm(session.userDataDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
 }
 
 function createCdpClient(wsUrl) {
@@ -209,6 +317,23 @@ async function openPage(chromeEndpoint, url) {
   await withTimeout(client.send('Page.navigate', { url }), 5000, 'Page.navigate');
   await withTimeout(load, 15000, 'Page.loadEventFired');
   return client;
+}
+
+async function navigatePage(page, url) {
+  const load = page.waitFor('Page.loadEventFired');
+  await withTimeout(page.send('Page.navigate', { url }), 5000, 'Page.navigate');
+  await withTimeout(load, 15000, 'Page.loadEventFired');
+}
+
+async function setPageViewport(page, { width, height, mobile = false }) {
+  await withTimeout(page.send('Emulation.setDeviceMetricsOverride', {
+    width,
+    height,
+    mobile,
+    deviceScaleFactor: 1,
+    screenWidth: width,
+    screenHeight: height,
+  }), 5000, 'Emulation.setDeviceMetricsOverride');
 }
 
 async function evaluateGraphSmoke(page) {
@@ -633,6 +758,14 @@ async function evaluateComposerSmoke(page, width = 0) {
       if (!customElements.get('chat-composer')) return { error: 'chat-composer not defined' };
       await settle();
 
+      const chatLayoutNode = [...document.querySelectorAll('layout-node')]
+        .find((node) => node.getAttribute('node-type') === 'panel' && node.textContent.includes('Agent Chat'));
+      if (chatLayoutNode?.hasAttribute('collapsed')) {
+        chatLayoutNode.querySelector('.collapse-btn')?.click();
+        await settle();
+        await settle();
+      }
+
       const composer = document.querySelector('chat-composer');
       if (!composer) return { error: 'missing chat-composer' };
       const forcedWidth = ${forcedWidth};
@@ -719,6 +852,12 @@ async function evaluateComposerSmoke(page, width = 0) {
         }));
 
       return {
+        viewport: {
+          width: window.innerWidth,
+          height: window.innerHeight,
+          documentClientWidth: document.documentElement.clientWidth,
+          documentScrollWidth: document.documentElement.scrollWidth,
+        },
         visibleBodyCount: bodies.filter((el) => !el.hidden && getComputedStyle(el).display !== 'none').length,
         composer: readBox(composer),
         body: bodyBox,
@@ -754,6 +893,175 @@ async function evaluateComposerSmoke(page, width = 0) {
   return result.result.value;
 }
 
+async function evaluateShowcaseSmoke(page) {
+  const expression = String.raw`
+    (async () => {
+      const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+      const settle = async () => {
+        for (let index = 0; index < 8; index += 1) await frame();
+      };
+      await Promise.all([
+        customElements.whenDefined('layout-shell-menu'),
+        customElements.whenDefined('layout-node'),
+        customElements.whenDefined('cascade-project-panel'),
+        customElements.whenDefined('cascade-source-panel'),
+        customElements.whenDefined('cascade-docs-panel'),
+        customElements.whenDefined('cascade-project-map-panel'),
+        customElements.whenDefined('cascade-overview-panel'),
+        customElements.whenDefined('cascade-graph-panel'),
+        customElements.whenDefined('cascade-ui-panel'),
+        customElements.whenDefined('cascade-chat-panel'),
+        customElements.whenDefined('cascade-runtime-panel'),
+        customElements.whenDefined('cascade-spatial-panel'),
+        customElements.whenDefined('cascade-theme-editor'),
+        customElements.whenDefined('source-editor'),
+        customElements.whenDefined('source-viewer'),
+        customElements.whenDefined('sn-tree-panel'),
+        customElements.whenDefined('canvas-graph'),
+      ]);
+      await settle();
+
+      const elementBox = (el, selector = el?.tagName?.toLowerCase?.() || '') => {
+        if (!el) return null;
+        const rect = el.getBoundingClientRect();
+        const style = getComputedStyle(el);
+        return {
+          selector,
+          width: rect.width,
+          height: rect.height,
+          display: style.display,
+          visibility: style.visibility,
+          text: el.textContent.trim().replace(/\s+/g, ' ').slice(0, 180),
+        };
+      };
+      const readBox = (selector) => {
+        const boxes = [...document.querySelectorAll(selector)].map((el) => elementBox(el, selector));
+        return boxes.find(visible) || boxes[0] || null;
+      };
+      const readAgentChatNode = () => {
+        let nodes = [...document.querySelectorAll('panel-layout.lab-layout layout-node')];
+        let node = nodes.find((item) => item.getAttribute('node-type') === 'panel' && item.textContent.includes('Agent Chat'));
+        if (!node) return null;
+        return {
+          ...elementBox(node, 'layout-node[panelType=chat]'),
+          collapsed: node.hasAttribute('collapsed'),
+          collapseDir: node.getAttribute('collapse-dir') || '',
+          nodeType: node.getAttribute('node-type') || '',
+        };
+      };
+      const visible = (box) => Boolean(
+        box &&
+        box.display !== 'none' &&
+        box.visibility !== 'hidden' &&
+        box.width > 4 &&
+        box.height > 4
+      );
+      const activate = async (projectId, viewId) => {
+        location.hash = projectId + '/' + viewId;
+        window.dispatchEvent(new HashChangeEvent('hashchange'));
+        document.querySelector('layout-shell-menu')?.selectGroup?.(projectId, 'showcase-smoke');
+        location.hash = projectId + '/' + viewId;
+        window.dispatchEvent(new HashChangeEvent('hashchange'));
+        await settle();
+        await settle();
+        return {
+          projectId,
+          viewId,
+          hash: location.hash,
+          activeProject: document.documentElement.dataset.showcaseProject || '',
+          activeView: document.documentElement.dataset.showcaseView || '',
+          customRailCount: document.querySelectorAll('.agent-chat-rail').length,
+          chatPanelCount: document.querySelectorAll('cascade-chat-panel').length,
+          composerCount: document.querySelectorAll('chat-composer').length,
+          agentChatNode: readAgentChatNode(),
+          sidebarLabels: [...document.querySelectorAll('layout-sidebar sidebar-section')]
+            .map((row) => row.textContent.trim().replace(/\s+/g, ' ')),
+          panels: [...document.querySelectorAll('layout-node')]
+            .map((node) => {
+              const rect = node.getBoundingClientRect();
+              const style = getComputedStyle(node);
+              return {
+                id: node.getAttribute('data-panel-id') || '',
+                width: rect.width,
+                height: rect.height,
+                display: style.display,
+                visibility: style.visibility,
+              };
+          }),
+          overview: readBox('cascade-overview-panel'),
+          project: readBox('cascade-project-panel'),
+          source: readBox('cascade-source-panel'),
+          docs: readBox('cascade-docs-panel'),
+          projectMap: readBox('cascade-project-map-panel'),
+          graph: readBox('cascade-graph-panel'),
+          ui: readBox('cascade-ui-panel'),
+          chat: readBox('cascade-chat-panel'),
+          theme: readBox('cascade-theme-editor'),
+          runtime: readBox('cascade-runtime-panel'),
+          spatial: readBox('cascade-spatial-panel'),
+          tree: readBox('cascade-project-panel sn-tree-panel'),
+          sourceEditor: readBox('cascade-source-panel source-editor'),
+          sourceEditorValue: document.querySelector('cascade-source-panel source-editor')?.getContent?.() || '',
+          sourceViewer: readBox('cascade-docs-panel source-viewer'),
+          canvasGraph: readBox('cascade-project-map-panel canvas-graph'),
+          projectFiles: [...document.querySelectorAll('cascade-project-panel .sn-tree-row')]
+            .map((row) => row.textContent.trim().replace(/\s+/g, ' ')),
+          runtimeFeatures: [...document.querySelectorAll('cascade-runtime-panel')]
+            .filter((panel) => panel.getBoundingClientRect().width > 4 && panel.getBoundingClientRect().height > 4)
+            .flatMap((panel) => [...panel.querySelectorAll('.workspace-feature-card strong')]
+              .map((el) => el.textContent.trim())),
+          spatialNodes: [...document.querySelectorAll('cascade-spatial-panel')]
+            .filter((panel) => panel.getBoundingClientRect().width > 4 && panel.getBoundingClientRect().height > 4)
+            .flatMap((panel) => [...panel.querySelectorAll('.spatial-node')]
+              .map((el) => ({
+                id: el.dataset.node,
+                width: el.getBoundingClientRect().width,
+                height: el.getBoundingClientRect().height,
+                x: getComputedStyle(el).getPropertyValue('--x').trim(),
+                y: getComputedStyle(el).getPropertyValue('--y').trim(),
+                scale: getComputedStyle(el).getPropertyValue('--scale').trim(),
+              }))),
+        };
+      };
+
+      return {
+        title: document.title,
+        shellTitle: document.querySelector('layout-shell-menu')?.getAttribute('title') || '',
+        projectPath: document.querySelector('layout-shell-menu')?.getAttribute('project-path') || '',
+        customRailCount: document.querySelectorAll('.agent-chat-rail').length,
+        chatPanelCount: document.querySelectorAll('cascade-chat-panel').length,
+        composerCount: document.querySelectorAll('chat-composer').length,
+        agentChatNode: readAgentChatNode(),
+        tabs: [...document.querySelectorAll('project-tabs .tab, project-tab-item')]
+          .map((tab) => tab.textContent.trim().replace(/\s+/g, ' ')),
+        groups: {
+          symbiote: await activate('symbiote-ui', 'overview'),
+          chat: await activate('chat', 'conversation'),
+          dev: await activate('multi-agent-dev', 'source-editor'),
+          devDocs: await activate('multi-agent-dev', 'markdown-docs'),
+          devGraph: await activate('multi-agent-dev', 'dependency-graph'),
+          automation: await activate('automation', 'engine-state'),
+          media: await activate('media-generation', 'variants'),
+          video: await activate('video-editor', 'timeline'),
+          data: await activate('data-research', 'report'),
+          node: await activate('node-studio', 'pcb-routing'),
+          spatial: await activate('spatial-xr', '3d-graph'),
+        },
+      };
+    })()
+  `;
+
+  const result = await withTimeout(page.send('Runtime.evaluate', {
+    expression,
+    awaitPromise: true,
+    returnByValue: true,
+  }), 15000, 'showcase smoke Runtime.evaluate');
+  if (result.exceptionDetails) {
+    throw new Error(result.exceptionDetails.text || 'Showcase smoke evaluation failed');
+  }
+  return result.result.value;
+}
+
 // Browser smoke is justified here: zero-height graph nodes, SVG trace geometry,
 // and compact-mode body visibility are CSS/layout regressions that linkedom cannot prove.
 test('cascade lab graph nodes render non-empty with route styles and compact mode in a real browser', { timeout: 45000 }, async (t) => {
@@ -764,25 +1072,12 @@ test('cascade lab graph nodes render non-empty with route styles and compact mod
   }
 
   const server = await createStaticServer();
-  const userDataDir = await mkdtemp(path.join(tmpdir(), 'symbiote-ui-chrome-'));
-  const chrome = spawn(chromePath, [
-    '--headless=new',
-    '--disable-background-networking',
-    '--disable-gpu',
-    '--disable-sync',
-    '--hide-scrollbars',
-    '--no-default-browser-check',
-    '--no-first-run',
-    '--remote-debugging-port=0',
-    `--user-data-dir=${userDataDir}`,
-    'about:blank',
-  ], { stdio: ['ignore', 'ignore', 'pipe'] });
-
+  let chromeSession;
   let page;
   try {
-    const endpoint = await withTimeout(waitForChromeEndpoint(chrome), 12000, 'Chrome DevTools endpoint');
+    chromeSession = await launchChromeSession(chromePath, 'graph smoke');
     page = await withTimeout(
-      openPage(endpoint, `${server.url}/demo/cascade-theme-lab.html?v=graph-browser-smoke#graph`),
+      openPage(chromeSession.endpoint, `${server.url}/demo/cascade-theme-lab.html?v=graph-browser-smoke#node-studio/editable-canvas`),
       22000,
       'graph smoke page open'
     );
@@ -885,9 +1180,303 @@ test('cascade lab graph nodes render non-empty with route styles and compact mod
     assert.ok(tabIconColors.size >= 3, `expected rotated tab accent colors, got ${[...tabIconColors].join(', ')}`);
   } finally {
     page?.close();
-    if (!chrome.killed) chrome.kill('SIGTERM');
+    await closeChromeSession(chromeSession);
     await server.close();
-    await rm(userDataDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
+  }
+});
+
+test('agent workspace demo exposes the public feature showcase groups', { timeout: 45000 }, async (t) => {
+  const chromePath = findChrome();
+  if (!chromePath || typeof WebSocket !== 'function') {
+    t.skip('Chrome or WebSocket is not available for browser layout smoke');
+    return;
+  }
+
+  const server = await createStaticServer();
+  let chromeSession;
+  let page;
+  try {
+    chromeSession = await launchChromeSession(chromePath, 'showcase smoke');
+    page = await withTimeout(
+      openPage(chromeSession.endpoint, `${server.url}/demo/cascade-theme-lab.html?v=agent-workspace-showcase-smoke`),
+      22000,
+      'showcase smoke page open'
+    );
+    await setPageViewport(page, { width: 1024, height: 768 });
+    const smoke = await evaluateShowcaseSmoke(page);
+    const isVisible = (box) => Boolean(
+      box &&
+      box.display !== 'none' &&
+      box.visibility !== 'hidden' &&
+      box.width > 4 &&
+      box.height > 4
+    );
+
+    assert.match(smoke.title, /Showcase Demo/);
+    assert.equal(smoke.shellTitle, 'symbiote-ui Showcase');
+    assert.equal(smoke.projectPath, 'project-type workspaces / agent constructor');
+    assert.equal(smoke.customRailCount, 0);
+    assert.equal(smoke.chatPanelCount, 1);
+    assert.equal(smoke.composerCount, 1);
+    assert.equal(smoke.agentChatNode?.collapsed, true);
+    assert.equal(smoke.agentChatNode?.collapseDir, 'horizontal');
+    for (const label of [
+      'Symbiote UI',
+      'Chat',
+      'Multi-Agent Dev',
+      'Automation',
+      'Media Generation',
+      'Video Editor',
+      'Data / Research',
+      'Node Studio',
+      'Spatial / XR',
+    ]) {
+      assert.ok(
+        smoke.tabs.some((tab) => tab.includes(label)),
+        `expected demo tab ${label}`
+      );
+    }
+
+    assert.equal(smoke.groups.symbiote.hash, '#symbiote-ui/overview');
+    assert.equal(smoke.groups.symbiote.activeProject, 'symbiote-ui');
+    assert.equal(smoke.groups.symbiote.activeView, 'overview');
+    assert.ok(isVisible(smoke.groups.symbiote.overview), JSON.stringify(smoke.groups.symbiote, null, 2));
+    assert.equal(isVisible(smoke.groups.symbiote.project), false);
+    assert.equal(isVisible(smoke.groups.symbiote.graph), false);
+    assert.equal(smoke.groups.symbiote.customRailCount, 0);
+    assert.equal(smoke.groups.symbiote.chatPanelCount, 1);
+    assert.equal(smoke.groups.symbiote.composerCount, 1);
+    assert.equal(smoke.groups.symbiote.agentChatNode?.collapsed, true);
+    assert.ok(smoke.groups.symbiote.sidebarLabels.some((label) => label.includes('Overview')));
+    assert.ok(smoke.groups.symbiote.sidebarLabels.some((label) => label.includes('Component roles')));
+    assert.ok(smoke.groups.symbiote.sidebarLabels.some((label) => label.includes('Engine link')));
+
+    assert.equal(smoke.groups.chat.hash, '#chat/conversation');
+    assert.equal(smoke.groups.chat.activeProject, 'chat');
+    assert.equal(isVisible(smoke.groups.chat.chat), false);
+    assert.equal(smoke.groups.chat.chatPanelCount, 1);
+    assert.equal(smoke.groups.chat.composerCount, 1);
+    assert.equal(smoke.groups.chat.agentChatNode?.collapsed, true);
+    assert.ok(isVisible(smoke.groups.chat.runtime), JSON.stringify(smoke.groups.chat, null, 2));
+    assert.ok(isVisible(smoke.groups.chat.theme));
+    assert.ok(smoke.groups.chat.sidebarLabels.some((label) => label.includes('Voice controls')));
+
+    assert.equal(smoke.groups.dev.hash, '#multi-agent-dev/source-editor');
+    assert.equal(smoke.groups.dev.activeProject, 'multi-agent-dev');
+    assert.equal(smoke.groups.dev.activeView, 'source-editor');
+    assert.ok(isVisible(smoke.groups.dev.project), JSON.stringify(smoke.groups.dev, null, 2));
+    assert.ok(isVisible(smoke.groups.dev.source), JSON.stringify(smoke.groups.dev, null, 2));
+    assert.ok(isVisible(smoke.groups.dev.sourceEditor));
+    assert.match(smoke.groups.dev.sourceEditorValue, /createRuntimeUiController/);
+    assert.equal(isVisible(smoke.groups.dev.sourceViewer), false);
+    assert.equal(isVisible(smoke.groups.dev.canvasGraph), false);
+    assert.ok(smoke.groups.dev.projectFiles.some((item) => item.includes('agent-workspace.md')));
+
+    assert.equal(smoke.groups.devDocs.hash, '#multi-agent-dev/markdown-docs');
+    assert.ok(isVisible(smoke.groups.devDocs.project), JSON.stringify(smoke.groups.devDocs, null, 2));
+    assert.ok(isVisible(smoke.groups.devDocs.docs), JSON.stringify(smoke.groups.devDocs, null, 2));
+    assert.ok(isVisible(smoke.groups.devDocs.sourceViewer));
+    assert.equal(isVisible(smoke.groups.devDocs.sourceEditor), false);
+    assert.ok(smoke.groups.devDocs.sourceViewer.text.includes('Agent workspace'));
+
+    assert.equal(smoke.groups.devGraph.hash, '#multi-agent-dev/dependency-graph');
+    assert.ok(isVisible(smoke.groups.devGraph.projectMap), JSON.stringify(smoke.groups.devGraph, null, 2));
+    assert.ok(isVisible(smoke.groups.devGraph.canvasGraph));
+    assert.equal(isVisible(smoke.groups.devGraph.sourceEditor), false);
+
+    assert.equal(smoke.groups.automation.hash, '#automation/engine-state');
+    assert.ok(isVisible(smoke.groups.automation.runtime), JSON.stringify(smoke.groups.automation, null, 2));
+    assert.ok(smoke.groups.automation.sidebarLabels.some((label) => label.includes('Execution logs')));
+
+    assert.equal(smoke.groups.media.hash, '#media-generation/variants');
+    assert.ok(isVisible(smoke.groups.media.ui), JSON.stringify(smoke.groups.media, null, 2));
+    assert.ok(smoke.groups.media.sidebarLabels.some((label) => label.includes('Variants')));
+
+    assert.equal(smoke.groups.video.hash, '#video-editor/timeline');
+    assert.ok(isVisible(smoke.groups.video.graph), JSON.stringify(smoke.groups.video, null, 2));
+    assert.ok(smoke.groups.video.sidebarLabels.some((label) => label.includes('Timeline')));
+    assert.ok(smoke.groups.video.sidebarLabels.some((label) => label.includes('Render queue')));
+
+    assert.equal(smoke.groups.data.hash, '#data-research/report');
+    assert.ok(isVisible(smoke.groups.data.project), JSON.stringify(smoke.groups.data, null, 2));
+    assert.ok(smoke.groups.data.sidebarLabels.some((label) => label.includes('Report')));
+
+    assert.equal(smoke.groups.node.hash, '#node-studio/pcb-routing');
+    assert.ok(isVisible(smoke.groups.node.graph), JSON.stringify(smoke.groups.node, null, 2));
+    assert.ok(smoke.groups.node.sidebarLabels.some((label) => label.includes('PCB routing')));
+
+    assert.equal(smoke.groups.spatial.hash, '#spatial-xr/3d-graph');
+    assert.ok(isVisible(smoke.groups.spatial.spatial), JSON.stringify(smoke.groups.spatial, null, 2));
+    assert.ok(isVisible(smoke.groups.spatial.graph));
+    assert.equal(smoke.groups.spatial.customRailCount, 0);
+    assert.equal(smoke.groups.spatial.chatPanelCount, 1);
+    assert.equal(smoke.groups.spatial.agentChatNode?.collapsed, true);
+
+    assert.deepEqual(smoke.groups.automation.runtimeFeatures, [
+      'runtime-ui-v1',
+      'WebMCP descriptors',
+      'layout actions',
+      'SSR-safe core',
+    ]);
+    assert.deepEqual(
+      smoke.groups.spatial.spatialNodes.map((node) => node.id),
+      ['project', 'runtime', 'ui', 'voice', 'xr']
+    );
+    assert.ok(smoke.groups.spatial.spatialNodes.every((node) => node.width > 20 && node.height > 20));
+    assert.ok(smoke.groups.spatial.spatialNodes.every((node) => node.scale));
+  } finally {
+    page?.close();
+    await closeChromeSession(chromeSession);
+    await server.close();
+  }
+});
+
+// Browser smoke is justified here: this verifies the browser import path and
+// adapter interaction surface for the optional Three renderer without making
+// Three.js a package dependency.
+test('three spatial graph adapter renders and drags through the browser module path', { timeout: 45000 }, async (t) => {
+  const chromePath = findChrome();
+  if (!chromePath || typeof WebSocket !== 'function') {
+    t.skip('Chrome or WebSocket is not available for spatial graph adapter smoke');
+    return;
+  }
+
+  const server = await createStaticServer();
+  let chromeSession;
+  let page;
+  try {
+    chromeSession = await launchChromeSession(chromePath, 'three spatial adapter smoke');
+    page = await withTimeout(
+      openPage(chromeSession.endpoint, `${server.url}/demo/cascade-theme-lab.html?v=three-spatial-adapter-smoke#spatial-xr/3d-graph`),
+      22000,
+      'three spatial adapter smoke page open'
+    );
+    const expression = String.raw`
+    (async () => {
+      const [{ createSpatialGraphModel }, { createThreeSpatialGraph }] = await Promise.all([
+        import('/xr/spatial-graph.js'),
+        import('/xr/three-spatial-graph.js')
+      ]);
+      const mockTHREE = {
+        Group: class {
+          constructor() {
+            this.children = [];
+            this.userData = {};
+            this.position = { set: (x, y, z) => { this.x = x; this.y = y; this.z = z; } };
+            this.scale = { set: (x, y, z) => { this.sx = x; this.sy = y; this.sz = z; } };
+          }
+          add(child) { this.children.push(child); }
+          remove(child) {
+            const index = this.children.indexOf(child);
+            if (index >= 0) this.children.splice(index, 1);
+          }
+        },
+        SphereGeometry: class { dispose() {} },
+        RingGeometry: class { dispose() {} },
+        MeshBasicMaterial: class {
+          constructor(options) {
+            this.hex = 0;
+            this.opacity = options.opacity ?? 1;
+            this.color = { setHex: (hex) => { this.hex = hex; } };
+            this.color.setHex(options.color);
+          }
+          dispose() {}
+        },
+        Mesh: class {
+          constructor(geometry, material) {
+            this.geometry = geometry;
+            this.material = material;
+            this.userData = {};
+            this.visible = true;
+            this.position = { set: (x, y, z) => { this.x = x; this.y = y; this.z = z; } };
+            this.scale = { set: (x, y, z) => { this.sx = x; this.sy = y; this.sz = z; } };
+          }
+        },
+        Vector3: class {
+          constructor(x, y, z) { this.x = x; this.y = y; this.z = z; }
+        },
+        BufferGeometry: class {
+          constructor() {
+            this.attributes = { position: {
+              setXYZ: (index, x, y, z) => {
+                this.points[index] = { x, y, z };
+              },
+              needsUpdate: false
+            } };
+            this.points = [];
+          }
+          setFromPoints(points) { this.points = points; return this; }
+          dispose() {}
+        },
+        LineBasicMaterial: class { dispose() {} },
+        Line: class {
+          constructor(geometry, material) {
+            this.geometry = geometry;
+            this.material = material;
+            this.userData = {};
+          }
+        }
+      };
+      const model = createSpatialGraphModel({
+        nodes: [
+          { id: 'source', label: 'Source', position: [0, 0, -5], radius: 1, draggable: true },
+          { id: 'target', label: 'Target', position: [2, 0, -5], radius: 1 }
+        ],
+        links: [{ id: 'edge', source: 'source', target: 'target' }]
+      });
+      const renderer = createThreeSpatialGraph(mockTHREE, model);
+      renderer.setModel({
+        ...model,
+        selection: { activeNodeId: 'source', focusedNodeId: 'target' }
+      });
+      const start = renderer.startNodeDrag({
+        kind: 'ray',
+        origin: [0, 0, 0],
+        direction: [0, 0, -1]
+      });
+      const move = renderer.moveNodeDrag({
+        kind: 'ray',
+        origin: [0, 0, 0],
+        direction: [0.2, 0, -1]
+      });
+      const end = renderer.endNodeDrag();
+      const updated = renderer.getModel().nodes.find((node) => node.id === 'source');
+      return {
+        childCount: renderer.group.children.length,
+        labelText: renderer.getLabelObject('source')?.userData?.text,
+        selectedHex: renderer.getNodeObject('source')?.material?.hex,
+        focusedAffordanceVisible: renderer.getDragAffordance('target')?.visible,
+        startPhase: start?.phase,
+        movePhase: move?.phase,
+        endPhase: end?.phase,
+        movedX: updated.position[0],
+        movedZ: updated.position[2]
+      };
+    })()
+    `;
+    const evaluation = await withTimeout(page.send('Runtime.evaluate', {
+      expression,
+      awaitPromise: true,
+      returnByValue: true,
+    }), 15000, 'three spatial adapter Runtime.evaluate');
+    if (evaluation.exceptionDetails) {
+      throw new Error(evaluation.exceptionDetails.text || 'Three spatial adapter evaluation failed');
+    }
+    const result = evaluation.result.value;
+
+    assert.ok(result.childCount >= 7);
+    assert.equal(result.labelText, 'Source');
+    assert.equal(result.selectedHex, 0xff0055);
+    assert.equal(result.focusedAffordanceVisible, true);
+    assert.equal(result.startPhase, 'start');
+    assert.equal(result.movePhase, 'move');
+    assert.equal(result.endPhase, 'end');
+    assert.ok(result.movedX > 0);
+    assert.ok(Number.isFinite(result.movedZ));
+  } finally {
+    page?.close();
+    await closeChromeSession(chromeSession);
+    await server.close();
   }
 });
 
@@ -899,29 +1488,20 @@ test('cascade lab chat composer keeps voice controls inside the input surface re
   }
 
   const server = await createStaticServer();
-  const userDataDir = await mkdtemp(path.join(tmpdir(), 'symbiote-ui-chrome-'));
-  const chrome = spawn(chromePath, [
-    '--headless=new',
-    '--disable-background-networking',
-    '--disable-gpu',
-    '--disable-sync',
-    '--hide-scrollbars',
-    '--no-default-browser-check',
-    '--no-first-run',
-    '--remote-debugging-port=0',
-    `--user-data-dir=${userDataDir}`,
-    'about:blank',
-  ], { stdio: ['ignore', 'ignore', 'pipe'] });
-
+  let chromeSession;
   let page;
   try {
-    const endpoint = await withTimeout(waitForChromeEndpoint(chrome), 12000, 'Chrome DevTools endpoint');
+    chromeSession = await launchChromeSession(chromePath, 'composer smoke');
     page = await withTimeout(
-      openPage(endpoint, `${server.url}/demo/cascade-theme-lab.html?v=composer-browser-smoke#chat`),
+      openPage(chromeSession.endpoint, `${server.url}/demo/cascade-theme-lab.html?v=composer-browser-smoke#chat/conversation`),
       22000,
       'composer smoke page open'
     );
     const smokeResults = [await evaluateComposerSmoke(page), await evaluateComposerSmoke(page, 320)];
+
+    await setPageViewport(page, { width: 390, height: 760, mobile: true });
+    await navigatePage(page, `${server.url}/demo/cascade-theme-lab.html?v=composer-browser-smoke-narrow#chat/conversation`);
+    smokeResults.push(await evaluateComposerSmoke(page));
 
     for (const smoke of smokeResults) {
       assert.equal(smoke.error, undefined);
@@ -949,6 +1529,14 @@ test('cascade lab chat composer keeps voice controls inside the input surface re
       assert.deepEqual(smoke.chat.chips.filter((chip) => chip.path.width > chip.box.width + 1), []);
       assert.deepEqual(smoke.chat.chips.filter((chip) => chip.path.overflow !== 'hidden'), []);
       assert.deepEqual(smoke.chat.chips.filter((chip) => chip.path.textOverflow !== 'ellipsis'), []);
+      if (smoke.viewport.width <= 420) {
+        assert.ok(smoke.chat.panel.width <= smoke.viewport.width + 1);
+        assert.ok(smoke.composer.right <= smoke.chat.panel.right + 1);
+        assert.ok(smoke.chat.sidebar.width <= smoke.chat.panel.width);
+        assert.ok(smoke.chat.transcript.width > 0);
+        assert.ok(smoke.chat.transcript.scrollWidth <= smoke.chat.transcript.clientWidth + 1);
+        assert.ok(smoke.chat.messages.scrollWidth <= smoke.chat.messages.clientWidth + 1);
+      }
       assert.ok(['1', '2'].includes(smoke.actions.gridRow));
       assert.equal(smoke.send.gridRow, '1');
       if (smoke.actions.gridRow === '2') {
@@ -957,9 +1545,8 @@ test('cascade lab chat composer keeps voice controls inside the input surface re
     }
   } finally {
     page?.close();
-    if (!chrome.killed) chrome.kill('SIGTERM');
+    await closeChromeSession(chromeSession);
     await server.close();
-    await rm(userDataDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
   }
 });
 
@@ -971,25 +1558,12 @@ test('node-canvas setEditorModel renders the advertised serializable WebMCP mode
   }
 
   const server = await createStaticServer();
-  const userDataDir = await mkdtemp(path.join(tmpdir(), 'symbiote-ui-chrome-'));
-  const chrome = spawn(chromePath, [
-    '--headless=new',
-    '--disable-background-networking',
-    '--disable-gpu',
-    '--disable-sync',
-    '--hide-scrollbars',
-    '--no-default-browser-check',
-    '--no-first-run',
-    '--remote-debugging-port=0',
-    `--user-data-dir=${userDataDir}`,
-    'about:blank',
-  ], { stdio: ['ignore', 'ignore', 'pipe'] });
-
+  let chromeSession;
   let page;
   try {
-    const endpoint = await withTimeout(waitForChromeEndpoint(chrome), 12000, 'Chrome DevTools endpoint');
+    chromeSession = await launchChromeSession(chromePath, 'node-canvas adapter smoke');
     page = await withTimeout(
-      openPage(endpoint, `${server.url}/demo/cascade-theme-lab.html?v=node-canvas-model-adapter#graph`),
+      openPage(chromeSession.endpoint, `${server.url}/demo/cascade-theme-lab.html?v=node-canvas-model-adapter#node-studio/editable-canvas`),
       22000,
       'node-canvas adapter page open'
     );
@@ -1064,8 +1638,7 @@ test('node-canvas setEditorModel renders the advertised serializable WebMCP mode
     assert.ok(result.boxes.some((box) => box.text.includes('Target')));
   } finally {
     page?.close();
-    if (!chrome.killed) chrome.kill('SIGTERM');
+    await closeChromeSession(chromeSession);
     await server.close();
-    await rm(userDataDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
   }
 });

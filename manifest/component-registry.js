@@ -3251,7 +3251,7 @@ export let COMPONENTS = [
       dataSchema: 'schemas/runtime-ui-v1.json',
       capabilities: ['control', 'button', 'slots', 'keyboard-activation', 'themeable'],
       attributes: [
-        { name: 'variant', type: 'string', description: 'Control variant: default, primary, danger, or icon.' },
+        { name: 'variant', type: 'string', description: 'Control variant: default, primary, success, danger, or icon.' },
         { name: 'disabled', type: 'boolean', description: 'Disables pointer and keyboard activation.' },
       ],
       slots: [
@@ -3278,6 +3278,12 @@ export let COMPONENTS = [
         '--sn-button-primary-border',
         '--sn-button-primary-color',
         '--sn-button-primary-hover-filter',
+        '--sn-button-success-bg',
+        '--sn-button-success-border',
+        '--sn-button-success-color',
+        '--sn-button-success-hover-bg',
+        '--sn-button-success-hover-border',
+        '--sn-button-success-hover-color',
         '--sn-button-danger-bg',
         '--sn-button-danger-border',
         '--sn-button-danger-color',

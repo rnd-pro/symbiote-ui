@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
+import { parseHTML } from 'linkedom';
 import { cmdDiscover, watchDiscover } from '../discover.js';
 import { createRuntimeUiController } from '../runtime/index.js';
 import { triggerWebMcpCommand } from '../webmcp.js';
@@ -295,6 +296,123 @@ test('createRuntimeUiController WebSocket integration handles inbound reload mes
   controller.disconnect();
 });
 
+test('createRuntimeUiController WebSocket create cleans CLS reservation on failure', async () => {
+  const { window } = parseHTML('<!doctype html><html><body><div id="app"></div></body></html>');
+  const { document } = window;
+  const originalWindow = globalThis.window;
+  const originalDocument = globalThis.document;
+  const originalCreateElement = document.createElement.bind(document);
+  const originalConsoleError = console.error;
+  let loggedError = null;
+
+  globalThis.window = window;
+  globalThis.document = document;
+  document.createElement = (tagName) => {
+    if (tagName === 'bad-widget') {
+      throw new Error('create failed');
+    }
+    return originalCreateElement(tagName);
+  };
+  console.error = (...args) => {
+    loggedError = args;
+  };
+
+  try {
+    let controller = createRuntimeUiController({ document });
+    controller.connect('ws://localhost:9999', {
+      WebSocket: MockWebSocket,
+      document,
+      reconnectMs: 0,
+    });
+
+    let socket = MockWebSocket.lastInstance;
+    assert.ok(socket);
+    socket.simulateMessage({
+      method: 'create',
+      params: {
+        targetSelector: '#app',
+        node: {
+          id: 'bad-widget',
+          component: 'bad-widget',
+          layout: { width: '120px', height: '80px' },
+        },
+        options: { cls: true },
+      },
+    });
+
+    assert.ok(loggedError);
+    assert.equal(document.querySelectorAll('.sym-layout-placeholder').length, 0);
+    assert.equal(controller.instances.has('bad-widget'), false);
+    controller.disconnect();
+  } finally {
+    console.error = originalConsoleError;
+    document.createElement = originalCreateElement;
+    globalThis.window = originalWindow;
+    globalThis.document = originalDocument;
+  }
+});
+
+test('createRuntimeUiController WebSocket create mounts CLS reservation on success', async () => {
+  const { window } = parseHTML('<!doctype html><html><body><div id="app"></div></body></html>');
+  const { document } = window;
+  const originalWindow = globalThis.window;
+  const originalDocument = globalThis.document;
+  const originalCreateElement = document.createElement.bind(document);
+
+  globalThis.window = window;
+  globalThis.document = document;
+  document.createElement = (tagName) => {
+    const el = originalCreateElement(tagName);
+    if (tagName === 'good-widget') {
+      el.getBoundingClientRect = () => ({ width: 220, height: 110 });
+    }
+    return el;
+  };
+
+  try {
+    let controller = createRuntimeUiController({ document });
+    controller.connect('ws://localhost:9999', {
+      WebSocket: MockWebSocket,
+      document,
+      reconnectMs: 0,
+    });
+
+    let socket = MockWebSocket.lastInstance;
+    assert.ok(socket);
+    socket.simulateMessage({
+      method: 'create',
+      params: {
+        targetSelector: '#app',
+        node: {
+          id: 'good-widget',
+          component: 'good-widget',
+          layout: { width: '220px', height: '110px' },
+        },
+        options: { cls: true },
+      },
+    });
+
+    const placeholder = document.querySelector('.sym-layout-placeholder');
+    assert.ok(placeholder);
+    assert.equal(placeholder.getAttribute('data-placeholder-state'), 'ready');
+    assert.ok(placeholder.querySelector('[data-runtime-ui-id="good-widget"]'));
+    assert.equal(controller.instances.has('good-widget'), true);
+
+    socket.simulateMessage({
+      method: 'destroy',
+      params: { id: 'good-widget' },
+    });
+
+    assert.equal(document.querySelector('.sym-layout-placeholder'), null);
+    assert.equal(controller.instances.has('good-widget'), false);
+    controller.disconnect();
+  } finally {
+    document.createElement = originalCreateElement;
+    globalThis.window = originalWindow;
+    globalThis.document = originalDocument;
+  }
+});
+
 test('watchDiscover monitors handler directory changes and triggers callback', async () => {
   clearRegistry();
 
@@ -303,42 +421,50 @@ test('watchDiscover monitors handler directory changes and triggers callback', a
 
   let manifests = [];
   let callbackInfo = [];
+  let watcher = null;
 
-  let watcher = watchDiscover({ handlers: tempDir }, (manifest, info) => {
-    manifests.push(manifest);
-    callbackInfo.push(info);
-  });
+  try {
+    watcher = watchDiscover({ handlers: tempDir }, (manifest, info) => {
+      manifests.push(manifest);
+      callbackInfo.push(info);
+    });
 
-  // Wait a short moment to ensure watcher is ready
-  await new Promise(resolve => setTimeout(resolve, 150));
+    // Wait a short moment to ensure watcher is ready
+    await new Promise(resolve => setTimeout(resolve, 150));
 
-  let handlerPath1 = join(tempDir, 'first.handler.js');
-  writeFileSync(handlerPath1, `
-    export default {
-      type: 'watch/first',
-      category: 'watch',
-      driver: { description: 'First watched node' }
-    };
-  `);
+    let handlerPath1 = join(tempDir, 'first.handler.js');
+    writeFileSync(handlerPath1, `
+      export default {
+        type: 'watch/first',
+        category: 'watch',
+        driver: { description: 'First watched node' }
+      };
+    `);
 
-  await new Promise((resolve) => {
-    let check = () => {
-      if (manifests.length >= 1) resolve();
-      else setTimeout(check, 100);
-    };
-    check();
-  });
+    await new Promise((resolve, reject) => {
+      let timer = setTimeout(() => reject(new Error('Timeout waiting for watchDiscover callback')), 2000);
+      let check = () => {
+        if (manifests.length >= 1) {
+          clearTimeout(timer);
+          resolve();
+        } else {
+          setTimeout(check, 100);
+        }
+      };
+      check();
+    });
 
-  assert.ok(manifests.length >= 1);
-  let latestManifest = manifests[manifests.length - 1];
-  let firstDriver = latestManifest.registry.drivers.find(d => d.type === 'watch/first');
+    assert.ok(manifests.length >= 1);
+    let latestManifest = manifests[manifests.length - 1];
+    let firstDriver = latestManifest.registry.drivers.find(d => d.type === 'watch/first');
 
-  assert.ok(firstDriver);
-  assert.equal(firstDriver.description, 'First watched node');
-
-  watcher.close();
-  rmSync(tempDir, { recursive: true, force: true });
-  clearRegistry();
+    assert.ok(firstDriver);
+    assert.equal(firstDriver.description, 'First watched node');
+  } finally {
+    if (watcher) {
+      watcher.close();
+    }
+    rmSync(tempDir, { recursive: true, force: true });
+    clearRegistry();
+  }
 });
-
-

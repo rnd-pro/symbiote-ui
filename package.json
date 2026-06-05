@@ -40,6 +40,14 @@
       "import": "./xr/index.js",
       "default": "./xr/index.js"
     },
+    "./xr/spatial-index": "./xr/spatial-index.js",
+    "./xr/spatial-graph": "./xr/spatial-graph.js",
+    "./xr/spherical-layout": "./xr/spherical-layout.js",
+    "./xr/spatial-drag-controller": "./xr/spatial-drag-controller.js",
+    "./xr/force-layout": "./xr/force-layout.js",
+    "./xr/force-layout-adapter": "./xr/force-layout-adapter.js",
+    "./xr/dual-view-controller": "./xr/dual-view-controller.js",
+    "./xr/three-spatial-graph": "./xr/three-spatial-graph.js",
     "./tokens/*": "./tokens/*",
     "./rules/*": "./rules/*",
     "./schemas/*": "./schemas/*",
@@ -69,6 +77,14 @@
     "./discover": {
       "import": "./discover.js",
       "default": "./discover.js"
+    },
+    "./motion": {
+      "import": "./themes/Motion.js",
+      "default": "./themes/Motion.js"
+    },
+    "./themes/TailwindBridge": {
+      "import": "./themes/TailwindBridge.js",
+      "default": "./themes/TailwindBridge.js"
     }
   },
   "files": [
@@ -107,9 +123,12 @@
     "palette/",
     "menu/",
     "ui/",
+    "docs/",
     "README.md",
     "LICENSE",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "llms.txt",
+    "skills/"
   ],
   "sideEffects": [
     "**/*.css.js",

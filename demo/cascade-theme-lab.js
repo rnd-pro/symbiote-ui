@@ -25,10 +25,12 @@ import '../display/EmptyState/EmptyState.js';
 import '../display/EventFeed/EventFeed.js';
 import '../display/LoadingOverlay/LoadingOverlay.js';
 import '../display/SourceViewer/SourceViewer.js';
+import '../display/SourceEditor/SourceEditor.js';
 import '../display/StatusRibbon/StatusRibbon.js';
 import '../list/ListDetailShell/ListDetailShell.js';
 import '../surface/Card/Card.js';
 import '../tree/TreePanel/TreePanel.js';
+import '../canvas/CanvasGraph/CanvasGraph.js';
 import '../effects/CellBg/CellBg.js';
 import '../chat/ChatTranscript/ChatTranscript.js';
 import '../chat/ChatComposer/ChatComposer.js?v=cascade-demo-chat-1';
@@ -52,7 +54,9 @@ await Promise.all([
   customElements.whenDefined('sn-list-detail-shell'),
   customElements.whenDefined('sn-loading-overlay'),
   customElements.whenDefined('source-viewer'),
+  customElements.whenDefined('source-editor'),
   customElements.whenDefined('sn-status-ribbon'),
+  customElements.whenDefined('canvas-graph'),
   customElements.whenDefined('chat-composer'),
   customElements.whenDefined('chat-sidebar-shell'),
   customElements.whenDefined('cascade-theme-widget'),
@@ -147,6 +151,250 @@ const SVG_NODE_SAMPLE_IMAGE = [
     </svg>
   `),
 ].join('');
+
+class CascadeOverviewPanel extends Symbiote {
+  renderCallback() {
+    this.$.projects = showcaseProjects.map((project) => ({
+      icon: project.icon,
+      name: project.name,
+      summary: project.overview || project.sidebarLabel,
+    }));
+  }
+}
+
+CascadeOverviewPanel.template = html`
+  <section class="showcase-overview">
+    <header class="showcase-overview-hero">
+      <span class="material-symbols-outlined">hub</span>
+      <div>
+        <p>symbiote-ui</p>
+        <h1>Agent UI construction library</h1>
+        <span>
+          Components, layouts, theme cascade, graph surfaces, chat, and WebMCP
+          metadata are packaged as reusable building blocks for runtime UI
+          construction.
+        </span>
+      </div>
+    </header>
+
+    <div class="showcase-overview-grid">
+      <article>
+        <span class="material-symbols-outlined">view_quilt</span>
+        <strong>Layout first</strong>
+        <p>Top tabs switch project-type layout groups. The left sidebar belongs only to the active project type.</p>
+      </article>
+      <article>
+        <span class="material-symbols-outlined">smart_toy</span>
+        <strong>One page agent</strong>
+        <p>The right agent chat is one standard collapsed layout panel, shared across every view.</p>
+      </article>
+      <article>
+        <span class="material-symbols-outlined">settings_suggest</span>
+        <strong>Engine boundary</strong>
+        <p>symbiote-ui owns UI composition. symbiote-engine owns execution, workflows, persistence, and server runtime.</p>
+      </article>
+      <article>
+        <span class="material-symbols-outlined">api</span>
+        <strong>Agent-readable</strong>
+        <p>WebMCP descriptors explain what components do and which inputs, state, and actions agents can use.</p>
+      </article>
+    </div>
+
+    <section class="showcase-project-map" aria-label="Project type tabs">
+      <div class="showcase-project-map-header">
+        <span class="material-symbols-outlined">folder_open</span>
+        <strong>Project types shown by the demo</strong>
+      </div>
+      <div class="showcase-project-list" itemize="projects">
+        <template>
+          <div class="showcase-project-pill">
+            <span class="material-symbols-outlined">{{icon}}</span>
+            <strong>{{name}}</strong>
+            <small>{{summary}}</small>
+          </div>
+        </template>
+      </div>
+    </section>
+  </section>
+`;
+
+CascadeOverviewPanel.rootStyles = `
+  cascade-overview-panel {
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    background: var(--sn-panel-bg);
+    color: var(--sn-text);
+  }
+
+  cascade-overview-panel .showcase-overview {
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr);
+    gap: var(--sn-lab-panel-gap, 14px);
+    height: 100%;
+    min-height: 0;
+    padding: var(--sn-lab-panel-padding, 16px);
+    overflow: auto;
+    scrollbar-color: var(--sn-scrollbar-thumb) var(--sn-scrollbar-track);
+  }
+
+  cascade-overview-panel .showcase-overview-hero {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 14px;
+    align-items: center;
+    padding: clamp(14px, 2vw, 24px);
+    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border-radius: var(--sn-node-radius);
+    background:
+      radial-gradient(circle at 10% 0%, color-mix(in oklab, var(--sn-node-selected) 24%, transparent), transparent 38%),
+      color-mix(in oklab, var(--sn-node-bg) 90%, var(--sn-bg));
+  }
+
+  cascade-overview-panel .showcase-overview-hero > .material-symbols-outlined {
+    display: grid;
+    place-items: center;
+    width: calc(58px * var(--sn-theme-density, 1));
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: var(--sn-node-bg);
+    color: var(--sn-node-selected);
+    font-size: calc(30px * var(--sn-theme-icon-scale, 1));
+  }
+
+  cascade-overview-panel .showcase-overview-hero p,
+  cascade-overview-panel .showcase-overview-hero h1,
+  cascade-overview-panel .showcase-overview-hero span {
+    margin: 0;
+  }
+
+  cascade-overview-panel .showcase-overview-hero p {
+    color: var(--sn-node-selected);
+    font-size: calc(12px * var(--sn-theme-type-scale, 1));
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  cascade-overview-panel .showcase-overview-hero h1 {
+    margin-top: 4px;
+    color: var(--sn-text);
+    font-size: calc(26px * var(--sn-theme-heading-scale, 1));
+    line-height: 1.08;
+  }
+
+  cascade-overview-panel .showcase-overview-hero span {
+    display: block;
+    margin-top: 8px;
+    max-width: 760px;
+    color: var(--sn-text-dim);
+    font-size: calc(14px * var(--sn-theme-type-scale, 1));
+    line-height: 1.45;
+  }
+
+  cascade-overview-panel .showcase-overview-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--sn-lab-panel-gap, 10px);
+  }
+
+  cascade-overview-panel .showcase-overview-grid article,
+  cascade-overview-panel .showcase-project-map {
+    min-width: 0;
+    padding: var(--sn-lab-panel-padding, 12px);
+    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border-radius: var(--sn-node-radius);
+    background: var(--sn-node-bg);
+  }
+
+  cascade-overview-panel article .material-symbols-outlined {
+    color: var(--sn-node-selected);
+    font-size: calc(21px * var(--sn-theme-icon-scale, 1));
+  }
+
+  cascade-overview-panel article strong {
+    display: block;
+    margin-top: 8px;
+    font-size: calc(14px * var(--sn-theme-type-scale, 1));
+  }
+
+  cascade-overview-panel article p {
+    margin: 6px 0 0;
+    color: var(--sn-text-dim);
+    font-size: calc(12px * var(--sn-theme-type-scale, 1));
+    line-height: 1.4;
+  }
+
+  cascade-overview-panel .showcase-project-map {
+    display: grid;
+    gap: 10px;
+  }
+
+  cascade-overview-panel .showcase-project-map-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--sn-text);
+  }
+
+  cascade-overview-panel .showcase-project-list {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  cascade-overview-panel .showcase-project-pill {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 3px 8px;
+    align-items: center;
+    min-width: 0;
+    padding: 9px 10px;
+    border: 1px solid color-mix(in oklab, var(--sn-node-border) 72%, transparent);
+    border-radius: var(--sn-node-radius);
+    background: color-mix(in oklab, var(--sn-bg) 72%, var(--sn-node-bg));
+  }
+
+  cascade-overview-panel .showcase-project-pill .material-symbols-outlined {
+    grid-row: span 2;
+    color: var(--sn-node-selected);
+    font-size: calc(18px * var(--sn-theme-icon-scale, 1));
+  }
+
+  cascade-overview-panel .showcase-project-pill strong,
+  cascade-overview-panel .showcase-project-pill small {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  cascade-overview-panel .showcase-project-pill strong {
+    font-size: calc(12px * var(--sn-theme-type-scale, 1));
+  }
+
+  cascade-overview-panel .showcase-project-pill small {
+    color: var(--sn-text-dim);
+    font-size: calc(11px * var(--sn-theme-type-scale, 1));
+  }
+
+  @media (max-width: 900px) {
+    cascade-overview-panel .showcase-overview-grid,
+    cascade-overview-panel .showcase-project-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 620px) {
+    cascade-overview-panel .showcase-overview-hero,
+    cascade-overview-panel .showcase-overview-grid,
+    cascade-overview-panel .showcase-project-list {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+`;
+
+CascadeOverviewPanel.reg('cascade-overview-panel');
 
 class CascadeGraphPanel extends Symbiote {
   initCallback() {
@@ -569,6 +817,7 @@ class CascadeUiPanel extends Symbiote {
         { id: 'controls', label: 'Controls', icon: 'smart_button' },
       ] },
     ]);
+    tree.showTree?.();
     tree.selectedId = 'cascade';
     this.ref.loading.setProgress(64, 'Composing UI', 'Hydrating reusable surfaces');
     this.ref.status.$.fadeTimeout = 60000;
@@ -802,6 +1051,328 @@ CascadeUiPanel.rootStyles = `
 
 CascadeUiPanel.reg('cascade-ui-panel');
 
+const PROJECT_TREE_ITEMS = [
+  {
+    id: 'src',
+    label: 'src',
+    icon: 'folder',
+    children: [
+      {
+        id: 'src/components',
+        label: 'components',
+        icon: 'folder',
+        children: [
+          { id: 'src/components/chat-composer.js', label: 'chat-composer.js', icon: 'forum', badges: ['voice'] },
+          { id: 'src/components/node-canvas.js', label: 'node-canvas.js', icon: 'hub', badges: ['graph'] },
+          { id: 'src/components/source-viewer.js', label: 'source-viewer.js', icon: 'article', badges: ['md'] },
+        ],
+      },
+      {
+        id: 'src/runtime',
+        label: 'runtime',
+        icon: 'folder',
+        children: [
+          { id: 'src/runtime/intent-router.js', label: 'intent-router.js', icon: 'alt_route', badges: ['WebMCP'] },
+          { id: 'src/runtime/layout-state.js', label: 'layout-state.js', icon: 'view_quilt', badges: ['SSR'] },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'docs',
+    label: 'docs',
+    icon: 'folder',
+    children: [
+      { id: 'docs/agent-workspace.md', label: 'agent-workspace.md', icon: 'description', badges: ['rendered'] },
+      { id: 'docs/webmcp.md', label: 'webmcp.md', icon: 'api', badges: ['agent'] },
+    ],
+  },
+  {
+    id: 'layouts',
+    label: 'layouts',
+    icon: 'folder',
+    children: [
+      { id: 'layouts/default.layout.json', label: 'default.layout.json', icon: 'data_object', badges: ['live'] },
+      { id: 'layouts/chat.layout.json', label: 'chat.layout.json', icon: 'forum', badges: ['chat'] },
+    ],
+  },
+];
+
+const PROJECT_GRAPH_MODEL = {
+  nodes: [
+    { id: 'src', label: 'src', type: 'data', isGroup: true, children: ['chat', 'canvas', 'viewer', 'runtime'] },
+    { id: 'docs', label: 'docs', type: 'docs', isGroup: true, children: ['readme', 'webmcp'] },
+    { id: 'layouts', label: 'layouts', type: 'config', isGroup: true, children: ['layout-default', 'layout-chat'] },
+    { id: 'chat', label: 'chat-composer.js', type: 'action', parentId: 'src' },
+    { id: 'canvas', label: 'node-canvas.js', type: 'output', parentId: 'src' },
+    { id: 'viewer', label: 'source-viewer.js', type: 'docs', parentId: 'src' },
+    { id: 'runtime', label: 'intent-router.js', type: 'action', parentId: 'src' },
+    { id: 'readme', label: 'agent-workspace.md', type: 'docs', parentId: 'docs' },
+    { id: 'webmcp', label: 'webmcp.md', type: 'docs', parentId: 'docs' },
+    { id: 'layout-default', label: 'default.layout.json', type: 'config', parentId: 'layouts' },
+    { id: 'layout-chat', label: 'chat.layout.json', type: 'config', parentId: 'layouts' },
+  ],
+  edges: [
+    { from: 'runtime', to: 'chat' },
+    { from: 'runtime', to: 'canvas' },
+    { from: 'viewer', to: 'readme' },
+    { from: 'webmcp', to: 'runtime' },
+    { from: 'layout-default', to: 'canvas' },
+    { from: 'layout-chat', to: 'chat' },
+  ],
+  rootNodes: ['src', 'docs', 'layouts'],
+};
+
+class CascadeProjectPanel extends Symbiote {
+  initCallback() {
+    this.addEventListener('sn-tree-select', (event) => {
+      this._selectProjectFile(event.detail?.item);
+    });
+  }
+
+  renderCallback() {
+    if (this._ready) return;
+    this._ready = true;
+    this.ref.tree.setItems(PROJECT_TREE_ITEMS);
+    this.ref.tree.showTree?.();
+    this.ref.tree.defaultExpandedIds = ['src', 'src/components', 'src/runtime', 'docs', 'layouts'];
+    this.ref.tree.selectedId = 'docs/agent-workspace.md';
+  }
+
+  _selectProjectFile(item) {
+    if (!item || Array.isArray(item.children)) return;
+    this.ref.tree.selectedId = item.id;
+    this.dispatchEvent(new CustomEvent('cascade-project-file-select', {
+      detail: { item },
+      bubbles: true,
+      composed: true,
+    }));
+  }
+}
+
+CascadeProjectPanel.template = html`
+  <section class="project-files-panel">
+    <sn-tree-panel
+      class="project-file-tree"
+      title="Project files"
+      title-icon="account_tree"
+      filter-placeholder="Filter project files"
+      ${{ ref: 'tree' }}
+    ></sn-tree-panel>
+    <footer class="project-files-contract">
+      <span class="material-symbols-outlined" aria-hidden="true">sync_alt</span>
+      <span>Tree selection emits file intent. Source, docs, and graph render in separate layout panels.</span>
+    </footer>
+  </section>
+`;
+
+const PROJECT_SOURCE_SAMPLE = [
+  'import { createRuntimeUiController } from "symbiote-ui/runtime";',
+  '',
+  'const controller = createRuntimeUiController({ root, layout });',
+  '',
+  'controller.create({',
+  '  id: "chat-surface",',
+  '  tagName: "chat-composer",',
+  '  state: {',
+  '    methods: {',
+  '      setVoiceControls: [{ input: { visible: true }, wakeListen: { visible: true } }]',
+  '    }',
+  '  }',
+  '});',
+  '',
+  'layout.openPanel("chat", { uiInvoked: true, source: "agent" });',
+].join('\n');
+
+const PROJECT_MARKDOWN_SAMPLE = [
+  '# Agent workspace',
+  '',
+  'The same library renders project navigation, source editing, markdown previews, chat controls, graph construction, and live layout panels.',
+  '',
+  '- `sn-tree-panel` owns project/file navigation.',
+  '- `source-editor` edits host-owned source text.',
+  '- `source-viewer` renders code, markdown, images, and diagnostics.',
+  '- `canvas-graph` shows a project overview graph distinct from editable `node-canvas`.',
+].join('\n');
+
+class CascadeSourcePanel extends Symbiote {
+  renderCallback() {
+    if (this._ready) return;
+    this._ready = true;
+    this.ref.editor.setLanguage('js');
+    this.ref.editor.setContent(PROJECT_SOURCE_SAMPLE);
+  }
+}
+
+CascadeSourcePanel.template = html`
+  <section class="project-source-panel">
+    <header class="project-panel-intro">
+      <span class="material-symbols-outlined" aria-hidden="true">code</span>
+      <div>
+        <strong>Source editor</strong>
+        <span>One focused panel for agent-authored code and runtime intents.</span>
+      </div>
+    </header>
+    <source-editor
+      class="project-source-editor"
+      aria-label="Agent-authored source editor"
+      ${{ ref: 'editor' }}
+    ></source-editor>
+  </section>
+`;
+
+class CascadeDocsPanel extends Symbiote {
+  renderCallback() {
+    if (this._ready) return;
+    this._ready = true;
+    this.ref.viewer.showFile({
+      path: 'docs/agent-workspace.md',
+      lang: 'md',
+      raw: PROJECT_MARKDOWN_SAMPLE,
+      statsText: 'rendered markdown',
+    });
+  }
+}
+
+CascadeDocsPanel.template = html`
+  <section class="project-docs-panel">
+    <source-viewer class="project-markdown-viewer" ${{ ref: 'viewer' }}></source-viewer>
+  </section>
+`;
+
+class CascadeProjectMapPanel extends Symbiote {
+  renderCallback() {
+    if (this._ready) return;
+    this._ready = true;
+    this.ref.graph.setGraphModel(PROJECT_GRAPH_MODEL);
+    setTimeout(() => {
+      this.ref.graph.fitView?.(46, false);
+      this.ref.graph.pulseNode?.('runtime', 1800);
+    }, 120);
+  }
+}
+
+CascadeProjectMapPanel.template = html`
+  <graph-explorer-shell class="project-canvas-graph-shell">
+    <canvas-graph slot="canvas" ${{ ref: 'graph' }}></canvas-graph>
+    <div class="graph-explorer-stats project-graph-stats" slot="stats">
+      <span>canvas-graph</span><span>project overview</span>
+    </div>
+  </graph-explorer-shell>
+`;
+
+const PROJECT_WORKSPACE_STYLES = `
+  cascade-project-panel,
+  cascade-source-panel,
+  cascade-docs-panel,
+  cascade-project-map-panel {
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+  }
+
+  cascade-project-panel .project-files-panel,
+  cascade-source-panel .project-source-panel,
+  cascade-docs-panel .project-docs-panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sn-lab-panel-gap, 12px);
+    height: 100%;
+    min-height: 0;
+    padding: var(--sn-lab-panel-padding, 12px);
+    overflow: hidden;
+    background: var(--sn-panel-bg);
+    color: var(--sn-text);
+  }
+
+  cascade-project-panel .project-file-tree {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border-radius: var(--sn-node-radius);
+    background: var(--sn-bg);
+  }
+
+  cascade-project-panel .project-files-contract,
+  cascade-source-panel .project-panel-intro {
+    display: flex;
+    align-items: center;
+    gap: var(--sn-lab-panel-gap, 12px);
+    min-height: calc(var(--sn-layout-header-height, 32px) * 1.4);
+    padding: 8px 10px;
+    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border-radius: var(--sn-node-radius);
+    background: var(--sn-node-bg);
+    color: var(--sn-text-dim);
+    font-size: var(--sn-small-size, 0.78rem);
+    line-height: 1.35;
+  }
+
+  cascade-source-panel .project-panel-intro strong {
+    display: block;
+    color: var(--sn-text);
+    font-size: calc(var(--sn-body-size, 1rem) * 0.96);
+  }
+
+  cascade-source-panel .project-panel-intro span:not(.material-symbols-outlined) {
+    display: block;
+  }
+
+  cascade-project-panel .project-files-contract .material-symbols-outlined,
+  cascade-source-panel .project-panel-intro .material-symbols-outlined {
+    color: var(--sn-primary);
+    font-size: calc(20px * var(--sn-theme-type-scale, 1));
+  }
+
+  cascade-source-panel .project-source-editor,
+  cascade-docs-panel .project-markdown-viewer,
+  cascade-project-map-panel .project-canvas-graph-shell {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border-radius: var(--sn-node-radius);
+    background: var(--sn-bg);
+    overflow: hidden;
+  }
+
+  cascade-project-map-panel .project-canvas-graph-shell {
+    width: 100%;
+    height: 100%;
+  }
+
+  cascade-project-map-panel canvas-graph {
+    width: 100%;
+    height: 100%;
+  }
+
+  cascade-project-map-panel .project-graph-stats {
+    display: inline-flex;
+    gap: 8px;
+    color: var(--sn-text-dim);
+    font-size: var(--sn-small-size, 0.78rem);
+  }
+
+  @media (max-width: 900px) {
+    cascade-project-panel .project-files-panel,
+    cascade-source-panel .project-source-panel,
+    cascade-docs-panel .project-docs-panel {
+      padding: 10px;
+    }
+  }
+`;
+
+CascadeProjectPanel.rootStyles = PROJECT_WORKSPACE_STYLES;
+CascadeProjectPanel.reg('cascade-project-panel');
+CascadeSourcePanel.rootStyles = PROJECT_WORKSPACE_STYLES;
+CascadeSourcePanel.reg('cascade-source-panel');
+CascadeDocsPanel.rootStyles = PROJECT_WORKSPACE_STYLES;
+CascadeDocsPanel.reg('cascade-docs-panel');
+CascadeProjectMapPanel.rootStyles = PROJECT_WORKSPACE_STYLES;
+CascadeProjectMapPanel.reg('cascade-project-map-panel');
+
 class CascadeChatPanel extends Symbiote {
   initCallback() {
     this.addEventListener('click', (event) => {
@@ -942,7 +1513,7 @@ class CascadeChatPanel extends Symbiote {
 
     let syncSidebar = () => {
       this.ref.sidebar.setAutoCollapse?.(false);
-      this.ref.sidebar.setCollapsed(false);
+      this.ref.sidebar.setCollapsed(true);
       this.ref.sidebar.setChats([
         {
           id: 'agent-chat',
@@ -1003,15 +1574,6 @@ class CascadeChatPanel extends Symbiote {
       },
     ]);
     this.ref.transcript.scrollToBottom();
-    this.ref.code.setContent([
-      'const theme = createCascadeTheme({',
-      '  mode: "dark",',
-      '  hue: 218,',
-      '  density: 100,',
-      '});',
-      '',
-      'applyCascadeTheme(root, theme.state);',
-    ].join('\n'), 'js');
     this.ref.composer.setPlaceholder('Ask the agent to build a themed component...');
     this.ref.composer.setValue('Render this response inside the current layout');
     this.ref.composer.setAttachedContext([
@@ -1096,43 +1658,12 @@ class CascadeChatPanel extends Symbiote {
 }
 
 CascadeChatPanel.template = html`
-  <section class="chat-lab-panel">
+  <section class="chat-shell chat-lab-panel">
     <chat-sidebar-shell class="chat-lab-sidebar" auto-collapse="false" ${{ ref: 'sidebar' }}></chat-sidebar-shell>
-    <div class="chat-lab-content">
+    <div class="chat-view chat-lab-content">
       <chat-transcript ${{ ref: 'transcript' }}>
         <cell-bg slot="background" ${{ ref: 'bg' }}></cell-bg>
       </chat-transcript>
-      <div class="chat-code-sample">
-        <code-block ${{ ref: 'code' }}></code-block>
-      </div>
-      <div class="chat-voice-state-strip" aria-label="Voice state examples">
-        <button class="voice-state-chip idle" type="button" data-voice-state="idle">
-          <span class="material-symbols-outlined">mic</span><span>idle</span>
-        </button>
-        <button class="voice-state-chip listening" type="button" data-voice-state="listening">
-          <span class="material-symbols-outlined">hearing</span><span>listening</span>
-        </button>
-        <button class="voice-state-chip transcribing" type="button" data-voice-state="transcribing">
-          <span class="material-symbols-outlined">hourglass_top</span><span>transcribing</span>
-        </button>
-        <button class="voice-state-chip speaking" type="button" data-voice-state="speaking">
-          <span class="material-symbols-outlined">record_voice_over</span><span>speaking</span>
-        </button>
-        <button class="voice-state-chip disabled" type="button" data-voice-state="disabled" disabled>
-          <span class="material-symbols-outlined">mic_off</span><span>disabled</span>
-        </button>
-      </div>
-      <div class="chat-bg-control-strip" aria-label="Animated background controls">
-        <button class="chat-bg-control" type="button" data-bg-action="trigger">
-          <span class="material-symbols-outlined">play_circle</span><span>trigger</span>
-        </button>
-        <button class="chat-bg-control" type="button" data-bg-action="start">
-          <span class="material-symbols-outlined">motion_play</span><span>run</span>
-        </button>
-        <button class="chat-bg-control" type="button" data-bg-action="stop">
-          <span class="material-symbols-outlined">motion_photos_paused</span><span>slow stop</span>
-        </button>
-      </div>
       <chat-composer ${{ ref: 'composer' }}></chat-composer>
     </div>
   </section>
@@ -1182,103 +1713,412 @@ CascadeChatPanel.rootStyles = `
   cascade-chat-panel chat-transcript {
     min-height: 96px;
   }
-
-  cascade-chat-panel .chat-code-sample {
-    flex: 0 0 min(22%, 96px);
-    min-height: 72px;
-    margin: 0 var(--sn-lab-content-padding, 12px);
-    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
-    border-radius: var(--sn-node-radius);
-    overflow: hidden;
-    background: var(--sn-bg);
-  }
-
-  cascade-chat-panel .chat-voice-state-strip {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--sn-composer-footer-gap, 4px);
-    padding: var(--sn-composer-footer-padding, 6px 16px 0);
-    margin: 0 var(--sn-lab-content-padding, 12px);
-    border-top: 1px solid color-mix(in oklab, var(--sn-node-border) 64%, transparent);
-    background: color-mix(in oklab, var(--sn-chat-bg) 88%, transparent);
-  }
-
-  cascade-chat-panel .voice-state-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--sn-composer-footer-gap, 4px);
-    min-height: var(--sn-composer-footer-btn-min-height, 24px);
-    max-width: 100%;
-    padding: var(--sn-composer-footer-btn-padding, 3px 8px);
-    border: 0;
-    border-radius: 999px;
-    background: var(--sn-node-bg);
-    color: var(--sn-text-dim);
-    font: inherit;
-    font-size: var(--sn-composer-footer-size, 11px);
-    cursor: pointer;
-  }
-
-  cascade-chat-panel .voice-state-chip .material-symbols-outlined {
-    font-size: var(--sn-composer-footer-icon-size);
-  }
-
-  cascade-chat-panel .voice-state-chip.listening,
-  cascade-chat-panel .voice-state-chip.speaking {
-    color: var(--sn-node-selected);
-    background: var(--sn-node-hover);
-  }
-
-  cascade-chat-panel .voice-state-chip.transcribing .material-symbols-outlined {
-    animation: lab-spin var(--sn-animation-duration-normal) linear infinite;
-    animation-play-state: var(--sn-animation-play-state);
-  }
-
-  cascade-chat-panel .voice-state-chip:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
-  }
-
-  cascade-chat-panel .chat-bg-control-strip {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--sn-composer-footer-gap, 4px);
-    padding: var(--sn-composer-footer-padding, 6px 16px 0);
-    margin: 0 var(--sn-lab-content-padding, 12px);
-    background: color-mix(in oklab, var(--sn-chat-bg) 84%, transparent);
-  }
-
-  cascade-chat-panel .chat-bg-control {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--sn-composer-footer-gap, 4px);
-    min-height: var(--sn-composer-footer-btn-min-height, 24px);
-    max-width: 100%;
-    padding: var(--sn-composer-footer-btn-padding, 3px 8px);
-    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
-    border-radius: 999px;
-    background: var(--sn-control-bg, var(--sn-node-bg));
-    color: var(--sn-control-fg, var(--sn-text));
-    font: inherit;
-    font-size: var(--sn-composer-footer-size, 11px);
-    cursor: pointer;
-  }
-
-  cascade-chat-panel .chat-bg-control:hover {
-    border-color: var(--sn-node-selected);
-    background: var(--sn-node-hover);
-  }
-
-  cascade-chat-panel .chat-bg-control .material-symbols-outlined {
-    font-size: var(--sn-composer-footer-icon-size);
-  }
-
-  @keyframes lab-spin {
-    100% { transform: rotate(360deg); }
-  }
 `;
 
 CascadeChatPanel.reg('cascade-chat-panel');
+
+class CascadeRuntimePanel extends Symbiote {
+  renderCallback() {
+    if (this._ready) return;
+    this._ready = true;
+    this.ref.code?.setContent?.([
+      'const controller = createRuntimeUiController({ root, layout });',
+      '',
+      'controller.create({',
+      '  id: "agent-panel",',
+      '  tagName: "sn-data-table",',
+      '  state: { method: "setData", args: [rows] },',
+      '  intents: { rowSelect: "inspect-project-node" }',
+      '});',
+      '',
+      'layout.openPanel("agent-panel", {',
+      '  uiInvoked: true,',
+      '  source: "agent-constructor"',
+      '});',
+    ].join('\n'), 'js');
+    this.ref.events?.setEvents?.([
+      { id: 'runtime-create', title: 'ui:create', status: 'done', detail: 'Component mounted with host-owned data.' },
+      { id: 'runtime-update', title: 'ui:update', status: 'done', detail: 'State applied through public methods.' },
+      { id: 'runtime-layout', title: 'layout:open-panel', status: 'running', detail: 'Panel insertion stays reversible.' },
+    ]);
+  }
+}
+
+CascadeRuntimePanel.template = html`
+  <section class="workspace-showcase-panel runtime-panel">
+    <sn-banner variant="info">Agents can construct components, update state, route intents, and open layout panels without a server reload.</sn-banner>
+    <div class="workspace-showcase-grid">
+      <article class="workspace-feature-card">
+        <span class="material-symbols-outlined">memory</span>
+        <strong>runtime-ui-v1</strong>
+        <p>Node-safe construction helpers create, update, and tear down host-approved UI.</p>
+      </article>
+      <article class="workspace-feature-card">
+        <span class="material-symbols-outlined">extension</span>
+        <strong>WebMCP descriptors</strong>
+        <p>Agents discover component capabilities, schemas, actions, and permission hints.</p>
+      </article>
+      <article class="workspace-feature-card">
+        <span class="material-symbols-outlined">view_quilt</span>
+        <strong>layout actions</strong>
+        <p>Open, close, split, duplicate, and remove UI-invoked panels through reusable layout APIs.</p>
+      </article>
+      <article class="workspace-feature-card">
+        <span class="material-symbols-outlined">verified</span>
+        <strong>SSR-safe core</strong>
+        <p>Root, core, runtime, manifest, and WebMCP entrypoints import without browser globals.</p>
+      </article>
+    </div>
+    <div class="runtime-workbench">
+      <code-block ${{ ref: 'code' }}></code-block>
+      <sn-event-feed ${{ ref: 'events' }}></sn-event-feed>
+    </div>
+  </section>
+`;
+
+CascadeRuntimePanel.rootStyles = `
+  cascade-runtime-panel {
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+  }
+
+  .workspace-showcase-panel {
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr);
+    gap: var(--sn-lab-panel-gap, 12px);
+    height: 100%;
+    min-height: 0;
+    padding: var(--sn-lab-panel-padding, 12px);
+    overflow: auto;
+    background: var(--sn-panel-bg);
+    color: var(--sn-text);
+    scrollbar-color: var(--sn-scrollbar-thumb) var(--sn-scrollbar-track);
+    scrollbar-width: var(--sn-scrollbar-width, thin);
+  }
+
+  .workspace-showcase-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--sn-lab-panel-gap, 12px);
+  }
+
+  .workspace-feature-card {
+    min-width: 0;
+    padding: calc(12px * var(--sn-theme-density, 1));
+    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border-radius: var(--sn-node-radius);
+    background: var(--sn-node-bg);
+  }
+
+  .workspace-feature-card .material-symbols-outlined {
+    color: var(--sn-node-selected);
+    font-size: calc(24px * var(--sn-theme-icon-scale, 1));
+  }
+
+  .workspace-feature-card strong {
+    display: block;
+    margin-top: 8px;
+    color: var(--sn-text);
+    font-size: calc(14px * var(--sn-theme-heading-scale, 1));
+  }
+
+  .workspace-feature-card p {
+    margin: 6px 0 0;
+    color: var(--sn-text-dim);
+    font-size: calc(12px * var(--sn-theme-type-scale, 1));
+    line-height: 1.45;
+  }
+
+  .runtime-workbench {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(220px, 0.8fr);
+    gap: var(--sn-lab-panel-gap, 12px);
+    min-height: 0;
+  }
+
+  .runtime-workbench code-block,
+  .runtime-workbench sn-event-feed {
+    min-height: 0;
+    overflow: auto;
+  }
+
+  @media (max-width: 860px) {
+    .workspace-showcase-grid,
+    .runtime-workbench {
+      grid-template-columns: 1fr;
+    }
+  }
+`;
+
+CascadeRuntimePanel.reg('cascade-runtime-panel');
+
+class CascadeSpatialPanel extends Symbiote {
+  initCallback() {
+    this._drag = null;
+    this.addEventListener('pointerdown', (event) => {
+      let node = event.target.closest?.('.spatial-node');
+      if (!node) return;
+      event.preventDefault();
+      node.setPointerCapture?.(event.pointerId);
+      this._drag = {
+        node,
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        x: Number(node.style.getPropertyValue('--x') || 0),
+        y: Number(node.style.getPropertyValue('--y') || 0),
+      };
+      this._selectNode(node);
+    });
+    this.addEventListener('pointermove', (event) => {
+      if (!this._drag || event.pointerId !== this._drag.pointerId) return;
+      let nextX = this._drag.x + event.clientX - this._drag.startX;
+      let nextY = this._drag.y + event.clientY - this._drag.startY;
+      this._setNodePosition(this._drag.node, nextX, nextY);
+    });
+    this.addEventListener('pointerup', (event) => this._endDrag(event));
+    this.addEventListener('pointercancel', (event) => this._endDrag(event));
+  }
+
+  renderCallback() {
+    if (this._ready) return;
+    this._ready = true;
+    [
+      ['project', 0, -132, 28],
+      ['runtime', 170, -46, -12],
+      ['ui', 104, 116, 18],
+      ['voice', -112, 118, -24],
+      ['xr', -174, -40, 36],
+    ].forEach(([id, x, y, z]) => {
+      let node = this.querySelector(`[data-node="${id}"]`);
+      if (node) {
+        node.style.setProperty('--x', x);
+        node.style.setProperty('--y', y);
+        node.style.setProperty('--z', z);
+        node.style.setProperty('--scale', Math.max(0.72, 1 + z / 220).toFixed(3));
+      }
+    });
+    this._selectNode(this.querySelector('[data-node="project"]'));
+  }
+
+  _setNodePosition(node, x, y) {
+    let stage = this.ref.stage?.getBoundingClientRect?.();
+    let maxX = Math.max(120, (stage?.width || 640) / 2 - 58);
+    let maxY = Math.max(100, (stage?.height || 420) / 2 - 58);
+    let nextX = Math.max(-maxX, Math.min(maxX, x));
+    let nextY = Math.max(-maxY, Math.min(maxY, y));
+    node.style.setProperty('--x', nextX.toFixed(1));
+    node.style.setProperty('--y', nextY.toFixed(1));
+    this.ref.position.textContent = `${node.dataset.node}: [${nextX.toFixed(0)}, ${nextY.toFixed(0)}, ${node.style.getPropertyValue('--z') || 0}]`;
+  }
+
+  _selectNode(node) {
+    if (!node) return;
+    this.querySelectorAll('.spatial-node').forEach((item) => item.toggleAttribute('data-active', item === node));
+    this.ref.position.textContent = `${node.dataset.node}: [${Number(node.style.getPropertyValue('--x') || 0).toFixed(0)}, ${Number(node.style.getPropertyValue('--y') || 0).toFixed(0)}, ${node.style.getPropertyValue('--z') || 0}]`;
+  }
+
+  _endDrag(event) {
+    if (!this._drag || event.pointerId !== this._drag.pointerId) return;
+    this._drag.node.releasePointerCapture?.(event.pointerId);
+    this._drag = null;
+  }
+}
+
+CascadeSpatialPanel.template = html`
+  <section class="spatial-panel">
+    <div class="spatial-copy">
+      <sn-banner variant="info">Desktop 3D preview: spherical nodes, shared graph data, draggable positions, and XR-ready meter-space contracts.</sn-banner>
+      <div class="spatial-contracts">
+        <span><span class="material-symbols-outlined">view_in_ar</span> spatial-graph-v1</span>
+        <span><span class="material-symbols-outlined">touch_app</span> drag controller</span>
+        <span><span class="material-symbols-outlined">account_tree</span> project structure</span>
+        <span><span class="material-symbols-outlined">pan_tool_alt</span> grab nodes</span>
+      </div>
+    </div>
+    <div class="spatial-stage" ${{ ref: 'stage' }} aria-label="Draggable spherical project graph preview">
+      <div class="spatial-orbit"></div>
+      <div class="spatial-link a"></div>
+      <div class="spatial-link b"></div>
+      <div class="spatial-link c"></div>
+      <button class="spatial-node project" type="button" data-node="project">
+        <span class="material-symbols-outlined">account_tree</span><strong>Project</strong>
+      </button>
+      <button class="spatial-node runtime" type="button" data-node="runtime">
+        <span class="material-symbols-outlined">memory</span><strong>Runtime</strong>
+      </button>
+      <button class="spatial-node ui" type="button" data-node="ui">
+        <span class="material-symbols-outlined">widgets</span><strong>UI</strong>
+      </button>
+      <button class="spatial-node voice" type="button" data-node="voice">
+        <span class="material-symbols-outlined">record_voice_over</span><strong>Voice</strong>
+      </button>
+      <button class="spatial-node xr" type="button" data-node="xr">
+        <span class="material-symbols-outlined">deployed_code</span><strong>XR</strong>
+      </button>
+      <output class="spatial-position" ${{ ref: 'position' }}>project: [0, 0, 0]</output>
+    </div>
+  </section>
+`;
+
+CascadeSpatialPanel.rootStyles = `
+  cascade-spatial-panel {
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+  }
+
+  cascade-spatial-panel .spatial-panel {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: var(--sn-lab-panel-gap, 12px);
+    height: 100%;
+    min-height: 0;
+    padding: var(--sn-lab-panel-padding, 12px);
+    overflow: hidden;
+    background:
+      radial-gradient(circle at 50% 42%, color-mix(in oklab, var(--sn-node-selected) 14%, transparent), transparent 44%),
+      var(--sn-panel-bg);
+    color: var(--sn-text);
+  }
+
+  cascade-spatial-panel .spatial-copy {
+    display: grid;
+    gap: 8px;
+  }
+
+  cascade-spatial-panel .spatial-contracts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  cascade-spatial-panel .spatial-contracts span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 8px;
+    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border-radius: 999px;
+    background: var(--sn-node-bg);
+    color: var(--sn-text-dim);
+    font-size: calc(11px * var(--sn-theme-type-scale, 1));
+  }
+
+  cascade-spatial-panel .spatial-contracts .material-symbols-outlined {
+    color: var(--sn-node-selected);
+    font-size: calc(16px * var(--sn-theme-icon-scale, 1));
+  }
+
+  cascade-spatial-panel .spatial-stage {
+    position: relative;
+    min-height: 360px;
+    overflow: hidden;
+    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border-radius: var(--sn-node-radius);
+    background:
+      linear-gradient(color-mix(in oklab, var(--sn-text) 5%, transparent) 1px, transparent 1px),
+      linear-gradient(90deg, color-mix(in oklab, var(--sn-text) 5%, transparent) 1px, transparent 1px),
+      color-mix(in oklab, var(--sn-bg) 86%, var(--sn-node-selected) 6%);
+    background-size: 32px 32px;
+    perspective: 900px;
+    touch-action: none;
+  }
+
+  cascade-spatial-panel .spatial-orbit {
+    position: absolute;
+    inset: 12%;
+    border: 1px solid color-mix(in oklab, var(--sn-node-selected) 36%, transparent);
+    border-radius: 50%;
+    transform: rotateX(68deg);
+    opacity: 0.72;
+  }
+
+  cascade-spatial-panel .spatial-link {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 38%;
+    height: 2px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, transparent, var(--sn-node-selected), transparent);
+    transform-origin: 0 50%;
+    opacity: 0.62;
+  }
+
+  cascade-spatial-panel .spatial-link.a { transform: rotate(21deg) translateX(-12%); }
+  cascade-spatial-panel .spatial-link.b { transform: rotate(122deg) translateX(-16%); }
+  cascade-spatial-panel .spatial-link.c { transform: rotate(-45deg) translateX(-18%); }
+
+  cascade-spatial-panel .spatial-node {
+    --x: 0;
+    --y: 0;
+    --z: 0;
+    --scale: 1;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    display: grid;
+    place-items: center;
+    width: calc(82px * var(--sn-theme-density, 1));
+    aspect-ratio: 1;
+    min-width: 58px;
+    border: var(--sn-node-border-width, 1px) solid color-mix(in oklab, var(--node-color, var(--sn-node-selected)) 56%, var(--sn-node-border));
+    border-radius: 50%;
+    background:
+      radial-gradient(circle at 32% 26%, color-mix(in oklab, white 42%, var(--node-color, var(--sn-node-selected))), transparent 0 12%, transparent 13%),
+      radial-gradient(circle at 40% 32%, color-mix(in oklab, var(--node-color, var(--sn-node-selected)) 64%, white), var(--node-color, var(--sn-node-selected)) 50%, color-mix(in oklab, var(--sn-bg) 72%, black) 100%);
+    color: var(--sn-bg);
+    box-shadow: 0 18px 42px color-mix(in oklab, var(--node-color, var(--sn-node-selected)) 24%, transparent);
+    transform:
+      translate3d(calc(var(--x) * 1px), calc(var(--y) * 1px), calc(var(--z) * 1px))
+      translate(-50%, -50%)
+      scale(var(--scale));
+    cursor: grab;
+    user-select: none;
+  }
+
+  cascade-spatial-panel .spatial-node:active {
+    cursor: grabbing;
+  }
+
+  cascade-spatial-panel .spatial-node[data-active] {
+    outline: max(2px, calc(2px * var(--sn-theme-outline-strength, 1))) solid var(--sn-focus-ring);
+    outline-offset: 4px;
+  }
+
+  cascade-spatial-panel .spatial-node.project { --node-color: var(--sn-tab-accent-0); }
+  cascade-spatial-panel .spatial-node.runtime { --node-color: var(--sn-tab-accent-1); }
+  cascade-spatial-panel .spatial-node.ui { --node-color: var(--sn-tab-accent-2); }
+  cascade-spatial-panel .spatial-node.voice { --node-color: var(--sn-tab-accent-3); }
+  cascade-spatial-panel .spatial-node.xr { --node-color: var(--sn-tab-accent-4); }
+
+  cascade-spatial-panel .spatial-node .material-symbols-outlined {
+    font-size: calc(26px * var(--sn-theme-icon-scale, 1));
+  }
+
+  cascade-spatial-panel .spatial-node strong {
+    font-size: calc(10px * var(--sn-theme-type-scale, 1));
+    line-height: 1;
+  }
+
+  cascade-spatial-panel .spatial-position {
+    position: absolute;
+    left: 10px;
+    bottom: 10px;
+    max-width: calc(100% - 20px);
+    padding: 5px 8px;
+    border-radius: 999px;
+    background: color-mix(in oklab, var(--sn-bg) 82%, transparent);
+    color: var(--sn-text-dim);
+    font-size: calc(11px * var(--sn-theme-type-scale, 1));
+  }
+`;
+
+CascadeSpatialPanel.reg('cascade-spatial-panel');
 
 const shellMenu = document.querySelector('layout-shell-menu');
 const sidebar = document.querySelector('#lab-sidebar');
@@ -1310,6 +2150,17 @@ layout.registerPanelType('graph', {
     { id: 'graph:reset-view', label: 'Reset view', icon: 'center_focus_strong', group: 'graph', groupLabel: 'Graph' },
   ],
 });
+layout.registerPanelType('overview', {
+  title: 'Overview',
+  icon: 'hub',
+  component: 'cascade-overview-panel',
+  behavior: {
+    importance: 100,
+    minInlineSize: 480,
+    minBlockSize: 320,
+    collapse: 'never',
+  },
+});
 layout.registerPanelType('ui', {
   title: 'UI',
   icon: 'widgets',
@@ -1321,15 +2172,59 @@ layout.registerPanelType('ui', {
     collapse: 'auto',
   },
 });
+layout.registerPanelType('project', {
+  title: 'Project files',
+  icon: 'account_tree',
+  component: 'cascade-project-panel',
+  behavior: {
+    importance: 98,
+    minInlineSize: 440,
+    minBlockSize: 320,
+    collapse: 'auto',
+  },
+});
+layout.registerPanelType('source', {
+  title: 'Source',
+  icon: 'code',
+  component: 'cascade-source-panel',
+  behavior: {
+    importance: 92,
+    minInlineSize: 420,
+    minBlockSize: 320,
+    collapse: 'auto',
+  },
+});
+layout.registerPanelType('docs', {
+  title: 'Documentation',
+  icon: 'description',
+  component: 'cascade-docs-panel',
+  behavior: {
+    importance: 70,
+    minInlineSize: 340,
+    minBlockSize: 280,
+    collapse: 'auto',
+  },
+});
+layout.registerPanelType('project-map', {
+  title: 'Project map',
+  icon: 'schema',
+  component: 'cascade-project-map-panel',
+  behavior: {
+    importance: 82,
+    minInlineSize: 420,
+    minBlockSize: 300,
+    collapse: 'auto',
+  },
+});
 layout.registerPanelType('chat', {
-  title: 'Chat',
-  icon: 'forum',
+  title: 'Agent Chat',
+  icon: 'smart_toy',
   component: 'cascade-chat-panel',
   behavior: {
-    importance: 25,
-    minInlineSize: 300,
+    importance: 20,
+    minInlineSize: 340,
     minBlockSize: 220,
-    collapse: 'auto',
+    collapse: 'manual',
   },
 });
 layout.registerPanelType('theme', {
@@ -1346,13 +2241,90 @@ layout.registerPanelType('theme', {
     'storage-key': CASCADE_THEME_STORAGE_KEY,
   },
 });
+layout.registerPanelType('runtime', {
+  title: 'Runtime',
+  icon: 'memory',
+  component: 'cascade-runtime-panel',
+  behavior: {
+    importance: 70,
+    minInlineSize: 320,
+    minBlockSize: 260,
+    collapse: 'auto',
+  },
+});
+layout.registerPanelType('spatial', {
+  title: 'Spatial',
+  icon: 'view_in_ar',
+  component: 'cascade-spatial-panel',
+  behavior: {
+    importance: 92,
+    minInlineSize: 420,
+    minBlockSize: 320,
+    collapse: 'auto',
+  },
+});
 layout.$.panelChrome = true;
 const createPanel = (panelType, behavior) => LayoutTree.createPanel(panelType, {}, behavior);
-const createOverviewLayout = () => LayoutTree.createSplit(
+
+const createCollapsedAgentChatPanel = () => {
+  let panel = createPanel('chat', {
+    importance: 20,
+    minInlineSize: 340,
+    minBlockSize: 220,
+    collapse: 'manual',
+  });
+  panel.collapsed = true;
+  panel.panelState = {
+    singleton: 'page-agent-chat',
+    role: 'assistant',
+  };
+  return panel;
+};
+
+const createShowcaseLayout = (mainLayout) => LayoutTree.createSplit(
   'horizontal',
-  createPanel('graph', { importance: 95 }),
-  createPanel('chat', { importance: 25 }),
-  0.52
+  mainLayout,
+  createCollapsedAgentChatPanel(),
+  0.965,
+  {
+    responsiveMode: 'preserve',
+    overflow: 'collapse',
+  }
+);
+
+const createOverviewLayout = () => createPanel('overview', {
+  importance: 100,
+  minInlineSize: 520,
+  minBlockSize: 360,
+  collapse: 'never',
+});
+
+const createProjectLayout = () => LayoutTree.createSplit(
+  'horizontal',
+  createPanel('project', { importance: 100, minInlineSize: 560, minBlockSize: 380 }),
+  createPanel('runtime', { importance: 54, minInlineSize: 340, minBlockSize: 260 }),
+  0.64
+);
+
+const createProjectSourceLayout = () => LayoutTree.createSplit(
+  'horizontal',
+  createPanel('project', { importance: 92, minInlineSize: 280, minBlockSize: 320 }),
+  createPanel('source', { importance: 100, minInlineSize: 480, minBlockSize: 340 }),
+  0.32
+);
+
+const createProjectDocsLayout = () => LayoutTree.createSplit(
+  'horizontal',
+  createPanel('project', { importance: 82, minInlineSize: 280, minBlockSize: 320 }),
+  createPanel('docs', { importance: 100, minInlineSize: 420, minBlockSize: 320 }),
+  0.32
+);
+
+const createProjectMapLayout = () => LayoutTree.createSplit(
+  'horizontal',
+  createPanel('project-map', { importance: 100, minInlineSize: 520, minBlockSize: 340 }),
+  createPanel('runtime', { importance: 52, minInlineSize: 320, minBlockSize: 260 }),
+  0.64
 );
 
 const createGraphLayout = () => LayoutTree.createSplit(
@@ -1362,9 +2334,16 @@ const createGraphLayout = () => LayoutTree.createSplit(
   0.62
 );
 
+const createComponentsLayout = () => LayoutTree.createSplit(
+  'horizontal',
+  createPanel('ui', { importance: 100, minInlineSize: 420, minBlockSize: 320 }),
+  createPanel('runtime', { importance: 62, minInlineSize: 340, minBlockSize: 280 }),
+  0.56
+);
+
 const createChatLayout = () => LayoutTree.createSplit(
   'horizontal',
-  createPanel('chat', { importance: 100, minInlineSize: 420, minBlockSize: 360 }),
+  createPanel('runtime', { importance: 100, minInlineSize: 420, minBlockSize: 320 }),
   createPanel('theme', { importance: 76, collapse: 'manual' }),
   0.62
 );
@@ -1394,107 +2373,323 @@ const createThemeLayout = () => LayoutTree.createSplit(
   0.42
 );
 
-const layoutGroups = [
+const createRuntimeLayout = () => LayoutTree.createSplit(
+  'horizontal',
+  createPanel('runtime', { importance: 100, minInlineSize: 420, minBlockSize: 320 }),
+  createPanel('ui', { importance: 48, minInlineSize: 320, minBlockSize: 260 }),
+  0.58
+);
+
+const createSpatialLayout = () => LayoutTree.createSplit(
+  'horizontal',
+  createPanel('spatial', {
+    importance: 100,
+    minInlineSize: 520,
+    minBlockSize: 360,
+    collapse: 'never',
+    overflow: 'scroll-inline',
+  }),
+  createPanel('graph', { importance: 70, minInlineSize: 420, minBlockSize: 320 }),
+  0.58
+);
+
+const view = (id, label, icon, layoutFactory, options = {}) => ({
+  id,
+  label,
+  icon,
+  layoutFactory,
+  ...options,
+});
+
+const showcaseProjects = [
   {
-    id: 'overview',
-    name: 'Overview',
-    icon: 'view_quilt',
-    sidebarLabel: 'Agent Chat',
-    sidebarIcon: 'smart_toy',
+    id: 'symbiote-ui',
+    name: 'Symbiote UI',
+    icon: 'hub',
+    sidebarLabel: 'Symbiote UI',
+    sidebarIcon: 'hub',
     color: 'var(--sn-tab-accent-0)',
     closeable: false,
-    tabsVisible: false,
-    behavior: { responsiveMode: 'stack', responsiveBreakpoint: 760, overflow: 'collapse' },
-  },
-  {
-    id: 'graph',
-    name: 'Graph',
-    icon: 'hub',
-    sidebarLabel: 'Explorer',
-    sidebarIcon: 'folder_open',
-    color: 'var(--sn-tab-accent-1)',
-    closeable: false,
-    behavior: { responsiveMode: 'scroll-inline', responsiveBreakpoint: 860, overflow: 'collapse' },
+    behavior: { responsiveMode: 'stack', responsiveBreakpoint: 820, overflow: 'collapse' },
+    views: [
+      view('overview', 'Overview', 'map', createOverviewLayout),
+      view('component-roles', 'Component roles', 'category', createComponentsLayout),
+      view('layout-groups', 'Layout groups', 'view_quilt', createProjectSourceLayout),
+      view('cascade-theme', 'Cascade theme', 'palette', createThemeLayout),
+      view('manifest-webmcp', 'Manifest & WebMCP', 'api', createComponentsLayout),
+      view('runtime-ui', 'Runtime UI', 'memory', createRuntimeLayout),
+      view('engine', 'Engine link', 'settings_suggest', createRuntimeLayout),
+      view('ssr-registration', 'SSR / browser', 'deployed_code', createProjectDocsLayout),
+      view('spatial-bridge', 'Spatial bridge', 'view_in_ar', createSpatialLayout),
+    ],
   },
   {
     id: 'chat',
     name: 'Chat',
     icon: 'forum',
-    sidebarLabel: 'Follow',
-    sidebarIcon: 'smart_toy',
+    sidebarLabel: 'Chat',
+    sidebarIcon: 'forum',
     color: 'var(--sn-tab-accent-2)',
     closeable: false,
     behavior: { responsiveMode: 'stack', responsiveBreakpoint: 780, overflow: 'collapse' },
+    views: [
+      view('conversation', 'Conversation', 'forum', createChatLayout),
+      view('voice-controls', 'Voice controls', 'record_voice_over', createChatLayout),
+      view('markdown-code', 'Markdown & code', 'code_blocks', createChatLayout),
+      view('runtime-panels', 'Runtime panels', 'view_quilt', createRuntimeLayout),
+      view('tool-calls', 'Tool calls', 'terminal', createRuntimeLayout),
+      view('history', 'Chat history', 'manage_history', createChatLayout),
+      view('theme-response', 'Theme response', 'palette', createChatLayout),
+    ],
   },
   {
-    id: 'theme',
-    name: 'Theme',
-    icon: 'palette',
-    sidebarLabel: 'Skills',
-    sidebarIcon: 'school',
-    color: 'var(--sn-tab-accent-4)',
+    id: 'multi-agent-dev',
+    name: 'Multi-Agent Dev',
+    icon: 'account_tree',
+    sidebarLabel: 'Development',
+    sidebarIcon: 'account_tree',
+    color: 'var(--sn-tab-accent-1)',
     closeable: false,
-    behavior: { responsiveMode: 'stack', responsiveBreakpoint: 820, overflow: 'collapse' },
+    behavior: { responsiveMode: 'stack', responsiveBreakpoint: 860, overflow: 'collapse' },
+    views: [
+      view('project-overview', 'Project overview', 'dashboard', createProjectLayout),
+      view('file-tree', 'File tree', 'folder_open', createProjectLayout),
+      view('source-editor', 'Source editor', 'edit_note', createProjectSourceLayout),
+      view('markdown-docs', 'Markdown/docs', 'description', createProjectDocsLayout),
+      view('dependency-graph', 'Dependency graph', 'hub', createProjectMapLayout),
+      view('tests-status', 'Tests & status', 'fact_check', createRuntimeLayout),
+      view('review-handoffs', 'Reviews', 'rate_review', createRuntimeLayout),
+      view('runtime-actions', 'Runtime actions', 'memory', createRuntimeLayout),
+    ],
   },
   {
-    id: 'responsive',
-    name: 'Responsive',
-    icon: 'view_agenda',
-    sidebarLabel: 'Graph',
-    sidebarIcon: 'developer_board',
+    id: 'automation',
+    name: 'Automation',
+    icon: 'automation',
+    sidebarLabel: 'Automation',
+    sidebarIcon: 'automation',
     color: 'var(--sn-tab-accent-3)',
     closeable: false,
-    behavior: { responsiveMode: 'stack', responsiveBreakpoint: 980, overflow: 'scroll-inline' },
+    behavior: { responsiveMode: 'scroll-inline', responsiveBreakpoint: 900, overflow: 'collapse' },
+    views: [
+      view('workflow-graph', 'Workflow graph', 'schema', createGraphLayout),
+      view('form-controls', 'Form controls', 'smart_button', createComponentsLayout),
+      view('approvals', 'Approvals', 'approval', createRuntimeLayout),
+      view('schedule', 'Schedule', 'calendar_month', createRuntimeLayout),
+      view('execution-logs', 'Execution logs', 'receipt_long', createRuntimeLayout),
+      view('engine-state', 'Engine state', 'settings_suggest', createRuntimeLayout),
+      view('recovery', 'Recovery actions', 'restart_alt', createRuntimeLayout),
+    ],
   },
-  { id: 'analysis', name: 'Analysis', icon: 'analytics', tabsVisible: false, disabled: true },
-  { id: 'monitor', name: 'Live Monitor', icon: 'monitor_heart', tabsVisible: false, disabled: true },
-  { id: 'runtime', name: 'Runtime', icon: 'memory', tabsVisible: false, disabled: true },
-  { id: 'spatial', name: 'Spatial', icon: 'view_in_ar', tabsVisible: false, disabled: true },
-  { id: 'settings', name: 'Settings', icon: 'settings', tabsVisible: false, disabled: true },
+  {
+    id: 'media-generation',
+    name: 'Media Generation',
+    icon: 'auto_awesome',
+    sidebarLabel: 'Media',
+    sidebarIcon: 'auto_awesome',
+    color: 'var(--sn-tab-accent-4)',
+    closeable: false,
+    behavior: { responsiveMode: 'stack', responsiveBreakpoint: 840, overflow: 'collapse' },
+    views: [
+      view('prompt-builder', 'Prompt builder', 'edit_note', createProjectSourceLayout),
+      view('parameters', 'Parameters', 'tune', createThemeLayout),
+      view('variants', 'Variants', 'grid_view', createComponentsLayout),
+      view('preview', 'Preview', 'preview', createComponentsLayout),
+      view('provenance', 'Provenance', 'history_edu', createProjectDocsLayout),
+      view('export', 'Export', 'ios_share', createRuntimeLayout),
+    ],
+  },
+  {
+    id: 'video-editor',
+    name: 'Video Editor',
+    icon: 'movie',
+    sidebarLabel: 'Video',
+    sidebarIcon: 'movie',
+    color: 'var(--sn-tab-accent-5)',
+    closeable: false,
+    behavior: { responsiveMode: 'scroll-inline', responsiveBreakpoint: 960, overflow: 'collapse' },
+    views: [
+      view('timeline', 'Timeline', 'video_timeline', createResponsiveLayout),
+      view('clip-bin', 'Clip bin', 'video_library', createComponentsLayout),
+      view('preview-monitor', 'Preview monitor', 'smart_display', createComponentsLayout),
+      view('transcript', 'Transcript', 'subtitles', createProjectDocsLayout),
+      view('effects', 'Effects inspector', 'video_settings', createThemeLayout),
+      view('render-queue', 'Render queue', 'hourglass_top', createRuntimeLayout),
+      view('automation-graph', 'Automation graph', 'schema', createGraphLayout),
+    ],
+  },
+  {
+    id: 'data-research',
+    name: 'Data / Research',
+    icon: 'query_stats',
+    sidebarLabel: 'Research',
+    sidebarIcon: 'query_stats',
+    color: 'var(--sn-tab-accent-6)',
+    closeable: false,
+    behavior: { responsiveMode: 'stack', responsiveBreakpoint: 860, overflow: 'collapse' },
+    views: [
+      view('query', 'Query', 'manage_search', createProjectSourceLayout),
+      view('table', 'Table', 'table_chart', createComponentsLayout),
+      view('chart', 'Chart', 'insert_chart', createComponentsLayout),
+      view('sources', 'Sources', 'source', createProjectLayout),
+      view('citations', 'Citations', 'format_quote', createProjectDocsLayout),
+      view('report', 'Report', 'article', createProjectDocsLayout),
+      view('graph', 'Evidence graph', 'hub', createGraphLayout),
+    ],
+  },
+  {
+    id: 'node-studio',
+    name: 'Node Studio',
+    icon: 'developer_board',
+    sidebarLabel: 'Node Studio',
+    sidebarIcon: 'developer_board',
+    color: 'var(--sn-tab-accent-1)',
+    closeable: false,
+    behavior: { responsiveMode: 'scroll-inline', responsiveBreakpoint: 920, overflow: 'scroll-inline' },
+    views: [
+      view('editable-canvas', 'Editable canvas', 'hub', createGraphLayout),
+      view('pcb-routing', 'PCB routing', 'conversion_path', createResponsiveLayout),
+      view('node-variants', 'Node variants', 'category', createGraphLayout),
+      view('inspector', 'Inspector', 'page_info', createGraphLayout),
+      view('simulation', 'Simulation', 'play_circle', createRuntimeLayout),
+      view('generated-code', 'Generated code', 'code', createProjectSourceLayout),
+      view('overview-graph', 'Overview graph', 'account_tree', createGraphLayout),
+    ],
+  },
+  {
+    id: 'spatial-xr',
+    name: 'Spatial / XR',
+    icon: 'view_in_ar',
+    sidebarLabel: 'Spatial',
+    sidebarIcon: 'view_in_ar',
+    color: 'var(--sn-tab-accent-4)',
+    closeable: false,
+    behavior: { responsiveMode: 'scroll-inline', responsiveBreakpoint: 920, overflow: 'scroll-inline' },
+    views: [
+      view('3d-graph', '3D graph', 'deployed_code', createSpatialLayout),
+      view('spatial-panels', 'Spatial panels', 'view_in_ar', createSpatialLayout),
+      view('pointer-drag', 'Pointer & drag', 'open_with', createSpatialLayout),
+      view('voice-controls', 'Voice controls', 'record_voice_over', createChatLayout),
+      view('theme-bridge', 'Theme bridge', 'palette', createSpatialLayout),
+      view('2d-fallback', '2D fallback', 'view_quilt', createProjectSourceLayout),
+    ],
+  },
 ];
 
-const layoutFactories = new Map([
-  ['overview', createOverviewLayout],
-  ['graph', createGraphLayout],
-  ['chat', createChatLayout],
-  ['theme', createThemeLayout],
-  ['responsive', createResponsiveLayout],
-]);
+const showcaseProjectGroups = showcaseProjects.map((project) => ({
+  id: project.id,
+  name: project.name,
+  icon: project.icon,
+  sidebarLabel: project.sidebarLabel,
+  sidebarIcon: project.sidebarIcon,
+  color: project.color,
+  closeable: project.closeable,
+  behavior: project.behavior,
+}));
 
-let activeLayoutGroupId = 'overview';
+const defaultProjectId = 'symbiote-ui';
+let activeProjectId = defaultProjectId;
+const activeViewByProject = new Map(showcaseProjects.map((project) => [project.id, project.views[0]?.id || 'overview']));
 
-function canApplyLayoutGroup(group) {
-  return Boolean(group && !group.disabled && layoutFactories.has(group.id));
+function getProject(id = activeProjectId) {
+  return showcaseProjects.find((project) => project.id === id) || showcaseProjects[0];
 }
 
-function getActiveLayoutGroup() {
-  let group = layoutGroups.find((item) => item.id === activeLayoutGroupId);
-  return canApplyLayoutGroup(group) ? group : layoutGroups[0];
+function getProjectView(project, viewId) {
+  return project.views.find((item) => item.id === viewId) || project.views[0];
 }
 
-function getHashLayoutGroupId() {
-  let id = String(location.hash || '').replace(/^#\/?/, '').split(/[/?#]/)[0];
-  return layoutGroups.some((group) => group.id === id) ? id : '';
+function viewSectionId(projectId, viewId) {
+  return `${projectId}:${viewId}`;
 }
 
-function applyLayoutGroup(id = activeLayoutGroupId) {
-  let nextGroup = layoutGroups.find((group) => group.id === id);
-  activeLayoutGroupId = canApplyLayoutGroup(nextGroup) ? nextGroup.id : 'overview';
-  let group = getActiveLayoutGroup();
+function parseViewSectionId(sectionId) {
+  let [projectId, ...rest] = String(sectionId || '').split(':');
+  return {
+    projectId,
+    viewId: rest.join(':'),
+  };
+}
+
+function syncProjectSidebar(project, activeViewId) {
+  if (!sidebar) return;
+  sidebar.routerSync = false;
+  sidebar.setSections?.(project.views.map((item) => ({
+    id: viewSectionId(project.id, item.id),
+    icon: item.icon,
+    label: item.label,
+    disabled: item.disabled,
+  })));
+  sidebar.setActiveSection?.(viewSectionId(project.id, activeViewId));
+  sidebar.$.collapsed = true;
+}
+
+function syncShellHomeTab() {
+  let tabs = shellMenu?.ref?.tabs;
+  if (!tabs?.$) return;
+  tabs.$.homeIcon = 'hub';
+  tabs.$.homeLabel = 'Symbiote UI';
+}
+
+function readHashState() {
+  let raw = String(location.hash || '').replace(/^#\/?/, '').split(/[?#]/)[0];
+  if (!raw) return {};
+  let [projectId, viewId] = raw.split('/');
+  if (!viewId && showcaseProjects.some((project) => project.id === projectId)) {
+    return { projectId };
+  }
+  let legacyProject = showcaseProjects.find((project) => project.views.some((item) => item.id === projectId));
+  if (!viewId && legacyProject) {
+    return { projectId: legacyProject.id, viewId: projectId };
+  }
+  return { projectId, viewId };
+}
+
+function writeHashState(projectId, viewId) {
+  let nextHash = `#${projectId}/${viewId}`;
+  if (location.hash === nextHash) return;
+  history.replaceState(null, '', nextHash);
+}
+
+function applyShowcaseView(projectId = activeProjectId, viewId = activeViewByProject.get(projectId), options = {}) {
+  let project = getProject(projectId);
+  let viewConfig = getProjectView(project, viewId);
+  activeProjectId = project.id;
+  activeViewByProject.set(project.id, viewConfig.id);
   layout.setLayoutBehavior({
     minInlineSize: 240,
     minBlockSize: 180,
-    ...group.behavior,
+    ...project.behavior,
+    ...viewConfig.behavior,
   });
-  layout.setLayout(layoutFactories.get(group.id)());
-  shellMenu?.setActiveGroup?.(activeLayoutGroupId);
+  layout.setLayout(createShowcaseLayout(viewConfig.layoutFactory()));
+  shellMenu?.setActiveGroup?.(project.id);
+  syncShellHomeTab();
+  syncProjectSidebar(project, viewConfig.id);
+  document.documentElement.dataset.showcaseProject = project.id;
+  document.documentElement.dataset.showcaseView = viewConfig.id;
+  if (options.writeHash !== false) writeHashState(project.id, viewConfig.id);
 }
 
-activeLayoutGroupId = getHashLayoutGroupId() || activeLayoutGroupId;
-shellMenu?.setGroups?.(layoutGroups, activeLayoutGroupId);
+let initialState = readHashState();
+activeProjectId = getProject(initialState.projectId || defaultProjectId).id;
+if (initialState.viewId) {
+  activeViewByProject.set(activeProjectId, getProjectView(getProject(activeProjectId), initialState.viewId).id);
+}
+shellMenu?.setGroups?.(showcaseProjectGroups, activeProjectId);
+syncShellHomeTab();
 if (sidebar) sidebar.$.collapsed = true;
-shellMenu?.addEventListener('layout-group-change', (event) => applyLayoutGroup(event.detail?.id));
-shellMenu?.addEventListener('layout-group-add', () => applyLayoutGroup('responsive'));
+shellMenu?.addEventListener('layout-group-change', (event) => {
+  let project = getProject(event.detail?.id);
+  applyShowcaseView(project.id, activeViewByProject.get(project.id));
+});
+shellMenu?.addEventListener('layout-group-add', () => applyShowcaseView('node-studio', 'editable-canvas'));
+sidebar?.addEventListener('sidebar-section-select', (event) => {
+  let { projectId, viewId } = parseViewSectionId(event.detail?.id || event.detail?.sectionId);
+  if (projectId !== activeProjectId) return;
+  event.preventDefault?.();
+  applyShowcaseView(projectId, viewId);
+});
 shellMenu?.addEventListener('cascade-theme-open-full', (event) => {
   layout.openPanel('theme', {
     behavior: {
@@ -1513,15 +2708,15 @@ shellMenu?.addEventListener('cascade-theme-open-full', (event) => {
   });
 });
 window.addEventListener('hashchange', () => {
-  let id = getHashLayoutGroupId();
-  if (id) applyLayoutGroup(id);
+  let state = readHashState();
+  if (state.projectId) applyShowcaseView(state.projectId, state.viewId, { writeHash: false });
 });
 shellMenu?.addEventListener('click', (event) => {
   let commandButton = event.target.closest('[data-layout-command]');
   if (!commandButton) return;
   if (commandButton.dataset.layoutCommand === 'reset') {
-    applyLayoutGroup(activeLayoutGroupId);
+    applyShowcaseView(activeProjectId, activeViewByProject.get(activeProjectId));
   }
 });
 
-applyLayoutGroup(activeLayoutGroupId);
+applyShowcaseView(activeProjectId, activeViewByProject.get(activeProjectId));

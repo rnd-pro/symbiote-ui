@@ -1044,3 +1044,103 @@ export function createXRVisualAgentReadinessSummary(input = {}) {
     checks,
   };
 }
+
+/**
+ * Automatically tiles panels in XR space.
+ *
+ * @param {Array} panels - Array of panel configurations.
+ * @param {Object} [options]
+ * @param {string} [options.layout] - 'arc' | 'grid' | 'sphere'. Default: 'arc'
+ * @param {number} [options.radius] - Radial distance in meters. Default: 1.6
+ * @param {number} [options.fov] - FOV arc for 'arc' mode in degrees. Default: 120
+ * @param {number} [options.eyeHeight] - Eye level height in meters. Default: 1.55
+ * @param {Array<number>} [options.center] - Custom center [x, y, z]. Default: [0, eyeHeight, 0]
+ * @returns {Array} List of normalized projected panels.
+ */
+export function autoTileXRPanels(panels, options = {}) {
+  let layout = options.layout || 'arc';
+  let radius = options.radius || 1.6;
+  let fov = options.fov || 120;
+  let eyeHeight = options.eyeHeight || 1.55;
+  let center = options.center || [0, eyeHeight, 0];
+  let gap = numberOr(options.gap, 0.12);
+  let panelSizes = panels.map((panel) => panel.layout?.size || panel.preferredSize || [0.8, 0.6]);
+  let maxPanelWidth = Math.max(0.8, ...panelSizes.map((size) => numberOr(size?.[0], 0.8)));
+  let maxPanelHeight = Math.max(0.6, ...panelSizes.map((size) => numberOr(size?.[1], 0.6)));
+
+  return panels.map((panel, index) => {
+    let position = [0, eyeHeight, -radius];
+    let rotation = [0, 0, 0];
+
+    if (layout === 'arc') {
+      let angle = panels.length <= 1 ? 0 : -fov/2 + (index / (panels.length - 1)) * fov;
+      let rad = angle * Math.PI / 180;
+      position = [
+        center[0] + Math.sin(rad) * radius,
+        center[1],
+        center[2] - Math.cos(rad) * radius
+      ];
+      rotation = [0, -angle, 0];
+    } else if (layout === 'grid') {
+      let cols = Math.ceil(Math.sqrt(panels.length));
+      let rows = Math.ceil(panels.length / cols);
+      let col = index % cols;
+      let row = Math.floor(index / cols);
+
+      let cellW = maxPanelWidth + gap;
+      let cellH = maxPanelHeight + gap;
+      let startX = -((cols - 1) * cellW) / 2;
+      let startY = center[1] + ((rows - 1) * cellH) / 2;
+
+      position = [
+        center[0] + startX + col * cellW,
+        startY - row * cellH,
+        center[2] - radius
+      ];
+      rotation = [0, 0, 0];
+    } else if (layout === 'sphere') {
+      let n = panels.length;
+      let phi = Math.acos(1 - 2 * (index + 0.5) / n);
+      let theta = Math.PI * (1 + Math.sqrt(5)) * index;
+
+      position = [
+        center[0] + Math.cos(theta) * Math.sin(phi) * radius,
+        center[1] + Math.sin(theta) * Math.sin(phi) * radius,
+        center[2] + Math.cos(phi) * radius
+      ];
+
+      let dx = position[0] - center[0];
+      let dz = position[2] - center[2];
+      let yaw = Math.atan2(dx, dz) * 180 / Math.PI;
+      rotation = [0, yaw, 0];
+    }
+
+    return {
+      ...panel,
+      id: panel.id || `panel-${index}`,
+      component: panel.component,
+      importance: panel.importance ?? panel.priority,
+      priority: panel.priority ?? panel.importance,
+      minSize: panel.minSize || panel.layout?.minSize || panel.preferredSize || panel.layout?.size || [0.8, 0.6],
+      preferredSize: panel.preferredSize || panel.layout?.preferredSize || panel.layout?.size || [0.8, 0.6],
+      collapsed: Boolean(panel.collapsed ?? panel.layout?.collapsed),
+      open: panel.open !== undefined ? Boolean(panel.open) : !Boolean(panel.collapsed ?? panel.layout?.collapsed),
+      themeScope: panel.themeScope || panel.layout?.themeScope || options.themeScope || 'xr',
+      layout: {
+        ...(panel.layout || {}),
+        position,
+        rotation,
+        size: panel.layout?.size || panel.preferredSize || [0.8, 0.6],
+        minSize: panel.layout?.minSize || panel.minSize || panel.preferredSize,
+        collapsed: Boolean(panel.collapsed ?? panel.layout?.collapsed),
+        themeScope: panel.layout?.themeScope || panel.themeScope || options.themeScope || 'xr',
+      },
+      poseComfort: createXRPanelPoseComfortSummary({
+        id: panel.id || `panel-${index}`,
+        position,
+        size: panel.layout?.size || panel.preferredSize || [0.8, 0.6],
+      }, options),
+      metadata: { ...(panel.metadata || {}) },
+    };
+  });
+}

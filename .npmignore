@@ -1,6 +1,7 @@
 node_modules/
 TMP/
 tmp/
+scratch/
 .DS_Store
 *.log
 .agent/

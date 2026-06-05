@@ -17978,7 +17978,7 @@
             {
               "name": "variant",
               "type": "string",
-              "description": "Control variant: default, primary, danger, or icon."
+              "description": "Control variant: default, primary, success, danger, or icon."
             },
             {
               "name": "disabled",
@@ -18071,6 +18071,30 @@
               "description": "Theme CSS custom property consumed by this component."
             },
             {
+              "name": "--sn-button-success-bg",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-button-success-border",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-button-success-color",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-button-success-hover-bg",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-button-success-hover-border",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
+              "name": "--sn-button-success-hover-color",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
               "name": "--sn-button-danger-bg",
               "description": "Theme CSS custom property consumed by this component."
             },
@@ -18126,7 +18150,7 @@
                 {
                   "name": "variant",
                   "type": "string",
-                  "description": "Control variant: default, primary, danger, or icon."
+                  "description": "Control variant: default, primary, success, danger, or icon."
                 },
                 {
                   "name": "disabled",
@@ -18166,6 +18190,12 @@
                 "--sn-button-primary-border",
                 "--sn-button-primary-color",
                 "--sn-button-primary-hover-filter",
+                "--sn-button-success-bg",
+                "--sn-button-success-border",
+                "--sn-button-success-color",
+                "--sn-button-success-hover-bg",
+                "--sn-button-success-hover-border",
+                "--sn-button-success-hover-color",
                 "--sn-button-danger-bg",
                 "--sn-button-danger-border",
                 "--sn-button-danger-color",

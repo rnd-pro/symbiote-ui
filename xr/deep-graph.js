@@ -1,4 +1,5 @@
 import { buildGraphModelFromSkeleton } from '../graph/index.js';
+import { createSimulation, forceCenter3D, forceLink3D, forceManyBody3D, forceCluster3D } from './force-layout.js';
 
 export const XR_DEEP_GRAPH_SCENE_VERSION = 'xr-deep-graph-v1';
 export const XR_DEEP_GRAPH_DIAGNOSTICS_VERSION = 'xr-deep-graph-diagnostics-v1';
@@ -111,6 +112,43 @@ function round(value) {
   return Number(value.toFixed(4));
 }
 
+function multiplyMatrix(a, b) {
+  let out = new Float32Array(16);
+  for (let column = 0; column < 4; column += 1) {
+    for (let row = 0; row < 4; row += 1) {
+      out[column * 4 + row] =
+        a[0 * 4 + row] * b[column * 4 + 0] +
+        a[1 * 4 + row] * b[column * 4 + 1] +
+        a[2 * 4 + row] * b[column * 4 + 2] +
+        a[3 * 4 + row] * b[column * 4 + 3];
+    }
+  }
+  return out;
+}
+
+function identityMatrix() {
+  return new Float32Array([
+    1, 0, 0, 0,
+    0, 1, 0, 0,
+    0, 0, 1, 0,
+    0, 0, 0, 1,
+  ]);
+}
+
+function translationMatrix([x = 0, y = 0, z = 0] = []) {
+  let out = identityMatrix();
+  out[12] = Number(x || 0);
+  out[13] = Number(y || 0);
+  out[14] = Number(z || 0);
+  return out;
+}
+
+export function projectWorldToCss3D(position, camera) {
+  let model = translationMatrix(position);
+  let mvp = multiplyMatrix(camera.projectionMatrix, multiplyMatrix(camera.viewMatrix, model));
+  return `matrix3d(${[...mvp].map(round).join(',')})`;
+}
+
 function placeNodes(nodes, options) {
   let radius = numberOr(options.radius, DEFAULTS.radius);
   let layerGap = numberOr(options.layerGap, DEFAULTS.layerGap);
@@ -118,6 +156,54 @@ function placeNodes(nodes, options) {
   let centerZ = numberOr(options.centerZ, DEFAULTS.centerZ);
   let origin = vectorOr(options.origin, [0, 0, 0]);
   let positioned = [];
+
+  if (options.placementStrategy === 'force-directed') {
+    let rawEdges = options.graph ? normalizeEdges(options.graph, nodes) : [];
+    let simNodes = nodes.map((n) => {
+      const isFixed = n.parentId === '' && n.depth === 0;
+      return {
+        id: n.id,
+        x: isFixed ? origin[0] : (Math.random() - 0.5) * 2,
+        y: isFixed ? (origin[1] + y) : ((Math.random() - 0.5) * 2 + y),
+        z: isFixed ? (origin[2] + centerZ) : ((Math.random() - 0.5) * 2 + centerZ),
+        fixed: isFixed
+      };
+    });
+
+    let sim = createSimulation(simNodes);
+    sim.force('center', forceCenter3D(origin[0], origin[1] + y, origin[2] + centerZ));
+    sim.force('charge', forceManyBody3D().strength(-1.5));
+
+    let simLinks = rawEdges.map((e) => ({
+      source: e.from,
+      target: e.to,
+      distance: 0.5
+    }));
+    sim.force('link', forceLink3D(simLinks));
+    sim.force('cluster', forceCluster3D().strength(0.1));
+
+    for (let i = 0; i < 120; i++) {
+      sim.tick();
+    }
+
+    let simNodesMap = new Map(simNodes.map((n) => [n.id, n]));
+    for (let node of nodes) {
+      let sn = simNodesMap.get(node.id);
+      positioned.push({
+        id: node.id,
+        label: node.label,
+        type: node.type,
+        path: node.path,
+        depth: node.depth,
+        position: [round(sn.x), round(sn.y), round(sn.z)],
+        rotation: [0, 0, 0],
+        radius: numberOr(options.nodeRadius, DEFAULTS.nodeRadius),
+        visualRole: node.depth === 0 ? 'root-node' : 'detail-node',
+        source: node.source,
+      });
+    }
+    return positioned;
+  }
 
   for (let [depth, layerNodes] of groupByDepth(nodes)) {
     let layerRadius = radius + depth * layerGap;

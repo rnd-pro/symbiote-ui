@@ -1,0 +1,31 @@
+# Symbiote UI
+
+> Runtime UI library for agent-driven professional interfaces. No build step.
+
+Symbiote UI is a Web Component library that lets AI agents create, control,
+and theme Studio-grade interfaces at runtime through a programmatic API.
+Unlike static "agent skill" instructions, Symbiote UI provides a live runtime
+where agents directly assemble UI from JSON, manage component lifecycle via
+WebSocket, compose cascading themes from presets, and orchestrate multi-step
+UI transactions with automatic rollback.
+
+## Documentation
+
+- [README](https://github.com/rnd-pro/symbiote-ui/blob/main/README.md)
+- [CHANGELOG](https://github.com/rnd-pro/symbiote-ui/blob/main/CHANGELOG.md)
+
+## Agent Skills
+
+- [symbiote-ui](skills/symbiote-ui/SKILL.md): Runtime UI Controller, WebSocket protocol, Dynamic Component Registry, Agent Intent Orchestrator, WebMCP Bridge.
+- [symbiote-ui-theming](skills/symbiote-ui-theming/SKILL.md): Cascade Theme System, ThemeFactory presets, Motion layer, State-to-Cascade CSS induction.
+
+## Schemas
+
+- [runtime-ui-v1](schemas/runtime-ui-v1.json): JSON schema for runtime UI trees.
+- [agent-intent-v1](schemas/agent-intent-v1.json): JSON schema for transactional agent intent sequences.
+- [component-descriptor-v2](schemas/component-descriptor-v2.json): JSON schema for component descriptors with SSR and WebMCP metadata.
+- [theme-rule-block-v1](schemas/theme-rule-block-v1.json): JSON schema for composable theme rule blocks.
+
+## Component Catalog
+
+- [custom-elements.json](custom-elements.json): Full Web Component catalog with properties, attributes, events, and theme aliases.

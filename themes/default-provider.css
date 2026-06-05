@@ -129,12 +129,12 @@
   --sn-node-selected: hsl(var(--sn-hue-accent) var(--sn-sat-vivid) var(--sn-lit-accent));
   --sn-node-accent: var(--sn-node-selected);
   --sn-node-hover: hsl(var(--sn-hue-base) var(--sn-sat-muted) var(--sn-lit-hover));
-  --sn-font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --sn-font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --sn-font: var(--font-sans, 'Inter', -apple-system, BlinkMacSystemFont, sans-serif);
+  --sn-font-mono: var(--font-mono, 'JetBrains Mono', 'Fira Code', monospace);
   --sn-font-ui: var(--sn-font);
   --sn-font-family: var(--sn-font);
   --sn-icon-font: 'Material Symbols Outlined';
-  --sn-text: hsl(var(--sn-hue-base) var(--sn-sat-muted) var(--sn-lit-text));
+  --sn-text: var(--color-foreground, hsl(var(--sn-hue-base) var(--sn-sat-muted) var(--sn-lit-text)));
   --sn-text-dim: hsl(var(--sn-hue-base) var(--sn-sat-muted) var(--sn-lit-text-dim));
   --sn-socket-size: 12px;
   --sn-socket-border-width: 2px;
@@ -291,6 +291,12 @@
   --sn-tabs-hover-bg: hsl(var(--sn-hue-base) var(--sn-sat-muted) var(--sn-lit-text) / 0.04);
   --sn-tabs-divider: hsl(var(--sn-hue-base) var(--sn-sat-muted) var(--sn-lit-text) / 0.1);
   --sn-tabs-accent: var(--sn-node-selected);
+  --sn-tab-accent-0: var(--sn-cat-server);
+  --sn-tab-accent-1: var(--sn-cat-data);
+  --sn-tab-accent-2: var(--sn-cat-control);
+  --sn-tab-accent-3: var(--sn-cat-instance);
+  --sn-tab-accent-4: var(--sn-type-action);
+  --sn-tab-accent-5: var(--sn-cat-class);
   --sn-tabs-radius: 8px 8px 0 0;
   --sn-tabs-corner-size: 12px;
   --sn-tabs-corner-cut: 11.5px;
@@ -731,5 +737,41 @@
   }
   100% {
     box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root, [style*="--sn-"], [data-theme] {
+    --sn-theme-outline-strength: 0.90 !important;
+    --sn-node-border-width: 3px !important;
+    --sn-outline-color: var(--sn-text) !important;
+    --sn-outline-color-soft: var(--sn-text) !important;
+    --sn-text-dim: var(--sn-text) !important;
+  }
+}
+
+@media (forced-colors: active) {
+  :root, [style*="--sn-"], [data-theme] {
+    --sn-bg: Canvas !important;
+    --sn-panel-bg: Canvas !important;
+    --sn-layout-bg: Canvas !important;
+    --sn-node-bg: Canvas !important;
+    --sn-surface: Canvas !important;
+    --sn-text: CanvasText !important;
+    --sn-text-dim: CanvasText !important;
+    --sn-outline-color: ButtonBorder !important;
+    --sn-outline-color-soft: ButtonBorder !important;
+    --sn-border: ButtonBorder !important;
+    --sn-node-border: ButtonBorder !important;
+    --sn-node-selected: Highlight !important;
+    --sn-node-accent: Highlight !important;
+    --sn-button-primary-bg: ButtonFace !important;
+    --sn-button-primary-color: ButtonText !important;
+    --sn-button-success-bg: ButtonFace !important;
+    --sn-button-success-color: ButtonText !important;
+    --sn-button-danger-hover-bg: ButtonFace !important;
+    --sn-button-danger-hover-color: ButtonText !important;
+    --sn-cell-dot: transparent !important;
+    --sn-cell-bg: Canvas !important;
   }
 }

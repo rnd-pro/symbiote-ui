@@ -34,6 +34,16 @@ export {
   getCascadeThemeControls,
   getReadableTextForHsl,
   normalizeCascadeThemeOptions,
+  applyMotion,
+  ScopedAnimationScope,
+  animateSpring,
+  stagger,
+  makeDraggable,
+  applyTailwindBridge,
+  hasTailwind,
+  applyThemePresets,
+  resolveThemePresets,
+  resolveThemePresetsForTask,
 } from './themes/Theme.js';
 
 export {

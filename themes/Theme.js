@@ -33,6 +33,10 @@ export {
   SMOOTH_MOTION,
   FAST_MOTION,
   DISABLED_MOTION,
+  ScopedAnimationScope,
+  animateSpring,
+  stagger,
+  makeDraggable,
 } from './Motion.js';
 
 export {
@@ -108,3 +112,8 @@ export function extractTheme(element, reference) {
   }
   return { name: 'extracted', tokens };
 }
+
+export {
+  applyTailwindBridge,
+  hasTailwind,
+} from './TailwindBridge.js';

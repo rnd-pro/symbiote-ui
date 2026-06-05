@@ -1,6 +1,7 @@
 node_modules/
 coverage/
 tmp/
+scratch/
 *.log
 *.tgz
 .DS_Store

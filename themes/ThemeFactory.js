@@ -39,9 +39,9 @@ export const PANEL_THEME_PRESETS = Object.freeze({
  * @returns {object} resolved cascade options
  */
 export function resolveThemePresets(presets = {}) {
-  let colorName = presets.color || presets.palette || 'dark';
-  let skinName = presets.skin || presets.layout || 'modern';
-  let motionName = presets.motion || 'default';
+  let colorName = presets.color || presets.colorPreset || presets.palette || 'dark';
+  let skinName = presets.skin || presets.skinPreset || presets.layout || 'modern';
+  let motionName = presets.motion || presets.motionPreset || 'default';
 
   let colorOpts = COLOR_PRESETS[colorName] || COLOR_PRESETS['dark'];
   let skinOpts = SKIN_PRESETS[skinName] || SKIN_PRESETS['modern'];

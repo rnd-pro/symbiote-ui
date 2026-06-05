@@ -17,6 +17,10 @@ import {
   resolveThemePresets,
 } from '../themes/ThemeFactory.js';
 
+import {
+  reserveLayoutFootprint,
+} from './cls-reservation.js';
+
 export const RUNTIME_UI_CONTRACT_VERSION = 'runtime-ui-v1';
 
 export const RUNTIME_UI_CONTRACT = Object.freeze({
@@ -134,6 +138,61 @@ function removeElement(element) {
   }
 }
 
+function unindexRuntimeUiInstance(controller, instance) {
+  if (!controller?.instances || !instance) return;
+  if (instance.id) controller.instances.delete(instance.id);
+  for (let child of instance.children || []) {
+    unindexRuntimeUiInstance(controller, child);
+  }
+}
+
+function resolveClsReservationOptions(clsOptions, layoutSize = {}, doc) {
+  let resolved = typeof clsOptions === 'object' ? { ...clsOptions } : {};
+  if (!resolved.width) {
+    resolved.width = layoutSize.width || (layoutSize.rect?.width ? `${layoutSize.rect.width * 100}%` : '100%');
+  }
+  if (!resolved.height) {
+    resolved.height = layoutSize.height || (layoutSize.rect?.height ? `${layoutSize.rect.height * 100}px` : '100px');
+  }
+  resolved.document = doc;
+  return resolved;
+}
+
+function shouldReserveLayout(parentEl, clsOptions, layoutSize = {}) {
+  return Boolean(parentEl && (clsOptions || layoutSize.width || layoutSize.height || layoutSize.rect));
+}
+
+function mountRuntimeUiInstance(controller, node, createOpts = {}, parentEl = null, doc = null) {
+  let clsOptions = createOpts.cls || createOpts.clsReservation;
+  let layoutSize = node?.layout || {};
+
+  if (!shouldReserveLayout(parentEl, clsOptions, layoutSize)) {
+    let instance = controller.create(node, createOpts);
+    if (parentEl) {
+      appendChild(parentEl, instance.element);
+    }
+    return instance;
+  }
+
+  let reservation = null;
+  let instance = null;
+  try {
+    reservation = reserveLayoutFootprint(parentEl, resolveClsReservationOptions(clsOptions, layoutSize, doc));
+    instance = controller.create(node, createOpts);
+    instance.reservation = reservation;
+    reservation.replace(instance.element);
+    return instance;
+  } catch (err) {
+    if (instance) {
+      instance.destroy({ remove: true });
+      unindexRuntimeUiInstance(controller, instance);
+    } else {
+      reservation?.destroy();
+    }
+    throw err;
+  }
+}
+
 function wireIntentEvents(element, node, options = {}) {
   let subscriptions = [];
   let onIntent = typeof options.onIntent === 'function' ? options.onIntent : null;
@@ -181,7 +240,7 @@ export function createRuntimeUiInstance(node, options = {}) {
   });
   let unsubscribe = wireIntentEvents(element, normalized, options);
 
-  return {
+  let instance = {
     id: normalized.id,
     component: normalized.component,
     element,
@@ -197,9 +256,17 @@ export function createRuntimeUiInstance(node, options = {}) {
     destroy({ remove = true } = {}) {
       unsubscribe();
       for (let child of childInstances.splice(0)) child.destroy({ remove });
-      if (remove) removeElement(element);
+      if (remove) {
+        if (instance.reservation) {
+          instance.reservation.destroy();
+        } else {
+          removeElement(element);
+        }
+      }
     },
   };
+  return instance;
+
 }
 
 export function createRuntimeUiController(options = {}) {
@@ -312,30 +379,22 @@ export function createRuntimeUiController(options = {}) {
             let parentId = params.parentId;
             let targetSelector = params.targetSelector || params.target;
 
-            let instance = controller.create(node, createOpts);
-
             let doc = connectOptions.document || options.document || (typeof globalThis.document !== 'undefined' ? globalThis.document : null);
+            let parentEl = null;
             if (parentId) {
               let parentInst = instances.get(parentId);
               if (parentInst && parentInst.element) {
-                parentInst.element.append(instance.element);
+                parentEl = parentInst.element;
               }
             } else if (targetSelector && doc) {
-              let targetEl = typeof targetSelector === 'string'
+              parentEl = typeof targetSelector === 'string'
                 ? doc.querySelector(targetSelector)
                 : targetSelector;
-              if (targetEl && typeof targetEl.append === 'function') {
-                targetEl.append(instance.element);
-              } else if (targetEl && typeof targetEl.appendChild === 'function') {
-                targetEl.appendChild(instance.element);
-              }
             } else if (doc && doc.body) {
-              if (typeof doc.body.append === 'function') {
-                doc.body.append(instance.element);
-              } else if (typeof doc.body.appendChild === 'function') {
-                doc.body.appendChild(instance.element);
-              }
+              parentEl = doc.body;
             }
+
+            mountRuntimeUiInstance(controller, node, createOpts, parentEl, doc);
           } else if (method === 'update') {
             controller.update(params.id, params.state, params.options);
           } else if (method === 'destroy') {
@@ -674,25 +733,26 @@ export async function executeAgentIntent(controller, intent = {}, options = {}) 
       } else if (type === 'ui') {
         let action = params.action || 'create';
         if (action === 'create') {
-          let instance = controller.create(params.node, params.options);
+          let node = params.node;
+          let createOpts = params.options || {};
           let parentId = params.parentId;
           let targetSelector = params.targetSelector || params.target;
 
+          let parentEl = null;
           if (parentId) {
             let parentInst = controller.instances.get(parentId);
             if (parentInst && parentInst.element) {
-              appendChild(parentInst.element, instance.element);
+              parentEl = parentInst.element;
             }
           } else if (targetSelector && doc) {
-            let targetEl = typeof targetSelector === 'string'
+            parentEl = typeof targetSelector === 'string'
               ? doc.querySelector(targetSelector)
               : targetSelector;
-            if (targetEl) {
-              appendChild(targetEl, instance.element);
-            }
           } else if (doc && doc.body) {
-            appendChild(doc.body, instance.element);
+            parentEl = doc.body;
           }
+
+          let instance = mountRuntimeUiInstance(controller, node, createOpts, parentEl, doc);
 
           executed.push({ type: 'ui-create', id: params.node.id || instance.id });
         } else if (action === 'destroy') {
@@ -795,3 +855,5 @@ export async function executeAgentIntent(controller, intent = {}, options = {}) 
 
   return { success: true, executedCount: executed.length };
 }
+
+export { reserveLayoutFootprint } from './cls-reservation.js';
