@@ -35,6 +35,16 @@ export {
   DISABLED_MOTION,
 } from './Motion.js';
 
+export {
+  applyThemePresets,
+  resolveThemePresets,
+  resolveThemePresetsForTask,
+  PANEL_THEME_PRESETS,
+  COLOR_PRESETS,
+  SKIN_PRESETS,
+  MOTION_PRESETS,
+} from './ThemeFactory.js';
+
 /**
  * Mapping from layout global tokens to symbiote-node tokens.
  * Layout module uses --bg-*, --text-* format; this bridges them.

@@ -109,6 +109,11 @@ test('discover exposes the standalone package contract', async () => {
   for (const name of ['mode', 'brightness', 'contrast', 'chroma', 'hue', 'outline', 'type', 'heading', 'density']) {
     assert.ok(cascadeControlNames.includes(name), `expected cascade theme control ${name}`);
   }
+
+  assert.ok(data.manifest.themePresets);
+  assert.deepEqual(data.manifest.themePresets.colors, ['carbon', 'neon', 'pcb', 'ebook', 'dark', 'light']);
+  assert.deepEqual(data.manifest.themePresets.skins, ['modern', 'compact', 'rounded']);
+  assert.deepEqual(data.manifest.themePresets.panels.chat, { color: 'dark', skin: 'modern', motion: 'smooth' });
 });
 
 test('webmcp helpers append component context to explicit tool descriptors', async () => {

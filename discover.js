@@ -32,6 +32,12 @@ import {
 } from './manifest/index.js';
 import { DEFAULT_LOCALE, LOCALE_CATALOG_KEYS, SUPPORTED_LOCALES } from './locale/index.js';
 import { WEBXR_RENDERER, XR_THREE_WEBXR_ADAPTER } from './xr/index.js';
+import {
+  COLOR_PRESETS,
+  SKIN_PRESETS,
+  MOTION_PRESETS,
+  PANEL_THEME_PRESETS,
+} from './themes/ThemeFactory.js';
 
 let __dirname = dirname(fileURLToPath(import.meta.url));
 let PKG_PATH = resolve(__dirname, 'package.json');
@@ -223,6 +229,12 @@ export async function cmdDiscover(options = {}) {
         ...getTheme(name),
         tokens: getThemeTokens(name),
       })),
+      themePresets: {
+        colors: Object.keys(COLOR_PRESETS),
+        skins: Object.keys(SKIN_PRESETS),
+        motions: Object.keys(MOTION_PRESETS),
+        panels: PANEL_THEME_PRESETS,
+      },
       themeRuntimeDescriptors: listThemeRuntimeDescriptors(),
       themeRuleBlocks: listThemeRuleBlocks(),
       themeControls: {

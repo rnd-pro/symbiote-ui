@@ -131,6 +131,8 @@ export let styles = css`
       display: grid;
       grid-template-columns: auto minmax(0, 1fr);
       align-items: stretch;
+      box-sizing: border-box;
+      height: calc(var(--sn-layout-header-min-height, 28px) * var(--sn-layout-menu-row-span));
       min-height: calc(var(--sn-layout-header-min-height, 28px) * var(--sn-layout-menu-row-span));
       border-top: 1px solid color-mix(in oklab, var(--sn-layout-border) 56%, transparent);
     }
@@ -157,9 +159,11 @@ export let styles = css`
       display: flex;
       align-items: center;
       gap: var(--sn-layout-menu-gap, var(--sn-layout-header-button-gap, 4px));
+      box-sizing: border-box;
+      height: calc(var(--sn-layout-header-min-height, 28px) * var(--sn-layout-menu-row-span));
       min-height: calc(var(--sn-layout-header-min-height, 28px) * var(--sn-layout-menu-row-span));
       min-width: min-content;
-      padding: var(--sn-layout-menu-padding, var(--sn-layout-header-padding, 2px 4px));
+      padding: var(--sn-layout-menu-padding, 0 4px);
       overflow-x: auto;
       overflow-y: hidden;
       ${themedScrollbarStyles}
@@ -170,7 +174,8 @@ export let styles = css`
       align-items: center;
       justify-content: center;
       gap: var(--sn-layout-menu-action-gap, var(--sn-layout-header-button-gap, 4px));
-      min-height: var(--sn-layout-menu-action-height, var(--sn-layout-header-min-height, 28px));
+      box-sizing: border-box;
+      min-height: var(--sn-layout-menu-action-height, calc(var(--sn-layout-header-min-height, 28px) - 4px));
       padding: var(--sn-layout-menu-action-padding, var(--sn-layout-header-button-padding, 4px 6px));
       border: 1px solid transparent;
       border-radius: var(--sn-layout-header-button-radius, 4px);

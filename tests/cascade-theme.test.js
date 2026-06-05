@@ -1608,3 +1608,37 @@ test('cascade theme lab exposes constrained chat smoke width for browser respons
   assert.match(source, /data-chat-smoke/);
   assert.match(source, /--stage7-chat-smoke-width/);
 });
+
+test('ThemeFactory resolves presets, resolves task mapping, and applies to elements', async () => {
+  let {
+    resolveThemePresets,
+    resolveThemePresetsForTask,
+    applyThemePresets,
+  } = await import('../themes/Theme.js');
+
+  let resolved = resolveThemePresets({ color: 'carbon', skin: 'compact', motion: 'fast' });
+  assert.equal(resolved.mode, 'dark');
+  assert.equal(resolved.hue, 218);
+  assert.equal(resolved.chroma, 0);
+  assert.equal(resolved.density, 80);
+  assert.equal(resolved.motion, 60);
+
+  assert.deepEqual(resolveThemePresetsForTask('editor'), { color: 'carbon', skin: 'compact', motion: 'fast' });
+  assert.deepEqual(resolveThemePresetsForTask('monitor'), { color: 'pcb', skin: 'compact', motion: 'fast' });
+  assert.deepEqual(resolveThemePresetsForTask('unknown'), { color: 'dark', skin: 'modern', motion: 'smooth' });
+
+  let styles = new Map();
+  let element = {
+    style: {
+      setProperty(key, val) {
+        styles.set(key, val);
+      }
+    }
+  };
+
+  applyThemePresets(element, { color: 'carbon', skin: 'compact', motion: 'fast' });
+  assert.equal(styles.get('--sn-theme-hue'), '218');
+  assert.equal(styles.get('--sn-theme-motion-scale'), '0.60');
+  assert.equal(styles.get('--sn-transition-fast'), '72ms');
+});
+
