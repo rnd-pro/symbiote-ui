@@ -1005,7 +1005,8 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(layoutNode, /--sn-layout-menu-action-height/);
   assert.match(layoutNode, /--sn-layout-menu-icon-size/);
   assert.match(layoutNode, /--sn-layout-menu-row-span/);
-  assert.match(layoutNode, /calc\(var\(--sn-layout-header-min-height, 28px\) \* var\(--sn-layout-menu-row-span\)\)/);
+  assert.match(layoutNode, /--sn-layout-menu-row-height/);
+  assert.match(layoutNode, /calc\(var\(--sn-layout-menu-row-height, var\(--sn-layout-header-min-height, 28px\)\) \* var\(--sn-layout-menu-row-span\)\)/);
   assert.match(layoutNode, /panel-menu-row-label/);
   assert.match(layoutNodeTpl, /panel-menu-drawer/);
   assert.match(layoutNodeTpl, /panelMenuRows/);
@@ -1641,4 +1642,3 @@ test('ThemeFactory resolves presets, resolves task mapping, and applies to eleme
   assert.equal(styles.get('--sn-theme-motion-scale'), '0.60');
   assert.equal(styles.get('--sn-transition-fast'), '72ms');
 });
-
