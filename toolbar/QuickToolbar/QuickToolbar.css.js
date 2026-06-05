@@ -141,7 +141,7 @@ export let styles = css`
   }
 
   .tb-btn--enter:hover {
-    --sn-button-hover-bg: color-mix(in srgb, var(--sn-cat-data) 25%, transparent);
+    --sn-button-hover-bg: color-mix(in oklab, var(--sn-cat-data) 25%, transparent);
     color: var(--sn-cat-data);
   }
 

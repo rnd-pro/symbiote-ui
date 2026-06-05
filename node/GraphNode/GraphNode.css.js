@@ -38,7 +38,7 @@ export let styles = css`
 
     &[data-selected] {
       border-color: var(--sn-node-selected);
-      box-shadow: 0 0 20px color-mix(in srgb, var(--sn-node-selected) 30%, transparent);
+      box-shadow: 0 0 20px color-mix(in oklab, var(--sn-node-selected) 30%, transparent);
     }
 
     &[data-collapsed] {
@@ -141,30 +141,30 @@ export let styles = css`
       display: block;
       width: 100%;
       height: 80px;
-      border-top: 1px solid color-mix(in srgb, currentColor 6%, transparent);
+      border-top: 1px solid color-mix(in oklab, currentColor 6%, transparent);
       opacity: 0.7;
     }
 
     &[data-processing] {
       border-color: var(--sn-node-accent, var(--sn-node-selected));
       box-shadow:
-        0 0 16px color-mix(in srgb, var(--sn-node-accent) 40%, transparent),
-        0 0 4px color-mix(in srgb, var(--sn-node-accent) 60%, transparent);
+        0 0 16px color-mix(in oklab, var(--sn-node-accent) 40%, transparent),
+        0 0 4px color-mix(in oklab, var(--sn-node-accent) 60%, transparent);
       animation: sn-node-pulse 1s ease-in-out infinite;
     }
 
     &[data-completed] {
       border-color: var(--sn-success-color);
-      box-shadow: 0 0 8px color-mix(in srgb, var(--sn-success-color) 30%, transparent);
+      box-shadow: 0 0 8px color-mix(in oklab, var(--sn-success-color) 30%, transparent);
     }
 
     &[data-error] {
-      border-color: color-mix(in srgb, var(--sn-danger-color) 60%, transparent);
+      border-color: color-mix(in oklab, var(--sn-danger-color) 60%, transparent);
       position: relative;
     }
 
     &[data-error] .sn-node-header {
-      background: color-mix(in srgb, var(--sn-danger-color) 10%, transparent);
+      background: color-mix(in oklab, var(--sn-danger-color) 10%, transparent);
     }
 
     & .error-frame {
@@ -174,9 +174,9 @@ export let styles = css`
       transform: translateX(-50%);
       min-width: var(--sn-node-error-frame-min-width);
       max-width: var(--sn-node-error-frame-max-width);
-      border: var(--sn-node-error-frame-border-width) solid color-mix(in srgb, var(--sn-danger-color) 60%, transparent);
+      border: var(--sn-node-error-frame-border-width) solid color-mix(in oklab, var(--sn-danger-color) 60%, transparent);
       border-radius: var(--sn-node-error-frame-radius);
-      background: color-mix(in srgb, var(--sn-danger-color) 8%, transparent);
+      background: color-mix(in oklab, var(--sn-danger-color) 8%, transparent);
       pointer-events: none;
       z-index: 10;
       transition: bottom 0.15s ease;
@@ -189,8 +189,8 @@ export let styles = css`
       padding: var(--sn-node-error-frame-header-padding, 5px 10px);
       font-size: var(--sn-node-error-frame-header-size, 12px);
       font-weight: 600;
-      color: color-mix(in srgb, var(--sn-danger-color) 90%, white);
-      border-bottom: 1px solid color-mix(in srgb, var(--sn-danger-color) 20%, transparent);
+      color: color-mix(in oklab, var(--sn-danger-color) 90%, white);
+      border-bottom: 1px solid color-mix(in oklab, var(--sn-danger-color) 20%, transparent);
       user-select: none;
     }
 
@@ -203,15 +203,15 @@ export let styles = css`
       padding: var(--sn-node-error-frame-body-padding, 6px 10px);
       font-size: var(--sn-node-error-frame-body-size, 11px);
       line-height: 1.4;
-      color: color-mix(in srgb, var(--sn-danger-color) 75%, white);
+      color: color-mix(in oklab, var(--sn-danger-color) 75%, white);
       word-wrap: break-word;
     }
 
     & .sn-node-media {
       inline-size: 100%;
       overflow: hidden;
-      border-bottom: 1px solid color-mix(in srgb, currentColor 8%, transparent);
-      background: color-mix(in srgb, var(--sn-node-accent) 10%, transparent);
+      border-bottom: 1px solid color-mix(in oklab, currentColor 8%, transparent);
+      background: color-mix(in oklab, var(--sn-node-accent) 10%, transparent);
     }
 
     & .sn-node-media-img {
@@ -270,16 +270,16 @@ export let styles = css`
       flex-direction: column;
       gap: var(--sn-node-item-gap, 3px);
       padding: var(--sn-node-item-padding, 8px 9px);
-      border: 1px solid var(--sn-node-item-border, color-mix(in srgb, currentColor 8%, transparent));
+      border: 1px solid var(--sn-node-item-border, color-mix(in oklab, currentColor 8%, transparent));
       border-radius: var(--sn-node-item-radius, 6px);
-      background: color-mix(in srgb, var(--sn-node-accent) 8%, transparent);
+      background: color-mix(in oklab, var(--sn-node-accent) 8%, transparent);
       color: inherit;
       text-decoration: none;
     }
 
     & .sn-node-item:hover {
-      border-color: color-mix(in srgb, var(--sn-node-accent) 44%, transparent);
-      background: color-mix(in srgb, var(--sn-node-accent) 14%, transparent);
+      border-color: color-mix(in oklab, var(--sn-node-accent) 44%, transparent);
+      background: color-mix(in oklab, var(--sn-node-accent) 14%, transparent);
     }
 
     & .sn-node-item-kicker {
@@ -638,9 +638,9 @@ export let styles = css`
       padding: var(--sn-node-header-padding, 8px 12px);
       background: var(
         --sn-node-header-bg,
-        color-mix(in srgb, var(--sn-node-accent) 15%, transparent)
+        color-mix(in oklab, var(--sn-node-accent) 15%, transparent)
       );
-      border-bottom: 1px solid var(--sn-node-header-border, color-mix(in srgb, currentColor 6%, transparent));
+      border-bottom: 1px solid var(--sn-node-header-border, color-mix(in oklab, currentColor 6%, transparent));
       border-radius: var(--sn-node-radius) var(--sn-node-radius) 0 0;
     }
 
@@ -749,8 +749,8 @@ export let styles = css`
     }
 
     & .sn-control-input {
-      background: color-mix(in srgb, var(--sn-bg) 70%, transparent);
-      border: 1px solid var(--sn-control-input-border, color-mix(in srgb, currentColor 10%, transparent));
+      background: color-mix(in oklab, var(--sn-bg) 70%, transparent);
+      border: 1px solid var(--sn-control-input-border, color-mix(in oklab, currentColor 10%, transparent));
       border-radius: var(--sn-control-input-radius, 4px);
       padding: var(--sn-control-input-padding, 4px 8px);
       color: var(--sn-text);
@@ -805,7 +805,7 @@ export let styles = css`
     border-radius: 0 0 var(--sn-node-radius) var(--sn-node-radius);
     overflow: hidden;
     max-height: 120px;
-    background: color-mix(in srgb, var(--sn-bg) 55%, transparent);
+    background: color-mix(in oklab, var(--sn-bg) 55%, transparent);
 
     &[hidden] {
       display: none;
@@ -845,13 +845,13 @@ export let styles = css`
     0%,
     100% {
       box-shadow:
-        0 0 16px color-mix(in srgb, var(--sn-danger-color) 35%, transparent),
-        0 0 4px color-mix(in srgb, var(--sn-danger-color) 50%, transparent);
+        0 0 16px color-mix(in oklab, var(--sn-danger-color) 35%, transparent),
+        0 0 4px color-mix(in oklab, var(--sn-danger-color) 50%, transparent);
     }
     50% {
       box-shadow:
-        0 0 24px color-mix(in srgb, var(--sn-danger-color) 50%, transparent),
-        0 0 8px color-mix(in srgb, var(--sn-danger-color) 70%, transparent);
+        0 0 24px color-mix(in oklab, var(--sn-danger-color) 50%, transparent),
+        0 0 8px color-mix(in oklab, var(--sn-danger-color) 70%, transparent);
     }
   }
 

@@ -27,8 +27,11 @@ export class GraphExplorerShell extends Symbiote {
   }
 
   _onShellClick = (event) => {
-    const button = event.target?.closest?.('[data-action], [data-mode], [data-layer]');
+    const button = event.composedPath?.().find?.((element) => (
+      element?.matches?.('[data-action], [data-mode], [data-layer]')
+    )) || event.target?.closest?.('[data-action], [data-mode], [data-layer]');
     if (!button || !this.contains(button)) return;
+    event.stopPropagation?.();
 
     const mode = button.getAttribute('data-mode');
     if (mode) {

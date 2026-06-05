@@ -42,10 +42,15 @@ function readCssPixelValue(element, name, fallback) {
 export class ChatSidebarShell extends Symbiote {
   static isoMode = true;
 
+  static get observedAttributes() {
+    return ['auto-collapse'];
+  }
+
   init$ = {
     navCollapsed: true,
     navWidth: DEFAULT_NAV_WIDTH,
     groupDividers: true,
+    autoCollapse: true,
     chats: [],
     title: translate('chat.sidebar.title'),
     newChatTitle: translate('chat.sidebar.new'),
@@ -65,6 +70,8 @@ export class ChatSidebarShell extends Symbiote {
   };
 
   initCallback() {
+    this.$.autoCollapse = this._readAutoCollapseAttribute();
+
     this.sub('navCollapsed', (value) => {
       this._applyNavWidth();
       emit(this, 'chat-sidebar-collapse-change', {
@@ -102,6 +109,12 @@ export class ChatSidebarShell extends Symbiote {
     this._resizeObserver?.disconnect();
   }
 
+  attributeChangedCallback(name, oldValue, newValue) {
+    super.attributeChangedCallback?.(name, oldValue, newValue);
+    if (oldValue === newValue || name !== 'auto-collapse') return;
+    this.setAutoCollapse(this._readAutoCollapseAttribute());
+  }
+
   setChats(chats = []) {
     this.$.chats = Array.isArray(chats) ? chats : [];
     let raf = globalThis.requestAnimationFrame || ((callback) => setTimeout(callback, 0));
@@ -111,6 +124,15 @@ export class ChatSidebarShell extends Symbiote {
   setCollapsed(collapsed, { auto = false } = {}) {
     this._autoCollapsed = auto;
     this.$.navCollapsed = Boolean(collapsed);
+  }
+
+  setAutoCollapse(enabled) {
+    this.$.autoCollapse = Boolean(enabled);
+    if (!this.$.autoCollapse && this._autoCollapsed) {
+      this.setCollapsed(false, { auto: false });
+      return;
+    }
+    this._syncCollapseForAvailableWidth();
   }
 
   setWidth(width) {
@@ -141,6 +163,7 @@ export class ChatSidebarShell extends Symbiote {
   }
 
   _syncCollapseForAvailableWidth() {
+    if (!this.$.autoCollapse) return;
     if (this._isResizing) return;
     let shell = this.closest('.chat-shell') || this.parentElement;
     if (!shell) return;
@@ -150,6 +173,11 @@ export class ChatSidebarShell extends Symbiote {
     } else if (width >= AUTO_UNCOLLAPSE_WIDTH && this.$.navCollapsed && this._autoCollapsed) {
       this.setCollapsed(false, { auto: false });
     }
+  }
+
+  _readAutoCollapseAttribute() {
+    let value = this.getAttribute('auto-collapse');
+    return value === null || (value !== 'false' && value !== 'never');
   }
 
   _startResize(event) {

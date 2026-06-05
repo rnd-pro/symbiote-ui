@@ -55,7 +55,7 @@ chat-list-item[nested] .chat-list-item::before {
   font-weight: 600;
   padding: var(--sn-chat-list-badge-padding, 1px 5px);
   border-radius: var(--sn-chat-list-badge-radius, 3px);
-  background: color-mix(in srgb, var(--sn-node-selected) 18%, transparent);
+  background: color-mix(in oklab, var(--sn-node-selected) 18%, transparent);
   color: var(--sn-node-selected);
   text-transform: uppercase;
   letter-spacing: 0;

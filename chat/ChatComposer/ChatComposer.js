@@ -7,12 +7,109 @@ function emit(el, type, detail = {}) {
   el.dispatchEvent(new CustomEvent(type, { bubbles: true, composed: true, detail }));
 }
 
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;');
+}
+
+function renderFooterIcon(icon) {
+  return icon
+    ? `<span class="material-symbols-outlined">${escapeHtml(icon)}</span>`
+    : '';
+}
+
+function renderFooterLabel(label) {
+  return label
+    ? `<span class="composer-footer-label">${escapeHtml(label)}</span>`
+    : '';
+}
+
+function normalizeVoiceInputState(state) {
+  return state === 'recording' ? 'listening' : state === 'processing' ? 'transcribing' : state || 'idle';
+}
+
+function normalizeFooterControl(control, index) {
+  let id = String(control?.id || control?.name || `control-${index + 1}`);
+  let kind = String(control?.kind || control?.type || 'button');
+  let priority = Math.min(Math.max(Number(control?.priority || index + 1), 1), 5);
+  return {
+    ...control,
+    id,
+    kind,
+    priority,
+    label: control?.label || id,
+    title: control?.title || control?.label || id,
+    value: control?.value ?? '',
+  };
+}
+
+function renderFooterControl(control, index) {
+  let item = normalizeFooterControl(control, index);
+  let commonClass = [
+    'composer-footer-btn',
+    'composer-footer-control',
+    `composer-priority-${item.priority}`,
+    item.active ? 'active' : '',
+    item.compact ? 'composer-param-collapsed' : '',
+    item.className || '',
+  ].filter(Boolean).join(' ');
+  let commonAttrs = [
+    `data-footer-control-id="${escapeHtml(item.id)}"`,
+    `data-footer-control-kind="${escapeHtml(item.kind)}"`,
+    `title="${escapeHtml(item.title)}"`,
+  ].join(' ');
+  let disabled = item.disabled ? ' disabled' : '';
+
+  if (item.kind === 'select') {
+    let options = Array.isArray(item.options) ? item.options : [];
+    let optionHtml = options.map((option) => {
+      let value = option?.value ?? option?.id ?? option?.label ?? '';
+      let label = option?.label ?? value;
+      let selected = String(value) === String(item.value) ? ' selected' : '';
+      return `<option value="${escapeHtml(value)}"${selected}>${escapeHtml(label)}</option>`;
+    }).join('');
+    return `
+      <label class="${commonClass} composer-footer-select-control" ${commonAttrs}>
+        ${renderFooterIcon(item.icon)}
+        ${renderFooterLabel(item.label)}
+        <select class="composer-footer-select" data-footer-control-id="${escapeHtml(item.id)}" data-footer-control-kind="${escapeHtml(item.kind)}"${disabled}>
+          ${optionHtml}
+        </select>
+      </label>
+    `;
+  }
+
+  if (item.kind === 'checkbox') {
+    let checked = item.checked || item.value === true ? ' checked' : '';
+    return `
+      <label class="${commonClass} composer-footer-checkbox-control" ${commonAttrs}>
+        ${renderFooterIcon(item.icon)}
+        <input class="composer-footer-checkbox" type="checkbox" data-footer-control-id="${escapeHtml(item.id)}" data-footer-control-kind="${escapeHtml(item.kind)}"${checked}${disabled}>
+        ${renderFooterLabel(item.label)}
+      </label>
+    `;
+  }
+
+  let value = item.value ? `<span class="composer-footer-value">${escapeHtml(item.value)}</span>` : '';
+  return `
+    <button class="${commonClass}" type="button" ${commonAttrs}${disabled}>
+      ${renderFooterIcon(item.icon)}
+      ${renderFooterLabel(item.label)}
+      ${value}
+    </button>
+  `;
+}
+
 export class ChatComposer extends Symbiote {
   init$ = {
     value: '',
     disabled: false,
     placeholder: translate('chat.composer.placeholder'),
     attachedContext: [],
+    footerControls: [],
     footerHtml: '',
     isSending: false,
 
@@ -42,11 +139,50 @@ export class ChatComposer extends Symbiote {
     },
 
     onVoiceInput: () => {
-      emit(this, 'chat-composer-voice-input');
+      let currentState = this._getVoiceInputState();
+      let action = currentState === 'listening'
+        ? 'stop'
+        : currentState === 'transcribing'
+          ? 'cancel'
+          : 'start';
+      let detail = {
+        action,
+        currentState,
+        mode: 'voice-input',
+        permission: 'microphone',
+        source: 'voice-input',
+      };
+      if (action === 'start') {
+        emit(this, 'chat-composer-permission-intent', {
+          action: 'request',
+          permission: 'microphone',
+          reason: 'voice-input',
+          source: 'voice-input',
+        });
+      }
+      emit(this, 'chat-composer-recorder-intent', detail);
+      emit(this, 'chat-composer-voice-input', detail);
     },
 
     onWakeListen: () => {
-      emit(this, 'chat-composer-wake-listen');
+      let active = Boolean(this._voiceControls?.wakeListen?.active);
+      let detail = {
+        action: active ? 'stop' : 'start',
+        currentState: active ? 'listening' : 'idle',
+        mode: 'wake-listen',
+        permission: 'microphone',
+        source: 'wake-listen',
+      };
+      if (!active) {
+        emit(this, 'chat-composer-permission-intent', {
+          action: 'request',
+          permission: 'microphone',
+          reason: 'wake-listening',
+          source: 'wake-listen',
+        });
+      }
+      emit(this, 'chat-composer-recorder-intent', detail);
+      emit(this, 'chat-composer-wake-listen', detail);
     },
 
     onVoiceResponse: () => {
@@ -64,24 +200,53 @@ export class ChatComposer extends Symbiote {
     },
 
     onVoiceApprove: () => {
-      emit(this, 'chat-composer-voice-approve');
+      let detail = this._getVoicePreviewIntentDetail('approve');
+      emit(this, 'chat-composer-transcription-intent', detail);
+      emit(this, 'chat-composer-voice-approve', detail);
     },
 
     onVoiceCancel: () => {
-      emit(this, 'chat-composer-voice-cancel');
+      let detail = this._getVoicePreviewIntentDetail('cancel');
+      emit(this, 'chat-composer-transcription-intent', detail);
+      emit(this, 'chat-composer-voice-cancel', detail);
     },
 
     onVoiceSend: () => {
-      emit(this, 'chat-composer-voice-send');
+      let detail = this._getVoicePreviewIntentDetail('send');
+      emit(this, 'chat-composer-transcription-intent', detail);
+      emit(this, 'chat-composer-voice-send', detail);
     },
 
     onParamChange: (event) => {
       let el = event.target;
       if (!el || (!el.classList.contains('composer-footer-select') && !el.classList.contains('composer-footer-checkbox'))) return;
-      emit(this, 'chat-composer-param-change', {
-        id: el.dataset.param,
+      let id = el.dataset.footerControlId || el.dataset.param;
+      let detail = {
+        id,
+        kind: el.dataset.footerControlKind || el.type,
         value: el.type === 'checkbox' ? el.checked : el.value,
         inputType: el.type,
+      };
+      if (el.dataset.footerControlId) {
+        emit(this, 'chat-composer-footer-control-change', detail);
+      }
+      emit(this, 'chat-composer-param-change', {
+        id,
+        value: detail.value,
+        inputType: detail.inputType,
+      });
+    },
+
+    onFooterClick: (event) => {
+      let btn = event.target?.closest?.('button[data-footer-control-id]');
+      if (!btn || btn.disabled) return;
+      let id = btn.dataset.footerControlId;
+      let control = (this.$.footerControls || []).find((item) => String(item.id || item.name) === id) || null;
+      emit(this, 'chat-composer-footer-control', {
+        id,
+        kind: btn.dataset.footerControlKind || control?.kind || control?.type || 'button',
+        value: control?.value ?? '',
+        control,
       });
     },
 
@@ -147,6 +312,10 @@ export class ChatComposer extends Symbiote {
     return this.ref.voicePreviewBody || null;
   }
 
+  getVoicePreviewText() {
+    return this.getVoicePreviewBody()?.textContent || '';
+  }
+
   getVoiceControlElements() {
     return {
       input: this.ref.voiceInputBtn || null,
@@ -154,6 +323,21 @@ export class ChatComposer extends Symbiote {
       response: this.ref.voiceResponseBtn || null,
       command: this.ref.voiceCommandBtn || null,
       language: this.ref.voiceLanguageBtn || null,
+    };
+  }
+
+  _getVoiceInputState() {
+    return normalizeVoiceInputState(this._voiceControls?.input?.state || 'idle');
+  }
+
+  _getVoicePreviewIntentDetail(action) {
+    let preview = this.getVoicePreviewElement();
+    return {
+      action,
+      source: 'voice-preview',
+      mode: preview?.hidden ? 'hidden' : Array.from(preview?.classList || [])
+        .find((item) => item !== 'composer-body' && item !== 'voice-preview') || 'preview',
+      text: this.getVoicePreviewText(),
     };
   }
 
@@ -166,7 +350,14 @@ export class ChatComposer extends Symbiote {
   }
 
   setFooterHtml(htmlStr) {
+    this.$.footerControls = [];
     this.$.footerHtml = htmlStr || '';
+  }
+
+  setFooterControls(controls = []) {
+    let normalized = Array.isArray(controls) ? controls.map((control, index) => normalizeFooterControl(control, index)) : [];
+    this.$.footerControls = normalized;
+    this.$.footerHtml = normalized.map(renderFooterControl).join('');
   }
 
   setDisabled(disabled) {
@@ -301,8 +492,21 @@ export class ChatComposer extends Symbiote {
     for (let btn of Object.values(this.getVoiceControlElements())) {
       if (btn) btn.disabled = Boolean(this.$.disabled);
     }
+    let voice = this._voiceControls || {};
+    if (this.ref.voiceInputBtn && (voice.input?.enabled === false || voice.input?.state === 'disabled')) {
+      this.ref.voiceInputBtn.disabled = true;
+    }
+    if (this.ref.wakeListenBtn && voice.wakeListen?.enabled === false) {
+      this.ref.wakeListenBtn.disabled = true;
+    }
     if (this.ref.voiceResponseBtn && this._voiceControls?.response?.enabled === false) {
       this.ref.voiceResponseBtn.disabled = true;
+    }
+    if (this.ref.voiceCommandBtn && voice.command?.enabled === false) {
+      this.ref.voiceCommandBtn.disabled = true;
+    }
+    if (this.ref.voiceLanguageBtn && voice.language?.enabled === false) {
+      this.ref.voiceLanguageBtn.disabled = true;
     }
   }
 
@@ -315,14 +519,28 @@ export class ChatComposer extends Symbiote {
     this._syncDisabledState();
   }
 
-  _syncVoiceInput({ visible = false, state = 'idle' } = {}) {
+  _syncVoiceInput({ visible = false, state = 'idle', enabled = true } = {}) {
     let btn = this.ref.voiceInputBtn;
     let icon = this.ref.voiceInputIcon;
     if (!btn) return;
+    let normalizedState = normalizeVoiceInputState(state);
     btn.hidden = !visible;
-    btn.classList.toggle('recording', state === 'recording');
-    btn.classList.toggle('processing', state === 'processing');
-    if (icon) icon.textContent = state === 'processing' ? 'hourglass_top' : state === 'recording' ? 'stop_circle' : 'mic';
+    btn.disabled = Boolean(this.$.disabled) || enabled === false || normalizedState === 'disabled';
+    btn.classList.toggle('recording', normalizedState === 'listening');
+    btn.classList.toggle('listening', normalizedState === 'listening');
+    btn.classList.toggle('processing', normalizedState === 'transcribing');
+    btn.classList.toggle('transcribing', normalizedState === 'transcribing');
+    btn.classList.toggle('disabled-state', normalizedState === 'disabled');
+    btn.dataset.voiceState = normalizedState;
+    if (icon) {
+      icon.textContent = normalizedState === 'transcribing'
+        ? 'hourglass_top'
+        : normalizedState === 'listening'
+          ? 'stop_circle'
+          : normalizedState === 'disabled'
+            ? 'mic_off'
+            : 'mic';
+    }
   }
 
   _syncWakeListen({ visible = false, active = false, commandText = '' } = {}) {
@@ -408,26 +626,28 @@ ChatComposer.template = html`
     <textarea ref="chatInput" rows="1"
       ${{ value: 'value', disabled: 'disabled', placeholder: 'placeholder',
           oninput: 'onInput', onkeydown: 'onKeyDown' }}></textarea>
-    <button class="btn-mic" ref="voiceInputBtn" type="button" title="Voice input" hidden ${{ onclick: 'onVoiceInput' }}>
-      <span class="material-symbols-outlined" ref="voiceInputIcon">mic</span>
-    </button>
-    <button class="btn-wake-listen" ref="wakeListenBtn" type="button" title="Wake listening" hidden ${{ onclick: 'onWakeListen' }}>
-      <span class="material-symbols-outlined">hearing</span>
-      <span class="wake-command-text" ref="wakeCommandText"></span>
-    </button>
-    <button class="btn-voice-response" ref="voiceResponseBtn" type="button" title="Voice response" hidden ${{ onclick: 'onVoiceResponse' }}>
-      <span class="material-symbols-outlined">record_voice_over</span>
-    </button>
-    <button class="btn-voice-command" ref="voiceCommandBtn" type="button" title="Voice command mode" hidden ${{ onclick: 'onVoiceCommand' }}>
-      <span class="material-symbols-outlined">keyboard_voice</span>
-      <span class="voice-command-button-text" ref="voiceCommandText"></span>
-    </button>
-    <button class="btn-voice-language" ref="voiceLanguageBtn" type="button" title="Voice language" hidden ${{ onclick: 'onVoiceLanguageClick' }}></button>
+    <div class="composer-actions">
+      <button class="btn-mic" ref="voiceInputBtn" type="button" title="Voice input" hidden ${{ onclick: 'onVoiceInput' }}>
+        <span class="material-symbols-outlined" ref="voiceInputIcon">mic</span>
+      </button>
+      <button class="btn-wake-listen" ref="wakeListenBtn" type="button" title="Wake listening" hidden ${{ onclick: 'onWakeListen' }}>
+        <span class="material-symbols-outlined">hearing</span>
+        <span class="wake-command-text" ref="wakeCommandText"></span>
+      </button>
+      <button class="btn-voice-response" ref="voiceResponseBtn" type="button" title="Voice response" hidden ${{ onclick: 'onVoiceResponse' }}>
+        <span class="material-symbols-outlined">record_voice_over</span>
+      </button>
+      <button class="btn-voice-command" ref="voiceCommandBtn" type="button" title="Voice command mode" hidden ${{ onclick: 'onVoiceCommand' }}>
+        <span class="material-symbols-outlined">keyboard_voice</span>
+        <span class="voice-command-button-text" ref="voiceCommandText"></span>
+      </button>
+      <button class="btn-voice-language" ref="voiceLanguageBtn" type="button" title="Voice language" hidden ${{ onclick: 'onVoiceLanguageClick' }}></button>
+    </div>
     <sn-button class="btn-send" ref="btnSend" variant="icon" ${{ onclick: 'onSend' }}>
       <span class="material-symbols-outlined" ref="sendIcon">arrow_upward</span>
     </sn-button>
   </div>
-  <div class="composer-footer" ref="footer" ${{ innerHTML: 'footerHtml', onchange: 'onParamChange' }}></div>
+  <div class="composer-footer" ref="footer" ${{ innerHTML: 'footerHtml', onchange: 'onParamChange', onclick: 'onFooterClick' }}></div>
   <div class="autocomplete-popup" ref="autocompletePopup"></div>
 </div>
 `;

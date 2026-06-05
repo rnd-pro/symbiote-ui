@@ -30,6 +30,7 @@ const LAYOUT_NODE_ICONS = [
   'horizontal_split',
   'vertical_split',
   'control_point_duplicate',
+  'unfold_less',
 ];
 
 const LAYOUT_PANEL_TREE_ACTIONS = Object.freeze([
@@ -38,25 +39,31 @@ const LAYOUT_PANEL_TREE_ACTIONS = Object.freeze([
   { id: 'layout:duplicate', label: 'Duplicate', icon: 'control_point_duplicate', title: 'Duplicate panel' },
 ]);
 
-const LAYOUT_PANEL_MENU_ACTIONS = Object.freeze([
-  ...LAYOUT_PANEL_TREE_ACTIONS,
-]);
+function getLayoutPanelViewActions({ canCollapse = false } = {}) {
+  return canCollapse
+    ? [{ id: 'layout:collapse-toggle', label: 'Collapse', icon: 'unfold_less', title: 'Collapse panel' }]
+    : [];
+}
+
+const LAYOUT_PANEL_MENU_ACTIONS = Object.freeze([...LAYOUT_PANEL_TREE_ACTIONS]);
 
 const LAYOUT_REMOVABLE_PANEL_MENU_ACTIONS = Object.freeze([
-  ...LAYOUT_PANEL_TREE_ACTIONS,
   { id: 'layout:remove', label: 'Remove', icon: 'close', title: 'Remove panel' },
 ]);
 
 const LAYOUT_UI_PANEL_MENU_ACTIONS = Object.freeze([
-  ...LAYOUT_PANEL_TREE_ACTIONS,
   { id: 'layout:close-ui-panel', label: 'Close', icon: 'close', title: 'Close temporary UI panel' },
   { id: 'layout:remove-ui-panel', label: 'Remove', icon: 'delete', title: 'Remove temporary UI panel from the layout' },
 ]);
 
-function getLayoutPanelMenuActions(nodeData) {
-  if (nodeData?.panelState?.uiInvoked) return LAYOUT_UI_PANEL_MENU_ACTIONS;
-  if (nodeData?.panelState?.removable === true) return LAYOUT_REMOVABLE_PANEL_MENU_ACTIONS;
-  return LAYOUT_PANEL_MENU_ACTIONS;
+function getLayoutPanelMenuActions(nodeData, state = {}) {
+  let actions = [
+    ...getLayoutPanelViewActions(state),
+    ...LAYOUT_PANEL_MENU_ACTIONS,
+  ];
+  if (nodeData?.panelState?.uiInvoked) return [...actions, ...LAYOUT_UI_PANEL_MENU_ACTIONS];
+  if (nodeData?.panelState?.removable === true) return [...actions, ...LAYOUT_REMOVABLE_PANEL_MENU_ACTIONS];
+  return actions;
 }
 
 export class LayoutNode extends Symbiote {
@@ -240,7 +247,6 @@ export class LayoutNode extends Symbiote {
 
 
     this._injectPanelComponent(config);
-    this._setPanelMenuActions(config.menuActions || []);
 
 
     let container = this.parentElement;
@@ -274,6 +280,7 @@ export class LayoutNode extends Symbiote {
 
 
     if (this.$.nodeType === 'panel') {
+      this.$.canCollapse = false;
 
       this.$.canCollapse =
         this.$.layoutCollapsePolicy !== 'never' &&
@@ -306,6 +313,7 @@ export class LayoutNode extends Symbiote {
         }
       }
     }
+    this._setPanelMenuActions(config.menuActions || []);
   }
 
   /**
@@ -397,7 +405,10 @@ export class LayoutNode extends Symbiote {
           disabled: Boolean(action.disabled),
         }))
       : [];
-    let normalized = [...getLayoutPanelMenuActions(this.$.nodeData), ...customActions];
+    let normalized = [
+      ...getLayoutPanelMenuActions(this.$.nodeData, { canCollapse: this.$.canCollapse }),
+      ...customActions,
+    ];
 
     ensureMaterialSymbols(normalized.map((action) => action.icon));
     this.$.panelMenuActions = normalized;
@@ -449,6 +460,12 @@ export class LayoutNode extends Symbiote {
     if (!id) return;
     let action = this.$.panelMenuActions.find((item) => item.id === id);
     if (!action || action.disabled) return;
+    if (action.id === 'layout:collapse-toggle') {
+      this._toggleCollapse();
+      this.$.isPanelMenuOpen = false;
+      this.$.panelMenuIcon = 'keyboard_arrow_down';
+      return;
+    }
     let detail = {
       panelId: this.$.nodeId,
       panelType: this.$.panelType,

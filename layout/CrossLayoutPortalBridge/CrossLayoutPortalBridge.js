@@ -42,7 +42,7 @@ export class CrossLayoutPortalBridge extends HTMLElement {
           stroke-width: var(--sn-portal-bridge-width, 2);
           stroke-linecap: round;
           stroke-dasharray: var(--sn-portal-bridge-dash, 7 7);
-          filter: drop-shadow(0 0 5px color-mix(in srgb, var(--sn-portal-bridge-stroke, var(--sn-node-selected, #4a9eff)) 40%, transparent));
+          filter: drop-shadow(0 0 5px color-mix(in oklab, var(--sn-portal-bridge-stroke, var(--sn-node-selected, #4a9eff)) 40%, transparent));
         }
 
         circle {

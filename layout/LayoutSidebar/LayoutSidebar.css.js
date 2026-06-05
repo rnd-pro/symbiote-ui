@@ -50,11 +50,11 @@ export let sidebarStyles = css`
   layout-sidebar .sb-header {
     display: flex;
     align-items: center;
-    gap: 2px;
-    padding: 2px 4px;
-    min-height: 28px;
+    gap: var(--sn-layout-header-gap, 2px);
+    padding: var(--sn-layout-header-padding, 2px 4px);
+    min-height: var(--sn-layout-header-min-height, 28px);
     background: var(--sn-node-header-bg);
-    border-bottom: none;
+    border-bottom: 1px solid var(--sn-layout-border);
     flex-shrink: 0;
 
     /* Collapsed: center the collapse button */
@@ -77,13 +77,14 @@ export let sidebarStyles = css`
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 4px 6px;
+    gap: var(--sn-layout-header-button-gap, 4px);
+    padding: var(--sn-layout-header-button-padding, 4px 6px);
     background: transparent;
     border: none;
-    border-radius: 4px;
+    border-radius: var(--sn-layout-header-button-radius, 4px);
     cursor: pointer;
     color: var(--sn-text-dim);
-    font-size: 0.75rem;
+    font-size: var(--sn-layout-header-button-size, 0.75rem);
     transition:
       background 0.1s,
       color 0.1s;
@@ -94,13 +95,13 @@ export let sidebarStyles = css`
     }
 
     & .material-symbols-outlined {
-      font-size: 16px;
+      font-size: var(--sn-layout-header-icon-size, 16px);
     }
 
     /* Active tune button in edit mode */
     layout-sidebar[edit-mode] &:first-child {
       color: var(--sn-cat-server);
-      background: color-mix(in srgb, var(--sn-cat-server) 10%, transparent);
+      background: color-mix(in oklab, var(--sn-cat-server) 10%, transparent);
     }
   }
 
@@ -394,7 +395,7 @@ export let sidebarStyles = css`
     }
 
     &:hover {
-      background: color-mix(in srgb, var(--sn-danger-color) 15%, transparent);
+      background: color-mix(in oklab, var(--sn-danger-color) 15%, transparent);
       color: var(--sn-danger-color);
     }
   }

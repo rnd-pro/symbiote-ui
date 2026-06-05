@@ -5,7 +5,30 @@ chat-transcript {
   flex: 1;
   min-height: 0;
   position: relative;
+  overflow: hidden;
   background: var(--sn-chat-bg);
+}
+
+.chat-background {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.chat-background ::slotted(*) {
+  width: 100%;
+  height: 100%;
+}
+
+chat-transcript > [slot="background"] {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
 }
 
 .chat-messages {

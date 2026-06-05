@@ -1680,7 +1680,7 @@
           "name": "NodeCanvas",
           "tagName": "node-canvas",
           "description": "Primary graph canvas custom element.",
-          "componentDescription": "Primary graph canvas custom element. Use this interactive visual graph surface when composing canvas UI. Capabilities: node-editor-canvas, connections, frames, subgraphs, viewport, selection. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "componentDescription": "Primary graph canvas custom element. Use this interactive visual graph surface when composing canvas UI. Capabilities: node-editor-canvas, connections, frames, subgraphs, viewport, selection. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: node_canvas_set_editor_model, node_canvas_set_path_style, node_canvas_set_flow_layout.",
           "attributes": [
             {
               "name": "connection-engine",
@@ -2052,16 +2052,126 @@
                   "animation-frame"
                 ],
                 "notes": "Browser-only interaction surface; exclude from JSDA SSR render fixtures unless guarded by a host fallback."
+              },
+              "webmcp": {
+                "documentation": "Agent-facing WebMCP documentation for stable component affordances only; host workflow policy remains outside symbiote-ui.",
+                "tools": [
+                  {
+                    "name": "node_canvas_set_editor_model",
+                    "description": "Attach a host-owned NodeEditor-style graph model to the node canvas; the component renders nodes, ports, and connections and emits intent events.",
+                    "inputSchema": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "nodes": {
+                          "type": "array"
+                        },
+                        "connections": {
+                          "type": "array"
+                        },
+                        "readonly": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "nodes"
+                      ]
+                    },
+                    "annotations": {
+                      "readOnlyHint": false,
+                      "destructiveHint": false,
+                      "idempotentHint": true
+                    },
+                    "exposedTo": [
+                      "agent",
+                      "assistant"
+                    ]
+                  },
+                  {
+                    "name": "node_canvas_set_path_style",
+                    "description": "Set the connection path rendering style for a node canvas without changing the host-owned graph model.",
+                    "inputSchema": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "style": {
+                          "enum": [
+                            "pcb",
+                            "bezier",
+                            "straight"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "style"
+                      ]
+                    },
+                    "annotations": {
+                      "readOnlyHint": false,
+                      "destructiveHint": false,
+                      "idempotentHint": true
+                    },
+                    "exposedTo": [
+                      "agent",
+                      "assistant"
+                    ]
+                  },
+                  {
+                    "name": "node_canvas_set_flow_layout",
+                    "description": "Apply document-flow node placement for agent-constructed graph previews, including direction, gap, padding, and scroll fallback.",
+                    "inputSchema": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "nodeIds": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "direction": {
+                          "enum": [
+                            "vertical",
+                            "horizontal"
+                          ]
+                        },
+                        "gap": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "scroll": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "nodeIds"
+                      ]
+                    },
+                    "annotations": {
+                      "readOnlyHint": false,
+                      "destructiveHint": false,
+                      "idempotentHint": true
+                    },
+                    "exposedTo": [
+                      "agent",
+                      "assistant"
+                    ]
+                  }
+                ]
               }
             },
             "agent": {
-              "componentDescription": "Primary graph canvas custom element. Use this interactive visual graph surface when composing canvas UI. Capabilities: node-editor-canvas, connections, frames, subgraphs, viewport, selection. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+              "componentDescription": "Primary graph canvas custom element. Use this interactive visual graph surface when composing canvas UI. Capabilities: node-editor-canvas, connections, frames, subgraphs, viewport, selection. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: node_canvas_set_editor_model, node_canvas_set_path_style, node_canvas_set_flow_layout.",
               "semanticRole": "interactive visual graph surface",
               "usage": "Render or compose <node-canvas> when the host needs primary graph canvas custom element.",
               "dataOwnership": "host-owned model; component renders and emits intent events",
               "webmcp": {
-                "mode": "described-only",
-                "toolNames": [],
+                "mode": "explicit-descriptor",
+                "toolNames": [
+                  "node_canvas_set_editor_model",
+                  "node_canvas_set_path_style",
+                  "node_canvas_set_flow_layout"
+                ],
                 "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
                 "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
                 "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
@@ -2074,13 +2184,17 @@
             }
           },
           "agent": {
-            "componentDescription": "Primary graph canvas custom element. Use this interactive visual graph surface when composing canvas UI. Capabilities: node-editor-canvas, connections, frames, subgraphs, viewport, selection. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "componentDescription": "Primary graph canvas custom element. Use this interactive visual graph surface when composing canvas UI. Capabilities: node-editor-canvas, connections, frames, subgraphs, viewport, selection. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: node_canvas_set_editor_model, node_canvas_set_path_style, node_canvas_set_flow_layout.",
             "semanticRole": "interactive visual graph surface",
             "usage": "Render or compose <node-canvas> when the host needs primary graph canvas custom element.",
             "dataOwnership": "host-owned model; component renders and emits intent events",
             "webmcp": {
-              "mode": "described-only",
-              "toolNames": [],
+              "mode": "explicit-descriptor",
+              "toolNames": [
+                "node_canvas_set_editor_model",
+                "node_canvas_set_path_style",
+                "node_canvas_set_flow_layout"
+              ],
               "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
               "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
               "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
@@ -2111,8 +2225,8 @@
           "customElement": true,
           "name": "CanvasGraph",
           "tagName": "canvas-graph",
-          "description": "Generic hierarchical canvas graph renderer with force layout and selection events.",
-          "componentDescription": "Generic hierarchical canvas graph renderer with force layout and selection events. Use this interactive visual graph surface when composing canvas UI. Capabilities: hierarchical-graph, force-layout, semantic-clusters, focus-selection, layout-snapshot. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "description": "Generic hierarchical graph overview/read renderer with force layout, semantic navigation, and selection events.",
+          "componentDescription": "Generic hierarchical graph overview/read renderer with force layout, semantic navigation, and selection events. Use this interactive visual graph surface when composing canvas UI. Capabilities: hierarchical-graph, overview-read-renderer, force-layout, semantic-clusters, focus-selection, layout-snapshot. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: canvas_graph_set_model, canvas_graph_focus_node, canvas_graph_set_path.",
           "members": [
             {
               "kind": "field",
@@ -2323,6 +2437,7 @@
             "contract": {
               "capabilities": [
                 "hierarchical-graph",
+                "overview-read-renderer",
                 "force-layout",
                 "semantic-clusters",
                 "focus-selection",
@@ -2466,16 +2581,101 @@
                   "animation-frame"
                 ],
                 "notes": "Browser-only interaction surface; exclude from JSDA SSR render fixtures unless guarded by a host fallback."
+              },
+              "webmcp": {
+                "documentation": "Agent-facing WebMCP documentation for stable component affordances only; host workflow policy remains outside symbiote-ui.",
+                "tools": [
+                  {
+                    "name": "canvas_graph_set_model",
+                    "description": "Load a host-owned normalized graph model into the generic canvas graph renderer without owning persistence or navigation policy.",
+                    "inputSchema": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "graph": {
+                          "type": "object"
+                        },
+                        "renderMode": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "graph"
+                      ]
+                    },
+                    "annotations": {
+                      "readOnlyHint": false,
+                      "destructiveHint": false,
+                      "idempotentHint": true
+                    },
+                    "exposedTo": [
+                      "agent",
+                      "assistant"
+                    ]
+                  },
+                  {
+                    "name": "canvas_graph_focus_node",
+                    "description": "Request focus on a visible or nested graph node by id; the host still owns what selecting that node means.",
+                    "inputSchema": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "nodeId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "nodeId"
+                      ]
+                    },
+                    "annotations": {
+                      "readOnlyHint": false,
+                      "destructiveHint": false
+                    },
+                    "exposedTo": [
+                      "agent",
+                      "assistant"
+                    ]
+                  },
+                  {
+                    "name": "canvas_graph_set_path",
+                    "description": "Navigate the generic graph renderer to a host-approved semantic group path without applying product routes.",
+                    "inputSchema": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "path": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "path"
+                      ]
+                    },
+                    "annotations": {
+                      "readOnlyHint": false,
+                      "destructiveHint": false
+                    },
+                    "exposedTo": [
+                      "agent",
+                      "assistant"
+                    ]
+                  }
+                ]
               }
             },
             "agent": {
-              "componentDescription": "Generic hierarchical canvas graph renderer with force layout and selection events. Use this interactive visual graph surface when composing canvas UI. Capabilities: hierarchical-graph, force-layout, semantic-clusters, focus-selection, layout-snapshot. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+              "componentDescription": "Generic hierarchical graph overview/read renderer with force layout, semantic navigation, and selection events. Use this interactive visual graph surface when composing canvas UI. Capabilities: hierarchical-graph, overview-read-renderer, force-layout, semantic-clusters, focus-selection, layout-snapshot. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: canvas_graph_set_model, canvas_graph_focus_node, canvas_graph_set_path.",
               "semanticRole": "interactive visual graph surface",
-              "usage": "Render or compose <canvas-graph> when the host needs generic hierarchical canvas graph renderer with force layout and selection events.",
+              "usage": "Render or compose <canvas-graph> when the host needs generic hierarchical graph overview/read renderer with force layout, semantic navigation, and selection events.",
               "dataOwnership": "host-owned model; component renders and emits intent events",
               "webmcp": {
-                "mode": "described-only",
-                "toolNames": [],
+                "mode": "explicit-descriptor",
+                "toolNames": [
+                  "canvas_graph_set_model",
+                  "canvas_graph_focus_node",
+                  "canvas_graph_set_path"
+                ],
                 "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
                 "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
                 "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
@@ -2488,13 +2688,17 @@
             }
           },
           "agent": {
-            "componentDescription": "Generic hierarchical canvas graph renderer with force layout and selection events. Use this interactive visual graph surface when composing canvas UI. Capabilities: hierarchical-graph, force-layout, semantic-clusters, focus-selection, layout-snapshot. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "componentDescription": "Generic hierarchical graph overview/read renderer with force layout, semantic navigation, and selection events. Use this interactive visual graph surface when composing canvas UI. Capabilities: hierarchical-graph, overview-read-renderer, force-layout, semantic-clusters, focus-selection, layout-snapshot. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: canvas_graph_set_model, canvas_graph_focus_node, canvas_graph_set_path.",
             "semanticRole": "interactive visual graph surface",
-            "usage": "Render or compose <canvas-graph> when the host needs generic hierarchical canvas graph renderer with force layout and selection events.",
+            "usage": "Render or compose <canvas-graph> when the host needs generic hierarchical graph overview/read renderer with force layout, semantic navigation, and selection events.",
             "dataOwnership": "host-owned model; component renders and emits intent events",
             "webmcp": {
-              "mode": "described-only",
-              "toolNames": [],
+              "mode": "explicit-descriptor",
+              "toolNames": [
+                "canvas_graph_set_model",
+                "canvas_graph_focus_node",
+                "canvas_graph_set_path"
+              ],
               "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
               "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
               "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
@@ -2526,7 +2730,7 @@
           "name": "GraphExplorerShell",
           "tagName": "graph-explorer-shell",
           "description": "Generic graph explorer shell with toolbar, canvas, overlay, legend, and stats slots.",
-          "componentDescription": "Generic graph explorer shell with toolbar, canvas, overlay, legend, and stats slots. Use this interactive visual graph surface when composing canvas UI. Capabilities: graph-toolbar, graph-slots, canvas-host, overlay-host, stats-host. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "componentDescription": "Generic graph explorer shell with toolbar, canvas, overlay, legend, and stats slots. Use this interactive visual graph surface when composing canvas UI. Capabilities: graph-toolbar, graph-slots, canvas-host, overlay-host, stats-host. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: graph_explorer_shell_set_view, graph_explorer_shell_set_stats, graph_explorer_shell_request_action.",
           "members": [
             {
               "kind": "field",
@@ -2569,8 +2773,70 @@
           ],
           "events": [
             {
-              "name": "graph-explorer-action",
+              "name": "graph-shell-mode-change",
+              "description": "Requests switching between structured and flat graph modes.",
+              "detail": [
+                {
+                  "name": "mode",
+                  "type": "string"
+                }
+              ],
+              "type": {
+                "text": "CustomEvent"
+              }
+            },
+            {
+              "name": "graph-shell-path-style-change",
+              "description": "Requests switching the slotted graph path rendering style.",
+              "detail": [
+                {
+                  "name": "style",
+                  "type": "string"
+                }
+              ],
+              "type": {
+                "text": "CustomEvent"
+              }
+            },
+            {
+              "name": "graph-shell-label-mode-change",
+              "description": "Requests a host-owned graph label mode.",
+              "detail": [
+                {
+                  "name": "mode",
+                  "type": "string"
+                }
+              ],
+              "type": {
+                "text": "CustomEvent"
+              }
+            },
+            {
+              "name": "graph-shell-layer-toggle",
+              "description": "Requests toggling a named host graph layer.",
+              "detail": [
+                {
+                  "name": "layer",
+                  "type": "string"
+                },
+                {
+                  "name": "visible",
+                  "type": "boolean"
+                }
+              ],
+              "type": {
+                "text": "CustomEvent"
+              }
+            },
+            {
+              "name": "graph-shell-action",
               "description": "Host-level graph toolbar action request.",
+              "detail": [
+                {
+                  "name": "action",
+                  "type": "string"
+                }
+              ],
               "type": {
                 "text": "CustomEvent"
               }
@@ -2633,8 +2899,58 @@
               "methods": [],
               "events": [
                 {
-                  "name": "graph-explorer-action",
-                  "description": "Host-level graph toolbar action request."
+                  "name": "graph-shell-mode-change",
+                  "description": "Requests switching between structured and flat graph modes.",
+                  "detail": [
+                    {
+                      "name": "mode",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "name": "graph-shell-path-style-change",
+                  "description": "Requests switching the slotted graph path rendering style.",
+                  "detail": [
+                    {
+                      "name": "style",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "name": "graph-shell-label-mode-change",
+                  "description": "Requests a host-owned graph label mode.",
+                  "detail": [
+                    {
+                      "name": "mode",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "name": "graph-shell-layer-toggle",
+                  "description": "Requests toggling a named host graph layer.",
+                  "detail": [
+                    {
+                      "name": "layer",
+                      "type": "string"
+                    },
+                    {
+                      "name": "visible",
+                      "type": "boolean"
+                    }
+                  ]
+                },
+                {
+                  "name": "graph-shell-action",
+                  "description": "Host-level graph toolbar action request.",
+                  "detail": [
+                    {
+                      "name": "action",
+                      "type": "string"
+                    }
+                  ]
                 }
               ],
               "slots": [
@@ -2682,16 +2998,119 @@
                   "animation-frame"
                 ],
                 "notes": "Browser-only interaction surface; exclude from JSDA SSR render fixtures unless guarded by a host fallback."
+              },
+              "webmcp": {
+                "documentation": "Agent-facing WebMCP documentation for stable component affordances only; host workflow policy remains outside symbiote-ui.",
+                "tools": [
+                  {
+                    "name": "graph_explorer_shell_set_view",
+                    "description": "Set graph explorer shell view state such as label mode and path style while the slotted graph component owns rendering.",
+                    "inputSchema": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "mode": {
+                          "enum": [
+                            "structured",
+                            "flat"
+                          ]
+                        },
+                        "pathStyle": {
+                          "enum": [
+                            "pcb",
+                            "bezier",
+                            "straight"
+                          ]
+                        }
+                      }
+                    },
+                    "annotations": {
+                      "readOnlyHint": false,
+                      "destructiveHint": false,
+                      "idempotentHint": true
+                    },
+                    "exposedTo": [
+                      "agent",
+                      "assistant"
+                    ]
+                  },
+                  {
+                    "name": "graph_explorer_shell_set_stats",
+                    "description": "Set visible graph statistics for the shell stats slot from host-owned graph metadata.",
+                    "inputSchema": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                              "value": {},
+                              "label": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "items"
+                      ]
+                    },
+                    "annotations": {
+                      "readOnlyHint": false,
+                      "destructiveHint": false,
+                      "idempotentHint": true
+                    },
+                    "exposedTo": [
+                      "agent",
+                      "assistant"
+                    ]
+                  },
+                  {
+                    "name": "graph_explorer_shell_request_action",
+                    "description": "Emit a host-handled graph explorer action such as fit, refresh, layer toggle, or add node without embedding product-specific policy.",
+                    "inputSchema": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "action": {
+                          "type": "string"
+                        },
+                        "layer": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "annotations": {
+                      "readOnlyHint": false,
+                      "destructiveHint": false
+                    },
+                    "exposedTo": [
+                      "agent",
+                      "assistant"
+                    ]
+                  }
+                ]
               }
             },
             "agent": {
-              "componentDescription": "Generic graph explorer shell with toolbar, canvas, overlay, legend, and stats slots. Use this interactive visual graph surface when composing canvas UI. Capabilities: graph-toolbar, graph-slots, canvas-host, overlay-host, stats-host. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+              "componentDescription": "Generic graph explorer shell with toolbar, canvas, overlay, legend, and stats slots. Use this interactive visual graph surface when composing canvas UI. Capabilities: graph-toolbar, graph-slots, canvas-host, overlay-host, stats-host. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: graph_explorer_shell_set_view, graph_explorer_shell_set_stats, graph_explorer_shell_request_action.",
               "semanticRole": "interactive visual graph surface",
               "usage": "Render or compose <graph-explorer-shell> when the host needs generic graph explorer shell with toolbar, canvas, overlay, legend, and stats slots.",
               "dataOwnership": "host-owned model; component renders and emits intent events",
               "webmcp": {
-                "mode": "described-only",
-                "toolNames": [],
+                "mode": "explicit-descriptor",
+                "toolNames": [
+                  "graph_explorer_shell_set_view",
+                  "graph_explorer_shell_set_stats",
+                  "graph_explorer_shell_request_action"
+                ],
                 "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
                 "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
                 "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
@@ -2704,13 +3123,17 @@
             }
           },
           "agent": {
-            "componentDescription": "Generic graph explorer shell with toolbar, canvas, overlay, legend, and stats slots. Use this interactive visual graph surface when composing canvas UI. Capabilities: graph-toolbar, graph-slots, canvas-host, overlay-host, stats-host. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "componentDescription": "Generic graph explorer shell with toolbar, canvas, overlay, legend, and stats slots. Use this interactive visual graph surface when composing canvas UI. Capabilities: graph-toolbar, graph-slots, canvas-host, overlay-host, stats-host. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: graph_explorer_shell_set_view, graph_explorer_shell_set_stats, graph_explorer_shell_request_action.",
             "semanticRole": "interactive visual graph surface",
             "usage": "Render or compose <graph-explorer-shell> when the host needs generic graph explorer shell with toolbar, canvas, overlay, legend, and stats slots.",
             "dataOwnership": "host-owned model; component renders and emits intent events",
             "webmcp": {
-              "mode": "described-only",
-              "toolNames": [],
+              "mode": "explicit-descriptor",
+              "toolNames": [
+                "graph_explorer_shell_set_view",
+                "graph_explorer_shell_set_stats",
+                "graph_explorer_shell_request_action"
+              ],
               "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
               "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
               "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
@@ -7904,7 +8327,7 @@
           "name": "CellBg",
           "tagName": "cell-bg",
           "description": "Animated cellular automaton background effect.",
-          "componentDescription": "Animated cellular automaton background effect. Use this effects UI component when composing effects UI. Capabilities: animated-background, canvas-effect, pulse, resize-aware, reduced-motion-friendly. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "componentDescription": "Animated cellular automaton background effect. Use this effects UI component when composing effects UI. Capabilities: animated-background, canvas-effect, activity-trigger, smooth-start, smooth-stop, pulse, resize-aware, reduced-motion-friendly. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: cell_bg_trigger, cell_bg_start, cell_bg_stop.",
           "members": [
             {
               "kind": "field",
@@ -7913,6 +8336,46 @@
                 "text": "boolean"
               },
               "description": "Persistent animation state."
+            },
+            {
+              "kind": "field",
+              "name": "autoTrigger",
+              "type": {
+                "text": "boolean"
+              },
+              "description": "When true, mount and resize events trigger timed animation pulses."
+            },
+            {
+              "kind": "field",
+              "name": "pulseDuration",
+              "type": {
+                "text": "number"
+              },
+              "description": "Default duration in milliseconds for automatic and host-triggered pulses."
+            },
+            {
+              "kind": "method",
+              "name": "start",
+              "type": {
+                "text": "function"
+              },
+              "description": "Starts persistent animation with smooth acceleration."
+            },
+            {
+              "kind": "method",
+              "name": "stop",
+              "type": {
+                "text": "function"
+              },
+              "description": "Stops persistent or timed animation with smooth deceleration."
+            },
+            {
+              "kind": "method",
+              "name": "trigger",
+              "type": {
+                "text": "function"
+              },
+              "description": "Triggers a timed animation pulse for agent-visible activity."
             },
             {
               "kind": "method",
@@ -8016,19 +8479,63 @@
               "capabilities": [
                 "animated-background",
                 "canvas-effect",
+                "activity-trigger",
+                "smooth-start",
+                "smooth-stop",
                 "pulse",
                 "resize-aware",
                 "reduced-motion-friendly"
               ],
-              "attributes": [],
+              "attributes": [
+                {
+                  "name": "active",
+                  "type": "boolean",
+                  "description": "Starts persistent animation when present."
+                },
+                {
+                  "name": "auto-trigger",
+                  "type": "boolean",
+                  "description": "Set to false/off to disable mount and resize pulses."
+                },
+                {
+                  "name": "pulse-duration",
+                  "type": "number",
+                  "description": "Default timed pulse duration in milliseconds."
+                }
+              ],
               "properties": [
                 {
                   "name": "active",
                   "type": "boolean",
                   "description": "Persistent animation state."
+                },
+                {
+                  "name": "autoTrigger",
+                  "type": "boolean",
+                  "description": "When true, mount and resize events trigger timed animation pulses."
+                },
+                {
+                  "name": "pulseDuration",
+                  "type": "number",
+                  "description": "Default duration in milliseconds for automatic and host-triggered pulses."
                 }
               ],
               "methods": [
+                {
+                  "name": "start",
+                  "type": "function",
+                  "description": "Starts persistent animation with smooth acceleration."
+                },
+                {
+                  "name": "stop",
+                  "type": "function",
+                  "description": "Stops persistent or timed animation with smooth deceleration."
+                },
+                {
+                  "name": "trigger",
+                  "type": "function",
+                  "description": "Triggers a timed animation pulse for agent-visible activity."
+                },
                 {
                   "name": "toggle",
                   "type": "function",
@@ -8050,7 +8557,52 @@
                   "description": "Resizes the canvas to its host bounds."
                 }
               ],
-              "events": [],
+              "events": [
+                {
+                  "name": "cell-bg-animation-trigger",
+                  "description": "Emits when a timed activity pulse is requested.",
+                  "detail": [
+                    {
+                      "name": "duration",
+                      "type": "number"
+                    }
+                  ]
+                },
+                {
+                  "name": "cell-bg-animation-start",
+                  "description": "Emits when the animation loop starts or resumes.",
+                  "detail": [
+                    {
+                      "name": "reason",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "name": "cell-bg-animation-stop",
+                  "description": "Emits when smooth deceleration starts.",
+                  "detail": [
+                    {
+                      "name": "reason",
+                      "type": "string"
+                    },
+                    {
+                      "name": "smooth",
+                      "type": "boolean"
+                    }
+                  ]
+                },
+                {
+                  "name": "cell-bg-animation-idle",
+                  "description": "Emits when smooth deceleration has finished and frames stop.",
+                  "detail": [
+                    {
+                      "name": "smooth",
+                      "type": "boolean"
+                    }
+                  ]
+                }
+              ],
               "slots": [],
               "themeAliases": [
                 "--sn-bg",
@@ -8083,16 +8635,84 @@
                   "animation-frame"
                 ],
                 "notes": "Browser-only interaction surface; exclude from JSDA SSR render fixtures unless guarded by a host fallback."
+              },
+              "webmcp": {
+                "documentation": "Agent-facing WebMCP documentation for stable component affordances only; host workflow policy remains outside symbiote-ui.",
+                "tools": [
+                  {
+                    "name": "cell_bg_trigger",
+                    "description": "Trigger a timed cellular background activity pulse for chat, status, or agent-visible activity without making the animation persistent.",
+                    "inputSchema": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "duration": {
+                          "type": "number",
+                          "minimum": 300
+                        }
+                      }
+                    },
+                    "annotations": {
+                      "readOnlyHint": false,
+                      "destructiveHint": false,
+                      "idempotentHint": false
+                    },
+                    "exposedTo": [
+                      "agent",
+                      "assistant"
+                    ]
+                  },
+                  {
+                    "name": "cell_bg_start",
+                    "description": "Start the cellular background as persistent ambient animation with smooth acceleration.",
+                    "inputSchema": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {}
+                    },
+                    "annotations": {
+                      "readOnlyHint": false,
+                      "destructiveHint": false,
+                      "idempotentHint": true
+                    },
+                    "exposedTo": [
+                      "agent",
+                      "assistant"
+                    ]
+                  },
+                  {
+                    "name": "cell_bg_stop",
+                    "description": "Stop persistent or timed cellular background animation with smooth deceleration.",
+                    "inputSchema": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {}
+                    },
+                    "annotations": {
+                      "readOnlyHint": false,
+                      "destructiveHint": false,
+                      "idempotentHint": true
+                    },
+                    "exposedTo": [
+                      "agent",
+                      "assistant"
+                    ]
+                  }
+                ]
               }
             },
             "agent": {
-              "componentDescription": "Animated cellular automaton background effect. Use this effects UI component when composing effects UI. Capabilities: animated-background, canvas-effect, pulse, resize-aware, reduced-motion-friendly. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+              "componentDescription": "Animated cellular automaton background effect. Use this effects UI component when composing effects UI. Capabilities: animated-background, canvas-effect, activity-trigger, smooth-start, smooth-stop, pulse, resize-aware, reduced-motion-friendly. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: cell_bg_trigger, cell_bg_start, cell_bg_stop.",
               "semanticRole": "effects UI component",
               "usage": "Render or compose <cell-bg> when the host needs animated cellular automaton background effect.",
               "dataOwnership": "host-owned props and attributes; component owns presentation state",
               "webmcp": {
-                "mode": "described-only",
-                "toolNames": [],
+                "mode": "explicit-descriptor",
+                "toolNames": [
+                  "cell_bg_trigger",
+                  "cell_bg_start",
+                  "cell_bg_stop"
+                ],
                 "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
                 "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
                 "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
@@ -8105,13 +8725,17 @@
             }
           },
           "agent": {
-            "componentDescription": "Animated cellular automaton background effect. Use this effects UI component when composing effects UI. Capabilities: animated-background, canvas-effect, pulse, resize-aware, reduced-motion-friendly. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "componentDescription": "Animated cellular automaton background effect. Use this effects UI component when composing effects UI. Capabilities: animated-background, canvas-effect, activity-trigger, smooth-start, smooth-stop, pulse, resize-aware, reduced-motion-friendly. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: cell_bg_trigger, cell_bg_start, cell_bg_stop.",
             "semanticRole": "effects UI component",
             "usage": "Render or compose <cell-bg> when the host needs animated cellular automaton background effect.",
             "dataOwnership": "host-owned props and attributes; component owns presentation state",
             "webmcp": {
-              "mode": "described-only",
-              "toolNames": [],
+              "mode": "explicit-descriptor",
+              "toolNames": [
+                "cell_bg_trigger",
+                "cell_bg_start",
+                "cell_bg_stop"
+              ],
               "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
               "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
               "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
@@ -11117,8 +11741,8 @@
           "customElement": true,
           "name": "ChatTranscript",
           "tagName": "chat-transcript",
-          "description": "Generic chat transcript shell with message rendering, scroll controls, live status, and status card events.",
-          "componentDescription": "Generic chat transcript shell with message rendering, scroll controls, live status, and status card events. Use this chat and conversation surface when composing chat UI. Capabilities: chat-transcript, message-list, scroll-state, status-card-events. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "description": "Generic chat transcript shell with message rendering, background slot, scroll controls, live status, and status card events.",
+          "componentDescription": "Generic chat transcript shell with message rendering, background slot, scroll controls, live status, and status card events. Use this chat and conversation surface when composing chat UI. Capabilities: chat-transcript, message-list, animated-background-slot, scroll-state, status-card-events. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
           "members": [
             {
               "kind": "field",
@@ -11278,6 +11902,7 @@
               "capabilities": [
                 "chat-transcript",
                 "message-list",
+                "animated-background-slot",
                 "scroll-state",
                 "status-card-events"
               ],
@@ -11345,7 +11970,12 @@
                   "description": "Reports copy result for message text."
                 }
               ],
-              "slots": [],
+              "slots": [
+                {
+                  "name": "background",
+                  "description": "Optional background layer for effects such as cell-bg; host controls animation lifecycle."
+                }
+              ],
               "themeAliases": [
                 "--sn-chat-bg",
                 "--sn-chat-message-bg",
@@ -11378,9 +12008,9 @@
               }
             },
             "agent": {
-              "componentDescription": "Generic chat transcript shell with message rendering, scroll controls, live status, and status card events. Use this chat and conversation surface when composing chat UI. Capabilities: chat-transcript, message-list, scroll-state, status-card-events. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+              "componentDescription": "Generic chat transcript shell with message rendering, background slot, scroll controls, live status, and status card events. Use this chat and conversation surface when composing chat UI. Capabilities: chat-transcript, message-list, animated-background-slot, scroll-state, status-card-events. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
               "semanticRole": "chat and conversation surface",
-              "usage": "Render or compose <chat-transcript> when the host needs generic chat transcript shell with message rendering, scroll controls, live status, and status card events.",
+              "usage": "Render or compose <chat-transcript> when the host needs generic chat transcript shell with message rendering, background slot, scroll controls, live status, and status card events.",
               "dataOwnership": "host-owned props and attributes; component owns presentation state",
               "webmcp": {
                 "mode": "described-only",
@@ -11397,9 +12027,9 @@
             }
           },
           "agent": {
-            "componentDescription": "Generic chat transcript shell with message rendering, scroll controls, live status, and status card events. Use this chat and conversation surface when composing chat UI. Capabilities: chat-transcript, message-list, scroll-state, status-card-events. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "componentDescription": "Generic chat transcript shell with message rendering, background slot, scroll controls, live status, and status card events. Use this chat and conversation surface when composing chat UI. Capabilities: chat-transcript, message-list, animated-background-slot, scroll-state, status-card-events. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
             "semanticRole": "chat and conversation surface",
-            "usage": "Render or compose <chat-transcript> when the host needs generic chat transcript shell with message rendering, scroll controls, live status, and status card events.",
+            "usage": "Render or compose <chat-transcript> when the host needs generic chat transcript shell with message rendering, background slot, scroll controls, live status, and status card events.",
             "dataOwnership": "host-owned props and attributes; component owns presentation state",
             "webmcp": {
               "mode": "described-only",
@@ -11413,7 +12043,13 @@
                 "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
               ]
             }
-          }
+          },
+          "slots": [
+            {
+              "name": "background",
+              "description": "Optional background layer for effects such as cell-bg; host controls animation lifecycle."
+            }
+          ]
         }
       ],
       "exports": [
@@ -11435,7 +12071,7 @@
           "name": "ChatComposer",
           "tagName": "chat-composer",
           "description": "Generic chat composer with input, voice controls, context chips, footer controls, and autocomplete host.",
-          "componentDescription": "Generic chat composer with input, voice controls, context chips, footer controls, and autocomplete host. Use this chat and conversation surface when composing chat UI. Capabilities: chat-input, voice-controls, voice-preview, wake-listening, voice-response-toggle, voice-command-mode, voice-language-mode, context-chips, footer-controls, autocomplete-host, drag-drop-context. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: chat_composer_submit, chat_composer_voice_control.",
+          "componentDescription": "Generic chat composer with input, voice controls, context chips, footer controls, and autocomplete host. Use this chat and conversation surface when composing chat UI. Capabilities: chat-input, voice-controls, voice-preview, wake-listening, voice-response-toggle, voice-command-mode, voice-language-mode, permission-intents, recorder-intents, transcription-intents, context-chips, footer-controls, footer-control-intents, autocomplete-host, drag-drop-context. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: chat_composer_submit, chat_composer_voice_control, chat_composer_voice_flow, chat_composer_footer_control.",
           "members": [
             {
               "kind": "field",
@@ -11468,6 +12104,14 @@
                 "text": "array"
               },
               "description": "Context chip descriptors."
+            },
+            {
+              "kind": "field",
+              "name": "footerControls",
+              "type": {
+                "text": "array"
+              },
+              "description": "Structured product-neutral footer control descriptors rendered by setFooterControls."
             },
             {
               "kind": "field",
@@ -11511,6 +12155,14 @@
             },
             {
               "kind": "method",
+              "name": "setFooterControls",
+              "type": {
+                "text": "function"
+              },
+              "description": "Sets structured footer controls for provider, model, agent, resource group, settings, or other host-owned intents."
+            },
+            {
+              "kind": "method",
               "name": "setFooterHtml",
               "type": {
                 "text": "function"
@@ -11547,7 +12199,7 @@
               "type": {
                 "text": "function"
               },
-              "description": "Sets mic button state: idle, recording, or processing."
+              "description": "Sets mic button state: idle, listening, transcribing, or disabled; recording/processing aliases are accepted."
             },
             {
               "kind": "method",
@@ -11599,6 +12251,14 @@
             },
             {
               "kind": "method",
+              "name": "getVoicePreviewText",
+              "type": {
+                "text": "function"
+              },
+              "description": "Returns current voice preview text for host-owned transcription handling."
+            },
+            {
+              "kind": "method",
               "name": "getVoiceControlElements",
               "type": {
                 "text": "function"
@@ -11631,6 +12291,24 @@
             {
               "name": "chat-composer-voice-input",
               "description": "Requests host-owned voice input capture.",
+              "detail": [
+                {
+                  "name": "action",
+                  "type": "string"
+                },
+                {
+                  "name": "currentState",
+                  "type": "string"
+                },
+                {
+                  "name": "permission",
+                  "type": "string"
+                },
+                {
+                  "name": "source",
+                  "type": "string"
+                }
+              ],
               "type": {
                 "text": "CustomEvent"
               }
@@ -11638,6 +12316,28 @@
             {
               "name": "chat-composer-wake-listen",
               "description": "Requests host-owned wake listening toggle.",
+              "detail": [
+                {
+                  "name": "action",
+                  "type": "string"
+                },
+                {
+                  "name": "currentState",
+                  "type": "string"
+                },
+                {
+                  "name": "mode",
+                  "type": "string"
+                },
+                {
+                  "name": "permission",
+                  "type": "string"
+                },
+                {
+                  "name": "source",
+                  "type": "string"
+                }
+              ],
               "type": {
                 "text": "CustomEvent"
               }
@@ -11670,8 +12370,105 @@
               }
             },
             {
+              "name": "chat-composer-permission-intent",
+              "description": "Requests a host-owned permission flow such as microphone access; the component never calls browser permission APIs itself.",
+              "detail": [
+                {
+                  "name": "action",
+                  "type": "string"
+                },
+                {
+                  "name": "permission",
+                  "type": "string"
+                },
+                {
+                  "name": "reason",
+                  "type": "string"
+                },
+                {
+                  "name": "source",
+                  "type": "string"
+                }
+              ],
+              "type": {
+                "text": "CustomEvent"
+              }
+            },
+            {
+              "name": "chat-composer-recorder-intent",
+              "description": "Requests host-owned recorder start, stop, or cancel behavior without owning MediaRecorder or capture policy.",
+              "detail": [
+                {
+                  "name": "action",
+                  "type": "string"
+                },
+                {
+                  "name": "currentState",
+                  "type": "string"
+                },
+                {
+                  "name": "mode",
+                  "type": "string"
+                },
+                {
+                  "name": "permission",
+                  "type": "string"
+                },
+                {
+                  "name": "source",
+                  "type": "string"
+                }
+              ],
+              "type": {
+                "text": "CustomEvent"
+              }
+            },
+            {
+              "name": "chat-composer-transcription-intent",
+              "description": "Requests host-owned transcription preview approve, cancel, or send behavior.",
+              "detail": [
+                {
+                  "name": "action",
+                  "type": "string"
+                },
+                {
+                  "name": "source",
+                  "type": "string"
+                },
+                {
+                  "name": "mode",
+                  "type": "string"
+                },
+                {
+                  "name": "text",
+                  "type": "string"
+                }
+              ],
+              "type": {
+                "text": "CustomEvent"
+              }
+            },
+            {
               "name": "chat-composer-voice-approve",
               "description": "Approves a recording preview.",
+              "detail": [
+                {
+                  "name": "action",
+                  "type": "string"
+                },
+                {
+                  "name": "source",
+                  "type": "string"
+                },
+                {
+                  "name": "mode",
+                  "type": "string"
+                },
+                {
+                  "name": "text",
+                  "type": "string"
+                }
+              ],
               "type": {
                 "text": "CustomEvent"
               }
@@ -11679,6 +12476,24 @@
             {
               "name": "chat-composer-voice-cancel",
               "description": "Cancels a recording preview.",
+              "detail": [
+                {
+                  "name": "action",
+                  "type": "string"
+                },
+                {
+                  "name": "source",
+                  "type": "string"
+                },
+                {
+                  "name": "mode",
+                  "type": "string"
+                },
+                {
+                  "name": "text",
+                  "type": "string"
+                }
+              ],
               "type": {
                 "text": "CustomEvent"
               }
@@ -11686,6 +12501,24 @@
             {
               "name": "chat-composer-voice-send",
               "description": "Requests sending a voice preview result.",
+              "detail": [
+                {
+                  "name": "action",
+                  "type": "string"
+                },
+                {
+                  "name": "source",
+                  "type": "string"
+                },
+                {
+                  "name": "mode",
+                  "type": "string"
+                },
+                {
+                  "name": "text",
+                  "type": "string"
+                }
+              ],
               "type": {
                 "text": "CustomEvent"
               }
@@ -11693,6 +12526,46 @@
             {
               "name": "chat-composer-key",
               "description": "Passes navigation/autocomplete keys to the host.",
+              "type": {
+                "text": "CustomEvent"
+              }
+            },
+            {
+              "name": "chat-composer-footer-control",
+              "description": "Emits a product-neutral footer control activation intent.",
+              "detail": [
+                {
+                  "name": "id",
+                  "type": "string"
+                },
+                {
+                  "name": "kind",
+                  "type": "string"
+                },
+                {
+                  "name": "value"
+                }
+              ],
+              "type": {
+                "text": "CustomEvent"
+              }
+            },
+            {
+              "name": "chat-composer-footer-control-change",
+              "description": "Emits a product-neutral footer control value change intent.",
+              "detail": [
+                {
+                  "name": "id",
+                  "type": "string"
+                },
+                {
+                  "name": "kind",
+                  "type": "string"
+                },
+                {
+                  "name": "value"
+                }
+              ],
               "type": {
                 "text": "CustomEvent"
               }
@@ -11877,8 +12750,12 @@
                 "voice-response-toggle",
                 "voice-command-mode",
                 "voice-language-mode",
+                "permission-intents",
+                "recorder-intents",
+                "transcription-intents",
                 "context-chips",
                 "footer-controls",
+                "footer-control-intents",
                 "autocomplete-host",
                 "drag-drop-context"
               ],
@@ -11903,6 +12780,11 @@
                   "name": "attachedContext",
                   "type": "array",
                   "description": "Context chip descriptors."
+                },
+                {
+                  "name": "footerControls",
+                  "type": "array",
+                  "description": "Structured product-neutral footer control descriptors rendered by setFooterControls."
                 },
                 {
                   "name": "footerHtml",
@@ -11932,6 +12814,11 @@
                   "description": "Sets context chip descriptors."
                 },
                 {
+                  "name": "setFooterControls",
+                  "type": "function",
+                  "description": "Sets structured footer controls for provider, model, agent, resource group, settings, or other host-owned intents."
+                },
+                {
                   "name": "setFooterHtml",
                   "type": "function",
                   "description": "Sets trusted footer controls HTML."
@@ -11954,7 +12841,7 @@
                 {
                   "name": "setVoiceInputState",
                   "type": "function",
-                  "description": "Sets mic button state: idle, recording, or processing."
+                  "description": "Sets mic button state: idle, listening, transcribing, or disabled; recording/processing aliases are accepted."
                 },
                 {
                   "name": "setWakeListenState",
@@ -11987,6 +12874,11 @@
                   "description": "Hides the voice preview surface."
                 },
                 {
+                  "name": "getVoicePreviewText",
+                  "type": "function",
+                  "description": "Returns current voice preview text for host-owned transcription handling."
+                },
+                {
                   "name": "getVoiceControlElements",
                   "type": "function",
                   "description": "Returns rendered voice control button elements for host adapters."
@@ -12007,11 +12899,51 @@
                 },
                 {
                   "name": "chat-composer-voice-input",
-                  "description": "Requests host-owned voice input capture."
+                  "description": "Requests host-owned voice input capture.",
+                  "detail": [
+                    {
+                      "name": "action",
+                      "type": "string"
+                    },
+                    {
+                      "name": "currentState",
+                      "type": "string"
+                    },
+                    {
+                      "name": "permission",
+                      "type": "string"
+                    },
+                    {
+                      "name": "source",
+                      "type": "string"
+                    }
+                  ]
                 },
                 {
                   "name": "chat-composer-wake-listen",
-                  "description": "Requests host-owned wake listening toggle."
+                  "description": "Requests host-owned wake listening toggle.",
+                  "detail": [
+                    {
+                      "name": "action",
+                      "type": "string"
+                    },
+                    {
+                      "name": "currentState",
+                      "type": "string"
+                    },
+                    {
+                      "name": "mode",
+                      "type": "string"
+                    },
+                    {
+                      "name": "permission",
+                      "type": "string"
+                    },
+                    {
+                      "name": "source",
+                      "type": "string"
+                    }
+                  ]
                 },
                 {
                   "name": "chat-composer-voice-response-toggle",
@@ -12032,20 +12964,178 @@
                   ]
                 },
                 {
+                  "name": "chat-composer-permission-intent",
+                  "description": "Requests a host-owned permission flow such as microphone access; the component never calls browser permission APIs itself.",
+                  "detail": [
+                    {
+                      "name": "action",
+                      "type": "string"
+                    },
+                    {
+                      "name": "permission",
+                      "type": "string"
+                    },
+                    {
+                      "name": "reason",
+                      "type": "string"
+                    },
+                    {
+                      "name": "source",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "name": "chat-composer-recorder-intent",
+                  "description": "Requests host-owned recorder start, stop, or cancel behavior without owning MediaRecorder or capture policy.",
+                  "detail": [
+                    {
+                      "name": "action",
+                      "type": "string"
+                    },
+                    {
+                      "name": "currentState",
+                      "type": "string"
+                    },
+                    {
+                      "name": "mode",
+                      "type": "string"
+                    },
+                    {
+                      "name": "permission",
+                      "type": "string"
+                    },
+                    {
+                      "name": "source",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "name": "chat-composer-transcription-intent",
+                  "description": "Requests host-owned transcription preview approve, cancel, or send behavior.",
+                  "detail": [
+                    {
+                      "name": "action",
+                      "type": "string"
+                    },
+                    {
+                      "name": "source",
+                      "type": "string"
+                    },
+                    {
+                      "name": "mode",
+                      "type": "string"
+                    },
+                    {
+                      "name": "text",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
                   "name": "chat-composer-voice-approve",
-                  "description": "Approves a recording preview."
+                  "description": "Approves a recording preview.",
+                  "detail": [
+                    {
+                      "name": "action",
+                      "type": "string"
+                    },
+                    {
+                      "name": "source",
+                      "type": "string"
+                    },
+                    {
+                      "name": "mode",
+                      "type": "string"
+                    },
+                    {
+                      "name": "text",
+                      "type": "string"
+                    }
+                  ]
                 },
                 {
                   "name": "chat-composer-voice-cancel",
-                  "description": "Cancels a recording preview."
+                  "description": "Cancels a recording preview.",
+                  "detail": [
+                    {
+                      "name": "action",
+                      "type": "string"
+                    },
+                    {
+                      "name": "source",
+                      "type": "string"
+                    },
+                    {
+                      "name": "mode",
+                      "type": "string"
+                    },
+                    {
+                      "name": "text",
+                      "type": "string"
+                    }
+                  ]
                 },
                 {
                   "name": "chat-composer-voice-send",
-                  "description": "Requests sending a voice preview result."
+                  "description": "Requests sending a voice preview result.",
+                  "detail": [
+                    {
+                      "name": "action",
+                      "type": "string"
+                    },
+                    {
+                      "name": "source",
+                      "type": "string"
+                    },
+                    {
+                      "name": "mode",
+                      "type": "string"
+                    },
+                    {
+                      "name": "text",
+                      "type": "string"
+                    }
+                  ]
                 },
                 {
                   "name": "chat-composer-key",
                   "description": "Passes navigation/autocomplete keys to the host."
+                },
+                {
+                  "name": "chat-composer-footer-control",
+                  "description": "Emits a product-neutral footer control activation intent.",
+                  "detail": [
+                    {
+                      "name": "id",
+                      "type": "string"
+                    },
+                    {
+                      "name": "kind",
+                      "type": "string"
+                    },
+                    {
+                      "name": "value"
+                    }
+                  ]
+                },
+                {
+                  "name": "chat-composer-footer-control-change",
+                  "description": "Emits a product-neutral footer control value change intent.",
+                  "detail": [
+                    {
+                      "name": "id",
+                      "type": "string"
+                    },
+                    {
+                      "name": "kind",
+                      "type": "string"
+                    },
+                    {
+                      "name": "value"
+                    }
+                  ]
                 },
                 {
                   "name": "chat-composer-param-change",
@@ -12148,7 +13238,7 @@
                   },
                   {
                     "name": "chat_composer_voice_control",
-                    "description": "Request host-owned voice input, wake listening, response, command mode, or language selection through the composer voice control surface.",
+                    "description": "Request host-owned voice input, wake listening, response, command mode, language selection, or preview actions through the composer voice control surface.",
                     "inputSchema": {
                       "type": "object",
                       "additionalProperties": false,
@@ -12163,6 +13253,15 @@
                             "preview-approve",
                             "preview-cancel",
                             "preview-send"
+                          ]
+                        },
+                        "state": {
+                          "enum": [
+                            "idle",
+                            "listening",
+                            "transcribing",
+                            "speaking",
+                            "disabled"
                           ]
                         },
                         "mode": {
@@ -12181,12 +13280,124 @@
                       "agent",
                       "assistant"
                     ]
+                  },
+                  {
+                    "name": "chat_composer_voice_flow",
+                    "description": "Document or request host-owned permission, recorder, and transcription intents for composer voice flows. The component emits intents only; browser permissions, MediaRecorder, speech recognition, and transcription providers remain host-owned.",
+                    "inputSchema": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "flow": {
+                          "enum": [
+                            "permission",
+                            "recorder",
+                            "transcription"
+                          ]
+                        },
+                        "action": {
+                          "enum": [
+                            "request",
+                            "start",
+                            "stop",
+                            "cancel",
+                            "approve",
+                            "send"
+                          ]
+                        },
+                        "permission": {
+                          "enum": [
+                            "microphone"
+                          ]
+                        },
+                        "currentState": {
+                          "enum": [
+                            "idle",
+                            "listening",
+                            "transcribing",
+                            "speaking",
+                            "disabled"
+                          ]
+                        },
+                        "source": {
+                          "enum": [
+                            "voice-input",
+                            "wake-listen",
+                            "voice-preview"
+                          ]
+                        },
+                        "text": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "flow",
+                        "action"
+                      ]
+                    },
+                    "annotations": {
+                      "readOnlyHint": false,
+                      "destructiveHint": false
+                    },
+                    "exposedTo": [
+                      "agent",
+                      "assistant"
+                    ]
+                  },
+                  {
+                    "name": "chat_composer_footer_control",
+                    "description": "Render or activate product-neutral composer footer controls such as provider, model, agent, resource group, or settings intent; the host owns routing, provider selection, and persistence.",
+                    "inputSchema": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "kind": {
+                          "enum": [
+                            "button",
+                            "intent",
+                            "select",
+                            "checkbox"
+                          ]
+                        },
+                        "label": {
+                          "type": "string"
+                        },
+                        "value": {},
+                        "icon": {
+                          "type": "string"
+                        },
+                        "options": {
+                          "type": "array"
+                        },
+                        "action": {
+                          "enum": [
+                            "set",
+                            "activate"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "action"
+                      ]
+                    },
+                    "annotations": {
+                      "readOnlyHint": false,
+                      "destructiveHint": false
+                    },
+                    "exposedTo": [
+                      "agent",
+                      "assistant"
+                    ]
                   }
                 ]
               }
             },
             "agent": {
-              "componentDescription": "Generic chat composer with input, voice controls, context chips, footer controls, and autocomplete host. Use this chat and conversation surface when composing chat UI. Capabilities: chat-input, voice-controls, voice-preview, wake-listening, voice-response-toggle, voice-command-mode, voice-language-mode, context-chips, footer-controls, autocomplete-host, drag-drop-context. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: chat_composer_submit, chat_composer_voice_control.",
+              "componentDescription": "Generic chat composer with input, voice controls, context chips, footer controls, and autocomplete host. Use this chat and conversation surface when composing chat UI. Capabilities: chat-input, voice-controls, voice-preview, wake-listening, voice-response-toggle, voice-command-mode, voice-language-mode, permission-intents, recorder-intents, transcription-intents, context-chips, footer-controls, footer-control-intents, autocomplete-host, drag-drop-context. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: chat_composer_submit, chat_composer_voice_control, chat_composer_voice_flow, chat_composer_footer_control.",
               "semanticRole": "chat and conversation surface",
               "usage": "Render or compose <chat-composer> when the host needs generic chat composer with input, voice controls, context chips, footer controls, and autocomplete host.",
               "dataOwnership": "host-owned props and attributes; component owns presentation state",
@@ -12194,7 +13405,9 @@
                 "mode": "explicit-descriptor",
                 "toolNames": [
                   "chat_composer_submit",
-                  "chat_composer_voice_control"
+                  "chat_composer_voice_control",
+                  "chat_composer_voice_flow",
+                  "chat_composer_footer_control"
                 ],
                 "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
                 "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
@@ -12208,7 +13421,7 @@
             }
           },
           "agent": {
-            "componentDescription": "Generic chat composer with input, voice controls, context chips, footer controls, and autocomplete host. Use this chat and conversation surface when composing chat UI. Capabilities: chat-input, voice-controls, voice-preview, wake-listening, voice-response-toggle, voice-command-mode, voice-language-mode, context-chips, footer-controls, autocomplete-host, drag-drop-context. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: chat_composer_submit, chat_composer_voice_control.",
+            "componentDescription": "Generic chat composer with input, voice controls, context chips, footer controls, and autocomplete host. Use this chat and conversation surface when composing chat UI. Capabilities: chat-input, voice-controls, voice-preview, wake-listening, voice-response-toggle, voice-command-mode, voice-language-mode, permission-intents, recorder-intents, transcription-intents, context-chips, footer-controls, footer-control-intents, autocomplete-host, drag-drop-context. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: chat_composer_submit, chat_composer_voice_control, chat_composer_voice_flow, chat_composer_footer_control.",
             "semanticRole": "chat and conversation surface",
             "usage": "Render or compose <chat-composer> when the host needs generic chat composer with input, voice controls, context chips, footer controls, and autocomplete host.",
             "dataOwnership": "host-owned props and attributes; component owns presentation state",
@@ -12216,7 +13429,9 @@
               "mode": "explicit-descriptor",
               "toolNames": [
                 "chat_composer_submit",
-                "chat_composer_voice_control"
+                "chat_composer_voice_control",
+                "chat_composer_voice_flow",
+                "chat_composer_footer_control"
               ],
               "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
               "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
@@ -13059,7 +14274,7 @@
           "name": "ChatSidebarShell",
           "tagName": "chat-sidebar-shell",
           "description": "Generic collapsible and resizable chat navigation shell.",
-          "componentDescription": "Generic collapsible and resizable chat navigation shell. Use this chat and conversation surface when composing chat UI. Capabilities: chat-sidebar, collapse, resize, nested-chat-list, responsive-auto-collapse. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "componentDescription": "Generic collapsible and resizable chat navigation shell. Use this chat and conversation surface when composing chat UI. Capabilities: chat-sidebar, collapse, resize, nested-chat-list, responsive-auto-collapse. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: chat_sidebar_set_chats, chat_sidebar_select, chat_sidebar_set_collapsed.",
           "members": [
             {
               "kind": "field",
@@ -13094,6 +14309,14 @@
               "description": "Whether grouped root chat rows render project dividers."
             },
             {
+              "kind": "field",
+              "name": "autoCollapse",
+              "type": {
+                "text": "boolean"
+              },
+              "description": "Whether narrow containers may auto-collapse the chat list."
+            },
+            {
               "kind": "method",
               "name": "setChats",
               "type": {
@@ -13124,6 +14347,14 @@
                 "text": "function"
               },
               "description": "Toggles grouped root chat dividers."
+            },
+            {
+              "kind": "method",
+              "name": "setAutoCollapse",
+              "type": {
+                "text": "function"
+              },
+              "description": "Toggles responsive auto-collapse without changing host-owned chat data."
             }
           ],
           "events": [
@@ -13259,7 +14490,13 @@
                 "nested-chat-list",
                 "responsive-auto-collapse"
               ],
-              "attributes": [],
+              "attributes": [
+                {
+                  "name": "auto-collapse",
+                  "type": "boolean",
+                  "description": "When false or never, keeps the chat list expanded until the host or user explicitly collapses it."
+                }
+              ],
               "properties": [
                 {
                   "name": "chats",
@@ -13280,6 +14517,11 @@
                   "name": "groupDividers",
                   "type": "boolean",
                   "description": "Whether grouped root chat rows render project dividers."
+                },
+                {
+                  "name": "autoCollapse",
+                  "type": "boolean",
+                  "description": "Whether narrow containers may auto-collapse the chat list."
                 }
               ],
               "methods": [
@@ -13302,6 +14544,11 @@
                   "name": "setGroupDividers",
                   "type": "function",
                   "description": "Toggles grouped root chat dividers."
+                },
+                {
+                  "name": "setAutoCollapse",
+                  "type": "function",
+                  "description": "Toggles responsive auto-collapse without changing host-owned chat data."
                 }
               ],
               "events": [
@@ -13365,16 +14612,129 @@
                   "focus"
                 ],
                 "notes": "May render shell markup under SSR, but interactive behavior belongs to browser hydration."
+              },
+              "webmcp": {
+                "documentation": "Agent-facing WebMCP documentation for stable component affordances only; host workflow policy remains outside symbiote-ui.",
+                "tools": [
+                  {
+                    "name": "chat_sidebar_set_chats",
+                    "description": "Set host-owned nested chat descriptors in the reusable sidebar shell without owning transport, routes, persistence, or project policy.",
+                    "inputSchema": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "activeId": {
+                          "type": "string"
+                        },
+                        "chats": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": true,
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "project": {
+                                "type": "string"
+                              },
+                              "adapter": {
+                                "type": "string"
+                              },
+                              "status": {
+                                "type": "string"
+                              },
+                              "children": {
+                                "type": "array"
+                              }
+                            },
+                            "required": [
+                              "id"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "chats"
+                      ]
+                    },
+                    "annotations": {
+                      "readOnlyHint": false,
+                      "destructiveHint": false,
+                      "idempotentHint": true
+                    },
+                    "exposedTo": [
+                      "agent",
+                      "assistant"
+                    ]
+                  },
+                  {
+                    "name": "chat_sidebar_select",
+                    "description": "Request selection of a host-owned chat id through the sidebar shell; the host decides routing, loading, and persistence.",
+                    "inputSchema": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "chatId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "chatId"
+                      ]
+                    },
+                    "annotations": {
+                      "readOnlyHint": false,
+                      "destructiveHint": false
+                    },
+                    "exposedTo": [
+                      "agent",
+                      "assistant"
+                    ]
+                  },
+                  {
+                    "name": "chat_sidebar_set_collapsed",
+                    "description": "Set the visual collapsed state of the chat sidebar shell without changing host-owned chat data.",
+                    "inputSchema": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "collapsed": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "collapsed"
+                      ]
+                    },
+                    "annotations": {
+                      "readOnlyHint": false,
+                      "destructiveHint": false,
+                      "idempotentHint": true
+                    },
+                    "exposedTo": [
+                      "agent",
+                      "assistant"
+                    ]
+                  }
+                ]
               }
             },
             "agent": {
-              "componentDescription": "Generic collapsible and resizable chat navigation shell. Use this chat and conversation surface when composing chat UI. Capabilities: chat-sidebar, collapse, resize, nested-chat-list, responsive-auto-collapse. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+              "componentDescription": "Generic collapsible and resizable chat navigation shell. Use this chat and conversation surface when composing chat UI. Capabilities: chat-sidebar, collapse, resize, nested-chat-list, responsive-auto-collapse. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: chat_sidebar_set_chats, chat_sidebar_select, chat_sidebar_set_collapsed.",
               "semanticRole": "chat and conversation surface",
               "usage": "Render or compose <chat-sidebar-shell> when the host needs generic collapsible and resizable chat navigation shell.",
               "dataOwnership": "host-owned props and attributes; component owns presentation state",
               "webmcp": {
-                "mode": "described-only",
-                "toolNames": [],
+                "mode": "explicit-descriptor",
+                "toolNames": [
+                  "chat_sidebar_set_chats",
+                  "chat_sidebar_select",
+                  "chat_sidebar_set_collapsed"
+                ],
                 "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
                 "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
                 "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
@@ -13387,13 +14747,17 @@
             }
           },
           "agent": {
-            "componentDescription": "Generic collapsible and resizable chat navigation shell. Use this chat and conversation surface when composing chat UI. Capabilities: chat-sidebar, collapse, resize, nested-chat-list, responsive-auto-collapse. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "componentDescription": "Generic collapsible and resizable chat navigation shell. Use this chat and conversation surface when composing chat UI. Capabilities: chat-sidebar, collapse, resize, nested-chat-list, responsive-auto-collapse. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: chat_sidebar_set_chats, chat_sidebar_select, chat_sidebar_set_collapsed.",
             "semanticRole": "chat and conversation surface",
             "usage": "Render or compose <chat-sidebar-shell> when the host needs generic collapsible and resizable chat navigation shell.",
             "dataOwnership": "host-owned props and attributes; component owns presentation state",
             "webmcp": {
-              "mode": "described-only",
-              "toolNames": [],
+              "mode": "explicit-descriptor",
+              "toolNames": [
+                "chat_sidebar_set_chats",
+                "chat_sidebar_select",
+                "chat_sidebar_set_collapsed"
+              ],
               "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
               "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
               "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
@@ -13403,7 +14767,14 @@
                 "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
               ]
             }
-          }
+          },
+          "attributes": [
+            {
+              "name": "auto-collapse",
+              "type": "boolean",
+              "description": "When false or never, keeps the chat list expanded until the host or user explicitly collapses it."
+            }
+          ]
         }
       ],
       "exports": [

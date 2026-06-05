@@ -74,6 +74,11 @@ const EXPORT_ENTRYPOINTS = [
     description: 'Layout tree, section registry, and router helpers without browser components.',
   },
   {
+    specifier: 'symbiote-ui/runtime',
+    kind: 'ssr-entry-safe',
+    description: 'Agent UI construction helpers for component creation, state updates, intent routing, layout insertion, and teardown.',
+  },
+  {
     specifier: 'symbiote-ui/xr',
     kind: 'ssr-entry-safe',
     description: 'WebXR capability, spatial layout projection, and XR pointer helpers without renderer lock-in.',

@@ -88,11 +88,21 @@ function readCssNumber(source, token, fallback) {
 }
 
 export class CellBg extends Symbiote {
+  static get observedAttributes() {
+    return ['active', 'auto-trigger', 'pulse-duration'];
+  }
+
   init$ = {
     active: false,
+    autoTrigger: true,
+    pulseDuration: 10000,
   };
 
   initCallback() {
+    this.$.active = this.hasAttribute('active');
+    this.$.autoTrigger = this._readAutoTriggerAttribute();
+    this.$.pulseDuration = this._readPulseDurationAttribute();
+
     this.canvas = this.ref.canvas;
     this.ctx = this.canvas?.getContext?.('2d') || null;
     this._available = Boolean(this.canvas && this.ctx);
@@ -139,7 +149,7 @@ export class CellBg extends Symbiote {
       if (this._resizeDebounce) clearTimeout(this._resizeDebounce);
       this._resizeDebounce = setTimeout(() => {
         this._resizeDebounce = null;
-        this.pulse(10000);
+        this._triggerIfEnabled();
       }, 300);
     };
 
@@ -166,12 +176,25 @@ export class CellBg extends Symbiote {
       this.ro?.observe(this);
       this.resize();
       this._seedRandom();
-      this.pulse(10000);
+      this._triggerIfEnabled();
     }, 0);
 
     this.sub('active', (val) => {
-      this.toggle(!!val);
+      this._setPersistent(!!val);
     });
+    if (this.$.active) this._setPersistent(true);
+  }
+
+  attributeChangedCallback(name, oldValue, newValue) {
+    super.attributeChangedCallback?.(name, oldValue, newValue);
+    if (oldValue === newValue) return;
+    if (name === 'active') {
+      this.$.active = this.hasAttribute('active');
+    } else if (name === 'auto-trigger') {
+      this.$.autoTrigger = this._readAutoTriggerAttribute();
+    } else if (name === 'pulse-duration') {
+      this.$.pulseDuration = this._readPulseDurationAttribute();
+    }
   }
 
   /**
@@ -180,17 +203,52 @@ export class CellBg extends Symbiote {
    * @param {boolean} state
    */
   toggle(state) {
+    let next = !!state;
+    if (this.$.active !== next) {
+      this.$.active = next;
+      return;
+    }
+    this._setPersistent(next);
+  }
+
+  _setPersistent(state) {
     this._toggled = !!state;
+    if (state && this._pulseTimer) {
+      clearTimeout(this._pulseTimer);
+      this._pulseTimer = null;
+    }
     if (state && this._prefersReducedMotion) {
       this._draw();
       return;
     }
     if (state) {
-      this._start();
+      this._start('persistent');
     } else if (!this._pulseTimer) {
       // Only stop if no active pulse timer
-      this._stop();
+      this._stop('persistent');
     }
+  }
+
+  /**
+   * Start persistent animation with smooth acceleration.
+   */
+  start() {
+    this.toggle(true);
+  }
+
+  /**
+   * Stop persistent or timed animation with smooth deceleration.
+   */
+  stop() {
+    if (this._pulseTimer) clearTimeout(this._pulseTimer);
+    this._pulseTimer = null;
+    this._toggled = false;
+    if (this.$.active) {
+      this.$.active = false;
+    } else {
+      this._setPersistent(false);
+    }
+    this._stop('manual');
   }
 
   /**
@@ -201,21 +259,39 @@ export class CellBg extends Symbiote {
    */
   pulse(duration = 10000) {
     if (this._toggled) return; // Already running persistently
+    let safeDuration = this._normalizePulseDuration(duration);
     if (this._prefersReducedMotion) {
       this._draw();
       return;
     }
     if (this._pulseTimer) clearTimeout(this._pulseTimer);
-    this._start();
+    this.dispatchEvent(new CustomEvent('cell-bg-animation-trigger', {
+      bubbles: true,
+      composed: true,
+      detail: { duration: safeDuration },
+    }));
+    this._start('pulse');
     this._pulseTimer = setTimeout(() => {
       this._pulseTimer = null;
-      if (!this._toggled) this._stop();
-    }, duration);
+      if (!this._toggled) this._stop('pulse');
+    }, safeDuration);
+  }
+
+  /**
+   * Trigger a timed animation pulse. Alias for hosts and WebMCP descriptors.
+   * @param {number} [duration=10000]
+   */
+  trigger(duration = 10000) {
+    this.pulse(duration ?? this.$.pulseDuration);
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
     if (this.ro) this.ro.disconnect();
+    if (this._pulseTimer) clearTimeout(this._pulseTimer);
+    if (this._resizeDebounce) clearTimeout(this._resizeDebounce);
+    this._pulseTimer = null;
+    this._resizeDebounce = null;
     this._themeObserver?.disconnect();
     this.ownerDocument?.removeEventListener?.('cascade-theme-change', this._themeChangeHandler);
     if (typeof this._motionQuery?.removeEventListener === 'function') {
@@ -241,7 +317,7 @@ export class CellBg extends Symbiote {
     } else {
       this._draw();
     }
-    if (pulse) this.pulse(3000);
+    if (pulse) this.trigger(3000);
   }
 
   _scheduleThemeRefresh() {
@@ -259,6 +335,25 @@ export class CellBg extends Symbiote {
 
   _buildPalette() {
     this._applyThemeState();
+  }
+
+  _readAutoTriggerAttribute() {
+    let value = this.getAttribute('auto-trigger');
+    return value !== 'false' && value !== 'off';
+  }
+
+  _readPulseDurationAttribute() {
+    return this._normalizePulseDuration(this.getAttribute('pulse-duration') || this.$.pulseDuration);
+  }
+
+  _normalizePulseDuration(duration) {
+    let next = Number.parseFloat(duration);
+    return Number.isFinite(next) && next > 0 ? Math.max(300, next) : 10000;
+  }
+
+  _triggerIfEnabled() {
+    if (this.$.autoTrigger === false) return;
+    this.trigger(this.$.pulseDuration);
   }
 
   _applyThemeState() {
@@ -335,10 +430,15 @@ export class CellBg extends Symbiote {
     }
   }
 
-  _start() {
+  _start(reason = 'manual') {
     if (!this._available) return;
     if (this.running) return;
     this.running = true;
+    this.dispatchEvent(new CustomEvent('cell-bg-animation-start', {
+      bubbles: true,
+      composed: true,
+      detail: { reason },
+    }));
     if (!this.isAnimating) {
       this.lastTime = now();
       this.isAnimating = true;
@@ -346,9 +446,14 @@ export class CellBg extends Symbiote {
     }
   }
 
-  _stop() {
+  _stop(reason = 'manual') {
     if (!this.running) return;
     this.running = false;
+    this.dispatchEvent(new CustomEvent('cell-bg-animation-stop', {
+      bubbles: true,
+      composed: true,
+      detail: { reason, smooth: true },
+    }));
     // Loop will smoothly decelerate and stop in renderLoop
   }
 
@@ -403,8 +508,8 @@ export class CellBg extends Symbiote {
   _injectNoise() {
     let regionW = Math.max(4, (this.cols * 0.3) | 0);
     let regionH = Math.max(4, (this.rows * 0.3) | 0);
-    let startX = (Math.random() * (this.cols - regionW)) | 0;
-    let startY = (Math.random() * (this.rows - regionH)) | 0;
+    let startX = (Math.random() * Math.max(1, this.cols - regionW)) | 0;
+    let startY = (Math.random() * Math.max(1, this.rows - regionH)) | 0;
     for (let y = startY; y < startY + regionH; y++) {
       for (let x = startX; x < startX + regionW; x++) {
         if (Math.random() < 0.15) {
@@ -431,6 +536,11 @@ export class CellBg extends Symbiote {
     if (!this.running && this.currentSpeed < 0.005) {
       this.currentSpeed = 0;
       this.isAnimating = false;
+      this.dispatchEvent(new CustomEvent('cell-bg-animation-idle', {
+        bubbles: true,
+        composed: true,
+        detail: { smooth: true },
+      }));
     }
 
     // Accumulate effective time for cellular automaton steps

@@ -3,13 +3,27 @@ export default `
 chat-composer {
   --chat-composer-bg: var(--sn-composer-bg);
   --chat-composer-action-bg: var(--sn-composer-action-bg);
+  container: chat-composer / inline-size;
   display: block;
   padding: var(--sn-composer-padding);
   position: relative;
   z-index: 2;
 }
 
-.composer-body,
+.composer-body {
+  container: composer-body / inline-size;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-rows: auto;
+  align-items: stretch;
+  align-content: end;
+  gap: var(--sn-composer-control-gap);
+  background: var(--chat-composer-bg);
+  border-radius: var(--sn-composer-radius);
+  padding: var(--sn-composer-body-padding);
+  transition: background 0.15s;
+}
+
 .voice-preview {
   container: composer-body / inline-size;
   display: flex;
@@ -28,8 +42,12 @@ chat-composer {
 }
 
 .composer-body textarea {
-  flex: 1;
-  min-width: min(100%, var(--sn-composer-input-min-inline-size, 160px));
+  grid-column: 1;
+  grid-row: 1;
+  align-self: end;
+  min-width: 0;
+  min-inline-size: min(100%, var(--sn-composer-input-min-inline-size, 160px));
+  width: 100%;
   background: transparent;
   border: none;
   color: var(--sn-text);
@@ -44,6 +62,28 @@ chat-composer {
   overflow-y: auto;
 }
 
+.composer-actions {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-end;
+  align-self: end;
+  justify-self: flex-end;
+  gap: var(--sn-composer-control-gap);
+  max-width: min(54cqi, var(--sn-composer-actions-max-inline-size, 460px));
+  min-width: 0;
+  overflow: hidden;
+}
+
+.composer-body > sn-button.btn-send {
+  grid-column: 3;
+  grid-row: 1;
+  align-self: end;
+  justify-self: end;
+}
+
 .composer-body textarea::placeholder {
   color: var(--sn-text-dim);
 }
@@ -56,7 +96,7 @@ sn-button.btn-send[variant="icon"] {
   --sn-button-hover-bg: var(--sn-composer-send-hover-bg);
   --sn-button-color: var(--chat-composer-bg);
   --sn-button-disabled-opacity: 0.3;
-  --sn-button-focus-ring: 2px solid color-mix(in srgb, var(--sn-text-dim) 50%, transparent);
+  --sn-button-focus-ring: 2px solid color-mix(in oklab, var(--sn-text-dim) 50%, transparent);
   background: var(--sn-button-bg);
   border: 0;
   color: var(--sn-button-color);
@@ -118,11 +158,12 @@ sn-button.btn-send[variant="icon"].btn-stop::after {
 .composer-footer {
   container: composer-footer / inline-size;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--sn-composer-footer-gap, 4px);
   padding: var(--sn-composer-footer-padding, 6px 16px 0);
   min-height: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .composer-footer:empty {
@@ -145,12 +186,18 @@ sn-button.btn-send[variant="icon"].btn-stop::after {
   transition: background 0.12s, color 0.12s;
   white-space: nowrap;
   min-width: 0;
+  max-width: 100%;
   flex: 0 1 auto;
 }
 
 .composer-footer-btn:hover {
   background: var(--sn-node-hover);
   color: var(--sn-text);
+}
+
+.composer-footer-btn.active {
+  color: var(--sn-text);
+  background: color-mix(in oklab, var(--sn-node-bg) 78%, var(--sn-text) 22%);
 }
 
 .composer-footer-btn .material-symbols-outlined {
@@ -177,8 +224,23 @@ sn-button.btn-send[variant="icon"].btn-stop::after {
   width: fit-content;
   padding: 0;
   min-width: 0;
-  max-width: 160px;
+  max-width: min(160px, 100%);
   text-overflow: ellipsis;
+}
+
+.composer-footer-select-control {
+  padding-right: 4px;
+}
+
+.composer-footer-checkbox-control {
+  user-select: none;
+}
+
+.composer-footer-checkbox {
+  accent-color: var(--sn-node-selected);
+  inline-size: var(--sn-composer-footer-icon-size, 16px);
+  block-size: var(--sn-composer-footer-icon-size, 16px);
+  margin: 0;
 }
 
 .composer-footer-select option {
@@ -187,7 +249,7 @@ sn-button.btn-send[variant="icon"].btn-stop::after {
 }
 
 .composer-param-model .composer-footer-select {
-  max-width: 190px;
+  max-width: min(190px, 100%);
 }
 
 .composer-toggle-icon {
@@ -199,8 +261,17 @@ sn-button.btn-send[variant="icon"].btn-stop::after {
   text-overflow: ellipsis;
 }
 
+.composer-footer-value {
+  overflow: hidden;
+  max-width: var(--sn-composer-footer-value-max, 92px);
+  color: var(--sn-text);
+  font-weight: 650;
+  text-overflow: ellipsis;
+}
+
 .composer-param-collapsed .composer-footer-select,
-.composer-param-collapsed .composer-footer-label {
+.composer-param-collapsed .composer-footer-label,
+.composer-param-collapsed .composer-footer-value {
   width: var(--sn-composer-collapsed-control-width);
   max-width: var(--sn-composer-collapsed-control-width);
   padding-right: var(--sn-composer-collapsed-control-padding);
@@ -209,7 +280,8 @@ sn-button.btn-send[variant="icon"].btn-stop::after {
 
 @container composer-footer (width <= 560px) {
   .composer-priority-1 .composer-footer-select,
-  .composer-priority-1 .composer-footer-label {
+  .composer-priority-1 .composer-footer-label,
+  .composer-priority-1 .composer-footer-value {
     width: var(--sn-composer-collapsed-control-width);
     max-width: var(--sn-composer-collapsed-control-width);
     padding-right: var(--sn-composer-collapsed-control-padding);
@@ -219,7 +291,8 @@ sn-button.btn-send[variant="icon"].btn-stop::after {
 
 @container composer-footer (width <= 500px) {
   .composer-priority-2 .composer-footer-select,
-  .composer-priority-2 .composer-footer-label {
+  .composer-priority-2 .composer-footer-label,
+  .composer-priority-2 .composer-footer-value {
     width: var(--sn-composer-collapsed-control-width);
     max-width: var(--sn-composer-collapsed-control-width);
     padding-right: var(--sn-composer-collapsed-control-padding);
@@ -229,7 +302,8 @@ sn-button.btn-send[variant="icon"].btn-stop::after {
 
 @container composer-footer (width <= 440px) {
   .composer-priority-3 .composer-footer-select,
-  .composer-priority-3 .composer-footer-label {
+  .composer-priority-3 .composer-footer-label,
+  .composer-priority-3 .composer-footer-value {
     width: var(--sn-composer-collapsed-control-width);
     max-width: var(--sn-composer-collapsed-control-width);
     padding-right: var(--sn-composer-collapsed-control-padding);
@@ -239,7 +313,8 @@ sn-button.btn-send[variant="icon"].btn-stop::after {
 
 @container composer-footer (width <= 380px) {
   .composer-priority-4 .composer-footer-select,
-  .composer-priority-4 .composer-footer-label {
+  .composer-priority-4 .composer-footer-label,
+  .composer-priority-4 .composer-footer-value {
     width: var(--sn-composer-collapsed-control-width);
     max-width: var(--sn-composer-collapsed-control-width);
     padding-right: var(--sn-composer-collapsed-control-padding);
@@ -249,7 +324,8 @@ sn-button.btn-send[variant="icon"].btn-stop::after {
 
 @container composer-footer (width <= 320px) {
   .composer-priority-5 .composer-footer-select,
-  .composer-priority-5 .composer-footer-label {
+  .composer-priority-5 .composer-footer-label,
+  .composer-priority-5 .composer-footer-value {
     width: var(--sn-composer-collapsed-control-width);
     max-width: var(--sn-composer-collapsed-control-width);
     padding-right: var(--sn-composer-collapsed-control-padding);
@@ -263,6 +339,8 @@ sn-button.btn-send[variant="icon"].btn-stop::after {
   gap: var(--sn-composer-chip-gap, 6px);
   padding: 0 var(--sn-composer-control-gap, 8px) var(--sn-composer-control-gap, 8px);
   min-height: 0;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .chat-context-bar:empty {
@@ -273,6 +351,8 @@ sn-button.btn-send[variant="icon"].btn-stop::after {
   display: flex;
   align-items: center;
   gap: var(--sn-composer-chip-gap, 4px);
+  min-width: 0;
+  max-width: 100%;
   background: var(--sn-node-hover);
   border-radius: 6px;
   padding: var(--sn-composer-chip-padding, 3px 8px);
@@ -281,7 +361,8 @@ sn-button.btn-send[variant="icon"].btn-stop::after {
 }
 
 .context-path {
-  max-width: 200px;
+  min-width: 0;
+  max-width: min(200px, 100%);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -320,8 +401,8 @@ chat-composer.drag-over .composer-body {
   right: var(--sn-composer-popup-inset, 20px);
   max-height: 240px;
   overflow-y: auto;
-  background: color-mix(in srgb, var(--sn-node-bg) 95%, transparent);
-  border: 1px solid color-mix(in srgb, var(--sn-node-hover) 45%, transparent);
+  background: color-mix(in oklab, var(--sn-node-bg) 95%, transparent);
+  border: 1px solid color-mix(in oklab, var(--sn-node-hover) 45%, transparent);
   border-radius: 16px;
   padding: var(--sn-composer-autocomplete-padding, 4px);
   margin-bottom: var(--sn-composer-footer-gap, 6px);
@@ -486,13 +567,13 @@ chat-composer.drag-over .composer-body {
   padding: 0 var(--sn-composer-control-gap, 10px);
   gap: var(--sn-composer-footer-gap, 6px);
   border-radius: 999px;
-  background: color-mix(in srgb, var(--sn-node-bg) 88%, var(--sn-text) 12%);
+  background: color-mix(in oklab, var(--sn-node-bg) 88%, var(--sn-text) 12%);
   color: var(--sn-text-dim);
 }
 
 .btn-voice-command.active {
   color: var(--sn-text);
-  background: color-mix(in srgb, var(--sn-node-bg) 72%, var(--sn-text) 28%);
+  background: color-mix(in oklab, var(--sn-node-bg) 72%, var(--sn-text) 28%);
 }
 
 .voice-command-button-text {
@@ -529,7 +610,7 @@ chat-composer.drag-over .composer-body {
   font-variation-settings: 'FILL' 1;
 }
 
-@container composer-body (width <= 460px) {
+@container composer-body (width <= 960px) {
   .btn-wake-listen.has-command,
   .btn-voice-command {
     width: var(--sn-composer-send-size);
@@ -541,6 +622,27 @@ chat-composer.drag-over .composer-body {
   .btn-wake-listen.has-command .wake-command-text,
   .btn-voice-command .voice-command-button-text {
     display: none;
+  }
+}
+
+@container chat-composer (width <= 480px) {
+  .composer-body {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+  }
+
+  .composer-actions {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: 100%;
+    max-width: 100%;
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+
+  .composer-body > sn-button.btn-send {
+    grid-column: 2;
+    grid-row: 1;
   }
 
   .btn-voice-language {
@@ -555,8 +657,10 @@ chat-composer.drag-over .composer-body {
 }
 
 @container composer-body (width <= 340px) {
-  .composer-body textarea {
-    flex-basis: 100%;
+  .composer-actions {
+    justify-self: stretch;
+    align-self: end;
+    justify-content: flex-end;
   }
 
   .btn-voice-language {
@@ -689,7 +793,7 @@ chat-composer.drag-over .composer-body {
   min-height: var(--sn-composer-input-min-height, 20px);
   padding: var(--sn-composer-footer-btn-padding, 2px 7px);
   border-radius: 999px;
-  background: color-mix(in srgb, var(--sn-node-bg) 86%, var(--sn-text) 14%);
+  background: color-mix(in oklab, var(--sn-node-bg) 86%, var(--sn-text) 14%);
   color: var(--sn-text-dim);
   font-size: var(--sn-composer-voice-label-size, 11px);
   font-weight: 600;
@@ -707,7 +811,7 @@ chat-composer.drag-over .composer-body {
   --sn-button-icon-size: var(--sn-composer-send-size);
   --sn-button-icon-font-size: var(--sn-composer-send-icon-size);
   --sn-button-radius: 50%;
-  --sn-button-focus-ring: 2px solid color-mix(in srgb, var(--sn-text-dim) 50%, transparent);
+  --sn-button-focus-ring: 2px solid color-mix(in oklab, var(--sn-text-dim) 50%, transparent);
   width: var(--sn-composer-send-size);
   height: var(--sn-composer-send-size);
   min-height: var(--sn-composer-send-size);

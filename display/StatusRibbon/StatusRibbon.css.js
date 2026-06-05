@@ -5,7 +5,7 @@ export default `
 
   sn-status-ribbon {
     position: fixed;
-    bottom: 20px;
+    bottom: var(--sn-status-ribbon-bottom, 20px);
     left: 50%;
     transform: translateX(-50%) translateY(20px);
     z-index: 9999;
@@ -22,25 +22,25 @@ export default `
   .fr-inner {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 8px 20px;
-    border-radius: 24px;
-    background: var(--sn-bg-overlay);
+    gap: var(--sn-status-ribbon-gap, 10px);
+    padding: var(--sn-status-ribbon-padding, 8px 20px);
+    border-radius: var(--sn-status-ribbon-radius, 24px);
+    background: var(--sn-status-ribbon-bg, var(--sn-bg-overlay));
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    border: 1px solid var(--sn-cat-server);
+    border: 1px solid var(--sn-status-ribbon-border, var(--sn-cat-server));
     box-shadow: var(--sn-shadow-lg), var(--sn-accent-glow);
     font-family: var(--sn-font-ui);
-    font-size: 12px;
+    font-size: var(--sn-status-ribbon-size, 12px);
     font-weight: 500;
-    color: var(--sn-text);
+    color: var(--sn-status-ribbon-color, var(--sn-text));
     white-space: nowrap;
-    max-width: 500px;
+    max-width: var(--sn-status-ribbon-max-width, 500px);
   }
 
   .fr-icon {
-    font-family: 'Material Symbols Outlined';
-    font-size: 16px;
+    font-family: var(--sn-icon-font, 'Material Symbols Outlined');
+    font-size: var(--sn-status-ribbon-icon-size, 16px);
     color: var(--sn-cat-server);
     animation: fr-pulse 2s ease-in-out infinite;
   }
@@ -54,7 +54,7 @@ export default `
     content: '...';
     animation: fr-dots 1.5s steps(3) infinite;
     display: inline-block;
-    width: 16px;
+    width: var(--sn-status-ribbon-dots-width, 16px);
     text-align: left;
     color: var(--sn-text-dim);
   }

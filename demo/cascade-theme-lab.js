@@ -1,40 +1,43 @@
 import Symbiote, { html } from '@symbiotejs/symbiote';
+import { Connection, Input, Node, NodeEditor, Output, Socket } from '../core/index.js';
+import * as LayoutTree from '../layout/LayoutTree.js';
 import {
-  Connection,
   DEFAULT_PROVIDER_THEME,
-  Input,
-  LayoutTree,
-  Node,
-  NodeEditor,
-  Output,
-  Socket,
+  CASCADE_THEME_DEFAULTS,
+  applyCascadeTheme,
   applyTheme,
-  configureMaterialSymbols,
-  defineModule,
-} from '../ui/index.js?v=theme-widget-layout-actions';
+  normalizeCascadeThemeOptions,
+} from '../themes/Theme.js';
+import { configureMaterialSymbols } from '../icons/MaterialSymbols.js';
+import '../layout/LayoutShellMenu/LayoutShellMenu.js';
+import '../layout/LayoutSidebar/LayoutSidebar.js';
+import '../layout/Layout/Layout.js';
+import '../layout/LayoutNode/LayoutNode.js';
+import '../layout/ProjectTabs/ProjectTabs.js';
+import '../canvas/NodeCanvas/NodeCanvas.js';
+import '../canvas/GraphExplorerShell/GraphExplorerShell.js';
+import '../node/GraphNode/GraphNode.js?v=cascade-demo-node-1';
+import '../control/Button/Button.js';
+import '../display/Banner/Banner.js';
+import '../display/Badge/Badge.js';
+import '../display/DataTable/DataTable.js';
+import '../display/EmptyState/EmptyState.js';
+import '../display/EventFeed/EventFeed.js';
+import '../display/LoadingOverlay/LoadingOverlay.js';
+import '../display/SourceViewer/SourceViewer.js';
+import '../display/StatusRibbon/StatusRibbon.js';
+import '../list/ListDetailShell/ListDetailShell.js';
+import '../surface/Card/Card.js';
+import '../tree/TreePanel/TreePanel.js';
+import '../effects/CellBg/CellBg.js';
+import '../chat/ChatTranscript/ChatTranscript.js';
+import '../chat/ChatComposer/ChatComposer.js?v=cascade-demo-chat-1';
+import '../chat/ChatSidebar/ChatSidebar.js?v=cascade-demo-chat-1';
+import '../display/CodeBlock/CodeBlock.js';
+import '../themes/CascadeThemeEditor/CascadeThemeEditor.js';
+import '../themes/CascadeThemeWidget/CascadeThemeWidget.js';
 
 configureMaterialSymbols();
-
-for (const tagName of [
-  'layout-shell-menu',
-  'layout-sidebar',
-  'panel-layout',
-  'project-tabs',
-  'node-canvas',
-  'sn-button',
-  'sn-banner',
-  'sn-badge',
-  'sn-card',
-  'sn-tree-panel',
-  'cell-bg',
-  'chat-transcript',
-  'chat-composer',
-  'code-block',
-  'cascade-theme-editor',
-  'cascade-theme-widget',
-]) {
-  defineModule(tagName);
-}
 
 await Promise.all([
   customElements.whenDefined('layout-shell-menu'),
@@ -42,12 +45,67 @@ await Promise.all([
   customElements.whenDefined('panel-layout'),
   customElements.whenDefined('layout-node'),
   customElements.whenDefined('project-tabs'),
+  customElements.whenDefined('graph-explorer-shell'),
+  customElements.whenDefined('sn-data-table'),
+  customElements.whenDefined('sn-empty-state'),
+  customElements.whenDefined('sn-event-feed'),
+  customElements.whenDefined('sn-list-detail-shell'),
+  customElements.whenDefined('sn-loading-overlay'),
+  customElements.whenDefined('source-viewer'),
+  customElements.whenDefined('sn-status-ribbon'),
+  customElements.whenDefined('chat-composer'),
+  customElements.whenDefined('chat-sidebar-shell'),
   customElements.whenDefined('cascade-theme-widget'),
 ]);
 
-applyTheme(document.documentElement, DEFAULT_PROVIDER_THEME);
-
+const CASCADE_THEME_STORAGE_KEY = 'symbiote-ui:cascade-theme-lab';
+const CASCADE_THEME_QUERY_KEYS = [
+  'mode',
+  'brightness',
+  'contrast',
+  'chroma',
+  'hue',
+  'outline',
+  'type',
+  'heading',
+  'density',
+];
 const urlParams = new URLSearchParams(location.search);
+
+function readStoredCascadeTheme() {
+  if (typeof localStorage === 'undefined') return CASCADE_THEME_DEFAULTS;
+  try {
+    let stored = JSON.parse(localStorage.getItem(CASCADE_THEME_STORAGE_KEY) || 'null');
+    return stored && typeof stored === 'object'
+      ? normalizeCascadeThemeOptions(stored)
+      : CASCADE_THEME_DEFAULTS;
+  } catch (error) {
+    void error;
+    return CASCADE_THEME_DEFAULTS;
+  }
+}
+
+function readUrlCascadeTheme() {
+  let options = {};
+  let hasOverride = false;
+  for (let key of CASCADE_THEME_QUERY_KEYS) {
+    if (!urlParams.has(key)) continue;
+    hasOverride = true;
+    options[key] = key === 'mode' ? urlParams.get(key) : Number(urlParams.get(key));
+  }
+  return hasOverride ? normalizeCascadeThemeOptions(options) : null;
+}
+
+function readInitialCascadeTheme() {
+  return readUrlCascadeTheme() || readStoredCascadeTheme();
+}
+
+applyTheme(document.documentElement, DEFAULT_PROVIDER_THEME);
+applyCascadeTheme(document.documentElement, readInitialCascadeTheme(), {
+  source: 'cascade-lab-init',
+  targetSelector: ':root',
+});
+
 const chatSmokeWidth = Number(urlParams.get('chatSmokeWidth') || 0);
 
 const CIRCLE_SAMPLE_IMAGE = [
@@ -69,6 +127,27 @@ const CIRCLE_SAMPLE_IMAGE = [
   `),
 ].join('');
 
+const SVG_NODE_SAMPLE_IMAGE = [
+  'data:image/svg+xml;utf8,',
+  encodeURIComponent(`
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+      <defs>
+        <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#8bd3ff"/>
+          <stop offset="0.55" stop-color="#79e6c4"/>
+          <stop offset="1" stop-color="#d6b5ff"/>
+        </linearGradient>
+      </defs>
+      <rect width="120" height="120" fill="none"/>
+      <path d="M60 10 103 35v50L60 110 17 85V35Z" fill="url(#g)" opacity=".92"/>
+      <path d="M39 44h42M39 60h42M39 76h42" stroke="#101417" stroke-width="8" stroke-linecap="round"/>
+      <circle cx="39" cy="44" r="7" fill="#101417"/>
+      <circle cx="81" cy="60" r="7" fill="#101417"/>
+      <circle cx="39" cy="76" r="7" fill="#101417"/>
+    </svg>
+  `),
+].join('');
+
 class CascadeGraphPanel extends Symbiote {
   initCallback() {
     this._pathStyle = 'pcb';
@@ -76,12 +155,30 @@ class CascadeGraphPanel extends Symbiote {
       if (event.detail?.actionId?.startsWith('path:')) {
         this._pathStyle = event.detail.actionId.slice(5);
         this.ref.canvas?.setPathStyle(this._pathStyle);
+        this._syncGraphShell();
         this.dispatchEvent(new CustomEvent('panel-menu-actions', {
           bubbles: true,
           composed: true,
-          detail: { actions: this._pathActions() },
+          detail: { actions: this._panelActions() },
         }));
+        return;
       }
+      if (event.detail?.actionId?.startsWith('graph:')) {
+        this._handleGraphShellAction(event.detail.actionId.slice(6));
+      }
+    });
+    this.addEventListener('graph-shell-path-style-change', (event) => {
+      this._pathStyle = event.detail?.style || 'pcb';
+      this.ref.canvas?.setPathStyle(this._pathStyle);
+      this._syncGraphShell();
+      this.dispatchEvent(new CustomEvent('panel-menu-actions', {
+        bubbles: true,
+        composed: true,
+        detail: { actions: this._panelActions() },
+      }));
+    });
+    this.addEventListener('graph-shell-action', (event) => {
+      this._handleGraphShellAction(event.detail?.action);
     });
   }
 
@@ -93,6 +190,9 @@ class CascadeGraphPanel extends Symbiote {
       color: 'var(--sn-node-selected)',
     });
     const editor = new NodeEditor();
+    this._editor = editor;
+    this._socket = socket;
+    this._generatedNodeCount = 0;
 
     let source = new Node('Theme source', {
       id: 'theme-source',
@@ -155,7 +255,7 @@ class CascadeGraphPanel extends Symbiote {
       type: 'agent',
       category: 'control',
       shape: 'circle',
-      icon: 'smart_toy',
+      icon: 'schema',
     });
     circleIconNode.addInput('in', new Input(socket, 'in'));
     circleIconNode.addOutput('next', new Output(socket, 'next'));
@@ -187,16 +287,21 @@ class CascadeGraphPanel extends Symbiote {
     pillNode.addOutput('next', new Output(socket, 'next'));
     editor.addNode(pillNode);
 
-    let diamondNode = new Node('Decision', {
-      id: 'diamond-sample',
-      type: 'decision',
+    let svgNode = new Node('SVG shape', {
+      id: 'svg-shape-sample',
+      type: 'svg',
       category: 'function',
-      shape: 'diamond',
-      icon: 'account_tree',
+      shape: 'hexagon',
+      icon: 'schema',
     });
-    diamondNode.addInput('in', new Input(socket, 'in'));
-    diamondNode.addOutput('next', new Output(socket, 'next'));
-    editor.addNode(diamondNode);
+    svgNode.params = {
+      media: SVG_NODE_SAMPLE_IMAGE,
+      mediaAlt: 'Hexagonal SVG node sample',
+      size: 118,
+    };
+    svgNode.addInput('in', new Input(socket, 'in'));
+    svgNode.addOutput('next', new Output(socket, 'next'));
+    editor.addNode(svgNode);
 
     let commentNode = new Node('Comment', {
       id: 'comment-sample',
@@ -209,6 +314,7 @@ class CascadeGraphPanel extends Symbiote {
       summary: 'Comment surfaces follow the same text, spacing, and outline cascade.',
     };
     commentNode.addInput('in', new Input(socket, 'in'));
+    commentNode.addOutput('next', new Output(socket, 'next'));
     editor.addNode(commentNode);
 
     editor.addConnection(new Connection(source, 'tokens', canvasNode, 'in'));
@@ -217,8 +323,8 @@ class CascadeGraphPanel extends Symbiote {
     editor.addConnection(new Connection(controlsNode, 'next', circleIconNode, 'in'));
     editor.addConnection(new Connection(circleIconNode, 'next', circleImageNode, 'in'));
     editor.addConnection(new Connection(circleImageNode, 'next', pillNode, 'in'));
-    editor.addConnection(new Connection(pillNode, 'next', diamondNode, 'in'));
-    editor.addConnection(new Connection(diamondNode, 'next', commentNode, 'in'));
+    editor.addConnection(new Connection(pillNode, 'next', svgNode, 'in'));
+    editor.addConnection(new Connection(svgNode, 'next', commentNode, 'in'));
 
     canvas.setEditor(editor);
     canvas.setReadonly(true);
@@ -226,32 +332,25 @@ class CascadeGraphPanel extends Symbiote {
     canvas.setPanels(false);
     canvas.setViewportLocked(false);
     canvas.setPathStyle(this._pathStyle);
+    this._syncGraphShell();
     canvas.$.zoom = 1;
     canvas.$.panX = 0;
     canvas.$.panY = 0;
 
-    const place = () => {
-      requestAnimationFrame(() => {
-        canvas.setFlowLayout({
-          nodeIds: [
-            source.id,
-            canvasNode.id,
-            layoutNode.id,
-            controlsNode.id,
-            circleIconNode.id,
-            circleImageNode.id,
-            pillNode.id,
-            diamondNode.id,
-            commentNode.id,
-          ],
-          direction: 'vertical',
-          gap: 76,
-          padding: { top: 42, right: 28, bottom: 42, left: 28 },
-          align: 'center',
-          scroll: true,
-        });
-      });
-    };
+    this._flowNodeIds = [
+      source.id,
+      canvasNode.id,
+      layoutNode.id,
+      controlsNode.id,
+      circleIconNode.id,
+      circleImageNode.id,
+      pillNode.id,
+      svgNode.id,
+      commentNode.id,
+    ];
+    this._lastFlowNode = commentNode;
+
+    const place = () => this._applyGraphFlowLayout();
 
     place();
     this._resizeObserver = new ResizeObserver(place);
@@ -266,6 +365,101 @@ class CascadeGraphPanel extends Symbiote {
     ];
   }
 
+  _graphActions() {
+    return [
+      { id: 'graph:insert-node', label: 'Add node', icon: 'add_circle' },
+      { id: 'graph:insert-edge', label: 'Add edge', icon: 'add_link' },
+      { id: 'graph:fit-view', label: 'Fit', icon: 'fit_screen' },
+      { id: 'graph:reset-view', label: 'Reset view', icon: 'center_focus_strong' },
+    ];
+  }
+
+  _panelActions() {
+    return [...this._pathActions(), ...this._graphActions()];
+  }
+
+  _syncGraphShell() {
+    this.ref.shell?.setPathStyle?.(this._pathStyle);
+    this.ref.shell?.setStats?.([
+      { value: this._flowNodeIds?.length || 0, label: 'nodes' },
+      { value: this._editor?.connections?.size || 0, label: 'links' },
+      { value: this._pathStyle.toUpperCase(), label: 'routes' },
+    ]);
+  }
+
+  _handleGraphShellAction(action) {
+    if (action === 'insert-node') {
+      this._insertDemoNode();
+    } else if (action === 'insert-edge') {
+      this._insertDemoEdge();
+    } else if (action === 'fit-view') {
+      this.ref.canvas?.fitView?.();
+    } else if (action === 'reset-view') {
+      this.ref.canvas.$.zoom = 1;
+      this.ref.canvas.$.panX = 0;
+      this.ref.canvas.$.panY = 0;
+      this._applyGraphFlowLayout();
+    }
+  }
+
+  _applyGraphFlowLayout() {
+    const canvas = this.ref.canvas;
+    if (!canvas || !this._flowNodeIds?.length) return;
+    requestAnimationFrame(() => {
+      canvas.setFlowLayout({
+        nodeIds: this._flowNodeIds,
+        direction: 'vertical',
+        gap: 76,
+        padding: { top: 42, right: 28, bottom: 42, left: 28 },
+        align: 'center',
+        scroll: false,
+      });
+      canvas.fitView?.();
+      this._syncGraphShell();
+    });
+  }
+
+  _insertDemoNode() {
+    if (!this._editor || !this._socket) return;
+    this._generatedNodeCount += 1;
+    const node = new Node(`Generated ${this._generatedNodeCount}`, {
+      id: `generated-node-${this._generatedNodeCount}`,
+      type: 'agent',
+      category: 'function',
+      shape: this._generatedNodeCount % 2 === 0 ? 'pill' : 'rect',
+      icon: 'auto_awesome',
+    });
+    node.params = {
+      summary: 'Inserted at runtime by the graph explorer shell action.',
+    };
+    node.addInput('in', new Input(this._socket, 'in'));
+    node.addOutput('next', new Output(this._socket, 'next'));
+    this._editor.addNode(node);
+    if (this._lastFlowNode?.outputs?.next) {
+      this._editor.addConnection(new Connection(this._lastFlowNode, 'next', node, 'in'));
+    }
+    this._lastFlowNode = node;
+    this._flowNodeIds.push(node.id);
+    this._applyGraphFlowLayout();
+  }
+
+  _insertDemoEdge() {
+    if (!this._editor || this._flowNodeIds.length < 2) return;
+    const source = this._editor.getNode(this._flowNodeIds.at(-2));
+    const target = this._editor.getNode(this._flowNodeIds.at(-1));
+    if (!source || !target || !source.outputs?.next || !target.inputs?.in) return;
+    const exists = this._editor.getConnections().some((connection) => (
+      connection.from === source.id
+      && connection.to === target.id
+      && connection.out === 'next'
+      && connection.in === 'in'
+    ));
+    if (!exists) {
+      this._editor.addConnection(new Connection(source, 'next', target, 'in'));
+    }
+    this._applyGraphFlowLayout();
+  }
+
   disconnectedCallback() {
     this._resizeObserver?.disconnect();
     super.disconnectedCallback?.();
@@ -273,7 +467,10 @@ class CascadeGraphPanel extends Symbiote {
 }
 
 CascadeGraphPanel.template = html`
-  <node-canvas class="lab-canvas" ${{ ref: 'canvas' }}></node-canvas>
+  <graph-explorer-shell class="lab-graph-explorer" ${{ ref: 'shell' }}>
+    <node-canvas class="lab-canvas" slot="canvas" ${{ ref: 'canvas' }}></node-canvas>
+    <div class="graph-explorer-stats lab-graph-stats" slot="stats"></div>
+  </graph-explorer-shell>
 `;
 
 CascadeGraphPanel.rootStyles = `
@@ -281,6 +478,17 @@ CascadeGraphPanel.rootStyles = `
     display: block;
     width: 100%;
     height: 100%;
+  }
+
+  cascade-graph-panel .lab-graph-explorer {
+    width: 100%;
+    height: 100%;
+  }
+
+  cascade-graph-panel .lab-graph-stats {
+    color: var(--sn-text-muted, var(--sn-text-dim, currentColor));
+    font-size: var(--sn-small-size, 0.78rem);
+    white-space: nowrap;
   }
 `;
 
@@ -362,6 +570,78 @@ class CascadeUiPanel extends Symbiote {
       ] },
     ]);
     tree.selectedId = 'cascade';
+    this.ref.loading.setProgress(64, 'Composing UI', 'Hydrating reusable surfaces');
+    this.ref.status.$.fadeTimeout = 60000;
+    this.ref.status.$.statusText = 'Constructor surfaces ready';
+    this.ref.status.$.visible = true;
+    this.ref.events.setEvents([
+      {
+        direction: 'call',
+        tool: 'component.describe',
+        args: { tagName: 'sn-data-table' },
+        timeText: 'now',
+      },
+      {
+        direction: 'result',
+        tool: 'component.describe',
+        success: true,
+        durationText: '24ms',
+        preview: {
+          type: 'list',
+          title: 'Descriptor fields',
+          value: ['componentDescription', 'contract.webmcp', 'contract.ssr'],
+        },
+      },
+      {
+        direction: 'result',
+        tool: 'component.render',
+        success: true,
+        durationText: '41ms',
+        preview: {
+          type: 'code',
+          lang: 'js',
+          value: 'layout.openPanel("source", { uiInvoked: true });',
+        },
+      },
+    ]);
+    this.ref.table.setData({
+      columns: [
+        { key: 'component', label: 'Component' },
+        { key: 'role', label: 'Role' },
+        { key: 'state', label: 'State', align: 'center' },
+      ],
+      rows: [
+        {
+          id: 'table',
+          component: 'sn-data-table',
+          role: 'tabular data',
+          cells: { state: { badge: { label: 'ready', variant: 'success' } } },
+        },
+        {
+          id: 'feed',
+          component: 'sn-event-feed',
+          role: 'tool trace',
+          cells: { state: { badge: { label: 'live', variant: 'info' } } },
+        },
+        {
+          id: 'source',
+          component: 'source-viewer',
+          role: 'source panel',
+          cells: { state: { badge: { label: 'agent', variant: 'warning' } } },
+        },
+      ],
+      emptyText: 'No constructor surfaces',
+    });
+    this.ref.source.showFile({
+      path: 'agent-ui/constructor.js',
+      lang: 'js',
+      raw: [
+        'let descriptor = catalog.find((item) => item.tagName === "sn-event-feed");',
+        'layout.openPanel("events", { uiInvoked: true, source: "agent" });',
+        'events.setEvents(toolTrace);',
+      ].join('\n'),
+      statsText: '3 agent-visible steps',
+    });
     this._renderTokens = renderTokens;
     renderTokens();
     document.addEventListener('cascade-theme-change', renderTokens);
@@ -391,6 +671,33 @@ CascadeUiPanel.template = html`
               <strong>Provider surface</strong>
               <p>Cards, controls, graph nodes, and scrollbars read the same inherited variables.</p>
             </sn-card>
+            <div class="constructor-surface-grid">
+              <div class="constructor-overlay-sample">
+                <sn-loading-overlay ${{ ref: 'loading' }}></sn-loading-overlay>
+              </div>
+              <sn-status-ribbon ${{ ref: 'status' }}></sn-status-ribbon>
+              <sn-empty-state>
+                <strong>No host data</strong>
+                <span>Agents can mount an empty state while a host-owned query resolves.</span>
+              </sn-empty-state>
+              <sn-event-feed ${{ ref: 'events' }}></sn-event-feed>
+              <sn-list-detail-shell
+                has-detail
+                sidebar-title="Surfaces"
+                sidebar-icon="view_sidebar"
+                detail-title="Source viewer"
+                detail-icon="code"
+                detail-description="Host-owned file data"
+              >
+                <div slot="list" class="constructor-list">
+                  <button type="button" class="constructor-list-item" data-active>source-viewer</button>
+                  <button type="button" class="constructor-list-item">sn-data-table</button>
+                  <button type="button" class="constructor-list-item">sn-event-feed</button>
+                </div>
+                <source-viewer slot="detail" ${{ ref: 'source' }}></source-viewer>
+              </sn-list-detail-shell>
+              <sn-data-table ${{ ref: 'table' }}></sn-data-table>
+            </div>
             <div class="token-grid" data-token-grid ${{ ref: 'grid' }}></div>
             <sn-tree-panel title="Cascade tree" title-icon="account_tree" ${{ ref: 'tree' }}></sn-tree-panel>
           </div>
@@ -404,11 +711,226 @@ CascadeUiPanel.rootStyles = `
     width: 100%;
     height: 100%;
   }
+
+  cascade-ui-panel .constructor-surface-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 0.86fr) minmax(0, 1.14fr);
+    gap: calc(var(--sn-space, 1rem) * 0.7);
+    min-width: 0;
+  }
+
+  cascade-ui-panel .constructor-overlay-sample,
+  cascade-ui-panel sn-status-ribbon,
+  cascade-ui-panel sn-empty-state {
+    min-height: 84px;
+    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border-radius: var(--sn-node-radius, 8px);
+    background: var(--sn-panel-bg, var(--sn-bg));
+  }
+
+  cascade-ui-panel .constructor-overlay-sample {
+    position: relative;
+    overflow: hidden;
+  }
+
+  cascade-ui-panel sn-status-ribbon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: calc(var(--sn-space, 1rem) * 0.55);
+  }
+
+  cascade-ui-panel sn-empty-state {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: calc(var(--sn-space, 1rem) * 0.28);
+    padding: calc(var(--sn-space, 1rem) * 0.65);
+    color: var(--sn-text-dim, currentColor);
+  }
+
+  cascade-ui-panel sn-empty-state strong {
+    color: var(--sn-text, currentColor);
+  }
+
+  cascade-ui-panel sn-event-feed,
+  cascade-ui-panel sn-list-detail-shell,
+  cascade-ui-panel sn-data-table {
+    min-height: 180px;
+    min-width: 0;
+  }
+
+  cascade-ui-panel sn-list-detail-shell,
+  cascade-ui-panel sn-data-table {
+    grid-column: 1 / -1;
+  }
+
+  cascade-ui-panel source-viewer {
+    min-height: 220px;
+    min-width: 0;
+  }
+
+  cascade-ui-panel .constructor-list {
+    display: grid;
+    gap: calc(var(--sn-space, 1rem) * 0.35);
+    padding: calc(var(--sn-space, 1rem) * 0.45);
+  }
+
+  cascade-ui-panel .constructor-list-item {
+    min-width: 0;
+    min-height: calc(var(--sn-control-height, 2rem) * 0.9);
+    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border-radius: var(--sn-control-radius, 0.45rem);
+    background: var(--sn-control-bg, var(--sn-node-bg));
+    color: var(--sn-control-fg, var(--sn-text));
+    font: inherit;
+    text-align: left;
+    padding: 0 calc(var(--sn-space, 1rem) * 0.55);
+  }
+
+  cascade-ui-panel .constructor-list-item[data-active] {
+    border-color: var(--sn-node-selected);
+    background: var(--sn-node-selected-bg, var(--sn-accent-bg-subtle));
+  }
+
+  @media (max-width: 760px) {
+    cascade-ui-panel .constructor-surface-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
 `;
 
 CascadeUiPanel.reg('cascade-ui-panel');
 
 class CascadeChatPanel extends Symbiote {
+  initCallback() {
+    this.addEventListener('click', (event) => {
+      let button = event.target.closest?.('[data-bg-action]');
+      if (button) {
+        this._applyBgAction(button.dataset.bgAction);
+        return;
+      }
+
+      let voiceButton = event.target.closest?.('[data-voice-state]');
+      if (voiceButton && !voiceButton.disabled) {
+        this._setVoiceDemoState(voiceButton.dataset.voiceState);
+      }
+    });
+
+    this.addEventListener('chat-composer-input', () => this._triggerBg(1600));
+    this.addEventListener('chat-composer-submit', () => this._triggerBg(4200));
+    this.addEventListener('chat-composer-send', () => this._triggerBg(4200));
+    this.addEventListener('chat-composer-voice-input', () => this._setVoiceDemoState('listening'));
+    this.addEventListener('chat-composer-wake-listen', () => this._setVoiceDemoState('listening'));
+    this.addEventListener('chat-composer-voice-response-toggle', () => this._setVoiceDemoState('speaking'));
+    this.addEventListener('chat-composer-voice-command-toggle', () => this._triggerBg(3600));
+    this.addEventListener('chat-composer-voice-language-change', () => this._triggerBg(2600));
+    this.addEventListener('chat-composer-voice-approve', () => this._setVoiceDemoState('transcribing'));
+    this.addEventListener('chat-composer-voice-cancel', () => this._setVoiceDemoState('idle'));
+    this.addEventListener('chat-composer-voice-send', () => {
+      this._triggerBg(5200);
+      this._queueBgStop(5600);
+    });
+  }
+
+  _applyBgAction(action) {
+    if (action === 'trigger') {
+      this._triggerBg(9000);
+    } else if (action === 'start') {
+      this._startBg();
+    } else if (action === 'stop') {
+      this._stopBg();
+    }
+  }
+
+  _triggerBg(duration = 3000) {
+    if (this._bgStopTimer) clearTimeout(this._bgStopTimer);
+    this._bgStopTimer = null;
+    this.ref.bg?.trigger?.(duration);
+  }
+
+  _startBg() {
+    if (this._bgStopTimer) clearTimeout(this._bgStopTimer);
+    this._bgStopTimer = null;
+    this.ref.bg?.start?.();
+  }
+
+  _stopBg() {
+    if (this._bgStopTimer) clearTimeout(this._bgStopTimer);
+    this._bgStopTimer = null;
+    this.ref.bg?.stop?.();
+  }
+
+  _queueBgStop(delay = 3600) {
+    if (this._bgStopTimer) clearTimeout(this._bgStopTimer);
+    this._bgStopTimer = setTimeout(() => {
+      this._bgStopTimer = null;
+      this.ref.bg?.stop?.();
+    }, delay);
+  }
+
+  _setVoiceDemoState(state = 'idle') {
+    let normalized = ['idle', 'listening', 'transcribing', 'speaking', 'disabled'].includes(state)
+      ? state
+      : 'idle';
+    this._voiceDemoState = normalized;
+    this.querySelectorAll?.('[data-voice-state]')?.forEach((button) => {
+      button.toggleAttribute('data-active', button.dataset.voiceState === normalized);
+    });
+    this.ref.composer?.setVoiceInputState?.(
+      normalized === 'speaking' ? 'idle' : normalized,
+      { enabled: normalized !== 'disabled' }
+    );
+    this.ref.composer?.setVoiceControls?.({
+      input: {
+        visible: true,
+        state: normalized === 'speaking' ? 'idle' : normalized,
+        enabled: normalized !== 'disabled',
+      },
+      wakeListen: { visible: true, active: normalized === 'listening', commandText: 'OK Agent' },
+      response: { visible: true, enabled: normalized !== 'disabled', speaking: normalized === 'speaking' },
+      command: { visible: true, active: normalized === 'listening', text: 'voice command' },
+      language: {
+        visible: true,
+        mode: 'ru',
+        options: [
+          { mode: 'auto', label: 'auto' },
+          { mode: 'ru', label: 'RU' },
+          { mode: 'en', label: 'EN' },
+        ],
+      },
+    });
+
+    if (normalized === 'listening') {
+      this.ref.composer?.setVoicePreview?.({
+        mode: 'recording',
+        status: 'listening',
+        text: 'Voice input is streamed by the host recorder.',
+        elapsed: true,
+        commandHints: ['OK Agent', 'build layout', 'change theme'],
+      });
+      this._startBg();
+    } else if (normalized === 'transcribing') {
+      this.ref.composer?.setVoicePreview?.({
+        mode: 'processing',
+        status: 'transcribing',
+        text: 'Host transcription resolves into editable text.',
+      });
+      this._triggerBg(6200);
+      this._queueBgStop(6600);
+    } else if (normalized === 'speaking') {
+      this.ref.composer?.setVoicePreview?.({
+        mode: 'result',
+        status: 'speaking',
+        text: 'The host speech output keeps the ambient activity running.',
+      });
+      this._startBg();
+    } else {
+      this.ref.composer?.clearVoicePreview?.();
+      this._stopBg();
+    }
+  }
+
   renderCallback() {
     if (this._ready) return;
     this._ready = true;
@@ -418,7 +940,41 @@ class CascadeChatPanel extends Symbiote {
       this.style.setProperty('--stage7-chat-smoke-width', `${chatSmokeWidth}px`);
     }
 
-    this.ref.bg.$.active = true;
+    let syncSidebar = () => {
+      this.ref.sidebar.setAutoCollapse?.(false);
+      this.ref.sidebar.setCollapsed(false);
+      this.ref.sidebar.setChats([
+        {
+          id: 'agent-chat',
+          title: 'Agent Chat',
+          icon: 'smart_toy',
+          active: true,
+          isRunning: true,
+          metaLabel: 'project-graph',
+          time: 'now',
+          subChats: [
+            { id: 'agent-chat-theme', title: 'Theme pass', icon: 'palette', active: true },
+            { id: 'agent-chat-layout', title: 'Layout pass', icon: 'view_quilt' },
+          ],
+        },
+        {
+          id: 'review',
+          title: 'Review',
+          icon: 'rate_review',
+          metaLabel: 'codex',
+          time: '2m',
+        },
+        {
+          id: 'handoff',
+          title: 'Handoff',
+          icon: 'hub',
+          metaLabel: 'webmcp',
+          time: '5m',
+        },
+      ]);
+    };
+    let raf = globalThis.requestAnimationFrame || ((callback) => setTimeout(callback, 0));
+    raf(syncSidebar);
     this.ref.transcript.setMessageItems([
       {
         role: 'user',
@@ -477,24 +1033,105 @@ class CascadeChatPanel extends Symbiote {
         ],
       },
     });
-    this.ref.composer.setFooterHtml(`
-      <button class="composer-footer-btn composer-priority-1" type="button">
-        <span class="material-symbols-outlined">palette</span><span class="composer-footer-label">theme</span>
-      </button>
-      <button class="composer-footer-btn composer-priority-2" type="button">
-        <span class="material-symbols-outlined">data_object</span><span class="composer-footer-label">web mcp</span>
-      </button>
-    `);
+    this.ref.composer.setFooterControls([
+      {
+        id: 'provider',
+        kind: 'select',
+        label: 'provider',
+        icon: 'cloud',
+        value: 'codex',
+        priority: 1,
+        options: [
+          { value: 'codex', label: 'codex' },
+          { value: 'gemini', label: 'gemini' },
+          { value: 'portal', label: 'portal' },
+        ],
+      },
+      {
+        id: 'model',
+        kind: 'select',
+        label: 'model',
+        icon: 'memory',
+        value: 'gpt-5',
+        priority: 2,
+        options: [
+          { value: 'gpt-5', label: 'gpt-5' },
+          { value: 'deepseek-4', label: 'deepseek-4' },
+          { value: 'gemini-pro', label: 'gemini-pro' },
+        ],
+      },
+      {
+        id: 'agent',
+        kind: 'button',
+        label: 'agent',
+        value: 'orchestrator',
+        icon: 'smart_toy',
+        priority: 3,
+      },
+      {
+        id: 'resource-group',
+        kind: 'button',
+        label: 'resource',
+        value: 'ui-runtime',
+        icon: 'hub',
+        priority: 4,
+      },
+      {
+        id: 'settings',
+        kind: 'intent',
+        label: 'settings',
+        icon: 'tune',
+        priority: 5,
+      },
+    ]);
+    this._setVoiceDemoState('idle');
+    this._triggerBg(9000);
+  }
+
+  disconnectedCallback() {
+    if (this._bgStopTimer) clearTimeout(this._bgStopTimer);
+    this._bgStopTimer = null;
+    super.disconnectedCallback?.();
   }
 }
 
 CascadeChatPanel.template = html`
   <section class="chat-lab-panel">
-    <cell-bg ${{ ref: 'bg' }}></cell-bg>
+    <chat-sidebar-shell class="chat-lab-sidebar" auto-collapse="false" ${{ ref: 'sidebar' }}></chat-sidebar-shell>
     <div class="chat-lab-content">
-      <chat-transcript ${{ ref: 'transcript' }}></chat-transcript>
+      <chat-transcript ${{ ref: 'transcript' }}>
+        <cell-bg slot="background" ${{ ref: 'bg' }}></cell-bg>
+      </chat-transcript>
       <div class="chat-code-sample">
         <code-block ${{ ref: 'code' }}></code-block>
+      </div>
+      <div class="chat-voice-state-strip" aria-label="Voice state examples">
+        <button class="voice-state-chip idle" type="button" data-voice-state="idle">
+          <span class="material-symbols-outlined">mic</span><span>idle</span>
+        </button>
+        <button class="voice-state-chip listening" type="button" data-voice-state="listening">
+          <span class="material-symbols-outlined">hearing</span><span>listening</span>
+        </button>
+        <button class="voice-state-chip transcribing" type="button" data-voice-state="transcribing">
+          <span class="material-symbols-outlined">hourglass_top</span><span>transcribing</span>
+        </button>
+        <button class="voice-state-chip speaking" type="button" data-voice-state="speaking">
+          <span class="material-symbols-outlined">record_voice_over</span><span>speaking</span>
+        </button>
+        <button class="voice-state-chip disabled" type="button" data-voice-state="disabled" disabled>
+          <span class="material-symbols-outlined">mic_off</span><span>disabled</span>
+        </button>
+      </div>
+      <div class="chat-bg-control-strip" aria-label="Animated background controls">
+        <button class="chat-bg-control" type="button" data-bg-action="trigger">
+          <span class="material-symbols-outlined">play_circle</span><span>trigger</span>
+        </button>
+        <button class="chat-bg-control" type="button" data-bg-action="start">
+          <span class="material-symbols-outlined">motion_play</span><span>run</span>
+        </button>
+        <button class="chat-bg-control" type="button" data-bg-action="stop">
+          <span class="material-symbols-outlined">motion_photos_paused</span><span>slow stop</span>
+        </button>
       </div>
       <chat-composer ${{ ref: 'composer' }}></chat-composer>
     </div>
@@ -518,12 +1155,21 @@ CascadeChatPanel.rootStyles = `
     background: var(--sn-chat-bg, transparent);
   }
 
+  cascade-chat-panel .chat-lab-sidebar {
+    position: relative;
+    z-index: 2;
+    flex: 0 0 auto;
+    height: 100%;
+  }
+
   cascade-chat-panel .chat-lab-content {
     position: relative;
     z-index: 1;
     display: flex;
     flex-direction: column;
-    width: 100%;
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
     min-height: 0;
   }
 
@@ -545,6 +1191,89 @@ CascadeChatPanel.rootStyles = `
     border-radius: var(--sn-node-radius);
     overflow: hidden;
     background: var(--sn-bg);
+  }
+
+  cascade-chat-panel .chat-voice-state-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sn-composer-footer-gap, 4px);
+    padding: var(--sn-composer-footer-padding, 6px 16px 0);
+    margin: 0 var(--sn-lab-content-padding, 12px);
+    border-top: 1px solid color-mix(in oklab, var(--sn-node-border) 64%, transparent);
+    background: color-mix(in oklab, var(--sn-chat-bg) 88%, transparent);
+  }
+
+  cascade-chat-panel .voice-state-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sn-composer-footer-gap, 4px);
+    min-height: var(--sn-composer-footer-btn-min-height, 24px);
+    max-width: 100%;
+    padding: var(--sn-composer-footer-btn-padding, 3px 8px);
+    border: 0;
+    border-radius: 999px;
+    background: var(--sn-node-bg);
+    color: var(--sn-text-dim);
+    font: inherit;
+    font-size: var(--sn-composer-footer-size, 11px);
+    cursor: pointer;
+  }
+
+  cascade-chat-panel .voice-state-chip .material-symbols-outlined {
+    font-size: var(--sn-composer-footer-icon-size);
+  }
+
+  cascade-chat-panel .voice-state-chip.listening,
+  cascade-chat-panel .voice-state-chip.speaking {
+    color: var(--sn-node-selected);
+    background: var(--sn-node-hover);
+  }
+
+  cascade-chat-panel .voice-state-chip.transcribing .material-symbols-outlined {
+    animation: lab-spin 1s linear infinite;
+  }
+
+  cascade-chat-panel .voice-state-chip:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  cascade-chat-panel .chat-bg-control-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sn-composer-footer-gap, 4px);
+    padding: var(--sn-composer-footer-padding, 6px 16px 0);
+    margin: 0 var(--sn-lab-content-padding, 12px);
+    background: color-mix(in oklab, var(--sn-chat-bg) 84%, transparent);
+  }
+
+  cascade-chat-panel .chat-bg-control {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sn-composer-footer-gap, 4px);
+    min-height: var(--sn-composer-footer-btn-min-height, 24px);
+    max-width: 100%;
+    padding: var(--sn-composer-footer-btn-padding, 3px 8px);
+    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border-radius: 999px;
+    background: var(--sn-control-bg, var(--sn-node-bg));
+    color: var(--sn-control-fg, var(--sn-text));
+    font: inherit;
+    font-size: var(--sn-composer-footer-size, 11px);
+    cursor: pointer;
+  }
+
+  cascade-chat-panel .chat-bg-control:hover {
+    border-color: var(--sn-node-selected);
+    background: var(--sn-node-hover);
+  }
+
+  cascade-chat-panel .chat-bg-control .material-symbols-outlined {
+    font-size: var(--sn-composer-footer-icon-size);
+  }
+
+  @keyframes lab-spin {
+    100% { transform: rotate(360deg); }
   }
 `;
 
@@ -574,6 +1303,10 @@ layout.registerPanelType('graph', {
     { id: 'path:pcb', label: 'PCB', icon: 'conversion_path', active: true },
     { id: 'path:bezier', label: 'Bezier', icon: 'gesture' },
     { id: 'path:straight', label: 'Straight', icon: 'horizontal_rule' },
+    { id: 'graph:insert-node', label: 'Add node', icon: 'add_circle' },
+    { id: 'graph:insert-edge', label: 'Add edge', icon: 'add_link' },
+    { id: 'graph:fit-view', label: 'Fit', icon: 'fit_screen' },
+    { id: 'graph:reset-view', label: 'Reset view', icon: 'center_focus_strong' },
   ],
 });
 layout.registerPanelType('ui', {
@@ -609,7 +1342,7 @@ layout.registerPanelType('theme', {
     collapse: 'manual',
   },
   attributes: {
-    'storage-key': 'symbiote-ui:cascade-theme-lab',
+    'storage-key': CASCADE_THEME_STORAGE_KEY,
   },
 });
 layout.$.panelChrome = true;
@@ -617,71 +1350,47 @@ const createPanel = (panelType, behavior) => LayoutTree.createPanel(panelType, {
 const createOverviewLayout = () => LayoutTree.createSplit(
   'horizontal',
   createPanel('graph', { importance: 95 }),
-  LayoutTree.createSplit(
-    'vertical',
-    createPanel('ui', { importance: 55 }),
-    createPanel('chat', { importance: 25 }),
-    0.48
-  ),
-  0.56
+  createPanel('chat', { importance: 25 }),
+  0.52
 );
 
 const createGraphLayout = () => LayoutTree.createSplit(
   'horizontal',
   createPanel('graph', { importance: 100, minInlineSize: 520, minBlockSize: 360 }),
-  LayoutTree.createSplit(
-    'vertical',
-    createPanel('theme', { importance: 70, collapse: 'manual' }),
-    createPanel('ui', { importance: 45 }),
-    0.44
-  ),
-  0.68
+  createPanel('ui', { importance: 45 }),
+  0.62
 );
 
 const createChatLayout = () => LayoutTree.createSplit(
   'horizontal',
-  LayoutTree.createSplit(
-    'vertical',
-    createPanel('graph', { importance: 60 }),
-    createPanel('ui', { importance: 45 }),
-    0.46
-  ),
-  LayoutTree.createSplit(
-    'vertical',
-    createPanel('chat', { importance: 100, minInlineSize: 420, minBlockSize: 360 }),
-    createPanel('theme', { importance: 76, collapse: 'manual' }),
-    0.66
-  ),
-  0.44
+  createPanel('chat', { importance: 100, minInlineSize: 420, minBlockSize: 360 }),
+  createPanel('theme', { importance: 76, collapse: 'manual' }),
+  0.62
 );
 
 const createResponsiveLayout = () => LayoutTree.createSplit(
-  'vertical',
-  LayoutTree.createSplit(
-    'horizontal',
-    createPanel('theme', { importance: 82, collapse: 'manual' }),
-    createPanel('ui', { importance: 50 }),
-    0.5
-  ),
-  LayoutTree.createSplit(
-    'horizontal',
-    createPanel('graph', { importance: 95 }),
-    createPanel('chat', { importance: 40 }),
-    0.52
-  ),
-  0.42
+  'horizontal',
+  createPanel('graph', {
+    importance: 100,
+    minInlineSize: 620,
+    minBlockSize: 360,
+    collapse: 'never',
+    overflow: 'scroll-inline',
+  }),
+  createPanel('ui', {
+    importance: 45,
+    minInlineSize: 360,
+    minBlockSize: 260,
+    collapse: 'auto',
+  }),
+  0.64
 );
 
 const createThemeLayout = () => LayoutTree.createSplit(
   'horizontal',
   createPanel('theme', { importance: 100, collapse: 'manual', minInlineSize: 320, minBlockSize: 280 }),
-  LayoutTree.createSplit(
-    'vertical',
-    createPanel('graph', { importance: 72 }),
-    createPanel('ui', { importance: 48 }),
-    0.5
-  ),
-  0.34
+  createPanel('ui', { importance: 48 }),
+  0.42
 );
 
 const layoutGroups = [
@@ -752,8 +1461,6 @@ const layoutFactories = new Map([
 ]);
 
 let activeLayoutGroupId = 'overview';
-let scrollFallback = false;
-const FORCED_SCROLL_INLINE_SIZE = 'max(calc(100% + var(--sn-layout-scroll-inline-extra, 320px)), calc(960px * var(--sn-theme-density, 1)))';
 
 function canApplyLayoutGroup(group) {
   return Boolean(group && !group.disabled && layoutFactories.has(group.id));
@@ -764,14 +1471,9 @@ function getActiveLayoutGroup() {
   return canApplyLayoutGroup(group) ? group : layoutGroups[0];
 }
 
-function setMainMenuActive() {
-  shellMenu?.querySelector('[data-layout-command="scroll"]')
-    ?.toggleAttribute('active', scrollFallback);
-  if (scrollFallback) {
-    layout.style.setProperty('--sn-layout-overflow-inline-size', FORCED_SCROLL_INLINE_SIZE);
-  } else {
-    layout.style.removeProperty('--sn-layout-overflow-inline-size');
-  }
+function getHashLayoutGroupId() {
+  let id = String(location.hash || '').replace(/^#\/?/, '').split(/[/?#]/)[0];
+  return layoutGroups.some((group) => group.id === id) ? id : '';
 }
 
 function applyLayoutGroup(id = activeLayoutGroupId) {
@@ -782,13 +1484,12 @@ function applyLayoutGroup(id = activeLayoutGroupId) {
     minInlineSize: 240,
     minBlockSize: 180,
     ...group.behavior,
-    overflow: scrollFallback ? 'scroll-inline' : group.behavior.overflow,
   });
   layout.setLayout(layoutFactories.get(group.id)());
   shellMenu?.setActiveGroup?.(activeLayoutGroupId);
-  setMainMenuActive();
 }
 
+activeLayoutGroupId = getHashLayoutGroupId() || activeLayoutGroupId;
 shellMenu?.setGroups?.(layoutGroups, activeLayoutGroupId);
 if (sidebar) sidebar.$.collapsed = true;
 shellMenu?.addEventListener('layout-group-change', (event) => applyLayoutGroup(event.detail?.id));
@@ -803,7 +1504,7 @@ shellMenu?.addEventListener('cascade-theme-open-full', (event) => {
     },
     direction: 'horizontal',
     panelState: {
-      storageKey: event.detail?.storageKey || 'symbiote-ui:cascade-theme-lab',
+      storageKey: event.detail?.storageKey || CASCADE_THEME_STORAGE_KEY,
     },
     ratio: 0.66,
     source: 'theme-widget',
@@ -811,19 +1512,13 @@ shellMenu?.addEventListener('cascade-theme-open-full', (event) => {
   });
 });
 window.addEventListener('hashchange', () => {
-  let id = String(location.hash || '').replace(/^#\/?/, '').split(/[/?#]/)[0];
-  if (layoutGroups.some((group) => group.id === id)) {
-    applyLayoutGroup(id);
-  }
+  let id = getHashLayoutGroupId();
+  if (id) applyLayoutGroup(id);
 });
 shellMenu?.addEventListener('click', (event) => {
   let commandButton = event.target.closest('[data-layout-command]');
   if (!commandButton) return;
   if (commandButton.dataset.layoutCommand === 'reset') {
-    scrollFallback = false;
-    applyLayoutGroup(activeLayoutGroupId);
-  } else if (commandButton.dataset.layoutCommand === 'scroll') {
-    scrollFallback = !scrollFallback;
     applyLayoutGroup(activeLayoutGroupId);
   }
 });

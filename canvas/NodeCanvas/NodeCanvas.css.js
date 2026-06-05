@@ -245,10 +245,10 @@ export let styles = css`
 
   @keyframes sn-fire-pulse {
     0% {
-      box-shadow: 0 0 0 0 color-mix(in srgb, var(--sn-success-color) 70%, transparent);
+      box-shadow: 0 0 0 0 color-mix(in oklab, var(--sn-success-color) 70%, transparent);
     }
     50% {
-      box-shadow: 0 0 20px 6px color-mix(in srgb, var(--sn-success-color) 50%, transparent);
+      box-shadow: 0 0 20px 6px color-mix(in oklab, var(--sn-success-color) 50%, transparent);
     }
     100% {
       box-shadow: 0 0 0 0 transparent;
@@ -372,13 +372,13 @@ export let styles = css`
   /* Fire trace: sequential node execution highlighting */
   @keyframes sn-fire-pulse {
     0% {
-      box-shadow: 0 0 0 0 color-mix(in srgb, var(--sn-success-color) 60%, transparent);
+      box-shadow: 0 0 0 0 color-mix(in oklab, var(--sn-success-color) 60%, transparent);
     }
     50% {
-      box-shadow: 0 0 16px 4px color-mix(in srgb, var(--sn-success-color) 40%, transparent);
+      box-shadow: 0 0 16px 4px color-mix(in oklab, var(--sn-success-color) 40%, transparent);
     }
     100% {
-      box-shadow: 0 0 0 0 color-mix(in srgb, var(--sn-success-color) 0%, transparent);
+      box-shadow: 0 0 0 0 color-mix(in oklab, var(--sn-success-color) 0%, transparent);
     }
   }
 
@@ -389,7 +389,7 @@ export let styles = css`
   }
 
   graph-node[data-fire-state='done'] {
-    border-color: color-mix(in srgb, var(--sn-success-color) 40%, transparent) !important;
+    border-color: color-mix(in oklab, var(--sn-success-color) 40%, transparent) !important;
     transition: border-color 2s ease-out;
   }
 

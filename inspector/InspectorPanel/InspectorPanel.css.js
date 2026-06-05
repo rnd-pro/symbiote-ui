@@ -99,7 +99,7 @@ export let styles = css`
     & .insp-value {
       font-size: 13px;
       padding: 6px 8px;
-      background: color-mix(in srgb, currentColor 4%, transparent);
+      background: color-mix(in oklab, currentColor 4%, transparent);
       border-radius: 4px;
     }
 
@@ -108,7 +108,7 @@ export let styles = css`
       padding: 2px 8px;
       font-size: 11px;
       border-radius: 4px;
-      background: color-mix(in srgb, var(--sn-cat-server) 15%, transparent);
+      background: color-mix(in oklab, var(--sn-cat-server) 15%, transparent);
       color: var(--sn-cat-server);
     }
 
@@ -151,7 +151,7 @@ export let styles = css`
   }
 
   .insp-port:hover {
-    background: color-mix(in srgb, currentColor 4%, transparent);
+    background: color-mix(in oklab, currentColor 4%, transparent);
   }
 
   .insp-port-dot {
@@ -193,7 +193,7 @@ export let styles = css`
     font-size: 12px;
     font-family: 'SF Mono', 'Fira Code', monospace;
     color: var(--sn-text);
-    background: color-mix(in srgb, currentColor 6%, transparent);
+    background: color-mix(in oklab, currentColor 6%, transparent);
     border: 1px solid var(--sn-field-control-subtle-border);
     border-radius: 4px;
     outline: none;
@@ -211,7 +211,7 @@ export let styles = css`
     font-size: 11px;
     font-family: 'SF Mono', 'Fira Code', monospace;
     color: var(--sn-text);
-    background: color-mix(in srgb, currentColor 6%, transparent);
+    background: color-mix(in oklab, currentColor 6%, transparent);
     border: 1px solid var(--sn-field-control-subtle-border);
     border-radius: 4px;
     outline: none;

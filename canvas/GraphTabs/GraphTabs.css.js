@@ -38,7 +38,7 @@ export let styles = css`
     position: relative;
 
     &:hover {
-      background: color-mix(in srgb, currentColor 4%, transparent);
+      background: color-mix(in oklab, currentColor 4%, transparent);
       color: var(--sn-text);
     }
 
@@ -69,7 +69,7 @@ export let styles = css`
       border-radius: 3px;
 
       &:hover {
-        background: color-mix(in srgb, currentColor 10%, transparent);
+        background: color-mix(in oklab, currentColor 10%, transparent);
       }
     }
 
@@ -90,7 +90,7 @@ export let styles = css`
       color 0.15s ease-out;
 
     &:hover {
-      background: color-mix(in srgb, currentColor 4%, transparent);
+      background: color-mix(in oklab, currentColor 4%, transparent);
       color: var(--sn-text);
     }
 

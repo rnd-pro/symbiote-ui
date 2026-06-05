@@ -55,7 +55,7 @@ export let styles = css`
       font-size: 11px;
       font-family: var(--sn-font-mono);
       color: var(--sn-text);
-      background: color-mix(in srgb, currentColor 6%, transparent);
+      background: color-mix(in oklab, currentColor 6%, transparent);
       border: 1px solid var(--sn-node-border);
       border-radius: 4px;
       outline: none;
@@ -74,7 +74,7 @@ export let styles = css`
       font-size: 12px;
       font-family: var(--sn-font-mono);
       color: var(--sn-text);
-      background: color-mix(in srgb, currentColor 4%, transparent);
+      background: color-mix(in oklab, currentColor 4%, transparent);
       border: 1px solid var(--sn-node-border);
       border-radius: 4px;
       padding: 8px;

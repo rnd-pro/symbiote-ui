@@ -20,7 +20,7 @@ export let styles = css`
 
     & .sn-ctrl-input {
       background: var(--sn-field-control-bg);
-      border: 1px solid var(--sn-control-input-border, color-mix(in srgb, currentColor 10%, transparent));
+      border: 1px solid var(--sn-control-input-border, color-mix(in oklab, currentColor 10%, transparent));
       border-radius: var(--sn-control-input-radius, 4px);
       padding: var(--sn-control-input-padding, 4px 8px);
       color: var(--sn-text);

@@ -358,10 +358,10 @@ export let THEME_RULE_BLOCKS = [
       { output: '--sn-node-border', inputs: ['color.border'], expression: 'color.border', description: 'Default node and source border token.' },
       { output: '--sn-node-selected', inputs: ['color.accent'], expression: 'color.accent', description: 'Selected and focus accent token.' },
       { output: '--sn-text-dim', inputs: ['color.textDim'], expression: 'color.textDim', description: 'Muted readable text token.' },
-      { output: '--sn-success-bg', inputs: ['component.successBackground'], expression: 'color-mix(in srgb, var(--sn-success-color) 18%, transparent)', description: 'Positive status surfaces follow the success branch.' },
-      { output: '--sn-success-border', inputs: ['component.successBorder'], expression: 'color-mix(in srgb, var(--sn-success-color) 32%, transparent)', description: 'Positive status borders follow the success branch.' },
-      { output: '--sn-danger-bg', inputs: ['component.dangerBackground'], expression: 'color-mix(in srgb, var(--sn-danger-color) 18%, transparent)', description: 'Negative status surfaces follow the danger branch.' },
-      { output: '--sn-danger-border', inputs: ['component.dangerBorder'], expression: 'color-mix(in srgb, var(--sn-danger-color) 32%, transparent)', description: 'Negative status borders follow the danger branch.' },
+      { output: '--sn-success-bg', inputs: ['component.successBackground'], expression: 'color-mix(in oklab, var(--sn-success-color) 18%, transparent)', description: 'Positive status surfaces follow the success branch.' },
+      { output: '--sn-success-border', inputs: ['component.successBorder'], expression: 'color-mix(in oklab, var(--sn-success-color) 32%, transparent)', description: 'Positive status borders follow the success branch.' },
+      { output: '--sn-danger-bg', inputs: ['component.dangerBackground'], expression: 'color-mix(in oklab, var(--sn-danger-color) 18%, transparent)', description: 'Negative status surfaces follow the danger branch.' },
+      { output: '--sn-danger-border', inputs: ['component.dangerBorder'], expression: 'color-mix(in oklab, var(--sn-danger-color) 32%, transparent)', description: 'Negative status borders follow the danger branch.' },
     ],
   },
   {
@@ -488,12 +488,12 @@ export let THEME_RULE_BLOCKS = [
       { output: '--sn-tree-panel-row-min-height', inputs: ['--sn-tree-row-min-height'], expression: 'var(--sn-tree-row-min-height)', description: 'Tree panels inherit the tree row geometry unless a host specializes the panel.' },
       { output: '--sn-list-detail-bg', inputs: ['--sn-panel-bg'], expression: 'var(--sn-panel-bg)', description: 'List/detail shells inherit the shared panel surface.' },
       { output: '--sn-list-detail-border', inputs: ['--sn-node-border'], expression: 'var(--sn-node-border)', description: 'List/detail shell dividers follow the provider border.' },
-      { output: '--sn-success-bg-hover', inputs: ['component.successBackgroundHover'], expression: 'color-mix(in srgb, var(--sn-success-color) 28%, transparent)', description: 'Positive action hover backgrounds follow the success branch.' },
-      { output: '--sn-success-border-hover', inputs: ['component.successBorderHover'], expression: 'color-mix(in srgb, var(--sn-success-color) 52%, transparent)', description: 'Positive action hover borders follow the success branch.' },
+      { output: '--sn-success-bg-hover', inputs: ['component.successBackgroundHover'], expression: 'color-mix(in oklab, var(--sn-success-color) 28%, transparent)', description: 'Positive action hover backgrounds follow the success branch.' },
+      { output: '--sn-success-border-hover', inputs: ['component.successBorderHover'], expression: 'color-mix(in oklab, var(--sn-success-color) 52%, transparent)', description: 'Positive action hover borders follow the success branch.' },
       { output: '--sn-subgraph-bg', inputs: ['component.subgraphBackground'], expression: 'var(--sn-subgraph-accent) gradient token', description: 'Subgraph action backgrounds are provider-owned gradient tokens.' },
       { output: '--sn-subgraph-bg-hover', inputs: ['component.subgraphBackgroundHover'], expression: 'var(--sn-subgraph-accent) hover gradient token', description: 'Subgraph action hover backgrounds are provider-owned gradient tokens.' },
-      { output: '--sn-subgraph-border', inputs: ['component.subgraphBorder'], expression: 'color-mix(in srgb, var(--sn-subgraph-accent) 30%, transparent)', description: 'Subgraph action borders follow the data accent branch.' },
-      { output: '--sn-subgraph-border-hover', inputs: ['component.subgraphBorderHover'], expression: 'color-mix(in srgb, var(--sn-subgraph-accent) 50%, transparent)', description: 'Subgraph action hover borders follow the data accent branch.' },
+      { output: '--sn-subgraph-border', inputs: ['component.subgraphBorder'], expression: 'color-mix(in oklab, var(--sn-subgraph-accent) 30%, transparent)', description: 'Subgraph action borders follow the data accent branch.' },
+      { output: '--sn-subgraph-border-hover', inputs: ['component.subgraphBorderHover'], expression: 'color-mix(in oklab, var(--sn-subgraph-accent) 50%, transparent)', description: 'Subgraph action hover borders follow the data accent branch.' },
       { output: '--sn-xr-panel-bg', inputs: ['--sn-panel-bg'], expression: 'var(--sn-panel-bg)', description: 'XR panel materials inherit provider panel surfaces.' },
       { output: '--sn-xr-panel-border', inputs: ['--sn-node-border'], expression: 'var(--sn-node-border)', description: 'XR panel edges follow the shared provider border.' },
       { output: '--sn-xr-panel-radius', inputs: ['--sn-node-radius'], expression: 'var(--sn-node-radius)', description: 'XR panel geometry follows the provider radius cascade.' },
@@ -506,8 +506,8 @@ export let THEME_RULE_BLOCKS = [
       { output: '--sn-syntax-keyword', inputs: ['syntax.keyword'], expression: 'hsl(var(--sn-hue-danger) var(--sn-sat-vivid) 82%)', description: 'Code keywords derive from the status hue cascade.' },
       { output: '--sn-syntax-string', inputs: ['syntax.string'], expression: 'hsl(var(--sn-hue-warning) var(--sn-sat-vivid) 65%)', description: 'Code strings derive from the warning hue cascade.' },
       { output: '--sn-syntax-comment', inputs: ['--sn-text-dim'], expression: 'var(--sn-text-dim)', description: 'Code comments inherit muted text.' },
-      { output: '--sn-diagnostic-error-bg', inputs: ['--sn-danger-color'], expression: 'color-mix(in srgb, var(--sn-danger-color) 7%, transparent)', description: 'Diagnostic error backgrounds derive from danger color.' },
-      { output: '--sn-diagnostic-warning-bg', inputs: ['--sn-warning-color'], expression: 'color-mix(in srgb, var(--sn-warning-color) 5%, transparent)', description: 'Diagnostic warning backgrounds derive from warning color.' },
+      { output: '--sn-diagnostic-error-bg', inputs: ['--sn-danger-color'], expression: 'color-mix(in oklab, var(--sn-danger-color) 7%, transparent)', description: 'Diagnostic error backgrounds derive from danger color.' },
+      { output: '--sn-diagnostic-warning-bg', inputs: ['--sn-warning-color'], expression: 'color-mix(in oklab, var(--sn-warning-color) 5%, transparent)', description: 'Diagnostic warning backgrounds derive from warning color.' },
     ],
   },
 ];
@@ -632,15 +632,15 @@ export let THEME_TOKENS = {
       },
       "statusOkBg": {
         "$type": "color",
-        "$value": "color-mix(in srgb, var(--sn-success-color) 12%, transparent)"
+        "$value": "color-mix(in oklab, var(--sn-success-color) 12%, transparent)"
       },
       "statusErrorBg": {
         "$type": "color",
-        "$value": "color-mix(in srgb, var(--sn-danger-color) 12%, transparent)"
+        "$value": "color-mix(in oklab, var(--sn-danger-color) 12%, transparent)"
       },
       "messageEventBg": {
         "$type": "color",
-        "$value": "color-mix(in srgb, var(--sn-cat-server) 10%, transparent)"
+        "$value": "color-mix(in oklab, var(--sn-cat-server) 10%, transparent)"
       }
     },
     "component": {
@@ -702,43 +702,43 @@ export let THEME_TOKENS = {
       },
       "successBackground": {
         "$type": "color",
-        "$value": "color-mix(in srgb, var(--sn-success-color) 18%, transparent)"
+        "$value": "color-mix(in oklab, var(--sn-success-color) 18%, transparent)"
       },
       "successBorder": {
         "$type": "color",
-        "$value": "color-mix(in srgb, var(--sn-success-color) 32%, transparent)"
+        "$value": "color-mix(in oklab, var(--sn-success-color) 32%, transparent)"
       },
       "successBackgroundHover": {
         "$type": "color",
-        "$value": "color-mix(in srgb, var(--sn-success-color) 28%, transparent)"
+        "$value": "color-mix(in oklab, var(--sn-success-color) 28%, transparent)"
       },
       "successBorderHover": {
         "$type": "color",
-        "$value": "color-mix(in srgb, var(--sn-success-color) 52%, transparent)"
+        "$value": "color-mix(in oklab, var(--sn-success-color) 52%, transparent)"
       },
       "dangerBackground": {
         "$type": "color",
-        "$value": "color-mix(in srgb, var(--sn-danger-color) 18%, transparent)"
+        "$value": "color-mix(in oklab, var(--sn-danger-color) 18%, transparent)"
       },
       "dangerBorder": {
         "$type": "color",
-        "$value": "color-mix(in srgb, var(--sn-danger-color) 32%, transparent)"
+        "$value": "color-mix(in oklab, var(--sn-danger-color) 32%, transparent)"
       },
       "subgraphBackground": {
         "$type": "gradient",
-        "$value": "linear-gradient(135deg, color-mix(in srgb, var(--sn-subgraph-accent) 12%, transparent) 0%, color-mix(in srgb, var(--sn-subgraph-accent) 8%, transparent) 100%)"
+        "$value": "linear-gradient(135deg, color-mix(in oklab, var(--sn-subgraph-accent) 12%, transparent) 0%, color-mix(in oklab, var(--sn-subgraph-accent) 8%, transparent) 100%)"
       },
       "subgraphBackgroundHover": {
         "$type": "gradient",
-        "$value": "linear-gradient(135deg, color-mix(in srgb, var(--sn-subgraph-accent) 22%, transparent) 0%, color-mix(in srgb, var(--sn-subgraph-accent) 15%, transparent) 100%)"
+        "$value": "linear-gradient(135deg, color-mix(in oklab, var(--sn-subgraph-accent) 22%, transparent) 0%, color-mix(in oklab, var(--sn-subgraph-accent) 15%, transparent) 100%)"
       },
       "subgraphBorder": {
         "$type": "color",
-        "$value": "color-mix(in srgb, var(--sn-subgraph-accent) 30%, transparent)"
+        "$value": "color-mix(in oklab, var(--sn-subgraph-accent) 30%, transparent)"
       },
       "subgraphBorderHover": {
         "$type": "color",
-        "$value": "color-mix(in srgb, var(--sn-subgraph-accent) 50%, transparent)"
+        "$value": "color-mix(in oklab, var(--sn-subgraph-accent) 50%, transparent)"
       },
       "subgraphPreviewConnection": {
         "$type": "color",
@@ -886,7 +886,7 @@ export let THEME_TOKENS = {
       },
       "nodeActiveBorder": {
         "$type": "color",
-        "$value": "color-mix(in srgb, var(--sn-node-selected) 50%, transparent)"
+        "$value": "color-mix(in oklab, var(--sn-node-selected) 50%, transparent)"
       },
       "connectionLinecap": {
         "$type": "string",
@@ -962,7 +962,7 @@ export let THEME_TOKENS = {
       },
       "chatItemChildShadow": {
         "$type": "shadow",
-        "$value": "2px 0 4px color-mix(in srgb, var(--sn-bg) 70%, transparent)"
+        "$value": "2px 0 4px color-mix(in oklab, var(--sn-bg) 70%, transparent)"
       },
       "listItemDisabledColor": {
         "$type": "color",
@@ -1776,7 +1776,7 @@ export let THEME_TOKENS = {
       },
       "loadingBarShadow": {
         "$type": "shadow",
-        "$value": "0 0 8px color-mix(in srgb, var(--sn-node-selected) 45%, transparent)"
+        "$value": "0 0 8px color-mix(in oklab, var(--sn-node-selected) 45%, transparent)"
       },
       "loadingSubColor": {
         "$type": "color",
@@ -1923,7 +1923,7 @@ export let THEME_TOKENS = {
         },
         "background": {
           "$type": "color",
-          "$value": "color-mix(in srgb, var(--sn-provider-rnd-pro-color) 20%, transparent)"
+          "$value": "color-mix(in oklab, var(--sn-provider-rnd-pro-color) 20%, transparent)"
         }
       },
       "official": {
@@ -1933,7 +1933,7 @@ export let THEME_TOKENS = {
         },
         "background": {
           "$type": "color",
-          "$value": "color-mix(in srgb, var(--sn-provider-official-color) 20%, transparent)"
+          "$value": "color-mix(in oklab, var(--sn-provider-official-color) 20%, transparent)"
         }
       },
       "google": {
@@ -1943,7 +1943,7 @@ export let THEME_TOKENS = {
         },
         "background": {
           "$type": "color",
-          "$value": "color-mix(in srgb, var(--sn-provider-google-color) 20%, transparent)"
+          "$value": "color-mix(in oklab, var(--sn-provider-google-color) 20%, transparent)"
         }
       },
       "community": {
@@ -1953,7 +1953,7 @@ export let THEME_TOKENS = {
         },
         "background": {
           "$type": "color",
-          "$value": "color-mix(in srgb, var(--sn-provider-community-color) 20%, transparent)"
+          "$value": "color-mix(in oklab, var(--sn-provider-community-color) 20%, transparent)"
         }
       },
       "default": {
@@ -2048,19 +2048,19 @@ export let THEME_TOKENS = {
     "diagnostic": {
       "errorBackground": {
         "$type": "color",
-        "$value": "color-mix(in srgb, var(--sn-danger-color) 7%, transparent)"
+        "$value": "color-mix(in oklab, var(--sn-danger-color) 7%, transparent)"
       },
       "errorBorder": {
         "$type": "color",
-        "$value": "color-mix(in srgb, var(--sn-danger-color) 55%, transparent)"
+        "$value": "color-mix(in oklab, var(--sn-danger-color) 55%, transparent)"
       },
       "warningBackground": {
         "$type": "color",
-        "$value": "color-mix(in srgb, var(--sn-warning-color) 5%, transparent)"
+        "$value": "color-mix(in oklab, var(--sn-warning-color) 5%, transparent)"
       },
       "warningBorder": {
         "$type": "color",
-        "$value": "color-mix(in srgb, var(--sn-warning-color) 45%, transparent)"
+        "$value": "color-mix(in oklab, var(--sn-warning-color) 45%, transparent)"
       }
     },
     "radius": {
@@ -2096,7 +2096,7 @@ export let THEME_TOKENS = {
       },
       "cellDot": {
         "$type": "color",
-        "$value": "color-mix(in srgb, var(--sn-text-dim) 55%, var(--sn-bg))"
+        "$value": "color-mix(in oklab, var(--sn-text-dim) 55%, var(--sn-bg))"
       },
       "cellBaseAlpha": {
         "$type": "number",

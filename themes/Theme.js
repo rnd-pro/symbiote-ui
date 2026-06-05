@@ -22,6 +22,7 @@ export {
   CASCADE_THEME_DESCRIPTOR,
   CASCADE_THEME_TOKEN_TARGETS,
   createCascadeTheme,
+  getReadableTextForHsl,
   getCascadeThemeControls,
   normalizeCascadeThemeOptions,
 } from './cascade-theme.js';

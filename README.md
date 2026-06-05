@@ -25,6 +25,7 @@ npm install jsda-kit linkedom
 - `symbiote-ui/layout` - SSR-safe layout helpers.
 - `symbiote-ui/graph` - provider graph normalization and projection helpers.
 - `symbiote-ui/manifest` - component, schema, rule, theme, and provider catalogs.
+- `symbiote-ui/runtime` - Node-safe agent UI construction helpers.
 - `symbiote-ui/ui` - browser Web Component registration and UI runtime.
 - `symbiote-ui/webmcp` - WebMCP descriptor helpers and registration utilities.
 - `symbiote-ui/xr` - WebXR provider helpers.
@@ -62,6 +63,163 @@ console.log(listModules());
 
 The root package and Node-safe entry points must import without creating DOM globals. Import safety does not mean every exported helper is useful without host data, a DOM adapter, browser hydration, or runtime-provided objects. Browser-only custom elements and module definition helpers belong behind `symbiote-ui/ui`.
 
+## Agent UI Construction
+
+Agents should start from the public manifest, choose a component by its
+agent-facing description, then ask the host to bind data and insert the
+component into an approved layout surface:
+
+```js
+import { listAgentComponentDescriptions } from 'symbiote-ui/manifest';
+
+let catalog = listAgentComponentDescriptions();
+let graphSurface = catalog.find((item) => item.tagName === 'node-canvas');
+console.log(graphSurface.componentDescription);
+console.log(graphSurface.webmcp.toolNames);
+```
+
+Browser hosts register custom elements through the public UI entrypoint:
+
+```js
+import { defineModule } from 'symbiote-ui/ui';
+
+defineModule('panel-layout');
+defineModule('chat-sidebar-shell');
+defineModule('chat-composer');
+defineModule('graph-explorer-shell');
+defineModule('node-canvas');
+defineModule('graph-node');
+```
+
+`NodeCanvas` is the low-level constructor surface for node/edge previews.
+When a host uses it directly, it must also register `graph-node`; this keeps
+the canvas reusable while node rendering stays in its own component contract.
+Use `symbiote-ui/core` for the host-owned editor model and `symbiote-ui/ui` for
+browser registration, not unexported package file paths.
+
+`canvas-graph` is not the primary node/edge constructor surface. Use it when an
+agent needs a read/overview graph renderer with semantic clusters, focus,
+selection, and layout snapshots. Use `node-canvas` when the agent is actively
+constructing editable nodes, sockets, edges, frames, or document-flow previews.
+Both components keep graph data host-owned and emit intent events; hosts own
+navigation, persistence, and permission policy.
+
+```js
+import { Node, NodeEditor, Output, Socket } from 'symbiote-ui/core';
+import { defineModule } from 'symbiote-ui/ui';
+
+defineModule('node-canvas');
+defineModule('graph-node');
+
+let editor = new NodeEditor();
+let socket = new Socket('flow');
+let node = new Node('Generated view', { id: 'generated-view', type: 'agent' });
+node.addOutput('next', new Output(socket, 'next'));
+editor.addNode(node);
+
+let canvas = document.querySelector('node-canvas');
+canvas.setEditor(editor);
+canvas.setPathStyle('pcb');
+canvas.setFlowLayout({ nodeIds: [node.id], direction: 'vertical', scroll: true });
+```
+
+`panel-layout` owns reusable split and panel behavior only. Product routes,
+transport, persistence, and permission checks remain host policy:
+
+```js
+layout.registerPanelType('chat', {
+  title: 'Chat',
+  icon: 'forum',
+  component: 'chat-composer',
+});
+layout.openPanel('chat', {
+  direction: 'horizontal',
+  ratio: 0.42,
+  uiInvoked: true,
+  source: 'agent-constructor',
+});
+```
+
+Theme updates should mutate the cascade target once and let components inherit
+tokens:
+
+```js
+import { applyCascadeTheme, createCascadeTheme } from 'symbiote-ui';
+
+let theme = createCascadeTheme({ mode: 'dark', brightness: 8, contrast: 64 });
+applyCascadeTheme(document.documentElement, theme.state);
+```
+
+For chat construction, `chat-sidebar-shell` owns sidebar presentation and emits
+selection/collapse/width intents. `chat-composer` owns composer presentation,
+footer controls, and voice-control intents. The host owns actual chat
+transport, model/provider policy, speech recognition, and storage.
+Use `setFooterControls()` for structured provider/model/agent/resource/settings
+controls; `chat-composer-footer-control` and
+`chat-composer-footer-control-change` report product-neutral intents back to the
+host. Voice controls emit `chat-composer-permission-intent`,
+`chat-composer-recorder-intent`, and `chat-composer-transcription-intent` so
+hosts can own microphone permission, recorder lifecycle, and transcription
+providers without those policies leaking into the component. `setFooterHtml()`
+remains available only for trusted host-rendered footer markup.
+`extractChatTitleFromAgentText()` provides a product-neutral parser for
+standalone `<chat-title>...</chat-title>` responses; any prompt instruction that
+asks an agent to produce that tag remains host policy.
+
+For live agent construction, `symbiote-ui/runtime` provides the Node-safe
+`runtime-ui-v1` adapter:
+
+```js
+import {
+  applyRuntimeLayoutAction,
+  createRuntimeUiController,
+} from 'symbiote-ui/runtime';
+
+let controller = createRuntimeUiController({
+  document,
+  allowedMethods: ['setData'],
+  onIntent(intent) {
+    hostActions.dispatch(intent.action, intent.detail);
+  },
+});
+
+let panel = controller.create({
+  id: 'agent-kpi-panel',
+  component: 'sn-data-table',
+  state: {
+    methods: {
+      setData: [{
+        columns: [{ key: 'metric', label: 'Metric' }],
+        rows: [{ metric: 'Latency' }],
+      }],
+    },
+  },
+  events: {
+    'row-open': 'metrics.open',
+  },
+});
+
+target.append(panel.element);
+controller.update('agent-kpi-panel', {
+  props: { density: 'compact' },
+  attrs: { 'data-live': true },
+});
+
+applyRuntimeLayoutAction(layout, {
+  type: 'open-panel',
+  panelType: 'agent-kpi-panel',
+  options: { uiInvoked: true, source: 'agent-constructor' },
+});
+```
+
+The runtime adapter never stores layouts, chat history, theme presets, or
+automation results. Hosts persist the `runtime-ui-v1` tree, constructed
+component state, intent mappings, and layout snapshots in their own project
+store. `destroy()` tears down listeners and removes dynamic elements when the
+host closes or removes UI-invoked panels. Hosts should pass `allowedMethods` or
+`allowMethod()` when applying agent-authored `state.methods`; use the component
+registry or a project policy allowlist to approve method calls.
+
 ## Cascade Theme
 
 `symbiote-ui` exposes a reusable cascade theme contract for agent-built UI, graph canvases, layouts, scrollbars, and VR-ready panels:
@@ -90,6 +248,13 @@ The contract writes both low-level controls such as `--sn-theme-bg-lightness`,
 `--sn-theme-density`, and public component aliases such as `--sn-bg`,
 `--sn-text`, `--sn-node-bg`, `--sn-panel-bg`, `--sn-ctx-bg`,
 `--sn-button-bg`, and `--sn-field-control-bg`.
+
+`createCascadeTheme()` also derives readable foreground tokens for colored
+controls. The same Node-safe formula is exposed as `getReadableTextForHsl()`;
+agents should use it when they construct custom accent surfaces instead of
+hard-coding light or dark button text. Tab and content-group accents rotate
+through `--sn-tab-accent-0` ... `--sn-tab-accent-5`, which lets hosts separate
+layout groups while still inheriting the same root cascade.
 
 Browser hosts can mount the reusable editor module inside a layout panel:
 

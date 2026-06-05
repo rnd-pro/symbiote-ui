@@ -8,6 +8,7 @@
 export * from '../core/index.js';
 export * from '../graph/index.js';
 export * from '../locale/index.js';
+export * from '../runtime/index.js';
 export { configureBrowserLocalization, detectBrowserLocale } from './locale.js';
 
 import { getComponent, listComponents } from '../manifest/component-registry.js';
@@ -44,6 +45,7 @@ export {
   DEFAULT_PROVIDER_THEME,
   DEFAULT_THEME,
   getCascadeThemeControls,
+  getReadableTextForHsl,
   normalizeCascadeThemeOptions,
 } from '../themes/Theme.js';
 
@@ -226,6 +228,12 @@ export { bringOverlayToFront, nextOverlayZIndex, resetOverlayStack } from './ove
 export { escapeHtml } from '../display/markdown-formatter.js';
 export { normalizeOutputList, normalizePreviewGraph } from '../display/output-preview.js';
 export { createNetworkApprovalPageStyles, renderNetworkApprovalPage } from '../display/network-approval-page.js';
+export {
+  CHAT_TITLE_MAX_LENGTH,
+  CHAT_TITLE_MAX_WORDS,
+  extractChatTitleFromAgentText,
+  sanitizeChatTitle,
+} from '../chat/chat-title.js';
 export { uiAlert, uiConfirm, uiPrompt } from './dialogs.js';
 export {
   bindListItemSelect,

@@ -144,7 +144,7 @@ export function createNetworkApprovalPageStyles() {
       padding: 22px;
       border: 1px solid var(--sn-node-border);
       border-radius: var(--sn-node-radius);
-      background: color-mix(in srgb, var(--sn-panel-bg) 92%, transparent);
+      background: color-mix(in oklab, var(--sn-panel-bg) 92%, transparent);
       box-shadow: var(--sn-node-shadow), 0 18px 60px hsl(var(--sn-hue-base) var(--sn-sat-muted) 0% / 0.32);
       backdrop-filter: blur(18px);
       z-index: 2;

@@ -212,7 +212,7 @@ export default css`
         linear-gradient(
           to right,
           var(--sn-node-selected) 0 var(--cte-range-progress),
-          color-mix(in srgb, var(--sn-text) 22%, transparent) var(--cte-range-progress) 100%
+          color-mix(in oklab, var(--sn-text) 22%, transparent) var(--cte-range-progress) 100%
         );
     }
 
@@ -231,7 +231,7 @@ export default css`
       height: var(--cte-range-track-height);
       border: var(--cte-range-border-width) solid var(--sn-node-border);
       border-radius: var(--sn-scrollbar-radius, 999px);
-      background: color-mix(in srgb, var(--sn-text) 22%, transparent);
+      background: color-mix(in oklab, var(--sn-text) 22%, transparent);
     }
 
     .cte-control input[type="range"]::-moz-range-progress {

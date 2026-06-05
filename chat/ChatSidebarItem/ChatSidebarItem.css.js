@@ -31,7 +31,7 @@ chat-sidebar-sub-item {
 chat-sidebar-item[data-active] > .chat-item,
 chat-sidebar-sub-item[data-active] > .chat-item-child {
   color: var(--sn-text);
-  background: color-mix(in srgb, var(--sn-chat-item-icon-color, var(--sn-cat-server)) 14%, var(--sn-node-hover));
+  background: color-mix(in oklab, var(--sn-chat-item-icon-color, var(--sn-cat-server)) 14%, var(--sn-node-hover));
   border-left: var(--sn-chat-sidebar-active-border-width, 2px) solid var(--sn-chat-item-icon-color, var(--sn-cat-server));
   padding-left: var(--sn-chat-sidebar-active-padding-left, 12px);
 }
@@ -142,7 +142,7 @@ chat-sidebar-item[data-group] > .chat-item .chat-item-delete {
 .chat-item-type {
   font-size: var(--sn-chat-sidebar-meta-size, 9px);
   color: var(--sn-cat-server);
-  background: color-mix(in srgb, var(--sn-cat-server) 10%, transparent);
+  background: color-mix(in oklab, var(--sn-cat-server) 10%, transparent);
   font-family: var(--sn-font-mono, monospace);
   margin-left: auto;
   padding: var(--sn-chat-sidebar-type-padding, 2px 4px);

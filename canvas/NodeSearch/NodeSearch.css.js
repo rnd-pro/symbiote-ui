@@ -83,7 +83,7 @@ export let styles = css`
     transition: background 0.1s;
 
     &:hover {
-      background: color-mix(in srgb, currentColor 6%, transparent);
+      background: color-mix(in oklab, currentColor 6%, transparent);
     }
   }
 
@@ -92,6 +92,6 @@ export let styles = css`
     color: var(--sn-text-dim);
     padding: 1px 6px;
     border-radius: 4px;
-    background: color-mix(in srgb, currentColor 5%, transparent);
+    background: color-mix(in oklab, currentColor 5%, transparent);
   }
 `;

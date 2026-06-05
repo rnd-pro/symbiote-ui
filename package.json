@@ -32,6 +32,10 @@
       "import": "./layout/index.js",
       "default": "./layout/index.js"
     },
+    "./runtime": {
+      "import": "./runtime/index.js",
+      "default": "./runtime/index.js"
+    },
     "./xr": {
       "import": "./xr/index.js",
       "default": "./xr/index.js"
@@ -87,6 +91,7 @@
     "node/",
     "interactions/",
     "layout/",
+    "runtime/",
     "locale/",
     "xr/",
     "navigation/",
@@ -158,7 +163,8 @@
     "@symbiotejs/symbiote": "3.8.0-webmcp.2"
   },
   "devDependencies": {
-    "@symbiotejs/symbiote": "3.8.0-webmcp.2"
+    "@symbiotejs/symbiote": "3.8.0-webmcp.2",
+    "linkedom": "^0.18.12"
   },
   "repository": {
     "type": "git",

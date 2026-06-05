@@ -110,8 +110,8 @@ sn-list-detail-shell:not([has-detail]) .sn-list-detail-body {
 }
 
 sn-list-detail-shell[detail-mode="compact"] {
-  --sn-list-detail-main-padding: 8px;
-  --sn-list-detail-header-min-height: 36px;
+  --sn-list-detail-main-padding: var(--sn-list-detail-compact-main-padding, 8px);
+  --sn-list-detail-header-min-height: var(--sn-list-detail-compact-header-min-height, 36px);
 }
 
 @media (max-width: 720px) {

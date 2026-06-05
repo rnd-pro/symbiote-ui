@@ -105,6 +105,7 @@ export function createCellBgStandaloneScript({
         isAnimating: false,
         stagnantCount: 0,
         pulseTimer: null,
+        toggled: false,
         bgFill: 'transparent',
         prefersReducedMotion: motionQuery.matches,
         cellSize: DEFAULTS.cellSize,
@@ -347,8 +348,35 @@ export function createCellBgStandaloneScript({
         }
       }
 
-      function stop() {
+      function start() {
+        if (state.pulseTimer) clearTimeout(state.pulseTimer);
+        state.pulseTimer = null;
+        state.toggled = true;
+        if (state.prefersReducedMotion) {
+          draw();
+          return;
+        }
+        state.running = true;
+        canvas.dispatchEvent(new CustomEvent('cell-bg-animation-start', {
+          bubbles: true,
+          composed: true,
+          detail: { reason: 'persistent' },
+        }));
+        if (!state.isAnimating) {
+          state.lastTime = performance.now();
+          state.isAnimating = true;
+          requestAnimationFrame(loop);
+        }
+      }
+
+      function stop(reason = 'manual') {
+        state.toggled = false;
         state.running = false;
+        canvas.dispatchEvent(new CustomEvent('cell-bg-animation-stop', {
+          bubbles: true,
+          composed: true,
+          detail: { reason, smooth: true },
+        }));
       }
 
       function loop() {
@@ -361,6 +389,11 @@ export function createCellBgStandaloneScript({
         if (!state.running && state.currentSpeed < 0.005) {
           state.currentSpeed = 0;
           state.isAnimating = false;
+          canvas.dispatchEvent(new CustomEvent('cell-bg-animation-idle', {
+            bubbles: true,
+            composed: true,
+            detail: { smooth: true },
+          }));
         }
         state.accumulator += dt * state.currentSpeed;
         let maxSteps = 5;
@@ -374,12 +407,24 @@ export function createCellBgStandaloneScript({
       }
 
       function pulse(duration = 10000) {
+        if (state.toggled) return;
         if (state.prefersReducedMotion) {
           draw();
           return;
         }
+        const safeDuration = Math.max(300, Number.parseFloat(duration) || 10000);
         if (state.pulseTimer) clearTimeout(state.pulseTimer);
+        canvas.dispatchEvent(new CustomEvent('cell-bg-animation-trigger', {
+          bubbles: true,
+          composed: true,
+          detail: { duration: safeDuration },
+        }));
         state.running = true;
+        canvas.dispatchEvent(new CustomEvent('cell-bg-animation-start', {
+          bubbles: true,
+          composed: true,
+          detail: { reason: 'pulse' },
+        }));
         if (!state.isAnimating) {
           state.lastTime = performance.now();
           state.isAnimating = true;
@@ -387,9 +432,22 @@ export function createCellBgStandaloneScript({
         }
         state.pulseTimer = setTimeout(() => {
           state.pulseTimer = null;
-          stop();
-        }, duration);
+          if (!state.toggled) stop('pulse');
+        }, safeDuration);
       }
+
+      function trigger(duration = 10000) {
+        pulse(duration);
+      }
+
+      canvas.__cellBg = {
+        start,
+        stop,
+        trigger,
+        pulse,
+        refreshTheme,
+        resize,
+      };
 
       motionQuery.addEventListener?.('change', (event) => {
         state.prefersReducedMotion = event.matches;

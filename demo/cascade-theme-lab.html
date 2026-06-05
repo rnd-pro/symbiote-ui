@@ -199,19 +199,17 @@
     <cascade-theme-widget
       slot="actions"
       storage-key="symbiote-ui:cascade-theme-lab"
+      target-selector=":root"
     ></cascade-theme-widget>
     <button class="lab-shell-action" slot="actions" type="button" data-layout-command="reset">
       <span class="material-symbols-outlined">restart_alt</span><span>Reset</span>
-    </button>
-    <button class="lab-shell-action" slot="actions" type="button" data-layout-command="scroll">
-      <span class="material-symbols-outlined">swap_horiz</span><span>Scroll</span>
     </button>
     <layout-sidebar id="lab-sidebar" slot="sidebar"></layout-sidebar>
     <section class="lab-content" aria-label="Cascade theme visual surface">
       <panel-layout class="lab-layout"></panel-layout>
     </section>
   </layout-shell-menu>
-  <script type="module" src="./cascade-theme-lab.js?v=agent-portal-shell"></script>
+  <script type="module" src="./cascade-theme-lab.js?v=layout-menu-graph-bg-1"></script>
 </body>
 
 </html>

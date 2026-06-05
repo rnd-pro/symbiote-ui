@@ -160,6 +160,7 @@ export let UI_SCHEMAS = {
           componentRegistry: { type: 'string', minLength: 1 },
           props: { type: 'object', additionalProperties: true },
           attrs: { type: 'object', additionalProperties: { type: ['string', 'number', 'boolean'] } },
+          state: { $ref: '#/$defs/componentState' },
           layout: { $ref: '#/$defs/layout' },
           bindings: { type: 'object', additionalProperties: { type: 'string' } },
           events: { type: 'object', additionalProperties: { type: 'string' } },
@@ -167,6 +168,27 @@ export let UI_SCHEMAS = {
           children: {
             type: 'array',
             items: { $ref: '#/$defs/node' },
+          },
+        },
+      },
+      componentState: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          props: { type: 'object', additionalProperties: true },
+          attrs: { type: 'object', additionalProperties: { type: ['string', 'number', 'boolean'] } },
+          methods: {
+            type: 'object',
+            additionalProperties: {
+              oneOf: [
+                { type: 'array' },
+                { type: 'string' },
+                { type: 'number' },
+                { type: 'boolean' },
+                { type: 'object', additionalProperties: true },
+                { type: 'null' },
+              ],
+            },
           },
         },
       },

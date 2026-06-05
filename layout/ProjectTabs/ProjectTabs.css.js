@@ -25,7 +25,7 @@ project-tabs::after {
   display: flex;
   align-items: flex-end;
   height: 100%;
-  padding: 0 12px;
+  padding: var(--sn-tabs-bar-padding, 0 12px);
   overflow-x: auto;
   scrollbar-width: none;
   position: relative;
@@ -41,26 +41,26 @@ project-tab-item {
   box-sizing: border-box;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 0 10px 0 12px;
+  gap: var(--sn-tabs-item-gap, 6px);
+  padding: var(--sn-tabs-item-padding, 0 10px 0 12px);
   height: var(--sn-tabs-item-height);
   border: 1px solid transparent;
   border-bottom: none;
   background: transparent;
   color: var(--sn-text-dim);
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--sn-tabs-item-font-size, 12px);
   font-family: inherit;
   white-space: nowrap;
   transition: background 0.15s, color 0.15s;
   position: relative;
   border-radius: var(--sn-tabs-radius);
-  margin: 0 2px;
+  margin: 0 var(--sn-tabs-item-margin-inline, 2px);
 }
 
 .tab .material-symbols-outlined,
 project-tab-item .material-symbols-outlined {
-  font-size: 15px;
+  font-size: var(--sn-tabs-icon-size, 15px);
   color: var(--tab-accent, var(--sn-tabs-accent));
 }
 
@@ -83,7 +83,7 @@ project-tab-item[disabled]:hover {
 .tab[active],
 project-tab-item[active] {
   background: var(--sn-tabs-active-bg);
-  border-color: color-mix(in srgb, var(--tab-accent, var(--sn-tabs-accent)) 44%, transparent);
+  border-color: color-mix(in oklab, var(--tab-accent, var(--sn-tabs-accent)) 44%, transparent);
   border-bottom: none;
   color: var(--sn-text);
 }
@@ -141,14 +141,14 @@ project-tab-item:not([active]):not(:hover):last-child::after,
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 16px;
-  height: 16px;
+  width: var(--sn-tabs-close-size, 16px);
+  height: var(--sn-tabs-close-size, 16px);
   border-radius: 50%;
   background: transparent;
   border: none;
   color: var(--sn-text-dim);
   cursor: pointer;
-  font-size: 14px;
+  font-size: var(--sn-tabs-close-font-size, 14px);
   padding: 0;
   line-height: 1;
   opacity: 0;
@@ -167,7 +167,7 @@ project-tab-item[active] .tab-close {
 }
 
 .tab-close:hover {
-  background: color-mix(in srgb, var(--sn-text) 20%, transparent);
+  background: color-mix(in oklab, var(--sn-text) 20%, transparent);
   color: var(--sn-text);
 }
 
@@ -175,21 +175,21 @@ project-tab-item[active] .tab-close {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: var(--sn-tabs-add-size, 28px);
+  height: var(--sn-tabs-add-size, 28px);
   border-radius: 50%;
   border: none;
   background: transparent;
   color: var(--sn-text-dim);
   cursor: pointer;
-  font-size: 18px;
+  font-size: var(--sn-tabs-add-font-size, 18px);
   transition: background 0.15s, color 0.15s;
-  margin-left: 4px;
-  margin-bottom: 2px;
+  margin-left: var(--sn-tabs-add-margin-left, 4px);
+  margin-bottom: var(--sn-tabs-add-margin-bottom, 2px);
 }
 
 .tab-add:hover {
-  background: color-mix(in srgb, var(--sn-text) 10%, transparent);
+  background: color-mix(in oklab, var(--sn-text) 10%, transparent);
   color: var(--sn-text);
 }
 

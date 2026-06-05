@@ -5,11 +5,16 @@ import { test } from 'node:test';
 test('root and metadata entrypoints import in Node', async () => {
   let root = await import('../index.js');
   let layout = await import('../layout/index.js');
+  let runtime = await import('../runtime/index.js');
   let manifest = await import('../manifest/index.js');
   let webmcp = await import('../webmcp.js');
 
   assert.equal(typeof root.NodeEditor, 'function');
   assert.equal(typeof root.createCascadeTheme, 'function');
+  assert.equal(typeof root.getReadableTextForHsl, 'function');
+  assert.equal(typeof root.createRuntimeUiInstance, 'function');
+  assert.equal(typeof runtime.createRuntimeUiController, 'function');
+  assert.equal(runtime.RUNTIME_UI_CONTRACT.version, 'runtime-ui-v1');
   assert.equal(typeof manifest.listComponents, 'function');
   assert.equal(typeof manifest.listAgentComponentDescriptions, 'function');
   assert.equal(typeof manifest.listThemeRuntimeDescriptors, 'function');
@@ -26,6 +31,7 @@ test('discover exposes the standalone package contract', async () => {
 
   assert.equal(data.package.name, 'symbiote-ui');
   assert.equal(entrypoints.get('symbiote-ui')?.kind, 'node-safe');
+  assert.equal(entrypoints.get('symbiote-ui/runtime')?.kind, 'ssr-entry-safe');
   assert.equal(entrypoints.get('symbiote-ui/webmcp')?.kind, 'ssr-entry-safe');
   let component = data.manifest.components.find((item) => item.tagName === 'cascade-theme-editor');
   let agentCatalogItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'cascade-theme-editor');
@@ -35,6 +41,11 @@ test('discover exposes the standalone package contract', async () => {
   let sidebar = data.manifest.components.find((item) => item.tagName === 'layout-sidebar');
   let layoutAgentItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'panel-layout');
   let sidebarAgentItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'layout-sidebar');
+  let chatSidebarAgentItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'chat-sidebar-shell');
+  let nodeCanvasAgentItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'node-canvas');
+  let canvasGraphAgentItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'canvas-graph');
+  let graphExplorerAgentItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'graph-explorer-shell');
+  let cellBgAgentItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'cell-bg');
   assert.ok(component.componentDescription.includes('cascade theme editor'));
   assert.equal(component.agent.webmcp.mode, 'explicit-descriptor');
   assert.ok(component.agent.webmcp.references.includes('https://rnd-pro.com/pulse/symbiote-webmcp-support/'));
@@ -65,6 +76,31 @@ test('discover exposes the standalone package contract', async () => {
   assert.ok(layoutAgentItem.webmcp.toolNames.includes('panel_layout_close_ui_panel'));
   assert.ok(sidebarAgentItem.webmcp.toolNames.includes('layout_sidebar_set_sections'));
   assert.ok(sidebarAgentItem.webmcp.toolNames.includes('layout_sidebar_set_active_section'));
+  assert.ok(chatSidebarAgentItem.webmcp.toolNames.includes('chat_sidebar_set_chats'));
+  assert.ok(chatSidebarAgentItem.webmcp.toolNames.includes('chat_sidebar_select'));
+  assert.ok(chatSidebarAgentItem.webmcp.toolNames.includes('chat_sidebar_set_collapsed'));
+  assert.ok(nodeCanvasAgentItem.webmcp.toolNames.includes('node_canvas_set_editor_model'));
+  assert.ok(nodeCanvasAgentItem.webmcp.toolNames.includes('node_canvas_set_path_style'));
+  assert.ok(nodeCanvasAgentItem.webmcp.toolNames.includes('node_canvas_set_flow_layout'));
+  assert.ok(nodeCanvasAgentItem.componentDescription.includes('node-editor-canvas'));
+  assert.ok(canvasGraphAgentItem.webmcp.toolNames.includes('canvas_graph_set_model'));
+  assert.ok(canvasGraphAgentItem.webmcp.toolNames.includes('canvas_graph_focus_node'));
+  assert.ok(canvasGraphAgentItem.webmcp.toolNames.includes('canvas_graph_set_path'));
+  assert.ok(canvasGraphAgentItem.componentDescription.includes('overview-read-renderer'));
+  assert.equal(
+    data.manifest.components
+      .find((item) => item.tagName === 'canvas-graph')
+      .contract.attributes
+      .some((attribute) => attribute.name === 'auto-trigger'),
+    false
+  );
+  assert.ok(graphExplorerAgentItem.webmcp.toolNames.includes('graph_explorer_shell_set_view'));
+  assert.ok(graphExplorerAgentItem.webmcp.toolNames.includes('graph_explorer_shell_set_stats'));
+  assert.ok(graphExplorerAgentItem.webmcp.toolNames.includes('graph_explorer_shell_request_action'));
+  assert.ok(cellBgAgentItem.componentDescription.includes('WebMCP tools: cell_bg_trigger'));
+  assert.ok(cellBgAgentItem.webmcp.toolNames.includes('cell_bg_trigger'));
+  assert.ok(cellBgAgentItem.webmcp.toolNames.includes('cell_bg_start'));
+  assert.ok(cellBgAgentItem.webmcp.toolNames.includes('cell_bg_stop'));
   assert.ok(data.manifest.themeRuntimeDescriptors.some((descriptor) => (
     descriptor.name === 'cascade-theme'
     && descriptor.webmcp?.name === 'symbiote-ui.createCascadeTheme'

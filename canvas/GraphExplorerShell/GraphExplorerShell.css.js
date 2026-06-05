@@ -49,23 +49,23 @@ graph-explorer-shell .graph-explorer-toolbar {
   justify-content: flex-end;
   gap: var(--sn-graph-explorer-toolbar-gap);
   z-index: var(--sn-graph-explorer-toolbar-z);
-  max-width: calc(100% - 16px);
+  max-width: calc(100% - var(--sn-graph-explorer-toolbar-max-offset, 16px));
 }
 
 graph-explorer-shell .graph-explorer-btn {
   min-width: 0;
-  min-height: 28px;
+  min-height: var(--sn-graph-explorer-button-min-height, 28px);
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
+  gap: var(--sn-graph-explorer-button-gap, 4px);
+  padding: var(--sn-graph-explorer-button-padding, 4px 10px);
   border: 1px solid var(--sn-node-border);
-  border-radius: 3px;
+  border-radius: var(--sn-graph-explorer-button-radius, 3px);
   background: var(--sn-node-bg);
   color: var(--sn-text);
   cursor: pointer;
   font-family: var(--sn-font);
-  font-size: 10px;
+  font-size: var(--sn-graph-explorer-button-size, 10px);
   white-space: nowrap;
   transition: background 150ms, border-color 150ms;
 }
@@ -86,19 +86,19 @@ graph-explorer-shell .graph-explorer-btn[data-active] {
 }
 
 graph-explorer-shell .graph-explorer-btn .material-symbols-outlined {
-  font-size: 14px;
+  font-size: var(--sn-graph-explorer-button-icon-size, 14px);
 }
 
 graph-explorer-shell .graph-explorer-toolbar-sep {
-  width: 1px;
+  width: var(--sn-graph-explorer-toolbar-sep-width, 1px);
   align-self: stretch;
-  margin: 0 4px;
+  margin: var(--sn-graph-explorer-toolbar-sep-margin, 0 4px);
   background: var(--sn-node-border);
 }
 
 graph-explorer-shell .graph-explorer-layer-btn {
-  padding: 3px 6px;
-  font-size: 9px;
+  padding: var(--sn-graph-explorer-layer-padding, 3px 6px);
+  font-size: var(--sn-graph-explorer-layer-size, 9px);
   opacity: 0.7;
 }
 
@@ -116,17 +116,17 @@ graph-explorer-shell .graph-explorer-stats {
   bottom: var(--sn-graph-explorer-stats-bottom);
   left: var(--sn-graph-explorer-stats-left);
   display: flex;
-  gap: 12px;
+  gap: var(--sn-graph-explorer-stats-gap, 12px);
   z-index: var(--sn-graph-explorer-stats-z);
-  max-height: 280px;
+  max-height: var(--sn-graph-explorer-stats-max-height, 280px);
   overflow-y: auto;
-  padding: 4px 10px;
+  padding: var(--sn-graph-explorer-stats-padding, 4px 10px);
   border: 1px solid var(--sn-node-border);
-  border-radius: 3px;
+  border-radius: var(--sn-graph-explorer-stats-radius, 3px);
   background: var(--sn-bg-overlay);
   color: var(--sn-text-dim);
   font-family: var(--sn-font);
-  font-size: 10px;
+  font-size: var(--sn-graph-explorer-stats-size, 10px);
 }
 
 graph-explorer-shell .graph-explorer-stat-val {

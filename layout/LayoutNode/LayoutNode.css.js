@@ -34,6 +34,7 @@ export let styles = css`
       border-bottom: 1px solid var(--sn-layout-border);
       flex-shrink: 0;
       min-height: var(--sn-layout-header-min-height, 28px);
+      position: relative;
     }
 
     &[panel-chrome='none'] {
@@ -84,6 +85,11 @@ export let styles = css`
     }
 
     .panel-menu-toggle {
+      position: absolute;
+      inset-inline-start: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+
       &[active] {
         background: var(--sn-node-hover);
         color: var(--sn-text);
@@ -105,7 +111,7 @@ export let styles = css`
       min-height: var(--sn-layout-menu-min-height, calc(var(--sn-layout-header-min-height, 28px) * 1.18));
       padding: var(--sn-layout-menu-padding, var(--sn-layout-header-padding, 2px 4px));
       border-bottom: 1px solid var(--sn-layout-border);
-      background: color-mix(in srgb, var(--sn-node-header-bg) 88%, var(--sn-bg) 12%);
+      background: color-mix(in oklab, var(--sn-node-header-bg) 88%, var(--sn-bg) 12%);
       overflow-x: auto;
       overflow-y: hidden;
       ${themedScrollbarStyles}
@@ -149,7 +155,7 @@ export let styles = css`
 
       &[active] {
         border-color: var(--sn-node-selected);
-        background: color-mix(in srgb, var(--sn-node-selected) 14%, transparent);
+        background: color-mix(in oklab, var(--sn-node-selected) 14%, transparent);
         color: var(--sn-text);
       }
 

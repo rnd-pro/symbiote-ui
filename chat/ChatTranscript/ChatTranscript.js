@@ -234,6 +234,9 @@ export class ChatTranscript extends Symbiote {
 }
 
 ChatTranscript.template = html`
+<div class="chat-background" aria-hidden="true">
+  <slot name="background"></slot>
+</div>
 <div ref="chatMessages" class="chat-messages" ${{ itemize: 'messageItems', 'item-tag': 'chat-message-item', onscroll: 'onScroll' }}></div>
 <button class="scroll-bottom-btn" ref="scrollBottomBtn" title="Scroll to bottom" ${{ onclick: 'onScrollToBottom' }}>
   <span class="material-symbols-outlined">arrow_downward</span>
