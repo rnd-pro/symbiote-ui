@@ -8,6 +8,15 @@ import {
   createDynamicComponentRegistry,
 } from './dynamic-registry.js';
 
+import {
+  applyCascadeTheme,
+  createCascadeTheme,
+} from '../themes/Theme.js';
+
+import {
+  resolveThemePresets,
+} from '../themes/ThemeFactory.js';
+
 export const RUNTIME_UI_CONTRACT_VERSION = 'runtime-ui-v1';
 
 export const RUNTIME_UI_CONTRACT = Object.freeze({
@@ -458,3 +467,160 @@ export {
   createDynamicComponentRegistry,
   validateComponentCode,
 } from './dynamic-registry.js';
+
+export async function executeAgentIntent(controller, intent = {}, options = {}) {
+  if (intent.version !== 'agent-intent-v1') {
+    throw new Error(`Unsupported agent intent version: "${intent.version}". Expected "agent-intent-v1".`);
+  }
+
+  let executed = [];
+  let doc = options.document || (typeof globalThis.document !== 'undefined' ? globalThis.document : null);
+
+  try {
+    for (let op of intent.operations || []) {
+      let type = op.type;
+      let params = op.params || {};
+
+      if (type === 'register-component') {
+        if (!controller.dynamicRegistry) {
+          throw new Error('Controller dynamicRegistry is not initialized.');
+        }
+        await controller.dynamicRegistry.register(params.tagName, params.codeOrClass || params.code, params.options);
+        executed.push({ type: 'register-component', tagName: params.tagName });
+
+      } else if (type === 'register-driver') {
+        if (typeof options.onRegisterDriver === 'function') {
+          await options.onRegisterDriver(params);
+        }
+        executed.push({ type: 'register-driver', params });
+
+      } else if (type === 'layout') {
+        let root = options.root || controller.root || null;
+        let action = params.action || params;
+        let res = applyRuntimeLayoutAction(root, action, params.options);
+
+        let rollbackAction = null;
+        let actionType = action.type || action.action;
+        let panelType = action.panelType || action.component || action.panel;
+        if (actionType === 'open-panel' && panelType) {
+          rollbackAction = { type: 'remove-ui-panel', panelType };
+        }
+
+        executed.push({ type: 'layout', action, rollbackAction });
+
+      } else if (type === 'ui') {
+        let action = params.action || 'create';
+        if (action === 'create') {
+          let instance = controller.create(params.node, params.options);
+          let parentId = params.parentId;
+          let targetSelector = params.targetSelector || params.target;
+
+          if (parentId) {
+            let parentInst = controller.instances.get(parentId);
+            if (parentInst && parentInst.element) {
+              appendChild(parentInst.element, instance.element);
+            }
+          } else if (targetSelector && doc) {
+            let targetEl = typeof targetSelector === 'string'
+              ? doc.querySelector(targetSelector)
+              : targetSelector;
+            if (targetEl) {
+              appendChild(targetEl, instance.element);
+            }
+          } else if (doc && doc.body) {
+            appendChild(doc.body, instance.element);
+          }
+
+          executed.push({ type: 'ui-create', id: params.node.id || instance.id });
+        } else if (action === 'destroy') {
+          let id = params.id;
+          controller.destroy(id, params.options);
+          executed.push({ type: 'ui-destroy', id });
+        }
+
+      } else if (type === 'theme') {
+        let targetSelector = params.targetSelector || params.target;
+        let targetEl = doc;
+        if (targetSelector && doc) {
+          targetEl = typeof targetSelector === 'string'
+            ? doc.querySelector(targetSelector)
+            : targetSelector;
+        }
+
+        if (!targetEl) {
+          throw new Error(`Theme target element not found for selector: "${targetSelector}".`);
+        }
+
+        let themeOptions = params.options || {};
+        if (params.presets) {
+          themeOptions = {
+            ...themeOptions,
+            ...resolveThemePresets(params.presets),
+          };
+        }
+
+        let keysToSave = Object.keys(createCascadeTheme(themeOptions));
+        let originalStyles = {};
+        if (targetEl.style) {
+          for (let key of keysToSave) {
+            originalStyles[key] = targetEl.style.getPropertyValue(key);
+          }
+        }
+
+        applyCascadeTheme(targetEl, themeOptions);
+        executed.push({ type: 'theme', targetEl, originalStyles });
+
+      } else if (type === 'state') {
+        let id = params.id;
+        let originalState = null;
+        let inst = controller.instances.get(id);
+        if (inst && inst.node) {
+          originalState = {
+            props: {},
+            attrs: {},
+          };
+          if (params.state?.props) {
+            for (let key of Object.keys(params.state.props)) {
+              originalState.props[key] = inst.element[key];
+            }
+          }
+          if (params.state?.attrs) {
+            for (let key of Object.keys(params.state.attrs)) {
+              originalState.attrs[key] = inst.element.getAttribute(key);
+            }
+          }
+        }
+
+        controller.update(id, params.state);
+        executed.push({ type: 'state', id, originalState });
+      }
+    }
+  } catch (err) {
+    for (let i = executed.length - 1; i >= 0; i--) {
+      let op = executed[i];
+      try {
+        if (op.type === 'ui-create') {
+          controller.destroy(op.id);
+        } else if (op.type === 'layout' && op.rollbackAction) {
+          let root = options.root || controller.root || null;
+          applyRuntimeLayoutAction(root, op.rollbackAction);
+        } else if (op.type === 'theme' && op.targetEl.style) {
+          for (let [key, val] of Object.entries(op.originalStyles)) {
+            if (val === '') {
+              op.targetEl.style.removeProperty(key);
+            } else {
+              op.targetEl.style.setProperty(key, val);
+            }
+          }
+        } else if (op.type === 'state' && op.originalState) {
+          controller.update(op.id, op.originalState);
+        }
+      } catch (rollbackErr) {
+        console.error('[executeAgentIntent] rollback failed for operation:', op, rollbackErr);
+      }
+    }
+    throw err;
+  }
+
+  return { success: true, executedCount: executed.length };
+}

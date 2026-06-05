@@ -19,6 +19,11 @@ export let UI_SCHEMA_VERSIONS = [
     path: 'schemas/theme-rule-block-v1.json',
     description: 'JSON Schema for composable theme source, cascade, semantic, and component alias blocks.',
   },
+  {
+    version: 'agent-intent-v1',
+    path: 'schemas/agent-intent-v1.json',
+    description: 'JSON Schema for unified transaction-like agent intent sequences.',
+  },
 ];
 
 export let UI_SCHEMAS = {
@@ -285,6 +290,42 @@ export let UI_SCHEMAS = {
         type: 'array',
         items: { type: 'string', minLength: 1 },
         uniqueItems: true,
+      },
+    },
+  },
+};
+
+UI_SCHEMAS['agent-intent-v1'] = {
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  $id: 'https://rnd-pro.github.io/symbiote-node/schemas/agent-intent-v1.json',
+  title: 'Symbiote Node Agent Intent Transaction',
+  type: 'object',
+  additionalProperties: false,
+  required: ['version', 'intentId', 'operations'],
+  properties: {
+    version: { const: 'agent-intent-v1' },
+    intentId: { type: 'string', minLength: 1 },
+    description: { type: 'string' },
+    metadata: { type: 'object', additionalProperties: true },
+    operations: {
+      type: 'array',
+      items: { $ref: '#/$defs/operation' },
+      minItems: 1,
+    },
+  },
+  $defs: {
+    operation: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['type', 'params'],
+      properties: {
+        type: {
+          enum: ['register-driver', 'register-component', 'layout', 'ui', 'theme', 'state'],
+        },
+        params: {
+          type: 'object',
+          additionalProperties: true,
+        },
       },
     },
   },
