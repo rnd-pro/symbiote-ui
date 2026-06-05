@@ -13,6 +13,9 @@
   --sn-theme-radius-scale: 1;
   --sn-theme-motion-scale: 1;
   --sn-theme-elevation-scale: 1;
+  --sn-transition-fast: calc(120ms * var(--sn-theme-motion-scale));
+  --sn-transition-normal: calc(240ms * var(--sn-theme-motion-scale));
+  --sn-transition-slow: calc(400ms * var(--sn-theme-motion-scale));
   --sn-hue-base: 0;
   --sn-hue-accent: var(--sn-theme-hue);
   --sn-hue-success: 122;
@@ -658,4 +661,25 @@
   --border-color: var(--sn-node-border);
   --text-color: var(--sn-text);
   --text-color-muted: var(--sn-text-dim);
+}
+
+/* State-to-Cascade CSS Induction (Studio UX status response) */
+[data-engine-state="running"] {
+  --sn-node-border: var(--sn-node-selected);
+  animation: sn-pulse calc(1.5s * var(--sn-theme-motion-scale, 1)) infinite;
+}
+[data-engine-state="error"] {
+  --sn-node-bg: color-mix(in oklab, var(--sn-danger-color) 12%, var(--sn-panel-bg));
+}
+
+@keyframes sn-pulse {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--sn-node-selected) 40%, transparent);
+  }
+  70% {
+    box-shadow: 0 0 0 6px transparent;
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
 }

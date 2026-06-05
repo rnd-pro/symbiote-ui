@@ -23,6 +23,9 @@ const DEFAULT_PROVIDER_THEME_TOKENS = {
   '--sn-theme-radius-scale': '1',
   '--sn-theme-motion-scale': '1',
   '--sn-theme-elevation-scale': '1',
+  '--sn-transition-fast': 'calc(120ms * var(--sn-theme-motion-scale))',
+  '--sn-transition-normal': 'calc(240ms * var(--sn-theme-motion-scale))',
+  '--sn-transition-slow': 'calc(400ms * var(--sn-theme-motion-scale))',
 
   '--sn-hue-base': '0',
   '--sn-hue-accent': 'var(--sn-theme-hue)',

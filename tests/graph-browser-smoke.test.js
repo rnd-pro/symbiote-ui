@@ -514,26 +514,20 @@ async function evaluateCascadeThemeSmoke(page) {
           fixture = document.createElement('div');
           fixture.id = 'theme-smoke-fixture';
           fixture.style.cssText = 'position:fixed;left:0;bottom:0;z-index:-1;inline-size:720px;block-size:auto;opacity:0.01;pointer-events:none;';
-          fixture.innerHTML = String.raw`
-            <sn-button variant="primary">primary</sn-button>
-            <sn-button>default</sn-button>
-            <project-tabs></project-tabs>
-            <graph-explorer-shell>
-              <button class="graph-explorer-btn" type="button"><span class="material-symbols-outlined">hub</span>Graph</button>
-              <div class="graph-explorer-stats"><span>9 nodes</span><span>8 links</span></div>
-            </graph-explorer-shell>
-            <sn-data-table>
-              <div class="sn-data-table">
-                <div class="sn-data-table-scroll">
-                  <table><thead><tr><th>State</th></tr></thead><tbody><tr><td><span class="sn-data-table-cell"><span class="sn-data-table-text">ready</span></span></td></tr></tbody></table>
-                </div>
-              </div>
-            </sn-data-table>
-            <sn-empty-state><span class="material-symbols-outlined">inbox</span><span>No host data</span></sn-empty-state>
-            <sn-event-feed><div class="sn-event-feed"><div class="sn-event-feed-header"><span>Events</span><span>3</span></div><div class="sn-event-feed-body-list"><sn-event-feed-item><div class="sn-event-feed-item"><div class="sn-event-feed-item-header"><span class="sn-event-feed-arrow">&gt;</span><span class="sn-event-feed-tool">tool</span><span class="sn-event-feed-time">now</span></div><div class="sn-event-feed-body">payload</div></div></sn-event-feed-item></div></div></sn-event-feed>
-            <source-viewer><div class="sv-header"><span class="sv-filename">demo.js</span><span class="sv-stats">12 lines</span><button class="sv-action" type="button"><span class="material-symbols-outlined">code</span>Raw</button></div></source-viewer>
-            <sn-status-ribbon visible><div class="fr-inner"><span class="fr-icon">sync</span><span class="fr-text">Status</span><span class="fr-dots"></span></div></sn-status-ribbon>
-          `;
+          fixture.innerHTML = [
+            '<sn-button variant="primary">primary</sn-button>',
+            '<sn-button>default</sn-button>',
+            '<project-tabs></project-tabs>',
+            '<graph-explorer-shell>',
+            '<button class="graph-explorer-btn" type="button"><span class="material-symbols-outlined">hub</span>Graph</button>',
+            '<div class="graph-explorer-stats"><span>9 nodes</span><span>8 links</span></div>',
+            '</graph-explorer-shell>',
+            '<sn-data-table><div class="sn-data-table"><div class="sn-data-table-scroll"><table><thead><tr><th>State</th></tr></thead><tbody><tr><td><span class="sn-data-table-cell"><span class="sn-data-table-text">ready</span></span></td></tr></tbody></table></div></div></sn-data-table>',
+            '<sn-empty-state><span class="material-symbols-outlined">inbox</span><span>No host data</span></sn-empty-state>',
+            '<sn-event-feed><div class="sn-event-feed"><div class="sn-event-feed-header"><span>Events</span><span>3</span></div><div class="sn-event-feed-body-list"><sn-event-feed-item><div class="sn-event-feed-item"><div class="sn-event-feed-item-header"><span class="sn-event-feed-arrow">&gt;</span><span class="sn-event-feed-tool">tool</span><span class="sn-event-feed-time">now</span></div><div class="sn-event-feed-body">payload</div></div></sn-event-feed-item></div></div></sn-event-feed>',
+            '<source-viewer><div class="sv-header"><span class="sv-filename">demo.js</span><span class="sv-stats">12 lines</span><button class="sv-action" type="button"><span class="material-symbols-outlined">code</span>Raw</button></div></source-viewer>',
+            '<sn-status-ribbon visible><div class="fr-inner"><span class="fr-icon">sync</span><span class="fr-text">Status</span><span class="fr-dots"></span></div></sn-status-ribbon>',
+          ].join('');
           document.body.append(fixture);
         }
         const tabs = fixture.querySelector('project-tabs');

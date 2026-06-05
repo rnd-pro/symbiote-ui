@@ -27,6 +27,14 @@ export {
   normalizeCascadeThemeOptions,
 } from './cascade-theme.js';
 
+export {
+  applyMotion,
+  DEFAULT_MOTION,
+  SMOOTH_MOTION,
+  FAST_MOTION,
+  DISABLED_MOTION,
+} from './Motion.js';
+
 /**
  * Mapping from layout global tokens to symbiote-node tokens.
  * Layout module uses --bg-*, --text-* format; this bridges them.

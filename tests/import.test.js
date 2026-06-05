@@ -101,12 +101,14 @@ test('discover exposes the standalone package contract', async () => {
   assert.ok(cellBgAgentItem.webmcp.toolNames.includes('cell_bg_trigger'));
   assert.ok(cellBgAgentItem.webmcp.toolNames.includes('cell_bg_start'));
   assert.ok(cellBgAgentItem.webmcp.toolNames.includes('cell_bg_stop'));
-  assert.ok(data.manifest.themeRuntimeDescriptors.some((descriptor) => (
-    descriptor.name === 'cascade-theme'
-    && descriptor.webmcp?.name === 'symbiote-ui.createCascadeTheme'
-  )));
-  assert.equal(data.manifest.themeControls['cascade-theme'].length, 9);
-  assert.ok(data.manifest.themeControls['cascade-theme'].some((control) => control.name === 'heading'));
+  let cascadeDescriptor = data.manifest.themeRuntimeDescriptors.find((descriptor) => descriptor.name === 'cascade-theme');
+  assert.ok(cascadeDescriptor);
+  assert.equal(cascadeDescriptor.webmcp?.name, 'symbiote-ui.createCascadeTheme');
+  assert.ok(cascadeDescriptor.exports.includes('getReadableTextForHsl'));
+  let cascadeControlNames = data.manifest.themeControls['cascade-theme'].map((control) => control.name);
+  for (const name of ['mode', 'brightness', 'contrast', 'chroma', 'hue', 'outline', 'type', 'heading', 'density']) {
+    assert.ok(cascadeControlNames.includes(name), `expected cascade theme control ${name}`);
+  }
 });
 
 test('webmcp helpers append component context to explicit tool descriptors', async () => {

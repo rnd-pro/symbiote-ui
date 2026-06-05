@@ -341,6 +341,7 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
     type: 100,
     density: 100,
   });
+  const motionScaleTheme = themeModule.createCascadeTheme({ motion: 60 });
   const noOutlineTheme = themeModule.createCascadeTheme({ outline: 0 });
   const fullOutlineTheme = themeModule.createCascadeTheme({ outline: 100 });
   const balancedHeadingTheme = themeModule.createCascadeTheme({ type: 100, heading: 120 });
@@ -352,6 +353,14 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.equal(theme.tokens['--sn-theme-text-lightness'], '94.0%');
   assert.equal(theme.tokens['--sn-theme-heading-scale'], '1.00');
   assert.equal(balancedHeadingTheme.tokens['--sn-theme-heading-scale'], '1.20');
+  assert.equal(theme.state.motion, 100);
+  assert.equal(theme.tokens['--sn-theme-motion-scale'], '1.00');
+  assert.equal(theme.tokens['--sn-transition-fast'], '120ms');
+  assert.equal(theme.tokens['--sn-transition-normal'], '240ms');
+  assert.equal(theme.tokens['--sn-transition-slow'], '400ms');
+  assert.equal(motionScaleTheme.state.motion, 60);
+  assert.equal(motionScaleTheme.tokens['--sn-theme-motion-scale'], '0.60');
+  assert.equal(motionScaleTheme.tokens['--sn-transition-fast'], '72ms');
   assert.equal(theme.descriptor.controls.find((control) => control.name === 'brightness')?.icon, 'brightness_6');
   assert.equal(theme.descriptor.controls.find((control) => control.name === 'heading')?.icon, 'title');
   assert.equal(theme.tokens['--sn-bg'], 'hsl(0 0% 10.0%)');
@@ -1256,6 +1265,9 @@ test('default provider exposes cascade control and scrollbar parity tokens', asy
   assert.equal(tokens['--sn-scrollbar-radius'], '999px');
   assert.equal(tokens['--sn-scrollbar-thumb-border'], '3px solid transparent');
   assert.equal(tokens['--sn-scrollbar-thumb-min-size'], '36px');
+  assert.equal(tokens['--sn-transition-fast'], 'calc(120ms * var(--sn-theme-motion-scale))');
+  assert.equal(tokens['--sn-transition-normal'], 'calc(240ms * var(--sn-theme-motion-scale))');
+  assert.equal(tokens['--sn-transition-slow'], 'calc(400ms * var(--sn-theme-motion-scale))');
   assert.match(css, /--sn-theme-outline-strength: 0\.38;/);
   assert.match(css, /--sn-theme-type-scale: 1;/);
   assert.match(css, /--sn-theme-heading-scale: 1;/);
@@ -1263,6 +1275,40 @@ test('default provider exposes cascade control and scrollbar parity tokens', asy
   assert.match(css, /--sn-button-primary-color: hsl\(0 0% 8%\);/);
   assert.match(css, /--sn-button-success-color: hsl\(0 0% 8%\);/);
   assert.match(css, /--sn-button-danger-hover-color: hsl\(0 0% 8%\);/);
+  assert.match(css, /--sn-transition-fast: calc\(120ms \* var\(--sn-theme-motion-scale\)\);/);
+  assert.match(css, /--sn-transition-normal: calc\(240ms \* var\(--sn-theme-motion-scale\)\);/);
+  assert.match(css, /--sn-transition-slow: calc\(400ms \* var\(--sn-theme-motion-scale\)\);/);
+});
+
+test('motion preset layer has default, smooth, fast, and disabled configurations', async () => {
+  const themeModule = await import(new URL('../themes/Theme.js', import.meta.url).href);
+
+  assert.equal(themeModule.DEFAULT_MOTION.name, 'default');
+  assert.equal(themeModule.DEFAULT_MOTION.motion['--sn-theme-motion-scale'], '1.00');
+  assert.equal(themeModule.DEFAULT_MOTION.motion['--sn-transition-fast'], '120ms');
+
+  assert.equal(themeModule.SMOOTH_MOTION.name, 'smooth');
+  assert.equal(themeModule.SMOOTH_MOTION.motion['--sn-theme-motion-scale'], '1.20');
+  assert.equal(themeModule.SMOOTH_MOTION.motion['--sn-transition-easing'], 'cubic-bezier(0.25, 1, 0.5, 1)');
+
+  assert.equal(themeModule.FAST_MOTION.name, 'fast');
+  assert.equal(themeModule.FAST_MOTION.motion['--sn-theme-motion-scale'], '0.60');
+
+  assert.equal(themeModule.DISABLED_MOTION.name, 'disabled');
+  assert.equal(themeModule.DISABLED_MOTION.motion['--sn-theme-motion-scale'], '0.00');
+  assert.equal(themeModule.DISABLED_MOTION.motion['--sn-transition-fast'], '0ms');
+
+  const element = {
+    styles: new Map(),
+    style: {
+      setProperty(name, value) {
+        element.styles.set(name, value);
+      }
+    }
+  };
+  themeModule.applyMotion(element, themeModule.SMOOTH_MOTION);
+  assert.equal(element.styles.get('--sn-theme-motion-scale'), '1.20');
+  assert.equal(element.styles.get('--sn-transition-easing'), 'cubic-bezier(0.25, 1, 0.5, 1)');
 });
 
 test('side-scroll contracts are explicit across reusable surfaces', async () => {
