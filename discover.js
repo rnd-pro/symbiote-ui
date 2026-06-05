@@ -8,6 +8,7 @@ import {
   listDrivers,
   listPacks,
   loadHandlers,
+  watchHandlers,
 } from 'symbiote-engine';
 
 import { HTML_IN_CANVAS_RENDERER } from './canvas/html-in-canvas.js';
@@ -265,3 +266,35 @@ export async function cmdDiscover(options = {}) {
     },
   };
 }
+
+/**
+ * Watch a directory of handlers for changes and notify on rediscovery.
+ * @param {Object} options
+ * @param {string} [options.handlers] - Directory of handlers to watch
+ * @param {function} callback - Callback function(newManifest, changedInfo)
+ * @returns {{ close: function }} Watcher handle
+ */
+export function watchDiscover(options = {}, callback) {
+  if (!options.handlers) {
+    return { close: () => {} };
+  }
+
+  let dir = resolve(/** @type {string} */ (options.handlers));
+
+  let watcher = watchHandlers(dir, {
+    onRegister: async (type, filePath) => {
+      try {
+        let manifest = await cmdDiscover(options);
+        callback(manifest, { type: 'register', nodeType: type, filePath });
+      } catch (err) {
+        console.error('[watchDiscover] failed to update on register:', err);
+      }
+    },
+    onError: (filePath, err) => {
+      console.error(`[watchDiscover] error for ${filePath}:`, err);
+    },
+  });
+
+  return watcher;
+}
+

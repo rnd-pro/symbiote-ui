@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { cmdDiscover } from '../discover.js';
+import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
+import { cmdDiscover, watchDiscover } from '../discover.js';
 import { createRuntimeUiController } from '../runtime/index.js';
 import { triggerWebMcpCommand } from '../webmcp.js';
 import { registerNodeType, clearRegistry } from 'symbiote-engine';
@@ -243,3 +245,100 @@ test('createRuntimeUiController WebSocket integration handles bidirectional comm
   controller.disconnect();
   assert.equal(socket.closed, true);
 });
+
+test('createRuntimeUiController WebSocket integration handles inbound reload messages', async () => {
+  let fakeDoc = new FakeDocument();
+  let fakeRoot = new FakeElement('div');
+
+  let reloadParams = null;
+  let eventReceived = null;
+
+  fakeRoot.addEventListener('runtime-reload', (e) => {
+    eventReceived = e;
+  });
+
+  let controller = createRuntimeUiController({
+    document: fakeDoc,
+    root: fakeRoot,
+  });
+
+  controller.connect('ws://localhost:9999', {
+    WebSocket: MockWebSocket,
+    document: fakeDoc,
+    root: fakeRoot,
+    reconnectMs: 0,
+    onReload: (params) => {
+      reloadParams = params;
+    },
+  });
+
+  let socket = MockWebSocket.lastInstance;
+  assert.ok(socket);
+
+  let mockManifest = { some: 'manifest-data' };
+  socket.simulateMessage({
+    method: 'reload',
+    params: {
+      manifest: mockManifest,
+      changedInfo: { type: 'register', nodeType: 'custom/node' },
+    },
+  });
+
+  assert.ok(reloadParams);
+  assert.deepEqual(reloadParams.manifest, mockManifest);
+  assert.equal(reloadParams.changedInfo.nodeType, 'custom/node');
+
+  assert.ok(eventReceived);
+  assert.equal(eventReceived.type, 'runtime-reload');
+  assert.deepEqual(eventReceived.detail.manifest, mockManifest);
+
+  controller.disconnect();
+});
+
+test('watchDiscover monitors handler directory changes and triggers callback', async () => {
+  clearRegistry();
+
+  let tempDir = join(process.cwd(), 'tmp-watch-handlers-' + Date.now());
+  mkdirSync(tempDir, { recursive: true });
+
+  let manifests = [];
+  let callbackInfo = [];
+
+  let watcher = watchDiscover({ handlers: tempDir }, (manifest, info) => {
+    manifests.push(manifest);
+    callbackInfo.push(info);
+  });
+
+  // Wait a short moment to ensure watcher is ready
+  await new Promise(resolve => setTimeout(resolve, 150));
+
+  let handlerPath1 = join(tempDir, 'first.handler.js');
+  writeFileSync(handlerPath1, `
+    export default {
+      type: 'watch/first',
+      category: 'watch',
+      driver: { description: 'First watched node' }
+    };
+  `);
+
+  await new Promise((resolve) => {
+    let check = () => {
+      if (manifests.length >= 1) resolve();
+      else setTimeout(check, 100);
+    };
+    check();
+  });
+
+  assert.ok(manifests.length >= 1);
+  let latestManifest = manifests[manifests.length - 1];
+  let firstDriver = latestManifest.registry.drivers.find(d => d.type === 'watch/first');
+
+  assert.ok(firstDriver);
+  assert.equal(firstDriver.description, 'First watched node');
+
+  watcher.close();
+  rmSync(tempDir, { recursive: true, force: true });
+  clearRegistry();
+});
+
+

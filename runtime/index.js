@@ -327,6 +327,30 @@ export function createRuntimeUiController(options = {}) {
           } else if (method === 'layout') {
             let layoutTarget = connectOptions.root || options.root || null;
             applyRuntimeLayoutAction(layoutTarget, params.action, params.options);
+          } else if (method === 'reload' || method === 'discover-update') {
+            let root = connectOptions.root || options.root || (typeof globalThis.document !== 'undefined' ? globalThis.document : null);
+            if (root && typeof root.dispatchEvent === 'function') {
+              let doc = connectOptions.document || options.document || (typeof globalThis.document !== 'undefined' ? globalThis.document : null);
+              let NativeCustomEvent = globalThis.CustomEvent;
+              if (typeof NativeCustomEvent !== 'function' && doc && typeof doc.createEvent === 'function') {
+                let event = doc.createEvent('CustomEvent');
+                event.initCustomEvent('runtime-reload', true, true, params);
+                root.dispatchEvent(event);
+              } else if (typeof NativeCustomEvent === 'function') {
+                let event = new NativeCustomEvent('runtime-reload', {
+                  bubbles: true,
+                  composed: true,
+                  detail: params,
+                });
+                root.dispatchEvent(event);
+              }
+            }
+
+            if (typeof connectOptions.onReload === 'function') {
+              connectOptions.onReload(params);
+            } else if (typeof options.onReload === 'function') {
+              options.onReload(params);
+            }
           }
         } catch (err) {
           console.error('[runtimeController] parse message error:', err);
