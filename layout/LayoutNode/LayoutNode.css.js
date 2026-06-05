@@ -163,7 +163,7 @@ export let styles = css`
       height: calc(var(--sn-layout-header-min-height, 28px) * var(--sn-layout-menu-row-span));
       min-height: calc(var(--sn-layout-header-min-height, 28px) * var(--sn-layout-menu-row-span));
       min-width: min-content;
-      padding: var(--sn-layout-menu-padding, 0 4px);
+      padding: var(--sn-layout-menu-row-padding, 0 4px);
       overflow-x: auto;
       overflow-y: hidden;
       ${themedScrollbarStyles}
