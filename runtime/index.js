@@ -4,6 +4,10 @@ import {
   removeUiPanel,
 } from '../layout/LayoutTree.js';
 
+import {
+  createDynamicComponentRegistry,
+} from './dynamic-registry.js';
+
 export const RUNTIME_UI_CONTRACT_VERSION = 'runtime-ui-v1';
 
 export const RUNTIME_UI_CONTRACT = Object.freeze({
@@ -188,6 +192,7 @@ export function createRuntimeUiInstance(node, options = {}) {
 
 export function createRuntimeUiController(options = {}) {
   let instances = new Map();
+  let dynamicRegistry = options.dynamicRegistry || createDynamicComponentRegistry(options);
   let _ws = null;
   let _wsUrl = null;
   let _disconnectedByUser = false;
@@ -236,6 +241,7 @@ export function createRuntimeUiController(options = {}) {
 
   const controller = {
     instances,
+    dynamicRegistry,
     create(node, createOptions = {}) {
       let instance = createRuntimeUiInstance(node, {
         ...options,
@@ -447,3 +453,8 @@ export function applyRuntimeLayoutAction(target, action = {}, options = {}) {
 
   return { handled: false, reason: 'unsupported-action' };
 }
+
+export {
+  createDynamicComponentRegistry,
+  validateComponentCode,
+} from './dynamic-registry.js';
