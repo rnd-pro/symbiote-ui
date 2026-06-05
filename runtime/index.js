@@ -188,7 +188,31 @@ export function createRuntimeUiInstance(node, options = {}) {
 
 export function createRuntimeUiController(options = {}) {
   let instances = new Map();
-  let onIntent = typeof options.onIntent === 'function' ? options.onIntent : null;
+  let _ws = null;
+  let _wsUrl = null;
+  let _disconnectedByUser = false;
+  let _reconnectTimer = null;
+  let _commandHandler = null;
+  let _listenerTarget = null;
+
+  let onIntent = (intent) => {
+    let OPEN = globalThis.WebSocket?.OPEN !== undefined ? globalThis.WebSocket.OPEN : 1;
+    if (_ws && _ws.readyState === OPEN) {
+      try {
+        let { version, action, eventName, component, componentId, detail } = intent;
+        _ws.send(JSON.stringify({
+          method: 'intent',
+          params: { version, action, eventName, component, componentId, detail },
+        }));
+      } catch (err) {
+        console.error('[runtimeController] failed to send intent:', err);
+      }
+    }
+    if (typeof options.onIntent === 'function') {
+      options.onIntent(intent);
+    }
+  };
+
   let indexInstance = (instance) => {
     if (instance.id) instances.set(instance.id, instance);
     for (let child of instance.children || []) indexInstance(child);
@@ -209,7 +233,8 @@ export function createRuntimeUiController(options = {}) {
     instance.destroy(destroyOptions);
     deleteInstanceTree(tree);
   };
-  return {
+
+  const controller = {
     instances,
     create(node, createOptions = {}) {
       let instance = createRuntimeUiInstance(node, {
@@ -235,7 +260,130 @@ export function createRuntimeUiController(options = {}) {
     clear(destroyOptions = {}) {
       for (let id of [...instances.keys()]) this.destroy(id, destroyOptions);
     },
+    connect(wsUrl, connectOptions = {}) {
+      if (wsUrl) _wsUrl = wsUrl;
+      _disconnectedByUser = false;
+
+      let NativeWebSocket = connectOptions.WebSocket || globalThis.WebSocket;
+      if (!NativeWebSocket) {
+        return;
+      }
+
+      if (_ws) {
+        _ws.close();
+      }
+
+      let url = _wsUrl;
+      _ws = new NativeWebSocket(url);
+
+      _ws.onopen = () => {
+        if (_reconnectTimer) {
+          clearTimeout(_reconnectTimer);
+          _reconnectTimer = null;
+        }
+      };
+
+      _ws.onmessage = ({ data }) => {
+        try {
+          let msg = JSON.parse(data);
+          let method = msg.method;
+          let params = msg.params || {};
+          if (method === 'create') {
+            let node = params.node;
+            let createOpts = params.options || {};
+            let parentId = params.parentId;
+            let targetSelector = params.targetSelector || params.target;
+
+            let instance = controller.create(node, createOpts);
+
+            let doc = connectOptions.document || options.document || (typeof globalThis.document !== 'undefined' ? globalThis.document : null);
+            if (parentId) {
+              let parentInst = instances.get(parentId);
+              if (parentInst && parentInst.element) {
+                parentInst.element.append(instance.element);
+              }
+            } else if (targetSelector && doc) {
+              let targetEl = typeof targetSelector === 'string'
+                ? doc.querySelector(targetSelector)
+                : targetSelector;
+              if (targetEl && typeof targetEl.append === 'function') {
+                targetEl.append(instance.element);
+              } else if (targetEl && typeof targetEl.appendChild === 'function') {
+                targetEl.appendChild(instance.element);
+              }
+            } else if (doc && doc.body) {
+              if (typeof doc.body.append === 'function') {
+                doc.body.append(instance.element);
+              } else if (typeof doc.body.appendChild === 'function') {
+                doc.body.appendChild(instance.element);
+              }
+            }
+          } else if (method === 'update') {
+            controller.update(params.id, params.state);
+          } else if (method === 'destroy') {
+            controller.destroy(params.id, params.options);
+          } else if (method === 'clear') {
+            controller.clear(params.options);
+          } else if (method === 'layout') {
+            let layoutTarget = connectOptions.root || options.root || null;
+            applyRuntimeLayoutAction(layoutTarget, params.action, params.options);
+          }
+        } catch (err) {
+          console.error('[runtimeController] parse message error:', err);
+        }
+      };
+
+      _ws.onclose = () => {
+        _ws = null;
+        if (!_disconnectedByUser && connectOptions.reconnectMs !== 0) {
+          let delay = connectOptions.reconnectMs || 2000;
+          _reconnectTimer = setTimeout(() => controller.connect(_wsUrl, connectOptions), delay);
+        }
+      };
+
+      _ws.onerror = () => {};
+
+      if (!_commandHandler) {
+        let root = connectOptions.root || options.root || (typeof globalThis.document !== 'undefined' ? globalThis.document : null);
+        if (root && root.addEventListener) {
+          _listenerTarget = root;
+          _commandHandler = (event) => {
+            let { command, args } = event.detail || {};
+            let OPEN = NativeWebSocket.OPEN !== undefined ? NativeWebSocket.OPEN : 1;
+            if (_ws && _ws.readyState === OPEN) {
+              try {
+                _ws.send(JSON.stringify({
+                  method: 'command',
+                  params: { command, args },
+                }));
+              } catch (err) {
+                console.error('[runtimeController] failed to send command:', err);
+              }
+            }
+          };
+          _listenerTarget.addEventListener('webmcp-command', _commandHandler);
+        }
+      }
+    },
+    disconnect() {
+      _disconnectedByUser = true;
+      if (_reconnectTimer) {
+        clearTimeout(_reconnectTimer);
+        _reconnectTimer = null;
+      }
+      if (_ws) {
+        _ws.close();
+        _ws = null;
+      }
+      if (_listenerTarget && _listenerTarget.removeEventListener && _commandHandler) {
+        _listenerTarget.removeEventListener('webmcp-command', _commandHandler);
+        _commandHandler = null;
+        _listenerTarget = null;
+      }
+    }
   };
+
+  return controller;
 }
 
 export function applyRuntimeLayoutAction(target, action = {}, options = {}) {

@@ -178,6 +178,7 @@ export async function cmdDiscover(options = {}) {
         outputs: (d.driver.outputs || []).map((out) => ({ name: out.name, type: out.type, label: out.label })),
         description: d.driver.description,
         params: Object.entries(d.driver.params || {}).map(([name, p]) => ({ name, type: p.type, required: p.required, default: p.default })),
+        agent: d.driver.agent || null,
       })),
       menu: menu.map((group) => ({
         category: group.category,

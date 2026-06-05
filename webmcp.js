@@ -59,3 +59,13 @@ export async function registerWebMcpTool(options, target = globalThis.document) 
 
   return { nativeActive, descriptor, unregister };
 }
+
+export function triggerWebMcpCommand(element, command, args = {}) {
+  if (!element || !command) return;
+  element.dispatchEvent(new CustomEvent('webmcp-command', {
+    bubbles: true,
+    composed: true,
+    detail: { command, args },
+  }));
+}
+
