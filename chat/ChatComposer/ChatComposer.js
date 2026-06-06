@@ -159,6 +159,7 @@ export class ChatComposer extends Symbiote {
         : currentState === 'transcribing'
           ? 'cancel'
           : 'start';
+      if (action === 'start') this._captureLocalVoiceVisibilitySnapshot();
       let detail = {
         action,
         currentState,
@@ -168,14 +169,21 @@ export class ChatComposer extends Symbiote {
       };
 
       let event = emitCancelable(this, 'chat-composer-voice-input', detail);
-      if (event.defaultPrevented) return;
-      if (!this._emitVoiceCaptureIntents(action, detail, 'voice-input')) return;
+      if (event.defaultPrevented) {
+        this._releaseLocalVoiceVisibilitySnapshot();
+        return;
+      }
+      if (!this._emitVoiceCaptureIntents(action, detail, 'voice-input')) {
+        this._releaseLocalVoiceVisibilitySnapshot();
+        return;
+      }
       this._handleDefaultVoiceInput(action);
     },
 
     onWakeListen: () => {
       let active = Boolean(this._voiceControls?.wakeListen?.active);
       let action = active ? 'stop' : 'start';
+      if (action === 'start') this._captureLocalVoiceVisibilitySnapshot();
       let detail = {
         action,
         currentState: active ? 'listening' : 'idle',
@@ -185,8 +193,14 @@ export class ChatComposer extends Symbiote {
       };
 
       let event = emitCancelable(this, 'chat-composer-wake-listen', detail);
-      if (event.defaultPrevented) return;
-      if (!this._emitVoiceCaptureIntents(action, detail, 'wake-listening')) return;
+      if (event.defaultPrevented) {
+        this._releaseLocalVoiceVisibilitySnapshot();
+        return;
+      }
+      if (!this._emitVoiceCaptureIntents(action, detail, 'wake-listening')) {
+        this._releaseLocalVoiceVisibilitySnapshot();
+        return;
+      }
       this._handleDefaultWakeListen(action);
     },
 
@@ -464,6 +478,20 @@ export class ChatComposer extends Symbiote {
     return !recorderEvent.defaultPrevented;
   }
 
+  _captureLocalVoiceVisibilitySnapshot() {
+    if (this._localVoiceVisibility) return;
+    this._localVoiceVisibility = {
+      input: this._voiceControls?.input?.visible,
+      response: this._voiceControls?.response?.visible,
+      command: this._voiceControls?.command?.visible,
+      language: this._voiceControls?.language?.visible,
+    };
+  }
+
+  _releaseLocalVoiceVisibilitySnapshot() {
+    if (!this._localVoiceControlsManaged) this._localVoiceVisibility = null;
+  }
+
   async _handleDefaultVoiceInput(action) {
     try {
       if (
@@ -481,6 +509,7 @@ export class ChatComposer extends Symbiote {
           permission = await runtime.requestPermission();
         }
         if (permission !== 'granted') {
+          this._releaseLocalVoiceVisibilitySnapshot();
           this.setVoicePreview({
             mode: 'result',
             status: 'Permission denied',
@@ -864,13 +893,8 @@ export class ChatComposer extends Symbiote {
     let isActive = isManualVoice || isWakeVoice;
 
     if (isActive && !this._localVoiceControlsManaged) {
+      this._captureLocalVoiceVisibilitySnapshot();
       this._localVoiceControlsManaged = true;
-      this._localVoiceVisibility = {
-        input: this._voiceControls?.input?.visible,
-        response: this._voiceControls?.response?.visible,
-        command: this._voiceControls?.command?.visible,
-        language: this._voiceControls?.language?.visible,
-      };
     }
 
     if (!this._voiceControls) this._voiceControls = {};
@@ -910,7 +934,7 @@ export class ChatComposer extends Symbiote {
         mode: this._voiceCommandLocale(),
         options: this._voiceControls.language?.options || this._voiceLanguageOptions(),
       };
-    } else if (this._localVoiceControlsManaged) {
+    } else if (this._localVoiceControlsManaged || this._localVoiceVisibility) {
       let previous = this._localVoiceVisibility || {};
       for (let key of ['input', 'response', 'command', 'language']) {
         if (!this._voiceControls[key]) continue;

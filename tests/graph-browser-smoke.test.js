@@ -1128,6 +1128,14 @@ async function evaluateComposerVoiceRuntimeSmoke(page) {
       };
       composer.ref?.wakeListenBtn?.click();
       await settle();
+      const wakeStoppedControls = {
+        wakeActive: Boolean(composer.ref?.wakeListenBtn?.classList.contains('listening')),
+        commandText: composer.ref?.wakeCommandText?.textContent?.trim() || '',
+        responseVisible: Boolean(composer.ref?.voiceResponseBtn && !composer.ref.voiceResponseBtn.hidden),
+        commandVisible: Boolean(composer.ref?.voiceCommandBtn && !composer.ref.voiceCommandBtn.hidden),
+        languageVisible: Boolean(composer.ref?.voiceLanguageBtn && !composer.ref.voiceLanguageBtn.hidden),
+        previewHidden: Boolean(composer.ref?.voicePreview?.hidden),
+      };
 
       return {
         activeControls,
@@ -1135,6 +1143,7 @@ async function evaluateComposerVoiceRuntimeSmoke(page) {
         wakeMatched,
         wakeDictation,
         wakeCancel,
+        wakeStoppedControls,
         recognition: instances.map((item) => ({
           lang: item.lang,
           startLang: item.startLang,
@@ -1490,9 +1499,13 @@ async function evaluateChatWorkspaceEventFlow(page) {
       };
 
       writeInput('Complete this mock stream');
-      sendButton?.click();
+      composer.querySelector('sn-button.btn-send')?.click();
       await pause(1800);
       await settle();
+      for (let i = 0; i < 8 && workspace.dataset.backgroundState !== 'done'; i += 1) {
+        await pause(250);
+        await settle();
+      }
 
       const messageItems = transcript.$?.messageItems || [];
       const messageDomState = {
@@ -1509,6 +1522,24 @@ async function evaluateChatWorkspaceEventFlow(page) {
       const sidebarActive = [...sidebar.querySelectorAll('chat-sidebar-item, chat-sidebar-sub-item')]
         .find((item) => item.hasAttribute('data-active'))?.$?.id || '';
       const footerProvider = composer.querySelector('select[data-footer-control-id="provider"]')?.value || '';
+      const finalState = {
+        sending: Boolean(composer.$?.isSending),
+        background: workspace.dataset.backgroundState || '',
+        messageCount: messageItems.length,
+        messageRoles: messageItems.map((item) => item.role),
+        messageDomState,
+        lastText: transcript.textContent.trim().replace(/\s+/g, ' ').slice(-240),
+      };
+
+      wakeButton?.click();
+      await settle();
+      const voiceStoppedState = {
+        wakeActive: wakeButton?.classList.contains('listening') || false,
+        responseVisible: Boolean(responseButton && !responseButton.hidden),
+        commandVisible: Boolean(composer.querySelector('button.btn-voice-command') && !composer.querySelector('button.btn-voice-command').hidden),
+        languageVisible: Boolean(composer.querySelector('button.btn-voice-language') && !composer.querySelector('button.btn-voice-language').hidden),
+        previewHidden: Boolean(composer.getVoicePreviewElement?.()?.hidden),
+      };
 
       return {
         error: undefined,
@@ -1522,17 +1553,11 @@ async function evaluateChatWorkspaceEventFlow(page) {
         webmcpComposerState,
         voicePreview,
         voiceState,
+        voiceStoppedState,
         spokenResponses,
         streamingState,
         stoppedState,
-        finalState: {
-          sending: Boolean(composer.$?.isSending),
-          background: workspace.dataset.backgroundState || '',
-          messageCount: messageItems.length,
-          messageRoles: messageItems.map((item) => item.role),
-          messageDomState,
-          lastText: transcript.textContent.trim().replace(/\s+/g, ' ').slice(-240),
-        },
+        finalState,
         counts: {
           panels: document.querySelectorAll('cascade-chat-panel').length,
           workspaces: document.querySelectorAll('chat-workspace').length,
@@ -1941,6 +1966,11 @@ test('showcase chat workspace exercises host event flow through library primitiv
     assert.equal(flow.voicePreview, '');
     assert.equal(flow.voiceState.wakeActive, true);
     assert.equal(flow.voiceState.responseActive, true);
+    assert.equal(flow.voiceStoppedState.wakeActive, false);
+    assert.equal(flow.voiceStoppedState.responseVisible, false);
+    assert.equal(flow.voiceStoppedState.commandVisible, false);
+    assert.equal(flow.voiceStoppedState.languageVisible, false);
+    assert.equal(flow.voiceStoppedState.previewHidden, true);
     assert.equal(flow.streamingState.sending, true);
     assert.match(flow.streamingState.background, /streaming|thinking|tool|responding/);
     assert.match(flow.streamingState.liveStatus, /Planning|Running|Writing/);
@@ -2171,6 +2201,12 @@ test('cascade lab chat composer keeps voice controls inside the input surface re
     assert.equal(voiceRuntimeSmoke.wakeCancel.wakeActive, true);
     assert.equal(voiceRuntimeSmoke.wakeCancel.previewHidden, true);
     assert.equal(voiceRuntimeSmoke.wakeCancel.inputState, 'idle');
+    assert.equal(voiceRuntimeSmoke.wakeStoppedControls.wakeActive, false);
+    assert.equal(voiceRuntimeSmoke.wakeStoppedControls.commandText, '');
+    assert.equal(voiceRuntimeSmoke.wakeStoppedControls.responseVisible, false);
+    assert.equal(voiceRuntimeSmoke.wakeStoppedControls.commandVisible, false);
+    assert.equal(voiceRuntimeSmoke.wakeStoppedControls.languageVisible, false);
+    assert.equal(voiceRuntimeSmoke.wakeStoppedControls.previewHidden, true);
     const recognitionLanguages = voiceRuntimeSmoke.recognition.map((item) => item.startLang);
     assert.deepEqual(recognitionLanguages.slice(0, 2), ['ru-RU', 'es-ES']);
     assert.ok(['ru-RU', 'es-ES', 'en-US'].includes(recognitionLanguages[2]));
