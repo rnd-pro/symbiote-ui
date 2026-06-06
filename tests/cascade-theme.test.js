@@ -1626,7 +1626,7 @@ test('chat composer exposes reusable voice controls and agent-facing metadata', 
   assert.match(composer, /class="btn-voice-command"/);
   assert.match(composer, /class="btn-voice-language"/);
   assert.match(composer, /class="composer-actions"/);
-  assert.match(composer, /<\/div>\s*<sn-button class="btn-send"/);
+  assert.match(composer, /<\/div>\s*<button class="btn-mic"[\s\S]*<sn-button class="btn-send"/);
   assert.match(styles, /\.btn-mic\[hidden\]/);
   assert.match(styles, /\.btn-wake-listen\[hidden\]/);
   assert.match(styles, /\.btn-voice-command\[disabled\]/);
@@ -1646,13 +1646,15 @@ test('chat composer exposes reusable voice controls and agent-facing metadata', 
   assert.match(styles, /\.composer-actions[\s\S]*align-self: end/);
   assert.match(styles, /\.composer-actions[\s\S]*flex-wrap: nowrap/);
   assert.match(styles, /\.composer-actions[\s\S]*max-width: min\(54cqi/);
-  assert.match(styles, /\.composer-body > sn-button\.btn-send[\s\S]*grid-column: 3/);
+  assert.match(styles, /\.btn-mic[\s\S]*grid-column: 3/);
+  assert.match(styles, /\.composer-body > sn-button\.btn-send[\s\S]*grid-column: 4/);
   assert.match(styles, /\.composer-body > sn-button\.btn-send[\s\S]*grid-row: 1/);
   assert.match(styles, /flex-wrap: wrap/);
   assert.match(styles, /@container composer-body \(width <= 960px\)/);
   assert.match(styles, /container: chat-composer \/ inline-size/);
   assert.match(styles, /@container chat-composer \(width <= 480px\)[\s\S]*\.composer-actions[\s\S]*flex-wrap: wrap/);
-  assert.match(styles, /@container chat-composer \(width <= 480px\)[\s\S]*\.composer-body > sn-button\.btn-send[\s\S]*grid-column: 2/);
+  assert.match(styles, /@container chat-composer \(width <= 480px\)[\s\S]*\.btn-mic[\s\S]*grid-column: 2/);
+  assert.match(styles, /@container chat-composer \(width <= 480px\)[\s\S]*\.composer-body > sn-button\.btn-send[\s\S]*grid-column: 3/);
   assert.match(styles, /@container composer-body \(width <= 340px\)/);
   assert.match(styles, /36cqi/);
   assert.match(styles, /38cqi/);
@@ -1723,8 +1725,14 @@ test('chat composer exposes reusable voice controls and agent-facing metadata', 
     eventByName.get('chat-composer-transcription-intent').detail.map((item) => item.name),
     ['action', 'source', 'mode', 'text']
   );
+  assert.deepEqual(
+    eventByName.get('chat-composer-audio-captured').detail.map((item) => item.name),
+    ['blob', 'mimeType']
+  );
   let voiceFlowTool = component.contract.webmcp.tools.find((tool) => tool.name === 'chat_composer_voice_flow');
   assert.ok(voiceFlowTool);
+  assert.match(voiceFlowTool.description, /VoiceRuntime/);
+  assert.doesNotMatch(voiceFlowTool.description, /component emits intents only/);
   assert.deepEqual(voiceFlowTool.inputSchema.properties.flow.enum, ['permission', 'recorder', 'transcription']);
   assert.deepEqual(voiceFlowTool.inputSchema.properties.permission.enum, ['microphone']);
   let customCatalog = JSON.parse(customElements);
@@ -1739,6 +1747,11 @@ test('chat composer exposes reusable voice controls and agent-facing metadata', 
     customComposer.events.find((event) => event.name === 'chat-composer-recorder-intent').detail.map((item) => item.name),
     ['action', 'currentState', 'mode', 'permission', 'source']
   );
+  assert.ok(customComposer.events.some((event) => event.name === 'chat-composer-audio-captured'));
+  let customVoiceFlowTool = customComposer.metadata.contract.webmcp.tools
+    .find((tool) => tool.name === 'chat_composer_voice_flow');
+  assert.match(customVoiceFlowTool.description, /VoiceRuntime/);
+  assert.doesNotMatch(customVoiceFlowTool.description, /component emits intents only/);
 });
 
 test('chat workspace composes reusable chat surfaces and exposes host intent contract', async () => {

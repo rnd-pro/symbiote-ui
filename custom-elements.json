@@ -11478,7 +11478,7 @@
             {
               "kind": "method",
               "name": "setWorkspaceState",
-              "description": "Applies host-owned chat workspace state without owning transport, routes, persistence, recorder, or API calls.",
+              "description": "Applies host-owned chat workspace state without owning transport, routes, persistence, or API calls.",
               "type": {
                 "text": "function"
               }
@@ -11526,7 +11526,7 @@
             {
               "kind": "method",
               "name": "setVoiceControls",
-              "description": "Sets visible voice control state while leaving recorder and transcription ownership to the host.",
+              "description": "Sets visible voice control state while hosts may override or allow browser VoiceRuntime behavior.",
               "type": {
                 "text": "function"
               }
@@ -11534,7 +11534,7 @@
             {
               "kind": "method",
               "name": "setVoicePreview",
-              "description": "Shows a host-owned voice transcription preview.",
+              "description": "Shows a voice transcription preview supplied by the host or browser VoiceRuntime.",
               "type": {
                 "text": "function"
               }
@@ -11542,7 +11542,7 @@
             {
               "kind": "method",
               "name": "clearVoicePreview",
-              "description": "Clears the host-owned voice transcription preview.",
+              "description": "Clears the voice transcription preview.",
               "type": {
                 "text": "function"
               }
@@ -11677,7 +11677,7 @@
             },
             {
               "name": "chat-workspace-voice-intent",
-              "description": "Routes host-owned voice permission, recorder, transcription, wake, response, command, language, and preview intents from the composed composer."
+              "description": "Routes cancelable voice permission, recorder, transcription, raw audio capture, wake, response, command, language, and preview intents from the composed composer while preserving host override semantics."
             },
             {
               "name": "chat-workspace-footer-intent",
@@ -11806,7 +11806,7 @@
                 {
                   "name": "setWorkspaceState",
                   "type": "function",
-                  "description": "Applies host-owned chat workspace state without owning transport, routes, persistence, recorder, or API calls."
+                  "description": "Applies host-owned chat workspace state without owning transport, routes, persistence, or API calls."
                 },
                 {
                   "name": "setChats",
@@ -11836,17 +11836,17 @@
                 {
                   "name": "setVoiceControls",
                   "type": "function",
-                  "description": "Sets visible voice control state while leaving recorder and transcription ownership to the host."
+                  "description": "Sets visible voice control state while hosts may override or allow browser VoiceRuntime behavior."
                 },
                 {
                   "name": "setVoicePreview",
                   "type": "function",
-                  "description": "Shows a host-owned voice transcription preview."
+                  "description": "Shows a voice transcription preview supplied by the host or browser VoiceRuntime."
                 },
                 {
                   "name": "clearVoicePreview",
                   "type": "function",
-                  "description": "Clears the host-owned voice transcription preview."
+                  "description": "Clears the voice transcription preview."
                 },
                 {
                   "name": "setLiveStatus",
@@ -11951,7 +11951,7 @@
                 },
                 {
                   "name": "chat-workspace-voice-intent",
-                  "description": "Routes host-owned voice permission, recorder, transcription, wake, response, command, language, and preview intents from the composed composer."
+                  "description": "Routes cancelable voice permission, recorder, transcription, raw audio capture, wake, response, command, language, and preview intents from the composed composer while preserving host override semantics."
                 },
                 {
                   "name": "chat-workspace-footer-intent",
@@ -13168,7 +13168,7 @@
               "type": {
                 "text": "function"
               },
-              "description": "Returns current voice preview text for host-owned transcription handling."
+              "description": "Returns current voice preview text for host or VoiceRuntime transcription handling."
             },
             {
               "kind": "method",
@@ -13203,7 +13203,7 @@
             },
             {
               "name": "chat-composer-voice-input",
-              "description": "Requests host-owned voice input capture.",
+              "description": "Cancelable voice input capture request; hosts can prevent default or allow browser VoiceRuntime fallback.",
               "detail": [
                 {
                   "name": "action",
@@ -13228,7 +13228,7 @@
             },
             {
               "name": "chat-composer-wake-listen",
-              "description": "Requests host-owned wake listening toggle.",
+              "description": "Cancelable wake listening request; hosts can prevent default or allow browser VoiceRuntime fallback.",
               "detail": [
                 {
                   "name": "action",
@@ -13257,21 +13257,21 @@
             },
             {
               "name": "chat-composer-voice-response-toggle",
-              "description": "Requests host-owned voice response toggle.",
+              "description": "Cancelable voice response toggle request.",
               "type": {
                 "text": "CustomEvent"
               }
             },
             {
               "name": "chat-composer-voice-command-toggle",
-              "description": "Requests host-owned voice command mode toggle.",
+              "description": "Cancelable voice command mode toggle request.",
               "type": {
                 "text": "CustomEvent"
               }
             },
             {
               "name": "chat-composer-voice-language-change",
-              "description": "Requests host-owned voice language mode change.",
+              "description": "Cancelable voice language mode change request.",
               "detail": [
                 {
                   "name": "mode",
@@ -13284,7 +13284,7 @@
             },
             {
               "name": "chat-composer-permission-intent",
-              "description": "Requests a host-owned permission flow such as microphone access; the component never calls browser permission APIs itself.",
+              "description": "Cancelable permission checking or request stage; hosts can prevent default or allow browser permission checks using navigator.permissions/getUserMedia.",
               "detail": [
                 {
                   "name": "action",
@@ -13309,7 +13309,7 @@
             },
             {
               "name": "chat-composer-recorder-intent",
-              "description": "Requests host-owned recorder start, stop, or cancel behavior without owning MediaRecorder or capture policy.",
+              "description": "Cancelable voice recorder lifecycle stage; hosts can prevent default or allow browser SpeechRecognition/MediaRecorder fallback.",
               "detail": [
                 {
                   "name": "action",
@@ -13338,7 +13338,7 @@
             },
             {
               "name": "chat-composer-transcription-intent",
-              "description": "Requests host-owned transcription preview approve, cancel, or send behavior.",
+              "description": "Cancelable transcription preview approve, cancel, or send stage; hosts can prevent default or allow standard VoiceRuntime preview behavior.",
               "detail": [
                 {
                   "name": "action",
@@ -13363,7 +13363,7 @@
             },
             {
               "name": "chat-composer-voice-approve",
-              "description": "Approves a recording preview.",
+              "description": "Cancelable approval request for the current voice preview.",
               "detail": [
                 {
                   "name": "action",
@@ -13388,7 +13388,7 @@
             },
             {
               "name": "chat-composer-voice-cancel",
-              "description": "Cancels a recording preview.",
+              "description": "Cancelable cancellation request for the current voice preview.",
               "detail": [
                 {
                   "name": "action",
@@ -13413,7 +13413,7 @@
             },
             {
               "name": "chat-composer-voice-send",
-              "description": "Requests sending a voice preview result.",
+              "description": "Cancelable request to send the current voice preview result.",
               "detail": [
                 {
                   "name": "action",
@@ -13429,6 +13429,22 @@
                 },
                 {
                   "name": "text",
+                  "type": "string"
+                }
+              ],
+              "type": {
+                "text": "CustomEvent"
+              }
+            },
+            {
+              "name": "chat-composer-audio-captured",
+              "description": "Emits a raw audio blob when browser media capture is available but speech recognition is not.",
+              "detail": [
+                {
+                  "name": "blob"
+                },
+                {
+                  "name": "mimeType",
                   "type": "string"
                 }
               ],
@@ -13789,7 +13805,7 @@
                 {
                   "name": "getVoicePreviewText",
                   "type": "function",
-                  "description": "Returns current voice preview text for host-owned transcription handling."
+                  "description": "Returns current voice preview text for host or VoiceRuntime transcription handling."
                 },
                 {
                   "name": "getVoiceControlElements",
@@ -13812,7 +13828,7 @@
                 },
                 {
                   "name": "chat-composer-voice-input",
-                  "description": "Requests host-owned voice input capture.",
+                  "description": "Cancelable voice input capture request; hosts can prevent default or allow browser VoiceRuntime fallback.",
                   "detail": [
                     {
                       "name": "action",
@@ -13834,7 +13850,7 @@
                 },
                 {
                   "name": "chat-composer-wake-listen",
-                  "description": "Requests host-owned wake listening toggle.",
+                  "description": "Cancelable wake listening request; hosts can prevent default or allow browser VoiceRuntime fallback.",
                   "detail": [
                     {
                       "name": "action",
@@ -13860,15 +13876,15 @@
                 },
                 {
                   "name": "chat-composer-voice-response-toggle",
-                  "description": "Requests host-owned voice response toggle."
+                  "description": "Cancelable voice response toggle request."
                 },
                 {
                   "name": "chat-composer-voice-command-toggle",
-                  "description": "Requests host-owned voice command mode toggle."
+                  "description": "Cancelable voice command mode toggle request."
                 },
                 {
                   "name": "chat-composer-voice-language-change",
-                  "description": "Requests host-owned voice language mode change.",
+                  "description": "Cancelable voice language mode change request.",
                   "detail": [
                     {
                       "name": "mode",
@@ -13878,7 +13894,7 @@
                 },
                 {
                   "name": "chat-composer-permission-intent",
-                  "description": "Requests a host-owned permission flow such as microphone access; the component never calls browser permission APIs itself.",
+                  "description": "Cancelable permission checking or request stage; hosts can prevent default or allow browser permission checks using navigator.permissions/getUserMedia.",
                   "detail": [
                     {
                       "name": "action",
@@ -13900,7 +13916,7 @@
                 },
                 {
                   "name": "chat-composer-recorder-intent",
-                  "description": "Requests host-owned recorder start, stop, or cancel behavior without owning MediaRecorder or capture policy.",
+                  "description": "Cancelable voice recorder lifecycle stage; hosts can prevent default or allow browser SpeechRecognition/MediaRecorder fallback.",
                   "detail": [
                     {
                       "name": "action",
@@ -13926,7 +13942,7 @@
                 },
                 {
                   "name": "chat-composer-transcription-intent",
-                  "description": "Requests host-owned transcription preview approve, cancel, or send behavior.",
+                  "description": "Cancelable transcription preview approve, cancel, or send stage; hosts can prevent default or allow standard VoiceRuntime preview behavior.",
                   "detail": [
                     {
                       "name": "action",
@@ -13948,7 +13964,7 @@
                 },
                 {
                   "name": "chat-composer-voice-approve",
-                  "description": "Approves a recording preview.",
+                  "description": "Cancelable approval request for the current voice preview.",
                   "detail": [
                     {
                       "name": "action",
@@ -13970,7 +13986,7 @@
                 },
                 {
                   "name": "chat-composer-voice-cancel",
-                  "description": "Cancels a recording preview.",
+                  "description": "Cancelable cancellation request for the current voice preview.",
                   "detail": [
                     {
                       "name": "action",
@@ -13992,7 +14008,7 @@
                 },
                 {
                   "name": "chat-composer-voice-send",
-                  "description": "Requests sending a voice preview result.",
+                  "description": "Cancelable request to send the current voice preview result.",
                   "detail": [
                     {
                       "name": "action",
@@ -14008,6 +14024,19 @@
                     },
                     {
                       "name": "text",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "name": "chat-composer-audio-captured",
+                  "description": "Emits a raw audio blob when browser media capture is available but speech recognition is not.",
+                  "detail": [
+                    {
+                      "name": "blob"
+                    },
+                    {
+                      "name": "mimeType",
                       "type": "string"
                     }
                   ]
@@ -14152,7 +14181,7 @@
                   },
                   {
                     "name": "chat_composer_voice_control",
-                    "description": "Request host-owned voice input, wake listening, response, command mode, language selection, or preview actions through the composer voice control surface.",
+                    "description": "Request voice input, wake listening, response, command mode, language selection, or preview actions through cancelable composer events; hosts can prevent defaults or let the browser VoiceRuntime handle local fallback.",
                     "inputSchema": {
                       "type": "object",
                       "additionalProperties": false,
@@ -14204,7 +14233,7 @@
                   },
                   {
                     "name": "chat_composer_voice_flow",
-                    "description": "Document or request host-owned permission, recorder, and transcription intents for composer voice flows. The component emits intents only; browser permissions, MediaRecorder, speech recognition, and transcription providers remain host-owned.",
+                    "description": "Document or request the interceptable permission, recorder, and transcription stages for composer voice flows. Hosts can prevent these intent events to own the flow; otherwise the browser VoiceRuntime may use native permissions, SpeechRecognition, or MediaRecorder fallback.",
                     "inputSchema": {
                       "type": "object",
                       "additionalProperties": false,

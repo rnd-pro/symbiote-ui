@@ -165,9 +165,12 @@ Expected views:
   chat, child audit/smoke chats, user request, thinking summary, tool card, and
   agent response.
 - Voice controls use `symbiote-ui/chat/voice-input-defaults.js` for shared
-  wake/send/cancel/delete/off command matching. Hosts still own microphone
-  permission, recorder lifecycle, speech recognition, transcription, and
-  persistence.
+  wake/send/cancel/delete/off command matching. The showcase demo implements
+  a functional local voice preview flow using the browser's native `VoiceRuntime`
+  when capability is detected. Hosts still own product-level permission configuration,
+  routing, persistence, and custom transcription adapters; if no host override is
+  provided, the library falls back to its default browser-level SpeechRecognition/MediaRecorder
+  capture flow, or a simulated mock flow if no microphone capability exists.
 - Runtime-created panel opened from a chat action.
 - Animated background controlled by cascade theme and motion state.
 - The `Chat` tab renders one full-size chat workspace. The right page-scoped

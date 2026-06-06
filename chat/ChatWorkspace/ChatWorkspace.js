@@ -203,10 +203,20 @@ export class ChatWorkspace extends Symbiote {
   _bindWorkspaceEvents() {
     let route = (sourceEvent, eventName, detailFactory = (event) => event.detail || {}) => {
       this.addEventListener(sourceEvent, (event) => {
-        emit(this, eventName, {
+        let detail = {
           ...detailFactory(event),
           sourceEvent,
+        };
+        let forwardedEvent = new CustomEvent(eventName, {
+          bubbles: true,
+          composed: true,
+          cancelable: event.cancelable,
+          detail,
         });
+        this.dispatchEvent(forwardedEvent);
+        if (forwardedEvent.defaultPrevented) {
+          event.preventDefault();
+        }
       });
     };
 
@@ -240,6 +250,7 @@ export class ChatWorkspace extends Symbiote {
       'chat-composer-permission-intent',
       'chat-composer-recorder-intent',
       'chat-composer-transcription-intent',
+      'chat-composer-audio-captured',
       'chat-composer-voice-approve',
       'chat-composer-voice-cancel',
       'chat-composer-voice-send',

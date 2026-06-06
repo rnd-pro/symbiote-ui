@@ -149,3 +149,27 @@ Agent-facing component descriptions should answer these questions:
 
 This keeps agents from assembling visually plausible but semantically wrong
 workspaces.
+
+## Voice Layer and Runtime Boundaries
+
+`symbiote-ui` includes a reusable browser-level voice runtime (`VoiceRuntime` in `chat/voice-runtime.js`, exported exclusively via `ui/index.js` to ensure the root package remains Node-safe) to provide built-in speech recognition and audio capture. Product-specific routing, auth, persistence, and irreversible permissions remain owned by the host app.
+
+The voice capability boundary operates through a cascade of cancelable intent events, allowing hosts to intercept intents or let the library fall back to native browser capabilities:
+
+### 1. Capability Detection
+Hosts and components inspect `VoiceRuntime.isAvailable` to check for browser audio capability, and `VoiceRuntime.hasSpeechRecognition` to determine if native Web Speech API recognition is supported.
+
+### 2. Permissions (`chat-composer-permission-intent`)
+When voice capture starts, the composer dispatches a cancelable `chat-composer-permission-intent` event.
+- If a host handles this event and calls `event.preventDefault()`, the host owns the permission check and notification flow.
+- If not prevented, the library queries browser permissions (`navigator.permissions.query`) and requests audio stream access (`navigator.mediaDevices.getUserMedia`) directly.
+
+### 3. Audio Recording and Speech Recognition (`chat-composer-recorder-intent`)
+The composer dispatches a cancelable `chat-composer-recorder-intent` event during start, stop, and cancel transitions.
+- If prevented, the host owns the recording lifecycle, transcription, and stream management.
+- If not prevented, the library falls back to browser-level capture. If native speech recognition is available, transcription updates are emitted in real-time. If only raw media capture is supported, the library records audio chunks and dispatches a `chat-composer-audio-captured` event with the resulting raw audio blob so the host can process or transcribe it.
+
+### 4. Transcription Preview and Send (`chat-composer-transcription-intent`)
+The composer dispatches a cancelable `chat-composer-transcription-intent` event when the user approves, cancels, or sends the current voice result.
+- If prevented, the host manages the transcription preview actions.
+- If not prevented, the library falls back to standard behavior (e.g. appending text to composer input, clearing preview states, or triggering standard message submit events).

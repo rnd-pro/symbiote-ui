@@ -13,7 +13,7 @@ chat-composer {
 .composer-body {
   container: composer-body / inline-size;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
   grid-template-rows: auto;
   align-items: stretch;
   align-content: end;
@@ -77,8 +77,14 @@ chat-composer {
   overflow: hidden;
 }
 
-.composer-body > sn-button.btn-send {
+.btn-mic {
   grid-column: 3;
+  grid-row: 1;
+  align-self: end;
+}
+
+.composer-body > sn-button.btn-send {
+  grid-column: 4;
   grid-row: 1;
   align-self: end;
   justify-self: end;
@@ -648,7 +654,7 @@ chat-composer.drag-over .composer-body {
 
 @container chat-composer (width <= 480px) {
   .composer-body {
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto auto;
     grid-template-rows: auto auto;
   }
 
@@ -661,8 +667,14 @@ chat-composer.drag-over .composer-body {
     overflow: visible;
   }
 
-  .composer-body > sn-button.btn-send {
+  .btn-mic {
     grid-column: 2;
+    grid-row: 1;
+    align-self: end;
+  }
+
+  .composer-body > sn-button.btn-send {
+    grid-column: 3;
     grid-row: 1;
   }
 

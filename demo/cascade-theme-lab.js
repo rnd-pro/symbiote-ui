@@ -35,6 +35,7 @@ import '../chat/ChatComposer/ChatComposer.js?v=voice-controls-final-8';
 import '../chat/ChatSidebarItem/ChatSidebarItem.js?v=voice-controls-final-8';
 import '../chat/ChatSidebar/ChatSidebar.js?v=voice-controls-final-8';
 import '../chat/ChatWorkspace/ChatWorkspace.js?v=cascade-demo-chat-workspace-1';
+import { VoiceRuntime } from '../chat/voice-runtime.js';
 import {
   defaultSendCommandPhrases,
   defaultVoiceActionCommandPhrases,
@@ -1908,6 +1909,78 @@ class CascadeChatPanel extends Symbiote {
 
   _handleWorkspaceVoiceIntent(event) {
     let sourceEvent = event.detail?.sourceEvent;
+
+    if (typeof VoiceRuntime !== 'undefined' && VoiceRuntime.isAvailable) {
+      if (sourceEvent === 'chat-composer-voice-input') {
+        let action = event.detail?.action || 'start';
+        this._recordHostEvent('voice-input', { action });
+        if (action === 'start') {
+          this._startBg();
+        } else if (action === 'stop') {
+          this._triggerBg(6200);
+          this._queueBgStop(6600);
+        } else if (action === 'cancel') {
+          this._stopBg();
+        }
+        return;
+      }
+
+      if (sourceEvent === 'chat-composer-wake-listen') {
+        let action = event.detail?.action || 'start';
+        this._recordHostEvent('wake-listen', { action });
+        if (action === 'start') {
+          this._startBg();
+        } else {
+          this._stopBg();
+        }
+        return;
+      }
+
+      if (sourceEvent === 'chat-composer-voice-response-toggle') {
+        this._recordHostEvent('voice-response-toggle');
+        return;
+      }
+
+      if (sourceEvent === 'chat-composer-voice-command-toggle') {
+        this._voiceCommandMode = !this._voiceCommandMode;
+        this._syncVoiceControls();
+        this._triggerBg(3600);
+        this._recordHostEvent('voice-command-toggle', { active: this._voiceCommandMode });
+        return;
+      }
+
+      if (sourceEvent === 'chat-composer-voice-language-change') {
+        let mode = event.detail?.mode || this._voiceLanguageMode;
+        this._voiceLanguageMode = ['ru', 'es', 'en'].includes(mode) ? mode : this._voiceLanguageMode;
+        this._syncVoiceControls();
+        this._triggerBg(2600);
+        this._recordHostEvent('voice-language-change', { mode: this._voiceLanguageMode });
+        return;
+      }
+
+      if (sourceEvent === 'chat-composer-voice-approve') {
+        this._recordHostEvent('voice-approve');
+        this._triggerBg(6200);
+        this._queueBgStop(6600);
+        return;
+      }
+
+      if (sourceEvent === 'chat-composer-voice-cancel') {
+        this._recordHostEvent('voice-cancel');
+        this._stopBg();
+        return;
+      }
+
+      if (sourceEvent === 'chat-composer-voice-send') {
+        let text = event.detail?.text || this._getComposer()?.getVoicePreviewText?.() || this._getComposer()?.$.value || 'Voice preview command';
+        this._recordHostEvent('voice-send', { text });
+        this._getComposer()?.clearVoicePreview?.();
+        this._startMockStream(text);
+        return;
+      }
+    }
+
+    // Otherwise fallback to simulated mock flow
     if (sourceEvent === 'chat-composer-voice-input' || sourceEvent === 'chat-composer-wake-listen') {
       let action = event.detail?.action || 'start';
       if (sourceEvent === 'chat-composer-voice-input') {

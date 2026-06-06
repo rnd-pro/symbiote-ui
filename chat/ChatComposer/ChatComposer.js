@@ -1,10 +1,24 @@
 import Symbiote, { html } from '@symbiotejs/symbiote';
 import '../../control/Button/Button.js';
 import { translate } from '../../locale/index.js';
+import { VoiceRuntime } from '../voice-runtime.js';
+import {
+  defaultWakeCommandPhrases,
+  defaultSendCommandPhrases,
+  defaultVoiceActionCommandPhrases,
+  wakeCommandCandidates,
+  matchVoiceCommandAtEnd,
+} from '../voice-input-defaults.js';
 import css from './ChatComposer.css.js';
 
 function emit(el, type, detail = {}) {
   el.dispatchEvent(new CustomEvent(type, { bubbles: true, composed: true, detail }));
+}
+
+function emitCancelable(el, type, detail = {}) {
+  let event = new CustomEvent(type, { bubbles: true, composed: true, cancelable: true, detail });
+  el.dispatchEvent(event);
+  return event;
 }
 
 function escapeHtml(value) {
@@ -152,69 +166,81 @@ export class ChatComposer extends Symbiote {
         permission: 'microphone',
         source: 'voice-input',
       };
-      if (action === 'start') {
-        emit(this, 'chat-composer-permission-intent', {
-          action: 'request',
-          permission: 'microphone',
-          reason: 'voice-input',
-          source: 'voice-input',
-        });
-      }
-      emit(this, 'chat-composer-recorder-intent', detail);
-      emit(this, 'chat-composer-voice-input', detail);
+
+      let event = emitCancelable(this, 'chat-composer-voice-input', detail);
+      if (event.defaultPrevented) return;
+      if (!this._emitVoiceCaptureIntents(action, detail, 'voice-input')) return;
+      this._handleDefaultVoiceInput(action);
     },
 
     onWakeListen: () => {
       let active = Boolean(this._voiceControls?.wakeListen?.active);
+      let action = active ? 'stop' : 'start';
       let detail = {
-        action: active ? 'stop' : 'start',
+        action,
         currentState: active ? 'listening' : 'idle',
         mode: 'wake-listen',
         permission: 'microphone',
         source: 'wake-listen',
       };
-      if (!active) {
-        emit(this, 'chat-composer-permission-intent', {
-          action: 'request',
-          permission: 'microphone',
-          reason: 'wake-listening',
-          source: 'wake-listen',
-        });
-      }
-      emit(this, 'chat-composer-recorder-intent', detail);
-      emit(this, 'chat-composer-wake-listen', detail);
+
+      let event = emitCancelable(this, 'chat-composer-wake-listen', detail);
+      if (event.defaultPrevented) return;
+      if (!this._emitVoiceCaptureIntents(action, detail, 'wake-listening')) return;
+      this._handleDefaultWakeListen(action);
     },
 
     onVoiceResponse: () => {
-      emit(this, 'chat-composer-voice-response-toggle');
+      emitCancelable(this, 'chat-composer-voice-response-toggle');
     },
 
     onVoiceCommand: () => {
-      emit(this, 'chat-composer-voice-command-toggle');
+      let event = emitCancelable(this, 'chat-composer-voice-command-toggle');
+      if (!event.defaultPrevented) {
+        this._voiceCommandMode = !this._voiceCommandMode;
+        this._syncLocalVoiceControls();
+      }
     },
 
     onVoiceLanguageClick: (event) => {
       let option = event.target?.closest?.('[data-voice-language]');
       if (!option) return;
-      emit(this, 'chat-composer-voice-language-change', { mode: option.dataset.voiceLanguage });
+      let mode = option.dataset.voiceLanguage;
+      let cevent = emitCancelable(this, 'chat-composer-voice-language-change', { mode });
+      if (!cevent.defaultPrevented) {
+        this.setVoiceLanguageState({ mode });
+        this._syncLocalVoiceControls();
+      }
     },
 
     onVoiceApprove: () => {
       let detail = this._getVoicePreviewIntentDetail('approve');
-      emit(this, 'chat-composer-transcription-intent', detail);
-      emit(this, 'chat-composer-voice-approve', detail);
+      let event = emitCancelable(this, 'chat-composer-voice-approve', detail);
+      if (event.defaultPrevented) return;
+      let intent = emitCancelable(this, 'chat-composer-transcription-intent', detail);
+      if (intent.defaultPrevented) return;
+      this._handleDefaultVoiceInput('stop');
     },
 
     onVoiceCancel: () => {
       let detail = this._getVoicePreviewIntentDetail('cancel');
-      emit(this, 'chat-composer-transcription-intent', detail);
-      emit(this, 'chat-composer-voice-cancel', detail);
+      let event = emitCancelable(this, 'chat-composer-voice-cancel', detail);
+      if (event.defaultPrevented) return;
+      let intent = emitCancelable(this, 'chat-composer-transcription-intent', detail);
+      if (intent.defaultPrevented) return;
+      this._handleDefaultVoiceInput('cancel');
     },
 
     onVoiceSend: () => {
       let detail = this._getVoicePreviewIntentDetail('send');
-      emit(this, 'chat-composer-transcription-intent', detail);
-      emit(this, 'chat-composer-voice-send', detail);
+      let event = emitCancelable(this, 'chat-composer-voice-send', detail);
+      if (event.defaultPrevented) return;
+      let intent = emitCancelable(this, 'chat-composer-transcription-intent', detail);
+      if (intent.defaultPrevented) return;
+      let text = this.getVoicePreviewText();
+      this.setValue(text);
+      this.clearVoicePreview();
+      emit(this, 'chat-composer-submit');
     },
 
     onParamChange: (event) => {
@@ -290,6 +316,334 @@ export class ChatComposer extends Symbiote {
       this._syncDisabledState();
       this._syncVoiceControls();
     });
+  }
+
+  disconnectedCallback() {
+    if (this._voiceRuntime) {
+      this._voiceRuntime.destroy();
+      this._voiceRuntime = null;
+    }
+    super.disconnectedCallback?.();
+  }
+
+  _voiceCommandLocale() {
+    let locale = this._voiceControls?.language?.mode || 'en';
+    return ['ru', 'es', 'en'].includes(locale) ? locale : 'en';
+  }
+
+  _getVoiceActionPhrases(action) {
+    let locale = this._voiceCommandLocale();
+    let phrases = defaultVoiceActionCommandPhrases();
+    if (action === 'send') {
+      let sendPhrases = defaultSendCommandPhrases();
+      return [sendPhrases[locale] || sendPhrases.en];
+    }
+    return phrases[action]?.[locale] || phrases[action]?.en || [];
+  }
+
+  _getWakeCommandPhrase() {
+    return wakeCommandCandidates(defaultWakeCommandPhrases(), this._voiceCommandLocale())[0] || 'Okay Agent';
+  }
+
+  _getVoiceCommandHints() {
+    let list = (action) => this._getVoiceActionPhrases(action).join(', ');
+    return [
+      `send: ${list('send')}`,
+      `cancel: ${list('cancel')}`,
+      `delete: ${list('delete')}`,
+      `off: ${list('off')}`,
+    ];
+  }
+
+  _extractVoiceCommandAction(text = '') {
+    let value = String(text || '').trim();
+    if (!value) return { matched: false, action: '', text: '' };
+    let candidates = ['send', 'cancel', 'delete', 'off'].flatMap((action) => (
+      this._getVoiceActionPhrases(action).map((phrase) => ({ action, phrase }))
+    ));
+    let command = matchVoiceCommandAtEnd(value, candidates);
+    if (!command.matched) return { matched: false, action: '', text: value };
+    if (command.action === 'send' && !command.text) return { matched: false, action: '', text: value };
+    return command;
+  }
+
+  _executeVoiceCommand(command) {
+    let runtime = this._getVoiceRuntime();
+    runtime.cancel();
+
+    if (command.action === 'send') {
+      this.setValue(command.text);
+      this.clearVoicePreview();
+      emit(this, 'chat-composer-submit');
+    } else if (command.action === 'delete') {
+      this.setValue('');
+      this.clearVoicePreview();
+    } else if (command.action === 'cancel') {
+      this.clearVoicePreview();
+    } else if (command.action === 'off') {
+      this._voiceCommandMode = false;
+      this.clearVoicePreview();
+    }
+
+    this._localVoiceState = 'idle';
+    this._localVoiceActiveMode = 'idle';
+    this._syncLocalVoiceControls();
+  }
+
+  _getVoiceRuntime() {
+    if (!this._voiceRuntime) {
+      this._voiceRuntime = new VoiceRuntime();
+      this._voiceRuntime.addEventListener('statechange', (e) => {
+        this._onVoiceRuntimeStateChange(e.detail.state);
+      });
+      this._voiceRuntime.addEventListener('speechresult', (e) => {
+        this._onVoiceRuntimeSpeechResult(e.detail.text, e.detail.isFinal);
+      });
+      this._voiceRuntime.addEventListener('audioblob', (e) => {
+        this._onVoiceRuntimeAudioBlob(e.detail.blob, e.detail.mimeType);
+      });
+      this._voiceRuntime.addEventListener('elapsedchange', (e) => {
+        this._onVoiceRuntimeElapsedChange(e.detail.elapsed);
+      });
+      this._voiceRuntime.addEventListener('error', (e) => {
+        this._onVoiceRuntimeError(e.detail.error);
+      });
+      this._voiceCommandMode = true;
+    }
+    return this._voiceRuntime;
+  }
+
+  _emitVoiceCaptureIntents(action, detail, reason) {
+    if (action === 'start') {
+      let permissionEvent = emitCancelable(this, 'chat-composer-permission-intent', {
+        action: 'request',
+        permission: 'microphone',
+        reason,
+        source: detail.source,
+      });
+      if (permissionEvent.defaultPrevented) return false;
+    }
+
+    let recorderEvent = emitCancelable(this, 'chat-composer-recorder-intent', detail);
+    return !recorderEvent.defaultPrevented;
+  }
+
+  async _handleDefaultVoiceInput(action) {
+    try {
+      let runtime = this._getVoiceRuntime();
+      if (action === 'start') {
+        let permission = await runtime.checkPermission();
+        if (permission === 'prompt') {
+          permission = await runtime.requestPermission();
+        }
+        if (permission !== 'granted') {
+          this.setVoicePreview({
+            mode: 'result',
+            status: 'Permission denied',
+            text: 'Microphone permission is required for voice input.',
+          });
+          return;
+        }
+
+        let locale = this._voiceCommandLocale();
+        this._localVoiceActiveMode = 'manual';
+        this._localVoiceState = 'listening';
+        this._syncLocalVoiceControls();
+
+        let mode = VoiceRuntime.hasSpeechRecognition ? 'speech' : 'audio';
+        await runtime.start({ language: locale, mode });
+      } else if (action === 'stop') {
+        this._localVoiceState = 'transcribing';
+        this._syncLocalVoiceControls();
+        let result = await runtime.stop();
+        this._handleVoiceResult(result);
+      } else if (action === 'cancel') {
+        runtime.cancel();
+        this._localVoiceState = 'idle';
+        this._localVoiceActiveMode = 'idle';
+        this._syncLocalVoiceControls();
+        this.clearVoicePreview();
+      }
+    } catch (err) {
+      this._onVoiceRuntimeError(err);
+    }
+  }
+
+  async _handleDefaultWakeListen(action) {
+    try {
+      let runtime = this._getVoiceRuntime();
+      if (action === 'start') {
+        let permission = await runtime.checkPermission();
+        if (permission === 'prompt') {
+          permission = await runtime.requestPermission();
+        }
+        if (permission !== 'granted') {
+          this.setVoicePreview({
+            mode: 'result',
+            status: 'Permission denied',
+            text: 'Microphone permission is required for wake listening.',
+          });
+          return;
+        }
+
+        let locale = this._voiceCommandLocale();
+        this._localVoiceActiveMode = 'wake';
+        this._localVoiceState = 'listening';
+        this._syncLocalVoiceControls();
+
+        await runtime.start({ language: locale, mode: 'speech' });
+      } else {
+        runtime.cancel();
+        this._localVoiceState = 'idle';
+        this._localVoiceActiveMode = 'idle';
+        this._syncLocalVoiceControls();
+        this.clearVoicePreview();
+      }
+    } catch (err) {
+      this._onVoiceRuntimeError(err);
+    }
+  }
+
+  _onVoiceRuntimeStateChange(state) {
+    if (state === 'idle' && this._localVoiceState === 'listening') {
+      this._localVoiceState = 'idle';
+      this._localVoiceActiveMode = 'idle';
+      this._syncLocalVoiceControls();
+    }
+  }
+
+  _onVoiceRuntimeSpeechResult(text, isFinal) {
+    this._localVoiceText = text;
+    if (this._localVoiceActiveMode === 'wake') {
+      let wakePhrases = this._voiceControls?.wakeListen?.commandText || this._getWakeCommandPhrase();
+      let locale = this._voiceCommandLocale();
+      let candidates = wakeCommandCandidates({ [locale]: wakePhrases }, locale);
+      let matchedWake = false;
+      for (let cand of candidates) {
+        if (text.toLowerCase().includes(cand.toLowerCase())) {
+          matchedWake = true;
+          break;
+        }
+      }
+      if (matchedWake) {
+        this.setVoicePreview({
+          mode: 'recording',
+          status: 'wake matched',
+          text: text,
+          elapsed: true,
+          commandHints: this._getVoiceCommandHints(),
+        });
+      } else {
+        this.setVoicePreview({
+          mode: 'recording',
+          status: 'listening',
+          text: text,
+          elapsed: true,
+        });
+      }
+    } else {
+      this.setVoicePreview({
+        mode: 'recording',
+        status: 'listening',
+        text: text,
+        elapsed: true,
+        commandHints: this._getVoiceCommandHints(),
+      });
+    }
+
+    if (this._voiceCommandMode) {
+      let command = this._extractVoiceCommandAction(text);
+      if (command.matched) {
+        this._executeVoiceCommand(command);
+      }
+    }
+  }
+
+  _onVoiceRuntimeAudioBlob(blob, mimeType) {
+    let event = new CustomEvent('chat-composer-audio-captured', {
+      bubbles: true,
+      composed: true,
+      detail: { blob, mimeType },
+    });
+    this.dispatchEvent(event);
+    this.setVoicePreview({
+      mode: 'result',
+      status: 'audio captured',
+      text: `Captured ${Math.round(blob.size / 1024)} KB audio blob (${mimeType}).`,
+      editable: false,
+    });
+  }
+
+  _onVoiceRuntimeElapsedChange(elapsed) {
+    this._localVoiceElapsed = elapsed;
+    let statusText = this._localVoiceState === 'listening' ? `listening (${elapsed}s)` : this._localVoiceState;
+    let preview = this.getVoicePreviewElement();
+    if (preview && !preview.hidden) {
+      let statusEl = this.ref.voicePreviewStatus;
+      if (statusEl) {
+        statusEl.textContent = statusText;
+      }
+    }
+  }
+
+  _onVoiceRuntimeError(err) {
+    this._localVoiceState = 'idle';
+    this._localVoiceActiveMode = 'idle';
+    this._syncLocalVoiceControls();
+    this.setVoicePreview({
+      mode: 'result',
+      status: 'Error',
+      text: err.message || String(err),
+    });
+  }
+
+  _handleVoiceResult(result) {
+    this._localVoiceState = 'idle';
+    this._localVoiceActiveMode = 'idle';
+    this._syncLocalVoiceControls();
+
+    if (result.cancelled) {
+      this.clearVoicePreview();
+      return;
+    }
+
+    let text = result.text || this._localVoiceText || '';
+    if (text) {
+      this.setVoicePreview({
+        mode: 'result',
+        status: 'transcribed',
+        text: text,
+        editable: true,
+      });
+    } else if (result.blob) {
+      // Audio blob already handled by audioblob event listener
+    } else {
+      this.setVoicePreview({
+        mode: 'result',
+        status: 'no speech detected',
+        text: '',
+      });
+    }
+  }
+
+  _syncLocalVoiceControls() {
+    let state = this._localVoiceState || 'idle';
+    let activeMode = this._localVoiceActiveMode || 'idle';
+    let isManualVoice = activeMode === 'manual' && ['listening', 'transcribing'].includes(state);
+    let isWakeVoice = activeMode === 'wake' && ['listening', 'transcribing', 'speaking'].includes(state);
+
+    this.setVoiceInputState(isManualVoice ? state : 'idle');
+    this.setWakeListenState({ active: isWakeVoice });
+
+    if (this._voiceControls) {
+      if (this._voiceControls.input) {
+        this._voiceControls.input.state = isManualVoice ? state : 'idle';
+      }
+      if (this._voiceControls.wakeListen) {
+        this._voiceControls.wakeListen.active = isWakeVoice;
+      }
+    }
+    this._syncVoiceControls();
   }
 
   getInputElement() {
@@ -639,10 +993,10 @@ ChatComposer.template = html`
         <span class="voice-command-button-text" ref="voiceCommandText"></span>
       </button>
       <button class="btn-voice-language" ref="voiceLanguageBtn" type="button" title="Voice language" hidden ${{ onclick: 'onVoiceLanguageClick' }}></button>
-      <button class="btn-mic" ref="voiceInputBtn" type="button" title="Voice input" hidden ${{ onclick: 'onVoiceInput' }}>
-        <span class="material-symbols-outlined" ref="voiceInputIcon">mic</span>
-      </button>
     </div>
+    <button class="btn-mic" ref="voiceInputBtn" type="button" title="Voice input" hidden ${{ onclick: 'onVoiceInput' }}>
+      <span class="material-symbols-outlined" ref="voiceInputIcon">mic</span>
+    </button>
     <sn-button class="btn-send" ref="btnSend" variant="icon" ${{ onclick: 'onSend' }}>
       <span class="material-symbols-outlined" ref="sendIcon">arrow_upward</span>
     </sn-button>

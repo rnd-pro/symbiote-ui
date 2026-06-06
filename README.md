@@ -163,10 +163,19 @@ and storage.
 Use `setFooterControls()` for structured provider/model/agent/resource/settings
 controls; `chat-composer-footer-control` and
 `chat-composer-footer-control-change` report product-neutral intents back to the
-host. Voice controls emit `chat-composer-permission-intent`,
-`chat-composer-recorder-intent`, and `chat-composer-transcription-intent` so
-hosts can own microphone permission, recorder lifecycle, and transcription
-providers without those policies leaking into the component. Use
+host. Voice controls emit cancelable primary events and granular
+`chat-composer-permission-intent`, `chat-composer-recorder-intent`, and
+`chat-composer-transcription-intent` stages so hosts can override microphone
+permission, recorder lifecycle, and transcription providers without those
+policies leaking into the component. If the host does not call
+`event.preventDefault()`, the library falls back to its built-in browser-level
+voice runtime (`VoiceRuntime` in `chat/voice-runtime.js`, exported via
+`ui/index.js` and NOT the root entry point to remain Node-safe). `VoiceRuntime`
+manages capability detection, checks/requests permissions through native browser
+APIs, and captures/transcribes input using native Web Speech Recognition. If
+SpeechRecognition is unsupported but recording is active, it records audio
+chunks and dispatches a `chat-composer-audio-captured` event with the resulting
+raw audio blob so the host can process or transcribe it. Use
 `symbiote-ui/chat/voice-input-defaults.js` for shared wake/send/cancel/delete/off
 phrases, command parsing, and matching when hosts need Agent Portal-compatible
 voice command behavior. `setFooterHtml()`

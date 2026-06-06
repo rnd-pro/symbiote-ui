@@ -824,7 +824,7 @@ async function evaluateComposerSmoke(page, width = 0) {
       const textarea = body.querySelector('textarea');
       const actions = body.querySelector('.composer-actions');
       const send = body.querySelector('sn-button.btn-send');
-      const readControls = () => [...body.querySelectorAll('.composer-actions button, sn-button.btn-send')]
+      const readControls = () => [...body.querySelectorAll('.composer-actions button, .btn-mic, sn-button.btn-send')]
         .map((el) => {
           const box = readBox(el);
           return {
@@ -1598,6 +1598,64 @@ test('showcase chat workspace exercises host event flow through library primitiv
       'chat workspace event flow page open'
     );
     await setPageViewport(page, { width: 1100, height: 760 });
+    await page.send('Runtime.evaluate', {
+      expression: String.raw`
+        (() => {
+          if (navigator.permissions) {
+            navigator.permissions.query = async (descriptor) => {
+              if (descriptor.name === 'microphone') {
+                return { state: 'granted' };
+              }
+              return { state: 'denied' };
+            };
+          }
+          if (navigator.mediaDevices) {
+            navigator.mediaDevices.getUserMedia = async () => {
+              return {
+                getTracks() {
+                  return [{
+                    stop() {}
+                  }];
+                }
+              };
+            };
+          }
+          const mockSpeechRecognition = class {
+            constructor() {
+              this.lang = '';
+              this.continuous = false;
+              this.interimResults = false;
+            }
+            start() {
+              setTimeout(() => {
+                if (this.onstart) this.onstart();
+                setTimeout(() => {
+                  if (this.onresult) {
+                    this.onresult({
+                      resultIndex: 0,
+                      results: [
+                        Object.assign([
+                          { transcript: 'wake listening active' }
+                        ], { isFinal: true })
+                      ]
+                    });
+                  }
+                }, 100);
+              }, 50);
+            }
+            stop() {
+              if (this.onend) this.onend();
+            }
+            abort() {
+              if (this.onend) this.onend();
+            }
+          };
+          window.SpeechRecognition = mockSpeechRecognition;
+          window.webkitSpeechRecognition = mockSpeechRecognition;
+        })()
+      `,
+      awaitPromise: true,
+    });
     const flow = await evaluateChatWorkspaceEventFlow(page);
 
     assert.equal(flow.error, undefined, JSON.stringify(flow, null, 2));
