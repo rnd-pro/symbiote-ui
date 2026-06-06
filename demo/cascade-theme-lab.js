@@ -36,7 +36,7 @@ import '../canvas/CanvasGraph/CanvasGraph.js';
 import '../chat/ChatComposer/ChatComposer.js?v=voice-command-rule-icon';
 import '../chat/ChatSidebarItem/ChatSidebarItem.js?v=voice-controls-final-8';
 import '../chat/ChatSidebar/ChatSidebar.js?v=voice-controls-final-8';
-import '../chat/ChatWorkspace/ChatWorkspace.js?v=cascade-demo-chat-workspace-1';
+import '../chat/ChatWorkspace/ChatWorkspace.js?v=scroll-bottom-placement-1';
 import { VoiceRuntime } from '../chat/voice-runtime.js';
 import {
   defaultSendCommandPhrases,

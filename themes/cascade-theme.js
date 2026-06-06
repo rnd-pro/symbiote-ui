@@ -1145,7 +1145,7 @@ export function createCascadeTheme(options = {}) {
     '--sn-tree-panel-content-padding': densityToken(4),
     '--sn-chat-gap': densityToken(8),
     '--sn-chat-transcript-padding': `${densityToken(18)} ${densityToken(16)} ${densityToken(10)}`,
-    '--sn-chat-scroll-bottom': densityToken(82),
+    '--sn-chat-scroll-bottom': densityToken(18),
     '--sn-chat-message-padding': `${densityToken(12)} ${densityToken(16)}`,
     '--sn-chat-tool-padding': `${densityToken(8)} ${densityToken(12)}`,
     '--sn-chat-code-padding': densityToken(8),

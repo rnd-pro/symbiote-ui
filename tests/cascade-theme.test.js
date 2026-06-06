@@ -375,7 +375,7 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   assert.doesNotMatch(html, /100vh/);
   assert.doesNotMatch(html, /--sn-tabs-bg/);
   assert.match(html, /project-path="project-type workspaces \/ agent constructor"/);
-  assert.match(html, /voice-controls-final-8/);
+  assert.match(html, /scroll-bottom-placement-1/);
   assert.match(html, /<layout-sidebar id="lab-sidebar" slot="sidebar"/);
   assert.doesNotMatch(html, /agent-chat-rail/);
   assert.match(source, /createCollapsedAgentChatPanel/);

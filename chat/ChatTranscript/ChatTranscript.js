@@ -41,9 +41,13 @@ export class ChatTranscript extends Symbiote {
   getScrollState() {
     let container = this.getScrollContainer();
     if (!container) return { hasOverflow: false, isAtBottom: true };
+    let distanceFromBottom = Math.max(0, container.scrollHeight - container.scrollTop - container.clientHeight);
+    let revealThreshold = Math.max(96, Math.round(container.clientHeight * 0.18));
     return {
       hasOverflow: container.scrollHeight > container.clientHeight + 12,
-      isAtBottom: container.scrollHeight - container.scrollTop <= container.clientHeight + 32,
+      isAtBottom: distanceFromBottom <= 32,
+      distanceFromBottom,
+      showScrollBottomButton: distanceFromBottom > revealThreshold,
     };
   }
 
@@ -62,7 +66,7 @@ export class ChatTranscript extends Symbiote {
     let btn = this.ref.scrollBottomBtn;
     if (!btn) return;
     let state = this.getScrollState();
-    btn.classList.toggle('visible', state.hasOverflow && !state.isAtBottom);
+    btn.classList.toggle('visible', state.hasOverflow && state.showScrollBottomButton);
   }
 
   findStatusBoard(cardIds = []) {

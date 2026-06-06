@@ -47,9 +47,9 @@ chat-message-item {
 }
 
 .scroll-bottom-btn {
-  position: absolute;
-  left: 50%;
-  bottom: var(--sn-chat-scroll-bottom);
+	  position: absolute;
+	  left: 50%;
+	  bottom: var(--sn-chat-scroll-bottom, 18px);
   z-index: 30;
   width: var(--sn-composer-send-size, 32px);
   height: var(--sn-composer-send-size, 32px);

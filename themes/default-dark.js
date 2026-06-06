@@ -587,7 +587,7 @@ const DEFAULT_DARK_TOKENS = {
   '--sn-chat-agent-message-bg': 'var(--sn-node-bg)',
   '--sn-chat-message-radius': '8px',
   '--sn-chat-transcript-padding': '24px 20px 12px',
-  '--sn-chat-scroll-bottom': '92px',
+  '--sn-chat-scroll-bottom': '18px',
   '--sn-chat-item-icon-color': 'currentColor',
   '--sn-chat-item-child-shadow': '2px 0 4px color-mix(in oklab, var(--sn-bg) 70%, transparent)',
   '--sn-chat-live-icon-size': '14px',

@@ -802,6 +802,7 @@ async function evaluateComposerSmoke(page, width = 0) {
           alignItems: style.alignItems,
           overflow: style.overflow,
           textOverflow: style.textOverflow,
+          visibility: style.visibility,
           whiteSpace: style.whiteSpace,
         };
       };
@@ -885,6 +886,38 @@ async function evaluateComposerSmoke(page, width = 0) {
       const messages = transcript?.querySelector('.chat-messages');
       const footer = composer.querySelector('.composer-footer');
       const contextBar = composer.querySelector('.chat-context-bar');
+      const scrollButton = transcript?.querySelector('.scroll-bottom-btn');
+      let scrollButtonState = null;
+      if (transcript && messages && scrollButton) {
+        transcript.scrollToBottom?.({ smooth: false });
+        await settle();
+        const atBottomState = transcript.getScrollState?.() || {};
+        const atBottomBox = readBox(scrollButton);
+        const atBottomVisible = scrollButton.classList.contains('visible') && isVisibleBox(atBottomBox);
+        if (atBottomState.hasOverflow) {
+          const distance = Math.max(180, Math.round(messages.clientHeight * 0.45));
+          messages.scrollTop = Math.max(0, messages.scrollHeight - messages.clientHeight - distance);
+          messages.dispatchEvent(new Event('scroll', { bubbles: true }));
+          transcript.updateScrollBottomButton?.();
+          await settle();
+        }
+        const scrolledState = transcript.getScrollState?.() || {};
+        const scrolledBox = readBox(scrollButton);
+        scrollButtonState = {
+          atBottom: {
+            hasOverflow: Boolean(atBottomState.hasOverflow),
+            distanceFromBottom: atBottomState.distanceFromBottom || 0,
+            visible: atBottomVisible,
+            box: atBottomBox,
+          },
+          scrolled: {
+            hasOverflow: Boolean(scrolledState.hasOverflow),
+            distanceFromBottom: scrolledState.distanceFromBottom || 0,
+            visible: scrollButton.classList.contains('visible') && isVisibleBox(scrolledBox),
+            box: scrolledBox,
+          },
+        };
+      }
       const footerControls = [...(footer?.querySelectorAll('.composer-footer-btn') || [])]
         .map((el) => ({
           text: el.textContent.trim().replace(/\\s+/g, ' '),
@@ -926,6 +959,7 @@ async function evaluateComposerSmoke(page, width = 0) {
           sidebar: readScroll(sidebar),
           transcript: readScroll(transcript),
           messages: readScroll(messages),
+          scrollButton: scrollButtonState,
           footer: readScroll(footer),
           contextBar: readScroll(contextBar),
           footerControls,
@@ -2277,6 +2311,15 @@ test('cascade lab chat composer keeps voice controls inside the input surface re
       assert.deepEqual(smoke.chat.chips.filter((chip) => chip.path.width > chip.box.width + 1), []);
       assert.deepEqual(smoke.chat.chips.filter((chip) => chip.path.overflow !== 'hidden'), []);
       assert.deepEqual(smoke.chat.chips.filter((chip) => chip.path.textOverflow !== 'ellipsis'), []);
+      if (smoke.chat.scrollButton?.atBottom?.hasOverflow) {
+        assert.equal(smoke.chat.scrollButton.atBottom.visible, false);
+        assert.equal(smoke.chat.scrollButton.scrolled.visible, true);
+        let transcript = smoke.chat.transcript;
+        let button = smoke.chat.scrollButton.scrolled.box;
+        let buttonCenter = button.y + button.height / 2;
+        assert.ok(buttonCenter > transcript.y + transcript.height * 0.62, JSON.stringify({ transcript, button }));
+        assert.ok(button.bottom <= transcript.bottom + 1, JSON.stringify({ transcript, button }));
+      }
       if (smoke.viewport.width <= 420) {
         assert.ok(smoke.chat.panel.width <= smoke.viewport.width + 1);
         assert.ok(smoke.composer.right <= smoke.chat.panel.right + 1);
