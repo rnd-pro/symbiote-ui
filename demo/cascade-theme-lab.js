@@ -1679,7 +1679,7 @@ class CascadeChatPanel extends Symbiote {
           ? ''
           : preserveComposerValue
             ? (composer?.$.value || '')
-            : 'Render this response inside the current layout отправить',
+            : '',
         attachedContext: [
           { key: 'theme', name: 'cascade-theme', title: 'Cascade theme contract', icon: 'palette' },
           { key: 'chat', name: 'chat-surface', title: 'Chat components', icon: 'forum' },
@@ -1712,11 +1712,11 @@ class CascadeChatPanel extends Symbiote {
         active: isWakeVoice,
         commandText: isWakeVoice ? this._getWakeCommandPhrase() : '',
       },
-      response: { visible: isWakeVoice, enabled: voiceAvailable, speaking: normalized === 'speaking' },
-      command: { visible: voiceModeActive, enabled: voiceAvailable, active: this._voiceCommandMode, text: 'Commands' },
+      response: { visible: isWakeVoice, enabled: isWakeVoice && voiceAvailable, speaking: normalized === 'speaking' },
+      command: { visible: voiceModeActive, enabled: voiceModeActive, active: this._voiceCommandMode, text: 'Commands' },
       language: {
         visible: voiceModeActive,
-        enabled: voiceAvailable,
+        enabled: voiceModeActive,
         mode: this._voiceLanguageMode,
         options: this._voiceLanguageOptions(),
       },
@@ -2228,7 +2228,7 @@ class CascadeChatPanel extends Symbiote {
     workspace.setMessages(this._getActiveMessages(), { smooth: false });
     workspace.setComposerState({
       placeholder: 'Ask the agent to inspect a package, run a smoke test, or build a layout...',
-      value: 'Render this response inside the current layout отправить',
+      value: '',
       attachedContext: [
         { key: 'theme', name: 'cascade-theme', title: 'Cascade theme contract', icon: 'palette' },
         { key: 'chat', name: 'chat-surface', title: 'Chat components', icon: 'forum' },

@@ -1021,11 +1021,12 @@ export class ChatComposer extends Symbiote {
     }
   }
 
-  _syncWakeListen({ visible = false, active = false, commandText = '' } = {}) {
+  _syncWakeListen({ visible = false, enabled = true, active = false, commandText = '' } = {}) {
     let btn = this.ref.wakeListenBtn;
     let text = this.ref.wakeCommandText;
     if (!btn) return;
     btn.hidden = !visible;
+    btn.disabled = Boolean(this.$.disabled) || !enabled;
     btn.classList.toggle('listening', Boolean(active));
     btn.classList.toggle('has-command', Boolean(commandText));
     if (text) text.textContent = commandText || '';
@@ -1040,19 +1041,21 @@ export class ChatComposer extends Symbiote {
     btn.classList.toggle('speaking', Boolean(speaking));
   }
 
-  _syncVoiceCommand({ visible = false, active = false, text = '' } = {}) {
+  _syncVoiceCommand({ visible = false, enabled = true, active = false, text = '' } = {}) {
     let btn = this.ref.voiceCommandBtn;
     let label = this.ref.voiceCommandText;
     if (!btn) return;
     btn.hidden = !visible;
+    btn.disabled = Boolean(this.$.disabled) || !enabled;
     btn.classList.toggle('active', Boolean(active));
     if (label) label.textContent = text || '';
   }
 
-  _syncVoiceLanguage({ visible = false, mode = 'auto', options } = {}) {
+  _syncVoiceLanguage({ visible = false, enabled = true, mode = 'auto', options } = {}) {
     let btn = this.ref.voiceLanguageBtn;
     if (!btn) return;
     btn.hidden = !visible;
+    btn.disabled = Boolean(this.$.disabled) || !enabled;
     let normalized = Array.isArray(options) && options.length
       ? options
       : [

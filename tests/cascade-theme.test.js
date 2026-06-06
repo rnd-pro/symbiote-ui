@@ -1621,6 +1621,9 @@ test('chat composer exposes reusable voice controls and agent-facing metadata', 
   assert.match(composer, /_formatVoiceElapsed/);
   assert.match(composer, /_localVoiceControlsManaged/);
   assert.match(composer, /emit\(this, 'chat-composer-submit'\)/);
+  assert.match(composer, /_syncVoiceCommand\(\{ visible = false, enabled = true/);
+  assert.match(composer, /_syncVoiceLanguage\(\{ visible = false, enabled = true/);
+  assert.match(composer, /btn\.disabled = Boolean\(this\.\$\.disabled\) \|\| !enabled/);
   assert.match(composer, /data-footer-control-id/);
   assert.match(composer, /footerControlId/);
   assert.match(composer, /normalizedState === 'listening'/);
@@ -1901,6 +1904,7 @@ test('cascade demo voice fallback confirms dictation directly into chat stream',
   assert.match(demoSource, /_getVoiceSubmissionText/);
   assert.match(demoSource, /sourceEvent === 'chat-composer-voice-approve'[\s\S]*_startMockStream\(text\)/);
   assert.doesNotMatch(demoSource, /sourceEvent === 'chat-composer-voice-approve'[\s\S]{0,180}_setVoiceDemoState\('transcribing'/);
+  assert.doesNotMatch(demoSource, /value: 'Render this response inside the current layout отправить'/);
 });
 
 test('static custom elements catalog carries agent-facing descriptions for chat surfaces', async () => {
