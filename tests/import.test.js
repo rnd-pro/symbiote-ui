@@ -60,6 +60,25 @@ test('chat nav tree helper builds product-neutral nested sidebar descriptors', a
   assert.equal(tree[1].metaLabel, 'MCP');
 });
 
+test('chat message model normalizes assistant role and attaches work summaries', async () => {
+  let { buildChatMessageItems, normalizeChatMessageRole } = await import('../chat/message-model.js');
+  let { items } = buildChatMessageItems([
+    { role: 'assistant', text: 'Rendered as an agent answer.' },
+    {
+      role: 'thinking',
+      done: true,
+      elapsed: 5,
+      meta: { mode: 'auto_edit', exitCode: 0, tools: 1, tokens: 240, cost: 0.001 },
+    },
+  ]);
+
+  assert.equal(normalizeChatMessageRole('assistant'), 'agent');
+  assert.equal(items.length, 1);
+  assert.equal(items[0].role, 'agent');
+  assert.match(items[0].workSummaryHtml, /work-summary-wrap/);
+  assert.match(items[0].workSummaryHtml, /content_copy/);
+});
+
 test('voice command helpers are importable without browser component registration', async () => {
   let helpers = await import('../chat/voice-input-defaults.js');
 

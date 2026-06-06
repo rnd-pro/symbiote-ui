@@ -473,6 +473,7 @@ UI_SCHEMAS['agent-intent-v1'] = {
         chroma: { type: 'number', minimum: 0, maximum: 100 },
         brightness: { type: 'number', minimum: 0, maximum: 100 },
         contrast: { type: 'number', minimum: 0, maximum: 100 },
+        pattern: { type: 'number', minimum: 0, maximum: 100 },
         density: { type: 'number', minimum: 75, maximum: 140 },
         outline: { type: 'number', minimum: 0, maximum: 100 },
         type: { type: 'number', minimum: 80, maximum: 130 },

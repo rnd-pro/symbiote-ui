@@ -478,6 +478,7 @@ export class ChatComposer extends Symbiote {
         this._localVoiceState = 'listening';
         this._localVoiceElapsed = 0;
         this._localVoiceText = '';
+        this._localVoiceWakeMatched = false;
         this._syncLocalVoiceControls();
         this._showLocalRecordingPreview('');
 
@@ -492,6 +493,7 @@ export class ChatComposer extends Symbiote {
         runtime.cancel();
         this._localVoiceState = 'idle';
         this._localVoiceActiveMode = 'idle';
+        this._localVoiceWakeMatched = false;
         this._syncLocalVoiceControls();
         this.clearVoicePreview();
       }
@@ -521,13 +523,16 @@ export class ChatComposer extends Symbiote {
         this._localVoiceState = 'listening';
         this._localVoiceElapsed = 0;
         this._localVoiceText = '';
+        this._localVoiceWakeMatched = false;
         this._syncLocalVoiceControls();
+        this._showLocalWakePreview('');
 
         await runtime.start({ language: this._voiceRecognitionLanguage(), mode: 'speech' });
       } else {
         runtime.cancel();
         this._localVoiceState = 'idle';
         this._localVoiceActiveMode = 'idle';
+        this._localVoiceWakeMatched = false;
         this._syncLocalVoiceControls();
         this.clearVoicePreview();
       }
@@ -558,6 +563,7 @@ export class ChatComposer extends Symbiote {
         }
       }
       if (matchedWake) {
+        this._localVoiceWakeMatched = true;
         this.setVoicePreview({
           mode: 'recording',
           status: 'wake matched',
@@ -566,12 +572,8 @@ export class ChatComposer extends Symbiote {
           commandHints: this._getVoiceCommandHints(),
         });
       } else {
-        this.setVoicePreview({
-          mode: 'recording',
-          status: 'listening',
-          text: text,
-          elapsed: true,
-        });
+        this._localVoiceWakeMatched = false;
+        this._showLocalWakePreview(text);
       }
     } else {
       this._showLocalRecordingPreview(text);
@@ -602,7 +604,11 @@ export class ChatComposer extends Symbiote {
 
   _onVoiceRuntimeElapsedChange(elapsed) {
     this._localVoiceElapsed = elapsed;
-    let statusText = this._localVoiceState === 'listening' ? this._formatVoiceElapsed(elapsed) : this._localVoiceState;
+    let statusText = this._localVoiceState === 'listening'
+      ? this._localVoiceActiveMode === 'wake'
+        ? (this._localVoiceWakeMatched ? 'wake matched' : `Listening for "${this._getWakeCommandPhrase()}"`)
+        : this._formatVoiceElapsed(elapsed)
+      : this._localVoiceState;
     let preview = this.getVoicePreviewElement();
     if (preview && !preview.hidden) {
       let statusEl = this.ref.voicePreviewStatus;
@@ -615,6 +621,7 @@ export class ChatComposer extends Symbiote {
   _onVoiceRuntimeError(err) {
     this._localVoiceState = 'idle';
     this._localVoiceActiveMode = 'idle';
+    this._localVoiceWakeMatched = false;
     this._syncLocalVoiceControls();
     this.setVoicePreview({
       mode: 'result',
@@ -674,6 +681,7 @@ export class ChatComposer extends Symbiote {
     this._localVoiceText = '';
     this._localVoiceState = 'idle';
     this._localVoiceActiveMode = 'idle';
+    this._localVoiceWakeMatched = false;
     this._syncLocalVoiceControls();
     this.clearVoicePreview();
     if (!value) return;
@@ -687,6 +695,16 @@ export class ChatComposer extends Symbiote {
       status: this._formatVoiceElapsed(this._localVoiceElapsed || 0),
       text,
       elapsed: true,
+      commandHints: this._voiceCommandMode ? this._getVoiceCommandHints() : [],
+    });
+  }
+
+  _showLocalWakePreview(text = '') {
+    this.setVoicePreview({
+      mode: 'recording',
+      status: `Listening for "${this._getWakeCommandPhrase()}"`,
+      text,
+      elapsed: false,
       commandHints: this._voiceCommandMode ? this._getVoiceCommandHints() : [],
     });
   }
@@ -729,6 +747,9 @@ export class ChatComposer extends Symbiote {
     this._voiceControls.wakeListen = {
       ...(this._voiceControls.wakeListen || {}),
       active: isWakeVoice,
+      commandText: isWakeVoice
+        ? (this._voiceControls.wakeListen?.commandText || this._getWakeCommandPhrase())
+        : (this._voiceControls.wakeListen?.commandText || ''),
     };
 
     if (isActive) {

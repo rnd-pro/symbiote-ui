@@ -1047,8 +1047,52 @@ async function evaluateComposerVoiceRuntimeSmoke(page) {
       await settle();
       await settle();
 
+      composer.setVoiceControls?.({
+        input: { visible: true, state: 'idle', enabled: true },
+        wakeListen: { visible: true, active: false, commandText: "О'кей Агент" },
+        response: { visible: false, enabled: true, speaking: false },
+        command: { visible: false, enabled: true, active: true, text: 'Commands' },
+        language: {
+          visible: false,
+          enabled: true,
+          mode: 'ru',
+          options: [
+            { mode: 'ru', label: 'RU' },
+            { mode: 'es', label: 'ES' },
+            { mode: 'en', label: 'EN' },
+          ],
+        },
+      });
+      await settle();
+      composer.ref?.wakeListenBtn?.click();
+      await settle();
+      const wakeActiveControls = {
+        wakeActive: Boolean(composer.ref?.wakeListenBtn?.classList.contains('listening')),
+        commandText: composer.ref?.wakeCommandText?.textContent?.trim() || '',
+        commandVisible: Boolean(composer.ref?.voiceCommandBtn && !composer.ref.voiceCommandBtn.hidden),
+        languageVisible: Boolean(composer.ref?.voiceLanguageBtn && !composer.ref.voiceLanguageBtn.hidden),
+        activeLanguage: composer.ref?.voiceLanguageBtn?.querySelector('.voice-language-option.active')?.textContent?.trim() || '',
+        commandHints: [...(composer.ref?.voiceCommandHints?.querySelectorAll('.voice-command-hint') || [])]
+          .map((item) => item.textContent.trim()),
+        previewStatus: composer.ref?.voicePreviewStatus?.textContent?.trim() || '',
+      };
+      instances[2]?.onresult?.({
+        results: Object.assign([[{ transcript: "О'кей Агент построй рабочую область" }]], { length: 1 }),
+      });
+      await settle();
+      const wakeMatched = {
+        previewStatus: composer.ref?.voicePreviewStatus?.textContent?.trim() || '',
+        previewText: composer.getVoicePreviewText?.() || '',
+        commandHints: [...(composer.ref?.voiceCommandHints?.querySelectorAll('.voice-command-hint') || [])]
+          .map((item) => item.textContent.trim()),
+      };
+      composer.ref?.wakeListenBtn?.click();
+      await settle();
+
       return {
         activeControls,
+        wakeActiveControls,
+        wakeMatched,
         recognition: instances.map((item) => ({
           lang: item.lang,
           startLang: item.startLang,
@@ -1387,6 +1431,17 @@ async function evaluateChatWorkspaceEventFlow(page) {
       await settle();
 
       const messageItems = transcript.$?.messageItems || [];
+      const messageDomState = {
+        agentMessages: transcript.querySelectorAll('chat-message-item .message.agent').length,
+        assistantMessages: transcript.querySelectorAll('chat-message-item .message.assistant').length,
+        messageContent: transcript.querySelectorAll('.msg-content').length,
+        workSummaries: transcript.querySelectorAll('.work-summary-wrap').length,
+        toolCards: transcript.querySelectorAll('.tool-card').length,
+        statusBoards: transcript.querySelectorAll('.status-board').length,
+        thinkingBlocks: transcript.querySelectorAll('.thinking-block').length,
+        codeBlocks: transcript.querySelectorAll('.md-code-block').length,
+        tables: transcript.querySelectorAll('.md-table').length,
+      };
       const sidebarActive = [...sidebar.querySelectorAll('chat-sidebar-item, chat-sidebar-sub-item')]
         .find((item) => item.hasAttribute('data-active'))?.$?.id || '';
       const footerProvider = composer.querySelector('select[data-footer-control-id="provider"]')?.value || '';
@@ -1410,6 +1465,7 @@ async function evaluateChatWorkspaceEventFlow(page) {
           background: workspace.dataset.backgroundState || '',
           messageCount: messageItems.length,
           messageRoles: messageItems.map((item) => item.role),
+          messageDomState,
           lastText: transcript.textContent.trim().replace(/\s+/g, ' ').slice(-240),
         },
         counts: {
@@ -1826,7 +1882,18 @@ test('showcase chat workspace exercises host event flow through library primitiv
     assert.equal(flow.finalState.sending, false);
     assert.equal(flow.finalState.background, 'done');
     assert.ok(flow.finalState.messageCount >= 5);
+    assert.ok(flow.finalState.messageRoles.includes('agent'));
     assert.ok(flow.finalState.messageRoles.includes('tool'));
+    assert.ok(flow.finalState.messageRoles.includes('board'));
+    assert.ok(flow.finalState.messageRoles.includes('thinking'));
+    assert.ok(flow.finalState.messageDomState.agentMessages >= 1, JSON.stringify(flow.finalState.messageDomState));
+    assert.equal(flow.finalState.messageDomState.assistantMessages, 0);
+    assert.ok(flow.finalState.messageDomState.workSummaries >= 1, JSON.stringify(flow.finalState.messageDomState));
+    assert.ok(flow.finalState.messageDomState.toolCards >= 1, JSON.stringify(flow.finalState.messageDomState));
+    assert.ok(flow.finalState.messageDomState.statusBoards >= 1, JSON.stringify(flow.finalState.messageDomState));
+    assert.ok(flow.finalState.messageDomState.thinkingBlocks >= 1, JSON.stringify(flow.finalState.messageDomState));
+    assert.ok(flow.finalState.messageDomState.codeBlocks >= 1, JSON.stringify(flow.finalState.messageDomState));
+    assert.ok(flow.finalState.messageDomState.tables >= 1, JSON.stringify(flow.finalState.messageDomState));
     assert.match(flow.finalState.lastText, /Mock host adapter handled|library provided the visible chat workspace/);
   } finally {
     page?.close();
@@ -2015,9 +2082,19 @@ test('cascade lab chat composer keeps voice controls inside the input surface re
     assert.equal(voiceRuntimeSmoke.activeControls.activeLanguage, 'RU');
     assert.ok(voiceRuntimeSmoke.activeControls.commandHints.length >= 4);
     assert.match(voiceRuntimeSmoke.activeControls.previewStatus, /Recording 00:00/);
-    assert.deepEqual(voiceRuntimeSmoke.recognition.map((item) => item.startLang), ['ru-RU', 'es-ES']);
+    assert.equal(voiceRuntimeSmoke.wakeActiveControls.wakeActive, true);
+    assert.equal(voiceRuntimeSmoke.wakeActiveControls.commandVisible, true);
+    assert.equal(voiceRuntimeSmoke.wakeActiveControls.languageVisible, true);
+    assert.equal(voiceRuntimeSmoke.wakeActiveControls.activeLanguage, 'RU');
+    assert.match(voiceRuntimeSmoke.wakeActiveControls.previewStatus, /О'кей Агент|Agent/);
+    assert.ok(voiceRuntimeSmoke.wakeActiveControls.commandHints.length >= 4);
+    assert.match(voiceRuntimeSmoke.wakeMatched.previewStatus, /wake matched/i);
+    assert.match(voiceRuntimeSmoke.wakeMatched.previewText, /построй рабочую область/);
+    assert.ok(voiceRuntimeSmoke.wakeMatched.commandHints.length >= 4);
+    assert.deepEqual(voiceRuntimeSmoke.recognition.map((item) => item.startLang), ['ru-RU', 'es-ES', 'ru-RU']);
     assert.equal(voiceRuntimeSmoke.recognition[0].aborted, true);
     assert.equal(voiceRuntimeSmoke.recognition[1].stopped, true);
+    assert.equal(voiceRuntimeSmoke.recognition[2].aborted, true);
     assert.deepEqual(voiceRuntimeSmoke.submissions, ['Build project UI ahora']);
     assert.equal(voiceRuntimeSmoke.previewHidden, true);
 

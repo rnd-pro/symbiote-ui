@@ -10,7 +10,7 @@ import css from './CascadeThemeWidget.css.js';
 import tpl from './CascadeThemeWidget.tpl.js';
 
 const DEFAULT_STORAGE_KEY = 'symbiote-ui:cascade-theme-editor';
-const COMPACT_CONTROLS = ['brightness', 'contrast', 'chroma', 'hue'];
+const COMPACT_CONTROLS = ['brightness', 'contrast', 'chroma', 'hue', 'pattern'];
 const CONTROL_ICONS = getCascadeThemeControls()
   .map((control) => control.icon)
   .filter(Boolean);

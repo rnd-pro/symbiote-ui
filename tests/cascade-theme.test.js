@@ -110,6 +110,7 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   assert.match(source, /--sn-theme-outline-strength/);
   assert.match(source, /--sn-theme-type-scale/);
   assert.match(source, /--sn-theme-heading-scale/);
+  assert.match(source, /--sn-theme-pattern-brightness/);
   assert.match(source, /--sn-shape-stroke/);
   assert.match(source, /--sn-shape-stroke-width/);
   assert.match(source, /--sn-node-label-size/);
@@ -128,6 +129,8 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   assert.match(source, /--sn-chat-sidebar-row-padding/);
   assert.match(source, /--sn-syntax-keyword/);
   assert.match(source, /--sn-cell-dot/);
+  assert.match(source, /--sn-cell-base-alpha/);
+  assert.match(source, /--sn-cell-alpha-span/);
   assert.match(source, /--sn-cell-noise/);
   assert.match(source, /--sn-node-icon-size/);
   assert.match(source, /--sn-node-pill-body-padding/);
@@ -220,6 +223,13 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   assert.match(source, /_setVoiceDemoState\(action === 'stop' \? 'transcribing' : 'listening', 'manual'\)/);
   assert.match(source, /_setVoiceDemoState\(action === 'stop' \? 'idle' : 'listening', 'wake'\)/);
   assert.match(source, /sourceEvent === 'chat-composer-voice-approve'[\s\S]*_startMockStream\(text\)/);
+  assert.match(source, /role: 'agent'/);
+  assert.match(source, /role: 'board'/);
+  assert.match(source, /role: 'tool'/);
+  assert.match(source, /role: 'thinking'[\s\S]*done: false/);
+  assert.match(source, /role: 'thinking'[\s\S]*done: true/);
+  assert.match(source, /\| Chat data \| Rendered by library \| Agent-facing use \|/);
+  assert.doesNotMatch(source, /role: 'assistant'/);
   assert.match(source, /_ensureMockThreads\(\)/);
   assert.match(source, /_mockChatCatalog\(\)/);
   assert.match(source, /_selectMockChat\(chatId = ''\)/);
@@ -250,6 +260,7 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   assert.match(source, /function readInitialCascadeTheme\(\)/);
   assert.match(source, /applyCascadeTheme\(document\.documentElement, readInitialCascadeTheme\(\)/);
   assert.match(source, /'chroma'/);
+  assert.match(source, /'pattern'/);
   assert.match(source, /'heading'/);
   assert.match(source, /setMessages\(/);
   assert.match(source, /setChats\(/);
@@ -446,6 +457,8 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.equal(theme.tokens['--sn-theme-text-lightness'], '94.0%');
   assert.equal(theme.tokens['--sn-theme-heading-scale'], '1.00');
   assert.equal(balancedHeadingTheme.tokens['--sn-theme-heading-scale'], '1.20');
+  assert.equal(theme.state.pattern, 60);
+  assert.equal(theme.tokens['--sn-theme-pattern-brightness'], '0.60');
   assert.equal(theme.state.motion, 100);
   assert.equal(theme.tokens['--sn-theme-motion-scale'], '1.00');
   assert.equal(theme.tokens['--sn-motion-enabled'], '1');
@@ -469,6 +482,7 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.equal(disabledMotionTheme.tokens['--sn-transition-fast'], '0ms');
   assert.equal(disabledMotionTheme.tokens['--sn-transition-easing'], 'linear');
   assert.equal(theme.descriptor.controls.find((control) => control.name === 'brightness')?.icon, 'brightness_6');
+  assert.equal(theme.descriptor.controls.find((control) => control.name === 'pattern')?.icon, 'grain');
   assert.equal(theme.descriptor.controls.find((control) => control.name === 'heading')?.icon, 'title');
   assert.equal(theme.tokens['--sn-bg'], 'hsl(0 0% 10.0%)');
   assert.equal(theme.tokens['--sn-text'], 'hsl(0 0% 94.0%)');
@@ -477,6 +491,8 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.equal(theme.tokens['--sn-chat-user-message-bg'], 'color-mix(in oklab, var(--sn-panel-bg) 88%, var(--sn-node-selected) 12%)');
   assert.equal(theme.tokens['--sn-composer-bg'], 'color-mix(in oklab, var(--sn-panel-bg) 90%, var(--sn-text) 4%)');
   assert.equal(theme.tokens['--sn-cell-dot'], 'hsl(0 0% 60.0%)');
+  assert.equal(theme.tokens['--sn-cell-base-alpha'], '0.033');
+  assert.equal(theme.tokens['--sn-cell-alpha-span'], '0.133');
   assert.equal(theme.tokens['--sn-hue-accent'], '218');
   assert.equal(theme.tokens['--sn-hue-warning'], '36');
   assert.equal(theme.tokens['--sn-hue-data'], '188');
@@ -674,7 +690,7 @@ test('cascade theme editor is a reusable browser module', async () => {
   assert.match(editor, /new CustomEvent\('cascade-theme-change'/);
   assert.match(editor, /CascadeThemeEditor\.reg\('cascade-theme-editor'\)/);
   assert.match(widget, /class CascadeThemeWidget extends Symbiote/);
-  assert.match(widget, /COMPACT_CONTROLS = \['brightness', 'contrast', 'chroma', 'hue'\]/);
+  assert.match(widget, /COMPACT_CONTROLS = \['brightness', 'contrast', 'chroma', 'hue', 'pattern'\]/);
   assert.match(widget, /applyCascadeTheme\(this\.\#resolveTarget\(\), this\.\#state, \{ notify: false \}\)/);
   assert.match(widget, /cascade-theme-open-full/);
   assert.match(widget, /CascadeThemeWidget\.reg\('cascade-theme-widget'\)/);
@@ -700,11 +716,13 @@ test('cascade theme editor is a reusable browser module', async () => {
   assert.match(registry, /cascade_theme_editor_apply/);
   assert.match(registry, /cascade_theme_widget_open_full/);
   assert.match(registry, /cascade_theme_widget_apply_quick/);
+  assert.match(registry, /pattern: \{ type: 'number', minimum: 0, maximum: 100 \}/);
   assert.match(registry, /panel_layout_open_panel/);
   assert.match(registry, /panel_layout_close_ui_panel/);
   assert.match(registry, /ui-invoked-panels/);
   assert.match(customElements, /"tagName": "cascade-theme-editor"/);
   assert.match(customElements, /"tagName": "cascade-theme-widget"/);
+  assert.match(customElements, /"pattern": \{\s*"type": "number",\s*"minimum": 0,\s*"maximum": 100\s*\}/);
   assert.match(customElements, /"componentDescription"/);
   assert.match(layoutNode, /_applyPanelComponentConfig/);
   assert.match(layoutNode, /config\.attributes/);
@@ -870,8 +888,10 @@ test('cascade theme visual smoke fixtures cover luminance and chroma states', as
   assert.ok(CASCADE_THEME_VISUAL_SMOKE_STATES.some((fixture) => fixture.state.mode === 'light'));
   assert.ok(CASCADE_THEME_VISUAL_SMOKE_STATES.some((fixture) => fixture.state.chroma === 0));
   assert.ok(CASCADE_THEME_VISUAL_SMOKE_STATES.some((fixture) => fixture.state.chroma === 100));
+  assert.ok(CASCADE_THEME_VISUAL_SMOKE_STATES.some((fixture) => fixture.state.pattern === 88));
   assert.ok(CASCADE_THEME_VISUAL_SMOKE_TOKEN_GROUPS.chat.includes('--sn-syntax-keyword'));
   assert.ok(CASCADE_THEME_VISUAL_SMOKE_TOKEN_GROUPS.animatedCanvas.includes('--sn-cell-bg'));
+  assert.ok(CASCADE_THEME_VISUAL_SMOKE_TOKEN_GROUPS.animatedCanvas.includes('--sn-theme-pattern-brightness'));
   assert.ok(CASCADE_THEME_VISUAL_SMOKE_TOKEN_GROUPS.graph.includes('--sn-node-circle-media-size'));
   assert.ok(CASCADE_THEME_VISUAL_SMOKE_TOKEN_GROUPS.layoutAndTabs.includes('--sn-tab-accent-5'));
   assert.ok(CASCADE_THEME_VISUAL_SMOKE_TOKEN_GROUPS.controls.includes('--sn-button-primary-color'));
@@ -882,6 +902,7 @@ test('cascade theme visual smoke fixtures cover luminance and chroma states', as
     themes.set(fixture.id, theme);
     assert.equal(theme.state.mode, fixture.state.mode);
     assert.equal(theme.state.chroma, fixture.state.chroma);
+    assert.equal(theme.state.pattern, fixture.state.pattern);
     for (let token of allFixtureTokens) {
       assert.ok(
         Object.hasOwn(theme.tokens, token),
@@ -908,6 +929,7 @@ test('cascade theme visual smoke fixtures cover luminance and chroma states', as
   assert.notEqual(highChroma.tokens['--sn-theme-heading-scale'], dark.tokens['--sn-theme-heading-scale']);
   assert.notEqual(highChroma.tokens['--sn-theme-density'], dark.tokens['--sn-theme-density']);
   assert.notEqual(highChroma.tokens['--sn-theme-outline-strength'], dark.tokens['--sn-theme-outline-strength']);
+  assert.notEqual(highChroma.tokens['--sn-theme-pattern-brightness'], dark.tokens['--sn-theme-pattern-brightness']);
 });
 
 test('cell background derives runtime palette and metrics from cascade tokens', async () => {
@@ -1370,6 +1392,7 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(customElements, /Active sidebar section id reflected by setActiveSection/);
   assert.doesNotMatch(customElements, /action-zone/);
   assert.doesNotMatch(customElements, /layout-preview/);
+  assert.match(customElements, /"name": "--sn-theme-pattern-brightness"/);
   assert.match(customElements, /"name": "--sn-cell-noise"/);
   assert.match(customElements, /"name": "background"/);
   assert.match(customElements, /"animated-background-slot"/);
@@ -1617,6 +1640,9 @@ test('chat composer exposes reusable voice controls and agent-facing metadata', 
   assert.match(composer, /chat-composer-footer-control-change/);
   assert.match(composer, /_handleDefaultVoiceApprove/);
   assert.match(composer, /_showLocalRecordingPreview\(''\)/);
+  assert.match(composer, /_showLocalWakePreview\(''\)/);
+  assert.match(composer, /Listening for "\$\{this\._getWakeCommandPhrase\(\)\}"/);
+  assert.match(composer, /wake matched/);
   assert.match(composer, /restartSpeechRecognition/);
   assert.match(composer, /_formatVoiceElapsed/);
   assert.match(composer, /_localVoiceControlsManaged/);
@@ -1839,6 +1865,7 @@ test('chat workspace composes reusable chat surfaces and exposes host intent con
   assert.match(registry, /animated-background-lifecycle/);
   assert.match(registry, /chat-nav-tree-helper/);
   assert.match(registry, /buildChatNavTree\(\)/);
+  assert.match(registry, /--sn-theme-pattern-brightness/);
 
   let component = registryModule.getComponent('chat-workspace');
   assert.ok(component);

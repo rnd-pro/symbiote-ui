@@ -292,6 +292,11 @@
                           "type": "number",
                           "minimum": 0,
                           "maximum": 360
+                        },
+                        "pattern": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 100
                         }
                       }
                     },
@@ -622,6 +627,11 @@
                           "minimum": 0,
                           "maximum": 360
                         },
+                        "pattern": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 100
+                        },
                         "outline": {
                           "type": "number",
                           "minimum": 0,
@@ -632,10 +642,20 @@
                           "minimum": 80,
                           "maximum": 130
                         },
+                        "heading": {
+                          "type": "number",
+                          "minimum": 80,
+                          "maximum": 140
+                        },
                         "density": {
                           "type": "number",
                           "minimum": 75,
                           "maximum": 140
+                        },
+                        "motion": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 200
                         }
                       }
                     },
@@ -8502,6 +8522,10 @@
               "description": "Theme CSS custom property consumed by this component."
             },
             {
+              "name": "--sn-theme-pattern-brightness",
+              "description": "Theme CSS custom property consumed by this component."
+            },
+            {
               "name": "--sn-cell-bg",
               "description": "Theme CSS custom property consumed by this component."
             },
@@ -8692,6 +8716,7 @@
               "slots": [],
               "themeAliases": [
                 "--sn-bg",
+                "--sn-theme-pattern-brightness",
                 "--sn-cell-bg",
                 "--sn-cell-dot",
                 "--sn-cell-base-alpha",
@@ -11735,6 +11760,10 @@
               "description": "Theme token consumed by chat-workspace."
             },
             {
+              "name": "--sn-theme-pattern-brightness",
+              "description": "Theme token consumed by chat-workspace."
+            },
+            {
               "name": "--sn-cell-bg",
               "description": "Theme token consumed by chat-workspace."
             }
@@ -11981,6 +12010,7 @@
                 "--sn-chat-gap",
                 "--sn-composer-bg",
                 "--sn-composer-padding",
+                "--sn-theme-pattern-brightness",
                 "--sn-cell-bg"
               ],
               "status": "draft",

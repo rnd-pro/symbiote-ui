@@ -251,6 +251,7 @@ let theme = createCascadeTheme({
   contrast: 58,
   chroma: 89,
   hue: 218,
+  pattern: 60,
   outline: 38,
   type: 100,
   heading: 100,
@@ -266,12 +267,15 @@ Apply the cascade once at `:root`, an app shell, or a subtree boundary. Componen
 The contract writes both low-level controls such as `--sn-theme-bg-lightness`,
 `--sn-theme-outline-strength`, `--sn-theme-type-scale`, and
 `--sn-theme-heading-scale`, `--sn-theme-density`, and
-`--sn-theme-motion-scale`, and public component aliases such as `--sn-bg`,
+`--sn-theme-pattern-brightness`, `--sn-theme-motion-scale`, and public component aliases such as `--sn-bg`,
 `--sn-text`, `--sn-node-bg`, `--sn-panel-bg`, `--sn-ctx-bg`,
 `--sn-button-bg`, and `--sn-field-control-bg`. Motion also exposes
 `--sn-motion-enabled`, `--sn-animation-play-state`,
 `--sn-animation-duration-scale`, and `--sn-transition-easing`; disabled
 motion sets transition durations to zero and pauses cascade-driven animations.
+The `pattern` control tunes animated background dots, noise, and glare through
+`--sn-cell-base-alpha`, `--sn-cell-alpha-span`, and
+`--sn-theme-pattern-brightness` without changing foreground surface contrast.
 
 `createCascadeTheme()` also derives readable foreground tokens for colored
 controls. The same Node-safe formula is exposed as `getReadableTextForHsl()`;

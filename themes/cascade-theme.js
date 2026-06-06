@@ -44,6 +44,15 @@ const CASCADE_THEME_CONTROL_LIST = [
     description: 'Accent hue in native CSS HSL space.',
   },
   {
+    name: 'pattern',
+    type: 'number',
+    min: 0,
+    max: 100,
+    default: 60,
+    icon: 'grain',
+    description: 'Brightness of animated background patterns, including cell-bg dots, ambient noise, and canvas pattern overlays.',
+  },
+  {
     name: 'outline',
     type: 'number',
     min: 0,
@@ -102,6 +111,7 @@ export const CASCADE_THEME_TOKEN_TARGETS = Object.freeze({
     '--sn-theme-bg-lightness',
     '--sn-theme-surface-lightness',
     '--sn-theme-text-lightness',
+    '--sn-theme-pattern-brightness',
     '--sn-bg',
     '--sn-panel-bg',
     '--sn-layout-bg',
@@ -641,6 +651,7 @@ export function normalizeCascadeThemeOptions(options = {}) {
     contrast: clamp(merged.contrast, 0, 100),
     chroma: clamp(merged.chroma, 0, 100),
     hue: clamp(merged.hue, 0, 360),
+    pattern: clamp(merged.pattern, 0, 100),
     outline: clamp(merged.outline, 0, 100),
     type: clamp(merged.type, 80, 130),
     heading: clamp(merged.heading, 80, 140),
@@ -657,6 +668,7 @@ export function createCascadeTheme(options = {}) {
   let headingScale = state.heading / 100;
   let densityScale = state.density / 100;
   let motionScale = state.motion / 100;
+  let patternScale = state.pattern / 100;
   let motionEnabled = motionScale > 0;
   let bg = dark
     ? 10 + state.brightness * 0.18
@@ -727,6 +739,18 @@ export function createCascadeTheme(options = {}) {
   let shapePortHintStrokeWidth = svgStrokeToken(0.5, outlineStrength);
   let connectionWidth = (1.5 + outlineStrength * 0.8).toFixed(2);
   let connectionHoverWidth = (2.4 + outlineStrength * 1.2).toFixed(2);
+  let cellBaseAlpha = dark
+    ? 0.012 + patternScale * 0.035
+    : 0.010 + patternScale * 0.025;
+  let cellAlphaSpan = dark
+    ? 0.070 + patternScale * 0.105
+    : 0.050 + patternScale * 0.075;
+  let cellGlareAlpha = dark
+    ? 0.006 + patternScale * 0.022
+    : 0.030 + patternScale * 0.060;
+  let cellNoiseOpacity = dark
+    ? 0.012 + patternScale * 0.030
+    : 0.008 + patternScale * 0.022;
 
   let tokens = {
     'color-scheme': dark ? 'dark' : 'light',
@@ -741,6 +765,7 @@ export function createCascadeTheme(options = {}) {
     '--sn-theme-heading-scale': headingScale.toFixed(2),
     '--sn-theme-density': densityScale.toFixed(2),
     '--sn-theme-spacing-scale': densityScale.toFixed(2),
+    '--sn-theme-pattern-brightness': patternScale.toFixed(2),
     '--sn-theme-motion-scale': motionScale.toFixed(2),
     '--sn-motion-enabled': motionEnabled ? '1' : '0',
     '--sn-animation-play-state': motionEnabled ? 'running' : 'paused',
@@ -770,14 +795,14 @@ export function createCascadeTheme(options = {}) {
     '--sn-bg-overlay': dark ? 'hsl(0 0% 0% / 0.45)' : 'hsl(0 0% 100% / 0.55)',
     '--sn-cell-bg': 'var(--sn-bg)',
     '--sn-cell-dot': `hsl(0 0% ${dim.toFixed(1)}%)`,
-    '--sn-cell-base-alpha': dark ? '0.06' : '0.035',
-    '--sn-cell-alpha-span': dark ? '0.18' : '0.12',
-    '--sn-cell-glare': `hsl(0 0% ${text.toFixed(1)}% / ${dark ? '0.02' : '0.08'})`,
+    '--sn-cell-base-alpha': cellBaseAlpha.toFixed(3),
+    '--sn-cell-alpha-span': cellAlphaSpan.toFixed(3),
+    '--sn-cell-glare': `hsl(0 0% ${text.toFixed(1)}% / ${cellGlareAlpha.toFixed(3)})`,
     '--sn-cell-vignette-mid': `hsl(0 0% ${bg.toFixed(1)}% / ${dark ? '0.70' : '0.36'})`,
     '--sn-cell-vignette-edge': 'var(--sn-bg)',
     '--sn-cell-noise': dark
-      ? 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'1.5\' numOctaves=\'2\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\' opacity=\'0.04\'/%3E%3C/svg%3E")'
-      : 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'1.1\' numOctaves=\'2\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\' opacity=\'0.025\'/%3E%3C/svg%3E")',
+      ? `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.5' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='${cellNoiseOpacity.toFixed(3)}'/%3E%3C/svg%3E")`
+      : `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='${cellNoiseOpacity.toFixed(3)}'/%3E%3C/svg%3E")`,
     '--sn-text': textColor,
     '--sn-text-dim': textDimColor,
     '--sn-outline-color': outlineColor,

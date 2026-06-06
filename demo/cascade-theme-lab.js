@@ -3,11 +3,13 @@ import { Connection, Input, Node, NodeEditor, Output, Socket } from '../core/ind
 import * as LayoutTree from '../layout/LayoutTree.js';
 import {
   DEFAULT_PROVIDER_THEME,
+  applyTheme,
+} from '../themes/Theme.js?v=cascade-pattern-control-1';
+import {
   CASCADE_THEME_DEFAULTS,
   applyCascadeTheme,
-  applyTheme,
   normalizeCascadeThemeOptions,
-} from '../themes/Theme.js';
+} from '../themes/cascade-theme.js?v=cascade-pattern-control-1';
 import { configureMaterialSymbols } from '../icons/MaterialSymbols.js';
 import '../layout/LayoutShellMenu/LayoutShellMenu.js';
 import '../layout/LayoutSidebar/LayoutSidebar.js';
@@ -76,6 +78,7 @@ const CASCADE_THEME_QUERY_KEYS = [
   'contrast',
   'chroma',
   'hue',
+  'pattern',
   'outline',
   'type',
   'heading',
@@ -793,6 +796,9 @@ class CascadeUiPanel extends Symbiote {
       '--sn-chat-sidebar-row-padding',
       '--sn-syntax-keyword',
       '--sn-cell-dot',
+      '--sn-theme-pattern-brightness',
+      '--sn-cell-base-alpha',
+      '--sn-cell-alpha-span',
       '--sn-cell-noise',
       '--sn-node-icon-size',
       '--sn-node-pill-body-padding',
@@ -1445,8 +1451,14 @@ class CascadeChatPanel extends Symbiote {
           text: 'Show the architecture audit handoff as reusable chat UI.',
         },
         {
-          role: 'assistant',
+          role: 'agent',
           text: 'The host selects a child chat, but `chat-workspace` still renders the transcript, composer, voice controls, and background through the same public component contract.',
+        },
+        {
+          role: 'thinking',
+          done: true,
+          elapsed: 4,
+          meta: { mode: 'auto_edit', exitCode: 0, tools: 1, tokens: 1180, cost: 0.0032, sessionId: 'demo-architecture-audit' },
         },
       ]],
       ['browser-smoke', [
@@ -1462,20 +1474,52 @@ class CascadeChatPanel extends Symbiote {
           done: true,
         },
         {
-          role: 'assistant',
+          role: 'agent',
           text: 'The smoke route verifies one chat workspace, library voice controls, and a full-height animated background.',
         },
       ]],
       ['codex', [
         {
-          role: 'assistant',
+          role: 'agent',
           text: 'Codex owns the host adapter in this demo: it changes footer params, streams responses, and stops background activity without taking over component internals.',
         },
       ]],
       ['webmcp', [
         {
-          role: 'assistant',
-          text: 'WebMCP metadata describes the same methods and events agents use to construct chat workspaces: state, select chat, send, voice intents, and background lifecycle.',
+          role: 'tool',
+          name: 'webmcp.describe_component',
+          input: { component: 'chat-workspace', descriptor: 'component-descriptor-v2' },
+          result: { tools: ['chat_workspace_set_state', 'chat_workspace_send'], visibility: 'agent-readable' },
+          done: true,
+        },
+        {
+          role: 'board',
+          streaming: true,
+          cardItems: [
+            { id: 'descriptor', title: 'Descriptor', icon: 'data_object', status: 'done', statusText: 'Schema ready' },
+            { id: 'permissions', title: 'Permissions', icon: 'verified_user', status: 'running', statusText: 'Checking hints' },
+          ],
+        },
+        {
+          role: 'agent',
+          text: [
+            'WebMCP metadata describes the same methods and events agents use to construct chat workspaces: state, select chat, send, voice intents, and background lifecycle.',
+            '',
+            '| Field | Purpose |',
+            '| --- | --- |',
+            '| `inputSchema` | agent-visible component contract |',
+            '| `annotations` | read/write and permission hints |',
+            '',
+            '```json',
+            '{ "name": "chat_workspace_send", "visibility": "agent-readable" }',
+            '```',
+          ].join('\n'),
+        },
+        {
+          role: 'thinking',
+          done: true,
+          elapsed: 4,
+          meta: { mode: 'plan', exitCode: 0, tools: 1, tokens: 740, cost: 0.0018, sessionId: 'demo-webmcp-contract' },
         },
       ]],
     ]);
@@ -1488,10 +1532,14 @@ class CascadeChatPanel extends Symbiote {
         text: 'Describe the project-graph-mcp package — AST analysis, tools, and how it provides codebase context.',
       },
       {
+        role: 'system',
+        text: 'Public showcase mode uses safe mock data. No private workspace, token, or local path is exposed.',
+      },
+      {
         role: 'thinking',
-        done: true,
-        elapsedText: '5s',
-        metaHtml: '<span>2 tool calls</span><span>3600 tks</span><span>$0.0108</span>',
+        done: false,
+        elapsed: 2,
+        status: 'Reading project graph, chat surface, voice command, and WebMCP contracts',
       },
       {
         role: 'tool',
@@ -1505,16 +1553,94 @@ class CascadeChatPanel extends Symbiote {
         done: true,
       },
       {
-        role: 'assistant',
+        role: 'board',
+        streaming: true,
+        cardItems: [
+          {
+            id: 'context-graph',
+            title: 'Context graph',
+            icon: 'account_tree',
+            status: 'done',
+            statusText: '28 files and 76 functions mapped',
+            linkId: 'project-graph',
+          },
+          {
+            id: 'browser-smoke',
+            title: 'Browser smoke',
+            icon: 'smart_display',
+            status: 'running',
+            statusText: 'Checking chat workspace and background lifecycle',
+            linkId: 'browser-smoke',
+          },
+          {
+            id: 'webmcp-metadata',
+            title: 'WebMCP metadata',
+            icon: 'hub',
+            status: 'queued',
+            statusText: 'Descriptors available for agents',
+            linkId: 'webmcp',
+          },
+        ],
+      },
+      {
+        role: 'agent',
         text: [
+          '## Agent workspace',
+          '',
           'Agent Portal is running here in public demo mode. This instance shows the current application UI against safe mock data, so clients can inspect the product without touching private agents, workspaces, or secrets.',
           '',
           'Project Graph MCP provides codebase context through AST analysis, skeleton extraction, dependency views, and tool-facing summaries. In `symbiote-ui`, the same chat primitives render the transcript, tool calls, voice controls, sidebar state, and animated background as reusable components.',
+          '',
+          '| Chat data | Rendered by library | Agent-facing use |',
+          '| --- | --- | --- |',
+          '| markdown | headings, tables, code, links | explain work and decisions |',
+          '| tool | input/result cards | expose structured tool calls |',
+          '| board | status cards | show parallel agent work |',
+          '| thinking | live and completed work summaries | audit execution state |',
+          '',
+          '```js',
+          'workspace.setWorkspaceState({',
+          '  messages,',
+          '  composer: { voiceControls, footerControls },',
+          '  background: { state: "streaming", active: true },',
+          '});',
+          '```',
           '',
           'Useful links:',
           '- Main site: https://rnd-pro.com/',
           '- Playground: https://playground.rnd-pro.com/',
         ].join('\n'),
+      },
+      {
+        role: 'thinking',
+        done: true,
+        elapsed: 5,
+        meta: { mode: 'auto_edit', exitCode: 0, tools: 2, tokens: 3600, cost: 0.0108, sessionId: 'demo-project-graph-chat-contract' },
+      },
+      {
+        role: 'tool',
+        name: 'component_descriptor/chat-workspace',
+        input: { component: 'chat-workspace', contract: 'webmcp', visibility: 'agent-readable' },
+        result: {
+          events: ['chat-workspace-send', 'chat-workspace-voice-intent', 'status-card-open'],
+          methods: ['setWorkspaceState', 'setMessages', 'setVoiceControls', 'triggerBackground'],
+          renderers: ['markdown', 'tool', 'board', 'thinking-summary', 'voice-preview'],
+        },
+        done: true,
+      },
+      {
+        role: 'agent',
+        text: [
+          'The chat demo intentionally keeps rendering logic in `symbiote-ui`: the host supplies message data, and the library owns markdown, code highlighting tokens, tool details, status cards, completed work summaries, voice preview, language toggle, and animated background state.',
+          '',
+          '> Relative shade differences come from cascade tokens, not local per-message colors.',
+        ].join('\n'),
+      },
+      {
+        role: 'thinking',
+        done: true,
+        elapsed: 3,
+        meta: { mode: 'plan', exitCode: 0, tools: 1, tokens: 910, cost: 0.0021, sessionId: 'demo-chat-display-types' },
       },
     ];
   }
@@ -1864,7 +1990,7 @@ class CascadeChatPanel extends Symbiote {
     this._isStreaming = false;
     this._recordHostEvent('stream-complete', { value });
     this._appendActiveMessage({
-      role: 'assistant',
+      role: 'agent',
       text: [
         `Mock host adapter handled "${value}" through ${this._footerState.provider}/${this._footerState.model}.`,
         '',
@@ -1888,7 +2014,7 @@ class CascadeChatPanel extends Symbiote {
     this._isStreaming = false;
     this._recordHostEvent('stream-stop', { reason });
     this._appendActiveMessage({
-      role: 'assistant',
+      role: 'agent',
       text: 'Mock stream stopped by the host adapter. The composer returned to send mode and the background entered smooth stop.',
     });
     this._getWorkspace()?.setWorkspaceState({
@@ -2856,7 +2982,7 @@ const createCollapsedAgentChatPanel = () => {
   panel.collapsed = true;
   panel.panelState = {
     singleton: 'page-agent-chat',
-    role: 'assistant',
+    role: 'agent',
   };
   return panel;
 };

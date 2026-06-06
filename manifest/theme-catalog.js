@@ -26,6 +26,7 @@ export let THEME_METADATA = {
       '--sn-theme-text-lightness',
       '--sn-theme-density',
       '--sn-theme-radius-scale',
+      '--sn-theme-pattern-brightness',
       '--sn-theme-motion-scale',
       '--sn-motion-enabled',
       '--sn-animation-play-state',
@@ -115,6 +116,7 @@ export let THEME_CONTROLS = {
     { name: 'textLightness', type: 'percentage', default: '94%', cssVar: '--sn-theme-text-lightness', description: 'Foreground text lightness inherited by text aliases.' },
     { name: 'density', type: 'number', default: '1', cssVar: '--sn-theme-density', description: 'Density multiplier for repeated navigation row height.' },
     { name: 'radius', type: 'number', default: '1', cssVar: '--sn-theme-radius-scale', description: 'Radius multiplier for node, row, list, composer, and source action corners.' },
+    { name: 'pattern', type: 'number', default: '0.60', cssVar: '--sn-theme-pattern-brightness', description: 'Background pattern brightness for animated cell dots, noise, and glare.' },
     { name: 'motion', type: 'number', default: '1', cssVar: '--sn-theme-motion-scale', description: 'Global motion multiplier for transitions and feedback effects.' },
     { name: 'elevation', type: 'number', default: '1', cssVar: '--sn-theme-elevation-scale', description: 'Global shadow and overlay intensity multiplier.' },
   ],
@@ -575,6 +577,7 @@ export let THEME_TOKENS = {
           "--sn-theme-text-lightness",
           "--sn-theme-density",
           "--sn-theme-radius-scale",
+          "--sn-theme-pattern-brightness",
           "--sn-theme-motion-scale",
           "--sn-motion-enabled",
           "--sn-animation-play-state",
@@ -2148,15 +2151,15 @@ export let THEME_TOKENS = {
       },
       "cellBaseAlpha": {
         "$type": "number",
-        "$value": "0.06"
+        "$value": "0.033"
       },
       "cellAlphaSpan": {
         "$type": "number",
-        "$value": "0.18"
+        "$value": "0.133"
       },
       "cellGlare": {
         "$type": "color",
-        "$value": "hsl(var(--sn-hue-base) var(--sn-sat-muted) var(--sn-lit-text) / 0.02)"
+        "$value": "hsl(var(--sn-hue-base) var(--sn-sat-muted) var(--sn-lit-text) / 0.019)"
       },
       "cellVignetteMid": {
         "$type": "color",
@@ -2168,7 +2171,7 @@ export let THEME_TOKENS = {
       },
       "cellNoise": {
         "$type": "asset",
-        "$value": "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.5' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E\")"
+        "$value": "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.5' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.030'/%3E%3C/svg%3E\")"
       },
       "shadowSmall": {
         "$type": "shadow",

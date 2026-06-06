@@ -58,10 +58,14 @@ export function buildWorkMetaHtml(meta) {
 export function findPreviousAgentText(messages, fromIndex) {
   for (let i = fromIndex - 1; i >= 0; i--) {
     let msg = messages[i];
-    if (msg?.role === 'agent' && typeof msg.text === 'string' && msg.text.trim()) return msg.text;
+    if (normalizeChatMessageRole(msg?.role) === 'agent' && typeof msg.text === 'string' && msg.text.trim()) return msg.text;
     if (msg?.role === 'user') break;
   }
   return '';
+}
+
+export function normalizeChatMessageRole(role = '') {
+  return role === 'assistant' ? 'agent' : role;
 }
 
 function compactText(value, maxLength = 96) {
@@ -91,9 +95,10 @@ export function buildWorkSummaryHtml(msg, copyText) {
 }
 
 export function toChatMessageItem(msg, options = {}) {
+  let role = normalizeChatMessageRole(msg?.role || msg?.type);
   return {
-    type: msg?.type || msg?.role,
-    role: msg?.role,
+    type: normalizeChatMessageRole(msg?.type || role),
+    role,
     text: msg?.text || msg?.content || '',
     isStreaming: Boolean(options.isLatestStreaming),
     isLatestTool: Boolean(options.isLatestTool),
@@ -122,14 +127,15 @@ export function buildChatMessageItems(messages = [], options = {}) {
   for (let i = 0; i < source.length; i++) {
     let msg = source[i];
     if (msg?.streaming) lastStreamingIndex = i;
-    if (msg?.role === 'tool') lastToolIndex = i;
+    if (normalizeChatMessageRole(msg?.role) === 'tool') lastToolIndex = i;
   }
 
   for (let i = 0; i < source.length; i++) {
     let msg = source[i];
+    let role = normalizeChatMessageRole(msg?.role);
     let isLatestStreaming = hasActiveStream && i === lastStreamingIndex && Boolean(msg?.streaming);
 
-    if (msg?.role === 'thinking' && msg.done) {
+    if (role === 'thinking' && msg.done) {
       let copyText = findPreviousAgentText(source, i);
       if (lastAgentItem) {
         lastAgentItem.workSummaryHtml = buildWorkSummaryHtml(msg, copyText);
@@ -141,13 +147,13 @@ export function buildChatMessageItems(messages = [], options = {}) {
       isLatestStreaming,
       isLatestTool: i === lastToolIndex,
     });
-    if (msg?.role === 'thinking' && msg.done) {
+    if (role === 'thinking' && msg.done) {
       item.copyText = findPreviousAgentText(source, i);
     }
     items.push(item);
 
-    if (msg?.role === 'agent') lastAgentItem = item;
-    if (msg?.role === 'board' && item.isStreaming && item.cardItems?.length) {
+    if (role === 'agent') lastAgentItem = item;
+    if (role === 'board' && item.isStreaming && item.cardItems?.length) {
       streamingBoards.push(item.cardItems.map((card) => card.id).filter(Boolean));
     }
   }
