@@ -637,7 +637,6 @@ chat-composer.drag-over .composer-body {
 }
 
 @container composer-body (width <= 960px) {
-  .btn-wake-listen.has-command,
   .btn-voice-command {
     width: var(--sn-composer-send-size);
     max-width: var(--sn-composer-send-size);
@@ -645,11 +644,23 @@ chat-composer.drag-over .composer-body {
     border-radius: 50%;
   }
 
-  .btn-wake-listen.has-command .wake-command-text,
   .btn-voice-command .voice-command-button-text {
     display: none;
   }
 
+}
+
+@container composer-body (width <= 560px) {
+  .btn-wake-listen.has-command {
+    width: var(--sn-composer-send-size);
+    max-width: var(--sn-composer-send-size);
+    padding: 0;
+    border-radius: 50%;
+  }
+
+  .btn-wake-listen.has-command .wake-command-text {
+    display: none;
+  }
 }
 
 @container chat-composer (width <= 480px) {

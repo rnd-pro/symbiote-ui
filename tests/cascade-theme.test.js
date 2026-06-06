@@ -220,8 +220,8 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   assert.match(source, /chat-workspace-voice-intent/);
   assert.match(source, /sourceEvent === 'chat-composer-voice-input'/);
   assert.match(source, /sourceEvent === 'chat-composer-voice-response-toggle'/);
-  assert.match(source, /_setVoiceDemoState\(action === 'stop' \? 'transcribing' : 'listening', 'manual'\)/);
-  assert.match(source, /_setVoiceDemoState\(action === 'stop' \? 'idle' : 'listening', 'wake'\)/);
+  assert.match(source, /_setVoiceDemoState\('listening', this\._voiceDemoMode === 'wake' \? 'wake' : 'manual'/);
+  assert.match(source, /_setVoiceDemoState\('listening', 'wake', \{ wakeMatched: false \}\)/);
   assert.match(source, /sourceEvent === 'chat-composer-voice-approve'[\s\S]*_startMockStream\(text\)/);
   assert.match(source, /role: 'agent'/);
   assert.match(source, /role: 'board'/);
@@ -270,10 +270,11 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   assert.match(source, /let voiceAvailable = normalized !== 'disabled'/);
   assert.match(source, /let isManualVoice = activeMode === 'manual'/);
   assert.match(source, /let isWakeVoice = activeMode === 'wake'/);
-  assert.match(source, /visible: voiceAvailable && !isWakeVoice/);
+  assert.match(source, /let isWakeDictation = isWakeVoice && this\._voiceDemoWakeMatched/);
+  assert.match(source, /visible: voiceAvailable/);
   assert.match(source, /visible: voiceModeActive/);
-  assert.match(source, /_setVoiceDemoState\(action === 'stop' \? 'transcribing' : 'listening', 'manual'\)/);
-  assert.match(source, /_setVoiceDemoState\(action === 'stop' \? 'idle' : 'listening', 'wake'\)/);
+  assert.match(source, /Wake mode is armed/);
+  assert.match(source, /wakeMatched: false/);
   assert.match(source, /footerControls: this\._buildFooterControls\(\)/);
   assert.match(source, /id: 'provider'/);
   assert.match(source, /id: 'model'/);
@@ -1929,6 +1930,7 @@ test('cascade demo voice fallback confirms dictation directly into chat stream',
   const demoSource = await readFile(cascadeDemoSource, 'utf8');
 
   assert.match(demoSource, /_getVoiceSubmissionText/);
+  assert.match(demoSource, /_handleWorkspaceVoiceIntent\(event\)[\s\S]*event\.preventDefault\?\.\(\)/);
   assert.match(demoSource, /sourceEvent === 'chat-composer-voice-approve'[\s\S]*_startMockStream\(text\)/);
   assert.doesNotMatch(demoSource, /sourceEvent === 'chat-composer-voice-approve'[\s\S]{0,180}_setVoiceDemoState\('transcribing'/);
   assert.doesNotMatch(demoSource, /value: 'Render this response inside the current layout отправить'/);

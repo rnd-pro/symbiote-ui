@@ -318,6 +318,7 @@ export class ChatComposer extends Symbiote {
   }
 
   disconnectedCallback() {
+    this._stopLocalWakeRecognition();
     if (this._voiceRuntime) {
       this._voiceRuntime.destroy();
       this._voiceRuntime = null;
@@ -341,6 +342,8 @@ export class ChatComposer extends Symbiote {
   }
 
   _getWakeCommandPhrase() {
+    let configured = String(this._voiceControls?.wakeListen?.commandText || '').trim();
+    if (configured) return configured;
     return wakeCommandCandidates(defaultWakeCommandPhrases(), this._voiceCommandLocale())[0] || 'Okay Agent';
   }
 
@@ -459,6 +462,14 @@ export class ChatComposer extends Symbiote {
 
   async _handleDefaultVoiceInput(action) {
     try {
+      if (
+        this._localVoiceActiveMode === 'wake' &&
+        action === 'start' &&
+        !this._localVoiceWakeMatched
+      ) {
+        await this._startDefaultWakeDictation();
+        return;
+      }
       let runtime = this._getVoiceRuntime();
       if (action === 'start') {
         let permission = await runtime.checkPermission();
@@ -524,15 +535,18 @@ export class ChatComposer extends Symbiote {
         this._localVoiceElapsed = 0;
         this._localVoiceText = '';
         this._localVoiceWakeMatched = false;
+        this._localWakeTriggering = false;
         this._syncLocalVoiceControls();
         this._showLocalWakePreview('');
 
-        await runtime.start({ language: this._voiceRecognitionLanguage(), mode: 'speech' });
+        this._startLocalWakeRecognition();
       } else {
+        this._stopLocalWakeRecognition();
         runtime.cancel();
         this._localVoiceState = 'idle';
         this._localVoiceActiveMode = 'idle';
         this._localVoiceWakeMatched = false;
+        this._localWakeTriggering = false;
         this._syncLocalVoiceControls();
         this.clearVoicePreview();
       }
@@ -543,15 +557,22 @@ export class ChatComposer extends Symbiote {
 
   _onVoiceRuntimeStateChange(state) {
     if (state === 'idle' && this._localVoiceState === 'listening') {
-      this._localVoiceState = 'idle';
-      this._localVoiceActiveMode = 'idle';
+      if (this._localVoiceActiveMode === 'wake' && this._localVoiceWakeMatched) {
+        this._localVoiceState = 'listening';
+        this._localVoiceWakeMatched = false;
+        this._startLocalWakeRecognition();
+        this._showLocalWakePreview('');
+      } else {
+        this._localVoiceState = 'idle';
+        this._localVoiceActiveMode = 'idle';
+      }
       this._syncLocalVoiceControls();
     }
   }
 
   _onVoiceRuntimeSpeechResult(text, isFinal) {
     this._localVoiceText = text;
-    if (this._localVoiceActiveMode === 'wake') {
+    if (this._localVoiceActiveMode === 'wake' && !this._localVoiceWakeMatched) {
       let wakePhrases = this._voiceControls?.wakeListen?.commandText || this._getWakeCommandPhrase();
       let locale = this._voiceCommandLocale();
       let candidates = wakeCommandCandidates({ [locale]: wakePhrases }, locale);
@@ -563,18 +584,11 @@ export class ChatComposer extends Symbiote {
         }
       }
       if (matchedWake) {
-        this._localVoiceWakeMatched = true;
-        this.setVoicePreview({
-          mode: 'recording',
-          status: 'wake matched',
-          text: text,
-          elapsed: true,
-          commandHints: this._getVoiceCommandHints(),
-        });
+        this._triggerDefaultVoiceInputFromWake();
       } else {
-        this._localVoiceWakeMatched = false;
         this._showLocalWakePreview(text);
       }
+      return;
     } else {
       this._showLocalRecordingPreview(text);
     }
@@ -619,6 +633,7 @@ export class ChatComposer extends Symbiote {
   }
 
   _onVoiceRuntimeError(err) {
+    this._stopLocalWakeRecognition();
     this._localVoiceState = 'idle';
     this._localVoiceActiveMode = 'idle';
     this._localVoiceWakeMatched = false;
@@ -631,12 +646,19 @@ export class ChatComposer extends Symbiote {
   }
 
   _handleVoiceResult(result) {
-    this._localVoiceState = 'idle';
-    this._localVoiceActiveMode = 'idle';
+    let wasWakeMode = this._localVoiceActiveMode === 'wake';
+    this._localVoiceState = wasWakeMode ? 'listening' : 'idle';
+    this._localVoiceActiveMode = wasWakeMode ? 'wake' : 'idle';
+    this._localVoiceWakeMatched = false;
     this._syncLocalVoiceControls();
 
     if (result.cancelled) {
-      this.clearVoicePreview();
+      if (wasWakeMode) {
+        this._startLocalWakeRecognition();
+        this._showLocalWakePreview('');
+      } else {
+        this.clearVoicePreview();
+      }
       return;
     }
 
@@ -678,12 +700,14 @@ export class ChatComposer extends Symbiote {
 
   _sendVoicePreviewText(text = '') {
     let value = String(text || '').trim();
+    let keepWakeMode = this._localVoiceActiveMode === 'wake';
     this._localVoiceText = '';
-    this._localVoiceState = 'idle';
-    this._localVoiceActiveMode = 'idle';
+    this._localVoiceState = keepWakeMode ? 'listening' : 'idle';
+    this._localVoiceActiveMode = keepWakeMode ? 'wake' : 'idle';
     this._localVoiceWakeMatched = false;
     this._syncLocalVoiceControls();
     this.clearVoicePreview();
+    if (keepWakeMode) this._startLocalWakeRecognition();
     if (!value) return;
     this.setValue(value);
     emit(this, 'chat-composer-submit');
@@ -709,14 +733,142 @@ export class ChatComposer extends Symbiote {
     });
   }
 
+  _getSpeechRecognitionConstructor() {
+    if (typeof window === 'undefined') return null;
+    return window.SpeechRecognition || window.webkitSpeechRecognition || null;
+  }
+
+  _startLocalWakeRecognition() {
+    if (
+      this._localVoiceActiveMode !== 'wake' ||
+      this._localVoiceWakeMatched ||
+      this._localWakeRecognition ||
+      this._localVoiceState !== 'listening'
+    ) {
+      return;
+    }
+    let SpeechRecognition = this._getSpeechRecognitionConstructor();
+    if (!SpeechRecognition) {
+      this._onVoiceRuntimeError(new Error('SpeechRecognition API not supported'));
+      return;
+    }
+    let recognition = new SpeechRecognition();
+    recognition.lang = this._voiceRecognitionLanguage();
+    recognition.interimResults = true;
+    recognition.continuous = true;
+    this._localWakeRecognition = recognition;
+
+    recognition.onresult = (event) => {
+      let transcript = '';
+      let start = Number.isFinite(event.resultIndex) ? event.resultIndex : 0;
+      for (let i = start; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript;
+      }
+      this._handleLocalWakeRecognitionText(transcript);
+    };
+
+    recognition.onerror = (event) => {
+      this._localWakeRecognition = null;
+      if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+        this._onVoiceRuntimeError(new Error('Microphone permission is required for wake listening.'));
+        return;
+      }
+      if (this._localVoiceActiveMode === 'wake' && !this._localVoiceWakeMatched) {
+        this._syncLocalVoiceControls();
+      }
+    };
+
+    recognition.onend = () => {
+      this._localWakeRecognition = null;
+      if (this._localVoiceActiveMode === 'wake' && !this._localVoiceWakeMatched) {
+        setTimeout(() => this._startLocalWakeRecognition(), 250);
+      }
+    };
+
+    try {
+      recognition.start();
+    } catch (err) {
+      this._localWakeRecognition = null;
+      this._onVoiceRuntimeError(err);
+    }
+  }
+
+  _stopLocalWakeRecognition() {
+    let recognition = this._localWakeRecognition;
+    if (!recognition) return;
+    recognition.onresult = null;
+    recognition.onerror = null;
+    recognition.onend = null;
+    try { recognition.abort(); } catch (_) {}
+    this._localWakeRecognition = null;
+  }
+
+  _handleLocalWakeRecognitionText(text = '') {
+    let value = String(text || '').trim();
+    this._localVoiceText = value;
+    this._showLocalWakePreview(value);
+    let locale = this._voiceCommandLocale();
+    let candidates = wakeCommandCandidates(defaultWakeCommandPhrases(), locale);
+    if (this._voiceControls?.wakeListen?.commandText) {
+      candidates = wakeCommandCandidates({ [locale]: this._voiceControls.wakeListen.commandText }, locale);
+    }
+    let matchedWake = candidates.some((phrase) => value.toLowerCase().includes(String(phrase).toLowerCase()));
+    if (matchedWake) this._triggerDefaultVoiceInputFromWake();
+  }
+
+  _triggerDefaultVoiceInputFromWake() {
+    if (this._localWakeTriggering || this._localVoiceActiveMode !== 'wake' || this._localVoiceWakeMatched) return;
+    this._localWakeTriggering = true;
+    this._stopLocalWakeRecognition();
+    this._localVoiceWakeMatched = true;
+    this._localVoiceText = '';
+    this._syncLocalVoiceControls();
+    this.setVoicePreview({
+      mode: 'recording',
+      status: 'wake matched',
+      text: '',
+      elapsed: false,
+      commandHints: this._voiceCommandMode ? this._getVoiceCommandHints() : [],
+    });
+    setTimeout(() => {
+      this._startDefaultWakeDictation().finally(() => {
+        this._localWakeTriggering = false;
+      });
+    }, 200);
+  }
+
+  async _startDefaultWakeDictation() {
+    let runtime = this._getVoiceRuntime();
+    if (runtime.state !== 'idle') return;
+    this._stopLocalWakeRecognition();
+    this._localVoiceActiveMode = 'wake';
+    this._localVoiceState = 'listening';
+    this._localVoiceElapsed = 0;
+    this._localVoiceText = '';
+    this._localVoiceWakeMatched = true;
+    this._syncLocalVoiceControls();
+    this._showLocalRecordingPreview('');
+    let mode = VoiceRuntime.hasSpeechRecognition ? 'speech' : 'audio';
+    await runtime.start({ language: this._voiceRecognitionLanguage(), mode });
+  }
+
   _handleDefaultVoiceLanguageChange(mode) {
     let locale = ['ru', 'es', 'en'].includes(mode) ? mode : this._voiceCommandLocale();
     let runtime = this._voiceRuntime;
-    if (!runtime) return;
+    if (!runtime) {
+      if (this._localVoiceActiveMode === 'wake' && !this._localVoiceWakeMatched) {
+        this._stopLocalWakeRecognition();
+        this._startLocalWakeRecognition();
+      }
+      return;
+    }
     runtime.setLanguage(this._voiceRecognitionLanguage(locale));
     if (runtime.state === 'recording' && runtime.mode === 'speech') {
       runtime.restartSpeechRecognition?.(this._voiceRecognitionLanguage(locale), { initialText: this._localVoiceText || '' })
         .catch((err) => this._onVoiceRuntimeError(err));
+    } else if (this._localVoiceActiveMode === 'wake' && !this._localVoiceWakeMatched) {
+      this._stopLocalWakeRecognition();
+      this._startLocalWakeRecognition();
     }
   }
 
@@ -725,6 +877,7 @@ export class ChatComposer extends Symbiote {
     let activeMode = this._localVoiceActiveMode || 'idle';
     let isManualVoice = activeMode === 'manual' && ['listening', 'transcribing'].includes(state);
     let isWakeVoice = activeMode === 'wake' && ['listening', 'transcribing', 'speaking'].includes(state);
+    let isWakeDictation = isWakeVoice && this._localVoiceWakeMatched;
     let isActive = isManualVoice || isWakeVoice;
 
     if (isActive && !this._localVoiceControlsManaged) {
@@ -741,7 +894,7 @@ export class ChatComposer extends Symbiote {
 
     this._voiceControls.input = {
       ...(this._voiceControls.input || {}),
-      state: isManualVoice ? state : 'idle',
+      state: isManualVoice ? state : isWakeDictation ? state : 'idle',
       enabled: this._voiceControls.input?.enabled !== false,
     };
     this._voiceControls.wakeListen = {
@@ -753,7 +906,7 @@ export class ChatComposer extends Symbiote {
     };
 
     if (isActive) {
-      if (isWakeVoice) this._voiceControls.input.visible = false;
+      if (isWakeVoice) this._voiceControls.input.visible = true;
       this._voiceControls.response = {
         ...(this._voiceControls.response || {}),
         visible: isWakeVoice,

@@ -33,7 +33,7 @@ import '../list/ListDetailShell/ListDetailShell.js';
 import '../surface/Card/Card.js';
 import '../tree/TreePanel/TreePanel.js';
 import '../canvas/CanvasGraph/CanvasGraph.js';
-import '../chat/ChatComposer/ChatComposer.js?v=voice-controls-final-8';
+import '../chat/ChatComposer/ChatComposer.js?v=wake-parity-1';
 import '../chat/ChatSidebarItem/ChatSidebarItem.js?v=voice-controls-final-8';
 import '../chat/ChatSidebar/ChatSidebar.js?v=voice-controls-final-8';
 import '../chat/ChatWorkspace/ChatWorkspace.js?v=cascade-demo-chat-workspace-1';
@@ -1825,11 +1825,12 @@ class CascadeChatPanel extends Symbiote {
     let activeMode = voiceAvailable ? (this._voiceDemoMode || 'idle') : 'idle';
     let isManualVoice = activeMode === 'manual' && ['listening', 'transcribing'].includes(normalized);
     let isWakeVoice = activeMode === 'wake' && ['listening', 'transcribing', 'speaking'].includes(normalized);
+    let isWakeDictation = isWakeVoice && this._voiceDemoWakeMatched;
     let voiceModeActive = isManualVoice || isWakeVoice;
     return {
       input: {
-        visible: voiceAvailable && !isWakeVoice,
-        state: isManualVoice ? normalized : 'idle',
+        visible: voiceAvailable,
+        state: isManualVoice ? normalized : isWakeDictation ? normalized : 'idle',
         enabled: voiceAvailable,
       },
       wakeListen: {
@@ -2035,17 +2036,25 @@ class CascadeChatPanel extends Symbiote {
 
   _handleWorkspaceVoiceIntent(event) {
     let sourceEvent = event.detail?.sourceEvent;
+    event.preventDefault?.();
 
     if (typeof VoiceRuntime !== 'undefined' && VoiceRuntime.isAvailable) {
       if (sourceEvent === 'chat-composer-voice-input') {
         let action = event.detail?.action || 'start';
         this._recordHostEvent('voice-input', { action });
         if (action === 'start') {
+          this._setVoiceDemoState('listening', this._voiceDemoMode === 'wake' ? 'wake' : 'manual', {
+            wakeMatched: this._voiceDemoMode === 'wake',
+          });
           this._startBg();
         } else if (action === 'stop') {
+          this._setVoiceDemoState('transcribing', this._voiceDemoMode === 'wake' ? 'wake' : 'manual', {
+            wakeMatched: this._voiceDemoMode === 'wake',
+          });
           this._triggerBg(6200);
           this._queueBgStop(6600);
         } else if (action === 'cancel') {
+          this._setVoiceDemoState(this._voiceDemoMode === 'wake' ? 'listening' : 'idle', this._voiceDemoMode === 'wake' ? 'wake' : 'idle');
           this._stopBg();
         }
         return;
@@ -2055,8 +2064,10 @@ class CascadeChatPanel extends Symbiote {
         let action = event.detail?.action || 'start';
         this._recordHostEvent('wake-listen', { action });
         if (action === 'start') {
+          this._setVoiceDemoState('listening', 'wake', { wakeMatched: false });
           this._startBg();
         } else {
+          this._setVoiceDemoState('idle', 'idle');
           this._stopBg();
         }
         return;
@@ -2110,9 +2121,13 @@ class CascadeChatPanel extends Symbiote {
     if (sourceEvent === 'chat-composer-voice-input' || sourceEvent === 'chat-composer-wake-listen') {
       let action = event.detail?.action || 'start';
       if (sourceEvent === 'chat-composer-voice-input') {
-        this._setVoiceDemoState(action === 'stop' ? 'transcribing' : 'listening', 'manual');
+        this._setVoiceDemoState(action === 'stop' ? 'transcribing' : 'listening', this._voiceDemoMode === 'wake' ? 'wake' : 'manual', {
+          wakeMatched: this._voiceDemoMode === 'wake',
+        });
       } else {
-        this._setVoiceDemoState(action === 'stop' ? 'idle' : 'listening', 'wake');
+        this._setVoiceDemoState(action === 'stop' ? 'idle' : 'listening', action === 'stop' ? 'idle' : 'wake', {
+          wakeMatched: false,
+        });
       }
       return;
     }
@@ -2269,24 +2284,28 @@ class CascadeChatPanel extends Symbiote {
     }, delay);
   }
 
-  _setVoiceDemoState(state = 'idle', mode = this._voiceDemoMode || 'idle') {
+  _setVoiceDemoState(state = 'idle', mode = this._voiceDemoMode || 'idle', options = {}) {
     let normalized = ['idle', 'listening', 'transcribing', 'speaking', 'disabled'].includes(state)
       ? state
       : 'idle';
     this._voiceDemoMode = ['manual', 'wake'].includes(mode) && !['idle', 'disabled'].includes(normalized)
       ? mode
       : 'idle';
+    this._voiceDemoWakeMatched = this._voiceDemoMode === 'wake' && Boolean(options.wakeMatched);
     this._voiceDemoState = normalized;
     this._syncVoiceControls(normalized);
 
     if (normalized === 'listening') {
+      let waitingForWake = this._voiceDemoMode === 'wake' && !this._voiceDemoWakeMatched;
       this._getComposer()?.setVoicePreview?.({
         mode: 'recording',
-        status: 'listening',
-        text: this._voiceDemoMode === 'wake'
-          ? `Listening for "${this._getWakeCommandPhrase()}" and command phrases.`
+        status: waitingForWake ? `Listening for "${this._getWakeCommandPhrase()}"` : 'listening',
+        text: waitingForWake
+          ? 'Wake mode is armed. Dictation starts only after the activation phrase; command hints stay visible.'
+          : this._voiceDemoMode === 'wake'
+            ? 'Wake phrase matched. Recording voice input until send/cancel command or mic stop.'
           : 'Recording voice input. Press the mic again to stop and transcribe.',
-        elapsed: true,
+        elapsed: !waitingForWake,
         commandHints: this._voiceCommandMode ? this._voiceCommandHints() : [],
       });
       this._startBg();
