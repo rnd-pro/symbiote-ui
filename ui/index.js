@@ -255,6 +255,8 @@ export {
   findPreviousAgentText,
   toChatMessageItem,
 } from '../chat/message-model.js';
+export { VoiceRuntime } from '../chat/voice-runtime.js';
+
 export { collectQuickOpenFilesFromSkeleton, fuzzyScore, searchQuickOpenItems } from '../navigation/quick-open-utils.js';
 
 const runtimeModules = new Map();
