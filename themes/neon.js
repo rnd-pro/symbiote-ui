@@ -5,7 +5,7 @@
  * All borders and shapes emit visible glow via elevated alpha
  * and vivid saturation. Designed for maximum visual impact.
  *
- * @module symbiote-node/themes/neon
+ * @module symbiote-ui/themes/neon
  */
 
 /** @type {import('./Theme.js').ThemeDefinition} */

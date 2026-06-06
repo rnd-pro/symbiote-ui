@@ -1,6 +1,6 @@
 /**
  * TemplatePreview styles
- * @module symbiote-node/inspector/TemplatePreview.css
+ * @module symbiote-ui/inspector/TemplatePreview.css
  */
 import { css } from '@symbiotejs/symbiote';
 

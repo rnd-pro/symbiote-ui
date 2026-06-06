@@ -4,7 +4,7 @@
  * Adapted from Rete.js area-plugin/drag.ts (86 LOC).
  * Handles both canvas panning and node dragging.
  *
- * @module symbiote-node/interactions/Drag
+ * @module symbiote-ui/interactions/Drag
  */
 
 export class Drag {

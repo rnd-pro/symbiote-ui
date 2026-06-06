@@ -1,6 +1,6 @@
 /**
  * CtrlItem styles
- * @module symbiote-node/node/CtrlItem.css
+ * @module symbiote-ui/node/CtrlItem.css
  */
 import { css } from '@symbiotejs/symbiote';
 

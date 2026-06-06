@@ -4,7 +4,7 @@
  * Zero saturation base (achromatic). All variation through
  * lightness only. Category accents retain color.
  *
- * @module symbiote-node/themes/grey
+ * @module symbiote-ui/themes/grey
  */
 
 /** @type {import('./Theme.js').ThemeDefinition} */

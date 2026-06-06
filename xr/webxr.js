@@ -81,7 +81,7 @@ export const WEBXR_RENDERER = Object.freeze({
   features: Object.values(WEBXR_FEATURES),
 });
 
-const DEFAULT_XR_DIAGNOSTIC_STORAGE_KEY = 'symbiote-node:xr-diagnostic-client-id';
+const DEFAULT_XR_DIAGNOSTIC_STORAGE_KEY = 'symbiote-ui:xr-diagnostic-client-id';
 const SENSITIVE_URL_PARAM_PATTERN = /token|secret|password|cookie|authorization|auth|key|session|code/i;
 
 function sanitizeDiagnosticIdPart(value, fallback = 'client') {

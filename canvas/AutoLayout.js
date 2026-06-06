@@ -12,7 +12,7 @@
  * - Per-node height-aware overlap resolution
  * - Layout direction: 'LR' (left-right) or 'TB' (top-bottom)
  *
- * @module symbiote-node/canvas/AutoLayout
+ * @module symbiote-ui/canvas/AutoLayout
  * @returns {Record<string, {x: number, y: number}>}
  */
 

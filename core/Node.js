@@ -1,10 +1,10 @@
 /**
  * Node — graph node with typed ports and controls
  *
- * Compatible with symbiote-node GraphNode structure.
- * Ports are explicit objects (unlike symbiote-node where they're implicit).
+ * Compatible with symbiote-ui GraphNode structure.
+ * Ports are explicit objects (unlike symbiote-ui where they're implicit).
  *
- * @module symbiote-node/core/Node
+ * @module symbiote-ui/core/Node
  */
 
 import { uid } from './Socket.js';

@@ -6,6 +6,10 @@ const ICON_NAME_RE = /^[a-z0-9_]+$/;
 const loadedIcons = new Set();
 
 const LINK_SELECTOR = 'link[data-sn-material-symbols="managed"]';
+const HOST_STYLESHEET_SELECTOR = [
+  'link[rel~="stylesheet"][href$="/packages/symbiote-ui/icons/material-symbols.css"]',
+  'link[rel~="stylesheet"][href$="icons/material-symbols.css"]',
+].join(',');
 
 /** @type {{ autoload: boolean, hrefBuilder: ((iconNames: string[]) => string)|null }} */
 const config = {
@@ -45,20 +49,25 @@ export function ensureMaterialSymbols(iconNames) {
   if (!changed) return;
 
   const iconList = [...loadedIcons].sort();
+  let link = findMaterialSymbolsLink();
   const href = config.hrefBuilder
     ? config.hrefBuilder(iconList)
-    : MATERIAL_SYMBOLS_LOCAL_URL;
+    : link?.href || MATERIAL_SYMBOLS_LOCAL_URL;
   if (!href) return;
 
-  let link = document.querySelector(LINK_SELECTOR);
   if (!link) {
     link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.dataset.snMaterialSymbols = 'managed';
     document.head.append(link);
   }
+  link.dataset.snMaterialSymbols = 'managed';
   link.href = href;
   link.dataset.snMaterialSymbolsIcons = iconList.join(',');
+}
+
+function findMaterialSymbolsLink() {
+  return document.querySelector(LINK_SELECTOR)
+    || document.querySelector(HOST_STYLESHEET_SELECTOR);
 }
 
 function isBrowserDocument() {

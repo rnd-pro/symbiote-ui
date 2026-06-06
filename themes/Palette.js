@@ -5,7 +5,7 @@
  * accents, category colors, connection colors.
  * Separated from geometry (Skin) for independent swapping.
  *
- * @module symbiote-node/themes/Palette
+ * @module symbiote-ui/themes/Palette
  */
 
 /**

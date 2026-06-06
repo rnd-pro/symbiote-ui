@@ -4,7 +4,7 @@
  * Rendered by GraphNode via itemize API.
  * Receives {key, label, inputType, value, isReadonly} from parent data.
  *
- * @module symbiote-node/components/CtrlItem
+ * @module symbiote-ui/components/CtrlItem
  */
 
 import Symbiote from '@symbiotejs/symbiote';

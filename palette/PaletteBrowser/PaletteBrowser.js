@@ -5,7 +5,7 @@
  * Similar to TouchDesigner's Component Palette concept.
  * Shows grouped node templates with icons, descriptions, and drag support.
  *
- * @module symbiote-node/palette/PaletteBrowser
+ * @module symbiote-ui/palette/PaletteBrowser
  */
 
 import Symbiote, { html } from '@symbiotejs/symbiote';

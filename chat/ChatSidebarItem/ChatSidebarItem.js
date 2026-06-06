@@ -184,10 +184,11 @@ export class ChatSidebarItem extends Symbiote {
       }
     }
   }
+
 }
 
 ChatSidebarItem.template = html`
-<div class="chat-item" ${{ '@data-id': 'id', onclick: 'onItemClick' }}>
+<div class="chat-item" ref="row" ${{ '@data-id': 'id', onclick: 'onItemClick' }}>
   <span class="chat-item-icon-slot">
     <span class="material-symbols-outlined chat-icon chat-item-icon" ${{ textContent: 'icon' }}></span>
     <button class="chat-item-delete" ${{ title: 'deleteTitle', '@aria-label': 'deleteChatLabel', onclick: 'onDelete' }}>
@@ -305,10 +306,11 @@ export class ChatSidebarSubItem extends Symbiote {
       }
     }
   }
+
 }
 
 ChatSidebarSubItem.template = html`
-<div class="chat-item-child" ${{ '@data-id': 'id', onclick: 'onItemClick' }}>
+<div class="chat-item-child" ref="row" ${{ '@data-id': 'id', onclick: 'onItemClick' }}>
   <span class="chat-item-icon-slot">
     <span class="material-symbols-outlined chat-icon chat-item-icon" ${{ textContent: 'icon' }}></span>
     <button class="chat-item-delete" ${{ title: 'deleteTitle', '@aria-label': 'deleteChatLabel', onclick: 'onDelete' }}>

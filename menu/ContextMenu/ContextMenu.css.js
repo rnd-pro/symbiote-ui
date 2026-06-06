@@ -1,6 +1,6 @@
 /**
  * ContextMenu styles
- * @module symbiote-node/menu/ContextMenu.css
+ * @module symbiote-ui/menu/ContextMenu.css
  */
 import { css } from '@symbiotejs/symbiote';
 

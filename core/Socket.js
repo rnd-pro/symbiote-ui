@@ -2,9 +2,9 @@
  * Socket — typed port connector
  *
  * Defines the type and visual identity of a connection endpoint.
- * Compatible with symbiote-node SocketTypes system.
+ * Compatible with symbiote-ui SocketTypes system.
  *
- * @module symbiote-node/core/Socket
+ * @module symbiote-ui/core/Socket
  */
 
 let _uid = 0;

@@ -1,6 +1,6 @@
 /**
  * Minimap styles
- * @module symbiote-node/canvas/Minimap.css
+ * @module symbiote-ui/canvas/Minimap.css
  */
 import { css } from '@symbiotejs/symbiote';
 

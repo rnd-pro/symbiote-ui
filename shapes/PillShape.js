@@ -4,7 +4,7 @@
  * Small node with rounded ends, label centered, 1 input left, 1 output right.
  * No header, no controls. Ideal for simple operations (multiply, add, etc.)
  *
- * @module symbiote-node/shapes/PillShape
+ * @module symbiote-ui/shapes/PillShape
  */
 
 import { NodeShape } from './NodeShape.js';

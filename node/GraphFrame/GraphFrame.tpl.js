@@ -1,6 +1,6 @@
 /**
  * GraphFrame template
- * @module symbiote-node/node/GraphFrame.tpl
+ * @module symbiote-ui/node/GraphFrame.tpl
  */
 import { html } from '@symbiotejs/symbiote';
 

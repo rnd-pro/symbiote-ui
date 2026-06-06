@@ -506,6 +506,26 @@ chat-composer.drag-over .composer-body {
   display: none;
 }
 
+.btn-mic {
+  order: 60;
+}
+
+.btn-wake-listen {
+  order: 20;
+}
+
+.btn-voice-response {
+  order: 30;
+}
+
+.btn-voice-command {
+  order: 40;
+}
+
+.btn-voice-language {
+  order: 50;
+}
+
 .btn-wake-listen.has-command {
   width: auto;
   max-width: min(var(--sn-composer-wake-command-max, 164px), 36cqi);
@@ -623,6 +643,7 @@ chat-composer.drag-over .composer-body {
   .btn-voice-command .voice-command-button-text {
     display: none;
   }
+
 }
 
 @container chat-composer (width <= 480px) {

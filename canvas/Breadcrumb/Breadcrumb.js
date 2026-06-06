@@ -4,7 +4,7 @@
  * Displays clickable path segments: Root > Sub Pipeline > Inner
  * Auto-hides at root level (depth 0).
  *
- * @module symbiote-node/canvas/Breadcrumb
+ * @module symbiote-ui/canvas/Breadcrumb
  */
 
 import Symbiote, { html } from '@symbiotejs/symbiote';

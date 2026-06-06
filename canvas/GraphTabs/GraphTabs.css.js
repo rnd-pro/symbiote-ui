@@ -1,6 +1,6 @@
 /**
  * GraphTabs styles
- * @module symbiote-node/canvas/GraphTabs.css
+ * @module symbiote-ui/canvas/GraphTabs.css
  */
 import { css } from '@symbiotejs/symbiote';
 

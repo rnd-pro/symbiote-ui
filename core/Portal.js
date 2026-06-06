@@ -11,7 +11,7 @@
  *   pm.addReceiver('channelA', node2, 'input');
  *   pm.getConnections(); // returns virtual connections
  *
- * @module symbiote-node/core/Portal
+ * @module symbiote-ui/core/Portal
  */
 
 /**

@@ -16,7 +16,7 @@
  *   FRAMES:
  *   [Formatters] color=#5cd87a x=490 y=-10 w=260 h=520
  *
- * @module symbiote-node/core/GraphText
+ * @module symbiote-ui/core/GraphText
  */
 
 const SHAPE_ICONS = {

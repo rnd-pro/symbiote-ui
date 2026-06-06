@@ -168,7 +168,7 @@ export function validateProjectGraphMetadata(input = {}) {
       throw new Error(`Invalid project graph metadata: clusters[${index}] must define at least one path`)
     }
     if (cluster.color !== undefined && !isGraphColorReference(cluster.color)) {
-      throw new Error(`Invalid project graph metadata: clusters[${index}].color must be a hex color or symbiote-node CSS token reference`)
+      throw new Error(`Invalid project graph metadata: clusters[${index}].color must be a hex color or symbiote-ui CSS token reference`)
     }
   }
 

@@ -4,7 +4,7 @@
  * Shows contextual actions for canvas, nodes, and connections.
  * Triple-file component: .js + .tpl.js + .css.js
  *
- * @module symbiote-node/components/ContextMenu
+ * @module symbiote-ui/components/ContextMenu
  */
 
 import Symbiote from '@symbiotejs/symbiote';

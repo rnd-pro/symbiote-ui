@@ -4,7 +4,7 @@
  * Pure data class (like Node). Stores position, size, color, label.
  * Frame does not own nodes — containment is determined by spatial overlap.
  *
- * @module symbiote-node/core/Frame
+ * @module symbiote-ui/core/Frame
  */
 
 import { uid } from './Socket.js';

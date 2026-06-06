@@ -4,7 +4,7 @@
  * Rendered by GraphNode via itemize API.
  * Registers socket with ConnectFlow for interactive connecting.
  *
- * @module symbiote-node/components/PortItem
+ * @module symbiote-ui/components/PortItem
  */
 
 import Symbiote from '@symbiotejs/symbiote';

@@ -1,6 +1,6 @@
 /**
  * QuickToolbar template
- * @module symbiote-node/toolbar/QuickToolbar.tpl
+ * @module symbiote-ui/toolbar/QuickToolbar.tpl
  */
 import { html } from '@symbiotejs/symbiote';
 

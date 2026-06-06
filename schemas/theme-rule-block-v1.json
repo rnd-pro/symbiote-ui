@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://rnd-pro.github.io/symbiote-node/schemas/theme-rule-block-v1.json",
+  "$id": "https://rnd-pro.github.io/symbiote-ui/schemas/theme-rule-block-v1.json",
   "title": "Symbiote Node Theme Rule Block",
   "type": "object",
   "additionalProperties": false,

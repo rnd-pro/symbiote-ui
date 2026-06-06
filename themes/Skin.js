@@ -5,7 +5,7 @@
  * semantic tokens (radius, sockets, grid) update harmoniously.
  * Shadow is split into geometry (here) and color (from Palette).
  *
- * @module symbiote-node/themes/Skin
+ * @module symbiote-ui/themes/Skin
  */
 
 /**

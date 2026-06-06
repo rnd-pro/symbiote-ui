@@ -4,7 +4,7 @@
  * Deep neutral greys with blue accent. Zero-saturation base
  * for maximum readability. Matches studio-grade tooling aesthetic.
  *
- * @module symbiote-node/themes/carbon
+ * @module symbiote-ui/themes/carbon
  */
 
 /** @type {import('./Theme.js').ThemeDefinition} */

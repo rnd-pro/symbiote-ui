@@ -4,7 +4,7 @@
  * Sockets distributed around the perimeter of a circle.
  * Inputs on left semicircle, outputs on right semicircle.
  *
- * @module symbiote-node/shapes/CircleShape
+ * @module symbiote-ui/shapes/CircleShape
  */
 
 import { NodeShape } from './NodeShape.js';

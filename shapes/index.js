@@ -1,6 +1,6 @@
 /**
  * Shape registry — maps shape names to implementations
- * @module symbiote-node/shapes/index
+ * @module symbiote-ui/shapes/index
  */
 
 import { NodeShape } from './NodeShape.js';

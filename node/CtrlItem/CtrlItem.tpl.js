@@ -1,6 +1,6 @@
 /**
  * CtrlItem template
- * @module symbiote-node/node/CtrlItem.tpl
+ * @module symbiote-ui/node/CtrlItem.tpl
  */
 import { html } from '@symbiotejs/symbiote';
 

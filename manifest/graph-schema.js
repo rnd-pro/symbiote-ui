@@ -14,7 +14,7 @@ export let GRAPH_SCHEMA_VERSIONS = [
 export let GRAPH_SCHEMAS = {
   v1: {
     $schema: 'https://json-schema.org/draft/2020-12/schema',
-    $id: 'https://rnd-pro.github.io/symbiote-node/schemas/graph-v1.json',
+    $id: 'https://rnd-pro.github.io/symbiote-ui/schemas/graph-v1.json',
     title: 'Symbiote Node Graph',
     type: 'object',
     additionalProperties: false,
@@ -105,7 +105,7 @@ export let GRAPH_SCHEMAS = {
   },
   'graph-model-v1': {
     $schema: 'https://json-schema.org/draft/2020-12/schema',
-    $id: 'https://rnd-pro.github.io/symbiote-node/schemas/graph-model-v1.json',
+    $id: 'https://rnd-pro.github.io/symbiote-ui/schemas/graph-model-v1.json',
     title: 'Symbiote Graph Model',
     type: 'object',
     additionalProperties: false,

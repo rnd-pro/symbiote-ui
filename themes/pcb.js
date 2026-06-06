@@ -9,7 +9,7 @@
  *
  * Background/surface/text colors match the global Carbon dashboard.
  *
- * @module symbiote-node/themes/pcb
+ * @module symbiote-ui/themes/pcb
  */
 
 /** @type {import('./Theme.js').ThemeDefinition} */

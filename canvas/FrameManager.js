@@ -5,7 +5,7 @@
  * Handles DOM creation, dragging, resizing, and child node containment
  * for GraphFrame elements on the canvas.
  *
- * @module symbiote-node/canvas/FrameManager
+ * @module symbiote-ui/canvas/FrameManager
  */
 
 import { Drag } from '../interactions/Drag.js';

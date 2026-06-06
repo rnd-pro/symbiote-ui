@@ -1,6 +1,6 @@
 /**
  * QuickToolbar styles
- * @module symbiote-node/toolbar/QuickToolbar.css
+ * @module symbiote-ui/toolbar/QuickToolbar.css
  */
 import { css } from '@symbiotejs/symbiote';
 

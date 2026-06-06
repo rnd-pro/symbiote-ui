@@ -14,7 +14,7 @@ export let PROJECT_SCHEMA_VERSIONS = [
 export let PROJECT_SCHEMAS = {
   'project-package-v1': {
     $schema: 'https://json-schema.org/draft/2020-12/schema',
-    $id: 'https://rnd-pro.github.io/symbiote-node/schemas/project-package-v1.json',
+    $id: 'https://rnd-pro.github.io/symbiote-ui/schemas/project-package-v1.json',
     title: 'Symbiote Project Package',
     type: 'object',
     additionalProperties: false,
@@ -116,7 +116,7 @@ export let PROJECT_SCHEMAS = {
   },
   'project-transaction-v1': {
     $schema: 'https://json-schema.org/draft/2020-12/schema',
-    $id: 'https://rnd-pro.github.io/symbiote-node/schemas/project-transaction-v1.json',
+    $id: 'https://rnd-pro.github.io/symbiote-ui/schemas/project-transaction-v1.json',
     title: 'Symbiote Project Transaction',
     type: 'object',
     additionalProperties: false,

@@ -1,6 +1,6 @@
 /**
  * Breadcrumb styles
- * @module symbiote-node/canvas/Breadcrumb.css
+ * @module symbiote-ui/canvas/Breadcrumb.css
  */
 import { css } from '@symbiotejs/symbiote';
 

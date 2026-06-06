@@ -5,7 +5,7 @@
  * Manages viewport transformations (pan/zoom), Level of Detail (LOD),
  * and node virtualization (phantom data) to optimize rendering of large graphs.
  *
- * @module symbiote-node/canvas/CanvasViewport
+ * @module symbiote-ui/canvas/CanvasViewport
  */
 
 export class CanvasViewport {

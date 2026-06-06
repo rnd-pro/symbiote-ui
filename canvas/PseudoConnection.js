@@ -5,7 +5,7 @@
  * Renders dashed Bézier path + plus indicator at endpoint.
  * Extracted from NodeCanvas to reduce complexity.
  *
- * @module symbiote-node/canvas/PseudoConnection
+ * @module symbiote-ui/canvas/PseudoConnection
  */
 
 export class PseudoConnection {

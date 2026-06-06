@@ -5,7 +5,7 @@
  * high-contrast dark text, minimal UI chrome, serif-influenced typography.
  * Optimized for long reading sessions and code exploration.
  *
- * @module symbiote-node/themes/ebook
+ * @module symbiote-ui/themes/ebook
  */
 
 /** @type {import('./Theme.js').ThemeDefinition} */

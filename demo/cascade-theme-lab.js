@@ -31,10 +31,17 @@ import '../list/ListDetailShell/ListDetailShell.js';
 import '../surface/Card/Card.js';
 import '../tree/TreePanel/TreePanel.js';
 import '../canvas/CanvasGraph/CanvasGraph.js';
-import '../effects/CellBg/CellBg.js';
-import '../chat/ChatTranscript/ChatTranscript.js';
-import '../chat/ChatComposer/ChatComposer.js?v=cascade-demo-chat-1';
-import '../chat/ChatSidebar/ChatSidebar.js?v=cascade-demo-chat-1';
+import '../chat/ChatComposer/ChatComposer.js?v=voice-controls-final-8';
+import '../chat/ChatSidebarItem/ChatSidebarItem.js?v=voice-controls-final-8';
+import '../chat/ChatSidebar/ChatSidebar.js?v=voice-controls-final-8';
+import '../chat/ChatWorkspace/ChatWorkspace.js?v=cascade-demo-chat-workspace-1';
+import {
+  defaultSendCommandPhrases,
+  defaultVoiceActionCommandPhrases,
+  defaultWakeCommandPhrases,
+  matchVoiceCommandAtEnd,
+  wakeCommandCandidates,
+} from '../chat/voice-input-defaults.js';
 import '../display/CodeBlock/CodeBlock.js';
 import '../themes/CascadeThemeEditor/CascadeThemeEditor.js';
 import '../themes/CascadeThemeWidget/CascadeThemeWidget.js';
@@ -57,8 +64,7 @@ await Promise.all([
   customElements.whenDefined('source-editor'),
   customElements.whenDefined('sn-status-ribbon'),
   customElements.whenDefined('canvas-graph'),
-  customElements.whenDefined('chat-composer'),
-  customElements.whenDefined('chat-sidebar-shell'),
+  customElements.whenDefined('chat-workspace'),
   customElements.whenDefined('cascade-theme-widget'),
 ]);
 
@@ -1375,238 +1381,242 @@ CascadeProjectMapPanel.reg('cascade-project-map-panel');
 
 class CascadeChatPanel extends Symbiote {
   initCallback() {
-    this.addEventListener('click', (event) => {
-      let button = event.target.closest?.('[data-bg-action]');
-      if (button) {
-        this._applyBgAction(button.dataset.bgAction);
-        return;
-      }
-
-      let voiceButton = event.target.closest?.('[data-voice-state]');
-      if (voiceButton && !voiceButton.disabled) {
-        this._setVoiceDemoState(voiceButton.dataset.voiceState);
-      }
-    });
-
-    this.addEventListener('chat-composer-input', () => this._triggerBg(1600));
-    this.addEventListener('chat-composer-submit', () => this._triggerBg(4200));
-    this.addEventListener('chat-composer-send', () => this._triggerBg(4200));
-    this.addEventListener('chat-composer-voice-input', () => this._setVoiceDemoState('listening'));
-    this.addEventListener('chat-composer-wake-listen', () => this._setVoiceDemoState('listening'));
-    this.addEventListener('chat-composer-voice-response-toggle', () => this._setVoiceDemoState('speaking'));
-    this.addEventListener('chat-composer-voice-command-toggle', () => this._triggerBg(3600));
-    this.addEventListener('chat-composer-voice-language-change', () => this._triggerBg(2600));
-    this.addEventListener('chat-composer-voice-approve', () => this._setVoiceDemoState('transcribing'));
-    this.addEventListener('chat-composer-voice-cancel', () => this._setVoiceDemoState('idle'));
-    this.addEventListener('chat-composer-voice-send', () => {
-      this._triggerBg(5200);
-      this._queueBgStop(5600);
-    });
-  }
-
-  _applyBgAction(action) {
-    if (action === 'trigger') {
-      this._triggerBg(9000);
-    } else if (action === 'start') {
-      this._startBg();
-    } else if (action === 'stop') {
-      this._stopBg();
-    }
-  }
-
-  _triggerBg(duration = 3000) {
-    if (this._bgStopTimer) clearTimeout(this._bgStopTimer);
-    this._bgStopTimer = null;
-    this.ref.bg?.trigger?.(duration);
-  }
-
-  _startBg() {
-    if (this._bgStopTimer) clearTimeout(this._bgStopTimer);
-    this._bgStopTimer = null;
-    this.ref.bg?.start?.();
-  }
-
-  _stopBg() {
-    if (this._bgStopTimer) clearTimeout(this._bgStopTimer);
-    this._bgStopTimer = null;
-    this.ref.bg?.stop?.();
-  }
-
-  _queueBgStop(delay = 3600) {
-    if (this._bgStopTimer) clearTimeout(this._bgStopTimer);
-    this._bgStopTimer = setTimeout(() => {
-      this._bgStopTimer = null;
-      this.ref.bg?.stop?.();
-    }, delay);
-  }
-
-  _setVoiceDemoState(state = 'idle') {
-    let normalized = ['idle', 'listening', 'transcribing', 'speaking', 'disabled'].includes(state)
-      ? state
-      : 'idle';
-    this._voiceDemoState = normalized;
-    this.querySelectorAll?.('[data-voice-state]')?.forEach((button) => {
-      button.toggleAttribute('data-active', button.dataset.voiceState === normalized);
-    });
-    this.ref.composer?.setVoiceInputState?.(
-      normalized === 'speaking' ? 'idle' : normalized,
-      { enabled: normalized !== 'disabled' }
-    );
-    this.ref.composer?.setVoiceControls?.({
-      input: {
-        visible: true,
-        state: normalized === 'speaking' ? 'idle' : normalized,
-        enabled: normalized !== 'disabled',
-      },
-      wakeListen: { visible: true, active: normalized === 'listening', commandText: 'OK Agent' },
-      response: { visible: true, enabled: normalized !== 'disabled', speaking: normalized === 'speaking' },
-      command: { visible: true, active: normalized === 'listening', text: 'voice command' },
-      language: {
-        visible: true,
-        mode: 'ru',
-        options: [
-          { mode: 'auto', label: 'auto' },
-          { mode: 'ru', label: 'RU' },
-          { mode: 'en', label: 'EN' },
-        ],
-      },
-    });
-
-    if (normalized === 'listening') {
-      this.ref.composer?.setVoicePreview?.({
-        mode: 'recording',
-        status: 'listening',
-        text: 'Voice input is streamed by the host recorder.',
-        elapsed: true,
-        commandHints: ['OK Agent', 'build layout', 'change theme'],
-      });
-      this._startBg();
-    } else if (normalized === 'transcribing') {
-      this.ref.composer?.setVoicePreview?.({
-        mode: 'processing',
-        status: 'transcribing',
-        text: 'Host transcription resolves into editable text.',
-      });
-      this._triggerBg(6200);
-      this._queueBgStop(6600);
-    } else if (normalized === 'speaking') {
-      this.ref.composer?.setVoicePreview?.({
-        mode: 'result',
-        status: 'speaking',
-        text: 'The host speech output keeps the ambient activity running.',
-      });
-      this._startBg();
-    } else {
-      this.ref.composer?.clearVoicePreview?.();
-      this._stopBg();
-    }
-  }
-
-  renderCallback() {
-    if (this._ready) return;
-    this._ready = true;
-
-    if (Number.isFinite(chatSmokeWidth) && chatSmokeWidth >= 220) {
-      this.toggleAttribute('data-chat-smoke', true);
-      this.style.setProperty('--stage7-chat-smoke-width', `${chatSmokeWidth}px`);
-    }
-
-    let syncSidebar = () => {
-      this.ref.sidebar.setAutoCollapse?.(false);
-      this.ref.sidebar.setCollapsed(true);
-      this.ref.sidebar.setChats([
-        {
-          id: 'agent-chat',
-          title: 'Agent Chat',
-          icon: 'smart_toy',
-          active: true,
-          isRunning: true,
-          metaLabel: 'project-graph',
-          time: 'now',
-          subChats: [
-            { id: 'agent-chat-theme', title: 'Theme pass', icon: 'palette', active: true },
-            { id: 'agent-chat-layout', title: 'Layout pass', icon: 'view_quilt' },
-          ],
-        },
-        {
-          id: 'review',
-          title: 'Review',
-          icon: 'rate_review',
-          metaLabel: 'codex',
-          time: '2m',
-        },
-        {
-          id: 'handoff',
-          title: 'Handoff',
-          icon: 'hub',
-          metaLabel: 'webmcp',
-          time: '5m',
-        },
-      ]);
+    this._activeChatId = 'project-graph';
+    this._footerState = {
+      provider: 'gemini',
+      model: 'gemini-2.5-pro',
+      agent: 'neurology',
+      task: 'dns',
     };
-    let raf = globalThis.requestAnimationFrame || ((callback) => setTimeout(callback, 0));
-    raf(syncSidebar);
-    this.ref.transcript.setMessageItems([
+    this._hostEventCount = 0;
+    this._hostFlowStep = 'ready';
+    this._isStreaming = false;
+    this._streamTimers = [];
+    this._voiceDemoMode = 'idle';
+
+    this._ensureMockThreads();
+
+    this._voiceLanguageMode = 'ru';
+    this._voiceCommandMode = true;
+    this._voiceCommandPhrases = defaultSendCommandPhrases();
+    this._voiceActionCommandPhrases = {
+      send: {
+        en: [this._voiceCommandPhrases.en],
+        ru: [this._voiceCommandPhrases.ru],
+        es: [this._voiceCommandPhrases.es],
+      },
+      ...defaultVoiceActionCommandPhrases(),
+    };
+    this._wakeCommandPhrases = defaultWakeCommandPhrases();
+
+    this.addEventListener('chat-workspace-input', (event) => {
+      this._triggerBg(1600);
+      this._handleVoiceCommandText(event.detail?.value || '');
+    });
+    this.addEventListener('chat-workspace-submit', (event) => this._handleWorkspaceSend(event));
+    this.addEventListener('chat-workspace-send', (event) => this._handleWorkspaceSend(event));
+    this.addEventListener('chat-workspace-chat-select', (event) => this._selectMockChat(event.detail?.chatId));
+    this.addEventListener('chat-workspace-footer-intent', (event) => this._handleWorkspaceFooterIntent(event));
+    this.addEventListener('chat-workspace-context-intent', (event) => this._handleWorkspaceContextIntent(event));
+    this.addEventListener('chat-workspace-voice-intent', (event) => this._handleWorkspaceVoiceIntent(event));
+    queueMicrotask(() => this._setupWorkspace());
+  }
+
+  _getWorkspace() {
+    return this.ref?.workspace || this.querySelector('chat-workspace');
+  }
+
+  _getComposer() {
+    return this._getWorkspace()?.getComposer?.();
+  }
+
+  _getSidebar() {
+    return this._getWorkspace()?.getSidebar?.();
+  }
+
+  _ensureMockThreads() {
+    if (this._mockMessagesByChat) return;
+    this._mockMessagesByChat = new Map([
+      ['project-graph', this._initialProjectGraphMessages()],
+      ['architecture-audit', [
+        {
+          role: 'user',
+          text: 'Show the architecture audit handoff as reusable chat UI.',
+        },
+        {
+          role: 'assistant',
+          text: 'The host selects a child chat, but `chat-workspace` still renders the transcript, composer, voice controls, and background through the same public component contract.',
+        },
+      ]],
+      ['browser-smoke', [
+        {
+          role: 'user',
+          text: 'Run the browser smoke path for the showcase.',
+        },
+        {
+          role: 'tool',
+          name: 'browser_smoke/cascade-theme-lab',
+          input: { route: '#chat/conversation' },
+          result: { workspace: 'ok', composer: 'ok', background: 'ok' },
+          done: true,
+        },
+        {
+          role: 'assistant',
+          text: 'The smoke route verifies one chat workspace, library voice controls, and a full-height animated background.',
+        },
+      ]],
+      ['codex', [
+        {
+          role: 'assistant',
+          text: 'Codex owns the host adapter in this demo: it changes footer params, streams responses, and stops background activity without taking over component internals.',
+        },
+      ]],
+      ['webmcp', [
+        {
+          role: 'assistant',
+          text: 'WebMCP metadata describes the same methods and events agents use to construct chat workspaces: state, select chat, send, voice intents, and background lifecycle.',
+        },
+      ]],
+    ]);
+  }
+
+  _initialProjectGraphMessages() {
+    return [
       {
         role: 'user',
-        text: 'Can the theme editor change chat surfaces, markdown, code, and the animated background at once?',
+        text: 'Describe the project-graph-mcp package — AST analysis, tools, and how it provides codebase context.',
+      },
+      {
+        role: 'thinking',
+        done: true,
+        elapsedText: '5s',
+        metaHtml: '<span>2 tool calls</span><span>3600 tks</span><span>$0.0108</span>',
+      },
+      {
+        role: 'tool',
+        name: 'get_skeleton/workspace/agent-portal/packages/project-graph-mcp',
+        input: { path: '/workspace/agent-portal/packages/project-graph-mcp' },
+        result: {
+          project: 'project-graph-mcp',
+          stats: { files: 28, functions: 76, lines: 3800 },
+          dirs: ['src/analysis/', 'src/tools/', 'src/rules/'],
+        },
+        done: true,
       },
       {
         role: 'assistant',
         text: [
-          'Yes. The cascade contract reaches chat messages, composer controls, syntax tokens, and canvas background tokens.',
+          'Agent Portal is running here in public demo mode. This instance shows the current application UI against safe mock data, so clients can inspect the product without touching private agents, workspaces, or secrets.',
           '',
-          '```js',
-          'applyCascadeTheme(document.documentElement, {',
-          '  mode: "dark",',
-          '  contrast: 58,',
-          '  chroma: 89',
-          '});',
-          '```',
+          'Project Graph MCP provides codebase context through AST analysis, skeleton extraction, dependency views, and tool-facing summaries. In `symbiote-ui`, the same chat primitives render the transcript, tool calls, voice controls, sidebar state, and animated background as reusable components.',
+          '',
+          'Useful links:',
+          '- Main site: https://rnd-pro.com/',
+          '- Playground: https://playground.rnd-pro.com/',
         ].join('\n'),
       },
+    ];
+  }
+
+  _mockChatCatalog() {
+    return [
       {
-        role: 'tool',
-        name: 'theme:compose',
-        input: { target: ':root', tokens: ['--sn-chat-bg', '--sn-composer-bg', '--sn-syntax-keyword'] },
-        result: { status: 'applied', scope: 'layout subtree' },
-        done: true,
-      },
-    ]);
-    this.ref.transcript.scrollToBottom();
-    this.ref.composer.setPlaceholder('Ask the agent to build a themed component...');
-    this.ref.composer.setValue('Render this response inside the current layout');
-    this.ref.composer.setAttachedContext([
-      { key: 'theme', name: 'cascade-theme', title: 'Cascade theme contract', icon: 'palette' },
-      { key: 'chat', name: 'chat-surface', title: 'Chat components', icon: 'forum' },
-    ]);
-    this.ref.composer.setVoiceControls({
-      input: { visible: true, state: 'idle' },
-      wakeListen: { visible: true, active: true, commandText: 'OK Agent' },
-      response: { visible: true, enabled: true, speaking: false },
-      command: { visible: true, active: true, text: 'voice command' },
-      language: {
-        visible: true,
-        mode: 'ru',
-        options: [
-          { mode: 'auto', label: 'auto' },
-          { mode: 'ru', label: 'RU' },
-          { mode: 'en', label: 'EN' },
+        id: 'project-graph',
+        name: 'What is Project Graph?',
+        cleanName: 'What is Project Graph?',
+        icon: 'chat',
+        isActive: this._activeChatId === 'project-graph',
+        isExpanded: true,
+        subChats: [
+          {
+            id: 'architecture-audit',
+            name: 'Architecture audit',
+            cleanName: 'Architecture audit',
+            icon: 'account_tree',
+            metaLabel: 'Agent',
+            statusKind: 'done',
+            statusIcon: 'check_circle',
+            statusTitle: 'Completed',
+            composerDisabled: true,
+          },
+          {
+            id: 'browser-smoke',
+            name: 'Browser smoke',
+            cleanName: 'Browser smoke',
+            icon: 'smart_display',
+            metaLabel: 'Agent',
+            statusKind: 'done',
+            statusIcon: 'check_circle',
+            statusTitle: 'Completed',
+            composerDisabled: true,
+          },
         ],
       },
-    });
-    this.ref.composer.setFooterControls([
+      {
+        id: 'codex',
+        name: 'Codex handoff',
+        cleanName: 'Codex handoff',
+        icon: 'terminal',
+        metaLabel: 'codex',
+        isActive: this._activeChatId === 'codex',
+      },
+      {
+        id: 'webmcp',
+        name: 'WebMCP contract',
+        cleanName: 'WebMCP contract',
+        icon: 'hub',
+        metaLabel: 'webmcp',
+        isActive: this._activeChatId === 'webmcp',
+      },
+    ];
+  }
+
+  _getActiveMessages() {
+    this._ensureMockThreads();
+    if (!this._mockMessagesByChat.has(this._activeChatId)) {
+      this._mockMessagesByChat.set(this._activeChatId, []);
+    }
+    return this._mockMessagesByChat.get(this._activeChatId);
+  }
+
+  _setActiveMessages(messages) {
+    this._ensureMockThreads();
+    this._mockMessagesByChat.set(this._activeChatId, Array.isArray(messages) ? messages : []);
+  }
+
+  _activeChatDescriptor() {
+    let stack = [...this._mockChatCatalog()];
+    while (stack.length) {
+      let item = stack.shift();
+      if (item.id === this._activeChatId) return item;
+      if (Array.isArray(item.subChats)) stack.push(...item.subChats);
+    }
+    return null;
+  }
+
+  _isActiveChatHumanInputDisabled() {
+    return Boolean(this._activeChatDescriptor()?.composerDisabled);
+  }
+
+  _appendActiveMessage(message) {
+    let messages = [...this._getActiveMessages(), message];
+    this._setActiveMessages(messages);
+    this._getWorkspace()?.setMessages?.(messages, { smooth: true });
+  }
+
+  _buildFooterControls() {
+    return [
       {
         id: 'provider',
         kind: 'select',
         label: 'provider',
         icon: 'cloud',
-        value: 'codex',
+        value: this._footerState.provider,
         priority: 1,
         options: [
           { value: 'codex', label: 'codex' },
           { value: 'gemini', label: 'gemini' },
-          { value: 'portal', label: 'portal' },
+          { value: 'opencode', label: 'opencode' },
         ],
       },
       {
@@ -1614,28 +1624,28 @@ class CascadeChatPanel extends Symbiote {
         kind: 'select',
         label: 'model',
         icon: 'memory',
-        value: 'gpt-5',
+        value: this._footerState.model,
         priority: 2,
         options: [
-          { value: 'gpt-5', label: 'gpt-5' },
-          { value: 'deepseek-4', label: 'deepseek-4' },
-          { value: 'gemini-pro', label: 'gemini-pro' },
+          { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
+          { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
+          { value: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash-Lite' },
         ],
       },
       {
         id: 'agent',
         kind: 'button',
         label: 'agent',
-        value: 'orchestrator',
-        icon: 'smart_toy',
+        value: this._footerState.agent,
+        icon: 'psychology',
         priority: 3,
       },
       {
-        id: 'resource-group',
+        id: 'task',
         kind: 'button',
-        label: 'resource',
-        value: 'ui-runtime',
-        icon: 'hub',
+        label: 'task',
+        value: this._footerState.task,
+        icon: 'task_alt',
         priority: 4,
       },
       {
@@ -1645,7 +1655,501 @@ class CascadeChatPanel extends Symbiote {
         icon: 'tune',
         priority: 5,
       },
-    ]);
+    ];
+  }
+
+  _syncWorkspaceState({ scrollToBottom = true, preserveComposerValue = true } = {}) {
+    let workspace = this._getWorkspace();
+    if (!workspace) return;
+    let composer = this._getComposer();
+    let composerDisabled = this._isActiveChatHumanInputDisabled();
+    workspace.setWorkspaceState({
+      chats: this._mockChatCatalog(),
+      activeChatId: this._activeChatId,
+      messages: this._getActiveMessages(),
+      messagesOptions: { scrollToBottom, smooth: false },
+      empty: false,
+      composer: {
+        disabled: composerDisabled,
+        placeholder: composerDisabled
+          ? 'This sub-agent chat is controlled by the orchestrator.'
+          : 'Ask the agent to inspect a package, run a smoke test, or build a layout...',
+        value: composerDisabled
+          ? ''
+          : preserveComposerValue
+            ? (composer?.$.value || '')
+            : 'Render this response inside the current layout отправить',
+        attachedContext: [
+          { key: 'theme', name: 'cascade-theme', title: 'Cascade theme contract', icon: 'palette' },
+          { key: 'chat', name: 'chat-surface', title: 'Chat components', icon: 'forum' },
+        ],
+        footerControls: this._buildFooterControls(),
+        sending: this._isStreaming,
+        voiceControls: this._buildVoiceControlsConfig(),
+      },
+    });
+  }
+
+  _buildVoiceControlsConfig(state = this._voiceDemoState || 'idle') {
+    let normalized = ['idle', 'listening', 'transcribing', 'speaking', 'disabled'].includes(state)
+      ? state
+      : 'idle';
+    let voiceAvailable = normalized !== 'disabled';
+    let activeMode = voiceAvailable ? (this._voiceDemoMode || 'idle') : 'idle';
+    let isManualVoice = activeMode === 'manual' && ['listening', 'transcribing'].includes(normalized);
+    let isWakeVoice = activeMode === 'wake' && ['listening', 'transcribing', 'speaking'].includes(normalized);
+    let voiceModeActive = isManualVoice || isWakeVoice;
+    return {
+      input: {
+        visible: voiceAvailable && !isWakeVoice,
+        state: isManualVoice ? normalized : 'idle',
+        enabled: voiceAvailable,
+      },
+      wakeListen: {
+        visible: voiceAvailable,
+        enabled: voiceAvailable,
+        active: isWakeVoice,
+        commandText: isWakeVoice ? this._getWakeCommandPhrase() : '',
+      },
+      response: { visible: isWakeVoice, enabled: voiceAvailable, speaking: normalized === 'speaking' },
+      command: { visible: voiceModeActive, enabled: voiceAvailable, active: this._voiceCommandMode, text: 'Commands' },
+      language: {
+        visible: voiceModeActive,
+        enabled: voiceAvailable,
+        mode: this._voiceLanguageMode,
+        options: this._voiceLanguageOptions(),
+      },
+    };
+  }
+
+  _recordHostEvent(type, detail = {}) {
+    this._hostEventCount += 1;
+    this._hostFlowStep = type;
+    this.dataset.hostEventCount = String(this._hostEventCount);
+    this.dataset.hostFlowStep = type;
+    this.dataset.activeChatId = this._activeChatId;
+    if (detail.id) this.dataset.lastFooterIntent = detail.id;
+    this.dispatchEvent(new CustomEvent('cascade-chat-host-flow', {
+      bubbles: true,
+      composed: true,
+      detail: {
+        type,
+        activeChatId: this._activeChatId,
+        footerState: { ...this._footerState },
+        ...detail,
+      },
+    }));
+  }
+
+  _selectMockChat(chatId = '') {
+    if (!chatId) return;
+    this._activeChatId = String(chatId);
+    this._clearStreamTimers();
+    this._isStreaming = false;
+    this._recordHostEvent('select-chat', { chatId: this._activeChatId });
+    this._syncWorkspaceState({ scrollToBottom: false, preserveComposerValue: true });
+    this._triggerBg(2400);
+  }
+
+  _handleWorkspaceFooterIntent(event) {
+    let detail = event.detail || {};
+    let id = String(detail.id || '');
+    if (!id) return;
+    if (id === 'provider' || id === 'model') {
+      this._footerState[id] = detail.value || this._footerState[id];
+    }
+    if (id === 'agent') this._footerState.agent = this._footerState.agent === 'neurology' ? 'orchestrator' : 'neurology';
+    if (id === 'task') this._footerState.task = this._footerState.task === 'dns' ? 'layout' : 'dns';
+    if (id === 'settings') {
+      this._getComposer()?.setVoicePreview?.({
+        mode: 'result',
+        status: 'footer intent',
+        text: `Host settings opened for ${this._footerState.provider}/${this._footerState.model}.`,
+      });
+    }
+    this._syncWorkspaceState({ scrollToBottom: false, preserveComposerValue: true });
+    this._recordHostEvent('footer-intent', { id, value: detail.value || this._footerState[id] || '' });
+    this._triggerBg(1800);
+  }
+
+  _handleWorkspaceContextIntent(event) {
+    let detail = event.detail || {};
+    this._recordHostEvent('context-intent', { id: detail.key || detail.path || 'context' });
+    this._triggerBg(1600);
+  }
+
+  _handleWorkspaceSend(event) {
+    event.preventDefault?.();
+    if (this._isActiveChatHumanInputDisabled()) {
+      this._triggerBg(1200);
+      return;
+    }
+    if (this._isStreaming) {
+      this._stopMockStream('manual-stop');
+      return;
+    }
+    let value = String(event.detail?.value || this._getComposer()?.$.value || '').trim();
+    if (!value) {
+      this._triggerBg(1200);
+      return;
+    }
+    this._startMockStream(value);
+  }
+
+  _startMockStream(value) {
+    this._clearStreamTimers();
+    this._isStreaming = true;
+    this._recordHostEvent('stream-start', { value });
+    let messages = [
+      ...this._getActiveMessages(),
+      { role: 'user', text: value },
+      {
+        role: 'thinking',
+        done: false,
+        elapsedText: '0s',
+        metaHtml: '<span>mock host adapter</span><span>streaming</span>',
+      },
+    ];
+    this._setActiveMessages(messages);
+    this._getWorkspace()?.setWorkspaceState({
+      messages,
+      messagesOptions: { smooth: true },
+      composer: {
+        value: '',
+        sending: true,
+        footerControls: this._buildFooterControls(),
+        voiceControls: this._buildVoiceControlsConfig(),
+      },
+      liveStatus: { phase: 'thinking', thinkingStatus: 'Planning mock host response...' },
+      background: { state: 'streaming', active: true },
+    });
+    this._streamTimers.push(
+      setTimeout(() => this._mockStreamToolStep(value), 500),
+      setTimeout(() => this._mockStreamRespondingStep(), 1000),
+      setTimeout(() => this._finishMockStream(value), 1500),
+    );
+  }
+
+  _mockStreamToolStep(value) {
+    if (!this._isStreaming) return;
+    this._recordHostEvent('stream-tool', { value });
+    this._appendActiveMessage({
+      role: 'tool',
+      name: 'mock_host_adapter.route_intent',
+      input: {
+        activeChatId: this._activeChatId,
+        prompt: value,
+        provider: this._footerState.provider,
+        model: this._footerState.model,
+      },
+      result: {
+        route: 'chat-workspace',
+        events: ['select', 'footer', 'send', 'stream', 'stop', 'background'],
+      },
+      done: true,
+    });
+    this._getWorkspace()?.setLiveStatus?.({ phase: 'tool', lastToolName: 'mock_host_adapter.route_intent' });
+  }
+
+  _mockStreamRespondingStep() {
+    if (!this._isStreaming) return;
+    this._recordHostEvent('stream-responding');
+    this._getWorkspace()?.setLiveStatus?.({ phase: 'responding' });
+  }
+
+  _finishMockStream(value) {
+    if (!this._isStreaming) return;
+    this._clearStreamTimers();
+    this._isStreaming = false;
+    this._recordHostEvent('stream-complete', { value });
+    this._appendActiveMessage({
+      role: 'assistant',
+      text: [
+        `Mock host adapter handled "${value}" through ${this._footerState.provider}/${this._footerState.model}.`,
+        '',
+        'The library provided the visible chat workspace, while the host owned selection, footer params, streaming state, and background lifecycle.',
+      ].join('\n'),
+    });
+    this._getWorkspace()?.setWorkspaceState({
+      composer: {
+        sending: false,
+        footerControls: this._buildFooterControls(),
+        voiceControls: this._buildVoiceControlsConfig(),
+      },
+      liveStatus: null,
+      background: { state: 'done', active: false },
+    });
+  }
+
+  _stopMockStream(reason = 'stopped') {
+    if (!this._isStreaming) return;
+    this._clearStreamTimers();
+    this._isStreaming = false;
+    this._recordHostEvent('stream-stop', { reason });
+    this._appendActiveMessage({
+      role: 'assistant',
+      text: 'Mock stream stopped by the host adapter. The composer returned to send mode and the background entered smooth stop.',
+    });
+    this._getWorkspace()?.setWorkspaceState({
+      composer: {
+        sending: false,
+        footerControls: this._buildFooterControls(),
+        voiceControls: this._buildVoiceControlsConfig(),
+      },
+      liveStatus: null,
+      background: { state: 'stop', active: false },
+    });
+  }
+
+  _clearStreamTimers() {
+    for (let timer of this._streamTimers || []) clearTimeout(timer);
+    this._streamTimers = [];
+  }
+
+  _handleWorkspaceVoiceIntent(event) {
+    let sourceEvent = event.detail?.sourceEvent;
+    if (sourceEvent === 'chat-composer-voice-input' || sourceEvent === 'chat-composer-wake-listen') {
+      let action = event.detail?.action || 'start';
+      if (sourceEvent === 'chat-composer-voice-input') {
+        this._setVoiceDemoState(action === 'stop' ? 'transcribing' : 'listening', 'manual');
+      } else {
+        this._setVoiceDemoState(action === 'stop' ? 'idle' : 'listening', 'wake');
+      }
+      return;
+    }
+    if (sourceEvent === 'chat-composer-voice-response-toggle') {
+      this._setVoiceDemoState('speaking', 'wake');
+      return;
+    }
+    if (sourceEvent === 'chat-composer-voice-command-toggle') {
+      this._voiceCommandMode = !this._voiceCommandMode;
+      this._syncVoiceControls();
+      this._triggerBg(3600);
+      return;
+    }
+    if (sourceEvent === 'chat-composer-voice-language-change') {
+      let mode = event.detail?.mode || this._voiceLanguageMode;
+      this._voiceLanguageMode = ['ru', 'es', 'en'].includes(mode) ? mode : this._voiceLanguageMode;
+      this._syncVoiceControls();
+      this._triggerBg(2600);
+      return;
+    }
+    if (sourceEvent === 'chat-composer-voice-approve') {
+      this._setVoiceDemoState('transcribing', this._voiceDemoMode || 'manual');
+      return;
+    }
+    if (sourceEvent === 'chat-composer-voice-cancel') {
+      this._setVoiceDemoState('idle');
+      return;
+    }
+    if (sourceEvent === 'chat-composer-voice-send') {
+      let text = event.detail?.text || this._getComposer()?.getVoicePreviewText?.() || this._getComposer()?.$.value || 'Voice preview command';
+      this._getComposer()?.clearVoicePreview?.();
+      this._startMockStream(text);
+    }
+  }
+
+  _voiceCommandLocale() {
+    return ['ru', 'es', 'en'].includes(this._voiceLanguageMode) ? this._voiceLanguageMode : 'en';
+  }
+
+  _voiceLanguageOptions() {
+    return [
+      { mode: 'ru', label: 'RU' },
+      { mode: 'es', label: 'ES' },
+      { mode: 'en', label: 'EN' },
+    ];
+  }
+
+  _getVoiceActionPhrases(action) {
+    let locale = this._voiceCommandLocale();
+    let phrases = this._voiceActionCommandPhrases || {};
+    return phrases[action]?.[locale] || phrases[action]?.en || [];
+  }
+
+  _getWakeCommandPhrase() {
+    return wakeCommandCandidates(this._wakeCommandPhrases || defaultWakeCommandPhrases(), this._voiceCommandLocale())[0] || 'Okay Agent';
+  }
+
+  _voiceCommandHints() {
+    let list = (action) => this._getVoiceActionPhrases(action).join(', ');
+    return [
+      `send: ${list('send')}`,
+      `cancel: ${list('cancel')}`,
+      `delete: ${list('delete')}`,
+      `off: ${list('off')}`,
+    ];
+  }
+
+  _extractVoiceCommandAction(text = '') {
+    let value = String(text || '').trim();
+    if (!value) return { matched: false, action: '', text: '' };
+    let candidates = ['send', 'cancel', 'delete', 'off'].flatMap((action) => (
+      this._getVoiceActionPhrases(action).map((phrase) => ({ action, phrase }))
+    ));
+    let command = matchVoiceCommandAtEnd(value, candidates);
+    if (!command.matched) return { matched: false, action: '', text: value };
+    if (command.action === 'send' && !command.text) return { matched: false, action: '', text: value };
+    return command;
+  }
+
+  _handleVoiceCommandText(text = '') {
+    if (!this._voiceCommandMode) return;
+    let command = this._extractVoiceCommandAction(text);
+    if (!command.matched) return;
+
+    if (command.action === 'send') {
+      this._getComposer()?.setValue?.(command.text);
+      this._getComposer()?.setVoicePreview?.({
+        mode: 'result',
+        status: 'command matched',
+        text: `Matched "${command.phrase}". The host would send: ${command.text}`,
+      });
+      this._triggerBg(4200);
+      this._queueBgStop(4600);
+      return;
+    }
+
+    if (command.action === 'delete') {
+      this._getComposer()?.setValue?.('');
+      this._getComposer()?.setVoicePreview?.({
+        mode: 'result',
+        status: 'command matched',
+        text: `Matched "${command.phrase}". Draft text cleared.`,
+      });
+      return;
+    }
+
+    if (command.action === 'cancel') {
+      this._setVoiceDemoState('idle');
+      return;
+    }
+
+    if (command.action === 'off') {
+      this._voiceCommandMode = false;
+      this._setVoiceDemoState('idle');
+    }
+  }
+
+  _triggerBg(duration = 3000) {
+    if (this._bgStopTimer) clearTimeout(this._bgStopTimer);
+    this._bgStopTimer = null;
+    this._getWorkspace()?.triggerBackground?.(duration);
+  }
+
+  _startBg() {
+    if (this._bgStopTimer) clearTimeout(this._bgStopTimer);
+    this._bgStopTimer = null;
+    this._getWorkspace()?.startBackground?.();
+  }
+
+  _stopBg() {
+    if (this._bgStopTimer) clearTimeout(this._bgStopTimer);
+    this._bgStopTimer = null;
+    this._getWorkspace()?.stopBackground?.();
+  }
+
+  _queueBgStop(delay = 3600) {
+    if (this._bgStopTimer) clearTimeout(this._bgStopTimer);
+    this._bgStopTimer = setTimeout(() => {
+      this._bgStopTimer = null;
+      this._getWorkspace()?.stopBackground?.();
+    }, delay);
+  }
+
+  _setVoiceDemoState(state = 'idle', mode = this._voiceDemoMode || 'idle') {
+    let normalized = ['idle', 'listening', 'transcribing', 'speaking', 'disabled'].includes(state)
+      ? state
+      : 'idle';
+    this._voiceDemoMode = ['manual', 'wake'].includes(mode) && !['idle', 'disabled'].includes(normalized)
+      ? mode
+      : 'idle';
+    this._voiceDemoState = normalized;
+    this._syncVoiceControls(normalized);
+
+    if (normalized === 'listening') {
+      this._getComposer()?.setVoicePreview?.({
+        mode: 'recording',
+        status: 'listening',
+        text: this._voiceDemoMode === 'wake'
+          ? `Listening for "${this._getWakeCommandPhrase()}" and command phrases.`
+          : 'Recording voice input. Press the mic again to stop and transcribe.',
+        elapsed: true,
+        commandHints: this._voiceCommandMode ? this._voiceCommandHints() : [],
+      });
+      this._startBg();
+    } else if (normalized === 'transcribing') {
+      this._getComposer()?.setVoicePreview?.({
+        mode: 'processing',
+        status: 'transcribing',
+        text: 'Host transcription resolves into editable text.',
+        commandHints: this._voiceCommandMode ? this._voiceCommandHints() : [],
+      });
+      this._triggerBg(6200);
+      this._queueBgStop(6600);
+    } else if (normalized === 'speaking') {
+      this._getComposer()?.setVoicePreview?.({
+        mode: 'result',
+        status: 'speaking',
+        text: 'The host speech output keeps the ambient activity running.',
+      });
+      this._startBg();
+    } else {
+      this._getComposer()?.clearVoicePreview?.();
+      this._stopBg();
+    }
+  }
+
+  _syncVoiceControls(state = this._voiceDemoState || 'idle') {
+    let normalized = ['idle', 'listening', 'transcribing', 'speaking', 'disabled'].includes(state)
+      ? state
+      : 'idle';
+    this._getComposer()?.setVoiceInputState?.(
+      normalized === 'speaking' ? 'idle' : normalized,
+      { enabled: normalized !== 'disabled' }
+    );
+    this._getComposer()?.setVoiceControls?.(this._buildVoiceControlsConfig(normalized));
+  }
+
+  renderCallback() {
+    this._setupWorkspace();
+  }
+
+  _setupWorkspace() {
+    if (this._ready) return;
+
+    let workspace = this._getWorkspace();
+    if (!workspace) {
+      queueMicrotask(() => this._setupWorkspace());
+      return;
+    }
+    this._ready = true;
+
+    if (Number.isFinite(chatSmokeWidth) && chatSmokeWidth >= 220) {
+      this.toggleAttribute('data-chat-smoke', true);
+      this.style.setProperty('--stage7-chat-smoke-width', `${chatSmokeWidth}px`);
+    }
+
+    let syncSidebar = () => {
+      let sidebar = this._getSidebar();
+      if (!sidebar) return;
+      sidebar.setAutoCollapse?.(false);
+      sidebar.setCollapsed(true);
+      workspace.setChats(this._mockChatCatalog(), { activeId: this._activeChatId });
+    };
+    let raf = globalThis.requestAnimationFrame || ((callback) => setTimeout(callback, 0));
+    raf(syncSidebar);
+    workspace.setMessages(this._getActiveMessages(), { smooth: false });
+    workspace.setComposerState({
+      placeholder: 'Ask the agent to inspect a package, run a smoke test, or build a layout...',
+      value: 'Render this response inside the current layout отправить',
+      attachedContext: [
+        { key: 'theme', name: 'cascade-theme', title: 'Cascade theme contract', icon: 'palette' },
+        { key: 'chat', name: 'chat-surface', title: 'Chat components', icon: 'forum' },
+      ],
+      voiceControls: this._buildVoiceControlsConfig('idle'),
+      footerControls: this._buildFooterControls(),
+    });
     this._setVoiceDemoState('idle');
     this._triggerBg(9000);
   }
@@ -1653,19 +2157,14 @@ class CascadeChatPanel extends Symbiote {
   disconnectedCallback() {
     if (this._bgStopTimer) clearTimeout(this._bgStopTimer);
     this._bgStopTimer = null;
+    this._clearStreamTimers();
     super.disconnectedCallback?.();
   }
 }
 
 CascadeChatPanel.template = html`
   <section class="chat-shell chat-lab-panel">
-    <chat-sidebar-shell class="chat-lab-sidebar" auto-collapse="false" ${{ ref: 'sidebar' }}></chat-sidebar-shell>
-    <div class="chat-view chat-lab-content">
-      <chat-transcript ${{ ref: 'transcript' }}>
-        <cell-bg slot="background" ${{ ref: 'bg' }}></cell-bg>
-      </chat-transcript>
-      <chat-composer ${{ ref: 'composer' }}></chat-composer>
-    </div>
+    <chat-workspace class="chat-lab-workspace" ${{ ref: 'workspace' }}></chat-workspace>
   </section>
 `;
 
@@ -1686,32 +2185,16 @@ CascadeChatPanel.rootStyles = `
     background: var(--sn-chat-bg, transparent);
   }
 
-  cascade-chat-panel .chat-lab-sidebar {
-    position: relative;
-    z-index: 2;
-    flex: 0 0 auto;
-    height: 100%;
-  }
-
-  cascade-chat-panel .chat-lab-content {
-    position: relative;
-    z-index: 1;
-    display: flex;
-    flex-direction: column;
+  cascade-chat-panel .chat-lab-workspace {
     flex: 1 1 auto;
-    width: auto;
     min-width: 0;
     min-height: 0;
   }
 
-  cascade-chat-panel[data-chat-smoke] .chat-lab-content {
+  cascade-chat-panel[data-chat-smoke] .chat-lab-workspace {
     align-self: flex-start;
     inline-size: min(100%, var(--stage7-chat-smoke-width));
     max-inline-size: min(100%, var(--stage7-chat-smoke-width));
-  }
-
-  cascade-chat-panel chat-transcript {
-    min-height: 96px;
   }
 `;
 
@@ -2217,13 +2700,24 @@ layout.registerPanelType('project-map', {
   },
 });
 layout.registerPanelType('chat', {
+  title: 'Chats',
+  icon: 'forum',
+  component: 'cascade-chat-panel',
+  behavior: {
+    importance: 100,
+    minInlineSize: 520,
+    minBlockSize: 360,
+    collapse: 'never',
+  },
+});
+layout.registerPanelType('agent-chat', {
   title: 'Agent Chat',
   icon: 'smart_toy',
   component: 'cascade-chat-panel',
   behavior: {
     importance: 20,
-    minInlineSize: 340,
-    minBlockSize: 220,
+    minInlineSize: 420,
+    minBlockSize: 320,
     collapse: 'manual',
   },
 });
@@ -2267,10 +2761,10 @@ layout.$.panelChrome = true;
 const createPanel = (panelType, behavior) => LayoutTree.createPanel(panelType, {}, behavior);
 
 const createCollapsedAgentChatPanel = () => {
-  let panel = createPanel('chat', {
+  let panel = createPanel('agent-chat', {
     importance: 20,
-    minInlineSize: 340,
-    minBlockSize: 220,
+    minInlineSize: 420,
+    minBlockSize: 320,
     collapse: 'manual',
   });
   panel.collapsed = true;
@@ -2285,7 +2779,7 @@ const createShowcaseLayout = (mainLayout) => LayoutTree.createSplit(
   'horizontal',
   mainLayout,
   createCollapsedAgentChatPanel(),
-  0.965,
+  0.65,
   {
     responsiveMode: 'preserve',
     overflow: 'collapse',
@@ -2341,12 +2835,12 @@ const createComponentsLayout = () => LayoutTree.createSplit(
   0.56
 );
 
-const createChatLayout = () => LayoutTree.createSplit(
-  'horizontal',
-  createPanel('runtime', { importance: 100, minInlineSize: 420, minBlockSize: 320 }),
-  createPanel('theme', { importance: 76, collapse: 'manual' }),
-  0.62
-);
+const createChatLayout = () => createPanel('chat', {
+  importance: 100,
+  minInlineSize: 560,
+  minBlockSize: 380,
+  collapse: 'never',
+});
 
 const createResponsiveLayout = () => LayoutTree.createSplit(
   'horizontal',
@@ -2436,8 +2930,8 @@ const showcaseProjects = [
       view('conversation', 'Conversation', 'forum', createChatLayout),
       view('voice-controls', 'Voice controls', 'record_voice_over', createChatLayout),
       view('markdown-code', 'Markdown & code', 'code_blocks', createChatLayout),
-      view('runtime-panels', 'Runtime panels', 'view_quilt', createRuntimeLayout),
-      view('tool-calls', 'Tool calls', 'terminal', createRuntimeLayout),
+      view('runtime-panels', 'Runtime panels', 'view_quilt', createChatLayout),
+      view('tool-calls', 'Tool calls', 'terminal', createChatLayout),
       view('history', 'Chat history', 'manage_history', createChatLayout),
       view('theme-response', 'Theme response', 'palette', createChatLayout),
     ],
@@ -2569,7 +3063,7 @@ const showcaseProjects = [
       view('3d-graph', '3D graph', 'deployed_code', createSpatialLayout),
       view('spatial-panels', 'Spatial panels', 'view_in_ar', createSpatialLayout),
       view('pointer-drag', 'Pointer & drag', 'open_with', createSpatialLayout),
-      view('voice-controls', 'Voice controls', 'record_voice_over', createChatLayout),
+      view('voice-controls', 'Voice controls', 'record_voice_over', createRuntimeLayout),
       view('theme-bridge', 'Theme bridge', 'palette', createSpatialLayout),
       view('2d-fallback', '2D fallback', 'view_quilt', createProjectSourceLayout),
     ],
@@ -2662,7 +3156,8 @@ function applyShowcaseView(projectId = activeProjectId, viewId = activeViewByPro
     ...project.behavior,
     ...viewConfig.behavior,
   });
-  layout.setLayout(createShowcaseLayout(viewConfig.layoutFactory()));
+  let viewLayout = viewConfig.layoutFactory();
+  layout.setLayout(project.id === 'chat' ? viewLayout : createShowcaseLayout(viewLayout));
   shellMenu?.setActiveGroup?.(project.id);
   syncShellHomeTab();
   syncProjectSidebar(project, viewConfig.id);

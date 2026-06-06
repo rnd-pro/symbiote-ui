@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://rnd-pro.github.io/symbiote-node/schemas/graph-model-v1.json",
+  "$id": "https://rnd-pro.github.io/symbiote-ui/schemas/graph-model-v1.json",
   "title": "Symbiote Graph Model",
   "type": "object",
   "additionalProperties": false,

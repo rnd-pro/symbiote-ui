@@ -627,9 +627,6 @@ ChatComposer.template = html`
       ${{ value: 'value', disabled: 'disabled', placeholder: 'placeholder',
           oninput: 'onInput', onkeydown: 'onKeyDown' }}></textarea>
     <div class="composer-actions">
-      <button class="btn-mic" ref="voiceInputBtn" type="button" title="Voice input" hidden ${{ onclick: 'onVoiceInput' }}>
-        <span class="material-symbols-outlined" ref="voiceInputIcon">mic</span>
-      </button>
       <button class="btn-wake-listen" ref="wakeListenBtn" type="button" title="Wake listening" hidden ${{ onclick: 'onWakeListen' }}>
         <span class="material-symbols-outlined">hearing</span>
         <span class="wake-command-text" ref="wakeCommandText"></span>
@@ -642,6 +639,9 @@ ChatComposer.template = html`
         <span class="voice-command-button-text" ref="voiceCommandText"></span>
       </button>
       <button class="btn-voice-language" ref="voiceLanguageBtn" type="button" title="Voice language" hidden ${{ onclick: 'onVoiceLanguageClick' }}></button>
+      <button class="btn-mic" ref="voiceInputBtn" type="button" title="Voice input" hidden ${{ onclick: 'onVoiceInput' }}>
+        <span class="material-symbols-outlined" ref="voiceInputIcon">mic</span>
+      </button>
     </div>
     <sn-button class="btn-send" ref="btnSend" variant="icon" ${{ onclick: 'onSend' }}>
       <span class="material-symbols-outlined" ref="sendIcon">arrow_upward</span>

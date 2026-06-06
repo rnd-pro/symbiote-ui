@@ -177,6 +177,10 @@ chat-sidebar-item[data-group] > .chat-item .chat-item-delete {
   font-size: var(--sn-chat-sidebar-delete-icon-size, 15px);
 }
 
+.chat-item-delete[hidden] {
+  display: none !important;
+}
+
 .chat-item:hover .chat-item-icon,
 .chat-item-child:hover .chat-item-icon {
   opacity: 0;

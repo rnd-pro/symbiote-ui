@@ -4,7 +4,7 @@
  * Simplified version of Rete.js ClassicFlow.
  * Handles: pointerdown on socket → drag pseudo-line → pointerup on target socket → create connection.
  *
- * @module symbiote-node/interactions/ConnectFlow
+ * @module symbiote-ui/interactions/ConnectFlow
  */
 
 import { Connection } from '../core/Connection.js';

@@ -4,7 +4,7 @@
  * Sockets arranged vertically on left (inputs) and right (outputs).
  * Default shape for most nodes.
  *
- * @module symbiote-node/shapes/RectShape
+ * @module symbiote-ui/shapes/RectShape
  */
 
 import { NodeShape } from './NodeShape.js';

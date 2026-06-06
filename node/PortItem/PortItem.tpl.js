@@ -1,6 +1,6 @@
 /**
  * PortItem template
- * @module symbiote-node/node/PortItem.tpl
+ * @module symbiote-ui/node/PortItem.tpl
  */
 import { html } from '@symbiotejs/symbiote';
 

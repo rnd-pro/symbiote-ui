@@ -1,6 +1,6 @@
 /**
  * Breadcrumb template
- * @module symbiote-node/canvas/Breadcrumb.tpl
+ * @module symbiote-ui/canvas/Breadcrumb.tpl
  */
 import { html } from '@symbiotejs/symbiote';
 

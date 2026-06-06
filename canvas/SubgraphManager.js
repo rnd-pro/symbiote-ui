@@ -5,7 +5,7 @@
  * the current state is saved and the inner editor is loaded.
  * Breadcrumb navigation allows jumping back to any level.
  *
- * @module symbiote-node/canvas/SubgraphManager
+ * @module symbiote-ui/canvas/SubgraphManager
  */
 
 /**

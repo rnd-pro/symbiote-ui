@@ -4,7 +4,7 @@
  * Adapted from Rete.js area-plugin/zoom.ts (123 LOC).
  * Handles zoom relative to cursor/pinch center.
  *
- * @module symbiote-node/interactions/Zoom
+ * @module symbiote-ui/interactions/Zoom
  */
 
 export class Zoom {

@@ -1,6 +1,6 @@
 /**
  * TemplatePreview template
- * @module symbiote-node/inspector/TemplatePreview.tpl
+ * @module symbiote-ui/inspector/TemplatePreview.tpl
  */
 import { html } from '@symbiotejs/symbiote';
 

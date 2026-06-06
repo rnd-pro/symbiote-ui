@@ -5,7 +5,7 @@
  * Ports are auto-generated from exposed inner nodes.
  * Supports drill-down navigation via SubgraphManager.
  *
- * @module symbiote-node/core/SubgraphNode
+ * @module symbiote-ui/core/SubgraphNode
  */
 
 import { Node } from './Node.js';

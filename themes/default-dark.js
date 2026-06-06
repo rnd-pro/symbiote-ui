@@ -1,10 +1,10 @@
 /**
- * Default Dark — default production theme for symbiote-node UI
+ * Default Dark — default production theme for symbiote-ui UI
  *
  * Cascadeable neutral shell aligned with the current Agent Portal theme.
  * Host applications can override the source controls at :root or a subtree.
  *
- * @module symbiote-node/themes/default-dark
+ * @module symbiote-ui/themes/default-dark
  */
 
 import { themedScrollbarRootStyles } from './scrollbar-styles.js';

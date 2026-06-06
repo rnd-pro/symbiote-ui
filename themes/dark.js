@@ -4,7 +4,7 @@
  * Built on atomic HSL tokens: change a hue value and entire
  * palette rebuilds harmoniously. AI-agent friendly.
  *
- * @module symbiote-node/themes/dark
+ * @module symbiote-ui/themes/dark
  */
 
 /** @type {import('./Theme.js').ThemeDefinition} */

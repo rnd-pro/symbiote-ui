@@ -5,7 +5,7 @@
  * creation/removal, and node dragging.
  *
  * Adapted from Rete.js readonly plugin (63 LOC).
- * @module symbiote-node/plugins/Readonly
+ * @module symbiote-ui/plugins/Readonly
  */
 
 export class Readonly {

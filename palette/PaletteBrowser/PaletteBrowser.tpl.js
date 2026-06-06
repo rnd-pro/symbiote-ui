@@ -1,6 +1,6 @@
 /**
  * PaletteBrowser template
- * @module symbiote-node/palette/PaletteBrowser.tpl
+ * @module symbiote-ui/palette/PaletteBrowser.tpl
  */
 import { html } from '@symbiotejs/symbiote';
 

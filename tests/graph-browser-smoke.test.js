@@ -759,7 +759,10 @@ async function evaluateComposerSmoke(page, width = 0) {
       await settle();
 
       const chatLayoutNode = [...document.querySelectorAll('layout-node')]
-        .find((node) => node.getAttribute('node-type') === 'panel' && node.textContent.includes('Agent Chat'));
+        .find((node) => node.getAttribute('node-type') === 'panel' && (
+          node.textContent.includes('Agent Chat') ||
+          node.textContent.includes('Chats')
+        ));
       if (chatLayoutNode?.hasAttribute('collapsed')) {
         chatLayoutNode.querySelector('.collapse-btn')?.click();
         await settle();
@@ -809,18 +812,63 @@ async function evaluateComposerSmoke(page, width = 0) {
           && child.right <= parent.right + 1
           && child.bottom <= parent.bottom + 1;
       };
+      const isVisibleBox = (box) => Boolean(
+        box &&
+        box.display !== 'none' &&
+        box.visibility !== 'hidden' &&
+        box.width > 0 &&
+        box.height > 0
+      );
 
       const bodyBox = readBox(body);
       const textarea = body.querySelector('textarea');
       const actions = body.querySelector('.composer-actions');
       const send = body.querySelector('sn-button.btn-send');
-      const controls = [...body.querySelectorAll('.composer-actions button, sn-button.btn-send')]
-        .map((el) => ({
+      const readControls = () => [...body.querySelectorAll('.composer-actions button, sn-button.btn-send')]
+        .map((el) => {
+          const box = readBox(el);
+          return {
           tag: el.tagName.toLowerCase(),
           className: el.className,
           text: el.textContent.trim(),
-          box: readBox(el),
-        }));
+          hidden: el.hidden || getComputedStyle(el).display === 'none',
+          box,
+          visible: isVisibleBox(box),
+        };
+        })
+        .filter((control) => control.visible)
+        .sort((a, b) => a.box.x - b.box.x || a.box.y - b.box.y);
+      const chatPanel = composer.closest('cascade-chat-panel');
+      chatPanel?._syncVoiceControls?.('idle');
+      await settle();
+      const initialControls = readControls();
+      composer.setVoiceControls?.({
+        input: { visible: false, state: 'idle', enabled: true },
+        wakeListen: { visible: true, active: true, commandText: "O'key Agent" },
+        response: { visible: true, enabled: true, speaking: false },
+        command: { visible: true, enabled: true, active: true, text: 'Commands' },
+        language: {
+          visible: true,
+          enabled: true,
+          mode: 'ru',
+          options: [
+            { mode: 'ru', label: 'RU' },
+            { mode: 'es', label: 'ES' },
+            { mode: 'en', label: 'EN' },
+          ],
+        },
+      });
+      await settle();
+      const controls = readControls();
+      const languageOptions = [...(body.querySelectorAll('.btn-voice-language .voice-language-option') || [])]
+        .map((el) => {
+          const box = readBox(el);
+          return {
+            text: el.textContent.trim(),
+            active: el.classList.contains('active'),
+            visible: isVisibleBox(box),
+          };
+        });
       const readScroll = (el) => {
         if (!el) return null;
         return {
@@ -868,6 +916,11 @@ async function evaluateComposerSmoke(page, width = 0) {
           ...control,
           insideBody: inside(bodyBox, control.box),
         })),
+        initialControls: initialControls.map((control) => ({
+          ...control,
+          insideBody: inside(bodyBox, control.box),
+        })),
+        languageOptions,
         chat: {
           panel: readScroll(panel),
           sidebar: readScroll(sidebar),
@@ -943,7 +996,7 @@ async function evaluateShowcaseSmoke(page) {
         let node = nodes.find((item) => item.getAttribute('node-type') === 'panel' && item.textContent.includes('Agent Chat'));
         if (!node) return null;
         return {
-          ...elementBox(node, 'layout-node[panelType=chat]'),
+          ...elementBox(node, 'layout-node[panelType=agent-chat]'),
           collapsed: node.hasAttribute('collapsed'),
           collapseDir: node.getAttribute('collapse-dir') || '',
           nodeType: node.getAttribute('node-type') || '',
@@ -1023,6 +1076,16 @@ async function evaluateShowcaseSmoke(page) {
               }))),
         };
       };
+      const expandAgentChat = async () => {
+        await activate('symbiote-ui', 'overview');
+        const node = [...document.querySelectorAll('panel-layout.lab-layout layout-node')]
+          .find((item) => item.getAttribute('node-type') === 'panel' && item.textContent.includes('Agent Chat'));
+        const button = node?.querySelector?.('.collapse-btn');
+        button?.click?.();
+        await settle();
+        await settle();
+        return readAgentChatNode();
+      };
 
       return {
         title: document.title,
@@ -1047,6 +1110,7 @@ async function evaluateShowcaseSmoke(page) {
           node: await activate('node-studio', 'pcb-routing'),
           spatial: await activate('spatial-xr', '3d-graph'),
         },
+        expandedAgentChat: await expandAgentChat(),
       };
     })()
   `;
@@ -1058,6 +1122,186 @@ async function evaluateShowcaseSmoke(page) {
   }), 15000, 'showcase smoke Runtime.evaluate');
   if (result.exceptionDetails) {
     throw new Error(result.exceptionDetails.text || 'Showcase smoke evaluation failed');
+  }
+  return result.result.value;
+}
+
+async function evaluateChatWorkspaceEventFlow(page) {
+  const expression = String.raw`
+    (async () => {
+      const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+      const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      const settle = async () => {
+        for (let index = 0; index < 8; index += 1) await frame();
+      };
+      await Promise.all([
+        customElements.whenDefined('layout-shell-menu'),
+        customElements.whenDefined('cascade-chat-panel'),
+        customElements.whenDefined('chat-workspace'),
+        customElements.whenDefined('chat-composer'),
+        customElements.whenDefined('chat-sidebar-shell'),
+        customElements.whenDefined('chat-transcript'),
+      ]);
+      location.hash = 'chat/conversation';
+      window.dispatchEvent(new HashChangeEvent('hashchange'));
+      document.querySelector('layout-shell-menu')?.selectGroup?.('chat', 'event-flow-smoke');
+      location.hash = 'chat/conversation';
+      window.dispatchEvent(new HashChangeEvent('hashchange'));
+      await settle();
+      await settle();
+
+      const panel = document.querySelector('cascade-chat-panel');
+      const workspace = panel?.querySelector('chat-workspace');
+      const composer = workspace?.getComposer?.();
+      const sidebar = workspace?.getSidebar?.();
+      const transcript = workspace?.getTranscript?.();
+      if (!panel || !workspace || !composer || !sidebar || !transcript) {
+        return {
+          error: 'missing chat workspace parts',
+          hasPanel: Boolean(panel),
+          hasWorkspace: Boolean(workspace),
+          hasComposer: Boolean(composer),
+          hasSidebar: Boolean(sidebar),
+          hasTranscript: Boolean(transcript),
+        };
+      }
+
+      const hostEvents = [];
+      panel.addEventListener('cascade-chat-host-flow', (event) => {
+        hostEvents.push({
+          type: event.detail?.type || '',
+          activeChatId: event.detail?.activeChatId || '',
+          id: event.detail?.id || '',
+          reason: event.detail?.reason || '',
+          provider: event.detail?.footerState?.provider || '',
+          model: event.detail?.footerState?.model || '',
+        });
+      });
+
+      sidebar.setCollapsed?.(false);
+      await settle();
+      const subagentItem = [...sidebar.querySelectorAll('chat-sidebar-sub-item')]
+        .find((item) => item.$?.id === 'architecture-audit');
+      const subagentRow = subagentItem?.querySelector('.chat-item-child');
+      subagentRow?.click();
+      await settle();
+      const subagentComposerState = {
+        activeChatId: panel.dataset.activeChatId || '',
+        sidebarActive: [...sidebar.querySelectorAll('chat-sidebar-item, chat-sidebar-sub-item')]
+          .find((item) => item.hasAttribute('data-active'))?.$?.id || '',
+        ariaDisabled: subagentRow?.getAttribute('aria-disabled') || '',
+        lockedRows: sidebar.querySelectorAll('[data-locked]').length,
+        lockIcons: sidebar.querySelectorAll('.chat-lock-icon').length,
+        composerDisabled: Boolean(composer.querySelector('textarea')?.disabled),
+        inputDisabled: Boolean(composer.querySelector('textarea')?.disabled),
+        sendDisabled: composer.querySelector('sn-button.btn-send')?.hasAttribute('disabled') || composer.querySelector('sn-button.btn-send')?.getAttribute('aria-disabled') === 'true',
+        micDisabled: Boolean(composer.querySelector('button.btn-mic')?.disabled),
+      };
+      const webmcpItem = [...sidebar.querySelectorAll('chat-sidebar-item, chat-sidebar-sub-item')]
+        .find((item) => item.$?.id === 'webmcp');
+      webmcpItem?.querySelector('.chat-item, .chat-item-child')?.click();
+      await settle();
+      const webmcpComposerState = {
+        composerDisabled: Boolean(composer.querySelector('textarea')?.disabled),
+        inputDisabled: Boolean(composer.querySelector('textarea')?.disabled),
+        sendDisabled: composer.querySelector('sn-button.btn-send')?.hasAttribute('disabled') || composer.querySelector('sn-button.btn-send')?.getAttribute('aria-disabled') === 'true',
+      };
+
+      const provider = composer.querySelector('select[data-footer-control-id="provider"]');
+      if (provider) {
+        provider.value = 'codex';
+        provider.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      await settle();
+
+      const wakeButton = composer.querySelector('button.btn-wake-listen');
+      const responseButton = composer.querySelector('button.btn-voice-response');
+      wakeButton?.click();
+      await settle();
+      responseButton?.click();
+      await settle();
+      const voicePreview = composer.getVoicePreviewText?.() || '';
+      const voiceState = {
+        wakeActive: wakeButton?.classList.contains('listening') || false,
+        responseSpeaking: responseButton?.classList.contains('speaking') || false,
+        background: workspace.dataset.backgroundState || '',
+      };
+
+      const writeInput = (value) => {
+        const input = composer.getInputElement?.() || composer.querySelector('textarea');
+        input.value = value;
+        input.dispatchEvent(new InputEvent('input', {
+          bubbles: true,
+          inputType: 'insertText',
+          data: value,
+        }));
+      };
+      const sendButton = composer.querySelector('sn-button.btn-send');
+
+      writeInput('Stop this mock stream');
+      sendButton?.click();
+      await pause(260);
+      const streamingState = {
+        sending: Boolean(composer.$?.isSending),
+        background: workspace.dataset.backgroundState || '',
+        liveStatus: transcript.querySelector('.live-status-indicator')?.textContent?.trim() || '',
+      };
+      sendButton?.click();
+      await settle();
+      const stoppedState = {
+        sending: Boolean(composer.$?.isSending),
+        background: workspace.dataset.backgroundState || '',
+      };
+
+      writeInput('Complete this mock stream');
+      sendButton?.click();
+      await pause(1800);
+      await settle();
+
+      const messageItems = transcript.$?.messageItems || [];
+      const sidebarActive = [...sidebar.querySelectorAll('chat-sidebar-item, chat-sidebar-sub-item')]
+        .find((item) => item.hasAttribute('data-active'))?.$?.id || '';
+      const footerProvider = composer.querySelector('select[data-footer-control-id="provider"]')?.value || '';
+
+      return {
+        error: undefined,
+        activeChatId: panel.dataset.activeChatId || '',
+        hostFlowStep: panel.dataset.hostFlowStep || '',
+        hostEventCount: Number(panel.dataset.hostEventCount || 0),
+        hostEvents,
+        sidebarActive,
+        footerProvider,
+        subagentComposerState,
+        webmcpComposerState,
+        voicePreview,
+        voiceState,
+        streamingState,
+        stoppedState,
+        finalState: {
+          sending: Boolean(composer.$?.isSending),
+          background: workspace.dataset.backgroundState || '',
+          messageCount: messageItems.length,
+          messageRoles: messageItems.map((item) => item.role),
+          lastText: transcript.textContent.trim().replace(/\s+/g, ' ').slice(-240),
+        },
+        counts: {
+          panels: document.querySelectorAll('cascade-chat-panel').length,
+          workspaces: document.querySelectorAll('chat-workspace').length,
+          composers: document.querySelectorAll('chat-composer').length,
+          transcripts: document.querySelectorAll('chat-transcript').length,
+          backgrounds: document.querySelectorAll('cell-bg').length,
+        },
+      };
+    })()
+  `;
+
+  const result = await withTimeout(page.send('Runtime.evaluate', {
+    expression,
+    awaitPromise: true,
+    returnByValue: true,
+  }), 18000, 'chat workspace event flow Runtime.evaluate');
+  if (result.exceptionDetails) {
+    throw new Error(result.exceptionDetails.text || 'Chat workspace event flow evaluation failed');
   }
   return result.result.value;
 }
@@ -1185,7 +1429,7 @@ test('cascade lab graph nodes render non-empty with route styles and compact mod
   }
 });
 
-test('agent workspace demo exposes the public feature showcase groups', { timeout: 45000 }, async (t) => {
+test('agent workspace demo exposes the public feature showcase groups', { timeout: 70000 }, async (t) => {
   const chromePath = findChrome();
   if (!chromePath || typeof WebSocket !== 'function') {
     t.skip('Chrome or WebSocket is not available for browser layout smoke');
@@ -1220,6 +1464,11 @@ test('agent workspace demo exposes the public feature showcase groups', { timeou
     assert.equal(smoke.composerCount, 1);
     assert.equal(smoke.agentChatNode?.collapsed, true);
     assert.equal(smoke.agentChatNode?.collapseDir, 'horizontal');
+    assert.equal(smoke.expandedAgentChat?.collapsed, false);
+    assert.ok(
+      smoke.expandedAgentChat?.width >= 300,
+      `expanded agent chat should keep a normal assistant width: ${JSON.stringify(smoke.expandedAgentChat)}`
+    );
     for (const label of [
       'Symbiote UI',
       'Chat',
@@ -1253,12 +1502,12 @@ test('agent workspace demo exposes the public feature showcase groups', { timeou
 
     assert.equal(smoke.groups.chat.hash, '#chat/conversation');
     assert.equal(smoke.groups.chat.activeProject, 'chat');
-    assert.equal(isVisible(smoke.groups.chat.chat), false);
+    assert.ok(isVisible(smoke.groups.chat.chat), JSON.stringify(smoke.groups.chat, null, 2));
     assert.equal(smoke.groups.chat.chatPanelCount, 1);
     assert.equal(smoke.groups.chat.composerCount, 1);
-    assert.equal(smoke.groups.chat.agentChatNode?.collapsed, true);
-    assert.ok(isVisible(smoke.groups.chat.runtime), JSON.stringify(smoke.groups.chat, null, 2));
-    assert.ok(isVisible(smoke.groups.chat.theme));
+    assert.equal(smoke.groups.chat.agentChatNode, null);
+    assert.equal(isVisible(smoke.groups.chat.runtime), false);
+    assert.equal(isVisible(smoke.groups.chat.theme), false);
     assert.ok(smoke.groups.chat.sidebarLabels.some((label) => label.includes('Voice controls')));
 
     assert.equal(smoke.groups.dev.hash, '#multi-agent-dev/source-editor');
@@ -1324,6 +1573,75 @@ test('agent workspace demo exposes the public feature showcase groups', { timeou
     );
     assert.ok(smoke.groups.spatial.spatialNodes.every((node) => node.width > 20 && node.height > 20));
     assert.ok(smoke.groups.spatial.spatialNodes.every((node) => node.scale));
+  } finally {
+    page?.close();
+    await closeChromeSession(chromeSession);
+    await server.close();
+  }
+});
+
+test('showcase chat workspace exercises host event flow through library primitives', { timeout: 45000 }, async (t) => {
+  const chromePath = findChrome();
+  if (!chromePath || typeof WebSocket !== 'function') {
+    t.skip('Chrome or WebSocket is not available for chat workspace event smoke');
+    return;
+  }
+
+  const server = await createStaticServer();
+  let chromeSession;
+  let page;
+  try {
+    chromeSession = await launchChromeSession(chromePath, 'chat workspace event flow smoke');
+    page = await withTimeout(
+      openPage(chromeSession.endpoint, `${server.url}/demo/cascade-theme-lab.html?v=chat-workspace-event-flow-smoke#chat/conversation`),
+      22000,
+      'chat workspace event flow page open'
+    );
+    await setPageViewport(page, { width: 1100, height: 760 });
+    const flow = await evaluateChatWorkspaceEventFlow(page);
+
+    assert.equal(flow.error, undefined, JSON.stringify(flow, null, 2));
+    assert.deepEqual(flow.counts, {
+      panels: 1,
+      workspaces: 1,
+      composers: 1,
+      transcripts: 1,
+      backgrounds: 1,
+    });
+    assert.equal(flow.activeChatId, 'webmcp');
+    assert.equal(flow.sidebarActive, 'webmcp');
+    assert.equal(flow.footerProvider, 'codex');
+    assert.equal(flow.subagentComposerState.activeChatId, 'architecture-audit');
+    assert.equal(flow.subagentComposerState.sidebarActive, 'architecture-audit');
+    assert.equal(flow.subagentComposerState.ariaDisabled, '');
+    assert.equal(flow.subagentComposerState.lockedRows, 0);
+    assert.equal(flow.subagentComposerState.lockIcons, 0);
+    assert.equal(flow.subagentComposerState.composerDisabled, true);
+    assert.equal(flow.subagentComposerState.inputDisabled, true);
+    assert.equal(flow.subagentComposerState.sendDisabled, true);
+    assert.equal(flow.subagentComposerState.micDisabled, true);
+    assert.equal(flow.webmcpComposerState.composerDisabled, false);
+    assert.equal(flow.webmcpComposerState.inputDisabled, false);
+    assert.equal(flow.webmcpComposerState.sendDisabled, false);
+    assert.ok(flow.hostEventCount >= 8, JSON.stringify(flow.hostEvents, null, 2));
+    assert.ok(flow.hostEvents.some((event) => event.type === 'select-chat' && event.activeChatId === 'webmcp'));
+    assert.ok(flow.hostEvents.some((event) => event.type === 'footer-intent' && event.id === 'provider' && event.provider === 'codex'));
+    assert.ok(flow.hostEvents.some((event) => event.type === 'stream-start'));
+    assert.ok(flow.hostEvents.some((event) => event.type === 'stream-stop' && event.reason === 'manual-stop'));
+    assert.ok(flow.hostEvents.some((event) => event.type === 'stream-tool'));
+    assert.ok(flow.hostEvents.some((event) => event.type === 'stream-responding'));
+    assert.ok(flow.hostEvents.some((event) => event.type === 'stream-complete'));
+    assert.match(flow.voicePreview, /speech output|listening/i);
+    assert.equal(flow.streamingState.sending, true);
+    assert.match(flow.streamingState.background, /streaming|thinking|tool|responding/);
+    assert.match(flow.streamingState.liveStatus, /Planning|Running|Writing/);
+    assert.equal(flow.stoppedState.sending, false);
+    assert.equal(flow.stoppedState.background, 'stop');
+    assert.equal(flow.finalState.sending, false);
+    assert.equal(flow.finalState.background, 'done');
+    assert.ok(flow.finalState.messageCount >= 5);
+    assert.ok(flow.finalState.messageRoles.includes('tool'));
+    assert.match(flow.finalState.lastText, /Mock host adapter handled|library provided the visible chat workspace/);
   } finally {
     page?.close();
     await closeChromeSession(chromeSession);
@@ -1519,6 +1837,38 @@ test('cascade lab chat composer keeps voice controls inside the input surface re
       assert.equal(smoke.actions.alignSelf, 'end');
       assert.equal(smoke.send.alignSelf, 'end');
       assert.ok(smoke.controls.length >= 5);
+      const controlToken = (control) => [
+        'btn-mic',
+        'btn-wake-listen',
+        'btn-voice-response',
+        'btn-voice-command',
+        'btn-voice-language',
+        'btn-send',
+      ].find((token) => String(control.className || '').split(/\s+/).includes(token));
+      if (smoke.actions.gridRow === '1') {
+        assert.deepEqual(smoke.initialControls.map(controlToken), ['btn-wake-listen', 'btn-mic', 'btn-send']);
+      }
+      if (smoke.actions.gridRow === '1') {
+        assert.deepEqual(smoke.controls.map(controlToken), [
+          'btn-wake-listen',
+          'btn-voice-response',
+          'btn-voice-command',
+          'btn-voice-language',
+          'btn-send',
+        ]);
+      } else {
+        for (const token of ['btn-wake-listen', 'btn-voice-response', 'btn-voice-command', 'btn-voice-language', 'btn-send']) {
+          assert.ok(smoke.controls.map(controlToken).includes(token));
+        }
+      }
+      const visibleLanguageOptions = smoke.languageOptions.filter((option) => option.visible);
+      assert.ok(visibleLanguageOptions.length >= 1);
+      assert.equal(visibleLanguageOptions.filter((option) => option.active).length, 1);
+      if (smoke.body.width <= 340) {
+        assert.deepEqual(visibleLanguageOptions.map((option) => option.text), ['RU']);
+      } else {
+        assert.deepEqual(visibleLanguageOptions.map((option) => option.text), ['RU', 'ES', 'EN']);
+      }
       assert.ok(smoke.chat.footerControls.length >= 5);
       assert.ok(smoke.chat.chips.length >= 2);
       assert.deepEqual(smoke.controls.filter((control) => !control.insideBody), []);

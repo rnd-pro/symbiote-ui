@@ -29,7 +29,7 @@ export let UI_SCHEMA_VERSIONS = [
 export let UI_SCHEMAS = {
   'component-descriptor-v1': {
     $schema: 'https://json-schema.org/draft/2020-12/schema',
-    $id: 'https://rnd-pro.github.io/symbiote-node/schemas/component-descriptor-v1.json',
+    $id: 'https://rnd-pro.github.io/symbiote-ui/schemas/component-descriptor-v1.json',
     title: 'Symbiote Node Component Descriptor',
     type: 'object',
     additionalProperties: false,
@@ -120,7 +120,7 @@ export let UI_SCHEMAS = {
   },
   'runtime-ui-v1': {
     $schema: 'https://json-schema.org/draft/2020-12/schema',
-    $id: 'https://rnd-pro.github.io/symbiote-node/schemas/runtime-ui-v1.json',
+    $id: 'https://rnd-pro.github.io/symbiote-ui/schemas/runtime-ui-v1.json',
     title: 'Symbiote Node Runtime UI Tree',
     type: 'object',
     additionalProperties: false,
@@ -222,7 +222,7 @@ export let UI_SCHEMAS = {
   },
   'theme-rule-block-v1': {
     $schema: 'https://json-schema.org/draft/2020-12/schema',
-    $id: 'https://rnd-pro.github.io/symbiote-node/schemas/theme-rule-block-v1.json',
+    $id: 'https://rnd-pro.github.io/symbiote-ui/schemas/theme-rule-block-v1.json',
     title: 'Symbiote Node Theme Rule Block',
     type: 'object',
     additionalProperties: false,

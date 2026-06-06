@@ -1,10 +1,10 @@
 /**
  * Connection — link between two node ports
  *
- * Uses symbiote-node naming: from/out/to/in
+ * Uses symbiote-ui naming: from/out/to/in
  * Adds connection ID for selection/history support.
  *
- * @module symbiote-node/core/Connection
+ * @module symbiote-ui/core/Connection
  */
 
 import { uid } from './Socket.js';
@@ -27,16 +27,16 @@ export class Connection {
     /** @type {string} */
     this.id = uid('conn');
 
-    /** @type {string} - Source node ID (symbiote-node: 'from') */
+    /** @type {string} - Source node ID (symbiote-ui: 'from') */
     this.from = sourceNode.id;
 
-    /** @type {string} - Source output key (symbiote-node: 'out') */
+    /** @type {string} - Source output key (symbiote-ui: 'out') */
     this.out = sourceOutput;
 
-    /** @type {string} - Target node ID (symbiote-node: 'to') */
+    /** @type {string} - Target node ID (symbiote-ui: 'to') */
     this.to = targetNode.id;
 
-    /** @type {string} - Target input key (symbiote-node: 'in') */
+    /** @type {string} - Target input key (symbiote-ui: 'in') */
     this.in = targetInput;
 
     /** @type {boolean} */

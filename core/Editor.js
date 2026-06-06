@@ -5,7 +5,7 @@
  * pre/post event hooks via callback-based event emitter.
  * Replaces Rete.js Scope/Signal with simpler emit pattern.
  *
- * @module symbiote-node/core/Editor
+ * @module symbiote-ui/core/Editor
  */
 
 import { Connection } from './Connection.js';
@@ -243,7 +243,7 @@ export class NodeEditor {
 
 
   /**
-   * Serialize editor state to symbiote-node workflow JSON format.
+   * Serialize editor state to symbiote-ui workflow JSON format.
    * Output is directly compatible with engine/Graph.fromJSON().
    * @param {Object<string, number[]>} [positions] - Node positions {nodeId: [x, y]}
    * @returns {object} Workflow JSON
@@ -305,7 +305,7 @@ export class NodeEditor {
   }
 
   /**
-   * Reconstruct editor state from symbiote-node workflow JSON.
+   * Reconstruct editor state from symbiote-ui workflow JSON.
    * Enables round-trip: Editor → toJSON → fromJSON → Editor.
    * Also accepts output from engine/Graph.toJSON().
    * @param {object} data - Workflow JSON

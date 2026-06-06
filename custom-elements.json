@@ -11401,6 +11401,829 @@
       ]
     },
     {
+      "path": "chat/ChatWorkspace/ChatWorkspace.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "customElement": true,
+          "name": "ChatWorkspace",
+          "tagName": "chat-workspace",
+          "description": "Reusable chat workspace shell that composes sidebar, transcript, composer, voice intents, footer controls, and animated background lifecycle.",
+          "componentDescription": "Reusable chat workspace shell that composes sidebar, transcript, composer, voice intents, footer controls, and animated background lifecycle. Use this chat and conversation surface when composing chat UI. Capabilities: chat-workspace, chat-sidebar-composition, chat-transcript-composition, chat-composer-composition, chat-nav-tree-helper, voice-intent-router, footer-control-intent-router, context-intent-router, animated-background-lifecycle, host-owned-transport. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: chat_workspace_set_state, chat_workspace_background, chat_workspace_select_chat, chat_workspace_send.",
+          "attributes": [
+            {
+              "name": "sidebar",
+              "description": "Set to hidden to hide the composed sidebar surface.",
+              "type": {
+                "text": "string"
+              }
+            },
+            {
+              "name": "empty",
+              "description": "Centers the composed composer and hides the transcript while the host has no messages.",
+              "type": {
+                "text": "boolean"
+              }
+            }
+          ],
+          "members": [
+            {
+              "kind": "field",
+              "name": "chats",
+              "description": "Host-owned nested chat descriptors forwarded to chat-sidebar-shell; hosts can use buildChatNavTree() to derive this product-neutral tree.",
+              "type": {
+                "text": "array"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "activeChatId",
+              "description": "Host-owned active chat id used to mark sidebar selection.",
+              "type": {
+                "text": "string"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "messageItems",
+              "description": "Normalized transcript message descriptors forwarded to chat-transcript.",
+              "type": {
+                "text": "array"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "composer",
+              "description": "Composer state including value, context chips, footer controls, sending state, voice controls, and voice preview.",
+              "type": {
+                "text": "object"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "voiceControls",
+              "description": "Host-owned voice control state forwarded to chat-composer.",
+              "type": {
+                "text": "object"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "backgroundState",
+              "description": "Host-owned activity, streaming, or idle state mapped to cell-bg trigger/start/stop lifecycle.",
+              "type": {
+                "text": "object"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "setWorkspaceState",
+              "description": "Applies host-owned chat workspace state without owning transport, routes, persistence, recorder, or API calls.",
+              "type": {
+                "text": "function"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "setChats",
+              "description": "Sets nested chat descriptors and active selection state using the same product-neutral normalization as buildChatNavTree().",
+              "type": {
+                "text": "function"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "setActiveChatId",
+              "description": "Marks a host-owned chat id active in the composed sidebar.",
+              "type": {
+                "text": "function"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "setEmpty",
+              "description": "Sets the host-owned empty conversation presentation state.",
+              "type": {
+                "text": "function"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "setMessages",
+              "description": "Sets transcript message descriptors and optionally scrolls to bottom.",
+              "type": {
+                "text": "function"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "setComposerState",
+              "description": "Sets composer value, context chips, footer controls, disabled/sending state, voice controls, and voice preview.",
+              "type": {
+                "text": "function"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "setVoiceControls",
+              "description": "Sets visible voice control state while leaving recorder and transcription ownership to the host.",
+              "type": {
+                "text": "function"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "setVoicePreview",
+              "description": "Shows a host-owned voice transcription preview.",
+              "type": {
+                "text": "function"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "clearVoicePreview",
+              "description": "Clears the host-owned voice transcription preview.",
+              "type": {
+                "text": "function"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "setLiveStatus",
+              "description": "Renders host-provided live status metadata and optionally drives background state.",
+              "type": {
+                "text": "function"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "setBackgroundState",
+              "description": "Maps host activity or streaming state to cell-bg trigger/start/stop lifecycle.",
+              "type": {
+                "text": "function"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "triggerBackground",
+              "description": "Triggers a timed animated background pulse.",
+              "type": {
+                "text": "function"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "startBackground",
+              "description": "Starts persistent animated background activity with smooth acceleration.",
+              "type": {
+                "text": "function"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "stopBackground",
+              "description": "Stops animated background activity with smooth deceleration.",
+              "type": {
+                "text": "function"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "getSidebar",
+              "description": "Returns the composed chat-sidebar-shell element.",
+              "type": {
+                "text": "function"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "getTranscript",
+              "description": "Returns the composed chat-transcript element.",
+              "type": {
+                "text": "function"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "getComposer",
+              "description": "Returns the composed chat-composer element.",
+              "type": {
+                "text": "function"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "getBackground",
+              "description": "Returns the composed cell-bg element.",
+              "type": {
+                "text": "function"
+              }
+            }
+          ],
+          "events": [
+            {
+              "name": "chat-workspace-chat-new",
+              "description": "Requests creating a host-owned chat."
+            },
+            {
+              "name": "chat-workspace-chat-select",
+              "description": "Requests selecting a host-owned chat id."
+            },
+            {
+              "name": "chat-workspace-chat-delete",
+              "description": "Requests deleting a host-owned chat id."
+            },
+            {
+              "name": "chat-workspace-input",
+              "description": "Reports draft input changes from the composed composer.",
+              "detail": [
+                {
+                  "name": "value",
+                  "type": "string"
+                },
+                {
+                  "name": "caretPosition",
+                  "type": "number"
+                }
+              ]
+            },
+            {
+              "name": "chat-workspace-key",
+              "description": "Routes key events from the composed composer for host-owned autocomplete and navigation."
+            },
+            {
+              "name": "chat-workspace-submit",
+              "description": "Requests submit from the composed composer.",
+              "detail": [
+                {
+                  "name": "value",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "name": "chat-workspace-send",
+              "description": "Requests send or stop from the composed composer.",
+              "detail": [
+                {
+                  "name": "value",
+                  "type": "string"
+                },
+                {
+                  "name": "sending",
+                  "type": "boolean"
+                }
+              ]
+            },
+            {
+              "name": "chat-workspace-voice-intent",
+              "description": "Routes host-owned voice permission, recorder, transcription, wake, response, command, language, and preview intents from the composed composer."
+            },
+            {
+              "name": "chat-workspace-footer-intent",
+              "description": "Routes product-neutral footer control activation and change intents."
+            },
+            {
+              "name": "chat-workspace-context-intent",
+              "description": "Routes context chip removal and dropped context attachment intents."
+            },
+            {
+              "name": "chat-workspace-background-change",
+              "description": "Reports host-requested background lifecycle state."
+            },
+            {
+              "name": "chat-workspace-background-event",
+              "description": "Routes cell-bg animation lifecycle events."
+            }
+          ],
+          "slots": [],
+          "cssProperties": [
+            {
+              "name": "--sn-chat-bg",
+              "description": "Theme token consumed by chat-workspace."
+            },
+            {
+              "name": "--sn-text",
+              "description": "Theme token consumed by chat-workspace."
+            },
+            {
+              "name": "--sn-font",
+              "description": "Theme token consumed by chat-workspace."
+            },
+            {
+              "name": "--sn-chat-sidebar-width",
+              "description": "Theme token consumed by chat-workspace."
+            },
+            {
+              "name": "--sn-chat-sidebar-collapsed-width",
+              "description": "Theme token consumed by chat-workspace."
+            },
+            {
+              "name": "--sn-chat-transcript-padding",
+              "description": "Theme token consumed by chat-workspace."
+            },
+            {
+              "name": "--sn-chat-gap",
+              "description": "Theme token consumed by chat-workspace."
+            },
+            {
+              "name": "--sn-composer-bg",
+              "description": "Theme token consumed by chat-workspace."
+            },
+            {
+              "name": "--sn-composer-padding",
+              "description": "Theme token consumed by chat-workspace."
+            },
+            {
+              "name": "--sn-cell-bg",
+              "description": "Theme token consumed by chat-workspace."
+            }
+          ],
+          "metadata": {
+            "category": "chat",
+            "module": "chat/ChatWorkspace/ChatWorkspace.js",
+            "specifier": "symbiote-ui/ui",
+            "visibility": "public",
+            "internal": false,
+            "contract": {
+              "capabilities": [
+                "chat-workspace",
+                "chat-sidebar-composition",
+                "chat-transcript-composition",
+                "chat-composer-composition",
+                "chat-nav-tree-helper",
+                "voice-intent-router",
+                "footer-control-intent-router",
+                "context-intent-router",
+                "animated-background-lifecycle",
+                "host-owned-transport"
+              ],
+              "attributes": [
+                {
+                  "name": "sidebar",
+                  "type": "string",
+                  "description": "Set to hidden to hide the composed sidebar surface."
+                },
+                {
+                  "name": "empty",
+                  "type": "boolean",
+                  "description": "Centers the composed composer and hides the transcript while the host has no messages."
+                }
+              ],
+              "properties": [
+                {
+                  "name": "chats",
+                  "type": "array",
+                  "description": "Host-owned nested chat descriptors forwarded to chat-sidebar-shell; hosts can use buildChatNavTree() to derive this product-neutral tree."
+                },
+                {
+                  "name": "activeChatId",
+                  "type": "string",
+                  "description": "Host-owned active chat id used to mark sidebar selection."
+                },
+                {
+                  "name": "messageItems",
+                  "type": "array",
+                  "description": "Normalized transcript message descriptors forwarded to chat-transcript."
+                },
+                {
+                  "name": "composer",
+                  "type": "object",
+                  "description": "Composer state including value, context chips, footer controls, sending state, voice controls, and voice preview."
+                },
+                {
+                  "name": "voiceControls",
+                  "type": "object",
+                  "description": "Host-owned voice control state forwarded to chat-composer."
+                },
+                {
+                  "name": "backgroundState",
+                  "type": "object",
+                  "description": "Host-owned activity, streaming, or idle state mapped to cell-bg trigger/start/stop lifecycle."
+                }
+              ],
+              "methods": [
+                {
+                  "name": "setWorkspaceState",
+                  "type": "function",
+                  "description": "Applies host-owned chat workspace state without owning transport, routes, persistence, recorder, or API calls."
+                },
+                {
+                  "name": "setChats",
+                  "type": "function",
+                  "description": "Sets nested chat descriptors and active selection state using the same product-neutral normalization as buildChatNavTree()."
+                },
+                {
+                  "name": "setActiveChatId",
+                  "type": "function",
+                  "description": "Marks a host-owned chat id active in the composed sidebar."
+                },
+                {
+                  "name": "setEmpty",
+                  "type": "function",
+                  "description": "Sets the host-owned empty conversation presentation state."
+                },
+                {
+                  "name": "setMessages",
+                  "type": "function",
+                  "description": "Sets transcript message descriptors and optionally scrolls to bottom."
+                },
+                {
+                  "name": "setComposerState",
+                  "type": "function",
+                  "description": "Sets composer value, context chips, footer controls, disabled/sending state, voice controls, and voice preview."
+                },
+                {
+                  "name": "setVoiceControls",
+                  "type": "function",
+                  "description": "Sets visible voice control state while leaving recorder and transcription ownership to the host."
+                },
+                {
+                  "name": "setVoicePreview",
+                  "type": "function",
+                  "description": "Shows a host-owned voice transcription preview."
+                },
+                {
+                  "name": "clearVoicePreview",
+                  "type": "function",
+                  "description": "Clears the host-owned voice transcription preview."
+                },
+                {
+                  "name": "setLiveStatus",
+                  "type": "function",
+                  "description": "Renders host-provided live status metadata and optionally drives background state."
+                },
+                {
+                  "name": "setBackgroundState",
+                  "type": "function",
+                  "description": "Maps host activity or streaming state to cell-bg trigger/start/stop lifecycle."
+                },
+                {
+                  "name": "triggerBackground",
+                  "type": "function",
+                  "description": "Triggers a timed animated background pulse."
+                },
+                {
+                  "name": "startBackground",
+                  "type": "function",
+                  "description": "Starts persistent animated background activity with smooth acceleration."
+                },
+                {
+                  "name": "stopBackground",
+                  "type": "function",
+                  "description": "Stops animated background activity with smooth deceleration."
+                },
+                {
+                  "name": "getSidebar",
+                  "type": "function",
+                  "description": "Returns the composed chat-sidebar-shell element."
+                },
+                {
+                  "name": "getTranscript",
+                  "type": "function",
+                  "description": "Returns the composed chat-transcript element."
+                },
+                {
+                  "name": "getComposer",
+                  "type": "function",
+                  "description": "Returns the composed chat-composer element."
+                },
+                {
+                  "name": "getBackground",
+                  "type": "function",
+                  "description": "Returns the composed cell-bg element."
+                }
+              ],
+              "events": [
+                {
+                  "name": "chat-workspace-chat-new",
+                  "description": "Requests creating a host-owned chat."
+                },
+                {
+                  "name": "chat-workspace-chat-select",
+                  "description": "Requests selecting a host-owned chat id."
+                },
+                {
+                  "name": "chat-workspace-chat-delete",
+                  "description": "Requests deleting a host-owned chat id."
+                },
+                {
+                  "name": "chat-workspace-input",
+                  "description": "Reports draft input changes from the composed composer.",
+                  "detail": [
+                    {
+                      "name": "value",
+                      "type": "string"
+                    },
+                    {
+                      "name": "caretPosition",
+                      "type": "number"
+                    }
+                  ]
+                },
+                {
+                  "name": "chat-workspace-key",
+                  "description": "Routes key events from the composed composer for host-owned autocomplete and navigation."
+                },
+                {
+                  "name": "chat-workspace-submit",
+                  "description": "Requests submit from the composed composer.",
+                  "detail": [
+                    {
+                      "name": "value",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "name": "chat-workspace-send",
+                  "description": "Requests send or stop from the composed composer.",
+                  "detail": [
+                    {
+                      "name": "value",
+                      "type": "string"
+                    },
+                    {
+                      "name": "sending",
+                      "type": "boolean"
+                    }
+                  ]
+                },
+                {
+                  "name": "chat-workspace-voice-intent",
+                  "description": "Routes host-owned voice permission, recorder, transcription, wake, response, command, language, and preview intents from the composed composer."
+                },
+                {
+                  "name": "chat-workspace-footer-intent",
+                  "description": "Routes product-neutral footer control activation and change intents."
+                },
+                {
+                  "name": "chat-workspace-context-intent",
+                  "description": "Routes context chip removal and dropped context attachment intents."
+                },
+                {
+                  "name": "chat-workspace-background-change",
+                  "description": "Reports host-requested background lifecycle state."
+                },
+                {
+                  "name": "chat-workspace-background-event",
+                  "description": "Routes cell-bg animation lifecycle events."
+                }
+              ],
+              "slots": [],
+              "themeAliases": [
+                "--sn-chat-bg",
+                "--sn-text",
+                "--sn-font",
+                "--sn-chat-sidebar-width",
+                "--sn-chat-sidebar-collapsed-width",
+                "--sn-chat-transcript-padding",
+                "--sn-chat-gap",
+                "--sn-composer-bg",
+                "--sn-composer-padding",
+                "--sn-cell-bg"
+              ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
+              "ssr": {
+                "mode": "hydrate-only",
+                "importSafe": false,
+                "jsdaRenderable": false,
+                "requiresDom": true,
+                "browserApis": [
+                  "events",
+                  "selection",
+                  "focus"
+                ],
+                "notes": "May render shell markup under SSR, but interactive behavior belongs to browser hydration."
+              },
+              "webmcp": {
+                "documentation": "Agent-facing WebMCP documentation for stable component affordances only; host workflow policy remains outside symbiote-ui.",
+                "tools": [
+                  {
+                    "name": "chat_workspace_set_state",
+                    "description": "Set host-owned chat workspace state for chats, active chat id, transcript messages, composer state, voice controls, live status, and background lifecycle without owning transport or persistence.",
+                    "inputSchema": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "activeChatId": {
+                          "type": "string"
+                        },
+                        "chats": {
+                          "type": "array"
+                        },
+                        "messages": {
+                          "type": "array"
+                        },
+                        "messageItems": {
+                          "type": "array"
+                        },
+                        "composer": {
+                          "type": "object"
+                        },
+                        "voiceControls": {
+                          "type": "object"
+                        },
+                        "liveStatus": {
+                          "type": "object"
+                        },
+                        "background": {
+                          "type": "object"
+                        },
+                        "backgroundState": {
+                          "type": "object"
+                        }
+                      }
+                    },
+                    "annotations": {
+                      "readOnlyHint": false,
+                      "destructiveHint": false,
+                      "idempotentHint": true,
+                      "runtimeMethod": "setWorkspaceState"
+                    },
+                    "exposedTo": [
+                      "agent",
+                      "assistant"
+                    ]
+                  },
+                  {
+                    "name": "chat_workspace_background",
+                    "description": "Drive the reusable chat workspace animated background lifecycle: timed trigger, smooth persistent start, smooth stop, or host streaming state.",
+                    "inputSchema": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "state": {
+                          "enum": [
+                            "trigger",
+                            "pulse",
+                            "start",
+                            "streaming",
+                            "thinking",
+                            "tool",
+                            "responding",
+                            "listening",
+                            "speaking",
+                            "idle",
+                            "stop",
+                            "done",
+                            "error",
+                            "disabled"
+                          ]
+                        },
+                        "duration": {
+                          "type": "number"
+                        },
+                        "active": {
+                          "type": "boolean"
+                        },
+                        "streaming": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "state"
+                      ]
+                    },
+                    "annotations": {
+                      "readOnlyHint": false,
+                      "destructiveHint": false,
+                      "runtimeMethod": "setBackgroundState",
+                      "intentEvents": [
+                        "chat-workspace-background-change",
+                        "chat-workspace-background-event"
+                      ]
+                    },
+                    "exposedTo": [
+                      "agent",
+                      "assistant"
+                    ]
+                  },
+                  {
+                    "name": "chat_workspace_select_chat",
+                    "description": "Request selection of a host-owned chat id from the reusable workspace; the host owns route, loading, and persistence.",
+                    "inputSchema": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "chatId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "chatId"
+                      ]
+                    },
+                    "annotations": {
+                      "readOnlyHint": false,
+                      "destructiveHint": false,
+                      "intentEvent": "chat-workspace-chat-select"
+                    },
+                    "exposedTo": [
+                      "agent",
+                      "assistant"
+                    ]
+                  },
+                  {
+                    "name": "chat_workspace_send",
+                    "description": "Request submit/send/stop through the reusable workspace composer surface; the host owns transport and streaming execution.",
+                    "inputSchema": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "action": {
+                          "enum": [
+                            "submit",
+                            "send",
+                            "stop"
+                          ]
+                        },
+                        "value": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "annotations": {
+                      "readOnlyHint": false,
+                      "destructiveHint": false,
+                      "intentEvents": [
+                        "chat-workspace-submit",
+                        "chat-workspace-send"
+                      ]
+                    },
+                    "exposedTo": [
+                      "agent",
+                      "assistant"
+                    ]
+                  }
+                ]
+              }
+            },
+            "agent": {
+              "componentDescription": "Reusable chat workspace shell that composes sidebar, transcript, composer, voice intents, footer controls, and animated background lifecycle. Use this chat and conversation surface when composing chat UI. Capabilities: chat-workspace, chat-sidebar-composition, chat-transcript-composition, chat-composer-composition, chat-nav-tree-helper, voice-intent-router, footer-control-intent-router, context-intent-router, animated-background-lifecycle, host-owned-transport. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: chat_workspace_set_state, chat_workspace_background, chat_workspace_select_chat, chat_workspace_send.",
+              "semanticRole": "chat and conversation surface",
+              "usage": "Render or compose <chat-workspace> when the host needs reusable chat workspace shell that composes sidebar, transcript, composer, voice intents, footer controls, and animated background lifecycle.",
+              "dataOwnership": "host-owned props and attributes; component owns presentation state",
+              "webmcp": {
+                "mode": "explicit-descriptor",
+                "toolNames": [
+                  "chat_workspace_set_state",
+                  "chat_workspace_background",
+                  "chat_workspace_select_chat",
+                  "chat_workspace_send"
+                ],
+                "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+                "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+                "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+                "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+                "references": [
+                  "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                  "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+                ]
+              }
+            }
+          },
+          "agent": {
+            "componentDescription": "Reusable chat workspace shell that composes sidebar, transcript, composer, voice intents, footer controls, and animated background lifecycle. Use this chat and conversation surface when composing chat UI. Capabilities: chat-workspace, chat-sidebar-composition, chat-transcript-composition, chat-composer-composition, chat-nav-tree-helper, voice-intent-router, footer-control-intent-router, context-intent-router, animated-background-lifecycle, host-owned-transport. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: chat_workspace_set_state, chat_workspace_background, chat_workspace_select_chat, chat_workspace_send.",
+            "semanticRole": "chat and conversation surface",
+            "usage": "Render or compose <chat-workspace> when the host needs reusable chat workspace shell that composes sidebar, transcript, composer, voice intents, footer controls, and animated background lifecycle.",
+            "dataOwnership": "host-owned props and attributes; component owns presentation state",
+            "webmcp": {
+              "mode": "explicit-descriptor",
+              "toolNames": [
+                "chat_workspace_set_state",
+                "chat_workspace_background",
+                "chat_workspace_select_chat",
+                "chat_workspace_send"
+              ],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "custom-element-definition",
+          "name": "chat-workspace",
+          "declaration": {
+            "name": "ChatWorkspace"
+          }
+        }
+      ]
+    },
+    {
       "path": "chat/ChatMessageItem/ChatMessageItem.js",
       "declarations": [
         {
@@ -16238,12 +17061,12 @@
             ],
             "methods": [],
             "events": [
-              {
-                "name": "chat-sidebar-select",
-                "description": "Emits selected child chat id and item data."
-              },
-              {
-                "name": "chat-sidebar-toggle",
+                {
+                  "name": "chat-sidebar-select",
+                  "description": "Emits selected child chat id and item data."
+                },
+                {
+                  "name": "chat-sidebar-toggle",
                 "description": "Emits nested child expansion changes."
               },
               {

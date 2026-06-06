@@ -5,7 +5,7 @@
  * Click result to select and center viewport on that node.
  * Escape to close.
  *
- * @module symbiote-node/canvas/NodeSearch
+ * @module symbiote-ui/canvas/NodeSearch
  */
 
 import Symbiote from '@symbiotejs/symbiote';

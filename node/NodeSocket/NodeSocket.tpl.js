@@ -1,6 +1,6 @@
 /**
  * NodeSocket template
- * @module symbiote-node/node/NodeSocket.tpl
+ * @module symbiote-ui/node/NodeSocket.tpl
  */
 import { html } from '@symbiotejs/symbiote';
 

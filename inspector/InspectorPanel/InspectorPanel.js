@@ -4,7 +4,7 @@
  * Displays node label, type, category, inputs/outputs/controls.
  * Updates when selection changes. Shows "No selection" when nothing selected.
  *
- * @module symbiote-node/inspector/InspectorPanel
+ * @module symbiote-ui/inspector/InspectorPanel
  */
 
 import Symbiote from '@symbiotejs/symbiote';

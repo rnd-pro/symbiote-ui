@@ -74,7 +74,7 @@ export let RULES = [
   {
     id: 'SYM-009',
     name: 'public-subpath-imports',
-    description: 'Consumers import symbiote-node through package exports instead of relative package internals or deep implementation paths.',
+    description: 'Consumers import symbiote-ui through package exports instead of relative package internals or deep implementation paths.',
     severity: 'error',
     filePattern: '**/*.js',
     check: 'uses_public_package_exports',

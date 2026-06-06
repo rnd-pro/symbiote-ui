@@ -5,7 +5,7 @@
  * Delete, Duplicate, Mute.
  * Positioned above the node and follows zoom/pan transform.
  *
- * @module symbiote-node/toolbar/QuickToolbar
+ * @module symbiote-ui/toolbar/QuickToolbar
  */
 
 import Symbiote from '@symbiotejs/symbiote';

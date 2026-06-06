@@ -1,6 +1,6 @@
 /**
  * InspectorPanel template
- * @module symbiote-node/inspector/InspectorPanel.tpl
+ * @module symbiote-ui/inspector/InspectorPanel.tpl
  */
 import { html } from '@symbiotejs/symbiote';
 

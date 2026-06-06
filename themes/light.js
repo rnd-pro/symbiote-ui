@@ -4,7 +4,7 @@
  * Inverted lightness values: bg=95%, surface=100%, text=15%.
  * Same atomic HSL structure as dark theme.
  *
- * @module symbiote-node/themes/light
+ * @module symbiote-ui/themes/light
  */
 
 /** @type {import('./Theme.js').ThemeDefinition} */

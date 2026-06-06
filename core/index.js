@@ -1,5 +1,5 @@
 /**
- * Node-safe core API for symbiote-node.
+ * Node-safe core API for symbiote-ui.
  *
  * This entrypoint must not import browser custom elements or Symbiote UI modules.
  */

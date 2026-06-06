@@ -30,7 +30,7 @@
  *   Main → Worker: { type: 'unpin', id }        — release pinned node
  *   Worker → Main: { type: 'tick', packed: Float32Array } — packed positions
  *
- * @module symbiote-node/canvas/ForceWorker
+ * @module symbiote-ui/canvas/ForceWorker
  */
 
 

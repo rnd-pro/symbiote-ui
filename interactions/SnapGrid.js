@@ -5,7 +5,7 @@
  * Supports dynamic (during drag) and static (on drop) modes.
  *
  * Adapted from Rete.js snap grid (62 LOC).
- * @module symbiote-node/interactions/SnapGrid
+ * @module symbiote-ui/interactions/SnapGrid
  */
 
 export class SnapGrid {

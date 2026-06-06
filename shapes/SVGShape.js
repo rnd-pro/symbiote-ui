@@ -11,7 +11,7 @@
  *   - Connector angle = normal from center → edge point
  *   - Aspect ratio of original SVG is preserved (xMidYMid meet)
  *
- * @module symbiote-node/shapes/SVGShape
+ * @module symbiote-ui/shapes/SVGShape
  */
 
 import { NodeShape } from './NodeShape.js';

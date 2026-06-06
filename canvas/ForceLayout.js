@@ -10,7 +10,7 @@
  *   force.onTick = (positions) => { ... };
  *   force.stop();
  *
- * @module symbiote-node/canvas/ForceLayout
+ * @module symbiote-ui/canvas/ForceLayout
  */
 
 export class ForceLayout {

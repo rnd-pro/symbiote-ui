@@ -9,7 +9,7 @@
  *  - PseudoConnection (temp drag line)
  *  - ViewportActions (context menu + keyboard + fitView)
  *
- * @module symbiote-node/canvas/NodeCanvas
+ * @module symbiote-ui/canvas/NodeCanvas
  */
 
 import Symbiote from '@symbiotejs/symbiote';

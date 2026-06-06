@@ -4,7 +4,7 @@
  * High saturation (60%), purple base hue (270).
  * Neon accents with vivid category colors.
  *
- * @module symbiote-node/themes/synthwave
+ * @module symbiote-ui/themes/synthwave
  */
 
 /** @type {import('./Theme.js').ThemeDefinition} */

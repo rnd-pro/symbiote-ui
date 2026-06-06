@@ -1,6 +1,6 @@
 /**
  * GraphFrame styles
- * @module symbiote-node/node/GraphFrame.css
+ * @module symbiote-ui/node/GraphFrame.css
  */
 import { css } from '@symbiotejs/symbiote';
 

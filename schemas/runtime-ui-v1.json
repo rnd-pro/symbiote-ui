@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://rnd-pro.github.io/symbiote-node/schemas/runtime-ui-v1.json",
+  "$id": "https://rnd-pro.github.io/symbiote-ui/schemas/runtime-ui-v1.json",
   "title": "Symbiote Node Runtime UI Tree",
   "type": "object",
   "additionalProperties": false,

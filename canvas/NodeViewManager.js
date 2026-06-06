@@ -6,7 +6,7 @@
  * group drag for multi-selected nodes, and twitch click detection.
  * Extracted from NodeCanvas to reduce complexity (was 27 cyclomatic).
  *
- * @module symbiote-node/canvas/NodeViewManager
+ * @module symbiote-ui/canvas/NodeViewManager
  */
 
 import { Drag } from '../interactions/Drag.js';

@@ -4,7 +4,7 @@
  * Input at top vertex, outputs distributed along bottom edges.
  * Classic if/else, switch/case pattern.
  *
- * @module symbiote-node/shapes/DiamondShape
+ * @module symbiote-ui/shapes/DiamondShape
  */
 
 import { NodeShape } from './NodeShape.js';

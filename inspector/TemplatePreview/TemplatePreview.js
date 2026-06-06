@@ -4,7 +4,7 @@
  * Shows placeholder chips (resolved/missing), test data input,
  * and interpolated preview text. Updates reactively.
  *
- * @module symbiote-node/inspector/TemplatePreview
+ * @module symbiote-ui/inspector/TemplatePreview
  */
 
 import Symbiote from '@symbiotejs/symbiote';

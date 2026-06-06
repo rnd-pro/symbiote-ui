@@ -5,7 +5,7 @@
  * Just text content with semi-transparent background.
  * Used for annotations and documentation on the canvas.
  *
- * @module symbiote-node/shapes/CommentShape
+ * @module symbiote-ui/shapes/CommentShape
  */
 
 import { NodeShape } from './NodeShape.js';

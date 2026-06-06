@@ -4,7 +4,7 @@
  * Synchronizes the canvas DOM state (nodes, connections, inspector, toolbar)
  * with the internal Selector state.
  *
- * @module symbiote-node/canvas/SelectionSync
+ * @module symbiote-ui/canvas/SelectionSync
  */
 
 export class SelectionSync {

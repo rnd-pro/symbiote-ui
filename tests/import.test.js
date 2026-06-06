@@ -14,6 +14,9 @@ test('root and metadata entrypoints import in Node', async () => {
   assert.equal(typeof root.createCascadeTheme, 'function');
   assert.equal(typeof root.getReadableTextForHsl, 'function');
   assert.equal(typeof root.createRuntimeUiInstance, 'function');
+  assert.equal(typeof root.buildChatNavTree, 'function');
+  assert.equal(typeof root.matchVoiceCommandAtEnd, 'function');
+  assert.equal(root.defaultSendCommandPhrases().ru, 'отправить');
   assert.equal(typeof runtime.createRuntimeUiController, 'function');
   assert.equal(runtime.RUNTIME_UI_CONTRACT.version, 'runtime-ui-v1');
   assert.equal(typeof manifest.listComponents, 'function');
@@ -31,6 +34,136 @@ test('root and metadata entrypoints import in Node', async () => {
   assert.equal(typeof xr.createSimulation, 'function');
   assert.equal(typeof xr.createForceLayoutAdapter, 'function');
   assert.equal(typeof xr.createDualViewController, 'function');
+});
+
+test('chat nav tree helper builds product-neutral nested sidebar descriptors', async () => {
+  let { buildChatNavTree } = await import('../chat/ChatWorkspace/chat-nav-tree.js');
+  let tree = buildChatNavTree({
+    chats: [
+      { id: 'root', projectId: 'project-graph', name: '💬 What is Project Graph?' },
+      { id: 'child', projectId: 'project-graph', parentChatId: 'root', name: 'Architecture audit', lastTaskStatus: 'done' },
+      { id: 'mcp', projectId: 'project-graph', name: 'WebMCP contract', origin: 'mcp' },
+    ],
+    projectId: 'project-graph',
+    activeChatId: 'child',
+  });
+
+  assert.equal(tree.length, 2);
+  assert.equal(tree[0].id, 'root');
+  assert.equal(tree[0].cleanName, 'What is Project Graph?');
+  assert.equal(tree[0].isExpanded, true);
+  assert.equal(tree[0].subChats[0].id, 'child');
+  assert.equal(tree[0].subChats[0].isActive, true);
+  assert.equal(tree[0].subChats[0].statusKind, 'done');
+  assert.equal(tree[0].subChats[0].statusIcon, 'check_circle');
+  assert.equal(tree[0].subChats[0].metaLabel, 'Agent');
+  assert.equal(tree[1].metaLabel, 'MCP');
+});
+
+test('voice command helpers are importable without browser component registration', async () => {
+  let helpers = await import('../chat/voice-input-defaults.js');
+
+  assert.equal(helpers.DEFAULT_VOICE_WAKE_COMMANDS.en, 'Okay Agent');
+  assert.equal(helpers.matchVoiceCommandAtEnd('draft send', [{ action: 'send', phrase: 'send' }]).text, 'draft');
+  assert.equal(helpers.matchVoiceCommandInText("О'кей Агент", helpers.wakeCommandCandidates(
+    helpers.defaultWakeCommandPhrases(),
+    'ru'
+  )).matched, true);
+});
+
+test('material symbols loader reuses a host-provided package stylesheet', async () => {
+  let NativeDocument = globalThis.document;
+  let NativeWindow = globalThis.window;
+  let appended = [];
+  let links = [{
+    rel: 'stylesheet',
+    href: 'http://127.0.0.1:4213/packages/symbiote-ui/icons/material-symbols.css',
+    dataset: {},
+  }];
+  globalThis.document = {
+    nodeType: 9,
+    head: {
+      append(link) {
+        appended.push(link);
+        links.push(link);
+      },
+    },
+    createElement(tagName) {
+      return {
+        tagName,
+        rel: '',
+        href: '',
+        dataset: {},
+      };
+    },
+    querySelector(selector) {
+      if (selector === 'link[data-sn-material-symbols="managed"]') {
+        return links.find((link) => link.dataset.snMaterialSymbols === 'managed') || null;
+      }
+      if (selector.includes('material-symbols.css')) {
+        return links.find((link) => (
+          link.rel.split(/\s+/).includes('stylesheet') &&
+          (
+            link.href.endsWith('/packages/symbiote-ui/icons/material-symbols.css') ||
+            link.href.endsWith('/icons/material-symbols.css')
+          )
+        )) || null;
+      }
+      return null;
+    },
+  };
+  globalThis.window = {};
+
+  try {
+    let materialSymbols = await import(`../icons/MaterialSymbols.js?host-stylesheet=${Date.now()}`);
+    materialSymbols.configureMaterialSymbols({ autoload: true, hrefBuilder: null });
+    materialSymbols.ensureMaterialSymbols(['hub', 'folder_open']);
+
+    assert.equal(appended.length, 0);
+    assert.equal(links.length, 1);
+    assert.equal(links[0].href, 'http://127.0.0.1:4213/packages/symbiote-ui/icons/material-symbols.css');
+    assert.equal(links[0].dataset.snMaterialSymbols, 'managed');
+    assert.equal(links[0].dataset.snMaterialSymbolsIcons, 'folder_open,hub');
+  } finally {
+    if (NativeDocument) {
+      globalThis.document = NativeDocument;
+    } else {
+      delete globalThis.document;
+    }
+    if (NativeWindow) {
+      globalThis.window = NativeWindow;
+    } else {
+      delete globalThis.window;
+    }
+  }
+});
+
+test('provider schemas use symbiote-ui public schema ids', async () => {
+  let manifest = await import('../manifest/index.js');
+  let schemaFiles = [
+    'component-descriptor-v1.json',
+    'component-descriptor-v2.json',
+    'agent-intent-v1.json',
+    'graph-v1.json',
+    'graph-model-v1.json',
+    'project-package-v1.json',
+    'project-transaction-v1.json',
+    'runtime-ui-v1.json',
+    'theme-rule-block-v1.json',
+  ];
+  let schemas = [
+    ...Object.values(manifest.UI_SCHEMAS),
+    ...Object.values(manifest.GRAPH_SCHEMAS),
+    ...Object.values(manifest.PROJECT_SCHEMAS),
+    ...await Promise.all(schemaFiles.map(async (file) => (
+      JSON.parse(await readFile(new URL(`../schemas/${file}`, import.meta.url), 'utf8'))
+    ))),
+  ];
+
+  for (const schema of schemas) {
+    assert.match(schema.$id, /^https:\/\/rnd-pro\.github\.io\/symbiote-ui\/schemas\//);
+    assert.doesNotMatch(schema.$id, /symbiote-node/);
+  }
 });
 
 test('discover exposes the standalone package contract', async () => {
@@ -51,6 +184,7 @@ test('discover exposes the standalone package contract', async () => {
   let layoutAgentItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'panel-layout');
   let sidebarAgentItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'layout-sidebar');
   let chatSidebarAgentItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'chat-sidebar-shell');
+  let chatWorkspaceAgentItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'chat-workspace');
   let nodeCanvasAgentItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'node-canvas');
   let canvasGraphAgentItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'canvas-graph');
   let graphExplorerAgentItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'graph-explorer-shell');
@@ -88,6 +222,12 @@ test('discover exposes the standalone package contract', async () => {
   assert.ok(chatSidebarAgentItem.webmcp.toolNames.includes('chat_sidebar_set_chats'));
   assert.ok(chatSidebarAgentItem.webmcp.toolNames.includes('chat_sidebar_select'));
   assert.ok(chatSidebarAgentItem.webmcp.toolNames.includes('chat_sidebar_set_collapsed'));
+  assert.ok(chatWorkspaceAgentItem.webmcp.toolNames.includes('chat_workspace_set_state'));
+  assert.ok(chatWorkspaceAgentItem.webmcp.toolNames.includes('chat_workspace_background'));
+  assert.ok(chatWorkspaceAgentItem.webmcp.toolNames.includes('chat_workspace_select_chat'));
+  assert.ok(chatWorkspaceAgentItem.webmcp.toolNames.includes('chat_workspace_send'));
+  assert.ok(chatWorkspaceAgentItem.componentDescription.includes('chat workspace'));
+  assert.ok(chatWorkspaceAgentItem.componentDescription.includes('host-owned-transport'));
   assert.ok(nodeCanvasAgentItem.webmcp.toolNames.includes('node_canvas_set_editor_model'));
   assert.ok(nodeCanvasAgentItem.webmcp.toolNames.includes('node_canvas_set_path_style'));
   assert.ok(nodeCanvasAgentItem.webmcp.toolNames.includes('node_canvas_set_flow_layout'));

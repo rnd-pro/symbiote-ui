@@ -1,6 +1,6 @@
 /**
  * NodeSocket styles
- * @module symbiote-node/node/NodeSocket.css
+ * @module symbiote-ui/node/NodeSocket.css
  */
 import { css } from '@symbiotejs/symbiote';
 

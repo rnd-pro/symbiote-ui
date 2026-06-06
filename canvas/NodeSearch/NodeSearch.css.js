@@ -1,6 +1,6 @@
 /**
  * NodeSearch styles
- * @module symbiote-node/canvas/NodeSearch.css
+ * @module symbiote-ui/canvas/NodeSearch.css
  */
 import { css } from '@symbiotejs/symbiote';
 

@@ -1,6 +1,6 @@
 /**
  * NodeSearch template
- * @module symbiote-node/canvas/NodeSearch.tpl
+ * @module symbiote-ui/canvas/NodeSearch.tpl
  */
 import { html } from '@symbiotejs/symbiote';
 

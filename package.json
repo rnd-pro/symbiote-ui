@@ -64,6 +64,7 @@
     "./shapes/*": "./shapes/*",
     "./plugins/*": "./plugins/*",
     "./chat/chat-context.js": "./chat/chat-context.js",
+    "./chat/voice-input-defaults.js": "./chat/voice-input-defaults.js",
     "./package.json": "./package.json",
     "./ui": {
       "import": "./ui/index.js",

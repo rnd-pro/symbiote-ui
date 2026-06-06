@@ -5,7 +5,7 @@
  * and provides undo()/redo() with Ctrl+Z / Ctrl+Shift+Z keyboard bindings.
  * Plugin pattern: attach to editor via history.listen(editor).
  *
- * @module symbiote-node/plugins/History
+ * @module symbiote-ui/plugins/History
  */
 
 /**

@@ -5,7 +5,7 @@
  * Each shape determines WHERE sockets appear and at WHAT ANGLE
  * connections should exit/enter.
  *
- * @module symbiote-node/shapes/NodeShape
+ * @module symbiote-ui/shapes/NodeShape
  */
 
 export class NodeShape {

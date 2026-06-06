@@ -6,7 +6,7 @@
  * The viewport rectangle shows current visible area and can be dragged to pan.
  * Positioned bottom-right of the canvas.
  *
- * @module symbiote-node/canvas/Minimap
+ * @module symbiote-ui/canvas/Minimap
  */
 
 import Symbiote from '@symbiotejs/symbiote';

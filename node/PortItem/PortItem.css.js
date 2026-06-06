@@ -1,6 +1,6 @@
 /**
  * PortItem styles
- * @module symbiote-node/node/PortItem.css
+ * @module symbiote-ui/node/PortItem.css
  */
 import { css } from '@symbiotejs/symbiote';
 

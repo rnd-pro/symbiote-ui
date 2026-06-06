@@ -4,7 +4,7 @@
  * Applies design tokens as CSS custom properties on a target element.
  * Themes are plain objects — AI can generate them on the fly.
  *
- * @module symbiote-node/themes/Theme
+ * @module symbiote-ui/themes/Theme
  */
 
 /**
@@ -50,7 +50,7 @@ export {
 } from './ThemeFactory.js';
 
 /**
- * Mapping from layout global tokens to symbiote-node tokens.
+ * Mapping from layout global tokens to symbiote-ui tokens.
  * Layout module uses --bg-*, --text-* format; this bridges them.
  * @type {Object<string, string>}
  */

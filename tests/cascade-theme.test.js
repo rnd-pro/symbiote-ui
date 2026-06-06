@@ -42,10 +42,15 @@ const chatMessageItemStyles = new URL('../chat/ChatMessageItem/ChatMessageItem.c
 const chatTranscriptStyles = new URL('../chat/ChatTranscript/ChatTranscript.css.js', import.meta.url);
 const chatComposerSource = new URL('../chat/ChatComposer/ChatComposer.js', import.meta.url);
 const chatComposerStyles = new URL('../chat/ChatComposer/ChatComposer.css.js', import.meta.url);
+const voiceInputDefaultsSource = new URL('../chat/voice-input-defaults.js', import.meta.url);
 const chatListStyles = new URL('../chat/ChatList/ChatList.css.js', import.meta.url);
 const chatListItemStyles = new URL('../chat/ChatListItem/ChatListItem.css.js', import.meta.url);
 const chatSidebarSource = new URL('../chat/ChatSidebar/ChatSidebar.js', import.meta.url);
 const chatSidebarStyles = new URL('../chat/ChatSidebar/ChatSidebar.css.js', import.meta.url);
+const chatWorkspaceSource = new URL('../chat/ChatWorkspace/ChatWorkspace.js', import.meta.url);
+const chatNavTreeSource = new URL('../chat/ChatWorkspace/chat-nav-tree.js', import.meta.url);
+const chatWorkspaceTemplate = new URL('../chat/ChatWorkspace/ChatWorkspace.tpl.js', import.meta.url);
+const chatWorkspaceStyles = new URL('../chat/ChatWorkspace/ChatWorkspace.css.js', import.meta.url);
 const chatSidebarItemSource = new URL('../chat/ChatSidebarItem/ChatSidebarItem.js', import.meta.url);
 const chatSidebarItemStyles = new URL('../chat/ChatSidebarItem/ChatSidebarItem.css.js', import.meta.url);
 const graphExplorerShellSource = new URL('../canvas/GraphExplorerShell/GraphExplorerShell.js', import.meta.url);
@@ -192,29 +197,50 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   assert.match(source, /this\._editor\.addNode\(node\)/);
   assert.match(source, /this\._editor\.addConnection\(new Connection/);
   assert.match(source, /this\._flowNodeIds\.push\(node\.id\)/);
-  assert.match(source, /chat\/ChatTranscript\/ChatTranscript\.js/);
-  assert.match(source, /chat\/ChatComposer\/ChatComposer\.js/);
-  assert.match(source, /chat\/ChatSidebar\/ChatSidebar\.js/);
-  assert.match(source, /<chat-transcript/);
-  assert.match(source, /<chat-composer/);
-  assert.match(source, /<chat-sidebar-shell/);
-  assert.match(source, /auto-collapse="false"/);
-  assert.match(source, /effects\/CellBg\/CellBg\.js/);
-  assert.match(source, /<cell-bg/);
-  assert.match(source, /slot="background"/);
+  assert.match(source, /chat\/ChatWorkspace\/ChatWorkspace\.js/);
+  assert.match(source, /<chat-workspace/);
+  assert.match(source, /getSidebar\?\.\(\)/);
+  assert.match(source, /setAutoCollapse\?\.\(false\)/);
   assert.doesNotMatch(source, /data-bg-action="trigger"/);
   assert.doesNotMatch(source, /data-bg-action="start"/);
   assert.doesNotMatch(source, /data-bg-action="stop"/);
   assert.match(source, /_triggerBg\(9000\)/);
-  assert.match(source, /this\.ref\.bg\?\.start\?\.\(\)/);
-  assert.match(source, /this\.ref\.bg\?\.stop\?\.\(\)/);
-  assert.match(source, /chat-composer-input/);
-  assert.match(source, /chat-composer-submit/);
-  assert.match(source, /chat-composer-voice-input/);
-  assert.match(source, /chat-composer-voice-response-toggle/);
-  assert.match(source, /_setVoiceDemoState\('listening'\)/);
-  assert.match(source, /_setVoiceDemoState\('transcribing'\)/);
-  assert.match(source, /_queueBgStop\(5600\)/);
+  assert.match(source, /triggerBackground\?\.\(duration\)/);
+  assert.match(source, /startBackground\?\.\(\)/);
+  assert.match(source, /stopBackground\?\.\(\)/);
+  assert.match(source, /chat-workspace-input/);
+  assert.match(source, /chat-workspace-submit/);
+  assert.match(source, /chat-workspace-send/);
+  assert.match(source, /chat-workspace-chat-select/);
+  assert.match(source, /chat-workspace-footer-intent/);
+  assert.match(source, /chat-workspace-context-intent/);
+  assert.match(source, /chat-workspace-voice-intent/);
+  assert.match(source, /sourceEvent === 'chat-composer-voice-input'/);
+  assert.match(source, /sourceEvent === 'chat-composer-voice-response-toggle'/);
+  assert.match(source, /_setVoiceDemoState\(action === 'stop' \? 'transcribing' : 'listening', 'manual'\)/);
+  assert.match(source, /_setVoiceDemoState\(action === 'stop' \? 'idle' : 'listening', 'wake'\)/);
+  assert.match(source, /_setVoiceDemoState\('transcribing', this\._voiceDemoMode \|\| 'manual'\)/);
+  assert.match(source, /_ensureMockThreads\(\)/);
+  assert.match(source, /_mockChatCatalog\(\)/);
+  assert.match(source, /_selectMockChat\(chatId = ''\)/);
+  assert.match(source, /_handleWorkspaceFooterIntent\(event\)/);
+  assert.match(source, /_handleWorkspaceContextIntent\(event\)/);
+  assert.match(source, /_handleWorkspaceSend\(event\)/);
+  assert.match(source, /_startMockStream\(value\)/);
+  assert.match(source, /_stopMockStream\(reason = 'stopped'\)/);
+  assert.match(source, /_recordHostEvent\(type, detail = \{\}\)/);
+  assert.match(source, /cascade-chat-host-flow/);
+  assert.match(source, /dataset\.hostEventCount/);
+  assert.match(source, /dataset\.hostFlowStep/);
+  assert.match(source, /setLiveStatus\?\.\(\{ phase: 'tool'/);
+  assert.match(source, /setLiveStatus\?\.\(\{ phase: 'responding'/);
+  assert.match(source, /background: \{ state: 'streaming'/);
+  assert.match(source, /background: \{ state: 'done'/);
+  assert.match(source, /background: \{ state: 'stop'/);
+  assert.match(source, /_queueBgStop\(4600\)/);
+  assert.match(source, /_queueBgStop\(6600\)/);
+  assert.doesNotMatch(source, /data-bg-action/);
+  assert.doesNotMatch(source, /data-voice-state/);
   assert.match(source, /component: 'cascade-chat-panel'/);
   assert.match(source, /CASCADE_THEME_STORAGE_KEY/);
   assert.match(source, /readStoredCascadeTheme/);
@@ -225,15 +251,23 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   assert.match(source, /applyCascadeTheme\(document\.documentElement, readInitialCascadeTheme\(\)/);
   assert.match(source, /'chroma'/);
   assert.match(source, /'heading'/);
-  assert.match(source, /setMessageItems\(/);
+  assert.match(source, /setMessages\(/);
   assert.match(source, /setChats\(/);
   assert.match(source, /setContent\(/);
-  assert.match(source, /setVoiceControls\(/);
-  assert.match(source, /setFooterControls\(\[/);
+  assert.match(source, /setComposerState\(\{/);
+  assert.match(source, /voiceControls: this\._buildVoiceControlsConfig\(/);
+  assert.match(source, /let voiceAvailable = normalized !== 'disabled'/);
+  assert.match(source, /let isManualVoice = activeMode === 'manual'/);
+  assert.match(source, /let isWakeVoice = activeMode === 'wake'/);
+  assert.match(source, /visible: voiceAvailable && !isWakeVoice/);
+  assert.match(source, /visible: voiceModeActive/);
+  assert.match(source, /_setVoiceDemoState\(action === 'stop' \? 'transcribing' : 'listening', 'manual'\)/);
+  assert.match(source, /_setVoiceDemoState\(action === 'stop' \? 'idle' : 'listening', 'wake'\)/);
+  assert.match(source, /footerControls: this\._buildFooterControls\(\)/);
   assert.match(source, /id: 'provider'/);
   assert.match(source, /id: 'model'/);
   assert.match(source, /id: 'agent'/);
-  assert.match(source, /id: 'resource-group'/);
+  assert.match(source, /id: 'task'/);
   assert.match(source, /id: 'settings'/);
   assert.doesNotMatch(source, /data-voice-state="idle"/);
   assert.doesNotMatch(source, /data-voice-state="listening"/);
@@ -309,7 +343,9 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   assert.match(source, /readHashState/);
   assert.match(source, /data-layout-command/);
   assert.match(source, /overflow: 'scroll-inline'/);
-  assert.match(source, /voice command/);
+  assert.match(source, /voice-input-defaults/);
+  assert.match(source, /matchVoiceCommandAtEnd/);
+  assert.match(source, /Commands/);
   assert.match(html, /project-type workspaces/);
   assert.match(html, /<layout-shell-menu/);
   assert.match(html, /<cascade-theme-widget/);
@@ -321,13 +357,15 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   assert.doesNotMatch(html, /100vh/);
   assert.doesNotMatch(html, /--sn-tabs-bg/);
   assert.match(html, /project-path="project-type workspaces \/ agent constructor"/);
-  assert.match(html, /showcase-layout-split-panels-1/);
+  assert.match(html, /voice-controls-final-8/);
   assert.match(html, /<layout-sidebar id="lab-sidebar" slot="sidebar"/);
   assert.doesNotMatch(html, /agent-chat-rail/);
   assert.match(source, /createCollapsedAgentChatPanel/);
+  assert.match(source, /layout\.registerPanelType\('agent-chat'/);
   assert.match(source, /panel\.collapsed = true/);
   assert.match(source, /singleton: 'page-agent-chat'/);
   assert.match(source, /createShowcaseLayout/);
+  assert.match(source, /project\.id === 'chat' \? viewLayout : createShowcaseLayout\(viewLayout\)/);
   assert.match(source, /component: 'cascade-overview-panel'/);
   assert.match(source, /component: 'cascade-chat-panel'/);
   assert.match(html, /slot="actions" type="button" data-layout-command="reset"/);
@@ -718,6 +756,7 @@ test('README documents the public agent UI constructor flow', async () => {
   assert.match(readme, /project-type top tabs/);
   assert.match(readme, /per-tab sidebar menus/);
   assert.match(readme, /right collapsed page-agent chat layout panel/);
+  assert.match(readme, /chat-workspace/);
 });
 
 test('agent UI principles document construction scenarios and workspace UX rules', async () => {
@@ -767,6 +806,7 @@ test('static custom elements catalog mirrors agent-facing WebMCP metadata', asyn
   }
 
   const expectedTools = new Map([
+    ['chat-workspace', ['chat_workspace_set_state', 'chat_workspace_background', 'chat_workspace_select_chat', 'chat_workspace_send']],
     ['chat-sidebar-shell', ['chat_sidebar_set_chats', 'chat_sidebar_select', 'chat_sidebar_set_collapsed']],
     ['node-canvas', ['node_canvas_set_editor_model', 'node_canvas_set_path_style', 'node_canvas_set_flow_layout']],
     ['canvas-graph', ['canvas_graph_set_model', 'canvas_graph_focus_node', 'canvas_graph_set_path']],
@@ -1591,6 +1631,11 @@ test('chat composer exposes reusable voice controls and agent-facing metadata', 
   assert.match(styles, /\.btn-wake-listen\[hidden\]/);
   assert.match(styles, /\.btn-voice-command\[disabled\]/);
   assert.match(styles, /\.btn-voice-language\[disabled\]/);
+  assert.match(styles, /\.btn-mic[\s\S]*order: 60/);
+  assert.match(styles, /\.btn-wake-listen[\s\S]*order: 20/);
+  assert.match(styles, /\.btn-voice-response[\s\S]*order: 30/);
+  assert.match(styles, /\.btn-voice-command[\s\S]*order: 40/);
+  assert.match(styles, /\.btn-voice-language[\s\S]*order: 50/);
   assert.match(styles, /\.composer-footer-btn\.active/);
   assert.match(styles, /\.composer-footer-value/);
   assert.match(styles, /\.composer-footer-checkbox/);
@@ -1616,6 +1661,7 @@ test('chat composer exposes reusable voice controls and agent-facing metadata', 
   assert.doesNotMatch(styles, /28vw/);
   assert.match(registry, /component-descriptor-v2/);
   for (const tagName of [
+    'chat-workspace',
     'chat-message-item',
     'chat-transcript',
     'chat-composer',
@@ -1695,6 +1741,141 @@ test('chat composer exposes reusable voice controls and agent-facing metadata', 
   );
 });
 
+test('chat workspace composes reusable chat surfaces and exposes host intent contract', async () => {
+  const [workspace, navTree, template, styles, registry, customElements, registryModule] = await Promise.all([
+    readFile(chatWorkspaceSource, 'utf8'),
+    readFile(chatNavTreeSource, 'utf8'),
+    readFile(chatWorkspaceTemplate, 'utf8'),
+    readFile(chatWorkspaceStyles, 'utf8'),
+    readFile(componentRegistrySource, 'utf8'),
+    readFile(customElementsSource, 'utf8'),
+    import(componentRegistrySource.href),
+  ]);
+
+  assert.match(workspace, /ChatSidebar\/ChatSidebar\.js/);
+  assert.match(workspace, /ChatTranscript\/ChatTranscript\.js/);
+  assert.match(workspace, /ChatComposer\/ChatComposer\.js/);
+  assert.match(workspace, /effects\/CellBg\/CellBg\.js/);
+  assert.match(workspace, /normalizeChatNavItem/);
+  assert.match(navTree, /export function buildChatNavTree/);
+  assert.match(navTree, /statusMeta/);
+  assert.match(navTree, /labels/);
+  assert.match(template, /<chat-sidebar-shell/);
+  assert.match(template, /<chat-transcript/);
+  assert.match(template, /<cell-bg[\s\S]*class="chat-workspace-bg"[\s\S]*auto-trigger="false"/);
+  assert.match(template, /<chat-composer/);
+  assert.match(styles, /container: chat-workspace \/ inline-size/);
+  assert.match(styles, /background: var\(--sn-chat-bg\)/);
+  assert.match(styles, /\.chat-workspace-bg/);
+  assert.match(styles, /--sn-chat-bg: transparent/);
+  assert.match(styles, /--sn-chat-sidebar-width/);
+  assert.match(styles, /--sn-chat-empty-composer-max-width/);
+
+  for (const method of [
+    'setWorkspaceState',
+    'setChats',
+    'setActiveChatId',
+    'setEmpty',
+    'setMessages',
+    'setComposerState',
+    'setVoiceControls',
+    'setVoicePreview',
+    'clearVoicePreview',
+    'setLiveStatus',
+    'setBackgroundState',
+    'triggerBackground',
+    'startBackground',
+    'stopBackground',
+    'getSidebar',
+    'getTranscript',
+    'getComposer',
+    'getBackground',
+  ]) {
+    assert.match(workspace, new RegExp(`${method}\\(`));
+  }
+  assert.match(workspace, /chatId: event\.detail\?\.chatId \|\| event\.detail\?\.id/);
+  assert.match(workspace, /chat-workspace-input/);
+  assert.match(workspace, /chat-workspace-key/);
+  assert.match(workspace, /chat-workspace-chat-select/);
+  assert.match(workspace, /chat-workspace-voice-intent/);
+  assert.match(workspace, /chat-workspace-footer-intent/);
+  assert.match(workspace, /chat-workspace-context-intent/);
+  assert.match(workspace, /chat-workspace-background-change/);
+  assert.match(workspace, /chat-workspace-background-event/);
+  assert.match(workspace, /BACKGROUND_PULSE_STATES/);
+  assert.match(workspace, /BACKGROUND_STOP_STATES/);
+  assert.match(workspace, /background\.trigger/);
+  assert.match(workspace, /background\.start/);
+  assert.match(workspace, /background\.stop/);
+
+  assert.match(registry, /\{[\s\S]*tagName: 'chat-workspace'[\s\S]*schemaVersion: 'component-descriptor-v2'/);
+  assert.match(registry, /chat_workspace_set_state/);
+  assert.match(registry, /chat_workspace_background/);
+  assert.match(registry, /chat_workspace_select_chat/);
+  assert.match(registry, /chat_workspace_send/);
+  assert.match(registry, /host-owned-transport/);
+  assert.match(registry, /animated-background-lifecycle/);
+  assert.match(registry, /chat-nav-tree-helper/);
+  assert.match(registry, /buildChatNavTree\(\)/);
+
+  let component = registryModule.getComponent('chat-workspace');
+  assert.ok(component);
+  assert.deepEqual(
+    component.contract.webmcp.tools.map((tool) => tool.name),
+    ['chat_workspace_set_state', 'chat_workspace_background', 'chat_workspace_select_chat', 'chat_workspace_send']
+  );
+  assert.ok(component.contract.methods.some((method) => method.name === 'setWorkspaceState'));
+  assert.ok(component.contract.methods.some((method) => method.name === 'setEmpty'));
+  assert.ok(component.contract.capabilities.includes('chat-nav-tree-helper'));
+  assert.ok(component.contract.events.some((event) => event.name === 'chat-workspace-input'));
+  assert.ok(component.contract.events.some((event) => event.name === 'chat-workspace-key'));
+  assert.ok(component.contract.events.some((event) => event.name === 'chat-workspace-voice-intent'));
+  assert.ok(component.componentDescription.includes('chat workspace'));
+
+  let catalog = JSON.parse(customElements);
+  let customWorkspace = catalog.modules
+    .flatMap((moduleRecord) => moduleRecord.declarations || [])
+    .find((declaration) => declaration.tagName === 'chat-workspace');
+  assert.ok(customWorkspace);
+  assert.match(customWorkspace.componentDescription, /chat-nav-tree-helper/);
+  assert.match(customElements, /buildChatNavTree\(\)/);
+  assert.deepEqual(
+    customWorkspace.metadata.contract.webmcp.tools.map((tool) => tool.name),
+    ['chat_workspace_set_state', 'chat_workspace_background', 'chat_workspace_select_chat', 'chat_workspace_send']
+  );
+  assert.ok(customWorkspace.agent.webmcp.toolNames.includes('chat_workspace_background'));
+});
+
+test('voice input command helpers match the Agent Portal command contract', async () => {
+  const [source, helpers] = await Promise.all([
+    readFile(voiceInputDefaultsSource, 'utf8'),
+    import(voiceInputDefaultsSource.href),
+  ]);
+
+  assert.match(source, /DEFAULT_VOICE_WAKE_COMMANDS/);
+  assert.match(source, /DEFAULT_VOICE_SEND_COMMANDS/);
+  assert.match(source, /matchVoiceCommandAtEnd/);
+  assert.match(source, /wakeCommandCandidates/);
+  assert.equal(helpers.defaultWakeCommandPhrases().ru, "О'кей Агент");
+  assert.equal(helpers.defaultSendCommandPhrases().ru, 'отправить');
+  assert.deepEqual(helpers.defaultVoiceActionCommandPhrases().cancel.ru, ['отмена', 'стоп']);
+  assert.deepEqual(helpers.wakeCommandCandidates(helpers.defaultWakeCommandPhrases(), 'en'), ['Okay Agent']);
+
+  let command = helpers.matchVoiceCommandAtEnd('Построй интерфейс отправить', [
+    { action: 'send', phrase: helpers.defaultSendCommandPhrases().ru },
+  ]);
+  assert.equal(command.matched, true);
+  assert.equal(command.action, 'send');
+  assert.equal(command.text, 'Построй интерфейс');
+
+  let wake = helpers.matchVoiceCommandInText("Скажи О'кей Агент и начни запись", helpers.wakeCommandCandidates(
+    helpers.defaultWakeCommandPhrases(),
+    'ru'
+  ));
+  assert.equal(wake.matched, true);
+  assert.equal(helpers.normalizeWakeCommandPhrase('голосовой ввод', 'ru'), "О'кей Агент");
+});
+
 test('static custom elements catalog carries agent-facing descriptions for chat surfaces', async () => {
   const catalog = JSON.parse(await readFile(customElementsSource, 'utf8'));
   const descriptions = new Map();
@@ -1705,6 +1886,7 @@ test('static custom elements catalog carries agent-facing descriptions for chat 
   }
 
   for (const tagName of [
+    'chat-workspace',
     'chat-composer',
     'chat-list',
     'chat-list-item',
@@ -1717,10 +1899,11 @@ test('static custom elements catalog carries agent-facing descriptions for chat 
 });
 
 test('chat sidebar metadata matches rendered reusable fields without product task policy', async () => {
-  const [sidebarItem, registry, customElementsSourceText] = await Promise.all([
+  const [sidebarItem, registry, customElementsSourceText, demoSource] = await Promise.all([
     readFile(new URL('../chat/ChatSidebarItem/ChatSidebarItem.js', import.meta.url), 'utf8'),
     readFile(componentRegistrySource, 'utf8'),
     readFile(customElementsSource, 'utf8'),
+    readFile(cascadeDemoSource, 'utf8'),
   ]);
   const catalog = JSON.parse(customElementsSourceText);
   const declarations = new Map(
@@ -1734,12 +1917,17 @@ test('chat sidebar metadata matches rendered reusable fields without product tas
 
   assert.doesNotMatch(sidebarItem, /pendingTaskId/);
   assert.match(sidebarItem, /isRunning/);
+  assert.doesNotMatch(sidebarItem, /isLocked|chat-sidebar-locked-select|chat-lock-icon|lockedTitle/);
   assert.match(sidebarItem, /statusKind === 'running'/);
 
   for (const propName of ['time', 'icon', 'metaLabel', 'hasChildren', 'isGroup', 'isRunning', 'subChats']) {
     assert.match(registry, new RegExp(`name: '${propName}'`));
     assert.match(customElementsSourceText, new RegExp(`"name": "${propName}"`));
   }
+  assert.doesNotMatch(registry, /isLocked|chat-sidebar-locked-select/);
+  assert.doesNotMatch(customElementsSourceText, /"name": "isLocked"|"name": "chat-sidebar-locked-select"/);
+  assert.match(demoSource, /composerDisabled: true/);
+  assert.match(demoSource, /disabled: composerDisabled/);
 
   assert.match(
     registry,
@@ -1749,6 +1937,7 @@ test('chat sidebar metadata matches rendered reusable fields without product tas
   assert.equal(subItemDeclaration?.contract?.schemaVersion, 'component-descriptor-v2');
   assert.equal(subItemMemberNames.has('agentType'), false);
   assert.equal(subItemMemberNames.has('metaLabel'), true);
+  assert.equal(subItemMemberNames.has('isLocked'), false);
   assert.equal(subItemMemberNames.has('isRunning'), true);
   assert.equal(subItemMemberNames.has('subChats'), true);
 });

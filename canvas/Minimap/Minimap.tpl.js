@@ -1,6 +1,6 @@
 /**
  * Minimap template
- * @module symbiote-node/canvas/Minimap.tpl
+ * @module symbiote-ui/canvas/Minimap.tpl
  */
 import { html } from '@symbiotejs/symbiote';
 

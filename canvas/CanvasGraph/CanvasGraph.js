@@ -241,7 +241,7 @@ export class CanvasGraph extends Symbiote {
 
     this._wakeLoop();
 
-    // Bind graph-breadcrumb from symbiote-node
+    // Bind graph-breadcrumb from symbiote-ui
     if (this.breadcrumb?.onNavigate) {
       this.breadcrumb.onNavigate((levelStr) => {
         // levelStr is the path string we passed into 'level' property
@@ -578,7 +578,7 @@ export class CanvasGraph extends Symbiote {
         group.w = dynamicSize;
         group.h = dynamicSize;
 
-        // Render existing symbiote-node breadcrumbs
+        // Render existing symbiote-ui breadcrumbs
         if (this.breadcrumb?.setPath) {
           const parts = groupId.split('/');
           const pathArr = [{ label: 'Root', level: '' }];

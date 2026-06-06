@@ -11,7 +11,7 @@
  *   rect    → [label]
  *   comment → >label]
  *
- * @module symbiote-node/core/GraphMermaid
+ * @module symbiote-ui/core/GraphMermaid
  */
 
 

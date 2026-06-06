@@ -28,7 +28,9 @@ The right chat layout panel follows the studio page-agent pattern: it starts col
 can open into an agent chat panel, and remains connected to the current project
 type and active sidebar item. It is not a replacement for the `Chat` project
 tab. The global rail is the assistant that helps with the current page; the
-`Chat` tab is the full chat-oriented workspace scenario.
+`Chat` tab is the full chat-oriented workspace scenario. It renders one
+full-size chat layout only; the reusable right-side page-agent panel is used by
+the other project-type tabs and expands to its own minimum assistant size.
 
 ### Top Tabs
 
@@ -154,17 +156,23 @@ Sidebar candidates:
 - Tool calls
 - Chat history
 - Theme response
-- Page-scoped assistant layout panel
 
 Expected views:
 
 - Chat transcript with markdown, code, tool status, and voice controls.
 - Composer with compact responsive controls.
+- Sidebar mock data follows the public Agent Portal playground pattern: parent
+  chat, child audit/smoke chats, user request, thinking summary, tool card, and
+  agent response.
+- Voice controls use `symbiote-ui/chat/voice-input-defaults.js` for shared
+  wake/send/cancel/delete/off command matching. Hosts still own microphone
+  permission, recorder lifecycle, speech recognition, transcription, and
+  persistence.
 - Runtime-created panel opened from a chat action.
 - Animated background controlled by cascade theme and motion state.
-- The right collapsed layout panel remains present even inside the full chat workspace;
-  opening the panel can show a secondary page assistant or context help, not a
-  duplicate transcript.
+- The `Chat` tab renders one full-size chat workspace. The right page-scoped
+  assistant layout panel is reserved for the other project-type tabs and must
+  not duplicate the chat transcript inside the Chat tab.
 
 Suggested structure:
 

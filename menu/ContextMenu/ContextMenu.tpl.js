@@ -1,6 +1,6 @@
 /**
  * ContextMenu template
- * @module symbiote-node/menu/ContextMenu.tpl
+ * @module symbiote-ui/menu/ContextMenu.tpl
  */
 import { html } from '@symbiotejs/symbiote';
 

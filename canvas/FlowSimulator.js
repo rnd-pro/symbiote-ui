@@ -4,7 +4,7 @@
  * Performs topological traversal of the node graph and animates
  * nodes and connections step-by-step (like n8n execution).
  *
- * @module symbiote-node/canvas/FlowSimulator
+ * @module symbiote-ui/canvas/FlowSimulator
  */
 
 /**

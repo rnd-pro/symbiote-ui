@@ -34,6 +34,7 @@ npm install jsda-kit linkedom
 - `symbiote-ui/xr` - WebXR provider helpers, spatial algorithms, 3D graph layout, and multi-view coordination.
 - `symbiote-ui/locale` - Node-safe locale catalogs and translation helpers.
 - `symbiote-ui/discover` - provider discovery JSON API used by the CLI.
+- `symbiote-ui/chat/voice-input-defaults.js` - Node-safe wake/send/action voice command defaults and matching helpers.
 - `symbiote-ui/custom-elements.json` - Custom Elements manifest.
 - `symbiote-ui/schemas/*`, `symbiote-ui/tokens/*`, `symbiote-ui/rules/*` - machine-readable provider contracts.
 - `symbiote-ui/display/*` - reusable display utilities exposed by package export map.
@@ -153,17 +154,22 @@ let theme = createCascadeTheme({ mode: 'dark', brightness: 8, contrast: 64 });
 applyCascadeTheme(document.documentElement, theme.state);
 ```
 
-For chat construction, `chat-sidebar-shell` owns sidebar presentation and emits
-selection/collapse/width intents. `chat-composer` owns composer presentation,
-footer controls, and voice-control intents. The host owns actual chat
-transport, model/provider policy, speech recognition, and storage.
+For chat construction, use `chat-workspace` when the host needs the complete
+reusable shell: sidebar, transcript, composer, footer controls, voice-control
+intents, and animated `cell-bg` lifecycle. `chat-sidebar-shell` and
+`chat-composer` remain lower-level primitives for custom composition. The host
+owns actual chat transport, model/provider policy, speech recognition, routes,
+and storage.
 Use `setFooterControls()` for structured provider/model/agent/resource/settings
 controls; `chat-composer-footer-control` and
 `chat-composer-footer-control-change` report product-neutral intents back to the
 host. Voice controls emit `chat-composer-permission-intent`,
 `chat-composer-recorder-intent`, and `chat-composer-transcription-intent` so
 hosts can own microphone permission, recorder lifecycle, and transcription
-providers without those policies leaking into the component. `setFooterHtml()`
+providers without those policies leaking into the component. Use
+`symbiote-ui/chat/voice-input-defaults.js` for shared wake/send/cancel/delete/off
+phrases, command parsing, and matching when hosts need Agent Portal-compatible
+voice command behavior. `setFooterHtml()`
 remains available only for trusted host-rendered footer markup.
 `extractChatTitleFromAgentText()` provides a product-neutral parser for
 standalone `<chat-title>...</chat-title>` responses; any prompt instruction that

@@ -4,7 +4,7 @@
  * Visual socket indicator for node ports.
  * Changes color via socket data attribute.
  *
- * @module symbiote-node/components/NodeSocket
+ * @module symbiote-ui/components/NodeSocket
  */
 
 import Symbiote from '@symbiotejs/symbiote';

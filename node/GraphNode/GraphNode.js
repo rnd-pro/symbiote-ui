@@ -4,7 +4,7 @@
  * Renders node header, input/output ports with sockets,
  * and embedded controls. Receives data via _nodeData property.
  *
- * @module symbiote-node/components/GraphNode
+ * @module symbiote-ui/components/GraphNode
  */
 
 import Symbiote from '@symbiotejs/symbiote';

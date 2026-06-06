@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://rnd-pro.github.io/symbiote-node/schemas/project-package-v1.json",
+  "$id": "https://rnd-pro.github.io/symbiote-ui/schemas/project-package-v1.json",
   "title": "Symbiote Project Package",
   "type": "object",
   "additionalProperties": false,

@@ -8,7 +8,7 @@ import { translate } from '../locale/index.js';
  * fitView, selectAll, deleteSelected, and socket highlighting.
  * Extracted from NodeCanvas to reduce complexity.
  *
- * @module symbiote-node/canvas/ViewportActions
+ * @module symbiote-ui/canvas/ViewportActions
  */
 
 export class ViewportActions {

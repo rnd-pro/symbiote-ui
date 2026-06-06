@@ -204,6 +204,7 @@ export let CellBg;
 export let ChatMessageItem;
 export let ChatTranscript;
 export let ChatComposer;
+export let ChatWorkspace;
 export let ChatList;
 export let ChatListItem;
 export let ChatSidebarShell;
@@ -483,6 +484,7 @@ if (hasDOMGlobals) {
     chatMessageItem,
     chatTranscript,
     chatComposer,
+    chatWorkspace,
     chatList,
     chatListItem,
     chatSidebar,
@@ -538,6 +540,7 @@ if (hasDOMGlobals) {
     import('../chat/ChatMessageItem/ChatMessageItem.js'),
     import('../chat/ChatTranscript/ChatTranscript.js'),
     import('../chat/ChatComposer/ChatComposer.js'),
+    import('../chat/ChatWorkspace/ChatWorkspace.js'),
     import('../chat/ChatList/ChatList.js'),
     import('../chat/ChatListItem/ChatListItem.js'),
     import('../chat/ChatSidebar/ChatSidebar.js'),
@@ -604,6 +607,7 @@ if (hasDOMGlobals) {
   ({ ChatMessageItem, stringifyBlock, truncateResult } = chatMessageItem);
   ({ ChatTranscript } = chatTranscript);
   ({ ChatComposer } = chatComposer);
+  ({ ChatWorkspace } = chatWorkspace);
   ({ ChatList } = chatList);
   ({ ChatListItem } = chatListItem);
   ({ ChatSidebarShell } = chatSidebar);
@@ -658,6 +662,7 @@ if (hasDOMGlobals) {
     ChatMessageItem,
     ChatTranscript,
     ChatComposer,
+    ChatWorkspace,
     ChatList,
     ChatListItem,
     ChatSidebarShell,

@@ -5,7 +5,7 @@
  * set of nodes and connections. Provides tab bar UI and
  * state switching for the NodeCanvas.
  *
- * @module symbiote-node/canvas/GraphTabs
+ * @module symbiote-ui/canvas/GraphTabs
  */
 
 import Symbiote, { html } from '@symbiotejs/symbiote';

@@ -1,6 +1,6 @@
 /**
  * InspectorPanel styles
- * @module symbiote-node/inspector/InspectorPanel.css
+ * @module symbiote-ui/inspector/InspectorPanel.css
  */
 import { css } from '@symbiotejs/symbiote';
 

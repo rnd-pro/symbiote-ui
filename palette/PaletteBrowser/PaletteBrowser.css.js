@@ -1,6 +1,6 @@
 /**
  * PaletteBrowser styles
- * @module symbiote-node/palette/PaletteBrowser.css
+ * @module symbiote-ui/palette/PaletteBrowser.css
  */
 import { css } from '@symbiotejs/symbiote';
 

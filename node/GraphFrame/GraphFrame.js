@@ -4,7 +4,7 @@
  * Colored rectangle with label that groups nodes spatially.
  * Moving the frame moves all nodes whose positions fall within its bounds.
  *
- * @module symbiote-node/components/GraphFrame
+ * @module symbiote-ui/components/GraphFrame
  */
 
 import Symbiote from '@symbiotejs/symbiote';

@@ -117,3 +117,26 @@ export {
   extractChatTitleFromAgentText,
   sanitizeChatTitle,
 } from './chat/chat-title.js';
+
+export {
+  buildChatNavTree,
+  cleanChatName,
+  normalizeChatNavItem,
+} from './chat/ChatWorkspace/chat-nav-tree.js';
+
+export {
+  DEFAULT_VOICE_ACTION_COMMANDS,
+  DEFAULT_VOICE_SEND_COMMANDS,
+  DEFAULT_VOICE_WAKE_COMMAND,
+  DEFAULT_VOICE_WAKE_COMMANDS,
+  LEGACY_VOICE_WAKE_COMMANDS,
+  defaultSendCommandPhrases,
+  defaultVoiceActionCommandPhrases,
+  defaultWakeCommandPhrases,
+  formatVoiceCommandList,
+  matchVoiceCommandAtEnd,
+  matchVoiceCommandInText,
+  normalizeWakeCommandPhrase,
+  parseVoiceCommandList,
+  wakeCommandCandidates,
+} from './chat/voice-input-defaults.js';

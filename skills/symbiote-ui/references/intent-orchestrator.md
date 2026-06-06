@@ -27,7 +27,7 @@ async function executeAgentIntent(controller, intent, options)
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://rnd-pro.github.io/symbiote-node/schemas/agent-intent-v1.json",
+  "$id": "https://rnd-pro.github.io/symbiote-ui/schemas/agent-intent-v1.json",
   "type": "object",
   "required": ["version", "intentId", "operations"],
   "properties": {

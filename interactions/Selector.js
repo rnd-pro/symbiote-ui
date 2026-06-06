@@ -5,7 +5,7 @@
  * canvas deselect, and group translate of selected nodes.
  *
  * Adapted from Rete.js selectable extension (208 LOC).
- * @module symbiote-node/interactions/Selector
+ * @module symbiote-ui/interactions/Selector
  */
 
 /** @type {number} Minimum pointer movement to consider a drag (pixels) */

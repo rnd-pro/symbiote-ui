@@ -6,7 +6,7 @@
  * gradient coloring, flow animation, socket offset calculation.
  * Extracted from NodeCanvas to reduce complexity.
  *
- * @module symbiote-node/canvas/ConnectionRenderer
+ * @module symbiote-ui/canvas/ConnectionRenderer
  */
 
 import { getShape } from '../shapes/index.js';

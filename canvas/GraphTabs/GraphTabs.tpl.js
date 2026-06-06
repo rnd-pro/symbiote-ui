@@ -1,6 +1,6 @@
 /**
  * GraphTabs template
- * @module symbiote-node/canvas/GraphTabs.tpl
+ * @module symbiote-ui/canvas/GraphTabs.tpl
  */
 import { html } from '@symbiotejs/symbiote';
 
