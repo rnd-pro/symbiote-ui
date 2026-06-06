@@ -1091,6 +1091,7 @@ async function evaluateComposerVoiceRuntimeSmoke(page) {
         activeLanguage: composer.ref?.voiceLanguageBtn?.querySelector('.voice-language-option.active')?.textContent?.trim() || '',
         commandHints: [...(composer.ref?.voiceCommandHints?.querySelectorAll('.voice-command-hint') || [])]
           .map((item) => item.textContent.trim()),
+        previewHidden: Boolean(composer.ref?.voicePreview?.hidden),
         previewStatus: composer.ref?.voicePreviewStatus?.textContent?.trim() || '',
         recognitionCount: instances.length,
       };
@@ -1118,6 +1119,13 @@ async function evaluateComposerVoiceRuntimeSmoke(page) {
         commandHints: [...(composer.ref?.voiceCommandHints?.querySelectorAll('.voice-command-hint') || [])]
           .map((item) => item.textContent.trim()),
       };
+      composer.ref?.voiceCancelBtn?.click();
+      await settle();
+      const wakeCancel = {
+        wakeActive: Boolean(composer.ref?.wakeListenBtn?.classList.contains('listening')),
+        previewHidden: Boolean(composer.ref?.voicePreview?.hidden),
+        inputState: composer.ref?.voiceInputBtn?.dataset?.voiceState || '',
+      };
       composer.ref?.wakeListenBtn?.click();
       await settle();
 
@@ -1126,6 +1134,7 @@ async function evaluateComposerVoiceRuntimeSmoke(page) {
         wakeActiveControls,
         wakeMatched,
         wakeDictation,
+        wakeCancel,
         recognition: instances.map((item) => ({
           lang: item.lang,
           startLang: item.startLang,
@@ -1370,6 +1379,29 @@ async function evaluateChatWorkspaceEventFlow(page) {
           hasTranscript: Boolean(transcript),
         };
       }
+      const spokenResponses = [];
+      class MockSpeechSynthesisUtterance {
+        constructor(text) {
+          this.text = text;
+          this.lang = '';
+          this.onend = null;
+          this.onerror = null;
+        }
+      }
+      Object.defineProperty(window, 'SpeechSynthesisUtterance', {
+        configurable: true,
+        value: MockSpeechSynthesisUtterance,
+      });
+      Object.defineProperty(window, 'speechSynthesis', {
+        configurable: true,
+        value: {
+          cancel() {},
+          speak(utterance) {
+            spokenResponses.push({ text: utterance.text, lang: utterance.lang });
+            setTimeout(() => utterance.onend?.(), 0);
+          },
+        },
+      });
 
       const hostEvents = [];
       panel.addEventListener('cascade-chat-host-flow', (event) => {
@@ -1423,11 +1455,10 @@ async function evaluateChatWorkspaceEventFlow(page) {
       const responseButton = composer.querySelector('button.btn-voice-response');
       wakeButton?.click();
       await settle();
-      responseButton?.click();
-      await settle();
       const voicePreview = composer.getVoicePreviewText?.() || '';
       const voiceState = {
         wakeActive: wakeButton?.classList.contains('listening') || false,
+        responseActive: responseButton?.classList.contains('active') || false,
         responseSpeaking: responseButton?.classList.contains('speaking') || false,
         background: workspace.dataset.backgroundState || '',
       };
@@ -1491,6 +1522,7 @@ async function evaluateChatWorkspaceEventFlow(page) {
         webmcpComposerState,
         voicePreview,
         voiceState,
+        spokenResponses,
         streamingState,
         stoppedState,
         finalState: {
@@ -1906,7 +1938,9 @@ test('showcase chat workspace exercises host event flow through library primitiv
     assert.ok(flow.hostEvents.some((event) => event.type === 'stream-tool'));
     assert.ok(flow.hostEvents.some((event) => event.type === 'stream-responding'));
     assert.ok(flow.hostEvents.some((event) => event.type === 'stream-complete'));
-    assert.match(flow.voicePreview, /speech output|listening|Wake mode is armed/i);
+    assert.equal(flow.voicePreview, '');
+    assert.equal(flow.voiceState.wakeActive, true);
+    assert.equal(flow.voiceState.responseActive, true);
     assert.equal(flow.streamingState.sending, true);
     assert.match(flow.streamingState.background, /streaming|thinking|tool|responding/);
     assert.match(flow.streamingState.liveStatus, /Planning|Running|Writing/);
@@ -1914,6 +1948,9 @@ test('showcase chat workspace exercises host event flow through library primitiv
     assert.equal(flow.stoppedState.background, 'stop');
     assert.equal(flow.finalState.sending, false);
     assert.equal(flow.finalState.background, 'done');
+    assert.equal(flow.spokenResponses.length, 1);
+    assert.match(flow.spokenResponses[0].text, /Mock host adapter handled/);
+    assert.equal(flow.spokenResponses[0].lang, 'ru-RU');
     assert.ok(flow.finalState.messageCount >= 5);
     assert.ok(flow.finalState.messageRoles.includes('agent'));
     assert.ok(flow.finalState.messageRoles.includes('tool'));
@@ -2121,8 +2158,9 @@ test('cascade lab chat composer keeps voice controls inside the input surface re
     assert.equal(voiceRuntimeSmoke.wakeActiveControls.commandVisible, true);
     assert.equal(voiceRuntimeSmoke.wakeActiveControls.languageVisible, true);
     assert.ok(['RU', 'ES', 'EN'].includes(voiceRuntimeSmoke.wakeActiveControls.activeLanguage));
-    assert.match(voiceRuntimeSmoke.wakeActiveControls.previewStatus, /О'кей Агент|Agent/);
-    assert.ok(voiceRuntimeSmoke.wakeActiveControls.commandHints.length >= 4);
+    assert.equal(voiceRuntimeSmoke.wakeActiveControls.previewHidden, true);
+    assert.equal(voiceRuntimeSmoke.wakeActiveControls.previewStatus, '');
+    assert.equal(voiceRuntimeSmoke.wakeActiveControls.commandHints.length, 0);
     assert.equal(voiceRuntimeSmoke.wakeActiveControls.recognitionCount, 3);
     assert.match(voiceRuntimeSmoke.wakeMatched.previewStatus, /Recording 00:00|wake matched/i);
     assert.equal(voiceRuntimeSmoke.wakeMatched.inputState, 'listening');
@@ -2130,6 +2168,9 @@ test('cascade lab chat composer keeps voice controls inside the input surface re
     assert.equal(voiceRuntimeSmoke.wakeMatched.wakeRecognitionAborted, true);
     assert.match(voiceRuntimeSmoke.wakeDictation.previewText, /построй рабочую область/);
     assert.ok(voiceRuntimeSmoke.wakeDictation.commandHints.length >= 4);
+    assert.equal(voiceRuntimeSmoke.wakeCancel.wakeActive, true);
+    assert.equal(voiceRuntimeSmoke.wakeCancel.previewHidden, true);
+    assert.equal(voiceRuntimeSmoke.wakeCancel.inputState, 'idle');
     const recognitionLanguages = voiceRuntimeSmoke.recognition.map((item) => item.startLang);
     assert.deepEqual(recognitionLanguages.slice(0, 2), ['ru-RU', 'es-ES']);
     assert.ok(['ru-RU', 'es-ES', 'en-US'].includes(recognitionLanguages[2]));

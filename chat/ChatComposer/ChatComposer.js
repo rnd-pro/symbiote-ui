@@ -394,6 +394,7 @@ export class ChatComposer extends Symbiote {
 
   _executeVoiceCommand(command) {
     let runtime = this._getVoiceRuntime();
+    let keepWakeMode = this._localVoiceActiveMode === 'wake';
 
     if (command.action === 'send') {
       runtime.cancel();
@@ -414,12 +415,15 @@ export class ChatComposer extends Symbiote {
     } else if (command.action === 'off') {
       runtime.cancel();
       this._voiceCommandMode = false;
+      keepWakeMode = false;
       this.clearVoicePreview();
     }
 
-    this._localVoiceState = 'idle';
-    this._localVoiceActiveMode = 'idle';
+    this._localVoiceState = keepWakeMode ? 'listening' : 'idle';
+    this._localVoiceActiveMode = keepWakeMode ? 'wake' : 'idle';
+    this._localVoiceWakeMatched = false;
     this._syncLocalVoiceControls();
+    if (keepWakeMode) this._startLocalWakeRecognition();
   }
 
   _getVoiceRuntime() {
@@ -502,11 +506,13 @@ export class ChatComposer extends Symbiote {
         this._handleVoiceResult(result);
       } else if (action === 'cancel') {
         runtime.cancel();
-        this._localVoiceState = 'idle';
-        this._localVoiceActiveMode = 'idle';
+        let keepWakeMode = this._localVoiceActiveMode === 'wake';
+        this._localVoiceState = keepWakeMode ? 'listening' : 'idle';
+        this._localVoiceActiveMode = keepWakeMode ? 'wake' : 'idle';
         this._localVoiceWakeMatched = false;
         this._syncLocalVoiceControls();
         this.clearVoicePreview();
+        if (keepWakeMode) this._startLocalWakeRecognition();
       }
     } catch (err) {
       this._onVoiceRuntimeError(err);
@@ -517,19 +523,6 @@ export class ChatComposer extends Symbiote {
     try {
       let runtime = this._getVoiceRuntime();
       if (action === 'start') {
-        let permission = await runtime.checkPermission();
-        if (permission === 'prompt') {
-          permission = await runtime.requestPermission();
-        }
-        if (permission !== 'granted') {
-          this.setVoicePreview({
-            mode: 'result',
-            status: 'Permission denied',
-            text: 'Microphone permission is required for wake listening.',
-          });
-          return;
-        }
-
         this._localVoiceActiveMode = 'wake';
         this._localVoiceState = 'listening';
         this._localVoiceElapsed = 0;
@@ -537,7 +530,7 @@ export class ChatComposer extends Symbiote {
         this._localVoiceWakeMatched = false;
         this._localWakeTriggering = false;
         this._syncLocalVoiceControls();
-        this._showLocalWakePreview('');
+        this.clearVoicePreview();
 
         this._startLocalWakeRecognition();
       } else {
@@ -561,7 +554,7 @@ export class ChatComposer extends Symbiote {
         this._localVoiceState = 'listening';
         this._localVoiceWakeMatched = false;
         this._startLocalWakeRecognition();
-        this._showLocalWakePreview('');
+        this.clearVoicePreview();
       } else {
         this._localVoiceState = 'idle';
         this._localVoiceActiveMode = 'idle';
@@ -585,8 +578,6 @@ export class ChatComposer extends Symbiote {
       }
       if (matchedWake) {
         this._triggerDefaultVoiceInputFromWake();
-      } else {
-        this._showLocalWakePreview(text);
       }
       return;
     } else {
@@ -655,7 +646,7 @@ export class ChatComposer extends Symbiote {
     if (result.cancelled) {
       if (wasWakeMode) {
         this._startLocalWakeRecognition();
-        this._showLocalWakePreview('');
+        this.clearVoicePreview();
       } else {
         this.clearVoicePreview();
       }
@@ -723,14 +714,8 @@ export class ChatComposer extends Symbiote {
     });
   }
 
-  _showLocalWakePreview(text = '') {
-    this.setVoicePreview({
-      mode: 'recording',
-      status: `Listening for "${this._getWakeCommandPhrase()}"`,
-      text,
-      elapsed: false,
-      commandHints: this._voiceCommandMode ? this._getVoiceCommandHints() : [],
-    });
+  _showLocalWakePreview() {
+    this.clearVoicePreview();
   }
 
   _getSpeechRecognitionConstructor() {
@@ -770,7 +755,12 @@ export class ChatComposer extends Symbiote {
     recognition.onerror = (event) => {
       this._localWakeRecognition = null;
       if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-        this._onVoiceRuntimeError(new Error('Microphone permission is required for wake listening.'));
+        this._localVoiceState = 'idle';
+        this._localVoiceActiveMode = 'idle';
+        this._localVoiceWakeMatched = false;
+        this._localWakeTriggering = false;
+        this._syncLocalVoiceControls();
+        this.clearVoicePreview();
         return;
       }
       if (this._localVoiceActiveMode === 'wake' && !this._localVoiceWakeMatched) {
@@ -806,7 +796,6 @@ export class ChatComposer extends Symbiote {
   _handleLocalWakeRecognitionText(text = '') {
     let value = String(text || '').trim();
     this._localVoiceText = value;
-    this._showLocalWakePreview(value);
     let locale = this._voiceCommandLocale();
     let candidates = wakeCommandCandidates(defaultWakeCommandPhrases(), locale);
     if (this._voiceControls?.wakeListen?.commandText) {
@@ -823,13 +812,7 @@ export class ChatComposer extends Symbiote {
     this._localVoiceWakeMatched = true;
     this._localVoiceText = '';
     this._syncLocalVoiceControls();
-    this.setVoicePreview({
-      mode: 'recording',
-      status: 'wake matched',
-      text: '',
-      elapsed: false,
-      commandHints: this._voiceCommandMode ? this._getVoiceCommandHints() : [],
-    });
+    this.clearVoicePreview();
     setTimeout(() => {
       this._startDefaultWakeDictation().finally(() => {
         this._localWakeTriggering = false;
@@ -902,7 +885,7 @@ export class ChatComposer extends Symbiote {
       active: isWakeVoice,
       commandText: isWakeVoice
         ? (this._voiceControls.wakeListen?.commandText || this._getWakeCommandPhrase())
-        : (this._voiceControls.wakeListen?.commandText || ''),
+        : '',
     };
 
     if (isActive) {
@@ -1206,11 +1189,12 @@ export class ChatComposer extends Symbiote {
     if (text) text.textContent = commandText || '';
   }
 
-  _syncVoiceResponse({ visible = false, enabled = true, speaking = false } = {}) {
+  _syncVoiceResponse({ visible = false, enabled = true, active = false, speaking = false } = {}) {
     let btn = this.ref.voiceResponseBtn;
     if (!btn) return;
     btn.hidden = !visible;
     btn.disabled = Boolean(this.$.disabled) || !enabled;
+    btn.classList.toggle('active', Boolean(active));
     btn.classList.toggle('enabled', Boolean(enabled));
     btn.classList.toggle('speaking', Boolean(speaking));
   }

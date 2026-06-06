@@ -621,7 +621,7 @@ chat-composer.drag-over .composer-body {
   cursor: not-allowed;
 }
 
-.btn-voice-response.enabled,
+.btn-voice-response.active,
 .btn-voice-response.speaking {
   color: var(--sn-node-selected);
   background: var(--sn-node-hover);

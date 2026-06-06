@@ -220,8 +220,11 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   assert.match(source, /chat-workspace-voice-intent/);
   assert.match(source, /sourceEvent === 'chat-composer-voice-input'/);
   assert.match(source, /sourceEvent === 'chat-composer-voice-response-toggle'/);
-  assert.match(source, /_setVoiceDemoState\('listening', this\._voiceDemoMode === 'wake' \? 'wake' : 'manual'/);
-  assert.match(source, /_setVoiceDemoState\('listening', 'wake', \{ wakeMatched: false \}\)/);
+  assert.match(source, /CASCADE_CHAT_VOICE_STORAGE_KEY/);
+  assert.match(source, /readStoredChatVoiceSettings/);
+  assert.match(source, /writeStoredChatVoiceSettings/);
+  assert.match(source, /voiceResponseEnabled: true/);
+  assert.match(source, /_setVoiceDemoState\(action === 'stop' \? 'idle' : 'listening', action === 'stop' \? 'idle' : 'wake'/);
   assert.match(source, /sourceEvent === 'chat-composer-voice-approve'[\s\S]*_startMockStream\(text\)/);
   assert.match(source, /role: 'agent'/);
   assert.match(source, /role: 'board'/);
@@ -273,8 +276,11 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   assert.match(source, /let isWakeDictation = isWakeVoice && this\._voiceDemoWakeMatched/);
   assert.match(source, /visible: voiceAvailable/);
   assert.match(source, /visible: voiceModeActive/);
-  assert.match(source, /Wake mode is armed/);
+  assert.match(source, /active: this\._voiceResponseEnabled/);
+  assert.match(source, /speaking: this\._speakingVoiceResponse/);
   assert.match(source, /wakeMatched: false/);
+  assert.match(source, /showPreview: false/);
+  assert.match(source, /_speakVoiceResponseText\(responseText\)/);
   assert.match(source, /footerControls: this\._buildFooterControls\(\)/);
   assert.match(source, /id: 'provider'/);
   assert.match(source, /id: 'model'/);
@@ -1641,7 +1647,7 @@ test('chat composer exposes reusable voice controls and agent-facing metadata', 
   assert.match(composer, /chat-composer-footer-control-change/);
   assert.match(composer, /_handleDefaultVoiceApprove/);
   assert.match(composer, /_showLocalRecordingPreview\(''\)/);
-  assert.match(composer, /_showLocalWakePreview\(''\)/);
+  assert.match(composer, /_showLocalWakePreview\(\)/);
   assert.match(composer, /Listening for "\$\{this\._getWakeCommandPhrase\(\)\}"/);
   assert.match(composer, /wake matched/);
   assert.match(composer, /restartSpeechRecognition/);
@@ -1930,7 +1936,8 @@ test('cascade demo voice fallback confirms dictation directly into chat stream',
   const demoSource = await readFile(cascadeDemoSource, 'utf8');
 
   assert.match(demoSource, /_getVoiceSubmissionText/);
-  assert.match(demoSource, /_handleWorkspaceVoiceIntent\(event\)[\s\S]*event\.preventDefault\?\.\(\)/);
+  assert.match(demoSource, /let useDefaultRuntime = typeof VoiceRuntime !== 'undefined' && VoiceRuntime\.isAvailable/);
+  assert.match(demoSource, /if \(!useDefaultRuntime\) event\.preventDefault\?\.\(\)/);
   assert.match(demoSource, /sourceEvent === 'chat-composer-voice-approve'[\s\S]*_startMockStream\(text\)/);
   assert.doesNotMatch(demoSource, /sourceEvent === 'chat-composer-voice-approve'[\s\S]{0,180}_setVoiceDemoState\('transcribing'/);
   assert.doesNotMatch(demoSource, /value: 'Render this response inside the current layout отправить'/);

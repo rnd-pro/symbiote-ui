@@ -33,7 +33,7 @@ import '../list/ListDetailShell/ListDetailShell.js';
 import '../surface/Card/Card.js';
 import '../tree/TreePanel/TreePanel.js';
 import '../canvas/CanvasGraph/CanvasGraph.js';
-import '../chat/ChatComposer/ChatComposer.js?v=wake-parity-1';
+import '../chat/ChatComposer/ChatComposer.js?v=wake-parity-2';
 import '../chat/ChatSidebarItem/ChatSidebarItem.js?v=voice-controls-final-8';
 import '../chat/ChatSidebar/ChatSidebar.js?v=voice-controls-final-8';
 import '../chat/ChatWorkspace/ChatWorkspace.js?v=cascade-demo-chat-workspace-1';
@@ -72,6 +72,7 @@ await Promise.all([
 ]);
 
 const CASCADE_THEME_STORAGE_KEY = 'symbiote-ui:cascade-theme-lab';
+const CASCADE_CHAT_VOICE_STORAGE_KEY = 'symbiote-ui:cascade-theme-lab:voice';
 const CASCADE_THEME_QUERY_KEYS = [
   'mode',
   'brightness',
@@ -112,6 +113,36 @@ function readUrlCascadeTheme() {
 
 function readInitialCascadeTheme() {
   return readUrlCascadeTheme() || readStoredCascadeTheme();
+}
+
+function readStoredChatVoiceSettings() {
+  let defaults = { languageMode: 'ru', voiceResponseEnabled: true };
+  if (typeof localStorage === 'undefined') return defaults;
+  try {
+    let stored = JSON.parse(localStorage.getItem(CASCADE_CHAT_VOICE_STORAGE_KEY) || 'null');
+    let languageMode = ['ru', 'es', 'en'].includes(stored?.languageMode)
+      ? stored.languageMode
+      : defaults.languageMode;
+    return {
+      languageMode,
+      voiceResponseEnabled: stored?.voiceResponseEnabled !== false,
+    };
+  } catch (error) {
+    void error;
+    return defaults;
+  }
+}
+
+function writeStoredChatVoiceSettings(settings = {}) {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    localStorage.setItem(CASCADE_CHAT_VOICE_STORAGE_KEY, JSON.stringify({
+      languageMode: ['ru', 'es', 'en'].includes(settings.languageMode) ? settings.languageMode : 'ru',
+      voiceResponseEnabled: settings.voiceResponseEnabled !== false,
+    }));
+  } catch (error) {
+    void error;
+  }
 }
 
 applyTheme(document.documentElement, DEFAULT_PROVIDER_THEME);
@@ -1400,10 +1431,16 @@ class CascadeChatPanel extends Symbiote {
     this._isStreaming = false;
     this._streamTimers = [];
     this._voiceDemoMode = 'idle';
+    this._voiceDemoState = 'idle';
+    this._voiceDemoWakeMatched = false;
+    this._speakingVoiceResponse = false;
+    this._voiceResponseLastText = '';
 
     this._ensureMockThreads();
 
-    this._voiceLanguageMode = 'ru';
+    let voiceSettings = readStoredChatVoiceSettings();
+    this._voiceLanguageMode = voiceSettings.languageMode;
+    this._voiceResponseEnabled = voiceSettings.voiceResponseEnabled;
     this._voiceCommandMode = true;
     this._voiceCommandPhrases = defaultSendCommandPhrases();
     this._voiceActionCommandPhrases = {
@@ -1839,7 +1876,12 @@ class CascadeChatPanel extends Symbiote {
         active: isWakeVoice,
         commandText: isWakeVoice ? this._getWakeCommandPhrase() : '',
       },
-      response: { visible: isWakeVoice, enabled: isWakeVoice && voiceAvailable, speaking: normalized === 'speaking' },
+      response: {
+        visible: isWakeVoice,
+        enabled: isWakeVoice && voiceAvailable,
+        active: this._voiceResponseEnabled,
+        speaking: this._speakingVoiceResponse || normalized === 'speaking',
+      },
       command: { visible: voiceModeActive, enabled: voiceModeActive, active: this._voiceCommandMode, text: 'Commands' },
       language: {
         visible: voiceModeActive,
@@ -1990,13 +2032,14 @@ class CascadeChatPanel extends Symbiote {
     this._clearStreamTimers();
     this._isStreaming = false;
     this._recordHostEvent('stream-complete', { value });
+    let responseText = [
+      `Mock host adapter handled "${value}" through ${this._footerState.provider}/${this._footerState.model}.`,
+      '',
+      'The library provided the visible chat workspace, while the host owned selection, footer params, streaming state, and background lifecycle.',
+    ].join('\n');
     this._appendActiveMessage({
       role: 'agent',
-      text: [
-        `Mock host adapter handled "${value}" through ${this._footerState.provider}/${this._footerState.model}.`,
-        '',
-        'The library provided the visible chat workspace, while the host owned selection, footer params, streaming state, and background lifecycle.',
-      ].join('\n'),
+      text: responseText,
     });
     this._getWorkspace()?.setWorkspaceState({
       composer: {
@@ -2007,6 +2050,7 @@ class CascadeChatPanel extends Symbiote {
       liveStatus: null,
       background: { state: 'done', active: false },
     });
+    this._speakVoiceResponseText(responseText);
   }
 
   _stopMockStream(reason = 'stopped') {
@@ -2036,133 +2080,76 @@ class CascadeChatPanel extends Symbiote {
 
   _handleWorkspaceVoiceIntent(event) {
     let sourceEvent = event.detail?.sourceEvent;
-    event.preventDefault?.();
+    let useDefaultRuntime = typeof VoiceRuntime !== 'undefined' && VoiceRuntime.isAvailable;
+    if (!useDefaultRuntime) event.preventDefault?.();
 
-    if (typeof VoiceRuntime !== 'undefined' && VoiceRuntime.isAvailable) {
-      if (sourceEvent === 'chat-composer-voice-input') {
-        let action = event.detail?.action || 'start';
-        this._recordHostEvent('voice-input', { action });
-        if (action === 'start') {
-          this._setVoiceDemoState('listening', this._voiceDemoMode === 'wake' ? 'wake' : 'manual', {
-            wakeMatched: this._voiceDemoMode === 'wake',
-          });
-          this._startBg();
-        } else if (action === 'stop') {
-          this._setVoiceDemoState('transcribing', this._voiceDemoMode === 'wake' ? 'wake' : 'manual', {
-            wakeMatched: this._voiceDemoMode === 'wake',
-          });
-          this._triggerBg(6200);
-          this._queueBgStop(6600);
-        } else if (action === 'cancel') {
-          this._setVoiceDemoState(this._voiceDemoMode === 'wake' ? 'listening' : 'idle', this._voiceDemoMode === 'wake' ? 'wake' : 'idle');
-          this._stopBg();
-        }
-        return;
-      }
-
-      if (sourceEvent === 'chat-composer-wake-listen') {
-        let action = event.detail?.action || 'start';
-        this._recordHostEvent('wake-listen', { action });
-        if (action === 'start') {
-          this._setVoiceDemoState('listening', 'wake', { wakeMatched: false });
-          this._startBg();
-        } else {
-          this._setVoiceDemoState('idle', 'idle');
-          this._stopBg();
-        }
-        return;
-      }
-
-      if (sourceEvent === 'chat-composer-voice-response-toggle') {
-        this._recordHostEvent('voice-response-toggle');
-        return;
-      }
-
-      if (sourceEvent === 'chat-composer-voice-command-toggle') {
-        this._voiceCommandMode = !this._voiceCommandMode;
-        this._syncVoiceControls();
-        this._triggerBg(3600);
-        this._recordHostEvent('voice-command-toggle', { active: this._voiceCommandMode });
-        return;
-      }
-
-      if (sourceEvent === 'chat-composer-voice-language-change') {
-        let mode = event.detail?.mode || this._voiceLanguageMode;
-        this._voiceLanguageMode = ['ru', 'es', 'en'].includes(mode) ? mode : this._voiceLanguageMode;
-        this._syncVoiceControls();
-        this._triggerBg(2600);
-        this._recordHostEvent('voice-language-change', { mode: this._voiceLanguageMode });
-        return;
-      }
-
-      if (sourceEvent === 'chat-composer-voice-approve') {
-        this._recordHostEvent('voice-approve');
-        this._triggerBg(6200);
-        this._queueBgStop(6600);
-        return;
-      }
-
-      if (sourceEvent === 'chat-composer-voice-cancel') {
-        this._recordHostEvent('voice-cancel');
-        this._stopBg();
-        return;
-      }
-
-      if (sourceEvent === 'chat-composer-voice-send') {
-        let text = event.detail?.text || this._getComposer()?.getVoicePreviewText?.() || this._getComposer()?.$.value || 'Voice preview command';
-        this._recordHostEvent('voice-send', { text });
-        this._getComposer()?.clearVoicePreview?.();
-        this._startMockStream(text);
-        return;
-      }
-    }
-
-    // Otherwise fallback to simulated mock flow
     if (sourceEvent === 'chat-composer-voice-input' || sourceEvent === 'chat-composer-wake-listen') {
       let action = event.detail?.action || 'start';
       if (sourceEvent === 'chat-composer-voice-input') {
+        let wakeMode = this._voiceDemoMode === 'wake';
+        this._recordHostEvent('voice-input', { action });
         this._setVoiceDemoState(action === 'stop' ? 'transcribing' : 'listening', this._voiceDemoMode === 'wake' ? 'wake' : 'manual', {
-          wakeMatched: this._voiceDemoMode === 'wake',
+          wakeMatched: wakeMode,
+          showPreview: !useDefaultRuntime,
         });
       } else {
+        this._recordHostEvent('wake-listen', { action });
         this._setVoiceDemoState(action === 'stop' ? 'idle' : 'listening', action === 'stop' ? 'idle' : 'wake', {
           wakeMatched: false,
+          showPreview: false,
         });
       }
       return;
     }
     if (sourceEvent === 'chat-composer-voice-response-toggle') {
-      this._setVoiceDemoState('speaking', 'wake');
+      this._voiceResponseEnabled = !this._voiceResponseEnabled;
+      if (!this._voiceResponseEnabled) this._cancelVoiceResponseSpeech();
+      this._saveVoiceDemoSettings();
+      this._syncVoiceControls();
+      this._recordHostEvent('voice-response-toggle', { active: this._voiceResponseEnabled });
       return;
     }
     if (sourceEvent === 'chat-composer-voice-command-toggle') {
       this._voiceCommandMode = !this._voiceCommandMode;
       this._syncVoiceControls();
       this._triggerBg(3600);
+      this._recordHostEvent('voice-command-toggle', { active: this._voiceCommandMode });
       return;
     }
     if (sourceEvent === 'chat-composer-voice-language-change') {
       let mode = event.detail?.mode || this._voiceLanguageMode;
       this._voiceLanguageMode = ['ru', 'es', 'en'].includes(mode) ? mode : this._voiceLanguageMode;
+      this._saveVoiceDemoSettings();
       this._syncVoiceControls();
       this._triggerBg(2600);
+      this._recordHostEvent('voice-language-change', { mode: this._voiceLanguageMode });
       return;
     }
     if (sourceEvent === 'chat-composer-voice-approve') {
-      let text = this._getVoiceSubmissionText(event.detail);
-      this._getComposer()?.clearVoicePreview?.();
-      this._setVoiceDemoState('idle');
-      this._startMockStream(text);
+      this._recordHostEvent('voice-approve');
+      if (!useDefaultRuntime) {
+        let text = this._getVoiceSubmissionText(event.detail);
+        this._getComposer()?.clearVoicePreview?.();
+        this._setVoiceDemoState('idle', 'idle', { showPreview: false });
+        this._startMockStream(text);
+      }
       return;
     }
     if (sourceEvent === 'chat-composer-voice-cancel') {
-      this._setVoiceDemoState('idle');
+      this._recordHostEvent('voice-cancel');
+      this._setVoiceDemoState(this._voiceDemoMode === 'wake' ? 'listening' : 'idle', this._voiceDemoMode === 'wake' ? 'wake' : 'idle', {
+        wakeMatched: false,
+        showPreview: false,
+      });
       return;
     }
     if (sourceEvent === 'chat-composer-voice-send') {
       let text = this._getVoiceSubmissionText(event.detail);
-      this._getComposer()?.clearVoicePreview?.();
-      this._startMockStream(text);
+      this._recordHostEvent('voice-send', { text });
+      if (!useDefaultRuntime) {
+        this._getComposer()?.clearVoicePreview?.();
+        this._startMockStream(text);
+      }
     }
   }
 
@@ -2186,6 +2173,57 @@ class CascadeChatPanel extends Symbiote {
       { mode: 'es', label: 'ES' },
       { mode: 'en', label: 'EN' },
     ];
+  }
+
+  _saveVoiceDemoSettings() {
+    writeStoredChatVoiceSettings({
+      languageMode: this._voiceLanguageMode,
+      voiceResponseEnabled: this._voiceResponseEnabled,
+    });
+  }
+
+  _voiceSpeechLocale() {
+    return {
+      ru: 'ru-RU',
+      es: 'es-ES',
+      en: 'en-US',
+    }[this._voiceCommandLocale()] || 'en-US';
+  }
+
+  _cancelVoiceResponseSpeech() {
+    if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel();
+    this._speakingVoiceResponse = false;
+    this._syncVoiceControls();
+  }
+
+  _cleanVoiceResponseText(text = '') {
+    return String(text || '')
+      .replace(/```[\s\S]*?```/g, ' ')
+      .replace(/`([^`]+)`/g, '$1')
+      .replace(/\[[^\]]+\]\(([^)]+)\)/g, '$1')
+      .replace(/[#*_>~|]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  _speakVoiceResponseText(text = '') {
+    if (!this._voiceResponseEnabled || this._voiceDemoMode !== 'wake') return;
+    if (typeof speechSynthesis === 'undefined' || typeof SpeechSynthesisUtterance === 'undefined') return;
+    let cleanText = this._cleanVoiceResponseText(text);
+    if (!cleanText || cleanText === this._voiceResponseLastText) return;
+    this._voiceResponseLastText = cleanText;
+
+    let utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = this._voiceSpeechLocale();
+    utterance.onend = () => {
+      this._speakingVoiceResponse = false;
+      this._syncVoiceControls();
+    };
+    utterance.onerror = utterance.onend;
+    this._speakingVoiceResponse = true;
+    this._syncVoiceControls();
+    speechSynthesis.cancel();
+    speechSynthesis.speak(utterance);
   }
 
   _getVoiceActionPhrases(action) {
@@ -2288,6 +2326,7 @@ class CascadeChatPanel extends Symbiote {
     let normalized = ['idle', 'listening', 'transcribing', 'speaking', 'disabled'].includes(state)
       ? state
       : 'idle';
+    let showPreview = options.showPreview !== false;
     this._voiceDemoMode = ['manual', 'wake'].includes(mode) && !['idle', 'disabled'].includes(normalized)
       ? mode
       : 'idle';
@@ -2297,17 +2336,19 @@ class CascadeChatPanel extends Symbiote {
 
     if (normalized === 'listening') {
       let waitingForWake = this._voiceDemoMode === 'wake' && !this._voiceDemoWakeMatched;
-      this._getComposer()?.setVoicePreview?.({
-        mode: 'recording',
-        status: waitingForWake ? `Listening for "${this._getWakeCommandPhrase()}"` : 'listening',
-        text: waitingForWake
-          ? 'Wake mode is armed. Dictation starts only after the activation phrase; command hints stay visible.'
-          : this._voiceDemoMode === 'wake'
+      if (showPreview && !waitingForWake) {
+        this._getComposer()?.setVoicePreview?.({
+          mode: 'recording',
+          status: 'listening',
+          text: this._voiceDemoMode === 'wake'
             ? 'Wake phrase matched. Recording voice input until send/cancel command or mic stop.'
-          : 'Recording voice input. Press the mic again to stop and transcribe.',
-        elapsed: !waitingForWake,
-        commandHints: this._voiceCommandMode ? this._voiceCommandHints() : [],
-      });
+            : 'Recording voice input. Press the mic again to stop and transcribe.',
+          elapsed: true,
+          commandHints: this._voiceCommandMode ? this._voiceCommandHints() : [],
+        });
+      } else if (!showPreview || waitingForWake) {
+        this._getComposer()?.clearVoicePreview?.();
+      }
       this._startBg();
     } else if (normalized === 'transcribing') {
       this._getComposer()?.setVoicePreview?.({
