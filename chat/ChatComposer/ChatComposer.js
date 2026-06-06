@@ -1298,7 +1298,7 @@ ChatComposer.template = html`
         <span class="material-symbols-outlined">record_voice_over</span>
       </button>
       <button class="btn-voice-command" ref="voiceCommandBtn" type="button" title="Voice command mode" hidden ${{ onclick: 'onVoiceCommand' }}>
-        <span class="material-symbols-outlined">keyboard_voice</span>
+        <span class="material-symbols-outlined">rule</span>
         <span class="voice-command-button-text" ref="voiceCommandText"></span>
       </button>
       <button class="btn-voice-language" ref="voiceLanguageBtn" type="button" title="Voice language" hidden ${{ onclick: 'onVoiceLanguageClick' }}></button>

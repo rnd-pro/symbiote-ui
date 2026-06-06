@@ -33,7 +33,7 @@ import '../list/ListDetailShell/ListDetailShell.js';
 import '../surface/Card/Card.js';
 import '../tree/TreePanel/TreePanel.js';
 import '../canvas/CanvasGraph/CanvasGraph.js';
-import '../chat/ChatComposer/ChatComposer.js?v=wake-parity-2';
+import '../chat/ChatComposer/ChatComposer.js?v=voice-command-rule-icon';
 import '../chat/ChatSidebarItem/ChatSidebarItem.js?v=voice-controls-final-8';
 import '../chat/ChatSidebar/ChatSidebar.js?v=voice-controls-final-8';
 import '../chat/ChatWorkspace/ChatWorkspace.js?v=cascade-demo-chat-workspace-1';
