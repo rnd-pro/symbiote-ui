@@ -165,7 +165,38 @@ export class VoiceRuntime extends RuntimeEventTarget {
     }
   }
 
-  async _startSpeechRecognition() {
+  async restartSpeechRecognition(language = '', { initialText = this._resultText.trim() } = {}) {
+    this.setLanguage(language);
+    if (this.state !== 'recording' || !this._recognition) return false;
+
+    let startTime = this._startTime || Date.now();
+    let recognition = this._recognition;
+    recognition.onresult = null;
+    recognition.onend = null;
+    recognition.onerror = null;
+    try { recognition.abort(); } catch (_) {}
+    this._recognition = null;
+    this._resolved = false;
+    this._resolveStop = null;
+    this._setState('starting');
+
+    try {
+      await this._startSpeechRecognition({ initialText, startTime });
+      return true;
+    } catch (err) {
+      this._setState('idle');
+      throw err;
+    }
+  }
+
+  _startElapsedTimer() {
+    if (this._elapsedTimer) clearInterval(this._elapsedTimer);
+    this._elapsedTimer = setInterval(() => {
+      this.dispatchEvent(createRuntimeEvent('elapsedchange', { elapsed: this.elapsed }));
+    }, 500);
+  }
+
+  async _startSpeechRecognition({ initialText = '', startTime = 0 } = {}) {
     return new Promise((resolve, reject) => {
       const SpeechRecognition = getSpeechRecognitionConstructor();
       if (!SpeechRecognition) {
@@ -177,14 +208,15 @@ export class VoiceRuntime extends RuntimeEventTarget {
       rec.interimResults = true;
       rec.continuous = true;
 
-      this._resultText = '';
+      this._resultText = initialText;
       this._recognition = rec;
       let started = false;
 
       rec.onstart = () => {
         if (started) return;
         started = true;
-        this._startTime = Date.now();
+        this._startTime = startTime || Date.now();
+        this._startElapsedTimer();
         this._setState('recording');
         resolve();
       };
@@ -194,7 +226,7 @@ export class VoiceRuntime extends RuntimeEventTarget {
         for (let i = 0; i < event.results.length; i++) {
           transcript += event.results[i][0].transcript;
         }
-        this._resultText = transcript.trim();
+        this._resultText = [initialText, transcript].filter(Boolean).join(' ').trim();
         this.dispatchEvent(createRuntimeEvent('speechresult', {
           text: this._resultText,
           isFinal: Boolean(event.results[event.results.length - 1]?.isFinal),
@@ -275,9 +307,7 @@ export class VoiceRuntime extends RuntimeEventTarget {
 
     recorder.start(this.chunkInterval);
     this._startTime = Date.now();
-    this._elapsedTimer = setInterval(() => {
-      this.dispatchEvent(createRuntimeEvent('elapsedchange', { elapsed: this.elapsed }));
-    }, 500);
+    this._startElapsedTimer();
     this._setState('recording');
   }
 

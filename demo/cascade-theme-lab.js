@@ -2008,7 +2008,10 @@ class CascadeChatPanel extends Symbiote {
       return;
     }
     if (sourceEvent === 'chat-composer-voice-approve') {
-      this._setVoiceDemoState('transcribing', this._voiceDemoMode || 'manual');
+      let text = this._getVoiceSubmissionText(event.detail);
+      this._getComposer()?.clearVoicePreview?.();
+      this._setVoiceDemoState('idle');
+      this._startMockStream(text);
       return;
     }
     if (sourceEvent === 'chat-composer-voice-cancel') {
@@ -2016,10 +2019,20 @@ class CascadeChatPanel extends Symbiote {
       return;
     }
     if (sourceEvent === 'chat-composer-voice-send') {
-      let text = event.detail?.text || this._getComposer()?.getVoicePreviewText?.() || this._getComposer()?.$.value || 'Voice preview command';
+      let text = this._getVoiceSubmissionText(event.detail);
       this._getComposer()?.clearVoicePreview?.();
       this._startMockStream(text);
     }
+  }
+
+  _getVoiceSubmissionText(detail = {}) {
+    let previewText = String(detail?.text || this._getComposer()?.getVoicePreviewText?.() || '').trim();
+    let draftText = String(this._getComposer()?.$.value || '').trim();
+    if (draftText) return draftText;
+    if (previewText && !/^Recording voice input\b|^Listening for\b|^Host transcription\b/i.test(previewText)) {
+      return previewText;
+    }
+    return 'Render this response inside the current layout';
   }
 
   _voiceCommandLocale() {

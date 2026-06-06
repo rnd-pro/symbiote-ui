@@ -946,6 +946,134 @@ async function evaluateComposerSmoke(page, width = 0) {
   return result.result.value;
 }
 
+async function evaluateComposerVoiceRuntimeSmoke(page) {
+  const expression = String.raw`
+    (async () => {
+      const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+      const settle = async () => {
+        for (let index = 0; index < 8; index += 1) await frame();
+      };
+      for (let index = 0; index < 90 && !customElements.get('chat-composer'); index += 1) {
+        await frame();
+      }
+      if (!customElements.get('chat-composer')) return { error: 'chat-composer not defined' };
+      await settle();
+
+      const composer = document.querySelector('chat-composer');
+      if (!composer) return { error: 'missing chat-composer' };
+
+      const instances = [];
+      class MockSpeechRecognition {
+        constructor() {
+          this.lang = '';
+          this.interimResults = false;
+          this.continuous = false;
+          instances.push(this);
+        }
+
+        start() {
+          this.started = true;
+          this.startLang = this.lang;
+          setTimeout(() => this.onstart?.(), 0);
+        }
+
+        stop() {
+          this.stopped = true;
+          setTimeout(() => this.onend?.(), 0);
+        }
+
+        abort() {
+          this.aborted = true;
+        }
+      }
+
+      Object.defineProperty(window, 'SpeechRecognition', {
+        configurable: true,
+        value: MockSpeechRecognition,
+      });
+      Object.defineProperty(navigator, 'permissions', {
+        configurable: true,
+        value: { query: async () => ({ state: 'granted' }) },
+      });
+
+      composer.setVoiceControls?.({
+        input: { visible: true, state: 'idle', enabled: true },
+        wakeListen: { visible: true, active: false, commandText: "O'key Agent" },
+        response: { visible: false, enabled: true, speaking: false },
+        command: { visible: false, enabled: true, active: true, text: 'Commands' },
+        language: {
+          visible: false,
+          enabled: true,
+          mode: 'ru',
+          options: [
+            { mode: 'ru', label: 'RU' },
+            { mode: 'es', label: 'ES' },
+            { mode: 'en', label: 'EN' },
+          ],
+        },
+      });
+      await settle();
+
+      const submissions = [];
+      composer.addEventListener('chat-composer-submit', () => {
+        submissions.push(composer.$?.value || '');
+      });
+
+      composer.ref?.voiceInputBtn?.click();
+      await settle();
+      const activeControls = {
+        inputState: composer.ref?.voiceInputBtn?.dataset?.voiceState || '',
+        commandVisible: Boolean(composer.ref?.voiceCommandBtn && !composer.ref.voiceCommandBtn.hidden),
+        languageVisible: Boolean(composer.ref?.voiceLanguageBtn && !composer.ref.voiceLanguageBtn.hidden),
+        activeLanguage: composer.ref?.voiceLanguageBtn?.querySelector('.voice-language-option.active')?.textContent?.trim() || '',
+        commandHints: [...(composer.ref?.voiceCommandHints?.querySelectorAll('.voice-command-hint') || [])]
+          .map((item) => item.textContent.trim()),
+        previewStatus: composer.ref?.voicePreviewStatus?.textContent?.trim() || '',
+      };
+
+      instances[0]?.onresult?.({
+        results: Object.assign([[{ transcript: 'Build project UI' }]], { length: 1 }),
+      });
+      await settle();
+
+      composer.ref?.voiceLanguageBtn?.querySelector('[data-voice-language="es"]')?.click();
+      await settle();
+      instances[1]?.onresult?.({
+        results: Object.assign([[{ transcript: 'ahora' }]], { length: 1 }),
+      });
+      await settle();
+
+      composer.ref?.voiceApproveBtn?.click();
+      await settle();
+      await settle();
+
+      return {
+        activeControls,
+        recognition: instances.map((item) => ({
+          lang: item.lang,
+          startLang: item.startLang,
+          started: Boolean(item.started),
+          stopped: Boolean(item.stopped),
+          aborted: Boolean(item.aborted),
+        })),
+        previewHidden: Boolean(composer.ref?.voicePreview?.hidden),
+        submissions,
+        value: composer.$?.value || '',
+      };
+    })()
+  `;
+
+  const result = await withTimeout(page.send('Runtime.evaluate', {
+    expression,
+    awaitPromise: true,
+    returnByValue: true,
+  }), 15000, 'composer voice runtime smoke Runtime.evaluate');
+  if (result.exceptionDetails) {
+    throw new Error(result.exceptionDetails.text || 'Composer voice runtime smoke evaluation failed');
+  }
+  return result.result.value;
+}
+
 async function evaluateShowcaseSmoke(page) {
   const expression = String.raw`
     (async () => {
@@ -1874,10 +2002,24 @@ test('cascade lab chat composer keeps voice controls inside the input surface re
       'composer smoke page open'
     );
     const smokeResults = [await evaluateComposerSmoke(page), await evaluateComposerSmoke(page, 320)];
+    const voiceRuntimeSmoke = await evaluateComposerVoiceRuntimeSmoke(page);
 
     await setPageViewport(page, { width: 390, height: 760, mobile: true });
     await navigatePage(page, `${server.url}/demo/cascade-theme-lab.html?v=composer-browser-smoke-narrow#chat/conversation`);
     smokeResults.push(await evaluateComposerSmoke(page));
+
+    assert.equal(voiceRuntimeSmoke.error, undefined);
+    assert.equal(voiceRuntimeSmoke.activeControls.inputState, 'listening');
+    assert.equal(voiceRuntimeSmoke.activeControls.commandVisible, true);
+    assert.equal(voiceRuntimeSmoke.activeControls.languageVisible, true);
+    assert.equal(voiceRuntimeSmoke.activeControls.activeLanguage, 'RU');
+    assert.ok(voiceRuntimeSmoke.activeControls.commandHints.length >= 4);
+    assert.match(voiceRuntimeSmoke.activeControls.previewStatus, /Recording 00:00/);
+    assert.deepEqual(voiceRuntimeSmoke.recognition.map((item) => item.startLang), ['ru-RU', 'es-ES']);
+    assert.equal(voiceRuntimeSmoke.recognition[0].aborted, true);
+    assert.equal(voiceRuntimeSmoke.recognition[1].stopped, true);
+    assert.deepEqual(voiceRuntimeSmoke.submissions, ['Build project UI ahora']);
+    assert.equal(voiceRuntimeSmoke.previewHidden, true);
 
     for (const smoke of smokeResults) {
       assert.equal(smoke.error, undefined);

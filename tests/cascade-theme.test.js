@@ -219,7 +219,7 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   assert.match(source, /sourceEvent === 'chat-composer-voice-response-toggle'/);
   assert.match(source, /_setVoiceDemoState\(action === 'stop' \? 'transcribing' : 'listening', 'manual'\)/);
   assert.match(source, /_setVoiceDemoState\(action === 'stop' \? 'idle' : 'listening', 'wake'\)/);
-  assert.match(source, /_setVoiceDemoState\('transcribing', this\._voiceDemoMode \|\| 'manual'\)/);
+  assert.match(source, /sourceEvent === 'chat-composer-voice-approve'[\s\S]*_startMockStream\(text\)/);
   assert.match(source, /_ensureMockThreads\(\)/);
   assert.match(source, /_mockChatCatalog\(\)/);
   assert.match(source, /_selectMockChat\(chatId = ''\)/);
@@ -1615,6 +1615,12 @@ test('chat composer exposes reusable voice controls and agent-facing metadata', 
   assert.match(composer, /chat-composer-voice-language-change/);
   assert.match(composer, /chat-composer-footer-control/);
   assert.match(composer, /chat-composer-footer-control-change/);
+  assert.match(composer, /_handleDefaultVoiceApprove/);
+  assert.match(composer, /_showLocalRecordingPreview\(''\)/);
+  assert.match(composer, /restartSpeechRecognition/);
+  assert.match(composer, /_formatVoiceElapsed/);
+  assert.match(composer, /_localVoiceControlsManaged/);
+  assert.match(composer, /emit\(this, 'chat-composer-submit'\)/);
   assert.match(composer, /data-footer-control-id/);
   assert.match(composer, /footerControlId/);
   assert.match(composer, /normalizedState === 'listening'/);
@@ -1887,6 +1893,14 @@ test('voice input command helpers match the Agent Portal command contract', asyn
   ));
   assert.equal(wake.matched, true);
   assert.equal(helpers.normalizeWakeCommandPhrase('голосовой ввод', 'ru'), "О'кей Агент");
+});
+
+test('cascade demo voice fallback confirms dictation directly into chat stream', async () => {
+  const demoSource = await readFile(cascadeDemoSource, 'utf8');
+
+  assert.match(demoSource, /_getVoiceSubmissionText/);
+  assert.match(demoSource, /sourceEvent === 'chat-composer-voice-approve'[\s\S]*_startMockStream\(text\)/);
+  assert.doesNotMatch(demoSource, /sourceEvent === 'chat-composer-voice-approve'[\s\S]{0,180}_setVoiceDemoState\('transcribing'/);
 });
 
 test('static custom elements catalog carries agent-facing descriptions for chat surfaces', async () => {

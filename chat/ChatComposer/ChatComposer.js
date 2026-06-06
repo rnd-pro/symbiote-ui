@@ -209,6 +209,7 @@ export class ChatComposer extends Symbiote {
       let cevent = emitCancelable(this, 'chat-composer-voice-language-change', { mode });
       if (!cevent.defaultPrevented) {
         this.setVoiceLanguageState({ mode });
+        this._handleDefaultVoiceLanguageChange(mode);
         this._syncLocalVoiceControls();
       }
     },
@@ -219,7 +220,7 @@ export class ChatComposer extends Symbiote {
       if (event.defaultPrevented) return;
       let intent = emitCancelable(this, 'chat-composer-transcription-intent', detail);
       if (intent.defaultPrevented) return;
-      this._handleDefaultVoiceInput('stop');
+      this._handleDefaultVoiceApprove();
     },
 
     onVoiceCancel: () => {
@@ -238,9 +239,7 @@ export class ChatComposer extends Symbiote {
       let intent = emitCancelable(this, 'chat-composer-transcription-intent', detail);
       if (intent.defaultPrevented) return;
       let text = this.getVoicePreviewText();
-      this.setValue(text);
-      this.clearVoicePreview();
-      emit(this, 'chat-composer-submit');
+      this._sendVoicePreviewText(text);
     },
 
     onParamChange: (event) => {
@@ -345,6 +344,29 @@ export class ChatComposer extends Symbiote {
     return wakeCommandCandidates(defaultWakeCommandPhrases(), this._voiceCommandLocale())[0] || 'Okay Agent';
   }
 
+  _voiceRecognitionLanguage(locale = this._voiceCommandLocale()) {
+    return {
+      ru: 'ru-RU',
+      es: 'es-ES',
+      en: 'en-US',
+    }[locale] || 'en-US';
+  }
+
+  _voiceLanguageOptions() {
+    return [
+      { mode: 'ru', label: 'RU', title: 'Russian' },
+      { mode: 'es', label: 'ES', title: 'Spanish' },
+      { mode: 'en', label: 'EN', title: 'English' },
+    ];
+  }
+
+  _formatVoiceElapsed(elapsed = 0) {
+    let value = Number.isFinite(elapsed) ? Math.max(0, elapsed) : 0;
+    let m = String(Math.floor(value / 60)).padStart(2, '0');
+    let s = String(value % 60).padStart(2, '0');
+    return `● Recording ${m}:${s}`;
+  }
+
   _getVoiceCommandHints() {
     let list = (action) => this._getVoiceActionPhrases(action).join(', ');
     return [
@@ -369,18 +391,25 @@ export class ChatComposer extends Symbiote {
 
   _executeVoiceCommand(command) {
     let runtime = this._getVoiceRuntime();
-    runtime.cancel();
 
     if (command.action === 'send') {
+      runtime.cancel();
       this.setValue(command.text);
       this.clearVoicePreview();
       emit(this, 'chat-composer-submit');
     } else if (command.action === 'delete') {
       this.setValue('');
       this.clearVoicePreview();
+      this._localVoiceText = '';
+      if (runtime.state === 'recording' && runtime.mode === 'speech') {
+        runtime.restartSpeechRecognition?.(this._voiceRecognitionLanguage(), { initialText: '' })
+          .catch((err) => this._onVoiceRuntimeError(err));
+      }
     } else if (command.action === 'cancel') {
+      runtime.cancel();
       this.clearVoicePreview();
     } else if (command.action === 'off') {
+      runtime.cancel();
       this._voiceCommandMode = false;
       this.clearVoicePreview();
     }
@@ -445,13 +474,15 @@ export class ChatComposer extends Symbiote {
           return;
         }
 
-        let locale = this._voiceCommandLocale();
         this._localVoiceActiveMode = 'manual';
         this._localVoiceState = 'listening';
+        this._localVoiceElapsed = 0;
+        this._localVoiceText = '';
         this._syncLocalVoiceControls();
+        this._showLocalRecordingPreview('');
 
         let mode = VoiceRuntime.hasSpeechRecognition ? 'speech' : 'audio';
-        await runtime.start({ language: locale, mode });
+        await runtime.start({ language: this._voiceRecognitionLanguage(), mode });
       } else if (action === 'stop') {
         this._localVoiceState = 'transcribing';
         this._syncLocalVoiceControls();
@@ -486,12 +517,13 @@ export class ChatComposer extends Symbiote {
           return;
         }
 
-        let locale = this._voiceCommandLocale();
         this._localVoiceActiveMode = 'wake';
         this._localVoiceState = 'listening';
+        this._localVoiceElapsed = 0;
+        this._localVoiceText = '';
         this._syncLocalVoiceControls();
 
-        await runtime.start({ language: locale, mode: 'speech' });
+        await runtime.start({ language: this._voiceRecognitionLanguage(), mode: 'speech' });
       } else {
         runtime.cancel();
         this._localVoiceState = 'idle';
@@ -542,13 +574,7 @@ export class ChatComposer extends Symbiote {
         });
       }
     } else {
-      this.setVoicePreview({
-        mode: 'recording',
-        status: 'listening',
-        text: text,
-        elapsed: true,
-        commandHints: this._getVoiceCommandHints(),
-      });
+      this._showLocalRecordingPreview(text);
     }
 
     if (this._voiceCommandMode) {
@@ -576,7 +602,7 @@ export class ChatComposer extends Symbiote {
 
   _onVoiceRuntimeElapsedChange(elapsed) {
     this._localVoiceElapsed = elapsed;
-    let statusText = this._localVoiceState === 'listening' ? `listening (${elapsed}s)` : this._localVoiceState;
+    let statusText = this._localVoiceState === 'listening' ? this._formatVoiceElapsed(elapsed) : this._localVoiceState;
     let preview = this.getVoicePreviewElement();
     if (preview && !preview.hidden) {
       let statusEl = this.ref.voicePreviewStatus;
@@ -626,23 +652,121 @@ export class ChatComposer extends Symbiote {
     }
   }
 
+  async _handleDefaultVoiceApprove() {
+    try {
+      let runtime = this._voiceRuntime;
+      let result = runtime && (runtime.state === 'recording' || runtime.state === 'starting')
+        ? await runtime.stop()
+        : null;
+      let text = result?.text || this._localVoiceText || this.getVoicePreviewText();
+      if (text && text.trim()) {
+        this._sendVoicePreviewText(text);
+        return;
+      }
+      if (result) this._handleVoiceResult(result);
+    } catch (err) {
+      this._onVoiceRuntimeError(err);
+    }
+  }
+
+  _sendVoicePreviewText(text = '') {
+    let value = String(text || '').trim();
+    this._localVoiceText = '';
+    this._localVoiceState = 'idle';
+    this._localVoiceActiveMode = 'idle';
+    this._syncLocalVoiceControls();
+    this.clearVoicePreview();
+    if (!value) return;
+    this.setValue(value);
+    emit(this, 'chat-composer-submit');
+  }
+
+  _showLocalRecordingPreview(text = '') {
+    this.setVoicePreview({
+      mode: 'recording',
+      status: this._formatVoiceElapsed(this._localVoiceElapsed || 0),
+      text,
+      elapsed: true,
+      commandHints: this._voiceCommandMode ? this._getVoiceCommandHints() : [],
+    });
+  }
+
+  _handleDefaultVoiceLanguageChange(mode) {
+    let locale = ['ru', 'es', 'en'].includes(mode) ? mode : this._voiceCommandLocale();
+    let runtime = this._voiceRuntime;
+    if (!runtime) return;
+    runtime.setLanguage(this._voiceRecognitionLanguage(locale));
+    if (runtime.state === 'recording' && runtime.mode === 'speech') {
+      runtime.restartSpeechRecognition?.(this._voiceRecognitionLanguage(locale), { initialText: this._localVoiceText || '' })
+        .catch((err) => this._onVoiceRuntimeError(err));
+    }
+  }
+
   _syncLocalVoiceControls() {
     let state = this._localVoiceState || 'idle';
     let activeMode = this._localVoiceActiveMode || 'idle';
     let isManualVoice = activeMode === 'manual' && ['listening', 'transcribing'].includes(state);
     let isWakeVoice = activeMode === 'wake' && ['listening', 'transcribing', 'speaking'].includes(state);
+    let isActive = isManualVoice || isWakeVoice;
 
-    this.setVoiceInputState(isManualVoice ? state : 'idle');
-    this.setWakeListenState({ active: isWakeVoice });
-
-    if (this._voiceControls) {
-      if (this._voiceControls.input) {
-        this._voiceControls.input.state = isManualVoice ? state : 'idle';
-      }
-      if (this._voiceControls.wakeListen) {
-        this._voiceControls.wakeListen.active = isWakeVoice;
-      }
+    if (isActive && !this._localVoiceControlsManaged) {
+      this._localVoiceControlsManaged = true;
+      this._localVoiceVisibility = {
+        input: this._voiceControls?.input?.visible,
+        response: this._voiceControls?.response?.visible,
+        command: this._voiceControls?.command?.visible,
+        language: this._voiceControls?.language?.visible,
+      };
     }
+
+    if (!this._voiceControls) this._voiceControls = {};
+
+    this._voiceControls.input = {
+      ...(this._voiceControls.input || {}),
+      state: isManualVoice ? state : 'idle',
+      enabled: this._voiceControls.input?.enabled !== false,
+    };
+    this._voiceControls.wakeListen = {
+      ...(this._voiceControls.wakeListen || {}),
+      active: isWakeVoice,
+    };
+
+    if (isActive) {
+      if (isWakeVoice) this._voiceControls.input.visible = false;
+      this._voiceControls.response = {
+        ...(this._voiceControls.response || {}),
+        visible: isWakeVoice,
+        enabled: typeof speechSynthesis !== 'undefined' && typeof SpeechSynthesisUtterance !== 'undefined',
+        speaking: state === 'speaking',
+      };
+      this._voiceControls.command = {
+        ...(this._voiceControls.command || {}),
+        visible: true,
+        enabled: true,
+        active: this._voiceCommandMode,
+        text: this._voiceControls.command?.text || 'Commands',
+      };
+      this._voiceControls.language = {
+        ...(this._voiceControls.language || {}),
+        visible: VoiceRuntime.hasSpeechRecognition,
+        enabled: VoiceRuntime.hasSpeechRecognition,
+        mode: this._voiceCommandLocale(),
+        options: this._voiceControls.language?.options || this._voiceLanguageOptions(),
+      };
+    } else if (this._localVoiceControlsManaged) {
+      let previous = this._localVoiceVisibility || {};
+      for (let key of ['input', 'response', 'command', 'language']) {
+        if (!this._voiceControls[key]) continue;
+        if (previous[key] === undefined) {
+          delete this._voiceControls[key].visible;
+        } else {
+          this._voiceControls[key].visible = previous[key];
+        }
+      }
+      this._localVoiceControlsManaged = false;
+      this._localVoiceVisibility = null;
+    }
+
     this._syncVoiceControls();
   }
 

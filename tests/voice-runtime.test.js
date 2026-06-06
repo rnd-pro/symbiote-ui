@@ -185,6 +185,66 @@ test('VoiceRuntime records media chunks and resolves stop result', async () => {
   }
 });
 
+test('VoiceRuntime restarts active speech recognition with preserved text and new language', async () => {
+  let instances = [];
+  let restoreWindow = defineGlobal('window', {
+    SpeechRecognition: class {
+      constructor() {
+        this.lang = '';
+        this.interimResults = false;
+        this.continuous = false;
+        instances.push(this);
+      }
+
+      start() {
+        this.onstart?.();
+      }
+
+      stop() {
+        this.onend?.();
+      }
+
+      abort() {
+        this.aborted = true;
+      }
+    },
+  });
+  let restoreNavigator = defineGlobal('navigator', {
+    language: 'en-US',
+  });
+
+  try {
+    let runtime = new VoiceRuntime();
+    let speech = [];
+    runtime.addEventListener('speechresult', (event) => speech.push(event.detail.text));
+
+    await runtime.start({ language: 'en-US', mode: 'speech' });
+    instances[0].onresult?.({
+      results: Object.assign([[{ transcript: 'hello' }]], { length: 1 }),
+    });
+
+    assert.equal(runtime.state, 'recording');
+    assert.equal(instances[0].lang, 'en-US');
+
+    let restarted = await runtime.restartSpeechRecognition('es-ES', { initialText: 'hello' });
+
+    assert.equal(restarted, true);
+    assert.equal(instances[0].aborted, true);
+    assert.equal(instances[1].lang, 'es-ES');
+    assert.equal(runtime.state, 'recording');
+
+    instances[1].onresult?.({
+      results: Object.assign([[{ transcript: 'mundo' }]], { length: 1 }),
+    });
+
+    assert.deepEqual(speech, ['hello', 'hello mundo']);
+    assert.deepEqual(await runtime.stop(), { text: 'hello mundo' });
+  } finally {
+    restoreNavigator();
+    restoreWindow();
+  }
+});
+
 test('VoiceRuntime cancel stops active media stream and resolves pending stop', async () => {
   let stopCount = 0;
   let recorderInstance = null;
