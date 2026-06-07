@@ -441,6 +441,28 @@ test('node-canvas exposes the agent-facing serializable model adapter promised b
   assert.ok(tool.inputSchema.properties.positions);
 });
 
+test('node shape registry exposes disc as a supported SVG node preset', async () => {
+  let [shapeModule, nodeSource] = await Promise.all([
+    import(new URL('../shapes/index.js', import.meta.url).href),
+    readFile(new URL('../core/Node.js', import.meta.url), 'utf8'),
+  ]);
+  let disc = shapeModule.getShape('disc');
+  let { getComponent } = await import('../manifest/index.js');
+  let graphNode = getComponent('graph-node');
+
+  assert.equal(disc.name, 'disc');
+  assert.ok(disc.pathData);
+  assert.equal(disc.viewBox, '0 0 24 24');
+  assert.match(nodeSource, /rect\/pill\/circle\/disc\/diamond\/comment/);
+  assert.ok(graphNode.contract.capabilities.includes('shape-variant'));
+  assert.ok(graphNode.contract.capabilities.includes('media-avatar'));
+  assert.ok(
+    graphNode.contract.attributes.some((attribute) =>
+      attribute.name === 'node-shape' && attribute.description.includes('disc')
+    )
+  );
+});
+
 test('source component registry does not keep legacy descriptor-v1 contracts', async () => {
   let source = await readFile(new URL('../manifest/component-registry.js', import.meta.url), 'utf8');
 

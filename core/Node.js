@@ -16,7 +16,7 @@ export class Node {
    * @param {string} [options.id] - Custom ID (default: auto-generated)
    * @param {string} [options.type] - Node type identifier (e.g. 'ai/llm')
    * @param {string} [options.category] - Category for styling (server/instance/control)
-   * @param {string} [options.shape] - Shape name (rect/pill/circle/diamond/comment)
+   * @param {string} [options.shape] - Shape name (rect/pill/circle/disc/diamond/comment or registered SVG preset)
    * @param {string} [options.icon] - Material icon name for visual rendering
    */
   constructor(label, options = {}) {

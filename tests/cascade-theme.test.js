@@ -143,6 +143,7 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   assert.match(source, /id: 'svg-shape-sample'/);
   assert.match(source, /id: 'comment-sample'/);
   assert.match(source, /shape: 'circle'/);
+  assert.match(source, /shape: 'disc'/);
   assert.match(source, /shape: 'pill'/);
   assert.match(source, /shape: 'hexagon'/);
   assert.match(source, /shape: 'comment'/);
