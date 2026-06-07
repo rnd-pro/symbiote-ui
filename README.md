@@ -170,7 +170,8 @@ permission, recorder lifecycle, and transcription providers without those
 policies leaking into the component. If the host does not call
 `event.preventDefault()`, the library falls back to its built-in browser-level
 voice runtime (`VoiceRuntime` in `chat/voice-runtime.js`, exported via
-`ui/index.js` and NOT the root entry point to remain Node-safe). `VoiceRuntime`
+`symbiote-ui/ui` and `symbiote-ui/chat/voice-runtime.js`, but NOT the root entry
+point to remain Node-safe). `VoiceRuntime`
 manages capability detection, checks/requests permissions through native browser
 APIs, and captures/transcribes input using native Web Speech Recognition. If
 SpeechRecognition is unsupported but recording is active, it records audio

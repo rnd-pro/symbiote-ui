@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { VoiceRuntime } from '../chat/voice-runtime.js';
+import { VoiceRuntime, blobToBase64 } from '../chat/voice-runtime.js';
 
 function defineGlobal(name, value) {
   let descriptor = Object.getOwnPropertyDescriptor(globalThis, name);
@@ -98,6 +98,10 @@ test('VoiceRuntime mocked browser environment query/request permission', async (
     assert.equal(VoiceRuntime.hasMediaRecorder, true);
 
     const runtime = new VoiceRuntime();
+    assert.equal(runtime.isAvailable, true);
+    assert.equal(runtime.hasSpeechRecognition, true);
+    assert.equal(runtime.hasMediaCapture, true);
+    assert.equal(runtime.hasMediaRecorder, true);
     assert.equal(await runtime.checkPermission(), 'granted');
     assert.equal(await runtime.requestPermission(), 'granted');
     assert.equal(streamStopped, true);
@@ -163,7 +167,7 @@ test('VoiceRuntime records media chunks and resolves stop result', async () => {
     runtime.addEventListener('audiochunk', () => { chunkCount += 1; });
     runtime.addEventListener('audioblob', (event) => { blobType = event.detail.mimeType; });
 
-    await runtime.start({ mode: 'media' });
+    await runtime.startMediaRecorder();
 
     assert.equal(runtime.state, 'recording');
     assert.equal(recorderInstance.interval, 125);
@@ -216,6 +220,10 @@ test('VoiceRuntime restarts active speech recognition with preserved text and ne
   try {
     let runtime = new VoiceRuntime();
     let speech = [];
+    let interim = [];
+    let callbackStates = [];
+    runtime.onInterim = (text) => interim.push(text);
+    runtime.onStateChange = (state) => callbackStates.push(state);
     runtime.addEventListener('speechresult', (event) => speech.push(event.detail.text));
 
     await runtime.start({ language: 'en-US', mode: 'speech' });
@@ -238,10 +246,28 @@ test('VoiceRuntime restarts active speech recognition with preserved text and ne
     });
 
     assert.deepEqual(speech, ['hello', 'hello mundo']);
+    assert.deepEqual(interim, ['hello', 'hello mundo']);
     assert.deepEqual(await runtime.stop(), { text: 'hello mundo' });
+    assert.deepEqual(callbackStates, ['starting', 'recording', 'starting', 'recording', 'processing', 'idle']);
   } finally {
     restoreNavigator();
     restoreWindow();
+  }
+});
+
+test('blobToBase64 converts browser Blob payloads', async () => {
+  class MockFileReader {
+    readAsDataURL() {
+      this.result = 'data:audio/webm;base64,dm9pY2U=';
+      this.onloadend();
+    }
+  }
+  let restoreFileReader = defineGlobal('FileReader', MockFileReader);
+
+  try {
+    assert.equal(await blobToBase64(new Blob(['voice'], { type: 'audio/webm' })), 'dm9pY2U=');
+  } finally {
+    restoreFileReader();
   }
 });
 

@@ -4,16 +4,20 @@ All notable changes to `symbiote-ui` will be documented in this file.
 
 ## Unreleased
 
+## [0.3.0-alpha.12] - 2026-06-06
+
 ### Added
 
 - Added the reusable `cascade-theme-editor` browser module for layout-hosted cascade theme editing.
 - Added copy parameters, reset defaults, and automatic `localStorage` persistence for cascade theme controls.
 - Added `componentDescription` and agent-facing WebMCP context to component descriptors and discovery output.
 - Added `createComponentToolDescriptor()` for explicit WebMCP tools with component context.
+- Added the reusable browser `VoiceRuntime` package contract to packed output and `symbiote-ui/ui`.
 
 ### Changed
 
 - Updated the cascade theme lab to show the editor as a layout panel instead of owning local toolbar controls.
+- Hardened `VoiceRuntime` for Agent Portal host adapters with instance capability getters, callback hooks, media-recorder start, and blob-to-base64 conversion.
 
 ## [0.3.0-alpha.11] - 2026-06-04
 

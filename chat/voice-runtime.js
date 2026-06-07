@@ -52,6 +52,22 @@ function mediaRecorderSupports(mimeType) {
     MediaRecorder.isTypeSupported(mimeType);
 }
 
+export function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    if (typeof FileReader === 'undefined') {
+      reject(new Error('FileReader API not supported'));
+      return;
+    }
+    let reader = new FileReader();
+    reader.onloadend = () => {
+      let value = String(reader.result || '');
+      resolve(value.includes(',') ? value.split(',')[1] || '' : value);
+    };
+    reader.onerror = () => reject(reader.error || new Error('Failed to read blob'));
+    reader.readAsDataURL(blob);
+  });
+}
+
 /**
  * Product-neutral browser voice capture and speech recognition runtime.
  * Node-safe at module import time: no top-level DOM or navigator access.
@@ -79,6 +95,8 @@ export class VoiceRuntime extends RuntimeEventTarget {
     this._elapsedTimer = null;
     this._resolveStop = null;
     this._resolved = false;
+    this._onStateChange = null;
+    this._onInterim = null;
   }
 
   static get isAvailable() {
@@ -98,9 +116,33 @@ export class VoiceRuntime extends RuntimeEventTarget {
     return typeof MediaRecorder !== 'undefined';
   }
 
+  get isAvailable() {
+    return VoiceRuntime.isAvailable;
+  }
+
+  get hasSpeechRecognition() {
+    return VoiceRuntime.hasSpeechRecognition;
+  }
+
+  get hasMediaCapture() {
+    return VoiceRuntime.hasMediaCapture;
+  }
+
+  get hasMediaRecorder() {
+    return VoiceRuntime.hasMediaRecorder;
+  }
+
   get elapsed() {
     if (!this._startTime) return 0;
     return Math.floor((Date.now() - this._startTime) / 1000);
+  }
+
+  set onStateChange(fn) {
+    this._onStateChange = typeof fn === 'function' ? fn : null;
+  }
+
+  set onInterim(fn) {
+    this._onInterim = typeof fn === 'function' ? fn : null;
   }
 
   setLanguage(lang = '') {
@@ -141,10 +183,11 @@ export class VoiceRuntime extends RuntimeEventTarget {
   _setState(nextState) {
     if (this.state === nextState) return;
     this.state = nextState;
+    this._onStateChange?.(nextState);
     this.dispatchEvent(createRuntimeEvent('statechange', { state: nextState }));
   }
 
-  async start({ language = '', mode = 'speech' } = {}) {
+  async start({ language = this.language, mode = 'speech' } = {}) {
     if (this.state !== 'idle') return;
     this.language = language;
     this.mode = mode;
@@ -163,6 +206,10 @@ export class VoiceRuntime extends RuntimeEventTarget {
       this.dispatchEvent(createRuntimeEvent('error', { error: err }));
       throw err;
     }
+  }
+
+  async startMediaRecorder() {
+    return this.start({ language: this.language, mode: 'audio' });
   }
 
   async restartSpeechRecognition(language = '', { initialText = this._resultText.trim() } = {}) {
@@ -192,6 +239,7 @@ export class VoiceRuntime extends RuntimeEventTarget {
   _startElapsedTimer() {
     if (this._elapsedTimer) clearInterval(this._elapsedTimer);
     this._elapsedTimer = setInterval(() => {
+      this._onInterim?.(null, this.elapsed);
       this.dispatchEvent(createRuntimeEvent('elapsedchange', { elapsed: this.elapsed }));
     }, 500);
   }
@@ -227,6 +275,7 @@ export class VoiceRuntime extends RuntimeEventTarget {
           transcript += event.results[i][0].transcript;
         }
         this._resultText = [initialText, transcript].filter(Boolean).join(' ').trim();
+        this._onInterim?.(this._resultText);
         this.dispatchEvent(createRuntimeEvent('speechresult', {
           text: this._resultText,
           isFinal: Boolean(event.results[event.results.length - 1]?.isFinal),

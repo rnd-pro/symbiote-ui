@@ -81,6 +81,8 @@ test('chat message model normalizes assistant role and attaches work summaries',
 
 test('voice command helpers are importable without browser component registration', async () => {
   let helpers = await import('../chat/voice-input-defaults.js');
+  let runtime = await import('../chat/voice-runtime.js');
+  let ui = await import('../ui/index.js');
 
   assert.equal(helpers.DEFAULT_VOICE_WAKE_COMMANDS.en, 'Okay Agent');
   assert.equal(helpers.matchVoiceCommandAtEnd('draft send', [{ action: 'send', phrase: 'send' }]).text, 'draft');
@@ -88,6 +90,10 @@ test('voice command helpers are importable without browser component registratio
     helpers.defaultWakeCommandPhrases(),
     'ru'
   )).matched, true);
+  assert.equal(typeof runtime.VoiceRuntime, 'function');
+  assert.equal(typeof runtime.blobToBase64, 'function');
+  assert.equal(typeof ui.VoiceRuntime, 'function');
+  assert.equal(typeof ui.blobToBase64, 'function');
 });
 
 test('material symbols loader reuses a host-provided package stylesheet', async () => {
