@@ -117,6 +117,24 @@ export function normalizeLayoutBehavior(behavior = {}, fallback = DEFAULT_LAYOUT
   }
 }
 
+export function hasLayoutBehaviorMetadata(behavior) {
+  return Boolean(
+    behavior &&
+    Number.isFinite(behavior.importance) &&
+    Number.isFinite(behavior.minInlineSize) &&
+    Number.isFinite(behavior.minBlockSize) &&
+    COLLAPSE_POLICIES.has(behavior.collapse) &&
+    OVERFLOW_POLICIES.has(behavior.overflow) &&
+    RESPONSIVE_MODES.has(behavior.responsiveMode)
+  )
+}
+
+export function layoutHasBehaviorMetadata(root) {
+  if (!root || !hasLayoutBehaviorMetadata(root.behavior)) return false
+  if (root.type !== 'split') return true
+  return layoutHasBehaviorMetadata(root.first) && layoutHasBehaviorMetadata(root.second)
+}
+
 /**
  * Generate unique node ID
  * @returns {string}

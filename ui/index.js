@@ -68,7 +68,11 @@ export { History } from '../plugins/History.js';
 
 export { FlowSimulator } from '../canvas/FlowSimulator.js';
 export * as LayoutTree from '../layout/LayoutTree.js';
-export { matchesSection } from '../layout/LayoutTree.js';
+export {
+  hasLayoutBehaviorMetadata,
+  layoutHasBehaviorMetadata,
+  matchesSection,
+} from '../layout/LayoutTree.js';
 export {
   SECTION_SCOPES,
   SectionRegistry,

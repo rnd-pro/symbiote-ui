@@ -11,7 +11,9 @@ import {
   findNode,
   getBehaviorImportance,
   getNodeBehavior,
+  hasLayoutBehaviorMetadata,
   joinPanels,
+  layoutHasBehaviorMetadata,
   normalizeLayoutBehavior,
   openPanel,
   removeUiPanel,
@@ -39,6 +41,21 @@ test('layout behavior normalizes responsive collapse and overflow policy', () =>
   assert.equal(behavior.overflow, 'scroll-inline');
   assert.equal(behavior.responsiveMode, 'stack');
   assert.equal(behavior.responsiveBreakpoint, 640);
+  assert.equal(hasLayoutBehaviorMetadata(behavior), true);
+  assert.equal(hasLayoutBehaviorMetadata({ ...behavior, overflow: 'invalid' }), false);
+});
+
+test('layout behavior metadata predicate validates complete layout trees', () => {
+  let nav = createPanel('navigation', {}, { importance: 80, minInlineSize: 220 });
+  let main = createPanel('main', {}, { importance: 95, minInlineSize: 520, collapse: 'never' });
+  let complete = createSplit('horizontal', nav, main, 0.3, { responsiveMode: 'scroll-inline' });
+
+  assert.equal(layoutHasBehaviorMetadata(complete), true);
+
+  let incompletePanel = createPanel('legacy');
+  let incomplete = createSplit('horizontal', nav, incompletePanel, 0.4, { responsiveMode: 'stack' });
+  assert.equal(layoutHasBehaviorMetadata(incomplete), false);
+  assert.equal(layoutHasBehaviorMetadata(null), false);
 });
 
 test('layout tree duplicates panel metadata for explicit menu duplicate action', () => {

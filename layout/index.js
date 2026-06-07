@@ -10,6 +10,8 @@ export {
   closeUiPanel,
   findPanel,
   findPanelByType,
+  hasLayoutBehaviorMetadata,
+  layoutHasBehaviorMetadata,
   openPanel,
   removeUiPanel,
   resolveLayoutMinSize,
