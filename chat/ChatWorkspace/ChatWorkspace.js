@@ -200,6 +200,19 @@ export class ChatWorkspace extends Symbiote {
     this.setBackgroundState({ state: 'stop', active: false });
   }
 
+  suspendLayout() {
+    this._layoutSuspendedBackgroundState = this.dataset.backgroundState || '';
+    this.getBackground()?.stop?.();
+  }
+
+  resumeLayout() {
+    let state = this._layoutSuspendedBackgroundState || this.dataset.backgroundState || '';
+    this._layoutSuspendedBackgroundState = '';
+    if (BACKGROUND_ACTIVE_STATES.has(state)) {
+      this.setBackgroundState({ state, active: true, reason: 'layout-resume' });
+    }
+  }
+
   _bindWorkspaceEvents() {
     let route = (sourceEvent, eventName, detailFactory = (event) => event.detail || {}) => {
       this.addEventListener(sourceEvent, (event) => {

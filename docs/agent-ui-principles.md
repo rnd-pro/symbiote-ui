@@ -111,6 +111,11 @@ UI can be closed or removed; host-owned panels should not be destructively
 removed unless the host marks them removable. Runtime operations should support
 dry-run, validation, rollback where possible, and explicit permission gates for
 irreversible actions.
+Hidden layout groups must suspend active work without destroying state. Use
+`suspendLayoutSubtree()` and `resumeLayoutSubtree()` from `symbiote-ui/layout`
+when switching workspace groups; components or host adapters that own animation,
+voice capture, TTS, timers, subscriptions, or network streams should expose
+`suspendLayout()` and `resumeLayout()` methods for that traversal.
 
 ### 10. Design for 2D, responsive, and spatial continuity
 

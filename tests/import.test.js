@@ -213,8 +213,12 @@ test('discover exposes the standalone package contract', async () => {
 
   assert.equal(data.package.name, 'symbiote-ui');
   assert.equal(entrypoints.get('symbiote-ui')?.kind, 'node-safe');
+  assert.equal(entrypoints.get('symbiote-ui/layout')?.kind, 'ssr-entry-safe');
   assert.equal(entrypoints.get('symbiote-ui/runtime')?.kind, 'ssr-entry-safe');
   assert.equal(entrypoints.get('symbiote-ui/webmcp')?.kind, 'ssr-entry-safe');
+  let layoutEntrypoint = await import('../layout/index.js');
+  assert.equal(typeof layoutEntrypoint.suspendLayoutSubtree, 'function');
+  assert.equal(typeof layoutEntrypoint.resumeLayoutSubtree, 'function');
   let component = data.manifest.components.find((item) => item.tagName === 'cascade-theme-editor');
   let agentCatalogItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'cascade-theme-editor');
   let shellMenu = data.manifest.components.find((item) => item.tagName === 'layout-shell-menu');
@@ -278,6 +282,7 @@ test('discover exposes the standalone package contract', async () => {
   assert.ok(chatWorkspaceAgentItem.webmcp.toolNames.includes('chat_workspace_send'));
   assert.ok(chatWorkspaceAgentItem.componentDescription.includes('chat workspace'));
   assert.ok(chatWorkspaceAgentItem.componentDescription.includes('host-owned-transport'));
+  assert.ok(chatWorkspaceAgentItem.componentDescription.includes('layout-lifecycle'));
   assert.ok(nodeCanvasAgentItem.webmcp.toolNames.includes('node_canvas_set_editor_model'));
   assert.ok(nodeCanvasAgentItem.webmcp.toolNames.includes('node_canvas_set_path_style'));
   assert.ok(nodeCanvasAgentItem.webmcp.toolNames.includes('node_canvas_set_flow_layout'));

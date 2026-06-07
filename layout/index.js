@@ -56,3 +56,8 @@ export {
   normalizeLayoutGroup,
   normalizeLayoutGroups,
 } from './LayoutShellMenu/layout-groups.js';
+export {
+  DEFAULT_LAYOUT_LIFECYCLE_SELECTOR,
+  resumeLayoutSubtree,
+  suspendLayoutSubtree,
+} from './lifecycle.js';

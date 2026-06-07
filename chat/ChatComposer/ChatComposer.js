@@ -340,6 +340,29 @@ export class ChatComposer extends Symbiote {
     super.disconnectedCallback?.();
   }
 
+  suspendLayout() {
+    this._resumeLocalWakeAfterSuspend = this._localVoiceActiveMode === 'wake';
+    this._stopLocalWakeRecognition();
+    this._voiceRuntime?.cancel?.();
+    this._localVoiceState = this._resumeLocalWakeAfterSuspend ? 'listening' : 'idle';
+    this._localVoiceActiveMode = this._resumeLocalWakeAfterSuspend ? 'wake' : 'idle';
+    this._localVoiceWakeMatched = false;
+    this._localWakeTriggering = false;
+    this.clearVoicePreview();
+    this._syncLocalVoiceControls();
+  }
+
+  resumeLayout() {
+    if (!this._resumeLocalWakeAfterSuspend) return;
+    this._resumeLocalWakeAfterSuspend = false;
+    this._localVoiceActiveMode = 'wake';
+    this._localVoiceState = 'listening';
+    this._localVoiceWakeMatched = false;
+    this._localWakeTriggering = false;
+    this._syncLocalVoiceControls();
+    this._startLocalWakeRecognition();
+  }
+
   _voiceCommandLocale() {
     let locale = this._voiceControls?.language?.mode || 'en';
     return ['ru', 'es', 'en'].includes(locale) ? locale : 'en';

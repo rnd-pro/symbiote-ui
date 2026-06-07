@@ -251,6 +251,35 @@ export class CellBg extends Symbiote {
     this._stop('manual');
   }
 
+  suspendLayout({ reason = 'layout-suspend' } = {}) {
+    this._resumePersistentAfterSuspend = Boolean(this._toggled || this.$.active);
+    if (this._pulseTimer) clearTimeout(this._pulseTimer);
+    this._pulseTimer = null;
+    let wasAnimating = this.running || this.isAnimating || this.currentSpeed > 0;
+    this._toggled = false;
+    this.running = false;
+    this.currentSpeed = 0;
+    this.isAnimating = false;
+    this.$.active = false;
+    if (wasAnimating) {
+      this.dispatchEvent(new CustomEvent('cell-bg-animation-stop', {
+        bubbles: true,
+        composed: true,
+        detail: { reason, smooth: false },
+      }));
+      this.dispatchEvent(new CustomEvent('cell-bg-animation-idle', {
+        bubbles: true,
+        composed: true,
+        detail: { reason, smooth: false },
+      }));
+    }
+  }
+
+  resumeLayout() {
+    if (this._resumePersistentAfterSuspend) this.start();
+    this._resumePersistentAfterSuspend = false;
+  }
+
   /**
    * Timed pulse: start animation for `duration` ms then auto-stop.
    * Does NOT start if toggle is already active (animation already running).

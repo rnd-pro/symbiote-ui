@@ -258,6 +258,11 @@ export {
 export { VoiceRuntime, blobToBase64 } from '../chat/voice-runtime.js';
 export { VoiceController } from '../chat/voice-controller.js';
 export {
+  DEFAULT_LAYOUT_LIFECYCLE_SELECTOR,
+  resumeLayoutSubtree,
+  suspendLayoutSubtree,
+} from '../layout/lifecycle.js';
+export {
   DEFAULT_VOICE_ACTION_COMMANDS,
   DEFAULT_VOICE_SEND_COMMANDS,
   DEFAULT_VOICE_WAKE_COMMAND,

@@ -25,7 +25,7 @@ npm install jsda-kit linkedom
 
 - `symbiote-ui` - Node-safe core primitives.
 - `symbiote-ui/core` - graph editor data primitives.
-- `symbiote-ui/layout` - SSR-safe layout helpers.
+- `symbiote-ui/layout` - SSR-safe layout, behavior, and lifecycle helpers.
 - `symbiote-ui/graph` - provider graph normalization and projection helpers.
 - `symbiote-ui/manifest` - component, schema, rule, theme, and provider catalogs.
 - `symbiote-ui/runtime` - Node-safe agent UI construction helpers.
@@ -333,8 +333,10 @@ agents that compose dynamic workspaces:
 ```js
 import {
   LayoutTree,
+  resumeLayoutSubtree,
   resolveLayoutMinSize,
   resolveResponsiveLayoutState,
+  suspendLayoutSubtree,
 } from 'symbiote-ui/layout';
 
 let root = LayoutTree.createSplit(
@@ -349,6 +351,9 @@ let state = resolveResponsiveLayoutState(
   { collapse: 'auto', overflow: 'scroll-inline', responsiveMode: 'scroll-inline' },
   { inlineSize: 520, blockSize: 420, layoutMinSize: minSize }
 );
+
+suspendLayoutSubtree(workspaceEl, { reason: 'workspace-inactive' });
+resumeLayoutSubtree(workspaceEl, { reason: 'workspace-active' });
 ```
 
 `panel-layout` uses the same contract at runtime. Root `layoutBehavior`
@@ -367,6 +372,12 @@ smoke tests, and agents can distinguish requested policy from active fallback.
 `layout-sidebar` owns only its sidebar configuration and width persistence; its
 reset control clears that state and emits `layout-sidebar-reset` for host-owned
 layout resets instead of clearing host storage or reloading the page.
+`suspendLayoutSubtree()` and `resumeLayoutSubtree()` call public
+`suspendLayout()`/`resumeLayout()` methods on reusable components and host
+adapters in a hidden layout subtree. `chat-workspace`, `chat-composer`, and
+`cell-bg` implement this contract so hidden workspace groups stop animated
+backgrounds, wake listeners, voice capture, and UI timers without destroying
+host-owned chat, route, or layout state.
 
 ## Spatial Algorithms
 

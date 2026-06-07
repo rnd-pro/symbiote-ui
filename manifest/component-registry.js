@@ -2153,6 +2153,7 @@ export let COMPONENTS = [
         'pulse',
         'resize-aware',
         'reduced-motion-friendly',
+        'layout-lifecycle',
       ],
       properties: [
         { name: 'active', type: 'boolean', description: 'Persistent animation state.' },
@@ -2172,6 +2173,8 @@ export let COMPONENTS = [
         { name: 'pulse', type: 'function', description: 'Runs a timed animation pulse.' },
         { name: 'refreshTheme', type: 'function', description: 'Refreshes canvas colors and geometry from inherited cascade tokens.' },
         { name: 'resize', type: 'function', description: 'Resizes the canvas to its host bounds.' },
+        { name: 'suspendLayout', type: 'function', description: 'Immediately stops animation work while the containing layout group is hidden.' },
+        { name: 'resumeLayout', type: 'function', description: 'Restores persistent animation only when it was active before layout suspension.' },
       ],
       events: [
         { name: 'cell-bg-animation-trigger', description: 'Emits when a timed activity pulse is requested.', detail: [{ name: 'duration', type: 'number' }] },
@@ -2570,6 +2573,7 @@ export let COMPONENTS = [
         'footer-control-intent-router',
         'context-intent-router',
         'animated-background-lifecycle',
+        'layout-lifecycle',
         'host-owned-transport',
       ],
       attributes: [
@@ -2599,6 +2603,8 @@ export let COMPONENTS = [
         { name: 'triggerBackground', type: 'function', description: 'Triggers a timed animated background pulse.' },
         { name: 'startBackground', type: 'function', description: 'Starts persistent animated background activity with smooth acceleration.' },
         { name: 'stopBackground', type: 'function', description: 'Stops animated background activity with smooth deceleration.' },
+        { name: 'suspendLayout', type: 'function', description: 'Stops composed background work while preserving host-owned chat state for hidden layout groups.' },
+        { name: 'resumeLayout', type: 'function', description: 'Restores persistent background activity when the host resumes a hidden layout group.' },
         { name: 'getSidebar', type: 'function', description: 'Returns the composed chat-sidebar-shell element.' },
         { name: 'getTranscript', type: 'function', description: 'Returns the composed chat-transcript element.' },
         { name: 'getComposer', type: 'function', description: 'Returns the composed chat-composer element.' },
@@ -2765,6 +2771,7 @@ export let COMPONENTS = [
         'footer-control-intents',
         'autocomplete-host',
         'drag-drop-context',
+        'layout-lifecycle',
       ],
       properties: [
         { name: 'value', type: 'string', description: 'Current input value.' },
@@ -2793,6 +2800,8 @@ export let COMPONENTS = [
         { name: 'clearVoicePreview', type: 'function', description: 'Hides the voice preview surface.' },
         { name: 'getVoicePreviewText', type: 'function', description: 'Returns current voice preview text for host or VoiceRuntime transcription handling.' },
         { name: 'getVoiceControlElements', type: 'function', description: 'Returns rendered voice control button elements for host adapters.' },
+        { name: 'suspendLayout', type: 'function', description: 'Cancels local VoiceRuntime capture and wake listening while the containing layout group is hidden.' },
+        { name: 'resumeLayout', type: 'function', description: 'Restores local wake listening only when it was active before layout suspension.' },
       ],
       events: [
         { name: 'chat-composer-input', description: 'Emits input value and caret position.' },

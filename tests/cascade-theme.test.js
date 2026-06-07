@@ -1290,6 +1290,8 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(cellBgComponent, /if \(state && this\._pulseTimer\)/);
   assert.match(cellBgComponent, /start\(\)/);
   assert.match(cellBgComponent, /stop\(\)/);
+  assert.match(cellBgComponent, /suspendLayout/);
+  assert.match(cellBgComponent, /resumeLayout/);
   assert.match(cellBgComponent, /trigger\(duration = 10000\)/);
   assert.match(cellBgComponent, /cell-bg-animation-trigger/);
   assert.match(cellBgComponent, /cell-bg-animation-start/);
@@ -1862,6 +1864,8 @@ test('chat workspace composes reusable chat surfaces and exposes host intent con
   assert.match(workspace, /background\.trigger/);
   assert.match(workspace, /background\.start/);
   assert.match(workspace, /background\.stop/);
+  assert.match(workspace, /suspendLayout/);
+  assert.match(workspace, /resumeLayout/);
 
   assert.match(registry, /\{[\s\S]*tagName: 'chat-workspace'[\s\S]*schemaVersion: 'component-descriptor-v2'/);
   assert.match(registry, /chat_workspace_set_state/);
@@ -1882,7 +1886,10 @@ test('chat workspace composes reusable chat surfaces and exposes host intent con
   );
   assert.ok(component.contract.methods.some((method) => method.name === 'setWorkspaceState'));
   assert.ok(component.contract.methods.some((method) => method.name === 'setEmpty'));
+  assert.ok(component.contract.methods.some((method) => method.name === 'suspendLayout'));
+  assert.ok(component.contract.methods.some((method) => method.name === 'resumeLayout'));
   assert.ok(component.contract.capabilities.includes('chat-nav-tree-helper'));
+  assert.ok(component.contract.capabilities.includes('layout-lifecycle'));
   assert.ok(component.contract.events.some((event) => event.name === 'chat-workspace-input'));
   assert.ok(component.contract.events.some((event) => event.name === 'chat-workspace-key'));
   assert.ok(component.contract.events.some((event) => event.name === 'chat-workspace-voice-intent'));
