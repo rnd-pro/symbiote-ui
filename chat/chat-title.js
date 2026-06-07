@@ -15,7 +15,7 @@ export function sanitizeChatTitle(value = '', options = {}) {
     .replace(/[`*_#[\](){}<>]/g, '')
     .replace(/\s+/g, ' ')
     .trim()
-    .replace(/^["']+|["']+$/g, '')
+    .replace(/^["'«“]+|["'»”]+$/g, '')
     .trim();
 
   if (!title) return '';

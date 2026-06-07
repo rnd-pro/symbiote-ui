@@ -16,6 +16,10 @@ test('sanitizeChatTitle strips markup and enforces title limits', () => {
     'Build dynamic layout, quickly'
   );
   assert.equal(
+    sanitizeChatTitle(' «Граф проекта» '),
+    'Граф проекта'
+  );
+  assert.equal(
     sanitizeChatTitle('one two three four five six seven eight nine ten'),
     'one two three four five six seven eight'
   );
@@ -33,6 +37,11 @@ test('extractChatTitleFromAgentText removes only standalone title tag', () => {
     text: 'Here is the generated UI.',
     changed: true,
   });
+
+  assert.equal(
+    extractChatTitleFromAgentText('<chat-title>«Русский заголовок»</chat-title>').title,
+    'Русский заголовок'
+  );
 });
 
 test('extractChatTitleFromAgentText leaves ordinary content unchanged', () => {
