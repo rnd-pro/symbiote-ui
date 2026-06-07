@@ -19,6 +19,10 @@
       "import": "./graph/index.js",
       "default": "./graph/index.js"
     },
+    "./canvas": {
+      "import": "./canvas/index.js",
+      "default": "./canvas/index.js"
+    },
     "./locale": {
       "import": "./locale/index.js",
       "default": "./locale/index.js"

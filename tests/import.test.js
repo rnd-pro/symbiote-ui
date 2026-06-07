@@ -96,6 +96,15 @@ test('voice command helpers are importable without browser component registratio
   assert.equal(typeof ui.blobToBase64, 'function');
 });
 
+test('canvas public entrypoint exposes graph and routing helpers', async () => {
+  let canvas = await import('../canvas/index.js');
+  assert.equal(typeof canvas.computeAutoLayout, 'function');
+  assert.equal(typeof canvas.SubgraphRouter, 'function');
+  assert.equal(typeof canvas.PinExpansion, 'function');
+  assert.equal(typeof canvas.routePcbTrace, 'function');
+  assert.equal(typeof canvas.analyzePcbRoute, 'function');
+});
+
 test('material symbols loader reuses a host-provided package stylesheet', async () => {
   let NativeDocument = globalThis.document;
   let NativeWindow = globalThis.window;

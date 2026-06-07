@@ -13,11 +13,13 @@ All notable changes to `symbiote-ui` will be documented in this file.
 - Added `componentDescription` and agent-facing WebMCP context to component descriptors and discovery output.
 - Added `createComponentToolDescriptor()` for explicit WebMCP tools with component context.
 - Added the reusable browser `VoiceRuntime` package contract to packed output and `symbiote-ui/ui`.
+- Added the public `symbiote-ui/canvas` entrypoint for graph, PCB routing, diagnostics, project graph, and HTML-in-canvas helpers.
 
 ### Changed
 
 - Updated the cascade theme lab to show the editor as a layout panel instead of owning local toolbar controls.
 - Hardened `VoiceRuntime` for Agent Portal host adapters with instance capability getters, callback hooks, media-recorder start, and blob-to-base64 conversion.
+- Extended `withGlobalPanel()` to carry panel behavior and split behavior into generated layout trees.
 
 ## [0.3.0-alpha.11] - 2026-06-04
 

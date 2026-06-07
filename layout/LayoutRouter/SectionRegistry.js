@@ -85,14 +85,16 @@ export function withGlobalPanel(layoutFn, panelType, {
   ratio = 0.65,
   collapsed = true,
   global = true,
+  behavior,
+  splitBehavior,
   panelState = {},
 } = {}) {
   return () => {
     let main = layoutFn();
-    let panel = LayoutTree.createPanel(panelType, panelState);
+    let panel = LayoutTree.createPanel(panelType, panelState, behavior);
     panel.global = global;
     panel.collapsed = collapsed;
-    return LayoutTree.createSplit(direction, main, panel, ratio);
+    return LayoutTree.createSplit(direction, main, panel, ratio, splitBehavior);
   };
 }
 

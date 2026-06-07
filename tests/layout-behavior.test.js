@@ -19,6 +19,7 @@ import {
   resolveResponsiveLayoutState,
   setNodeBehavior,
 } from '../layout/LayoutTree.js';
+import { withGlobalPanel } from '../layout/LayoutRouter/SectionRegistry.js';
 
 test('layout behavior normalizes responsive collapse and overflow policy', () => {
   let behavior = normalizeLayoutBehavior({
@@ -239,6 +240,30 @@ test('layout tree opens and closes UI-invoked panels without owning host layout 
   assert.equal(reopened.panel.id, opened.panel.id);
   assert.equal(reopened.panel.collapsed, false);
   assert.equal(reopened.panel.panelState.closed, false);
+});
+
+test('global panel helper preserves panel and split behavior contracts', () => {
+  let createLayout = withGlobalPanel(
+    () => createPanel('main', {}, { importance: 60, minInlineSize: 320 }),
+    'agent-chat',
+    {
+      behavior: { importance: 95, collapse: 'manual', minInlineSize: 360 },
+      splitBehavior: { overflow: 'scroll-inline', responsiveMode: 'scroll-inline' },
+      panelState: { source: 'global-chat', removable: true },
+      ratio: 0.72,
+    },
+  );
+
+  let root = createLayout();
+  assert.equal(root.type, 'split');
+  assert.equal(root.ratio, 0.72);
+  assert.equal(root.behavior.overflow, 'scroll-inline');
+  assert.equal(root.second.panelType, 'agent-chat');
+  assert.equal(root.second.panelState.source, 'global-chat');
+  assert.equal(root.second.panelState.removable, true);
+  assert.equal(getNodeBehavior(root.second).importance, 95);
+  assert.equal(getNodeBehavior(root.second).collapse, 'manual');
+  assert.equal(getNodeBehavior(root.second).minInlineSize, 360);
 });
 
 test('layout tree removeUiPanel restores captured host layout for the last temporary panel', () => {
