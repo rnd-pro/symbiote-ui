@@ -149,3 +149,11 @@ export {
   parseVoiceCommandList,
   wakeCommandCandidates,
 } from './chat/voice-input-defaults.js';
+
+export {
+  DEFAULT_VOICE_SETTINGS,
+  loadVoiceSettings,
+  saveVoiceSettings,
+  mergeServerVoiceSettings,
+  normalizeVoiceLanguageMode,
+} from './chat/voice-settings.js';

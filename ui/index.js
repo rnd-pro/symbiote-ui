@@ -288,6 +288,14 @@ export {
   wakeCommandCandidates,
 } from '../chat/voice-input-defaults.js';
 
+export {
+  DEFAULT_VOICE_SETTINGS,
+  loadVoiceSettings,
+  saveVoiceSettings,
+  mergeServerVoiceSettings,
+  normalizeVoiceLanguageMode,
+} from '../chat/voice-settings.js';
+
 export { collectQuickOpenFilesFromSkeleton, fuzzyScore, searchQuickOpenItems } from '../navigation/quick-open-utils.js';
 
 const runtimeModules = new Map();

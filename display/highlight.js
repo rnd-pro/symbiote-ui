@@ -133,7 +133,10 @@ export function renderMarkdown(src, options = {}) {
     if (raw.trimStart().startsWith('```')) {
       flushP();
       if (inCode) {
-        out.push(`<pre class="md-code-block"><code>${esc(codeLines.join('\n'))}</code></pre>`);
+        const lang = (codeLang || '').trim().toLowerCase();
+        const highlighted = highlightCodeBlock(codeLines.join('\n'), lang);
+        const classAttr = lang ? ` class="language-${escAttr(lang)}"` : '';
+        out.push(`<pre class="md-code-block"><code${classAttr}>${highlighted}</code></pre>`);
         inCode = false; codeLines = [];
       } else {
         closeList();
@@ -219,11 +222,54 @@ export function renderMarkdown(src, options = {}) {
   flushP();
   // Close any open code block
   if (inCode) {
-    out.push(`<pre class="md-code-block"><code>${esc(codeLines.join('\n'))}</code></pre>`);
+    const lang = (codeLang || '').trim().toLowerCase();
+    const highlighted = highlightCodeBlock(codeLines.join('\n'), lang);
+    const classAttr = lang ? ` class="language-${escAttr(lang)}"` : '';
+    out.push(`<pre class="md-code-block"><code${classAttr}>${highlighted}</code></pre>`);
   }
   closeList();
 
   return out.join('\n');
+
+  function highlightCodeBlock(code, lang) {
+    const l = (lang || '').trim().toLowerCase();
+    if (l === 'js' || l === 'javascript' || l === 'ts' || l === 'typescript') {
+      return highlight(code);
+    } else if (l === 'sql') {
+      return highlightSQL(code);
+    } else if (l === 'json') {
+      return highlightJSON(code);
+    } else if (l === 'css') {
+      return highlightCSS(code);
+    } else if (l === 'html' || l === 'htm' || l === 'xml') {
+      return highlightHTML(code);
+    } else if (l === 'yaml' || l === 'yml') {
+      return highlightYAML(code);
+    } else if (l === 'sh' || l === 'bash' || l === 'shell') {
+      return highlightShell(code);
+    } else if (l === 'env' || l === 'ini' || l === 'conf' || l === 'cfg' || l === 'toml') {
+      return highlightINI(code);
+    } else if (
+      l === 'python' ||
+      l === 'ruby' ||
+      l === 'go' ||
+      l === 'rust' ||
+      l === 'java' ||
+      l === 'kotlin' ||
+      l === 'swift' ||
+      l === 'c' ||
+      l === 'csharp' ||
+      l === 'php' ||
+      l === 'dart' ||
+      l === 'lua' ||
+      l === 'dockerfile'
+    ) {
+      return highlightLang(code, l);
+    } else if (l === 'plain' || l === 'txt' || l === 'csv') {
+      return highlightPlain(code);
+    }
+    return esc(code);
+  }
 
   function inline(text) {
     let escaped = esc(text);

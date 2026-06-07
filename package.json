@@ -76,6 +76,7 @@
     "./chat/voice-input-defaults.js": "./chat/voice-input-defaults.js",
     "./chat/voice-controller.js": "./chat/voice-controller.js",
     "./chat/voice-runtime.js": "./chat/voice-runtime.js",
+    "./chat/voice-settings.js": "./chat/voice-settings.js",
     "./package.json": "./package.json",
     "./ui": {
       "import": "./ui/index.js",
