@@ -8,8 +8,17 @@ class TestCSSStyleSheet {
   }
 }
 
+let testWindow = null;
+
 function installDom() {
+  if (testWindow) {
+    testWindow.document.body.innerHTML = '';
+    testWindow.document.adoptedStyleSheets = [];
+    return;
+  }
+
   let { window } = parseHTML('<!doctype html><html><body></body></html>');
+  testWindow = window;
   Object.assign(globalThis, {
     window,
     document: window.document,
@@ -30,10 +39,29 @@ async function nextRenderTick() {
   await new Promise((resolve) => setTimeout(resolve, 0));
 }
 
+function defineElement(tagName, ComponentClass) {
+  if (!customElements.get(tagName)) {
+    customElements.define(tagName, ComponentClass);
+  }
+}
+
+async function defineSourceViewerElements() {
+  let [{ CodeBlock }, { SourceViewer }] = await Promise.all([
+    import('../display/CodeBlock/CodeBlock.js'),
+    import('../display/SourceViewer/SourceViewer.js'),
+  ]);
+  defineElement('code-block', CodeBlock);
+  defineElement('source-viewer', SourceViewer);
+}
+
+async function defineSourceEditorElement() {
+  let { SourceEditor } = await import('../display/SourceEditor/SourceEditor.js');
+  defineElement('source-editor', SourceEditor);
+}
+
 test('source viewer forwards save actions and syntax tokens to code rendering', async () => {
   installDom();
-  await import('../display/CodeBlock/CodeBlock.js');
-  await import('../display/SourceViewer/SourceViewer.js');
+  await defineSourceViewerElements();
 
   let viewer = document.createElement('source-viewer');
   document.body.append(viewer);
@@ -85,9 +113,37 @@ test('source viewer forwards save actions and syntax tokens to code rendering', 
   assert.equal(codeBlock.style.getPropertyValue('--sn-syntax-keyword') || '', '');
 });
 
+test('source viewer exposes markdown document behavior', async () => {
+  installDom();
+  await defineSourceViewerElements();
+
+  let viewer = document.createElement('source-viewer');
+  document.body.append(viewer);
+  await nextRenderTick();
+
+  viewer.showFile({
+    path: 'docs/agent-workspace.md',
+    raw: '# Agent workspace\n\nRender markdown and code from the same library.',
+    lang: 'md',
+  });
+  await nextRenderTick();
+
+  let codeBlock = viewer.querySelector('code-block');
+  assert.equal(viewer.$.viewMode, 'rendered');
+  assert.equal(viewer.$.showToggle, true);
+  assert.equal(codeBlock.$.isMarkdown, true);
+  assert.match(codeBlock.$.highlighted, /Agent workspace/);
+
+  await viewer.toggleMode();
+  await nextRenderTick();
+  assert.equal(viewer.$.viewMode, 'source');
+  assert.equal(codeBlock.$.isMarkdown, false);
+  assert.equal(codeBlock.$.lang, 'plain');
+});
+
 test('source editor accepts source documents and emits host save intents', async () => {
   installDom();
-  await import('../display/SourceEditor/SourceEditor.js');
+  await defineSourceEditorElement();
 
   let editor = document.createElement('source-editor');
   document.body.append(editor);

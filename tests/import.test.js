@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { execFile } from 'node:child_process';
+import { mkdtemp, readFile, rm, symlink } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
+import { promisify } from 'node:util';
+
+const execFileAsync = promisify(execFile);
 
 test('root and metadata entrypoints import in Node', async () => {
   let root = await import('../index.js');
@@ -244,6 +251,9 @@ test('discover exposes the standalone package contract', async () => {
   let canvasGraphAgentItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'canvas-graph');
   let graphExplorerAgentItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'graph-explorer-shell');
   let cellBgAgentItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'cell-bg');
+  let codeBlockAgentItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'code-block');
+  let sourceViewerAgentItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'source-viewer');
+  let sourceEditorAgentItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'source-editor');
   assert.ok(component.componentDescription.includes('cascade theme editor'));
   assert.equal(component.agent.webmcp.mode, 'explicit-descriptor');
   assert.ok(component.agent.webmcp.references.includes('https://rnd-pro.com/pulse/symbiote-webmcp-support/'));
@@ -314,6 +324,24 @@ test('discover exposes the standalone package contract', async () => {
   assert.ok(cellBgAgentItem.webmcp.toolNames.includes('cell_bg_trigger'));
   assert.ok(cellBgAgentItem.webmcp.toolNames.includes('cell_bg_start'));
   assert.ok(cellBgAgentItem.webmcp.toolNames.includes('cell_bg_stop'));
+  assert.ok(codeBlockAgentItem.componentDescription.includes('markdown document'));
+  assert.ok(codeBlockAgentItem.webmcp.toolNames.includes('code_block_set_content'));
+  assert.ok(sourceViewerAgentItem.componentDescription.includes('markdown-document-viewer'));
+  assert.ok(sourceViewerAgentItem.webmcp.toolNames.includes('source_viewer_set_document'));
+  assert.ok(sourceViewerAgentItem.webmcp.toolNames.includes('source_viewer_action'));
+  assert.ok(sourceEditorAgentItem.componentDescription.includes('markdown-editing'));
+  assert.ok(sourceEditorAgentItem.webmcp.toolNames.includes('source_editor_content'));
+  assert.ok(sourceEditorAgentItem.webmcp.toolNames.includes('source_editor_save'));
+  let sourceViewer = data.manifest.components.find((item) => item.tagName === 'source-viewer');
+  let sourceEditor = data.manifest.components.find((item) => item.tagName === 'source-editor');
+  assert.ok(sourceViewer.contract.capabilities.includes('directory-summary'));
+  assert.ok(sourceEditor.contract.capabilities.includes('markdown-editing'));
+  let customElements = JSON.parse(await readFile(new URL('../custom-elements.json', import.meta.url), 'utf8'));
+  let sourceEditorDeclaration = customElements.modules
+    .flatMap((module) => module.declarations || [])
+    .find((declaration) => declaration.tagName === 'source-editor');
+  assert.ok(sourceEditorDeclaration.componentDescription.includes('markdown-editing'));
+  assert.ok(sourceEditorDeclaration.agent.webmcp.toolNames.includes('source_editor_save'));
   let cascadeDescriptor = data.manifest.themeRuntimeDescriptors.find((descriptor) => descriptor.name === 'cascade-theme');
   assert.ok(cascadeDescriptor);
   assert.equal(cascadeDescriptor.webmcp?.name, 'symbiote-ui.createCascadeTheme');
@@ -327,6 +355,26 @@ test('discover exposes the standalone package contract', async () => {
   assert.deepEqual(data.manifest.themePresets.colors, ['carbon', 'neon', 'pcb', 'ebook', 'dark', 'light']);
   assert.deepEqual(data.manifest.themePresets.skins, ['modern', 'compact', 'rounded']);
   assert.deepEqual(data.manifest.themePresets.panels.chat, { color: 'dark', skin: 'modern', motion: 'smooth' });
+});
+
+test('CLI discover works when launched through an npm bin symlink', async () => {
+  let tmpDir = await mkdtemp(join(tmpdir(), 'symbiote-ui-cli-'));
+  let binPath = join(tmpDir, 'symbiote-ui');
+
+  try {
+    await symlink(fileURLToPath(new URL('../cli.js', import.meta.url)), binPath);
+    let { stdout } = await execFileAsync(process.execPath, [binPath, 'discover'], {
+      cwd: fileURLToPath(new URL('..', import.meta.url)),
+      maxBuffer: 10 * 1024 * 1024,
+    });
+    let data = JSON.parse(stdout);
+
+    assert.equal(data.command, 'discover');
+    assert.equal(data.package.name, 'symbiote-ui');
+    assert.ok(data.manifest.components.some((component) => component.tagName === 'cascade-theme-widget'));
+  } finally {
+    await rm(tmpDir, { recursive: true, force: true });
+  }
 });
 
 test('webmcp helpers append component context to explicit tool descriptors', async () => {

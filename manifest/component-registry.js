@@ -785,20 +785,107 @@ const WEBMCP_TOOLS = {
       exposedTo: ['agent', 'assistant'],
     },
   ],
+  'code-block': [
+    {
+      name: 'code_block_set_content',
+      description: 'Render host-provided code, markdown, or image content with syntax tokens, markdown base path, image API base, and optional diagnostics. Use this instead of creating product-local markdown/code renderers.',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          mode: { enum: ['source', 'markdown', 'image'] },
+          content: { type: 'string' },
+          language: { type: 'string' },
+          basePath: { type: 'string' },
+          imageApiBase: { type: 'string' },
+          syntaxTokens: { type: 'object' },
+          diagnostics: { type: 'array' },
+        },
+        required: ['content'],
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, runtimeMethods: ['setContent', 'setDiagnostics'] },
+      exposedTo: ['agent', 'assistant'],
+    },
+  ],
+  'source-viewer': [
+    {
+      name: 'source_viewer_set_document',
+      description: 'Display a host-owned source document, markdown document, image, binary placeholder, or directory summary. The viewer owns rendering, markdown preview, diagnostics, syntax tokens, and transform UI; the host owns loading and persistence.',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          path: { type: 'string' },
+          content: { type: 'string' },
+          raw: { type: 'string' },
+          language: { type: 'string' },
+          mode: { enum: ['source', 'rendered', 'transformed', 'image', 'binary', 'directory', 'error'] },
+          statsText: { type: 'string' },
+          readable: { type: 'boolean' },
+          directoryText: { type: 'string' },
+          imageApiBase: { type: 'string' },
+          saveAction: { type: 'object' },
+          syntaxTokens: { type: 'object' },
+          diagnostics: { type: 'array' },
+        },
+        required: ['path'],
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, runtimeMethods: ['showFile', 'showDirectory', 'showImage', 'showBinary', 'setDiagnostics'] },
+      exposedTo: ['agent', 'assistant'],
+    },
+    {
+      name: 'source_viewer_action',
+      description: 'Request a configured source-viewer action such as save, open, apply, graph focus, or mode toggle. Hosts handle the emitted intent and keep routing/persistence outside symbiote-ui.',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          action: { enum: ['trigger', 'show-graph', 'toggle-mode'] },
+          path: { type: 'string' },
+        },
+        required: ['action'],
+      },
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        intentEvents: ['source-viewer-action', 'source-viewer-show-graph', 'source-viewer-toggle-mode'],
+      },
+      exposedTo: ['agent', 'assistant'],
+    },
+  ],
   'source-editor': [
     {
       name: 'source_editor_content',
-      description: 'Read or replace source editor text while leaving persistence policy to the host application.',
+      description: 'Read or replace source or markdown editor text while leaving persistence policy to the host application.',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
         properties: {
           action: { enum: ['read', 'replace'] },
           value: { type: 'string' },
+          language: { type: 'string' },
+          path: { type: 'string' },
+          dirty: { type: 'boolean' },
         },
         required: ['action'],
       },
-      annotations: { readOnlyHint: false, destructiveHint: false, runtimeMethods: ['getContent', 'setContent'] },
+      annotations: { readOnlyHint: false, destructiveHint: false, runtimeMethods: ['getContent', 'setContent', 'setLanguage', 'setDirty'] },
+      exposedTo: ['agent', 'assistant'],
+    },
+    {
+      name: 'source_editor_save',
+      description: 'Emit the configured source-editor save intent for source or markdown content. The host owns validation, filesystem writes, routing, and persistence.',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          path: { type: 'string' },
+          language: { type: 'string' },
+          value: { type: 'string' },
+          source: { type: 'string' },
+        },
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, intentEvent: 'source-editor-save', runtimeMethod: 'triggerSave' },
       exposedTo: ['agent', 'assistant'],
     },
   ],
@@ -1023,7 +1110,7 @@ export let COMPONENTS = [
     description: 'Compact global header widget for cascade theme quick controls.',
     agent: {
       semanticRole: 'global shell cascade theme quick control',
-      usage: 'Mount in a layout shell action slot when the full theme editor should stay out of the default layout but remain reachable.',
+      usage: 'Mount in a layout shell action slot with a host-selected storage-key and target-selector. Pair it with cascade-theme-editor by listening for cascade-theme-open-full and opening a host-approved panel-layout panel that uses the same storage-key and target-selector.',
       dataOwnership: 'component-owned normalized quick theme state persisted through the same host-selected localStorage key as cascade-theme-editor',
     },
     contract: {
@@ -1076,7 +1163,7 @@ export let COMPONENTS = [
     description: 'Reusable cascade theme editor module for host layouts.',
     agent: {
       semanticRole: 'layout-hosted cascade theme control surface',
-      usage: 'Mount as a layout panel when an agent or user needs bounded live theme controls for a host shell.',
+      usage: 'Mount as a layout panel when an agent or user needs bounded live theme controls for a host shell. When opened from cascade-theme-widget, use the same storage-key and target-selector so quick controls and full controls edit one cascade theme state.',
       dataOwnership: 'component-owned normalized theme state persisted through host-selected localStorage key',
     },
     contract: {
@@ -1840,12 +1927,12 @@ export let COMPONENTS = [
     className: 'CodeBlock',
     module: 'display/CodeBlock/CodeBlock.js',
     category: 'display',
-    description: 'Code, markdown, image, and diagnostics display component.',
+    description: 'Code, markdown document, image, and diagnostics display component for reusable agent output surfaces.',
     contract: {
       status: 'draft',
       schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
-      capabilities: ['syntax-highlight', 'markdown-render', 'image-render', 'line-gutter', 'diagnostics'],
+      capabilities: ['syntax-highlight', 'markdown-render', 'markdown-document-viewer', 'image-render', 'line-gutter', 'diagnostics'],
       attributes: [
         { name: 'image-api-base', type: 'string', description: 'Optional base URL for resolving image preview sources.' },
       ],
@@ -1901,12 +1988,12 @@ export let COMPONENTS = [
     className: 'SourceViewer',
     module: 'display/SourceViewer/SourceViewer.js',
     category: 'display',
-    description: 'Source file viewer with code, markdown, image, metadata, save actions, syntax theme tokens, diagnostics, and transform modes.',
+    description: 'Source and markdown document viewer with code, rendered markdown, image, directory metadata, save actions, syntax theme tokens, diagnostics, and transform modes.',
     contract: {
       status: 'draft',
       schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
-      capabilities: ['source-code', 'markdown-preview', 'image-preview', 'diagnostics', 'save-action-intent', 'syntax-theme-tokens', 'transform-toggle'],
+      capabilities: ['source-code', 'markdown-preview', 'markdown-document-viewer', 'image-preview', 'directory-summary', 'diagnostics', 'save-action-intent', 'syntax-theme-tokens', 'transform-toggle'],
       attributes: [
         { name: 'image-api-base', type: 'string', description: 'Optional base URL for resolving image preview sources.' },
       ],
@@ -1919,9 +2006,10 @@ export let COMPONENTS = [
         { name: 'syntaxTokens', type: 'object', description: 'Optional shorthand token map applied to code-block syntax variables.' },
       ],
       methods: [
-        { name: 'showFile', type: 'function', description: 'Displays a source file from pure path, language, code, and optional transform data.' },
+        { name: 'showFile', type: 'function', description: 'Displays a source or markdown file from pure path, language, code, and optional transform data.' },
         { name: 'showDirectory', type: 'function', description: 'Displays normalized directory text.' },
         { name: 'showImage', type: 'function', description: 'Displays an image path through the nested code-block renderer.' },
+        { name: 'showBinary', type: 'function', description: 'Displays a binary file placeholder for host-owned non-text content.' },
         { name: 'showError', type: 'function', description: 'Displays an error state.' },
         { name: 'setSaveAction', type: 'function', description: 'Sets or clears the host-owned source action descriptor.' },
         { name: 'setSyntaxTheme', type: 'function', description: 'Applies a syntax theme token map to the viewer and nested code-block.' },
@@ -1972,15 +2060,15 @@ export let COMPONENTS = [
     className: 'SourceEditor',
     module: 'display/SourceEditor/SourceEditor.js',
     category: 'display',
-    description: 'Generic source text editor with content, dirty state, readonly, disabled, save action intents, syntax theme tokens, focus, and tab handling.',
+    description: 'Generic source and markdown text editor with content, dirty state, readonly, disabled, save action intents, syntax theme tokens, focus, and tab handling.',
     contract: {
       status: 'draft',
       schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
-      capabilities: ['source-editing', 'dirty-state', 'save-action-intent', 'syntax-theme-tokens', 'keyboard-tab-indent'],
+      capabilities: ['source-editing', 'markdown-editing', 'document-editing', 'dirty-state', 'save-action-intent', 'syntax-theme-tokens', 'keyboard-tab-indent'],
       properties: [
         { name: 'value', type: 'string', description: 'Editor content.' },
-        { name: 'language', type: 'string', description: 'Language label reflected to data-language.' },
+        { name: 'language', type: 'string', description: 'Language label reflected to data-language; use md/markdown for markdown documents.' },
         { name: 'path', type: 'string', description: 'Host-owned source path/id for save and input intents.' },
         { name: 'placeholder', type: 'string', description: 'Textarea placeholder.' },
         { name: 'ariaLabel', type: 'string', description: 'Accessible editor label.' },
@@ -1994,7 +2082,7 @@ export let COMPONENTS = [
       methods: [
         { name: 'getContent', type: 'function', description: 'Returns current editor text.' },
         { name: 'setContent', type: 'function', description: 'Sets editor text and optional dirty state.' },
-        { name: 'setSourceDocument', type: 'function', description: 'Applies a normalized source document with path, content, language, dirty/readonly state, save action, and syntax theme.' },
+        { name: 'setSourceDocument', type: 'function', description: 'Applies a normalized source or markdown document with path, content, language, dirty/readonly state, save action, and syntax theme.' },
         { name: 'setEditable', type: 'function', description: 'Toggles disabled state from an editable flag.' },
         { name: 'setLanguage', type: 'function', description: 'Sets language metadata.' },
         { name: 'setDirty', type: 'function', description: 'Sets dirty state.' },

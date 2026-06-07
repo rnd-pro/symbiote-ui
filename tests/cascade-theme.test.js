@@ -761,6 +761,11 @@ test('README documents the public agent UI constructor flow', async () => {
   assert.match(readme, /symbiote-ui\/ui/);
   assert.match(readme, /not unexported package file paths/);
   assert.match(readme, /layout.openPanel\('chat'/);
+  assert.match(readme, /defineModule\('cascade-theme-widget'\)/);
+  assert.match(readme, /defineModule\('cascade-theme-editor'\)/);
+  assert.match(readme, /cascade-theme-open-full/);
+  assert.match(readme, /layout\.openPanel\('theme-editor'/);
+  assert.match(readme, /source: 'cascade-theme-widget'/);
   assert.match(readme, /symbiote-ui\/runtime/);
   assert.match(readme, /createRuntimeUiController/);
   assert.match(readme, /applyRuntimeLayoutAction/);

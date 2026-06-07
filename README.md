@@ -155,6 +155,61 @@ let theme = createCascadeTheme({ mode: 'dark', brightness: 8, contrast: 64 });
 applyCascadeTheme(document.documentElement, theme.state);
 ```
 
+Use `cascade-theme-widget` for shell-level quick controls and
+`cascade-theme-editor` for the full layout panel. Keep both components on the
+same `storage-key` and `target-selector`; the widget emits
+`cascade-theme-open-full`, and the host opens a registered `panel-layout`
+panel:
+
+```html
+<section id="app-shell">
+  <header>
+    <cascade-theme-widget
+      storage-key="my-app:cascade-theme"
+      target-selector="#app-shell"
+    ></cascade-theme-widget>
+  </header>
+  <panel-layout id="workspace-layout"></panel-layout>
+</section>
+```
+
+```js
+import { defineModule } from 'symbiote-ui/ui';
+
+defineModule('cascade-theme-widget');
+defineModule('cascade-theme-editor');
+defineModule('panel-layout');
+
+class AppThemePanel extends HTMLElement {
+  connectedCallback() {
+    if (this.ready) return;
+    this.ready = true;
+    this.innerHTML = `
+      <cascade-theme-editor
+        storage-key="my-app:cascade-theme"
+        target-selector="#app-shell"
+      ></cascade-theme-editor>
+    `;
+  }
+}
+
+customElements.define('app-theme-panel', AppThemePanel);
+
+let layout = document.querySelector('#workspace-layout');
+layout.registerPanelType('theme-editor', {
+  title: 'Theme',
+  icon: 'palette',
+  component: 'app-theme-panel',
+});
+
+document.addEventListener('cascade-theme-open-full', () => {
+  layout.openPanel('theme-editor', {
+    uiInvoked: true,
+    source: 'cascade-theme-widget',
+  });
+});
+```
+
 For chat construction, use `chat-workspace` when the host needs the complete
 reusable shell: sidebar, transcript, composer, footer controls, voice-control
 intents, and animated `cell-bg` lifecycle. `chat-sidebar-shell` and

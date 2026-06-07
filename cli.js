@@ -1,11 +1,22 @@
 #!/usr/bin/env node
 
+import { realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 import { cmdDiscover } from './discover.js';
 
 let command = process.argv[2] || 'discover';
-let isMain = fileURLToPath(import.meta.url) === process.argv[1];
+let modulePath = fileURLToPath(import.meta.url);
+let argvPath = process.argv[1] || '';
+let isMain = modulePath === argvPath;
+
+if (!isMain && argvPath) {
+  try {
+    isMain = modulePath === realpathSync(argvPath);
+  } catch (error) {
+    void error;
+  }
+}
 
 if (isMain && command === 'discover') {
   let result = await cmdDiscover({});
