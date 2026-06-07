@@ -256,6 +256,22 @@ export {
   toChatMessageItem,
 } from '../chat/message-model.js';
 export { VoiceRuntime, blobToBase64 } from '../chat/voice-runtime.js';
+export {
+  DEFAULT_VOICE_ACTION_COMMANDS,
+  DEFAULT_VOICE_SEND_COMMANDS,
+  DEFAULT_VOICE_WAKE_COMMAND,
+  DEFAULT_VOICE_WAKE_COMMANDS,
+  LEGACY_VOICE_WAKE_COMMANDS,
+  defaultSendCommandPhrases,
+  defaultVoiceActionCommandPhrases,
+  defaultWakeCommandPhrases,
+  formatVoiceCommandList,
+  matchVoiceCommandAtEnd,
+  matchVoiceCommandInText,
+  normalizeWakeCommandPhrase,
+  parseVoiceCommandList,
+  wakeCommandCandidates,
+} from '../chat/voice-input-defaults.js';
 
 export { collectQuickOpenFilesFromSkeleton, fuzzyScore, searchQuickOpenItems } from '../navigation/quick-open-utils.js';
 

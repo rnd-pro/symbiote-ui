@@ -94,6 +94,12 @@ test('voice command helpers are importable without browser component registratio
   assert.equal(typeof runtime.blobToBase64, 'function');
   assert.equal(typeof ui.VoiceRuntime, 'function');
   assert.equal(typeof ui.blobToBase64, 'function');
+  assert.equal(ui.DEFAULT_VOICE_WAKE_COMMANDS.en, 'Okay Agent');
+  assert.equal(ui.matchVoiceCommandAtEnd('draft send', [{ action: 'send', phrase: 'send' }]).text, 'draft');
+  assert.equal(ui.matchVoiceCommandInText("О'кей Агент", ui.wakeCommandCandidates(
+    ui.defaultWakeCommandPhrases(),
+    'ru'
+  )).matched, true);
 });
 
 test('canvas public entrypoint exposes graph and routing helpers', async () => {
