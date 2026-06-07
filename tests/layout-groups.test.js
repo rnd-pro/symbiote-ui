@@ -11,6 +11,7 @@ import {
 } from '../layout/LayoutShellMenu/layout-groups.js';
 
 const sidebarSectionSource = new URL('../layout/LayoutSidebar/SidebarSection.js', import.meta.url);
+const sidebarSectionTemplateSource = new URL('../layout/LayoutSidebar/SidebarSection.tpl.js', import.meta.url);
 
 function installMinimalDom() {
   globalThis.CustomEvent = class CustomEvent extends Event {
@@ -164,12 +165,24 @@ test('layout groups fall back from disabled active id to the home group', () => 
 });
 
 test('sidebar sections expose cancelable selection before router navigation', async () => {
-  let source = await readFile(sidebarSectionSource, 'utf8');
+  let [source, template] = await Promise.all([
+    readFile(sidebarSectionSource, 'utf8'),
+    readFile(sidebarSectionTemplateSource, 'utf8'),
+  ]);
 
   assert.match(source, /sidebar-section-select/);
   assert.match(source, /cancelable:\s*true/);
   assert.match(source, /sidebar\?\.routerSync === false/);
-  assert.match(source, /navigate\(this\.\$\.sectionId\)/);
+  assert.match(source, /navigate\(sectionId\)/);
+  assert.match(source, /#getSectionId\(\)/);
+  assert.match(source, /this\.dataset\.sectionId/);
+  assert.match(template, /'@data-section-id':\s*'sectionId'/);
+  assert.match(source, /item\.addEventListener\('click',\s*this\.\$\.onSectionClick\)/);
+  assert.match(source, /\.sec-expand'\)\?\.addEventListener\('click',\s*this\.\$\.onExpandToggle\)/);
+  assert.match(source, /\.sec-eye'\)\?\.addEventListener\('click',\s*this\.\$\.onToggleVisibility\)/);
+  assert.doesNotMatch(template, /onclick:\s*'onSectionClick'/);
+  assert.doesNotMatch(template, /onclick:\s*'onExpandToggle'/);
+  assert.doesNotMatch(template, /onclick:\s*'onToggleVisibility'/);
 });
 
 test('layout shell menu emits normalized group intents without host executable state', async () => {

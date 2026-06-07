@@ -32,19 +32,21 @@ export class SidebarSection extends Symbiote {
 
     onSectionClick: () => {
       if (!this.$.isVisible || this.$.isDisabled) return;
+      let sectionId = this.#getSectionId();
+      if (!sectionId) return;
       let sidebar = this.closest('layout-sidebar');
       let event = new CustomEvent('sidebar-section-select', {
         bubbles: true,
         composed: true,
         cancelable: true,
         detail: {
-          id: this.$.sectionId,
-          sectionId: this.$.sectionId,
+          id: sectionId,
+          sectionId,
         },
       });
       let shouldNavigate = this.dispatchEvent(event);
       if (!shouldNavigate || sidebar?.routerSync === false) return;
-      navigate(this.$.sectionId);
+      navigate(sectionId);
     },
 
     onExpandToggle: (e) => {
@@ -56,13 +58,22 @@ export class SidebarSection extends Symbiote {
     onToggleVisibility: (e) => {
       e.stopPropagation();
       let sidebar = this.closest('layout-sidebar');
-      if (sidebar) sidebar.toggleVisibility(this.$.sectionId);
+      if (sidebar) sidebar.toggleVisibility(this.#getSectionId());
     },
   };
 
   renderCallback() {
     ensureMaterialSymbols(['close', 'drag_indicator', 'expand_more', 'visibility', 'visibility_off', this.$.icon]);
     this.sub('icon', (icon) => ensureMaterialSymbols([icon]));
+    this.#bindSectionControls();
+
+    this.sub('sectionId', (id) => {
+      if (id) {
+        this.dataset.sectionId = String(id);
+      } else {
+        this.removeAttribute('data-section-id');
+      }
+    });
 
     this.sub('isActive', (val) => {
       this.toggleAttribute('data-active', val);
@@ -136,6 +147,21 @@ export class SidebarSection extends Symbiote {
       }
     });
   }
+
+  #bindSectionControls() {
+    if (this._sectionControlsBound) return;
+    let item = this.querySelector('.sec-item');
+    if (!item) return;
+
+    item.addEventListener('click', this.$.onSectionClick);
+    this.querySelector('.sec-expand')?.addEventListener('click', this.$.onExpandToggle);
+    this.querySelector('.sec-eye')?.addEventListener('click', this.$.onToggleVisibility);
+    this._sectionControlsBound = true;
+  }
+
+  #getSectionId() {
+    return this.$.sectionId || this.dataset.sectionId || this.querySelector('.sec-item')?.dataset.sectionId || '';
+  }
 }
 
 SidebarSection.template = sidebarSectionTemplate;
@@ -176,10 +202,20 @@ export class SidebarSubItem extends Symbiote {
   renderCallback() {
     ensureMaterialSymbols(['close', this.$.icon]);
     this.sub('icon', (icon) => ensureMaterialSymbols([icon]));
+    this.#bindSubItemControls();
 
     this.sub('isMaster', (val) => {
       this.toggleAttribute('data-master', val);
     });
+  }
+
+  #bindSubItemControls() {
+    if (this._subItemControlsBound) return;
+    let close = this.querySelector('.sub-panel-close');
+    if (!close) return;
+
+    close.addEventListener('click', this.$.onClose);
+    this._subItemControlsBound = true;
   }
 }
 
@@ -187,7 +223,7 @@ SidebarSubItem.template = html`
   <div class="sub-panel-item">
     <span class="material-symbols-outlined" ${{ textContent: 'icon' }}></span>
     <span ${{ textContent: 'title' }}></span>
-    <button class="sub-panel-close" ${{ onclick: 'onClose' }}>
+    <button class="sub-panel-close">
       <span class="material-symbols-outlined">close</span>
     </button>
   </div>
