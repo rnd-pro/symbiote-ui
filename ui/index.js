@@ -293,6 +293,7 @@ export {
   loadVoiceSettings,
   saveVoiceSettings,
   mergeServerVoiceSettings,
+  normalizeVoiceCommandSettings,
   normalizeVoiceLanguageMode,
 } from '../chat/voice-settings.js';
 

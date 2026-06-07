@@ -1,8 +1,23 @@
+import {
+  defaultSendCommandPhrases,
+  defaultVoiceActionCommandPhrases,
+  defaultWakeCommandPhrases,
+  normalizeWakeCommandPhrase,
+  parseVoiceCommandList,
+} from './voice-input-defaults.js';
+
 export const DEFAULT_VOICE_SETTINGS = Object.freeze({
   commandMode: false,
   responseEnabled: false,
   languageMode: 'en',
 });
+
+const VOICE_LOCALES = Object.freeze(['en', 'ru', 'es']);
+const VOICE_ACTIONS = Object.freeze(['cancel', 'delete', 'off']);
+
+function asObject(value) {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
 
 export function normalizeVoiceLanguageMode(mode, fallbackLocale = 'en') {
   let value = String(mode || '').trim().toLowerCase();
@@ -85,4 +100,50 @@ export function mergeServerVoiceSettings(local, serverVoiceInput, fallbackLocale
   }
 
   return result;
+}
+
+export function normalizeVoiceCommandSettings(raw = {}) {
+  let data = asObject(raw);
+  let sendDefaults = defaultSendCommandPhrases();
+  let wakeDefaults = defaultWakeCommandPhrases();
+  let actionDefaults = defaultVoiceActionCommandPhrases();
+  let savedSend = asObject(data.sendCommands);
+  let savedWake = asObject(data.wakeCommands);
+  let savedActions = asObject(data.actionCommands);
+  let legacySendCommand = String(data.sendCommand || '').trim();
+
+  let sendCommands = Object.fromEntries(
+    VOICE_LOCALES.map((locale) => {
+      let value = String(savedSend[locale] || (locale === 'en' ? legacySendCommand : '') || sendDefaults[locale]).trim();
+      return [locale, value || sendDefaults[locale]];
+    })
+  );
+
+  let wakeCommands = Object.fromEntries(
+    VOICE_LOCALES.map((locale) => [
+      locale,
+      normalizeWakeCommandPhrase(savedWake[locale] || wakeDefaults[locale], locale),
+    ])
+  );
+
+  let actionCommands = Object.fromEntries(
+    VOICE_ACTIONS.map((action) => {
+      let values = asObject(savedActions[action]);
+      return [
+        action,
+        Object.fromEntries(
+          VOICE_LOCALES.map((locale) => [
+            locale,
+            parseVoiceCommandList(values[locale], actionDefaults[action][locale]),
+          ])
+        ),
+      ];
+    })
+  );
+
+  return {
+    sendCommands,
+    wakeCommands,
+    actionCommands,
+  };
 }

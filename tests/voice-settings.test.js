@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import {
   DEFAULT_VOICE_SETTINGS,
   normalizeVoiceLanguageMode,
+  normalizeVoiceCommandSettings,
   loadVoiceSettings,
   saveVoiceSettings,
   mergeServerVoiceSettings,
@@ -125,4 +126,56 @@ test('mergeServerVoiceSettings merges server settings without clobbering undefin
   assert.equal(merged4.commandMode, false);
   assert.equal(merged4.responseEnabled, true);
   assert.equal(merged4.languageMode, 'es');
+});
+
+test('normalizeVoiceCommandSettings returns full command defaults', () => {
+  const settings = normalizeVoiceCommandSettings();
+
+  assert.deepEqual(settings.sendCommands, {
+    en: 'send',
+    ru: 'отправить',
+    es: 'enviar',
+  });
+  assert.deepEqual(settings.wakeCommands, {
+    en: 'Okay Agent',
+    ru: "О'кей Агент",
+    es: 'Okey Agente',
+  });
+  assert.deepEqual(settings.actionCommands.cancel.ru, ['отмена', 'стоп']);
+  assert.deepEqual(settings.actionCommands.delete.en, ['delete', 'clear']);
+  assert.deepEqual(settings.actionCommands.off.es, ['apagar']);
+});
+
+test('normalizeVoiceCommandSettings normalizes saved and legacy command settings', () => {
+  const settings = normalizeVoiceCommandSettings({
+    sendCommand: 'ship',
+    sendCommands: {
+      ru: 'пуск',
+    },
+    wakeCommands: {
+      ru: 'голосовой ввод',
+      es: 'oye agente',
+    },
+    actionCommands: {
+      cancel: {
+        en: 'abort; stop now',
+      },
+      delete: {
+        ru: 'стереть, очистить',
+      },
+      off: {
+        es: ['silencio', 'apaga'],
+      },
+    },
+  });
+
+  assert.equal(settings.sendCommands.en, 'ship');
+  assert.equal(settings.sendCommands.ru, 'пуск');
+  assert.equal(settings.sendCommands.es, 'enviar');
+  assert.equal(settings.wakeCommands.ru, "О'кей Агент");
+  assert.equal(settings.wakeCommands.es, 'oye agente');
+  assert.deepEqual(settings.actionCommands.cancel.en, ['abort', 'stop now']);
+  assert.deepEqual(settings.actionCommands.cancel.ru, ['отмена', 'стоп']);
+  assert.deepEqual(settings.actionCommands.delete.ru, ['стереть', 'очистить']);
+  assert.deepEqual(settings.actionCommands.off.es, ['silencio', 'apaga']);
 });
