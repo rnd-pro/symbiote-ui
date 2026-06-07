@@ -8,6 +8,15 @@ export * from './core/index.js';
 export * from './graph/index.js';
 export * from './locale/index.js';
 export * from './runtime/index.js';
+export {
+  buildResourceTreeFromEntries,
+  createMemoryPersistenceAdapter,
+  createPersistenceAdapter,
+  createSourceDocument,
+  normalizeResourceTree,
+  normalizeResourceTreeItem,
+  normalizeSourceDocument,
+} from 'symbiote-engine/contracts';
 
 export {
   NodeShape,

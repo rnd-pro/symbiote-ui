@@ -56,6 +56,11 @@
     "./rules/*": "./rules/*",
     "./schemas/*": "./schemas/*",
     "./custom-elements.json": "./custom-elements.json",
+    "./tree/TreeView": "./tree/TreeView/TreeView.js",
+    "./tree/TreePanel": "./tree/TreePanel/TreePanel.js",
+    "./display/code-block": "./display/CodeBlock/CodeBlock.js",
+    "./display/source-viewer": "./display/SourceViewer/SourceViewer.js",
+    "./display/source-editor": "./display/SourceEditor/SourceEditor.js",
     "./display/output-preview": "./display/output-preview.js",
     "./display/highlight": "./display/highlight.js",
     "./display/markdown-formatter": "./display/markdown-formatter.js",
@@ -183,7 +188,7 @@
     "ssr"
   ],
   "dependencies": {
-    "symbiote-engine": "0.3.0-alpha.7"
+    "symbiote-engine": "0.3.0-alpha.8"
   },
   "peerDependencies": {
     "@symbiotejs/symbiote": "3.8.0-webmcp.2"

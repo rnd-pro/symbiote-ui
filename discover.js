@@ -97,6 +97,31 @@ const EXPORT_ENTRYPOINTS = [
     description: 'Browser Web Components, layout modules, themes, router helpers, chat, navigation, and display modules.',
   },
   {
+    specifier: 'symbiote-ui/display/code-block',
+    kind: 'browser-component',
+    description: 'Direct browser component entrypoint for code, markdown, image, and diagnostics display.',
+  },
+  {
+    specifier: 'symbiote-ui/display/source-viewer',
+    kind: 'browser-component',
+    description: 'Direct browser component entrypoint for source, markdown, image, directory, metadata, and transform display.',
+  },
+  {
+    specifier: 'symbiote-ui/display/source-editor',
+    kind: 'browser-component',
+    description: 'Direct browser component entrypoint for generic editable or readonly source text surfaces.',
+  },
+  {
+    specifier: 'symbiote-ui/tree/TreeView',
+    kind: 'browser-component',
+    description: 'Direct browser component entrypoint for reusable resource tree rendering.',
+  },
+  {
+    specifier: 'symbiote-ui/tree/TreePanel',
+    kind: 'browser-component',
+    description: 'Direct browser component entrypoint for tree panel chrome, filtering, placeholders, and expand/collapse state.',
+  },
+  {
     specifier: 'symbiote-ui/webmcp',
     kind: 'ssr-entry-safe',
     description: 'Explicit WebMCP descriptor helpers and native registration utilities that no-op without a model context.',

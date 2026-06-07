@@ -15,6 +15,8 @@ test('root and metadata entrypoints import in Node', async () => {
   assert.equal(typeof root.getReadableTextForHsl, 'function');
   assert.equal(typeof root.createRuntimeUiInstance, 'function');
   assert.equal(typeof root.buildChatNavTree, 'function');
+  assert.equal(typeof root.normalizeResourceTreeItem, 'function');
+  assert.equal(typeof root.normalizeSourceDocument, 'function');
   assert.equal(typeof root.matchVoiceCommandAtEnd, 'function');
   assert.equal(root.defaultSendCommandPhrases().ru, 'отправить');
   assert.equal(typeof runtime.createRuntimeUiController, 'function');
@@ -94,6 +96,8 @@ test('voice command helpers are importable without browser component registratio
   assert.equal(typeof runtime.blobToBase64, 'function');
   assert.equal(typeof ui.VoiceRuntime, 'function');
   assert.equal(typeof ui.blobToBase64, 'function');
+  assert.equal(typeof ui.buildResourceTreeFromEntries, 'function');
+  assert.equal(typeof ui.createSourceDocument, 'function');
   assert.equal(ui.DEFAULT_VOICE_WAKE_COMMANDS.en, 'Okay Agent');
   assert.equal(ui.matchVoiceCommandAtEnd('draft send', [{ action: 'send', phrase: 'send' }]).text, 'draft');
   assert.equal(ui.matchVoiceCommandInText("О'кей Агент", ui.wakeCommandCandidates(
@@ -216,6 +220,11 @@ test('discover exposes the standalone package contract', async () => {
   assert.equal(entrypoints.get('symbiote-ui/layout')?.kind, 'ssr-entry-safe');
   assert.equal(entrypoints.get('symbiote-ui/runtime')?.kind, 'ssr-entry-safe');
   assert.equal(entrypoints.get('symbiote-ui/webmcp')?.kind, 'ssr-entry-safe');
+  assert.equal(entrypoints.get('symbiote-ui/display/source-viewer')?.kind, 'browser-component');
+  assert.equal(entrypoints.get('symbiote-ui/display/source-editor')?.kind, 'browser-component');
+  assert.equal(entrypoints.get('symbiote-ui/display/code-block')?.kind, 'browser-component');
+  assert.equal(entrypoints.get('symbiote-ui/tree/TreeView')?.kind, 'browser-component');
+  assert.equal(entrypoints.get('symbiote-ui/tree/TreePanel')?.kind, 'browser-component');
   let layoutEntrypoint = await import('../layout/index.js');
   assert.equal(typeof layoutEntrypoint.suspendLayoutSubtree, 'function');
   assert.equal(typeof layoutEntrypoint.resumeLayoutSubtree, 'function');

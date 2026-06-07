@@ -141,10 +141,12 @@ test('packed package imports from a consumer project with SSR-safe entrypoints',
     let tarball = join(tmpRoot, pack.filename);
     let packageDir = join(tmpRoot, 'package');
     let consumerDir = join(tmpRoot, 'consumer');
+    let tmpNodeModules = join(tmpRoot, 'node_modules');
 
     run('tar', ['-xzf', tarball, '-C', tmpRoot]);
     await assertNoPrivatePackContent(packageDir);
     await mkdir(join(consumerDir, 'node_modules', '@symbiotejs'), { recursive: true });
+    await mkdir(join(tmpNodeModules, '@symbiotejs'), { recursive: true });
     await symlink(packageDir, join(consumerDir, 'node_modules', 'symbiote-ui'), 'dir');
     await symlink(
       resolve(repoRoot, 'node_modules', '@symbiotejs', 'symbiote'),
@@ -154,6 +156,16 @@ test('packed package imports from a consumer project with SSR-safe entrypoints',
     await symlink(
       resolve(repoRoot, 'node_modules', 'symbiote-engine'),
       join(consumerDir, 'node_modules', 'symbiote-engine'),
+      'dir'
+    );
+    await symlink(
+      resolve(repoRoot, 'node_modules', '@symbiotejs', 'symbiote'),
+      join(tmpNodeModules, '@symbiotejs', 'symbiote'),
+      'dir'
+    );
+    await symlink(
+      resolve(repoRoot, 'node_modules', 'symbiote-engine'),
+      join(tmpNodeModules, 'symbiote-engine'),
       'dir'
     );
 
