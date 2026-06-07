@@ -35,6 +35,7 @@ npm install jsda-kit linkedom
 - `symbiote-ui/locale` - Node-safe locale catalogs and translation helpers.
 - `symbiote-ui/discover` - provider discovery JSON API used by the CLI.
 - `symbiote-ui/chat/voice-input-defaults.js` - Node-safe wake/send/action voice command defaults and matching helpers.
+- `symbiote-ui/chat/voice-controller.js` - browser wake listening and response speech orchestration for chat hosts.
 - `symbiote-ui/custom-elements.json` - Custom Elements manifest.
 - `symbiote-ui/schemas/*`, `symbiote-ui/tokens/*`, `symbiote-ui/rules/*` - machine-readable provider contracts.
 - `symbiote-ui/display/*` - reusable display utilities exposed by package export map.
@@ -179,7 +180,12 @@ chunks and dispatches a `chat-composer-audio-captured` event with the resulting
 raw audio blob so the host can process or transcribe it. Use
 `symbiote-ui/chat/voice-input-defaults.js` for shared wake/send/cancel/delete/off
 phrases, command parsing, and matching when hosts need Agent Portal-compatible
-voice command behavior. `setFooterHtml()`
+voice command behavior. `VoiceController` in
+`symbiote-ui/chat/voice-controller.js` coordinates browser wake listening,
+pause/resume while recording or speaking, wake-command matching, and response
+speech lifecycle while leaving settings, transcription providers, persistence,
+and routing to the host. It is also exported through `symbiote-ui/ui` for
+browser hosts. `setFooterHtml()`
 remains available only for trusted host-rendered footer markup.
 `extractChatTitleFromAgentText()` provides a product-neutral parser for
 standalone `<chat-title>...</chat-title>` responses; any prompt instruction that

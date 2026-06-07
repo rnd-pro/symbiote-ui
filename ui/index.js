@@ -256,6 +256,7 @@ export {
   toChatMessageItem,
 } from '../chat/message-model.js';
 export { VoiceRuntime, blobToBase64 } from '../chat/voice-runtime.js';
+export { VoiceController } from '../chat/voice-controller.js';
 export {
   DEFAULT_VOICE_ACTION_COMMANDS,
   DEFAULT_VOICE_SEND_COMMANDS,

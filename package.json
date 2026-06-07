@@ -69,6 +69,7 @@
     "./plugins/*": "./plugins/*",
     "./chat/chat-context.js": "./chat/chat-context.js",
     "./chat/voice-input-defaults.js": "./chat/voice-input-defaults.js",
+    "./chat/voice-controller.js": "./chat/voice-controller.js",
     "./chat/voice-runtime.js": "./chat/voice-runtime.js",
     "./package.json": "./package.json",
     "./ui": {

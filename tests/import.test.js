@@ -223,6 +223,8 @@ test('discover exposes the standalone package contract', async () => {
   let sidebar = data.manifest.components.find((item) => item.tagName === 'layout-sidebar');
   let layoutAgentItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'panel-layout');
   let sidebarAgentItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'layout-sidebar');
+  let chatComposer = data.manifest.components.find((item) => item.tagName === 'chat-composer');
+  let chatComposerAgentItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'chat-composer');
   let chatSidebarAgentItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'chat-sidebar-shell');
   let chatWorkspaceAgentItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'chat-workspace');
   let nodeCanvasAgentItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'node-canvas');
@@ -259,6 +261,14 @@ test('discover exposes the standalone package contract', async () => {
   assert.ok(layoutAgentItem.webmcp.toolNames.includes('panel_layout_close_ui_panel'));
   assert.ok(sidebarAgentItem.webmcp.toolNames.includes('layout_sidebar_set_sections'));
   assert.ok(sidebarAgentItem.webmcp.toolNames.includes('layout_sidebar_set_active_section'));
+  assert.ok(chatComposerAgentItem.webmcp.toolNames.includes('chat_composer_voice_control'));
+  assert.ok(chatComposerAgentItem.webmcp.toolNames.includes('chat_composer_voice_flow'));
+  assert.ok(chatComposer.contract.webmcp.tools
+    .find((tool) => tool.name === 'chat_composer_voice_control')
+    .description.includes('VoiceController'));
+  assert.ok(chatComposer.contract.webmcp.tools
+    .find((tool) => tool.name === 'chat_composer_voice_flow')
+    .description.includes('VoiceRuntime'));
   assert.ok(chatSidebarAgentItem.webmcp.toolNames.includes('chat_sidebar_set_chats'));
   assert.ok(chatSidebarAgentItem.webmcp.toolNames.includes('chat_sidebar_select'));
   assert.ok(chatSidebarAgentItem.webmcp.toolNames.includes('chat_sidebar_set_collapsed'));

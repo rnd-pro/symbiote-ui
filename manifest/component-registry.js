@@ -145,7 +145,7 @@ const WEBMCP_TOOLS = {
     },
     {
       name: 'chat_composer_voice_control',
-      description: 'Request voice input, wake listening, response, command mode, language selection, or preview actions through cancelable composer events; hosts can prevent defaults or let the browser VoiceRuntime handle local fallback.',
+      description: 'Request voice input, wake listening, response, command mode, language selection, or preview actions through cancelable composer events; hosts can prevent defaults, delegate wake/TTS orchestration to VoiceController, or let VoiceRuntime handle local capture fallback.',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -171,7 +171,7 @@ const WEBMCP_TOOLS = {
     },
     {
       name: 'chat_composer_voice_flow',
-      description: 'Document or request the interceptable permission, recorder, and transcription stages for composer voice flows. Hosts can prevent these intent events to own the flow; otherwise the browser VoiceRuntime may use native permissions, SpeechRecognition, or MediaRecorder fallback.',
+      description: 'Document or request the interceptable permission, recorder, and transcription stages for composer voice flows. Hosts can prevent these intent events to own the flow; otherwise VoiceRuntime may use native permissions, SpeechRecognition, or MediaRecorder fallback, paired with VoiceController for wake/TTS lifecycle.',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
