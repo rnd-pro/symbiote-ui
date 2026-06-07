@@ -3,6 +3,10 @@ export default `
     <span class="sv-filename" bind="textContent: filename"></span>
     <div class="sv-controls">
       <span class="sv-stats" bind="textContent: statsText"></span>
+      <button class="sv-action sv-save-action" bind="onclick: onSourceAction; hidden: !showSaveAction; title: saveTitle">
+        <span class="material-symbols-outlined icon-sm" bind="textContent: saveIcon"></span>
+        <span class="sv-action-label" bind="textContent: saveLabel"></span>
+      </button>
       <button class="sv-action" bind="onclick: onShowGraph; hidden: !showGraphAction; title: showGraphTitle">
         <span class="material-symbols-outlined icon-sm">account_tree</span>
         <span class="sv-action-label" bind="textContent: graphLabel"></span>

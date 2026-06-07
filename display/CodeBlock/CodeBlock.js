@@ -14,6 +14,11 @@ import {
   highlightLang,
   highlightPlain,
 } from "../highlight.js";
+import {
+  applySourceSyntaxTheme,
+  normalizeSourceSyntaxTheme,
+  normalizeSourceTokenMap,
+} from "../source-contract.js";
 
 export class CodeBlock extends Symbiote {
   init$ = {
@@ -133,9 +138,24 @@ export class CodeBlock extends Symbiote {
   setContent(code, lang = "plain", options = {}) {
     if (options.basePath !== undefined) this.setBasePath(options.basePath);
     if (options.imageApiBase !== undefined) this.setImageApiBase(options.imageApiBase);
+    if (options.syntaxTheme !== undefined || options.syntaxTokens !== undefined) {
+      this.setSyntaxTheme(options.syntaxTheme || { tokens: options.syntaxTokens });
+    }
     this.$.lang = lang || "plain";
     this.$.code = "";
     this.$.code = code || "";
+  }
+
+  setSyntaxTokens(tokens = {}) {
+    this._syntaxTheme = normalizeSourceSyntaxTheme({ tokens: normalizeSourceTokenMap(tokens) });
+    applySourceSyntaxTheme(this, this._syntaxTheme);
+    return this._syntaxTheme;
+  }
+
+  setSyntaxTheme(theme = null) {
+    this._syntaxTheme = normalizeSourceSyntaxTheme(theme);
+    applySourceSyntaxTheme(this, this._syntaxTheme);
+    return this._syntaxTheme;
   }
 
   _resolveImageSrc(src) {

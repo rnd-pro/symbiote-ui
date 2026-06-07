@@ -1,6 +1,11 @@
 import Symbiote from '@symbiotejs/symbiote';
 import template from './SourceEditor.tpl.js';
 import css from './SourceEditor.css.js';
+import {
+  applySourceSyntaxTheme,
+  normalizeSourceAction,
+  normalizeSourceSyntaxTheme,
+} from '../source-contract.js';
 
 function emit(component, name, detail = {}) {
   component.dispatchEvent(new CustomEvent(name, {
@@ -14,6 +19,7 @@ export class SourceEditor extends Symbiote {
   init$ = {
     value: '',
     language: 'plain',
+    path: '',
     placeholder: '',
     ariaLabel: 'Source editor',
     readonly: false,
@@ -22,6 +28,9 @@ export class SourceEditor extends Symbiote {
     onInput: () => this._handleInput(),
     onKeyDown: (event) => this._handleKeyDown(event),
   };
+
+  _saveAction = null;
+  _syntaxTheme = null;
 
   renderCallback() {
     this.sub('value', (value) => {
@@ -77,6 +86,25 @@ export class SourceEditor extends Symbiote {
     this.setDirty(Boolean(options.dirty));
   }
 
+  setSourceDocument(document = {}) {
+    let data = document && typeof document === 'object' ? document : {};
+    if (data.path != null || data.id != null || data.uri != null) {
+      this.$.path = String(data.path || data.id || data.uri || '');
+    }
+    if (data.language != null || data.lang != null) {
+      this.setLanguage(data.language || data.lang);
+    }
+    if (data.readOnly !== undefined || data.readonly !== undefined) {
+      this.readOnly = Boolean(data.readOnly ?? data.readonly);
+    }
+    if (data.disabled !== undefined) {
+      this.disabled = Boolean(data.disabled);
+    }
+    this.setSaveAction(data.saveAction || data.save || null);
+    this.setSyntaxTheme(data.syntaxTheme || { tokens: data.syntaxTokens });
+    this.setContent(data.content ?? data.raw ?? '', { dirty: Boolean(data.dirty) });
+  }
+
   setEditable(editable) {
     this.$.disabled = !editable;
   }
@@ -87,6 +115,35 @@ export class SourceEditor extends Symbiote {
 
   setDirty(dirty) {
     this.$.dirty = Boolean(dirty);
+  }
+
+  setSaveAction(action) {
+    this._saveAction = normalizeSourceAction(action);
+    this.toggleAttribute('has-save-action', Boolean(this._saveAction));
+    return this._saveAction;
+  }
+
+  setSyntaxTheme(theme = null) {
+    this._syntaxTheme = normalizeSourceSyntaxTheme(theme);
+    applySourceSyntaxTheme(this, this._syntaxTheme);
+    return this._syntaxTheme;
+  }
+
+  setSyntaxTokens(tokens = {}) {
+    return this.setSyntaxTheme({ tokens });
+  }
+
+  triggerSave(extra = {}) {
+    if (!this._saveAction || this._saveAction.disabled) return false;
+    emit(this, 'source-editor-save', {
+      action: this._saveAction,
+      path: this.$.path,
+      value: this.getContent(),
+      dirty: this.$.dirty,
+      language: this.$.language,
+      ...extra,
+    });
+    return true;
   }
 
   focus() {
@@ -105,6 +162,7 @@ export class SourceEditor extends Symbiote {
       value,
       dirty: this.$.dirty,
       language: this.$.language,
+      path: this.$.path,
     });
   }
 

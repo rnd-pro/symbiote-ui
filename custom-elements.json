@@ -6277,8 +6277,8 @@
           "customElement": true,
           "name": "SourceViewer",
           "tagName": "source-viewer",
-          "description": "Source file viewer with code, markdown, image, metadata, actions, and transform modes.",
-          "componentDescription": "Source file viewer with code, markdown, image, metadata, actions, and transform modes. Use this data and content presentation surface when composing display UI. Capabilities: source-code, markdown-preview, image-preview, diagnostics, transform-toggle. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "description": "Source file viewer with code, markdown, image, metadata, save actions, syntax theme tokens, diagnostics, and transform modes.",
+          "componentDescription": "Source file viewer with code, markdown, image, metadata, save actions, syntax theme tokens, diagnostics, and transform modes. Use this data and content presentation surface when composing display UI. Capabilities: source-code, markdown-preview, image-preview, diagnostics, save-action-intent, syntax-theme-tokens, transform-toggle. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
           "attributes": [
             {
               "name": "image-api-base",
@@ -6340,6 +6340,48 @@
               "type": "function",
               "description": "Passes diagnostics to nested code-block.",
               "kind": "method"
+            },
+            {
+              "name": "saveAction",
+              "type": "object",
+              "description": "Host-owned action descriptor rendered as an intent button; the host owns persistence.",
+              "kind": "field"
+            },
+            {
+              "name": "syntaxTheme",
+              "type": "object",
+              "description": "Optional syntax theme descriptor with CSS custom property tokens.",
+              "kind": "field"
+            },
+            {
+              "name": "syntaxTokens",
+              "type": "object",
+              "description": "Optional shorthand token map applied to code-block syntax variables.",
+              "kind": "field"
+            },
+            {
+              "name": "setSaveAction",
+              "type": "function",
+              "description": "Sets or clears the host-owned source action descriptor.",
+              "kind": "method"
+            },
+            {
+              "name": "setSyntaxTheme",
+              "type": "function",
+              "description": "Applies a syntax theme token map to the viewer and nested code-block.",
+              "kind": "method"
+            },
+            {
+              "name": "setSyntaxTokens",
+              "type": "function",
+              "description": "Applies shorthand syntax tokens to the viewer and nested code-block.",
+              "kind": "method"
+            },
+            {
+              "name": "triggerSourceAction",
+              "type": "function",
+              "description": "Emits the configured source action intent without owning persistence.",
+              "kind": "method"
             }
           ],
           "events": [
@@ -6366,6 +6408,29 @@
                   "type": "string"
                 }
               ]
+            },
+            {
+              "name": "source-viewer-action",
+              "description": "Requests the host to execute the configured source action, usually save/open/apply.",
+              "detail": [
+                {
+                  "name": "action",
+                  "type": "object",
+                  "required": true
+                },
+                {
+                  "name": "path",
+                  "type": "string"
+                },
+                {
+                  "name": "language",
+                  "type": "string"
+                },
+                {
+                  "name": "content",
+                  "type": "string"
+                }
+              ]
             }
           ],
           "cssProperties": [
@@ -6383,6 +6448,15 @@
             },
             {
               "name": "--sn-source-action-icon-size"
+            },
+            {
+              "name": "--sn-syntax-keyword"
+            },
+            {
+              "name": "--sn-syntax-string"
+            },
+            {
+              "name": "--sn-syntax-comment"
             }
           ],
           "metadata": {
@@ -6398,6 +6472,8 @@
                 "markdown-preview",
                 "image-preview",
                 "diagnostics",
+                "save-action-intent",
+                "syntax-theme-tokens",
                 "transform-toggle"
               ],
               "attributes": [
@@ -6422,6 +6498,21 @@
                   "name": "viewMode",
                   "type": "string",
                   "description": "Current display mode: source, rendered, or transformed."
+                },
+                {
+                  "name": "saveAction",
+                  "type": "object",
+                  "description": "Host-owned action descriptor rendered as an intent button; the host owns persistence."
+                },
+                {
+                  "name": "syntaxTheme",
+                  "type": "object",
+                  "description": "Optional syntax theme descriptor with CSS custom property tokens."
+                },
+                {
+                  "name": "syntaxTokens",
+                  "type": "object",
+                  "description": "Optional shorthand token map applied to code-block syntax variables."
                 }
               ],
               "methods": [
@@ -6454,6 +6545,26 @@
                   "name": "setDiagnostics",
                   "type": "function",
                   "description": "Passes diagnostics to nested code-block."
+                },
+                {
+                  "name": "setSaveAction",
+                  "type": "function",
+                  "description": "Sets or clears the host-owned source action descriptor."
+                },
+                {
+                  "name": "setSyntaxTheme",
+                  "type": "function",
+                  "description": "Applies a syntax theme token map to the viewer and nested code-block."
+                },
+                {
+                  "name": "setSyntaxTokens",
+                  "type": "function",
+                  "description": "Applies shorthand syntax tokens to the viewer and nested code-block."
+                },
+                {
+                  "name": "triggerSourceAction",
+                  "type": "function",
+                  "description": "Emits the configured source action intent without owning persistence."
                 }
               ],
               "events": [
@@ -6480,6 +6591,29 @@
                       "type": "string"
                     }
                   ]
+                },
+                {
+                  "name": "source-viewer-action",
+                  "description": "Requests the host to execute the configured source action, usually save/open/apply.",
+                  "detail": [
+                    {
+                      "name": "action",
+                      "type": "object",
+                      "required": true
+                    },
+                    {
+                      "name": "path",
+                      "type": "string"
+                    },
+                    {
+                      "name": "language",
+                      "type": "string"
+                    },
+                    {
+                      "name": "content",
+                      "type": "string"
+                    }
+                  ]
                 }
               ],
               "slots": [],
@@ -6488,7 +6622,10 @@
                 "--sn-source-header-bg",
                 "--sn-source-border",
                 "--sn-source-toolbar-gap",
-                "--sn-source-action-icon-size"
+                "--sn-source-action-icon-size",
+                "--sn-syntax-keyword",
+                "--sn-syntax-string",
+                "--sn-syntax-comment"
               ],
               "status": "draft",
               "schemaVersion": "component-descriptor-v2",
@@ -6503,9 +6640,9 @@
               }
             },
             "agent": {
-              "componentDescription": "Source file viewer with code, markdown, image, metadata, actions, and transform modes. Use this data and content presentation surface when composing display UI. Capabilities: source-code, markdown-preview, image-preview, diagnostics, transform-toggle. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+              "componentDescription": "Source file viewer with code, markdown, image, metadata, save actions, syntax theme tokens, diagnostics, and transform modes. Use this data and content presentation surface when composing display UI. Capabilities: source-code, markdown-preview, image-preview, diagnostics, save-action-intent, syntax-theme-tokens, transform-toggle. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
               "semanticRole": "data and content presentation surface",
-              "usage": "Render or compose <source-viewer> when the host needs source file viewer with code, markdown, image, metadata, actions, and transform modes.",
+              "usage": "Render or compose <source-viewer> when the host needs source file viewer with code, markdown, image, metadata, save actions, syntax theme tokens, diagnostics, and transform modes.",
               "dataOwnership": "host-owned props and attributes; component owns presentation state",
               "webmcp": {
                 "mode": "described-only",
@@ -6522,9 +6659,9 @@
             }
           },
           "agent": {
-            "componentDescription": "Source file viewer with code, markdown, image, metadata, actions, and transform modes. Use this data and content presentation surface when composing display UI. Capabilities: source-code, markdown-preview, image-preview, diagnostics, transform-toggle. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "componentDescription": "Source file viewer with code, markdown, image, metadata, save actions, syntax theme tokens, diagnostics, and transform modes. Use this data and content presentation surface when composing display UI. Capabilities: source-code, markdown-preview, image-preview, diagnostics, save-action-intent, syntax-theme-tokens, transform-toggle. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
             "semanticRole": "data and content presentation surface",
-            "usage": "Render or compose <source-viewer> when the host needs source file viewer with code, markdown, image, metadata, actions, and transform modes.",
+            "usage": "Render or compose <source-viewer> when the host needs source file viewer with code, markdown, image, metadata, save actions, syntax theme tokens, diagnostics, and transform modes.",
             "dataOwnership": "host-owned props and attributes; component owns presentation state",
             "webmcp": {
               "mode": "described-only",
@@ -6559,8 +6696,8 @@
           "customElement": true,
           "name": "SourceEditor",
           "tagName": "source-editor",
-          "description": "Generic source text editor with content, dirty state, readonly, disabled, focus, and tab handling.",
-          "componentDescription": "Generic source text editor with content, dirty state, readonly, disabled, focus, and tab handling. Use this data and content presentation surface when composing display UI. Capabilities: source-editing, dirty-state, keyboard-tab-indent. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: source_editor_content.",
+          "description": "Generic source text editor with content, dirty state, readonly, disabled, save action intents, syntax theme tokens, focus, and tab handling.",
+          "componentDescription": "Generic source text editor with content, dirty state, readonly, disabled, save action intents, syntax theme tokens, focus, and tab handling. Use this data and content presentation surface when composing display UI. Capabilities: source-editing, dirty-state, save-action-intent, syntax-theme-tokens, keyboard-tab-indent. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: source_editor_content.",
           "members": [
             {
               "name": "value",
@@ -6645,6 +6782,60 @@
               "type": "function",
               "description": "Selects textarea content.",
               "kind": "method"
+            },
+            {
+              "name": "path",
+              "type": "string",
+              "description": "Host-owned source path/id for save and input intents.",
+              "kind": "field"
+            },
+            {
+              "name": "saveAction",
+              "type": "object",
+              "description": "Host-owned action descriptor used by triggerSave; the host owns persistence.",
+              "kind": "field"
+            },
+            {
+              "name": "syntaxTheme",
+              "type": "object",
+              "description": "Optional syntax theme descriptor with CSS custom property tokens.",
+              "kind": "field"
+            },
+            {
+              "name": "syntaxTokens",
+              "type": "object",
+              "description": "Optional shorthand token map applied to editor syntax variables.",
+              "kind": "field"
+            },
+            {
+              "name": "setSourceDocument",
+              "type": "function",
+              "description": "Applies a normalized source document with path, content, language, dirty/readonly state, save action, and syntax theme.",
+              "kind": "method"
+            },
+            {
+              "name": "setSaveAction",
+              "type": "function",
+              "description": "Sets or clears the host-owned save action descriptor.",
+              "kind": "method"
+            },
+            {
+              "name": "setSyntaxTheme",
+              "type": "function",
+              "description": "Applies a syntax theme token map to the editor surface.",
+              "kind": "method"
+            },
+            {
+              "name": "setSyntaxTokens",
+              "type": "function",
+              "description": "Applies shorthand syntax tokens to the editor surface.",
+              "kind": "method"
+            },
+            {
+              "name": "triggerSave",
+              "type": "function",
+              "description": "Emits the configured source-editor-save intent without owning persistence.",
+              "kind": "method"
             }
           ],
           "events": [
@@ -6652,6 +6843,40 @@
               "name": "source-editor-input",
               "description": "Emits after text changes.",
               "detail": [
+                {
+                  "name": "value",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "dirty",
+                  "type": "boolean",
+                  "required": true
+                },
+                {
+                  "name": "language",
+                  "type": "string",
+                  "required": true
+                },
+                {
+                  "name": "path",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "name": "source-editor-save",
+              "description": "Requests the host to save/apply the current editor content.",
+              "detail": [
+                {
+                  "name": "action",
+                  "type": "object",
+                  "required": true
+                },
+                {
+                  "name": "path",
+                  "type": "string"
+                },
                 {
                   "name": "value",
                   "type": "string",
@@ -6697,6 +6922,15 @@
             },
             {
               "name": "--sn-editor-font"
+            },
+            {
+              "name": "--sn-syntax-keyword"
+            },
+            {
+              "name": "--sn-syntax-string"
+            },
+            {
+              "name": "--sn-syntax-comment"
             }
           ],
           "metadata": {
@@ -6710,6 +6944,8 @@
               "capabilities": [
                 "source-editing",
                 "dirty-state",
+                "save-action-intent",
+                "syntax-theme-tokens",
                 "keyboard-tab-indent"
               ],
               "attributes": [],
@@ -6748,6 +6984,26 @@
                   "name": "dirty",
                   "type": "boolean",
                   "description": "Whether content differs from host baseline."
+                },
+                {
+                  "name": "path",
+                  "type": "string",
+                  "description": "Host-owned source path/id for save and input intents."
+                },
+                {
+                  "name": "saveAction",
+                  "type": "object",
+                  "description": "Host-owned action descriptor used by triggerSave; the host owns persistence."
+                },
+                {
+                  "name": "syntaxTheme",
+                  "type": "object",
+                  "description": "Optional syntax theme descriptor with CSS custom property tokens."
+                },
+                {
+                  "name": "syntaxTokens",
+                  "type": "object",
+                  "description": "Optional shorthand token map applied to editor syntax variables."
                 }
               ],
               "methods": [
@@ -6785,6 +7041,31 @@
                   "name": "select",
                   "type": "function",
                   "description": "Selects textarea content."
+                },
+                {
+                  "name": "setSourceDocument",
+                  "type": "function",
+                  "description": "Applies a normalized source document with path, content, language, dirty/readonly state, save action, and syntax theme."
+                },
+                {
+                  "name": "setSaveAction",
+                  "type": "function",
+                  "description": "Sets or clears the host-owned save action descriptor."
+                },
+                {
+                  "name": "setSyntaxTheme",
+                  "type": "function",
+                  "description": "Applies a syntax theme token map to the editor surface."
+                },
+                {
+                  "name": "setSyntaxTokens",
+                  "type": "function",
+                  "description": "Applies shorthand syntax tokens to the editor surface."
+                },
+                {
+                  "name": "triggerSave",
+                  "type": "function",
+                  "description": "Emits the configured source-editor-save intent without owning persistence."
                 }
               ],
               "events": [
@@ -6792,6 +7073,40 @@
                   "name": "source-editor-input",
                   "description": "Emits after text changes.",
                   "detail": [
+                    {
+                      "name": "value",
+                      "type": "string",
+                      "required": true
+                    },
+                    {
+                      "name": "dirty",
+                      "type": "boolean",
+                      "required": true
+                    },
+                    {
+                      "name": "language",
+                      "type": "string",
+                      "required": true
+                    },
+                    {
+                      "name": "path",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "name": "source-editor-save",
+                  "description": "Requests the host to save/apply the current editor content.",
+                  "detail": [
+                    {
+                      "name": "action",
+                      "type": "object",
+                      "required": true
+                    },
+                    {
+                      "name": "path",
+                      "type": "string"
+                    },
                     {
                       "name": "value",
                       "type": "string",
@@ -6820,7 +7135,10 @@
                 "--sn-editor-text",
                 "--sn-editor-border",
                 "--sn-editor-radius",
-                "--sn-editor-font"
+                "--sn-editor-font",
+                "--sn-syntax-keyword",
+                "--sn-syntax-string",
+                "--sn-syntax-comment"
               ],
               "status": "draft",
               "schemaVersion": "component-descriptor-v2",
@@ -6878,9 +7196,9 @@
               }
             },
             "agent": {
-              "componentDescription": "Generic source text editor with content, dirty state, readonly, disabled, focus, and tab handling. Use this data and content presentation surface when composing display UI. Capabilities: source-editing, dirty-state, keyboard-tab-indent. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: source_editor_content.",
+              "componentDescription": "Generic source text editor with content, dirty state, readonly, disabled, save action intents, syntax theme tokens, focus, and tab handling. Use this data and content presentation surface when composing display UI. Capabilities: source-editing, dirty-state, save-action-intent, syntax-theme-tokens, keyboard-tab-indent. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: source_editor_content.",
               "semanticRole": "data and content presentation surface",
-              "usage": "Render or compose <source-editor> when the host needs generic source text editor with content, dirty state, readonly, disabled, focus, and tab handling.",
+              "usage": "Render or compose <source-editor> when the host needs generic source text editor with content, dirty state, readonly, disabled, save action intents, syntax theme tokens, focus, and tab handling.",
               "dataOwnership": "host-owned props and attributes; component owns presentation state",
               "webmcp": {
                 "mode": "explicit-descriptor",
@@ -6899,9 +7217,9 @@
             }
           },
           "agent": {
-            "componentDescription": "Generic source text editor with content, dirty state, readonly, disabled, focus, and tab handling. Use this data and content presentation surface when composing display UI. Capabilities: source-editing, dirty-state, keyboard-tab-indent. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: source_editor_content.",
+            "componentDescription": "Generic source text editor with content, dirty state, readonly, disabled, save action intents, syntax theme tokens, focus, and tab handling. Use this data and content presentation surface when composing display UI. Capabilities: source-editing, dirty-state, save-action-intent, syntax-theme-tokens, keyboard-tab-indent. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: source_editor_content.",
             "semanticRole": "data and content presentation surface",
-            "usage": "Render or compose <source-editor> when the host needs generic source text editor with content, dirty state, readonly, disabled, focus, and tab handling.",
+            "usage": "Render or compose <source-editor> when the host needs generic source text editor with content, dirty state, readonly, disabled, save action intents, syntax theme tokens, focus, and tab handling.",
             "dataOwnership": "host-owned props and attributes; component owns presentation state",
             "webmcp": {
               "mode": "explicit-descriptor",

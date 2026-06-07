@@ -3,6 +3,11 @@ import "../CodeBlock/CodeBlock.js";
 import template from "./SourceViewer.tpl.js";
 import css from "./SourceViewer.css.js";
 import { translate } from "../../locale/index.js";
+import {
+  applySourceSyntaxTheme,
+  normalizeSourceAction,
+  normalizeSourceSyntaxTheme,
+} from "../source-contract.js";
 
 const EXT_LANG = {
   ".md": "md",
@@ -199,7 +204,12 @@ export class SourceViewer extends Symbiote {
     showGraphTitle: translate('sourceViewer.showInGraph'),
     toggleModeTitle: translate('sourceViewer.toggleViewMode'),
     graphLabel: translate('sourceViewer.graphLabel'),
+    saveLabel: "Save",
+    saveIcon: "save",
+    saveTitle: "Save source",
+    showSaveAction: false,
     toggleIcon: "compress",
+    onSourceAction: () => this.triggerSourceAction(),
     onShowGraph: () => emit(this, "source-viewer-show-graph", { path: this._currentPath }),
     onToggleMode: () => this.toggleMode(),
   };
@@ -212,6 +222,8 @@ export class SourceViewer extends Symbiote {
   _loadingTransform = false;
   _isReadable = true;
   _transformSource = null;
+  _saveAction = null;
+  _syntaxTheme = null;
 
   renderCallback() {
     this.sub("hasFile", (value) => {
@@ -246,6 +258,8 @@ export class SourceViewer extends Symbiote {
     this._currentPath = null;
     this._fileData = null;
     this._transformSource = null;
+    this.setSaveAction(null);
+    this.setSyntaxTheme(null);
     this.getCodeBlock()?.clearDiagnostics?.();
   }
 
@@ -287,6 +301,8 @@ export class SourceViewer extends Symbiote {
     this._transformSource = typeof options.transform === "function" ? options.transform : null;
     this._fileData = { raw, lang };
     this.$.statsText = this._baseStatsText;
+    this.setSaveAction(options.saveAction || options.save || null);
+    this.setSyntaxTheme(options.syntaxTheme || { tokens: options.syntaxTokens });
 
     const codeBlock = this.getCodeBlock();
     if (lang === "md" || lang === "markdown") {
@@ -294,20 +310,53 @@ export class SourceViewer extends Symbiote {
       this.$.modeLabel = "rendered";
       this.$.showToggle = true;
       if (codeBlock) {
-        codeBlock.$.lang = "md";
-        codeBlock.setBasePath(path);
-        codeBlock.$.code = raw;
+        codeBlock.setContent(raw, "md", {
+          basePath: path,
+          syntaxTheme: this._syntaxTheme,
+        });
       }
     } else {
       this.$.viewMode = "source";
       this.$.modeLabel = "source";
       this.$.showToggle = Boolean(this._transformSource);
       if (codeBlock) {
-        codeBlock.$.lang = lang;
-        codeBlock.$.code = raw;
+        codeBlock.setContent(raw, lang, { syntaxTheme: this._syntaxTheme });
       }
     }
     this.$.hasFile = true;
+  }
+
+  setSaveAction(action) {
+    this._saveAction = normalizeSourceAction(action);
+    this.$.showSaveAction = Boolean(this._saveAction);
+    this.$.saveLabel = this._saveAction?.label || "Save";
+    this.$.saveIcon = this._saveAction?.icon || "save";
+    this.$.saveTitle = this._saveAction?.label || "Save source";
+    this.toggleAttribute("has-save-action", Boolean(this._saveAction));
+    return this._saveAction;
+  }
+
+  setSyntaxTheme(theme = null) {
+    this._syntaxTheme = normalizeSourceSyntaxTheme(theme);
+    applySourceSyntaxTheme(this, this._syntaxTheme);
+    this.getCodeBlock()?.setSyntaxTheme?.(this._syntaxTheme);
+    return this._syntaxTheme;
+  }
+
+  setSyntaxTokens(tokens = {}) {
+    return this.setSyntaxTheme({ tokens });
+  }
+
+  triggerSourceAction(extra = {}) {
+    if (!this._saveAction || this._saveAction.disabled) return false;
+    emit(this, "source-viewer-action", {
+      action: this._saveAction,
+      path: this._currentPath,
+      language: this._fileData?.lang || getSourceLanguage(this._currentPath),
+      content: this._fileData?.raw || "",
+      ...extra,
+    });
+    return true;
   }
 
   async toggleMode() {
@@ -331,31 +380,31 @@ export class SourceViewer extends Symbiote {
 
     if (lang === "md" || lang === "markdown") {
       if (this.$.viewMode === "rendered") {
-        codeBlock.$.lang = "md";
-        codeBlock.setBasePath(this._currentPath);
+        codeBlock.setContent(this._fileData.raw, "md", {
+          basePath: this._currentPath,
+          syntaxTheme: this._syntaxTheme,
+        });
       } else {
-        codeBlock.$.lang = "plain";
+        codeBlock.setContent(this._fileData.raw, "plain", { syntaxTheme: this._syntaxTheme });
       }
-      codeBlock.$.code = this._fileData.raw;
       return;
     }
 
-    codeBlock.$.lang = lang;
     if (this.$.viewMode !== "transformed") {
       this.$.statsText = this._baseStatsText;
-      codeBlock.$.code = this._fileData.raw;
+      codeBlock.setContent(this._fileData.raw, lang, { syntaxTheme: this._syntaxTheme });
       return;
     }
 
     if (this._transformCache) {
-      codeBlock.$.code = this._transformCache;
+      codeBlock.setContent(this._transformCache, lang, { syntaxTheme: this._syntaxTheme });
       if (this._transformStatsText) this.$.statsText = this._transformStatsText;
       return;
     }
     if (!this._transformSource || this._loadingTransform) return;
 
     this._loadingTransform = true;
-    codeBlock.$.code = this._isReadable ? "// Compressing..." : "// Expanding...";
+    codeBlock.setContent(this._isReadable ? "// Compressing..." : "// Expanding...", lang, { syntaxTheme: this._syntaxTheme });
     try {
       const result = await this._transformSource({
         path: this._currentPath,
@@ -366,9 +415,9 @@ export class SourceViewer extends Symbiote {
       this._transformCache = result?.code || (this._isReadable ? "// Compression unavailable" : "// Expand unavailable");
       this._transformStatsText = result?.statsText || "";
       if (this._transformStatsText) this.$.statsText = this._transformStatsText;
-      codeBlock.$.code = this._transformCache;
+      codeBlock.setContent(this._transformCache, lang, { syntaxTheme: this._syntaxTheme });
     } catch {
-      codeBlock.$.code = this._isReadable ? "// Compression failed" : "// Expand failed";
+      codeBlock.setContent(this._isReadable ? "// Compression failed" : "// Expand failed", lang, { syntaxTheme: this._syntaxTheme });
     } finally {
       this._loadingTransform = false;
     }
@@ -397,6 +446,8 @@ export class SourceViewer extends Symbiote {
     this._loadingTransform = false;
     this._currentPath = path;
     this._fileData = null;
+    this.setSaveAction(null);
+    this.setSyntaxTheme(null);
     this.getCodeBlock()?.clearDiagnostics?.();
   }
 
