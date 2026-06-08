@@ -188,6 +188,7 @@ export const CASCADE_THEME_TOKEN_TARGETS = Object.freeze({
     '--sn-button-danger-hover-color',
     '--sn-scrollbar-thumb',
     '--sn-scrollbar-thumb-hover',
+    '--sn-grid-dot',
     '--sn-cell-bg',
     '--sn-cell-dot',
     '--sn-cell-base-alpha',
@@ -454,6 +455,7 @@ export const CASCADE_THEME_TOKEN_TARGETS = Object.freeze({
     '--sn-code-gutter-width',
     '--sn-code-markdown-padding',
     '--sn-code-table-cell-padding',
+    '--sn-grid-size',
     '--sn-cell-size',
     '--sn-cell-min-radius',
     '--sn-cell-max-radius',
@@ -739,6 +741,9 @@ export function createCascadeTheme(options = {}) {
   let shapePortHintStrokeWidth = svgStrokeToken(0.5, outlineStrength);
   let connectionWidth = (1.5 + outlineStrength * 0.8).toFixed(2);
   let connectionHoverWidth = (2.4 + outlineStrength * 1.2).toFixed(2);
+  let gridDotAlpha = dark
+    ? 0.018 + patternScale * 0.070
+    : 0.026 + patternScale * 0.078;
   let cellBaseAlpha = dark
     ? 0.012 + patternScale * 0.035
     : 0.010 + patternScale * 0.025;
@@ -793,6 +798,8 @@ export function createCascadeTheme(options = {}) {
     '--sn-node-bg': 'var(--sn-panel-bg)',
     '--sn-surface': 'var(--sn-node-bg)',
     '--sn-bg-overlay': dark ? 'hsl(0 0% 0% / 0.45)' : 'hsl(0 0% 100% / 0.55)',
+    '--sn-grid-dot': `hsl(0 0% ${text.toFixed(1)}% / ${gridDotAlpha.toFixed(3)})`,
+    '--sn-grid-size': '20px',
     '--sn-cell-bg': 'var(--sn-bg)',
     '--sn-cell-dot': `hsl(0 0% ${dim.toFixed(1)}%)`,
     '--sn-cell-base-alpha': cellBaseAlpha.toFixed(3),

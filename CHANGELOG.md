@@ -4,6 +4,12 @@ All notable changes to `symbiote-ui` will be documented in this file.
 
 ## Unreleased
 
+## [0.3.0-alpha.16] - 2026-06-08
+
+### Fixed
+
+- Added cascade theme `--sn-grid-dot` and `--sn-grid-size` output so `node-canvas` background dots inherit from the provider theme and respond to the pattern control.
+
 ## [0.3.0-alpha.12] - 2026-06-06
 
 ### Added

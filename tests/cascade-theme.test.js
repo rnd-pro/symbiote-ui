@@ -457,6 +457,8 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   const noOutlineTheme = themeModule.createCascadeTheme({ outline: 0 });
   const fullOutlineTheme = themeModule.createCascadeTheme({ outline: 100 });
   const balancedHeadingTheme = themeModule.createCascadeTheme({ type: 100, heading: 120 });
+  const noPatternTheme = themeModule.createCascadeTheme({ pattern: 0 });
+  const fullPatternTheme = themeModule.createCascadeTheme({ pattern: 100 });
 
   assert.equal(theme.name, 'cascade-theme');
   assert.equal(theme.state.mode, 'dark');
@@ -498,6 +500,9 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.equal(theme.tokens['--sn-field-control-bg'], 'var(--sn-bg)');
   assert.equal(theme.tokens['--sn-chat-user-message-bg'], 'color-mix(in oklab, var(--sn-panel-bg) 88%, var(--sn-node-selected) 12%)');
   assert.equal(theme.tokens['--sn-composer-bg'], 'color-mix(in oklab, var(--sn-panel-bg) 90%, var(--sn-text) 4%)');
+  assert.equal(theme.tokens['--sn-grid-dot'], 'hsl(0 0% 94.0% / 0.060)');
+  assert.equal(noPatternTheme.tokens['--sn-grid-dot'], 'hsl(0 0% 94.0% / 0.018)');
+  assert.equal(fullPatternTheme.tokens['--sn-grid-dot'], 'hsl(0 0% 94.0% / 0.088)');
   assert.equal(theme.tokens['--sn-cell-dot'], 'hsl(0 0% 60.0%)');
   assert.equal(theme.tokens['--sn-cell-base-alpha'], '0.033');
   assert.equal(theme.tokens['--sn-cell-alpha-span'], '0.133');
@@ -537,6 +542,7 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.equal(theme.tokens['--sn-composer-input-min-inline-size'], 'calc(160px * var(--sn-theme-density))');
   assert.equal(theme.tokens['--sn-code-font-size'], 'calc(12px * var(--sn-theme-type-scale))');
   assert.equal(theme.tokens['--sn-composer-send-size'], 'calc(32px * var(--sn-theme-density))');
+  assert.equal(theme.tokens['--sn-grid-size'], '20px');
   assert.equal(theme.tokens['--sn-cell-size'], 'calc(14px * var(--sn-theme-density))');
   assert.equal(theme.tokens['--sn-tabs-item-font-size'], 'calc(12px * var(--sn-theme-type-scale))');
   assert.equal(theme.tokens['--sn-tabs-icon-size'], 'calc(15px * var(--sn-theme-type-scale))');

@@ -77,6 +77,8 @@ export const CASCADE_THEME_VISUAL_SMOKE_TOKEN_GROUPS = Object.freeze({
     '--sn-syntax-keyword',
   ]),
   animatedCanvas: Object.freeze([
+    '--sn-grid-dot',
+    '--sn-grid-size',
     '--sn-cell-bg',
     '--sn-cell-dot',
     '--sn-theme-pattern-brightness',

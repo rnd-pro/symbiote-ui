@@ -347,7 +347,7 @@ test('discover exposes the standalone package contract', async () => {
   assert.equal(cascadeDescriptor.webmcp?.name, 'symbiote-ui.createCascadeTheme');
   assert.ok(cascadeDescriptor.exports.includes('getReadableTextForHsl'));
   let cascadeControlNames = data.manifest.themeControls['cascade-theme'].map((control) => control.name);
-  for (const name of ['mode', 'brightness', 'contrast', 'chroma', 'hue', 'outline', 'type', 'heading', 'density']) {
+  for (const name of ['mode', 'brightness', 'contrast', 'chroma', 'hue', 'pattern', 'outline', 'type', 'heading', 'density']) {
     assert.ok(cascadeControlNames.includes(name), `expected cascade theme control ${name}`);
   }
 
