@@ -347,6 +347,92 @@ export class CanvasViewport {
     this.#syncPhantomToRenderer();
   }
 
+  #getVisibleViewportSize() {
+    let canvasRect = this.#canvas.ref.canvasContainer.getBoundingClientRect();
+    let visibleWidth = canvasRect.width;
+    let inspector = this.#canvas.ref.inspector || this.#canvas.querySelector('inspector-panel');
+    if (inspector && !inspector.hasAttribute('hidden') && inspector.offsetWidth > 20) {
+      visibleWidth -= inspector.offsetWidth;
+    }
+    return {
+      width: visibleWidth,
+      height: canvasRect.height,
+    };
+  }
+
+  #getNodeBounds(nodeId) {
+    let el = this.#nodeViews.get(nodeId);
+    if (el?._position) {
+      return {
+        id: nodeId,
+        x: el._position.x,
+        y: el._position.y,
+        w: el._cachedW || el.offsetWidth || 150,
+        h: el._cachedH || el.offsetHeight || 40,
+      };
+    }
+
+    let pd = this.#phantomData.get(nodeId);
+    if (!pd) return null;
+    return {
+      id: nodeId,
+      x: pd.x,
+      y: pd.y,
+      w: pd.w || 150,
+      h: pd.h || 40,
+    };
+  }
+
+  #getBoundsForNodeIds(nodeIds) {
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    let ids = [];
+
+    for (let nodeId of nodeIds) {
+      let id = String(nodeId || '');
+      if (!id || ids.includes(id)) continue;
+      let bounds = this.#getNodeBounds(id);
+      if (!bounds) continue;
+      ids.push(id);
+      minX = Math.min(minX, bounds.x);
+      minY = Math.min(minY, bounds.y);
+      maxX = Math.max(maxX, bounds.x + bounds.w);
+      maxY = Math.max(maxY, bounds.y + bounds.h);
+    }
+
+    if (minX === Infinity) return null;
+    return { ids, minX, minY, maxX, maxY };
+  }
+
+  #fitBounds(bounds, {
+    padding = 80,
+    minZoom = 0.001,
+    maxZoom = 1.5,
+  } = {}) {
+    if (!bounds) return false;
+    let viewport = this.#getVisibleViewportSize();
+    let graphW = Math.max(1, bounds.maxX - bounds.minX);
+    let graphH = Math.max(1, bounds.maxY - bounds.minY);
+    let safePadding = Math.max(0, Number(padding) || 0);
+    let availableW = Math.max(1, viewport.width - safePadding * 2);
+    let availableH = Math.max(1, viewport.height - safePadding * 2);
+    let scaleX = availableW / graphW;
+    let scaleY = availableH / graphH;
+    let min = Math.max(0.001, Number(minZoom) || 0.001);
+    let max = Math.max(min, Number(maxZoom) || 1.5);
+    let scale = Math.max(min, Math.min(scaleX, scaleY, max));
+    let centerX = (bounds.minX + bounds.maxX) / 2;
+    let centerY = (bounds.minY + bounds.maxY) / 2;
+
+    this.#canvas.$.zoom = scale;
+    this.#canvas.$.panX = viewport.width / 2 - centerX * scale;
+    this.#canvas.$.panY = viewport.height / 2 - centerY * scale;
+    this.updateTransform();
+    return true;
+  }
+
   /**
    * Fit all nodes (phantom and DOM) within the viewport
    */
@@ -381,35 +467,60 @@ export class CanvasViewport {
 
     let graphW = maxX - minX;
     let graphH = maxY - minY;
-    let canvasRect = this.#canvas.ref.canvasContainer.getBoundingClientRect();
-
-    let visibleWidth = canvasRect.width;
-    let inspector = this.#canvas.ref.inspector || this.#canvas.querySelector('inspector-panel');
-    if (inspector && !inspector.hasAttribute('hidden')) {
-      visibleWidth -= inspector.offsetWidth || 280;
-    }
-
-    let scaleX = (visibleWidth - 80) / graphW;
-    let scaleY = (canvasRect.height - 80) / graphH;
+    let viewport = this.#getVisibleViewportSize();
+    let scaleX = (viewport.width - 80) / graphW;
+    let scaleY = (viewport.height - 80) / graphH;
     let scale = Math.max(0.001, Math.min(scaleX, scaleY, 1.5));
 
     let centerX = (minX + maxX) / 2;
     let centerY = (minY + maxY) / 2;
 
     this.#canvas.$.zoom = scale;
-    this.#canvas.$.panX = visibleWidth / 2 - centerX * scale;
-    this.#canvas.$.panY = canvasRect.height / 2 - centerY * scale;
+    this.#canvas.$.panX = viewport.width / 2 - centerX * scale;
+    this.#canvas.$.panY = viewport.height / 2 - centerY * scale;
     this.updateTransform();
   }
 
   /**
+   * Fit multiple nodes into the visible viewport.
+   * @param {string[]} nodeIds
+   * @param {Object} [options]
+   * @param {number} [options.padding=80]
+   * @param {number} [options.minZoom=0.001]
+   * @param {number} [options.maxZoom=1.5]
+   * @param {string|boolean} [options.select=false]
+   * @returns {boolean}
+   */
+  flyToNodes(nodeIds, options = {}) {
+    let ids = Array.isArray(nodeIds) ? nodeIds : [nodeIds];
+    let bounds = this.#getBoundsForNodeIds(ids);
+    if (!bounds) return false;
+
+    let result = this.#fitBounds(bounds, options);
+    let select = options.select;
+    if (select === true) select = bounds.ids[0];
+    if (typeof select === 'string' && select) {
+      this.#canvas.selectNode(select);
+    }
+    return result;
+  }
+
+  /**
    * Fly camera to a specific node, zooming in
-   * @param {string} nodeId
+   * @param {string|string[]} nodeId
    * @param {Object} [options]
    * @param {number} [options.zoom=0.8]
    * @returns {boolean} True if successful
    */
-  flyToNode(nodeId, { zoom = 0.8 } = {}) {
+  flyToNode(nodeId, options = {}) {
+    if (Array.isArray(nodeId)) {
+      return this.flyToNodes(nodeId, {
+        ...options,
+        maxZoom: options.maxZoom ?? options.zoom ?? 1.5,
+      });
+    }
+
+    let { zoom = 0.8 } = options;
     let el = this.#nodeViews.get(nodeId);
 
     if (!el && this.#phantomData.has(nodeId)) {

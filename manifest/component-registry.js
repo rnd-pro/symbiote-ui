@@ -626,6 +626,33 @@ const WEBMCP_TOOLS = {
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, runtimeMethod: 'setFlowLayout' },
       exposedTo: ['agent', 'assistant'],
     },
+    {
+      name: 'node_canvas_focus_nodes',
+      description: 'Focus one or more node ids by fitting their bounding box into the visible node canvas viewport.',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          nodeIds: {
+            type: 'array',
+            minItems: 1,
+            items: { type: 'string' },
+          },
+          padding: { type: 'number', minimum: 0 },
+          minZoom: { type: 'number', minimum: 0.001 },
+          maxZoom: { type: 'number', minimum: 0.001 },
+          select: {
+            anyOf: [
+              { type: 'string' },
+              { type: 'boolean' },
+            ],
+          },
+        },
+        required: ['nodeIds'],
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, runtimeMethod: 'focusNodes' },
+      exposedTo: ['agent', 'assistant'],
+    },
   ],
   'canvas-graph': [
     {
@@ -1383,7 +1410,7 @@ export let COMPONENTS = [
       status: 'draft',
       schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/graph-model-v1.json',
-      capabilities: ['node-editor-canvas', 'connections', 'frames', 'subgraphs', 'viewport', 'selection'],
+      capabilities: ['node-editor-canvas', 'connections', 'frames', 'subgraphs', 'viewport', 'selection', 'multi-node-focus'],
       attributes: [
         { name: 'connection-engine', type: 'string', description: 'Connection renderer engine selection.' },
       ],
@@ -1405,6 +1432,9 @@ export let COMPONENTS = [
         { name: 'setPathStyle', type: 'function', description: 'Sets connection path rendering style.' },
         { name: 'setFlowLayout', type: 'function', description: 'Positions nodes in vertical or horizontal document flow and can enable native canvas scrolling.' },
         { name: 'clearFlowLayout', type: 'function', description: 'Clears flow layout sizing and scroll mode.' },
+        { name: 'flyToNode', type: 'function', description: 'Focuses one node by id, or fits a supplied node id array into view.' },
+        { name: 'flyToNodes', type: 'function', description: 'Fits a supplied set of node ids into the visible viewport.' },
+        { name: 'focusNodes', type: 'function', description: 'Agent-facing alias for focusing one or more nodes in the viewport.' },
         { name: 'setNodePosition', type: 'function', description: 'Positions one node in canvas coordinates.' },
         { name: 'getPositions', type: 'function', description: 'Returns node positions.' },
       ],

@@ -845,6 +845,111 @@ async function evaluateFlowScrollDragSmoke(page) {
   return result.result.value;
 }
 
+async function evaluateNodeCanvasMultiFocusSmoke(page) {
+  const expression = String.raw`
+    (async () => {
+      await customElements.whenDefined('node-canvas');
+      await customElements.whenDefined('graph-node');
+      const [{ NodeEditor, Node, Connection, Input, Output, Socket }] = await Promise.all([
+        import('/core/index.js')
+      ]);
+
+      const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+      const settle = async () => {
+        for (let index = 0; index < 8; index += 1) await frame();
+      };
+
+      const canvas = document.createElement('node-canvas');
+      canvas.style.cssText = [
+        'display:block',
+        'position:fixed',
+        'left:20px',
+        'top:20px',
+        'width:640px',
+        'height:360px',
+        'z-index:1'
+      ].join(';');
+      document.body.append(canvas);
+
+      const signal = new Socket('signal');
+      const editor = new NodeEditor();
+      const nodes = [
+        new Node('Hero', { id: 'hero', type: 'profile', icon: 'person' }),
+        new Node('Biography', { id: 'bio', type: 'bio', icon: 'article' }),
+        new Node('Agent Portal', { id: 'agent-portal', type: 'project', icon: 'work' }),
+        new Node('Far Archive', { id: 'far-archive', type: 'archive', icon: 'folder' })
+      ];
+      for (const node of nodes) {
+        node.addInput('in', new Input(signal, 'in'));
+        node.addOutput('out', new Output(signal, 'out'));
+        editor.addNode(node);
+      }
+      editor.addConnection(new Connection(nodes[0], 'out', nodes[1], 'in'));
+      editor.addConnection(new Connection(nodes[0], 'out', nodes[2], 'in'));
+      editor.addConnection(new Connection(nodes[2], 'out', nodes[3], 'in'));
+
+      canvas.setEditor(editor);
+      canvas.setPanels(false);
+      canvas.setReadonly(true);
+      canvas.setNodePosition('hero', 0, 0);
+      canvas.setNodePosition('bio', 380, 0);
+      canvas.setNodePosition('agent-portal', 0, 260);
+      canvas.setNodePosition('far-archive', 1800, 900);
+      await settle();
+
+      const ok = canvas.flyToNodes(['hero', 'bio', 'agent-portal'], {
+        padding: 36,
+        maxZoom: 1,
+        select: 'hero'
+      });
+      await settle();
+
+      const canvasRect = canvas.querySelector('.canvas-container').getBoundingClientRect();
+      const readNode = (id) => {
+        const el = canvas.querySelector('graph-node[node-id="' + id + '"]');
+        const rect = el?.getBoundingClientRect();
+        return rect ? {
+          id,
+          left: rect.left - canvasRect.left,
+          top: rect.top - canvasRect.top,
+          right: rect.right - canvasRect.left,
+          bottom: rect.bottom - canvasRect.top,
+          selected: el.hasAttribute('data-selected')
+        } : null;
+      };
+      const focused = ['hero', 'bio', 'agent-portal'].map(readNode);
+      const far = readNode('far-archive');
+      const allFocusedVisible = focused.every((rect) => rect
+        && rect.left >= -2
+        && rect.top >= -2
+        && rect.right <= canvasRect.width + 2
+        && rect.bottom <= canvasRect.height + 2);
+
+      canvas.remove();
+      return {
+        ok,
+        zoom: canvas.$.zoom,
+        panX: canvas.$.panX,
+        panY: canvas.$.panY,
+        canvas: { width: canvasRect.width, height: canvasRect.height },
+        focused,
+        far,
+        allFocusedVisible
+      };
+    })()
+  `;
+
+  const result = await withTimeout(page.send('Runtime.evaluate', {
+    expression,
+    awaitPromise: true,
+    returnByValue: true,
+  }), 15000, 'node-canvas multi-node focus Runtime.evaluate');
+  if (result.exceptionDetails) {
+    throw new Error(result.exceptionDetails.text || 'Node-canvas multi-node focus evaluation failed');
+  }
+  return result.result.value;
+}
+
 async function evaluateComposerSmoke(page, width = 0) {
   const forcedWidth = Number.isFinite(width) && width > 0 ? width : 0;
   const expression = String.raw`
@@ -1868,6 +1973,38 @@ test('node-canvas flow-scroll drag keeps repeated pan gestures continuous', { ti
       Math.abs(smoke.afterSecond.contentTop - smoke.afterFirst.contentTop) <= 16,
       JSON.stringify(smoke, null, 2)
     );
+  } finally {
+    page?.close();
+    await closeChromeSession(chromeSession);
+    await server.close();
+  }
+});
+
+// Browser smoke is justified here: multi-node focus is viewport geometry that
+// depends on rendered graph-node dimensions and canvas transform behavior.
+test('node-canvas focuses multiple nodes by fitting them into the viewport', { timeout: 45000 }, async (t) => {
+  const chromePath = findChrome();
+  if (!chromePath || typeof WebSocket !== 'function') {
+    t.skip('Chrome or WebSocket is not available for multi-node focus smoke');
+    return;
+  }
+
+  const server = await createStaticServer();
+  let chromeSession;
+  let page;
+  try {
+    chromeSession = await launchChromeSession(chromePath, 'multi-node focus smoke');
+    page = await withTimeout(
+      openPage(chromeSession.endpoint, `${server.url}/demo/cascade-theme-lab.html?v=multi-node-focus-smoke`),
+      22000,
+      'multi-node focus page open'
+    );
+    const smoke = await evaluateNodeCanvasMultiFocusSmoke(page);
+
+    assert.equal(smoke.ok, true, JSON.stringify(smoke, null, 2));
+    assert.equal(smoke.allFocusedVisible, true, JSON.stringify(smoke, null, 2));
+    assert.equal(smoke.focused.find((node) => node.id === 'hero')?.selected, true);
+    assert.ok(smoke.zoom > 0 && smoke.zoom <= 1, JSON.stringify(smoke, null, 2));
   } finally {
     page?.close();
     await closeChromeSession(chromeSession);

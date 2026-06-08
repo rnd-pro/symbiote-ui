@@ -702,13 +702,39 @@ export class NodeCanvas extends Symbiote {
   /**
    * Focus viewport on a specific node by ID.
    * Deducts inspector panel width from visibility calculation.
-   * @param {string} nodeId - Target node ID
+   * @param {string|string[]} nodeId - Target node ID or node IDs to fit together
    * @param {Object} [opts]
    * @param {number} [opts.zoom=0.8] - Target zoom level
    * @returns {boolean}
    */
   flyToNode(nodeId, opts) {
     return this._viewport?.flyToNode(nodeId, opts) || false;
+  }
+
+  /**
+   * Focus viewport on multiple nodes by fitting their bounding box into view.
+   * @param {string[]} nodeIds - Target node IDs
+   * @param {Object} [opts]
+   * @param {number} [opts.padding=80] - Screen padding around the focused group
+   * @param {number} [opts.minZoom=0.001] - Minimum zoom while fitting
+   * @param {number} [opts.maxZoom=1.5] - Maximum zoom while fitting
+   * @param {string|boolean} [opts.select=false] - Node id to select, or true to select first
+   * @returns {boolean}
+   */
+  flyToNodes(nodeIds, opts) {
+    return this._viewport?.flyToNodes(nodeIds, opts) || false;
+  }
+
+  /**
+   * Agent-facing alias for focusing one or more nodes in the viewport.
+   * @param {string|string[]} nodeIds
+   * @param {Object} [opts]
+   * @returns {boolean}
+   */
+  focusNodes(nodeIds, opts) {
+    return Array.isArray(nodeIds)
+      ? this.flyToNodes(nodeIds, opts)
+      : this.flyToNode(nodeIds, opts);
   }
 
   /**

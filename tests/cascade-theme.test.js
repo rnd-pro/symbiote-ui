@@ -845,7 +845,7 @@ test('static custom elements catalog mirrors agent-facing WebMCP metadata', asyn
   const expectedTools = new Map([
     ['chat-workspace', ['chat_workspace_set_state', 'chat_workspace_background', 'chat_workspace_select_chat', 'chat_workspace_send']],
     ['chat-sidebar-shell', ['chat_sidebar_set_chats', 'chat_sidebar_select', 'chat_sidebar_set_collapsed']],
-    ['node-canvas', ['node_canvas_set_editor_model', 'node_canvas_set_path_style', 'node_canvas_set_flow_layout']],
+    ['node-canvas', ['node_canvas_set_editor_model', 'node_canvas_set_path_style', 'node_canvas_set_flow_layout', 'node_canvas_focus_nodes']],
     ['canvas-graph', ['canvas_graph_set_model', 'canvas_graph_focus_node', 'canvas_graph_set_path']],
     ['graph-explorer-shell', ['graph_explorer_shell_set_view', 'graph_explorer_shell_set_stats', 'graph_explorer_shell_request_action']],
   ]);

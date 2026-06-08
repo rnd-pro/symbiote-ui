@@ -305,6 +305,7 @@ test('discover exposes the standalone package contract', async () => {
   assert.ok(nodeCanvasAgentItem.webmcp.toolNames.includes('node_canvas_set_editor_model'));
   assert.ok(nodeCanvasAgentItem.webmcp.toolNames.includes('node_canvas_set_path_style'));
   assert.ok(nodeCanvasAgentItem.webmcp.toolNames.includes('node_canvas_set_flow_layout'));
+  assert.ok(nodeCanvasAgentItem.webmcp.toolNames.includes('node_canvas_focus_nodes'));
   assert.ok(nodeCanvasAgentItem.componentDescription.includes('node-editor-canvas'));
   assert.ok(canvasGraphAgentItem.webmcp.toolNames.includes('canvas_graph_set_model'));
   assert.ok(canvasGraphAgentItem.webmcp.toolNames.includes('canvas_graph_focus_node'));
@@ -487,6 +488,11 @@ test('node-canvas exposes the agent-facing serializable model adapter promised b
   assert.ok(tool.inputSchema.properties.nodes);
   assert.ok(tool.inputSchema.properties.connections);
   assert.ok(tool.inputSchema.properties.positions);
+  let focusTool = component.contract.webmcp.tools.find((item) => item.name === 'node_canvas_focus_nodes');
+  assert.equal(focusTool.annotations.runtimeMethod, 'focusNodes');
+  assert.ok(component.contract.methods.some((method) => method.name === 'focusNodes'));
+  assert.ok(component.contract.methods.some((method) => method.name === 'flyToNodes'));
+  assert.ok(focusTool.inputSchema.properties.nodeIds);
 });
 
 test('node shape registry exposes disc as a supported SVG node preset', async () => {

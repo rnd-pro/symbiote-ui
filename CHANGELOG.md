@@ -4,6 +4,13 @@ All notable changes to `symbiote-ui` will be documented in this file.
 
 ## Unreleased
 
+## [0.3.0-alpha.18] - 2026-06-08
+
+### Added
+
+- Added `node-canvas` multi-node focus via `flyToNodes()` and `focusNodes()`,
+  including WebMCP/discovery metadata for `node_canvas_focus_nodes`.
+
 ## [0.3.0-alpha.17] - 2026-06-08
 
 ### Fixed
