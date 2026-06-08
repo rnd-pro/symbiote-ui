@@ -29,3 +29,7 @@ UI transactions with automatic rollback.
 ## Component Catalog
 
 - [custom-elements.json](custom-elements.json): Full Web Component catalog with properties, attributes, events, and theme aliases.
+- Graph explorer dual mode: register `graph-explorer-shell`, `node-canvas`,
+  `canvas-graph`, and `graph-node`; use `createGraphViewModeController`
+  from `symbiote-ui/ui` or `symbiote-ui/canvas` to switch structured/flat
+  renderer visibility, fit/focus, path style, and host-owned flat graph models.

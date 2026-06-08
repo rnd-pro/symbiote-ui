@@ -2498,15 +2498,27 @@
                       "type": "object",
                       "additionalProperties": false,
                       "properties": {
-                        "graph": {
+                        "version": {
+                          "type": "string"
+                        },
+                        "nodes": {
+                          "type": "array"
+                        },
+                        "edges": {
+                          "type": "array"
+                        },
+                        "groups": {
+                          "type": "array"
+                        },
+                        "layout": {
                           "type": "object"
                         },
-                        "renderMode": {
-                          "type": "string"
+                        "metadata": {
+                          "type": "object"
                         }
                       },
                       "required": [
-                        "graph"
+                        "nodes"
                       ]
                     },
                     "annotations": {
@@ -2639,8 +2651,8 @@
           "customElement": true,
           "name": "GraphExplorerShell",
           "tagName": "graph-explorer-shell",
-          "description": "Generic graph explorer shell with toolbar, canvas, overlay, legend, and stats slots.",
-          "componentDescription": "Generic graph explorer shell with toolbar, canvas, overlay, legend, and stats slots. Use this interactive visual graph surface when composing canvas UI. Capabilities: graph-toolbar, graph-slots, canvas-host, overlay-host, stats-host. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: graph_explorer_shell_set_view, graph_explorer_shell_set_stats, graph_explorer_shell_request_action.",
+          "description": "Generic graph explorer shell with toolbar, canvas, overlay, legend, stats slots, and a dual node-canvas/canvas-graph view-mode controller helper.",
+          "componentDescription": "Generic graph explorer shell with toolbar, canvas, overlay, legend, stats slots, and a dual node-canvas/canvas-graph view-mode controller helper. Use this interactive visual graph surface when composing canvas UI. Capabilities: graph-toolbar, graph-slots, canvas-host, overlay-host, stats-host, dual-view-mode-controller. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: graph_explorer_shell_set_view, graph_explorer_shell_set_stats, graph_explorer_shell_request_action.",
           "members": [
             {
               "name": "title",
@@ -2651,7 +2663,7 @@
             {
               "name": "mode",
               "type": "string",
-              "description": "Current graph view mode supplied by the host adapter.",
+              "description": "Current graph view mode supplied by the host adapter or createGraphViewModeController().",
               "kind": "field"
             },
             {
@@ -2784,7 +2796,8 @@
                 "graph-slots",
                 "canvas-host",
                 "overlay-host",
-                "stats-host"
+                "stats-host",
+                "dual-view-mode-controller"
               ],
               "attributes": [],
               "properties": [
@@ -2796,7 +2809,7 @@
                 {
                   "name": "mode",
                   "type": "string",
-                  "description": "Current graph view mode supplied by the host adapter."
+                  "description": "Current graph view mode supplied by the host adapter or createGraphViewModeController()."
                 }
               ],
               "methods": [
@@ -2938,6 +2951,7 @@
                           "enum": [
                             "pcb",
                             "bezier",
+                            "orthogonal",
                             "straight"
                           ]
                         }
@@ -3025,9 +3039,9 @@
               }
             },
             "agent": {
-              "componentDescription": "Generic graph explorer shell with toolbar, canvas, overlay, legend, and stats slots. Use this interactive visual graph surface when composing canvas UI. Capabilities: graph-toolbar, graph-slots, canvas-host, overlay-host, stats-host. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: graph_explorer_shell_set_view, graph_explorer_shell_set_stats, graph_explorer_shell_request_action.",
+              "componentDescription": "Generic graph explorer shell with toolbar, canvas, overlay, legend, stats slots, and a dual node-canvas/canvas-graph view-mode controller helper. Use this interactive visual graph surface when composing canvas UI. Capabilities: graph-toolbar, graph-slots, canvas-host, overlay-host, stats-host, dual-view-mode-controller. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: graph_explorer_shell_set_view, graph_explorer_shell_set_stats, graph_explorer_shell_request_action.",
               "semanticRole": "interactive visual graph surface",
-              "usage": "Render or compose <graph-explorer-shell> when the host needs generic graph explorer shell with toolbar, canvas, overlay, legend, and stats slots.",
+              "usage": "Render or compose <graph-explorer-shell> when the host needs generic graph explorer shell with toolbar, canvas, overlay, legend, stats slots, and a dual node-canvas/canvas-graph view-mode controller helper.",
               "dataOwnership": "host-owned model; component renders and emits intent events",
               "webmcp": {
                 "mode": "explicit-descriptor",
@@ -3048,9 +3062,9 @@
             }
           },
           "agent": {
-            "componentDescription": "Generic graph explorer shell with toolbar, canvas, overlay, legend, and stats slots. Use this interactive visual graph surface when composing canvas UI. Capabilities: graph-toolbar, graph-slots, canvas-host, overlay-host, stats-host. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: graph_explorer_shell_set_view, graph_explorer_shell_set_stats, graph_explorer_shell_request_action.",
+            "componentDescription": "Generic graph explorer shell with toolbar, canvas, overlay, legend, stats slots, and a dual node-canvas/canvas-graph view-mode controller helper. Use this interactive visual graph surface when composing canvas UI. Capabilities: graph-toolbar, graph-slots, canvas-host, overlay-host, stats-host, dual-view-mode-controller. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: graph_explorer_shell_set_view, graph_explorer_shell_set_stats, graph_explorer_shell_request_action.",
             "semanticRole": "interactive visual graph surface",
-            "usage": "Render or compose <graph-explorer-shell> when the host needs generic graph explorer shell with toolbar, canvas, overlay, legend, and stats slots.",
+            "usage": "Render or compose <graph-explorer-shell> when the host needs generic graph explorer shell with toolbar, canvas, overlay, legend, stats slots, and a dual node-canvas/canvas-graph view-mode controller helper.",
             "dataOwnership": "host-owned model; component renders and emits intent events",
             "webmcp": {
               "mode": "explicit-descriptor",

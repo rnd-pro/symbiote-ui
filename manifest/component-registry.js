@@ -662,10 +662,14 @@ const WEBMCP_TOOLS = {
         type: 'object',
         additionalProperties: false,
         properties: {
-          graph: { type: 'object' },
-          renderMode: { type: 'string' },
+          version: { type: 'string' },
+          nodes: { type: 'array' },
+          edges: { type: 'array' },
+          groups: { type: 'array' },
+          layout: { type: 'object' },
+          metadata: { type: 'object' },
         },
-        required: ['graph'],
+        required: ['nodes'],
       },
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, runtimeMethod: 'setGraphModel' },
       exposedTo: ['agent', 'assistant'],
@@ -708,7 +712,7 @@ const WEBMCP_TOOLS = {
         additionalProperties: false,
         properties: {
           mode: { enum: ['structured', 'flat'] },
-          pathStyle: { enum: ['pcb', 'bezier', 'straight'] },
+          pathStyle: { enum: ['pcb', 'bezier', 'orthogonal', 'straight'] },
         },
       },
       annotations: {
@@ -1508,15 +1512,15 @@ export let COMPONENTS = [
     className: 'GraphExplorerShell',
     module: 'canvas/GraphExplorerShell/GraphExplorerShell.js',
     category: 'canvas',
-    description: 'Generic graph explorer shell with toolbar, canvas, overlay, legend, and stats slots.',
+    description: 'Generic graph explorer shell with toolbar, canvas, overlay, legend, stats slots, and a dual node-canvas/canvas-graph view-mode controller helper.',
     contract: {
       status: 'draft',
       schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
-      capabilities: ['graph-toolbar', 'graph-slots', 'canvas-host', 'overlay-host', 'stats-host'],
+      capabilities: ['graph-toolbar', 'graph-slots', 'canvas-host', 'overlay-host', 'stats-host', 'dual-view-mode-controller'],
       properties: [
         { name: 'title', type: 'string', description: 'Explorer title displayed by the host shell.' },
-        { name: 'mode', type: 'string', description: 'Current graph view mode supplied by the host adapter.' },
+        { name: 'mode', type: 'string', description: 'Current graph view mode supplied by the host adapter or createGraphViewModeController().' },
       ],
       methods: [
         { name: 'setMode', type: 'function', description: 'Sets the shell view mode.' },

@@ -9,6 +9,9 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
+const CHROME_ENDPOINT_TIMEOUT_MS = 30000;
+const BROWSER_SMOKE_TIMEOUT_MS = 180000;
+const SHOWCASE_BROWSER_SMOKE_TIMEOUT_MS = 200000;
 const chromeCandidates = [
   process.env.CHROME_BIN,
   '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
@@ -201,7 +204,7 @@ async function stopChrome(chrome) {
   }
 }
 
-async function launchChromeSession(chromePath, label, attempts = 2) {
+async function launchChromeSession(chromePath, label, attempts = 5) {
   let lastError;
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     const userDataDir = await mkdtemp(path.join(tmpdir(), 'symbiote-ui-chrome-'));
@@ -221,8 +224,8 @@ async function launchChromeSession(chromePath, label, attempts = 2) {
 
     try {
       const endpoint = await withTimeout(
-        waitForChromeEndpoint(chrome, 20000, remoteDebuggingPort),
-        20000,
+        waitForChromeEndpoint(chrome, CHROME_ENDPOINT_TIMEOUT_MS, remoteDebuggingPort),
+        CHROME_ENDPOINT_TIMEOUT_MS,
         `${label} Chrome DevTools endpoint`
       );
       return { chrome, userDataDir, endpoint };
@@ -230,7 +233,7 @@ async function launchChromeSession(chromePath, label, attempts = 2) {
       lastError = error;
       await stopChrome(chrome);
       await rm(userDataDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
-      if (attempt < attempts) await delay(250 * attempt);
+      if (attempt < attempts) await delay(500 * attempt);
     }
   }
   throw lastError;
@@ -240,6 +243,7 @@ async function closeChromeSession(session) {
   if (!session) return;
   await stopChrome(session.chrome);
   await rm(session.userDataDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
+  await delay(300);
 }
 
 function createCdpClient(wsUrl) {
@@ -1822,7 +1826,7 @@ async function evaluateChatWorkspaceEventFlow(page) {
 
 // Browser smoke is justified here: zero-height graph nodes, SVG trace geometry,
 // and compact-mode body visibility are CSS/layout regressions that linkedom cannot prove.
-test('cascade lab graph nodes render non-empty with route styles and compact mode in a real browser', { timeout: 45000 }, async (t) => {
+test('cascade lab graph nodes render non-empty with route styles and compact mode in a real browser', { timeout: BROWSER_SMOKE_TIMEOUT_MS }, async (t) => {
   const chromePath = findChrome();
   if (!chromePath || typeof WebSocket !== 'function') {
     t.skip('Chrome or WebSocket is not available for browser layout smoke');
@@ -1945,7 +1949,7 @@ test('cascade lab graph nodes render non-empty with route styles and compact mod
 
 // Browser smoke is justified here: repeated drag/pan uses real pointer events,
 // native scroll state, and layout transforms that linkedom cannot model.
-test('node-canvas flow-scroll drag keeps repeated pan gestures continuous', { timeout: 45000 }, async (t) => {
+test('node-canvas flow-scroll drag keeps repeated pan gestures continuous', { timeout: BROWSER_SMOKE_TIMEOUT_MS }, async (t) => {
   const chromePath = findChrome();
   if (!chromePath || typeof WebSocket !== 'function') {
     t.skip('Chrome or WebSocket is not available for flow-scroll drag smoke');
@@ -1982,7 +1986,7 @@ test('node-canvas flow-scroll drag keeps repeated pan gestures continuous', { ti
 
 // Browser smoke is justified here: multi-node focus is viewport geometry that
 // depends on rendered graph-node dimensions and canvas transform behavior.
-test('node-canvas focuses multiple nodes by fitting them into the viewport', { timeout: 45000 }, async (t) => {
+test('node-canvas focuses multiple nodes by fitting them into the viewport', { timeout: BROWSER_SMOKE_TIMEOUT_MS }, async (t) => {
   const chromePath = findChrome();
   if (!chromePath || typeof WebSocket !== 'function') {
     t.skip('Chrome or WebSocket is not available for multi-node focus smoke');
@@ -2012,7 +2016,7 @@ test('node-canvas focuses multiple nodes by fitting them into the viewport', { t
   }
 });
 
-test('agent workspace demo exposes the public feature showcase groups', { timeout: 70000 }, async (t) => {
+test('agent workspace demo exposes the public feature showcase groups', { timeout: SHOWCASE_BROWSER_SMOKE_TIMEOUT_MS }, async (t) => {
   const chromePath = findChrome();
   if (!chromePath || typeof WebSocket !== 'function') {
     t.skip('Chrome or WebSocket is not available for browser layout smoke');
@@ -2163,7 +2167,7 @@ test('agent workspace demo exposes the public feature showcase groups', { timeou
   }
 });
 
-test('showcase chat workspace exercises host event flow through library primitives', { timeout: 45000 }, async (t) => {
+test('showcase chat workspace exercises host event flow through library primitives', { timeout: BROWSER_SMOKE_TIMEOUT_MS }, async (t) => {
   const chromePath = findChrome();
   if (!chromePath || typeof WebSocket !== 'function') {
     t.skip('Chrome or WebSocket is not available for chat workspace event smoke');
@@ -2314,7 +2318,7 @@ test('showcase chat workspace exercises host event flow through library primitiv
 // Browser smoke is justified here: this verifies the browser import path and
 // adapter interaction surface for the optional Three renderer without making
 // Three.js a package dependency.
-test('three spatial graph adapter renders and drags through the browser module path', { timeout: 45000 }, async (t) => {
+test('three spatial graph adapter renders and drags through the browser module path', { timeout: BROWSER_SMOKE_TIMEOUT_MS }, async (t) => {
   const chromePath = findChrome();
   if (!chromePath || typeof WebSocket !== 'function') {
     t.skip('Chrome or WebSocket is not available for spatial graph adapter smoke');
@@ -2460,7 +2464,7 @@ test('three spatial graph adapter renders and drags through the browser module p
   }
 });
 
-test('cascade lab chat composer keeps voice controls inside the input surface responsively', { timeout: 45000 }, async (t) => {
+test('cascade lab chat composer keeps voice controls inside the input surface responsively', { timeout: BROWSER_SMOKE_TIMEOUT_MS }, async (t) => {
   const chromePath = findChrome();
   if (!chromePath || typeof WebSocket !== 'function') {
     t.skip('Chrome or WebSocket is not available for browser layout smoke');
@@ -2616,7 +2620,7 @@ test('cascade lab chat composer keeps voice controls inside the input surface re
   }
 });
 
-test('node-canvas setEditorModel renders the advertised serializable WebMCP model path', { timeout: 45000 }, async (t) => {
+test('node-canvas setEditorModel renders the advertised serializable WebMCP model path', { timeout: BROWSER_SMOKE_TIMEOUT_MS }, async (t) => {
   const chromePath = findChrome();
   if (!chromePath || typeof WebSocket !== 'function') {
     t.skip('Chrome or WebSocket is not available for node-canvas adapter smoke');

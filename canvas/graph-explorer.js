@@ -1,4 +1,5 @@
 export const GRAPH_PATH_STYLES = ['pcb', 'bezier', 'orthogonal', 'straight'];
+export const GRAPH_VIEW_MODES = ['structured', 'flat'];
 
 export const GRAPH_DIRECTORY_FRAME_COLORS = [
   'var(--sn-graph-cluster-0)',
@@ -14,6 +15,297 @@ export function resolveInitialGraphViewMode(urlParams) {
   const modeParam = urlParams.get('mode');
   return modeParam === 'flat' ? 'flat' : 'structured';
 }
+
+export function normalizeGraphExplorerViewMode(mode) {
+  return mode === 'flat' ? 'flat' : 'structured';
+}
+
+export const normalizeGraphViewMode = normalizeGraphExplorerViewMode;
+
+function scheduleGraphExplorerFrame(callback) {
+  if (typeof requestAnimationFrame === 'function') {
+    requestAnimationFrame(callback);
+  } else {
+    callback();
+  }
+}
+
+function resolveGraphExplorerElement(root, selector, fallback) {
+  return fallback || root?.querySelector?.(selector) || null;
+}
+
+export function applyGraphExplorerViewMode({
+  mode = 'structured',
+  shell = null,
+  structuredCanvas = null,
+  flatGraph = null,
+  refresh = true,
+} = {}) {
+  const normalized = normalizeGraphExplorerViewMode(mode);
+  const root = shell || structuredCanvas?.parentElement || flatGraph?.parentElement || null;
+  const resolvedStructured = resolveGraphExplorerElement(root, 'node-canvas', structuredCanvas);
+  const resolvedFlat = resolveGraphExplorerElement(root, 'canvas-graph', flatGraph);
+
+  shell?.setMode?.(normalized);
+  shell?.setAttribute?.('data-mode', normalized);
+
+  if (resolvedStructured) {
+    resolvedStructured.hidden = normalized === 'flat';
+    resolvedStructured.setAttribute?.('data-graph-mode', normalized);
+  }
+  if (resolvedFlat) {
+    resolvedFlat.hidden = normalized !== 'flat';
+    resolvedFlat.setAttribute?.('data-graph-mode', normalized);
+  }
+
+  if (refresh) {
+    scheduleGraphExplorerFrame(() => {
+      if (normalized === 'flat') {
+        resolvedFlat?.resizeCanvas?.();
+      } else {
+        resolvedStructured?.refreshConnections?.();
+      }
+    });
+  }
+
+  return {
+    mode: normalized,
+    structuredCanvas: resolvedStructured,
+    flatGraph: resolvedFlat,
+  };
+}
+
+export function createGraphExplorerViewController({
+  shell = null,
+  structuredCanvas = null,
+  flatGraph = null,
+  mode = 'structured',
+  initialMode = null,
+  pathStyle = 'pcb',
+  structuredEditor = null,
+  structuredModel = null,
+  flatModel = null,
+  flatPath = null,
+  path = null,
+  onModeChange = null,
+} = {}) {
+  let state = {
+    shell,
+    structuredCanvas,
+    flatGraph,
+    mode: normalizeGraphExplorerViewMode(initialMode ?? mode),
+    pathStyle,
+    structuredEditor,
+    structuredModel,
+    flatModel,
+    flatPath: flatPath ?? path,
+  };
+  let subscribers = new Set();
+
+  function snapshot() {
+    return {
+      shell: state.shell,
+      structuredCanvas: state.structuredCanvas,
+      flatGraph: state.flatGraph,
+      mode: state.mode,
+      pathStyle: state.pathStyle,
+      structuredEditor: state.structuredEditor,
+      structuredModel: state.structuredModel,
+      flatModel: state.flatModel,
+      flatPath: state.flatPath,
+    };
+  }
+
+  function notify(event) {
+    let current = snapshot();
+    for (let subscriber of subscribers) {
+      subscriber(current, event);
+    }
+  }
+
+  let api = {
+    get mode() {
+      return state.mode;
+    },
+
+    get structuredCanvas() {
+      return state.structuredCanvas;
+    },
+
+    get flatGraph() {
+      return state.flatGraph;
+    },
+
+    getState() {
+      return snapshot();
+    },
+
+    subscribe(callback) {
+      if (typeof callback !== 'function') return () => {};
+      subscribers.add(callback);
+      return () => subscribers.delete(callback);
+    },
+
+    connect(next = {}) {
+      state = {
+        ...state,
+        ...next,
+        mode: normalizeGraphExplorerViewMode(next.initialMode ?? next.mode ?? state.mode),
+        flatPath: next.flatPath ?? next.path ?? state.flatPath,
+      };
+      if (state.structuredEditor) api.setStructuredEditor(state.structuredEditor);
+      if (state.structuredModel) api.setStructuredModel(state.structuredModel);
+      if (state.flatModel) api.setFlatModel(state.flatModel);
+      if (state.flatPath != null) api.setFlatPath(state.flatPath);
+      api.setPathStyle(state.pathStyle);
+      api.setMode(state.mode, { notify: false });
+      return api;
+    },
+
+    setMode(nextMode, { notify: shouldNotify = true, refresh = true } = {}) {
+      let result = applyGraphExplorerViewMode({
+        mode: nextMode,
+        shell: state.shell,
+        structuredCanvas: state.structuredCanvas,
+        flatGraph: state.flatGraph,
+        refresh,
+      });
+      state.mode = result.mode;
+      state.structuredCanvas = result.structuredCanvas;
+      state.flatGraph = result.flatGraph;
+      if (shouldNotify) {
+        onModeChange?.(state.mode);
+        api.notify('mode');
+      }
+      return state.mode;
+    },
+
+    toggleMode(options = {}) {
+      return api.setMode(state.mode === 'flat' ? 'structured' : 'flat', options);
+    },
+
+    setStructuredEditor(editor) {
+      state.structuredEditor = editor;
+      state.structuredCanvas?.setEditor?.(editor);
+      notify('structured-editor');
+      return api;
+    },
+
+    setStructuredModel(model) {
+      state.structuredModel = model;
+      state.structuredCanvas?.setEditorModel?.(model);
+      notify('structured-model');
+      return api;
+    },
+
+    setFlatModel(model) {
+      state.flatModel = model;
+      state.flatGraph?.setGraphModel?.(model);
+      notify('flat-model');
+      return api;
+    },
+
+    setFlatPath(path = null) {
+      state.flatPath = path;
+      state.flatGraph?.setPath?.(path);
+      notify('flat-path');
+      return api;
+    },
+
+    setPath(path = null) {
+      return api.setFlatPath(path);
+    },
+
+    setModels({
+      structured = undefined,
+      structuredEditor: nextStructuredEditor = undefined,
+      structuredModel: nextStructuredModel = undefined,
+      flat = undefined,
+      flatModel: nextFlatModel = undefined,
+      flatPath: nextFlatPath = undefined,
+      path: nextPath = undefined,
+    } = {}) {
+      let structuredValue = nextStructuredEditor ?? structured;
+      if (structuredValue !== undefined) {
+        if (structuredValue?.nodes && typeof structuredValue.toJSON !== 'function') {
+          api.setStructuredModel(structuredValue);
+        } else {
+          api.setStructuredEditor(structuredValue);
+        }
+      }
+      if (nextStructuredModel !== undefined) api.setStructuredModel(nextStructuredModel);
+      let flatValue = nextFlatModel ?? flat;
+      if (flatValue !== undefined) api.setFlatModel(flatValue);
+      let pathValue = nextFlatPath ?? nextPath;
+      if (pathValue !== undefined) api.setFlatPath(pathValue);
+      return api;
+    },
+
+    setPathStyle(style = 'pcb') {
+      state.pathStyle = style;
+      state.shell?.setPathStyle?.(style);
+      state.structuredCanvas?.setPathStyle?.(style);
+      state.structuredCanvas?.refreshConnections?.();
+      notify('path-style');
+      return api;
+    },
+
+    fitView({ structuredArgs = [], flatArgs = [] } = {}) {
+      if (state.mode === 'flat') {
+        state.flatGraph?.fitView?.(...flatArgs);
+      } else {
+        state.structuredCanvas?.fitView?.(...structuredArgs);
+      }
+      return api;
+    },
+
+    focusNode({
+      nodeId = '',
+      structuredNodeIds = null,
+      flatNodeId = nodeId,
+      structuredOptions = {},
+      flatOptions = {},
+    } = {}) {
+      if (state.mode === 'flat') {
+        if (flatNodeId) {
+          state.flatGraph?.flyToNode?.(flatNodeId, { zoom: 1.1, ...flatOptions });
+          state.flatGraph?.pulseNode?.(flatNodeId, flatOptions.pulseMs ?? 900);
+        }
+        return api;
+      }
+
+      let nodeIds = structuredNodeIds || (nodeId ? [nodeId] : []);
+      if (nodeIds.length > 0) {
+        state.structuredCanvas?.focusNodes?.(nodeIds, structuredOptions);
+      }
+      return api;
+    },
+
+    notify(event = 'state') {
+      notify(event);
+      return api;
+    },
+
+    destroy() {
+      subscribers.clear();
+      state = {
+        shell: null,
+        structuredCanvas: null,
+        flatGraph: null,
+        mode: 'structured',
+        pathStyle: 'pcb',
+        structuredEditor: null,
+        structuredModel: null,
+        flatModel: null,
+        flatPath: null,
+      };
+    },
+  };
+
+  return api.connect();
+}
+
+export const createGraphViewModeController = createGraphExplorerViewController;
 
 function setGraphButtonVisual(button, icon, label) {
   const iconElement = button.querySelector?.('.material-symbols-outlined');

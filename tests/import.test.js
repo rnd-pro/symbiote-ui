@@ -24,6 +24,7 @@ test('root and metadata entrypoints import in Node', async () => {
   assert.equal(typeof root.buildChatNavTree, 'function');
   assert.equal(typeof root.normalizeResourceTreeItem, 'function');
   assert.equal(typeof root.normalizeSourceDocument, 'function');
+  assert.equal(typeof root.createGraphViewModeController, 'function');
   assert.equal(typeof root.matchVoiceCommandAtEnd, 'function');
   assert.equal(root.defaultSendCommandPhrases().ru, 'отправить');
   assert.equal(typeof runtime.createRuntimeUiController, 'function');
@@ -105,6 +106,7 @@ test('voice command helpers are importable without browser component registratio
   assert.equal(typeof ui.blobToBase64, 'function');
   assert.equal(typeof ui.buildResourceTreeFromEntries, 'function');
   assert.equal(typeof ui.createSourceDocument, 'function');
+  assert.equal(typeof ui.createGraphViewModeController, 'function');
   assert.equal(ui.DEFAULT_VOICE_WAKE_COMMANDS.en, 'Okay Agent');
   assert.equal(ui.matchVoiceCommandAtEnd('draft send', [{ action: 'send', phrase: 'send' }]).text, 'draft');
   assert.equal(ui.matchVoiceCommandInText("О'кей Агент", ui.wakeCommandCandidates(
@@ -120,6 +122,155 @@ test('canvas public entrypoint exposes graph and routing helpers', async () => {
   assert.equal(typeof canvas.PinExpansion, 'function');
   assert.equal(typeof canvas.routePcbTrace, 'function');
   assert.equal(typeof canvas.analyzePcbRoute, 'function');
+  assert.equal(typeof canvas.createGraphExplorerViewController, 'function');
+  assert.equal(typeof canvas.createGraphViewModeController, 'function');
+  assert.equal(typeof canvas.applyGraphExplorerViewMode, 'function');
+  assert.deepEqual(canvas.GRAPH_VIEW_MODES, ['structured', 'flat']);
+  assert.equal(canvas.normalizeGraphExplorerViewMode('flat'), 'flat');
+  assert.equal(canvas.normalizeGraphViewMode('flat'), 'flat');
+  assert.equal(canvas.normalizeGraphExplorerViewMode('unknown'), 'structured');
+});
+
+test('graph explorer view controller coordinates structured and flat renderers', async () => {
+  let {
+    applyGraphExplorerViewMode,
+    createGraphExplorerViewController,
+    createGraphViewModeController,
+  } = await import('../canvas/graph-explorer.js');
+  let calls = [];
+  let makeElement = (name) => ({
+    hidden: false,
+    attrs: {},
+    setAttribute(key, value) {
+      this.attrs[key] = value;
+      calls.push(`${name}:attr:${key}:${value}`);
+    },
+  });
+  let shell = {
+    ...makeElement('shell'),
+    setMode(mode) {
+      this.mode = mode;
+      calls.push(`shell:mode:${mode}`);
+    },
+    setPathStyle(style) {
+      this.pathStyle = style;
+      calls.push(`shell:path:${style}`);
+    },
+  };
+  let structuredCanvas = {
+    ...makeElement('structured'),
+    setEditor(editor) {
+      this.editor = editor;
+      calls.push(`structured:editor:${editor.id}`);
+    },
+    setEditorModel(model) {
+      this.model = model;
+      calls.push(`structured:model:${model.nodes.length}`);
+    },
+    setPathStyle(style) {
+      this.pathStyle = style;
+      calls.push(`structured:path:${style}`);
+    },
+    refreshConnections() {
+      calls.push('structured:refresh');
+    },
+    fitView(...args) {
+      calls.push(`structured:fit:${args.join(',')}`);
+    },
+    focusNodes(nodeIds, options) {
+      calls.push(`structured:focus:${nodeIds.join(',')}:${options.select}`);
+    },
+  };
+  let flatGraph = {
+    ...makeElement('flat'),
+    setGraphModel(model) {
+      this.model = model;
+      calls.push(`flat:model:${model.nodes.length}`);
+    },
+    setPath(path) {
+      this.path = path;
+      calls.push(`flat:path:${path || ''}`);
+    },
+    resizeCanvas() {
+      calls.push('flat:resize');
+    },
+    fitView(...args) {
+      calls.push(`flat:fit:${args.join(',')}`);
+    },
+    flyToNode(nodeId, options) {
+      calls.push(`flat:fly:${nodeId}:${options.zoom}`);
+    },
+    pulseNode(nodeId, duration) {
+      calls.push(`flat:pulse:${nodeId}:${duration}`);
+    },
+  };
+
+  let result = applyGraphExplorerViewMode({
+    mode: 'flat',
+    shell,
+    structuredCanvas,
+    flatGraph,
+    refresh: false,
+  });
+  assert.equal(result.mode, 'flat');
+  assert.equal(structuredCanvas.hidden, true);
+  assert.equal(flatGraph.hidden, false);
+  assert.equal(shell.attrs['data-mode'], 'flat');
+
+  let controller = createGraphExplorerViewController({
+    shell,
+    structuredCanvas,
+    flatGraph,
+    mode: 'flat',
+    pathStyle: 'orthogonal',
+    structuredEditor: { id: 'editor' },
+    flatModel: { nodes: [{ id: 'a' }], edges: [] },
+    flatPath: 'group/a',
+  });
+
+  assert.equal(controller.mode, 'flat');
+  assert.equal(createGraphViewModeController, createGraphExplorerViewController);
+  assert.equal(structuredCanvas.editor.id, 'editor');
+  assert.equal(flatGraph.model.nodes.length, 1);
+  assert.equal(controller.getState().pathStyle, 'orthogonal');
+  let eventNames = [];
+  let unsubscribe = controller.subscribe((state, event) => {
+    eventNames.push(`${event}:${state.mode}`);
+  });
+  controller.setModels({
+    structuredModel: { nodes: [], connections: [], positions: {} },
+    flat: { nodes: [{ id: 'b' }, { id: 'c' }], edges: [] },
+    path: 'group/b',
+  });
+  controller.fitView({ flatArgs: [42] });
+  controller.focusNode({ nodeId: 'a' });
+  controller.setMode('structured', { refresh: false });
+  controller.fitView({ structuredArgs: [56, false] });
+  controller.focusNode({
+    nodeId: 'a',
+    structuredNodeIds: ['a', 'b'],
+    structuredOptions: { select: 'a' },
+  });
+
+  assert.equal(structuredCanvas.hidden, false);
+  assert.equal(flatGraph.hidden, true);
+  assert.ok(calls.includes('flat:model:1'));
+  assert.ok(calls.includes('flat:model:2'));
+  assert.ok(calls.includes('structured:model:0'));
+  assert.ok(calls.includes('flat:path:group/a'));
+  assert.ok(calls.includes('flat:path:group/b'));
+  assert.ok(calls.includes('flat:fit:42'));
+  assert.ok(calls.includes('flat:fly:a:1.1'));
+  assert.ok(calls.includes('structured:fit:56,false'));
+  assert.ok(calls.includes('structured:focus:a,b:a'));
+  assert.ok(eventNames.includes('flat-model:flat'));
+  assert.ok(eventNames.includes('flat-path:flat'));
+  assert.ok(eventNames.includes('mode:structured'));
+  unsubscribe();
+  controller.setMode('flat', { refresh: false });
+  assert.equal(eventNames.filter((item) => item === 'mode:flat').length, 0);
+  controller.destroy();
+  assert.equal(controller.getState().shell, null);
 });
 
 test('material symbols loader reuses a host-provided package stylesheet', async () => {

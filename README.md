@@ -93,6 +93,7 @@ defineModule('chat-sidebar-shell');
 defineModule('chat-composer');
 defineModule('graph-explorer-shell');
 defineModule('node-canvas');
+defineModule('canvas-graph');
 defineModule('graph-node');
 ```
 
@@ -111,9 +112,13 @@ navigation, persistence, and permission policy.
 
 ```js
 import { Node, NodeEditor, Output, Socket } from 'symbiote-ui/core';
-import { defineModule } from 'symbiote-ui/ui';
+import {
+  createGraphViewModeController,
+  defineModule,
+} from 'symbiote-ui/ui';
 
 defineModule('node-canvas');
+defineModule('canvas-graph');
 defineModule('graph-node');
 
 let editor = new NodeEditor();
@@ -126,6 +131,20 @@ let canvas = document.querySelector('node-canvas');
 canvas.setEditor(editor);
 canvas.setPathStyle('pcb');
 canvas.setFlowLayout({ nodeIds: [node.id], direction: 'vertical', scroll: true });
+
+let graphView = createGraphViewModeController({
+  shell: document.querySelector('graph-explorer-shell'),
+  structuredCanvas: canvas,
+  flatGraph: document.querySelector('canvas-graph'),
+  structuredEditor: editor,
+  flatModel: {
+    nodes: [{ id: 'generated-view', label: 'Generated view', type: 'data' }],
+    edges: [],
+  },
+});
+
+graphView.setMode(new URLSearchParams(location.search).get('mode'));
+graphView.focusNode({ nodeId: 'generated-view' });
 ```
 
 `panel-layout` owns reusable split and panel behavior only. Product routes,
