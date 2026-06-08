@@ -4,6 +4,12 @@ All notable changes to `symbiote-ui` will be documented in this file.
 
 ## Unreleased
 
+## [0.3.0-alpha.20] - 2026-06-08
+
+### Changed
+
+- Updated the `symbiote-engine` dependency to `0.3.0-alpha.11` so browser-safe video packs stay on the published browser runtime contract.
+
 ## [0.3.0-alpha.19] - 2026-06-08
 
 ### Changed
