@@ -189,7 +189,7 @@
     "ssr"
   ],
   "dependencies": {
-    "symbiote-engine": "0.3.0-alpha.8"
+    "symbiote-engine": "0.3.0-alpha.9"
   },
   "peerDependencies": {
     "@symbiotejs/symbiote": "3.8.0-webmcp.2"
