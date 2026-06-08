@@ -744,6 +744,107 @@ async function evaluateCascadeThemeSmoke(page) {
   return result.result.value;
 }
 
+async function evaluateFlowScrollDragSmoke(page) {
+  const expression = String.raw`
+    (async () => {
+      await customElements.whenDefined('node-canvas');
+      await customElements.whenDefined('graph-node');
+      const [{ NodeEditor, Node }] = await Promise.all([
+        import('/core/index.js')
+      ]);
+
+      const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+      const settle = async () => {
+        for (let index = 0; index < 6; index += 1) await frame();
+      };
+      const pointer = (type, x, y) => new PointerEvent(type, {
+        bubbles: true,
+        cancelable: true,
+        pointerId: 17,
+        pointerType: 'mouse',
+        button: 0,
+        buttons: type === 'pointerup' ? 0 : 1,
+        clientX: x,
+        clientY: y,
+        pageX: x,
+        pageY: y,
+      });
+      const drag = async (target, fromY, toY) => {
+        target.dispatchEvent(pointer('pointerdown', 120, fromY));
+        window.dispatchEvent(pointer('pointermove', 120, toY));
+        await settle();
+        window.dispatchEvent(pointer('pointerup', 120, toY));
+        await settle();
+      };
+      const read = (canvas) => {
+        const content = canvas.querySelector('.content');
+        const container = canvas.querySelector('.canvas-container');
+        return {
+          panX: canvas.$.panX,
+          panY: canvas.$.panY,
+          scrollTop: canvas.scrollTop,
+          scrollLeft: canvas.scrollLeft,
+          contentTop: content.getBoundingClientRect().top - container.getBoundingClientRect().top,
+          transform: content.style.transform,
+        };
+      };
+
+      const canvas = document.createElement('node-canvas');
+      canvas.style.cssText = [
+        'display:block',
+        'position:fixed',
+        'left:20px',
+        'top:20px',
+        'width:320px',
+        'height:180px',
+        'z-index:1'
+      ].join(';');
+      document.body.append(canvas);
+      const editor = new NodeEditor();
+      for (let index = 0; index < 6; index += 1) {
+        editor.addNode(new Node('Scroll Node ' + index, {
+          id: 'flow-scroll-node-' + index,
+          type: 'panel',
+          icon: 'hub'
+        }));
+      }
+      canvas.setEditor(editor);
+      canvas.setViewportLocked(false);
+      canvas.setPanels(false);
+      canvas.$.panX = 0;
+      canvas.$.panY = 0;
+      canvas.$.zoom = 1;
+      canvas.setFlowLayout({
+        direction: 'vertical',
+        gap: 80,
+        padding: { top: 0, right: 16, bottom: 360, left: 16 },
+        align: 'stretch',
+        scroll: true,
+      });
+      await settle();
+
+      const target = canvas.querySelector('.canvas-container');
+      const initial = read(canvas);
+      await drag(target, 150, 90);
+      const afterFirst = read(canvas);
+      await drag(target, 150, 140);
+      const afterSecond = read(canvas);
+      canvas.remove();
+      return { initial, afterFirst, afterSecond };
+    })()
+  `;
+
+  const result = await withTimeout(page.send('Runtime.evaluate', {
+    expression,
+    awaitPromise: true,
+    returnByValue: true,
+  }), 15000, 'flow-scroll drag Runtime.evaluate');
+  if (result.exceptionDetails) {
+    throw new Error(result.exceptionDetails.text || 'Flow-scroll drag evaluation failed');
+  }
+  return result.result.value;
+}
+
 async function evaluateComposerSmoke(page, width = 0) {
   const forcedWidth = Number.isFinite(width) && width > 0 ? width : 0;
   const expression = String.raw`
@@ -1730,6 +1831,43 @@ test('cascade lab graph nodes render non-empty with route styles and compact mod
     ) >= 4.5);
     const tabIconColors = new Set(themeSmoke.scaled.tabItems.map((item) => item.iconColor));
     assert.ok(tabIconColors.size >= 3, `expected rotated tab accent colors, got ${[...tabIconColors].join(', ')}`);
+  } finally {
+    page?.close();
+    await closeChromeSession(chromeSession);
+    await server.close();
+  }
+});
+
+// Browser smoke is justified here: repeated drag/pan uses real pointer events,
+// native scroll state, and layout transforms that linkedom cannot model.
+test('node-canvas flow-scroll drag keeps repeated pan gestures continuous', { timeout: 45000 }, async (t) => {
+  const chromePath = findChrome();
+  if (!chromePath || typeof WebSocket !== 'function') {
+    t.skip('Chrome or WebSocket is not available for flow-scroll drag smoke');
+    return;
+  }
+
+  const server = await createStaticServer();
+  let chromeSession;
+  let page;
+  try {
+    chromeSession = await launchChromeSession(chromePath, 'flow-scroll drag smoke');
+    page = await withTimeout(
+      openPage(chromeSession.endpoint, `${server.url}/demo/cascade-theme-lab.html?v=flow-scroll-drag-smoke`),
+      22000,
+      'flow-scroll drag page open'
+    );
+    const smoke = await evaluateFlowScrollDragSmoke(page);
+
+    assert.equal(smoke.initial.panY, 0);
+    assert.equal(smoke.afterFirst.panY, 0);
+    assert.equal(smoke.afterSecond.panY, 0);
+    assert.ok(smoke.afterFirst.scrollTop > smoke.initial.scrollTop, JSON.stringify(smoke, null, 2));
+    assert.ok(smoke.afterSecond.scrollTop > smoke.afterFirst.scrollTop, JSON.stringify(smoke, null, 2));
+    assert.ok(
+      Math.abs(smoke.afterSecond.contentTop - smoke.afterFirst.contentTop) <= 16,
+      JSON.stringify(smoke, null, 2)
+    );
   } finally {
     page?.close();
     await closeChromeSession(chromeSession);

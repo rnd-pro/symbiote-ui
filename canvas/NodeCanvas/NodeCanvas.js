@@ -1282,7 +1282,7 @@ export class NodeCanvas extends Symbiote {
       container,
       {
         getPosition: () => this._flowLayout
-          ? ({ x: -container.scrollLeft, y: -container.scrollTop })
+          ? ({ x: -this.scrollLeft, y: -this.scrollTop })
           : ({ x: this.$.panX, y: this.$.panY }),
         getZoom: () => 1,
       },
@@ -1296,6 +1296,13 @@ export class NodeCanvas extends Symbiote {
           if (this._viewportLocked) return;
           if (this._zoom?.isTranslating()) return;
           if (this._connectFlow?.isPicking()) return;
+          if (this._flowLayout?.scroll) {
+            this.scrollLeft = -x;
+            this.scrollTop = -y;
+            this.dispatchEvent(new CustomEvent('manualviewport'));
+            this.toggleAttribute('data-interacting', true);
+            return;
+          }
           this.$.panX = x;
           this.$.panY = y;
           this._updateTransform();

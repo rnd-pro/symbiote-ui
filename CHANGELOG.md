@@ -4,6 +4,13 @@ All notable changes to `symbiote-ui` will be documented in this file.
 
 ## Unreleased
 
+## [0.3.0-alpha.17] - 2026-06-08
+
+### Fixed
+
+- Kept repeated `node-canvas` drag gestures continuous in flow-scroll layouts by
+  updating native scroll state instead of viewport pan transform state.
+
 ## [0.3.0-alpha.16] - 2026-06-08
 
 ### Fixed
