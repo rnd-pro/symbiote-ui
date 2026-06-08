@@ -4,6 +4,12 @@ All notable changes to `symbiote-ui` will be documented in this file.
 
 ## Unreleased
 
+## [0.3.0-alpha.19] - 2026-06-08
+
+### Changed
+
+- Updated the `symbiote-engine` dependency to `0.3.0-alpha.10` for the browser-safe engine runtime entrypoint.
+
 ## [0.3.0-alpha.18] - 2026-06-08
 
 ### Added

@@ -1,6 +1,6 @@
 {
   "name": "symbiote-ui",
-  "version": "0.3.0-alpha.18",
+  "version": "0.3.0-alpha.19",
   "type": "module",
   "description": "Symbiote provider UI, Web Components, themes, manifests, schemas, graph layout helpers, WebMCP metadata, and SSR-safe UI contracts.",
   "main": "index.js",
@@ -189,7 +189,7 @@
     "ssr"
   ],
   "dependencies": {
-    "symbiote-engine": "0.3.0-alpha.9"
+    "symbiote-engine": "0.3.0-alpha.10"
   },
   "peerDependencies": {
     "@symbiotejs/symbiote": "3.8.0-webmcp.2"
