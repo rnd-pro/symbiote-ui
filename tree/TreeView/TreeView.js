@@ -71,11 +71,87 @@ export class TreeView extends Symbiote {
     },
 
     onTreeKeydown: (event) => {
-      if (event.key !== 'Enter' && event.key !== ' ') return;
       let row = event.target?.closest?.('.sn-tree-row');
       if (!row) return;
-      event.preventDefault();
-      row.click();
+
+      const rows = this.getVisibleRowElements();
+      let index = rows.indexOf(row);
+      if (index === -1) return;
+
+      const item = this.#visibleItems[Number(row.dataset.index)];
+      if (!item) return;
+
+      switch (event.key) {
+        case 'Enter':
+        case ' ':
+          event.preventDefault();
+          row.click();
+          break;
+
+        case 'ArrowDown': {
+          event.preventDefault();
+          const nextRow = rows[index + 1];
+          if (nextRow) nextRow.focus();
+          break;
+        }
+
+        case 'ArrowUp': {
+          event.preventDefault();
+          const prevRow = rows[index - 1];
+          if (prevRow) prevRow.focus();
+          break;
+        }
+
+        case 'ArrowRight': {
+          event.preventDefault();
+          const hasChildren = Array.isArray(item.children) && item.children.length > 0;
+          const id = getItemId(item);
+          const expanded = this.#expandedIds.has(id);
+          if (hasChildren) {
+            if (!expanded) {
+              this.#toggleItem(item);
+            } else {
+              const nextRow = rows[index + 1];
+              if (nextRow) nextRow.focus();
+            }
+          }
+          break;
+        }
+
+        case 'ArrowLeft': {
+          event.preventDefault();
+          const hasChildren = Array.isArray(item.children) && item.children.length > 0;
+          const id = getItemId(item);
+          const expanded = this.#expandedIds.has(id);
+          if (hasChildren && expanded) {
+            this.#toggleItem(item);
+          } else {
+            let parentEl = null;
+            let currentDepth = Number(row.style.getPropertyValue('--sn-tree-depth') || 0);
+            for (let i = index - 1; i >= 0; i--) {
+              let depth = Number(rows[i].style.getPropertyValue('--sn-tree-depth') || 0);
+              if (depth < currentDepth) {
+                parentEl = rows[i];
+                break;
+              }
+            }
+            if (parentEl) parentEl.focus();
+          }
+          break;
+        }
+
+        case 'Home': {
+          event.preventDefault();
+          rows[0]?.focus();
+          break;
+        }
+
+        case 'End': {
+          event.preventDefault();
+          rows[rows.length - 1]?.focus();
+          break;
+        }
+      }
     },
 
     onTreeDragStart: (event) => {
@@ -178,6 +254,10 @@ export class TreeView extends Symbiote {
       }
     }
     return result;
+  }
+
+  getVisibleRowElements() {
+    return Array.from(this.querySelectorAll('.sn-tree-row'));
   }
 
   renderCallback() {
@@ -307,7 +387,15 @@ export class TreeView extends Symbiote {
       let row = document.createElement('div');
       row.className = 'sn-tree-row';
       row.setAttribute('role', 'treeitem');
-      row.tabIndex = 0;
+
+      let isFocusable = false;
+      if (this.#selectedId) {
+        isFocusable = (id === this.#selectedId);
+      } else {
+        isFocusable = (rowIndex === 0);
+      }
+      row.tabIndex = isFocusable ? 0 : -1;
+
       row.dataset.index = String(rowIndex);
       row.dataset.treeId = id;
       row.style.setProperty('--sn-tree-depth', String(depth));

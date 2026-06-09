@@ -1,3 +1,6 @@
+import { acquireCurrentTestFileLock } from './test-lock.js';
+await acquireCurrentTestFileLock(import.meta.url);
+
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { mkdir, mkdtemp, readdir, readFile, rm, symlink } from 'node:fs/promises';

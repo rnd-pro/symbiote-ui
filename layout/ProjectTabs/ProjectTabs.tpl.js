@@ -1,7 +1,7 @@
 import { html } from '@symbiotejs/symbiote';
 
 export default html`
-<div class="tab-bar">
+<div class="tab-bar" role="tablist">
   <button class="tab" ${{ '@active': 'isHomeActive', onclick: 'onHomeClick' }}>
     <span class="material-symbols-outlined" ${{ textContent: 'homeIcon' }}></span>
     <span ${{ textContent: 'homeLabel' }}></span>

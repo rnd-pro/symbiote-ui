@@ -414,7 +414,6 @@ export function computeAutoLayout(editor, options = {}) {
     for (let r = 0; r < maxR; r += step) {
       for (let delta = 0; delta <= M_PI; delta += angularStep) {
         for (const sign of [1, -1]) {
-          cycleCount++;
           let a = prefAngle + delta * sign;
           let x = Math.round(Math.cos(a) * r);
           let y = Math.round(Math.sin(a) * r);

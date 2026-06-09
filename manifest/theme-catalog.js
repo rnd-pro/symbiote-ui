@@ -182,7 +182,7 @@ export let THEME_ELEMENT_GROUPS = [
   {
     name: 'graph',
     description: 'Graph nodes, edges, clusters, pins, sockets, and graph canvas feedback.',
-    tokens: ['--sn-node-bg', '--sn-node-border', '--sn-node-selected', '--sn-conn-color', '--sn-type-data', '--sn-type-action', '--sn-graph-type-data', '--sn-graph-type-action', '--sn-graph-cluster-0', '--sn-graph-cluster-1', '--sn-minimap-bg', '--sn-minimap-node', '--sn-minimap-viewport', '--sn-cat-server', '--sn-cat-control', '--sn-cat-data', '--sn-subgraph-accent'],
+    tokens: ['--sn-node-bg', '--sn-node-border', '--sn-node-selected', '--sn-conn-color', '--sn-type-data', '--sn-type-action', '--sn-type-project', '--sn-type-profile', '--sn-type-pulse', '--sn-type-skill', '--sn-graph-type-data', '--sn-graph-type-action', '--sn-graph-type-project', '--sn-graph-type-profile-photo', '--sn-graph-type-pulse', '--sn-graph-type-skill', '--sn-canvas-graph-panel-bg', '--sn-canvas-graph-panel-border', '--sn-canvas-graph-ghost', '--sn-graph-cluster-0', '--sn-graph-cluster-1', '--sn-minimap-bg', '--sn-minimap-node', '--sn-minimap-viewport', '--sn-cat-server', '--sn-cat-control', '--sn-cat-data', '--sn-subgraph-accent'],
     usedBy: ['node-canvas', 'canvas-graph', 'graph-explorer-shell', 'node-minimap'],
   },
   {
@@ -1413,6 +1413,114 @@ export let THEME_TOKENS = {
         "$type": "color",
         "$value": "hsl(calc(var(--sn-hue-warning) + 8) var(--sn-sat-vivid) 67%)"
       },
+      "graphTypeDirectory": {
+        "$type": "color",
+        "$value": "var(--sn-type-directory)"
+      },
+      "graphTypeFile": {
+        "$type": "color",
+        "$value": "var(--sn-type-file)"
+      },
+      "graphTypeSource": {
+        "$type": "color",
+        "$value": "var(--sn-type-source)"
+      },
+      "graphTypeCanvas": {
+        "$type": "color",
+        "$value": "var(--sn-type-canvas)"
+      },
+      "graphTypeLayout": {
+        "$type": "color",
+        "$value": "var(--sn-type-layout)"
+      },
+      "graphTypeControls": {
+        "$type": "color",
+        "$value": "var(--sn-type-controls)"
+      },
+      "graphTypeControl": {
+        "$type": "color",
+        "$value": "var(--sn-type-control)"
+      },
+      "graphTypeProfile": {
+        "$type": "color",
+        "$value": "var(--sn-type-profile)"
+      },
+      "graphTypeProfilePhoto": {
+        "$type": "color",
+        "$value": "var(--sn-type-profile-photo)"
+      },
+      "graphTypeBio": {
+        "$type": "color",
+        "$value": "var(--sn-type-bio)"
+      },
+      "graphTypePortal": {
+        "$type": "color",
+        "$value": "var(--sn-type-portal)"
+      },
+      "graphTypeProject": {
+        "$type": "color",
+        "$value": "var(--sn-type-project)"
+      },
+      "graphTypePulse": {
+        "$type": "color",
+        "$value": "var(--sn-type-pulse)"
+      },
+      "graphTypeSkill": {
+        "$type": "color",
+        "$value": "var(--sn-type-skill)"
+      },
+      "graphTypeFunction": {
+        "$type": "color",
+        "$value": "var(--sn-type-function)"
+      },
+      "graphTypeClass": {
+        "$type": "color",
+        "$value": "var(--sn-type-class)"
+      },
+      "graphTypeModule": {
+        "$type": "color",
+        "$value": "var(--sn-type-module)"
+      },
+      "canvasGraphBackground": {
+        "$type": "color",
+        "$value": "var(--sn-bg)"
+      },
+      "canvasGraphEdge": {
+        "$type": "color",
+        "$value": "var(--sn-conn-color)"
+      },
+      "canvasGraphPulse": {
+        "$type": "color",
+        "$value": "var(--sn-node-selected)"
+      },
+      "canvasGraphDanger": {
+        "$type": "color",
+        "$value": "var(--sn-danger-color)"
+      },
+      "canvasGraphText": {
+        "$type": "color",
+        "$value": "var(--sn-text)"
+      },
+      "canvasGraphTextDim": {
+        "$type": "color",
+        "$value": "var(--sn-text-dim)"
+      },
+      "canvasGraphPanelBackground": {
+        "$type": "color",
+        "$value": "var(--sn-panel-bg)"
+      },
+      "canvasGraphPanelBorder": {
+        "$type": "color",
+        "$value": "var(--sn-node-border)"
+      },
+      "canvasGraphGhost": {
+        "$type": "color",
+        "$value": "var(--sn-text-dim)"
+      },
+      "canvasGraphRadialIcon": {
+        "$type": "color",
+        "$value": "var(--sn-bg)"
+      },
       "graphCluster0": {
         "$type": "color",
         "$value": "hsl(var(--sn-hue-accent) var(--sn-sat-vivid) 74%)"
@@ -1937,9 +2045,17 @@ export let THEME_TOKENS = {
         "$type": "color",
         "$value": "hsl(var(--sn-hue-data) var(--sn-sat-vivid) 58%)"
       },
+      "typeProfilePhoto": {
+        "$type": "color",
+        "$value": "var(--sn-type-profile)"
+      },
       "typeProfileInfo": {
         "$type": "color",
         "$value": "var(--sn-success-color)"
+      },
+      "typeBio": {
+        "$type": "color",
+        "$value": "var(--sn-type-profile-info)"
       },
       "typePortal": {
         "$type": "color",
@@ -1948,6 +2064,14 @@ export let THEME_TOKENS = {
       "typeProject": {
         "$type": "color",
         "$value": "hsl(24 var(--sn-sat-vivid) 62%)"
+      },
+      "typePulse": {
+        "$type": "color",
+        "$value": "var(--sn-type-docs)"
+      },
+      "typeSkill": {
+        "$type": "color",
+        "$value": "var(--sn-cat-control)"
       },
       "accentWarning": {
         "$type": "color",

@@ -53,6 +53,26 @@ controller.update('my-panel', {
 controller.destroy('my-panel');
 ```
 
+
+## Component Authoring Contract
+
+Before building or hardening a Symbiote UI element, run a Symbiote feature pass
+against the closest existing component and the current `@symbiotejs/symbiote`
+patterns used in this repository. Use every relevant built-in capability before
+adding manual infrastructure.
+
+- Prefer Symbiote `html` templates, declarative bindings, Light DOM slots,
+  `rootStyles`, reactive component state, lifecycle hooks, bubbling intent
+  events, and provider metadata/discover contracts over ad hoc DOM wiring.
+- Translate visual behavior through Symbiote cascade tokens and component-owned
+  `rootStyles`; do not duplicate cascade formulas in component logic.
+- Use imperative DOM listeners only for native browser behavior that Symbiote
+  does not cover cleanly, and keep that code local to the component.
+- Keep Node-safe entry points free of browser-only imports while browser Web
+  Components stay behind `symbiote-ui/ui`.
+- If a relevant Symbiote capability is intentionally not used, record the reason
+  in the implementation notes, test name, or durable goal checklist.
+
 ## Core API
 
 ### createRuntimeUiController(options)
@@ -106,7 +126,7 @@ Connect the controller to a server for remote UI management:
 ```javascript
 controller.connect('ws://localhost:8080/runtime', {
   reconnectMs: 2000,    // Auto-reconnect delay (0 to disable)
-  onReload: (params) => console.log('Reloaded:', params),
+  onReload: (params) => handleRuntimeReload(params),
 });
 ```
 

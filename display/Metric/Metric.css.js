@@ -4,13 +4,13 @@ sn-metric {
   box-sizing: border-box;
   align-items: center;
   justify-content: space-between;
-  gap: var(--sn-metric-gap);
+  gap: var(--sn-metric-gap, 8px);
   min-width: 0;
-  padding: var(--sn-metric-padding);
-  border-block-end: 1px solid var(--sn-metric-border);
-  color: var(--sn-metric-color);
+  padding: var(--sn-metric-padding, 4px 0);
+  border-block-end: 1px solid var(--sn-metric-border, color-mix(in oklab, currentColor 12%, transparent));
+  color: var(--sn-metric-color, inherit);
   font-family: var(--sn-font);
-  font-size: var(--sn-metric-label-size);
+  font-size: var(--sn-metric-label-size, 12px);
 }
 
 sn-metric[hidden] {
@@ -28,7 +28,7 @@ sn-metric[variant="stacked"] {
 
 .sn-metric-label {
   min-width: 0;
-  color: var(--sn-metric-label-color);
+  color: var(--sn-metric-label-color, var(--sn-text-dim));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -36,10 +36,10 @@ sn-metric[variant="stacked"] {
 
 .sn-metric-value {
   min-width: 0;
-  color: var(--sn-metric-value-color);
-  font-family: var(--sn-metric-value-font);
-  font-size: var(--sn-metric-value-size);
-  font-weight: var(--sn-metric-value-weight);
+  color: var(--sn-metric-value-color, var(--sn-text));
+  font-family: var(--sn-metric-value-font, var(--sn-font-mono, monospace));
+  font-size: var(--sn-metric-value-size, 13px);
+  font-weight: var(--sn-metric-value-weight, 600);
   text-align: end;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -47,14 +47,14 @@ sn-metric[variant="stacked"] {
 }
 
 sn-metric[status="success"] .sn-metric-value {
-  color: var(--sn-metric-success-color);
+  color: var(--sn-metric-success-color, var(--sn-status-success, #3fb950));
 }
 
 sn-metric[status="warning"] .sn-metric-value {
-  color: var(--sn-metric-warning-color);
+  color: var(--sn-metric-warning-color, var(--sn-status-warning, #d29922));
 }
 
 sn-metric[status="error"] .sn-metric-value {
-  color: var(--sn-metric-error-color);
+  color: var(--sn-metric-error-color, var(--sn-status-error, #f85149));
 }
 `;

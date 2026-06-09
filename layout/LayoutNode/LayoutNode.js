@@ -10,6 +10,7 @@ import { ensureMaterialSymbols } from '../../icons/MaterialSymbols.js';
 import { template } from './LayoutNode.tpl.js';
 import { styles } from './LayoutNode.css.js';
 import { translate } from '../../locale/index.js';
+import { resumeLayoutSubtree, suspendLayoutSubtree } from './../lifecycle.js';
 import * as LayoutTree from './../LayoutTree.js';
 
 const LAYOUT_NODE_ICONS = [
@@ -156,6 +157,7 @@ export class LayoutNode extends Symbiote {
     isCollapsed: false,
     canCollapse: true,
     collapseDirection: 'vertical',
+    collapseSlot: 'first',
     collapseIcon: 'expand_less',
     savedRatio: 0.5,
     isFullscreen: false,
@@ -201,21 +203,7 @@ export class LayoutNode extends Symbiote {
         this.$.isCollapsed = data.collapsed || false;
         this.toggleAttribute('collapsed', this.$.isCollapsed);
         this.toggleAttribute('auto-collapsed', data.autoCollapsed || false);
-        this.#syncHostAttribute('collapse-dir', this.$.isCollapsed ? this.$.collapseDirection : '');
-
-        if (this.$.isCollapsed) {
-          if (this.$.collapseDirection === 'horizontal') {
-            this.$.collapseIcon = 'chevron_right';
-          } else {
-            this.$.collapseIcon = 'expand_more';
-          }
-        } else {
-          if (this.$.collapseDirection === 'horizontal') {
-            this.$.collapseIcon = 'chevron_left';
-          } else {
-            this.$.collapseIcon = 'expand_less';
-          }
-        }
+        this._syncCollapsePresentation();
       }
 
       this._updateStyles();
@@ -336,6 +324,8 @@ export class LayoutNode extends Symbiote {
 
     if (this.$.nodeType === 'panel') {
       this.$.canCollapse = false;
+      this.$.collapseSlot = 'first';
+      this.#syncHostAttribute('collapse-side', '');
 
       this.$.canCollapse =
         this.$.layoutCollapsePolicy !== 'never' &&
@@ -344,6 +334,8 @@ export class LayoutNode extends Symbiote {
         !siblingCollapsed;
 
       if (isSplitChild) {
+        this.$.collapseSlot = isFirst ? 'first' : 'second';
+        this.#syncHostAttribute('collapse-side', this.$.collapseSlot);
 
         let parentNode = container.closest('layout-node');
         if (!parentNode && container.getRootNode() instanceof ShadowRoot) {
@@ -351,20 +343,9 @@ export class LayoutNode extends Symbiote {
         }
 
         if (parentNode) {
-          let parentDir = parentNode.getAttribute('direction');
+          let parentDir = parentNode.getAttribute('direction') || this.$.collapseDirection;
           this.$.collapseDirection = parentDir;
-          if (this.$.isCollapsed) {
-            this.#syncHostAttribute('collapse-dir', parentDir);
-          }
-
-
-          if (!this.$.isCollapsed) {
-            if (parentDir === 'horizontal') {
-              this.$.collapseIcon = isFirst ? 'chevron_left' : 'chevron_right';
-            } else {
-              this.$.collapseIcon = isFirst ? 'expand_less' : 'expand_more';
-            }
-          }
+          this._syncCollapsePresentation();
         }
       }
     }
@@ -589,9 +570,24 @@ export class LayoutNode extends Symbiote {
   _ensureChildNode(container, nodeData) {
     let children = Array.from(container.children)
       .filter((item) => item.localName === 'layout-node');
-    let child = children[0];
+    let child = children.find((item) => this.#matchesLayoutNode(item, nodeData));
+    if (!child) {
+      child = this.#findReusableLayoutNode(container, nodeData);
+    }
+    let movingReusableChild = child && child.parentElement !== container;
+    if (movingReusableChild) {
+      suspendLayoutSubtree(child, { reason: 'layout-move' });
+      try {
+        container.appendChild(child);
+      } finally {
+        resumeLayoutSubtree(child, { reason: 'layout-move' });
+      }
+    }
     for (let node of children.slice(1)) {
-      node.remove();
+      if (node !== child) node.remove();
+    }
+    if (children[0] && children[0] !== child) {
+      children[0].remove();
     }
     if (!child) {
       child = document.createElement('layout-node');
@@ -605,6 +601,21 @@ export class LayoutNode extends Symbiote {
     child.$.panelChrome = this.$.panelChrome !== false;
     child.setAttribute('panel-chrome', this.$.panelChrome ? 'default' : 'none');
     child.$.nodeData = { ...nodeData };
+  }
+
+  #matchesLayoutNode(node, nodeData) {
+    return node?.localName === 'layout-node' && node.$?.nodeId === nodeData?.id;
+  }
+
+  #findReusableLayoutNode(container, nodeData) {
+    if (!nodeData?.id) return null;
+    let scope = this.closest?.('panel-layout') || this.getRootNode?.() || this.parentElement;
+    let candidates = Array.from(scope?.querySelectorAll?.('layout-node') || []);
+    return candidates.find((candidate) => (
+      this.#matchesLayoutNode(candidate, nodeData) &&
+      candidate !== this &&
+      !candidate.contains(container)
+    )) || null;
   }
 
   _onPanelMenuActions = (event) => {
@@ -705,6 +716,21 @@ export class LayoutNode extends Symbiote {
         detail: { nodeId: this.$.nodeId },
       })
     );
+  }
+
+  _syncCollapsePresentation() {
+    this.#syncHostAttribute('collapse-dir', this.$.isCollapsed ? this.$.collapseDirection : '');
+    this.$.collapseIcon = this._getCollapseIcon();
+  }
+
+  _getCollapseIcon() {
+    let isFirst = this.$.collapseSlot !== 'second';
+    if (this.$.collapseDirection === 'horizontal') {
+      if (this.$.isCollapsed) return isFirst ? 'chevron_right' : 'chevron_left';
+      return isFirst ? 'chevron_left' : 'chevron_right';
+    }
+    if (this.$.isCollapsed) return isFirst ? 'expand_more' : 'expand_less';
+    return isFirst ? 'expand_less' : 'expand_more';
   }
 
   _toggleCollapse() {

@@ -8,6 +8,11 @@ export class StatusBadge extends Symbiote {
     super();
     this.templateProcessors.add(slotProcessor);
   }
+
+  connectedCallback() {
+    super.connectedCallback?.();
+    if (!this.hasAttribute('role')) this.setAttribute('role', 'status');
+  }
 }
 
 StatusBadge.template = template;

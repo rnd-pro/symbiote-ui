@@ -40,7 +40,7 @@ import '../../inspector/InspectorPanel/InspectorPanel.js';
 import '../Minimap/Minimap.js';
 import '../NodeSearch/NodeSearch.js';
 import '../Breadcrumb/Breadcrumb.js';
-import { computeAutoLayout } from '../AutoLayout.js';
+import { computeAutoLayout, computeTreeLayout } from '../AutoLayout.js';
 import { NodeEditor } from '../../core/Editor.js';
 import { translate } from '../../locale/index.js';
 
@@ -680,14 +680,58 @@ export class NodeCanvas extends Symbiote {
   }
 
   /**
-   * Apply auto layout to all nodes
+   * Apply a graph layout to rendered nodes.
+   * @param {Object} [options]
+   * @param {'auto'|'tree'|'flow'} [options.algorithm='auto']
+   * @param {boolean} [options.fit=false]
+   * @returns {{algorithm: string, positions: Object<string, {x: number, y: number}>}|null}
    */
-  autoLayout() {
-    if (!this._editor) return;
-    let positions = computeAutoLayout(this._editor);
-    for (const [nodeId, pos] of Object.entries(positions)) {
-      this.setNodePosition(nodeId, pos.x, pos.y);
+  applyLayout(options = {}) {
+    if (!this._editor) return null;
+
+    let algorithm = ['auto', 'tree', 'flow'].includes(options.algorithm)
+      ? options.algorithm
+      : 'auto';
+
+    if (algorithm === 'flow') {
+      let result = this.setFlowLayout(options);
+      if (options.fit === true) this.fitView();
+      return { algorithm, positions: result.positions, width: result.width, height: result.height };
     }
+
+    this.clearFlowLayout();
+    let layoutOptions = {
+      ...options,
+      nodeSizes: options.nodeSizes || this.measureNodeSizes(),
+    };
+    delete layoutOptions.algorithm;
+    delete layoutOptions.fit;
+
+    let positions = algorithm === 'tree'
+      ? computeTreeLayout(this._editor, layoutOptions)
+      : computeAutoLayout(this._editor, layoutOptions);
+
+    this.setBatchMode(true);
+    try {
+      for (const [nodeId, pos] of Object.entries(positions)) {
+        this.setNodePosition(nodeId, pos.x, pos.y);
+      }
+    } finally {
+      this.setBatchMode(false);
+    }
+    this.syncPhantom();
+    this.refreshConnections();
+    if (options.fit === true) this.fitView();
+    return { algorithm, positions };
+  }
+
+  /**
+   * Apply auto layout to all nodes.
+   * @param {Object} [options]
+   * @returns {{algorithm: string, positions: Object<string, {x: number, y: number}>}|null}
+   */
+  autoLayout(options = {}) {
+    return this.applyLayout({ ...options, algorithm: 'auto' });
   }
 
   /**

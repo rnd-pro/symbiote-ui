@@ -130,7 +130,7 @@ editor.addNode(node);
 let canvas = document.querySelector('node-canvas');
 canvas.setEditor(editor);
 canvas.setPathStyle('pcb');
-canvas.setFlowLayout({ nodeIds: [node.id], direction: 'vertical', scroll: true });
+canvas.applyLayout({ algorithm: 'flow', nodeIds: [node.id], direction: 'vertical', scroll: true });
 
 let graphView = createGraphViewModeController({
   shell: document.querySelector('graph-explorer-shell'),
@@ -138,14 +138,45 @@ let graphView = createGraphViewModeController({
   flatGraph: document.querySelector('canvas-graph'),
   structuredEditor: editor,
   flatModel: {
-    nodes: [{ id: 'generated-view', label: 'Generated view', type: 'data' }],
+    nodes: [
+      { id: 'group/generated', label: 'Generated', type: 'data', children: ['generated-view'] },
+      { id: 'generated-view', label: 'Generated view', type: 'data' },
+    ],
     edges: [],
+    groups: [{ id: 'group/generated', nodeIds: ['generated-view'] }],
   },
 });
 
 graphView.setMode(new URLSearchParams(location.search).get('mode'));
-graphView.focusNode({ nodeId: 'generated-view' });
+graphView.focusNode({ nodeId: 'generated-view', flatNodeIds: ['generated-view'] });
 ```
+
+For flat overview demos, keep the nodes that should be visible together at the
+root of the `canvas-graph` model and pass `flatNodeIds` to
+`focusNode()`. The older `flatNodeId` field focuses a single node and may enter
+that node's parent group when the model is hierarchical. Focus changes in flat
+mode queue the next active node through the graph deactivation cycle, and
+`canvas-graph` renders a small route marker along the available node links so
+the viewer keeps visual continuity between selections.
+
+`canvas-graph` consumes the global cascade theme through public aliases such as
+`--sn-canvas-graph-panel-bg`, `--sn-canvas-graph-panel-border`,
+`--sn-canvas-graph-ghost`, and the `--sn-graph-type-*` node type aliases. Hosts
+should set semantic node `type` values and let the library theme derive the
+viewer colors; avoid product-local canvas color constants.
+
+Semantic overview groups can be declared with top-level `groups`, `node.children`,
+`node.parentId`, or `node.group`. `canvas-graph` normalizes those groups, passes
+them into the force layout, and derives group gravity weights from group size,
+link density, and cross-group links. Hosts should provide the semantic model, not
+product-local physics constants.
+
+`node-canvas.applyLayout()` is the agent-facing layout entrypoint. Use
+`algorithm: 'auto'` for grouped graph auto-layout, `algorithm: 'tree'` for
+structured directory/tree layouts, and `algorithm: 'flow'` for document-like
+previews. Flat graph seed positions from `computeInitialGraphPositions()` are
+stable by default; pass `random: Math.random` only when a non-deterministic demo
+is intentional.
 
 `panel-layout` owns reusable split and panel behavior only. Product routes,
 transport, persistence, and permission checks remain host policy:
@@ -318,6 +349,31 @@ store. `destroy()` tears down listeners and removes dynamic elements when the
 host closes or removes UI-invoked panels. Hosts should pass `allowedMethods` or
 `allowMethod()` when applying agent-authored `state.methods`; use the component
 registry or a project policy allowlist to approve method calls.
+
+## Localization
+
+`symbiote-ui/locale` supports English, Russian, and Spanish catalogs with an
+`auto` mode that resolves browser language preferences by default. Browser hosts
+can use the UI entrypoint helper once during startup and pass product-owned
+messages without reimplementing locale detection:
+
+```js
+import { configureBrowserLocalization, translate } from 'symbiote-ui/ui';
+
+configureBrowserLocalization({
+  messages: {
+    ru: { 'app.title': 'Проект' },
+    es: { 'app.title': 'Proyecto' },
+    en: { 'app.title': 'Project' },
+  },
+});
+
+document.title = translate('app.title');
+```
+
+Node-safe hosts can call `configureAutoLocalization()` from `symbiote-ui/locale`
+with explicit `preferences` or a supplied `navigator` object. The helper sets
+`document.documentElement.lang` when a document is available.
 
 ## Cascade Theme
 

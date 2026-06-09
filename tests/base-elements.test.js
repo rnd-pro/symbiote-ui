@@ -1,0 +1,651 @@
+import { acquireCurrentTestFileLock } from './test-lock.js';
+await acquireCurrentTestFileLock(import.meta.url);
+
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { parseHTML } from 'linkedom';
+
+class TestCSSStyleSheet {
+  replaceSync(text) {
+    this.cssText = text;
+  }
+}
+
+function installSsrDom() {
+  let { window } = parseHTML('<!doctype html><html><body></body></html>');
+  Object.assign(globalThis, {
+    window,
+    document: window.document,
+    HTMLElement: window.HTMLElement,
+    Element: window.Element,
+    customElements: window.customElements,
+    Node: window.Node,
+    Event: window.Event,
+    CustomEvent: window.CustomEvent,
+    MutationObserver: window.MutationObserver,
+    CSSStyleSheet: TestCSSStyleSheet,
+  });
+  window.document.adoptedStyleSheets = [];
+  Object.defineProperty(window.HTMLElement.prototype, 'adoptedStyleSheets', {
+    configurable: true,
+    get() {
+      return this.__symbioteSsrSheets || [];
+    },
+    set(value) {
+      this.__symbioteSsrSheets = value;
+    },
+  });
+  globalThis.getComputedStyle = (element) => {
+    return {
+      getPropertyValue(prop) {
+        return element.style?.getPropertyValue?.(prop) || '';
+      }
+    };
+  };
+  return window;
+}
+
+async function nextRenderTick() {
+  await Promise.resolve();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+test('sn-button hones standard control states', async () => {
+  installSsrDom();
+  await import('../control/Button/Button.js');
+
+  const el = document.createElement('sn-button');
+  document.body.append(el);
+  await nextRenderTick();
+
+  assert.equal(el.getAttribute('role'), 'button');
+  assert.equal(el.getAttribute('tabindex'), '0');
+
+  el.loading = true;
+  assert.equal(el.hasAttribute('loading'), true);
+  assert.equal(el.getAttribute('aria-busy'), 'true');
+  assert.equal(el.getAttribute('aria-disabled'), 'true');
+  assert.equal(el.getAttribute('tabindex'), '-1');
+  let spinner = el.querySelector('.sn-button-spinner');
+  if (spinner) assert.equal(spinner.hidden, false, 'Spinner should be visible when loading');
+
+  el.loading = false;
+  if (spinner) assert.equal(spinner.hidden, true, 'Spinner should be hidden when not loading');
+  el.disabled = true;
+  assert.equal(el.hasAttribute('disabled'), true);
+  assert.equal(el.getAttribute('aria-disabled'), 'true');
+  assert.equal(el.getAttribute('tabindex'), '-1');
+
+  el.pressed = true;
+  assert.equal(el.getAttribute('pressed'), 'true');
+  assert.equal(el.getAttribute('aria-pressed'), 'true');
+  el.setAttribute('pressed', '');
+  assert.equal(el.getAttribute('aria-pressed'), 'true');
+
+  el.selected = true;
+  assert.equal(el.hasAttribute('selected'), true);
+
+  el.size = 'lg';
+  el.block = true;
+  assert.equal(el.getAttribute('size'), 'lg');
+  assert.equal(el.hasAttribute('block'), true);
+
+  el.remove();
+});
+
+test('sn-field links labels, hints, errors, and input state styling', async () => {
+  installSsrDom();
+  await import('../control/Field/Field.js');
+
+  const el = document.createElement('sn-field');
+  el.innerHTML = `
+    <label slot="label">Email Address</label>
+    <input type="email" placeholder="name@domain.com">
+    <div slot="hint">Enter your email</div>
+    <div slot="error">Invalid email address</div>
+  `;
+  document.body.append(el);
+
+  // Trigger mutation observer sync
+  await nextRenderTick();
+
+
+  const input = el.querySelector('input');
+  const label = el.querySelector('label');
+  const hint = el.querySelector('[slot="hint"]');
+
+  assert.ok(input.id, 'Input should be assigned an auto-generated ID');
+  assert.equal(label.getAttribute('for'), input.id, 'Label should point to Input ID');
+  assert.ok(input.getAttribute('aria-describedby').includes(hint.id), 'Input should be described by the hint');
+
+  el.required = true;
+  el.disabled = true;
+  el.readonly = true;
+  el.invalid = true;
+  el._syncControlState(); // Force immediate sync check
+
+  assert.ok(input.hasAttribute('required'));
+  assert.ok(input.hasAttribute('disabled'));
+  assert.ok(input.hasAttribute('readonly'));
+  assert.equal(input.getAttribute('aria-invalid'), 'true');
+
+  el.remove();
+});
+
+test('sn-selection controls preserve native semantics, descriptions, and change intents', async () => {
+  installSsrDom();
+  await import('../control/SelectionControl/SelectionControl.js');
+
+  const checkbox = document.createElement('sn-checkbox');
+  checkbox.innerHTML = `
+    Enable sync
+    <div slot="hint">Keeps workspace state current</div>
+    <div slot="error">Sync is required</div>
+  `;
+  checkbox.name = 'sync';
+  checkbox.value = 'yes';
+  checkbox.checked = true;
+  checkbox.indeterminate = true;
+  checkbox.required = true;
+  checkbox.invalid = true;
+  document.body.append(checkbox);
+  await nextRenderTick();
+
+  const checkboxInput = checkbox.querySelector('input');
+  const checkboxHint = checkbox.querySelector('[slot="hint"]');
+  const checkboxError = checkbox.querySelector('[slot="error"]');
+
+  assert.equal(checkboxInput.type, 'checkbox');
+  assert.equal(checkboxInput.checked, true);
+  assert.equal(checkboxInput.indeterminate, true);
+  assert.equal(checkboxInput.name, 'sync');
+  assert.equal(checkboxInput.value, 'yes');
+  assert.ok(checkboxInput.hasAttribute('required'));
+  assert.equal(checkboxInput.getAttribute('aria-invalid'), 'true');
+  assert.ok(checkboxInput.getAttribute('aria-describedby').includes(checkboxHint.id));
+  assert.ok(checkboxInput.getAttribute('aria-describedby').includes(checkboxError.id));
+
+  let controlChange = null;
+  let checkboxChange = null;
+  checkbox.addEventListener('sn-control-change', (event) => {
+    controlChange = event.detail;
+  });
+  checkbox.addEventListener('sn-checkbox-change', (event) => {
+    checkboxChange = event.detail;
+  });
+  checkboxInput.checked = false;
+  checkboxInput.dispatchEvent(new Event('change', { bubbles: true }));
+
+  assert.equal(checkbox.checked, false);
+  assert.equal(checkbox.indeterminate, false);
+  assert.equal(controlChange.control, 'checkbox');
+  assert.equal(controlChange.checked, false);
+  assert.equal(controlChange.value, 'yes');
+  assert.deepEqual(checkboxChange, controlChange);
+
+  checkbox.checked = true;
+  checkbox.readonly = true;
+  checkboxInput.checked = false;
+  checkboxInput.dispatchEvent(new Event('change', { bubbles: true }));
+  assert.equal(checkbox.checked, true, 'readonly checkbox should restore host-owned checked state');
+  assert.equal(checkboxInput.checked, true);
+  assert.equal(checkboxInput.getAttribute('aria-readonly'), 'true');
+
+  const radio = document.createElement('sn-radio');
+  radio.name = 'mode';
+  radio.value = 'manual';
+  document.body.append(radio);
+  await nextRenderTick();
+
+  const radioInput = radio.querySelector('input');
+  assert.equal(radioInput.type, 'radio');
+  assert.equal(radioInput.name, 'mode');
+  assert.equal(radioInput.value, 'manual');
+
+  const sw = document.createElement('sn-switch');
+  sw.checked = true;
+  document.body.append(sw);
+  await nextRenderTick();
+
+  const switchInput = sw.querySelector('input');
+  assert.equal(switchInput.type, 'checkbox');
+  assert.equal(switchInput.getAttribute('role'), 'switch');
+  assert.equal(switchInput.getAttribute('aria-checked'), 'true');
+
+  checkbox.remove();
+  radio.remove();
+  sw.remove();
+});
+
+test('context-menu implements roving focus and APG item styling', async () => {
+  installSsrDom();
+  await import('../menu/ContextMenu/ContextMenu.js');
+
+  const el = document.createElement('context-menu');
+  document.body.append(el);
+  await nextRenderTick();
+
+  let clickedLabel = null;
+  const items = [
+    { label: 'Cut', icon: 'content_cut', action: () => { clickedLabel = 'Cut'; } },
+    { label: 'Copy', icon: 'content_copy', action: () => {}, detail: 'Ctrl+C' },
+    { divider: true },
+    { label: 'Format', icon: 'check', checked: true, action: () => {} },
+    { label: 'Delete', icon: 'delete', destructive: true, action: () => {} },
+    { label: 'Paste', icon: 'content_paste', disabled: true, action: () => {} },
+  ];
+
+  el.show(100, 200, items);
+  await nextRenderTick();
+
+  assert.equal(el.$.visible, true);
+  assert.equal(el.hasAttribute('hidden'), false);
+
+  const renderedItems = el.querySelectorAll('ctx-item');
+  assert.equal(renderedItems.length, 6);
+
+  assert.equal(renderedItems[1].$.detail, 'Ctrl+C');
+  assert.equal(renderedItems[2].$.divider, true);
+  assert.equal(renderedItems[3].$.checked, true);
+  assert.equal(renderedItems[4].$.destructive, true);
+  assert.equal(renderedItems[5].$.disabled, true);
+
+  el.hide();
+  assert.equal(el.$.visible, false);
+  el.remove();
+});
+
+test('project-tabs coordinates roving tabindex and keys', async () => {
+  installSsrDom();
+  await import('../layout/ProjectTabs/ProjectTabs.js');
+
+  const el = document.createElement('project-tabs');
+  document.body.append(el);
+  await nextRenderTick();
+
+  el.setTabs([
+    { id: 'tab1', name: 'Main Project', closeable: false },
+    { id: 'tab2', name: 'Sidebar Helper', closeable: true },
+  ], 'tab1');
+  await nextRenderTick();
+
+  const homeTab = el.querySelector('.tab');
+  const items = el.querySelectorAll('project-tab-item');
+
+  assert.equal(homeTab.getAttribute('role'), 'tab');
+  assert.equal(items.length, 2);
+  assert.equal(items[0].getAttribute('role'), 'tab');
+  assert.equal(items[0].getAttribute('aria-selected'), 'true');
+  assert.equal(items[0].getAttribute('tabindex'), '0');
+  assert.equal(items[1].getAttribute('aria-selected'), 'false');
+  assert.equal(items[1].getAttribute('tabindex'), '-1');
+
+  el.remove();
+});
+
+test('sn-list-item enforces selection events and loading states', async () => {
+  installSsrDom();
+  await import('../list/ListItem/ListItem.js');
+
+  const el = document.createElement('sn-list-item');
+  document.body.append(el);
+  await nextRenderTick();
+
+  let selectTriggered = false;
+  el.addEventListener('sn-list-item-select', () => {
+    selectTriggered = true;
+  });
+
+  el.setItem({ label: 'Item Title', description: 'Item description text', active: true });
+  await nextRenderTick();
+
+  assert.equal(el.getAttribute('active'), '');
+
+  const innerItem = el.ref.item;
+  assert.equal(innerItem.getAttribute('aria-selected'), 'true');
+
+  innerItem.dispatchEvent(new window.Event('click', { bubbles: true, composed: true }));
+  assert.equal(selectTriggered, true);
+
+  el.remove();
+});
+
+test('sn-data-table implements sorting descriptors and selection click triggers', async () => {
+  installSsrDom();
+  await import('../display/DataTable/DataTable.js');
+
+  const el = document.createElement('sn-data-table');
+  document.body.append(el);
+  await nextRenderTick();
+
+  let sortEvent = null;
+  el.addEventListener('sn-data-table-sort', (e) => {
+    sortEvent = e.detail;
+  });
+
+  el.setData({
+    columns: [
+      { key: 'name', label: 'Name', sortable: true },
+      { key: 'status', label: 'Status' }
+    ],
+    rows: [
+      { id: 'row1', name: 'Pipeline A', status: 'Passed' },
+      { id: 'row2', name: 'Pipeline B', status: 'Failed' }
+    ]
+  });
+  await nextRenderTick();
+
+  el.loading = true;
+  assert.equal(el.loading, true);
+  assert.equal(el.hasAttribute('loading'), true);
+
+  el.errorText = 'Timeout occurred';
+  assert.equal(el.errorText, 'Timeout occurred');
+
+  el.remove();
+});
+
+test('sn-badge renders with status role', async () => {
+  installSsrDom();
+  await import('../display/Badge/Badge.js?base-elements-badge');
+
+  const el = document.createElement('sn-badge');
+  document.body.append(el);
+  await nextRenderTick();
+
+  assert.equal(el.getAttribute('role'), 'status');
+
+  el.remove();
+});
+
+test('sn-metric renders with ARIA role and status-based live region', async () => {
+  installSsrDom();
+  await import('../display/Metric/Metric.js');
+
+  const el = document.createElement('sn-metric');
+  document.body.append(el);
+  await nextRenderTick();
+
+  assert.equal(el.getAttribute('role'), 'group');
+
+  el.setAttribute('status', 'error');
+  assert.equal(el.getAttribute('aria-live'), 'polite');
+
+  el.setAttribute('status', 'success');
+  assert.equal(el.hasAttribute('aria-live'), false);
+
+  el.remove();
+});
+
+test('sn-card renders with ARIA role and interactive focus support', async () => {
+  installSsrDom();
+  await import('../surface/Card/Card.js');
+
+  const el = document.createElement('sn-card');
+  document.body.append(el);
+  await nextRenderTick();
+
+  assert.equal(el.getAttribute('role'), 'region');
+  assert.equal(el.hasAttribute('tabindex'), false);
+
+  el.setAttribute('interactive', '');
+  assert.equal(el.getAttribute('role'), 'button');
+  assert.equal(el.getAttribute('tabindex'), '0');
+
+  el.removeAttribute('interactive');
+  assert.equal(el.getAttribute('role'), 'region');
+  assert.equal(el.hasAttribute('tabindex'), false);
+
+  el.remove();
+});
+
+test('sn-banner renders with variant-based ARIA role', async () => {
+  installSsrDom();
+  await import('../display/Banner/Banner.js');
+
+  const el = document.createElement('sn-banner');
+  document.body.append(el);
+  await nextRenderTick();
+
+  assert.equal(el.getAttribute('role'), 'status');
+
+  el.setAttribute('variant', 'error');
+  assert.equal(el.getAttribute('role'), 'alert');
+
+  el.setAttribute('variant', 'danger');
+  assert.equal(el.getAttribute('role'), 'alert');
+
+  el.setAttribute('variant', 'info');
+  assert.equal(el.getAttribute('role'), 'status');
+
+  el.remove();
+});
+
+test('sn-empty-state renders with region role', async () => {
+  installSsrDom();
+  await import('../display/EmptyState/EmptyState.js');
+
+  const el = document.createElement('sn-empty-state');
+  document.body.append(el);
+  await nextRenderTick();
+
+  assert.equal(el.getAttribute('role'), 'region');
+
+  el.remove();
+});
+
+test('sn-loading-overlay renders with progressbar role and ARIA value tracking', async () => {
+  installSsrDom();
+  await import('../display/LoadingOverlay/LoadingOverlay.js');
+
+  const el = document.createElement('sn-loading-overlay');
+  document.body.append(el);
+  await nextRenderTick();
+
+  assert.equal(el.getAttribute('role'), 'progressbar');
+  assert.equal(el.getAttribute('aria-valuemin'), '0');
+  assert.equal(el.getAttribute('aria-valuemax'), '100');
+
+  el.remove();
+});
+
+test('quick-open renders with combobox ARIA role and manages selection states', async () => {
+  installSsrDom();
+  await import('../navigation/QuickOpen/QuickOpen.js');
+
+  const el = document.createElement('quick-open');
+  document.body.append(el);
+  await nextRenderTick();
+
+  const input = el.querySelector('.qo-input');
+  const resultsContainer = el.querySelector('.qo-results');
+
+  assert.equal(input.getAttribute('role'), 'combobox');
+  assert.equal(input.getAttribute('aria-autocomplete'), 'list');
+  assert.equal(input.getAttribute('aria-controls'), 'qo-results-list');
+  assert.equal(resultsContainer.getAttribute('role'), 'listbox');
+
+  const items = [
+    { label: 'File A', path: 'src/FileA.js', value: 'src/FileA.js' },
+    { label: 'File B', path: 'src/FileB.js', value: 'src/FileB.js' },
+  ];
+  el.setItems(items);
+  await nextRenderTick();
+
+  assert.equal(input.getAttribute('aria-expanded'), 'false');
+
+  el.open();
+  await nextRenderTick();
+
+  assert.equal(input.getAttribute('aria-expanded'), 'true');
+
+  const options = el.querySelectorAll('.qo-item');
+  assert.equal(options.length, 2);
+  assert.equal(options[0].getAttribute('role'), 'option');
+  assert.equal(options[0].id, 'qo-item-0');
+  assert.equal(options[0].getAttribute('aria-selected'), 'true');
+  assert.equal(options[1].getAttribute('aria-selected'), 'false');
+  assert.equal(input.getAttribute('aria-activedescendant'), 'qo-item-0');
+
+  input.dispatchEvent(new window.Event('focus'));
+  const keyEvent = new window.Event('keydown', { bubbles: true, cancelable: true });
+  Object.defineProperty(keyEvent, 'key', { value: 'ArrowDown' });
+  input.dispatchEvent(keyEvent);
+  await nextRenderTick();
+
+  const updatedOptions = el.querySelectorAll('.qo-item');
+  assert.equal(updatedOptions[0].getAttribute('aria-selected'), 'false');
+  assert.equal(updatedOptions[1].getAttribute('aria-selected'), 'true');
+  assert.equal(input.getAttribute('aria-activedescendant'), 'qo-item-1');
+
+  el.remove();
+});
+
+test('sn-slider updates value, syncs input attributes, and handles native events', async () => {
+  installSsrDom();
+  await import('../control/Slider/Slider.js');
+  const sliderCss = (await import('../control/Slider/Slider.css.js')).default;
+
+  const el = document.createElement('sn-slider');
+  el.min = '10';
+  el.max = '200';
+  el.value = '50';
+  document.body.append(el);
+  await nextRenderTick();
+
+  const input = el.querySelector('input');
+  assert.equal(input.value, '50');
+  assert.equal(input.min, '10');
+  assert.equal(input.max, '200');
+
+  let changeEvent = null;
+  el.addEventListener('sn-slider-change', (e) => {
+    changeEvent = e.detail;
+  });
+
+  input.value = '120';
+  input.dispatchEvent(new window.Event('change', { bubbles: true }));
+  await nextRenderTick();
+
+  assert.equal(el.value, '120');
+  assert.equal(changeEvent.value, '120');
+  assert.match(sliderCss, /\.sn-slider-wrapper:focus-within \.sn-slider-track-wrap/);
+  assert.doesNotMatch(sliderCss, /\.sn-slider-input:focus-visible ~ \.sn-slider-track-wrap/);
+
+  el.remove();
+});
+
+test('sn-rating renders max stars, handles selection and keyboard increment', async () => {
+  installSsrDom();
+  await import('../control/Rating/Rating.js');
+
+  const el = document.createElement('sn-rating');
+  el.max = '6';
+  el.value = '2';
+  document.body.append(el);
+  await nextRenderTick();
+
+  const stars = el.querySelectorAll('.sn-rating-star');
+  assert.equal(stars.length, 6);
+  assert.ok(stars[0].hasAttribute('data-active'));
+  assert.ok(stars[1].hasAttribute('data-active'));
+  assert.ok(!stars[2].hasAttribute('data-active'));
+
+  // Simulate click on index 3 (value 4)
+  stars[3].dispatchEvent(new window.Event('click', { bubbles: true }));
+  await nextRenderTick();
+  assert.equal(el.value, '4');
+
+  // Simulate ArrowRight keydown to increment to 5
+  const keyEvent = new window.Event('keydown', { bubbles: true });
+  Object.defineProperty(keyEvent, 'key', { value: 'ArrowRight' });
+  el.dispatchEvent(keyEvent);
+  await nextRenderTick();
+  assert.equal(el.value, '5');
+
+  el.setAttribute('disabled', '');
+  assert.equal(el.hasAttribute('tabindex'), false);
+  assert.equal(el.querySelector('input').disabled, true);
+
+  el.remove();
+});
+
+test('sn-segmented-control coordinates roving focus and selection', async () => {
+  installSsrDom();
+  await import('../control/SegmentedControl/SegmentedControl.js');
+
+  const el = document.createElement('sn-segmented-control');
+  el.innerHTML = `
+    <button value="light">Light</button>
+    <button value="dark">Dark</button>
+    <button value="system">System</button>
+  `;
+  el.value = 'dark';
+  document.body.append(el);
+  await nextRenderTick();
+
+  const items = el._getItems();
+  assert.equal(items.length, 3);
+  assert.equal(items[0].getAttribute('aria-checked'), 'false');
+  assert.equal(items[1].getAttribute('aria-checked'), 'true');
+  assert.equal(items[1].getAttribute('tabindex'), '0');
+  assert.equal(items[0].getAttribute('tabindex'), '-1');
+
+  let changeEvent = null;
+  el.addEventListener('sn-segmented-change', (e) => {
+    changeEvent = e.detail;
+  });
+
+  items[2].dispatchEvent(new window.Event('click', { bubbles: true }));
+  await nextRenderTick();
+
+  assert.equal(el.value, 'system');
+  assert.equal(changeEvent.value, 'system');
+
+  el.setAttribute('disabled', '');
+  assert.equal(el.getAttribute('aria-disabled'), 'true');
+  assert.equal(items[0].getAttribute('aria-disabled'), 'true');
+
+  el.remove();
+});
+
+test('sn-tooltip links trigger a11y description and controls popup overlay state', async () => {
+  installSsrDom();
+  await import('../display/Tooltip/Tooltip.js');
+
+  const el = document.createElement('sn-tooltip');
+  el.content = 'Helpful tooltip info';
+  const trigger = document.createElement('button');
+  trigger.textContent = 'Hover me';
+  el.append(trigger);
+  document.body.append(el);
+  await nextRenderTick();
+
+  const popup = el.ref.popup;
+  assert.equal(trigger.getAttribute('aria-describedby'), popup.id);
+  assert.ok(!popup.hasAttribute('data-visible'));
+
+  // Trigger mouseenter
+  el.dispatchEvent(new window.Event('mouseenter'));
+  await nextRenderTick();
+
+  assert.ok(popup.hasAttribute('data-visible'));
+  assert.equal(popup.getAttribute('aria-hidden'), 'false');
+
+  el.setAttribute('disabled', '');
+  await nextRenderTick();
+  assert.ok(!popup.hasAttribute('data-visible'));
+
+  el.show();
+  await nextRenderTick();
+  assert.ok(!popup.hasAttribute('data-visible'), 'disabled tooltip should ignore programmatic show');
+
+  // Trigger mouseleave
+  el.dispatchEvent(new window.Event('mouseleave'));
+  await nextRenderTick();
+
+  assert.ok(!popup.hasAttribute('data-visible'));
+  assert.equal(popup.getAttribute('aria-hidden'), 'true');
+
+  el.remove();
+});

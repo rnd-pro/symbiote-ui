@@ -4,6 +4,8 @@ sn-tree-panel {
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-height: 0;
+  min-block-size: 0;
   overflow: hidden;
   font-family: var(--sn-font);
   font-size: var(--sn-tree-panel-font-size);
@@ -14,8 +16,21 @@ sn-tree-panel[hidden] {
   display: none !important;
 }
 
+.sn-tree-panel-shell {
+  box-sizing: border-box;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  inline-size: 100%;
+  block-size: 100%;
+  min-inline-size: 0;
+  min-block-size: 0;
+  overflow: hidden;
+}
+
 .sn-tree-panel-title {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   gap: var(--sn-tree-panel-title-gap);
   padding: var(--sn-tree-panel-title-padding);
@@ -33,6 +48,7 @@ sn-tree-panel[hidden] {
 
 .sn-tree-panel-toolbar {
   display: flex;
+  flex: 0 0 auto;
   gap: var(--sn-tree-panel-toolbar-gap);
   padding: var(--sn-tree-panel-toolbar-padding);
   border-bottom: 1px solid var(--sn-node-border);
@@ -71,8 +87,9 @@ sn-tree-panel[hidden] {
 }
 
 .sn-tree-panel-content {
-  flex: 1;
-  overflow-y: auto;
+  flex: 1 1 auto;
+  min-block-size: 0;
+  overflow: auto;
   padding: var(--sn-tree-panel-content-padding);
 }
 
@@ -87,6 +104,8 @@ sn-tree-panel[hidden] {
 }
 
 sn-tree-view {
+  display: block;
+  min-block-size: 0;
   --sn-tree-gap: var(--sn-tree-panel-gap, var(--sn-tree-gap));
   --sn-tree-indent: var(--sn-tree-panel-indent, var(--sn-tree-indent));
   --sn-tree-row-min-height: var(--sn-tree-panel-row-min-height, var(--sn-tree-row-height));

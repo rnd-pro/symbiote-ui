@@ -3,11 +3,11 @@ sn-card {
   display: block;
   box-sizing: border-box;
   min-width: 0;
-  padding: var(--sn-card-padding);
-  margin-block-end: var(--sn-card-margin-block-end);
-  border: 1px solid var(--sn-card-border);
-  border-radius: var(--sn-card-radius);
-  background: var(--sn-card-bg);
+  padding: var(--sn-card-padding, 12px);
+  margin-block-end: var(--sn-card-margin-block-end, 0);
+  border: 1px solid var(--sn-card-border, color-mix(in oklab, currentColor 12%, transparent));
+  border-radius: var(--sn-card-radius, 4px);
+  background: var(--sn-card-bg, transparent);
   color: var(--sn-text);
   font-family: var(--sn-font);
 }
@@ -18,7 +18,14 @@ sn-card[hidden] {
 
 sn-card[interactive] {
   cursor: pointer;
-  transition: background 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+  transition: background var(--sn-transition-normal, 150ms) var(--sn-transition-easing, ease),
+              border-color var(--sn-transition-normal, 150ms) var(--sn-transition-easing, ease),
+              box-shadow var(--sn-transition-normal, 150ms) var(--sn-transition-easing, ease);
+}
+
+sn-card[interactive]:focus-visible {
+  outline: var(--sn-card-focus-ring, 2px solid var(--sn-focus-ring-color, currentColor));
+  outline-offset: 2px;
 }
 
 sn-card[interactive]:hover {

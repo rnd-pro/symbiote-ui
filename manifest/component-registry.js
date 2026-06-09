@@ -12,8 +12,23 @@ const STATIC_RENDERABLE_TAGS = new Set([
   'sn-data-table',
   'sn-empty-state',
   'sn-event-feed',
+  'sn-checkbox',
   'sn-field',
   'sn-metric',
+  'sn-radio',
+  'sn-switch',
+  'sn-slider',
+  'sn-rating',
+  'sn-segmented-control',
+  'sn-tooltip',
+  'sn-dialog',
+  'sn-select',
+  'sn-toast',
+  'sn-toast-region',
+  'sn-listbox',
+  'sn-popover',
+  'sn-combobox',
+  'sn-drawer',
 ]);
 
 const HYDRATE_ONLY_TAGS = new Set([
@@ -627,6 +642,33 @@ const WEBMCP_TOOLS = {
       exposedTo: ['agent', 'assistant'],
     },
     {
+      name: 'node_canvas_apply_layout',
+      description: 'Apply a reusable node-canvas layout algorithm: grouped auto layout, tree layout, or document-flow layout, with optional viewport fit.',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          algorithm: { enum: ['auto', 'tree', 'flow'] },
+          fit: { type: 'boolean' },
+          groups: { type: 'object' },
+          nodeSizes: { type: 'object' },
+          direction: { type: 'string' },
+          gapX: { type: 'number', minimum: 0 },
+          gapY: { type: 'number', minimum: 0 },
+          startX: { type: 'number' },
+          startY: { type: 'number' },
+          crossingPasses: { type: 'number', minimum: 0 },
+          nodeIds: { type: 'array', items: { type: 'string' } },
+          gap: { type: 'number', minimum: 0 },
+          padding: {},
+          align: { enum: ['start', 'center', 'end', 'stretch'] },
+          scroll: { type: 'boolean' },
+        },
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, runtimeMethod: 'applyLayout' },
+      exposedTo: ['agent', 'assistant'],
+    },
+    {
       name: 'node_canvas_focus_nodes',
       description: 'Focus one or more node ids by fitting their bounding box into the visible node canvas viewport.',
       inputSchema: {
@@ -686,6 +728,33 @@ const WEBMCP_TOOLS = {
         required: ['nodeId'],
       },
       annotations: { readOnlyHint: false, destructiveHint: false, runtimeMethod: 'flyToNode' },
+      exposedTo: ['agent', 'assistant'],
+    },
+    {
+      name: 'canvas_graph_focus_nodes',
+      description: 'Focus one or more visible graph node ids by fitting their bounding box into the canvas graph viewport.',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          nodeIds: {
+            type: 'array',
+            minItems: 1,
+            items: { type: 'string' },
+          },
+          padding: { type: 'number', minimum: 0 },
+          minZoom: { type: 'number', minimum: 0.001 },
+          maxZoom: { type: 'number', minimum: 0.001 },
+          select: {
+            anyOf: [
+              { type: 'string' },
+              { type: 'boolean' },
+            ],
+          },
+        },
+        required: ['nodeIds'],
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, runtimeMethod: 'focusNodes' },
       exposedTo: ['agent', 'assistant'],
     },
     {
@@ -1113,6 +1182,9 @@ const UI_NAMED_EXPORTS = new Set([
   'TreePanel',
   'ActionButton',
   'FormField',
+  'CheckboxControl',
+  'RadioControl',
+  'SwitchControl',
   'SurfaceCard',
   'StatusBadge',
   'MetricItem',
@@ -1124,6 +1196,43 @@ const UI_NAMED_EXPORTS = new Set([
   'StatusRibbon',
   'CascadeThemeEditor',
   'CascadeThemeWidget',
+  'SliderControl',
+  'RatingControl',
+  'SegmentedControl',
+  'Tooltip',
+  'Dialog',
+  'Select',
+  'Toast',
+  'ToastRegion',
+  'Listbox',
+  'Popover',
+  'Combobox',
+  'Drawer',
+  'Menu',
+  'MenuItem',
+  'MenuSeparator',
+  'MenuGroup',
+  'Dropdown',
+  'Toolbar',
+  'SnBreadcrumb',
+  'SnBreadcrumbItem',
+  'Accordion',
+  'AccordionItem',
+  'Pagination',
+  'Stepper',
+  'NavList',
+  'NavItem',
+  'ProgressBar',
+  'ProgressRing',
+  'Spinner',
+  'Skeleton',
+  'StatusLight',
+  'DescriptionList',
+  'DescriptionItem',
+  'Timeline',
+  'TimelineItem',
+  'Avatar',
+  'Tag',
 ]);
 
 const COMPONENT_VISIBILITY = {
@@ -1131,6 +1240,1014 @@ const COMPONENT_VISIBILITY = {
   internal: 'internal',
   experimental: 'experimental',
 };
+
+const SELECTION_CONTROL_THEME_ALIASES = [
+  '--sn-selection-color',
+  '--sn-selection-font-size',
+  '--sn-selection-line-height',
+  '--sn-selection-gap',
+  '--sn-selection-control-size',
+  '--sn-selection-control-offset',
+  '--sn-selection-border',
+  '--sn-selection-radius',
+  '--sn-selection-bg',
+  '--sn-selection-mark-color',
+  '--sn-selection-content-gap',
+  '--sn-selection-hint-size',
+  '--sn-selection-hint-line-height',
+  '--sn-selection-hint-color',
+  '--sn-selection-error-color',
+  '--sn-selection-hover-border',
+  '--sn-selection-focus-ring',
+  '--sn-selection-focus-offset',
+  '--sn-selection-checked-border',
+  '--sn-selection-checked-bg',
+  '--sn-selection-radio-dot-size',
+  '--sn-selection-switch-width',
+  '--sn-selection-switch-height',
+  '--sn-selection-switch-bg',
+  '--sn-selection-switch-padding',
+  '--sn-selection-switch-thumb-size',
+  '--sn-selection-switch-thumb-bg',
+  '--sn-selection-switch-thumb-shadow',
+  '--sn-selection-switch-thumb-active-bg',
+  '--sn-selection-error-border',
+  '--sn-selection-disabled-opacity',
+];
+
+function getSelectionControlAttributes({ indeterminate = false } = {}) {
+  let attrs = [
+    { name: 'checked', type: 'boolean', description: 'Reflects the selected state to the native input.' },
+    { name: 'disabled', type: 'boolean', description: 'Disables pointer, keyboard, and native form interaction.' },
+    { name: 'required', type: 'boolean', description: 'Marks the native input as required for host form validation.' },
+    { name: 'readonly', type: 'boolean', description: 'Prevents user-driven state changes while keeping the control readable.' },
+    { name: 'invalid', type: 'boolean', description: 'Marks the control invalid and links visible error text when present.' },
+    { name: 'name', type: 'string', description: 'Native input name for form submission and radio grouping.' },
+    { name: 'value', type: 'string', description: 'Native input value. Defaults to "on".' },
+  ];
+  if (indeterminate) {
+    attrs.splice(1, 0, { name: 'indeterminate', type: 'boolean', description: 'Shows the checkbox mixed state until the next user change.' });
+  }
+  return attrs;
+}
+
+function getSelectionControlProperties({ indeterminate = false } = {}) {
+  let props = [
+    { name: 'checked', type: 'boolean', description: 'Boolean checked state mirrored to the native input.' },
+    { name: 'name', type: 'string', description: 'Native input name.' },
+    { name: 'value', type: 'string', description: 'Native input value. Defaults to "on".' },
+  ];
+  if (indeterminate) {
+    props.splice(1, 0, { name: 'indeterminate', type: 'boolean', description: 'Checkbox mixed-state property and attribute.' });
+  }
+  return props;
+}
+
+function getSelectionControlEvents(tagName) {
+  let control = tagName.replace(/^sn-/, '');
+  return [
+    {
+      name: 'sn-control-change',
+      description: 'Emits after a user-driven selection change.',
+      detail: [
+        { name: 'control', type: 'string' },
+        { name: 'checked', type: 'boolean' },
+        { name: 'value', type: 'string' },
+        { name: 'name', type: 'string' },
+        { name: 'indeterminate', type: 'boolean' },
+      ],
+    },
+    {
+      name: `${tagName}-change`,
+      description: `Emits after a user-driven ${control} change.`,
+      detail: [
+        { name: 'control', type: 'string' },
+        { name: 'checked', type: 'boolean' },
+        { name: 'value', type: 'string' },
+        { name: 'name', type: 'string' },
+        { name: 'indeterminate', type: 'boolean' },
+      ],
+    },
+  ];
+}
+
+const SELECTION_CONTROL_COMPONENTS = [
+  {
+    tagName: 'sn-checkbox',
+    className: 'CheckboxControl',
+    description: 'Themeable checkbox control with native input semantics, mixed state, labels, hints, and errors.',
+    capabilities: ['form-control', 'checkbox', 'native-input', 'checked-state', 'mixed-state', 'slots', 'themeable'],
+    indeterminate: true,
+  },
+  {
+    tagName: 'sn-radio',
+    className: 'RadioControl',
+    description: 'Themeable radio control with native input semantics, shared-name grouping, labels, hints, and errors.',
+    capabilities: ['form-control', 'radio', 'native-input', 'checked-state', 'single-selection', 'slots', 'themeable'],
+  },
+  {
+    tagName: 'sn-switch',
+    className: 'SwitchControl',
+    description: 'Themeable switch control with native checkbox semantics, switch role, labels, hints, and errors.',
+    capabilities: ['form-control', 'switch', 'native-input', 'checked-state', 'slots', 'themeable'],
+  },
+].map((component) => ({
+  tagName: component.tagName,
+  className: component.className,
+  module: 'control/SelectionControl/SelectionControl.js',
+  category: 'control',
+  description: component.description,
+  contract: {
+    status: 'draft',
+    schemaVersion: 'component-descriptor-v2',
+    dataSchema: 'schemas/runtime-ui-v1.json',
+    capabilities: component.capabilities,
+    attributes: getSelectionControlAttributes({ indeterminate: component.indeterminate }),
+    properties: getSelectionControlProperties({ indeterminate: component.indeterminate }),
+    methods: [
+      { name: 'focusControl', type: 'function', description: 'Focuses the internal native input.' },
+    ],
+    slots: [
+      { name: 'default', description: 'Visible control label.' },
+      { name: 'hint', description: 'Optional helper text linked to the native input.' },
+      { name: 'error', description: 'Optional error text linked while invalid.' },
+    ],
+    events: getSelectionControlEvents(component.tagName),
+    themeAliases: SELECTION_CONTROL_THEME_ALIASES,
+  },
+}));
+
+const EXPANDED_CATALOG_COMPONENTS = [
+  {
+    tagName: 'sn-slider',
+    className: 'SliderControl',
+    module: 'control/Slider/Slider.js',
+    category: 'control',
+    description: 'Themeable slider control with native input semantics, track alignment, active states, and custom styling.',
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['form-control', 'slider', 'native-input', 'themeable'],
+      attributes: [
+        { name: 'value', type: 'string', description: 'Slider value.' },
+        { name: 'min', type: 'string', description: 'Minimum bounds value.' },
+        { name: 'max', type: 'string', description: 'Maximum bounds value.' },
+        { name: 'step', type: 'string', description: 'Increment/decrement step size.' },
+        { name: 'disabled', type: 'boolean', description: 'Disables user interactions.' },
+        { name: 'readonly', type: 'boolean', description: 'Prevents editing value.' },
+        { name: 'name', type: 'string', description: 'Input name.' },
+      ],
+      properties: [
+        { name: 'value', type: 'string', description: 'Slider value.' },
+        { name: 'min', type: 'string', description: 'Minimum bounds value.' },
+        { name: 'max', type: 'string', description: 'Maximum bounds value.' },
+        { name: 'step', type: 'string', description: 'Increment/decrement step size.' },
+        { name: 'disabled', type: 'boolean', description: 'Disables user interactions.' },
+        { name: 'readonly', type: 'boolean', description: 'Prevents editing value.' },
+        { name: 'name', type: 'string', description: 'Input name.' },
+      ],
+      methods: [
+        { name: 'focusControl', type: 'function', description: 'Focuses the internal native input.' },
+      ],
+      slots: [
+        { name: 'default', description: 'Visible label content.' },
+      ],
+      events: [
+        { name: 'sn-control-change', description: 'Emits on slider input/change.', detail: [{ name: 'value', type: 'string' }] },
+        { name: 'sn-slider-input', description: 'Emits on slider dragging input.', detail: [{ name: 'value', type: 'string' }] },
+        { name: 'sn-slider-change', description: 'Emits on slider drag release.', detail: [{ name: 'value', type: 'string' }] },
+      ],
+      themeAliases: ['--sn-slider-track-bg', '--sn-slider-active-bg', '--sn-slider-thumb-bg'],
+    },
+  },
+  {
+    tagName: 'sn-rating',
+    className: 'RatingControl',
+    module: 'control/Rating/Rating.js',
+    category: 'control',
+    description: 'Themeable rating stars control with interactive hover, disabled/readonly states, and keyboard accessibility.',
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['form-control', 'rating', 'themeable'],
+      attributes: [
+        { name: 'value', type: 'string', description: 'Rating value.' },
+        { name: 'max', type: 'string', description: 'Maximum rating stars.' },
+        { name: 'disabled', type: 'boolean', description: 'Disables rating change.' },
+        { name: 'readonly', type: 'boolean', description: 'Prevents editing rating.' },
+        { name: 'name', type: 'string', description: 'Input name.' },
+      ],
+      properties: [
+        { name: 'value', type: 'string', description: 'Rating value.' },
+        { name: 'max', type: 'string', description: 'Maximum rating stars.' },
+        { name: 'disabled', type: 'boolean', description: 'Disables rating change.' },
+        { name: 'readonly', type: 'boolean', description: 'Prevents editing rating.' },
+        { name: 'name', type: 'string', description: 'Input name.' },
+      ],
+      methods: [
+        { name: 'focusControl', type: 'function', description: 'Focuses the rating container.' },
+      ],
+      slots: [],
+      events: [
+        { name: 'sn-control-change', description: 'Emits on value changes.', detail: [{ name: 'value', type: 'string' }] },
+        { name: 'sn-rating-change', description: 'Emits on rating value changes.', detail: [{ name: 'value', type: 'string' }] },
+      ],
+      themeAliases: ['--sn-rating-gap', '--sn-rating-size', '--sn-rating-star-active-color'],
+    },
+  },
+  {
+    tagName: 'sn-segmented-control',
+    className: 'SegmentedControl',
+    module: 'control/SegmentedControl/SegmentedControl.js',
+    category: 'control',
+    description: 'Linear segmented control of options with radio group keyboard navigation and roving tabindex.',
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['form-control', 'segmented-control', 'radio-group', 'themeable'],
+      attributes: [
+        { name: 'value', type: 'string', description: 'Segmented value.' },
+        { name: 'disabled', type: 'boolean', description: 'Disables segmented control.' },
+        { name: 'readonly', type: 'boolean', description: 'Prevents editing value.' },
+        { name: 'name', type: 'string', description: 'Input name.' },
+      ],
+      properties: [
+        { name: 'value', type: 'string', description: 'Segmented value.' },
+        { name: 'disabled', type: 'boolean', description: 'Disables segmented control.' },
+        { name: 'readonly', type: 'boolean', description: 'Prevents editing value.' },
+        { name: 'name', type: 'string', description: 'Input name.' },
+      ],
+      methods: [
+        { name: 'focusControl', type: 'function', description: 'Focuses the selected segment.' },
+      ],
+      slots: [
+        { name: 'default', description: 'Slotted segment options.' },
+      ],
+      events: [
+        { name: 'sn-control-change', description: 'Emits on segment change.', detail: [{ name: 'value', type: 'string' }] },
+        { name: 'sn-segmented-change', description: 'Emits on segment selection.', detail: [{ name: 'value', type: 'string' }] },
+      ],
+      themeAliases: ['--sn-segmented-bg', '--sn-segmented-border', '--sn-segmented-radius', '--sn-segmented-selected-bg'],
+    },
+  },
+  {
+    tagName: 'sn-tooltip',
+    className: 'Tooltip',
+    module: 'display/Tooltip/Tooltip.js',
+    category: 'display',
+    description: 'Floating contextual tooltip triggered on hover or focus of trigger child.',
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['display', 'tooltip', 'overlay', 'themeable'],
+      attributes: [
+        { name: 'content', type: 'string', description: 'Tooltip text content.' },
+        { name: 'placement', type: 'string', description: 'Tooltip placement relative to target: top, bottom, left, or right.' },
+        { name: 'disabled', type: 'boolean', description: 'Disables tooltip visibility.' },
+      ],
+      properties: [
+        { name: 'content', type: 'string', description: 'Tooltip text content.' },
+        { name: 'placement', type: 'string', description: 'Tooltip placement relative to target.' },
+        { name: 'disabled', type: 'boolean', description: 'Disables tooltip visibility.' },
+      ],
+      methods: [
+        { name: 'show', type: 'function', description: 'Shows the tooltip manually.' },
+        { name: 'hide', type: 'function', description: 'Hides the tooltip manually.' },
+      ],
+      slots: [
+        { name: 'default', description: 'Child element trigger.' },
+      ],
+      events: [
+        { name: 'sn-tooltip-show', description: 'Emits when tooltip opens.' },
+        { name: 'sn-tooltip-hide', description: 'Emits when tooltip closes.' },
+      ],
+      themeAliases: ['--sn-tooltip-bg', '--sn-tooltip-color', '--sn-tooltip-radius', '--sn-tooltip-max-width'],
+    },
+  },
+  {
+    tagName: 'sn-dialog',
+    className: 'Dialog',
+    module: 'surface/Dialog/Dialog.js',
+    category: 'surface',
+    description: 'Themeable modal dialog overlay with focus trap, return focus support, click backdrop dismiss, and keyboard accessibility.',
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['surface', 'dialog', 'overlay', 'focus-trap', 'themeable'],
+      attributes: [
+        { name: 'open', type: 'boolean', description: 'Controls whether the dialog is open.' },
+        { name: 'label', type: 'string', description: 'Accessible header label text.' },
+        { name: 'no-backdrop-dismiss', type: 'boolean', description: 'Prevents closing dialog via backdrop click or escape key.' },
+      ],
+      properties: [
+        { name: 'open', type: 'boolean', description: 'Controls whether the dialog is open.' },
+        { name: 'label', type: 'string', description: 'Accessible header label text.' },
+      ],
+      methods: [
+        { name: 'show', type: 'function', description: 'Opens the modal dialog.' },
+        { name: 'close', type: 'function', description: 'Closes the modal dialog.' },
+      ],
+      slots: [
+        { name: 'default', description: 'Content area of the dialog.' },
+        { name: 'title', description: 'Custom header title slot.' },
+        { name: 'footer', description: 'Custom footer slot containing action buttons.' },
+      ],
+      events: [
+        { name: 'sn-dialog-open', description: 'Emits when dialog opens.' },
+        { name: 'sn-dialog-close', description: 'Emits when dialog closes.' },
+      ],
+      themeAliases: ['--sn-dialog-backdrop-bg', '--sn-dialog-max-width', '--sn-dialog-max-height'],
+    },
+  },
+  {
+    tagName: 'sn-select',
+    className: 'Select',
+    module: 'control/Select/Select.js',
+    category: 'control',
+    description: 'Themeable custom select control with keyboard navigability, options popover, and native select form sync.',
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['form-control', 'select', 'native-input', 'themeable'],
+      attributes: [
+        { name: 'value', type: 'string', description: 'Active selection value.' },
+        { name: 'disabled', type: 'boolean', description: 'Disables select interface.' },
+        { name: 'required', type: 'boolean', description: 'Requires selection before submit.' },
+        { name: 'placeholder', type: 'string', description: 'Fallback display text.' },
+        { name: 'invalid', type: 'boolean', description: 'Displays error styling.' },
+        { name: 'name', type: 'string', description: 'Standard input field name.' },
+      ],
+      properties: [
+        { name: 'value', type: 'string', description: 'Active selection value.' },
+        { name: 'disabled', type: 'boolean', description: 'Disables select interface.' },
+        { name: 'required', type: 'boolean', description: 'Requires selection before submit.' },
+        { name: 'placeholder', type: 'string', description: 'Fallback display text.' },
+        { name: 'invalid', type: 'boolean', description: 'Displays error styling.' },
+        { name: 'name', type: 'string', description: 'Standard input field name.' },
+      ],
+      methods: [
+        { name: 'open', type: 'function', description: 'Opens options dropdown.' },
+        { name: 'close', type: 'function', description: 'Closes options dropdown.' },
+      ],
+      slots: [
+        { name: 'default', description: 'Contains child option elements.' },
+      ],
+      events: [
+        { name: 'sn-select-change', description: 'Emits on value selection changes.', detail: [{ name: 'value', type: 'string' }] },
+        { name: 'change', description: 'Standard HTML form change bubble event.', detail: [{ name: 'value', type: 'string' }] },
+      ],
+      themeAliases: [],
+    },
+  },
+  {
+    tagName: 'sn-toast',
+    className: 'Toast',
+    module: 'display/Toast/Toast.js',
+    category: 'display',
+    description: 'Themeable alert message card that slides into corner viewport regions and auto-dismisses.',
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['display', 'toast', 'alert', 'themeable'],
+      attributes: [
+        { name: 'variant', type: 'string', description: 'Toast state type: info, success, warning, or error.' },
+        { name: 'duration', type: 'number', description: 'Dismissal timer duration in ms. Set to 0 to disable auto dismiss.' },
+        { name: 'message', type: 'string', description: 'Primary message text.' },
+      ],
+      properties: [
+        { name: 'variant', type: 'string', description: 'Toast state type.' },
+        { name: 'duration', type: 'number', description: 'Dismissal timer duration.' },
+        { name: 'message', type: 'string', description: 'Primary message text.' },
+      ],
+      methods: [
+        { name: 'dismiss', type: 'function', description: 'Triggers fade-out and removes the toast.' },
+      ],
+      slots: [
+        { name: 'default', description: 'Custom text/HTML elements.' },
+      ],
+      events: [],
+      themeAliases: [],
+    },
+  },
+  {
+    tagName: 'sn-toast-region',
+    className: 'ToastRegion',
+    module: 'display/Toast/Toast.js',
+    category: 'display',
+    description: 'Fixed viewport region managing layouts for active toast message collections.',
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['display', 'toast-region', 'layout'],
+      attributes: [],
+      properties: [],
+      methods: [],
+      slots: [
+        { name: 'default', description: 'Slotted active sn-toast cards.' },
+      ],
+      events: [],
+      themeAliases: [],
+    },
+  },
+  {
+    tagName: 'sn-listbox',
+    className: 'Listbox',
+    module: 'list/Listbox/Listbox.js',
+    category: 'list',
+    description: 'Themeable listbox control with keyboard accessibility, multiple mode support, typeahead search, and light DOM slotting.',
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['listbox', 'keyboard-navigability', 'typeahead', 'multiple', 'themeable'],
+      attributes: [
+        { name: 'value', type: 'string', description: 'Comma-separated values of selected items.' },
+        { name: 'multiple', type: 'boolean', description: 'Allows selection of multiple options.' },
+        { name: 'disabled', type: 'boolean', description: 'Disables user interactions.' },
+        { name: 'label', type: 'string', description: 'Accessible listbox label text.' },
+      ],
+      properties: [
+        { name: 'value', type: 'string', description: 'Selected value(s).' },
+        { name: 'multiple', type: 'boolean', description: 'Allows multiple selection.' },
+        { name: 'disabled', type: 'boolean', description: 'Disables the control.' },
+      ],
+      methods: [],
+      slots: [
+        { name: 'default', description: 'Slotted list items with role="option" attributes.' },
+      ],
+      events: [
+        { name: 'sn-listbox-change', description: 'Emits when selection value changes.', detail: [{ name: 'value', type: 'string' }] },
+        { name: 'change', description: 'Standard change event.', detail: [{ name: 'value', type: 'string' }] },
+      ],
+      themeAliases: ['--sn-listbox-bg', '--sn-listbox-border', '--sn-listbox-radius', '--sn-listbox-shadow', '--sn-listbox-text', '--sn-listbox-hover-bg', '--sn-listbox-selected-bg'],
+    },
+  },
+  {
+    tagName: 'sn-popover',
+    className: 'Popover',
+    module: 'surface/Popover/Popover.js',
+    category: 'surface',
+    description: 'Themeable non-modal popover overlay positioned relative to an anchor/trigger with click-outside and escape key dismissal.',
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['surface', 'popover', 'overlay', 'dismissable', 'themeable'],
+      attributes: [
+        { name: 'open', type: 'boolean', description: 'Controls whether the popover is open.' },
+        { name: 'placement', type: 'string', description: 'Placement relative to anchor (e.g. bottom-start, top-end).' },
+        { name: 'offset', type: 'number', description: 'Visual offset in pixels from anchor.' },
+        { name: 'disabled', type: 'boolean', description: 'Disables opening interactions.' },
+      ],
+      properties: [
+        { name: 'open', type: 'boolean', description: 'Controls whether the popover is open.' },
+        { name: 'placement', type: 'string', description: 'Placement relative to anchor.' },
+        { name: 'offset', type: 'number', description: 'Visual offset.' },
+      ],
+      methods: [
+        { name: 'show', type: 'function', description: 'Opens the popover.' },
+        { name: 'close', type: 'function', description: 'Closes the popover.' },
+      ],
+      slots: [
+        { name: 'default', description: 'Popover content panel.' },
+        { name: 'trigger', description: 'Slot for the element that toggles the popover.' },
+      ],
+      events: [
+        { name: 'sn-popover-open', description: 'Emits when popover opens.' },
+        { name: 'sn-popover-close', description: 'Emits when popover closes.' },
+      ],
+      themeAliases: ['--sn-popover-bg', '--sn-popover-border', '--sn-popover-radius', '--sn-popover-shadow'],
+    },
+  },
+  {
+    tagName: 'sn-combobox',
+    className: 'Combobox',
+    module: 'control/Combobox/Combobox.js',
+    category: 'control',
+    description: 'Themeable combobox/autocomplete input field with dropdown search filtering, arrow navigation, and custom options support.',
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['form-control', 'combobox', 'autocomplete', 'dropdown', 'themeable'],
+      attributes: [
+        { name: 'value', type: 'string', description: 'Selected value.' },
+        { name: 'placeholder', type: 'string', description: 'Placeholder label text.' },
+        { name: 'disabled', type: 'boolean', description: 'Disables user interactions.' },
+        { name: 'name', type: 'string', description: 'Input field name.' },
+      ],
+      properties: [
+        { name: 'value', type: 'string', description: 'Selected value.' },
+        { name: 'placeholder', type: 'string', description: 'Placeholder label text.' },
+        { name: 'disabled', type: 'boolean', description: 'Disables the control.' },
+      ],
+      methods: [
+        { name: 'open', type: 'function', description: 'Opens the options dropdown.' },
+        { name: 'close', type: 'function', description: 'Closes the options dropdown.' },
+      ],
+      slots: [
+        { name: 'default', description: 'Slotted option elements.' },
+      ],
+      events: [
+        { name: 'sn-combobox-change', description: 'Emits when selected value changes.', detail: [{ name: 'value', type: 'string' }] },
+        { name: 'change', description: 'Standard change event.', detail: [{ name: 'value', type: 'string' }] },
+      ],
+      themeAliases: ['--sn-field-bg', '--sn-primary'],
+    },
+  },
+  {
+    tagName: 'sn-drawer',
+    className: 'Drawer',
+    module: 'surface/Drawer/Drawer.js',
+    category: 'surface',
+    description: 'Themeable slide-out dialog drawer overlay with focus trap, backdrop click dismiss, placement options, and keyboard accessibility.',
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['surface', 'drawer', 'overlay', 'focus-trap', 'themeable'],
+      attributes: [
+        { name: 'open', type: 'boolean', description: 'Controls whether the drawer is open.' },
+        { name: 'placement', type: 'string', description: 'Edge to slide out from (right, left, top, bottom).' },
+        { name: 'label', type: 'string', description: 'Accessible header title label text.' },
+        { name: 'no-backdrop-dismiss', type: 'boolean', description: 'Prevents closing drawer via backdrop click.' },
+      ],
+      properties: [
+        { name: 'open', type: 'boolean', description: 'Controls whether the drawer is open.' },
+        { name: 'placement', type: 'string', description: 'Edge to slide out from.' },
+        { name: 'label', type: 'string', description: 'Drawer header title text.' },
+      ],
+      methods: [
+        { name: 'show', type: 'function', description: 'Opens the slide-out drawer.' },
+        { name: 'close', type: 'function', description: 'Closes the slide-out drawer.' },
+      ],
+      slots: [
+        { name: 'default', description: 'Content area of the drawer.' },
+        { name: 'title', description: 'Custom header title slot.' },
+        { name: 'footer', description: 'Custom footer slot containing actions.' },
+      ],
+      events: [
+        { name: 'sn-drawer-open', description: 'Emits when drawer opens.' },
+        { name: 'sn-drawer-close', description: 'Emits when drawer closes.' },
+      ],
+      themeAliases: ['--sn-drawer-backdrop-bg', '--sn-drawer-bg', '--sn-drawer-size'],
+    },
+  },
+];
+
+const BATCH_EXPANSION_COMPONENTS = [
+  {
+    tagName: 'sn-menu',
+    className: 'Menu',
+    module: 'menu/Menu/Menu.js',
+    category: 'menu',
+    description: 'Renders a menu container with roving focus keyboard navigation.',
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['menu', 'roving-focus', 'keyboard-navigation', 'themeable'],
+      slots: [
+        { name: 'default', description: 'Menu items.' }
+      ],
+      themeAliases: ['--sn-menu-bg', '--sn-menu-border', '--sn-menu-padding']
+    }
+  },
+  {
+    tagName: 'sn-menu-item',
+    className: 'MenuItem',
+    module: 'menu/Menu/Menu.js',
+    category: 'menu',
+    description: 'Interactive item inside a menu supporting icons, checkboxes, and shortcuts.',
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['menu-item', 'checked-state', 'icon', 'shortcut'],
+      attributes: [
+        { name: 'disabled', type: 'boolean', description: 'Disables interaction.' },
+        { name: 'checked', type: 'boolean', description: 'Sets check state.' },
+        { name: 'icon', type: 'string', description: 'Optional leading icon.' },
+        { name: 'shortcut', type: 'string', description: 'Optional keyboard shortcut label.' }
+      ],
+      events: [
+        { name: 'sn-menu-item-select', description: 'Emitted when item is clicked or activated.' }
+      ]
+    }
+  },
+  {
+    tagName: 'sn-menu-separator',
+    className: 'MenuSeparator',
+    module: 'menu/Menu/Menu.js',
+    category: 'menu',
+    description: 'Draws a separation line between menu items.',
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['menu-separator']
+    }
+  },
+  {
+    tagName: 'sn-menu-group',
+    className: 'MenuGroup',
+    module: 'menu/Menu/Menu.js',
+    category: 'menu',
+    description: 'Groups menu items with an optional header label.',
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['menu-group', 'label'],
+      attributes: [
+        { name: 'label', type: 'string', description: 'Optional group label.' }
+      ]
+    }
+  },
+  {
+    tagName: 'sn-dropdown',
+    className: 'Dropdown',
+    module: 'menu/Menu/Menu.js',
+    category: 'menu',
+    description: 'Toggle button dropdown menu overlay.',
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['dropdown', 'overlay', 'trigger'],
+      slots: [
+        { name: 'trigger', description: 'Trigger button element.' },
+        { name: 'default', description: 'Dropdown menu content.' }
+      ]
+    }
+  },
+  {
+    tagName: 'sn-toolbar',
+    className: 'Toolbar',
+    module: 'toolbar/Toolbar/Toolbar.js',
+    category: 'toolbar',
+    description: 'Toolbar containing controls with roving focus keyboard navigation.',
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['toolbar', 'roving-focus', 'keyboard-navigation', 'compact', 'themeable'],
+      attributes: [
+        { name: 'orientation', type: 'string', description: 'Layout direction: horizontal or vertical.' },
+        { name: 'compact', type: 'boolean', description: 'Reduces padding and gap spacing.' }
+      ],
+      themeAliases: ['--sn-toolbar-bg', '--sn-toolbar-border', '--sn-toolbar-padding']
+    }
+  },
+  {
+    tagName: 'sn-breadcrumb',
+    className: 'SnBreadcrumb',
+    module: 'navigation/Breadcrumb/Breadcrumb.js',
+    category: 'navigation',
+    description: 'Generic breadcrumb navigation for showing current path trail.',
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['breadcrumb', 'path-navigation'],
+      methods: [
+        { name: 'setPath', type: 'function', description: 'Dynamically sets breadcrumb segments.' }
+      ],
+      events: [
+        { name: 'sn-breadcrumb-select', description: 'Emits when a trail item is selected.' }
+      ]
+    }
+  },
+  {
+    tagName: 'sn-breadcrumb-item',
+    className: 'SnBreadcrumbItem',
+    module: 'navigation/Breadcrumb/Breadcrumb.js',
+    category: 'navigation',
+    description: 'Internal item component representing a breadcrumb path segment.',
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['breadcrumb-item', 'label', 'icon'],
+      attributes: [
+        { name: 'label', type: 'string', description: 'Segment label.' },
+        { name: 'icon', type: 'string', description: 'Optional icon.' },
+        { name: 'is-first', type: 'boolean', description: 'Identifies the root segment.' },
+        { name: 'is-active', type: 'boolean', description: 'Identifies the active trailing segment.' }
+      ]
+    }
+  },
+  {
+    tagName: 'sn-accordion',
+    className: 'Accordion',
+    module: 'surface/Accordion/Accordion.js',
+    category: 'surface',
+    description: 'Groups multiple collapsible accordion panels.',
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['accordion', 'collapsible-group'],
+      attributes: [
+        { name: 'multiple', type: 'boolean', description: 'Allows multiple sections open simultaneously.' }
+      ]
+    }
+  },
+  {
+    tagName: 'sn-accordion-item',
+    className: 'AccordionItem',
+    module: 'surface/Accordion/Accordion.js',
+    category: 'surface',
+    description: 'Individual collapsible section within an accordion.',
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['accordion-item', 'collapsible', 'ssr-safe'],
+      attributes: [
+        { name: 'open', type: 'boolean', description: 'Expansion state.' },
+        { name: 'disabled', type: 'boolean', description: 'Disables toggle action.' },
+        { name: 'header', type: 'string', description: 'Header text label.' }
+      ],
+      events: [
+        { name: 'sn-accordion-item-toggle', description: 'Emitted when open state changes.' }
+      ]
+    }
+  },
+  {
+    tagName: 'sn-pagination',
+    className: 'Pagination',
+    module: 'control/Pagination/Pagination.js',
+    category: 'control',
+    description: 'Pagination control showing current page, page buttons, and total range indicators.',
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['pagination', 'pager-control', 'state-reflection'],
+      attributes: [
+        { name: 'current-page', type: 'number', description: 'Active page index.' },
+        { name: 'total-pages', type: 'number', description: 'Max pages limit.' },
+        { name: 'disabled', type: 'boolean', description: 'Disables interactions.' }
+      ],
+      events: [
+        { name: 'sn-page-change', description: 'Emitted when a page number is selected.' }
+      ]
+    }
+  },
+  {
+    tagName: 'sn-stepper',
+    className: 'Stepper',
+    module: 'control/Stepper/Stepper.js',
+    category: 'control',
+    description: 'Stepper showing horizontal sequence of steps.',
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['stepper', 'steps-progress'],
+      attributes: [
+        { name: 'active-step', type: 'number', description: 'Active index.' }
+      ],
+      methods: [
+        { name: 'setSteps', type: 'function', description: 'Set step array descriptors.' }
+      ],
+      events: [
+        { name: 'sn-step-change', description: 'Emitted when a step is activated.' }
+      ]
+    }
+  },
+  {
+    tagName: 'sn-nav-list',
+    className: 'NavList',
+    module: 'navigation/NavList/NavList.js',
+    category: 'navigation',
+    description: 'Vertical layout list for route-agnostic sidebar/panel navigation links.',
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['nav-list', 'navigation-container']
+    }
+  },
+  {
+    tagName: 'sn-nav-item',
+    className: 'NavItem',
+    module: 'navigation/NavList/NavList.js',
+    category: 'navigation',
+    description: 'Individual navigation link item supporting active state, badge count, and icon.',
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['nav-item', 'navigation-link'],
+      attributes: [
+        { name: 'active', type: 'boolean', description: 'Marks active route status.' },
+        { name: 'disabled', type: 'boolean', description: 'Disables click interaction.' },
+        { name: 'icon', type: 'string', description: 'Leading icon identifier.' },
+        { name: 'badge', type: 'string', description: 'Trailing count/badge label.' }
+      ],
+      events: [
+        { name: 'sn-nav-select', description: 'Emitted when navigation item is clicked.' }
+      ]
+    }
+  },
+  {
+    tagName: 'sn-progress-bar',
+    className: 'ProgressBar',
+    module: 'display/Progress/Progress.js',
+    category: 'display',
+    description: 'Horizontal progress bar representing completion percentage or indeterminate work.',
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['progress-bar', 'value-tracking', 'accessibility-roles'],
+      attributes: [
+        { name: 'value', type: 'number', description: 'Current progress value.' },
+        { name: 'max', type: 'number', description: 'Maximum progress limit.' },
+        { name: 'indeterminate', type: 'boolean', description: 'Enables looping waiting state.' }
+      ]
+    }
+  },
+  {
+    tagName: 'sn-progress-ring',
+    className: 'ProgressRing',
+    module: 'display/Progress/Progress.js',
+    category: 'display',
+    description: 'Circular progress ring representing completion ratio.',
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['progress-ring', 'value-tracking', 'circle-ratio'],
+      attributes: [
+        { name: 'value', type: 'number', description: 'Current value.' },
+        { name: 'max', type: 'number', description: 'Max value limit.' },
+        { name: 'indeterminate', type: 'boolean', description: 'Enables looping waiting state.' }
+      ]
+    }
+  },
+  {
+    tagName: 'sn-spinner',
+    className: 'Spinner',
+    module: 'display/Progress/Progress.js',
+    category: 'display',
+    description: 'Standard loading circle spinner widget.',
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['spinner', 'loader']
+    }
+  },
+  {
+    tagName: 'sn-skeleton',
+    className: 'Skeleton',
+    module: 'display/Skeleton/Skeleton.js',
+    category: 'display',
+    description: 'Skeleton screen placeholder for loading layout templates.',
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['skeleton', 'shimmer', 'loading-placeholder'],
+      attributes: [
+        { name: 'variant', type: 'string', description: 'Shape variant: text, circle, block.' },
+        { name: 'animation', type: 'string', description: 'Animation style: shimmer, pulse, none.' }
+      ]
+    }
+  },
+  {
+    tagName: 'sn-status-light',
+    className: 'StatusLight',
+    module: 'display/StatusLight/StatusLight.js',
+    category: 'display',
+    description: 'Mini colored circular status light indicator.',
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['status-light', 'status-role'],
+      attributes: [
+        { name: 'variant', type: 'string', description: 'Status color variant: success, warning, error, info, neutral.' }
+      ]
+    }
+  },
+  {
+    tagName: 'sn-description-list',
+    className: 'DescriptionList',
+    module: 'display/DescriptionList/DescriptionList.js',
+    category: 'display',
+    description: 'Renders definition pairs (labels and values) inside a structured grid layout.',
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['description-list', 'key-value-grid'],
+      slots: [
+        { name: 'default', description: 'Description items.' }
+      ]
+    }
+  },
+  {
+    tagName: 'sn-description-item',
+    className: 'DescriptionItem',
+    module: 'display/DescriptionList/DescriptionList.js',
+    category: 'display',
+    description: 'Key-value label-definition record inside description lists.',
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['description-item', 'label', 'value'],
+      attributes: [
+        { name: 'label', type: 'string', description: 'Field descriptor key label.' }
+      ],
+      slots: [
+        { name: 'default', description: 'Field value detail content.' }
+      ]
+    }
+  },
+  {
+    tagName: 'sn-timeline',
+    className: 'Timeline',
+    module: 'display/Timeline/Timeline.js',
+    category: 'display',
+    description: 'Vertical log flow tracking chronological traces or milestones.',
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['timeline', 'logs-list']
+    }
+  },
+  {
+    tagName: 'sn-timeline-item',
+    className: 'TimelineItem',
+    module: 'display/Timeline/Timeline.js',
+    category: 'display',
+    description: 'Individual trace item in a vertical timeline.',
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['timeline-item', 'milestone'],
+      attributes: [
+        { name: 'title', type: 'string', description: 'Event title.' },
+        { name: 'time', type: 'string', description: 'Timestamp label.' },
+        { name: 'variant', type: 'string', description: 'Indicator state: success, warning, error, info, neutral.' }
+      ]
+    }
+  },
+  {
+    tagName: 'sn-avatar',
+    className: 'Avatar',
+    module: 'display/Avatar/Avatar.js',
+    category: 'display',
+    description: 'Circle profile icon holding an image or initials fallback, with status indicator.',
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['avatar', 'profile-image', 'initials-fallback'],
+      attributes: [
+        { name: 'src', type: 'string', description: 'Image asset path.' },
+        { name: 'initials', type: 'string', description: 'Name initials fallback.' },
+        { name: 'shape', type: 'string', description: 'Format layout shape: circle, rounded, square.' },
+        { name: 'status', type: 'string', description: 'Presence indicator badge status.' }
+      ]
+    }
+  },
+  {
+    tagName: 'sn-tag',
+    className: 'Tag',
+    module: 'display/Tag/Tag.js',
+    category: 'display',
+    description: 'Small chip label element with optional close trigger.',
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['tag', 'chip', 'dismissable'],
+      attributes: [
+        { name: 'variant', type: 'string', description: 'Color variant: success, warning, error, info, neutral.' },
+        { name: 'closable', type: 'boolean', description: 'Includes remove/close button.' }
+      ],
+      events: [
+        { name: 'sn-tag-close', description: 'Emits when tag dismiss button is clicked.' }
+      ]
+    }
+  }
+];
 
 export let COMPONENTS = [
   {
@@ -1414,7 +2531,7 @@ export let COMPONENTS = [
       status: 'draft',
       schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/graph-model-v1.json',
-      capabilities: ['node-editor-canvas', 'connections', 'frames', 'subgraphs', 'viewport', 'selection', 'multi-node-focus'],
+      capabilities: ['node-editor-canvas', 'connections', 'frames', 'subgraphs', 'viewport', 'selection', 'multi-node-focus', 'graph-layout'],
       attributes: [
         { name: 'connection-engine', type: 'string', description: 'Connection renderer engine selection.' },
       ],
@@ -1434,6 +2551,8 @@ export let COMPONENTS = [
         { name: 'setViewportLocked', type: 'function', description: 'Locks pan and zoom while preserving rendering.' },
         { name: 'setCompactMode', type: 'function', description: 'Toggles compact node rendering.' },
         { name: 'setPathStyle', type: 'function', description: 'Sets connection path rendering style.' },
+        { name: 'applyLayout', type: 'function', description: 'Applies auto, tree, or flow node layout and returns the resulting positions.' },
+        { name: 'autoLayout', type: 'function', description: 'Applies grouped automatic graph layout to all nodes.' },
         { name: 'setFlowLayout', type: 'function', description: 'Positions nodes in vertical or horizontal document flow and can enable native canvas scrolling.' },
         { name: 'clearFlowLayout', type: 'function', description: 'Clears flow layout sizing and scroll mode.' },
         { name: 'flyToNode', type: 'function', description: 'Focuses one node by id, or fits a supplied node id array into view.' },
@@ -1480,10 +2599,15 @@ export let COMPONENTS = [
         { name: 'setGraphModel', type: 'function', description: 'Loads normalized graph data into the canvas renderer.' },
         { name: 'setPath', type: 'function', description: 'Navigates to a group path or semantic cluster path.' },
         { name: 'flyToNode', type: 'function', description: 'Focuses a node by id and enters parent groups when needed.' },
+        { name: 'flyToNodes', type: 'function', description: 'Fits one or more visible graph node ids into the canvas viewport.' },
+        { name: 'fitNodes', type: 'function', description: 'Fits one or more visible graph node ids into the canvas viewport.' },
+        { name: 'focusNodes', type: 'function', description: 'Agent-facing alias for fitting one or more graph node ids into the viewport.' },
         { name: 'fitView', type: 'function', description: 'Fits the visible graph into the canvas viewport.' },
         { name: 'resetView', type: 'function', description: 'Resets viewport pan and zoom.' },
         { name: 'setLayoutSnapshot', type: 'function', description: 'Restores persisted graph node positions and viewport state.' },
         { name: 'getLayoutSnapshot', type: 'function', description: 'Returns serializable node positions and viewport state.' },
+        { name: 'suspendLayout', type: 'function', description: 'Marks the graph as layout-suspended so internal layout moves do not trigger destructive teardown.' },
+        { name: 'resumeLayout', type: 'function', description: 'Resumes graph drawing and theme sync after layout suspension.' },
       ],
       events: [
         { name: 'file-selected', description: 'Emits when a leaf/file node is selected.', detail: [{ name: 'path', type: 'string' }] },
@@ -1501,6 +2625,24 @@ export let COMPONENTS = [
         '--sn-node-border',
         '--sn-node-selected',
         '--sn-conn-color',
+        '--sn-canvas-graph-bg',
+        '--sn-canvas-graph-edge',
+        '--sn-canvas-graph-pulse',
+        '--sn-canvas-graph-danger',
+        '--sn-canvas-graph-text',
+        '--sn-canvas-graph-text-dim',
+        '--sn-canvas-graph-panel-bg',
+        '--sn-canvas-graph-panel-border',
+        '--sn-canvas-graph-ghost',
+        '--sn-canvas-graph-radial-icon',
+        '--sn-graph-type-profile',
+        '--sn-graph-type-profile-photo',
+        '--sn-graph-type-bio',
+        '--sn-graph-type-project',
+        '--sn-graph-type-pulse',
+        '--sn-graph-type-skill',
+        '--sn-graph-type-directory',
+        '--sn-graph-type-file',
         '--sn-cat-server',
         '--sn-cat-data',
         '--sn-effect-focus-ring',
@@ -3522,7 +4664,7 @@ export let COMPONENTS = [
       status: 'draft',
       schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
-      capabilities: ['tree-data', 'tree-panel-chrome', 'filter', 'expand-collapse', 'placeholder', 'local-storage'],
+      capabilities: ['tree-data', 'tree-panel-chrome', 'scroll-container', 'filter', 'expand-collapse', 'placeholder', 'local-storage'],
       attributes: [
         { name: 'title', type: 'string', description: 'Optional panel heading text.' },
         { name: 'title-icon', type: 'string', description: 'Optional Material Symbols icon name shown before the title.' },
@@ -3692,6 +4834,9 @@ export let COMPONENTS = [
       ],
     },
   },
+  ...SELECTION_CONTROL_COMPONENTS,
+  ...EXPANDED_CATALOG_COMPONENTS,
+  ...BATCH_EXPANSION_COMPONENTS,
   {
     tagName: 'sn-card',
     className: 'SurfaceCard',

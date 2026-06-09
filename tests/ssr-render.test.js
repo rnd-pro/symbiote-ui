@@ -1,3 +1,6 @@
+import { acquireCurrentTestFileLock } from './test-lock.js';
+await acquireCurrentTestFileLock(import.meta.url);
+
 import assert from 'node:assert/strict';
 import { parseHTML } from 'linkedom';
 import { test } from 'node:test';
@@ -84,6 +87,93 @@ const fixtures = {
   'sn-empty-state': (el) => {
     el.textContent = 'No host data';
     return 'No host data';
+  },
+  'sn-checkbox': (el) => {
+    el.textContent = 'Enable sync';
+    return 'Enable sync';
+  },
+  'sn-radio': (el) => {
+    el.textContent = 'Choose mode';
+    return 'Choose mode';
+  },
+  'sn-switch': (el) => {
+    el.textContent = 'Enable notifications';
+    return 'Enable notifications';
+  },
+  'sn-slider': (el) => {
+    el.value = '42';
+    return '';
+  },
+  'sn-rating': (el) => {
+    el.value = '3';
+    return '';
+  },
+  'sn-segmented-control': (el) => {
+    el.innerHTML = '<button value="a">A</button>';
+    return 'A';
+  },
+  'sn-tooltip': (el) => {
+    el.content = 'Info';
+    el.innerHTML = '<button>Hover</button>';
+    return 'Hover';
+  },
+  'sn-dialog': (el) => {
+    el.label = 'Dialog Title';
+    const p = document.createElement('p');
+    p.textContent = 'Dialog body content';
+    el.appendChild(p);
+    return 'Dialog body content';
+  },
+  'sn-select': (el) => {
+    el.placeholder = 'Choose option';
+    const opt = document.createElement('option');
+    opt.value = 'opt1';
+    opt.textContent = 'Option 1';
+    el.appendChild(opt);
+    return 'Option 1';
+  },
+  'sn-toast': (el) => {
+    el.message = 'Notification message';
+    return 'message';
+  },
+  'sn-toast-region': (el) => {
+    const toast = document.createElement('sn-toast');
+    toast.message = 'Toast';
+    el.appendChild(toast);
+    return 'message';
+  },
+  'sn-listbox': (el) => {
+    const opt = document.createElement('div');
+    opt.setAttribute('role', 'option');
+    opt.setAttribute('data-value', 'a');
+    opt.textContent = 'A';
+    el.appendChild(opt);
+    return 'A';
+  },
+  'sn-popover': (el) => {
+    const btn = document.createElement('button');
+    btn.setAttribute('slot', 'trigger');
+    btn.textContent = 'Trigger';
+    el.appendChild(btn);
+    const content = document.createElement('div');
+    content.textContent = 'Popover Content';
+    el.appendChild(content);
+    return 'Popover Content';
+  },
+  'sn-combobox': (el) => {
+    el.placeholder = 'Search...';
+    const opt = document.createElement('option');
+    opt.value = 'a';
+    opt.textContent = 'A';
+    el.appendChild(opt);
+    return 'A';
+  },
+  'sn-drawer': (el) => {
+    el.label = 'Drawer Title';
+    const content = document.createElement('div');
+    content.textContent = 'Drawer content';
+    el.appendChild(content);
+    return 'Drawer content';
   },
 };
 

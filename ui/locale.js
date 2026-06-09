@@ -1,5 +1,7 @@
 import {
+  configureAutoLocalization,
   configureLocalization,
+  getNavigatorLocalePreferences,
   getLocalization,
   isLocalizationExplicit,
   normalizeLocaleMode,
@@ -7,22 +9,17 @@ import {
 } from '../locale/index.js';
 
 export function detectBrowserLocale(source = globalThis.navigator) {
-  if (!source) return 'en';
-  let languages = Array.isArray(source.languages) ? source.languages : [];
-  let preferences = languages.length > 0 ? languages : [source.language];
-  return resolveLocale(preferences);
+  return resolveLocale(getNavigatorLocalePreferences(source));
 }
 
 export function configureBrowserLocalization(options = {}) {
   let mode = normalizeLocaleMode(options.mode, { fallback: '' });
   if (mode) {
-    let source = options.navigator ?? globalThis.navigator;
-    let languages = Array.isArray(source?.languages) ? source.languages : [];
-    let preferences = options.preferences
-      ?? (languages.length > 0 ? languages : [source?.language]);
-    return configureLocalization({
+    return configureAutoLocalization({
       mode,
-      preferences,
+      preferences: options.preferences,
+      navigator: options.navigator,
+      document: options.document,
       messages: options.messages,
       explicit: options.explicit,
     });
@@ -41,9 +38,10 @@ export function configureBrowserLocalization(options = {}) {
   }
 
   let locale = detectBrowserLocale(options.navigator ?? globalThis.navigator);
-  return configureLocalization({
+  return configureAutoLocalization({
     mode: 'auto',
     preferences: [locale],
+    document: options.document,
     messages: options.messages,
     explicit: options.explicit ?? false,
   });

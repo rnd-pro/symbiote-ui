@@ -1,6 +1,11 @@
 import Symbiote from '@symbiotejs/symbiote';
 import { ForceLayout } from '../ForceLayout.js';
 import { createCanvasGraphStore } from '../graph-model.js';
+import {
+  findForceNodeGroup,
+  getForceLayoutOptions,
+  normalizeForceGroups,
+} from '../graph-layout.js';
 import css from './CanvasGraph.css.js';
 import {
   DOT_RADIUS,
@@ -16,6 +21,8 @@ import {
 } from './CanvasGraphGeometry.js';
 import { GRAPH_TYPE_COLOR_TOKENS } from '../../graph/theme-contract.js';
 import {
+  CANVAS_GRAPH_LAYER_TARGETS,
+  findActiveTransitionMarker,
   getDepthGroupsFrame,
   getLayerAnimationFrame,
   getNextPulseQueue,
@@ -48,6 +55,19 @@ const DEFAULT_MENU_ITEMS = Object.freeze([
   { action: 'view-code', label: 'View Code', path: 'M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0L19.2 12l-4.6-4.6L16 6l6 6-6 6-1.4-1.4z' },
 ]);
 
+function normalizeFocusNodeIds(nodeIds) {
+  let ids = Array.isArray(nodeIds) ? nodeIds : [nodeIds];
+  let normalized = [];
+  let seen = new Set();
+  for (let id of ids) {
+    let normalizedId = String(id || '').trim();
+    if (!normalizedId || seen.has(normalizedId)) continue;
+    seen.add(normalizedId);
+    normalized.push(normalizedId);
+  }
+  return normalized;
+}
+
 function toRgba(rgb, alpha = 1) {
   return `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alpha})`;
 }
@@ -63,9 +83,10 @@ function resolveCanvasColor(value, fallback) {
   if (!value || typeof document === 'undefined') return fallback;
   let ctx = resolveCanvasColor.ctx || document.createElement('canvas').getContext('2d');
   resolveCanvasColor.ctx = ctx;
-  ctx.fillStyle = 'rgba(0, 0, 0, 0)';
+  ctx.fillStyle = 'rgb(1, 2, 3)';
   ctx.fillStyle = value;
   let normalized = ctx.fillStyle;
+  if (normalized === 'rgb(1, 2, 3)' || normalized === '#010203') return fallback;
   if (normalized.startsWith('#')) {
     let hex = normalized.slice(1);
     if (hex.length === 3) hex = hex.split('').map((part) => part + part).join('');
@@ -94,6 +115,25 @@ function readThemeRgb(source, token, fallback) {
   return resolveCanvasColor(value, fallback);
 }
 
+function readThemeRgbAny(source, tokens, fallback) {
+  for (let token of tokens) {
+    let value = getComputedStyle(source).getPropertyValue(token).trim();
+    if (!value) continue;
+    let resolved = resolveCanvasColor(resolveCssVars(source, value), null);
+    if (resolved) return resolved;
+  }
+  return fallback;
+}
+
+function scheduleFrame(callback) {
+  if (typeof globalThis.requestAnimationFrame === 'function') {
+    let id = globalThis.requestAnimationFrame(callback);
+    return () => globalThis.cancelAnimationFrame?.(id);
+  }
+  let id = setTimeout(callback, 0);
+  return () => clearTimeout(id);
+}
+
 export class CanvasGraph extends Symbiote {
   init$ = {
     // These defaults will be updated from external controller if needed
@@ -111,6 +151,8 @@ export class CanvasGraph extends Symbiote {
     brownianThresh: 0.001,
     pinReheat: 0.02,
     pinCap: 0.08,
+    groupDistance: 120,
+    groupStrength: 0.05,
     wellStrength: 0.8,
     centerPull: 0.3,
     wellRepulsion: 5.0,
@@ -126,6 +168,10 @@ export class CanvasGraph extends Symbiote {
   _dangerRgb = [244, 67, 54];
   _textRgb = [240, 240, 240];
   _textDimRgb = [153, 153, 153];
+  _panelBgRgb = [34, 34, 34];
+  _panelBorderRgb = [74, 158, 255];
+  _menuIconRgb = [26, 26, 26];
+  _ghostRgb = [51, 51, 51];
   _typeColorRgb = {};
   _ghostColor = 'rgb(51,51,51)';
 
@@ -148,6 +194,7 @@ export class CanvasGraph extends Symbiote {
     this.hoverNode = null;
     this.nextActiveNode = null;
     this.deactivating = false;
+    this._transitionMarkers = [];
     this.menuAnim = 0;
     this.dragOffset = { x: 0, y: 0 };
     this.renderMode = 'dots';
@@ -185,6 +232,10 @@ export class CanvasGraph extends Symbiote {
     this._visualDragDeltaY = 0;
     this._dragWorldTransform = null;
     this._layoutSnapshot = null;
+    this._themeSyncQueued = false;
+    this._cancelThemeSync = null;
+    this._layoutSuspended = false;
+    this._layoutSuspendReason = '';
 
     // Info panel state (typewriter HUD to the right of active node)
     this._infoPanel = {
@@ -218,12 +269,7 @@ export class CanvasGraph extends Symbiote {
       4: { scale: 1, opacity: 1, parallax: 0 }
     };
 
-    this.LAYER_TARGETS = {
-      scale:    [1.12, 1.0,  0.95, 0.88, 0.78],
-      opacity:  [1.0,  0.9,  0.55, 0.06, 0.03],
-      blur:     [0,    0,    1,    3,    5],
-      parallax: [0,    0,    0.02, 0.04, 0.07]
-    };
+    this.LAYER_TARGETS = CANVAS_GRAPH_LAYER_TARGETS;
 
     this.depthGroups = {
       0: { edges: [], nodes: [] },
@@ -238,6 +284,7 @@ export class CanvasGraph extends Symbiote {
     this.resizeCanvas();
 
     this.bindEvents();
+    this._bindThemeSync();
 
     this._wakeLoop();
 
@@ -249,13 +296,37 @@ export class CanvasGraph extends Symbiote {
       });
     }
 
-    setTimeout(() => this.syncCanvasTheme(), 100);
+    this._scheduleCanvasThemeSync();
   }
 
   disconnectedCallback() {
+    if (this._layoutSuspendReason === 'layout-move') return;
     this._loopRunning = false;
     if (this._animationFrame) cancelAnimationFrame(this._animationFrame);
+    this._cancelThemeSync?.();
+    this._cancelThemeSync = null;
+    this.ownerDocument?.removeEventListener?.('cascade-theme-change', this._themeChangeHandler);
+    this._themeObserver?.disconnect();
     if (this.worker) this.worker.stop();
+  }
+
+  suspendLayout({ reason = 'layout-suspend' } = {}) {
+    this._layoutSuspended = true;
+    this._layoutSuspendReason = reason;
+    if (reason === 'layout-move') return;
+    this._loopRunning = false;
+    if (this._animationFrame) cancelAnimationFrame(this._animationFrame);
+    this.worker?.pause?.();
+  }
+
+  resumeLayout({ reason = 'layout-resume' } = {}) {
+    let wasLayoutMove = this._layoutSuspendReason === 'layout-move' || reason === 'layout-move';
+    this._layoutSuspended = false;
+    this._layoutSuspendReason = '';
+    if (!wasLayoutMove) this.worker?.resume?.();
+    this.resizeCanvas();
+    this._scheduleCanvasThemeSync();
+    this._wakeLoop();
   }
 
   /**
@@ -282,6 +353,53 @@ export class CanvasGraph extends Symbiote {
 
   resetView() {
     this.fitView();
+  }
+
+  _getVisibleFocusFrame(nodeId, { fallbackToParent = true } = {}) {
+    let id = String(nodeId || '').trim();
+    if (!id) return null;
+
+    let node = this.nodeMap?.get(id);
+    if (!node && fallbackToParent) {
+      let graphNode = this.graphDB?.nodes?.get(id);
+      let parentId = graphNode?.parentId;
+      while (parentId && !node) {
+        node = this.nodeMap?.get(parentId);
+        if (node) {
+          id = parentId;
+          break;
+        }
+        parentId = this.graphDB?.nodes?.get(parentId)?.parentId;
+      }
+    }
+    if (!node) return null;
+
+    let pos = this.getSmooth(id) || this.nodePositions.get(id);
+    if (!pos) return null;
+
+    if (this.renderMode === 'dots') {
+      let connections = this.adjMap?.get(id)?.size || 0;
+      let radius = getNodeRadius(node, connections);
+      return {
+        id,
+        node,
+        minX: pos.x - radius,
+        minY: pos.y - radius,
+        maxX: pos.x + radius,
+        maxY: pos.y + radius,
+      };
+    }
+
+    let width = Number.isFinite(node.w) ? node.w : 160;
+    let height = Number.isFinite(node.h) ? node.h : 40;
+    return {
+      id,
+      node,
+      minX: pos.x,
+      minY: pos.y,
+      maxX: pos.x + width,
+      maxY: pos.y + height,
+    };
   }
 
   fitView(padding = 60, animate = true) {
@@ -327,15 +445,277 @@ export class CanvasGraph extends Symbiote {
     this._wakeLoop();
   }
 
-  pulseNode(nodeId, durationMs = 1500) {
+  fitNodes(nodeIds, options = {}) {
+    let ids = normalizeFocusNodeIds(nodeIds);
+    if (ids.length === 0) return false;
+
+    const rect = this.canvas.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return false;
+
+    let frames = ids
+      .map((id) => this._getVisibleFocusFrame(id, { fallbackToParent: options.fallbackToParent !== false }))
+      .filter(Boolean);
+    if (frames.length === 0) return false;
+
+    let minX = Math.min(...frames.map((frame) => frame.minX));
+    let minY = Math.min(...frames.map((frame) => frame.minY));
+    let maxX = Math.max(...frames.map((frame) => frame.maxX));
+    let maxY = Math.max(...frames.map((frame) => frame.maxY));
+    let graphW = maxX - minX || 1;
+    let graphH = maxY - minY || 1;
+    let cx = (minX + maxX) / 2;
+    let cy = (minY + maxY) / 2;
+    let padding = Number.isFinite(options.padding) ? options.padding : 80;
+    let minZoom = Number.isFinite(options.minZoom) ? options.minZoom : 0.02;
+    let maxZoom = Number.isFinite(options.maxZoom) ? options.maxZoom : 2.0;
+    let newZoom = Math.max(minZoom, Math.min(
+      (rect.width - padding * 2) / graphW,
+      (rect.height - padding * 2) / graphH,
+      maxZoom
+    ));
+    let newPanX = rect.width / 2 - cx * newZoom;
+    let newPanY = rect.height / 2 - cy * newZoom;
+
+    let animate = options.animate !== false;
+    this._zoomAnchor = null;
+    if (animate) {
+      this._targetZoom = newZoom;
+      this._targetPanX = newPanX;
+      this._targetPanY = newPanY;
+    } else {
+      this.zoom = newZoom;
+      this._targetZoom = newZoom;
+      this.panX = newPanX;
+      this.panY = newPanY;
+      this._targetPanX = null;
+      this._targetPanY = null;
+    }
+
+    let selectedId = null;
+    if (typeof options.select === 'string') {
+      selectedId = options.select;
+    } else if (options.select === true) {
+      selectedId = frames[0]?.id || null;
+    }
+    if (selectedId && this.nodeMap?.has(selectedId)) {
+      this._activateNode(selectedId, {
+        transition: options.transition !== false,
+        transitionMarkerMs: options.transitionMarkerMs,
+        transitionMs: options.transitionMs,
+        marker: options.marker,
+      });
+    }
+
+    this.needsDraw = true;
+    this._wakeLoop();
+    return true;
+  }
+
+  flyToNodes(nodeIds, options = {}) {
+    return this.fitNodes(nodeIds, options);
+  }
+
+  focusNodes(nodeIds, options = {}) {
+    let ids = normalizeFocusNodeIds(nodeIds);
+    if (ids.length === 0) return false;
+    if (!Array.isArray(nodeIds) && ids.length === 1 && options.fit !== true) {
+      this.flyToNode(ids[0], options);
+      return true;
+    }
+    return this.fitNodes(ids, options);
+  }
+
+  pulseNode(nodeId, durationMs = 1500, options = {}) {
+    let now = globalThis.performance?.now?.() ?? Date.now();
+    let marker = options.deferUntilTransition === false
+      ? null
+      : findActiveTransitionMarker(this._transitionMarkers, nodeId, now);
+    if (marker) {
+      marker.pendingPulse = {
+        duration: durationMs,
+        waves: Number.isFinite(options.waves) ? options.waves : 1,
+      };
+      this._pulses = (this._pulses || []).filter((pulse) => pulse.id !== nodeId);
+      this.needsDraw = true;
+      this._wakeLoop();
+      return;
+    }
+    this._queuePulseNow(nodeId, durationMs, options, now);
+  }
+
+  _queuePulseNow(nodeId, durationMs = 1500, options = {}, startTime = globalThis.performance?.now?.() ?? Date.now()) {
     this._pulses = getNextPulseQueue({
       pulses: this._pulses || [],
       nodeId,
-      startTime: performance.now(),
+      startTime,
       duration: durationMs,
+      waves: Number.isFinite(options.waves) ? options.waves : 1,
     });
     this.needsDraw = true;
     this._wakeLoop();
+  }
+
+  _activateNode(nodeOrId, options = {}) {
+    let node = typeof nodeOrId === 'string' ? this.nodeMap?.get(nodeOrId) : nodeOrId;
+    if (!node) return false;
+
+    let previousNode = this.activeNode;
+    let isNewActivation = !previousNode || previousNode.id !== node.id;
+    let shouldTransition = options.transition !== false
+      && isNewActivation
+      && previousNode
+      && !this.dragNode
+      && !this.isPanning;
+
+    if (shouldTransition) {
+      this.nextActiveNode = node;
+      this.deactivating = true;
+      this.menuAnim = 0;
+      this._queueTransitionMarker(previousNode.id, node.id, options);
+      this.needsDraw = true;
+      this._wakeLoop();
+      return true;
+    }
+
+    this.activeNode = node;
+    this.nextActiveNode = null;
+    this.deactivating = false;
+    if (isNewActivation && previousNode && options.marker !== false) {
+      this._queueTransitionMarker(previousNode.id, node.id, options);
+    }
+    this.updateInteractionDepths();
+    return true;
+  }
+
+  _queueTransitionMarker(fromId, toId, options = {}) {
+    let from = String(fromId || '').trim();
+    let to = String(toId || '').trim();
+    if (!from || !to || from === to) return;
+
+    let path = this._findTransitionPath(from, to);
+    if (path.length < 2) return;
+
+    let now = globalThis.performance?.now?.() ?? Date.now();
+    let duration = Number.isFinite(options.transitionMarkerMs)
+      ? options.transitionMarkerMs
+      : Number.isFinite(options.transitionMs)
+        ? options.transitionMs
+        : 850;
+    this._transitionMarkers = [
+      ...(this._transitionMarkers || []).filter((marker) => marker.toId !== to),
+      { fromId: from, toId: to, path, startTime: now, duration },
+    ];
+  }
+
+  _findTransitionPath(fromId, toId) {
+    if (!this.adjMap?.has(fromId) || !this.adjMap?.has(toId)) return [fromId, toId];
+    let queue = [fromId];
+    let parent = new Map([[fromId, null]]);
+    let visited = 0;
+
+    while (queue.length > 0 && visited < 500) {
+      let current = queue.shift();
+      visited++;
+      if (current === toId) break;
+      for (let next of this.adjMap.get(current) || []) {
+        if (parent.has(next) || !this.nodeMap?.has(next)) continue;
+        parent.set(next, current);
+        queue.push(next);
+      }
+    }
+
+    if (!parent.has(toId)) return [fromId, toId];
+    let path = [];
+    let current = toId;
+    while (current) {
+      path.unshift(current);
+      current = parent.get(current);
+    }
+    return path.length > 1 ? path : [fromId, toId];
+  }
+
+  _getTransitionRoutePoint(marker, progress) {
+    let points = marker.path
+      .map((id) => this.nodeCenter(id))
+      .filter(Boolean);
+    if (points.length < 2) return null;
+
+    let segments = [];
+    let total = 0;
+    for (let i = 1; i < points.length; i++) {
+      let from = points[i - 1];
+      let to = points[i];
+      let dx = to.x - from.x;
+      let dy = to.y - from.y;
+      let length = Math.sqrt(dx * dx + dy * dy);
+      if (length <= 0.1) continue;
+      segments.push({ from, to, dx, dy, length });
+      total += length;
+    }
+    if (segments.length === 0 || total <= 0.1) return null;
+
+    let distance = Math.max(0, Math.min(1, progress)) * total;
+    for (let segment of segments) {
+      if (distance > segment.length) {
+        distance -= segment.length;
+        continue;
+      }
+      let t = distance / segment.length;
+      return {
+        x: segment.from.x + segment.dx * t,
+        y: segment.from.y + segment.dy * t,
+      };
+    }
+
+    return segments.at(-1)?.to || null;
+  }
+
+  _drawTransitionMarkers(ctx) {
+    if (!this._transitionMarkers?.length) return false;
+    let now = globalThis.performance?.now?.() ?? Date.now();
+    let hasActiveMarkers = false;
+    this._transitionMarkers = this._transitionMarkers.filter((marker) => {
+      let duration = Math.max(1, marker.duration || 850);
+      let elapsed = now - marker.startTime;
+      if (elapsed >= duration) {
+        this._completeTransitionMarker(marker, now);
+        return false;
+      }
+
+      let progress = Math.max(0, Math.min(1, elapsed / duration));
+      let eased = progress < 0.5
+        ? 2 * progress * progress
+        : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+      let point = this._getTransitionRoutePoint(marker, eased);
+      if (!point) return false;
+
+      let radius = Math.max(3, 7 / Math.max(this.zoom, 0.15));
+      let alpha = 0.35 + Math.sin(progress * Math.PI) * 0.65;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, radius * 1.8, 0, Math.PI * 2);
+      ctx.fillStyle = toRgba(this._pulseRgb, 0.18 * alpha);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
+      ctx.fillStyle = toRgba(this._pulseRgb, alpha);
+      ctx.fill();
+      ctx.lineWidth = Math.max(1, 1.5 / Math.max(this.zoom, 0.15));
+      ctx.strokeStyle = toRgba(this._textRgb, 0.55 * alpha);
+      ctx.stroke();
+      ctx.restore();
+      hasActiveMarkers = true;
+      this.needsDraw = true;
+      return true;
+    });
+    return hasActiveMarkers;
+  }
+
+  _completeTransitionMarker(marker, now = globalThis.performance?.now?.() ?? Date.now()) {
+    let pulse = marker?.pendingPulse;
+    if (!pulse) return;
+    this._queuePulseNow(marker.toId, pulse.duration, { waves: pulse.waves }, now);
+    marker.pendingPulse = null;
   }
 
   flyToNode(nodeId, options = {}) {
@@ -364,8 +744,12 @@ export class CanvasGraph extends Symbiote {
     // Activate the node
     const foundNode = this.nodeMap?.get(nodeId);
     if (foundNode) {
-      this.activeNode = foundNode;
-      this.updateInteractionDepths();
+      this._activateNode(foundNode, {
+        transition: options.transition !== false,
+        transitionMarkerMs: options.transitionMarkerMs,
+        transitionMs: options.transitionMs,
+        marker: options.marker,
+      });
     }
     this.needsDraw = true;
     this._wakeLoop();
@@ -614,26 +998,47 @@ export class CanvasGraph extends Symbiote {
     this.rebuildAdjMap();
     this.updateInteractionDepths();
 
-    const options = {
-      chargeStrength: this.$.chargeStrength,
-      linkDistance: this.$.linkDistance,
+    this.startWorker({
+      activeGroupId: this.currentGroupId,
+      boundaryRadius: this.currentGroupId ? this.graphDB.nodes.get(this.currentGroupId).w / 2 : null,
+      attractors: null,
+    });
+
+    this._emitGraphEvent('pathChanged', { path: this.currentGroupId || '' });
+  }
+
+  getVisibleForceGroups() {
+    return normalizeForceGroups(
+      this.graphDB.groups || {},
+      new Set(this.nodes.map((node) => node.id))
+    );
+  }
+
+  getWorkerOptions(customOptions = null, forceGroups = {}) {
+    const autoOptions = getForceLayoutOptions(this.nodes.length, {
+      continuous: true,
+      groups: forceGroups,
+      edges: this.edges,
+    });
+    return {
       linkStrength: this.$.linkStrength,
       centerStrength: this.$.centerStrength,
       velocityDecay: this.$.velocityDecay,
       collideStrength: this.$.collideStrength,
       alphaDecay: this.$.alphaDecay,
       theta: this.$.theta,
+      groupDistance: this.$.groupDistance,
+      groupStrength: this.$.groupStrength,
+      wellStrength: this.$.wellStrength,
+      centerPull: this.$.centerPull,
+      wellRepulsion: this.$.wellRepulsion,
+      crossLinkScale: this.$.crossLinkScale,
       nodeWidth: this.renderMode === 'dots' ? DOT_RADIUS * 2 : 160,
       nodeHeight: this.renderMode === 'dots' ? DOT_RADIUS * 2 : 40,
       mode: 'continuous',
-      activeGroupId: this.currentGroupId,
-      boundaryRadius: this.currentGroupId ? this.graphDB.nodes.get(this.currentGroupId).w / 2 : null,
-      attractors: null,
+      ...autoOptions,
+      ...(customOptions || {}),
     };
-
-    this.startWorker(options);
-
-    this._emitGraphEvent('pathChanged', { path: this.currentGroupId || '' });
   }
 
   startWorker(customOptions = null) {
@@ -667,23 +1072,8 @@ export class CanvasGraph extends Symbiote {
       this._emitLayoutSnapshot();
     };
 
-    const options = customOptions || {
-      chargeStrength: this.$.chargeStrength,
-      linkDistance: this.$.linkDistance,
-      linkStrength: this.$.linkStrength,
-      centerStrength: this.$.centerStrength,
-      velocityDecay: this.$.velocityDecay,
-      collideStrength: this.$.collideStrength,
-      alphaDecay: this.$.alphaDecay,
-      theta: this.$.theta,
-      wellStrength: this.$.wellStrength,
-      centerPull: this.$.centerPull,
-      wellRepulsion: this.$.wellRepulsion,
-      crossLinkScale: this.$.crossLinkScale,
-      nodeWidth: this.renderMode === 'dots' ? DOT_RADIUS * 2 : 160,
-      nodeHeight: this.renderMode === 'dots' ? DOT_RADIUS * 2 : 40,
-      mode: 'continuous',
-    };
+    const forceGroups = this.getVisibleForceGroups();
+    const options = this.getWorkerOptions(customOptions, forceGroups);
 
     this.worker.start({
       nodes: this.nodes.map(n => {
@@ -700,11 +1090,13 @@ export class CanvasGraph extends Symbiote {
         }
         return {
           id: n.id, type: n.type, parentId: n.parentId, isGroup: !!n.isGroup,
-          children: n.children || [], x: pos?.x, y: pos?.y, w: finalW, h: finalH,
+          children: n.children || [], group: findForceNodeGroup(forceGroups, n.id),
+          x: pos?.x, y: pos?.y, w: finalW, h: finalH,
         };
       }),
       edges: this.edges.filter(e => this.nodeMap.has(e.from) && this.nodeMap.has(e.to)),
-      groups: {}, options
+      groups: forceGroups,
+      options,
     });
 
     this.worker.updateConfig({
@@ -756,20 +1148,55 @@ export class CanvasGraph extends Symbiote {
     return `rgb(${rr},${gg},${bbb})`;
   }
 
+  _bindThemeSync() {
+    this._themeChangeHandler = () => this._scheduleCanvasThemeSync();
+    this.ownerDocument?.addEventListener?.('cascade-theme-change', this._themeChangeHandler);
+
+    if (typeof globalThis.MutationObserver !== 'function') return;
+    this._themeObserver = new MutationObserver(() => this._scheduleCanvasThemeSync());
+    let themeSources = [
+      this.ownerDocument?.documentElement,
+      this.ownerDocument?.body,
+      this.parentElement,
+      this,
+    ].filter(Boolean);
+    let seen = new Set();
+    for (let source of themeSources) {
+      if (seen.has(source)) continue;
+      seen.add(source);
+      this._themeObserver.observe(source, { attributes: true, attributeFilter: ['class', 'style'] });
+    }
+  }
+
+  _scheduleCanvasThemeSync() {
+    if (this._themeSyncQueued) return;
+    this._themeSyncQueued = true;
+    this._cancelThemeSync = scheduleFrame(() => {
+      this._themeSyncQueued = false;
+      this._cancelThemeSync = null;
+      this.syncCanvasTheme();
+      this.needsDraw = true;
+      this._wakeLoop();
+    });
+  }
+
   syncCanvasTheme() {
-    this._bgRgb = readThemeRgb(this, '--sn-bg', this._bgRgb);
-    this._edgeRgb = readThemeRgb(this, '--sn-conn-color', this._edgeRgb);
-    this._pulseRgb = readThemeRgb(this, '--sn-node-selected', this._pulseRgb);
-    this._dangerRgb = readThemeRgb(this, '--sn-danger-color', this._dangerRgb);
-    this._textRgb = readThemeRgb(this, '--sn-text', this._textRgb);
-    this._textDimRgb = readThemeRgb(this, '--sn-text-dim', this._textDimRgb);
+    this._bgRgb = readThemeRgbAny(this, ['--sn-canvas-graph-bg', '--sn-bg'], this._bgRgb);
+    this._edgeRgb = readThemeRgbAny(this, ['--sn-canvas-graph-edge', '--sn-conn-color', '--sn-node-selected'], this._edgeRgb);
+    this._pulseRgb = readThemeRgbAny(this, ['--sn-canvas-graph-pulse', '--sn-node-selected'], this._pulseRgb);
+    this._dangerRgb = readThemeRgbAny(this, ['--sn-canvas-graph-danger', '--sn-danger-color', '--sn-status-error'], this._dangerRgb);
+    this._textRgb = readThemeRgbAny(this, ['--sn-canvas-graph-text', '--sn-text'], this._textRgb);
+    this._textDimRgb = readThemeRgbAny(this, ['--sn-canvas-graph-text-dim', '--sn-text-dim'], this._textDimRgb);
+    this._panelBgRgb = readThemeRgbAny(this, ['--sn-canvas-graph-panel-bg', '--sn-panel-bg', '--sn-node-bg', '--sn-bg'], this._panelBgRgb);
+    this._panelBorderRgb = readThemeRgbAny(this, ['--sn-canvas-graph-panel-border', '--sn-node-border', '--sn-outline-color-soft', '--sn-text-dim'], this._panelBorderRgb);
+    this._menuIconRgb = readThemeRgbAny(this, ['--sn-canvas-graph-radial-icon', '--sn-panel-bg', '--sn-bg'], this._menuIconRgb);
+    this._ghostRgb = readThemeRgbAny(this, ['--sn-canvas-graph-ghost', '--sn-text-dim', '--sn-node-hover'], this._ghostRgb);
     for (let [type, token] of Object.entries(GRAPH_TYPE_COLOR_TOKENS)) {
       this._typeColorRgb[type] = readThemeRgb(this, token, this._typeColorRgb[type] || this._edgeRgb);
     }
 
     [this._bgR, this._bgG, this._bgB] = this._bgRgb;
-    let boost = 25;
-    this._ghostColor = `rgb(${Math.min(255, this._bgR + boost)},${Math.min(255, this._bgG + boost)},${Math.min(255, this._bgB + boost)})`;
+    this._ghostColor = toRgba(this._ghostRgb, 1);
   }
 
   draw() {
@@ -1004,6 +1431,8 @@ export class CanvasGraph extends Symbiote {
           fillStyle = this.blendBg(fromTC[0], fromTC[1], fromTC[2], 0.35);
         }
 
+        currentCtx.save();
+        currentCtx.globalAlpha *= edge.aAlpha;
         currentCtx.fillStyle = fillStyle;
         currentCtx.beginPath();
         const midX = from.x + dx * 0.5, midY = from.y + dy * 0.5;
@@ -1018,6 +1447,7 @@ export class CanvasGraph extends Symbiote {
         currentCtx.arc(from.x, from.y, wFrom, ang - Math.PI/2, ang - Math.PI * 1.5, true);
         currentCtx.closePath();
         currentCtx.fill();
+        currentCtx.restore();
       }
 
       // Nodes
@@ -1133,7 +1563,8 @@ export class CanvasGraph extends Symbiote {
           const pos = this.getSmooth(p.id) || this.nodePositions.get(p.id);
           if (!pos) return false;
           const progress = elapsed / p.duration;
-          const pulsePhase = (progress * 3) % 1;
+          const waves = Number.isFinite(p.waves) ? Math.max(1, p.waves) : 1;
+          const pulsePhase = (progress * waves) % 1;
           const r = 20 + (pulsePhase * 80);
           const opacity = 1 - pulsePhase;
           mainCtx.beginPath();
@@ -1147,6 +1578,7 @@ export class CanvasGraph extends Symbiote {
           return true;
         });
       }
+      this._drawTransitionMarkers(mainCtx);
     }
 
     const showMenu = this.activeNode && !this.dragNode && !this.deactivating;
@@ -1196,7 +1628,7 @@ export class CanvasGraph extends Symbiote {
             const p = new Path2D(item.path);
             mainCtx.fillStyle = item.danger
               ? toRgba(this._dangerRgb, easeOut)
-              : toRgba(this._bgRgb, easeOut);
+              : toRgba(this._menuIconRgb, easeOut);
             mainCtx.fill(p);
           }
           mainCtx.restore();
@@ -1228,6 +1660,10 @@ export class CanvasGraph extends Symbiote {
     this._prevDragDeltaX = idle.prevDragDeltaX;
     this._prevDragDeltaY = idle.prevDragDeltaY;
     this._idleFrames = idle.idleFrames;
+    if (idle.shouldStop && this._transitionMarkers?.length > 0) {
+      idle.shouldStop = false;
+      this.needsDraw = true;
+    }
 
     // Allow 3 extra frames after convergence to flush final sub-pixel lerps
     if (idle.shouldStop) {
@@ -1379,14 +1815,14 @@ export class CanvasGraph extends Symbiote {
     ctx.filter = 'blur(16px)';
     ctx.beginPath();
     ctx.roundRect(panelX, panelY, panelW, panelH + 16, cornerR);
-    ctx.fillStyle = toRgba(this._bgRgb, 0.85 * ip.opacity);
+    ctx.fillStyle = toRgba(this._panelBgRgb, 0.85 * ip.opacity);
     ctx.fill();
     ctx.filter = 'none';
 
     // Border
     ctx.beginPath();
     ctx.roundRect(panelX, panelY, panelW, panelH + 16, cornerR);
-    ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${0.15 * ip.opacity})`;
+    ctx.strokeStyle = toRgba(this._panelBorderRgb, 0.5 * ip.opacity);
     ctx.lineWidth = 0.8;
     ctx.stroke();
 
@@ -1556,12 +1992,9 @@ export class CanvasGraph extends Symbiote {
         if (vis && sim) { sim.x = vis.x; sim.y = vis.y; }
 
         let isNewActivation = !this.activeNode || this.activeNode.id !== hit.id;
-        this.activeNode = hit;
-        this.nextActiveNode = null;
-        this.deactivating = false;
+        this._activateNode(hit, { transition: false, marker: false });
         this.dragNode = hit;
         if (isNewActivation) this.menuAnim = 0;
-        this.updateInteractionDepths();
         this._nodeActivatedOnDown = isNewActivation;
         const pos = this.nodePositions.get(hit.id);
         const hitDepth = hit.targetDepth ?? 0;

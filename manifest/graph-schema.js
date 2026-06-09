@@ -126,6 +126,11 @@ export let GRAPH_SCHEMAS = {
         items: { $ref: '#/$defs/edge' },
         uniqueItems: true,
       },
+      groups: {
+        type: 'array',
+        items: { $ref: '#/$defs/group' },
+        uniqueItems: true,
+      },
       views: {
         type: 'object',
         additionalProperties: { $ref: '#/$defs/view' },

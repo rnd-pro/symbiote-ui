@@ -240,6 +240,10 @@ export class SourceViewer extends Symbiote {
         this.$.toggleIcon = this._isReadable ? "compress" : "open_in_full";
       }
     });
+    for (const prop of ["statsText", "saveLabel", "graphLabel", "modeLabel", "saveTitle", "showGraphTitle", "toggleModeTitle"]) {
+      this.sub(prop, () => this._syncHeaderText());
+    }
+    this._syncHeaderText();
   }
 
   getCodeBlock() {
@@ -345,6 +349,27 @@ export class SourceViewer extends Symbiote {
 
   setSyntaxTokens(tokens = {}) {
     return this.setSyntaxTheme({ tokens });
+  }
+
+  _syncHeaderText() {
+    this._setHeaderAttr(".sv-stats", "data-source-text", this.$.statsText);
+    this._setHeaderAttr(".sv-save-label", "data-label", this.$.saveLabel);
+    this._setHeaderAttr(".sv-graph-label", "data-label", this.$.graphLabel);
+    this._setHeaderAttr(".sv-toggle-label", "data-label", this.$.modeLabel);
+    this._setHeaderAttr(".sv-save-action", "aria-label", this.$.saveTitle || this.$.saveLabel);
+    this._setHeaderAttr(".sv-graph-action", "aria-label", this.$.showGraphTitle || this.$.graphLabel);
+    this._setHeaderAttr(".sv-toggle-action", "aria-label", this.$.toggleModeTitle || this.$.modeLabel);
+  }
+
+  _setHeaderAttr(selector, name, value) {
+    const element = this.querySelector(selector);
+    if (!element) return;
+    const text = String(value || "").trim();
+    if (text) {
+      element.setAttribute(name, text);
+    } else {
+      element.removeAttribute(name);
+    }
   }
 
   triggerSourceAction(extra = {}) {

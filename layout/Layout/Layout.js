@@ -224,23 +224,37 @@ export class Layout extends Symbiote {
   _renderRoot() {
     if (!this.$.layoutTree || !this.ref.root) return;
 
-
     let rootNodes = Array.from(this.ref.root.children)
       .filter((child) => child.localName === 'layout-node');
-    let rootNode = rootNodes[0];
-    for (let node of rootNodes.slice(1)) {
-      node.remove();
+    let rootNode = rootNodes.find((node) => node.$?.nodeId === this.$.layoutTree.id);
+    if (!rootNode) {
+      let reusableRoot = rootNodes.find((node) => {
+        let nodeId = node.$?.nodeId;
+        return nodeId && LayoutTree.findNode(this.$.layoutTree, nodeId);
+      });
+      if (reusableRoot) {
+        rootNode = document.createElement('layout-node');
+        this.ref.root.insertBefore(rootNode, reusableRoot);
+      }
+    }
+    if (!rootNode) {
+      rootNode = rootNodes[0];
     }
     if (!rootNode) {
       rootNode = document.createElement('layout-node');
       this.ref.root.appendChild(rootNode);
     }
 
-
     let chromeEnabled = this.$.panelChrome !== false;
     rootNode.$.panelChrome = chromeEnabled;
     rootNode.setAttribute('panel-chrome', chromeEnabled ? 'default' : 'none');
     rootNode.$.nodeData = this.$.layoutTree;
+
+    for (let node of Array.from(this.ref.root.children)) {
+      if (node.localName === 'layout-node' && node !== rootNode) {
+        node.remove();
+      }
+    }
   }
 
   _scheduleResponsiveLayout() {
@@ -967,11 +981,7 @@ export class Layout extends Symbiote {
       node.removeAttribute('collapse-dir');
       node.$.isCollapsed = false;
 
-      if (node.$.collapseDirection === 'horizontal') {
-        node.$.collapseIcon = 'chevron_left';
-      } else {
-        node.$.collapseIcon = 'expand_less';
-      }
+      node._syncCollapsePresentation?.();
     });
 
 

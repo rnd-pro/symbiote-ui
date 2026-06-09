@@ -1,6 +1,6 @@
 {
   "name": "symbiote-ui",
-  "version": "0.3.0-alpha.21",
+  "version": "0.3.0-alpha.24",
   "type": "module",
   "description": "Symbiote provider UI, Web Components, themes, manifests, schemas, graph layout helpers, WebMCP metadata, and SSR-safe UI contracts.",
   "main": "index.js",
@@ -174,7 +174,8 @@
     "access": "public"
   },
   "scripts": {
-    "test": "node --test tests/*.test.js"
+    "test": "node tests/run-tests.js -- node --test tests/*.test.js",
+    "test:browser": "node tests/run-tests.js --suite browser -- node --test tests/graph-browser-smoke.test.js"
   },
   "keywords": [
     "node-editor",

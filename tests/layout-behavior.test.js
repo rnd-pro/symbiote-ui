@@ -1,4 +1,8 @@
+import { acquireCurrentTestFileLock } from './test-lock.js';
+await acquireCurrentTestFileLock(import.meta.url);
+
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
 import {
   DEFAULT_LAYOUT_BEHAVIOR,
@@ -22,6 +26,54 @@ import {
   setNodeBehavior,
 } from '../layout/LayoutTree.js';
 import { withGlobalPanel } from '../layout/LayoutRouter/SectionRegistry.js';
+
+const layoutNodeStyles = new URL('../layout/LayoutNode/LayoutNode.css.js', import.meta.url);
+const layoutNodeTemplate = new URL('../layout/LayoutNode/LayoutNode.tpl.js', import.meta.url);
+const layoutNodeSource = new URL('../layout/LayoutNode/LayoutNode.js', import.meta.url);
+const layoutSource = new URL('../layout/Layout/Layout.js', import.meta.url);
+
+test('layout node panel header adapts without overlapping actions', async () => {
+  let [styles, template] = await Promise.all([
+    readFile(layoutNodeStyles, 'utf8'),
+    readFile(layoutNodeTemplate, 'utf8'),
+  ]);
+
+  assert.match(template, /class="panel-actions"/);
+  assert.match(template, /class="panel-menu-action-label"/);
+  assert.match(styles, /\.panel-view\s*\{[\s\S]*?container-type: inline-size;[\s\S]*?container-name: layout-panel;/);
+  assert.match(styles, /\.panel-header\s*\{[\s\S]*?box-sizing: border-box;[\s\S]*?display: grid;[\s\S]*?grid-template-columns: minmax\(0, 1fr\) auto minmax\(0, 1fr\);[\s\S]*?block-size: var\(--sn-layout-header-block-size,/);
+  assert.match(styles, /\.type-btn\s*\{[\s\S]*?grid-column: 1;[\s\S]*?overflow: hidden;/);
+  assert.match(styles, /\.panel-menu-toggle\s*\{[\s\S]*?grid-column: 2;[\s\S]*?position: static;[\s\S]*?transform: none;/);
+  assert.match(styles, /\.panel-actions\s*\{[\s\S]*?grid-column: 3;[\s\S]*?justify-content: flex-end;[\s\S]*?overflow: hidden;/);
+  assert.match(styles, /\.panel-menu-row\s*\{[\s\S]*?min-block-size: calc\(var\(--sn-layout-menu-row-height,/);
+  assert.doesNotMatch(styles, /\.panel-menu-row\s*\{[\s\S]*?height: calc\(var\(--sn-layout-menu-row-height,/);
+  assert.match(styles, /\.panel-menu-actions\s*\{[\s\S]*?flex-wrap: wrap;[\s\S]*?overflow: hidden;/);
+  assert.match(styles, /\.panel-menu-action-label\s*\{[\s\S]*?text-overflow: ellipsis;/);
+  assert.match(styles, /@container layout-panel \(max-width: 360px\) \{[\s\S]*?\.panel-menu-action-label \{[\s\S]*?display: none;/);
+  assert.match(styles, /@container layout-panel \(max-width: 280px\) \{[\s\S]*?\.panel-menu-row \{[\s\S]*?grid-template-columns: 1fr;/);
+  assert.match(styles, /@container layout-panel \(max-width: 360px\) \{[\s\S]*?\.panel-title \{[\s\S]*?display: none;/);
+  assert.match(styles, /@container layout-panel \(max-width: 260px\) \{[\s\S]*?\.dropdown-arrow \{[\s\S]*?display: none;/);
+  assert.match(styles, /@container layout-panel \(max-width: 220px\) \{[\s\S]*?\.fullscreen-btn \{[\s\S]*?display: none;/);
+  let menuBlock = styles.slice(styles.indexOf('    .panel-menu-toggle {'), styles.indexOf('    .panel-actions {'));
+  assert.doesNotMatch(menuBlock, /position: absolute;/);
+});
+
+test('layout node collapsed icon points toward expansion side', async () => {
+  let [source, layout] = await Promise.all([
+    readFile(layoutNodeSource, 'utf8'),
+    readFile(layoutSource, 'utf8'),
+  ]);
+
+  assert.match(source, /collapseSlot: 'first'/);
+  assert.match(source, /this\.\$\.collapseSlot = isFirst \? 'first' : 'second'/);
+  assert.match(source, /this\.\#syncHostAttribute\('collapse-side', this\.\$\.collapseSlot\)/);
+  assert.match(source, /if \(this\.\$\.isCollapsed\) return isFirst \? 'chevron_right' : 'chevron_left';/);
+  assert.match(source, /return isFirst \? 'chevron_left' : 'chevron_right';/);
+  assert.match(source, /if \(this\.\$\.isCollapsed\) return isFirst \? 'expand_more' : 'expand_less';/);
+  assert.match(source, /return isFirst \? 'expand_less' : 'expand_more';/);
+  assert.match(layout, /node\._syncCollapsePresentation\?\.\(\)/);
+  assert.doesNotMatch(source, /this\.\$\.isCollapsed\)[\s\S]{0,120}this\.\$\.collapseIcon = 'chevron_right'/);
+});
 
 test('layout behavior normalizes responsive collapse and overflow policy', () => {
   let behavior = normalizeLayoutBehavior({

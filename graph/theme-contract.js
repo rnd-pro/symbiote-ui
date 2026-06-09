@@ -8,6 +8,23 @@ export const GRAPH_TYPE_COLOR_TOKENS = Object.freeze({
   docs: '--sn-graph-type-docs',
   asset: '--sn-graph-type-asset',
   group: '--sn-graph-type-group',
+  directory: '--sn-graph-type-directory',
+  file: '--sn-graph-type-file',
+  source: '--sn-graph-type-source',
+  canvas: '--sn-graph-type-canvas',
+  layout: '--sn-graph-type-layout',
+  controls: '--sn-graph-type-controls',
+  control: '--sn-graph-type-control',
+  profile: '--sn-graph-type-profile',
+  'profile-photo': '--sn-graph-type-profile-photo',
+  bio: '--sn-graph-type-bio',
+  portal: '--sn-graph-type-portal',
+  project: '--sn-graph-type-project',
+  pulse: '--sn-graph-type-pulse',
+  skill: '--sn-graph-type-skill',
+  function: '--sn-graph-type-function',
+  class: '--sn-graph-type-class',
+  module: '--sn-graph-type-module',
 });
 
 export const GRAPH_CLUSTER_COLOR_TOKENS = Object.freeze([

@@ -4,6 +4,55 @@ All notable changes to `symbiote-ui` will be documented in this file.
 
 ## Unreleased
 
+## [0.3.0-alpha.23] - 2026-06-08
+
+### Added
+
+- Added reusable base controls and display primitives for rating, segmented
+  selection, native selection controls, sliders, and tooltips.
+- Expanded agent-facing component metadata, Custom Elements output, and
+  discovery coverage for the broader component catalog.
+- Added segmented browser smoke execution so visual/layout scenarios run as
+  independent release gates.
+
+### Changed
+
+- Hardened reusable buttons, fields, list items, tables, menus, project tabs,
+  cards, banners, metrics, empty states, and loading overlays with stronger
+  state, ARIA, keyboard, and intent contracts.
+- Synchronized package test execution through the suite runner and lock helper
+  so browser and non-browser tests do not collide.
+
+### Fixed
+
+- Made browser smoke tests require Chrome for Testing, Chromium, or an explicit
+  `CHROME_BIN` instead of silently launching the unsupported macOS Chrome app
+  wrapper.
+- Tightened CDP page readiness checks so browser tests only pass after the
+  expected URL and document body are present.
+
+## [0.3.0-alpha.22] - 2026-06-08
+
+### Added
+
+- Added `canvas-graph` multi-node focus via `fitNodes()`, `flyToNodes()`,
+  and `focusNodes()`, including WebMCP/discovery metadata for
+  `canvas_graph_focus_nodes`.
+- Extended `createGraphViewModeController().focusNode()` with `flatNodeIds` so
+  flat graph demos can fit several visible nodes without drilling into a parent
+  group.
+- Added a main-thread `ForceLayout` fallback so bundled hosts still render
+  `canvas-graph` when the standalone worker file is not served.
+
+### Fixed
+
+- Kept flat graph selection emphasis scoped to the selected node by default so
+  multi-node focus does not fan out repeated pulse waves across every fitted
+  neighbor.
+- Refreshed cached `canvas-graph` drawing colors on `cascade-theme-change` and
+  root/component theme mutations so flat canvas nodes, edges, and backgrounds
+  inherit the active cascade theme without host-local redraw hacks.
+
 ## [0.3.0-alpha.20] - 2026-06-08
 
 ### Changed

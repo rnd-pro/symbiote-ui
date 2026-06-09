@@ -23,6 +23,7 @@ export class QuickOpen extends Symbiote {
     query: '',
     resultsHTML: '',
     selectedIdx: 0,
+    activeDescendantId: '',
     placeholder: translate('quickOpen.placeholder'),
     emptyText: translate('quickOpen.empty'),
     maxResults: 15,
@@ -73,17 +74,37 @@ export class QuickOpen extends Symbiote {
     this._removeDocumentKeydown = () => document.removeEventListener('keydown', keydown);
 
     this.sub('visible', (visible) => {
+      let input = this.querySelector('.qo-input');
+      if (input) {
+        input.setAttribute('aria-expanded', String(visible));
+      }
+
       if (!this._overlay) return;
       this._overlay.hidden = !visible;
 
       if (visible) {
-        requestAnimationFrame(() => {
-          let input = this.querySelector('.qo-input');
+        let focusInput = () => {
           if (input) {
             input.value = '';
             input.focus();
           }
-        });
+        };
+        if (typeof requestAnimationFrame === 'function') {
+          requestAnimationFrame(focusInput);
+        } else {
+          focusInput();
+        }
+      }
+    });
+
+    this.sub('activeDescendantId', (id) => {
+      let input = this.querySelector('.qo-input');
+      if (input) {
+        if (id) {
+          input.setAttribute('aria-activedescendant', id);
+        } else {
+          input.removeAttribute('aria-activedescendant');
+        }
       }
     });
   }
@@ -162,21 +183,24 @@ export class QuickOpen extends Symbiote {
   _renderResults() {
     if (this._results.length === 0) {
       this.$.resultsHTML = `<div class="qo-empty">${escapeHtml(this.$.emptyText)}</div>`;
+      this.$.activeDescendantId = '';
       return;
     }
 
     let html = [];
     for (let i = 0; i < this._results.length; i++) {
       let { item } = this._results[i];
-      let selectedClass = i === this.$.selectedIdx ? ' qo-selected' : '';
+      let isSelected = i === this.$.selectedIdx;
+      let selectedClass = isSelected ? ' qo-selected' : '';
 
-      html.push(`<div class="qo-item${selectedClass}" data-idx="${i}" data-value="${escapeHtml(item.value)}">
+      html.push(`<div class="qo-item${selectedClass}" id="qo-item-${i}" role="option" aria-selected="${isSelected}" data-idx="${i}" data-value="${escapeHtml(item.value)}">
         <span class="qo-name">${escapeHtml(item.label)}</span>
         <span class="qo-path">${escapeHtml(item.path)}</span>
       </div>`);
     }
 
     this.$.resultsHTML = html.join('');
+    this.$.activeDescendantId = `qo-item-${this.$.selectedIdx}`;
   }
 }
 

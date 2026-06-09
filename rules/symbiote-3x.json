@@ -165,6 +165,15 @@
       "filePattern": ["**/*.tpl.js", "**/*.css.js", "**/*.js"],
       "check": "no_legacy_ui_shell_classes",
       "tags": ["symbiote", "styles", "theming", "components"]
+    },
+    {
+      "id": "SYM-019",
+      "name": "data-display-selection-rules",
+      "description": "Rules directing agents to select list, tree, table, timeline, or description surfaces appropriately based on dataset characteristics.",
+      "severity": "info",
+      "filePattern": "manifest/**/*.js",
+      "check": "data_display_selection_guideline",
+      "tags": ["symbiote", "agents", "data-display", "metadata"]
     }
   ]
 }

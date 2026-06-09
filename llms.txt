@@ -33,3 +33,8 @@ UI transactions with automatic rollback.
   `canvas-graph`, and `graph-node`; use `createGraphViewModeController`
   from `symbiote-ui/ui` or `symbiote-ui/canvas` to switch structured/flat
   renderer visibility, fit/focus, path style, and host-owned flat graph models.
+  Use `flatNodeIds` when fitting several `canvas-graph` nodes in flat mode;
+  `flatNodeId` is a single-node focus and can enter a hierarchical parent group.
+  `canvas-graph` reads `--sn-canvas-graph-*` and `--sn-graph-type-*` aliases
+  from the cascade theme, so host apps should pass semantic node types instead
+  of local canvas color constants.

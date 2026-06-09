@@ -1,4 +1,8 @@
+import { acquireCurrentTestFileLock } from './test-lock.js';
+await acquireCurrentTestFileLock(import.meta.url);
+
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { parseHTML } from 'linkedom';
 import { test } from 'node:test';
 
@@ -9,6 +13,8 @@ class TestCSSStyleSheet {
 }
 
 let testWindow = null;
+const sourceViewerStylesUrl = new URL('../display/SourceViewer/SourceViewer.css.js', import.meta.url);
+const sourceViewerTemplateUrl = new URL('../display/SourceViewer/SourceViewer.tpl.js', import.meta.url);
 
 function installDom() {
   if (testWindow) {
@@ -139,6 +145,61 @@ test('source viewer exposes markdown document behavior', async () => {
   assert.equal(viewer.$.viewMode, 'source');
   assert.equal(codeBlock.$.isMarkdown, false);
   assert.equal(codeBlock.$.lang, 'plain');
+});
+
+test('source viewer compact header keeps hidden labels out of control text', async () => {
+  installDom();
+  await defineSourceViewerElements();
+
+  let viewer = document.createElement('source-viewer');
+  document.body.append(viewer);
+  await nextRenderTick();
+
+  viewer.showFile({
+    path: 'profile/photo.md',
+    raw: '# Vladimir Matiasevich',
+    lang: 'md',
+    statsText: 'profile-photo',
+  });
+  await nextRenderTick();
+
+  let controls = viewer.querySelector('.sv-controls');
+  let stats = viewer.querySelector('.sv-stats');
+  let toggleLabel = viewer.querySelector('.sv-toggle-label');
+  let toggleAction = viewer.querySelector('.sv-toggle-action');
+
+  assert.equal(stats.getAttribute('data-source-text'), 'profile-photo');
+  assert.equal(toggleLabel.getAttribute('data-label'), 'rendered');
+  assert.equal(toggleAction.getAttribute('aria-label'), viewer.$.toggleModeTitle);
+  assert.doesNotMatch(controls.textContent, /profile-photo/);
+  assert.doesNotMatch(controls.textContent, /rendered/);
+});
+
+test('source viewer header keeps one row and hides controls by priority', async () => {
+  const [styles, template] = await Promise.all([
+    readFile(sourceViewerStylesUrl, 'utf8'),
+    readFile(sourceViewerTemplateUrl, 'utf8'),
+  ]);
+
+  assert.match(template, /class="sv-shell"/);
+  assert.match(styles, /\.sv-shell \{[\s\S]*?display: flex;[\s\S]*?block-size: 100%;[\s\S]*?min-block-size: 0;[\s\S]*?overflow: hidden;/);
+  assert.match(styles, /\.sv-header \{[\s\S]*?display: grid;[\s\S]*?grid-template-columns: minmax\(0, 1fr\) minmax\(0, max-content\);[\s\S]*?block-size: var\(--sn-source-header-block-size,/);
+  assert.match(styles, /\.sv-controls \{[\s\S]*?flex-wrap: nowrap;[\s\S]*?max-inline-size: var\(--sn-source-controls-max-inline-size, 46cqw\);[\s\S]*?overflow: hidden;/);
+  assert.match(styles, /\.sv-stats::before \{[\s\S]*?content: attr\(data-source-text\);/);
+  assert.match(styles, /\.sv-action-label::before \{[\s\S]*?content: attr\(data-label\);/);
+  assert.match(styles, /@container \(max-width: 520px\) \{[\s\S]*?\.sv-action-label \{[\s\S]*?display: none;/);
+  assert.match(styles, /@container \(max-width: 460px\) \{[\s\S]*?\.sv-stats \{[\s\S]*?display: none;/);
+  assert.match(styles, /@container \(max-width: 380px\) \{[\s\S]*?\.sv-graph-action \{[\s\S]*?display: none;/);
+  assert.match(styles, /@container \(max-width: 320px\) \{[\s\S]*?\.sv-save-action \{[\s\S]*?display: none;/);
+  assert.doesNotMatch(styles, /grid-template-columns: minmax\(0, 1fr\);\s*align-items: start;/);
+  assert.doesNotMatch(template, /textContent: statsText/);
+  assert.doesNotMatch(template, /textContent: saveLabel/);
+  assert.doesNotMatch(template, /textContent: graphLabel/);
+  assert.doesNotMatch(template, /textContent: modeLabel/);
+  assert.match(template, /class="sv-stats"/);
+  assert.match(template, /class="sv-action-label sv-save-label"/);
+  assert.match(template, /class="sv-action sv-graph-action"/);
+  assert.match(template, /class="sv-action sv-toggle-action"/);
 });
 
 test('source editor accepts source documents and emits host save intents', async () => {

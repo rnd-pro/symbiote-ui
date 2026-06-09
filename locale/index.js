@@ -325,6 +325,7 @@ let configuredLocale = DEFAULT_LOCALE;
 let configuredLocaleMode = DEFAULT_LOCALE_MODE;
 let configuredMessages = {};
 let explicitlyConfiguredLocale = false;
+let configuredPreferences = [];
 
 function isPlainObject(value) {
   return value && typeof value === 'object' && !Array.isArray(value);
@@ -351,6 +352,21 @@ function normalizeLocaleMessages(messages = {}) {
     };
   }
   return result;
+}
+
+function normalizeLocalePreferences(preferences = []) {
+  let values = Array.isArray(preferences) ? preferences : [preferences];
+  return values
+    .map((value) => String(value || '').trim())
+    .filter(Boolean);
+}
+
+export function getNavigatorLocalePreferences(source = globalThis.navigator) {
+  if (!source) return [DEFAULT_LOCALE];
+  let languages = Array.isArray(source.languages) ? source.languages : [];
+  let preferences = languages.length > 0 ? languages : [source.language];
+  let normalized = normalizeLocalePreferences(preferences);
+  return normalized.length > 0 ? normalized : [DEFAULT_LOCALE];
 }
 
 export function normalizeLocale(value, options = {}) {
@@ -404,8 +420,21 @@ export function interpolateLocaleMessage(message, params = {}) {
   });
 }
 
+function resolveConfiguredLocale(options = {}) {
+  if (configuredLocaleMode !== DEFAULT_LOCALE_MODE) return configuredLocale;
+  let preferences = options.preferences != null
+    ? normalizeLocalePreferences(options.preferences)
+    : configuredPreferences;
+  if (preferences.length === 0) {
+    preferences = getNavigatorLocalePreferences(options.navigator);
+  }
+  return resolveLocale(preferences, { fallback: options.fallbackLocale ?? DEFAULT_LOCALE });
+}
+
 export function createTranslator(options = {}) {
-  let locale = normalizeLocale(options.locale ?? configuredLocale);
+  let locale = options.locale != null
+    ? normalizeLocale(options.locale)
+    : resolveConfiguredLocale(options);
   let fallbackLocale = normalizeLocale(options.fallbackLocale ?? DEFAULT_LOCALE);
   let localeMessages = normalizeLocaleMessages(options.messages);
   let flatMessages = normalizeMessages(options.messages);
@@ -446,9 +475,12 @@ export function configureLocalization(options = {}) {
 
   if (options.mode != null) {
     configuredLocaleMode = normalizeLocaleMode(options.mode);
+    configuredPreferences = normalizeLocalePreferences(
+      options.preferences ?? getNavigatorLocalePreferences(options.navigator),
+    );
     configuredLocale = resolveLocaleForMode(
       configuredLocaleMode,
-      options.preferences ?? configuredLocale,
+      configuredPreferences,
       { fallback: options.fallbackLocale ?? DEFAULT_LOCALE },
     );
     explicitlyConfiguredLocale = options.explicit ?? configuredLocaleMode !== DEFAULT_LOCALE_MODE;
@@ -457,6 +489,7 @@ export function configureLocalization(options = {}) {
   if (options.locale != null) {
     configuredLocale = normalizeLocale(options.locale);
     configuredLocaleMode = configuredLocale;
+    configuredPreferences = [configuredLocale];
     explicitlyConfiguredLocale = options.explicit !== false;
   }
 
@@ -464,7 +497,7 @@ export function configureLocalization(options = {}) {
 }
 
 export function getLocalization() {
-  let locale = configuredLocale;
+  let locale = resolveConfiguredLocale();
   return {
     locale,
     mode: configuredLocaleMode,
@@ -483,9 +516,37 @@ export function resetLocalization() {
   configuredLocaleMode = DEFAULT_LOCALE_MODE;
   configuredMessages = {};
   explicitlyConfiguredLocale = false;
+  configuredPreferences = [];
   return getLocalization();
 }
 
 export function isLocalizationExplicit() {
   return explicitlyConfiguredLocale;
+}
+
+export function applyLocalizationToDocument(localization = getLocalization(), options = {}) {
+  let doc = options.document || globalThis.document;
+  if (!doc?.documentElement) return localization;
+  let locale = normalizeLocale(localization?.locale);
+  doc.documentElement.lang = locale;
+  doc.documentElement.dir = options.dir || 'ltr';
+  doc.documentElement.dataset.locale = locale;
+  doc.documentElement.dataset.localeMode = localization?.mode || configuredLocaleMode;
+  return localization;
+}
+
+export function configureAutoLocalization(options = {}) {
+  let localization = configureLocalization({
+    ...options,
+    mode: options.mode ?? DEFAULT_LOCALE_MODE,
+    preferences: options.preferences ?? getNavigatorLocalePreferences(options.navigator),
+    explicit: options.explicit ?? false,
+  });
+  if (options.document !== false) {
+    applyLocalizationToDocument(localization, {
+      document: options.document,
+      dir: options.dir,
+    });
+  }
+  return localization;
 }

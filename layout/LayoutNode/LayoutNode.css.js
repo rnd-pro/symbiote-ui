@@ -23,18 +23,24 @@ export let styles = css`
       width: 100%;
       height: 100%;
       position: relative;
+      container-type: inline-size;
+      container-name: layout-panel;
     }
 
     .panel-header {
-      display: flex;
+      box-sizing: border-box;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
       align-items: center;
       gap: var(--sn-layout-header-gap, 2px);
       padding: var(--sn-layout-header-padding, 2px 4px);
       background: var(--sn-node-header-bg);
       border-bottom: 1px solid var(--sn-layout-border);
       flex-shrink: 0;
-      min-height: var(--sn-layout-header-min-height, 28px);
+      block-size: var(--sn-layout-header-block-size, calc(var(--sn-layout-header-min-height, 28px) + 3px));
+      min-block-size: var(--sn-layout-header-block-size, calc(var(--sn-layout-header-min-height, 28px) + 3px));
       position: relative;
+      overflow: hidden;
     }
 
     &[panel-chrome='none'] {
@@ -54,6 +60,12 @@ export let styles = css`
       cursor: pointer;
       color: var(--sn-text-dim);
       font-size: var(--sn-layout-header-button-size, 0.75rem);
+      box-sizing: border-box;
+      min-inline-size: var(--sn-layout-header-button-min-inline-size, 24px);
+      block-size: var(--sn-layout-header-button-block-size, var(--sn-layout-header-button-min-block-size, 24px));
+      min-block-size: var(--sn-layout-header-button-block-size, var(--sn-layout-header-button-min-block-size, 24px));
+      min-width: 0;
+      line-height: 1;
       transition:
         background 0.1s,
         color 0.1s;
@@ -73,6 +85,18 @@ export let styles = css`
     }
 
     .type-btn {
+      grid-column: 1;
+      justify-self: start;
+      justify-content: flex-start;
+      max-inline-size: 100%;
+      min-inline-size: 0;
+      overflow: hidden;
+
+      .panel-icon,
+      .dropdown-arrow {
+        flex: 0 0 auto;
+      }
+
       .dropdown-arrow {
         font-size: var(--sn-layout-header-dropdown-size, 18px);
         margin-left: -2px;
@@ -81,14 +105,14 @@ export let styles = css`
     }
 
     .header-spacer {
-      flex: 1;
+      display: none;
     }
 
     .panel-menu-toggle {
-      position: absolute;
-      inset-inline-start: 50%;
-      top: 50%;
-      transform: translate(-50%, -50%);
+      grid-column: 2;
+      justify-self: center;
+      position: static;
+      transform: none;
 
       &[active] {
         background: var(--sn-node-hover);
@@ -101,9 +125,40 @@ export let styles = css`
       }
     }
 
+    .panel-actions {
+      grid-column: 3;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: var(--sn-layout-header-gap, 2px);
+      min-width: 0;
+      overflow: hidden;
+    }
+
     .panel-title {
       font-weight: 500;
+      min-inline-size: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
       white-space: nowrap;
+    }
+
+    @container layout-panel (max-width: 360px) {
+      .panel-title {
+        display: none;
+      }
+    }
+
+    @container layout-panel (max-width: 260px) {
+      .dropdown-arrow {
+        display: none;
+      }
+    }
+
+    @container layout-panel (max-width: 220px) {
+      .fullscreen-btn {
+        display: none;
+      }
     }
 
     .panel-menu-drawer {
@@ -132,8 +187,7 @@ export let styles = css`
       grid-template-columns: auto minmax(0, 1fr);
       align-items: stretch;
       box-sizing: border-box;
-      height: calc(var(--sn-layout-menu-row-height, var(--sn-layout-header-min-height, 28px)) * var(--sn-layout-menu-row-span));
-      min-height: calc(var(--sn-layout-menu-row-height, var(--sn-layout-header-min-height, 28px)) * var(--sn-layout-menu-row-span));
+      min-block-size: calc(var(--sn-layout-menu-row-height, var(--sn-layout-header-block-size, calc(var(--sn-layout-header-min-height, 28px) + 3px))) * var(--sn-layout-menu-row-span));
       border-top: 1px solid color-mix(in oklab, var(--sn-layout-border) 56%, transparent);
     }
 
@@ -158,14 +212,13 @@ export let styles = css`
     .panel-menu-actions {
       display: flex;
       align-items: center;
+      flex-wrap: wrap;
       gap: var(--sn-layout-menu-gap, var(--sn-layout-header-button-gap, 4px));
       box-sizing: border-box;
-      height: calc(var(--sn-layout-menu-row-height, var(--sn-layout-header-min-height, 28px)) * var(--sn-layout-menu-row-span));
-      min-height: calc(var(--sn-layout-menu-row-height, var(--sn-layout-header-min-height, 28px)) * var(--sn-layout-menu-row-span));
+      min-block-size: calc(var(--sn-layout-menu-row-height, var(--sn-layout-header-block-size, calc(var(--sn-layout-header-min-height, 28px) + 3px))) * var(--sn-layout-menu-row-span));
       min-width: min-content;
       padding: var(--sn-layout-menu-row-padding, 0 4px);
-      overflow-x: auto;
-      overflow-y: hidden;
+      overflow: hidden;
       ${themedScrollbarStyles}
     }
 
@@ -211,6 +264,37 @@ export let styles = css`
       }
     }
 
+    .panel-menu-action-label {
+      min-inline-size: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    @container layout-panel (max-width: 360px) {
+      .panel-menu-action {
+        inline-size: var(--sn-layout-menu-action-icon-size, var(--sn-layout-header-button-min-inline-size, 24px));
+        padding-inline: var(--sn-layout-menu-action-icon-padding-inline, 4px);
+      }
+
+      .panel-menu-action-label {
+        display: none;
+      }
+    }
+
+    @container layout-panel (max-width: 280px) {
+      .panel-menu-row {
+        grid-template-columns: 1fr;
+      }
+
+      .panel-menu-row-label {
+        display: none;
+      }
+
+      .panel-menu-actions {
+        padding-block: var(--sn-layout-menu-row-compact-padding-block, 3px);
+      }
+    }
+
     .panel-content {
       flex: 1;
       overflow: auto;
@@ -232,6 +316,7 @@ export let styles = css`
 
       .panel-header {
         position: relative;
+        display: flex;
       }
 
       /* Hide fullscreen button, dropdown, and spacer */
@@ -253,6 +338,10 @@ export let styles = css`
         .panel-icon {
           font-size: var(--sn-layout-collapsed-icon-size, 18px);
         }
+      }
+
+      .panel-actions {
+        display: contents;
       }
 
       /* Expand button centered */
@@ -284,6 +373,7 @@ export let styles = css`
       }
 
       .panel-header {
+        display: flex;
         flex-direction: column;
         writing-mode: horizontal-tb;
         padding: 0;
@@ -317,9 +407,17 @@ export let styles = css`
         }
       }
 
+      .panel-actions {
+        order: 2;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        flex: 1;
+      }
+
       /* Expand button centered via flex-grow */
       .collapse-btn {
-        order: 2;
         padding: var(--sn-layout-collapsed-horizontal-button-padding, 8px 4px);
         flex: 1;
         display: flex;

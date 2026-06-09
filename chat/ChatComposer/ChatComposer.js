@@ -602,6 +602,14 @@ export class ChatComposer extends Symbiote {
 
   _onVoiceRuntimeStateChange(state) {
     if (state === 'idle' && this._localVoiceState === 'listening') {
+      if (
+        this._localWakeTriggering &&
+        this._localVoiceActiveMode === 'wake' &&
+        this._localVoiceWakeMatched
+      ) {
+        this._syncLocalVoiceControls();
+        return;
+      }
       if (this._localVoiceActiveMode === 'wake' && this._localVoiceWakeMatched) {
         this._localVoiceState = 'listening';
         this._localVoiceWakeMatched = false;

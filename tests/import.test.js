@@ -1,3 +1,6 @@
+import { acquireCurrentTestFileLock } from './test-lock.js';
+await acquireCurrentTestFileLock(import.meta.url);
+
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { mkdtemp, readFile, rm, symlink } from 'node:fs/promises';
@@ -24,7 +27,11 @@ test('root and metadata entrypoints import in Node', async () => {
   assert.equal(typeof root.buildChatNavTree, 'function');
   assert.equal(typeof root.normalizeResourceTreeItem, 'function');
   assert.equal(typeof root.normalizeSourceDocument, 'function');
+  assert.equal(typeof root.normalizeCanvasGraphGroups, 'function');
+  assert.equal(typeof root.normalizeForceGroups, 'function');
   assert.equal(typeof root.createGraphViewModeController, 'function');
+  assert.equal(typeof root.configureAutoLocalization, 'function');
+  assert.equal(typeof root.getNavigatorLocalePreferences, 'function');
   assert.equal(typeof root.matchVoiceCommandAtEnd, 'function');
   assert.equal(root.defaultSendCommandPhrases().ru, 'отправить');
   assert.equal(typeof runtime.createRuntimeUiController, 'function');
@@ -44,6 +51,38 @@ test('root and metadata entrypoints import in Node', async () => {
   assert.equal(typeof xr.createSimulation, 'function');
   assert.equal(typeof xr.createForceLayoutAdapter, 'function');
   assert.equal(typeof xr.createDualViewController, 'function');
+});
+
+test('locale auto mode resolves browser preferences from the library contract', async () => {
+  let {
+    applyLocalizationToDocument,
+    configureAutoLocalization,
+    configureLocalization,
+    getLocalization,
+    getNavigatorLocalePreferences,
+    resetLocalization,
+    translate,
+  } = await import('../locale/index.js');
+
+  resetLocalization();
+  configureLocalization({ mode: 'auto', preferences: ['ru-RU', 'en-US'] });
+  assert.equal(getLocalization().locale, 'ru');
+  assert.equal(translate('dialog.cancel'), 'Отмена');
+
+  resetLocalization();
+  let localization = configureAutoLocalization({
+    navigator: { languages: ['es-AR', 'en-US'] },
+    document: false,
+  });
+  assert.equal(localization.locale, 'es');
+  assert.equal(translate('dialog.confirm'), 'Confirmar');
+  assert.deepEqual(getNavigatorLocalePreferences({ language: 'ru-RU' }), ['ru-RU']);
+
+  let doc = { documentElement: { dataset: {} } };
+  applyLocalizationToDocument(localization, { document: doc });
+  assert.equal(doc.documentElement.lang, 'es');
+  assert.equal(doc.documentElement.dataset.localeMode, 'auto');
+  resetLocalization();
 });
 
 test('chat nav tree helper builds product-neutral nested sidebar descriptors', async () => {
@@ -197,6 +236,10 @@ test('graph explorer view controller coordinates structured and flat renderers',
     fitView(...args) {
       calls.push(`flat:fit:${args.join(',')}`);
     },
+    focusNodes(nodeIds, options) {
+      calls.push(`flat:focus:${nodeIds.join(',')}:${options.select || ''}:${options.fit}`);
+      return true;
+    },
     flyToNode(nodeId, options) {
       calls.push(`flat:fly:${nodeId}:${options.zoom}`);
     },
@@ -244,6 +287,11 @@ test('graph explorer view controller coordinates structured and flat renderers',
   });
   controller.fitView({ flatArgs: [42] });
   controller.focusNode({ nodeId: 'a' });
+  controller.focusNode({
+    nodeId: 'a',
+    flatNodeIds: ['a', 'b'],
+    flatOptions: { select: 'a', padding: 64 },
+  });
   controller.setMode('structured', { refresh: false });
   controller.fitView({ structuredArgs: [56, false] });
   controller.focusNode({
@@ -261,6 +309,7 @@ test('graph explorer view controller coordinates structured and flat renderers',
   assert.ok(calls.includes('flat:path:group/b'));
   assert.ok(calls.includes('flat:fit:42'));
   assert.ok(calls.includes('flat:fly:a:1.1'));
+  assert.ok(calls.includes('flat:focus:a,b:a:true'));
   assert.ok(calls.includes('structured:fit:56,false'));
   assert.ok(calls.includes('structured:focus:a,b:a'));
   assert.ok(eventNames.includes('flat-model:flat'));
@@ -271,6 +320,290 @@ test('graph explorer view controller coordinates structured and flat renderers',
   assert.equal(eventNames.filter((item) => item === 'mode:flat').length, 0);
   controller.destroy();
   assert.equal(controller.getState().shell, null);
+});
+
+test('graph explorer keeps multi-node flat focus until layout settles', async () => {
+  let { createGraphExplorerViewController } = await import('../canvas/graph-explorer.js');
+  let listeners = new Map();
+  let calls = [];
+  let flatGraph = {
+    hidden: false,
+    setGraphModel() {},
+    setPath() {},
+    resizeCanvas() {},
+    focusNodes(nodeIds, options) {
+      calls.push(`focus:${nodeIds.join(',')}:${options.pulse === false ? 'quiet' : 'pulse'}`);
+      return true;
+    },
+    pulseNode(nodeId) {
+      calls.push(`pulse:${nodeId}`);
+    },
+    addEventListener(type, callback) {
+      if (!listeners.has(type)) listeners.set(type, new Set());
+      listeners.get(type).add(callback);
+    },
+    removeEventListener(type, callback) {
+      listeners.get(type)?.delete(callback);
+    },
+  };
+  let emit = (type) => {
+    for (const callback of [...(listeners.get(type) || [])]) callback({ type });
+  };
+  let controller = createGraphExplorerViewController({
+    flatGraph,
+    mode: 'flat',
+  });
+
+  controller.focusNode({
+    nodeId: 'a',
+    flatNodeIds: ['a', 'b'],
+    flatOptions: { select: 'a' },
+  });
+  emit('layout-tick');
+  emit('layout-done');
+  emit('layout-tick');
+
+  assert.deepEqual(calls, [
+    'focus:a,b:pulse',
+    'pulse:a',
+    'focus:a,b:quiet',
+    'focus:a,b:quiet',
+  ]);
+  assert.equal(listeners.get('layout-tick')?.size || 0, 0);
+  assert.equal(listeners.get('layout-done')?.size || 0, 0);
+});
+
+test('canvas graph pulse queue defaults to a single visual wave', async () => {
+  let { findActiveTransitionMarker, getNextPulseQueue } = await import('../canvas/CanvasGraph/CanvasGraphDrawState.js');
+  let [pulse] = getNextPulseQueue({
+    nodeId: 'a',
+    startTime: 10,
+    duration: 900,
+  });
+  let queue = getNextPulseQueue({
+    pulses: [pulse],
+    nodeId: 'b',
+    startTime: 20,
+    duration: 1200,
+    waves: 2,
+  });
+  let customPulse = queue.find((item) => item.id === 'b');
+
+  assert.equal(pulse.waves, 1);
+  assert.equal(customPulse.waves, 2);
+
+  let marker = { toId: 'b', startTime: 100, duration: 400 };
+  assert.equal(findActiveTransitionMarker([marker], 'b', 250), marker);
+  assert.equal(findActiveTransitionMarker([marker], 'b', 500), null);
+  assert.equal(findActiveTransitionMarker([marker], 'a', 250), null);
+});
+
+test('canvas graph starts node pulse when the transition marker arrives', async () => {
+  let source = await readFile(new URL('../canvas/CanvasGraph/CanvasGraph.js', import.meta.url), 'utf8');
+
+  assert.match(source, /findActiveTransitionMarker\(this\._transitionMarkers, nodeId, now\)/);
+  assert.match(source, /marker\.pendingPulse = \{/);
+  assert.match(source, /this\._pulses = \(this\._pulses \|\| \[\]\)\.filter\(\(pulse\) => pulse\.id !== nodeId\)/);
+  assert.match(source, /this\._completeTransitionMarker\(marker, now\);/);
+  assert.match(source, /this\._queuePulseNow\(marker\.toId, pulse\.duration, \{ waves: pulse\.waves \}, now\)/);
+});
+
+test('canvas graph focus transition uses queued activation before depth recalculation', async () => {
+  let { resolveDeactivationFrame } = await import('../canvas/CanvasGraph/CanvasGraphDrawState.js');
+  let source = await readFile(new URL('../canvas/CanvasGraph/CanvasGraph.js', import.meta.url), 'utf8');
+  let activeNode = { id: 'current' };
+  let nextActiveNode = { id: 'next' };
+  let frame = resolveDeactivationFrame({
+    deactivating: true,
+    activeNode,
+    nextActiveNode,
+    layerAnim: {
+      0: { scale: 1 },
+      4: { scale: 1 },
+    },
+  });
+
+  assert.equal(frame.activeNode, nextActiveNode);
+  assert.equal(frame.nextActiveNode, null);
+  assert.equal(frame.deactivating, false);
+  assert.equal(frame.interactionDepthsChanged, true);
+  assert.match(source, /_activateNode\(selectedId/);
+  assert.match(source, /this\.nextActiveNode = node;/);
+  assert.match(source, /_queueTransitionMarker\(previousNode\.id, node\.id, options\)/);
+  assert.match(source, /_drawTransitionMarkers\(mainCtx\)/);
+});
+
+test('canvas graph focus layer targets separate selected hubs from surrounding layers', async () => {
+  let {
+    CANVAS_GRAPH_LAYER_TARGETS,
+    getLayerAnimationFrame,
+  } = await import('../canvas/CanvasGraph/CanvasGraphDrawState.js');
+  let layerAnim = {
+    0: { scale: 1, opacity: 1, parallax: 0 },
+    1: { scale: 1, opacity: 1, parallax: 0 },
+    2: { scale: 1, opacity: 1, parallax: 0 },
+    3: { scale: 1, opacity: 1, parallax: 0 },
+    4: { scale: 1, opacity: 1, parallax: 0 },
+  };
+  let frame = getLayerAnimationFrame({
+    layerAnim,
+    layerTargets: CANVAS_GRAPH_LAYER_TARGETS,
+    isIdle: false,
+    inGroupMode: false,
+  });
+
+  assert.equal(CANVAS_GRAPH_LAYER_TARGETS.opacity[0], 1);
+  assert.ok(CANVAS_GRAPH_LAYER_TARGETS.opacity[1] <= 0.6);
+  assert.ok(CANVAS_GRAPH_LAYER_TARGETS.opacity[2] <= CANVAS_GRAPH_LAYER_TARGETS.opacity[1] * 0.5);
+  assert.ok(CANVAS_GRAPH_LAYER_TARGETS.opacity[4] <= 0.03);
+  assert.ok(CANVAS_GRAPH_LAYER_TARGETS.scale[1] < CANVAS_GRAPH_LAYER_TARGETS.scale[0]);
+  assert.ok(CANVAS_GRAPH_LAYER_TARGETS.blur[2] > CANVAS_GRAPH_LAYER_TARGETS.blur[1]);
+  assert.ok(CANVAS_GRAPH_LAYER_TARGETS.parallax[4] > CANVAS_GRAPH_LAYER_TARGETS.parallax[2]);
+  assert.ok(frame[1].opacity < 1);
+  assert.ok(frame[2].opacity < frame[1].opacity);
+  assert.ok(frame[2].scale < frame[1].scale);
+});
+
+test('canvas graph passes normalized semantic groups into the force layout', async () => {
+  let source = await readFile(new URL('../canvas/CanvasGraph/CanvasGraph.js', import.meta.url), 'utf8');
+
+  assert.match(source, /getVisibleForceGroups\(\)/);
+  assert.match(source, /groups:\s*forceGroups/);
+  assert.match(source, /group:\s*findForceNodeGroup\(forceGroups,\s*n\.id\)/);
+  assert.doesNotMatch(source, /groups:\s*\{\}/);
+});
+
+test('force layout fallback preserves continuous drag dynamics without a browser worker', async () => {
+  let NativeWorker = globalThis.Worker;
+  let nativeRaf = globalThis.requestAnimationFrame;
+  let nativeCancelRaf = globalThis.cancelAnimationFrame;
+  let nativeWarn = console.warn;
+  globalThis.requestAnimationFrame = (callback) => setTimeout(() => callback(Date.now()), 0);
+  globalThis.cancelAnimationFrame = (id) => clearTimeout(id);
+  console.warn = () => {};
+
+  try {
+    delete globalThis.Worker;
+    let { ForceLayout } = await import('../canvas/ForceLayout.js');
+    let force = new ForceLayout('/missing-force-worker.js');
+    let ticks = [];
+    let nextTick = () => new Promise((resolve, reject) => {
+      let timer = setTimeout(() => reject(new Error('force layout fallback did not tick')), 200);
+      let previous = force.onTick;
+      force.onTick = (positions, meta) => {
+        previous?.(positions, meta);
+        ticks.push({ positions, meta });
+        clearTimeout(timer);
+        resolve({ positions, meta });
+      };
+    });
+
+    let firstTick = nextTick();
+    force.start({
+      nodes: [{ id: 'a', x: 0, y: 0 }, { id: 'b', x: 140, y: 0 }],
+      edges: [{ from: 'a', to: 'b' }],
+      options: { mode: 'continuous', alphaDecay: 0.5, brownian: 0 },
+    });
+    let first = await firstTick;
+    assert.equal(first.meta.fallback, true);
+    assert.ok(Number.isFinite(first.positions.a.x));
+
+    force.pin('a', 320, 180);
+    let pinned = await nextTick();
+    assert.deepEqual(
+      {
+        x: Math.round(pinned.positions.a.x),
+        y: Math.round(pinned.positions.a.y),
+      },
+      { x: 320, y: 180 }
+    );
+
+    force.unpin('a');
+    let released = await nextTick();
+    assert.equal(released.meta.fallback, true);
+    assert.ok(ticks.length >= 3);
+    force.stop();
+  } finally {
+    console.warn = nativeWarn;
+    if (NativeWorker) {
+      globalThis.Worker = NativeWorker;
+    } else {
+      delete globalThis.Worker;
+    }
+    if (nativeRaf) {
+      globalThis.requestAnimationFrame = nativeRaf;
+    } else {
+      delete globalThis.requestAnimationFrame;
+    }
+    if (nativeCancelRaf) {
+      globalThis.cancelAnimationFrame = nativeCancelRaf;
+    } else {
+      delete globalThis.cancelAnimationFrame;
+    }
+  }
+});
+
+test('force layout fallback applies semantic group links without a browser worker', async () => {
+  let NativeWorker = globalThis.Worker;
+  let nativeRaf = globalThis.requestAnimationFrame;
+  let nativeCancelRaf = globalThis.cancelAnimationFrame;
+  let nativeWarn = console.warn;
+  globalThis.requestAnimationFrame = (callback) => setTimeout(() => callback(Date.now()), 0);
+  globalThis.cancelAnimationFrame = (id) => clearTimeout(id);
+  console.warn = () => {};
+
+  try {
+    delete globalThis.Worker;
+    let { ForceLayout } = await import('../canvas/ForceLayout.js');
+    let force = new ForceLayout('/missing-force-worker.js');
+    let firstTick = new Promise((resolve, reject) => {
+      let timer = setTimeout(() => reject(new Error('semantic group fallback did not tick')), 200);
+      force.onTick = (positions, meta) => {
+        clearTimeout(timer);
+        resolve({ positions, meta });
+      };
+    });
+
+    force.start({
+      nodes: [{ id: 'a', x: 0, y: 0 }, { id: 'b', x: 100, y: 0 }],
+      edges: [],
+      groups: { pair: ['a', 'b'] },
+      options: {
+        mode: 'continuous',
+        alphaDecay: 0.5,
+        brownian: 0,
+        chargeStrength: 0,
+        centerStrength: 0,
+        centerPull: 0,
+        collideStrength: 0,
+        groupDistance: 10,
+        groupStrength: 1,
+      },
+    });
+
+    let first = await firstTick;
+    assert.equal(first.meta.fallback, true);
+    assert.ok(first.positions.a.x > 0);
+    assert.ok(first.positions.b.x < 100);
+    force.stop();
+  } finally {
+    console.warn = nativeWarn;
+    if (NativeWorker) {
+      globalThis.Worker = NativeWorker;
+    } else {
+      delete globalThis.Worker;
+    }
+    if (nativeRaf) {
+      globalThis.requestAnimationFrame = nativeRaf;
+    } else {
+      delete globalThis.requestAnimationFrame;
+    }
+    if (nativeCancelRaf) {
+      globalThis.cancelAnimationFrame = nativeCancelRaf;
+    } else {
+      delete globalThis.cancelAnimationFrame;
+    }
+  }
 });
 
 test('material symbols loader reuses a host-provided package stylesheet', async () => {
@@ -456,12 +789,22 @@ test('discover exposes the standalone package contract', async () => {
   assert.ok(nodeCanvasAgentItem.webmcp.toolNames.includes('node_canvas_set_editor_model'));
   assert.ok(nodeCanvasAgentItem.webmcp.toolNames.includes('node_canvas_set_path_style'));
   assert.ok(nodeCanvasAgentItem.webmcp.toolNames.includes('node_canvas_set_flow_layout'));
+  assert.ok(nodeCanvasAgentItem.webmcp.toolNames.includes('node_canvas_apply_layout'));
   assert.ok(nodeCanvasAgentItem.webmcp.toolNames.includes('node_canvas_focus_nodes'));
   assert.ok(nodeCanvasAgentItem.componentDescription.includes('node-editor-canvas'));
+  assert.ok(nodeCanvasAgentItem.componentDescription.includes('graph-layout'));
   assert.ok(canvasGraphAgentItem.webmcp.toolNames.includes('canvas_graph_set_model'));
   assert.ok(canvasGraphAgentItem.webmcp.toolNames.includes('canvas_graph_focus_node'));
   assert.ok(canvasGraphAgentItem.webmcp.toolNames.includes('canvas_graph_set_path'));
   assert.ok(canvasGraphAgentItem.componentDescription.includes('overview-read-renderer'));
+  assert.ok(data.manifest.components
+    .find((item) => item.tagName === 'canvas-graph')
+    .contract.methods
+    .some((method) => method.name === 'suspendLayout'));
+  assert.ok(data.manifest.components
+    .find((item) => item.tagName === 'canvas-graph')
+    .contract.methods
+    .some((method) => method.name === 'resumeLayout'));
   assert.equal(
     data.manifest.components
       .find((item) => item.tagName === 'canvas-graph')
@@ -486,14 +829,27 @@ test('discover exposes the standalone package contract', async () => {
   assert.ok(sourceEditorAgentItem.webmcp.toolNames.includes('source_editor_save'));
   let sourceViewer = data.manifest.components.find((item) => item.tagName === 'source-viewer');
   let sourceEditor = data.manifest.components.find((item) => item.tagName === 'source-editor');
+  let checkbox = data.manifest.components.find((item) => item.tagName === 'sn-checkbox');
+  let radio = data.manifest.components.find((item) => item.tagName === 'sn-radio');
+  let sw = data.manifest.components.find((item) => item.tagName === 'sn-switch');
   assert.ok(sourceViewer.contract.capabilities.includes('directory-summary'));
   assert.ok(sourceEditor.contract.capabilities.includes('markdown-editing'));
+  assert.ok(checkbox.contract.capabilities.includes('mixed-state'));
+  assert.ok(checkbox.contract.attributes.some((attribute) => attribute.name === 'indeterminate'));
+  assert.ok(checkbox.contract.events.some((event) => event.name === 'sn-checkbox-change'));
+  assert.ok(radio.contract.capabilities.includes('single-selection'));
+  assert.ok(sw.contract.capabilities.includes('switch'));
   let customElements = JSON.parse(await readFile(new URL('../custom-elements.json', import.meta.url), 'utf8'));
   let sourceEditorDeclaration = customElements.modules
     .flatMap((module) => module.declarations || [])
     .find((declaration) => declaration.tagName === 'source-editor');
+  let checkboxDeclaration = customElements.modules
+    .flatMap((module) => module.declarations || [])
+    .find((declaration) => declaration.tagName === 'sn-checkbox');
   assert.ok(sourceEditorDeclaration.componentDescription.includes('markdown-editing'));
   assert.ok(sourceEditorDeclaration.agent.webmcp.toolNames.includes('source_editor_save'));
+  assert.ok(checkboxDeclaration.componentDescription.includes('mixed state'));
+  assert.ok(checkboxDeclaration.metadata.contract.themeAliases.includes('--sn-selection-checked-bg'));
   let cascadeDescriptor = data.manifest.themeRuntimeDescriptors.find((descriptor) => descriptor.name === 'cascade-theme');
   assert.ok(cascadeDescriptor);
   assert.equal(cascadeDescriptor.webmcp?.name, 'symbiote-ui.createCascadeTheme');
@@ -640,6 +996,11 @@ test('node-canvas exposes the agent-facing serializable model adapter promised b
   assert.ok(tool.inputSchema.properties.connections);
   assert.ok(tool.inputSchema.properties.positions);
   let focusTool = component.contract.webmcp.tools.find((item) => item.name === 'node_canvas_focus_nodes');
+  let layoutTool = component.contract.webmcp.tools.find((item) => item.name === 'node_canvas_apply_layout');
+  assert.equal(layoutTool.annotations.runtimeMethod, 'applyLayout');
+  assert.ok(component.contract.methods.some((method) => method.name === 'applyLayout'));
+  assert.ok(component.contract.methods.some((method) => method.name === 'autoLayout'));
+  assert.deepEqual(layoutTool.inputSchema.properties.algorithm.enum, ['auto', 'tree', 'flow']);
   assert.equal(focusTool.annotations.runtimeMethod, 'focusNodes');
   assert.ok(component.contract.methods.some((method) => method.name === 'focusNodes'));
   assert.ok(component.contract.methods.some((method) => method.name === 'flyToNodes'));

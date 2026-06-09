@@ -13,13 +13,29 @@ export class LoadingOverlay extends Symbiote {
   };
 
   renderCallback() {
+    if (!this.hasAttribute('role')) this.setAttribute('role', 'progressbar');
+    this.setAttribute('aria-valuemin', '0');
+    this.setAttribute('aria-valuemax', '100');
+
     this.sub('isHidden', (value) => {
       this.toggleAttribute('hidden-state', Boolean(value));
     });
     this.sub('pct', (value) => {
       let pct = Number.isFinite(Number(value)) ? Math.max(0, Math.min(100, Number(value))) : 0;
       this.style.setProperty('--sn-loading-progress', `${pct}%`);
+      this.setAttribute('aria-valuenow', String(pct));
     });
+    this.sub('phase', () => this._syncValueText());
+    this.sub('sub', () => this._syncValueText());
+  }
+
+  _syncValueText() {
+    const text = [this.$.phase, this.$.sub].filter(Boolean).join(': ');
+    if (text) {
+      this.setAttribute('aria-valuetext', text);
+    } else {
+      this.removeAttribute('aria-valuetext');
+    }
   }
 
   show() {

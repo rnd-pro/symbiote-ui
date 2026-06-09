@@ -104,6 +104,7 @@ export { PinExpansion } from '../canvas/PinExpansion.js';
 export { ForceLayout } from '../canvas/ForceLayout.js';
 export {
   createCanvasGraphStore,
+  normalizeCanvasGraphGroups,
   normalizeCanvasGraphModel,
 } from '../canvas/graph-model.js';
 export {
@@ -113,6 +114,7 @@ export {
   getDrillableFiles,
   getForceLayoutOptions,
   getGraphCacheKey,
+  normalizeForceGroups,
   getOrBuildGraph,
 } from '../canvas/graph-layout.js';
 export {
@@ -226,12 +228,52 @@ export let TreeView;
 export let TreePanel;
 export let ActionButton;
 export let FormField;
+export let CheckboxControl;
+export let RadioControl;
+export let SwitchControl;
 export let SurfaceCard;
+export let SliderControl;
+export let RatingControl;
+export let SegmentedControl;
+export let Tooltip;
 export let OutputListPreview;
 export let OutputGraphPreview;
 export let StatusRibbon;
 export let CascadeThemeEditor;
 export let CascadeThemeWidget;
+export let Dialog;
+export let Select;
+export let Toast;
+export let ToastRegion;
+export let Listbox;
+export let Popover;
+export let Combobox;
+export let Drawer;
+export let Menu;
+export let MenuItem;
+export let MenuSeparator;
+export let MenuGroup;
+export let Dropdown;
+export let Toolbar;
+export let SnBreadcrumb;
+export let SnBreadcrumbItem;
+export let Accordion;
+export let AccordionItem;
+export let Pagination;
+export let Stepper;
+export let NavList;
+export let NavItem;
+export let ProgressBar;
+export let ProgressRing;
+export let Spinner;
+export let Skeleton;
+export let StatusLight;
+export let DescriptionList;
+export let DescriptionItem;
+export let Timeline;
+export let TimelineItem;
+export let Avatar;
+export let Tag;
 export let stringifyBlock;
 export let truncateResult;
 export { sharedUiStyles } from './shared-styles.js';
@@ -547,12 +589,38 @@ if (hasDOMGlobals) {
     treePanel,
     actionButton,
     formField,
+    selectionControl,
     surfaceCard,
     outputListPreview,
     outputGraphPreview,
     statusRibbon,
     cascadeThemeEditor,
     cascadeThemeWidget,
+    sliderControl,
+    ratingControl,
+    segmentedControl,
+    tooltip,
+    dialog,
+    select,
+    toast,
+    listbox,
+    popover,
+    combobox,
+    drawer,
+    menu,
+    toolbar,
+    breadcrumbNav,
+    accordion,
+    pagination,
+    stepper,
+    navList,
+    progress,
+    skeleton,
+    statusLight,
+    descriptionList,
+    timeline,
+    avatar,
+    tag,
   ] = await Promise.all([
     import('../canvas/NodeCanvas/NodeCanvas.js'),
     import('../canvas/CanvasGraph/CanvasGraph.js'),
@@ -603,12 +671,38 @@ if (hasDOMGlobals) {
     import('../tree/TreePanel/TreePanel.js'),
     import('../control/Button/Button.js'),
     import('../control/Field/Field.js'),
+    import('../control/SelectionControl/SelectionControl.js'),
     import('../surface/Card/Card.js'),
     import('../display/OutputListPreview/OutputListPreview.js'),
     import('../display/OutputGraphPreview/OutputGraphPreview.js'),
     import('../display/StatusRibbon/StatusRibbon.js'),
     import('../themes/CascadeThemeEditor/CascadeThemeEditor.js'),
     import('../themes/CascadeThemeWidget/CascadeThemeWidget.js'),
+    import('../control/Slider/Slider.js'),
+    import('../control/Rating/Rating.js'),
+    import('../control/SegmentedControl/SegmentedControl.js'),
+    import('../display/Tooltip/Tooltip.js'),
+    import('../surface/Dialog/Dialog.js'),
+    import('../control/Select/Select.js'),
+    import('../display/Toast/Toast.js'),
+    import('../list/Listbox/Listbox.js'),
+    import('../surface/Popover/Popover.js'),
+    import('../control/Combobox/Combobox.js'),
+    import('../surface/Drawer/Drawer.js'),
+    import('../menu/Menu/Menu.js'),
+    import('../toolbar/Toolbar/Toolbar.js'),
+    import('../navigation/Breadcrumb/Breadcrumb.js'),
+    import('../surface/Accordion/Accordion.js'),
+    import('../control/Pagination/Pagination.js'),
+    import('../control/Stepper/Stepper.js'),
+    import('../navigation/NavList/NavList.js'),
+    import('../display/Progress/Progress.js'),
+    import('../display/Skeleton/Skeleton.js'),
+    import('../display/StatusLight/StatusLight.js'),
+    import('../display/DescriptionList/DescriptionList.js'),
+    import('../display/Timeline/Timeline.js'),
+    import('../display/Avatar/Avatar.js'),
+    import('../display/Tag/Tag.js'),
   ]);
 
   ({ NodeCanvas } = nodeCanvas);
@@ -670,12 +764,38 @@ if (hasDOMGlobals) {
   ({ TreePanel } = treePanel);
   ({ ActionButton } = actionButton);
   ({ FormField } = formField);
+  ({ CheckboxControl, RadioControl, SwitchControl } = selectionControl);
   ({ SurfaceCard } = surfaceCard);
   ({ OutputListPreview } = outputListPreview);
   ({ OutputGraphPreview } = outputGraphPreview);
   ({ StatusRibbon } = statusRibbon);
   ({ CascadeThemeEditor } = cascadeThemeEditor);
   ({ CascadeThemeWidget } = cascadeThemeWidget);
+  ({ SliderControl } = sliderControl);
+  ({ RatingControl } = ratingControl);
+  ({ SegmentedControl } = segmentedControl);
+  ({ Tooltip } = tooltip);
+  ({ Dialog } = dialog);
+  ({ Select } = select);
+  ({ Toast, ToastRegion } = toast);
+  ({ Listbox } = listbox);
+  ({ Popover } = popover);
+  ({ Combobox } = combobox);
+  ({ Drawer } = drawer);
+  ({ Menu, MenuItem, MenuSeparator, MenuGroup, Dropdown } = menu);
+  ({ Toolbar } = toolbar);
+  ({ SnBreadcrumb, SnBreadcrumbItem } = breadcrumbNav);
+  ({ Accordion, AccordionItem } = accordion);
+  ({ Pagination } = pagination);
+  ({ Stepper } = stepper);
+  ({ NavList, NavItem } = navList);
+  ({ ProgressBar, ProgressRing, Spinner } = progress);
+  ({ Skeleton } = skeleton);
+  ({ StatusLight } = statusLight);
+  ({ DescriptionList, DescriptionItem } = descriptionList);
+  ({ Timeline, TimelineItem } = timeline);
+  ({ Avatar } = avatar);
+  ({ Tag } = tag);
 
   registerCatalogModules({
     NodeCanvas,
@@ -726,12 +846,52 @@ if (hasDOMGlobals) {
     TreePanel,
     ActionButton,
     FormField,
+    CheckboxControl,
+    RadioControl,
+    SwitchControl,
     SurfaceCard,
     OutputListPreview,
     OutputGraphPreview,
     StatusRibbon,
     CascadeThemeEditor,
     CascadeThemeWidget,
+    SliderControl,
+    RatingControl,
+    SegmentedControl,
+    Tooltip,
+    Dialog,
+    Select,
+    Toast,
+    ToastRegion,
+    Listbox,
+    Popover,
+    Combobox,
+    Drawer,
+    Menu,
+    MenuItem,
+    MenuSeparator,
+    MenuGroup,
+    Dropdown,
+    Toolbar,
+    SnBreadcrumb,
+    SnBreadcrumbItem,
+    Accordion,
+    AccordionItem,
+    Pagination,
+    Stepper,
+    NavList,
+    NavItem,
+    ProgressBar,
+    ProgressRing,
+    Spinner,
+    Skeleton,
+    StatusLight,
+    DescriptionList,
+    DescriptionItem,
+    Timeline,
+    TimelineItem,
+    Avatar,
+    Tag,
   });
 }
 
@@ -745,3 +905,10 @@ export {
   AUTO_UNCOLLAPSE_WIDTH,
   clampChatSidebarWidth,
 } from '../chat/ChatSidebar/constants.js';
+
+export { registerDismissableLayer } from './dismissable-layer.js';
+export { FocusTrap, getFocusableElements } from './focus-trap.js';
+export { positionOverlay } from './overlay-positioner.js';
+export { Collection } from './collection.js';
+export { setupRovingFocus } from './roving-focus.js';
+export { Typeahead } from './typeahead.js';

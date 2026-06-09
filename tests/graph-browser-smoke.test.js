@@ -1,3 +1,6 @@
+import { acquireCurrentTestFileLock } from './test-lock.js';
+await acquireCurrentTestFileLock(import.meta.url);
+
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
@@ -5,24 +8,61 @@ import { createReadStream, existsSync } from 'node:fs';
 import { mkdtemp, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { test } from 'node:test';
+import { after, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const CHROME_ENDPOINT_TIMEOUT_MS = 30000;
 const BROWSER_SMOKE_TIMEOUT_MS = 180000;
 const SHOWCASE_BROWSER_SMOKE_TIMEOUT_MS = 200000;
-const chromeCandidates = [
-  process.env.CHROME_BIN,
-  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+const BROWSER_LAUNCH_ATTEMPTS = Math.max(
+  1,
+  Number.parseInt(process.env.SYMBIOTE_UI_BROWSER_LAUNCH_ATTEMPTS || '1', 10) || 1
+);
+const allowSystemChrome = process.env.SYMBIOTE_UI_ALLOW_SYSTEM_CHROME === '1';
+const managedChromeCandidates = [
+  process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
+  '/Applications/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing',
   '/Applications/Chromium.app/Contents/MacOS/Chromium',
   '/usr/bin/google-chrome',
   '/usr/bin/chromium',
   '/usr/bin/chromium-browser',
 ].filter(Boolean);
+const unsupportedMacChromeCandidates = [
+  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+  '/Applications/Google Chrome Dev.app/Contents/MacOS/Google Chrome Dev',
+  '/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary',
+].filter(Boolean);
+let sharedChromeSession;
+let sharedChromeSessionPromise;
 
 function findChrome() {
-  return chromeCandidates.find((candidate) => existsSync(candidate)) || '';
+  if (process.env.CHROME_BIN) {
+    if (!existsSync(process.env.CHROME_BIN)) {
+      throw new Error(`CHROME_BIN does not exist: ${process.env.CHROME_BIN}`);
+    }
+    return process.env.CHROME_BIN;
+  }
+
+  const managedChrome = managedChromeCandidates.find((candidate) => existsSync(candidate));
+  if (managedChrome) return managedChrome;
+
+  const systemChrome = unsupportedMacChromeCandidates.find((candidate) => existsSync(candidate));
+  if (systemChrome && allowSystemChrome) return systemChrome;
+  if (systemChrome) {
+    throw new Error([
+      'Browser smoke requires a managed Chrome binary.',
+      `Found unsupported macOS Chrome app launcher: ${systemChrome}`,
+      'Install Chrome for Testing or Chromium, or set CHROME_BIN to a standalone browser executable.',
+      'To force the unsupported system launcher for local diagnosis only, set SYMBIOTE_UI_ALLOW_SYSTEM_CHROME=1.',
+    ].join('\n'));
+  }
+
+  throw new Error([
+    'Browser smoke requires a managed Chrome binary.',
+    'No managed Chrome binary was found.',
+    'Install Chrome for Testing or Chromium, or set CHROME_BIN to a standalone browser executable.',
+  ].join('\n'));
 }
 
 function withTimeout(promise, timeoutMs, label) {
@@ -179,8 +219,18 @@ function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function isProcessAlive(pid) {
+  if (!pid) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function waitForChromeExit(chrome, timeoutMs = 2500) {
-  if (!chrome || chrome.exitCode !== null || chrome.signalCode) {
+  if (!chrome || !isProcessAlive(chrome.pid)) {
     return Promise.resolve();
   }
   return new Promise((resolve) => {
@@ -194,17 +244,21 @@ function waitForChromeExit(chrome, timeoutMs = 2500) {
 
 async function stopChrome(chrome) {
   if (!chrome) return;
-  if (chrome.exitCode === null && !chrome.signalCode) {
+  if (isProcessAlive(chrome.pid)) {
     chrome.kill('SIGTERM');
-    await waitForChromeExit(chrome, 2500);
+    await waitForChromeExit(chrome, 3000);
   }
-  if (chrome.exitCode === null && !chrome.signalCode) {
-    chrome.kill('SIGKILL');
-    await waitForChromeExit(chrome, 1000);
+  if (isProcessAlive(chrome.pid)) {
+    try {
+      process.kill(chrome.pid, 'SIGKILL');
+    } catch {
+      // The process may have exited between the liveness check and SIGKILL.
+    }
+    await waitForChromeExit(chrome, 1500);
   }
 }
 
-async function launchChromeSession(chromePath, label, attempts = 5) {
+async function createChromeSession(chromePath, label, attempts = BROWSER_LAUNCH_ATTEMPTS) {
   let lastError;
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     const userDataDir = await mkdtemp(path.join(tmpdir(), 'symbiote-ui-chrome-'));
@@ -217,6 +271,7 @@ async function launchChromeSession(chromePath, label, attempts = 5) {
       '--hide-scrollbars',
       '--no-default-browser-check',
       '--no-first-run',
+      '--remote-debugging-address=127.0.0.1',
       `--remote-debugging-port=${remoteDebuggingPort}`,
       `--user-data-dir=${userDataDir}`,
       'about:blank',
@@ -239,12 +294,38 @@ async function launchChromeSession(chromePath, label, attempts = 5) {
   throw lastError;
 }
 
+async function launchChromeSession(chromePath, label, attempts = BROWSER_LAUNCH_ATTEMPTS) {
+  if (sharedChromeSession && isProcessAlive(sharedChromeSession.chrome?.pid)) {
+    return sharedChromeSession;
+  }
+  if (!sharedChromeSessionPromise) {
+    sharedChromeSessionPromise = createChromeSession(chromePath, label, attempts)
+      .then((session) => {
+        sharedChromeSession = session;
+        return session;
+      })
+      .catch((error) => {
+        sharedChromeSessionPromise = undefined;
+        throw error;
+      });
+  }
+  return sharedChromeSessionPromise;
+}
+
 async function closeChromeSession(session) {
   if (!session) return;
+  if (session === sharedChromeSession) return;
   await stopChrome(session.chrome);
   await rm(session.userDataDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
-  await delay(300);
+  await delay(1000);
 }
+
+after(async () => {
+  const session = sharedChromeSession;
+  sharedChromeSession = undefined;
+  sharedChromeSessionPromise = undefined;
+  await closeChromeSession(session);
+});
 
 function createCdpClient(wsUrl) {
   const socket = new WebSocket(wsUrl);
@@ -302,31 +383,93 @@ function createCdpClient(wsUrl) {
         events.set(method, [...(events.get(method) || []), listener]);
       });
     },
-    close() {
-      socket.close();
+    async close() {
+      if (socket.readyState === WebSocket.CLOSED) return;
+      await new Promise((resolve) => {
+        const timer = setTimeout(resolve, 1000);
+        socket.addEventListener('close', () => {
+          clearTimeout(timer);
+          resolve();
+        }, { once: true });
+        try {
+          socket.close();
+        } catch {
+          clearTimeout(timer);
+          resolve();
+        }
+      });
     },
   };
 }
 
 async function openPage(chromeEndpoint, url) {
   const endpoint = new URL(chromeEndpoint);
-  const target = await fetch(`http://${endpoint.host}/json/new?${encodeURIComponent(url)}`, {
+  const response = await fetch(`http://${endpoint.host}/json/new?${encodeURIComponent(url)}`, {
     method: 'PUT',
     signal: AbortSignal.timeout(5000),
-  }).then((response) => response.json());
+  });
+  if (!response.ok) {
+    const body = await response.text().catch(() => '');
+    throw new Error(`Chrome target creation failed: ${response.status} ${response.statusText}\n${body}`);
+  }
+  const target = await response.json();
+  if (!target.webSocketDebuggerUrl) {
+    throw new Error(`Chrome target creation did not return webSocketDebuggerUrl: ${JSON.stringify(target)}`);
+  }
   const client = createCdpClient(target.webSocketDebuggerUrl);
-  await withTimeout(client.send('Page.enable'), 5000, 'Page.enable');
-  await withTimeout(client.send('Runtime.enable'), 5000, 'Runtime.enable');
-  const load = client.waitFor('Page.loadEventFired');
-  await withTimeout(client.send('Page.navigate', { url }), 5000, 'Page.navigate');
-  await withTimeout(load, 15000, 'Page.loadEventFired');
-  return client;
+  try {
+    await withTimeout(client.send('Page.enable'), 5000, 'Page.enable');
+    await withTimeout(client.send('Runtime.enable'), 5000, 'Runtime.enable');
+    await withTimeout(client.send('Page.navigate', { url }), 5000, 'Page.navigate');
+    await waitForPageReady(client, url);
+    return client;
+  } catch (error) {
+    await client.close().catch(() => {});
+    throw error;
+  }
 }
 
 async function navigatePage(page, url) {
-  const load = page.waitFor('Page.loadEventFired');
   await withTimeout(page.send('Page.navigate', { url }), 5000, 'Page.navigate');
-  await withTimeout(load, 15000, 'Page.loadEventFired');
+  await waitForPageReady(page, url);
+}
+
+async function waitForPageReady(page, url) {
+  const expectedHref = new URL(url).href;
+  let lastSnapshot = null;
+  const ready = withTimeout((async () => {
+    for (;;) {
+      try {
+        const result = await page.send('Runtime.evaluate', {
+          expression: String.raw`
+            (() => ({
+              href: location.href,
+              readyState: document.readyState,
+              hasBody: Boolean(document.body),
+            }))()
+          `,
+          returnByValue: true,
+        });
+        lastSnapshot = result.result?.value || {};
+        if (
+          lastSnapshot.href === expectedHref &&
+          lastSnapshot.hasBody === true &&
+          (lastSnapshot.readyState === 'interactive' || lastSnapshot.readyState === 'complete')
+        ) {
+          return lastSnapshot;
+        }
+      } catch (error) {
+        lastSnapshot = { error: error?.message || String(error) };
+      }
+      await delay(80);
+    }
+  })(), 15000, `page ready for ${expectedHref}`);
+
+  try {
+    return await ready;
+  } catch (error) {
+    throw new Error(`${error.message}. Last page snapshot: ${JSON.stringify(lastSnapshot)}`);
+  }
 }
 
 async function setPageViewport(page, { width, height, mobile = false }) {
@@ -954,6 +1097,152 @@ async function evaluateNodeCanvasMultiFocusSmoke(page) {
   return result.result.value;
 }
 
+async function evaluateCanvasGraphGravityVisualSmoke(page) {
+  const expression = String.raw`
+    (async () => {
+      await customElements.whenDefined('canvas-graph');
+      const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+      const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      const fixture = document.createElement('section');
+      fixture.id = 'canvas-graph-gravity-visual-fixture';
+      fixture.style.cssText = [
+        'position:fixed',
+        'left:0',
+        'top:0',
+        'width:760px',
+        'height:460px',
+        'z-index:20',
+        'background:var(--sn-bg, #151515)',
+      ].join(';');
+      const graph = document.createElement('canvas-graph');
+      graph.style.cssText = 'display:block;width:760px;height:460px;';
+      fixture.append(graph);
+      document.body.append(fixture);
+
+      const groups = [
+        { id: 'alpha', label: 'Alpha', cx: -230, cy: -80, type: 'data' },
+        { id: 'beta', label: 'Beta', cx: 210, cy: -60, type: 'action' },
+        { id: 'gamma', label: 'Gamma', cx: 0, cy: 210, type: 'docs' },
+      ];
+      const nodes = [];
+      const edges = [];
+      const snapshot = { positions: {}, viewport: { panX: 380, panY: 230, zoom: 0.8 } };
+      for (const group of groups) {
+        const nodeIds = [];
+        for (let index = 0; index < 7; index += 1) {
+          const angle = (Math.PI * 2 * index) / 7;
+          const id = group.id + '-' + index;
+          nodeIds.push(id);
+          nodes.push({
+            id,
+            label: group.label + ' ' + index,
+            type: group.type,
+            group: group.id,
+          });
+          snapshot.positions[id] = {
+            x: group.cx + Math.cos(angle) * (42 + index * 2),
+            y: group.cy + Math.sin(angle) * (42 + index * 2),
+          };
+          if (index > 0) edges.push({ from: group.id + '-0', to: id });
+          edges.push({ from: id, to: group.id + '-' + ((index + 1) % 7) });
+        }
+        group.nodeIds = nodeIds;
+      }
+      edges.push(
+        { from: 'alpha-0', to: 'beta-0' },
+        { from: 'beta-1', to: 'gamma-1' },
+        { from: 'gamma-2', to: 'alpha-2' }
+      );
+
+      graph.setLayoutSnapshot(snapshot);
+      graph.setGraphModel({
+        nodes,
+        edges,
+        groups: groups.map(({ id, label, nodeIds }) => ({ id, label, nodeIds })),
+      });
+      graph.fitView?.({ animate: false, padding: 72 });
+      for (let index = 0; index < 8; index += 1) await frame();
+      await wait(1800);
+      for (let index = 0; index < 4; index += 1) await frame();
+
+      const positions = {};
+      for (const [id, pos] of graph.nodePositions.entries()) {
+        positions[id] = { x: pos.x, y: pos.y };
+      }
+      const centers = {};
+      const within = {};
+      for (const group of groups) {
+        const pts = group.nodeIds.map((id) => positions[id]).filter(Boolean);
+        const cx = pts.reduce((sum, pos) => sum + pos.x, 0) / pts.length;
+        const cy = pts.reduce((sum, pos) => sum + pos.y, 0) / pts.length;
+        centers[group.id] = { x: cx, y: cy, count: pts.length };
+        within[group.id] = pts.reduce((sum, pos) => {
+          const dx = pos.x - cx;
+          const dy = pos.y - cy;
+          return sum + Math.sqrt(dx * dx + dy * dy);
+        }, 0) / pts.length;
+      }
+      const centerIds = groups.map((group) => group.id);
+      const between = [];
+      for (let i = 0; i < centerIds.length; i += 1) {
+        for (let j = i + 1; j < centerIds.length; j += 1) {
+          const a = centers[centerIds[i]];
+          const b = centers[centerIds[j]];
+          const dx = a.x - b.x;
+          const dy = a.y - b.y;
+          between.push(Math.sqrt(dx * dx + dy * dy));
+        }
+      }
+      const withinValues = Object.values(within);
+      const meanWithin = withinValues.reduce((sum, value) => sum + value, 0) / withinValues.length;
+      const minBetween = Math.min(...between);
+      const forceGroups = graph.getVisibleForceGroups?.() || {};
+      const options = graph.getWorkerOptions?.(null, forceGroups) || {};
+      const canvas = graph.canvas;
+      const context = canvas?.getContext?.('2d');
+      let sampledPixels = 0;
+      let nonBlankPixels = 0;
+      if (context && canvas.width > 0 && canvas.height > 0) {
+        const image = context.getImageData(0, 0, canvas.width, canvas.height).data;
+        const step = Math.max(4, Math.floor(image.length / 4 / 1200) * 4);
+        for (let offset = 0; offset < image.length; offset += step) {
+          sampledPixels += 1;
+          if (image[offset] > 12 || image[offset + 1] > 12 || image[offset + 2] > 12 || image[offset + 3] > 12) {
+            nonBlankPixels += 1;
+          }
+        }
+      }
+      const result = {
+        nodeCount: graph.nodes.length,
+        positionCount: Object.keys(positions).length,
+        tickCount: graph.tickCount,
+        centers,
+        within,
+        meanWithin,
+        minBetween,
+        separationRatio: minBetween / Math.max(1, meanWithin),
+        groupCount: Object.keys(forceGroups).length,
+        groupDistance: options.groupDistance,
+        groupStrength: options.groupStrength,
+        nonBlankPixels,
+        sampledPixels,
+      };
+      fixture.remove();
+      return result;
+    })()
+  `;
+
+  const result = await withTimeout(page.send('Runtime.evaluate', {
+    expression,
+    awaitPromise: true,
+    returnByValue: true,
+  }), 25000, 'canvas-graph semantic force gravity visual Runtime.evaluate');
+  if (result.exceptionDetails) {
+    throw new Error(result.exceptionDetails.text || 'Canvas graph gravity visual evaluation failed');
+  }
+  return result.result.value;
+}
+
 async function evaluateComposerSmoke(page, width = 0) {
   const forcedWidth = Number.isFinite(width) && width > 0 ? width : 0;
   const expression = String.raw`
@@ -1274,9 +1563,10 @@ async function evaluateComposerVoiceRuntimeSmoke(page) {
       await settle();
 
       const submissions = [];
-      composer.addEventListener('chat-composer-submit', () => {
+      composer.addEventListener('chat-composer-submit', (event) => {
+        event.stopPropagation();
         submissions.push(composer.$?.value || '');
-      });
+      }, { capture: true });
 
       composer.ref?.voiceInputBtn?.click();
       await settle();
@@ -1912,6 +2202,7 @@ test('cascade lab graph nodes render non-empty with route styles and compact mod
     assert.ok(smoke.compact.dots.length >= smoke.compact.paths.length * 2);
     assert.ok(smoke.compact.dots.every((dot) => Number.isFinite(dot.cx) && Number.isFinite(dot.cy) && dot.r > 0));
     assert.equal(smoke.directPcb.pathStyle, 'pcb');
+    assert.equal(smoke.directPcb.error, '', JSON.stringify(smoke.directPcb, null, 2));
     assert.ok(smoke.directPcb.path, 'expected rendered adjacent-node direct PCB path');
     assert.match(smoke.directPcb.path.d, /^M [^ ]+ [^ ]+ [HV] [^ ]+$/);
 
@@ -1941,7 +2232,50 @@ test('cascade lab graph nodes render non-empty with route styles and compact mod
     const tabIconColors = new Set(themeSmoke.scaled.tabItems.map((item) => item.iconColor));
     assert.ok(tabIconColors.size >= 3, `expected rotated tab accent colors, got ${[...tabIconColors].join(', ')}`);
   } finally {
-    page?.close();
+    await page?.close?.();
+    await closeChromeSession(chromeSession);
+    await server.close();
+  }
+});
+
+// Browser smoke is justified here: force-gravity clustering depends on the
+// worker, canvas lifecycle, theme rendering, and real animation frames.
+test('canvas-graph semantic force gravity visual groups stay clustered in a real browser', { timeout: BROWSER_SMOKE_TIMEOUT_MS }, async (t) => {
+  const chromePath = findChrome();
+  if (!chromePath || typeof WebSocket !== 'function') {
+    t.skip('Chrome or WebSocket is not available for canvas-graph gravity visual smoke');
+    return;
+  }
+
+  const server = await createStaticServer();
+  let chromeSession;
+  let page;
+  try {
+    chromeSession = await launchChromeSession(chromePath, 'canvas-graph gravity visual smoke');
+    page = await withTimeout(
+      openPage(chromeSession.endpoint, `${server.url}/demo/cascade-theme-lab.html?v=canvas-graph-gravity-visual`),
+      22000,
+      'canvas-graph gravity visual page open'
+    );
+    const smoke = await evaluateCanvasGraphGravityVisualSmoke(page);
+
+    assert.equal(smoke.nodeCount, 21, JSON.stringify(smoke, null, 2));
+    assert.equal(smoke.positionCount, 21, JSON.stringify(smoke, null, 2));
+    assert.equal(smoke.groupCount, 3, JSON.stringify(smoke, null, 2));
+    assert.ok(smoke.tickCount > 8, JSON.stringify(smoke, null, 2));
+    assert.ok(smoke.groupDistance > 0, JSON.stringify(smoke, null, 2));
+    assert.ok(smoke.groupStrength > 0, JSON.stringify(smoke, null, 2));
+    assert.ok(smoke.meanWithin > 0, JSON.stringify(smoke, null, 2));
+    assert.ok(smoke.minBetween > 0, JSON.stringify(smoke, null, 2));
+    assert.ok(smoke.separationRatio > 1.8, JSON.stringify(smoke, null, 2));
+    assert.ok(smoke.nonBlankPixels > 8, JSON.stringify(smoke, null, 2));
+    for (const center of Object.values(smoke.centers)) {
+      assert.equal(center.count, 7, JSON.stringify(smoke, null, 2));
+      assert.ok(Number.isFinite(center.x), JSON.stringify(smoke, null, 2));
+      assert.ok(Number.isFinite(center.y), JSON.stringify(smoke, null, 2));
+    }
+  } finally {
+    await page?.close?.();
     await closeChromeSession(chromeSession);
     await server.close();
   }
@@ -1978,7 +2312,7 @@ test('node-canvas flow-scroll drag keeps repeated pan gestures continuous', { ti
       JSON.stringify(smoke, null, 2)
     );
   } finally {
-    page?.close();
+    await page?.close?.();
     await closeChromeSession(chromeSession);
     await server.close();
   }
@@ -2010,7 +2344,7 @@ test('node-canvas focuses multiple nodes by fitting them into the viewport', { t
     assert.equal(smoke.focused.find((node) => node.id === 'hero')?.selected, true);
     assert.ok(smoke.zoom > 0 && smoke.zoom <= 1, JSON.stringify(smoke, null, 2));
   } finally {
-    page?.close();
+    await page?.close?.();
     await closeChromeSession(chromeSession);
     await server.close();
   }
@@ -2161,7 +2495,7 @@ test('agent workspace demo exposes the public feature showcase groups', { timeou
     assert.ok(smoke.groups.spatial.spatialNodes.every((node) => node.width > 20 && node.height > 20));
     assert.ok(smoke.groups.spatial.spatialNodes.every((node) => node.scale));
   } finally {
-    page?.close();
+    await page?.close?.();
     await closeChromeSession(chromeSession);
     await server.close();
   }
@@ -2309,7 +2643,7 @@ test('showcase chat workspace exercises host event flow through library primitiv
     assert.ok(flow.finalState.messageDomState.tables >= 1, JSON.stringify(flow.finalState.messageDomState));
     assert.match(flow.finalState.lastText, /Mock host adapter handled|library provided the visible chat workspace/);
   } finally {
-    page?.close();
+    await page?.close?.();
     await closeChromeSession(chromeSession);
     await server.close();
   }
@@ -2458,7 +2792,7 @@ test('three spatial graph adapter renders and drags through the browser module p
     assert.ok(result.movedX > 0);
     assert.ok(Number.isFinite(result.movedZ));
   } finally {
-    page?.close();
+    await page?.close?.();
     await closeChromeSession(chromeSession);
     await server.close();
   }
@@ -2614,7 +2948,7 @@ test('cascade lab chat composer keeps voice controls inside the input surface re
       }
     }
   } finally {
-    page?.close();
+    await page?.close?.();
     await closeChromeSession(chromeSession);
     await server.close();
   }
@@ -2707,7 +3041,7 @@ test('node-canvas setEditorModel renders the advertised serializable WebMCP mode
     assert.ok(result.boxes.some((box) => box.text.includes('Source')));
     assert.ok(result.boxes.some((box) => box.text.includes('Target')));
   } finally {
-    page?.close();
+    await page?.close?.();
     await closeChromeSession(chromeSession);
     await server.close();
   }

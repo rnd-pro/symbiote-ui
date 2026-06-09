@@ -1,19 +1,18 @@
-/**
- * ContextMenu template
- * @module symbiote-ui/menu/ContextMenu.tpl
- */
 import { html } from '@symbiotejs/symbiote';
 
-export let template = html`
+export default html`
   <div class="sn-ctx-backdrop" ${{ onclick: 'onBackdropClick' }}></div>
-  <div class="sn-ctx-menu">
+  <div class="sn-ctx-menu" role="menu" ${{ onkeydown: 'onKeydown' }}>
     <div class="ctx-items" ${{ itemize: 'items', 'item-tag': 'ctx-item' }}></div>
   </div>
 `;
 
 export let ctxItemTemplate = html`
-  <button class="sn-ctx-btn" ${{ onclick: 'onclick' }}>
-    <span class="material-symbols-outlined sn-ctx-icon">{{icon}}</span>
-    <span>{{label}}</span>
+  <div class="sn-ctx-divider" ${{ '@hidden': '!divider' }}></div>
+  <button class="sn-ctx-btn" ${{ onclick: 'onclick', '@hidden': 'divider' }}>
+    <span class="material-symbols-outlined sn-ctx-icon" ${{ '@hidden': '!icon' }}>{{icon}}</span>
+    <span class="material-symbols-outlined sn-ctx-check-mark" ${{ '@hidden': '!checked' }}>check</span>
+    <span class="sn-ctx-label">{{label}}</span>
+    <span class="sn-ctx-detail" ${{ '@hidden': '!detail' }}>{{detail}}</span>
   </button>
 `;

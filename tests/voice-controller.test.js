@@ -1,3 +1,6 @@
+import { acquireCurrentTestFileLock } from './test-lock.js';
+await acquireCurrentTestFileLock(import.meta.url);
+
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { VoiceController } from '../chat/voice-controller.js';

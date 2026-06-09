@@ -140,6 +140,30 @@ adapt the workspace instead of guessing.
 9. Verify responsive, keyboard, voice, and spatial fallbacks when those modes
    are part of the host.
 
+## Data Display Selection Guidelines
+
+When presenting datasets, agents must choose the appropriate display surface based on the nature of the data:
+
+1. **List (`sn-list-item`, `sn-listbox`)**:
+   - Best for: Homogeneous flat lists, sequential options, simple navigations, or small item counts.
+   - When to avoid: Multi-dimensional tabular data, hierarchies, or datasets requiring complex sorting/filtering across columns.
+
+2. **Table (`sn-data-table`)**:
+   - Best for: Multi-column structured data, pipelines, metrics comparisons, where sorting by columns, multi-row selection, or expandable detail views are required.
+   - When to avoid: Deeply nested hierarchy trees, single-column flat lists, or long key-value detail lists.
+
+3. **Tree (`tree-view`, `tree-panel`)**:
+   - Best for: Hierarchical relationships, folder/file systems, nested organizations, and parent-child navigation.
+   - When to avoid: Chronological linear events or wide tabular data with multiple independent properties per node.
+
+4. **Timeline (`sn-timeline`)**:
+   - Best for: Chronological event logs, run history, audit trails, and versioning sequences.
+   - When to avoid: Key-value definitions or non-temporal hierarchical groupings.
+
+5. **Description List (`sn-description-list`)**:
+   - Best for: Key-value details of a single object (e.g., metadata inspector, package info, single item detail summary).
+   - When to avoid: Multi-row datasets or collections of multiple similar entities.
+
 ## Component Metadata Requirements
 
 Agent-facing component descriptions should answer these questions:

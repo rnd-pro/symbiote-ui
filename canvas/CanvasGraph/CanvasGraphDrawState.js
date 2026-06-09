@@ -45,12 +45,31 @@ export function resolveViewportAnimation(options) {
   return next;
 }
 
-export function getNextPulseQueue({ pulses = [], nodeId, startTime, duration }) {
+export function getNextPulseQueue({ pulses = [], nodeId, startTime, duration, waves = 1 }) {
   return [
     ...pulses.filter((pulse) => pulse.id !== nodeId),
-    { id: nodeId, startTime, duration },
+    { id: nodeId, startTime, duration, waves },
   ];
 }
+
+export function findActiveTransitionMarker(markers = [], nodeId, now) {
+  let id = String(nodeId || '').trim();
+  if (!id) return null;
+  for (let marker of markers || []) {
+    if (marker?.toId !== id) continue;
+    let duration = Math.max(1, marker.duration || 850);
+    let elapsed = now - marker.startTime;
+    if (elapsed >= 0 && elapsed < duration) return marker;
+  }
+  return null;
+}
+
+export const CANVAS_GRAPH_LAYER_TARGETS = Object.freeze({
+  scale: Object.freeze([1.14, 0.96, 0.88, 0.78, 0.68]),
+  opacity: Object.freeze([1, 0.52, 0.24, 0.07, 0.02]),
+  blur: Object.freeze([0, 0.4, 1.6, 3.5, 6]),
+  parallax: Object.freeze([0, 0.02, 0.045, 0.075, 0.11]),
+});
 
 export function resolveGroupOrbitRotationFrame(options) {
   let {

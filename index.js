@@ -70,6 +70,7 @@ export { History } from './plugins/History.js';
 export { computeAutoLayout, computeTreeLayout } from './canvas/AutoLayout.js';
 export {
   createCanvasGraphStore,
+  normalizeCanvasGraphGroups,
   normalizeCanvasGraphModel,
 } from './canvas/graph-model.js';
 export {
@@ -80,6 +81,7 @@ export {
   getForceLayoutOptions,
   getGraphCacheKey,
   getOrBuildGraph,
+  normalizeForceGroups,
 } from './canvas/graph-layout.js';
 export {
   GRAPH_DIRECTORY_FRAME_COLORS,

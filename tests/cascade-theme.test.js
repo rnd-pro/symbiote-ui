@@ -1,3 +1,6 @@
+import { acquireCurrentTestFileLock } from './test-lock.js';
+await acquireCurrentTestFileLock(import.meta.url);
+
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
@@ -53,7 +56,9 @@ const chatWorkspaceTemplate = new URL('../chat/ChatWorkspace/ChatWorkspace.tpl.j
 const chatWorkspaceStyles = new URL('../chat/ChatWorkspace/ChatWorkspace.css.js', import.meta.url);
 const chatSidebarItemSource = new URL('../chat/ChatSidebarItem/ChatSidebarItem.js', import.meta.url);
 const chatSidebarItemStyles = new URL('../chat/ChatSidebarItem/ChatSidebarItem.css.js', import.meta.url);
+const graphThemeContractSource = new URL('../graph/theme-contract.js', import.meta.url);
 const graphExplorerShellSource = new URL('../canvas/GraphExplorerShell/GraphExplorerShell.js', import.meta.url);
+const canvasGraphSource = new URL('../canvas/CanvasGraph/CanvasGraph.js', import.meta.url);
 const graphExplorerShellStyles = new URL('../canvas/GraphExplorerShell/GraphExplorerShell.css.js', import.meta.url);
 const cellBgSource = new URL('../effects/CellBg/CellBg.js', import.meta.url);
 const cellBgStyles = new URL('../effects/CellBg/CellBg.css.js', import.meta.url);
@@ -510,6 +515,9 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.equal(theme.tokens['--sn-hue-warning'], '36');
   assert.equal(theme.tokens['--sn-hue-data'], '188');
   assert.equal(theme.tokens['--sn-hue-danger'], '4');
+  assert.equal(theme.tokens['--sn-danger-color'], 'hsl(4 89% 58%)');
+  assert.equal(theme.tokens['--sn-success-color'], 'hsl(122 89% 57%)');
+  assert.equal(theme.tokens['--sn-warning-color'], 'hsl(36 89% 58%)');
   assert.equal(theme.tokens['--sn-cat-control'], 'hsl(36 89% 58%)');
   assert.equal(theme.tokens['--sn-cat-data'], 'hsl(188 89% 42.0%)');
   assert.equal(theme.tokens['--sn-type-action'], 'hsl(4 89% 78.0%)');
@@ -640,6 +648,39 @@ test('applyCascadeTheme notifies subtree targets by default', async () => {
   }
 });
 
+test('canvas graph refreshes cached flat renderer colors from cascade theme changes', async () => {
+  const [source, graphThemeContract, registrySource, customElements] = await Promise.all([
+    readFile(canvasGraphSource, 'utf8'),
+    readFile(graphThemeContractSource, 'utf8'),
+    readFile(componentRegistrySource, 'utf8'),
+    readFile(customElementsSource, 'utf8').then((value) => JSON.parse(value)),
+  ]);
+
+  assert.match(source, /ownerDocument\?\.addEventListener\?\.\('cascade-theme-change', this\._themeChangeHandler\)/);
+  assert.match(source, /new MutationObserver\(\(\) => this\._scheduleCanvasThemeSync\(\)\)/);
+  assert.match(source, /this\._themeObserver\.observe\(source, \{ attributes: true, attributeFilter: \['class', 'style'\] \}\)/);
+  assert.match(source, /this\.syncCanvasTheme\(\);\n\s+this\.needsDraw = true;\n\s+this\._wakeLoop\(\);/);
+  assert.match(source, /this\._edgeRgb = readThemeRgbAny\(this, \['--sn-canvas-graph-edge', '--sn-conn-color', '--sn-node-selected'\], this\._edgeRgb\)/);
+  assert.match(source, /this\._panelBgRgb = readThemeRgbAny\(this, \['--sn-canvas-graph-panel-bg', '--sn-panel-bg', '--sn-node-bg', '--sn-bg'\], this\._panelBgRgb\)/);
+  assert.match(source, /this\._panelBorderRgb = readThemeRgbAny\(this, \['--sn-canvas-graph-panel-border', '--sn-node-border', '--sn-outline-color-soft', '--sn-text-dim'\], this\._panelBorderRgb\)/);
+  assert.match(source, /this\._menuIconRgb = readThemeRgbAny\(this, \['--sn-canvas-graph-radial-icon', '--sn-panel-bg', '--sn-bg'\], this\._menuIconRgb\)/);
+  assert.match(source, /this\._ghostRgb = readThemeRgbAny\(this, \['--sn-canvas-graph-ghost', '--sn-text-dim', '--sn-node-hover'\], this\._ghostRgb\)/);
+  assert.match(source, /this\._typeColorRgb\[type\] = readThemeRgb\(this, token, this\._typeColorRgb\[type\] \|\| this\._edgeRgb\)/);
+  assert.doesNotMatch(source, /let boost = 25/);
+  assert.match(source, /currentCtx\.globalAlpha \*= edge\.aAlpha/);
+  assert.match(graphThemeContract, /'profile-photo': '--sn-graph-type-profile-photo'/);
+  assert.match(graphThemeContract, /pulse: '--sn-graph-type-pulse'/);
+  assert.match(graphThemeContract, /skill: '--sn-graph-type-skill'/);
+  assert.match(registrySource, /'--sn-canvas-graph-panel-bg'/);
+  assert.match(registrySource, /'--sn-graph-type-project'/);
+
+  let canvasGraph = customElements.modules
+    .flatMap((moduleRecord) => moduleRecord.declarations || [])
+    .find((declaration) => declaration.tagName === 'canvas-graph');
+  assert.ok(canvasGraph.cssProperties.some((property) => property.name === '--sn-canvas-graph-panel-bg'));
+  assert.ok(canvasGraph.metadata.contract.themeAliases.includes('--sn-canvas-graph-ghost'));
+});
+
 test('node type color tokens are canonical across themes and graph aliases', async () => {
   const [cascadeSource, defaultProviderTheme] = await Promise.all([
     readFile(cascadeThemeSource, 'utf8'),
@@ -650,13 +691,33 @@ test('node type color tokens are canonical across themes and graph aliases', asy
 
   assert.match(cascadeSource, /'--sn-type-action': typeAction/);
   assert.match(cascadeSource, /'--sn-graph-type-action': 'var\(--sn-type-action\)'/);
+  assert.match(cascadeSource, /'--sn-graph-type-project': 'var\(--sn-type-project\)'/);
+  assert.match(cascadeSource, /'--sn-canvas-graph-panel-bg': 'var\(--sn-panel-bg\)'/);
   assert.match(cascadeSource, /'--sn-type-source': 'var\(--sn-cat-server\)'/);
   assert.equal(theme.tokens['--sn-type-output'].startsWith('hsl('), true);
   assert.equal(theme.tokens['--sn-type-config'].startsWith('hsl('), true);
   assert.equal(theme.tokens['--sn-graph-type-output'], 'var(--sn-type-output)');
+  assert.equal(theme.tokens['--sn-graph-type-profile-photo'], 'var(--sn-type-profile-photo)');
+  assert.equal(theme.tokens['--sn-graph-type-bio'], 'var(--sn-type-bio)');
+  assert.equal(theme.tokens['--sn-graph-type-pulse'], 'var(--sn-type-pulse)');
+  assert.equal(theme.tokens['--sn-conn-color'], 'var(--sn-node-selected)');
+  assert.equal(theme.tokens['--sn-conn-selected'], 'var(--sn-danger-color)');
+  assert.equal(theme.tokens['--sn-conn-dot-fill'], 'var(--sn-conn-color)');
+  assert.equal(theme.tokens['--sn-canvas-graph-panel-bg'], 'var(--sn-panel-bg)');
+  assert.equal(theme.tokens['--sn-canvas-graph-edge'], 'var(--sn-conn-color)');
+  assert.equal(theme.tokens['--sn-toolbar-bg'], 'color-mix(in oklab, var(--sn-panel-bg) 94%, transparent)');
+  assert.equal(theme.tokens['--sn-toolbar-border'], theme.tokens['--sn-outline-color']);
+  assert.equal(theme.tokens['--sn-toolbar-color'], 'var(--sn-text-dim)');
+  assert.equal(theme.tokens['--sn-toolbar-active'], 'var(--sn-text)');
+  assert.equal(theme.tokens['--sn-toolbar-danger-color'], 'var(--sn-danger-color)');
+  assert.equal(theme.tokens['--sn-toolbar-title-color'], 'var(--sn-text)');
   assert.equal(defaultProviderTheme.DEFAULT_PROVIDER_THEME.tokens['--sn-graph-type-action'], 'var(--sn-type-action)');
+  assert.equal(defaultProviderTheme.DEFAULT_PROVIDER_THEME.tokens['--sn-graph-type-project'], 'var(--sn-type-project)');
+  assert.equal(defaultProviderTheme.DEFAULT_PROVIDER_THEME.tokens['--sn-canvas-graph-ghost'], 'var(--sn-text-dim)');
   assert.equal(defaultProviderTheme.DEFAULT_PROVIDER_THEME.tokens['--sn-type-action'], 'hsl(var(--sn-hue-danger) var(--sn-sat-vivid) 78%)');
   assert.equal(defaultProviderTheme.DEFAULT_PROVIDER_THEME.tokens['--sn-type-source'], 'var(--sn-cat-server)');
+  assert.equal(defaultProviderTheme.DEFAULT_PROVIDER_THEME.tokens['--sn-type-profile-photo'], 'var(--sn-type-profile)');
+  assert.equal(defaultProviderTheme.DEFAULT_PROVIDER_THEME.tokens['--sn-type-skill'], 'var(--sn-cat-control)');
 });
 
 test('svg shape nodes keep visual icons without internal labels or watermarks', async () => {
@@ -845,8 +906,8 @@ test('static custom elements catalog mirrors agent-facing WebMCP metadata', asyn
   const expectedTools = new Map([
     ['chat-workspace', ['chat_workspace_set_state', 'chat_workspace_background', 'chat_workspace_select_chat', 'chat_workspace_send']],
     ['chat-sidebar-shell', ['chat_sidebar_set_chats', 'chat_sidebar_select', 'chat_sidebar_set_collapsed']],
-    ['node-canvas', ['node_canvas_set_editor_model', 'node_canvas_set_path_style', 'node_canvas_set_flow_layout', 'node_canvas_focus_nodes']],
-    ['canvas-graph', ['canvas_graph_set_model', 'canvas_graph_focus_node', 'canvas_graph_set_path']],
+    ['node-canvas', ['node_canvas_set_editor_model', 'node_canvas_set_path_style', 'node_canvas_set_flow_layout', 'node_canvas_apply_layout', 'node_canvas_focus_nodes']],
+    ['canvas-graph', ['canvas_graph_set_model', 'canvas_graph_focus_node', 'canvas_graph_focus_nodes', 'canvas_graph_set_path']],
     ['graph-explorer-shell', ['graph_explorer_shell_set_view', 'graph_explorer_shell_set_stats', 'graph_explorer_shell_request_action']],
   ]);
 
@@ -865,6 +926,10 @@ test('static custom elements catalog mirrors agent-facing WebMCP metadata', asyn
     false
   );
   assert.ok(canvasGraph.metadata.contract.capabilities.includes('overview-read-renderer'));
+  assert.ok(canvasGraph.metadata.contract.methods.some((method) => method.name === 'suspendLayout'));
+  assert.ok(canvasGraph.metadata.contract.methods.some((method) => method.name === 'resumeLayout'));
+  assert.ok(canvasGraph.metadata.contract.themeAliases.includes('--sn-canvas-graph-panel-bg'));
+  assert.ok(canvasGraph.metadata.contract.themeAliases.includes('--sn-graph-type-project'));
 });
 
 test('cascade theme derives distinct dark and light branches', async () => {
@@ -1191,7 +1256,7 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(layoutNode, /--sn-layout-menu-icon-size/);
   assert.match(layoutNode, /--sn-layout-menu-row-span/);
   assert.match(layoutNode, /--sn-layout-menu-row-height/);
-  assert.match(layoutNode, /calc\(var\(--sn-layout-menu-row-height, var\(--sn-layout-header-min-height, 28px\)\) \* var\(--sn-layout-menu-row-span\)\)/);
+  assert.match(layoutNode, /calc\(var\(--sn-layout-menu-row-height, var\(--sn-layout-header-block-size, calc\(var\(--sn-layout-header-min-height, 28px\) \+ 3px\)\)\) \* var\(--sn-layout-menu-row-span\)\)/);
   assert.match(layoutNode, /panel-menu-row-label/);
   assert.match(layoutNodeTpl, /panel-menu-drawer/);
   assert.match(layoutNodeTpl, /panelMenuRows/);

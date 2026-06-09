@@ -16,18 +16,20 @@ export let template = html`
         <span class="material-symbols-outlined">more_horiz</span>
         <span class="material-symbols-outlined" ${{ textContent: 'panelMenuIcon' }}></span>
       </button>
-      <button
-        class="header-btn collapse-btn"
-        ${{ onclick: 'onCollapseClick', '@hidden': '!canCollapse', title: 'collapseTitle' }}
-      >
-        <span class="material-symbols-outlined" ${{ textContent: 'collapseIcon' }}></span>
-      </button>
-      <button
-        class="header-btn fullscreen-btn"
-        ${{ onclick: 'onFullscreenClick', title: 'fullscreenTitle' }}
-      >
-        <span class="material-symbols-outlined" ${{ textContent: 'fullscreenIcon' }}></span>
-      </button>
+      <div class="panel-actions">
+        <button
+          class="header-btn collapse-btn"
+          ${{ onclick: 'onCollapseClick', '@hidden': '!canCollapse', title: 'collapseTitle' }}
+        >
+          <span class="material-symbols-outlined" ${{ textContent: 'collapseIcon' }}></span>
+        </button>
+        <button
+          class="header-btn fullscreen-btn"
+          ${{ onclick: 'onFullscreenClick', title: 'fullscreenTitle' }}
+        >
+          <span class="material-symbols-outlined" ${{ textContent: 'fullscreenIcon' }}></span>
+        </button>
+      </div>
     </div>
     <div class="panel-menu-drawer" ${{ '@hidden': '!isPanelMenuOpen' }}>
       <div class="panel-menu-rows" itemize="panelMenuRows">
@@ -51,7 +53,7 @@ export let template = html`
                   }}
                 >
                   <span class="material-symbols-outlined">{{icon}}</span>
-                  <span>{{label}}</span>
+                  <span class="panel-menu-action-label">{{label}}</span>
                 </button>
               </template>
             </div>

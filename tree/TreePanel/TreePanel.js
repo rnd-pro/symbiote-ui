@@ -29,6 +29,14 @@ export class TreePanel extends Symbiote {
   initCallback() {
     this.#syncAttributes();
     this.#syncInputChrome();
+
+    if (!this.hasAttribute('role')) {
+      this.setAttribute('role', 'region');
+    }
+    if (!this.hasAttribute('aria-label') && !this.hasAttribute('aria-labelledby')) {
+      let title = this.getAttribute('title') || 'Navigation Tree';
+      this.setAttribute('aria-label', title);
+    }
   }
 
   get tree() {

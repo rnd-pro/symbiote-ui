@@ -8,6 +8,11 @@ export class EmptyState extends Symbiote {
     super();
     this.templateProcessors.add(slotProcessor);
   }
+
+  connectedCallback() {
+    super.connectedCallback?.();
+    if (!this.hasAttribute('role')) this.setAttribute('role', 'region');
+  }
 }
 
 EmptyState.template = template;

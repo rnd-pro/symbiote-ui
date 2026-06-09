@@ -674,6 +674,7 @@ function initSimulation(data) {
         strength: config.linkStrength,
         restLength: config.linkDistance,
         bias: 0.5,
+        group: false,
       };
     })
     .filter(Boolean);
@@ -709,6 +710,7 @@ function initSimulation(data) {
           strength: config.groupStrength,
           restLength: config.groupDistance,
           bias: 0.5,
+          group: true,
         });
       }
     }
@@ -1018,19 +1020,16 @@ self.onmessage = function (e) {
 
       if (updates.linkDistance !== undefined || updates.linkStrength !== undefined) {
         for (const edge of edges) {
-          if (edge.restLength === config.groupDistance && edge.strength === config.groupStrength)
-            continue;
+          if (edge.group) continue;
           if (updates.linkDistance !== undefined) edge.restLength = config.linkDistance;
           if (updates.linkStrength !== undefined) edge.strength = config.linkStrength;
         }
       }
       if (updates.groupDistance !== undefined || updates.groupStrength !== undefined) {
         for (const edge of edges) {
-
-          if (edge.restLength !== config.linkDistance || edge.strength !== config.linkStrength) {
-            if (updates.groupDistance !== undefined) edge.restLength = config.groupDistance;
-            if (updates.groupStrength !== undefined) edge.strength = config.groupStrength;
-          }
+          if (!edge.group) continue;
+          if (updates.groupDistance !== undefined) edge.restLength = config.groupDistance;
+          if (updates.groupStrength !== undefined) edge.strength = config.groupStrength;
         }
       }
 

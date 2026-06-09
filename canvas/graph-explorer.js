@@ -34,6 +34,19 @@ function resolveGraphExplorerElement(root, selector, fallback) {
   return fallback || root?.querySelector?.(selector) || null;
 }
 
+function normalizeFocusNodeIds(nodeIds) {
+  let ids = Array.isArray(nodeIds) ? nodeIds : [nodeIds];
+  let normalized = [];
+  let seen = new Set();
+  for (let id of ids) {
+    let normalizedId = String(id || '').trim();
+    if (!normalizedId || seen.has(normalizedId)) continue;
+    seen.add(normalizedId);
+    normalized.push(normalizedId);
+  }
+  return normalized;
+}
+
 export function applyGraphExplorerViewMode({
   mode = 'structured',
   shell = null,
@@ -101,6 +114,7 @@ export function createGraphExplorerViewController({
     flatPath: flatPath ?? path,
   };
   let subscribers = new Set();
+  let pendingFlatFocusCleanup = null;
 
   function snapshot() {
     return {
@@ -121,6 +135,63 @@ export function createGraphExplorerViewController({
     for (let subscriber of subscribers) {
       subscriber(current, event);
     }
+  }
+
+  function clearPendingFlatFocus() {
+    if (typeof pendingFlatFocusCleanup === 'function') pendingFlatFocusCleanup();
+    pendingFlatFocusCleanup = null;
+  }
+
+  function runFlatFocus(nodeIds, options = {}, { fit = false } = {}) {
+    let ids = normalizeFocusNodeIds(nodeIds);
+    if (ids.length === 0 || !state.flatGraph) return false;
+
+    if (fit || ids.length > 1 || options.fit === true || options.drill === false) {
+      let focusOptions = { padding: 80, ...options, fit: true };
+      let focused = Boolean(
+        state.flatGraph.focusNodes?.(ids, focusOptions)
+        || state.flatGraph.fitNodes?.(ids, focusOptions)
+      );
+      if (focused && focusOptions.pulse !== false) {
+        let selectedId = typeof focusOptions.select === 'string' ? focusOptions.select : ids[0];
+        let pulseId = ids.includes(selectedId) ? selectedId : ids[0];
+        state.flatGraph.pulseNode?.(pulseId, focusOptions.pulseMs ?? 900);
+      }
+      return focused;
+    }
+
+    state.flatGraph.flyToNode?.(ids[0], { zoom: 1.1, ...options });
+    state.flatGraph.pulseNode?.(ids[0], options.pulseMs ?? 900);
+    return true;
+  }
+
+  function deferFlatFocus(nodeIds, options = {}, focusOptions = {}) {
+    if (!state.flatGraph?.addEventListener || options.defer === false) return;
+    clearPendingFlatFocus();
+    let attempts = 0;
+    let done = false;
+    let retry = (event) => {
+      if (done) return;
+      attempts += 1;
+      let focused = runFlatFocus(
+        nodeIds,
+        { ...options, defer: false, pulse: attempts === 1 && options.pulse !== false },
+        focusOptions
+      );
+      let canStopOnSuccess = !focusOptions.fit || event?.type === 'layout-done';
+      let maxAttempts = focusOptions.fit ? 48 : 12;
+      if ((focused && canStopOnSuccess) || attempts >= maxAttempts) {
+        done = true;
+        clearPendingFlatFocus();
+      }
+    };
+    let cleanup = () => {
+      state.flatGraph?.removeEventListener?.('layout-tick', retry);
+      state.flatGraph?.removeEventListener?.('layout-done', retry);
+    };
+    pendingFlatFocusCleanup = cleanup;
+    state.flatGraph.addEventListener('layout-tick', retry);
+    state.flatGraph.addEventListener('layout-done', retry);
   }
 
   let api = {
@@ -263,13 +334,19 @@ export function createGraphExplorerViewController({
       nodeId = '',
       structuredNodeIds = null,
       flatNodeId = nodeId,
+      flatNodeIds = null,
       structuredOptions = {},
       flatOptions = {},
     } = {}) {
       if (state.mode === 'flat') {
-        if (flatNodeId) {
-          state.flatGraph?.flyToNode?.(flatNodeId, { zoom: 1.1, ...flatOptions });
-          state.flatGraph?.pulseNode?.(flatNodeId, flatOptions.pulseMs ?? 900);
+        let explicitFlatNodeIds = flatNodeIds != null;
+        let ids = normalizeFocusNodeIds(explicitFlatNodeIds ? flatNodeIds : flatNodeId);
+        if (ids.length > 0) {
+          let options = { fit: explicitFlatNodeIds, ...flatOptions };
+          let didFocus = runFlatFocus(ids, options, { fit: explicitFlatNodeIds });
+          if (explicitFlatNodeIds || !didFocus) {
+            deferFlatFocus(ids, { ...options, pulse: !didFocus }, { fit: explicitFlatNodeIds });
+          }
         }
         return api;
       }
@@ -287,6 +364,7 @@ export function createGraphExplorerViewController({
     },
 
     destroy() {
+      clearPendingFlatFocus();
       subscribers.clear();
       state = {
         shell: null,

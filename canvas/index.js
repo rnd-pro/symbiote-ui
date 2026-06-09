@@ -9,6 +9,7 @@ export { routePcbTrace } from './PcbRouter.js';
 export { analyzePcbRoute, analyzePcbRouteSet, summarizePcbRouteQuality } from './PcbRouteDiagnostics.js';
 export {
   createCanvasGraphStore,
+  normalizeCanvasGraphGroups,
   normalizeCanvasGraphModel,
 } from './graph-model.js';
 export {
@@ -19,6 +20,7 @@ export {
   getForceLayoutOptions,
   getGraphCacheKey,
   getOrBuildGraph,
+  normalizeForceGroups,
 } from './graph-layout.js';
 export {
   GRAPH_DIRECTORY_FRAME_COLORS,
