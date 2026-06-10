@@ -161,6 +161,24 @@ export let RULES = [
     check: 'no_legacy_ui_shell_classes',
     tags: ['symbiote', 'styles', 'theming', 'components'],
   },
+  {
+    id: 'SYM-019',
+    name: 'data-display-selection-rules',
+    description: 'Rules directing agents to select list, tree, table, timeline, or description surfaces appropriately based on dataset characteristics.',
+    severity: 'info',
+    filePattern: 'manifest/**/*.js',
+    check: 'data_display_selection_guideline',
+    tags: ['symbiote', 'agents', 'data-display', 'metadata'],
+  },
+  {
+    id: 'SYM-020',
+    name: 'no-hardcoded-visual-values',
+    description: 'Component CSS must not use raw hex, rgb(), hsl(), or named CSS colors outside accepted functional exceptions (ColorPicker swatches, media poster geometry, known-accent foreground). Use --sn-* cascade tokens.',
+    severity: 'warning',
+    filePattern: '**/*.css.js',
+    check: 'no_raw_color_values_in_css',
+    tags: ['symbiote', 'theming', 'tokens', 'design-quality'],
+  },
 ];
 
 export let RULESETS = [
