@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Video Studio — sn-canvas-viewport + sn-timeline-editor</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: #111;
+      color: #eee;
+      font-family: 'Inter', system-ui, sans-serif;
+      overflow: hidden;
+    }
+
+    .toolbar {
+      height: 32px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 12px;
+      background: rgba(255,255,255,0.03);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      flex-shrink: 0;
+    }
+
+    .toolbar .title {
+      font-size: 12px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .toolbar .title span { opacity: 0.6; font-weight: 400; font-size: 10px; }
+
+    .studio-body {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .top-row {
+      display: flex;
+      flex: 0.6;
+      min-height: 200px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .viewport-area {
+      flex: 1;
+    }
+
+    .bottom-row {
+      flex: 0.4;
+      min-height: 150px;
+    }
+
+    sn-canvas-viewport { width: 100%; height: 100%; }
+    sn-timeline-editor { width: 100%; height: 100%; }
+  </style>
+</head>
+
+<body>
+  <div class="toolbar">
+    <div class="title">
+      🎬 Video Studio
+      <span>sn-canvas-viewport + sn-timeline-editor sync demo</span>
+    </div>
+  </div>
+  <div class="studio-body">
+    <div class="top-row">
+      <div class="viewport-area">
+        <sn-canvas-viewport id="viewport"></sn-canvas-viewport>
+      </div>
+    </div>
+    <div class="bottom-row">
+      <sn-timeline-editor id="timeline"></sn-timeline-editor>
+    </div>
+  </div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "@symbiotejs/symbiote": "./node_modules/@symbiotejs/symbiote/core/index.js",
+      "@symbiotejs/symbiote/": "./node_modules/@symbiotejs/symbiote/"
+    }
+  }
+  </script>
+
+  <script type="module">
+    import './timeline/TimelineEditor/TimelineEditor.js';
+    import './viewport/CanvasViewport/CanvasViewport.js';
+
+    let vp = document.getElementById('viewport');
+    let tl = document.getElementById('timeline');
+
+    // ── Composition with animated layers ──
+    let composition = {
+      width: 1920,
+      height: 1080,
+      fps: 30,
+      duration: 300,
+      background: '#0d1117',
+      layers: [
+        // Background gradient — always visible
+        {
+          type: 'gradient',
+          x: 0, y: 0, width: 1920, height: 1080,
+          stops: [[0, 'hsl(220 40% 12%)'], [0.5, 'hsl(260 30% 15%)'], [1, 'hsl(200 40% 10%)']],
+        },
+        // Intro title — frames 0-90
+        {
+          type: 'text',
+          x: 480, y: 420,
+          text: '✨ INTRO',
+          fontSize: 120,
+          color: 'rgba(255,255,255,0.9)',
+          startFrame: 0,
+          endFrame: 90,
+        },
+        // Decorative circle — frames 0-90
+        {
+          type: 'circle',
+          x: 960, y: 800,
+          radius: 60,
+          color: 'hsl(210 60% 50%)',
+          opacity: 0.5,
+          startFrame: 0,
+          endFrame: 90,
+        },
+        // Main content — frames 100-250
+        {
+          type: 'rect',
+          x: 160, y: 140,
+          width: 1600, height: 800,
+          color: 'rgba(255,255,255,0.03)',
+          startFrame: 100,
+          endFrame: 250,
+        },
+        {
+          type: 'text',
+          x: 240, y: 300,
+          text: 'MAIN CONTENT',
+          fontSize: 96,
+          color: 'rgba(255,255,255,0.85)',
+          startFrame: 100,
+          endFrame: 250,
+        },
+        {
+          type: 'text',
+          x: 240, y: 450,
+          text: 'Frame-synced viewport demo',
+          fontSize: 36,
+          color: 'rgba(255,255,255,0.5)',
+          startFrame: 100,
+          endFrame: 250,
+        },
+        // Circle element — frames 100-250
+        {
+          type: 'circle',
+          x: 1500, y: 500,
+          radius: 120,
+          color: 'hsl(280 50% 45%)',
+          opacity: 0.6,
+          startFrame: 100,
+          endFrame: 250,
+        },
+        // Outro — frames 260-300
+        {
+          type: 'text',
+          x: 620, y: 440,
+          text: 'THE END',
+          fontSize: 100,
+          color: 'rgba(255,255,255,0.8)',
+          startFrame: 260,
+          endFrame: 300,
+        },
+        // Lower third caption — frames 10-80
+        {
+          type: 'rect',
+          x: 100, y: 880,
+          width: 500, height: 60,
+          color: 'rgba(0,0,0,0.6)',
+          startFrame: 10,
+          endFrame: 80,
+        },
+        {
+          type: 'text',
+          x: 120, y: 890,
+          text: 'Title Card',
+          fontSize: 28,
+          color: 'rgba(255,255,255,0.9)',
+          startFrame: 10,
+          endFrame: 80,
+        },
+        // Subtitle — frames 120-200
+        {
+          type: 'rect',
+          x: 100, y: 880,
+          width: 400, height: 60,
+          color: 'rgba(0,0,0,0.6)',
+          startFrame: 120,
+          endFrame: 200,
+        },
+        {
+          type: 'text',
+          x: 120, y: 890,
+          text: 'Subtitle Text',
+          fontSize: 28,
+          color: 'rgba(255,255,255,0.9)',
+          startFrame: 120,
+          endFrame: 200,
+        },
+      ],
+    };
+
+    // ── Timeline data matching the composition ──
+    let timelineData = {
+      fps: 30,
+      duration: 300,
+      tracks: [
+        {
+          id: 'v1', type: 'video', label: 'Composition',
+          clips: [
+            { id: 'intro', start: 0, end: 90, label: 'Intro' },
+            { id: 'main', start: 100, end: 250, label: 'Main Content' },
+            { id: 'outro', start: 260, end: 300, label: 'Outro' },
+          ],
+        },
+        {
+          id: 'a1', type: 'audio', label: 'Music',
+          clips: [
+            { id: 'bgm', start: 0, end: 300, label: 'Background Music' },
+          ],
+        },
+        {
+          id: 't1', type: 'text', label: 'Captions',
+          clips: [
+            { id: 'title', start: 10, end: 80, label: 'Title Card' },
+            { id: 'sub', start: 120, end: 200, label: 'Subtitle' },
+          ],
+        },
+        {
+          id: 'e1', type: 'effect', label: 'Effects',
+          clips: [
+            { id: 'circle', start: 0, end: 90, label: 'Deco Circle' },
+            { id: 'purple', start: 100, end: 250, label: 'Purple Orb' },
+          ],
+        },
+      ],
+      markers: [
+        { frame: 0, label: 'Start' },
+        { frame: 90, label: 'Cut 1' },
+        { frame: 250, label: 'Cut 2' },
+      ],
+    };
+
+    // Load data
+    vp.loadComposition(composition);
+    tl.loadTimeline(timelineData);
+
+    // ── Sync: timeline playhead → viewport frame ──
+    tl.addEventListener('playhead-change', (e) => {
+      vp.setFrame(e.detail.frame);
+    });
+
+    console.log('✅ Video Studio demo initialized — timeline↔viewport sync active');
+  </script>
+</body>
+
+</html>
