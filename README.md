@@ -159,6 +159,11 @@ mode queue the next active node through the graph deactivation cycle, and
 `canvas-graph` renders a small route marker along the available node links so
 the viewer keeps visual continuity between selections.
 
+`canvas-graph.enableDeviceOrientationParallax()` enables sensor-driven layer
+parallax as a progressive enhancement. Call it from a user gesture; browsers
+that require `DeviceOrientationEvent.requestPermission()` need that activation,
+and unsupported or insecure contexts return a structured disabled result.
+
 `canvas-graph` consumes the global cascade theme through public aliases such as
 `--sn-canvas-graph-panel-bg`, `--sn-canvas-graph-panel-border`,
 `--sn-canvas-graph-ghost`, and the `--sn-graph-type-*` node type aliases. Hosts
@@ -493,12 +498,18 @@ persisted with the tree. `importance` decides auto-collapse order, minimum
 inline/block sizes decide when panels no longer fit, `collapse` controls
 whether a panel may auto-collapse, `overflow` selects collapse versus
 horizontal/vertical scroll fallback, and `responsiveMode` selects mobile
-preserve, vertical stack, or horizontal scroll behavior. Minimum footprint
-resolution accounts for split ratios, so a skewed split still reserves enough
-scrollable space for both child branches.
+preserve, vertical stack, horizontal scroll, or drawer behavior. In drawer
+mode the same layout tree stays mounted: one `mobileDock: 'primary'` panel
+remains central while `mobileDock: 'start'` and `mobileDock: 'end'` panels are
+projected as gesture-capable side drawers. Minimum footprint resolution
+accounts for split ratios, so a skewed split still reserves enough scrollable
+space for both child branches.
 At runtime `panel-layout` exposes resolved scroll axes through
 `scroll-inline-active` and `scroll-block-active` attributes so CSS, browser
 smoke tests, and agents can distinguish requested policy from active fallback.
+Drawer projection exposes `drawer-mode-active`, `drawer-start-open`, and
+`drawer-end-open` runtime attributes; opening drawers changes only presentation
+state and does not save or mutate the host layout tree.
 `layout-sidebar` owns only its sidebar configuration and width persistence; its
 reset control clears that state and emits `layout-sidebar-reset` for host-owned
 layout resets instead of clearing host storage or reloading the page.

@@ -2,6 +2,7 @@ import { acquireCurrentTestFileLock } from './test-lock.js';
 await acquireCurrentTestFileLock(import.meta.url);
 
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
 import { parseHTML } from 'linkedom';
 
@@ -220,6 +221,10 @@ test('sn-selection controls preserve native semantics, descriptions, and change 
 test('context-menu implements roving focus and APG item styling', async () => {
   installSsrDom();
   await import('../menu/ContextMenu/ContextMenu.js');
+  const contextMenuStyles = await readFile(
+    new URL('../menu/ContextMenu/ContextMenu.css.js', import.meta.url),
+    'utf8'
+  );
 
   const el = document.createElement('context-menu');
   document.body.append(el);
@@ -249,6 +254,11 @@ test('context-menu implements roving focus and APG item styling', async () => {
   assert.equal(renderedItems[3].$.checked, true);
   assert.equal(renderedItems[4].$.destructive, true);
   assert.equal(renderedItems[5].$.disabled, true);
+
+  const firstCheck = renderedItems[0].querySelector('.sn-ctx-check-mark');
+  assert.equal(firstCheck.hasAttribute('hidden'), true);
+  assert.match(contextMenuStyles, /\.sn-ctx-check-mark\[hidden\]/);
+  assert.match(contextMenuStyles, /display:\s*none\s*!important/);
 
   el.hide();
   assert.equal(el.$.visible, false);

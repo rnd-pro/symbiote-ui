@@ -156,8 +156,13 @@ export async function acquireTestLock({
   let release = async () => {
     if (released) return;
     released = true;
-    heldLocks.delete(lockDir);
-    await rm(lockDir, { recursive: true, force: true });
+    try {
+      await rm(lockDir, { recursive: true, force: true });
+      heldLocks.delete(lockDir);
+    } catch (err) {
+      released = false;
+      throw err;
+    }
   };
   let lock = { lockDir, meta, release };
   heldLocks.set(lockDir, lock);

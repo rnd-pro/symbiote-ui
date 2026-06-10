@@ -21,16 +21,30 @@ import {
   normalizeLayoutBehavior,
   openPanel,
   removeUiPanel,
+  resolveMobileDrawerLayout,
   resolveLayoutMinSize,
   resolveResponsiveLayoutState,
   setNodeBehavior,
 } from '../layout/LayoutTree.js';
 import { withGlobalPanel } from '../layout/LayoutRouter/SectionRegistry.js';
+import {
+  DEFAULT_WHEEL_ZOOM_SENSITIVITY,
+  resolveWheelZoomDelta,
+  resolveWheelZoomFactor,
+} from '../interactions/Zoom.js';
 
 const layoutNodeStyles = new URL('../layout/LayoutNode/LayoutNode.css.js', import.meta.url);
 const layoutNodeTemplate = new URL('../layout/LayoutNode/LayoutNode.tpl.js', import.meta.url);
 const layoutNodeSource = new URL('../layout/LayoutNode/LayoutNode.js', import.meta.url);
 const layoutSource = new URL('../layout/Layout/Layout.js', import.meta.url);
+const layoutStyles = new URL('../layout/Layout/Layout.css.js', import.meta.url);
+const layoutTemplate = new URL('../layout/Layout/Layout.tpl.js', import.meta.url);
+const canvasGraphSource = new URL('../canvas/CanvasGraph/CanvasGraph.js', import.meta.url);
+const cascadeThemeSource = new URL('../themes/cascade-theme.js', import.meta.url);
+const defaultProviderThemeSource = new URL('../themes/default-provider.js', import.meta.url);
+const defaultDarkThemeSource = new URL('../themes/default-dark.js', import.meta.url);
+const componentRegistrySource = new URL('../manifest/component-registry.js', import.meta.url);
+const customElementsSource = new URL('../custom-elements.json', import.meta.url);
 
 test('layout node panel header adapts without overlapping actions', async () => {
   let [styles, template] = await Promise.all([
@@ -54,6 +68,12 @@ test('layout node panel header adapts without overlapping actions', async () => 
   assert.match(styles, /@container layout-panel \(max-width: 360px\) \{[\s\S]*?\.panel-title \{[\s\S]*?display: none;/);
   assert.match(styles, /@container layout-panel \(max-width: 260px\) \{[\s\S]*?\.dropdown-arrow \{[\s\S]*?display: none;/);
   assert.match(styles, /@container layout-panel \(max-width: 220px\) \{[\s\S]*?\.fullscreen-btn \{[\s\S]*?display: none;/);
+  assert.match(styles, /&\[collapsed\]\[collapse-dir='vertical'\]\s*\{[\s\S]*?\.panel-actions\s*\{[\s\S]*?position:\s*absolute;[\s\S]*?inset:\s*0;[\s\S]*?block-size:\s*100%;/);
+  assert.match(styles, /&\[collapsed\]\[collapse-dir='vertical'\]\s*\{[\s\S]*?\.collapse-btn\s*\{[\s\S]*?inset:\s*0;[\s\S]*?inline-size:\s*100%;[\s\S]*?block-size:\s*100%;/);
+  assert.match(styles, /&\[collapsed\]\[collapse-dir='horizontal'\]\s*\{[\s\S]*?\.panel-actions\s*\{[\s\S]*?position:\s*absolute;[\s\S]*?inset:\s*0;[\s\S]*?block-size:\s*100%;/);
+  assert.match(styles, /&\[collapsed\]\[collapse-dir='horizontal'\]\s*\{[\s\S]*?\.collapse-btn\s*\{[\s\S]*?inline-size:\s*100%;[\s\S]*?block-size:\s*100%;/);
+  assert.match(styles, /&\[collapsed\]\[collapse-dir='horizontal'\]\s*\{[\s\S]*?\.type-btn\s*\{[\s\S]*?block-size:\s*var\(--sn-layout-header-block-size,/);
+  assert.match(styles, /&\[collapsed\]\[collapse-dir='horizontal'\]\s*\{[\s\S]*?\.panel-icon\s*\{[\s\S]*?font-size:\s*var\(--sn-layout-header-icon-size,\s*16px\);/);
   let menuBlock = styles.slice(styles.indexOf('    .panel-menu-toggle {'), styles.indexOf('    .panel-actions {'));
   assert.doesNotMatch(menuBlock, /position: absolute;/);
 });
@@ -82,8 +102,10 @@ test('layout behavior normalizes responsive collapse and overflow policy', () =>
     minBlockSize: 240,
     collapse: 'never',
     overflow: 'scroll-inline',
-    responsiveMode: 'stack',
+    responsiveMode: 'swipe',
     responsiveBreakpoint: 640,
+    mobileDock: 'end',
+    swipeControl: 'island',
   });
 
   assert.equal(behavior.importance, 100);
@@ -91,10 +113,14 @@ test('layout behavior normalizes responsive collapse and overflow policy', () =>
   assert.equal(behavior.minBlockSize, 240);
   assert.equal(behavior.collapse, 'never');
   assert.equal(behavior.overflow, 'scroll-inline');
-  assert.equal(behavior.responsiveMode, 'stack');
+  assert.equal(behavior.responsiveMode, 'swipe');
   assert.equal(behavior.responsiveBreakpoint, 640);
+  assert.equal(behavior.mobileDock, 'end');
+  assert.equal(behavior.swipeControl, 'island');
   assert.equal(hasLayoutBehaviorMetadata(behavior), true);
   assert.equal(hasLayoutBehaviorMetadata({ ...behavior, overflow: 'invalid' }), false);
+  assert.equal(hasLayoutBehaviorMetadata({ ...behavior, mobileDock: 'invalid' }), false);
+  assert.equal(hasLayoutBehaviorMetadata({ ...behavior, swipeControl: 'invalid' }), false);
 });
 
 test('layout behavior metadata predicate validates complete layout trees', () => {
@@ -226,6 +252,237 @@ test('layout behavior resolves responsive state and scroll fallback axes', () =>
   assert.equal(bothAxes.scrollInline, true);
   assert.equal(bothAxes.scrollBlock, true);
   assert.equal(bothAxes.collapseAllowed, false);
+
+  let drawer = resolveResponsiveLayoutState(
+    { collapse: 'auto', overflow: 'collapse', responsiveMode: 'drawer', responsiveBreakpoint: 760 },
+    { inlineSize: 390, blockSize: 760, layoutMinSize: { inlineSize: 1060, blockSize: 420 } }
+  );
+
+  assert.equal(drawer.responsiveActive, true);
+  assert.equal(drawer.effectiveResponsiveMode, 'drawer');
+  assert.equal(drawer.drawerActive, true);
+  assert.equal(drawer.collapseAllowed, false);
+  assert.equal(drawer.scrollInline, false);
+  assert.equal(drawer.scrollBlock, false);
+
+  let swipe = resolveResponsiveLayoutState(
+    { collapse: 'auto', overflow: 'collapse', responsiveMode: 'swipe', responsiveBreakpoint: 760 },
+    { inlineSize: 390, blockSize: 760, layoutMinSize: { inlineSize: 1060, blockSize: 420 } }
+  );
+
+  assert.equal(swipe.responsiveActive, true);
+  assert.equal(swipe.effectiveResponsiveMode, 'swipe');
+  assert.equal(swipe.drawerActive, true);
+  assert.equal(swipe.collapseAllowed, false);
+});
+
+test('layout tree resolves mobile drawer docks without product panel names', () => {
+  let materials = createPanel('materials', {}, { importance: 60, mobileDock: 'start' });
+  let content = createPanel('content', {}, { importance: 100, mobileDock: 'primary' });
+  let graph = createPanel('graph', {}, { importance: 80, mobileDock: 'end', swipeControl: 'island' });
+  let theme = createPanel('theme', {}, { importance: 70, mobileDock: 'end' });
+  let root = createSplit(
+    'horizontal',
+    materials,
+    createSplit('horizontal', content, createSplit('vertical', graph, theme, 0.5), 0.55),
+    0.24,
+    { responsiveMode: 'drawer' }
+  );
+  let projection = resolveMobileDrawerLayout(root);
+
+  assert.equal(projection.primaryPanelId, content.id);
+  assert.deepEqual(projection.startPanelIds, [materials.id]);
+  assert.deepEqual(projection.endPanelIds, [graph.id, theme.id]);
+  assert.equal(projection.panels.find((panel) => panel.id === materials.id).dock, 'start');
+  assert.equal(projection.panels.find((panel) => panel.id === content.id).dock, 'primary');
+  assert.equal(projection.panels.find((panel) => panel.id === graph.id).dock, 'end');
+  assert.equal(projection.panels.find((panel) => panel.id === graph.id).swipeControl, 'island');
+  assert.equal(projection.panels.find((panel) => panel.id === theme.id).dock, 'end');
+
+  let autoRoot = createSplit(
+    'horizontal',
+    createPanel('tree', {}, { importance: 40 }),
+    createSplit(
+      'horizontal',
+      createPanel('reader', {}, { importance: 95 }),
+      createPanel('map', {}, { importance: 70 }),
+      0.6
+    ),
+    0.25,
+    { responsiveMode: 'drawer' }
+  );
+  let autoProjection = resolveMobileDrawerLayout(autoRoot);
+
+  assert.equal(autoProjection.panels.map((panel) => panel.dock).join(','), 'start,primary,end');
+  assert.equal(autoProjection.primaryPanelId, autoProjection.panels[1].id);
+});
+
+test('panel layout drawer mode has gesture, theme, and metadata contracts', async () => {
+  let [layout, styles, template, nodeStyles, registry, customElements] = await Promise.all([
+    readFile(layoutSource, 'utf8'),
+    readFile(layoutStyles, 'utf8'),
+    readFile(layoutTemplate, 'utf8'),
+    readFile(layoutNodeStyles, 'utf8'),
+    readFile(componentRegistrySource, 'utf8'),
+    readFile(customElementsSource, 'utf8'),
+  ]);
+
+  assert.match(layout, /setPointerCapture/);
+  assert.match(layout, /releasePointerCapture/);
+  assert.match(layout, /pointercancel/);
+  assert.match(layout, /drawer-mode-active/);
+  assert.match(layout, /resolveMobileDrawerLayout/);
+  assert.match(layout, /drawer-start-open/);
+  assert.match(layout, /drawer-end-open/);
+  assert.match(layout, /drawerStartPanelId/);
+  assert.match(layout, /drawerEndPanelId/);
+  assert.match(layout, /drawer-active-panel/);
+  assert.match(layout, /dataset\.drawerPanelId/);
+  assert.match(layout, /_renderDrawerHandleStack/);
+  assert.match(layout, /_resolveDrawerSwipeControl/);
+  assert.match(layout, /dataset\.swipeControl/);
+  assert.match(layout, /startPanels\.length > 0 && !startOpen && !endOpen/);
+  assert.match(layout, /endPanels\.length > 0 && !startOpen && !endOpen/);
+  assert.match(template, /layout-drawer-handle-stack-start/);
+  assert.match(template, /layout-drawer-handle-stack-end/);
+  assert.match(styles, /\[drawer-mode-active\]/);
+  assert.match(styles, /\.layout-drawer-handle-stack\s*\{/);
+  assert.match(styles, /\.layout-drawer-handle-stack\[data-swipe-control='island'\]\s*\{/);
+  assert.match(styles, /--sn-layout-swipe-island-size/);
+  assert.match(styles, /touch-action:\s*none;/);
+  assert.match(styles, /cursor:\s*grab;/);
+  assert.match(styles, /min-block-size:\s*var\(--sn-layout-drawer-min-block-size,\s*inherit\)/);
+  assert.match(styles, /inset:\s*0;/);
+  assert.match(styles, /--sn-layout-drawer-translate:\s*-100%/);
+  assert.match(styles, /--sn-layout-drawer-translate:\s*100%/);
+  assert.match(styles, /transform:\s*translateX\(var\(--sn-layout-drawer-translate\)\)/);
+  assert.match(styles, /\[drawer-mode-active\]\[drawer-start-open\]\s+layout-node\[mobile-dock='start'\]/);
+  assert.match(styles, /\[drawer-mode-active\]\[drawer-end-open\]\s+layout-node\[mobile-dock='end'\]/);
+  assert.match(layout, /--sn-layout-drawer-translate/);
+  assert.match(layout, /setImportantStylePropertyIfChanged\(node\.style,\s*'transform'/);
+  assert.match(layout, /_setDrawerHandleVisualState/);
+  assert.match(layout, /_applyDrawerHandleProgress/);
+  assert.match(layout, /_getDrawerHandleOpenOffset/);
+  assert.match(layout, /_setDrawerNodeExpanded/);
+  assert.match(layout, /_restoreDrawerNodeCollapseState/);
+  assert.match(layout, /drawer-expanded/);
+  assert.match(layout, /_clearDrawerDrag\('all'\)/);
+  assert.match(styles, /--sn-layout-drawer-handle-inline-size/);
+  assert.match(styles, /--sn-layout-drawer-handle-gap/);
+  assert.match(layout, /inset-inline-start/);
+  assert.match(layout, /inset-inline-end/);
+  assert.doesNotMatch(layout, /open \? 'var\(--sn-layout-drawer-size\)'/);
+  assert.doesNotMatch(styles, /layout-drawer-handle-start[\s\S]{0,140}var\(--sn-layout-drawer-size\)/);
+  assert.match(styles, /box-sizing:\s*border-box/);
+  assert.match(styles, /touch-action:\s*pan-y;/);
+  assert.match(styles, /overscroll-behavior:\s*contain;/);
+  assert.match(styles, /--sn-layout-drawer-bg/);
+  assert.match(styles, /--sn-layout-drawer-shadow/);
+  assert.match(styles, /box-shadow:\s*var\(--sn-layout-drawer-shadow,\s*var\(--sn-shadow-xl\)\)/);
+  assert.match(styles, /--sn-layout-drawer-handle-bg/);
+  assert.match(styles, /--sn-layout-drawer-backdrop-bg,\s*transparent/);
+  assert.match(styles, /--sn-layout-drawer-backdrop-filter,\s*none/);
+  assert.match(styles, /border-inline-start-width:\s*0/);
+  assert.match(styles, /border-inline-end-width:\s*0/);
+  assert.doesNotMatch(styles, /--sn-layout-drawer-open-handle-radius/);
+  assert.match(styles, /layout-node\[drawer-expanded\]/);
+  assert.match(styles, /\.panel-content\s*\{[\s\S]*?display:\s*block !important;/);
+  assert.match(styles, /layout-node\[drawer-expanded\]\s*\{[\s\S]*?\.type-btn,[\s\S]*?\.collapse-btn\s*\{[\s\S]*?display:\s*none !important;/);
+  assert.match(styles, /--sn-layout-drawer-handle-shadow,\s*none/);
+  assert.doesNotMatch(styles, /--sn-layout-drawer-backdrop-bg,\s*color-mix/);
+  assert.doesNotMatch(styles, /--sn-layout-drawer-backdrop-filter,\s*blur/);
+  assert.match(styles, /prefers-reduced-motion:\s*reduce/);
+  assert.match(layout, /_syncFullscreenBounds/);
+  assert.match(layout, /fullscreen-active/);
+  assert.match(layout, /setAttributeIfChanged\(this,\s*'fullscreen-active',\s*'true'\)/);
+  assert.match(layout, /this\._clearDrawerProjection\(\);/);
+  assert.match(layout, /removeAttribute\('drawer-mode-active'\)/);
+  assert.match(layout, /--sn-layout-fullscreen-host-top', '0px'/);
+  assert.match(styles, /\.fullscreen-tab-bar\s*\{[\s\S]*?top:\s*0;/);
+  assert.match(styles, /height:\s*var\(--sn-fullscreen-tab-bar-height,\s*32px\)/);
+  assert.match(styles, /z-index:\s*var\(--sn-fullscreen-tab-bar-z,\s*20010\)/);
+  assert.match(styles, /\[fullscreen-active\]\s*\{[\s\S]*?\.layout-drawer-backdrop,[\s\S]*?\.layout-drawer-handle-stack,[\s\S]*?\.layout-drawer-handle\s*\{[\s\S]*?display:\s*none !important;/);
+  assert.ok(
+    styles.lastIndexOf('layout-node[fullscreen]') > styles.indexOf("layout-node[mobile-dock='start'],"),
+    'drawer-mode fullscreen override must be after start/end drawer sizing'
+  );
+  assert.match(nodeStyles, /--sn-layout-fullscreen-host-top/);
+  assert.match(nodeStyles, /--sn-fullscreen-tab-bar-height,\s*32px/);
+  assert.match(nodeStyles, /--sn-layout-fullscreen-host-bottom/);
+  assert.match(nodeStyles, /layout-node\s*\{[\s\S]*?&\[fullscreen\]\s*\{[\s\S]*?height:\s*auto !important;/);
+  assert.match(registry, /mobile-drawer/);
+  assert.match(registry, /mobile-swipe-mode/);
+  assert.match(registry, /swipe-island-control/);
+  assert.match(registry, /multi-drawer-handles/);
+  assert.match(registry, /drawer-start-panel-id/);
+  assert.match(registry, /drawer-end-panel-id/);
+  assert.match(registry, /drawer/);
+  assert.match(registry, /mobileDock/);
+  assert.match(registry, /swipeControl/);
+  assert.match(customElements, /mobile-drawer/);
+  assert.match(customElements, /mobile-swipe-mode/);
+  assert.match(customElements, /swipe-island-control/);
+  assert.match(customElements, /drawer/);
+  assert.match(customElements, /swipe/);
+  assert.match(customElements, /mobileDock/);
+  assert.match(customElements, /swipeControl/);
+  assert.doesNotMatch(customElements, /--sn-layout-drawer-open-handle-radius/);
+});
+
+test('fullscreen tab layer stays above floating toolbars in theme defaults', async () => {
+  let [cascadeTheme, defaultProvider, defaultDark] = await Promise.all([
+    readFile(cascadeThemeSource, 'utf8'),
+    readFile(defaultProviderThemeSource, 'utf8'),
+    readFile(defaultDarkThemeSource, 'utf8'),
+  ]);
+
+  for (let source of [cascadeTheme, defaultProvider, defaultDark]) {
+    assert.match(source, /--sn-fullscreen-tab-bar-z['"]:\s*['"]20010['"]/);
+  }
+  assert.match(cascadeTheme, /--sn-fullscreen-tab-bar-height['"]:\s*densityToken\(32\)/);
+  assert.match(cascadeTheme, /--sn-fullscreen-tab-active-height['"]:\s*densityToken\(33\)/);
+});
+
+test('canvas graph fit clamps padding for narrow viewports', async () => {
+  let source = await readFile(canvasGraphSource, 'utf8');
+  let styles = await readFile(new URL('../canvas/CanvasGraph/CanvasGraph.css.js', import.meta.url), 'utf8');
+
+  assert.match(source, /function resolveFitPadding/);
+  assert.match(source, /minSide \* 0\.32/);
+  assert.match(source, /Math\.max\(1,\s*rect\.width - fitPadding \* 2\)/);
+  assert.match(source, /Math\.max\(1,\s*rect\.width - padding \* 2\)/);
+  assert.match(styles, /touch-action:\s*none;/);
+  assert.match(source, /_activePointers = new Map/);
+  assert.match(source, /_startPinchGesture/);
+  assert.match(source, /_applyPinchGesture/);
+  assert.match(source, /this\.zoom = nextZoom/);
+  assert.match(source, /this\._targetZoom = nextZoom/);
+  assert.match(source, /pointercancel/);
+});
+
+test('canvas graph wheel zoom uses deltaMode-aware half-strength scaling', async () => {
+  let source = await readFile(canvasGraphSource, 'utf8');
+
+  assert.equal(DEFAULT_WHEEL_ZOOM_SENSITIVITY, 0.5);
+  assert.match(source, /resolveWheelZoomFactor\(e\)/);
+  assert.doesNotMatch(source, /e\.deltaY > 0 \? 0\.92 : 1\.08/);
+  assert.match(source, /const MAX_ZOOM_OUT_FIT_MULTIPLIER = 4;/);
+  assert.match(source, /_resolveMinZoom\(rect[\s\S]*this\._resolveGraphFitZoom\(rect\) \/ MAX_ZOOM_OUT_FIT_MULTIPLIER/);
+  assert.match(source, /_clampZoom\(this\._targetZoom \* factor,\s*rect\)/);
+  assert.match(source, /_clampZoom\(this\._pinchGesture\.zoom \* \(distance \/ this\._pinchGesture\.distance\),\s*rect\)/);
+  assert.doesNotMatch(source, /this\._targetZoom = Math\.max\(0\.02,\s*Math\.min\(5,\s*this\._targetZoom \* factor\)\)/);
+
+  let pixelWheel = { deltaY: 120, deltaMode: 0, ctrlKey: false };
+  let trackpadWheel = { deltaY: 10, deltaMode: 0, ctrlKey: false };
+  let lineWheel = { deltaY: 3, deltaMode: 1, ctrlKey: false };
+  let pageWheel = { deltaY: 1, deltaMode: 2, ctrlKey: false };
+
+  assert.equal(resolveWheelZoomDelta(pixelWheel), -0.12);
+  assert.ok(Math.abs(resolveWheelZoomDelta(lineWheel) + 0.075) < Number.EPSILON);
+  assert.equal(resolveWheelZoomDelta(pageWheel), -0.5);
+  assert.equal(resolveWheelZoomDelta(pixelWheel, 1), resolveWheelZoomDelta(pixelWheel) * 2);
+  assert.ok(resolveWheelZoomFactor(trackpadWheel) > 0.99);
+  assert.ok(resolveWheelZoomFactor(pixelWheel) < 0.93);
 });
 
 test('layout minimum size estimate follows split direction and node behavior', () => {
@@ -491,4 +748,150 @@ test('layout restore guard rejects expanded states that would immediately collap
     }),
     false
   );
+});
+
+test('panel layout drawer handle pointer gesture opens and closes drawer panels', async () => {
+  let { parseHTML } = await import('linkedom');
+  let { window } = parseHTML('<!doctype html><html><body></body></html>');
+  let TestCSSStyleSheet = class {
+    replaceSync(text) { this.cssText = text; }
+  };
+  Object.assign(globalThis, {
+    window,
+    document: window.document,
+    HTMLElement: window.HTMLElement,
+    Element: window.Element,
+    customElements: window.customElements,
+    Node: window.Node,
+    Event: window.Event,
+    CustomEvent: window.CustomEvent,
+    MutationObserver: window.MutationObserver,
+    CSSStyleSheet: TestCSSStyleSheet,
+  });
+  window.document.adoptedStyleSheets = [];
+
+  // Mock getPropertyPriority for linkedom's style object
+  const div = window.document.createElement('div');
+  const StyleProto = Object.getPrototypeOf(div.style);
+  StyleProto.getPropertyPriority = StyleProto.getPropertyPriority || (() => '');
+
+  // Import Layout
+  await import('../layout/Layout/Layout.js');
+  await import('../layout/LayoutNode/LayoutNode.js');
+
+  const layout = document.createElement('panel-layout');
+  document.body.append(layout);
+
+  layout.getBoundingClientRect = () => ({
+    width: 300,
+    height: 600,
+    top: 0,
+    left: 0,
+    bottom: 600,
+    right: 300,
+  });
+
+  layout.$.layoutBehavior = {
+    responsiveMode: 'drawer',
+    responsiveBreakpoint: 720,
+  };
+
+  layout.registerPanelType('materials', { title: 'Materials', icon: 'folder', behavior: { minInlineSize: 320, minBlockSize: 240, responsiveMode: 'drawer' } });
+  layout.registerPanelType('graph', { title: 'Graph', icon: 'hub', behavior: { minInlineSize: 640, minBlockSize: 480 } });
+
+  layout.setLayout(createSplit(
+    'horizontal',
+    createPanel('graph'),
+    createPanel('materials', { mobileDock: 'end' }),
+    0.5
+  ));
+
+  // Trigger next layout cycle
+  layout._applyResponsiveLayout();
+  await Promise.resolve();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  // Verify it is in drawer-mode-active
+  assert.equal(layout.hasAttribute('drawer-mode-active'), true);
+
+  // Find the end drawer handle (stack-end)
+  const stackEnd = layout.querySelector('.layout-drawer-handle-stack-end');
+  assert.ok(stackEnd);
+  const handleButton = stackEnd.querySelector('.layout-drawer-handle');
+  assert.ok(handleButton);
+
+  // Start gesture by pointerdown on the handle button
+  const pointerDownEvent = new Event('pointerdown');
+  pointerDownEvent.pointerId = 1;
+  pointerDownEvent.button = 0;
+  pointerDownEvent.clientX = 290;
+  pointerDownEvent.preventDefault = () => {};
+  handleButton.dispatchEvent(pointerDownEvent);
+
+  // Verify gesture is active
+  assert.ok(layout._drawerGesture);
+  assert.equal(layout.hasAttribute('drawer-dragging'), true);
+
+  // Move pointer to simulate drag
+  const pointerMoveEvent = new Event('pointermove');
+  pointerMoveEvent.pointerId = 1;
+  pointerMoveEvent.clientX = 150; // drag left to open the end drawer (dock end is at right)
+  pointerMoveEvent.preventDefault = () => {};
+  layout.dispatchEvent(pointerMoveEvent);
+
+  // Verify gesture progress
+  assert.ok(layout._drawerGesture.moved);
+  assert.equal(layout.getAttribute('drawer-dragging'), '');
+
+  // Release pointer to complete gesture and open
+  const pointerUpEvent = new Event('pointerup');
+  pointerUpEvent.pointerId = 1;
+  pointerUpEvent.clientX = 100;
+  pointerUpEvent.preventDefault = () => {};
+  layout.dispatchEvent(pointerUpEvent);
+
+  // Wait for sync
+  await Promise.resolve();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  // The drawer should be open now
+  assert.equal(layout.$.drawerEndOpen, true);
+  assert.equal(layout.hasAttribute('drawer-end-open'), true);
+  assert.equal(layout._drawerGesture, null);
+  assert.notEqual(stackEnd.style.getPropertyValue('inset-inline-end'), '0px');
+
+  const closePointerDownEvent = new Event('pointerdown');
+  closePointerDownEvent.pointerId = 2;
+  closePointerDownEvent.button = 0;
+  closePointerDownEvent.clientX = 100;
+  closePointerDownEvent.preventDefault = () => {};
+  handleButton.dispatchEvent(closePointerDownEvent);
+
+  assert.ok(layout._drawerGesture);
+  assert.equal(layout._drawerGesture.startOpen, true);
+
+  const closePointerMoveEvent = new Event('pointermove');
+  closePointerMoveEvent.pointerId = 2;
+  closePointerMoveEvent.clientX = 260;
+  closePointerMoveEvent.preventDefault = () => {};
+  layout.dispatchEvent(closePointerMoveEvent);
+
+  assert.ok(layout._drawerGesture.moved);
+
+  const closePointerUpEvent = new Event('pointerup');
+  closePointerUpEvent.pointerId = 2;
+  closePointerUpEvent.clientX = 280;
+  closePointerUpEvent.preventDefault = () => {};
+  layout.dispatchEvent(closePointerUpEvent);
+
+  await Promise.resolve();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  assert.equal(layout.$.drawerEndOpen, false);
+  assert.equal(layout.hasAttribute('drawer-end-open'), false);
+  assert.equal(layout._drawerGesture, null);
+  assert.equal(stackEnd.style.getPropertyValue('inset-inline-end'), '0px');
+
+  // Clean up
+  layout.remove();
 });

@@ -738,9 +738,10 @@ test('svg shape nodes keep visual icons without internal labels or watermarks', 
 });
 
 test('cascade theme editor is a reusable browser module', async () => {
-  const [editor, widget, widgetStyles, styles, uiIndex, registry, customElements, layoutNode] = await Promise.all([
+  const [editor, widget, widgetTemplate, widgetStyles, styles, uiIndex, registry, customElements, layoutNode] = await Promise.all([
     readFile(cascadeThemeEditorSource, 'utf8'),
     readFile(cascadeThemeWidgetSource, 'utf8'),
+    readFile(new URL('../themes/CascadeThemeWidget/CascadeThemeWidget.tpl.js', import.meta.url), 'utf8'),
     readFile(new URL('../themes/CascadeThemeWidget/CascadeThemeWidget.css.js', import.meta.url), 'utf8'),
     readFile(new URL('../themes/CascadeThemeEditor/CascadeThemeEditor.css.js', import.meta.url), 'utf8'),
     readFile(uiIndexSource, 'utf8'),
@@ -768,9 +769,24 @@ test('cascade theme editor is a reusable browser module', async () => {
   assert.match(widget, /COMPACT_CONTROLS = \['brightness', 'contrast', 'chroma', 'hue', 'pattern'\]/);
   assert.match(widget, /applyCascadeTheme\(this\.\#resolveTarget\(\), this\.\#state, \{ notify: false \}\)/);
   assert.match(widget, /cascade-theme-open-full/);
+  assert.match(widget, /mountOverlayToDocument\(popover, this\)/);
+  assert.match(widget, /bringOverlayToFront\(popover\)/);
+  assert.match(widget, /restoreOverlayHome\(popover\)/);
+  assert.match(widget, /positionOverlay\(trigger, popover, 'bottom-end'/);
+  assert.match(widget, /#eventTargetsWidget\(event\)/);
   assert.match(widget, /CascadeThemeWidget\.reg\('cascade-theme-widget'\)/);
+  assert.match(widgetTemplate, /ref="trigger"/);
+  assert.match(widgetTemplate, /ref="popover"/);
   assert.match(widgetStyles, /cascade-theme-widget/);
+  assert.match(widgetStyles, /\.ctw-popover\[data-overlay-portal\]/);
+  assert.match(widgetStyles, /--sn-overlay-z-base, 20000/);
+  assert.doesNotMatch(widgetStyles, /--sn-theme-widget-z, 80/);
   assert.match(widgetStyles, /--sn-theme-widget-width/);
+  assert.match(widgetStyles, /@media \(max-width: 820px\) \{[\s\S]*?\.ctw-popover\[data-overlay-portal\] \{[\s\S]*?position: fixed;/);
+  assert.match(widgetStyles, /right: max\(var\(--sn-theme-widget-mobile-inset, 8px\), env\(safe-area-inset-right\)\);/);
+  assert.match(widgetStyles, /left: max\(var\(--sn-theme-widget-mobile-inset, 8px\), env\(safe-area-inset-left\)\);/);
+  assert.match(widgetStyles, /max-height: calc\([\s\S]*?100dvh[\s\S]*?env\(safe-area-inset-bottom\)[\s\S]*?\);/);
+  assert.match(widgetStyles, /overflow: auto;/);
   assert.match(styles, /cascade-theme-editor/);
   assert.match(styles, /--sn-scrollbar-thumb/);
   assert.match(styles, /input\[type="range"\]/);
@@ -780,6 +796,9 @@ test('cascade theme editor is a reusable browser module', async () => {
   assert.match(styles, /--sn-theme-editor-control-icon-size/);
   assert.match(styles, /::-webkit-slider-thumb/);
   assert.match(styles, /::-moz-range-thumb/);
+  assert.match(styles, /container: cascade-theme-editor \/ inline-size/);
+  assert.match(styles, /@container cascade-theme-editor \(max-width: 360px\) \{[\s\S]*?\.cte-status \{[\s\S]*?display: none;/);
+  assert.match(styles, /@container cascade-theme-editor \(max-width: 360px\) \{[\s\S]*?\.cte-control \{[\s\S]*?grid-template-columns: minmax\(0, 1fr\) minmax\(92px, 1fr\) minmax\(28px, auto\);/);
   assert.match(uiIndex, /CascadeThemeEditor/);
   assert.match(uiIndex, /CascadeThemeWidget/);
   assert.match(uiIndex, /themes\/CascadeThemeEditor\/CascadeThemeEditor\.js/);

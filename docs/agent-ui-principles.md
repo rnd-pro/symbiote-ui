@@ -121,8 +121,10 @@ voice capture, TTS, timers, subscriptions, or network streams should expose
 
 The same task model should survive across desktop panels, narrow/mobile
 layouts, and spatial/XR projections. Layout behavior must describe minimum
-sizes, collapse priority, scroll policy, and mobile stacking so agents can
-adapt the workspace instead of guessing.
+sizes, collapse priority, scroll policy, and mobile stack or drawer projection
+so agents can adapt the workspace instead of guessing. Use drawer projection
+when a central work surface should remain primary while start/end panels slide
+over it through gestures without rebuilding the layout tree.
 
 ## Agent Construction Flow
 

@@ -146,6 +146,8 @@ test('voice command helpers are importable without browser component registratio
   assert.equal(typeof ui.buildResourceTreeFromEntries, 'function');
   assert.equal(typeof ui.createSourceDocument, 'function');
   assert.equal(typeof ui.createGraphViewModeController, 'function');
+  assert.equal(typeof ui.groupNodes, 'function');
+  assert.equal(typeof ui.ungroupNodes, 'function');
   assert.equal(ui.DEFAULT_VOICE_WAKE_COMMANDS.en, 'Okay Agent');
   assert.equal(ui.matchVoiceCommandAtEnd('draft send', [{ action: 'send', phrase: 'send' }]).text, 'draft');
   assert.equal(ui.matchVoiceCommandInText("О'кей Агент", ui.wakeCommandCandidates(
@@ -161,6 +163,8 @@ test('canvas public entrypoint exposes graph and routing helpers', async () => {
   assert.equal(typeof canvas.PinExpansion, 'function');
   assert.equal(typeof canvas.routePcbTrace, 'function');
   assert.equal(typeof canvas.analyzePcbRoute, 'function');
+  assert.equal(typeof canvas.groupNodes, 'function');
+  assert.equal(typeof canvas.ungroupNodes, 'function');
   assert.equal(typeof canvas.createGraphExplorerViewController, 'function');
   assert.equal(typeof canvas.createGraphViewModeController, 'function');
   assert.equal(typeof canvas.applyGraphExplorerViewMode, 'function');
@@ -433,6 +437,45 @@ test('canvas graph focus transition uses queued activation before depth recalcul
   assert.match(source, /_drawTransitionMarkers\(mainCtx\)/);
 });
 
+test('canvas graph exits active focus before accepting a different node click', async () => {
+  let source = await readFile(new URL('../canvas/CanvasGraph/CanvasGraph.js', import.meta.url), 'utf8');
+
+  assert.match(source, /this\._focusExitOnDown = false/);
+  assert.match(source, /_beginFocusExit\(\)/);
+  assert.match(source, /this\.activeNode && this\.activeNode\.id !== hit\.id && !this\.deactivating/);
+  assert.match(source, /this\._focusExitOnDown = this\._beginFocusExit\(\)/);
+  assert.match(source, /if \(this\._focusExitOnDown\) \{/);
+  assert.match(source, /this\._focusExitOnDown = false;/);
+  assert.ok(
+    source.indexOf('this._focusExitOnDown = this._beginFocusExit();') <
+      source.indexOf('this._activateNode(hit, { transition: false, marker: false });')
+  );
+});
+
+test('canvas graph exposes device-orientation parallax as progressive enhancement', async () => {
+  let source = await readFile(new URL('../canvas/CanvasGraph/CanvasGraph.js', import.meta.url), 'utf8');
+
+  assert.match(source, /enableDeviceOrientationParallax\(options = \{\}\)/);
+  assert.match(source, /device-orientation-parallax/);
+  assert.match(source, /orientationParallaxStatus: 'orientation-parallax-status'/);
+  assert.match(source, /getDeviceOrientationParallaxStatus\(\)/);
+  assert.match(source, /_requestDeviceOrientationParallaxFromGesture\(\)/);
+  assert.match(source, /typeof globalThis\.DeviceOrientationEvent === 'undefined'/);
+  assert.match(source, /globalThis\.isSecureContext === false/);
+  assert.match(source, /DeviceOrientationEvent\.requestPermission/);
+  assert.match(source, /requestPermission\.call\(globalThis\.DeviceOrientationEvent, Boolean\(options\.absolute\)\)/);
+  assert.match(source, /reason: 'permission-error'/);
+  assert.match(source, /this\._setDeviceOrientationParallaxStatus/);
+  assert.ok(
+    source.indexOf('this._requestDeviceOrientationParallaxFromGesture();') <
+      source.indexOf('this._rememberPointer(e);')
+  );
+  assert.match(source, /window\.addEventListener\('deviceorientation', handleOrientation, \{ passive: true \}\)/);
+  assert.match(source, /disableDeviceOrientationParallax\(\)/);
+  assert.match(source, /const visualDragDeltaX = dragDeltaX \+ this\._orientationParallaxX/);
+  assert.match(source, /const pOffX = -la\.parallax \* visualDragDeltaX/);
+});
+
 test('canvas graph focus layer targets separate selected hubs from surrounding layers', async () => {
   let {
     CANVAS_GRAPH_LAYER_TARGETS,
@@ -685,6 +728,10 @@ test('provider schemas use symbiote-ui public schema ids', async () => {
     'project-transaction-v1.json',
     'runtime-ui-v1.json',
     'theme-rule-block-v1.json',
+    'message-part-v1.json',
+    'data-grid-v1.json',
+    'chart-spec-v1.json',
+    'source-diff-v1.json',
   ];
   let schemas = [
     ...Object.values(manifest.UI_SCHEMAS),

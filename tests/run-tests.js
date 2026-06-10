@@ -193,10 +193,28 @@ async function createBatches(commandArgs) {
 function terminate(signal) {
   if (terminating) return;
   terminating = true;
-  if (childIsRunning()) child.kill(signal);
+  if (childIsRunning()) {
+    if (child.pid) {
+      try {
+        process.kill(-child.pid, signal);
+      } catch {
+        child.kill(signal);
+      }
+    } else {
+      child.kill(signal);
+    }
+  }
   let killTimer = setTimeout(() => {
     if (child && child.exitCode === null && child.signalCode === null) {
-      child.kill('SIGKILL');
+      if (child.pid) {
+        try {
+          process.kill(-child.pid, 'SIGKILL');
+        } catch {
+          child.kill('SIGKILL');
+        }
+      } else {
+        child.kill('SIGKILL');
+      }
     }
   }, 3000);
   let waitForChild = childExit || Promise.resolve();
@@ -210,6 +228,7 @@ function terminate(signal) {
 function runChild(command, args) {
   child = spawn(command, args, {
     cwd: process.cwd(),
+    detached: true,
     env: {
       ...process.env,
       SYMBIOTE_UI_TEST_SUITE_LOCK_ID: lock?.meta?.key || '',

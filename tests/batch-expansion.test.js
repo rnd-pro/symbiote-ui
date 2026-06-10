@@ -2,6 +2,7 @@ import { acquireCurrentTestFileLock } from './test-lock.js';
 await acquireCurrentTestFileLock(import.meta.url);
 
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
 import { parseHTML } from 'linkedom';
 
@@ -376,6 +377,7 @@ test('sn-drawer slides in/out and manages backdrop visibility', async () => {
 test('sn-menu and related components manage items and custom events', async () => {
   installSsrDom();
   await import('../menu/Menu/Menu.js');
+  const menuStyles = await readFile(new URL('../menu/Menu/Menu.css.js', import.meta.url), 'utf8');
 
   const menu = document.createElement('sn-menu');
   const item1 = document.createElement('sn-menu-item');
@@ -395,6 +397,9 @@ test('sn-menu and related components manage items and custom events', async () =
   assert.equal(item1.getAttribute('tabindex'), '0');
   assert.equal(item2.getAttribute('role'), 'menuitemcheckbox');
   assert.equal(item2.getAttribute('aria-checked'), 'true');
+  assert.ok(item1.querySelectorAll('.sn-menu-item-icon[hidden]').length >= 1);
+  assert.match(menuStyles, /\.sn-menu-item-icon\[hidden\]/);
+  assert.match(menuStyles, /display:\s*none\s*!important/);
 
   let selected = false;
   item1.addEventListener('sn-menu-item-select', (e) => {

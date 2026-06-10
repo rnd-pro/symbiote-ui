@@ -30,6 +30,27 @@ function createEditor(nodes, connections = []) {
   };
 }
 
+function assertNoNodeOverlaps(positions, nodeSizes, padding = 0) {
+  let ids = Object.keys(positions);
+  for (let i = 0; i < ids.length; i++) {
+    for (let j = i + 1; j < ids.length; j++) {
+      let idA = ids[i];
+      let idB = ids[j];
+      let a = positions[idA];
+      let b = positions[idB];
+      let sizeA = nodeSizes[idA];
+      let sizeB = nodeSizes[idB];
+      let separated = (
+        b.x >= a.x + sizeA.w + padding ||
+        a.x >= b.x + sizeB.w + padding ||
+        b.y >= a.y + sizeA.h + padding ||
+        a.y >= b.y + sizeB.h + padding
+      );
+      assert.equal(separated, true, `${idA} overlaps ${idB}`);
+    }
+  }
+}
+
 describe('node graph layout helpers', () => {
   it('computes grouped auto layout positions without macro placement crashes', () => {
     let editor = createEditor(
@@ -55,6 +76,58 @@ describe('node graph layout helpers', () => {
       assert.equal(Number.isFinite(position.y), true);
     }
     assert.notDeepEqual(positions.a, positions.c);
+  });
+
+  it('keeps final grouped auto layout rectangles separated', () => {
+    let nodes = [
+      'profile/photo',
+      'bio/about',
+      'projects/index',
+      'pulse/index',
+      'skills/index',
+      'skills/agentic-ai',
+      'skills/product-ui',
+      'projects/agent-portal',
+      'projects/video-studio',
+      'pulse/agent-portal',
+      'pulse/video-studio',
+    ].map((id) => ({ id }));
+    let editor = createEditor(nodes, [
+      { from: 'profile/photo', to: 'bio/about' },
+      { from: 'profile/photo', to: 'projects/index' },
+      { from: 'profile/photo', to: 'pulse/index' },
+      { from: 'profile/photo', to: 'skills/index' },
+      { from: 'skills/index', to: 'skills/agentic-ai' },
+      { from: 'skills/index', to: 'skills/product-ui' },
+      { from: 'projects/index', to: 'projects/agent-portal' },
+      { from: 'projects/index', to: 'projects/video-studio' },
+      { from: 'projects/agent-portal', to: 'pulse/agent-portal' },
+      { from: 'projects/video-studio', to: 'pulse/video-studio' },
+      { from: 'pulse/index', to: 'pulse/agent-portal' },
+      { from: 'pulse/index', to: 'pulse/video-studio' },
+      { from: 'skills/agentic-ai', to: 'projects/agent-portal' },
+      { from: 'skills/product-ui', to: 'projects/video-studio' },
+    ]);
+    let nodeSizes = Object.fromEntries(nodes.map((node) => [node.id, { w: 220, h: 120 }]));
+    nodeSizes['profile/photo'] = { w: 240, h: 220 };
+    nodeSizes['projects/agent-portal'] = { w: 300, h: 240 };
+    nodeSizes['projects/video-studio'] = { w: 300, h: 240 };
+
+    let positions = computeAutoLayout(editor, {
+      groups: {
+        biography: ['profile/photo', 'bio/about'],
+        skills: ['skills/index', 'skills/agentic-ai', 'skills/product-ui'],
+        projects: ['projects/index', 'projects/agent-portal', 'projects/video-studio'],
+        pulse: ['pulse/index', 'pulse/agent-portal', 'pulse/video-studio'],
+      },
+      nodeSizes,
+      gapX: 90,
+      gapY: 48,
+      maxLayerRows: 2,
+    });
+
+    assert.deepEqual(Object.keys(positions).sort(), nodes.map((node) => node.id).sort());
+    assertNoNodeOverlaps(positions, nodeSizes);
   });
 
   it('builds a force-layout worker payload from generic nodes and connections', () => {
