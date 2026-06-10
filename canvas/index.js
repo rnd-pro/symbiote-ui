@@ -8,9 +8,13 @@ export { FlowSimulator } from './FlowSimulator.js';
 export { routePcbTrace } from './PcbRouter.js';
 export { analyzePcbRoute, analyzePcbRouteSet, summarizePcbRouteQuality } from './PcbRouteDiagnostics.js';
 export {
+  addNodesToGroup,
   createCanvasGraphStore,
+  groupNodes,
   normalizeCanvasGraphGroups,
   normalizeCanvasGraphModel,
+  removeNodesFromGroup,
+  ungroupNodes,
 } from './graph-model.js';
 export {
   computeInitialGraphPositions,

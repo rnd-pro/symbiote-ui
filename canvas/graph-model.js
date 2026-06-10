@@ -179,3 +179,116 @@ export function createCanvasGraphStore(model = {}) {
     groups: normalized.groups,
   };
 }
+
+/**
+ * Groups multiple nodes under a new group node in the editor.
+ * @param {import('../core/Editor.js').NodeEditor} editor
+ * @param {string[]} nodeIds
+ * @param {string} groupId
+ * @param {string} [groupLabel='Group']
+ * @returns {object|null}
+ */
+export function groupNodes(editor, nodeIds, groupId, groupLabel = 'Group') {
+  if (!editor || !nodeIds || nodeIds.length === 0) return null;
+  let gId = groupId || 'group-' + Date.now();
+  let groupNode = {
+    id: gId,
+    label: groupLabel,
+    type: 'group',
+    category: 'group',
+    shape: 'group',
+    inputs: {},
+    outputs: {},
+    controls: {},
+    params: {},
+    parentId: null,
+    isGroup: true,
+    children: [],
+  };
+
+  for (const id of nodeIds) {
+    let node = editor.getNode(id);
+    if (node) {
+      node.parentId = gId;
+      groupNode.children.push(id);
+    }
+  }
+
+  editor.addNode(groupNode);
+  return groupNode;
+}
+
+/**
+ * Removes a group node and un-parents its child nodes in the editor.
+ * @param {import('../core/Editor.js').NodeEditor} editor
+ * @param {string} groupId
+ * @returns {boolean}
+ */
+export function ungroupNodes(editor, groupId) {
+  if (!editor) return false;
+  let groupNode = editor.getNode(groupId);
+  if (!groupNode) return false;
+
+  let children = groupNode.children || [];
+  for (const childId of children) {
+    let childNode = editor.getNode(childId);
+    if (childNode) {
+      childNode.parentId = null;
+    }
+  }
+
+  editor.removeNode(groupId);
+  return true;
+}
+
+/**
+ * Adds nodes to an existing group in the editor.
+ * @param {import('../core/Editor.js').NodeEditor} editor
+ * @param {string} groupId
+ * @param {string[]} nodeIds
+ * @returns {boolean}
+ */
+export function addNodesToGroup(editor, groupId, nodeIds) {
+  if (!editor || !nodeIds || nodeIds.length === 0) return false;
+  let groupNode = editor.getNode(groupId);
+  if (!groupNode) return false;
+
+  groupNode.isGroup = true;
+  groupNode.children = groupNode.children || [];
+
+  for (const id of nodeIds) {
+    let node = editor.getNode(id);
+    if (node) {
+      node.parentId = groupId;
+      if (!groupNode.children.includes(id)) {
+        groupNode.children.push(id);
+      }
+    }
+  }
+  return true;
+}
+
+/**
+ * Removes nodes from their parent groups in the editor.
+ * @param {import('../core/Editor.js').NodeEditor} editor
+ * @param {string[]} nodeIds
+ * @returns {boolean}
+ */
+export function removeNodesFromGroup(editor, nodeIds) {
+  if (!editor || !nodeIds || nodeIds.length === 0) return false;
+
+  for (const id of nodeIds) {
+    let node = editor.getNode(id);
+    if (node && node.parentId) {
+      let groupNode = editor.getNode(node.parentId);
+      if (groupNode && groupNode.children) {
+        groupNode.children = groupNode.children.filter((cid) => cid !== id);
+        if (groupNode.children.length === 0) {
+          groupNode.isGroup = false;
+        }
+      }
+      node.parentId = null;
+    }
+  }
+  return true;
+}

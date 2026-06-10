@@ -10,6 +10,7 @@
  * - Bi-directional crossing minimization (forward + backward sweeps)
  * - Per-layer X offset based on actual max node width
  * - Per-node height-aware overlap resolution
+ * - Optional sibling-layer wrapping via `maxLayerRows`
  * - Layout direction: 'LR' (left-right) or 'TB' (top-bottom)
  *
  * @module symbiote-ui/canvas/AutoLayout
@@ -29,6 +30,7 @@ export function computeAutoLayout(editor, options = {}) {
     groups = null,
     nodeSizes = null,
     direction = 'LR',
+    maxLayerRows = Infinity,
   } = options;
 
 
@@ -41,6 +43,62 @@ export function computeAutoLayout(editor, options = {}) {
       };
     }
     return { w: nodeWidth, h: nodeHeight };
+  }
+
+  function getDeterministicSign(a, b, salt = 0) {
+    let value = salt;
+    let key = `${a}:${b}`;
+    for (let i = 0; i < key.length; i++) {
+      value = (value * 31 + key.charCodeAt(i)) | 0;
+    }
+    return value % 2 === 0 ? 1 : -1;
+  }
+
+  function resolveFinalOverlaps(finalPositions, {
+    paddingX = gapX * 0.35,
+    paddingY = gapY * 0.5,
+    passes = 12,
+  } = {}) {
+    let ids = Object.keys(finalPositions).sort();
+    for (let pass = 0; pass < passes; pass++) {
+      let overlaps = false;
+      for (let i = 0; i < ids.length; i++) {
+        for (let j = i + 1; j < ids.length; j++) {
+          let id1 = ids[i];
+          let id2 = ids[j];
+          let p1 = finalPositions[id1];
+          let p2 = finalPositions[id2];
+          let s1 = getSize(id1);
+          let s2 = getSize(id2);
+          let c1x = p1.x + s1.w / 2;
+          let c1y = p1.y + s1.h / 2;
+          let c2x = p2.x + s2.w / 2;
+          let c2y = p2.y + s2.h / 2;
+          let dx = c1x - c2x;
+          let dy = c1y - c2y;
+          let minDx = (s1.w + s2.w) / 2 + paddingX;
+          let minDy = (s1.h + s2.h) / 2 + paddingY;
+          let overlapX = minDx - Math.abs(dx);
+          let overlapY = minDy - Math.abs(dy);
+
+          if (overlapX <= 0 || overlapY <= 0) continue;
+          overlaps = true;
+
+          if (overlapX < overlapY) {
+            let sign = dx === 0 ? getDeterministicSign(id1, id2, pass) : Math.sign(dx);
+            let fix = overlapX / 2 + 1;
+            p1.x += sign * fix;
+            p2.x -= sign * fix;
+          } else {
+            let sign = dy === 0 ? getDeterministicSign(id1, id2, pass + 17) : Math.sign(dy);
+            let fix = overlapY / 2 + 1;
+            p1.y += sign * fix;
+            p2.y -= sign * fix;
+          }
+        }
+      }
+      if (!overlaps) break;
+    }
   }
 
   let nodes = [...editor.getNodes()];
@@ -273,43 +331,68 @@ export function computeAutoLayout(editor, options = {}) {
         }
       }
 
-      let minLocalY = Infinity,
-        maxLocalY = -Infinity;
-      for (const [nId, y] of yPos.entries()) {
-        if (y < minLocalY) minLocalY = y;
-        let bottom = y + getSize(nId).h;
-        if (bottom > maxLocalY) maxLocalY = bottom;
-      }
-      if (minLocalY === Infinity) {
-        minLocalY = 0;
-        maxLocalY = 0;
-      }
+      let rowLimit = Number.isFinite(maxLayerRows)
+        ? Math.max(1, Math.floor(maxLayerRows))
+        : Infinity;
+      let layerMetrics = [];
+      let packedPositions = new Map();
 
+      for (let l = 0; l < layerArr.length; l++) {
+        let ordered = [...layerArr[l]].sort((a, b) => {
+          let dy = yPos.get(a) - yPos.get(b);
+          return dy === 0 ? a.localeCompare(b) : dy;
+        });
+        let maxRows = rowLimit === Infinity ? Math.max(1, ordered.length) : rowLimit;
+        let columns = [];
+        for (let i = 0; i < ordered.length; i++) {
+          let node = ordered[i];
+          let colIndex = Math.floor(i / maxRows);
+          if (!columns[colIndex]) {
+            columns[colIndex] = { nodes: [], rowY: [], width: 0, height: 0 };
+          }
+          let col = columns[colIndex];
+          let size = getSize(node);
+          col.nodes.push(node);
+          col.rowY.push(col.height);
+          col.width = Math.max(col.width, size.w);
+          col.height += size.h + gapY;
+        }
+
+        let layerW = 0;
+        let layerH = 0;
+        let colX = 0;
+        for (const col of columns) {
+          for (let i = 0; i < col.nodes.length; i++) {
+            packedPositions.set(col.nodes[i], { x: colX, y: col.rowY[i] });
+          }
+          layerH = Math.max(layerH, col.height);
+          colX += col.width + gapX;
+        }
+        if (columns.length > 0) {
+          layerW = colX - gapX;
+        }
+        layerMetrics[l] = { w: layerW, h: layerH };
+      }
 
       let layerXOffsets = [];
       let xAccum = 0;
       for (let l = 0; l < layerArr.length; l++) {
         layerXOffsets.push(xAccum);
-
-        let maxW = 0;
-        for (const node of layerArr[l]) {
-          let nw = getSize(node).w;
-          if (nw > maxW) maxW = nw;
-        }
-        xAccum += maxW + gapX;
+        xAccum += (layerMetrics[l]?.w || nodeWidth) + gapX;
       }
 
       for (let l = 0; l < layerArr.length; l++) {
         for (const node of layerArr[l]) {
+          let packed = packedPositions.get(node) || { x: 0, y: 0 };
           localPositions[node] = {
-            x: layerXOffsets[l],
-            y: yPos.get(node) - minLocalY,
+            x: layerXOffsets[l] + packed.x,
+            y: packed.y,
           };
         }
       }
 
       maxLinkedW = xAccum;
-      maxLinkedH = maxLocalY - minLocalY + gapY;
+      maxLinkedH = Math.max(...layerMetrics.map((metric) => metric?.h || 0), 0) + gapY;
     }
 
 
@@ -507,48 +590,10 @@ export function computeAutoLayout(editor, options = {}) {
       }
 
 
-      let ids = Object.keys(finalPositions);
-      for (let pass = 0; pass < 3; pass++) {
-        let overlaps = false;
-        for (let i = 0; i < ids.length; i++) {
-          for (let j = i + 1; j < ids.length; j++) {
-            let p1 = finalPositions[ids[i]];
-            let p2 = finalPositions[ids[j]];
-            let s1 = getSize(ids[i]);
-            let s2 = getSize(ids[j]);
-            let dx = p1.x - p2.x,
-              dy = p1.y - p2.y;
-            let absDx = Math.abs(dx),
-              absDy = Math.abs(dy);
-
-
-            let overlapX = (s1.w + s2.w) / 2 + gapX * 0.3;
-            let overlapY = (s1.h + s2.h) / 2 + gapY * 0.3;
-
-            if (absDx < overlapX && absDy < overlapY) {
-              overlaps = true;
-
-              let penX = overlapX - absDx;
-              let penY = overlapY - absDy;
-
-              if (penX < penY) {
-
-                let fix = penX / 2 + 1;
-                p1.x += dx >= 0 ? fix : -fix;
-                p2.x += dx >= 0 ? -fix : fix;
-              } else {
-
-                let fix = penY / 2 + 1;
-                p1.y += dy >= 0 ? fix : -fix;
-                p2.y += dy >= 0 ? -fix : fix;
-              }
-            }
-          }
-        }
-        if (!overlaps) break;
-      }
     }
   }
+
+  resolveFinalOverlaps(finalPositions, options.overlap);
 
   for (const k in finalPositions) {
     if (isNaN(finalPositions[k].x) || isNaN(finalPositions[k].y)) {

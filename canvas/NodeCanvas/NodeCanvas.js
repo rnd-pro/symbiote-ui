@@ -21,6 +21,7 @@ import { Zoom } from '../../interactions/Zoom.js';
 import { ConnectFlow } from '../../interactions/ConnectFlow.js';
 import { Selector } from '../../interactions/Selector.js';
 import { SnapGrid } from '../../interactions/SnapGrid.js';
+import { isNodeInMarquee, isEdgeIntersectingRect } from '../../interactions/SelectionGeometry.js';
 import { applyTheme } from '../../themes/Theme.js';
 import { applyPalette } from '../../themes/Palette.js';
 import { applySkin } from '../../themes/Skin.js';
@@ -254,6 +255,57 @@ export class NodeCanvas extends Symbiote {
         getZoom: () => this.$.zoom,
         onDotDrag: (socketData) => {
           if (this._connectFlow && !this._readonly) {
+            let existingConns = [];
+            if (socketData.side === 'input') {
+              existingConns = editor.getConnections().filter(
+                (c) => c.to === socketData.nodeId && c.in === socketData.key
+              );
+            } else {
+              existingConns = editor.getConnections().filter(
+                (c) => c.from === socketData.nodeId && c.out === socketData.key
+              );
+            }
+
+            if (existingConns.length > 0) {
+              let conn = existingConns[0];
+              let event = new CustomEvent('sn-connection-reconnect', {
+                detail: {
+                  connectionId: conn.id,
+                  connection: conn,
+                  draggedSide: socketData.side,
+                  nodeId: socketData.nodeId,
+                  key: socketData.key,
+                },
+                cancelable: true,
+                bubbles: true,
+              });
+              this.dispatchEvent(event);
+              if (event.defaultPrevented) return;
+
+              editor.removeConnection(conn.id);
+
+              if (socketData.side === 'input') {
+                let sourceEl = this.getNodeView(conn.from);
+                let sourceSocketEl = sourceEl?.querySelector(`.sn-socket[data-key="${conn.out}"]`);
+                this._connectFlow.pickSocket({
+                  nodeId: conn.from,
+                  key: conn.out,
+                  side: 'output',
+                  element: sourceSocketEl,
+                });
+              } else {
+                let targetEl = this.getNodeView(conn.to);
+                let targetSocketEl = targetEl?.querySelector(`.sn-socket[data-key="${conn.in}"]`);
+                this._connectFlow.pickSocket({
+                  nodeId: conn.to,
+                  key: conn.in,
+                  side: 'input',
+                  element: targetSocketEl,
+                });
+              }
+              return;
+            }
+
             this._connectFlow.pickSocket(socketData);
           }
         },
@@ -1339,6 +1391,91 @@ export class NodeCanvas extends Symbiote {
     this._viewport?.syncPhantom();
   }
 
+  _updateMarqueeDom() {
+    let marquee = this.ref.marquee;
+    if (!marquee || !this._marqueeStart || !this._marqueeEnd) return;
+
+    let x1 = Math.min(this._marqueeStart.x, this._marqueeEnd.x);
+    let y1 = Math.min(this._marqueeStart.y, this._marqueeEnd.y);
+    let x2 = Math.max(this._marqueeStart.x, this._marqueeEnd.x);
+    let y2 = Math.max(this._marqueeStart.y, this._marqueeEnd.y);
+
+    marquee.style.left = `${x1}px`;
+    marquee.style.top = `${y1}px`;
+    marquee.style.width = `${x2 - x1}px`;
+    marquee.style.height = `${y2 - y1}px`;
+    marquee.hidden = false;
+  }
+
+  _performMarqueeSelection(accumulate = false) {
+    if (!this._marqueeStart || !this._marqueeEnd) return;
+
+    let x1 = Math.min(this._marqueeStart.x, this._marqueeEnd.x);
+    let y1 = Math.min(this._marqueeStart.y, this._marqueeEnd.y);
+    let x2 = Math.max(this._marqueeStart.x, this._marqueeEnd.x);
+    let y2 = Math.max(this._marqueeStart.y, this._marqueeEnd.y);
+
+    let t = {
+      k: this.$.zoom,
+      x: this.$.panX,
+      y: this.$.panY,
+    };
+    let screenToWorld = (sx, sy) => ({
+      x: (sx - t.x) / t.k,
+      y: (sy - t.y) / t.k,
+    });
+
+    let worldStart = screenToWorld(x1, y1);
+    let worldEnd = screenToWorld(x2, y2);
+
+    let worldMarquee = {
+      x: worldStart.x,
+      y: worldStart.y,
+      width: worldEnd.x - worldStart.x,
+      height: worldEnd.y - worldStart.y,
+    };
+
+    let selectedNodeIds = [];
+    for (const [nodeId, el] of this._nodeViews) {
+      let pos = el._position || { x: 0, y: 0 };
+      let size = {
+        width: el.offsetWidth || el._cachedW || 180,
+        height: el.offsetHeight || el._cachedH || 60,
+      };
+      let nodeRect = { x: pos.x, y: pos.y, width: size.width, height: size.height };
+      if (isNodeInMarquee(nodeRect, worldMarquee, { containment: 'intersect' })) {
+        selectedNodeIds.push(nodeId);
+      }
+    }
+
+    let selectedConnIds = [];
+    if (this._editor) {
+      for (const conn of this._editor.getConnections()) {
+        if (selectedNodeIds.includes(conn.from) && selectedNodeIds.includes(conn.to)) {
+          selectedConnIds.push(conn.id);
+        } else {
+          let fromEl = this._nodeViews.get(conn.from);
+          let toEl = this._nodeViews.get(conn.to);
+          if (fromEl && toEl) {
+            let fromPos = fromEl._position;
+            let toPos = toEl._position;
+            let fromW = fromEl._cachedW || fromEl.offsetWidth || 180;
+            let fromH = fromEl._cachedH || fromEl.offsetHeight || 60;
+            let toW = toEl._cachedW || toEl.offsetWidth || 180;
+            let toH = toEl._cachedH || toEl.offsetHeight || 60;
+            let p1 = { x: fromPos.x + fromW / 2, y: fromPos.y + fromH / 2 };
+            let p2 = { x: toPos.x + toW / 2, y: toPos.y + toH / 2 };
+            if (isEdgeIntersectingRect(p1, p2, worldMarquee)) {
+              selectedConnIds.push(conn.id);
+            }
+          }
+        }
+      }
+    }
+
+    this._selector.selectNodes(selectedNodeIds, accumulate);
+    this._selector.selectConnections(selectedConnIds, true);
+  }
 
   renderCallback() {
     ensureMaterialSymbols(['map']);
@@ -1359,13 +1496,32 @@ export class NodeCanvas extends Symbiote {
       {
         shouldStart: () => !this._viewportLocked,
         onStart: (e) => {
-
           this._panStart = e ? { x: e.pageX, y: e.pageY, target: e.target } : null;
+          this._isMarqueeSelection = e && e.shiftKey;
+          if (this._isMarqueeSelection) {
+            let rect = container.getBoundingClientRect();
+            this._marqueeStart = {
+              x: e.clientX - rect.left,
+              y: e.clientY - rect.top,
+            };
+            this._marqueeEnd = { ...this._marqueeStart };
+            this._updateMarqueeDom();
+          }
         },
-        onTranslate: (x, y) => {
+        onTranslate: (x, y, e) => {
           if (this._viewportLocked) return;
           if (this._zoom?.isTranslating()) return;
           if (this._connectFlow?.isPicking()) return;
+          if (this._isMarqueeSelection && e) {
+            let rect = container.getBoundingClientRect();
+            this._marqueeEnd = {
+              x: e.clientX - rect.left,
+              y: e.clientY - rect.top,
+            };
+            this._updateMarqueeDom();
+            this._performMarqueeSelection(e.ctrlKey || e.metaKey);
+            return;
+          }
           if (this._flowLayout?.scroll) {
             this.scrollLeft = -x;
             this.scrollTop = -y;
@@ -1382,13 +1538,25 @@ export class NodeCanvas extends Symbiote {
           this.toggleAttribute('data-interacting', true);
         },
         onDrop: (e) => {
-
+          if (this._isMarqueeSelection) {
+            this._isMarqueeSelection = false;
+            if (this.ref.marquee) this.ref.marquee.hidden = true;
+            this.dispatchEvent(
+              new CustomEvent('sn-selection-change', {
+                detail: {
+                  nodes: Array.from(this._selector.getSelectedNodes()),
+                  connections: Array.from(this._selector.getSelectedConnections()),
+                },
+                bubbles: true,
+              })
+            );
+          }
           if (this._panStart && e) {
             let dx = Math.abs(e.pageX - this._panStart.x);
             let dy = Math.abs(e.pageY - this._panStart.y);
             let t = this._panStart.target;
             let isNode = t?.closest?.('graph-node, quick-toolbar, context-menu, inspector-panel');
-            if (dx < 5 && dy < 5 && !isNode) {
+            if (dx < 5 && dy < 5 && !isNode && !e.shiftKey) {
               this._selector.unselectAll();
             }
           }

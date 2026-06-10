@@ -368,12 +368,15 @@ export class CanvasConnectionRenderer {
       let cx = nodePos.x + w / 2;
       let cy = nodePos.y + h / 2;
       let baseAngle = Math.atan2(targetPos.y - cy, targetPos.x - cx);
-      let sideGap = Math.PI / 6;
-      let angle = baseAngle + (side === 'output' ? -sideGap : sideGap);
+      let angle = baseAngle;
       let shouldReverse = side === 'output' ? targetPos.y < cy : targetPos.y > cy;
       let effectiveIndex = shouldReverse ? total - 1 - index : index;
       if (total > 1) {
-        angle += (effectiveIndex - (total - 1) / 2) * ((2 * Math.PI) / (total * 2));
+        let sideGap = Math.PI / 6;
+        angle =
+          baseAngle +
+          (side === 'output' ? -sideGap : sideGap) +
+          (effectiveIndex - (total - 1) / 2) * ((2 * Math.PI) / (total * 2));
       }
       let step = Math.PI / 12;
       angle = Math.round(angle / step) * step;

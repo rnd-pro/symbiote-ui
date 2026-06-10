@@ -12,6 +12,11 @@
 import { getShape } from '../shapes/index.js';
 import { routePcbTrace } from './PcbRouter.js';
 
+function svgPathIdForConnection(connId) {
+  let encoded = Array.from(String(connId), (char) => char.codePointAt(0).toString(16)).join('-');
+  return `sn-conn-path-${encoded || 'unknown'}`;
+}
+
 export class ConnectionRenderer {
   /** @type {Map<string, import('../core/Connection.js').Connection>} */
   #connectionData = new Map();
@@ -215,9 +220,16 @@ export class ConnectionRenderer {
     let arrow = this.#svgLayer.querySelector(`[data-conn-arrow="${conn.id}"]`);
     if (arrow) arrow.remove();
 
+    let textEl = this.#getConnectionText(conn.id);
+    if (textEl) textEl.remove();
 
     this.renderFreeDots(fromId);
     this.renderFreeDots(toId);
+  }
+
+  #getConnectionText(connId) {
+    return Array.from(this.#svgLayer.querySelectorAll('[data-conn-text]'))
+      .find((el) => el.getAttribute('data-conn-text') === String(connId)) || null;
   }
 
   /**
@@ -516,17 +528,15 @@ export class ConnectionRenderer {
         let baseAngle = Math.atan2(targetPos.y - cy, targetPos.x - cx);
 
 
-        let sideGap = Math.PI / 6;
-        let adjustedBase = baseAngle + (side === 'output' ? -sideGap : sideGap);
-
-
         let dy = targetPos.y - cy;
         let shouldReverse = side === 'output' ? dy < 0 : dy > 0;
         let effectiveIndex = shouldReverse ? total - 1 - index : index;
 
 
-        let angle = adjustedBase;
+        let angle = baseAngle;
         if (total > 1) {
+          let sideGap = Math.PI / 6;
+          let adjustedBase = baseAngle + (side === 'output' ? -sideGap : sideGap);
           let segment = (2 * Math.PI) / (total * 2);
           let offset = (effectiveIndex - (total - 1) / 2) * segment;
           angle = adjustedBase + offset;
@@ -860,6 +870,8 @@ export class ConnectionRenderer {
       });
       this.#svgLayer.appendChild(path);
     }
+    let pathId = svgPathIdForConnection(conn.id);
+    path.setAttribute('id', pathId);
     path.setAttribute('d', d);
 
 
@@ -899,6 +911,27 @@ export class ConnectionRenderer {
 
 
     this.#updateArrow(conn.id, d);
+
+    let labelText = conn.label || conn.metadata?.label || '';
+    let textEl = this.#getConnectionText(conn.id);
+    if (labelText) {
+      if (!textEl) {
+        textEl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        textEl.setAttribute('data-conn-text', String(conn.id));
+        textEl.setAttribute('class', 'sn-conn-label');
+        textEl.setAttribute('text-anchor', 'middle');
+        textEl.setAttribute('dy', '-6');
+        this.#svgLayer.appendChild(textEl);
+      }
+      textEl.replaceChildren();
+      let textPath = document.createElementNS('http://www.w3.org/2000/svg', 'textPath');
+      textPath.setAttribute('href', `#${pathId}`);
+      textPath.setAttribute('startOffset', '50%');
+      textPath.textContent = labelText;
+      textEl.appendChild(textPath);
+    } else {
+      if (textEl) textEl.remove();
+    }
   }
 
   /**

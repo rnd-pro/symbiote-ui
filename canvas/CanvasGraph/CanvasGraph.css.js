@@ -17,6 +17,7 @@ export default `
     display: block;
     outline: none;
     user-select: none;
+    touch-action: none;
     cursor: default;
   }
   canvas-graph > canvas.grabbing { cursor: grabbing; }

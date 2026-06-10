@@ -398,8 +398,24 @@ export let styles = css`
     transition: border-color var(--sn-animation-duration-slower) var(--sn-transition-easing);
   }
 
-  graph-node[data-fire-state='pending'] {
+   graph-node[data-fire-state='pending'] {
     opacity: 0.5;
     transition: opacity var(--sn-transition-fast) var(--sn-transition-easing);
+  }
+
+  .sn-marquee {
+    position: absolute;
+    border: 1px dashed var(--sn-accent-color, #3b82f6);
+    background-color: color-mix(in srgb, var(--sn-accent-color, #3b82f6) 15%, transparent);
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  .sn-conn-label {
+    font-family: var(--sn-font-family, sans-serif);
+    font-size: var(--sn-font-size-small, 10px);
+    fill: var(--sn-conn-label-color, var(--sn-text-muted, #8e8e93));
+    pointer-events: none;
+    user-select: none;
   }
 `;

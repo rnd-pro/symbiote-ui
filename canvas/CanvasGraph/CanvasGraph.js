@@ -32,11 +32,10 @@ import {
   resolveIdleFrame,
   resolveViewportAnimation,
 } from './CanvasGraphDrawState.js';
-
-const INIT_NODE_COUNT = 40;
-const EDGE_RATIO = 1.2;
-
-const NODE_TYPES = ['data', 'action', 'output', 'config', 'external', 'style', 'docs', 'asset'];
+import { resolveWheelZoomFactor } from '../../interactions/Zoom.js';
+const MIN_ZOOM_FALLBACK = 0.02;
+const MAX_ZOOM = 5;
+const MAX_ZOOM_OUT_FIT_MULTIPLIER = 4;
 
 const DEFAULT_EVENT_NAMES = Object.freeze({
   fileSelected: 'file-selected',
@@ -45,6 +44,7 @@ const DEFAULT_EVENT_NAMES = Object.freeze({
   layoutSnapshot: 'layout-snapshot',
   layoutTick: 'layout-tick',
   nodeDeselected: 'node-deselected',
+  orientationParallaxStatus: 'orientation-parallax-status',
   pathChanged: 'path-changed',
   toolbarAction: 'toolbar-action',
 });
@@ -66,6 +66,35 @@ function normalizeFocusNodeIds(nodeIds) {
     normalized.push(normalizedId);
   }
   return normalized;
+}
+
+function resolveFitPadding(padding, rect) {
+  let requested = Number.isFinite(padding) ? padding : 0;
+  let minSide = Math.min(rect?.width || 0, rect?.height || 0);
+  if (minSide <= 0) return Math.max(0, requested);
+  let maxPadding = Math.max(12, minSide * 0.32);
+  return Math.max(0, Math.min(requested, maxPadding));
+}
+
+function resolveFrameFitZoom(frame, rect, padding = 0) {
+  if (!frame || !rect || rect.width === 0 || rect.height === 0) return MIN_ZOOM_FALLBACK;
+  let graphW = frame.maxX - frame.minX || 1;
+  let graphH = frame.maxY - frame.minY || 1;
+  return Math.min(
+    Math.max(1, rect.width - padding * 2) / graphW,
+    Math.max(1, rect.height - padding * 2) / graphH
+  );
+}
+
+function getPointerDistance(a, b) {
+  return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+}
+
+function getPointerCenter(a, b) {
+  return {
+    x: (a.clientX + b.clientX) / 2,
+    y: (a.clientY + b.clientY) / 2,
+  };
 }
 
 function toRgba(rgb, alpha = 1) {
@@ -231,6 +260,19 @@ export class CanvasGraph extends Symbiote {
     this._visualDragDeltaX = 0;
     this._visualDragDeltaY = 0;
     this._dragWorldTransform = null;
+    this._activePointers = new Map();
+    this._pinchGesture = null;
+    this._pinchPointerIds = new Set();
+    this._focusExitOnDown = false;
+    this._orientationParallaxEnabled = false;
+    this._orientationParallaxX = 0;
+    this._orientationParallaxY = 0;
+    this._orientationParallaxTargetX = 0;
+    this._orientationParallaxTargetY = 0;
+    this._orientationParallaxCleanup = null;
+    this._orientationParallaxStatus = { supported: null, enabled: false, reason: 'idle' };
+    this._orientationParallaxAutoPending = false;
+    this._orientationParallaxAutoSettled = false;
     this._layoutSnapshot = null;
     this._themeSyncQueued = false;
     this._cancelThemeSync = null;
@@ -307,6 +349,7 @@ export class CanvasGraph extends Symbiote {
     this._cancelThemeSync = null;
     this.ownerDocument?.removeEventListener?.('cascade-theme-change', this._themeChangeHandler);
     this._themeObserver?.disconnect();
+    this.disableDeviceOrientationParallax();
     if (this.worker) this.worker.stop();
   }
 
@@ -402,6 +445,34 @@ export class CanvasGraph extends Symbiote {
     };
   }
 
+  _getVisibleGraphFrame() {
+    let frames = this.nodes
+      .map((node) => this._getVisibleFocusFrame(node.id, { fallbackToParent: false }))
+      .filter(Boolean);
+    if (frames.length === 0) return null;
+    return {
+      minX: Math.min(...frames.map((frame) => frame.minX)),
+      minY: Math.min(...frames.map((frame) => frame.minY)),
+      maxX: Math.max(...frames.map((frame) => frame.maxX)),
+      maxY: Math.max(...frames.map((frame) => frame.maxY)),
+    };
+  }
+
+  _resolveGraphFitZoom(rect = this.canvas?.getBoundingClientRect(), options = {}) {
+    let frame = this._getVisibleGraphFrame();
+    let padding = resolveFitPadding(Number.isFinite(options.padding) ? options.padding : 0, rect);
+    return resolveFrameFitZoom(frame, rect, padding);
+  }
+
+  _resolveMinZoom(rect = this.canvas?.getBoundingClientRect()) {
+    return Math.max(MIN_ZOOM_FALLBACK, this._resolveGraphFitZoom(rect) / MAX_ZOOM_OUT_FIT_MULTIPLIER);
+  }
+
+  _clampZoom(zoom, rect = this.canvas?.getBoundingClientRect()) {
+    let minZoom = Math.min(MAX_ZOOM, this._resolveMinZoom(rect));
+    return Math.max(minZoom, Math.min(MAX_ZOOM, zoom));
+  }
+
   fitView(padding = 60, animate = true) {
     if (!this.nodePositions.size) return;
     const rect = this.canvas.getBoundingClientRect();
@@ -420,9 +491,10 @@ export class CanvasGraph extends Symbiote {
     const cx = (minX + maxX) / 2;
     const cy = (minY + maxY) / 2;
 
+    const fitPadding = resolveFitPadding(padding, rect);
     const newZoom = Math.max(0.02, Math.min(
-      (rect.width - padding * 2) / graphW,
-      (rect.height - padding * 2) / graphH,
+      Math.max(1, rect.width - fitPadding * 2) / graphW,
+      Math.max(1, rect.height - fitPadding * 2) / graphH,
       2.0
     ));
     const newPanX = rect.width / 2 - cx * newZoom;
@@ -465,12 +537,15 @@ export class CanvasGraph extends Symbiote {
     let graphH = maxY - minY || 1;
     let cx = (minX + maxX) / 2;
     let cy = (minY + maxY) / 2;
-    let padding = Number.isFinite(options.padding) ? options.padding : 80;
+    let padding = resolveFitPadding(
+      Number.isFinite(options.padding) ? options.padding : 80,
+      rect
+    );
     let minZoom = Number.isFinite(options.minZoom) ? options.minZoom : 0.02;
     let maxZoom = Number.isFinite(options.maxZoom) ? options.maxZoom : 2.0;
     let newZoom = Math.max(minZoom, Math.min(
-      (rect.width - padding * 2) / graphW,
-      (rect.height - padding * 2) / graphH,
+      Math.max(1, rect.width - padding * 2) / graphW,
+      Math.max(1, rect.height - padding * 2) / graphH,
       maxZoom
     ));
     let newPanX = rect.width / 2 - cx * newZoom;
@@ -584,6 +659,18 @@ export class CanvasGraph extends Symbiote {
       this._queueTransitionMarker(previousNode.id, node.id, options);
     }
     this.updateInteractionDepths();
+    return true;
+  }
+
+  _beginFocusExit() {
+    if (!this.activeNode || this.deactivating) return false;
+    this.deactivating = true;
+    this.dragNode = null;
+    this.nextActiveNode = null;
+    this.menuAnim = 0;
+    this.needsDraw = true;
+    this._wakeLoop();
+    this._emitGraphEvent('nodeDeselected');
     return true;
   }
 
@@ -811,6 +898,133 @@ export class CanvasGraph extends Symbiote {
 
   getActionItems() {
     return this.actionItems || [...DEFAULT_MENU_ITEMS];
+  }
+
+  getDeviceOrientationParallaxStatus() {
+    return { ...this._orientationParallaxStatus };
+  }
+
+  _resolveDeviceOrientationParallaxOptions(options = {}) {
+    let strengthAttr = Number.parseFloat(this.getAttribute('device-orientation-parallax-strength') || '');
+    let maxTiltAttr = Number.parseFloat(this.getAttribute('device-orientation-parallax-max-tilt') || '');
+    return {
+      ...options,
+      strength: Number.isFinite(options.strength)
+        ? options.strength
+        : Number.isFinite(strengthAttr)
+          ? strengthAttr
+          : undefined,
+      maxTilt: Number.isFinite(options.maxTilt)
+        ? options.maxTilt
+        : Number.isFinite(maxTiltAttr)
+          ? maxTiltAttr
+          : undefined,
+      absolute: options.absolute ?? this.hasAttribute('device-orientation-parallax-absolute'),
+    };
+  }
+
+  _setDeviceOrientationParallaxStatus(status) {
+    let detail = {
+      supported: status.supported ?? null,
+      enabled: status.enabled === true,
+      permission: status.permission || '',
+      reason: status.reason || '',
+      errorName: status.errorName || '',
+    };
+    this._orientationParallaxStatus = detail;
+    this.setAttribute('data-orientation-parallax', detail.enabled ? 'enabled' : detail.reason || detail.permission || 'disabled');
+    this._emitGraphEvent('orientationParallaxStatus', detail, {
+      bubbles: true,
+      composed: true,
+    });
+    return detail;
+  }
+
+  _requestDeviceOrientationParallaxFromGesture() {
+    if (!this.hasAttribute('device-orientation-parallax')) return;
+    if (this._orientationParallaxEnabled || this._orientationParallaxAutoPending || this._orientationParallaxAutoSettled) return;
+    this._orientationParallaxAutoPending = true;
+    this.enableDeviceOrientationParallax(this._resolveDeviceOrientationParallaxOptions())
+      .then((result) => {
+        this._orientationParallaxAutoSettled = result.enabled === true
+          || result.reason === 'no-window'
+          || result.reason === 'no-device-orientation'
+          || result.reason === 'insecure-context'
+          || result.permission === 'denied';
+      })
+      .catch((error) => {
+        this._setDeviceOrientationParallaxStatus({
+          supported: true,
+          enabled: false,
+          reason: 'permission-error',
+          errorName: error?.name || 'Error',
+        });
+      })
+      .finally(() => {
+        this._orientationParallaxAutoPending = false;
+      });
+  }
+
+  async enableDeviceOrientationParallax(options = {}) {
+    if (typeof globalThis.window === 'undefined' || typeof globalThis.window.addEventListener !== 'function') {
+      return this._setDeviceOrientationParallaxStatus({ supported: false, enabled: false, reason: 'no-window' });
+    }
+    if (typeof globalThis.DeviceOrientationEvent === 'undefined') {
+      return this._setDeviceOrientationParallaxStatus({ supported: false, enabled: false, reason: 'no-device-orientation' });
+    }
+    if (globalThis.isSecureContext === false) {
+      return this._setDeviceOrientationParallaxStatus({ supported: false, enabled: false, reason: 'insecure-context' });
+    }
+
+    let requestPermission = globalThis.DeviceOrientationEvent.requestPermission;
+    if (typeof requestPermission === 'function' && options.requestPermission !== false) {
+      let permission;
+      try {
+        permission = await requestPermission.call(globalThis.DeviceOrientationEvent, Boolean(options.absolute));
+      } catch (error) {
+        return this._setDeviceOrientationParallaxStatus({
+          supported: true,
+          enabled: false,
+          reason: 'permission-error',
+          errorName: error?.name || 'Error',
+        });
+      }
+      if (permission !== 'granted') {
+        return this._setDeviceOrientationParallaxStatus({ supported: true, enabled: false, permission });
+      }
+    }
+
+    this.disableDeviceOrientationParallax();
+    let strength = Number.isFinite(options.strength) ? options.strength : 32;
+    let maxTilt = Number.isFinite(options.maxTilt) ? Math.max(1, options.maxTilt) : 32;
+    let handleOrientation = (event) => {
+      let gamma = Number(event.gamma);
+      let beta = Number(event.beta);
+      if (!Number.isFinite(gamma) && !Number.isFinite(beta)) return;
+      this._orientationParallaxTargetX = Math.max(-1, Math.min(1, (Number.isFinite(gamma) ? gamma : 0) / maxTilt)) * strength;
+      this._orientationParallaxTargetY = Math.max(-1, Math.min(1, (Number.isFinite(beta) ? beta : 0) / maxTilt)) * strength;
+      this.needsDraw = true;
+      this._wakeLoop();
+    };
+    globalThis.window.addEventListener('deviceorientation', handleOrientation, { passive: true });
+    this._orientationParallaxCleanup = () => {
+      globalThis.window.removeEventListener('deviceorientation', handleOrientation);
+    };
+    this._orientationParallaxEnabled = true;
+    return this._setDeviceOrientationParallaxStatus({ supported: true, enabled: true, permission: 'granted' });
+  }
+
+  disableDeviceOrientationParallax() {
+    this._orientationParallaxCleanup?.();
+    this._orientationParallaxCleanup = null;
+    this._orientationParallaxEnabled = false;
+    this._orientationParallaxTargetX = 0;
+    this._orientationParallaxTargetY = 0;
+    this._orientationParallaxX = 0;
+    this._orientationParallaxY = 0;
+    this._orientationParallaxAutoPending = false;
+    this._orientationParallaxAutoSettled = false;
+    this._setDeviceOrientationParallaxStatus({ supported: null, enabled: false, reason: 'disabled' });
   }
 
   setSemanticPathPrefix(prefix) {
@@ -1279,8 +1493,20 @@ export class CanvasGraph extends Symbiote {
     this.focusActive = focus.focusActive;
     dragDeltaX = focus.dragDeltaX;
     dragDeltaY = focus.dragDeltaY;
-    this._visualDragDeltaX = dragDeltaX;
-    this._visualDragDeltaY = dragDeltaY;
+    if (this._orientationParallaxEnabled) {
+      this._orientationParallaxX += (this._orientationParallaxTargetX - this._orientationParallaxX) * 0.12;
+      this._orientationParallaxY += (this._orientationParallaxTargetY - this._orientationParallaxY) * 0.12;
+      if (
+        Math.abs(this._orientationParallaxTargetX - this._orientationParallaxX) > 0.05
+        || Math.abs(this._orientationParallaxTargetY - this._orientationParallaxY) > 0.05
+      ) {
+        this.needsDraw = true;
+      }
+    }
+    const visualDragDeltaX = dragDeltaX + this._orientationParallaxX;
+    const visualDragDeltaY = dragDeltaY + this._orientationParallaxY;
+    this._visualDragDeltaX = visualDragDeltaX;
+    this._visualDragDeltaY = visualDragDeltaY;
     this._infoPanel._centeredForNode = focus.centeredForNode;
     if (focus.targetPanX !== null) {
       this._targetPanX = focus.targetPanX;
@@ -1291,8 +1517,8 @@ export class CanvasGraph extends Symbiote {
       const octx = this.offscreenCanvases[i].ctx;
       const la = this.layerAnim[i];
       const s = la.scale;
-      const pOffX = -la.parallax * dragDeltaX;
-      const pOffY = -la.parallax * dragDeltaY;
+      const pOffX = -la.parallax * visualDragDeltaX;
+      const pOffY = -la.parallax * visualDragDeltaY;
 
       octx.setTransform(1, 0, 0, 1, 0, 0);
       octx.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -1950,8 +2176,94 @@ export class CanvasGraph extends Symbiote {
     return null;
   }
 
+  _rememberPointer(e) {
+    this._activePointers.set(e.pointerId, e);
+  }
+
+  _forgetPointer(e) {
+    this._activePointers.delete(e.pointerId);
+  }
+
+  _getPinchPointers() {
+    return [...this._activePointers.values()].slice(0, 2);
+  }
+
+  _cancelPointerDragForPinch() {
+    if (this.dragNode) {
+      this.worker?.unpin(this.dragNode.id);
+      this.dragNode = null;
+    }
+    this._dragWorldTransform = null;
+    this.isPanning = false;
+    this.canvas.style.cursor = 'default';
+  }
+
+  _startPinchGesture() {
+    let [first, second] = this._getPinchPointers();
+    if (!first || !second) return false;
+    let distance = getPointerDistance(first, second);
+    if (distance <= 0) return false;
+    let center = getPointerCenter(first, second);
+    let rect = this.canvas.getBoundingClientRect();
+    let mx = center.x - rect.left;
+    let my = center.y - rect.top;
+    this._cancelPointerDragForPinch();
+    this._pinchPointerIds = new Set([first.pointerId, second.pointerId]);
+    this._pinchGesture = {
+      distance,
+      zoom: this.zoom,
+      worldX: (mx - this.panX) / Math.max(this.zoom, 0.001),
+      worldY: (my - this.panY) / Math.max(this.zoom, 0.001),
+    };
+    return true;
+  }
+
+  _applyPinchGesture() {
+    if (!this._pinchGesture && !this._startPinchGesture()) return false;
+    let [first, second] = this._getPinchPointers();
+    if (!first || !second) return false;
+    let distance = getPointerDistance(first, second);
+    if (distance <= 0 || this._pinchGesture.distance <= 0) return false;
+    let center = getPointerCenter(first, second);
+    let rect = this.canvas.getBoundingClientRect();
+    let mx = center.x - rect.left;
+    let my = center.y - rect.top;
+    let nextZoom = this._clampZoom(this._pinchGesture.zoom * (distance / this._pinchGesture.distance), rect);
+    this.zoom = nextZoom;
+    this._targetZoom = nextZoom;
+    this.panX = mx - this._pinchGesture.worldX * nextZoom;
+    this.panY = my - this._pinchGesture.worldY * nextZoom;
+    this._targetPanX = null;
+    this._targetPanY = null;
+    this._zoomAnchor = null;
+    this.hoverNode = null;
+    this.needsDraw = true;
+    this._wakeLoop();
+    return true;
+  }
+
+  _endPinchPointer(e) {
+    let wasPinchPointer = this._pinchPointerIds?.has(e.pointerId);
+    this._pinchPointerIds?.delete(e.pointerId);
+    this._forgetPointer(e);
+    if (this._activePointers.size < 2) {
+      this._pinchGesture = null;
+    } else {
+      this._startPinchGesture();
+    }
+    return wasPinchPointer;
+  }
+
   bindEvents() {
     this.canvas.addEventListener('pointerdown', (e) => {
+      this._requestDeviceOrientationParallaxFromGesture();
+      this._rememberPointer(e);
+      if (this._activePointers.size >= 2) {
+        this.canvas.setPointerCapture(e.pointerId);
+        this._startPinchGesture();
+        e.preventDefault();
+        return;
+      }
       this._wakeLoop();  // User interaction — resume rendering
       const world = this.screenToWorld(e.clientX, e.clientY, 0);
 
@@ -1987,6 +2299,15 @@ export class CanvasGraph extends Symbiote {
 
       const hit = this.hitTestScreen(e.clientX, e.clientY);
       if (hit) {
+        if (this.activeNode && this.activeNode.id !== hit.id && !this.deactivating) {
+          this._focusExitOnDown = this._beginFocusExit();
+          this._dragStartX = e.clientX;
+          this._dragStartY = e.clientY;
+          this.canvas.setPointerCapture(e.pointerId);
+          e.preventDefault();
+          return;
+        }
+
         const vis = this.getSmooth(hit.id);
         const sim = this.nodePositions.get(hit.id);
         if (vis && sim) { sim.x = vis.x; sim.y = vis.y; }
@@ -2022,6 +2343,15 @@ export class CanvasGraph extends Symbiote {
     });
 
     this.canvas.addEventListener('pointermove', (e) => {
+      if (this._activePointers.has(e.pointerId)) {
+        this._rememberPointer(e);
+      }
+      if (this._activePointers.size >= 2 || this._pinchGesture) {
+        if (this._applyPinchGesture()) {
+          e.preventDefault();
+          return;
+        }
+      }
       if (this.dragNode) {
         this._wakeLoop();  // Dragging node — resume rendering
         const world = this.screenToWorld(e.clientX, e.clientY, 0, this._dragWorldTransform);
@@ -2041,6 +2371,12 @@ export class CanvasGraph extends Symbiote {
     });
 
     this.canvas.addEventListener('pointerup', (e) => {
+      if (this._pinchGesture || this._pinchPointerIds?.has(e.pointerId)) {
+        this._endPinchPointer(e);
+        e.preventDefault();
+        return;
+      }
+      this._forgetPointer(e);
       const draggedNode = this.dragNode;
       if (this.dragNode) {
         this.worker?.unpin(this.dragNode.id);
@@ -2054,6 +2390,15 @@ export class CanvasGraph extends Symbiote {
       const dx = e.clientX - (this._dragStartX || 0);
       const dy = e.clientY - (this._dragStartY || 0);
       const wasClick = (dx * dx + dy * dy) < 25;
+
+      if (this._focusExitOnDown) {
+        this._focusExitOnDown = false;
+        this._nodeActivatedOnDown = false;
+        this._dragStartX = 0;
+        this._dragStartY = 0;
+        e.preventDefault();
+        return;
+      }
 
       if (wasClick) {
         const node = draggedNode || this.hitTestScreen(e.clientX, e.clientY);
@@ -2100,12 +2445,28 @@ export class CanvasGraph extends Symbiote {
       this._dragStartY = 0;
     });
 
+    this.canvas.addEventListener('pointercancel', (e) => {
+      if (this._pinchGesture || this._pinchPointerIds?.has(e.pointerId)) {
+        this._endPinchPointer(e);
+        e.preventDefault();
+        return;
+      }
+      this._forgetPointer(e);
+      if (this.dragNode) {
+        this.worker?.unpin(this.dragNode.id);
+        this.dragNode = null;
+      }
+      this._dragWorldTransform = null;
+      this.isPanning = false;
+      this.canvas.style.cursor = 'default';
+    });
+
     this.canvas.addEventListener('wheel', (e) => {
       e.preventDefault();
       const rect = this.canvas.getBoundingClientRect();
       const mx = e.clientX - rect.left, my = e.clientY - rect.top;
-      const factor = e.deltaY > 0 ? 0.92 : 1.08;
-      this._targetZoom = Math.max(0.02, Math.min(5, this._targetZoom * factor));
+      const factor = resolveWheelZoomFactor(e);
+      this._targetZoom = this._clampZoom(this._targetZoom * factor, rect);
       this._zoomAnchor = { mx, my };
       this._wakeLoop();  // Zoom changed — resume rendering
     }, { passive: false });

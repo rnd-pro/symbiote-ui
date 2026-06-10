@@ -2,6 +2,7 @@ import { html } from '@symbiotejs/symbiote';
 
 export let template = html`
   <div ref="canvasContainer" class="canvas-container" tabindex="0">
+    <div ref="marquee" class="sn-marquee" hidden></div>
     <canvas ref="connCanvas" class="sn-conn-canvas"></canvas>
     <div ref="content" class="content">
       <svg ref="connections" class="sn-connections"></svg>

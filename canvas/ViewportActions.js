@@ -1,4 +1,5 @@
 import { translate } from '../locale/index.js';
+import { alignNodes, distributeNodes } from '../interactions/SelectionGeometry.js';
 
 /**
  * ViewportActions — context menu, keyboard shortcuts, viewport utilities
@@ -53,6 +54,21 @@ export class ViewportActions {
    * Keyboard handler — bind to container
    * @param {KeyboardEvent} e
    */
+  #dispatchIntent(eventName, detail) {
+    if (!this.#canvas) return true;
+    let event = new CustomEvent(eventName, {
+      detail,
+      cancelable: true,
+      bubbles: true,
+    });
+    this.#canvas.dispatchEvent(event);
+    return !event.defaultPrevented;
+  }
+
+  /**
+   * Keyboard handler — bind to container
+   * @param {KeyboardEvent} e
+   */
   handleKeydown = (e) => {
     if (this.#readonly) return;
 
@@ -73,13 +89,58 @@ export class ViewportActions {
 
     if (e.key === 'c' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
-      this.#copySelected();
+      let selectedNodeIds = Array.from(this.#selector.getSelectedNodes());
+      if (selectedNodeIds.length > 0) {
+        let defaultData = selectedNodeIds.map(id => {
+          let node = this.#editor.getNode(id);
+          let el = this.#nodeViews.get(id);
+          return node ? {
+            node,
+            position: el?._position ? { ...el._position } : { x: 0, y: 0 }
+          } : null;
+        }).filter(Boolean);
+        if (this.#dispatchIntent('sn-clipboard-copy', { nodeIds: selectedNodeIds, defaultData })) {
+          this.#copySelected();
+        }
+      }
+    }
+
+
+    if (e.key === 'x' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      let selectedNodeIds = Array.from(this.#selector.getSelectedNodes());
+      if (selectedNodeIds.length > 0) {
+        let defaultData = selectedNodeIds.map(id => {
+          let node = this.#editor.getNode(id);
+          let el = this.#nodeViews.get(id);
+          return node ? {
+            node,
+            position: el?._position ? { ...el._position } : { x: 0, y: 0 }
+          } : null;
+        }).filter(Boolean);
+        if (this.#dispatchIntent('sn-clipboard-cut', { nodeIds: selectedNodeIds, defaultData })) {
+          this.#copySelected();
+          this.deleteSelected();
+        }
+      }
     }
 
 
     if (e.key === 'v' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
-      this.#pasteNodes();
+      if (this.#dispatchIntent('sn-clipboard-paste', { clipboard: this.#clipboard })) {
+        this.#pasteNodes();
+      }
+    }
+
+    if (e.key === 'z' && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
+      e.preventDefault();
+      this.#dispatchIntent('sn-undo', {});
+    }
+
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+      e.preventDefault();
+      this.#dispatchIntent('sn-redo', {});
     }
 
 
@@ -379,7 +440,7 @@ export class ViewportActions {
 
 
   #copySelected() {
-    let selected = this.#selector.getSelectedNodes();
+    let selected = Array.from(this.#selector.getSelectedNodes());
     if (selected.length === 0) return;
 
     this.#clipboard = selected
@@ -425,7 +486,7 @@ export class ViewportActions {
 
   /** Align selected nodes horizontally (same Y) */
   alignSelectedHorizontal() {
-    let selected = this.#selector.getSelectedNodes();
+    let selected = Array.from(this.#selector.getSelectedNodes());
     if (selected.length < 2) return;
 
     let totalY = 0;
@@ -449,7 +510,7 @@ export class ViewportActions {
 
   /** Align selected nodes vertically (same X) */
   alignSelectedVertical() {
-    let selected = this.#selector.getSelectedNodes();
+    let selected = Array.from(this.#selector.getSelectedNodes());
     if (selected.length < 2) return;
 
     let totalX = 0;
@@ -468,6 +529,120 @@ export class ViewportActions {
           y: el._position.y,
         });
       }
+    }
+  }
+
+  /** Align selected nodes by their left edge */
+  alignSelectedLeft() {
+    let selected = Array.from(this.#selector.getSelectedNodes());
+    if (selected.length < 2) return;
+    let nodePositions = {};
+    let nodeSizes = {};
+    for (const id of selected) {
+      let el = this.#nodeViews.get(id);
+      if (el) {
+        nodePositions[id] = el._position || { x: 0, y: 0 };
+        nodeSizes[id] = { width: el.offsetWidth || 180, height: el.offsetHeight || 60 };
+      }
+    }
+    let newPositions = alignNodes(nodePositions, nodeSizes, selected, 'left');
+    for (const [id, pos] of Object.entries(newPositions)) {
+      this.#editor.emit('nodemovetopos', { nodeId: id, x: pos.x, y: pos.y });
+    }
+  }
+
+  /** Align selected nodes by their right edge */
+  alignSelectedRight() {
+    let selected = Array.from(this.#selector.getSelectedNodes());
+    if (selected.length < 2) return;
+    let nodePositions = {};
+    let nodeSizes = {};
+    for (const id of selected) {
+      let el = this.#nodeViews.get(id);
+      if (el) {
+        nodePositions[id] = el._position || { x: 0, y: 0 };
+        nodeSizes[id] = { width: el.offsetWidth || 180, height: el.offsetHeight || 60 };
+      }
+    }
+    let newPositions = alignNodes(nodePositions, nodeSizes, selected, 'right');
+    for (const [id, pos] of Object.entries(newPositions)) {
+      this.#editor.emit('nodemovetopos', { nodeId: id, x: pos.x, y: pos.y });
+    }
+  }
+
+  /** Align selected nodes by their top edge */
+  alignSelectedTop() {
+    let selected = Array.from(this.#selector.getSelectedNodes());
+    if (selected.length < 2) return;
+    let nodePositions = {};
+    let nodeSizes = {};
+    for (const id of selected) {
+      let el = this.#nodeViews.get(id);
+      if (el) {
+        nodePositions[id] = el._position || { x: 0, y: 0 };
+        nodeSizes[id] = { width: el.offsetWidth || 180, height: el.offsetHeight || 60 };
+      }
+    }
+    let newPositions = alignNodes(nodePositions, nodeSizes, selected, 'top');
+    for (const [id, pos] of Object.entries(newPositions)) {
+      this.#editor.emit('nodemovetopos', { nodeId: id, x: pos.x, y: pos.y });
+    }
+  }
+
+  /** Align selected nodes by their bottom edge */
+  alignSelectedBottom() {
+    let selected = Array.from(this.#selector.getSelectedNodes());
+    if (selected.length < 2) return;
+    let nodePositions = {};
+    let nodeSizes = {};
+    for (const id of selected) {
+      let el = this.#nodeViews.get(id);
+      if (el) {
+        nodePositions[id] = el._position || { x: 0, y: 0 };
+        nodeSizes[id] = { width: el.offsetWidth || 180, height: el.offsetHeight || 60 };
+      }
+    }
+    let newPositions = alignNodes(nodePositions, nodeSizes, selected, 'bottom');
+    for (const [id, pos] of Object.entries(newPositions)) {
+      this.#editor.emit('nodemovetopos', { nodeId: id, x: pos.x, y: pos.y });
+    }
+  }
+
+  /** Distributes selected nodes horizontally */
+  distributeSelectedHorizontal() {
+    let selected = Array.from(this.#selector.getSelectedNodes());
+    if (selected.length < 3) return;
+    let nodePositions = {};
+    let nodeSizes = {};
+    for (const id of selected) {
+      let el = this.#nodeViews.get(id);
+      if (el) {
+        nodePositions[id] = el._position || { x: 0, y: 0 };
+        nodeSizes[id] = { width: el.offsetWidth || 180, height: el.offsetHeight || 60 };
+      }
+    }
+    let newPositions = distributeNodes(nodePositions, nodeSizes, selected, 'horizontal');
+    for (const [id, pos] of Object.entries(newPositions)) {
+      this.#editor.emit('nodemovetopos', { nodeId: id, x: pos.x, y: pos.y });
+    }
+  }
+
+  /** Distributes selected nodes vertically */
+  distributeSelectedVertical() {
+    let selected = Array.from(this.#selector.getSelectedNodes());
+    if (selected.length < 3) return;
+    let nodePositions = {};
+    let nodeSizes = {};
+    for (const id of selected) {
+      let el = this.#nodeViews.get(id);
+      if (el) {
+        nodePositions[id] = el._position || { x: 0, y: 0 };
+        nodeSizes[id] = { width: el.offsetWidth || 180, height: el.offsetHeight || 60 };
+      }
+    }
+    let newPositions = distributeNodes(nodePositions, nodeSizes, selected, 'vertical');
+    for (const [id, pos] of Object.entries(newPositions)) {
+      this.#editor.emit('nodemovetopos', { nodeId: id, x: pos.x, y: pos.y });
     }
   }
 }
