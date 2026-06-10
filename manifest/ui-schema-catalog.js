@@ -24,6 +24,26 @@ export let UI_SCHEMA_VERSIONS = [
     path: 'schemas/agent-intent-v1.json',
     description: 'JSON Schema for unified transaction-like agent intent sequences.',
   },
+  {
+    version: 'message-part-v1',
+    path: 'schemas/message-part-v1.json',
+    description: 'JSON Schema for agent chat message parts.',
+  },
+  {
+    version: 'data-grid-v1',
+    path: 'schemas/data-grid-v1.json',
+    description: 'JSON Schema for Data Grid options, columns, and rows configuration.',
+  },
+  {
+    version: 'chart-spec-v1',
+    path: 'schemas/chart-spec-v1.json',
+    description: 'JSON Schema for Chart Spec V1 configurations.',
+  },
+  {
+    version: 'source-diff-v1',
+    path: 'schemas/source-diff-v1.json',
+    description: 'JSON Schema for Unified and Side-by-Side Diff datasets.',
+  },
 ];
 
 export let UI_SCHEMAS = {
@@ -650,6 +670,211 @@ UI_SCHEMAS['component-descriptor-v2'].$defs.webMcpTool = {
       uniqueItems: true,
     },
   },
+};
+
+UI_SCHEMAS['message-part-v1'] = {
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  $id: 'https://rnd-pro.github.io/symbiote-ui/schemas/message-part-v1.json',
+  title: 'Symbiote Agent Message Part',
+  type: 'object',
+  required: ['type'],
+  properties: {
+    type: {
+      type: 'string',
+      enum: [
+        'text',
+        'text_delta',
+        'stream_delta',
+        'reasoning',
+        'status',
+        'tool_call',
+        'tool_result',
+        'source',
+        'attachment',
+        'artifact',
+        'approval',
+        'action',
+        'retry',
+        'cancel',
+        'error',
+        'cancelled'
+      ]
+    },
+    text: { type: 'string' },
+    name: { type: 'string' },
+    id: { type: 'string' },
+    args: { type: ['object', 'array', 'string', 'number', 'boolean', 'null'] },
+    result: { type: ['object', 'array', 'string', 'number', 'boolean', 'null'] },
+    status: { type: 'string' },
+    title: { type: 'string' },
+    url: { type: 'string' },
+    mimeType: { type: 'string' },
+    meta: { type: 'object', additionalProperties: true }
+  },
+  additionalProperties: false
+};
+
+UI_SCHEMAS['data-grid-v1'] = {
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  $id: 'https://rnd-pro.github.io/symbiote-ui/schemas/data-grid-v1.json',
+  title: 'DataGridOptionsV1',
+  type: 'object',
+  properties: {
+    columns: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          key: { type: 'string' },
+          label: { type: 'string' },
+          align: { type: 'string', enum: ['start', 'center', 'end'] },
+          sortable: { type: 'boolean' },
+          sortDirection: { type: 'string', enum: ['asc', 'desc', 'none'] },
+          visible: { type: 'boolean' },
+          pinned: { type: 'string', enum: ['left', 'right', 'none'] },
+          width: { type: ['string', 'number'] }
+        },
+        required: ['key']
+      }
+    },
+    rows: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: ['string', 'number'] },
+          cells: { type: 'object' },
+          details: { type: 'string' },
+          children: { type: 'array' }
+        }
+      }
+    },
+    selectionMode: {
+      type: 'string',
+      enum: ['none', 'single', 'multi']
+    },
+    emptyText: {
+      type: 'string'
+    }
+  },
+  additionalProperties: false
+};
+
+UI_SCHEMAS['chart-spec-v1'] = {
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  $id: 'https://rnd-pro.github.io/symbiote-ui/schemas/chart-spec-v1.json',
+  title: 'ChartSpecV1',
+  type: 'object',
+  properties: {
+    title: { type: 'string' },
+    type: { type: 'string', enum: ['bar', 'line', 'area', 'scatter', 'pie', 'mixed'] },
+    xAxis: {
+      type: 'object',
+      properties: {
+        type: { type: 'string', enum: ['category', 'value'] },
+        data: { type: 'array', items: { type: 'string' } }
+      }
+    },
+    yAxis: {
+      type: 'object',
+      properties: {
+        type: { type: 'string', enum: ['value'] },
+        min: { type: 'number' },
+        max: { type: 'number' },
+        label: { type: 'string' }
+      }
+    },
+    series: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          name: { type: 'string' },
+          type: { type: 'string', enum: ['bar', 'line', 'area', 'scatter', 'pie'] },
+          data: { type: 'array', items: { type: 'number' } },
+          color: { type: 'string' }
+        },
+        required: ['name', 'data']
+      }
+    },
+    thresholds: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          value: { type: 'number' },
+          label: { type: 'string' },
+          color: { type: 'string' }
+        },
+        required: ['value']
+      }
+    },
+    legend: {
+      type: 'object',
+      properties: {
+        show: { type: 'boolean' },
+        position: { type: 'string', enum: ['top', 'bottom'] }
+      }
+    },
+    tooltip: {
+      type: 'object',
+      properties: {
+        show: { type: 'boolean' }
+      }
+    }
+  },
+  required: ['series'],
+  additionalProperties: false
+};
+
+UI_SCHEMAS['source-diff-v1'] = {
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  $id: 'https://rnd-pro.github.io/symbiote-ui/schemas/source-diff-v1.json',
+  title: 'SourceDiffV1',
+  type: 'object',
+  properties: {
+    path: { type: 'string' },
+    originalPath: { type: ['string', 'null'] },
+    modifiedPath: { type: ['string', 'null'] },
+    hunks: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          header: { type: 'string' },
+          lines: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                type: { type: 'string', enum: ['addition', 'deletion', 'normal'] },
+                originalLineNumber: { type: ['integer', 'null'] },
+                modifiedLineNumber: { type: ['integer', 'null'] },
+                content: { type: 'string' },
+                diagnostics: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      severity: { type: 'string', enum: ['error', 'warning', 'info', 'hint'] },
+                      message: { type: 'string' },
+                      code: { type: 'string' }
+                    },
+                    required: ['severity', 'message'],
+                    additionalProperties: false
+                  }
+                }
+              },
+              required: ['type', 'content']
+            }
+          }
+        },
+        required: ['header', 'lines']
+      }
+    }
+  },
+  required: ['path', 'hunks'],
+  additionalProperties: false
 };
 
 export function listUiSchemaVersions() {

@@ -151,7 +151,7 @@ export let THEME_ELEMENT_GROUPS = [
   {
     name: 'code-surface',
     description: 'Read-only and editable source/code surfaces.',
-    tokens: ['--sn-source-bg', '--sn-source-header-bg', '--sn-source-border', '--sn-source-editor-bg', '--sn-source-editor-color', '--sn-syntax-keyword', '--sn-syntax-string', '--sn-syntax-comment', '--sn-diagnostic-error-bg', '--sn-diagnostic-warning-bg'],
+    tokens: ['--sn-source-bg', '--sn-source-header-bg', '--sn-source-border', '--sn-source-toolbar-gap', '--sn-source-stats-max-inline-size', '--sn-source-toggle-label-max-inline-size', '--sn-source-editor-bg', '--sn-source-editor-color', '--sn-syntax-keyword', '--sn-syntax-string', '--sn-syntax-comment', '--sn-diagnostic-error-bg', '--sn-diagnostic-warning-bg'],
     usedBy: ['source-viewer', 'source-editor'],
   },
   {

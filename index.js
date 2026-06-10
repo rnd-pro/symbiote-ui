@@ -69,9 +69,13 @@ export { Readonly } from './plugins/Readonly.js';
 export { History } from './plugins/History.js';
 export { computeAutoLayout, computeTreeLayout } from './canvas/AutoLayout.js';
 export {
+  addNodesToGroup,
   createCanvasGraphStore,
+  groupNodes,
   normalizeCanvasGraphGroups,
   normalizeCanvasGraphModel,
+  removeNodesFromGroup,
+  ungroupNodes,
 } from './canvas/graph-model.js';
 export {
   computeInitialGraphPositions,

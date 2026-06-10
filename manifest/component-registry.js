@@ -341,8 +341,10 @@ const WEBMCP_TOOLS = {
           minBlockSize: { type: 'number', minimum: 0 },
           collapse: { enum: ['auto', 'manual', 'never'] },
           overflow: { enum: ['collapse', 'scroll-inline', 'scroll-block', 'scroll'] },
-          responsiveMode: { enum: ['preserve', 'stack', 'scroll-inline'] },
+          responsiveMode: { enum: ['preserve', 'stack', 'scroll-inline', 'drawer', 'swipe'] },
           responsiveBreakpoint: { type: 'number', minimum: 0 },
+          mobileDock: { enum: ['auto', 'primary', 'start', 'end'] },
+          swipeControl: { enum: ['edge', 'island', 'none'] },
         },
       },
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, runtimeMethod: 'setLayoutBehavior' },
@@ -1155,6 +1157,7 @@ const UI_NAMED_EXPORTS = new Set([
   'CodeBlock',
   'SourceViewer',
   'SourceEditor',
+  'SourceDiff',
   'LoadingOverlay',
   'OutputListPreview',
   'OutputGraphPreview',
@@ -1233,6 +1236,23 @@ const UI_NAMED_EXPORTS = new Set([
   'TimelineItem',
   'Avatar',
   'Tag',
+  'DatePicker',
+  'ColorPicker',
+  'FileUpload',
+  'Transfer',
+  'Mentions',
+  'TagsInput',
+  'PinInput',
+  'SplitPanel',
+  'ScrollArea',
+  'FloatingPanel',
+  'AspectRatio',
+  'Chart',
+  'RichTextEditor',
+  'Tour',
+  'Carousel',
+  'QrCode',
+  'VideoPlayer',
 ]);
 
 const COMPONENT_VISIBILITY = {
@@ -2251,6 +2271,672 @@ const BATCH_EXPANSION_COMPONENTS = [
 
 export let COMPONENTS = [
   {
+    tagName: 'sn-date-picker',
+    className: 'DatePicker',
+    module: 'control/DatePicker/DatePicker.js',
+    category: 'control',
+    description: 'Advanced date and calendar selection control.',
+    agent: {
+      semanticRole: 'date selection control',
+      usage: 'Use to pick a single calendar date.',
+      dataOwnership: 'component-owned selected date string',
+    },
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['date-picker', 'calendar'],
+      attributes: [
+        { name: 'value', type: 'string', description: 'Selected date string (YYYY-MM-DD).' },
+        { name: 'disabled', type: 'boolean', description: 'Disables user interaction.' },
+        { name: 'placeholder', type: 'string', description: 'Prompt text when empty.' },
+        { name: 'name', type: 'string', description: 'Form input field identifier.' }
+      ],
+      events: [
+        { name: 'change', description: 'Emits when selection changes.', detail: [{ name: 'value', type: 'string' }] },
+        { name: 'sn-control-change', description: 'Bubbles change detail to forms.', detail: [{ name: 'value', type: 'string' }] }
+      ],
+      themeAliases: [
+        '--sn-bg',
+        '--sn-field-control-bg',
+        '--sn-field-control-border',
+        '--sn-field-control-focus-border',
+        '--sn-field-control-radius',
+        '--sn-font',
+        '--sn-node-hover',
+        '--sn-node-selected',
+        '--sn-outline-color-soft',
+        '--sn-panel-bg',
+        '--sn-panel-radius',
+        '--sn-panel-shadow',
+        '--sn-text',
+        '--sn-text-dim',
+        '--sn-theme-density',
+        '--sn-theme-type-scale'
+      ]
+    }
+  },
+  {
+    tagName: 'sn-color-picker',
+    className: 'ColorPicker',
+    module: 'control/ColorPicker/ColorPicker.js',
+    category: 'control',
+    description: 'Canvas-based color and preset swatch picker control.',
+    agent: {
+      semanticRole: 'color selection control',
+      usage: 'Use to select color values.',
+      dataOwnership: 'component-owned hex color value',
+    },
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['color-picker', 'swatch'],
+      attributes: [
+        { name: 'value', type: 'string', description: 'Hex color value (e.g. #ffffff).' },
+        { name: 'disabled', type: 'boolean', description: 'Disables color changes.' },
+        { name: 'name', type: 'string', description: 'Form input identifier.' }
+      ],
+      events: [
+        { name: 'change', description: 'Emits when color changes.', detail: [{ name: 'value', type: 'string' }] },
+        { name: 'sn-control-change', description: 'Bubbles color detail to forms.', detail: [{ name: 'value', type: 'string' }] }
+      ],
+      themeAliases: [
+        '--sn-bg',
+        '--sn-field-control-bg',
+        '--sn-field-control-border',
+        '--sn-field-control-focus-border',
+        '--sn-field-control-radius',
+        '--sn-font',
+        '--sn-node-selected',
+        '--sn-outline-color-soft',
+        '--sn-panel-bg',
+        '--sn-panel-radius',
+        '--sn-panel-shadow',
+        '--sn-text',
+        '--sn-theme-density',
+        '--sn-theme-type-scale'
+      ]
+    }
+  },
+  {
+    tagName: 'sn-file-upload',
+    className: 'FileUpload',
+    module: 'control/FileUpload/FileUpload.js',
+    category: 'control',
+    description: 'Drag & drop file selection and listing control.',
+    agent: {
+      semanticRole: 'file upload control',
+      usage: 'Use to select and list local files.',
+      dataOwnership: 'component-owned file reference array',
+    },
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['file-upload', 'dropzone'],
+      attributes: [
+        { name: 'disabled', type: 'boolean', description: 'Disables file selection.' },
+        { name: 'multiple', type: 'boolean', description: 'Allows picking multiple files.' },
+        { name: 'accept', type: 'string', description: 'Accepted mime types or extensions.' },
+        { name: 'max-size', type: 'number', description: 'Maximum allowed file size in bytes.' },
+        { name: 'placeholder', type: 'string', description: 'Dropzone visual text.' }
+      ],
+      events: [
+        { name: 'sn-file-select', description: 'Emits when files are added.', detail: [{ name: 'files', type: 'array' }] },
+        { name: 'sn-file-remove', description: 'Emits when a file is removed.', detail: [{ name: 'file', type: 'object' }] },
+        { name: 'sn-file-error', description: 'Emits when a file fails type or size validation.', detail: [{ name: 'file', type: 'object' }, { name: 'error', type: 'string' }] }
+      ],
+      themeAliases: [
+        '--sn-bg',
+        '--sn-field-control-bg',
+        '--sn-font',
+        '--sn-node-hover',
+        '--sn-node-selected',
+        '--sn-outline-color-soft',
+        '--sn-panel-bg',
+        '--sn-panel-radius',
+        '--sn-status-error',
+        '--sn-text',
+        '--sn-text-dim',
+        '--sn-theme-density',
+        '--sn-theme-type-scale',
+        '--sn-transition-fast'
+      ]
+    }
+  },
+  {
+    tagName: 'sn-transfer',
+    className: 'Transfer',
+    module: 'control/Transfer/Transfer.js',
+    category: 'control',
+    description: 'Double panel list selection shuttle transfer control.',
+    agent: {
+      semanticRole: 'list transfer shuttle control',
+      usage: 'Use to shuttle selected options between source and target lists.',
+      dataOwnership: 'component-owned list items selection',
+    },
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['transfer', 'shuttle-list'],
+      attributes: [
+        { name: 'disabled', type: 'boolean', description: 'Disables option shuttle.' },
+        { name: 'value', type: 'string', description: 'Comma-separated target list values.' },
+        { name: 'source-title', type: 'string', description: 'Label for source panel.' },
+        { name: 'target-title', type: 'string', description: 'Label for target panel.' }
+      ],
+      events: [
+        { name: 'change', description: 'Emits when transfer completes.', detail: [{ name: 'value', type: 'string' }] },
+        { name: 'sn-control-change', description: 'Bubbles updated selection to forms.', detail: [{ name: 'value', type: 'string' }] }
+      ],
+      themeAliases: [
+        '--sn-bg',
+        '--sn-field-control-bg',
+        '--sn-field-control-border',
+        '--sn-font',
+        '--sn-node-hover',
+        '--sn-node-selected',
+        '--sn-outline-color-soft',
+        '--sn-panel-bg',
+        '--sn-panel-radius',
+        '--sn-text',
+        '--sn-theme-density',
+        '--sn-theme-type-scale'
+      ]
+    }
+  },
+  {
+    tagName: 'sn-mentions',
+    className: 'Mentions',
+    module: 'control/Mentions/Mentions.js',
+    category: 'control',
+    description: 'Input suggestion autocompleter for tag character mentions.',
+    agent: {
+      semanticRole: 'suggestion mentioning wrapper',
+      usage: 'Use to autocomplete tags or user mentions on typing trigger character.',
+      dataOwnership: 'autocompleter configuration options',
+    },
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['mentions', 'autocomplete'],
+      attributes: [
+        { name: 'trigger-char', type: 'string', description: 'Character trigger prefix (default @).' }
+      ],
+      events: [
+        { name: 'sn-mention-select', description: 'Emits when a mention option is selected.', detail: [{ name: 'value', type: 'string' }] }
+      ],
+      themeAliases: [
+        '--sn-font',
+        '--sn-node-hover',
+        '--sn-outline-color-soft',
+        '--sn-panel-bg',
+        '--sn-panel-radius',
+        '--sn-panel-shadow',
+        '--sn-text',
+        '--sn-theme-density',
+        '--sn-theme-type-scale'
+      ]
+    }
+  },
+  {
+    tagName: 'sn-tags-input',
+    className: 'TagsInput',
+    module: 'control/TagsInput/TagsInput.js',
+    category: 'control',
+    description: 'Interactive chip editing tags list input control.',
+    agent: {
+      semanticRole: 'tags chip array input',
+      usage: 'Use to enter and manage arrays of tag strings.',
+      dataOwnership: 'component-owned tags array values',
+    },
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['tags-input', 'chips-array'],
+      attributes: [
+        { name: 'disabled', type: 'boolean', description: 'Disables editing.' },
+        { name: 'value', type: 'string', description: 'Comma-separated tags list.' },
+        { name: 'placeholder', type: 'string', description: 'Field prompt text.' }
+      ],
+      events: [
+        { name: 'change', description: 'Emits on tag list change.', detail: [{ name: 'value', type: 'string' }] },
+        { name: 'sn-control-change', description: 'Bubbles updated tag list to forms.', detail: [{ name: 'value', type: 'string' }] }
+      ],
+      themeAliases: [
+        '--sn-bg',
+        '--sn-field-control-bg',
+        '--sn-field-control-border',
+        '--sn-field-control-focus-border',
+        '--sn-field-control-radius',
+        '--sn-font',
+        '--sn-node-selected',
+        '--sn-outline-color-soft',
+        '--sn-panel-bg',
+        '--sn-panel-radius',
+        '--sn-status-error',
+        '--sn-text',
+        '--sn-text-dim',
+        '--sn-theme-density',
+        '--sn-theme-type-scale',
+        '--sn-transition-fast'
+      ]
+    }
+  },
+  {
+    tagName: 'sn-pin-input',
+    className: 'PinInput',
+    module: 'control/PinInput/PinInput.js',
+    category: 'control',
+    description: 'Segmented PIN/OTP passcode validation cell inputs.',
+    agent: {
+      semanticRole: 'passcode OTP inputs row',
+      usage: 'Use to validate multi-digit verification codes.',
+      dataOwnership: 'component-owned code string value',
+    },
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['pin-input', 'passcode-verification'],
+      attributes: [
+        { name: 'disabled', type: 'boolean', description: 'Disables code cell inputs.' },
+        { name: 'value', type: 'string', description: 'Passcode value.' },
+        { name: 'length', type: 'number', description: 'Number of digit cells.' },
+        { name: 'mask', type: 'boolean', description: 'Masks typed code values.' }
+      ],
+      events: [
+        { name: 'change', description: 'Emits on code edits.', detail: [{ name: 'value', type: 'string' }] },
+        { name: 'sn-pin-complete', description: 'Emits when all digit cells are filled.', detail: [{ name: 'value', type: 'string' }] }
+      ],
+      themeAliases: [
+        '--sn-bg',
+        '--sn-field-control-bg',
+        '--sn-field-control-border',
+        '--sn-field-control-focus-border',
+        '--sn-field-control-radius',
+        '--sn-font',
+        '--sn-node-selected',
+        '--sn-outline-color-soft',
+        '--sn-panel-radius',
+        '--sn-text',
+        '--sn-text-dim',
+        '--sn-theme-density',
+        '--sn-theme-type-scale',
+        '--sn-transition-fast'
+      ]
+    }
+  },
+  {
+    tagName: 'sn-split-panel',
+    className: 'SplitPanel',
+    module: 'layout/SplitPanel/SplitPanel.js',
+    category: 'layout',
+    description: 'Binary space partition resizable panel container.',
+    agent: {
+      semanticRole: 'resizable panels divider layout',
+      usage: 'Use to display side-by-side or stacked resizable panes.',
+      dataOwnership: 'layout partition split percentage',
+    },
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['split-panel', 'resizable-partition'],
+      attributes: [
+        { name: 'orientation', type: 'string', description: 'Split direction: horizontal or vertical.' },
+        { name: 'value', type: 'number', description: 'Percentage split position.' },
+        { name: 'disabled', type: 'boolean', description: 'Disables resizing handle.' }
+      ],
+      events: [
+        { name: 'sn-split-resize', description: 'Emits on partition resize actions.', detail: [{ name: 'value', type: 'number' }] }
+      ],
+      themeAliases: [
+        '--sn-font',
+        '--sn-node-selected',
+        '--sn-outline-color-soft',
+        '--sn-transition-fast'
+      ]
+    }
+  },
+  {
+    tagName: 'sn-scroll-area',
+    className: 'ScrollArea',
+    module: 'layout/ScrollArea/ScrollArea.js',
+    category: 'layout',
+    description: 'Custom scrollbar container viewport.',
+    agent: {
+      semanticRole: 'custom scroll viewport',
+      usage: 'Use to wrap overflowing content in custom scrollbar layouts.',
+      dataOwnership: 'scroll position offset coordinates',
+    },
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['scroll-area', 'custom-scrollbar'],
+      properties: [
+        { name: 'scrollTop', type: 'number', description: 'Vertical scroll offset of the viewport.' },
+        { name: 'scrollLeft', type: 'number', description: 'Horizontal scroll offset of the viewport.' }
+      ],
+      methods: [
+        { name: 'scrollToPosition', type: 'function', description: 'Sets viewport scroll offsets without owning content.' }
+      ],
+      events: [
+        { name: 'sn-scroll-area-scroll', description: 'Emits normalized viewport scroll metrics.', detail: [{ name: 'scrollTop', type: 'number' }, { name: 'scrollLeft', type: 'number' }] }
+      ],
+      themeAliases: [
+        '--sn-font',
+        '--sn-node-selected',
+        '--sn-scrollbar-thumb',
+        '--sn-text-dim',
+        '--sn-transition-fast'
+      ]
+    }
+  },
+  {
+    tagName: 'sn-floating-panel',
+    className: 'FloatingPanel',
+    module: 'layout/FloatingPanel/FloatingPanel.js',
+    category: 'layout',
+    description: 'Draggable movable floating panel overlay window.',
+    agent: {
+      semanticRole: 'draggable window shell',
+      usage: 'Use to host modal layouts that float over other elements.',
+      dataOwnership: 'window position and minimized states',
+    },
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['floating-panel', 'draggable-pane'],
+      attributes: [
+        { name: 'label', type: 'string', description: 'Window header title.' },
+        { name: 'x', type: 'number', description: 'Left position offset.' },
+        { name: 'y', type: 'number', description: 'Top position offset.' },
+        { name: 'width', type: 'number', description: 'Window width.' },
+        { name: 'height', type: 'number', description: 'Window height.' },
+        { name: 'minimized', type: 'boolean', description: 'Collapses content area.' },
+        { name: 'maximized', type: 'boolean', description: 'Expands window to fill viewport.' }
+      ],
+      events: [
+        { name: 'sn-floating-close', description: 'Emits when closed.' },
+        { name: 'sn-floating-minimize', description: 'Emits on minimization.', detail: [{ name: 'minimized', type: 'boolean' }] },
+        { name: 'sn-floating-maximize', description: 'Emits on maximization.', detail: [{ name: 'maximized', type: 'boolean' }] }
+      ],
+      themeAliases: [
+        '--sn-font',
+        '--sn-node-hover',
+        '--sn-outline-color-soft',
+        '--sn-panel-bg',
+        '--sn-panel-radius',
+        '--sn-panel-shadow',
+        '--sn-status-error',
+        '--sn-text',
+        '--sn-text-dim',
+        '--sn-theme-type-scale'
+      ]
+    }
+  },
+  {
+    tagName: 'sn-aspect-ratio',
+    className: 'AspectRatio',
+    module: 'layout/AspectRatio/AspectRatio.js',
+    category: 'layout',
+    description: 'Container enforcing fixed aspect ratio constraints on child media content.',
+    agent: {
+      semanticRole: 'aspect ratio constraint container',
+      usage: 'Use to embed images/videos with fixed ratios.',
+      dataOwnership: 'target ratio configuration string',
+    },
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['aspect-ratio', 'media-layout'],
+      attributes: [
+        { name: 'ratio', type: 'string', description: 'Aspect ratio string (e.g. 16/9, 1/1).' }
+      ],
+      events: []
+    }
+  },
+  {
+    tagName: 'sn-chart',
+    className: 'Chart',
+    module: 'display/Chart/Chart.js',
+    category: 'display',
+    description: 'Lightweight SVG line and bar chart data visualizer.',
+    agent: {
+      semanticRole: 'svg data visualization chart',
+      usage: 'Use to plot numbers in bar or line formats.',
+      dataOwnership: 'visualized datalist array',
+    },
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/chart-spec-v1.json',
+      capabilities: ['chart', 'data-viz'],
+      attributes: [
+        { name: 'title', type: 'string', description: 'Chart header title.' },
+        { name: 'type', type: 'string', description: 'Chart plot style: bar or line.' }
+      ],
+      methods: [
+        { name: 'setData', type: 'function', description: 'Sets local chart data from numbers or label/value objects.' },
+        { name: 'setSpec', type: 'function', description: 'Sets normalized Chart Spec V1 configuration.' },
+        { name: 'getSpec', type: 'function', description: 'Gets active Chart Spec V1 configuration.' }
+      ],
+      events: [
+        { name: 'sn-chart-zoom', description: 'Fired when selection zoom is applied.' },
+        { name: 'sn-chart-brush', description: 'Fired when selection brush is applied.' },
+        { name: 'sn-chart-zoom-reset', description: 'Fired when zoom is reset.' }
+      ],
+      themeAliases: [
+        '--sn-font',
+        '--sn-node-selected',
+        '--sn-outline-color-soft',
+        '--sn-panel-bg',
+        '--sn-panel-radius',
+        '--sn-shadow-md',
+        '--sn-tabs-accent',
+        '--sn-text',
+        '--sn-text-dim',
+        '--sn-theme-type-scale',
+        '--sn-tooltip-bg',
+        '--sn-tooltip-color',
+        '--sn-transition-fast'
+      ]
+    }
+  },
+  {
+    tagName: 'sn-rich-text-editor',
+    className: 'RichTextEditor',
+    module: 'control/RichTextEditor/RichTextEditor.js',
+    category: 'control',
+    description: 'Light rich text document editor format surface.',
+    agent: {
+      semanticRole: 'rich text content editor',
+      usage: 'Use to format and edit html string content.',
+      dataOwnership: 'component-owned html value',
+    },
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['rich-text', 'editor-surface'],
+      attributes: [
+        { name: 'value', type: 'string', description: 'HTML document string value.' },
+        { name: 'disabled', type: 'boolean', description: 'Disables content editing.' },
+        { name: 'unsafe', type: 'boolean', description: 'Bypasses HTML sanitization for trusted content.' }
+      ],
+      events: [
+        { name: 'change', description: 'Emits on text edits.', detail: [{ name: 'value', type: 'string' }] },
+        { name: 'sn-control-change', description: 'Bubbles updated HTML value.', detail: [{ name: 'value', type: 'string' }] }
+      ],
+      themeAliases: [
+        '--sn-bg',
+        '--sn-field-control-bg',
+        '--sn-field-control-border',
+        '--sn-font',
+        '--sn-node-hover',
+        '--sn-node-selected',
+        '--sn-outline-color-soft',
+        '--sn-panel-bg',
+        '--sn-panel-radius',
+        '--sn-text',
+        '--sn-text-dim',
+        '--sn-theme-type-scale'
+      ]
+    }
+  },
+  {
+    tagName: 'sn-tour',
+    className: 'Tour',
+    module: 'display/Tour/Tour.js',
+    category: 'display',
+    description: 'Step-by-step interactive coachmark workflow walkthrough.',
+    agent: {
+      semanticRole: 'walkthrough tour overlay',
+      usage: 'Use to guide users through page elements.',
+      dataOwnership: 'tour steps metadata',
+    },
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['tour', 'walkthrough'],
+      attributes: [
+        { name: 'active-step', type: 'number', description: 'Active step sequence index.' }
+      ],
+      events: [
+        { name: 'sn-tour-change', description: 'Emits on step navigation.', detail: [{ name: 'step', type: 'number' }] },
+        { name: 'sn-tour-complete', description: 'Emits when finished.' },
+        { name: 'sn-tour-close', description: 'Emits when closed.' }
+      ],
+      themeAliases: [
+        '--sn-font',
+        '--sn-node-hover',
+        '--sn-node-selected',
+        '--sn-outline-color-soft',
+        '--sn-panel-bg',
+        '--sn-panel-radius',
+        '--sn-panel-shadow',
+        '--sn-text',
+        '--sn-text-dim',
+        '--sn-theme-type-scale'
+      ]
+    }
+  },
+  {
+    tagName: 'sn-carousel',
+    className: 'Carousel',
+    module: 'display/Carousel/Carousel.js',
+    category: 'display',
+    description: 'Horizontal slide-based media carousel gallery.',
+    agent: {
+      semanticRole: 'slotted media carousel slider',
+      usage: 'Use to scroll through slide panels.',
+      dataOwnership: 'current scroll slide index',
+    },
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['carousel', 'gallery'],
+      attributes: [
+        { name: 'active-index', type: 'number', description: 'Visible slide index.' }
+      ],
+      events: [
+        { name: 'sn-carousel-change', description: 'Emits when slide transitions.', detail: [{ name: 'index', type: 'number' }] }
+      ],
+      themeAliases: [
+        '--sn-font',
+        '--sn-node-hover',
+        '--sn-node-selected',
+        '--sn-outline-color-soft',
+        '--sn-panel-bg',
+        '--sn-text',
+        '--sn-text-dim',
+        '--sn-transition-fast'
+      ]
+    }
+  },
+  {
+    tagName: 'sn-qr-code',
+    className: 'QrCode',
+    module: 'display/QrCode/QrCode.js',
+    category: 'display',
+    description: 'Scalable SVG-based QR code matrix renderer.',
+    agent: {
+      semanticRole: 'qr code matrix renderer',
+      usage: 'Use to display scannable values.',
+      dataOwnership: 'rendered value string',
+    },
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['qr-code', 'barcode'],
+      attributes: [
+        { name: 'value', type: 'string', description: 'Scannable data value.' }
+      ],
+      events: [
+        { name: 'sn-qr-error', description: 'Emits when the value is too long for the built-in encoder.', detail: [{ name: 'value', type: 'string' }, { name: 'error', type: 'string' }] }
+      ],
+      themeAliases: [
+        '--sn-font',
+        '--sn-outline-color-soft',
+        '--sn-panel-bg',
+        '--sn-panel-radius',
+        '--sn-qr-background',
+        '--sn-qr-module-color',
+        '--sn-text-dim'
+      ]
+    }
+  },
+  {
+    tagName: 'sn-video-player',
+    className: 'VideoPlayer',
+    module: 'display/VideoPlayer/VideoPlayer.js',
+    category: 'display',
+    description: 'Custom styled control wrapper overlay for media video playback.',
+    agent: {
+      semanticRole: 'custom styled video controls player',
+      usage: 'Use to play video media streams with customized controls.',
+      dataOwnership: 'video player attributes state',
+    },
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['video-player', 'media-playback'],
+      attributes: [
+        { name: 'src', type: 'string', description: 'Video source URL.' },
+        { name: 'autoplay', type: 'boolean', description: 'Autoplays video on load.' },
+        { name: 'loop', type: 'boolean', description: 'Loops playback.' },
+        { name: 'muted', type: 'boolean', description: 'Mutes volume on load.' }
+      ],
+      events: [],
+      themeAliases: [
+        '--sn-bg',
+        '--sn-font',
+        '--sn-node-selected',
+        '--sn-panel-radius',
+        '--sn-transition-fast',
+        '--sn-transition-normal',
+        '--sn-video-bg',
+        '--sn-video-btn-color',
+        '--sn-video-controls-bg',
+        '--sn-video-text',
+        '--sn-video-thumb',
+        '--sn-video-track'
+      ]
+    }
+  },
+  {
     tagName: 'cascade-theme-widget',
     className: 'CascadeThemeWidget',
     module: 'themes/CascadeThemeWidget/CascadeThemeWidget.js',
@@ -2566,6 +3252,13 @@ export let COMPONENTS = [
         { name: 'subgraph-enter', description: 'Emits when canvas enters a subgraph.', detail: [{ name: 'path', type: 'array' }] },
         { name: 'subgraph-exit', description: 'Emits when canvas exits a subgraph.', detail: [{ name: 'path', type: 'array' }] },
         { name: 'manualviewport', description: 'Emits after user-driven viewport changes.' },
+        { name: 'sn-selection-change', description: 'Emits when marquee or multi-selection changes.' },
+        { name: 'sn-connection-reconnect', description: 'Emits when connection reconnection is initiated.' },
+        { name: 'sn-clipboard-copy', description: 'Emits clipboard copy intent.' },
+        { name: 'sn-clipboard-cut', description: 'Emits clipboard cut intent.' },
+        { name: 'sn-clipboard-paste', description: 'Emits clipboard paste intent.' },
+        { name: 'sn-undo', description: 'Emits undo intent.' },
+        { name: 'sn-redo', description: 'Emits redo intent.' },
       ],
       themeAliases: [
         '--sn-bg',
@@ -2573,8 +3266,11 @@ export let COMPONENTS = [
         '--sn-grid-size',
         '--sn-conn-color',
         '--sn-conn-selected',
+        '--sn-accent-color',
+        '--sn-conn-label-color',
         '--sn-node-bg',
         '--sn-node-border',
+        '--sn-text-muted',
       ],
     },
   },
@@ -2583,12 +3279,18 @@ export let COMPONENTS = [
     className: 'CanvasGraph',
     module: 'canvas/CanvasGraph/CanvasGraph.js',
     category: 'canvas',
-    description: 'Generic hierarchical graph overview/read renderer with force layout, semantic navigation, and selection events.',
+    description: 'Generic hierarchical graph overview/read renderer with force layout, semantic navigation, selection events, and optional device-orientation parallax.',
     contract: {
       status: 'draft',
       schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/graph-model-v1.json',
-      capabilities: ['hierarchical-graph', 'overview-read-renderer', 'force-layout', 'semantic-clusters', 'focus-selection', 'layout-snapshot'],
+      capabilities: ['hierarchical-graph', 'overview-read-renderer', 'force-layout', 'semantic-clusters', 'focus-selection', 'layout-snapshot', 'device-orientation-parallax'],
+      attributes: [
+        { name: 'device-orientation-parallax', type: 'boolean', description: 'Requests device-orientation parallax on the first user gesture.' },
+        { name: 'device-orientation-parallax-strength', type: 'number', description: 'Maximum parallax offset in CSS pixels.' },
+        { name: 'device-orientation-parallax-max-tilt', type: 'number', description: 'Tilt angle that maps to full parallax strength.' },
+        { name: 'device-orientation-parallax-absolute', type: 'boolean', description: 'Requests absolute orientation permission when available.' },
+      ],
       properties: [
         { name: 'graphDB', type: 'object', description: 'Normalized graph store created from graph-model-v1 data.' },
         { name: 'currentGroupId', type: 'string', description: 'Current drilled group id, or empty at root.' },
@@ -2606,6 +3308,9 @@ export let COMPONENTS = [
         { name: 'resetView', type: 'function', description: 'Resets viewport pan and zoom.' },
         { name: 'setLayoutSnapshot', type: 'function', description: 'Restores persisted graph node positions and viewport state.' },
         { name: 'getLayoutSnapshot', type: 'function', description: 'Returns serializable node positions and viewport state.' },
+        { name: 'getDeviceOrientationParallaxStatus', type: 'function', description: 'Returns current device-orientation parallax support, permission, and enabled state.' },
+        { name: 'enableDeviceOrientationParallax', type: 'function', description: 'Enables device-orientation parallax as a progressive enhancement after user activation.' },
+        { name: 'disableDeviceOrientationParallax', type: 'function', description: 'Disables device-orientation parallax and removes sensor listeners.' },
         { name: 'suspendLayout', type: 'function', description: 'Marks the graph as layout-suspended so internal layout moves do not trigger destructive teardown.' },
         { name: 'resumeLayout', type: 'function', description: 'Resumes graph drawing and theme sync after layout suspension.' },
       ],
@@ -2617,6 +3322,7 @@ export let COMPONENTS = [
         { name: 'layout-tick', description: 'Emits during force layout updates.' },
         { name: 'layout-done', description: 'Emits when force layout settles.' },
         { name: 'layout-snapshot', description: 'Emits a serializable layout snapshot after user layout changes.' },
+        { name: 'orientation-parallax-status', description: 'Emits device-orientation parallax support, permission, and enabled state.' },
         { name: 'toolbar-action', description: 'Emits selected toolbar action for the active node.' },
       ],
       themeAliases: [
@@ -2742,23 +3448,29 @@ export let COMPONENTS = [
       status: 'draft',
       schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
-      capabilities: ['layout-tree', 'split-panels', 'panel-registry', 'panel-menu-actions', 'ui-invoked-panels', 'responsive-behavior', 'importance-auto-collapse', 'min-size-fit', 'scroll-fallback', 'mobile-stack', 'local-storage'],
+      capabilities: ['layout-tree', 'split-panels', 'panel-registry', 'panel-menu-actions', 'ui-invoked-panels', 'responsive-behavior', 'importance-auto-collapse', 'min-size-fit', 'scroll-fallback', 'mobile-stack', 'mobile-drawer', 'mobile-swipe-mode', 'multi-drawer-handles', 'swipe-island-control', 'local-storage'],
       attributes: [
         { name: 'storage-key', type: 'string', description: 'Optional key for persisted layout state.' },
         { name: 'min-panel-size', type: 'number', description: 'Minimum panel size in pixels.' },
         { name: 'min-panel-inline-size', type: 'number', description: 'Default minimum inline size before auto-collapse.' },
         { name: 'min-panel-block-size', type: 'number', description: 'Default minimum block size before auto-collapse.' },
-        { name: 'responsive-mode', type: 'string', description: 'Responsive mode: preserve, stack, or scroll-inline.' },
+        { name: 'responsive-mode', type: 'string', description: 'Responsive mode: preserve, stack, scroll-inline, drawer, or swipe.' },
         { name: 'responsive-breakpoint', type: 'number', description: 'Inline size where responsive mode activates.' },
+        { name: 'swipe-control', type: 'string', description: 'Default mobile swipe control: edge, island, or none.' },
         { name: 'overflow-mode', type: 'string', description: 'Overflow fallback: collapse, scroll-inline, scroll-block, or scroll.' },
         { name: 'scroll-inline-active', type: 'boolean', description: 'Read-only runtime marker set when resolved behavior requires inline-axis scrolling.' },
         { name: 'scroll-block-active', type: 'boolean', description: 'Read-only runtime marker set when resolved behavior requires block-axis scrolling.' },
+        { name: 'drawer-mode-active', type: 'boolean', description: 'Read-only runtime marker set when drawer responsive projection is active.' },
+        { name: 'drawer-start-open', type: 'boolean', description: 'Read-only runtime marker set when the start drawer is open.' },
+        { name: 'drawer-end-open', type: 'boolean', description: 'Read-only runtime marker set when the end drawer is open.' },
+        { name: 'drawer-start-panel-id', type: 'string', description: 'Read-only runtime marker for the active start drawer panel id when multiple start panels exist.' },
+        { name: 'drawer-end-panel-id', type: 'string', description: 'Read-only runtime marker for the active end drawer panel id when multiple end panels exist.' },
         { name: 'auto-collapse', type: 'boolean', description: 'Whether panels may auto-collapse when space is insufficient.' },
       ],
       properties: [
         { name: 'layoutTree', type: 'object', description: 'Pure layout tree data rendered by layout-node children.' },
-        { name: 'layoutBehavior', type: 'object', description: 'Host-applied root responsive behavior controlling auto-collapse, overflow fallback, and mobile mode; not persisted into saved layout trees.' },
-        { name: 'panelTypes', type: 'object', description: 'Host-provided panel type descriptors keyed by panel type.' },
+        { name: 'layoutBehavior', type: 'object', description: 'Host-applied root responsive behavior controlling auto-collapse, overflow fallback, mobile drawer/swipe mode, default mobileDock, and default swipeControl; not persisted into saved layout trees.' },
+        { name: 'panelTypes', type: 'object', description: 'Host-provided panel type descriptors keyed by panel type; descriptor behavior may include mobileDock: auto, primary, start, or end and swipeControl: edge, island, or none.' },
         { name: 'panelChrome', type: 'boolean', description: 'Whether panel headers and explicit panel menu controls are visible.' },
       ],
       methods: [
@@ -2767,8 +3479,11 @@ export let COMPONENTS = [
         { name: 'openPanel', type: 'function', description: 'Opens or reuses a host-approved panel type inside the current layout tree.' },
         { name: 'closeUiPanel', type: 'function', description: 'Closes a UI-invoked temporary panel by marking it closed/collapsed without removing its layout node.' },
         { name: 'removeUiPanel', type: 'function', description: 'Physically removes a UI-invoked temporary panel; the last temporary panel may restore the captured host layout.' },
-        { name: 'setLayoutBehavior', type: 'function', description: 'Sets host-applied root responsive behavior for auto-collapse, overflow, and mobile stacking.' },
+        { name: 'setLayoutBehavior', type: 'function', description: 'Sets host-applied root responsive behavior for auto-collapse, overflow, mobile stacking, and drawer projection.' },
         { name: 'setNodeBehavior', type: 'function', description: 'Sets persisted behavior for a concrete layout insertion point.' },
+        { name: 'openDrawer', type: 'function', description: 'Opens the start or end drawer, optionally selecting a concrete panel id when multiple panels share that drawer side.' },
+        { name: 'closeDrawer', type: 'function', description: 'Closes one or both mobile drawers without mutating the layout tree.' },
+        { name: 'toggleDrawer', type: 'function', description: 'Toggles the start or end mobile drawer, optionally selecting a concrete panel id when multiple panels share that drawer side.' },
       ],
       events: [
         { name: 'layout-change', description: 'Bubbles when the layout tree changes.' },
@@ -2793,6 +3508,15 @@ export let COMPONENTS = [
         '--sn-layout-overflow-inline-size',
         '--sn-layout-overflow-block-size',
         '--sn-layout-responsive-panel-min-block-size',
+        '--sn-layout-drawer-bg',
+        '--sn-layout-drawer-border',
+        '--sn-layout-drawer-shadow',
+        '--sn-layout-drawer-backdrop-bg',
+        '--sn-layout-drawer-handle-bg',
+        '--sn-layout-drawer-handle-color',
+        '--sn-layout-drawer-handle-shadow',
+        '--sn-layout-drawer-handle-shadow-start',
+        '--sn-layout-drawer-handle-shadow-end',
       ],
     },
   },
@@ -3224,6 +3948,8 @@ export let COMPONENTS = [
         '--sn-source-header-bg',
         '--sn-source-border',
         '--sn-source-toolbar-gap',
+        '--sn-source-stats-max-inline-size',
+        '--sn-source-toggle-label-max-inline-size',
         '--sn-source-action-icon-size',
         '--sn-syntax-keyword',
         '--sn-syntax-string',
@@ -4033,6 +4759,8 @@ export let COMPONENTS = [
         { name: 'chat-transcript-scroll-bottom', description: 'Emits after scroll-to-bottom is requested.' },
         { name: 'status-card-open', description: 'Requests opening a linked status card target.' },
         { name: 'message-copy', description: 'Reports copy result for message text.' },
+        { name: 'chat-approval', description: 'Emits when a human approval action is taken.' },
+        { name: 'chat-action', description: 'Emits when a custom action (retry, cancel, generic action) is triggered.' },
       ],
       slots: [
         { name: 'background', description: 'Optional background layer for effects such as cell-bg; host controls animation lifecycle.' },
@@ -4962,19 +5690,34 @@ export let COMPONENTS = [
     contract: {
       status: 'draft',
       schemaVersion: 'component-descriptor-v2',
-      dataSchema: 'schemas/runtime-ui-v1.json',
+      dataSchema: 'schemas/data-grid-v1.json',
       capabilities: ['data-table', 'column-schema', 'row-records', 'structured-cells', 'empty-state', 'themeable'],
+      attributes: [
+        { name: 'loading', type: 'boolean', description: 'Loading state.' },
+        { name: 'selected-row-id', type: 'string', description: 'Active selected row ID.' },
+        { name: 'selection-mode', type: 'string', description: 'Row selection mode: none, single, multi.' }
+      ],
       properties: [
         { name: 'emptyText', type: 'string', description: 'Empty state text.' },
         { name: 'isEmpty', type: 'boolean', description: 'Whether the table has no rendered rows or columns.' },
+        { name: 'selectionMode', type: 'string', description: 'Row selection mode.' },
+        { name: 'selectedRowIds', type: 'array', description: 'Array of selected row IDs.' }
       ],
       methods: [
         { name: 'setColumns', type: 'function', description: 'Sets column descriptors with keys, labels, and alignment.' },
         { name: 'setRows', type: 'function', description: 'Sets row records or cell descriptor maps.' },
         { name: 'setData', type: 'function', description: 'Sets columns, rows, and optional empty text in one call.' },
         { name: 'getData', type: 'function', description: 'Returns the current column and row descriptors.' },
+        { name: 'toggleColumnVisibility', type: 'function', description: 'Toggles column visibility.' },
+        { name: 'setColumnWidth', type: 'function', description: 'Sets column width.' },
+        { name: 'toggleColumnPinning', type: 'function', description: 'Toggles column pinning.' }
       ],
-      events: [],
+      events: [
+        { name: 'sn-data-table-sort', description: 'Fired when column sort changes.' },
+        { name: 'sn-data-table-select', description: 'Fired when selection changes.' },
+        { name: 'sn-data-table-edit', description: 'Fired when cell editing is requested.' },
+        { name: 'sn-data-table-visible-window', description: 'Fired when visible scroll window changes.' }
+      ],
       themeAliases: [
         '--sn-data-table-bg',
         '--sn-data-table-border',
@@ -5158,6 +5901,49 @@ export let COMPONENTS = [
         '--sn-frame-font-size',
       ],
     },
+  },
+  {
+    tagName: 'sn-source-diff',
+    className: 'SourceDiff',
+    module: 'display/SourceDiff/SourceDiff.js',
+    category: 'display',
+    description: 'Unified and Side-by-Side source diff viewer for code reviews.',
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/source-diff-v1.json',
+      capabilities: ['diff-viewer', 'code-review', 'commentable'],
+      attributes: [
+        { name: 'layout', type: 'string', description: 'Layout mode: unified or side-by-side.' }
+      ],
+      properties: [
+        { name: 'path', type: 'string', description: 'Target file path.' },
+        { name: 'layout', type: 'string', description: 'Active layout mode.' }
+      ],
+      methods: [
+        { name: 'setDiffData', type: 'function', description: 'Sets diff hunks and lines data.' },
+        { name: 'getDiffData', type: 'function', description: 'Gets current diff dataset.' }
+      ],
+      events: [
+        { name: 'sn-diff-comment-add', description: 'Triggered when inline comment is added.' },
+        { name: 'sn-review-accept', description: 'Triggered when hunk or file is accepted.' },
+        { name: 'sn-review-reject', description: 'Triggered when hunk or file is rejected.' },
+        { name: 'sn-review-request-change', description: 'Triggered when hunk or file changes are requested.' }
+      ],
+      themeAliases: [
+        '--sn-font',
+        '--sn-panel-bg',
+        '--sn-panel-radius',
+        '--sn-outline-color-soft',
+        '--sn-surface',
+        '--sn-text',
+        '--sn-text-dim',
+        '--sn-hue-success',
+        '--sn-hue-danger',
+        '--sn-hue-warning',
+        '--sn-hue-info'
+      ]
+    }
   },
 ].map((component) => {
   let exportName = UI_NAMED_EXPORTS.has(component.className) ? component.className : null;

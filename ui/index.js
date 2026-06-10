@@ -19,6 +19,17 @@ export { Zoom } from '../interactions/Zoom.js';
 export { Selector } from '../interactions/Selector.js';
 export { SnapGrid } from '../interactions/SnapGrid.js';
 export { ConnectFlow } from '../interactions/ConnectFlow.js';
+export {
+  isPointInRect,
+  isRectIntersecting,
+  isRectContaining,
+  computeSelectionBounds,
+  isNodeInMarquee,
+  areEdgeEndpointsInSelection,
+  isEdgeIntersectingRect,
+  alignNodes,
+  distributeNodes,
+} from '../interactions/SelectionGeometry.js';
 
 export {
   NodeShape,
@@ -71,6 +82,7 @@ export * as LayoutTree from '../layout/LayoutTree.js';
 export {
   hasLayoutBehaviorMetadata,
   layoutHasBehaviorMetadata,
+  resolveMobileDrawerLayout,
   matchesSection,
 } from '../layout/LayoutTree.js';
 export {
@@ -103,9 +115,13 @@ export { LODManager } from '../canvas/LODManager.js';
 export { PinExpansion } from '../canvas/PinExpansion.js';
 export { ForceLayout } from '../canvas/ForceLayout.js';
 export {
+  addNodesToGroup,
   createCanvasGraphStore,
+  groupNodes,
   normalizeCanvasGraphGroups,
   normalizeCanvasGraphModel,
+  removeNodesFromGroup,
+  ungroupNodes,
 } from '../canvas/graph-model.js';
 export {
   computeInitialGraphPositions,
@@ -187,6 +203,7 @@ export let ProjectTabs;
 export let CodeBlock;
 export let SourceViewer;
 export let SourceEditor;
+export let SourceDiff;
 export let LoadingOverlay;
 export let StatusBadge;
 export let StatusBanner;
@@ -203,7 +220,10 @@ export let updateParams;
 export let parseQuery;
 export let buildHash;
 export let buildQuery;
+export let configureRouter;
 export let getRoute;
+export let getRouterBasePath;
+export let getRouterMode;
 export let setDefaultPanel;
 export let registerGlobalParam;
 export let setGlobalParam;
@@ -274,6 +294,23 @@ export let Timeline;
 export let TimelineItem;
 export let Avatar;
 export let Tag;
+export let DatePicker;
+export let ColorPicker;
+export let FileUpload;
+export let Transfer;
+export let Mentions;
+export let TagsInput;
+export let PinInput;
+export let SplitPanel;
+export let ScrollArea;
+export let FloatingPanel;
+export let AspectRatio;
+export let Chart;
+export let RichTextEditor;
+export let Tour;
+export let Carousel;
+export let QrCode;
+export let VideoPlayer;
 export let stringifyBlock;
 export let truncateResult;
 export { sharedUiStyles } from './shared-styles.js';
@@ -561,6 +598,7 @@ if (hasDOMGlobals) {
     codeBlock,
     sourceViewer,
     sourceEditor,
+    sourceDiff,
     loadingOverlay,
     statusBadge,
     statusBanner,
@@ -621,6 +659,23 @@ if (hasDOMGlobals) {
     timeline,
     avatar,
     tag,
+    datePicker,
+    colorPicker,
+    fileUpload,
+    transfer,
+    mentions,
+    tagsInput,
+    pinInput,
+    splitPanel,
+    scrollArea,
+    floatingPanel,
+    aspectRatio,
+    chart,
+    richTextEditor,
+    tour,
+    carousel,
+    qrCode,
+    videoPlayer,
   ] = await Promise.all([
     import('../canvas/NodeCanvas/NodeCanvas.js'),
     import('../canvas/CanvasGraph/CanvasGraph.js'),
@@ -643,6 +698,7 @@ if (hasDOMGlobals) {
     import('../display/CodeBlock/CodeBlock.js'),
     import('../display/SourceViewer/SourceViewer.js'),
     import('../display/SourceEditor/SourceEditor.js'),
+    import('../display/SourceDiff/SourceDiff.js'),
     import('../display/LoadingOverlay/LoadingOverlay.js'),
     import('../display/Badge/Badge.js'),
     import('../display/Banner/Banner.js'),
@@ -703,6 +759,23 @@ if (hasDOMGlobals) {
     import('../display/Timeline/Timeline.js'),
     import('../display/Avatar/Avatar.js'),
     import('../display/Tag/Tag.js'),
+    import('../control/DatePicker/DatePicker.js'),
+    import('../control/ColorPicker/ColorPicker.js'),
+    import('../control/FileUpload/FileUpload.js'),
+    import('../control/Transfer/Transfer.js'),
+    import('../control/Mentions/Mentions.js'),
+    import('../control/TagsInput/TagsInput.js'),
+    import('../control/PinInput/PinInput.js'),
+    import('../layout/SplitPanel/SplitPanel.js'),
+    import('../layout/ScrollArea/ScrollArea.js'),
+    import('../layout/FloatingPanel/FloatingPanel.js'),
+    import('../layout/AspectRatio/AspectRatio.js'),
+    import('../display/Chart/Chart.js'),
+    import('../control/RichTextEditor/RichTextEditor.js'),
+    import('../display/Tour/Tour.js'),
+    import('../display/Carousel/Carousel.js'),
+    import('../display/QrCode/QrCode.js'),
+    import('../display/VideoPlayer/VideoPlayer.js'),
   ]);
 
   ({ NodeCanvas } = nodeCanvas);
@@ -726,6 +799,7 @@ if (hasDOMGlobals) {
   ({ CodeBlock } = codeBlock);
   ({ SourceViewer, getSourceLanguage, isDirectoryLikePath, buildDirectoryInfo } = sourceViewer);
   ({ SourceEditor } = sourceEditor);
+  ({ SourceDiff } = sourceDiff);
   ({ LoadingOverlay } = loadingOverlay);
   ({ StatusBadge } = statusBadge);
   ({ StatusBanner } = statusBanner);
@@ -740,7 +814,10 @@ if (hasDOMGlobals) {
     parseQuery,
     buildHash,
     buildQuery,
+    configureRouter,
     getRoute,
+    getRouterBasePath,
+    getRouterMode,
     setDefaultPanel,
     registerGlobalParam,
     setGlobalParam,
@@ -796,6 +873,23 @@ if (hasDOMGlobals) {
   ({ Timeline, TimelineItem } = timeline);
   ({ Avatar } = avatar);
   ({ Tag } = tag);
+  ({ default: DatePicker } = datePicker);
+  ({ default: ColorPicker } = colorPicker);
+  ({ default: FileUpload } = fileUpload);
+  ({ default: Transfer } = transfer);
+  ({ default: Mentions } = mentions);
+  ({ default: TagsInput } = tagsInput);
+  ({ default: PinInput } = pinInput);
+  ({ default: SplitPanel } = splitPanel);
+  ({ default: ScrollArea } = scrollArea);
+  ({ default: FloatingPanel } = floatingPanel);
+  ({ default: AspectRatio } = aspectRatio);
+  ({ default: Chart } = chart);
+  ({ default: RichTextEditor } = richTextEditor);
+  ({ default: Tour } = tour);
+  ({ default: Carousel } = carousel);
+  ({ default: QrCode } = qrCode);
+  ({ default: VideoPlayer } = videoPlayer);
 
   registerCatalogModules({
     NodeCanvas,
@@ -819,6 +913,7 @@ if (hasDOMGlobals) {
     CodeBlock,
     SourceViewer,
     SourceEditor,
+    SourceDiff,
     LoadingOverlay,
     StatusBadge,
     StatusBanner,
@@ -892,6 +987,23 @@ if (hasDOMGlobals) {
     TimelineItem,
     Avatar,
     Tag,
+    DatePicker,
+    ColorPicker,
+    FileUpload,
+    Transfer,
+    Mentions,
+    TagsInput,
+    PinInput,
+    SplitPanel,
+    ScrollArea,
+    FloatingPanel,
+    AspectRatio,
+    Chart,
+    RichTextEditor,
+    Tour,
+    Carousel,
+    QrCode,
+    VideoPlayer,
   });
 }
 

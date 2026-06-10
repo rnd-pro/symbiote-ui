@@ -79,6 +79,7 @@ export let GRAPH_SCHEMAS = {
           id: { type: 'string', minLength: 1 },
           source: { $ref: '#/$defs/endpoint' },
           target: { $ref: '#/$defs/endpoint' },
+          label: { type: 'string' },
           metadata: { type: 'object', additionalProperties: true },
         },
       },
@@ -221,6 +222,7 @@ export let GRAPH_SCHEMAS = {
         properties: {
           id: { type: 'string', minLength: 1 },
           kind: { type: 'string', minLength: 1 },
+          label: { type: 'string' },
           source: { $ref: '#/$defs/endpoint' },
           target: { $ref: '#/$defs/endpoint' },
           params: { type: 'object', additionalProperties: true },
