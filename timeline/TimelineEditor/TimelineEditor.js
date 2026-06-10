@@ -80,8 +80,6 @@ export class TimelineEditor extends Symbiote {
     timeDisplay: '00:00:00',
     playing: false,
     hasData: false,
-    headersHtml: '',
-    playheadX: 0,
     zoomLabel: '4 px/fr',
 
     rulerClick: (e) => {
@@ -238,10 +236,10 @@ export class TimelineEditor extends Symbiote {
     if (!this.#data) return;
     this.#playheadFrame = Math.max(0, Math.min(frame, this.#data.duration));
     let x = this.#playheadFrame * this.#pixelsPerFrame;
-    this.set$({
-      playheadX: x,
-      timeDisplay: formatTimecode(this.#playheadFrame, this.#data.fps || 30),
-    });
+    this.$.timeDisplay = formatTimecode(this.#playheadFrame, this.#data.fps || 30);
+    // Update playhead DOM via refs
+    if (this.ref.rulerPlayhead) this.ref.rulerPlayhead.style.left = x + 'px';
+    if (this.ref.tracksPlayhead) this.ref.tracksPlayhead.style.left = x + 'px';
     emit(this, 'playhead-change', {
       frame: this.#playheadFrame,
       time: this.#playheadFrame / (this.#data.fps || 30),
@@ -326,8 +324,8 @@ export class TimelineEditor extends Symbiote {
   // ── Rendering ──
 
   #renderHeaders() {
-    if (!this.#data) return;
-    let html = this.#data.tracks.map(track => {
+    if (!this.#data || !this.ref.headersList) return;
+    let markup = this.#data.tracks.map(track => {
       let type = track.type || 'default';
       let color = TRACK_COLORS[type] || TRACK_COLORS.default;
       let icon = TRACK_ICONS[type] || TRACK_ICONS.default;
@@ -337,7 +335,7 @@ export class TimelineEditor extends Symbiote {
         <button class="te-header-mute" title="Mute">M</button>
       </div>`;
     }).join('');
-    this.$.headersHtml = html;
+    this.ref.headersList.innerHTML = markup;
   }
 
   #renderRuler() {
@@ -371,9 +369,14 @@ export class TimelineEditor extends Symbiote {
 
     let majorInterval = tickInterval * 4;
 
-    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
-    ctx.fillStyle = 'rgba(255,255,255,0.4)';
-    ctx.font = '9px Inter, system-ui, sans-serif';
+    // Read colors from cascade
+    let computed = getComputedStyle(this);
+    let tickColor = computed.getPropertyValue('--sn-text-dim').trim() || 'rgba(255,255,255,0.4)';
+    let lineColor = computed.getPropertyValue('--te-border').trim() || 'rgba(255,255,255,0.12)';
+
+    ctx.strokeStyle = lineColor;
+    ctx.fillStyle = tickColor;
+    ctx.font = `9px ${computed.getPropertyValue('--sn-font').trim() || 'Inter, system-ui, sans-serif'}`;
     ctx.textBaseline = 'top';
 
     for (let f = 0; f <= duration; f += tickInterval) {
@@ -394,7 +397,8 @@ export class TimelineEditor extends Symbiote {
 
     // Draw markers
     if (this.#data.markers) {
-      ctx.strokeStyle = 'hsla(40, 70%, 55%, 0.6)';
+      let markerColor = computed.getPropertyValue('--te-marker-color').trim() || 'hsla(40, 70%, 55%, 0.6)';
+      ctx.strokeStyle = markerColor;
       for (let marker of this.#data.markers) {
         let x = marker.frame * ppf;
         if (x > width) continue;

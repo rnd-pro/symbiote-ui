@@ -58,8 +58,6 @@ export class CanvasViewport extends Symbiote {
 
   init$ = {
     hasData: false,
-    canvasWidth: 640,
-    canvasHeight: 360,
     zoomLabel: '100%',
     frameLabel: 'F: 0',
 
@@ -192,10 +190,14 @@ export class CanvasViewport extends Symbiote {
     let dw = Math.round(rw * scale);
     let dh = Math.round(rh * scale);
     this.set$({
-      canvasWidth: dw,
-      canvasHeight: dh,
       zoomLabel: `${Math.round(scale * 100)}%`,
     });
+
+    let frame = this.ref.canvasFrame;
+    if (frame) {
+      frame.style.width = dw + 'px';
+      frame.style.height = dh + 'px';
+    }
 
     let canvas = this.ref.viewport;
     if (canvas) {
