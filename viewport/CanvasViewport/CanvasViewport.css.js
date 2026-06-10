@@ -4,15 +4,15 @@ let css = /*css*/`
     flex-direction: column;
     min-height: 100px;
     height: 100%;
-    background: var(--sn-bg, #1a1a2e);
-    color: var(--sn-text, #e0e0e0);
-    font-family: var(--sn-font, 'Inter', system-ui, sans-serif);
-    font-size: var(--sn-font-size-sm, 11px);
+    background: var(--sn-panel-bg);
+    color: var(--sn-text);
+    font-family: var(--sn-font);
+    font-size: 11px;
     overflow: hidden;
-    --vp-checker-light: rgba(255,255,255,0.04);
-    --vp-checker-dark: rgba(0,0,0,0.1);
-    --vp-border: var(--sn-outline-color, rgba(255,255,255,0.08));
-    --vp-safe-zone: rgba(255,255,255,0.12);
+    --vp-border: var(--sn-node-border);
+    --vp-safe-zone: hsl(var(--sn-hue-base) var(--sn-sat-muted) var(--sn-lit-text) / 0.12);
+    --vp-checker-light: hsl(var(--sn-hue-base) var(--sn-sat-muted) var(--sn-lit-text) / 0.04);
+    --vp-checker-dark: hsl(var(--sn-hue-base) var(--sn-sat-muted) 0% / 0.1);
   }
 
   /* ── Header bar ── */
@@ -22,51 +22,56 @@ let css = /*css*/`
     gap: 6px;
     height: 28px;
     padding: 0 8px;
-    background: var(--sn-bg, #1a1a2e);
+    background: var(--sn-panel-bg);
     border-bottom: 1px solid var(--vp-border);
     flex-shrink: 0;
   }
 
   .vp-header select {
-    background: rgba(255,255,255,0.06);
+    background: var(--sn-node-bg);
     border: 1px solid var(--vp-border);
-    color: var(--sn-text-dim, #aaa);
+    color: var(--sn-text-dim);
     padding: 1px 4px;
-    border-radius: 3px;
+    border-radius: calc(3px * var(--sn-theme-radius-scale, 1));
     font-family: inherit;
     font-size: 10px;
     cursor: pointer;
+    transition: var(--sn-effect-hover-transition);
+  }
+
+  .vp-header select:hover {
+    border-color: var(--sn-node-selected);
   }
 
   .vp-header button {
-    background: none;
+    background: var(--sn-node-bg);
     border: 1px solid var(--vp-border);
-    color: var(--sn-text-dim, #aaa);
+    color: var(--sn-text-dim);
     padding: 2px 6px;
-    border-radius: 3px;
+    border-radius: calc(3px * var(--sn-theme-radius-scale, 1));
     cursor: pointer;
     font-family: inherit;
     font-size: 10px;
-    transition: background 0.15s, color 0.15s;
+    transition: var(--sn-effect-hover-transition);
   }
 
   .vp-header button:hover {
-    background: rgba(255,255,255,0.06);
-    color: var(--sn-text, #e0e0e0);
+    background: var(--sn-node-hover);
+    color: var(--sn-text);
   }
 
   .vp-spacer { flex: 1; }
 
   .vp-zoom-label {
     font-size: 10px;
-    color: var(--sn-text-dim, #aaa);
-    font-family: var(--sn-font-mono, monospace);
+    color: var(--sn-text-dim);
+    font-family: var(--sn-font-mono);
   }
 
   .vp-frame-label {
     font-size: 10px;
-    color: var(--sn-text-dim, #aaa);
-    font-family: var(--sn-font-mono, monospace);
+    color: var(--sn-text-dim);
+    font-family: var(--sn-font-mono);
   }
 
   /* ── Canvas area ── */
@@ -86,7 +91,7 @@ let css = /*css*/`
 
   .vp-canvas-frame {
     position: relative;
-    box-shadow: 0 2px 16px rgba(0,0,0,0.5);
+    box-shadow: var(--sn-shadow-lg);
     overflow: hidden;
     transition: width 0.3s ease, height 0.3s ease;
   }
@@ -105,7 +110,7 @@ let css = /*css*/`
     border: 1px dashed var(--vp-safe-zone);
     margin: 10%;
     opacity: 0;
-    transition: opacity 0.2s;
+    transition: opacity var(--sn-transition-fast);
   }
 
   :host([show-safe-zone]) .vp-safe-zone {
@@ -118,8 +123,9 @@ let css = /*css*/`
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--sn-text-dim, #aaa);
+    color: var(--sn-text-dim);
     font-size: 12px;
+    font-style: italic;
     opacity: 0.5;
   }
 `;

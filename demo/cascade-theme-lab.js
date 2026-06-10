@@ -48,6 +48,8 @@ import {
 import '../display/CodeBlock/CodeBlock.js';
 import '../themes/CascadeThemeEditor/CascadeThemeEditor.js';
 import '../themes/CascadeThemeWidget/CascadeThemeWidget.js';
+import '../timeline/TimelineEditor/TimelineEditor.js';
+import '../viewport/CanvasViewport/CanvasViewport.js';
 
 configureMaterialSymbols();
 
@@ -3023,9 +3025,31 @@ layout.registerPanelType('spatial', {
   icon: 'view_in_ar',
   component: 'cascade-spatial-panel',
   behavior: {
-    importance: 92,
+    importance: 100,
     minInlineSize: 420,
     minBlockSize: 320,
+    collapse: 'never',
+  },
+});
+layout.registerPanelType('viewport', {
+  title: 'Viewport',
+  icon: 'smart_display',
+  component: 'sn-canvas-viewport',
+  behavior: {
+    importance: 100,
+    minInlineSize: 420,
+    minBlockSize: 280,
+    collapse: 'never',
+  },
+});
+layout.registerPanelType('timeline', {
+  title: 'Timeline',
+  icon: 'video_timeline',
+  component: 'sn-timeline-editor',
+  behavior: {
+    importance: 95,
+    minInlineSize: 480,
+    minBlockSize: 180,
     collapse: 'auto',
   },
 });
@@ -3159,6 +3183,37 @@ const createSpatialLayout = () => LayoutTree.createSplit(
   0.58
 );
 
+const createVideoStudioLayout = () => LayoutTree.createSplit(
+  'vertical',
+  LayoutTree.createSplit(
+    'horizontal',
+    createPanel('viewport', { importance: 100, minInlineSize: 420, minBlockSize: 280, collapse: 'never' }),
+    createPanel('graph', { importance: 60, minInlineSize: 320, minBlockSize: 260 }),
+    0.55
+  ),
+  createPanel('timeline', { importance: 95, minInlineSize: 480, minBlockSize: 180 }),
+  0.62
+);
+
+const createVideoPreviewLayout = () => LayoutTree.createSplit(
+  'vertical',
+  createPanel('viewport', { importance: 100, minInlineSize: 520, minBlockSize: 320, collapse: 'never' }),
+  createPanel('timeline', { importance: 88, minInlineSize: 480, minBlockSize: 160 }),
+  0.65
+);
+
+const createVideoEffectsLayout = () => LayoutTree.createSplit(
+  'horizontal',
+  LayoutTree.createSplit(
+    'vertical',
+    createPanel('viewport', { importance: 100, minInlineSize: 420, minBlockSize: 260 }),
+    createPanel('timeline', { importance: 90, minInlineSize: 400, minBlockSize: 160 }),
+    0.6
+  ),
+  createPanel('theme', { importance: 60, minInlineSize: 300, minBlockSize: 260 }),
+  0.68
+);
+
 const view = (id, label, icon, layoutFactory, options = {}) => ({
   id,
   label,
@@ -3275,11 +3330,11 @@ const showcaseProjects = [
     closeable: false,
     behavior: { responsiveMode: 'scroll-inline', responsiveBreakpoint: 960, overflow: 'collapse' },
     views: [
-      view('timeline', 'Timeline', 'video_timeline', createResponsiveLayout),
+      view('studio', 'Studio', 'movie', createVideoStudioLayout),
+      view('preview-monitor', 'Preview', 'smart_display', createVideoPreviewLayout),
+      view('effects', 'Effects', 'video_settings', createVideoEffectsLayout),
       view('clip-bin', 'Clip bin', 'video_library', createComponentsLayout),
-      view('preview-monitor', 'Preview monitor', 'smart_display', createComponentsLayout),
       view('transcript', 'Transcript', 'subtitles', createProjectDocsLayout),
-      view('effects', 'Effects inspector', 'video_settings', createThemeLayout),
       view('render-queue', 'Render queue', 'hourglass_top', createRuntimeLayout),
       view('automation-graph', 'Automation graph', 'schema', createGraphLayout),
     ],

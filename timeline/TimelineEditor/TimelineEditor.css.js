@@ -4,26 +4,26 @@ let css = /*css*/`
     flex-direction: column;
     min-height: 120px;
     height: 100%;
-    background: var(--sn-bg, #1a1a2e);
-    color: var(--sn-text, #e0e0e0);
-    font-family: var(--sn-font, 'Inter', system-ui, sans-serif);
-    font-size: var(--sn-font-size-sm, 11px);
+    background: var(--sn-panel-bg);
+    color: var(--sn-text);
+    font-family: var(--sn-font);
+    font-size: 11px;
     overflow: hidden;
     user-select: none;
     --te-track-height: 36px;
     --te-ruler-height: 28px;
     --te-header-width: 140px;
-    --te-playhead-color: hsl(var(--sn-hue-danger, 0) 70% 55%);
-    --te-clip-radius: 3px;
-    --te-border: var(--sn-outline-color, rgba(255,255,255,0.08));
-    --te-track-bg: var(--sn-panel-bg, rgba(255,255,255,0.03));
-    --te-track-bg-alt: rgba(255,255,255,0.015);
-    --te-clip-video: hsl(210 55% 42%);
-    --te-clip-audio: hsl(45 65% 42%);
-    --te-clip-text: hsl(150 45% 38%);
+    --te-playhead-color: var(--sn-danger-color);
+    --te-clip-radius: calc(3px * var(--sn-theme-radius-scale, 1));
+    --te-border: var(--sn-node-border);
+    --te-track-bg: var(--sn-bg);
+    --te-track-bg-alt: color-mix(in srgb, var(--sn-bg) 85%, var(--sn-panel-bg));
+    --te-clip-video: hsl(var(--sn-hue-accent) var(--sn-sat-vivid) 42%);
+    --te-clip-audio: hsl(var(--sn-hue-warning) var(--sn-sat-vivid) 42%);
+    --te-clip-text: hsl(var(--sn-hue-success) var(--sn-sat-vivid) 38%);
     --te-clip-effect: hsl(280 50% 45%);
-    --te-marker-color: hsl(var(--sn-hue-warning, 40) 70% 55%);
-    --te-selection: hsl(var(--sn-hue-accent, 220) 60% 50% / 0.25);
+    --te-marker-color: var(--sn-warning-color);
+    --te-selection: hsl(var(--sn-hue-accent) var(--sn-sat-vivid) 50% / 0.25);
   }
 
   /* ── Transport bar ── */
@@ -33,39 +33,39 @@ let css = /*css*/`
     gap: 8px;
     height: 28px;
     padding: 0 8px;
-    background: var(--sn-bg, #1a1a2e);
+    background: var(--sn-panel-bg);
     border-bottom: 1px solid var(--te-border);
     flex-shrink: 0;
   }
 
   .te-transport button {
-    background: none;
+    background: var(--sn-node-bg);
     border: 1px solid var(--te-border);
-    color: var(--sn-text-dim, #aaa);
+    color: var(--sn-text-dim);
     padding: 2px 6px;
-    border-radius: 3px;
+    border-radius: calc(3px * var(--sn-theme-radius-scale, 1));
     cursor: pointer;
     font-family: inherit;
     font-size: 11px;
     line-height: 1;
-    transition: background 0.15s, color 0.15s;
+    transition: var(--sn-effect-hover-transition);
   }
 
   .te-transport button:hover {
-    background: rgba(255,255,255,0.06);
-    color: var(--sn-text, #e0e0e0);
+    background: var(--sn-node-hover);
+    color: var(--sn-text);
   }
 
   .te-transport button[data-active] {
     background: var(--te-playhead-color);
     border-color: var(--te-playhead-color);
-    color: #fff;
+    color: hsl(0 0% 8%);
   }
 
   .te-transport .te-time {
-    font-family: var(--sn-font-mono, 'JetBrains Mono', monospace);
+    font-family: var(--sn-font-mono);
     font-size: 11px;
-    color: var(--sn-text, #e0e0e0);
+    color: var(--sn-text);
     min-width: 80px;
     text-align: center;
   }
@@ -76,7 +76,7 @@ let css = /*css*/`
 
   .te-transport .te-zoom-label {
     font-size: 10px;
-    color: var(--sn-text-dim, #aaa);
+    color: var(--sn-text-dim);
   }
 
   /* ── Main area ── */
@@ -102,7 +102,7 @@ let css = /*css*/`
     align-items: center;
     padding: 0 8px;
     font-size: 10px;
-    color: var(--sn-text-dim, #aaa);
+    color: var(--sn-text-dim);
   }
 
   .te-header-track {
@@ -143,12 +143,12 @@ let css = /*css*/`
     height: 16px;
     border: none;
     background: none;
-    color: var(--sn-text-dim, #aaa);
+    color: var(--sn-text-dim);
     cursor: pointer;
     font-size: 12px;
     padding: 0;
     opacity: 0.5;
-    transition: opacity 0.15s;
+    transition: opacity var(--sn-transition-fast);
   }
 
   .te-header-mute:hover {
@@ -184,6 +184,8 @@ let css = /*css*/`
     overflow-x: auto;
     overflow-y: auto;
     position: relative;
+    scrollbar-color: var(--sn-scrollbar-thumb) var(--sn-scrollbar-track);
+    scrollbar-width: var(--sn-scrollbar-width, thin);
   }
 
   .te-tracks-canvas {
@@ -219,36 +221,15 @@ let css = /*css*/`
     clip-path: polygon(0 0, 100% 0, 50% 100%);
   }
 
-  /* ── Markers ── */
-  .te-marker {
-    position: absolute;
-    top: 0;
-    width: 1px;
-    height: 100%;
-    background: var(--te-marker-color);
-    opacity: 0.6;
-    pointer-events: none;
-    z-index: 5;
-  }
-
-  .te-marker::before {
-    content: attr(data-label);
-    position: absolute;
-    top: -16px;
-    left: 2px;
-    font-size: 9px;
-    color: var(--te-marker-color);
-    white-space: nowrap;
-  }
-
   /* ── Empty state ── */
   .te-empty {
     display: flex;
     align-items: center;
     justify-content: center;
     flex: 1;
-    color: var(--sn-text-dim, #aaa);
+    color: var(--sn-text-dim);
     font-size: 12px;
+    font-style: italic;
     opacity: 0.5;
   }
 `;
