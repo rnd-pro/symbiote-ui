@@ -51,6 +51,7 @@ Use `symbiote-node` only as the terminal migration facade for older consumers.
 ## Related Packages
 
 - [`symbiote-engine`](https://github.com/RND-PRO/symbiote-engine) - runtime execution, CLI commands, server helpers, persistence, and handlers.
+- [`symbiote-workspace`](https://github.com/RND-PRO/symbiote-workspace) - workspace orchestration, plugin system, server mode, and portable configs.
 - [`symbiote-node`](https://github.com/RND-PRO/symbiote-node) - terminal migration facade for older imports.
 - [Package split guide](https://github.com/RND-PRO/symbiote-node/blob/main/docs/package-split.md)
 - [Agent contract index](https://github.com/RND-PRO/symbiote-node/blob/main/docs/agent-contracts.md)
