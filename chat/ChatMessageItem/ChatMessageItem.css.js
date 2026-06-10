@@ -631,4 +631,181 @@ h4.md-h {
   color: var(--sn-cat-server);
   background: var(--sn-message-event-bg);
 }
+
+.source-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--sn-node-hover);
+  border: 1px solid var(--sn-node-border);
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: var(--sn-chat-small-size, 11px);
+  color: var(--sn-text-dim);
+  margin-top: 4px;
+}
+.source-badge .material-symbols-outlined {
+  font-size: 14px;
+}
+
+.attachment-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--sn-node-hover);
+  border: 1px solid var(--sn-node-border);
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin: 4px 0;
+  max-width: 320px;
+}
+.attachment-card .material-symbols-outlined {
+  font-size: 20px;
+  color: var(--sn-text-dim);
+}
+.attachment-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.attachment-title {
+  font-size: var(--sn-chat-small-size, 12px);
+  font-weight: 500;
+  color: var(--sn-text);
+}
+
+.artifact-card {
+  background: var(--sn-node-hover);
+  border: 1px solid var(--sn-node-border);
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 6px 0;
+  width: 100%;
+}
+.artifact-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--sn-bg);
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--sn-node-border);
+}
+.artifact-header .material-symbols-outlined {
+  font-size: 16px;
+  color: var(--sn-text-dim);
+}
+.artifact-title {
+  font-size: var(--sn-chat-small-size, 11px);
+  font-weight: 600;
+  color: var(--sn-text-dim);
+  text-transform: uppercase;
+}
+
+.approval-card,
+.action-card {
+  background: var(--sn-node-hover);
+  border: 1px solid var(--sn-accent-border, var(--sn-node-border));
+  border-radius: 8px;
+  padding: 12px;
+  margin: 8px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+.approval-header,
+.action-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--sn-chat-status-card-size, 12px);
+  font-weight: 600;
+  color: var(--sn-text);
+}
+.approval-header .material-symbols-outlined {
+  color: var(--sn-cat-server, var(--sn-text-dim));
+}
+.action-header .material-symbols-outlined {
+  color: var(--sn-accent-color, var(--sn-text-dim));
+}
+.approval-body,
+.action-body {
+  font-size: var(--sn-chat-small-size, 12px);
+  color: var(--sn-text-dim);
+  line-height: 1.4;
+}
+.approval-actions,
+.action-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+.sn-btn {
+  font-family: inherit;
+  font-size: var(--sn-chat-small-size, 11px);
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--sn-node-border);
+  background: var(--sn-node-bg);
+  color: var(--sn-text);
+  cursor: pointer;
+  transition: background var(--sn-transition-fast) var(--sn-transition-easing), border-color var(--sn-transition-fast) var(--sn-transition-easing);
+}
+.sn-btn:hover {
+  background: var(--sn-node-hover);
+  border-color: var(--sn-text-dim);
+}
+.sn-btn.approve {
+  background: var(--sn-success-color, #22c55e);
+  color: #fff;
+  border-color: var(--sn-success-border, #15803d);
+}
+.sn-btn.approve:hover {
+  background: var(--sn-success-hover, #16a34a);
+}
+.sn-btn.reject {
+  background: var(--sn-danger-color, #ef4444);
+  color: #fff;
+  border-color: var(--sn-danger-border, #b91c1c);
+}
+.sn-btn.reject:hover {
+  background: var(--sn-danger-hover, #dc2626);
+}
+
+.error-card {
+  background: var(--sn-danger-bg, rgba(239, 68, 68, 0.08));
+  border: 1px solid var(--sn-danger-border, var(--sn-node-border));
+  border-radius: 8px;
+  padding: 12px;
+  margin: 6px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+.error-card.cancelled {
+  background: var(--sn-node-hover);
+  border-color: var(--sn-node-border);
+}
+.error-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--sn-chat-status-card-size, 12px);
+  font-weight: 600;
+  color: var(--sn-text);
+}
+.error-header .material-symbols-outlined {
+  color: var(--sn-danger-color);
+}
+.error-card.cancelled .error-header .material-symbols-outlined {
+  color: var(--sn-text-dim);
+}
+.error-body {
+  font-size: var(--sn-chat-small-size, 11px);
+  color: var(--sn-text-dim);
+  font-family: var(--sn-font-mono, monospace);
+  white-space: pre-wrap;
+}
 `;

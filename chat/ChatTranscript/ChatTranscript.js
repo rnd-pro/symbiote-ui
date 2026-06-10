@@ -1,9 +1,16 @@
 import Symbiote, { html } from '@symbiotejs/symbiote';
 import '../ChatMessageItem/ChatMessageItem.js';
+import { translate } from '../../locale/index.js';
 import css from './ChatTranscript.css.js';
 
 function emit(el, type, detail = {}) {
   el.dispatchEvent(new CustomEvent(type, { bubbles: true, composed: true, detail }));
+}
+
+function emitCancelable(el, type, detail = {}) {
+  let event = new CustomEvent(type, { bubbles: true, composed: true, cancelable: true, detail });
+  el.dispatchEvent(event);
+  return event;
 }
 
 export class ChatTranscript extends Symbiote {
@@ -24,7 +31,21 @@ export class ChatTranscript extends Symbiote {
     },
   };
 
+  renderCallback() {
+    this.sub('messageItems', (items) => {
+      if (items?.length > 0) {
+        let wasAtBottom = this._messageItemsWasAtBottom ?? this.isAtBottom(32);
+        this._messageItemsWasAtBottom = undefined;
+        if (!wasAtBottom) return;
+        requestAnimationFrame(() => {
+          this.scrollToBottom({ smooth: false });
+        });
+      }
+    });
+  }
+
   setMessageItems(items = []) {
+    this._messageItemsWasAtBottom = this.isAtBottom(32);
     this.$.messageItems = Array.isArray(items) ? items : [];
   }
 
@@ -96,10 +117,14 @@ export class ChatTranscript extends Symbiote {
     let statusEl = card.querySelector('.status-card-status');
     if (statusEl) {
       if (isDone) {
-        statusEl.textContent = status === 'done' ? 'Completed' : status === 'error' ? 'Failed' : 'Cancelled';
+        statusEl.textContent = status === 'done'
+          ? translate('chat.message.completed')
+          : status === 'error'
+            ? translate('chat.message.failed')
+            : translate('chat.message.cancelled');
       } else {
         let elapsed = this._formatElapsed(cardData.startedAt || cardData.updatedAt);
-        statusEl.textContent = `Running${elapsed ? ' - ' + elapsed : ''}`;
+        statusEl.textContent = `${translate('chat.message.running')}${elapsed ? ' - ' + elapsed : ''}`;
       }
     }
 
@@ -124,17 +149,17 @@ export class ChatTranscript extends Symbiote {
     if (!meta) return;
 
     let icon = 'pending';
-    let text = 'Processing...';
+    let text = translate('chat.message.processing');
     let spinClass = 'spin-icon';
 
     if (meta.phase === 'thinking') {
-      text = meta.thinkingStatus || 'Thinking...';
+      text = meta.thinkingStatus || translate('chat.message.thinkingStatus');
     } else if (meta.phase === 'tool') {
       icon = 'build_circle';
-      text = `Running: ${meta.lastToolName || 'tool'}`;
+      text = translate('chat.message.runningTool', { tool: meta.lastToolName || 'tool' });
     } else if (meta.phase === 'responding') {
       icon = 'edit_note';
-      text = 'Writing response...';
+      text = translate('chat.message.writingResponse');
       spinClass = '';
     }
 
@@ -156,6 +181,26 @@ export class ChatTranscript extends Symbiote {
       event.preventDefault();
       event.stopPropagation();
       this._copyMessageText(copyBtn.dataset.copyText || '', copyBtn);
+      return;
+    }
+
+    let approvalBtn = event.target.closest('.approval-btn');
+    if (approvalBtn) {
+      event.preventDefault();
+      event.stopPropagation();
+      let id = approvalBtn.dataset.id || '';
+      let action = approvalBtn.dataset.action || '';
+      emitCancelable(this, 'chat-approval', { id, action, button: approvalBtn });
+      return;
+    }
+
+    let actionBtn = event.target.closest('.action-btn');
+    if (actionBtn) {
+      event.preventDefault();
+      event.stopPropagation();
+      let id = actionBtn.dataset.id || '';
+      let action = actionBtn.dataset.action || '';
+      emitCancelable(this, 'chat-action', { id, action, button: actionBtn });
       return;
     }
 

@@ -31,6 +31,7 @@ export class ChatMessageItem extends Symbiote {
     workSummaryHtml: '',
     copyText: '',
     cardItems: [],
+    parts: [],
     messageClass: 'message',
     bodyHtml: '',
   };
@@ -51,13 +52,16 @@ export class ChatMessageItem extends Symbiote {
     this.sub('workSummaryHtml', () => this._renderBody());
     this.sub('copyText', () => this._renderBody());
     this.sub('cardItems', () => this._renderBody());
+    this.sub('parts', () => this._renderBody());
   }
 
   _renderBody() {
     let role = this.$.role || this.$.type;
     this.$.messageClass = `message ${role || ''}${this.$.isStreaming ? ' streaming' : ''}`.trim();
 
-    if (role === 'tool') {
+    if (this.$.parts && this.$.parts.length > 0) {
+      this.$.bodyHtml = this._renderParts();
+    } else if (role === 'tool') {
       this.$.bodyHtml = this._renderTool();
     } else if (role === 'board') {
       this.$.bodyHtml = this._renderBoard();
@@ -66,6 +70,184 @@ export class ChatMessageItem extends Symbiote {
     } else {
       this.$.bodyHtml = this._renderTextMessage();
     }
+  }
+
+  _renderParts() {
+    let parts = this.$.parts || [];
+    let htmlStr = '';
+
+    let lastTextIndex = -1;
+    for (let i = parts.length - 1; i >= 0; i--) {
+      if (parts[i].type === 'text' || parts[i].type === 'text_delta') {
+        lastTextIndex = i;
+        break;
+      }
+    }
+
+    let insideStatusBoard = false;
+
+    for (let i = 0; i < parts.length; i++) {
+      let part = parts[i];
+      let type = part.type;
+
+      if (type === 'status') {
+        if (!insideStatusBoard) {
+          htmlStr += '<div class="status-board">';
+          insideStatusBoard = true;
+        }
+      } else {
+        if (insideStatusBoard) {
+          htmlStr += '</div>';
+          insideStatusBoard = false;
+        }
+      }
+
+      if (type === 'text' || type === 'text_delta') {
+        let cursor = (type === 'text_delta' || (this.$.isStreaming && i === lastTextIndex)) ? '<span class="streaming-cursor"></span>' : '';
+        htmlStr += `<div class="msg-content">${formatMarkdown(part.text)}${cursor}</div>`;
+      } else if (type === 'reasoning') {
+        let isDone = part.status !== 'active' && part.status !== 'running' && this.$.done;
+        let className = isDone ? 'work-summary' : 'thinking-block';
+        let openAttr = isDone ? '' : ' open';
+        let statusHtml = part.status ? `<span class="thinking-status">${escapeHtml(part.status)}</span>` : '';
+        let details = `<details class="${className}"${openAttr}>`;
+        if (isDone) {
+          details += `<summary><span class="material-symbols-outlined work-summary-icon">check_circle</span>${escapeHtml(part.title || translate('chat.message.worked'))}${this._renderCopyButton(part.text)}</summary>`;
+        } else {
+          details += `<summary><span class="material-symbols-outlined thinking-icon spin-icon">pending</span>${escapeHtml(part.title || translate('chat.message.thinking'))}${statusHtml}</summary>`;
+        }
+        if (part.text) {
+          details += `<div class="work-body">${formatMarkdown(part.text)}</div>`;
+        }
+        details += '</details>';
+        if (isDone) {
+          htmlStr += `<div class="work-summary-wrap">${details}</div>`;
+        } else {
+          htmlStr += details;
+        }
+      } else if (type === 'status') {
+        let status = part.status || 'idle';
+        let isDone = status === 'done' || status === 'error' || status === 'cancelled';
+        let statusIcon = part.meta?.icon || (status === 'running' ? 'pending' : isDone ? 'check_circle' : 'schedule');
+        let spinClass = status === 'running' ? 'spin-icon' : '';
+        let statusText = part.text || (status === 'running' ? translate('chat.message.running') : translate('chat.message.queued'));
+        let title = part.title || part.name || translate('chat.message.status');
+        let id = part.id || '';
+        let linkedAttr = part.url ? ` data-link-id="${escapeHtml(part.url)}"` : '';
+        htmlStr += `<div class="status-card" data-card-id="${escapeHtml(id)}"${linkedAttr} data-status="${escapeHtml(status)}">
+          <div class="status-card-header">
+            <span class="material-symbols-outlined ${spinClass}">${escapeHtml(statusIcon)}</span><span class="card-title">${escapeHtml(title)}</span>
+          </div>
+          <div class="status-card-status">${escapeHtml(statusText)}</div>
+        </div>`;
+      } else if (type === 'tool_call') {
+        let icon = 'build';
+        let spinClass = '';
+        if (part.status === 'running' || part.status === 'active') {
+          icon = 'build_circle';
+          spinClass = 'spin-icon';
+        }
+        let openAttr = part.status === 'running' ? ' open' : '';
+        let summary = summarizeToolInput(part.args);
+        let summaryHtml = summary ? `<span class="tool-summary" title="${escapeHtml(summary)}">${escapeHtml(summary)}</span>` : '';
+        let cardHtml = `<details class="tool-card"${openAttr}>
+          <summary class="tool-header"><span class="material-symbols-outlined tool-icon ${spinClass}">${icon}</span><span class="tool-name">${escapeHtml(part.name || 'tool')}</span>${summaryHtml}</summary>`;
+        if (part.args != null) {
+          cardHtml += `<div class="tool-section"><div class="tool-label">${escapeHtml(translate('chat.message.input'))}</div><pre class="tool-code">${escapeHtml(stringifyBlock(part.args))}</pre></div>`;
+        }
+        cardHtml += `</details>`;
+        htmlStr += cardHtml;
+      } else if (type === 'tool_result') {
+        let isError = part.status === 'error';
+        let icon = isError ? 'error' : 'check_circle';
+        let cardHtml = `<details class="tool-card">
+          <summary class="tool-header"><span class="material-symbols-outlined tool-icon">${icon}</span><span class="tool-name">${escapeHtml(part.name || 'tool result')}</span></summary>`;
+        if (part.result != null) {
+          cardHtml += `<div class="tool-section"><div class="tool-label">${escapeHtml(translate('chat.message.result'))}</div><pre class="tool-code">${escapeHtml(truncateResult(part.result))}</pre></div>`;
+        }
+        cardHtml += `</details>`;
+        htmlStr += cardHtml;
+      } else if (type === 'source') {
+        let title = part.title || part.name || part.url || translate('chat.message.source');
+        let sourceBody = part.url
+          ? `<a href="${escapeHtml(part.url)}" class="md-link" target="_blank">${escapeHtml(title)}</a>`
+          : `<span>${escapeHtml(title)}</span>`;
+        htmlStr += `<div class="source-badge">
+          <span class="material-symbols-outlined">menu_book</span>
+          ${sourceBody}
+        </div>`;
+      } else if (type === 'attachment') {
+        let title = part.title || part.name || translate('chat.message.attachment');
+        let icon = 'attachment';
+        if (part.mimeType?.startsWith('image/')) icon = 'image';
+        else if (part.mimeType?.startsWith('video/')) icon = 'video_file';
+        else if (part.mimeType?.startsWith('audio/')) icon = 'audio_file';
+        htmlStr += `<div class="attachment-card">
+          <span class="material-symbols-outlined">${icon}</span>
+          <div class="attachment-info">
+            <span class="attachment-title">${escapeHtml(title)}</span>
+            ${part.url ? `<a href="${escapeHtml(part.url)}" class="md-link" target="_blank">${escapeHtml(translate('chat.message.download'))}</a>` : ''}
+          </div>
+        </div>`;
+      } else if (type === 'artifact') {
+        let title = part.title || part.name || translate('chat.message.artifact');
+        htmlStr += `<div class="artifact-card">
+          <div class="artifact-header">
+            <span class="material-symbols-outlined">description</span>
+            <span class="artifact-title">${escapeHtml(title)}</span>
+          </div>
+          ${part.text ? `<pre class="md-code-block">${escapeHtml(part.text)}</pre>` : ''}
+        </div>`;
+      } else if (type === 'approval') {
+        let title = part.title || part.name || translate('chat.message.approvalTitle');
+        let id = part.id || '';
+        let text = part.text || translate('chat.message.approvalText');
+        htmlStr += `<div class="approval-card" data-approval-id="${escapeHtml(id)}">
+          <div class="approval-header">
+            <span class="material-symbols-outlined">rule</span>
+            <span class="approval-title">${escapeHtml(title)}</span>
+          </div>
+          <div class="approval-body">${escapeHtml(text)}</div>
+          <div class="approval-actions">
+            <button class="sn-btn approval-btn approve" data-action="approve" data-id="${escapeHtml(id)}">${escapeHtml(translate('chat.message.approve'))}</button>
+            <button class="sn-btn approval-btn reject" data-action="reject" data-id="${escapeHtml(id)}">${escapeHtml(translate('chat.message.reject'))}</button>
+          </div>
+        </div>`;
+      } else if (type === 'action' || type === 'retry' || type === 'cancel') {
+        let title = part.title || part.name || translate('chat.message.actionRequired');
+        let id = part.id || '';
+        let text = part.text || '';
+        let btnLabel = part.title || part.name || translate('chat.message.retry');
+        let actionType = type === 'retry' ? 'retry' : type === 'cancel' ? 'cancel' : 'action';
+        let icon = actionType === 'retry' ? 'replay' : actionType === 'cancel' ? 'cancel' : 'bolt';
+        htmlStr += `<div class="action-card" data-action-id="${escapeHtml(id)}">
+          <div class="action-header">
+            <span class="material-symbols-outlined">${icon}</span>
+            <span class="action-title">${escapeHtml(title)}</span>
+          </div>
+          ${text ? `<div class="action-body">${escapeHtml(text)}</div>` : ''}
+          <div class="action-actions">
+            <button class="sn-btn action-btn" data-action="${escapeHtml(actionType)}" data-id="${escapeHtml(id)}">${escapeHtml(btnLabel)}</button>
+          </div>
+        </div>`;
+      } else if (type === 'error' || type === 'cancelled') {
+        let title = part.title || part.name || (type === 'cancelled' ? translate('chat.message.operationCancelled') : translate('chat.message.error'));
+        let icon = type === 'cancelled' ? 'cancel' : 'error';
+        htmlStr += `<div class="error-card ${type}">
+          <div class="error-header">
+            <span class="material-symbols-outlined">${icon}</span>
+            <span class="error-title">${escapeHtml(title)}</span>
+          </div>
+          <div class="error-body">${escapeHtml(part.text)}</div>
+        </div>`;
+      }
+    }
+
+    if (insideStatusBoard) {
+      htmlStr += '</div>';
+    }
+
+    return htmlStr;
   }
 
   _renderTool() {

@@ -69,7 +69,7 @@ export function normalizeChatMessageRole(role = '') {
 }
 
 function compactText(value, maxLength = 96) {
-  let text = String(value || '').replace(/\s+/g, ' ').trim();
+  let text = String(value ?? '').replace(/\s+/g, ' ').trim();
   if (!text) return '';
   return text.length > maxLength ? `${text.slice(0, maxLength - 3)}...` : text;
 }
@@ -94,17 +94,166 @@ export function buildWorkSummaryHtml(msg, copyText) {
   return `<div class="work-summary-wrap"><details class="work-summary"><summary><span class="material-symbols-outlined work-summary-icon">check_circle</span>${escapeHtml(translate('chat.message.workedFor', { elapsed }))}${copyBtn}</summary>${bodyHtml}</details></div>`;
 }
 
-export function toChatMessageItem(msg, options = {}) {
-  let role = normalizeChatMessageRole(msg?.role || msg?.type);
+export const MESSAGE_PART_KINDS = {
+  TEXT: 'text',
+  TEXT_DELTA: 'text_delta',
+  STREAM_DELTA: 'stream_delta',
+  REASONING: 'reasoning',
+  STATUS: 'status',
+  TOOL_CALL: 'tool_call',
+  TOOL_RESULT: 'tool_result',
+  SOURCE: 'source',
+  ATTACHMENT: 'attachment',
+  ARTIFACT: 'artifact',
+  APPROVAL: 'approval',
+  ACTION: 'action',
+  RETRY: 'retry',
+  CANCEL: 'cancel',
+  ERROR: 'error',
+  CANCELLED: 'cancelled',
+};
+
+export function normalizeChatMessagePart(part) {
+  if (!part || typeof part !== 'object') {
+    return {
+      type: 'text',
+      text: typeof part === 'string' ? part : String(part ?? ''),
+      name: '',
+      id: '',
+      args: null,
+      result: null,
+      status: '',
+      title: '',
+      url: '',
+      mimeType: '',
+      meta: {},
+    };
+  }
+
+  let type = part.type ?? part.kind ?? 'text';
+  if (type === 'stream_delta') {
+    type = 'text_delta';
+  }
+
+  let args = part.args ?? part.arguments ?? part.input ?? null;
+  if (type === 'tool_call' && typeof args === 'string') {
+    try {
+      args = JSON.parse(args);
+    } catch {}
+  }
+
   return {
-    type: normalizeChatMessageRole(msg?.type || role),
+    type,
+    text: part.text ?? part.content ?? part.value ?? '',
+    name: part.name ?? '',
+    id: part.id ?? part.toolCallId ?? part.tool_call_id ?? '',
+    args,
+    result: part.result ?? part.output ?? null,
+    status: part.status ?? '',
+    title: part.title ?? part.label ?? '',
+    url: part.url ?? part.href ?? '',
+    mimeType: part.mimeType ?? part.mime ?? part.contentType ?? '',
+    meta: part.meta && typeof part.meta === 'object' ? part.meta : {},
+  };
+}
+
+export function toChatMessageItem(msg, options = {}) {
+  let role = normalizeChatMessageRole(msg?.role ?? msg?.type);
+  let parts = [];
+  if (Array.isArray(msg?.parts)) {
+    parts = msg.parts.map(normalizeChatMessagePart);
+  } else {
+    if (role === 'tool') {
+      if (msg?.name || msg?.input != null) {
+        parts.push({
+          type: 'tool_call',
+          name: msg.name || 'tool',
+          args: msg.input,
+          id: msg.id || '',
+          text: '',
+          result: null,
+          status: '',
+          title: '',
+          url: '',
+          mimeType: '',
+          meta: {},
+        });
+      }
+      if (msg?.result != null) {
+        parts.push({
+          type: 'tool_result',
+          name: msg.name || 'tool',
+          result: msg.result,
+          id: msg.id || '',
+          text: '',
+          args: null,
+          status: '',
+          title: '',
+          url: '',
+          mimeType: '',
+          meta: {},
+        });
+      }
+    } else if (role === 'thinking') {
+      parts.push({
+        type: 'reasoning',
+        text: msg?.text || msg?.content || '',
+        status: msg?.status || '',
+        name: '',
+        id: '',
+        args: null,
+        result: null,
+        title: '',
+        url: '',
+        mimeType: '',
+        meta: {},
+      });
+    } else if (role === 'board') {
+      let cardItems = Array.isArray(msg?.cardItems) ? msg.cardItems : [];
+      for (let card of cardItems) {
+        parts.push({
+          type: 'status',
+          id: card.id || '',
+          title: card.title || '',
+          status: card.status || '',
+          text: card.statusText || '',
+          name: '',
+          args: null,
+          result: null,
+          url: '',
+          mimeType: '',
+          meta: {},
+        });
+      }
+    } else {
+      let textVal = msg?.text ?? msg?.content ?? '';
+      if (textVal !== '' || options.isLatestStreaming) {
+        parts.push({
+          type: options.isLatestStreaming ? 'text_delta' : 'text',
+          text: textVal,
+          name: '',
+          id: '',
+          args: null,
+          result: null,
+          status: '',
+          title: '',
+          url: '',
+          mimeType: '',
+          meta: {},
+        });
+      }
+    }
+  }
+
+  return {
+    type: normalizeChatMessageRole(msg?.type ?? role),
     role,
-    text: msg?.text || msg?.content || '',
+    text: msg?.text ?? msg?.content ?? '',
     isStreaming: Boolean(options.isLatestStreaming),
     isLatestTool: Boolean(options.isLatestTool),
-    name: msg?.name || '',
-    input: msg?.input || null,
-    result: msg?.result || null,
+    name: msg?.name ?? '',
+    input: msg?.input ?? null,
+    result: msg?.result ?? null,
     done: Boolean(msg?.done),
     elapsedText: formatElapsed(msg?.elapsed || 0),
     status: msg?.status || '',
@@ -112,6 +261,7 @@ export function toChatMessageItem(msg, options = {}) {
     cardItems: Array.isArray(msg?.cardItems) ? msg.cardItems : [],
     workSummaryHtml: '',
     copyText: '',
+    parts,
   };
 }
 
