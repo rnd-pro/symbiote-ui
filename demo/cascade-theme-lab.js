@@ -3044,7 +3044,7 @@ layout.registerPanelType('viewport', {
 });
 layout.registerPanelType('timeline', {
   title: 'Timeline',
-  icon: 'video_timeline',
+  icon: 'view_timeline',
   component: 'sn-timeline-editor',
   behavior: {
     importance: 95,
@@ -3541,4 +3541,96 @@ shellMenu?.addEventListener('click', (event) => {
   }
 });
 
+// ── Video panel mock data auto-loader ──
+const VIDEO_MOCK_TIMELINE = {
+  fps: 30,
+  duration: 900,
+  tracks: [
+    { id: 'v1', type: 'video', label: 'Video 1', clips: [
+      { id: 'intro', start: 0, end: 90, label: 'Intro' },
+      { id: 'scene-1', start: 100, end: 350, label: 'Scene 1' },
+      { id: 'scene-2', start: 360, end: 600, label: 'Scene 2' },
+      { id: 'outro', start: 750, end: 900, label: 'Outro' },
+    ] },
+    { id: 'v2', type: 'video', label: 'Video 2 (B-roll)', clips: [
+      { id: 'broll-1', start: 120, end: 280, label: 'B-roll' },
+      { id: 'broll-2', start: 400, end: 520, label: 'Interview' },
+    ] },
+    { id: 'a1', type: 'audio', label: 'Music', clips: [
+      { id: 'bgm', start: 0, end: 900, label: 'Background Music' },
+    ] },
+    { id: 'a2', type: 'audio', label: 'Voice', clips: [
+      { id: 'vo-1', start: 30, end: 340, label: 'Narration' },
+      { id: 'vo-2', start: 380, end: 580, label: 'Dialog' },
+    ] },
+    { id: 't1', type: 'text', label: 'Titles', clips: [
+      { id: 'title', start: 10, end: 80, label: 'Main Title' },
+      { id: 'lower-3rd', start: 130, end: 200, label: 'Lower Third' },
+      { id: 'credits', start: 800, end: 890, label: 'Credits' },
+    ] },
+    { id: 'fx', type: 'effect', label: 'Effects', clips: [
+      { id: 'trans-1', start: 88, end: 102, label: 'Cross Dissolve' },
+      { id: 'trans-2', start: 348, end: 362, label: 'Fade' },
+      { id: 'color', start: 100, end: 600, label: 'Color Grade' },
+    ] },
+  ],
+  markers: [
+    { frame: 90, label: 'Act I' },
+    { frame: 350, label: 'Act II' },
+    { frame: 750, label: 'Act III' },
+  ],
+};
+
+const VIDEO_MOCK_COMPOSITION = {
+  width: 1920,
+  height: 1080,
+  fps: 30,
+  duration: 900,
+  background: 'hsl(230 25% 12%)',
+  layers: [
+    { type: 'gradient', x: 0, y: 0, width: 1920, height: 1080, stops: [[0, 'hsl(220 35% 18%)'], [0.6, 'hsl(260 30% 14%)'], [1, 'hsl(200 25% 10%)']], opacity: 1 },
+    { type: 'rect', x: 160, y: 180, width: 1600, height: 720, color: 'hsl(220 20% 16%)', opacity: 0.85 },
+    { type: 'circle', x: 960, y: 400, radius: 180, color: 'hsl(210 55% 42%)', opacity: 0.3 },
+    { type: 'circle', x: 700, y: 500, radius: 120, color: 'hsl(280 50% 45%)', opacity: 0.2 },
+    { type: 'text', x: 480, y: 340, text: 'symbiote-video', fontSize: 72, fontFamily: 'Inter, sans-serif', color: 'hsl(0 0% 94%)' },
+    { type: 'text', x: 480, y: 430, text: 'Programmatic video framework', fontSize: 28, fontFamily: 'Inter, sans-serif', color: 'hsl(0 0% 60%)' },
+    { type: 'rect', x: 480, y: 500, width: 200, height: 4, color: 'hsl(210 55% 42%)', opacity: 0.6 },
+    { type: 'text', x: 480, y: 540, text: '00:00:00 / 00:30:00  •  1920×1080  •  30 fps', fontSize: 16, fontFamily: 'monospace', color: 'hsl(0 0% 40%)' },
+  ],
+};
+
+function initVideoPanel(el) {
+  if (el.matches('sn-timeline-editor') && !el._demoInit) {
+    el._demoInit = true;
+    el.loadTimeline(VIDEO_MOCK_TIMELINE);
+  }
+  if (el.matches('sn-canvas-viewport') && !el._demoInit) {
+    el._demoInit = true;
+    el.loadComposition(VIDEO_MOCK_COMPOSITION);
+  }
+}
+
+// Sync playhead between timeline and viewport
+layout.addEventListener('playhead-change', (e) => {
+  let frame = e.detail?.frame;
+  if (frame == null) return;
+  layout.querySelectorAll('sn-canvas-viewport').forEach((vp) => {
+    if (!vp._demoInit) return;
+    vp.setFrame(frame);
+  });
+});
+
+// Auto-init video panels when they appear in the layout
+let videoObserver = new MutationObserver((mutations) => {
+  for (let m of mutations) {
+    for (let node of m.addedNodes) {
+      if (node.nodeType !== 1) continue;
+      initVideoPanel(node);
+      node.querySelectorAll?.('sn-timeline-editor, sn-canvas-viewport').forEach(initVideoPanel);
+    }
+  }
+});
+videoObserver.observe(layout, { childList: true, subtree: true });
+
 applyShowcaseView(activeProjectId, activeViewByProject.get(activeProjectId));
+
