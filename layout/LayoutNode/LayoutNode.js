@@ -152,6 +152,7 @@ export class LayoutNode extends Symbiote {
     layoutMinBlockSize: 160,
     layoutCollapsePolicy: 'auto',
     layoutOverflowPolicy: 'collapse',
+    layoutMobileDock: 'auto',
 
 
     isCollapsed: false,
@@ -412,9 +413,11 @@ export class LayoutNode extends Symbiote {
     this.$.layoutMinBlockSize = behavior.minBlockSize;
     this.$.layoutCollapsePolicy = behavior.collapse;
     this.$.layoutOverflowPolicy = behavior.overflow;
+    this.$.layoutMobileDock = behavior.mobileDock;
     this.#syncHostAttribute('importance', behavior.importance);
     this.#syncHostAttribute('collapse-policy', behavior.collapse);
     this.#syncHostAttribute('overflow-policy', behavior.overflow);
+    this.#syncHostAttribute('mobile-dock-policy', behavior.mobileDock);
     this.style.setProperty('--sn-layout-panel-importance', String(behavior.importance));
     this.style.setProperty('--sn-layout-panel-min-inline-size', `${behavior.minInlineSize}px`);
     this.style.setProperty('--sn-layout-panel-min-block-size', `${behavior.minBlockSize}px`);

@@ -1,10 +1,13 @@
 /**
- * LayoutRouter — universal hash-based router for layout system
+ * LayoutRouter — universal router for layout system
+ *
+ * Supports two URL strategies:
+ * - **hash** (default): `#panel/subpath?param1=value&param2=value`
+ * - **path**: `/basePath/panel/subpath/?param1=value&param2=value`
  *
  * Uses Symbiote PubSub named data context (ROUTER) to provide
- * reactive routing across the application.
- *
- * URL format: #panel/subpath?param1=value&param2=value
+ * reactive routing across the application. The PubSub contract
+ * is identical in both modes.
  *
  * Two levels of query params:
  * - **Global** (registered via registerGlobalParam): persist across section switches
@@ -23,6 +26,22 @@ const CTX = 'ROUTER';
 /** @type {Set<string>} Keys that persist across section switches */
 const _globalKeys = new Set();
 
+/**
+ * Router configuration
+ * @type {{ mode: 'hash' | 'path', basePath: string, defaultPanel: string }}
+ */
+const _config = {
+  mode: 'hash',
+  basePath: '/',
+  defaultPanel: 'default',
+};
+
+/** @type {boolean} Whether initial sync has been performed */
+let _initialized = false;
+
+/** @type {Function|null} Current URL change listener to allow re-binding */
+let _urlChangeListener = null;
+
 const routerCtx = PubSub.registerCtx(
   {
     panel: 'default',
@@ -32,6 +51,58 @@ const routerCtx = PubSub.registerCtx(
   },
   CTX
 );
+
+/**
+ * Configure router mode. Call once before any navigation.
+ *
+ * @param {Object} options
+ * @param {'hash' | 'path'} [options.mode='hash'] - URL strategy
+ * @param {string} [options.basePath] - Base path for path-mode (e.g. '/cv/').
+ *   Auto-detected from <base> tag if not provided. Ignored in hash mode.
+ * @param {string} [options.defaultPanel='default'] - Default panel when URL has no route
+ */
+export function configureRouter({ mode = 'hash', basePath, defaultPanel } = {}) {
+  _config.mode = mode === 'path' ? 'path' : 'hash';
+  _config.defaultPanel = defaultPanel || 'default';
+
+  if (_config.mode === 'path') {
+    _config.basePath = _normalizeBasePath(basePath || _detectBasePath());
+  } else {
+    _config.basePath = '/';
+  }
+
+  // Re-bind URL listener for the correct event
+  if (typeof window !== 'undefined' && _urlChangeListener) {
+    if (_config.mode === 'hash') {
+      window.removeEventListener('popstate', _urlChangeListener);
+      window.addEventListener('hashchange', _urlChangeListener);
+    } else {
+      window.removeEventListener('hashchange', _urlChangeListener);
+      window.addEventListener('popstate', _urlChangeListener);
+    }
+  }
+
+  // Re-sync from the current URL
+  if (typeof location !== 'undefined') {
+    syncFromUrl();
+  }
+}
+
+/**
+ * Get current router base path (for path-mode consumers that need it)
+ * @returns {string}
+ */
+export function getRouterBasePath() {
+  return _config.basePath;
+}
+
+/**
+ * Get current router mode
+ * @returns {'hash' | 'path'}
+ */
+export function getRouterMode() {
+  return _config.mode;
+}
 
 /**
  * Parse query string into object
@@ -79,6 +150,29 @@ export function buildHash(panel, subpath, params) {
 }
 
 /**
+ * Build a full URL string for the given route parts.
+ * In hash mode returns `pathname#panel/subpath?query`.
+ * In path mode returns `basePath/panel/subpath/?query`.
+ * @param {string} panel
+ * @param {string} [subpath]
+ * @param {Object} [mergedParams]
+ * @returns {string}
+ */
+function buildUrl(panel, subpath, mergedParams) {
+  if (_config.mode === 'path') {
+    let path = _config.basePath + panel;
+    if (subpath) path += '/' + subpath;
+    // Ensure trailing slash for clean URLs
+    if (!path.endsWith('/')) path += '/';
+    const q = mergedParams ? buildQuery(mergedParams) : '';
+    return q ? path + '?' + q : path;
+  }
+  // hash mode
+  const hash = buildHash(panel, subpath, mergedParams);
+  return location.pathname + '#' + hash;
+}
+
+/**
  * Navigate to a new route — updates URL and PubSub context.
  * Global params (registered via registerGlobalParam) are automatically
  * carried over unless explicitly overridden or set to null.
@@ -104,12 +198,14 @@ export function navigate(panel, subpath = '', params = {}) {
       delete merged[k];
     }
   }
-  const hash = buildHash(panel, subpath, merged);
 
-  history.pushState(null, '', location.pathname + '#' + hash);
-  syncFromHash();
+  const url = buildUrl(panel, subpath, merged);
+  history.pushState(null, '', url);
+  syncFromUrl();
+
   if (typeof window !== 'undefined') {
-    window.dispatchEvent(new Event('hashchange'));
+    const eventName = _config.mode === 'path' ? 'popstate' : 'hashchange';
+    window.dispatchEvent(new Event(eventName));
   }
 }
 
@@ -129,20 +225,36 @@ export function updateParams(params) {
       merged[k] = v;
     }
   }
+
+  const url = buildUrl(routerCtx.read('panel'), routerCtx.read('subpath'), merged);
+  history.replaceState(null, '', url);
+
   const query = buildQuery(merged);
-  const hash = buildHash(routerCtx.read('panel'), routerCtx.read('subpath'), merged);
-  history.replaceState(null, '', '#' + hash);
   routerCtx.pub('query', query);
+
   if (typeof window !== 'undefined') {
-    window.dispatchEvent(new Event('hashchange'));
+    const eventName = _config.mode === 'path' ? 'popstate' : 'hashchange';
+    window.dispatchEvent(new Event(eventName));
   }
 }
 
 /**
- * Sync PubSub context from current URL hash
+ * Sync PubSub context from current URL.
+ * In hash mode reads location.hash; in path mode reads location.pathname + search.
  */
-function syncFromHash() {
-  const raw = location.hash.replace(/^#/, '') || 'default';
+function syncFromUrl() {
+  if (_config.mode === 'path') {
+    _syncFromPath();
+  } else {
+    _syncFromHash();
+  }
+}
+
+/**
+ * Parse hash URL into PubSub context
+ */
+function _syncFromHash() {
+  const raw = location.hash.replace(/^#/, '') || _config.defaultPanel;
 
   const qIdx = raw.indexOf('?');
   const pathPart = qIdx >= 0 ? raw.substring(0, qIdx) : raw;
@@ -152,10 +264,49 @@ function syncFromHash() {
   const panel = slashIdx >= 0 ? pathPart.substring(0, slashIdx) : pathPart;
   const subpath = slashIdx >= 0 ? pathPart.substring(slashIdx + 1) : '';
 
+  _publishRoute(panel, subpath, queryPart);
+}
+
+/**
+ * Parse path-based URL into PubSub context
+ */
+function _syncFromPath() {
+  const pathname = decodeURIComponent(location.pathname);
+  const basePath = _config.basePath;
+
+  // Strip basePath prefix
+  let relative = pathname.startsWith(basePath)
+    ? pathname.slice(basePath.length)
+    : pathname.replace(/^\/+/, '');
+
+  // Remove leading/trailing slashes and /index suffix
+  relative = relative
+    .replace(/^\/+|\/+$/g, '')
+    .replace(/\/index$/, '');
+
+  if (!relative) {
+    _publishRoute(_config.defaultPanel, '', location.search.replace(/^\?/, ''));
+    return;
+  }
+
+  const slashIdx = relative.indexOf('/');
+  const panel = slashIdx >= 0 ? relative.substring(0, slashIdx) : relative;
+  const subpath = slashIdx >= 0 ? relative.substring(slashIdx + 1).replace(/\/+$/, '') : '';
+  const queryPart = location.search.replace(/^\?/, '');
+
+  _publishRoute(panel, subpath, queryPart);
+}
+
+/**
+ * Publish route parts to PubSub context and sync global params
+ * @param {string} panel
+ * @param {string} subpath
+ * @param {string} queryPart
+ */
+function _publishRoute(panel, subpath, queryPart) {
   routerCtx.pub('panel', panel);
   routerCtx.pub('subpath', subpath);
   routerCtx.pub('query', queryPart);
-
 
   if (_globalKeys.size > 0) {
     const allParams = parseQuery(queryPart);
@@ -180,13 +331,27 @@ export function getRoute() {
 }
 
 /**
- * Set default panel (first section to show if hash is empty)
+ * Set default panel (first section to show if URL has no route)
  * @param {string} panel
  */
 export function setDefaultPanel(panel) {
   if (typeof location === 'undefined') return;
-  if (!location.hash || location.hash === '#') {
-    navigate(panel);
+  _config.defaultPanel = panel;
+
+  if (_config.mode === 'path') {
+    // In path mode, check if we're at the base path
+    const pathname = decodeURIComponent(location.pathname);
+    const relative = pathname.startsWith(_config.basePath)
+      ? pathname.slice(_config.basePath.length).replace(/^\/+|\/+$/g, '')
+      : '';
+    if (!relative) {
+      navigate(panel);
+    }
+  } else {
+    // In hash mode, check if hash is empty
+    if (!location.hash || location.hash === '#') {
+      navigate(panel);
+    }
   }
 }
 
@@ -220,10 +385,39 @@ export function setGlobalParam(key, value) {
   updateParams({ [key]: value });
 }
 
+/**
+ * Detect base path from <base> tag or fallback to '/'
+ * @returns {string}
+ */
+function _detectBasePath() {
+  if (typeof document === 'undefined' || typeof location === 'undefined') return '/';
+  let base = document.querySelector('base')?.href;
+  if (!base) return '/';
+  try {
+    return new URL(base, location.href).pathname;
+  } catch {
+    return '/';
+  }
+}
 
+/**
+ * Normalize base path to always have leading and trailing slashes
+ * @param {string} path
+ * @returns {string}
+ */
+function _normalizeBasePath(path) {
+  let normalized = String(path || '/');
+  if (!normalized.startsWith('/')) normalized = '/' + normalized;
+  if (!normalized.endsWith('/')) normalized += '/';
+  return normalized;
+}
+
+// --- Initial sync ---
 if (typeof location !== 'undefined' && typeof window !== 'undefined') {
-  syncFromHash();
-  window.addEventListener('hashchange', syncFromHash);
+  _urlChangeListener = () => syncFromUrl();
+  syncFromUrl();
+  // Default to hash mode listener; configureRouter() will re-bind if needed
+  window.addEventListener('hashchange', _urlChangeListener);
 }
 
 /**
@@ -271,4 +465,3 @@ export function updateHashParam(key, value, locationObj = typeof window !== 'und
     historyObj.replaceState(null, '', newHash)
   }
 }
-

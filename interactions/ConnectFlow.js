@@ -97,6 +97,48 @@ export class ConnectFlow {
     socketEl.addEventListener('pointerdown', (e) => {
       e.stopPropagation();
       e.preventDefault();
+
+      if (data.side === 'input') {
+        let existingConns = this.#editor.getConnections().filter(
+          (c) => c.to === data.nodeId && c.in === data.key
+        );
+        if (existingConns.length > 0) {
+          let conn = existingConns[0];
+          let canvasEl = socketEl.closest('node-canvas');
+          if (canvasEl) {
+            let event = new CustomEvent('sn-connection-reconnect', {
+              detail: {
+                connectionId: conn.id,
+                connection: conn,
+                draggedSide: 'input',
+                nodeId: data.nodeId,
+                key: data.key,
+              },
+              cancelable: true,
+              bubbles: true,
+            });
+            canvasEl.dispatchEvent(event);
+            if (event.defaultPrevented) return;
+
+            this.#editor.removeConnection(conn.id);
+
+            // Reconnect: start picking from the source (output) socket
+            let sourceNode = this.#editor.getNode(conn.from);
+            if (sourceNode) {
+              let sourceEl = canvasEl.getNodeView ? canvasEl.getNodeView(conn.from) : null;
+              let sourceSocketEl = sourceEl?.querySelector(`.sn-socket[data-key="${conn.out}"]`);
+              this.#pick({
+                nodeId: conn.from,
+                key: conn.out,
+                side: 'output',
+                element: sourceSocketEl,
+              });
+            }
+            return;
+          }
+        }
+      }
+
       this.#pick(data);
     });
   }

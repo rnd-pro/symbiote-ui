@@ -32,6 +32,12 @@ function setStylePropertyIfChanged(style, name, value) {
   }
 }
 
+function setImportantStylePropertyIfChanged(style, name, value) {
+  if (style.getPropertyValue(name) !== value || style.getPropertyPriority(name) !== 'important') {
+    style.setProperty(name, value, 'important');
+  }
+}
+
 export class Layout extends Symbiote {
   static isoMode = true;
 
@@ -43,6 +49,7 @@ export class Layout extends Symbiote {
     '@min-panel-block-size': 160,
     '@responsive-mode': 'preserve',
     '@responsive-breakpoint': 720,
+    '@swipe-control': 'edge',
     '@overflow-mode': 'collapse',
     '@auto-collapse': true,
 
@@ -62,6 +69,11 @@ export class Layout extends Symbiote {
     hasFullscreenTabs: false,
     tabItems: [],
 
+    drawerStartOpen: false,
+    drawerEndOpen: false,
+    drawerStartPanelId: '',
+    drawerEndPanelId: '',
+
 
     onTabClick: (e) => {
       let panelId = e.target.closest('[data-panel-id]')?.dataset.panelId;
@@ -69,6 +81,11 @@ export class Layout extends Symbiote {
         this._switchFullscreenPanel(panelId);
       }
     },
+
+
+    onDrawerToggleClick: (e) => this._onDrawerToggleClick(e),
+    onDrawerHandlePointerDown: (e) => this._onDrawerHandlePointerDown(e),
+    onDrawerBackdropClick: () => this.closeDrawer(),
 
 
     onLayoutChange: () => this._saveLayout(),
@@ -93,7 +110,7 @@ export class Layout extends Symbiote {
   }
 
   initCallback() {
-    ensureMaterialSymbols(['dashboard']);
+    ensureMaterialSymbols(['dashboard', 'chevron_left', 'chevron_right']);
     this._loadLayout();
 
 
@@ -106,6 +123,12 @@ export class Layout extends Symbiote {
     this.addEventListener('panel-collapse-toggle', (e) => this._onPanelCollapseToggle(e));
     this.addEventListener('panel-menu-action', (e) => this._onPanelMenuAction(e));
     this.addEventListener('panel-close', (e) => this._onPanelClose(e));
+    this._drawerPointerMoveHandler = (e) => this._onDrawerPointerMove(e);
+    this._drawerPointerUpHandler = (e) => this._onDrawerPointerUp(e);
+    this._drawerPointerCancelHandler = (e) => this._onDrawerPointerCancel(e);
+    this.addEventListener('pointermove', this._drawerPointerMoveHandler);
+    this.addEventListener('pointerup', this._drawerPointerUpHandler);
+    this.addEventListener('pointercancel', this._drawerPointerCancelHandler);
 
 
     this._resizeFallback = () => this._scheduleResponsiveLayout();
@@ -125,6 +148,11 @@ export class Layout extends Symbiote {
     if (this._responsiveFrame && typeof cancelAnimationFrame !== 'undefined') {
       cancelAnimationFrame(this._responsiveFrame);
       this._responsiveFrame = 0;
+    }
+    if (this._drawerPointerMoveHandler) {
+      this.removeEventListener('pointermove', this._drawerPointerMoveHandler);
+      this.removeEventListener('pointerup', this._drawerPointerUpHandler);
+      this.removeEventListener('pointercancel', this._drawerPointerCancelHandler);
     }
     super.disconnectedCallback?.();
   }
@@ -214,6 +242,7 @@ export class Layout extends Symbiote {
       overflow: this.getAttribute('overflow-mode') || this.$['@overflow-mode'],
       responsiveMode: this.getAttribute('responsive-mode') || this.$['@responsive-mode'],
       responsiveBreakpoint: this.getAttribute('responsive-breakpoint') || this.$['@responsive-breakpoint'],
+      swipeControl: this.getAttribute('swipe-control') || this.$['@swipe-control'],
     });
   }
 
@@ -288,6 +317,7 @@ export class Layout extends Symbiote {
     });
 
     setAttributeIfChanged(this, 'responsive-mode', behavior.responsiveMode);
+    setAttributeIfChanged(this, 'swipe-control', behavior.swipeControl);
     setAttributeIfChanged(this, 'overflow-mode', behavior.overflow);
     toggleAttributeIfChanged(this, 'responsive-active', responsiveState.responsiveActive);
     toggleAttributeIfChanged(this, 'scroll-inline-active', responsiveState.scrollInline);
@@ -295,6 +325,10 @@ export class Layout extends Symbiote {
     for (let [name, value] of Object.entries(responsiveState.cssVars)) {
       setStylePropertyIfChanged(this.style, name, value);
     }
+    this._syncFullscreenBounds();
+    this._lastResponsiveState = responsiveState;
+    this._lastDrawerBehavior = behavior;
+    this._syncDrawerProjection(responsiveState, behavior, tree);
 
     if (this.$.fullscreenPanelId) return;
 
@@ -446,10 +480,499 @@ export class Layout extends Symbiote {
         restoringNodeId: targetNode.id,
         resolvePanelBehavior: (node, branchBehavior) => {
           let typeBehavior = this.$.panelTypes[node.panelType]?.behavior || {};
-          return LayoutTree.getNodeBehavior(node, LayoutTree.normalizeLayoutBehavior(typeBehavior, branchBehavior));
+          return LayoutTree.getNodeBehavior(
+            node,
+            LayoutTree.normalizeLayoutBehavior(typeBehavior, branchBehavior)
+          );
         },
       }
     );
+  }
+
+  _syncDrawerProjection(responsiveState, behavior, tree) {
+    let active = Boolean(responsiveState.drawerActive) && !this.$.fullscreenPanelId;
+    toggleAttributeIfChanged(this, 'drawer-mode-active', active);
+    if (!active) {
+      this._clearDrawerProjection();
+      return;
+    }
+
+    let projection = LayoutTree.resolveMobileDrawerLayout(tree, {
+      fallbackBehavior: behavior,
+      resolvePanelBehavior: (node, branchBehavior) => {
+        let typeBehavior = this.$.panelTypes[node.panelType]?.behavior || {};
+        return LayoutTree.getNodeBehavior(
+          node,
+          LayoutTree.normalizeLayoutBehavior(typeBehavior, branchBehavior)
+        );
+      },
+    });
+    this._drawerProjection = projection;
+
+    let hasStart = projection.startPanelIds.length > 0;
+    let hasEnd = projection.endPanelIds.length > 0;
+    let startPanelId = this._resolveDrawerPanelId('start', projection.startPanelIds);
+    let endPanelId = this._resolveDrawerPanelId('end', projection.endPanelIds);
+    let startOpen = hasStart && this.$.drawerStartOpen;
+    let endOpen = hasEnd && this.$.drawerEndOpen;
+    toggleAttributeIfChanged(this, 'drawer-start-open', startOpen);
+    toggleAttributeIfChanged(this, 'drawer-end-open', endOpen);
+    if (startPanelId) {
+      setAttributeIfChanged(this, 'drawer-start-panel-id', startPanelId);
+    } else {
+      this.removeAttribute('drawer-start-panel-id');
+    }
+    if (endPanelId) {
+      setAttributeIfChanged(this, 'drawer-end-panel-id', endPanelId);
+    } else {
+      this.removeAttribute('drawer-end-panel-id');
+    }
+    if (projection.primaryPanelId) {
+      setAttributeIfChanged(this, 'drawer-primary-panel-id', projection.primaryPanelId);
+    } else {
+      this.removeAttribute('drawer-primary-panel-id');
+    }
+
+    let panelMap = new Map(projection.panels.map((panel) => [panel.id, panel]));
+    for (let node of this.querySelectorAll('layout-node[node-type="panel"]')) {
+      let panel = panelMap.get(node.$?.nodeId);
+      if (!panel) {
+        this._clearDrawerNode(node);
+        continue;
+      }
+      setAttributeIfChanged(node, 'mobile-dock', panel.dock);
+      toggleAttributeIfChanged(node, 'drawer-primary', panel.dock === 'primary');
+      this._setDrawerNodeExpanded(node, true);
+      let open = (
+        (panel.dock === 'start' && startOpen && panel.id === startPanelId) ||
+        (panel.dock === 'end' && endOpen && panel.id === endPanelId)
+      );
+      toggleAttributeIfChanged(
+        node,
+        'drawer-active-panel',
+        (panel.dock === 'start' && panel.id === startPanelId) ||
+          (panel.dock === 'end' && panel.id === endPanelId)
+      );
+      toggleAttributeIfChanged(node, 'drawer-open', open);
+      if (panel.dock === 'start' || panel.dock === 'end') {
+        let closedTranslate = panel.dock === 'start' ? '-100%' : '100%';
+        let translate = open ? '0%' : closedTranslate;
+        setStylePropertyIfChanged(
+          node.style,
+          '--sn-layout-drawer-translate',
+          translate
+        );
+        setImportantStylePropertyIfChanged(node.style, 'transform', `translateX(${translate})`);
+        if (panel.dock === 'start') {
+          setStylePropertyIfChanged(
+            node.style,
+            'inset-inline-start',
+            '0px'
+          );
+          node.style.removeProperty('inset-inline-end');
+        } else {
+          setStylePropertyIfChanged(
+            node.style,
+            'inset-inline-end',
+            '0px'
+          );
+          node.style.removeProperty('inset-inline-start');
+        }
+      } else {
+        node.style.removeProperty('--sn-layout-drawer-translate');
+        node.style.removeProperty('transform');
+        node.style.removeProperty('inset-inline-start');
+        node.style.removeProperty('inset-inline-end');
+      }
+    }
+    this._syncDrawerHandleState(projection, startOpen, endOpen, startPanelId, endPanelId);
+  }
+
+  _clearDrawerProjection() {
+    this.removeAttribute('drawer-mode-active');
+    this.removeAttribute('drawer-start-open');
+    this.removeAttribute('drawer-end-open');
+    this.removeAttribute('drawer-primary-panel-id');
+    this.removeAttribute('drawer-start-panel-id');
+    this.removeAttribute('drawer-end-panel-id');
+    this.removeAttribute('drawer-dragging');
+    this._drawerProjection = null;
+    for (let node of this.querySelectorAll('layout-node[mobile-dock], layout-node[drawer-open]')) {
+      this._clearDrawerNode(node);
+    }
+    this._syncDrawerHandleState(null, false, false, '', '');
+  }
+
+  _clearDrawerNode(node) {
+    node.removeAttribute('mobile-dock');
+    node.removeAttribute('drawer-primary');
+    node.removeAttribute('drawer-open');
+    node.removeAttribute('drawer-active-panel');
+    node.removeAttribute('drawer-dragging');
+    node.removeAttribute('drawer-expanded');
+    this._restoreDrawerNodeCollapseState(node);
+    node.style.removeProperty('transform');
+    node.style.removeProperty('--sn-layout-drawer-translate');
+    node.style.removeProperty('inset-inline-start');
+    node.style.removeProperty('inset-inline-end');
+  }
+
+  _setDrawerNodeExpanded(node, expanded) {
+    toggleAttributeIfChanged(node, 'drawer-expanded', expanded);
+    if (!expanded) {
+      this._restoreDrawerNodeCollapseState(node);
+      return;
+    }
+    if (node.$) {
+      node.$.isCollapsed = false;
+      node.$.collapseIcon = node._getCollapseIcon?.() || node.$.collapseIcon;
+    }
+    node.removeAttribute('collapsed');
+    node.removeAttribute('auto-collapsed');
+    node.removeAttribute('collapse-dir');
+    if (node.ref?.panelContent) {
+      node.ref.panelContent.hidden = false;
+    }
+    node._syncCollapsePresentation?.();
+  }
+
+  _restoreDrawerNodeCollapseState(node) {
+    let nodeData = node.$?.nodeData;
+    if (!nodeData || nodeData.type !== 'panel') return;
+    let collapsed = Boolean(nodeData.collapsed);
+    if (node.$) {
+      node.$.isCollapsed = collapsed;
+    }
+    toggleAttributeIfChanged(node, 'collapsed', collapsed);
+    toggleAttributeIfChanged(node, 'auto-collapsed', Boolean(nodeData.autoCollapsed));
+    if (node.ref?.panelContent) {
+      node.ref.panelContent.hidden = collapsed;
+    }
+    node._syncCollapsePresentation?.();
+  }
+
+  _resolveDrawerPanelId(dock, ids = []) {
+    let prop = dock === 'start' ? 'drawerStartPanelId' : 'drawerEndPanelId';
+    let current = this.$[prop] || '';
+    if (!ids.includes(current)) {
+      current = ids[0] || '';
+      this.$[prop] = current;
+    }
+    return current;
+  }
+
+  _setActiveDrawerPanelId(dock, panelId) {
+    if (!panelId) return;
+    if (dock === 'start') {
+      this.$.drawerStartPanelId = panelId;
+    } else if (dock === 'end') {
+      this.$.drawerEndPanelId = panelId;
+    }
+  }
+
+  _getActiveDrawerPanelId(dock) {
+    return dock === 'start' ? this.$.drawerStartPanelId : this.$.drawerEndPanelId;
+  }
+
+  _syncDrawerHandleState(projection, startOpen, endOpen, startPanelId, endPanelId) {
+    let panels = projection?.panels || [];
+    let startPanels = panels.filter((panel) => panel.dock === 'start');
+    let endPanels = panels.filter((panel) => panel.dock === 'end');
+    this._syncDrawerHandleStack('start', startPanels, startPanels.length > 0 && !startOpen && !endOpen, startOpen, startPanelId);
+    this._syncDrawerHandleStack('end', endPanels, endPanels.length > 0 && !startOpen && !endOpen, endOpen, endPanelId);
+  }
+
+  _syncDrawerHandleStack(dock, panels, available, open, activePanelId) {
+    let stack = this.querySelector(`.layout-drawer-handle-stack-${dock}`);
+    if (!stack) return;
+    if (!available || panels.length === 0) {
+      stack.hidden = true;
+      stack.replaceChildren();
+      stack.removeAttribute('data-swipe-control');
+      stack.style.removeProperty(dock === 'start' ? 'inset-inline-start' : 'inset-inline-end');
+      stack.style.removeProperty(dock === 'start' ? 'inset-inline-end' : 'inset-inline-start');
+      stack.style.removeProperty('transform');
+      return;
+    }
+    let swipeControl = this._resolveDrawerSwipeControl(panels);
+    this._renderDrawerHandleStack(stack, dock, panels, open, activePanelId, swipeControl);
+    this._setDrawerHandleVisualState(stack, dock, true, open, activePanelId, swipeControl);
+  }
+
+  _resolveDrawerSwipeControl(panels = []) {
+    if (panels.every((panel) => panel.swipeControl === 'none')) return 'none';
+    if (panels.some((panel) => panel.swipeControl === 'island')) return 'island';
+    return 'edge';
+  }
+
+  _renderDrawerHandleStack(stack, dock, panels, open, activePanelId, swipeControl = 'edge') {
+    stack.replaceChildren();
+    stack.dataset.swipeControl = swipeControl;
+    let multiple = panels.length > 1;
+    for (let panel of panels) {
+      if (panel.swipeControl === 'none') continue;
+      let config = this.$.panelTypes[panel.panelType] || {};
+      let title = config.title || panel.panelType || panel.id;
+      let icon = multiple
+        ? config.icon || 'dashboard'
+        : dock === 'start' ? 'chevron_right' : 'chevron_left';
+      let button = document.createElement('button');
+      button.className = `layout-drawer-handle layout-drawer-handle-${dock}`;
+      button.type = 'button';
+      button.dataset.drawerDock = dock;
+      button.dataset.drawerPanelId = panel.id;
+      button.dataset.swipeControl = panel.swipeControl || swipeControl;
+      button.setAttribute('aria-label', `Toggle ${title} drawer`);
+      button.setAttribute('aria-expanded', String(open && panel.id === activePanelId));
+      button.title = `Toggle ${title} drawer`;
+      if (panel.id === activePanelId) {
+        button.setAttribute('active', '');
+      }
+      let iconNode = document.createElement('span');
+      iconNode.className = 'material-symbols-outlined';
+      iconNode.textContent = icon;
+      button.append(iconNode);
+      button.addEventListener('click', (event) => this._onDrawerToggleClick(event));
+      button.addEventListener('pointerdown', (event) => this._onDrawerHandlePointerDown(event));
+      stack.append(button);
+    }
+  }
+
+  _setDrawerHandleVisualState(handle, dock, available, open, panelId = '', swipeControl = 'edge') {
+    if (!handle) return;
+    let active = Boolean(available) && swipeControl !== 'none';
+    handle.hidden = !active;
+    if (swipeControl === 'island') {
+      handle.style.removeProperty('inset-inline-start');
+      handle.style.removeProperty('inset-inline-end');
+      handle.style.removeProperty('transform');
+      return;
+    }
+    let insetProperty = dock === 'start' ? 'inset-inline-start' : 'inset-inline-end';
+    let oppositeInsetProperty = dock === 'start' ? 'inset-inline-end' : 'inset-inline-start';
+    handle.style.removeProperty(oppositeInsetProperty);
+    if (!active) {
+      handle.style.removeProperty(insetProperty);
+      handle.style.removeProperty('transform');
+      return;
+    }
+    let offset = open ? `${this._getDrawerHandleOpenOffset(dock, handle, panelId)}px` : '0px';
+    setImportantStylePropertyIfChanged(handle.style, insetProperty, offset);
+    setImportantStylePropertyIfChanged(handle.style, 'transform', 'translateY(-50%)');
+  }
+
+  _getDrawerHandleOpenOffset(dock, handle, panelId = '') {
+    let drawerNode = this._getDrawerNode(dock, panelId);
+    let drawerWidth = drawerNode?.getBoundingClientRect?.().width || this._getFallbackDrawerWidth();
+    let handleWidth = handle?.getBoundingClientRect?.().width || 32;
+    return Math.max(0, drawerWidth - handleWidth);
+  }
+
+  openDrawer(dock, panelId = '') {
+    this._setDrawerOpen(dock, true, panelId);
+  }
+
+  closeDrawer(dock = 'all') {
+    if (dock === 'start' || dock === 'all') this.$.drawerStartOpen = false;
+    if (dock === 'end' || dock === 'all') this.$.drawerEndOpen = false;
+    this._clearDrawerDrag(dock);
+    this._resyncDrawerProjection();
+  }
+
+  toggleDrawer(dock, panelId = '') {
+    let activePanelId = this._getActiveDrawerPanelId(dock);
+    let nextPanelId = panelId || activePanelId;
+    let sameOpenPanel = this._isDrawerOpen(dock) && (!panelId || panelId === activePanelId);
+    this._setDrawerOpen(dock, !sameOpenPanel, nextPanelId);
+  }
+
+  _setDrawerOpen(dock, open, panelId = '') {
+    if (dock === 'start') {
+      if (panelId) this.$.drawerStartPanelId = panelId;
+      this.$.drawerStartOpen = Boolean(open);
+      if (open) this.$.drawerEndOpen = false;
+    } else if (dock === 'end') {
+      if (panelId) this.$.drawerEndPanelId = panelId;
+      this.$.drawerEndOpen = Boolean(open);
+      if (open) this.$.drawerStartOpen = false;
+    }
+    this._clearDrawerDrag('all');
+    this._resyncDrawerProjection();
+  }
+
+  _isDrawerOpen(dock) {
+    return dock === 'start' ? Boolean(this.$.drawerStartOpen) : Boolean(this.$.drawerEndOpen);
+  }
+
+  _resyncDrawerProjection() {
+    if (!this._lastResponsiveState || !this._lastDrawerBehavior || !this.$.layoutTree) return;
+    this._syncDrawerProjection(this._lastResponsiveState, this._lastDrawerBehavior, this.$.layoutTree);
+  }
+
+  _onDrawerToggleClick(e) {
+    if (this._ignoreNextDrawerClick) {
+      this._ignoreNextDrawerClick = false;
+      e.preventDefault();
+      return;
+    }
+    if (!this.hasAttribute('drawer-mode-active')) return;
+    let target = e.currentTarget || e.target.closest('[data-drawer-dock]');
+    let dock = target?.dataset?.drawerDock;
+    let panelId = target?.dataset?.drawerPanelId || '';
+    if (dock !== 'start' && dock !== 'end') return;
+    this.toggleDrawer(dock, panelId);
+  }
+
+  _onDrawerHandlePointerDown(e) {
+    if (!this.hasAttribute('drawer-mode-active')) return;
+    if (e.button !== undefined && e.button !== 0) return;
+    let target = e.currentTarget || e.target.closest('[data-drawer-dock]');
+    let dock = target?.dataset?.drawerDock;
+    if (dock !== 'start' && dock !== 'end') return;
+    let panelId = target?.dataset?.drawerPanelId || this._getActiveDrawerPanelId(dock);
+    let activePanelId = this._getActiveDrawerPanelId(dock);
+    let startOpen = this._isDrawerOpen(dock) && (!panelId || panelId === activePanelId);
+    let drawerNode = this._getDrawerNode(dock, panelId);
+    let width = drawerNode?.getBoundingClientRect?.().width || this._getFallbackDrawerWidth();
+    if (width <= 0) width = this._getFallbackDrawerWidth();
+    this._drawerGesture = {
+      pointerId: e.pointerId,
+      dock,
+      panelId,
+      startX: e.clientX,
+      width,
+      startOpen,
+      prepared: false,
+      moved: false,
+      target,
+    };
+    this.setAttribute('drawer-dragging', '');
+    drawerNode?.setAttribute('drawer-dragging', '');
+    target?.setPointerCapture?.(e.pointerId);
+    e.preventDefault();
+  }
+
+  _onDrawerPointerMove(e) {
+    let gesture = this._drawerGesture;
+    if (!gesture || e.pointerId !== gesture.pointerId) return;
+    let delta = e.clientX - gesture.startX;
+    if (Math.abs(delta) > 4) gesture.moved = true;
+    if (gesture.moved && !gesture.prepared) {
+      this._setActiveDrawerPanelId(gesture.dock, gesture.panelId);
+      this._prepareDrawerPanelForGesture(gesture.dock, gesture.panelId);
+      gesture.prepared = true;
+    }
+    let progress = this._getDrawerGestureProgress(gesture, delta);
+    this._applyDrawerProgress(gesture.dock, progress, gesture.width, gesture.panelId);
+    e.preventDefault();
+  }
+
+  _onDrawerPointerUp(e) {
+    let gesture = this._drawerGesture;
+    if (!gesture || e.pointerId !== gesture.pointerId) return;
+    let delta = e.clientX - gesture.startX;
+    let progress = this._getDrawerGestureProgress(gesture, delta);
+    let open = progress >= 0.5;
+    if (gesture.moved) {
+      this._ignoreNextDrawerClick = true;
+      e.preventDefault();
+    }
+    gesture.target?.releasePointerCapture?.(gesture.pointerId);
+    this._clearDrawerDrag(gesture.dock);
+    this._drawerGesture = null;
+    this._setDrawerOpen(gesture.dock, open, gesture.panelId);
+  }
+
+  _onDrawerPointerCancel(e) {
+    let gesture = this._drawerGesture;
+    if (!gesture || e.pointerId !== gesture.pointerId) return;
+    gesture.target?.releasePointerCapture?.(gesture.pointerId);
+    this._clearDrawerDrag(gesture.dock);
+    this._drawerGesture = null;
+    this._setDrawerOpen(gesture.dock, gesture.startOpen, gesture.panelId);
+  }
+
+  _getDrawerGestureProgress(gesture, delta) {
+    let width = Math.max(1, gesture.width);
+    let raw = gesture.dock === 'start'
+      ? (gesture.startOpen ? 1 + delta / width : delta / width)
+      : (gesture.startOpen ? 1 - delta / width : -delta / width);
+    return Math.max(0, Math.min(1, raw));
+  }
+
+  _prepareDrawerPanelForGesture(dock, panelId) {
+    for (let node of this.querySelectorAll(`layout-node[mobile-dock="${dock}"]`)) {
+      let active = node.$?.nodeId === panelId;
+      toggleAttributeIfChanged(node, 'drawer-active-panel', active);
+      if (!active) {
+        node.removeAttribute('drawer-open');
+        let closedTranslate = dock === 'start' ? '-100%' : '100%';
+        setStylePropertyIfChanged(node.style, '--sn-layout-drawer-translate', closedTranslate);
+        setImportantStylePropertyIfChanged(node.style, 'transform', `translateX(${closedTranslate})`);
+      }
+    }
+  }
+
+  _applyDrawerProgress(dock, progress, width = this._getFallbackDrawerWidth(), panelId = '') {
+    let translate = dock === 'start'
+      ? (progress - 1) * 100
+      : (1 - progress) * 100;
+    let node = this._getDrawerNode(dock, panelId);
+    if (node) {
+      setStylePropertyIfChanged(node.style, '--sn-layout-drawer-translate', `${translate}%`);
+      setImportantStylePropertyIfChanged(node.style, 'transform', `translateX(${translate}%)`);
+      if (dock === 'start') {
+        setStylePropertyIfChanged(node.style, 'inset-inline-start', '0px');
+        node.style.removeProperty('inset-inline-end');
+      } else {
+        setStylePropertyIfChanged(node.style, 'inset-inline-end', '0px');
+        node.style.removeProperty('inset-inline-start');
+      }
+      node.setAttribute('drawer-dragging', '');
+    }
+    this._applyDrawerHandleProgress(dock, progress, width, panelId);
+  }
+
+  _applyDrawerHandleProgress(dock, progress, width = this._getFallbackDrawerWidth(), panelId = '') {
+    let handle = this.querySelector(`.layout-drawer-handle-stack-${dock}`);
+    if (!handle || handle.hidden) return;
+    if (handle.dataset.swipeControl === 'island') return;
+    let handleWidth = handle.getBoundingClientRect?.().width || 32;
+    let offset = Math.max(0, progress) * Math.max(0, width - handleWidth);
+    let insetProperty = dock === 'start' ? 'inset-inline-start' : 'inset-inline-end';
+    let oppositeInsetProperty = dock === 'start' ? 'inset-inline-end' : 'inset-inline-start';
+    handle.style.removeProperty(oppositeInsetProperty);
+    setImportantStylePropertyIfChanged(handle.style, insetProperty, `${offset}px`);
+    setImportantStylePropertyIfChanged(handle.style, 'transform', 'translateY(-50%)');
+  }
+
+  _clearDrawerDrag(dock) {
+    this.removeAttribute('drawer-dragging');
+    if (dock === 'all') {
+      for (let node of this.querySelectorAll('layout-node[drawer-dragging]')) {
+        node.removeAttribute('drawer-dragging');
+      }
+      return;
+    }
+    for (let node of this.querySelectorAll(`layout-node[mobile-dock="${dock}"]`)) {
+      node.removeAttribute('drawer-dragging');
+    }
+  }
+
+  _getDrawerNode(dock, panelId = '') {
+    if (panelId) {
+      for (let node of this.querySelectorAll(`layout-node[mobile-dock="${dock}"]`)) {
+        if (node.$?.nodeId === panelId) return node;
+      }
+    }
+    return this.querySelector(`layout-node[mobile-dock="${dock}"][drawer-active-panel]`) ||
+      this.querySelector(`layout-node[mobile-dock="${dock}"]`);
+  }
+
+  _getFallbackDrawerWidth() {
+    let rect = this.getBoundingClientRect?.();
+    let inlineSize = rect?.width || 360;
+    return Math.max(240, Math.min(inlineSize * 0.86, 360));
   }
 
   /**
@@ -611,6 +1134,7 @@ export class Layout extends Symbiote {
       this.$.fullscreenPanelId = null;
       this.$.hasFullscreenTabs = false;
       this.$.tabItems = [];
+      this._syncFullscreenBounds();
 
       panelNode.removeAttribute('fullscreen');
       panelNode.$.isFullscreen = false;
@@ -626,10 +1150,13 @@ export class Layout extends Symbiote {
 
 
       this._renderRoot();
+      this._scheduleResponsiveLayout();
       this.dispatchEvent(new CustomEvent('layout-change', { bubbles: true }));
     } else {
 
       this.$.fullscreenPanelId = panelId;
+      this._syncFullscreenBounds();
+      this._clearDrawerProjection();
 
 
       allPanels.forEach((p) => {
@@ -647,6 +1174,22 @@ export class Layout extends Symbiote {
       this._updateTabItems(allPanels, panelId);
       this.$.hasFullscreenTabs = true;
     }
+  }
+
+  _syncFullscreenBounds() {
+    if (!this.$.fullscreenPanelId) {
+      this.removeAttribute('fullscreen-active');
+      this.style.removeProperty('--sn-layout-fullscreen-host-top');
+      this.style.removeProperty('--sn-layout-fullscreen-host-right');
+      this.style.removeProperty('--sn-layout-fullscreen-host-bottom');
+      this.style.removeProperty('--sn-layout-fullscreen-host-left');
+      return;
+    }
+    setAttributeIfChanged(this, 'fullscreen-active', 'true');
+    setStylePropertyIfChanged(this.style, '--sn-layout-fullscreen-host-top', '0px');
+    setStylePropertyIfChanged(this.style, '--sn-layout-fullscreen-host-left', '0px');
+    setStylePropertyIfChanged(this.style, '--sn-layout-fullscreen-host-right', '0px');
+    setStylePropertyIfChanged(this.style, '--sn-layout-fullscreen-host-bottom', '0px');
   }
 
   /**
@@ -682,6 +1225,9 @@ export class Layout extends Symbiote {
     let newPanel = this._findPanelNode(panelId);
     if (!newPanel) return;
 
+    this.$.fullscreenPanelId = panelId;
+    this._syncFullscreenBounds();
+    this._clearDrawerProjection();
 
     allPanels.forEach((p) => {
       if (p.$.nodeId === panelId) {
@@ -696,8 +1242,6 @@ export class Layout extends Symbiote {
         this.#setPanelVisible(p, false);
       }
     });
-
-    this.$.fullscreenPanelId = panelId;
 
 
     this._updateTabItems(allPanels, panelId);

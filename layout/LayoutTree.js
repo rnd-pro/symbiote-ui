@@ -16,7 +16,15 @@
  */
 
 /**
- * @typedef {'preserve' | 'stack' | 'scroll-inline'} LayoutResponsiveMode
+ * @typedef {'preserve' | 'stack' | 'scroll-inline' | 'drawer' | 'swipe'} LayoutResponsiveMode
+ */
+
+/**
+ * @typedef {'auto' | 'primary' | 'start' | 'end'} LayoutMobileDock
+ */
+
+/**
+ * @typedef {'edge' | 'island' | 'none'} LayoutSwipeControl
  */
 
 /**
@@ -28,6 +36,8 @@
  * @property {LayoutOverflowPolicy} [overflow] Overflow fallback when collapse is disabled.
  * @property {LayoutResponsiveMode} [responsiveMode] Root responsive behavior.
  * @property {number} [responsiveBreakpoint] Inline size where responsiveMode activates.
+ * @property {LayoutMobileDock} [mobileDock] Mobile drawer placement preference.
+ * @property {LayoutSwipeControl} [swipeControl] Mobile swipe handle placement.
  */
 
 /**
@@ -64,6 +74,8 @@ export const DEFAULT_LAYOUT_BEHAVIOR = Object.freeze({
   overflow: 'collapse',
   responsiveMode: 'preserve',
   responsiveBreakpoint: 720,
+  mobileDock: 'auto',
+  swipeControl: 'edge',
 })
 
 export const COLLAPSED_PANEL_INLINE_SIZE = 32
@@ -73,7 +85,9 @@ export const STABLE_FIT_FACTOR = 1.02
 
 const COLLAPSE_POLICIES = new Set(['auto', 'manual', 'never'])
 const OVERFLOW_POLICIES = new Set(['collapse', 'scroll-inline', 'scroll-block', 'scroll'])
-const RESPONSIVE_MODES = new Set(['preserve', 'stack', 'scroll-inline'])
+const RESPONSIVE_MODES = new Set(['preserve', 'stack', 'scroll-inline', 'drawer', 'swipe'])
+const MOBILE_DOCKS = new Set(['auto', 'primary', 'start', 'end'])
+const SWIPE_CONTROLS = new Set(['edge', 'island', 'none'])
 
 let idCounter = 0
 
@@ -101,6 +115,12 @@ export function normalizeLayoutBehavior(behavior = {}, fallback = DEFAULT_LAYOUT
   let responsiveMode = RESPONSIVE_MODES.has(input.responsiveMode)
     ? input.responsiveMode
     : base.responsiveMode || DEFAULT_LAYOUT_BEHAVIOR.responsiveMode
+  let mobileDock = MOBILE_DOCKS.has(input.mobileDock)
+    ? input.mobileDock
+    : base.mobileDock || DEFAULT_LAYOUT_BEHAVIOR.mobileDock
+  let swipeControl = SWIPE_CONTROLS.has(input.swipeControl)
+    ? input.swipeControl
+    : base.swipeControl || DEFAULT_LAYOUT_BEHAVIOR.swipeControl
 
   return {
     importance: finiteNumber(input.importance, base.importance ?? DEFAULT_LAYOUT_BEHAVIOR.importance, 0, 100),
@@ -114,6 +134,8 @@ export function normalizeLayoutBehavior(behavior = {}, fallback = DEFAULT_LAYOUT
       base.responsiveBreakpoint ?? DEFAULT_LAYOUT_BEHAVIOR.responsiveBreakpoint,
       0
     ),
+    mobileDock,
+    swipeControl,
   }
 }
 
@@ -125,7 +147,9 @@ export function hasLayoutBehaviorMetadata(behavior) {
     Number.isFinite(behavior.minBlockSize) &&
     COLLAPSE_POLICIES.has(behavior.collapse) &&
     OVERFLOW_POLICIES.has(behavior.overflow) &&
-    RESPONSIVE_MODES.has(behavior.responsiveMode)
+    RESPONSIVE_MODES.has(behavior.responsiveMode) &&
+    MOBILE_DOCKS.has(behavior.mobileDock) &&
+    SWIPE_CONTROLS.has(behavior.swipeControl)
   )
 }
 
@@ -715,6 +739,89 @@ export function resolveLayoutMinSize(root, options = {}) {
 }
 
 /**
+ * Resolve panel placement for mobile drawer projection without mutating layout
+ * tree state.
+ * @param {LayoutNode | null} root
+ * @param {Object} [options]
+ * @param {LayoutBehavior} [options.fallbackBehavior]
+ * @param {(node: PanelNode, branchBehavior: LayoutBehavior) => LayoutBehavior} [options.resolvePanelBehavior]
+ * @returns {{
+ *   primaryPanelId: string,
+ *   startPanelIds: string[],
+ *   endPanelIds: string[],
+ *   panels: Array<{id: string, panelType: string, dock: LayoutMobileDock, requestedDock: LayoutMobileDock, importance: number, swipeControl: LayoutSwipeControl, order: number}>
+ * }}
+ */
+export function resolveMobileDrawerLayout(root, options = {}) {
+  let {
+    fallbackBehavior = DEFAULT_LAYOUT_BEHAVIOR,
+    resolvePanelBehavior = (node, branchBehavior) => getNodeBehavior(node, branchBehavior),
+  } = options
+  let records = []
+
+  function walk(node, fallback) {
+    if (!node) return
+    let branchBehavior = getNodeBehavior(node, fallback)
+    if (isPanelNode(node)) {
+      let behavior = resolvePanelBehavior(node, branchBehavior)
+      records.push({
+        id: node.id,
+        panelType: node.panelType || '',
+        dock: behavior.mobileDock,
+        requestedDock: behavior.mobileDock,
+        importance: behavior.importance,
+        swipeControl: behavior.swipeControl,
+        order: records.length,
+      })
+      return
+    }
+    walk(node.first, branchBehavior)
+    walk(node.second, branchBehavior)
+  }
+
+  walk(root, normalizeLayoutBehavior(fallbackBehavior))
+  if (!records.length) {
+    return {
+      primaryPanelId: '',
+      startPanelIds: [],
+      endPanelIds: [],
+      panels: [],
+    }
+  }
+
+  let primary = records
+    .filter((record) => record.requestedDock === 'primary')
+    .sort((a, b) => b.importance - a.importance || a.order - b.order)[0]
+  if (!primary) {
+    primary = [...records]
+      .sort((a, b) => b.importance - a.importance || a.order - b.order)[0]
+  }
+
+  let panels = records.map((record) => {
+    let dock = record.requestedDock
+    if (record.id === primary.id) {
+      dock = 'primary'
+    } else if (dock === 'auto' || dock === 'primary') {
+      dock = record.order < primary.order ? 'start' : 'end'
+    }
+    return { ...record, dock }
+  })
+  let startPanelIds = panels
+    .filter((record) => record.dock === 'start')
+    .map((record) => record.id)
+  let endPanelIds = panels
+    .filter((record) => record.dock === 'end')
+    .map((record) => record.id)
+
+  return {
+    primaryPanelId: primary.id,
+    startPanelIds,
+    endPanelIds,
+    panels,
+  }
+}
+
+/**
  * Resolve root responsive layout state for browser and agent consumers.
  * @param {LayoutBehavior} [behavior]
  * @param {Object} [viewport]
@@ -731,6 +838,7 @@ export function resolveLayoutMinSize(root, options = {}) {
  *   layoutMinSize: {inlineSize: number, blockSize: number},
  *   responsiveActive: boolean,
  *   effectiveResponsiveMode: LayoutResponsiveMode,
+ *   drawerActive: boolean,
  *   collapseAllowed: boolean,
  *   scrollInline: boolean,
  *   scrollBlock: boolean,
@@ -755,6 +863,7 @@ export function resolveResponsiveLayoutState(
     inlineSize <= normalized.responsiveBreakpoint
   )
   let effectiveResponsiveMode = responsiveActive ? normalized.responsiveMode : 'preserve'
+  let drawerActive = effectiveResponsiveMode === 'drawer' || effectiveResponsiveMode === 'swipe'
   let collapseAllowed = (
     normalized.collapse === 'auto' &&
     normalized.overflow === 'collapse' &&
@@ -780,6 +889,7 @@ export function resolveResponsiveLayoutState(
     layoutMinSize,
     responsiveActive,
     effectiveResponsiveMode,
+    drawerActive,
     collapseAllowed,
     scrollInline,
     scrollBlock,

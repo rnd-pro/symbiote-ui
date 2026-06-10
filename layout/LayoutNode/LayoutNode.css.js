@@ -330,6 +330,8 @@ export let styles = css`
 
       /* Panel icon at left */
       .type-btn {
+        position: relative;
+        z-index: 1;
         padding: var(--sn-layout-collapsed-type-padding, 4px 8px);
         background: none;
         cursor: default;
@@ -341,15 +343,24 @@ export let styles = css`
       }
 
       .panel-actions {
-        display: contents;
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        display: block;
+        inline-size: 100%;
+        block-size: 100%;
       }
 
       /* Expand button centered */
       .collapse-btn {
         position: absolute;
-        left: 50%;
-        top: 50%;
-        transform: translate(-50%, -50%);
+        inset: 0;
+        inline-size: 100%;
+        block-size: 100%;
+        min-block-size: 0;
+        transform: none;
+        align-items: center;
+        justify-content: center;
         padding: var(--sn-layout-collapsed-button-padding, 4px);
       }
     }
@@ -396,31 +407,43 @@ export let styles = css`
       /* Panel icon at top */
       .type-btn {
         order: 1;
-        padding: var(--sn-layout-collapsed-horizontal-type-padding, 6px 4px);
+        position: relative;
+        z-index: 1;
+        inline-size: 100%;
+        block-size: var(--sn-layout-header-block-size, calc(var(--sn-layout-header-min-height, 28px) + 3px));
+        min-block-size: var(--sn-layout-header-block-size, calc(var(--sn-layout-header-min-height, 28px) + 3px));
+        justify-content: center;
+        padding: var(--sn-layout-header-button-padding, 4px 6px);
         background: none;
         cursor: default;
         pointer-events: none;
         flex: 0 0 auto;
 
         .panel-icon {
-          font-size: var(--sn-layout-collapsed-horizontal-icon-size, 20px);
+          font-size: var(--sn-layout-header-icon-size, 16px);
         }
       }
 
       .panel-actions {
         order: 2;
-        display: flex;
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        display: block;
         align-items: center;
         justify-content: center;
-        width: 100%;
-        flex: 1;
+        inline-size: 100%;
+        block-size: 100%;
       }
 
-      /* Expand button centered via flex-grow */
+      /* Expand button covers the collapsed rail so the action area remains full height. */
       .collapse-btn {
         padding: var(--sn-layout-collapsed-horizontal-button-padding, 8px 4px);
-        flex: 1;
+        flex: 0 0 auto;
         display: flex;
+        inline-size: 100%;
+        block-size: 100%;
+        min-block-size: 0;
         align-items: center;
         justify-content: center;
       }
@@ -429,8 +452,18 @@ export let styles = css`
     /* Fullscreen state */
     &[fullscreen] {
       position: fixed !important;
-      inset: 0 !important;
-      top: 28px !important;
+      inset:
+        calc(var(--sn-layout-fullscreen-host-top, 0px) + var(--sn-fullscreen-tab-bar-height, 32px))
+        var(--sn-layout-fullscreen-host-right, 0px)
+        var(--sn-layout-fullscreen-host-bottom, 0px)
+        var(--sn-layout-fullscreen-host-left, 0px) !important;
+      flex: none !important;
+      inline-size: auto !important;
+      block-size: auto !important;
+      width: auto !important;
+      height: auto !important;
+      max-inline-size: none !important;
+      max-block-size: none !important;
       z-index: 10001 !important;
       box-shadow: 0 0 40px var(--sn-shadow-color);
     }

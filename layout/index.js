@@ -15,12 +15,16 @@ export {
   openPanel,
   removeUiPanel,
   resolveLayoutMinSize,
+  resolveMobileDrawerLayout,
   resolveResponsiveLayoutState,
 } from './LayoutTree.js';
 export {
   buildHash,
   buildQuery,
+  configureRouter,
   getRoute,
+  getRouterBasePath,
+  getRouterMode,
   navigate,
   parseQuery,
   registerGlobalParam,

@@ -50,6 +50,35 @@ export class Selector {
   }
 
   /**
+   * Select multiple nodes
+   * @param {string[]|Set<string>} nodeIds
+   * @param {boolean} accumulate
+   */
+  selectNodes(nodeIds, accumulate = false) {
+    if (!accumulate) {
+      this.#selectedNodes.clear();
+      this.#selectedConnections.clear();
+    }
+    for (const id of nodeIds) {
+      this.#selectedNodes.add(id);
+    }
+    this.#notify();
+  }
+
+  /**
+   * Toggle node selection state
+   * @param {string} nodeId
+   */
+  toggleNode(nodeId) {
+    if (this.#selectedNodes.has(nodeId)) {
+      this.#selectedNodes.delete(nodeId);
+    } else {
+      this.#selectedNodes.add(nodeId);
+    }
+    this.#notify();
+  }
+
+  /**
    * Select a connection
    * @param {string} connId
    * @param {boolean} accumulate
@@ -66,6 +95,35 @@ export class Selector {
       this.#selectedConnections.add(connId);
     }
 
+    this.#notify();
+  }
+
+  /**
+   * Select multiple connections
+   * @param {string[]|Set<string>} connIds
+   * @param {boolean} accumulate
+   */
+  selectConnections(connIds, accumulate = false) {
+    if (!accumulate) {
+      this.#selectedNodes.clear();
+      this.#selectedConnections.clear();
+    }
+    for (const id of connIds) {
+      this.#selectedConnections.add(id);
+    }
+    this.#notify();
+  }
+
+  /**
+   * Toggle connection selection state
+   * @param {string} connId
+   */
+  toggleConnection(connId) {
+    if (this.#selectedConnections.has(connId)) {
+      this.#selectedConnections.delete(connId);
+    } else {
+      this.#selectedConnections.add(connId);
+    }
     this.#notify();
   }
 
@@ -100,7 +158,7 @@ export class Selector {
    * @returns {Set<string>}
    */
   getSelectedNodes() {
-    return this.#selectedNodes;
+    return new Set(this.#selectedNodes);
   }
 
   /**
@@ -108,7 +166,7 @@ export class Selector {
    * @returns {Set<string>}
    */
   getSelectedConnections() {
-    return this.#selectedConnections;
+    return new Set(this.#selectedConnections);
   }
 
   /**

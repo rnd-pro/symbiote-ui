@@ -7,6 +7,19 @@
  * @module symbiote-ui/interactions/Zoom
  */
 
+export const DEFAULT_WHEEL_ZOOM_SENSITIVITY = 0.5;
+
+export function resolveWheelZoomDelta(event, sensitivity = DEFAULT_WHEEL_ZOOM_SENSITIVITY) {
+  let modeFactor = event.deltaMode === 1 ? 0.05 : event.deltaMode ? 1 : 0.002;
+  let ctrlFactor = event.ctrlKey ? 10 : 1;
+  let scale = Number.isFinite(sensitivity) ? Math.max(0, sensitivity) : DEFAULT_WHEEL_ZOOM_SENSITIVITY;
+  return -event.deltaY * modeFactor * ctrlFactor * scale;
+}
+
+export function resolveWheelZoomFactor(event, sensitivity = DEFAULT_WHEEL_ZOOM_SENSITIVITY) {
+  return 2 ** resolveWheelZoomDelta(event, sensitivity);
+}
+
 export class Zoom {
   /** @type {PointerEvent[]} */
   #pointers = [];
@@ -28,10 +41,13 @@ export class Zoom {
 
   /**
    * @param {number} [intensity=0.1] - Zoom sensitivity
+   * @param {{wheelSensitivity?: number}} [options]
    */
-  constructor(intensity = 0.1) {
+  constructor(intensity = 0.1, options = {}) {
     /** @type {number} */
     this.intensity = intensity;
+    /** @type {number} */
+    this.wheelSensitivity = options.wheelSensitivity ?? DEFAULT_WHEEL_ZOOM_SENSITIVITY;
   }
 
   /**
@@ -71,9 +87,7 @@ export class Zoom {
     e.preventDefault();
     let rect = this.#getRect();
 
-    let absDelta = Math.min(Math.abs(e.deltaY), 10) / 10;
-    let sign = e.deltaY < 0 ? 1 : -1;
-    let delta = sign * this.intensity * absDelta;
+    let delta = resolveWheelZoomFactor(e, this.wheelSensitivity) - 1;
     let ox = (rect.left - e.clientX) * delta;
     let oy = (rect.top - e.clientY) * delta;
     this.#onZoom(delta, ox, oy, 'wheel');
