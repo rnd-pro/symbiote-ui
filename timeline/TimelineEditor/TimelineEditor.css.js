@@ -1,5 +1,5 @@
 let css = /*css*/`
-  :host {
+  sn-timeline-editor {
     display: flex;
     flex-direction: column;
     min-height: 120px;
@@ -231,6 +231,12 @@ let css = /*css*/`
     font-size: 12px;
     font-style: italic;
     opacity: 0.5;
+  }
+
+  .te-empty[hidden],
+  .te-headers[hidden],
+  .te-canvas-area[hidden] {
+    display: none;
   }
 `;
 

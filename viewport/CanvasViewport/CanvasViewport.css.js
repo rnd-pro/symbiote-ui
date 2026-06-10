@@ -1,5 +1,5 @@
 let css = /*css*/`
-  :host {
+  sn-canvas-viewport {
     display: flex;
     flex-direction: column;
     min-height: 100px;
@@ -113,7 +113,7 @@ let css = /*css*/`
     transition: opacity var(--sn-transition-fast);
   }
 
-  :host([show-safe-zone]) .vp-safe-zone {
+  sn-canvas-viewport[show-safe-zone] .vp-safe-zone {
     opacity: 1;
   }
 
@@ -127,6 +127,14 @@ let css = /*css*/`
     font-size: 12px;
     font-style: italic;
     opacity: 0.5;
+  }
+
+  .vp-empty[hidden] {
+    display: none;
+  }
+
+  .vp-canvas-wrap[hidden] {
+    display: none;
   }
 `;
 
