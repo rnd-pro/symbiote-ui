@@ -1,7 +1,7 @@
 export default /*css*/ `
 sn-data-table {
   display: block;
-  min-width: 0;
+  min-width: var(--sn-data-table-min-width);
   color: var(--sn-data-table-color, var(--sn-text));
   font-family: var(--sn-font-ui, inherit);
   position: relative;
@@ -14,9 +14,9 @@ sn-data-table[hidden] {
 .sn-data-table {
   box-sizing: border-box;
   min-width: 0;
-  border: 1px solid var(--sn-data-table-border);
-  border-radius: var(--sn-data-table-radius);
-  background: var(--sn-data-table-bg);
+  border: 1px solid var(--sn-data-table-border, var(--sn-outline-color-soft));
+  border-radius: var(--sn-data-table-radius, 6px);
+  background: var(--sn-data-table-bg, var(--sn-panel-bg));
   overflow: hidden;
   position: relative;
 }
@@ -28,35 +28,55 @@ sn-data-table[hidden] {
 
 .sn-data-table table {
   width: 100%;
-  min-width: var(--sn-data-table-min-width);
-  border-collapse: collapse;
+  min-width: var(--sn-data-table-min-width, 100%);
+  border-collapse: separate;
+  border-spacing: 0;
 }
 
 .sn-data-table th,
 .sn-data-table td {
   box-sizing: border-box;
   min-width: 0;
-  padding: var(--sn-data-table-cell-padding);
+  padding: var(--sn-data-table-cell-padding, 8px 12px);
   text-align: start;
   vertical-align: middle;
 }
 
 .sn-data-table th {
-  border-block-end: 1px solid var(--sn-data-table-header-border);
-  background: var(--sn-data-table-header-bg);
-  color: var(--sn-data-table-header-color);
-  font-size: var(--sn-data-table-header-size);
-  font-weight: var(--sn-data-table-header-weight);
-  line-height: var(--sn-data-table-line-height);
-  text-transform: var(--sn-data-table-header-transform);
+  border-block-end: 1px solid var(--sn-data-table-header-border, var(--sn-outline-color-soft));
+  background: var(--sn-data-table-header-bg, var(--sn-surface));
+  color: var(--sn-data-table-header-color, var(--sn-text-dim));
+  font-size: var(--sn-data-table-header-size, 12px);
+  font-weight: var(--sn-data-table-header-weight, 500);
+  line-height: var(--sn-data-table-line-height, 1.4);
+  text-transform: var(--sn-data-table-header-transform, none);
   white-space: nowrap;
 }
 
 .sn-data-table td {
-  border-block-end: 1px solid var(--sn-data-table-row-border);
-  color: var(--sn-data-table-color);
-  font-size: var(--sn-data-table-cell-size);
-  line-height: var(--sn-data-table-line-height);
+  border-block-end: 1px solid var(--sn-data-table-row-border, var(--sn-outline-color-soft));
+  color: var(--sn-data-table-color, var(--sn-text));
+  font-size: var(--sn-data-table-cell-size, 13px);
+  line-height: var(--sn-data-table-line-height, 1.4);
+}
+
+/* Sticky pinned columns styling */
+.sn-data-table th[style*="position: sticky"] {
+  background: var(--sn-data-table-header-bg, var(--sn-surface));
+  z-index: 3;
+}
+
+.sn-data-table td[style*="position: sticky"] {
+  background: var(--sn-data-table-bg, var(--sn-panel-bg));
+  z-index: 2;
+}
+
+.sn-data-table tbody tr[aria-selected="true"] td[style*="position: sticky"] {
+  background: var(--sn-data-table-row-selected-bg, rgba(0, 122, 204, 0.15));
+}
+
+.sn-data-table tbody tr:hover td[style*="position: sticky"] {
+  background: var(--sn-data-table-row-hover-bg, rgba(255, 255, 255, 0.04));
 }
 
 .sn-data-table tbody tr {
@@ -87,7 +107,7 @@ sn-data-table[hidden] {
 .sn-data-table-cell {
   display: inline-flex;
   align-items: center;
-  gap: var(--sn-data-table-cell-gap);
+  gap: var(--sn-data-table-cell-gap, 6px);
   max-width: 100%;
   min-width: 0;
 }
@@ -101,16 +121,16 @@ sn-data-table[hidden] {
 
 .sn-data-table-marker {
   flex: 0 0 auto;
-  width: var(--sn-data-table-marker-size);
-  height: var(--sn-data-table-marker-size);
-  border-radius: var(--sn-data-table-marker-radius);
+  width: var(--sn-data-table-marker-size, 8px);
+  height: var(--sn-data-table-marker-size, 8px);
+  border-radius: var(--sn-data-table-marker-radius, 50%);
   background: var(--sn-data-table-marker-color, var(--sn-node-selected));
 }
 
 .sn-data-table-error {
   padding: var(--sn-data-table-empty-padding, 16px);
   color: var(--sn-status-error, #f85149);
-  font-size: var(--sn-data-table-cell-size);
+  font-size: var(--sn-data-table-cell-size, 13px);
   background: rgba(248, 81, 73, 0.1);
   border: 1px solid var(--sn-status-error, #f85149);
   border-radius: var(--sn-data-table-radius, 4px);
@@ -118,10 +138,10 @@ sn-data-table[hidden] {
 }
 
 .sn-data-table-empty {
-  padding: var(--sn-data-table-empty-padding);
-  color: var(--sn-data-table-empty-color);
-  font-size: var(--sn-data-table-cell-size);
-  line-height: var(--sn-data-table-line-height);
+  padding: var(--sn-data-table-empty-padding, 32px);
+  color: var(--sn-data-table-empty-color, var(--sn-text-dim));
+  font-size: var(--sn-data-table-cell-size, 13px);
+  line-height: var(--sn-data-table-line-height, 1.4);
   text-align: center;
 }
 
@@ -136,7 +156,7 @@ sn-data-table[hidden] {
   backdrop-filter: blur(1px);
   z-index: 10;
   color: var(--sn-text);
-  font-size: var(--sn-data-table-cell-size);
+  font-size: var(--sn-data-table-cell-size, 13px);
 }
 
 .sn-data-table-spinner {
@@ -194,7 +214,8 @@ sn-data-table[hidden] {
   color: var(--sn-tabs-accent, #007acc);
 }
 
-.sn-data-table-expand-btn {
+.sn-data-table-expand-btn,
+.sn-data-table-tree-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -206,15 +227,19 @@ sn-data-table[hidden] {
   border-radius: 4px;
   outline: none;
   transition: color 0.1s, background 0.1s;
+  vertical-align: middle;
 }
 
 .sn-data-table-expand-btn:hover,
-.sn-data-table-expand-btn:focus-visible {
+.sn-data-table-expand-btn:focus-visible,
+.sn-data-table-tree-btn:hover,
+.sn-data-table-tree-btn:focus-visible {
   color: var(--sn-text);
   background: rgba(255, 255, 255, 0.1);
 }
 
-.sn-data-table-expand-btn .material-symbols-outlined {
+.sn-data-table-expand-btn .material-symbols-outlined,
+.sn-data-table-tree-btn .material-symbols-outlined {
   font-size: 16px;
   transition: transform var(--sn-transition-fast, 120ms);
 }
@@ -226,11 +251,11 @@ tr[aria-expanded="true"] .sn-data-table-expand-btn .material-symbols-outlined {
 .sn-data-table-details-row td {
   padding: 12px 16px 12px 36px;
   background: var(--sn-data-table-details-bg, rgba(255, 255, 255, 0.02));
-  border-block-end: 1px solid var(--sn-data-table-row-border);
+  border-block-end: 1px solid var(--sn-data-table-row-border, var(--sn-outline-color-soft));
 }
 
 .sn-data-table tbody tr:focus {
-  outline: 2px solid var(--sn-focus-ring-color, currentColor);
+  outline: 2px solid var(--sn-focus-ring-color, var(--sn-tabs-accent, #007acc));
   outline-offset: -2px;
 }
 `;

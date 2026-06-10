@@ -231,7 +231,7 @@ export class SourceViewer extends Symbiote {
     });
     this.sub("viewMode", (mode) => {
       const lang = this._fileData?.lang || getSourceLanguage(this._currentPath);
-      this.toggleAttribute("mode-raw", mode !== "source");
+      this.toggleAttribute("mode-raw", mode === "source");
       if (lang === "md") {
         this.$.modeLabel = mode === "rendered" ? "rendered" : "source";
         this.$.toggleIcon = mode === "rendered" ? "article" : "code";

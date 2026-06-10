@@ -4,6 +4,16 @@ import { ensureMaterialSymbols } from '../../icons/MaterialSymbols.js';
 import '../Badge/Badge.js';
 import template from './DataTable.tpl.js';
 import css from './DataTable.css.js';
+import {
+  normalizeColumns,
+  sortColumns,
+  toggleColumnVisibility,
+  setColumnWidth,
+  toggleColumnPinning,
+  toggleRowSelection,
+  toggleRowExpansion,
+  getTreeRows,
+} from './dataTableState.js';
 
 function emit(el, type, detail = {}) {
   el.dispatchEvent(new CustomEvent(type, { bubbles: true, composed: true, detail }));
@@ -23,22 +33,6 @@ function normalizeVariant(value) {
   let variant = String(value ?? '').trim();
   if (['success', 'info', 'warning', 'error'].includes(variant)) return variant;
   return '';
-}
-
-function normalizeColumns(columns) {
-  if (!Array.isArray(columns)) return [];
-  return columns
-    .filter((column) => column && typeof column === 'object' && column.key)
-    .map((column) => ({
-      key: String(column.key),
-      label: String(column.label ?? column.key),
-      align: column.align === 'end' || column.align === 'center' ? column.align : 'start',
-      sortable: Boolean(column.sortable),
-    }));
-}
-
-function normalizeRows(rows) {
-  return Array.isArray(rows) ? rows.filter((row) => row && typeof row === 'object') : [];
 }
 
 function resolveCell(row, column) {
@@ -69,9 +63,70 @@ function renderBadge(badge) {
   return `<sn-badge${variantAttr}>${label}</sn-badge>`;
 }
 
-function renderHead(columns, sortColumn, sortDirection, hasExpand) {
-  if (columns.length === 0) return '';
-  let cells = columns.map((column) => {
+function getStickyOffsets(columns) {
+  let leftOffsets = {};
+  let rightOffsets = {};
+
+  let leftSum = 0;
+  for (let col of columns) {
+    if (col.pinned === 'left') {
+      leftOffsets[col.key] = leftSum;
+      let w = parseInt(col.width) || 120;
+      leftSum += w;
+    }
+  }
+
+  let rightSum = 0;
+  // Reverse loop for right pinned
+  for (let i = columns.length - 1; i >= 0; i--) {
+    let col = columns[i];
+    if (col.pinned === 'right') {
+      rightOffsets[col.key] = rightSum;
+      let w = parseInt(col.width) || 120;
+      rightSum += w;
+    }
+  }
+
+  return { leftOffsets, rightOffsets };
+}
+
+function getVisibleRowHeight(scrollContainer, fallback) {
+  let configured = Number(fallback);
+  if (Number.isFinite(configured) && configured > 0) return configured;
+
+  let row = scrollContainer.querySelector('tbody tr:not(.sn-data-table-details-row)');
+  let measured = row?.getBoundingClientRect?.().height;
+  return Number.isFinite(measured) && measured > 0 ? measured : 36;
+}
+
+function renderHead(columns, sortColumn, sortDirection, hasExpand, selectionMode, selectedRowIds, visibleRows) {
+  let cells = [];
+
+  // 1. If multi-select mode, render select all column
+  if (selectionMode === 'multi') {
+    let selectableRows = visibleRows.filter((row) => row.id != null);
+    let allSelected = selectableRows.length > 0
+      && selectableRows.every((row) => selectedRowIds.has(String(row.id)));
+    let checked = allSelected ? ' checked' : '';
+    cells.push(`<th scope="col" style="width: 40px; position: sticky; left: 0; z-index: 3;">
+      <div class="sn-data-table-header-content">
+        <input type="checkbox" class="sn-data-table-select-all" aria-label="Select all rows"${checked}>
+      </div>
+    </th>`);
+  }
+
+  // 2. If row details expand column is needed
+  if (hasExpand) {
+    cells.push(`<th scope="col" style="width: 40px;"></th>`);
+  }
+
+  // Calculate sticky offsets
+  let { leftOffsets, rightOffsets } = getStickyOffsets(columns);
+  let selectOffset = selectionMode === 'multi' ? 40 : 0;
+
+  columns.forEach((column) => {
+    if (column.visible === false) return;
+
     let ariaSort = '';
     let sortIndicator = '';
 
@@ -87,65 +142,120 @@ function renderHead(columns, sortColumn, sortDirection, hasExpand) {
       </button>`;
     }
 
-    return `<th scope="col" data-align="${column.align}"${ariaSort}>
+    let stickyStyle = '';
+    if (column.pinned === 'left') {
+      let left = (leftOffsets[column.key] ?? 0) + selectOffset;
+      stickyStyle = `position: sticky; left: ${left}px; z-index: 2;`;
+    } else if (column.pinned === 'right') {
+      let right = rightOffsets[column.key] ?? 0;
+      stickyStyle = `position: sticky; right: ${right}px; z-index: 2;`;
+    }
+
+    let widthStyle = column.width !== 'auto' ? `width: ${column.width}px; min-width: ${column.width}px; max-width: ${column.width}px;` : '';
+    let styleAttr = (stickyStyle || widthStyle) ? ` style="${stickyStyle}${widthStyle}"` : '';
+
+    cells.push(`<th scope="col" data-align="${column.align}"${ariaSort}${styleAttr}>
       <div class="sn-data-table-header-content">
         <span>${escapeHtml(column.label)}</span>
         ${sortIndicator}
       </div>
-    </th>`;
-  }).join('');
+    </th>`);
+  });
 
-  if (hasExpand) {
-    return `<tr><th scope="col" style="width: 40px;"></th>${cells}</tr>`;
-  }
-  return `<tr>${cells}</tr>`;
+  return `<tr>${cells.join('')}</tr>`;
 }
 
-function renderBody(columns, rows, selectedRowId, expandedRowIds, hasExpand) {
+function renderBody(columns, rows, selectedRowIds, expandedRowIds, hasExpand, selectionMode) {
+  let { leftOffsets, rightOffsets } = getStickyOffsets(columns);
+  let selectOffset = selectionMode === 'multi' ? 40 : 0;
+
   return rows.map((row) => {
-    let cells = columns.map((column) => {
+    let cells = [];
+
+    // 1. Checkbox for multi-select
+    if (selectionMode === 'multi') {
+      let isRowSelected = selectedRowIds.has(String(row.id));
+      cells.push(`<td style="position: sticky; left: 0; z-index: 2;">
+        <input type="checkbox" class="sn-data-table-select-row" data-row-id="${escapeAttr(row.id)}" ${isRowSelected ? 'checked' : ''} aria-label="Select row">
+      </td>`);
+    }
+
+    // 2. caret for row details
+    if (hasExpand) {
+      if (row.details) {
+        let isExpanded = row.id && expandedRowIds.has(String(row.id));
+        cells.push(`<td>
+          <button class="sn-data-table-expand-btn" data-row-id="${escapeAttr(row.id)}" aria-label="${isExpanded ? 'Collapse' : 'Expand'} row" aria-expanded="${isExpanded}">
+            <span class="material-symbols-outlined">chevron_right</span>
+          </button>
+        </td>`);
+      } else {
+        cells.push('<td></td>');
+      }
+    }
+
+    // 3. Render cells
+    columns.forEach((column, colIndex) => {
+      if (column.visible === false) return;
+
       let cell = resolveCell(row, column);
       let align = cell.align === 'end' || cell.align === 'center' ? cell.align : column.align;
-      return `<td data-align="${align}">${renderCellContent(cell)}</td>`;
-    }).join('');
+
+      let stickyStyle = '';
+      if (column.pinned === 'left') {
+        let left = (leftOffsets[column.key] ?? 0) + selectOffset;
+        stickyStyle = `position: sticky; left: ${left}px; z-index: 2;`;
+      } else if (column.pinned === 'right') {
+        let right = rightOffsets[column.key] ?? 0;
+        stickyStyle = `position: sticky; right: ${right}px; z-index: 2;`;
+      }
+
+      let indentStyle = '';
+      let treeToggle = '';
+      if (colIndex === 0 && row.level > 0) {
+        indentStyle = `padding-left: ${16 + row.level * 20}px;`;
+      }
+      if (colIndex === 0 && Array.isArray(row.children) && row.children.length > 0) {
+        let isExpanded = row.id && expandedRowIds.has(String(row.id));
+        treeToggle = `<button class="sn-data-table-tree-btn" data-row-id="${escapeAttr(row.id)}" aria-label="${isExpanded ? 'Collapse' : 'Expand'} row" aria-expanded="${isExpanded}">
+          <span class="material-symbols-outlined">${isExpanded ? 'keyboard_arrow_down' : 'keyboard_arrow_right'}</span>
+        </button>`;
+      }
+
+      let widthStyle = column.width !== 'auto' ? `width: ${column.width}px; min-width: ${column.width}px; max-width: ${column.width}px;` : '';
+      let styleAttr = (stickyStyle || widthStyle || indentStyle)
+        ? ` style="${stickyStyle}${widthStyle}${indentStyle}"`
+        : '';
+
+      cells.push(`<td data-align="${align}"${styleAttr}>${treeToggle}${renderCellContent(cell)}</td>`);
+    });
 
     let rowId = row.id ? ` data-row-id="${escapeAttr(row.id)}"` : '';
-    let isSelected = row.id && String(row.id) === String(selectedRowId);
+    let isSelected = row.id && selectedRowIds.has(String(row.id));
     let ariaSelected = isSelected ? ' aria-selected="true"' : '';
     let tabIndex = ' tabindex="-1"';
     let isExpanded = row.id && expandedRowIds.has(String(row.id));
 
-    let expandCell = '';
     let expandRowHtml = '';
-
-    if (hasExpand) {
-      if (row.details) {
-        expandCell = `<td>
-          <button class="sn-data-table-expand-btn" data-row-id="${escapeAttr(row.id)}" aria-label="${isExpanded ? 'Collapse' : 'Expand'} row" aria-expanded="${isExpanded}">
-            <span class="material-symbols-outlined">chevron_right</span>
-          </button>
-        </td>`;
-        if (isExpanded) {
-          expandRowHtml = `<tr class="sn-data-table-details-row">
-            <td colspan="${columns.length + 1}">${row.details}</td>
-          </tr>`;
-        }
-      } else {
-        expandCell = '<td></td>';
-      }
+    if (hasExpand && row.details && isExpanded) {
+      let totalCols = columns.filter(c => c.visible !== false).length + (selectionMode === 'multi' ? 1 : 0) + 1;
+      expandRowHtml = `<tr class="sn-data-table-details-row">
+        <td colspan="${totalCols}">${escapeHtml(row.details)}</td>
+      </tr>`;
     }
 
-    let ariaExpandedAttr = row.details ? ` aria-expanded="${isExpanded}"` : '';
+    let ariaExpandedAttr = (row.details || (Array.isArray(row.children) && row.children.length > 0)) ? ` aria-expanded="${isExpanded}"` : '';
 
-    return `<tr${rowId}${ariaSelected}${tabIndex}${ariaExpandedAttr}>${expandCell}${cells}</tr>${expandRowHtml}`;
+    return `<tr${rowId}${ariaSelected}${tabIndex}${ariaExpandedAttr}>${cells.join('')}</tr>${expandRowHtml}`;
   }).join('');
 }
 
 export class DataTable extends Symbiote {
-  static observedAttributes = ['loading', 'selected-row-id'];
+  static observedAttributes = ['loading', 'selected-row-id', 'selection-mode'];
 
   #columns = [];
   #rows = [];
+  #selectedRowIds = new Set();
   #expandedRowIds = new Set();
 
   init$ = {
@@ -156,6 +266,7 @@ export class DataTable extends Symbiote {
     errorText: '',
     loading: false,
     selectedRowId: '',
+    selectionMode: 'single',
     sortColumn: '',
     sortDirection: 'none',
     isEmpty: true,
@@ -163,6 +274,27 @@ export class DataTable extends Symbiote {
     hideTable: true,
 
     onHeadClick: (event) => {
+      let selectAll = event.target?.closest('.sn-data-table-select-all');
+      if (selectAll) {
+        event.stopPropagation();
+        let visibleRows = getTreeRows(this.#rows, this.#expandedRowIds);
+        if (selectAll.checked) {
+          this.#selectedRowIds = new Set(
+            visibleRows
+              .filter((row) => row.id != null)
+              .map((row) => String(row.id))
+          );
+        } else {
+          this.#selectedRowIds.clear();
+        }
+        this.#render();
+        emit(this, 'sn-data-table-select', {
+          selectedRowIds: this.selectedRowIds,
+          mode: 'all',
+        });
+        return;
+      }
+
       let sortBtn = event.target?.closest('.sn-data-table-sort-btn');
       if (!sortBtn) return;
       event.stopPropagation();
@@ -180,6 +312,23 @@ export class DataTable extends Symbiote {
     },
 
     onBodyClick: (event) => {
+      let selectRow = event.target?.closest('.sn-data-table-select-row');
+      if (selectRow) {
+        let rowId = selectRow.dataset.rowId;
+        this.#selectedRowIds = toggleRowSelection(this.#selectedRowIds, rowId, 'multi');
+        this.#render();
+        emit(this, 'sn-data-table-select', { rowId, selectedRowIds: this.selectedRowIds });
+        return;
+      }
+
+      let treeBtn = event.target?.closest('.sn-data-table-tree-btn');
+      if (treeBtn) {
+        event.stopPropagation();
+        let rowId = treeBtn.dataset.rowId;
+        this.toggleRowExpansion(rowId);
+        return;
+      }
+
       let expandBtn = event.target?.closest('.sn-data-table-expand-btn');
       if (expandBtn) {
         event.stopPropagation();
@@ -192,10 +341,62 @@ export class DataTable extends Symbiote {
       if (!tr || tr.classList.contains('sn-data-table-details-row')) return;
       let rowId = tr.dataset.rowId;
       if (rowId) {
-        this.selectedRowId = rowId;
-        let rowData = this.#rows.find(r => String(r.id) === rowId);
-        emit(this, 'sn-data-table-select', { rowId, row: rowData });
+        if (this.$.selectionMode === 'single') {
+          this.#selectedRowIds = toggleRowSelection(this.#selectedRowIds, rowId, 'single');
+          this.selectedRowId = this.#selectedRowIds.has(rowId) ? rowId : '';
+          let rowData = this.#rows.find(r => String(r.id) === rowId);
+          emit(this, 'sn-data-table-select', { rowId, row: rowData, selectedRowIds: this.selectedRowIds });
+        } else if (this.$.selectionMode === 'multi') {
+          this.#selectedRowIds = toggleRowSelection(this.#selectedRowIds, rowId, 'multi');
+          this.#render();
+          emit(this, 'sn-data-table-select', { rowId, selectedRowIds: this.selectedRowIds });
+        }
       }
+    },
+
+    onBodyDblClick: (event) => {
+      let td = event.target?.closest('td');
+      if (!td) return;
+      let tr = td.parentElement;
+      if (!tr || tr.classList.contains('sn-data-table-details-row')) return;
+      let rowId = tr.dataset.rowId;
+      let colIndex = Array.from(tr.children).indexOf(td);
+
+      let dataColIndex = colIndex;
+      if (this.$.selectionMode === 'multi') dataColIndex--;
+      let visibleRows = getTreeRows(this.#rows, this.#expandedRowIds);
+      if (visibleRows.some(r => r.details)) dataColIndex--;
+
+      let visibleColumns = sortColumns(this.#columns).filter((column) => column.visible !== false);
+      if (dataColIndex >= 0 && dataColIndex < visibleColumns.length) {
+        let column = visibleColumns[dataColIndex];
+        let rowData = visibleRows.find(r => String(r.id) === rowId);
+        if (column && rowData) {
+          let cellData = resolveCell(rowData, column);
+          emit(this, 'sn-data-table-edit', {
+            rowId,
+            columnKey: column.key,
+            value: cellData.text ?? cellData,
+            row: rowData,
+          });
+        }
+      }
+    },
+
+    onScroll: (event) => {
+      let scrollContainer = event.target;
+      let scrollTop = scrollContainer.scrollTop;
+      let clientHeight = scrollContainer.clientHeight;
+      let rowHeight = getVisibleRowHeight(scrollContainer, this.getAttribute('row-height'));
+      let startIndex = Math.floor(scrollTop / rowHeight);
+      let endIndex = Math.min(this.#rows.length - 1, Math.ceil((scrollTop + clientHeight) / rowHeight));
+
+      emit(this, 'sn-data-table-visible-window', {
+        startIndex,
+        endIndex,
+        scrollTop,
+        clientHeight,
+      });
     },
 
     onBodyKeyDown: (event) => {
@@ -231,9 +432,16 @@ export class DataTable extends Symbiote {
             let tr = rows[index];
             let rowId = tr.dataset.rowId;
             if (rowId) {
-              this.selectedRowId = rowId;
-              let rowData = this.#rows.find(r => String(r.id) === rowId);
-              emit(this, 'sn-data-table-select', { rowId, row: rowData });
+              if (this.$.selectionMode === 'single') {
+                this.#selectedRowIds = toggleRowSelection(this.#selectedRowIds, rowId, 'single');
+                this.selectedRowId = this.#selectedRowIds.has(rowId) ? rowId : '';
+                let rowData = this.#rows.find(r => String(r.id) === rowId);
+                emit(this, 'sn-data-table-select', { rowId, row: rowData, selectedRowIds: this.selectedRowIds });
+              } else if (this.$.selectionMode === 'multi') {
+                this.#selectedRowIds = toggleRowSelection(this.#selectedRowIds, rowId, 'multi');
+                this.#render();
+                emit(this, 'sn-data-table-select', { rowId, selectedRowIds: this.selectedRowIds });
+              }
             }
           }
           break;
@@ -264,17 +472,7 @@ export class DataTable extends Symbiote {
   };
 
   toggleRowExpansion(rowId, forceState) {
-    if (forceState === true) {
-      this.#expandedRowIds.add(String(rowId));
-    } else if (forceState === false) {
-      this.#expandedRowIds.delete(String(rowId));
-    } else {
-      if (this.#expandedRowIds.has(String(rowId))) {
-        this.#expandedRowIds.delete(String(rowId));
-      } else {
-        this.#expandedRowIds.add(String(rowId));
-      }
-    }
+    this.#expandedRowIds = toggleRowExpansion(this.#expandedRowIds, rowId, forceState);
     this.#render();
   }
 
@@ -284,13 +482,13 @@ export class DataTable extends Symbiote {
   }
 
   setRows(rows = []) {
-    this.#rows = normalizeRows(rows);
+    this.#rows = rows;
     this.#render();
   }
 
   setData({ columns = this.#columns, rows = this.#rows, emptyText = this.$.emptyText } = {}) {
     this.#columns = normalizeColumns(columns);
-    this.#rows = normalizeRows(rows);
+    this.#rows = rows;
     this.set$({ emptyText: String(emptyText ?? 'No rows') });
     this.#render();
   }
@@ -300,6 +498,34 @@ export class DataTable extends Symbiote {
       columns: [...this.#columns],
       rows: [...this.#rows],
     };
+  }
+
+  toggleColumnVisibility(key, visible) {
+    this.#columns = toggleColumnVisibility(this.#columns, key, visible);
+    this.#render();
+  }
+
+  setColumnWidth(key, width) {
+    this.#columns = setColumnWidth(this.#columns, key, width);
+    this.#render();
+  }
+
+  toggleColumnPinning(key, pinned) {
+    this.#columns = toggleColumnPinning(this.#columns, key, pinned);
+    this.#render();
+  }
+
+  get selectionMode() { return this.getAttribute('selection-mode') || 'single'; }
+  set selectionMode(val) {
+    this.setAttribute('selection-mode', String(val || 'single'));
+    this.$.selectionMode = String(val || 'single');
+    this.#render();
+  }
+
+  get selectedRowIds() { return Array.from(this.#selectedRowIds); }
+  set selectedRowIds(val) {
+    this.#selectedRowIds = new Set(Array.isArray(val) ? val.map(String) : []);
+    this.#render();
   }
 
   get loading() { return this.hasAttribute('loading'); }
@@ -318,6 +544,11 @@ export class DataTable extends Symbiote {
   set selectedRowId(val) {
     this.$.selectedRowId = String(val || '');
     this.setAttribute('selected-row-id', this.$.selectedRowId);
+    if (this.$.selectedRowId) {
+      this.#selectedRowIds.add(this.$.selectedRowId);
+    } else {
+      this.#selectedRowIds.clear();
+    }
     this.#render();
   }
 
@@ -339,6 +570,14 @@ export class DataTable extends Symbiote {
       this.$.loading = newValue !== null;
     } else if (name === 'selected-row-id') {
       this.$.selectedRowId = newValue || '';
+      if (this.$.selectedRowId) {
+        this.#selectedRowIds.add(this.$.selectedRowId);
+      } else {
+        this.#selectedRowIds.clear();
+      }
+      this.#render();
+    } else if (name === 'selection-mode') {
+      this.$.selectionMode = newValue || 'single';
       this.#render();
     } else {
       super.attributeChangedCallback?.(name, oldValue, newValue);
@@ -349,37 +588,50 @@ export class DataTable extends Symbiote {
     super.connectedCallback?.();
     this.$.loading = this.hasAttribute('loading');
     this.$.selectedRowId = this.getAttribute('selected-row-id') || '';
+    if (this.$.selectedRowId) {
+      this.#selectedRowIds.add(this.$.selectedRowId);
+    }
+    this.$.selectionMode = this.getAttribute('selection-mode') || 'single';
     this.#render();
   }
 
   #render() {
-    let isEmpty = this.#columns.length === 0 || this.#rows.length === 0;
-    let hasExpand = this.#rows.some(r => r.details);
+    let sortedCols = sortColumns(this.#columns);
+    let visibleRows = getTreeRows(this.#rows, this.#expandedRowIds);
+    let isEmpty = sortedCols.length === 0 || visibleRows.length === 0;
+    let hasExpand = visibleRows.some(r => r.details);
 
-    const iconNames = ['chevron_right'];
-    const sortIcons = this.#columns.filter(c => c.sortable).map(() => 'unfold_more');
+    const iconNames = ['chevron_right', 'keyboard_arrow_right', 'keyboard_arrow_down'];
+    const sortIcons = sortedCols.filter(c => c.sortable).map(() => 'unfold_more');
     if (sortIcons.length > 0) {
       iconNames.push('unfold_more', 'arrow_upward', 'arrow_downward');
     }
     ensureMaterialSymbols(iconNames);
 
     this.set$({
-      headHtml: renderHead(this.#columns, this.$.sortColumn, this.$.sortDirection, hasExpand),
-      bodyHtml: renderBody(this.#columns, this.#rows, this.$.selectedRowId, this.#expandedRowIds, hasExpand),
+      headHtml: renderHead(
+        sortedCols,
+        this.$.sortColumn,
+        this.$.sortDirection,
+        hasExpand,
+        this.$.selectionMode,
+        this.#selectedRowIds,
+        visibleRows
+      ),
+      bodyHtml: renderBody(sortedCols, visibleRows, this.#selectedRowIds, this.#expandedRowIds, hasExpand, this.$.selectionMode),
       isEmpty,
       showTable: !isEmpty && !this.$.errorText,
       hideTable: isEmpty || Boolean(this.$.errorText),
     });
     this.toggleAttribute('empty', isEmpty);
 
-    // Apply roving focus defaults after rendering the rows
     setTimeout(() => {
       const tbody = this.querySelector('tbody');
       if (!tbody) return;
       const trs = Array.from(tbody.querySelectorAll('tr:not(.sn-data-table-details-row)'));
       if (trs.length > 0) {
         trs.forEach((tr) => {
-          let isSelected = tr.dataset.rowId && String(tr.dataset.rowId) === String(this.$.selectedRowId);
+          let isSelected = tr.dataset.rowId && this.#selectedRowIds.has(String(tr.dataset.rowId));
           tr.setAttribute('tabindex', isSelected ? '0' : '-1');
         });
         if (!trs.some(t => t.getAttribute('tabindex') === '0')) {

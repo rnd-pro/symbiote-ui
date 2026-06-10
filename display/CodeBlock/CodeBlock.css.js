@@ -11,8 +11,11 @@ export default `
   code-block .cb-scroll {
     display: flex;
     height: 100%;
+    min-inline-size: 0;
     overflow: auto;
     align-items: stretch;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
   }
   code-block .cb-gutter {
     position: sticky;
@@ -36,8 +39,8 @@ export default `
   code-block .cb-pre {
     margin: 0;
     padding: var(--sn-code-padding, 12px);
-    flex: 1;
-    min-width: 0;
+    flex: 1 0 max-content;
+    min-inline-size: var(--sn-code-content-min-inline-size, 0);
     font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
     font-size: var(--sn-code-font-size, 12px);
     line-height: 1.6;
