@@ -44,6 +44,7 @@ const DEFAULT_DARK_TOKENS = {
   '--sn-alpha-subtle': '0.15',
   '--sn-alpha-faint': '0.06',
   '--sn-overlay-z-base': '20000',
+  '--sn-fullscreen-tab-bar-z': '20010',
 
   '--sn-danger-color': 'hsl(var(--sn-hue-danger) var(--sn-sat-vivid) 58%)',
   '--sn-success-color': 'hsl(var(--sn-hue-success) var(--sn-sat-vivid) 57%)',
@@ -121,6 +122,10 @@ const DEFAULT_DARK_TOKENS = {
   '--sn-shadow-md': '0 2px calc(8px * var(--sn-theme-elevation-scale)) hsl(var(--sn-hue-base) var(--sn-sat-muted) 0% / 0.28)',
   '--sn-shadow-lg': '0 6px calc(18px * var(--sn-theme-elevation-scale)) hsl(var(--sn-hue-base) var(--sn-sat-muted) 0% / 0.28)',
   '--sn-shadow-xl': '0 -8px calc(28px * var(--sn-theme-elevation-scale)) hsl(var(--sn-hue-base) var(--sn-sat-muted) 0% / 0.32)',
+  '--sn-layout-drawer-shadow': 'var(--sn-shadow-xl)',
+  '--sn-layout-drawer-handle-shadow': 'var(--sn-chat-item-child-shadow)',
+  '--sn-layout-drawer-handle-shadow-start': 'var(--sn-layout-drawer-handle-shadow)',
+  '--sn-layout-drawer-handle-shadow-end': '-2px 0 4px color-mix(in oklab, var(--sn-bg) 70%, transparent)',
   '--sn-node-header-bg': 'var(--sn-panel-bg)',
   '--sn-node-selected': 'hsl(var(--sn-hue-accent) var(--sn-sat-vivid) var(--sn-lit-accent))',
   '--sn-node-accent': 'var(--sn-node-selected)',

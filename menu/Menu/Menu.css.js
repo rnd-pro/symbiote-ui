@@ -55,6 +55,12 @@ sn-menu-item[checked] {
   height: 1.25em;
 }
 
+.sn-menu-item-icon[hidden],
+.sn-menu-item-shortcut[hidden],
+.sn-menu-group-label[hidden] {
+  display: none !important;
+}
+
 .sn-menu-item-label {
   flex: 1;
 }

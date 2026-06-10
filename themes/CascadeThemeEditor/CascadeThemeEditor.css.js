@@ -5,6 +5,7 @@ export default css`
     display: block;
     min-width: 0;
     height: 100%;
+    container: cascade-theme-editor / inline-size;
     color: var(--sn-text);
     font-family: var(--sn-font);
 
@@ -44,7 +45,7 @@ export default css`
 
     .cte-title {
       flex: 1 1 auto;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       gap: var(--sn-theme-editor-title-gap, var(--sn-lab-control-gap, 8px));
       min-width: 0;
       font-size: var(--sn-theme-editor-title-size, var(--sn-lab-title-size, 14px));
@@ -52,7 +53,7 @@ export default css`
     }
 
     .cte-title strong {
-      flex: 1 1 92px;
+      flex: 1 1 auto;
       min-width: 0;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -319,6 +320,20 @@ export default css`
     .cte-params::-webkit-scrollbar-thumb:hover {
       background: var(--sn-scrollbar-thumb-hover);
       background-clip: content-box;
+    }
+
+    @container cascade-theme-editor (max-width: 360px) {
+      .cte-header {
+        gap: var(--sn-theme-editor-header-compact-gap, 6px);
+      }
+
+      .cte-status {
+        display: none;
+      }
+
+      .cte-control {
+        grid-template-columns: minmax(0, 1fr) minmax(92px, 1fr) minmax(28px, auto);
+      }
     }
   }
 `;

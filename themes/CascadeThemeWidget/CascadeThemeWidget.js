@@ -6,6 +6,12 @@ import {
   getCascadeThemeControls,
   normalizeCascadeThemeOptions,
 } from '../cascade-theme.js';
+import {
+  bringOverlayToFront,
+  mountOverlayToDocument,
+  restoreOverlayHome,
+} from '../../ui/overlay-stack.js';
+import { positionOverlay } from '../../ui/overlay-positioner.js';
 import css from './CascadeThemeWidget.css.js';
 import tpl from './CascadeThemeWidget.tpl.js';
 
@@ -47,13 +53,15 @@ export class CascadeThemeWidget extends Symbiote {
   #controls = getCascadeThemeControls().filter((control) => COMPACT_CONTROLS.includes(control.name));
   #state = normalizeCascadeThemeOptions(CASCADE_THEME_DEFAULTS);
   #ready = false;
+  #popoverBound = false;
+  #overlayListenersBound = false;
 
   init$ = {
     isOpen: false,
     triggerTitle: 'Theme quick controls',
 
     onToggle: () => {
-      this.$.isOpen = !this.$.isOpen;
+      this.#setOpen(!this.$.isOpen);
     },
   };
 
@@ -62,8 +70,8 @@ export class CascadeThemeWidget extends Symbiote {
     this.addEventListener('input', this.#onInput);
     this.addEventListener('click', this.#onClick);
     this._onDocumentPointerDown = (event) => {
-      if (!this.$.isOpen || this.contains(event.target)) return;
-      this.$.isOpen = false;
+      if (!this.$.isOpen || this.#eventTargetsWidget(event)) return;
+      this.#setOpen(false);
     };
     if (typeof document !== 'undefined') {
       document.addEventListener('pointerdown', this._onDocumentPointerDown);
@@ -73,6 +81,8 @@ export class CascadeThemeWidget extends Symbiote {
   disconnectedCallback() {
     this.removeEventListener('input', this.#onInput);
     this.removeEventListener('click', this.#onClick);
+    this.#unbindPopoverEvents();
+    this.#setOpen(false);
     if (typeof document !== 'undefined') {
       document.removeEventListener('pointerdown', this._onDocumentPointerDown);
     }
@@ -90,9 +100,11 @@ export class CascadeThemeWidget extends Symbiote {
   renderCallback() {
     if (this.#ready) return;
     this.#ready = true;
+    this.#bindPopoverEvents();
     this.#renderControls();
     this.#loadStoredState();
     this.#apply('init');
+    if (this.$.isOpen) this.#openPopover();
   }
 
   get state() {
@@ -137,7 +149,7 @@ export class CascadeThemeWidget extends Symbiote {
 
   #onInput = (event) => {
     let input = event.target.closest?.('[data-theme-control]');
-    if (!input || !this.contains(input)) return;
+    if (!input || !this.#elementTargetsWidget(input)) return;
     this.#state = normalizeCascadeThemeOptions({
       ...this.#state,
       [input.dataset.themeControl]: Number(input.value),
@@ -147,7 +159,7 @@ export class CascadeThemeWidget extends Symbiote {
 
   #onClick = (event) => {
     let modeButton = event.target.closest?.('[data-theme-mode]');
-    if (modeButton && this.contains(modeButton)) {
+    if (modeButton && this.#elementTargetsWidget(modeButton)) {
       this.#state = normalizeCascadeThemeOptions({
         ...this.#state,
         mode: modeButton.dataset.themeMode,
@@ -163,7 +175,7 @@ export class CascadeThemeWidget extends Symbiote {
     } else if (action === 'reset') {
       this.reset();
     } else if (action === 'open-full') {
-      this.$.isOpen = false;
+      this.#setOpen(false);
       this.dispatchEvent(new CustomEvent('cascade-theme-open-full', {
         bubbles: true,
         composed: true,
@@ -171,6 +183,108 @@ export class CascadeThemeWidget extends Symbiote {
       }));
     }
   };
+
+  #bindPopoverEvents() {
+    let popover = this.ref.popover;
+    if (!popover || this.#popoverBound) return;
+    popover.addEventListener('input', this.#onInput);
+    popover.addEventListener('click', this.#onClick);
+    this.#popoverBound = true;
+  }
+
+  #unbindPopoverEvents() {
+    let popover = this.ref.popover;
+    if (!popover || !this.#popoverBound) return;
+    popover.removeEventListener('input', this.#onInput);
+    popover.removeEventListener('click', this.#onClick);
+    this.#popoverBound = false;
+  }
+
+  #setOpen(open) {
+    let nextOpen = Boolean(open);
+    if (nextOpen === this.$.isOpen) {
+      if (nextOpen) this.#openPopover();
+      return;
+    }
+    this.$.isOpen = nextOpen;
+    if (nextOpen) {
+      this.#openPopover();
+    } else {
+      this.#closePopover();
+    }
+  }
+
+  #openPopover() {
+    let popover = this.ref.popover;
+    if (!popover) return;
+    this.#bindPopoverEvents();
+    popover.hidden = false;
+    mountOverlayToDocument(popover, this);
+    bringOverlayToFront(popover);
+    this.#positionPopover();
+    this.#bindOverlayListeners();
+    if (typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(() => {
+        if (this.$.isOpen) this.#positionPopover();
+      });
+    }
+  }
+
+  #closePopover() {
+    let popover = this.ref.popover;
+    this.#unbindOverlayListeners();
+    if (!popover) return;
+    popover.hidden = true;
+    popover.style.removeProperty('top');
+    popover.style.removeProperty('left');
+    restoreOverlayHome(popover);
+  }
+
+  #bindOverlayListeners() {
+    if (this.#overlayListenersBound || typeof window === 'undefined') return;
+    window.addEventListener('resize', this.#onOverlayReposition);
+    window.addEventListener('scroll', this.#onOverlayReposition, true);
+    this.#overlayListenersBound = true;
+  }
+
+  #unbindOverlayListeners() {
+    if (!this.#overlayListenersBound || typeof window === 'undefined') return;
+    window.removeEventListener('resize', this.#onOverlayReposition);
+    window.removeEventListener('scroll', this.#onOverlayReposition, true);
+    this.#overlayListenersBound = false;
+  }
+
+  #onOverlayReposition = () => {
+    if (this.$.isOpen) this.#positionPopover();
+  };
+
+  #positionPopover() {
+    let popover = this.ref.popover;
+    let trigger = this.ref.trigger || this.querySelector('.ctw-trigger');
+    if (!popover || !trigger || typeof window === 'undefined') return;
+    if (window.matchMedia?.('(max-width: 820px)')?.matches) {
+      popover.style.removeProperty('top');
+      popover.style.removeProperty('left');
+      return;
+    }
+    let offset = Number.parseFloat(
+      getComputedStyle(trigger).getPropertyValue('--sn-theme-widget-offset') || '8'
+    );
+    positionOverlay(trigger, popover, 'bottom-end', {
+      offset: Number.isFinite(offset) ? offset : 8,
+    });
+  }
+
+  #eventTargetsWidget(event) {
+    let path = event.composedPath?.() || [];
+    let popover = this.ref.popover;
+    return path.includes(this) || (popover && (path.includes(popover) || popover.contains(event.target)));
+  }
+
+  #elementTargetsWidget(element) {
+    let popover = this.ref.popover;
+    return this.contains(element) || Boolean(popover?.contains(element));
+  }
 
   #renderControls() {
     let controls = this.ref.controls;

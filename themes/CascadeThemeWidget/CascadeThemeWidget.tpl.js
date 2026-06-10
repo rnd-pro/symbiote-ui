@@ -2,6 +2,7 @@ import { html } from '@symbiotejs/symbiote';
 
 export default html`
   <button
+    ref="trigger"
     class="ctw-trigger shell-action"
     type="button"
     aria-haspopup="dialog"
@@ -15,7 +16,13 @@ export default html`
     <span class="material-symbols-outlined" aria-hidden="true">palette</span>
     <span class="ctw-trigger-label">Theme</span>
   </button>
-  <section class="ctw-popover" role="dialog" aria-label="Theme quick controls" ${{ '@hidden': '!isOpen' }}>
+  <section
+    ref="popover"
+    class="ctw-popover"
+    role="dialog"
+    aria-label="Theme quick controls"
+    ${{ '@hidden': '!isOpen' }}
+  >
     <header class="ctw-header">
       <strong>Theme</strong>
       <div class="ctw-header-actions">

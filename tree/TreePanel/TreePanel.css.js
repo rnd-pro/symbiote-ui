@@ -41,6 +41,10 @@ sn-tree-panel[hidden] {
   text-transform: uppercase;
 }
 
+.sn-tree-panel-title[hidden] {
+  display: none;
+}
+
 .sn-tree-panel-title-icon,
 .sn-tree-panel-toolbar-icon {
   font-size: var(--sn-tree-panel-icon-size);

@@ -36,6 +36,14 @@ export let styles = css`
     margin: 4px 6px;
   }
 
+  .sn-ctx-divider[hidden],
+  .sn-ctx-btn[hidden],
+  .sn-ctx-icon[hidden],
+  .sn-ctx-check-mark[hidden],
+  .sn-ctx-detail[hidden] {
+    display: none !important;
+  }
+
   .sn-ctx-btn {
     display: flex;
     align-items: center;
