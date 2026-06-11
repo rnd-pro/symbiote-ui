@@ -967,10 +967,10 @@ test('cascade theme derives distinct dark and light branches', async () => {
   assert.equal(darkTheme.tokens['--sn-theme-outline-strength'], lightTheme.tokens['--sn-theme-outline-strength']);
   assert.equal(darkTheme.tokens['--sn-field-control-bg'], 'var(--sn-bg)');
   assert.equal(lightTheme.tokens['--sn-field-control-bg'], 'var(--sn-bg)');
-  assert.equal(lightTheme.tokens['--sn-button-primary-color'], 'hsl(0 0% 98.0%)');
-  assert.equal(lightTheme.tokens['--sn-button-success-color'], 'hsl(0 0% 18.9%)');
+  assert.equal(lightTheme.tokens['--sn-button-primary-color'], 'hsl(0 0% 8.0%)');
+  assert.equal(lightTheme.tokens['--sn-button-success-color'], 'hsl(0 0% 8.0%)');
   assert.equal(themeModule.getReadableTextForHsl(218, 89, 63, 94), 'hsl(0 0% 8.0%)');
-  assert.equal(themeModule.getReadableTextForHsl(218, 89, 56.2, 18.9), 'hsl(0 0% 98.0%)');
+  assert.equal(themeModule.getReadableTextForHsl(218, 89, 56.2, 18.9), 'hsl(0 0% 8.0%)');
 });
 
 test('cascade theme visual smoke fixtures cover luminance and chroma states', async () => {

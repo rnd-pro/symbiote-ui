@@ -80,6 +80,7 @@ test('recipe resolution preserves cascade order and bounded overrides', () => {
     params: {
       density: 101,
       hue: 120,
+      radius: 24,
     },
     overrides: {
       '--sn-theme-elevation-scale': '1.2',
@@ -92,6 +93,7 @@ test('recipe resolution preserves cascade order and bounded overrides', () => {
   assert.equal(resolved.base, 'default-provider');
   assert.equal(resolved.params.density, 101);
   assert.equal(resolved.params.hue, 120);
+  assert.equal(resolved.params.radius, 24);
   assert.equal(resolved.overrides['--sn-theme-elevation-scale'], '1.2');
   assert.equal(resolved.overrides['--bad-token'], undefined);
   assert.equal(resolved.overrides['--sn-leak'], undefined);
@@ -112,13 +114,18 @@ test('createCascadeTheme resolves recipes without breaking raw params', () => {
   assert.equal(raw.state.mode, 'light');
   assert.equal(raw.state.hue, 33);
   assert.equal(raw.state.density, 110);
+  assert.equal(raw.state.radius, 20);
+  assert.equal(raw.tokens['--sn-theme-radius-scale'], '1.00');
 
   let themed = createCascadeTheme({
     recipe: 'ops-dashboard',
-    params: { density: 100 },
+    params: { density: 100, radius: 30 },
   });
   assert.equal(themed.recipe, 'ops-dashboard');
   assert.equal(themed.state.density, 100);
+  assert.equal(themed.state.radius, 30);
+  assert.equal(themed.tokens['--sn-theme-radius-scale'], '1.50');
+  assert.match(themed.tokens['--sn-data-table-radius'], /var\(--sn-theme-radius-scale\)/);
   assert.equal(themed.tokens['--sn-theme-elevation-scale'], '1.1');
   assert.ok(themed.descriptor.recipeModel.recipeNames.includes('ops-dashboard'));
 });

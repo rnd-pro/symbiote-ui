@@ -9,6 +9,7 @@ const CASCADE_PARAM_NAMES = [
   'type',
   'heading',
   'density',
+  'radius',
   'motion',
 ];
 
@@ -25,6 +26,7 @@ const DEFAULT_CASCADE_PARAMS = Object.freeze({
   type: 100,
   heading: 100,
   density: 100,
+  radius: 20,
   motion: 100,
 });
 
@@ -57,7 +59,7 @@ const RELATION_DEFINITIONS = {
       { name: 'scale', type: 'number', min: 0.5, max: 1.6, default: 1 },
       { name: 'compactness', type: 'number', min: -2, max: 2, default: 0 },
     ],
-    affects: ['density', '--sn-data-table-radius', '--sn-source-action-radius', '--sn-graph-explorer-button-radius'],
+    affects: ['density', 'radius', '--sn-data-table-radius', '--sn-source-action-radius', '--sn-graph-explorer-button-radius'],
   },
   elevation: {
     name: 'elevation',
@@ -167,7 +169,7 @@ const RECIPE_CATALOG = {
       motionCurve: { speed: 1.1, feedback: 0.7 },
     },
     overrides: {
-      '--sn-data-table-radius': 'calc(6px * var(--sn-theme-density))',
+      '--sn-data-table-radius': 'calc(6px * var(--sn-theme-density) * var(--sn-theme-radius-scale))',
       '--sn-theme-elevation-scale': '1.1',
     },
   },
@@ -187,8 +189,8 @@ const RECIPE_CATALOG = {
       semanticHues: { semanticSpread: -0.7 },
     },
     overrides: {
-      '--sn-source-action-radius': 'calc(3px * var(--sn-theme-density))',
-      '--sn-graph-explorer-button-radius': 'calc(3px * var(--sn-theme-density))',
+      '--sn-source-action-radius': 'calc(3px * var(--sn-theme-density) * var(--sn-theme-radius-scale))',
+      '--sn-graph-explorer-button-radius': 'calc(3px * var(--sn-theme-density) * var(--sn-theme-radius-scale))',
       '--sn-theme-elevation-scale': '0.75',
     },
   },
@@ -227,7 +229,7 @@ const RECIPE_CATALOG = {
     },
     overrides: {
       '--sn-theme-elevation-scale': '1.2',
-      '--sn-data-table-radius': 'calc(10px * var(--sn-theme-density))',
+      '--sn-data-table-radius': 'calc(10px * var(--sn-theme-density) * var(--sn-theme-radius-scale))',
     },
   },
   'presentation-clean': {
@@ -285,7 +287,7 @@ const RECIPE_CATALOG = {
     },
     overrides: {
       '--sn-theme-elevation-scale': '0.45',
-      '--sn-data-table-radius': 'calc(7px * var(--sn-theme-density))',
+      '--sn-data-table-radius': 'calc(7px * var(--sn-theme-density) * var(--sn-theme-radius-scale))',
     },
   },
 };
@@ -330,7 +332,7 @@ function relationValue(modifier, name, fallback = 0) {
 }
 
 function relationScaleToken(px, scale) {
-  return `calc(${px}px * ${Number(scale).toFixed(2)} * var(--sn-theme-density))`;
+  return `calc(${px}px * ${Number(scale).toFixed(2)} * var(--sn-theme-density) * var(--sn-theme-radius-scale))`;
 }
 
 function rotateHue(base, offset) {
@@ -356,6 +358,7 @@ function applyRelation(params, overrides, name, modifier) {
     let scale = relationValue(modifier, 'scale', 1);
     let compactness = relationValue(modifier, 'compactness');
     addParam(params, 'density', compactness * 2);
+    addParam(params, 'radius', (scale - 1) * 20 + compactness * 2);
     setOverride(overrides, '--sn-data-table-radius', relationScaleToken(8, scale));
     setOverride(overrides, '--sn-source-action-radius', relationScaleToken(4, scale));
     setOverride(overrides, '--sn-graph-explorer-button-radius', relationScaleToken(3, scale));

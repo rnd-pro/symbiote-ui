@@ -1034,7 +1034,7 @@ async function evaluateDesignProtocolThemeSmoke(page) {
           recipe: 'presentation-clean',
           register: 'presentation',
           componentFamilies: ['table'],
-          params: { contrast: 62, type: 116, heading: 126 },
+          params: { contrast: 62, density: 104, type: 116, heading: 126, radius: 24 },
         }),
       };
     })()
@@ -2022,7 +2022,7 @@ async function evaluateShowcaseSmoke(page) {
           devGraph: await activate('multi-agent-dev', 'dependency-graph'),
           automation: await activate('automation', 'engine-state'),
           media: await activate('media-generation', 'variants'),
-          video: await activate('video-editor', 'timeline'),
+          video: await activate('video-editor', 'studio'),
           data: await activate('data-research', 'report'),
           node: await activate('node-studio', 'pcb-routing'),
           spatial: await activate('spatial-xr', '3d-graph'),
@@ -2657,9 +2657,9 @@ test('agent workspace demo exposes the public feature showcase groups', { timeou
     assert.ok(isVisible(smoke.groups.media.ui), JSON.stringify(smoke.groups.media, null, 2));
     assert.ok(smoke.groups.media.sidebarLabels.some((label) => label.includes('Variants')));
 
-    assert.equal(smoke.groups.video.hash, '#video-editor/timeline');
+    assert.equal(smoke.groups.video.hash, '#video-editor/studio');
     assert.ok(isVisible(smoke.groups.video.graph), JSON.stringify(smoke.groups.video, null, 2));
-    assert.ok(smoke.groups.video.sidebarLabels.some((label) => label.includes('Timeline')));
+    assert.ok(smoke.groups.video.sidebarLabels.some((label) => label.includes('Studio')));
     assert.ok(smoke.groups.video.sidebarLabels.some((label) => label.includes('Render queue')));
 
     assert.equal(smoke.groups.data.hash, '#data-research/report');

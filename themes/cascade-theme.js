@@ -94,6 +94,15 @@ const CASCADE_THEME_CONTROL_LIST = [
     description: 'Spacing and hit-target scale for graph nodes, ports, chat composer, controls, layout chrome, panel menus, and tree rows.',
   },
   {
+    name: 'radius',
+    type: 'number',
+    min: 0,
+    max: 100,
+    default: 20,
+    icon: 'rounded_corner',
+    description: 'Corner-radius scale for reusable controls, cards, tables, graph chrome, chat surfaces, and layout panels.',
+  },
+  {
     name: 'motion',
     type: 'number',
     min: 0,
@@ -329,6 +338,7 @@ export const CASCADE_THEME_TOKEN_TARGETS = Object.freeze({
   density: [
     '--sn-theme-density',
     '--sn-theme-spacing-scale',
+    '--sn-theme-radius-scale',
     '--sn-node-header-gap',
     '--sn-node-header-padding',
     '--sn-node-collapsed-body-padding',
@@ -637,6 +647,10 @@ function densityToken(px) {
   return `calc(${px}px * var(--sn-theme-density))`;
 }
 
+function radiusToken(px) {
+  return `calc(${px}px * var(--sn-theme-density) * var(--sn-theme-radius-scale))`;
+}
+
 function svgStrokeToken(px, outlineStrength) {
   let defaultOutlineStrength = CASCADE_THEME_DEFAULTS.outline / 100;
   let scale = defaultOutlineStrength <= 0 ? outlineStrength : outlineStrength / defaultOutlineStrength;
@@ -683,9 +697,11 @@ function contrastRatio(a, b) {
 
 export function getReadableTextForHsl(hue, saturation, lightness, preferredLightness) {
   let bgLum = relativeLuminance(hslToRgb(hue, saturation, lightness));
-  let preferred = { hue: 0, saturation: 0, lightness: preferredLightness };
-  let inverted = { hue: 0, saturation: 0, lightness: preferredLightness > 50 ? 8 : 98 };
-  let candidates = [preferred, inverted].map((candidate) => ({
+  let candidates = [preferredLightness, 8, 98].map((candidateLightness) => ({
+    hue: 0,
+    saturation: 0,
+    lightness: candidateLightness,
+  })).map((candidate) => ({
     ...candidate,
     ratio: contrastRatio(bgLum, relativeLuminance(hslToRgb(
       candidate.hue,
@@ -716,6 +732,7 @@ export function normalizeCascadeThemeOptions(options = {}) {
     type: clamp(merged.type, 80, 130),
     heading: clamp(merged.heading, 80, 140),
     density: clamp(merged.density, 75, 140),
+    radius: clamp(merged.radius, 0, 100),
     motion: clamp(merged.motion, 0, 200),
   };
 }
@@ -728,6 +745,7 @@ export function createCascadeTheme(options = {}) {
   let typeScale = state.type / 100;
   let headingScale = state.heading / 100;
   let densityScale = state.density / 100;
+  let radiusScale = state.radius / CASCADE_THEME_DEFAULTS.radius;
   let motionScale = state.motion / 100;
   let patternScale = state.pattern / 100;
   let motionEnabled = motionScale > 0;
@@ -829,6 +847,7 @@ export function createCascadeTheme(options = {}) {
     '--sn-theme-heading-scale': headingScale.toFixed(2),
     '--sn-theme-density': densityScale.toFixed(2),
     '--sn-theme-spacing-scale': densityScale.toFixed(2),
+    '--sn-theme-radius-scale': radiusScale.toFixed(2),
     '--sn-theme-elevation-scale': '1',
     '--sn-theme-pattern-brightness': patternScale.toFixed(2),
     '--sn-theme-motion-scale': motionScale.toFixed(2),
@@ -1292,7 +1311,7 @@ export function createCascadeTheme(options = {}) {
     '--sn-chat-sidebar-collapsed-header-padding': `${densityToken(4)} 0`,
     '--sn-chat-sidebar-collapsed-header-gap': densityToken(8),
     '--sn-chat-sidebar-button-padding': `${densityToken(4)} ${densityToken(6)}`,
-    '--sn-chat-sidebar-button-radius': densityToken(4),
+    '--sn-chat-sidebar-button-radius': radiusToken(4),
     '--sn-chat-sidebar-items-padding': `${densityToken(4)} 0`,
     '--sn-chat-sidebar-compact-label-min': densityToken(72),
     '--sn-chat-sidebar-compact-label-ch-width': densityToken(5),
@@ -1313,9 +1332,9 @@ export function createCascadeTheme(options = {}) {
     '--sn-chat-sidebar-status-margin': densityToken(4),
     '--sn-chat-sidebar-meta-margin': densityToken(6),
     '--sn-chat-sidebar-type-padding': `${densityToken(2)} ${densityToken(4)}`,
-    '--sn-chat-sidebar-type-radius': densityToken(3),
+    '--sn-chat-sidebar-type-radius': radiusToken(3),
     '--sn-chat-sidebar-delete-box-size': densityToken(16),
-    '--sn-chat-sidebar-delete-radius': densityToken(3),
+    '--sn-chat-sidebar-delete-radius': radiusToken(3),
     '--sn-chat-sidebar-child-gap': densityToken(8),
     '--sn-chat-sidebar-child-padding': `${densityToken(4)} ${densityToken(14)} ${densityToken(4)} ${densityToken(38)}`,
     '--sn-chat-sidebar-child-min-height': densityToken(24),
@@ -1335,7 +1354,7 @@ export function createCascadeTheme(options = {}) {
     '--sn-chat-list-filter-gap': densityToken(4),
     '--sn-chat-list-filter-padding': `${densityToken(6)} ${densityToken(12)}`,
     '--sn-chat-list-filter-button-padding': `${densityToken(3)} ${densityToken(8)}`,
-    '--sn-chat-list-filter-button-radius': densityToken(4),
+    '--sn-chat-list-filter-button-radius': radiusToken(4),
     '--sn-chat-list-filter-button-min-height': densityToken(24),
     '--sn-chat-list-item-padding': `${densityToken(10)} ${densityToken(14)}`,
     '--sn-chat-list-item-gap': densityToken(4),
@@ -1347,7 +1366,7 @@ export function createCascadeTheme(options = {}) {
     '--sn-chat-list-item-branch-top': densityToken(14),
     '--sn-chat-list-item-branch-width': densityToken(10),
     '--sn-chat-list-badge-padding': `${densityToken(1)} ${densityToken(5)}`,
-    '--sn-chat-list-badge-radius': densityToken(3),
+    '--sn-chat-list-badge-radius': radiusToken(3),
     '--sn-chat-list-meta-gap': densityToken(6),
     '--sn-chat-list-delete-padding': `0 ${densityToken(2)}`,
     '--sn-composer-padding': `${densityToken(10)} ${densityToken(14)} ${densityToken(14)}`,
@@ -1376,7 +1395,7 @@ export function createCascadeTheme(options = {}) {
     '--sn-code-gutter-width': densityToken(32),
     '--sn-code-markdown-padding': `${densityToken(20)} ${densityToken(28)}`,
     '--sn-code-table-cell-padding': `${densityToken(6)} ${densityToken(12)}`,
-    '--sn-data-table-radius': densityToken(8),
+    '--sn-data-table-radius': radiusToken(8),
     '--sn-data-table-cell-padding': `${densityToken(6)} ${densityToken(10)}`,
     '--sn-data-table-cell-gap': densityToken(6),
     '--sn-data-table-line-height': '1.35',
@@ -1384,7 +1403,7 @@ export function createCascadeTheme(options = {}) {
     '--sn-data-table-header-transform': 'uppercase',
     '--sn-data-table-min-width': densityToken(360),
     '--sn-data-table-marker-size': densityToken(8),
-    '--sn-data-table-marker-radius': densityToken(8),
+    '--sn-data-table-marker-radius': radiusToken(8),
     '--sn-data-table-empty-padding': densityToken(18),
     '--sn-data-table-empty-color': 'var(--sn-text-dim)',
     '--sn-empty-state-padding': `${densityToken(18)} ${densityToken(14)}`,
@@ -1393,7 +1412,7 @@ export function createCascadeTheme(options = {}) {
     '--sn-empty-state-height': 'auto',
     '--sn-empty-state-font-style': 'italic',
     '--sn-empty-state-line-height': '1.35',
-    '--sn-list-detail-radius': densityToken(8),
+    '--sn-list-detail-radius': radiusToken(8),
     '--sn-list-detail-sidebar-width': densityToken(180),
     '--sn-list-detail-min-height': densityToken(220),
     '--sn-list-detail-height': '100%',
@@ -1421,7 +1440,7 @@ export function createCascadeTheme(options = {}) {
     '--sn-graph-explorer-button-min-height': densityToken(28),
     '--sn-graph-explorer-button-gap': densityToken(4),
     '--sn-graph-explorer-button-padding': `${densityToken(4)} ${densityToken(10)}`,
-    '--sn-graph-explorer-button-radius': densityToken(3),
+    '--sn-graph-explorer-button-radius': radiusToken(3),
     '--sn-graph-explorer-toolbar-max-offset': densityToken(16),
     '--sn-graph-explorer-toolbar-sep-width': densityToken(1),
     '--sn-graph-explorer-toolbar-sep-margin': `0 ${densityToken(4)}`,
@@ -1429,21 +1448,21 @@ export function createCascadeTheme(options = {}) {
     '--sn-graph-explorer-stats-gap': densityToken(12),
     '--sn-graph-explorer-stats-max-height': densityToken(280),
     '--sn-graph-explorer-stats-padding': `${densityToken(4)} ${densityToken(10)}`,
-    '--sn-graph-explorer-stats-radius': densityToken(3),
+    '--sn-graph-explorer-stats-radius': radiusToken(3),
     '--sn-source-toolbar-gap': densityToken(8),
     '--sn-source-header-padding': `${densityToken(6)} ${densityToken(12)}`,
     '--sn-source-action-gap': densityToken(3),
     '--sn-source-action-padding': `${densityToken(2)} ${densityToken(8)}`,
-    '--sn-source-action-radius': densityToken(4),
+    '--sn-source-action-radius': radiusToken(4),
     '--sn-status-ribbon-bottom': densityToken(20),
     '--sn-status-ribbon-gap': densityToken(10),
     '--sn-status-ribbon-padding': `${densityToken(8)} ${densityToken(20)}`,
-    '--sn-status-ribbon-radius': densityToken(24),
+    '--sn-status-ribbon-radius': radiusToken(24),
     '--sn-status-ribbon-max-width': densityToken(500),
     '--sn-status-ribbon-dots-width': densityToken(16),
     '--sn-cell-size': densityToken(14),
-    '--sn-cell-min-radius': densityToken(2),
-    '--sn-cell-max-radius': densityToken(5),
+    '--sn-cell-min-radius': radiusToken(2),
+    '--sn-cell-max-radius': radiusToken(5),
     '--sn-cell-step-ms': `${Math.round(75 / densityScale)}ms`,
     '--sn-cell-fade-rate': `${(0.025 + (1 / densityScale) * 0.015).toFixed(3)}`,
     '--sn-lab-toolbar-gap': densityToken(12),

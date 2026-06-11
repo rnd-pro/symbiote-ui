@@ -4,6 +4,22 @@ All notable changes to `symbiote-ui` will be documented in this file.
 
 ## Unreleased
 
+## [0.3.0-alpha.43] - 2026-06-11
+
+### Added
+
+- Added `radius` as a cascade theme parameter with WebMCP/schema coverage and
+  `--sn-theme-radius-scale` token output.
+
+### Fixed
+
+- Kept cascade theme radius recipe overrides relative to the global radius
+  scale instead of only density.
+- Improved cascade theme button text selection so light recipe primary actions
+  keep readable contrast.
+- Updated browser smoke coverage for the current showcase video workspace route
+  and valid presentation/table design-policy parameters.
+
 ## [0.3.0-alpha.23] - 2026-06-08
 
 ### Added
