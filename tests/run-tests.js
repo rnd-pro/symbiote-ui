@@ -12,6 +12,7 @@ const signalExitCodes = new Map([
 const browserSmokeFile = 'tests/graph-browser-smoke.test.js';
 const browserSmokeSegments = [
   'cascade lab graph nodes render non-empty with route styles and compact mode in a real browser',
+  'design protocol applies recipe themes and policy diagnostics in a real browser',
   'node-canvas flow-scroll drag keeps repeated pan gestures continuous',
   'node-canvas focuses multiple nodes by fitting them into the viewport',
   'canvas-graph semantic force gravity visual groups stay clustered in a real browser',

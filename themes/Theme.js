@@ -22,9 +22,20 @@ export {
   CASCADE_THEME_DESCRIPTOR,
   CASCADE_THEME_TOKEN_TARGETS,
   createCascadeTheme,
+  getCascadeThemeRecipe,
+  getCascadeThemeRecipeDescriptor,
+  getCascadeThemeRelation,
   getReadableTextForHsl,
   getCascadeThemeControls,
+  isBoundedThemeOverride,
+  listCascadeThemeRecipes,
+  listCascadeThemeRelations,
   normalizeCascadeThemeOptions,
+  normalizeThemeOverrides,
+  resolveCascadeThemeRecipe,
+  THEME_RECIPE_CATALOG,
+  THEME_RECIPE_NAMES,
+  THEME_RELATION_DEFINITIONS,
 } from './cascade-theme.js';
 
 export {

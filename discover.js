@@ -15,6 +15,7 @@ import { HTML_IN_CANVAS_RENDERER } from './canvas/html-in-canvas.js';
 import {
   getTheme,
   getThemeControls,
+  getThemeRecipeModel,
   getThemeRecipe,
   getThemeTokens,
   getUiSchema,
@@ -24,6 +25,8 @@ import {
   listProjectSchemas,
   listRules,
   listThemeElementGroups,
+  listThemeRecipes,
+  listThemeRelations,
   listThemeRuntimeDescriptors,
   listThemeRuleBlocks,
   listTokenFiles,
@@ -309,13 +312,18 @@ export async function cmdDiscover(options = {}) {
         panels: PANEL_THEME_PRESETS,
       },
       themeRuntimeDescriptors: listThemeRuntimeDescriptors(),
+      themeRecipeModel: getThemeRecipeModel(),
+      themeRelations: listThemeRelations(),
       themeRuleBlocks: listThemeRuleBlocks(),
       themeControls: {
         ...Object.fromEntries(THEME_NAMES.map((name) => [name, getThemeControls(name)])),
         ...Object.fromEntries(listThemeRuntimeDescriptors().map((descriptor) => [descriptor.name, descriptor.controls])),
       },
       themeElementGroups: listThemeElementGroups(),
-      themeRecipes: THEME_NAMES.map((name) => getThemeRecipe(name)).filter(Boolean),
+      themeRecipes: [
+        ...THEME_NAMES.map((name) => getThemeRecipe(name)).filter(Boolean),
+        ...listThemeRecipes(),
+      ],
       tokenFiles: listTokenFiles(),
       rulesets: RULESETS.map((rs) => ({
         name: rs.name,

@@ -910,6 +910,147 @@ async function evaluateCascadeThemeSmoke(page) {
   return result.result.value;
 }
 
+async function evaluateDesignProtocolThemeSmoke(page) {
+  const expression = String.raw`
+    (async () => {
+      const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+      const settle = async () => {
+        for (let index = 0; index < 8; index += 1) await frame();
+      };
+      const [
+        { applyCascadeTheme, resolveCascadeThemeRecipe },
+        { deriveDesignConstraints, validateThemePatch },
+      ] = await Promise.all([
+        import('/themes/cascade-theme.js'),
+        import('/rules/design-policy.js'),
+      ]);
+      await Promise.all([
+        customElements.whenDefined('sn-button'),
+        customElements.whenDefined('chat-composer'),
+        customElements.whenDefined('graph-explorer-shell'),
+        customElements.whenDefined('sn-data-table'),
+        customElements.whenDefined('source-viewer'),
+      ]);
+
+      let fixture = document.querySelector('#design-protocol-theme-smoke');
+      if (!fixture) {
+        fixture = document.createElement('section');
+        fixture.id = 'design-protocol-theme-smoke';
+        fixture.style.cssText = [
+          'position:fixed',
+          'inset:auto auto 0 0',
+          'z-index:-1',
+          'inline-size:760px',
+          'padding:16px',
+          'display:grid',
+          'grid-template-columns:repeat(2, minmax(0, 1fr))',
+          'gap:12px',
+          'opacity:0.01',
+          'pointer-events:none',
+          'background:var(--sn-panel-bg)',
+          'color:var(--sn-text)',
+        ].join(';');
+        fixture.innerHTML = [
+          '<sn-button variant="primary">Run</sn-button>',
+          '<chat-composer></chat-composer>',
+          '<graph-explorer-shell><button class="graph-explorer-btn" type="button"><span class="material-symbols-outlined">hub</span><span>Graph</span></button></graph-explorer-shell>',
+          '<sn-data-table><div class="sn-data-table"><table><tbody><tr><td><span class="sn-data-table-cell"><span class="sn-data-table-text">Ready</span></span></td></tr></tbody></table></div></sn-data-table>',
+          '<source-viewer><div class="sv-header"><span class="sv-filename">workspace.js</span><button class="sv-action" type="button">Open</button></div></source-viewer>',
+        ].join('');
+        document.body.append(fixture);
+      }
+
+      const read = (selector) => {
+        const el = fixture.querySelector(selector);
+        if (!el) return null;
+        const rect = el.getBoundingClientRect();
+        const style = getComputedStyle(el);
+        return {
+          selector,
+          width: rect.width,
+          height: rect.height,
+          color: style.color,
+          backgroundColor: style.backgroundColor,
+          borderColor: style.borderColor,
+          fontSize: style.fontSize,
+          padding: style.padding,
+        };
+      };
+
+      const snapshot = async ({ recipe, register, componentFamilies, params = {}, relations = {} }) => {
+        const resolved = resolveCascadeThemeRecipe({ recipe, params, relations });
+        const constraints = deriveDesignConstraints({
+          design: { register, componentFamilies },
+          theme: { recipe, params: resolved.params },
+        }, {});
+        const validation = validateThemePatch({
+          recipe,
+          relations: resolved.relations,
+          params: resolved.params,
+        }, constraints);
+        const theme = applyCascadeTheme(fixture, {
+          recipe,
+          params,
+          relations,
+        }, { notify: false });
+        await settle();
+        return {
+          recipe,
+          validationStatus: validation.status,
+          blockedCount: validation.violations.filter((item) => item.status === 'blocked').length,
+          warningCount: validation.violations.filter((item) => item.status === 'warn').length,
+          state: theme.state,
+          resolved: resolved.params,
+          root: {
+            hue: getComputedStyle(fixture).getPropertyValue('--sn-theme-hue').trim(),
+            density: getComputedStyle(fixture).getPropertyValue('--sn-theme-density').trim(),
+            typeScale: getComputedStyle(fixture).getPropertyValue('--sn-theme-type-scale').trim(),
+            outline: getComputedStyle(fixture).getPropertyValue('--sn-theme-outline-strength').trim(),
+            panel: getComputedStyle(fixture).getPropertyValue('--sn-panel-bg').trim(),
+          },
+          primaryButton: read('sn-button[variant="primary"]'),
+          composer: read('chat-composer'),
+          graphButton: read('graph-explorer-shell .graph-explorer-btn'),
+          dataCell: read('sn-data-table td'),
+          sourceHeader: read('source-viewer .sv-header'),
+        };
+      };
+
+      return {
+        invalidMode: validateThemePatch({ params: { mode: 'system' } }),
+        agent: await snapshot({
+          recipe: 'agent-console',
+          register: 'agent-workspace',
+          componentFamilies: ['chat', 'table', 'graph'],
+          params: { contrast: 78, outline: 60 },
+        }),
+        editor: await snapshot({
+          recipe: 'editor-pro',
+          register: 'editor',
+          componentFamilies: ['code-editor', 'chat'],
+          params: { contrast: 74, hue: 230 },
+        }),
+        presentation: await snapshot({
+          recipe: 'presentation-clean',
+          register: 'presentation',
+          componentFamilies: ['table'],
+          params: { contrast: 62, type: 116, heading: 126 },
+        }),
+      };
+    })()
+  `;
+
+  const result = await withTimeout(page.send('Runtime.evaluate', {
+    expression,
+    awaitPromise: true,
+    returnByValue: true,
+  }), 15000, 'design protocol theme smoke Runtime.evaluate');
+  if (result.exceptionDetails) {
+    throw new Error(result.exceptionDetails.text || 'Design protocol theme smoke evaluation failed');
+  }
+  return result.result.value;
+}
+
 async function evaluateFlowScrollDragSmoke(page) {
   const expression = String.raw`
     (async () => {
@@ -2247,6 +2388,56 @@ test('cascade lab graph nodes render non-empty with route styles and compact mod
     ) >= 4.5);
     const tabIconColors = new Set(themeSmoke.scaled.tabItems.map((item) => item.iconColor));
     assert.ok(tabIconColors.size >= 3, `expected rotated tab accent colors, got ${[...tabIconColors].join(', ')}`);
+  } finally {
+    await page?.close?.();
+    await closeChromeSession(chromeSession);
+    await server.close();
+  }
+});
+
+// Browser smoke is justified here: recipe theme application, computed contrast,
+// and module-family surface sizing require actual CSS cascade and layout.
+test('design protocol applies recipe themes and policy diagnostics in a real browser', { timeout: BROWSER_SMOKE_TIMEOUT_MS }, async () => {
+  const chromePath = findChrome();
+  assertBrowserSmokeRuntime();
+
+  const server = await createStaticServer();
+  let chromeSession;
+  let page;
+  try {
+    chromeSession = await launchChromeSession(chromePath, 'design protocol theme smoke');
+    page = await withTimeout(
+      openPage(chromeSession.endpoint, `${server.url}/demo/cascade-theme-lab.html?v=design-protocol-theme-smoke#node-studio/editable-canvas`),
+      22000,
+      'design protocol theme smoke page open'
+    );
+    const smoke = await evaluateDesignProtocolThemeSmoke(page);
+
+    assert.equal(smoke.invalidMode.status, 'blocked');
+    assert.equal(smoke.invalidMode.violations[0].parameter, 'mode');
+    assert.equal(smoke.invalidMode.suggestedPatches[0].value, 'dark');
+
+    for (const key of ['agent', 'editor', 'presentation']) {
+      const snapshot = smoke[key];
+      assert.equal(snapshot.blockedCount, 0, JSON.stringify(snapshot, null, 2));
+      assert.ok(['pass', 'warn'].includes(snapshot.validationStatus), JSON.stringify(snapshot, null, 2));
+      assert.ok(snapshot.root.hue, JSON.stringify(snapshot, null, 2));
+      assert.notEqual(snapshot.root.panel, '', JSON.stringify(snapshot, null, 2));
+      assert.ok(snapshot.primaryButton.width > 40, JSON.stringify(snapshot, null, 2));
+      assert.ok(snapshot.primaryButton.height > 20, JSON.stringify(snapshot, null, 2));
+      assert.ok(snapshot.composer.width > 40, JSON.stringify(snapshot, null, 2));
+      assert.ok(snapshot.graphButton.width > 40, JSON.stringify(snapshot, null, 2));
+      assert.ok(snapshot.dataCell.height > 12, JSON.stringify(snapshot, null, 2));
+      assert.ok(snapshot.sourceHeader.height > 12, JSON.stringify(snapshot, null, 2));
+      assert.ok(contrastRatio(
+        snapshot.primaryButton.color,
+        snapshot.primaryButton.backgroundColor
+      ) >= 4.5, JSON.stringify(snapshot, null, 2));
+    }
+
+    assert.notEqual(smoke.agent.root.density, smoke.presentation.root.density);
+    assert.notEqual(smoke.editor.root.hue, smoke.presentation.root.hue);
+    assert.ok(cssNumber(smoke.presentation.root.typeScale) >= cssNumber(smoke.agent.root.typeScale));
   } finally {
     await page?.close?.();
     await closeChromeSession(chromeSession);

@@ -1,3 +1,8 @@
+import {
+  getCascadeThemeRecipeDescriptor,
+  resolveCascadeThemeRecipe,
+} from './theme-recipes.js';
+
 const CASCADE_THEME_CONTROL_LIST = [
   {
     name: 'mode',
@@ -509,23 +514,54 @@ export const CASCADE_THEME_DESCRIPTOR = Object.freeze({
       'createCascadeTheme',
       'applyCascadeTheme',
       'normalizeCascadeThemeOptions',
+      'resolveCascadeThemeRecipe',
       'getCascadeThemeControls',
       'getReadableTextForHsl',
     ],
   cascade: 'Apply once at :root, an app shell, or a subtree boundary. Components consume inherited --sn-* tokens through the CSS cascade.',
   controls: CASCADE_THEME_CONTROL_LIST,
+  recipeModel: getCascadeThemeRecipeDescriptor(),
   tokenTargets: CASCADE_THEME_TOKEN_TARGETS,
   webmcp: {
     name: 'symbiote-ui.createCascadeTheme',
     description: 'Generate cascade theme tokens from bounded controls for agent-composed Symbiote UI and graph layouts.',
     inputSchema: {
       type: 'object',
-      properties: Object.fromEntries(CASCADE_THEME_CONTROL_LIST.map((control) => [
-        control.name,
-        control.type === 'enum'
-          ? { type: 'string', enum: control.values, default: control.default, description: control.description }
-          : { type: 'number', minimum: control.min, maximum: control.max, default: control.default, description: control.description },
-      ])),
+      properties: {
+        recipe: {
+          type: 'string',
+          enum: getCascadeThemeRecipeDescriptor().recipeNames,
+          description: 'Optional relative theme recipe direction resolved before user/editor params.',
+        },
+        params: {
+          type: 'object',
+          additionalProperties: false,
+          description: 'User/editor cascade controls applied over the selected recipe.',
+          properties: Object.fromEntries(CASCADE_THEME_CONTROL_LIST.map((control) => [
+            control.name,
+            control.type === 'enum'
+              ? { type: 'string', enum: control.values, default: control.default, description: control.description }
+              : { type: 'number', minimum: control.min, maximum: control.max, default: control.default, description: control.description },
+          ])),
+        },
+        relations: {
+          type: 'object',
+          additionalProperties: true,
+          description: 'Relative relation modifiers such as surfaceLadder, stateLayers, typographyCurve, and graphDataPalette.',
+        },
+        overrides: {
+          type: 'object',
+          additionalProperties: { type: ['string', 'number'] },
+          propertyNames: { pattern: '^--sn-[a-z0-9-]+$' },
+          description: 'Bounded escape hatch for concrete --sn-* CSS custom properties.',
+        },
+        ...Object.fromEntries(CASCADE_THEME_CONTROL_LIST.map((control) => [
+          control.name,
+          control.type === 'enum'
+            ? { type: 'string', enum: control.values, default: control.default, description: control.description }
+            : { type: 'number', minimum: control.min, maximum: control.max, default: control.default, description: control.description },
+        ])),
+      },
       additionalProperties: false,
     },
     annotations: {
@@ -666,7 +702,8 @@ export function getCascadeThemeControls() {
 }
 
 export function normalizeCascadeThemeOptions(options = {}) {
-  let merged = { ...CASCADE_THEME_DEFAULTS, ...options };
+  let resolved = resolveCascadeThemeRecipe(options);
+  let merged = { ...CASCADE_THEME_DEFAULTS, ...resolved.params };
   let mode = merged.mode === 'light' ? 'light' : 'dark';
   return {
     mode,
@@ -684,7 +721,8 @@ export function normalizeCascadeThemeOptions(options = {}) {
 }
 
 export function createCascadeTheme(options = {}) {
-  let state = normalizeCascadeThemeOptions(options);
+  let resolvedRecipe = resolveCascadeThemeRecipe(options);
+  let state = normalizeCascadeThemeOptions(resolvedRecipe.params);
   let dark = state.mode === 'dark';
   let outlineStrength = state.outline / 100;
   let typeScale = state.type / 100;
@@ -1517,15 +1555,33 @@ export function createCascadeTheme(options = {}) {
     '--sn-scrollbar-radius': '999px',
     '--sn-scrollbar-thumb-border': '3px solid transparent',
     '--sn-scrollbar-thumb-min-size': '36px',
+    ...resolvedRecipe.overrides,
   };
 
   return {
     name: 'cascade-theme',
     descriptor: completeCascadeThemeDescriptor(tokens),
     state,
+    recipe: resolvedRecipe.recipe,
+    relations: resolvedRecipe.relations,
+    overrides: resolvedRecipe.overrides,
     tokens,
   };
 }
+
+export {
+  getCascadeThemeRecipe,
+  getCascadeThemeRecipeDescriptor,
+  getCascadeThemeRelation,
+  isBoundedThemeOverride,
+  listCascadeThemeRecipes,
+  listCascadeThemeRelations,
+  normalizeThemeOverrides,
+  resolveCascadeThemeRecipe,
+  THEME_RECIPE_CATALOG,
+  THEME_RECIPE_NAMES,
+  THEME_RELATION_DEFINITIONS,
+} from './theme-recipes.js';
 
 export function applyCascadeTheme(element, options = {}, eventOptions = {}) {
   let theme = createCascadeTheme(options);

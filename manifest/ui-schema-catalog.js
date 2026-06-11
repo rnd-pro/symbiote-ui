@@ -20,6 +20,11 @@ export let UI_SCHEMA_VERSIONS = [
     description: 'JSON Schema for composable theme source, cascade, semantic, and component alias blocks.',
   },
   {
+    version: 'theme-recipe-v1',
+    path: 'schemas/theme-recipe-v1.json',
+    description: 'JSON Schema for relative Symbiote theme recipes, relation modifiers, and bounded token overrides.',
+  },
+  {
     version: 'agent-intent-v1',
     path: 'schemas/agent-intent-v1.json',
     description: 'JSON Schema for unified transaction-like agent intent sequences.',
@@ -236,6 +241,59 @@ export let UI_SCHEMAS = {
           y: { type: 'number', minimum: 0, maximum: 1 },
           width: { type: 'number', minimum: 0, maximum: 1 },
           height: { type: 'number', minimum: 0, maximum: 1 },
+        },
+      },
+    },
+  },
+  'theme-recipe-v1': {
+    $schema: 'https://json-schema.org/draft/2020-12/schema',
+    $id: 'https://rnd-pro.github.io/symbiote-ui/schemas/theme-recipe-v1.json',
+    title: 'Symbiote Theme Recipe',
+    type: 'object',
+    additionalProperties: false,
+    required: ['name', 'version', 'base', 'description', 'params', 'relations'],
+    properties: {
+      name: { type: 'string', pattern: '^[a-z][a-z0-9-]*$' },
+      version: { const: 'theme-recipe-v1' },
+      base: { const: 'default-provider' },
+      description: { type: 'string', minLength: 1 },
+      designRegisters: {
+        type: 'array',
+        items: { type: 'string', minLength: 1 },
+        uniqueItems: true,
+      },
+      params: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          mode: { enum: ['dark', 'light'] },
+          brightness: { type: 'number', minimum: 0, maximum: 100 },
+          contrast: { type: 'number', minimum: 0, maximum: 100 },
+          chroma: { type: 'number', minimum: 0, maximum: 100 },
+          hue: { type: 'number', minimum: 0, maximum: 360 },
+          pattern: { type: 'number', minimum: 0, maximum: 100 },
+          outline: { type: 'number', minimum: 0, maximum: 100 },
+          type: { type: 'number', minimum: 80, maximum: 130 },
+          heading: { type: 'number', minimum: 80, maximum: 140 },
+          density: { type: 'number', minimum: 75, maximum: 140 },
+          motion: { type: 'number', minimum: 0, maximum: 200 },
+        },
+      },
+      relations: {
+        type: 'object',
+        additionalProperties: {
+          type: 'object',
+          additionalProperties: { type: 'number' },
+        },
+      },
+      overrides: {
+        type: 'object',
+        propertyNames: { pattern: '^--sn-[a-z0-9-]+$' },
+        additionalProperties: {
+          anyOf: [
+            { type: 'string', maxLength: 180 },
+            { type: 'number' },
+          ],
         },
       },
     },

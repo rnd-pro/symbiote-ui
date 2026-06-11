@@ -3,6 +3,11 @@ import {
   createCascadeTheme,
   getCascadeThemeControls,
 } from '../themes/cascade-theme.js';
+import {
+  getCascadeThemeRecipeDescriptor,
+  listCascadeThemeRecipes,
+  listCascadeThemeRelations,
+} from '../themes/theme-recipes.js';
 
 export let THEME_NAMES = [
   'default-provider',
@@ -57,6 +62,12 @@ export let THEME_RUNTIME_DESCRIPTORS = [
   createCascadeTheme().descriptor,
 ];
 
+export let THEME_RECIPE_MODEL = getCascadeThemeRecipeDescriptor();
+
+export let THEME_RELATIONS = listCascadeThemeRelations();
+
+export let THEME_RECIPES = listCascadeThemeRecipes();
+
 const RUNTIME_THEMES = {
   'default-provider': DEFAULT_PROVIDER_THEME,
 };
@@ -96,6 +107,7 @@ const CSS_TOKEN_CLASSIFIERS = [
 ];
 
 function copyData(value) {
+  if (value === undefined) return undefined;
   return JSON.parse(JSON.stringify(value));
 }
 
@@ -2357,6 +2369,29 @@ export function listThemeRuntimeDescriptors() {
 
 export function getThemeRuntimeDescriptor(name) {
   return copyData(THEME_RUNTIME_DESCRIPTORS.find((descriptor) => descriptor.name === name));
+}
+
+export function getThemeRecipeModel() {
+  return copyData(THEME_RECIPE_MODEL);
+}
+
+export function listThemeRelations() {
+  return copyData(THEME_RELATIONS);
+}
+
+export function getThemeRelation(name) {
+  return copyData(THEME_RELATIONS.find((relation) => relation.name === name));
+}
+
+export function listThemeRecipes(filter = {}) {
+  return copyData(THEME_RECIPES.filter((recipe) => {
+    if (!filter.designRegister) return true;
+    return recipe.designRegisters.includes(filter.designRegister);
+  }));
+}
+
+export function getThemeRecipeDirection(name) {
+  return copyData(THEME_RECIPES.find((recipe) => recipe.name === name));
 }
 
 export function listThemeElementGroups() {

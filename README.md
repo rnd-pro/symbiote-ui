@@ -407,6 +407,67 @@ applyCascadeTheme(document.documentElement, theme.state);
 
 Apply the cascade once at `:root`, an app shell, or a subtree boundary. Components inherit `--sn-*` tokens; host projects should not duplicate the formulas in app-local CSS or JS.
 
+Agent-controlled theme construction should use the design protocol model:
+`theme.recipe` selects a relative direction, `theme.params` stores current
+bounded controls, `theme.relations` modifies derived formulas, and
+`theme.overrides` is a sparse escape hatch for concrete `--sn-*` tokens.
+`symbiote-ui discover` exposes `themeRecipeModel`, `themeRelations`, and
+`themeRecipes` for agents that need to inspect the available directions.
+
+```js
+import {
+  applyCascadeTheme,
+  resolveCascadeThemeRecipe,
+} from 'symbiote-ui';
+import {
+  deriveDesignConstraints,
+  validateThemePatch,
+} from 'symbiote-ui/rules/design-policy.js';
+
+let patch = {
+  recipe: 'agent-console',
+  relations: {
+    surfaceLadder: { depth: 1 },
+    stateLayers: { strength: 1 },
+  },
+  params: {
+    contrast: 76,
+    density: 88,
+  },
+};
+let hostConfig = {};
+
+let constraints = deriveDesignConstraints({
+  design: {
+    register: 'agent-workspace',
+    componentFamilies: ['chat', 'graph', 'table'],
+  },
+  theme: {
+    recipe: patch.recipe,
+  },
+});
+let report = validateThemePatch(patch, constraints);
+if (report.status === 'blocked') {
+  throw new Error(report.violations.map((item) => item.reason).join('\n'));
+}
+
+let resolved = resolveCascadeThemeRecipe(patch);
+let portableTheme = {
+  params: resolved.params,
+  relations: resolved.relations,
+  overrides: resolved.overrides,
+};
+hostConfig.theme = portableTheme;
+applyCascadeTheme(document.documentElement, patch);
+```
+
+The validator does not silently clamp agent patches. It returns hard blocks,
+soft warnings, violated rules, derived ranges, and suggested JSON-patch-style
+fixes. Browser smoke coverage includes a segmented design protocol check for
+recipe application and policy diagnostics; it runs through `npm run
+test:browser` when a managed Chrome for Testing or Chromium binary is
+available.
+
 The contract writes both low-level controls such as `--sn-theme-bg-lightness`,
 `--sn-theme-outline-strength`, `--sn-theme-type-scale`, and
 `--sn-theme-heading-scale`, `--sn-theme-density`, and

@@ -97,6 +97,13 @@ surfaces, and spatial panels should inherit from the highest stable owner.
 Component-local theme application is only for isolated previews, embedded
 experiments, or explicit subtree overrides.
 
+Agents change design through a protocol patch, not by writing component-local
+CSS. Use `theme.recipe` for direction, `theme.params` for bounded controls,
+`theme.relations` for derived formula modifiers, and sparse `theme.overrides`
+only when a concrete public `--sn-*` token is the right escape hatch. Validate
+the patch with design policy rules before applying it; blocked patches return
+diagnostics and suggested fixes instead of silently clamping values.
+
 ### 8. Prefer Light DOM and shared provider components
 
 Use Symbiote Light DOM, `rootStyles`, slots, context, provider tokens, and
@@ -138,8 +145,12 @@ over it through gestures without rebuilding the layout tree.
    execution.
 7. Keep source, preview, graph, controls, and status inspectable when the task
    benefits from them.
-8. Apply cascade theme at the workspace owner and let components inherit.
-9. Verify responsive, keyboard, voice, and spatial fallbacks when those modes
+8. Propose and validate theme/design patches before applying or persisting
+   them.
+9. Apply cascade theme at the workspace owner and let components inherit.
+10. Persist portable theme params, relations, overrides, and subtree scopes in
+   host/workspace config rather than product-local CSS.
+11. Verify responsive, keyboard, voice, and spatial fallbacks when those modes
    are part of the host.
 
 ## Data Display Selection Guidelines
