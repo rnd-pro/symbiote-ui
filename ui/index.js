@@ -354,7 +354,16 @@ export {
   toChatMessageItem,
 } from '../chat/message-model.js';
 export { VoiceRuntime, blobToBase64 } from '../chat/voice-runtime.js';
-export { VoiceController } from '../chat/voice-controller.js';
+export {
+  TERMINAL_WAKE_ERRORS,
+  VOICE_MICROPHONE_DENIED_MESSAGE,
+  VOICE_WAKE_UNSUPPORTED_MESSAGE,
+  VoiceController,
+  isTerminalWakeError,
+  voiceMicrophoneDeniedMessage,
+  voiceStartErrorMessage,
+  voiceWakeStartErrorMessage,
+} from '../chat/voice-controller.js';
 export {
   DEFAULT_LAYOUT_LIFECYCLE_SELECTOR,
   resumeLayoutSubtree,

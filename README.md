@@ -295,8 +295,11 @@ voice command behavior. `VoiceController` in
 `symbiote-ui/chat/voice-controller.js` coordinates browser wake listening,
 pause/resume while recording or speaking, wake-command matching, and response
 speech lifecycle while leaving settings, transcription providers, persistence,
-and routing to the host. It is also exported through `symbiote-ui/ui` for
-browser hosts. `setFooterHtml()`
+and routing to the host. It also exports product-neutral wake/capture error
+helpers such as `voiceWakeStartErrorMessage()` and
+`voiceStartErrorMessage()` so hosts can show the same microphone-denied and
+unsupported-browser messages across mic and wake-listen controls. It is also
+exported through `symbiote-ui/ui` for browser hosts. `setFooterHtml()`
 remains available only for trusted host-rendered footer markup.
 `extractChatTitleFromAgentText()` provides a product-neutral parser for
 standalone `<chat-title>...</chat-title>` responses; any prompt instruction that

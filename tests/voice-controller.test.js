@@ -3,7 +3,13 @@ await acquireCurrentTestFileLock(import.meta.url);
 
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { VoiceController } from '../chat/voice-controller.js';
+import {
+  VoiceController,
+  isTerminalWakeError,
+  voiceMicrophoneDeniedMessage,
+  voiceStartErrorMessage,
+  voiceWakeStartErrorMessage,
+} from '../chat/voice-controller.js';
 
 function defineGlobal(name, value) {
   let descriptor = Object.getOwnPropertyDescriptor(globalThis, name);
@@ -34,6 +40,31 @@ test('VoiceController basic properties and defaults', () => {
   assert.equal(controller.isWakeActive, false);
   assert.equal(controller.getLanguage(), 'en-US');
   assert.deepEqual(controller.getWakeCandidates(), []);
+});
+
+test('VoiceController exposes product-neutral voice error messages', () => {
+  assert.equal(
+    voiceMicrophoneDeniedMessage(),
+    'Microphone access denied. Check browser microphone permissions.'
+  );
+  assert.equal(
+    voiceStartErrorMessage({ wasMicrophonePrompt: true, permissionRefreshMessage: 'Refresh after permission.' }),
+    'Refresh after permission.'
+  );
+  assert.equal(
+    voiceStartErrorMessage({ wasMicrophonePrompt: false, permissionRefreshMessage: 'Refresh after permission.' }),
+    'Microphone access denied. Check browser microphone permissions.'
+  );
+  assert.equal(
+    voiceWakeStartErrorMessage('not-supported'),
+    'Continuous listening requires browser speech recognition.'
+  );
+  assert.equal(
+    voiceWakeStartErrorMessage('not-allowed'),
+    'Microphone access denied. Check browser microphone permissions.'
+  );
+  assert.equal(isTerminalWakeError('service-not-allowed'), true);
+  assert.equal(isTerminalWakeError('network'), false);
 });
 
 test('VoiceController reports unsupported wake recognition as a stable code', () => {

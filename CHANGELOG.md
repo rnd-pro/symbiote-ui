@@ -4,6 +4,13 @@ All notable changes to `symbiote-ui` will be documented in this file.
 
 ## Unreleased
 
+## [0.3.0-alpha.44] - 2026-06-11
+
+### Added
+
+- Added product-neutral `VoiceController` error helpers for shared
+  microphone-denied and unsupported wake-listening messages.
+
 ## [0.3.0-alpha.43] - 2026-06-11
 
 ### Added

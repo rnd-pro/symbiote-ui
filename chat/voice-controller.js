@@ -1,7 +1,42 @@
 import { matchVoiceCommandInText } from './voice-input-defaults.js';
 
+export const VOICE_MICROPHONE_DENIED_MESSAGE = 'Microphone access denied. Check browser microphone permissions.';
+export const VOICE_WAKE_UNSUPPORTED_MESSAGE = 'Continuous listening requires browser speech recognition.';
+export const TERMINAL_WAKE_ERRORS = Object.freeze([
+  'not-allowed',
+  'service-not-allowed',
+  'not-supported',
+  'start-failed',
+]);
+
 function createWakeError(error, message, cause = null) {
   return { error, message, cause };
+}
+
+export function isTerminalWakeError(error = '') {
+  return TERMINAL_WAKE_ERRORS.includes(error);
+}
+
+export function voiceMicrophoneDeniedMessage() {
+  return VOICE_MICROPHONE_DENIED_MESSAGE;
+}
+
+export function voiceStartErrorMessage({
+  wasMicrophonePrompt = false,
+  permissionRefreshMessage = '',
+} = {}) {
+  return wasMicrophonePrompt && permissionRefreshMessage
+    ? permissionRefreshMessage
+    : VOICE_MICROPHONE_DENIED_MESSAGE;
+}
+
+export function voiceWakeStartErrorMessage(error = '', {
+  microphoneDeniedMessage = VOICE_MICROPHONE_DENIED_MESSAGE,
+  wakeUnsupportedMessage = VOICE_WAKE_UNSUPPORTED_MESSAGE,
+} = {}) {
+  return error === 'not-supported'
+    ? wakeUnsupportedMessage
+    : microphoneDeniedMessage;
 }
 
 export class VoiceController {

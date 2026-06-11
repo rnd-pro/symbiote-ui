@@ -142,6 +142,9 @@ test('voice command helpers are importable without browser component registratio
   assert.equal(typeof runtime.VoiceRuntime, 'function');
   assert.equal(typeof runtime.blobToBase64, 'function');
   assert.equal(typeof ui.VoiceRuntime, 'function');
+  assert.equal(typeof ui.voiceMicrophoneDeniedMessage, 'function');
+  assert.equal(typeof ui.voiceWakeStartErrorMessage, 'function');
+  assert.equal(ui.voiceWakeStartErrorMessage('not-allowed'), 'Microphone access denied. Check browser microphone permissions.');
   assert.equal(typeof ui.blobToBase64, 'function');
   assert.equal(typeof ui.buildResourceTreeFromEntries, 'function');
   assert.equal(typeof ui.createSourceDocument, 'function');
