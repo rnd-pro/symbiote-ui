@@ -141,32 +141,11 @@ export class ChatMessageItem extends Symbiote {
           <div class="status-card-status">${escapeHtml(statusText)}</div>
         </div>`;
       } else if (type === 'tool_call') {
-        let icon = 'build';
-        let spinClass = '';
-        if (part.status === 'running' || part.status === 'active') {
-          icon = 'build_circle';
-          spinClass = 'spin-icon';
-        }
-        let openAttr = part.status === 'running' ? ' open' : '';
-        let summary = summarizeToolInput(part.args);
-        let summaryHtml = summary ? `<span class="tool-summary" title="${escapeHtml(summary)}">${escapeHtml(summary)}</span>` : '';
-        let cardHtml = `<details class="tool-card"${openAttr}>
-          <summary class="tool-header"><span class="material-symbols-outlined tool-icon ${spinClass}">${icon}</span><span class="tool-name">${escapeHtml(part.name || 'tool')}</span>${summaryHtml}</summary>`;
-        if (part.args != null) {
-          cardHtml += `<div class="tool-section"><div class="tool-label">${escapeHtml(translate('chat.message.input'))}</div><pre class="tool-code">${escapeHtml(stringifyBlock(part.args))}</pre></div>`;
-        }
-        cardHtml += `</details>`;
-        htmlStr += cardHtml;
+        let resultPart = this._isPairedToolResult(part, parts[i + 1]) ? parts[i + 1] : null;
+        htmlStr += this._renderToolCallPart(part, resultPart);
+        if (resultPart) i += 1;
       } else if (type === 'tool_result') {
-        let isError = part.status === 'error';
-        let icon = isError ? 'error' : 'check_circle';
-        let cardHtml = `<details class="tool-card">
-          <summary class="tool-header"><span class="material-symbols-outlined tool-icon">${icon}</span><span class="tool-name">${escapeHtml(part.name || 'tool result')}</span></summary>`;
-        if (part.result != null) {
-          cardHtml += `<div class="tool-section"><div class="tool-label">${escapeHtml(translate('chat.message.result'))}</div><pre class="tool-code">${escapeHtml(truncateResult(part.result))}</pre></div>`;
-        }
-        cardHtml += `</details>`;
-        htmlStr += cardHtml;
+        htmlStr += this._renderToolResultPart(part);
       } else if (type === 'source') {
         let title = part.title || part.name || part.url || translate('chat.message.source');
         let sourceBody = part.url
@@ -248,6 +227,63 @@ export class ChatMessageItem extends Symbiote {
     }
 
     return htmlStr;
+  }
+
+  _isPairedToolResult(callPart, resultPart) {
+    if (!callPart || !resultPart || resultPart.type !== 'tool_result') return false;
+    if (callPart.id || resultPart.id) {
+      if (callPart.id && resultPart.id) return callPart.id === resultPart.id;
+      if (callPart.name && resultPart.name) return callPart.name === resultPart.name;
+      return true;
+    }
+    if (callPart.name && resultPart.name) return callPart.name === resultPart.name;
+    return true;
+  }
+
+  _getToolResultValue(part) {
+    if (!part) return null;
+    if (part.result != null) return part.result;
+    return part.text !== '' ? part.text : null;
+  }
+
+  _renderToolCallPart(part, resultPart = null) {
+    let isRunning = part.status === 'running' || part.status === 'active';
+    let isError = part.status === 'error' || resultPart?.status === 'error';
+    let icon = isError ? 'error' : isRunning ? 'build_circle' : 'build';
+    let spinClass = isRunning ? 'spin-icon' : '';
+    let openAttr = this.$.isLatestTool || isRunning ? ' open' : '';
+    let summary = summarizeToolInput(part.args);
+    let summaryHtml = summary
+      ? `<span class="tool-summary" title="${escapeHtml(summary)}">${escapeHtml(summary)}</span>`
+      : '';
+    let name = part.name || resultPart?.name || 'tool';
+    let cardHtml = `<details class="tool-card"${openAttr}>
+      <summary class="tool-header"><span class="material-symbols-outlined tool-icon ${spinClass}">${icon}</span><span class="tool-name">${escapeHtml(name)}</span>${summaryHtml}</summary>`;
+
+    if (part.args != null) {
+      cardHtml += `<div class="tool-section"><div class="tool-label">${escapeHtml(translate('chat.message.input'))}</div><pre class="tool-code">${escapeHtml(stringifyBlock(part.args))}</pre></div>`;
+    }
+
+    let resultValue = this._getToolResultValue(resultPart) ?? this._getToolResultValue(part);
+    if (resultValue != null) {
+      cardHtml += `<div class="tool-section"><div class="tool-label">${escapeHtml(translate('chat.message.result'))}</div><pre class="tool-code">${escapeHtml(truncateResult(resultValue))}</pre></div>`;
+    } else if (isRunning) {
+      cardHtml += `<div class="tool-section tool-waiting"><em>${escapeHtml(translate('chat.message.running'))}</em></div>`;
+    }
+
+    return `${cardHtml}</details>`;
+  }
+
+  _renderToolResultPart(part) {
+    let isError = part.status === 'error';
+    let icon = isError ? 'error' : 'check_circle';
+    let cardHtml = `<details class="tool-card">
+      <summary class="tool-header"><span class="material-symbols-outlined tool-icon">${icon}</span><span class="tool-name">${escapeHtml(part.name || 'tool result')}</span></summary>`;
+    let resultValue = this._getToolResultValue(part);
+    if (resultValue != null) {
+      cardHtml += `<div class="tool-section"><div class="tool-label">${escapeHtml(translate('chat.message.result'))}</div><pre class="tool-code">${escapeHtml(truncateResult(resultValue))}</pre></div>`;
+    }
+    return `${cardHtml}</details>`;
   }
 
   _renderTool() {

@@ -41,6 +41,12 @@ function renderFooterLabel(label) {
     : '';
 }
 
+function renderLeadingLabel(label) {
+  return String(label || '').trim()
+    ? `<span class="composer-leading-label">${escapeHtml(label)}</span>`
+    : '';
+}
+
 function normalizeVoiceInputState(state) {
   return state === 'recording' ? 'listening' : state === 'processing' ? 'transcribing' : state || 'idle';
 }
@@ -57,6 +63,49 @@ function normalizeFooterControl(control, index) {
     label: control?.label || id,
     title: control?.title || control?.label || id,
     value: control?.value ?? '',
+  };
+}
+
+function normalizeLeadingControl(control, index) {
+  return normalizeFooterControl(control, index);
+}
+
+function renderLeadingControl(control, index) {
+  let item = normalizeLeadingControl(control, index);
+  let commonClass = [
+    'composer-leading-btn',
+    'composer-leading-control',
+    item.active ? 'active' : '',
+    item.className || '',
+  ].filter(Boolean).join(' ');
+  let commonAttrs = [
+    `data-leading-control-id="${escapeHtml(item.id)}"`,
+    `data-leading-control-kind="${escapeHtml(item.kind)}"`,
+    `title="${escapeHtml(item.title)}"`,
+    `aria-label="${escapeHtml(item.title)}"`,
+  ].join(' ');
+  let disabled = item.disabled ? ' disabled' : '';
+
+  return `
+    <button class="${commonClass}" type="button" ${commonAttrs}${disabled}>
+      ${renderFooterIcon(item.icon)}
+      ${renderLeadingLabel(item.label)}
+    </button>
+  `;
+}
+
+function toAnchorRect(el) {
+  let rect = el?.getBoundingClientRect?.();
+  if (!rect) return null;
+  return {
+    x: rect.x,
+    y: rect.y,
+    top: rect.top,
+    right: rect.right,
+    bottom: rect.bottom,
+    left: rect.left,
+    width: rect.width,
+    height: rect.height,
   };
 }
 
@@ -123,6 +172,8 @@ export class ChatComposer extends Symbiote {
     disabled: false,
     placeholder: translate('chat.composer.placeholder'),
     attachedContext: [],
+    leadingControls: [],
+    leadingHtml: '',
     footerControls: [],
     footerHtml: '',
     isSending: false,
@@ -285,6 +336,20 @@ export class ChatComposer extends Symbiote {
         id,
         kind: btn.dataset.footerControlKind || control?.kind || control?.type || 'button',
         value: control?.value ?? '',
+        control,
+      });
+    },
+
+    onLeadingClick: (event) => {
+      let btn = event.target?.closest?.('button[data-leading-control-id]');
+      if (!btn || btn.disabled) return;
+      let id = btn.dataset.leadingControlId;
+      let control = (this.$.leadingControls || []).find((item) => String(item.id || item.name) === id) || null;
+      emit(this, 'chat-composer-leading-control', {
+        id,
+        kind: btn.dataset.leadingControlKind || control?.kind || control?.type || 'button',
+        value: control?.value ?? '',
+        anchorRect: toAnchorRect(btn),
         control,
       });
     },
@@ -1039,6 +1104,14 @@ export class ChatComposer extends Symbiote {
     this.$.attachedContext = Array.isArray(items) ? items : [];
   }
 
+  setLeadingControls(controls = []) {
+    let normalized = Array.isArray(controls) ? controls.map((control, index) => normalizeLeadingControl(control, index)) : [];
+    this.$.leadingControls = normalized;
+    this.$.leadingHtml = normalized.map(renderLeadingControl).join('');
+    this.toggleAttribute('leading-controls', normalized.length > 0);
+    queueMicrotask(() => this._syncDisabledState());
+  }
+
   setFooterHtml(htmlStr) {
     this.$.footerControls = [];
     this.$.footerHtml = htmlStr || '';
@@ -1179,6 +1252,11 @@ export class ChatComposer extends Symbiote {
     let input = this.getInputElement();
     if (input) input.disabled = Boolean(this.$.disabled);
     if (this.ref.btnSend) this.ref.btnSend.disabled = Boolean(this.$.disabled);
+    let leadingControls = new Map((this.$.leadingControls || []).map((item) => [String(item.id || item.name), item]));
+    for (let btn of this.ref.leadingControls?.querySelectorAll?.('button[data-leading-control-id]') || []) {
+      let control = leadingControls.get(btn.dataset.leadingControlId);
+      btn.disabled = Boolean(this.$.disabled) || Boolean(control?.disabled);
+    }
     for (let btn of Object.values(this.getVoiceControlElements())) {
       if (btn) btn.disabled = Boolean(this.$.disabled);
     }
@@ -1317,6 +1395,7 @@ ChatComposer.template = html`
     </div>
   </div>
   <div class="composer-body">
+    <div class="composer-leading-controls" ref="leadingControls" ${{ innerHTML: 'leadingHtml', onclick: 'onLeadingClick' }}></div>
     <textarea ref="chatInput" rows="1"
       ${{ value: 'value', disabled: 'disabled', placeholder: 'placeholder',
           oninput: 'onInput', onkeydown: 'onKeyDown' }}></textarea>

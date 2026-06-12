@@ -62,6 +62,47 @@ chat-composer {
   overflow-y: auto;
 }
 
+.composer-leading-controls {
+  grid-column: 1;
+  grid-row: 1;
+  align-self: end;
+  display: none;
+  min-inline-size: 0;
+}
+
+:host([leading-controls]) .composer-body,
+chat-composer[leading-controls] .composer-body {
+  grid-template-columns: auto minmax(0, 1fr) auto auto auto;
+  padding-inline-start: var(--sn-composer-body-leading-padding-inline-start, 8px);
+}
+
+:host([leading-controls]) .composer-leading-controls,
+chat-composer[leading-controls] .composer-leading-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+:host([leading-controls]) .composer-body textarea,
+chat-composer[leading-controls] .composer-body textarea {
+  grid-column: 2;
+}
+
+:host([leading-controls]) .composer-actions,
+chat-composer[leading-controls] .composer-actions {
+  grid-column: 3;
+}
+
+:host([leading-controls]) .btn-mic,
+chat-composer[leading-controls] .btn-mic {
+  grid-column: 4;
+}
+
+:host([leading-controls]) .composer-body > sn-button.btn-send,
+chat-composer[leading-controls] .composer-body > sn-button.btn-send {
+  grid-column: 5;
+}
+
 .composer-actions {
   grid-column: 2;
   grid-row: 1;
@@ -174,6 +215,50 @@ sn-button.btn-send[variant="icon"].btn-stop::after {
 
 .composer-footer:empty {
   display: none;
+}
+
+.composer-leading-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sn-composer-footer-gap, 4px);
+  inline-size: var(--sn-composer-send-size);
+  block-size: var(--sn-composer-send-size);
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--sn-text-dim);
+  font-family: inherit;
+  cursor: pointer;
+  transition: background var(--sn-transition-fast) var(--sn-transition-easing), color var(--sn-transition-fast) var(--sn-transition-easing), transform var(--sn-transition-fast) var(--sn-transition-easing);
+}
+
+.composer-leading-btn:hover,
+.composer-leading-btn.active {
+  background: var(--sn-node-hover);
+  color: var(--sn-text);
+}
+
+.composer-leading-btn:focus-visible {
+  outline: var(--sn-effect-focus-ring);
+  outline-offset: 2px;
+}
+
+.composer-leading-btn[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.composer-leading-btn .material-symbols-outlined {
+  font-size: var(--sn-composer-send-icon-size);
+}
+
+.composer-leading-label {
+  overflow: hidden;
+  max-inline-size: var(--sn-composer-leading-label-max, 120px);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .composer-footer-btn {
@@ -669,6 +754,22 @@ chat-composer.drag-over .composer-body {
     grid-template-rows: auto auto;
   }
 
+  :host([leading-controls]) .composer-body,
+  chat-composer[leading-controls] .composer-body {
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+  }
+
+  :host([leading-controls]) .composer-leading-controls,
+  chat-composer[leading-controls] .composer-leading-controls {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  :host([leading-controls]) .composer-body textarea,
+  chat-composer[leading-controls] .composer-body textarea {
+    grid-column: 2;
+  }
+
   .composer-actions {
     grid-column: 1 / -1;
     grid-row: 2;
@@ -687,6 +788,16 @@ chat-composer.drag-over .composer-body {
   .composer-body > sn-button.btn-send {
     grid-column: 3;
     grid-row: 1;
+  }
+
+  :host([leading-controls]) .btn-mic,
+  chat-composer[leading-controls] .btn-mic {
+    grid-column: 3;
+  }
+
+  :host([leading-controls]) .composer-body > sn-button.btn-send,
+  chat-composer[leading-controls] .composer-body > sn-button.btn-send {
+    grid-column: 4;
   }
 
   .btn-voice-language {

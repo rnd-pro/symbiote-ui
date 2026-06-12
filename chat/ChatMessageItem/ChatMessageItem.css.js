@@ -15,6 +15,8 @@ chat-message-item {
 
 .message.tool {
   align-self: flex-start;
+  flex-direction: column;
+  gap: var(--sn-chat-tool-gap, 6px);
   max-width: 100%;
   width: 100%;
 }
@@ -64,6 +66,8 @@ chat-message-item {
   border-radius: 12px;
   background: var(--sn-node-hover);
   overflow: hidden;
+  width: 100%;
+  min-width: 0;
   transition: background var(--sn-transition-fast) var(--sn-transition-easing);
 }
 

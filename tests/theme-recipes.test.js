@@ -70,6 +70,24 @@ test('theme relation catalog formalizes relation modifier names', () => {
   assert.ok(relations.every((relation) => relation.affects.length > 0));
 });
 
+test('material texture relation only adjusts animated cell dots', () => {
+  let relation = listCascadeThemeRelations().find((item) => item.name === 'materialTexture');
+  let base = createCascadeTheme({ mode: 'dark' });
+  let textured = createCascadeTheme({
+    mode: 'dark',
+    relations: {
+      materialTexture: { grain: 1.4, glare: 2 },
+    },
+  });
+
+  assert.deepEqual(relation.parameters.map((parameter) => parameter.name), ['grain']);
+  assert.notEqual(textured.tokens['--sn-cell-base-alpha'], base.tokens['--sn-cell-base-alpha']);
+  assert.equal(textured.tokens['--sn-cell-glare'], base.tokens['--sn-cell-glare']);
+  assert.equal(textured.tokens['--sn-cell-vignette-mid'], base.tokens['--sn-cell-vignette-mid']);
+  assert.equal(textured.tokens['--sn-cell-vignette-edge'], base.tokens['--sn-cell-vignette-edge']);
+  assert.equal(textured.tokens['--sn-cell-noise'], base.tokens['--sn-cell-noise']);
+});
+
 test('recipe resolution preserves cascade order and bounded overrides', () => {
   let resolved = resolveCascadeThemeRecipe({
     recipe: 'editor-pro',

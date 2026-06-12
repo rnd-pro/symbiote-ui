@@ -19,9 +19,8 @@ function findCssFiles(dir, files = []) {
     if (
       entry === 'node_modules' ||
       entry === 'demo' ||
-      entry === '.git' ||
-      entry === '.agent-portal' ||
-      entry === 'tmp'
+      entry === 'tmp' ||
+      entry.startsWith('.')
     ) {
       continue;
     }

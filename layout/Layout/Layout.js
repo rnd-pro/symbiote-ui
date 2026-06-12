@@ -356,6 +356,7 @@ export class Layout extends Symbiote {
       if (!node || node.collapsed || !this._canAutoCollapseNode(tree, node, candidate.behavior)) continue;
       node.collapsed = true;
       node.autoCollapsed = true;
+      node.manualExpanded = false;
       changed = true;
     }
 
@@ -437,6 +438,7 @@ export class Layout extends Symbiote {
 
   _canAutoCollapseNode(tree, node, behavior) {
     if (behavior.collapse !== 'auto') return false;
+    if (node.manualExpanded) return false;
     let parentInfo = LayoutTree.findParent(tree, node.id);
     if (!parentInfo) return false;
     let sibling = parentInfo.which === 'first' ? parentInfo.parent.second : parentInfo.parent.first;
@@ -1033,7 +1035,11 @@ export class Layout extends Symbiote {
     if (!tree) return;
 
 
-    LayoutTree.updateNode(tree, panelId, { collapsed, autoCollapsed: false });
+    LayoutTree.updateNode(tree, panelId, {
+      collapsed,
+      autoCollapsed: false,
+      manualExpanded: !collapsed,
+    });
 
 
     this.$.layoutTree = { ...tree };

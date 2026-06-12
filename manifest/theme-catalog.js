@@ -128,7 +128,7 @@ export let THEME_CONTROLS = {
     { name: 'textLightness', type: 'percentage', default: '94%', cssVar: '--sn-theme-text-lightness', description: 'Foreground text lightness inherited by text aliases.' },
     { name: 'density', type: 'number', default: '1', cssVar: '--sn-theme-density', description: 'Density multiplier for repeated navigation row height.' },
     { name: 'radius', type: 'number', default: '1', cssVar: '--sn-theme-radius-scale', description: 'Radius multiplier for node, row, list, composer, and source action corners.' },
-    { name: 'pattern', type: 'number', default: '0.60', cssVar: '--sn-theme-pattern-brightness', description: 'Background pattern brightness for animated cell dots, noise, and glare.' },
+    { name: 'pattern', type: 'number', default: '0.60', cssVar: '--sn-theme-pattern-brightness', description: 'Animated cell dot intensity; gradients, glare, and noise stay independent.' },
     { name: 'motion', type: 'number', default: '1', cssVar: '--sn-theme-motion-scale', description: 'Global motion multiplier for transitions and feedback effects.' },
     { name: 'elevation', type: 'number', default: '1', cssVar: '--sn-theme-elevation-scale', description: 'Global shadow and overlay intensity multiplier.' },
   ],

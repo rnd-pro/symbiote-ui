@@ -131,7 +131,13 @@ test('message parts rendering works', async () => {
   let root = el.shadowRoot || el;
   assert.equal(root.querySelector('.msg-content')?.textContent.trim(), 'Here is the result:');
   assert.match(root.querySelector('.work-summary-wrap')?.textContent || '', /I need to check the data first/);
-  assert.equal(root.querySelector('.tool-card .tool-name')?.textContent, 'fetch_data');
+  let toolCards = root.querySelectorAll('.tool-card');
+  assert.equal(toolCards.length, 1);
+  assert.equal(toolCards[0].querySelector('.tool-name')?.textContent, 'fetch_data');
+  let toolSections = toolCards[0].querySelectorAll('.tool-section');
+  assert.equal(toolSections.length, 2);
+  assert.match(toolSections[0].textContent || '', /"limit": 5/);
+  assert.match(toolSections[1].textContent || '', /"data": \[/);
   assert.equal(root.querySelector('.source-badge a')?.textContent, 'Reference Doc');
   assert.equal(root.querySelector('.attachment-title')?.textContent, 'Screenshot');
   assert.equal(root.querySelector('.artifact-title')?.textContent, 'Script');
@@ -141,6 +147,115 @@ test('message parts rendering works', async () => {
   assert.doesNotMatch(root.textContent || '', /chat\.message\./);
 
   el.remove();
+});
+
+test('only the latest tool message opens its paired tool details', async () => {
+  let first = document.createElement('chat-message-item');
+  let latest = document.createElement('chat-message-item');
+  document.body.append(first, latest);
+
+  first.set$({
+    role: 'tool',
+    isLatestTool: false,
+    parts: [
+      { type: 'tool_call', name: 'read_file', args: { path: 'old.js' } },
+      { type: 'tool_result', name: 'read_file', result: 'ok' },
+    ],
+  });
+  latest.set$({
+    role: 'tool',
+    isLatestTool: true,
+    parts: [
+      { type: 'tool_call', name: 'write_file', args: { path: 'new.js' } },
+      { type: 'tool_result', name: 'write_file', result: 'ok' },
+    ],
+  });
+
+  await nextRenderTick();
+
+  let firstRoot = first.shadowRoot || first;
+  let latestRoot = latest.shadowRoot || latest;
+  let firstCards = firstRoot.querySelectorAll('.tool-card');
+  let latestCards = latestRoot.querySelectorAll('.tool-card');
+
+  assert.equal(firstCards.length, 1);
+  assert.equal(latestCards.length, 1);
+  assert.equal(firstCards[0].hasAttribute('open'), false);
+  assert.equal(latestCards[0].hasAttribute('open'), true);
+  assert.match(latestCards[0].textContent || '', /new\.js/);
+  assert.match(latestCards[0].textContent || '', /ok/);
+
+  first.remove();
+  latest.remove();
+});
+
+test('adjacent unnamed tool results stay inside the previous tool card', async () => {
+  let el = document.createElement('chat-message-item');
+  document.body.append(el);
+
+  el.set$({
+    role: 'tool',
+    isLatestTool: true,
+    parts: [
+      { type: 'tool_call', name: 'mcp_tool', args: { goalId: 'goal-1' } },
+      { type: 'tool_result', result: { ok: true } },
+    ],
+  });
+
+  await nextRenderTick();
+
+  let root = el.shadowRoot || el;
+  let message = root.querySelector('.message.tool');
+  let cards = message.querySelectorAll(':scope > details.tool-card');
+  let sections = cards[0].querySelectorAll('.tool-section');
+
+  assert.equal(cards.length, 1);
+  assert.equal(cards[0].hasAttribute('open'), true);
+  assert.equal(sections.length, 2);
+  assert.match(sections[0].textContent || '', /goal-1/);
+  assert.match(sections[1].textContent || '', /ok/);
+
+  el.remove();
+});
+
+test('legacy tool messages render one paired full-width card in transcripts', async () => {
+  let transcript = document.createElement('chat-transcript');
+  document.body.append(transcript);
+
+  transcript.setMessageItems([
+    toChatMessageItem({
+      role: 'tool',
+      name: 'mcp_tool',
+      input: { goalId: 'goal-1' },
+      result: { ok: true },
+    }, { isLatestTool: true }),
+  ]);
+
+  await nextRenderTick();
+
+  let item = transcript.querySelector('chat-message-item');
+  let root = item.shadowRoot || item;
+  let message = root.querySelector('.message.tool');
+  let cards = message.querySelectorAll(':scope > details.tool-card');
+  let sections = cards[0].querySelectorAll('.tool-section');
+
+  assert.equal(cards.length, 1);
+  assert.equal(cards[0].hasAttribute('open'), true);
+  assert.equal(sections.length, 2);
+  assert.match(sections[0].textContent || '', /goal-1/);
+  assert.match(sections[1].textContent || '', /ok/);
+
+  transcript.remove();
+});
+
+test('tool message cards use a vertical full-width layout', async () => {
+  let source = await readFile(
+    new URL('../chat/ChatMessageItem/ChatMessageItem.css.js', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(source, /\.message\.tool\s*\{[^}]*flex-direction:\s*column/s);
+  assert.match(source, /\.tool-card\s*\{[^}]*width:\s*100%/s);
 });
 
 test('approval and action events are dispatched properly', async () => {

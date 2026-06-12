@@ -149,6 +149,8 @@ test('voice command helpers are importable without browser component registratio
   assert.equal(typeof ui.buildResourceTreeFromEntries, 'function');
   assert.equal(typeof ui.createSourceDocument, 'function');
   assert.equal(typeof ui.createGraphViewModeController, 'function');
+  assert.equal(typeof ui.layoutOverlayStack, 'function');
+  assert.equal(typeof ui.measureOverlayStackReserve, 'function');
   assert.equal(typeof ui.groupNodes, 'function');
   assert.equal(typeof ui.ungroupNodes, 'function');
   assert.equal(ui.DEFAULT_VOICE_WAKE_COMMANDS.en, 'Okay Agent');
@@ -820,6 +822,7 @@ test('discover exposes the standalone package contract', async () => {
   assert.ok(sidebarAgentItem.webmcp.toolNames.includes('layout_sidebar_set_active_section'));
   assert.ok(chatComposerAgentItem.webmcp.toolNames.includes('chat_composer_voice_control'));
   assert.ok(chatComposerAgentItem.webmcp.toolNames.includes('chat_composer_voice_flow'));
+  assert.ok(chatComposerAgentItem.webmcp.toolNames.includes('chat_composer_leading_control'));
   assert.ok(chatComposer.contract.webmcp.tools
     .find((tool) => tool.name === 'chat_composer_voice_control')
     .description.includes('VoiceController'));
@@ -834,8 +837,10 @@ test('discover exposes the standalone package contract', async () => {
   assert.ok(chatWorkspaceAgentItem.webmcp.toolNames.includes('chat_workspace_select_chat'));
   assert.ok(chatWorkspaceAgentItem.webmcp.toolNames.includes('chat_workspace_send'));
   assert.ok(chatWorkspaceAgentItem.componentDescription.includes('chat workspace'));
+  assert.ok(chatWorkspaceAgentItem.componentDescription.includes('leading-control-intent-router'));
   assert.ok(chatWorkspaceAgentItem.componentDescription.includes('host-owned-transport'));
   assert.ok(chatWorkspaceAgentItem.componentDescription.includes('layout-lifecycle'));
+  assert.ok(chatWorkspaceAgentItem.componentDescription.includes('overlay-stack-reserve'));
   assert.ok(nodeCanvasAgentItem.webmcp.toolNames.includes('node_canvas_set_editor_model'));
   assert.ok(nodeCanvasAgentItem.webmcp.toolNames.includes('node_canvas_set_path_style'));
   assert.ok(nodeCanvasAgentItem.webmcp.toolNames.includes('node_canvas_set_flow_layout'));

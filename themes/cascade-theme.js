@@ -55,7 +55,7 @@ const CASCADE_THEME_CONTROL_LIST = [
     max: 100,
     default: 60,
     icon: 'grain',
-    description: 'Brightness of animated background patterns, including cell-bg dots, ambient noise, and canvas pattern overlays.',
+    description: 'Intensity of animated cell-bg dots; ambient gradients and noise stay stable.',
   },
   {
     name: 'outline',
@@ -827,12 +827,8 @@ export function createCascadeTheme(options = {}) {
   let cellAlphaSpan = dark
     ? 0.070 + patternScale * 0.105
     : 0.050 + patternScale * 0.075;
-  let cellGlareAlpha = dark
-    ? 0.006 + patternScale * 0.022
-    : 0.030 + patternScale * 0.060;
-  let cellNoiseOpacity = dark
-    ? 0.012 + patternScale * 0.030
-    : 0.008 + patternScale * 0.022;
+  let cellGlareAlpha = dark ? 0.019 : 0.066;
+  let cellNoiseOpacity = dark ? 0.030 : 0.021;
 
   let tokens = {
     'color-scheme': dark ? 'dark' : 'light',

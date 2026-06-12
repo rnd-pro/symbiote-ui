@@ -35,6 +35,10 @@ chat-transcript > [slot="background"] {
   flex: 1;
   overflow-y: auto;
   padding: var(--sn-chat-transcript-padding);
+  padding-block-end: calc(
+    var(--sn-chat-transcript-padding-block-end, 16px) + var(--sn-chat-overlay-stack-reserve, 0px)
+  );
+  scroll-padding-block-end: var(--sn-chat-overlay-stack-reserve, 0px);
   display: flex;
   flex-direction: column;
   gap: var(--sn-chat-gap);
@@ -49,7 +53,7 @@ chat-message-item {
 .scroll-bottom-btn {
 	  position: absolute;
 	  left: 50%;
-	  bottom: var(--sn-chat-scroll-bottom, 18px);
+	  bottom: calc(var(--sn-chat-scroll-bottom, 18px) + var(--sn-chat-overlay-stack-reserve, 0px));
   z-index: 30;
   width: var(--sn-composer-send-size, 32px);
   height: var(--sn-composer-send-size, 32px);

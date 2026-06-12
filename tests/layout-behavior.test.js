@@ -32,6 +32,7 @@ import {
   resolveWheelZoomDelta,
   resolveWheelZoomFactor,
 } from '../interactions/Zoom.js';
+import { layoutOverlayStack } from '../ui/overlay-stack.js';
 
 const layoutNodeStyles = new URL('../layout/LayoutNode/LayoutNode.css.js', import.meta.url);
 const layoutNodeTemplate = new URL('../layout/LayoutNode/LayoutNode.tpl.js', import.meta.url);
@@ -45,6 +46,153 @@ const defaultProviderThemeSource = new URL('../themes/default-provider.js', impo
 const defaultDarkThemeSource = new URL('../themes/default-dark.js', import.meta.url);
 const componentRegistrySource = new URL('../manifest/component-registry.js', import.meta.url);
 const customElementsSource = new URL('../custom-elements.json', import.meta.url);
+
+function createOverlayProbe({ width, height }) {
+  let attrs = new Map();
+  let style = {
+    left: '0px',
+    top: '0px',
+    setProperty(name, value) {
+      this[name] = value;
+    },
+    removeProperty(name) {
+      delete this[name];
+    },
+  };
+  return {
+    hidden: false,
+    offsetWidth: width,
+    offsetHeight: height,
+    style,
+    setAttribute(name, value = '') {
+      attrs.set(name, String(value));
+    },
+    removeAttribute(name) {
+      attrs.delete(name);
+    },
+    hasAttribute(name) {
+      return attrs.has(name);
+    },
+    getAttribute(name) {
+      return attrs.get(name) || null;
+    },
+    getBoundingClientRect() {
+      let left = Number.parseFloat(style.left) || 0;
+      let top = Number.parseFloat(style.top) || 0;
+      return { left, top, right: left + width, bottom: top + height, width, height };
+    },
+  };
+}
+
+test('overlay stack layers transient surfaces above an anchor and reports scroll reserve', () => {
+  let previousWindow = globalThis.window;
+  globalThis.window = { innerWidth: 800, innerHeight: 600 };
+  try {
+    let anchor = {
+      getBoundingClientRect() {
+        return { left: 300, top: 500, right: 500, bottom: 540, width: 200, height: 40 };
+      },
+    };
+    let first = createOverlayProbe({ width: 120, height: 40 });
+    let second = createOverlayProbe({ width: 180, height: 60 });
+    let reserveTarget = { style: { setProperty(name, value) { this[name] = value; } } };
+
+    let result = layoutOverlayStack({
+      anchor,
+      overlays: [first, second],
+      container: { left: 0, top: 0, right: 800, bottom: 600, width: 800, height: 600 },
+      reserveTarget,
+      gap: 8,
+      viewportGutter: 16,
+    });
+
+    assert.equal(result.visible, 2);
+    assert.equal(first.style.top, '452px');
+    assert.equal(first.style.left, '340px');
+    assert.equal(second.style.top, '384px');
+    assert.equal(second.style.left, '310px');
+    assert.equal(result.reserveBlockSize, 116);
+    assert.equal(reserveTarget.style['--sn-chat-overlay-stack-reserve'], '116px');
+    assert.equal(first.getAttribute('data-overlay-stack-index'), '0');
+    assert.equal(second.getAttribute('data-overlay-stack-index'), '1');
+  } finally {
+    if (previousWindow) globalThis.window = previousWindow;
+    else delete globalThis.window;
+  }
+});
+
+test('overlay stack supports per-item anchors and caret alignment', () => {
+  let previousWindow = globalThis.window;
+  globalThis.window = { innerWidth: 800, innerHeight: 600 };
+  try {
+    let composer = {
+      getBoundingClientRect() {
+        return { left: 300, top: 500, right: 700, bottom: 540, width: 400, height: 40 };
+      },
+    };
+    let trigger = {
+      getBoundingClientRect() {
+        return { left: 308, top: 510, right: 340, bottom: 542, width: 32, height: 32 };
+      },
+    };
+    let menu = createOverlayProbe({ width: 120, height: 40 });
+    let status = createOverlayProbe({ width: 200, height: 60 });
+
+    let result = layoutOverlayStack({
+      anchor: composer,
+      overlays: [
+        {
+          element: menu,
+          anchor: trigger,
+          align: 'start',
+          inlineOffset: -4,
+          caretTarget: trigger,
+          caretProperty: '--menu-caret-left',
+        },
+        status,
+      ],
+      container: { left: 0, top: 0, right: 800, bottom: 600, width: 800, height: 600 },
+      gap: 8,
+      viewportGutter: 16,
+    });
+
+    assert.equal(result.visible, 2);
+    assert.equal(menu.style.top, '452px');
+    assert.equal(menu.style.left, '304px');
+    assert.equal(menu.style['--menu-caret-left'], '20px');
+    assert.equal(status.style.top, '384px');
+    assert.equal(status.style.left, '400px');
+    assert.equal(result.reserveBlockSize, 116);
+
+    menu.hidden = true;
+    let hiddenResult = layoutOverlayStack({
+      anchor: composer,
+      overlays: [
+        {
+          element: menu,
+          anchor: trigger,
+          align: 'start',
+          inlineOffset: -4,
+          caretTarget: trigger,
+          caretProperty: '--menu-caret-left',
+        },
+        status,
+      ],
+      container: { left: 0, top: 0, right: 800, bottom: 600, width: 800, height: 600 },
+      gap: 8,
+      viewportGutter: 16,
+    });
+
+    assert.equal(hiddenResult.visible, 1);
+    assert.equal(menu.hasAttribute('data-overlay-stack-item'), false);
+    assert.equal(menu.style.top, undefined);
+    assert.equal(menu.style.left, undefined);
+    assert.equal(status.getAttribute('data-overlay-stack-index'), '0');
+  } finally {
+    if (previousWindow) globalThis.window = previousWindow;
+    else delete globalThis.window;
+  }
+});
 
 test('layout node panel header adapts without overlapping actions', async () => {
   let [styles, template] = await Promise.all([
@@ -93,6 +241,17 @@ test('layout node collapsed icon points toward expansion side', async () => {
   assert.match(source, /return isFirst \? 'expand_less' : 'expand_more';/);
   assert.match(layout, /node\._syncCollapsePresentation\?\.\(\)/);
   assert.doesNotMatch(source, /this\.\$\.isCollapsed\)[\s\S]{0,120}this\.\$\.collapseIcon = 'chevron_right'/);
+});
+
+test('layout keeps manually expanded auto panels from being immediately auto-collapsed', async () => {
+  let layout = await readFile(layoutSource, 'utf8');
+
+  assert.match(
+    layout,
+    /LayoutTree\.updateNode\(tree, panelId, \{\s*collapsed,\s*autoCollapsed: false,\s*manualExpanded: !collapsed,/,
+  );
+  assert.match(layout, /if \(node\.manualExpanded\) return false;/);
+  assert.match(layout, /node\.manualExpanded = false;/);
 });
 
 test('layout behavior normalizes responsive collapse and overflow policy', () => {

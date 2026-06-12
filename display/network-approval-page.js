@@ -124,8 +124,8 @@ export function createNetworkApprovalPageStyles() {
 
     .sn-network-approval-cell-bg::after {
       background:
-        radial-gradient(ellipse 80% 50% at 50% -10%, var(--sn-cell-glare) 0%, transparent 100%),
-        radial-gradient(ellipse at 50% 50%, transparent 20%, var(--sn-cell-vignette-mid) 70%, var(--sn-cell-vignette-edge) 100%),
+        radial-gradient(circle at 50% -10%, var(--sn-cell-glare) 0%, transparent 100%),
+        radial-gradient(circle at 50% 50%, transparent 20%, var(--sn-cell-vignette-mid) 70%, var(--sn-cell-vignette-edge) 100%),
         var(--sn-cell-noise);
     }
 

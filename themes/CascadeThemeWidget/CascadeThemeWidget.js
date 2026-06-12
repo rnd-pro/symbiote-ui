@@ -10,6 +10,7 @@ import {
   bringOverlayToFront,
   mountOverlayToDocument,
   restoreOverlayHome,
+  syncOverlayTheme,
 } from '../../ui/overlay-stack.js';
 import { positionOverlay } from '../../ui/overlay-positioner.js';
 import css from './CascadeThemeWidget.css.js';
@@ -219,7 +220,7 @@ export class CascadeThemeWidget extends Symbiote {
     if (!popover) return;
     this.#bindPopoverEvents();
     popover.hidden = false;
-    mountOverlayToDocument(popover, this);
+    mountOverlayToDocument(popover, this.#resolveTarget());
     bringOverlayToFront(popover);
     this.#positionPopover();
     this.#bindOverlayListeners();
@@ -325,10 +326,12 @@ export class CascadeThemeWidget extends Symbiote {
   }
 
   #apply(source) {
-    let theme = applyCascadeTheme(this.#resolveTarget(), this.#state, { notify: false });
+    let target = this.#resolveTarget();
+    let theme = applyCascadeTheme(target, this.#state, { notify: false });
     this.#state = theme.state;
     this.#persistState();
     this.#syncControls();
+    this.#syncPopoverTheme(target);
     this.dispatchEvent(new CustomEvent('cascade-theme-change', {
       bubbles: true,
       composed: true,
@@ -343,15 +346,26 @@ export class CascadeThemeWidget extends Symbiote {
   }
 
   #syncControls() {
-    for (let button of this.querySelectorAll('[data-theme-mode]')) {
+    for (let button of this.#queryControlElements('[data-theme-mode]')) {
       button.setAttribute('aria-pressed', String(button.dataset.themeMode === this.#state.mode));
     }
-    for (let input of this.querySelectorAll('[data-theme-control]')) {
+    for (let input of this.#queryControlElements('[data-theme-control]')) {
       input.value = String(this.#state[input.dataset.themeControl]);
     }
-    for (let output of this.querySelectorAll('[data-theme-output]')) {
+    for (let output of this.#queryControlElements('[data-theme-output]')) {
       output.textContent = String(this.#state[output.dataset.themeOutput]);
     }
+  }
+
+  #queryControlElements(selector) {
+    let result = new Set(this.querySelectorAll(selector));
+    let popover = this.ref.popover;
+    if (popover) {
+      for (let element of popover.querySelectorAll(selector)) {
+        result.add(element);
+      }
+    }
+    return result;
   }
 
   #resolveTarget() {
@@ -360,6 +374,12 @@ export class CascadeThemeWidget extends Symbiote {
       return document.querySelector(this.targetSelector) || document.documentElement;
     }
     return document.documentElement;
+  }
+
+  #syncPopoverTheme(target = this.#resolveTarget()) {
+    let popover = this.ref.popover;
+    if (!popover) return;
+    syncOverlayTheme(popover, target);
   }
 
   #copyWithFallback(text) {

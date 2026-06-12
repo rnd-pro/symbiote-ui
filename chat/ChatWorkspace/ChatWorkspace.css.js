@@ -1,6 +1,7 @@
 export default `
 :host,
 chat-workspace {
+  --sn-chat-overlay-stack-reserve: 0px;
   container: chat-workspace / inline-size;
   display: flex;
   min-width: 0;
@@ -46,6 +47,7 @@ chat-workspace[sidebar="hidden"] {
   position: relative;
   z-index: 1;
   --sn-chat-bg: transparent;
+  --sn-chat-overlay-stack-reserve: inherit;
 }
 
 .chat-workspace-composer {

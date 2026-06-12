@@ -29,6 +29,9 @@ test('network approval page reuses CellBg standalone theme runtime', async () =>
   assert.match(source, /--sn-cell-max-radius: 5px/);
   assert.match(source, /--sn-cell-step-ms: 75ms/);
   assert.match(source, /--sn-cell-fade-rate: 0\.04/);
+  assert.match(source, /radial-gradient\(circle at 50% -10%, var\(--sn-cell-glare\)/);
+  assert.match(source, /radial-gradient\(circle at 50% 50%, transparent 20%, var\(--sn-cell-vignette-mid\)/);
+  assert.doesNotMatch(source, /radial-gradient\(ellipse/);
 
   assert.match(script, /sn-network-approval-canvas/);
   assert.equal(typeof new Function(script), 'function');

@@ -196,6 +196,13 @@ workspaces.
 
 `symbiote-ui` includes a reusable browser-level voice runtime (`VoiceRuntime` in `chat/voice-runtime.js`, exported exclusively via `ui/index.js` to ensure the root package remains Node-safe) to provide built-in speech recognition and audio capture. Product-specific routing, auth, persistence, and irreversible permissions remain owned by the host app.
 
+Composer action entry points use `setLeadingControls()` for compact controls
+before the text input. The composer emits `chat-composer-leading-control` and
+`chat-workspace` forwards it as `chat-workspace-leading-intent`; hosts decide
+which menu, goal, attachment, or plugin action that intent opens. The event can
+include `anchorRect` so hosts can position their own popovers beside the
+originating control without querying composer internals.
+
 The voice capability boundary operates through a cascade of cancelable intent events, allowing hosts to intercept intents or let the library fall back to native browser capabilities:
 
 ### 1. Capability Detection

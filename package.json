@@ -107,6 +107,7 @@
     "graph/",
     "icons/",
     "discover.js",
+    "audit.js",
     "cli.js",
     "webmcp.js",
     "manifest/",

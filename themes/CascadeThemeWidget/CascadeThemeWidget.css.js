@@ -14,7 +14,33 @@ export default css`
   }
 
   cascade-theme-widget .ctw-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sn-shell-menu-action-inner-gap, 6px);
     flex: 0 0 auto;
+    min-height: var(--sn-shell-menu-action-height, 26px);
+    padding: var(--sn-shell-menu-action-padding, 4px 10px);
+    border: 1px solid transparent;
+    border-radius: var(--sn-layout-header-button-radius, 4px);
+    background: transparent;
+    color: var(--sn-text-dim);
+    font: inherit;
+    font-size: var(--sn-shell-menu-action-size, 11px);
+    font-weight: 600;
+    letter-spacing: var(--sn-shell-menu-action-letter-spacing, 0.5px);
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background var(--sn-transition-fast) var(--sn-transition-easing),
+      border-color var(--sn-transition-fast) var(--sn-transition-easing),
+      color var(--sn-transition-fast) var(--sn-transition-easing);
+  }
+
+  cascade-theme-widget .ctw-trigger:hover,
+  cascade-theme-widget .ctw-trigger[active] {
+    border-color: var(--sn-node-border);
+    background: var(--sn-node-hover);
+    color: var(--sn-text);
   }
 
   cascade-theme-widget .ctw-trigger .material-symbols-outlined,

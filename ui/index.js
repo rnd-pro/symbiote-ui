@@ -314,7 +314,14 @@ export let VideoPlayer;
 export let stringifyBlock;
 export let truncateResult;
 export { sharedUiStyles } from './shared-styles.js';
-export { bringOverlayToFront, nextOverlayZIndex, resetOverlayStack } from './overlay-stack.js';
+export {
+  bringOverlayToFront,
+  clearOverlayStack,
+  layoutOverlayStack,
+  measureOverlayStackReserve,
+  nextOverlayZIndex,
+  resetOverlayStack,
+} from './overlay-stack.js';
 export { escapeHtml } from '../display/markdown-formatter.js';
 export {
   buildResourceTreeFromEntries,

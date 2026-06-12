@@ -34,6 +34,29 @@ export class SelectionSync {
     this.#getConnRenderer = getConnRenderer;
   }
 
+  #toggleAttribute(el, attr, value) {
+    if (!el) return;
+    if (value !== el.hasAttribute(attr)) {
+      value ? el.setAttribute(attr, '') : el.removeAttribute(attr);
+    }
+  }
+
+  #findConnectionPart(root, attr, value) {
+    if (!root) return null;
+    return root.querySelector(`[${attr}="${value}"]`);
+  }
+
+  #connectionParts(id, path) {
+    let connSvg = this.#canvas.ref.connections;
+    let dotSvg = this.#canvas.ref.pseudoSvg || connSvg;
+    return [
+      path,
+      this.#findConnectionPart(connSvg, 'data-conn-arrow', id),
+      this.#findConnectionPart(dotSvg, 'data-conn-dot', `${id}-start`),
+      this.#findConnectionPart(dotSvg, 'data-conn-dot', `${id}-end`),
+    ].filter(Boolean);
+  }
+
   /**
    * Synchronize DOM when selection changes
    * @param {Set<string>} selectedNodes
@@ -95,25 +118,22 @@ export class SelectionSync {
       if (!path) continue;
 
 
+      let parts = this.#connectionParts(id, path);
       let shouldSelectConn = selectedConnections.has(id);
-      if (shouldSelectConn !== path.hasAttribute('data-selected')) {
-        shouldSelectConn
-          ? path.setAttribute('data-selected', '')
-          : path.removeAttribute('data-selected');
+      for (const el of parts) {
+        this.#toggleAttribute(el, 'data-selected', shouldSelectConn);
       }
 
 
       let isActive = activeConnIds.has(id);
-      if (isActive !== path.hasAttribute('data-active-conn')) {
-        isActive
-          ? path.setAttribute('data-active-conn', '')
-          : path.removeAttribute('data-active-conn');
+      for (const el of parts) {
+        this.#toggleAttribute(el, 'data-active-conn', isActive);
       }
 
 
       let shouldDim = !isActive && selectedNodes.size > 0;
-      if (shouldDim !== path.hasAttribute('data-dimmed')) {
-        shouldDim ? path.setAttribute('data-dimmed', '') : path.removeAttribute('data-dimmed');
+      for (const el of parts) {
+        this.#toggleAttribute(el, 'data-dimmed', shouldDim);
       }
     }
 

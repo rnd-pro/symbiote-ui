@@ -60,6 +60,8 @@ import {
 // Import Selector
 import { Selector } from '../interactions/Selector.js';
 
+import { SelectionSync } from '../canvas/SelectionSync.js';
+
 // Import graph-model helpers
 import {
   groupNodes,
@@ -243,6 +245,82 @@ describe('Selector Model Extensions', () => {
 
     assert.deepEqual(Array.from(selector.getSelectedNodes()), ['node-a']);
     assert.deepEqual(Array.from(selector.getSelectedConnections()), ['conn-1']);
+  });
+});
+
+describe('SelectionSync Connection Focus', () => {
+  it('syncs active and dimmed state to connection paths, arrows, and endpoint dots', () => {
+    let connections = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    let pseudoSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    connections.innerHTML = `
+      <path data-conn-id="active-conn"></path>
+      <polygon data-conn-arrow="active-conn"></polygon>
+      <path data-conn-id="dimmed-conn"></path>
+      <polygon data-conn-arrow="dimmed-conn"></polygon>
+    `;
+    pseudoSvg.innerHTML = `
+      <circle data-conn-dot="active-conn-start"></circle>
+      <circle data-conn-dot="active-conn-end"></circle>
+      <circle data-conn-dot="dimmed-conn-start"></circle>
+      <circle data-conn-dot="dimmed-conn-end"></circle>
+    `;
+
+    let selectionEvent;
+    let canvas = {
+      ref: {
+        connections,
+        pseudoSvg,
+        quickToolbar: null,
+        inspector: null,
+      },
+      dispatchEvent(event) {
+        selectionEvent = event;
+      },
+    };
+    let connectionData = [
+      { id: 'active-conn', from: 'selected-node', to: 'neighbor-node' },
+      { id: 'dimmed-conn', from: 'other-node', to: 'unrelated-node' },
+    ];
+    let editor = {
+      getConnections() {
+        return connectionData;
+      },
+    };
+    let sync = new SelectionSync({
+      canvas,
+      getEditor: () => editor,
+      nodeViews: new Map(),
+      getConnRenderer: () => ({ data: new Map(connectionData.map((conn) => [conn.id, conn])) }),
+    });
+
+    sync.sync(new Set(['selected-node']), new Set());
+
+    for (const selector of [
+      '[data-conn-id="active-conn"]',
+      '[data-conn-arrow="active-conn"]',
+      '[data-conn-dot="active-conn-start"]',
+      '[data-conn-dot="active-conn-end"]',
+    ]) {
+      assert.equal(
+        (connections.querySelector(selector) || pseudoSvg.querySelector(selector)).hasAttribute('data-active-conn'),
+        true
+      );
+    }
+
+    for (const selector of [
+      '[data-conn-id="dimmed-conn"]',
+      '[data-conn-arrow="dimmed-conn"]',
+      '[data-conn-dot="dimmed-conn-start"]',
+      '[data-conn-dot="dimmed-conn-end"]',
+    ]) {
+      assert.equal(
+        (connections.querySelector(selector) || pseudoSvg.querySelector(selector)).hasAttribute('data-dimmed'),
+        true
+      );
+    }
+
+    assert.equal(selectionEvent.type, 'selection-changed');
+    assert.deepEqual(selectionEvent.detail.nodes, ['selected-node']);
   });
 });
 

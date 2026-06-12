@@ -200,6 +200,15 @@ export let styles = css`
     display: initial;
   }
 
+  .sn-conn-dot[data-active-conn] {
+    opacity: 1;
+    fill: var(--sn-node-selected, var(--sn-conn-color));
+  }
+
+  .sn-conn-dot[data-dimmed] {
+    opacity: 0.3;
+  }
+
   /* Free dots for unconnected SVG ports */
   .sn-free-dot {
     fill: var(--sn-conn-color);
@@ -371,6 +380,15 @@ export let styles = css`
     fill: var(--sn-conn-color);
     opacity: 0.5;
     pointer-events: none;
+  }
+
+  .sn-conn-arrow[data-active-conn] {
+    opacity: 1;
+    fill: var(--sn-node-selected, var(--sn-conn-color));
+  }
+
+  .sn-conn-arrow[data-dimmed] {
+    opacity: 0.3;
   }
 
   /* Fire trace: sequential node execution highlighting */

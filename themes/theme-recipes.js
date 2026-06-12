@@ -124,12 +124,11 @@ const RELATION_DEFINITIONS = {
   materialTexture: {
     name: 'materialTexture',
     family: 'surface',
-    description: 'Relative pattern, cell background, glare, and texture visibility.',
+    description: 'Relative animated cell dot visibility.',
     parameters: [
       { name: 'grain', type: 'number', min: -2, max: 2, default: 0 },
-      { name: 'glare', type: 'number', min: -2, max: 2, default: 0 },
     ],
-    affects: ['pattern', '--sn-cell-base-alpha', '--sn-cell-glare', '--sn-cell-noise'],
+    affects: ['pattern', '--sn-cell-base-alpha', '--sn-cell-alpha-span'],
   },
 };
 
@@ -206,7 +205,7 @@ const RECIPE_CATALOG = {
       graphDataPalette: { dataChroma: 1.5, clusterContrast: 1.4 },
       semanticHues: { hueShift: -10, semanticSpread: 1 },
       stateLayers: { strength: 1 },
-      materialTexture: { grain: 0.8, glare: 0.4 },
+      materialTexture: { grain: 0.8 },
     },
     overrides: {
       '--sn-theme-elevation-scale': '1',
@@ -222,7 +221,7 @@ const RECIPE_CATALOG = {
     relations: {
       surfaceLadder: { depth: 1.2, contrastBias: 0.7 },
       stateLayers: { strength: 1.1, focus: 1 },
-      materialTexture: { grain: 1.1, glare: 1 },
+      materialTexture: { grain: 1.1 },
       radiusCurve: { scale: 1.25, compactness: 0.4 },
       motionCurve: { speed: -0.4, feedback: 1.2 },
       semanticHues: { semanticSpread: 0.8 },
@@ -264,7 +263,7 @@ const RECIPE_CATALOG = {
       surfaceLadder: { depth: 1, contrastBias: 0.8 },
       radiusCurve: { scale: 1.3, compactness: 0.2 },
       motionCurve: { speed: -0.2, feedback: 0.9 },
-      materialTexture: { grain: 0.6, glare: 0.5 },
+      materialTexture: { grain: 0.6 },
     },
     overrides: {
       '--sn-theme-elevation-scale': '1.15',
@@ -283,7 +282,7 @@ const RECIPE_CATALOG = {
       typographyCurve: { body: 0.8, heading: 1 },
       spacingCurve: { density: 0.8, panelRhythm: 0.8 },
       semanticHues: { semanticSpread: -0.8 },
-      materialTexture: { grain: -0.4, glare: -0.8 },
+      materialTexture: { grain: -0.4 },
     },
     overrides: {
       '--sn-theme-elevation-scale': '0.45',
@@ -392,10 +391,8 @@ function applyRelation(params, overrides, name, modifier) {
     addParam(params, 'outline', relationValue(modifier, 'clusterContrast') * 3);
   } else if (name === 'materialTexture') {
     let grain = relationValue(modifier, 'grain');
-    let glare = relationValue(modifier, 'glare');
-    addParam(params, 'pattern', grain * 8 + glare * 3);
+    addParam(params, 'pattern', grain * 8);
     setOverride(overrides, '--sn-cell-base-alpha', (0.08 + Math.max(-2, Math.min(2, grain)) * 0.018).toFixed(3));
-    setOverride(overrides, '--sn-cell-glare', `${Math.max(0, Math.min(100, 60 + glare * 8)).toFixed(1)}%`);
   }
 }
 

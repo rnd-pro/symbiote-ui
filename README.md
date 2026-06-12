@@ -272,7 +272,11 @@ intents, and animated `cell-bg` lifecycle. `chat-sidebar-shell` and
 `chat-composer` remain lower-level primitives for custom composition. The host
 owns actual chat transport, model/provider policy, speech recognition, routes,
 and storage.
-Use `setFooterControls()` for structured provider/model/agent/resource/settings
+Use `setLeadingControls()` for compact inline entry points before the text
+input, such as a host-owned action menu. `chat-composer-leading-control`
+reports those product-neutral intents back to the host with an optional
+`anchorRect` for host-owned popover positioning. Use
+`setFooterControls()` for structured provider/model/agent/resource/settings
 controls; `chat-composer-footer-control` and
 `chat-composer-footer-control-change` report product-neutral intents back to the
 host. Voice controls emit cancelable primary events and granular
@@ -480,9 +484,10 @@ The contract writes both low-level controls such as `--sn-theme-bg-lightness`,
 `--sn-motion-enabled`, `--sn-animation-play-state`,
 `--sn-animation-duration-scale`, and `--sn-transition-easing`; disabled
 motion sets transition durations to zero and pauses cascade-driven animations.
-The `pattern` control tunes animated background dots, noise, and glare through
+The `pattern` control tunes animated background dots through
 `--sn-cell-base-alpha`, `--sn-cell-alpha-span`, and
-`--sn-theme-pattern-brightness` without changing foreground surface contrast.
+`--sn-theme-pattern-brightness`; glare, vignette, and noise stay stable so the
+ambient gradient does not shift with dot intensity.
 
 `createCascadeTheme()` also derives readable foreground tokens for colored
 controls. The same Node-safe formula is exposed as `getReadableTextForHsl()`;

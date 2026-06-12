@@ -47,6 +47,7 @@
  * @property {string} panelType - Panel content type (e.g., 'viewport', 'timeline')
  * @property {boolean} [collapsed] - Whether panel is collapsed
  * @property {boolean} [autoCollapsed] - Whether panel was collapsed by responsive layout behavior.
+ * @property {boolean} [manualExpanded] - Whether an auto-collapsible panel was manually expanded.
  * @property {LayoutBehavior} [behavior] Responsive behavior at this insertion point.
  * @property {Object} [panelState] - Panel-specific state
  */

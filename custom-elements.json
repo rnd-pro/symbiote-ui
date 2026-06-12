@@ -4083,8 +4083,8 @@
           "customElement": true,
           "name": "ChatComposer",
           "tagName": "chat-composer",
-          "description": "Generic chat composer with input, voice controls, context chips, footer controls, and autocomplete host.",
-          "componentDescription": "Generic chat composer with input, voice controls, context chips, footer controls, and autocomplete host. Use this chat and conversation surface when composing chat UI. Capabilities: chat-input, voice-controls, voice-preview, wake-listening, voice-response-toggle, voice-command-mode, voice-language-mode, permission-intents, recorder-intents, transcription-intents, context-chips, footer-controls, footer-control-intents, autocomplete-host, drag-drop-context, layout-lifecycle. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: chat_composer_submit, chat_composer_voice_control, chat_composer_voice_flow, chat_composer_footer_control.",
+          "description": "Generic chat composer with input, leading controls, voice controls, context chips, footer controls, and autocomplete host.",
+          "componentDescription": "Generic chat composer with input, leading controls, voice controls, context chips, footer controls, and autocomplete host. Use this chat and conversation surface when composing chat UI. Capabilities: chat-input, voice-controls, voice-preview, wake-listening, voice-response-toggle, voice-command-mode, voice-language-mode, permission-intents, recorder-intents, transcription-intents, context-chips, leading-controls, leading-control-intents, footer-controls, footer-control-intents, autocomplete-host, drag-drop-context, layout-lifecycle. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: chat_composer_submit, chat_composer_voice_control, chat_composer_voice_flow, chat_composer_footer_control, chat_composer_leading_control.",
           "attributes": [],
           "members": [
             {
@@ -4240,6 +4240,27 @@
               "kind": "method",
               "name": "resumeLayout",
               "description": "Restores local wake listening only when it was active before layout suspension."
+            },
+            {
+              "kind": "field",
+              "name": "leadingControls",
+              "type": {
+                "text": "array"
+              },
+              "description": "Structured product-neutral inline control descriptors rendered before the text input by setLeadingControls."
+            },
+            {
+              "kind": "field",
+              "name": "leadingHtml",
+              "type": {
+                "text": "string"
+              },
+              "description": "Trusted leading control HTML owned by the host adapter."
+            },
+            {
+              "kind": "method",
+              "name": "setLeadingControls",
+              "description": "Sets structured inline controls before the input for host-owned action entry points."
             }
           ],
           "events": [
@@ -4617,6 +4638,31 @@
               "name": "chat-composer-context-drop",
               "description": "Requests dropped context attachment.",
               "detail": []
+            },
+            {
+              "name": "chat-composer-leading-control",
+              "description": "Emits a product-neutral leading control activation intent with an optional anchorRect for host-owned popover positioning.",
+              "detail": [
+                {
+                  "name": "id",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "kind",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "value"
+                },
+                {
+                  "name": "anchorRect",
+                  "type": "object"
+                }
+              ]
             }
           ],
           "slots": [],
@@ -4775,6 +4821,8 @@
               "recorder-intents",
               "transcription-intents",
               "context-chips",
+              "leading-controls",
+              "leading-control-intents",
               "footer-controls",
               "footer-control-intents",
               "autocomplete-host",
@@ -4802,6 +4850,16 @@
                 "name": "attachedContext",
                 "type": "array",
                 "description": "Context chip descriptors."
+              },
+              {
+                "name": "leadingControls",
+                "type": "array",
+                "description": "Structured product-neutral inline control descriptors rendered before the text input by setLeadingControls."
+              },
+              {
+                "name": "leadingHtml",
+                "type": "string",
+                "description": "Trusted leading control HTML owned by the host adapter."
               },
               {
                 "name": "footerControls",
@@ -4834,6 +4892,11 @@
                 "name": "setAttachedContext",
                 "type": "function",
                 "description": "Sets context chip descriptors."
+              },
+              {
+                "name": "setLeadingControls",
+                "type": "function",
+                "description": "Sets structured inline controls before the input for host-owned action entry points."
               },
               {
                 "name": "setFooterControls",
@@ -5149,6 +5212,27 @@
                 "description": "Passes navigation/autocomplete keys to the host."
               },
               {
+                "name": "chat-composer-leading-control",
+                "description": "Emits a product-neutral leading control activation intent with an optional anchorRect for host-owned popover positioning.",
+                "detail": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  },
+                  {
+                    "name": "kind",
+                    "type": "string"
+                  },
+                  {
+                    "name": "value"
+                  },
+                  {
+                    "name": "anchorRect",
+                    "type": "object"
+                  }
+                ]
+              },
+              {
                 "name": "chat-composer-footer-control",
                 "description": "Emits a product-neutral footer control activation intent.",
                 "detail": [
@@ -5454,14 +5538,54 @@
                     "agent",
                     "assistant"
                   ]
+                },
+                {
+                  "name": "chat_composer_leading_control",
+                  "description": "Render or activate product-neutral inline controls before the composer input, such as a host-owned action menu entry point.",
+                  "inputSchema": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "label": {
+                        "type": "string"
+                      },
+                      "icon": {
+                        "type": "string"
+                      },
+                      "action": {
+                        "enum": [
+                          "set",
+                          "activate"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "action"
+                    ]
+                  },
+                  "annotations": {
+                    "readOnlyHint": false,
+                    "destructiveHint": false,
+                    "intentEvents": [
+                      "chat-composer-leading-control"
+                    ]
+                  },
+                  "exposedTo": [
+                    "agent",
+                    "assistant"
+                  ]
                 }
               ]
             }
           },
           "agent": {
-            "componentDescription": "Generic chat composer with input, voice controls, context chips, footer controls, and autocomplete host. Use this chat and conversation surface when composing chat UI. Capabilities: chat-input, voice-controls, voice-preview, wake-listening, voice-response-toggle, voice-command-mode, voice-language-mode, permission-intents, recorder-intents, transcription-intents, context-chips, footer-controls, footer-control-intents, autocomplete-host, drag-drop-context, layout-lifecycle. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: chat_composer_submit, chat_composer_voice_control, chat_composer_voice_flow, chat_composer_footer_control.",
+            "componentDescription": "Generic chat composer with input, leading controls, voice controls, context chips, footer controls, and autocomplete host. Use this chat and conversation surface when composing chat UI. Capabilities: chat-input, voice-controls, voice-preview, wake-listening, voice-response-toggle, voice-command-mode, voice-language-mode, permission-intents, recorder-intents, transcription-intents, context-chips, leading-controls, leading-control-intents, footer-controls, footer-control-intents, autocomplete-host, drag-drop-context, layout-lifecycle. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: chat_composer_submit, chat_composer_voice_control, chat_composer_voice_flow, chat_composer_footer_control, chat_composer_leading_control.",
             "semanticRole": "chat and conversation surface",
-            "usage": "Render or compose <chat-composer> when the host needs generic chat composer with input, voice controls, context chips, footer controls, and autocomplete host.",
+            "usage": "Render or compose <chat-composer> when the host needs generic chat composer with input, leading controls, voice controls, context chips, footer controls, and autocomplete host.",
             "dataOwnership": "host-owned props and attributes; component owns presentation state",
             "webmcp": {
               "mode": "explicit-descriptor",
@@ -5469,7 +5593,8 @@
                 "chat_composer_submit",
                 "chat_composer_voice_control",
                 "chat_composer_voice_flow",
-                "chat_composer_footer_control"
+                "chat_composer_footer_control",
+                "chat_composer_leading_control"
               ],
               "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
               "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
@@ -5495,6 +5620,8 @@
                 "recorder-intents",
                 "transcription-intents",
                 "context-chips",
+                "leading-controls",
+                "leading-control-intents",
                 "footer-controls",
                 "footer-control-intents",
                 "autocomplete-host",
@@ -5522,6 +5649,16 @@
                   "name": "attachedContext",
                   "type": "array",
                   "description": "Context chip descriptors."
+                },
+                {
+                  "name": "leadingControls",
+                  "type": "array",
+                  "description": "Structured product-neutral inline control descriptors rendered before the text input by setLeadingControls."
+                },
+                {
+                  "name": "leadingHtml",
+                  "type": "string",
+                  "description": "Trusted leading control HTML owned by the host adapter."
                 },
                 {
                   "name": "footerControls",
@@ -5554,6 +5691,11 @@
                   "name": "setAttachedContext",
                   "type": "function",
                   "description": "Sets context chip descriptors."
+                },
+                {
+                  "name": "setLeadingControls",
+                  "type": "function",
+                  "description": "Sets structured inline controls before the input for host-owned action entry points."
                 },
                 {
                   "name": "setFooterControls",
@@ -5869,6 +6011,27 @@
                   "description": "Passes navigation/autocomplete keys to the host."
                 },
                 {
+                  "name": "chat-composer-leading-control",
+                  "description": "Emits a product-neutral leading control activation intent with an optional anchorRect for host-owned popover positioning.",
+                  "detail": [
+                    {
+                      "name": "id",
+                      "type": "string"
+                    },
+                    {
+                      "name": "kind",
+                      "type": "string"
+                    },
+                    {
+                      "name": "value"
+                    },
+                    {
+                      "name": "anchorRect",
+                      "type": "object"
+                    }
+                  ]
+                },
+                {
                   "name": "chat-composer-footer-control",
                   "description": "Emits a product-neutral footer control activation intent.",
                   "detail": [
@@ -6168,6 +6331,46 @@
                       "intentEvents": [
                         "chat-composer-footer-control",
                         "chat-composer-footer-control-change"
+                      ]
+                    },
+                    "exposedTo": [
+                      "agent",
+                      "assistant"
+                    ]
+                  },
+                  {
+                    "name": "chat_composer_leading_control",
+                    "description": "Render or activate product-neutral inline controls before the composer input, such as a host-owned action menu entry point.",
+                    "inputSchema": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "label": {
+                          "type": "string"
+                        },
+                        "icon": {
+                          "type": "string"
+                        },
+                        "action": {
+                          "enum": [
+                            "set",
+                            "activate"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "action"
+                      ]
+                    },
+                    "annotations": {
+                      "readOnlyHint": false,
+                      "destructiveHint": false,
+                      "intentEvents": [
+                        "chat-composer-leading-control"
                       ]
                     },
                     "exposedTo": [
@@ -10082,8 +10285,8 @@
           "customElement": true,
           "name": "ChatWorkspace",
           "tagName": "chat-workspace",
-          "description": "Reusable chat workspace shell that composes sidebar, transcript, composer, voice intents, footer controls, and animated background lifecycle.",
-          "componentDescription": "Reusable chat workspace shell that composes sidebar, transcript, composer, voice intents, footer controls, and animated background lifecycle. Use this chat and conversation surface when composing chat UI. Capabilities: chat-workspace, chat-sidebar-composition, chat-transcript-composition, chat-composer-composition, chat-nav-tree-helper, voice-intent-router, footer-control-intent-router, context-intent-router, animated-background-lifecycle, layout-lifecycle, host-owned-transport. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: chat_workspace_set_state, chat_workspace_background, chat_workspace_select_chat, chat_workspace_send.",
+          "description": "Reusable chat workspace shell that composes sidebar, transcript, composer, leading controls, voice intents, footer controls, transient overlay reserve, and animated background lifecycle.",
+          "componentDescription": "Reusable chat workspace shell that composes sidebar, transcript, composer, leading controls, voice intents, footer controls, transient overlay reserve, and animated background lifecycle. Use this chat and conversation surface when composing chat UI. Capabilities: chat-workspace, chat-sidebar-composition, chat-transcript-composition, chat-composer-composition, chat-nav-tree-helper, voice-intent-router, leading-control-intent-router, footer-control-intent-router, context-intent-router, animated-background-lifecycle, overlay-stack-reserve, layout-lifecycle, host-owned-transport. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: chat_workspace_set_state, chat_workspace_background, chat_workspace_select_chat, chat_workspace_send.",
           "attributes": [
             {
               "name": "sidebar",
@@ -10150,6 +10353,14 @@
               "description": "Host-owned activity, streaming, or idle state mapped to cell-bg trigger/start/stop lifecycle."
             },
             {
+              "kind": "field",
+              "name": "overlayStackReserve",
+              "type": {
+                "text": "number"
+              },
+              "description": "Host-owned bottom transient overlay stack reserve in CSS pixels."
+            },
+            {
               "kind": "method",
               "name": "setWorkspaceState",
               "description": "Applies host-owned chat workspace state without owning transport, routes, persistence, or API calls."
@@ -10193,6 +10404,11 @@
               "kind": "method",
               "name": "clearVoicePreview",
               "description": "Clears the voice transcription preview."
+            },
+            {
+              "kind": "method",
+              "name": "setOverlayStackReserve",
+              "description": "Sets bottom transient overlay stack reserve so transcript padding and scroll controls avoid floating surfaces."
             },
             {
               "kind": "method",
@@ -10343,6 +10559,11 @@
               "name": "chat-workspace-background-event",
               "description": "Routes cell-bg animation lifecycle events.",
               "detail": []
+            },
+            {
+              "name": "chat-workspace-leading-intent",
+              "description": "Routes product-neutral inline leading control activation intents.",
+              "detail": []
             }
           ],
           "slots": [],
@@ -10369,6 +10590,10 @@
             },
             {
               "name": "--sn-chat-transcript-padding",
+              "description": "Theme CSS custom property consumed by chat-workspace."
+            },
+            {
+              "name": "--sn-chat-overlay-stack-reserve",
               "description": "Theme CSS custom property consumed by chat-workspace."
             },
             {
@@ -10400,9 +10625,11 @@
               "chat-composer-composition",
               "chat-nav-tree-helper",
               "voice-intent-router",
+              "leading-control-intent-router",
               "footer-control-intent-router",
               "context-intent-router",
               "animated-background-lifecycle",
+              "overlay-stack-reserve",
               "layout-lifecycle",
               "host-owned-transport"
             ],
@@ -10437,7 +10664,7 @@
               {
                 "name": "composer",
                 "type": "object",
-                "description": "Composer state including value, context chips, footer controls, sending state, voice controls, and voice preview."
+                "description": "Composer state including value, context chips, leading controls, footer controls, sending state, voice controls, and voice preview."
               },
               {
                 "name": "voiceControls",
@@ -10448,6 +10675,11 @@
                 "name": "backgroundState",
                 "type": "object",
                 "description": "Host-owned activity, streaming, or idle state mapped to cell-bg trigger/start/stop lifecycle."
+              },
+              {
+                "name": "overlayStackReserve",
+                "type": "number",
+                "description": "Host-owned bottom transient overlay stack reserve in CSS pixels."
               }
             ],
             "methods": [
@@ -10479,7 +10711,7 @@
               {
                 "name": "setComposerState",
                 "type": "function",
-                "description": "Sets composer value, context chips, footer controls, disabled/sending state, voice controls, and voice preview."
+                "description": "Sets composer value, context chips, leading controls, footer controls, disabled/sending state, voice controls, and voice preview."
               },
               {
                 "name": "setVoiceControls",
@@ -10495,6 +10727,11 @@
                 "name": "clearVoicePreview",
                 "type": "function",
                 "description": "Clears the voice transcription preview."
+              },
+              {
+                "name": "setOverlayStackReserve",
+                "type": "function",
+                "description": "Sets bottom transient overlay stack reserve so transcript padding and scroll controls avoid floating surfaces."
               },
               {
                 "name": "setLiveStatus",
@@ -10608,6 +10845,10 @@
                 ]
               },
               {
+                "name": "chat-workspace-leading-intent",
+                "description": "Routes product-neutral inline leading control activation intents."
+              },
+              {
                 "name": "chat-workspace-voice-intent",
                 "description": "Routes cancelable voice permission, recorder, transcription, raw audio capture, wake, response, command, language, and preview intents from the composed composer while preserving host override semantics."
               },
@@ -10636,6 +10877,7 @@
               "--sn-chat-sidebar-width",
               "--sn-chat-sidebar-collapsed-width",
               "--sn-chat-transcript-padding",
+              "--sn-chat-overlay-stack-reserve",
               "--sn-chat-gap",
               "--sn-composer-bg",
               "--sn-composer-padding",
@@ -10662,7 +10904,7 @@
               "tools": [
                 {
                   "name": "chat_workspace_set_state",
-                  "description": "Set host-owned chat workspace state for chats, active chat id, transcript messages, composer state, voice controls, live status, and background lifecycle without owning transport or persistence.",
+                  "description": "Set host-owned chat workspace state for chats, active chat id, transcript messages, composer state, voice controls, live status, overlay-stack reserve, and background lifecycle without owning transport or persistence.",
                   "inputSchema": {
                     "type": "object",
                     "additionalProperties": false,
@@ -10693,6 +10935,9 @@
                       },
                       "backgroundState": {
                         "type": "object"
+                      },
+                      "overlayStackReserve": {
+                        "type": "number"
                       }
                     }
                   },
@@ -10824,9 +11069,9 @@
             }
           },
           "agent": {
-            "componentDescription": "Reusable chat workspace shell that composes sidebar, transcript, composer, voice intents, footer controls, and animated background lifecycle. Use this chat and conversation surface when composing chat UI. Capabilities: chat-workspace, chat-sidebar-composition, chat-transcript-composition, chat-composer-composition, chat-nav-tree-helper, voice-intent-router, footer-control-intent-router, context-intent-router, animated-background-lifecycle, layout-lifecycle, host-owned-transport. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: chat_workspace_set_state, chat_workspace_background, chat_workspace_select_chat, chat_workspace_send.",
+            "componentDescription": "Reusable chat workspace shell that composes sidebar, transcript, composer, leading controls, voice intents, footer controls, transient overlay reserve, and animated background lifecycle. Use this chat and conversation surface when composing chat UI. Capabilities: chat-workspace, chat-sidebar-composition, chat-transcript-composition, chat-composer-composition, chat-nav-tree-helper, voice-intent-router, leading-control-intent-router, footer-control-intent-router, context-intent-router, animated-background-lifecycle, overlay-stack-reserve, layout-lifecycle, host-owned-transport. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: chat_workspace_set_state, chat_workspace_background, chat_workspace_select_chat, chat_workspace_send.",
             "semanticRole": "chat and conversation surface",
-            "usage": "Render or compose <chat-workspace> when the host needs reusable chat workspace shell that composes sidebar, transcript, composer, voice intents, footer controls, and animated background lifecycle.",
+            "usage": "Render or compose <chat-workspace> when the host needs reusable chat workspace shell that composes sidebar, transcript, composer, leading controls, voice intents, footer controls, transient overlay reserve, and animated background lifecycle.",
             "dataOwnership": "host-owned props and attributes; component owns presentation state",
             "webmcp": {
               "mode": "explicit-descriptor",
@@ -10855,9 +11100,11 @@
                 "chat-composer-composition",
                 "chat-nav-tree-helper",
                 "voice-intent-router",
+                "leading-control-intent-router",
                 "footer-control-intent-router",
                 "context-intent-router",
                 "animated-background-lifecycle",
+                "overlay-stack-reserve",
                 "layout-lifecycle",
                 "host-owned-transport"
               ],
@@ -10892,7 +11139,7 @@
                 {
                   "name": "composer",
                   "type": "object",
-                  "description": "Composer state including value, context chips, footer controls, sending state, voice controls, and voice preview."
+                  "description": "Composer state including value, context chips, leading controls, footer controls, sending state, voice controls, and voice preview."
                 },
                 {
                   "name": "voiceControls",
@@ -10903,6 +11150,11 @@
                   "name": "backgroundState",
                   "type": "object",
                   "description": "Host-owned activity, streaming, or idle state mapped to cell-bg trigger/start/stop lifecycle."
+                },
+                {
+                  "name": "overlayStackReserve",
+                  "type": "number",
+                  "description": "Host-owned bottom transient overlay stack reserve in CSS pixels."
                 }
               ],
               "methods": [
@@ -10934,7 +11186,7 @@
                 {
                   "name": "setComposerState",
                   "type": "function",
-                  "description": "Sets composer value, context chips, footer controls, disabled/sending state, voice controls, and voice preview."
+                  "description": "Sets composer value, context chips, leading controls, footer controls, disabled/sending state, voice controls, and voice preview."
                 },
                 {
                   "name": "setVoiceControls",
@@ -10950,6 +11202,11 @@
                   "name": "clearVoicePreview",
                   "type": "function",
                   "description": "Clears the voice transcription preview."
+                },
+                {
+                  "name": "setOverlayStackReserve",
+                  "type": "function",
+                  "description": "Sets bottom transient overlay stack reserve so transcript padding and scroll controls avoid floating surfaces."
                 },
                 {
                   "name": "setLiveStatus",
@@ -11063,6 +11320,10 @@
                   ]
                 },
                 {
+                  "name": "chat-workspace-leading-intent",
+                  "description": "Routes product-neutral inline leading control activation intents."
+                },
+                {
                   "name": "chat-workspace-voice-intent",
                   "description": "Routes cancelable voice permission, recorder, transcription, raw audio capture, wake, response, command, language, and preview intents from the composed composer while preserving host override semantics."
                 },
@@ -11091,6 +11352,7 @@
                 "--sn-chat-sidebar-width",
                 "--sn-chat-sidebar-collapsed-width",
                 "--sn-chat-transcript-padding",
+                "--sn-chat-overlay-stack-reserve",
                 "--sn-chat-gap",
                 "--sn-composer-bg",
                 "--sn-composer-padding",
@@ -11117,7 +11379,7 @@
                 "tools": [
                   {
                     "name": "chat_workspace_set_state",
-                    "description": "Set host-owned chat workspace state for chats, active chat id, transcript messages, composer state, voice controls, live status, and background lifecycle without owning transport or persistence.",
+                    "description": "Set host-owned chat workspace state for chats, active chat id, transcript messages, composer state, voice controls, live status, overlay-stack reserve, and background lifecycle without owning transport or persistence.",
                     "inputSchema": {
                       "type": "object",
                       "additionalProperties": false,
@@ -11148,6 +11410,9 @@
                         },
                         "backgroundState": {
                           "type": "object"
+                        },
+                        "overlayStackReserve": {
+                          "type": "number"
                         }
                       }
                     },

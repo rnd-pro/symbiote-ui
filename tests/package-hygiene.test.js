@@ -32,7 +32,8 @@ function assertNoPrivatePackFiles(files) {
     /^\.gitmodules$/,
     /^tmp(?:\/|$)/,
     /(?:^|\/)delegation(?:\/|$)/,
-    /(?:^|\/)(?:audit|scratch|probe|screenshot|session|private-memory)/i,
+    /(?:^|\/)audit(?:[-_]|\/)/i,
+    /(?:^|\/)(?:scratch|probe|screenshot|session|private-memory)(?:[-_.]|\/|$)/i,
     /\.(?:png|jpe?g|webp|gif)$/i,
   ];
   for (let file of files) {
@@ -130,6 +131,9 @@ test('npm pack output excludes private memory and scratch artifacts', async () =
   assert.ok(files.includes('package.json'));
   assert.ok(files.includes('custom-elements.json'));
   assert.ok(files.includes('index.js'));
+  assert.ok(files.includes('cli.js'));
+  assert.ok(files.includes('discover.js'));
+  assert.ok(files.includes('audit.js'));
   assert.ok(files.includes('ui/index.js'));
   assert.ok(files.includes('runtime/index.js'));
   assert.ok(files.includes('manifest/component-registry.js'));
@@ -149,8 +153,13 @@ test('packed package imports from a consumer project with SSR-safe entrypoints',
     run('tar', ['-xzf', tarball, '-C', tmpRoot]);
     await assertNoPrivatePackContent(packageDir);
     await mkdir(join(consumerDir, 'node_modules', '@symbiotejs'), { recursive: true });
+    await mkdir(join(consumerDir, 'node_modules', '.bin'), { recursive: true });
     await mkdir(join(tmpNodeModules, '@symbiotejs'), { recursive: true });
     await symlink(packageDir, join(consumerDir, 'node_modules', 'symbiote-ui'), 'dir');
+    await symlink(
+      join('..', 'symbiote-ui', 'cli.js'),
+      join(consumerDir, 'node_modules', '.bin', 'symbiote-ui')
+    );
     await symlink(
       resolve(repoRoot, 'node_modules', '@symbiotejs', 'symbiote'),
       join(consumerDir, 'node_modules', '@symbiotejs', 'symbiote'),
@@ -206,6 +215,10 @@ test('packed package imports from a consumer project with SSR-safe entrypoints',
       if (typeof dualView.createDualViewController !== 'function') throw new Error('missing dualView.createDualViewController');
     `;
     run(process.execPath, ['--input-type=module', '-e', smoke], { cwd: consumerDir });
+    let cli = run(process.execPath, [join('node_modules', '.bin', 'symbiote-ui'), 'discover'], { cwd: consumerDir });
+    let data = JSON.parse(cli.stdout);
+    assert.equal(data.command, 'discover');
+    assert.equal(data.package.name, 'symbiote-ui');
   } finally {
     await rm(tmpRoot, { recursive: true, force: true });
   }

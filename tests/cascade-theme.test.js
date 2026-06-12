@@ -767,9 +767,16 @@ test('cascade theme editor is a reusable browser module', async () => {
   assert.match(editor, /CascadeThemeEditor\.reg\('cascade-theme-editor'\)/);
   assert.match(widget, /class CascadeThemeWidget extends Symbiote/);
   assert.match(widget, /COMPACT_CONTROLS = \['brightness', 'contrast', 'chroma', 'hue', 'pattern'\]/);
-  assert.match(widget, /applyCascadeTheme\(this\.\#resolveTarget\(\), this\.\#state, \{ notify: false \}\)/);
+  assert.match(widget, /syncOverlayTheme/);
+  assert.match(widget, /let target = this\.\#resolveTarget\(\)/);
+  assert.match(widget, /applyCascadeTheme\(target, this\.\#state, \{ notify: false \}\)/);
+  assert.match(widget, /this\.\#syncPopoverTheme\(target\)/);
+  assert.match(widget, /#queryControlElements\(selector\)/);
+  assert.match(widget, /this\.\#queryControlElements\('\[data-theme-mode\]'\)/);
+  assert.match(widget, /this\.\#queryControlElements\('\[data-theme-control\]'\)/);
+  assert.match(widget, /this\.\#queryControlElements\('\[data-theme-output\]'\)/);
   assert.match(widget, /cascade-theme-open-full/);
-  assert.match(widget, /mountOverlayToDocument\(popover, this\)/);
+  assert.match(widget, /mountOverlayToDocument\(popover, this\.\#resolveTarget\(\)\)/);
   assert.match(widget, /bringOverlayToFront\(popover\)/);
   assert.match(widget, /restoreOverlayHome\(popover\)/);
   assert.match(widget, /positionOverlay\(trigger, popover, 'bottom-end'/);
@@ -778,6 +785,16 @@ test('cascade theme editor is a reusable browser module', async () => {
   assert.match(widgetTemplate, /ref="trigger"/);
   assert.match(widgetTemplate, /ref="popover"/);
   assert.match(widgetStyles, /cascade-theme-widget/);
+  assert.match(widgetStyles, /cascade-theme-widget \.ctw-trigger \{/);
+  assert.match(widgetStyles, /min-height: var\(--sn-shell-menu-action-height/);
+  assert.match(widgetStyles, /border: 1px solid transparent/);
+  assert.match(widgetStyles, /border-radius: var\(--sn-layout-header-button-radius/);
+  assert.match(widgetStyles, /background: transparent/);
+  assert.match(widgetStyles, /color: var\(--sn-text-dim\)/);
+  assert.match(widgetStyles, /font: inherit/);
+  assert.match(widgetStyles, /font-size: var\(--sn-shell-menu-action-size/);
+  assert.match(widgetStyles, /cascade-theme-widget \.ctw-trigger:hover/);
+  assert.match(widgetStyles, /background: var\(--sn-node-hover\)/);
   assert.match(widgetStyles, /\.ctw-popover\[data-overlay-portal\]/);
   assert.match(widgetStyles, /--sn-overlay-z-base, 20000/);
   assert.doesNotMatch(widgetStyles, /--sn-theme-widget-z, 80/);
@@ -1033,6 +1050,16 @@ test('cascade theme visual smoke fixtures cover luminance and chroma states', as
   assert.notEqual(highChroma.tokens['--sn-theme-density'], dark.tokens['--sn-theme-density']);
   assert.notEqual(highChroma.tokens['--sn-theme-outline-strength'], dark.tokens['--sn-theme-outline-strength']);
   assert.notEqual(highChroma.tokens['--sn-theme-pattern-brightness'], dark.tokens['--sn-theme-pattern-brightness']);
+
+  let patternOff = themeModule.createCascadeTheme({ mode: 'dark', pattern: 0 });
+  let patternOn = themeModule.createCascadeTheme({ mode: 'dark', pattern: 100 });
+  assert.notEqual(patternOff.tokens['--sn-cell-base-alpha'], patternOn.tokens['--sn-cell-base-alpha']);
+  assert.notEqual(patternOff.tokens['--sn-cell-alpha-span'], patternOn.tokens['--sn-cell-alpha-span']);
+  assert.equal(patternOff.tokens['--sn-cell-dot'], patternOn.tokens['--sn-cell-dot']);
+  assert.equal(patternOff.tokens['--sn-cell-glare'], patternOn.tokens['--sn-cell-glare']);
+  assert.equal(patternOff.tokens['--sn-cell-vignette-mid'], patternOn.tokens['--sn-cell-vignette-mid']);
+  assert.equal(patternOff.tokens['--sn-cell-vignette-edge'], patternOn.tokens['--sn-cell-vignette-edge']);
+  assert.equal(patternOff.tokens['--sn-cell-noise'], patternOn.tokens['--sn-cell-noise']);
 });
 
 test('cell background derives runtime palette and metrics from cascade tokens', async () => {
@@ -1407,6 +1434,9 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(cellBgTheme, /cell-bg-animation-stop/);
   assert.match(cellBgTheme, /cell-bg-animation-idle/);
   assert.match(cellBg, /--sn-cell-bg/);
+  assert.match(cellBg, /radial-gradient\(circle at 50% -10%, var\(--sn-cell-glare\)/);
+  assert.match(cellBg, /radial-gradient\(circle at 50% 50%, transparent 20%, var\(--sn-cell-vignette-mid\)/);
+  assert.doesNotMatch(cellBg, /radial-gradient\(ellipse/);
   assert.match(cellBg, /--sn-cell-glare/);
   assert.match(cellBg, /--sn-cell-noise/);
   assert.match(registry, /panel-menu-actions/);
@@ -1560,6 +1590,13 @@ test('default provider exposes cascade control and scrollbar parity tokens', asy
   assert.equal(tokens['--sn-tab-accent-3'], 'var(--sn-cat-instance)');
   assert.equal(tokens['--sn-tab-accent-4'], 'var(--sn-type-action)');
   assert.equal(tokens['--sn-tab-accent-5'], 'var(--sn-cat-class)');
+  assert.equal(tokens['--sn-layout-menu-row-height'], 'calc(30px * var(--sn-theme-density))');
+  assert.equal(tokens['--sn-layout-menu-row-label-width'], 'calc(66px * var(--sn-theme-density))');
+  assert.equal(tokens['--sn-layout-menu-action-height'], 'calc(28px * var(--sn-theme-density))');
+  assert.equal(tokens['--sn-layout-menu-action-size'], 'calc(12px * var(--sn-theme-type-scale))');
+  assert.equal(tokens['--sn-layout-menu-icon-size'], 'calc(16px * var(--sn-theme-type-scale))');
+  assert.equal(tokens['--sn-panel-radius'], 'var(--sn-node-radius)');
+  assert.equal(tokens['--sn-panel-shadow'], 'var(--sn-shadow-md)');
   assert.equal(tokens['--sn-scrollbar-width'], 'thin');
   assert.equal(tokens['--sn-scrollbar-size'], '10px');
   assert.equal(tokens['--sn-scrollbar-radius'], '999px');
@@ -1578,6 +1615,10 @@ test('default provider exposes cascade control and scrollbar parity tokens', asy
   assert.match(css, /--sn-button-danger-hover-color: hsl\(0 0% 8%\);/);
   assert.match(css, /--sn-tab-accent-0: var\(--sn-cat-server\);/);
   assert.match(css, /--sn-tab-accent-5: var\(--sn-cat-class\);/);
+  assert.match(css, /--sn-layout-menu-row-height: calc\(30px \* var\(--sn-theme-density\)\);/);
+  assert.match(css, /--sn-layout-menu-action-height: calc\(28px \* var\(--sn-theme-density\)\);/);
+  assert.match(css, /--sn-layout-menu-icon-size: calc\(16px \* var\(--sn-theme-type-scale\)\);/);
+  assert.match(css, /--sn-panel-shadow: var\(--sn-shadow-md\);/);
   assert.match(css, /--sn-transition-fast: calc\(120ms \* var\(--sn-theme-motion-scale\)\);/);
   assert.match(css, /--sn-transition-normal: calc\(240ms \* var\(--sn-theme-motion-scale\)\);/);
   assert.match(css, /--sn-transition-slow: calc\(400ms \* var\(--sn-theme-motion-scale\)\);/);
@@ -1726,6 +1767,7 @@ test('chat composer exposes reusable voice controls and agent-facing metadata', 
 
   assert.match(composer, /setVoiceControls\(config = \{\}\)/);
   assert.match(composer, /setFooterControls\(controls = \[\]\)/);
+  assert.match(composer, /setLeadingControls\(controls = \[\]\)/);
   assert.match(composer, /setVoiceInputState/);
   assert.match(composer, /setWakeListenState/);
   assert.match(composer, /setVoiceResponseState/);
@@ -1742,6 +1784,7 @@ test('chat composer exposes reusable voice controls and agent-facing metadata', 
   assert.match(composer, /chat-composer-voice-command-toggle/);
   assert.match(composer, /chat-composer-voice-language-change/);
   assert.match(composer, /chat-composer-footer-control/);
+  assert.match(composer, /chat-composer-leading-control/);
   assert.match(composer, /chat-composer-footer-control-change/);
   assert.match(composer, /_handleDefaultVoiceApprove/);
   assert.match(composer, /_showLocalRecordingPreview\(''\)/);
@@ -1756,6 +1799,7 @@ test('chat composer exposes reusable voice controls and agent-facing metadata', 
   assert.match(composer, /_syncVoiceLanguage\(\{ visible = false, enabled = true/);
   assert.match(composer, /btn\.disabled = Boolean\(this\.\$\.disabled\) \|\| !enabled/);
   assert.match(composer, /data-footer-control-id/);
+  assert.match(composer, /data-leading-control-id/);
   assert.match(composer, /footerControlId/);
   assert.match(composer, /normalizedState === 'listening'/);
   assert.match(composer, /normalizedState === 'transcribing'/);
@@ -1766,6 +1810,7 @@ test('chat composer exposes reusable voice controls and agent-facing metadata', 
   assert.match(composer, /class="btn-voice-command"/);
   assert.match(composer, /class="btn-voice-language"/);
   assert.match(composer, /class="composer-actions"/);
+  assert.match(composer, /class="composer-leading-controls"/);
   assert.match(composer, /<\/div>\s*<button class="btn-mic"[\s\S]*<sn-button class="btn-send"/);
   assert.match(styles, /\.btn-mic\[hidden\]/);
   assert.match(styles, /\.btn-wake-listen\[hidden\]/);
@@ -1777,11 +1822,16 @@ test('chat composer exposes reusable voice controls and agent-facing metadata', 
   assert.match(styles, /\.btn-voice-command[\s\S]*order: 40/);
   assert.match(styles, /\.btn-voice-language[\s\S]*order: 50/);
   assert.match(styles, /\.composer-footer-btn\.active/);
+  assert.match(styles, /\.composer-leading-btn\.active/);
   assert.match(styles, /\.composer-footer-value/);
   assert.match(styles, /\.composer-footer-checkbox/);
   assert.match(styles, /container: composer-body \/ inline-size/);
   assert.match(styles, /grid-template-rows: auto/);
   assert.match(styles, /grid-template-columns: minmax\(0, 1fr\) auto auto/);
+  assert.match(styles, /\[leading-controls\][\s\S]*grid-template-columns: auto minmax\(0, 1fr\) auto auto auto/);
+  assert.match(styles, /\[leading-controls\][\s\S]*padding-inline-start: var\(--sn-composer-body-leading-padding-inline-start, 8px\)/);
+  assert.match(styles, /\.composer-leading-controls[\s\S]*display: none/);
+  assert.match(styles, /\[leading-controls\][\s\S]*\.composer-leading-controls[\s\S]*display: flex/);
   assert.match(styles, /\.composer-actions[\s\S]*justify-self: flex-end/);
   assert.match(styles, /\.composer-actions[\s\S]*align-self: end/);
   assert.match(styles, /\.composer-actions[\s\S]*flex-wrap: nowrap/);
@@ -1795,6 +1845,7 @@ test('chat composer exposes reusable voice controls and agent-facing metadata', 
   assert.match(styles, /@container chat-composer \(width <= 480px\)[\s\S]*\.composer-actions[\s\S]*flex-wrap: wrap/);
   assert.match(styles, /@container chat-composer \(width <= 480px\)[\s\S]*\.btn-mic[\s\S]*grid-column: 2/);
   assert.match(styles, /@container chat-composer \(width <= 480px\)[\s\S]*\.composer-body > sn-button\.btn-send[\s\S]*grid-column: 3/);
+  assert.match(styles, /@container chat-composer \(width <= 480px\)[\s\S]*\[leading-controls\][\s\S]*grid-template-columns: auto minmax\(0, 1fr\) auto auto/);
   assert.match(styles, /@container composer-body \(width <= 340px\)/);
   assert.match(styles, /36cqi/);
   assert.match(styles, /38cqi/);
@@ -1823,6 +1874,10 @@ test('chat composer exposes reusable voice controls and agent-facing metadata', 
   assert.match(registry, /recorder-intents/);
   assert.match(registry, /transcription-intents/);
   assert.match(registry, /footer-control-intents/);
+  assert.match(registry, /leading-control-intents/);
+  assert.match(registry, /leading-control-intent-router/);
+  assert.match(registry, /setLeadingControls/);
+  assert.match(registry, /chat_composer_leading_control/);
   assert.match(registry, /setFooterControls/);
   assert.match(registry, /chat_composer_voice_control/);
   assert.match(registry, /chat_composer_voice_flow/);
@@ -1831,6 +1886,8 @@ test('chat composer exposes reusable voice controls and agent-facing metadata', 
   assert.match(registry, /chat-composer-recorder-intent/);
   assert.match(registry, /chat-composer-transcription-intent/);
   assert.match(registry, /chat-composer-footer-control-change/);
+  assert.match(registry, /chat-composer-leading-control/);
+  assert.match(registry, /anchorRect/);
   assert.match(registry, /listening/);
   assert.match(registry, /transcribing/);
   assert.match(registry, /preview-approve/);
@@ -1838,6 +1895,7 @@ test('chat composer exposes reusable voice controls and agent-facing metadata', 
   assert.match(registry, /preview-send/);
   assert.match(registry, /chat-composer-voice-language-change/);
   assert.match(customElements, /"name": "setVoiceControls"/);
+  assert.match(customElements, /"name": "setLeadingControls"/);
   assert.match(customElements, /"name": "setFooterControls"/);
   assert.match(customElements, /"name": "getVoicePreviewText"/);
   assert.match(customElements, /"name": "chat-composer-voice-input"/);
@@ -1845,7 +1903,10 @@ test('chat composer exposes reusable voice controls and agent-facing metadata', 
   assert.match(customElements, /"name": "chat-composer-recorder-intent"/);
   assert.match(customElements, /"name": "chat-composer-transcription-intent"/);
   assert.match(customElements, /"name": "chat-composer-footer-control"/);
+  assert.match(customElements, /"name": "chat-composer-leading-control"/);
+  assert.match(customElements, /"name": "anchorRect"/);
   assert.match(customElements, /"name": "chat_composer_voice_flow"/);
+  assert.match(customElements, /"name": "chat_composer_leading_control"/);
   assert.match(customElements, /"name": "chat_composer_footer_control"/);
   assert.match(customElements, /"name": "--sn-composer-send-icon-size"/);
   assert.match(customElements, /"name": "--sn-composer-collapsed-control-padding"/);
@@ -1869,6 +1930,10 @@ test('chat composer exposes reusable voice controls and agent-facing metadata', 
     eventByName.get('chat-composer-audio-captured').detail.map((item) => item.name),
     ['blob', 'mimeType']
   );
+  assert.deepEqual(
+    eventByName.get('chat-composer-leading-control').detail.map((item) => item.name),
+    ['id', 'kind', 'value', 'anchorRect']
+  );
   let voiceFlowTool = component.contract.webmcp.tools.find((tool) => tool.name === 'chat_composer_voice_flow');
   assert.ok(voiceFlowTool);
   assert.match(voiceFlowTool.description, /VoiceRuntime/);
@@ -1881,7 +1946,7 @@ test('chat composer exposes reusable voice controls and agent-facing metadata', 
     .find((declaration) => declaration.tagName === 'chat-composer');
   assert.deepEqual(
     customComposer.metadata.contract.webmcp.tools.map((tool) => tool.name),
-    ['chat_composer_submit', 'chat_composer_voice_control', 'chat_composer_voice_flow', 'chat_composer_footer_control']
+    ['chat_composer_submit', 'chat_composer_voice_control', 'chat_composer_voice_flow', 'chat_composer_footer_control', 'chat_composer_leading_control']
   );
   assert.deepEqual(
     customComposer.events.find((event) => event.name === 'chat-composer-recorder-intent').detail.map((item) => item.name),
@@ -1895,11 +1960,12 @@ test('chat composer exposes reusable voice controls and agent-facing metadata', 
 });
 
 test('chat workspace composes reusable chat surfaces and exposes host intent contract', async () => {
-  const [workspace, navTree, template, styles, registry, customElements, registryModule] = await Promise.all([
+  const [workspace, navTree, template, styles, transcriptStyles, registry, customElements, registryModule] = await Promise.all([
     readFile(chatWorkspaceSource, 'utf8'),
     readFile(chatNavTreeSource, 'utf8'),
     readFile(chatWorkspaceTemplate, 'utf8'),
     readFile(chatWorkspaceStyles, 'utf8'),
+    readFile(chatTranscriptStyles, 'utf8'),
     readFile(componentRegistrySource, 'utf8'),
     readFile(customElementsSource, 'utf8'),
     import(componentRegistrySource.href),
@@ -1915,7 +1981,8 @@ test('chat workspace composes reusable chat surfaces and exposes host intent con
   assert.match(navTree, /labels/);
   assert.match(template, /<chat-sidebar-shell/);
   assert.match(template, /<chat-transcript/);
-  assert.match(template, /<cell-bg[\s\S]*class="chat-workspace-bg"[\s\S]*auto-trigger="false"/);
+  assert.match(template, /<cell-bg[\s\S]*class="chat-workspace-bg"/);
+  assert.doesNotMatch(template, /auto-trigger="false"/);
   assert.match(template, /<chat-composer/);
   assert.match(styles, /container: chat-workspace \/ inline-size/);
   assert.match(styles, /background: var\(--sn-chat-bg\)/);
@@ -1971,8 +2038,12 @@ test('chat workspace composes reusable chat surfaces and exposes host intent con
   assert.match(registry, /host-owned-transport/);
   assert.match(registry, /animated-background-lifecycle/);
   assert.match(registry, /chat-nav-tree-helper/);
+  assert.match(registry, /overlay-stack-reserve/);
   assert.match(registry, /buildChatNavTree\(\)/);
   assert.match(registry, /--sn-theme-pattern-brightness/);
+  assert.match(workspace, /setOverlayStackReserve/);
+  assert.match(styles, /--sn-chat-overlay-stack-reserve/);
+  assert.match(transcriptStyles, /scroll-padding-block-end: var\(--sn-chat-overlay-stack-reserve/);
 
   let component = registryModule.getComponent('chat-workspace');
   assert.ok(component);
@@ -1982,9 +2053,11 @@ test('chat workspace composes reusable chat surfaces and exposes host intent con
   );
   assert.ok(component.contract.methods.some((method) => method.name === 'setWorkspaceState'));
   assert.ok(component.contract.methods.some((method) => method.name === 'setEmpty'));
+  assert.ok(component.contract.methods.some((method) => method.name === 'setOverlayStackReserve'));
   assert.ok(component.contract.methods.some((method) => method.name === 'suspendLayout'));
   assert.ok(component.contract.methods.some((method) => method.name === 'resumeLayout'));
   assert.ok(component.contract.capabilities.includes('chat-nav-tree-helper'));
+  assert.ok(component.contract.capabilities.includes('overlay-stack-reserve'));
   assert.ok(component.contract.capabilities.includes('layout-lifecycle'));
   assert.ok(component.contract.events.some((event) => event.name === 'chat-workspace-input'));
   assert.ok(component.contract.events.some((event) => event.name === 'chat-workspace-key'));
@@ -1997,6 +2070,8 @@ test('chat workspace composes reusable chat surfaces and exposes host intent con
     .find((declaration) => declaration.tagName === 'chat-workspace');
   assert.ok(customWorkspace);
   assert.match(customWorkspace.componentDescription, /chat-nav-tree-helper/);
+  assert.match(customWorkspace.componentDescription, /overlay-stack-reserve/);
+  assert.ok(customWorkspace.metadata.contract.methods.some((method) => method.name === 'setOverlayStackReserve'));
   assert.match(customElements, /buildChatNavTree\(\)/);
   assert.deepEqual(
     customWorkspace.metadata.contract.webmcp.tools.map((tool) => tool.name),

@@ -39,6 +39,11 @@ function normalizeBackgroundInput(input = {}) {
   return input && typeof input === 'object' ? input : {};
 }
 
+function normalizePixelValue(value = 0) {
+  let number = Number.parseFloat(value);
+  return Number.isFinite(number) && number > 0 ? Math.ceil(number) : 0;
+}
+
 export class ChatWorkspace extends Symbiote {
   static isoMode = true;
 
@@ -94,6 +99,9 @@ export class ChatWorkspace extends Symbiote {
     if ('composer' in state) this.setComposerState(state.composer || {});
     if ('voiceControls' in state) this.setVoiceControls(state.voiceControls || {});
     if ('liveStatus' in state) this.setLiveStatus(state.liveStatus);
+    if ('overlayStackReserve' in state || 'overlayReserve' in state) {
+      this.setOverlayStackReserve(state.overlayStackReserve ?? state.overlayReserve);
+    }
     if ('background' in state || 'backgroundState' in state) {
       this.setBackgroundState(state.backgroundState || state.background || {});
     }
@@ -135,6 +143,7 @@ export class ChatWorkspace extends Symbiote {
     if (!composer || !state || typeof state !== 'object') return;
     if ('value' in state) composer.setValue(state.value);
     if ('attachedContext' in state) composer.setAttachedContext(state.attachedContext);
+    if ('leadingControls' in state) composer.setLeadingControls(state.leadingControls);
     if ('footerControls' in state) composer.setFooterControls(state.footerControls);
     if ('footerHtml' in state) composer.setFooterHtml(state.footerHtml);
     if ('disabled' in state) composer.setDisabled(state.disabled);
@@ -157,6 +166,13 @@ export class ChatWorkspace extends Symbiote {
 
   clearVoicePreview() {
     this.getComposer()?.clearVoicePreview();
+  }
+
+  setOverlayStackReserve(value = 0) {
+    let reserve = normalizePixelValue(value);
+    this.style.setProperty('--sn-chat-overlay-stack-reserve', `${reserve}px`);
+    this.dataset.overlayStackReserve = String(reserve);
+    this.getTranscript()?.updateScrollBottomButton?.();
   }
 
   setLiveStatus(meta = null) {
@@ -249,6 +265,7 @@ export class ChatWorkspace extends Symbiote {
       value: this.getComposer()?.$.value || '',
       sending: Boolean(this.getComposer()?.$.isSending),
     }));
+    route('chat-composer-leading-control', 'chat-workspace-leading-intent');
     route('chat-composer-footer-control', 'chat-workspace-footer-intent');
     route('chat-composer-footer-control-change', 'chat-workspace-footer-intent');
     route('chat-composer-param-change', 'chat-workspace-footer-intent');

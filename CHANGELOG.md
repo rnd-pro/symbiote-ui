@@ -4,6 +4,11 @@ All notable changes to `symbiote-ui` will be documented in this file.
 
 ## Unreleased
 
+### Fixed
+
+- Included the CLI audit module in the published package so `symbiote-ui
+  discover` works from installed npm bin shims.
+
 ## [0.3.0-alpha.44] - 2026-06-11
 
 ### Added
