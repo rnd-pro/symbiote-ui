@@ -196,9 +196,9 @@ export function getForceLayoutOptions(nodeCount, {
       1.2
     ));
     options.centerPull = rounded(clampNumber(
-      0.18 + densityScale * 0.12 + (metrics.groupCount > 1 ? 0.08 : 0),
-      0.18,
-      0.42
+      0.12 + densityScale * 0.06 + groupScale * 0.03,
+      0.12,
+      0.28
     ));
     options.wellRepulsion = rounded(clampNumber(
       4 + metrics.groupCount * 1.1 + groupRadius * 0.6 + metrics.crossLinkRatio * 0.8,

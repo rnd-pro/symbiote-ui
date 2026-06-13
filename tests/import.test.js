@@ -29,6 +29,8 @@ test('root and metadata entrypoints import in Node', async () => {
   assert.equal(typeof root.normalizeSourceDocument, 'function');
   assert.equal(typeof root.normalizeCanvasGraphGroups, 'function');
   assert.equal(typeof root.normalizeForceGroups, 'function');
+  assert.equal(typeof root.resolveCanvasGraphViewportFit, 'function');
+  assert.equal(typeof root.resolveCanvasGraphMinZoom, 'function');
   assert.equal(typeof root.createGraphViewModeController, 'function');
   assert.equal(typeof root.configureAutoLocalization, 'function');
   assert.equal(typeof root.getNavigatorLocalePreferences, 'function');
@@ -173,6 +175,8 @@ test('canvas public entrypoint exposes graph and routing helpers', async () => {
   assert.equal(typeof canvas.createGraphExplorerViewController, 'function');
   assert.equal(typeof canvas.createGraphViewModeController, 'function');
   assert.equal(typeof canvas.applyGraphExplorerViewMode, 'function');
+  assert.equal(typeof canvas.resolveCanvasGraphViewportFit, 'function');
+  assert.equal(typeof canvas.resolveCanvasGraphMinZoom, 'function');
   assert.deepEqual(canvas.GRAPH_VIEW_MODES, ['structured', 'flat']);
   assert.equal(canvas.normalizeGraphExplorerViewMode('flat'), 'flat');
   assert.equal(canvas.normalizeGraphViewMode('flat'), 'flat');
@@ -485,6 +489,7 @@ test('canvas graph focus layer targets separate selected hubs from surrounding l
   let {
     CANVAS_GRAPH_LAYER_TARGETS,
     getLayerAnimationFrame,
+    resolveIdleFrame,
   } = await import('../canvas/CanvasGraph/CanvasGraphDrawState.js');
   let layerAnim = {
     0: { scale: 1, opacity: 1, parallax: 0 },
@@ -510,6 +515,28 @@ test('canvas graph focus layer targets separate selected hubs from surrounding l
   assert.ok(frame[1].opacity < 1);
   assert.ok(frame[2].opacity < frame[1].opacity);
   assert.ok(frame[2].scale < frame[1].scale);
+
+  let idle = resolveIdleFrame({
+    targetZoom: 1,
+    zoom: 1,
+    dragDeltaX: 0,
+    dragDeltaY: 0,
+    prevDragDeltaX: 0,
+    prevDragDeltaY: 0,
+    layerAnim: { 0: { scale: 1 } },
+    isIdle: true,
+    layerTargets: { scale: [1] },
+    lastAlpha: 0,
+    dragNode: null,
+    isPanning: false,
+    deactivating: false,
+    targetPanX: null,
+    infoPanel: { opacity: 0, lines: [] },
+    nodeAppearancesActive: true,
+    idleFrames: 8,
+  });
+  assert.equal(idle.shouldStop, false);
+  assert.equal(idle.idleFrames, 0);
 });
 
 test('canvas graph passes normalized semantic groups into the force layout', async () => {
@@ -860,6 +887,14 @@ test('discover exposes the standalone package contract', async () => {
     .find((item) => item.tagName === 'canvas-graph')
     .contract.methods
     .some((method) => method.name === 'resumeLayout'));
+  assert.ok(data.manifest.components
+    .find((item) => item.tagName === 'canvas-graph')
+    .contract.methods
+    .some((method) => method.name === 'setForceLayoutOptions'));
+  assert.ok(data.manifest.components
+    .find((item) => item.tagName === 'canvas-graph')
+    .contract.methods
+    .some((method) => method.name === 'animateNodeAppearance'));
   assert.equal(
     data.manifest.components
       .find((item) => item.tagName === 'canvas-graph')

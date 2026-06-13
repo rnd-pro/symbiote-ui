@@ -3327,6 +3327,8 @@ export let COMPONENTS = [
         { name: 'fitNodes', type: 'function', description: 'Fits one or more visible graph node ids into the canvas viewport.' },
         { name: 'focusNodes', type: 'function', description: 'Agent-facing alias for fitting one or more graph node ids into the viewport.' },
         { name: 'fitView', type: 'function', description: 'Fits the visible graph into the canvas viewport.' },
+        { name: 'setForceLayoutOptions', type: 'function', description: 'Applies numeric force-layout tuning options without changing the host-owned graph model.' },
+        { name: 'animateNodeAppearance', type: 'function', description: 'Replays node appearance animation for visible graph nodes or a supplied node id set.' },
         { name: 'resetView', type: 'function', description: 'Resets viewport pan and zoom.' },
         { name: 'setLayoutSnapshot', type: 'function', description: 'Restores persisted graph node positions and viewport state.' },
         { name: 'getLayoutSnapshot', type: 'function', description: 'Returns serializable node positions and viewport state.' },

@@ -265,6 +265,7 @@ export function resolveIdleFrame(options) {
     deactivating,
     targetPanX,
     infoPanel,
+    nodeAppearancesActive = false,
     idleFrames,
   } = options;
 
@@ -287,6 +288,7 @@ export function resolveIdleFrame(options) {
     && !hasDrag
     && !hasActiveAnim
     && !hasPanAnim
+    && !nodeAppearancesActive
     && !infoPanelAnimating;
 
   let nextIdleFrames = shouldIdle ? idleFrames + 1 : 0;

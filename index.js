@@ -99,6 +99,14 @@ export {
   normalizeForceGroups,
 } from './canvas/graph-layout.js';
 export {
+  MAX_CANVAS_GRAPH_ZOOM,
+  MIN_CANVAS_GRAPH_ZOOM,
+  resolveCanvasGraphMinZoom,
+  resolveCanvasGraphViewportFit,
+  resolveFitPadding,
+  resolveFrameFitZoom,
+} from './canvas/CanvasGraph/CanvasGraphViewport.js';
+export {
   GRAPH_DIRECTORY_FRAME_COLORS,
   GRAPH_PATH_STYLES,
   GRAPH_VIEW_MODES,

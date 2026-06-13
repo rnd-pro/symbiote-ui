@@ -857,6 +857,7 @@ All modules are also re-exported from the barrel `symbiote-ui/xr`.
 ## Demos
 
 - [`demo/cascade-theme-lab.html`](./demo/cascade-theme-lab.html) - agent workspace showcase with project-type top tabs, per-tab sidebar menus, a right collapsed page-agent chat layout panel, project file tree, source editor, markdown/source viewer, editable node canvas, canvas graph overview, chat and voice controls, runtime UI contracts, spatial node preview, component surfaces, and cascade theme editing.
+- [`demo/canvas-graph-gravity-lab.html`](./demo/canvas-graph-gravity-lab.html) - standalone `canvas-graph` force controls with fit, focus, node appearance animation, and one-node zoom diagnostics.
 - [`demo/pcb-router-stress.html`](./demo/pcb-router-stress.html) - animated PCB route diagnostics with orbit metrics, keyframes, and agent-readable JSON samples.
 
 ## WebMCP

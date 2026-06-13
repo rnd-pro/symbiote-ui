@@ -41,6 +41,7 @@ const layoutSource = new URL('../layout/Layout/Layout.js', import.meta.url);
 const layoutStyles = new URL('../layout/Layout/Layout.css.js', import.meta.url);
 const layoutTemplate = new URL('../layout/Layout/Layout.tpl.js', import.meta.url);
 const canvasGraphSource = new URL('../canvas/CanvasGraph/CanvasGraph.js', import.meta.url);
+const canvasGraphViewportSource = new URL('../canvas/CanvasGraph/CanvasGraphViewport.js', import.meta.url);
 const cascadeThemeSource = new URL('../themes/cascade-theme.js', import.meta.url);
 const defaultProviderThemeSource = new URL('../themes/default-provider.js', import.meta.url);
 const defaultDarkThemeSource = new URL('../themes/default-dark.js', import.meta.url);
@@ -604,12 +605,14 @@ test('fullscreen tab layer stays above floating toolbars in theme defaults', asy
 
 test('canvas graph fit clamps padding for narrow viewports', async () => {
   let source = await readFile(canvasGraphSource, 'utf8');
+  let viewportSource = await readFile(canvasGraphViewportSource, 'utf8');
   let styles = await readFile(new URL('../canvas/CanvasGraph/CanvasGraph.css.js', import.meta.url), 'utf8');
 
-  assert.match(source, /function resolveFitPadding/);
-  assert.match(source, /minSide \* 0\.32/);
-  assert.match(source, /Math\.max\(1,\s*rect\.width - fitPadding \* 2\)/);
-  assert.match(source, /Math\.max\(1,\s*rect\.width - padding \* 2\)/);
+  assert.match(source, /resolveCanvasGraphViewportFit/);
+  assert.match(viewportSource, /function resolveFitPadding/);
+  assert.match(viewportSource, /minSide \* 0\.32/);
+  assert.match(viewportSource, /resolveFrameFitZoom\(frame,\s*rect,\s*fitPadding\)/);
+  assert.match(viewportSource, /Math\.max\(1,\s*rect\.width - padding \* 2\)/);
   assert.match(styles, /touch-action:\s*none;/);
   assert.match(source, /_activePointers = new Map/);
   assert.match(source, /_startPinchGesture/);
@@ -621,12 +624,13 @@ test('canvas graph fit clamps padding for narrow viewports', async () => {
 
 test('canvas graph wheel zoom uses deltaMode-aware half-strength scaling', async () => {
   let source = await readFile(canvasGraphSource, 'utf8');
+  let viewportSource = await readFile(canvasGraphViewportSource, 'utf8');
 
   assert.equal(DEFAULT_WHEEL_ZOOM_SENSITIVITY, 0.5);
   assert.match(source, /resolveWheelZoomFactor\(e\)/);
   assert.doesNotMatch(source, /e\.deltaY > 0 \? 0\.92 : 1\.08/);
-  assert.match(source, /const MAX_ZOOM_OUT_FIT_MULTIPLIER = 4;/);
-  assert.match(source, /_resolveMinZoom\(rect[\s\S]*this\._resolveGraphFitZoom\(rect\) \/ MAX_ZOOM_OUT_FIT_MULTIPLIER/);
+  assert.match(viewportSource, /export const MAX_ZOOM_OUT_FIT_MULTIPLIER = 4;/);
+  assert.match(source, /_resolveMinZoom\(rect[\s\S]*return resolveCanvasGraphMinZoom\(\{/);
   assert.match(source, /_clampZoom\(this\._targetZoom \* factor,\s*rect\)/);
   assert.match(source, /_clampZoom\(this\._pinchGesture\.zoom \* \(distance \/ this\._pinchGesture\.distance\),\s*rect\)/);
   assert.doesNotMatch(source, /this\._targetZoom = Math\.max\(0\.02,\s*Math\.min\(5,\s*this\._targetZoom \* factor\)\)/);

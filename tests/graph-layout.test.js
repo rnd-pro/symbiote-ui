@@ -18,6 +18,11 @@ import {
   createCanvasGraphStore,
   normalizeCanvasGraphModel,
 } from '../canvas/graph-model.js';
+import {
+  MIN_CANVAS_GRAPH_ZOOM,
+  resolveCanvasGraphMinZoom,
+  resolveCanvasGraphViewportFit,
+} from '../canvas/CanvasGraph/CanvasGraphViewport.js';
 
 function createEditor(nodes, connections = []) {
   return {
@@ -205,6 +210,46 @@ describe('node graph layout helpers', () => {
     assert.ok(options.wellRepulsion > 5);
     assert.ok(options.crossLinkScale < 0.32);
     assert.ok(options.chargeStrength < -150);
+  });
+
+  it('keeps dense process graph gravity below cluster separation forces', () => {
+    let nodes = Array.from({ length: 48 }, (_, index) => `node-${index}`);
+    let groups = Object.fromEntries(
+      Array.from({ length: 6 }, (_, groupIndex) => [
+        `group-${groupIndex}`,
+        nodes.slice(groupIndex * 8, groupIndex * 8 + 8),
+      ])
+    );
+    let edges = [];
+    for (let index = 0; index < nodes.length - 1; index++) {
+      edges.push({ from: nodes[index], to: nodes[index + 1] });
+      if (index + 8 < nodes.length) edges.push({ from: nodes[index], to: nodes[index + 8] });
+    }
+
+    let options = getForceLayoutOptions(nodes.length, { continuous: true, groups, edges });
+
+    assert.ok(options.centerPull <= 0.24);
+    assert.ok(options.wellRepulsion >= 8);
+    assert.ok(options.groupDistance >= 150);
+    assert.ok(options.crossLinkScale <= 0.28);
+  });
+
+  it('fits one-node canvas graph frames without converting fit zoom into a hard zoom floor', () => {
+    let rect = { width: 480, height: 320 };
+    let frame = { minX: -8, minY: -8, maxX: 8, maxY: 8 };
+
+    let fit = resolveCanvasGraphViewportFit({
+      frame,
+      rect,
+      padding: 80,
+      minZoom: MIN_CANVAS_GRAPH_ZOOM,
+      maxZoom: 1.35,
+    });
+
+    assert.equal(fit.zoom, 1.35);
+    assert.equal(fit.panX, 240);
+    assert.equal(fit.panY, 160);
+    assert.equal(resolveCanvasGraphMinZoom({ frame, rect, visibleNodeCount: 1 }), MIN_CANVAS_GRAPH_ZOOM);
   });
 
   it('computes deterministic grouped flat positions with an injected random source', () => {

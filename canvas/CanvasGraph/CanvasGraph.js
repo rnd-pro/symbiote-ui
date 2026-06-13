@@ -32,10 +32,15 @@ import {
   resolveIdleFrame,
   resolveViewportAnimation,
 } from './CanvasGraphDrawState.js';
+import {
+  MAX_CANVAS_GRAPH_ZOOM,
+  MIN_CANVAS_GRAPH_ZOOM,
+  resolveCanvasGraphMinZoom,
+  resolveCanvasGraphViewportFit,
+  resolveFitPadding,
+  resolveFrameFitZoom,
+} from './CanvasGraphViewport.js';
 import { resolveWheelZoomFactor } from '../../interactions/Zoom.js';
-const MIN_ZOOM_FALLBACK = 0.02;
-const MAX_ZOOM = 5;
-const MAX_ZOOM_OUT_FIT_MULTIPLIER = 4;
 
 const DEFAULT_EVENT_NAMES = Object.freeze({
   fileSelected: 'file-selected',
@@ -66,24 +71,6 @@ function normalizeFocusNodeIds(nodeIds) {
     normalized.push(normalizedId);
   }
   return normalized;
-}
-
-function resolveFitPadding(padding, rect) {
-  let requested = Number.isFinite(padding) ? padding : 0;
-  let minSide = Math.min(rect?.width || 0, rect?.height || 0);
-  if (minSide <= 0) return Math.max(0, requested);
-  let maxPadding = Math.max(12, minSide * 0.32);
-  return Math.max(0, Math.min(requested, maxPadding));
-}
-
-function resolveFrameFitZoom(frame, rect, padding = 0) {
-  if (!frame || !rect || rect.width === 0 || rect.height === 0) return MIN_ZOOM_FALLBACK;
-  let graphW = frame.maxX - frame.minX || 1;
-  let graphH = frame.maxY - frame.minY || 1;
-  return Math.min(
-    Math.max(1, rect.width - padding * 2) / graphW,
-    Math.max(1, rect.height - padding * 2) / graphH
-  );
 }
 
 function getPointerDistance(a, b) {
@@ -161,6 +148,53 @@ function scheduleFrame(callback) {
   }
   let id = setTimeout(callback, 0);
   return () => clearTimeout(id);
+}
+
+function normalizeFitViewArgs(padding, animate) {
+  if (padding && typeof padding === 'object') {
+    return {
+      padding: Number.isFinite(padding.padding) ? padding.padding : 60,
+      animate: padding.animate !== false,
+      maxZoom: Number.isFinite(padding.maxZoom) ? padding.maxZoom : 2,
+      minZoom: Number.isFinite(padding.minZoom) ? padding.minZoom : MIN_CANVAS_GRAPH_ZOOM,
+    };
+  }
+  return {
+    padding: Number.isFinite(padding) ? padding : 60,
+    animate: animate !== false,
+    maxZoom: 2,
+    minZoom: MIN_CANVAS_GRAPH_ZOOM,
+  };
+}
+
+function sanitizeForceLayoutOptions(options = {}) {
+  const allowed = new Set([
+    'chargeStrength',
+    'linkDistance',
+    'linkStrength',
+    'centerStrength',
+    'velocityDecay',
+    'collideStrength',
+    'alphaDecay',
+    'alphaFloor',
+    'alphaTarget',
+    'brownian',
+    'brownianThresh',
+    'pinReheat',
+    'pinCap',
+    'groupDistance',
+    'groupStrength',
+    'wellStrength',
+    'centerPull',
+    'wellRepulsion',
+    'crossLinkScale',
+  ]);
+  let normalized = {};
+  for (const [key, value] of Object.entries(options || {})) {
+    if (!allowed.has(key) || !Number.isFinite(value)) continue;
+    normalized[key] = value;
+  }
+  return normalized;
 }
 
 export class CanvasGraph extends Symbiote {
@@ -274,6 +308,8 @@ export class CanvasGraph extends Symbiote {
     this._orientationParallaxAutoPending = false;
     this._orientationParallaxAutoSettled = false;
     this._layoutSnapshot = null;
+    this._forceLayoutOverrides = {};
+    this._nodeAppearances = new Map();
     this._themeSyncQueued = false;
     this._cancelThemeSync = null;
     this._layoutSuspended = false;
@@ -465,12 +501,16 @@ export class CanvasGraph extends Symbiote {
   }
 
   _resolveMinZoom(rect = this.canvas?.getBoundingClientRect()) {
-    return Math.max(MIN_ZOOM_FALLBACK, this._resolveGraphFitZoom(rect) / MAX_ZOOM_OUT_FIT_MULTIPLIER);
+    return resolveCanvasGraphMinZoom({
+      frame: this._getVisibleGraphFrame(),
+      rect,
+      visibleNodeCount: this.nodes?.length || 0,
+    });
   }
 
   _clampZoom(zoom, rect = this.canvas?.getBoundingClientRect()) {
-    let minZoom = Math.min(MAX_ZOOM, this._resolveMinZoom(rect));
-    return Math.max(minZoom, Math.min(MAX_ZOOM, zoom));
+    let minZoom = Math.min(MAX_CANVAS_GRAPH_ZOOM, this._resolveMinZoom(rect));
+    return Math.max(minZoom, Math.min(MAX_CANVAS_GRAPH_ZOOM, zoom));
   }
 
   fitView(padding = 60, animate = true) {
@@ -478,38 +518,25 @@ export class CanvasGraph extends Symbiote {
     const rect = this.canvas.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) return;
 
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    for (const pos of this.nodePositions.values()) {
-      if (pos.x < minX) minX = pos.x;
-      if (pos.y < minY) minY = pos.y;
-      if (pos.x > maxX) maxX = pos.x;
-      if (pos.y > maxY) maxY = pos.y;
-    }
+    let opts = normalizeFitViewArgs(padding, animate);
+    let fit = resolveCanvasGraphViewportFit({
+      frame: this._getVisibleGraphFrame(),
+      rect,
+      padding: opts.padding,
+      minZoom: opts.minZoom,
+      maxZoom: opts.maxZoom,
+    });
 
-    const graphW = maxX - minX || 1;
-    const graphH = maxY - minY || 1;
-    const cx = (minX + maxX) / 2;
-    const cy = (minY + maxY) / 2;
-
-    const fitPadding = resolveFitPadding(padding, rect);
-    const newZoom = Math.max(0.02, Math.min(
-      Math.max(1, rect.width - fitPadding * 2) / graphW,
-      Math.max(1, rect.height - fitPadding * 2) / graphH,
-      2.0
-    ));
-    const newPanX = rect.width / 2 - cx * newZoom;
-    const newPanY = rect.height / 2 - cy * newZoom;
-
-    if (animate) {
-      this._targetZoom = newZoom;
-      this._targetPanX = newPanX;
-      this._targetPanY = newPanY;
+    if (opts.animate) {
+      this._targetZoom = fit.zoom;
+      this._targetPanX = fit.panX;
+      this._targetPanY = fit.panY;
       this._zoomAnchor = null;
     } else {
-      this.zoom = newZoom;
-      this._targetZoom = newZoom;
-      this.panX = newPanX;
-      this.panY = newPanY;
+      this.zoom = fit.zoom;
+      this._targetZoom = fit.zoom;
+      this.panX = fit.panX;
+      this.panY = fit.panY;
       this._targetPanX = null;
       this._targetPanY = null;
     }
@@ -529,39 +556,31 @@ export class CanvasGraph extends Symbiote {
       .filter(Boolean);
     if (frames.length === 0) return false;
 
-    let minX = Math.min(...frames.map((frame) => frame.minX));
-    let minY = Math.min(...frames.map((frame) => frame.minY));
-    let maxX = Math.max(...frames.map((frame) => frame.maxX));
-    let maxY = Math.max(...frames.map((frame) => frame.maxY));
-    let graphW = maxX - minX || 1;
-    let graphH = maxY - minY || 1;
-    let cx = (minX + maxX) / 2;
-    let cy = (minY + maxY) / 2;
-    let padding = resolveFitPadding(
-      Number.isFinite(options.padding) ? options.padding : 80,
-      rect
-    );
-    let minZoom = Number.isFinite(options.minZoom) ? options.minZoom : 0.02;
-    let maxZoom = Number.isFinite(options.maxZoom) ? options.maxZoom : 2.0;
-    let newZoom = Math.max(minZoom, Math.min(
-      Math.max(1, rect.width - padding * 2) / graphW,
-      Math.max(1, rect.height - padding * 2) / graphH,
-      maxZoom
-    ));
-    let newPanX = rect.width / 2 - cx * newZoom;
-    let newPanY = rect.height / 2 - cy * newZoom;
+    let frame = {
+      minX: Math.min(...frames.map((item) => item.minX)),
+      minY: Math.min(...frames.map((item) => item.minY)),
+      maxX: Math.max(...frames.map((item) => item.maxX)),
+      maxY: Math.max(...frames.map((item) => item.maxY)),
+    };
+    let fit = resolveCanvasGraphViewportFit({
+      frame,
+      rect,
+      padding: Number.isFinite(options.padding) ? options.padding : 80,
+      minZoom: Number.isFinite(options.minZoom) ? options.minZoom : MIN_CANVAS_GRAPH_ZOOM,
+      maxZoom: Number.isFinite(options.maxZoom) ? options.maxZoom : 2,
+    });
 
     let animate = options.animate !== false;
     this._zoomAnchor = null;
     if (animate) {
-      this._targetZoom = newZoom;
-      this._targetPanX = newPanX;
-      this._targetPanY = newPanY;
+      this._targetZoom = fit.zoom;
+      this._targetPanX = fit.panX;
+      this._targetPanY = fit.panY;
     } else {
-      this.zoom = newZoom;
-      this._targetZoom = newZoom;
-      this.panX = newPanX;
-      this.panY = newPanY;
+      this.zoom = fit.zoom;
+      this._targetZoom = fit.zoom;
+      this.panX = fit.panX;
+      this.panY = fit.panY;
       this._targetPanX = null;
       this._targetPanY = null;
     }
@@ -1057,7 +1076,13 @@ export class CanvasGraph extends Symbiote {
   }
 
   setGraphModel(model) {
+    let previousIds = new Set(this.graphDB?.nodes?.keys?.() || []);
     this.graphDB = createCanvasGraphStore(model);
+    let nextIds = [...this.graphDB.nodes.keys()];
+    let enteringIds = previousIds.size === 0
+      ? nextIds
+      : nextIds.filter((id) => !previousIds.has(id));
+    this._queueNodeAppearances(enteringIds);
 
     // Center viewport BEFORE worker starts — prevents nodes flashing at top-left
     const rect = this.canvas.getBoundingClientRect();
@@ -1067,6 +1092,64 @@ export class CanvasGraph extends Symbiote {
     }
 
     this.loadLevel(null);
+  }
+
+  setForceLayoutOptions(options = {}, { restart = false } = {}) {
+    this._forceLayoutOverrides = sanitizeForceLayoutOptions(options);
+    if (this.worker) {
+      this.worker.updateConfig?.(this._forceLayoutOverrides);
+      if (restart) {
+        this.startWorker({
+          activeGroupId: this.currentGroupId,
+          boundaryRadius: this.currentGroupId ? this.graphDB.nodes.get(this.currentGroupId)?.w / 2 : null,
+          attractors: null,
+        });
+      }
+    }
+    this.needsDraw = true;
+    this._wakeLoop();
+  }
+
+  _queueNodeAppearances(nodeIds, options = {}) {
+    if (!Array.isArray(nodeIds) || nodeIds.length === 0) return;
+    let now = globalThis.performance?.now?.() ?? Date.now();
+    let duration = Number.isFinite(options.durationMs) ? options.durationMs : 700;
+    let stagger = Number.isFinite(options.staggerMs) ? options.staggerMs : 12;
+    for (let index = 0; index < nodeIds.length; index++) {
+      let id = String(nodeIds[index] || '').trim();
+      if (!id) continue;
+      this._nodeAppearances.set(id, {
+        startTime: now + index * stagger,
+        duration,
+      });
+    }
+    this.needsDraw = true;
+    this._wakeLoop();
+  }
+
+  animateNodeAppearance(nodeIds = null, options = {}) {
+    let ids = nodeIds === null || nodeIds === undefined
+      ? this.nodes.map((node) => node.id)
+      : normalizeFocusNodeIds(nodeIds);
+    this._queueNodeAppearances(ids, options);
+    return ids.length;
+  }
+
+  _resolveNodeAppearance(nodeId, now = globalThis.performance?.now?.() ?? Date.now()) {
+    let marker = this._nodeAppearances?.get(nodeId);
+    if (!marker) return { alpha: 1, scale: 1 };
+    let elapsed = now - marker.startTime;
+    if (elapsed >= marker.duration) {
+      this._nodeAppearances.delete(nodeId);
+      return { alpha: 1, scale: 1 };
+    }
+    let progress = Math.max(0, Math.min(1, elapsed / Math.max(1, marker.duration)));
+    let eased = 1 - Math.pow(1 - progress, 3);
+    this.needsDraw = true;
+    return {
+      alpha: eased,
+      scale: 0.65 + 0.35 * eased,
+    };
   }
 
   rebuildNodeMap() { this.nodeMap = new Map(this.nodes.map(n => [n.id, n])); }
@@ -1251,6 +1334,7 @@ export class CanvasGraph extends Symbiote {
       nodeHeight: this.renderMode === 'dots' ? DOT_RADIUS * 2 : 40,
       mode: 'continuous',
       ...autoOptions,
+      ...this._forceLayoutOverrides,
       ...(customOptions || {}),
     };
   }
@@ -1583,6 +1667,8 @@ export class CanvasGraph extends Symbiote {
         return { x: (screenX - tCurrent.E) / tCurrent.A, y: (screenY - tCurrent.F) / tCurrent.A };
       };
 
+      const nodeAppearanceNow = globalThis.performance?.now?.() ?? Date.now();
+
       currentCtx.strokeStyle = toRgba(this._edgeRgb, 0.25);
       currentCtx.lineWidth = 1.5;
 
@@ -1692,6 +1778,15 @@ export class CanvasGraph extends Symbiote {
         node.aGlow = node.aGlow !== undefined ? node.aGlow : 0;
         node.aGlow += ((isActive ? 1 : 0) - node.aGlow) * 0.1;
 
+        const appearance = this._resolveNodeAppearance(node.id, nodeAppearanceNow);
+        currentCtx.save();
+        currentCtx.globalAlpha *= appearance.alpha;
+        if (Math.abs(appearance.scale - 1) > 0.001) {
+          currentCtx.translate(pos.x, pos.y);
+          currentCtx.scale(appearance.scale, appearance.scale);
+          currentCtx.translate(-pos.x, -pos.y);
+        }
+
         if (this.renderMode === 'dots') {
           let r = getNodeRadius(node, conns, { scale: node.aScale });
 
@@ -1758,6 +1853,7 @@ export class CanvasGraph extends Symbiote {
             }
           }
         }
+        currentCtx.restore();
       }
     };
 
@@ -1881,6 +1977,7 @@ export class CanvasGraph extends Symbiote {
       deactivating: this.deactivating,
       targetPanX: this._targetPanX,
       infoPanel: this._infoPanel,
+      nodeAppearancesActive: this._nodeAppearances?.size > 0,
       idleFrames: this._idleFrames,
     });
     this._prevDragDeltaX = idle.prevDragDeltaX;

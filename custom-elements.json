@@ -678,6 +678,16 @@
                 "name": "resumeLayout",
                 "type": "function",
                 "description": "Resumes graph drawing and theme sync after layout suspension."
+              },
+              {
+                "name": "setForceLayoutOptions",
+                "type": "function",
+                "description": "Applies numeric force-layout tuning options without changing the host-owned graph model."
+              },
+              {
+                "name": "animateNodeAppearance",
+                "type": "function",
+                "description": "Replays node appearance animation for visible graph nodes or a supplied node id set."
               }
             ],
             "events": [
@@ -1083,6 +1093,16 @@
                   "name": "resumeLayout",
                   "type": "function",
                   "description": "Resumes graph drawing and theme sync after layout suspension."
+                },
+                {
+                  "name": "setForceLayoutOptions",
+                  "type": "function",
+                  "description": "Applies numeric force-layout tuning options without changing the host-owned graph model."
+                },
+                {
+                  "name": "animateNodeAppearance",
+                  "type": "function",
+                  "description": "Replays node appearance animation for visible graph nodes or a supplied node id set."
                 }
               ],
               "events": [
