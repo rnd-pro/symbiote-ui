@@ -514,9 +514,9 @@ export class CanvasGraph extends Symbiote {
   }
 
   fitView(padding = 60, animate = true) {
-    if (!this.nodePositions.size) return;
+    if (!this.nodePositions.size) return false;
     const rect = this.canvas.getBoundingClientRect();
-    if (rect.width === 0 || rect.height === 0) return;
+    if (rect.width === 0 || rect.height === 0) return false;
 
     let opts = normalizeFitViewArgs(padding, animate);
     let fit = resolveCanvasGraphViewportFit({
@@ -542,6 +542,7 @@ export class CanvasGraph extends Symbiote {
     }
     this.needsDraw = true;
     this._wakeLoop();
+    return true;
   }
 
   fitNodes(nodeIds, options = {}) {
