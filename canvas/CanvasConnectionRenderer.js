@@ -70,6 +70,54 @@ function toRgba(rgb, alpha = 1) {
   return `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alpha})`;
 }
 
+function compactPathPoints(points) {
+  let compact = [];
+  for (let point of points) {
+    let prev = compact.at(-1);
+    if (!prev || Math.abs(prev.x - point.x) > 0.5 || Math.abs(prev.y - point.y) > 0.5) {
+      compact.push(point);
+    }
+  }
+  return compact;
+}
+
+function parsePathPoints(d) {
+  let tokens = String(d || '').match(/[MLHVCSQTAZ]|-?\d*\.?\d+(?:e[-+]?\d+)?/gi) || [];
+  let points = [];
+  let index = 0;
+  let command = '';
+  let x = 0;
+  let y = 0;
+  let readNumber = () => Number(tokens[index++]);
+
+  while (index < tokens.length) {
+    let token = tokens[index++];
+    if (/^[a-z]$/i.test(token)) command = token.toUpperCase();
+    else index -= 1;
+
+    if (command === 'M' || command === 'L') {
+      x = readNumber();
+      y = readNumber();
+      if (Number.isFinite(x) && Number.isFinite(y)) points.push({ x, y });
+    } else if (command === 'H') {
+      x = readNumber();
+      if (Number.isFinite(x) && Number.isFinite(y)) points.push({ x, y });
+    } else if (command === 'V') {
+      y = readNumber();
+      if (Number.isFinite(x) && Number.isFinite(y)) points.push({ x, y });
+    } else if (command === 'C') {
+      index += 4;
+      x = readNumber();
+      y = readNumber();
+      if (Number.isFinite(x) && Number.isFinite(y)) points.push({ x, y });
+    } else {
+      break;
+    }
+  }
+
+  return compactPathPoints(points);
+}
+
 /**
  * Parallel support for connection rendering via HTML5 Canvas API.
  * This is used to test performance against the DOM-bound SVG renderer.
@@ -93,6 +141,13 @@ export class CanvasConnectionRenderer {
   #batchMode = false;
   #batchDirty = false;
   #pathCache = new Map();
+  #transientPathStyle = '';
+  #transientPathStyleRequests = new Map();
+  #frozenConnectionLayer = null;
+  #progressivePcbQueue = new Set();
+  #progressivePcbFrame = 0;
+  #progressivePcbBatchSize = 4;
+  #processingProgressivePcb = false;
   #phantomSignature = '';
 
   /** @type {Array<{id:string, x:number, y:number, w:number, h:number, degree:number, color:string, label:string}>} */
@@ -144,7 +199,11 @@ export class CanvasConnectionRenderer {
   #initResizeObserver() {
     let parent = this.#canvasLayer.parentElement;
     if (!parent) return;
-    if (this.#resizeObserver && this.#resizeParent === parent) return;
+    if (this.#resizeObserver && this.#resizeParent === parent) {
+      let rect = parent.getBoundingClientRect();
+      this.#resizeCanvas(rect.width, rect.height);
+      return;
+    }
     this.#resizeObserver?.disconnect();
     this.#resizeParent = parent;
 
@@ -231,13 +290,87 @@ export class CanvasConnectionRenderer {
 
   remove(conn) {
     this.#connectionData.delete(conn.id);
-    this.#invalidatePathCache();
+    this.#pathCache.delete(conn.id);
+    this.#progressivePcbQueue.delete(conn.id);
     this.redraw();
   }
 
-  updateForNode(_nodeId) {
-    this.#invalidatePathCache();
+  updateForNode(nodeId) {
+    if (!nodeId) {
+      this.#invalidatePathCache();
+      this.redraw();
+      return;
+    }
+    if (!this.#hasPcbDragProxyForNode(nodeId)) {
+      for (const connId of this.#connectionIdsForNode(nodeId)) this.#pathCache.delete(connId);
+    }
     this.redraw();
+  }
+
+  setTransientPathStyle(style = '', options = {}) {
+    let nextStyle = style || '';
+    let source = options.source || 'default';
+    let previousScope = this.#transientPathScope();
+    let previousRequest = this.#transientPathStyleRequests.get(source);
+    let wasProgressiveSuspended = this.#progressivePcbSuspended();
+
+    if (nextStyle) {
+      let connectionIds = options.connectionIds
+        ? new Set(Array.from(options.connectionIds, String))
+        : null;
+      if (nextStyle === 'pcb-drag-proxy' && options.freezeLayer === true) {
+        this.#captureFrozenConnectionLayer();
+      } else if (nextStyle !== 'pcb-drag-proxy' || options.reuseFrozenPaths !== true) {
+        this.#frozenConnectionLayer = null;
+      }
+      let frozenPaths =
+        options.reuseFrozenPaths === true && previousRequest?.style === nextStyle
+          ? previousRequest.frozenPaths
+          : null;
+      if (nextStyle === 'pcb-drag-proxy' && !frozenPaths) {
+        frozenPaths = this.#captureConnectionPathPoints(connectionIds);
+      }
+      this.#transientPathStyleRequests.delete(source);
+      this.#transientPathStyleRequests.set(source, {
+        style: nextStyle,
+        connectionIds,
+        draggedNodeId: options.draggedNodeId,
+        frozenPaths,
+        suspendProgressivePcb: options.suspendProgressivePcb === true,
+      });
+    } else {
+      this.#transientPathStyleRequests.delete(source);
+      this.#frozenConnectionLayer = null;
+    }
+
+    let isProgressiveSuspended = this.#progressivePcbSuspended();
+    if (!wasProgressiveSuspended && isProgressiveSuspended) {
+      this.#cancelProgressivePcbFrame();
+    }
+
+    this.#transientPathStyle = this.#globalTransientPathStyle();
+    let nextScope = this.#transientPathScope();
+    if (previousScope.global || nextScope.global) {
+      this.#invalidatePathCache();
+      this.redraw();
+      return;
+    }
+
+    let affected = this.#changedTransientConnections(previousScope.connectionIds, nextScope.connectionIds);
+    let protectedProxyIds = this.#activePcbDragProxyConnectionIds();
+    for (const connId of affected) {
+      if (!protectedProxyIds.global && !protectedProxyIds.ids.has(connId)) {
+        this.#pathCache.delete(connId);
+      }
+    }
+    this.redraw();
+    if (wasProgressiveSuspended && !isProgressiveSuspended) {
+      this.#requestProgressivePcbFrame();
+    }
+  }
+
+  get transientPathStyle() {
+    return this.#transientPathStyle;
   }
 
   setFlowing(connId, active) {
@@ -312,6 +445,187 @@ export class CanvasConnectionRenderer {
 
   #invalidatePathCache() {
     this.#pathCache.clear();
+    this.#frozenConnectionLayer = null;
+    this.#cancelProgressivePcb();
+  }
+
+  #cancelProgressivePcb() {
+    this.#cancelProgressivePcbFrame();
+    this.#processingProgressivePcb = false;
+    this.#progressivePcbQueue.clear();
+  }
+
+  #cancelProgressivePcbFrame() {
+    if (this.#progressivePcbFrame && typeof cancelAnimationFrame === 'function') {
+      cancelAnimationFrame(this.#progressivePcbFrame);
+    }
+    this.#progressivePcbFrame = 0;
+  }
+
+  #progressivePcbSuspended() {
+    for (const request of this.#transientPathStyleRequests.values()) {
+      if (request.suspendProgressivePcb) return true;
+    }
+    return false;
+  }
+
+  #requestProgressivePcbFrame() {
+    if (
+      this.#processingProgressivePcb ||
+      this.#progressivePcbFrame ||
+      this.#progressivePcbSuspended() ||
+      !this.#progressivePcbQueue.size ||
+      typeof requestAnimationFrame !== 'function'
+    ) {
+      return;
+    }
+    this.#progressivePcbFrame = requestAnimationFrame(() => {
+      this.#progressivePcbFrame = 0;
+      this.#processProgressivePcb();
+    });
+  }
+
+  #connectionHasTransientRequest(connId) {
+    for (const request of this.#transientPathStyleRequests.values()) {
+      if (!request.connectionIds || request.connectionIds.has(connId)) return true;
+    }
+    return false;
+  }
+
+  #scheduleProgressivePcb(connId) {
+    if (this.#connectionHasTransientRequest(connId)) return;
+    this.#progressivePcbQueue.add(connId);
+    this.#requestProgressivePcbFrame();
+  }
+
+  #processProgressivePcb() {
+    if (!this.#progressivePcbQueue.size) return;
+    if (this.#progressivePcbSuspended()) return;
+    let batch = [...this.#progressivePcbQueue]
+      .filter((connId) => !this.#connectionHasTransientRequest(connId))
+      .slice(0, this.#progressivePcbBatchSize);
+    if (!batch.length) {
+      this.#progressivePcbFrame = 0;
+      return;
+    }
+    for (const connId of batch) {
+      this.#progressivePcbQueue.delete(connId);
+      let conn = this.#connectionData.get(connId);
+      if (conn) this.#plotPath(this.#ctx, conn, { fullPcb: true });
+    }
+    this.#processingProgressivePcb = true;
+    try {
+      this.redraw();
+    } finally {
+      this.#processingProgressivePcb = false;
+    }
+    this.#requestProgressivePcbFrame();
+  }
+
+  #captureFrozenConnectionLayer() {
+    if (!this.#canvasLayer.width || !this.#canvasLayer.height) return;
+    let layer = document.createElement('canvas');
+    layer.width = this.#canvasLayer.width;
+    layer.height = this.#canvasLayer.height;
+    let ctx = layer.getContext('2d', { alpha: true });
+    if (!ctx) return;
+    ctx.drawImage(this.#canvasLayer, 0, 0);
+    this.#frozenConnectionLayer = layer;
+  }
+
+  #connectionIdsForNode(nodeId) {
+    let ids = [];
+    for (const [connId, conn] of this.#connectionData) {
+      if (conn.from === nodeId || conn.to === nodeId) ids.push(connId);
+    }
+    return ids;
+  }
+
+  #hasPcbDragProxyForNode(nodeId) {
+    for (const request of this.#transientPathStyleRequests.values()) {
+      if (request.style !== 'pcb-drag-proxy') continue;
+      if (request.draggedNodeId === nodeId) return true;
+      if (!request.connectionIds) return true;
+    }
+    return false;
+  }
+
+  #activePcbDragProxyConnectionIds() {
+    let ids = new Set();
+    for (const request of this.#transientPathStyleRequests.values()) {
+      if (request.style !== 'pcb-drag-proxy') continue;
+      if (!request.connectionIds) return { global: true, ids };
+      for (const connId of request.connectionIds) ids.add(connId);
+    }
+    return { global: false, ids };
+  }
+
+  #captureConnectionPathPoints(connectionIds) {
+    let frozenPaths = new Map();
+    let ids = connectionIds || this.#connectionData.keys();
+    for (const connId of ids) {
+      let cached = this.#pathCache.get(connId);
+      let points = parsePathPoints(cached?.d || '');
+      if (points.length >= 2) frozenPaths.set(connId, points);
+    }
+    return frozenPaths;
+  }
+
+  #globalTransientPathStyle() {
+    let pathStyle = '';
+    for (const request of this.#transientPathStyleRequests.values()) {
+      if (!request.connectionIds) pathStyle = request.style;
+    }
+    return pathStyle;
+  }
+
+  #transientPathScope() {
+    let connectionIds = new Set();
+    for (const request of this.#transientPathStyleRequests.values()) {
+      if (!request.connectionIds) return { global: true, connectionIds };
+      for (const connId of request.connectionIds) connectionIds.add(connId);
+    }
+    return { global: false, connectionIds };
+  }
+
+  #changedTransientConnections(previousIds, nextIds) {
+    let changed = new Set();
+    for (const connId of previousIds) {
+      if (!nextIds.has(connId)) changed.add(connId);
+    }
+    for (const connId of nextIds) {
+      if (!previousIds.has(connId)) changed.add(connId);
+    }
+    return changed;
+  }
+
+  #transientRequestForConnection(conn) {
+    let pathStyle = this.#pathStyle;
+    let matched = null;
+    for (const request of this.#transientPathStyleRequests.values()) {
+      if (!request.connectionIds || request.connectionIds.has(conn.id)) {
+        pathStyle = request.style;
+        matched = request;
+      }
+    }
+    return matched ? { ...matched, style: pathStyle } : null;
+  }
+
+  #buildPcbDragProxyPath(conn, request, { start, end }) {
+    let frozen = request?.frozenPaths?.get?.(conn.id);
+    if (!frozen || frozen.length < 2) return '';
+    let draggedNodeId = request?.draggedNodeId;
+    let movingFrom = draggedNodeId === conn.from;
+    let movingTo = draggedNodeId === conn.to;
+    if (!movingFrom && !movingTo) return '';
+
+    if (movingFrom) {
+      let anchor = frozen[0];
+      return `M ${anchor.x} ${anchor.y} L ${start.x} ${start.y}`;
+    }
+
+    let anchor = frozen.at(-1);
+    return `M ${anchor.x} ${anchor.y} L ${end.x} ${end.y}`;
   }
 
   #scheduleRenderLoop() {
@@ -505,6 +819,15 @@ export class CanvasConnectionRenderer {
     }
     this._connIndexMap = connIndexMap;
 
+    let frozenProxyIds = this.#activePcbDragProxyConnectionIds();
+    if (this.#frozenConnectionLayer && (frozenProxyIds.global || frozenProxyIds.ids.size)) {
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.drawImage(this.#frozenConnectionLayer, 0, 0);
+      ctx.setTransform(dpr * zoom, 0, 0, dpr * zoom, dpr * pan.x, dpr * pan.y);
+      this.#drawFrozenDragProxies(ctx, zoom, frozenProxyIds);
+      this.#stopRenderLoop();
+      return;
+    }
 
     let socketsToDraw = new Map();
 
@@ -592,6 +915,16 @@ export class CanvasConnectionRenderer {
 
       ctx.stroke(coords.path2D);
 
+      if (coords.dragProxyPath2D) {
+        ctx.save();
+        ctx.shadowBlur = 0;
+        ctx.setLineDash([]);
+        ctx.strokeStyle = this.#colorParams.selected || this.#colorParams.normal;
+        ctx.lineWidth = Math.max(baseWidth + 1, 2 / zoom);
+        ctx.stroke(coords.dragProxyPath2D);
+        ctx.restore();
+      }
+
 
       if (coords.arrow) {
         ctx.save();
@@ -643,6 +976,28 @@ export class CanvasConnectionRenderer {
 
     if (hasFlowing) this.#scheduleRenderLoop();
     else this.#stopRenderLoop();
+  }
+
+  #drawFrozenDragProxies(ctx, zoom, proxyIds) {
+    let ids = proxyIds.global ? this.#connectionData.keys() : proxyIds.ids;
+    let baseWidth = this.#colorParams.width;
+
+    ctx.save();
+    ctx.shadowBlur = 0;
+    ctx.setLineDash([]);
+    ctx.strokeStyle = this.#colorParams.selected || this.#colorParams.normal;
+    ctx.lineWidth = Math.max(baseWidth + 1, 2 / zoom);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    for (const connId of ids) {
+      let connection = this.#connectionData.get(connId);
+      if (!connection) continue;
+      let coords = this.#plotPath(ctx, connection);
+      if (coords?.dragProxyPath2D) ctx.stroke(coords.dragProxyPath2D);
+    }
+
+    ctx.restore();
   }
 
   /**
@@ -735,9 +1090,19 @@ export class CanvasConnectionRenderer {
     this.redraw();
   };
 
-  #plotPath(ctx, conn) {
+  #plotPath(ctx, conn, options = {}) {
+    let transientRequest = this.#transientRequestForConnection(conn);
+    let effectiveStyle = transientRequest?.style || this.#pathStyle;
     let cached = this.#pathCache.get(conn.id);
-    if (cached?.pathStyle === this.#pathStyle) {
+    if (effectiveStyle !== 'pcb-drag-proxy' && cached?.pathStyle === effectiveStyle) {
+      return cached;
+    }
+    if (
+      !options.fullPcb &&
+      effectiveStyle === 'pcb' &&
+      cached?.pathStyle === 'pcb-draft'
+    ) {
+      this.#scheduleProgressivePcb(conn.id);
       return cached;
     }
 
@@ -793,7 +1158,7 @@ export class CanvasConnectionRenderer {
 
     let d;
     let arrow = { x: endX, y: endY, angle: 0 };
-    let effectiveStyle = this.#pathStyle;
+    let cachePathStyle = effectiveStyle;
     if (effectiveStyle === 'straight') {
       d = `M ${startX} ${startY} L ${endX} ${endY}`;
       arrow.x = (startX + endX) / 2;
@@ -927,6 +1292,37 @@ export class CanvasConnectionRenderer {
         }
       }
       d = path;
+    } else if (effectiveStyle === 'pcb-drag-proxy') {
+      let proxyD =
+        this.#buildPcbDragProxyPath(conn, transientRequest, {
+          start: { x: startX, y: startY },
+          end: { x: endX, y: endY },
+          fromAngle: fromOffset.angle ?? 0,
+          toAngle: toOffset.angle ?? 180,
+        }) || `M ${startX} ${startY} L ${endX} ${endY}`;
+      let base = cached?.pathStyle === 'pcb' ? cached : null;
+      if (!base) {
+        let straight = `M ${startX} ${startY} L ${endX} ${endY}`;
+        base = {
+          startX,
+          startY,
+          endX,
+          endY,
+          d: straight,
+          path2D: new Path2D(straight),
+          arrow: null,
+          pathStyle: 'pcb',
+        };
+      }
+      return {
+        ...base,
+        startX,
+        startY,
+        endX,
+        endY,
+        dragProxyPath2D: new Path2D(proxyD),
+        pathStyle: 'pcb-drag-proxy',
+      };
     } else if (effectiveStyle === 'pcb') {
       let routed = routePcbTrace({
         start: { x: startX, y: startY },
@@ -938,9 +1334,16 @@ export class CanvasConnectionRenderer {
         rects: this._nodeRectMap ? [...this._nodeRectMap.values()] : [],
         connections: [...this.#connectionData.values()],
         conn,
+        quality: options.fullPcb ? 'full' : 'draft',
       });
       d = routed.path;
       arrow = routed.arrow;
+      if (!options.fullPcb) {
+        this.#scheduleProgressivePcb(conn.id);
+        cachePathStyle = 'pcb-draft';
+      } else {
+        cachePathStyle = 'pcb';
+      }
     } else {
 
       let fromAngleDeg, toAngleDeg;
@@ -980,7 +1383,16 @@ export class CanvasConnectionRenderer {
       arrow.angle = Math.atan2(endY + cp2y - cp1y - startY, endX + cp2x - cp1x - startX);
     }
 
-    let coords = { startX, startY, endX, endY, path2D: new Path2D(d), arrow, pathStyle: effectiveStyle };
+    let coords = {
+      startX,
+      startY,
+      endX,
+      endY,
+      d,
+      path2D: new Path2D(d),
+      arrow,
+      pathStyle: cachePathStyle,
+    };
     this.#pathCache.set(conn.id, coords);
     return coords;
   }
@@ -990,6 +1402,7 @@ export class CanvasConnectionRenderer {
     this.#resizeObserver = null;
     this.#resizeParent = null;
     this.#stopRenderLoop();
+    this.#cancelProgressivePcb();
     this.#connectionData.clear();
     this.#phantomSignature = '';
     this.#invalidatePathCache();

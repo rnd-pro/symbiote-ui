@@ -52,6 +52,7 @@ export class Layout extends Symbiote {
     '@swipe-control': 'edge',
     '@overflow-mode': 'collapse',
     '@auto-collapse': true,
+    '@drawer-hover-open': false,
 
 
     layoutTree: null,
@@ -129,6 +130,13 @@ export class Layout extends Symbiote {
     this.addEventListener('pointermove', this._drawerPointerMoveHandler);
     this.addEventListener('pointerup', this._drawerPointerUpHandler);
     this.addEventListener('pointercancel', this._drawerPointerCancelHandler);
+    this._drawerRailPointerDownHandler = (e) => this._onDrawerRailPointerDown(e);
+    this._drawerRailPointerOverHandler = (e) => this._onDrawerRailHover(e);
+    this.addEventListener('pointerdown', this._drawerRailPointerDownHandler);
+    this.addEventListener('pointerover', this._drawerRailPointerOverHandler);
+    this.addEventListener('mouseover', this._drawerRailPointerOverHandler);
+    this._drawerClickCaptureHandler = (e) => this._onDrawerClickCapture(e);
+    this.addEventListener('click', this._drawerClickCaptureHandler, true);
 
 
     this._resizeFallback = () => this._scheduleResponsiveLayout();
@@ -154,6 +162,15 @@ export class Layout extends Symbiote {
       this.removeEventListener('pointerup', this._drawerPointerUpHandler);
       this.removeEventListener('pointercancel', this._drawerPointerCancelHandler);
     }
+    if (this._drawerRailPointerDownHandler) {
+      this.removeEventListener('pointerdown', this._drawerRailPointerDownHandler);
+      this.removeEventListener('pointerover', this._drawerRailPointerOverHandler);
+      this.removeEventListener('mouseover', this._drawerRailPointerOverHandler);
+    }
+    if (this._drawerClickCaptureHandler) {
+      this.removeEventListener('click', this._drawerClickCaptureHandler, true);
+    }
+    this._clearDrawerRailPeek();
     super.disconnectedCallback?.();
   }
 
@@ -243,6 +260,9 @@ export class Layout extends Symbiote {
       responsiveMode: this.getAttribute('responsive-mode') || this.$['@responsive-mode'],
       responsiveBreakpoint: this.getAttribute('responsive-breakpoint') || this.$['@responsive-breakpoint'],
       swipeControl: this.getAttribute('swipe-control') || this.$['@swipe-control'],
+      drawerHoverOpen: this.getAttribute('drawer-hover-open') === null
+        ? this.$['@drawer-hover-open']
+        : this.getAttribute('drawer-hover-open') !== 'false',
     });
   }
 
@@ -303,12 +323,13 @@ export class Layout extends Symbiote {
     let behavior = this._getRootBehavior();
     let rect = this.getBoundingClientRect();
     let tree = this.$.layoutTree;
+    let resolvePanelBehavior = (node, branchBehavior) => {
+      let typeBehavior = this.$.panelTypes[node.panelType]?.behavior || {};
+      return LayoutTree.getNodeBehavior(node, LayoutTree.normalizeLayoutBehavior(typeBehavior, branchBehavior));
+    };
     let layoutMinSize = LayoutTree.resolveLayoutMinSize(tree, {
       fallbackBehavior: behavior,
-      resolvePanelBehavior: (node, branchBehavior) => {
-        let typeBehavior = this.$.panelTypes[node.panelType]?.behavior || {};
-        return LayoutTree.getNodeBehavior(node, LayoutTree.normalizeLayoutBehavior(typeBehavior, branchBehavior));
-      },
+      resolvePanelBehavior,
     });
     let responsiveState = LayoutTree.resolveResponsiveLayoutState(behavior, {
       inlineSize: rect.width,
@@ -332,6 +353,22 @@ export class Layout extends Symbiote {
 
     if (this.$.fullscreenPanelId) return;
 
+    let compressionChanged = responsiveState.collapseAllowed
+      ? LayoutTree.applyPriorityCompression(tree, {
+        inlineSize: rect.width,
+        blockSize: rect.height,
+        fallbackBehavior: behavior,
+      }, {
+        fallbackBehavior: behavior,
+        resolvePanelBehavior,
+      })
+      : LayoutTree.clearPriorityCompression(tree);
+    if (compressionChanged) {
+      this._renderRoot();
+      this._scheduleResponsiveLayout();
+      return;
+    }
+
     if (!responsiveState.collapseAllowed) {
       if (this._clearAutoCollapsedPanels(tree)) {
         this.$.layoutTree = { ...tree };
@@ -347,7 +384,6 @@ export class Layout extends Symbiote {
       return;
     }
 
-    let changed = false;
     let candidates = this._collectAutoCollapseCandidates(tree, behavior)
       .sort((a, b) => a.behavior.importance - b.behavior.importance);
 
@@ -357,12 +393,10 @@ export class Layout extends Symbiote {
       node.collapsed = true;
       node.autoCollapsed = true;
       node.manualExpanded = false;
-      changed = true;
-    }
-
-    if (changed) {
       this.$.layoutTree = { ...tree };
       this._saveLayout();
+      this._scheduleResponsiveLayout();
+      return;
     }
   }
 
@@ -517,8 +551,12 @@ export class Layout extends Symbiote {
     let endPanelId = this._resolveDrawerPanelId('end', projection.endPanelIds);
     let startOpen = hasStart && this.$.drawerStartOpen;
     let endOpen = hasEnd && this.$.drawerEndOpen;
+    let startRail = projection.panels.some((panel) => panel.dock === 'start' && panel.swipeControl === 'rail');
+    let endRail = projection.panels.some((panel) => panel.dock === 'end' && panel.swipeControl === 'rail');
     toggleAttributeIfChanged(this, 'drawer-start-open', startOpen);
     toggleAttributeIfChanged(this, 'drawer-end-open', endOpen);
+    toggleAttributeIfChanged(this, 'drawer-start-rail', startRail);
+    toggleAttributeIfChanged(this, 'drawer-end-rail', endRail);
     if (startPanelId) {
       setAttributeIfChanged(this, 'drawer-start-panel-id', startPanelId);
     } else {
@@ -544,11 +582,12 @@ export class Layout extends Symbiote {
       }
       setAttributeIfChanged(node, 'mobile-dock', panel.dock);
       toggleAttributeIfChanged(node, 'drawer-primary', panel.dock === 'primary');
-      this._setDrawerNodeExpanded(node, true);
       let open = (
         (panel.dock === 'start' && startOpen && panel.id === startPanelId) ||
         (panel.dock === 'end' && endOpen && panel.id === endPanelId)
       );
+      let rail = panel.swipeControl === 'rail' && (panel.dock === 'start' || panel.dock === 'end');
+      this._syncDrawerNodeInteractionState(node, panel, open, rail);
       toggleAttributeIfChanged(
         node,
         'drawer-active-panel',
@@ -557,7 +596,7 @@ export class Layout extends Symbiote {
       );
       toggleAttributeIfChanged(node, 'drawer-open', open);
       if (panel.dock === 'start' || panel.dock === 'end') {
-        let closedTranslate = panel.dock === 'start' ? '-100%' : '100%';
+        let closedTranslate = this._getDrawerClosedTranslate(panel.dock, panel.swipeControl, open);
         let translate = open ? '0%' : closedTranslate;
         setStylePropertyIfChanged(
           node.style,
@@ -588,12 +627,16 @@ export class Layout extends Symbiote {
       }
     }
     this._syncDrawerHandleState(projection, startOpen, endOpen, startPanelId, endPanelId);
+    this._scheduleDrawerRailPeek(startOpen, endOpen);
   }
 
   _clearDrawerProjection() {
+    this._clearDrawerRailPeek();
     this.removeAttribute('drawer-mode-active');
     this.removeAttribute('drawer-start-open');
     this.removeAttribute('drawer-end-open');
+    this.removeAttribute('drawer-start-rail');
+    this.removeAttribute('drawer-end-rail');
     this.removeAttribute('drawer-primary-panel-id');
     this.removeAttribute('drawer-start-panel-id');
     this.removeAttribute('drawer-end-panel-id');
@@ -612,11 +655,89 @@ export class Layout extends Symbiote {
     node.removeAttribute('drawer-active-panel');
     node.removeAttribute('drawer-dragging');
     node.removeAttribute('drawer-expanded');
+    node.removeAttribute('drawer-rail');
+    node.removeAttribute('drawer-rail-collapsed');
+    node.removeAttribute('drawer-hover-open');
+    delete node.dataset.drawerDock;
+    delete node.dataset.drawerPanelId;
+    delete node.dataset.swipeControl;
     this._restoreDrawerNodeCollapseState(node);
     node.style.removeProperty('transform');
     node.style.removeProperty('--sn-layout-drawer-translate');
     node.style.removeProperty('inset-inline-start');
     node.style.removeProperty('inset-inline-end');
+  }
+
+  _syncDrawerNodeInteractionState(node, panel, open, rail) {
+    let dock = panel.dock;
+    toggleAttributeIfChanged(node, 'drawer-rail', rail);
+    toggleAttributeIfChanged(node, 'drawer-hover-open', rail && panel.drawerHoverOpen);
+    if (dock === 'start' || dock === 'end') {
+      node.dataset.drawerDock = dock;
+      node.dataset.drawerPanelId = panel.id;
+      node.dataset.swipeControl = panel.swipeControl;
+    } else {
+      delete node.dataset.drawerDock;
+      delete node.dataset.drawerPanelId;
+      delete node.dataset.swipeControl;
+    }
+    if (rail && !open) {
+      this._setDrawerNodeRail(node, dock);
+      return;
+    }
+    node.removeAttribute('drawer-rail-collapsed');
+    this._setDrawerNodeExpanded(node, true);
+  }
+
+  _scheduleDrawerRailPeek(startOpen, endOpen) {
+    if (this._drawerRailPeekPlayed || this._drawerRailPeekTimer || this._drawerRailPeekClearTimer) return;
+    if (startOpen || endOpen || this.$.fullscreenPanelId) return;
+    let nodes = this.querySelectorAll('layout-node[drawer-rail][drawer-rail-collapsed][data-drawer-dock]');
+    if (!nodes.length) return;
+    this._drawerRailPeekPlayed = true;
+    if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) {
+      return;
+    }
+    this._drawerRailPeekTimer = setTimeout(() => {
+      this._drawerRailPeekTimer = 0;
+      this._runDrawerRailPeek();
+    }, 220);
+  }
+
+  _runDrawerRailPeek() {
+    if (!this.hasAttribute('drawer-mode-active') || this.$.drawerStartOpen || this.$.drawerEndOpen) return;
+    let nodes = this.querySelectorAll('layout-node[drawer-rail][drawer-rail-collapsed][data-drawer-dock]');
+    if (!nodes.length) return;
+    for (let node of nodes) {
+      let dock = node.dataset.drawerDock;
+      let distance = dock === 'start'
+        ? 'var(--sn-layout-drawer-rail-peek-distance, 10px)'
+        : 'calc(var(--sn-layout-drawer-rail-peek-distance, 10px) * -1)';
+      node.setAttribute('drawer-rail-peeking', '');
+      setImportantStylePropertyIfChanged(node.style, 'transform', `translateX(${distance})`);
+    }
+    this._drawerRailPeekClearTimer = setTimeout(() => {
+      this._drawerRailPeekClearTimer = 0;
+      this._clearDrawerRailPeek();
+    }, 360);
+  }
+
+  _clearDrawerRailPeek() {
+    if (this._drawerRailPeekTimer) {
+      clearTimeout(this._drawerRailPeekTimer);
+      this._drawerRailPeekTimer = 0;
+    }
+    if (this._drawerRailPeekClearTimer) {
+      clearTimeout(this._drawerRailPeekClearTimer);
+      this._drawerRailPeekClearTimer = 0;
+    }
+    for (let node of this.querySelectorAll('layout-node[drawer-rail-peeking]')) {
+      node.removeAttribute('drawer-rail-peeking');
+      if (!node.hasAttribute('drawer-rail-collapsed')) continue;
+      let dock = node.dataset.drawerDock;
+      let closedTranslate = this._getDrawerClosedTranslateForNode(node, dock);
+      setImportantStylePropertyIfChanged(node.style, 'transform', `translateX(${closedTranslate})`);
+    }
   }
 
   _setDrawerNodeExpanded(node, expanded) {
@@ -634,6 +755,22 @@ export class Layout extends Symbiote {
     node.removeAttribute('collapse-dir');
     if (node.ref?.panelContent) {
       node.ref.panelContent.hidden = false;
+    }
+    node._syncCollapsePresentation?.();
+  }
+
+  _setDrawerNodeRail(node, dock) {
+    node.removeAttribute('drawer-expanded');
+    node.setAttribute('drawer-rail-collapsed', '');
+    node.setAttribute('collapse-dir', 'horizontal');
+    if (node.$) {
+      node.$.collapseDirection = 'horizontal';
+      node.$.collapseSlot = dock === 'end' ? 'second' : 'first';
+      node.$.isCollapsed = true;
+      node.$.collapseIcon = node._getCollapseIcon?.() || node.$.collapseIcon;
+    }
+    if (node.ref?.panelContent) {
+      node.ref.panelContent.hidden = true;
     }
     node._syncCollapsePresentation?.();
   }
@@ -704,6 +841,7 @@ export class Layout extends Symbiote {
   _resolveDrawerSwipeControl(panels = []) {
     if (panels.every((panel) => panel.swipeControl === 'none')) return 'none';
     if (panels.some((panel) => panel.swipeControl === 'island')) return 'island';
+    if (panels.every((panel) => panel.swipeControl === 'rail' || panel.swipeControl === 'none')) return 'rail';
     return 'edge';
   }
 
@@ -712,7 +850,7 @@ export class Layout extends Symbiote {
     stack.dataset.swipeControl = swipeControl;
     let multiple = panels.length > 1;
     for (let panel of panels) {
-      if (panel.swipeControl === 'none') continue;
+      if (panel.swipeControl === 'none' || panel.swipeControl === 'rail') continue;
       let config = this.$.panelTypes[panel.panelType] || {};
       let title = config.title || panel.panelType || panel.id;
       let icon = multiple
@@ -742,7 +880,7 @@ export class Layout extends Symbiote {
 
   _setDrawerHandleVisualState(handle, dock, available, open, panelId = '', swipeControl = 'edge') {
     if (!handle) return;
-    let active = Boolean(available) && swipeControl !== 'none';
+    let active = Boolean(available) && swipeControl !== 'none' && swipeControl !== 'rail';
     handle.hidden = !active;
     if (swipeControl === 'island') {
       handle.style.removeProperty('inset-inline-start');
@@ -789,6 +927,7 @@ export class Layout extends Symbiote {
   }
 
   _setDrawerOpen(dock, open, panelId = '') {
+    this._clearDrawerRailPeek();
     if (dock === 'start') {
       if (panelId) this.$.drawerStartPanelId = panelId;
       this.$.drawerStartOpen = Boolean(open);
@@ -815,20 +954,22 @@ export class Layout extends Symbiote {
     if (this._ignoreNextDrawerClick) {
       this._ignoreNextDrawerClick = false;
       e.preventDefault();
+      e.stopPropagation();
       return;
     }
     if (!this.hasAttribute('drawer-mode-active')) return;
-    let target = e.currentTarget || e.target.closest('[data-drawer-dock]');
+    let target = this._getDrawerGestureTarget(e);
     let dock = target?.dataset?.drawerDock;
     let panelId = target?.dataset?.drawerPanelId || '';
     if (dock !== 'start' && dock !== 'end') return;
+    if (!this._isDrawerOpen(dock)) this._suppressDrawerContentClicks();
     this.toggleDrawer(dock, panelId);
   }
 
   _onDrawerHandlePointerDown(e) {
     if (!this.hasAttribute('drawer-mode-active')) return;
     if (e.button !== undefined && e.button !== 0) return;
-    let target = e.currentTarget || e.target.closest('[data-drawer-dock]');
+    let target = this._getDrawerGestureTarget(e);
     let dock = target?.dataset?.drawerDock;
     if (dock !== 'start' && dock !== 'end') return;
     let panelId = target?.dataset?.drawerPanelId || this._getActiveDrawerPanelId(dock);
@@ -836,6 +977,9 @@ export class Layout extends Symbiote {
     let startOpen = this._isDrawerOpen(dock) && (!panelId || panelId === activePanelId);
     let drawerNode = this._getDrawerNode(dock, panelId);
     let width = drawerNode?.getBoundingClientRect?.().width || this._getFallbackDrawerWidth();
+    if (target?.dataset?.swipeControl === 'rail') {
+      width = this._getFallbackDrawerWidth();
+    }
     if (width <= 0) width = this._getFallbackDrawerWidth();
     this._drawerGesture = {
       pointerId: e.pointerId,
@@ -848,16 +992,115 @@ export class Layout extends Symbiote {
       moved: false,
       target,
     };
-    this.setAttribute('drawer-dragging', '');
-    drawerNode?.setAttribute('drawer-dragging', '');
+    this._setDrawerGestureDragging(this._drawerGesture);
     target?.setPointerCapture?.(e.pointerId);
     e.preventDefault();
+  }
+
+  _onDrawerRailPointerDown(e) {
+    if (!this.hasAttribute('drawer-mode-active')) return;
+    if (e.button !== undefined && e.button !== 0) return;
+    this._clearDrawerRailPeek();
+    let target = e.target?.closest?.('layout-node[drawer-rail][drawer-rail-collapsed][data-drawer-dock]');
+    if (target && this.contains(target)) {
+      let dock = target.dataset.drawerDock;
+      let openDock = this.$.drawerStartOpen ? 'start' : this.$.drawerEndOpen ? 'end' : '';
+      if (openDock && openDock !== dock) {
+        this._ignoreNextRailCollapseToggle = target.dataset.drawerPanelId || '';
+        this.closeDrawer(openDock);
+        this._suppressDrawerContentClicks();
+        e.preventDefault();
+        return;
+      }
+      this._onDrawerHandlePointerDown(e);
+      if (this._drawerGesture) {
+        this._drawerGesture.source = 'rail';
+      }
+      return;
+    }
+    this._onDrawerContentPointerDown(e);
+    if (!this._drawerGesture) {
+      this._onDrawerPrimaryPointerDown(e);
+    }
+  }
+
+  _onDrawerContentPointerDown(e) {
+    if (this._isDrawerContentSwipeBlocked(e.target)) return;
+    let target = e.target?.closest?.('layout-node[drawer-open][drawer-expanded][data-drawer-dock]');
+    if (!target || !this.contains(target)) return;
+    if (target.dataset.swipeControl !== 'rail') return;
+    let dock = target.dataset.drawerDock;
+    if (dock !== 'start' && dock !== 'end') return;
+    let panelId = target.dataset.drawerPanelId || this._getActiveDrawerPanelId(dock);
+    let width = target.getBoundingClientRect?.().width || this._getFallbackDrawerWidth();
+    if (width <= 0) width = this._getFallbackDrawerWidth();
+    this._drawerGesture = {
+      pointerId: e.pointerId,
+      dock,
+      panelId,
+      startX: e.clientX,
+      startY: e.clientY,
+      width,
+      startOpen: true,
+      prepared: false,
+      moved: false,
+      pending: true,
+      target,
+      source: 'content',
+    };
+    this._captureDrawerGesturePointer(this._drawerGesture);
+  }
+
+  _isDrawerContentSwipeBlocked(target) {
+    return Boolean(target?.closest?.(
+      'button, a, input, textarea, select, [contenteditable="true"], .split-resizer, canvas, node-canvas, canvas-graph'
+    ));
+  }
+
+  _onDrawerPrimaryPointerDown(e) {
+    if (this.$.drawerStartOpen || this.$.drawerEndOpen) return;
+    if (this._isDrawerContentSwipeBlocked(e.target)) return;
+    let target = e.target?.closest?.('layout-node[drawer-primary]');
+    if (!target || !this.contains(target)) return;
+    this._drawerGesture = {
+      pointerId: e.pointerId,
+      dock: '',
+      panelId: '',
+      startX: e.clientX,
+      startY: e.clientY,
+      width: this._getFallbackDrawerWidth(),
+      startOpen: false,
+      prepared: false,
+      moved: false,
+      pending: true,
+      target,
+      source: 'primary',
+    };
+    this._captureDrawerGesturePointer(this._drawerGesture);
+  }
+
+  _onDrawerRailHover(e) {
+    if (!this.hasAttribute('drawer-mode-active')) return;
+    if (e.pointerType && e.pointerType !== 'mouse') return;
+    let target = e.target?.closest?.('layout-node[drawer-rail][drawer-rail-collapsed][drawer-hover-open][data-drawer-dock]');
+    if (!target || !this.contains(target)) return;
+    let dock = target.dataset.drawerDock;
+    let panelId = target.dataset.drawerPanelId || '';
+    if (dock !== 'start' && dock !== 'end') return;
+    this.openDrawer(dock, panelId);
+  }
+
+  _getDrawerGestureTarget(e) {
+    let currentTarget = e.currentTarget;
+    if (currentTarget?.dataset?.drawerDock) return currentTarget;
+    return e.target?.closest?.('[data-drawer-dock]');
   }
 
   _onDrawerPointerMove(e) {
     let gesture = this._drawerGesture;
     if (!gesture || e.pointerId !== gesture.pointerId) return;
     let delta = e.clientX - gesture.startX;
+    if (gesture.pending && !this._activatePendingDrawerGesture(gesture, e, delta)) return;
     if (Math.abs(delta) > 4) gesture.moved = true;
     if (gesture.moved && !gesture.prepared) {
       this._setActiveDrawerPanelId(gesture.dock, gesture.panelId);
@@ -872,26 +1115,78 @@ export class Layout extends Symbiote {
   _onDrawerPointerUp(e) {
     let gesture = this._drawerGesture;
     if (!gesture || e.pointerId !== gesture.pointerId) return;
+    if (gesture.pending) {
+      gesture.target?.releasePointerCapture?.(gesture.pointerId);
+      this._drawerGesture = null;
+      return;
+    }
     let delta = e.clientX - gesture.startX;
     let progress = this._getDrawerGestureProgress(gesture, delta);
-    let open = progress >= 0.5;
+    let committedDrag = gesture.moved && Math.abs(delta) >= this._getDrawerGestureDragThreshold(gesture);
+    let open = committedDrag
+      ? progress >= 0.5
+      : gesture.source === 'rail' ? !gesture.startOpen : progress >= 0.5;
     if (gesture.moved) {
       this._ignoreNextDrawerClick = true;
+      this._suppressDrawerContentClicks();
       e.preventDefault();
+    }
+    if (gesture.source === 'rail') {
+      this._ignoreNextRailCollapseToggle = gesture.panelId;
     }
     gesture.target?.releasePointerCapture?.(gesture.pointerId);
     this._clearDrawerDrag(gesture.dock);
     this._drawerGesture = null;
     this._setDrawerOpen(gesture.dock, open, gesture.panelId);
+    if (open && !gesture.startOpen) this._suppressDrawerContentClicks();
   }
 
   _onDrawerPointerCancel(e) {
     let gesture = this._drawerGesture;
     if (!gesture || e.pointerId !== gesture.pointerId) return;
     gesture.target?.releasePointerCapture?.(gesture.pointerId);
-    this._clearDrawerDrag(gesture.dock);
+    if (!gesture.pending) {
+      this._clearDrawerDrag(gesture.dock);
+    }
     this._drawerGesture = null;
     this._setDrawerOpen(gesture.dock, gesture.startOpen, gesture.panelId);
+  }
+
+  _activatePendingDrawerGesture(gesture, e, delta) {
+    let absX = Math.abs(delta);
+    let absY = Math.abs((e.clientY ?? gesture.startY) - gesture.startY);
+    if (absX < 16 && absY < 16) return false;
+    if (absX < 16 || absX <= absY) {
+      gesture.target?.releasePointerCapture?.(gesture.pointerId);
+      this._drawerGesture = null;
+      return false;
+    }
+    if (gesture.source === 'primary') {
+      let dock = delta > 0 ? 'start' : 'end';
+      let panelId = this._getActiveDrawerPanelId(dock);
+      let drawerNode = this._getDrawerNode(dock, panelId);
+      if (!panelId || !drawerNode) {
+        this._drawerGesture = null;
+        return false;
+      }
+      gesture.dock = dock;
+      gesture.panelId = panelId;
+      gesture.width = drawerNode.getBoundingClientRect?.().width || this._getFallbackDrawerWidth();
+      if (gesture.width <= 0) gesture.width = this._getFallbackDrawerWidth();
+    }
+    gesture.pending = false;
+    gesture.moved = true;
+    this._setDrawerGestureDragging(gesture);
+    this._captureDrawerGesturePointer(gesture);
+    return true;
+  }
+
+  _captureDrawerGesturePointer(gesture) {
+    try {
+      gesture?.target?.setPointerCapture?.(gesture.pointerId);
+    } catch {
+      // Pointer capture can fail for synthetic or already-cancelled pointers.
+    }
   }
 
   _getDrawerGestureProgress(gesture, delta) {
@@ -902,13 +1197,49 @@ export class Layout extends Symbiote {
     return Math.max(0, Math.min(1, raw));
   }
 
+  _getDrawerGestureDragThreshold(gesture) {
+    if (gesture.source !== 'rail') return 4;
+    return Math.min(48, Math.max(16, gesture.width * 0.08));
+  }
+
+  _drawerNow() {
+    return globalThis.performance?.now?.() || Date.now();
+  }
+
+  _suppressDrawerContentClicks(duration = 360) {
+    this._drawerClickSuppressUntil = Math.max(
+      this._drawerClickSuppressUntil || 0,
+      this._drawerNow() + duration
+    );
+  }
+
+  _onDrawerClickCapture(e) {
+    if (!this.hasAttribute('drawer-mode-active')) return;
+    let target = e.target;
+    let drawerNode = target?.closest?.('layout-node[mobile-dock="start"], layout-node[mobile-dock="end"]');
+    if (!drawerNode || !this.contains(drawerNode)) return;
+    let suppressActive = this._drawerNow() < (this._drawerClickSuppressUntil || 0);
+    let suppress = suppressActive
+      || drawerNode.hasAttribute('drawer-rail-collapsed')
+      || drawerNode.hasAttribute('drawer-dragging');
+    if (!suppress) return;
+    if (target.closest?.('.collapse-btn, .layout-drawer-handle')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation?.();
+  }
+
   _prepareDrawerPanelForGesture(dock, panelId) {
     for (let node of this.querySelectorAll(`layout-node[mobile-dock="${dock}"]`)) {
       let active = node.$?.nodeId === panelId;
       toggleAttributeIfChanged(node, 'drawer-active-panel', active);
+      if (active && node.hasAttribute('drawer-rail')) {
+        node.removeAttribute('drawer-rail-collapsed');
+        this._setDrawerNodeExpanded(node, true);
+      }
       if (!active) {
         node.removeAttribute('drawer-open');
-        let closedTranslate = dock === 'start' ? '-100%' : '100%';
+        let closedTranslate = this._getDrawerClosedTranslateForNode(node, dock);
         setStylePropertyIfChanged(node.style, '--sn-layout-drawer-translate', closedTranslate);
         setImportantStylePropertyIfChanged(node.style, 'transform', `translateX(${closedTranslate})`);
       }
@@ -916,13 +1247,25 @@ export class Layout extends Symbiote {
   }
 
   _applyDrawerProgress(dock, progress, width = this._getFallbackDrawerWidth(), panelId = '') {
+    let node = this._getDrawerNode(dock, panelId);
+    let rail = node?.dataset?.swipeControl === 'rail';
     let translate = dock === 'start'
       ? (progress - 1) * 100
       : (1 - progress) * 100;
-    let node = this._getDrawerNode(dock, panelId);
     if (node) {
-      setStylePropertyIfChanged(node.style, '--sn-layout-drawer-translate', `${translate}%`);
-      setImportantStylePropertyIfChanged(node.style, 'transform', `translateX(${translate}%)`);
+      node.setAttribute('drawer-dragging', '');
+      if (rail) {
+        let railWidth = this._getDrawerRailWidth();
+        let travel = Math.max(0, width - railWidth);
+        let translatePx = dock === 'start'
+          ? -travel + progress * travel
+          : travel - progress * travel;
+        setStylePropertyIfChanged(node.style, '--sn-layout-drawer-translate', `${translatePx}px`);
+        setImportantStylePropertyIfChanged(node.style, 'transform', `translateX(${translatePx}px)`);
+      } else {
+        setStylePropertyIfChanged(node.style, '--sn-layout-drawer-translate', `${translate}%`);
+        setImportantStylePropertyIfChanged(node.style, 'transform', `translateX(${translate}%)`);
+      }
       if (dock === 'start') {
         setStylePropertyIfChanged(node.style, 'inset-inline-start', '0px');
         node.style.removeProperty('inset-inline-end');
@@ -930,9 +1273,10 @@ export class Layout extends Symbiote {
         setStylePropertyIfChanged(node.style, 'inset-inline-end', '0px');
         node.style.removeProperty('inset-inline-start');
       }
-      node.setAttribute('drawer-dragging', '');
     }
-    this._applyDrawerHandleProgress(dock, progress, width, panelId);
+    if (!rail) {
+      this._applyDrawerHandleProgress(dock, progress, width, panelId);
+    }
   }
 
   _applyDrawerHandleProgress(dock, progress, width = this._getFallbackDrawerWidth(), panelId = '') {
@@ -946,6 +1290,14 @@ export class Layout extends Symbiote {
     handle.style.removeProperty(oppositeInsetProperty);
     setImportantStylePropertyIfChanged(handle.style, insetProperty, `${offset}px`);
     setImportantStylePropertyIfChanged(handle.style, 'transform', 'translateY(-50%)');
+  }
+
+  _setDrawerGestureDragging(gesture) {
+    this.setAttribute('drawer-dragging', '');
+    gesture?.target?.setAttribute('drawer-dragging', '');
+    let dock = gesture?.dock;
+    if (dock !== 'start' && dock !== 'end') return;
+    this._getDrawerNode(dock, gesture.panelId)?.setAttribute('drawer-dragging', '');
   }
 
   _clearDrawerDrag(dock) {
@@ -975,6 +1327,26 @@ export class Layout extends Symbiote {
     let rect = this.getBoundingClientRect?.();
     let inlineSize = rect?.width || 360;
     return Math.max(240, Math.min(inlineSize * 0.86, 360));
+  }
+
+  _getDrawerRailWidth() {
+    return LayoutTree.COLLAPSED_PANEL_INLINE_SIZE || 32;
+  }
+
+  _getDrawerClosedTranslate(dock, swipeControl = 'edge', open = false) {
+    if (swipeControl === 'rail' && !open) {
+      return '0px';
+    }
+    return dock === 'start' ? '-100%' : '100%';
+  }
+
+  _getDrawerClosedTranslateForNode(node, dock) {
+    return this._getDrawerClosedTranslate(dock, node?.dataset?.swipeControl || 'edge');
+  }
+
+  _getDrawerDockForPanel(panelId) {
+    let panel = this._drawerProjection?.panels?.find((item) => item.id === panelId);
+    return panel?.dock === 'start' || panel?.dock === 'end' ? panel.dock : '';
   }
 
   /**
@@ -1031,6 +1403,23 @@ export class Layout extends Symbiote {
   _onPanelCollapseToggle(e) {
     if (this.$.panelChrome === false) return;
     let { panelId, collapsed } = e.detail;
+    if (this._ignoreNextRailCollapseToggle === panelId) {
+      this._ignoreNextRailCollapseToggle = '';
+      e.preventDefault?.();
+      return;
+    }
+    let drawerDock = this.hasAttribute('drawer-mode-active')
+      ? this._getDrawerDockForPanel(panelId)
+      : '';
+    if (drawerDock) {
+      if (collapsed) {
+        this.closeDrawer(drawerDock);
+      } else {
+        this._suppressDrawerContentClicks();
+        this.openDrawer(drawerDock, panelId);
+      }
+      return;
+    }
     let tree = this.$.layoutTree;
     if (!tree) return;
 

@@ -17,6 +17,57 @@ function svgPathIdForConnection(connId) {
   return `sn-conn-path-${encoded || 'unknown'}`;
 }
 
+function compactPathPoints(points) {
+  let compact = [];
+  for (let point of points) {
+    let prev = compact.at(-1);
+    if (!prev || Math.abs(prev.x - point.x) > 0.5 || Math.abs(prev.y - point.y) > 0.5) {
+      compact.push(point);
+    }
+  }
+  return compact;
+}
+
+function parsePathPoints(d) {
+  let tokens = String(d || '').match(/[MLHVCSQTAZ]|-?\d*\.?\d+(?:e[-+]?\d+)?/gi) || [];
+  let points = [];
+  let index = 0;
+  let command = '';
+  let x = 0;
+  let y = 0;
+  let readNumber = () => Number(tokens[index++]);
+
+  while (index < tokens.length) {
+    let token = tokens[index++];
+    if (/^[a-z]$/i.test(token)) {
+      command = token.toUpperCase();
+    } else {
+      index -= 1;
+    }
+
+    if (command === 'M' || command === 'L') {
+      x = readNumber();
+      y = readNumber();
+      if (Number.isFinite(x) && Number.isFinite(y)) points.push({ x, y });
+    } else if (command === 'H') {
+      x = readNumber();
+      if (Number.isFinite(x) && Number.isFinite(y)) points.push({ x, y });
+    } else if (command === 'V') {
+      y = readNumber();
+      if (Number.isFinite(x) && Number.isFinite(y)) points.push({ x, y });
+    } else if (command === 'C') {
+      index += 4;
+      x = readNumber();
+      y = readNumber();
+      if (Number.isFinite(x) && Number.isFinite(y)) points.push({ x, y });
+    } else {
+      break;
+    }
+  }
+
+  return compactPathPoints(points);
+}
+
 export class ConnectionRenderer {
   /** @type {Map<string, import('../core/Connection.js').Connection>} */
   #connectionData = new Map();
@@ -44,6 +95,44 @@ export class ConnectionRenderer {
 
   /** @type {'bezier'|'orthogonal'|'straight'|'pcb'} */
   #pathStyle = 'bezier';
+
+  /** @type {''|'bezier'|'orthogonal'|'straight'|'pcb'|'pcb-drag-proxy'} */
+  #transientPathStyle = '';
+
+  /** @type {Map<string, { style: 'bezier'|'orthogonal'|'straight'|'pcb'|'pcb-drag-proxy', connectionIds: Set<string>|null, draggedNodeId?: string, frozenPaths?: Map<string, Array<{x:number,y:number}>>, suspendProgressivePcb?: boolean }>} */
+  #transientPathStyleRequests = new Map();
+
+  #progressivePcbQueue = new Set();
+  #progressivePcbFrame = 0;
+  #progressivePcbBatchSize = 4;
+  #processingProgressivePcb = false;
+
+  #pcbPathSignature(conn, pathStyle, geometry) {
+    let rounded = [
+      geometry.startX,
+      geometry.startY,
+      geometry.endX,
+      geometry.endY,
+      geometry.fromPos.x,
+      geometry.fromPos.y,
+      geometry.toPos.x,
+      geometry.toPos.y,
+      geometry.fromW,
+      geometry.fromH,
+      geometry.toW,
+      geometry.toH,
+      geometry.fromAngle ?? 0,
+      geometry.toAngle ?? 180,
+    ].map((value) => Math.round(Number(value || 0) * 10) / 10);
+    return [
+      pathStyle,
+      conn.from,
+      conn.out,
+      conn.to,
+      conn.in,
+      ...rounded,
+    ].join(':');
+  }
 
   /**
    * @param {object} config
@@ -86,8 +175,8 @@ export class ConnectionRenderer {
    */
   #getNodeSize(nodeEl, fallbackWidth, fallbackHeight) {
     return {
-      width: nodeEl.offsetWidth || nodeEl._cachedW || fallbackWidth,
-      height: nodeEl.offsetHeight || nodeEl._cachedH || fallbackHeight,
+      width: nodeEl._cachedW || nodeEl.offsetWidth || fallbackWidth,
+      height: nodeEl._cachedH || nodeEl.offsetHeight || fallbackHeight,
     };
   }
 
@@ -202,6 +291,7 @@ export class ConnectionRenderer {
     let fromId = conn.from;
     let toId = conn.to;
     this.#connectionData.delete(conn.id);
+    this.#progressivePcbQueue.delete(conn.id);
     let path = this.#svgLayer.querySelector(`[data-conn-id="${conn.id}"]`);
     if (path) {
 
@@ -312,6 +402,7 @@ export class ConnectionRenderer {
    * Call after initial node positioning to let SVG connectors settle.
    */
   refreshAll() {
+    this.#cancelProgressivePcb();
     this.#clearAllSlots();
 
 
@@ -357,12 +448,12 @@ export class ConnectionRenderer {
       const fromSize = this.#getNodeSize(fromEl, 180, 100);
 
       let toCenter = {
-        x: toPos.x + (toEl._cachedW || 180) / 2,
-        y: toPos.y + (toEl._cachedH || 100) / 2,
+        x: toPos.x + toSize.width / 2,
+        y: toPos.y + toSize.height / 2,
       };
       let fromCenter = {
-        x: fromPos.x + (fromEl._cachedW || 180) / 2,
-        y: fromPos.y + (fromEl._cachedH || 100) / 2,
+        x: fromPos.x + fromSize.width / 2,
+        y: fromPos.y + fromSize.height / 2,
       };
 
       if (!nodeJobs.has(conn.from)) nodeJobs.set(conn.from, []);
@@ -381,7 +472,7 @@ export class ConnectionRenderer {
       if (shape?.pathData && shape.getEdgePoint) continue;
       if (!shape?.getSidePosition) continue;
 
-      let size = { width: el._cachedW || 180, height: el._cachedH || 100 };
+      let size = this.#getNodeSize(el, 180, 100);
       let cx = el._position.x + size.width / 2;
       let cy = el._position.y + size.height / 2;
 
@@ -486,15 +577,254 @@ export class ConnectionRenderer {
    */
   setPathStyle(style) {
     this.#pathStyle = style;
+    this.#rerenderAllConnections();
+  }
+
+  /**
+   * Temporarily override visible path styles without changing the user-selected style.
+   * @param {''|'bezier'|'orthogonal'|'straight'|'pcb'|'pcb-drag-proxy'} style
+   * @param {{ source?: string, connectionIds?: Iterable<string>, draggedNodeId?: string }} [options]
+   */
+  setTransientPathStyle(style = '', options = {}) {
+    let nextStyle = style || '';
+    let source = options.source || 'default';
+    let previousScope = this.#transientPathScope();
+    let previousRequest = this.#transientPathStyleRequests.get(source);
+    let wasProgressiveSuspended = this.#progressivePcbSuspended();
+
+    if (nextStyle) {
+      let connectionIds = options.connectionIds
+        ? new Set(Array.from(options.connectionIds, String))
+        : null;
+      if (!connectionIds) this.#cancelProgressivePcb();
+      let frozenPaths =
+        options.reuseFrozenPaths === true && previousRequest?.style === nextStyle
+          ? previousRequest.frozenPaths
+          : null;
+      if (nextStyle === 'pcb-drag-proxy' && !frozenPaths) {
+        frozenPaths = this.#captureConnectionPathPoints(connectionIds);
+      }
+      this.#transientPathStyleRequests.delete(source);
+      this.#transientPathStyleRequests.set(source, {
+        style: nextStyle,
+        connectionIds,
+        draggedNodeId: options.draggedNodeId,
+        frozenPaths,
+        suspendProgressivePcb: options.suspendProgressivePcb === true,
+      });
+    } else {
+      this.#transientPathStyleRequests.delete(source);
+    }
+
+    let isProgressiveSuspended = this.#progressivePcbSuspended();
+    if (!wasProgressiveSuspended && isProgressiveSuspended) {
+      this.#cancelProgressivePcbFrame();
+    }
+
+    let nextRequest = this.#transientPathStyleRequests.get(source);
+    if (previousRequest?.style === 'pcb-drag-proxy') {
+      this.#removeDragProxyPaths(
+        previousRequest.connectionIds,
+        nextRequest?.style === 'pcb-drag-proxy' ? nextRequest.connectionIds : null
+      );
+    }
+
+    this.#transientPathStyle = this.#globalTransientPathStyle();
+    let nextScope = this.#transientPathScope();
+    if (previousScope.global || nextScope.global) {
+      this.#rerenderAllConnections();
+      return;
+    }
+    let affected = this.#changedTransientConnections(previousScope.connectionIds, nextScope.connectionIds);
+    if (affected.size) this.#rerenderConnections(affected);
+    if (wasProgressiveSuspended && !isProgressiveSuspended) {
+      this.#requestProgressivePcbFrame();
+    }
+  }
+
+  #rerenderAllConnections() {
+    this.#cancelProgressivePcb();
     this.#clearAllSlots();
     for (const [, conn] of this.#connectionData) {
       this.#render(conn);
     }
   }
 
+  #rerenderConnections(connIds) {
+    for (const connId of connIds) this.#progressivePcbQueue.delete(connId);
+    for (const connId of connIds) {
+      let conn = this.#connectionData.get(connId);
+      if (conn) this.#render(conn);
+    }
+  }
+
+  #cancelProgressivePcb() {
+    this.#cancelProgressivePcbFrame();
+    this.#processingProgressivePcb = false;
+    this.#progressivePcbQueue.clear();
+  }
+
+  #cancelProgressivePcbFrame() {
+    if (this.#progressivePcbFrame && typeof cancelAnimationFrame === 'function') {
+      cancelAnimationFrame(this.#progressivePcbFrame);
+    }
+    this.#progressivePcbFrame = 0;
+  }
+
+  #progressivePcbSuspended() {
+    for (const request of this.#transientPathStyleRequests.values()) {
+      if (request.suspendProgressivePcb) return true;
+    }
+    return false;
+  }
+
+  #requestProgressivePcbFrame() {
+    if (
+      this.#processingProgressivePcb ||
+      this.#progressivePcbFrame ||
+      this.#progressivePcbSuspended() ||
+      !this.#progressivePcbQueue.size ||
+      typeof requestAnimationFrame !== 'function'
+    ) {
+      return;
+    }
+    this.#progressivePcbFrame = requestAnimationFrame(() => {
+      this.#progressivePcbFrame = 0;
+      this.#processProgressivePcb();
+    });
+  }
+
+  #connectionHasTransientRequest(connId) {
+    for (const request of this.#transientPathStyleRequests.values()) {
+      if (!request.connectionIds || request.connectionIds.has(connId)) return true;
+    }
+    return false;
+  }
+
+  #scheduleProgressivePcb(connId) {
+    if (this.#connectionHasTransientRequest(connId)) return;
+    this.#progressivePcbQueue.add(connId);
+    this.#requestProgressivePcbFrame();
+  }
+
+  #processProgressivePcb() {
+    if (!this.#progressivePcbQueue.size) return;
+    if (this.#progressivePcbSuspended()) return;
+    let batch = [...this.#progressivePcbQueue]
+      .filter((connId) => !this.#connectionHasTransientRequest(connId))
+      .slice(0, this.#progressivePcbBatchSize);
+    if (!batch.length) {
+      this.#progressivePcbFrame = 0;
+      return;
+    }
+    let previousRectCache = this._nodeRectCache;
+    this._nodeRectCache = this.#buildNodeRectCache();
+    this.#processingProgressivePcb = true;
+    try {
+      for (const connId of batch) {
+        this.#progressivePcbQueue.delete(connId);
+        let conn = this.#connectionData.get(connId);
+        if (conn) this.#render(conn, '', { fullPcb: true });
+      }
+    } finally {
+      this.#processingProgressivePcb = false;
+      this._nodeRectCache = previousRectCache || null;
+    }
+    this.#requestProgressivePcbFrame();
+  }
+
+  #captureConnectionPathPoints(connectionIds) {
+    let frozenPaths = new Map();
+    if (!connectionIds) return frozenPaths;
+    for (let connId of connectionIds) {
+      let path = this.#svgLayer.querySelector(`[data-conn-id="${connId}"]`);
+      let points = parsePathPoints(path?.getAttribute('d') || '');
+      if (points.length >= 2) frozenPaths.set(connId, points);
+    }
+    return frozenPaths;
+  }
+
+  #renderDragProxy(connId, d) {
+    let proxy = this.#svgLayer.querySelector(`[data-conn-proxy-id="${connId}"]`);
+    if (!proxy) {
+      proxy = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      proxy.setAttribute('class', 'sn-conn-drag-proxy');
+      proxy.setAttribute('data-conn-proxy-id', connId);
+      proxy.setAttribute('fill', 'none');
+      proxy.setAttribute('pointer-events', 'none');
+      this.#svgLayer.appendChild(proxy);
+    }
+    proxy.setAttribute('d', d);
+  }
+
+  #removeDragProxyPaths(connectionIds = null, keepIds = null) {
+    let keep = keepIds ? new Set(keepIds) : null;
+    let proxies = connectionIds
+      ? Array.from(connectionIds, (connId) =>
+          this.#svgLayer.querySelector(`[data-conn-proxy-id="${connId}"]`)
+        ).filter(Boolean)
+      : Array.from(this.#svgLayer.querySelectorAll('[data-conn-proxy-id]'));
+
+    for (const proxy of proxies) {
+      let connId = proxy.getAttribute('data-conn-proxy-id') || '';
+      if (!keep || !keep.has(connId)) proxy.remove();
+    }
+  }
+
+  #globalTransientPathStyle() {
+    let pathStyle = '';
+    for (const request of this.#transientPathStyleRequests.values()) {
+      if (!request.connectionIds) pathStyle = request.style;
+    }
+    return pathStyle;
+  }
+
+  #transientPathScope() {
+    let connectionIds = new Set();
+    for (const request of this.#transientPathStyleRequests.values()) {
+      if (!request.connectionIds) {
+        return { global: true, connectionIds };
+      }
+      for (const connId of request.connectionIds) connectionIds.add(connId);
+    }
+    return { global: false, connectionIds };
+  }
+
+  #changedTransientConnections(previousIds, nextIds) {
+    let changed = new Set();
+    for (const connId of previousIds) {
+      if (!nextIds.has(connId)) changed.add(connId);
+    }
+    for (const connId of nextIds) {
+      if (!previousIds.has(connId)) changed.add(connId);
+    }
+    return changed;
+  }
+
+  #pathStyleForConnection(conn) {
+    return this.#transientRequestForConnection(conn)?.style || this.#pathStyle;
+  }
+
+  #transientRequestForConnection(conn) {
+    let pathStyle = this.#pathStyle;
+    let matched = null;
+    for (const request of this.#transientPathStyleRequests.values()) {
+      if (!request.connectionIds || request.connectionIds.has(conn.id)) {
+        pathStyle = request.style;
+        matched = request;
+      }
+    }
+    return matched ? { ...matched, style: pathStyle } : null;
+  }
+
   /** @returns {'bezier'|'orthogonal'|'straight'} */
   get pathStyle() {
     return this.#pathStyle;
+  }
+
+  /** @returns {''|'bezier'|'orthogonal'|'straight'|'pcb'|'pcb-drag-proxy'} */
+  get transientPathStyle() {
+    return this.#transientPathStyle;
   }
 
   /**
@@ -513,7 +843,7 @@ export class ConnectionRenderer {
     let shape = getShape(nodeEl.getAttribute('node-shape'));
     let nodeData = nodeEl._nodeData;
     if (shape && shape.pathData && nodeData) {
-      let size = { width: nodeEl._cachedW || 180, height: nodeEl._cachedH || 100 };
+      let size = this.#getNodeSize(nodeEl, 180, 100);
 
 
       if (targetPos && shape.getEdgePoint) {
@@ -654,7 +984,7 @@ export class ConnectionRenderer {
    * @param {import('../core/Connection.js').Connection} conn
    * @returns {void}
    */
-  #render(conn) {
+  #render(conn, _changedNodeId = '', options = {}) {
     let fromEl = this.#nodeViews.get(conn.from);
     let toEl = this.#nodeViews.get(conn.to);
     if (!fromEl || !toEl) return;
@@ -695,10 +1025,37 @@ export class ConnectionRenderer {
     let toSize = { width: toW, height: toH };
 
 
+    let transientRequest = this.#transientRequestForConnection(conn);
+    let pathStyle = transientRequest?.style || this.#pathStyle;
+    let path = this.#svgLayer.querySelector(`[data-conn-id="${conn.id}"]`);
+    let pcbSignature = '';
+    if (pathStyle === 'pcb') {
+      pcbSignature = this.#pcbPathSignature(conn, pathStyle, {
+        startX,
+        startY,
+        endX,
+        endY,
+        fromPos,
+        toPos,
+        fromW,
+        fromH,
+        toW,
+        toH,
+        fromAngle: fromOffset.angle ?? 0,
+        toAngle: toOffset.angle ?? 180,
+      });
+      if (
+        !options.fullPcb &&
+        path?.getAttribute('data-pcb-quality') === 'full' &&
+        path.getAttribute('data-pcb-signature') === pcbSignature
+      ) {
+        return;
+      }
+    }
     let d;
-    if (this.#pathStyle === 'straight') {
+    if (pathStyle === 'straight') {
       d = `M ${startX} ${startY} L ${endX} ${endY}`;
-    } else if (this.#pathStyle === 'orthogonal') {
+    } else if (pathStyle === 'orthogonal') {
       let connKeys = Array.from(this.#connectionData.keys());
       let connIndex = connKeys.indexOf(conn.id);
       let traceOffset = (connIndex > -1 ? connIndex % 10 : 0) * 4;
@@ -811,7 +1168,16 @@ export class ConnectionRenderer {
         }
       }
       d = path;
-    } else if (this.#pathStyle === 'pcb') {
+    } else if (pathStyle === 'pcb-drag-proxy') {
+      d = this.#buildPcbDragProxyPath(conn, transientRequest, {
+        start: { x: startX, y: startY },
+        end: { x: endX, y: endY },
+        fromAngle: fromOffset.angle ?? 0,
+        toAngle: toOffset.angle ?? 180,
+      }) || `M ${startX} ${startY} L ${endX} ${endY}`;
+      this.#renderDragProxy(conn.id, d);
+      return;
+    } else if (pathStyle === 'pcb') {
       let routed = routePcbTrace({
         start: { x: startX, y: startY },
         end: { x: endX, y: endY },
@@ -822,8 +1188,12 @@ export class ConnectionRenderer {
         rects: this._nodeRectCache ? [...this._nodeRectCache.values()] : this.#nodeRects(),
         connections: [...this.#connectionData.values()],
         conn,
+        quality: options.fullPcb ? 'full' : 'draft',
       });
       d = routed.path;
+      if (!options.fullPcb) {
+        this.#scheduleProgressivePcb(conn.id);
+      }
     } else {
 
       let fromAngleDeg, toAngleDeg;
@@ -859,7 +1229,6 @@ export class ConnectionRenderer {
       d = `M ${startX} ${startY} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${endX} ${endY}`;
     }
 
-    let path = this.#svgLayer.querySelector(`[data-conn-id="${conn.id}"]`);
     if (!path) {
       path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
       path.setAttribute('class', 'sn-conn-path');
@@ -873,6 +1242,13 @@ export class ConnectionRenderer {
     let pathId = svgPathIdForConnection(conn.id);
     path.setAttribute('id', pathId);
     path.setAttribute('d', d);
+    if (pathStyle === 'pcb') {
+      path.setAttribute('data-pcb-quality', options.fullPcb ? 'full' : 'draft');
+      path.setAttribute('data-pcb-signature', pcbSignature);
+    } else {
+      path.removeAttribute('data-pcb-quality');
+      path.removeAttribute('data-pcb-signature');
+    }
 
 
     let fromSocketName = fromNode?.outputs[conn.out]?.socket?.name || 'data';
@@ -932,6 +1308,23 @@ export class ConnectionRenderer {
     } else {
       if (textEl) textEl.remove();
     }
+  }
+
+  #buildPcbDragProxyPath(conn, request, { start, end }) {
+    let frozen = request?.frozenPaths?.get?.(conn.id);
+    if (!frozen || frozen.length < 2) return '';
+    let draggedNodeId = request?.draggedNodeId;
+    let movingFrom = draggedNodeId === conn.from;
+    let movingTo = draggedNodeId === conn.to;
+    if (!movingFrom && !movingTo) return '';
+
+    if (movingFrom) {
+      let anchor = frozen[0];
+      return `M ${anchor.x} ${anchor.y} L ${start.x} ${start.y}`;
+    }
+
+    let anchor = frozen.at(-1);
+    return `M ${anchor.x} ${anchor.y} L ${end.x} ${end.y}`;
   }
 
   /**
@@ -1094,7 +1487,7 @@ export class ConnectionRenderer {
     let shape = getShape(shapeName);
     if (!shape?.pathData || !shape.getEdgePoint) return;
 
-    let size = { width: nodeEl.offsetWidth || 100, height: nodeEl.offsetHeight || 100 };
+    let size = this.#getNodeSize(nodeEl, 100, 100);
     let pos = nodeEl._position;
     if (!pos) return;
 

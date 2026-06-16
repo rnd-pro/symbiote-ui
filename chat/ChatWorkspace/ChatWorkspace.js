@@ -94,7 +94,12 @@ export class ChatWorkspace extends Symbiote {
     if ('activeChatId' in state) this.setActiveChatId(state.activeChatId);
     if ('empty' in state) this.setEmpty(state.empty);
     if ('messages' in state || 'messageItems' in state) {
-      this.setMessages(state.messageItems || state.messages || [], state.messagesOptions || {});
+      let messageItems = state.messageItems || state.messages || [];
+      if ('messageWindow' in state) {
+        this.replaceMessageWindow(messageItems, state.messageWindow || {});
+      } else {
+        this.setMessages(messageItems, state.messagesOptions || {});
+      }
     }
     if ('composer' in state) this.setComposerState(state.composer || {});
     if ('voiceControls' in state) this.setVoiceControls(state.voiceControls || {});
@@ -136,6 +141,24 @@ export class ChatWorkspace extends Symbiote {
     if (scrollToBottom) {
       queueMicrotask(() => transcript?.scrollToBottom?.({ smooth }));
     }
+  }
+
+  replaceMessageWindow(items = [], window = {}) {
+    return this.getTranscript()?.replaceMessageWindow?.(Array.isArray(items) ? items : [], window) || null;
+  }
+
+  prependMessages(items = [], window = {}) {
+    return this.getTranscript()?.prependMessageItems?.(Array.isArray(items) ? items : [], window) || null;
+  }
+
+  getMessageWindow() {
+    return this.getTranscript()?.getMessageWindow?.() || {
+      startIndex: 0,
+      count: 0,
+      totalItems: 0,
+      hasOlder: false,
+      hasNewer: false,
+    };
   }
 
   setComposerState(state = {}) {
@@ -271,6 +294,7 @@ export class ChatWorkspace extends Symbiote {
     route('chat-composer-param-change', 'chat-workspace-footer-intent');
     route('chat-composer-context-remove', 'chat-workspace-context-intent');
     route('chat-composer-context-drop', 'chat-workspace-context-intent');
+    route('chat-transcript-load-older', 'chat-workspace-load-older');
     for (let name of [
       'chat-composer-voice-input',
       'chat-composer-wake-listen',

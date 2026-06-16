@@ -44,6 +44,13 @@ export let styles = css`
       min-inline-size: 0;
       max-inline-size: calc(100vw - 32px);
       overflow: hidden;
+      clip-path: inset(
+        var(--sn-toolbar-clip-top, 0px)
+        var(--sn-toolbar-clip-right, 0px)
+        var(--sn-toolbar-clip-bottom, 0px)
+        var(--sn-toolbar-clip-left, 0px)
+        round 10px
+      );
     }
 
     &[data-has-title] .toolbar {

@@ -19,12 +19,23 @@ export function getNodeColor(node, typeColors = {}) {
 export function getGroupOrbitMetrics(node, conns, opts = {}) {
   let hubScale = 1 + Math.min(conns, 8) * 0.1;
   let aScale = opts.scale ?? (node.aScale || 1);
-  let baseR = DOT_RADIUS * hubScale * aScale;
+  let weightScale = getNodeWeightScale(node);
+  let baseR = DOT_RADIUS * hubScale * aScale * weightScale;
   let childCount = Math.max(2, Math.min(12, node.children?.length || 3));
   let innerR = baseR * Math.max(0.1, 0.18 - (childCount - 3) * 0.008);
   let spacing = innerR * 2.5;
   let orbitR = spacing / (2 * Math.sin(Math.PI / childCount));
   return { hubScale, baseR, childCount, innerR, spacing, orbitR };
+}
+
+export function getNodeWeight(node) {
+  let raw = node?.weight ?? node?.mass ?? node?.value ?? node?.params?.weight ?? node?.state?.weight;
+  if (!Number.isFinite(raw)) return 1;
+  return Math.max(0.35, Math.min(8, raw));
+}
+
+export function getNodeWeightScale(node) {
+  return Math.max(0.72, Math.min(1.9, Math.sqrt(getNodeWeight(node))));
 }
 
 /**
@@ -41,7 +52,7 @@ export function getNodeRadius(node, conns, opts = {}) {
   }
   let hubScale = 1 + Math.min(conns, 8) * 0.1;
   let aScale = opts.scale ?? (node.aScale || 1);
-  return DOT_RADIUS * hubScale * aScale;
+  return DOT_RADIUS * hubScale * aScale * getNodeWeightScale(node);
 }
 
 export function getNodeHitRadius(node, hitRadius = HIT_RADIUS) {

@@ -6,7 +6,10 @@ import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
 import {
   DEFAULT_LAYOUT_BEHAVIOR,
+  RUNTIME_SPLIT_RATIO,
+  applyPriorityCompression,
   branchFitsExpandedState,
+  clearPriorityCompression,
   closeUiPanel,
   createPanel,
   createSplit,
@@ -42,6 +45,8 @@ const layoutStyles = new URL('../layout/Layout/Layout.css.js', import.meta.url);
 const layoutTemplate = new URL('../layout/Layout/Layout.tpl.js', import.meta.url);
 const canvasGraphSource = new URL('../canvas/CanvasGraph/CanvasGraph.js', import.meta.url);
 const canvasGraphViewportSource = new URL('../canvas/CanvasGraph/CanvasGraphViewport.js', import.meta.url);
+const nodeCanvasStyles = new URL('../canvas/NodeCanvas/NodeCanvas.css.js', import.meta.url);
+const canvasViewportSource = new URL('../canvas/CanvasViewport.js', import.meta.url);
 const cascadeThemeSource = new URL('../themes/cascade-theme.js', import.meta.url);
 const defaultProviderThemeSource = new URL('../themes/default-provider.js', import.meta.url);
 const defaultDarkThemeSource = new URL('../themes/default-dark.js', import.meta.url);
@@ -266,6 +271,7 @@ test('layout behavior normalizes responsive collapse and overflow policy', () =>
     responsiveBreakpoint: 640,
     mobileDock: 'end',
     swipeControl: 'island',
+    drawerHoverOpen: true,
   });
 
   assert.equal(behavior.importance, 100);
@@ -277,10 +283,29 @@ test('layout behavior normalizes responsive collapse and overflow policy', () =>
   assert.equal(behavior.responsiveBreakpoint, 640);
   assert.equal(behavior.mobileDock, 'end');
   assert.equal(behavior.swipeControl, 'island');
+  assert.equal(behavior.drawerHoverOpen, true);
   assert.equal(hasLayoutBehaviorMetadata(behavior), true);
   assert.equal(hasLayoutBehaviorMetadata({ ...behavior, overflow: 'invalid' }), false);
   assert.equal(hasLayoutBehaviorMetadata({ ...behavior, mobileDock: 'invalid' }), false);
   assert.equal(hasLayoutBehaviorMetadata({ ...behavior, swipeControl: 'invalid' }), false);
+});
+
+test('layout behavior accepts rail drawer controls with optional hover open', () => {
+  let behavior = normalizeLayoutBehavior({
+    responsiveMode: 'drawer',
+    mobileDock: 'start',
+    swipeControl: 'rail',
+    drawerHoverOpen: true,
+  });
+
+  assert.equal(behavior.swipeControl, 'rail');
+  assert.equal(behavior.drawerHoverOpen, true);
+  assert.equal(hasLayoutBehaviorMetadata(behavior), true);
+
+  let fallback = normalizeLayoutBehavior({ swipeControl: 'rail', drawerHoverOpen: true });
+  let inherited = normalizeLayoutBehavior({}, fallback);
+  assert.equal(inherited.swipeControl, 'rail');
+  assert.equal(inherited.drawerHoverOpen, true);
 });
 
 test('layout behavior metadata predicate validates complete layout trees', () => {
@@ -459,6 +484,12 @@ test('layout tree resolves mobile drawer docks without product panel names', () 
   assert.equal(projection.panels.find((panel) => panel.id === graph.id).swipeControl, 'island');
   assert.equal(projection.panels.find((panel) => panel.id === theme.id).dock, 'end');
 
+  let rail = createPanel('rail', {}, { importance: 55, mobileDock: 'start', swipeControl: 'rail', drawerHoverOpen: true });
+  let railProjection = resolveMobileDrawerLayout(createSplit('horizontal', rail, content, 0.25));
+  let railPanel = railProjection.panels.find((panel) => panel.id === rail.id);
+  assert.equal(railPanel.swipeControl, 'rail');
+  assert.equal(railPanel.drawerHoverOpen, true);
+
   let autoRoot = createSplit(
     'horizontal',
     createPanel('tree', {}, { importance: 40 }),
@@ -478,8 +509,9 @@ test('layout tree resolves mobile drawer docks without product panel names', () 
 });
 
 test('panel layout drawer mode has gesture, theme, and metadata contracts', async () => {
-  let [layout, styles, template, nodeStyles, registry, customElements] = await Promise.all([
+  let [layout, layoutNode, styles, template, nodeStyles, registry, customElements] = await Promise.all([
     readFile(layoutSource, 'utf8'),
+    readFile(layoutNodeSource, 'utf8'),
     readFile(layoutStyles, 'utf8'),
     readFile(layoutTemplate, 'utf8'),
     readFile(layoutNodeStyles, 'utf8'),
@@ -500,6 +532,20 @@ test('panel layout drawer mode has gesture, theme, and metadata contracts', asyn
   assert.match(layout, /dataset\.drawerPanelId/);
   assert.match(layout, /_renderDrawerHandleStack/);
   assert.match(layout, /_resolveDrawerSwipeControl/);
+  assert.match(layout, /_onDrawerRailPointerDown/);
+  assert.match(layout, /_onDrawerRailHover/);
+  assert.match(layout, /_isDrawerContentSwipeBlocked\(target\)[\s\S]*?\.split-resizer/);
+  assert.match(layoutNode, /addEventListener\('pointerdown', this\._onSplitResizerPointerDown\)/);
+  assert.match(layoutNode, /removeEventListener\('pointerdown', this\._onSplitResizerPointerDown\)/);
+  assert.match(layoutNode, /_onSplitResizerPointerDown = \(event\) => {[\s\S]*?resizer\.closest\('layout-node'\) !== this[\s\S]*?this\._startResize\(event\);/);
+  assert.match(layoutNode, /_clearRuntimeSplitRatio\(\) {[\s\S]*?delete this\.\$\.nodeData\[LayoutTree\.RUNTIME_SPLIT_RATIO\];/);
+  assert.match(layoutNode, /_startResize\(e\)[\s\S]*?e\.stopPropagation\(\);/);
+  assert.match(layoutNode, /_startResize\(e\)[\s\S]*?this\._clearRuntimeSplitRatio\(\);[\s\S]*?this\.\$\.ratio = newRatio;/);
+  assert.doesNotMatch(template, /onpointerdown:\s*'onResizerDown'/);
+  assert.match(layout, /drawer-rail-collapsed/);
+  assert.match(layout, /_scheduleDrawerRailPeek/);
+  assert.match(layout, /drawer-rail-peeking/);
+  assert.match(layout, /drawerHoverOpen/);
   assert.match(layout, /dataset\.swipeControl/);
   assert.match(layout, /startPanels\.length > 0 && !startOpen && !endOpen/);
   assert.match(layout, /endPanels\.length > 0 && !startOpen && !endOpen/);
@@ -508,9 +554,14 @@ test('panel layout drawer mode has gesture, theme, and metadata contracts', asyn
   assert.match(styles, /\[drawer-mode-active\]/);
   assert.match(styles, /\.layout-drawer-handle-stack\s*\{/);
   assert.match(styles, /\.layout-drawer-handle-stack\[data-swipe-control='island'\]\s*\{/);
+  assert.match(styles, /layout-node\[drawer-rail\]\[drawer-rail-collapsed\]/);
+  assert.match(styles, /--sn-layout-drawer-rail-peek-distance:\s*20px/);
   assert.match(styles, /--sn-layout-swipe-island-size/);
   assert.match(styles, /touch-action:\s*none;/);
   assert.match(styles, /cursor:\s*grab;/);
+  assert.match(styles, /layout-node\[mobile-dock='start'\],[\s\S]*?layout-node\[mobile-dock='end'\]\s*\{[\s\S]*?will-change:\s*transform;/);
+  assert.match(styles, /layout-node\[drawer-dragging\]\s*\{[\s\S]*?transition:\s*none;[\s\S]*?will-change:\s*transform;/);
+  assert.match(styles, /&\[drawer-dragging\]\s*\{[\s\S]*?\.layout-drawer-handle-stack,[\s\S]*?\.layout-drawer-handle,[\s\S]*?transition:\s*none;/);
   assert.match(styles, /min-block-size:\s*var\(--sn-layout-drawer-min-block-size,\s*inherit\)/);
   assert.match(styles, /inset:\s*0;/);
   assert.match(styles, /--sn-layout-drawer-translate:\s*-100%/);
@@ -523,6 +574,10 @@ test('panel layout drawer mode has gesture, theme, and metadata contracts', asyn
   assert.match(layout, /_setDrawerHandleVisualState/);
   assert.match(layout, /_applyDrawerHandleProgress/);
   assert.match(layout, /_getDrawerHandleOpenOffset/);
+  assert.match(layout, /_setDrawerGestureDragging\(gesture\)/);
+  assert.match(layout, /this\._setDrawerGestureDragging\(this\._drawerGesture\)/);
+  assert.match(layout, /this\._setDrawerGestureDragging\(gesture\);\s*this\._captureDrawerGesturePointer\(gesture\)/);
+  assert.match(layout, /node\.setAttribute\('drawer-dragging', ''\);\s*if \(rail\)/);
   assert.match(layout, /_setDrawerNodeExpanded/);
   assert.match(layout, /_restoreDrawerNodeCollapseState/);
   assert.match(layout, /drawer-expanded/);
@@ -560,7 +615,7 @@ test('panel layout drawer mode has gesture, theme, and metadata contracts', asyn
   assert.match(layout, /--sn-layout-fullscreen-host-top', '0px'/);
   assert.match(styles, /\.fullscreen-tab-bar\s*\{[\s\S]*?top:\s*0;/);
   assert.match(styles, /height:\s*var\(--sn-fullscreen-tab-bar-height,\s*32px\)/);
-  assert.match(styles, /z-index:\s*var\(--sn-fullscreen-tab-bar-z,\s*20010\)/);
+  assert.match(styles, /z-index:\s*var\(--sn-fullscreen-tab-bar-z,\s*30020\)/);
   assert.match(styles, /\[fullscreen-active\]\s*\{[\s\S]*?\.layout-drawer-backdrop,[\s\S]*?\.layout-drawer-handle-stack,[\s\S]*?\.layout-drawer-handle\s*\{[\s\S]*?display:\s*none !important;/);
   assert.ok(
     styles.lastIndexOf('layout-node[fullscreen]') > styles.indexOf("layout-node[mobile-dock='start'],"),
@@ -569,6 +624,7 @@ test('panel layout drawer mode has gesture, theme, and metadata contracts', asyn
   assert.match(nodeStyles, /--sn-layout-fullscreen-host-top/);
   assert.match(nodeStyles, /--sn-fullscreen-tab-bar-height,\s*32px/);
   assert.match(nodeStyles, /--sn-layout-fullscreen-host-bottom/);
+  assert.match(nodeStyles, /z-index:\s*var\(--sn-fullscreen-panel-z,\s*30010\) !important;/);
   assert.match(nodeStyles, /layout-node\s*\{[\s\S]*?&\[fullscreen\]\s*\{[\s\S]*?height:\s*auto !important;/);
   assert.match(registry, /mobile-drawer/);
   assert.match(registry, /mobile-swipe-mode/);
@@ -597,7 +653,8 @@ test('fullscreen tab layer stays above floating toolbars in theme defaults', asy
   ]);
 
   for (let source of [cascadeTheme, defaultProvider, defaultDark]) {
-    assert.match(source, /--sn-fullscreen-tab-bar-z['"]:\s*['"]20010['"]/);
+    assert.match(source, /--sn-fullscreen-panel-z['"]:\s*['"]30010['"]/);
+    assert.match(source, /--sn-fullscreen-tab-bar-z['"]:\s*['"]30020['"]/);
   }
   assert.match(cascadeTheme, /--sn-fullscreen-tab-bar-height['"]:\s*densityToken\(32\)/);
   assert.match(cascadeTheme, /--sn-fullscreen-tab-active-height['"]:\s*densityToken\(33\)/);
@@ -620,6 +677,16 @@ test('canvas graph fit clamps padding for narrow viewports', async () => {
   assert.match(source, /this\.zoom = nextZoom/);
   assert.match(source, /this\._targetZoom = nextZoom/);
   assert.match(source, /pointercancel/);
+});
+
+test('node canvas declares touch ownership for mobile drawer gestures', async () => {
+  let styles = await readFile(nodeCanvasStyles, 'utf8');
+
+  assert.match(styles, /node-canvas\s*\{[\s\S]*?touch-action:\s*none;/);
+  assert.match(styles, /node-canvas\s*\{[\s\S]*?user-select:\s*none;/);
+  assert.match(styles, /\.canvas-container\s*\{[\s\S]*?touch-action:\s*none;/);
+  assert.match(styles, /\[data-flow-scroll='vertical'\]\s*\{[\s\S]*?touch-action:\s*pan-y;/);
+  assert.match(styles, /\[data-flow-scroll='horizontal'\]\s*\{[\s\S]*?touch-action:\s*pan-x;/);
 });
 
 test('canvas graph wheel zoom uses deltaMode-aware half-strength scaling', async () => {
@@ -646,6 +713,24 @@ test('canvas graph wheel zoom uses deltaMode-aware half-strength scaling', async
   assert.equal(resolveWheelZoomDelta(pixelWheel, 1), resolveWheelZoomDelta(pixelWheel) * 2);
   assert.ok(resolveWheelZoomFactor(trackpadWheel) > 0.99);
   assert.ok(resolveWheelZoomFactor(pixelWheel) < 0.93);
+});
+
+test('node canvas fit view avoids microscopic startup zoom', async () => {
+  let source = await readFile(canvasViewportSource, 'utf8');
+
+  assert.match(source, /const NODE_CANVAS_MIN_FIT_ZOOM = 0\.08;/);
+  assert.match(source, /const NODE_CANVAS_MIN_FIT_VIEWPORT_SIZE = 48;/);
+  assert.match(source, /resolveFitPadding\(padding, viewport\)/);
+  assert.match(source, /resolveFitPadding\(80, viewport\)/);
+  assert.doesNotMatch(source, /Math\.max\(0\.001,\s*Math\.min\(scaleX,\s*scaleY,\s*1\.5\)\)/);
+  assert.doesNotMatch(source, /minZoom = 0\.001/);
+});
+
+test('node canvas single-node focus applies the viewport transform immediately', async () => {
+  let source = await readFile(canvasViewportSource, 'utf8');
+
+  assert.match(source, /flyToNode\(nodeId, options = {}\) {/);
+  assert.match(source, /this\.#canvas\.\$\.zoom = zoom;\s*this\.#canvas\.\$\.panX = newPanX;\s*this\.#canvas\.\$\.panY = newPanY;\s*this\.#canvas\.selectNode\(nodeId\);\s*this\.updateTransform\(\);/);
 });
 
 test('layout minimum size estimate follows split direction and node behavior', () => {
@@ -913,6 +998,45 @@ test('layout restore guard rejects expanded states that would immediately collap
   );
 });
 
+test('priority compression shrinks lower-importance wide panels before auto-collapse', () => {
+  let tree = createPanel('tree', {}, {
+    importance: 82,
+    minInlineSize: 200,
+    collapse: 'auto',
+  });
+  let details = createPanel('details', {}, {
+    importance: 100,
+    minInlineSize: 320,
+    collapse: 'never',
+  });
+  let graph = createPanel('graph', {}, {
+    importance: 70,
+    minInlineSize: 320,
+    collapse: 'auto',
+  });
+  let content = createSplit('horizontal', details, graph, 0.32);
+  let root = createSplit('horizontal', tree, content, 0.22, {
+    minInlineSize: 960,
+  });
+
+  assert.equal(
+    applyPriorityCompression(root, { inlineSize: 960 }),
+    true
+  );
+  assert.ok(Math.abs(root[RUNTIME_SPLIT_RATIO] - 1 / 3) < 0.01);
+  assert.ok(Math.abs(content[RUNTIME_SPLIT_RATIO] - 0.5) < 0.01);
+  assert.equal(JSON.stringify(root).includes('runtimeSplitRatio'), false);
+
+  assert.equal(clearPriorityCompression(root), true);
+  assert.equal(root[RUNTIME_SPLIT_RATIO], undefined);
+  assert.equal(content[RUNTIME_SPLIT_RATIO], undefined);
+
+  assert.equal(
+    applyPriorityCompression(root, { inlineSize: 1300 }),
+    false
+  );
+});
+
 test('panel layout drawer handle pointer gesture opens and closes drawer panels', async () => {
   let { parseHTML } = await import('linkedom');
   let { window } = parseHTML('<!doctype html><html><body></body></html>');
@@ -930,6 +1054,7 @@ test('panel layout drawer handle pointer gesture opens and closes drawer panels'
     CustomEvent: window.CustomEvent,
     MutationObserver: window.MutationObserver,
     CSSStyleSheet: TestCSSStyleSheet,
+    getComputedStyle: window.getComputedStyle || (() => ({ transitionDuration: '0s', animationDuration: '0s' })),
   });
   window.document.adoptedStyleSheets = [];
 
@@ -1055,6 +1180,411 @@ test('panel layout drawer handle pointer gesture opens and closes drawer panels'
   assert.equal(layout._drawerGesture, null);
   assert.equal(stackEnd.style.getPropertyValue('inset-inline-end'), '0px');
 
-  // Clean up
+  const railLayout = document.createElement('panel-layout');
+  document.body.append(railLayout);
+  railLayout.getBoundingClientRect = () => ({
+    width: 300,
+    height: 600,
+    top: 0,
+    left: 0,
+    bottom: 600,
+    right: 300,
+  });
+  railLayout.$.layoutBehavior = {
+    responsiveMode: 'drawer',
+    responsiveBreakpoint: 720,
+    swipeControl: 'rail',
+    drawerHoverOpen: true,
+  };
+  railLayout.registerPanelType('nav', {
+    title: 'Navigation',
+    icon: 'folder',
+    behavior: { mobileDock: 'start', swipeControl: 'rail', drawerHoverOpen: true },
+  });
+  railLayout.registerPanelType('main', {
+    title: 'Main',
+    icon: 'article',
+    behavior: { mobileDock: 'primary', minInlineSize: 320, minBlockSize: 240 },
+  });
+  railLayout.registerPanelType('tools', {
+    title: 'Tools',
+    icon: 'hub',
+    behavior: { mobileDock: 'end', swipeControl: 'rail' },
+  });
+  railLayout.setLayout(createSplit(
+    'horizontal',
+    createPanel('nav'),
+    createSplit('horizontal', createPanel('main'), createPanel('tools'), 0.8),
+    0.25
+  ));
+  railLayout._applyResponsiveLayout();
+  await Promise.resolve();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  assert.equal(railLayout.hasAttribute('drawer-mode-active'), true);
+  assert.equal(railLayout.querySelector('.layout-drawer-handle-stack-start').hidden, true);
+  assert.equal(railLayout._drawerRailPeekPlayed, true);
+  assert.ok(railLayout._drawerRailPeekTimer);
+
+  let railNode = railLayout.querySelector('layout-node[drawer-rail][drawer-rail-collapsed][data-drawer-dock="start"]');
+  assert.ok(railNode);
+  assert.equal(railNode.dataset.swipeControl, 'rail');
+  assert.equal(railNode.hasAttribute('drawer-hover-open'), true);
+  let endRailPeekNode = railLayout.querySelector('layout-node[drawer-rail][drawer-rail-collapsed][data-drawer-dock="end"]');
+  assert.ok(endRailPeekNode);
+  railLayout._runDrawerRailPeek();
+  assert.equal(railNode.hasAttribute('drawer-rail-peeking'), true);
+  assert.match(railNode.style.getPropertyValue('transform'), /--sn-layout-drawer-rail-peek-distance/);
+  assert.equal(endRailPeekNode.hasAttribute('drawer-rail-peeking'), true);
+  assert.match(endRailPeekNode.style.getPropertyValue('transform'), /calc\(/);
+  railLayout._clearDrawerRailPeek();
+  assert.equal(railNode.hasAttribute('drawer-rail-peeking'), false);
+  assert.equal(endRailPeekNode.hasAttribute('drawer-rail-peeking'), false);
+  assert.equal(railNode.style.getPropertyValue('transform'), 'translateX(0px)');
+  assert.equal(endRailPeekNode.style.getPropertyValue('transform'), 'translateX(0px)');
+
+  const railClickDown = new Event('pointerdown', { bubbles: true });
+  railClickDown.pointerId = 3;
+  railClickDown.button = 0;
+  railClickDown.clientX = 12;
+  railClickDown.preventDefault = () => {};
+  railNode.dispatchEvent(railClickDown);
+
+  const railClickUp = new Event('pointerup');
+  railClickUp.pointerId = 3;
+  railClickUp.clientX = 12;
+  railClickUp.preventDefault = () => {};
+  railLayout.dispatchEvent(railClickUp);
+
+  assert.equal(railLayout.$.drawerStartOpen, true);
+  assert.equal(railLayout.hasAttribute('drawer-start-open'), true);
+  railNode.dispatchEvent(new CustomEvent('panel-collapse-toggle', {
+    bubbles: true,
+    composed: true,
+    detail: { panelId: railNode.$.nodeId, collapsed: true },
+  }));
+  assert.equal(railLayout.$.drawerStartOpen, true);
+
+  let endRailNode = railLayout.querySelector('layout-node[drawer-rail][drawer-rail-collapsed][data-drawer-dock="end"]');
+  assert.ok(endRailNode);
+  const oppositeRailDown = new Event('pointerdown', { bubbles: true });
+  oppositeRailDown.pointerId = 9;
+  oppositeRailDown.button = 0;
+  oppositeRailDown.clientX = 288;
+  oppositeRailDown.preventDefault = () => {};
+  endRailNode.dispatchEvent(oppositeRailDown);
+
+  const oppositeRailUp = new Event('pointerup');
+  oppositeRailUp.pointerId = 9;
+  oppositeRailUp.clientX = 288;
+  oppositeRailUp.preventDefault = () => {};
+  railLayout.dispatchEvent(oppositeRailUp);
+  assert.equal(railLayout.$.drawerStartOpen, false);
+  assert.equal(railLayout.$.drawerEndOpen, false);
+  endRailNode.dispatchEvent(new CustomEvent('panel-collapse-toggle', {
+    bubbles: true,
+    composed: true,
+    detail: { panelId: endRailNode.$.nodeId, collapsed: false },
+  }));
+  assert.equal(railLayout.$.drawerEndOpen, false);
+
+  railLayout.closeDrawer('start');
+  railNode = railLayout.querySelector('layout-node[drawer-rail][drawer-rail-collapsed][data-drawer-dock="start"]');
+  assert.ok(railNode);
+
+  railNode.dispatchEvent(new CustomEvent('panel-collapse-toggle', {
+    bubbles: true,
+    composed: true,
+    detail: { panelId: railNode.$.nodeId, collapsed: false },
+  }));
+  assert.equal(railLayout.$.drawerStartOpen, true);
+  let drawerClickTarget = document.createElement('div');
+  railNode.append(drawerClickTarget);
+  let drawerClick = new Event('click', { bubbles: true, cancelable: true });
+  drawerClickTarget.dispatchEvent(drawerClick);
+  assert.equal(drawerClick.defaultPrevented, true);
+  railLayout._drawerClickSuppressUntil = 0;
+
+  railLayout.closeDrawer('start');
+  railNode = railLayout.querySelector('layout-node[drawer-rail][drawer-rail-collapsed][data-drawer-dock="start"]');
+  const railTouchDown = new Event('pointerdown', { bubbles: true });
+  railTouchDown.pointerId = 6;
+  railTouchDown.pointerType = 'touch';
+  railTouchDown.button = 0;
+  railTouchDown.clientX = 12;
+  railTouchDown.preventDefault = () => {};
+  railNode.dispatchEvent(railTouchDown);
+
+  const railTouchMove = new Event('pointermove');
+  railTouchMove.pointerId = 6;
+  railTouchMove.pointerType = 'touch';
+  railTouchMove.clientX = 22;
+  railTouchMove.preventDefault = () => {};
+  railLayout.dispatchEvent(railTouchMove);
+
+  const railTouchUp = new Event('pointerup');
+  railTouchUp.pointerId = 6;
+  railTouchUp.pointerType = 'touch';
+  railTouchUp.clientX = 22;
+  railTouchUp.preventDefault = () => {};
+  railLayout.dispatchEvent(railTouchUp);
+
+  assert.equal(railLayout.$.drawerStartOpen, true);
+  railNode.dispatchEvent(new CustomEvent('panel-collapse-toggle', {
+    bubbles: true,
+    composed: true,
+    detail: { panelId: railNode.$.nodeId, collapsed: true },
+  }));
+  assert.equal(railLayout.$.drawerStartOpen, true);
+
+  railLayout.closeDrawer('start');
+  railNode = railLayout.querySelector('layout-node[drawer-rail][drawer-rail-collapsed][data-drawer-dock="start"]');
+  const railHover = new Event('pointerover', { bubbles: true });
+  railHover.pointerType = 'mouse';
+  railHover.preventDefault = () => {};
+  railNode.dispatchEvent(railHover);
+  assert.equal(railLayout.$.drawerStartOpen, true);
+
+  railLayout.closeDrawer('start');
+  railNode = railLayout.querySelector('layout-node[drawer-rail][drawer-rail-collapsed][data-drawer-dock="start"]');
+  const railSwipeDown = new Event('pointerdown', { bubbles: true });
+  railSwipeDown.pointerId = 4;
+  railSwipeDown.button = 0;
+  railSwipeDown.clientX = 8;
+  railSwipeDown.preventDefault = () => {};
+  railNode.dispatchEvent(railSwipeDown);
+
+  const railSwipeMove = new Event('pointermove');
+  railSwipeMove.pointerId = 4;
+  railSwipeMove.clientX = 220;
+  railSwipeMove.preventDefault = () => {};
+  railLayout.dispatchEvent(railSwipeMove);
+
+  const railSwipeUp = new Event('pointerup');
+  railSwipeUp.pointerId = 4;
+  railSwipeUp.clientX = 260;
+  railSwipeUp.preventDefault = () => {};
+  railLayout.dispatchEvent(railSwipeUp);
+  assert.equal(railLayout.$.drawerStartOpen, true);
+
+  railLayout.openDrawer('start');
+  railNode = railLayout.querySelector('layout-node[drawer-rail][drawer-expanded][data-drawer-dock="start"]');
+  assert.ok(railNode);
+
+  const drawerContentJitterDown = new Event('pointerdown', { bubbles: true });
+  drawerContentJitterDown.pointerId = 7;
+  drawerContentJitterDown.pointerType = 'touch';
+  drawerContentJitterDown.button = 0;
+  drawerContentJitterDown.clientX = 220;
+  drawerContentJitterDown.clientY = 80;
+  railNode.dispatchEvent(drawerContentJitterDown);
+
+  const drawerContentJitterMove = new Event('pointermove');
+  drawerContentJitterMove.pointerId = 7;
+  drawerContentJitterMove.pointerType = 'touch';
+  drawerContentJitterMove.clientX = 214;
+  drawerContentJitterMove.clientY = 84;
+  drawerContentJitterMove.preventDefault = () => {};
+  railLayout.dispatchEvent(drawerContentJitterMove);
+
+  const drawerContentJitterUp = new Event('pointerup');
+  drawerContentJitterUp.pointerId = 7;
+  drawerContentJitterUp.pointerType = 'touch';
+  drawerContentJitterUp.clientX = 214;
+  drawerContentJitterUp.clientY = 84;
+  railLayout.dispatchEvent(drawerContentJitterUp);
+  assert.equal(railLayout.$.drawerStartOpen, true);
+
+  railNode = railLayout.querySelector('layout-node[drawer-rail][drawer-expanded][data-drawer-dock="start"]');
+  const drawerContentSwipeDown = new Event('pointerdown', { bubbles: true });
+  drawerContentSwipeDown.pointerId = 8;
+  drawerContentSwipeDown.pointerType = 'touch';
+  drawerContentSwipeDown.button = 0;
+  drawerContentSwipeDown.clientX = 220;
+  drawerContentSwipeDown.clientY = 80;
+  railNode.dispatchEvent(drawerContentSwipeDown);
+
+  const drawerContentSwipeMove = new Event('pointermove');
+  drawerContentSwipeMove.pointerId = 8;
+  drawerContentSwipeMove.pointerType = 'touch';
+  drawerContentSwipeMove.clientX = 40;
+  drawerContentSwipeMove.clientY = 88;
+  drawerContentSwipeMove.preventDefault = () => {};
+  railLayout.dispatchEvent(drawerContentSwipeMove);
+
+  const drawerContentSwipeUp = new Event('pointerup');
+  drawerContentSwipeUp.pointerId = 8;
+  drawerContentSwipeUp.pointerType = 'touch';
+  drawerContentSwipeUp.clientX = 24;
+  drawerContentSwipeUp.clientY = 90;
+  drawerContentSwipeUp.preventDefault = () => {};
+  railLayout.dispatchEvent(drawerContentSwipeUp);
+  assert.equal(railLayout.$.drawerStartOpen, false);
+
+  let primaryNode = railLayout.querySelector('layout-node[drawer-primary]');
+  assert.ok(primaryNode);
+  const primaryStartSwipeDown = new Event('pointerdown', { bubbles: true });
+  primaryStartSwipeDown.pointerId = 10;
+  primaryStartSwipeDown.pointerType = 'touch';
+  primaryStartSwipeDown.button = 0;
+  primaryStartSwipeDown.clientX = 120;
+  primaryStartSwipeDown.clientY = 240;
+  primaryNode.dispatchEvent(primaryStartSwipeDown);
+
+  const primaryStartSwipeMove = new Event('pointermove');
+  primaryStartSwipeMove.pointerId = 10;
+  primaryStartSwipeMove.pointerType = 'touch';
+  primaryStartSwipeMove.clientX = 270;
+  primaryStartSwipeMove.clientY = 248;
+  primaryStartSwipeMove.preventDefault = () => {};
+  railLayout.dispatchEvent(primaryStartSwipeMove);
+
+  const primaryStartSwipeUp = new Event('pointerup');
+  primaryStartSwipeUp.pointerId = 10;
+  primaryStartSwipeUp.pointerType = 'touch';
+  primaryStartSwipeUp.clientX = 292;
+  primaryStartSwipeUp.clientY = 250;
+  primaryStartSwipeUp.preventDefault = () => {};
+  railLayout.dispatchEvent(primaryStartSwipeUp);
+  assert.equal(railLayout.$.drawerStartOpen, true);
+  assert.equal(railLayout.$.drawerEndOpen, false);
+
+  railLayout.closeDrawer('start');
+  primaryNode = railLayout.querySelector('layout-node[drawer-primary]');
+  const primaryEndSwipeDown = new Event('pointerdown', { bubbles: true });
+  primaryEndSwipeDown.pointerId = 11;
+  primaryEndSwipeDown.pointerType = 'touch';
+  primaryEndSwipeDown.button = 0;
+  primaryEndSwipeDown.clientX = 180;
+  primaryEndSwipeDown.clientY = 240;
+  primaryNode.dispatchEvent(primaryEndSwipeDown);
+
+  const primaryEndSwipeMove = new Event('pointermove');
+  primaryEndSwipeMove.pointerId = 11;
+  primaryEndSwipeMove.pointerType = 'touch';
+  primaryEndSwipeMove.clientX = 40;
+  primaryEndSwipeMove.clientY = 248;
+  primaryEndSwipeMove.preventDefault = () => {};
+  railLayout.dispatchEvent(primaryEndSwipeMove);
+
+  const primaryEndSwipeUp = new Event('pointerup');
+  primaryEndSwipeUp.pointerId = 11;
+  primaryEndSwipeUp.pointerType = 'touch';
+  primaryEndSwipeUp.clientX = 8;
+  primaryEndSwipeUp.clientY = 250;
+  primaryEndSwipeUp.preventDefault = () => {};
+  railLayout.dispatchEvent(primaryEndSwipeUp);
+  assert.equal(railLayout.$.drawerStartOpen, false);
+  assert.equal(railLayout.$.drawerEndOpen, true);
+
+  railLayout.closeDrawer('end');
+  primaryNode = railLayout.querySelector('layout-node[drawer-primary]');
+  const primaryVerticalDown = new Event('pointerdown', { bubbles: true });
+  primaryVerticalDown.pointerId = 12;
+  primaryVerticalDown.pointerType = 'touch';
+  primaryVerticalDown.button = 0;
+  primaryVerticalDown.clientX = 140;
+  primaryVerticalDown.clientY = 120;
+  primaryNode.dispatchEvent(primaryVerticalDown);
+
+  let verticalPrevented = false;
+  const primaryVerticalMove = new Event('pointermove');
+  primaryVerticalMove.pointerId = 12;
+  primaryVerticalMove.pointerType = 'touch';
+  primaryVerticalMove.clientX = 146;
+  primaryVerticalMove.clientY = 250;
+  primaryVerticalMove.preventDefault = () => { verticalPrevented = true; };
+  railLayout.dispatchEvent(primaryVerticalMove);
+
+  const primaryVerticalUp = new Event('pointerup');
+  primaryVerticalUp.pointerId = 12;
+  primaryVerticalUp.pointerType = 'touch';
+  primaryVerticalUp.clientX = 146;
+  primaryVerticalUp.clientY = 250;
+  railLayout.dispatchEvent(primaryVerticalUp);
+  assert.equal(verticalPrevented, false);
+  assert.equal(railLayout._drawerGesture, null);
+  assert.equal(railLayout.$.drawerStartOpen, false);
+  assert.equal(railLayout.$.drawerEndOpen, false);
+
+  const primaryTapDown = new Event('pointerdown', { bubbles: true });
+  primaryTapDown.pointerId = 13;
+  primaryTapDown.pointerType = 'touch';
+  primaryTapDown.button = 0;
+  primaryTapDown.clientX = 160;
+  primaryTapDown.clientY = 180;
+  primaryNode.dispatchEvent(primaryTapDown);
+  const primaryTapUp = new Event('pointerup');
+  primaryTapUp.pointerId = 13;
+  primaryTapUp.pointerType = 'touch';
+  primaryTapUp.clientX = 160;
+  primaryTapUp.clientY = 180;
+  railLayout.dispatchEvent(primaryTapUp);
+  assert.equal(railLayout._drawerGesture, null);
+  assert.equal(railLayout.$.drawerStartOpen, false);
+  assert.equal(railLayout.$.drawerEndOpen, false);
+
+  const linkInPrimary = document.createElement('a');
+  linkInPrimary.href = '#blocked';
+  linkInPrimary.textContent = 'Blocked link';
+  primaryNode.append(linkInPrimary);
+  const primaryLinkDown = new Event('pointerdown', { bubbles: true });
+  primaryLinkDown.pointerId = 14;
+  primaryLinkDown.pointerType = 'touch';
+  primaryLinkDown.button = 0;
+  primaryLinkDown.clientX = 180;
+  primaryLinkDown.clientY = 220;
+  linkInPrimary.dispatchEvent(primaryLinkDown);
+  assert.equal(railLayout._drawerGesture, null);
+  const primaryLinkMove = new Event('pointermove');
+  primaryLinkMove.pointerId = 14;
+  primaryLinkMove.pointerType = 'touch';
+  primaryLinkMove.clientX = 20;
+  primaryLinkMove.clientY = 225;
+  primaryLinkMove.preventDefault = () => {};
+  railLayout.dispatchEvent(primaryLinkMove);
+  assert.equal(railLayout.$.drawerStartOpen, false);
+  assert.equal(railLayout.$.drawerEndOpen, false);
+
+  railLayout.openDrawer('start');
+  railNode = railLayout.querySelector('layout-node[drawer-rail][drawer-expanded][data-drawer-dock="start"]');
+  const canvasInDrawer = document.createElement('canvas');
+  railNode.append(canvasInDrawer);
+  const drawerCanvasDown = new Event('pointerdown', { bubbles: true });
+  drawerCanvasDown.pointerId = 15;
+  drawerCanvasDown.pointerType = 'touch';
+  drawerCanvasDown.button = 0;
+  drawerCanvasDown.clientX = 120;
+  drawerCanvasDown.clientY = 220;
+  canvasInDrawer.dispatchEvent(drawerCanvasDown);
+  assert.equal(railLayout._drawerGesture, null);
+  assert.equal(railLayout.$.drawerStartOpen, true);
+
+  railLayout.closeDrawer('start');
+  primaryNode = railLayout.querySelector('layout-node[drawer-primary]');
+  const primaryCancelDown = new Event('pointerdown', { bubbles: true });
+  primaryCancelDown.pointerId = 16;
+  primaryCancelDown.pointerType = 'touch';
+  primaryCancelDown.button = 0;
+  primaryCancelDown.clientX = 120;
+  primaryCancelDown.clientY = 240;
+  primaryNode.dispatchEvent(primaryCancelDown);
+  const primaryCancelMove = new Event('pointermove');
+  primaryCancelMove.pointerId = 16;
+  primaryCancelMove.pointerType = 'touch';
+  primaryCancelMove.clientX = 260;
+  primaryCancelMove.clientY = 246;
+  primaryCancelMove.preventDefault = () => {};
+  railLayout.dispatchEvent(primaryCancelMove);
+  assert.ok(railLayout._drawerGesture);
+  const primaryCancel = new Event('pointercancel');
+  primaryCancel.pointerId = 16;
+  primaryCancel.pointerType = 'touch';
+  railLayout.dispatchEvent(primaryCancel);
+  assert.equal(railLayout._drawerGesture, null);
+  assert.equal(railLayout.$.drawerStartOpen, false);
+  assert.equal(railLayout.$.drawerEndOpen, false);
+
   layout.remove();
+  railLayout.remove();
 });

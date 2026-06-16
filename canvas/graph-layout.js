@@ -161,6 +161,7 @@ export function getForceLayoutOptions(nodeCount, {
   const metrics = getForceGroupMetrics(nodeCount, groups, linkEdges);
   const hasGroups = metrics.groupCount > 0;
   const options = {
+    layoutAlgorithm: 'organic',
     chargeStrength: nodeCount > 500 ? -300 : -150,
     linkDistance: nodeCount > 500 ? 100 : 150,
   };

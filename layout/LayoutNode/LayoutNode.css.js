@@ -464,7 +464,7 @@ export let styles = css`
       height: auto !important;
       max-inline-size: none !important;
       max-block-size: none !important;
-      z-index: 10001 !important;
+      z-index: var(--sn-fullscreen-panel-z, 30010) !important;
       box-shadow: 0 0 40px var(--sn-shadow-color);
     }
 

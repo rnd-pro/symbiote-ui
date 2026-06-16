@@ -102,6 +102,7 @@ export let styles = css`
         var(--sn-layout-drawer-inline-size, 86vw),
         var(--sn-layout-drawer-max-inline-size, 360px)
       );
+      --sn-layout-drawer-rail-peek-distance: 20px;
       min-block-size: var(--sn-layout-drawer-min-block-size, inherit);
       overflow: hidden;
 
@@ -155,6 +156,16 @@ export let styles = css`
         transform: none !important;
       }
 
+      &[drawer-start-rail] layout-node[mobile-dock='primary'] {
+        inset-inline-start: var(--sn-layout-collapsed-horizontal-size, 32px);
+        width: auto !important;
+      }
+
+      &[drawer-end-rail] layout-node[mobile-dock='primary'] {
+        inset-inline-end: var(--sn-layout-collapsed-horizontal-size, 32px);
+        width: auto !important;
+      }
+
       layout-node[mobile-dock='start'],
       layout-node[mobile-dock='end'] {
         z-index: var(--sn-layout-drawer-z, 3);
@@ -166,6 +177,7 @@ export let styles = css`
         max-inline-size: calc(100% - var(--sn-layout-drawer-edge-size, 34px));
         border-color: var(--sn-layout-drawer-border, var(--sn-layout-border));
         box-shadow: none;
+        will-change: transform;
       }
 
       layout-node[drawer-expanded] {
@@ -187,15 +199,103 @@ export let styles = css`
           padding: var(--sn-layout-header-padding, 2px 4px) !important;
         }
 
-        .type-btn,
-        .collapse-btn {
-          display: none !important;
+        &:not([drawer-rail]) {
+          .type-btn,
+          .collapse-btn {
+            display: none !important;
+          }
         }
 
         .panel-content {
           display: block !important;
           flex: 1 1 auto !important;
           min-block-size: 0 !important;
+        }
+      }
+
+      layout-node[drawer-rail][drawer-rail-collapsed] {
+        inline-size: var(--sn-layout-collapsed-horizontal-size, 32px) !important;
+        width: var(--sn-layout-collapsed-horizontal-size, 32px) !important;
+        min-inline-size: var(--sn-layout-collapsed-horizontal-size, 32px) !important;
+        max-inline-size: var(--sn-layout-collapsed-horizontal-size, 32px) !important;
+        transform: translateX(0) !important;
+        cursor: ew-resize;
+        user-select: none;
+
+        .panel-view {
+          inline-size: var(--sn-layout-collapsed-horizontal-size, 32px);
+          width: var(--sn-layout-collapsed-horizontal-size, 32px);
+          display: flex;
+          flex-direction: column;
+          block-size: 100%;
+          height: 100%;
+        }
+
+        .panel-content,
+        .panel-menu-drawer {
+          display: none !important;
+        }
+
+        .panel-header {
+          display: flex;
+          flex-direction: column;
+          writing-mode: horizontal-tb;
+          padding: 0;
+          height: 100%;
+          gap: 0;
+          align-items: center;
+          justify-content: flex-start;
+          width: var(--sn-layout-collapsed-horizontal-size, 32px);
+        }
+
+        .fullscreen-btn,
+        .panel-menu-toggle,
+        .dropdown-arrow,
+        .panel-title,
+        .header-spacer {
+          display: none !important;
+        }
+
+        .type-btn {
+          order: 1;
+          position: relative;
+          z-index: 1;
+          inline-size: 100%;
+          block-size: var(--sn-layout-header-block-size, calc(var(--sn-layout-header-min-height, 28px) + 3px));
+          min-block-size: var(--sn-layout-header-block-size, calc(var(--sn-layout-header-min-height, 28px) + 3px));
+          justify-content: center;
+          padding: var(--sn-layout-header-button-padding, 4px 6px);
+          background: none;
+          cursor: default;
+          pointer-events: none;
+          flex: 0 0 auto;
+
+          .panel-icon {
+            font-size: var(--sn-layout-header-icon-size, 16px);
+          }
+        }
+
+        .panel-actions {
+          order: 2;
+          position: absolute;
+          inset: 0;
+          z-index: 0;
+          display: block;
+          align-items: center;
+          justify-content: center;
+          inline-size: 100%;
+          block-size: 100%;
+        }
+
+        .collapse-btn {
+          padding: var(--sn-layout-collapsed-horizontal-button-padding, 8px 4px);
+          flex: 0 0 auto;
+          display: flex;
+          inline-size: 100%;
+          block-size: 100%;
+          min-block-size: 0;
+          align-items: center;
+          justify-content: center;
         }
       }
 
@@ -233,6 +333,7 @@ export let styles = css`
 
       layout-node[drawer-dragging] {
         transition: none;
+        will-change: transform;
       }
 
       .layout-drawer-handle-stack {
@@ -372,6 +473,7 @@ export let styles = css`
       }
 
       &[drawer-dragging] {
+        .layout-drawer-handle-stack,
         .layout-drawer-handle,
         layout-node[mobile-dock='start'],
         layout-node[mobile-dock='end'] {
@@ -419,7 +521,7 @@ export let styles = css`
       display: flex;
       align-items: stretch;
       gap: 0;
-      z-index: var(--sn-fullscreen-tab-bar-z, 20010);
+      z-index: var(--sn-fullscreen-tab-bar-z, 30020);
       padding: 0;
 
       &[hidden] {

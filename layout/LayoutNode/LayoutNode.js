@@ -176,7 +176,6 @@ export class LayoutNode extends Symbiote {
     '^panelChrome': true,
 
 
-    onResizerDown: (e) => this._startResize(e),
     onTypeClick: (e) => this._showTypeMenu(e),
     onPanelMenuToggle: () => this._togglePanelMenu(),
     onCollapseClick: () => this._toggleCollapse(),
@@ -231,18 +230,22 @@ export class LayoutNode extends Symbiote {
   initCallback() {
     this.addEventListener('panel-menu-actions', this._onPanelMenuActions);
     this.addEventListener('click', this._onPanelMenuClick);
+    this.addEventListener('pointerdown', this._onSplitResizerPointerDown);
   }
 
   disconnectedCallback() {
     this.removeEventListener('panel-menu-actions', this._onPanelMenuActions);
     this.removeEventListener('click', this._onPanelMenuClick);
+    this.removeEventListener('pointerdown', this._onSplitResizerPointerDown);
     super.disconnectedCallback?.();
   }
 
   _updateStyles() {
-    let ratio = this.$.ratio;
     let dir = this.$.direction;
     let data = this.$.nodeData;
+    let ratio = Number.isFinite(data?.[LayoutTree.RUNTIME_SPLIT_RATIO])
+      ? data[LayoutTree.RUNTIME_SPLIT_RATIO]
+      : this.$.ratio;
 
 
     let firstCollapsed = data?.first?.collapsed || false;
@@ -480,6 +483,17 @@ export class LayoutNode extends Symbiote {
     this._runPanelMenuAction(event);
   };
 
+  _onSplitResizerPointerDown = (event) => {
+    let resizer = event.target?.closest?.('.split-resizer');
+    if (!resizer || resizer.closest('layout-node') !== this) return;
+    this._startResize(event);
+  };
+
+  _clearRuntimeSplitRatio() {
+    if (!this.$.nodeData) return;
+    delete this.$.nodeData[LayoutTree.RUNTIME_SPLIT_RATIO];
+  }
+
   _togglePanelMenu() {
     if (this.$.panelChrome === false || this.$['^panelChrome'] === false) return;
     if (this.$.isCollapsed || !this.$.hasPanelMenuActions) return;
@@ -632,6 +646,8 @@ export class LayoutNode extends Symbiote {
   _startResize(e) {
     if (this.$.panelChrome === false || this.$['^panelChrome'] === false) return;
     e.preventDefault();
+    e.stopPropagation();
+    this._clearRuntimeSplitRatio();
     this.toggleAttribute('resizing', true);
 
 
@@ -680,6 +696,7 @@ export class LayoutNode extends Symbiote {
       let newRatio = Math.max(0.1, Math.min(0.9, rawRatio));
 
 
+      this._clearRuntimeSplitRatio();
       this.$.ratio = newRatio;
       this._updateStyles();
 

@@ -67,3 +67,33 @@ test('PCB router rejects direct routes that do not leave endpoints perpendicular
   assertSegmentFollowsDirection(routed.points[0], routed.points[1], { dx: 1, dy: 0 }, 16);
   assertSegmentFollowsDirection(routed.points.at(-1), routed.points.at(-2), { dx: -1, dy: 0 }, 16);
 });
+
+test('PCB router exposes a cheap draft route before full lane routing', () => {
+  const base = {
+    start: { x: 120, y: 100 },
+    end: { x: 620, y: 460 },
+    fromRect: { id: 'source', x: 20, y: 60, w: 100, h: 80 },
+    toRect: { id: 'target', x: 620, y: 420, w: 100, h: 80 },
+    fromAngle: 0,
+    toAngle: 180,
+    rects: [
+      { id: 'source', x: 20, y: 60, w: 100, h: 80 },
+      { id: 'obstacle-a', x: 250, y: 150, w: 160, h: 140 },
+      { id: 'obstacle-b', x: 420, y: 310, w: 120, h: 120 },
+      { id: 'target', x: 620, y: 420, w: 100, h: 80 },
+    ],
+    connections: [{ id: 'conn-draft', from: 'source', to: 'target' }],
+    conn: { id: 'conn-draft', from: 'source', to: 'target' },
+    grid: 10,
+    stub: 28,
+    clearance: 28,
+    chamfer: 8,
+  };
+
+  const draft = routePcbTrace({ ...base, quality: 'draft' });
+  const full = routePcbTrace(base);
+
+  assert.equal(draft.strategy, 'pcb-draft');
+  assert.ok(draft.path.startsWith('M 120 100'));
+  assert.notEqual(draft.path, full.path);
+});

@@ -16,6 +16,8 @@ export let styles = css`
     );
     background-size: var(--sn-grid-size) var(--sn-grid-size);
     cursor: grab;
+    touch-action: none;
+    user-select: none;
     /* Prevent scrollbar oscillation: canvas manages its own viewport internally.
      - size: SVG overflow:visible children cannot influence parent sizing
      - layout: internal layout changes don't trigger parent reflow
@@ -33,6 +35,7 @@ export let styles = css`
       position: relative;
       overflow: hidden;
       outline: none;
+      touch-action: none;
     }
 
     &[data-flow-scroll] {
@@ -42,11 +45,13 @@ export let styles = css`
     &[data-flow-scroll='vertical'] {
       overflow-y: auto;
       overflow-x: hidden;
+      touch-action: pan-y;
     }
 
     &[data-flow-scroll='horizontal'] {
       overflow-x: auto;
       overflow-y: hidden;
+      touch-action: pan-x;
     }
 
     &[data-flow-scroll] .canvas-container {
@@ -172,6 +177,16 @@ export let styles = css`
       stroke-width: var(--sn-conn-selected-width, 3);
       opacity: 1;
     }
+  }
+
+  .sn-conn-drag-proxy {
+    stroke: var(--sn-node-selected, var(--sn-conn-color));
+    stroke-width: var(--sn-conn-selected-width, 3);
+    stroke-linecap: var(--sn-conn-linecap, round);
+    stroke-linejoin: var(--sn-conn-linejoin, round);
+    opacity: 0.95;
+    pointer-events: none;
+    vector-effect: non-scaling-stroke;
   }
 
   /* Kill pointer-events on SVG paths during active zoom/pan to prevent

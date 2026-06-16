@@ -43,6 +43,8 @@ const ICONS = [
   'visibility_off',
 ];
 
+const CLIP_BOUNDARY_SELECTOR = '.panel-content, .panel-view, panel-layout';
+
 export class QuickToolbar extends Symbiote {
   init$ = {
     items: ACTIONS,
@@ -87,15 +89,38 @@ export class QuickToolbar extends Symbiote {
   /** @type {boolean} */
   _viewportEventsBound = false;
 
+  /** @type {boolean} */
+  _documentEventsBound = false;
+
   /** @type {number} */
   _positionFrame = 0;
 
   _onViewportChange = () => {
+    if (!this.#isAnchorVisible()) {
+      this.hide();
+      return;
+    }
     this.#requestPositionUpdate();
   };
 
   _onWheel = (/** @type {WheelEvent} */ e) => {
     this.#forwardWheelToCanvas(e);
+  };
+
+  _onDocumentPointerDown = (/** @type {PointerEvent|MouseEvent|TouchEvent} */ e) => {
+    if (!this.$.visible || this.hidden) return;
+    let target = this.#eventTarget(e);
+    if (!target) return;
+    if (this.contains(target)) return;
+
+    let canvas = this.#getAnchorCanvas();
+    if (canvas?.contains?.(target)) return;
+
+    this.hide();
+  };
+
+  _onDocumentVisibilityChange = () => {
+    if (this.ownerDocument?.hidden) this.hide();
   };
 
   /** @type {number} Toolbar height + gap */
@@ -109,6 +134,9 @@ export class QuickToolbar extends Symbiote {
 
   /** @type {number} */
   static TOOLBAR_EDGE_INSET = 16;
+
+  /** @type {number} */
+  static ANCHOR_VISIBILITY_MARGIN = 16;
 
   /** @type {{ zoom: number, panX: number, panY: number }} */
   _transform = { zoom: 1, panX: 0, panY: 0 };
@@ -135,6 +163,7 @@ export class QuickToolbar extends Symbiote {
     this.$.visible = true;
     this.toggleAttribute('hidden', false);
     bringOverlayToFront(this);
+    this.#bindDocumentEvents();
 
     this.#fitToolbarWidth();
     this.#positionAtNode(nodeEl);
@@ -159,6 +188,8 @@ export class QuickToolbar extends Symbiote {
     this.toggleAttribute('data-has-title', false);
     this.style.removeProperty('--sn-toolbar-fit-width');
     this.style.removeProperty('--sn-toolbar-scale');
+    this.#clearClipInsets();
+    this.#unbindDocumentEvents();
     restoreOverlayHome(this);
   }
 
@@ -189,6 +220,7 @@ export class QuickToolbar extends Symbiote {
 
   destroyCallback() {
     this.#cancelPositionUpdate();
+    this.#unbindDocumentEvents();
     if (this._viewportEventsBound && typeof window !== 'undefined') {
       window.removeEventListener('resize', this._onViewportChange);
       window.removeEventListener('scroll', this._onViewportChange, { capture: true });
@@ -253,6 +285,66 @@ export class QuickToolbar extends Symbiote {
       cancelAnimationFrame(this._positionFrame);
     }
     this._positionFrame = 0;
+  }
+
+  #bindDocumentEvents() {
+    if (this._documentEventsBound) return;
+    let doc = this.ownerDocument;
+    if (!doc?.addEventListener) return;
+
+    doc.addEventListener('pointerdown', this._onDocumentPointerDown, { capture: true });
+    doc.addEventListener('visibilitychange', this._onDocumentVisibilityChange);
+    this._documentEventsBound = true;
+  }
+
+  #unbindDocumentEvents() {
+    if (!this._documentEventsBound) return;
+    let doc = this.ownerDocument;
+    if (doc?.removeEventListener) {
+      doc.removeEventListener('pointerdown', this._onDocumentPointerDown, { capture: true });
+      doc.removeEventListener('visibilitychange', this._onDocumentVisibilityChange);
+    }
+    this._documentEventsBound = false;
+  }
+
+  #eventTarget(/** @type {Event} */ e) {
+    let path = typeof e.composedPath === 'function' ? e.composedPath() : null;
+    return path?.[0] || e.target || null;
+  }
+
+  #getAnchorCanvas() {
+    return this._nodeEl?.closest?.('node-canvas') || null;
+  }
+
+  #isAnchorVisible() {
+    let nodeEl = this._nodeEl;
+    if (!nodeEl) return true;
+    if (!nodeEl.isConnected) return false;
+    if (!this.#elementIntersectsViewport(nodeEl)) return false;
+
+    let canvas = this.#getAnchorCanvas();
+    if (canvas && !this.#elementIntersectsViewport(canvas)) return false;
+
+    return true;
+  }
+
+  #elementIntersectsViewport(/** @type {HTMLElement} */ element) {
+    let rect = element.getBoundingClientRect?.();
+    if (!rect) return true;
+    if (rect.width <= 0 || rect.height <= 0) return false;
+
+    let docEl = element.ownerDocument?.documentElement;
+    let viewportWidth = docEl?.clientWidth || globalThis.window?.innerWidth || 0;
+    let viewportHeight = docEl?.clientHeight || globalThis.window?.innerHeight || 0;
+    if (!viewportWidth || !viewportHeight) return true;
+
+    let margin = QuickToolbar.ANCHOR_VISIBILITY_MARGIN;
+    return (
+      rect.right >= -margin &&
+      rect.bottom >= -margin &&
+      rect.left <= viewportWidth + margin &&
+      rect.top <= viewportHeight + margin
+    );
   }
 
   /**
@@ -345,26 +437,23 @@ export class QuickToolbar extends Symbiote {
       if (this.hasAttribute('data-overlay-portal')) {
         let x = nodeRect.left + nodeRect.width / 2;
         let toolbarWidth = (toolbarEl?.offsetWidth || 0) * scale;
-        let viewportWidth = this.ownerDocument?.documentElement?.clientWidth || window.innerWidth || 0;
-        let edgeInset = QuickToolbar.TOOLBAR_EDGE_INSET;
-        if (toolbarWidth && viewportWidth) {
-          if (viewportWidth > toolbarWidth + edgeInset * 2) {
-            x = Math.min(
-              Math.max(x, edgeInset + toolbarWidth / 2),
-              viewportWidth - edgeInset - toolbarWidth / 2
-            );
-          } else {
-            x = viewportWidth / 2;
-          }
-        }
+        let toolbarBlockHeight = toolbarHeight * scale;
+        let clipRect = this.#resolveClipBoundaryRect(nodeEl);
         let y = nodeRect.top - offsetY;
         this.style.transform = `translate(${x}px, ${y}px)`;
+        this.#syncClipInsets({
+          left: x - toolbarWidth / 2,
+          top: y,
+          right: x + toolbarWidth / 2,
+          bottom: y + toolbarBlockHeight,
+        }, clipRect, scale);
         return;
       }
 
       let x = nodeRect.left - containerRect.left + nodeRect.width / 2;
       let y = nodeRect.top - containerRect.top - offsetY;
       this.style.transform = `translate(${x}px, ${y}px)`;
+      this.#clearClipInsets();
       return;
     }
 
@@ -373,6 +462,46 @@ export class QuickToolbar extends Symbiote {
     let x = pos.x + w / 2;
     let y = pos.y - offsetY;
     this.style.transform = `translate(${x}px, ${y}px)`;
+    this.#clearClipInsets();
+  }
+
+  #resolveClipBoundaryRect(/** @type {HTMLElement} */ nodeEl) {
+    let boundary = nodeEl.closest?.(CLIP_BOUNDARY_SELECTOR) || this.#getAnchorCanvas();
+    let rect = boundary?.getBoundingClientRect?.();
+    if (rect && rect.width > 0 && rect.height > 0) return rect;
+
+    let docEl = nodeEl.ownerDocument?.documentElement;
+    let width = docEl?.clientWidth || globalThis.window?.innerWidth || 0;
+    let height = docEl?.clientHeight || globalThis.window?.innerHeight || 0;
+    if (!width || !height) return null;
+
+    return {
+      left: 0,
+      top: 0,
+      right: width,
+      bottom: height,
+      width,
+      height,
+    };
+  }
+
+  #syncClipInsets(toolbarRect, clipRect, scale) {
+    if (!clipRect) {
+      this.#clearClipInsets();
+      return;
+    }
+    let divisor = Number.isFinite(scale) && scale > 0 ? scale : 1;
+    this.style.setProperty('--sn-toolbar-clip-top', `${Math.max(0, clipRect.top - toolbarRect.top) / divisor}px`);
+    this.style.setProperty('--sn-toolbar-clip-right', `${Math.max(0, toolbarRect.right - clipRect.right) / divisor}px`);
+    this.style.setProperty('--sn-toolbar-clip-bottom', `${Math.max(0, toolbarRect.bottom - clipRect.bottom) / divisor}px`);
+    this.style.setProperty('--sn-toolbar-clip-left', `${Math.max(0, clipRect.left - toolbarRect.left) / divisor}px`);
+  }
+
+  #clearClipInsets() {
+    this.style.removeProperty('--sn-toolbar-clip-top');
+    this.style.removeProperty('--sn-toolbar-clip-right');
+    this.style.removeProperty('--sn-toolbar-clip-bottom');
+    this.style.removeProperty('--sn-toolbar-clip-left');
   }
 
   /**

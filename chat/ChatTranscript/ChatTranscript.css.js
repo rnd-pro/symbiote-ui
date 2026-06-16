@@ -46,6 +46,14 @@ chat-transcript > [slot="background"] {
   z-index: 1;
 }
 
+.chat-top-sentinel {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 0;
+  height: var(--sn-chat-transcript-top-sentinel-height, 0);
+  pointer-events: none;
+}
+
 chat-message-item {
   display: contents;
 }

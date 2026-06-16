@@ -24,7 +24,7 @@
  */
 
 /**
- * @typedef {'edge' | 'island' | 'none'} LayoutSwipeControl
+ * @typedef {'edge' | 'island' | 'rail' | 'none'} LayoutSwipeControl
  */
 
 /**
@@ -38,6 +38,7 @@
  * @property {number} [responsiveBreakpoint] Inline size where responsiveMode activates.
  * @property {LayoutMobileDock} [mobileDock] Mobile drawer placement preference.
  * @property {LayoutSwipeControl} [swipeControl] Mobile swipe handle placement.
+ * @property {boolean} [drawerHoverOpen] Whether mouse hover over a drawer rail opens the drawer.
  */
 
 /**
@@ -77,18 +78,23 @@ export const DEFAULT_LAYOUT_BEHAVIOR = Object.freeze({
   responsiveBreakpoint: 720,
   mobileDock: 'auto',
   swipeControl: 'edge',
+  drawerHoverOpen: false,
 })
 
 export const COLLAPSED_PANEL_INLINE_SIZE = 32
 export const COLLAPSED_PANEL_BLOCK_SIZE = 28
 export const RESTORE_FIT_FACTOR = 1.18
 export const STABLE_FIT_FACTOR = 1.02
+export const RUNTIME_SPLIT_RATIO = Symbol.for('symbiote-ui.layout.runtimeSplitRatio')
+
+const PRIORITY_COMPRESSION_START_FACTOR = 1.25
+const RATIO_EPSILON = 0.0005
 
 const COLLAPSE_POLICIES = new Set(['auto', 'manual', 'never'])
 const OVERFLOW_POLICIES = new Set(['collapse', 'scroll-inline', 'scroll-block', 'scroll'])
 const RESPONSIVE_MODES = new Set(['preserve', 'stack', 'scroll-inline', 'drawer', 'swipe'])
 const MOBILE_DOCKS = new Set(['auto', 'primary', 'start', 'end'])
-const SWIPE_CONTROLS = new Set(['edge', 'island', 'none'])
+const SWIPE_CONTROLS = new Set(['edge', 'island', 'rail', 'none'])
 
 let idCounter = 0
 
@@ -122,6 +128,9 @@ export function normalizeLayoutBehavior(behavior = {}, fallback = DEFAULT_LAYOUT
   let swipeControl = SWIPE_CONTROLS.has(input.swipeControl)
     ? input.swipeControl
     : base.swipeControl || DEFAULT_LAYOUT_BEHAVIOR.swipeControl
+  let drawerHoverOpen = 'drawerHoverOpen' in input
+    ? Boolean(input.drawerHoverOpen)
+    : Boolean(base.drawerHoverOpen ?? DEFAULT_LAYOUT_BEHAVIOR.drawerHoverOpen)
 
   return {
     importance: finiteNumber(input.importance, base.importance ?? DEFAULT_LAYOUT_BEHAVIOR.importance, 0, 100),
@@ -137,6 +146,7 @@ export function normalizeLayoutBehavior(behavior = {}, fallback = DEFAULT_LAYOUT
     ),
     mobileDock,
     swipeControl,
+    drawerHoverOpen,
   }
 }
 
@@ -150,7 +160,8 @@ export function hasLayoutBehaviorMetadata(behavior) {
     OVERFLOW_POLICIES.has(behavior.overflow) &&
     RESPONSIVE_MODES.has(behavior.responsiveMode) &&
     MOBILE_DOCKS.has(behavior.mobileDock) &&
-    SWIPE_CONTROLS.has(behavior.swipeControl)
+    SWIPE_CONTROLS.has(behavior.swipeControl) &&
+    typeof behavior.drawerHoverOpen === 'boolean'
   )
 }
 
@@ -678,6 +689,162 @@ function readBlockSize(size, fallback = 0) {
   return finiteNumber(size?.blockSize ?? size?.height, fallback, 0)
 }
 
+function clearRuntimeSplitRatios(root) {
+  let changed = false
+  function walk(node) {
+    if (!node) return
+    if (isSplitNode(node)) {
+      if (node[RUNTIME_SPLIT_RATIO] !== undefined) {
+        delete node[RUNTIME_SPLIT_RATIO]
+        changed = true
+      }
+      walk(node.first)
+      walk(node.second)
+    }
+  }
+  walk(root)
+  return changed
+}
+
+export function clearPriorityCompression(root) {
+  return clearRuntimeSplitRatios(root)
+}
+
+/**
+ * Apply runtime-only split ratios that let lower-importance panels absorb
+ * responsive compression before auto-collapse is evaluated.
+ * @param {LayoutNode | null} root
+ * @param {Object} viewport
+ * @param {number} viewport.inlineSize
+ * @param {LayoutBehavior} [viewport.fallbackBehavior]
+ * @param {Object} [options]
+ * @param {LayoutBehavior} [options.fallbackBehavior]
+ * @param {(node: PanelNode, branchBehavior: LayoutBehavior) => LayoutBehavior} [options.resolvePanelBehavior]
+ * @returns {boolean} Whether any runtime ratio changed.
+ */
+export function applyPriorityCompression(root, viewport = {}, options = {}) {
+  if (!root || !isSplitNode(root)) return false
+  let {
+    fallbackBehavior = viewport.fallbackBehavior || DEFAULT_LAYOUT_BEHAVIOR,
+    resolvePanelBehavior = (node, branchBehavior) => getNodeBehavior(node, branchBehavior),
+  } = options
+  let inlineSize = readInlineSize(viewport)
+  if (inlineSize <= 0) return clearRuntimeSplitRatios(root)
+
+  let rootBehavior = getNodeBehavior(root, fallbackBehavior)
+  let compressionEnd = finiteNumber(rootBehavior.minInlineSize, 0, 1)
+  let compressionStart = compressionEnd * PRIORITY_COMPRESSION_START_FACTOR
+  if (compressionEnd <= 0 || compressionStart <= compressionEnd || inlineSize >= compressionStart) {
+    return clearRuntimeSplitRatios(root)
+  }
+
+  let progress = inlineSize <= compressionEnd
+    ? 1
+    : (compressionStart - inlineSize) / (compressionStart - compressionEnd)
+  progress = Math.max(0, Math.min(1, progress))
+  if (progress <= 0) return clearRuntimeSplitRatios(root)
+
+  let panels = []
+  let horizontalOnly = true
+  function collect(node, share, fallback) {
+    if (!node || node.collapsed) return
+    let branchBehavior = getNodeBehavior(node, fallback)
+    if (isPanelNode(node)) {
+      let behavior = resolvePanelBehavior(node, branchBehavior)
+      panels.push({
+        node,
+        behavior,
+        baseShare: share,
+        targetShare: share,
+        order: panels.length,
+      })
+      return
+    }
+    if (node.direction !== 'horizontal') {
+      horizontalOnly = false
+      return
+    }
+    let ratio = finiteNumber(node.ratio, 0.5, 0.1, 0.9)
+    collect(node.first, share * ratio, branchBehavior)
+    collect(node.second, share * (1 - ratio), branchBehavior)
+  }
+  collect(root, 1, normalizeLayoutBehavior(fallbackBehavior))
+
+  if (!horizontalOnly || panels.length < 2) return clearRuntimeSplitRatios(root)
+
+  let equalShare = 1 / panels.length
+  let donors = panels
+    .filter((panel) => panel.targetShare > equalShare + RATIO_EPSILON)
+    .sort((a, b) => (
+      a.behavior.importance - b.behavior.importance ||
+      b.targetShare - a.targetShare ||
+      a.order - b.order
+    ))
+  let receivers = panels
+    .filter((panel) => panel.targetShare < equalShare - RATIO_EPSILON)
+    .sort((a, b) => (
+      b.behavior.importance - a.behavior.importance ||
+      a.targetShare - b.targetShare ||
+      a.order - b.order
+    ))
+
+  for (let donor of donors) {
+    let available = donor.targetShare - equalShare
+    if (available <= RATIO_EPSILON) continue
+    for (let receiver of receivers) {
+      if (receiver.behavior.importance < donor.behavior.importance) continue
+      let need = equalShare - receiver.targetShare
+      if (need <= RATIO_EPSILON) continue
+      let moved = Math.min(available, need)
+      donor.targetShare -= moved
+      receiver.targetShare += moved
+      available -= moved
+      if (available <= RATIO_EPSILON) break
+    }
+  }
+
+  let shareById = new Map()
+  let hasTargetChange = false
+  for (let panel of panels) {
+    let share = panel.baseShare + (panel.targetShare - panel.baseShare) * progress
+    shareById.set(panel.node.id, share)
+    if (Math.abs(share - panel.baseShare) > RATIO_EPSILON) {
+      hasTargetChange = true
+    }
+  }
+  if (!hasTargetChange) return clearRuntimeSplitRatios(root)
+
+  function subtreeShare(node) {
+    if (!node || node.collapsed) return 0
+    if (isPanelNode(node)) return shareById.get(node.id) || 0
+    return subtreeShare(node.first) + subtreeShare(node.second)
+  }
+
+  let changed = false
+  function apply(node) {
+    if (!isSplitNode(node)) return
+    let firstShare = subtreeShare(node.first)
+    let secondShare = subtreeShare(node.second)
+    let totalShare = firstShare + secondShare
+    let nextRatio = totalShare > 0
+      ? finiteNumber(firstShare / totalShare, node.ratio || 0.5, 0.1, 0.9)
+      : undefined
+    if (nextRatio === undefined || Math.abs(nextRatio - finiteNumber(node.ratio, 0.5, 0.1, 0.9)) <= RATIO_EPSILON) {
+      if (node[RUNTIME_SPLIT_RATIO] !== undefined) {
+        delete node[RUNTIME_SPLIT_RATIO]
+        changed = true
+      }
+    } else if (Math.abs((node[RUNTIME_SPLIT_RATIO] ?? node.ratio) - nextRatio) > RATIO_EPSILON) {
+      node[RUNTIME_SPLIT_RATIO] = nextRatio
+      changed = true
+    }
+    apply(node.first)
+    apply(node.second)
+  }
+  apply(root)
+  return changed
+}
+
 /**
  * Resolve the minimum expanded footprint of a layout tree.
  * @param {LayoutNode | null} root
@@ -750,7 +917,7 @@ export function resolveLayoutMinSize(root, options = {}) {
  *   primaryPanelId: string,
  *   startPanelIds: string[],
  *   endPanelIds: string[],
- *   panels: Array<{id: string, panelType: string, dock: LayoutMobileDock, requestedDock: LayoutMobileDock, importance: number, swipeControl: LayoutSwipeControl, order: number}>
+ *   panels: Array<{id: string, panelType: string, dock: LayoutMobileDock, requestedDock: LayoutMobileDock, importance: number, swipeControl: LayoutSwipeControl, drawerHoverOpen: boolean, order: number}>
  * }}
  */
 export function resolveMobileDrawerLayout(root, options = {}) {
@@ -772,6 +939,7 @@ export function resolveMobileDrawerLayout(root, options = {}) {
         requestedDock: behavior.mobileDock,
         importance: behavior.importance,
         swipeControl: behavior.swipeControl,
+        drawerHoverOpen: behavior.drawerHoverOpen,
         order: records.length,
       })
       return

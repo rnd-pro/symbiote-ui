@@ -65,10 +65,20 @@ export function applyGraphExplorerViewMode({
   if (resolvedStructured) {
     resolvedStructured.hidden = normalized === 'flat';
     resolvedStructured.setAttribute?.('data-graph-mode', normalized);
+    if (normalized === 'flat') {
+      resolvedStructured.suspendLayout?.({ reason: 'view-mode-hidden', releaseDom: true });
+    } else {
+      resolvedStructured.resumeLayout?.({ reason: 'view-mode-active' });
+    }
   }
   if (resolvedFlat) {
     resolvedFlat.hidden = normalized !== 'flat';
     resolvedFlat.setAttribute?.('data-graph-mode', normalized);
+    if (normalized === 'flat') {
+      resolvedFlat.resumeLayout?.({ reason: 'view-mode-active' });
+    } else {
+      resolvedFlat.suspendLayout?.({ reason: 'view-mode-hidden' });
+    }
   }
 
   if (refresh) {

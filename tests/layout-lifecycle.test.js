@@ -28,6 +28,8 @@ function installLayoutDom() {
       CustomEvent: window.CustomEvent,
       MutationObserver: window.MutationObserver,
       CSSStyleSheet: TestCSSStyleSheet,
+      requestAnimationFrame: (callback) => setTimeout(() => callback(Date.now()), 0),
+      cancelAnimationFrame: (id) => clearTimeout(id),
     });
     window.document.adoptedStyleSheets = [];
     return;
@@ -109,6 +111,44 @@ test('layout lifecycle helpers suspend and resume reusable and host-owned subtre
   for (let element of root.querySelectorAll('agent-chat, chat-workspace, chat-composer, cell-bg')) {
     assert.equal(element.hasAttribute('data-layout-suspended'), false);
   }
+});
+
+test('node-canvas exposes reusable layout suspend and resume lifecycle', async () => {
+  installLayoutDom();
+  await import('../canvas/NodeCanvas/NodeCanvas.js');
+
+  let element = document.createElement('node-canvas');
+  element.ref = {
+    quickToolbar: { hideCalls: 0, hide() { this.hideCalls += 1; } },
+    contextMenu: {
+      hidden: false,
+      hideCalls: 0,
+      hide() { this.hideCalls += 1; },
+      setAttribute(name) {
+        if (name === 'hidden') this.hidden = true;
+      },
+    },
+  };
+  let synced = 0;
+  let refreshed = 0;
+  element.syncPhantom = () => {
+    synced += 1;
+  };
+  element.refreshConnections = () => {
+    refreshed += 1;
+  };
+
+  element.suspendLayout({ reason: 'view-mode-hidden' });
+  assert.equal(element._layoutSuspended, true);
+  assert.equal(element.getAttribute('data-layout-suspended'), '');
+  assert.equal(element.ref.quickToolbar.hideCalls, 1);
+  assert.equal(element.ref.contextMenu.hideCalls, 1);
+
+  element.resumeLayout({ reason: 'view-mode-active' });
+  assert.equal(element._layoutSuspended, false);
+  assert.equal(element.hasAttribute('data-layout-suspended'), false);
+  assert.equal(synced, 1);
+  assert.equal(refreshed, 1);
 });
 
 test('opening a UI panel preserves existing layout panel components by node id', async () => {

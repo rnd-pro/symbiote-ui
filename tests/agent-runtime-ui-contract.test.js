@@ -14,6 +14,7 @@ class TestCSSStyleSheet {
 
 function installSsrDom() {
   let { window } = parseHTML('<!doctype html><html><body></body></html>');
+  let baseGetComputedStyle = window.getComputedStyle?.bind(window);
   Object.assign(globalThis, {
     window,
     document: window.document,
@@ -25,6 +26,14 @@ function installSsrDom() {
     CustomEvent: window.CustomEvent,
     MutationObserver: window.MutationObserver,
     CSSStyleSheet: TestCSSStyleSheet,
+    getComputedStyle: (el) => {
+      let computed = baseGetComputedStyle?.(el) || {};
+      return {
+        ...computed,
+        transitionDuration: computed.transitionDuration || '0s',
+        getPropertyValue: (name) => computed.getPropertyValue?.(name) || '',
+      };
+    },
     requestAnimationFrame: (cb) => setTimeout(cb, 0),
     cancelAnimationFrame: (id) => clearTimeout(id),
   });
@@ -46,10 +55,15 @@ installSsrDom();
 const { toChatMessageItem, normalizeChatMessagePart, MESSAGE_PART_KINDS } = await import('../chat/message-model.js');
 await import('../chat/ChatMessageItem/ChatMessageItem.js');
 const { ChatTranscript } = await import('../chat/ChatTranscript/ChatTranscript.js');
+await import('../chat/ChatWorkspace/ChatWorkspace.js');
 
 async function nextRenderTick() {
   await Promise.resolve();
   await new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+function messageItemText(item) {
+  return (item.shadowRoot || item).textContent.trim();
 }
 
 test('message-part model normalization works', () => {
@@ -344,4 +358,116 @@ test('ChatTranscript stream auto-pin behavior works', async () => {
   assert.equal(scrollToBottomCalls, 0);
 
   transcript.remove();
+});
+
+test('ChatTranscript message windows can replace and prepend without using host chat state', async () => {
+  let transcript = document.createElement('chat-transcript');
+  document.body.append(transcript);
+
+  transcript.replaceMessageWindow([
+    toChatMessageItem({ role: 'assistant', text: 'message-2' }),
+    toChatMessageItem({ role: 'assistant', text: 'message-3' }),
+  ], {
+    startIndex: 2,
+    totalItems: 5,
+  });
+
+  await nextRenderTick();
+  assert.deepEqual(
+    Array.from(transcript.querySelectorAll('chat-message-item')).map(messageItemText),
+    ['message-2', 'message-3'],
+  );
+  assert.deepEqual(transcript.getMessageWindow(), {
+    startIndex: 2,
+    count: 2,
+    totalItems: 5,
+    hasOlder: true,
+    hasNewer: true,
+  });
+
+  transcript.prependMessageItems([
+    toChatMessageItem({ role: 'user', text: 'message-0' }),
+    toChatMessageItem({ role: 'user', text: 'message-1' }),
+  ], {
+    startIndex: 0,
+    totalItems: 5,
+    hasOlder: false,
+    hasNewer: true,
+  });
+
+  await nextRenderTick();
+  assert.deepEqual(
+    Array.from(transcript.querySelectorAll('chat-message-item')).map(messageItemText),
+    ['message-0', 'message-1', 'message-2', 'message-3'],
+  );
+  assert.deepEqual(transcript.getMessageWindow(), {
+    startIndex: 0,
+    count: 4,
+    totalItems: 5,
+    hasOlder: false,
+    hasNewer: true,
+  });
+
+  transcript.setMessageItems([
+    toChatMessageItem({ role: 'assistant', text: 'full-reset' }),
+  ]);
+  assert.deepEqual(transcript.getMessageWindow(), {
+    startIndex: 0,
+    count: 1,
+    totalItems: 1,
+    hasOlder: false,
+    hasNewer: false,
+  });
+
+  transcript.remove();
+});
+
+test('ChatWorkspace forwards transcript window APIs and load older events', async () => {
+  let workspace = document.createElement('chat-workspace');
+  document.body.append(workspace);
+  await nextRenderTick();
+
+  workspace.replaceMessageWindow([
+    toChatMessageItem({ role: 'assistant', text: 'workspace-message-1' }),
+  ], {
+    startIndex: 1,
+    totalItems: 3,
+  });
+
+  await nextRenderTick();
+  assert.deepEqual(workspace.getMessageWindow(), {
+    startIndex: 1,
+    count: 1,
+    totalItems: 3,
+    hasOlder: true,
+    hasNewer: true,
+  });
+
+  workspace.prependMessages([
+    toChatMessageItem({ role: 'user', text: 'workspace-message-0' }),
+  ], {
+    startIndex: 0,
+    totalItems: 3,
+  });
+
+  await nextRenderTick();
+  assert.deepEqual(
+    Array.from(workspace.getTranscript().querySelectorAll('chat-message-item')).map(messageItemText),
+    ['workspace-message-0', 'workspace-message-1'],
+  );
+
+  let eventPromise = new Promise((resolve) => {
+    workspace.addEventListener('chat-workspace-load-older', (event) => resolve(event.detail));
+  });
+  workspace.getTranscript().dispatchEvent(new CustomEvent('chat-transcript-load-older', {
+    bubbles: true,
+    composed: true,
+    detail: { fromIndex: 0 },
+  }));
+
+  let detail = await eventPromise;
+  assert.equal(detail.fromIndex, 0);
+  assert.equal(detail.sourceEvent, 'chat-transcript-load-older');
+
+  workspace.remove();
 });

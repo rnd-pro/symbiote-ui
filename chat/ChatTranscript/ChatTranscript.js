@@ -18,6 +18,13 @@ export class ChatTranscript extends Symbiote {
 
   init$ = {
     messageItems: [],
+    messageWindow: {
+      startIndex: 0,
+      count: 0,
+      totalItems: 0,
+      hasOlder: false,
+      hasNewer: false,
+    },
     onScroll: () => {
       this.updateScrollBottomButton();
       emit(this, 'chat-transcript-scroll', this.getScrollState());
@@ -32,21 +39,105 @@ export class ChatTranscript extends Symbiote {
   };
 
   renderCallback() {
-    this.sub('messageItems', (items) => {
-      if (items?.length > 0) {
-        let wasAtBottom = this._messageItemsWasAtBottom ?? this.isAtBottom(32);
-        this._messageItemsWasAtBottom = undefined;
-        if (!wasAtBottom) return;
-        requestAnimationFrame(() => {
-          this.scrollToBottom({ smooth: false });
-        });
-      }
-    });
+    if (!this._messageItemsSubscriptionReady) {
+      this._messageItemsSubscriptionReady = true;
+      this.sub('messageItems', (items) => {
+        if (items?.length > 0) {
+          let wasAtBottom = this._messageItemsWasAtBottom ?? this.isAtBottom(32);
+          this._messageItemsWasAtBottom = undefined;
+          if (!wasAtBottom) return;
+          requestAnimationFrame(() => {
+            this.scrollToBottom({ smooth: false });
+          });
+        }
+      });
+    }
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback?.();
+    this._topSentinelObserver?.disconnect?.();
+    this._topSentinelObserver = null;
   }
 
   setMessageItems(items = []) {
     this._messageItemsWasAtBottom = this.isAtBottom(32);
-    this.$.messageItems = Array.isArray(items) ? items : [];
+    let next = Array.isArray(items) ? items : [];
+    this._removeTopSentinel();
+    this.$.messageItems = next;
+    this._setMessageWindow({
+      startIndex: 0,
+      count: next.length,
+      totalItems: next.length,
+      hasOlder: false,
+      hasNewer: false,
+    });
+  }
+
+  replaceMessageWindow(items = [], window = {}) {
+    let container = this.getScrollContainer();
+    let next = Array.isArray(items) ? items : [];
+    if (!container) {
+      this._setMessageWindowFromOptions(next, window);
+      return this.getMessageWindow();
+    }
+
+    let liveStatus = container.querySelector('.live-status-indicator');
+    if (liveStatus) liveStatus.remove();
+    for (let node of this._messageNodes(container)) node.remove();
+    this._ensureTopSentinel();
+    for (let item of next) {
+      this._insertMessageElement(container, item);
+    }
+    if (liveStatus) container.appendChild(liveStatus);
+    this._setMessageWindowFromOptions(next, window);
+    this._setupTopSentinelObserver();
+    this.updateScrollBottomButton();
+    return this.getMessageWindow();
+  }
+
+  prependMessageItems(items = [], window = {}) {
+    let container = this.getScrollContainer();
+    let next = Array.isArray(items) ? items : [];
+    if (!container || next.length === 0) return this.getMessageWindow();
+
+    let previousScrollHeight = container.scrollHeight || 0;
+    let previousScrollTop = container.scrollTop || 0;
+    this._ensureTopSentinel();
+    let beforeNode = this._firstMessageNode(container) || container.querySelector('.live-status-indicator') || null;
+    for (let item of next) {
+      this._insertMessageElement(container, item, beforeNode);
+    }
+
+    let current = this.getMessageWindow();
+    this._setMessageWindow({
+      startIndex: Number.isFinite(window.startIndex) ? window.startIndex : Math.max(0, current.startIndex - next.length),
+      count: Number.isFinite(window.count) ? window.count : current.count + next.length,
+      totalItems: Number.isFinite(window.totalItems) ? window.totalItems : Math.max(current.totalItems, current.count + next.length),
+      hasOlder: Boolean(window.hasOlder ?? (Number.isFinite(window.startIndex) ? window.startIndex > 0 : current.startIndex > next.length)),
+      hasNewer: Boolean(window.hasNewer ?? current.hasNewer),
+    });
+
+    let heightAdded = Math.max(0, (container.scrollHeight || 0) - previousScrollHeight);
+    container.scrollTop = previousScrollTop + heightAdded;
+    requestAnimationFrame(() => {
+      let settledHeightAdded = Math.max(0, (container.scrollHeight || 0) - previousScrollHeight);
+      container.scrollTop = previousScrollTop + settledHeightAdded;
+      this.updateScrollBottomButton();
+    });
+    this._setupTopSentinelObserver();
+    return this.getMessageWindow();
+  }
+
+  getMessageWindow() {
+    let win = this.$.messageWindow || {};
+    return {
+      startIndex: Number.isFinite(win.startIndex) ? win.startIndex : 0,
+      count: Number.isFinite(win.count) ? win.count : 0,
+      totalItems: Number.isFinite(win.totalItems) ? win.totalItems : 0,
+      hasOlder: Boolean(win.hasOlder),
+      hasNewer: Boolean(win.hasNewer),
+    };
   }
 
   getScrollContainer() {
@@ -173,6 +264,85 @@ export class ChatTranscript extends Symbiote {
     indicator.append(iconEl, ' ', textEl);
     container.appendChild(indicator);
     requestAnimationFrame(() => this.scrollToBottom());
+  }
+
+  _setMessageWindowFromOptions(items = [], window = {}) {
+    let startIndex = Number.isFinite(window.startIndex) ? window.startIndex : 0;
+    let totalItems = Number.isFinite(window.totalItems) ? window.totalItems : items.length;
+    this._setMessageWindow({
+      startIndex,
+      count: Number.isFinite(window.count) ? window.count : items.length,
+      totalItems,
+      hasOlder: Boolean(window.hasOlder ?? startIndex > 0),
+      hasNewer: Boolean(window.hasNewer ?? (startIndex + items.length < totalItems)),
+    });
+  }
+
+  _setMessageWindow(window = {}) {
+    this.$.messageWindow = {
+      startIndex: Number.isFinite(window.startIndex) ? window.startIndex : 0,
+      count: Number.isFinite(window.count) ? window.count : 0,
+      totalItems: Number.isFinite(window.totalItems) ? window.totalItems : 0,
+      hasOlder: Boolean(window.hasOlder),
+      hasNewer: Boolean(window.hasNewer),
+    };
+  }
+
+  _insertMessageElement(container, item = {}, beforeNode = null) {
+    let el = document.createElement('chat-message-item');
+    container.insertBefore(el, beforeNode);
+    if (typeof el.set$ === 'function') el.set$(item);
+    else Object.assign(el, item);
+    return el;
+  }
+
+  _messageNodes(container = this.getScrollContainer()) {
+    if (!container) return [];
+    return Array.from(container.children || []).filter((child) => child.localName === 'chat-message-item');
+  }
+
+  _firstMessageNode(container = this.getScrollContainer()) {
+    return this._messageNodes(container)[0] || null;
+  }
+
+  _ensureTopSentinel() {
+    let container = this.getScrollContainer();
+    if (!container) return null;
+    let sentinel = container.querySelector(':scope > .chat-top-sentinel') || container.querySelector('.chat-top-sentinel');
+    if (!sentinel) {
+      sentinel = document.createElement('div');
+      sentinel.className = 'chat-top-sentinel';
+      sentinel.setAttribute('aria-hidden', 'true');
+    }
+    if (sentinel.parentNode !== container || container.firstChild !== sentinel) {
+      container.insertBefore(sentinel, container.firstChild || null);
+    }
+    this._topSentinel = sentinel;
+    return sentinel;
+  }
+
+  _removeTopSentinel() {
+    this._topSentinelObserver?.disconnect?.();
+    this._topSentinelObserver = null;
+    this._topSentinel?.remove?.();
+    this._topSentinel = null;
+  }
+
+  _setupTopSentinelObserver() {
+    if (this._topSentinelObserver || typeof IntersectionObserver === 'undefined') return;
+    let sentinel = this._ensureTopSentinel();
+    let container = this.getScrollContainer();
+    if (!sentinel || !container) return;
+    this._topSentinelObserver = new IntersectionObserver((entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return;
+      let window = this.getMessageWindow();
+      if (!window.hasOlder) return;
+      emit(this, 'chat-transcript-load-older', {
+        fromIndex: window.startIndex,
+        window,
+      });
+    }, { root: container, threshold: 0 });
+    this._topSentinelObserver.observe(sentinel);
   }
 
   _handleMessageItemClick(event) {

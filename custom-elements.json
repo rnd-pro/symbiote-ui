@@ -311,17 +311,17 @@
             {
               "kind": "method",
               "name": "flyToNode",
-              "description": "Focuses a node by id and enters parent groups when needed."
+              "description": "Focuses a node by id and enters parent groups when needed; accepts optional viewportEase for slower camera tracking."
             },
             {
               "kind": "method",
               "name": "flyToNodes",
-              "description": "Fits one or more visible graph node ids into the canvas viewport."
+              "description": "Fits one or more visible graph node ids into the canvas viewport; accepts optional viewportEase for live replay tracking."
             },
             {
               "kind": "method",
               "name": "fitNodes",
-              "description": "Fits one or more visible graph node ids into the canvas viewport."
+              "description": "Fits one or more visible graph node ids into the canvas viewport; accepts optional viewportEase for live replay tracking."
             },
             {
               "kind": "method",
@@ -330,13 +330,23 @@
             },
             {
               "kind": "method",
+              "name": "queueTransitionMarkers",
+              "description": "Queues animated route markers from one graph node to multiple target node ids without changing the host-owned graph model."
+            },
+            {
+              "kind": "method",
               "name": "fitView",
-              "description": "Fits the visible graph into the canvas viewport."
+              "description": "Fits the visible graph into the canvas viewport; accepts optional viewportEase for live replay tracking."
             },
             {
               "kind": "method",
               "name": "resetView",
               "description": "Resets viewport pan and zoom."
+            },
+            {
+              "kind": "method",
+              "name": "resetLayoutState",
+              "description": "Clears force layout positions, transition markers, pulses, and persisted layout snapshot before deterministic replay restarts."
             },
             {
               "kind": "method",
@@ -617,17 +627,17 @@
               {
                 "name": "flyToNode",
                 "type": "function",
-                "description": "Focuses a node by id and enters parent groups when needed."
+                "description": "Focuses a node by id and enters parent groups when needed; accepts optional viewportEase for slower camera tracking."
               },
               {
                 "name": "flyToNodes",
                 "type": "function",
-                "description": "Fits one or more visible graph node ids into the canvas viewport."
+                "description": "Fits one or more visible graph node ids into the canvas viewport; accepts optional viewportEase for live replay tracking."
               },
               {
                 "name": "fitNodes",
                 "type": "function",
-                "description": "Fits one or more visible graph node ids into the canvas viewport."
+                "description": "Fits one or more visible graph node ids into the canvas viewport; accepts optional viewportEase for live replay tracking."
               },
               {
                 "name": "focusNodes",
@@ -637,12 +647,17 @@
               {
                 "name": "fitView",
                 "type": "function",
-                "description": "Fits the visible graph into the canvas viewport."
+                "description": "Fits the visible graph into the canvas viewport; accepts optional viewportEase for live replay tracking."
               },
               {
                 "name": "resetView",
                 "type": "function",
                 "description": "Resets viewport pan and zoom."
+              },
+              {
+                "name": "resetLayoutState",
+                "type": "function",
+                "description": "Clears force layout positions, transition markers, pulses, and persisted layout snapshot before deterministic replay restarts."
               },
               {
                 "name": "setLayoutSnapshot",
@@ -682,7 +697,7 @@
               {
                 "name": "setForceLayoutOptions",
                 "type": "function",
-                "description": "Applies numeric force-layout tuning options without changing the host-owned graph model."
+                "description": "Applies force-layout tuning options, including layoutAlgorithm: organic, oil-cloud, or spring, without changing the host-owned graph model."
               },
               {
                 "name": "animateNodeAppearance",
@@ -1032,17 +1047,17 @@
                 {
                   "name": "flyToNode",
                   "type": "function",
-                  "description": "Focuses a node by id and enters parent groups when needed."
+                  "description": "Focuses a node by id and enters parent groups when needed; accepts optional viewportEase for slower camera tracking."
                 },
                 {
                   "name": "flyToNodes",
                   "type": "function",
-                  "description": "Fits one or more visible graph node ids into the canvas viewport."
+                  "description": "Fits one or more visible graph node ids into the canvas viewport; accepts optional viewportEase for live replay tracking."
                 },
                 {
                   "name": "fitNodes",
                   "type": "function",
-                  "description": "Fits one or more visible graph node ids into the canvas viewport."
+                  "description": "Fits one or more visible graph node ids into the canvas viewport; accepts optional viewportEase for live replay tracking."
                 },
                 {
                   "name": "focusNodes",
@@ -1050,9 +1065,14 @@
                   "description": "Agent-facing alias for fitting one or more graph node ids into the viewport."
                 },
                 {
+                  "name": "queueTransitionMarkers",
+                  "type": "function",
+                  "description": "Queues animated route markers from one graph node to multiple target node ids without changing the host-owned graph model."
+                },
+                {
                   "name": "fitView",
                   "type": "function",
-                  "description": "Fits the visible graph into the canvas viewport."
+                  "description": "Fits the visible graph into the canvas viewport; accepts optional viewportEase for live replay tracking."
                 },
                 {
                   "name": "resetView",
@@ -1097,7 +1117,7 @@
                 {
                   "name": "setForceLayoutOptions",
                   "type": "function",
-                  "description": "Applies numeric force-layout tuning options without changing the host-owned graph model."
+                  "description": "Applies force-layout tuning options, including layoutAlgorithm: organic, oil-cloud, or spring, without changing the host-owned graph model."
                 },
                 {
                   "name": "animateNodeAppearance",
@@ -2609,7 +2629,7 @@
           "name": "NodeCanvas",
           "tagName": "node-canvas",
           "description": "Primary graph canvas custom element.",
-          "componentDescription": "Primary graph canvas custom element. Use this interactive visual graph surface when composing canvas UI. Capabilities: node-editor-canvas, connections, frames, subgraphs, viewport, selection, multi-node-focus, graph-layout. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: node_canvas_set_editor_model, node_canvas_set_path_style, node_canvas_set_flow_layout, node_canvas_apply_layout, node_canvas_focus_nodes.",
+          "componentDescription": "Primary graph canvas custom element. Use this interactive visual graph surface when composing canvas UI. Capabilities: node-editor-canvas, connections, frames, subgraphs, viewport, selection, multi-node-focus, graph-layout, layout-lifecycle. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: node_canvas_set_editor_model, node_canvas_set_path_style, node_canvas_set_flow_layout, node_canvas_apply_layout, node_canvas_focus_nodes.",
           "attributes": [
             {
               "name": "connection-engine",
@@ -2728,6 +2748,16 @@
               "kind": "method",
               "name": "focusNodes",
               "description": "Agent-facing alias for focusing one or more nodes in the viewport."
+            },
+            {
+              "kind": "method",
+              "name": "suspendLayout",
+              "description": "Pauses transient viewport work while preserving host-owned editor and DOM state for hidden layout groups."
+            },
+            {
+              "kind": "method",
+              "name": "resumeLayout",
+              "description": "Resumes viewport sync after a hidden layout group becomes active again."
             },
             {
               "kind": "method",
@@ -3324,7 +3354,7 @@
             }
           },
           "agent": {
-            "componentDescription": "Primary graph canvas custom element. Use this interactive visual graph surface when composing canvas UI. Capabilities: node-editor-canvas, connections, frames, subgraphs, viewport, selection, multi-node-focus, graph-layout. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: node_canvas_set_editor_model, node_canvas_set_path_style, node_canvas_set_flow_layout, node_canvas_apply_layout, node_canvas_focus_nodes.",
+            "componentDescription": "Primary graph canvas custom element. Use this interactive visual graph surface when composing canvas UI. Capabilities: node-editor-canvas, connections, frames, subgraphs, viewport, selection, multi-node-focus, graph-layout, layout-lifecycle. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: node_canvas_set_editor_model, node_canvas_set_path_style, node_canvas_set_flow_layout, node_canvas_apply_layout, node_canvas_focus_nodes.",
             "semanticRole": "interactive visual graph surface",
             "usage": "Render or compose <node-canvas> when the host needs primary graph canvas custom element.",
             "dataOwnership": "host-owned model; component renders and emits intent events",
@@ -9890,7 +9920,7 @@
           "name": "ChatTranscript",
           "tagName": "chat-transcript",
           "description": "Generic chat transcript shell with message rendering, background slot, scroll controls, live status, and status card events.",
-          "componentDescription": "Generic chat transcript shell with message rendering, background slot, scroll controls, live status, and status card events. Use this chat and conversation surface when composing chat UI. Capabilities: chat-transcript, message-list, animated-background-slot, scroll-state, status-card-events. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "componentDescription": "Generic chat transcript shell with message rendering, background slot, scroll controls, live status, and status card events. Use this chat and conversation surface when composing chat UI. Capabilities: chat-transcript, message-list, animated-background-slot, scroll-state, status-card-events, scroll-anchor, message-windowing, load-older-sentinel. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
           "attributes": [],
           "members": [
             {
@@ -9930,6 +9960,29 @@
               "kind": "method",
               "name": "updateStatusCard",
               "description": "Updates a status card by host-owned id."
+            },
+            {
+              "kind": "field",
+              "name": "messageWindow",
+              "type": {
+                "text": "object"
+              },
+              "description": "Visible message window metadata with startIndex, count, totalItems, hasOlder, and hasNewer."
+            },
+            {
+              "kind": "method",
+              "name": "replaceMessageWindow",
+              "description": "Replaces the visible message window with pure message descriptors and metadata."
+            },
+            {
+              "kind": "method",
+              "name": "prependMessageItems",
+              "description": "Prepends older messages while preserving the current scroll anchor."
+            },
+            {
+              "kind": "method",
+              "name": "getMessageWindow",
+              "description": "Returns visible message window metadata for host-owned paging."
             }
           ],
           "events": [
@@ -9969,6 +10022,18 @@
               "name": "chat-action",
               "description": "Emits when a custom action (retry, cancel, generic action) is triggered.",
               "detail": []
+            },
+            {
+              "name": "chat-transcript-load-older",
+              "description": "Requests older message descriptors when the top sentinel is reached.",
+              "detail": [
+                {
+                  "name": "fromIndex",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ]
             }
           ],
           "slots": [
@@ -10029,6 +10094,10 @@
             {
               "name": "--sn-composer-send-icon-size",
               "description": "Theme CSS custom property consumed by chat-transcript."
+            },
+            {
+              "name": "--sn-chat-transcript-top-sentinel-height",
+              "description": "Theme CSS custom property consumed by chat-transcript."
             }
           ],
           "contract": {
@@ -10037,7 +10106,10 @@
               "message-list",
               "animated-background-slot",
               "scroll-state",
-              "status-card-events"
+              "status-card-events",
+              "scroll-anchor",
+              "message-windowing",
+              "load-older-sentinel"
             ],
             "attributes": [],
             "properties": [
@@ -10045,6 +10117,11 @@
                 "name": "messageItems",
                 "type": "array",
                 "description": "Normalized message item descriptors rendered by chat-message-item."
+              },
+              {
+                "name": "messageWindow",
+                "type": "object",
+                "description": "Visible message window metadata with startIndex, count, totalItems, hasOlder, and hasNewer."
               }
             ],
             "methods": [
@@ -10077,6 +10154,21 @@
                 "name": "updateStatusCard",
                 "type": "function",
                 "description": "Updates a status card by host-owned id."
+              },
+              {
+                "name": "replaceMessageWindow",
+                "type": "function",
+                "description": "Replaces the visible message window with pure message descriptors and metadata."
+              },
+              {
+                "name": "prependMessageItems",
+                "type": "function",
+                "description": "Prepends older messages while preserving the current scroll anchor."
+              },
+              {
+                "name": "getMessageWindow",
+                "type": "function",
+                "description": "Returns visible message window metadata for host-owned paging."
               }
             ],
             "events": [
@@ -10109,6 +10201,16 @@
               {
                 "name": "chat-action",
                 "description": "Emits when a custom action (retry, cancel, generic action) is triggered."
+              },
+              {
+                "name": "chat-transcript-load-older",
+                "description": "Requests older message descriptors when the top sentinel is reached.",
+                "detail": [
+                  {
+                    "name": "fromIndex",
+                    "type": "number"
+                  }
+                ]
               }
             ],
             "slots": [
@@ -10130,7 +10232,8 @@
               "--sn-chat-tool-font-size",
               "--sn-chat-live-icon-size",
               "--sn-composer-send-size",
-              "--sn-composer-send-icon-size"
+              "--sn-composer-send-icon-size",
+              "--sn-chat-transcript-top-sentinel-height"
             ],
             "status": "draft",
             "schemaVersion": "component-descriptor-v2",
@@ -10149,7 +10252,7 @@
             }
           },
           "agent": {
-            "componentDescription": "Generic chat transcript shell with message rendering, background slot, scroll controls, live status, and status card events. Use this chat and conversation surface when composing chat UI. Capabilities: chat-transcript, message-list, animated-background-slot, scroll-state, status-card-events. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "componentDescription": "Generic chat transcript shell with message rendering, background slot, scroll controls, live status, and status card events. Use this chat and conversation surface when composing chat UI. Capabilities: chat-transcript, message-list, animated-background-slot, scroll-state, status-card-events, scroll-anchor, message-windowing, load-older-sentinel. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
             "semanticRole": "chat and conversation surface",
             "usage": "Render or compose <chat-transcript> when the host needs generic chat transcript shell with message rendering, background slot, scroll controls, live status, and status card events.",
             "dataOwnership": "host-owned props and attributes; component owns presentation state",
@@ -10173,7 +10276,10 @@
                 "message-list",
                 "animated-background-slot",
                 "scroll-state",
-                "status-card-events"
+                "status-card-events",
+                "scroll-anchor",
+                "message-windowing",
+                "load-older-sentinel"
               ],
               "attributes": [],
               "properties": [
@@ -10181,6 +10287,11 @@
                   "name": "messageItems",
                   "type": "array",
                   "description": "Normalized message item descriptors rendered by chat-message-item."
+                },
+                {
+                  "name": "messageWindow",
+                  "type": "object",
+                  "description": "Visible message window metadata with startIndex, count, totalItems, hasOlder, and hasNewer."
                 }
               ],
               "methods": [
@@ -10213,6 +10324,21 @@
                   "name": "updateStatusCard",
                   "type": "function",
                   "description": "Updates a status card by host-owned id."
+                },
+                {
+                  "name": "replaceMessageWindow",
+                  "type": "function",
+                  "description": "Replaces the visible message window with pure message descriptors and metadata."
+                },
+                {
+                  "name": "prependMessageItems",
+                  "type": "function",
+                  "description": "Prepends older messages while preserving the current scroll anchor."
+                },
+                {
+                  "name": "getMessageWindow",
+                  "type": "function",
+                  "description": "Returns visible message window metadata for host-owned paging."
                 }
               ],
               "events": [
@@ -10245,6 +10371,16 @@
                 {
                   "name": "chat-action",
                   "description": "Emits when a custom action (retry, cancel, generic action) is triggered."
+                },
+                {
+                  "name": "chat-transcript-load-older",
+                  "description": "Requests older message descriptors when the top sentinel is reached.",
+                  "detail": [
+                    {
+                      "name": "fromIndex",
+                      "type": "number"
+                    }
+                  ]
                 }
               ],
               "slots": [
@@ -10266,7 +10402,8 @@
                 "--sn-chat-tool-font-size",
                 "--sn-chat-live-icon-size",
                 "--sn-composer-send-size",
-                "--sn-composer-send-icon-size"
+                "--sn-composer-send-icon-size",
+                "--sn-chat-transcript-top-sentinel-height"
               ],
               "status": "draft",
               "schemaVersion": "component-descriptor-v2",
@@ -10306,7 +10443,7 @@
           "name": "ChatWorkspace",
           "tagName": "chat-workspace",
           "description": "Reusable chat workspace shell that composes sidebar, transcript, composer, leading controls, voice intents, footer controls, transient overlay reserve, and animated background lifecycle.",
-          "componentDescription": "Reusable chat workspace shell that composes sidebar, transcript, composer, leading controls, voice intents, footer controls, transient overlay reserve, and animated background lifecycle. Use this chat and conversation surface when composing chat UI. Capabilities: chat-workspace, chat-sidebar-composition, chat-transcript-composition, chat-composer-composition, chat-nav-tree-helper, voice-intent-router, leading-control-intent-router, footer-control-intent-router, context-intent-router, animated-background-lifecycle, overlay-stack-reserve, layout-lifecycle, host-owned-transport. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: chat_workspace_set_state, chat_workspace_background, chat_workspace_select_chat, chat_workspace_send.",
+          "componentDescription": "Reusable chat workspace shell that composes sidebar, transcript, composer, leading controls, voice intents, footer controls, transient overlay reserve, and animated background lifecycle. Use this chat and conversation surface when composing chat UI. Capabilities: chat-workspace, chat-sidebar-composition, chat-transcript-composition, chat-composer-composition, chat-nav-tree-helper, voice-intent-router, leading-control-intent-router, footer-control-intent-router, context-intent-router, animated-background-lifecycle, overlay-stack-reserve, message-windowing, layout-lifecycle, host-owned-transport. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: chat_workspace_set_state, chat_workspace_background, chat_workspace_select_chat, chat_workspace_send.",
           "attributes": [
             {
               "name": "sidebar",
@@ -10484,6 +10621,29 @@
               "kind": "method",
               "name": "getBackground",
               "description": "Returns the composed cell-bg element."
+            },
+            {
+              "kind": "field",
+              "name": "messageWindow",
+              "type": {
+                "text": "object"
+              },
+              "description": "Visible transcript window metadata forwarded to chat-transcript for paged message loading."
+            },
+            {
+              "kind": "method",
+              "name": "replaceMessageWindow",
+              "description": "Replaces the visible transcript message window with host-owned window metadata."
+            },
+            {
+              "kind": "method",
+              "name": "prependMessages",
+              "description": "Prepends older transcript message descriptors while preserving the current scroll anchor."
+            },
+            {
+              "kind": "method",
+              "name": "getMessageWindow",
+              "description": "Returns the composed transcript message window metadata."
             }
           ],
           "events": [
@@ -10584,6 +10744,11 @@
               "name": "chat-workspace-leading-intent",
               "description": "Routes product-neutral inline leading control activation intents.",
               "detail": []
+            },
+            {
+              "name": "chat-workspace-load-older",
+              "description": "Routes product-neutral transcript load-older requests from the composed transcript.",
+              "detail": []
             }
           ],
           "slots": [],
@@ -10635,6 +10800,10 @@
             {
               "name": "--sn-cell-bg",
               "description": "Theme CSS custom property consumed by chat-workspace."
+            },
+            {
+              "name": "--sn-chat-transcript-top-sentinel-height",
+              "description": "Theme CSS custom property consumed by chat-workspace."
             }
           ],
           "contract": {
@@ -10650,6 +10819,7 @@
               "context-intent-router",
               "animated-background-lifecycle",
               "overlay-stack-reserve",
+              "message-windowing",
               "layout-lifecycle",
               "host-owned-transport"
             ],
@@ -10700,6 +10870,11 @@
                 "name": "overlayStackReserve",
                 "type": "number",
                 "description": "Host-owned bottom transient overlay stack reserve in CSS pixels."
+              },
+              {
+                "name": "messageWindow",
+                "type": "object",
+                "description": "Visible transcript window metadata forwarded to chat-transcript for paged message loading."
               }
             ],
             "methods": [
@@ -10807,6 +10982,21 @@
                 "name": "getBackground",
                 "type": "function",
                 "description": "Returns the composed cell-bg element."
+              },
+              {
+                "name": "replaceMessageWindow",
+                "type": "function",
+                "description": "Replaces the visible transcript message window with host-owned window metadata."
+              },
+              {
+                "name": "prependMessages",
+                "type": "function",
+                "description": "Prepends older transcript message descriptors while preserving the current scroll anchor."
+              },
+              {
+                "name": "getMessageWindow",
+                "type": "function",
+                "description": "Returns the composed transcript message window metadata."
               }
             ],
             "events": [
@@ -10887,6 +11077,10 @@
               {
                 "name": "chat-workspace-background-event",
                 "description": "Routes cell-bg animation lifecycle events."
+              },
+              {
+                "name": "chat-workspace-load-older",
+                "description": "Routes product-neutral transcript load-older requests from the composed transcript."
               }
             ],
             "slots": [],
@@ -10902,7 +11096,8 @@
               "--sn-composer-bg",
               "--sn-composer-padding",
               "--sn-theme-pattern-brightness",
-              "--sn-cell-bg"
+              "--sn-cell-bg",
+              "--sn-chat-transcript-top-sentinel-height"
             ],
             "status": "draft",
             "schemaVersion": "component-descriptor-v2",
@@ -11089,7 +11284,7 @@
             }
           },
           "agent": {
-            "componentDescription": "Reusable chat workspace shell that composes sidebar, transcript, composer, leading controls, voice intents, footer controls, transient overlay reserve, and animated background lifecycle. Use this chat and conversation surface when composing chat UI. Capabilities: chat-workspace, chat-sidebar-composition, chat-transcript-composition, chat-composer-composition, chat-nav-tree-helper, voice-intent-router, leading-control-intent-router, footer-control-intent-router, context-intent-router, animated-background-lifecycle, overlay-stack-reserve, layout-lifecycle, host-owned-transport. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: chat_workspace_set_state, chat_workspace_background, chat_workspace_select_chat, chat_workspace_send.",
+            "componentDescription": "Reusable chat workspace shell that composes sidebar, transcript, composer, leading controls, voice intents, footer controls, transient overlay reserve, and animated background lifecycle. Use this chat and conversation surface when composing chat UI. Capabilities: chat-workspace, chat-sidebar-composition, chat-transcript-composition, chat-composer-composition, chat-nav-tree-helper, voice-intent-router, leading-control-intent-router, footer-control-intent-router, context-intent-router, animated-background-lifecycle, overlay-stack-reserve, message-windowing, layout-lifecycle, host-owned-transport. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: chat_workspace_set_state, chat_workspace_background, chat_workspace_select_chat, chat_workspace_send.",
             "semanticRole": "chat and conversation surface",
             "usage": "Render or compose <chat-workspace> when the host needs reusable chat workspace shell that composes sidebar, transcript, composer, leading controls, voice intents, footer controls, transient overlay reserve, and animated background lifecycle.",
             "dataOwnership": "host-owned props and attributes; component owns presentation state",
@@ -11125,6 +11320,7 @@
                 "context-intent-router",
                 "animated-background-lifecycle",
                 "overlay-stack-reserve",
+                "message-windowing",
                 "layout-lifecycle",
                 "host-owned-transport"
               ],
@@ -11175,6 +11371,11 @@
                   "name": "overlayStackReserve",
                   "type": "number",
                   "description": "Host-owned bottom transient overlay stack reserve in CSS pixels."
+                },
+                {
+                  "name": "messageWindow",
+                  "type": "object",
+                  "description": "Visible transcript window metadata forwarded to chat-transcript for paged message loading."
                 }
               ],
               "methods": [
@@ -11282,6 +11483,21 @@
                   "name": "getBackground",
                   "type": "function",
                   "description": "Returns the composed cell-bg element."
+                },
+                {
+                  "name": "replaceMessageWindow",
+                  "type": "function",
+                  "description": "Replaces the visible transcript message window with host-owned window metadata."
+                },
+                {
+                  "name": "prependMessages",
+                  "type": "function",
+                  "description": "Prepends older transcript message descriptors while preserving the current scroll anchor."
+                },
+                {
+                  "name": "getMessageWindow",
+                  "type": "function",
+                  "description": "Returns the composed transcript message window metadata."
                 }
               ],
               "events": [
@@ -11362,6 +11578,10 @@
                 {
                   "name": "chat-workspace-background-event",
                   "description": "Routes cell-bg animation lifecycle events."
+                },
+                {
+                  "name": "chat-workspace-load-older",
+                  "description": "Routes product-neutral transcript load-older requests from the composed transcript."
                 }
               ],
               "slots": [],
@@ -11377,7 +11597,8 @@
                 "--sn-composer-bg",
                 "--sn-composer-padding",
                 "--sn-theme-pattern-brightness",
-                "--sn-cell-bg"
+                "--sn-cell-bg",
+                "--sn-chat-transcript-top-sentinel-height"
               ],
               "status": "draft",
               "schemaVersion": "component-descriptor-v2",

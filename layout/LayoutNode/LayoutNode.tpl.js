@@ -66,7 +66,7 @@ export let template = html`
 
   <div class="split-view" ${{ '@hidden': '!isSplit', '@direction': 'direction' }}>
     <div class="split-first" ref="first" ${{ '@style': 'firstStyle' }}></div>
-    <div class="split-resizer" ${{ onpointerdown: 'onResizerDown' }}></div>
+    <div class="split-resizer"></div>
     <div class="split-second" ref="second" ${{ '@style': 'secondStyle' }}></div>
   </div>
 `;

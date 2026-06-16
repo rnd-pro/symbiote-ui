@@ -232,6 +232,12 @@ test('graph explorer view controller coordinates structured and flat renderers',
     focusNodes(nodeIds, options) {
       calls.push(`structured:focus:${nodeIds.join(',')}:${options.select}`);
     },
+    suspendLayout(context) {
+      calls.push(`structured:suspend:${context.reason}`);
+    },
+    resumeLayout(context) {
+      calls.push(`structured:resume:${context.reason}`);
+    },
   };
   let flatGraph = {
     ...makeElement('flat'),
@@ -259,6 +265,12 @@ test('graph explorer view controller coordinates structured and flat renderers',
     pulseNode(nodeId, duration) {
       calls.push(`flat:pulse:${nodeId}:${duration}`);
     },
+    suspendLayout(context) {
+      calls.push(`flat:suspend:${context.reason}`);
+    },
+    resumeLayout(context) {
+      calls.push(`flat:resume:${context.reason}`);
+    },
   };
 
   let result = applyGraphExplorerViewMode({
@@ -272,6 +284,8 @@ test('graph explorer view controller coordinates structured and flat renderers',
   assert.equal(structuredCanvas.hidden, true);
   assert.equal(flatGraph.hidden, false);
   assert.equal(shell.attrs['data-mode'], 'flat');
+  assert.ok(calls.includes('structured:suspend:view-mode-hidden'));
+  assert.ok(calls.includes('flat:resume:view-mode-active'));
 
   let controller = createGraphExplorerViewController({
     shell,
@@ -315,6 +329,8 @@ test('graph explorer view controller coordinates structured and flat renderers',
 
   assert.equal(structuredCanvas.hidden, false);
   assert.equal(flatGraph.hidden, true);
+  assert.ok(calls.includes('structured:resume:view-mode-active'));
+  assert.ok(calls.includes('flat:suspend:view-mode-hidden'));
   assert.ok(calls.includes('flat:model:1'));
   assert.ok(calls.includes('flat:model:2'));
   assert.ok(calls.includes('structured:model:0'));
@@ -411,14 +427,71 @@ test('canvas graph pulse queue defaults to a single visual wave', async () => {
   assert.equal(findActiveTransitionMarker([marker], 'a', 250), null);
 });
 
-test('canvas graph starts node pulse when the transition marker arrives', async () => {
+test('canvas graph viewport animation accepts custom camera ease', async () => {
+  let { resolveViewportAnimation } = await import('../canvas/CanvasGraph/CanvasGraphDrawState.js');
+  let slow = resolveViewportAnimation({
+    zoom: 1,
+    targetZoom: 2,
+    panX: 0,
+    panY: 0,
+    targetPanX: 100,
+    targetPanY: 0,
+    zoomAnchor: null,
+    viewportEase: 0.05,
+  });
+  let normal = resolveViewportAnimation({
+    zoom: 1,
+    targetZoom: 2,
+    panX: 0,
+    panY: 0,
+    targetPanX: 100,
+    targetPanY: 0,
+    zoomAnchor: null,
+  });
+
+  assert.ok(slow.zoom > 1);
+  assert.ok(slow.zoom < normal.zoom);
+  assert.ok(slow.panX > 0);
+  assert.ok(slow.panX < normal.panX);
+});
+
+test('canvas graph moves a marker dot along formed links before starting node pulse', async () => {
   let source = await readFile(new URL('../canvas/CanvasGraph/CanvasGraph.js', import.meta.url), 'utf8');
 
   assert.match(source, /findActiveTransitionMarker\(this\._transitionMarkers, nodeId, now\)/);
+  assert.match(source, /queueTransitionMarkers\(fromId, toIds = \[\], options = \{\}\)/);
+  assert.match(source, /_resolveTransitionRoutePoints\(marker\)/);
+  assert.match(source, /_nodeVisualScreenCenter\(id\)/);
+  assert.match(source, /this\.getVisualLayerTransform\(depth\)/);
+  assert.match(source, /ctx\.setTransform\(1, 0, 0, 1, 0, 0\)/);
+  assert.match(source, /marker\.points = points;/);
+  assert.doesNotMatch(source, /_drawTransitionRouteTrail/);
+  assert.doesNotMatch(source, /createLinearGradient\(from\.x, from\.y, point\.x, point\.y\)/);
+  assert.doesNotMatch(source, /ctx\.lineTo\(point\.x, point\.y\)/);
   assert.match(source, /marker\.pendingPulse = \{/);
   assert.match(source, /this\._pulses = \(this\._pulses \|\| \[\]\)\.filter\(\(pulse\) => pulse\.id !== nodeId\)/);
   assert.match(source, /this\._completeTransitionMarker\(marker, now\);/);
   assert.match(source, /this\._queuePulseNow\(marker\.toId, pulse\.duration, \{ waves: pulse\.waves \}, now\)/);
+});
+
+test('canvas graph waits for complete transition routes before moving marker dots', async () => {
+  let source = await readFile(new URL('../canvas/CanvasGraph/CanvasGraph.js', import.meta.url), 'utf8');
+
+  assert.match(source, /for \(let id of marker\.path \|\| \[\]\)/);
+  assert.match(source, /if \(!point\) return null;/);
+  assert.match(source, /marker\.points = points;/);
+  assert.match(source, /marker\.startTime = now;/);
+});
+
+test('canvas graph dot radius follows semantic node weight', async () => {
+  let { getNodeRadius, getNodeWeightScale } = await import('../canvas/CanvasGraph/CanvasGraphGeometry.js');
+  let normalRadius = getNodeRadius({ id: 'normal', weight: 1 }, 0);
+  let heavyRadius = getNodeRadius({ id: 'heavy', weight: 4 }, 0);
+  let lightRadius = getNodeRadius({ id: 'light', weight: 0.35 }, 0);
+
+  assert.ok(heavyRadius > normalRadius * 1.7);
+  assert.ok(lightRadius < normalRadius);
+  assert.equal(getNodeWeightScale({ weight: 100 }), 1.9);
 });
 
 test('canvas graph focus transition uses queued activation before depth recalculation', async () => {
@@ -459,6 +532,213 @@ test('canvas graph exits active focus before accepting a different node click', 
     source.indexOf('this._focusExitOnDown = this._beginFocusExit();') <
       source.indexOf('this._activateNode(hit, { transition: false, marker: false });')
   );
+});
+
+test('canvas graph prunes stale state when replacing the graph model', async () => {
+  let source = await readFile(new URL('../canvas/CanvasGraph/CanvasGraph.js', import.meta.url), 'utf8');
+
+  assert.match(source, /this\._pruneGraphState\(nextIdSet\)/);
+  assert.match(source, /for \(const id of this\.nodePositions\.keys\(\)\)/);
+  assert.match(source, /for \(const id of this\.smoothPositions\.keys\(\)\)/);
+  assert.match(source, /for \(const id of this\._nodeAppearances\.keys\(\)\)/);
+  assert.match(source, /filter\(\(marker\) => nodeIds\.has\(marker\.fromId\) && nodeIds\.has\(marker\.toId\)\)/);
+  assert.match(source, /if \(previousIds\.size === 0 && rect\.width > 0\)/);
+  assert.match(source, /if \(!this\.graphDB\.nodes\.has\(id\)\) continue;/);
+  assert.match(source, /if \(this\.graphDB\.nodes\.has\(id\)\) this\.nodePositions\.set\(id, pos\);/);
+});
+
+test('canvas graph exposes layout state reset for deterministic replay restarts', async () => {
+  let source = await readFile(new URL('../canvas/CanvasGraph/CanvasGraph.js', import.meta.url), 'utf8');
+
+  assert.match(source, /resetLayoutState\(\) \{/);
+  assert.match(source, /this\.nodePositions\.clear\(\)/);
+  assert.match(source, /this\.smoothPositions\.clear\(\)/);
+  assert.match(source, /this\._layoutSnapshot = null/);
+  assert.match(source, /this\._transitionMarkers = \[\]/);
+  assert.match(source, /this\._pulses = \[\]/);
+  assert.match(source, /this\.worker\.stop\(\)/);
+});
+
+test('canvas graph seeds entering node positions and eases appearance', async () => {
+  let source = await readFile(new URL('../canvas/CanvasGraph/CanvasGraph.js', import.meta.url), 'utf8');
+
+  assert.match(source, /function stableUnit\(value\)/);
+  assert.match(source, /function averageCanvasPoints\(points\)/);
+  assert.match(source, /function getEnteringNodeSeedOffset\(id, index = 0, count = 1\)/);
+  assert.match(source, /INCREMENTAL_LAYOUT_INITIAL_ALPHA = 0\.045/);
+  assert.match(source, /NODE_APPEARANCE_START_SCALE = 0\.2/);
+  assert.match(source, /ENTERING_LAYOUT_SIZE_SCALE = 0\.18/);
+  assert.match(source, /ENTERING_LAYOUT_SIZE_WARMUP_TICKS = 72/);
+  assert.match(source, /const algorithm = options\?\.layoutAlgorithm/);
+  assert.match(source, /normalized\.layoutAlgorithm = algorithm/);
+  assert.match(source, /let retainedPositionCount = retainedPositionIds\.length/);
+  assert.match(source, /let incrementalLayout = retainedPositionCount > 0/);
+  assert.match(source, /this\._layoutPreserveIds = incrementalLayout \? new Set\(retainedPositionIds\) : new Set\(\)/);
+  assert.match(source, /this\._workerGeneration \+= 1/);
+  assert.match(source, /const workerGeneration = this\._workerGeneration/);
+  assert.match(source, /if \(workerGeneration !== this\._workerGeneration\) return/);
+  assert.match(source, /this\._seedEnteringNodePositions\(enteringIds\)/);
+  assert.match(source, /_resolveEnteringNodeSeedPosition\(id, index, count\)/);
+  assert.match(source, /for \(const edge of this\.graphDB\?\.edges \|\| \[\]\)/);
+  assert.match(source, /this\.nodePositions\.set\(id, position\)/);
+  assert.match(source, /this\.smoothPositions\.set\(id, \{ \.\.\.position \}\)/);
+  assert.match(source, /const isPreserved = this\._layoutPreserveIds\?\.has\(n\.id\)/);
+  assert.match(source, /layoutParticipation: isEntering \? 0\.02 : isPreserved \? 0\.06 : 1/);
+  assert.match(source, /layoutWarmupTicks: isEntering \? 72 : isPreserved \? 120 : 0/);
+  assert.match(source, /layoutSizeScale: isEntering \? ENTERING_LAYOUT_SIZE_SCALE : 1/);
+  assert.match(source, /layoutSizeWarmupTicks: isEntering \? ENTERING_LAYOUT_SIZE_WARMUP_TICKS : 0/);
+  assert.match(source, /layoutFixedTicks: isPreserved \? 42 : 0/);
+  assert.match(source, /const workerX = pos \? pos\.x \+ finalW \/ 2 : undefined/);
+  assert.match(source, /x: workerX, y: workerY, w: finalW, h: finalH/);
+  assert.match(source, /workerOptions\.initialAlpha = INCREMENTAL_LAYOUT_INITIAL_ALPHA/);
+  assert.match(source, /contAlphaFloor: this\.\$\.alphaFloor/);
+  assert.match(source, /contAlphaTarget: this\.\$\.alphaTarget/);
+  assert.doesNotMatch(source, /this\.worker\.updateConfig\(\{\n      contAlphaFloor: this\.\$\.alphaFloor/);
+  assert.match(source, /progress < 0\.5/);
+  assert.match(source, /scale: NODE_APPEARANCE_START_SCALE \+ \(1 - NODE_APPEARANCE_START_SCALE\) \* eased/);
+  assert.doesNotMatch(source, /1 - Math\.pow\(1 - progress, 3\)/);
+  assert.doesNotMatch(source, /scale: 0\.5 \+ 0\.5 \* eased/);
+  let fallback = await readFile(new URL('../canvas/ForceLayout.js', import.meta.url), 'utf8');
+  let worker = await readFile(new URL('../canvas/ForceWorker.js', import.meta.url), 'utf8');
+  assert.match(fallback, /function normalizeSizeScale\(value\)/);
+  assert.match(fallback, /function normalizeLayoutAlgorithm\(value\)/);
+  assert.match(fallback, /function getEffectiveMass\(node\)/);
+  assert.match(fallback, /function getEffectiveWidth\(node\)/);
+  assert.match(fallback, /layoutAlgorithm: 'organic'/);
+  assert.match(fallback, /resolved\.layoutAlgorithm = normalizeLayoutAlgorithm\(options\.layoutAlgorithm\)/);
+  assert.match(fallback, /function getFallbackClouds\(nodeById, groups, options\)/);
+  assert.match(fallback, /function applyFallbackCloudForces\(nodeById, groups, options, alpha\)/);
+  assert.match(fallback, /options\.layoutAlgorithm !== 'oil-cloud'/);
+  assert.match(fallback, /applyFallbackCloudForces\(state\.nodeById, state\.groups, options, alpha\)/);
+  assert.match(fallback, /layoutSizeScale: normalizeSizeScale\(rawNode\.layoutSizeScale\)/);
+  assert.match(fallback, /node\.layoutSizeScale = Math\.min\(1, node\.layoutSizeScale \+ 1 \/ sizeWarmupTicks\)/);
+  assert.match(fallback, /Math\.max\(getEffectiveWidth\(a\), getEffectiveHeight\(a\)\)/);
+  assert.match(fallback, /0\.18 \+ participation \* 0\.82/);
+  assert.match(fallback, /initialAlpha: 1/);
+  assert.match(fallback, /alpha: options\.initialAlpha/);
+  assert.match(fallback, /layoutFixedTicks: Math\.max\(0, finiteNumber\(rawNode\.layoutFixedTicks, 0\)\)/);
+  assert.match(fallback, /node\.layoutFixedTicks -= 1/);
+  assert.match(worker, /function normalizeSizeScale\(value\)/);
+  assert.match(worker, /function normalizeLayoutAlgorithm\(value\)/);
+  assert.match(worker, /function getEffectiveMass\(node\)/);
+  assert.match(worker, /function getEffectiveWidth\(node\)/);
+  assert.match(worker, /layoutAlgorithm: 'organic'/);
+  assert.match(worker, /config\.layoutAlgorithm = normalizeLayoutAlgorithm\(config\.layoutAlgorithm\)/);
+  assert.match(worker, /if \(config\.layoutAlgorithm === 'spring'\) return/);
+  assert.match(worker, /config\.layoutAlgorithm === 'oil-cloud' \? 0\.025 : 0\.08/);
+  assert.match(worker, /config\.layoutAlgorithm === 'oil-cloud' \? 1\.35 : 1/);
+  assert.match(worker, /layoutSizeScale: normalizeSizeScale\(n\.layoutSizeScale\)/);
+  assert.match(worker, /node\.layoutSizeScale = Math\.min\(1, node\.layoutSizeScale \+ 1 \/ sizeWarmupTicks\)/);
+  assert.match(worker, /let hwA = getEffectiveWidth\(a\) \/ 2 \+ padX \+ massPadA/);
+  assert.match(worker, /0\.18 \+ participation \* 0\.82/);
+  assert.match(worker, /initialAlpha: 1/);
+  assert.match(worker, /continuousAlpha = clampNumber\(finiteNumber\(config\.initialAlpha, 1\), config\.contAlphaFloor, 1\)/);
+  assert.match(worker, /let layoutFixedTicks = Math\.max\(0, finiteNumber\(n\.layoutFixedTicks, 0\)\)/);
+  assert.match(worker, /n\.layoutFixedTicks -= 1/);
+});
+
+test('canvas graph gravity lab simulates orchestration event replay', async () => {
+  let source = await readFile(new URL('../demo/canvas-graph-gravity-lab.js', import.meta.url), 'utf8');
+  let html = await readFile(new URL('../demo/canvas-graph-gravity-lab.html', import.meta.url), 'utf8');
+
+  assert.match(html, /gravity-lab-layout-algorithms-v1/);
+  assert.match(source, /gravity-lab-layout-algorithms-v1/);
+  assert.match(source, /waitingStatuses\s*=\s*new Set/);
+  assert.match(source, /layoutAlgorithms\s*=\s*Object\.freeze/);
+  assert.match(source, /id:\s*'organic', label:\s*'organic force'/);
+  assert.match(source, /id:\s*'oil-cloud', label:\s*'oil-cloud bodies'/);
+  assert.match(source, /id:\s*'spring', label:\s*'spring baseline'/);
+  assert.match(source, /state\.layoutAlgorithm = 'organic'/);
+  assert.match(source, /layoutAlgorithm: state\.layoutAlgorithm/);
+  assert.match(source, /agentPalette\s*=\s*\{/);
+  assert.match(source, /color:\s*'#1565C0'/);
+  assert.match(source, /color:\s*'#F9A825'/);
+  assert.match(source, /color:\s*'#6A1B9A'/);
+  assert.match(source, /color:\s*'#E65100'/);
+  assert.match(source, /orchestrationEvents\s*=\s*\[/);
+  assert.match(source, /label:\s*'parallel fan-out'/);
+  assert.match(source, /weight:\s*2\.4/);
+  assert.match(source, /weight:\s*0\.7/);
+  assert.match(source, /id:\s*'parallel:subagents'/);
+  assert.match(source, /type:\s*'parallel'/);
+  assert.match(source, /icon:\s*'sync'/);
+  assert.match(source, /focusNodes:\s*\['agent:orchestrator', 'parallel:subagents'/);
+  assert.match(source, /activityNodes:\s*\['agent:code-reviewer', 'agent:ui-engineer', 'agent:qa-engineer'\]/);
+  assert.match(source, /fanOut:\s*\{/);
+  assert.match(source, /state:\s*\{ status:\s*'running' \}/);
+  assert.match(source, /label:\s*'review branch'/);
+  assert.match(source, /label:\s*'ui branch'/);
+  assert.match(source, /label:\s*'qa branch'/);
+  assert.match(source, /label:\s*'parallel tool calls complete'/);
+  assert.match(source, /updates:\s*\[/);
+  assert.match(source, /id:\s*'tool:apply-patch', state:\s*\{ status:\s*'done' \}/);
+  assert.match(source, /label:\s*'parallel merge'/);
+  assert.match(source, /id:\s*'parallel:merge'/);
+  assert.match(source, /icon:\s*'merge'/);
+  assert.match(source, /delaySlot:\s*4/);
+  assert.match(source, /function focusReplayFrame\(frame, attempt = 0\)/);
+  assert.match(source, /REPLAY_CAMERA_TRACK_MS = 140/);
+  assert.match(source, /REPLAY_CAMERA_INTEREST_LIMIT = 16/);
+  assert.match(source, /\['cameraEase', 0\.015, 0\.2, 0\.032, 0\.001\]/);
+  assert.match(source, /\['appearanceMs', 200, 2400, 1080, 10\]/);
+  assert.match(source, /\['coordinateJumpThreshold', 1, 120, 18, 1\]/);
+  assert.match(source, /function trackReplayCamera\(frame, \{ select = false, attempt = 0 \} = \{\}\)/);
+  assert.match(source, /function scheduleReplayCameraTrack\(frame\)/);
+  assert.match(source, /getReplayFrameCameraNodes\(frame, \{ includeActivity: false \}\)/);
+  assert.match(source, /function getReplayFramePulseNode\(frame\)/);
+  assert.match(source, /function scheduleReplayPulse\(frame\)/);
+  assert.match(source, /FINAL_REPLAY_FOCUS_IDLE_MS = 1000/);
+  assert.match(source, /function scheduleFinalReplayFocus\(frame\)/);
+  assert.match(source, /function mergeReplayFrame\(events\)/);
+  assert.match(source, /function groupOrchestrationEventsByDelaySlot\(\)/);
+  assert.match(source, /function mergeNodeUpdate\(node, update\)/);
+  assert.match(source, /function resetReplayMovementDiagnostics\(\)/);
+  assert.match(source, /function getPositionSnapshot\(\)/);
+  assert.match(source, /function updateReplayMovementDiagnostics\(snapshot = getPositionSnapshot\(\)\)/);
+  assert.match(source, /function resetCoordinateJumpDiagnostics\(\)/);
+  assert.match(source, /function updateCoordinateJumpDiagnostics\(snapshot = getPositionSnapshot\(\)\)/);
+  assert.match(source, /COORDINATE_JUMP_EVENT_LIMIT = 32/);
+  assert.match(source, /COORDINATE_JUMP_NODE_LIMIT = 6/);
+  assert.match(source, /const threshold = Math\.max\(0, Number\(state\.coordinateJumpThreshold\) \|\| 0\)/);
+  assert.match(source, /if \(move >= threshold\)/);
+  assert.match(source, /coordinateJumpEvents\.push\(\{/);
+  assert.match(source, /replayFrameMoves\.push\(\{/);
+  assert.match(source, /maxCommonMove: Number\(maxCommonMove\.toFixed\(2\)\)/);
+  assert.match(source, /graph\.resetLayoutState\(\)/);
+  assert.match(source, /graph\.setGraphModel\(currentModel\);\n  graph\.animateNodeAppearance/);
+  assert.doesNotMatch(source, /graph\.setGraphModel\(currentModel\);\n  graph\.setForceLayoutOptions\(readForceOptions\(\), \{ restart: true \}\);\n  graph\.animateNodeAppearance\(newNodes/);
+  assert.match(source, /syncFocusId = frame\.syncFocus \|\| null/);
+  assert.match(source, /activityNodeIds = \[\.\.\.\(frame\.activityNodes \|\| \[\]\)\]/);
+  assert.match(source, /graph\.queueTransitionMarkers\?\.\(fanOut\.from, fanOut\.to/);
+  assert.match(source, /graph\.fitNodes\(replayCameraInterestIds/);
+  assert.match(source, /scheduleReplayPulse\(frame\)/);
+  assert.match(source, /scheduleReplayCameraTrack\(frame\)/);
+  assert.match(source, /transition:\s*false/);
+  assert.match(source, /viewportEase:\s*Number\(state\.cameraEase\)/);
+  assert.match(source, /replayFinalFocusTimer = setTimeout\(\(\) => \{/);
+  assert.match(source, /scheduleFinalReplayFocus\(frame\)/);
+  assert.match(source, /setTimeout\(\(\) => trackReplayCamera\(frame, \{ select, attempt: attempt \+ 1 \}\), 80\)/);
+  assert.match(source, /setTimeout\(\(\) => focusReplayFrame\(frame, attempt \+ 1\), 80\)/);
+  assert.match(source, /applyOrchestrationFrame\(mergeReplayFrame\(events\)\)/);
+  assert.match(source, /graph\.animateNodeAppearance\(newNodes\.map\(\(node\) => node\.id\)/);
+  assert.match(source, /const duration = Math\.max\(900, Number\(state\.eventDelayMs\) \* 1\.7\)/);
+  assert.match(source, /frame\.primaryFocus\s*\|\|\s*frame\.syncFocus\s*\|\|\s*frame\.focus/);
+  assert.match(source, /frame\.fanOut\?\.\[0\]\?\.from/);
+  assert.doesNotMatch(source, /ids\.forEach\(\(id, index\)/);
+  assert.match(source, /parallelBranches:\s*state\.scenario === 'orchestration' \? 3 : 0/);
+  assert.match(source, /waitingNodes:\s*state\.scenario === 'orchestration'/);
+  assert.match(source, /syncFocus:\s*syncFocusId/);
+  assert.match(source, /activityNodes:\s*activityNodeIds/);
+  assert.match(source, /lastFrameMove:\s*replayFrameMoves\[replayFrameMoves\.length - 1\] \|\| null/);
+  assert.match(source, /maxFrameMove:\s*replayFrameMoves\.length/);
+  assert.match(source, /frameMoves:\s*replayFrameMoves\.slice\(-8\)/);
+  assert.match(source, /coordinateJumpThreshold:\s*Number\(state\.coordinateJumpThreshold\)/);
+  assert.match(source, /coordinateJumpCount:\s*coordinateJumpEvents\.length/);
+  assert.match(source, /lastCoordinateJump:\s*coordinateJumpEvents\[coordinateJumpEvents\.length - 1\] \|\| null/);
+  assert.match(source, /maxCoordinateJump:\s*coordinateJumpEvents\.length/);
+  assert.match(source, /coordinateJumps:\s*coordinateJumpEvents\.slice\(-8\)/);
+  assert.match(source, /layoutAlgorithm:\s*state\.layoutAlgorithm/);
+  assert.match(source, /Replay orchestration/);
 });
 
 test('canvas graph exposes device-orientation parallax as progressive enhancement', async () => {
@@ -537,6 +817,58 @@ test('canvas graph focus layer targets separate selected hubs from surrounding l
   });
   assert.equal(idle.shouldStop, false);
   assert.equal(idle.idleFrames, 0);
+
+  idle = resolveIdleFrame({
+    targetZoom: 1,
+    zoom: 1,
+    dragDeltaX: 0,
+    dragDeltaY: 0,
+    prevDragDeltaX: 0,
+    prevDragDeltaY: 0,
+    layerAnim: { 0: { scale: 1 } },
+    isIdle: true,
+    layerTargets: { scale: [1] },
+    lastAlpha: 0,
+    dragNode: null,
+    isPanning: false,
+    deactivating: false,
+    targetPanX: null,
+    infoPanel: { opacity: 0, lines: [] },
+    pulsesActive: true,
+    idleFrames: 8,
+  });
+  assert.equal(idle.shouldStop, false);
+  assert.equal(idle.idleFrames, 0);
+
+  idle = resolveIdleFrame({
+    targetZoom: 1,
+    zoom: 1,
+    dragDeltaX: 0,
+    dragDeltaY: 0,
+    prevDragDeltaX: 0,
+    prevDragDeltaY: 0,
+    layerAnim: { 0: { scale: 1 } },
+    isIdle: true,
+    layerTargets: { scale: [1] },
+    lastAlpha: 0,
+    dragNode: null,
+    isPanning: false,
+    deactivating: false,
+    targetPanX: null,
+    infoPanel: { opacity: 0, lines: [] },
+    statusAnimationsActive: true,
+    idleFrames: 8,
+  });
+  assert.equal(idle.shouldStop, false);
+  assert.equal(idle.idleFrames, 0);
+
+  let source = await readFile(new URL('../canvas/CanvasGraph/CanvasGraph.js', import.meta.url), 'utf8');
+  assert.match(source, /function drawCanvasGraphIcon\(ctx, icon, x, y, size, color, alpha = 1\)/);
+  assert.match(source, /getCanvasGraphNodeIcon\(node\)/);
+  assert.match(source, /_drawNodeStatusIndicator\(currentCtx, node, pos, drawnRadius, tc, layerOpacity, nodeAppearanceNow\)/);
+  assert.match(source, /_drawNodeIcon\(currentCtx, node, pos, drawnRadius, tc, layerOpacity\)/);
+  assert.match(source, /statusAnimationsActive: this\._hasAnimatingNodeStatuses\(\)/);
+  assert.match(source, /pulsesActive: this\._pulses\?\.length > 0/);
 });
 
 test('canvas graph passes normalized semantic groups into the force layout', async () => {
@@ -660,6 +992,141 @@ test('force layout fallback applies semantic group links without a browser worke
     assert.equal(first.meta.fallback, true);
     assert.ok(first.positions.a.x > 0);
     assert.ok(first.positions.b.x < 100);
+    force.stop();
+  } finally {
+    console.warn = nativeWarn;
+    if (NativeWorker) {
+      globalThis.Worker = NativeWorker;
+    } else {
+      delete globalThis.Worker;
+    }
+    if (nativeRaf) {
+      globalThis.requestAnimationFrame = nativeRaf;
+    } else {
+      delete globalThis.requestAnimationFrame;
+    }
+    if (nativeCancelRaf) {
+      globalThis.cancelAnimationFrame = nativeCancelRaf;
+    } else {
+      delete globalThis.cancelAnimationFrame;
+    }
+  }
+});
+
+test('force layout fallback warms appearing nodes into layout participation', async () => {
+  let NativeWorker = globalThis.Worker;
+  let nativeRaf = globalThis.requestAnimationFrame;
+  let nativeCancelRaf = globalThis.cancelAnimationFrame;
+  let nativeWarn = console.warn;
+  globalThis.requestAnimationFrame = (callback) => setTimeout(() => callback(Date.now()), 0);
+  globalThis.cancelAnimationFrame = (id) => clearTimeout(id);
+  console.warn = () => {};
+
+  try {
+    delete globalThis.Worker;
+    let { ForceLayout } = await import('../canvas/ForceLayout.js');
+    let force = new ForceLayout('/missing-force-worker.js');
+    let ticks = [];
+    let nextTick = () => new Promise((resolve, reject) => {
+      let timer = setTimeout(() => reject(new Error('layout participation fallback did not tick')), 200);
+      force.onTick = (positions, meta) => {
+        ticks.push({ positions, meta });
+        clearTimeout(timer);
+        resolve({ positions, meta });
+      };
+    });
+
+    let firstTick = nextTick();
+    force.start({
+      nodes: [
+        { id: 'source', x: 0, y: 0, mass: 4 },
+        { id: 'appearing', x: 100, y: 0, layoutParticipation: 0, layoutWarmupTicks: 2 },
+      ],
+      edges: [{ from: 'source', to: 'appearing' }],
+      options: {
+        mode: 'continuous',
+        alphaDecay: 0.5,
+        brownian: 0,
+        chargeStrength: 0,
+        centerStrength: 0,
+        centerPull: 0,
+        collideStrength: 0,
+        linkDistance: 10,
+        linkStrength: 1,
+      },
+    });
+
+    let first = await firstTick;
+    assert.equal(Math.round(first.positions.appearing.x), 100);
+
+    let second = await nextTick();
+    assert.ok(second.positions.appearing.x < 100);
+    assert.ok(Math.abs(second.positions.source.x) < Math.abs(second.positions.appearing.x - 100));
+    force.stop();
+  } finally {
+    console.warn = nativeWarn;
+    if (NativeWorker) {
+      globalThis.Worker = NativeWorker;
+    } else {
+      delete globalThis.Worker;
+    }
+    if (nativeRaf) {
+      globalThis.requestAnimationFrame = nativeRaf;
+    } else {
+      delete globalThis.requestAnimationFrame;
+    }
+    if (nativeCancelRaf) {
+      globalThis.cancelAnimationFrame = nativeCancelRaf;
+    } else {
+      delete globalThis.cancelAnimationFrame;
+    }
+  }
+});
+
+test('force layout fallback reserves collision space for warming nodes', async () => {
+  let NativeWorker = globalThis.Worker;
+  let nativeRaf = globalThis.requestAnimationFrame;
+  let nativeCancelRaf = globalThis.cancelAnimationFrame;
+  let nativeWarn = console.warn;
+  globalThis.requestAnimationFrame = (callback) => setTimeout(() => callback(Date.now()), 0);
+  globalThis.cancelAnimationFrame = (id) => clearTimeout(id);
+  console.warn = () => {};
+
+  try {
+    delete globalThis.Worker;
+    let { ForceLayout } = await import('../canvas/ForceLayout.js');
+    let force = new ForceLayout('/missing-force-worker.js');
+    let tick = new Promise((resolve, reject) => {
+      let timer = setTimeout(() => reject(new Error('collision warmup fallback did not tick')), 200);
+      force.onTick = (positions, meta) => {
+        clearTimeout(timer);
+        resolve({ positions, meta });
+      };
+    });
+
+    force.start({
+      nodes: [
+        { id: 'a', x: 0, y: 0, w: 24, h: 24, mass: 2 },
+        { id: 'b', x: 2, y: 0, w: 24, h: 24, mass: 1, layoutParticipation: 0.04, layoutWarmupTicks: 20 },
+      ],
+      edges: [],
+      options: {
+        mode: 'continuous',
+        alphaDecay: 0.5,
+        brownian: 0,
+        chargeStrength: 0,
+        centerStrength: 0,
+        centerPull: 0,
+        collideStrength: 1,
+        collisionPadding: 20,
+        velocityDecay: 0.2,
+      },
+    });
+
+    let first = await tick;
+    assert.equal(first.meta.fallback, true);
+    assert.ok(first.positions.a.x < 0);
+    assert.ok(first.positions.b.x > 2);
     force.stop();
   } finally {
     console.warn = nativeWarn;
@@ -894,7 +1361,20 @@ test('discover exposes the standalone package contract', async () => {
   assert.ok(data.manifest.components
     .find((item) => item.tagName === 'canvas-graph')
     .contract.methods
+    .find((method) => method.name === 'setForceLayoutOptions')
+    .description.includes('layoutAlgorithm'));
+  assert.ok(data.manifest.components
+    .find((item) => item.tagName === 'canvas-graph')
+    .contract.methods
     .some((method) => method.name === 'animateNodeAppearance'));
+  assert.ok(data.manifest.components
+    .find((item) => item.tagName === 'canvas-graph')
+    .contract.methods
+    .some((method) => method.name === 'queueTransitionMarkers'));
+  assert.ok(data.manifest.components
+    .find((item) => item.tagName === 'canvas-graph')
+    .contract.methods
+    .some((method) => method.name === 'resetLayoutState'));
   assert.equal(
     data.manifest.components
       .find((item) => item.tagName === 'canvas-graph')

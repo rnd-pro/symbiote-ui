@@ -44,7 +44,8 @@ const DEFAULT_DARK_TOKENS = {
   '--sn-alpha-subtle': '0.15',
   '--sn-alpha-faint': '0.06',
   '--sn-overlay-z-base': '20000',
-  '--sn-fullscreen-tab-bar-z': '20010',
+  '--sn-fullscreen-panel-z': '30010',
+  '--sn-fullscreen-tab-bar-z': '30020',
 
   '--sn-danger-color': 'hsl(var(--sn-hue-danger) var(--sn-sat-vivid) 58%)',
   '--sn-success-color': 'hsl(var(--sn-hue-success) var(--sn-sat-vivid) 57%)',

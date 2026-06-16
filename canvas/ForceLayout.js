@@ -29,6 +29,8 @@ const FALLBACK_DEFAULT_OPTIONS = Object.freeze({
   alphaDecay: 0.015,
   alphaMin: 0.001,
   alphaTarget: 0,
+  initialAlpha: 1,
+  layoutAlgorithm: 'organic',
   contAlphaFloor: 0.001,
   contAlphaTarget: 0.001,
   brownian: 0,
@@ -47,6 +49,65 @@ function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
+function normalizeMass(value) {
+  return clamp(finiteNumber(value, 1), 0.35, 8);
+}
+
+function normalizeParticipation(value) {
+  return clamp(finiteNumber(value, 1), 0, 1);
+}
+
+function normalizeSizeScale(value) {
+  return clamp(finiteNumber(value, 1), 0.12, 1);
+}
+
+function normalizeLayoutAlgorithm(value) {
+  return value === 'spring' || value === 'oil-cloud' ? value : 'organic';
+}
+
+function getParticipation(node) {
+  return normalizeParticipation(node?.layoutParticipation);
+}
+
+function getLayoutSizeScale(node) {
+  return normalizeSizeScale(node?.layoutSizeScale);
+}
+
+function getEffectiveMass(node) {
+  return Math.max(0.35, normalizeMass(node?.mass) * getLayoutSizeScale(node));
+}
+
+function getCollisionParticipation(node) {
+  let participation = getParticipation(node);
+  if (participation <= 0.001) return 0;
+  return clamp(0.18 + participation * 0.82, 0, 1);
+}
+
+function getMovementScale(node) {
+  return getParticipation(node) / Math.max(1, getEffectiveMass(node));
+}
+
+function getEffectiveWidth(node) {
+  return Math.max(1, finiteNumber(node?.w, 1) * getLayoutSizeScale(node));
+}
+
+function getEffectiveHeight(node) {
+  return Math.max(1, finiteNumber(node?.h, 1) * getLayoutSizeScale(node));
+}
+
+function advanceLayoutParticipation(nodes) {
+  for (const node of nodes) {
+    if (node.layoutParticipation < 1) {
+      let warmupTicks = Math.max(1, finiteNumber(node.layoutWarmupTicks, 36));
+      node.layoutParticipation = Math.min(1, node.layoutParticipation + 1 / warmupTicks);
+    }
+    if (node.layoutSizeScale < 1) {
+      let sizeWarmupTicks = Math.max(1, finiteNumber(node.layoutSizeWarmupTicks, 36));
+      node.layoutSizeScale = Math.min(1, node.layoutSizeScale + 1 / sizeWarmupTicks);
+    }
+  }
+}
+
 function hashUnit(value) {
   let text = String(value || '');
   let hash = 2166136261;
@@ -59,6 +120,69 @@ function hashUnit(value) {
 
 function fallbackJitter(id, axis) {
   return (hashUnit(`${id}:${axis}`) - 0.5) * 0.01;
+}
+
+function getFallbackClouds(nodeById, groups, options) {
+  let clouds = [];
+  if (options.layoutAlgorithm !== 'oil-cloud') return clouds;
+  for (const [groupId, memberIds] of Object.entries(groups || {})) {
+    let members = memberIds.map((id) => nodeById.get(id)).filter(Boolean);
+    if (members.length < 2) continue;
+    let cx = 0;
+    let cy = 0;
+    let totalMass = 0;
+    for (const member of members) {
+      let mass = getEffectiveMass(member);
+      cx += member.x * mass;
+      cy += member.y * mass;
+      totalMass += mass;
+    }
+    cx /= Math.max(1, totalMass);
+    cy /= Math.max(1, totalMass);
+    let radius = 0;
+    for (const member of members) {
+      let nodeRadius = Math.max(getEffectiveWidth(member), getEffectiveHeight(member)) / 2;
+      radius = Math.max(radius, Math.hypot(member.x - cx, member.y - cy) + nodeRadius);
+    }
+    clouds.push({ id: groupId, members, x: cx, y: cy, radius: radius * 1.12 });
+  }
+  return clouds;
+}
+
+function applyFallbackCloudForces(nodeById, groups, options, alpha) {
+  let clouds = getFallbackClouds(nodeById, groups, options);
+  if (clouds.length === 0) return;
+
+  for (const cloud of clouds) {
+    for (const node of cloud.members) {
+      let scale = getMovementScale(node);
+      node.vx -= (node.x - cloud.x) * options.wellStrength * alpha * 0.16 * scale;
+      node.vy -= (node.y - cloud.y) * options.wellStrength * alpha * 0.16 * scale;
+    }
+  }
+
+  for (let i = 0; i < clouds.length; i++) {
+    for (let j = i + 1; j < clouds.length; j++) {
+      let a = clouds[i];
+      let b = clouds[j];
+      let dx = b.x - a.x;
+      let dy = b.y - a.y;
+      let distance = Math.sqrt(dx * dx + dy * dy) || 1;
+      let minDistance = a.radius + b.radius + options.groupDistance * 0.2;
+      if (distance >= minDistance) continue;
+      let push = ((minDistance - distance) / distance) * options.wellRepulsion * alpha * 0.04;
+      let px = dx * push;
+      let py = dy * push;
+      for (const node of a.members) {
+        node.vx -= px / Math.max(1, getEffectiveMass(node));
+        node.vy -= py / Math.max(1, getEffectiveMass(node));
+      }
+      for (const node of b.members) {
+        node.vx += px / Math.max(1, getEffectiveMass(node));
+        node.vy += py / Math.max(1, getEffectiveMass(node));
+      }
+    }
+  }
 }
 
 function resolveFallbackOptions(options = {}) {
@@ -75,6 +199,12 @@ function resolveFallbackOptions(options = {}) {
     options.contAlphaTarget,
     finiteNumber(options.alphaTarget, FALLBACK_DEFAULT_OPTIONS.contAlphaTarget)
   );
+  resolved.initialAlpha = clamp(
+    finiteNumber(options.initialAlpha, FALLBACK_DEFAULT_OPTIONS.initialAlpha),
+    resolved.contAlphaFloor,
+    1
+  );
+  resolved.layoutAlgorithm = normalizeLayoutAlgorithm(options.layoutAlgorithm);
   resolved.mode = options.mode === 'continuous' ? 'continuous' : 'converge';
   return resolved;
 }
@@ -426,8 +556,15 @@ export class ForceLayout {
         vy: 0,
         w: Math.max(1, finiteNumber(rawNode.w, options.nodeWidth || 80)),
         h: Math.max(1, finiteNumber(rawNode.h, options.nodeHeight || 40)),
-        mass: Math.max(1, finiteNumber(rawNode.mass, 1)),
+        mass: normalizeMass(rawNode.mass),
+        layoutParticipation: normalizeParticipation(rawNode.layoutParticipation),
+        layoutWarmupTicks: Math.max(0, finiteNumber(rawNode.layoutWarmupTicks, 0)),
+        layoutSizeScale: normalizeSizeScale(rawNode.layoutSizeScale),
+        layoutSizeWarmupTicks: Math.max(0, finiteNumber(rawNode.layoutSizeWarmupTicks, 0)),
+        layoutFixedTicks: Math.max(0, finiteNumber(rawNode.layoutFixedTicks, 0)),
       };
+      node.layoutFixedX = node.x;
+      node.layoutFixedY = node.y;
       nodes.push(node);
       nodeById.set(node.id, node);
     }
@@ -486,7 +623,7 @@ export class ForceLayout {
       groups,
       options,
       mode: options.mode,
-      alpha: 1,
+      alpha: options.initialAlpha,
       iteration: 0,
       initialDoneSent: false,
       maxIterations: Math.max(1, Math.ceil(Math.log(options.alphaMin) / Math.log(1 - options.alphaDecay)) + 1),
@@ -571,6 +708,8 @@ export class ForceLayout {
       let source = state.nodeById.get(edge.sourceId);
       let target = state.nodeById.get(edge.targetId);
       if (!source || !target) continue;
+      let participation = Math.min(getParticipation(source), getParticipation(target));
+      if (participation <= 0.01) continue;
       let dx = target.x - source.x;
       let dy = target.y - source.y;
       if (Math.abs(dx) < 1e-6 && Math.abs(dy) < 1e-6) {
@@ -578,13 +717,13 @@ export class ForceLayout {
         dy = fallbackJitter(`${source.id}:${target.id}`, 'link-y');
       }
       let distance = Math.sqrt(dx * dx + dy * dy) || 1;
-      let force = ((distance - edge.restLength) / distance) * edge.strength * alpha;
+      let force = ((distance - edge.restLength) / distance) * edge.strength * alpha * participation;
       let fx = dx * force;
       let fy = dy * force;
-      source.vx += fx;
-      source.vy += fy;
-      target.vx -= fx;
-      target.vy -= fy;
+      source.vx += fx / Math.max(1, getEffectiveMass(source));
+      source.vy += fy / Math.max(1, getEffectiveMass(source));
+      target.vx -= fx / Math.max(1, getEffectiveMass(target));
+      target.vy -= fy / Math.max(1, getEffectiveMass(target));
     }
 
     let charge = Math.abs(finiteNumber(options.chargeStrength, FALLBACK_DEFAULT_OPTIONS.chargeStrength)) * alpha;
@@ -599,33 +738,43 @@ export class ForceLayout {
           dy = fallbackJitter(`${a.id}:${b.id}`, 'charge-y');
         }
         let distanceSq = Math.max(dx * dx + dy * dy, 25);
-        let force = charge / distanceSq;
-        a.vx -= dx * force;
-        a.vy -= dy * force;
-        b.vx += dx * force;
-        b.vy += dy * force;
+        let forceParticipation = Math.min(getParticipation(a), getParticipation(b));
+        let force = charge * getEffectiveMass(a) * getEffectiveMass(b) * forceParticipation / distanceSq;
+        a.vx -= dx * force / Math.max(1, getEffectiveMass(a));
+        a.vy -= dy * force / Math.max(1, getEffectiveMass(a));
+        b.vx += dx * force / Math.max(1, getEffectiveMass(b));
+        b.vy += dy * force / Math.max(1, getEffectiveMass(b));
 
         let distance = Math.sqrt(distanceSq) || 1;
-        let minDistance = (Math.max(a.w, a.h) + Math.max(b.w, b.h)) / 2 + options.collisionPadding;
-        if (distance < minDistance) {
-          let push = ((minDistance - distance) / distance) * options.collideStrength * 0.5;
+        let massPad = Math.max(0, getEffectiveMass(a) - 1) * 2.4
+          + Math.max(0, getEffectiveMass(b) - 1) * 2.4;
+        let minDistance = (
+          Math.max(getEffectiveWidth(a), getEffectiveHeight(a))
+          + Math.max(getEffectiveWidth(b), getEffectiveHeight(b))
+        ) / 2 + options.collisionPadding + massPad;
+        let collisionParticipation = Math.min(getCollisionParticipation(a), getCollisionParticipation(b));
+        if (distance < minDistance && collisionParticipation > 0.05) {
+          let push = ((minDistance - distance) / distance) * options.collideStrength * collisionParticipation * 0.5;
           let px = dx * push;
           let py = dy * push;
-          a.vx -= px;
-          a.vy -= py;
-          b.vx += px;
-          b.vy += py;
+          a.vx -= px / Math.max(1, getEffectiveMass(a));
+          a.vy -= py / Math.max(1, getEffectiveMass(a));
+          b.vx += px / Math.max(1, getEffectiveMass(b));
+          b.vy += py / Math.max(1, getEffectiveMass(b));
         }
       }
     }
+
+    applyFallbackCloudForces(state.nodeById, state.groups, options, alpha);
 
     let centerStrength = finiteNumber(options.centerStrength, 0);
     if (centerStrength <= 0) {
       centerStrength = finiteNumber(options.centerPull, FALLBACK_DEFAULT_OPTIONS.centerPull) * 0.02;
     }
     for (const node of nodes) {
-      node.vx -= node.x * centerStrength * alpha;
-      node.vy -= node.y * centerStrength * alpha;
+      let scale = getMovementScale(node);
+      node.vx -= node.x * centerStrength * alpha * scale;
+      node.vy -= node.y * centerStrength * alpha * scale;
       if (options.brownian > 0 && alpha < options.brownianThresh && node.fx === undefined) {
         node.vx += fallbackJitter(`${node.id}:${state.iteration}`, 'brownian-x') * options.brownian;
         node.vy += fallbackJitter(`${node.id}:${state.iteration}`, 'brownian-y') * options.brownian;
@@ -636,7 +785,13 @@ export class ForceLayout {
     let decay = clamp(1 - finiteNumber(options.velocityDecay, FALLBACK_DEFAULT_OPTIONS.velocityDecay), 0.02, 0.98);
     let maxVelocity = Math.max(80, Math.sqrt(nodes.length) * 40);
     for (const node of nodes) {
-      if (node.fx !== undefined) {
+      if (node.fx === undefined && node.fy === undefined && node.layoutFixedTicks > 0) {
+        node.x = node.layoutFixedX;
+        node.y = node.layoutFixedY;
+        node.vx = 0;
+        node.vy = 0;
+        node.layoutFixedTicks -= 1;
+      } else if (node.fx !== undefined) {
         node.x = node.fx;
         node.y = node.fy;
         node.vx = 0;
@@ -649,6 +804,7 @@ export class ForceLayout {
       }
       energy += node.vx * node.vx + node.vy * node.vy;
     }
+    advanceLayoutParticipation(nodes);
     return energy;
   }
 

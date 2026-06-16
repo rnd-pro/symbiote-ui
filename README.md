@@ -159,6 +159,22 @@ that node's parent group when the model is hierarchical. Focus changes in flat
 mode queue the next active node through the graph deactivation cycle, and
 `canvas-graph` renders a small route marker along the available node links so
 the viewer keeps visual continuity between selections.
+Hosts that replay parallel orchestration or tool activity can call
+`queueTransitionMarkers(fromId, toIds, { transitionMarkerMs })` to fan out
+animated route markers from one source node to multiple target nodes without
+changing the host-owned graph model.
+Use `fitNodes(ids, { viewportEase })` or `fitView({ viewportEase })` when a
+live replay should track a changing area of interest with a slower camera path
+than ordinary user-initiated focus.
+During incremental model growth, `canvas-graph` seeds entering node positions
+near linked visible nodes, starts them with a small effective collision size,
+and restarts the force layout with low initial heat, so live process replay can
+grow without a full random recomposition.
+`setForceLayoutOptions({ layoutAlgorithm })` accepts `organic`, `oil-cloud`, or
+`spring`: use `organic` for the default grouped force model, `oil-cloud` for
+slower cloud-body separation, and `spring` as a plain force-directed baseline.
+Use `resetLayoutState()` before replaying the same process graph from the
+beginning when old node positions should not seed the next force-layout run.
 
 `canvas-graph.enableDeviceOrientationParallax()` enables sensor-driven layer
 parallax as a progressive enhancement. Call it from a user gesture; browsers

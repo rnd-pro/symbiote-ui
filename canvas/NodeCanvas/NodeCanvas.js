@@ -137,6 +137,30 @@ export class NodeCanvas extends Symbiote {
   /** @type {boolean} */
   _nodeDragActive = false;
 
+  /** @type {Set<string>} */
+  _pendingConnectionNodeIds = new Set();
+
+  /** @type {number} */
+  _connectionUpdateFrame = 0;
+
+  /** @type {number} */
+  _connectionUpdateTimer = 0;
+
+  /** @type {number} */
+  _lastConnectionUpdateTime = 0;
+
+  /** @type {number} */
+  _dragConnectionUpdateInterval = 33;
+
+  /** @type {number} */
+  _nodeDragReleaseFrame = 0;
+
+  /** @type {string[]} */
+  _nodeDragConnectionIds = [];
+
+  /** @type {string} */
+  _nodeDragId = '';
+
   /** @type {number|null} */
   _panAnimFrame = null;
 
@@ -158,6 +182,12 @@ export class NodeCanvas extends Symbiote {
   /** @type {'bezier'|'orthogonal'|'straight'|'pcb'} saved across setEditor calls */
   _pathStyle = 'bezier';
 
+  /** @type {Map<string, { style: 'bezier'|'orthogonal'|'straight'|'pcb'|'pcb-drag-proxy', connectionIds: Iterable<string>|null, draggedNodeId?: string }>} */
+  _transientPathStyleRequests = new Map();
+
+  /** @type {''|'bezier'|'orthogonal'|'straight'|'pcb'|'pcb-drag-proxy'} */
+  _activeTransientPathStyle = '';
+
   /** @type {Object|null} */
   _flowLayout = null;
 
@@ -176,12 +206,19 @@ export class NodeCanvas extends Symbiote {
   /** @type {string|null} */
   _lastClickNodeId = null;
 
+  /** @type {boolean} */
+  _layoutSuspended = false;
+
+  /** @type {string} */
+  _layoutSuspendReason = '';
+
 
   /**
    * Clear all existing node, connection, and frame views from the DOM.
    * Called before switching to a new editor to ensure clean state.
    */
   _clearViews() {
+    this._clearScheduledConnectionUpdates();
 
     for (const [, el] of this._nodeViews) {
       if (el._previewRaf) {
@@ -314,6 +351,13 @@ export class NodeCanvas extends Symbiote {
 
     if (this._pathStyle !== 'bezier') {
       this._connRenderer.setPathStyle(this._pathStyle);
+    }
+    for (const [source, request] of this._transientPathStyleRequests) {
+      this._connRenderer.setTransientPathStyle?.(request.style, {
+        source,
+        connectionIds: request.connectionIds,
+        draggedNodeId: request.draggedNodeId,
+      });
     }
 
     this._pseudo = new PseudoConnection(this.ref.pseudoSvg);
@@ -655,6 +699,34 @@ export class NodeCanvas extends Symbiote {
     this._connRenderer?.setPathStyle(style);
   }
 
+  /**
+   * Temporarily override connection rendering while preserving the selected path style.
+   * @param {''|'bezier'|'orthogonal'|'straight'|'pcb'|'pcb-drag-proxy'} style
+   * @param {string} [source]
+   */
+  setTransientPathStyle(style = '', source = 'default', options = {}) {
+    if (style) {
+      this._transientPathStyleRequests.set(source, {
+        style,
+        connectionIds: options.connectionIds || null,
+        draggedNodeId: options.draggedNodeId,
+      });
+    } else {
+      this._transientPathStyleRequests.delete(source);
+    }
+    let nextStyle = [...this._transientPathStyleRequests.values()].pop()?.style || '';
+    let connectionIds = options.connectionIds;
+    this._activeTransientPathStyle = nextStyle;
+    this._connRenderer?.setTransientPathStyle?.(style, {
+      source,
+      connectionIds,
+      draggedNodeId: options.draggedNodeId,
+      freezeLayer: options.freezeLayer,
+      reuseFrozenPaths: options.reuseFrozenPaths,
+      suspendProgressivePcb: options.suspendProgressivePcb,
+    });
+  }
+
   /** @returns {'bezier'|'orthogonal'|'straight'|'pcb'} */
   getPathStyle() {
     return this._pathStyle;
@@ -812,7 +884,7 @@ export class NodeCanvas extends Symbiote {
    * @param {string[]} nodeIds - Target node IDs
    * @param {Object} [opts]
    * @param {number} [opts.padding=80] - Screen padding around the focused group
-   * @param {number} [opts.minZoom=0.001] - Minimum zoom while fitting
+   * @param {number} [opts.minZoom=0.08] - Minimum zoom while fitting
    * @param {number} [opts.maxZoom=1.5] - Maximum zoom while fitting
    * @param {string|boolean} [opts.select=false] - Node id to select, or true to select first
    * @returns {boolean}
@@ -831,6 +903,45 @@ export class NodeCanvas extends Symbiote {
     return Array.isArray(nodeIds)
       ? this.flyToNodes(nodeIds, opts)
       : this.flyToNode(nodeIds, opts);
+  }
+
+  /**
+   * Pause transient viewport work while the host hides this renderer.
+   * Host-owned editor data and DOM node state stay intact for fast resume.
+   * @param {{reason?: string, releaseDom?: boolean}} [context]
+   */
+  suspendLayout({ reason = 'layout-suspend', releaseDom = false } = {}) {
+    this._layoutSuspended = true;
+    this._layoutSuspendReason = reason;
+    this.toggleAttribute('data-layout-suspended', true);
+    this.ref?.quickToolbar?.hide?.();
+    this.ref?.contextMenu?.hide?.();
+    this.ref?.contextMenu?.setAttribute?.('hidden', '');
+    if (this._panAnimFrame) {
+      cancelAnimationFrame(this._panAnimFrame);
+      this._panAnimFrame = null;
+    }
+    if (releaseDom && this._editor) {
+      this._layoutReleasedDom = true;
+      this._suspendedEditor = this._editor;
+      this._suspendedPositions = this.getPositions();
+      this._clearViews();
+    }
+  }
+
+  /**
+   * Resume viewport sync after a hidden layout group becomes active again.
+   * @param {{reason?: string}} [context]
+   */
+  resumeLayout({ reason = 'layout-resume' } = {}) {
+    let wasLayoutMove = this._layoutSuspendReason === 'layout-move' || reason === 'layout-move';
+    this._layoutSuspended = false;
+    this._layoutSuspendReason = '';
+    this.toggleAttribute('data-layout-suspended', false);
+    if (wasLayoutMove) return;
+    if (this._layoutReleasedDom) return;
+    this.syncPhantom();
+    this.refreshConnections();
   }
 
   /**
@@ -1209,10 +1320,10 @@ export class NodeCanvas extends Symbiote {
 
     if (this._batchMode) return;
 
-    this._connRenderer?.updateForNode(nodeId);
-
-    if (el.hasAttribute('data-svg-shape')) {
-      this._connRenderer?.refreshFreeDots(nodeId);
+    if (this._nodeDragActive) {
+      this._scheduleConnectionUpdate(nodeId);
+    } else {
+      this._updateConnectionsForNode(nodeId);
     }
 
 
@@ -1220,6 +1331,95 @@ export class NodeCanvas extends Symbiote {
     if (toolbar && toolbar._nodeId === nodeId) {
       toolbar.updatePosition(el);
     }
+  }
+
+  _updateConnectionsForNode(nodeId) {
+    let el = this._nodeViews.get(nodeId);
+    this._connRenderer?.updateForNode(nodeId);
+    if (el?.hasAttribute('data-svg-shape')) {
+      this._connRenderer?.refreshFreeDots(nodeId);
+    }
+  }
+
+  _scheduleConnectionUpdate(nodeId) {
+    this._pendingConnectionNodeIds.add(nodeId);
+    if (this._nodeDragActive) {
+      this._scheduleDragConnectionUpdate();
+      return;
+    }
+    if (this._connectionUpdateFrame) return;
+    if (typeof requestAnimationFrame === 'function') {
+      this._connectionUpdateFrame = requestAnimationFrame(() => {
+        this._connectionUpdateFrame = 0;
+        this._flushScheduledConnectionUpdates();
+      });
+      return;
+    }
+    this._flushScheduledConnectionUpdates();
+  }
+
+  _scheduleDragConnectionUpdate() {
+    if (this._connectionUpdateFrame || this._connectionUpdateTimer) return;
+    let now = globalThis.performance?.now?.() ?? Date.now();
+    let elapsed = now - this._lastConnectionUpdateTime;
+    let delay = Math.max(0, this._dragConnectionUpdateInterval - elapsed);
+    let requestFrame = () => {
+      if (typeof requestAnimationFrame === 'function') {
+        this._connectionUpdateFrame = requestAnimationFrame(() => {
+          this._connectionUpdateFrame = 0;
+          this._flushScheduledConnectionUpdates();
+        });
+        return;
+      }
+      this._flushScheduledConnectionUpdates();
+    };
+
+    if (delay > 0 && typeof globalThis.setTimeout === 'function') {
+      this._connectionUpdateTimer = globalThis.setTimeout(() => {
+        this._connectionUpdateTimer = 0;
+        requestFrame();
+      }, delay);
+      return;
+    }
+
+    requestFrame();
+  }
+
+  _flushScheduledConnectionUpdates() {
+    if (this._connectionUpdateFrame && typeof cancelAnimationFrame === 'function') {
+      cancelAnimationFrame(this._connectionUpdateFrame);
+    }
+    this._connectionUpdateFrame = 0;
+    if (this._connectionUpdateTimer && typeof globalThis.clearTimeout === 'function') {
+      globalThis.clearTimeout(this._connectionUpdateTimer);
+    }
+    this._connectionUpdateTimer = 0;
+    if (!this._pendingConnectionNodeIds.size) return;
+    let nodeIds = [...this._pendingConnectionNodeIds];
+    this._pendingConnectionNodeIds.clear();
+    this._lastConnectionUpdateTime = globalThis.performance?.now?.() ?? Date.now();
+    for (let nodeId of nodeIds) {
+      this._updateConnectionsForNode(nodeId);
+    }
+  }
+
+  _clearScheduledConnectionUpdates() {
+    if (this._connectionUpdateFrame && typeof cancelAnimationFrame === 'function') {
+      cancelAnimationFrame(this._connectionUpdateFrame);
+    }
+    this._connectionUpdateFrame = 0;
+    if (this._connectionUpdateTimer && typeof globalThis.clearTimeout === 'function') {
+      globalThis.clearTimeout(this._connectionUpdateTimer);
+    }
+    this._connectionUpdateTimer = 0;
+    this._pendingConnectionNodeIds.clear();
+  }
+
+  _cancelNodeDragRelease() {
+    if (this._nodeDragReleaseFrame && typeof cancelAnimationFrame === 'function') {
+      cancelAnimationFrame(this._nodeDragReleaseFrame);
+    }
+    this._nodeDragReleaseFrame = 0;
   }
 
   /**
@@ -1353,15 +1553,38 @@ export class NodeCanvas extends Symbiote {
     toolbar.scheduleHide?.(undefined, nodeId);
   }
 
+  _connectionIdsForNode(nodeId) {
+    let connections =
+      this._editor?.getNodeConnections?.(nodeId) ||
+      this._editor?.getConnectionsForNode?.(nodeId) ||
+      this._editor?.getConnections?.()?.filter?.((conn) => conn.from === nodeId || conn.to === nodeId) ||
+      [];
+    return connections.map((conn) => conn.id).filter(Boolean);
+  }
+
   _handleNodeDragStart(nodeId) {
+    this._cancelNodeDragRelease();
     this._nodeDragActive = true;
+    this._nodeDragId = nodeId;
     this.setAttribute('data-node-dragging', nodeId);
+    if (this._pathStyle !== 'straight') {
+      let connectionIds = this._connectionIdsForNode(nodeId);
+      this._nodeDragConnectionIds = connectionIds;
+      let dragStyle = this._pathStyle === 'pcb' ? 'pcb-drag-proxy' : 'straight';
+      this.setTransientPathStyle(dragStyle, 'node-drag', {
+        connectionIds,
+        draggedNodeId: nodeId,
+        freezeLayer: dragStyle === 'pcb-drag-proxy',
+        suspendProgressivePcb: dragStyle === 'pcb-drag-proxy',
+      });
+    }
     this.ref.quickToolbar?.hide?.();
   }
 
   _handleNodeDragEnd(nodeId, nodeEl, event) {
     this._nodeDragActive = false;
     this.removeAttribute('data-node-dragging');
+    this._releaseNodeDragTransient();
 
     if (!nodeEl?.isConnected || !this._selector.isNodeSelected(nodeId)) return;
 
@@ -1374,6 +1597,14 @@ export class NodeCanvas extends Symbiote {
     } else {
       restoreToolbar();
     }
+  }
+
+  _releaseNodeDragTransient() {
+    this._nodeDragConnectionIds = [];
+    this._nodeDragId = '';
+    this._cancelNodeDragRelease();
+    this._clearScheduledConnectionUpdates();
+    this.setTransientPathStyle('', 'node-drag');
   }
 
   _handleConnectionClick(connId, e) {

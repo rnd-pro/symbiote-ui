@@ -8,6 +8,17 @@
  * @module symbiote-ui/canvas/CanvasViewport
  */
 
+const NODE_CANVAS_MIN_FIT_ZOOM = 0.08;
+const NODE_CANVAS_MIN_FIT_VIEWPORT_SIZE = 48;
+
+function resolveFitPadding(padding, viewport) {
+  let minSide = Math.min(viewport.width, viewport.height);
+  if (minSide < NODE_CANVAS_MIN_FIT_VIEWPORT_SIZE) return null;
+  let requested = Math.max(0, Number(padding) || 0);
+  let maxPadding = Math.max(0, (minSide - NODE_CANVAS_MIN_FIT_VIEWPORT_SIZE) / 2);
+  return Math.min(requested, maxPadding);
+}
+
 export class CanvasViewport {
   /** @type {import('./NodeCanvas/NodeCanvas.js').NodeCanvas} */
   #canvas;
@@ -408,19 +419,20 @@ export class CanvasViewport {
 
   #fitBounds(bounds, {
     padding = 80,
-    minZoom = 0.001,
+    minZoom = NODE_CANVAS_MIN_FIT_ZOOM,
     maxZoom = 1.5,
   } = {}) {
     if (!bounds) return false;
     let viewport = this.#getVisibleViewportSize();
+    let safePadding = resolveFitPadding(padding, viewport);
+    if (safePadding === null) return false;
     let graphW = Math.max(1, bounds.maxX - bounds.minX);
     let graphH = Math.max(1, bounds.maxY - bounds.minY);
-    let safePadding = Math.max(0, Number(padding) || 0);
     let availableW = Math.max(1, viewport.width - safePadding * 2);
     let availableH = Math.max(1, viewport.height - safePadding * 2);
     let scaleX = availableW / graphW;
     let scaleY = availableH / graphH;
-    let min = Math.max(0.001, Number(minZoom) || 0.001);
+    let min = Math.max(NODE_CANVAS_MIN_FIT_ZOOM, Number(minZoom) || NODE_CANVAS_MIN_FIT_ZOOM);
     let max = Math.max(min, Number(maxZoom) || 1.5);
     let scale = Math.max(min, Math.min(scaleX, scaleY, max));
     let centerX = (bounds.minX + bounds.maxX) / 2;
@@ -468,9 +480,11 @@ export class CanvasViewport {
     let graphW = maxX - minX;
     let graphH = maxY - minY;
     let viewport = this.#getVisibleViewportSize();
-    let scaleX = (viewport.width - 80) / graphW;
-    let scaleY = (viewport.height - 80) / graphH;
-    let scale = Math.max(0.001, Math.min(scaleX, scaleY, 1.5));
+    let safePadding = resolveFitPadding(80, viewport);
+    if (safePadding === null) return;
+    let scaleX = (viewport.width - safePadding * 2) / graphW;
+    let scaleY = (viewport.height - safePadding * 2) / graphH;
+    let scale = Math.max(NODE_CANVAS_MIN_FIT_ZOOM, Math.min(scaleX, scaleY, 1.5));
 
     let centerX = (minX + maxX) / 2;
     let centerY = (minY + maxY) / 2;
@@ -486,7 +500,7 @@ export class CanvasViewport {
    * @param {string[]} nodeIds
    * @param {Object} [options]
    * @param {number} [options.padding=80]
-   * @param {number} [options.minZoom=0.001]
+   * @param {number} [options.minZoom=0.08]
    * @param {number} [options.maxZoom=1.5]
    * @param {string|boolean} [options.select=false]
    * @returns {boolean}
@@ -574,6 +588,7 @@ export class CanvasViewport {
     this.#canvas.$.panY = newPanY;
 
     this.#canvas.selectNode(nodeId);
+    this.updateTransform();
     return true;
   }
 

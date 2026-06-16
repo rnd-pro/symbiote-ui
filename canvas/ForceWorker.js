@@ -33,6 +33,84 @@
  * @module symbiote-ui/canvas/ForceWorker
  */
 
+function finiteNumber(value, fallback = 0) {
+  return Number.isFinite(value) ? value : fallback;
+}
+
+function clampNumber(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function normalizeMass(value) {
+  return clampNumber(finiteNumber(value, 1), 0.35, 8);
+}
+
+function normalizeParticipation(value) {
+  return clampNumber(finiteNumber(value, 1), 0, 1);
+}
+
+function normalizeSizeScale(value) {
+  return clampNumber(finiteNumber(value, 1), 0.12, 1);
+}
+
+function normalizeLayoutAlgorithm(value) {
+  return value === 'spring' || value === 'oil-cloud' ? value : 'organic';
+}
+
+function getCloudRadiusEasing() {
+  return config.layoutAlgorithm === 'oil-cloud' ? 0.025 : 0.08;
+}
+
+function getCloudRepulsionScale() {
+  return config.layoutAlgorithm === 'oil-cloud' ? 1.35 : 1;
+}
+
+function getCloudWellScale() {
+  return config.layoutAlgorithm === 'oil-cloud' ? 0.72 : 1;
+}
+
+function getParticipation(node) {
+  return normalizeParticipation(node?.layoutParticipation);
+}
+
+function getLayoutSizeScale(node) {
+  return normalizeSizeScale(node?.layoutSizeScale);
+}
+
+function getEffectiveMass(node) {
+  return Math.max(0.35, normalizeMass(node?.mass) * getLayoutSizeScale(node));
+}
+
+function getCollisionParticipation(node) {
+  let participation = getParticipation(node);
+  if (participation <= 0.001) return 0;
+  return clampNumber(0.18 + participation * 0.82, 0, 1);
+}
+
+function getMovementScale(node) {
+  return getParticipation(node) / Math.max(1, getEffectiveMass(node));
+}
+
+function getEffectiveWidth(node) {
+  return Math.max(1, finiteNumber(node?.w, 1) * getLayoutSizeScale(node));
+}
+
+function getEffectiveHeight(node) {
+  return Math.max(1, finiteNumber(node?.h, 1) * getLayoutSizeScale(node));
+}
+
+function advanceLayoutParticipation(nodes) {
+  for (const node of nodes) {
+    if (node.layoutParticipation < 1) {
+      let warmupTicks = Math.max(1, finiteNumber(node.layoutWarmupTicks, 36));
+      node.layoutParticipation = Math.min(1, node.layoutParticipation + 1 / warmupTicks);
+    }
+    if (node.layoutSizeScale < 1) {
+      let sizeWarmupTicks = Math.max(1, finiteNumber(node.layoutSizeWarmupTicks, 36));
+      node.layoutSizeScale = Math.min(1, node.layoutSizeScale + 1 / sizeWarmupTicks);
+    }
+  }
+}
 
 /**
  * Adaptive quadtree supporting both charge computation and collision detection.
@@ -208,12 +286,12 @@ function applyChargeForce(nodes, strength, theta) {
     if (!node.length) {
 
       let current = node.data;
-      let count = 0;
+      let mass = 0;
       while (current) {
-        count++;
+        mass += getEffectiveMass(current) * getParticipation(current);
         current = current._qtNext;
       }
-      node.value = strength * count;
+      node.value = strength * mass;
       node.x = node.data.x;
       node.y = node.data.y;
       return;
@@ -246,6 +324,8 @@ function applyChargeForce(nodes, strength, theta) {
   }
   let distMin2 = Math.max(1, avgSize * avgSize * 0.25);
   for (const body of nodes) {
+    let bodyScale = getMovementScale(body);
+    if (bodyScale <= 0.001) continue;
     qtVisit(tree, (node, x0, y0, x1) => {
       if (!node.value) return true;
 
@@ -267,8 +347,8 @@ function applyChargeForce(nodes, strength, theta) {
         if (distSq < 1000 * 1000) {
 
           let force = node.value / distSq;
-          body.vx -= dx * force;
-          body.vy -= dy * force;
+          body.vx -= dx * force * bodyScale;
+          body.vy -= dy * force * bodyScale;
         }
         return true;
       }
@@ -286,9 +366,9 @@ function applyChargeForce(nodes, strength, theta) {
             }
             let distSqLeaf = dxLeaf * dxLeaf + dyLeaf * dyLeaf;
             if (distSqLeaf < distMin2) distSqLeaf = distMin2;
-            let force = strength / distSqLeaf;
-            body.vx -= dxLeaf * force;
-            body.vy -= dyLeaf * force;
+            let force = strength * getEffectiveMass(current) * getParticipation(current) / distSqLeaf;
+            body.vx -= dxLeaf * force * bodyScale;
+            body.vy -= dyLeaf * force * bodyScale;
           }
           current = current._qtNext;
         }
@@ -371,6 +451,8 @@ function applyCollisionForce(nodes, strength, iterations) {
 function resolveOverlap(nodes, i, j, padX, padY, strength) {
   let a = nodes[i],
     b = nodes[j];
+  let participation = Math.min(getCollisionParticipation(a), getCollisionParticipation(b));
+  if (participation <= 0.05) return;
 
 
   if (a.parentId !== b.parentId) {
@@ -390,10 +472,12 @@ function resolveOverlap(nodes, i, j, padX, padY, strength) {
   let dx = b.x - a.x;
   let dy = b.y - a.y;
 
-  let hwA = a.w / 2 + padX;
-  let hhA = a.h / 2 + padY;
-  let hwB = b.w / 2 + padX;
-  let hhB = b.h / 2 + padY;
+  let massPadA = Math.max(0, getEffectiveMass(a) - 1) * 2.4;
+  let massPadB = Math.max(0, getEffectiveMass(b) - 1) * 2.4;
+  let hwA = getEffectiveWidth(a) / 2 + padX + massPadA;
+  let hhA = getEffectiveHeight(a) / 2 + padY + massPadA;
+  let hwB = getEffectiveWidth(b) / 2 + padX + massPadB;
+  let hhB = getEffectiveHeight(b) / 2 + padY + massPadB;
 
   let overlapX = hwA + hwB - Math.abs(dx);
   let overlapY = hhA + hhB - Math.abs(dy);
@@ -403,10 +487,12 @@ function resolveOverlap(nodes, i, j, padX, padY, strength) {
 
     if (overlapX < overlapY) {
       let sign = dx < 0 ? -1 : dx > 0 ? 1 : Math.random() < 0.5 ? -1 : 1;
-      let push = overlapX * strength * 0.5;
+      let push = overlapX * strength * participation * 0.5;
+      let aShare = getEffectiveMass(b) / (getEffectiveMass(a) + getEffectiveMass(b));
+      let bShare = 1 - aShare;
 
-      a.x -= sign * push;
-      b.x += sign * push;
+      a.x -= sign * push * aShare;
+      b.x += sign * push * bShare;
 
 
       if (Math.sign(a.vx) === sign) a.vx = 0;
@@ -418,10 +504,12 @@ function resolveOverlap(nodes, i, j, padX, padY, strength) {
       b.y += jitter;
     } else {
       let sign = dy < 0 ? -1 : dy > 0 ? 1 : Math.random() < 0.5 ? -1 : 1;
-      let push = overlapY * strength * 0.5;
+      let push = overlapY * strength * participation * 0.5;
+      let aShare = getEffectiveMass(b) / (getEffectiveMass(a) + getEffectiveMass(b));
+      let bShare = 1 - aShare;
 
-      a.y -= sign * push;
-      b.y += sign * push;
+      a.y -= sign * push * aShare;
+      b.y += sign * push * bShare;
 
 
       if (Math.sign(a.vy) === sign) a.vy = 0;
@@ -501,6 +589,8 @@ function applyLinkForce(nodes, edges, alpha) {
     let s = nodes[e.source];
     let t = nodes[e.target];
     if (!s || !t) continue;
+    let participation = Math.min(getParticipation(s), getParticipation(t));
+    if (participation <= 0.01) continue;
 
     let dx = t.x + t.vx - s.x - s.vx;
     let dy = t.y + t.vy - s.y - s.vy;
@@ -510,16 +600,16 @@ function applyLinkForce(nodes, edges, alpha) {
     }
 
     let dist = Math.sqrt(dx * dx + dy * dy) || 1;
-    let force = ((dist - e.restLength) / dist) * alpha * e.strength;
+    let force = ((dist - e.restLength) / dist) * alpha * e.strength * participation;
     let fx = dx * force;
     let fy = dy * force;
 
 
     let bias = e.bias;
-    t.vx -= fx * bias;
-    t.vy -= fy * bias;
-    s.vx += fx * (1 - bias);
-    s.vy += fy * (1 - bias);
+    t.vx -= fx * bias / Math.max(1, getEffectiveMass(t));
+    t.vy -= fy * bias / Math.max(1, getEffectiveMass(t));
+    s.vx += fx * (1 - bias) / Math.max(1, getEffectiveMass(s));
+    s.vy += fy * (1 - bias) / Math.max(1, getEffectiveMass(s));
   }
 }
 
@@ -567,6 +657,8 @@ let config = {
   alphaDecay: 0.015,
   alphaMin: 0.001,
   alphaTarget: 0,
+  initialAlpha: 1,
+  layoutAlgorithm: 'organic',
 
   contAlphaFloor: 0.001,
   contAlphaTarget: 0.001,
@@ -594,6 +686,7 @@ function initSimulation(data) {
 
 
   Object.assign(config, options);
+  config.layoutAlgorithm = normalizeLayoutAlgorithm(config.layoutAlgorithm);
   simMode = options.mode || 'converge';
 
 
@@ -605,10 +698,13 @@ function initSimulation(data) {
 
 
     let hasPos = n.x !== undefined && n.y !== undefined;
+    let x = hasPos ? n.x : Math.cos(angle) * radius + (Math.random() - 0.5) * 100;
+    let y = hasPos ? n.y : Math.sin(angle) * radius + (Math.random() - 0.5) * 100;
+    let layoutFixedTicks = Math.max(0, finiteNumber(n.layoutFixedTicks, 0));
     return {
       id: n.id,
-      x: hasPos ? n.x : Math.cos(angle) * radius + (Math.random() - 0.5) * 100,
-      y: hasPos ? n.y : Math.sin(angle) * radius + (Math.random() - 0.5) * 100,
+      x,
+      y,
       _hadPos: hasPos,
       vx: 0,
       vy: 0,
@@ -620,6 +716,15 @@ function initSimulation(data) {
       index: i,
       w,
       h,
+      mass: normalizeMass(n.mass),
+      baseMass: normalizeMass(n.mass),
+      layoutParticipation: normalizeParticipation(n.layoutParticipation),
+      layoutWarmupTicks: Math.max(0, finiteNumber(n.layoutWarmupTicks, 0)),
+      layoutSizeScale: normalizeSizeScale(n.layoutSizeScale),
+      layoutSizeWarmupTicks: Math.max(0, finiteNumber(n.layoutSizeWarmupTicks, 0)),
+      layoutFixedTicks,
+      layoutFixedX: x,
+      layoutFixedY: y,
     };
   });
 
@@ -743,6 +848,7 @@ function computeGravityWells(degree) {
     n.mySun = null;
   }
 
+  if (config.layoutAlgorithm === 'spring') return;
 
   let medianDeg =
     degree.length > 0 ? [...degree].sort((a, b) => a - b)[Math.floor(degree.length / 2)] : 1;
@@ -757,11 +863,11 @@ function computeGravityWells(degree) {
 
     if (n.isGroup || deg >= hubThreshold || (!n.parentId && n.children && n.children.length > 0)) {
       n.isSun = true;
-      n.mass = deg + 5;
+      n.mass = Math.max(n.baseMass, deg + 5);
       galacticSuns.push(n);
     } else {
       n.isSun = false;
-      n.mass = 1;
+      n.mass = Math.max(n.baseMass, 1);
     }
   }
 
@@ -781,7 +887,7 @@ function computeGravityWells(degree) {
       else {
 
         n.isSun = true;
-        n.mass = 2;
+        n.mass = Math.max(n.baseMass, 2);
         galacticSuns.push(n);
       }
     }
@@ -819,18 +925,26 @@ function computeGravityWells(degree) {
 
 function tick(alpha) {
 
-
-  applyChargeForce(nodes, config.chargeStrength * alpha, config.theta);
+  let chargeScale = config.layoutAlgorithm === 'oil-cloud' ? 0.72 : 1;
+  applyChargeForce(nodes, config.chargeStrength * alpha * chargeScale, config.theta);
 
 
   applyLinkForce(nodes, edges, alpha);
 
 
-  applyCollisionForce(nodes, config.collideStrength, 4);
+  applyCollisionForce(nodes, config.collideStrength, config.layoutAlgorithm === 'oil-cloud' ? 8 : 6);
+
+  if (config.layoutAlgorithm === 'spring') {
+    for (const n of nodes) {
+      let scale = getMovementScale(n);
+      n.vx -= n.x * config.centerPull * alpha * 0.02 * scale;
+      n.vy -= n.y * config.centerPull * alpha * 0.02 * scale;
+    }
+  }
 
 
   for (const sun of galacticSuns) {
-    sun.dynamicRadius = sun.w || 20;
+    sun.dynamicRadius = (getEffectiveWidth(sun) || 20) * (config.layoutAlgorithm === 'oil-cloud' ? 1.18 : 1);
     sun.smoothRadius = sun.smoothRadius || sun.dynamicRadius;
   }
   for (const p of planets) {
@@ -838,20 +952,22 @@ function tick(alpha) {
       let dx = p.x - p.mySun.x;
       let dy = p.y - p.mySun.y;
       let dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist > p.mySun.dynamicRadius) {
-        p.mySun.dynamicRadius = dist;
+      let weightedDistance = dist * getParticipation(p);
+      if (weightedDistance > p.mySun.dynamicRadius) {
+        p.mySun.dynamicRadius = weightedDistance;
       }
     }
   }
   for (const sun of galacticSuns) {
-    sun.smoothRadius += (sun.dynamicRadius - sun.smoothRadius) * 0.08;
+    sun.smoothRadius += (sun.dynamicRadius - sun.smoothRadius) * getCloudRadiusEasing();
   }
 
 
   for (const sun of galacticSuns) {
     if (sun.id === config.activeGroupId) continue;
-    sun.vx -= sun.x * config.centerPull * alpha;
-    sun.vy -= sun.y * config.centerPull * alpha;
+    let scale = getMovementScale(sun);
+    sun.vx -= sun.x * config.centerPull * alpha * scale;
+    sun.vy -= sun.y * config.centerPull * alpha * scale;
   }
 
 
@@ -863,18 +979,19 @@ function tick(alpha) {
       let dy = sj.y - si.y;
       let dist = Math.sqrt(dx * dx + dy * dy) + 1;
       let combinedRadius = si.smoothRadius + sj.smoothRadius;
+      let participation = Math.min(getParticipation(si), getParticipation(sj));
       if (dist < combinedRadius) {
 
         let overlapRatio = (combinedRadius - dist) / combinedRadius;
-        let rawForce = overlapRatio * config.wellRepulsion * alpha;
+        let rawForce = overlapRatio * config.wellRepulsion * getCloudRepulsionScale() * alpha * participation;
 
-        let force = Math.min(rawForce, 50);
+        let force = Math.min(rawForce, config.layoutAlgorithm === 'oil-cloud' ? 24 : 50);
         let nx = dx / dist,
           ny = dy / dist;
-        si.vx -= nx * force;
-        si.vy -= ny * force;
-        sj.vx += nx * force;
-        sj.vy += ny * force;
+        si.vx -= nx * force / Math.max(1, getEffectiveMass(si));
+        si.vy -= ny * force / Math.max(1, getEffectiveMass(si));
+        sj.vx += nx * force / Math.max(1, getEffectiveMass(sj));
+        sj.vy += ny * force / Math.max(1, getEffectiveMass(sj));
       }
     }
   }
@@ -883,8 +1000,9 @@ function tick(alpha) {
   for (const p of planets) {
     let dx = p.x - p.mySun.x;
     let dy = p.y - p.mySun.y;
-    p.vx -= dx * config.wellStrength * alpha;
-    p.vy -= dy * config.wellStrength * alpha;
+    let scale = getMovementScale(p);
+    p.vx -= dx * config.wellStrength * getCloudWellScale() * alpha * scale;
+    p.vy -= dy * config.wellStrength * getCloudWellScale() * alpha * scale;
   }
 
 
@@ -892,6 +1010,14 @@ function tick(alpha) {
   let decay = 1 - config.velocityDecay;
   let vMax = Math.max(200, Math.sqrt(nodes.length) * 10);
   for (const n of nodes) {
+    if (n.fx === undefined && n.fy === undefined && n.layoutFixedTicks > 0) {
+      n.x = n.layoutFixedX;
+      n.y = n.layoutFixedY;
+      n.vx = 0;
+      n.vy = 0;
+      n.layoutFixedTicks -= 1;
+      continue;
+    }
     if (n.fx !== undefined) {
       n.x = n.fx;
       n.vx = 0;
@@ -913,6 +1039,7 @@ function tick(alpha) {
     energy += n.vx * n.vx + n.vy * n.vy;
   }
 
+  advanceLayoutParticipation(nodes);
   return energy;
 }
 
@@ -1072,7 +1199,7 @@ self.onmessage = function (e) {
 function startConverge() {
   let totalNodes = nodes.length;
   let adaptiveAlphaDecay = config.alphaDecay;
-  let alpha = 1;
+  let alpha = clampNumber(finiteNumber(config.initialAlpha, 1), config.alphaMin, 1);
   let iteration = 0;
   let maxIter = Math.ceil(Math.log(config.alphaMin) / Math.log(1 - config.alphaDecay)) + 1;
   let batchSize = totalNodes > 1000 ? 8 : 4;
@@ -1216,7 +1343,7 @@ let continuousAlpha = 1;
 let continuousIteration = 0;
 
 function startContinuous() {
-  continuousAlpha = 1;
+  continuousAlpha = clampNumber(finiteNumber(config.initialAlpha, 1), config.contAlphaFloor, 1);
   continuousIteration = 0;
   self._initialDoneSent = false;
 

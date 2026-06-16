@@ -964,6 +964,7 @@ test('static custom elements catalog mirrors agent-facing WebMCP metadata', asyn
   assert.ok(canvasGraph.metadata.contract.capabilities.includes('overview-read-renderer'));
   assert.ok(canvasGraph.metadata.contract.methods.some((method) => method.name === 'suspendLayout'));
   assert.ok(canvasGraph.metadata.contract.methods.some((method) => method.name === 'resumeLayout'));
+  assert.ok(canvasGraph.metadata.contract.methods.some((method) => method.name === 'queueTransitionMarkers'));
   assert.ok(canvasGraph.metadata.contract.themeAliases.includes('--sn-canvas-graph-panel-bg'));
   assert.ok(canvasGraph.metadata.contract.themeAliases.includes('--sn-graph-type-project'));
 });
@@ -1997,6 +1998,9 @@ test('chat workspace composes reusable chat surfaces and exposes host intent con
     'setActiveChatId',
     'setEmpty',
     'setMessages',
+    'replaceMessageWindow',
+    'prependMessages',
+    'getMessageWindow',
     'setComposerState',
     'setVoiceControls',
     'setVoicePreview',
@@ -2020,6 +2024,7 @@ test('chat workspace composes reusable chat surfaces and exposes host intent con
   assert.match(workspace, /chat-workspace-voice-intent/);
   assert.match(workspace, /chat-workspace-footer-intent/);
   assert.match(workspace, /chat-workspace-context-intent/);
+  assert.match(workspace, /chat-workspace-load-older/);
   assert.match(workspace, /chat-workspace-background-change/);
   assert.match(workspace, /chat-workspace-background-event/);
   assert.match(workspace, /BACKGROUND_PULSE_STATES/);
@@ -2039,8 +2044,11 @@ test('chat workspace composes reusable chat surfaces and exposes host intent con
   assert.match(registry, /animated-background-lifecycle/);
   assert.match(registry, /chat-nav-tree-helper/);
   assert.match(registry, /overlay-stack-reserve/);
+  assert.match(registry, /message-windowing/);
   assert.match(registry, /buildChatNavTree\(\)/);
+  assert.match(registry, /chat-workspace-load-older/);
   assert.match(registry, /--sn-theme-pattern-brightness/);
+  assert.match(registry, /--sn-chat-transcript-top-sentinel-height/);
   assert.match(workspace, /setOverlayStackReserve/);
   assert.match(styles, /--sn-chat-overlay-stack-reserve/);
   assert.match(transcriptStyles, /scroll-padding-block-end: var\(--sn-chat-overlay-stack-reserve/);
@@ -2054,10 +2062,14 @@ test('chat workspace composes reusable chat surfaces and exposes host intent con
   assert.ok(component.contract.methods.some((method) => method.name === 'setWorkspaceState'));
   assert.ok(component.contract.methods.some((method) => method.name === 'setEmpty'));
   assert.ok(component.contract.methods.some((method) => method.name === 'setOverlayStackReserve'));
+  assert.ok(component.contract.methods.some((method) => method.name === 'replaceMessageWindow'));
+  assert.ok(component.contract.methods.some((method) => method.name === 'prependMessages'));
+  assert.ok(component.contract.methods.some((method) => method.name === 'getMessageWindow'));
   assert.ok(component.contract.methods.some((method) => method.name === 'suspendLayout'));
   assert.ok(component.contract.methods.some((method) => method.name === 'resumeLayout'));
   assert.ok(component.contract.capabilities.includes('chat-nav-tree-helper'));
   assert.ok(component.contract.capabilities.includes('overlay-stack-reserve'));
+  assert.ok(component.contract.capabilities.includes('message-windowing'));
   assert.ok(component.contract.capabilities.includes('layout-lifecycle'));
   assert.ok(component.contract.events.some((event) => event.name === 'chat-workspace-input'));
   assert.ok(component.contract.events.some((event) => event.name === 'chat-workspace-key'));
@@ -2068,10 +2080,23 @@ test('chat workspace composes reusable chat surfaces and exposes host intent con
   let customWorkspace = catalog.modules
     .flatMap((moduleRecord) => moduleRecord.declarations || [])
     .find((declaration) => declaration.tagName === 'chat-workspace');
+  let customTranscript = catalog.modules
+    .flatMap((moduleRecord) => moduleRecord.declarations || [])
+    .find((declaration) => declaration.tagName === 'chat-transcript');
   assert.ok(customWorkspace);
+  assert.ok(customTranscript);
   assert.match(customWorkspace.componentDescription, /chat-nav-tree-helper/);
   assert.match(customWorkspace.componentDescription, /overlay-stack-reserve/);
   assert.ok(customWorkspace.metadata.contract.methods.some((method) => method.name === 'setOverlayStackReserve'));
+  assert.ok(customWorkspace.metadata.contract.methods.some((method) => method.name === 'replaceMessageWindow'));
+  assert.ok(customWorkspace.metadata.contract.events.some((event) => event.name === 'chat-workspace-load-older'));
+  assert.ok(customWorkspace.metadata.contract.themeAliases.includes('--sn-chat-transcript-top-sentinel-height'));
+  assert.ok(customTranscript.metadata.contract.capabilities.includes('message-windowing'));
+  assert.ok(customTranscript.metadata.contract.methods.some((method) => method.name === 'replaceMessageWindow'));
+  assert.ok(customTranscript.metadata.contract.methods.some((method) => method.name === 'prependMessageItems'));
+  assert.ok(customTranscript.metadata.contract.methods.some((method) => method.name === 'getMessageWindow'));
+  assert.ok(customTranscript.metadata.contract.events.some((event) => event.name === 'chat-transcript-load-older'));
+  assert.ok(customTranscript.metadata.contract.themeAliases.includes('--sn-chat-transcript-top-sentinel-height'));
   assert.match(customElements, /buildChatNavTree\(\)/);
   assert.deepEqual(
     customWorkspace.metadata.contract.webmcp.tools.map((tool) => tool.name),

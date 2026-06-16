@@ -51,6 +51,20 @@ function uniqueSorted(values) {
     .sort((a, b) => a - b);
 }
 
+function selectRoutingLanes(values, anchor, limit = 12) {
+  const lanes = uniqueSorted(values);
+  if (lanes.length <= limit) return lanes;
+
+  const selected = new Set([lanes[0], lanes.at(-1)]);
+  for (const lane of lanes
+    .slice(1, -1)
+    .sort((a, b) => Math.abs(a - anchor) - Math.abs(b - anchor))) {
+    selected.add(lane);
+    if (selected.size >= limit) break;
+  }
+  return [...selected].sort((a, b) => a - b);
+}
+
 function endpointStub(point, rect, dir, distance) {
   if (dir.dx > 0) {
     return { x: Math.max(point.x + distance, rect.x + rect.w + distance), y: point.y };
@@ -687,6 +701,22 @@ function compactDirectRoute({
   };
 }
 
+function draftTraceRoute({ start, end, stubFrom, stubTo, grid, snapToGrid }) {
+  const midX = alignGrid((stubFrom.x + stubTo.x) / 2, grid, snapToGrid);
+  const midY = alignGrid((stubFrom.y + stubTo.y) / 2, grid, snapToGrid);
+  const horizontalFirst = Math.abs(stubFrom.x - stubTo.x) >= Math.abs(stubFrom.y - stubTo.y);
+  const points = horizontalFirst
+    ? [start, stubFrom, { x: midX, y: stubFrom.y }, { x: midX, y: stubTo.y }, stubTo, end]
+    : [start, stubFrom, { x: stubFrom.x, y: midY }, { x: stubTo.x, y: midY }, stubTo, end];
+  const routed = buildPath(points, 0);
+  return {
+    path: routed.path,
+    points: routed.points,
+    arrow: midpointArrow(routed.points),
+    strategy: 'pcb-draft',
+  };
+}
+
 export function routePcbTrace({
   start,
   end,
@@ -704,6 +734,7 @@ export function routePcbTrace({
   snapToGrid = true,
   fromDirection = null,
   toDirection = null,
+  quality = 'full',
 }) {
   const shift = parallelShift(connections, conn, grid);
   const absShift = Math.abs(shift);
@@ -732,6 +763,9 @@ export function routePcbTrace({
   const tDir = preferredTDir;
   const stubFrom = endpointStub(start, routeFromRect, fDir, stubDistance);
   const stubTo = endpointStub(end, routeToRect, tDir, stubDistance);
+  if (quality === 'draft') {
+    return draftTraceRoute({ start, end, stubFrom, stubTo, grid, snapToGrid });
+  }
   const endpointRule = createEndpointRule(fDir, tDir, Math.max(grid * 1.5, chamfer * 2));
   const localRouteLimit = Math.max(stub * 4, clearance * 3, grid * 12);
   const endpointManhattanLength = Math.abs(end.x - start.x) + Math.abs(end.y - start.y);
@@ -814,14 +848,16 @@ export function routePcbTrace({
     laneSpread,
     snapToGrid,
   });
+  const xLaneAnchor = (stubFrom.x + stubTo.x) / 2;
+  const yLaneAnchor = (stubFrom.y + stubTo.y) / 2;
   addLaneCandidates(
     addCandidate,
     start,
     stubFrom,
     stubTo,
     end,
-    uniqueSorted([leftLaneX, rightLaneX, ...laneCandidates.xLanes]),
-    laneCandidates.yLanes
+    selectRoutingLanes([leftLaneX, rightLaneX, ...laneCandidates.xLanes], xLaneAnchor),
+    selectRoutingLanes(laneCandidates.yLanes, yLaneAnchor)
   );
 
   let points = chooseBestRoute(candidates, obstacleRects, routeFromRect, routeToRect, grid, 6, endpointRule);

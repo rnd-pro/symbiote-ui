@@ -204,6 +204,7 @@ describe('node graph layout helpers', () => {
     });
 
     assert.equal(options.mode, 'continuous');
+    assert.equal(options.layoutAlgorithm, 'organic');
     assert.ok(options.groupDistance > 120);
     assert.ok(options.groupStrength > 0.05);
     assert.ok(options.wellStrength > 0.8);

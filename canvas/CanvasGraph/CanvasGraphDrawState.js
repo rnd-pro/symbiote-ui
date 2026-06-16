@@ -7,7 +7,9 @@ export function resolveViewportAnimation(options) {
     targetPanX,
     targetPanY,
     zoomAnchor,
+    viewportEase = 0.15,
   } = options;
+  let ease = Math.max(0.015, Math.min(0.35, Number.isFinite(viewportEase) ? viewportEase : 0.15));
 
   let next = {
     zoom,
@@ -20,7 +22,7 @@ export function resolveViewportAnimation(options) {
   let zoomAnimating = Math.abs(targetZoom - zoom) > 0.0001;
   if (zoomAnimating) {
     let oldZoom = zoom;
-    next.zoom += (targetZoom - zoom) * 0.15;
+    next.zoom += (targetZoom - zoom) * ease;
     if (zoomAnchor) {
       let { mx, my } = zoomAnchor;
       next.panX = mx - (mx - panX) * (next.zoom / oldZoom);
@@ -37,8 +39,8 @@ export function resolveViewportAnimation(options) {
       next.targetPanX = null;
       next.targetPanY = null;
     } else {
-      next.panX += panDx * 0.15;
-      next.panY += panDy * 0.15;
+      next.panX += panDx * ease;
+      next.panY += panDy * ease;
     }
   }
 
@@ -266,6 +268,8 @@ export function resolveIdleFrame(options) {
     targetPanX,
     infoPanel,
     nodeAppearancesActive = false,
+    pulsesActive = false,
+    statusAnimationsActive = false,
     idleFrames,
   } = options;
 
@@ -289,6 +293,8 @@ export function resolveIdleFrame(options) {
     && !hasActiveAnim
     && !hasPanAnim
     && !nodeAppearancesActive
+    && !pulsesActive
+    && !statusAnimationsActive
     && !infoPanelAnimating;
 
   let nextIdleFrames = shouldIdle ? idleFrames + 1 : 0;
