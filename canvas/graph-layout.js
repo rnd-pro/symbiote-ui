@@ -232,14 +232,20 @@ export function createForceLayoutPayload({
   continuous = false,
 }) {
   return {
-    nodes: nodes.map((node) => ({
-      id: node.id,
-      x: positions[node.id]?.x ?? 0,
-      y: positions[node.id]?.y ?? 0,
-      group: findForceNodeGroup(groups, node.id),
-      w: nodeSizes[node.id]?.w || node.params?.calculatedWidth || 260,
-      h: nodeSizes[node.id]?.h || node.params?.calculatedHeight || 60,
-    })),
+    nodes: nodes.map((node) => {
+      let position = positions[node.id];
+      let layoutNode = {
+        id: node.id,
+        group: findForceNodeGroup(groups, node.id),
+        w: nodeSizes[node.id]?.w || node.params?.calculatedWidth || 260,
+        h: nodeSizes[node.id]?.h || node.params?.calculatedHeight || 60,
+      };
+      if (Number.isFinite(position?.x) && Number.isFinite(position?.y)) {
+        layoutNode.x = position.x;
+        layoutNode.y = position.y;
+      }
+      return layoutNode;
+    }),
     edges: connections.map((connection) => ({
       from: connection.from,
       to: connection.to,

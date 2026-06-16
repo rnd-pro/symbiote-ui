@@ -150,7 +150,7 @@ describe('node graph layout helpers', () => {
 
     assert.deepEqual(payload.nodes, [
       { id: 'a', x: 10, y: 20, group: 'core', w: 120, h: 48 },
-      { id: 'b', x: 0, y: 0, group: null, w: 90, h: 30 },
+      { id: 'b', group: null, w: 90, h: 30 },
     ]);
     assert.deepEqual(payload.edges, [{ from: 'a', to: 'b' }]);
     assert.deepEqual(payload.groups, { core: ['a'] });

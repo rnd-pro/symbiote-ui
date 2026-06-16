@@ -170,9 +170,11 @@ export function createGraphExplorerViewController({
       return focused;
     }
 
-    state.flatGraph.flyToNode?.(ids[0], { zoom: 1.1, ...options });
-    state.flatGraph.pulseNode?.(ids[0], options.pulseMs ?? 900);
-    return true;
+    let focused = Boolean(state.flatGraph.flyToNode?.(ids[0], { zoom: 1.1, ...options }));
+    if (focused && options.pulse !== false) {
+      state.flatGraph.pulseNode?.(ids[0], options.pulseMs ?? 900);
+    }
+    return focused;
   }
 
   function deferFlatFocus(nodeIds, options = {}, focusOptions = {}) {

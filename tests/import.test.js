@@ -402,6 +402,52 @@ test('graph explorer keeps multi-node flat focus until layout settles', async ()
   assert.equal(listeners.get('layout-done')?.size || 0, 0);
 });
 
+test('graph explorer retries single-node flat focus until the layout has positions', async () => {
+  let { createGraphExplorerViewController } = await import('../canvas/graph-explorer.js');
+  let listeners = new Map();
+  let calls = [];
+  let ready = false;
+  let flatGraph = {
+    hidden: false,
+    setGraphModel() {},
+    setPath() {},
+    resizeCanvas() {},
+    flyToNode(nodeId, options) {
+      calls.push(`fly:${nodeId}:${options.pulse === false ? 'quiet' : 'pulse'}`);
+      return ready;
+    },
+    pulseNode(nodeId) {
+      calls.push(`pulse:${nodeId}`);
+    },
+    addEventListener(type, callback) {
+      if (!listeners.has(type)) listeners.set(type, new Set());
+      listeners.get(type).add(callback);
+    },
+    removeEventListener(type, callback) {
+      listeners.get(type)?.delete(callback);
+    },
+  };
+  let emit = (type) => {
+    for (const callback of [...(listeners.get(type) || [])]) callback({ type });
+  };
+  let controller = createGraphExplorerViewController({
+    flatGraph,
+    mode: 'flat',
+  });
+
+  controller.focusNode({ nodeId: 'a' });
+  ready = true;
+  emit('layout-tick');
+
+  assert.deepEqual(calls, [
+    'fly:a:pulse',
+    'fly:a:pulse',
+    'pulse:a',
+  ]);
+  assert.equal(listeners.get('layout-tick')?.size || 0, 0);
+  assert.equal(listeners.get('layout-done')?.size || 0, 0);
+});
+
 test('canvas graph pulse queue defaults to a single visual wave', async () => {
   let { findActiveTransitionMarker, getNextPulseQueue } = await import('../canvas/CanvasGraph/CanvasGraphDrawState.js');
   let [pulse] = getNextPulseQueue({

@@ -1022,8 +1022,7 @@ export class CanvasGraph extends Symbiote {
     let ids = normalizeFocusNodeIds(nodeIds);
     if (ids.length === 0) return false;
     if (!Array.isArray(nodeIds) && ids.length === 1 && options.fit !== true) {
-      this.flyToNode(ids[0], options);
-      return true;
+      return this.flyToNode(ids[0], options);
     }
     return this.fitNodes(ids, options);
   }
@@ -1336,15 +1335,15 @@ export class CanvasGraph extends Symbiote {
       if (node.parentId !== this.currentGroupId) {
         this.loadLevel(node.parentId, { enterSemanticCluster: true });
         setTimeout(() => this.flyToNode(nodeId, options), 500);
-        return;
+        return false;
       }
     }
 
     const pos = this.getSmooth(nodeId) || this.nodePositions.get(nodeId);
-    if (!pos) return;
+    if (!pos) return false;
 
     const rect = this.canvas.getBoundingClientRect();
-    if (rect.width === 0) return;
+    if (rect.width === 0 || rect.height === 0) return false;
 
     // Set zoom target: use provided zoom level, or force a comfortable minimum for focus
     const targetZoom = options.zoom || Math.max(1.2, Math.min(2.0, this.zoom));
@@ -1369,7 +1368,7 @@ export class CanvasGraph extends Symbiote {
         });
         this.needsDraw = true;
         this._wakeLoop();
-        return;
+        return true;
       }
       this._applyViewportTarget(pendingViewport);
       this._activateNode(foundNode, {
@@ -1383,6 +1382,7 @@ export class CanvasGraph extends Symbiote {
     }
     this.needsDraw = true;
     this._wakeLoop();
+    return true;
   }
 
   focusSemanticCluster(nodeId) {
