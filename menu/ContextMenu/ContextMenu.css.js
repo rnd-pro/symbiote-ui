@@ -2,9 +2,11 @@ import { css } from '@symbiotejs/symbiote';
 
 export let styles = css`
   context-menu {
+    --sn-overlay-z-tier: local;
+    --sn-overlay-z-base: var(--sn-ctx-z, var(--sn-canvas-overlay-z-base, 12000));
     position: absolute;
     inset: 0;
-    z-index: var(--sn-ctx-z, var(--sn-overlay-z-base, 20000));
+    z-index: var(--sn-ctx-z, var(--sn-canvas-overlay-z-base, 12000));
     pointer-events: none;
 
     &[hidden] {

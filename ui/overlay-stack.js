@@ -1,6 +1,7 @@
 const DEFAULT_OVERLAY_Z_BASE = 20000;
+const DEFAULT_OVERLAY_Z_TIER = 'global';
 
-let overlayZCounter = DEFAULT_OVERLAY_Z_BASE;
+let overlayZCounters = new Map([[DEFAULT_OVERLAY_Z_TIER, DEFAULT_OVERLAY_Z_BASE]]);
 let overlayHomes = new WeakMap();
 
 function clamp(value, min, max) {
@@ -18,6 +19,12 @@ function readOverlayBase(element) {
   let value = getComputedStyle(element).getPropertyValue('--sn-overlay-z-base').trim();
   let number = Number.parseInt(value, 10);
   return Number.isFinite(number) ? number : DEFAULT_OVERLAY_Z_BASE;
+}
+
+function readOverlayTier(element) {
+  if (typeof getComputedStyle !== 'function' || !element) return DEFAULT_OVERLAY_Z_TIER;
+  let value = getComputedStyle(element).getPropertyValue('--sn-overlay-z-tier').trim();
+  return value || DEFAULT_OVERLAY_Z_TIER;
 }
 
 function readCssNumber(element, name, fallback = 0) {
@@ -105,9 +112,12 @@ function collectCustomProperties(style) {
 }
 
 export function nextOverlayZIndex(element = null) {
-  overlayZCounter = Math.max(overlayZCounter, readOverlayBase(element));
-  overlayZCounter += 1;
-  return overlayZCounter;
+  let tier = readOverlayTier(element);
+  let base = readOverlayBase(element);
+  let current = overlayZCounters.get(tier) ?? base;
+  let next = Math.max(current, base) + 1;
+  overlayZCounters.set(tier, next);
+  return next;
 }
 
 export function bringOverlayToFront(element) {
@@ -115,12 +125,13 @@ export function bringOverlayToFront(element) {
   if (element?.style) {
     element.style.zIndex = String(zIndex);
     element.setAttribute?.('data-overlay-z', String(zIndex));
+    element.setAttribute?.('data-overlay-tier', readOverlayTier(element));
   }
   return zIndex;
 }
 
 export function resetOverlayStack(value = DEFAULT_OVERLAY_Z_BASE) {
-  overlayZCounter = Number.isFinite(value) ? value : DEFAULT_OVERLAY_Z_BASE;
+  overlayZCounters = new Map([[DEFAULT_OVERLAY_Z_TIER, Number.isFinite(value) ? value : DEFAULT_OVERLAY_Z_BASE]]);
 }
 
 export function measureOverlayStackReserve({

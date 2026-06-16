@@ -3214,6 +3214,7 @@ export let COMPONENTS = [
       events: [],
       themeAliases: [
         '--sn-overlay-z-base',
+        '--sn-canvas-overlay-z-base',
         '--sn-node-callout-z',
         '--sn-node-callout-bg',
         '--sn-node-callout-border',
@@ -3449,6 +3450,7 @@ export let COMPONENTS = [
       events: [],
       themeAliases: [
         '--sn-overlay-z-base',
+        '--sn-canvas-overlay-z-base',
         '--sn-ctx-bg',
         '--sn-ctx-border',
         '--sn-ctx-color',
@@ -4291,6 +4293,7 @@ export let COMPONENTS = [
       events: [],
       themeAliases: [
         '--sn-overlay-z-base',
+        '--sn-canvas-overlay-z-base',
         '--sn-toolbar-bg',
         '--sn-toolbar-border',
         '--sn-toolbar-color',

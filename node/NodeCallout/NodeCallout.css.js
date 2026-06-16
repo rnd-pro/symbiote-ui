@@ -2,9 +2,11 @@ import { css } from '@symbiotejs/symbiote';
 
 export const styles = css`
   node-callout {
+    --sn-overlay-z-tier: local;
+    --sn-overlay-z-base: var(--sn-node-callout-z, var(--sn-canvas-overlay-z-base, 12000));
     position: fixed;
     inset: 0 auto auto 0;
-    z-index: var(--sn-node-callout-z, var(--sn-overlay-z-base, 20000));
+    z-index: var(--sn-node-callout-z, var(--sn-canvas-overlay-z-base, 12000));
     display: block;
     inline-size: max-content;
     max-inline-size: min(var(--sn-node-callout-max-width, 520px), calc(100vw - 32px));

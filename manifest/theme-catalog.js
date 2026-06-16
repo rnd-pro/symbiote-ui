@@ -139,7 +139,7 @@ export let THEME_ELEMENT_GROUPS = [
   {
     name: 'panel',
     description: 'Framed layout surfaces such as sidebars, graph panels, source panes, and dialogs.',
-    tokens: ['--sn-panel-bg', '--sn-surface', '--sn-border', '--sn-card-bg', '--sn-card-border', '--sn-card-radius', '--sn-card-padding', '--sn-dialog-bg', '--sn-dialog-border', '--sn-dialog-radius', '--sn-dialog-shadow', '--sn-dialog-backdrop', '--sn-node-border', '--sn-node-shadow', '--sn-node-radius', '--sn-overlay-z-base'],
+    tokens: ['--sn-panel-bg', '--sn-surface', '--sn-border', '--sn-card-bg', '--sn-card-border', '--sn-card-radius', '--sn-card-padding', '--sn-dialog-bg', '--sn-dialog-border', '--sn-dialog-radius', '--sn-dialog-shadow', '--sn-dialog-backdrop', '--sn-node-border', '--sn-node-shadow', '--sn-node-radius', '--sn-overlay-z-base', '--sn-canvas-overlay-z-base'],
     usedBy: ['panel-layout', 'sn-card', 'source-viewer', 'source-editor', 'chat-transcript', 'sn-loading-overlay'],
   },
   {

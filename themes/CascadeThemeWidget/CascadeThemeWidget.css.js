@@ -51,6 +51,8 @@ export default css`
 
   cascade-theme-widget .ctw-popover,
   .ctw-popover[data-overlay-portal] {
+    --sn-overlay-z-tier: global;
+    --sn-overlay-z-base: var(--sn-theme-widget-z, 20000);
     z-index: var(--sn-theme-widget-z, var(--sn-overlay-z-base, 20000));
     display: grid;
     grid-template-rows: auto auto auto;

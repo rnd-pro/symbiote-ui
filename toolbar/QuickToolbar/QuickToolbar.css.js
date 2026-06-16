@@ -6,10 +6,12 @@ import { css } from '@symbiotejs/symbiote';
 
 export let styles = css`
   quick-toolbar {
+    --sn-overlay-z-tier: local;
+    --sn-overlay-z-base: var(--sn-toolbar-z, var(--sn-canvas-overlay-z-base, 12000));
     position: absolute;
     top: 0;
     left: 0;
-    z-index: var(--sn-toolbar-z, var(--sn-overlay-z-base, 20000));
+    z-index: var(--sn-toolbar-z, var(--sn-canvas-overlay-z-base, 12000));
     pointer-events: all;
     transform-origin: center bottom;
 

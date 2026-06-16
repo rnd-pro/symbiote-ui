@@ -35,7 +35,7 @@ import {
   resolveWheelZoomDelta,
   resolveWheelZoomFactor,
 } from '../interactions/Zoom.js';
-import { layoutOverlayStack } from '../ui/overlay-stack.js';
+import { bringOverlayToFront, layoutOverlayStack, resetOverlayStack } from '../ui/overlay-stack.js';
 
 const layoutNodeStyles = new URL('../layout/LayoutNode/LayoutNode.css.js', import.meta.url);
 const layoutNodeTemplate = new URL('../layout/LayoutNode/LayoutNode.tpl.js', import.meta.url);
@@ -124,6 +124,46 @@ test('overlay stack layers transient surfaces above an anchor and reports scroll
   } finally {
     if (previousWindow) globalThis.window = previousWindow;
     else delete globalThis.window;
+  }
+});
+
+test('overlay stack keeps local canvas overlays below global popovers', () => {
+  let previousGetComputedStyle = globalThis.getComputedStyle;
+  globalThis.getComputedStyle = (element) => ({
+    getPropertyValue(name) {
+      return element.cssProps?.[name] || '';
+    },
+  });
+
+  try {
+    resetOverlayStack();
+    let themePopover = createOverlayProbe({ width: 320, height: 240 });
+    themePopover.cssProps = {
+      '--sn-overlay-z-tier': 'global',
+      '--sn-overlay-z-base': '20030',
+    };
+    let quickToolbar = createOverlayProbe({ width: 160, height: 48 });
+    quickToolbar.cssProps = {
+      '--sn-overlay-z-tier': 'local',
+      '--sn-overlay-z-base': '12000',
+    };
+
+    let themeZ = bringOverlayToFront(themePopover);
+    for (let i = 0; i < 12; i += 1) {
+      bringOverlayToFront(quickToolbar);
+    }
+
+    assert.equal(themePopover.getAttribute('data-overlay-tier'), 'global');
+    assert.equal(quickToolbar.getAttribute('data-overlay-tier'), 'local');
+    assert.ok(Number.parseInt(quickToolbar.style.zIndex, 10) < themeZ);
+
+    let nextThemeZ = bringOverlayToFront(themePopover);
+    assert.ok(nextThemeZ > themeZ);
+    assert.ok(Number.parseInt(quickToolbar.style.zIndex, 10) < nextThemeZ);
+  } finally {
+    resetOverlayStack();
+    if (previousGetComputedStyle) globalThis.getComputedStyle = previousGetComputedStyle;
+    else delete globalThis.getComputedStyle;
   }
 });
 

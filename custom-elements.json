@@ -35920,6 +35920,10 @@
               "description": "Theme CSS custom property consumed by context-menu."
             },
             {
+              "name": "--sn-canvas-overlay-z-base",
+              "description": "Base z-index for local canvas overlays."
+            },
+            {
               "name": "--sn-ctx-bg",
               "description": "Theme CSS custom property consumed by context-menu."
             },
@@ -35984,6 +35988,7 @@
             "slots": [],
             "themeAliases": [
               "--sn-overlay-z-base",
+              "--sn-canvas-overlay-z-base",
               "--sn-ctx-bg",
               "--sn-ctx-border",
               "--sn-ctx-color",
@@ -36064,6 +36069,7 @@
               "slots": [],
               "themeAliases": [
                 "--sn-overlay-z-base",
+                "--sn-canvas-overlay-z-base",
                 "--sn-ctx-bg",
                 "--sn-ctx-border",
                 "--sn-ctx-color",
@@ -38765,6 +38771,10 @@
               "description": "Theme CSS custom property consumed by node-callout."
             },
             {
+              "name": "--sn-canvas-overlay-z-base",
+              "description": "Base z-index for local canvas overlays."
+            },
+            {
               "name": "--sn-node-callout-z",
               "description": "Theme CSS custom property consumed by node-callout."
             },
@@ -38884,6 +38894,7 @@
             ],
             "themeAliases": [
               "--sn-overlay-z-base",
+              "--sn-canvas-overlay-z-base",
               "--sn-node-callout-z",
               "--sn-node-callout-bg",
               "--sn-node-callout-border",
@@ -39004,6 +39015,7 @@
               ],
               "themeAliases": [
                 "--sn-overlay-z-base",
+                "--sn-canvas-overlay-z-base",
                 "--sn-node-callout-z",
                 "--sn-node-callout-bg",
                 "--sn-node-callout-border",
@@ -42103,6 +42115,10 @@
               "description": "Theme CSS custom property consumed by quick-toolbar."
             },
             {
+              "name": "--sn-canvas-overlay-z-base",
+              "description": "Base z-index for local canvas overlays."
+            },
+            {
               "name": "--sn-toolbar-bg",
               "description": "Theme CSS custom property consumed by quick-toolbar."
             },
@@ -42236,6 +42252,7 @@
             "slots": [],
             "themeAliases": [
               "--sn-overlay-z-base",
+              "--sn-canvas-overlay-z-base",
               "--sn-toolbar-bg",
               "--sn-toolbar-border",
               "--sn-toolbar-color",
@@ -42352,6 +42369,7 @@
               "slots": [],
               "themeAliases": [
                 "--sn-overlay-z-base",
+                "--sn-canvas-overlay-z-base",
                 "--sn-toolbar-bg",
                 "--sn-toolbar-border",
                 "--sn-toolbar-color",
