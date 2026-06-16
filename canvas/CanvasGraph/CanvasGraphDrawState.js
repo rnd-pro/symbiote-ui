@@ -125,6 +125,34 @@ export function resolveDeactivationFrame(options) {
   };
 }
 
+export function resolveCanvasGraphEdgeFocus(options) {
+  let {
+    edge,
+    focusNodeId,
+    alpha = 0.5,
+    width = 1.5,
+  } = options;
+  let id = String(focusNodeId || '').trim();
+  if (!id) {
+    return { active: false, alpha, width };
+  }
+
+  let active = edge?.from === id || edge?.to === id;
+  if (active) {
+    return {
+      active,
+      alpha: Math.max(alpha, 0.95),
+      width: Math.max(width, 2.4),
+    };
+  }
+
+  return {
+    active,
+    alpha: Math.min(alpha, 0.16),
+    width: Math.min(width, 1),
+  };
+}
+
 export function getLayerAnimationFrame(options) {
   let { layerAnim, layerTargets, isIdle, inGroupMode } = options;
   let next = {};

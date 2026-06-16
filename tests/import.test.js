@@ -519,6 +519,38 @@ test('canvas graph focus transition uses queued activation before depth recalcul
   assert.match(source, /_drawTransitionMarkers\(mainCtx\)/);
 });
 
+test('canvas graph edge focus keeps only one-hop selected-node links active', async () => {
+  let { resolveCanvasGraphEdgeFocus } = await import('../canvas/CanvasGraph/CanvasGraphDrawState.js');
+
+  assert.deepEqual(
+    resolveCanvasGraphEdgeFocus({
+      edge: { from: 'selected-node', to: 'neighbor-node' },
+      focusNodeId: 'selected-node',
+      alpha: 0.5,
+      width: 1.5,
+    }),
+    { active: true, alpha: 0.95, width: 2.4 }
+  );
+  assert.deepEqual(
+    resolveCanvasGraphEdgeFocus({
+      edge: { from: 'neighbor-node', to: 'second-hop-node' },
+      focusNodeId: 'selected-node',
+      alpha: 0.5,
+      width: 1.5,
+    }),
+    { active: false, alpha: 0.16, width: 1 }
+  );
+  assert.deepEqual(
+    resolveCanvasGraphEdgeFocus({
+      edge: { from: 'neighbor-node', to: 'second-hop-node' },
+      focusNodeId: null,
+      alpha: 0.5,
+      width: 1.5,
+    }),
+    { active: false, alpha: 0.5, width: 1.5 }
+  );
+});
+
 test('canvas graph exits active focus before accepting a different node click', async () => {
   let source = await readFile(new URL('../canvas/CanvasGraph/CanvasGraph.js', import.meta.url), 'utf8');
 

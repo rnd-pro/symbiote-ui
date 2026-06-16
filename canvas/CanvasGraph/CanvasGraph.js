@@ -28,6 +28,7 @@ import {
   getLayerAnimationFrame,
   getNextPulseQueue,
   resolveGroupOrbitRotationFrame,
+  resolveCanvasGraphEdgeFocus,
   resolveDeactivationFrame,
   resolveFocusFrame,
   resolveIdleFrame,
@@ -2329,6 +2330,7 @@ export class CanvasGraph extends Symbiote {
       };
 
       const nodeAppearanceNow = globalThis.performance?.now?.() ?? Date.now();
+      const focusNodeId = this.dragNode?.id || this.activeNode?.id || null;
 
       currentCtx.strokeStyle = toRgba(this._edgeRgb, 0.25);
       currentCtx.lineWidth = 1.5;
@@ -2365,6 +2367,15 @@ export class CanvasGraph extends Symbiote {
           else { tAlpha = 0.05; tWidth = 1.0; }
         }
 
+        let edgeFocus = resolveCanvasGraphEdgeFocus({
+          edge,
+          focusNodeId,
+          alpha: tAlpha,
+          width: tWidth,
+        });
+        tAlpha = edgeFocus.alpha;
+        tWidth = edgeFocus.width;
+
         const edgeOpacity = tAlpha * layerOpacity;
         edge.aAlpha = edge.aAlpha !== undefined ? edge.aAlpha : 0.5;
         edge.aWidth = edge.aWidth || 1.5;
@@ -2390,6 +2401,13 @@ export class CanvasGraph extends Symbiote {
         let fillStyle;
         if (isGhost) {
           fillStyle = GHOST_COLOR;
+        } else if (focusNodeId && !edgeFocus.active) {
+          fillStyle = this.blendBg(
+            this._ghostRgb[0],
+            this._ghostRgb[1],
+            this._ghostRgb[2],
+            0.28
+          );
         } else if (this.dragNode || this.activeNode) {
           const fromOpacity = this.layerAnim[fromDepth].opacity;
           const toOpacity = this.layerAnim[toDepth].opacity;
