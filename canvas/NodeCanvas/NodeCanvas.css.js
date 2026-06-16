@@ -415,7 +415,8 @@ export let styles = css`
   }
 
   .sn-conn-arrow[data-dimmed] {
-    opacity: 0.3;
+    fill: var(--sn-conn-dimmed, var(--sn-text-dim));
+    opacity: 0.24;
   }
 
   /* Fire trace: sequential node execution highlighting */
