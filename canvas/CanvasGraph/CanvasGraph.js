@@ -972,29 +972,33 @@ export class CanvasGraph extends Symbiote {
       maxZoom: Number.isFinite(options.maxZoom) ? options.maxZoom : 2,
     });
 
-    let animate = options.animate !== false;
-    this._zoomAnchor = null;
-    if (animate) {
-      this._targetZoom = fit.zoom;
-      this._targetPanX = fit.panX;
-      this._targetPanY = fit.panY;
-      this._viewportEase = normalizeViewportEase(options.viewportEase);
-    } else {
-      this.zoom = fit.zoom;
-      this._targetZoom = fit.zoom;
-      this.panX = fit.panX;
-      this.panY = fit.panY;
-      this._targetPanX = null;
-      this._targetPanY = null;
-      this._viewportEase = DEFAULT_VIEWPORT_EASE;
-    }
-
     let selectedId = null;
     if (typeof options.select === 'string') {
       selectedId = options.select;
     } else if (options.select === true) {
       selectedId = frames[0]?.id || null;
     }
+    let pendingViewport = {
+      zoom: fit.zoom,
+      panX: fit.panX,
+      panY: fit.panY,
+      animate: options.animate !== false,
+      viewportEase: normalizeViewportEase(options.viewportEase),
+    };
+    if (selectedId && this._shouldDeferFocusTransition(selectedId, options)) {
+      this._activateNode(selectedId, {
+        transition: true,
+        transitionMarkerMs: options.transitionMarkerMs,
+        transitionMs: options.transitionMs,
+        marker: options.marker,
+        pendingViewport,
+      });
+      this.needsDraw = true;
+      this._wakeLoop();
+      return true;
+    }
+
+    this._applyViewportTarget(pendingViewport);
     if (selectedId && this.nodeMap?.has(selectedId)) {
       this._activateNode(selectedId, {
         transition: options.transition !== false,
@@ -1053,6 +1057,35 @@ export class CanvasGraph extends Symbiote {
     this._wakeLoop();
   }
 
+  _shouldDeferFocusTransition(nodeId, options = {}) {
+    return options.deferFocusUntilTransition !== false
+      && options.transition !== false
+      && this.activeNode
+      && this.activeNode.id !== nodeId
+      && !this.dragNode
+      && !this.isPanning;
+  }
+
+  _applyViewportTarget(viewport = {}) {
+    if (!Number.isFinite(viewport.zoom) || !Number.isFinite(viewport.panX) || !Number.isFinite(viewport.panY)) return false;
+    this._zoomAnchor = null;
+    if (viewport.animate !== false) {
+      this._targetZoom = viewport.zoom;
+      this._targetPanX = viewport.panX;
+      this._targetPanY = viewport.panY;
+      this._viewportEase = normalizeViewportEase(viewport.viewportEase);
+    } else {
+      this.zoom = viewport.zoom;
+      this._targetZoom = viewport.zoom;
+      this.panX = viewport.panX;
+      this.panY = viewport.panY;
+      this._targetPanX = null;
+      this._targetPanY = null;
+      this._viewportEase = DEFAULT_VIEWPORT_EASE;
+    }
+    return true;
+  }
+
   _activateNode(nodeOrId, options = {}) {
     let node = typeof nodeOrId === 'string' ? this.nodeMap?.get(nodeOrId) : nodeOrId;
     if (!node) return false;
@@ -1066,13 +1099,17 @@ export class CanvasGraph extends Symbiote {
       && !this.isPanning;
 
     if (shouldTransition) {
-      this.nextActiveNode = node;
+      this.nextActiveNode = null;
       this.deactivating = true;
       this.menuAnim = 0;
-      this._queueTransitionMarker(previousNode.id, node.id, options);
-      this.needsDraw = true;
-      this._wakeLoop();
-      return true;
+      let marker = this._queueTransitionMarker(previousNode.id, node.id, options);
+      if (marker) {
+        marker.pendingActivation = node.id;
+        marker.pendingViewport = options.pendingViewport || null;
+        this.needsDraw = true;
+        this._wakeLoop();
+        return true;
+      }
     }
 
     this.activeNode = node;
@@ -1111,10 +1148,12 @@ export class CanvasGraph extends Symbiote {
       : Number.isFinite(options.transitionMs)
         ? options.transitionMs
         : 850;
+    let marker = { fromId: from, toId: to, path, startTime: now, duration };
     this._transitionMarkers = [
       ...(this._transitionMarkers || []).filter((marker) => marker.toId !== to),
-      { fromId: from, toId: to, path, startTime: now, duration },
+      marker,
     ];
+    return marker;
   }
 
   queueTransitionMarkers(fromId, toIds = [], options = {}) {
@@ -1271,10 +1310,21 @@ export class CanvasGraph extends Symbiote {
   }
 
   _completeTransitionMarker(marker, now = globalThis.performance?.now?.() ?? Date.now()) {
+    if (marker?.pendingViewport) {
+      this._applyViewportTarget(marker.pendingViewport);
+      marker.pendingViewport = null;
+    }
+    if (marker?.pendingActivation && this.nodeMap?.has(marker.pendingActivation)) {
+      this._activateNode(marker.pendingActivation, { transition: false, marker: false });
+      marker.pendingActivation = null;
+    }
     let pulse = marker?.pendingPulse;
-    if (!pulse) return;
-    this._queuePulseNow(marker.toId, pulse.duration, { waves: pulse.waves }, now);
-    marker.pendingPulse = null;
+    if (pulse) {
+      this._queuePulseNow(marker.toId, pulse.duration, { waves: pulse.waves }, now);
+      marker.pendingPulse = null;
+    }
+    this.needsDraw = true;
+    this._wakeLoop();
   }
 
   flyToNode(nodeId, options = {}) {
@@ -1295,21 +1345,38 @@ export class CanvasGraph extends Symbiote {
 
     // Set zoom target: use provided zoom level, or force a comfortable minimum for focus
     const targetZoom = options.zoom || Math.max(1.2, Math.min(2.0, this.zoom));
-    this._targetZoom = targetZoom;
-    this._targetPanX = rect.width / 2 - pos.x * targetZoom;
-    this._targetPanY = rect.height / 2 - pos.y * targetZoom;
-    this._zoomAnchor = null;
-    this._viewportEase = normalizeViewportEase(options.viewportEase);
+    let pendingViewport = {
+      zoom: targetZoom,
+      panX: rect.width / 2 - pos.x * targetZoom,
+      panY: rect.height / 2 - pos.y * targetZoom,
+      animate: true,
+      viewportEase: normalizeViewportEase(options.viewportEase),
+    };
 
     // Activate the node
     const foundNode = this.nodeMap?.get(nodeId);
     if (foundNode) {
+      if (this._shouldDeferFocusTransition(nodeId, options)) {
+        this._activateNode(foundNode, {
+          transition: true,
+          transitionMarkerMs: options.transitionMarkerMs,
+          transitionMs: options.transitionMs,
+          marker: options.marker,
+          pendingViewport,
+        });
+        this.needsDraw = true;
+        this._wakeLoop();
+        return;
+      }
+      this._applyViewportTarget(pendingViewport);
       this._activateNode(foundNode, {
         transition: options.transition !== false,
         transitionMarkerMs: options.transitionMarkerMs,
         transitionMs: options.transitionMs,
         marker: options.marker,
       });
+    } else {
+      this._applyViewportTarget(pendingViewport);
     }
     this.needsDraw = true;
     this._wakeLoop();

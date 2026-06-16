@@ -600,6 +600,7 @@ test('panel layout drawer mode has gesture, theme, and metadata contracts', asyn
   assert.match(styles, /touch-action:\s*none;/);
   assert.match(styles, /cursor:\s*grab;/);
   assert.match(styles, /layout-node\[node-type='panel'\]\s*\{[\s\S]*?background-clip:\s*padding-box;[\s\S]*?isolation:\s*isolate;[\s\S]*?backface-visibility:\s*hidden;[\s\S]*?-webkit-backface-visibility:\s*hidden;[\s\S]*?transform:\s*translate3d\(var\(--sn-layout-drawer-translate,\s*0\),\s*0,\s*0\);/);
+  assert.match(styles, /&\[drawer-mode-active\]\s*\{[\s\S]*?layout-node \.type-btn\s*\{[\s\S]*?display:\s*none !important;/);
   assert.match(styles, /layout-node\[mobile-dock='start'\],[\s\S]*?layout-node\[mobile-dock='end'\]\s*\{[\s\S]*?contain:\s*layout paint style;[\s\S]*?will-change:\s*transform;/);
   assert.match(styles, /layout-node\[drawer-expanded\]\s*\{[\s\S]*?\.panel-view\s*\{[\s\S]*?background:\s*inherit;[\s\S]*?isolation:\s*isolate;[\s\S]*?\.panel-content\s*\{[\s\S]*?background:\s*inherit;/);
   assert.match(styles, /layout-node\[drawer-dragging\]\s*\{[\s\S]*?transition:\s*none;[\s\S]*?will-change:\s*transform;/);

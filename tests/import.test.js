@@ -471,7 +471,19 @@ test('canvas graph moves a marker dot along formed links before starting node pu
   assert.match(source, /marker\.pendingPulse = \{/);
   assert.match(source, /this\._pulses = \(this\._pulses \|\| \[\]\)\.filter\(\(pulse\) => pulse\.id !== nodeId\)/);
   assert.match(source, /this\._completeTransitionMarker\(marker, now\);/);
+  assert.match(source, /marker\.pendingActivation = node\.id;/);
+  assert.match(source, /marker\.pendingViewport = options\.pendingViewport \|\| null;/);
+  assert.match(source, /this\._applyViewportTarget\(marker\.pendingViewport\);/);
+  assert.match(source, /this\._activateNode\(marker\.pendingActivation, \{ transition: false, marker: false \}\);/);
   assert.match(source, /this\._queuePulseNow\(marker\.toId, pulse\.duration, \{ waves: pulse\.waves \}, now\)/);
+  assert.ok(
+    source.indexOf('this._applyViewportTarget(marker.pendingViewport);') <
+      source.indexOf('this._activateNode(marker.pendingActivation, { transition: false, marker: false });')
+  );
+  assert.ok(
+    source.indexOf('this._activateNode(marker.pendingActivation, { transition: false, marker: false });') <
+      source.indexOf('this._queuePulseNow(marker.toId, pulse.duration, { waves: pulse.waves }, now)')
+  );
 });
 
 test('canvas graph waits for complete transition routes before moving marker dots', async () => {
@@ -514,7 +526,10 @@ test('canvas graph focus transition uses queued activation before depth recalcul
   assert.equal(frame.deactivating, false);
   assert.equal(frame.interactionDepthsChanged, true);
   assert.match(source, /_activateNode\(selectedId/);
-  assert.match(source, /this\.nextActiveNode = node;/);
+  assert.match(source, /this\.nextActiveNode = null;/);
+  assert.match(source, /if \(selectedId && this\._shouldDeferFocusTransition\(selectedId, options\)\)/);
+  assert.match(source, /pendingViewport,/);
+  assert.match(source, /marker\.pendingActivation = node\.id;/);
   assert.match(source, /_queueTransitionMarker\(previousNode\.id, node\.id, options\)/);
   assert.match(source, /_drawTransitionMarkers\(mainCtx\)/);
 });

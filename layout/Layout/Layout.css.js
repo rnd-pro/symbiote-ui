@@ -153,6 +153,10 @@ export let styles = css`
         }
       }
 
+      layout-node .type-btn {
+        display: none !important;
+      }
+
       layout-node[mobile-dock='primary'] {
         inset: 0;
         z-index: var(--sn-layout-drawer-primary-z, 1);
