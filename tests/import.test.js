@@ -496,7 +496,7 @@ test('canvas graph radial action buttons respond to pointer hover', async () => 
   assert.match(source, /this\.canvas\.style\.cursor = hitItem \? 'pointer' : 'default';/);
   assert.match(source, /const isHovered = this\._hoverAction === item\.action;/);
   assert.match(source, /const itemRadius = isHovered \? ir \* 1\.36 : ir;/);
-  assert.match(source, /mainCtx\.stroke\(\);/);
+  assert.doesNotMatch(source, /if \(isHovered\) \{\s+mainCtx\.lineWidth[\s\S]*?mainCtx\.stroke\(\);/);
   assert.match(source, /this\.canvas\.addEventListener\('pointerleave'/);
 });
 

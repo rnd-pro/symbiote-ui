@@ -2699,13 +2699,6 @@ export class CanvasGraph extends Symbiote {
             ? toRgba(this._dangerRgb, (isHovered ? 0.48 : 0.25) * easeOut)
             : toRgba(tc, fillAlpha * easeOut);
           mainCtx.fill();
-          if (isHovered) {
-            mainCtx.lineWidth = Math.max(1.25, 2 / Math.max(0.1, this.zoom));
-            mainCtx.strokeStyle = item.danger
-              ? toRgba(this._dangerRgb, 0.9 * easeOut)
-              : toRgba(this._pulseRgb, 0.95 * easeOut);
-            mainCtx.stroke();
-          }
 
           mainCtx.save();
           const iconScale = (itemRadius * (isHovered ? 1.16 : 1.2)) / 24;
