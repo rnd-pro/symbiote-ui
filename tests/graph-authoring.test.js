@@ -249,6 +249,18 @@ describe('Selector Model Extensions', () => {
 });
 
 describe('SelectionSync Connection Focus', () => {
+  it('styles dimmed connection paths as neutral inactive wires', async () => {
+    let source = await readFile(
+      new URL('../canvas/NodeCanvas/NodeCanvas.css.js', import.meta.url),
+      'utf8'
+    );
+
+    assert.match(source, /\.sn-conn-path\[data-dimmed\]/);
+    assert.match(source, /stroke: var\(--sn-conn-dimmed, var\(--sn-text-dim\)\);/);
+    assert.match(source, /\.sn-conn-path\[data-active-conn\]/);
+    assert.match(source, /stroke: var\(--sn-node-selected, var\(--sn-conn-selected, var\(--sn-conn-color\)\)\);/);
+  });
+
   it('syncs active and dimmed state to connection paths, arrows, and endpoint dots', () => {
     let connections = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     let pseudoSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');

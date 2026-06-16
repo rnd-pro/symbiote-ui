@@ -179,6 +179,18 @@ export let styles = css`
     }
   }
 
+  .sn-conn-path[data-active-conn] {
+    stroke: var(--sn-node-selected, var(--sn-conn-selected, var(--sn-conn-color)));
+    stroke-width: var(--sn-conn-selected-width, 3);
+    opacity: 1;
+  }
+
+  .sn-conn-path[data-dimmed] {
+    stroke: var(--sn-conn-dimmed, var(--sn-text-dim));
+    stroke-width: var(--sn-conn-width, 2);
+    opacity: 0.24;
+  }
+
   .sn-conn-drag-proxy {
     stroke: var(--sn-node-selected, var(--sn-conn-color));
     stroke-width: var(--sn-conn-selected-width, 3);
