@@ -135,8 +135,13 @@ export let styles = css`
         inset-block: 0;
         box-sizing: border-box;
         background: var(--sn-layout-drawer-bg, var(--sn-panel-bg, var(--sn-node-bg)));
+        background-clip: padding-box;
+        isolation: isolate;
         touch-action: pan-y;
         overscroll-behavior: contain;
+        backface-visibility: hidden;
+        -webkit-backface-visibility: hidden;
+        transform: translate3d(var(--sn-layout-drawer-translate, 0), 0, 0);
         transition:
           transform var(--sn-layout-drawer-transition-duration, var(--sn-transition-normal, 180ms))
             var(--sn-layout-drawer-transition-easing, var(--sn-transition-easing, ease)),
@@ -177,6 +182,7 @@ export let styles = css`
         max-inline-size: calc(100% - var(--sn-layout-drawer-edge-size, 34px));
         border-color: var(--sn-layout-drawer-border, var(--sn-layout-border));
         box-shadow: none;
+        contain: layout paint style;
         will-change: transform;
       }
 
@@ -186,6 +192,8 @@ export let styles = css`
           block-size: 100% !important;
           display: flex !important;
           flex-direction: column !important;
+          background: inherit;
+          isolation: isolate;
         }
 
         .panel-header {
@@ -210,6 +218,7 @@ export let styles = css`
           display: block !important;
           flex: 1 1 auto !important;
           min-block-size: 0 !important;
+          background: inherit;
         }
       }
 
@@ -218,7 +227,7 @@ export let styles = css`
         width: var(--sn-layout-collapsed-horizontal-size, 32px) !important;
         min-inline-size: var(--sn-layout-collapsed-horizontal-size, 32px) !important;
         max-inline-size: var(--sn-layout-collapsed-horizontal-size, 32px) !important;
-        transform: translateX(0) !important;
+        transform: translate3d(0, 0, 0) !important;
         cursor: ew-resize;
         user-select: none;
 
@@ -303,19 +312,19 @@ export let styles = css`
         inset-inline-start: 0;
         inset-inline-end: auto;
         --sn-layout-drawer-translate: -100%;
-        transform: translateX(var(--sn-layout-drawer-translate));
+        transform: translate3d(var(--sn-layout-drawer-translate), 0, 0);
       }
 
       layout-node[mobile-dock='end'] {
         inset-inline-start: auto;
         inset-inline-end: 0;
         --sn-layout-drawer-translate: 100%;
-        transform: translateX(var(--sn-layout-drawer-translate));
+        transform: translate3d(var(--sn-layout-drawer-translate), 0, 0);
       }
 
       layout-node[mobile-dock='start'][drawer-open],
       layout-node[mobile-dock='end'][drawer-open] {
-        transform: translateX(0);
+        transform: translate3d(0, 0, 0);
         box-shadow: var(--sn-layout-drawer-shadow, var(--sn-shadow-xl));
       }
 
@@ -483,12 +492,12 @@ export let styles = css`
     }
 
     &[drawer-mode-active][drawer-start-open] layout-node[mobile-dock='start'] {
-      transform: translateX(0);
+      transform: translate3d(0, 0, 0);
       box-shadow: var(--sn-layout-drawer-shadow, var(--sn-shadow-xl));
     }
 
     &[drawer-mode-active][drawer-end-open] layout-node[mobile-dock='end'] {
-      transform: translateX(0);
+      transform: translate3d(0, 0, 0);
       box-shadow: var(--sn-layout-drawer-shadow, var(--sn-shadow-xl));
     }
 

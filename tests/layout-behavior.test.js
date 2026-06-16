@@ -599,17 +599,21 @@ test('panel layout drawer mode has gesture, theme, and metadata contracts', asyn
   assert.match(styles, /--sn-layout-swipe-island-size/);
   assert.match(styles, /touch-action:\s*none;/);
   assert.match(styles, /cursor:\s*grab;/);
-  assert.match(styles, /layout-node\[mobile-dock='start'\],[\s\S]*?layout-node\[mobile-dock='end'\]\s*\{[\s\S]*?will-change:\s*transform;/);
+  assert.match(styles, /layout-node\[node-type='panel'\]\s*\{[\s\S]*?background-clip:\s*padding-box;[\s\S]*?isolation:\s*isolate;[\s\S]*?backface-visibility:\s*hidden;[\s\S]*?-webkit-backface-visibility:\s*hidden;[\s\S]*?transform:\s*translate3d\(var\(--sn-layout-drawer-translate,\s*0\),\s*0,\s*0\);/);
+  assert.match(styles, /layout-node\[mobile-dock='start'\],[\s\S]*?layout-node\[mobile-dock='end'\]\s*\{[\s\S]*?contain:\s*layout paint style;[\s\S]*?will-change:\s*transform;/);
+  assert.match(styles, /layout-node\[drawer-expanded\]\s*\{[\s\S]*?\.panel-view\s*\{[\s\S]*?background:\s*inherit;[\s\S]*?isolation:\s*isolate;[\s\S]*?\.panel-content\s*\{[\s\S]*?background:\s*inherit;/);
   assert.match(styles, /layout-node\[drawer-dragging\]\s*\{[\s\S]*?transition:\s*none;[\s\S]*?will-change:\s*transform;/);
   assert.match(styles, /&\[drawer-dragging\]\s*\{[\s\S]*?\.layout-drawer-handle-stack,[\s\S]*?\.layout-drawer-handle,[\s\S]*?transition:\s*none;/);
   assert.match(styles, /min-block-size:\s*var\(--sn-layout-drawer-min-block-size,\s*inherit\)/);
   assert.match(styles, /inset:\s*0;/);
   assert.match(styles, /--sn-layout-drawer-translate:\s*-100%/);
   assert.match(styles, /--sn-layout-drawer-translate:\s*100%/);
-  assert.match(styles, /transform:\s*translateX\(var\(--sn-layout-drawer-translate\)\)/);
+  assert.match(styles, /transform:\s*translate3d\(var\(--sn-layout-drawer-translate\),\s*0,\s*0\)/);
   assert.match(styles, /\[drawer-mode-active\]\[drawer-start-open\]\s+layout-node\[mobile-dock='start'\]/);
   assert.match(styles, /\[drawer-mode-active\]\[drawer-end-open\]\s+layout-node\[mobile-dock='end'\]/);
   assert.match(layout, /--sn-layout-drawer-translate/);
+  assert.match(layout, /function drawerTranslateTransform\(value\)/);
+  assert.match(layout, /translate3d\(\$\{value\}, 0, 0\)/);
   assert.match(layout, /setImportantStylePropertyIfChanged\(node\.style,\s*'transform'/);
   assert.match(layout, /_setDrawerHandleVisualState/);
   assert.match(layout, /_applyDrawerHandleProgress/);
@@ -1280,8 +1284,8 @@ test('panel layout drawer handle pointer gesture opens and closes drawer panels'
   railLayout._clearDrawerRailPeek();
   assert.equal(railNode.hasAttribute('drawer-rail-peeking'), false);
   assert.equal(endRailPeekNode.hasAttribute('drawer-rail-peeking'), false);
-  assert.equal(railNode.style.getPropertyValue('transform'), 'translateX(0px)');
-  assert.equal(endRailPeekNode.style.getPropertyValue('transform'), 'translateX(0px)');
+  assert.equal(railNode.style.getPropertyValue('transform'), 'translate3d(0px, 0, 0)');
+  assert.equal(endRailPeekNode.style.getPropertyValue('transform'), 'translate3d(0px, 0, 0)');
 
   const railClickDown = new Event('pointerdown', { bubbles: true });
   railClickDown.pointerId = 3;

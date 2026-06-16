@@ -38,6 +38,10 @@ function setImportantStylePropertyIfChanged(style, name, value) {
   }
 }
 
+function drawerTranslateTransform(value) {
+  return `translate3d(${value}, 0, 0)`;
+}
+
 export class Layout extends Symbiote {
   static isoMode = true;
 
@@ -603,7 +607,7 @@ export class Layout extends Symbiote {
           '--sn-layout-drawer-translate',
           translate
         );
-        setImportantStylePropertyIfChanged(node.style, 'transform', `translateX(${translate})`);
+        setImportantStylePropertyIfChanged(node.style, 'transform', drawerTranslateTransform(translate));
         if (panel.dock === 'start') {
           setStylePropertyIfChanged(
             node.style,
@@ -714,7 +718,7 @@ export class Layout extends Symbiote {
         ? 'var(--sn-layout-drawer-rail-peek-distance, 10px)'
         : 'calc(var(--sn-layout-drawer-rail-peek-distance, 10px) * -1)';
       node.setAttribute('drawer-rail-peeking', '');
-      setImportantStylePropertyIfChanged(node.style, 'transform', `translateX(${distance})`);
+      setImportantStylePropertyIfChanged(node.style, 'transform', drawerTranslateTransform(distance));
     }
     this._drawerRailPeekClearTimer = setTimeout(() => {
       this._drawerRailPeekClearTimer = 0;
@@ -736,7 +740,7 @@ export class Layout extends Symbiote {
       if (!node.hasAttribute('drawer-rail-collapsed')) continue;
       let dock = node.dataset.drawerDock;
       let closedTranslate = this._getDrawerClosedTranslateForNode(node, dock);
-      setImportantStylePropertyIfChanged(node.style, 'transform', `translateX(${closedTranslate})`);
+      setImportantStylePropertyIfChanged(node.style, 'transform', drawerTranslateTransform(closedTranslate));
     }
   }
 
@@ -1241,7 +1245,7 @@ export class Layout extends Symbiote {
         node.removeAttribute('drawer-open');
         let closedTranslate = this._getDrawerClosedTranslateForNode(node, dock);
         setStylePropertyIfChanged(node.style, '--sn-layout-drawer-translate', closedTranslate);
-        setImportantStylePropertyIfChanged(node.style, 'transform', `translateX(${closedTranslate})`);
+        setImportantStylePropertyIfChanged(node.style, 'transform', drawerTranslateTransform(closedTranslate));
       }
     }
   }
@@ -1261,10 +1265,10 @@ export class Layout extends Symbiote {
           ? -travel + progress * travel
           : travel - progress * travel;
         setStylePropertyIfChanged(node.style, '--sn-layout-drawer-translate', `${translatePx}px`);
-        setImportantStylePropertyIfChanged(node.style, 'transform', `translateX(${translatePx}px)`);
+        setImportantStylePropertyIfChanged(node.style, 'transform', drawerTranslateTransform(`${translatePx}px`));
       } else {
         setStylePropertyIfChanged(node.style, '--sn-layout-drawer-translate', `${translate}%`);
-        setImportantStylePropertyIfChanged(node.style, 'transform', `translateX(${translate}%)`);
+        setImportantStylePropertyIfChanged(node.style, 'transform', drawerTranslateTransform(`${translate}%`));
       }
       if (dock === 'start') {
         setStylePropertyIfChanged(node.style, 'inset-inline-start', '0px');
