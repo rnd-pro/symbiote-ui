@@ -637,6 +637,7 @@ export class CanvasGraph extends Symbiote {
     this.dragNode = null;
     this.activeNode = null;
     this.hoverNode = null;
+    this._hoverAction = '';
     this.nextActiveNode = null;
     this.deactivating = false;
     this._transitionMarkers = [];
@@ -1115,6 +1116,7 @@ export class CanvasGraph extends Symbiote {
     this.activeNode = node;
     this.nextActiveNode = null;
     this.deactivating = false;
+    if (isNewActivation) this._setHoverAction('');
     if (isNewActivation && previousNode && options.marker !== false) {
       this._queueTransitionMarker(previousNode.id, node.id, options);
     }
@@ -1127,6 +1129,7 @@ export class CanvasGraph extends Symbiote {
     this.deactivating = true;
     this.dragNode = null;
     this.nextActiveNode = null;
+    this._setHoverAction('');
     this.menuAnim = 0;
     this.needsDraw = true;
     this._wakeLoop();
@@ -2685,23 +2688,34 @@ export class CanvasGraph extends Symbiote {
         const tc = getNodeColor(this.activeNode, this._typeColorRgb);
         for (const entry of menuLayout.items) {
           const item = entry.item;
+          const isHovered = this._hoverAction === item.action;
+          const itemRadius = isHovered ? ir * 1.36 : ir;
+          const fillAlpha = isHovered ? 1 : 0.9;
+          const iconAlpha = isHovered ? 1 : easeOut;
 
           mainCtx.beginPath();
-          mainCtx.arc(entry.x, entry.y, ir, 0, Math.PI * 2);
+          mainCtx.arc(entry.x, entry.y, itemRadius, 0, Math.PI * 2);
           mainCtx.fillStyle = item.danger
-            ? toRgba(this._dangerRgb, 0.25 * easeOut)
-            : toRgba(tc, 0.9 * easeOut);
+            ? toRgba(this._dangerRgb, (isHovered ? 0.48 : 0.25) * easeOut)
+            : toRgba(tc, fillAlpha * easeOut);
           mainCtx.fill();
+          if (isHovered) {
+            mainCtx.lineWidth = Math.max(1.25, 2 / Math.max(0.1, this.zoom));
+            mainCtx.strokeStyle = item.danger
+              ? toRgba(this._dangerRgb, 0.9 * easeOut)
+              : toRgba(this._pulseRgb, 0.95 * easeOut);
+            mainCtx.stroke();
+          }
 
           mainCtx.save();
-          const iconScale = (ir * 1.2) / 24;
+          const iconScale = (itemRadius * (isHovered ? 1.16 : 1.2)) / 24;
           if (iconScale > 0) {
             mainCtx.translate(entry.x - 12 * iconScale, entry.y - 12 * iconScale);
             mainCtx.scale(iconScale, iconScale);
             const p = new Path2D(item.path);
             mainCtx.fillStyle = item.danger
-              ? toRgba(this._dangerRgb, easeOut)
-              : toRgba(this._menuIconRgb, easeOut);
+              ? toRgba(this._dangerRgb, iconAlpha)
+              : toRgba(this._menuIconRgb, iconAlpha);
             mainCtx.fill(p);
           }
           mainCtx.restore();
@@ -3104,6 +3118,34 @@ export class CanvasGraph extends Symbiote {
     return wasPinchPointer;
   }
 
+  _setHoverAction(action = '') {
+    let nextAction = String(action || '');
+    if (this._hoverAction === nextAction) return false;
+    this._hoverAction = nextAction;
+    this.needsDraw = true;
+    this._wakeLoop();
+    return true;
+  }
+
+  _updateHoverState(e) {
+    let hitItem = null;
+    if (this.activeNode && !this.dragNode && this.menuAnim > 0.5) {
+      let apos = this.getSmooth(this.activeNode.id);
+      if (apos) {
+        hitItem = getRadialMenuHit({
+          world: this.screenToWorld(e.clientX, e.clientY, 0),
+          activeNode: this.activeNode,
+          activePosition: apos,
+          connectionCount: this.adjMap.get(this.activeNode.id)?.size || 0,
+          menuItems: this.getActionItems(),
+        });
+      }
+    }
+    this._setHoverAction(hitItem?.action || '');
+    this.hoverNode = hitItem ? null : this.hitTestScreen(e.clientX, e.clientY);
+    this.canvas.style.cursor = hitItem ? 'pointer' : 'default';
+  }
+
   bindEvents() {
     this.canvas.addEventListener('pointerdown', (e) => {
       this._requestDeviceOrientationParallaxFromGesture();
@@ -3210,14 +3252,22 @@ export class CanvasGraph extends Symbiote {
         this.nodePositions.set(this.dragNode.id, { x: newX, y: newY });
         this.worker?.pin(this.dragNode.id, newX, newY);
         this.hoverNode = null;
+        this._setHoverAction('');
       } else if (this.isPanning) {
         this._wakeLoop();  // Panning — resume rendering
         this.panX = this.panStart.x + (e.clientX - this.panStart.px);
         this.panY = this.panStart.y + (e.clientY - this.panStart.py);
         this.hoverNode = null;
+        this._setHoverAction('');
       } else {
-        this.hoverNode = this.hitTestScreen(e.clientX, e.clientY);
+        this._updateHoverState(e);
       }
+    });
+
+    this.canvas.addEventListener('pointerleave', () => {
+      this.hoverNode = null;
+      this._setHoverAction('');
+      this.canvas.style.cursor = 'default';
     });
 
     this.canvas.addEventListener('pointerup', (e) => {

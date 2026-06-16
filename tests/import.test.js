@@ -486,6 +486,20 @@ test('canvas graph moves a marker dot along formed links before starting node pu
   );
 });
 
+test('canvas graph radial action buttons respond to pointer hover', async () => {
+  let source = await readFile(new URL('../canvas/CanvasGraph/CanvasGraph.js', import.meta.url), 'utf8');
+
+  assert.match(source, /this\._hoverAction = '';/);
+  assert.match(source, /_setHoverAction\(action = ''\) \{/);
+  assert.match(source, /_updateHoverState\(e\) \{/);
+  assert.match(source, /hitItem = getRadialMenuHit\(\{/);
+  assert.match(source, /this\.canvas\.style\.cursor = hitItem \? 'pointer' : 'default';/);
+  assert.match(source, /const isHovered = this\._hoverAction === item\.action;/);
+  assert.match(source, /const itemRadius = isHovered \? ir \* 1\.36 : ir;/);
+  assert.match(source, /mainCtx\.stroke\(\);/);
+  assert.match(source, /this\.canvas\.addEventListener\('pointerleave'/);
+});
+
 test('canvas graph waits for complete transition routes before moving marker dots', async () => {
   let source = await readFile(new URL('../canvas/CanvasGraph/CanvasGraph.js', import.meta.url), 'utf8');
 
