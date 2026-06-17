@@ -182,22 +182,44 @@ export function createGraphExplorerViewController({
     clearPendingFlatFocus();
     let attempts = 0;
     let done = false;
+    let startTime = globalThis.performance?.now?.() ?? Date.now();
+    let lastFocusAt = 0;
+    let minInterval = focusOptions.fit ? 240 : 0;
+    let maxDuration = focusOptions.fit ? 5600 : 1200;
+    let finishTimer = typeof globalThis.setTimeout === 'function'
+      ? globalThis.setTimeout(() => retry({ type: 'layout-timeout', final: true }), maxDuration)
+      : null;
     let retry = (event) => {
       if (done) return;
+      let now = globalThis.performance?.now?.() ?? Date.now();
+      if (
+        focusOptions.fit
+        && event?.type === 'layout-tick'
+        && lastFocusAt
+        && now - lastFocusAt < minInterval
+      ) {
+        return;
+      }
       attempts += 1;
+      lastFocusAt = now;
       let focused = runFlatFocus(
         nodeIds,
         { ...options, defer: false, pulse: attempts === 1 && options.pulse !== false },
         focusOptions
       );
-      let canStopOnSuccess = !focusOptions.fit || event?.type === 'layout-done';
-      let maxAttempts = focusOptions.fit ? 48 : 12;
+      let finalAttempt = event?.type === 'layout-done'
+        || event?.final === true
+        || now - startTime >= maxDuration;
+      let canStopOnSuccess = !focusOptions.fit || finalAttempt;
+      let maxAttempts = focusOptions.fit ? Number.POSITIVE_INFINITY : 12;
       if ((focused && canStopOnSuccess) || attempts >= maxAttempts) {
         done = true;
         clearPendingFlatFocus();
       }
     };
     let cleanup = () => {
+      if (finishTimer) globalThis.clearTimeout?.(finishTimer);
+      finishTimer = null;
       state.flatGraph?.removeEventListener?.('layout-tick', retry);
       state.flatGraph?.removeEventListener?.('layout-done', retry);
     };

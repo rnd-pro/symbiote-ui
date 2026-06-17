@@ -987,6 +987,7 @@ export class CanvasGraph extends Symbiote {
       viewportEase: normalizeViewportEase(options.viewportEase),
     };
     if (selectedId && this._shouldDeferFocusTransition(selectedId, options)) {
+      this._cancelViewportGestureTarget();
       this._activateNode(selectedId, {
         transition: true,
         transitionMarkerMs: options.transitionMarkerMs,
@@ -1086,6 +1087,14 @@ export class CanvasGraph extends Symbiote {
     return true;
   }
 
+  _cancelViewportGestureTarget() {
+    this._zoomAnchor = null;
+    this._targetZoom = this.zoom;
+    this._targetPanX = null;
+    this._targetPanY = null;
+    this._viewportEase = DEFAULT_VIEWPORT_EASE;
+  }
+
   _activateNode(nodeOrId, options = {}) {
     let node = typeof nodeOrId === 'string' ? this.nodeMap?.get(nodeOrId) : nodeOrId;
     if (!node) return false;
@@ -1104,6 +1113,7 @@ export class CanvasGraph extends Symbiote {
       this.menuAnim = 0;
       let marker = this._queueTransitionMarker(previousNode.id, node.id, options);
       if (marker) {
+        this.nextActiveNode = node;
         marker.pendingActivation = node.id;
         marker.pendingViewport = options.pendingViewport || null;
         this.needsDraw = true;
@@ -1115,12 +1125,23 @@ export class CanvasGraph extends Symbiote {
     this.activeNode = node;
     this.nextActiveNode = null;
     this.deactivating = false;
-    if (isNewActivation) this._setHoverAction('');
+    if (isNewActivation) {
+      this._setHoverAction('');
+      this._resetInfoPanelForActivation();
+    }
     if (isNewActivation && previousNode && options.marker !== false) {
       this._queueTransitionMarker(previousNode.id, node.id, options);
     }
     this.updateInteractionDepths();
     return true;
+  }
+
+  _resetInfoPanelForActivation() {
+    this._infoPanel.nodeId = null;
+    this._infoPanel.lines = [];
+    this._infoPanel.totalExtent = 0;
+    this._infoPanel.totalExtentY = 0;
+    this._infoPanel._centeredForNode = null;
   }
 
   _beginFocusExit() {
@@ -1329,6 +1350,11 @@ export class CanvasGraph extends Symbiote {
     this._wakeLoop();
   }
 
+  _hasPendingActivationMarker(nodeId) {
+    let id = String(nodeId || '').trim();
+    return Boolean(id && this._transitionMarkers?.some((marker) => marker?.pendingActivation === id));
+  }
+
   flyToNode(nodeId, options = {}) {
     const node = this.graphDB?.nodes.get(nodeId);
     if (node && node.parentId) {
@@ -1359,6 +1385,7 @@ export class CanvasGraph extends Symbiote {
     const foundNode = this.nodeMap?.get(nodeId);
     if (foundNode) {
       if (this._shouldDeferFocusTransition(nodeId, options)) {
+        this._cancelViewportGestureTarget();
         this._activateNode(foundNode, {
           transition: true,
           transitionMarkerMs: options.transitionMarkerMs,
@@ -2254,8 +2281,15 @@ export class CanvasGraph extends Symbiote {
     this.resizeOffscreenCanvases();
     const mainCtx = this.ctx;
     const isIdle = (!this.activeNode && !this.currentGroupId) || this.deactivating;
+    const hasPendingActivation = this._hasPendingActivationMarker(this.nextActiveNode?.id);
 
-    let deactivation = resolveDeactivationFrame({
+    let deactivation = hasPendingActivation ? {
+      activeNode: this.activeNode,
+      nextActiveNode: this.nextActiveNode,
+      deactivating: this.deactivating,
+      deselected: false,
+      interactionDepthsChanged: false,
+    } : resolveDeactivationFrame({
       deactivating: this.deactivating,
       activeNode: this.activeNode,
       nextActiveNode: this.nextActiveNode,
@@ -2284,8 +2318,12 @@ export class CanvasGraph extends Symbiote {
     let dragDeltaX = 0, dragDeltaY = 0;
 
     let activePosition = this.activeNode ? this.nodePositions.get(this.activeNode.id) : null;
+    const viewportTargetActive = this._targetPanX !== null
+      || this._targetPanY !== null
+      || Math.abs(this._targetZoom - this.zoom) > 0.001;
     let shouldCenterFocus = this.activeNode
       && !this.deactivating
+      && !viewportTargetActive
       && this._infoPanel._centeredForNode !== this.activeNode.id
       && this._infoPanel.totalExtent > 0;
     let focus = resolveFocusFrame({

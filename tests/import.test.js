@@ -389,6 +389,7 @@ test('graph explorer keeps multi-node flat focus until layout settles', async ()
     flatOptions: { select: 'a' },
   });
   emit('layout-tick');
+  emit('layout-tick');
   emit('layout-done');
   emit('layout-tick');
 
@@ -589,7 +590,17 @@ test('canvas graph focus transition uses queued activation before depth recalcul
   assert.match(source, /this\.nextActiveNode = null;/);
   assert.match(source, /if \(selectedId && this\._shouldDeferFocusTransition\(selectedId, options\)\)/);
   assert.match(source, /pendingViewport,/);
+  assert.match(source, /this\.nextActiveNode = node;/);
   assert.match(source, /marker\.pendingActivation = node\.id;/);
+  assert.match(source, /_cancelViewportGestureTarget\(\) \{/);
+  assert.match(source, /this\._cancelViewportGestureTarget\(\);\s+this\._activateNode\(selectedId,/);
+  assert.match(source, /this\._cancelViewportGestureTarget\(\);\s+this\._activateNode\(foundNode,/);
+  assert.match(source, /_hasPendingActivationMarker\(nodeId\) \{/);
+  assert.match(source, /const hasPendingActivation = this\._hasPendingActivationMarker\(this\.nextActiveNode\?\.id\);/);
+  assert.match(source, /_resetInfoPanelForActivation\(\) \{/);
+  assert.match(source, /this\._infoPanel\.totalExtent = 0;/);
+  assert.match(source, /const viewportTargetActive = this\._targetPanX !== null/);
+  assert.match(source, /&& !viewportTargetActive\s+&& this\._infoPanel\._centeredForNode !== this\.activeNode\.id/);
   assert.match(source, /_queueTransitionMarker\(previousNode\.id, node\.id, options\)/);
   assert.match(source, /_drawTransitionMarkers\(mainCtx\)/);
 });
