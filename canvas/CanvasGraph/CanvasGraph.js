@@ -63,6 +63,7 @@ const DEFAULT_MENU_ITEMS = Object.freeze([
 ]);
 
 const INCREMENTAL_LAYOUT_INITIAL_ALPHA = 0.045;
+const SEEDED_LAYOUT_INITIAL_ALPHA = 0.22;
 const NODE_APPEARANCE_START_SCALE = 0.2;
 const ENTERING_LAYOUT_SIZE_SCALE = 0.18;
 const ENTERING_LAYOUT_SIZE_WARMUP_TICKS = 72;
@@ -1303,10 +1304,8 @@ export class CanvasGraph extends Symbiote {
         : 1 - Math.pow(-2 * progress + 2, 2) / 2;
       let point = this._getTransitionRoutePoint(marker, eased);
       if (!point) {
-        marker.startTime = now;
-        hasActiveMarkers = true;
-        this.needsDraw = true;
-        return true;
+        this._completeTransitionMarker(marker, now);
+        return false;
       }
 
       let radius = Math.max(3 * dpr, 7 * dpr);
@@ -1652,6 +1651,7 @@ export class CanvasGraph extends Symbiote {
     let nextIds = [...this.graphDB.nodes.keys()];
     let nextIdSet = new Set(nextIds);
     this._pruneGraphState(nextIdSet);
+    let initialLayoutSeeded = previousIds.size === 0 && this._seedInitialNodePositions(nextIds);
     let enteringIds = previousIds.size === 0
       ? nextIds
       : nextIds.filter((id) => !previousIds.has(id));
@@ -1672,7 +1672,7 @@ export class CanvasGraph extends Symbiote {
       this.panY = rect.height / 2;
     }
 
-    this.loadLevel(null, { incrementalLayout });
+    this.loadLevel(null, { incrementalLayout, initialLayoutSeeded });
   }
 
   _getPositionForNode(id) {
@@ -1715,6 +1715,51 @@ export class CanvasGraph extends Symbiote {
       this.nodePositions.set(id, position);
       this.smoothPositions.set(id, { ...position });
     }
+  }
+
+  _seedInitialNodePositions(nodeIds) {
+    let ids = normalizeFocusNodeIds(nodeIds);
+    if (ids.length === 0 || this.nodePositions.size > 0) return false;
+
+    let idSet = new Set(ids);
+    let groups = normalizeForceGroups(this.graphDB?.groups || {}, idSet);
+    let groupEntries = Object.entries(groups)
+      .map(([groupId, members]) => [groupId, members.filter((id) => idSet.has(id))])
+      .filter(([, members]) => members.length > 0);
+    let groupedIds = new Set(groupEntries.flatMap(([, members]) => members));
+    let ungrouped = ids.filter((id) => !groupedIds.has(id));
+    if (ungrouped.length > 0) groupEntries.push(['__ungrouped__', ungrouped]);
+    if (groupEntries.length === 0) groupEntries.push(['__all__', ids]);
+
+    let groupCount = groupEntries.length;
+    let groupRadius = groupCount <= 1 ? 0 : Math.max(150, Math.sqrt(ids.length) * 54);
+    for (let groupIndex = 0; groupIndex < groupCount; groupIndex++) {
+      let [groupId, members] = groupEntries[groupIndex];
+      let groupAngle = groupCount <= 1
+        ? 0
+        : -Math.PI / 2 + (Math.PI * 2 * groupIndex) / groupCount;
+      let center = {
+        x: Math.cos(groupAngle) * groupRadius,
+        y: Math.sin(groupAngle) * groupRadius,
+      };
+      let localRadius = Math.max(42, Math.sqrt(members.length) * (groupCount <= 1 ? 40 : 30));
+      let angleOffset = stableUnit(`${groupId}:seed-angle`) * Math.PI * 2;
+      for (let memberIndex = 0; memberIndex < members.length; memberIndex++) {
+        let id = members[memberIndex];
+        if (this.nodePositions.has(id)) continue;
+        let node = this.graphDB?.nodes?.get(id);
+        let isGroupCenter = node?.isGroup && id === groupId;
+        let angle = angleOffset + (Math.PI * 2 * memberIndex) / Math.max(1, members.length);
+        let radius = isGroupCenter ? 0 : localRadius + stableUnit(`${id}:seed-radius`) * 18;
+        let position = {
+          x: center.x + Math.cos(angle) * radius,
+          y: center.y + Math.sin(angle) * radius,
+        };
+        this.nodePositions.set(id, position);
+        this.smoothPositions.set(id, { ...position });
+      }
+    }
+    return this.nodePositions.size > 0;
   }
 
   _pruneGraphState(nodeIds) {
@@ -2032,6 +2077,8 @@ export class CanvasGraph extends Symbiote {
     };
     if (levelOptions.incrementalLayout) {
       workerOptions.initialAlpha = INCREMENTAL_LAYOUT_INITIAL_ALPHA;
+    } else if (levelOptions.initialLayoutSeeded) {
+      workerOptions.initialAlpha = SEEDED_LAYOUT_INITIAL_ALPHA;
     }
     this.startWorker(workerOptions);
 

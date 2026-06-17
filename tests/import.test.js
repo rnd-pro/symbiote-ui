@@ -518,6 +518,8 @@ test('canvas graph moves a marker dot along formed links before starting node pu
   assert.match(source, /marker\.pendingPulse = \{/);
   assert.match(source, /this\._pulses = \(this\._pulses \|\| \[\]\)\.filter\(\(pulse\) => pulse\.id !== nodeId\)/);
   assert.match(source, /this\._completeTransitionMarker\(marker, now\);/);
+  assert.match(source, /if \(!point\) \{\s+this\._completeTransitionMarker\(marker, now\);\s+return false;\s+\}/);
+  assert.doesNotMatch(source, /marker\.startTime = now/);
   assert.match(source, /marker\.pendingActivation = node\.id;/);
   assert.match(source, /marker\.pendingViewport = options\.pendingViewport \|\| null;/);
   assert.match(source, /this\._applyViewportTarget\(marker\.pendingViewport\);/);
@@ -553,7 +555,8 @@ test('canvas graph waits for complete transition routes before moving marker dot
   assert.match(source, /for \(let id of marker\.path \|\| \[\]\)/);
   assert.match(source, /if \(!point\) return null;/);
   assert.match(source, /marker\.points = points;/);
-  assert.match(source, /marker\.startTime = now;/);
+  assert.match(source, /if \(!point\) \{\s+this\._completeTransitionMarker\(marker, now\);\s+return false;\s+\}/);
+  assert.doesNotMatch(source, /marker\.startTime = now/);
 });
 
 test('canvas graph dot radius follows semantic node weight', async () => {
@@ -656,6 +659,8 @@ test('canvas graph prunes stale state when replacing the graph model', async () 
   let source = await readFile(new URL('../canvas/CanvasGraph/CanvasGraph.js', import.meta.url), 'utf8');
 
   assert.match(source, /this\._pruneGraphState\(nextIdSet\)/);
+  assert.match(source, /let initialLayoutSeeded = previousIds\.size === 0 && this\._seedInitialNodePositions\(nextIds\);/);
+  assert.match(source, /this\.loadLevel\(null, \{ incrementalLayout, initialLayoutSeeded \}\)/);
   assert.match(source, /for \(const id of this\.nodePositions\.keys\(\)\)/);
   assert.match(source, /for \(const id of this\.smoothPositions\.keys\(\)\)/);
   assert.match(source, /for \(const id of this\._nodeAppearances\.keys\(\)\)/);
@@ -684,9 +689,13 @@ test('canvas graph seeds entering node positions and eases appearance', async ()
   assert.match(source, /function averageCanvasPoints\(points\)/);
   assert.match(source, /function getEnteringNodeSeedOffset\(id, index = 0, count = 1\)/);
   assert.match(source, /INCREMENTAL_LAYOUT_INITIAL_ALPHA = 0\.045/);
+  assert.match(source, /SEEDED_LAYOUT_INITIAL_ALPHA = 0\.22/);
   assert.match(source, /NODE_APPEARANCE_START_SCALE = 0\.2/);
   assert.match(source, /ENTERING_LAYOUT_SIZE_SCALE = 0\.18/);
   assert.match(source, /ENTERING_LAYOUT_SIZE_WARMUP_TICKS = 72/);
+  assert.match(source, /_seedInitialNodePositions\(nodeIds\) \{/);
+  assert.match(source, /let groups = normalizeForceGroups\(this\.graphDB\?\.groups \|\| \{\}, idSet\);/);
+  assert.match(source, /workerOptions\.initialAlpha = SEEDED_LAYOUT_INITIAL_ALPHA;/);
   assert.match(source, /const algorithm = options\?\.layoutAlgorithm/);
   assert.match(source, /normalized\.layoutAlgorithm = algorithm/);
   assert.match(source, /let retainedPositionCount = retainedPositionIds\.length/);

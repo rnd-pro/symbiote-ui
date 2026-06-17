@@ -183,8 +183,7 @@ export function createGraphExplorerViewController({
     let attempts = 0;
     let done = false;
     let startTime = globalThis.performance?.now?.() ?? Date.now();
-    let lastFocusAt = 0;
-    let minInterval = focusOptions.fit ? 240 : 0;
+    let hasTickFocus = false;
     let maxDuration = focusOptions.fit ? 5600 : 1200;
     let finishTimer = typeof globalThis.setTimeout === 'function'
       ? globalThis.setTimeout(() => retry({ type: 'layout-timeout', final: true }), maxDuration)
@@ -192,16 +191,11 @@ export function createGraphExplorerViewController({
     let retry = (event) => {
       if (done) return;
       let now = globalThis.performance?.now?.() ?? Date.now();
-      if (
-        focusOptions.fit
-        && event?.type === 'layout-tick'
-        && lastFocusAt
-        && now - lastFocusAt < minInterval
-      ) {
+      if (focusOptions.fit && event?.type === 'layout-tick' && hasTickFocus) {
         return;
       }
       attempts += 1;
-      lastFocusAt = now;
+      if (event?.type === 'layout-tick') hasTickFocus = true;
       let focused = runFlatFocus(
         nodeIds,
         { ...options, defer: false, pulse: attempts === 1 && options.pulse !== false },
