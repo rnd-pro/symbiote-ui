@@ -182,15 +182,15 @@ export function createGraphExplorerViewController({
     clearPendingFlatFocus();
     let attempts = 0;
     let done = false;
-    let startTime = globalThis.performance?.now?.() ?? Date.now();
     let hasTickFocus = false;
-    let maxDuration = focusOptions.fit ? 5600 : 1200;
-    let finishTimer = typeof globalThis.setTimeout === 'function'
-      ? globalThis.setTimeout(() => retry({ type: 'layout-timeout', final: true }), maxDuration)
+    let cleanupTimer = typeof globalThis.setTimeout === 'function'
+      ? globalThis.setTimeout(() => {
+        done = true;
+        clearPendingFlatFocus();
+      }, focusOptions.fit ? 5600 : 1200)
       : null;
     let retry = (event) => {
       if (done) return;
-      let now = globalThis.performance?.now?.() ?? Date.now();
       if (focusOptions.fit && event?.type === 'layout-tick' && hasTickFocus) {
         return;
       }
@@ -201,19 +201,16 @@ export function createGraphExplorerViewController({
         { ...options, defer: false, pulse: attempts === 1 && options.pulse !== false },
         focusOptions
       );
-      let finalAttempt = event?.type === 'layout-done'
-        || event?.final === true
-        || now - startTime >= maxDuration;
-      let canStopOnSuccess = !focusOptions.fit || finalAttempt;
+      let finalAttempt = event?.type === 'layout-done';
       let maxAttempts = focusOptions.fit ? Number.POSITIVE_INFINITY : 12;
-      if ((focused && canStopOnSuccess) || attempts >= maxAttempts) {
+      if (focused || finalAttempt || attempts >= maxAttempts) {
         done = true;
         clearPendingFlatFocus();
       }
     };
     let cleanup = () => {
-      if (finishTimer) globalThis.clearTimeout?.(finishTimer);
-      finishTimer = null;
+      if (cleanupTimer) globalThis.clearTimeout?.(cleanupTimer);
+      cleanupTimer = null;
       state.flatGraph?.removeEventListener?.('layout-tick', retry);
       state.flatGraph?.removeEventListener?.('layout-done', retry);
     };
@@ -372,7 +369,7 @@ export function createGraphExplorerViewController({
         if (ids.length > 0) {
           let options = { fit: explicitFlatNodeIds, ...flatOptions };
           let didFocus = runFlatFocus(ids, options, { fit: explicitFlatNodeIds });
-          if (explicitFlatNodeIds || !didFocus) {
+          if (!didFocus) {
             deferFlatFocus(ids, { ...options, pulse: !didFocus }, { fit: explicitFlatNodeIds });
           }
         }

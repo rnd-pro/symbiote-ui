@@ -164,6 +164,7 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   assert.match(source, /display\/DataTable\/DataTable\.js/);
   assert.match(source, /display\/SourceViewer\/SourceViewer\.js/);
   assert.match(source, /list\/ListDetailShell\/ListDetailShell\.js/);
+  assert.match(source, /board\/KanbanBoard\/KanbanBoard\.js/);
   assert.match(source, /customElements\.whenDefined\('sn-loading-overlay'\)/);
   assert.match(source, /customElements\.whenDefined\('sn-empty-state'\)/);
   assert.match(source, /customElements\.whenDefined\('sn-status-ribbon'\)/);
@@ -171,6 +172,7 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   assert.match(source, /customElements\.whenDefined\('sn-data-table'\)/);
   assert.match(source, /customElements\.whenDefined\('source-viewer'\)/);
   assert.match(source, /customElements\.whenDefined\('sn-list-detail-shell'\)/);
+  assert.match(source, /customElements\.whenDefined\('sn-kanban-board'\)/);
   assert.match(source, /<sn-loading-overlay/);
   assert.match(source, /constructor-overlay-sample/);
   assert.match(source, /<sn-empty-state/);
@@ -179,6 +181,10 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   assert.match(source, /<sn-data-table/);
   assert.match(source, /<source-viewer slot="detail"/);
   assert.match(source, /<sn-list-detail-shell/);
+  assert.match(source, /class CascadeBoardPanel extends Symbiote/);
+  assert.match(source, /<sn-kanban-board/);
+  assert.match(source, /view\('kanban-board', 'Kanban board', 'view_kanban', createBoardLayout\)/);
+  assert.match(source, /component: 'cascade-board-panel'/);
   assert.match(source, /setProgress\(64, 'Composing UI'/);
   assert.match(source, /setEvents\(\[/);
   assert.match(source, /setData\(\{/);
@@ -381,7 +387,7 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   assert.doesNotMatch(html, /100vh/);
   assert.doesNotMatch(html, /--sn-tabs-bg/);
   assert.match(html, /project-path="project-type workspaces \/ agent constructor"/);
-  assert.match(html, /scroll-bottom-placement-1/);
+  assert.match(html, /kanban-board-demo-1/);
   assert.match(html, /<layout-sidebar id="lab-sidebar" slot="sidebar"/);
   assert.doesNotMatch(html, /agent-chat-rail/);
   assert.match(source, /createCollapsedAgentChatPanel/);

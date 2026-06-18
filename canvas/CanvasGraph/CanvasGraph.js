@@ -522,9 +522,38 @@ function scheduleFrame(callback) {
 }
 
 const DEFAULT_VIEWPORT_EASE = 0.15;
+const TRANSITION_ROUTE_FIT_PROGRESS = 0.5;
+const TRANSITION_TARGET_FIT_PROGRESS = 0.5;
 
 function normalizeViewportEase(value, fallback = DEFAULT_VIEWPORT_EASE) {
   return Math.max(0.015, Math.min(0.35, Number.isFinite(value) ? value : fallback));
+}
+
+function clampTransitionProgress(value) {
+  return Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
+}
+
+function easeOutCubic(progress) {
+  let t = clampTransitionProgress(progress);
+  return 1 - Math.pow(1 - t, 3);
+}
+
+function easeInOutCubic(progress) {
+  let t = clampTransitionProgress(progress);
+  return t < 0.5
+    ? 4 * t * t * t
+    : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+function mixTransitionViewport(from, to, progress) {
+  if (!from || !to) return null;
+  let t = clampTransitionProgress(progress);
+  return {
+    zoom: from.zoom + (to.zoom - from.zoom) * t,
+    panX: from.panX + (to.panX - from.panX) * t,
+    panY: from.panY + (to.panY - from.panY) * t,
+    animate: false,
+  };
 }
 
 function normalizeFitViewArgs(padding, animate) {
@@ -1088,6 +1117,117 @@ export class CanvasGraph extends Symbiote {
     return true;
   }
 
+  _captureViewportState() {
+    return {
+      zoom: this.zoom,
+      panX: this.panX,
+      panY: this.panY,
+      animate: false,
+    };
+  }
+
+  _setViewportImmediate(viewport = {}) {
+    if (!Number.isFinite(viewport.zoom) || !Number.isFinite(viewport.panX) || !Number.isFinite(viewport.panY)) return false;
+    this._zoomAnchor = null;
+    this.zoom = viewport.zoom;
+    this.panX = viewport.panX;
+    this.panY = viewport.panY;
+    this._targetZoom = viewport.zoom;
+    this._targetPanX = null;
+    this._targetPanY = null;
+    this._viewportEase = DEFAULT_VIEWPORT_EASE;
+    return true;
+  }
+
+  _resolveTransitionRouteViewport(marker, options = {}) {
+    let ids = normalizeFocusNodeIds(marker?.path || []);
+    if (ids.length < 2) return null;
+
+    const rect = this.canvas.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return null;
+
+    let frames = ids
+      .map((id) => this._getVisibleFocusFrame(id, { fallbackToParent: options.fallbackToParent !== false }))
+      .filter(Boolean);
+    if (frames.length < 2) return null;
+
+    let frame = {
+      minX: Math.min(...frames.map((item) => item.minX)),
+      minY: Math.min(...frames.map((item) => item.minY)),
+      maxX: Math.max(...frames.map((item) => item.maxX)),
+      maxY: Math.max(...frames.map((item) => item.maxY)),
+    };
+    let fit = resolveCanvasGraphViewportFit({
+      frame,
+      rect,
+      padding: Number.isFinite(options.transitionRoutePadding)
+        ? options.transitionRoutePadding
+        : Number.isFinite(options.padding)
+          ? Math.max(options.padding, 120)
+          : 120,
+      minZoom: Number.isFinite(options.transitionRouteMinZoom) ? options.transitionRouteMinZoom : MIN_CANVAS_GRAPH_ZOOM,
+      maxZoom: Number.isFinite(options.transitionRouteMaxZoom) ? options.transitionRouteMaxZoom : 1.35,
+    });
+    return {
+      zoom: fit.zoom,
+      panX: fit.panX,
+      panY: fit.panY,
+      animate: options.animate !== false,
+      viewportEase: normalizeViewportEase(options.transitionRouteViewportEase ?? options.viewportEase),
+    };
+  }
+
+  _prepareTransitionMarkerViewport(marker, options = {}) {
+    if (!marker?.pendingViewport) return false;
+    let routeViewport = options.routeViewport || this._resolveTransitionRouteViewport(marker, options);
+    if (!routeViewport) return false;
+
+    marker.initialViewport = this._captureViewportState();
+    marker.routeViewport = routeViewport;
+    marker.routeFitProgress = Number.isFinite(options.transitionRouteFitProgress)
+      ? clampTransitionProgress(options.transitionRouteFitProgress)
+      : TRANSITION_ROUTE_FIT_PROGRESS;
+    marker.targetFitProgress = Number.isFinite(options.transitionTargetFitProgress)
+      ? clampTransitionProgress(options.transitionTargetFitProgress)
+      : TRANSITION_TARGET_FIT_PROGRESS;
+    return true;
+  }
+
+  _resolveTransitionMarkerViewport(marker, progress) {
+    if (!marker?.initialViewport || !marker.routeViewport || !marker.pendingViewport) return null;
+    let routeFitProgress = Math.max(0.01, Math.min(0.5, marker.routeFitProgress || TRANSITION_ROUTE_FIT_PROGRESS));
+    let targetFitProgress = Math.max(0.01, Math.min(0.5, marker.targetFitProgress || TRANSITION_TARGET_FIT_PROGRESS));
+    let p = clampTransitionProgress(progress);
+
+    if (p <= routeFitProgress) {
+      return mixTransitionViewport(
+        marker.initialViewport,
+        marker.routeViewport,
+        easeOutCubic(p / routeFitProgress)
+      );
+    }
+
+    let targetStart = Math.max(routeFitProgress, 1 - targetFitProgress);
+    if (p < targetStart) return marker.routeViewport;
+
+    return mixTransitionViewport(
+      marker.routeViewport,
+      marker.pendingViewport,
+      easeInOutCubic((p - targetStart) / Math.max(0.01, 1 - targetStart))
+    );
+  }
+
+  _updateTransitionMarkerViewport(now = globalThis.performance?.now?.() ?? Date.now()) {
+    let marker = (this._transitionMarkers || []).find((item) => item?.pendingActivation && item.routeViewport && item.pendingViewport);
+    if (!marker) return false;
+
+    let duration = Math.max(1, marker.duration || 850);
+    let progress = clampTransitionProgress((now - marker.startTime) / duration);
+    let viewport = this._resolveTransitionMarkerViewport(marker, progress);
+    if (!viewport) return false;
+    return this._setViewportImmediate(viewport);
+  }
+
   _cancelViewportGestureTarget() {
     this._zoomAnchor = null;
     this._targetZoom = this.zoom;
@@ -1117,6 +1257,7 @@ export class CanvasGraph extends Symbiote {
         this.nextActiveNode = node;
         marker.pendingActivation = node.id;
         marker.pendingViewport = options.pendingViewport || null;
+        this._prepareTransitionMarkerViewport(marker, options);
         this.needsDraw = true;
         this._wakeLoop();
         return true;
@@ -1333,6 +1474,7 @@ export class CanvasGraph extends Symbiote {
 
   _completeTransitionMarker(marker, now = globalThis.performance?.now?.() ?? Date.now()) {
     if (marker?.pendingViewport) {
+      if (marker.routeViewport) this._setViewportImmediate(marker.pendingViewport);
       this._applyViewportTarget(marker.pendingViewport);
       marker.pendingViewport = null;
     }
@@ -2303,6 +2445,7 @@ export class CanvasGraph extends Symbiote {
     if (!this.canvas) return;
     const dpr = window.devicePixelRatio || 1;
 
+    this._updateTransitionMarkerViewport();
     let viewport = resolveViewportAnimation({
       zoom: this.zoom,
       targetZoom: this._targetZoom,

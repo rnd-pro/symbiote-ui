@@ -184,6 +184,7 @@ export * from '../xr/index.js';
 
 export let NodeCanvas;
 export let CanvasGraph;
+export let KanbanBoard;
 export let GraphExplorerShell;
 export let ContextMenu;
 export let GraphNode;
@@ -595,6 +596,7 @@ if (hasDOMGlobals) {
   const [
     nodeCanvas,
     canvasGraph,
+    kanbanBoard,
     graphExplorerShell,
     contextMenu,
     graphNode,
@@ -695,6 +697,7 @@ if (hasDOMGlobals) {
   ] = await Promise.all([
     import('../canvas/NodeCanvas/NodeCanvas.js'),
     import('../canvas/CanvasGraph/CanvasGraph.js'),
+    import('../board/KanbanBoard/KanbanBoard.js'),
     import('../canvas/GraphExplorerShell/GraphExplorerShell.js'),
     import('../menu/ContextMenu/ContextMenu.js'),
     import('../node/GraphNode/GraphNode.js'),
@@ -796,6 +799,7 @@ if (hasDOMGlobals) {
 
   ({ NodeCanvas } = nodeCanvas);
   ({ CanvasGraph } = canvasGraph);
+  ({ KanbanBoard } = kanbanBoard);
   ({ GraphExplorerShell } = graphExplorerShell);
   ({ ContextMenu } = contextMenu);
   ({ GraphNode } = graphNode);
@@ -910,6 +914,7 @@ if (hasDOMGlobals) {
   registerCatalogModules({
     NodeCanvas,
     CanvasGraph,
+    KanbanBoard,
     GraphExplorerShell,
     ContextMenu,
     GraphNode,

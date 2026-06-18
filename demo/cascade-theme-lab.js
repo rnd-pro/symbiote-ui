@@ -33,6 +33,7 @@ import '../list/ListDetailShell/ListDetailShell.js';
 import '../surface/Card/Card.js';
 import '../tree/TreePanel/TreePanel.js';
 import '../canvas/CanvasGraph/CanvasGraph.js';
+import '../board/KanbanBoard/KanbanBoard.js';
 import '../chat/ChatComposer/ChatComposer.js?v=voice-command-rule-icon';
 import '../chat/ChatSidebarItem/ChatSidebarItem.js?v=voice-controls-final-8';
 import '../chat/ChatSidebar/ChatSidebar.js?v=voice-controls-final-8';
@@ -69,6 +70,7 @@ await Promise.all([
   customElements.whenDefined('source-editor'),
   customElements.whenDefined('sn-status-ribbon'),
   customElements.whenDefined('canvas-graph'),
+  customElements.whenDefined('sn-kanban-board'),
   customElements.whenDefined('chat-workspace'),
   customElements.whenDefined('cascade-theme-widget'),
 ]);
@@ -2611,6 +2613,312 @@ CascadeRuntimePanel.rootStyles = `
 
 CascadeRuntimePanel.reg('cascade-runtime-panel');
 
+const KANBAN_BOARD_MODEL = {
+  id: 'release-flow',
+  title: 'Agent release flow',
+  columns: [
+    {
+      id: 'intake',
+      title: 'Intake',
+      description: 'Host-owned work queue',
+      cards: [
+        {
+          id: 'scope-demo',
+          title: 'Scope public demo update',
+          summary: 'Expose the board surface through the Automation workspace.',
+          meta: ['demo'],
+          footer: [{ label: 'planned', kind: 'status' }],
+          actions: [{ id: 'open-source', icon: 'code', title: 'Open source panel' }],
+        },
+        {
+          id: 'classify-pages',
+          title: 'Classify Pages publish target',
+          summary: 'Keep source imports and static dependencies available under /demo.',
+          meta: ['pages'],
+          footer: [{ label: 'public', kind: 'warning' }],
+          actions: [{ id: 'inspect', icon: 'page_info', title: 'Inspect metadata' }],
+        },
+      ],
+    },
+    {
+      id: 'build',
+      title: 'Build',
+      description: 'Reusable component composition',
+      cards: [
+        {
+          id: 'render-kanban-board',
+          title: 'Render sn-kanban-board',
+          summary: 'Columns and cards are host data; the component emits selection and move intents.',
+          meta: ['component', 'themeable'],
+          footer: [{ label: 'live', kind: 'status' }],
+          actions: [{ id: 'select-card', icon: 'touch_app', title: 'Select card' }],
+        },
+      ],
+    },
+    {
+      id: 'verify',
+      title: 'Verify',
+      description: 'Tests and smoke checks',
+      cards: [
+        {
+          id: 'run-contract-tests',
+          title: 'Run contract tests',
+          summary: 'Package exports, manifest metadata, and component behavior stay in sync.',
+          meta: ['node --test'],
+          footer: [{ label: 'queued', kind: 'warning' }],
+          actions: [{ id: 'show-events', icon: 'receipt_long', title: 'Show events' }],
+        },
+        {
+          id: 'browser-smoke',
+          title: 'Browser smoke',
+          summary: 'Open the demo, route to Automation / Kanban board, and verify rendering.',
+          meta: ['browser'],
+          footer: [{ label: 'manual', kind: 'warning' }],
+          actions: [{ id: 'fit-board', icon: 'fit_screen', title: 'Fit board' }],
+        },
+      ],
+    },
+    {
+      id: 'ship',
+      title: 'Ship',
+      description: 'Public Pages release',
+      cards: [
+        {
+          id: 'publish-pages',
+          title: 'Publish GitHub Pages',
+          summary: 'Deploy a static branch with no private context or local scratch artifacts.',
+          meta: ['gh-pages'],
+          footer: [{ label: 'ready', kind: 'status' }],
+          actions: [{ id: 'copy-url', icon: 'link', title: 'Copy public URL' }],
+        },
+      ],
+    },
+  ],
+};
+
+const KANBAN_SOURCE_SAMPLE = [
+  'import { KanbanBoard } from "symbiote-ui/board";',
+  '',
+  'let board = document.querySelector("sn-kanban-board");',
+  '',
+  'board.setBoard({',
+  '  columns: workflowColumns,',
+  '});',
+  '',
+  'board.addEventListener("sn-board-card-select", ({ detail }) => {',
+  '  inspector.showCard(detail.card);',
+  '});',
+  '',
+  'board.addEventListener("sn-board-card-drop", ({ detail }) => {',
+  '  workflow.requestMove(detail.card.id, detail.toColumnId);',
+  '});',
+].join('\n');
+
+class CascadeBoardPanel extends Symbiote {
+  initCallback() {
+    this._events = [];
+    this.addEventListener('sn-board-card-select', (event) => this._recordBoardIntent('select', event));
+    this.addEventListener('sn-board-card-action', (event) => this._recordBoardIntent('action', event));
+    this.addEventListener('sn-board-card-drop', (event) => this._recordBoardIntent('drop', event));
+  }
+
+  renderCallback() {
+    if (this._ready) return;
+    this._ready = true;
+    this.ref.board.setBoard(KANBAN_BOARD_MODEL);
+    this.ref.board.selectCard('render-kanban-board');
+    this.ref.code.setContent(KANBAN_SOURCE_SAMPLE, 'js');
+    this._setBoardEvents([
+      {
+        id: 'board-ready',
+        title: 'sn-kanban-board ready',
+        status: 'done',
+        detail: 'Host-owned columns rendered through the reusable board component.',
+      },
+      {
+        id: 'board-intents',
+        title: 'intent listeners attached',
+        status: 'running',
+        detail: 'Select a card or action menu item to update this event feed.',
+      },
+    ]);
+  }
+
+  _recordBoardIntent(kind, event) {
+    let detail = event.detail || {};
+    let card = detail.card;
+    let title = kind === 'drop'
+      ? `move ${card?.id || 'card'}`
+      : `${kind} ${card?.id || 'card'}`;
+    let eventDetail = kind === 'drop'
+      ? `${detail.fromColumnId} -> ${detail.toColumnId}`
+      : detail.actionId || card?.title || 'board intent';
+    this._setBoardEvents([
+      {
+        id: `${kind}-${Date.now()}`,
+        title,
+        status: kind === 'drop' ? 'running' : 'done',
+        detail: eventDetail,
+      },
+      ...this._events,
+    ].slice(0, 6));
+  }
+
+  _setBoardEvents(events) {
+    this._events = events;
+    this.ref.events?.setEvents?.(events);
+  }
+}
+
+CascadeBoardPanel.template = html`
+  <section class="board-panel">
+    <sn-banner variant="info">
+      A host supplies workflow columns and cards. The board handles rendering,
+      selection, action menus, drag targets, and emits product-neutral intents.
+    </sn-banner>
+    <div class="board-workbench">
+      <section class="board-preview" aria-label="Kanban board workflow preview">
+        <header class="board-preview-header">
+          <span class="material-symbols-outlined" aria-hidden="true">view_kanban</span>
+          <div>
+            <strong>Automation workflow board</strong>
+            <span>Reusable surface for planning, approvals, verification, and release gates.</span>
+          </div>
+        </header>
+        <sn-kanban-board
+          label="Agent release workflow board"
+          empty-text="No workflow lanes"
+          ${{ ref: 'board' }}
+        ></sn-kanban-board>
+      </section>
+      <aside class="board-side" aria-label="Kanban board source and events">
+        <code-block ${{ ref: 'code' }}></code-block>
+        <sn-event-feed ${{ ref: 'events' }}></sn-event-feed>
+      </aside>
+    </div>
+  </section>
+`;
+
+CascadeBoardPanel.rootStyles = `
+  cascade-board-panel {
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+  }
+
+  cascade-board-panel .board-panel {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: var(--sn-lab-panel-gap, 12px);
+    height: 100%;
+    min-height: 0;
+    padding: var(--sn-lab-panel-padding, 12px);
+    overflow: hidden;
+    background: var(--sn-panel-bg);
+    color: var(--sn-text);
+  }
+
+  cascade-board-panel .board-workbench {
+    display: grid;
+    grid-template-columns: minmax(420px, 1.15fr) minmax(280px, 0.85fr);
+    gap: var(--sn-lab-panel-gap, 12px);
+    min-width: 0;
+    min-height: 0;
+  }
+
+  cascade-board-panel .board-preview,
+  cascade-board-panel .board-side {
+    min-width: 0;
+    min-height: 0;
+  }
+
+  cascade-board-panel .board-preview {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 10px;
+    padding: 10px;
+    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border-radius: var(--sn-node-radius);
+    background: var(--sn-bg);
+    overflow: hidden;
+  }
+
+  cascade-board-panel .board-preview-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    min-height: 48px;
+    padding: 8px 10px;
+    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border-radius: var(--sn-control-radius, 6px);
+    background: var(--sn-node-bg);
+  }
+
+  cascade-board-panel .board-preview-header .material-symbols-outlined {
+    color: var(--sn-node-selected);
+    font-size: calc(24px * var(--sn-theme-icon-scale, 1));
+  }
+
+  cascade-board-panel .board-preview-header strong,
+  cascade-board-panel .board-preview-header span:not(.material-symbols-outlined) {
+    display: block;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  cascade-board-panel .board-preview-header strong {
+    color: var(--sn-text);
+    font-size: calc(14px * var(--sn-theme-heading-scale, 1));
+  }
+
+  cascade-board-panel .board-preview-header span:not(.material-symbols-outlined) {
+    margin-top: 3px;
+    color: var(--sn-text-dim);
+    font-size: calc(11px * var(--sn-theme-type-scale, 1));
+    line-height: 1.35;
+  }
+
+  cascade-board-panel sn-kanban-board {
+    min-width: 0;
+    min-height: 0;
+    --sn-kanban-columns-height: 100%;
+    --sn-kanban-column-height: 100%;
+    --sn-kanban-column-min-height: 260px;
+    --sn-kanban-card-list-overflow: auto;
+  }
+
+  cascade-board-panel .board-side {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) minmax(190px, 0.8fr);
+    gap: var(--sn-lab-panel-gap, 12px);
+  }
+
+  cascade-board-panel code-block,
+  cascade-board-panel sn-event-feed {
+    min-width: 0;
+    min-height: 0;
+    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border-radius: var(--sn-node-radius);
+    background: var(--sn-bg);
+    overflow: auto;
+  }
+
+  @media (max-width: 980px) {
+    cascade-board-panel .board-panel {
+      overflow: auto;
+    }
+
+    cascade-board-panel .board-workbench {
+      grid-template-columns: minmax(0, 1fr);
+      min-height: 760px;
+    }
+  }
+`;
+
+CascadeBoardPanel.reg('cascade-board-panel');
+
 class CascadeSpatialPanel extends Symbiote {
   initCallback() {
     this._drag = null;
@@ -3020,6 +3328,18 @@ layout.registerPanelType('runtime', {
     collapse: 'auto',
   },
 });
+layout.registerPanelType('board', {
+  title: 'Kanban board',
+  icon: 'view_kanban',
+  component: 'cascade-board-panel',
+  behavior: {
+    importance: 100,
+    minInlineSize: 560,
+    minBlockSize: 360,
+    collapse: 'never',
+    overflow: 'scroll-inline',
+  },
+});
 layout.registerPanelType('spatial', {
   title: 'Spatial',
   icon: 'view_in_ar',
@@ -3170,6 +3490,14 @@ const createRuntimeLayout = () => LayoutTree.createSplit(
   0.58
 );
 
+const createBoardLayout = () => createPanel('board', {
+  importance: 100,
+  minInlineSize: 620,
+  minBlockSize: 420,
+  collapse: 'never',
+  overflow: 'scroll-inline',
+});
+
 const createSpatialLayout = () => LayoutTree.createSplit(
   'horizontal',
   createPanel('spatial', {
@@ -3294,6 +3622,7 @@ const showcaseProjects = [
     behavior: { responsiveMode: 'scroll-inline', responsiveBreakpoint: 900, overflow: 'collapse' },
     views: [
       view('workflow-graph', 'Workflow graph', 'schema', createGraphLayout),
+      view('kanban-board', 'Kanban board', 'view_kanban', createBoardLayout),
       view('form-controls', 'Form controls', 'smart_button', createComponentsLayout),
       view('approvals', 'Approvals', 'approval', createRuntimeLayout),
       view('schedule', 'Schedule', 'calendar_month', createRuntimeLayout),
@@ -3633,4 +3962,3 @@ let videoObserver = new MutationObserver((mutations) => {
 videoObserver.observe(layout, { childList: true, subtree: true });
 
 applyShowcaseView(activeProjectId, activeViewByProject.get(activeProjectId));
-

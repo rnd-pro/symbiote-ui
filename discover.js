@@ -100,6 +100,11 @@ const EXPORT_ENTRYPOINTS = [
     description: 'Browser Web Components, layout modules, themes, router helpers, chat, navigation, and display modules.',
   },
   {
+    specifier: 'symbiote-ui/board',
+    kind: 'browser-component',
+    description: 'Direct browser component entrypoint for reusable kanban boards with host-owned columns, cards, actions, selection, and move intents.',
+  },
+  {
     specifier: 'symbiote-ui/display/code-block',
     kind: 'browser-component',
     description: 'Direct browser component entrypoint for code, markdown, image, and diagnostics display.',

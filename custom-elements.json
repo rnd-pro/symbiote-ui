@@ -43678,6 +43678,406 @@
           }
         }
       ]
+    },
+    {
+      "path": "board/KanbanBoard/KanbanBoard.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "customElement": true,
+          "name": "KanbanBoard",
+          "tagName": "sn-kanban-board",
+          "description": "Generic themeable kanban board for host-owned columns, cards, actions, selection, and move intents.",
+          "componentDescription": "Generic themeable kanban board for host-owned columns, cards, actions, selection, and move intents. Use this board UI component when composing board UI. Capabilities: kanban-board, columns, cards, selection, move-intent, themeable. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "attributes": [
+            {
+              "name": "empty-text",
+              "type": {
+                "text": "string"
+              },
+              "description": "Message shown when the board has no columns."
+            },
+            {
+              "name": "label",
+              "type": {
+                "text": "string"
+              },
+              "description": "Accessible region label."
+            }
+          ],
+          "members": [
+            {
+              "kind": "field",
+              "name": "renderCard",
+              "type": {
+                "text": "function"
+              },
+              "description": "Optional host callback for custom card rendering."
+            },
+            {
+              "kind": "field",
+              "name": "renderColumnBody",
+              "type": {
+                "text": "function"
+              },
+              "description": "Optional host callback for custom column body rendering."
+            },
+            {
+              "kind": "field",
+              "name": "renderColumnHeader",
+              "type": {
+                "text": "function"
+              },
+              "description": "Optional host callback for custom column header rendering."
+            },
+            {
+              "kind": "method",
+              "name": "setBoard",
+              "description": "Sets board model with columns and cards."
+            },
+            {
+              "kind": "method",
+              "name": "setColumns",
+              "description": "Sets only column descriptors."
+            },
+            {
+              "kind": "method",
+              "name": "getBoard",
+              "description": "Returns the normalized board model."
+            },
+            {
+              "kind": "method",
+              "name": "getSelectedCard",
+              "description": "Returns the selected normalized card."
+            },
+            {
+              "kind": "method",
+              "name": "selectCard",
+              "description": "Selects a card by id and emits a selection event."
+            }
+          ],
+          "events": [
+            {
+              "name": "sn-board-card-select",
+              "description": "Emits when a card is selected."
+            },
+            {
+              "name": "sn-board-card-action",
+              "description": "Emits when a rendered card action is invoked."
+            },
+            {
+              "name": "sn-board-card-drop",
+              "description": "Emits host-owned move intent when a card is dropped on another column."
+            }
+          ],
+          "slots": [],
+          "cssProperties": [
+            {
+              "name": "--sn-kanban-column-width",
+              "description": "Theme CSS custom property consumed by sn-kanban-board."
+            },
+            {
+              "name": "--sn-kanban-gap",
+              "description": "Theme CSS custom property consumed by sn-kanban-board."
+            },
+            {
+              "name": "--sn-kanban-padding",
+              "description": "Theme CSS custom property consumed by sn-kanban-board."
+            },
+            {
+              "name": "--sn-kanban-border",
+              "description": "Theme CSS custom property consumed by sn-kanban-board."
+            },
+            {
+              "name": "--sn-kanban-radius",
+              "description": "Theme CSS custom property consumed by sn-kanban-board."
+            },
+            {
+              "name": "--sn-kanban-column-bg",
+              "description": "Theme CSS custom property consumed by sn-kanban-board."
+            },
+            {
+              "name": "--sn-kanban-header-bg",
+              "description": "Theme CSS custom property consumed by sn-kanban-board."
+            },
+            {
+              "name": "--sn-kanban-title-color",
+              "description": "Theme CSS custom property consumed by sn-kanban-board."
+            },
+            {
+              "name": "--sn-kanban-description-color",
+              "description": "Theme CSS custom property consumed by sn-kanban-board."
+            },
+            {
+              "name": "--sn-kanban-card-bg",
+              "description": "Theme CSS custom property consumed by sn-kanban-board."
+            },
+            {
+              "name": "--sn-kanban-card-border",
+              "description": "Theme CSS custom property consumed by sn-kanban-board."
+            },
+            {
+              "name": "--sn-kanban-card-radius",
+              "description": "Theme CSS custom property consumed by sn-kanban-board."
+            },
+            {
+              "name": "--sn-kanban-card-gap",
+              "description": "Theme CSS custom property consumed by sn-kanban-board."
+            }
+          ],
+          "contract": {
+            "capabilities": [
+              "kanban-board",
+              "columns",
+              "cards",
+              "selection",
+              "move-intent",
+              "themeable"
+            ],
+            "attributes": [
+              {
+                "name": "empty-text",
+                "type": "string",
+                "description": "Message shown when the board has no columns."
+              },
+              {
+                "name": "label",
+                "type": "string",
+                "description": "Accessible region label."
+              }
+            ],
+            "properties": [
+              {
+                "name": "renderCard",
+                "type": "function",
+                "description": "Optional host callback for custom card rendering."
+              },
+              {
+                "name": "renderColumnBody",
+                "type": "function",
+                "description": "Optional host callback for custom column body rendering."
+              },
+              {
+                "name": "renderColumnHeader",
+                "type": "function",
+                "description": "Optional host callback for custom column header rendering."
+              }
+            ],
+            "methods": [
+              {
+                "name": "setBoard",
+                "type": "function",
+                "description": "Sets board model with columns and cards."
+              },
+              {
+                "name": "setColumns",
+                "type": "function",
+                "description": "Sets only column descriptors."
+              },
+              {
+                "name": "getBoard",
+                "type": "function",
+                "description": "Returns the normalized board model."
+              },
+              {
+                "name": "getSelectedCard",
+                "type": "function",
+                "description": "Returns the selected normalized card."
+              },
+              {
+                "name": "selectCard",
+                "type": "function",
+                "description": "Selects a card by id and emits a selection event."
+              }
+            ],
+            "events": [
+              {
+                "name": "sn-board-card-select",
+                "description": "Emits when a card is selected."
+              },
+              {
+                "name": "sn-board-card-action",
+                "description": "Emits when a rendered card action is invoked."
+              },
+              {
+                "name": "sn-board-card-drop",
+                "description": "Emits host-owned move intent when a card is dropped on another column."
+              }
+            ],
+            "slots": [],
+            "themeAliases": [
+              "--sn-kanban-column-width",
+              "--sn-kanban-gap",
+              "--sn-kanban-padding",
+              "--sn-kanban-border",
+              "--sn-kanban-radius",
+              "--sn-kanban-column-bg",
+              "--sn-kanban-header-bg",
+              "--sn-kanban-title-color",
+              "--sn-kanban-description-color",
+              "--sn-kanban-card-bg",
+              "--sn-kanban-card-border",
+              "--sn-kanban-card-radius",
+              "--sn-kanban-card-gap"
+            ],
+            "status": "draft",
+            "schemaVersion": "component-descriptor-v2",
+            "dataSchema": "schemas/runtime-ui-v1.json",
+            "ssr": {
+              "mode": "hydrate-only",
+              "importSafe": false,
+              "jsdaRenderable": false,
+              "requiresDom": true,
+              "browserApis": [
+                "events",
+                "selection",
+                "focus"
+              ],
+              "notes": "May render shell markup under SSR, but interactive behavior belongs to browser hydration."
+            }
+          },
+          "agent": {
+            "componentDescription": "Generic themeable kanban board for host-owned columns, cards, actions, selection, and move intents. Use this board UI component when composing board UI. Capabilities: kanban-board, columns, cards, selection, move-intent, themeable. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "board UI component",
+            "usage": "Render or compose <sn-kanban-board> when the host needs generic themeable kanban board for host-owned columns, cards, actions, selection, and move intents.",
+            "dataOwnership": "host-owned props and attributes; component owns presentation state",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          },
+          "metadata": {
+            "contract": {
+              "capabilities": [
+                "kanban-board",
+                "columns",
+                "cards",
+                "selection",
+                "move-intent",
+                "themeable"
+              ],
+              "attributes": [
+                {
+                  "name": "empty-text",
+                  "type": "string",
+                  "description": "Message shown when the board has no columns."
+                },
+                {
+                  "name": "label",
+                  "type": "string",
+                  "description": "Accessible region label."
+                }
+              ],
+              "properties": [
+                {
+                  "name": "renderCard",
+                  "type": "function",
+                  "description": "Optional host callback for custom card rendering."
+                },
+                {
+                  "name": "renderColumnBody",
+                  "type": "function",
+                  "description": "Optional host callback for custom column body rendering."
+                },
+                {
+                  "name": "renderColumnHeader",
+                  "type": "function",
+                  "description": "Optional host callback for custom column header rendering."
+                }
+              ],
+              "methods": [
+                {
+                  "name": "setBoard",
+                  "type": "function",
+                  "description": "Sets board model with columns and cards."
+                },
+                {
+                  "name": "setColumns",
+                  "type": "function",
+                  "description": "Sets only column descriptors."
+                },
+                {
+                  "name": "getBoard",
+                  "type": "function",
+                  "description": "Returns the normalized board model."
+                },
+                {
+                  "name": "getSelectedCard",
+                  "type": "function",
+                  "description": "Returns the selected normalized card."
+                },
+                {
+                  "name": "selectCard",
+                  "type": "function",
+                  "description": "Selects a card by id and emits a selection event."
+                }
+              ],
+              "events": [
+                {
+                  "name": "sn-board-card-select",
+                  "description": "Emits when a card is selected."
+                },
+                {
+                  "name": "sn-board-card-action",
+                  "description": "Emits when a rendered card action is invoked."
+                },
+                {
+                  "name": "sn-board-card-drop",
+                  "description": "Emits host-owned move intent when a card is dropped on another column."
+                }
+              ],
+              "slots": [],
+              "themeAliases": [
+                "--sn-kanban-column-width",
+                "--sn-kanban-gap",
+                "--sn-kanban-padding",
+                "--sn-kanban-border",
+                "--sn-kanban-radius",
+                "--sn-kanban-column-bg",
+                "--sn-kanban-header-bg",
+                "--sn-kanban-title-color",
+                "--sn-kanban-description-color",
+                "--sn-kanban-card-bg",
+                "--sn-kanban-card-border",
+                "--sn-kanban-card-radius",
+                "--sn-kanban-card-gap"
+              ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
+              "ssr": {
+                "mode": "hydrate-only",
+                "importSafe": false,
+                "jsdaRenderable": false,
+                "requiresDom": true,
+                "browserApis": [
+                  "events",
+                  "selection",
+                  "focus"
+                ],
+                "notes": "May render shell markup under SSR, but interactive behavior belongs to browser hydration."
+              }
+            }
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "custom-element-definition",
+          "name": "sn-kanban-board",
+          "declaration": {
+            "name": "KanbanBoard"
+          }
+        }
+      ]
     }
   ]
 }

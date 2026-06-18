@@ -351,7 +351,7 @@ test('graph explorer view controller coordinates structured and flat renderers',
   assert.equal(controller.getState().shell, null);
 });
 
-test('graph explorer keeps multi-node flat focus until layout settles', async () => {
+test('graph explorer does not defer successful multi-node flat focus', async () => {
   let { createGraphExplorerViewController } = await import('../canvas/graph-explorer.js');
   let listeners = new Map();
   let calls = [];
@@ -396,11 +396,60 @@ test('graph explorer keeps multi-node flat focus until layout settles', async ()
   assert.deepEqual(calls, [
     'focus:a,b:pulse',
     'pulse:a',
-    'focus:a,b:quiet',
-    'focus:a,b:quiet',
   ]);
   assert.equal(listeners.get('layout-tick')?.size || 0, 0);
   assert.equal(listeners.get('layout-done')?.size || 0, 0);
+});
+
+test('graph explorer timeout clears deferred flat focus without refocusing', async () => {
+  let { createGraphExplorerViewController } = await import('../canvas/graph-explorer.js');
+  let listeners = new Map();
+  let calls = [];
+  let timeoutCallback = null;
+  let originalSetTimeout = globalThis.setTimeout;
+  let originalClearTimeout = globalThis.clearTimeout;
+  globalThis.setTimeout = (callback) => {
+    timeoutCallback = callback;
+    return 1;
+  };
+  globalThis.clearTimeout = () => {};
+  try {
+    let flatGraph = {
+      hidden: false,
+      setGraphModel() {},
+      setPath() {},
+      resizeCanvas() {},
+      focusNodes(nodeIds) {
+        calls.push(`focus:${nodeIds.join(',')}`);
+        return false;
+      },
+      addEventListener(type, callback) {
+        if (!listeners.has(type)) listeners.set(type, new Set());
+        listeners.get(type).add(callback);
+      },
+      removeEventListener(type, callback) {
+        listeners.get(type)?.delete(callback);
+      },
+    };
+    let controller = createGraphExplorerViewController({
+      flatGraph,
+      mode: 'flat',
+    });
+
+    controller.focusNode({
+      nodeId: 'a',
+      flatNodeIds: ['a', 'b'],
+      flatOptions: { select: 'a' },
+    });
+    timeoutCallback?.();
+
+    assert.deepEqual(calls, ['focus:a,b']);
+    assert.equal(listeners.get('layout-tick')?.size || 0, 0);
+    assert.equal(listeners.get('layout-done')?.size || 0, 0);
+  } finally {
+    globalThis.setTimeout = originalSetTimeout;
+    globalThis.clearTimeout = originalClearTimeout;
+  }
 });
 
 test('graph explorer retries single-node flat focus until the layout has positions', async () => {
@@ -520,11 +569,39 @@ test('canvas graph moves a marker dot along formed links before starting node pu
   assert.match(source, /this\._completeTransitionMarker\(marker, now\);/);
   assert.match(source, /if \(!point\) \{\s+this\._completeTransitionMarker\(marker, now\);\s+return false;\s+\}/);
   assert.doesNotMatch(source, /marker\.startTime = now/);
+  assert.match(source, /_resolveTransitionRouteViewport\(marker, options = \{\}\) \{/);
+  assert.match(source, /let ids = normalizeFocusNodeIds\(marker\?\.path \|\| \[\]\);/);
+  assert.match(source, /options\.transitionRoutePadding/);
+  assert.match(source, /options\.transitionRouteMaxZoom\) \? options\.transitionRouteMaxZoom : 1\.35/);
+  assert.match(source, /TRANSITION_ROUTE_FIT_PROGRESS = 0\.5/);
+  assert.match(source, /TRANSITION_TARGET_FIT_PROGRESS = 0\.5/);
+  assert.match(source, /function easeOutCubic\(progress\) \{/);
+  assert.match(source, /function easeInOutCubic\(progress\) \{/);
+  assert.match(source, /function mixTransitionViewport\(from, to, progress\) \{/);
+  assert.match(source, /_prepareTransitionMarkerViewport\(marker, options\)/);
+  assert.match(source, /marker\.initialViewport = this\._captureViewportState\(\);/);
+  assert.match(source, /marker\.routeViewport = routeViewport;/);
+  assert.match(source, /marker\.routeFitProgress = Number\.isFinite\(options\.transitionRouteFitProgress\)/);
+  assert.match(source, /marker\.targetFitProgress = Number\.isFinite\(options\.transitionTargetFitProgress\)/);
+  assert.match(source, /_resolveTransitionMarkerViewport\(marker, progress\) \{/);
+  assert.match(source, /Math\.min\(0\.5, marker\.routeFitProgress \|\| TRANSITION_ROUTE_FIT_PROGRESS\)/);
+  assert.match(source, /Math\.min\(0\.5, marker\.targetFitProgress \|\| TRANSITION_TARGET_FIT_PROGRESS\)/);
+  assert.match(source, /easeOutCubic\(p \/ routeFitProgress\)/);
+  assert.match(source, /let targetStart = Math\.max\(routeFitProgress, 1 - targetFitProgress\);/);
+  assert.match(source, /easeInOutCubic\(\(p - targetStart\) \/ Math\.max\(0\.01, 1 - targetStart\)\)/);
+  assert.match(source, /_updateTransitionMarkerViewport\(now = globalThis\.performance\?\.now\?\.\(\) \?\? Date\.now\(\)\) \{/);
+  assert.match(source, /return this\._setViewportImmediate\(viewport\);/);
   assert.match(source, /marker\.pendingActivation = node\.id;/);
   assert.match(source, /marker\.pendingViewport = options\.pendingViewport \|\| null;/);
+  assert.match(source, /this\._prepareTransitionMarkerViewport\(marker, options\);/);
+  assert.match(source, /this\._updateTransitionMarkerViewport\(\);/);
   assert.match(source, /this\._applyViewportTarget\(marker\.pendingViewport\);/);
   assert.match(source, /this\._activateNode\(marker\.pendingActivation, \{ transition: false, marker: false \}\);/);
   assert.match(source, /this\._queuePulseNow\(marker\.toId, pulse\.duration, \{ waves: pulse\.waves \}, now\)/);
+  assert.ok(
+    source.indexOf('this._updateTransitionMarkerViewport();') <
+      source.indexOf('let viewport = resolveViewportAnimation({')
+  );
   assert.ok(
     source.indexOf('this._applyViewportTarget(marker.pendingViewport);') <
       source.indexOf('this._activateNode(marker.pendingActivation, { transition: false, marker: false });')
@@ -1381,6 +1458,7 @@ test('discover exposes the standalone package contract', async () => {
 
   assert.equal(data.package.name, 'symbiote-ui');
   assert.equal(entrypoints.get('symbiote-ui')?.kind, 'node-safe');
+  assert.equal(entrypoints.get('symbiote-ui/board')?.kind, 'browser-component');
   assert.equal(entrypoints.get('symbiote-ui/layout')?.kind, 'ssr-entry-safe');
   assert.equal(entrypoints.get('symbiote-ui/runtime')?.kind, 'ssr-entry-safe');
   assert.equal(entrypoints.get('symbiote-ui/webmcp')?.kind, 'ssr-entry-safe');
@@ -1404,6 +1482,8 @@ test('discover exposes the standalone package contract', async () => {
   let chatComposerAgentItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'chat-composer');
   let chatSidebarAgentItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'chat-sidebar-shell');
   let chatWorkspaceAgentItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'chat-workspace');
+  let kanbanBoard = data.manifest.components.find((item) => item.tagName === 'sn-kanban-board');
+  let kanbanBoardAgentItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'sn-kanban-board');
   let nodeCanvasAgentItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'node-canvas');
   let canvasGraphAgentItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'canvas-graph');
   let graphExplorerAgentItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'graph-explorer-shell');
@@ -1462,6 +1542,10 @@ test('discover exposes the standalone package contract', async () => {
   assert.ok(chatWorkspaceAgentItem.componentDescription.includes('host-owned-transport'));
   assert.ok(chatWorkspaceAgentItem.componentDescription.includes('layout-lifecycle'));
   assert.ok(chatWorkspaceAgentItem.componentDescription.includes('overlay-stack-reserve'));
+  assert.equal(kanbanBoard.contract.schemaVersion, 'component-descriptor-v2');
+  assert.ok(kanbanBoard.contract.capabilities.includes('kanban-board'));
+  assert.ok(kanbanBoard.contract.events.some((event) => event.name === 'sn-board-card-drop'));
+  assert.ok(kanbanBoardAgentItem.componentDescription.includes('kanban board'));
   assert.ok(nodeCanvasAgentItem.webmcp.toolNames.includes('node_canvas_set_editor_model'));
   assert.ok(nodeCanvasAgentItem.webmcp.toolNames.includes('node_canvas_set_path_style'));
   assert.ok(nodeCanvasAgentItem.webmcp.toolNames.includes('node_canvas_set_flow_layout'));

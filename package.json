@@ -23,6 +23,10 @@
       "import": "./canvas/index.js",
       "default": "./canvas/index.js"
     },
+    "./board": {
+      "import": "./board/index.js",
+      "default": "./board/index.js"
+    },
     "./locale": {
       "import": "./locale/index.js",
       "default": "./locale/index.js"
@@ -118,6 +122,7 @@
     "themes/",
     "plugins/",
     "canvas/",
+    "board/",
     "node/",
     "interactions/",
     "layout/",
@@ -152,6 +157,7 @@
     "themes/CascadeThemeWidget/CascadeThemeWidget.js",
     "ui/index.js",
     "canvas/**/*.js",
+    "board/**/*.js",
     "node/**/*.js",
     "layout/**/*.js",
     "xr/**/*.js",
