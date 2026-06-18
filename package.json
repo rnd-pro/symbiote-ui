@@ -1,0 +1,222 @@
+{
+  "name": "symbiote-ui",
+  "version": "0.3.0-alpha.44",
+  "type": "module",
+  "description": "Symbiote provider UI, Web Components, themes, manifests, schemas, graph layout helpers, WebMCP metadata, and SSR-safe UI contracts.",
+  "main": "index.js",
+  "customElements": "custom-elements.json",
+  "exports": {
+    ".": {
+      "import": "./index.js",
+      "default": "./index.js"
+    },
+    "./core": {
+      "import": "./core/index.js",
+      "default": "./core/index.js"
+    },
+    "./core/*": "./core/*",
+    "./graph": {
+      "import": "./graph/index.js",
+      "default": "./graph/index.js"
+    },
+    "./canvas": {
+      "import": "./canvas/index.js",
+      "default": "./canvas/index.js"
+    },
+    "./board": {
+      "import": "./board/index.js",
+      "default": "./board/index.js"
+    },
+    "./locale": {
+      "import": "./locale/index.js",
+      "default": "./locale/index.js"
+    },
+    "./manifest": {
+      "import": "./manifest/index.js",
+      "default": "./manifest/index.js"
+    },
+    "./manifest/*": "./manifest/*",
+    "./layout": {
+      "import": "./layout/index.js",
+      "default": "./layout/index.js"
+    },
+    "./runtime": {
+      "import": "./runtime/index.js",
+      "default": "./runtime/index.js"
+    },
+    "./xr": {
+      "import": "./xr/index.js",
+      "default": "./xr/index.js"
+    },
+    "./xr/spatial-index": "./xr/spatial-index.js",
+    "./xr/spatial-graph": "./xr/spatial-graph.js",
+    "./xr/spherical-layout": "./xr/spherical-layout.js",
+    "./xr/spatial-drag-controller": "./xr/spatial-drag-controller.js",
+    "./xr/force-layout": "./xr/force-layout.js",
+    "./xr/force-layout-adapter": "./xr/force-layout-adapter.js",
+    "./xr/dual-view-controller": "./xr/dual-view-controller.js",
+    "./xr/three-spatial-graph": "./xr/three-spatial-graph.js",
+    "./tokens/*": "./tokens/*",
+    "./rules/*": "./rules/*",
+    "./schemas/*": "./schemas/*",
+    "./custom-elements.json": "./custom-elements.json",
+    "./tree/TreeView": "./tree/TreeView/TreeView.js",
+    "./tree/TreePanel": "./tree/TreePanel/TreePanel.js",
+    "./display/code-block": "./display/CodeBlock/CodeBlock.js",
+    "./display/source-viewer": "./display/SourceViewer/SourceViewer.js",
+    "./display/source-editor": "./display/SourceEditor/SourceEditor.js",
+    "./display/output-preview": "./display/output-preview.js",
+    "./display/highlight": "./display/highlight.js",
+    "./display/markdown-formatter": "./display/markdown-formatter.js",
+    "./display/format-utils": "./display/format-utils.js",
+    "./display/icons": "./display/icons.js",
+    "./display/network-approval-page": "./display/network-approval-page.js",
+    "./display/event-feed-adapter": "./display/event-feed-adapter.js",
+    "./themes/default-provider.js": "./themes/default-provider.js",
+    "./themes/*": "./themes/*",
+    "./shapes/*": "./shapes/*",
+    "./plugins/*": "./plugins/*",
+    "./chat/chat-context.js": "./chat/chat-context.js",
+    "./chat/voice-input-defaults.js": "./chat/voice-input-defaults.js",
+    "./chat/voice-controller.js": "./chat/voice-controller.js",
+    "./chat/voice-runtime.js": "./chat/voice-runtime.js",
+    "./chat/voice-settings.js": "./chat/voice-settings.js",
+    "./package.json": "./package.json",
+    "./ui": {
+      "import": "./ui/index.js",
+      "default": "./ui/index.js"
+    },
+    "./ui/scrollbar-styles.js": "./ui/scrollbar-styles.js",
+    "./webmcp": {
+      "import": "./webmcp.js",
+      "default": "./webmcp.js"
+    },
+    "./discover": {
+      "import": "./discover.js",
+      "default": "./discover.js"
+    },
+    "./motion": {
+      "import": "./themes/Motion.js",
+      "default": "./themes/Motion.js"
+    },
+    "./themes/TailwindBridge": {
+      "import": "./themes/TailwindBridge.js",
+      "default": "./themes/TailwindBridge.js"
+    }
+  },
+  "files": [
+    "index.js",
+    "custom-elements.json",
+    "core/",
+    "graph/",
+    "icons/",
+    "discover.js",
+    "audit.js",
+    "cli.js",
+    "webmcp.js",
+    "manifest/",
+    "tokens/",
+    "rules/",
+    "schemas/",
+    "shapes/",
+    "themes/",
+    "plugins/",
+    "canvas/",
+    "board/",
+    "node/",
+    "interactions/",
+    "layout/",
+    "runtime/",
+    "locale/",
+    "xr/",
+    "navigation/",
+    "display/",
+    "effects/",
+    "control/",
+    "surface/",
+    "chat/",
+    "list/",
+    "tree/",
+    "toolbar/",
+    "inspector/",
+    "palette/",
+    "menu/",
+    "ui/",
+    "docs/",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "llms.txt",
+    "skills/"
+  ],
+  "sideEffects": [
+    "**/*.css.js",
+    "**/*.tpl.js",
+    "core/base-path.js",
+    "themes/CascadeThemeEditor/CascadeThemeEditor.js",
+    "themes/CascadeThemeWidget/CascadeThemeWidget.js",
+    "ui/index.js",
+    "canvas/**/*.js",
+    "board/**/*.js",
+    "node/**/*.js",
+    "layout/**/*.js",
+    "xr/**/*.js",
+    "display/**/*.js",
+    "effects/**/*.js",
+    "control/**/*.js",
+    "surface/**/*.js",
+    "chat/**/*.js",
+    "list/**/*.js",
+    "tree/**/*.js",
+    "navigation/**/*.js",
+    "toolbar/**/*.js",
+    "inspector/**/*.js",
+    "palette/**/*.js",
+    "menu/**/*.js"
+  ],
+  "bin": {
+    "symbiote-ui": "cli.js"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "test": "node tests/run-tests.js -- node --test tests/*.test.js",
+    "test:browser": "node tests/run-tests.js --suite browser -- node --test tests/graph-browser-smoke.test.js"
+  },
+  "keywords": [
+    "node-editor",
+    "graph-editor",
+    "visual-programming",
+    "node-graph",
+    "symbiote",
+    "web-components",
+    "data-flow",
+    "dag",
+    "webmcp",
+    "ssr"
+  ],
+  "dependencies": {
+    "symbiote-engine": "0.3.0-alpha.11"
+  },
+  "peerDependencies": {
+    "@symbiotejs/symbiote": "3.8.0-webmcp.2"
+  },
+  "devDependencies": {
+    "@symbiotejs/symbiote": "3.8.0-webmcp.2",
+    "linkedom": "^0.18.12"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RND-PRO/symbiote-ui.git"
+  },
+  "homepage": "https://github.com/RND-PRO/symbiote-ui#readme",
+  "bugs": {
+    "url": "https://github.com/RND-PRO/symbiote-ui/issues"
+  },
+  "author": "RND-PRO <nicothin@gmail.com>",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
