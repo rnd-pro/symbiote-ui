@@ -29,6 +29,7 @@ npm install jsda-kit linkedom
 - `symbiote-ui/graph` - provider graph normalization and projection helpers.
 - `symbiote-ui/manifest` - component, schema, rule, theme, and provider catalogs.
 - `symbiote-ui/runtime` - Node-safe agent UI construction helpers.
+- `symbiote-ui/runtime/product-context` - Node-safe product context normalization for host-owned agent views.
 - `symbiote-ui/ui` - browser Web Component registration and UI runtime.
 - `symbiote-ui/webmcp` - WebMCP descriptor helpers and registration utilities.
 - `symbiote-ui/xr` - WebXR provider helpers, spatial algorithms, 3D graph layout, and multi-view coordination.
@@ -82,6 +83,32 @@ let catalog = listAgentComponentDescriptions();
 let graphSurface = catalog.find((item) => item.tagName === 'node-canvas');
 console.log(graphSurface.componentDescription);
 console.log(graphSurface.webmcp.toolNames);
+```
+
+Component contracts stay reusable and product-neutral. Hosts add product
+meaning through product context: identity, views, domain entities, allowed
+actions, componentRef links, and live event state. WebMCP descriptors created
+from product context describe host-owned product intents; they do not move
+permission policy or persistence into reusable components.
+
+```js
+import { createProductContextAgentView } from 'symbiote-ui/runtime/product-context';
+import { createProductContextToolDescriptors } from 'symbiote-ui/webmcp';
+
+let productContext = {
+  product: {
+    id: 'automation-release-demo',
+    name: 'Automation release flow',
+    category: 'automation',
+  },
+  views: [{ id: 'kanban-board', label: 'Kanban board', route: '#automation/kanban-board' }],
+  componentRefs: [{ id: 'release-board', component: 'sn-kanban-board', viewId: 'kanban-board' }],
+  entities: [{ id: 'publish-pages', type: 'release-task', label: 'Publish GitHub Pages' }],
+  actions: [{ id: 'select-release-card', title: 'Select release card', componentRefs: ['release-board'] }],
+};
+
+console.log(createProductContextAgentView(productContext));
+console.log(createProductContextToolDescriptors(productContext));
 ```
 
 Browser hosts register custom elements through the public UI entrypoint:

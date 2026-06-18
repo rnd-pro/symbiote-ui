@@ -1,0 +1,174 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rnd-pro.github.io/symbiote-ui/schemas/product-context-v1.json",
+  "title": "Symbiote UI Product Context",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "product", "views", "componentRefs", "entities", "actions"],
+  "properties": {
+    "version": { "const": "product-context-v1" },
+    "schema": { "const": "https://rnd-pro.github.io/symbiote-ui/schemas/product-context-v1.json" },
+    "product": { "$ref": "#/$defs/product" },
+    "agent": { "$ref": "#/$defs/agent" },
+    "views": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/view" }
+    },
+    "componentRefs": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/componentRef" }
+    },
+    "entities": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/entity" }
+    },
+    "actions": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/action" }
+    },
+    "eventLog": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/eventLogItem" }
+    },
+    "webmcp": { "$ref": "#/$defs/webmcp" },
+    "metadata": { "type": "object", "additionalProperties": true }
+  },
+  "$defs": {
+    "idArray": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "product": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "category"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "category": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "url": { "type": "string" },
+        "metadata": { "type": "object", "additionalProperties": true }
+      }
+    },
+    "agent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["summary", "usage"],
+      "properties": {
+        "summary": { "type": "string", "minLength": 1 },
+        "usage": { "type": "string", "minLength": 1 },
+        "audience": { "type": "string" },
+        "constraints": { "$ref": "#/$defs/idArray" }
+      }
+    },
+    "view": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "route"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "label": { "type": "string", "minLength": 1 },
+        "route": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "componentRefs": { "$ref": "#/$defs/idArray" },
+        "entityRefs": { "$ref": "#/$defs/idArray" },
+        "actionRefs": { "$ref": "#/$defs/idArray" },
+        "active": { "type": "boolean" },
+        "metadata": { "type": "object", "additionalProperties": true }
+      }
+    },
+    "componentRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "component"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "component": { "type": "string", "minLength": 1 },
+        "componentId": { "type": "string" },
+        "selector": { "type": "string" },
+        "viewId": { "type": "string" },
+        "role": { "type": "string" },
+        "description": { "type": "string" },
+        "entityRefs": { "$ref": "#/$defs/idArray" },
+        "actionRefs": { "$ref": "#/$defs/idArray" },
+        "metadata": { "type": "object", "additionalProperties": true }
+      }
+    },
+    "entity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "label"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "type": { "type": "string", "minLength": 1 },
+        "label": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "status": { "type": "string" },
+        "componentRefs": { "$ref": "#/$defs/idArray" },
+        "actionRefs": { "$ref": "#/$defs/idArray" },
+        "data": { "type": "object", "additionalProperties": true },
+        "metadata": { "type": "object", "additionalProperties": true }
+      }
+    },
+    "action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "title", "type", "inputSchema"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "title": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "type": { "type": "string", "minLength": 1 },
+        "inputSchema": { "type": "object", "additionalProperties": true },
+        "componentRefs": { "$ref": "#/$defs/idArray" },
+        "entityRefs": { "$ref": "#/$defs/idArray" },
+        "viewRefs": { "$ref": "#/$defs/idArray" },
+        "eventName": { "type": "string" },
+        "intent": { "type": "object", "additionalProperties": true },
+        "permission": { "type": "string" },
+        "destructive": { "type": "boolean" },
+        "allowed": { "type": "boolean" },
+        "metadata": { "type": "object", "additionalProperties": true }
+      }
+    },
+    "eventLogItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "title"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "type": { "type": "string", "minLength": 1 },
+        "title": { "type": "string", "minLength": 1 },
+        "detail": { "type": "string" },
+        "status": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "viewId": { "type": "string" },
+        "actionId": { "type": "string" },
+        "entityId": { "type": "string" },
+        "componentRefId": { "type": "string" },
+        "data": { "type": "object", "additionalProperties": true },
+        "metadata": { "type": "object", "additionalProperties": true }
+      }
+    },
+    "webmcp": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "productDescription", "toolNames", "componentContext", "actionPolicy", "references"],
+      "properties": {
+        "mode": { "enum": ["product-actions", "described-only"] },
+        "productDescription": { "type": "string", "minLength": 1 },
+        "toolNames": { "$ref": "#/$defs/idArray" },
+        "componentContext": { "type": "string", "minLength": 1 },
+        "actionPolicy": { "type": "string", "minLength": 1 },
+        "references": {
+          "type": "array",
+          "items": { "type": "string", "format": "uri" },
+          "uniqueItems": true
+        }
+      }
+    }
+  }
+}
