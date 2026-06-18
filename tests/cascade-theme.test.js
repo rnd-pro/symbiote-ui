@@ -165,6 +165,8 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   assert.match(source, /display\/SourceViewer\/SourceViewer\.js/);
   assert.match(source, /list\/ListDetailShell\/ListDetailShell\.js/);
   assert.match(source, /board\/KanbanBoard\/KanbanBoard\.js/);
+  assert.match(source, /runtime\/product-context\.js/);
+  assert.match(source, /webmcp\.js/);
   assert.match(source, /customElements\.whenDefined\('sn-loading-overlay'\)/);
   assert.match(source, /customElements\.whenDefined\('sn-empty-state'\)/);
   assert.match(source, /customElements\.whenDefined\('sn-status-ribbon'\)/);
@@ -185,6 +187,14 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   assert.match(source, /<sn-kanban-board/);
   assert.match(source, /view\('kanban-board', 'Kanban board', 'view_kanban', createBoardLayout\)/);
   assert.match(source, /component: 'cascade-board-panel'/);
+  assert.match(source, /const AUTOMATION_PRODUCT_CONTEXT = \{/);
+  assert.match(source, /class CascadeProductContextPanel extends Symbiote/);
+  assert.match(source, /createProductContextAgentView\(AUTOMATION_PRODUCT_CONTEXT\)/);
+  assert.match(source, /createProductContextToolDescriptors\(AUTOMATION_PRODUCT_CONTEXT\)/);
+  assert.match(source, /component: 'cascade-product-context-panel'/);
+  assert.match(source, /view\('product-context', 'Product context', 'api', createProductContextLayout\)/);
+  assert.match(source, /release_flow_request_move/);
+  assert.match(source, /componentRefs: \['release-board'\]/);
   assert.match(source, /setProgress\(64, 'Composing UI'/);
   assert.match(source, /setEvents\(\[/);
   assert.match(source, /setData\(\{/);
@@ -387,7 +397,7 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   assert.doesNotMatch(html, /100vh/);
   assert.doesNotMatch(html, /--sn-tabs-bg/);
   assert.match(html, /project-path="project-type workspaces \/ agent constructor"/);
-  assert.match(html, /kanban-board-demo-1/);
+  assert.match(html, /product-context-demo-1/);
   assert.match(html, /<layout-sidebar id="lab-sidebar" slot="sidebar"/);
   assert.doesNotMatch(html, /agent-chat-rail/);
   assert.match(source, /createCollapsedAgentChatPanel/);

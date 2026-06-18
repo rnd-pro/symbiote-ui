@@ -16,6 +16,7 @@ test('root and metadata entrypoints import in Node', async () => {
   let root = await import('../index.js');
   let layout = await import('../layout/index.js');
   let runtime = await import('../runtime/index.js');
+  let productContext = await import('../runtime/product-context.js');
   let manifest = await import('../manifest/index.js');
   let webmcp = await import('../webmcp.js');
   let xr = await import('../xr/index.js');
@@ -24,6 +25,8 @@ test('root and metadata entrypoints import in Node', async () => {
   assert.equal(typeof root.createCascadeTheme, 'function');
   assert.equal(typeof root.getReadableTextForHsl, 'function');
   assert.equal(typeof root.createRuntimeUiInstance, 'function');
+  assert.equal(root.PRODUCT_CONTEXT_VERSION, 'product-context-v1');
+  assert.equal(typeof root.normalizeProductContext, 'function');
   assert.equal(typeof root.buildChatNavTree, 'function');
   assert.equal(typeof root.normalizeResourceTreeItem, 'function');
   assert.equal(typeof root.normalizeSourceDocument, 'function');
@@ -38,11 +41,16 @@ test('root and metadata entrypoints import in Node', async () => {
   assert.equal(root.defaultSendCommandPhrases().ru, 'отправить');
   assert.equal(typeof runtime.createRuntimeUiController, 'function');
   assert.equal(runtime.RUNTIME_UI_CONTRACT.version, 'runtime-ui-v1');
+  assert.equal(runtime.PRODUCT_CONTEXT_SCHEMA_ID, 'https://rnd-pro.github.io/symbiote-ui/schemas/product-context-v1.json');
+  assert.equal(productContext.PRODUCT_CONTEXT_VERSION, 'product-context-v1');
   assert.equal(typeof manifest.listComponents, 'function');
   assert.equal(typeof manifest.listAgentComponentDescriptions, 'function');
   assert.equal(typeof manifest.listThemeRuntimeDescriptors, 'function');
+  assert.ok(manifest.listUiSchemaVersions().includes('product-context-v1'));
+  assert.equal(manifest.getUiSchema('product-context-v1').title, 'Symbiote UI Product Context');
   assert.equal(typeof webmcp.createToolDescriptor, 'function');
   assert.equal(typeof webmcp.createComponentToolDescriptor, 'function');
+  assert.equal(typeof webmcp.createProductContextToolDescriptors, 'function');
   assert.equal(typeof layout.resolveLayoutMinSize, 'function');
   assert.equal(typeof layout.resolveResponsiveLayoutState, 'function');
 

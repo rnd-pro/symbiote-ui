@@ -21,6 +21,13 @@ import {
   reserveLayoutFootprint,
 } from './cls-reservation.js';
 
+export {
+  PRODUCT_CONTEXT_SCHEMA_ID,
+  PRODUCT_CONTEXT_VERSION,
+  createProductContextAgentView,
+  normalizeProductContext,
+} from './product-context.js';
+
 export const RUNTIME_UI_CONTRACT_VERSION = 'runtime-ui-v1';
 
 export const RUNTIME_UI_CONTRACT = Object.freeze({

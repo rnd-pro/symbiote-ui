@@ -10,6 +10,8 @@ import {
   applyCascadeTheme,
   normalizeCascadeThemeOptions,
 } from '../themes/cascade-theme.js?v=cascade-pattern-control-1';
+import { createProductContextAgentView } from '../runtime/product-context.js';
+import { createProductContextToolDescriptors } from '../webmcp.js';
 import { configureMaterialSymbols } from '../icons/MaterialSymbols.js';
 import '../layout/LayoutShellMenu/LayoutShellMenu.js';
 import '../layout/LayoutSidebar/LayoutSidebar.js';
@@ -2696,6 +2698,189 @@ const KANBAN_BOARD_MODEL = {
   ],
 };
 
+const AUTOMATION_PRODUCT_CONTEXT = {
+  product: {
+    id: 'automation-release-demo',
+    name: 'Automation release flow',
+    category: 'automation',
+    description: 'Public demo product for release workflow planning and GitHub Pages publish gates.',
+    url: 'https://rnd-pro.github.io/symbiote-ui/demo/cascade-theme-lab.html#automation/kanban-board',
+  },
+  agent: {
+    summary: 'Automation release flow presents the host product above reusable symbiote-ui components.',
+    usage: 'Inspect the release board, map domain tasks to component refs, and emit host-owned product intents.',
+    audience: 'agent',
+    constraints: [
+      'Component contracts are reusable library metadata.',
+      'Product actions are host-owned intents.',
+      'Publishing policy stays outside reusable components.',
+    ],
+  },
+  views: [
+    {
+      id: 'kanban-board',
+      label: 'Kanban board',
+      route: '#automation/kanban-board',
+      description: 'Workflow board with host-owned release tasks rendered by sn-kanban-board.',
+      componentRefs: ['release-board'],
+      entityRefs: ['scope-demo', 'run-contract-tests', 'publish-pages'],
+      actionRefs: ['select-release-card', 'request-release-move'],
+      active: true,
+    },
+    {
+      id: 'product-context',
+      label: 'Product context',
+      route: '#automation/product-context',
+      description: 'Agent-readable product inspector for views, entities, actions, tools, and event state.',
+      componentRefs: ['agent-context-inspector'],
+      entityRefs: ['release-context'],
+      actionRefs: ['inspect-component-contract'],
+    },
+  ],
+  componentRefs: [
+    {
+      id: 'release-board',
+      component: 'sn-kanban-board',
+      componentId: 'release-flow',
+      selector: 'cascade-board-panel sn-kanban-board',
+      viewId: 'kanban-board',
+      role: 'workflow board',
+      description: 'Reusable board component rendering release-flow columns and cards.',
+      entityRefs: ['scope-demo', 'run-contract-tests', 'publish-pages'],
+      actionRefs: ['select-release-card', 'request-release-move'],
+    },
+    {
+      id: 'agent-context-inspector',
+      component: 'cascade-product-context-panel',
+      selector: 'cascade-product-context-panel',
+      viewId: 'product-context',
+      role: 'agent-readable product inspector',
+      description: 'Host demo panel exposing product semantics, component refs, WebMCP descriptors, and live events.',
+      entityRefs: ['release-context'],
+      actionRefs: ['inspect-component-contract'],
+    },
+  ],
+  entities: [
+    {
+      id: 'scope-demo',
+      type: 'release-task',
+      label: 'Scope public demo update',
+      status: 'planned',
+      componentRefs: ['release-board'],
+      actionRefs: ['select-release-card'],
+    },
+    {
+      id: 'run-contract-tests',
+      type: 'release-task',
+      label: 'Run contract tests',
+      status: 'queued',
+      componentRefs: ['release-board'],
+      actionRefs: ['select-release-card', 'request-release-move'],
+    },
+    {
+      id: 'publish-pages',
+      type: 'release-task',
+      label: 'Publish GitHub Pages',
+      status: 'ready',
+      componentRefs: ['release-board'],
+      actionRefs: ['select-release-card', 'request-release-move'],
+    },
+    {
+      id: 'release-context',
+      type: 'agent-context',
+      label: 'Automation product context',
+      status: 'live',
+      componentRefs: ['agent-context-inspector'],
+      actionRefs: ['inspect-component-contract'],
+    },
+  ],
+  actions: [
+    {
+      id: 'select-release-card',
+      name: 'release_flow_select_card',
+      title: 'Select release card',
+      description: 'Selects a visible release task and updates the product inspector event stream.',
+      type: 'intent',
+      eventName: 'sn-board-card-select',
+      componentRefs: ['release-board'],
+      entityRefs: ['scope-demo', 'run-contract-tests', 'publish-pages'],
+      viewRefs: ['kanban-board'],
+      inputSchema: {
+        type: 'object',
+        required: ['cardId'],
+        properties: {
+          cardId: { type: 'string' },
+        },
+      },
+    },
+    {
+      id: 'request-release-move',
+      name: 'release_flow_request_move',
+      title: 'Request release move',
+      description: 'Emits a host-owned move intent; reusable board code does not mutate release policy.',
+      type: 'intent',
+      eventName: 'sn-board-card-drop',
+      componentRefs: ['release-board'],
+      entityRefs: ['run-contract-tests', 'publish-pages'],
+      viewRefs: ['kanban-board'],
+      permission: 'release.move.request',
+      inputSchema: {
+        type: 'object',
+        required: ['cardId', 'toColumnId'],
+        properties: {
+          cardId: { type: 'string' },
+          toColumnId: { type: 'string' },
+        },
+      },
+    },
+    {
+      id: 'inspect-component-contract',
+      name: 'release_flow_inspect_component_contract',
+      title: 'Inspect component contract',
+      description: 'Returns the componentRef and neutral component tag that back a product view.',
+      type: 'read',
+      componentRefs: ['agent-context-inspector'],
+      entityRefs: ['release-context'],
+      viewRefs: ['product-context'],
+      inputSchema: {
+        type: 'object',
+        required: ['componentRefId'],
+        properties: {
+          componentRefId: { type: 'string' },
+        },
+      },
+    },
+  ],
+  eventLog: [
+    {
+      id: 'product-context-ready',
+      type: 'agent-view',
+      title: 'Product context ready',
+      detail: 'Agent view includes product, views, componentRefs, entities, actions, WebMCP descriptors, and event log.',
+      status: 'done',
+      viewId: 'product-context',
+      componentRefId: 'agent-context-inspector',
+      entityId: 'release-context',
+    },
+    {
+      id: 'release-board-linked',
+      type: 'component-ref',
+      title: 'release-board linked',
+      detail: 'sn-kanban-board is referenced by product actions without owning release policy.',
+      status: 'done',
+      viewId: 'kanban-board',
+      componentRefId: 'release-board',
+      entityId: 'publish-pages',
+    },
+  ],
+  webmcp: {
+    references: [
+      'https://rnd-pro.github.io/symbiote-ui/demo/cascade-theme-lab.html#automation/product-context',
+      'https://rnd-pro.github.io/symbiote-ui/schemas/product-context-v1.json',
+    ],
+  },
+};
+
 const KANBAN_SOURCE_SAMPLE = [
   'import { KanbanBoard } from "symbiote-ui/board";',
   '',
@@ -2918,6 +3103,293 @@ CascadeBoardPanel.rootStyles = `
 `;
 
 CascadeBoardPanel.reg('cascade-board-panel');
+
+class CascadeProductContextPanel extends Symbiote {
+  renderCallback() {
+    if (this._ready) return;
+    this._ready = true;
+    let agentView = createProductContextAgentView(AUTOMATION_PRODUCT_CONTEXT);
+    let descriptors = createProductContextToolDescriptors(AUTOMATION_PRODUCT_CONTEXT);
+    this.$.productName = agentView.product.name;
+    this.$.productCategory = agentView.product.category;
+    this.$.summary = agentView.summary;
+    this.$.metrics = [
+      { label: 'Views', value: String(agentView.views.length) },
+      { label: 'Component refs', value: String(agentView.componentRefs.length) },
+      { label: 'Entities', value: String(agentView.entities.length) },
+      { label: 'Tools', value: String(descriptors.length) },
+    ];
+    this.$.tools = descriptors.map((descriptor) => ({
+      name: descriptor.name,
+      action: descriptor.annotations.actionId,
+      refs: descriptor.annotations.componentRefs.join(', '),
+    }));
+    this.ref.agentView?.setContent?.(JSON.stringify(agentView, null, 2), 'json');
+    this.ref.toolsJson?.setContent?.(JSON.stringify(descriptors, null, 2), 'json');
+    this.ref.events?.setEvents?.(agentView.eventLog.map((item) => ({
+      id: item.id,
+      title: item.title,
+      status: item.status || item.type,
+      detail: item.detail || `${item.componentRefId || item.viewId || item.entityId}`,
+    })));
+  }
+}
+
+CascadeProductContextPanel.template = html`
+  <section class="product-context-panel">
+    <header class="product-context-header">
+      <span class="material-symbols-outlined" aria-hidden="true">productivity</span>
+      <div>
+        <p>{{productCategory}}</p>
+        <h2>{{productName}}</h2>
+        <span>{{summary}}</span>
+      </div>
+    </header>
+
+    <div class="product-context-grid">
+      <section class="product-context-main" aria-label="Agent-readable product context">
+        <div class="product-context-metrics" itemize="metrics">
+          <template>
+            <article>
+              <strong>{{value}}</strong>
+              <span>{{label}}</span>
+            </article>
+          </template>
+        </div>
+        <code-block ${{ ref: 'agentView' }}></code-block>
+      </section>
+
+      <aside class="product-context-side" aria-label="Product WebMCP descriptors">
+        <section class="product-context-tools">
+          <header>
+            <span class="material-symbols-outlined" aria-hidden="true">api</span>
+            <strong>WebMCP product actions</strong>
+          </header>
+          <div itemize="tools">
+            <template>
+              <article>
+                <strong>{{name}}</strong>
+                <span>{{action}}</span>
+                <small>{{refs}}</small>
+              </article>
+            </template>
+          </div>
+        </section>
+        <sn-event-feed ${{ ref: 'events' }}></sn-event-feed>
+        <code-block ${{ ref: 'toolsJson' }}></code-block>
+      </aside>
+    </div>
+  </section>
+`;
+
+CascadeProductContextPanel.rootStyles = `
+  cascade-product-context-panel {
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    background: var(--sn-panel-bg);
+    color: var(--sn-text);
+  }
+
+  cascade-product-context-panel .product-context-panel {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: var(--sn-lab-panel-gap, 12px);
+    height: 100%;
+    min-height: 0;
+    padding: var(--sn-lab-panel-padding, 12px);
+    overflow: hidden;
+  }
+
+  cascade-product-context-panel .product-context-header {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    padding: 12px;
+    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border-radius: var(--sn-node-radius);
+    background: var(--sn-node-bg);
+  }
+
+  cascade-product-context-panel .product-context-header > .material-symbols-outlined {
+    color: var(--sn-node-selected);
+    font-size: calc(28px * var(--sn-theme-icon-scale, 1));
+  }
+
+  cascade-product-context-panel .product-context-header p,
+  cascade-product-context-panel .product-context-header h2,
+  cascade-product-context-panel .product-context-header span {
+    display: block;
+    margin: 0;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  cascade-product-context-panel .product-context-header p {
+    color: var(--sn-node-selected);
+    font-size: calc(11px * var(--sn-theme-type-scale, 1));
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  cascade-product-context-panel .product-context-header h2 {
+    margin-top: 3px;
+    color: var(--sn-text);
+    font-size: calc(18px * var(--sn-theme-heading-scale, 1));
+    line-height: 1.15;
+  }
+
+  cascade-product-context-panel .product-context-header span {
+    margin-top: 5px;
+    color: var(--sn-text-dim);
+    font-size: calc(12px * var(--sn-theme-type-scale, 1));
+    line-height: 1.4;
+  }
+
+  cascade-product-context-panel .product-context-grid {
+    display: grid;
+    grid-template-columns: minmax(420px, 1.1fr) minmax(320px, 0.9fr);
+    gap: var(--sn-lab-panel-gap, 12px);
+    min-width: 0;
+    min-height: 0;
+  }
+
+  cascade-product-context-panel .product-context-main,
+  cascade-product-context-panel .product-context-side {
+    display: grid;
+    gap: var(--sn-lab-panel-gap, 12px);
+    min-width: 0;
+    min-height: 0;
+  }
+
+  cascade-product-context-panel .product-context-main {
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  cascade-product-context-panel .product-context-side {
+    grid-template-rows: auto minmax(170px, 0.5fr) minmax(0, 1fr);
+  }
+
+  cascade-product-context-panel .product-context-metrics {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  cascade-product-context-panel .product-context-metrics article,
+  cascade-product-context-panel .product-context-tools {
+    min-width: 0;
+    padding: 10px;
+    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border-radius: var(--sn-node-radius);
+    background: var(--sn-node-bg);
+  }
+
+  cascade-product-context-panel .product-context-metrics strong,
+  cascade-product-context-panel .product-context-metrics span {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  cascade-product-context-panel .product-context-metrics strong {
+    color: var(--sn-text);
+    font-size: calc(18px * var(--sn-theme-heading-scale, 1));
+  }
+
+  cascade-product-context-panel .product-context-metrics span {
+    margin-top: 3px;
+    color: var(--sn-text-dim);
+    font-size: calc(11px * var(--sn-theme-type-scale, 1));
+  }
+
+  cascade-product-context-panel .product-context-tools {
+    display: grid;
+    gap: 8px;
+  }
+
+  cascade-product-context-panel .product-context-tools header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  cascade-product-context-panel .product-context-tools header .material-symbols-outlined {
+    color: var(--sn-node-selected);
+    font-size: calc(18px * var(--sn-theme-icon-scale, 1));
+  }
+
+  cascade-product-context-panel .product-context-tools header strong {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: calc(13px * var(--sn-theme-type-scale, 1));
+  }
+
+  cascade-product-context-panel .product-context-tools article {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+    padding: 7px 8px;
+    border: 1px solid color-mix(in oklab, var(--sn-node-border) 72%, transparent);
+    border-radius: var(--sn-control-radius, 6px);
+    background: var(--sn-bg);
+  }
+
+  cascade-product-context-panel .product-context-tools article strong,
+  cascade-product-context-panel .product-context-tools article span,
+  cascade-product-context-panel .product-context-tools article small {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  cascade-product-context-panel .product-context-tools article strong {
+    color: var(--sn-text);
+    font-size: calc(12px * var(--sn-theme-type-scale, 1));
+  }
+
+  cascade-product-context-panel .product-context-tools article span,
+  cascade-product-context-panel .product-context-tools article small {
+    color: var(--sn-text-dim);
+    font-size: calc(11px * var(--sn-theme-type-scale, 1));
+  }
+
+  cascade-product-context-panel code-block,
+  cascade-product-context-panel sn-event-feed {
+    min-width: 0;
+    min-height: 0;
+    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border-radius: var(--sn-node-radius);
+    background: var(--sn-bg);
+    overflow: auto;
+  }
+
+  @media (max-width: 980px) {
+    cascade-product-context-panel .product-context-panel {
+      overflow: auto;
+    }
+
+    cascade-product-context-panel .product-context-grid,
+    cascade-product-context-panel .product-context-metrics {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    cascade-product-context-panel .product-context-grid {
+      min-height: 920px;
+    }
+  }
+`;
+
+CascadeProductContextPanel.reg('cascade-product-context-panel');
 
 class CascadeSpatialPanel extends Symbiote {
   initCallback() {
@@ -3340,6 +3812,18 @@ layout.registerPanelType('board', {
     overflow: 'scroll-inline',
   },
 });
+layout.registerPanelType('product-context', {
+  title: 'Product context',
+  icon: 'api',
+  component: 'cascade-product-context-panel',
+  behavior: {
+    importance: 96,
+    minInlineSize: 560,
+    minBlockSize: 380,
+    collapse: 'never',
+    overflow: 'scroll-inline',
+  },
+});
 layout.registerPanelType('spatial', {
   title: 'Spatial',
   icon: 'view_in_ar',
@@ -3498,6 +3982,14 @@ const createBoardLayout = () => createPanel('board', {
   overflow: 'scroll-inline',
 });
 
+const createProductContextLayout = () => createPanel('product-context', {
+  importance: 100,
+  minInlineSize: 620,
+  minBlockSize: 420,
+  collapse: 'never',
+  overflow: 'scroll-inline',
+});
+
 const createSpatialLayout = () => LayoutTree.createSplit(
   'horizontal',
   createPanel('spatial', {
@@ -3623,6 +4115,7 @@ const showcaseProjects = [
     views: [
       view('workflow-graph', 'Workflow graph', 'schema', createGraphLayout),
       view('kanban-board', 'Kanban board', 'view_kanban', createBoardLayout),
+      view('product-context', 'Product context', 'api', createProductContextLayout),
       view('form-controls', 'Form controls', 'smart_button', createComponentsLayout),
       view('approvals', 'Approvals', 'approval', createRuntimeLayout),
       view('schedule', 'Schedule', 'calendar_month', createRuntimeLayout),

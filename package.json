@@ -44,6 +44,7 @@
       "import": "./runtime/index.js",
       "default": "./runtime/index.js"
     },
+    "./runtime/product-context": "./runtime/product-context.js",
     "./xr": {
       "import": "./xr/index.js",
       "default": "./xr/index.js"

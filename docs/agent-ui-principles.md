@@ -70,6 +70,15 @@ routes, transport, secrets, project state, and irreversible operations. Agent
 metadata must describe component capability without implying that a reusable
 component owns product policy.
 
+Product context is the host-owned layer that turns reusable component contracts
+into an agent-readable product. It names the product, views, domain entities,
+allowed actions, componentRef links, and live event state. `symbiote-ui`
+normalizes that context and can create WebMCP descriptors from it, while the
+host remains the owner of execution, permissions, persistence, and product
+semantics. A reusable component such as `sn-kanban-board` can expose selection
+and move intents; a host product decides whether those intents mean release
+planning, editorial workflow, support triage, or another domain.
+
 ### 5. Separate source, preview, graph, controls, and status
 
 A generated workspace should make the construction loop visible:

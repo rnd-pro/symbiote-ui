@@ -90,6 +90,11 @@ const EXPORT_ENTRYPOINTS = [
     description: 'Agent UI construction helpers for component creation, state updates, intent routing, layout insertion, and teardown.',
   },
   {
+    specifier: 'symbiote-ui/runtime/product-context',
+    kind: 'node-safe',
+    description: 'Host-owned product context normalization for exposing product identity, views, entities, actions, component refs, and event logs to agents.',
+  },
+  {
     specifier: 'symbiote-ui/xr',
     kind: 'ssr-entry-safe',
     description: 'WebXR capability, spatial layout projection, and XR pointer helpers without renderer lock-in.',

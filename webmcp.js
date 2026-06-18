@@ -1,3 +1,8 @@
+import {
+  createProductContextAgentView,
+  normalizeProductContext,
+} from './runtime/product-context.js';
+
 export function getModelContext(target = globalThis.document) {
   return target?.modelContext || globalThis.navigator?.modelContext || null;
 }
@@ -67,4 +72,80 @@ export function triggerWebMcpCommand(element, command, args = {}) {
     composed: true,
     detail: { command, args },
   }));
+}
+
+function resolveProductAction(context, action = {}) {
+  let key = action.id || action.actionId || action.name || action.toolName;
+  let normalizedKey = String(key || '').trim();
+  let existing = normalizedKey
+    ? context.actions.find((item) => (
+      item.id === normalizedKey
+      || item.name === normalizedKey
+      || item.title === normalizedKey
+    ))
+    : null;
+  if (existing) return existing;
+  return normalizeProductContext({
+    product: context.product,
+    actions: [action],
+  }).actions[0] || {};
+}
+
+export function createProductActionToolDescriptor(productContext, action) {
+  let context = normalizeProductContext(productContext);
+  let actionRecord = resolveProductAction(context, action);
+  let productDescription = context.webmcp.productDescription;
+  return createToolDescriptor({
+    name: actionRecord.name,
+    description: [
+      productDescription,
+      actionRecord.description,
+    ].filter(Boolean).join('\n\n'),
+    inputSchema: actionRecord.inputSchema || {
+      type: 'object',
+      additionalProperties: true,
+    },
+    annotations: {
+      productContextVersion: context.version,
+      productId: context.product.id,
+      productName: context.product.name,
+      actionId: actionRecord.id,
+      actionType: actionRecord.type,
+      componentRefs: actionRecord.componentRefs || [],
+      entityRefs: actionRecord.entityRefs || [],
+      viewRefs: actionRecord.viewRefs || [],
+      permission: actionRecord.permission || '',
+      destructive: Boolean(actionRecord.destructive),
+      allowed: actionRecord.allowed !== false,
+      actionPolicy: context.webmcp.actionPolicy,
+      intent: actionRecord.intent || {},
+    },
+  });
+}
+
+export function createProductContextToolDescriptors(productContext) {
+  let context = normalizeProductContext(productContext);
+  return context.actions
+    .filter((action) => action.allowed !== false)
+    .map((action) => createProductActionToolDescriptor(context, action));
+}
+
+export async function registerProductContextTools(productContext, target = globalThis.document) {
+  let context = normalizeProductContext(productContext);
+  let agentView = createProductContextAgentView(context);
+  let descriptors = createProductContextToolDescriptors(context);
+  let registrations = [];
+  for (let descriptor of descriptors) {
+    registrations.push(await registerWebMcpTool(descriptor, target));
+  }
+  return {
+    nativeActive: registrations.some((registration) => registration.nativeActive),
+    context,
+    agentView,
+    descriptors,
+    registrations,
+    unregister() {
+      for (let registration of registrations) registration.unregister?.();
+    },
+  };
 }
