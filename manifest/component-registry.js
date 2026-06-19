@@ -5802,6 +5802,7 @@ export let COMPONENTS = [
   },
   {
     tagName: 'sn-kanban-board',
+    exportName: 'KanbanBoard',
     className: 'KanbanBoard',
     module: 'board/KanbanBoard/KanbanBoard.js',
     category: 'board',
