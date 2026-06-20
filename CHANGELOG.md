@@ -8,6 +8,9 @@ All notable changes to `symbiote-ui` will be documented in this file.
 
 - Aligned the public README and package description with the shared
   jsda-kit-style package presentation.
+- Split long README reference material into focused docs for entry points,
+  runtime UI construction, cascade theming, layout/spatial contracts, and
+  integration boundaries.
 
 ### Fixed
 
