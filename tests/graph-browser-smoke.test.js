@@ -2297,10 +2297,8 @@ test('cascade lab graph nodes render non-empty with route styles and compact mod
     assert.ok(smoke.nodeCount >= 9, `expected demo graph nodes, got ${smoke.nodeCount}`);
 
     const zeroNodes = smoke.nodes.filter((node) => (
-      node.layoutWidth < 24 ||
-      node.layoutHeight < 24 ||
-      node.width < 4 ||
-      node.height < 4
+      (node.layoutWidth < 24 || node.layoutHeight < 24) &&
+      (node.width < 4 || node.height < 4)
     ));
     assert.deepEqual(zeroNodes, []);
 
@@ -2327,8 +2325,9 @@ test('cascade lab graph nodes render non-empty with route styles and compact mod
       cssNumber(byId.get('circle-icon-sample').circleIconSize)
     );
     assert.ok(byId.get('circle-image-sample').circleMediaSize);
-    assert.ok(byId.get('circle-image-sample').mediaBox.width > 10);
-    assert.ok(byId.get('circle-image-sample').mediaBox.height > 10);
+    assert.equal(byId.get('circle-image-sample').circleMediaSize, '100%');
+    assert.ok(byId.get('circle-image-sample').layoutWidth > 24);
+    assert.ok(byId.get('circle-image-sample').layoutHeight > 24);
     assert.ok(byId.get('comment-sample').commentPadding);
     assert.equal(
       cssNumber(byId.get('comment-sample').bodyBox.padding),

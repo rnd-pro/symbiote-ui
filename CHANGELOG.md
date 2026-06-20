@@ -4,10 +4,13 @@ All notable changes to `symbiote-ui` will be documented in this file.
 
 ## Unreleased
 
+## [0.3.0-alpha.46] - 2026-06-20
+
 ### Changed
 
 - Expanded `llms.txt` into a current agent-facing resource map aligned with
   the public README, docs, skills, schemas, and component catalog.
+- Updated the `symbiote-engine` dependency to `0.3.0-alpha.12`.
 - Aligned the public README and package description with the shared
   jsda-kit-style package presentation.
 - Split long README reference material into focused docs for entry points,
