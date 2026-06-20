@@ -1,40 +1,49 @@
 # Symbiote UI
 
-> Runtime UI library for agent-driven professional interfaces. No build step.
+> Agent-ready Web Components, layouts, themes, manifests, and UI contracts for professional Symbiote interfaces. No build step.
 
-Symbiote UI is a Web Component library that lets AI agents create, control,
-and theme Studio-grade interfaces at runtime through a programmatic API.
-Unlike static "agent skill" instructions, Symbiote UI provides a live runtime
-where agents directly assemble UI from JSON, manage component lifecycle via
-WebSocket, compose cascading themes from presets, and orchestrate multi-step
-UI transactions with automatic rollback.
+Symbiote UI lets agents and host apps assemble dense professional interfaces from reusable Web Components, layout shells, graph editors, chat surfaces, source/code panels, data displays, menus, controls, and Cascade themes. Use the published package exports and provider metadata instead of importing implementation paths or cloning host-product UI.
 
-## Documentation
+## Key resources
 
-- [README](https://github.com/rnd-pro/symbiote-ui/blob/main/README.md)
-- [CHANGELOG](https://github.com/rnd-pro/symbiote-ui/blob/main/CHANGELOG.md)
+- [README](https://github.com/rnd-pro/symbiote-ui/blob/main/README.md): package overview, quick start, features, entry points, and related projects
+- [CHANGELOG](https://github.com/rnd-pro/symbiote-ui/blob/main/CHANGELOG.md): release history and current unreleased changes
+- [custom-elements.json](https://github.com/rnd-pro/symbiote-ui/blob/main/custom-elements.json): full Web Component catalog with properties, attributes, events, and theme aliases
+- [discover.js](https://github.com/rnd-pro/symbiote-ui/blob/main/discover.js): provider discovery command used by agents and build tooling
 
-## Agent Skills
+## Core docs
 
-- [symbiote-ui](skills/symbiote-ui/SKILL.md): Runtime UI Controller, WebSocket protocol, Dynamic Component Registry, Agent Intent Orchestrator, WebMCP Bridge.
-- [symbiote-ui-theming](skills/symbiote-ui-theming/SKILL.md): Cascade Theme System, ThemeFactory presets, Motion layer, State-to-Cascade CSS induction.
+- [Entry Points](https://github.com/rnd-pro/symbiote-ui/blob/main/docs/entry-points.md): Node-safe, browser-safe, UI, layout, canvas, theme, manifest, and WebMCP imports
+- [Runtime UI Construction](https://github.com/rnd-pro/symbiote-ui/blob/main/docs/runtime-ui-construction.md): runtime trees, component descriptors, transactional UI construction, and rollback expectations
+- [Integration Contracts](https://github.com/rnd-pro/symbiote-ui/blob/main/docs/integration-contracts.md): provider contracts, host boundaries, and agent-facing metadata
+- [Cascade Theme](https://github.com/rnd-pro/symbiote-ui/blob/main/docs/cascade-theme.md): theme params, aliases, recipes, and scoped provider theming
+- [Layout and Spatial](https://github.com/rnd-pro/symbiote-ui/blob/main/docs/layout-and-spatial.md): layout shells, routers, sidebars, panel menus, canvas, graph, XR, and spatial surfaces
+- [Agent UI Principles](https://github.com/rnd-pro/symbiote-ui/blob/main/docs/agent-ui-principles.md): professional UI reuse rules for agent-built interfaces
+
+## Agent skills
+
+- [symbiote-ui](https://github.com/rnd-pro/symbiote-ui/blob/main/skills/symbiote-ui/SKILL.md): runtime UI controller, WebSocket protocol, dynamic component registry, intent orchestration, and WebMCP bridge
+- [symbiote-ui-theming](https://github.com/rnd-pro/symbiote-ui/blob/main/skills/symbiote-ui-theming/SKILL.md): Cascade theme system, theme presets, motion layer, and state-to-Cascade CSS induction
+- [symbiote-library-adapter](https://github.com/rnd-pro/symbiote-ui/blob/main/skills/symbiote-library-adapter/SKILL.md): adapter rules for mapping external UI libraries into Symbiote provider metadata
 
 ## Schemas
 
-- [runtime-ui-v1](schemas/runtime-ui-v1.json): JSON schema for runtime UI trees.
-- [agent-intent-v1](schemas/agent-intent-v1.json): JSON schema for transactional agent intent sequences.
-- [component-descriptor-v2](schemas/component-descriptor-v2.json): JSON schema for component descriptors with SSR and WebMCP metadata.
-- [theme-rule-block-v1](schemas/theme-rule-block-v1.json): JSON schema for composable theme rule blocks.
+- [runtime-ui-v1](https://github.com/rnd-pro/symbiote-ui/blob/main/schemas/runtime-ui-v1.json): runtime UI tree schema
+- [agent-intent-v1](https://github.com/rnd-pro/symbiote-ui/blob/main/schemas/agent-intent-v1.json): transactional agent intent schema
+- [component-descriptor-v2](https://github.com/rnd-pro/symbiote-ui/blob/main/schemas/component-descriptor-v2.json): component descriptors with SSR and WebMCP metadata
+- [theme-rule-block-v1](https://github.com/rnd-pro/symbiote-ui/blob/main/schemas/theme-rule-block-v1.json): composable Cascade theme rule blocks
+- [project-package-v1](https://github.com/rnd-pro/symbiote-ui/blob/main/schemas/project-package-v1.json): portable project package metadata
+- [project-transaction-v1](https://github.com/rnd-pro/symbiote-ui/blob/main/schemas/project-transaction-v1.json): project graph transaction metadata
 
-## Component Catalog
+## Component and layout guidance
 
-- [custom-elements.json](custom-elements.json): Full Web Component catalog with properties, attributes, events, and theme aliases.
-- Graph explorer dual mode: register `graph-explorer-shell`, `node-canvas`,
-  `canvas-graph`, and `graph-node`; use `createGraphViewModeController`
-  from `symbiote-ui/ui` or `symbiote-ui/canvas` to switch structured/flat
-  renderer visibility, fit/focus, path style, and host-owned flat graph models.
-  Use `flatNodeIds` when fitting several `canvas-graph` nodes in flat mode;
-  `flatNodeId` is a single-node focus and can enter a hierarchical parent group.
-  `canvas-graph` reads `--sn-canvas-graph-*` and `--sn-graph-type-*` aliases
-  from the cascade theme, so host apps should pass semantic node types instead
-  of local canvas color constants.
+- Use `symbiote-ui/ui` for browser Web Components and shared UI modules.
+- Use `symbiote-ui/layout` for layout shells, routers, sidebars, project tabs, panel menus, and region orchestration.
+- Use `symbiote-ui/canvas` or `symbiote-ui/graph` for graph explorers, node canvases, structured/flat graph modes, graph metadata, and transactions.
+- Use `symbiote-ui/chat` for chat composers, transcripts, message lists, sidebars, and message models.
+- Use `symbiote-ui/display` for source viewers/editors, code blocks, data tables, metrics, banners, event feeds, and output previews.
+- Use `symbiote-ui/themes`, `symbiote-ui/tokens`, and `symbiote-ui/manifest` for Cascade theme metadata, aliases, and provider catalogs.
+
+## Graph explorer guidance
+
+Register `graph-explorer-shell`, `node-canvas`, `canvas-graph`, and `graph-node` when building graph editing or project graph interfaces. Use `createGraphViewModeController` from `symbiote-ui/ui` or `symbiote-ui/canvas` to switch structured and flat renderer visibility, fit/focus state, path style, and host-owned flat graph models. Use `flatNodeIds` when fitting several `canvas-graph` nodes in flat mode; `flatNodeId` is single-node focus and can enter a hierarchical parent group. `canvas-graph` reads `--sn-canvas-graph-*` and `--sn-graph-type-*` aliases from the Cascade theme, so host apps should pass semantic node types instead of local canvas color constants.

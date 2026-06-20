@@ -6,6 +6,8 @@ All notable changes to `symbiote-ui` will be documented in this file.
 
 ### Changed
 
+- Expanded `llms.txt` into a current agent-facing resource map aligned with
+  the public README, docs, skills, schemas, and component catalog.
 - Aligned the public README and package description with the shared
   jsda-kit-style package presentation.
 - Split long README reference material into focused docs for entry points,
