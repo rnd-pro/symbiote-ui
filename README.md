@@ -1,11 +1,77 @@
 # symbiote-ui
 
-`symbiote-ui` owns the browser-facing and agent-facing UI contracts for Symbiote provider systems.
+**symbiote-ui turns provider metadata into agent-ready Web Components,
+layouts, themes, and UI contracts. Fast.**
 
-It is built for agents that construct components, data views, and surrounding layouts dynamically. A chat agent can choose a component descriptor, bind data, compose a layout, and let the browser hydrate interactive Web Components without restarting the server.
+Build browser-facing and agent-facing interfaces from reusable Symbiote
+primitives: Web Components, layout shells, graph and board surfaces, display
+widgets, Cascade themes, manifests, schemas, rules, WebMCP descriptors, and
+SSR-safe runtime helpers. The package gives agents and hosts a direct path from
+component discovery to hydrated UI without binding provider contracts to one
+product app or frontend framework.
+
+## Why symbiote-ui?
+
+- **One catalog for agent-built UI** - components, layouts, themes, schemas,
+  rules, and WebMCP metadata are discoverable through package exports and
+  provider manifests.
+- **Platform-native components** - browser modules register Custom Elements
+  that hosts can hydrate without a framework-specific runtime.
+- **Layouts and data views for professional apps** - shells, panels, graph
+  canvases, boards, trees, editors, timelines, event feeds, file trees, and
+  inspector surfaces are reusable across host products.
+- **Cascade theme by default** - shared tokens, rules, and theme helpers keep
+  agent-generated interfaces visually coherent.
+- **Node-safe contracts, browser-only UI** - provider metadata and runtime
+  helpers stay importable in Node while Web Components stay behind
+  `symbiote-ui/ui`.
+
+## What is symbiote-ui?
+
+`symbiote-ui` is the provider UI layer for Symbiote systems. It exposes the
+component catalog, layout primitives, graph and board helpers, display
+utilities, Cascade theme contracts, WebMCP descriptors, and Custom Elements
+registration surface used by agents and hosts that construct interfaces
+dynamically.
 
 See [Agent UI Construction Principles](./docs/agent-ui-principles.md) for the
 UX scenarios and workspace rules that guide agent-built interfaces.
+
+## Key Features
+
+### Provider Catalog And Discovery
+
+- **Manifest-first UI construction** - agents read component descriptions,
+  tags, categories, schema links, rules, theme parts, and WebMCP descriptors
+  before composing an interface.
+- **Discoverable package contracts** - `symbiote-ui discover`,
+  `custom-elements.json`, `symbiote-ui/manifest`, tokens, rules, and schemas
+  describe what the package can provide.
+- **Product-context projection** - host-owned product context becomes
+  agent-facing views, component refs, entities, actions, and tool descriptors
+  without moving host policy into reusable UI code.
+
+### Web Component Runtime
+
+- **Browser registration surface** - `symbiote-ui/ui` defines Custom Elements
+  for chat, layout, graph, board, tree, editor, display, media, theme, and
+  utility modules.
+- **SSR-safe entry points** - root, `core`, `layout`, `graph`, `manifest`,
+  `runtime`, `locale`, and related contracts stay safe for Node imports.
+- **Display and editor primitives** - source viewers, source editors, diffs,
+  code blocks, event feeds, file trees, kanban boards, data tables, graph
+  canvases, and inspector surfaces support professional agent interfaces.
+
+### Theme, Layout, And Interaction Contracts
+
+- **Cascade theme helpers** - tokens and theme factories keep generated UI
+  consistent across shells, panels, and embedded components.
+- **Reusable layout primitives** - shell, sidebar, panel, tab, graph, board,
+  and adaptive layout contracts can be composed by hosts and workspace
+  constructors.
+- **Host-owned state and policy** - components emit intent events and consume
+  explicit data; navigation, persistence, permissions, secrets, and identity
+  remain in the host.
 
 ## Install
 

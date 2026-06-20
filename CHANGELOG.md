@@ -4,6 +4,11 @@ All notable changes to `symbiote-ui` will be documented in this file.
 
 ## Unreleased
 
+### Changed
+
+- Aligned the public README and package description with the shared
+  jsda-kit-style package presentation.
+
 ### Fixed
 
 - Included the CLI audit module in the published package so `symbiote-ui
