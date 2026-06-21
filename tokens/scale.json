@@ -1,0 +1,56 @@
+{
+  "$schema": "https://design-tokens.github.io/community-group/format/",
+  "$description": "Canonical geometry scale. Rung token names are the stable contract; per-register profile values are carried under $extensions.sn.registers. Default $value uses the airy 'product' profile.",
+  "space": {
+    "$type": "dimension",
+    "xs": {
+      "$value": { "value": 4, "unit": "px" },
+      "$extensions": { "sn": { "token": "--sn-space-xs", "registers": { "product": 4, "tool": 3, "spacious": 5 } } }
+    },
+    "sm": {
+      "$value": { "value": 8, "unit": "px" },
+      "$extensions": { "sn": { "token": "--sn-space-sm", "registers": { "product": 8, "tool": 5, "spacious": 10 } } }
+    },
+    "md": {
+      "$value": { "value": 12, "unit": "px" },
+      "$extensions": { "sn": { "token": "--sn-space-md", "registers": { "product": 12, "tool": 8, "spacious": 14 } } }
+    },
+    "lg": {
+      "$value": { "value": 16, "unit": "px" },
+      "$extensions": { "sn": { "token": "--sn-space-lg", "registers": { "product": 16, "tool": 12, "spacious": 20 } } }
+    },
+    "xl": {
+      "$value": { "value": 24, "unit": "px" },
+      "$extensions": { "sn": { "token": "--sn-space-xl", "registers": { "product": 24, "tool": 16, "spacious": 28 } } }
+    }
+  },
+  "radius": {
+    "$type": "dimension",
+    "node": {
+      "$value": "{space.md}",
+      "$extensions": { "sn": { "token": "--sn-node-radius", "rungByRegister": { "product": "md", "tool": "md", "spacious": "lg" } } }
+    },
+    "comment": {
+      "$value": "{space.sm}",
+      "$extensions": { "sn": { "token": "--sn-comment-radius", "rungByRegister": { "product": "sm", "tool": "sm", "spacious": "md" } } }
+    }
+  },
+  "size": {
+    "$type": "dimension",
+    "socket": {
+      "$value": "{space.md}",
+      "$extensions": { "sn": { "token": "--sn-socket-size", "rungByRegister": { "product": "md", "tool": "md", "spacious": "md" } } }
+    },
+    "grid": {
+      "$value": "{space.xl}",
+      "$extensions": { "sn": { "token": "--sn-grid-size", "rungByRegister": { "product": "xl", "tool": "xl", "spacious": "xl" } } }
+    }
+  },
+  "font": {
+    "size": {
+      "$type": "dimension",
+      "$value": { "value": 13, "unit": "px" },
+      "$extensions": { "sn": { "token": "--sn-font-size", "registers": { "product": 13, "tool": 12, "spacious": 14 } } }
+    }
+  }
+}
