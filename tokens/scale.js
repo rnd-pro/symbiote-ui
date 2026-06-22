@@ -299,13 +299,77 @@ function parsePx(rawValue) {
   return null;
 }
 
-function nearestRung(value, rungValues) {
-  let best = null;
-  for (let [rung, px] of rungValues) {
-    let distance = Math.abs(value - px);
-    if (!best || distance < best.distance) best = { rung, px, distance };
+/**
+ * Canonical step ladder — the universal spacing primitive. Integer rung indices
+ * `--sn-step-0..12` whose px = `STEP_MULTIPLES[n] × base × density`. Base 2px at
+ * density 1 (product) yields the de-facto vocabulary 0/2/4/6/8/10/12/14/16/20/
+ * 24/28/32; a denser or airier design re-resolves the same names by setting a
+ * different `--sn-base` / `--sn-density`. The legacy `--sn-space-xs/sm/md/lg/xl`
+ * names are permanent aliases onto even rungs (see `LEGACY_SPACE_STEP`).
+ */
+export const STEP_MULTIPLES = Object.freeze([0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 14, 16]);
+export const STEP_BASE_PX = 2;
+const STEP_TOKENS = Object.freeze(STEP_MULTIPLES.map((_, index) => `--sn-step-${index}`));
+const STEP_TOKEN_SET = new Set(STEP_TOKENS);
+
+/** Legacy t-shirt spacing name → step index (4/8/12/16/24px at the product base). */
+export const LEGACY_SPACE_STEP = Object.freeze({ xs: 2, sm: 4, md: 6, lg: 8, xl: 10 });
+
+/** Steps in the de-facto vocabulary, by px, for descriptor hints. */
+const STEP_DEFACTO = Object.freeze({ 2: '2px', 3: '6px', 5: '10px', 7: '14px', 9: '20px' });
+
+/** @param {string} name @returns {boolean} */
+export function isStepToken(name) {
+  return STEP_TOKEN_SET.has(String(name || '').trim());
+}
+
+/** @returns {string[]} */
+export function listStepTokens() {
+  return [...STEP_TOKENS];
+}
+
+/** px for a step at a given base/density, or null for an out-of-range index. */
+export function stepPx(step, base = STEP_BASE_PX, density = 1) {
+  let k = STEP_MULTIPLES[step];
+  return k === undefined ? null : k * base * density;
+}
+
+/** The `--sn-step-*` map (flat px) for seeding the root cascade. */
+export function stepScaleTokens(base = STEP_BASE_PX, density = 1) {
+  let tokens = {};
+  for (let index = 0; index < STEP_MULTIPLES.length; index++) {
+    tokens[`--sn-step-${index}`] = `${STEP_MULTIPLES[index] * base * density}px`;
   }
-  return best;
+  return tokens;
+}
+
+/**
+ * Snap a raw spacing value to the nearest step rung (product base).
+ * @param {string|number} rawValue
+ * @returns {{token: string, exact: boolean, nearestPx: number}|null}
+ */
+export function snapSpaceToStep(rawValue) {
+  let value = parsePx(rawValue);
+  if (value === null) return null;
+  let best = null;
+  for (let index = 0; index < STEP_MULTIPLES.length; index++) {
+    let px = STEP_MULTIPLES[index] * STEP_BASE_PX;
+    let distance = Math.abs(value - px);
+    if (!best || distance < best.distance) best = { step: index, px, distance };
+  }
+  return { token: `var(--sn-step-${best.step})`, exact: best.distance < 0.5, nearestPx: best.px };
+}
+
+/** @returns {Object} agent-facing descriptor of the step ladder. */
+export function getStepScaleDescriptor() {
+  return {
+    version: 'step-scale-v1',
+    basePx: STEP_BASE_PX,
+    model: 'px = STEP_MULTIPLES[n] * --sn-base * --sn-density; the rung index is register-agnostic, the px register-scoped.',
+    steps: STEP_MULTIPLES.map((k, index) => ({ step: index, token: `--sn-step-${index}`, k, productPx: k * STEP_BASE_PX, defacto: STEP_DEFACTO[index] || null })),
+    legacyAliases: Object.fromEntries(Object.entries(LEGACY_SPACE_STEP).map(([rung, step]) => [`--sn-space-${rung}`, `--sn-step-${step}`])),
+    preferSemantic: 'Prefer a semantic token (e.g. --sn-card-padding) when a family owns the role; otherwise a --sn-step-* rung. The --sn-space-* t-shirt names are permanent aliases onto even rungs.',
+  };
 }
 
 /**
@@ -331,15 +395,9 @@ export function snapValueToToken(property, rawValue, profileName = DEFAULT_GEOME
     };
   }
 
-  let rungValues = SPACE_RUNGS.map((rung) => [rung, profile.space[rung]]);
-  let best = nearestRung(value, rungValues);
-  if (!best) return null;
-  return {
-    token: `var(--sn-space-${best.rung})`,
-    exact: best.distance < 0.5,
-    nearestPx: best.px,
-    axis,
-  };
+  let snap = snapSpaceToStep(value);
+  if (!snap) return null;
+  return { token: snap.token, exact: snap.exact, nearestPx: snap.nearestPx, axis };
 }
 
 /**
@@ -417,7 +475,12 @@ export function geometryAtPropertyRegistrations(profileName = DEFAULT_GEOMETRY_P
     inherits: true,
     initialValue: `${p.space[rung]}px`,
   }));
+  for (let index = 0; index < STEP_MULTIPLES.length; index++) {
+    registrations.push({ name: `--sn-step-${index}`, syntax: '<length>', inherits: true, initialValue: `${STEP_MULTIPLES[index] * STEP_BASE_PX}px` });
+  }
   registrations.push(
+    { name: '--sn-base', syntax: '<length>', inherits: true, initialValue: `${STEP_BASE_PX}px` },
+    { name: '--sn-density', syntax: '<number>', inherits: true, initialValue: '1' },
     { name: '--sn-socket-border-width', syntax: '<length>', inherits: true, initialValue: `${p.socketBorderWidth}px` },
     { name: '--sn-conn-width', syntax: '<number>', inherits: true, initialValue: String(p.connWidth) },
     { name: '--sn-font-size', syntax: '<length>', inherits: true, initialValue: `${p.fontSize}px` },

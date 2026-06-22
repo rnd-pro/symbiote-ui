@@ -38,7 +38,7 @@ const ROOT_SELECTOR_REG = /(^|[\s,])(:root|:host|html|\[data-theme)/;
 /** Comment escapes that suppress a finding on a line (shared with color lint). */
 const ESCAPE_MARKERS = ['lint-allow', 'audit-ok', 'audit-allow', 'lint-ok'];
 
-const PRIMITIVE_TOKEN_REG = /var\(\s*(--sn-space-(?:xs|sm|md|lg|xl))\s*[,)]/g;
+const PRIMITIVE_TOKEN_REG = /var\(\s*(--sn-(?:step-[0-9]+|space-(?:xs|sm|md|lg|xl)))\s*[,)]/g;
 const RAW_LENGTH_REG = /(?<![\w.#-])(-?\d*\.?\d+)(px|rem|em)\b/g;
 const RAW_DURATION_REG = /(?<![\w.#-])(\d*\.?\d+)(ms|s)\b/g;
 const MOTION_PROPERTIES = new Set(['transition', 'transition-duration', 'animation', 'animation-duration']);

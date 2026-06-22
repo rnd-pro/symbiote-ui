@@ -1,6 +1,21 @@
 /* Generated from themes/default-provider.js provider tokens. */
 :root {
   /* Canonical scale primitives, mirrors tokens/scale.js. */
+  --sn-base: 2px;
+  --sn-density: var(--sn-theme-spacing-scale, 1);
+  --sn-step-0: 0px;
+  --sn-step-1: 2px;
+  --sn-step-2: 4px;
+  --sn-step-3: 6px;
+  --sn-step-4: 8px;
+  --sn-step-5: 10px;
+  --sn-step-6: 12px;
+  --sn-step-7: 14px;
+  --sn-step-8: 16px;
+  --sn-step-9: 20px;
+  --sn-step-10: 24px;
+  --sn-step-11: 28px;
+  --sn-step-12: 32px;
   --sn-space-xs: 4px;
   --sn-space-sm: 8px;
   --sn-space-md: 12px;
