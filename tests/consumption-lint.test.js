@@ -47,10 +47,14 @@ test('lintGeometryValue handles shorthand multi-value declarations', () => {
   assert.equal(findings.length, 2);
 });
 
-test('lintMotionValue flags raw durations only on motion properties', () => {
-  assert.equal(lintMotionValue('transition', 'all 200ms ease').length, 1);
+test('lintMotionValue flags raw durations only on motion properties and snaps to a token', () => {
+  let hit = lintMotionValue('transition', 'all 200ms ease');
+  assert.equal(hit.length, 1);
+  assert.equal(hit[0].suggestion, 'var(--sn-transition-normal)'); // 200ms nearest 240
   assert.equal(lintMotionValue('transition', 'all var(--sn-transition-fast) ease').length, 0);
   assert.equal(lintMotionValue('padding', '200ms').length, 0);
+  // animation properties snap to the animation duration rungs
+  assert.equal(lintMotionValue('animation-duration', '1.1s')[0].suggestion, 'var(--sn-animation-duration-normal)');
 });
 
 test('lintComponentCss reports geometry, cascade, and escape behavior over a block', () => {

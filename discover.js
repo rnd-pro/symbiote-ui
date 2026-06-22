@@ -36,7 +36,7 @@ import {
   UI_SCHEMA_VERSIONS,
 } from './manifest/index.js';
 import { DEFAULT_LOCALE, LOCALE_CATALOG_KEYS, SUPPORTED_LOCALES } from './locale/index.js';
-import { getGeometryScaleDescriptor, getTypeScaleDescriptor, getRadiusScaleDescriptor } from './tokens/scale.js';
+import { getGeometryScaleDescriptor, getTypeScaleDescriptor, getRadiusScaleDescriptor, getMotionScaleDescriptor } from './tokens/scale.js';
 import { getSemanticTokenCatalog, tokensForFamily } from './tokens/semantic-catalog.js';
 import { getComponentRecipesDescriptor } from './manifest/component-recipes.js';
 import { lintComponentCss } from './tokens/geometry-lint.js';
@@ -343,6 +343,7 @@ export async function cmdDiscover(options = {}) {
       geometryScale: getGeometryScaleDescriptor(),
       typeScale: getTypeScaleDescriptor(),
       radiusScale: getRadiusScaleDescriptor(),
+      motionScale: getMotionScaleDescriptor(),
       semanticTokenCatalog: getSemanticTokenCatalog(),
       componentRecipes: getComponentRecipesDescriptor(),
       rulesets: RULESETS.map((rs) => ({

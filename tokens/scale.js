@@ -117,6 +117,52 @@ const TYPE_TOKEN_SET = new Set(TYPE_TOKENS);
 /** Canonical font weights in use, named. */
 export const WEIGHT_SCALE = Object.freeze({ normal: 400, medium: 500, semibold: 600, bold: 700 });
 
+/**
+ * Canonical motion durations (ms). `transition` rungs are for interaction
+ * feedback, `animation` rungs for longer ambient motion. Mirrors the
+ * `--sn-transition-*` / `--sn-animation-duration-*` root tokens.
+ */
+export const MOTION_SCALE = Object.freeze({
+  transition: { fast: 120, normal: 240, slow: 400 },
+  animation: { fast: 600, normal: 1000, slow: 1500, slower: 2000 },
+});
+
+function parseMs(rawValue) {
+  let text = String(rawValue || '').trim();
+  let match = text.match(/^(\d*\.?\d+)(ms|s)$/);
+  if (!match) return null;
+  return match[2] === 's' ? Number(match[1]) * 1000 : Number(match[1]);
+}
+
+/**
+ * Snap a raw duration to the nearest motion token.
+ * @param {string|number} rawValue e.g. '0.2s', '200ms'
+ * @param {'transition'|'animation'} [kind]
+ * @returns {{token: string, exact: boolean, nearestMs: number}|null}
+ */
+export function snapDurationToToken(rawValue, kind = 'transition') {
+  let ms = parseMs(rawValue);
+  if (ms === null) return null;
+  let rungs = MOTION_SCALE[kind] || MOTION_SCALE.transition;
+  let prefix = kind === 'animation' ? '--sn-animation-duration' : '--sn-transition';
+  let best = null;
+  for (let [rung, value] of Object.entries(rungs)) {
+    let distance = Math.abs(ms - value);
+    if (!best || distance < best.distance) best = { rung, value, distance };
+  }
+  return { token: `var(${prefix}-${best.rung})`, exact: best.distance < 1, nearestMs: best.value };
+}
+
+/** @returns {Object} agent-facing descriptor of the motion scale. */
+export function getMotionScaleDescriptor() {
+  return {
+    version: 'motion-scale-v1',
+    transition: Object.entries(MOTION_SCALE.transition).map(([rung, ms]) => ({ rung, token: `--sn-transition-${rung}`, ms })),
+    animation: Object.entries(MOTION_SCALE.animation).map(([rung, ms]) => ({ rung, token: `--sn-animation-duration-${rung}`, ms })),
+    note: 'Use --sn-transition-* for interaction feedback, --sn-animation-duration-* for ambient motion; both scale with the theme motion factor.',
+  };
+}
+
 /** @param {string} name @returns {boolean} */
 export function isTypeToken(name) {
   return TYPE_TOKEN_SET.has(String(name || '').trim());
