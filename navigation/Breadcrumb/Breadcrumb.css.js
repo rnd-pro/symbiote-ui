@@ -30,7 +30,7 @@ sn-breadcrumb-item {
 .bc-label {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--sn-space-xs);
   cursor: pointer;
   text-decoration: none;
   color: inherit;

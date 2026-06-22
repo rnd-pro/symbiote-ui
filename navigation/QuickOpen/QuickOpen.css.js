@@ -29,8 +29,8 @@ quick-open {
   .qo-input-wrap {
     display: flex;
     align-items: center;
-    padding: 8px 12px;
-    gap: 8px;
+    padding: var(--sn-space-sm) var(--sn-space-md);
+    gap: var(--sn-space-sm);
     border-bottom: 1px solid var(--sn-node-border);
   }
   .qo-icon { color: var(--sn-text-dim); font-size: 20px; }
@@ -56,14 +56,14 @@ quick-open {
   }
   .qo-results {
     overflow-y: auto;
-    padding: 4px 0;
+    padding: var(--sn-space-xs) 0;
     max-height: 350px;
   }
   .qo-item {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px 16px;
+    gap: var(--sn-space-sm);
+    padding: var(--sn-space-sm) var(--sn-space-lg);
     cursor: pointer;
     transition: background 80ms ease;
   }
