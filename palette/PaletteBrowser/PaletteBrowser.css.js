@@ -37,7 +37,7 @@ export let styles = css`
   }
 
   .pal-search {
-    padding: 8px 12px;
+    padding: var(--sn-space-sm) var(--sn-space-md);
     border-bottom: 1px solid var(--sn-node-border);
 
     & input {
@@ -65,7 +65,7 @@ export let styles = css`
   .pal-list {
     flex: 1;
     overflow-y: auto;
-    padding: 4px 0;
+    padding: var(--sn-space-xs) 0;
   }
 
   pal-category {
@@ -79,7 +79,7 @@ export let styles = css`
       cursor: pointer;
       display: flex;
       align-items: center;
-      gap: 4px;
+      gap: var(--sn-space-xs);
 
       & .material-symbols-outlined {
         font-size: 14px;
@@ -104,7 +104,7 @@ export let styles = css`
     padding: 6px 14px 6px 28px;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--sn-space-sm);
     cursor: grab;
     border-radius: 4px;
     margin: 1px 6px;

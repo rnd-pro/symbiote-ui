@@ -30,9 +30,9 @@ let css = /*css*/`
   .te-transport {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--sn-space-sm);
     height: 28px;
-    padding: 0 8px;
+    padding: 0 var(--sn-space-sm);
     background: var(--sn-panel-bg);
     border-bottom: 1px solid var(--te-border);
     flex-shrink: 0;
@@ -100,7 +100,7 @@ let css = /*css*/`
     border-bottom: 1px solid var(--te-border);
     display: flex;
     align-items: center;
-    padding: 0 8px;
+    padding: 0 var(--sn-space-sm);
     font-size: 10px;
     color: var(--sn-text-dim);
   }
@@ -109,7 +109,7 @@ let css = /*css*/`
     height: var(--te-track-height);
     display: flex;
     align-items: center;
-    padding: 0 8px;
+    padding: 0 var(--sn-space-sm);
     gap: 6px;
     border-bottom: 1px solid var(--te-border);
     cursor: default;
