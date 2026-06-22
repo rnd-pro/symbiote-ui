@@ -9,7 +9,7 @@ import { test } from 'node:test';
 
 import { DEFAULT_PROVIDER_THEME } from '../themes/default-provider.js';
 import {
-  geometrySpacePrimitives,
+  rootSpacePrimitives,
   stepScaleTokens,
   typeScaleTokens,
   radiusScaleTokens,
@@ -19,7 +19,9 @@ import {
 } from '../tokens/scale.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const PRODUCT = { ...stepScaleTokens(), ...geometrySpacePrimitives('product'), ...typeScaleTokens(), ...radiusScaleTokens() };
+// The root seeds the density-aware step ladder (calc form) + permanent aliases,
+// so it re-resolves from --sn-base / --sn-density at runtime.
+const PRODUCT = { ...rootSpacePrimitives(), ...typeScaleTokens(), ...radiusScaleTokens() };
 
 test('default-provider token object seeds the canonical scale primitives', () => {
   let tokens = DEFAULT_PROVIDER_THEME.tokens;

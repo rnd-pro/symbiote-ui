@@ -6,7 +6,7 @@ import {
   getCascadeThemeControls,
   normalizeCascadeThemeOptions,
 } from '../cascade-theme.js';
-import { geometrySpacePrimitives, GEOMETRY_PROFILE_NAMES } from '../../tokens/scale.js';
+import { geometryRegisterScaleTokens, GEOMETRY_PROFILE_NAMES } from '../../tokens/scale.js';
 import template from './CascadeThemeEditor.tpl.js';
 import css from './CascadeThemeEditor.css.js';
 
@@ -294,18 +294,19 @@ export class CascadeThemeEditor extends Symbiote {
     return document.documentElement;
   }
 
-  // Preview a canonical geometry register on the target: overrides the
-  // --sn-space-* primitives so converted surfaces (those consuming them)
-  // re-space live. Scoped to the primitives so it composes with the cascade
-  // density/radius sliders. Empty register reverts to the provider root.
+  // Preview a canonical geometry register on the target: writes the register's
+  // density knobs (--sn-base / --sn-density / --sn-theme-density|spacing-scale|
+  // radius-scale) so the step ladder AND every density-scaled semantic token
+  // shift together — the same knobs the density slider drives. Empty register
+  // reverts to the provider root.
   #applyGeometryRegister(source) {
     let target = this.#resolveTarget();
     if (!target?.style) return;
-    for (let token of Object.keys(geometrySpacePrimitives('product'))) {
+    for (let token of Object.keys(geometryRegisterScaleTokens('product'))) {
       target.style.removeProperty(token);
     }
     if (this.#geometryRegister) {
-      for (let [token, value] of Object.entries(geometrySpacePrimitives(this.#geometryRegister))) {
+      for (let [token, value] of Object.entries(geometryRegisterScaleTokens(this.#geometryRegister))) {
         target.style.setProperty(token, value);
       }
     }

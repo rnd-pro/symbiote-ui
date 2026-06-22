@@ -8,7 +8,7 @@
  */
 
 import { themedScrollbarRootStyles } from './scrollbar-styles.js';
-import { geometrySpacePrimitives, typeScaleTokens, radiusScaleTokens, STEP_BASE_PX } from '../tokens/scale.js';
+import { rootSpacePrimitives, typeScaleTokens, radiusScaleTokens, STEP_BASE_PX } from '../tokens/scale.js';
 
 const DEFAULT_PROVIDER_THEME_TOKENS = {
   // Canonical scale primitives seeded into the root so component CSS can consume
@@ -18,7 +18,7 @@ const DEFAULT_PROVIDER_THEME_TOKENS = {
   // the two knobs any design retunes to re-resolve the whole ladder.
   '--sn-base': `${STEP_BASE_PX}px`,
   '--sn-density': 'var(--sn-theme-spacing-scale, 1)',
-  ...geometrySpacePrimitives('product'),
+  ...rootSpacePrimitives(),
   ...typeScaleTokens(),
   ...radiusScaleTokens(),
   '--sn-theme-hue': '218',
@@ -98,19 +98,19 @@ const DEFAULT_PROVIDER_THEME_TOKENS = {
   '--sn-layout-header-min-height': 'calc(28px * var(--sn-theme-density))',
   '--sn-layout-header-button-size': 'calc(12px * var(--sn-theme-type-scale))',
   '--sn-layout-header-icon-size': 'calc(16px * var(--sn-theme-type-scale))',
-  '--sn-layout-header-button-gap': 'calc(var(--sn-space-xs) * var(--sn-theme-density))',
+  '--sn-layout-header-button-gap': 'var(--sn-space-xs)',
   '--sn-layout-header-button-padding': 'calc(4px * var(--sn-theme-density)) calc(6px * var(--sn-theme-density))',
   '--sn-layout-menu-min-height': 'calc(34px * var(--sn-theme-density))',
   '--sn-layout-menu-row-height': 'calc(30px * var(--sn-theme-density))',
   '--sn-layout-menu-padding': 'calc(3px * var(--sn-theme-density)) calc(6px * var(--sn-theme-density))',
-  '--sn-layout-menu-row-padding': '0 calc(var(--sn-space-xs) * var(--sn-theme-density))',
+  '--sn-layout-menu-row-padding': '0 var(--sn-space-xs)',
   '--sn-layout-menu-row-label-width': 'calc(66px * var(--sn-theme-density))',
-  '--sn-layout-menu-label-padding': '0 calc(var(--sn-space-sm) * var(--sn-theme-density))',
+  '--sn-layout-menu-label-padding': '0 var(--sn-space-sm)',
   '--sn-layout-menu-label-size': 'calc(11px * var(--sn-theme-type-scale))',
-  '--sn-layout-menu-gap': 'calc(var(--sn-space-xs) * var(--sn-theme-density))',
-  '--sn-layout-menu-action-gap': 'calc(var(--sn-space-xs) * var(--sn-theme-density))',
+  '--sn-layout-menu-gap': 'var(--sn-space-xs)',
+  '--sn-layout-menu-action-gap': 'var(--sn-space-xs)',
   '--sn-layout-menu-action-height': 'calc(28px * var(--sn-theme-density))',
-  '--sn-layout-menu-action-padding': 'calc(var(--sn-space-xs) * var(--sn-theme-density)) calc(var(--sn-space-sm) * var(--sn-theme-density))',
+  '--sn-layout-menu-action-padding': 'var(--sn-space-xs) var(--sn-space-sm)',
   '--sn-layout-menu-action-size': 'calc(12px * var(--sn-theme-type-scale))',
   '--sn-layout-menu-icon-size': 'calc(16px * var(--sn-theme-type-scale))',
   '--sn-panel-menu-z': 'var(--sn-overlay-z-base)',
@@ -461,13 +461,13 @@ const DEFAULT_PROVIDER_THEME_TOKENS = {
   '--sn-dialog-radius': 'calc(8px * var(--sn-theme-radius-scale))',
   '--sn-dialog-shadow': 'var(--sn-shadow-lg)',
   '--sn-dialog-backdrop': 'var(--sn-bg-overlay)',
-  '--sn-dialog-body-padding': 'calc(var(--sn-step-9) * var(--sn-theme-density))',
+  '--sn-dialog-body-padding': 'var(--sn-step-9)',
   '--sn-dialog-font-size': '14px',
   '--sn-dialog-min-width': '250px',
-  '--sn-dialog-message-gap': 'calc(var(--sn-step-9) * var(--sn-theme-density))',
-  '--sn-dialog-prompt-message-gap': 'calc(var(--sn-step-5) * var(--sn-theme-density))',
-  '--sn-dialog-actions-gap': 'calc(var(--sn-step-5) * var(--sn-theme-density))',
-  '--sn-dialog-actions-margin-block-start': 'calc(var(--sn-step-9) * var(--sn-theme-density))',
+  '--sn-dialog-message-gap': 'var(--sn-step-9)',
+  '--sn-dialog-prompt-message-gap': 'var(--sn-step-5)',
+  '--sn-dialog-actions-gap': 'var(--sn-step-5)',
+  '--sn-dialog-actions-margin-block-start': 'var(--sn-step-9)',
   '--sn-button-bg': 'var(--sn-node-bg)',
   '--sn-button-color': 'var(--sn-text)',
   '--sn-button-border': 'var(--sn-node-border)',
