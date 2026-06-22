@@ -45,8 +45,8 @@ export let styles = css`
     & .insp-header {
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 12px 16px;
+      gap: var(--sn-space-sm);
+      padding: var(--sn-space-md) var(--sn-space-lg);
       font-size: 14px;
       font-weight: 600;
       border-bottom: 1px solid var(--sn-node-border);
@@ -67,7 +67,7 @@ export let styles = css`
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 8px;
+      gap: var(--sn-space-sm);
       padding: 40px 0;
       color: var(--sn-text-dim);
       font-size: 13px;
@@ -83,7 +83,7 @@ export let styles = css`
     }
 
     & .insp-field {
-      margin-bottom: 12px;
+      margin-bottom: var(--sn-space-md);
     }
 
     & .insp-field label {
@@ -92,7 +92,7 @@ export let styles = css`
       font-weight: 600;
       text-transform: uppercase;
       color: var(--sn-text-dim);
-      margin-bottom: 4px;
+      margin-bottom: var(--sn-space-xs);
       letter-spacing: 0.5px;
     }
 
@@ -119,7 +119,7 @@ export let styles = css`
     }
 
     & .insp-section {
-      margin-top: 16px;
+      margin-top: var(--sn-space-lg);
     }
 
     & .insp-section-title {
@@ -129,7 +129,7 @@ export let styles = css`
       font-size: 12px;
       font-weight: 600;
       color: var(--sn-text-dim);
-      margin-bottom: 8px;
+      margin-bottom: var(--sn-space-sm);
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
@@ -143,8 +143,8 @@ export let styles = css`
   .insp-port {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 4px 8px;
+    gap: var(--sn-space-sm);
+    padding: var(--sn-space-xs) var(--sn-space-sm);
     font-size: 12px;
     border-radius: 4px;
     margin-bottom: 2px;
@@ -173,7 +173,7 @@ export let styles = css`
   }
 
   .insp-ctrl {
-    margin-bottom: 12px;
+    margin-bottom: var(--sn-space-md);
   }
 
   .insp-ctrl-label {
@@ -182,7 +182,7 @@ export let styles = css`
     font-weight: 600;
     text-transform: uppercase;
     color: var(--sn-text-dim);
-    margin-bottom: 4px;
+    margin-bottom: var(--sn-space-xs);
     letter-spacing: 0.5px;
   }
 
@@ -237,7 +237,7 @@ export let styles = css`
     background-size:
       6px 6px,
       6px 6px;
-    padding-right: 24px;
+    padding-right: var(--sn-space-xl);
 
     & option {
       background: var(--sn-node-bg);
@@ -294,10 +294,10 @@ export let styles = css`
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: var(--sn-space-sm);
     width: 100%;
     padding: 10px 16px;
-    margin-top: 12px;
+    margin-top: var(--sn-space-md);
     border: 1px solid var(--sn-subgraph-border);
     border-radius: 8px;
     background: var(--sn-subgraph-bg);
@@ -326,7 +326,7 @@ export let styles = css`
   }
 
   .insp-fire {
-    padding: 12px 16px;
+    padding: var(--sn-space-md) var(--sn-space-lg);
   }
 
   .insp-fire-btn {
@@ -364,9 +364,9 @@ export let styles = css`
   }
 
   .insp-template-preview {
-    padding: 0 16px 12px;
+    padding: 0 var(--sn-space-lg) var(--sn-space-md);
     border-top: 1px solid var(--sn-field-control-subtle-border);
-    margin-top: 8px;
+    margin-top: var(--sn-space-sm);
 
     &[hidden] {
       display: none;
