@@ -179,6 +179,23 @@ export function snapValueToToken(property, rawValue, profileName = DEFAULT_GEOME
 }
 
 /**
+ * The spacing-rung primitives for a profile, as a `--sn-space-*` map.
+ *
+ * This is the subset of the scale that seeds the root cascade so component CSS
+ * can consume `var(--sn-space-md)` app-wide. Derived tokens (node-radius, grid,
+ * sockets) are intentionally excluded — they are owned by the skin / provider
+ * root and must not be re-seeded here.
+ * @param {string} [profileName]
+ * @returns {Object<string,string>}
+ */
+export function geometrySpacePrimitives(profileName = DEFAULT_GEOMETRY_PROFILE) {
+  let p = getProfile(profileName);
+  let primitives = {};
+  for (let rung of SPACE_RUNGS) primitives[`--sn-space-${rung}`] = `${p.space[rung]}px`;
+  return primitives;
+}
+
+/**
  * Build the geometry custom-property map for a profile. This is the single
  * source `themes/Skin.js` skins are generated from.
  * @param {string} profileName
