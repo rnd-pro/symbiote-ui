@@ -150,6 +150,64 @@ export function snapFontSizeToToken(rawValue) {
   return { token: `var(--sn-text-${best.rung})`, exact: best.distance < 0.5, nearestPx: best.px };
 }
 
+/**
+ * Canonical radius scale — the de-facto corner radii, named. Components should
+ * prefer their semantic radius token (`--sn-card-radius`, `--sn-node-radius`,
+ * which density-scale); these rungs define those tokens and cover new surfaces.
+ * `full` is the pill/round case.
+ */
+export const RADIUS_SCALE = Object.freeze({ xs: 2, sm: 4, md: 6, lg: 8, xl: 12 });
+const RADIUS_RUNGS = Object.freeze(Object.keys(RADIUS_SCALE));
+const RADIUS_FULL_PX = 9999;
+const RADIUS_TOKENS = Object.freeze([...RADIUS_RUNGS.map((r) => `--sn-radius-${r}`), '--sn-radius-full']);
+const RADIUS_TOKEN_SET = new Set(RADIUS_TOKENS);
+
+/** @param {string} name @returns {boolean} */
+export function isRadiusToken(name) {
+  return RADIUS_TOKEN_SET.has(String(name || '').trim());
+}
+
+/** @returns {string[]} */
+export function listRadiusTokens() {
+  return [...RADIUS_TOKENS];
+}
+
+/** The `--sn-radius-*` map for seeding the root cascade. */
+export function radiusScaleTokens() {
+  let tokens = {};
+  for (let rung of RADIUS_RUNGS) tokens[`--sn-radius-${rung}`] = `${RADIUS_SCALE[rung]}px`;
+  tokens['--sn-radius-full'] = `${RADIUS_FULL_PX}px`;
+  return tokens;
+}
+
+/**
+ * Snap a raw border-radius to the nearest radius token (large values → pill).
+ * @param {string|number} rawValue
+ * @returns {{token: string, exact: boolean, nearestPx: number}|null}
+ */
+export function snapRadiusToToken(rawValue) {
+  let value = parsePx(rawValue);
+  if (value === null) return null;
+  if (value >= 100) return { token: 'var(--sn-radius-full)', exact: true, nearestPx: RADIUS_FULL_PX };
+  let best = null;
+  for (let rung of RADIUS_RUNGS) {
+    let distance = Math.abs(value - RADIUS_SCALE[rung]);
+    if (!best || distance < best.distance) best = { rung, px: RADIUS_SCALE[rung], distance };
+  }
+  return { token: `var(--sn-radius-${best.rung})`, exact: best.distance < 0.5, nearestPx: best.px };
+}
+
+/** @returns {Object} agent-facing descriptor of the radius scale. */
+export function getRadiusScaleDescriptor() {
+  return {
+    version: 'radius-scale-v1',
+    tokens: [...RADIUS_TOKENS],
+    rungs: RADIUS_RUNGS.map((rung) => ({ name: rung, token: `--sn-radius-${rung}`, px: RADIUS_SCALE[rung] })),
+    full: { token: '--sn-radius-full', px: RADIUS_FULL_PX },
+    preferSemantic: 'Use the component semantic radius token (e.g. --sn-card-radius) when one exists; these rungs define those and cover new surfaces.',
+  };
+}
+
 /** @returns {Object} agent-facing descriptor of the type scale. */
 export function getTypeScaleDescriptor() {
   return {

@@ -68,7 +68,7 @@ sn-nav-item[disabled] {
   padding: 0 var(--sn-space-xs);
   min-width: 16px;
   height: 16px;
-  border-radius: 8px;
+  border-radius: var(--sn-radius-lg);
   background: var(--sn-nav-item-badge-bg, var(--sn-outline-color, rgba(255, 255, 255, 0.12)));
   color: var(--sn-nav-item-badge-color, var(--sn-text, #ffffff));
   font-size: 9px;

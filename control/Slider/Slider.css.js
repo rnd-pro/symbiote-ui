@@ -21,7 +21,7 @@ sn-slider {
   inline-size: 100%;
   block-size: var(--sn-slider-track-height, 4px);
   background: var(--sn-slider-track-bg, color-mix(in oklab, var(--sn-text) 12%, transparent));
-  border-radius: 999px;
+  border-radius: var(--sn-radius-full);
   pointer-events: none;
 }
 
@@ -30,7 +30,7 @@ sn-slider {
   inset-block: 0;
   inset-inline-start: 0;
   background: var(--sn-slider-active-bg, var(--sn-node-selected, #0056b3));
-  border-radius: 999px;
+  border-radius: var(--sn-radius-full);
 }
 
 .sn-slider-thumb {
@@ -38,7 +38,7 @@ sn-slider {
   top: 50%;
   inline-size: var(--sn-slider-thumb-size, 12px);
   block-size: var(--sn-slider-thumb-size, 12px);
-  border-radius: 999px;
+  border-radius: var(--sn-radius-full);
   background: var(--sn-slider-thumb-bg, #fff);
   border: 1px solid var(--sn-slider-thumb-border, var(--sn-slider-active-bg, var(--sn-node-selected, #0056b3)));
   box-shadow: var(--sn-slider-thumb-shadow, 0 1px 3px rgba(0, 0, 0, 0.25));

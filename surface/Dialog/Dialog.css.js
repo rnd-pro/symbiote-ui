@@ -56,7 +56,7 @@ sn-dialog {
   align-items: center;
   justify-content: center;
   padding: var(--sn-space-xs);
-  border-radius: 4px;
+  border-radius: var(--sn-radius-sm);
   transition: background-color var(--sn-transition-fast, 120ms), color var(--sn-transition-fast, 120ms);
 }
 

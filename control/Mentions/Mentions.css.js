@@ -43,7 +43,7 @@ sn-mentions {
   padding: calc(6px * var(--sn-theme-density, 1)) calc(10px * var(--sn-theme-density, 1));
   font-size: calc(12px * var(--sn-theme-type-scale, 1));
   color: var(--sn-text);
-  border-radius: 4px;
+  border-radius: var(--sn-radius-sm);
   cursor: pointer;
   user-select: none;
 }

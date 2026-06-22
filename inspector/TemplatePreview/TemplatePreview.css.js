@@ -57,7 +57,7 @@ export let styles = css`
       color: var(--sn-text);
       background: color-mix(in oklab, currentColor 6%, transparent);
       border: 1px solid var(--sn-node-border);
-      border-radius: 4px;
+      border-radius: var(--sn-radius-sm);
       outline: none;
       resize: vertical;
       min-height: 50px;
@@ -76,7 +76,7 @@ export let styles = css`
       color: var(--sn-text);
       background: color-mix(in oklab, currentColor 4%, transparent);
       border: 1px solid var(--sn-node-border);
-      border-radius: 4px;
+      border-radius: var(--sn-radius-sm);
       padding: var(--sn-space-sm);
       white-space: pre-wrap;
       word-break: break-word;

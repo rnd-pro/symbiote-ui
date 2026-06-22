@@ -20,6 +20,7 @@ import {
   DEFAULT_GEOMETRY_PROFILE,
   geometryAxisForProperty,
   snapFontSizeToToken,
+  snapRadiusToToken,
   snapValueToToken,
 } from './scale.js';
 
@@ -69,7 +70,9 @@ export function lintGeometryValue(property, value, profileName = DEFAULT_GEOMETR
     if (IGNORE_VALUES.has(literal)) continue;
     let snap = axis === 'font-size'
       ? snapFontSizeToToken(numeric)
-      : snapValueToToken(property, numeric, profileName);
+      : axis === 'radius'
+        ? snapRadiusToToken(numeric)
+        : snapValueToToken(property, numeric, profileName);
     findings.push({
       kind: 'raw-geometry',
       property,

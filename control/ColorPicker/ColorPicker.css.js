@@ -36,7 +36,7 @@ sn-color-picker {
 .sn-color-swatch-preview {
   width: 18px;
   height: 18px;
-  border-radius: 4px;
+  border-radius: var(--sn-radius-sm);
   border: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.2));
   margin-right: var(--sn-space-sm);
   box-sizing: border-box;
@@ -66,7 +66,7 @@ sn-color-picker {
   position: relative;
   width: 100%;
   height: 120px;
-  border-radius: 4px;
+  border-radius: var(--sn-radius-sm);
   overflow: hidden;
   margin-bottom: var(--sn-space-sm);
   cursor: crosshair;
@@ -126,7 +126,7 @@ sn-color-picker {
 .sn-color-preset-swatch {
   width: 20px;
   height: 20px;
-  border-radius: 4px;
+  border-radius: var(--sn-radius-sm);
   cursor: pointer;
   border: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.1));
 }
@@ -146,7 +146,7 @@ sn-color-picker {
   background: var(--sn-field-control-bg, var(--sn-bg, #0c0c0e));
   border: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
   color: var(--sn-text);
-  border-radius: 4px;
+  border-radius: var(--sn-radius-sm);
   padding: var(--sn-space-xs) var(--sn-space-sm);
   font-size: var(--sn-text-sm);
   outline: none;

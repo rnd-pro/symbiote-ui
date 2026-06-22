@@ -352,7 +352,7 @@ export let styles = css`
     &[node-shape='pill'] {
       min-width: 100px;
       max-width: 200px;
-      border-radius: 999px;
+      border-radius: var(--sn-radius-full);
 
       & .sn-node-header {
         display: none;
@@ -460,7 +460,7 @@ export let styles = css`
     &[node-shape='diamond'] {
       min-width: 100px;
       min-height: 100px;
-      border-radius: 4px;
+      border-radius: var(--sn-radius-sm);
       transform-origin: center;
       clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
       display: flex;

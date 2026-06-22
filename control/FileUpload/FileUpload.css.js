@@ -60,7 +60,7 @@ sn-file-upload {
   padding: 6px 10px;
   background: var(--sn-panel-bg, #1e1e24);
   border: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
-  border-radius: 4px;
+  border-radius: var(--sn-radius-sm);
   font-size: calc(12px * var(--sn-theme-type-scale, 1));
 }
 
@@ -87,7 +87,7 @@ sn-file-upload {
   color: var(--sn-text-dim, rgba(255,255,255,0.6));
   cursor: pointer;
   padding: 2px;
-  border-radius: 4px;
+  border-radius: var(--sn-radius-sm);
 }
 
 .sn-file-item-remove:hover {

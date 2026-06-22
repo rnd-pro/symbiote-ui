@@ -13,6 +13,12 @@
   --sn-text-lg: 14px;
   --sn-text-xl: 16px;
   --sn-text-2xl: 18px;
+  --sn-radius-xs: 2px;
+  --sn-radius-sm: 4px;
+  --sn-radius-md: 6px;
+  --sn-radius-lg: 8px;
+  --sn-radius-xl: 12px;
+  --sn-radius-full: 9999px;
   --sn-theme-hue: 218;
   --sn-theme-chroma: 89%;
   --sn-theme-bg-lightness: 10%;

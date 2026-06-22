@@ -48,7 +48,7 @@ quick-open {
   .qo-kbd {
     font-size: var(--sn-text-2xs);
     padding: 2px 6px;
-    border-radius: 4px;
+    border-radius: var(--sn-radius-sm);
     background: var(--sn-node-bg);
     border: 1px solid var(--sn-node-border);
     color: var(--sn-text-dim);

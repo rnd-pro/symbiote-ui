@@ -63,7 +63,7 @@ chat-message-item {
 }
 
 .tool-card {
-  border-radius: 12px;
+  border-radius: var(--sn-radius-xl);
   background: var(--sn-node-hover);
   overflow: hidden;
   width: 100%;
@@ -152,7 +152,7 @@ chat-message-item {
 
 .tool-code {
   background: var(--sn-bg);
-  border-radius: 6px;
+  border-radius: var(--sn-radius-md);
   padding: var(--sn-chat-code-padding, 8px);
   font-family: var(--sn-font-mono);
   font-size: var(--sn-chat-code-size, 11px);
@@ -195,7 +195,7 @@ chat-message-item {
 
 .md-code-block {
   background: var(--sn-bg);
-  border-radius: 8px;
+  border-radius: var(--sn-radius-lg);
   padding: var(--sn-chat-code-padding, 12px);
   overflow-x: auto;
   margin: 6px 0;
@@ -207,7 +207,7 @@ chat-message-item {
 .md-inline-code {
   background: var(--sn-node-hover);
   padding: 2px 5px;
-  border-radius: 4px;
+  border-radius: var(--sn-radius-sm);
   font-family: var(--sn-font-mono);
   font-size: var(--sn-chat-code-size, 11px);
   color: var(--sn-text);
@@ -217,7 +217,7 @@ chat-message-item {
   color: var(--sn-node-selected);
   background: var(--sn-accent-bg);
   padding: 1px 4px;
-  border-radius: 4px;
+  border-radius: var(--sn-radius-sm);
   font-weight: 500;
   word-break: break-all;
 }
@@ -267,7 +267,7 @@ h4.md-h {
   padding: var(--sn-space-sm) var(--sn-space-lg);
   border-left: 4px solid var(--sn-node-selected);
   background: var(--sn-accent-bg-subtle);
-  border-radius: 0 4px 4px 0;
+  border-radius: 0 var(--sn-radius-sm) var(--sn-radius-sm) 0;
   font-style: italic;
   color: var(--sn-text-dim);
 }
@@ -284,7 +284,7 @@ h4.md-h {
 .md-img {
   max-width: 100%;
   height: auto;
-  border-radius: 6px;
+  border-radius: var(--sn-radius-md);
   margin: var(--sn-space-sm) 0;
   border: 1px solid var(--sn-node-border);
 }
@@ -411,7 +411,7 @@ h4.md-h {
   width: calc(var(--sn-chat-summary-icon-size, 16px) * 1.5);
   height: calc(var(--sn-chat-summary-icon-size, 16px) * 1.5);
   border: none;
-  border-radius: 8px;
+  border-radius: var(--sn-radius-lg);
   background: transparent;
   color: var(--sn-text-dim);
   display: inline-flex;
@@ -466,7 +466,7 @@ h4.md-h {
   font-size: var(--sn-chat-tool-label-size, 10px);
   font-weight: 500;
   padding: 2px 7px;
-  border-radius: 4px;
+  border-radius: var(--sn-radius-sm);
   background: var(--sn-node-hover);
   color: var(--sn-text-dim);
   white-space: nowrap;
@@ -517,7 +517,7 @@ h4.md-h {
   max-width: 320px;
   background: var(--sn-node-hover);
   border: 1px solid var(--sn-node-hover);
-  border-radius: 8px;
+  border-radius: var(--sn-radius-lg);
   padding: var(--sn-chat-status-card-padding, 10px 12px);
   display: flex;
   flex-direction: column;
@@ -609,7 +609,7 @@ h4.md-h {
   background: var(--sn-node-bg);
   color: var(--sn-text-dim);
   padding: var(--sn-composer-footer-btn-padding, 2px 6px);
-  border-radius: 4px;
+  border-radius: var(--sn-radius-sm);
   font-size: var(--sn-chat-small-size, 11px);
   white-space: nowrap;
   max-width: 120px;
@@ -643,7 +643,7 @@ h4.md-h {
   background: var(--sn-node-hover);
   border: 1px solid var(--sn-node-border);
   padding: var(--sn-space-xs) var(--sn-space-sm);
-  border-radius: 6px;
+  border-radius: var(--sn-radius-md);
   font-size: var(--sn-chat-small-size, 11px);
   color: var(--sn-text-dim);
   margin-top: var(--sn-space-xs);
@@ -659,7 +659,7 @@ h4.md-h {
   background: var(--sn-node-hover);
   border: 1px solid var(--sn-node-border);
   padding: var(--sn-space-sm) var(--sn-space-md);
-  border-radius: 8px;
+  border-radius: var(--sn-radius-lg);
   margin: var(--sn-space-xs) 0;
   max-width: 320px;
 }
@@ -681,7 +681,7 @@ h4.md-h {
 .artifact-card {
   background: var(--sn-node-hover);
   border: 1px solid var(--sn-node-border);
-  border-radius: 8px;
+  border-radius: var(--sn-radius-lg);
   overflow: hidden;
   margin: 6px 0;
   width: 100%;
@@ -709,7 +709,7 @@ h4.md-h {
 .action-card {
   background: var(--sn-node-hover);
   border: 1px solid var(--sn-accent-border, var(--sn-node-border));
-  border-radius: 8px;
+  border-radius: var(--sn-radius-lg);
   padding: var(--sn-space-md);
   margin: var(--sn-space-sm) 0;
   display: flex;
@@ -749,7 +749,7 @@ h4.md-h {
   font-size: var(--sn-chat-small-size, 11px);
   font-weight: 600;
   padding: 6px 12px;
-  border-radius: 6px;
+  border-radius: var(--sn-radius-md);
   border: 1px solid var(--sn-node-border);
   background: var(--sn-node-bg);
   color: var(--sn-text);
@@ -780,7 +780,7 @@ h4.md-h {
 .error-card {
   background: var(--sn-danger-bg, rgba(239, 68, 68, 0.08));
   border: 1px solid var(--sn-danger-border, var(--sn-node-border));
-  border-radius: 8px;
+  border-radius: var(--sn-radius-lg);
   padding: var(--sn-space-md);
   margin: 6px 0;
   display: flex;

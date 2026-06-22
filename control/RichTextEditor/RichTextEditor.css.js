@@ -32,7 +32,7 @@ sn-rich-text-editor {
   color: var(--sn-text-dim, rgba(255,255,255,0.6));
   cursor: pointer;
   padding: var(--sn-space-xs);
-  border-radius: 4px;
+  border-radius: var(--sn-radius-sm);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -62,7 +62,7 @@ sn-rich-text-editor {
   transform: translateY(-50%);
   background-color: var(--sn-panel-bg, #1e1e24);
   border: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
-  border-radius: 4px;
+  border-radius: var(--sn-radius-sm);
   padding: 4px 6px;
   z-index: 10;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
@@ -75,7 +75,7 @@ sn-rich-text-editor {
 .sn-editor-link-input {
   background: var(--sn-field-control-bg, var(--sn-bg, #0c0c0e));
   border: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
-  border-radius: 4px;
+  border-radius: var(--sn-radius-sm);
   color: var(--sn-text);
   padding: var(--sn-space-xs) var(--sn-space-sm);
   font-size: var(--sn-text-sm);
@@ -90,7 +90,7 @@ sn-rich-text-editor {
   background: var(--sn-node-hover, rgba(255,255,255,0.05));
   border: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
   color: var(--sn-text);
-  border-radius: 4px;
+  border-radius: var(--sn-radius-sm);
   padding: var(--sn-space-xs) var(--sn-space-sm);
   font-size: var(--sn-text-sm);
   cursor: pointer;

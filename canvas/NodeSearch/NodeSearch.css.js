@@ -53,13 +53,13 @@ export let styles = css`
       color: var(--sn-text-dim);
       padding: 2px 6px;
       border: 1px solid var(--sn-node-border);
-      border-radius: 4px;
+      border-radius: var(--sn-radius-sm);
     }
 
     & .search-results {
       margin-top: var(--sn-space-xs);
       background: var(--sn-node-bg);
-      border-radius: 8px;
+      border-radius: var(--sn-radius-lg);
       border: 1px solid var(--sn-node-border);
       box-shadow: 0 4px 16px var(--sn-shadow-color);
       overflow: hidden;
@@ -91,7 +91,7 @@ export let styles = css`
     font-size: var(--sn-text-xs);
     color: var(--sn-text-dim);
     padding: 1px 6px;
-    border-radius: 4px;
+    border-radius: var(--sn-radius-sm);
     background: color-mix(in oklab, currentColor 5%, transparent);
   }
 `;

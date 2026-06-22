@@ -36,7 +36,7 @@ import {
   UI_SCHEMA_VERSIONS,
 } from './manifest/index.js';
 import { DEFAULT_LOCALE, LOCALE_CATALOG_KEYS, SUPPORTED_LOCALES } from './locale/index.js';
-import { getGeometryScaleDescriptor, getTypeScaleDescriptor } from './tokens/scale.js';
+import { getGeometryScaleDescriptor, getTypeScaleDescriptor, getRadiusScaleDescriptor } from './tokens/scale.js';
 import { lintComponentCss } from './tokens/geometry-lint.js';
 import { checkContrast } from './tokens/contrast.js';
 import { WEBXR_RENDERER, XR_THREE_WEBXR_ADAPTER } from './xr/index.js';
@@ -340,6 +340,7 @@ export async function cmdDiscover(options = {}) {
       tokenFiles: listTokenFiles(),
       geometryScale: getGeometryScaleDescriptor(),
       typeScale: getTypeScaleDescriptor(),
+      radiusScale: getRadiusScaleDescriptor(),
       rulesets: RULESETS.map((rs) => ({
         name: rs.name,
         version: rs.version,

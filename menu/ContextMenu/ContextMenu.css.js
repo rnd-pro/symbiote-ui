@@ -25,7 +25,7 @@ export let styles = css`
       min-width: 180px;
       background: var(--sn-ctx-bg, #1e1e1e);
       border: 1px solid var(--sn-ctx-border, #333);
-      border-radius: 8px;
+      border-radius: var(--sn-radius-lg);
       box-shadow: 0 8px 24px var(--sn-shadow-color, rgba(0,0,0,0.5));
       padding: var(--sn-space-xs);
       overflow: hidden;
@@ -58,7 +58,7 @@ export let styles = css`
     font-family: var(--sn-font);
     font-size: var(--sn-text-md);
     cursor: pointer;
-    border-radius: 4px;
+    border-radius: var(--sn-radius-sm);
     transition: background 0.1s, color 0.1s;
     outline: none;
 

@@ -45,7 +45,7 @@ export let styles = css`
       padding: 6px 10px;
       background: var(--sn-field-control-bg);
       border: 1px solid var(--sn-node-border);
-      border-radius: 4px;
+      border-radius: var(--sn-radius-sm);
       color: var(--sn-text);
       font-family: inherit;
       font-size: var(--sn-text-sm);
@@ -106,7 +106,7 @@ export let styles = css`
     align-items: center;
     gap: var(--sn-space-sm);
     cursor: grab;
-    border-radius: 4px;
+    border-radius: var(--sn-radius-sm);
     margin: 1px 6px;
     transition: background 0.15s ease-out;
 

@@ -100,14 +100,14 @@ export let styles = css`
       font-size: var(--sn-text-md);
       padding: 6px 8px;
       background: color-mix(in oklab, currentColor 4%, transparent);
-      border-radius: 4px;
+      border-radius: var(--sn-radius-sm);
     }
 
     & .insp-tag {
       display: inline-block;
       padding: 2px 8px;
       font-size: var(--sn-text-xs);
-      border-radius: 4px;
+      border-radius: var(--sn-radius-sm);
       background: color-mix(in oklab, var(--sn-cat-server) 15%, transparent);
       color: var(--sn-cat-server);
     }
@@ -146,7 +146,7 @@ export let styles = css`
     gap: var(--sn-space-sm);
     padding: var(--sn-space-xs) var(--sn-space-sm);
     font-size: var(--sn-text-sm);
-    border-radius: 4px;
+    border-radius: var(--sn-radius-sm);
     margin-bottom: 2px;
   }
 
@@ -195,7 +195,7 @@ export let styles = css`
     color: var(--sn-text);
     background: color-mix(in oklab, currentColor 6%, transparent);
     border: 1px solid var(--sn-field-control-subtle-border);
-    border-radius: 4px;
+    border-radius: var(--sn-radius-sm);
     outline: none;
     box-sizing: border-box;
     transition: border-color 0.15s;
@@ -213,7 +213,7 @@ export let styles = css`
     color: var(--sn-text);
     background: color-mix(in oklab, currentColor 6%, transparent);
     border: 1px solid var(--sn-field-control-subtle-border);
-    border-radius: 4px;
+    border-radius: var(--sn-radius-sm);
     outline: none;
     resize: vertical;
     min-height: 80px;
@@ -299,7 +299,7 @@ export let styles = css`
     padding: 10px 16px;
     margin-top: var(--sn-space-md);
     border: 1px solid var(--sn-subgraph-border);
-    border-radius: 8px;
+    border-radius: var(--sn-radius-lg);
     background: var(--sn-subgraph-bg);
     color: var(--sn-subgraph-accent);
     font-family: var(--sn-font);
@@ -337,7 +337,7 @@ export let styles = css`
     width: 100%;
     padding: 10px 16px;
     border: 1px solid var(--sn-success-border);
-    border-radius: 8px;
+    border-radius: var(--sn-radius-lg);
     background: var(--sn-success-bg);
     color: var(--sn-success-color);
     font-family: var(--sn-font);

@@ -62,7 +62,7 @@ sn-toast[data-dismissing] {
   align-items: center;
   justify-content: center;
   padding: 2px;
-  border-radius: 4px;
+  border-radius: var(--sn-radius-sm);
   margin-top: 1px;
   transition: background-color var(--sn-transition-fast, 120ms), color var(--sn-transition-fast, 120ms);
 }

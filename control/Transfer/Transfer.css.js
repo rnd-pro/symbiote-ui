@@ -49,7 +49,7 @@ sn-transfer {
   padding: calc(6px * var(--sn-theme-density, 1)) calc(8px * var(--sn-theme-density, 1));
   font-size: calc(12px * var(--sn-theme-type-scale, 1));
   color: var(--sn-text);
-  border-radius: 4px;
+  border-radius: var(--sn-radius-sm);
   cursor: pointer;
   user-select: none;
 }
@@ -76,7 +76,7 @@ sn-transfer {
   height: 32px;
   background: var(--sn-panel-bg, #1e1e24);
   border: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
-  border-radius: 6px;
+  border-radius: var(--sn-radius-md);
   color: var(--sn-text);
   cursor: pointer;
 }
