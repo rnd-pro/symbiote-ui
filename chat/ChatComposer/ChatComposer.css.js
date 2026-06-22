@@ -320,7 +320,7 @@ sn-button.btn-send[variant="icon"].btn-stop::after {
 }
 
 .composer-footer-select-control {
-  padding-right: 4px;
+  padding-right: var(--sn-space-xs);
 }
 
 .composer-footer-checkbox-control {
@@ -926,7 +926,7 @@ chat-composer.drag-over .composer-body {
 .voice-preview-body[contenteditable="true"] {
   cursor: text;
   border-radius: calc(6px * var(--sn-theme-radius-scale));
-  padding-inline: 4px;
+  padding-inline: var(--sn-space-xs);
   margin-inline: -4px;
 }
 
