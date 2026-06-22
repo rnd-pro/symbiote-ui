@@ -146,6 +146,22 @@ sn-kanban-board .sn-kanban-card-summary {
   overflow-wrap: anywhere;
 }
 
+@keyframes sn-kanban-card-spin { to { transform: rotate(360deg); } }
+sn-kanban-board .sn-kanban-card-spinner {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  margin-inline-end: 6px;
+  vertical-align: -1px;
+  border: 2px solid var(--sn-kanban-card-border, var(--sn-node-border));
+  border-top-color: var(--sn-accent, #7c3aed);
+  border-radius: 50%;
+  animation: sn-kanban-card-spin 0.8s linear infinite;
+}
+sn-kanban-board .sn-kanban-card[data-busy] {
+  border-color: color-mix(in srgb, var(--sn-accent, #7c3aed) 45%, var(--sn-node-border));
+}
+
 sn-kanban-board .sn-kanban-card-meta {
   display: flex;
   flex-wrap: wrap;

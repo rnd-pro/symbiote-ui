@@ -70,6 +70,7 @@ export function normalizeKanbanCard(raw = {}, index = 0, fallbackColumnId = '') 
     meta: asArray(card.meta ?? card.badges ?? card.labels).map(normalizeChip).filter(Boolean),
     footer: asArray(card.footer ?? card.statuses ?? card.flags).map(normalizeChip).filter(Boolean),
     actions: asArray(card.actions).map(normalizeAction),
+    busy: Boolean(card.busy ?? card.running ?? card.active),
     draggable: card.draggable !== false,
     raw: card,
   };
@@ -302,6 +303,12 @@ export class KanbanBoard extends Symbiote {
     let meta = makeElement('div', 'sn-kanban-card-meta');
     for (let chip of card.meta) meta.append(this.#renderChip(chip));
     let title = makeElement('div', 'sn-kanban-card-title', card.title);
+    if (card.busy) {
+      cardEl.dataset.busy = 'true';
+      let spinner = makeElement('span', 'sn-kanban-card-spinner');
+      spinner.setAttribute('aria-hidden', 'true');
+      title.prepend(spinner);
+    }
     let summary = makeElement('div', 'sn-kanban-card-summary', card.summary || '');
     let footer = makeElement('div', 'sn-kanban-card-footer');
     for (let chip of card.footer) footer.append(this.#renderChip(chip));
