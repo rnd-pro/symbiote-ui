@@ -6,6 +6,7 @@ import {
   getCascadeThemeControls,
   normalizeCascadeThemeOptions,
 } from '../cascade-theme.js';
+import { geometrySpacePrimitives, GEOMETRY_PROFILE_NAMES } from '../../tokens/scale.js';
 import {
   bringOverlayToFront,
   mountOverlayToDocument,
@@ -53,6 +54,7 @@ export class CascadeThemeWidget extends Symbiote {
 
   #controls = getCascadeThemeControls().filter((control) => COMPACT_CONTROLS.includes(control.name));
   #state = normalizeCascadeThemeOptions(CASCADE_THEME_DEFAULTS);
+  #geometryRegister = '';
   #ready = false;
   #popoverBound = false;
   #overlayListenersBound = false;
@@ -96,6 +98,8 @@ export class CascadeThemeWidget extends Symbiote {
       this.#loadStoredState();
     }
     this.#apply(name);
+    this.#applyGeometryRegister(name);
+    this.#syncRegisterButtons();
   }
 
   renderCallback() {
@@ -105,6 +109,8 @@ export class CascadeThemeWidget extends Symbiote {
     this.#renderControls();
     this.#loadStoredState();
     this.#apply('init');
+    this.#applyGeometryRegister('init');
+    this.#syncRegisterButtons();
     if (this.$.isOpen) this.#openPopover();
   }
 
@@ -127,6 +133,9 @@ export class CascadeThemeWidget extends Symbiote {
 
   reset() {
     this.setState(CASCADE_THEME_DEFAULTS, { source: 'reset' });
+    this.#geometryRegister = '';
+    this.#applyGeometryRegister('reset');
+    this.#syncRegisterButtons();
   }
 
   async copyParameters() {
@@ -166,6 +175,15 @@ export class CascadeThemeWidget extends Symbiote {
         mode: modeButton.dataset.themeMode,
       });
       this.#apply('mode');
+      return;
+    }
+
+    let registerButton = event.target.closest?.('[data-geometry-register]');
+    if (registerButton && this.#elementTargetsWidget(registerButton)) {
+      let next = registerButton.dataset.geometryRegister;
+      this.#geometryRegister = GEOMETRY_PROFILE_NAMES.includes(next) ? next : '';
+      this.#applyGeometryRegister('toggle');
+      this.#syncRegisterButtons();
       return;
     }
 
@@ -319,6 +337,8 @@ export class CascadeThemeWidget extends Symbiote {
   #loadStoredState() {
     let stored = parseStoredState(getStorage()?.getItem(this.storageKey));
     if (stored) this.#state = normalizeCascadeThemeOptions(stored);
+    let register = getStorage()?.getItem(`${this.storageKey}::geometry-register`);
+    this.#geometryRegister = GEOMETRY_PROFILE_NAMES.includes(register) ? register : '';
   }
 
   #persistState() {
@@ -374,6 +394,34 @@ export class CascadeThemeWidget extends Symbiote {
       return document.querySelector(this.targetSelector) || document.documentElement;
     }
     return document.documentElement;
+  }
+
+  // Preview a canonical geometry register: overrides --sn-space-* on the target
+  // so converted surfaces re-space live. Scoped to the primitives so it composes
+  // with the cascade sliders. Empty register reverts to the provider root.
+  #applyGeometryRegister(source) {
+    let target = this.#resolveTarget();
+    if (!target?.style) return;
+    for (let token of Object.keys(geometrySpacePrimitives('product'))) {
+      target.style.removeProperty(token);
+    }
+    if (this.#geometryRegister) {
+      for (let [token, value] of Object.entries(geometrySpacePrimitives(this.#geometryRegister))) {
+        target.style.setProperty(token, value);
+      }
+    }
+    getStorage()?.setItem(`${this.storageKey}::geometry-register`, this.#geometryRegister);
+    this.dispatchEvent(new CustomEvent('cascade-geometry-register-change', {
+      bubbles: true,
+      composed: true,
+      detail: { source, register: this.#geometryRegister || 'default', targetSelector: this.targetSelector },
+    }));
+  }
+
+  #syncRegisterButtons() {
+    for (let button of this.#queryControlElements('[data-geometry-register]')) {
+      button.setAttribute('aria-pressed', String(button.dataset.geometryRegister === this.#geometryRegister));
+    }
   }
 
   #syncPopoverTheme(target = this.#resolveTarget()) {

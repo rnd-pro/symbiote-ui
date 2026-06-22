@@ -6,6 +6,7 @@ import {
   getCascadeThemeControls,
   normalizeCascadeThemeOptions,
 } from '../cascade-theme.js';
+import { geometrySpacePrimitives, GEOMETRY_PROFILE_NAMES } from '../../tokens/scale.js';
 import template from './CascadeThemeEditor.tpl.js';
 import css from './CascadeThemeEditor.css.js';
 
@@ -49,6 +50,7 @@ export class CascadeThemeEditor extends Symbiote {
 
   #controls = getCascadeThemeControls();
   #state = normalizeCascadeThemeOptions(CASCADE_THEME_DEFAULTS);
+  #geometryRegister = '';
   #ready = false;
   #copyTimer = 0;
 
@@ -75,6 +77,7 @@ export class CascadeThemeEditor extends Symbiote {
     }
     if (name === 'target-selector' && this.#ready) {
       this.#apply('target');
+      this.#applyGeometryRegister('target');
     }
   }
 
@@ -84,6 +87,18 @@ export class CascadeThemeEditor extends Symbiote {
     this.#renderControls();
     this.#loadStoredState();
     this.#apply('init');
+    this.#applyGeometryRegister('init');
+    this.#syncRegisterButtons();
+  }
+
+  get geometryRegister() {
+    return this.#geometryRegister;
+  }
+
+  set geometryRegister(value) {
+    this.#geometryRegister = GEOMETRY_PROFILE_NAMES.includes(value) ? value : '';
+    this.#applyGeometryRegister('property');
+    this.#syncRegisterButtons();
   }
 
   get state() {
@@ -109,6 +124,9 @@ export class CascadeThemeEditor extends Symbiote {
 
   reset() {
     this.setState(CASCADE_THEME_DEFAULTS, { source: 'reset' });
+    this.#geometryRegister = '';
+    this.#applyGeometryRegister('reset');
+    this.#syncRegisterButtons();
   }
 
   async copyParameters() {
@@ -160,6 +178,15 @@ export class CascadeThemeEditor extends Symbiote {
       return;
     }
 
+    let registerButton = event.target.closest?.('[data-geometry-register]');
+    if (registerButton && this.contains(registerButton)) {
+      let next = registerButton.dataset.geometryRegister;
+      this.#geometryRegister = GEOMETRY_PROFILE_NAMES.includes(next) ? next : '';
+      this.#applyGeometryRegister('toggle');
+      this.#syncRegisterButtons();
+      return;
+    }
+
     let action = event.target.closest?.('[data-action]')?.dataset.action;
     if (action === 'copy') {
       void this.copyParameters();
@@ -207,6 +234,8 @@ export class CascadeThemeEditor extends Symbiote {
     if (stored) {
       this.#state = normalizeCascadeThemeOptions(stored);
     }
+    let register = storage.getItem(this.#geometryStorageKey());
+    this.#geometryRegister = GEOMETRY_PROFILE_NAMES.includes(register) ? register : '';
   }
 
   #persistState() {
@@ -263,6 +292,50 @@ export class CascadeThemeEditor extends Symbiote {
       return document.querySelector(this.targetSelector) || document.documentElement;
     }
     return document.documentElement;
+  }
+
+  // Preview a canonical geometry register on the target: overrides the
+  // --sn-space-* primitives so converted surfaces (those consuming them)
+  // re-space live. Scoped to the primitives so it composes with the cascade
+  // density/radius sliders. Empty register reverts to the provider root.
+  #applyGeometryRegister(source) {
+    let target = this.#resolveTarget();
+    if (!target?.style) return;
+    for (let token of Object.keys(geometrySpacePrimitives('product'))) {
+      target.style.removeProperty(token);
+    }
+    if (this.#geometryRegister) {
+      for (let [token, value] of Object.entries(geometrySpacePrimitives(this.#geometryRegister))) {
+        target.style.setProperty(token, value);
+      }
+    }
+    this.#persistGeometryRegister();
+    this.dispatchEvent(new CustomEvent('cascade-geometry-register-change', {
+      bubbles: true,
+      composed: true,
+      detail: {
+        source,
+        register: this.#geometryRegister || 'default',
+        targetSelector: this.targetSelector,
+      },
+    }));
+  }
+
+  #syncRegisterButtons() {
+    for (let button of this.querySelectorAll('[data-geometry-register]')) {
+      let active = button.dataset.geometryRegister === this.#geometryRegister;
+      button.setAttribute('aria-pressed', String(active));
+    }
+  }
+
+  #geometryStorageKey() {
+    return `${this.storageKey}::geometry-register`;
+  }
+
+  #persistGeometryRegister() {
+    let storage = getStorage();
+    if (!storage) return;
+    storage.setItem(this.#geometryStorageKey(), this.#geometryRegister);
   }
 
   #syncRangeProgress(input, value) {
