@@ -48,6 +48,22 @@ test('validateComponent fails on a resolved sub-AA contrast pair', () => {
   assert.equal(result.valid, false);
 });
 
+test('validateComponent surfaces the family semantic tokens for organic fit', () => {
+  let known = validateComponent({ css: GOOD, file: 'card.css.js', family: 'card' });
+  assert.equal(known.family, 'card');
+  assert.ok(known.familyTokens.length > 0, 'card family should expose semantic tokens');
+  assert.ok(known.familyTokens.some((t) => t.token === '--sn-card-bg'));
+  assert.match(known.fit, /card.*family/i);
+
+  let novel = validateComponent({ css: GOOD, family: 'totally-new-surface' });
+  assert.equal(novel.familyTokens.length, 0);
+  assert.match(novel.fit, /new surface/i);
+
+  // family is opt-in: no family => no fit fields
+  let plain = validateComponent({ css: GOOD });
+  assert.equal('family' in plain, false);
+});
+
 test('validateTokenUsage returns the literal -> token fix map', () => {
   let fixes = validateTokenUsage({ css: BAD, profile: 'product' });
   assert.ok(fixes.length >= 3);

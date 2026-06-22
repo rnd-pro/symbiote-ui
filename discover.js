@@ -37,6 +37,8 @@ import {
 } from './manifest/index.js';
 import { DEFAULT_LOCALE, LOCALE_CATALOG_KEYS, SUPPORTED_LOCALES } from './locale/index.js';
 import { getGeometryScaleDescriptor, getTypeScaleDescriptor, getRadiusScaleDescriptor } from './tokens/scale.js';
+import { getSemanticTokenCatalog, tokensForFamily } from './tokens/semantic-catalog.js';
+import { getComponentRecipesDescriptor } from './manifest/component-recipes.js';
 import { lintComponentCss } from './tokens/geometry-lint.js';
 import { checkContrast } from './tokens/contrast.js';
 import { WEBXR_RENDERER, XR_THREE_WEBXR_ADAPTER } from './xr/index.js';
@@ -341,6 +343,8 @@ export async function cmdDiscover(options = {}) {
       geometryScale: getGeometryScaleDescriptor(),
       typeScale: getTypeScaleDescriptor(),
       radiusScale: getRadiusScaleDescriptor(),
+      semanticTokenCatalog: getSemanticTokenCatalog(),
+      componentRecipes: getComponentRecipesDescriptor(),
       rulesets: RULESETS.map((rs) => ({
         name: rs.name,
         version: rs.version,
@@ -373,7 +377,7 @@ export async function cmdDiscover(options = {}) {
  * @param {Array<[string,string,Object=]>} [input.contrastPairs] resolved fg/bg pairs to WCAG-check
  * @returns {{command:string,file:string,valid:boolean,findings:Array<Object>,contrast:Array<Object>,summary:Object}}
  */
-export function validateComponent({ css = '', file = '<component>', profile, contrastPairs = [] } = {}) {
+export function validateComponent({ css = '', file = '<component>', profile, contrastPairs = [], family = '' } = {}) {
   let { findings } = lintComponentCss({ content: css, file, profile });
   let contrast = contrastPairs.map(([fg, bg, opts]) => ({ fg, bg, ...checkContrast(fg, bg, opts || {}) }));
   let failingContrast = contrast.filter((entry) => entry.resolved && !entry.passesAA);
@@ -381,7 +385,7 @@ export function validateComponent({ css = '', file = '<component>', profile, con
   let warnings = findings.filter((finding) => finding.severity === 'warning');
   let info = findings.filter((finding) => finding.severity === 'info');
 
-  return {
+  let result = {
     command: 'validate-component',
     file,
     valid: errors.length === 0 && failingContrast.length === 0,
@@ -395,6 +399,19 @@ export function validateComponent({ css = '', file = '<component>', profile, con
       contrastFailures: failingContrast.length,
     },
   };
+
+  // Organic-fit hint: when the component belongs to a known semantic family,
+  // surface that family's tokens so it reuses them instead of re-deriving.
+  if (family) {
+    let familyTokens = tokensForFamily(family);
+    result.family = family;
+    result.familyTokens = familyTokens;
+    result.fit = familyTokens.length
+      ? `This is the '${family}' family — consume its ${familyTokens.length} semantic tokens (e.g. ${familyTokens.slice(0, 3).map((t) => t.token).join(', ')}) instead of re-deriving the surface from primitives.`
+      : `No semantic family '${family}' exists — treat this as a new surface and compose from the scale rungs.`;
+  }
+
+  return result;
 }
 
 /**
