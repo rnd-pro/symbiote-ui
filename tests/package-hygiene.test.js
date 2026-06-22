@@ -99,9 +99,12 @@ async function assertNoPrivatePackContent(packageDir) {
 }
 
 test('tracked public repository files pass private hygiene scan', async () => {
-  let gitmodules = await readFile(join(repoRoot, '.gitmodules'), 'utf8');
-  assert.match(gitmodules, /url = \.\.\/team-memory\.git/);
-  assert.doesNotMatch(gitmodules, /https?:\/\/|git@/);
+  // Shared-clone architecture: team memory is a configured directory, not a
+  // submodule. A .gitmodules may be absent; if present it must never expose a
+  // remote URL or reference the private team-memory repository.
+  let gitmodules = await readFile(join(repoRoot, '.gitmodules'), 'utf8').catch(() => '');
+  assert.doesNotMatch(gitmodules, /https?:\/\/|git@/, '.gitmodules must not expose a remote URL');
+  assert.doesNotMatch(gitmodules, /team-memory/i, '.gitmodules must not reference private team memory');
 
   let blockedPatterns = [
     { pattern: /\/Users\//, label: 'absolute local path' },
