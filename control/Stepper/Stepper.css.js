@@ -35,7 +35,7 @@ sn-stepper[hidden] {
   background: var(--sn-stepper-indicator-bg, var(--sn-bg, #121214));
   border: 2px solid var(--sn-stepper-indicator-border, var(--sn-outline-color, rgba(255, 255, 255, 0.12)));
   color: var(--sn-stepper-indicator-color, var(--sn-text-dim, rgba(255, 255, 255, 0.7)));
-  font-size: 11px;
+  font-size: var(--sn-text-xs);
   font-weight: 600;
   transition: all var(--sn-transition-normal, 240ms);
 }
@@ -82,6 +82,6 @@ sn-stepper[hidden] {
 }
 
 .sn-stepper-indicator .material-symbols-outlined {
-  font-size: 14px;
+  font-size: var(--sn-text-lg);
 }
 `;

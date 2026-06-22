@@ -7,7 +7,7 @@ let css = /*css*/`
     background: var(--sn-panel-bg);
     color: var(--sn-text);
     font-family: var(--sn-font);
-    font-size: 11px;
+    font-size: var(--sn-text-xs);
     overflow: hidden;
     --vp-border: var(--sn-node-border);
     --vp-safe-zone: hsl(var(--sn-hue-base) var(--sn-sat-muted) var(--sn-lit-text) / 0.12);
@@ -34,7 +34,7 @@ let css = /*css*/`
     padding: 1px 4px;
     border-radius: calc(3px * var(--sn-theme-radius-scale, 1));
     font-family: inherit;
-    font-size: 10px;
+    font-size: var(--sn-text-2xs);
     cursor: pointer;
     transition: var(--sn-effect-hover-transition);
   }
@@ -51,7 +51,7 @@ let css = /*css*/`
     border-radius: calc(3px * var(--sn-theme-radius-scale, 1));
     cursor: pointer;
     font-family: inherit;
-    font-size: 10px;
+    font-size: var(--sn-text-2xs);
     transition: var(--sn-effect-hover-transition);
   }
 
@@ -63,13 +63,13 @@ let css = /*css*/`
   .vp-spacer { flex: 1; }
 
   .vp-zoom-label {
-    font-size: 10px;
+    font-size: var(--sn-text-2xs);
     color: var(--sn-text-dim);
     font-family: var(--sn-font-mono);
   }
 
   .vp-frame-label {
-    font-size: 10px;
+    font-size: var(--sn-text-2xs);
     color: var(--sn-text-dim);
     font-family: var(--sn-font-mono);
   }
@@ -124,7 +124,7 @@ let css = /*css*/`
     align-items: center;
     justify-content: center;
     color: var(--sn-text-dim);
-    font-size: 12px;
+    font-size: var(--sn-text-sm);
     font-style: italic;
     opacity: 0.5;
   }

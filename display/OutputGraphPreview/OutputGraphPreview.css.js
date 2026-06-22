@@ -31,13 +31,13 @@ output-graph-preview[hidden] {
   gap: 10px;
   min-height: 18px;
   color: var(--sn-output-preview-muted, var(--sn-text-dim));
-  font-size: 11px;
+  font-size: var(--sn-text-xs);
 }
 
 .output-graph-preview-title {
   overflow: hidden;
   color: var(--sn-output-preview-title, var(--sn-text));
-  font-size: 12px;
+  font-size: var(--sn-text-sm);
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -51,7 +51,7 @@ output-graph-preview[hidden] {
 .output-graph-preview-empty {
   padding: var(--sn-space-sm) 0;
   color: var(--sn-output-preview-muted, var(--sn-text-dim));
-  font-size: 12px;
+  font-size: var(--sn-text-sm);
 }
 
 .output-graph-preview-canvas {
@@ -89,7 +89,7 @@ output-graph-preview[hidden] {
 
 .output-graph-preview-node-label {
   color: var(--sn-output-preview-label, var(--sn-text));
-  font-size: 12px;
+  font-size: var(--sn-text-sm);
   font-weight: 500;
 }
 
@@ -97,7 +97,7 @@ output-graph-preview[hidden] {
 .output-graph-preview-node-description,
 .output-graph-preview-edge {
   color: var(--sn-output-preview-muted, var(--sn-text-dim));
-  font-size: 10px;
+  font-size: var(--sn-text-2xs);
   line-height: 1.35;
 }
 

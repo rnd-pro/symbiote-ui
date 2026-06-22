@@ -96,7 +96,7 @@ sn-date-picker {
 }
 
 .sn-calendar-weekday {
-  font-size: 11px;
+  font-size: var(--sn-text-xs);
   font-weight: 500;
   color: var(--sn-text-dim, rgba(255,255,255,0.6));
   padding: var(--sn-space-xs) 0;

@@ -49,6 +49,6 @@ sn-breadcrumb-item[data-active] .bc-label {
 }
 
 .bc-label .material-symbols-outlined {
-  font-size: 16px;
+  font-size: var(--sn-text-xl);
 }
 `;

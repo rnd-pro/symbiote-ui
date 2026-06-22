@@ -57,7 +57,7 @@ export let styles = css`
       border-color 0.15s;
 
     & .material-symbols-outlined {
-      font-size: 18px;
+      font-size: var(--sn-text-2xl);
     }
 
     &:hover {

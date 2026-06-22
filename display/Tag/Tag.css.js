@@ -66,6 +66,6 @@ sn-tag[variant="info"] {
 }
 
 .sn-tag-close-btn .material-symbols-outlined {
-  font-size: 12px;
+  font-size: var(--sn-text-sm);
 }
 `;

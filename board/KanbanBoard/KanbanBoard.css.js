@@ -75,7 +75,7 @@ sn-kanban-board .sn-kanban-column-count {
   border: 1px solid var(--sn-kanban-border, var(--sn-node-border));
   border-radius: 999px;
   color: var(--sn-kanban-count-color, var(--sn-text-dim));
-  font-size: 11px;
+  font-size: var(--sn-text-xs);
   line-height: 1.4;
   text-align: center;
 }
@@ -153,7 +153,7 @@ sn-kanban-board .sn-kanban-card-meta {
   gap: 5px;
   min-width: 0;
   color: var(--sn-text-dim);
-  font-size: 11px;
+  font-size: var(--sn-text-xs);
   line-height: 1.35;
 }
 
@@ -164,7 +164,7 @@ sn-kanban-board .sn-kanban-card-footer {
   gap: 5px;
   min-width: 0;
   color: var(--sn-text-dim);
-  font-size: 11px;
+  font-size: var(--sn-text-xs);
   line-height: 1.35;
 }
 
@@ -177,7 +177,7 @@ sn-kanban-board .sn-kanban-chip {
   border: 1px solid var(--sn-node-border);
   border-radius: 999px;
   color: var(--sn-text-dim);
-  font-size: 10px;
+  font-size: var(--sn-text-2xs);
   line-height: 1.2;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -211,7 +211,7 @@ sn-kanban-board .sn-kanban-card-action {
   background: var(--sn-node-bg);
   color: var(--sn-text);
   font: inherit;
-  font-size: 11px;
+  font-size: var(--sn-text-xs);
   text-align: start;
   cursor: pointer;
 }
@@ -268,7 +268,7 @@ sn-kanban-board .sn-kanban-card-action[data-kind="danger"] {
 
 sn-kanban-board .sn-kanban-card-menu .material-symbols-outlined,
 sn-kanban-board .sn-kanban-card-action .material-symbols-outlined {
-  font-size: 16px;
+  font-size: var(--sn-text-xl);
 }
 
 sn-kanban-board .sn-kanban-column-empty,
@@ -280,7 +280,7 @@ sn-kanban-board .sn-kanban-empty {
   border: 1px dashed var(--sn-node-border);
   border-radius: 7px;
   color: var(--sn-text-dim);
-  font-size: 11px;
+  font-size: var(--sn-text-xs);
   line-height: 1.4;
   text-align: center;
 }

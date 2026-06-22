@@ -11,7 +11,7 @@ export let styles = css`
     gap: 2px;
     padding: 6px 12px;
     font-family: var(--sn-font);
-    font-size: 12px;
+    font-size: var(--sn-text-sm);
     color: var(--sn-text-dim);
     background: var(--sn-ctx-bg);
     border-radius: 6px;
@@ -62,14 +62,14 @@ export let styles = css`
     }
 
     & .material-symbols-outlined {
-      font-size: 14px;
+      font-size: var(--sn-text-lg);
     }
   }
 
   .bc-sep {
     color: var(--sn-text-dim);
     opacity: 0.5;
-    font-size: 11px;
+    font-size: var(--sn-text-xs);
     padding: 0 2px;
   }
 `;

@@ -56,7 +56,7 @@ export let styles = css`
     background: transparent;
     color: var(--sn-ctx-color, #e0e0e0);
     font-family: var(--sn-font);
-    font-size: 13px;
+    font-size: var(--sn-text-md);
     cursor: pointer;
     border-radius: 4px;
     transition: background 0.1s, color 0.1s;
@@ -73,7 +73,7 @@ export let styles = css`
   }
 
   .sn-ctx-icon {
-    font-size: 18px;
+    font-size: var(--sn-text-2xl);
     opacity: 0.7;
   }
 
@@ -82,7 +82,7 @@ export let styles = css`
     align-items: center;
     justify-content: center;
     width: 16px;
-    font-size: 12px;
+    font-size: var(--sn-text-sm);
     color: var(--tab-accent, var(--sn-tabs-accent, #007acc));
   }
 
@@ -93,7 +93,7 @@ export let styles = css`
 
   .sn-ctx-detail {
     margin-left: auto;
-    font-size: 11px;
+    font-size: var(--sn-text-xs);
     color: var(--sn-text-dim, #888);
     padding-left: var(--sn-space-md);
   }

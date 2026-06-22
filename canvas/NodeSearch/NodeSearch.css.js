@@ -30,7 +30,7 @@ export let styles = css`
     }
 
     & .search-icon {
-      font-size: 18px;
+      font-size: var(--sn-text-2xl);
       color: var(--sn-text-dim);
     }
 
@@ -40,7 +40,7 @@ export let styles = css`
       border: none;
       outline: none;
       color: var(--sn-text);
-      font-size: 14px;
+      font-size: var(--sn-text-lg);
       font-family: inherit;
     }
 
@@ -49,7 +49,7 @@ export let styles = css`
     }
 
     & .search-hint {
-      font-size: 11px;
+      font-size: var(--sn-text-xs);
       color: var(--sn-text-dim);
       padding: 2px 6px;
       border: 1px solid var(--sn-node-border);
@@ -79,7 +79,7 @@ export let styles = css`
     padding: 8px 14px;
     cursor: pointer;
     color: var(--sn-text);
-    font-size: 13px;
+    font-size: var(--sn-text-md);
     transition: background var(--sn-transition-fast) var(--sn-transition-easing);
 
     &:hover {
@@ -88,7 +88,7 @@ export let styles = css`
   }
 
   .search-result-type {
-    font-size: 11px;
+    font-size: var(--sn-text-xs);
     color: var(--sn-text-dim);
     padding: 1px 6px;
     border-radius: 4px;

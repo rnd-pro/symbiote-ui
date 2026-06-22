@@ -60,7 +60,7 @@ sn-floating-panel {
 }
 
 .sn-floating-action-icon {
-  font-size: 16px;
+  font-size: var(--sn-text-xl);
 }
 
 .sn-floating-action-btn[data-action="close"]:hover {

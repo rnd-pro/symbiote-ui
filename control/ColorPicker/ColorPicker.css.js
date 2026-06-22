@@ -148,7 +148,7 @@ sn-color-picker {
   color: var(--sn-text);
   border-radius: 4px;
   padding: var(--sn-space-xs) var(--sn-space-sm);
-  font-size: 12px;
+  font-size: var(--sn-text-sm);
   outline: none;
 }
 

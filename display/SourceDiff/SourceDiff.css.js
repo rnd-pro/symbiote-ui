@@ -35,12 +35,12 @@ sn-source-diff {
 
 .sn-source-diff-filename {
   font-weight: 500;
-  font-size: 13px;
+  font-size: var(--sn-text-md);
   color: var(--sn-text, #fff);
 }
 
 .sn-source-diff-stats {
-  font-size: 11px;
+  font-size: var(--sn-text-xs);
   color: var(--sn-text-dim, #888);
 }
 
@@ -59,7 +59,7 @@ sn-source-diff {
   border-radius: 4px;
   color: var(--sn-text-dim, #ccc);
   padding: 4px 10px;
-  font-size: 12px;
+  font-size: var(--sn-text-sm);
   cursor: pointer;
   outline: none;
   transition: background 0.15s, color 0.15s;
@@ -73,7 +73,7 @@ sn-source-diff {
 
 .sn-source-diff-mode-btn .material-symbols-outlined,
 .sn-source-diff-btn .material-symbols-outlined {
-  font-size: 16px;
+  font-size: var(--sn-text-xl);
 }
 
 .sn-source-diff-accept {
@@ -187,7 +187,7 @@ sn-source-diff {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--sn-text-sm);
   font-weight: bold;
 }
 

@@ -37,7 +37,7 @@ sn-qr-code {
 .sn-qr-label {
   margin-top: var(--sn-space-sm);
   max-width: 120px;
-  font-size: 11px;
+  font-size: var(--sn-text-xs);
   color: var(--sn-text-dim, rgba(255,255,255,0.5));
   overflow-wrap: anywhere;
 }

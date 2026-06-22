@@ -199,7 +199,7 @@ export let sidebarStyles = css`
     }
 
     & .material-symbols-outlined {
-      font-size: 16px;
+      font-size: var(--sn-text-xl);
     }
 
     layout-sidebar[edit-mode] & {
@@ -238,12 +238,12 @@ export let sidebarStyles = css`
   }
 
   sidebar-section .sec-icon {
-    font-size: 16px;
+    font-size: var(--sn-text-xl);
     flex-shrink: 0;
   }
 
   sidebar-section .sec-label {
-    font-size: 13px;
+    font-size: var(--sn-text-md);
     font-weight: 500;
 
     layout-sidebar[collapsed] & {
@@ -254,7 +254,7 @@ export let sidebarStyles = css`
   /* Expand chevron */
   sidebar-section .sec-expand {
     margin-left: auto;
-    font-size: 16px;
+    font-size: var(--sn-text-xl);
     transition:
       transform 0.15s,
       opacity 0.15s;
@@ -308,7 +308,7 @@ export let sidebarStyles = css`
     }
 
     & .material-symbols-outlined {
-      font-size: 16px;
+      font-size: var(--sn-text-xl);
     }
 
     layout-sidebar[edit-mode] & {
@@ -354,7 +354,7 @@ export let sidebarStyles = css`
     gap: var(--sn-space-sm);
     padding: 4px 14px 4px 38px;
     min-height: 24px;
-    font-size: 12px;
+    font-size: var(--sn-text-sm);
     color: var(--sn-text-dim);
     cursor: default;
     transition:
@@ -367,7 +367,7 @@ export let sidebarStyles = css`
     }
 
     & .material-symbols-outlined {
-      font-size: 14px;
+      font-size: var(--sn-text-lg);
       opacity: 0.6;
     }
   }
@@ -391,7 +391,7 @@ export let sidebarStyles = css`
       color 0.12s;
 
     & .material-symbols-outlined {
-      font-size: 14px;
+      font-size: var(--sn-text-lg);
     }
 
     &:hover {

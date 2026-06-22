@@ -31,13 +31,13 @@ output-list-preview[hidden] {
   gap: 10px;
   min-height: 18px;
   color: var(--sn-output-preview-muted, var(--sn-text-dim));
-  font-size: 11px;
+  font-size: var(--sn-text-xs);
 }
 
 .output-list-preview-title {
   overflow: hidden;
   color: var(--sn-output-preview-title, var(--sn-text));
-  font-size: 12px;
+  font-size: var(--sn-text-sm);
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -58,7 +58,7 @@ output-list-preview[hidden] {
 .output-list-preview-empty {
   padding: var(--sn-space-sm) 0;
   color: var(--sn-output-preview-muted, var(--sn-text-dim));
-  font-size: 12px;
+  font-size: var(--sn-text-sm);
 }
 
 .output-list-preview-item {
@@ -84,14 +84,14 @@ output-list-preview[hidden] {
 
 .output-list-preview-label {
   color: var(--sn-output-preview-label, var(--sn-text));
-  font-size: 12px;
+  font-size: var(--sn-text-sm);
   font-weight: 500;
 }
 
 .output-list-preview-description {
   grid-column: 1 / -1;
   color: var(--sn-output-preview-muted, var(--sn-text-dim));
-  font-size: 11px;
+  font-size: var(--sn-text-xs);
   line-height: 1.35;
 }
 
@@ -99,7 +99,7 @@ output-list-preview[hidden] {
 .output-list-preview-status {
   color: var(--sn-output-preview-muted, var(--sn-text-dim));
   font-family: var(--sn-font-mono, monospace);
-  font-size: 10px;
+  font-size: var(--sn-text-2xs);
 }
 
 .output-list-preview-status {

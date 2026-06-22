@@ -62,7 +62,7 @@ sn-tags-input {
 }
 
 .sn-tags-chip-remove-icon {
-  font-size: 14px;
+  font-size: var(--sn-text-lg);
 }
 
 .sn-tags-input-field {

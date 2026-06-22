@@ -18,7 +18,7 @@ export let styles = css`
       display: flex;
       align-items: center;
       gap: var(--sn-space-xs);
-      font-size: 10px;
+      font-size: var(--sn-text-2xs);
       font-weight: 600;
       text-transform: uppercase;
       color: var(--sn-text-dim);
@@ -28,7 +28,7 @@ export let styles = css`
 
     & .tpl-chips-label .material-symbols-outlined,
     & .tpl-preview-label .material-symbols-outlined {
-      font-size: 14px;
+      font-size: var(--sn-text-lg);
       opacity: 0.6;
     }
 
@@ -39,7 +39,7 @@ export let styles = css`
     }
 
     & .tpl-chips-empty {
-      font-size: 11px;
+      font-size: var(--sn-text-xs);
       color: var(--sn-text-dim);
       font-style: italic;
       padding: var(--sn-space-xs) 0;
@@ -52,7 +52,7 @@ export let styles = css`
     & .tpl-test-data {
       width: 100%;
       padding: 6px 8px;
-      font-size: 11px;
+      font-size: var(--sn-text-xs);
       font-family: var(--sn-font-mono);
       color: var(--sn-text);
       background: color-mix(in oklab, currentColor 6%, transparent);
@@ -71,7 +71,7 @@ export let styles = css`
     }
 
     & .tpl-preview-result {
-      font-size: 12px;
+      font-size: var(--sn-text-sm);
       font-family: var(--sn-font-mono);
       color: var(--sn-text);
       background: color-mix(in oklab, currentColor 4%, transparent);
@@ -88,7 +88,7 @@ export let styles = css`
   .tpl-chip {
     display: inline-block;
     padding: 2px 8px;
-    font-size: 11px;
+    font-size: var(--sn-text-xs);
     font-family: var(--sn-font-mono);
     border-radius: 10px;
     background: var(--sn-success-bg);

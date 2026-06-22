@@ -78,7 +78,7 @@ sn-file-upload {
 
 .sn-file-item-size {
   color: var(--sn-text-dim, rgba(255,255,255,0.5));
-  font-size: 11px;
+  font-size: var(--sn-text-xs);
 }
 
 .sn-file-item-remove {
