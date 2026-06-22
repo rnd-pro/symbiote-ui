@@ -8,7 +8,7 @@ sn-file-upload {
 .sn-file-container {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--sn-space-sm);
   width: 100%;
 }
 
@@ -35,7 +35,7 @@ sn-file-upload {
 
 .sn-file-dropzone-icon {
   font-size: 32px;
-  margin-bottom: 8px;
+  margin-bottom: var(--sn-space-sm);
 }
 
 .sn-file-dropzone-text {

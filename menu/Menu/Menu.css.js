@@ -69,7 +69,7 @@ sn-menu-item[checked] {
   font-size: calc(var(--sn-menu-item-font-size, 12px) - 2px);
   color: var(--sn-menu-item-shortcut-color, var(--sn-text-dim-extra, rgba(255, 255, 255, 0.4)));
   margin-left: auto;
-  padding-left: 12px;
+  padding-left: var(--sn-space-md);
 }
 
 sn-menu-separator {

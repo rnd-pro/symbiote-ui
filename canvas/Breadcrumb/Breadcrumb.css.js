@@ -54,7 +54,7 @@ export let styles = css`
       color 0.15s ease-out;
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: var(--sn-space-xs);
 
     &:hover {
       background: var(--sn-ctx-hover);

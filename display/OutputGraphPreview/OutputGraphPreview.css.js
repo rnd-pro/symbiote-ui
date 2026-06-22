@@ -49,7 +49,7 @@ output-graph-preview[hidden] {
 }
 
 .output-graph-preview-empty {
-  padding: 8px 0;
+  padding: var(--sn-space-sm) 0;
   color: var(--sn-output-preview-muted, var(--sn-text-dim));
   font-size: 12px;
 }
@@ -60,7 +60,7 @@ output-graph-preview[hidden] {
   grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
   gap: 10px;
   min-height: 96px;
-  padding: 8px;
+  padding: var(--sn-space-sm);
   border-radius: var(--sn-output-preview-canvas-radius);
   background:
     linear-gradient(var(--sn-output-preview-grid) 1px, transparent 1px),

@@ -44,12 +44,12 @@ sn-date-picker {
   top: 100%;
   left: 0;
   z-index: 1000;
-  margin-top: 4px;
+  margin-top: var(--sn-space-xs);
   background-color: var(--sn-panel-bg, #1e1e24);
   border: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
   border-radius: var(--sn-panel-radius, 6px);
   box-shadow: var(--sn-panel-shadow, 0 10px 25px rgba(0,0,0,0.35));
-  padding: 8px;
+  padding: var(--sn-space-sm);
   box-sizing: border-box;
   min-width: 260px;
 }
@@ -66,7 +66,7 @@ sn-date-picker {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: var(--sn-space-sm);
 }
 
 .sn-calendar-nav-btn {
@@ -74,7 +74,7 @@ sn-date-picker {
   border: none;
   color: var(--sn-text);
   cursor: pointer;
-  padding: 4px;
+  padding: var(--sn-space-xs);
   border-radius: 4px;
 }
 
@@ -99,7 +99,7 @@ sn-date-picker {
   font-size: 11px;
   font-weight: 500;
   color: var(--sn-text-dim, rgba(255,255,255,0.6));
-  padding: 4px 0;
+  padding: var(--sn-space-xs) 0;
 }
 
 .sn-calendar-day {

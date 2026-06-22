@@ -23,8 +23,8 @@ export default `
   canvas-graph > canvas.grabbing { cursor: grabbing; }
   canvas-graph > graph-breadcrumb {
     position: absolute;
-    top: 16px;
-    left: 16px;
+    top: var(--sn-space-lg);
+    left: var(--sn-space-lg);
     z-index: 10;
   }
 `;

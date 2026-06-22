@@ -24,13 +24,13 @@ sn-source-diff {
   background: var(--sn-surface, #272730);
   border-block-end: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--sn-space-sm);
 }
 
 .sn-source-diff-info {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--sn-space-md);
 }
 
 .sn-source-diff-filename {
@@ -46,7 +46,7 @@ sn-source-diff {
 
 .sn-source-diff-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--sn-space-sm);
 }
 
 .sn-source-diff-mode-btn,
@@ -135,7 +135,7 @@ sn-source-diff {
 
 .sn-source-diff-hunk-actions {
   display: inline-flex;
-  gap: 8px;
+  gap: var(--sn-space-sm);
   float: right;
 }
 
@@ -201,7 +201,7 @@ sn-source-diff {
   justify-content: center;
   min-width: 14px;
   height: 14px;
-  margin-inline-start: 4px;
+  margin-inline-start: var(--sn-space-xs);
   border-radius: 999px;
   background: var(--sn-hue-info, #38bdf8);
   color: var(--sn-panel-bg, #1e1e24);

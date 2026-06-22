@@ -42,7 +42,7 @@ sn-combobox {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 8px;
+  padding: var(--sn-space-sm);
   transition: color var(--sn-transition-fast, 120ms);
 }
 
@@ -61,7 +61,7 @@ sn-combobox {
   max-height: 240px;
   overflow-y: auto;
   box-sizing: border-box;
-  padding: 4px;
+  padding: var(--sn-space-xs);
 }
 
 .sn-combobox-dropdown[data-visible] {
