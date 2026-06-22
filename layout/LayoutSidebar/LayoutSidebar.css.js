@@ -141,7 +141,7 @@ export let sidebarStyles = css`
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 4px 0;
+    padding: var(--sn-space-xs) 0;
   }
 
   /* ═══════════════════════ SidebarSection ═══════════════════════ */
@@ -228,7 +228,7 @@ export let sidebarStyles = css`
     overflow: hidden;
 
     layout-sidebar[edit-mode] & {
-      padding-left: 4px;
+      padding-left: var(--sn-space-xs);
     }
 
     &:hover {
@@ -279,7 +279,7 @@ export let sidebarStyles = css`
     color: var(--sn-text);
     background: var(--sn-node-bg);
     border-left: 2px solid var(--sn-cat-server);
-    padding-left: 12px;
+    padding-left: var(--sn-space-md);
 
     layout-sidebar[edit-mode] & {
       padding-left: 2px;
@@ -351,7 +351,7 @@ export let sidebarStyles = css`
   sidebar-section .sub-panel-item {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--sn-space-sm);
     padding: 4px 14px 4px 38px;
     min-height: 24px;
     font-size: 12px;

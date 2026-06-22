@@ -24,7 +24,7 @@ sn-floating-panel {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
+  padding: var(--sn-space-sm) var(--sn-space-md);
   background-color: var(--sn-panel-bg, #1e1e24);
   border-bottom: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
   cursor: move;
@@ -70,7 +70,7 @@ sn-floating-panel {
 .sn-floating-body {
   flex: 1;
   overflow: auto;
-  padding: 12px;
+  padding: var(--sn-space-md);
   box-sizing: border-box;
 }
 
