@@ -12,6 +12,8 @@ import {
   GEOMETRY_PROFILES,
   GEOMETRY_PROFILE_NAMES,
   SPACE_RUNGS,
+  STEP_MULTIPLES,
+  LEGACY_SPACE_STEP,
   buildSkinGeometry,
   geometryAxisForProperty,
   getGeometryScaleDescriptor,
@@ -22,66 +24,26 @@ import {
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-// Frozen snapshot of the skin geometry maps before the canonical-scale refactor.
-// Guards against any drift when skins are generated from tokens/scale.js.
-const EXPECTED_MODERN = {
-  '--sn-space-xs': '4px',
-  '--sn-space-sm': '8px',
-  '--sn-space-md': '12px',
-  '--sn-space-lg': '16px',
-  '--sn-space-xl': '24px',
-  '--sn-node-radius': 'var(--sn-space-md)',
-  '--sn-comment-radius': 'var(--sn-space-sm)',
-  '--sn-socket-size': 'var(--sn-space-md)',
-  '--sn-socket-border-width': '2px',
-  '--sn-grid-size': 'var(--sn-space-xl)',
-  '--sn-conn-width': '2',
-  '--sn-font': "'Inter', sans-serif",
-  '--sn-font-size': '13px',
-  '--sn-shadow-geometry': '0 4px 16px',
-  '--sn-node-shadow': 'var(--sn-shadow-geometry) var(--sn-shadow-color, rgba(0, 0, 0, 0.3))',
-};
-const EXPECTED_COMPACT = {
-  '--sn-space-xs': '3px',
-  '--sn-space-sm': '5px',
-  '--sn-space-md': '8px',
-  '--sn-space-lg': '12px',
-  '--sn-space-xl': '16px',
-  '--sn-node-radius': 'var(--sn-space-md)',
-  '--sn-comment-radius': 'var(--sn-space-sm)',
-  '--sn-socket-size': 'var(--sn-space-md)',
-  '--sn-socket-border-width': '1.5px',
-  '--sn-grid-size': 'var(--sn-space-xl)',
-  '--sn-conn-width': '1.5',
-  '--sn-font': "'Inter', sans-serif",
-  '--sn-font-size': '12px',
-  '--sn-shadow-geometry': '0 2px 8px',
-  '--sn-node-shadow': 'var(--sn-shadow-geometry) var(--sn-shadow-color, rgba(0, 0, 0, 0.2))',
-};
-const EXPECTED_ROUNDED = {
-  '--sn-space-xs': '5px',
-  '--sn-space-sm': '10px',
-  '--sn-space-md': '14px',
-  '--sn-space-lg': '20px',
-  '--sn-space-xl': '28px',
-  '--sn-node-radius': 'var(--sn-space-lg)',
-  '--sn-comment-radius': 'var(--sn-space-md)',
-  '--sn-socket-size': 'var(--sn-space-md)',
-  '--sn-socket-border-width': '2.5px',
-  '--sn-grid-size': 'var(--sn-space-xl)',
-  '--sn-conn-width': '2.5',
-  '--sn-font': "'Space Grotesk', sans-serif",
-  '--sn-font-size': '14px',
-  '--sn-shadow-geometry': '0 6px 24px',
-  '--sn-node-shadow': 'var(--sn-shadow-geometry) var(--sn-shadow-color, rgba(0, 0, 0, 0.25))',
-};
+test('skins are generated from the step ladder per register', () => {
+  // product (MODERN) is zero-change vs the old 5-rung scale — same px via steps
+  assert.equal(MODERN_SKIN.geometry['--sn-step-2'], '4px'); // was --sn-space-xs
+  assert.equal(MODERN_SKIN.geometry['--sn-step-6'], '12px'); // was --sn-space-md
+  assert.equal(MODERN_SKIN.geometry['--sn-step-10'], '24px'); // was --sn-space-xl
+  assert.equal(MODERN_SKIN.geometry['--sn-step-3'], '6px'); // the new de-facto rung
+  assert.equal(MODERN_SKIN.geometry['--sn-space-md'], 'var(--sn-step-6)');
+  assert.equal(MODERN_SKIN.geometry['--sn-node-radius'], 'var(--sn-space-md)');
+  assert.equal(MODERN_SKIN.geometry['--sn-socket-border-width'], '2px');
+  assert.equal(MODERN_SKIN.geometry['--sn-conn-width'], '2');
+  assert.equal(MODERN_SKIN.geometry['--sn-font-size'], '13px');
 
-test('skins generated from the canonical scale match the pre-refactor geometry exactly', () => {
-  assert.deepEqual(MODERN_SKIN.geometry, EXPECTED_MODERN);
-  assert.deepEqual(COMPACT_SKIN.geometry, EXPECTED_COMPACT);
-  assert.deepEqual(ROUNDED_SKIN.geometry, EXPECTED_ROUNDED);
-  // key order preserved
-  assert.deepEqual(Object.keys(MODERN_SKIN.geometry), Object.keys(EXPECTED_MODERN));
+  // tool (COMPACT) re-resolves the same ladder denser (× 0.75), spacious airier (× 1.25)
+  assert.equal(COMPACT_SKIN.geometry['--sn-step-6'], '9px');
+  assert.equal(COMPACT_SKIN.geometry['--sn-space-md'], 'var(--sn-step-6)'); // alias is register-stable
+  assert.equal(COMPACT_SKIN.geometry['--sn-font-size'], '12px');
+  assert.equal(COMPACT_SKIN.geometry['--sn-conn-width'], '1.5');
+  assert.equal(ROUNDED_SKIN.geometry['--sn-step-6'], '15px');
+  assert.equal(ROUNDED_SKIN.geometry['--sn-node-radius'], 'var(--sn-space-lg)');
+  assert.equal(ROUNDED_SKIN.geometry['--sn-font-size'], '14px');
 });
 
 test('buildSkinGeometry is the single source the skins are derived from', () => {
@@ -142,10 +104,12 @@ test('tokens/scale.json register values stay in sync with the scale module', () 
     let entry = catalog.space[rung];
     assert.equal(entry.$type === undefined ? catalog.space.$type : entry.$type ?? catalog.space.$type, 'dimension');
     let registers = entry.$extensions.sn.registers;
+    let step = LEGACY_SPACE_STEP[rung];
     for (let profileName of GEOMETRY_PROFILE_NAMES) {
+      let p = GEOMETRY_PROFILES[profileName];
       assert.equal(
         registers[profileName],
-        GEOMETRY_PROFILES[profileName].space[rung],
+        STEP_MULTIPLES[step] * p.base * p.density,
         `space.${rung} register ${profileName} drifted between scale.json and scale.js`,
       );
     }

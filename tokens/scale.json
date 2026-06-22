@@ -9,11 +9,11 @@
     },
     "sm": {
       "$value": { "value": 8, "unit": "px" },
-      "$extensions": { "sn": { "token": "--sn-space-sm", "uuid": "geo-space-sm", "registers": { "product": 8, "tool": 5, "spacious": 10 } } }
+      "$extensions": { "sn": { "token": "--sn-space-sm", "uuid": "geo-space-sm", "registers": { "product": 8, "tool": 6, "spacious": 10 } } }
     },
     "md": {
       "$value": { "value": 12, "unit": "px" },
-      "$extensions": { "sn": { "token": "--sn-space-md", "uuid": "geo-space-md", "registers": { "product": 12, "tool": 8, "spacious": 14 } } }
+      "$extensions": { "sn": { "token": "--sn-space-md", "uuid": "geo-space-md", "registers": { "product": 12, "tool": 9, "spacious": 15 } } }
     },
     "lg": {
       "$value": { "value": 16, "unit": "px" },
@@ -21,7 +21,7 @@
     },
     "xl": {
       "$value": { "value": 24, "unit": "px" },
-      "$extensions": { "sn": { "token": "--sn-space-xl", "uuid": "geo-space-xl", "registers": { "product": 24, "tool": 16, "spacious": 28 } } }
+      "$extensions": { "sn": { "token": "--sn-space-xl", "uuid": "geo-space-xl", "registers": { "product": 24, "tool": 18, "spacious": 30 } } }
     }
   },
   "radius": {
