@@ -46,7 +46,7 @@ sn-tour {
 }
 
 .sn-tour-icon {
-  font-size: 16px;
+  font-size: var(--sn-text-xl);
 }
 
 .sn-tour-body {
@@ -63,7 +63,7 @@ sn-tour {
 }
 
 .sn-tour-progress {
-  font-size: 11px;
+  font-size: var(--sn-text-xs);
   color: var(--sn-text-dim, rgba(255,255,255,0.5));
 }
 
@@ -78,7 +78,7 @@ sn-tour {
   color: var(--sn-text);
   padding: var(--sn-space-xs) var(--sn-space-sm);
   border-radius: 4px;
-  font-size: 11px;
+  font-size: var(--sn-text-xs);
   cursor: pointer;
 }
 

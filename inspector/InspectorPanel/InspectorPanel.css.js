@@ -47,14 +47,14 @@ export let styles = css`
       align-items: center;
       gap: var(--sn-space-sm);
       padding: var(--sn-space-md) var(--sn-space-lg);
-      font-size: 14px;
+      font-size: var(--sn-text-lg);
       font-weight: 600;
       border-bottom: 1px solid var(--sn-node-border);
       background: var(--sn-node-bg);
     }
 
     & .insp-header .material-symbols-outlined {
-      font-size: 18px;
+      font-size: var(--sn-text-2xl);
       opacity: 0.7;
     }
 
@@ -70,7 +70,7 @@ export let styles = css`
       gap: var(--sn-space-sm);
       padding: 40px 0;
       color: var(--sn-text-dim);
-      font-size: 13px;
+      font-size: var(--sn-text-md);
 
       &[hidden] {
         display: none;
@@ -88,7 +88,7 @@ export let styles = css`
 
     & .insp-field label {
       display: block;
-      font-size: 11px;
+      font-size: var(--sn-text-xs);
       font-weight: 600;
       text-transform: uppercase;
       color: var(--sn-text-dim);
@@ -97,7 +97,7 @@ export let styles = css`
     }
 
     & .insp-value {
-      font-size: 13px;
+      font-size: var(--sn-text-md);
       padding: 6px 8px;
       background: color-mix(in oklab, currentColor 4%, transparent);
       border-radius: 4px;
@@ -106,7 +106,7 @@ export let styles = css`
     & .insp-tag {
       display: inline-block;
       padding: 2px 8px;
-      font-size: 11px;
+      font-size: var(--sn-text-xs);
       border-radius: 4px;
       background: color-mix(in oklab, var(--sn-cat-server) 15%, transparent);
       color: var(--sn-cat-server);
@@ -114,7 +114,7 @@ export let styles = css`
 
     & .insp-mono {
       font-family: 'SF Mono', 'Fira Code', monospace;
-      font-size: 11px;
+      font-size: var(--sn-text-xs);
       opacity: 0.6;
     }
 
@@ -126,7 +126,7 @@ export let styles = css`
       display: flex;
       align-items: center;
       gap: 6px;
-      font-size: 12px;
+      font-size: var(--sn-text-sm);
       font-weight: 600;
       color: var(--sn-text-dim);
       margin-bottom: var(--sn-space-sm);
@@ -135,7 +135,7 @@ export let styles = css`
     }
 
     & .insp-section-title .material-symbols-outlined {
-      font-size: 16px;
+      font-size: var(--sn-text-xl);
       opacity: 0.6;
     }
   }
@@ -145,7 +145,7 @@ export let styles = css`
     align-items: center;
     gap: var(--sn-space-sm);
     padding: var(--sn-space-xs) var(--sn-space-sm);
-    font-size: 12px;
+    font-size: var(--sn-text-sm);
     border-radius: 4px;
     margin-bottom: 2px;
   }
@@ -167,7 +167,7 @@ export let styles = css`
   }
 
   .insp-port-type {
-    font-size: 10px;
+    font-size: var(--sn-text-2xs);
     color: var(--sn-text-dim);
     font-family: 'SF Mono', 'Fira Code', monospace;
   }
@@ -178,7 +178,7 @@ export let styles = css`
 
   .insp-ctrl-label {
     display: block;
-    font-size: 11px;
+    font-size: var(--sn-text-xs);
     font-weight: 600;
     text-transform: uppercase;
     color: var(--sn-text-dim);
@@ -190,7 +190,7 @@ export let styles = css`
   .insp-ctrl-select {
     width: 100%;
     padding: 6px 8px;
-    font-size: 12px;
+    font-size: var(--sn-text-sm);
     font-family: 'SF Mono', 'Fira Code', monospace;
     color: var(--sn-text);
     background: color-mix(in oklab, currentColor 6%, transparent);
@@ -208,7 +208,7 @@ export let styles = css`
   .insp-ctrl-textarea {
     width: 100%;
     padding: 6px 8px;
-    font-size: 11px;
+    font-size: var(--sn-text-xs);
     font-family: 'SF Mono', 'Fira Code', monospace;
     color: var(--sn-text);
     background: color-mix(in oklab, currentColor 6%, transparent);
@@ -303,7 +303,7 @@ export let styles = css`
     background: var(--sn-subgraph-bg);
     color: var(--sn-subgraph-accent);
     font-family: var(--sn-font);
-    font-size: 13px;
+    font-size: var(--sn-text-md);
     font-weight: 500;
     cursor: pointer;
     transition:
@@ -322,7 +322,7 @@ export let styles = css`
   }
 
   .insp-enter-btn .material-symbols-outlined {
-    font-size: 18px;
+    font-size: var(--sn-text-2xl);
   }
 
   .insp-fire {
@@ -341,7 +341,7 @@ export let styles = css`
     background: var(--sn-success-bg);
     color: var(--sn-success-color);
     font-family: var(--sn-font);
-    font-size: 13px;
+    font-size: var(--sn-text-md);
     font-weight: 600;
     cursor: pointer;
     transition:

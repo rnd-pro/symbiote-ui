@@ -49,7 +49,7 @@ sn-rich-text-editor {
 }
 
 .sn-editor-icon {
-  font-size: 18px;
+  font-size: var(--sn-text-2xl);
 }
 
 .sn-editor-link-overlay {
@@ -78,7 +78,7 @@ sn-rich-text-editor {
   border-radius: 4px;
   color: var(--sn-text);
   padding: var(--sn-space-xs) var(--sn-space-sm);
-  font-size: 12px;
+  font-size: var(--sn-text-sm);
   outline: none;
 }
 
@@ -92,7 +92,7 @@ sn-rich-text-editor {
   color: var(--sn-text);
   border-radius: 4px;
   padding: var(--sn-space-xs) var(--sn-space-sm);
-  font-size: 12px;
+  font-size: var(--sn-text-sm);
   cursor: pointer;
 }
 

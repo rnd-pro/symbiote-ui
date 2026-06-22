@@ -46,7 +46,7 @@ quick-open {
   }
   .qo-input::placeholder { color: var(--sn-text-dim); }
   .qo-kbd {
-    font-size: 10px;
+    font-size: var(--sn-text-2xs);
     padding: 2px 6px;
     border-radius: 4px;
     background: var(--sn-node-bg);
@@ -72,12 +72,12 @@ quick-open {
     background: var(--sn-accent-bg);
   }
   .qo-name {
-    font-size: 13px;
+    font-size: var(--sn-text-md);
     color: var(--sn-text);
     font-weight: 500;
   }
   .qo-path {
-    font-size: 11px;
+    font-size: var(--sn-text-xs);
     color: var(--sn-text-dim);
     margin-left: auto;
     font-family: var(--sn-font-mono);

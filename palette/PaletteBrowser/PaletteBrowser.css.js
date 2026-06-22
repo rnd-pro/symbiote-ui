@@ -13,7 +13,7 @@ export let styles = css`
     background: var(--sn-ctx-bg);
     border-left: 1px solid var(--sn-node-border);
     font-family: var(--sn-font);
-    font-size: 13px;
+    font-size: var(--sn-text-md);
     color: var(--sn-text);
     overflow: hidden;
     user-select: none;
@@ -22,7 +22,7 @@ export let styles = css`
   .pal-header {
     padding: 10px 14px;
     font-weight: 600;
-    font-size: 12px;
+    font-size: var(--sn-text-sm);
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: var(--sn-text-dim);
@@ -32,7 +32,7 @@ export let styles = css`
     gap: 6px;
 
     & .material-symbols-outlined {
-      font-size: 16px;
+      font-size: var(--sn-text-xl);
     }
   }
 
@@ -48,7 +48,7 @@ export let styles = css`
       border-radius: 4px;
       color: var(--sn-text);
       font-family: inherit;
-      font-size: 12px;
+      font-size: var(--sn-text-sm);
       outline: none;
       transition: border-color 0.2s ease-out;
 
@@ -71,7 +71,7 @@ export let styles = css`
   pal-category {
     & .pal-cat-header {
       padding: 6px 14px;
-      font-size: 11px;
+      font-size: var(--sn-text-xs);
       font-weight: 600;
       color: var(--sn-text-dim);
       text-transform: uppercase;
@@ -82,7 +82,7 @@ export let styles = css`
       gap: var(--sn-space-xs);
 
       & .material-symbols-outlined {
-        font-size: 14px;
+        font-size: var(--sn-text-lg);
         transition: transform 0.2s ease-out;
       }
 
@@ -120,7 +120,7 @@ export let styles = css`
     }
 
     & .pal-item-icon {
-      font-size: 16px;
+      font-size: var(--sn-text-xl);
       width: 20px;
       text-align: center;
       color: var(--item-color, var(--sn-text-dim));
@@ -128,11 +128,11 @@ export let styles = css`
 
     & .pal-item-label {
       flex: 1;
-      font-size: 12px;
+      font-size: var(--sn-text-sm);
     }
 
     & .pal-item-desc {
-      font-size: 10px;
+      font-size: var(--sn-text-2xs);
       color: var(--sn-text-dim);
       max-width: 100px;
       overflow: hidden;

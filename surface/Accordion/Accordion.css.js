@@ -65,7 +65,7 @@ sn-accordion-item:last-child {
 }
 
 .sn-accordion-icon {
-  font-size: 16px;
+  font-size: var(--sn-text-xl);
   color: var(--sn-text-dim, rgba(255, 255, 255, 0.6));
   transition: transform var(--sn-transition-normal, 240ms);
   user-select: none;

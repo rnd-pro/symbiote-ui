@@ -29,7 +29,7 @@ sn-transfer {
   padding: var(--sn-space-sm) var(--sn-space-md);
   background: var(--sn-panel-bg, #1e1e24);
   border-bottom: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
-  font-size: 12px;
+  font-size: var(--sn-text-sm);
   color: var(--sn-text);
   font-weight: 500;
 }

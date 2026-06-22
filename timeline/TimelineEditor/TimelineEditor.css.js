@@ -7,7 +7,7 @@ let css = /*css*/`
     background: var(--sn-panel-bg);
     color: var(--sn-text);
     font-family: var(--sn-font);
-    font-size: 11px;
+    font-size: var(--sn-text-xs);
     overflow: hidden;
     user-select: none;
     --te-track-height: 36px;
@@ -46,7 +46,7 @@ let css = /*css*/`
     border-radius: calc(3px * var(--sn-theme-radius-scale, 1));
     cursor: pointer;
     font-family: inherit;
-    font-size: 11px;
+    font-size: var(--sn-text-xs);
     line-height: 1;
     transition: var(--sn-effect-hover-transition);
   }
@@ -64,7 +64,7 @@ let css = /*css*/`
 
   .te-transport .te-time {
     font-family: var(--sn-font-mono);
-    font-size: 11px;
+    font-size: var(--sn-text-xs);
     color: var(--sn-text);
     min-width: 80px;
     text-align: center;
@@ -75,7 +75,7 @@ let css = /*css*/`
   }
 
   .te-transport .te-zoom-label {
-    font-size: 10px;
+    font-size: var(--sn-text-2xs);
     color: var(--sn-text-dim);
   }
 
@@ -101,7 +101,7 @@ let css = /*css*/`
     display: flex;
     align-items: center;
     padding: 0 var(--sn-space-sm);
-    font-size: 10px;
+    font-size: var(--sn-text-2xs);
     color: var(--sn-text-dim);
   }
 
@@ -135,7 +135,7 @@ let css = /*css*/`
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: 11px;
+    font-size: var(--sn-text-xs);
   }
 
   .te-header-mute {
@@ -145,7 +145,7 @@ let css = /*css*/`
     background: none;
     color: var(--sn-text-dim);
     cursor: pointer;
-    font-size: 12px;
+    font-size: var(--sn-text-sm);
     padding: 0;
     opacity: 0.5;
     transition: opacity var(--sn-transition-fast);
@@ -228,7 +228,7 @@ let css = /*css*/`
     justify-content: center;
     flex: 1;
     color: var(--sn-text-dim);
-    font-size: 12px;
+    font-size: var(--sn-text-sm);
     font-style: italic;
     opacity: 0.5;
   }

@@ -649,7 +649,7 @@ h4.md-h {
   margin-top: var(--sn-space-xs);
 }
 .source-badge .material-symbols-outlined {
-  font-size: 14px;
+  font-size: var(--sn-text-lg);
 }
 
 .attachment-card {
@@ -695,7 +695,7 @@ h4.md-h {
   border-bottom: 1px solid var(--sn-node-border);
 }
 .artifact-header .material-symbols-outlined {
-  font-size: 16px;
+  font-size: var(--sn-text-xl);
   color: var(--sn-text-dim);
 }
 .artifact-title {

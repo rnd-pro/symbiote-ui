@@ -32,7 +32,7 @@ export let styles = css`
     }
 
     & .sn-frame-icon {
-      font-size: 16px;
+      font-size: var(--sn-text-xl);
       opacity: 0.7;
     }
 

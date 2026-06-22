@@ -206,7 +206,7 @@ sn-data-table[hidden] {
 }
 
 .sn-data-table-sort-btn .material-symbols-outlined {
-  font-size: 14px;
+  font-size: var(--sn-text-lg);
 }
 
 [aria-sort="ascending"] .sn-data-table-sort-btn,
@@ -240,7 +240,7 @@ sn-data-table[hidden] {
 
 .sn-data-table-expand-btn .material-symbols-outlined,
 .sn-data-table-tree-btn .material-symbols-outlined {
-  font-size: 16px;
+  font-size: var(--sn-text-xl);
   transition: transform var(--sn-transition-fast, 120ms);
 }
 

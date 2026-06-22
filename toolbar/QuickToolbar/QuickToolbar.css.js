@@ -155,7 +155,7 @@ export let styles = css`
   }
 
   .tb-icon {
-    font-size: 18px;
+    font-size: var(--sn-text-2xl);
     pointer-events: none;
   }
 `;

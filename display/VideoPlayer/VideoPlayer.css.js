@@ -96,7 +96,7 @@ sn-video-player {
 }
 
 .sn-video-time {
-  font-size: 11px;
+  font-size: var(--sn-text-xs);
   color: var(--sn-video-text, #fff);
   font-variant-numeric: tabular-nums;
 }

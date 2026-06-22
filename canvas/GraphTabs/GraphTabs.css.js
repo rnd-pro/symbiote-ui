@@ -12,7 +12,7 @@ export let styles = css`
     background: var(--sn-ctx-bg);
     border-bottom: 1px solid var(--sn-node-border);
     font-family: var(--sn-font);
-    font-size: 12px;
+    font-size: var(--sn-text-sm);
     color: var(--sn-text-dim);
     overflow-x: auto;
     overflow-y: hidden;
@@ -58,11 +58,11 @@ export let styles = css`
     }
 
     & .material-symbols-outlined {
-      font-size: 14px;
+      font-size: var(--sn-text-lg);
     }
 
     & .tab-close {
-      font-size: 14px;
+      font-size: var(--sn-text-lg);
       opacity: 0;
       transition: opacity var(--sn-transition-fast) var(--sn-transition-easing);
       padding: 2px;
@@ -95,7 +95,7 @@ export let styles = css`
     }
 
     & .material-symbols-outlined {
-      font-size: 16px;
+      font-size: var(--sn-text-xl);
     }
   }
 `;

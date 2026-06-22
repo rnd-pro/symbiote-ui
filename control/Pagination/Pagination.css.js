@@ -57,6 +57,6 @@ sn-pagination[hidden] {
 }
 
 .sn-pagination-btn .material-symbols-outlined {
-  font-size: 16px;
+  font-size: var(--sn-text-xl);
 }
 `;
