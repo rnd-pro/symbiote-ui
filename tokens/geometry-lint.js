@@ -19,6 +19,7 @@
 import {
   DEFAULT_GEOMETRY_PROFILE,
   geometryAxisForProperty,
+  snapDurationToToken,
   snapFontSizeToToken,
   snapRadiusToToken,
   snapValueToToken,
@@ -92,14 +93,16 @@ export function lintGeometryValue(property, value, profileName = DEFAULT_GEOMETR
  */
 export function lintMotionValue(property, value) {
   if (!MOTION_PROPERTIES.has(property)) return [];
+  let kind = property.startsWith('animation') ? 'animation' : 'transition';
   let masked = maskAllowedSpans(value);
   let findings = [];
   for (let match of masked.matchAll(RAW_DURATION_REG)) {
+    let snap = snapDurationToToken(match[0], kind);
     findings.push({
       kind: 'raw-motion',
       property,
       literal: match[0],
-      suggestion: 'var(--sn-transition-*) or var(--sn-animation-duration-*)',
+      suggestion: snap ? snap.token : 'var(--sn-transition-*) or var(--sn-animation-duration-*)',
     });
   }
   return findings;
