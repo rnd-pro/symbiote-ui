@@ -17,28 +17,29 @@ import {
 test('@property registrations cover concrete primitives and inherit', () => {
   let regs = geometryAtPropertyRegistrations('product');
   let names = regs.map((r) => r.name);
-  assert.ok(names.includes('--sn-space-md'));
+  assert.ok(names.includes('--sn-step-6'));
   assert.ok(names.includes('--sn-conn-width'));
   assert.ok(names.includes('--sn-font-size'));
-  // derived aliases (var()-valued) are intentionally not registered
+  // var()-valued aliases (--sn-space-md, --sn-node-radius) are not registered
+  assert.equal(names.includes('--sn-space-md'), false);
   assert.equal(names.includes('--sn-node-radius'), false);
 
-  let spaceMd = regs.find((r) => r.name === '--sn-space-md');
-  assert.equal(spaceMd.syntax, '<length>');
-  assert.equal(spaceMd.inherits, true);
-  assert.equal(spaceMd.initialValue, '12px');
+  let step6 = regs.find((r) => r.name === '--sn-step-6');
+  assert.equal(step6.syntax, '<length>');
+  assert.equal(step6.inherits, true);
+  assert.equal(step6.initialValue, '12px');
 
   let conn = regs.find((r) => r.name === '--sn-conn-width');
   assert.equal(conn.syntax, '<number>');
 
-  // dense profile changes the initial-values
-  let dense = geometryAtPropertyRegistrations('tool').find((r) => r.name === '--sn-space-md');
-  assert.equal(dense.initialValue, '8px');
+  // dense profile re-resolves the same rung via base × density
+  let dense = geometryAtPropertyRegistrations('tool').find((r) => r.name === '--sn-step-6');
+  assert.equal(dense.initialValue, '9px');
 });
 
 test('geometryAtPropertyCss emits valid @property blocks', () => {
   let css = geometryAtPropertyCss('product');
-  assert.match(css, /@property --sn-space-md \{/);
+  assert.match(css, /@property --sn-step-6 \{/);
   assert.match(css, /syntax: '<length>';/);
   assert.match(css, /inherits: true;/);
   assert.match(css, /initial-value: 12px;/);

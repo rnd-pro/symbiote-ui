@@ -12,14 +12,17 @@ const editorTemplate = new URL('../themes/CascadeThemeEditor/CascadeThemeEditor.
 const widgetSource = new URL('../themes/CascadeThemeWidget/CascadeThemeWidget.js', import.meta.url);
 const widgetTemplate = new URL('../themes/CascadeThemeWidget/CascadeThemeWidget.tpl.js', import.meta.url);
 
-test('geometrySpacePrimitives returns only the --sn-space-* rungs per register', () => {
+test('geometrySpacePrimitives emits the step ladder plus --sn-space-* aliases per register', () => {
   let product = geometrySpacePrimitives('product');
-  assert.deepEqual(Object.keys(product), ['--sn-space-xs', '--sn-space-sm', '--sn-space-md', '--sn-space-lg', '--sn-space-xl']);
-  assert.equal(product['--sn-space-md'], '12px');
-  // dense register shifts the same rung
-  assert.equal(geometrySpacePrimitives('tool')['--sn-space-md'], '8px');
-  assert.equal(geometrySpacePrimitives('spacious')['--sn-space-md'], '14px');
-  // no derived tokens leak in (composes with cascade density/radius sliders)
+  // step ladder primitives carry the px; product is the airy default
+  assert.equal(product['--sn-step-6'], '12px');
+  assert.equal(product['--sn-step-3'], '6px');
+  // legacy t-shirt names are permanent var() aliases onto even step rungs
+  assert.equal(product['--sn-space-md'], 'var(--sn-step-6)');
+  // the same rung index re-resolves denser/airier per register (base × density)
+  assert.equal(geometrySpacePrimitives('tool')['--sn-step-6'], '9px');
+  assert.equal(geometrySpacePrimitives('spacious')['--sn-step-6'], '15px');
+  // derived geometry (node-radius) is not seeded here
   assert.equal('--sn-node-radius' in product, false);
 });
 

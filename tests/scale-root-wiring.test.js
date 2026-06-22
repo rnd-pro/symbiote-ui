@@ -31,7 +31,7 @@ test('default-provider token object seeds the canonical scale primitives', () =>
 test('default-provider.css root mirrors the scale primitives (no drift)', () => {
   let css = readFileSync(resolve(__dirname, '../themes/default-provider.css'), 'utf-8');
   for (let [name, value] of Object.entries(PRODUCT)) {
-    assert.match(css, new RegExp(`${name}:\\s*${value.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')};`),
+    assert.match(css, new RegExp(`${name}:\\s*${value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')};`),
       `${name}: ${value} missing from default-provider.css :root`);
   }
 });

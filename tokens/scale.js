@@ -18,12 +18,19 @@
 /** Spacing rung names, smallest → largest. The numbered axis the rest derives from. */
 export const SPACE_RUNGS = Object.freeze(['xs', 'sm', 'md', 'lg', 'xl']);
 
-/** Register-scoped geometry profiles. `product` is the airy default. */
+/**
+ * Register-scoped geometry profiles. `product` is the airy default. Spacing is
+ * no longer a hand-authored px table per register — it is the step ladder
+ * generated from two knobs: `base` (the grid quantum) and `density` (the
+ * register multiplier). product=1 (exact legacy px), tool=0.75 (dense),
+ * spacious=1.25 (airy). Any design re-tunes these two numbers.
+ */
 const PROFILES = {
   product: {
     registers: ['product', 'agent-workspace', 'media-studio', 'brand'],
     skin: 'modern',
-    space: { xs: 4, sm: 8, md: 12, lg: 16, xl: 24 },
+    base: 2,
+    density: 1,
     radius: { node: 'md', comment: 'sm' },
     socketSize: 'md',
     socketBorderWidth: 2,
@@ -36,7 +43,8 @@ const PROFILES = {
   tool: {
     registers: ['tool', 'admin', 'editor'],
     skin: 'compact',
-    space: { xs: 3, sm: 5, md: 8, lg: 12, xl: 16 },
+    base: 2,
+    density: 0.75,
     radius: { node: 'md', comment: 'sm' },
     socketSize: 'md',
     socketBorderWidth: 1.5,
@@ -49,7 +57,8 @@ const PROFILES = {
   spacious: {
     registers: ['presentation'],
     skin: 'rounded',
-    space: { xs: 5, sm: 10, md: 14, lg: 20, xl: 28 },
+    base: 2,
+    density: 1.25,
     radius: { node: 'lg', comment: 'md' },
     socketSize: 'md',
     socketBorderWidth: 2.5,
@@ -368,6 +377,7 @@ export function getStepScaleDescriptor() {
     model: 'px = STEP_MULTIPLES[n] * --sn-base * --sn-density; the rung index is register-agnostic, the px register-scoped.',
     steps: STEP_MULTIPLES.map((k, index) => ({ step: index, token: `--sn-step-${index}`, k, productPx: k * STEP_BASE_PX, defacto: STEP_DEFACTO[index] || null })),
     legacyAliases: Object.fromEntries(Object.entries(LEGACY_SPACE_STEP).map(([rung, step]) => [`--sn-space-${rung}`, `--sn-step-${step}`])),
+    registers: GEOMETRY_PROFILE_NAMES.map((name) => ({ name, base: PROFILES[name].base, density: PROFILES[name].density })),
     preferSemantic: 'Prefer a semantic token (e.g. --sn-card-padding) when a family owns the role; otherwise a --sn-step-* rung. The --sn-space-* t-shirt names are permanent aliases onto even rungs.',
   };
 }
@@ -412,8 +422,8 @@ export function snapValueToToken(property, rawValue, profileName = DEFAULT_GEOME
  */
 export function geometrySpacePrimitives(profileName = DEFAULT_GEOMETRY_PROFILE) {
   let p = getProfile(profileName);
-  let primitives = {};
-  for (let rung of SPACE_RUNGS) primitives[`--sn-space-${rung}`] = `${p.space[rung]}px`;
+  let primitives = stepScaleTokens(p.base, p.density);
+  for (let rung of SPACE_RUNGS) primitives[`--sn-space-${rung}`] = `var(--sn-step-${LEGACY_SPACE_STEP[rung]})`;
   return primitives;
 }
 
@@ -425,8 +435,8 @@ export function geometrySpacePrimitives(profileName = DEFAULT_GEOMETRY_PROFILE) 
  */
 export function buildSkinGeometry(profileName) {
   let p = getProfile(profileName);
-  let geometry = {};
-  for (let rung of SPACE_RUNGS) geometry[`--sn-space-${rung}`] = `${p.space[rung]}px`;
+  let geometry = stepScaleTokens(p.base, p.density);
+  for (let rung of SPACE_RUNGS) geometry[`--sn-space-${rung}`] = `var(--sn-step-${LEGACY_SPACE_STEP[rung]})`;
   geometry['--sn-node-radius'] = `var(--sn-space-${p.radius.node})`;
   geometry['--sn-comment-radius'] = `var(--sn-space-${p.radius.comment})`;
   geometry['--sn-socket-size'] = `var(--sn-space-${p.socketSize})`;
@@ -469,18 +479,15 @@ export function geometryScaleCss(profileName = DEFAULT_GEOMETRY_PROFILE) {
  */
 export function geometryAtPropertyRegistrations(profileName = DEFAULT_GEOMETRY_PROFILE) {
   let p = getProfile(profileName);
-  let registrations = SPACE_RUNGS.map((rung) => ({
-    name: `--sn-space-${rung}`,
-    syntax: '<length>',
-    inherits: true,
-    initialValue: `${p.space[rung]}px`,
-  }));
+  // --sn-space-* are var() aliases onto step rungs now, so (like --sn-node-radius)
+  // they are not @property-registrable; only the concrete step primitives are.
+  let registrations = [];
   for (let index = 0; index < STEP_MULTIPLES.length; index++) {
-    registrations.push({ name: `--sn-step-${index}`, syntax: '<length>', inherits: true, initialValue: `${STEP_MULTIPLES[index] * STEP_BASE_PX}px` });
+    registrations.push({ name: `--sn-step-${index}`, syntax: '<length>', inherits: true, initialValue: `${STEP_MULTIPLES[index] * p.base * p.density}px` });
   }
   registrations.push(
-    { name: '--sn-base', syntax: '<length>', inherits: true, initialValue: `${STEP_BASE_PX}px` },
-    { name: '--sn-density', syntax: '<number>', inherits: true, initialValue: '1' },
+    { name: '--sn-base', syntax: '<length>', inherits: true, initialValue: `${p.base}px` },
+    { name: '--sn-density', syntax: '<number>', inherits: true, initialValue: String(p.density) },
     { name: '--sn-socket-border-width', syntax: '<length>', inherits: true, initialValue: `${p.socketBorderWidth}px` },
     { name: '--sn-conn-width', syntax: '<number>', inherits: true, initialValue: String(p.connWidth) },
     { name: '--sn-font-size', syntax: '<length>', inherits: true, initialValue: `${p.fontSize}px` },
@@ -519,7 +526,8 @@ export function getGeometryScaleDescriptor() {
       name,
       registers: [...PROFILES[name].registers],
       skin: PROFILES[name].skin,
-      space: { ...PROFILES[name].space },
+      base: PROFILES[name].base,
+      density: PROFILES[name].density,
       fontSize: PROFILES[name].fontSize,
     })),
     axes: {

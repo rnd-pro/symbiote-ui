@@ -16,11 +16,11 @@
   --sn-step-10: 24px;
   --sn-step-11: 28px;
   --sn-step-12: 32px;
-  --sn-space-xs: 4px;
-  --sn-space-sm: 8px;
-  --sn-space-md: 12px;
-  --sn-space-lg: 16px;
-  --sn-space-xl: 24px;
+  --sn-space-xs: var(--sn-step-2);
+  --sn-space-sm: var(--sn-step-4);
+  --sn-space-md: var(--sn-step-6);
+  --sn-space-lg: var(--sn-step-8);
+  --sn-space-xl: var(--sn-step-10);
   --sn-text-2xs: 10px;
   --sn-text-xs: 11px;
   --sn-text-sm: 12px;
