@@ -194,7 +194,7 @@ sn-data-table[hidden] {
   color: var(--sn-text-dim, #888);
   cursor: pointer;
   padding: 2px;
-  border-radius: 4px;
+  border-radius: var(--sn-radius-sm);
   outline: none;
   transition: color 0.1s, background 0.1s;
 }
@@ -224,7 +224,7 @@ sn-data-table[hidden] {
   color: var(--sn-text-dim, #888);
   cursor: pointer;
   padding: var(--sn-space-xs);
-  border-radius: 4px;
+  border-radius: var(--sn-radius-sm);
   outline: none;
   transition: color 0.1s, background 0.1s;
   vertical-align: middle;

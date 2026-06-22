@@ -75,7 +75,7 @@ export default `
     max-width: 100%;
     max-height: 100%;
     object-fit: contain;
-    border-radius: 4px;
+    border-radius: var(--sn-radius-sm);
     box-shadow: 0 2px 12px var(--sn-bg-overlay);
   }
   /* In markdown mode: hide code, show md */
@@ -99,7 +99,7 @@ export default `
     padding: var(--sn-space-sm) var(--sn-space-lg);
     border-left: 4px solid var(--sn-cat-server);
     background: var(--sn-accent-bg-subtle);
-    border-radius: 0 4px 4px 0;
+    border-radius: 0 var(--sn-radius-sm) var(--sn-radius-sm) 0;
     font-style: italic;
   }
   code-block .md-list {
@@ -114,7 +114,7 @@ export default `
     padding: var(--sn-code-padding, 12px 16px);
     background: var(--sn-bg);
     border: 1px solid var(--sn-node-border);
-    border-radius: 6px;
+    border-radius: var(--sn-radius-md);
     font-family: 'SF Mono', 'Fira Code', monospace;
     font-size: var(--sn-code-font-size, 12px);
     line-height: 1.6;
@@ -137,7 +137,7 @@ export default `
   code-block .md-img {
     max-width: 100%;
     height: auto;
-    border-radius: 6px;
+    border-radius: var(--sn-radius-md);
     margin: var(--sn-space-sm) 0;
     border: 1px solid var(--sn-node-border);
     box-shadow: 0 2px 8px var(--sn-bg-overlay);

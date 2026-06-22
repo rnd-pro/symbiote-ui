@@ -41,7 +41,7 @@ sn-rating:not([disabled]):not([readonly]) .sn-rating-star:hover {
 sn-rating:focus-visible .sn-rating-container {
   outline: var(--sn-rating-focus-ring, 2px solid var(--sn-focus-ring-color, currentColor));
   outline-offset: 4px;
-  border-radius: 2px;
+  border-radius: var(--sn-radius-xs);
 }
 
 sn-rating[disabled] {

@@ -11,7 +11,7 @@ export let styles = css`
     right: var(--sn-space-lg);
     width: 200px;
     height: 140px;
-    border-radius: 8px;
+    border-radius: var(--sn-radius-lg);
     overflow: hidden;
     border: 1px solid var(--sn-node-border);
     box-shadow: 0 4px 16px var(--sn-shadow-color);
@@ -42,7 +42,7 @@ export let styles = css`
     right: var(--sn-space-lg);
     width: 32px;
     height: 32px;
-    border-radius: 6px;
+    border-radius: var(--sn-radius-md);
     border: 1px solid var(--sn-node-border);
     background: var(--sn-node-bg);
     color: var(--sn-text-dim);

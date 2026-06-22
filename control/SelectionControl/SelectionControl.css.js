@@ -148,19 +148,19 @@ sn-checkbox[indeterminate] .sn-selection-mark {
   inline-size: 8px;
   block-size: 2px;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--sn-radius-full);
   background: currentColor;
   transform: scale(1);
 }
 
 sn-radio .sn-selection-visual {
-  border-radius: 999px;
+  border-radius: var(--sn-radius-full);
 }
 
 sn-radio .sn-selection-mark {
   inline-size: var(--sn-selection-radio-dot-size, 6px);
   block-size: var(--sn-selection-radio-dot-size, 6px);
-  border-radius: 999px;
+  border-radius: var(--sn-radius-full);
   background: currentColor;
 }
 
@@ -175,7 +175,7 @@ sn-switch .sn-selection-input-wrap {
 }
 
 sn-switch .sn-selection-visual {
-  border-radius: 999px;
+  border-radius: var(--sn-radius-full);
   background: var(--sn-selection-switch-bg, var(--sn-field-toggle-bg, color-mix(in oklab, var(--sn-text) 12%, transparent)));
 }
 
@@ -184,7 +184,7 @@ sn-switch .sn-selection-mark {
   inset-inline-start: var(--sn-selection-switch-padding, 2px);
   inline-size: var(--sn-selection-switch-thumb-size, 14px);
   block-size: var(--sn-selection-switch-thumb-size, 14px);
-  border-radius: 999px;
+  border-radius: var(--sn-radius-full);
   background: var(--sn-selection-switch-thumb-bg, var(--sn-field-toggle-thumb-bg, #fff));
   box-shadow: var(--sn-selection-switch-thumb-shadow, 0 1px 2px rgba(0, 0, 0, 0.2));
   opacity: 1;

@@ -8,10 +8,16 @@ import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 
 import { DEFAULT_PROVIDER_THEME } from '../themes/default-provider.js';
-import { geometrySpacePrimitives, typeScaleTokens, snapFontSizeToToken } from '../tokens/scale.js';
+import {
+  geometrySpacePrimitives,
+  typeScaleTokens,
+  radiusScaleTokens,
+  snapFontSizeToToken,
+  snapRadiusToToken,
+} from '../tokens/scale.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const PRODUCT = { ...geometrySpacePrimitives('product'), ...typeScaleTokens() };
+const PRODUCT = { ...geometrySpacePrimitives('product'), ...typeScaleTokens(), ...radiusScaleTokens() };
 
 test('default-provider token object seeds the canonical scale primitives', () => {
   let tokens = DEFAULT_PROVIDER_THEME.tokens;
@@ -42,6 +48,18 @@ test('type scale codifies the de-facto sizes and snaps font-size to a rung', () 
   let near = snapFontSizeToToken('15px');
   assert.equal(near.token, 'var(--sn-text-lg)');
   assert.equal(near.exact, false);
+});
+
+test('radius scale snaps corner radii, with a pill case for large values', () => {
+  let tokens = radiusScaleTokens();
+  assert.equal(tokens['--sn-radius-md'], '6px');
+  assert.equal(tokens['--sn-radius-full'], '9999px');
+  assert.equal(snapRadiusToToken('6px').token, 'var(--sn-radius-md)');
+  assert.equal(snapRadiusToToken('6px').exact, true);
+  // off-scale snaps to nearest rung (7 -> 6 md or 8 lg; nearest is md by <0.5 rule false)
+  assert.equal(snapRadiusToToken('10px').token, 'var(--sn-radius-lg)'); // nearest to 8 vs 12
+  // pill
+  assert.equal(snapRadiusToToken('999px').token, 'var(--sn-radius-full)');
 });
 
 test('seeding primitives does not redefine derived geometry tokens', () => {

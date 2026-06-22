@@ -419,7 +419,7 @@ chat-sidebar-sub-item .chat-sub-items chat-sidebar-sub-item .chat-item-child::be
   width: var(--sn-chat-compact-delete-width);
   height: 100%;
   background: var(--sn-node-bg);
-  border-radius: 0 4px 4px 0;
+  border-radius: 0 var(--sn-radius-sm) var(--sn-radius-sm) 0;
   z-index: 31;
   transition: color var(--sn-transition-fast) var(--sn-transition-easing), opacity var(--sn-transition-fast) var(--sn-transition-easing);
 }

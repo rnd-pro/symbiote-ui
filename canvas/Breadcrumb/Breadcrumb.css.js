@@ -14,7 +14,7 @@ export let styles = css`
     font-size: var(--sn-text-sm);
     color: var(--sn-text-dim);
     background: var(--sn-ctx-bg);
-    border-radius: 6px;
+    border-radius: var(--sn-radius-md);
     backdrop-filter: blur(8px);
     pointer-events: auto;
     user-select: none;
@@ -47,7 +47,7 @@ export let styles = css`
 
   .bc-label {
     padding: 3px 8px;
-    border-radius: 4px;
+    border-radius: var(--sn-radius-sm);
     cursor: pointer;
     transition:
       background 0.15s ease-out,

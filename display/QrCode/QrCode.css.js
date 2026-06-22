@@ -21,7 +21,7 @@ sn-qr-code {
   height: 120px;
   background-color: var(--sn-qr-background, #fff);
   padding: 6px;
-  border-radius: 4px;
+  border-radius: var(--sn-radius-sm);
   box-sizing: border-box;
 }
 

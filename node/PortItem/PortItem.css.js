@@ -55,7 +55,7 @@ export let styles = css`
       }
 
       &[data-socket-shape='square']::after {
-        border-radius: 2px;
+        border-radius: var(--sn-radius-xs);
       }
 
       &[data-socket-shape='diamond']::after {

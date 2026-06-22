@@ -73,7 +73,7 @@ sn-kanban-board .sn-kanban-column-count {
   min-width: 24px;
   padding: 2px 7px;
   border: 1px solid var(--sn-kanban-border, var(--sn-node-border));
-  border-radius: 999px;
+  border-radius: var(--sn-radius-full);
   color: var(--sn-kanban-count-color, var(--sn-text-dim));
   font-size: var(--sn-text-xs);
   line-height: 1.4;
@@ -175,7 +175,7 @@ sn-kanban-board .sn-kanban-chip {
   min-height: 18px;
   padding: 1px 6px;
   border: 1px solid var(--sn-node-border);
-  border-radius: 999px;
+  border-radius: var(--sn-radius-full);
   color: var(--sn-text-dim);
   font-size: var(--sn-text-2xs);
   line-height: 1.2;
@@ -207,7 +207,7 @@ sn-kanban-board .sn-kanban-card-action {
   min-height: 30px;
   padding: var(--sn-space-xs) var(--sn-space-sm);
   border: 1px solid var(--sn-node-border);
-  border-radius: 6px;
+  border-radius: var(--sn-radius-md);
   background: var(--sn-node-bg);
   color: var(--sn-text);
   font: inherit;
@@ -236,7 +236,7 @@ sn-kanban-board .sn-kanban-card-menu {
   width: 24px;
   height: 24px;
   border: 1px solid var(--sn-node-border);
-  border-radius: 999px;
+  border-radius: var(--sn-radius-full);
   background: var(--sn-node-bg);
   color: var(--sn-text);
   cursor: pointer;

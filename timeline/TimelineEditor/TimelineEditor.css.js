@@ -126,7 +126,7 @@ let css = /*css*/`
   .te-header-icon {
     width: 14px;
     height: 14px;
-    border-radius: 2px;
+    border-radius: var(--sn-radius-xs);
     flex-shrink: 0;
   }
 

@@ -58,7 +58,7 @@ sn-video-player {
   color: var(--sn-video-btn-color, #fff);
   cursor: pointer;
   padding: var(--sn-space-xs);
-  border-radius: 4px;
+  border-radius: var(--sn-radius-sm);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -74,7 +74,7 @@ sn-video-player {
   width: 100%;
   height: 4px;
   background: var(--sn-video-track, rgba(255, 255, 255, 0.3));
-  border-radius: 2px;
+  border-radius: var(--sn-radius-xs);
   outline: none;
   cursor: pointer;
 }
@@ -106,7 +106,7 @@ sn-video-player {
   width: 60px;
   height: 4px;
   background: var(--sn-video-track, rgba(255, 255, 255, 0.3));
-  border-radius: 2px;
+  border-radius: var(--sn-radius-xs);
   outline: none;
   cursor: pointer;
 }

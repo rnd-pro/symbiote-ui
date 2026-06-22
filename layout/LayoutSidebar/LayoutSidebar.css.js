@@ -294,7 +294,7 @@ export let sidebarStyles = css`
     padding: 4px 6px;
     background: transparent;
     border: none;
-    border-radius: 4px;
+    border-radius: var(--sn-radius-sm);
     cursor: pointer;
     color: var(--sn-text-dim);
     transition:

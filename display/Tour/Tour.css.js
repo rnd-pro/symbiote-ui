@@ -42,7 +42,7 @@ sn-tour {
   color: var(--sn-text-dim, rgba(255,255,255,0.6));
   cursor: pointer;
   padding: 2px;
-  border-radius: 4px;
+  border-radius: var(--sn-radius-sm);
 }
 
 .sn-tour-icon {
@@ -77,7 +77,7 @@ sn-tour {
   border: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
   color: var(--sn-text);
   padding: var(--sn-space-xs) var(--sn-space-sm);
-  border-radius: 4px;
+  border-radius: var(--sn-radius-sm);
   font-size: var(--sn-text-xs);
   cursor: pointer;
 }

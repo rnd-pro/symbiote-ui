@@ -49,7 +49,7 @@ sn-floating-panel {
   color: var(--sn-text-dim, rgba(255,255,255,0.6));
   cursor: pointer;
   padding: 2px;
-  border-radius: 4px;
+  border-radius: var(--sn-radius-sm);
   display: inline-flex;
   align-items: center;
 }

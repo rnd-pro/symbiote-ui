@@ -116,7 +116,7 @@ output-graph-preview[hidden] {
 .output-graph-preview-edge {
   max-width: 100%;
   padding: 3px 6px;
-  border-radius: 999px;
+  border-radius: var(--sn-radius-full);
   background: var(--sn-output-preview-edge-bg);
 }
 `;

@@ -75,7 +75,7 @@ sn-date-picker {
   color: var(--sn-text);
   cursor: pointer;
   padding: var(--sn-space-xs);
-  border-radius: 4px;
+  border-radius: var(--sn-radius-sm);
 }
 
 .sn-calendar-nav-btn:hover {
@@ -106,7 +106,7 @@ sn-date-picker {
   font-size: calc(12px * var(--sn-theme-type-scale, 1));
   padding: 6px 0;
   color: var(--sn-text);
-  border-radius: 4px;
+  border-radius: var(--sn-radius-sm);
   cursor: pointer;
 }
 

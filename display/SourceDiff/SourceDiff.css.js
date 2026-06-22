@@ -56,7 +56,7 @@ sn-source-diff {
   gap: 6px;
   background: transparent;
   border: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.15));
-  border-radius: 4px;
+  border-radius: var(--sn-radius-sm);
   color: var(--sn-text-dim, #ccc);
   padding: 4px 10px;
   font-size: var(--sn-text-sm);
@@ -145,7 +145,7 @@ sn-source-diff {
   cursor: pointer;
   padding: 2px;
   color: var(--sn-text-dim, #888);
-  border-radius: 4px;
+  border-radius: var(--sn-radius-sm);
 }
 .sn-source-diff-hunk-btn:hover {
   background: rgba(255,255,255,0.1);
@@ -202,7 +202,7 @@ sn-source-diff {
   min-width: 14px;
   height: 14px;
   margin-inline-start: var(--sn-space-xs);
-  border-radius: 999px;
+  border-radius: var(--sn-radius-full);
   background: var(--sn-hue-info, #38bdf8);
   color: var(--sn-panel-bg, #1e1e24);
   font-family: var(--sn-font, sans-serif);
