@@ -21,7 +21,7 @@ let css = /*css*/`
     align-items: center;
     gap: 6px;
     height: 28px;
-    padding: 0 8px;
+    padding: 0 var(--sn-space-sm);
     background: var(--sn-panel-bg);
     border-bottom: 1px solid var(--vp-border);
     flex-shrink: 0;

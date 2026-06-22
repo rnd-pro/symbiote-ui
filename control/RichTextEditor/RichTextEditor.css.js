@@ -20,7 +20,7 @@ sn-rich-text-editor {
   position: relative;
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: var(--sn-space-xs);
   padding: 6px;
   background-color: var(--sn-panel-bg, #1e1e24);
   border-bottom: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
@@ -31,7 +31,7 @@ sn-rich-text-editor {
   border: none;
   color: var(--sn-text-dim, rgba(255,255,255,0.6));
   cursor: pointer;
-  padding: 4px;
+  padding: var(--sn-space-xs);
   border-radius: 4px;
   display: inline-flex;
   align-items: center;
@@ -77,7 +77,7 @@ sn-rich-text-editor {
   border: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
   border-radius: 4px;
   color: var(--sn-text);
-  padding: 4px 8px;
+  padding: var(--sn-space-xs) var(--sn-space-sm);
   font-size: 12px;
   outline: none;
 }
@@ -91,7 +91,7 @@ sn-rich-text-editor {
   border: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
   color: var(--sn-text);
   border-radius: 4px;
-  padding: 4px 8px;
+  padding: var(--sn-space-xs) var(--sn-space-sm);
   font-size: 12px;
   cursor: pointer;
 }
@@ -114,7 +114,7 @@ sn-rich-text-editor {
   min-height: 120px;
   max-height: 300px;
   overflow-y: auto;
-  padding: 12px;
+  padding: var(--sn-space-md);
   color: var(--sn-text);
   font-size: calc(13px * var(--sn-theme-type-scale, 1));
   outline: none;

@@ -28,7 +28,7 @@ sn-tags-input {
 .sn-tags-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: var(--sn-space-xs);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -37,7 +37,7 @@ sn-tags-input {
 .sn-tags-chip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--sn-space-xs);
   padding: 2px 8px;
   background-color: var(--sn-panel-bg, #1e1e24);
   border: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
@@ -73,7 +73,7 @@ sn-tags-input {
   outline: none;
   color: var(--sn-text);
   font-size: calc(13px * var(--sn-theme-type-scale, 1));
-  padding: 4px 0;
+  padding: var(--sn-space-xs) 0;
 }
 
 sn-tags-input[disabled] .sn-tags-container {

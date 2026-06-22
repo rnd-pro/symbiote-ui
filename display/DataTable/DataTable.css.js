@@ -134,7 +134,7 @@ sn-data-table[hidden] {
   background: rgba(248, 81, 73, 0.1);
   border: 1px solid var(--sn-status-error, #f85149);
   border-radius: var(--sn-data-table-radius, 4px);
-  margin: 8px;
+  margin: var(--sn-space-sm);
 }
 
 .sn-data-table-empty {
@@ -151,7 +151,7 @@ sn-data-table[hidden] {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: var(--sn-space-md);
   background: var(--sn-data-table-loading-bg, rgba(30, 30, 30, 0.7));
   backdrop-filter: blur(1px);
   z-index: 10;
@@ -223,7 +223,7 @@ sn-data-table[hidden] {
   border: none;
   color: var(--sn-text-dim, #888);
   cursor: pointer;
-  padding: 4px;
+  padding: var(--sn-space-xs);
   border-radius: 4px;
   outline: none;
   transition: color 0.1s, background 0.1s;

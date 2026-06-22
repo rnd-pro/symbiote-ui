@@ -58,18 +58,18 @@ sn-carousel {
 }
 
 .sn-carousel-nav-prev {
-  left: 8px;
+  left: var(--sn-space-sm);
 }
 
 .sn-carousel-nav-next {
-  right: 8px;
+  right: var(--sn-space-sm);
 }
 
 .sn-carousel-pagination {
   display: flex;
   justify-content: center;
   gap: 6px;
-  margin-top: 12px;
+  margin-top: var(--sn-space-md);
 }
 
 .sn-carousel-dot {

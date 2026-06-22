@@ -26,7 +26,7 @@ sn-video-player {
   left: 0;
   right: 0;
   background: var(--sn-video-controls-bg, linear-gradient(transparent, rgba(0, 0, 0, 0.85)));
-  padding: 8px 12px;
+  padding: var(--sn-space-sm) var(--sn-space-md);
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -43,13 +43,13 @@ sn-video-player {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--sn-space-md);
 }
 
 .sn-video-controls-group {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sn-space-sm);
 }
 
 .sn-video-btn {
@@ -57,7 +57,7 @@ sn-video-player {
   border: none;
   color: var(--sn-video-btn-color, #fff);
   cursor: pointer;
-  padding: 4px;
+  padding: var(--sn-space-xs);
   border-radius: 4px;
   display: inline-flex;
   align-items: center;

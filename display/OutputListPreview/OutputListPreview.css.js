@@ -56,7 +56,7 @@ output-list-preview[hidden] {
 }
 
 .output-list-preview-empty {
-  padding: 8px 0;
+  padding: var(--sn-space-sm) 0;
   color: var(--sn-output-preview-muted, var(--sn-text-dim));
   font-size: 12px;
 }

@@ -12,7 +12,7 @@ sn-qr-code {
   background-color: var(--sn-panel-bg, #1e1e24);
   border: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
   border-radius: var(--sn-panel-radius, 6px);
-  padding: 12px;
+  padding: var(--sn-space-md);
   box-sizing: border-box;
 }
 
@@ -35,7 +35,7 @@ sn-qr-code {
 }
 
 .sn-qr-label {
-  margin-top: 8px;
+  margin-top: var(--sn-space-sm);
   max-width: 120px;
   font-size: 11px;
   color: var(--sn-text-dim, rgba(255,255,255,0.5));

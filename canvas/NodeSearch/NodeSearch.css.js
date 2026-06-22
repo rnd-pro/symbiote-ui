@@ -7,7 +7,7 @@ import { css } from '@symbiotejs/symbiote';
 export let styles = css`
   node-search {
     position: absolute;
-    top: 16px;
+    top: var(--sn-space-lg);
     left: 50%;
     transform: translateX(-50%);
     width: 360px;
@@ -21,7 +21,7 @@ export let styles = css`
     & .search-bar {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: var(--sn-space-sm);
       padding: 8px 14px;
       background: var(--sn-node-bg);
       border: 1px solid var(--sn-node-border);
@@ -57,7 +57,7 @@ export let styles = css`
     }
 
     & .search-results {
-      margin-top: 4px;
+      margin-top: var(--sn-space-xs);
       background: var(--sn-node-bg);
       border-radius: 8px;
       border: 1px solid var(--sn-node-border);

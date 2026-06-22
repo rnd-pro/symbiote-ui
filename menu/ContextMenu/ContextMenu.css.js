@@ -27,7 +27,7 @@ export let styles = css`
       border: 1px solid var(--sn-ctx-border, #333);
       border-radius: 8px;
       box-shadow: 0 8px 24px var(--sn-shadow-color, rgba(0,0,0,0.5));
-      padding: 4px;
+      padding: var(--sn-space-xs);
       overflow: hidden;
     }
   }
@@ -49,7 +49,7 @@ export let styles = css`
   .sn-ctx-btn {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--sn-space-sm);
     width: 100%;
     padding: 6px 12px;
     border: none;
@@ -95,7 +95,7 @@ export let styles = css`
     margin-left: auto;
     font-size: 11px;
     color: var(--sn-text-dim, #888);
-    padding-left: 12px;
+    padding-left: var(--sn-space-md);
   }
 
   .sn-ctx-btn[destructive] {

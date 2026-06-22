@@ -13,11 +13,11 @@ sn-tour {
   border: 1px solid var(--sn-node-selected, #2e90fa);
   border-radius: var(--sn-panel-radius, 6px);
   box-shadow: var(--sn-panel-shadow, 0 10px 25px rgba(0,0,0,0.35));
-  padding: 12px;
+  padding: var(--sn-space-md);
   width: 240px;
   box-sizing: border-box;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--sn-space-sm);
 }
 
 .sn-tour-popover[data-visible] {
@@ -59,7 +59,7 @@ sn-tour {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 8px;
+  margin-top: var(--sn-space-sm);
 }
 
 .sn-tour-progress {
@@ -76,7 +76,7 @@ sn-tour {
   background: var(--sn-panel-bg, #1e1e24);
   border: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
   color: var(--sn-text);
-  padding: 4px 8px;
+  padding: var(--sn-space-xs) var(--sn-space-sm);
   border-radius: 4px;
   font-size: 11px;
   cursor: pointer;

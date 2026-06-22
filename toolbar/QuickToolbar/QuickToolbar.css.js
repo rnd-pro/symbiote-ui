@@ -99,7 +99,7 @@ export let styles = css`
       display: flex;
       justify-content: center;
       gap: 2px;
-      padding: 4px;
+      padding: var(--sn-space-xs);
     }
   }
 

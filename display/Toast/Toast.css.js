@@ -1,12 +1,12 @@
 export default /*css*/ `
 sn-toast-region {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
+  bottom: var(--sn-space-xl);
+  right: var(--sn-space-xl);
   z-index: 9999;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--sn-space-sm);
   max-width: min(calc(100% - 48px), 380px);
   pointer-events: none;
 }
@@ -14,7 +14,7 @@ sn-toast-region {
 .sn-toast-region-container {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--sn-space-sm);
 }
 
 sn-toast {
@@ -30,7 +30,7 @@ sn-toast[data-dismissing] {
 .sn-toast-card {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: var(--sn-space-md);
   padding: calc(12px * var(--sn-theme-density, 1)) calc(16px * var(--sn-theme-density, 1));
   background-color: var(--sn-panel-bg, #1e1e24);
   border: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));

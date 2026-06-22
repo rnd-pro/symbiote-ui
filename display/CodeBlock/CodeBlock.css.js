@@ -95,22 +95,22 @@ export default `
   code-block h4.md-h { font-size: var(--sn-markdown-h4-size, 14px); }
   code-block .md-p { margin: 8px 0; }
   code-block .md-quote {
-    margin: 8px 0;
-    padding: 8px 16px;
+    margin: var(--sn-space-sm) 0;
+    padding: var(--sn-space-sm) var(--sn-space-lg);
     border-left: 4px solid var(--sn-cat-server);
     background: var(--sn-accent-bg-subtle);
     border-radius: 0 4px 4px 0;
     font-style: italic;
   }
   code-block .md-list {
-    margin: 8px 0;
-    padding-left: 24px;
+    margin: var(--sn-space-sm) 0;
+    padding-left: var(--sn-space-xl);
   }
   code-block .md-list li {
     margin: 3px 0;
   }
   code-block .md-code-block {
-    margin: 12px 0;
+    margin: var(--sn-space-md) 0;
     padding: var(--sn-code-padding, 12px 16px);
     background: var(--sn-bg);
     border: 1px solid var(--sn-node-border);
@@ -138,19 +138,19 @@ export default `
     max-width: 100%;
     height: auto;
     border-radius: 6px;
-    margin: 8px 0;
+    margin: var(--sn-space-sm) 0;
     border: 1px solid var(--sn-node-border);
     box-shadow: 0 2px 8px var(--sn-bg-overlay);
   }
   code-block .md-hr {
     border: none;
     border-top: 1px solid var(--sn-node-border);
-    margin: 16px 0;
+    margin: var(--sn-space-lg) 0;
   }
   code-block .md-table {
     width: 100%;
     border-collapse: collapse;
-    margin: 12px 0;
+    margin: var(--sn-space-md) 0;
     font-size: var(--sn-code-table-size, 13px);
   }
   code-block .md-table th,
