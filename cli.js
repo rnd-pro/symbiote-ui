@@ -41,7 +41,7 @@ if (isMain && command === 'discover') {
     process.exit(1);
   }
   let css = readFileSync(file, 'utf-8');
-  let result = validateComponent({ css, file, profile: readFlag('profile') });
+  let result = validateComponent({ css, file, profile: readFlag('profile'), family: readFlag('family') });
   process.stdout.write(JSON.stringify(result, null, 2) + '\n');
   if (!result.valid) {
     process.exit(1);
