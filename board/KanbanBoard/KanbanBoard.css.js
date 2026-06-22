@@ -62,7 +62,7 @@ sn-kanban-board .sn-kanban-column-title {
 }
 
 sn-kanban-board .sn-kanban-column-description {
-  margin-block-start: 3px;
+  margin-block-start: var(--sn-step-1);
   color: var(--sn-kanban-description-color, var(--sn-text-dim));
   font-size: var(--sn-kanban-description-size, 11px);
   line-height: 1.3;
@@ -71,7 +71,7 @@ sn-kanban-board .sn-kanban-column-description {
 sn-kanban-board .sn-kanban-column-count {
   align-self: start;
   min-width: 24px;
-  padding: 2px 7px;
+  padding: var(--sn-step-1) var(--sn-step-3);
   border: 1px solid var(--sn-kanban-border, var(--sn-node-border));
   border-radius: var(--sn-radius-full);
   color: var(--sn-kanban-count-color, var(--sn-text-dim));
@@ -104,7 +104,7 @@ sn-kanban-board .sn-kanban-card {
   display: grid;
   flex: 0 0 auto;
   grid-template-rows: auto auto 1fr auto;
-  gap: 7px;
+  gap: var(--sn-step-3);
   position: relative;
   width: 100%;
   min-height: var(--sn-kanban-card-min-height, 118px);
@@ -151,22 +151,22 @@ sn-kanban-board .sn-kanban-card-spinner {
   display: inline-block;
   width: 11px;
   height: 11px;
-  margin-inline-end: 6px;
+  margin-inline-end: var(--sn-step-3);
   vertical-align: -1px;
   border: 2px solid var(--sn-kanban-card-border, var(--sn-node-border));
-  border-top-color: var(--sn-accent, #7c3aed);
+  border-top-color: var(--sn-node-selected);
   border-radius: 50%;
-  animation: sn-kanban-card-spin 0.8s linear infinite;
+  animation: sn-kanban-card-spin var(--sn-animation-duration-fast) linear infinite;
 }
 sn-kanban-board .sn-kanban-card[data-busy] {
-  border-color: color-mix(in srgb, var(--sn-accent, #7c3aed) 45%, var(--sn-node-border));
+  border-color: color-mix(in srgb, var(--sn-node-selected) 45%, var(--sn-node-border));
 }
 
 sn-kanban-board .sn-kanban-card-meta {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 5px;
+  gap: var(--sn-step-2);
   min-width: 0;
   color: var(--sn-text-dim);
   font-size: var(--sn-text-xs);
@@ -177,7 +177,7 @@ sn-kanban-board .sn-kanban-card-footer {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(24px, max-content));
   align-items: center;
-  gap: 5px;
+  gap: var(--sn-step-2);
   min-width: 0;
   color: var(--sn-text-dim);
   font-size: var(--sn-text-xs);
@@ -189,7 +189,7 @@ sn-kanban-board .sn-kanban-chip {
   align-items: center;
   max-width: 100%;
   min-height: 18px;
-  padding: 1px 6px;
+  padding: var(--sn-step-0) var(--sn-step-3);
   border: 1px solid var(--sn-node-border);
   border-radius: var(--sn-radius-full);
   color: var(--sn-text-dim);
@@ -218,7 +218,7 @@ sn-kanban-board .sn-kanban-chip[data-kind="error"] {
 sn-kanban-board .sn-kanban-card-action {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sn-step-3);
   width: 100%;
   min-height: 30px;
   padding: var(--sn-space-xs) var(--sn-space-sm);
@@ -240,9 +240,9 @@ sn-kanban-board .sn-kanban-card-actions {
 sn-kanban-board .sn-kanban-card-actions[open] {
   grid-column: 1 / -1;
   display: grid;
-  gap: 6px;
+  gap: var(--sn-step-3);
   width: 100%;
-  margin-block-start: 2px;
+  margin-block-start: var(--sn-step-1);
   justify-self: stretch;
 }
 
@@ -267,9 +267,9 @@ sn-kanban-board .sn-kanban-card-menu-list {
   display: grid;
   gap: var(--sn-space-xs);
   width: 100%;
-  padding: 6px;
+  padding: var(--sn-step-3);
   border: 1px solid var(--sn-node-border);
-  border-radius: 7px;
+  border-radius: var(--sn-radius-md);
   background: var(--sn-panel-bg);
 }
 
@@ -294,7 +294,7 @@ sn-kanban-board .sn-kanban-empty {
   min-height: 96px;
   padding: var(--sn-space-md);
   border: 1px dashed var(--sn-node-border);
-  border-radius: 7px;
+  border-radius: var(--sn-radius-md);
   color: var(--sn-text-dim);
   font-size: var(--sn-text-xs);
   line-height: 1.4;
