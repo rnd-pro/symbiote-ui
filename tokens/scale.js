@@ -214,6 +214,54 @@ export function geometryScaleCss(profileName = DEFAULT_GEOMETRY_PROFILE) {
 }
 
 /**
+ * Native `@property` registrations for the concrete geometry tokens.
+ *
+ * Only primitives with a computationally-independent initial value are
+ * registered — derived aliases (`--sn-node-radius: var(--sn-space-md)`) cannot
+ * carry a `var()` initial-value and inherit their validity from the primitive.
+ *
+ * `inherits: true` is deliberate and overrides the original spec note of
+ * `inherits:false`: these are cascade tokens (SYM-011), so they must inherit or
+ * the cascade-token model breaks. Registration still gives the wanted benefit —
+ * an invalid value computes to `initial-value` instead of poisoning the cascade.
+ *
+ * @param {string} [profileName]
+ * @returns {Array<{name:string,syntax:string,inherits:boolean,initialValue:string}>}
+ */
+export function geometryAtPropertyRegistrations(profileName = DEFAULT_GEOMETRY_PROFILE) {
+  let p = getProfile(profileName);
+  let registrations = SPACE_RUNGS.map((rung) => ({
+    name: `--sn-space-${rung}`,
+    syntax: '<length>',
+    inherits: true,
+    initialValue: `${p.space[rung]}px`,
+  }));
+  registrations.push(
+    { name: '--sn-socket-border-width', syntax: '<length>', inherits: true, initialValue: `${p.socketBorderWidth}px` },
+    { name: '--sn-conn-width', syntax: '<number>', inherits: true, initialValue: String(p.connWidth) },
+    { name: '--sn-font-size', syntax: '<length>', inherits: true, initialValue: `${p.fontSize}px` },
+  );
+  return registrations;
+}
+
+/**
+ * Emit the geometry `@property` registrations as a CSS block.
+ * @param {string} [profileName]
+ * @returns {string}
+ */
+export function geometryAtPropertyCss(profileName = DEFAULT_GEOMETRY_PROFILE) {
+  return geometryAtPropertyRegistrations(profileName)
+    .map((reg) => [
+      `@property ${reg.name} {`,
+      `  syntax: '${reg.syntax}';`,
+      `  inherits: ${reg.inherits};`,
+      `  initial-value: ${reg.initialValue};`,
+      '}',
+    ].join('\n'))
+    .join('\n');
+}
+
+/**
  * Agent-facing descriptor of the geometry scale for `discover`.
  * @returns {Object}
  */
