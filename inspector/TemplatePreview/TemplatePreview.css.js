@@ -7,7 +7,7 @@ import { css } from '@symbiotejs/symbiote';
 export let styles = css`
   template-preview {
     display: block;
-    padding-top: 8px;
+    padding-top: var(--sn-space-sm);
 
     & .tpl-preview-section {
       margin-bottom: 10px;
@@ -17,12 +17,12 @@ export let styles = css`
     & .tpl-preview-label {
       display: flex;
       align-items: center;
-      gap: 4px;
+      gap: var(--sn-space-xs);
       font-size: 10px;
       font-weight: 600;
       text-transform: uppercase;
       color: var(--sn-text-dim);
-      margin-bottom: 4px;
+      margin-bottom: var(--sn-space-xs);
       letter-spacing: 0.5px;
     }
 
@@ -35,14 +35,14 @@ export let styles = css`
     & .tpl-chips {
       display: flex;
       flex-wrap: wrap;
-      gap: 4px;
+      gap: var(--sn-space-xs);
     }
 
     & .tpl-chips-empty {
       font-size: 11px;
       color: var(--sn-text-dim);
       font-style: italic;
-      padding: 4px 0;
+      padding: var(--sn-space-xs) 0;
 
       &[hidden] {
         display: none;
@@ -77,7 +77,7 @@ export let styles = css`
       background: color-mix(in oklab, currentColor 4%, transparent);
       border: 1px solid var(--sn-node-border);
       border-radius: 4px;
-      padding: 8px;
+      padding: var(--sn-space-sm);
       white-space: pre-wrap;
       word-break: break-word;
       min-height: 30px;
