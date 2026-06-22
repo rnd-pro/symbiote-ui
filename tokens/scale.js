@@ -102,6 +102,66 @@ const RADIUS_PROPERTIES = new Set([
 const FONT_SIZE_PROPERTIES = new Set(['font-size']);
 
 /**
+ * Canonical type scale — the de-facto font sizes already in the system, named
+ * so a new module picks a rung instead of an arbitrary px. Absolute (not
+ * register-scoped); `--sn-font-size` remains the register-scoped body default
+ * and equals `--sn-text-md`.
+ */
+export const TYPE_SCALE = Object.freeze({
+  '2xs': 10, 'xs': 11, 'sm': 12, 'md': 13, 'lg': 14, 'xl': 16, '2xl': 18,
+});
+const TYPE_RUNGS = Object.freeze(Object.keys(TYPE_SCALE));
+const TYPE_TOKENS = Object.freeze(TYPE_RUNGS.map((rung) => `--sn-text-${rung}`));
+const TYPE_TOKEN_SET = new Set(TYPE_TOKENS);
+
+/** Canonical font weights in use, named. */
+export const WEIGHT_SCALE = Object.freeze({ normal: 400, medium: 500, semibold: 600, bold: 700 });
+
+/** @param {string} name @returns {boolean} */
+export function isTypeToken(name) {
+  return TYPE_TOKEN_SET.has(String(name || '').trim());
+}
+
+/** @returns {string[]} */
+export function listTypeTokens() {
+  return [...TYPE_TOKENS];
+}
+
+/** The `--sn-text-*` map for seeding the root cascade. */
+export function typeScaleTokens() {
+  let tokens = {};
+  for (let rung of TYPE_RUNGS) tokens[`--sn-text-${rung}`] = `${TYPE_SCALE[rung]}px`;
+  return tokens;
+}
+
+/**
+ * Snap a raw font-size to the nearest type-scale token.
+ * @param {string|number} rawValue
+ * @returns {{token: string, exact: boolean, nearestPx: number}|null}
+ */
+export function snapFontSizeToToken(rawValue) {
+  let value = parsePx(rawValue);
+  if (value === null) return null;
+  let best = null;
+  for (let rung of TYPE_RUNGS) {
+    let distance = Math.abs(value - TYPE_SCALE[rung]);
+    if (!best || distance < best.distance) best = { rung, px: TYPE_SCALE[rung], distance };
+  }
+  return { token: `var(--sn-text-${best.rung})`, exact: best.distance < 0.5, nearestPx: best.px };
+}
+
+/** @returns {Object} agent-facing descriptor of the type scale. */
+export function getTypeScaleDescriptor() {
+  return {
+    version: 'type-scale-v1',
+    tokens: [...TYPE_TOKENS],
+    rungs: TYPE_RUNGS.map((rung) => ({ name: rung, token: `--sn-text-${rung}`, px: TYPE_SCALE[rung] })),
+    weights: { ...WEIGHT_SCALE },
+    bodyTokenName: '--sn-font-size',
+  };
+}
+
+/**
  * @param {string} property
  * @returns {'space'|'radius'|'font-size'|null}
  */

@@ -8,10 +8,10 @@ import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 
 import { DEFAULT_PROVIDER_THEME } from '../themes/default-provider.js';
-import { geometrySpacePrimitives } from '../tokens/scale.js';
+import { geometrySpacePrimitives, typeScaleTokens, snapFontSizeToToken } from '../tokens/scale.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const PRODUCT = geometrySpacePrimitives('product');
+const PRODUCT = { ...geometrySpacePrimitives('product'), ...typeScaleTokens() };
 
 test('default-provider token object seeds the canonical scale primitives', () => {
   let tokens = DEFAULT_PROVIDER_THEME.tokens;
@@ -26,6 +26,22 @@ test('default-provider.css root mirrors the scale primitives (no drift)', () => 
     assert.match(css, new RegExp(`${name}:\\s*${value.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')};`),
       `${name}: ${value} missing from default-provider.css :root`);
   }
+});
+
+test('type scale codifies the de-facto sizes and snaps font-size to a rung', () => {
+  let tokens = typeScaleTokens();
+  assert.equal(tokens['--sn-text-md'], '13px');
+  assert.equal(tokens['--sn-text-xs'], '11px');
+  assert.equal(tokens['--sn-text-2xl'], '18px');
+  // exact rung
+  assert.deepEqual(
+    { token: snapFontSizeToToken('11px').token, exact: snapFontSizeToToken('11px').exact },
+    { token: 'var(--sn-text-xs)', exact: true },
+  );
+  // off-scale snaps to nearest, flagged inexact (15 -> 14 lg)
+  let near = snapFontSizeToToken('15px');
+  assert.equal(near.token, 'var(--sn-text-lg)');
+  assert.equal(near.exact, false);
 });
 
 test('seeding primitives does not redefine derived geometry tokens', () => {

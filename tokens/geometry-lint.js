@@ -19,6 +19,7 @@
 import {
   DEFAULT_GEOMETRY_PROFILE,
   geometryAxisForProperty,
+  snapFontSizeToToken,
   snapValueToToken,
 } from './scale.js';
 
@@ -66,7 +67,9 @@ export function lintGeometryValue(property, value, profileName = DEFAULT_GEOMETR
     let literal = match[0];
     let numeric = `${match[1]}${match[2]}`;
     if (IGNORE_VALUES.has(literal)) continue;
-    let snap = snapValueToToken(property, numeric, profileName);
+    let snap = axis === 'font-size'
+      ? snapFontSizeToToken(numeric)
+      : snapValueToToken(property, numeric, profileName);
     findings.push({
       kind: 'raw-geometry',
       property,

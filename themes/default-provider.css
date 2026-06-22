@@ -1,11 +1,18 @@
 /* Generated from themes/default-provider.js provider tokens. */
 :root {
-  /* Canonical geometry-scale primitives (product profile), mirrors tokens/scale.js. */
+  /* Canonical scale primitives, mirrors tokens/scale.js. */
   --sn-space-xs: 4px;
   --sn-space-sm: 8px;
   --sn-space-md: 12px;
   --sn-space-lg: 16px;
   --sn-space-xl: 24px;
+  --sn-text-2xs: 10px;
+  --sn-text-xs: 11px;
+  --sn-text-sm: 12px;
+  --sn-text-md: 13px;
+  --sn-text-lg: 14px;
+  --sn-text-xl: 16px;
+  --sn-text-2xl: 18px;
   --sn-theme-hue: 218;
   --sn-theme-chroma: 89%;
   --sn-theme-bg-lightness: 10%;

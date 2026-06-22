@@ -8,15 +8,16 @@
  */
 
 import { themedScrollbarRootStyles } from './scrollbar-styles.js';
-import { geometrySpacePrimitives } from '../tokens/scale.js';
+import { geometrySpacePrimitives, typeScaleTokens } from '../tokens/scale.js';
 
 const DEFAULT_PROVIDER_THEME_TOKENS = {
-  // Canonical geometry-scale primitives (product profile) seeded into the root
-  // so component CSS can consume var(--sn-space-*) app-wide. Single-sourced from
-  // tokens/scale.js. Derived geometry (node-radius, grid, sockets) keeps its own
-  // values below until migrated; these primitives add the scale without changing
-  // anything that currently renders.
+  // Canonical scale primitives seeded into the root so component CSS can consume
+  // var(--sn-space-*) (spacing) and var(--sn-text-*) (type) app-wide.
+  // Single-sourced from tokens/scale.js. Derived geometry (node-radius, grid,
+  // sockets) keeps its own values below until migrated; these primitives add the
+  // scale without changing anything that currently renders.
   ...geometrySpacePrimitives('product'),
+  ...typeScaleTokens(),
   '--sn-theme-hue': '218',
   '--sn-theme-chroma': '89%',
   '--sn-theme-bg-lightness': '10%',
