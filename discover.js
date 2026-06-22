@@ -36,6 +36,9 @@ import {
   UI_SCHEMA_VERSIONS,
 } from './manifest/index.js';
 import { DEFAULT_LOCALE, LOCALE_CATALOG_KEYS, SUPPORTED_LOCALES } from './locale/index.js';
+import { getGeometryScaleDescriptor } from './tokens/scale.js';
+import { lintComponentCss } from './tokens/geometry-lint.js';
+import { checkContrast } from './tokens/contrast.js';
 import { WEBXR_RENDERER, XR_THREE_WEBXR_ADAPTER } from './xr/index.js';
 import {
   COLOR_PRESETS,
@@ -335,6 +338,7 @@ export async function cmdDiscover(options = {}) {
         ...listThemeRecipes(),
       ],
       tokenFiles: listTokenFiles(),
+      geometryScale: getGeometryScaleDescriptor(),
       rulesets: RULESETS.map((rs) => ({
         name: rs.name,
         version: rs.version,
@@ -355,6 +359,60 @@ export async function cmdDiscover(options = {}) {
       ],
     },
   };
+}
+
+/**
+ * Validate a component CSS source against the geometry scale and cascade
+ * contract. Thin agent-facing wrapper over the shared consumption linter.
+ * @param {Object} input
+ * @param {string} input.css component `.css.js` source (or a CSS snippet)
+ * @param {string} [input.file]
+ * @param {string} [input.profile] register profile for snap suggestions
+ * @param {Array<[string,string,Object=]>} [input.contrastPairs] resolved fg/bg pairs to WCAG-check
+ * @returns {{command:string,file:string,valid:boolean,findings:Array<Object>,contrast:Array<Object>,summary:Object}}
+ */
+export function validateComponent({ css = '', file = '<component>', profile, contrastPairs = [] } = {}) {
+  let { findings } = lintComponentCss({ content: css, file, profile });
+  let contrast = contrastPairs.map(([fg, bg, opts]) => ({ fg, bg, ...checkContrast(fg, bg, opts || {}) }));
+  let failingContrast = contrast.filter((entry) => entry.resolved && !entry.passesAA);
+  let errors = findings.filter((finding) => finding.severity === 'error');
+  let warnings = findings.filter((finding) => finding.severity === 'warning');
+  let info = findings.filter((finding) => finding.severity === 'info');
+
+  return {
+    command: 'validate-component',
+    file,
+    valid: errors.length === 0 && failingContrast.length === 0,
+    findings,
+    contrast,
+    summary: {
+      errors: errors.length,
+      warnings: warnings.length,
+      info: info.length,
+      contrastChecked: contrast.length,
+      contrastFailures: failingContrast.length,
+    },
+  };
+}
+
+/**
+ * Map every hardcoded geometry/motion literal in a component to its nearest
+ * scale token. The `{ literal → --sn-* }` view agents use to auto-fix.
+ * @param {Object} input
+ * @param {string} input.css
+ * @param {string} [input.profile]
+ * @returns {Array<{line:number,property:string,literal:string,suggestion:?string,message:string}>}
+ */
+export function validateTokenUsage({ css = '', profile } = {}) {
+  let { findings } = lintComponentCss({ content: css, profile });
+  return findings
+    .filter((finding) => finding.type === 'geometry-lint' || finding.type === 'motion-lint')
+    .map((finding) => ({
+      line: finding.line,
+      property: finding.property,
+      suggestion: finding.suggestion,
+      message: finding.message,
+    }));
 }
 
 /**

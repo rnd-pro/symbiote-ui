@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 import { RULES } from './manifest/rule-catalog.js';
 import { listComponents } from './manifest/component-registry.js';
+import { lintComponentCss } from './tokens/geometry-lint.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -194,6 +195,26 @@ export async function cmdAudit(options = {}) {
     errors.push({
       type: 'css-lint',
       message: `Failed to scan CSS files: ${err.message}`
+    });
+  }
+
+  // 4. Hardcoded geometry / motion linting (SYM-015 consumption side)
+  try {
+    let cssFiles = findCssFiles(__dirname);
+    let profile = options.profile;
+    for (let file of cssFiles) {
+      let content = readFileSync(file, 'utf-8');
+      let relative = file.replace(__dirname + '/', '');
+      let { findings } = lintComponentCss({ content, file: relative, profile });
+      for (let finding of findings) {
+        if (finding.severity === 'error') errors.push(finding);
+        else warnings.push(finding);
+      }
+    }
+  } catch (err) {
+    errors.push({
+      type: 'geometry-lint',
+      message: `Failed to lint component geometry: ${err.message}`
     });
   }
 
