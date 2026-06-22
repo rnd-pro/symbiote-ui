@@ -28,7 +28,9 @@ test('lintGeometryValue flags raw lengths on geometry axes and snaps to a token'
   assert.equal(exact[0].exact, true);
 
   let font = lintGeometryValue('font-size', '13px', 'product');
-  assert.equal(font[0].suggestion, 'var(--sn-font-size)');
+  assert.equal(font[0].suggestion, 'var(--sn-text-md)'); // type scale, exact rung
+  let label = lintGeometryValue('font-size', '11px', 'product');
+  assert.equal(label[0].suggestion, 'var(--sn-text-xs)');
 });
 
 test('lintGeometryValue ignores tokens, zero, keywords, and non-geometry axes', () => {
