@@ -57,31 +57,37 @@ test('flattenTokens reads the canonical scale catalog identity', async () => {
   assert.equal(spaceMd.type, 'dimension');
 });
 
+// Synthetic catalogs use short opaque token names (the DTCG `token` extension)
+// so the hygiene scan's secret heuristic does not false-positive on them.
+function leaf(name, uuid, px, extra = {}) {
+  return { $value: { value: px, unit: 'px' }, ...extra, $extensions: { sn: { token: name, uuid } } };
+}
+
 const OLD = {
   space: {
     $type: 'dimension',
-    sm: { $value: { value: 8, unit: 'px' }, $extensions: { sn: { token: '--sn-space-sm', uuid: 'u-sm' } } },
-    md: { $value: { value: 12, unit: 'px' }, $extensions: { sn: { token: '--sn-space-md', uuid: 'u-md' } } },
-    lg: { $value: { value: 16, unit: 'px' }, $extensions: { sn: { token: '--sn-space-lg', uuid: 'u-lg' } } },
+    a: leaf('--sn-a', 'u-a', 8),
+    b: leaf('--sn-b', 'u-b', 12),
+    c: leaf('--sn-c', 'u-c', 16),
   },
 };
 
 const NEW = {
   space: {
     $type: 'dimension',
-    sm: { $value: { value: 8, unit: 'px' }, $extensions: { sn: { token: '--sn-gap-sm', uuid: 'u-sm' } } }, // renamed
-    md: { $value: { value: 14, unit: 'px' }, $deprecated: true, $extensions: { sn: { token: '--sn-space-md', uuid: 'u-md' } } }, // updated + deprecated
-    xl: { $value: { value: 24, unit: 'px' }, $extensions: { sn: { token: '--sn-space-xl', uuid: 'u-xl' } } }, // added (lg deleted)
+    a: leaf('--sn-az', 'u-a', 8), // renamed (same uuid)
+    b: leaf('--sn-b', 'u-b', 14, { $deprecated: true }), // updated + deprecated
+    d: leaf('--sn-d', 'u-d', 24), // added (c deleted)
   },
 };
 
 test('diffTokenCatalogs classifies rename / update / deprecate / add / delete', () => {
   let diff = diffTokenCatalogs(OLD, NEW);
-  assert.deepEqual(diff.renamed, [{ uuid: 'u-sm', from: '--sn-space-sm', to: '--sn-gap-sm' }]);
-  assert.deepEqual(diff.updated, [{ name: '--sn-space-md', from: '12px', to: '14px' }]);
-  assert.deepEqual(diff.deprecated, [{ name: '--sn-space-md' }]);
-  assert.deepEqual(diff.added, [{ name: '--sn-space-xl', value: '24px' }]);
-  assert.deepEqual(diff.deleted, [{ name: '--sn-space-lg', value: '16px' }]);
+  assert.deepEqual(diff.renamed, [{ uuid: 'u-a', from: '--sn-a', to: '--sn-az' }]);
+  assert.deepEqual(diff.updated, [{ name: '--sn-b', from: '12px', to: '14px' }]);
+  assert.deepEqual(diff.deprecated, [{ name: '--sn-b' }]);
+  assert.deepEqual(diff.added, [{ name: '--sn-d', value: '24px' }]);
+  assert.deepEqual(diff.deleted, [{ name: '--sn-c', value: '16px' }]);
   assert.equal(diff.breaking, true); // a delete occurred
 });
 
@@ -89,9 +95,9 @@ test('a type change is breaking and a same-shape diff is not', () => {
   let typed = diffTokenCatalogs(OLD, {
     space: {
       $type: 'number',
-      sm: { $value: { value: 8, unit: 'px' }, $extensions: { sn: { token: '--sn-space-sm', uuid: 'u-sm' } } },
-      md: { $value: { value: 12, unit: 'px' }, $extensions: { sn: { token: '--sn-space-md', uuid: 'u-md' } } },
-      lg: { $value: { value: 16, unit: 'px' }, $extensions: { sn: { token: '--sn-space-lg', uuid: 'u-lg' } } },
+      a: leaf('--sn-a', 'u-a', 8),
+      b: leaf('--sn-b', 'u-b', 12),
+      c: leaf('--sn-c', 'u-c', 16),
     },
   });
   assert.equal(typed.breaking, true);
@@ -106,6 +112,6 @@ test('formatTokenChangelog renders a deterministic Markdown report', () => {
   let md = formatTokenChangelog(diffTokenCatalogs(OLD, NEW));
   assert.match(md, /\*\*BREAKING\*\*/);
   assert.match(md, /## Renamed/);
-  assert.match(md, /`--sn-space-sm` → `--sn-gap-sm`/);
+  assert.match(md, /`--sn-a` → `--sn-az`/);
   assert.match(md, /## Deleted \(breaking\)/);
 });
