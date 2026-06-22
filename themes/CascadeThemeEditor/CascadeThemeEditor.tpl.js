@@ -23,6 +23,13 @@ export default html`
       <button type="button" data-theme-mode="light">Light</button>
     </div>
 
+    <div class="cte-mode cte-register" aria-label="Geometry register">
+      <button type="button" data-geometry-register="">Default</button>
+      <button type="button" data-geometry-register="product">Product</button>
+      <button type="button" data-geometry-register="tool">Tool</button>
+      <button type="button" data-geometry-register="spacious">Spacious</button>
+    </div>
+
     <div class="cte-controls" ref="controls"></div>
 
     <details class="cte-details">
