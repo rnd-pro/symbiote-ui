@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
 
-import { geometrySpacePrimitives, GEOMETRY_PROFILE_NAMES } from '../tokens/scale.js';
+import { geometrySpacePrimitives, geometryRegisterScaleTokens, GEOMETRY_PROFILE_NAMES } from '../tokens/scale.js';
 
 const editorSource = new URL('../themes/CascadeThemeEditor/CascadeThemeEditor.js', import.meta.url);
 const editorTemplate = new URL('../themes/CascadeThemeEditor/CascadeThemeEditor.tpl.js', import.meta.url);
@@ -26,6 +26,22 @@ test('geometrySpacePrimitives emits the step ladder plus --sn-space-* aliases pe
   assert.equal('--sn-node-radius' in product, false);
 });
 
+test('geometryRegisterScaleTokens emits the density knobs a register preview writes', () => {
+  // The register toggle writes these onto the target; the step ladder and every
+  // calc(px * var(--sn-theme-density)) semantic token shift from one selection.
+  let tool = geometryRegisterScaleTokens('tool');
+  assert.equal(tool['--sn-theme-density'], '0.75');
+  assert.equal(tool['--sn-theme-spacing-scale'], '0.75');
+  assert.equal(tool['--sn-base'], '2px');
+  assert.equal(geometryRegisterScaleTokens('spacious')['--sn-theme-density'], '1.25');
+  assert.equal(geometryRegisterScaleTokens('product')['--sn-theme-density'], '1');
+  // --sn-density carries the root formula, not a pinned number, so it keeps
+  // deriving from --sn-theme-spacing-scale and composes with the density slider
+  assert.equal(tool['--sn-density'], 'var(--sn-theme-spacing-scale, 1)');
+  // a register does not pin concrete step px — steps follow the knob via calc
+  assert.equal('--sn-step-6' in tool, false);
+});
+
 test('the cascade theme editor exposes a geometry register toggle', async () => {
   let [source, template] = await Promise.all([
     readFile(editorSource, 'utf8'),
@@ -39,7 +55,7 @@ test('the cascade theme editor exposes a geometry register toggle', async () => 
   }
 
   // component wires the toggle to the scale and applies it to the target
-  assert.match(source, /geometrySpacePrimitives/);
+  assert.match(source, /geometryRegisterScaleTokens/);
   assert.match(source, /\[data-geometry-register\]/);
   assert.match(source, /#applyGeometryRegister/);
   assert.match(source, /cascade-geometry-register-change/);
@@ -56,7 +72,7 @@ test('the cascade theme widget exposes the same geometry register toggle', async
   for (let register of GEOMETRY_PROFILE_NAMES) {
     assert.match(template, new RegExp(`data-geometry-register="${register}"`));
   }
-  assert.match(source, /geometrySpacePrimitives/);
+  assert.match(source, /geometryRegisterScaleTokens/);
   assert.match(source, /#applyGeometryRegister/);
   assert.match(source, /#syncRegisterButtons/);
 });

@@ -343,13 +343,64 @@ export function stepPx(step, base = STEP_BASE_PX, density = 1) {
   return k === undefined ? null : k * base * density;
 }
 
-/** The `--sn-step-*` map (flat px) for seeding the root cascade. */
+/** The `--sn-step-*` map (flat px) for a fixed base/density — used by exported skins. */
 export function stepScaleTokens(base = STEP_BASE_PX, density = 1) {
   let tokens = {};
   for (let index = 0; index < STEP_MULTIPLES.length; index++) {
     tokens[`--sn-step-${index}`] = `${STEP_MULTIPLES[index] * base * density}px`;
   }
   return tokens;
+}
+
+/**
+ * Density-aware step ladder for the live root cascade. Each rung is
+ * `calc(K × var(--sn-base) × var(--sn-density))`, so the whole ladder re-resolves
+ * from the two knobs at runtime: a register toggle or the density slider moves
+ * `--sn-density` and every step — and everything derived from a step — follows.
+ * At base 2px / density 1 it is pixel-identical to `stepScaleTokens()`.
+ */
+export function stepLadderCalcTokens() {
+  let tokens = {};
+  for (let index = 0; index < STEP_MULTIPLES.length; index++) {
+    let k = STEP_MULTIPLES[index];
+    tokens[`--sn-step-${index}`] = k === 0 ? '0px' : `calc(${k} * var(--sn-base) * var(--sn-density))`;
+  }
+  return tokens;
+}
+
+/**
+ * Live root spacing primitives: the density-aware step ladder plus the permanent
+ * `--sn-space-*` t-shirt aliases onto even rungs. This is what the provider root
+ * seeds so every spacing token reacts to `--sn-base` / `--sn-density`.
+ */
+export function rootSpacePrimitives() {
+  let primitives = stepLadderCalcTokens();
+  for (let rung of SPACE_RUNGS) primitives[`--sn-space-${rung}`] = `var(--sn-step-${LEGACY_SPACE_STEP[rung]})`;
+  return primitives;
+}
+
+/**
+ * Register density knobs — the values a geometry-register preview writes onto a
+ * target so it reads at that register. A register is the two knobs (`base`,
+ * `density`) plus the legacy `--sn-theme-*` scale aliases the density slider also
+ * drives. Writing them from one selection moves both the step ladder (via
+ * `--sn-density`) and every `calc(px × var(--sn-theme-density))` semantic token,
+ * so the whole surface shifts register with no double-density. The density itself
+ * lives in `--sn-theme-spacing-scale` / `--sn-theme-density` (the same vars the
+ * slider sets); `--sn-density` carries the root *formula* rather than a pinned
+ * number, so it keeps deriving from those vars — the preview composes with the
+ * slider, and it works on a subtree target that lacks the root rule.
+ */
+export function geometryRegisterScaleTokens(profileName = DEFAULT_GEOMETRY_PROFILE) {
+  let p = getProfile(profileName);
+  let density = String(p.density);
+  return {
+    '--sn-base': `${p.base}px`,
+    '--sn-density': 'var(--sn-theme-spacing-scale, 1)',
+    '--sn-theme-density': density,
+    '--sn-theme-spacing-scale': density,
+    '--sn-theme-radius-scale': '1',
+  };
 }
 
 /**
