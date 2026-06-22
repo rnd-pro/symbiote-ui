@@ -110,23 +110,24 @@ test('geometryAxisForProperty classifies properties', () => {
   assert.equal(geometryAxisForProperty('color'), null);
 });
 
-test('snapValueToToken maps raw values to the nearest scale token per profile', () => {
-  // exact rung hit (product)
+test('snapValueToToken maps raw values to the nearest step rung', () => {
+  // exact rung hit on the step ladder
   let exact = snapValueToToken('padding', '12px', 'product');
-  assert.equal(exact.token, 'var(--sn-space-md)');
+  assert.equal(exact.token, 'var(--sn-step-6)');
   assert.equal(exact.exact, true);
-  // off-scale → nearest rung, flagged inexact
+  // off-scale → nearest step, flagged inexact (7 → 6 = step-3)
   let near = snapValueToToken('gap', '7px', 'product');
-  assert.equal(near.token, 'var(--sn-space-sm)');
+  assert.equal(near.token, 'var(--sn-step-3)');
   assert.equal(near.exact, false);
-  assert.equal(near.nearestPx, 8);
-  // same raw value snaps differently under the dense tool profile
+  assert.equal(near.nearestPx, 6);
+  // the step ladder is register-agnostic; the token resolves per register at use
   let dense = snapValueToToken('padding', '12px', 'tool');
-  assert.equal(dense.token, 'var(--sn-space-lg)');
-  assert.equal(dense.exact, true);
-  // radius axis also snaps to the spacing rungs
+  assert.equal(dense.token, 'var(--sn-step-6)');
+  // the finer ladder captures the de-facto 6px exactly (was off-scale on 5 rungs)
+  assert.equal(snapValueToToken('gap', '6px', 'product').exact, true);
+  // radius axis also snaps to the step ladder
   let radius = snapValueToToken('border-radius', '16px', 'product');
-  assert.equal(radius.token, 'var(--sn-space-lg)');
+  assert.equal(radius.token, 'var(--sn-step-8)');
   // font-size axis
   let font = snapValueToToken('font-size', '13px', 'product');
   assert.equal(font.token, 'var(--sn-font-size)');

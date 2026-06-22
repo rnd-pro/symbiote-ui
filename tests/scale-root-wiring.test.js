@@ -10,14 +10,16 @@ import { test } from 'node:test';
 import { DEFAULT_PROVIDER_THEME } from '../themes/default-provider.js';
 import {
   geometrySpacePrimitives,
+  stepScaleTokens,
   typeScaleTokens,
   radiusScaleTokens,
   snapFontSizeToToken,
   snapRadiusToToken,
+  snapSpaceToStep,
 } from '../tokens/scale.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const PRODUCT = { ...geometrySpacePrimitives('product'), ...typeScaleTokens(), ...radiusScaleTokens() };
+const PRODUCT = { ...stepScaleTokens(), ...geometrySpacePrimitives('product'), ...typeScaleTokens(), ...radiusScaleTokens() };
 
 test('default-provider token object seeds the canonical scale primitives', () => {
   let tokens = DEFAULT_PROVIDER_THEME.tokens;
@@ -48,6 +50,31 @@ test('type scale codifies the de-facto sizes and snaps font-size to a rung', () 
   let near = snapFontSizeToToken('15px');
   assert.equal(near.token, 'var(--sn-text-lg)');
   assert.equal(near.exact, false);
+});
+
+test('the step ladder is the de-facto vocabulary and seeds the root', () => {
+  let steps = stepScaleTokens();
+  assert.equal(steps['--sn-step-0'], '0px');
+  assert.equal(steps['--sn-step-3'], '6px'); // the 159x de-facto value, now a rung
+  assert.equal(steps['--sn-step-6'], '12px'); // == legacy --sn-space-md
+  assert.equal(steps['--sn-step-9'], '20px');
+  assert.equal(steps['--sn-step-12'], '32px');
+  // the dominant off-scale values snap EXACTLY (zero-change conversion)
+  for (let [px, token] of [['2px', '--sn-step-1'], ['6px', '--sn-step-3'], ['10px', '--sn-step-5'], ['14px', '--sn-step-7'], ['20px', '--sn-step-9']]) {
+    let snap = snapSpaceToStep(px);
+    assert.equal(snap.token, `var(${token})`);
+    assert.equal(snap.exact, true, `${px} should be an exact step rung`);
+  }
+});
+
+test('legacy --sn-space-* px is preserved on the step ladder (zero-change)', () => {
+  let steps = stepScaleTokens();
+  // xs/sm/md/lg/xl map onto even rungs at the same px as before
+  assert.equal(steps['--sn-step-2'], '4px'); // xs
+  assert.equal(steps['--sn-step-4'], '8px'); // sm
+  assert.equal(steps['--sn-step-6'], '12px'); // md
+  assert.equal(steps['--sn-step-8'], '16px'); // lg
+  assert.equal(steps['--sn-step-10'], '24px'); // xl
 });
 
 test('radius scale snaps corner radii, with a pill case for large values', () => {

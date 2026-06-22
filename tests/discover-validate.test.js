@@ -34,7 +34,7 @@ test('validateComponent surfaces geometry + motion findings with snap suggestion
   // findings are warnings (not errors) so valid stays true unless contrast fails
   assert.equal(result.summary.warnings >= 3, true);
   let geometry = result.findings.filter((f) => f.type === 'geometry-lint');
-  assert.ok(geometry.some((f) => f.suggestion === 'var(--sn-space-md)'));
+  assert.ok(geometry.some((f) => f.suggestion === 'var(--sn-step-6)'));
   assert.ok(result.findings.some((f) => f.type === 'motion-lint'));
 });
 
@@ -79,6 +79,6 @@ test('validateTokenUsage returns the literal -> token fix map', () => {
   let fixes = validateTokenUsage({ css: BAD, profile: 'product' });
   assert.ok(fixes.length >= 3);
   let padding = fixes.find((f) => f.property === 'padding');
-  assert.equal(padding.suggestion, 'var(--sn-space-md)');
+  assert.equal(padding.suggestion, 'var(--sn-step-6)');
   assert.ok(fixes.some((f) => f.property === 'transition'));
 });

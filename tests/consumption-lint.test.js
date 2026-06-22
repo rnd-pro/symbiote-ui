@@ -20,11 +20,11 @@ test('lintGeometryValue flags raw lengths on geometry axes and snaps to a token'
   let pad = lintGeometryValue('padding', '13px', 'product');
   assert.equal(pad.length, 1);
   assert.equal(pad[0].kind, 'raw-geometry');
-  assert.equal(pad[0].suggestion, 'var(--sn-space-md)'); // nearest product rung (12)
+  assert.equal(pad[0].suggestion, 'var(--sn-step-6)'); // nearest step rung (12px)
   assert.equal(pad[0].exact, false);
 
   let exact = lintGeometryValue('gap', '12px', 'product');
-  assert.equal(exact[0].suggestion, 'var(--sn-space-md)');
+  assert.equal(exact[0].suggestion, 'var(--sn-step-6)');
   assert.equal(exact[0].exact, true);
 
   let font = lintGeometryValue('font-size', '13px', 'product');

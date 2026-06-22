@@ -8,14 +8,17 @@
  */
 
 import { themedScrollbarRootStyles } from './scrollbar-styles.js';
-import { geometrySpacePrimitives, typeScaleTokens, radiusScaleTokens } from '../tokens/scale.js';
+import { geometrySpacePrimitives, stepScaleTokens, typeScaleTokens, radiusScaleTokens, STEP_BASE_PX } from '../tokens/scale.js';
 
 const DEFAULT_PROVIDER_THEME_TOKENS = {
   // Canonical scale primitives seeded into the root so component CSS can consume
-  // var(--sn-space-*) (spacing), var(--sn-text-*) (type), and var(--sn-radius-*)
-  // (corner radius) app-wide. Single-sourced from tokens/scale.js. Derived
-  // geometry (node-radius, grid, sockets) keeps its own values below until
-  // migrated; these primitives add the scale without changing what renders.
+  // the universal step ladder var(--sn-step-N) (spacing), var(--sn-space-*)
+  // (t-shirt aliases), var(--sn-text-*) (type), and var(--sn-radius-*) (radius)
+  // app-wide. Single-sourced from tokens/scale.js. --sn-base / --sn-density are
+  // the two knobs any design retunes to re-resolve the whole ladder.
+  '--sn-base': `${STEP_BASE_PX}px`,
+  '--sn-density': 'var(--sn-theme-spacing-scale, 1)',
+  ...stepScaleTokens(),
   ...geometrySpacePrimitives('product'),
   ...typeScaleTokens(),
   ...radiusScaleTokens(),
