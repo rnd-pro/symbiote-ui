@@ -368,6 +368,24 @@ export async function cmdDiscover(options = {}) {
 }
 
 /**
+ * Best-effort guess of a component's semantic family from its host selector
+ * (`sn-<family> { … }`) or its file basename, returning it only when that
+ * family actually owns catalog tokens (so a wrong guess produces no hint).
+ * @param {string} css
+ * @param {string} file
+ * @returns {string}
+ */
+function inferComponentFamily(css, file) {
+  for (let match of String(css).matchAll(/(?:^|[\s,{}])(sn-[a-z][a-z0-9-]*)/g)) {
+    let family = match[1].replace(/^sn-/, '');
+    if (tokensForFamily(family).length) return family;
+  }
+  let base = String(file).split(/[\\/]/).pop().replace(/\.(css\.js|tpl\.js|js)$/i, '');
+  let kebab = base.replace(/([a-z0-9])([A-Z])/g, '$1-$2').replace(/[_\s]+/g, '-').toLowerCase();
+  return tokensForFamily(kebab).length ? kebab : '';
+}
+
+/**
  * Validate a component CSS source against the geometry scale and cascade
  * contract. Thin agent-facing wrapper over the shared consumption linter.
  * @param {Object} input
@@ -402,13 +420,16 @@ export function validateComponent({ css = '', file = '<component>', profile, con
 
   // Organic-fit hint: when the component belongs to a known semantic family,
   // surface that family's tokens so it reuses them instead of re-deriving.
-  if (family) {
-    let familyTokens = tokensForFamily(family);
-    result.family = family;
+  // Family is taken explicitly, or inferred from the host selector / filename.
+  let resolvedFamily = family || inferComponentFamily(css, file);
+  let familyTokens = resolvedFamily ? tokensForFamily(resolvedFamily) : [];
+  if (family || familyTokens.length) {
+    result.family = resolvedFamily;
+    result.familyInferred = !family && Boolean(resolvedFamily);
     result.familyTokens = familyTokens;
     result.fit = familyTokens.length
-      ? `This is the '${family}' family — consume its ${familyTokens.length} semantic tokens (e.g. ${familyTokens.slice(0, 3).map((t) => t.token).join(', ')}) instead of re-deriving the surface from primitives.`
-      : `No semantic family '${family}' exists — treat this as a new surface and compose from the scale rungs.`;
+      ? `This is the '${resolvedFamily}' family — consume its ${familyTokens.length} semantic tokens (e.g. ${familyTokens.slice(0, 3).map((t) => t.token).join(', ')}) instead of re-deriving the surface from primitives.`
+      : `No semantic family '${resolvedFamily}' exists — treat this as a new surface and compose from the scale rungs.`;
   }
 
   return result;

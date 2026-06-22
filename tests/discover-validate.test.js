@@ -59,9 +59,20 @@ test('validateComponent surfaces the family semantic tokens for organic fit', ()
   assert.equal(novel.familyTokens.length, 0);
   assert.match(novel.fit, /new surface/i);
 
-  // family is opt-in: no family => no fit fields
+  // family is opt-in: an unknown family (sn-widget) => no fit fields
   let plain = validateComponent({ css: GOOD });
   assert.equal('family' in plain, false);
+
+  // but a known family is inferred automatically from the host selector
+  let inferred = validateComponent({ css: 'sn-card {\n  padding: var(--sn-space-md);\n}' });
+  assert.equal(inferred.family, 'card');
+  assert.equal(inferred.familyInferred, true);
+  assert.ok(inferred.familyTokens.some((t) => t.token === '--sn-card-bg'));
+
+  // explicit family overrides inference and is not marked inferred
+  let explicit = validateComponent({ css: 'sn-card { padding: 0; }', family: 'button' });
+  assert.equal(explicit.family, 'button');
+  assert.equal(explicit.familyInferred, false);
 });
 
 test('validateTokenUsage returns the literal -> token fix map', () => {
