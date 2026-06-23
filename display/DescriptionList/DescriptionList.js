@@ -1,4 +1,5 @@
 import Symbiote from '@symbiotejs/symbiote';
+import { slotProcessor } from '@symbiotejs/symbiote/core/slotProcessor.js';
 import { descriptionListTemplate, descriptionItemTemplate } from './DescriptionList.tpl.js';
 import css from './DescriptionList.css.js';
 
@@ -21,6 +22,19 @@ export class DescriptionItem extends Symbiote {
   init$ = {
     label: '',
   };
+
+  constructor() {
+    super();
+    this.templateProcessors.add(slotProcessor);
+  }
+
+  renderCallback() {
+    // Sync the initial label after init$ is applied so parser/innerHTML-created
+    // items (where attributeChangedCallback fires before init$) still render it.
+    if (this.hasAttribute('label')) {
+      this.$.label = this.getAttribute('label') || '';
+    }
+  }
 
   connectedCallback() {
     super.connectedCallback?.();
