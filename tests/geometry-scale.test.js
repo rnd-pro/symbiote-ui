@@ -114,6 +114,20 @@ test('tokens/scale.json register values stay in sync with the scale module', () 
       );
     }
   }
+  // step-ladder register sync — the same invariant for the universal step rungs
+  for (let n = 0; n < STEP_MULTIPLES.length; n++) {
+    let entry = catalog.step[n];
+    assert.ok(entry, `scale.json is missing step.${n}`);
+    let registers = entry.$extensions.sn.registers;
+    for (let profileName of GEOMETRY_PROFILE_NAMES) {
+      let p = GEOMETRY_PROFILES[profileName];
+      assert.equal(
+        registers[profileName],
+        STEP_MULTIPLES[n] * p.base * p.density,
+        `step.${n} register ${profileName} drifted between scale.json and scale.js`,
+      );
+    }
+  }
   // font-size sync
   let fontRegisters = catalog.font.size.$extensions.sn.registers;
   for (let profileName of GEOMETRY_PROFILE_NAMES) {
