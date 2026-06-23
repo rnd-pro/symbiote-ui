@@ -12,7 +12,7 @@ sn-qr-code {
   background-color: var(--sn-panel-bg, #1e1e24);
   border: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
   border-radius: var(--sn-panel-radius, 6px);
-  padding: var(--sn-space-md);
+  padding: var(--sn-step-6);
   box-sizing: border-box;
 }
 
@@ -20,7 +20,7 @@ sn-qr-code {
   width: 120px;
   height: 120px;
   background-color: var(--sn-qr-background, #fff);
-  padding: 6px;
+  padding: var(--sn-step-3);
   border-radius: var(--sn-radius-sm);
   box-sizing: border-box;
 }
@@ -35,7 +35,7 @@ sn-qr-code {
 }
 
 .sn-qr-label {
-  margin-top: var(--sn-space-sm);
+  margin-top: var(--sn-step-4);
   max-width: 120px;
   font-size: var(--sn-text-xs);
   color: var(--sn-text-dim, rgba(255,255,255,0.5));

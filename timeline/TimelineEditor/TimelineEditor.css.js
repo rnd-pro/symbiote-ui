@@ -30,9 +30,9 @@ let css = /*css*/`
   .te-transport {
     display: flex;
     align-items: center;
-    gap: var(--sn-space-sm);
+    gap: var(--sn-step-4);
     height: 28px;
-    padding: 0 var(--sn-space-sm);
+    padding: 0 var(--sn-step-4);
     background: var(--sn-panel-bg);
     border-bottom: 1px solid var(--te-border);
     flex-shrink: 0;
@@ -42,7 +42,7 @@ let css = /*css*/`
     background: var(--sn-node-bg);
     border: 1px solid var(--te-border);
     color: var(--sn-text-dim);
-    padding: 2px 6px;
+    padding: var(--sn-step-1) var(--sn-step-3);
     border-radius: calc(3px * var(--sn-theme-radius-scale, 1));
     cursor: pointer;
     font-family: inherit;
@@ -100,7 +100,7 @@ let css = /*css*/`
     border-bottom: 1px solid var(--te-border);
     display: flex;
     align-items: center;
-    padding: 0 var(--sn-space-sm);
+    padding: 0 var(--sn-step-4);
     font-size: var(--sn-text-2xs);
     color: var(--sn-text-dim);
   }
@@ -109,8 +109,8 @@ let css = /*css*/`
     height: var(--te-track-height);
     display: flex;
     align-items: center;
-    padding: 0 var(--sn-space-sm);
-    gap: 6px;
+    padding: 0 var(--sn-step-4);
+    gap: var(--sn-step-3);
     border-bottom: 1px solid var(--te-border);
     cursor: default;
   }

@@ -8,12 +8,12 @@ sn-pin-input {
 .sn-pin-container {
   display: flex;
   align-items: center;
-  gap: var(--sn-space-sm);
+  gap: var(--sn-step-4);
 }
 
 .sn-pin-cells {
   display: flex;
-  gap: var(--sn-space-sm);
+  gap: var(--sn-step-4);
 }
 
 .sn-pin-cell {
@@ -43,7 +43,7 @@ sn-pin-input {
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  padding: var(--sn-space-xs);
+  padding: var(--sn-step-2);
 }
 
 .sn-pin-mask-toggle:hover {

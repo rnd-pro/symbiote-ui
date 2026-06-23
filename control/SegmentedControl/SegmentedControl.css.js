@@ -5,7 +5,7 @@ sn-segmented-control {
   background: var(--sn-segmented-bg, color-mix(in oklab, var(--sn-text) 5%, transparent));
   border: 1px solid var(--sn-segmented-border, color-mix(in oklab, var(--sn-text) 12%, transparent));
   border-radius: var(--sn-segmented-radius, var(--sn-field-control-radius, 4px));
-  padding: 2px;
+  padding: var(--sn-step-1);
   max-width: 100%;
   overflow-x: auto;
   font-family: var(--sn-font);

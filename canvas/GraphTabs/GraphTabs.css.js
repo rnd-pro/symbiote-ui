@@ -27,8 +27,8 @@ export let styles = css`
   tab-item {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 0 14px;
+    gap: var(--sn-step-3);
+    padding: 0 var(--sn-step-7);
     cursor: pointer;
     white-space: nowrap;
     border-right: 1px solid var(--sn-node-border);
@@ -65,7 +65,7 @@ export let styles = css`
       font-size: var(--sn-text-lg);
       opacity: 0;
       transition: opacity var(--sn-transition-fast) var(--sn-transition-easing);
-      padding: 2px;
+      padding: var(--sn-step-1);
       border-radius: 3px;
 
       &:hover {

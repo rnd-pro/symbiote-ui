@@ -7,7 +7,7 @@ import { css } from '@symbiotejs/symbiote';
 export let styles = css`
   node-search {
     position: absolute;
-    top: var(--sn-space-lg);
+    top: var(--sn-step-8);
     left: 50%;
     transform: translateX(-50%);
     width: 360px;
@@ -21,8 +21,8 @@ export let styles = css`
     & .search-bar {
       display: flex;
       align-items: center;
-      gap: var(--sn-space-sm);
-      padding: 8px 14px;
+      gap: var(--sn-step-4);
+      padding: var(--sn-step-4) var(--sn-step-7);
       background: var(--sn-node-bg);
       border: 1px solid var(--sn-node-border);
       border-radius: 10px;
@@ -51,13 +51,13 @@ export let styles = css`
     & .search-hint {
       font-size: var(--sn-text-xs);
       color: var(--sn-text-dim);
-      padding: 2px 6px;
+      padding: var(--sn-step-1) var(--sn-step-3);
       border: 1px solid var(--sn-node-border);
       border-radius: var(--sn-radius-sm);
     }
 
     & .search-results {
-      margin-top: var(--sn-space-xs);
+      margin-top: var(--sn-step-2);
       background: var(--sn-node-bg);
       border-radius: var(--sn-radius-lg);
       border: 1px solid var(--sn-node-border);
@@ -76,7 +76,7 @@ export let styles = css`
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 8px 14px;
+    padding: var(--sn-step-4) var(--sn-step-7);
     cursor: pointer;
     color: var(--sn-text);
     font-size: var(--sn-text-md);
@@ -90,7 +90,7 @@ export let styles = css`
   .search-result-type {
     font-size: var(--sn-text-xs);
     color: var(--sn-text-dim);
-    padding: 1px 6px;
+    padding: 1px var(--sn-step-3);
     border-radius: var(--sn-radius-sm);
     background: color-mix(in oklab, currentColor 5%, transparent);
   }

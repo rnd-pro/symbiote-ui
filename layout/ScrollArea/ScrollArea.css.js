@@ -41,16 +41,16 @@ sn-scroll-area {
 }
 
 .sn-scrollbar-vertical {
-  top: 2px;
-  right: 2px;
-  bottom: 2px;
+  top: var(--sn-step-1);
+  right: var(--sn-step-1);
+  bottom: var(--sn-step-1);
   width: 6px;
 }
 
 .sn-scrollbar-horizontal {
-  left: 2px;
-  bottom: 2px;
-  right: 2px;
+  left: var(--sn-step-1);
+  bottom: var(--sn-step-1);
+  right: var(--sn-step-1);
   height: 6px;
 }
 

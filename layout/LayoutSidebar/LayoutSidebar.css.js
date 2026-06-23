@@ -60,7 +60,7 @@ export let sidebarStyles = css`
     /* Collapsed: center the collapse button */
     layout-sidebar[collapsed] & {
       justify-content: center;
-      padding: 2px 0;
+      padding: var(--sn-step-1) 0;
     }
   }
 
@@ -141,7 +141,7 @@ export let sidebarStyles = css`
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: var(--sn-space-xs) 0;
+    padding: var(--sn-step-2) 0;
   }
 
   /* ═══════════════════════ SidebarSection ═══════════════════════ */
@@ -190,7 +190,7 @@ export let sidebarStyles = css`
   sidebar-section .sec-drag-handle {
     display: none;
     align-items: center;
-    padding: 0 2px;
+    padding: 0 var(--sn-step-1);
     cursor: grab;
     color: var(--sn-text-dim);
 
@@ -215,9 +215,9 @@ export let sidebarStyles = css`
   sidebar-section .sec-item {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: var(--sn-step-5);
     flex: 1;
-    padding: 6px 14px;
+    padding: var(--sn-step-3) var(--sn-step-7);
     min-height: 28px;
     cursor: pointer;
     color: var(--sn-text-dim);
@@ -228,7 +228,7 @@ export let sidebarStyles = css`
     overflow: hidden;
 
     layout-sidebar[edit-mode] & {
-      padding-left: var(--sn-space-xs);
+      padding-left: var(--sn-step-2);
     }
 
     &:hover {
@@ -279,10 +279,10 @@ export let sidebarStyles = css`
     color: var(--sn-text);
     background: var(--sn-node-bg);
     border-left: 2px solid var(--sn-cat-server);
-    padding-left: var(--sn-space-md);
+    padding-left: var(--sn-step-6);
 
     layout-sidebar[edit-mode] & {
-      padding-left: 2px;
+      padding-left: var(--sn-step-1);
     }
   }
 
@@ -291,7 +291,7 @@ export let sidebarStyles = css`
     display: none;
     align-items: center;
     justify-content: center;
-    padding: 4px 6px;
+    padding: var(--sn-step-2) var(--sn-step-3);
     background: transparent;
     border: none;
     border-radius: var(--sn-radius-sm);
@@ -351,8 +351,8 @@ export let sidebarStyles = css`
   sidebar-section .sub-panel-item {
     display: flex;
     align-items: center;
-    gap: var(--sn-space-sm);
-    padding: 4px 14px 4px 38px;
+    gap: var(--sn-step-4);
+    padding: var(--sn-step-2) var(--sn-step-7) var(--sn-step-2) 38px;
     min-height: 24px;
     font-size: var(--sn-text-sm);
     color: var(--sn-text-dim);
@@ -378,7 +378,7 @@ export let sidebarStyles = css`
     align-items: center;
     justify-content: center;
     margin-left: auto;
-    padding: 2px;
+    padding: var(--sn-step-1);
     background: transparent;
     border: none;
     border-radius: 3px;

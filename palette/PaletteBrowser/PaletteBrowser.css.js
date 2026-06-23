@@ -20,7 +20,7 @@ export let styles = css`
   }
 
   .pal-header {
-    padding: 10px 14px;
+    padding: var(--sn-step-5) var(--sn-step-7);
     font-weight: 600;
     font-size: var(--sn-text-sm);
     text-transform: uppercase;
@@ -29,7 +29,7 @@ export let styles = css`
     border-bottom: 1px solid var(--sn-node-border);
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--sn-step-3);
 
     & .material-symbols-outlined {
       font-size: var(--sn-text-xl);
@@ -37,12 +37,12 @@ export let styles = css`
   }
 
   .pal-search {
-    padding: var(--sn-space-sm) var(--sn-space-md);
+    padding: var(--sn-step-4) var(--sn-step-6);
     border-bottom: 1px solid var(--sn-node-border);
 
     & input {
       width: 100%;
-      padding: 6px 10px;
+      padding: var(--sn-step-3) var(--sn-step-5);
       background: var(--sn-field-control-bg);
       border: 1px solid var(--sn-node-border);
       border-radius: var(--sn-radius-sm);
@@ -65,12 +65,12 @@ export let styles = css`
   .pal-list {
     flex: 1;
     overflow-y: auto;
-    padding: var(--sn-space-xs) 0;
+    padding: var(--sn-step-2) 0;
   }
 
   pal-category {
     & .pal-cat-header {
-      padding: 6px 14px;
+      padding: var(--sn-step-3) var(--sn-step-7);
       font-size: var(--sn-text-xs);
       font-weight: 600;
       color: var(--sn-text-dim);
@@ -79,7 +79,7 @@ export let styles = css`
       cursor: pointer;
       display: flex;
       align-items: center;
-      gap: var(--sn-space-xs);
+      gap: var(--sn-step-2);
 
       & .material-symbols-outlined {
         font-size: var(--sn-text-lg);
@@ -101,13 +101,13 @@ export let styles = css`
   }
 
   pal-item {
-    padding: 6px 14px 6px 28px;
+    padding: var(--sn-step-3) var(--sn-step-7) var(--sn-step-3) var(--sn-step-11);
     display: flex;
     align-items: center;
-    gap: var(--sn-space-sm);
+    gap: var(--sn-step-4);
     cursor: grab;
     border-radius: var(--sn-radius-sm);
-    margin: 1px 6px;
+    margin: 1px var(--sn-step-3);
     transition: background 0.15s ease-out;
 
     &:hover {

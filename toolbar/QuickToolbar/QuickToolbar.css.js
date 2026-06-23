@@ -71,7 +71,7 @@ export let styles = css`
 
     & .toolbar-title {
       box-sizing: border-box;
-      padding: 8px 10px 7px;
+      padding: var(--sn-step-4) var(--sn-step-5) 7px;
       border-bottom: 1px solid var(--sn-toolbar-border);
       color: var(--sn-toolbar-title-color);
       font-size: var(--sn-toolbar-title-font-size);
@@ -98,8 +98,8 @@ export let styles = css`
     & .toolbar-actions {
       display: flex;
       justify-content: center;
-      gap: 2px;
-      padding: var(--sn-space-xs);
+      gap: var(--sn-step-1);
+      padding: var(--sn-step-2);
     }
   }
 

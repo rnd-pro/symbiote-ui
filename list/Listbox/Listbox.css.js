@@ -8,7 +8,7 @@ sn-listbox {
   background-color: var(--sn-listbox-bg, var(--sn-panel-bg, #1e1e24));
   border: 1px solid var(--sn-listbox-border, var(--sn-outline-color-soft, rgba(255,255,255,0.08)));
   border-radius: var(--sn-listbox-radius, var(--sn-panel-radius, 8px));
-  padding: var(--sn-space-xs);
+  padding: var(--sn-step-2);
   max-height: var(--sn-listbox-max-height, 280px);
   overflow-y: auto;
   box-sizing: border-box;
@@ -31,7 +31,7 @@ sn-listbox {
   cursor: pointer;
   user-select: none;
   transition: background-color var(--sn-transition-fast, 120ms) ease, color var(--sn-transition-fast, 120ms) ease;
-  margin-bottom: 2px;
+  margin-bottom: var(--sn-step-1);
 }
 
 .sn-listbox [role="option"]:last-child {

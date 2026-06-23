@@ -20,8 +20,8 @@ export let styles = css`
     & .sn-frame-header {
       display: flex;
       align-items: center;
-      gap: 6px;
-      padding: 6px 12px;
+      gap: var(--sn-step-3);
+      padding: var(--sn-step-3) var(--sn-step-6);
       font-family: var(--sn-frame-font);
       font-size: var(--sn-frame-font-size);
       font-weight: 600;

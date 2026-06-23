@@ -52,7 +52,7 @@ sn-select {
   left: 0;
   width: 100%;
   z-index: 1000;
-  margin-top: var(--sn-space-xs);
+  margin-top: var(--sn-step-2);
   background-color: var(--sn-panel-bg, #1e1e24);
   border: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
   border-radius: var(--sn-panel-radius, 6px);
@@ -70,7 +70,7 @@ sn-select {
 .sn-select-options-list {
   list-style: none;
   margin: 0;
-  padding: var(--sn-space-xs);
+  padding: var(--sn-step-2);
 }
 
 .sn-select-option {

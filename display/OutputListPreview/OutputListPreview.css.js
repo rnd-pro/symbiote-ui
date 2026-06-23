@@ -28,7 +28,7 @@ output-list-preview[hidden] {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: var(--sn-step-5);
   min-height: 18px;
   color: var(--sn-output-preview-muted, var(--sn-text-dim));
   font-size: var(--sn-text-xs);
@@ -51,12 +51,12 @@ output-list-preview[hidden] {
 .output-list-preview-items {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--sn-step-3);
   min-width: 0;
 }
 
 .output-list-preview-empty {
-  padding: var(--sn-space-sm) 0;
+  padding: var(--sn-step-4) 0;
   color: var(--sn-output-preview-muted, var(--sn-text-dim));
   font-size: var(--sn-text-sm);
 }
@@ -65,9 +65,9 @@ output-list-preview[hidden] {
   box-sizing: border-box;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 3px 10px;
+  gap: 3px var(--sn-step-5);
   min-height: 38px;
-  padding: 8px 10px;
+  padding: var(--sn-step-4) var(--sn-step-5);
   border: 1px solid var(--sn-output-preview-item-border);
   border-radius: var(--sn-output-preview-item-radius);
   background: var(--sn-output-preview-item-bg);

@@ -29,8 +29,8 @@ quick-open {
   .qo-input-wrap {
     display: flex;
     align-items: center;
-    padding: var(--sn-space-sm) var(--sn-space-md);
-    gap: var(--sn-space-sm);
+    padding: var(--sn-step-4) var(--sn-step-6);
+    gap: var(--sn-step-4);
     border-bottom: 1px solid var(--sn-node-border);
   }
   .qo-icon { color: var(--sn-text-dim); font-size: 20px; }
@@ -42,12 +42,12 @@ quick-open {
     font-size: 15px;
     font-family: inherit;
     outline: none;
-    padding: 6px 0;
+    padding: var(--sn-step-3) 0;
   }
   .qo-input::placeholder { color: var(--sn-text-dim); }
   .qo-kbd {
     font-size: var(--sn-text-2xs);
-    padding: 2px 6px;
+    padding: var(--sn-step-1) var(--sn-step-3);
     border-radius: var(--sn-radius-sm);
     background: var(--sn-node-bg);
     border: 1px solid var(--sn-node-border);
@@ -56,14 +56,14 @@ quick-open {
   }
   .qo-results {
     overflow-y: auto;
-    padding: var(--sn-space-xs) 0;
+    padding: var(--sn-step-2) 0;
     max-height: 350px;
   }
   .qo-item {
     display: flex;
     align-items: center;
-    gap: var(--sn-space-sm);
-    padding: var(--sn-space-sm) var(--sn-space-lg);
+    gap: var(--sn-step-4);
+    padding: var(--sn-step-4) var(--sn-step-8);
     cursor: pointer;
     transition: background 80ms ease;
   }
@@ -83,7 +83,7 @@ quick-open {
     font-family: var(--sn-font-mono);
   }
   .qo-empty {
-    padding: 20px;
+    padding: var(--sn-step-9);
     text-align: center;
     color: var(--sn-text-dim);
     font-style: italic;

@@ -20,8 +20,8 @@ sn-rich-text-editor {
   position: relative;
   display: flex;
   flex-wrap: wrap;
-  gap: var(--sn-space-xs);
-  padding: 6px;
+  gap: var(--sn-step-2);
+  padding: var(--sn-step-3);
   background-color: var(--sn-panel-bg, #1e1e24);
   border-bottom: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
 }
@@ -31,7 +31,7 @@ sn-rich-text-editor {
   border: none;
   color: var(--sn-text-dim, rgba(255,255,255,0.6));
   cursor: pointer;
-  padding: var(--sn-space-xs);
+  padding: var(--sn-step-2);
   border-radius: var(--sn-radius-sm);
   display: inline-flex;
   align-items: center;
@@ -55,15 +55,15 @@ sn-rich-text-editor {
 .sn-editor-link-overlay {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sn-step-3);
   position: absolute;
-  right: 6px;
+  right: var(--sn-step-3);
   top: 50%;
   transform: translateY(-50%);
   background-color: var(--sn-panel-bg, #1e1e24);
   border: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
   border-radius: var(--sn-radius-sm);
-  padding: 4px 6px;
+  padding: var(--sn-step-2) var(--sn-step-3);
   z-index: 10;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
@@ -77,7 +77,7 @@ sn-rich-text-editor {
   border: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
   border-radius: var(--sn-radius-sm);
   color: var(--sn-text);
-  padding: var(--sn-space-xs) var(--sn-space-sm);
+  padding: var(--sn-step-2) var(--sn-step-4);
   font-size: var(--sn-text-sm);
   outline: none;
 }
@@ -91,7 +91,7 @@ sn-rich-text-editor {
   border: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
   color: var(--sn-text);
   border-radius: var(--sn-radius-sm);
-  padding: var(--sn-space-xs) var(--sn-space-sm);
+  padding: var(--sn-step-2) var(--sn-step-4);
   font-size: var(--sn-text-sm);
   cursor: pointer;
 }
@@ -114,7 +114,7 @@ sn-rich-text-editor {
   min-height: 120px;
   max-height: 300px;
   overflow-y: auto;
-  padding: var(--sn-space-md);
+  padding: var(--sn-step-6);
   color: var(--sn-text);
   font-size: calc(13px * var(--sn-theme-type-scale, 1));
   outline: none;

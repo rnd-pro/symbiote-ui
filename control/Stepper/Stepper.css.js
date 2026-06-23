@@ -16,7 +16,7 @@ sn-stepper[hidden] {
 .sn-stepper-step {
   display: flex;
   align-items: center;
-  gap: var(--sn-space-sm);
+  gap: var(--sn-step-4);
   position: relative;
   flex: 1;
 }
@@ -49,7 +49,7 @@ sn-stepper[hidden] {
   flex: 1;
   height: 2px;
   background: var(--sn-stepper-line-bg, var(--sn-outline-color-soft, rgba(255, 255, 255, 0.08)));
-  margin: 0 var(--sn-space-sm);
+  margin: 0 var(--sn-step-4);
   transition: background var(--sn-transition-normal, 240ms);
 }
 

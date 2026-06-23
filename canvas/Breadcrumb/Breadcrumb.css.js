@@ -8,8 +8,8 @@ export let styles = css`
   graph-breadcrumb {
     display: flex;
     align-items: center;
-    gap: 2px;
-    padding: 6px 12px;
+    gap: var(--sn-step-1);
+    padding: var(--sn-step-3) var(--sn-step-6);
     font-family: var(--sn-font);
     font-size: var(--sn-text-sm);
     color: var(--sn-text-dim);
@@ -19,8 +19,8 @@ export let styles = css`
     pointer-events: auto;
     user-select: none;
     position: absolute;
-    top: 10px;
-    left: 10px;
+    top: var(--sn-step-5);
+    left: var(--sn-step-5);
     z-index: 50;
     box-shadow: 0 2px 8px var(--sn-shadow-color);
     border: 1px solid var(--sn-node-border);
@@ -46,7 +46,7 @@ export let styles = css`
   }
 
   .bc-label {
-    padding: 3px 8px;
+    padding: 3px var(--sn-step-4);
     border-radius: var(--sn-radius-sm);
     cursor: pointer;
     transition:
@@ -54,7 +54,7 @@ export let styles = css`
       color 0.15s ease-out;
     display: flex;
     align-items: center;
-    gap: var(--sn-space-xs);
+    gap: var(--sn-step-2);
 
     &:hover {
       background: var(--sn-ctx-hover);
@@ -70,6 +70,6 @@ export let styles = css`
     color: var(--sn-text-dim);
     opacity: 0.5;
     font-size: var(--sn-text-xs);
-    padding: 0 2px;
+    padding: 0 var(--sn-step-1);
   }
 `;

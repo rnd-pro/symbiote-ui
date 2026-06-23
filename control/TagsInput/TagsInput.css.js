@@ -10,7 +10,7 @@ sn-tags-input {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
+  gap: var(--sn-step-3);
   width: 100%;
   min-height: calc(36px * var(--sn-theme-density, 1));
   padding: 4px calc(12px * var(--sn-theme-density, 1));
@@ -28,7 +28,7 @@ sn-tags-input {
 .sn-tags-list {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--sn-space-xs);
+  gap: var(--sn-step-2);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -37,8 +37,8 @@ sn-tags-input {
 .sn-tags-chip {
   display: inline-flex;
   align-items: center;
-  gap: var(--sn-space-xs);
-  padding: 2px 8px;
+  gap: var(--sn-step-2);
+  padding: var(--sn-step-1) var(--sn-step-4);
   background-color: var(--sn-panel-bg, #1e1e24);
   border: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
   border-radius: var(--sn-radius-sm);
@@ -73,7 +73,7 @@ sn-tags-input {
   outline: none;
   color: var(--sn-text);
   font-size: calc(13px * var(--sn-theme-type-scale, 1));
-  padding: var(--sn-space-xs) 0;
+  padding: var(--sn-step-2) 0;
 }
 
 sn-tags-input[disabled] .sn-tags-container {

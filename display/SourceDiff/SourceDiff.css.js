@@ -20,17 +20,17 @@ sn-source-diff {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 16px;
+  padding: var(--sn-step-5) var(--sn-step-8);
   background: var(--sn-surface, #272730);
   border-block-end: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
   flex-wrap: wrap;
-  gap: var(--sn-space-sm);
+  gap: var(--sn-step-4);
 }
 
 .sn-source-diff-info {
   display: flex;
   align-items: center;
-  gap: var(--sn-space-md);
+  gap: var(--sn-step-6);
 }
 
 .sn-source-diff-filename {
@@ -46,19 +46,19 @@ sn-source-diff {
 
 .sn-source-diff-actions {
   display: flex;
-  gap: var(--sn-space-sm);
+  gap: var(--sn-step-4);
 }
 
 .sn-source-diff-mode-btn,
 .sn-source-diff-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sn-step-3);
   background: transparent;
   border: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.15));
   border-radius: var(--sn-radius-sm);
   color: var(--sn-text-dim, #ccc);
-  padding: 4px 10px;
+  padding: var(--sn-step-2) var(--sn-step-5);
   font-size: var(--sn-text-sm);
   cursor: pointer;
   outline: none;
@@ -123,19 +123,19 @@ sn-source-diff {
   background: rgba(0, 122, 204, 0.1);
   color: var(--sn-tabs-accent, #58a6ff);
   font-weight: 500;
-  padding: 6px 12px;
+  padding: var(--sn-step-3) var(--sn-step-6);
   user-select: none;
   border-bottom: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.05));
   border-top: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.05));
 }
 
 .sn-source-diff-hunk-header td {
-  padding: 6px 12px;
+  padding: var(--sn-step-3) var(--sn-step-6);
 }
 
 .sn-source-diff-hunk-actions {
   display: inline-flex;
-  gap: var(--sn-space-sm);
+  gap: var(--sn-step-4);
   float: right;
 }
 
@@ -143,7 +143,7 @@ sn-source-diff {
   background: transparent;
   border: none;
   cursor: pointer;
-  padding: 2px;
+  padding: var(--sn-step-1);
   color: var(--sn-text-dim, #888);
   border-radius: var(--sn-radius-sm);
 }
@@ -163,7 +163,7 @@ sn-source-diff {
 .sn-source-diff-gutter {
   width: 45px;
   text-align: right;
-  padding: 2px 10px 2px 4px;
+  padding: var(--sn-step-1) var(--sn-step-5) var(--sn-step-1) var(--sn-step-2);
   color: var(--sn-text-dim, #57606a);
   user-select: none;
   border-right: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.05));
@@ -175,7 +175,7 @@ sn-source-diff {
 .sn-source-diff-comment-btn {
   display: none;
   position: absolute;
-  right: 2px;
+  right: var(--sn-step-1);
   top: 50%;
   transform: translateY(-50%);
   background: var(--sn-surface, #272730);
@@ -201,7 +201,7 @@ sn-source-diff {
   justify-content: center;
   min-width: 14px;
   height: 14px;
-  margin-inline-start: var(--sn-space-xs);
+  margin-inline-start: var(--sn-step-2);
   border-radius: var(--sn-radius-full);
   background: var(--sn-hue-info, #38bdf8);
   color: var(--sn-panel-bg, #1e1e24);
@@ -224,7 +224,7 @@ sn-source-diff {
 }
 
 .sn-source-diff-code {
-  padding: 2px 12px;
+  padding: var(--sn-step-1) var(--sn-step-6);
   white-space: pre-wrap;
   word-break: break-all;
   vertical-align: top;

@@ -35,7 +35,7 @@ sn-timeline-item:last-child {
   width: 2px;
   flex: 1;
   background: var(--sn-timeline-connector-color, var(--sn-outline-color-soft, rgba(255, 255, 255, 0.08)));
-  margin-top: var(--sn-space-xs);
+  margin-top: var(--sn-step-2);
 }
 
 sn-timeline-item:last-child .sn-timeline-connector {
@@ -74,7 +74,7 @@ sn-timeline-item[variant="info"] .sn-timeline-indicator {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: var(--sn-space-xs);
+  gap: var(--sn-step-2);
   font-family: var(--sn-font, sans-serif);
   min-width: 0;
 }

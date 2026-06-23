@@ -8,7 +8,7 @@ sn-file-upload {
 .sn-file-container {
   display: flex;
   flex-direction: column;
-  gap: var(--sn-space-sm);
+  gap: var(--sn-step-4);
   width: 100%;
 }
 
@@ -35,7 +35,7 @@ sn-file-upload {
 
 .sn-file-dropzone-icon {
   font-size: 32px;
-  margin-bottom: var(--sn-space-sm);
+  margin-bottom: var(--sn-step-4);
 }
 
 .sn-file-dropzone-text {
@@ -46,7 +46,7 @@ sn-file-upload {
 .sn-file-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--sn-step-3);
 }
 
 .sn-file-native-input {
@@ -57,7 +57,7 @@ sn-file-upload {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 10px;
+  padding: var(--sn-step-3) var(--sn-step-5);
   background: var(--sn-panel-bg, #1e1e24);
   border: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
   border-radius: var(--sn-radius-sm);
@@ -67,7 +67,7 @@ sn-file-upload {
 .sn-file-item-info {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--sn-step-1);
 }
 
 .sn-file-item-name {
@@ -86,7 +86,7 @@ sn-file-upload {
   border: none;
   color: var(--sn-text-dim, rgba(255,255,255,0.6));
   cursor: pointer;
-  padding: 2px;
+  padding: var(--sn-step-1);
   border-radius: var(--sn-radius-sm);
 }
 

@@ -46,7 +46,7 @@ sn-kanban-board .sn-kanban-column-header {
   display: grid;
   flex: 0 0 auto;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: var(--sn-space-sm);
+  gap: var(--sn-step-4);
   min-height: var(--sn-kanban-header-min-height, 54px);
   padding: var(--sn-kanban-header-padding, 9px 10px);
   border-block-end: 1px solid var(--sn-kanban-border, var(--sn-node-border));
@@ -221,7 +221,7 @@ sn-kanban-board .sn-kanban-card-action {
   gap: var(--sn-step-3);
   width: 100%;
   min-height: 30px;
-  padding: var(--sn-space-xs) var(--sn-space-sm);
+  padding: var(--sn-step-2) var(--sn-step-4);
   border: 1px solid var(--sn-node-border);
   border-radius: var(--sn-radius-md);
   background: var(--sn-node-bg);
@@ -265,7 +265,7 @@ sn-kanban-board .sn-kanban-card-menu::-webkit-details-marker {
 
 sn-kanban-board .sn-kanban-card-menu-list {
   display: grid;
-  gap: var(--sn-space-xs);
+  gap: var(--sn-step-2);
   width: 100%;
   padding: var(--sn-step-3);
   border: 1px solid var(--sn-node-border);
@@ -292,7 +292,7 @@ sn-kanban-board .sn-kanban-empty {
   display: grid;
   place-items: center;
   min-height: 96px;
-  padding: var(--sn-space-md);
+  padding: var(--sn-step-6);
   border: 1px dashed var(--sn-node-border);
   border-radius: var(--sn-radius-md);
   color: var(--sn-text-dim);

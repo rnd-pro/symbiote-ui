@@ -95,22 +95,22 @@ export default `
   code-block h4.md-h { font-size: var(--sn-markdown-h4-size, 14px); }
   code-block .md-p { margin: 8px 0; }
   code-block .md-quote {
-    margin: var(--sn-space-sm) 0;
-    padding: var(--sn-space-sm) var(--sn-space-lg);
+    margin: var(--sn-step-4) 0;
+    padding: var(--sn-step-4) var(--sn-step-8);
     border-left: 4px solid var(--sn-cat-server);
     background: var(--sn-accent-bg-subtle);
     border-radius: 0 var(--sn-radius-sm) var(--sn-radius-sm) 0;
     font-style: italic;
   }
   code-block .md-list {
-    margin: var(--sn-space-sm) 0;
-    padding-left: var(--sn-space-xl);
+    margin: var(--sn-step-4) 0;
+    padding-left: var(--sn-step-10);
   }
   code-block .md-list li {
     margin: 3px 0;
   }
   code-block .md-code-block {
-    margin: var(--sn-space-md) 0;
+    margin: var(--sn-step-6) 0;
     padding: var(--sn-code-padding, 12px 16px);
     background: var(--sn-bg);
     border: 1px solid var(--sn-node-border);
@@ -138,19 +138,19 @@ export default `
     max-width: 100%;
     height: auto;
     border-radius: var(--sn-radius-md);
-    margin: var(--sn-space-sm) 0;
+    margin: var(--sn-step-4) 0;
     border: 1px solid var(--sn-node-border);
     box-shadow: 0 2px 8px var(--sn-bg-overlay);
   }
   code-block .md-hr {
     border: none;
     border-top: 1px solid var(--sn-node-border);
-    margin: var(--sn-space-lg) 0;
+    margin: var(--sn-step-8) 0;
   }
   code-block .md-table {
     width: 100%;
     border-collapse: collapse;
-    margin: var(--sn-space-md) 0;
+    margin: var(--sn-step-6) 0;
     font-size: var(--sn-code-table-size, 13px);
   }
   code-block .md-table th,

@@ -42,7 +42,7 @@ sn-combobox {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: var(--sn-space-sm);
+  padding: var(--sn-step-4);
   transition: color var(--sn-transition-fast, 120ms);
 }
 
@@ -61,7 +61,7 @@ sn-combobox {
   max-height: 240px;
   overflow-y: auto;
   box-sizing: border-box;
-  padding: var(--sn-space-xs);
+  padding: var(--sn-step-2);
 }
 
 .sn-combobox-dropdown[data-visible] {
@@ -83,7 +83,7 @@ sn-combobox {
   cursor: pointer;
   user-select: none;
   transition: background-color var(--sn-transition-fast, 120ms), color var(--sn-transition-fast, 120ms);
-  margin-bottom: 2px;
+  margin-bottom: var(--sn-step-1);
 }
 
 .sn-combobox-option:hover {

@@ -19,9 +19,9 @@ let css = /*css*/`
   .vp-header {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--sn-step-3);
     height: 28px;
-    padding: 0 var(--sn-space-sm);
+    padding: 0 var(--sn-step-4);
     background: var(--sn-panel-bg);
     border-bottom: 1px solid var(--vp-border);
     flex-shrink: 0;
@@ -31,7 +31,7 @@ let css = /*css*/`
     background: var(--sn-node-bg);
     border: 1px solid var(--vp-border);
     color: var(--sn-text-dim);
-    padding: 1px 4px;
+    padding: 1px var(--sn-step-2);
     border-radius: calc(3px * var(--sn-theme-radius-scale, 1));
     font-family: inherit;
     font-size: var(--sn-text-2xs);
@@ -47,7 +47,7 @@ let css = /*css*/`
     background: var(--sn-node-bg);
     border: 1px solid var(--vp-border);
     color: var(--sn-text-dim);
-    padding: 2px 6px;
+    padding: var(--sn-step-1) var(--sn-step-3);
     border-radius: calc(3px * var(--sn-theme-radius-scale, 1));
     cursor: pointer;
     font-family: inherit;

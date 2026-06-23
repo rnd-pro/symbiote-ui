@@ -27,7 +27,7 @@ export let styles = css`
       border: 1px solid var(--sn-ctx-border, #333);
       border-radius: var(--sn-radius-lg);
       box-shadow: 0 8px 24px var(--sn-shadow-color, rgba(0,0,0,0.5));
-      padding: var(--sn-space-xs);
+      padding: var(--sn-step-2);
       overflow: hidden;
     }
   }
@@ -35,7 +35,7 @@ export let styles = css`
   .sn-ctx-divider {
     height: 1px;
     background: var(--sn-ctx-divider-color, var(--sn-tabs-divider, #333));
-    margin: 4px 6px;
+    margin: var(--sn-step-2) var(--sn-step-3);
   }
 
   .sn-ctx-divider[hidden],
@@ -49,9 +49,9 @@ export let styles = css`
   .sn-ctx-btn {
     display: flex;
     align-items: center;
-    gap: var(--sn-space-sm);
+    gap: var(--sn-step-4);
     width: 100%;
-    padding: 6px 12px;
+    padding: var(--sn-step-3) var(--sn-step-6);
     border: none;
     background: transparent;
     color: var(--sn-ctx-color, #e0e0e0);
@@ -95,7 +95,7 @@ export let styles = css`
     margin-left: auto;
     font-size: var(--sn-text-xs);
     color: var(--sn-text-dim, #888);
-    padding-left: var(--sn-space-md);
+    padding-left: var(--sn-step-6);
   }
 
   .sn-ctx-btn[destructive] {

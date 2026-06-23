@@ -75,7 +75,7 @@ sn-list-detail-shell .sn-list-detail-heading {
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--sn-step-1);
   min-width: 0;
 }
 

@@ -24,7 +24,7 @@ sn-floating-panel {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--sn-space-sm) var(--sn-space-md);
+  padding: var(--sn-step-4) var(--sn-step-6);
   background-color: var(--sn-panel-bg, #1e1e24);
   border-bottom: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
   cursor: move;
@@ -40,7 +40,7 @@ sn-floating-panel {
 .sn-floating-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sn-step-3);
 }
 
 .sn-floating-action-btn {
@@ -48,7 +48,7 @@ sn-floating-panel {
   border: none;
   color: var(--sn-text-dim, rgba(255,255,255,0.6));
   cursor: pointer;
-  padding: 2px;
+  padding: var(--sn-step-1);
   border-radius: var(--sn-radius-sm);
   display: inline-flex;
   align-items: center;
@@ -70,7 +70,7 @@ sn-floating-panel {
 .sn-floating-body {
   flex: 1;
   overflow: auto;
-  padding: var(--sn-space-md);
+  padding: var(--sn-step-6);
   box-sizing: border-box;
 }
 

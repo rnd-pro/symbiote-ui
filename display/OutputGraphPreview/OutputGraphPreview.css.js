@@ -28,7 +28,7 @@ output-graph-preview[hidden] {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: var(--sn-step-5);
   min-height: 18px;
   color: var(--sn-output-preview-muted, var(--sn-text-dim));
   font-size: var(--sn-text-xs);
@@ -49,7 +49,7 @@ output-graph-preview[hidden] {
 }
 
 .output-graph-preview-empty {
-  padding: var(--sn-space-sm) 0;
+  padding: var(--sn-step-4) 0;
   color: var(--sn-output-preview-muted, var(--sn-text-dim));
   font-size: var(--sn-text-sm);
 }
@@ -58,9 +58,9 @@ output-graph-preview[hidden] {
   position: relative;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
-  gap: 10px;
+  gap: var(--sn-step-5);
   min-height: 96px;
-  padding: var(--sn-space-sm);
+  padding: var(--sn-step-4);
   border-radius: var(--sn-output-preview-canvas-radius);
   background:
     linear-gradient(var(--sn-output-preview-grid) 1px, transparent 1px),
@@ -72,7 +72,7 @@ output-graph-preview[hidden] {
   box-sizing: border-box;
   min-width: 0;
   min-height: 52px;
-  padding: 8px 10px;
+  padding: var(--sn-step-4) var(--sn-step-5);
   border: 1px solid var(--sn-output-preview-item-border);
   border-radius: var(--sn-output-preview-item-radius);
   background: var(--sn-output-preview-item-bg);
@@ -110,12 +110,12 @@ output-graph-preview[hidden] {
   grid-column: 1 / -1;
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--sn-step-3);
 }
 
 .output-graph-preview-edge {
   max-width: 100%;
-  padding: 3px 6px;
+  padding: 3px var(--sn-step-3);
   border-radius: var(--sn-radius-full);
   background: var(--sn-output-preview-edge-bg);
 }

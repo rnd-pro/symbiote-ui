@@ -13,11 +13,11 @@ sn-tour {
   border: 1px solid var(--sn-node-selected, #2e90fa);
   border-radius: var(--sn-panel-radius, 6px);
   box-shadow: var(--sn-panel-shadow, 0 10px 25px rgba(0,0,0,0.35));
-  padding: var(--sn-space-md);
+  padding: var(--sn-step-6);
   width: 240px;
   box-sizing: border-box;
   flex-direction: column;
-  gap: var(--sn-space-sm);
+  gap: var(--sn-step-4);
 }
 
 .sn-tour-popover[data-visible] {
@@ -41,7 +41,7 @@ sn-tour {
   border: none;
   color: var(--sn-text-dim, rgba(255,255,255,0.6));
   cursor: pointer;
-  padding: 2px;
+  padding: var(--sn-step-1);
   border-radius: var(--sn-radius-sm);
 }
 
@@ -59,7 +59,7 @@ sn-tour {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: var(--sn-space-sm);
+  margin-top: var(--sn-step-4);
 }
 
 .sn-tour-progress {
@@ -69,14 +69,14 @@ sn-tour {
 
 .sn-tour-buttons {
   display: flex;
-  gap: 6px;
+  gap: var(--sn-step-3);
 }
 
 .sn-tour-btn {
   background: var(--sn-panel-bg, #1e1e24);
   border: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
   color: var(--sn-text);
-  padding: var(--sn-space-xs) var(--sn-space-sm);
+  padding: var(--sn-step-2) var(--sn-step-4);
   border-radius: var(--sn-radius-sm);
   font-size: var(--sn-text-xs);
   cursor: pointer;

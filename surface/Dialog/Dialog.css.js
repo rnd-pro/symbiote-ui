@@ -55,7 +55,7 @@ sn-dialog {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: var(--sn-space-xs);
+  padding: var(--sn-step-2);
   border-radius: var(--sn-radius-sm);
   transition: background-color var(--sn-transition-fast, 120ms), color var(--sn-transition-fast, 120ms);
 }
@@ -77,7 +77,7 @@ sn-dialog {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: var(--sn-space-md);
+  gap: var(--sn-step-6);
   padding: calc(16px * var(--sn-theme-density, 1)) calc(20px * var(--sn-theme-density, 1));
   border-top: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
   background-color: color-mix(in oklab, var(--sn-panel-bg) 95%, var(--sn-text) 5%);

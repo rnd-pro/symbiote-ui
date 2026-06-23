@@ -44,12 +44,12 @@ sn-date-picker {
   top: 100%;
   left: 0;
   z-index: 1000;
-  margin-top: var(--sn-space-xs);
+  margin-top: var(--sn-step-2);
   background-color: var(--sn-panel-bg, #1e1e24);
   border: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
   border-radius: var(--sn-panel-radius, 6px);
   box-shadow: var(--sn-panel-shadow, 0 10px 25px rgba(0,0,0,0.35));
-  padding: var(--sn-space-sm);
+  padding: var(--sn-step-4);
   box-sizing: border-box;
   min-width: 260px;
 }
@@ -66,7 +66,7 @@ sn-date-picker {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--sn-space-sm);
+  margin-bottom: var(--sn-step-4);
 }
 
 .sn-calendar-nav-btn {
@@ -74,7 +74,7 @@ sn-date-picker {
   border: none;
   color: var(--sn-text);
   cursor: pointer;
-  padding: var(--sn-space-xs);
+  padding: var(--sn-step-2);
   border-radius: var(--sn-radius-sm);
 }
 
@@ -91,7 +91,7 @@ sn-date-picker {
 .sn-calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 2px;
+  gap: var(--sn-step-1);
   text-align: center;
 }
 
@@ -99,12 +99,12 @@ sn-date-picker {
   font-size: var(--sn-text-xs);
   font-weight: 500;
   color: var(--sn-text-dim, rgba(255,255,255,0.6));
-  padding: var(--sn-space-xs) 0;
+  padding: var(--sn-step-2) 0;
 }
 
 .sn-calendar-day {
   font-size: calc(12px * var(--sn-theme-type-scale, 1));
-  padding: 6px 0;
+  padding: var(--sn-step-3) 0;
   color: var(--sn-text);
   border-radius: var(--sn-radius-sm);
   cursor: pointer;

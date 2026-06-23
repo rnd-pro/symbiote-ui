@@ -84,7 +84,7 @@ sn-list-item[loading] .sn-list-item {
   border-right-color: transparent;
   border-radius: 50%;
   animation: sn-list-item-spin 0.6s linear infinite;
-  margin-inline-end: var(--sn-space-xs);
+  margin-inline-end: var(--sn-step-2);
   flex: 0 0 auto;
 }
 
@@ -114,7 +114,7 @@ sn-list-item[loading] .sn-list-item {
 .sn-list-item-body {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--sn-step-1);
   min-width: 0;
   flex: 1 1 auto;
 }

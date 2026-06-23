@@ -65,7 +65,7 @@ sn-nav-item[disabled] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0 var(--sn-space-xs);
+  padding: 0 var(--sn-step-2);
   min-width: 16px;
   height: 16px;
   border-radius: var(--sn-radius-lg);

@@ -18,7 +18,7 @@ sn-pagination[hidden] {
   justify-content: center;
   min-width: var(--sn-pagination-btn-size, 28px);
   height: var(--sn-pagination-btn-size, 28px);
-  padding: 0 6px;
+  padding: 0 var(--sn-step-3);
   box-sizing: border-box;
   background: var(--sn-pagination-btn-bg, transparent);
   border: 1px solid var(--sn-pagination-btn-border, var(--sn-outline-color-soft, rgba(255, 255, 255, 0.08)));

@@ -7,22 +7,22 @@ import { css } from '@symbiotejs/symbiote';
 export let styles = css`
   template-preview {
     display: block;
-    padding-top: var(--sn-space-sm);
+    padding-top: var(--sn-step-4);
 
     & .tpl-preview-section {
-      margin-bottom: 10px;
+      margin-bottom: var(--sn-step-5);
     }
 
     & .tpl-chips-label,
     & .tpl-preview-label {
       display: flex;
       align-items: center;
-      gap: var(--sn-space-xs);
+      gap: var(--sn-step-2);
       font-size: var(--sn-text-2xs);
       font-weight: 600;
       text-transform: uppercase;
       color: var(--sn-text-dim);
-      margin-bottom: var(--sn-space-xs);
+      margin-bottom: var(--sn-step-2);
       letter-spacing: 0.5px;
     }
 
@@ -35,14 +35,14 @@ export let styles = css`
     & .tpl-chips {
       display: flex;
       flex-wrap: wrap;
-      gap: var(--sn-space-xs);
+      gap: var(--sn-step-2);
     }
 
     & .tpl-chips-empty {
       font-size: var(--sn-text-xs);
       color: var(--sn-text-dim);
       font-style: italic;
-      padding: var(--sn-space-xs) 0;
+      padding: var(--sn-step-2) 0;
 
       &[hidden] {
         display: none;
@@ -51,7 +51,7 @@ export let styles = css`
 
     & .tpl-test-data {
       width: 100%;
-      padding: 6px 8px;
+      padding: var(--sn-step-3) var(--sn-step-4);
       font-size: var(--sn-text-xs);
       font-family: var(--sn-font-mono);
       color: var(--sn-text);
@@ -77,7 +77,7 @@ export let styles = css`
       background: color-mix(in oklab, currentColor 4%, transparent);
       border: 1px solid var(--sn-node-border);
       border-radius: var(--sn-radius-sm);
-      padding: var(--sn-space-sm);
+      padding: var(--sn-step-4);
       white-space: pre-wrap;
       word-break: break-word;
       min-height: 30px;
@@ -87,7 +87,7 @@ export let styles = css`
 
   .tpl-chip {
     display: inline-block;
-    padding: 2px 8px;
+    padding: var(--sn-step-1) var(--sn-step-4);
     font-size: var(--sn-text-xs);
     font-family: var(--sn-font-mono);
     border-radius: 10px;

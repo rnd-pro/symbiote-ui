@@ -7,8 +7,8 @@ import { css } from '@symbiotejs/symbiote';
 export let styles = css`
   node-minimap {
     position: absolute;
-    bottom: var(--sn-space-lg);
-    right: var(--sn-space-lg);
+    bottom: var(--sn-step-8);
+    right: var(--sn-step-8);
     width: 200px;
     height: 140px;
     border-radius: var(--sn-radius-lg);
@@ -38,8 +38,8 @@ export let styles = css`
 
   .sn-minimap-toggle {
     position: absolute;
-    bottom: var(--sn-space-lg);
-    right: var(--sn-space-lg);
+    bottom: var(--sn-step-8);
+    right: var(--sn-step-8);
     width: 32px;
     height: 32px;
     border-radius: var(--sn-radius-md);

@@ -8,7 +8,7 @@ sn-transfer {
 .sn-transfer-container {
   display: flex;
   align-items: center;
-  gap: var(--sn-space-lg);
+  gap: var(--sn-step-8);
   width: 100%;
 }
 
@@ -26,7 +26,7 @@ sn-transfer {
 }
 
 .sn-transfer-panel-header {
-  padding: var(--sn-space-sm) var(--sn-space-md);
+  padding: var(--sn-step-4) var(--sn-step-6);
   background: var(--sn-panel-bg, #1e1e24);
   border-bottom: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
   font-size: var(--sn-text-sm);
@@ -37,7 +37,7 @@ sn-transfer {
 .sn-transfer-list {
   list-style: none;
   margin: 0;
-  padding: var(--sn-space-xs);
+  padding: var(--sn-step-2);
   overflow-y: auto;
   flex: 1;
 }
@@ -45,7 +45,7 @@ sn-transfer {
 .sn-transfer-item {
   display: flex;
   align-items: center;
-  gap: var(--sn-space-sm);
+  gap: var(--sn-step-4);
   padding: calc(6px * var(--sn-theme-density, 1)) calc(8px * var(--sn-theme-density, 1));
   font-size: calc(12px * var(--sn-theme-type-scale, 1));
   color: var(--sn-text);
@@ -65,7 +65,7 @@ sn-transfer {
 .sn-transfer-buttons {
   display: flex;
   flex-direction: column;
-  gap: var(--sn-space-sm);
+  gap: var(--sn-step-4);
 }
 
 .sn-transfer-btn {

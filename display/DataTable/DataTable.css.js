@@ -134,7 +134,7 @@ sn-data-table[hidden] {
   background: rgba(248, 81, 73, 0.1);
   border: 1px solid var(--sn-status-error, #f85149);
   border-radius: var(--sn-data-table-radius, 4px);
-  margin: var(--sn-space-sm);
+  margin: var(--sn-step-4);
 }
 
 .sn-data-table-empty {
@@ -151,7 +151,7 @@ sn-data-table[hidden] {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--sn-space-md);
+  gap: var(--sn-step-6);
   background: var(--sn-data-table-loading-bg, rgba(30, 30, 30, 0.7));
   backdrop-filter: blur(1px);
   z-index: 10;
@@ -182,7 +182,7 @@ sn-data-table[hidden] {
 .sn-data-table-header-content {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sn-step-3);
 }
 
 .sn-data-table-sort-btn {
@@ -193,7 +193,7 @@ sn-data-table[hidden] {
   border: none;
   color: var(--sn-text-dim, #888);
   cursor: pointer;
-  padding: 2px;
+  padding: var(--sn-step-1);
   border-radius: var(--sn-radius-sm);
   outline: none;
   transition: color 0.1s, background 0.1s;
@@ -223,7 +223,7 @@ sn-data-table[hidden] {
   border: none;
   color: var(--sn-text-dim, #888);
   cursor: pointer;
-  padding: var(--sn-space-xs);
+  padding: var(--sn-step-2);
   border-radius: var(--sn-radius-sm);
   outline: none;
   transition: color 0.1s, background 0.1s;
@@ -249,7 +249,7 @@ tr[aria-expanded="true"] .sn-data-table-expand-btn .material-symbols-outlined {
 }
 
 .sn-data-table-details-row td {
-  padding: 12px 16px 12px 36px;
+  padding: var(--sn-step-6) var(--sn-step-8) var(--sn-step-6) 36px;
   background: var(--sn-data-table-details-bg, rgba(255, 255, 255, 0.02));
   border-block-end: 1px solid var(--sn-data-table-row-border, var(--sn-outline-color-soft));
 }
