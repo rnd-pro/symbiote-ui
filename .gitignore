@@ -6,3 +6,5 @@ scratch/
 *.tgz
 .DS_Store
 .agent-portal
+catalog/dist/
+_site/
