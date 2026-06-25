@@ -145,6 +145,10 @@ sn-data-table[hidden] {
   text-align: center;
 }
 
+.sn-data-table-loading-overlay[hidden] {
+  display: none;
+}
+
 .sn-data-table-loading-overlay {
   position: absolute;
   inset: 0;
