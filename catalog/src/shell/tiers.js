@@ -1,5 +1,5 @@
 export const STATIC_TAGS = new Set([
-  'code-block', 'source-viewer', 'sn-badge', 'sn-banner', 'sn-card', 'sn-data-table',
+  'code-block', 'source-viewer', 'sn-badge', 'sn-banner', 'sn-card',
   'sn-empty-state', 'sn-event-feed', 'sn-checkbox', 'sn-field', 'sn-metric', 'sn-radio',
   'sn-switch', 'sn-slider', 'sn-rating', 'sn-segmented-control', 'sn-tooltip', 'sn-dialog',
   'sn-select', 'sn-toast', 'sn-toast-region', 'sn-listbox', 'sn-popover', 'sn-combobox', 'sn-drawer',
@@ -17,6 +17,15 @@ export const HYDRATE_FIXTURES = {
   'chat-list': el => el.setItems([{ id: 'l1', title: 'Chat', preview: 'Preview' }]),
   'sn-list-item': el => el.setItem({ label: 'Label', description: 'Description', meta: '' }),
   'project-tabs': el => { el.setTabs([{ id: 'p1', label: 'Tab' }]); el.activeId = 'p1'; },
+  'sn-loading-overlay': el => el.setProgress(66, 'Loading', 'preview'),
+  'sn-data-table': el => el.setData({
+    columns: [{ key: 'name', label: 'Name' }, { key: 'role', label: 'Role' }],
+    rows: [{ name: 'Aria', role: 'agent' }, { name: 'Cas', role: 'host' }],
+  }),
+  'sn-description-list': el => {
+    el.innerHTML = '<sn-description-item label="Status">Active</sn-description-item>'
+      + '<sn-description-item label="Owner">agent</sn-description-item>';
+  },
 };
 
 export function tierOf(tag, category) {

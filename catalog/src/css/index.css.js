@@ -7,6 +7,7 @@ export default /*css*/ `
   --cat-border: var(--sn-border, #333);
   --cat-accent-bg: var(--sn-accent-bg, #3b82f6);
   --cat-accent-border: var(--sn-accent-border, #2563eb);
+  --cat-accent: var(--sn-node-selected, #3b82f6);
   --cat-font: var(--sn-font-family, var(--sn-font, Inter, system-ui, sans-serif));
   --cat-mono: var(--sn-font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
   --cat-radius: var(--sn-radius-md, var(--sn-radius, 8px));
@@ -53,27 +54,89 @@ body {
   scrollbar-color: var(--cat-border) transparent;
 }
 
-.topbar-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 28px;
-  padding: 0 10px;
-  margin-right: 4px;
+/* The catalog drives its own two tabs; the project-add affordance is irrelevant. */
+project-tabs .tab-add {
+  display: none;
+}
+
+.demos-intro {
+  margin: 0 0 20px;
+  max-width: 70ch;
   font-size: 13px;
+  line-height: 1.5;
   color: var(--cat-dim);
+}
+
+.demos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 16px;
+}
+
+.demo-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  color: inherit;
   text-decoration: none;
+  background: var(--cat-surface);
   border: 1px solid var(--cat-border);
+  border-radius: var(--cat-radius);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: border-color var(--sn-transition-fast), background var(--sn-transition-fast), transform var(--sn-transition-fast);
+}
+
+.demo-card:hover,
+.demo-card:focus-visible {
+  outline: none;
+  transform: translateY(-1px);
+  border-color: var(--cat-accent);
+  background: color-mix(in srgb, var(--cat-accent) 8%, var(--cat-surface));
+}
+
+.demo-card-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  font-size: 24px;
+  color: var(--cat-accent);
+  background: color-mix(in srgb, var(--cat-accent) 18%, transparent);
   border-radius: var(--cat-radius);
 }
 
-.topbar-link:hover {
-  color: var(--cat-text);
-  border-color: var(--cat-accent-border);
+.demo-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
 }
 
-.topbar-link .material-symbols-outlined {
-  font-size: 18px;
+.demo-card-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--cat-text);
+}
+
+.demo-card-desc {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--cat-dim);
+}
+
+.demo-card-arrow {
+  flex: none;
+  font-size: 20px;
+  color: var(--cat-dim);
+  transition: color var(--sn-transition-fast), transform var(--sn-transition-fast);
+}
+
+.demo-card:hover .demo-card-arrow {
+  color: var(--cat-accent);
+  transform: translateX(2px);
 }
 
 .category-heading {
@@ -163,6 +226,7 @@ catalog-component-card[hidden] {
 }
 
 .card-demo {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -174,7 +238,11 @@ catalog-component-card[hidden] {
   background: var(--cat-inset);
   border: 1px solid var(--cat-border);
   border-radius: var(--cat-radius);
-  overflow: auto;
+  /* Keep live previews inside their box: layout containment makes the card the
+     containing block for absolute AND fixed descendants (overlays, drawers,
+     loading overlays) so they cannot escape and cover the workspace. */
+  contain: layout;
+  overflow: hidden;
 }
 
 .demo-note {

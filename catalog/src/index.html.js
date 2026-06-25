@@ -16,11 +16,6 @@ export default /*html*/ `<!doctype html>
   path-label="Component Catalog"
   path-icon="widgets">
 
-  <a class="topbar-link" slot="actions" href="./demo/" title="Open the symbiote-ui demos">
-    <span class="material-symbols-outlined" aria-hidden="true">play_circle</span>
-    <span>Demo</span>
-  </a>
-
   <cascade-theme-widget
     slot="actions"
     storage-key="symbiote-ui:catalog-theme"
@@ -29,7 +24,10 @@ export default /*html*/ `<!doctype html>
 
   <layout-sidebar slot="sidebar"></layout-sidebar>
 
-  <main id="workspace-content" aria-live="polite"></main>
+  <main id="workspace-content" aria-live="polite">
+    <div id="components-view"></div>
+    <div id="demos-view" hidden></div>
+  </main>
 
 </layout-shell-menu>
 </body>
