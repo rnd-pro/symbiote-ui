@@ -240,6 +240,11 @@ export class LayoutNode extends Symbiote {
     super.disconnectedCallback?.();
   }
 
+  destroyCallback() {
+    this._cancelPanelMenuActionStateSync();
+    super.destroyCallback?.();
+  }
+
   _updateStyles() {
     let dir = this.$.direction;
     let data = this.$.nodeData;
@@ -459,12 +464,27 @@ export class LayoutNode extends Symbiote {
   _schedulePanelMenuActionStateSync() {
     this._syncPanelMenuActionState();
     if (typeof requestAnimationFrame !== 'undefined') {
-      requestAnimationFrame(() => this._syncPanelMenuActionState());
+      this._cancelPanelMenuActionStateSync();
+      this._panelMenuActionStateFrame = requestAnimationFrame(() => {
+        this._panelMenuActionStateFrame = 0;
+        this._syncPanelMenuActionState();
+      });
     }
   }
 
+  _cancelPanelMenuActionStateSync() {
+    if (this._panelMenuActionStateFrame && typeof cancelAnimationFrame !== 'undefined') {
+      cancelAnimationFrame(this._panelMenuActionStateFrame);
+    }
+    this._panelMenuActionStateFrame = 0;
+  }
+
   _syncPanelMenuActionState() {
-    let actions = new Map(this.$.panelMenuActions.map((action) => [action.id, action]));
+    // A queued frame can outlive the node: Symbiote's deferred teardown nulls the
+    // reactive context, so `this.$` reads become nullish. Bail before touching it.
+    let panelMenuActions = this.$?.panelMenuActions;
+    if (!this.isConnected || !panelMenuActions) return;
+    let actions = new Map(panelMenuActions.map((action) => [action.id, action]));
     for (let button of this.querySelectorAll('.panel-menu-action[data-menu-action-id]')) {
       let action = actions.get(button.dataset.menuActionId);
       let active = Boolean(action?.active);

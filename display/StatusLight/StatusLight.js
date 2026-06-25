@@ -2,11 +2,13 @@ import Symbiote from '@symbiotejs/symbiote';
 import template from './StatusLight.tpl.js';
 import css from './StatusLight.css.js';
 
+const DEFAULT_VARIANT = 'neutral';
+
 export class StatusLight extends Symbiote {
   static observedAttributes = ['variant'];
 
   init$ = {
-    variant: 'neutral',
+    variant: DEFAULT_VARIANT,
   };
 
   connectedCallback() {
@@ -14,15 +16,11 @@ export class StatusLight extends Symbiote {
     if (!this.hasAttribute('role')) {
       this.setAttribute('role', 'status');
     }
-    // Hydrate $ from pre-set attributes
-    if (this.hasAttribute('variant')) {
-      this.$.variant = this.getAttribute('variant');
-    }
     this.#syncState();
   }
 
   get variant() {
-    return this.getAttribute('variant') || 'neutral';
+    return this.getAttribute('variant') || DEFAULT_VARIANT;
   }
 
   set variant(val) {
@@ -31,17 +29,28 @@ export class StatusLight extends Symbiote {
 
   attributeChangedCallback(name, oldValue, newValue) {
     if (oldValue === newValue) return;
-    if (!this.isConnected) return;
     if (name === 'variant') {
-      this.$.variant = newValue || 'neutral';
       this.#syncState();
     } else {
       super.attributeChangedCallback?.(name, oldValue, newValue);
     }
   }
 
+  // Reflect a valid variant onto the attribute that drives the [variant=...] styles.
+  // The attribute is the source of truth for parsed/innerHTML markup, where
+  // attributeChangedCallback can run before init$ has populated $ — so resolve from
+  // it first and never write back a missing value as the literal "null" string.
   #syncState() {
-    this.setAttribute('variant', this.$.variant);
+    let variant = this.getAttribute('variant') || this.$.variant || DEFAULT_VARIANT;
+    if (variant === 'null' || variant === 'undefined') {
+      variant = DEFAULT_VARIANT;
+    }
+    if (this.$.variant !== variant) {
+      this.$.variant = variant;
+    }
+    if (this.getAttribute('variant') !== variant) {
+      this.setAttribute('variant', variant);
+    }
   }
 }
 

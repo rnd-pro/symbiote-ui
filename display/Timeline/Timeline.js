@@ -62,21 +62,34 @@ export class TimelineItem extends Symbiote {
 
   attributeChangedCallback(name, oldValue, newValue) {
     if (oldValue === newValue) return;
-    if (!this.isConnected) return;
     if (name === 'title') {
       this.$.title = newValue || '';
     } else if (name === 'time') {
       this.$.time = newValue || '';
     } else if (name === 'variant') {
-      this.$.variant = newValue || 'neutral';
       this.#syncState();
     } else {
       super.attributeChangedCallback?.(name, oldValue, newValue);
     }
   }
 
+  // Reflect a valid variant onto the attribute that drives the [variant=...] styles.
+  // The attribute is the source of truth for parsed/innerHTML markup, where
+  // attributeChangedCallback can run before init$ has populated $ — so resolve from
+  // it first and never write back a missing value as the literal "null" string.
+  // title/time live only in $ (read by the template, not reflected), so they don't
+  // need this guard.
   #syncState() {
-    this.setAttribute('variant', this.$.variant);
+    let variant = this.getAttribute('variant') || this.$.variant || 'neutral';
+    if (variant === 'null' || variant === 'undefined') {
+      variant = 'neutral';
+    }
+    if (this.$.variant !== variant) {
+      this.$.variant = variant;
+    }
+    if (this.getAttribute('variant') !== variant) {
+      this.setAttribute('variant', variant);
+    }
   }
 }
 

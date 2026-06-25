@@ -612,6 +612,28 @@ test('sn-status-light reflects semantic color indicators', async () => {
   assert.equal(sl.getAttribute('role'), 'status');
 
   sl.remove();
+
+  // Preset variant must survive when host apps build the element inside a
+  // JS-assembled innerHTML string, not just via createElement + setAttribute.
+  const host = document.createElement('div');
+  document.body.appendChild(host);
+  host.innerHTML = '<sn-status-light variant="error"></sn-status-light>';
+  await nextRenderTick();
+
+  const parsed = host.firstElementChild;
+  assert.equal(parsed.getAttribute('variant'), 'error', 'preset variant must survive parser/innerHTML upgrade');
+  assert.equal(parsed.variant, 'error');
+  host.remove();
+
+  // Reproduce the browser upgrade ordering deterministically: attributeChangedCallback
+  // can fire while the element is connected but before init$ has populated $. The old
+  // #syncState wrote that uninitialized $.variant straight back, stringifying it to
+  // the literal "null" and breaking the [variant=...] styles.
+  const upgraded = document.createElement('sn-status-light');
+  upgraded.setAttribute('variant', 'warning');
+  Object.defineProperty(upgraded, 'isConnected', { configurable: true, get() { return true; } });
+  upgraded.attributeChangedCallback('variant', null, 'warning');
+  assert.equal(upgraded.getAttribute('variant'), 'warning', 'pre-init sync must not clobber the variant to "null"');
 });
 
 test('sn-description-list structures definition grids', async () => {
@@ -651,6 +673,16 @@ test('sn-timeline documents traces chronologically', async () => {
   assert.equal(ti.getAttribute('variant'), 'info');
 
   tl.remove();
+
+  // Reproduce the browser upgrade ordering deterministically: attributeChangedCallback
+  // can fire while the element is connected but before init$ has populated $. The old
+  // #syncState wrote that uninitialized $.variant straight back, stringifying it to
+  // the literal "null" and breaking the [variant=...] styles.
+  const upgraded = document.createElement('sn-timeline-item');
+  upgraded.setAttribute('variant', 'info');
+  Object.defineProperty(upgraded, 'isConnected', { configurable: true, get() { return true; } });
+  upgraded.attributeChangedCallback('variant', null, 'info');
+  assert.equal(upgraded.getAttribute('variant'), 'info', 'pre-init sync must not clobber the variant to "null"');
 });
 
 test('sn-avatar presents profile fallbacks', async () => {

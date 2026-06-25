@@ -204,3 +204,63 @@ test('opening a UI panel preserves existing layout panel components by node id',
   assert.equal(layout.querySelector('test-lifecycle-content-panel'), contentPanel);
   assert.equal(themeLifecycle.connected, 1);
 });
+
+test('re-mounting the layout tree tears down replaced nodes without a stale panel-menu frame throwing', async () => {
+  installLayoutDom();
+  let [{ createPanel, createSplit }] = await Promise.all([
+    import('../layout/LayoutTree.js'),
+    import('../layout/Layout/Layout.js'),
+  ]);
+  await import('../layout/LayoutNode/LayoutNode.js');
+
+  // Drive animation frames manually so a queued panel-menu-action sync can be
+  // forced to fire *after* the replaced node is torn down, reproducing the race.
+  let frameCallbacks = [];
+  let originalRaf = globalThis.requestAnimationFrame;
+  let originalCancel = globalThis.cancelAnimationFrame;
+  globalThis.requestAnimationFrame = (callback) => frameCallbacks.push(callback);
+  globalThis.cancelAnimationFrame = (handle) => {
+    if (handle) frameCallbacks[handle - 1] = null;
+  };
+
+  try {
+    let layout = document.createElement('panel-layout');
+    document.body.append(layout);
+    layout.registerPanelType('alpha', {});
+    layout.registerPanelType('beta', {});
+    layout.setLayout(createSplit('horizontal', createPanel('alpha'), createPanel('beta')));
+    await nextLayoutRenderTick();
+
+    let staleNode = layout.querySelector('layout-node[node-type="panel"]');
+    assert.ok(staleNode, 'expected a panel layout-node to mount');
+
+    // Queue a panel-menu-action state sync for the node that is about to be replaced.
+    let queuedBefore = frameCallbacks.length;
+    staleNode.setPanelMenuActions([{ id: 'graph:focus', label: 'Focus' }]);
+    assert.ok(frameCallbacks.length > queuedBefore, 'expected a panel-menu sync frame to be queued');
+
+    // Replace the tree with fresh node ids, disconnecting the previous panels.
+    layout.setLayout(createSplit('vertical', createPanel('beta'), createPanel('alpha')));
+    await nextLayoutRenderTick();
+    assert.equal(staleNode.isConnected, false, 'replaced node should be disconnected');
+
+    // Let Symbiote's deferred teardown run: destroyCallback fires and the reactive
+    // context is nulled, so `this.$` reads on the node become nullish.
+    await new Promise((resolve) => setTimeout(resolve, 160));
+    assert.equal(staleNode.$?.panelMenuActions ?? null, null, 'reactive context should be torn down');
+
+    // Flushing every queued frame must not throw: the stale node's sync frame is the
+    // one that previously crashed with `null is not an object (... panelMenuActions.map)`.
+    let pending = frameCallbacks;
+    frameCallbacks = [];
+    assert.doesNotThrow(() => {
+      for (let callback of pending) callback?.(0);
+    }, 'pending animation frames should be safe to flush after teardown');
+
+    // The state sync itself must also bail out defensively on a torn-down node.
+    assert.doesNotThrow(() => staleNode._syncPanelMenuActionState());
+  } finally {
+    globalThis.requestAnimationFrame = originalRaf;
+    globalThis.cancelAnimationFrame = originalCancel;
+  }
+});
