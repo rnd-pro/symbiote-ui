@@ -29,9 +29,7 @@ export default /*html*/ `<!doctype html>
 
   <layout-sidebar slot="sidebar"></layout-sidebar>
 
-  <sn-scroll-area class="workspace-scroll">
-    <main id="workspace-content" aria-live="polite"></main>
-  </sn-scroll-area>
+  <main id="workspace-content" aria-live="polite"></main>
 
 </layout-shell-menu>
 </body>

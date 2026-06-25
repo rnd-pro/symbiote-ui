@@ -40,17 +40,17 @@ body {
   min-height: 0;
 }
 
-.workspace-scroll {
+#workspace-content {
   display: block;
   width: 100%;
   height: 100%;
-  min-height: 0;
-}
-
-#workspace-content {
-  display: block;
   min-width: 0;
+  min-height: 0;
   padding: 24px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--cat-border) transparent;
 }
 
 .topbar-link {
