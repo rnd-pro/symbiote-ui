@@ -17,9 +17,14 @@ const NAMED_COLOR_REG = /:\s*(?:red|blue|green|yellow|orange|purple|pink|brown|b
 function findCssFiles(dir, files = []) {
   let entries = readdirSync(dir);
   for (let entry of entries) {
+    // Skip non-component trees: deps, the internal demo/catalog showcase apps,
+    // assembled build output, and scratch. The geometry/color contract applies
+    // to shippable component CSS, not these.
     if (
       entry === 'node_modules' ||
       entry === 'demo' ||
+      entry === 'catalog' ||
+      entry === '_site' ||
       entry === 'tmp' ||
       entry.startsWith('.')
     ) {
