@@ -45,7 +45,7 @@ sn-chart {
   gap: 6px;
   cursor: pointer;
   user-select: none;
-  transition: opacity 0.15s ease;
+  transition: opacity var(--sn-transition-fast, 0.15s) ease;
 }
 
 .sn-chart-legend-item[data-hidden="true"] {
@@ -106,7 +106,7 @@ sn-chart {
   fill: var(--sn-panel-bg, #1e1e24);
   stroke-width: 2;
   cursor: pointer;
-  transition: r 0.1s ease, fill 0.1s ease;
+  transition: r var(--sn-transition-fast, 0.1s) ease, fill var(--sn-transition-fast, 0.1s) ease;
 }
 
 .sn-chart-line-point:hover {
