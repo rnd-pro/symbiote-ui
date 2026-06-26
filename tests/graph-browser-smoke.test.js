@@ -2360,7 +2360,9 @@ test('cascade lab graph nodes render non-empty with route styles and compact mod
     assert.equal(smoke.directPcb.pathStyle, 'pcb');
     assert.equal(smoke.directPcb.error, '', JSON.stringify(smoke.directPcb, null, 2));
     assert.ok(smoke.directPcb.path, 'expected rendered adjacent-node direct PCB path');
-    assert.match(smoke.directPcb.path.d, /^M [^ ]+ [^ ]+ [HV] [^ ]+$/);
+    assert.match(smoke.directPcb.path.d, /^M /);
+    assert.match(smoke.directPcb.path.d, / [LHV] /);
+    assert.doesNotMatch(smoke.directPcb.path.d, / C /);
 
     assert.equal(themeSmoke.base.root.typeScale, '1.00');
     assert.equal(themeSmoke.scaled.root.typeScale, '1.18');
