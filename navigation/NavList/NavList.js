@@ -12,6 +12,9 @@ export class NavList extends Symbiote {
     if (!this.hasAttribute('role')) {
       this.setAttribute('role', 'navigation');
     }
+    if (!this.hasAttribute('aria-label') && !this.hasAttribute('aria-labelledby')) {
+      this.setAttribute('aria-label', 'Navigation');
+    }
     this.#cleanupRoving = setupRovingFocus(this, 'sn-nav-item');
   }
 
@@ -52,6 +55,16 @@ export class NavItem extends Symbiote {
     }));
   };
 
+  #onKeyDown = (e) => {
+    if (e.key !== 'Enter') return;
+    if (this.$.disabled) {
+      e.preventDefault();
+      return;
+    }
+    e.preventDefault();
+    this.click();
+  };
+
   connectedCallback() {
     super.connectedCallback?.();
     this.$.active = this.active;
@@ -61,18 +74,28 @@ export class NavItem extends Symbiote {
     if (!this.hasAttribute('role')) {
       this.setAttribute('role', 'link');
     }
-    this.setAttribute('aria-current', this.$.active ? 'page' : 'false');
+    this.#syncCurrent();
     this.setAttribute('aria-disabled', String(this.$.disabled));
     if (!this.hasAttribute('tabindex')) {
       this.setAttribute('tabindex', '-1');
     }
     this.addEventListener('click', this.#onClick);
+    this.addEventListener('keydown', this.#onKeyDown);
     this.#syncIcon();
   }
 
   disconnectedCallback() {
     this.removeEventListener('click', this.#onClick);
+    this.removeEventListener('keydown', this.#onKeyDown);
     super.disconnectedCallback?.();
+  }
+
+  #syncCurrent() {
+    if (this.$.active) {
+      this.setAttribute('aria-current', 'page');
+    } else {
+      this.removeAttribute('aria-current');
+    }
   }
 
   get active() {
@@ -112,7 +135,7 @@ export class NavItem extends Symbiote {
     if (!this.isConnected) return;
     if (name === 'active') {
       this.$.active = newValue !== null;
-      this.setAttribute('aria-current', this.$.active ? 'page' : 'false');
+      this.#syncCurrent();
     } else if (name === 'disabled') {
       this.$.disabled = newValue !== null;
       this.setAttribute('aria-disabled', String(this.$.disabled));

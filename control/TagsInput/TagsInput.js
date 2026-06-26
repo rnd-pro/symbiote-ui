@@ -33,16 +33,25 @@ class TagsInput extends Symbiote {
     super();
     this.init$ = {
       placeholder: 'Add tag...',
+      inputLabel: 'Add tag...',
     };
   }
 
   connectedCallback() {
     super.connectedCallback?.();
+    if (!this.hasAttribute('role')) {
+      this.setAttribute('role', 'group');
+    }
+    if (!this.hasAttribute('aria-label')) {
+      this.setAttribute('aria-label', 'Tags input');
+    }
     this.ref.container?.addEventListener('click', this.#onContainerClick);
     this.ref.input?.addEventListener('keydown', this.#onInputKeyDown);
 
     this.$.placeholder = this.getAttribute('placeholder') || 'Add tag...';
+    this.$.inputLabel = this.$.placeholder;
     this.#syncValue();
+    this.#syncDisabled();
   }
 
   disconnectedCallback() {
@@ -84,6 +93,7 @@ class TagsInput extends Symbiote {
       this.#syncDisabled();
     } else if (name === 'placeholder') {
       this.$.placeholder = newValue || 'Add tag...';
+      this.$.inputLabel = this.$.placeholder;
     }
   }
 
@@ -97,6 +107,9 @@ class TagsInput extends Symbiote {
     if (this.ref.input) {
       this.ref.input.disabled = this.disabled;
     }
+    this.ref.tagsList?.querySelectorAll('.sn-tags-chip-remove').forEach((btn) => {
+      btn.disabled = this.disabled;
+    });
   }
 
   #addTag(tag) {
@@ -134,8 +147,11 @@ class TagsInput extends Symbiote {
       const removeBtn = document.createElement('button');
       removeBtn.type = 'button';
       removeBtn.className = 'sn-tags-chip-remove';
+      removeBtn.setAttribute('aria-label', `Remove ${tag}`);
+      removeBtn.disabled = this.disabled;
       const removeIcon = document.createElement('span');
       removeIcon.className = 'material-symbols-outlined sn-tags-chip-remove-icon';
+      removeIcon.setAttribute('aria-hidden', 'true');
       removeIcon.textContent = 'close';
       removeBtn.appendChild(removeIcon);
       removeBtn.addEventListener('click', (event) => {

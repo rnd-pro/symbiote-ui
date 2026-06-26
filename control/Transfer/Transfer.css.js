@@ -58,6 +58,11 @@ sn-transfer {
   background-color: var(--sn-node-hover, rgba(255,255,255,0.04));
 }
 
+.sn-transfer-item:focus-visible {
+  outline: var(--sn-focus-outline, 2px solid var(--sn-focus-ring-color, currentColor));
+  outline-offset: var(--sn-focus-outline-offset, -1px);
+}
+
 .sn-transfer-item[data-selected] {
   background-color: color-mix(in oklab, var(--sn-node-selected, #2e90fa) 10%, transparent);
 }
@@ -84,6 +89,11 @@ sn-transfer {
 .sn-transfer-btn:hover:not([disabled]) {
   background: var(--sn-node-hover, rgba(255,255,255,0.05));
   border-color: var(--sn-node-selected, #2e90fa);
+}
+
+.sn-transfer-btn:focus-visible {
+  outline: var(--sn-focus-outline, 2px solid var(--sn-focus-ring-color, currentColor));
+  outline-offset: var(--sn-focus-outline-offset, 2px);
 }
 
 .sn-transfer-btn[disabled] {

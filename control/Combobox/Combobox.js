@@ -1,4 +1,5 @@
 import Symbiote from '@symbiotejs/symbiote';
+import { UID } from '@symbiotejs/symbiote/utils';
 import template from './Combobox.tpl.js';
 import css from './Combobox.css.js';
 import { registerDismissableLayer } from '../../ui/dismissable-layer.js';
@@ -15,6 +16,7 @@ export class Combobox extends Symbiote {
   #focusedIndex = -1;
   #cleanupDismissable = null;
   #syncingValue = false;
+  #instanceId = UID.generate('sn-combobox-XXXXXXXX');
 
   #onInput = (event) => {
     const query = this.ref.input.value.toLowerCase().trim();
@@ -103,9 +105,22 @@ export class Combobox extends Symbiote {
     });
     this.#observer.observe(this, { childList: true, characterData: true, subtree: true });
 
+    this.#setupAria();
     this.#syncOptions();
     this.#syncDisabledState();
     this.#syncNativeInput();
+  }
+
+  #setupAria() {
+    const listboxId = `${this.#instanceId}-listbox`;
+    if (this.ref.dropdown) this.ref.dropdown.id = listboxId;
+    if (this.ref.input) {
+      this.ref.input.setAttribute('aria-controls', listboxId);
+      if (!this.hasAttribute('aria-label') && !this.hasAttribute('aria-labelledby') &&
+          !this.ref.input.hasAttribute('aria-label') && !this.ref.input.hasAttribute('aria-labelledby')) {
+        this.ref.input.setAttribute('aria-label', 'Search and select an option');
+      }
+    }
   }
 
   disconnectedCallback() {
@@ -242,7 +257,7 @@ export class Combobox extends Symbiote {
         const li = document.createElement('li');
         li.className = 'sn-combobox-option';
         li.role = 'option';
-        li.id = `sn-combobox-opt-${index}-${this.uid || '0'}`;
+        li.id = `${this.#instanceId}-opt-${index}`;
         li.textContent = opt.label;
         li.setAttribute('data-value', opt.value);
         if (opt.disabled) {

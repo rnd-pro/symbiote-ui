@@ -54,6 +54,25 @@ class ColorPicker extends Symbiote {
     window.removeEventListener('mouseup', this.#onCanvasMouseUp);
   };
 
+  #onCanvasKeyDown = (event) => {
+    if (this.disabled) return;
+    const step = event.shiftKey ? 10 : 1;
+    let handled = true;
+    switch (event.key) {
+      case 'ArrowRight': this.#saturation = Math.min(100, this.#saturation + step); break;
+      case 'ArrowLeft': this.#saturation = Math.max(0, this.#saturation - step); break;
+      case 'ArrowUp': this.#value = Math.min(100, this.#value + step); break;
+      case 'ArrowDown': this.#value = Math.max(0, this.#value - step); break;
+      case 'Home': this.#saturation = 0; break;
+      case 'End': this.#saturation = 100; break;
+      default: handled = false;
+    }
+    if (handled) {
+      event.preventDefault();
+      this.#updateFromHsv();
+    }
+  };
+
   constructor() {
     super();
     this.init$ = {
@@ -67,6 +86,7 @@ class ColorPicker extends Symbiote {
     this.ref.hueSlider?.addEventListener('input', this.#onHueChange);
     this.ref.hexInput?.addEventListener('input', this.#onHexInput);
     this.ref.canvas?.addEventListener('mousedown', this.#onCanvasMouseDown);
+    this.ref.canvas?.addEventListener('keydown', this.#onCanvasKeyDown);
     document.addEventListener('click', this.#onOutsideClick);
 
     this.#renderPresets();
@@ -78,6 +98,7 @@ class ColorPicker extends Symbiote {
     this.ref.hueSlider?.removeEventListener('input', this.#onHueChange);
     this.ref.hexInput?.removeEventListener('input', this.#onHexInput);
     this.ref.canvas?.removeEventListener('mousedown', this.#onCanvasMouseDown);
+    this.ref.canvas?.removeEventListener('keydown', this.#onCanvasKeyDown);
     document.removeEventListener('click', this.#onOutsideClick);
     window.removeEventListener('mousemove', this.#onCanvasMouseMove);
     window.removeEventListener('mouseup', this.#onCanvasMouseUp);
@@ -167,6 +188,10 @@ class ColorPicker extends Symbiote {
       this.ref.nativeInput.disabled = disabled;
       this.ref.nativeInput.name = this.name;
     }
+    if (this.ref.canvas) {
+      this.ref.canvas.setAttribute('aria-disabled', String(disabled));
+      this.ref.canvas.tabIndex = disabled ? -1 : 0;
+    }
   }
 
   #handleCanvasMove(event) {
@@ -209,6 +234,14 @@ class ColorPicker extends Symbiote {
   #updateVisuals() {
     if (this.ref.hueSlider) {
       this.ref.hueSlider.value = String(this.#hue);
+      this.ref.hueSlider.setAttribute('aria-valuetext', `${Math.round(this.#hue)} degrees`);
+    }
+
+    if (this.ref.canvas) {
+      const s = Math.round(this.#saturation);
+      const v = Math.round(this.#value);
+      this.ref.canvas.setAttribute('aria-valuenow', String(s));
+      this.ref.canvas.setAttribute('aria-valuetext', `Saturation ${s}%, brightness ${v}%`);
     }
 
     if (this.ref.canvasBg) {
@@ -235,9 +268,11 @@ class ColorPicker extends Symbiote {
     ];
 
     colors.forEach(color => {
-      const swatch = document.createElement('div');
+      const swatch = document.createElement('button');
+      swatch.type = 'button';
       swatch.className = 'sn-color-preset-swatch';
       swatch.style.backgroundColor = color;
+      swatch.setAttribute('aria-label', color);
       swatch.addEventListener('click', (event) => {
         event.stopPropagation();
         if (this.disabled) return;

@@ -89,10 +89,16 @@ sn-date-picker {
 }
 
 .sn-calendar-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sn-step-1);
+  text-align: center;
+}
+
+.sn-calendar-row {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: var(--sn-step-1);
-  text-align: center;
 }
 
 .sn-calendar-weekday {
@@ -112,6 +118,16 @@ sn-date-picker {
 
 .sn-calendar-day:hover {
   background-color: var(--sn-node-hover, rgba(255,255,255,0.05));
+}
+
+.sn-calendar-day:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--sn-node-selected, #2e90fa) 60%, transparent);
+}
+
+.sn-calendar-nav-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--sn-node-selected, #2e90fa) 60%, transparent);
 }
 
 .sn-calendar-day[data-selected] {

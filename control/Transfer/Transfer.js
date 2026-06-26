@@ -7,6 +7,7 @@ class Transfer extends Symbiote {
 
   #sourceItems = []; // Array of { value, label, selected }
   #targetItems = []; // Array of { value, label, selected }
+  #instanceId = `sn-transfer-${Math.random().toString(36).slice(2, 9)}`;
 
   #onToTarget = () => {
     if (this.disabled) return;
@@ -55,6 +56,15 @@ class Transfer extends Symbiote {
 
     this.$.sourceTitle = this.getAttribute('source-title') || 'Source';
     this.$.targetTitle = this.getAttribute('target-title') || 'Target';
+
+    if (this.ref.sourceHeader && this.ref.sourceList) {
+      this.ref.sourceHeader.id = `${this.#instanceId}-source-title`;
+      this.ref.sourceList.setAttribute('aria-labelledby', this.ref.sourceHeader.id);
+    }
+    if (this.ref.targetHeader && this.ref.targetList) {
+      this.ref.targetHeader.id = `${this.#instanceId}-target-title`;
+      this.ref.targetList.setAttribute('aria-labelledby', this.ref.targetHeader.id);
+    }
 
     this.#parseChildren();
     this.#renderLists();
@@ -122,6 +132,8 @@ class Transfer extends Symbiote {
     this.#renderList(this.ref.sourceList, this.#sourceItems, 'source');
     this.#renderList(this.ref.targetList, this.#targetItems, 'target');
 
+    this.setAttribute('aria-disabled', this.disabled ? 'true' : 'false');
+
     // Update buttons disabled status
     const sourceSelected = this.#sourceItems.some(item => item.selected);
     const targetSelected = this.#targetItems.some(item => item.selected);
@@ -142,6 +154,12 @@ class Transfer extends Symbiote {
       const li = document.createElement('li');
       li.className = 'sn-transfer-item';
       li.setAttribute('data-value', item.value);
+      li.role = 'option';
+      li.setAttribute('aria-selected', item.selected ? 'true' : 'false');
+      li.tabIndex = this.disabled ? -1 : 0;
+      if (this.disabled) {
+        li.setAttribute('aria-disabled', 'true');
+      }
       if (item.selected) {
         li.setAttribute('data-selected', '');
       }
@@ -150,6 +168,8 @@ class Transfer extends Symbiote {
       checkbox.type = 'checkbox';
       checkbox.checked = item.selected;
       checkbox.disabled = this.disabled;
+      checkbox.tabIndex = -1;
+      checkbox.setAttribute('aria-hidden', 'true');
       checkbox.addEventListener('click', (event) => {
         event.stopPropagation();
       });
@@ -165,11 +185,19 @@ class Transfer extends Symbiote {
       li.appendChild(checkbox);
       li.appendChild(label);
 
-      li.addEventListener('click', (event) => {
+      const toggle = (event) => {
         event.stopPropagation();
         if (this.disabled) return;
         item.selected = !item.selected;
         this.#renderLists();
+      };
+
+      li.addEventListener('click', toggle);
+      li.addEventListener('keydown', (event) => {
+        if (event.key === ' ' || event.key === 'Enter') {
+          event.preventDefault();
+          toggle(event);
+        }
       });
 
       container.appendChild(li);

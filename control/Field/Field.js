@@ -146,6 +146,9 @@ export class FormField extends Symbiote {
 
       const error = this._errorEl || this.querySelector('[slot="error"]');
       if (error && !this._errorEl) this._errorEl = error;
+      if (error && !error.hasAttribute('role')) {
+        error.setAttribute('role', 'alert');
+      }
 
       const describedBy = [];
 

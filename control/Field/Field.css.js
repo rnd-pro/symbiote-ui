@@ -73,6 +73,13 @@ sn-field textarea:focus {
   box-shadow: var(--sn-field-control-focus-shadow);
 }
 
+sn-field input:focus-visible,
+sn-field select:focus-visible,
+sn-field textarea:focus-visible {
+  outline: var(--sn-field-control-focus-ring, var(--sn-button-focus-ring, 2px solid var(--sn-focus-ring-color, currentColor)));
+  outline-offset: var(--sn-field-control-focus-offset, 1px);
+}
+
 sn-field[disabled] {
   opacity: var(--sn-field-disabled-opacity, 0.6);
 }

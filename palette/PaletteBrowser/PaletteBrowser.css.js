@@ -89,6 +89,11 @@ export let styles = css`
       &:hover {
         color: var(--sn-text);
       }
+
+      &:focus-visible {
+        outline: 2px solid var(--sn-node-selected);
+        outline-offset: -2px;
+      }
     }
 
     &[data-collapsed] .pal-cat-items {
@@ -117,6 +122,12 @@ export let styles = css`
     &:active {
       cursor: grabbing;
       background: var(--sn-ctx-hover);
+    }
+
+    &[aria-selected='true'] {
+      background: var(--sn-ctx-hover);
+      outline: 2px solid var(--sn-node-selected);
+      outline-offset: -2px;
     }
 
     & .pal-item-icon {

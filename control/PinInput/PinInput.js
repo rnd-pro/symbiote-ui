@@ -85,6 +85,7 @@ class PinInput extends Symbiote {
       input.pattern = '[0-9]*';
       input.inputMode = 'numeric';
       input.disabled = this.disabled;
+      input.setAttribute('aria-label', `Digit ${i + 1} of ${len}`);
 
       input.addEventListener('input', (e) => this.#handleInput(e, i));
       input.addEventListener('keydown', (e) => this.#handleKeyDown(e, i));
@@ -122,6 +123,7 @@ class PinInput extends Symbiote {
     if (this.ref.toggleIcon) {
       this.ref.toggleIcon.textContent = this.#isMasked ? 'visibility' : 'visibility_off';
     }
+    this.ref.maskToggle?.setAttribute('aria-pressed', String(this.#isMasked));
   }
 
   #handleInput(event, index) {

@@ -57,8 +57,18 @@ sn-tags-input {
   align-items: center;
 }
 
-.sn-tags-chip-remove:hover {
+.sn-tags-chip-remove:hover:not([disabled]) {
   color: var(--sn-status-error, #ff4d4f);
+}
+
+.sn-tags-chip-remove:focus-visible {
+  outline: var(--sn-tags-focus-ring, 2px solid var(--sn-focus-ring-color, currentColor));
+  outline-offset: 2px;
+  border-radius: var(--sn-radius-sm);
+}
+
+.sn-tags-chip-remove[disabled] {
+  cursor: not-allowed;
 }
 
 .sn-tags-chip-remove-icon {

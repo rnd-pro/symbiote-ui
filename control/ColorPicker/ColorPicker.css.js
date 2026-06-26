@@ -72,6 +72,11 @@ sn-color-picker {
   cursor: crosshair;
 }
 
+.sn-color-canvas-wrap:focus-visible {
+  outline: 2px solid var(--sn-node-selected, #2e90fa);
+  outline-offset: 2px;
+}
+
 .sn-color-canvas-bg {
   width: 100%;
   height: 100%;
@@ -104,6 +109,11 @@ sn-color-picker {
   background: linear-gradient(to right, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%);
 }
 
+.sn-color-hue-slider:focus-visible {
+  outline: 2px solid var(--sn-node-selected, #2e90fa);
+  outline-offset: 2px;
+}
+
 .sn-color-hue-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
@@ -124,6 +134,8 @@ sn-color-picker {
 }
 
 .sn-color-preset-swatch {
+  box-sizing: border-box;
+  padding: 0;
   width: 20px;
   height: 20px;
   border-radius: var(--sn-radius-sm);
@@ -133,6 +145,11 @@ sn-color-picker {
 
 .sn-color-preset-swatch:hover {
   transform: scale(1.1);
+}
+
+.sn-color-preset-swatch:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--sn-node-selected, #2e90fa) 60%, transparent);
 }
 
 .sn-color-input-wrap {

@@ -1,4 +1,5 @@
 import Symbiote from '@symbiotejs/symbiote';
+import { UID } from '@symbiotejs/symbiote/utils';
 import template from './Mentions.tpl.js';
 import css from './Mentions.css.js';
 
@@ -10,6 +11,7 @@ class Mentions extends Symbiote {
   #focusedIndex = -1;
   #triggerIndex = -1;
   #activeQuery = '';
+  #instanceId = UID.generate('sn-mentions-XXXXXXXX');
 
   #onInput = (event) => {
     const input = this.#getInputElement();
@@ -79,7 +81,22 @@ class Mentions extends Symbiote {
     }
     document.addEventListener('click', this.#onOutsideClick);
 
+    this.#setupAria();
     this.#parseChildren();
+  }
+
+  #setupAria() {
+    const listboxId = `${this.#instanceId}-listbox`;
+    if (this.ref.optionsList) this.ref.optionsList.id = listboxId;
+
+    const input = this.#getInputElement();
+    if (input) {
+      input.setAttribute('role', 'combobox');
+      input.setAttribute('aria-haspopup', 'listbox');
+      input.setAttribute('aria-autocomplete', 'list');
+      input.setAttribute('aria-expanded', 'false');
+      input.setAttribute('aria-controls', listboxId);
+    }
   }
 
   disconnectedCallback() {
@@ -111,6 +128,12 @@ class Mentions extends Symbiote {
     this.#isOpen = false;
     this.ref.dropdown?.removeAttribute('data-visible');
     this.#focusedIndex = -1;
+
+    const input = this.#getInputElement();
+    if (input) {
+      input.setAttribute('aria-expanded', 'false');
+      input.removeAttribute('aria-activedescendant');
+    }
   }
 
   #getInputElement() {
@@ -149,6 +172,9 @@ class Mentions extends Symbiote {
     filtered.forEach((opt, index) => {
       const li = document.createElement('li');
       li.className = 'sn-mentions-option';
+      li.setAttribute('role', 'option');
+      li.id = `${this.#instanceId}-opt-${index}`;
+      li.setAttribute('aria-selected', 'false');
       li.textContent = opt.label;
       li.setAttribute('data-value', opt.value);
       li.addEventListener('click', (event) => {
@@ -159,6 +185,7 @@ class Mentions extends Symbiote {
     });
 
     this.ref.dropdown?.setAttribute('data-visible', '');
+    this.#getInputElement()?.setAttribute('aria-expanded', 'true');
     this.#focusOption(0);
   }
 
@@ -176,9 +203,12 @@ class Mentions extends Symbiote {
     items.forEach((item, idx) => {
       if (idx === index) {
         item.setAttribute('data-focused', '');
+        item.setAttribute('aria-selected', 'true');
         item.scrollIntoView?.({ block: 'nearest' });
+        this.#getInputElement()?.setAttribute('aria-activedescendant', item.id);
       } else {
         item.removeAttribute('data-focused');
+        item.setAttribute('aria-selected', 'false');
       }
     });
   }
