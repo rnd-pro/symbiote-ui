@@ -228,28 +228,6 @@ export default css`
       box-shadow: none;
     }
 
-    .cte-control input[type="range"]::-moz-range-track {
-      height: var(--cte-range-track-height);
-      border: var(--cte-range-border-width) solid var(--sn-node-border);
-      border-radius: var(--sn-scrollbar-radius, 999px);
-      background: color-mix(in oklab, var(--sn-text) 22%, transparent);
-    }
-
-    .cte-control input[type="range"]::-moz-range-progress {
-      height: var(--cte-range-track-height);
-      border-radius: var(--sn-scrollbar-radius, 999px);
-      background: var(--sn-node-selected);
-    }
-
-    .cte-control input[type="range"]::-moz-range-thumb {
-      width: var(--cte-range-thumb-size);
-      height: var(--cte-range-thumb-size);
-      border: var(--cte-range-border-width) solid var(--sn-node-border);
-      border-radius: 50%;
-      background: var(--sn-node-selected);
-      box-shadow: none;
-    }
-
     .cte-control input[type="range"]:disabled {
       cursor: not-allowed;
       opacity: var(--sn-button-disabled-opacity, 0.6);
