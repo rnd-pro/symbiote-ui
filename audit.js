@@ -122,12 +122,15 @@ export async function cmdAudit(options = {}) {
     let catalogComponents = listComponents({ includeInternal: true, includeExperimental: true });
     let catalogTags = new Set(catalogComponents.map(c => c.tagName));
 
-    // Check catalog components in custom-elements
-    for (let tagName of catalogTags) {
-      if (!customElementTags.has(tagName)) {
+    // Check catalog components in custom-elements (internal sub-components are
+    // rendered only inside their parent and are intentionally absent from the
+    // public custom-elements.json catalog, so skip them here)
+    for (let component of catalogComponents) {
+      if (component.internal) continue;
+      if (!customElementTags.has(component.tagName)) {
         warnings.push({
           type: 'component-sync',
-          message: `Component '${tagName}' is registered in manifest/component-registry.js but is missing from custom-elements.json.`
+          message: `Component '${component.tagName}' is registered in manifest/component-registry.js but is missing from custom-elements.json.`
         });
       }
     }
@@ -168,8 +171,16 @@ export async function cmdAudit(options = {}) {
           continue;
         }
 
+        // A token consumed with a literal fallback — var(--sn-x, #fff) — is
+        // tokenized; the fallback is a safety net the cascade contract allows.
+        // Mask var()/url() spans before scanning so only truly raw colors flag,
+        // mirroring tokens/geometry-lint.js (the geometry side already does this).
+        let scan = line
+          .replace(/var\([^()]*(?:\([^()]*\)[^()]*)*\)/g, ' ')
+          .replace(/url\([^)]*\)/g, ' ');
+
         // Check for color expressions
-        let colorMatches = line.match(COLOR_REG);
+        let colorMatches = scan.match(COLOR_REG);
         if (colorMatches) {
           for (let match of colorMatches) {
             warnings.push({
@@ -182,7 +193,7 @@ export async function cmdAudit(options = {}) {
         }
 
         // Check for named color assignments
-        let namedColorMatches = line.match(NAMED_COLOR_REG);
+        let namedColorMatches = scan.match(NAMED_COLOR_REG);
         if (namedColorMatches) {
           for (let match of namedColorMatches) {
             let colorWord = match.split(':')[1].trim();
