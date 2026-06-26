@@ -29,7 +29,7 @@ sn-tree-view[hidden] {
   gap: var(--sn-tree-gap);
   min-height: var(--sn-tree-row-min-height, var(--sn-tree-row-height));
   padding-block: var(--sn-tree-row-padding-block);
-  padding-inline: var(--sn-tree-depth-indent) 8px;
+  padding-inline: var(--sn-tree-depth-indent) var(--sn-step-4, 8px);
   border: 1px solid transparent;
   border-radius: var(--sn-tree-row-radius);
   background: var(--sn-tree-row-bg, transparent);

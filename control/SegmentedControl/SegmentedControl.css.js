@@ -33,7 +33,7 @@ sn-segmented-control > * {
   line-height: var(--sn-segmented-line-height, 1.35);
   padding: var(--sn-segmented-padding, 4px 12px);
   min-height: var(--sn-segmented-item-min-height, 20px);
-  border-radius: calc(var(--sn-segmented-radius, var(--sn-field-control-radius, 4px)) - 2px);
+  border-radius: calc(var(--sn-segmented-radius, var(--sn-field-control-radius, 4px)) - var(--sn-radius-xs, 2px));
   cursor: pointer;
   white-space: nowrap;
   outline: none;

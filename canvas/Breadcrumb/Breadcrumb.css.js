@@ -46,7 +46,7 @@ export let styles = css`
   }
 
   .bc-label {
-    padding: 3px var(--sn-step-4);
+    padding: var(--sn-step-1, 3px) var(--sn-step-4);
     border-radius: var(--sn-radius-sm);
     cursor: pointer;
     transition:

@@ -19,7 +19,7 @@ sn-file-upload {
   justify-content: center;
   border: 2px dashed var(--sn-outline-color-soft, rgba(255,255,255,0.08));
   border-radius: var(--sn-panel-radius, 6px);
-  padding: calc(24px * var(--sn-theme-density, 1)) calc(16px * var(--sn-theme-density, 1));
+  padding: calc(var(--sn-step-10, 24px) * var(--sn-theme-density, 1)) calc(var(--sn-step-8, 16px) * var(--sn-theme-density, 1));
   background: var(--sn-field-control-bg, var(--sn-bg, #0c0c0e));
   color: var(--sn-text-dim, rgba(255,255,255,0.6));
   cursor: pointer;
@@ -34,12 +34,12 @@ sn-file-upload {
 }
 
 .sn-file-dropzone-icon {
-  font-size: 32px;
+  font-size: var(--sn-text-2xl, 32px);
   margin-bottom: var(--sn-step-4);
 }
 
 .sn-file-dropzone-text {
-  font-size: calc(13px * var(--sn-theme-type-scale, 1));
+  font-size: calc(var(--sn-text-md, 13px) * var(--sn-theme-type-scale, 1));
   text-align: center;
 }
 
@@ -61,7 +61,7 @@ sn-file-upload {
   background: var(--sn-panel-bg, #1e1e24);
   border: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
   border-radius: var(--sn-radius-sm);
-  font-size: calc(12px * var(--sn-theme-type-scale, 1));
+  font-size: calc(var(--sn-text-sm, 12px) * var(--sn-theme-type-scale, 1));
 }
 
 .sn-file-item-info {

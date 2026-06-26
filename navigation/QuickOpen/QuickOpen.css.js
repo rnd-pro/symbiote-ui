@@ -11,7 +11,7 @@ quick-open {
     background: var(--sn-bg-overlay);
     display: flex; justify-content: center; padding-top: 15vh;
     pointer-events: all;
-    animation: qo-fadein 100ms ease;
+    animation: qo-fadein var(--sn-animation-duration-fast, 100ms) ease;
   }
   .qo-overlay[hidden] { display: none !important; }
   .qo-hidden { display: none !important; pointer-events: none; }
@@ -20,7 +20,7 @@ quick-open {
     max-height: 420px;
     background: var(--sn-panel-bg);
     border: 1px solid var(--sn-node-border);
-    border-radius: 10px;
+    border-radius: var(--sn-radius-lg, 10px);
     box-shadow: 0 20px 60px var(--sn-bg-overlay);
     overflow: hidden;
     display: flex;
@@ -39,7 +39,7 @@ quick-open {
     background: transparent;
     border: none;
     color: var(--sn-text);
-    font-size: 15px;
+    font-size: var(--sn-text-lg, 15px);
     font-family: inherit;
     outline: none;
     padding: var(--sn-step-3) 0;
@@ -65,7 +65,7 @@ quick-open {
     gap: var(--sn-step-4);
     padding: var(--sn-step-4) var(--sn-step-8);
     cursor: pointer;
-    transition: background 80ms ease;
+    transition: background var(--sn-transition-fast, 80ms) ease;
   }
   .qo-item:hover { background: var(--sn-node-hover); }
   .qo-item.qo-selected {

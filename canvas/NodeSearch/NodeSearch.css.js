@@ -25,7 +25,7 @@ export let styles = css`
       padding: var(--sn-step-4) var(--sn-step-7);
       background: var(--sn-node-bg);
       border: 1px solid var(--sn-node-border);
-      border-radius: 10px;
+      border-radius: var(--sn-radius-lg, 10px);
       box-shadow: 0 8px 32px var(--sn-shadow-color);
     }
 
@@ -90,7 +90,7 @@ export let styles = css`
   .search-result-type {
     font-size: var(--sn-text-xs);
     color: var(--sn-text-dim);
-    padding: 1px var(--sn-step-3);
+    padding: var(--sn-step-0, 1px) var(--sn-step-3);
     border-radius: var(--sn-radius-sm);
     background: color-mix(in oklab, currentColor 5%, transparent);
   }

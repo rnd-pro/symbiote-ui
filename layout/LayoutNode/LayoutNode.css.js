@@ -99,7 +99,7 @@ export let styles = css`
 
       .dropdown-arrow {
         font-size: var(--sn-layout-header-dropdown-size, 18px);
-        margin-left: -2px;
+        margin-left: var(--sn-step-0, -2px);
         opacity: 0.6;
       }
     }

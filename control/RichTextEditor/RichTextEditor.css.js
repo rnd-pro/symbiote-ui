@@ -65,7 +65,7 @@ sn-rich-text-editor {
   border-radius: var(--sn-radius-sm);
   padding: var(--sn-step-2) var(--sn-step-3);
   z-index: 10;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 8px var(--sn-shadow-color, rgba(0, 0, 0, 0.3));
 }
 
 .sn-editor-link-overlay[hidden] {
@@ -102,7 +102,7 @@ sn-rich-text-editor {
 
 .sn-editor-link-btn.confirm {
   background: var(--sn-node-selected, #2e90fa);
-  color: #fff;
+  color: var(--sn-text, #fff);
   border: none;
 }
 
@@ -116,7 +116,7 @@ sn-rich-text-editor {
   overflow-y: auto;
   padding: var(--sn-step-6);
   color: var(--sn-text);
-  font-size: calc(13px * var(--sn-theme-type-scale, 1));
+  font-size: calc(var(--sn-text-md, 13px) * var(--sn-theme-type-scale, 1));
   outline: none;
   box-sizing: border-box;
   background-color: transparent;

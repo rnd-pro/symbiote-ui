@@ -44,7 +44,7 @@ sn-slider {
   box-shadow: var(--sn-slider-thumb-shadow, 0 1px 3px rgba(0, 0, 0, 0.25));
   transform: translate(-50%, -50%);
   pointer-events: none;
-  transition: transform 100ms ease, background-color 100ms ease;
+  transition: transform var(--sn-transition-fast, 100ms) ease, background-color var(--sn-transition-fast, 100ms) ease;
 }
 
 .sn-slider-input {

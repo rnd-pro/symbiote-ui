@@ -51,7 +51,7 @@ export let styles = css`
       cursor: nwse-resize;
       border-right: 3px solid color-mix(in oklab, var(--frame-color, var(--sn-node-selected)) 40%, transparent);
       border-bottom: 3px solid color-mix(in oklab, var(--frame-color, var(--sn-node-selected)) 40%, transparent);
-      border-radius: 0 0 10px 0;
+      border-radius: 0 0 var(--sn-radius-lg, 10px) 0;
     }
 
     &:hover {

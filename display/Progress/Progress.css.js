@@ -76,11 +76,11 @@ sn-progress-ring[hidden] {
 }
 
 sn-progress-ring[indeterminate] .sn-progress-ring-svg {
-  animation: sn-progress-ring-rot 2s linear infinite;
+  animation: sn-progress-ring-rot var(--sn-animation-duration-slower, 2s) linear infinite;
 }
 
 sn-progress-ring[indeterminate] .sn-progress-ring-fill {
-  animation: sn-progress-ring-dash 1.5s ease-in-out infinite;
+  animation: sn-progress-ring-dash var(--sn-animation-duration-slow, 1.5s) ease-in-out infinite;
 }
 
 @keyframes sn-progress-ring-rot {
@@ -135,7 +135,7 @@ sn-spinner[hidden] {
   sn-progress-ring[indeterminate] .sn-progress-ring-svg,
   sn-progress-ring[indeterminate] .sn-progress-ring-fill,
   .sn-spinner-indicator {
-    animation-duration: 2.5s;
+    animation-duration: var(--sn-animation-duration-slower, 2.5s);
   }
 }
 `;

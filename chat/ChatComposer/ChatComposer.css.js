@@ -494,7 +494,7 @@ chat-composer.drag-over .composer-body {
   overflow-y: auto;
   background: color-mix(in oklab, var(--sn-node-bg) 95%, transparent);
   border: 1px solid color-mix(in oklab, var(--sn-node-hover) 45%, transparent);
-  border-radius: 16px;
+  border-radius: var(--sn-radius-xl, 16px);
   padding: var(--sn-composer-autocomplete-padding, 4px);
   margin-bottom: var(--sn-composer-footer-gap, 6px);
   box-shadow: var(--sn-shadow-xl);
@@ -925,9 +925,9 @@ chat-composer.drag-over .composer-body {
 
 .voice-preview-body[contenteditable="true"] {
   cursor: text;
-  border-radius: calc(6px * var(--sn-theme-radius-scale));
+  border-radius: calc(var(--sn-radius-md, 6px) * var(--sn-theme-radius-scale));
   padding-inline: var(--sn-step-2);
-  margin-inline: -4px;
+  margin-inline: var(--sn-step-0, -4px);
 }
 
 .voice-preview-body[contenteditable="true"]:focus {

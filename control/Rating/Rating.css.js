@@ -21,7 +21,7 @@ sn-rating {
   inline-size: var(--sn-rating-size, 20px);
   block-size: var(--sn-rating-size, 20px);
   color: var(--sn-rating-star-empty-color, color-mix(in oklab, var(--sn-text) 20%, transparent));
-  transition: transform 100ms ease, color 100ms ease;
+  transition: transform var(--sn-transition-fast, 100ms) ease, color var(--sn-transition-fast, 100ms) ease;
 }
 
 .sn-rating-star svg {

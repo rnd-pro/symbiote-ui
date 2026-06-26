@@ -25,7 +25,7 @@ sn-pin-input {
   border: 1px solid var(--sn-field-control-border, var(--sn-outline-color-soft, rgba(255,255,255,0.08)));
   border-radius: var(--sn-field-control-radius, var(--sn-panel-radius, 6px));
   color: var(--sn-text);
-  font-size: calc(16px * var(--sn-theme-type-scale, 1));
+  font-size: calc(var(--sn-text-xl, 16px) * var(--sn-theme-type-scale, 1));
   font-weight: 600;
   outline: none;
   transition: border-color var(--sn-transition-fast, 120ms);

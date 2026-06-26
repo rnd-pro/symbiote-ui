@@ -23,11 +23,11 @@ sn-listbox {
 .sn-listbox [role="option"] {
   display: flex;
   align-items: center;
-  padding: calc(8px * var(--sn-theme-density, 1)) calc(12px * var(--sn-theme-density, 1));
+  padding: calc(var(--sn-step-4, 8px) * var(--sn-theme-density, 1)) calc(var(--sn-step-6, 12px) * var(--sn-theme-density, 1));
   font-family: var(--sn-font, sans-serif);
-  font-size: calc(13px * var(--sn-theme-type-scale, 1));
+  font-size: calc(var(--sn-text-md, 13px) * var(--sn-theme-type-scale, 1));
   color: var(--sn-listbox-text, var(--sn-text, #ffffff));
-  border-radius: calc(var(--sn-panel-radius, 8px) - 4px);
+  border-radius: calc(var(--sn-panel-radius, 8px) - var(--sn-radius-sm, 4px));
   cursor: pointer;
   user-select: none;
   transition: background-color var(--sn-transition-fast, 120ms) ease, color var(--sn-transition-fast, 120ms) ease;

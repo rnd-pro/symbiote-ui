@@ -31,7 +31,7 @@ sn-tour {
 }
 
 .sn-tour-title {
-  font-size: calc(13px * var(--sn-theme-type-scale, 1));
+  font-size: calc(var(--sn-text-md, 13px) * var(--sn-theme-type-scale, 1));
   font-weight: 600;
   color: var(--sn-text);
 }
@@ -50,7 +50,7 @@ sn-tour {
 }
 
 .sn-tour-body {
-  font-size: calc(12px * var(--sn-theme-type-scale, 1));
+  font-size: calc(var(--sn-text-sm, 12px) * var(--sn-theme-type-scale, 1));
   color: var(--sn-text-dim, rgba(255,255,255,0.8));
   line-height: 1.4;
 }
@@ -89,6 +89,6 @@ sn-tour {
 .sn-tour-btn[data-primary] {
   background: var(--sn-node-selected, #2e90fa);
   border-color: var(--sn-node-selected, #2e90fa);
-  color: #fff;
+  color: var(--sn-node-selected-text, #fff);
 }
 `;

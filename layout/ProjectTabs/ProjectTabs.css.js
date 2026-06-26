@@ -116,7 +116,7 @@ project-tab-item[active]::after {
 project-tab-item:not([active]):not(:hover)::after {
   content: '';
   position: absolute;
-  right: -2px;
+  right: var(--sn-step-0, -2px);
   top: 25%;
   height: 50%;
   width: 1px;

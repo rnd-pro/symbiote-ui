@@ -50,7 +50,7 @@ chat-sidebar-shell[resizing] .chat-nav  {
 .chat-nav-resize-handle {
   position: absolute;
   top: 0;
-  right: -1px;
+  right: var(--sn-step-0, -1px);
   bottom: 0;
   width: var(--sn-chat-sidebar-resize-hit-size, 4px);
   cursor: col-resize;

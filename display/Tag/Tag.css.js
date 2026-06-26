@@ -50,7 +50,7 @@ sn-tag[variant="info"] {
   background: transparent;
   border: none;
   padding: 0;
-  margin: 0 -4px 0 0;
+  margin: 0 var(--sn-step-0, -4px) 0 0;
   cursor: pointer;
   color: inherit;
   border-radius: 50%;
@@ -62,7 +62,7 @@ sn-tag[variant="info"] {
 
 .sn-tag-close-btn:hover {
   opacity: 1;
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: var(--sn-node-hover, rgba(255, 255, 255, 0.1));
 }
 
 .sn-tag-close-btn .material-symbols-outlined {

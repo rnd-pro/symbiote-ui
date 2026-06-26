@@ -352,7 +352,7 @@ export let sidebarStyles = css`
     display: flex;
     align-items: center;
     gap: var(--sn-step-4);
-    padding: var(--sn-step-2) var(--sn-step-7) var(--sn-step-2) 38px;
+    padding: var(--sn-step-2) var(--sn-step-7) var(--sn-step-2) var(--sn-step-12, 38px);
     min-height: 24px;
     font-size: var(--sn-text-sm);
     color: var(--sn-text-dim);
@@ -381,7 +381,7 @@ export let sidebarStyles = css`
     padding: var(--sn-step-1);
     background: transparent;
     border: none;
-    border-radius: 3px;
+    border-radius: var(--sn-radius-xs, 3px);
     cursor: pointer;
     color: var(--sn-text-dim);
     opacity: 0;

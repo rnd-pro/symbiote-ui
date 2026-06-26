@@ -40,8 +40,8 @@ sn-mentions {
 .sn-mentions-option {
   display: flex;
   align-items: center;
-  padding: calc(6px * var(--sn-theme-density, 1)) calc(10px * var(--sn-theme-density, 1));
-  font-size: calc(12px * var(--sn-theme-type-scale, 1));
+  padding: calc(var(--sn-step-3, 6px) * var(--sn-theme-density, 1)) calc(var(--sn-step-5, 10px) * var(--sn-theme-density, 1));
+  font-size: calc(var(--sn-text-sm, 12px) * var(--sn-theme-type-scale, 1));
   color: var(--sn-text);
   border-radius: var(--sn-radius-sm);
   cursor: pointer;

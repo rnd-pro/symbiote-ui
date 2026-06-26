@@ -63,7 +63,7 @@ export let styles = css`
       min-height: 50px;
       box-sizing: border-box;
       line-height: 1.4;
-      transition: border-color 0.15s;
+      transition: border-color var(--sn-transition-fast, 0.15s);
 
       &:focus {
         border-color: var(--sn-node-selected);
@@ -90,7 +90,7 @@ export let styles = css`
     padding: var(--sn-step-1) var(--sn-step-4);
     font-size: var(--sn-text-xs);
     font-family: var(--sn-font-mono);
-    border-radius: 10px;
+    border-radius: var(--sn-radius-lg, 10px);
     background: var(--sn-success-bg);
     color: var(--sn-success-color);
     border: 1px solid var(--sn-success-border);

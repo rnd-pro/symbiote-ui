@@ -31,7 +31,7 @@ export let styles = css`
       align-items: stretch;
       gap: 0;
       padding: 0;
-      border-radius: 10px;
+      border-radius: var(--sn-radius-lg, 10px);
       background: var(--sn-toolbar-bg);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
@@ -41,7 +41,7 @@ export let styles = css`
         0 0 0 1px var(--sn-shadow-color);
       transform: translateX(-50%) scale(var(--sn-toolbar-scale, 1));
       transform-origin: center top;
-      animation: toolbar-in 0.2s ease-out;
+      animation: toolbar-in var(--sn-animation-duration-fast, 0.2s) ease-out;
       inline-size: var(--sn-toolbar-fit-width, max-content);
       min-inline-size: 0;
       max-inline-size: calc(100vw - 32px);
@@ -71,7 +71,7 @@ export let styles = css`
 
     & .toolbar-title {
       box-sizing: border-box;
-      padding: var(--sn-step-4) var(--sn-step-5) 7px;
+      padding: var(--sn-step-4) var(--sn-step-5) var(--sn-step-3, 7px);
       border-bottom: 1px solid var(--sn-toolbar-border);
       color: var(--sn-toolbar-title-color);
       font-size: var(--sn-toolbar-title-font-size);

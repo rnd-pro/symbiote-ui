@@ -71,7 +71,7 @@ sn-nav-item[disabled] {
   border-radius: var(--sn-radius-lg);
   background: var(--sn-nav-item-badge-bg, var(--sn-outline-color, rgba(255, 255, 255, 0.12)));
   color: var(--sn-nav-item-badge-color, var(--sn-text, #ffffff));
-  font-size: 9px;
+  font-size: var(--sn-text-2xs, 9px);
   font-weight: 600;
 }
 `;

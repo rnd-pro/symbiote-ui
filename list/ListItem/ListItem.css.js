@@ -83,7 +83,7 @@ sn-list-item[loading] .sn-list-item {
   border: 2px solid currentColor;
   border-right-color: transparent;
   border-radius: 50%;
-  animation: sn-list-item-spin 0.6s linear infinite;
+  animation: sn-list-item-spin var(--sn-animation-duration-fast, 0.6s) linear infinite;
   margin-inline-end: var(--sn-step-2);
   flex: 0 0 auto;
 }
@@ -94,7 +94,7 @@ sn-list-item[loading] .sn-list-item {
 
 @media (prefers-reduced-motion: reduce) {
   .sn-list-item-spinner {
-    animation-duration: 2s;
+    animation-duration: var(--sn-animation-duration-slower, 2s);
   }
 }
 

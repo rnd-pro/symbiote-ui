@@ -22,8 +22,8 @@ sn-skeleton[variant="circle"] {
 
 sn-skeleton[variant="text"] {
   height: 0.75em;
-  margin-top: 0.125em;
-  margin-bottom: 0.125em;
+  margin-top: var(--sn-space-xs, 0.125em);
+  margin-bottom: var(--sn-space-xs, 0.125em);
   width: 85%;
 }
 
@@ -42,10 +42,10 @@ sn-skeleton[animation="shimmer"]::after {
   transform: translateX(-100%);
   background-image: linear-gradient(
     90deg,
-    rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.06) 20%,
-    rgba(255, 255, 255, 0.1) 60%,
-    rgba(255, 255, 255, 0) 100%
+    var(--sn-node-hover, rgba(255, 255, 255, 0)) 0%,
+    var(--sn-node-hover, rgba(255, 255, 255, 0.06)) 20%,
+    var(--sn-node-border, rgba(255, 255, 255, 0.1)) 60%,
+    var(--sn-node-hover, rgba(255, 255, 255, 0)) 100%
   );
   animation: sn-skeleton-shimmer var(--sn-transition-slow, 1.2s) infinite;
 }

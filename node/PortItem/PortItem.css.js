@@ -16,7 +16,7 @@ export let styles = css`
       flex-direction: row;
 
       & .sn-socket {
-        margin-left: -22px;
+        margin-left: var(--sn-step-0, -22px);
       }
     }
 
@@ -24,7 +24,7 @@ export let styles = css`
       flex-direction: row-reverse;
 
       & .sn-socket {
-        margin-right: -22px;
+        margin-right: var(--sn-step-0, -22px);
       }
     }
 
@@ -59,7 +59,7 @@ export let styles = css`
       }
 
       &[data-socket-shape='diamond']::after {
-        border-radius: 1px;
+        border-radius: var(--sn-radius-xs, 1px);
         transform: rotate(45deg) scale(0.85);
       }
 

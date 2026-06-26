@@ -57,7 +57,7 @@ sn-stepper[hidden] {
 .sn-stepper-step[data-state="completed"] .sn-stepper-indicator {
   background: var(--sn-stepper-completed-bg, var(--sn-success-color, #4caf50));
   border-color: var(--sn-stepper-completed-border, var(--sn-success-color, #4caf50));
-  color: var(--sn-stepper-completed-color, #ffffff);
+  color: var(--sn-stepper-completed-color, var(--sn-text, #ffffff));
 }
 
 .sn-stepper-step[data-state="completed"] .sn-stepper-line {
@@ -72,7 +72,7 @@ sn-stepper[hidden] {
 .sn-stepper-step[data-state="active"] .sn-stepper-indicator {
   background: var(--sn-stepper-active-bg, var(--sn-node-selected, #2196f3));
   border-color: var(--sn-stepper-active-border, var(--sn-node-selected, #2196f3));
-  color: var(--sn-stepper-active-color, #ffffff);
+  color: var(--sn-stepper-active-color, var(--sn-text, #ffffff));
   box-shadow: 0 0 0 3px color-mix(in oklab, var(--sn-node-selected, #2196f3) 25%, transparent);
 }
 

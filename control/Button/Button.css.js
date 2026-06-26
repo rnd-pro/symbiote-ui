@@ -64,7 +64,7 @@ sn-button[loading] .sn-button-spinner {
     transition: none !important;
   }
   sn-button[loading] .sn-button-spinner {
-    animation-duration: 2s;
+    animation-duration: var(--sn-animation-duration-slower, 2s);
   }
 }
 

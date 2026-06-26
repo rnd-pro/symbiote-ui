@@ -32,7 +32,7 @@ sn-floating-panel {
 }
 
 .sn-floating-title {
-  font-size: calc(13px * var(--sn-theme-type-scale, 1));
+  font-size: calc(var(--sn-text-md, 13px) * var(--sn-theme-type-scale, 1));
   font-weight: 500;
   color: var(--sn-text);
 }

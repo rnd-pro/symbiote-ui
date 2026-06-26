@@ -66,7 +66,7 @@ export let styles = css`
       opacity: 0;
       transition: opacity var(--sn-transition-fast) var(--sn-transition-easing);
       padding: var(--sn-step-1);
-      border-radius: 3px;
+      border-radius: var(--sn-radius-xs, 3px);
 
       &:hover {
         background: color-mix(in oklab, currentColor 10%, transparent);

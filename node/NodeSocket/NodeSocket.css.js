@@ -40,7 +40,7 @@ export let styles = css`
     }
 
     &[data-socket-shape='diamond'] {
-      border-radius: 1px;
+      border-radius: var(--sn-radius-xs, 1px);
       transform: rotate(45deg) scale(0.85);
 
       &:hover {

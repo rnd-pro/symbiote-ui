@@ -65,7 +65,7 @@ output-list-preview[hidden] {
   box-sizing: border-box;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 3px var(--sn-step-5);
+  gap: var(--sn-step-1, 3px) var(--sn-step-5);
   min-height: 38px;
   padding: var(--sn-step-4) var(--sn-step-5);
   border: 1px solid var(--sn-output-preview-item-border);

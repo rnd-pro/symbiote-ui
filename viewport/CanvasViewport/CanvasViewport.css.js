@@ -31,7 +31,7 @@ let css = /*css*/`
     background: var(--sn-node-bg);
     border: 1px solid var(--vp-border);
     color: var(--sn-text-dim);
-    padding: 1px var(--sn-step-2);
+    padding: var(--sn-step-0, 1px) var(--sn-step-2);
     border-radius: calc(3px * var(--sn-theme-radius-scale, 1));
     font-family: inherit;
     font-size: var(--sn-text-2xs);
@@ -93,7 +93,7 @@ let css = /*css*/`
     position: relative;
     box-shadow: var(--sn-shadow-lg);
     overflow: hidden;
-    transition: width 0.3s ease, height 0.3s ease;
+    transition: width var(--sn-transition-normal, 0.3s) ease, height var(--sn-transition-normal, 0.3s) ease;
   }
 
   .vp-canvas-frame canvas {

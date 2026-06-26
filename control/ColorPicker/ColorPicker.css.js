@@ -75,18 +75,18 @@ sn-color-picker {
 .sn-color-canvas-bg {
   width: 100%;
   height: 100%;
-  background: linear-gradient(to bottom, transparent, #000), linear-gradient(to right, #fff, transparent);
+  background: linear-gradient(to bottom, transparent, var(--sn-shadow-color, #000)), linear-gradient(to right, var(--sn-text, #fff), transparent);
 }
 
 .sn-color-canvas-handle {
   position: absolute;
   width: 12px;
   height: 12px;
-  border: 2px solid #fff;
+  border: 2px solid var(--sn-text, #fff);
   border-radius: 50%;
-  box-shadow: 0 0 4px rgba(0,0,0,0.5);
-  margin-left: -6px;
-  margin-top: -6px;
+  box-shadow: 0 0 4px var(--sn-shadow-color, rgba(0,0,0,0.5));
+  margin-left: var(--sn-step-0, -6px);
+  margin-top: var(--sn-step-0, -6px);
   pointer-events: none;
 }
 
@@ -98,7 +98,7 @@ sn-color-picker {
   -webkit-appearance: none;
   width: 100%;
   height: 10px;
-  border-radius: 5px;
+  border-radius: var(--sn-radius-sm, 5px);
   outline: none;
   margin-bottom: var(--sn-step-6);
   background: linear-gradient(to right, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%);
@@ -110,10 +110,10 @@ sn-color-picker {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: #fff;
+  background: var(--sn-text, #fff);
   border: 2px solid var(--sn-outline-color-soft, rgba(0,0,0,0.3));
   cursor: pointer;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  box-shadow: 0 1px 3px var(--sn-shadow-color, rgba(0,0,0,0.3));
 }
 
 .sn-color-presets {

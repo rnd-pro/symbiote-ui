@@ -115,7 +115,7 @@ output-graph-preview[hidden] {
 
 .output-graph-preview-edge {
   max-width: 100%;
-  padding: 3px var(--sn-step-3);
+  padding: var(--sn-step-1, 3px) var(--sn-step-3);
   border-radius: var(--sn-radius-full);
   background: var(--sn-output-preview-edge-bg);
 }

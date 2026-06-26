@@ -48,7 +48,7 @@ sn-carousel {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  box-shadow: 0 2px 8px var(--sn-shadow-color, rgba(0,0,0,0.3));
   transition: opacity var(--sn-transition-fast, 120ms);
 }
 

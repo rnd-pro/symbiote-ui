@@ -19,7 +19,7 @@ export let styles = css`
     font-family: var(--sn-font);
     color: var(--sn-text);
     overflow-y: auto;
-    transition: transform 0.2s ease;
+    transition: transform var(--sn-transition-normal, 0.2s) ease;
 
     &[hidden] {
       display: none;
@@ -28,12 +28,12 @@ export let styles = css`
     & .insp-resize-handle {
       position: absolute;
       top: 0;
-      left: -2px;
+      left: var(--sn-step-0, -2px);
       width: 5px;
       height: 100%;
       cursor: col-resize;
       z-index: 110;
-      transition: background 0.15s;
+      transition: background var(--sn-transition-fast, 0.15s);
 
       &:hover,
       &.dragging {
@@ -60,7 +60,7 @@ export let styles = css`
 
     & .insp-body {
       flex: 1;
-      padding: 44px var(--sn-step-8) var(--sn-step-6);
+      padding: var(--sn-step-12, 44px) var(--sn-step-8) var(--sn-step-6);
     }
 
     & .insp-empty {
@@ -68,7 +68,7 @@ export let styles = css`
       flex-direction: column;
       align-items: center;
       gap: var(--sn-step-4);
-      padding: 40px 0;
+      padding: var(--sn-step-12, 40px) 0;
       color: var(--sn-text-dim);
       font-size: var(--sn-text-md);
 
@@ -78,7 +78,7 @@ export let styles = css`
     }
 
     & .insp-empty .material-symbols-outlined {
-      font-size: 32px;
+      font-size: var(--sn-text-2xl, 32px);
       opacity: 0.4;
     }
 
@@ -198,7 +198,7 @@ export let styles = css`
     border-radius: var(--sn-radius-sm);
     outline: none;
     box-sizing: border-box;
-    transition: border-color 0.15s;
+    transition: border-color var(--sn-transition-fast, 0.15s);
 
     &:focus {
       border-color: var(--sn-node-selected);
@@ -219,7 +219,7 @@ export let styles = css`
     min-height: 80px;
     box-sizing: border-box;
     line-height: 1.4;
-    transition: border-color 0.15s;
+    transition: border-color var(--sn-transition-fast, 0.15s);
 
     &:focus {
       border-color: var(--sn-node-selected);
@@ -262,16 +262,16 @@ export let styles = css`
       position: absolute;
       inset: 0;
       background: var(--sn-field-toggle-bg);
-      border-radius: 10px;
-      transition: background 0.2s;
+      border-radius: var(--sn-radius-lg, 10px);
+      transition: background var(--sn-transition-normal, 0.2s);
 
       &::before {
         content: '';
         position: absolute;
         width: 14px;
         height: 14px;
-        left: 3px;
-        bottom: 3px;
+        left: var(--sn-step-1, 3px);
+        bottom: var(--sn-step-1, 3px);
         background: var(--sn-field-toggle-thumb-bg);
         border-radius: 50%;
         transition:
@@ -359,7 +359,7 @@ export let styles = css`
     }
 
     .material-symbols-outlined {
-      font-size: 20px;
+      font-size: var(--sn-text-2xl, 20px);
     }
   }
 

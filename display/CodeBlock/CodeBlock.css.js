@@ -88,12 +88,12 @@ export default `
   code-block[mode-image] .cb-img-wrap { display: flex; }
 
   /* Markdown styles */
-  code-block .md-h { margin: 20px 0 8px; color: var(--sn-text); font-weight: 700; }
+  code-block .md-h { margin: var(--sn-step-9, 20px) 0 var(--sn-step-4, 8px); color: var(--sn-text); font-weight: 700; }
   code-block h1.md-h { font-size: var(--sn-markdown-h1-size, 24px); border-bottom: 2px solid var(--sn-node-border); padding-bottom: 8px; }
   code-block h2.md-h { font-size: var(--sn-markdown-h2-size, 20px); border-bottom: 1px solid var(--sn-node-border); padding-bottom: 6px; }
   code-block h3.md-h { font-size: var(--sn-markdown-h3-size, 16px); }
   code-block h4.md-h { font-size: var(--sn-markdown-h4-size, 14px); }
-  code-block .md-p { margin: 8px 0; }
+  code-block .md-p { margin: var(--sn-step-4, 8px) 0; }
   code-block .md-quote {
     margin: var(--sn-step-4) 0;
     padding: var(--sn-step-4) var(--sn-step-8);
@@ -107,7 +107,7 @@ export default `
     padding-left: var(--sn-step-10);
   }
   code-block .md-list li {
-    margin: 3px 0;
+    margin: var(--sn-step-1, 3px) 0;
   }
   code-block .md-code-block {
     margin: var(--sn-step-6) 0;
@@ -122,9 +122,9 @@ export default `
     white-space: pre;
   }
   code-block .md-inline-code {
-    padding: 1px 5px;
+    padding: var(--sn-step-0, 1px) var(--sn-step-2, 5px);
     background: var(--sn-node-hover);
-    border-radius: 3px;
+    border-radius: var(--sn-radius-xs, 3px);
     font-family: 'SF Mono', 'Fira Code', monospace;
     font-size: 0.9em;
   }

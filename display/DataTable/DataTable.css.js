@@ -81,7 +81,7 @@ sn-data-table[hidden] {
 
 .sn-data-table tbody tr {
   cursor: pointer;
-  transition: background 0.1s ease;
+  transition: background var(--sn-transition-fast, 0.1s) ease;
 }
 
 .sn-data-table tbody tr:hover {
@@ -131,7 +131,7 @@ sn-data-table[hidden] {
   padding: var(--sn-data-table-empty-padding, 16px);
   color: var(--sn-status-error, #f85149);
   font-size: var(--sn-data-table-cell-size, 13px);
-  background: rgba(248, 81, 73, 0.1);
+  background: var(--sn-danger-color, rgba(248, 81, 73, 0.1));
   border: 1px solid var(--sn-status-error, #f85149);
   border-radius: var(--sn-data-table-radius, 4px);
   margin: var(--sn-step-4);
@@ -170,7 +170,7 @@ sn-data-table[hidden] {
   border: 2px solid currentColor;
   border-right-color: transparent;
   border-radius: 50%;
-  animation: sn-data-table-spin 0.6s linear infinite;
+  animation: sn-data-table-spin var(--sn-animation-duration-fast, 0.6s) linear infinite;
 }
 
 @keyframes sn-data-table-spin {
@@ -179,7 +179,7 @@ sn-data-table[hidden] {
 
 @media (prefers-reduced-motion: reduce) {
   .sn-data-table-spinner {
-    animation-duration: 2s;
+    animation-duration: var(--sn-animation-duration-slower, 2s);
   }
 }
 
@@ -200,13 +200,13 @@ sn-data-table[hidden] {
   padding: var(--sn-step-1);
   border-radius: var(--sn-radius-sm);
   outline: none;
-  transition: color 0.1s, background 0.1s;
+  transition: color var(--sn-transition-fast, 0.1s), background var(--sn-transition-fast, 0.1s);
 }
 
 .sn-data-table-sort-btn:hover,
 .sn-data-table-sort-btn:focus-visible {
   color: var(--sn-text);
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--sn-node-hover, rgba(255, 255, 255, 0.1));
 }
 
 .sn-data-table-sort-btn .material-symbols-outlined {
@@ -230,7 +230,7 @@ sn-data-table[hidden] {
   padding: var(--sn-step-2);
   border-radius: var(--sn-radius-sm);
   outline: none;
-  transition: color 0.1s, background 0.1s;
+  transition: color var(--sn-transition-fast, 0.1s), background var(--sn-transition-fast, 0.1s);
   vertical-align: middle;
 }
 
@@ -239,7 +239,7 @@ sn-data-table[hidden] {
 .sn-data-table-tree-btn:hover,
 .sn-data-table-tree-btn:focus-visible {
   color: var(--sn-text);
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--sn-node-hover, rgba(255, 255, 255, 0.1));
 }
 
 .sn-data-table-expand-btn .material-symbols-outlined,
@@ -253,7 +253,7 @@ tr[aria-expanded="true"] .sn-data-table-expand-btn .material-symbols-outlined {
 }
 
 .sn-data-table-details-row td {
-  padding: var(--sn-step-6) var(--sn-step-8) var(--sn-step-6) 36px;
+  padding: var(--sn-step-6) var(--sn-step-8) var(--sn-step-6) var(--sn-step-12, 36px);
   background: var(--sn-data-table-details-bg, rgba(255, 255, 255, 0.02));
   border-block-end: 1px solid var(--sn-data-table-row-border, var(--sn-outline-color-soft));
 }

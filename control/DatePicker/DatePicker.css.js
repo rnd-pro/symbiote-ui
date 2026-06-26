@@ -116,7 +116,7 @@ sn-date-picker {
 
 .sn-calendar-day[data-selected] {
   background-color: var(--sn-node-selected, #2e90fa);
-  color: #fff;
+  color: var(--sn-node-selected-text, #fff);
   font-weight: bold;
 }
 

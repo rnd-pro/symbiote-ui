@@ -92,7 +92,7 @@ sn-video-player {
   border-radius: 50%;
   background: var(--sn-node-selected, #2e90fa);
   cursor: pointer;
-  margin-top: -3px;
+  margin-top: var(--sn-step-0, -3px);
 }
 
 .sn-video-time {

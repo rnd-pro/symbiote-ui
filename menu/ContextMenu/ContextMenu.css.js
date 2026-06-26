@@ -59,7 +59,7 @@ export let styles = css`
     font-size: var(--sn-text-md);
     cursor: pointer;
     border-radius: var(--sn-radius-sm);
-    transition: background 0.1s, color 0.1s;
+    transition: background var(--sn-transition-fast, 0.1s), color var(--sn-transition-fast, 0.1s);
     outline: none;
 
     &:hover {

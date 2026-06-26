@@ -31,20 +31,20 @@ sn-toast[data-dismissing] {
   display: flex;
   align-items: flex-start;
   gap: var(--sn-step-6);
-  padding: calc(12px * var(--sn-theme-density, 1)) calc(16px * var(--sn-theme-density, 1));
+  padding: calc(var(--sn-step-6, 12px) * var(--sn-theme-density, 1)) calc(var(--sn-step-8, 16px) * var(--sn-theme-density, 1));
   background-color: var(--sn-panel-bg, #1e1e24);
   border: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
   border-radius: var(--sn-panel-radius, 6px);
   box-shadow: var(--sn-panel-shadow, 0 8px 20px rgba(0,0,0,0.3));
   color: var(--sn-text);
   font-family: var(--sn-font, sans-serif);
-  font-size: calc(13px * var(--sn-theme-type-scale, 1));
+  font-size: calc(var(--sn-text-md, 13px) * var(--sn-theme-type-scale, 1));
   box-sizing: border-box;
 }
 
 .sn-toast-icon {
   flex-shrink: 0;
-  margin-top: 1px;
+  margin-top: var(--sn-step-0, 1px);
 }
 
 .sn-toast-message {
@@ -63,7 +63,7 @@ sn-toast[data-dismissing] {
   justify-content: center;
   padding: var(--sn-step-1);
   border-radius: var(--sn-radius-sm);
-  margin-top: 1px;
+  margin-top: var(--sn-step-0, 1px);
   transition: background-color var(--sn-transition-fast, 120ms), color var(--sn-transition-fast, 120ms);
 }
 

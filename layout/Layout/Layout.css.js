@@ -575,7 +575,7 @@ export let styles = css`
 
       &[active] {
         height: var(--sn-fullscreen-tab-active-height, 33px);
-        margin-bottom: -1px;
+        margin-bottom: var(--sn-step-0, -1px);
         position: relative;
         z-index: 1;
         background: var(--sn-node-header-bg);

@@ -19,12 +19,12 @@ sn-select {
   justify-content: space-between;
   width: 100%;
   min-height: calc(36px * var(--sn-theme-density, 1));
-  padding: 0 calc(12px * var(--sn-theme-density, 1));
+  padding: 0 calc(var(--sn-step-6, 12px) * var(--sn-theme-density, 1));
   background: var(--sn-field-control-bg, var(--sn-bg, #0c0c0e));
   border: 1px solid var(--sn-field-control-border, var(--sn-outline-color-soft, rgba(255,255,255,0.08)));
   border-radius: var(--sn-field-control-radius, var(--sn-panel-radius, 6px));
   color: var(--sn-text);
-  font-size: calc(13px * var(--sn-theme-type-scale, 1));
+  font-size: calc(var(--sn-text-md, 13px) * var(--sn-theme-type-scale, 1));
   cursor: pointer;
   text-align: left;
   transition: border-color var(--sn-transition-fast, 120ms), box-shadow var(--sn-transition-fast, 120ms);
@@ -77,10 +77,10 @@ sn-select {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: calc(8px * var(--sn-theme-density, 1)) calc(12px * var(--sn-theme-density, 1));
-  font-size: calc(13px * var(--sn-theme-type-scale, 1));
+  padding: calc(var(--sn-step-4, 8px) * var(--sn-theme-density, 1)) calc(var(--sn-step-6, 12px) * var(--sn-theme-density, 1));
+  font-size: calc(var(--sn-text-md, 13px) * var(--sn-theme-type-scale, 1));
   color: var(--sn-text);
-  border-radius: calc(var(--sn-panel-radius, 6px) - 2px);
+  border-radius: calc(var(--sn-panel-radius, 6px) - var(--sn-radius-xs, 2px));
   cursor: pointer;
   user-select: none;
   transition: background-color var(--sn-transition-fast, 120ms), color var(--sn-transition-fast, 120ms);

@@ -13,7 +13,7 @@ sn-tags-input {
   gap: var(--sn-step-3);
   width: 100%;
   min-height: calc(36px * var(--sn-theme-density, 1));
-  padding: 4px calc(12px * var(--sn-theme-density, 1));
+  padding: var(--sn-step-2, 4px) calc(12px * var(--sn-theme-density, 1));
   background: var(--sn-field-control-bg, var(--sn-bg, #0c0c0e));
   border: 1px solid var(--sn-field-control-border, var(--sn-outline-color-soft, rgba(255,255,255,0.08)));
   border-radius: var(--sn-field-control-radius, var(--sn-panel-radius, 6px));

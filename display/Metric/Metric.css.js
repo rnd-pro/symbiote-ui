@@ -47,14 +47,14 @@ sn-metric[variant="stacked"] {
 }
 
 sn-metric[status="success"] .sn-metric-value {
-  color: var(--sn-metric-success-color, var(--sn-status-success, #3fb950));
+  color: var(--sn-metric-success-color, var(--sn-status-success, var(--sn-success-color, #3fb950)));
 }
 
 sn-metric[status="warning"] .sn-metric-value {
-  color: var(--sn-metric-warning-color, var(--sn-status-warning, #d29922));
+  color: var(--sn-metric-warning-color, var(--sn-status-warning, var(--sn-warning-color, #d29922)));
 }
 
 sn-metric[status="error"] .sn-metric-value {
-  color: var(--sn-metric-error-color, var(--sn-status-error, #f85149));
+  color: var(--sn-metric-error-color, var(--sn-status-error, var(--sn-danger-color, #f85149)));
 }
 `;

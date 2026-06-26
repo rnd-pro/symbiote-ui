@@ -50,7 +50,7 @@ export let styles = css`
       font-family: inherit;
       font-size: var(--sn-text-sm);
       outline: none;
-      transition: border-color 0.2s ease-out;
+      transition: border-color var(--sn-transition-normal, 0.2s) ease-out;
 
       &:focus {
         border-color: var(--sn-node-selected);
@@ -83,7 +83,7 @@ export let styles = css`
 
       & .material-symbols-outlined {
         font-size: var(--sn-text-lg);
-        transition: transform 0.2s ease-out;
+        transition: transform var(--sn-transition-normal, 0.2s) ease-out;
       }
 
       &:hover {
@@ -107,8 +107,8 @@ export let styles = css`
     gap: var(--sn-step-4);
     cursor: grab;
     border-radius: var(--sn-radius-sm);
-    margin: 1px var(--sn-step-3);
-    transition: background 0.15s ease-out;
+    margin: var(--sn-step-0, 1px) var(--sn-step-3);
+    transition: background var(--sn-transition-fast, 0.15s) ease-out;
 
     &:hover {
       background: var(--sn-ctx-hover);

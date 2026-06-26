@@ -56,14 +56,14 @@ export default css`
     z-index: var(--sn-theme-widget-z, var(--sn-overlay-z-base, 20000));
     display: grid;
     grid-template-rows: auto auto auto;
-    gap: var(--sn-theme-widget-gap, calc(8px * var(--sn-theme-density, 1)));
+    gap: var(--sn-theme-widget-gap, calc(var(--sn-step-4, 8px) * var(--sn-theme-density, 1)));
     width: min(92vw, var(--sn-theme-widget-width, 320px));
     max-width: calc(100vw - 16px);
-    padding: var(--sn-theme-widget-padding, calc(10px * var(--sn-theme-density, 1)));
+    padding: var(--sn-theme-widget-padding, calc(var(--sn-step-5, 10px) * var(--sn-theme-density, 1)));
     border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
     border-radius: var(--sn-node-radius, 8px);
     background: var(--sn-panel-bg);
-    box-shadow: var(--sn-panel-shadow, 0 16px 48px hsl(0 0% 0% / 0.28));
+    box-shadow: var(--sn-panel-shadow, 0 16px 48px var(--sn-shadow-color, hsl(0 0% 0% / 0.28)));
     color: var(--sn-text);
     font-family: var(--sn-font);
   }
@@ -249,7 +249,7 @@ export default css`
     cascade-theme-widget .ctw-popover,
     .ctw-popover[data-overlay-portal] {
       position: fixed;
-      top: var(--sn-theme-widget-mobile-top, calc(env(safe-area-inset-top) + 88px));
+      top: var(--sn-theme-widget-mobile-top, calc(env(safe-area-inset-top) + var(--sn-step-12, 88px)));
       right: max(var(--sn-theme-widget-mobile-inset, 8px), env(safe-area-inset-right));
       left: max(var(--sn-theme-widget-mobile-inset, 8px), env(safe-area-inset-left));
       width: auto;

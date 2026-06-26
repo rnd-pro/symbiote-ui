@@ -18,12 +18,12 @@ let css = /*css*/`
     --te-border: var(--sn-node-border);
     --te-track-bg: var(--sn-bg);
     --te-track-bg-alt: color-mix(in srgb, var(--sn-bg) 85%, var(--sn-panel-bg));
-    --te-clip-video: hsl(var(--sn-hue-accent) var(--sn-sat-vivid) 42%);
-    --te-clip-audio: hsl(var(--sn-hue-warning) var(--sn-sat-vivid) 42%);
-    --te-clip-text: hsl(var(--sn-hue-success) var(--sn-sat-vivid) 38%);
-    --te-clip-effect: hsl(280 50% 45%);
+    --te-clip-video: var(--sn-node-selected, hsl(var(--sn-hue-accent) var(--sn-sat-vivid) 42%));
+    --te-clip-audio: var(--sn-warning-color, hsl(var(--sn-hue-warning) var(--sn-sat-vivid) 42%));
+    --te-clip-text: var(--sn-success-color, hsl(var(--sn-hue-success) var(--sn-sat-vivid) 38%));
+    --te-clip-effect: var(--sn-node-selected, hsl(280 50% 45%));
     --te-marker-color: var(--sn-warning-color);
-    --te-selection: hsl(var(--sn-hue-accent) var(--sn-sat-vivid) 50% / 0.25);
+    --te-selection: var(--sn-node-selected, hsl(var(--sn-hue-accent) var(--sn-sat-vivid) 50% / 0.25));
   }
 
   /* ── Transport bar ── */
@@ -43,7 +43,7 @@ let css = /*css*/`
     border: 1px solid var(--te-border);
     color: var(--sn-text-dim);
     padding: var(--sn-step-1) var(--sn-step-3);
-    border-radius: calc(3px * var(--sn-theme-radius-scale, 1));
+    border-radius: calc(var(--sn-radius-xs, 3px) * var(--sn-theme-radius-scale, 1));
     cursor: pointer;
     font-family: inherit;
     font-size: var(--sn-text-xs);
@@ -59,7 +59,7 @@ let css = /*css*/`
   .te-transport button[data-active] {
     background: var(--te-playhead-color);
     border-color: var(--te-playhead-color);
-    color: hsl(0 0% 8%);
+    color: var(--sn-bg, hsl(0 0% 8%));
   }
 
   .te-transport .te-time {
@@ -207,14 +207,14 @@ let css = /*css*/`
     background: var(--te-playhead-color);
     pointer-events: none;
     z-index: 10;
-    transition: left 0.03s linear;
+    transition: left var(--sn-transition-fast, 0.03s) linear;
   }
 
   .te-playhead::before {
     content: '';
     position: absolute;
     top: 0;
-    left: -5px;
+    left: var(--sn-step-0, -5px);
     width: 11px;
     height: 8px;
     background: var(--te-playhead-color);

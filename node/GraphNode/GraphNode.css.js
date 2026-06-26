@@ -309,7 +309,7 @@ export let styles = css`
     }
 
     &[data-selected] .error-frame {
-      bottom: calc(100% + 46px);
+      bottom: calc(100% + var(--sn-step-12, 46px));
     }
 
     &:hover {
@@ -369,10 +369,10 @@ export let styles = css`
         padding: 0;
       }
       & .sn-port-in node-socket {
-        margin-left: -26px;
+        margin-left: var(--sn-step-0, -26px);
       }
       & .sn-port-out node-socket {
-        margin-right: -26px;
+        margin-right: var(--sn-step-0, -26px);
       }
       & .controls {
         display: none;
@@ -713,7 +713,7 @@ export let styles = css`
       flex-direction: row;
 
       & node-socket {
-        margin-left: -18px;
+        margin-left: var(--sn-step-0, -18px);
       }
     }
 
@@ -722,7 +722,7 @@ export let styles = css`
       justify-content: flex-end;
 
       & node-socket {
-        margin-right: -18px;
+        margin-right: var(--sn-step-0, -18px);
       }
     }
 

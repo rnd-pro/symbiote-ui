@@ -57,7 +57,7 @@ sn-field textarea {
   font-family: var(--sn-font);
   font-size: var(--sn-field-control-font-size);
   line-height: var(--sn-field-control-line-height);
-  transition: border-color 150ms ease, background 150ms ease, box-shadow 150ms ease;
+  transition: border-color var(--sn-transition-fast, 150ms) ease, background var(--sn-transition-fast, 150ms) ease, box-shadow var(--sn-transition-fast, 150ms) ease;
 }
 
 sn-field input::placeholder,

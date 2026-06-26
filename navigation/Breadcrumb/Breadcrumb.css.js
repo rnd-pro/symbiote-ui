@@ -23,7 +23,7 @@ sn-breadcrumb-item {
 
 .bc-sep {
   color: var(--sn-breadcrumb-separator-color, var(--sn-text-dim-extra, rgba(255, 255, 255, 0.4)));
-  font-size: 1.1em;
+  font-size: var(--sn-breadcrumb-separator-size, 1.1em);
   user-select: none;
 }
 

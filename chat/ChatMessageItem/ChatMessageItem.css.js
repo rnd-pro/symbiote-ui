@@ -45,7 +45,7 @@ chat-message-item {
 
 .msg-content {
   padding: var(--sn-chat-message-padding, 12px 16px);
-  border-radius: 16px;
+  border-radius: var(--sn-radius-xl, 16px);
   width: 100%;
   font-size: var(--sn-chat-message-font-size, 13px);
   line-height: 1.5;
@@ -206,7 +206,7 @@ chat-message-item {
 
 .md-inline-code {
   background: var(--sn-node-hover);
-  padding: var(--sn-step-1) 5px;
+  padding: var(--sn-step-1) var(--sn-step-2, 5px);
   border-radius: var(--sn-radius-sm);
   font-family: var(--sn-font-mono);
   font-size: var(--sn-chat-code-size, 11px);
@@ -216,7 +216,7 @@ chat-message-item {
 .markdown-mention {
   color: var(--sn-node-selected);
   background: var(--sn-accent-bg);
-  padding: 1px var(--sn-step-2);
+  padding: var(--sn-step-0, 1px) var(--sn-step-2);
   border-radius: var(--sn-radius-sm);
   font-weight: 500;
   word-break: break-all;
@@ -278,7 +278,7 @@ h4.md-h {
 }
 
 .md-list li {
-  margin: 3px 0;
+  margin: var(--sn-step-1, 3px) 0;
 }
 
 .md-img {
@@ -407,7 +407,7 @@ h4.md-h {
 
 .work-copy-btn {
   flex: 0 0 calc(var(--sn-chat-summary-icon-size, 16px) * 1.5);
-  margin-top: 1px;
+  margin-top: var(--sn-step-0, 1px);
   width: calc(var(--sn-chat-summary-icon-size, 16px) * 1.5);
   height: calc(var(--sn-chat-summary-icon-size, 16px) * 1.5);
   border: none;
@@ -465,7 +465,7 @@ h4.md-h {
 .meta-chip {
   font-size: var(--sn-chat-tool-label-size, 10px);
   font-weight: 500;
-  padding: var(--sn-step-1) 7px;
+  padding: var(--sn-step-1) var(--sn-step-3, 7px);
   border-radius: var(--sn-radius-sm);
   background: var(--sn-node-hover);
   color: var(--sn-text-dim);
@@ -664,7 +664,7 @@ h4.md-h {
   max-width: 320px;
 }
 .attachment-card .material-symbols-outlined {
-  font-size: 20px;
+  font-size: var(--sn-text-2xl, 20px);
   color: var(--sn-text-dim);
 }
 .attachment-info {

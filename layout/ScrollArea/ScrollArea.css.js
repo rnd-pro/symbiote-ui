@@ -19,7 +19,6 @@ sn-scroll-area {
   height: 100%;
   overflow: scroll;
   scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE/Edge */
 }
 
 .sn-scroll-viewport::-webkit-scrollbar {
@@ -56,7 +55,7 @@ sn-scroll-area {
 
 .sn-scrollbar-thumb {
   background-color: var(--sn-scrollbar-thumb, var(--sn-text-dim, rgba(255,255,255,0.2)));
-  border-radius: 3px;
+  border-radius: var(--sn-radius-xs, 3px);
   cursor: pointer;
   position: absolute;
   top: 0;
