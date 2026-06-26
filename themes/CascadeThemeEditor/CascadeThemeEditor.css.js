@@ -104,7 +104,7 @@ export default css`
     .cte-control input:focus-visible,
     .cte-details summary:focus-visible {
       outline: var(--sn-effect-focus-ring, 2px solid var(--sn-node-selected));
-      outline-offset: 2px;
+      outline-offset: var(--sn-focus-outline-offset, 2px);
     }
 
     .cte-icon-button {
