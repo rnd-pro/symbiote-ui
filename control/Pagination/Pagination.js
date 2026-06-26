@@ -150,7 +150,7 @@ export class Pagination extends Symbiote {
   #renderPageBtn(page, isActive, disabled) {
     const activeAttr = isActive ? ' active' : '';
     const disabledAttr = disabled ? ' disabled' : '';
-    const ariaLabel = `Page ${page}`;
+    const ariaLabel = `Go to page ${page}`;
     const ariaCurrent = isActive ? ' aria-current="page"' : '';
     return `<button class="sn-pagination-btn"${activeAttr}${disabledAttr}${ariaCurrent} data-page="${page}" aria-label="${ariaLabel}">${page}</button>`;
   }

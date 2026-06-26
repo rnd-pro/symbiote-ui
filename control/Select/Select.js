@@ -1,4 +1,5 @@
 import Symbiote from '@symbiotejs/symbiote';
+import { UID } from '@symbiotejs/symbiote/utils';
 import template from './Select.tpl.js';
 import css from './Select.css.js';
 
@@ -9,6 +10,9 @@ export class Select extends Symbiote {
   #options = [];
   #isOpen = false;
   #focusedIndex = -1;
+  #instanceId = UID.generate('sn-select-XXXXXXXX');
+  #typeahead = '';
+  #typeaheadTimer = null;
 
   #onTriggerClick = (event) => {
     if (this.disabled) return;
@@ -44,13 +48,54 @@ export class Select extends Symbiote {
         event.preventDefault();
         this.close();
         break;
+      case 'Home':
+        if (this.#isOpen) {
+          event.preventDefault();
+          this.#focusOption(0);
+        }
+        break;
+      case 'End':
+        if (this.#isOpen) {
+          event.preventDefault();
+          this.#focusOption(this.#options.length - 1);
+        }
+        break;
       case 'Tab':
         if (this.#isOpen) {
           this.close();
         }
         break;
+      default:
+        if (event.key.length === 1 && !event.altKey && !event.ctrlKey && !event.metaKey) {
+          this.#onTypeahead(event.key);
+        }
+        break;
     }
   };
+
+  #onTypeahead(char) {
+    if (this.#options.length === 0) return;
+
+    clearTimeout(this.#typeaheadTimer);
+    this.#typeahead += char.toLowerCase();
+    this.#typeaheadTimer = setTimeout(() => {
+      this.#typeahead = '';
+    }, 500);
+
+    if (!this.#isOpen) {
+      this.open();
+    }
+
+    const start = this.#focusedIndex >= 0 ? this.#focusedIndex : -1;
+    const total = this.#options.length;
+    for (let i = 1; i <= total; i++) {
+      const index = (start + i) % total;
+      if (this.#options[index].label.toLowerCase().startsWith(this.#typeahead)) {
+        this.#focusOption(index);
+        break;
+      }
+    }
+  }
 
   #onOutsideClick = (event) => {
     if (this.#isOpen && !this.contains(event.target)) {
@@ -67,6 +112,19 @@ export class Select extends Symbiote {
 
   connectedCallback() {
     super.connectedCallback?.();
+
+    if (this.ref.dropdown) {
+      const listboxId = `${this.#instanceId}-listbox`;
+      this.ref.dropdown.id = listboxId;
+      this.ref.trigger?.setAttribute('aria-controls', listboxId);
+    }
+    if (this.ref.valueText) {
+      const valueTextId = `${this.#instanceId}-value`;
+      this.ref.valueText.id = valueTextId;
+      this.ref.dropdown?.setAttribute('aria-labelledby', valueTextId);
+    }
+    this.#syncNativeAttributes();
+
     this.ref.trigger?.addEventListener('click', this.#onTriggerClick);
     this.ref.trigger?.addEventListener('keydown', this.#onTriggerKeyDown);
     document.addEventListener('click', this.#onOutsideClick);
@@ -85,6 +143,7 @@ export class Select extends Symbiote {
     document.removeEventListener('click', this.#onOutsideClick);
     this.#observer?.disconnect();
     this.#observer = null;
+    clearTimeout(this.#typeaheadTimer);
     super.disconnectedCallback?.();
   }
 
@@ -163,8 +222,11 @@ export class Select extends Symbiote {
   close() {
     if (!this.#isOpen) return;
     this.#isOpen = false;
+    this.#focusedIndex = -1;
     this.ref.trigger?.setAttribute('aria-expanded', 'false');
+    this.ref.trigger?.removeAttribute('aria-activedescendant');
     this.ref.dropdown?.removeAttribute('data-visible');
+    Array.from(this.ref.optionsContainer?.children || []).forEach(item => item.removeAttribute('data-focused'));
     this.ref.trigger?.focus();
 
     this.dispatchEvent(new CustomEvent('sn-select-close', { bubbles: true, composed: true }));
@@ -200,7 +262,7 @@ export class Select extends Symbiote {
           const li = document.createElement('li');
           li.className = 'sn-select-option';
           li.role = 'option';
-          li.id = `sn-select-opt-${index}-${this.uid || '0'}`;
+          li.id = `${this.#instanceId}-opt-${index}`;
           li.textContent = opt.label;
           li.setAttribute('data-value', opt.value);
           li.addEventListener('click', (event) => {
@@ -251,6 +313,12 @@ export class Select extends Symbiote {
   }
 
   #syncNativeAttributes() {
+    if (this.ref.trigger) {
+      this.ref.trigger.setAttribute('aria-disabled', this.disabled ? 'true' : 'false');
+      this.ref.trigger.setAttribute('aria-required', this.required ? 'true' : 'false');
+      this.ref.trigger.setAttribute('aria-invalid', this.invalid ? 'true' : 'false');
+    }
+
     const native = this.ref.nativeSelect;
     if (!native) return;
     native.disabled = this.disabled;

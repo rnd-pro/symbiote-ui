@@ -11,6 +11,7 @@ export class Popover extends Symbiote {
   #triggerEl = null;
   #cleanupDismissable = null;
   #syncingOpen = false;
+  #panelId = `sn-popover-panel-${Math.random().toString(36).slice(2, 9)}`;
 
   #onTriggerClick = (event) => {
     if (this.disabled) return;
@@ -43,9 +44,14 @@ export class Popover extends Symbiote {
         this.#triggerEl = newTrigger;
         this.#triggerEl?.addEventListener('click', this.#onTriggerClick);
         this.#triggerEl?.setAttribute('aria-haspopup', 'dialog');
+        this.#triggerEl?.setAttribute('aria-controls', this.ref.panel?.id || this.#panelId);
         this.#triggerEl?.setAttribute('aria-expanded', this.open ? 'true' : 'false');
       }
     };
+
+    if (this.ref.panel && !this.ref.panel.id) {
+      this.ref.panel.id = this.#panelId;
+    }
 
     slot?.addEventListener('slotchange', updateTrigger);
     updateTrigger();
@@ -126,14 +132,14 @@ export class Popover extends Symbiote {
     // Register dismissable layer
     this.#cleanupDismissable = registerDismissableLayer({
       element: panel,
-      onDismiss: () => this.close(),
+      onDismiss: (event) => this.close({ returnFocus: event?.key === 'Escape' }),
       interactOutsideExclude: [this.#triggerEl, panel],
     });
 
     this.dispatchEvent(new CustomEvent('sn-popover-open', { bubbles: true, composed: true }));
   }
 
-  close() {
+  close({ returnFocus = false } = {}) {
     const panel = this.ref.panel;
     if (!panel) return;
 
@@ -149,6 +155,10 @@ export class Popover extends Symbiote {
     if (this.#cleanupDismissable) {
       this.#cleanupDismissable();
       this.#cleanupDismissable = null;
+    }
+
+    if (returnFocus && typeof this.#triggerEl?.focus === 'function') {
+      this.#triggerEl.focus();
     }
 
     this.dispatchEvent(new CustomEvent('sn-popover-close', { bubbles: true, composed: true }));

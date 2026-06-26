@@ -35,6 +35,11 @@ sn-pagination[hidden] {
   color: var(--sn-pagination-btn-hover-color, var(--sn-text, #ffffff));
 }
 
+.sn-pagination-btn:focus-visible {
+  outline: var(--sn-pagination-focus-ring, 2px solid var(--sn-focus-ring-color, currentColor));
+  outline-offset: 2px;
+}
+
 .sn-pagination-btn[active] {
   background: var(--sn-pagination-btn-active-bg, var(--sn-node-selected, rgba(255, 255, 255, 0.15)));
   border-color: var(--sn-pagination-btn-active-border, var(--sn-node-selected, rgba(255, 255, 255, 0.3)));

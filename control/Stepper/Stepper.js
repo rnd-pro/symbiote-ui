@@ -15,13 +15,21 @@ export class Stepper extends Symbiote {
 
   connectedCallback() {
     super.connectedCallback?.();
+    if (!this.hasAttribute('role')) {
+      this.setAttribute('role', 'list');
+    }
+    if (!this.hasAttribute('aria-label')) {
+      this.setAttribute('aria-label', 'Progress');
+    }
     this.$.activeStep = this.activeStep;
     this.addEventListener('click', this.#onStepClick);
+    this.addEventListener('keydown', this.#onStepKeydown);
     this.#render();
   }
 
   disconnectedCallback() {
     this.removeEventListener('click', this.#onStepClick);
+    this.removeEventListener('keydown', this.#onStepKeydown);
     super.disconnectedCallback?.();
   }
 
@@ -50,7 +58,18 @@ export class Stepper extends Symbiote {
   }
 
   #onStepClick(e) {
+    this.#activateStep(e.target.closest('.sn-stepper-step'));
+  }
+
+  #onStepKeydown(e) {
+    if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
     const stepEl = e.target.closest('.sn-stepper-step');
+    if (!stepEl) return;
+    e.preventDefault();
+    this.#activateStep(stepEl);
+  }
+
+  #activateStep(stepEl) {
     if (!stepEl) return;
     const index = Number(stepEl.dataset.index);
     if (!Number.isInteger(index)) return;
@@ -98,10 +117,14 @@ export class Stepper extends Symbiote {
       const isLast = idx === steps.length - 1;
       const lineHtml = isLast ? '' : '<div class="sn-stepper-line"></div>';
 
+      const stateText = state === 'completed' ? 'completed' : state === 'active' ? 'current' : 'not completed';
+      const accessibleName = `Step ${idx + 1}${stepLabel ? `: ${stepLabel}` : ''}, ${stateText}`;
+      const currentAttr = state === 'active' ? ' aria-current="step"' : '';
+
       htmlStr += `
-        <div class="sn-stepper-step" data-state="${state}" data-index="${idx}">
-          <span class="sn-stepper-indicator">${indicator}</span>
-          <span class="sn-stepper-label">${stepLabel}</span>
+        <div class="sn-stepper-step" data-state="${state}" data-index="${idx}" role="button" tabindex="0" aria-label="${accessibleName}"${currentAttr}>
+          <span class="sn-stepper-indicator" aria-hidden="true">${indicator}</span>
+          <span class="sn-stepper-label" aria-hidden="true">${stepLabel}</span>
           ${lineHtml}
         </div>
       `;

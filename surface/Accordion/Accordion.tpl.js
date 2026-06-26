@@ -6,11 +6,11 @@ export let accordionTemplate = html`
 
 export let accordionItemTemplate = html`
   <details class="sn-accordion-details" ${{ '@open': 'open', ontoggle: 'onDetailsToggle' }}>
-    <summary class="sn-accordion-summary">
+    <summary ref="summary" class="sn-accordion-summary">
       <span class="sn-accordion-header-text" ${{ textContent: 'header' }}></span>
-      <span class="sn-accordion-icon material-symbols-outlined">chevron_right</span>
+      <span class="sn-accordion-icon material-symbols-outlined" aria-hidden="true">chevron_right</span>
     </summary>
-    <div class="sn-accordion-content">
+    <div ref="content" class="sn-accordion-content" role="region">
       <slot></slot>
     </div>
   </details>

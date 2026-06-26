@@ -65,6 +65,12 @@ sn-dialog {
   color: var(--sn-text);
 }
 
+.sn-dialog-close-btn:focus-visible {
+  outline: 2px solid var(--sn-focus-ring-color, currentColor);
+  outline-offset: 2px;
+  color: var(--sn-text);
+}
+
 .sn-dialog-body {
   padding: calc(var(--sn-step-9, 20px) * var(--sn-theme-density, 1));
   overflow-y: auto;

@@ -20,6 +20,9 @@ export class Toolbar extends Symbiote {
     if (!this.hasAttribute('role')) {
       this.setAttribute('role', 'toolbar');
     }
+    if (!this.hasAttribute('aria-label') && !this.hasAttribute('aria-labelledby')) {
+      this.setAttribute('aria-label', 'Toolbar');
+    }
     this.setAttribute('aria-orientation', this.orientation);
 
     this.#initFocus();

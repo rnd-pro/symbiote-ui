@@ -58,6 +58,10 @@ export class AccordionItem extends Symbiote {
     onDetailsToggle: (e) => {
       const details = this.querySelector('.sn-accordion-details');
       if (!details) return;
+      if (this.$.disabled && details.open) {
+        details.open = false;
+        return;
+      }
       const open = details.open;
       if (this.$.open !== open) {
         this.$.open = open;
@@ -73,6 +77,7 @@ export class AccordionItem extends Symbiote {
     this.$.open = this.open;
     this.$.disabled = this.disabled;
     this.$.header = this.header;
+    this.#linkRegion();
     this.#syncState();
   }
 
@@ -116,14 +121,29 @@ export class AccordionItem extends Symbiote {
     }
   }
 
+  #linkRegion() {
+    const summary = this.ref.summary;
+    const content = this.ref.content;
+    if (!summary || !content) return;
+    const uid = this.uid || Math.random().toString(36).slice(2, 9);
+    if (!summary.id) summary.id = `sn-accordion-summary-${uid}`;
+    summary.setAttribute('aria-controls', content.id || (content.id = `sn-accordion-region-${uid}`));
+    content.setAttribute('aria-labelledby', summary.id);
+  }
+
   #syncState() {
     const details = this.querySelector('.sn-accordion-details');
     if (!details) return;
     details.open = this.$.open;
+    const summary = this.ref.summary;
     if (this.$.disabled) {
       details.setAttribute('disabled', '');
+      summary?.setAttribute('aria-disabled', 'true');
+      summary?.setAttribute('tabindex', '-1');
     } else {
       details.removeAttribute('disabled');
+      summary?.removeAttribute('aria-disabled');
+      summary?.removeAttribute('tabindex');
     }
   }
 }

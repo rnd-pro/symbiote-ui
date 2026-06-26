@@ -11,6 +11,7 @@ export class Drawer extends Symbiote {
   #focusTrap = null;
   #cleanupDismissable = null;
   #syncingOpen = false;
+  #titleId = `sn-drawer-title-${Math.random().toString(36).slice(2, 9)}`;
 
   #onCloseBtnClick = () => {
     this.close();
@@ -35,6 +36,7 @@ export class Drawer extends Symbiote {
 
     this.#focusTrap = new FocusTrap(this.ref.panel || this);
     this.#syncPanelState();
+    this.#syncAccessibleName();
 
     if (this.open) {
       this.show();
@@ -80,6 +82,7 @@ export class Drawer extends Symbiote {
       newValue != null ? this.show() : this.close();
     } else if (name === 'label') {
       this.$.label = newValue || '';
+      this.#syncAccessibleName();
     } else if (name === 'placement') {
       this.#syncPanelState();
     }
@@ -163,6 +166,24 @@ export class Drawer extends Symbiote {
     if (!panel) return;
     panel.setAttribute('data-placement', this.placement);
     panel.toggleAttribute('data-visible', this.open);
+  }
+
+  // Name the dialog from its visible heading (aria-labelledby is preferred over
+  // aria-label by the APG dialog pattern). Fall back to aria-label only when the
+  // heading has no text, so the dialog is never left without an accessible name.
+  #syncAccessibleName() {
+    const panel = this.ref.panel;
+    if (!panel) return;
+    const title = this.ref.title;
+    const hasHeading = !!(title && title.textContent.trim());
+    if (hasHeading) {
+      if (!title.id) title.id = this.#titleId;
+      panel.setAttribute('aria-labelledby', title.id);
+      panel.removeAttribute('aria-label');
+    } else {
+      panel.removeAttribute('aria-labelledby');
+      panel.setAttribute('aria-label', this.label || 'Dialog');
+    }
   }
 }
 

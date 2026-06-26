@@ -33,6 +33,23 @@ sn-file-upload {
   color: var(--sn-text);
 }
 
+.sn-file-dropzone:focus-visible {
+  outline: var(--sn-file-dropzone-focus-ring, 2px solid var(--sn-focus-ring-color, currentColor));
+  outline-offset: 2px;
+}
+
+.sn-file-live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px; /* audit-ok: fixed visually-hidden live-region idiom, not themeable */
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .sn-file-dropzone-icon {
   font-size: var(--sn-text-2xl, 32px);
   margin-bottom: var(--sn-step-4);

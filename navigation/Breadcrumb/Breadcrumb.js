@@ -22,7 +22,11 @@ export class SnBreadcrumbItem extends Symbiote {
     });
     this.sub('isActive', (val) => {
       this.toggleAttribute('data-active', val);
-      this.setAttribute('aria-current', val ? 'page' : 'false');
+      if (val) {
+        this.setAttribute('aria-current', 'page');
+      } else {
+        this.removeAttribute('aria-current');
+      }
     });
     this.sub('isFirst', (val) => {
       this.toggleAttribute('data-first', val);

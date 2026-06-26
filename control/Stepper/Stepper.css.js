@@ -25,6 +25,12 @@ sn-stepper[hidden] {
   flex: 0 0 auto;
 }
 
+.sn-stepper-step:focus-visible {
+  outline: var(--sn-stepper-focus-ring, 2px solid var(--sn-focus-ring-color, currentColor));
+  outline-offset: 2px;
+  border-radius: var(--sn-radius-sm, 4px);
+}
+
 .sn-stepper-indicator {
   display: inline-flex;
   align-items: center;

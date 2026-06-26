@@ -31,14 +31,25 @@ sn-breadcrumb-item {
   display: inline-flex;
   align-items: center;
   gap: var(--sn-step-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
   cursor: pointer;
   text-decoration: none;
   color: inherit;
   transition: color var(--sn-transition-fast, 120ms);
 }
 
-.bc-label:hover {
+button.bc-label:hover {
   color: var(--sn-breadcrumb-hover-color, var(--sn-text, #ffffff));
+}
+
+button.bc-label:focus-visible {
+  outline: 2px solid var(--sn-focus-ring-color, currentColor);
+  outline-offset: var(--sn-focus-outline-offset, 2px);
+  border-radius: var(--sn-radius-xs, 3px);
 }
 
 sn-breadcrumb-item[data-active] .bc-label {

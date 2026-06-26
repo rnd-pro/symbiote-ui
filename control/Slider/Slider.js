@@ -10,6 +10,9 @@ const SLIDER_ATTRIBUTES = [
   'disabled',
   'readonly',
   'name',
+  'aria-label',
+  'aria-labelledby',
+  'aria-valuetext',
 ];
 
 export class SliderControl extends Symbiote {
@@ -162,7 +165,20 @@ export class SliderControl extends Symbiote {
       input.removeAttribute('aria-readonly');
     }
 
+    this._forwardAria(input, 'aria-label');
+    this._forwardAria(input, 'aria-labelledby');
+    this._forwardAria(input, 'aria-valuetext');
+
     this._syncVisuals();
+  }
+
+  _forwardAria(input, attr) {
+    let value = this.getAttribute(attr);
+    if (value == null) {
+      input.removeAttribute(attr);
+    } else {
+      input.setAttribute(attr, value);
+    }
   }
 
   _syncVisuals() {

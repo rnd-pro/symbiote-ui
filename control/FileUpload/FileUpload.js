@@ -12,6 +12,14 @@ class FileUpload extends Symbiote {
     this.ref.fileInput?.click();
   };
 
+  #onDropzoneKeydown = (event) => {
+    if (this.disabled) return;
+    if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar') {
+      event.preventDefault();
+      this.ref.fileInput?.click();
+    }
+  };
+
   #onFileInputChange = (event) => {
     const fileList = event.target.files;
     if (fileList) {
@@ -48,6 +56,7 @@ class FileUpload extends Symbiote {
   connectedCallback() {
     super.connectedCallback?.();
     this.ref.dropzone?.addEventListener('click', this.#onDropzoneClick);
+    this.ref.dropzone?.addEventListener('keydown', this.#onDropzoneKeydown);
     this.ref.dropzone?.addEventListener('dragover', this.#onDragOver);
     this.ref.dropzone?.addEventListener('dragleave', this.#onDragLeave);
     this.ref.dropzone?.addEventListener('drop', this.#onDrop);
@@ -58,6 +67,7 @@ class FileUpload extends Symbiote {
 
   disconnectedCallback() {
     this.ref.dropzone?.removeEventListener('click', this.#onDropzoneClick);
+    this.ref.dropzone?.removeEventListener('keydown', this.#onDropzoneKeydown);
     this.ref.dropzone?.removeEventListener('dragover', this.#onDragOver);
     this.ref.dropzone?.removeEventListener('dragleave', this.#onDragLeave);
     this.ref.dropzone?.removeEventListener('drop', this.#onDrop);
@@ -122,7 +132,10 @@ class FileUpload extends Symbiote {
       this.ref.fileInput.disabled = this.disabled;
     }
     if (this.ref.dropzone) {
+      this.ref.dropzone.setAttribute('aria-label', this.placeholder);
       this.ref.dropzone.toggleAttribute('data-disabled', this.disabled);
+      this.ref.dropzone.setAttribute('aria-disabled', String(this.disabled));
+      this.ref.dropzone.tabIndex = this.disabled ? -1 : 0;
     }
   }
 
@@ -151,6 +164,9 @@ class FileUpload extends Symbiote {
     }
 
     this.#renderFileList();
+
+    const added = accepted.length;
+    this.#announce(`${added} file${added === 1 ? '' : 's'} added. ${this.#files.length} selected.`);
 
     this.dispatchEvent(new CustomEvent('sn-file-select', {
       bubbles: true,
@@ -209,8 +225,10 @@ class FileUpload extends Symbiote {
       const removeBtn = document.createElement('button');
       removeBtn.type = 'button';
       removeBtn.className = 'sn-file-item-remove';
+      removeBtn.setAttribute('aria-label', `Remove ${file.name}`);
       const removeIcon = document.createElement('span');
       removeIcon.className = 'material-symbols-outlined';
+      removeIcon.setAttribute('aria-hidden', 'true');
       removeIcon.textContent = 'close';
       removeBtn.appendChild(removeIcon);
       removeBtn.addEventListener('click', (event) => {
@@ -224,10 +242,18 @@ class FileUpload extends Symbiote {
     });
   }
 
+  #announce(message) {
+    if (this.ref.liveRegion) {
+      this.ref.liveRegion.textContent = message;
+    }
+  }
+
   #removeFileIndex(index) {
     const removedFile = this.#files[index];
     this.#files.splice(index, 1);
     this.#renderFileList();
+
+    this.#announce(`${removedFile?.name || 'File'} removed. ${this.#files.length} selected.`);
 
     this.dispatchEvent(new CustomEvent('sn-file-remove', {
       bubbles: true,
