@@ -7,7 +7,7 @@ export default html`
       <input ref="input"
              type="text"
              class="sn-combobox-input"
-             placeholder="{{placeholder}}"
+             ${{ '@placeholder': 'placeholder' }}
              role="combobox"
              aria-autocomplete="list"
              aria-expanded="false" />

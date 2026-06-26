@@ -5,8 +5,7 @@ export default html`
        class="sn-listbox"
        role="listbox"
        tabindex="0"
-       aria-label="{{label}}"
-       aria-activedescendant="{{activeId}}">
+       ${{ '@aria-label': 'label', '@aria-activedescendant': 'activeId' }}>
     <slot></slot>
   </div>
 `;

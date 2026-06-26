@@ -1,7 +1,7 @@
 import { html } from '@symbiotejs/symbiote';
 
 export default html`
-  <dialog ref="dialog" class="sn-dialog" aria-label="{{label}}">
+  <dialog ref="dialog" class="sn-dialog" ${{ '@aria-label': 'label' }}>
     <div class="sn-dialog-panel">
       <header class="sn-dialog-header">
         <slot name="title"><h2 class="sn-dialog-title">{{label}}</h2></slot>
