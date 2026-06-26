@@ -619,6 +619,94 @@ test('sn-segmented-control coordinates roving focus and selection', async () => 
   el.remove();
 });
 
+test('sn-transport drives playback intents, time display, and scrubber without owning media', async () => {
+  installSsrDom();
+  await import('../control/Transport/Transport.js');
+
+  const el = document.createElement('sn-transport');
+  el.duration = 300;
+  el.fps = 30;
+  el.current = 60;
+  document.body.append(el);
+  await nextRenderTick();
+
+  // 60 frames / 30 fps = 2s of 300/30 = 10s.
+  assert.equal(el.ref.time.textContent, '0:02 / 0:10');
+  assert.equal(el.ref.playIcon.hasAttribute('hidden'), false);
+  assert.equal(el.ref.pauseIcon.hasAttribute('hidden'), true);
+  assert.equal(el.ref.scrub.hasAttribute('hidden'), true, 'scrubber hidden until show-scrub');
+
+  let controlChange = null;
+  let playEvent = null;
+  el.addEventListener('sn-control-change', (e) => { controlChange = e.detail; });
+  el.addEventListener('sn-transport-play', (e) => { playEvent = e.detail; });
+
+  el.ref.playBtn.dispatchEvent(new window.Event('click', { bubbles: true }));
+  await nextRenderTick();
+
+  assert.equal(el.playing, true);
+  assert.equal(playEvent.playing, true);
+  assert.equal(controlChange.control, 'transport');
+  assert.equal(controlChange.action, 'play');
+  assert.equal(el.ref.playIcon.hasAttribute('hidden'), true);
+  assert.equal(el.ref.pauseIcon.hasAttribute('hidden'), false);
+  assert.equal(el.ref.playBtn.getAttribute('aria-label'), 'Pause');
+
+  let pauseEvent = null;
+  el.addEventListener('sn-transport-pause', (e) => { pauseEvent = e.detail; });
+  el.ref.playBtn.dispatchEvent(new window.Event('click', { bubbles: true }));
+  await nextRenderTick();
+  assert.equal(el.playing, false);
+  assert.equal(pauseEvent.playing, false);
+
+  let stepEvent = null;
+  el.addEventListener('sn-transport-step', (e) => { stepEvent = e.detail; });
+  el.ref.stepForwardBtn.dispatchEvent(new window.Event('click', { bubbles: true }));
+  assert.equal(stepEvent.dir, 1);
+  el.ref.stepBackBtn.dispatchEvent(new window.Event('click', { bubbles: true }));
+  assert.equal(stepEvent.dir, -1);
+
+  let skipEvent = null;
+  el.addEventListener('sn-transport-skip', (e) => { skipEvent = e.detail; });
+  el.ref.skipEndBtn.dispatchEvent(new window.Event('click', { bubbles: true }));
+  assert.equal(skipEvent.to, 'end');
+  el.ref.skipStartBtn.dispatchEvent(new window.Event('click', { bubbles: true }));
+  assert.equal(skipEvent.to, 'start');
+
+  let stopEvent = null;
+  el.playing = true;
+  el.addEventListener('sn-transport-stop', (e) => { stopEvent = e.detail; });
+  el.ref.stopBtn.dispatchEvent(new window.Event('click', { bubbles: true }));
+  assert.equal(stopEvent.playing, false);
+  assert.equal(el.playing, false);
+
+  el.showScrub = true;
+  await nextRenderTick();
+  assert.equal(el.ref.scrub.hasAttribute('hidden'), false);
+  assert.equal(el.ref.scrub.max, '300');
+
+  let seekEvent = null;
+  el.addEventListener('sn-transport-seek', (e) => { seekEvent = e.detail; });
+  el.ref.scrub.value = '150';
+  el.ref.scrub.dispatchEvent(new window.Event('input', { bubbles: true }));
+  await nextRenderTick();
+  assert.equal(seekEvent.value, 150);
+  assert.equal(seekEvent.frame, 150);
+  assert.equal(el.current, 150);
+
+  // Disabled blocks intents and disables controls.
+  el.setAttribute('disabled', '');
+  await nextRenderTick();
+  assert.equal(el.getAttribute('aria-disabled'), 'true');
+  assert.equal(el.ref.playBtn.disabled, true);
+  let blockedFire = false;
+  el.addEventListener('sn-transport-skip', () => { blockedFire = true; });
+  el.ref.skipEndBtn.dispatchEvent(new window.Event('click', { bubbles: true }));
+  assert.equal(blockedFire, false, 'disabled transport ignores actions');
+
+  el.remove();
+});
+
 test('sn-tooltip links trigger a11y description and controls popup overlay state', async () => {
   installSsrDom();
   await import('../display/Tooltip/Tooltip.js');

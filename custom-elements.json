@@ -15596,6 +15596,598 @@
       ]
     },
     {
+      "path": "control/Transport/Transport.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "customElement": true,
+          "name": "Transport",
+          "tagName": "sn-transport",
+          "description": "Standalone media/timeline transport bar that drives a host timeline or viewport through events without owning a media element.",
+          "componentDescription": "Standalone media/timeline transport bar that drives a host timeline or viewport through events without owning a media element. Use this form and command control when composing control UI. Capabilities: transport, playback-control, timeline-control, themeable. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "attributes": [
+            {
+              "name": "playing",
+              "type": {
+                "text": "boolean"
+              },
+              "description": "Whether playback is running."
+            },
+            {
+              "name": "current",
+              "type": {
+                "text": "number"
+              },
+              "description": "Current playhead frame."
+            },
+            {
+              "name": "duration",
+              "type": {
+                "text": "number"
+              },
+              "description": "Total timeline length in frames."
+            },
+            {
+              "name": "fps",
+              "type": {
+                "text": "number"
+              },
+              "description": "Frames per second used to derive the time display."
+            },
+            {
+              "name": "disabled",
+              "type": {
+                "text": "boolean"
+              },
+              "description": "Disables all transport controls."
+            },
+            {
+              "name": "show-scrub",
+              "type": {
+                "text": "boolean"
+              },
+              "description": "Shows the range scrubber."
+            }
+          ],
+          "members": [
+            {
+              "kind": "field",
+              "name": "playing",
+              "type": {
+                "text": "boolean"
+              },
+              "description": "Whether playback is running."
+            },
+            {
+              "kind": "field",
+              "name": "current",
+              "type": {
+                "text": "number"
+              },
+              "description": "Current playhead frame."
+            },
+            {
+              "kind": "field",
+              "name": "duration",
+              "type": {
+                "text": "number"
+              },
+              "description": "Total timeline length in frames."
+            },
+            {
+              "kind": "field",
+              "name": "fps",
+              "type": {
+                "text": "number"
+              },
+              "description": "Frames per second used to derive the time display."
+            },
+            {
+              "kind": "field",
+              "name": "disabled",
+              "type": {
+                "text": "boolean"
+              },
+              "description": "Disables all transport controls."
+            },
+            {
+              "kind": "field",
+              "name": "showScrub",
+              "type": {
+                "text": "boolean"
+              },
+              "description": "Shows the range scrubber."
+            }
+          ],
+          "events": [
+            {
+              "name": "sn-control-change",
+              "description": "Emits on any transport action.",
+              "detail": [
+                {
+                  "name": "action",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "sn-transport-play",
+              "description": "Emits when playback starts.",
+              "detail": [
+                {
+                  "name": "playing",
+                  "type": {
+                    "text": "boolean"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "sn-transport-pause",
+              "description": "Emits when playback pauses.",
+              "detail": [
+                {
+                  "name": "playing",
+                  "type": {
+                    "text": "boolean"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "sn-transport-stop",
+              "description": "Emits when playback stops.",
+              "detail": [
+                {
+                  "name": "playing",
+                  "type": {
+                    "text": "boolean"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "sn-transport-step",
+              "description": "Emits when stepping one frame.",
+              "detail": [
+                {
+                  "name": "dir",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "sn-transport-skip",
+              "description": "Emits when skipping to start or end.",
+              "detail": [
+                {
+                  "name": "to",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "sn-transport-seek",
+              "description": "Emits when scrubbing the timeline.",
+              "detail": [
+                {
+                  "name": "value",
+                  "type": {
+                    "text": "number"
+                  }
+                },
+                {
+                  "name": "frame",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ]
+            }
+          ],
+          "cssProperties": [
+            {
+              "name": "--sn-transport-bg",
+              "description": "Theme CSS custom property consumed by sn-transport."
+            },
+            {
+              "name": "--sn-transport-fg",
+              "description": "Theme CSS custom property consumed by sn-transport."
+            },
+            {
+              "name": "--sn-transport-accent",
+              "description": "Theme CSS custom property consumed by sn-transport."
+            },
+            {
+              "name": "--sn-transport-btn-hover",
+              "description": "Theme CSS custom property consumed by sn-transport."
+            },
+            {
+              "name": "--sn-transport-radius",
+              "description": "Theme CSS custom property consumed by sn-transport."
+            },
+            {
+              "name": "--sn-transport-gap",
+              "description": "Theme CSS custom property consumed by sn-transport."
+            }
+          ],
+          "contract": {
+            "capabilities": [
+              "transport",
+              "playback-control",
+              "timeline-control",
+              "themeable"
+            ],
+            "attributes": [
+              {
+                "name": "playing",
+                "type": "boolean",
+                "description": "Whether playback is running."
+              },
+              {
+                "name": "current",
+                "type": "number",
+                "description": "Current playhead frame."
+              },
+              {
+                "name": "duration",
+                "type": "number",
+                "description": "Total timeline length in frames."
+              },
+              {
+                "name": "fps",
+                "type": "number",
+                "description": "Frames per second used to derive the time display."
+              },
+              {
+                "name": "disabled",
+                "type": "boolean",
+                "description": "Disables all transport controls."
+              },
+              {
+                "name": "show-scrub",
+                "type": "boolean",
+                "description": "Shows the range scrubber."
+              }
+            ],
+            "properties": [
+              {
+                "name": "playing",
+                "type": "boolean",
+                "description": "Whether playback is running."
+              },
+              {
+                "name": "current",
+                "type": "number",
+                "description": "Current playhead frame."
+              },
+              {
+                "name": "duration",
+                "type": "number",
+                "description": "Total timeline length in frames."
+              },
+              {
+                "name": "fps",
+                "type": "number",
+                "description": "Frames per second used to derive the time display."
+              },
+              {
+                "name": "disabled",
+                "type": "boolean",
+                "description": "Disables all transport controls."
+              },
+              {
+                "name": "showScrub",
+                "type": "boolean",
+                "description": "Shows the range scrubber."
+              }
+            ],
+            "methods": [],
+            "events": [
+              {
+                "name": "sn-control-change",
+                "description": "Emits on any transport action.",
+                "detail": [
+                  {
+                    "name": "action",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "name": "sn-transport-play",
+                "description": "Emits when playback starts.",
+                "detail": [
+                  {
+                    "name": "playing",
+                    "type": "boolean"
+                  }
+                ]
+              },
+              {
+                "name": "sn-transport-pause",
+                "description": "Emits when playback pauses.",
+                "detail": [
+                  {
+                    "name": "playing",
+                    "type": "boolean"
+                  }
+                ]
+              },
+              {
+                "name": "sn-transport-stop",
+                "description": "Emits when playback stops.",
+                "detail": [
+                  {
+                    "name": "playing",
+                    "type": "boolean"
+                  }
+                ]
+              },
+              {
+                "name": "sn-transport-step",
+                "description": "Emits when stepping one frame.",
+                "detail": [
+                  {
+                    "name": "dir",
+                    "type": "number"
+                  }
+                ]
+              },
+              {
+                "name": "sn-transport-skip",
+                "description": "Emits when skipping to start or end.",
+                "detail": [
+                  {
+                    "name": "to",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "name": "sn-transport-seek",
+                "description": "Emits when scrubbing the timeline.",
+                "detail": [
+                  {
+                    "name": "value",
+                    "type": "number"
+                  },
+                  {
+                    "name": "frame",
+                    "type": "number"
+                  }
+                ]
+              }
+            ],
+            "slots": [],
+            "themeAliases": [
+              "--sn-transport-bg",
+              "--sn-transport-fg",
+              "--sn-transport-accent",
+              "--sn-transport-btn-hover",
+              "--sn-transport-radius",
+              "--sn-transport-gap"
+            ],
+            "status": "draft",
+            "schemaVersion": "component-descriptor-v2",
+            "dataSchema": "schemas/runtime-ui-v1.json",
+            "ssr": {
+              "mode": "jsda-ssr-renderable",
+              "importSafe": false,
+              "jsdaRenderable": true,
+              "requiresDom": true,
+              "browserApis": [],
+              "notes": "Import after JSDA/linkedom installs DOM globals; verify rendering with JSDA SSR smoke tests."
+            }
+          },
+          "agent": {
+            "componentDescription": "Standalone media/timeline transport bar that drives a host timeline or viewport through events without owning a media element. Use this form and command control when composing control UI. Capabilities: transport, playback-control, timeline-control, themeable. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "form and command control",
+            "usage": "Render or compose <sn-transport> when the host needs standalone media/timeline transport bar that drives a host timeline or viewport through events without owning a media element.",
+            "dataOwnership": "host-owned props and attributes; component owns presentation state",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          },
+          "metadata": {
+            "contract": {
+              "capabilities": [
+                "transport",
+                "playback-control",
+                "timeline-control",
+                "themeable"
+              ],
+              "attributes": [
+                {
+                  "name": "playing",
+                  "type": "boolean",
+                  "description": "Whether playback is running."
+                },
+                {
+                  "name": "current",
+                  "type": "number",
+                  "description": "Current playhead frame."
+                },
+                {
+                  "name": "duration",
+                  "type": "number",
+                  "description": "Total timeline length in frames."
+                },
+                {
+                  "name": "fps",
+                  "type": "number",
+                  "description": "Frames per second used to derive the time display."
+                },
+                {
+                  "name": "disabled",
+                  "type": "boolean",
+                  "description": "Disables all transport controls."
+                },
+                {
+                  "name": "show-scrub",
+                  "type": "boolean",
+                  "description": "Shows the range scrubber."
+                }
+              ],
+              "properties": [
+                {
+                  "name": "playing",
+                  "type": "boolean",
+                  "description": "Whether playback is running."
+                },
+                {
+                  "name": "current",
+                  "type": "number",
+                  "description": "Current playhead frame."
+                },
+                {
+                  "name": "duration",
+                  "type": "number",
+                  "description": "Total timeline length in frames."
+                },
+                {
+                  "name": "fps",
+                  "type": "number",
+                  "description": "Frames per second used to derive the time display."
+                },
+                {
+                  "name": "disabled",
+                  "type": "boolean",
+                  "description": "Disables all transport controls."
+                },
+                {
+                  "name": "showScrub",
+                  "type": "boolean",
+                  "description": "Shows the range scrubber."
+                }
+              ],
+              "methods": [],
+              "events": [
+                {
+                  "name": "sn-control-change",
+                  "description": "Emits on any transport action.",
+                  "detail": [
+                    {
+                      "name": "action",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "name": "sn-transport-play",
+                  "description": "Emits when playback starts.",
+                  "detail": [
+                    {
+                      "name": "playing",
+                      "type": "boolean"
+                    }
+                  ]
+                },
+                {
+                  "name": "sn-transport-pause",
+                  "description": "Emits when playback pauses.",
+                  "detail": [
+                    {
+                      "name": "playing",
+                      "type": "boolean"
+                    }
+                  ]
+                },
+                {
+                  "name": "sn-transport-stop",
+                  "description": "Emits when playback stops.",
+                  "detail": [
+                    {
+                      "name": "playing",
+                      "type": "boolean"
+                    }
+                  ]
+                },
+                {
+                  "name": "sn-transport-step",
+                  "description": "Emits when stepping one frame.",
+                  "detail": [
+                    {
+                      "name": "dir",
+                      "type": "number"
+                    }
+                  ]
+                },
+                {
+                  "name": "sn-transport-skip",
+                  "description": "Emits when skipping to start or end.",
+                  "detail": [
+                    {
+                      "name": "to",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "name": "sn-transport-seek",
+                  "description": "Emits when scrubbing the timeline.",
+                  "detail": [
+                    {
+                      "name": "value",
+                      "type": "number"
+                    },
+                    {
+                      "name": "frame",
+                      "type": "number"
+                    }
+                  ]
+                }
+              ],
+              "slots": [],
+              "themeAliases": [
+                "--sn-transport-bg",
+                "--sn-transport-fg",
+                "--sn-transport-accent",
+                "--sn-transport-btn-hover",
+                "--sn-transport-radius",
+                "--sn-transport-gap"
+              ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
+              "ssr": {
+                "mode": "jsda-ssr-renderable",
+                "importSafe": false,
+                "jsdaRenderable": true,
+                "requiresDom": true,
+                "browserApis": [],
+                "notes": "Import after JSDA/linkedom installs DOM globals; verify rendering with JSDA SSR smoke tests."
+              }
+            }
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "custom-element-definition",
+          "name": "sn-transport",
+          "declaration": {
+            "name": "Transport"
+          }
+        }
+      ]
+    },
+    {
       "path": "control/Select/Select.js",
       "declarations": [
         {

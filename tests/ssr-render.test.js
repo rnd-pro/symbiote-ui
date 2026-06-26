@@ -112,6 +112,11 @@ const fixtures = {
     el.innerHTML = '<button value="a">A</button>';
     return 'A';
   },
+  'sn-transport': (el) => {
+    el.duration = 300;
+    el.fps = 30;
+    return '0:00 / 0:10';
+  },
   'sn-tooltip': (el) => {
     el.content = 'Info';
     el.innerHTML = '<button>Hover</button>';

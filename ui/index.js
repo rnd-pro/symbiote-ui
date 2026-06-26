@@ -256,6 +256,7 @@ export let SurfaceCard;
 export let SliderControl;
 export let RatingControl;
 export let SegmentedControl;
+export let Transport;
 export let Tooltip;
 export let OutputListPreview;
 export let OutputGraphPreview;
@@ -655,6 +656,7 @@ if (hasDOMGlobals) {
     sliderControl,
     ratingControl,
     segmentedControl,
+    transport,
     tooltip,
     dialog,
     select,
@@ -756,6 +758,7 @@ if (hasDOMGlobals) {
     import('../control/Slider/Slider.js'),
     import('../control/Rating/Rating.js'),
     import('../control/SegmentedControl/SegmentedControl.js'),
+    import('../control/Transport/Transport.js'),
     import('../display/Tooltip/Tooltip.js'),
     import('../surface/Dialog/Dialog.js'),
     import('../control/Select/Select.js'),
@@ -871,6 +874,7 @@ if (hasDOMGlobals) {
   ({ SliderControl } = sliderControl);
   ({ RatingControl } = ratingControl);
   ({ SegmentedControl } = segmentedControl);
+  ({ Transport } = transport);
   ({ Tooltip } = tooltip);
   ({ Dialog } = dialog);
   ({ Select } = select);
@@ -974,6 +978,7 @@ if (hasDOMGlobals) {
     SliderControl,
     RatingControl,
     SegmentedControl,
+    Transport,
     Tooltip,
     Dialog,
     Select,
