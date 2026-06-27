@@ -101,6 +101,10 @@
       "import": "./themes/Motion.js",
       "default": "./themes/Motion.js"
     },
+    "./notifications": {
+      "import": "./notifications/notification-queue.js",
+      "default": "./notifications/notification-queue.js"
+    },
     "./themes/TailwindBridge": {
       "import": "./themes/TailwindBridge.js",
       "default": "./themes/TailwindBridge.js"
@@ -132,6 +136,7 @@
     "locale/",
     "xr/",
     "navigation/",
+    "notifications/",
     "display/",
     "effects/",
     "control/",
