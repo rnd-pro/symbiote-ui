@@ -133,6 +133,20 @@ const EN_MESSAGES = Object.freeze({
   'sourceViewer.showInGraph': 'Show in Graph',
   'sourceViewer.toggleViewMode': 'Toggle view mode',
   'sourceViewer.graphLabel': 'graph',
+  'notification.title': 'Notifications',
+  'notification.empty': 'No notifications',
+  'notification.muteNarration': 'Mute narration',
+  'notification.unmuteNarration': 'Unmute narration',
+  'notification.depth.terse': 'Brief',
+  'notification.depth.chatty': 'Detailed',
+  'notification.event.taskCreated': 'Task created',
+  'notification.event.taskMoved': 'Task moved',
+  'notification.event.taskStarted': 'Task started',
+  'notification.event.taskCompleted': 'Task completed',
+  'notification.event.taskFailed': 'Task failed',
+  'notification.event.taskBlocked': 'Task blocked',
+  'notification.event.approvalRequired': 'Approval required',
+  'notification.event.agentMessage': 'Agent message',
 });
 
 const RU_MESSAGES = Object.freeze({
@@ -255,6 +269,20 @@ const RU_MESSAGES = Object.freeze({
   'sourceViewer.showInGraph': 'Показать в графе',
   'sourceViewer.toggleViewMode': 'Переключить режим просмотра',
   'sourceViewer.graphLabel': 'граф',
+  'notification.title': 'Уведомления',
+  'notification.empty': 'Нет уведомлений',
+  'notification.muteNarration': 'Отключить озвучку',
+  'notification.unmuteNarration': 'Включить озвучку',
+  'notification.depth.terse': 'Кратко',
+  'notification.depth.chatty': 'Подробно',
+  'notification.event.taskCreated': 'Задача создана',
+  'notification.event.taskMoved': 'Задача перемещена',
+  'notification.event.taskStarted': 'Задача запущена',
+  'notification.event.taskCompleted': 'Задача завершена',
+  'notification.event.taskFailed': 'Задача провалена',
+  'notification.event.taskBlocked': 'Задача заблокирована',
+  'notification.event.approvalRequired': 'Требуется подтверждение',
+  'notification.event.agentMessage': 'Сообщение агента',
 });
 
 const ES_MESSAGES = Object.freeze({
@@ -377,6 +405,20 @@ const ES_MESSAGES = Object.freeze({
   'sourceViewer.showInGraph': 'Mostrar en grafo',
   'sourceViewer.toggleViewMode': 'Alternar modo de vista',
   'sourceViewer.graphLabel': 'grafo',
+  'notification.title': 'Notificaciones',
+  'notification.empty': 'Sin notificaciones',
+  'notification.muteNarration': 'Silenciar narración',
+  'notification.unmuteNarration': 'Activar narración',
+  'notification.depth.terse': 'Breve',
+  'notification.depth.chatty': 'Detallado',
+  'notification.event.taskCreated': 'Tarea creada',
+  'notification.event.taskMoved': 'Tarea movida',
+  'notification.event.taskStarted': 'Tarea iniciada',
+  'notification.event.taskCompleted': 'Tarea completada',
+  'notification.event.taskFailed': 'Tarea fallida',
+  'notification.event.taskBlocked': 'Tarea bloqueada',
+  'notification.event.approvalRequired': 'Aprobación requerida',
+  'notification.event.agentMessage': 'Mensaje del agente',
 });
 
 export const LOCALE_CATALOGS = Object.freeze({
