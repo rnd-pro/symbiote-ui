@@ -8,3 +8,5 @@ scratch/
 .agent-portal
 catalog/dist/
 _site/
+
+.agent-portal-worktrees/

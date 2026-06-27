@@ -1,4 +1,5 @@
 import { matchVoiceCommandInText } from './voice-input-defaults.js';
+import { VOICE_ARBITRATION_ROLES } from './voice-arbitration.js';
 
 export const VOICE_MICROPHONE_DENIED_MESSAGE = 'Microphone access denied. Check browser microphone permissions.';
 export const VOICE_WAKE_UNSUPPORTED_MESSAGE = 'Continuous listening requires browser speech recognition.';
@@ -47,6 +48,7 @@ export class VoiceController {
     onSpeechStart = () => {},
     onSpeechEnd = () => {},
     onWakeError = () => {},
+    arbitration = null,
   } = {}) {
     this.getLanguage = getLanguage;
     this.getWakeCandidates = getWakeCandidates;
@@ -54,6 +56,7 @@ export class VoiceController {
     this.onSpeechStart = onSpeechStart;
     this.onSpeechEnd = onSpeechEnd;
     this.onWakeError = onWakeError;
+    this.arbitration = arbitration;
 
     this.wakeEnabled = false;
     this.wakePaused = false;
@@ -62,6 +65,8 @@ export class VoiceController {
     this._wakeRecognition = null;
     this._speechUtterance = null;
     this._wakeTimeout = null;
+    this._listenToken = null;
+    this._speechToken = null;
   }
 
   static get hasSpeechRecognition() {
@@ -156,6 +161,7 @@ export class VoiceController {
       };
 
       recognition.start();
+      this._acquireListenFloor();
     } catch (err) {
       this.wakeEnabled = false;
       this.wakePaused = false;
@@ -168,7 +174,43 @@ export class VoiceController {
     }
   }
 
+  _acquireListenFloor() {
+    if (!this.arbitration || this._listenToken) return;
+    this._listenToken = this.arbitration.request({
+      role: VOICE_ARBITRATION_ROLES.listening,
+      onPreempt: () => {
+        this._listenToken = null;
+      },
+    });
+  }
+
+  _releaseListenFloor() {
+    if (this._listenToken) {
+      this.arbitration?.release(this._listenToken);
+      this._listenToken = null;
+    }
+  }
+
+  _acquireSpeechFloor() {
+    if (!this.arbitration || this._speechToken) return;
+    this._speechToken = this.arbitration.request({
+      role: VOICE_ARBITRATION_ROLES.speech,
+      onPreempt: () => {
+        this._speechToken = null;
+        this.cancelSpeech();
+      },
+    });
+  }
+
+  _releaseSpeechFloor() {
+    if (this._speechToken) {
+      this.arbitration?.release(this._speechToken);
+      this._speechToken = null;
+    }
+  }
+
   _stopWakeRecognition() {
+    this._releaseListenFloor();
     if (this._wakeTimeout) {
       clearTimeout(this._wakeTimeout);
       this._wakeTimeout = null;
@@ -190,6 +232,7 @@ export class VoiceController {
     this.cancelSpeech();
 
     this.pauseWake();
+    this._acquireSpeechFloor();
     this.speaking = true;
     this.onSpeechStart();
 
@@ -201,6 +244,7 @@ export class VoiceController {
       if (this._speechUtterance === utterance) {
         this.speaking = false;
         this._speechUtterance = null;
+        this._releaseSpeechFloor();
         this.onSpeechEnd();
         this.resumeWake();
       }
@@ -219,6 +263,7 @@ export class VoiceController {
       globalThis.speechSynthesis.cancel();
       this.speaking = false;
       this._speechUtterance = null;
+      this._releaseSpeechFloor();
       this.onSpeechEnd();
       this.resumeWake();
     }

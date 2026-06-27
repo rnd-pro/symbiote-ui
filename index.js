@@ -198,3 +198,23 @@ export {
   createNotificationQueue,
   createNotificationDebouncer,
 } from './notifications/notification-queue.js';
+
+export {
+  DEFAULT_VOICE_ARBITRATION_PRIORITIES,
+  VOICE_ARBITRATION_ROLES,
+  VoiceArbitrationChannel,
+  getDefaultVoiceArbitrationChannel,
+  resetDefaultVoiceArbitrationChannel,
+} from './chat/voice-arbitration.js';
+
+export {
+  DEFAULT_NARRATION_DEPTH,
+  DEFAULT_NARRATION_EVENT,
+  NARRATION_DEPTHS,
+  NOTIFICATION_EVENT_TYPES,
+  composeNarration,
+  listNarrationVariants,
+  selectNarrationPhrase,
+} from './chat/notification-phrases.js';
+
+export { NotificationNarrator } from './chat/notification-narrator.js';

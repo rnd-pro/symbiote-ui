@@ -10,6 +10,10 @@ import {
   voiceStartErrorMessage,
   voiceWakeStartErrorMessage,
 } from '../chat/voice-controller.js';
+import {
+  VoiceArbitrationChannel,
+  VOICE_ARBITRATION_ROLES,
+} from '../chat/voice-arbitration.js';
 
 function defineGlobal(name, value) {
   let descriptor = Object.getOwnPropertyDescriptor(globalThis, name);
@@ -287,6 +291,58 @@ test('VoiceController speech synthesis lifecycle with mocked speechSynthesis', a
     assert.equal(speechEnded, 2);
     assert.equal(controller.wakePaused, false);
     assert.equal(cancelCalled, 3); // Cancel is called in cancelSpeech and inside speak (before start)
+  } finally {
+    restoreWindow();
+    restoreUtterance();
+    restoreSpeechSynthesis();
+  }
+});
+
+test('VoiceController honors the shared arbitration channel for listen and speech floors', async () => {
+  let restoreSpeechSynthesis = defineGlobal('speechSynthesis', {
+    speak(utterance) {
+      setTimeout(() => utterance.onend?.(), 0);
+    },
+    cancel() {},
+  });
+  let restoreUtterance = defineGlobal('SpeechSynthesisUtterance', class {
+    constructor(text) {
+      this.text = text;
+      this.lang = '';
+    }
+  });
+  let restoreWindow = defineGlobal('window', {
+    SpeechRecognition: class {
+      start() {}
+      abort() {}
+    }
+  });
+
+  try {
+    let channel = new VoiceArbitrationChannel();
+    const controller = new VoiceController({ arbitration: channel });
+
+    // Active wake listening must hold the listening floor.
+    controller.startWake();
+    assert.equal(channel.activeRole, VOICE_ARBITRATION_ROLES.listening);
+    // Background narration cannot speak over an active mic.
+    assert.equal(channel.request({ role: VOICE_ARBITRATION_ROLES.notification }), null);
+
+    // Speaking swaps the listening floor for the speech floor.
+    controller.speak('hello');
+    assert.equal(controller.speaking, true);
+    assert.equal(channel.activeRole, VOICE_ARBITRATION_ROLES.speech);
+    // Notification narration still yields to chat speech.
+    assert.equal(channel.request({ role: VOICE_ARBITRATION_ROLES.notification }), null);
+
+    // Finishing speech releases the speech floor and resumes the listening floor.
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    assert.equal(controller.speaking, false);
+    assert.equal(channel.activeRole, VOICE_ARBITRATION_ROLES.listening);
+
+    // Stopping wake fully frees the channel.
+    controller.stopWake({ disableMode: true });
+    assert.equal(channel.isBusy, false);
   } finally {
     restoreWindow();
     restoreUtterance();
