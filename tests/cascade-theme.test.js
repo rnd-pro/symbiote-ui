@@ -1408,6 +1408,8 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(codeBlock, /--sn-markdown-h4-size/);
   assert.match(codeBlock, /--sn-code-font-size/);
   assert.match(codeBlock, /--sn-code-padding/);
+  assert.match(codeBlock, /--sn-code-table-row-hover-bg, var\(--sn-bg\)/);
+  assert.doesNotMatch(codeBlock, /md-table tr:hover td \{\s*background: var\(--sn-bg-overlay\);/);
   assert.match(chatMessage, /--sn-chat-markdown-h1-size/);
   assert.match(chatMessage, /--sn-chat-markdown-h4-size/);
   assert.match(chatMessage, /--sn-chat-message-font-size/);

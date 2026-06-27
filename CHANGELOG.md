@@ -4,6 +4,13 @@ All notable changes to `symbiote-ui` will be documented in this file.
 
 ## Unreleased
 
+## [0.3.0-alpha.50] - 2026-06-27
+
+### Fixed
+
+- Kept markdown table row hover backgrounds on the active theme background
+  instead of using the dark overlay/backdrop token.
+
 ## [0.3.0-alpha.49] - 2026-06-27
 
 ### Fixed

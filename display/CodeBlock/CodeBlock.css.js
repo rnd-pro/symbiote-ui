@@ -164,7 +164,7 @@ export default `
     font-weight: 600;
   }
   code-block .md-table tr:hover td {
-    background: var(--sn-bg-overlay);
+    background: var(--sn-code-table-row-hover-bg, var(--sn-bg));
   }
   /* Token colors */
   code-block .t-kw   { color: var(--sn-syntax-keyword); }
