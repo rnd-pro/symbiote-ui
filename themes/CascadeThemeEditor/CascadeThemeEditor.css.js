@@ -15,7 +15,7 @@ export default css`
 
     .cte-shell {
       display: grid;
-      grid-template-rows: auto auto minmax(0, 1fr) auto;
+      grid-template-rows: auto auto auto minmax(0, 1fr) auto;
       gap: var(--sn-theme-editor-gap, var(--sn-lab-panel-gap, 12px));
       height: 100%;
       min-height: 0;

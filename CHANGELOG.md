@@ -4,6 +4,14 @@ All notable changes to `symbiote-ui` will be documented in this file.
 
 ## Unreleased
 
+## [0.3.0-alpha.48] - 2026-06-27
+
+### Fixed
+
+- Kept the full cascade theme editor controls in separate grid rows after the
+  geometry register toggle was added, preventing overlap in narrow layout
+  panels.
+
 ## [0.3.0-alpha.46] - 2026-06-20
 
 ### Changed
