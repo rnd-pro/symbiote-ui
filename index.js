@@ -189,3 +189,12 @@ export {
   normalizeVoiceCommandSettings,
   normalizeVoiceLanguageMode,
 } from './chat/voice-settings.js';
+
+export {
+  SEVERITY_RANK,
+  severityRank,
+  normalizeNotificationItem,
+  notificationKey,
+  createNotificationQueue,
+  createNotificationDebouncer,
+} from './notifications/notification-queue.js';
