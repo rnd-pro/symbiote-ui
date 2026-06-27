@@ -682,7 +682,7 @@ test('canvas graph refreshes cached flat renderer colors from cascade theme chan
   assert.match(source, /this\._themeObserver\.observe\(source, \{ attributes: true, attributeFilter: \['class', 'style'\] \}\)/);
   assert.match(source, /this\.syncCanvasTheme\(\);\n\s+this\.needsDraw = true;\n\s+this\._wakeLoop\(\);/);
   assert.match(source, /this\._edgeRgb = readThemeRgbAny\(this, \['--sn-canvas-graph-edge', '--sn-conn-color', '--sn-node-selected'\], this\._edgeRgb\)/);
-  assert.match(source, /this\._panelBgRgb = readThemeRgbAny\(this, \['--sn-canvas-graph-panel-bg', '--sn-panel-bg', '--sn-node-bg', '--sn-bg'\], this\._panelBgRgb\)/);
+  assert.match(source, /this\._panelBgRgb = readThemeRgbAny\(\s*this,\s*\['--sn-canvas-graph-panel-bg', '--sn-canvas-graph-bg', '--sn-bg', '--sn-panel-bg', '--sn-node-bg'\],\s*this\._bgRgb\s*\)/);
   assert.match(source, /this\._panelBorderRgb = readThemeRgbAny\(this, \['--sn-canvas-graph-panel-border', '--sn-node-border', '--sn-outline-color-soft', '--sn-text-dim'\], this\._panelBorderRgb\)/);
   assert.match(source, /this\._menuIconRgb = readThemeRgbAny\(this, \['--sn-canvas-graph-radial-icon', '--sn-panel-bg', '--sn-bg'\], this\._menuIconRgb\)/);
   assert.match(source, /this\._ghostRgb = readThemeRgbAny\(this, \['--sn-canvas-graph-ghost', '--sn-text-dim', '--sn-node-hover'\], this\._ghostRgb\)/);
@@ -713,7 +713,7 @@ test('node type color tokens are canonical across themes and graph aliases', asy
   assert.match(cascadeSource, /'--sn-type-action': typeAction/);
   assert.match(cascadeSource, /'--sn-graph-type-action': 'var\(--sn-type-action\)'/);
   assert.match(cascadeSource, /'--sn-graph-type-project': 'var\(--sn-type-project\)'/);
-  assert.match(cascadeSource, /'--sn-canvas-graph-panel-bg': 'var\(--sn-panel-bg\)'/);
+  assert.match(cascadeSource, /'--sn-canvas-graph-panel-bg': 'var\(--sn-canvas-graph-bg\)'/);
   assert.match(cascadeSource, /'--sn-type-source': 'var\(--sn-cat-server\)'/);
   assert.equal(theme.tokens['--sn-type-output'].startsWith('hsl('), true);
   assert.equal(theme.tokens['--sn-type-config'].startsWith('hsl('), true);
@@ -724,7 +724,7 @@ test('node type color tokens are canonical across themes and graph aliases', asy
   assert.equal(theme.tokens['--sn-conn-color'], 'var(--sn-node-selected)');
   assert.equal(theme.tokens['--sn-conn-selected'], 'var(--sn-danger-color)');
   assert.equal(theme.tokens['--sn-conn-dot-fill'], 'var(--sn-conn-color)');
-  assert.equal(theme.tokens['--sn-canvas-graph-panel-bg'], 'var(--sn-panel-bg)');
+  assert.equal(theme.tokens['--sn-canvas-graph-panel-bg'], 'var(--sn-canvas-graph-bg)');
   assert.equal(theme.tokens['--sn-canvas-graph-edge'], 'var(--sn-conn-color)');
   assert.equal(theme.tokens['--sn-toolbar-bg'], 'color-mix(in oklab, var(--sn-panel-bg) 94%, transparent)');
   assert.equal(theme.tokens['--sn-toolbar-border'], theme.tokens['--sn-outline-color']);
@@ -734,6 +734,7 @@ test('node type color tokens are canonical across themes and graph aliases', asy
   assert.equal(theme.tokens['--sn-toolbar-title-color'], 'var(--sn-text)');
   assert.equal(defaultProviderTheme.DEFAULT_PROVIDER_THEME.tokens['--sn-graph-type-action'], 'var(--sn-type-action)');
   assert.equal(defaultProviderTheme.DEFAULT_PROVIDER_THEME.tokens['--sn-graph-type-project'], 'var(--sn-type-project)');
+  assert.equal(defaultProviderTheme.DEFAULT_PROVIDER_THEME.tokens['--sn-canvas-graph-panel-bg'], 'var(--sn-canvas-graph-bg)');
   assert.equal(defaultProviderTheme.DEFAULT_PROVIDER_THEME.tokens['--sn-canvas-graph-ghost'], 'var(--sn-text-dim)');
   assert.equal(defaultProviderTheme.DEFAULT_PROVIDER_THEME.tokens['--sn-type-action'], 'hsl(var(--sn-hue-danger) var(--sn-sat-vivid) 78%)');
   assert.equal(defaultProviderTheme.DEFAULT_PROVIDER_THEME.tokens['--sn-type-source'], 'var(--sn-cat-server)');

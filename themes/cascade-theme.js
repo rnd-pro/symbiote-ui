@@ -977,7 +977,7 @@ export function createCascadeTheme(options = {}) {
     '--sn-canvas-graph-danger': 'var(--sn-danger-color)',
     '--sn-canvas-graph-text': 'var(--sn-text)',
     '--sn-canvas-graph-text-dim': 'var(--sn-text-dim)',
-    '--sn-canvas-graph-panel-bg': 'var(--sn-panel-bg)',
+    '--sn-canvas-graph-panel-bg': 'var(--sn-canvas-graph-bg)',
     '--sn-canvas-graph-panel-border': outlineColor,
     '--sn-canvas-graph-ghost': `hsl(0 0% ${dim.toFixed(1)}%)`,
     '--sn-canvas-graph-radial-icon': 'var(--sn-bg)',

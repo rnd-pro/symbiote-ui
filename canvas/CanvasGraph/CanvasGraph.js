@@ -2429,7 +2429,11 @@ export class CanvasGraph extends Symbiote {
     this._dangerRgb = readThemeRgbAny(this, ['--sn-canvas-graph-danger', '--sn-danger-color', '--sn-status-error'], this._dangerRgb);
     this._textRgb = readThemeRgbAny(this, ['--sn-canvas-graph-text', '--sn-text'], this._textRgb);
     this._textDimRgb = readThemeRgbAny(this, ['--sn-canvas-graph-text-dim', '--sn-text-dim'], this._textDimRgb);
-    this._panelBgRgb = readThemeRgbAny(this, ['--sn-canvas-graph-panel-bg', '--sn-panel-bg', '--sn-node-bg', '--sn-bg'], this._panelBgRgb);
+    this._panelBgRgb = readThemeRgbAny(
+      this,
+      ['--sn-canvas-graph-panel-bg', '--sn-canvas-graph-bg', '--sn-bg', '--sn-panel-bg', '--sn-node-bg'],
+      this._bgRgb
+    );
     this._panelBorderRgb = readThemeRgbAny(this, ['--sn-canvas-graph-panel-border', '--sn-node-border', '--sn-outline-color-soft', '--sn-text-dim'], this._panelBorderRgb);
     this._menuIconRgb = readThemeRgbAny(this, ['--sn-canvas-graph-radial-icon', '--sn-panel-bg', '--sn-bg'], this._menuIconRgb);
     this._ghostRgb = readThemeRgbAny(this, ['--sn-canvas-graph-ghost', '--sn-text-dim', '--sn-node-hover'], this._ghostRgb);

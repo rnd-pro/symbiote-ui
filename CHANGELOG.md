@@ -4,6 +4,13 @@ All notable changes to `symbiote-ui` will be documented in this file.
 
 ## Unreleased
 
+## [0.3.0-alpha.49] - 2026-06-27
+
+### Fixed
+
+- Aligned the canvas graph info panel background with the global canvas
+  background and prevented dark fallback panels in light cascade themes.
+
 ## [0.3.0-alpha.48] - 2026-06-27
 
 ### Fixed
