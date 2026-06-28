@@ -137,12 +137,29 @@ project-tab-item:not([active]):not(:hover):last-child::after,
   content: none;
 }
 
+.tab-lead {
+  display: grid;
+  place-items: center;
+  width: var(--sn-tabs-close-size, 16px);
+  height: var(--sn-tabs-close-size, 16px);
+}
+
+.tab-lead > * {
+  grid-area: 1 / 1;
+}
+
+.tab-lead .material-symbols-outlined {
+  opacity: 1;
+  pointer-events: none;
+  transition: opacity var(--sn-transition-fast) var(--sn-transition-easing);
+}
+
 .tab-close {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: var(--sn-tabs-close-size, 16px);
-  height: var(--sn-tabs-close-size, 16px);
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
   background: transparent;
   border: none;
@@ -152,6 +169,7 @@ project-tab-item:not([active]):not(:hover):last-child::after,
   padding: 0;
   line-height: 1;
   opacity: 0;
+  pointer-events: none;
   transition: opacity var(--sn-transition-fast) var(--sn-transition-easing), background var(--sn-transition-fast) var(--sn-transition-easing), color var(--sn-transition-fast) var(--sn-transition-easing);
 }
 
@@ -159,11 +177,13 @@ project-tab-item:not([active]):not(:hover):last-child::after,
   display: none;
 }
 
-.tab:hover .tab-close,
-.tab[active] .tab-close,
-project-tab-item:hover .tab-close,
-project-tab-item[active] .tab-close {
+project-tab-item:hover .tab-lead:has(.tab-close:not([hidden])) .material-symbols-outlined {
+  opacity: 0;
+}
+
+project-tab-item:hover .tab-close:not([hidden]) {
   opacity: 1;
+  pointer-events: auto;
 }
 
 .tab-close:hover {
