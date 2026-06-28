@@ -19,6 +19,7 @@ import {
   parseNotificationConfig,
   resolveEventPreset,
   resolvePhraseVariants,
+  resolveToneShape,
   serializeNotificationConfig,
 } from '../notification-config.js';
 import { NotificationNarrator } from '../../chat/notification-narrator.js';
@@ -190,6 +191,7 @@ export class NotificationWidget extends Symbiote {
     if (sound) {
       sound.setMuted(!this.#config.enabled || !this.#config.soundEnabled);
       sound.setMasterGain(this.#config.soundVolume);
+      sound.setToneShape(resolveToneShape(this.#config));
     }
     let narrator = this.#ensureNarrator();
     if (narrator) narrator.setEnabled(this.#config.enabled && this.#config.narrationEnabled);
@@ -213,6 +215,7 @@ export class NotificationWidget extends Symbiote {
     if (typeof window === 'undefined') return null;
     this.#sound = createSoundEngine({
       masterGain: this.#config.soundVolume,
+      toneShape: resolveToneShape(this.#config),
       muted: !this.#config.enabled || !this.#config.soundEnabled,
     });
     this.#sound.installGestureUnlock(window);

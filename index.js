@@ -200,11 +200,14 @@ export {
 } from './notifications/notification-queue.js';
 
 export {
+  DEFAULT_TONE_SHAPE,
+  NOTIFICATION_SOUND_WAVEFORMS,
   NOTIFICATION_TONE_PRESETS,
   buildTonePlan,
   createSoundEngine,
   getPresetDuration,
   listTonePresetKeys,
+  normalizeToneShape,
   resolveTonePreset,
   resolveTonePresetKey,
 } from './notifications/sound-engine.js';
@@ -220,6 +223,7 @@ export {
   parseNotificationConfig,
   resolveEventPreset,
   resolvePhraseVariants,
+  resolveToneShape,
   serializeNotificationConfig,
   setPhraseVariants,
 } from './notifications/notification-config.js';

@@ -14,6 +14,7 @@ import {
   parseNotificationConfig,
   resolveEventPreset,
   resolvePhraseVariants,
+  resolveToneShape,
   serializeNotificationConfig,
   setPhraseVariants,
 } from '../notifications/notification-config.js';
@@ -48,6 +49,22 @@ test('normalize clamps sound + voice volume independently and coerces flags', ()
   assert.equal(mixed.voiceVolume, 0.9);
   assert.equal(normalizeNotificationConfig({ enabled: 0 }).enabled, false);
   assert.equal(normalizeNotificationConfig({ narrationEnabled: 'yes' }).narrationEnabled, true);
+});
+
+test('generative sound shape normalizes + resolves', () => {
+  let defaults = normalizeNotificationConfig({});
+  assert.equal(defaults.soundWaveform, 'auto');
+  assert.equal(defaults.soundPitch, 0);
+  assert.equal(defaults.soundDuration, 1);
+  // bounds + coercion
+  let c = normalizeNotificationConfig({ soundWaveform: 'square', soundPitch: 99, soundDuration: 9 });
+  assert.equal(c.soundWaveform, 'square');
+  assert.equal(c.soundPitch, 12);
+  assert.equal(c.soundDuration, 2);
+  assert.equal(normalizeNotificationConfig({ soundWaveform: 'bogus' }).soundWaveform, 'auto');
+  assert.equal(normalizeNotificationConfig({ soundPitch: -99 }).soundPitch, -12);
+  // resolveToneShape projects the flat fields onto the engine shape
+  assert.deepEqual(resolveToneShape(c), { waveform: 'square', semitones: 12, durationScale: 2 });
 });
 
 test('a legacy single volume seeds both channels', () => {

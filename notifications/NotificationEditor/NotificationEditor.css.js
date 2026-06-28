@@ -120,6 +120,14 @@ export default css`
     accent-color: var(--sn-node-selected);
   }
 
+  notification-editor .ne-row input[type="range"] {
+    justify-self: end;
+    width: var(--sn-notification-editor-range-width, 180px);
+    max-width: 70%;
+    height: var(--sn-notification-widget-range-hit-size, 34px);
+    accent-color: var(--sn-node-selected);
+  }
+
   notification-editor .ne-control-group {
     display: inline-flex;
     align-items: center;

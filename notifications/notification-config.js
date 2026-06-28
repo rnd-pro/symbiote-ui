@@ -13,7 +13,9 @@
 import {
   listTonePresetKeys,
   resolveTonePresetKey,
+  normalizeToneShape,
   NOTIFICATION_TONE_PRESETS,
+  NOTIFICATION_SOUND_WAVEFORMS,
 } from './sound-engine.js';
 import {
   NARRATION_DEPTHS,
@@ -70,6 +72,9 @@ export const NOTIFICATION_CONFIG_DEFAULTS = Object.freeze({
   enabled: true,
   soundVolume: 0.8,
   voiceVolume: 0.8,
+  soundWaveform: 'auto',
+  soundPitch: 0,
+  soundDuration: 1,
   soundEnabled: true,
   narrationEnabled: true,
   narrationDepth: DEFAULT_NARRATION_DEPTH,
@@ -152,12 +157,20 @@ function normalizePhraseOverrides(value) {
  */
 export function normalizeNotificationConfig(input = {}) {
   let value = input && typeof input === 'object' ? input : {};
+  let shape = normalizeToneShape({
+    waveform: value.soundWaveform,
+    semitones: value.soundPitch,
+    durationScale: value.soundDuration,
+  });
   return {
     enabled: value.enabled === undefined ? true : Boolean(value.enabled),
     // A single legacy `volume` seeds both channels so a persisted pre-split config
     // round-trips into separate sound + voice levels.
     soundVolume: clamp01(value.soundVolume ?? value.volume, NOTIFICATION_CONFIG_DEFAULTS.soundVolume),
     voiceVolume: clamp01(value.voiceVolume ?? value.volume, NOTIFICATION_CONFIG_DEFAULTS.voiceVolume),
+    soundWaveform: shape.waveform,
+    soundPitch: shape.semitones,
+    soundDuration: shape.durationScale,
     soundEnabled: value.soundEnabled === undefined ? true : Boolean(value.soundEnabled),
     narrationEnabled: value.narrationEnabled === undefined ? true : Boolean(value.narrationEnabled),
     narrationDepth: normalizeDepth(value.narrationDepth),
@@ -166,6 +179,15 @@ export function normalizeNotificationConfig(input = {}) {
     stageNarration: normalizeStageNarration(value.stageNarration),
     phraseOverrides: normalizePhraseOverrides(value.phraseOverrides),
   };
+}
+
+/** The generative tone shape (waveform / pitch / length) the engine should apply. */
+export function resolveToneShape(config) {
+  return normalizeToneShape({
+    waveform: config?.soundWaveform,
+    semitones: config?.soundPitch,
+    durationScale: config?.soundDuration,
+  });
 }
 
 /** Serialize a config for localStorage. Normalizes first so storage stays clean. */
@@ -260,14 +282,19 @@ export function listAllPresetKeys() {
   return listTonePresetKeys();
 }
 
+/** Waveform options offered in the generative-sound waveform selector. */
+export { NOTIFICATION_SOUND_WAVEFORMS };
+
 export default {
   NOTIFICATION_CONFIG_DEFAULTS,
   NOTIFICATION_PRESET_KEYS,
   NOTIFICATION_BOARD_STAGES,
+  NOTIFICATION_SOUND_WAVEFORMS,
   normalizeNotificationConfig,
   serializeNotificationConfig,
   parseNotificationConfig,
   resolveEventPreset,
+  resolveToneShape,
   isStageNarrationEnabled,
   resolvePhraseVariants,
   setPhraseVariants,

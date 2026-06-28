@@ -149,6 +149,31 @@ test('setMasterGain rescales subsequent plays live', () => {
   assert.ok(Math.abs(peak - recipe.peakGain * 0.25) < 1e-9);
 });
 
+test('buildTonePlan applies the tone shape (waveform, pitch, length)', () => {
+  const recipe = resolveTonePreset('card-entered-stage'); // sine; tones 330@0/0.09, 440@0.1/0.11
+  const shaped = buildTonePlan(recipe, 0, { waveform: 'square', semitones: 12, durationScale: 2 });
+  assert.equal(shaped[0].oscillator, 'square');
+  assert.ok(Math.abs(shaped[0].frequency - 660) < 1e-6, '+12 semitones doubles 330Hz');
+  assert.ok(Math.abs(shaped[1].start - 0.2) < 1e-9, 'onset scaled by length');
+  assert.ok(Math.abs((shaped[0].stop - shaped[0].start) - 0.18) < 1e-9, 'duration scaled by length');
+  // Omitting the shape leaves the preset exactly as authored.
+  const plain = buildTonePlan(recipe, 0);
+  assert.equal(plain[0].oscillator, 'sine');
+  assert.ok(Math.abs(plain[0].frequency - 330) < 1e-6);
+});
+
+test('setToneShape reshapes subsequent plays live', () => {
+  let oscs = [];
+  const fakeCtx = makeFakeAudioContext([], null, (o) => oscs.push(o));
+  const engine = createSoundEngine({ audioContextFactory: () => fakeCtx });
+  engine.unlock();
+  engine.setToneShape({ waveform: 'triangle', semitones: -12 });
+  engine.play('card-entered-stage');
+  assert.ok(oscs.length >= 1);
+  assert.ok(oscs.every((o) => o.type === 'triangle'), 'waveform overridden');
+  assert.ok(Math.abs(oscs[0].frequency - 165) < 1e-6, '-12 semitones halves 330Hz');
+});
+
 test('gesture unlock attaches and detaches listeners on a fake target', () => {
   const target = makeFakeEventTarget();
   const fakeCtx = makeFakeAudioContext([]);
@@ -160,7 +185,7 @@ test('gesture unlock attaches and detaches listeners on a fake target', () => {
   assert.equal(target.count('pointerdown'), 0, 'listener removed after first gesture');
 });
 
-function makeFakeAudioContext(events, onGainValue) {
+function makeFakeAudioContext(events, onGainValue, onOsc) {
   return {
     state: 'suspended',
     currentTime: 0,
@@ -168,13 +193,14 @@ function makeFakeAudioContext(events, onGainValue) {
     resume() { this.resumed = true; this.state = 'running'; },
     close() { this.state = 'closed'; },
     createOscillator() {
-      return {
+      const osc = {
         type: 'sine',
-        frequency: { setValueAtTime() {} },
+        frequency: { setValueAtTime(value) { osc._frequency = value; } },
         connect(node) { return node; },
-        start() { events.push('osc:start'); },
+        start() { events.push('osc:start'); onOsc?.({ type: osc.type, frequency: osc._frequency }); },
         stop() { events.push('osc:stop'); },
       };
+      return osc;
     },
     createGain() {
       return {

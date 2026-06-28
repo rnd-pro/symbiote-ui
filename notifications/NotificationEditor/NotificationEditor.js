@@ -3,12 +3,14 @@ import { ensureMaterialSymbols } from '../../icons/MaterialSymbols.js';
 import {
   NOTIFICATION_CONFIG_DEFAULTS,
   NOTIFICATION_BOARD_STAGES,
+  NOTIFICATION_SOUND_WAVEFORMS,
   EVENT_LABEL_KEYS,
   listEventPresetOptions,
   normalizeNotificationConfig,
   parseNotificationConfig,
   resolveEventPreset,
   resolvePhraseVariants,
+  resolveToneShape,
   serializeNotificationConfig,
   setPhraseVariants,
 } from '../notification-config.js';
@@ -195,6 +197,10 @@ export class NotificationEditor extends Symbiote {
         </div>`;
     }).join('');
 
+    let waveformOptions = NOTIFICATION_SOUND_WAVEFORMS
+      .map((wave) => `<option value="${escapeHtml(wave)}" ${wave === c.soundWaveform ? 'selected' : ''}>${escapeHtml(t(`notification.sound.wave.${wave}`))}</option>`)
+      .join('');
+
     let stageRows = NOTIFICATION_BOARD_STAGES.map((stage) => `
       <div class="ne-row">
         <label for="ne-stage-${escapeHtml(stage)}">${escapeHtml(t(`notification.stage.${stage}`))}</label>
@@ -224,6 +230,22 @@ export class NotificationEditor extends Symbiote {
         ${soundRows}
       </div>
       <div class="ne-section">
+        <div class="ne-section-title">${escapeHtml(t('notification.sound.section'))}</div>
+        <div class="ne-row">
+          <label for="ne-waveform">${escapeHtml(t('notification.sound.waveform'))}</label>
+          <select id="ne-waveform" class="ne-select" data-config-sound="waveform">${waveformOptions}</select>
+        </div>
+        <div class="ne-row">
+          <label for="ne-pitch">${escapeHtml(t('notification.sound.pitch'))}</label>
+          <input id="ne-pitch" type="range" min="-12" max="12" step="1" value="${c.soundPitch}" data-config-sound="pitch">
+        </div>
+        <div class="ne-row">
+          <label for="ne-duration">${escapeHtml(t('notification.sound.duration'))}</label>
+          <input id="ne-duration" type="range" min="0.5" max="2" step="0.1" value="${c.soundDuration}" data-config-sound="duration">
+        </div>
+        <div class="ne-hint">${escapeHtml(t('notification.sound.hint'))}</div>
+      </div>
+      <div class="ne-section">
         <div class="ne-section-title">${escapeHtml(t('notification.detailed.depth'))}</div>
         <div class="ne-depth" aria-label="${escapeHtml(t('notification.detailed.depth'))}">${depthButtons}</div>
       </div>
@@ -242,6 +264,15 @@ export class NotificationEditor extends Symbiote {
   #onInput = (event) => {
     let target = event.target;
     if (!target) return;
+
+    let soundKey = target.dataset?.configSound;
+    if (soundKey) {
+      let field = soundKey === 'waveform' ? 'soundWaveform' : soundKey === 'pitch' ? 'soundPitch' : 'soundDuration';
+      let value = soundKey === 'waveform' ? target.value : Number(target.value);
+      this.#config = normalizeNotificationConfig({ ...this.#config, [field]: value });
+      this.#apply('sound-shape');
+      return;
+    }
 
     let eventPreset = target.dataset?.eventPreset;
     if (eventPreset) {
@@ -318,7 +349,7 @@ export class NotificationEditor extends Symbiote {
   // depth, and edited phrase bank. The user's click unlocks Web Audio.
   #ensurePreview() {
     if (this.#preview || typeof window === 'undefined') return this.#preview;
-    let sound = createSoundEngine({ masterGain: this.#config.soundVolume });
+    let sound = createSoundEngine({ masterGain: this.#config.soundVolume, toneShape: resolveToneShape(this.#config) });
     sound.installGestureUnlock(window);
     let narrator = new NotificationNarrator({
       arbitration: getDefaultVoiceArbitrationChannel(),
@@ -341,6 +372,7 @@ export class NotificationEditor extends Symbiote {
     let preview = this.#ensurePreview();
     if (!preview) return;
     preview.sound.setMasterGain(this.#config.soundVolume);
+    preview.sound.setToneShape(resolveToneShape(this.#config));
     preview.sound.setMuted(false);
     preview.sound.unlock();
     preview.sound.play(resolveEventPreset(this.#config, type));

@@ -12,6 +12,39 @@ const GAIN_FLOOR = 0.0001;
 const DEFAULT_ATTACK = 0.015;
 const OSC_RELEASE_PAD = 0.02;
 
+/** Oscillator wave types the generative shape can force, plus 'auto' (per-preset). */
+export const NOTIFICATION_SOUND_WAVEFORMS = Object.freeze([
+  'auto',
+  'sine',
+  'triangle',
+  'square',
+  'sawtooth',
+]);
+
+/** Identity shape: every preset plays exactly as authored. */
+export const DEFAULT_TONE_SHAPE = Object.freeze({ waveform: 'auto', semitones: 0, durationScale: 1 });
+
+function clampRange(value, min, max, fallback) {
+  let n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, n));
+}
+
+/**
+ * Normalize a global tone shape applied across every preset: an optional waveform
+ * override, a semitone pitch transpose, and a duration (length) scale.
+ * @param {{ waveform?: string, semitones?: number, durationScale?: number }} [shape]
+ * @returns {{ waveform: string, semitones: number, durationScale: number }}
+ */
+export function normalizeToneShape(shape = {}) {
+  let value = shape && typeof shape === 'object' ? shape : {};
+  return {
+    waveform: NOTIFICATION_SOUND_WAVEFORMS.includes(value.waveform) ? value.waveform : 'auto',
+    semitones: Math.round(clampRange(value.semitones, -12, 12, 0)),
+    durationScale: clampRange(value.durationScale, 0.5, 2, 1),
+  };
+}
+
 /**
  * @typedef {Object} ToneStep
  * @property {number} frequency  Oscillator frequency in Hz.
@@ -143,20 +176,25 @@ export function resolveTonePreset(presetKey) {
  * timing. Exported for unit testing the timing/envelope math.
  * @param {ToneRecipe} recipe
  * @param {number} [startTime] Absolute base time (e.g. audioCtx.currentTime).
+ * @param {{ waveform?: string, semitones?: number, durationScale?: number }} [shape]
+ *   Global tone shape; omitted/identity leaves the preset exactly as authored.
  * @returns {ScheduledTone[]}
  */
-export function buildTonePlan(recipe, startTime = 0) {
+export function buildTonePlan(recipe, startTime = 0, shape) {
   if (!recipe || !Array.isArray(recipe.tones)) return [];
-  const oscillator = recipe.oscillator || 'sine';
+  const s = normalizeToneShape(shape);
+  const oscillator = s.waveform !== 'auto' ? s.waveform : (recipe.oscillator || 'sine');
   const basePeak = recipe.peakGain > 0 ? recipe.peakGain : DEFAULT_PEAK_GAIN;
   const attack = recipe.attack >= 0 ? recipe.attack : DEFAULT_ATTACK;
+  const pitchFactor = Math.pow(2, s.semitones / 12);
+  const lengthScale = s.durationScale;
   return recipe.tones.map((tone) => {
-    const start = startTime + tone.at;
-    const stop = start + tone.duration;
+    const start = startTime + tone.at * lengthScale;
+    const stop = start + tone.duration * lengthScale;
     const peakGain = tone.peakGain > 0 ? tone.peakGain : basePeak;
     return {
       oscillator,
-      frequency: tone.frequency,
+      frequency: tone.frequency * pitchFactor,
       start,
       attackAt: Math.min(start + attack, stop),
       stop,
@@ -203,6 +241,7 @@ const GESTURE_EVENTS = ['pointerdown', 'keydown', 'touchstart'];
  */
 export function createSoundEngine(options = {}) {
   let masterGain = options.masterGain > 0 ? options.masterGain : 1;
+  let toneShape = normalizeToneShape(options.toneShape);
   const audioContextFactory = options.audioContextFactory;
   let muted = Boolean(options.muted);
   /** @type {AudioContext | null} */
@@ -265,7 +304,7 @@ export function createSoundEngine(options = {}) {
     if (!activated) return false;
     const ctx = ensureRunning();
     if (!ctx) return false;
-    const plan = buildTonePlan(recipe, ctx.currentTime);
+    const plan = buildTonePlan(recipe, ctx.currentTime, toneShape);
     try {
       for (const step of plan) {
         const osc = ctx.createOscillator();
@@ -296,6 +335,11 @@ export function createSoundEngine(options = {}) {
     if (Number.isFinite(next) && next >= 0) masterGain = next;
   }
 
+  /** Live generative tone shape (waveform / pitch / length) for subsequent plays. */
+  function setToneShape(shape) {
+    toneShape = normalizeToneShape(shape);
+  }
+
   function dispose() {
     detachGesture?.();
     const ctx = audioCtx;
@@ -310,6 +354,7 @@ export function createSoundEngine(options = {}) {
     installGestureUnlock,
     setMuted,
     setMasterGain,
+    setToneShape,
     isMuted: () => muted,
     isUnlocked: () => unlocked,
     getPresetDuration: (presetKey) => getPresetDuration(resolveTonePreset(presetKey)),
