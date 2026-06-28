@@ -53,6 +53,28 @@ export class ChatMessageItem extends Symbiote {
     this.sub('copyText', () => this._renderBody());
     this.sub('cardItems', () => this._renderBody());
     this.sub('parts', () => this._renderBody());
+
+    if (!this._confirmClickBound) {
+      this._confirmClickBound = true;
+      this.addEventListener('click', (event) => this._handleConfirmClick(event));
+    }
+  }
+
+  _handleConfirmClick(event) {
+    let btn = event.target?.closest?.('.confirm-btn');
+    if (!btn || !this.contains(btn)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    let id = btn.dataset.id || '';
+    let action = btn.dataset.confirmAction || '';
+    let part = (this.$.parts || []).find((p) => p.type === 'confirm' && (p.id || '') === id);
+    let payload = part ? part.payload ?? null : null;
+    let type = action === 'cancel' ? 'chat-message-cancel' : 'chat-message-confirm';
+    this.dispatchEvent(new CustomEvent(type, {
+      bubbles: true,
+      composed: true,
+      detail: { id, action, payload },
+    }));
   }
 
   _renderBody() {
@@ -89,6 +111,15 @@ export class ChatMessageItem extends Symbiote {
     for (let i = 0; i < parts.length; i++) {
       let part = parts[i];
       let type = part.type;
+
+      if (type !== 'confirm' && part.display && typeof part.display.text === 'string') {
+        if (insideStatusBoard) {
+          htmlStr += '</div>';
+          insideStatusBoard = false;
+        }
+        htmlStr += this._renderDisplayCard(part.display);
+        continue;
+      }
 
       if (type === 'status') {
         if (!insideStatusBoard) {
@@ -209,6 +240,8 @@ export class ChatMessageItem extends Symbiote {
             <button class="sn-btn action-btn" data-action="${escapeHtml(actionType)}" data-id="${escapeHtml(id)}">${escapeHtml(btnLabel)}</button>
           </div>
         </div>`;
+      } else if (type === 'confirm') {
+        htmlStr += this._renderConfirmPart(part);
       } else if (type === 'error' || type === 'cancelled') {
         let title = part.title || part.name || (type === 'cancelled' ? translate('chat.message.operationCancelled') : translate('chat.message.error'));
         let icon = type === 'cancelled' ? 'cancel' : 'error';
@@ -284,6 +317,35 @@ export class ChatMessageItem extends Symbiote {
       cardHtml += `<div class="tool-section"><div class="tool-label">${escapeHtml(translate('chat.message.result'))}</div><pre class="tool-code">${escapeHtml(truncateResult(resultValue))}</pre></div>`;
     }
     return `${cardHtml}</details>`;
+  }
+
+  _renderDisplayCard(display) {
+    let metaHtml = typeof display.metaHtml === 'string' && display.metaHtml
+      ? `<div class="display-card-meta">${display.metaHtml}</div>`
+      : '';
+    return `<div class="display-card">
+      <div class="display-card-body">${formatMarkdown(display.text)}</div>
+      ${metaHtml}
+    </div>`;
+  }
+
+  _renderConfirmPart(part) {
+    let title = part.title || part.name || translate('chat.message.confirmTitle');
+    let id = part.id || '';
+    let text = part.text || translate('chat.message.confirmText');
+    let confirmLabel = part.meta?.confirmLabel || translate('chat.message.confirm');
+    let cancelLabel = part.meta?.cancelLabel || translate('chat.message.cancel');
+    return `<div class="confirm-pill" data-confirm-id="${escapeHtml(id)}">
+      <span class="material-symbols-outlined confirm-pill-icon">help</span>
+      <div class="confirm-pill-info">
+        <span class="confirm-pill-title">${escapeHtml(title)}</span>
+        ${text ? `<span class="confirm-pill-text">${escapeHtml(text)}</span>` : ''}
+      </div>
+      <div class="confirm-pill-actions">
+        <button class="sn-btn confirm-pill-btn confirm-btn confirm" type="button" data-confirm-action="confirm" data-id="${escapeHtml(id)}">${escapeHtml(confirmLabel)}</button>
+        <button class="sn-btn confirm-pill-btn confirm-btn cancel" type="button" data-confirm-action="cancel" data-id="${escapeHtml(id)}">${escapeHtml(cancelLabel)}</button>
+      </div>
+    </div>`;
   }
 
   _renderTool() {

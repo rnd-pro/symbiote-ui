@@ -328,6 +328,112 @@ test('approval and action events are dispatched properly', async () => {
   transcript.remove();
 });
 
+test('dual-channel display and llmContent pass through normalization', () => {
+  let part = normalizeChatMessagePart({
+    type: 'text',
+    text: 'plain',
+    display: { text: 'Curated card', metaHtml: '<span>m</span>', componentTag: 'x-card', props: { a: 1 } },
+    llmContent: 'compact for model',
+    payload: { changeId: 'c-1' },
+    action: 'change-status',
+  });
+  assert.equal(part.text, 'plain');
+  assert.equal(part.display.text, 'Curated card');
+  assert.equal(part.display.metaHtml, '<span>m</span>');
+  assert.equal(part.display.componentTag, 'x-card');
+  assert.deepEqual(part.display.props, { a: 1 });
+  assert.equal(part.llmContent, 'compact for model');
+  assert.deepEqual(part.payload, { changeId: 'c-1' });
+  assert.equal(part.action, 'change-status');
+
+  let plain = normalizeChatMessagePart({ type: 'text', text: 'hi' });
+  assert.equal(plain.display, null);
+  assert.equal(plain.llmContent, '');
+  assert.equal(plain.payload, null);
+});
+
+test('serializeTranscript prefers llmContent then part text', async () => {
+  let { serializeTranscript } = await import('../chat/message-model.js');
+  let out = serializeTranscript([
+    { role: 'user', text: 'hello' },
+    { role: 'assistant', parts: [
+      { type: 'text', text: 'visible answer', llmContent: 'compact answer' },
+      { type: 'confirm', text: 'Confirm?', id: 'c-1' },
+    ] },
+    { role: 'assistant', llmContent: 'whole-message compact' },
+  ]);
+  assert.match(out, /hello/);
+  assert.match(out, /compact answer/);
+  assert.doesNotMatch(out, /visible answer/);
+  assert.match(out, /whole-message compact/);
+});
+
+test('display.text renders a curated card while plain text is unchanged', async () => {
+  let curated = document.createElement('chat-message-item');
+  let plain = document.createElement('chat-message-item');
+  document.body.append(curated, plain);
+
+  curated.set$({ role: 'agent', parts: [{ type: 'text', text: 'raw', display: { text: 'Curated body', metaHtml: '<span class="meta-chip">ok</span>' } }] });
+  plain.set$({ role: 'agent', parts: [{ type: 'text', text: 'raw plain' }] });
+
+  await nextRenderTick();
+
+  let curatedRoot = curated.shadowRoot || curated;
+  let plainRoot = plain.shadowRoot || plain;
+  assert.ok(curatedRoot.querySelector('.display-card'));
+  assert.match(curatedRoot.querySelector('.display-card-body')?.textContent || '', /Curated body/);
+  assert.ok(curatedRoot.querySelector('.display-card-meta .meta-chip'));
+  assert.equal(curatedRoot.querySelector('.msg-content'), null);
+  assert.equal(plainRoot.querySelector('.display-card'), null);
+  assert.match(plainRoot.querySelector('.msg-content')?.textContent || '', /raw plain/);
+
+  curated.remove();
+  plain.remove();
+});
+
+test('confirm part renders an inline pill and emits confirm/cancel events', async () => {
+  let itemSource = await readFile(new URL('../chat/ChatMessageItem/ChatMessageItem.js', import.meta.url), 'utf8');
+  assert.match(itemSource, /bubbles:\s*true,\s*composed:\s*true/);
+
+  let el = document.createElement('chat-message-item');
+  document.body.append(el);
+  el.set$({
+    role: 'agent',
+    parts: [{ type: 'confirm', title: 'Apply status change', text: 'Move to Done?', id: 'chg-1', payload: { to: 'done' } }],
+  });
+
+  await nextRenderTick();
+
+  let root = el.shadowRoot || el;
+  let pill = root.querySelector('.confirm-pill');
+  assert.ok(pill);
+  assert.match(pill.textContent || '', /Apply status change/);
+  assert.match(pill.textContent || '', /Move to Done\?/);
+  assert.doesNotMatch(root.textContent || '', /chat\.message\./);
+
+  let confirmPromise = new Promise((resolve) => {
+    el.addEventListener('chat-message-confirm', (event) => resolve({ ...event.detail, event }));
+  });
+  root.querySelector('.confirm-btn.confirm').click();
+  let confirmDetail = await confirmPromise;
+  assert.equal(confirmDetail.id, 'chg-1');
+  assert.equal(confirmDetail.action, 'confirm');
+  assert.deepEqual(confirmDetail.payload, { to: 'done' });
+  assert.equal(confirmDetail.event.bubbles, true);
+
+  let cancelPromise = new Promise((resolve) => {
+    el.addEventListener('chat-message-cancel', (event) => resolve({ ...event.detail, event }));
+  });
+  root.querySelector('.confirm-btn.cancel').click();
+  let cancelDetail = await cancelPromise;
+  assert.equal(cancelDetail.id, 'chg-1');
+  assert.equal(cancelDetail.action, 'cancel');
+  assert.deepEqual(cancelDetail.payload, { to: 'done' });
+  assert.equal(cancelDetail.event.bubbles, true);
+
+  el.remove();
+});
+
 test('ChatTranscript stream auto-pin behavior works', async () => {
   let transcript = document.createElement('chat-transcript');
   document.body.append(transcript);

@@ -812,4 +812,83 @@ h4.md-h {
   font-family: var(--sn-font-mono, monospace);
   white-space: pre-wrap;
 }
+
+.display-card {
+  background: var(--sn-node-bg);
+  border: 1px solid var(--sn-node-border);
+  border-radius: var(--sn-radius-xl, 16px);
+  padding: var(--sn-chat-message-padding, 12px 16px);
+  margin: var(--sn-step-2) 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sn-step-3);
+}
+.display-card-body {
+  font-size: var(--sn-chat-message-font-size, 13px);
+  line-height: 1.5;
+  color: var(--sn-text);
+  word-break: break-word;
+}
+.display-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sn-step-3);
+}
+
+.confirm-pill {
+  display: flex;
+  align-items: center;
+  gap: var(--sn-step-4);
+  flex-wrap: wrap;
+  background: var(--sn-node-hover);
+  border: 1px solid var(--sn-accent-border, var(--sn-node-border));
+  border-radius: var(--sn-radius-xl, 16px);
+  padding: var(--sn-step-3) var(--sn-step-6);
+  margin: var(--sn-step-3) 0;
+  width: 100%;
+}
+.confirm-pill-icon {
+  font-size: var(--sn-chat-status-icon-size, 16px);
+  color: var(--sn-accent-color, var(--sn-text-dim));
+}
+.confirm-pill-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sn-step-1);
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.confirm-pill-title {
+  font-size: var(--sn-chat-status-card-size, 12px);
+  font-weight: 600;
+  color: var(--sn-text);
+}
+.confirm-pill-text {
+  font-size: var(--sn-chat-small-size, 12px);
+  color: var(--sn-text-dim);
+  line-height: 1.4;
+}
+.confirm-pill-actions {
+  display: flex;
+  gap: var(--sn-step-3);
+  flex: 0 0 auto;
+}
+.sn-btn.confirm {
+  background: var(--sn-success-color, #22c55e);
+  color: var(--sn-text-on-accent, #fff);
+  border-color: var(--sn-success-border, #15803d);
+}
+.sn-btn.confirm:hover {
+  background: var(--sn-success-hover, #16a34a);
+}
+.sn-btn.cancel {
+  background: var(--sn-node-bg);
+  color: var(--sn-text);
+  border-color: var(--sn-node-border);
+}
+.sn-btn.cancel:hover {
+  background: var(--sn-node-hover);
+  border-color: var(--sn-text-dim);
+}
 `;

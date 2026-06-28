@@ -107,11 +107,22 @@ export const MESSAGE_PART_KINDS = {
   ARTIFACT: 'artifact',
   APPROVAL: 'approval',
   ACTION: 'action',
+  CONFIRM: 'confirm',
   RETRY: 'retry',
   CANCEL: 'cancel',
   ERROR: 'error',
   CANCELLED: 'cancelled',
 };
+
+function normalizeDisplayPayload(display) {
+  if (!display || typeof display !== 'object') return null;
+  let next = {};
+  if (typeof display.text === 'string') next.text = display.text;
+  if (typeof display.metaHtml === 'string') next.metaHtml = display.metaHtml;
+  if (typeof display.componentTag === 'string') next.componentTag = display.componentTag;
+  if (display.props && typeof display.props === 'object') next.props = display.props;
+  return next;
+}
 
 export function normalizeChatMessagePart(part) {
   if (!part || typeof part !== 'object') {
@@ -127,6 +138,10 @@ export function normalizeChatMessagePart(part) {
       url: '',
       mimeType: '',
       meta: {},
+      display: null,
+      llmContent: '',
+      payload: null,
+      action: '',
     };
   }
 
@@ -154,7 +169,42 @@ export function normalizeChatMessagePart(part) {
     url: part.url ?? part.href ?? '',
     mimeType: part.mimeType ?? part.mime ?? part.contentType ?? '',
     meta: part.meta && typeof part.meta === 'object' ? part.meta : {},
+    display: normalizeDisplayPayload(part.display),
+    llmContent: typeof part.llmContent === 'string' ? part.llmContent : '',
+    payload: part.payload ?? null,
+    action: part.action ?? '',
   };
+}
+
+export function partTranscriptText(part) {
+  if (!part || typeof part !== 'object') return typeof part === 'string' ? part : '';
+  if (typeof part.llmContent === 'string' && part.llmContent) return part.llmContent;
+  if (typeof part.text === 'string' && part.text) return part.text;
+  if (part.display && typeof part.display.text === 'string') return part.display.text;
+  return '';
+}
+
+export function serializeTranscript(messages = [], options = {}) {
+  let separator = typeof options.separator === 'string' ? options.separator : '\n\n';
+  let source = Array.isArray(messages) ? messages : [];
+  let lines = [];
+  for (let msg of source) {
+    if (typeof msg?.llmContent === 'string' && msg.llmContent) {
+      lines.push(msg.llmContent);
+      continue;
+    }
+    let parts = Array.isArray(msg?.parts) ? msg.parts : null;
+    if (parts) {
+      let partText = parts.map(partTranscriptText).filter(Boolean).join(separator);
+      if (partText) {
+        lines.push(partText);
+        continue;
+      }
+    }
+    let text = msg?.text ?? msg?.content ?? '';
+    if (text !== '' && text != null) lines.push(String(text));
+  }
+  return lines.join(separator);
 }
 
 export function toChatMessageItem(msg, options = {}) {
@@ -177,6 +227,10 @@ export function toChatMessageItem(msg, options = {}) {
           url: '',
           mimeType: '',
           meta: {},
+          display: null,
+          llmContent: '',
+          payload: null,
+          action: '',
         });
       }
       if (msg?.result != null) {
@@ -192,6 +246,10 @@ export function toChatMessageItem(msg, options = {}) {
           url: '',
           mimeType: '',
           meta: {},
+          display: null,
+          llmContent: '',
+          payload: null,
+          action: '',
         });
       }
     } else if (role === 'thinking') {
@@ -207,6 +265,10 @@ export function toChatMessageItem(msg, options = {}) {
         url: '',
         mimeType: '',
         meta: {},
+        display: null,
+        llmContent: '',
+        payload: null,
+        action: '',
       });
     } else if (role === 'board') {
       let cardItems = Array.isArray(msg?.cardItems) ? msg.cardItems : [];
@@ -223,6 +285,10 @@ export function toChatMessageItem(msg, options = {}) {
           url: '',
           mimeType: '',
           meta: {},
+          display: null,
+          llmContent: '',
+          payload: null,
+          action: '',
         });
       }
     } else {
@@ -240,6 +306,10 @@ export function toChatMessageItem(msg, options = {}) {
           url: '',
           mimeType: '',
           meta: {},
+          display: null,
+          llmContent: '',
+          payload: null,
+          action: '',
         });
       }
     }
