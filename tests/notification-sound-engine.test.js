@@ -133,6 +133,22 @@ test('masterGain scales the envelope peak', () => {
   assert.ok(Math.abs(peak - recipe.peakGain * 0.5) < 1e-9);
 });
 
+test('setMasterGain rescales subsequent plays live', () => {
+  let peak = 0;
+  const fakeCtx = makeFakeAudioContext([], (value) => { peak = Math.max(peak, value); });
+  const engine = createSoundEngine({ audioContextFactory: () => fakeCtx, masterGain: 1 });
+  engine.unlock();
+  engine.setMasterGain(0.25);
+  engine.play('card-entered-stage');
+  const recipe = resolveTonePreset('card-entered-stage');
+  assert.ok(Math.abs(peak - recipe.peakGain * 0.25) < 1e-9);
+  // Invalid values are ignored; a previously set gain stays in effect.
+  peak = 0;
+  engine.setMasterGain('loud');
+  engine.play('card-entered-stage');
+  assert.ok(Math.abs(peak - recipe.peakGain * 0.25) < 1e-9);
+});
+
 test('gesture unlock attaches and detaches listeners on a fake target', () => {
   const target = makeFakeEventTarget();
   const fakeCtx = makeFakeAudioContext([]);

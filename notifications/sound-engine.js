@@ -202,7 +202,7 @@ const GESTURE_EVENTS = ['pointerdown', 'keydown', 'touchstart'];
  * @param {SoundEngineOptions} [options]
  */
 export function createSoundEngine(options = {}) {
-  const masterGain = options.masterGain > 0 ? options.masterGain : 1;
+  let masterGain = options.masterGain > 0 ? options.masterGain : 1;
   const audioContextFactory = options.audioContextFactory;
   let muted = Boolean(options.muted);
   /** @type {AudioContext | null} */
@@ -290,6 +290,12 @@ export function createSoundEngine(options = {}) {
     muted = Boolean(value);
   }
 
+  /** Live master-gain multiplier for every subsequent {@link play}. Accepts 0 (silent). */
+  function setMasterGain(value) {
+    let next = Number(value);
+    if (Number.isFinite(next) && next >= 0) masterGain = next;
+  }
+
   function dispose() {
     detachGesture?.();
     const ctx = audioCtx;
@@ -303,6 +309,7 @@ export function createSoundEngine(options = {}) {
     unlock,
     installGestureUnlock,
     setMuted,
+    setMasterGain,
     isMuted: () => muted,
     isUnlocked: () => unlocked,
     getPresetDuration: (presetKey) => getPresetDuration(resolveTonePreset(presetKey)),

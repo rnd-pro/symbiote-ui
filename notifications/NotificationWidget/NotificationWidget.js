@@ -194,7 +194,10 @@ export class NotificationWidget extends Symbiote {
   #applyConfig(source) {
     this.#persistConfig();
     let sound = this.#ensureSound();
-    if (sound) sound.setMuted(!this.#config.enabled || !this.#config.soundEnabled);
+    if (sound) {
+      sound.setMuted(!this.#config.enabled || !this.#config.soundEnabled);
+      sound.setMasterGain(this.#config.soundVolume);
+    }
     let narrator = this.#ensureNarrator();
     if (narrator) narrator.setEnabled(this.#config.enabled && this.#config.narrationEnabled);
     this.dispatchEvent(new CustomEvent('notification-config-change', {
@@ -215,7 +218,7 @@ export class NotificationWidget extends Symbiote {
     if (this.#sound) return this.#sound;
     if (typeof window === 'undefined') return null;
     this.#sound = createSoundEngine({
-      masterGain: this.#config.volume,
+      masterGain: this.#config.soundVolume,
       muted: !this.#config.enabled || !this.#config.soundEnabled,
     });
     this.#sound.installGestureUnlock(window);
@@ -230,7 +233,7 @@ export class NotificationWidget extends Symbiote {
       enabled: this.#config.enabled && this.#config.narrationEnabled,
       getLocale: () => this.locale,
       getDepth: () => this.#config.narrationDepth,
-      getVoiceParams: () => ({ volume: this.#config.volume }),
+      getVoiceParams: () => ({ volume: this.#config.voiceVolume }),
     });
     return this.#narrator;
   }
@@ -323,8 +326,18 @@ export class NotificationWidget extends Symbiote {
         <input id="nw-enabled" type="checkbox" data-config="enabled" ${c.enabled ? 'checked' : ''}>
       </div>
       <div class="nw-row">
-        <label for="nw-volume">${escapeHtml(t('notification.widget.volume'))}</label>
-        <input id="nw-volume" type="range" min="0" max="100" step="1" value="${Math.round(c.volume * 100)}" data-config="volume">
+        <label for="nw-sound-volume">
+          <span class="material-symbols-outlined" aria-hidden="true">graphic_eq</span>
+          ${escapeHtml(t('notification.widget.soundVolume'))}
+        </label>
+        <input id="nw-sound-volume" type="range" min="0" max="100" step="1" value="${Math.round(c.soundVolume * 100)}" data-config="soundVolume">
+      </div>
+      <div class="nw-row">
+        <label for="nw-voice-volume">
+          <span class="material-symbols-outlined" aria-hidden="true">record_voice_over</span>
+          ${escapeHtml(t('notification.widget.voiceVolume'))}
+        </label>
+        <input id="nw-voice-volume" type="range" min="0" max="100" step="1" value="${Math.round(c.voiceVolume * 100)}" data-config="voiceVolume">
       </div>
       <div class="nw-row">
         <label for="nw-narration">${escapeHtml(t('notification.widget.narration'))}</label>
@@ -404,7 +417,7 @@ export class NotificationWidget extends Symbiote {
     let configKey = target.dataset?.config;
     if (configKey) {
       let next = { ...this.#config };
-      if (configKey === 'volume') next.volume = Number(target.value) / 100;
+      if (configKey === 'soundVolume' || configKey === 'voiceVolume') next[configKey] = Number(target.value) / 100;
       else next[configKey] = Boolean(target.checked);
       this.#config = normalizeNotificationConfig(next);
       this.#applyConfig('input');

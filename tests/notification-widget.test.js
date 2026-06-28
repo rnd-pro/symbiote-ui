@@ -26,7 +26,8 @@ test('defaults are complete and bounded', () => {
   assert.equal(config.soundEnabled, true);
   assert.equal(config.narrationEnabled, true);
   assert.equal(config.narrationDepth, NOTIFICATION_CONFIG_DEFAULTS.narrationDepth);
-  assert.ok(config.volume >= 0 && config.volume <= 1);
+  assert.ok(config.soundVolume >= 0 && config.soundVolume <= 1);
+  assert.ok(config.voiceVolume >= 0 && config.voiceVolume <= 1);
   for (let type of NOTIFICATION_EVENT_TYPES) {
     assert.ok(NOTIFICATION_PRESET_KEYS.includes(config.eventPresets[type]), `${type} maps to a canonical preset`);
   }
@@ -35,12 +36,28 @@ test('defaults are complete and bounded', () => {
   }
 });
 
-test('normalize clamps volume and coerces flags', () => {
-  assert.equal(normalizeNotificationConfig({ volume: 9 }).volume, 1);
-  assert.equal(normalizeNotificationConfig({ volume: -3 }).volume, 0);
-  assert.equal(normalizeNotificationConfig({ volume: 'x' }).volume, NOTIFICATION_CONFIG_DEFAULTS.volume);
+test('normalize clamps sound + voice volume independently and coerces flags', () => {
+  assert.equal(normalizeNotificationConfig({ soundVolume: 9 }).soundVolume, 1);
+  assert.equal(normalizeNotificationConfig({ soundVolume: -3 }).soundVolume, 0);
+  assert.equal(normalizeNotificationConfig({ voiceVolume: 9 }).voiceVolume, 1);
+  assert.equal(normalizeNotificationConfig({ voiceVolume: -3 }).voiceVolume, 0);
+  assert.equal(normalizeNotificationConfig({ soundVolume: 'x' }).soundVolume, NOTIFICATION_CONFIG_DEFAULTS.soundVolume);
+  // The two channels are set independently of one another.
+  let mixed = normalizeNotificationConfig({ soundVolume: 0.2, voiceVolume: 0.9 });
+  assert.equal(mixed.soundVolume, 0.2);
+  assert.equal(mixed.voiceVolume, 0.9);
   assert.equal(normalizeNotificationConfig({ enabled: 0 }).enabled, false);
   assert.equal(normalizeNotificationConfig({ narrationEnabled: 'yes' }).narrationEnabled, true);
+});
+
+test('a legacy single volume seeds both channels', () => {
+  let migrated = normalizeNotificationConfig({ volume: 0.33 });
+  assert.equal(migrated.soundVolume, 0.33);
+  assert.equal(migrated.voiceVolume, 0.33);
+  // An explicit channel value wins over the legacy fallback.
+  let partial = normalizeNotificationConfig({ volume: 0.33, voiceVolume: 0.7 });
+  assert.equal(partial.soundVolume, 0.33);
+  assert.equal(partial.voiceVolume, 0.7);
 });
 
 test('narration depth and locale fall back when invalid', () => {
@@ -80,7 +97,8 @@ test('listEventPresetOptions exposes only canonical keys; listAllPresetKeys is b
 
 test('serialize -> parse round-trips a normalized config', () => {
   let config = normalizeNotificationConfig({
-    volume: 0.42,
+    soundVolume: 0.42,
+    voiceVolume: 0.61,
     narrationDepth: 'chatty',
     eventPresets: { 'task.failed': 'terminal-reject' },
     stageNarration: { audit: false },

@@ -161,9 +161,20 @@ export default css`
 
   notification-widget .nw-row label,
   .nw-popover[data-overlay-portal] .nw-row label {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sn-notification-widget-label-gap, 6px);
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  notification-widget .nw-row label .material-symbols-outlined,
+  .nw-popover[data-overlay-portal] .nw-row label .material-symbols-outlined {
+    flex: none;
+    font-size: var(--sn-notification-widget-label-icon-size, 15px);
+    color: var(--sn-text-dim);
   }
 
   notification-widget .nw-row input[type="range"],

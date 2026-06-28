@@ -2,7 +2,8 @@
  * Notification widget config core — pure, deterministic, Node-safe.
  *
  * Owns every decision the {@link NotificationWidget} surfaces: master on/off,
- * volume, narration toggle + depth, per-event tone-preset selection, per-board-
+ * independent sound + voice volumes, narration toggle + depth, per-event tone-
+ * preset selection, per-board-
  * stage narration toggles, and a live override layer for the randomized phrase
  * bank. Nothing here touches the DOM, Web Audio, speechSynthesis, or the wall
  * clock, so the widget's whole settings model is unit-testable in Node and the
@@ -54,7 +55,8 @@ export const NOTIFICATION_BOARD_STAGES = Object.freeze([
 
 export const NOTIFICATION_CONFIG_DEFAULTS = Object.freeze({
   enabled: true,
-  volume: 0.8,
+  soundVolume: 0.8,
+  voiceVolume: 0.8,
   soundEnabled: true,
   narrationEnabled: true,
   narrationDepth: DEFAULT_NARRATION_DEPTH,
@@ -139,7 +141,10 @@ export function normalizeNotificationConfig(input = {}) {
   let value = input && typeof input === 'object' ? input : {};
   return {
     enabled: value.enabled === undefined ? true : Boolean(value.enabled),
-    volume: clamp01(value.volume, NOTIFICATION_CONFIG_DEFAULTS.volume),
+    // A single legacy `volume` seeds both channels so a persisted pre-split config
+    // round-trips into separate sound + voice levels.
+    soundVolume: clamp01(value.soundVolume ?? value.volume, NOTIFICATION_CONFIG_DEFAULTS.soundVolume),
+    voiceVolume: clamp01(value.voiceVolume ?? value.volume, NOTIFICATION_CONFIG_DEFAULTS.voiceVolume),
     soundEnabled: value.soundEnabled === undefined ? true : Boolean(value.soundEnabled),
     narrationEnabled: value.narrationEnabled === undefined ? true : Boolean(value.narrationEnabled),
     narrationDepth: normalizeDepth(value.narrationDepth),
