@@ -35,6 +35,5 @@ export default html`
       </div>
     </header>
     <div class="nw-compact" ref="compact"></div>
-    <div class="nw-detailed" ref="detailed" hidden></div>
   </section>
 `;

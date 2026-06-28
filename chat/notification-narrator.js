@@ -29,6 +29,7 @@ export class NotificationNarrator {
     getLocale = () => 'en',
     getDepth = () => 'terse',
     getLanguage = (locale) => locale,
+    getVariants = null,
     getVoiceParams = () => ({}),
     enabled = true,
     random,
@@ -42,6 +43,7 @@ export class NotificationNarrator {
     this.getLocale = getLocale;
     this.getDepth = getDepth;
     this.getLanguage = getLanguage;
+    this.getVariants = getVariants;
     this.getVoiceParams = getVoiceParams;
     this.enabled = enabled;
     this.random = random;
@@ -82,12 +84,18 @@ export class NotificationNarrator {
    * @param {{ type: string, params?: object, locale?: string, depth?: string }} event
    */
   compose(event = {}) {
+    let locale = event.locale ?? this.getLocale();
+    let depth = event.depth ?? this.getDepth();
+    // A host can supply the user's edited phrase bank; otherwise the built-in
+    // bank is used. Explicit event.variants win over the provider.
+    let variants = event.variants ?? this.getVariants?.({ type: event.type, locale, depth });
     return composeNarration({
       type: event.type,
       params: event.params || {},
-      locale: event.locale ?? this.getLocale(),
-      depth: event.depth ?? this.getDepth(),
+      locale,
+      depth,
       random: this.random,
+      variants,
     });
   }
 

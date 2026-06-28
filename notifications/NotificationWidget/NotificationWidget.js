@@ -14,22 +14,16 @@ import {
 import { createSoundEngine } from '../sound-engine.js';
 import {
   NOTIFICATION_CONFIG_DEFAULTS,
-  NOTIFICATION_BOARD_STAGES,
   isStageNarrationEnabled,
-  listEventPresetOptions,
   normalizeNotificationConfig,
   parseNotificationConfig,
   resolveEventPreset,
   resolvePhraseVariants,
   serializeNotificationConfig,
-  setPhraseVariants,
 } from '../notification-config.js';
 import { NotificationNarrator } from '../../chat/notification-narrator.js';
 import { getDefaultVoiceArbitrationChannel } from '../../chat/voice-arbitration.js';
-import {
-  NARRATION_DEPTHS,
-  NOTIFICATION_EVENT_TYPES,
-} from '../../chat/notification-phrases.js';
+import { NOTIFICATION_EVENT_TYPES } from '../../chat/notification-phrases.js';
 import {
   createTranslator,
   normalizeLocale,
@@ -40,20 +34,7 @@ import css from './NotificationWidget.css.js';
 import tpl from './NotificationWidget.tpl.js';
 
 const DEFAULT_STORAGE_KEY = 'symbiote-ui:notification-widget';
-const ICONS = ['notifications', 'restart_alt', 'open_in_full', 'volume_up', 'graphic_eq', 'record_voice_over'];
-
-// Map narration event types onto their localized label key.
-const EVENT_LABEL_KEYS = {
-  'task.created': 'notification.event.taskCreated',
-  'task.moved': 'notification.event.taskMoved',
-  'task.started': 'notification.event.taskStarted',
-  'task.completed': 'notification.event.taskCompleted',
-  'task.failed': 'notification.event.taskFailed',
-  'task.blocked': 'notification.event.taskBlocked',
-  'approval.required': 'notification.event.approvalRequired',
-  'agent.message': 'notification.event.agentMessage',
-  generic: 'notification.event.generic',
-};
+const ICONS = ['notifications', 'restart_alt', 'open_in_full', 'graphic_eq', 'record_voice_over'];
 
 function getStorage() {
   if (typeof window !== 'undefined' && window.localStorage) return window.localStorage;
@@ -93,20 +74,19 @@ export class NotificationWidget extends Symbiote {
     ensureMaterialSymbols(ICONS);
     this.addEventListener('click', this.#onClick);
     this.addEventListener('input', this.#onInput);
-    this.addEventListener('change', this.#onInput);
     this._onDocumentPointerDown = (event) => {
       if (!this.$.isOpen || this.#eventTargetsWidget(event)) return;
       this.#setOpen(false);
     };
     if (typeof document !== 'undefined') {
       document.addEventListener('pointerdown', this._onDocumentPointerDown);
+      document.addEventListener('notification-config-change', this.#onExternalConfigChange);
     }
   }
 
   disconnectedCallback() {
     this.removeEventListener('click', this.#onClick);
     this.removeEventListener('input', this.#onInput);
-    this.removeEventListener('change', this.#onInput);
     this.#unbindPopoverEvents();
     this.#setOpen(false);
     this.#clearFlushTimer();
@@ -116,9 +96,21 @@ export class NotificationWidget extends Symbiote {
     this.#narrator = null;
     if (typeof document !== 'undefined') {
       document.removeEventListener('pointerdown', this._onDocumentPointerDown);
+      document.removeEventListener('notification-config-change', this.#onExternalConfigChange);
     }
     super.disconnectedCallback?.();
   }
+
+  // The notification-editor (or another widget) changed our shared config: adopt
+  // it and re-apply to the live runtime without re-announcing (no feedback loop).
+  #onExternalConfigChange = (event) => {
+    if (event.target === this || !this.#ready) return;
+    let detail = event.detail;
+    if (!detail || detail.storageKey !== this.storageKey) return;
+    this.#config = normalizeNotificationConfig(detail.config ?? this.config);
+    this.#render();
+    this.#applyConfig('external', { emit: false });
+  };
 
   attributeChangedCallback(name, oldValue, newValue) {
     if (oldValue === newValue || !this.#ready) return;
@@ -191,8 +183,9 @@ export class NotificationWidget extends Symbiote {
     getStorage()?.setItem(this.storageKey, serializeNotificationConfig(this.#config));
   }
 
-  #applyConfig(source) {
-    this.#persistConfig();
+  #applyConfig(source, { emit = true } = {}) {
+    // Skip the write-back when adopting an already-persisted external change.
+    if (emit) this.#persistConfig();
     let sound = this.#ensureSound();
     if (sound) {
       sound.setMuted(!this.#config.enabled || !this.#config.soundEnabled);
@@ -200,6 +193,7 @@ export class NotificationWidget extends Symbiote {
     }
     let narrator = this.#ensureNarrator();
     if (narrator) narrator.setEnabled(this.#config.enabled && this.#config.narrationEnabled);
+    if (!emit) return;
     this.dispatchEvent(new CustomEvent('notification-config-change', {
       bubbles: true,
       composed: true,
@@ -233,6 +227,7 @@ export class NotificationWidget extends Symbiote {
       enabled: this.#config.enabled && this.#config.narrationEnabled,
       getLocale: () => this.locale,
       getDepth: () => this.#config.narrationDepth,
+      getVariants: ({ type, locale, depth }) => resolvePhraseVariants(this.#config, { type, locale, depth }),
       getVoiceParams: () => ({ volume: this.#config.voiceVolume }),
     });
     return this.#narrator;
@@ -307,13 +302,11 @@ export class NotificationWidget extends Symbiote {
       this.ref.resetButton.setAttribute('aria-label', t('notification.widget.reset'));
     }
     if (this.ref.openFullButton) {
-      let detailed = this.ref.detailed && !this.ref.detailed.hidden;
-      let label = detailed ? t('notification.widget.trigger') : t('notification.widget.openFull');
+      let label = t('notification.widget.openFull');
       this.ref.openFullButton.title = label;
       this.ref.openFullButton.setAttribute('aria-label', label);
     }
     this.#renderCompact(t);
-    this.#renderDetailed(t);
   }
 
   #renderCompact(t) {
@@ -346,68 +339,6 @@ export class NotificationWidget extends Symbiote {
     `;
   }
 
-  #renderDetailed(t) {
-    let host = this.ref.detailed;
-    if (!host) return;
-    let c = this.#config;
-    let presetOptions = listEventPresetOptions();
-
-    let soundRows = NOTIFICATION_EVENT_TYPES.map((type) => {
-      let selected = resolveEventPreset(c, type);
-      let options = presetOptions
-        .map((key) => `<option value="${escapeHtml(key)}" ${key === selected ? 'selected' : ''}>${escapeHtml(key)}</option>`)
-        .join('');
-      return `
-        <div class="nw-row">
-          <label>${escapeHtml(t(EVENT_LABEL_KEYS[type] || 'notification.event.generic'))}</label>
-          <select class="nw-select" data-event-preset="${escapeHtml(type)}">${options}</select>
-        </div>`;
-    }).join('');
-
-    let stageRows = NOTIFICATION_BOARD_STAGES.map((stage) => `
-      <div class="nw-row">
-        <label for="nw-stage-${escapeHtml(stage)}">${escapeHtml(t(`notification.stage.${stage}`))}</label>
-        <input id="nw-stage-${escapeHtml(stage)}" type="checkbox" data-stage="${escapeHtml(stage)}" ${c.stageNarration[stage] ? 'checked' : ''}>
-      </div>`).join('');
-
-    let depthButtons = NARRATION_DEPTHS.map((depth) => `
-      <button type="button" data-depth="${escapeHtml(depth)}" aria-pressed="${String(depth === c.narrationDepth)}">
-        ${escapeHtml(t(`notification.depth.${depth}`))}
-      </button>`).join('');
-
-    let phraseBlocks = NOTIFICATION_EVENT_TYPES.map((type) => {
-      let variants = resolvePhraseVariants(c, { type, locale: this.locale, depth: c.narrationDepth });
-      return `
-        <div class="nw-phrase">
-          <div class="nw-phrase-head">
-            <span>${escapeHtml(t(EVENT_LABEL_KEYS[type] || 'notification.event.generic'))}</span>
-            <button type="button" data-phrase-reset="${escapeHtml(type)}">${escapeHtml(t('notification.detailed.phraseReset'))}</button>
-          </div>
-          <textarea data-phrase="${escapeHtml(type)}" rows="2">${escapeHtml(variants.join('\n'))}</textarea>
-        </div>`;
-    }).join('');
-
-    host.innerHTML = `
-      <div class="nw-section">
-        <div class="nw-section-title">${escapeHtml(t('notification.detailed.soundSection'))}</div>
-        ${soundRows}
-      </div>
-      <div class="nw-section">
-        <div class="nw-section-title">${escapeHtml(t('notification.detailed.depth'))}</div>
-        <div class="nw-depth" aria-label="${escapeHtml(t('notification.detailed.depth'))}">${depthButtons}</div>
-      </div>
-      <div class="nw-section">
-        <div class="nw-section-title">${escapeHtml(t('notification.detailed.stageSection'))}</div>
-        ${stageRows}
-      </div>
-      <div class="nw-section">
-        <div class="nw-section-title">${escapeHtml(t('notification.detailed.phraseSection'))}</div>
-        <div class="nw-hint">${escapeHtml(t('notification.detailed.phraseHint'))}</div>
-        ${phraseBlocks}
-      </div>
-    `;
-  }
-
   // -- interaction -----------------------------------------------------------
 
   #onInput = (event) => {
@@ -415,93 +346,33 @@ export class NotificationWidget extends Symbiote {
     if (!target || !this.#elementTargetsWidget(target)) return;
 
     let configKey = target.dataset?.config;
-    if (configKey) {
-      let next = { ...this.#config };
-      if (configKey === 'soundVolume' || configKey === 'voiceVolume') next[configKey] = Number(target.value) / 100;
-      else next[configKey] = Boolean(target.checked);
-      this.#config = normalizeNotificationConfig(next);
-      this.#applyConfig('input');
-      return;
-    }
-
-    let eventPreset = target.dataset?.eventPreset;
-    if (eventPreset) {
-      this.#config = normalizeNotificationConfig({
-        ...this.#config,
-        eventPresets: { ...this.#config.eventPresets, [eventPreset]: target.value },
-      });
-      this.#applyConfig('event-preset');
-      return;
-    }
-
-    let stage = target.dataset?.stage;
-    if (stage) {
-      this.#config = normalizeNotificationConfig({
-        ...this.#config,
-        stageNarration: { ...this.#config.stageNarration, [stage]: Boolean(target.checked) },
-      });
-      this.#applyConfig('stage');
-      return;
-    }
-
-    let phraseType = target.dataset?.phrase;
-    if (phraseType && event.type === 'change') {
-      let variants = String(target.value).split('\n');
-      this.#config = setPhraseVariants(this.#config, {
-        type: phraseType,
-        locale: this.locale,
-        depth: this.#config.narrationDepth,
-        variants,
-      });
-      this.#applyConfig('phrase');
-    }
+    if (!configKey) return;
+    let next = { ...this.#config };
+    if (configKey === 'soundVolume' || configKey === 'voiceVolume') next[configKey] = Number(target.value) / 100;
+    else next[configKey] = Boolean(target.checked);
+    this.#config = normalizeNotificationConfig(next);
+    this.#applyConfig('input');
   };
 
   #onClick = (event) => {
-    let depthButton = event.target.closest?.('[data-depth]');
-    if (depthButton && this.#elementTargetsWidget(depthButton)) {
-      let depth = depthButton.dataset.depth;
-      if (NARRATION_DEPTHS.includes(depth)) {
-        this.#config = normalizeNotificationConfig({ ...this.#config, narrationDepth: depth });
-        this.#render();
-        this.#applyConfig('depth');
-      }
-      return;
-    }
-
-    let phraseReset = event.target.closest?.('[data-phrase-reset]');
-    if (phraseReset && this.#elementTargetsWidget(phraseReset)) {
-      this.#config = setPhraseVariants(this.#config, {
-        type: phraseReset.dataset.phraseReset,
-        locale: this.locale,
-        depth: this.#config.narrationDepth,
-        variants: [],
-      });
-      this.#render();
-      this.#applyConfig('phrase-reset');
-      return;
-    }
-
     let action = event.target.closest?.('[data-action]')?.dataset.action;
     if (!action || !this.#elementTargetsWidget(event.target)) return;
     if (action === 'reset') {
       this.reset();
       this.#render();
     } else if (action === 'open-full') {
-      this.#toggleDetailed();
+      this.#openFull();
     }
   };
 
-  #toggleDetailed() {
-    let detailed = this.ref.detailed;
-    if (!detailed) return;
-    detailed.hidden = !detailed.hidden;
-    this.#render();
-    if (this.$.isOpen) this.#positionPopover();
+  // Hand the detailed settings off to the host, which opens the full
+  // notification-editor panel — mirroring the cascade theme widget's open-full.
+  #openFull() {
+    this.#setOpen(false);
     this.dispatchEvent(new CustomEvent('notification-open-full', {
       bubbles: true,
       composed: true,
-      detail: { open: !detailed.hidden, config: this.config, storageKey: this.storageKey },
+      detail: { config: this.config, storageKey: this.storageKey },
     }));
   }
 

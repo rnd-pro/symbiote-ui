@@ -37,6 +37,28 @@ test('randomized selection is deterministic under an injected RNG', () => {
   assert.equal(first.variantIndex, 0);
 });
 
+test('explicit variants override the built-in bank', () => {
+  let result = composeNarration({
+    type: 'task.moved',
+    params: { title: 'Build', stage: 'Review' },
+    locale: 'en',
+    depth: 'terse',
+    variants: ['{title} now at {stage}'],
+    random: () => 0,
+  });
+  assert.equal(result.text, 'Build now at Review');
+  // An empty override list falls back to the built-in bank.
+  let fallback = composeNarration({
+    type: 'task.moved',
+    params: { title: 'Build', stage: 'Review' },
+    locale: 'en',
+    depth: 'terse',
+    variants: [],
+    random: () => 0,
+  });
+  assert.notEqual(fallback.text, 'Build now at Review');
+});
+
 test('terse and chatty depth produce different phrasings', () => {
   let terse = selectNarrationPhrase({ type: 'task.completed', params: { title: 'X' }, locale: 'en', depth: 'terse', random: () => 0 });
   let chatty = selectNarrationPhrase({ type: 'task.completed', params: { title: 'X' }, locale: 'en', depth: 'chatty', random: () => 0 });

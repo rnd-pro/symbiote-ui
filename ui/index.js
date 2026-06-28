@@ -264,6 +264,7 @@ export let StatusRibbon;
 export let CascadeThemeEditor;
 export let CascadeThemeWidget;
 export let NotificationWidget;
+export let NotificationEditor;
 export let Dialog;
 export let Select;
 export let Toast;
@@ -655,6 +656,7 @@ if (hasDOMGlobals) {
     cascadeThemeEditor,
     cascadeThemeWidget,
     notificationWidget,
+    notificationEditor,
     sliderControl,
     ratingControl,
     segmentedControl,
@@ -758,6 +760,7 @@ if (hasDOMGlobals) {
     import('../themes/CascadeThemeEditor/CascadeThemeEditor.js'),
     import('../themes/CascadeThemeWidget/CascadeThemeWidget.js'),
     import('../notifications/NotificationWidget/NotificationWidget.js'),
+    import('../notifications/NotificationEditor/NotificationEditor.js'),
     import('../control/Slider/Slider.js'),
     import('../control/Rating/Rating.js'),
     import('../control/SegmentedControl/SegmentedControl.js'),
@@ -875,6 +878,7 @@ if (hasDOMGlobals) {
   ({ CascadeThemeEditor } = cascadeThemeEditor);
   ({ CascadeThemeWidget } = cascadeThemeWidget);
   ({ NotificationWidget } = notificationWidget);
+  ({ NotificationEditor } = notificationEditor);
   ({ SliderControl } = sliderControl);
   ({ RatingControl } = ratingControl);
   ({ SegmentedControl } = segmentedControl);
@@ -980,6 +984,7 @@ if (hasDOMGlobals) {
     CascadeThemeEditor,
     CascadeThemeWidget,
     NotificationWidget,
+    NotificationEditor,
     SliderControl,
     RatingControl,
     SegmentedControl,

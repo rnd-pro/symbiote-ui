@@ -136,17 +136,10 @@ export default css`
   }
 
   notification-widget .nw-compact,
-  notification-widget .nw-detailed,
-  .nw-popover[data-overlay-portal] .nw-compact,
-  .nw-popover[data-overlay-portal] .nw-detailed {
+  .nw-popover[data-overlay-portal] .nw-compact {
     display: grid;
     gap: var(--sn-notification-widget-control-gap, 9px);
     min-width: 0;
-  }
-
-  notification-widget .nw-detailed[hidden],
-  .nw-popover[data-overlay-portal] .nw-detailed[hidden] {
-    display: none;
   }
 
   notification-widget .nw-row,
@@ -192,131 +185,11 @@ export default css`
     accent-color: var(--sn-node-selected);
   }
 
-  notification-widget .nw-section,
-  .nw-popover[data-overlay-portal] .nw-section {
-    display: grid;
-    gap: var(--sn-notification-widget-control-gap, 9px);
-    padding-top: var(--sn-notification-widget-control-gap, 9px);
-    border-top: 1px solid var(--sn-node-border);
-  }
-
-  notification-widget .nw-section-title,
-  .nw-popover[data-overlay-portal] .nw-section-title {
-    color: var(--sn-text);
-    font-size: var(--sn-notification-widget-section-size, 11px);
-    font-weight: 600;
-    letter-spacing: 0.4px;
-    text-transform: uppercase;
-  }
-
-  notification-widget .nw-select,
-  notification-widget .nw-row select,
-  .nw-popover[data-overlay-portal] .nw-select,
-  .nw-popover[data-overlay-portal] .nw-row select {
-    min-width: var(--sn-notification-widget-select-width, 132px);
-    max-width: 60%;
-    padding: var(--sn-notification-widget-select-padding, 4px 8px);
-    border: 1px solid var(--sn-node-border);
-    border-radius: var(--sn-button-radius, 6px);
-    background: var(--sn-node-bg);
-    color: var(--sn-text);
-    font: inherit;
-    font-size: var(--sn-notification-widget-control-size, 12px);
-  }
-
-  notification-widget .nw-depth,
-  .nw-popover[data-overlay-portal] .nw-depth {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--sn-notification-widget-mode-gap, 4px);
-    padding: var(--sn-notification-widget-mode-padding, 3px);
-    border: 1px solid var(--sn-node-border);
-    border-radius: var(--sn-node-radius, 8px);
-    background: var(--sn-bg);
-  }
-
-  notification-widget .nw-depth button,
-  .nw-popover[data-overlay-portal] .nw-depth button {
-    min-width: 0;
-    min-height: var(--sn-notification-widget-mode-height, var(--sn-button-min-height, 28px));
-    padding: var(--sn-notification-widget-mode-button-padding, 5px 10px);
-    border: 1px solid transparent;
-    border-radius: var(--sn-button-radius, 6px);
-    background: var(--sn-notification-widget-depth-bg, transparent);
-    color: var(--sn-text-dim);
-    font: inherit;
-    font-size: var(--sn-notification-widget-control-size, 12px);
-    cursor: pointer;
-  }
-
-  notification-widget .nw-depth button[aria-pressed="true"],
-  .nw-popover[data-overlay-portal] .nw-depth button[aria-pressed="true"] {
-    border-color: var(--sn-button-primary-border, var(--sn-node-selected));
-    background: var(--sn-button-primary-bg, var(--sn-node-selected));
-    color: var(--sn-button-primary-color, var(--sn-bg));
-  }
-
-  notification-widget .nw-phrase,
-  .nw-popover[data-overlay-portal] .nw-phrase {
-    display: grid;
-    gap: var(--sn-notification-widget-phrase-gap, 5px);
-  }
-
-  notification-widget .nw-phrase-head,
-  .nw-popover[data-overlay-portal] .nw-phrase-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--sn-notification-widget-action-gap, 8px);
-    color: var(--sn-text-dim);
-    font-size: var(--sn-notification-widget-control-size, 12px);
-  }
-
-  notification-widget .nw-phrase-head button,
-  .nw-popover[data-overlay-portal] .nw-phrase-head button {
-    padding: var(--sn-notification-widget-chip-padding, 2px 8px);
-    border: 1px solid var(--sn-node-border);
-    border-radius: var(--sn-button-radius, 6px);
-    background: var(--sn-node-bg);
-    color: var(--sn-text-dim);
-    font: inherit;
-    font-size: var(--sn-notification-widget-chip-size, 11px);
-    cursor: pointer;
-  }
-
-  notification-widget .nw-phrase textarea,
-  .nw-popover[data-overlay-portal] .nw-phrase textarea {
-    width: 100%;
-    min-height: var(--sn-notification-widget-phrase-height, 56px);
-    padding: var(--sn-notification-widget-phrase-padding, 6px 8px);
-    border: 1px solid var(--sn-node-border);
-    border-radius: var(--sn-button-radius, 6px);
-    background: var(--sn-node-bg);
-    color: var(--sn-text);
-    font: inherit;
-    font-size: var(--sn-notification-widget-control-size, 12px);
-    line-height: 1.45;
-    resize: vertical;
-  }
-
-  notification-widget .nw-hint,
-  .nw-popover[data-overlay-portal] .nw-hint {
-    color: var(--sn-text-dim);
-    font-size: var(--sn-notification-widget-hint-size, 10.5px);
-    opacity: 0.85;
-  }
-
   notification-widget .nw-trigger:focus-visible,
   notification-widget .nw-header-actions button:focus-visible,
   notification-widget .nw-row input:focus-visible,
-  notification-widget .nw-row select:focus-visible,
-  notification-widget .nw-depth button:focus-visible,
-  notification-widget .nw-phrase textarea:focus-visible,
   .nw-popover[data-overlay-portal] .nw-header-actions button:focus-visible,
-  .nw-popover[data-overlay-portal] .nw-row input:focus-visible,
-  .nw-popover[data-overlay-portal] .nw-row select:focus-visible,
-  .nw-popover[data-overlay-portal] .nw-depth button:focus-visible,
-  .nw-popover[data-overlay-portal] .nw-phrase textarea:focus-visible {
+  .nw-popover[data-overlay-portal] .nw-row input:focus-visible {
     outline: var(--sn-effect-focus-ring, 2px solid var(--sn-node-selected));
     outline-offset: 2px;
   }

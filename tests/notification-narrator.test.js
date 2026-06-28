@@ -67,6 +67,16 @@ test('compose selects a localized phrase without speaking', () => {
   assert.equal(synthesis.spoken.length, 0);
 });
 
+test('compose uses the getVariants provider (edited phrase bank)', () => {
+  let seen = null;
+  let { narrator } = makeNarrator({
+    getVariants: (query) => { seen = query; return ['{title} parked at {stage}']; },
+  });
+  let narration = narrator.compose({ type: 'task.moved', params: { title: 'Build', stage: 'Review' } });
+  assert.equal(narration.text, 'Build parked at Review');
+  assert.deepEqual(seen, { type: 'task.moved', locale: 'en', depth: 'terse' });
+});
+
 test('narrate speaks through speechSynthesis and holds the arbitration floor', () => {
   let { narrator, synthesis, channel, events } = makeNarrator();
   let result = narrator.narrate({ type: 'task.completed', params: { title: 'Deploy' } });

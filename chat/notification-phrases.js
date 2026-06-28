@@ -198,15 +198,19 @@ export function listNarrationVariants({ type, locale, depth } = {}) {
  * @param {string} [options.locale] - target locale (falls back to default).
  * @param {string} [options.depth] - 'terse' | 'chatty'.
  * @param {() => number} [options.random] - injectable RNG returning [0, 1).
+ * @param {string[]} [options.variants] - explicit phrase variants (e.g. a user's
+ *   edited phrase bank); falls back to the built-in bank when empty/omitted.
  * @returns {{ text: string, type: string, locale: string, depth: string, variantIndex: number, template: string }}
  */
-export function composeNarration({ type, params = {}, locale, depth, random } = {}) {
+export function composeNarration({ type, params = {}, locale, depth, random, variants } = {}) {
   let resolvedType = normalizeEventType(type);
   let resolvedLocale = normalizeLocale(locale);
   let resolvedDepth = normalizeDepth(depth);
-  let variants = resolveVariants(resolvedLocale, resolvedType, resolvedDepth);
-  let variantIndex = pickIndex(variants.length, random);
-  let template = variants[variantIndex];
+  let resolved = Array.isArray(variants) && variants.length > 0
+    ? variants
+    : resolveVariants(resolvedLocale, resolvedType, resolvedDepth);
+  let variantIndex = pickIndex(resolved.length, random);
+  let template = resolved[variantIndex];
   return {
     text: interpolateLocaleMessage(template, params),
     type: resolvedType,

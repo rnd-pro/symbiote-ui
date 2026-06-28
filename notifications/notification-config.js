@@ -53,6 +53,19 @@ export const NOTIFICATION_BOARD_STAGES = Object.freeze([
   'terminal',
 ]);
 
+/** Narration event type → its localized label key (shared by widget + editor). */
+export const EVENT_LABEL_KEYS = Object.freeze({
+  'task.created': 'notification.event.taskCreated',
+  'task.moved': 'notification.event.taskMoved',
+  'task.started': 'notification.event.taskStarted',
+  'task.completed': 'notification.event.taskCompleted',
+  'task.failed': 'notification.event.taskFailed',
+  'task.blocked': 'notification.event.taskBlocked',
+  'approval.required': 'notification.event.approvalRequired',
+  'agent.message': 'notification.event.agentMessage',
+  generic: 'notification.event.generic',
+});
+
 export const NOTIFICATION_CONFIG_DEFAULTS = Object.freeze({
   enabled: true,
   soundVolume: 0.8,
