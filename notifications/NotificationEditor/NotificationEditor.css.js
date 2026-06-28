@@ -5,6 +5,7 @@ export default css`
     display: block;
     width: 100%;
     height: 100%;
+    min-width: 0;
     color: var(--sn-text);
     font-family: var(--sn-font);
   }
@@ -18,6 +19,7 @@ export default css`
     flex-direction: column;
     width: 100%;
     height: 100%;
+    min-width: 0;
     box-sizing: border-box;
     background: var(--sn-panel-bg);
   }
@@ -73,6 +75,7 @@ export default css`
 
   notification-editor .ne-body {
     flex: 1;
+    min-width: 0;
     min-height: 0;
     overflow: auto;
     display: grid;
