@@ -82,7 +82,6 @@ export default css`
     gap: var(--sn-notification-editor-section-gap, 14px);
     align-content: start;
     padding: var(--sn-notification-editor-body-padding, 14px 16px 20px);
-    max-width: var(--sn-notification-editor-max-width, 640px);
   }
 
   notification-editor .ne-section {
