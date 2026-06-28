@@ -117,9 +117,37 @@ export default css`
     accent-color: var(--sn-node-selected);
   }
 
+  notification-editor .ne-control-group {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sn-notification-widget-action-gap, 6px);
+    min-width: 0;
+    justify-self: end;
+  }
+
+  notification-editor .ne-play {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    padding: var(--sn-notification-widget-action-gap, 4px);
+    border: 1px solid var(--sn-node-border);
+    border-radius: var(--sn-button-radius, 6px);
+    background: var(--sn-node-bg);
+    color: var(--sn-text-dim);
+    cursor: pointer;
+  }
+
+  notification-editor .ne-play:hover {
+    color: var(--sn-text);
+  }
+
+  notification-editor .ne-play .material-symbols-outlined {
+    font-size: var(--sn-notification-widget-label-icon-size, 16px);
+  }
+
   notification-editor .ne-select {
-    min-width: var(--sn-notification-widget-select-width, 160px);
-    max-width: 70%;
+    min-width: var(--sn-notification-widget-select-width, 150px);
     padding: var(--sn-notification-widget-select-padding, 4px 8px);
     border: 1px solid var(--sn-node-border);
     border-radius: var(--sn-button-radius, 6px);
@@ -205,6 +233,7 @@ export default css`
   }
 
   notification-editor .ne-icon-button:focus-visible,
+  notification-editor .ne-play:focus-visible,
   notification-editor .ne-row input:focus-visible,
   notification-editor .ne-select:focus-visible,
   notification-editor .ne-depth button:focus-visible,

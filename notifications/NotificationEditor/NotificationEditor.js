@@ -16,6 +16,9 @@ import {
   NARRATION_DEPTHS,
   NOTIFICATION_EVENT_TYPES,
 } from '../../chat/notification-phrases.js';
+import { createSoundEngine } from '../sound-engine.js';
+import { NotificationNarrator } from '../../chat/notification-narrator.js';
+import { getDefaultVoiceArbitrationChannel } from '../../chat/voice-arbitration.js';
 import {
   createTranslator,
   normalizeLocale,
@@ -26,7 +29,7 @@ import css from './NotificationEditor.css.js';
 import tpl from './NotificationEditor.tpl.js';
 
 const DEFAULT_STORAGE_KEY = 'symbiote-ui:notification-widget';
-const ICONS = ['notifications', 'restart_alt'];
+const ICONS = ['notifications', 'restart_alt', 'play_arrow'];
 
 function getStorage() {
   if (typeof window !== 'undefined' && window.localStorage) return window.localStorage;
@@ -55,6 +58,7 @@ export class NotificationEditor extends Symbiote {
 
   #config = normalizeNotificationConfig(NOTIFICATION_CONFIG_DEFAULTS);
   #ready = false;
+  #preview = null;
 
   initCallback() {
     ensureMaterialSymbols(ICONS);
@@ -73,6 +77,9 @@ export class NotificationEditor extends Symbiote {
     if (typeof document !== 'undefined') {
       document.removeEventListener('notification-config-change', this.#onExternalChange);
     }
+    this.#preview?.narrator?.cancel?.();
+    this.#preview?.sound?.dispose?.();
+    this.#preview = null;
     super.disconnectedCallback?.();
   }
 
@@ -176,10 +183,16 @@ export class NotificationEditor extends Symbiote {
       let options = presetOptions
         .map((key) => `<option value="${escapeHtml(key)}" ${key === selected ? 'selected' : ''}>${escapeHtml(key)}</option>`)
         .join('');
+      let previewLabel = t('notification.editor.preview');
       return `
         <div class="ne-row">
           <label>${escapeHtml(t(EVENT_LABEL_KEYS[type] || 'notification.event.generic'))}</label>
-          <select class="ne-select" data-event-preset="${escapeHtml(type)}">${options}</select>
+          <div class="ne-control-group">
+            <button type="button" class="ne-play" data-preview="${escapeHtml(type)}" title="${escapeHtml(previewLabel)}" aria-label="${escapeHtml(previewLabel)}">
+              <span class="material-symbols-outlined" aria-hidden="true">play_arrow</span>
+            </button>
+            <select class="ne-select" data-event-preset="${escapeHtml(type)}">${options}</select>
+          </div>
         </div>`;
     }).join('');
 
@@ -265,6 +278,12 @@ export class NotificationEditor extends Symbiote {
   };
 
   #onClick = (event) => {
+    let previewButton = event.target.closest?.('[data-preview]');
+    if (previewButton && this.contains(previewButton)) {
+      this.#previewEvent(previewButton.dataset.preview);
+      return;
+    }
+
     let depthButton = event.target.closest?.('[data-depth]');
     if (depthButton && this.contains(depthButton)) {
       let depth = depthButton.dataset.depth;
@@ -292,6 +311,48 @@ export class NotificationEditor extends Symbiote {
     let action = event.target.closest?.('[data-action]')?.dataset.action;
     if (action === 'reset') this.reset();
   };
+
+  // -- preview ---------------------------------------------------------------
+
+  // Lazily build a private sound engine + narrator so a play button can demo an
+  // event exactly as it will fire on the board, honoring the current volumes,
+  // depth, and edited phrase bank. The user's click unlocks Web Audio.
+  #ensurePreview() {
+    if (this.#preview || typeof window === 'undefined') return this.#preview;
+    let sound = createSoundEngine({ masterGain: this.#config.soundVolume });
+    sound.installGestureUnlock(window);
+    let narrator = new NotificationNarrator({
+      arbitration: getDefaultVoiceArbitrationChannel(),
+      getLocale: () => this.locale,
+      getDepth: () => this.#config.narrationDepth,
+      getVariants: ({ type, locale, depth }) => resolvePhraseVariants(this.#config, { type, locale, depth }),
+      getVoiceParams: () => ({ volume: this.#config.voiceVolume }),
+    });
+    this.#preview = { sound, narrator };
+    return this.#preview;
+  }
+
+  // Sample interpolation values so a previewed phrase reads naturally.
+  #sampleParams() {
+    let t = this.#t();
+    return { title: t('notification.editor.sampleTitle'), stage: t('notification.stage.execute') };
+  }
+
+  #previewEvent(type) {
+    let preview = this.#ensurePreview();
+    if (!preview) return;
+    preview.sound.setMasterGain(this.#config.soundVolume);
+    preview.sound.setMuted(false);
+    preview.sound.unlock();
+    preview.sound.play(resolveEventPreset(this.#config, type));
+    preview.narrator.setEnabled(true);
+    preview.narrator.narrate({
+      type,
+      params: this.#sampleParams(),
+      locale: this.locale,
+      depth: this.#config.narrationDepth,
+    });
+  }
 }
 
 NotificationEditor.template = tpl;
