@@ -637,7 +637,11 @@ export class LayoutNode extends Symbiote {
 
     child.$.panelChrome = this.$.panelChrome !== false;
     child.setAttribute('panel-chrome', this.$.panelChrome ? 'default' : 'none');
-    child.$.nodeData = { ...nodeData };
+    // Reference the live tree node (not a shallow copy) so a nested split's resize
+    // — which mutates nodeData.ratio — reaches the master layout tree and survives
+    // the next _renderRoot/_saveLayout. The root node already holds this reference;
+    // copying here detached every nested split from the tree, so its ratio reset.
+    child.$.nodeData = nodeData;
   }
 
   #matchesLayoutNode(node, nodeData) {
