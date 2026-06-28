@@ -150,6 +150,36 @@ chat-message-item {
   margin-bottom: var(--sn-step-2);
 }
 
+.tool-result-summary {
+  font-size: var(--sn-chat-tool-font-size, 12px);
+  font-weight: 600;
+  color: var(--sn-text);
+  line-height: 1.4;
+}
+
+.tool-warnings {
+  list-style: none;
+  margin: 0;
+  padding: 0 var(--sn-chat-tool-padding, 12px) var(--sn-step-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sn-step-2);
+}
+
+.tool-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sn-step-2);
+  font-size: var(--sn-chat-small-size, 11px);
+  color: var(--sn-warning-color, var(--sn-danger-color, #b45309));
+  line-height: 1.4;
+}
+
+.tool-warning-icon {
+  font-size: var(--sn-chat-tool-icon-size, 14px);
+  flex: 0 0 auto;
+}
+
 .tool-code {
   background: var(--sn-bg);
   border-radius: var(--sn-radius-md);
@@ -890,5 +920,26 @@ h4.md-h {
 .sn-btn.cancel:hover {
   background: var(--sn-node-hover);
   border-color: var(--sn-text-dim);
+}
+
+.confirm-pill.resolved {
+  opacity: 0.85;
+  border-color: var(--sn-node-border);
+}
+.confirm-pill.resolved .confirm-pill-icon {
+  color: var(--sn-text-dim);
+}
+.confirm-pill[data-resolved='confirm'] .confirm-pill-icon {
+  color: var(--sn-success-color, #22c55e);
+}
+.confirm-pill.resolved .confirm-btn {
+  cursor: default;
+}
+.confirm-pill.resolved .confirm-btn:disabled {
+  opacity: 0.5;
+}
+.confirm-pill.resolved .confirm-btn.is-chosen {
+  opacity: 1;
+  font-weight: 600;
 }
 `;

@@ -114,6 +114,26 @@ export const MESSAGE_PART_KINDS = {
   CANCELLED: 'cancelled',
 };
 
+const TOOL_RESULT_ENVELOPE_KIND = 'tool-result/v1';
+
+function isToolResultEnvelope(value) {
+  return Boolean(value)
+    && typeof value === 'object'
+    && !Array.isArray(value)
+    && value._kind === TOOL_RESULT_ENVELOPE_KIND;
+}
+
+function normalizeEnvelopeWarnings(warnings) {
+  if (warnings == null) return [];
+  let list = Array.isArray(warnings) ? warnings : [warnings];
+  let result = [];
+  for (let entry of list) {
+    if (entry == null) continue;
+    result.push(typeof entry === 'string' ? entry : String(entry));
+  }
+  return result;
+}
+
 function normalizeDisplayPayload(display) {
   if (!display || typeof display !== 'object') return null;
   let next = {};
@@ -133,7 +153,10 @@ export function normalizeChatMessagePart(part) {
       id: '',
       args: null,
       result: null,
+      summary: '',
+      warnings: [],
       status: '',
+      resolved: '',
       title: '',
       url: '',
       mimeType: '',
@@ -157,14 +180,26 @@ export function normalizeChatMessagePart(part) {
     } catch {}
   }
 
+  let result = part.result ?? part.output ?? null;
+  let summary = '';
+  let warnings = [];
+  if (type === 'tool_result' && isToolResultEnvelope(result)) {
+    summary = typeof result.summary === 'string' ? result.summary : '';
+    warnings = normalizeEnvelopeWarnings(result.warnings);
+    result = result.data ?? null;
+  }
+
   return {
     type,
     text: part.text ?? part.content ?? part.value ?? '',
     name: part.name ?? '',
     id: part.id ?? part.toolCallId ?? part.tool_call_id ?? '',
     args,
-    result: part.result ?? part.output ?? null,
+    result,
+    summary,
+    warnings,
     status: part.status ?? '',
+    resolved: part.resolved ?? '',
     title: part.title ?? part.label ?? '',
     url: part.url ?? part.href ?? '',
     mimeType: part.mimeType ?? part.mime ?? part.contentType ?? '',
@@ -222,7 +257,10 @@ export function toChatMessageItem(msg, options = {}) {
           id: msg.id || '',
           text: '',
           result: null,
+          summary: '',
+          warnings: [],
           status: '',
+          resolved: '',
           title: '',
           url: '',
           mimeType: '',
@@ -234,33 +272,25 @@ export function toChatMessageItem(msg, options = {}) {
         });
       }
       if (msg?.result != null) {
-        parts.push({
+        parts.push(normalizeChatMessagePart({
           type: 'tool_result',
           name: msg.name || 'tool',
           result: msg.result,
           id: msg.id || '',
-          text: '',
-          args: null,
-          status: '',
-          title: '',
-          url: '',
-          mimeType: '',
-          meta: {},
-          display: null,
-          llmContent: '',
-          payload: null,
-          action: '',
-        });
+        }));
       }
     } else if (role === 'thinking') {
       parts.push({
         type: 'reasoning',
         text: msg?.text || msg?.content || '',
         status: msg?.status || '',
+        resolved: '',
         name: '',
         id: '',
         args: null,
         result: null,
+        summary: '',
+        warnings: [],
         title: '',
         url: '',
         mimeType: '',
@@ -278,10 +308,13 @@ export function toChatMessageItem(msg, options = {}) {
           id: card.id || '',
           title: card.title || '',
           status: card.status || '',
+          resolved: '',
           text: card.statusText || '',
           name: '',
           args: null,
           result: null,
+          summary: '',
+          warnings: [],
           url: '',
           mimeType: '',
           meta: {},
@@ -301,7 +334,10 @@ export function toChatMessageItem(msg, options = {}) {
           id: '',
           args: null,
           result: null,
+          summary: '',
+          warnings: [],
           status: '',
+          resolved: '',
           title: '',
           url: '',
           mimeType: '',

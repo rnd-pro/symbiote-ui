@@ -421,15 +421,185 @@ test('confirm part renders an inline pill and emits confirm/cancel events', asyn
   assert.deepEqual(confirmDetail.payload, { to: 'done' });
   assert.equal(confirmDetail.event.bubbles, true);
 
-  let cancelPromise = new Promise((resolve) => {
-    el.addEventListener('chat-message-cancel', (event) => resolve({ ...event.detail, event }));
+  el.remove();
+
+  let cancelEl = document.createElement('chat-message-item');
+  document.body.append(cancelEl);
+  cancelEl.set$({
+    role: 'agent',
+    parts: [{ type: 'confirm', title: 'Apply status change', text: 'Move to Done?', id: 'chg-1', payload: { to: 'done' } }],
   });
-  root.querySelector('.confirm-btn.cancel').click();
+
+  await nextRenderTick();
+
+  let cancelRoot = cancelEl.shadowRoot || cancelEl;
+  let cancelPromise = new Promise((resolve) => {
+    cancelEl.addEventListener('chat-message-cancel', (event) => resolve({ ...event.detail, event }));
+  });
+  cancelRoot.querySelector('.confirm-btn.cancel').click();
   let cancelDetail = await cancelPromise;
   assert.equal(cancelDetail.id, 'chg-1');
   assert.equal(cancelDetail.action, 'cancel');
   assert.deepEqual(cancelDetail.payload, { to: 'done' });
   assert.equal(cancelDetail.event.bubbles, true);
+
+  cancelEl.remove();
+});
+
+test('tool-result envelope normalizes summary/warnings and keeps raw results back-compatible', () => {
+  let envelopePart = normalizeChatMessagePart({
+    type: 'tool_result',
+    name: 'apply_change',
+    result: {
+      _kind: 'tool-result/v1',
+      summary: 'Moved card to Done',
+      warnings: ['column was near WIP limit'],
+      data: { id: 'card-1', status: 'done' },
+    },
+  });
+  assert.equal(envelopePart.summary, 'Moved card to Done');
+  assert.deepEqual(envelopePart.warnings, ['column was near WIP limit']);
+  assert.deepEqual(envelopePart.result, { id: 'card-1', status: 'done' });
+
+  let rawPart = normalizeChatMessagePart({
+    type: 'tool_result',
+    name: 'apply_change',
+    result: { id: 'card-1', status: 'done' },
+  });
+  assert.equal(rawPart.summary, '');
+  assert.deepEqual(rawPart.warnings, []);
+  assert.deepEqual(rawPart.result, { id: 'card-1', status: 'done' });
+
+  let legacyItem = toChatMessageItem({
+    role: 'tool',
+    name: 'apply_change',
+    result: { _kind: 'tool-result/v1', summary: 'Saved', warnings: ['stale read'], data: { ok: true } },
+  });
+  let legacyResult = legacyItem.parts.find((p) => p.type === 'tool_result');
+  assert.equal(legacyResult.summary, 'Saved');
+  assert.deepEqual(legacyResult.warnings, ['stale read']);
+  assert.deepEqual(legacyResult.result, { ok: true });
+});
+
+test('tool_result envelope renders a prominent summary, warning list, and collapsed data', async () => {
+  let el = document.createElement('chat-message-item');
+  document.body.append(el);
+
+  el.set$({
+    role: 'tool',
+    isLatestTool: true,
+    parts: [
+      normalizeChatMessagePart({
+        type: 'tool_result',
+        name: 'apply_change',
+        result: {
+          _kind: 'tool-result/v1',
+          summary: 'Moved card to Done',
+          warnings: ['column was near WIP limit', 'assignee unchanged'],
+          data: { id: 'card-1', status: 'done' },
+        },
+      }),
+    ],
+  });
+
+  await nextRenderTick();
+
+  let root = el.shadowRoot || el;
+  let card = root.querySelector('.tool-card');
+  assert.ok(card);
+  assert.equal(card.tagName.toLowerCase(), 'details');
+  assert.match(root.querySelector('.tool-result-summary')?.textContent || '', /Moved card to Done/);
+  let warnings = root.querySelectorAll('.tool-warning');
+  assert.equal(warnings.length, 2);
+  assert.match(warnings[0].textContent || '', /near WIP limit/);
+  assert.ok(warnings[0].querySelector('.tool-warning-icon'));
+  let resultSection = card.querySelector('.tool-section .tool-code');
+  assert.match(resultSection?.textContent || '', /"status": "done"/);
+  assert.doesNotMatch(root.textContent || '', /tool-result\/v1/);
+
+  el.remove();
+});
+
+test('raw (non-envelope) tool_result renders unchanged', async () => {
+  let el = document.createElement('chat-message-item');
+  document.body.append(el);
+
+  el.set$({
+    role: 'tool',
+    isLatestTool: true,
+    parts: [{ type: 'tool_result', name: 'apply_change', result: { id: 'card-1', status: 'done' } }],
+  });
+
+  await nextRenderTick();
+
+  let root = el.shadowRoot || el;
+  assert.equal(root.querySelector('.tool-result-summary'), null);
+  assert.equal(root.querySelectorAll('.tool-warning').length, 0);
+  assert.match(root.querySelector('.tool-code')?.textContent || '', /"status": "done"/);
+
+  el.remove();
+});
+
+test('confirm part becomes decided and disables buttons after a click', async () => {
+  let el = document.createElement('chat-message-item');
+  document.body.append(el);
+  el.set$({
+    role: 'agent',
+    parts: [{ type: 'confirm', title: 'Apply status change', text: 'Move to Done?', id: 'chg-2', payload: { to: 'done' } }],
+  });
+
+  await nextRenderTick();
+
+  let root = el.shadowRoot || el;
+  let confirmBtn = root.querySelector('.confirm-btn.confirm');
+  let cancelBtn = root.querySelector('.confirm-btn.cancel');
+  assert.equal(confirmBtn.disabled, false);
+  assert.equal(cancelBtn.disabled, false);
+
+  let confirmEvents = 0;
+  el.addEventListener('chat-message-confirm', (event) => {
+    confirmEvents += 1;
+    assert.equal(event.detail.id, 'chg-2');
+    assert.equal(event.detail.action, 'confirm');
+    assert.deepEqual(event.detail.payload, { to: 'done' });
+  });
+
+  confirmBtn.click();
+  await nextRenderTick();
+
+  assert.equal(confirmEvents, 1);
+  let pill = root.querySelector('.confirm-pill');
+  assert.ok(pill.classList.contains('resolved'));
+  assert.equal(pill.getAttribute('data-resolved'), 'confirm');
+  let resolvedConfirm = root.querySelector('.confirm-btn.confirm');
+  let resolvedCancel = root.querySelector('.confirm-btn.cancel');
+  assert.equal(resolvedConfirm.disabled, true);
+  assert.equal(resolvedCancel.disabled, true);
+  assert.ok(resolvedConfirm.classList.contains('is-chosen'));
+
+  resolvedConfirm.click();
+  await nextRenderTick();
+  assert.equal(confirmEvents, 1);
+
+  el.remove();
+});
+
+test('confirm part renders decided state directly from a resolved field', async () => {
+  let el = document.createElement('chat-message-item');
+  document.body.append(el);
+  el.set$({
+    role: 'agent',
+    parts: [{ type: 'confirm', title: 'Apply change', id: 'chg-3', resolved: 'cancel' }],
+  });
+
+  await nextRenderTick();
+
+  let root = el.shadowRoot || el;
+  let pill = root.querySelector('.confirm-pill');
+  assert.ok(pill.classList.contains('resolved'));
+  assert.equal(pill.getAttribute('data-resolved'), 'cancel');
+  assert.equal(root.querySelector('.confirm-btn.confirm').disabled, true);
+  assert.ok(root.querySelector('.confirm-btn.cancel').classList.contains('is-chosen'));
 
   el.remove();
 });

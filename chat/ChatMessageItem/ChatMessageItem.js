@@ -65,9 +65,11 @@ export class ChatMessageItem extends Symbiote {
     if (!btn || !this.contains(btn)) return;
     event.preventDefault();
     event.stopPropagation();
+    if (btn.disabled) return;
     let id = btn.dataset.id || '';
     let action = btn.dataset.confirmAction || '';
     let part = (this.$.parts || []).find((p) => p.type === 'confirm' && (p.id || '') === id);
+    if (part && part.resolved) return;
     let payload = part ? part.payload ?? null : null;
     let type = action === 'cancel' ? 'chat-message-cancel' : 'chat-message-confirm';
     this.dispatchEvent(new CustomEvent(type, {
@@ -75,6 +77,11 @@ export class ChatMessageItem extends Symbiote {
       composed: true,
       detail: { id, action, payload },
     }));
+
+    if (part) {
+      part.resolved = action === 'cancel' ? 'cancel' : 'confirm';
+      this._renderBody();
+    }
   }
 
   _renderBody() {
@@ -297,6 +304,10 @@ export class ChatMessageItem extends Symbiote {
       cardHtml += `<div class="tool-section"><div class="tool-label">${escapeHtml(translate('chat.message.input'))}</div><pre class="tool-code">${escapeHtml(stringifyBlock(part.args))}</pre></div>`;
     }
 
+    if (resultPart) {
+      cardHtml += this._renderToolResultEnvelopeBody(resultPart);
+    }
+
     let resultValue = this._getToolResultValue(resultPart) ?? this._getToolResultValue(part);
     if (resultValue != null) {
       cardHtml += `<div class="tool-section"><div class="tool-label">${escapeHtml(translate('chat.message.result'))}</div><pre class="tool-code">${escapeHtml(truncateResult(resultValue))}</pre></div>`;
@@ -310,13 +321,32 @@ export class ChatMessageItem extends Symbiote {
   _renderToolResultPart(part) {
     let isError = part.status === 'error';
     let icon = isError ? 'error' : 'check_circle';
+    let summaryHtml = part.summary
+      ? `<span class="tool-summary" title="${escapeHtml(part.summary)}">${escapeHtml(part.summary)}</span>`
+      : '';
     let cardHtml = `<details class="tool-card">
-      <summary class="tool-header"><span class="material-symbols-outlined tool-icon">${icon}</span><span class="tool-name">${escapeHtml(part.name || 'tool result')}</span></summary>`;
+      <summary class="tool-header"><span class="material-symbols-outlined tool-icon">${icon}</span><span class="tool-name">${escapeHtml(part.name || 'tool result')}</span>${summaryHtml}</summary>`;
+    cardHtml += this._renderToolResultEnvelopeBody(part);
     let resultValue = this._getToolResultValue(part);
     if (resultValue != null) {
       cardHtml += `<div class="tool-section"><div class="tool-label">${escapeHtml(translate('chat.message.result'))}</div><pre class="tool-code">${escapeHtml(truncateResult(resultValue))}</pre></div>`;
     }
     return `${cardHtml}</details>`;
+  }
+
+  _renderToolResultEnvelopeBody(part) {
+    let html = '';
+    if (part?.summary) {
+      html += `<div class="tool-section tool-result-summary">${escapeHtml(part.summary)}</div>`;
+    }
+    let warnings = Array.isArray(part?.warnings) ? part.warnings : [];
+    if (warnings.length) {
+      let items = warnings
+        .map((warning) => `<li class="tool-warning"><span class="material-symbols-outlined tool-warning-icon">warning</span><span>${escapeHtml(String(warning))}</span></li>`)
+        .join('');
+      html += `<ul class="tool-warnings">${items}</ul>`;
+    }
+    return html;
   }
 
   _renderDisplayCard(display) {
@@ -335,15 +365,24 @@ export class ChatMessageItem extends Symbiote {
     let text = part.text || translate('chat.message.confirmText');
     let confirmLabel = part.meta?.confirmLabel || translate('chat.message.confirm');
     let cancelLabel = part.meta?.cancelLabel || translate('chat.message.cancel');
-    return `<div class="confirm-pill" data-confirm-id="${escapeHtml(id)}">
-      <span class="material-symbols-outlined confirm-pill-icon">help</span>
+    let resolved = part.resolved || (part.status === 'confirmed' || part.status === 'cancelled' ? part.status : '');
+    let isConfirmed = resolved === 'confirm' || resolved === 'confirmed';
+    let isCancelled = resolved === 'cancel' || resolved === 'cancelled';
+    let isResolved = isConfirmed || isCancelled;
+    let resolvedAttr = isResolved ? ` data-resolved="${escapeHtml(isConfirmed ? 'confirm' : 'cancel')}"` : '';
+    let icon = isConfirmed ? 'check_circle' : isCancelled ? 'cancel' : 'help';
+    let disabledAttr = isResolved ? ' disabled' : '';
+    let confirmActive = isConfirmed ? ' is-chosen' : '';
+    let cancelActive = isCancelled ? ' is-chosen' : '';
+    return `<div class="confirm-pill${isResolved ? ' resolved' : ''}" data-confirm-id="${escapeHtml(id)}"${resolvedAttr}>
+      <span class="material-symbols-outlined confirm-pill-icon">${icon}</span>
       <div class="confirm-pill-info">
         <span class="confirm-pill-title">${escapeHtml(title)}</span>
         ${text ? `<span class="confirm-pill-text">${escapeHtml(text)}</span>` : ''}
       </div>
       <div class="confirm-pill-actions">
-        <button class="sn-btn confirm-pill-btn confirm-btn confirm" type="button" data-confirm-action="confirm" data-id="${escapeHtml(id)}">${escapeHtml(confirmLabel)}</button>
-        <button class="sn-btn confirm-pill-btn confirm-btn cancel" type="button" data-confirm-action="cancel" data-id="${escapeHtml(id)}">${escapeHtml(cancelLabel)}</button>
+        <button class="sn-btn confirm-pill-btn confirm-btn confirm${confirmActive}" type="button" data-confirm-action="confirm" data-id="${escapeHtml(id)}"${disabledAttr}>${escapeHtml(confirmLabel)}</button>
+        <button class="sn-btn confirm-pill-btn confirm-btn cancel${cancelActive}" type="button" data-confirm-action="cancel" data-id="${escapeHtml(id)}"${disabledAttr}>${escapeHtml(cancelLabel)}</button>
       </div>
     </div>`;
   }
