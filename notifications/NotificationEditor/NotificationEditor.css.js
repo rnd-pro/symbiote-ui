@@ -19,7 +19,7 @@ export default css`
     width: 100%;
     height: 100%;
     box-sizing: border-box;
-    background: var(--sn-bg);
+    background: var(--sn-panel-bg);
   }
 
   notification-editor .ne-header {
