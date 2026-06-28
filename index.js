@@ -200,6 +200,31 @@ export {
 } from './notifications/notification-queue.js';
 
 export {
+  NOTIFICATION_TONE_PRESETS,
+  buildTonePlan,
+  createSoundEngine,
+  getPresetDuration,
+  listTonePresetKeys,
+  resolveTonePreset,
+  resolveTonePresetKey,
+} from './notifications/sound-engine.js';
+
+export {
+  NOTIFICATION_BOARD_STAGES,
+  NOTIFICATION_CONFIG_DEFAULTS,
+  NOTIFICATION_PRESET_KEYS,
+  isStageNarrationEnabled,
+  listAllPresetKeys,
+  listEventPresetOptions,
+  normalizeNotificationConfig,
+  parseNotificationConfig,
+  resolveEventPreset,
+  resolvePhraseVariants,
+  serializeNotificationConfig,
+  setPhraseVariants,
+} from './notifications/notification-config.js';
+
+export {
   DEFAULT_VOICE_ARBITRATION_PRIORITIES,
   VOICE_ARBITRATION_ROLES,
   VoiceArbitrationChannel,

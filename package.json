@@ -86,6 +86,8 @@
     "./chat/voice-runtime.js": "./chat/voice-runtime.js",
     "./chat/voice-settings.js": "./chat/voice-settings.js",
     "./notifications/sound-engine.js": "./notifications/sound-engine.js",
+    "./notifications/notification-config.js": "./notifications/notification-config.js",
+    "./notifications/NotificationWidget/NotificationWidget.js": "./notifications/NotificationWidget/NotificationWidget.js",
     "./package.json": "./package.json",
     "./ui": {
       "import": "./ui/index.js",
