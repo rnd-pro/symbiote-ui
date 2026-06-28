@@ -44,12 +44,16 @@ chat-message-item {
 }
 
 .msg-content {
+  box-sizing: border-box;
   padding: var(--sn-chat-message-padding, 12px 16px);
   border-radius: var(--sn-radius-xl, 16px);
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
   font-size: var(--sn-chat-message-font-size, 13px);
   line-height: 1.5;
   word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .message.user .msg-content {
@@ -117,7 +121,7 @@ chat-message-item {
 
 .tool-summary {
   min-width: 0;
-  max-width: min(56ch, 60vw);
+  max-width: min(56ch, 100%);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -189,6 +193,9 @@ chat-message-item {
   color: var(--sn-text-dim);
   white-space: pre-wrap;
   word-break: break-all;
+  overflow-wrap: anywhere;
+  min-width: 0;
+  max-width: 100%;
   max-height: 200px;
   overflow-y: auto;
 }
@@ -227,6 +234,8 @@ chat-message-item {
   background: var(--sn-bg);
   border-radius: var(--sn-radius-lg);
   padding: var(--sn-chat-code-padding, 12px);
+  min-width: 0;
+  max-width: 100%;
   overflow-x: auto;
   margin: var(--sn-step-3) 0;
   font-family: var(--sn-font-mono);
@@ -256,6 +265,8 @@ chat-message-item {
   color: var(--sn-text-dim);
   text-decoration: underline;
   text-decoration-color: var(--sn-node-border);
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .md-link:hover {
@@ -370,6 +381,39 @@ h4.md-h {
 
 .t-prop {
   color: var(--sn-syntax-property);
+}
+
+.msg-content .t-kw,
+.msg-content .t-lit,
+.work-body .t-kw,
+.work-body .t-lit,
+.display-card-body .t-kw,
+.display-card-body .t-lit {
+  color: var(--sn-chat-syntax-keyword, color-mix(in srgb, var(--sn-syntax-keyword) 55%, var(--sn-text-dim)));
+}
+
+.msg-content .t-str,
+.msg-content .t-num,
+.work-body .t-str,
+.work-body .t-num,
+.display-card-body .t-str,
+.display-card-body .t-num {
+  color: var(--sn-chat-syntax-string, color-mix(in srgb, var(--sn-syntax-string) 55%, var(--sn-text-dim)));
+}
+
+.msg-content .t-fn,
+.msg-content .t-bi,
+.work-body .t-fn,
+.work-body .t-bi,
+.display-card-body .t-fn,
+.display-card-body .t-bi {
+  color: var(--sn-chat-syntax-function, color-mix(in srgb, var(--sn-syntax-function) 55%, var(--sn-text-dim)));
+}
+
+.msg-content .t-prop,
+.work-body .t-prop,
+.display-card-body .t-prop {
+  color: var(--sn-chat-syntax-property, color-mix(in srgb, var(--sn-syntax-property) 55%, var(--sn-text-dim)));
 }
 
 .work-summary-wrap {
@@ -844,12 +888,15 @@ h4.md-h {
 }
 
 .display-card {
+  box-sizing: border-box;
   background: var(--sn-node-bg);
   border: 1px solid var(--sn-node-border);
   border-radius: var(--sn-radius-xl, 16px);
   padding: var(--sn-chat-message-padding, 12px 16px);
   margin: var(--sn-step-2) 0;
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
   display: flex;
   flex-direction: column;
   gap: var(--sn-step-3);
@@ -858,12 +905,23 @@ h4.md-h {
   font-size: var(--sn-chat-message-font-size, 13px);
   line-height: 1.5;
   color: var(--sn-text);
+  min-width: 0;
+  max-width: 100%;
   word-break: break-word;
+  overflow-wrap: anywhere;
 }
 .display-card-meta {
   display: flex;
   flex-wrap: wrap;
   gap: var(--sn-step-3);
+  min-width: 0;
+  max-width: 100%;
+}
+.display-card-meta > * {
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .confirm-pill {
