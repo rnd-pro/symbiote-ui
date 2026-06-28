@@ -62,6 +62,14 @@ export class NotificationEditor extends Symbiote {
 
   initCallback() {
     ensureMaterialSymbols(ICONS);
+  }
+
+  // Listeners are (idempotently) bound on connect and released on disconnect, so
+  // a layout that reparents the panel keeps them balanced. Crucially nothing here
+  // re-renders: the rendered DOM persists across reparenting, so the panel's
+  // measured size stays stable and the layout's responsive pass converges.
+  connectedCallback() {
+    super.connectedCallback?.();
     this.addEventListener('input', this.#onInput);
     this.addEventListener('change', this.#onInput);
     this.addEventListener('click', this.#onClick);
@@ -94,15 +102,6 @@ export class NotificationEditor extends Symbiote {
     this.#ready = true;
     this.#loadStoredConfig();
     this.#render();
-  }
-
-  connectedCallback() {
-    super.connectedCallback?.();
-    // Re-read on (re)mount so reopening the panel reflects edits made meanwhile.
-    if (this.#ready) {
-      this.#loadStoredConfig();
-      this.#render();
-    }
   }
 
   get storageKey() {
