@@ -7,6 +7,7 @@ import {
   syncOverlayTheme,
 } from '../../ui/overlay-stack.js';
 import { positionOverlay } from '../../ui/overlay-positioner.js';
+import { broadcastPopoverOpen, registerPopoverDismissal } from '../../ui/popover-coordinator.js';
 import {
   createNotificationDebouncer,
   normalizeNotificationItem,
@@ -58,6 +59,7 @@ export class NotificationWidget extends Symbiote {
   #ready = false;
   #popoverBound = false;
   #overlayListenersBound = false;
+  #dismissalCleanup = null;
   #sound = null;
   #narrator = null;
   #debouncer = createNotificationDebouncer();
@@ -75,12 +77,7 @@ export class NotificationWidget extends Symbiote {
     ensureMaterialSymbols(ICONS);
     this.addEventListener('click', this.#onClick);
     this.addEventListener('input', this.#onInput);
-    this._onDocumentPointerDown = (event) => {
-      if (!this.$.isOpen || this.#eventTargetsWidget(event)) return;
-      this.#setOpen(false);
-    };
     if (typeof document !== 'undefined') {
-      document.addEventListener('pointerdown', this._onDocumentPointerDown);
       document.addEventListener('notification-config-change', this.#onExternalConfigChange);
     }
   }
@@ -96,7 +93,6 @@ export class NotificationWidget extends Symbiote {
     this.#sound = null;
     this.#narrator = null;
     if (typeof document !== 'undefined') {
-      document.removeEventListener('pointerdown', this._onDocumentPointerDown);
       document.removeEventListener('notification-config-change', this.#onExternalConfigChange);
     }
     super.disconnectedCallback?.();
@@ -419,7 +415,9 @@ export class NotificationWidget extends Symbiote {
     bringOverlayToFront(popover);
     this.#positionPopover();
     this.#bindOverlayListeners();
+    this.#bindDismissal();
     this.#ensureRuntime();
+    broadcastPopoverOpen(this);
     if (typeof requestAnimationFrame === 'function') {
       requestAnimationFrame(() => {
         if (this.$.isOpen) this.#positionPopover();
@@ -429,12 +427,30 @@ export class NotificationWidget extends Symbiote {
 
   #closePopover() {
     let popover = this.ref.popover;
+    this.#unbindDismissal();
     this.#unbindOverlayListeners();
     if (!popover) return;
     popover.hidden = true;
     popover.style.removeProperty('top');
     popover.style.removeProperty('left');
     restoreOverlayHome(popover);
+  }
+
+  // Coordinated dismissal: a capture-phase outside-pointerdown closes this
+  // popover, and any other widget opening its popover broadcasts so this one
+  // closes too — enforcing at most one open popover at a time.
+  #bindDismissal() {
+    if (this.#dismissalCleanup) return;
+    this.#dismissalCleanup = registerPopoverDismissal({
+      owner: this,
+      isInside: (event) => this.#eventTargetsWidget(event),
+      onDismiss: () => this.#setOpen(false),
+    });
+  }
+
+  #unbindDismissal() {
+    this.#dismissalCleanup?.();
+    this.#dismissalCleanup = null;
   }
 
   #bindOverlayListeners() {

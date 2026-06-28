@@ -14,6 +14,7 @@ import {
   syncOverlayTheme,
 } from '../../ui/overlay-stack.js';
 import { positionOverlay } from '../../ui/overlay-positioner.js';
+import { broadcastPopoverOpen, registerPopoverDismissal } from '../../ui/popover-coordinator.js';
 import css from './CascadeThemeWidget.css.js';
 import tpl from './CascadeThemeWidget.tpl.js';
 
@@ -58,6 +59,7 @@ export class CascadeThemeWidget extends Symbiote {
   #ready = false;
   #popoverBound = false;
   #overlayListenersBound = false;
+  #dismissalCleanup = null;
 
   init$ = {
     isOpen: false,
@@ -72,13 +74,6 @@ export class CascadeThemeWidget extends Symbiote {
     ensureMaterialSymbols(ICONS);
     this.addEventListener('input', this.#onInput);
     this.addEventListener('click', this.#onClick);
-    this._onDocumentPointerDown = (event) => {
-      if (!this.$.isOpen || this.#eventTargetsWidget(event)) return;
-      this.#setOpen(false);
-    };
-    if (typeof document !== 'undefined') {
-      document.addEventListener('pointerdown', this._onDocumentPointerDown);
-    }
   }
 
   disconnectedCallback() {
@@ -86,9 +81,6 @@ export class CascadeThemeWidget extends Symbiote {
     this.removeEventListener('click', this.#onClick);
     this.#unbindPopoverEvents();
     this.#setOpen(false);
-    if (typeof document !== 'undefined') {
-      document.removeEventListener('pointerdown', this._onDocumentPointerDown);
-    }
     super.disconnectedCallback?.();
   }
 
@@ -242,6 +234,8 @@ export class CascadeThemeWidget extends Symbiote {
     bringOverlayToFront(popover);
     this.#positionPopover();
     this.#bindOverlayListeners();
+    this.#bindDismissal();
+    broadcastPopoverOpen(this);
     if (typeof requestAnimationFrame === 'function') {
       requestAnimationFrame(() => {
         if (this.$.isOpen) this.#positionPopover();
@@ -251,12 +245,30 @@ export class CascadeThemeWidget extends Symbiote {
 
   #closePopover() {
     let popover = this.ref.popover;
+    this.#unbindDismissal();
     this.#unbindOverlayListeners();
     if (!popover) return;
     popover.hidden = true;
     popover.style.removeProperty('top');
     popover.style.removeProperty('left');
     restoreOverlayHome(popover);
+  }
+
+  // Coordinated dismissal: a capture-phase outside-pointerdown closes this
+  // popover, and any other widget opening its popover broadcasts so this one
+  // closes too — enforcing at most one open popover at a time.
+  #bindDismissal() {
+    if (this.#dismissalCleanup) return;
+    this.#dismissalCleanup = registerPopoverDismissal({
+      owner: this,
+      isInside: (event) => this.#eventTargetsWidget(event),
+      onDismiss: () => this.#setOpen(false),
+    });
+  }
+
+  #unbindDismissal() {
+    this.#dismissalCleanup?.();
+    this.#dismissalCleanup = null;
   }
 
   #bindOverlayListeners() {
