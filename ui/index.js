@@ -292,6 +292,8 @@ export let ProgressRing;
 export let Spinner;
 export let Skeleton;
 export let StatusLight;
+export let PackCard;
+export let PackDetail;
 export let DescriptionList;
 export let DescriptionItem;
 export let Timeline;
@@ -679,6 +681,8 @@ if (hasDOMGlobals) {
     progress,
     skeleton,
     statusLight,
+    packCard,
+    packDetail,
     descriptionList,
     timeline,
     avatar,
@@ -783,6 +787,8 @@ if (hasDOMGlobals) {
     import('../display/Progress/Progress.js'),
     import('../display/Skeleton/Skeleton.js'),
     import('../display/StatusLight/StatusLight.js'),
+    import('../marketplace/PackCard/PackCard.js'),
+    import('../marketplace/PackDetail/PackDetail.js'),
     import('../display/DescriptionList/DescriptionList.js'),
     import('../display/Timeline/Timeline.js'),
     import('../display/Avatar/Avatar.js'),
@@ -901,6 +907,8 @@ if (hasDOMGlobals) {
   ({ ProgressBar, ProgressRing, Spinner } = progress);
   ({ Skeleton } = skeleton);
   ({ StatusLight } = statusLight);
+  ({ PackCard } = packCard);
+  ({ PackDetail } = packDetail);
   ({ DescriptionList, DescriptionItem } = descriptionList);
   ({ Timeline, TimelineItem } = timeline);
   ({ Avatar } = avatar);
@@ -1017,6 +1025,8 @@ if (hasDOMGlobals) {
     Spinner,
     Skeleton,
     StatusLight,
+    PackCard,
+    PackDetail,
     DescriptionList,
     DescriptionItem,
     Timeline,

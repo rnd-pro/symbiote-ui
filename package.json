@@ -94,6 +94,13 @@
     "./notifications/sound-engine.js": "./notifications/sound-engine.js",
     "./notifications/notification-config.js": "./notifications/notification-config.js",
     "./notifications/NotificationWidget/NotificationWidget.js": "./notifications/NotificationWidget/NotificationWidget.js",
+    "./marketplace": {
+      "import": "./marketplace/index.js",
+      "default": "./marketplace/index.js"
+    },
+    "./marketplace/pack-readiness.js": "./marketplace/pack-readiness.js",
+    "./marketplace/PackCard": "./marketplace/PackCard/PackCard.js",
+    "./marketplace/PackDetail": "./marketplace/PackDetail/PackDetail.js",
     "./package.json": "./package.json",
     "./ui": {
       "import": "./ui/index.js",
@@ -160,6 +167,7 @@
     "inspector/",
     "palette/",
     "menu/",
+    "marketplace/",
     "ui/",
     "docs/",
     "README.md",
@@ -191,7 +199,8 @@
     "toolbar/**/*.js",
     "inspector/**/*.js",
     "palette/**/*.js",
-    "menu/**/*.js"
+    "menu/**/*.js",
+    "marketplace/**/*.js"
   ],
   "bin": {
     "symbiote-ui": "cli.js"

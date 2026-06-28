@@ -40604,6 +40604,596 @@
       ]
     },
     {
+      "path": "marketplace/PackCard/PackCard.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "customElement": true,
+          "name": "PackCard",
+          "tagName": "sn-pack-card",
+          "description": "Registry-agnostic gallery card for a workspace package: name, version, tags, optional author/price, and a readiness indicator from a host-supplied readiness projection.",
+          "componentDescription": "Registry-agnostic gallery card for a workspace package: name, version, tags, optional author/price, and a readiness indicator from a host-supplied readiness projection. Use this marketplace UI component when composing marketplace UI. Capabilities: marketplace, package-card, readiness, themeable. Data ownership: host-owned content or slotted DOM. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "attributes": [],
+          "members": [
+            {
+              "kind": "method",
+              "name": "setPackage",
+              "description": "Sets the workspace package object and optional display/readiness options."
+            },
+            {
+              "kind": "method",
+              "name": "setReadiness",
+              "description": "Updates the readiness projection used for the status indicator."
+            }
+          ],
+          "events": [
+            {
+              "name": "select",
+              "description": "Requests selecting the package.",
+              "detail": [
+                {
+                  "name": "id",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "package",
+                  "type": {
+                    "text": "object"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "install",
+              "description": "Requests installing the package.",
+              "detail": [
+                {
+                  "name": "id",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "package",
+                  "type": {
+                    "text": "object"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "preview",
+              "description": "Requests previewing the package.",
+              "detail": [
+                {
+                  "name": "id",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "package",
+                  "type": {
+                    "text": "object"
+                  }
+                }
+              ]
+            }
+          ],
+          "slots": [],
+          "cssProperties": [
+            {
+              "name": "--sn-pack-card-name-color",
+              "description": "Theme CSS custom property consumed by sn-pack-card."
+            },
+            {
+              "name": "--sn-pack-card-name-size",
+              "description": "Theme CSS custom property consumed by sn-pack-card."
+            },
+            {
+              "name": "--sn-pack-card-name-weight",
+              "description": "Theme CSS custom property consumed by sn-pack-card."
+            },
+            {
+              "name": "--sn-pack-card-description-color",
+              "description": "Theme CSS custom property consumed by sn-pack-card."
+            },
+            {
+              "name": "--sn-pack-card-action-bg",
+              "description": "Theme CSS custom property consumed by sn-pack-card."
+            },
+            {
+              "name": "--sn-pack-card-action-border",
+              "description": "Theme CSS custom property consumed by sn-pack-card."
+            },
+            {
+              "name": "--sn-pack-card-action-primary-bg",
+              "description": "Theme CSS custom property consumed by sn-pack-card."
+            },
+            {
+              "name": "--sn-pack-card-action-primary-border",
+              "description": "Theme CSS custom property consumed by sn-pack-card."
+            }
+          ],
+          "contract": {
+            "capabilities": [
+              "marketplace",
+              "package-card",
+              "readiness",
+              "themeable"
+            ],
+            "attributes": [],
+            "properties": [],
+            "methods": [
+              {
+                "name": "setPackage",
+                "type": "function",
+                "description": "Sets the workspace package object and optional display/readiness options."
+              },
+              {
+                "name": "setReadiness",
+                "type": "function",
+                "description": "Updates the readiness projection used for the status indicator."
+              }
+            ],
+            "events": [
+              {
+                "name": "select",
+                "description": "Requests selecting the package.",
+                "detail": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  },
+                  {
+                    "name": "package",
+                    "type": "object"
+                  }
+                ]
+              },
+              {
+                "name": "install",
+                "description": "Requests installing the package.",
+                "detail": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  },
+                  {
+                    "name": "package",
+                    "type": "object"
+                  }
+                ]
+              },
+              {
+                "name": "preview",
+                "description": "Requests previewing the package.",
+                "detail": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  },
+                  {
+                    "name": "package",
+                    "type": "object"
+                  }
+                ]
+              }
+            ],
+            "slots": [],
+            "themeAliases": [
+              "--sn-pack-card-name-color",
+              "--sn-pack-card-name-size",
+              "--sn-pack-card-name-weight",
+              "--sn-pack-card-description-color",
+              "--sn-pack-card-action-bg",
+              "--sn-pack-card-action-border",
+              "--sn-pack-card-action-primary-bg",
+              "--sn-pack-card-action-primary-border"
+            ],
+            "status": "draft",
+            "schemaVersion": "component-descriptor-v2",
+            "dataSchema": "schemas/runtime-ui-v1.json",
+            "ssr": {
+              "mode": "hydrate-only",
+              "importSafe": false,
+              "jsdaRenderable": false,
+              "requiresDom": true,
+              "browserApis": [
+                "events"
+              ],
+              "notes": "Default browser component classification pending component-specific JSDA SSR smoke coverage."
+            }
+          },
+          "agent": {
+            "componentDescription": "Registry-agnostic gallery card for a workspace package: name, version, tags, optional author/price, and a readiness indicator from a host-supplied readiness projection. Use this marketplace UI component when composing marketplace UI. Capabilities: marketplace, package-card, readiness, themeable. Data ownership: host-owned content or slotted DOM. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "marketplace UI component",
+            "usage": "Render or compose <sn-pack-card> when the host needs registry-agnostic gallery card for a workspace package: name, version, tags, optional author/price, and a readiness indicator from a host-supplied readiness projection.",
+            "dataOwnership": "host-owned content or slotted DOM",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          },
+          "metadata": {
+            "contract": {
+              "capabilities": [
+                "marketplace",
+                "package-card",
+                "readiness",
+                "themeable"
+              ],
+              "attributes": [],
+              "properties": [],
+              "methods": [
+                {
+                  "name": "setPackage",
+                  "type": "function",
+                  "description": "Sets the workspace package object and optional display/readiness options."
+                },
+                {
+                  "name": "setReadiness",
+                  "type": "function",
+                  "description": "Updates the readiness projection used for the status indicator."
+                }
+              ],
+              "events": [
+                {
+                  "name": "select",
+                  "description": "Requests selecting the package.",
+                  "detail": [
+                    {
+                      "name": "id",
+                      "type": "string"
+                    },
+                    {
+                      "name": "package",
+                      "type": "object"
+                    }
+                  ]
+                },
+                {
+                  "name": "install",
+                  "description": "Requests installing the package.",
+                  "detail": [
+                    {
+                      "name": "id",
+                      "type": "string"
+                    },
+                    {
+                      "name": "package",
+                      "type": "object"
+                    }
+                  ]
+                },
+                {
+                  "name": "preview",
+                  "description": "Requests previewing the package.",
+                  "detail": [
+                    {
+                      "name": "id",
+                      "type": "string"
+                    },
+                    {
+                      "name": "package",
+                      "type": "object"
+                    }
+                  ]
+                }
+              ],
+              "slots": [],
+              "themeAliases": [
+                "--sn-pack-card-name-color",
+                "--sn-pack-card-name-size",
+                "--sn-pack-card-name-weight",
+                "--sn-pack-card-description-color",
+                "--sn-pack-card-action-bg",
+                "--sn-pack-card-action-border",
+                "--sn-pack-card-action-primary-bg",
+                "--sn-pack-card-action-primary-border"
+              ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
+              "ssr": {
+                "mode": "hydrate-only",
+                "importSafe": false,
+                "jsdaRenderable": false,
+                "requiresDom": true,
+                "browserApis": [
+                  "events"
+                ],
+                "notes": "Default browser component classification pending component-specific JSDA SSR smoke coverage."
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "path": "marketplace/PackDetail/PackDetail.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "customElement": true,
+          "name": "PackDetail",
+          "tagName": "sn-pack-detail",
+          "description": "Registry-agnostic package detail and readiness panel: manifest facts, compatibility, dependencies, assets, and a readiness/compatibility section fed by a host-supplied readiness projection.",
+          "componentDescription": "Registry-agnostic package detail and readiness panel: manifest facts, compatibility, dependencies, assets, and a readiness/compatibility section fed by a host-supplied readiness projection. Use this marketplace UI component when composing marketplace UI. Capabilities: marketplace, package-detail, readiness, manifest-summary, themeable. Data ownership: host-owned content or slotted DOM. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "attributes": [],
+          "members": [
+            {
+              "kind": "method",
+              "name": "setPackage",
+              "description": "Sets the workspace package object and optional readiness, preview, and action options."
+            },
+            {
+              "kind": "method",
+              "name": "setReadiness",
+              "description": "Updates the readiness projection used for the readiness section."
+            }
+          ],
+          "events": [
+            {
+              "name": "install",
+              "description": "Requests installing the package.",
+              "detail": [
+                {
+                  "name": "id",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "package",
+                  "type": {
+                    "text": "object"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "preview",
+              "description": "Requests previewing the package.",
+              "detail": [
+                {
+                  "name": "id",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "package",
+                  "type": {
+                    "text": "object"
+                  }
+                }
+              ]
+            }
+          ],
+          "slots": [],
+          "cssProperties": [
+            {
+              "name": "--sn-pack-detail-name-color",
+              "description": "Theme CSS custom property consumed by sn-pack-detail."
+            },
+            {
+              "name": "--sn-pack-detail-name-size",
+              "description": "Theme CSS custom property consumed by sn-pack-detail."
+            },
+            {
+              "name": "--sn-pack-detail-title-color",
+              "description": "Theme CSS custom property consumed by sn-pack-detail."
+            },
+            {
+              "name": "--sn-pack-detail-description-color",
+              "description": "Theme CSS custom property consumed by sn-pack-detail."
+            },
+            {
+              "name": "--sn-pack-detail-action-bg",
+              "description": "Theme CSS custom property consumed by sn-pack-detail."
+            },
+            {
+              "name": "--sn-pack-detail-action-border",
+              "description": "Theme CSS custom property consumed by sn-pack-detail."
+            },
+            {
+              "name": "--sn-pack-detail-action-primary-bg",
+              "description": "Theme CSS custom property consumed by sn-pack-detail."
+            },
+            {
+              "name": "--sn-pack-detail-action-primary-border",
+              "description": "Theme CSS custom property consumed by sn-pack-detail."
+            }
+          ],
+          "contract": {
+            "capabilities": [
+              "marketplace",
+              "package-detail",
+              "readiness",
+              "manifest-summary",
+              "themeable"
+            ],
+            "attributes": [],
+            "properties": [],
+            "methods": [
+              {
+                "name": "setPackage",
+                "type": "function",
+                "description": "Sets the workspace package object and optional readiness, preview, and action options."
+              },
+              {
+                "name": "setReadiness",
+                "type": "function",
+                "description": "Updates the readiness projection used for the readiness section."
+              }
+            ],
+            "events": [
+              {
+                "name": "install",
+                "description": "Requests installing the package.",
+                "detail": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  },
+                  {
+                    "name": "package",
+                    "type": "object"
+                  }
+                ]
+              },
+              {
+                "name": "preview",
+                "description": "Requests previewing the package.",
+                "detail": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  },
+                  {
+                    "name": "package",
+                    "type": "object"
+                  }
+                ]
+              }
+            ],
+            "slots": [],
+            "themeAliases": [
+              "--sn-pack-detail-name-color",
+              "--sn-pack-detail-name-size",
+              "--sn-pack-detail-title-color",
+              "--sn-pack-detail-description-color",
+              "--sn-pack-detail-action-bg",
+              "--sn-pack-detail-action-border",
+              "--sn-pack-detail-action-primary-bg",
+              "--sn-pack-detail-action-primary-border"
+            ],
+            "status": "draft",
+            "schemaVersion": "component-descriptor-v2",
+            "dataSchema": "schemas/runtime-ui-v1.json",
+            "ssr": {
+              "mode": "hydrate-only",
+              "importSafe": false,
+              "jsdaRenderable": false,
+              "requiresDom": true,
+              "browserApis": [
+                "events"
+              ],
+              "notes": "Default browser component classification pending component-specific JSDA SSR smoke coverage."
+            }
+          },
+          "agent": {
+            "componentDescription": "Registry-agnostic package detail and readiness panel: manifest facts, compatibility, dependencies, assets, and a readiness/compatibility section fed by a host-supplied readiness projection. Use this marketplace UI component when composing marketplace UI. Capabilities: marketplace, package-detail, readiness, manifest-summary, themeable. Data ownership: host-owned content or slotted DOM. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "marketplace UI component",
+            "usage": "Render or compose <sn-pack-detail> when the host needs registry-agnostic package detail and readiness panel: manifest facts, compatibility, dependencies, assets, and a readiness/compatibility section fed by a host-supplied readiness projection.",
+            "dataOwnership": "host-owned content or slotted DOM",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          },
+          "metadata": {
+            "contract": {
+              "capabilities": [
+                "marketplace",
+                "package-detail",
+                "readiness",
+                "manifest-summary",
+                "themeable"
+              ],
+              "attributes": [],
+              "properties": [],
+              "methods": [
+                {
+                  "name": "setPackage",
+                  "type": "function",
+                  "description": "Sets the workspace package object and optional readiness, preview, and action options."
+                },
+                {
+                  "name": "setReadiness",
+                  "type": "function",
+                  "description": "Updates the readiness projection used for the readiness section."
+                }
+              ],
+              "events": [
+                {
+                  "name": "install",
+                  "description": "Requests installing the package.",
+                  "detail": [
+                    {
+                      "name": "id",
+                      "type": "string"
+                    },
+                    {
+                      "name": "package",
+                      "type": "object"
+                    }
+                  ]
+                },
+                {
+                  "name": "preview",
+                  "description": "Requests previewing the package.",
+                  "detail": [
+                    {
+                      "name": "id",
+                      "type": "string"
+                    },
+                    {
+                      "name": "package",
+                      "type": "object"
+                    }
+                  ]
+                }
+              ],
+              "slots": [],
+              "themeAliases": [
+                "--sn-pack-detail-name-color",
+                "--sn-pack-detail-name-size",
+                "--sn-pack-detail-title-color",
+                "--sn-pack-detail-description-color",
+                "--sn-pack-detail-action-bg",
+                "--sn-pack-detail-action-border",
+                "--sn-pack-detail-action-primary-bg",
+                "--sn-pack-detail-action-primary-border"
+              ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
+              "ssr": {
+                "mode": "hydrate-only",
+                "importSafe": false,
+                "jsdaRenderable": false,
+                "requiresDom": true,
+                "browserApis": [
+                  "events"
+                ],
+                "notes": "Default browser component classification pending component-specific JSDA SSR smoke coverage."
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
       "path": "surface/Dialog/Dialog.js",
       "declarations": [
         {
