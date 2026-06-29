@@ -28,9 +28,7 @@ export class ChatTranscript extends Symbiote {
     liveStatusActive: false,
     liveStatusIcon: 'pending',
     liveStatusText: '',
-    liveStatusSpinClass: 'spin-icon',
-    '+liveStatusIconClass': () => `material-symbols-outlined ${this.$.liveStatusSpinClass}`.trim(),
-    '+liveStatusHidden': () => !this.$.liveStatusActive,
+    liveStatusIconClass: 'material-symbols-outlined spin-icon',
     onScroll: () => {
       this.updateScrollBottomButton();
       emit(this, 'chat-transcript-scroll', this.getScrollState());
@@ -251,7 +249,7 @@ export class ChatTranscript extends Symbiote {
     this.set$({
       liveStatusIcon: icon,
       liveStatusText: text,
-      liveStatusSpinClass: spinClass,
+      liveStatusIconClass: `material-symbols-outlined ${spinClass}`.trim(),
       liveStatusActive: true,
     });
     requestAnimationFrame(() => this.scrollToBottom());
@@ -410,7 +408,7 @@ ChatTranscript.template = html`
 <div ref="chatMessages" class="chat-messages" ${{ onscroll: 'onScroll' }}>
   <div ref="topSentinel" class="chat-top-sentinel" aria-hidden="true"></div>
   <div class="chat-message-list" ${{ itemize: 'messageItems', 'item-tag': 'chat-message-item' }}></div>
-  <div class="live-status-indicator" ${{ '@hidden': 'liveStatusHidden' }}>
+  <div class="live-status-indicator" ${{ '@hidden': '!liveStatusActive' }}>
     <span ${{ className: 'liveStatusIconClass' }}>{{liveStatusIcon}}</span>
     <span>{{liveStatusText}}</span>
   </div>
