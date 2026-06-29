@@ -3280,7 +3280,6 @@ class CascadeChatPartsPanel extends Symbiote {
       messagesOptions: { scrollToBottom: false, smooth: false },
       empty: false,
       composer: {
-        disabled: true,
         placeholder: 'Custom message parts are host-driven in this showcase.',
         value: '',
       },
