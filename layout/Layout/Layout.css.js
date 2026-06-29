@@ -563,8 +563,8 @@ export let styles = css`
       font-size: var(--sn-fullscreen-tab-size, 12px);
       font-family: inherit;
       transition:
-        background 0.15s,
-        color 0.15s;
+        background var(--sn-transition-fast) var(--sn-transition-easing),
+        color var(--sn-transition-fast) var(--sn-transition-easing);
 
       .material-symbols-outlined {
         font-size: var(--sn-fullscreen-tab-icon-size, 16px);

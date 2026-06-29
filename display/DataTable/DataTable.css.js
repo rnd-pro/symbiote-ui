@@ -72,11 +72,11 @@ sn-data-table[hidden] {
 }
 
 .sn-data-table tbody tr[aria-selected="true"] td[style*="position: sticky"] {
-  background: var(--sn-data-table-row-selected-bg, rgba(0, 122, 204, 0.15));
+  background: var(--sn-data-table-row-selected-bg, color-mix(in oklab, var(--sn-node-selected) 18%, transparent));
 }
 
 .sn-data-table tbody tr:hover td[style*="position: sticky"] {
-  background: var(--sn-data-table-row-hover-bg, rgba(255, 255, 255, 0.04));
+  background: var(--sn-data-table-row-hover-bg, var(--sn-node-hover));
 }
 
 .sn-data-table tbody tr {
@@ -85,11 +85,11 @@ sn-data-table[hidden] {
 }
 
 .sn-data-table tbody tr:hover {
-  background: var(--sn-data-table-row-hover-bg, rgba(255, 255, 255, 0.04));
+  background: var(--sn-data-table-row-hover-bg, var(--sn-node-hover));
 }
 
 .sn-data-table tbody tr[aria-selected="true"] {
-  background: var(--sn-data-table-row-selected-bg, rgba(0, 122, 204, 0.15));
+  background: var(--sn-data-table-row-selected-bg, color-mix(in oklab, var(--sn-node-selected) 18%, transparent));
 }
 
 .sn-data-table tr:last-child td {
@@ -254,7 +254,7 @@ tr[aria-expanded="true"] .sn-data-table-expand-btn .material-symbols-outlined {
 
 .sn-data-table-details-row td {
   padding: var(--sn-step-6) var(--sn-step-8) var(--sn-step-6) var(--sn-step-12, 36px);
-  background: var(--sn-data-table-details-bg, rgba(255, 255, 255, 0.02));
+  background: var(--sn-data-table-details-bg, color-mix(in oklab, var(--sn-node-hover) 60%, transparent));
   border-block-end: 1px solid var(--sn-data-table-row-border, var(--sn-outline-color-soft));
 }
 

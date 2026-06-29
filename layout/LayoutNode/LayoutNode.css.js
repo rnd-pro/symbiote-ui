@@ -87,8 +87,8 @@ export let styles = css`
       min-width: 0;
       line-height: 1;
       transition:
-        background 0.1s,
-        color 0.1s;
+        background var(--sn-transition-fast) var(--sn-transition-easing),
+        color var(--sn-transition-fast) var(--sn-transition-easing);
 
       &[hidden] {
         display: none;
@@ -259,9 +259,9 @@ export let styles = css`
       white-space: nowrap;
       cursor: pointer;
       transition:
-        background 0.1s,
-        border-color 0.1s,
-        color 0.1s;
+        background var(--sn-transition-fast) var(--sn-transition-easing),
+        border-color var(--sn-transition-fast) var(--sn-transition-easing),
+        color var(--sn-transition-fast) var(--sn-transition-easing);
 
       &:hover {
         background: var(--sn-node-hover);

@@ -847,6 +847,7 @@ h4.md-h {
 .sn-btn.approve {
   background: var(--sn-success-color, #22c55e);
   color: #fff;
+  color: oklch(from var(--sn-success-color, #22c55e) calc((l - 0.5) * -1000) 0 0);
   border-color: var(--sn-success-border, #15803d);
 }
 .sn-btn.approve:hover {
@@ -855,6 +856,7 @@ h4.md-h {
 .sn-btn.reject {
   background: var(--sn-danger-color, #ef4444);
   color: #fff;
+  color: oklch(from var(--sn-danger-color, #ef4444) calc((l - 0.5) * -1000) 0 0);
   border-color: var(--sn-danger-border, #b91c1c);
 }
 .sn-btn.reject:hover {

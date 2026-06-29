@@ -58,7 +58,7 @@ chat-composer {
   line-height: 1.4;
   resize: none;
   min-height: var(--sn-composer-input-min-height);
-  max-height: 200px;
+  max-height: var(--sn-composer-input-max-height, calc(200px * var(--sn-theme-density)));
   overflow-y: auto;
 }
 
@@ -192,8 +192,8 @@ sn-button.btn-send[variant="icon"].btn-stop .material-symbols-outlined {
 
 sn-button.btn-send[variant="icon"].btn-stop::after {
   content: '';
-  width: 10px;
-  height: 10px;
+  width: calc(10px * var(--sn-theme-density));
+  height: calc(10px * var(--sn-theme-density));
   border-radius: var(--sn-radius-xs);
   background: var(--sn-text);
   position: absolute;
