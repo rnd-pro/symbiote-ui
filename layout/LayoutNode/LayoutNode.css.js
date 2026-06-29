@@ -329,6 +329,9 @@ export let styles = css`
       /* fill the cross-axis: the split slot wrapper is a row, so flex-basis:auto would
          otherwise shrink the rail to its content width (a 2px sliver) */
       width: 100% !important;
+      /* border-box so width:100% includes the border and the rail fits its slot
+         exactly — otherwise the border overflow eats the inter-ear gap */
+      box-sizing: border-box;
       height: var(--sn-layout-collapsed-vertical-size, 28px) !important;
       min-height: var(--sn-layout-collapsed-vertical-size, 28px) !important;
       max-height: var(--sn-layout-collapsed-vertical-size, 28px) !important;
@@ -530,6 +533,9 @@ export let styles = css`
     &[collapse-ears] > .split-view {
       flex-direction: row;
       align-items: stretch;
+      /* the ear row hides its resizer, so add a matching gap between ears so the
+         horizontal spacing equals the vertical resizer gap between stacked panels */
+      gap: var(--sn-layout-resizer-thickness, 2px);
 
       > .split-resizer {
         display: none;
