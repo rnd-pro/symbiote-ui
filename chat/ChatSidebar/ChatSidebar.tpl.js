@@ -1,7 +1,7 @@
 import { html } from '@symbiotejs/symbiote';
 
 export default html`
-<div class="chat-nav" ${{ onclick: 'onChatClick' }}>
+<div class="chat-nav" ${{ '@collapsed': 'navCollapsed', '@data-group-dividers': 'groupDividers' }}>
   <div class="chat-nav-header">
     <button class="nav-btn nav-btn-add" ${{ onclick: 'onNewChat', title: 'newChatTitle' }}>
       <span class="material-symbols-outlined">add</span>

@@ -75,7 +75,6 @@ export class ChatSidebarItem extends Symbiote {
     statusKind: '',
     statusIcon: '',
     statusTitle: '',
-    hasChildren: false,
     isGroup: false,
     isExpanded: false,
     isActive: false,
@@ -84,6 +83,9 @@ export class ChatSidebarItem extends Symbiote {
     deleteTitle: translate('chat.sidebar.delete'),
     deleteChatLabel: translate('chat.sidebar.deleteChat'),
     toggleChildrenLabel: translate('chat.sidebar.toggleChildren'),
+
+    '+hasChildren': () => this.$.subChats?.length > 0,
+    '+hasStatus': () => Boolean(this.$.statusKind && this.$.statusIcon),
 
     onItemClick: (event) => {
       if (event.target.closest('.chat-item-delete') || event.target.closest('.chat-expand-icon')) return;
@@ -135,20 +137,14 @@ export class ChatSidebarItem extends Symbiote {
     this.sub('isGroup', (value) => {
       this.toggleAttribute('data-group', value);
     });
+    this.sub('hasStatus', (value) => this.toggleAttribute('data-has-status', value));
     this.sub('agentColor', (value) => this._syncAgentColor(value));
     this.sub('cleanName', (value) => this._syncCompactLabelWidth(value));
-    this.sub('statusKind', () => this._syncStatus());
-    this.sub('statusIcon', () => this._syncStatus());
     this._syncAgentColor(this.$.agentColor);
     this._syncCompactLabelWidth(this.$.cleanName || this.$.name);
-    this._syncStatus();
     this.toggleAttribute('data-group', this.$.isGroup);
 
-    this.sub('subChats', (chats) => {
-      let has = chats && chats.length > 0;
-      this.$.hasChildren = has;
-      this._syncAutoExpanded();
-    });
+    this.sub('subChats', () => this._syncAutoExpanded());
   }
 
   _syncAutoExpanded() {
@@ -172,19 +168,6 @@ export class ChatSidebarItem extends Symbiote {
     syncCompactLabelWidth(this, value);
   }
 
-  _syncStatus() {
-    let hasStatus = Boolean(this.$.statusKind && this.$.statusIcon);
-    this.toggleAttribute('data-has-status', hasStatus);
-    if (this.ref.statusIcon) {
-      this.ref.statusIcon.hidden = !hasStatus;
-      if (hasStatus) {
-        this.ref.statusIcon.setAttribute('data-status', this.$.statusKind);
-      } else {
-        this.ref.statusIcon.removeAttribute('data-status');
-      }
-    }
-  }
-
 }
 
 ChatSidebarItem.template = html`
@@ -196,7 +179,7 @@ ChatSidebarItem.template = html`
     </button>
   </span>
   <span class="chat-item-label" ${{ textContent: 'cleanName' }}></span>
-  <span class="material-symbols-outlined chat-status-icon" ref="statusIcon" ${{ textContent: 'statusIcon', title: 'statusTitle' }}></span>
+  <span class="material-symbols-outlined chat-status-icon" ${{ textContent: 'statusIcon', title: 'statusTitle', '@data-status': 'statusKind', '@hidden': '!hasStatus' }}></span>
   <span class="chat-item-adapter" ${{ textContent: 'metaLabel' }}></span>
   <span class="material-symbols-outlined chat-expand-icon" role="button" tabindex="0" ${{ title: 'toggleChildrenLabel', '@aria-label': 'toggleChildrenLabel', onclick: 'onExpandToggle' }}>chevron_right</span>
 </div>
@@ -215,13 +198,15 @@ export class ChatSidebarSubItem extends Symbiote {
     statusIcon: '',
     statusTitle: '',
     metaLabel: '',
-    hasChildren: false,
     isExpanded: false,
     isActive: false,
     isRunning: false,
     subChats: [],
     deleteTitle: translate('chat.sidebar.delete'),
     deleteChatLabel: translate('chat.sidebar.deleteChat'),
+
+    '+hasChildren': () => this.$.subChats?.length > 0,
+    '+hasStatus': () => Boolean(this.$.statusKind && this.$.statusIcon),
 
     onItemClick: (event) => {
       if (event.target.closest('.chat-item-delete') || event.target.closest('.chat-expand-icon')) return;
@@ -259,18 +244,12 @@ export class ChatSidebarSubItem extends Symbiote {
       this.toggleAttribute('data-has-sub', value);
       if (!value) this.$.isExpanded = false;
     });
+    this.sub('hasStatus', (value) => this.toggleAttribute('data-has-status', value));
     this.sub('agentColor', (value) => this._syncAgentColor(value));
     this.sub('cleanName', (value) => this._syncCompactLabelWidth(value));
-    this.sub('statusKind', () => this._syncStatus());
-    this.sub('statusIcon', () => this._syncStatus());
     this._syncAgentColor(this.$.agentColor);
     this._syncCompactLabelWidth(this.$.cleanName || this.$.name);
-    this._syncStatus();
-    this.sub('subChats', (chats) => {
-      let has = chats && chats.length > 0;
-      this.$.hasChildren = has;
-      this._syncAutoExpanded();
-    });
+    this.sub('subChats', () => this._syncAutoExpanded());
   }
 
   _syncAutoExpanded() {
@@ -294,19 +273,6 @@ export class ChatSidebarSubItem extends Symbiote {
     syncCompactLabelWidth(this, value);
   }
 
-  _syncStatus() {
-    let hasStatus = Boolean(this.$.statusKind && this.$.statusIcon);
-    this.toggleAttribute('data-has-status', hasStatus);
-    if (this.ref.statusIcon) {
-      this.ref.statusIcon.hidden = !hasStatus;
-      if (hasStatus) {
-        this.ref.statusIcon.setAttribute('data-status', this.$.statusKind);
-      } else {
-        this.ref.statusIcon.removeAttribute('data-status');
-      }
-    }
-  }
-
 }
 
 ChatSidebarSubItem.template = html`
@@ -319,7 +285,7 @@ ChatSidebarSubItem.template = html`
   </span>
   <span class="chat-item-label" ${{ textContent: 'cleanName' }}></span>
   <span class="chat-item-type" ${{ textContent: 'metaLabel' }}></span>
-  <span class="material-symbols-outlined chat-status-icon" ref="statusIcon" ${{ textContent: 'statusIcon', title: 'statusTitle' }}></span>
+  <span class="material-symbols-outlined chat-status-icon" ${{ textContent: 'statusIcon', title: 'statusTitle', '@data-status': 'statusKind', '@hidden': '!hasStatus' }}></span>
   <span class="material-symbols-outlined chat-expand-icon" role="button" tabindex="0" ${{ title: 'toggleChildrenLabel', '@aria-label': 'toggleChildrenLabel', onclick: 'onExpandToggle' }}>chevron_right</span>
 </div>
 <div class="chat-sub-items" itemize="subChats" item-tag="chat-sidebar-sub-item" ${{ '@data-parent': 'id' }}></div>

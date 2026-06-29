@@ -21,32 +21,6 @@ function emitCancelable(el, type, detail = {}) {
   return event;
 }
 
-function escapeHtml(value) {
-  return String(value ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;');
-}
-
-function renderFooterIcon(icon) {
-  return icon
-    ? `<span class="material-symbols-outlined">${escapeHtml(icon)}</span>`
-    : '';
-}
-
-function renderFooterLabel(label) {
-  return label
-    ? `<span class="composer-footer-label">${escapeHtml(label)}</span>`
-    : '';
-}
-
-function renderLeadingLabel(label) {
-  return String(label || '').trim()
-    ? `<span class="composer-leading-label">${escapeHtml(label)}</span>`
-    : '';
-}
-
 function normalizeVoiceInputState(state) {
   return state === 'recording' ? 'listening' : state === 'processing' ? 'transcribing' : state || 'idle';
 }
@@ -55,7 +29,7 @@ function normalizeFooterControl(control, index) {
   let id = String(control?.id || control?.name || `control-${index + 1}`);
   let kind = String(control?.kind || control?.type || 'button');
   let priority = Math.min(Math.max(Number(control?.priority || index + 1), 1), 5);
-  return {
+  let item = {
     ...control,
     id,
     kind,
@@ -64,34 +38,87 @@ function normalizeFooterControl(control, index) {
     title: control?.title || control?.label || id,
     value: control?.value ?? '',
   };
+  return decorateFooterControl(item);
 }
 
 function normalizeLeadingControl(control, index) {
-  return normalizeFooterControl(control, index);
+  let id = String(control?.id || control?.name || `control-${index + 1}`);
+  let kind = String(control?.kind || control?.type || 'button');
+  let priority = Math.min(Math.max(Number(control?.priority || index + 1), 1), 5);
+  let item = {
+    ...control,
+    id,
+    kind,
+    priority,
+    label: control?.label || id,
+    title: control?.title || control?.label || id,
+    value: control?.value ?? '',
+  };
+  return decorateLeadingControl(item);
 }
 
-function renderLeadingControl(control, index) {
-  let item = normalizeLeadingControl(control, index);
-  let commonClass = [
+function decorateFooterControl(item) {
+  let isSelect = item.kind === 'select';
+  let isCheckbox = item.kind === 'checkbox';
+  let isButton = !isSelect && !isCheckbox;
+  let labelText = String(item.label || '');
+  let valueText = item.value ? String(item.value) : '';
+  let baseClass = [
+    'composer-footer-btn',
+    'composer-footer-control',
+    `composer-priority-${item.priority}`,
+    item.active ? 'active' : '',
+    item.compact ? 'composer-param-collapsed' : '',
+    item.className || '',
+  ].filter(Boolean);
+  let wrapClass = [...baseClass];
+  if (isSelect) wrapClass.push('composer-footer-select-control');
+  if (isCheckbox) wrapClass.push('composer-footer-checkbox-control');
+  let options = (isSelect && Array.isArray(item.options) ? item.options : []).map((option) => {
+    let value = option?.value ?? option?.id ?? option?.label ?? '';
+    return {
+      value: String(value),
+      label: String(option?.label ?? value),
+      selected: String(value) === String(item.value),
+    };
+  });
+  return {
+    ...item,
+    isSelect,
+    isCheckbox,
+    isButton,
+    icon: item.icon ? String(item.icon) : '',
+    hasIcon: Boolean(item.icon),
+    label: labelText,
+    hasLabel: Boolean(labelText),
+    value: valueText,
+    hasValue: Boolean(valueText),
+    disabled: Boolean(item.disabled),
+    checked: Boolean(item.checked || item.value === true),
+    selectClass: isSelect ? wrapClass.join(' ') : '',
+    checkboxClass: isCheckbox ? wrapClass.join(' ') : '',
+    buttonClass: isButton ? baseClass.join(' ') : '',
+    options,
+  };
+}
+
+function decorateLeadingControl(item) {
+  let labelText = String(item.label || '').trim();
+  let itemClass = [
     'composer-leading-btn',
     'composer-leading-control',
     item.active ? 'active' : '',
     item.className || '',
   ].filter(Boolean).join(' ');
-  let commonAttrs = [
-    `data-leading-control-id="${escapeHtml(item.id)}"`,
-    `data-leading-control-kind="${escapeHtml(item.kind)}"`,
-    `title="${escapeHtml(item.title)}"`,
-    `aria-label="${escapeHtml(item.title)}"`,
-  ].join(' ');
-  let disabled = item.disabled ? ' disabled' : '';
-
-  return `
-    <button class="${commonClass}" type="button" ${commonAttrs}${disabled}>
-      ${renderFooterIcon(item.icon)}
-      ${renderLeadingLabel(item.label)}
-    </button>
-  `;
+  return {
+    ...item,
+    icon: item.icon ? String(item.icon) : '',
+    hasIcon: Boolean(item.icon),
+    label: labelText,
+    hasLabel: Boolean(labelText),
+    disabled: Boolean(item.disabled),
+    itemClass,
+  };
 }
 
 function toAnchorRect(el) {
@@ -109,63 +136,6 @@ function toAnchorRect(el) {
   };
 }
 
-function renderFooterControl(control, index) {
-  let item = normalizeFooterControl(control, index);
-  let commonClass = [
-    'composer-footer-btn',
-    'composer-footer-control',
-    `composer-priority-${item.priority}`,
-    item.active ? 'active' : '',
-    item.compact ? 'composer-param-collapsed' : '',
-    item.className || '',
-  ].filter(Boolean).join(' ');
-  let commonAttrs = [
-    `data-footer-control-id="${escapeHtml(item.id)}"`,
-    `data-footer-control-kind="${escapeHtml(item.kind)}"`,
-    `title="${escapeHtml(item.title)}"`,
-  ].join(' ');
-  let disabled = item.disabled ? ' disabled' : '';
-
-  if (item.kind === 'select') {
-    let options = Array.isArray(item.options) ? item.options : [];
-    let optionHtml = options.map((option) => {
-      let value = option?.value ?? option?.id ?? option?.label ?? '';
-      let label = option?.label ?? value;
-      let selected = String(value) === String(item.value) ? ' selected' : '';
-      return `<option value="${escapeHtml(value)}"${selected}>${escapeHtml(label)}</option>`;
-    }).join('');
-    return `
-      <label class="${commonClass} composer-footer-select-control" ${commonAttrs}>
-        ${renderFooterIcon(item.icon)}
-        ${renderFooterLabel(item.label)}
-        <select class="composer-footer-select" data-footer-control-id="${escapeHtml(item.id)}" data-footer-control-kind="${escapeHtml(item.kind)}"${disabled}>
-          ${optionHtml}
-        </select>
-      </label>
-    `;
-  }
-
-  if (item.kind === 'checkbox') {
-    let checked = item.checked || item.value === true ? ' checked' : '';
-    return `
-      <label class="${commonClass} composer-footer-checkbox-control" ${commonAttrs}>
-        ${renderFooterIcon(item.icon)}
-        <input class="composer-footer-checkbox" type="checkbox" data-footer-control-id="${escapeHtml(item.id)}" data-footer-control-kind="${escapeHtml(item.kind)}"${checked}${disabled}>
-        ${renderFooterLabel(item.label)}
-      </label>
-    `;
-  }
-
-  let value = item.value ? `<span class="composer-footer-value">${escapeHtml(item.value)}</span>` : '';
-  return `
-    <button class="${commonClass}" type="button" ${commonAttrs}${disabled}>
-      ${renderFooterIcon(item.icon)}
-      ${renderFooterLabel(item.label)}
-      ${value}
-    </button>
-  `;
-}
-
 export class ChatComposer extends Symbiote {
   init$ = {
     value: '',
@@ -173,7 +143,6 @@ export class ChatComposer extends Symbiote {
     placeholder: translate('chat.composer.placeholder'),
     attachedContext: [],
     leadingControls: [],
-    leadingHtml: '',
     footerControls: [],
     footerHtml: '',
     isSending: false,
@@ -1107,7 +1076,6 @@ export class ChatComposer extends Symbiote {
   setLeadingControls(controls = []) {
     let normalized = Array.isArray(controls) ? controls.map((control, index) => normalizeLeadingControl(control, index)) : [];
     this.$.leadingControls = normalized;
-    this.$.leadingHtml = normalized.map(renderLeadingControl).join('');
     this.toggleAttribute('leading-controls', normalized.length > 0);
     queueMicrotask(() => this._syncDisabledState());
   }
@@ -1115,12 +1083,36 @@ export class ChatComposer extends Symbiote {
   setFooterHtml(htmlStr) {
     this.$.footerControls = [];
     this.$.footerHtml = htmlStr || '';
+    queueMicrotask(() => this._applyFooterHtml());
   }
 
   setFooterControls(controls = []) {
     let normalized = Array.isArray(controls) ? controls.map((control, index) => normalizeFooterControl(control, index)) : [];
+    this.$.footerHtml = '';
+    this._clearFooterHtml();
     this.$.footerControls = normalized;
-    this.$.footerHtml = normalized.map(renderFooterControl).join('');
+  }
+
+  _applyFooterHtml() {
+    let footer = this.ref.footer;
+    if (!footer) return;
+    this._footerHtmlNode?.remove();
+    let html = this.$.footerHtml;
+    if (!html) {
+      this._footerHtmlNode = null;
+      return;
+    }
+    let node = document.createElement('div');
+    node.className = 'composer-footer-html';
+    node.style.display = 'contents';
+    node.innerHTML = html;
+    this._footerHtmlNode = node;
+    footer.appendChild(node);
+  }
+
+  _clearFooterHtml() {
+    this._footerHtmlNode?.remove();
+    this._footerHtmlNode = null;
   }
 
   setDisabled(disabled) {
@@ -1395,7 +1387,14 @@ ChatComposer.template = html`
     </div>
   </div>
   <div class="composer-body">
-    <div class="composer-leading-controls" ref="leadingControls" ${{ innerHTML: 'leadingHtml', onclick: 'onLeadingClick' }}></div>
+    <div class="composer-leading-controls" ref="leadingControls" itemize="leadingControls" ${{ onclick: 'onLeadingClick' }}>
+      <template>
+        <button type="button" ${{ '@class': 'itemClass', '@data-leading-control-id': 'id', '@data-leading-control-kind': 'kind', '@title': 'title', '@aria-label': 'title', '@disabled': 'disabled' }}>
+          <span class="material-symbols-outlined" ${{ '@hidden': '!hasIcon' }}>{{icon}}</span>
+          <span class="composer-leading-label" ${{ '@hidden': '!hasLabel' }}>{{label}}</span>
+        </button>
+      </template>
+    </div>
     <textarea ref="chatInput" rows="1"
       ${{ value: 'value', disabled: 'disabled', placeholder: 'placeholder',
           oninput: 'onInput', onkeydown: 'onKeyDown' }}></textarea>
@@ -1420,7 +1419,29 @@ ChatComposer.template = html`
       <span class="material-symbols-outlined" ref="sendIcon">arrow_upward</span>
     </sn-button>
   </div>
-  <div class="composer-footer" ref="footer" ${{ innerHTML: 'footerHtml', onchange: 'onParamChange', onclick: 'onFooterClick' }}></div>
+  <div class="composer-footer" ref="footer" itemize="footerControls" ${{ onchange: 'onParamChange', onclick: 'onFooterClick' }}>
+    <template>
+      <label ${{ '@class': 'selectClass', '@data-footer-control-id': 'id', '@data-footer-control-kind': 'kind', '@title': 'title', '@hidden': '!isSelect' }}>
+        <span class="material-symbols-outlined" ${{ '@hidden': '!hasIcon' }}>{{icon}}</span>
+        <span class="composer-footer-label" ${{ '@hidden': '!hasLabel' }}>{{label}}</span>
+        <select class="composer-footer-select" ${{ '@data-footer-control-id': 'id', '@data-footer-control-kind': 'kind', '@disabled': 'disabled' }} itemize="options">
+          <template>
+            <option ${{ '@value': 'value', '@selected': 'selected' }}>{{label}}</option>
+          </template>
+        </select>
+      </label>
+      <label ${{ '@class': 'checkboxClass', '@data-footer-control-id': 'id', '@data-footer-control-kind': 'kind', '@title': 'title', '@hidden': '!isCheckbox' }}>
+        <span class="material-symbols-outlined" ${{ '@hidden': '!hasIcon' }}>{{icon}}</span>
+        <input class="composer-footer-checkbox" type="checkbox" ${{ '@data-footer-control-id': 'id', '@data-footer-control-kind': 'kind', checked: 'checked', '@disabled': 'disabled' }}>
+        <span class="composer-footer-label" ${{ '@hidden': '!hasLabel' }}>{{label}}</span>
+      </label>
+      <button type="button" ${{ '@class': 'buttonClass', '@data-footer-control-id': 'id', '@data-footer-control-kind': 'kind', '@title': 'title', '@disabled': 'disabled', '@hidden': '!isButton' }}>
+        <span class="material-symbols-outlined" ${{ '@hidden': '!hasIcon' }}>{{icon}}</span>
+        <span class="composer-footer-label" ${{ '@hidden': '!hasLabel' }}>{{label}}</span>
+        <span class="composer-footer-value" ${{ '@hidden': '!hasValue' }}>{{value}}</span>
+      </button>
+    </template>
+  </div>
   <div class="autocomplete-popup" ref="autocompletePopup"></div>
 </div>
 `;

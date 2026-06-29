@@ -64,9 +64,6 @@ export class ChatSidebarShell extends Symbiote {
     onNewChat: () => {
       emit(this, 'chat-sidebar-new');
     },
-    onChatClick: (event) => {
-      this._handleChatClick(event);
-    },
   };
 
   initCallback() {
@@ -87,10 +84,6 @@ export class ChatSidebarShell extends Symbiote {
       });
     });
 
-    this.sub('groupDividers', () => {
-      this._applyGroupDividers();
-    });
-
     if (typeof ResizeObserver === 'function') {
       this._resizeObserver = new ResizeObserver(() => this._syncCollapseForAvailableWidth());
       let shell = this.closest('.chat-shell') || this.parentElement;
@@ -99,7 +92,6 @@ export class ChatSidebarShell extends Symbiote {
 
     queueMicrotask(() => {
       this._applyNavWidth();
-      this._applyGroupDividers();
       this._syncCollapseForAvailableWidth();
     });
   }
@@ -117,8 +109,6 @@ export class ChatSidebarShell extends Symbiote {
 
   setChats(chats = []) {
     this.$.chats = Array.isArray(chats) ? chats : [];
-    let raf = globalThis.requestAnimationFrame || ((callback) => setTimeout(callback, 0));
-    raf(() => this.syncExpandedChatItems(this.$.chats));
   }
 
   setCollapsed(collapsed, { auto = false } = {}) {
@@ -152,14 +142,7 @@ export class ChatSidebarShell extends Symbiote {
     } else {
       this.style.setProperty('--chat-nav-width', 'var(--sn-chat-sidebar-width, 200px)');
     }
-    let nav = this.querySelector('.chat-nav');
-    if (nav) nav.toggleAttribute('collapsed', this.$.navCollapsed);
     this.toggleAttribute('collapsed', this.$.navCollapsed);
-  }
-
-  _applyGroupDividers() {
-    let nav = this.querySelector('.chat-nav');
-    if (nav) nav.toggleAttribute('data-group-dividers', Boolean(this.$.groupDividers));
   }
 
   _syncCollapseForAvailableWidth() {
@@ -233,42 +216,6 @@ export class ChatSidebarShell extends Symbiote {
     document.addEventListener('pointerup', onUp);
   }
 
-  _handleChatClick(event) {
-    let btnDelete = event.target.closest('.chat-item-delete');
-    let item = event.target.closest('.chat-item, .chat-item-child');
-    if (!item) return;
-
-    let chatId = item.dataset.id;
-    if (btnDelete) {
-      event.stopPropagation();
-      emit(this, 'chat-sidebar-delete', { id: chatId });
-      return;
-    }
-
-    let expandIcon = event.target.closest('.chat-expand-icon');
-    if (expandIcon) {
-      event.stopPropagation();
-      let subContainer = this.querySelector(`.chat-sub-items[data-parent="${chatId}"]`);
-      if (!subContainer) return;
-      let isExpanded = subContainer.hasAttribute('expanded');
-      subContainer.toggleAttribute('expanded', !isExpanded);
-      item.classList.toggle('chat-item-expanded', !isExpanded);
-      emit(this, 'chat-sidebar-toggle', { id: chatId, expanded: !isExpanded });
-      return;
-    }
-
-    if (chatId) {
-      emit(this, 'chat-sidebar-select', { id: chatId });
-    }
-  }
-
-  syncExpandedChatItems(chats = this.$.chats) {
-    for (let chat of chats || []) {
-      let item = [...this.querySelectorAll('chat-sidebar-item')].find((el) => el.$?.id === chat.id);
-      if (!item) continue;
-      item.$.isExpanded = Boolean(chat.isExpanded);
-    }
-  }
 }
 
 ChatSidebarShell.template = template;

@@ -16,6 +16,10 @@ export class ChatList extends Symbiote {
     filterAllLabel: translate('chat.list.filter.all'),
     filterProjectLabel: translate('chat.list.filter.project'),
     filterActiveLabel: translate('chat.list.filter.active'),
+    filterAllActive: true,
+    filterProjectActive: false,
+    filterActiveActive: false,
+    '+isEmpty': () => this.$.chatItems.length === 0,
     onFilterClick: (event) => {
       this.setFilter(event.currentTarget?.dataset?.filter || 'all');
     },
@@ -44,22 +48,20 @@ export class ChatList extends Symbiote {
   };
 
   renderCallback() {
-    this.sub('filter', () => this.syncFilterButtons());
     this.syncFilterButtons();
   }
 
   setItems(items = []) {
     this.$.chatItems = Array.isArray(items) ? items : [];
-    this.renderEmptyState();
   }
 
   setEmptyMessage(message) {
     this.$.emptyMessage = message || '';
-    this.renderEmptyState();
   }
 
   setFilter(filter = 'all') {
     this.$.filter = filter || 'all';
+    this.syncFilterButtons();
     this.dispatchEvent(new CustomEvent('chat-list-filter', {
       bubbles: true,
       composed: true,
@@ -73,22 +75,10 @@ export class ChatList extends Symbiote {
       || event.target?.getRootNode?.().host;
   }
 
-  renderEmptyState() {
-    let container = this.ref.items;
-    if (!container || this.$.chatItems.length > 0) return;
-    let empty = document.createElement('sn-empty-state');
-    let icon = document.createElement('span');
-    icon.className = 'material-symbols-outlined chat-list-empty-icon';
-    icon.textContent = 'chat_bubble_outline';
-    empty.appendChild(icon);
-    empty.append(this.$.emptyMessage);
-    container.replaceChildren(empty);
-  }
-
   syncFilterButtons() {
-    this.querySelectorAll('.chat-list-filter-btn').forEach((button) => {
-      button.toggleAttribute('active', button.dataset.filter === this.$.filter);
-    });
+    this.$.filterAllActive = this.$.filter === 'all';
+    this.$.filterProjectActive = this.$.filter === 'project';
+    this.$.filterActiveActive = this.$.filter === 'active';
   }
 }
 

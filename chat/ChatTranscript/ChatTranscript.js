@@ -25,6 +25,12 @@ export class ChatTranscript extends Symbiote {
       hasOlder: false,
       hasNewer: false,
     },
+    liveStatusActive: false,
+    liveStatusIcon: 'pending',
+    liveStatusText: '',
+    liveStatusSpinClass: 'spin-icon',
+    '+liveStatusIconClass': () => `material-symbols-outlined ${this.$.liveStatusSpinClass}`.trim(),
+    '+liveStatusHidden': () => !this.$.liveStatusActive,
     onScroll: () => {
       this.updateScrollBottomButton();
       emit(this, 'chat-transcript-scroll', this.getScrollState());
@@ -52,6 +58,7 @@ export class ChatTranscript extends Symbiote {
         }
       });
     }
+    this._setupTopSentinelObserver();
   }
 
   disconnectedCallback() {
@@ -63,7 +70,6 @@ export class ChatTranscript extends Symbiote {
   setMessageItems(items = []) {
     this._messageItemsWasAtBottom = this.isAtBottom(32);
     let next = Array.isArray(items) ? items : [];
-    this._removeTopSentinel();
     this.$.messageItems = next;
     this._setMessageWindow({
       startIndex: 0,
@@ -75,21 +81,9 @@ export class ChatTranscript extends Symbiote {
   }
 
   replaceMessageWindow(items = [], window = {}) {
-    let container = this.getScrollContainer();
     let next = Array.isArray(items) ? items : [];
-    if (!container) {
-      this._setMessageWindowFromOptions(next, window);
-      return this.getMessageWindow();
-    }
-
-    let liveStatus = container.querySelector('.live-status-indicator');
-    if (liveStatus) liveStatus.remove();
-    for (let node of this._messageNodes(container)) node.remove();
-    this._ensureTopSentinel();
-    for (let item of next) {
-      this._insertMessageElement(container, item);
-    }
-    if (liveStatus) container.appendChild(liveStatus);
+    this._messageItemsWasAtBottom = this.isAtBottom(32);
+    this.$.messageItems = next;
     this._setMessageWindowFromOptions(next, window);
     this._setupTopSentinelObserver();
     this.updateScrollBottomButton();
@@ -97,17 +91,15 @@ export class ChatTranscript extends Symbiote {
   }
 
   prependMessageItems(items = [], window = {}) {
-    let container = this.getScrollContainer();
     let next = Array.isArray(items) ? items : [];
-    if (!container || next.length === 0) return this.getMessageWindow();
+    if (next.length === 0) return this.getMessageWindow();
 
-    let previousScrollHeight = container.scrollHeight || 0;
-    let previousScrollTop = container.scrollTop || 0;
-    this._ensureTopSentinel();
-    let beforeNode = this._firstMessageNode(container) || container.querySelector('.live-status-indicator') || null;
-    for (let item of next) {
-      this._insertMessageElement(container, item, beforeNode);
-    }
+    let container = this.getScrollContainer();
+    let previousScrollHeight = container?.scrollHeight || 0;
+    let previousScrollTop = container?.scrollTop || 0;
+
+    this._messageItemsWasAtBottom = false;
+    this.$.messageItems = [...next, ...this.$.messageItems];
 
     let current = this.getMessageWindow();
     this._setMessageWindow({
@@ -118,13 +110,15 @@ export class ChatTranscript extends Symbiote {
       hasNewer: Boolean(window.hasNewer ?? current.hasNewer),
     });
 
-    let heightAdded = Math.max(0, (container.scrollHeight || 0) - previousScrollHeight);
-    container.scrollTop = previousScrollTop + heightAdded;
-    requestAnimationFrame(() => {
-      let settledHeightAdded = Math.max(0, (container.scrollHeight || 0) - previousScrollHeight);
-      container.scrollTop = previousScrollTop + settledHeightAdded;
-      this.updateScrollBottomButton();
-    });
+    if (container) {
+      let heightAdded = Math.max(0, (container.scrollHeight || 0) - previousScrollHeight);
+      container.scrollTop = previousScrollTop + heightAdded;
+      requestAnimationFrame(() => {
+        let settledHeightAdded = Math.max(0, (container.scrollHeight || 0) - previousScrollHeight);
+        container.scrollTop = previousScrollTop + settledHeightAdded;
+        this.updateScrollBottomButton();
+      });
+    }
     this._setupTopSentinelObserver();
     return this.getMessageWindow();
   }
@@ -233,11 +227,11 @@ export class ChatTranscript extends Symbiote {
   }
 
   renderLiveStatus(meta) {
-    let container = this.getScrollContainer();
-    if (!container) return;
-    let existing = container.querySelector('.live-status-indicator');
-    if (existing) existing.remove();
-    if (!meta) return;
+    if (!meta) {
+      this.$.liveStatusActive = false;
+      this.$.liveStatusText = '';
+      return;
+    }
 
     let icon = 'pending';
     let text = translate('chat.message.processing');
@@ -254,15 +248,12 @@ export class ChatTranscript extends Symbiote {
       spinClass = '';
     }
 
-    let indicator = document.createElement('div');
-    indicator.className = 'live-status-indicator';
-    let iconEl = document.createElement('span');
-    iconEl.className = `material-symbols-outlined ${spinClass}`.trim();
-    iconEl.textContent = icon;
-    let textEl = document.createElement('span');
-    textEl.textContent = text;
-    indicator.append(iconEl, ' ', textEl);
-    container.appendChild(indicator);
+    this.set$({
+      liveStatusIcon: icon,
+      liveStatusText: text,
+      liveStatusSpinClass: spinClass,
+      liveStatusActive: true,
+    });
     requestAnimationFrame(() => this.scrollToBottom());
   }
 
@@ -288,49 +279,9 @@ export class ChatTranscript extends Symbiote {
     };
   }
 
-  _insertMessageElement(container, item = {}, beforeNode = null) {
-    let el = document.createElement('chat-message-item');
-    container.insertBefore(el, beforeNode);
-    if (typeof el.set$ === 'function') el.set$(item);
-    else Object.assign(el, item);
-    return el;
-  }
-
-  _messageNodes(container = this.getScrollContainer()) {
-    if (!container) return [];
-    return Array.from(container.children || []).filter((child) => child.localName === 'chat-message-item');
-  }
-
-  _firstMessageNode(container = this.getScrollContainer()) {
-    return this._messageNodes(container)[0] || null;
-  }
-
-  _ensureTopSentinel() {
-    let container = this.getScrollContainer();
-    if (!container) return null;
-    let sentinel = container.querySelector(':scope > .chat-top-sentinel') || container.querySelector('.chat-top-sentinel');
-    if (!sentinel) {
-      sentinel = document.createElement('div');
-      sentinel.className = 'chat-top-sentinel';
-      sentinel.setAttribute('aria-hidden', 'true');
-    }
-    if (sentinel.parentNode !== container || container.firstChild !== sentinel) {
-      container.insertBefore(sentinel, container.firstChild || null);
-    }
-    this._topSentinel = sentinel;
-    return sentinel;
-  }
-
-  _removeTopSentinel() {
-    this._topSentinelObserver?.disconnect?.();
-    this._topSentinelObserver = null;
-    this._topSentinel?.remove?.();
-    this._topSentinel = null;
-  }
-
   _setupTopSentinelObserver() {
     if (this._topSentinelObserver || typeof IntersectionObserver === 'undefined') return;
-    let sentinel = this._ensureTopSentinel();
+    let sentinel = this.ref.topSentinel;
     let container = this.getScrollContainer();
     if (!sentinel || !container) return;
     this._topSentinelObserver = new IntersectionObserver((entries) => {
@@ -456,7 +407,14 @@ ChatTranscript.template = html`
 <div class="chat-background" aria-hidden="true">
   <slot name="background"></slot>
 </div>
-<div ref="chatMessages" class="chat-messages" ${{ itemize: 'messageItems', 'item-tag': 'chat-message-item', onscroll: 'onScroll' }}></div>
+<div ref="chatMessages" class="chat-messages" ${{ onscroll: 'onScroll' }}>
+  <div ref="topSentinel" class="chat-top-sentinel" aria-hidden="true"></div>
+  <div class="chat-message-list" ${{ itemize: 'messageItems', 'item-tag': 'chat-message-item' }}></div>
+  <div class="live-status-indicator" ${{ '@hidden': 'liveStatusHidden' }}>
+    <span ${{ className: 'liveStatusIconClass' }}>{{liveStatusIcon}}</span>
+    <span>{{liveStatusText}}</span>
+  </div>
+</div>
 <button class="scroll-bottom-btn" ref="scrollBottomBtn" title="Scroll to bottom" ${{ onclick: 'onScrollToBottom' }}>
   <span class="material-symbols-outlined">arrow_downward</span>
 </button>

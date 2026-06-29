@@ -32,28 +32,31 @@ export class ChatMessageItem extends Symbiote {
     copyText: '',
     cardItems: [],
     parts: [],
-    messageClass: 'message',
-    bodyHtml: '',
+
+    '+messageClass': () => {
+      let role = this.$.role || this.$.type;
+      return `message ${role || ''}${this.$.isStreaming ? ' streaming' : ''}`.trim();
+    },
+
+    '+bodyHtml': () => {
+      let role = this.$.role || this.$.type;
+      if (this.$.parts && this.$.parts.length > 0) {
+        return this._renderParts();
+      }
+      if (role === 'tool') {
+        return this._renderTool();
+      }
+      if (role === 'board') {
+        return this._renderBoard();
+      }
+      if (role === 'thinking') {
+        return this._renderThinking();
+      }
+      return this._renderTextMessage();
+    },
   };
 
   renderCallback() {
-    this.sub('type', () => this._renderBody());
-    this.sub('role', () => this._renderBody());
-    this.sub('text', () => this._renderBody());
-    this.sub('isStreaming', () => this._renderBody());
-    this.sub('isLatestTool', () => this._renderBody());
-    this.sub('name', () => this._renderBody());
-    this.sub('input', () => this._renderBody());
-    this.sub('result', () => this._renderBody());
-    this.sub('done', () => this._renderBody());
-    this.sub('elapsedText', () => this._renderBody());
-    this.sub('status', () => this._renderBody());
-    this.sub('metaHtml', () => this._renderBody());
-    this.sub('workSummaryHtml', () => this._renderBody());
-    this.sub('copyText', () => this._renderBody());
-    this.sub('cardItems', () => this._renderBody());
-    this.sub('parts', () => this._renderBody());
-
     if (!this._confirmClickBound) {
       this._confirmClickBound = true;
       this.addEventListener('click', (event) => this._handleConfirmClick(event));
@@ -80,24 +83,7 @@ export class ChatMessageItem extends Symbiote {
 
     if (part) {
       part.resolved = action === 'cancel' ? 'cancel' : 'confirm';
-      this._renderBody();
-    }
-  }
-
-  _renderBody() {
-    let role = this.$.role || this.$.type;
-    this.$.messageClass = `message ${role || ''}${this.$.isStreaming ? ' streaming' : ''}`.trim();
-
-    if (this.$.parts && this.$.parts.length > 0) {
-      this.$.bodyHtml = this._renderParts();
-    } else if (role === 'tool') {
-      this.$.bodyHtml = this._renderTool();
-    } else if (role === 'board') {
-      this.$.bodyHtml = this._renderBoard();
-    } else if (role === 'thinking') {
-      this.$.bodyHtml = this._renderThinking();
-    } else {
-      this.$.bodyHtml = this._renderTextMessage();
+      this.notify('parts');
     }
   }
 
@@ -468,7 +454,7 @@ export class ChatMessageItem extends Symbiote {
 }
 
 ChatMessageItem.template = html`
-<div ${{ className: 'messageClass', innerHTML: 'bodyHtml', onclick: '^onMessageItemClick' }}></div>
+<div ${{ className: '+messageClass', innerHTML: '+bodyHtml', onclick: '^onMessageItemClick' }}></div>
 `;
 ChatMessageItem.rootStyles = css;
 

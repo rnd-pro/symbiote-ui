@@ -54,6 +54,10 @@ chat-transcript > [slot="background"] {
   pointer-events: none;
 }
 
+.chat-message-list {
+  display: contents;
+}
+
 chat-message-item {
   display: contents;
 }
@@ -104,6 +108,10 @@ chat-message-item {
   color: var(--sn-text-dim);
   animation: status-fade-in var(--sn-transition-normal) var(--sn-transition-easing);
   animation-play-state: var(--sn-animation-play-state);
+}
+
+.live-status-indicator[hidden] {
+  display: none;
 }
 
 .live-status-indicator .material-symbols-outlined {
