@@ -317,6 +317,30 @@ export function createDialogueStage(options = {}) {
       return stage;
     },
 
+    /** Pause every channel's in-flight speech; no-op where unsupported. */
+    pause() {
+      for (let channel of channels.values()) {
+        if (channel.synthesis) {
+          try {
+            channel.synthesis.pause();
+          } catch (_) {}
+        }
+      }
+      return stage;
+    },
+
+    /** Resume every channel's paused speech; no-op where unsupported. */
+    resume() {
+      for (let channel of channels.values()) {
+        if (channel.synthesis) {
+          try {
+            channel.synthesis.resume();
+          } catch (_) {}
+        }
+      }
+      return stage;
+    },
+
     /**
      * Install a one-shot gesture unlock. On the first pointerdown/keydown/
      * touchstart on `target`, call `unlock()`. Returns a detach function.
