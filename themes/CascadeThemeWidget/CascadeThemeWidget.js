@@ -2,9 +2,12 @@ import Symbiote from '@symbiotejs/symbiote';
 import { ensureMaterialSymbols } from '../../icons/MaterialSymbols.js';
 import {
   applyCascadeTheme,
+  applyCascadeThemeBundle,
   CASCADE_THEME_DEFAULTS,
   getCascadeThemeControls,
+  isCascadeThemeBundle,
   normalizeCascadeThemeOptions,
+  serializeCascadeThemeBundle,
 } from '../cascade-theme.js';
 import { geometryRegisterScaleTokens, GEOMETRY_PROFILE_NAMES } from '../../tokens/scale.js';
 import {
@@ -43,11 +46,12 @@ function parseStoredState(value) {
 }
 
 export class CascadeThemeWidget extends Symbiote {
-  static observedAttributes = ['storage-key', 'target-selector', 'default-state'];
+  static observedAttributes = ['storage-key', 'target-selector', 'default-state', 'scopes'];
 
   #controls = getCascadeThemeControls().filter((control) => COMPACT_CONTROLS.includes(control.name));
   #state = normalizeCascadeThemeOptions(CASCADE_THEME_DEFAULTS);
   #geometryRegister = '';
+  #scopes = [];
   #ready = false;
 
   init$ = {
@@ -139,6 +143,24 @@ export class CascadeThemeWidget extends Symbiote {
 
   setState(value, options = {}) {
     let source = options.source || 'set-state';
+    let scopes = this.scopes;
+    // a full bundle restores every scope (and named window) at once when the host
+    // has fed the scope set; afterwards reload this widget's own scope so the
+    // sliders reflect what was applied
+    if (isCascadeThemeBundle(value) && scopes.length) {
+      applyCascadeThemeBundle(value, scopes, {
+        applyState: (target, state) => { applyCascadeTheme(target, state, { notify: false }); },
+        namedStorageBase: scopes[0]?.storageKey,
+        resolveNamed: (name) => Array.from(
+          (this.ownerDocument || document).querySelectorAll(`[data-theme-label="${CSS.escape(name)}"]`)
+        ),
+      });
+      this.#loadStoredState();
+      this.#apply(source);
+      this.#applyGeometryRegister(source);
+      this.#syncRegisterButtons();
+      return;
+    }
     let params = value;
     // a snapshot may carry the geometry profile alongside the parameters (see
     // copyParameters); split it back out so the preset round-trips too
@@ -171,6 +193,19 @@ export class CascadeThemeWidget extends Symbiote {
     return this.getAttribute('target-selector') || '';
   }
 
+  // The structural + picked scopes the bundle copy/apply spans, set by the host
+  // like the editor's targets: Array<{ id, selector, storageKey }>. Falls back to
+  // a `scopes` attribute (JSON) so a host can declare them declaratively.
+  get scopes() {
+    if (this.#scopes.length) return this.#scopes;
+    let parsed = parseStoredState(this.getAttribute('scopes'));
+    return Array.isArray(parsed) ? parsed : [];
+  }
+
+  set scopes(value) {
+    this.#scopes = Array.isArray(value) ? value : [];
+  }
+
   reset() {
     let def = this.defaultState;
     let hasRegister = def && typeof def === 'object' && 'register' in def;
@@ -185,11 +220,15 @@ export class CascadeThemeWidget extends Symbiote {
   }
 
   async copyParameters() {
-    // copy the full theme: the cascade parameters plus the active geometry profile,
-    // so the snapshot round-trips through setState (parameters alone drop the preset)
-    let payload = this.#geometryRegister
-      ? { ...this.#state, register: this.#geometryRegister }
-      : { ...this.#state };
+    // with host-fed scopes, copy the whole multi-scope bundle (every structural
+    // and picked scope plus named windows) so the snapshot round-trips through
+    // setState; otherwise copy this scope's parameters plus its geometry profile.
+    let scopes = this.scopes;
+    let payload = scopes.length
+      ? serializeCascadeThemeBundle(scopes.map((scope) => ({ id: scope.id, storageKey: scope.storageKey })))
+      : this.#geometryRegister
+        ? { ...this.#state, register: this.#geometryRegister }
+        : { ...this.#state };
     let text = JSON.stringify(payload, null, 2);
     if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
       try {

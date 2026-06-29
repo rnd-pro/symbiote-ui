@@ -735,6 +735,150 @@ export function getCascadeThemeControls() {
   return CASCADE_THEME_CONTROL_LIST.map((control) => ({ ...control }));
 }
 
+export const CASCADE_BUNDLE_VERSION = 1;
+const CASCADE_BUNDLE_NAMED_MARKER = '::win::';
+const CASCADE_BUNDLE_REGISTER_SUFFIX = '::geometry-register';
+
+function getCascadeThemeStorage() {
+  if (typeof window !== 'undefined' && window.localStorage) return window.localStorage;
+  if (typeof globalThis !== 'undefined' && globalThis.localStorage) return globalThis.localStorage;
+  return null;
+}
+
+function parseStoredState(value) {
+  if (!value) return null;
+  try {
+    let parsed = JSON.parse(value);
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch (error) {
+    void error;
+    return null;
+  }
+}
+
+export function isCascadeThemeBundle(value) {
+  return Boolean(
+    value
+    && typeof value === 'object'
+    && value.version === CASCADE_BUNDLE_VERSION
+    && value.scopes
+    && typeof value.scopes === 'object'
+  );
+}
+
+export function serializeCascadeThemeBundle(scopeDefs, options = {}) {
+  let storage = options.storage || getCascadeThemeStorage();
+  let namedMarker = options.namedMarker || CASCADE_BUNDLE_NAMED_MARKER;
+  let scopes = {};
+  let named = {};
+  if (!storage) return { version: CASCADE_BUNDLE_VERSION, scopes, named };
+
+  let readRegister = (key) => {
+    try {
+      return storage.getItem(key + CASCADE_BUNDLE_REGISTER_SUFFIX) || '';
+    } catch (error) {
+      void error;
+      return '';
+    }
+  };
+
+  for (let scopeDef of scopeDefs || []) {
+    if (!scopeDef || !scopeDef.id || !scopeDef.storageKey) continue;
+    let stored;
+    try {
+      stored = parseStoredState(storage.getItem(scopeDef.storageKey));
+    } catch (error) {
+      void error;
+      stored = null;
+    }
+    if (!stored) continue;
+    scopes[scopeDef.id] = {
+      ...normalizeCascadeThemeOptions(stored),
+      register: readRegister(scopeDef.storageKey),
+    };
+  }
+
+  let keys = [];
+  try {
+    for (let index = 0; index < storage.length; index += 1) {
+      let key = storage.key(index);
+      if (typeof key === 'string') keys.push(key);
+    }
+  } catch (error) {
+    void error;
+  }
+
+  for (let key of keys) {
+    if (!key.includes(namedMarker)) continue;
+    if (key.endsWith(CASCADE_BUNDLE_REGISTER_SUFFIX)) continue;
+    let stored;
+    try {
+      stored = parseStoredState(storage.getItem(key));
+    } catch (error) {
+      void error;
+      stored = null;
+    }
+    if (!stored) continue;
+    let name = key.slice(key.indexOf(namedMarker) + namedMarker.length);
+    named[name] = {
+      ...normalizeCascadeThemeOptions(stored),
+      register: readRegister(key),
+    };
+  }
+
+  return { version: CASCADE_BUNDLE_VERSION, scopes, named };
+}
+
+export function applyCascadeThemeBundle(bundle, scopeDefs, options = {}) {
+  if (!isCascadeThemeBundle(bundle)) return;
+  let storage = options.storage || getCascadeThemeStorage();
+  let namedMarker = options.namedMarker || CASCADE_BUNDLE_NAMED_MARKER;
+  let namedStorageBase = options.namedStorageBase || '';
+  let applyState = typeof options.applyState === 'function' ? options.applyState : null;
+  let resolveScopeTarget = typeof options.resolveScopeTarget === 'function'
+    ? options.resolveScopeTarget
+    : (scopeDef) => scopeDef?.selector;
+  let resolveNamed = typeof options.resolveNamed === 'function' ? options.resolveNamed : null;
+
+  let persist = (storageKey, entry) => {
+    if (!storage || !storageKey) return;
+    let { register, ...params } = entry || {};
+    try {
+      storage.setItem(storageKey, JSON.stringify(params));
+      storage.setItem(storageKey + CASCADE_BUNDLE_REGISTER_SUFFIX, register || '');
+    } catch (error) {
+      void error;
+    }
+  };
+
+  let runApply = (target, entry) => {
+    if (!applyState || target == null) return;
+    let { register, ...params } = entry || {};
+    void register;
+    try {
+      applyState(target, params);
+    } catch (error) {
+      void error;
+    }
+  };
+
+  for (let [id, entry] of Object.entries(bundle.scopes || {})) {
+    let scopeDef = (scopeDefs || []).find((def) => def && def.id === id);
+    if (!scopeDef) continue;
+    persist(scopeDef.storageKey, entry);
+    runApply(resolveScopeTarget(scopeDef), entry);
+  }
+
+  for (let [name, entry] of Object.entries(bundle.named || {})) {
+    let storageKey = namedStorageBase + namedMarker + name;
+    persist(storageKey, entry);
+    let targets = resolveNamed ? resolveNamed(name) : null;
+    for (let target of targets || []) {
+      runApply(target, entry);
+    }
+  }
+}
+
 export function normalizeCascadeThemeOptions(options = {}) {
   let resolved = resolveCascadeThemeRecipe(options);
   let merged = { ...CASCADE_THEME_DEFAULTS, ...resolved.params };

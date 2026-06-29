@@ -2,9 +2,12 @@ import Symbiote from '@symbiotejs/symbiote';
 import { ensureMaterialSymbols } from '../../icons/MaterialSymbols.js';
 import {
   applyCascadeTheme,
+  applyCascadeThemeBundle,
   CASCADE_THEME_DEFAULTS,
   getCascadeThemeControls,
+  isCascadeThemeBundle,
   normalizeCascadeThemeOptions,
+  serializeCascadeThemeBundle,
 } from '../cascade-theme.js';
 import { geometryRegisterScaleTokens, GEOMETRY_PROFILE_NAMES } from '../../tokens/scale.js';
 import template from './CascadeThemeEditor.tpl.js';
@@ -295,12 +298,23 @@ export class CascadeThemeEditor extends Symbiote {
     let id = element.dataset.themeId || element.id;
     let selector = element.dataset.themeTarget || (element.id ? `#${element.id}` : '');
     if (!id || !selector) return;
+    // Key picked windows by their NAME (portable across rebuilds) so a copied bundle's
+    // `named` entries match back via [data-theme-label]. Fall back to a visible title,
+    // then the theme id.
+    let name = element.dataset.themeLabel
+      || element.getAttribute?.('title')
+      || element.textContent?.trim()
+      || element.dataset.themeId
+      || id;
+    // ensure the element advertises the name so resolveNamed can find it on apply.
+    if (element.dataset.themeLabel !== name) element.dataset.themeLabel = name;
     let descriptor = {
       id: `pick:${id}`,
-      label: element.dataset.themeLabel || id,
+      name,
+      label: name,
       icon: element.dataset.themeIcon || 'colorize',
       selector,
-      storageKey: element.dataset.themeKey || `${this.storageKey}::win::${id}`,
+      storageKey: element.dataset.themeKey || `${this.#targetDefs[0]?.storageKey || this.storageKey}::win::${name}`,
     };
     let existing = this.#targetDefs.findIndex((entry) => entry.id === descriptor.id);
     if (existing >= 0) this.#targetDefs[existing] = descriptor;
@@ -316,6 +330,25 @@ export class CascadeThemeEditor extends Symbiote {
   }
 
   setState(value, options = {}) {
+    if (isCascadeThemeBundle(value)) {
+      applyCascadeThemeBundle(
+        value,
+        this.#targetDefs.map((entry) => ({ id: entry.id, selector: entry.selector, storageKey: entry.storageKey })),
+        {
+          applyState: (target, state) => { applyCascadeTheme(target, state, { notify: false }); },
+          namedStorageBase: this.#targetDefs[0]?.storageKey || this.storageKey,
+          resolveNamed: (name) => Array.from(
+            (this.ownerDocument || document).querySelectorAll(`[data-theme-label="${CSS.escape(name)}"]`)
+          ),
+        }
+      );
+      // reload the active scope so the editor UI reflects the applied bundle
+      this.#loadStoredState();
+      this.#apply(options.source || 'set-bundle');
+      this.#applyGeometryRegister(options.source || 'set-bundle');
+      this.#syncRegisterButtons();
+      return;
+    }
     this.#state = normalizeCascadeThemeOptions(value);
     this.#apply(options.source || 'set-state');
   }
@@ -372,7 +405,10 @@ export class CascadeThemeEditor extends Symbiote {
   }
 
   async copyParameters() {
-    let payload = JSON.stringify(this.#state, null, 2);
+    let bundle = serializeCascadeThemeBundle(
+      this.#targetDefs.map((entry) => ({ id: entry.id, storageKey: entry.storageKey }))
+    );
+    let payload = JSON.stringify(bundle, null, 2);
     try {
       if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
         try {
