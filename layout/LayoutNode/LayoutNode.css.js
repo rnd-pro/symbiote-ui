@@ -15,6 +15,7 @@ export let styles = css`
       flex-direction: column;
       background: var(--sn-node-bg);
       border: 1px solid var(--sn-layout-border);
+      border-radius: var(--sn-frame-radius, 0);
     }
 
     .panel-view {
@@ -299,6 +300,7 @@ export let styles = css`
       flex: 1;
       overflow: auto;
       position: relative;
+      padding: var(--sn-frame-inset, 0);
       ${themedScrollbarStyles}
     }
 
@@ -489,6 +491,7 @@ export let styles = css`
       display: flex;
       width: 100%;
       height: 100%;
+      gap: var(--sn-frame-gap, 0);
 
       &[direction='horizontal'] {
         flex-direction: row;

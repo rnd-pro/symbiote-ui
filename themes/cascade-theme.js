@@ -103,6 +103,24 @@ const CASCADE_THEME_CONTROL_LIST = [
     description: 'Corner-radius scale for reusable controls, cards, tables, graph chrome, chat surfaces, and layout panels.',
   },
   {
+    name: 'frameRadius',
+    type: 'number',
+    min: 0,
+    max: 200,
+    default: 100,
+    icon: 'crop_square',
+    description: 'Corner radius of the outer layout frames (panels) and tabs, independent of the inner radius; also cascades into their inner padding so content stays clear of the rounded corners.',
+  },
+  {
+    name: 'frameGap',
+    type: 'number',
+    min: 0,
+    max: 20,
+    default: 0,
+    icon: 'space_dashboard',
+    description: 'Gap (px) between layout panels and inset from the window edges, so rounded frames float apart as separate cards instead of touching.',
+  },
+  {
     name: 'motion',
     type: 'number',
     min: 0,
@@ -733,6 +751,8 @@ export function normalizeCascadeThemeOptions(options = {}) {
     heading: clamp(merged.heading, 80, 140),
     density: clamp(merged.density, 75, 140),
     radius: clamp(merged.radius, 0, 100),
+    frameRadius: clamp(merged.frameRadius, 0, 200),
+    frameGap: clamp(merged.frameGap, 0, 20),
     motion: clamp(merged.motion, 0, 200),
   };
 }
@@ -746,6 +766,20 @@ export function createCascadeTheme(options = {}) {
   let headingScale = state.heading / 100;
   let densityScale = state.density / 100;
   let radiusScale = state.radius / CASCADE_THEME_DEFAULTS.radius;
+  // frameRadius is a 0-200 dial referenced to 100 = the provider baseline (panels round
+  // 12px * radius-scale, tabs are top-round). At the default (100) the emitted frame/tabs
+  // tokens equal the provider's, so existing layouts are unchanged; 0 flattens, 200 doubles.
+  let frameFactor = state.frameRadius / 100;
+  let frameGapPx = state.frameGap;
+  let frameRadiusCss = `calc(12px * var(--sn-theme-radius-scale, 1) * ${frameFactor.toFixed(3)})`;
+  // padding only grows once panels round BEYOND the provider baseline, so default panels
+  // keep their original (zero) content inset.
+  let frameInsetCss = `calc(max(0px, ${frameRadiusCss} - 12px) * 0.7)`;
+  // tabs keep the provider top-round shape (+ chrome) at/below the baseline; above it they
+  // become gently rounded rectangles (capped) with the strip chrome removed.
+  let tabsRounded = frameFactor > 1;
+  let tabsScaleCss = `calc(8px * ${frameFactor.toFixed(3)})`;
+  let tabsRadiusCss = tabsRounded ? `min(${tabsScaleCss}, 10px)` : `${tabsScaleCss} ${tabsScaleCss} 0px 0px`;
   let motionScale = state.motion / 100;
   let patternScale = state.pattern / 100;
   let motionEnabled = motionScale > 0;
@@ -844,6 +878,13 @@ export function createCascadeTheme(options = {}) {
     '--sn-theme-density': densityScale.toFixed(2),
     '--sn-theme-spacing-scale': densityScale.toFixed(2),
     '--sn-theme-radius-scale': radiusScale.toFixed(2),
+    '--sn-theme-frame-radius-scale': frameFactor.toFixed(2),
+    '--sn-frame-radius': frameRadiusCss,
+    '--sn-frame-inset': frameInsetCss,
+    '--sn-frame-gap': `${frameGapPx.toFixed(1)}px`,
+    '--sn-tabs-radius': tabsRadiusCss,
+    // strip the tab-strip chrome (underline + corner cuts) only once tabs become pills
+    '--sn-tabs-chrome': tabsRounded ? 'none' : 'block',
     '--sn-theme-elevation-scale': '1',
     '--sn-theme-pattern-brightness': patternScale.toFixed(2),
     '--sn-theme-motion-scale': motionScale.toFixed(2),

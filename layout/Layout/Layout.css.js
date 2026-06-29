@@ -16,9 +16,11 @@ export let styles = css`
     }
 
     .layout-root {
+      box-sizing: border-box;
       display: flex;
       width: 100%;
       height: 100%;
+      padding: var(--sn-frame-gap, 0);
       background: var(--sn-layout-gap-bg);
     }
 

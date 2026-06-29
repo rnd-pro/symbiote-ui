@@ -12,6 +12,7 @@ project-tabs {
 :host::after,
 project-tabs::after {
   content: '';
+  display: var(--sn-tabs-chrome, block);
   position: absolute;
   bottom: 0;
   left: 0;
@@ -23,7 +24,7 @@ project-tabs::after {
 
 .tab-bar {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   height: 100%;
   padding: var(--sn-tabs-bar-padding, 0 12px);
   overflow-x: auto;
@@ -45,7 +46,6 @@ project-tab-item {
   padding: var(--sn-tabs-item-padding, 0 10px 0 12px);
   height: var(--sn-tabs-item-height);
   border: 1px solid transparent;
-  border-bottom: none;
   background: transparent;
   color: var(--sn-text-dim);
   cursor: pointer;
@@ -91,6 +91,7 @@ project-tab-item[active] {
 .tab[active]::before,
 project-tab-item[active]::before {
   content: '';
+  display: var(--sn-tabs-chrome, block);
   position: absolute;
   bottom: 0;
   left: calc(-1 * var(--sn-tabs-corner-size));
@@ -103,6 +104,7 @@ project-tab-item[active]::before {
 .tab[active]::after,
 project-tab-item[active]::after {
   content: '';
+  display: var(--sn-tabs-chrome, block);
   position: absolute;
   bottom: 0;
   right: calc(-1 * var(--sn-tabs-corner-size));
@@ -115,6 +117,7 @@ project-tab-item[active]::after {
 .tab:not([active]):not(:hover)::after,
 project-tab-item:not([active]):not(:hover)::after {
   content: '';
+  display: var(--sn-tabs-chrome, block);
   position: absolute;
   right: var(--sn-step-0, -2px);
   top: 25%;

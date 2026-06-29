@@ -10,6 +10,8 @@ const CASCADE_PARAM_NAMES = [
   'heading',
   'density',
   'radius',
+  'frameRadius',
+  'frameGap',
   'motion',
 ];
 
@@ -27,6 +29,8 @@ const DEFAULT_CASCADE_PARAMS = Object.freeze({
   heading: 100,
   density: 100,
   radius: 20,
+  frameRadius: 100,
+  frameGap: 0,
   motion: 100,
 });
 
