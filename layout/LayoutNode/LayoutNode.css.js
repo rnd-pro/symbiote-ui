@@ -310,6 +310,9 @@ export let styles = css`
       height: var(--sn-layout-collapsed-vertical-size, 28px) !important;
       min-height: var(--sn-layout-collapsed-vertical-size, 28px) !important;
       max-height: var(--sn-layout-collapsed-vertical-size, 28px) !important;
+      /* a thin collapsed strip must not round into a pill — an over-large frame radius
+         plus overflow:hidden would clip the leading panel icon behind the rounded edge */
+      border-radius: min(var(--sn-frame-radius, 0px), calc(var(--sn-layout-collapsed-vertical-size, 28px) * 0.35));
 
       .panel-content,
       .panel-menu-drawer {
@@ -372,6 +375,8 @@ export let styles = css`
       width: var(--sn-layout-collapsed-horizontal-size, 32px) !important;
       min-width: var(--sn-layout-collapsed-horizontal-size, 32px) !important;
       max-width: var(--sn-layout-collapsed-horizontal-size, 32px) !important;
+      /* keep the narrow collapsed rail from rounding into a pill that clips its icon */
+      border-radius: min(var(--sn-frame-radius, 0px), calc(var(--sn-layout-collapsed-horizontal-size, 32px) * 0.35));
 
       .panel-view {
         width: var(--sn-layout-collapsed-horizontal-size, 32px);
