@@ -228,6 +228,10 @@ export class ChatComposer extends Symbiote {
       emitCancelable(this, 'chat-composer-voice-response-toggle');
     },
 
+    onVoicePresent: () => {
+      emitCancelable(this, 'chat-composer-voice-present');
+    },
+
     onVoiceCommand: () => {
       let event = emitCancelable(this, 'chat-composer-voice-command-toggle');
       if (!event.defaultPrevented) {
@@ -1045,6 +1049,7 @@ export class ChatComposer extends Symbiote {
       input: this.ref.voiceInputBtn || null,
       wakeListen: this.ref.wakeListenBtn || null,
       response: this.ref.voiceResponseBtn || null,
+      present: this.ref.voicePresentBtn || null,
       command: this.ref.voiceCommandBtn || null,
       language: this.ref.voiceLanguageBtn || null,
     };
@@ -1133,6 +1138,7 @@ export class ChatComposer extends Symbiote {
       input: { ...(current.input || {}), ...(config.input || {}) },
       wakeListen: { ...(current.wakeListen || {}), ...(config.wakeListen || {}) },
       response: { ...(current.response || {}), ...(config.response || {}) },
+      present: { ...(current.present || {}), ...(config.present || {}) },
       command: { ...(current.command || {}), ...(config.command || {}) },
       language: { ...(current.language || {}), ...(config.language || {}) },
     };
@@ -1149,6 +1155,10 @@ export class ChatComposer extends Symbiote {
 
   setVoiceResponseState(options = {}) {
     this.setVoiceControls({ response: { ...(this._voiceControls?.response || {}), ...options } });
+  }
+
+  setPresentState(options = {}) {
+    this.setVoiceControls({ present: { ...(this._voiceControls?.present || {}), ...options } });
   }
 
   setVoiceCommandState(options = {}) {
@@ -1262,6 +1272,9 @@ export class ChatComposer extends Symbiote {
     if (this.ref.voiceResponseBtn && this._voiceControls?.response?.enabled === false) {
       this.ref.voiceResponseBtn.disabled = true;
     }
+    if (this.ref.voicePresentBtn && this._voiceControls?.present?.enabled === false) {
+      this.ref.voicePresentBtn.disabled = true;
+    }
     if (this.ref.voiceCommandBtn && voice.command?.enabled === false) {
       this.ref.voiceCommandBtn.disabled = true;
     }
@@ -1274,6 +1287,7 @@ export class ChatComposer extends Symbiote {
     this._syncVoiceInput(this._voiceControls?.input || {});
     this._syncWakeListen(this._voiceControls?.wakeListen || {});
     this._syncVoiceResponse(this._voiceControls?.response || {});
+    this._syncVoicePresent(this._voiceControls?.present || {});
     this._syncVoiceCommand(this._voiceControls?.command || {});
     this._syncVoiceLanguage(this._voiceControls?.language || {});
     this._syncDisabledState();
@@ -1322,6 +1336,19 @@ export class ChatComposer extends Symbiote {
     btn.classList.toggle('active', Boolean(active));
     btn.classList.toggle('enabled', Boolean(enabled));
     btn.classList.toggle('speaking', Boolean(speaking));
+  }
+
+  _syncVoicePresent({ visible = false, enabled = true, active = false, title = '' } = {}) {
+    let btn = this.ref.voicePresentBtn;
+    if (!btn) return;
+    btn.hidden = !visible;
+    btn.disabled = Boolean(this.$.disabled) || !enabled;
+    btn.classList.toggle('active', Boolean(active));
+    btn.classList.toggle('enabled', Boolean(enabled));
+    if (title) {
+      btn.title = title;
+      btn.setAttribute('aria-label', title);
+    }
   }
 
   _syncVoiceCommand({ visible = false, enabled = true, active = false, text = '' } = {}) {
@@ -1405,6 +1432,9 @@ ChatComposer.template = html`
       </button>
       <button class="btn-voice-response" ref="voiceResponseBtn" type="button" title="Voice response" hidden ${{ onclick: 'onVoiceResponse' }}>
         <span class="material-symbols-outlined">record_voice_over</span>
+      </button>
+      <button class="btn-voice-present" ref="voicePresentBtn" type="button" title="Present" hidden ${{ onclick: 'onVoicePresent' }}>
+        <span class="material-symbols-outlined">co_present</span>
       </button>
       <button class="btn-voice-command" ref="voiceCommandBtn" type="button" title="Voice command mode" hidden ${{ onclick: 'onVoiceCommand' }}>
         <span class="material-symbols-outlined">rule</span>
