@@ -14,9 +14,24 @@
  * no-ops and `isSupported()` returns false.
  */
 
+import { detectBrowserLocale } from '../ui/locale.js';
+
 const PITCH_RANGE = { min: 0, max: 2 };
 const RATE_RANGE = { min: 0.1, max: 10 };
 const VOLUME_RANGE = { min: 0, max: 1 };
+
+/** Short locale -> BCP-47 lang used for utterance.lang and voice selection. */
+const LOCALE_LANG = { en: 'en-US', ru: 'ru-RU', es: 'es-ES' };
+
+/**
+ * Resolve a short locale ('en'|'ru'|'es') or a full BCP-47 lang to a BCP-47
+ * lang. Short locales map through LOCALE_LANG; anything already containing a
+ * region (or otherwise non-mappable) is returned as-is.
+ */
+function toBcp47(locale) {
+  if (typeof locale !== 'string' || !locale) return '';
+  return LOCALE_LANG[locale.toLowerCase()] || locale;
+}
 
 function clamp(value, min, max) {
   if (!Number.isFinite(value)) return undefined;
@@ -34,9 +49,10 @@ function lowerOrEmpty(value) {
 /**
  * Resolve a voice for a persona profile from a list of available voices.
  * Match order: `profile.voice` by voiceURI or name (case-insensitive), then the
- * first voice whose `lang` starts with `profile.lang`, then the first voice.
+ * first voice whose `lang` starts with the requested lang (the persona's own
+ * `lang`, else `fallbackLang`), then the first voice.
  */
-function resolveVoice(voices, profile) {
+function resolveVoice(voices, profile, fallbackLang) {
   if (!Array.isArray(voices) || voices.length === 0) return null;
 
   let wanted = lowerOrEmpty(profile?.voice);
@@ -47,7 +63,7 @@ function resolveVoice(voices, profile) {
     if (byVoice) return byVoice;
   }
 
-  let lang = lowerOrEmpty(profile?.lang);
+  let lang = lowerOrEmpty(profile?.lang) || lowerOrEmpty(fallbackLang);
   if (lang) {
     let byLang = voices.find((v) => lowerOrEmpty(v?.lang).startsWith(lang));
     if (byLang) return byLang;
@@ -61,10 +77,15 @@ function resolveVoice(voices, profile) {
  *
  * @param {object} [options]
  * @param {Document} [options.document] - injectable document (defaults to the global one).
+ * @param {string} [options.locale] - default locale personas inherit for TTS: a
+ *   short locale ('en'|'ru'|'es') or a full BCP-47 lang. Defaults to the
+ *   browser-detected locale. A persona's own `lang` always wins over this.
  * @returns {object} stage
  */
 export function createDialogueStage(options = {}) {
   let doc = options.document || (typeof document !== 'undefined' ? document : null);
+  // Default stage locale: explicit option, else browser-detected (lazy, Node-safe).
+  let stageLang = toBcp47(options.locale != null ? options.locale : detectBrowserLocale());
   // Map<personaId, { profile, iframe, synthesis, UtteranceCtor, utterance, voiceListener }>
   let channels = new Map();
   let disposed = false;
@@ -144,7 +165,7 @@ export function createDialogueStage(options = {}) {
       }
     }
 
-    return resolveVoice(voices, channel.profile);
+    return resolveVoice(voices, channel.profile, stageLang);
   }
 
   function clearUtteranceHandlers(utterance) {
@@ -167,6 +188,20 @@ export function createDialogueStage(options = {}) {
   }
 
   let stage = {
+    /**
+     * Set the default locale personas inherit for TTS. Accepts a short locale
+     * ('en'|'ru'|'es') or a full BCP-47 lang; takes effect on the next speak.
+     */
+    setLocale(locale) {
+      stageLang = toBcp47(locale);
+      return stage;
+    },
+
+    /** Current stage locale as a BCP-47 lang (e.g. 'en-US'). */
+    getLocale() {
+      return stageLang;
+    },
+
     /** Register or update a persona profile. */
     persona(id, profile = {}) {
       if (id == null) return stage;
@@ -213,7 +248,7 @@ export function createDialogueStage(options = {}) {
         if (pitch !== undefined) utterance.pitch = pitch;
         if (rate !== undefined) utterance.rate = rate;
         if (volume !== undefined) utterance.volume = volume;
-        let lang = profile.lang || voice?.lang;
+        let lang = profile.lang || stageLang || voice?.lang;
         if (lang) utterance.lang = lang;
 
         // Replace any in-flight utterance on this persona's own channel.

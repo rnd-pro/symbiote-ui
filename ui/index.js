@@ -408,6 +408,12 @@ export {
   normalizeVoiceLanguageMode,
 } from '../chat/voice-settings.js';
 
+export {
+  resolveDefaultVoiceLocale,
+  localeToSpeechLang,
+  VOICE_LOCALE_LANGS,
+} from '../chat/voice-locale.js';
+
 export { collectQuickOpenFilesFromSkeleton, fuzzyScore, searchQuickOpenItems } from '../navigation/quick-open-utils.js';
 
 const runtimeModules = new Map();
