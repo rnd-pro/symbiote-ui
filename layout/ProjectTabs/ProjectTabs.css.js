@@ -9,19 +9,6 @@ project-tabs {
   position: relative;
 }
 
-:host::after,
-project-tabs::after {
-  content: '';
-  display: var(--sn-tabs-chrome, block);
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: var(--sn-tabs-border);
-  z-index: 1;
-}
-
 .tab-bar {
   display: flex;
   align-items: center;
