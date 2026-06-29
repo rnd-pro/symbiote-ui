@@ -268,6 +268,122 @@ test('player is a clean no-op against a non-browser stage', async () => {
   assert.equal(player.index, 2);
 });
 
+function makeLongTimeline() {
+  return {
+    personas: { ada: {}, linus: {} },
+    turns: [
+      { persona: 'ada', text: 'one', cue: 'panel-1' },
+      { persona: 'linus', text: 'two', cue: 'panel-2' },
+      { persona: 'ada', text: 'three', cue: 'panel-3' },
+      { persona: 'linus', text: 'four', cue: 'panel-4' },
+    ],
+  };
+}
+
+test('seek() while paused previews only that turn and stays paused', async () => {
+  let { document, created } = makeSpeechDocument();
+  let stage = createDialogueStage({ document, locale: 'en' });
+  let cues = [];
+  let indices = [];
+  let player = createDialoguePlayer(stage, makeLongTimeline(), {
+    defaultGapMs: 0,
+    onCue: (cue, turn, index) => cues.push({ cue, text: turn.text, index }),
+    onIndexChange: (i) => indices.push(i),
+  });
+
+  player.play();
+  // Let the first utterance start speaking.
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  player.pause();
+  assert.equal(player.isPaused, true);
+
+  // Preview turn 2 while paused. onIndexChange(2) fires synchronously.
+  player.seek(2);
+  assert.equal(player.index, 2);
+  assert.equal(player.isPaused, true, 'preview keeps the controller paused');
+  assert.equal(player.isPlaying, false);
+  assert.ok(indices.includes(2), 'onIndexChange(2) fired for the preview');
+
+  // Wait well past the preview's speak start + end + any gap. The cue fires on
+  // speak start; the turn must NOT advance to 3.
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.ok(
+    cues.some((c) => c.index === 2 && c.text === 'three'),
+    'onCue fired for previewed turn 2',
+  );
+  assert.equal(player.index, 2, 'preview did not auto-advance past turn 2');
+  assert.equal(player.isPaused, true, 'still paused after the gap window');
+  assert.ok(
+    !indices.includes(3),
+    'cursor never moved to turn 3 during the paused preview',
+  );
+
+  // Resuming continues the tour from the previewed turn (advances to 3+).
+  player.play();
+  assert.equal(player.isPlaying, true);
+  await player.done;
+  assert.equal(player.index, 3, 'play() continued from the preview to the end');
+  assert.ok(indices.includes(3), 'tour advanced to turn 3 after resume');
+  // The full set of texts spoken includes the post-preview turn 'four'.
+  assert.ok(
+    created.some((u) => u.text === 'four'),
+    'turn after the preview was spoken once playback resumed',
+  );
+});
+
+test('a paused preview does not resolve the done promise', async () => {
+  let { document } = makeSpeechDocument();
+  let stage = createDialogueStage({ document, locale: 'en' });
+  let player = createDialoguePlayer(stage, makeLongTimeline(), { defaultGapMs: 0 });
+
+  player.play();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  player.pause();
+  player.seek(2);
+
+  // Race done against a timeout; a paused preview must keep done pending.
+  let settled = false;
+  player.done.then(() => {
+    settled = true;
+  });
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.equal(settled, false, 'done stayed pending through the preview');
+
+  // Clean up so the test process does not hang on the unresolved promise.
+  player.stop();
+  await player.done;
+});
+
+test('a second seek while previewing previews the new turn and stays paused', async () => {
+  let { document, created } = makeSpeechDocument();
+  let stage = createDialogueStage({ document, locale: 'en' });
+  let cues = [];
+  let player = createDialoguePlayer(stage, makeLongTimeline(), {
+    defaultGapMs: 0,
+    onCue: (cue, turn, index) => cues.push({ text: turn.text, index }),
+  });
+
+  player.play();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  player.pause();
+
+  player.seek(1);
+  player.seek(3);
+  assert.equal(player.index, 3, 'second seek moved the preview cursor');
+  assert.equal(player.isPaused, true, 'second preview is still paused');
+
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.equal(player.index, 3, 'second preview did not advance');
+  assert.ok(
+    cues.some((c) => c.index === 3 && c.text === 'four'),
+    'onCue fired for the re-previewed turn',
+  );
+
+  player.stop();
+  await player.done;
+});
+
 test('empty timeline finishes immediately on play()', async () => {
   let stage = createDialogueStage();
   let player = createDialoguePlayer(stage, { personas: {}, turns: [] }, { defaultGapMs: 0 });

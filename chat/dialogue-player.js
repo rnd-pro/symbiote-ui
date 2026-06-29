@@ -65,6 +65,11 @@ export function createDialoguePlayer(stage, timeline, options = {}) {
   // Set to the active run token when an advance is requested while paused (the
   // current turn ended during a pause); `resume()` replays it.
   let pendingAdvance = null;
+  // True when the current paused state is a seek-preview: a single turn was
+  // spoken on demand while staying paused, with no frozen utterance to un-freeze.
+  // resume()/play() uses this to restart from the current index via the normal
+  // play path instead of letting `stage.resume()` continue a frozen utterance.
+  let previewPause = false;
   // Generation token: bumped on every cancel/seek/stop so a stale speak end or
   // gap callback from a superseded turn cannot advance the cursor.
   let run = 0;
@@ -156,6 +161,9 @@ export function createDialoguePlayer(stage, timeline, options = {}) {
     speakPromise.then(() => {
       // Superseded by next/prev/seek/stop — the new owner drives.
       if (token !== run) return;
+      // A paused seek-preview spoke this turn on demand; it must never advance,
+      // so drop the end here rather than parking a pendingAdvance.
+      if (previewPause) return;
       // Paused while (or just before) this turn ended: hold the advance until
       // resume() instead of dropping it.
       if (state === 'paused') {
@@ -195,10 +203,38 @@ export function createDialoguePlayer(stage, timeline, options = {}) {
   function gotoAndSpeak(target) {
     let next = clampIndex(target, total);
     halt();
+    // Leaving any preview: this is a normal play-through jump, so the tour must
+    // advance after the turn ends.
+    previewPause = false;
     let changed = next !== index;
     index = next;
     if (changed) emitIndex();
     emitState('playing');
+    speakCurrent();
+  }
+
+  // Preview a single turn while staying paused. Cancels any frozen/current
+  // utterance (halt bumps the run token + stage.cancel), then re-enables
+  // synthesis: the stage was frozen by a prior stage.pause(), and cancel+resume
+  // clears that paused queue state so the previewed turn can actually speak.
+  // Speaks only `target` (firing its onCue + onIndexChange) and never schedules
+  // an advance — the previewPause flag makes speakCurrent's end handler drop the
+  // turn end instead of advancing, so the tour resumes only on play()/resume().
+  // A second seek mid-preview re-enters here: halt() invalidates the prior
+  // preview's run token and this previews the new turn, still paused.
+  function previewWhilePaused(target) {
+    let next = clampIndex(target, total);
+    halt();
+    previewPause = true;
+    if (stage && typeof stage.resume === 'function') {
+      try {
+        stage.resume();
+      } catch (_) {}
+    }
+    let changed = next !== index;
+    index = next;
+    if (changed) emitIndex();
+    // state stays 'paused'; speakCurrent fires onCue but never advances.
     speakCurrent();
   }
 
@@ -228,6 +264,9 @@ export function createDialoguePlayer(stage, timeline, options = {}) {
     /** Hold the current utterance; no auto-advance while paused. */
     pause() {
       if (state !== 'playing') return controller;
+      // A real freeze-pause: stage.pause() holds the in-flight utterance, which
+      // resume() un-freezes. Mark this as not a preview.
+      previewPause = false;
       // An in-flight gap means the turn already ended; convert it to a pending
       // advance so resume() continues to the next turn instead of losing it.
       if (gapTimer !== null) {
@@ -243,9 +282,24 @@ export function createDialoguePlayer(stage, timeline, options = {}) {
       return controller;
     },
 
-    /** Resume after pause. Replays an advance deferred while paused. */
+    /**
+     * Resume after pause. Two cases, distinguished by `previewPause`:
+     *   freeze-pause (previewPause false): a frozen utterance is held by
+     *     stage.pause(); call stage.resume() to continue it and replay any
+     *     advance deferred while paused.
+     *   preview-pause (previewPause true): seek() already cancelled the frozen
+     *     utterance and spoke a preview turn, so there is nothing to un-freeze;
+     *     continue the tour from the current index via the normal play path.
+     */
     resume() {
       if (state !== 'paused') return controller;
+      if (previewPause) {
+        previewPause = false;
+        halt();
+        emitState('playing');
+        speakCurrent();
+        return controller;
+      }
       if (stage && typeof stage.resume === 'function') {
         try {
           stage.resume();
@@ -279,15 +333,25 @@ export function createDialoguePlayer(stage, timeline, options = {}) {
       return controller;
     },
 
-    /** Jump to turn `i` and speak it. */
+    /**
+     * Jump to turn `i` and speak it. While playing, jump and continue the tour.
+     * While paused, PREVIEW only turn `i`: speak that single turn and stay
+     * paused — no resume, no auto-advance. A later play()/resume() continues the
+     * tour from `i`.
+     */
     seek(i) {
-      gotoAndSpeak(i);
+      if (state === 'paused') {
+        previewWhilePaused(i);
+      } else {
+        gotoAndSpeak(i);
+      }
       return controller;
     },
 
     /** Stop playback, reset to index 0, and resolve `done`. */
     stop() {
       halt();
+      previewPause = false;
       let changed = index !== 0;
       index = 0;
       if (changed) emitIndex();
