@@ -247,3 +247,5 @@ export {
 } from './chat/notification-phrases.js';
 
 export { NotificationNarrator } from './chat/notification-narrator.js';
+export { createDialogueStage } from './chat/dialogue-stage.js';
+export { playDialogueTimeline, buildAlternatingTimeline } from './chat/dialogue-timeline.js';
