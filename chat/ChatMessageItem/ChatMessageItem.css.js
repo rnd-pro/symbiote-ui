@@ -37,11 +37,20 @@ chat-message-item {
 }
 
 .message.system .msg-content {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sn-step-2);
   background: color-mix(in srgb, var(--sn-text-dim) 9%, transparent);
   border-radius: var(--sn-radius-lg, 12px);
-  text-align: center;
+  text-align: left;
   font-style: normal;
   padding: var(--sn-step-2) var(--sn-step-4);
+}
+
+.message.system .system-note-icon {
+  flex: 0 0 auto;
+  font-size: var(--sn-chat-meta-icon-size);
+  color: var(--sn-text-dim);
 }
 
 .msg-content {

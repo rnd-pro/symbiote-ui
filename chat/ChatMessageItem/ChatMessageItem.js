@@ -27,6 +27,7 @@ export class ChatMessageItem extends Symbiote {
     done: false,
     elapsedText: '',
     status: '',
+    icon: '',
     metaHtml: '',
     workSummaryHtml: '',
     copyText: '',
@@ -40,19 +41,18 @@ export class ChatMessageItem extends Symbiote {
 
     '+bodyHtml': () => {
       let role = this.$.role || this.$.type;
-      if (this.$.parts && this.$.parts.length > 0) {
-        return this._renderParts();
+      let body =
+        this.$.parts && this.$.parts.length > 0 ? this._renderParts()
+        : role === 'tool' ? this._renderTool()
+        : role === 'board' ? this._renderBoard()
+        : role === 'thinking' ? this._renderThinking()
+        : this._renderTextMessage();
+      // a system aside (focus drop, operator hint) leads with a library glyph
+      // rather than an emoji baked into its copy
+      if (role === 'system' && this.$.icon) {
+        return `<span class="material-symbols-outlined system-note-icon" aria-hidden="true">${escapeHtml(this.$.icon)}</span>${body}`;
       }
-      if (role === 'tool') {
-        return this._renderTool();
-      }
-      if (role === 'board') {
-        return this._renderBoard();
-      }
-      if (role === 'thinking') {
-        return this._renderThinking();
-      }
-      return this._renderTextMessage();
+      return body;
     },
   };
 

@@ -363,6 +363,7 @@ export function toChatMessageItem(msg, options = {}) {
     done: Boolean(msg?.done),
     elapsedText: formatElapsed(msg?.elapsed || 0),
     status: msg?.status || '',
+    icon: msg?.icon ?? '',
     metaHtml: buildWorkMetaHtml(msg?.meta),
     cardItems: Array.isArray(msg?.cardItems) ? msg.cardItems : [],
     workSummaryHtml: '',
