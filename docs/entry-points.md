@@ -17,6 +17,9 @@
 - `symbiote-ui/chat/voice-arbitration.js` - Node-safe shared speaking-channel lock so notification narration yields to chat voice and never overlaps the microphone.
 - `symbiote-ui/chat/notification-phrases.js` - Node-safe localized, randomized notification phrase bank with terse/chatty depth.
 - `symbiote-ui/chat/notification-narrator.js` - browser `speechSynthesis` narration primitive that speaks phrase-bank phrases through the arbitration channel.
+- `symbiote-ui/chat/dialogue-stage.js` - multi-voice dialogue engine: each persona speaks through its own hidden-iframe `speechSynthesis` so voices can overlap, with `setLocale`, pause/resume, and a one-shot gesture unlock; spoken text is sanitized for TTS by default.
+- `symbiote-ui/chat/dialogue-timeline.js` - `playDialogueTimeline` and `buildAlternatingTimeline`: sequence dialogue turns with per-turn cues and overlap, building round-robin alternating conversations from plain lines.
+- `symbiote-ui/chat/dialogue-player.js` - `createDialoguePlayer` transport controller over a stage and timeline: `play`/`pause`/`resume`/`prev`/`next`/`seek`/`stop`, `index`/`total`/`isPlaying`/`isPaused` getters, a `done` promise, and settable `onCue`/`onIndexChange`/`onStateChange`.
 - `symbiote-ui/custom-elements.json` - Custom Elements manifest.
 - `symbiote-ui/schemas/*`, `symbiote-ui/tokens/*`, `symbiote-ui/rules/*` - machine-readable provider contracts.
 - `symbiote-ui/display/*` - reusable display utilities exposed by package export map.

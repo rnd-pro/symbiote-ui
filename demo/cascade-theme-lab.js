@@ -41,6 +41,9 @@ import '../chat/ChatSidebarItem/ChatSidebarItem.js?v=voice-controls-final-8';
 import '../chat/ChatSidebar/ChatSidebar.js?v=voice-controls-final-8';
 import '../chat/ChatWorkspace/ChatWorkspace.js?v=scroll-bottom-placement-1';
 import { VoiceRuntime } from '../chat/voice-runtime.js';
+import { createDialogueStage } from '../chat/dialogue-stage.js';
+import { buildAlternatingTimeline, playDialogueTimeline } from '../chat/dialogue-timeline.js';
+import { createDialoguePlayer } from '../chat/dialogue-player.js';
 import {
   defaultSendCommandPhrases,
   defaultVoiceActionCommandPhrases,
@@ -2478,6 +2481,432 @@ CascadeChatPanel.rootStyles = `
 
 CascadeChatPanel.reg('cascade-chat-panel');
 
+const DIALOGUE_TOUR_PERSONAS = ['guide', 'ops'];
+
+const DIALOGUE_TOUR_PROFILES = {
+  guide: { pitch: 1.15, rate: 1, lang: 'en-US' },
+  ops: { pitch: 0.78, rate: 1.02, lang: 'en-US' },
+};
+
+const DIALOGUE_TOUR_SCRIPT = [
+  { persona: 'guide', cue: 'overview', text: 'Welcome to the multi-voice tour. I am the guide, and I narrate what each panel does.' },
+  { persona: 'ops', cue: 'stage', text: 'And I am ops. Each persona speaks through its own hidden iframe, so two voices can talk in parallel.' },
+  { persona: 'guide', cue: 'timeline', text: 'The timeline is just an ordered list of turns. buildAlternatingTimeline assigns personas round-robin.' },
+  { persona: 'ops', cue: 'player', text: 'createDialoguePlayer wraps the stage with transport controls — play, pause, previous, next, and stop.' },
+  { persona: 'guide', cue: 'cue', text: 'On each cue the host highlights the turn the voice is narrating, like the row glowing right now.' },
+  { persona: 'ops', cue: 'theme', text: 'Everything is themed with the shared cascade tokens, so it matches the rest of the playground.' },
+];
+
+class CascadeDialogueTourPanel extends Symbiote {
+  init$ = {
+    turns: [],
+    activeIndex: -1,
+    cueIndex: -1,
+    statusLabel: 'Idle',
+    statusIcon: 'graphic_eq',
+    positionLabel: '0 / 0',
+    supportNote: '',
+
+    onPlay: () => this._player?.play(),
+    onPause: () => this._player?.pause(),
+    onPrev: () => this._player?.prev(),
+    onNext: () => this._player?.next(),
+    onStop: () => this._stopAll(),
+    onCrossTalk: () => this._runCrossTalk(),
+    onSelectTurn: (event) => {
+      let index = Number(event.currentTarget?.dataset?.index);
+      if (Number.isFinite(index)) this._player?.seek(index);
+    },
+  };
+
+  initCallback() {
+    this._cueTimer = null;
+    this._crossTalkAbort = null;
+    this._stage = createDialogueStage({ locale: 'en' });
+    this._timeline = buildAlternatingTimeline(DIALOGUE_TOUR_PERSONAS, DIALOGUE_TOUR_SCRIPT);
+    // Same script, but with overlap so the scheduler cross-talks the channels.
+    this._crossTalkTimeline = buildAlternatingTimeline(DIALOGUE_TOUR_PERSONAS, DIALOGUE_TOUR_SCRIPT, 600);
+    for (let [id, profile] of Object.entries(DIALOGUE_TOUR_PROFILES)) {
+      this._stage.persona(id, profile);
+    }
+
+    this._player = createDialoguePlayer(this._stage, this._timeline, {
+      defaultGapMs: 220,
+      onIndexChange: (index) => {
+        this.$.activeIndex = index;
+        this._syncTurns();
+        this._syncPosition();
+      },
+      onStateChange: (state) => this._applyState(state),
+      onCue: (cue, turn, index) => this._flashCue(index),
+    });
+
+    this.$.turns = this._timeline.turns.map((turn, index) => this._toRow(turn, index));
+    this._detachGesture = this._stage.installGestureUnlock(
+      typeof window !== 'undefined' ? window : null,
+    );
+    this.$.supportNote = this._stage.isSupported()
+      ? 'Two persona voices play through independent speech channels.'
+      : 'Speech is unavailable here; the transport still walks the timeline turn by turn.';
+    this._syncPosition();
+  }
+
+  destroyCallback() {
+    if (this._cueTimer) {
+      clearTimeout(this._cueTimer);
+      this._cueTimer = null;
+    }
+    this._crossTalkAbort?.abort();
+    this._player?.stop();
+    this._detachGesture?.();
+    this._stage?.dispose();
+  }
+
+  // Stop both the transport player and any in-flight scheduler run.
+  _stopAll() {
+    this._crossTalkAbort?.abort();
+    this._crossTalkAbort = null;
+    this._player?.stop();
+  }
+
+  // Fire-and-forget cross-talk via the timeline scheduler: overlapping turns let
+  // the two persona channels speak in parallel, distinct from the stepwise player.
+  _runCrossTalk() {
+    if (this._crossTalkAbort) return;
+    this._player?.stop();
+    let controller = new AbortController();
+    this._crossTalkAbort = controller;
+    this.$.statusLabel = 'Cross-talk';
+    this.$.statusIcon = 'forum';
+    playDialogueTimeline(this._stage, this._crossTalkTimeline, {
+      signal: controller.signal,
+      onCue: (cue, turn, index) => {
+        this.$.activeIndex = index;
+        this._syncTurns();
+        this._syncPosition();
+        this._flashCue(index);
+      },
+    }).then(() => {
+      if (this._crossTalkAbort === controller) {
+        this._crossTalkAbort = null;
+        this._applyState('finished');
+      }
+    });
+  }
+
+  _toRow(turn, index) {
+    let personaLabel = turn.persona === 'ops' ? 'Ops' : 'Guide';
+    return {
+      index,
+      persona: turn.persona,
+      personaLabel,
+      personaIcon: turn.persona === 'ops' ? 'terminal' : 'record_voice_over',
+      text: turn.text,
+      rowClass: 'dialogue-turn',
+    };
+  }
+
+  _syncTurns() {
+    let active = this.$.activeIndex;
+    let cue = this.$.cueIndex;
+    this.$.turns = this._timeline.turns.map((turn, index) => {
+      let row = this._toRow(turn, index);
+      let classes = ['dialogue-turn'];
+      if (index === active) classes.push('is-active');
+      if (index === cue) classes.push('is-cued');
+      row.rowClass = classes.join(' ');
+      return row;
+    });
+  }
+
+  _syncPosition() {
+    let total = this._player?.total || 0;
+    let current = this.$.activeIndex >= 0 ? this.$.activeIndex + 1 : 0;
+    this.$.positionLabel = `${current} / ${total}`;
+  }
+
+  _applyState(state) {
+    let map = {
+      playing: { label: 'Playing', icon: 'graphic_eq' },
+      paused: { label: 'Paused', icon: 'pause' },
+      stopped: { label: 'Stopped', icon: 'stop' },
+      finished: { label: 'Finished', icon: 'check_circle' },
+    };
+    let next = map[state] || { label: 'Idle', icon: 'graphic_eq' };
+    this.$.statusLabel = next.label;
+    this.$.statusIcon = next.icon;
+    if (state === 'stopped' || state === 'finished') {
+      this.$.activeIndex = state === 'stopped' ? -1 : this.$.activeIndex;
+      this._syncTurns();
+      this._syncPosition();
+    }
+  }
+
+  _flashCue(index) {
+    this.$.cueIndex = index;
+    this._syncTurns();
+    if (this._cueTimer) clearTimeout(this._cueTimer);
+    this._cueTimer = setTimeout(() => {
+      this._cueTimer = null;
+      this.$.cueIndex = -1;
+      this._syncTurns();
+    }, 900);
+  }
+}
+
+CascadeDialogueTourPanel.template = html`
+  <section class="dialogue-tour-panel">
+    <header class="dialogue-tour-head">
+      <span class="material-symbols-outlined">record_voice_over</span>
+      <div>
+        <strong>Multi-voice dialogue tour</strong>
+        <p>
+          Two personas narrate the playground through independent speech
+          channels. The transport drives a shared timeline; each cue highlights
+          the turn being spoken.
+        </p>
+      </div>
+    </header>
+
+    <div class="dialogue-tour-transport">
+      <button type="button" class="dialogue-btn" title="Play" ${{ onclick: 'onPlay' }}>
+        <span class="material-symbols-outlined">play_arrow</span>
+      </button>
+      <button type="button" class="dialogue-btn" title="Pause" ${{ onclick: 'onPause' }}>
+        <span class="material-symbols-outlined">pause</span>
+      </button>
+      <button type="button" class="dialogue-btn" title="Previous" ${{ onclick: 'onPrev' }}>
+        <span class="material-symbols-outlined">skip_previous</span>
+      </button>
+      <button type="button" class="dialogue-btn" title="Next" ${{ onclick: 'onNext' }}>
+        <span class="material-symbols-outlined">skip_next</span>
+      </button>
+      <button type="button" class="dialogue-btn" title="Stop" ${{ onclick: 'onStop' }}>
+        <span class="material-symbols-outlined">stop</span>
+      </button>
+      <button type="button" class="dialogue-btn" title="Cross-talk (overlapping voices)" ${{ onclick: 'onCrossTalk' }}>
+        <span class="material-symbols-outlined">forum</span>
+      </button>
+      <span class="dialogue-status">
+        <span class="material-symbols-outlined">{{statusIcon}}</span>
+        <span>{{statusLabel}}</span>
+        <em>{{positionLabel}}</em>
+      </span>
+    </div>
+
+    <div class="dialogue-tour-turns" itemize="turns">
+      <template>
+        <button type="button" ${{ '@class': 'rowClass', '@data-index': 'index', onclick: 'onSelectTurn' }}>
+          <span class="dialogue-turn-persona dialogue-turn-{{persona}}">
+            <span class="material-symbols-outlined">{{personaIcon}}</span>
+            {{personaLabel}}
+          </span>
+          <span class="dialogue-turn-text">{{text}}</span>
+        </button>
+      </template>
+    </div>
+
+    <footer class="dialogue-tour-foot">
+      <span class="material-symbols-outlined">info</span>
+      <span>{{supportNote}}</span>
+    </footer>
+  </section>
+`;
+
+CascadeDialogueTourPanel.rootStyles = `
+  cascade-dialogue-tour-panel {
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    background: var(--sn-panel-bg);
+    color: var(--sn-text);
+  }
+
+  cascade-dialogue-tour-panel .dialogue-tour-panel {
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    gap: var(--sn-lab-panel-gap, 14px);
+    height: 100%;
+    min-height: 0;
+    padding: var(--sn-lab-panel-padding, 16px);
+    overflow: hidden;
+  }
+
+  cascade-dialogue-tour-panel .dialogue-tour-head {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 12px;
+    align-items: center;
+    padding: clamp(12px, 1.8vw, 18px);
+    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border-radius: var(--sn-node-radius);
+    background: color-mix(in oklab, var(--sn-node-bg) 90%, var(--sn-bg));
+  }
+
+  cascade-dialogue-tour-panel .dialogue-tour-head > .material-symbols-outlined {
+    display: grid;
+    place-items: center;
+    width: calc(44px * var(--sn-theme-density, 1));
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: var(--sn-node-bg);
+    color: var(--sn-node-selected);
+    font-size: calc(24px * var(--sn-theme-icon-scale, 1));
+  }
+
+  cascade-dialogue-tour-panel .dialogue-tour-head strong {
+    display: block;
+    color: var(--sn-text);
+    font-size: calc(16px * var(--sn-theme-heading-scale, 1));
+  }
+
+  cascade-dialogue-tour-panel .dialogue-tour-head p {
+    margin: 4px 0 0;
+    color: var(--sn-text-dim);
+    font-size: var(--sn-small-size, 0.82rem);
+    line-height: 1.4;
+  }
+
+  cascade-dialogue-tour-panel .dialogue-tour-transport {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border-radius: var(--sn-node-radius);
+    background: var(--sn-node-bg);
+  }
+
+  cascade-dialogue-tour-panel .dialogue-btn {
+    display: grid;
+    place-items: center;
+    width: calc(36px * var(--sn-theme-density, 1));
+    aspect-ratio: 1;
+    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border-radius: var(--sn-node-radius);
+    background: var(--sn-panel-bg);
+    color: var(--sn-text);
+    cursor: pointer;
+    transition: background 0.16s ease, color 0.16s ease;
+  }
+
+  cascade-dialogue-tour-panel .dialogue-btn:hover {
+    background: var(--sn-node-selected);
+    color: var(--sn-node-bg);
+  }
+
+  cascade-dialogue-tour-panel .dialogue-btn .material-symbols-outlined {
+    font-size: calc(20px * var(--sn-theme-icon-scale, 1));
+  }
+
+  cascade-dialogue-tour-panel .dialogue-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+    padding: 4px 10px;
+    border-radius: var(--sn-node-radius);
+    color: var(--sn-text-dim);
+    font-size: var(--sn-small-size, 0.82rem);
+  }
+
+  cascade-dialogue-tour-panel .dialogue-status .material-symbols-outlined {
+    font-size: calc(18px * var(--sn-theme-icon-scale, 1));
+    color: var(--sn-node-selected);
+  }
+
+  cascade-dialogue-tour-panel .dialogue-status em {
+    font-style: normal;
+    color: var(--sn-text);
+  }
+
+  cascade-dialogue-tour-panel .dialogue-tour-turns {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 0;
+    overflow: auto;
+    padding-right: 4px;
+    scrollbar-color: var(--sn-scrollbar-thumb) var(--sn-scrollbar-track);
+  }
+
+  cascade-dialogue-tour-panel .dialogue-turn {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 12px;
+    align-items: start;
+    width: 100%;
+    text-align: left;
+    padding: 10px 12px;
+    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border-radius: var(--sn-node-radius);
+    background: var(--sn-node-bg);
+    color: var(--sn-text);
+    cursor: pointer;
+    transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease;
+  }
+
+  cascade-dialogue-tour-panel .dialogue-turn:hover {
+    border-color: var(--sn-node-selected);
+  }
+
+  cascade-dialogue-tour-panel .dialogue-turn.is-active {
+    border-color: var(--sn-node-selected);
+    background: color-mix(in oklab, var(--sn-node-selected) 18%, var(--sn-node-bg));
+  }
+
+  cascade-dialogue-tour-panel .dialogue-turn.is-cued {
+    transform: translateX(2px);
+    box-shadow: 0 0 0 2px color-mix(in oklab, var(--sn-node-selected) 60%, transparent);
+  }
+
+  cascade-dialogue-tour-panel .dialogue-turn-persona {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: var(--sn-small-size, 0.78rem);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  cascade-dialogue-tour-panel .dialogue-turn-persona .material-symbols-outlined {
+    font-size: calc(16px * var(--sn-theme-icon-scale, 1));
+  }
+
+  cascade-dialogue-tour-panel .dialogue-turn-guide {
+    color: var(--sn-node-selected);
+    background: color-mix(in oklab, var(--sn-node-selected) 16%, transparent);
+  }
+
+  cascade-dialogue-tour-panel .dialogue-turn-ops {
+    color: var(--sn-text);
+    background: color-mix(in oklab, var(--sn-text) 12%, transparent);
+  }
+
+  cascade-dialogue-tour-panel .dialogue-turn-text {
+    line-height: 1.45;
+    font-size: calc(13px * var(--sn-theme-type-scale, 1));
+  }
+
+  cascade-dialogue-tour-panel .dialogue-tour-foot {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--sn-text-dim);
+    font-size: var(--sn-small-size, 0.78rem);
+  }
+
+  cascade-dialogue-tour-panel .dialogue-tour-foot .material-symbols-outlined {
+    font-size: calc(16px * var(--sn-theme-icon-scale, 1));
+  }
+`;
+
+CascadeDialogueTourPanel.reg('cascade-dialogue-tour-panel');
+
 class CascadeRuntimePanel extends Symbiote {
   renderCallback() {
     if (this._ready) return;
@@ -3857,6 +4286,17 @@ layout.registerPanelType('timeline', {
     collapse: 'auto',
   },
 });
+layout.registerPanelType('dialogue-tour', {
+  title: 'Dialogue tour',
+  icon: 'record_voice_over',
+  component: 'cascade-dialogue-tour-panel',
+  behavior: {
+    importance: 100,
+    minInlineSize: 520,
+    minBlockSize: 360,
+    collapse: 'never',
+  },
+});
 layout.$.panelChrome = true;
 const createPanel = (panelType, behavior) => LayoutTree.createPanel(panelType, {}, behavior);
 
@@ -3939,6 +4379,13 @@ const createChatLayout = () => createPanel('chat', {
   importance: 100,
   minInlineSize: 560,
   minBlockSize: 380,
+  collapse: 'never',
+});
+
+const createDialogueTourLayout = () => createPanel('dialogue-tour', {
+  importance: 100,
+  minInlineSize: 520,
+  minBlockSize: 360,
   collapse: 'never',
 });
 
@@ -4076,6 +4523,7 @@ const showcaseProjects = [
     views: [
       view('conversation', 'Conversation', 'forum', createChatLayout),
       view('voice-controls', 'Voice controls', 'record_voice_over', createChatLayout),
+      view('dialogue-tour', 'Dialogue tour', 'record_voice_over', createDialogueTourLayout),
       view('markdown-code', 'Markdown & code', 'code_blocks', createChatLayout),
       view('runtime-panels', 'Runtime panels', 'view_quilt', createChatLayout),
       view('tool-calls', 'Tool calls', 'terminal', createChatLayout),

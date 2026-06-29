@@ -4,6 +4,14 @@ All notable changes to `symbiote-ui` will be documented in this file.
 
 ## Unreleased
 
+### Added
+
+- Added `createDialogueStage`, `playDialogueTimeline`, `buildAlternatingTimeline`,
+  and `createDialoguePlayer` for multi-voice narrated tours — overlapping
+  per-persona speechSynthesis, a cue-driven timeline, and a play/pause/seek
+  transport controller; plus `sanitizeVoiceResponseText` now runs inside the
+  dialogue stage so spoken text is markdown/symbol-free.
+
 ## [0.3.0-alpha.50] - 2026-06-27
 
 ### Fixed

@@ -121,6 +121,38 @@ description, ask the host to bind data, and insert the component into an
 approved layout surface. Deep constructor, graph, runtime, and host-policy
 examples live in [Runtime UI Construction](./docs/runtime-ui-construction.md).
 
+## Example: Multi-Voice Narrated Tour
+
+```js
+import { createDialogueStage } from 'symbiote-ui/chat/dialogue-stage.js';
+import { buildAlternatingTimeline } from 'symbiote-ui/chat/dialogue-timeline.js';
+import { createDialoguePlayer } from 'symbiote-ui/chat/dialogue-player.js';
+
+let stage = createDialogueStage({ locale: 'en' });
+stage.persona('guide', { pitch: 1, rate: 1 });
+stage.persona('agent', { pitch: 0.9, rate: 1.05 });
+
+let timeline = buildAlternatingTimeline(
+  ['guide', 'agent'],
+  [
+    { text: 'Welcome to the workspace tour.', cue: 'intro' },
+    { text: 'I will highlight each panel as we go.', cue: 'panels' },
+    { text: 'Drag a node onto the canvas to begin.', cue: 'canvas' },
+  ],
+  200, // overlap so the two voices cross-talk
+);
+
+let player = createDialoguePlayer(stage, timeline);
+player.onCue = (cue) => highlight(cue);
+stage.installGestureUnlock(document.body); // browsers gate speech behind a gesture
+player.play();
+```
+
+The stage gives each persona its own hidden-iframe `speechSynthesis` channel so
+voices overlap, the timeline sequences turns with cues and overlap, and the
+player exposes `play`/`pause`/`resume`/`prev`/`next`/`seek`/`stop` plus a `done`
+promise.
+
 ## CLI
 
 ```sh
