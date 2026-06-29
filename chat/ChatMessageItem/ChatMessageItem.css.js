@@ -37,10 +37,11 @@ chat-message-item {
 }
 
 .message.system .msg-content {
-  background: transparent;
+  background: color-mix(in srgb, var(--sn-text-dim) 9%, transparent);
+  border-radius: var(--sn-radius-lg, 12px);
   text-align: center;
-  font-style: italic;
-  padding: var(--sn-step-2);
+  font-style: normal;
+  padding: var(--sn-step-2) var(--sn-step-4);
 }
 
 .msg-content {
