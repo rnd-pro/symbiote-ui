@@ -6,13 +6,13 @@ export default html`
       <div class="cte-title">
         <span class="material-symbols-outlined" aria-hidden="true">palette</span>
         <strong>Cascade theme</strong>
-        <span class="cte-status" ref="status">ready</span>
+        <span class="cte-status" ref="status">{{status}}</span>
       </div>
       <div class="cte-actions">
-        <button type="button" class="cte-icon-button" data-action="copy" title="Copy parameters" aria-label="Copy parameters">
+        <button type="button" class="cte-icon-button" data-action="copy" ${{ onclick: 'onCopy' }} title="Copy parameters" aria-label="Copy parameters">
           <span class="material-symbols-outlined" aria-hidden="true">content_copy</span>
         </button>
-        <button type="button" class="cte-icon-button" data-action="reset" title="Reset to defaults" aria-label="Reset to defaults">
+        <button type="button" class="cte-icon-button" data-action="reset" ${{ onclick: 'onReset' }} title="Reset to defaults" aria-label="Reset to defaults">
           <span class="material-symbols-outlined" aria-hidden="true">restart_alt</span>
         </button>
       </div>
@@ -33,25 +33,40 @@ export default html`
     </div>
 
     <div class="cte-mode" aria-label="Theme mode">
-      <button type="button" data-theme-mode="dark">Dark</button>
-      <button type="button" data-theme-mode="light">Light</button>
+      <button type="button" data-theme-mode="dark" ${{ onclick: 'onModePick', '@aria-pressed': 'modeDark' }}>Dark</button>
+      <button type="button" data-theme-mode="light" ${{ onclick: 'onModePick', '@aria-pressed': 'modeLight' }}>Light</button>
     </div>
 
     <div class="cte-mode cte-register" aria-label="Geometry register">
-      <button type="button" data-geometry-register="">Default</button>
-      <button type="button" data-geometry-register="product">Product</button>
-      <button type="button" data-geometry-register="tool">Tool</button>
-      <button type="button" data-geometry-register="spacious">Spacious</button>
+      <button type="button" data-geometry-register="" ${{ onclick: 'onRegisterPick', '@aria-pressed': 'registerDefault' }}>Default</button>
+      <button type="button" data-geometry-register="product" ${{ onclick: 'onRegisterPick', '@aria-pressed': 'registerProduct' }}>Product</button>
+      <button type="button" data-geometry-register="tool" ${{ onclick: 'onRegisterPick', '@aria-pressed': 'registerTool' }}>Tool</button>
+      <button type="button" data-geometry-register="spacious" ${{ onclick: 'onRegisterPick', '@aria-pressed': 'registerSpacious' }}>Spacious</button>
     </div>
 
-    <div class="cte-controls" ref="controls"></div>
+    <div class="cte-controls" ref="controls" itemize="controlsList">
+      <template>
+        <div class="cte-control" title="{{description}}">
+          <div class="cte-control-head">
+            <span class="cte-control-icon material-symbols-outlined" aria-hidden="true">{{icon}}</span>
+            <label ${{ '@for': 'inputId' }}>{{name}}</label>
+          </div>
+          <input
+            type="range"
+            step="1"
+            ${{ '@id': 'inputId', '@min': 'min', '@max': 'max', value: 'value', '@data-theme-control': 'name', 'style.--cte-range-progress': 'progress', oninput: '^onControlInput' }}
+          >
+          <output ${{ '@data-theme-output': 'name' }}>{{value}}</output>
+        </div>
+      </template>
+    </div>
 
     <details class="cte-details">
       <summary>
         <span class="material-symbols-outlined" aria-hidden="true">data_object</span>
         Parameters
       </summary>
-      <pre class="cte-params" ref="params"></pre>
+      <pre class="cte-params" ref="params">{{params}}</pre>
     </details>
   </section>
 `;

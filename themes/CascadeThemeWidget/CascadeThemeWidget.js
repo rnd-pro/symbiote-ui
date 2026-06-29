@@ -42,14 +42,6 @@ function parseStoredState(value) {
   }
 }
 
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;');
-}
-
 export class CascadeThemeWidget extends Symbiote {
   static observedAttributes = ['storage-key', 'target-selector'];
 
@@ -57,29 +49,69 @@ export class CascadeThemeWidget extends Symbiote {
   #state = normalizeCascadeThemeOptions(CASCADE_THEME_DEFAULTS);
   #geometryRegister = '';
   #ready = false;
-  #popoverBound = false;
-  #overlayListenersBound = false;
-  #dismissalCleanup = null;
 
   init$ = {
     isOpen: false,
     triggerTitle: 'Theme quick controls',
+    // Reactive mirror of #state.mode and #geometryRegister; the mode/register
+    // aria-pressed bindings derive from these, so a selection re-renders the
+    // toggle state in both the inline host DOM and the portaled popover.
+    mode: this.#state.mode,
+    register: this.#geometryRegister,
+    // Compact slider list rendered by itemize on .ctw-controls. Reassigning
+    // controlsList (see #syncControls) re-renders the values reactively.
+    controlsList: [],
+
+    '+modeDarkActive': () => String(this.$.mode === 'dark'),
+    '+modeLightActive': () => String(this.$.mode === 'light'),
+    '+registerDefaultActive': () => String(this.$.register === ''),
+    '+registerProductActive': () => String(this.$.register === 'product'),
+    '+registerToolActive': () => String(this.$.register === 'tool'),
+    '+registerSpaciousActive': () => String(this.$.register === 'spacious'),
 
     onToggle: () => {
       this.#setOpen(!this.$.isOpen);
+    },
+    onControlInput: (event) => {
+      let input = event.currentTarget;
+      let name = input?.dataset?.themeControl;
+      if (!name) return;
+      this.#state = normalizeCascadeThemeOptions({ ...this.#state, [name]: Number(input.value) });
+      this.#apply('input');
+    },
+    onModePick: (event) => {
+      let mode = event.currentTarget?.dataset?.themeMode;
+      if (!mode) return;
+      this.#state = normalizeCascadeThemeOptions({ ...this.#state, mode });
+      this.#apply('mode');
+    },
+    onRegisterPick: (event) => {
+      let next = event.currentTarget?.dataset?.geometryRegister;
+      this.#geometryRegister = GEOMETRY_PROFILE_NAMES.includes(next) ? next : '';
+      this.#applyGeometryRegister('toggle');
+      this.#syncRegisterButtons();
+    },
+    onCopy: () => {
+      void this.copyParameters();
+    },
+    onReset: () => {
+      this.reset();
+    },
+    onOpenFull: () => {
+      this.#setOpen(false);
+      this.dispatchEvent(new CustomEvent('cascade-theme-open-full', {
+        bubbles: true,
+        composed: true,
+        detail: { state: this.state, storageKey: this.storageKey, targetSelector: this.targetSelector },
+      }));
     },
   };
 
   initCallback() {
     ensureMaterialSymbols(ICONS);
-    this.addEventListener('input', this.#onInput);
-    this.addEventListener('click', this.#onClick);
   }
 
   disconnectedCallback() {
-    this.removeEventListener('input', this.#onInput);
-    this.removeEventListener('click', this.#onClick);
-    this.#unbindPopoverEvents();
     this.#setOpen(false);
     super.disconnectedCallback?.();
   }
@@ -97,7 +129,6 @@ export class CascadeThemeWidget extends Symbiote {
   renderCallback() {
     if (this.#ready) return;
     this.#ready = true;
-    this.#bindPopoverEvents();
     this.#renderControls();
     this.#loadStoredState();
     this.#apply('init');
@@ -149,68 +180,6 @@ export class CascadeThemeWidget extends Symbiote {
     }));
   }
 
-  #onInput = (event) => {
-    let input = event.target.closest?.('[data-theme-control]');
-    if (!input || !this.#elementTargetsWidget(input)) return;
-    this.#state = normalizeCascadeThemeOptions({
-      ...this.#state,
-      [input.dataset.themeControl]: Number(input.value),
-    });
-    this.#apply('input');
-  };
-
-  #onClick = (event) => {
-    let modeButton = event.target.closest?.('[data-theme-mode]');
-    if (modeButton && this.#elementTargetsWidget(modeButton)) {
-      this.#state = normalizeCascadeThemeOptions({
-        ...this.#state,
-        mode: modeButton.dataset.themeMode,
-      });
-      this.#apply('mode');
-      return;
-    }
-
-    let registerButton = event.target.closest?.('[data-geometry-register]');
-    if (registerButton && this.#elementTargetsWidget(registerButton)) {
-      let next = registerButton.dataset.geometryRegister;
-      this.#geometryRegister = GEOMETRY_PROFILE_NAMES.includes(next) ? next : '';
-      this.#applyGeometryRegister('toggle');
-      this.#syncRegisterButtons();
-      return;
-    }
-
-    let action = event.target.closest?.('[data-action]')?.dataset.action;
-    if (!action) return;
-    if (action === 'copy') {
-      void this.copyParameters();
-    } else if (action === 'reset') {
-      this.reset();
-    } else if (action === 'open-full') {
-      this.#setOpen(false);
-      this.dispatchEvent(new CustomEvent('cascade-theme-open-full', {
-        bubbles: true,
-        composed: true,
-        detail: { state: this.state, storageKey: this.storageKey, targetSelector: this.targetSelector },
-      }));
-    }
-  };
-
-  #bindPopoverEvents() {
-    let popover = this.ref.popover;
-    if (!popover || this.#popoverBound) return;
-    popover.addEventListener('input', this.#onInput);
-    popover.addEventListener('click', this.#onClick);
-    this.#popoverBound = true;
-  }
-
-  #unbindPopoverEvents() {
-    let popover = this.ref.popover;
-    if (!popover || !this.#popoverBound) return;
-    popover.removeEventListener('input', this.#onInput);
-    popover.removeEventListener('click', this.#onClick);
-    this.#popoverBound = false;
-  }
-
   #setOpen(open) {
     let nextOpen = Boolean(open);
     if (nextOpen === this.$.isOpen) {
@@ -228,7 +197,6 @@ export class CascadeThemeWidget extends Symbiote {
   #openPopover() {
     let popover = this.ref.popover;
     if (!popover) return;
-    this.#bindPopoverEvents();
     popover.hidden = false;
     mountOverlayToDocument(popover, this.#resolveTarget());
     bringOverlayToFront(popover);
@@ -253,6 +221,9 @@ export class CascadeThemeWidget extends Symbiote {
     popover.style.removeProperty('left');
     restoreOverlayHome(popover);
   }
+
+  #overlayListenersBound = false;
+  #dismissalCleanup = null;
 
   // Coordinated dismissal: a capture-phase outside-pointerdown closes this
   // popover, and any other widget opening its popover broadcasts so this one
@@ -312,38 +283,15 @@ export class CascadeThemeWidget extends Symbiote {
     return path.includes(this) || (popover && (path.includes(popover) || popover.contains(event.target)));
   }
 
-  #elementTargetsWidget(element) {
-    let popover = this.ref.popover;
-    return this.contains(element) || Boolean(popover?.contains(element));
-  }
-
   #renderControls() {
-    let controls = this.ref.controls;
-    if (!controls) return;
-    controls.innerHTML = this.#controls
-      .map((control) => {
-        let name = escapeHtml(control.name);
-        let icon = escapeHtml(control.icon || 'tune');
-        return `
-          <div class="ctw-control">
-            <div class="ctw-control-head">
-              <span class="ctw-control-icon material-symbols-outlined" aria-hidden="true">${icon}</span>
-              <label for="ctw-${name}">${name}</label>
-            </div>
-            <input
-              id="ctw-${name}"
-              type="range"
-              min="${control.min}"
-              max="${control.max}"
-              step="1"
-              value="${control.default}"
-              data-theme-control="${name}"
-            >
-            <output data-theme-output="${name}">${control.default}</output>
-          </div>
-        `;
-      })
-      .join('');
+    this.$.controlsList = this.#controls.map((control) => ({
+      name: control.name,
+      icon: control.icon || 'tune',
+      inputId: `ctw-${control.name}`,
+      min: control.min,
+      max: control.max,
+      value: this.#state[control.name] ?? control.default,
+    }));
   }
 
   #loadStoredState() {
@@ -377,27 +325,20 @@ export class CascadeThemeWidget extends Symbiote {
     }));
   }
 
+  // Push current #state into the reactive scope: the mode toggle derives from
+  // this.$.mode and the slider list re-renders its values from controlsList.
+  // Reactive bindings survive the popover portal move, so this keeps the inline
+  // host DOM and the document-mounted popover in sync from one place.
   #syncControls() {
-    for (let button of this.#queryControlElements('[data-theme-mode]')) {
-      button.setAttribute('aria-pressed', String(button.dataset.themeMode === this.#state.mode));
-    }
-    for (let input of this.#queryControlElements('[data-theme-control]')) {
-      input.value = String(this.#state[input.dataset.themeControl]);
-    }
-    for (let output of this.#queryControlElements('[data-theme-output]')) {
-      output.textContent = String(this.#state[output.dataset.themeOutput]);
-    }
-  }
-
-  #queryControlElements(selector) {
-    let result = new Set(this.querySelectorAll(selector));
-    let popover = this.ref.popover;
-    if (popover) {
-      for (let element of popover.querySelectorAll(selector)) {
-        result.add(element);
-      }
-    }
-    return result;
+    this.$.mode = this.#state.mode;
+    this.$.controlsList = this.#controls.map((control) => ({
+      name: control.name,
+      icon: control.icon || 'tune',
+      inputId: `ctw-${control.name}`,
+      min: control.min,
+      max: control.max,
+      value: this.#state[control.name],
+    }));
   }
 
   #resolveTarget() {
@@ -432,9 +373,7 @@ export class CascadeThemeWidget extends Symbiote {
   }
 
   #syncRegisterButtons() {
-    for (let button of this.#queryControlElements('[data-geometry-register]')) {
-      button.setAttribute('aria-pressed', String(button.dataset.geometryRegister === this.#geometryRegister));
-    }
+    this.$.register = this.#geometryRegister;
   }
 
   #syncPopoverTheme(target = this.#resolveTarget()) {

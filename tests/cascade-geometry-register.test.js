@@ -56,7 +56,7 @@ test('the cascade theme editor exposes a geometry register toggle', async () => 
 
   // component wires the toggle to the scale and applies it to the target
   assert.match(source, /geometryRegisterScaleTokens/);
-  assert.match(source, /\[data-geometry-register\]/);
+  assert.match(source, /onRegisterPick/);
   assert.match(source, /#applyGeometryRegister/);
   assert.match(source, /cascade-geometry-register-change/);
   assert.match(source, /get geometryRegister\(\)/);
