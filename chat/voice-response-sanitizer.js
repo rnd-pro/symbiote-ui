@@ -101,6 +101,7 @@ function cleanReadableLine(line) {
       .replace(CLI_FLAG_RE, ' ')
       .replace(/[«»“”"\[\]{}]/g, ' ')
       .replace(/(?<=\p{L})-(?=\p{L})/gu, ' ')
+      .replace(/[—–]/g, ' ')
       .replace(/[*_~>#]/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();

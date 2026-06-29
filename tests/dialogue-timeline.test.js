@@ -35,6 +35,98 @@ function makeFakeStage() {
   return stage;
 }
 
+/**
+ * Fake DOM driving the *real* createDialogueStage: each created iframe exposes a
+ * contentWindow with a speechSynthesis queue and a SpeechSynthesisUtterance ctor.
+ * Captured utterances land in `created`, so a test can read `utterance.text` —
+ * the exact string that would be spoken — and assert it was sanitized.
+ */
+function makeSpeechDocument() {
+  let created = [];
+  class FakeUtterance {
+    constructor(text) {
+      this.text = text;
+      created.push(this);
+    }
+  }
+  let frameWindow = {
+    SpeechSynthesisUtterance: FakeUtterance,
+    speechSynthesis: {
+      getVoices: () => [],
+      speak(utterance) {
+        // Resolve the speak Promise on a microtask, mirroring engine end events.
+        queueMicrotask(() => utterance.onend?.());
+      },
+      cancel() {},
+      resume() {},
+      addEventListener() {},
+      removeEventListener() {},
+    },
+  };
+  let body = {
+    appendChild() {},
+    removeChild() {},
+  };
+  let document = {
+    body,
+    createElement() {
+      return {
+        setAttribute() {},
+        style: {},
+        contentWindow: frameWindow,
+        parentNode: body,
+      };
+    },
+  };
+  return { document, created };
+}
+
+test('stage.speak() sanitizes markdown and symbols before the utterance', async () => {
+  let { document, created } = makeSpeechDocument();
+  let stage = createDialogueStage({ document, locale: 'ru' });
+  stage.persona('host', {});
+
+  await stage.speak('host', 'Это интерфейс «Аварийные наряды» — **смотри** `code`');
+
+  assert.equal(created.length, 1);
+  let spoken = created[0].text;
+  for (let token of ['«', '»', '**', '`', '—']) {
+    assert.equal(spoken.includes(token), false, `expected no ${token} in spoken text: ${spoken}`);
+  }
+  // Real prose survives the filter.
+  assert.match(spoken, /Это интерфейс/);
+});
+
+test('stage.speak({ sanitize: false }) speaks the raw text verbatim', async () => {
+  let { document, created } = makeSpeechDocument();
+  let stage = createDialogueStage({ document, locale: 'ru' });
+  stage.persona('host', {});
+
+  let raw = 'Текст «как есть» — **жирный** `code`';
+  await stage.speak('host', raw, { sanitize: false });
+
+  assert.equal(created.length, 1);
+  assert.equal(created[0].text, raw);
+});
+
+test('playDialogueTimeline feeds sanitized text through the real stage', async () => {
+  let { document, created } = makeSpeechDocument();
+  let stage = createDialogueStage({ document, locale: 'ru' });
+
+  let timeline = {
+    personas: { host: {} },
+    turns: [{ persona: 'host', text: 'Смотри «панель» — **тут** `cmd`' }],
+  };
+
+  await playDialogueTimeline(stage, timeline, { defaultGapMs: 0 });
+
+  assert.equal(created.length, 1);
+  let spoken = created[0].text;
+  for (let token of ['«', '»', '**', '`', '—']) {
+    assert.equal(spoken.includes(token), false, `expected no ${token} in spoken text: ${spoken}`);
+  }
+});
+
 test('buildAlternatingTimeline assigns persona ids round-robin', () => {
   let timeline = buildAlternatingTimeline(
     ['ada', 'linus'],

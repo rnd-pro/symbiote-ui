@@ -181,6 +181,8 @@ export {
   wakeCommandCandidates,
 } from './chat/voice-input-defaults.js';
 
+export { sanitizeVoiceResponseText } from './chat/voice-response-sanitizer.js';
+
 export {
   DEFAULT_VOICE_SETTINGS,
   loadVoiceSettings,

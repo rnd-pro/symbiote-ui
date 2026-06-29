@@ -15,6 +15,7 @@
  */
 
 import { detectBrowserLocale } from '../ui/locale.js';
+import { sanitizeVoiceResponseText } from './voice-response-sanitizer.js';
 
 const PITCH_RANGE = { min: 0, max: 2 };
 const RATE_RANGE = { min: 0.1, max: 10 };
@@ -219,14 +220,20 @@ export function createDialogueStage(options = {}) {
      * Speak `text` as `personaId`. Resolves when the utterance ends, rejects on
      * error. Applies the persona's voice, pitch, rate, and volume. In a
      * non-browser env this resolves immediately and never throws.
+     *
+     * The text is sanitized for TTS by default (markdown, code, symbols, and
+     * decorative punctuation stripped via `sanitizeVoiceResponseText`); pass
+     * `sanitize: false` to speak the raw text verbatim.
      */
-    speak(personaId, text, { onStart, onEnd, onError } = {}) {
+    speak(personaId, text, { onStart, onEnd, onError, sanitize } = {}) {
       if (!supported()) return Promise.resolve();
 
       let channel = ensureChannel(personaId);
       if (!channel || !bindBrowserSpeech(channel)) return Promise.resolve();
 
-      let body = text == null ? '' : String(text);
+      let spoken = sanitize === false ? String(text || '') : sanitizeVoiceResponseText(text);
+      if (!spoken) spoken = String(text || '').trim();
+      let body = spoken;
 
       return new Promise((resolve, reject) => {
         let utterance;
