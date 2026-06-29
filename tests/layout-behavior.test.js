@@ -279,7 +279,10 @@ test('layout node collapsed icon points toward expansion side', async () => {
   ]);
 
   assert.match(source, /collapseSlot: 'first'/);
-  assert.match(source, /this\.\$\.collapseSlot = isFirst \? 'first' : 'second'/);
+  // The slot is derived from the node's visual outer edges so a collapsed ear row
+  // (rendered perpendicular to its logical axis) still points its chevron the way it
+  // actually opens.
+  assert.match(source, /this\.\$\.collapseSlot = atSecondEdge \? 'second' : 'first'/);
   assert.match(source, /this\.\#syncHostAttribute\('collapse-side', this\.\$\.collapseSlot\)/);
   assert.match(source, /if \(this\.\$\.isCollapsed\) return isFirst \? 'chevron_right' : 'chevron_left';/);
   assert.match(source, /return isFirst \? 'chevron_left' : 'chevron_right';/);

@@ -15,12 +15,26 @@ export let styles = css`
       flex-direction: column;
       background: var(--sn-node-bg);
       border: 1px solid var(--sn-layout-border);
-      /* Per-joint radius: interior joints keep the themed frame radius, joints on the
-         layout's outer boundary are flattened. Computed per node in LayoutNode.js. */
-      border-top-left-radius: var(--sn-node-radius-tl, var(--sn-frame-radius, 0));
-      border-top-right-radius: var(--sn-node-radius-tr, var(--sn-frame-radius, 0));
-      border-bottom-right-radius: var(--sn-node-radius-br, var(--sn-frame-radius, 0));
-      border-bottom-left-radius: var(--sn-node-radius-bl, var(--sn-frame-radius, 0));
+      border-radius: var(--sn-frame-radius, 0);
+    }
+
+    /* A collapsed rail that sits flush against a layout boundary flattens only that
+       edge's two joints; a rail between panels keeps every joint at the frame radius. */
+    &[collapse-flat-edge='bottom'] {
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+    }
+    &[collapse-flat-edge='top'] {
+      border-top-left-radius: 0;
+      border-top-right-radius: 0;
+    }
+    &[collapse-flat-edge='right'] {
+      border-top-right-radius: 0;
+      border-bottom-right-radius: 0;
+    }
+    &[collapse-flat-edge='left'] {
+      border-top-left-radius: 0;
+      border-bottom-left-radius: 0;
     }
 
     .panel-view {
@@ -318,14 +332,6 @@ export let styles = css`
       height: var(--sn-layout-collapsed-vertical-size, 28px) !important;
       min-height: var(--sn-layout-collapsed-vertical-size, 28px) !important;
       max-height: var(--sn-layout-collapsed-vertical-size, 28px) !important;
-      /* edge-aware rounding (computed per node): interior joints keep the themed
-         radius, outer-boundary joints flatten, each clamped so a thin rail never
-         rounds into a pill that would clip the leading panel icon */
-      --sn-collapsed-vertical-radius-cap: calc(var(--sn-layout-collapsed-vertical-size, 28px) * 0.35);
-      border-top-left-radius: min(var(--sn-node-radius-tl, var(--sn-frame-radius, 0px)), var(--sn-collapsed-vertical-radius-cap));
-      border-top-right-radius: min(var(--sn-node-radius-tr, var(--sn-frame-radius, 0px)), var(--sn-collapsed-vertical-radius-cap));
-      border-bottom-right-radius: min(var(--sn-node-radius-br, var(--sn-frame-radius, 0px)), var(--sn-collapsed-vertical-radius-cap));
-      border-bottom-left-radius: min(var(--sn-node-radius-bl, var(--sn-frame-radius, 0px)), var(--sn-collapsed-vertical-radius-cap));
 
       .panel-content,
       .panel-menu-drawer {
@@ -388,13 +394,6 @@ export let styles = css`
       width: var(--sn-layout-collapsed-horizontal-size, 32px) !important;
       min-width: var(--sn-layout-collapsed-horizontal-size, 32px) !important;
       max-width: var(--sn-layout-collapsed-horizontal-size, 32px) !important;
-      /* edge-aware rounding, each joint clamped so the narrow rail never rounds
-         into a pill that clips its icon */
-      --sn-collapsed-horizontal-radius-cap: calc(var(--sn-layout-collapsed-horizontal-size, 32px) * 0.35);
-      border-top-left-radius: min(var(--sn-node-radius-tl, var(--sn-frame-radius, 0px)), var(--sn-collapsed-horizontal-radius-cap));
-      border-top-right-radius: min(var(--sn-node-radius-tr, var(--sn-frame-radius, 0px)), var(--sn-collapsed-horizontal-radius-cap));
-      border-bottom-right-radius: min(var(--sn-node-radius-br, var(--sn-frame-radius, 0px)), var(--sn-collapsed-horizontal-radius-cap));
-      border-bottom-left-radius: min(var(--sn-node-radius-bl, var(--sn-frame-radius, 0px)), var(--sn-collapsed-horizontal-radius-cap));
 
       .panel-view {
         width: var(--sn-layout-collapsed-horizontal-size, 32px);

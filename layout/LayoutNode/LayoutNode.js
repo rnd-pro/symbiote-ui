@@ -334,7 +334,11 @@ export class LayoutNode extends Symbiote {
     let parentInfo = LayoutTree.findParent(tree, childId);
     while (parentInfo) {
       let { parent, which } = parentInfo;
-      if (parent.direction === 'vertical') {
+      // A split whose both children are rails renders them as a side-by-side ear
+      // row, so it lays children out horizontally regardless of its logical axis.
+      let earsMode = this.#isRailSubtree(parent.first) && this.#isRailSubtree(parent.second);
+      let visualDir = earsMode ? 'horizontal' : parent.direction;
+      if (visualDir === 'vertical') {
         if (which === 'first') edges.bottom = false;
         else edges.top = false;
       } else {
@@ -345,25 +349,6 @@ export class LayoutNode extends Symbiote {
       parentInfo = LayoutTree.findParent(tree, childId);
     }
     return edges;
-  }
-
-  /**
-   * Radius values for each of the node's four rounded joints. A joint stays rounded
-   * unless both of its adjacent sides lie on the layout's outer boundary (the
-   * layout's own outer edge meeting point), where it flattens. Emitted as four
-   * longhand vars so the collapsed-rail CSS can clamp each independently.
-   * @param {{top: boolean, right: boolean, bottom: boolean, left: boolean}} edges
-   * @returns {{tl: string, tr: string, br: string, bl: string}}
-   */
-  #edgeRadiusValues(edges) {
-    let r = 'var(--sn-frame-radius, 0px)';
-    let pick = (a, b) => (a && b ? '0px' : r);
-    return {
-      tl: pick(edges.top, edges.left),
-      tr: pick(edges.top, edges.right),
-      br: pick(edges.bottom, edges.right),
-      bl: pick(edges.bottom, edges.left),
-    };
   }
 
   /**
@@ -378,16 +363,6 @@ export class LayoutNode extends Symbiote {
       return this.#countExpandedPanels(node.first) + this.#countExpandedPanels(node.second);
     }
     return 0;
-  }
-
-  /** Drive per-joint rounding from the node's position against the layout edges. */
-  #applyOuterEdgeRounding(tree) {
-    let edges = this.#computeOuterEdges(tree);
-    let { tl, tr, br, bl } = this.#edgeRadiusValues(edges);
-    this.style.setProperty('--sn-node-radius-tl', tl);
-    this.style.setProperty('--sn-node-radius-tr', tr);
-    this.style.setProperty('--sn-node-radius-br', br);
-    this.style.setProperty('--sn-node-radius-bl', bl);
   }
 
   _updatePanelInfo() {
@@ -438,7 +413,7 @@ export class LayoutNode extends Symbiote {
       this.#syncHostAttribute('collapse-side', '');
 
       let tree = this.#getLayoutTree();
-      this.#applyOuterEdgeRounding(tree);
+      let outerEdges = this.#computeOuterEdges(tree);
 
       // The sibling being collapsed no longer forbids this one: two or more
       // adjacent siblings may collapse together and share a single ear rail. The
@@ -455,9 +430,6 @@ export class LayoutNode extends Symbiote {
         toggleAllowed;
 
       if (isSplitChild) {
-        this.$.collapseSlot = isFirst ? 'first' : 'second';
-        this.#syncHostAttribute('collapse-side', this.$.collapseSlot);
-
         let parentNode = container.closest('layout-node');
         if (!parentNode && container.getRootNode() instanceof ShadowRoot) {
           parentNode = container.getRootNode().host;
@@ -466,8 +438,28 @@ export class LayoutNode extends Symbiote {
         if (parentNode) {
           let parentDir = parentNode.getAttribute('direction') || this.$.collapseDirection;
           this.$.collapseDirection = parentDir;
-          this._syncCollapsePresentation();
         }
+
+        // Derive the collapse slot from the VISUAL outer edges, not the raw
+        // split-first/second position: a collapsed ear row renders perpendicular to
+        // its logical axis, so the chevron must follow the side it actually opens.
+        let atSecondEdge = this.$.collapseDirection === 'horizontal'
+          ? (outerEdges.right && !outerEdges.left)
+          : (outerEdges.bottom && !outerEdges.top);
+        this.$.collapseSlot = atSecondEdge ? 'second' : 'first';
+        this.#syncHostAttribute('collapse-side', this.$.collapseSlot);
+
+        // Flatten the rail's joints only on an edge that is a real layout boundary
+        // (a rail sitting between panels keeps every joint at the frame radius).
+        let flatEdge = '';
+        if (this.$.isCollapsed) {
+          flatEdge = this.$.collapseDirection === 'horizontal'
+            ? (outerEdges.right ? 'right' : outerEdges.left ? 'left' : '')
+            : (outerEdges.bottom ? 'bottom' : outerEdges.top ? 'top' : '');
+        }
+        this.#syncHostAttribute('collapse-flat-edge', flatEdge);
+
+        if (parentNode) this._syncCollapsePresentation();
       }
     }
     this._setPanelMenuActions(config.menuActions || []);
