@@ -54,7 +54,7 @@ project-tab-item {
   white-space: nowrap;
   transition: background var(--sn-transition-fast) var(--sn-transition-easing), color var(--sn-transition-fast) var(--sn-transition-easing);
   position: relative;
-  border-radius: 0;
+  border-radius: var(--sn-tabs-radius);
   margin: 0 var(--sn-tabs-item-margin-inline, 2px);
 }
 
@@ -89,32 +89,6 @@ project-tab-item[active] {
   /* the active tab inverts its background, so derive a legible label colour from
      that background's own lightness instead of the surrounding text colour */
   color: oklch(from var(--sn-tabs-active-bg) calc((l - 0.5) * -1000) 0 0);
-}
-
-.tab[active]::before,
-project-tab-item[active]::before {
-  content: '';
-  display: var(--sn-tabs-chrome, block);
-  position: absolute;
-  bottom: 0;
-  left: calc(-1 * var(--sn-tabs-corner-size));
-  width: var(--sn-tabs-corner-size);
-  height: var(--sn-tabs-corner-size);
-  pointer-events: none;
-  background: radial-gradient(circle at 0 0, transparent var(--sn-tabs-corner-cut), var(--sn-tabs-active-bg) var(--sn-tabs-corner-size));
-}
-
-.tab[active]::after,
-project-tab-item[active]::after {
-  content: '';
-  display: var(--sn-tabs-chrome, block);
-  position: absolute;
-  bottom: 0;
-  right: calc(-1 * var(--sn-tabs-corner-size));
-  width: var(--sn-tabs-corner-size);
-  height: var(--sn-tabs-corner-size);
-  pointer-events: none;
-  background: radial-gradient(circle at 100% 0, transparent var(--sn-tabs-corner-cut), var(--sn-tabs-active-bg) var(--sn-tabs-corner-size));
 }
 
 .tab:not([active]):not(:hover)::after,
