@@ -43,7 +43,7 @@ function parseStoredState(value) {
 }
 
 export class CascadeThemeWidget extends Symbiote {
-  static observedAttributes = ['storage-key', 'target-selector'];
+  static observedAttributes = ['storage-key', 'target-selector', 'default-state'];
 
   #controls = getCascadeThemeControls().filter((control) => COMPACT_CONTROLS.includes(control.name));
   #state = normalizeCascadeThemeOptions(CASCADE_THEME_DEFAULTS);
@@ -114,7 +114,7 @@ export class CascadeThemeWidget extends Symbiote {
 
   attributeChangedCallback(name, oldValue, newValue) {
     if (oldValue === newValue || !this.#ready) return;
-    if (name === 'storage-key') {
+    if (name === 'storage-key' || name === 'default-state') {
       this.#loadStoredState();
     }
     this.#apply(name);
@@ -146,12 +146,19 @@ export class CascadeThemeWidget extends Symbiote {
     return this.getAttribute('storage-key') || DEFAULT_STORAGE_KEY;
   }
 
+  // The first-visit default and the target the reset button restores to. Consumers
+  // declare it via the default-state attribute (JSON); without it the built-in
+  // cascade defaults stand. Stored state always wins, so this never overwrites edits.
+  get defaultState() {
+    return parseStoredState(this.getAttribute('default-state')) || CASCADE_THEME_DEFAULTS;
+  }
+
   get targetSelector() {
     return this.getAttribute('target-selector') || '';
   }
 
   reset() {
-    this.setState(CASCADE_THEME_DEFAULTS, { source: 'reset' });
+    this.setState(this.defaultState, { source: 'reset' });
     this.#geometryRegister = '';
     this.#applyGeometryRegister('reset');
     this.#syncRegisterButtons();
@@ -292,7 +299,7 @@ export class CascadeThemeWidget extends Symbiote {
 
   #loadStoredState() {
     let stored = parseStoredState(getStorage()?.getItem(this.storageKey));
-    if (stored) this.#state = normalizeCascadeThemeOptions(stored);
+    this.#state = normalizeCascadeThemeOptions(stored || this.defaultState);
     let register = getStorage()?.getItem(`${this.storageKey}::geometry-register`);
     this.#geometryRegister = GEOMETRY_PROFILE_NAMES.includes(register) ? register : '';
   }
