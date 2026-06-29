@@ -67,7 +67,13 @@ export class VoiceController {
     this._wakeTimeout = null;
     this._listenToken = null;
     this._speechToken = null;
+    // wake keep-alive guard: count quick consecutive failures so a persistently
+    // failing recognition can't tight-loop start/stop (see onend/onerror below).
+    this._wakeFailures = 0;
+    this._wakeStartedAt = 0;
   }
+
+  static WAKE_MAX_FAILURES = 4;
 
   static get hasSpeechRecognition() {
     if (typeof window === 'undefined') return false;
@@ -86,6 +92,7 @@ export class VoiceController {
   startWake() {
     this.wakeEnabled = true;
     this.wakePaused = false;
+    this._wakeFailures = 0;
     this._startWakeRecognition();
   }
 
@@ -150,16 +157,38 @@ export class VoiceController {
 
       recognition.onerror = (event) => {
         this._wakeRecognition = null;
+        // a terminal error (mic denied / unavailable / unsupported) must stop wake
+        // outright, otherwise the onend keep-alive restarts straight into the same
+        // error — a tight start/stop loop. onend (fired next) does the rest.
+        if (isTerminalWakeError(event.error) || event.error === 'audio-capture') {
+          this.wakeEnabled = false;
+          this.wakePaused = false;
+          if (this._wakeTimeout) {
+            clearTimeout(this._wakeTimeout);
+            this._wakeTimeout = null;
+          }
+        }
         this.onWakeError(event);
       };
 
       recognition.onend = () => {
         this._wakeRecognition = null;
-        if (this.wakeEnabled && !this.wakePaused) {
-          this._wakeTimeout = setTimeout(() => this._startWakeRecognition(), 250);
+        if (!this.wakeEnabled || this.wakePaused) return;
+        // Recognition naturally ends after speech/silence — restart to keep
+        // listening. But if it keeps ending almost immediately, back off and give
+        // up after a cap so a flaky/erroring engine can't loop on/off forever.
+        let ranBriefly = Date.now() - this._wakeStartedAt < 1500;
+        this._wakeFailures = ranBriefly ? this._wakeFailures + 1 : 0;
+        if (this._wakeFailures >= VoiceController.WAKE_MAX_FAILURES) {
+          this.wakeEnabled = false;
+          this.onWakeError(createWakeError('restart-loop', 'Continuous listening keeps restarting; stopped.'));
+          return;
         }
+        let delay = Math.min(250 * Math.pow(2, this._wakeFailures), 4000);
+        this._wakeTimeout = setTimeout(() => this._startWakeRecognition(), delay);
       };
 
+      this._wakeStartedAt = Date.now();
       recognition.start();
       this._acquireListenFloor();
     } catch (err) {
