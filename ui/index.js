@@ -404,6 +404,7 @@ export { sanitizeVoiceResponseText } from '../chat/voice-response-sanitizer.js';
 export { createDialogueStage } from '../chat/dialogue-stage.js';
 export { playDialogueTimeline, buildAlternatingTimeline } from '../chat/dialogue-timeline.js';
 export { createDialoguePlayer } from '../chat/dialogue-player.js';
+export { createPresenterCursor, playCursorScenario } from '../chat/presenter-cursor.js';
 
 export {
   DEFAULT_VOICE_SETTINGS,

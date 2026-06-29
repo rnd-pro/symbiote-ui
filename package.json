@@ -92,6 +92,7 @@
     "./chat/dialogue-stage.js": "./chat/dialogue-stage.js",
     "./chat/dialogue-timeline.js": "./chat/dialogue-timeline.js",
     "./chat/dialogue-player.js": "./chat/dialogue-player.js",
+    "./chat/presenter-cursor.js": "./chat/presenter-cursor.js",
     "./chat/chat-title-generation.js": "./chat/chat-title-generation.js",
     "./chat/workflow-summary.js": "./chat/workflow-summary.js",
     "./chat/live-status.js": "./chat/live-status.js",

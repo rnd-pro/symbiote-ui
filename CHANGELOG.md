@@ -11,6 +11,22 @@ All notable changes to `symbiote-ui` will be documented in this file.
   per-persona speechSynthesis, a cue-driven timeline, and a play/pause/seek
   transport controller; plus `sanitizeVoiceResponseText` now runs inside the
   dialogue stage so spoken text is markdown/symbol-free.
+- Added `createPresenterCursor` and `playCursorScenario`
+  (`symbiote-ui/chat/presenter-cursor.js`) — an animated arrow cursor that
+  drag-selects any element with a marching-ants marquee and travels between
+  checkpoints along a curved path (`moveTo`/`clear`/`dispose`, Node-safe at
+  import), plus a player for agent-authored
+  `{ steps: [{ target, holdMs?, gesture?, label? }] }` scenarios with a host
+  `resolveTarget`, per-step `onStep`, configurable `defaultHoldMs`, and
+  `AbortSignal` support.
+- Added `actions` and `embed` custom-content message parts to `ChatMessageItem`
+  and the message model: an `actions` part
+  (`{ type: 'actions', actions: [{ id, label, icon, variant }] }`) renders inline
+  action buttons and emits `chat-message-action` / `chat-workspace-action`
+  `{ id, actionId, payload }`, while an `embed` part (`{ type: 'embed', key }`)
+  renders a keyed slot so `ChatTranscript` emits `chat-transcript-embeds-ready` /
+  `chat-workspace-embeds-ready` `{ embeds: [{ key, slot }] }` for hosts to mount
+  and re-attach live widgets.
 
 ## [0.3.0-alpha.50] - 2026-06-27
 

@@ -44,6 +44,7 @@ import { VoiceRuntime } from '../chat/voice-runtime.js';
 import { createDialogueStage } from '../chat/dialogue-stage.js';
 import { buildAlternatingTimeline, playDialogueTimeline } from '../chat/dialogue-timeline.js';
 import { createDialoguePlayer } from '../chat/dialogue-player.js';
+import { createPresenterCursor, playCursorScenario } from '../chat/presenter-cursor.js';
 import {
   defaultSendCommandPhrases,
   defaultVoiceActionCommandPhrases,
@@ -2907,6 +2908,541 @@ CascadeDialogueTourPanel.rootStyles = `
 
 CascadeDialogueTourPanel.reg('cascade-dialogue-tour-panel');
 
+const PRESENTER_CURSOR_TARGETS = [
+  { id: 'context', label: 'Context graph', icon: 'account_tree', text: '28 files and 76 functions mapped for the active workspace.' },
+  { id: 'review', label: 'Code review', icon: 'rate_review', text: 'Adversarial review pass over the pending diff.' },
+  { id: 'smoke', label: 'Browser smoke', icon: 'smart_display', text: 'Verify the chat workspace and animated background lifecycle.' },
+  { id: 'publish', label: 'Publish', icon: 'rocket_launch', text: 'Tag, push, and announce the showcase build.' },
+];
+
+const PRESENTER_CURSOR_SCENARIO = {
+  steps: [
+    { target: 'context', label: 'Mapping the codebase', holdMs: 1100 },
+    { target: 'review', label: 'Reviewing the diff', holdMs: 1100 },
+    { target: 'smoke', label: 'Running browser smoke', holdMs: 1100 },
+    { target: 'publish', label: 'Shipping the build', holdMs: 1300 },
+  ],
+};
+
+class CascadeCursorPanel extends Symbiote {
+  init$ = {
+    targets: [],
+    statusLabel: 'Idle',
+    statusIcon: 'ads_click',
+    playLabel: 'Play tour',
+    playIcon: 'play_arrow',
+    supportNote: '',
+
+    onPlay: () => this._togglePlay(),
+  };
+
+  initCallback() {
+    this._cursor = createPresenterCursor();
+    this._abort = null;
+    this.$.targets = PRESENTER_CURSOR_TARGETS.map((target) => ({
+      ...target,
+      cardClass: 'cursor-target',
+    }));
+    this.$.supportNote = this._cursor.isSupported()
+      ? 'The marching-ants cursor drag-selects each target along a curved travel path.'
+      : 'Cursor rendering is unavailable here; the scenario still walks each target step by step.';
+  }
+
+  destroyCallback() {
+    this._abort?.abort();
+    this._abort = null;
+    this._cursor?.dispose();
+    this._cursor = null;
+  }
+
+  // Map an agent-authored step target id to one of the rendered sample cards.
+  _resolveTarget(targetId) {
+    if (!targetId) return null;
+    return this.querySelector(`.cursor-target[data-target-id="${targetId}"]`);
+  }
+
+  _togglePlay() {
+    if (this._abort) {
+      this._abort.abort();
+      this._abort = null;
+      return;
+    }
+    this._runScenario();
+  }
+
+  _runScenario() {
+    let controller = new AbortController();
+    this._abort = controller;
+    this.$.playLabel = 'Stop tour';
+    this.$.playIcon = 'stop';
+    this._setActive(-1);
+    playCursorScenario(this._cursor, PRESENTER_CURSOR_SCENARIO, {
+      signal: controller.signal,
+      resolveTarget: (target) => this._resolveTarget(target),
+      onStep: (step, index) => {
+        this._setActive(index);
+        let target = PRESENTER_CURSOR_TARGETS[index];
+        this.$.statusIcon = target?.icon || 'ads_click';
+        this.$.statusLabel = step.label || target?.label || 'Touring';
+      },
+    }).then(() => {
+      if (this._abort === controller) {
+        this._abort = null;
+        this._setActive(-1);
+        this.$.statusLabel = 'Finished';
+        this.$.statusIcon = 'check_circle';
+        this.$.playLabel = 'Play tour';
+        this.$.playIcon = 'play_arrow';
+      }
+    });
+  }
+
+  _setActive(activeIndex) {
+    this.$.targets = PRESENTER_CURSOR_TARGETS.map((target, index) => ({
+      ...target,
+      cardClass: index === activeIndex ? 'cursor-target is-active' : 'cursor-target',
+    }));
+  }
+}
+
+CascadeCursorPanel.template = html`
+  <section class="cursor-panel">
+    <header class="cursor-head">
+      <span class="material-symbols-outlined">ads_click</span>
+      <div>
+        <strong>Presenter cursor tour</strong>
+        <p>
+          An animated pointer drag-selects each labelled target in turn, so an
+          agent-authored scenario can walk a viewer across any set of on-screen
+          elements.
+        </p>
+      </div>
+    </header>
+
+    <div class="cursor-transport">
+      <button type="button" class="cursor-btn" ${{ onclick: 'onPlay' }}>
+        <span class="material-symbols-outlined">{{playIcon}}</span>
+        <span>{{playLabel}}</span>
+      </button>
+      <span class="cursor-status">
+        <span class="material-symbols-outlined">{{statusIcon}}</span>
+        <span>{{statusLabel}}</span>
+      </span>
+    </div>
+
+    <div class="cursor-targets" itemize="targets">
+      <template>
+        <article ${{ '@class': 'cardClass', '@data-target-id': 'id' }}>
+          <span class="cursor-target-icon material-symbols-outlined">{{icon}}</span>
+          <div class="cursor-target-body">
+            <strong>{{label}}</strong>
+            <span>{{text}}</span>
+          </div>
+        </article>
+      </template>
+    </div>
+
+    <footer class="cursor-foot">
+      <span class="material-symbols-outlined">info</span>
+      <span>{{supportNote}}</span>
+    </footer>
+  </section>
+`;
+
+CascadeCursorPanel.rootStyles = `
+  cascade-cursor-panel {
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    background: var(--sn-panel-bg);
+    color: var(--sn-text);
+  }
+
+  cascade-cursor-panel .cursor-panel {
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    gap: var(--sn-lab-panel-gap, 14px);
+    height: 100%;
+    min-height: 0;
+    padding: var(--sn-lab-panel-padding, 16px);
+    overflow: hidden;
+  }
+
+  cascade-cursor-panel .cursor-head {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 12px;
+    align-items: center;
+    padding: clamp(12px, 1.8vw, 18px);
+    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border-radius: var(--sn-node-radius);
+    background: color-mix(in oklab, var(--sn-node-bg) 90%, var(--sn-bg));
+  }
+
+  cascade-cursor-panel .cursor-head > .material-symbols-outlined {
+    display: grid;
+    place-items: center;
+    width: calc(44px * var(--sn-theme-density, 1));
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: var(--sn-node-bg);
+    color: var(--sn-node-selected);
+    font-size: calc(24px * var(--sn-theme-icon-scale, 1));
+  }
+
+  cascade-cursor-panel .cursor-head strong {
+    display: block;
+    color: var(--sn-text);
+    font-size: calc(16px * var(--sn-theme-heading-scale, 1));
+  }
+
+  cascade-cursor-panel .cursor-head p {
+    margin: 4px 0 0;
+    color: var(--sn-text-dim);
+    font-size: var(--sn-small-size, 0.82rem);
+    line-height: 1.4;
+  }
+
+  cascade-cursor-panel .cursor-transport {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border-radius: var(--sn-node-radius);
+    background: var(--sn-node-bg);
+  }
+
+  cascade-cursor-panel .cursor-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border-radius: var(--sn-node-radius);
+    background: var(--sn-panel-bg);
+    color: var(--sn-text);
+    cursor: pointer;
+    font: inherit;
+    transition: background 0.16s ease, color 0.16s ease;
+  }
+
+  cascade-cursor-panel .cursor-btn:hover {
+    background: var(--sn-node-selected);
+    color: var(--sn-node-bg);
+  }
+
+  cascade-cursor-panel .cursor-btn .material-symbols-outlined {
+    font-size: calc(20px * var(--sn-theme-icon-scale, 1));
+  }
+
+  cascade-cursor-panel .cursor-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+    padding: 4px 10px;
+    border-radius: var(--sn-node-radius);
+    color: var(--sn-text-dim);
+    font-size: var(--sn-small-size, 0.82rem);
+  }
+
+  cascade-cursor-panel .cursor-status .material-symbols-outlined {
+    font-size: calc(18px * var(--sn-theme-icon-scale, 1));
+    color: var(--sn-node-selected);
+  }
+
+  cascade-cursor-panel .cursor-targets {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+    align-content: start;
+    min-height: 0;
+    overflow: auto;
+    padding-right: 4px;
+    scrollbar-color: var(--sn-scrollbar-thumb) var(--sn-scrollbar-track);
+  }
+
+  cascade-cursor-panel .cursor-target {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 12px;
+    align-items: start;
+    padding: 14px;
+    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border-radius: var(--sn-node-radius);
+    background: var(--sn-node-bg);
+    transition: border-color 0.18s ease, background 0.18s ease;
+  }
+
+  cascade-cursor-panel .cursor-target.is-active {
+    border-color: var(--sn-node-selected);
+    background: color-mix(in oklab, var(--sn-node-selected) 18%, var(--sn-node-bg));
+  }
+
+  cascade-cursor-panel .cursor-target-icon {
+    display: grid;
+    place-items: center;
+    width: calc(38px * var(--sn-theme-density, 1));
+    aspect-ratio: 1;
+    border-radius: var(--sn-node-radius);
+    background: var(--sn-panel-bg);
+    color: var(--sn-node-selected);
+    font-size: calc(22px * var(--sn-theme-icon-scale, 1));
+  }
+
+  cascade-cursor-panel .cursor-target-body strong {
+    display: block;
+    color: var(--sn-text);
+    font-size: calc(14px * var(--sn-theme-type-scale, 1));
+  }
+
+  cascade-cursor-panel .cursor-target-body span {
+    display: block;
+    margin-top: 4px;
+    color: var(--sn-text-dim);
+    font-size: var(--sn-small-size, 0.78rem);
+    line-height: 1.4;
+  }
+
+  cascade-cursor-panel .cursor-foot {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--sn-text-dim);
+    font-size: var(--sn-small-size, 0.78rem);
+  }
+
+  cascade-cursor-panel .cursor-foot .material-symbols-outlined {
+    font-size: calc(16px * var(--sn-theme-icon-scale, 1));
+  }
+`;
+
+CascadeCursorPanel.reg('cascade-cursor-panel');
+
+class CascadeChatPartsPanel extends Symbiote {
+  initCallback() {
+    this._embedFilled = new WeakSet();
+    this.dataset.lastAction = '';
+
+    this.addEventListener('chat-workspace-action', (event) => this._handleAction(event));
+    this.addEventListener('chat-workspace-embeds-ready', (event) => this._handleEmbedsReady(event));
+    queueMicrotask(() => this._setupWorkspace());
+  }
+
+  _getWorkspace() {
+    return this.ref?.workspace || this.querySelector('chat-workspace');
+  }
+
+  _seedMessages() {
+    return [
+      {
+        role: 'user',
+        text: 'Show how a message can carry interactive actions and a live embed.',
+      },
+      {
+        role: 'agent',
+        parts: [
+          {
+            type: 'text',
+            text: 'Pick how the host should respond. These buttons are an "actions" message part rendered by the library.',
+          },
+          {
+            type: 'actions',
+            id: 'respond-actions',
+            actions: [
+              { id: 'approve', label: 'Approve plan', icon: 'check_circle', variant: 'primary' },
+              { id: 'revise', label: 'Request changes', icon: 'edit', variant: 'ghost' },
+            ],
+          },
+        ],
+      },
+      {
+        role: 'agent',
+        parts: [
+          {
+            type: 'text',
+            text: 'And here is an "embed" part — the host fills its slot with a live widget once the transcript reports the slots are ready.',
+          },
+          { type: 'embed', key: 'counter-widget' },
+        ],
+      },
+    ];
+  }
+
+  _setupWorkspace() {
+    let workspace = this._getWorkspace();
+    if (!workspace) return;
+    workspace.setWorkspaceState({
+      messages: this._seedMessages(),
+      messagesOptions: { scrollToBottom: false, smooth: false },
+      empty: false,
+      composer: {
+        disabled: true,
+        placeholder: 'Custom message parts are host-driven in this showcase.',
+        value: '',
+      },
+    });
+  }
+
+  _handleAction(event) {
+    let { id, actionId } = event.detail || {};
+    this.dataset.lastAction = `${id || ''}:${actionId || ''}`;
+    let target = this._embedHost;
+    if (target) {
+      let note = actionId === 'approve' ? 'Plan approved' : 'Changes requested';
+      target.dataset.lastAction = note;
+      let label = target.querySelector('.embed-note');
+      if (label) label.textContent = note;
+    }
+  }
+
+  _handleEmbedsReady(event) {
+    let embeds = event.detail?.embeds || [];
+    for (let { key, slot } of embeds) {
+      if (key !== 'counter-widget' || !slot || this._embedFilled.has(slot)) continue;
+      this._embedFilled.add(slot);
+      slot.replaceChildren(this._buildCounterWidget());
+    }
+  }
+
+  // A small live host widget that owns its own state inside the embed slot.
+  _buildCounterWidget() {
+    let host = document.createElement('div');
+    host.className = 'parts-embed-widget';
+
+    let title = document.createElement('div');
+    title.className = 'embed-title';
+    title.innerHTML = '<span class="material-symbols-outlined">tune</span><span>Live host widget</span>';
+
+    let count = 0;
+    let value = document.createElement('strong');
+    value.className = 'embed-value';
+    value.textContent = String(count);
+
+    let controls = document.createElement('div');
+    controls.className = 'embed-controls';
+    let dec = document.createElement('button');
+    dec.type = 'button';
+    dec.className = 'embed-btn';
+    dec.innerHTML = '<span class="material-symbols-outlined">remove</span>';
+    let inc = document.createElement('button');
+    inc.type = 'button';
+    inc.className = 'embed-btn';
+    inc.innerHTML = '<span class="material-symbols-outlined">add</span>';
+    dec.addEventListener('click', () => {
+      count -= 1;
+      value.textContent = String(count);
+    });
+    inc.addEventListener('click', () => {
+      count += 1;
+      value.textContent = String(count);
+    });
+    controls.append(dec, value, inc);
+
+    let note = document.createElement('div');
+    note.className = 'embed-note';
+    note.textContent = 'Click an action button above to update me.';
+
+    host.append(title, controls, note);
+    this._embedHost = host;
+    return host;
+  }
+}
+
+CascadeChatPartsPanel.template = html`
+  <section class="chat-parts-panel">
+    <chat-workspace class="chat-parts-workspace" ${{ ref: 'workspace' }}></chat-workspace>
+  </section>
+`;
+
+CascadeChatPartsPanel.rootStyles = `
+  cascade-chat-parts-panel {
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+  }
+
+  cascade-chat-parts-panel .chat-parts-panel {
+    position: relative;
+    display: flex;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    background: var(--sn-chat-bg, transparent);
+  }
+
+  cascade-chat-parts-panel .chat-parts-workspace {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  cascade-chat-parts-panel .parts-embed-widget {
+    display: grid;
+    gap: 10px;
+    padding: 14px;
+    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border-radius: var(--sn-node-radius);
+    background: var(--sn-node-bg);
+    color: var(--sn-text);
+  }
+
+  cascade-chat-parts-panel .parts-embed-widget .embed-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--sn-text-dim);
+    font-size: var(--sn-small-size, 0.78rem);
+  }
+
+  cascade-chat-parts-panel .parts-embed-widget .embed-title .material-symbols-outlined {
+    font-size: calc(18px * var(--sn-theme-icon-scale, 1));
+    color: var(--sn-node-selected);
+  }
+
+  cascade-chat-parts-panel .parts-embed-widget .embed-controls {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  cascade-chat-parts-panel .parts-embed-widget .embed-value {
+    min-width: 2ch;
+    text-align: center;
+    font-size: calc(22px * var(--sn-theme-heading-scale, 1));
+    color: var(--sn-text);
+  }
+
+  cascade-chat-parts-panel .parts-embed-widget .embed-btn {
+    display: grid;
+    place-items: center;
+    width: calc(34px * var(--sn-theme-density, 1));
+    aspect-ratio: 1;
+    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border-radius: var(--sn-node-radius);
+    background: var(--sn-panel-bg);
+    color: var(--sn-text);
+    cursor: pointer;
+    transition: background 0.16s ease, color 0.16s ease;
+  }
+
+  cascade-chat-parts-panel .parts-embed-widget .embed-btn:hover {
+    background: var(--sn-node-selected);
+    color: var(--sn-node-bg);
+  }
+
+  cascade-chat-parts-panel .parts-embed-widget .embed-note {
+    color: var(--sn-text-dim);
+    font-size: var(--sn-small-size, 0.78rem);
+  }
+`;
+
+CascadeChatPartsPanel.reg('cascade-chat-parts-panel');
+
 class CascadeRuntimePanel extends Symbiote {
   renderCallback() {
     if (this._ready) return;
@@ -4297,6 +4833,28 @@ layout.registerPanelType('dialogue-tour', {
     collapse: 'never',
   },
 });
+layout.registerPanelType('presenter-cursor', {
+  title: 'Presenter cursor',
+  icon: 'ads_click',
+  component: 'cascade-cursor-panel',
+  behavior: {
+    importance: 100,
+    minInlineSize: 480,
+    minBlockSize: 360,
+    collapse: 'never',
+  },
+});
+layout.registerPanelType('chat-parts', {
+  title: 'Custom parts',
+  icon: 'smart_button',
+  component: 'cascade-chat-parts-panel',
+  behavior: {
+    importance: 100,
+    minInlineSize: 520,
+    minBlockSize: 360,
+    collapse: 'never',
+  },
+});
 layout.$.panelChrome = true;
 const createPanel = (panelType, behavior) => LayoutTree.createPanel(panelType, {}, behavior);
 
@@ -4383,6 +4941,20 @@ const createChatLayout = () => createPanel('chat', {
 });
 
 const createDialogueTourLayout = () => createPanel('dialogue-tour', {
+  importance: 100,
+  minInlineSize: 520,
+  minBlockSize: 360,
+  collapse: 'never',
+});
+
+const createPresenterCursorLayout = () => createPanel('presenter-cursor', {
+  importance: 100,
+  minInlineSize: 480,
+  minBlockSize: 360,
+  collapse: 'never',
+});
+
+const createChatPartsLayout = () => createPanel('chat-parts', {
   importance: 100,
   minInlineSize: 520,
   minBlockSize: 360,
@@ -4509,6 +5081,7 @@ const showcaseProjects = [
       view('engine', 'Engine link', 'settings_suggest', createRuntimeLayout),
       view('ssr-registration', 'SSR / browser', 'deployed_code', createProjectDocsLayout),
       view('spatial-bridge', 'Spatial bridge', 'view_in_ar', createSpatialLayout),
+      view('presenter-cursor', 'Presenter cursor', 'ads_click', createPresenterCursorLayout),
     ],
   },
   {
@@ -4529,6 +5102,7 @@ const showcaseProjects = [
       view('tool-calls', 'Tool calls', 'terminal', createChatLayout),
       view('history', 'Chat history', 'manage_history', createChatLayout),
       view('theme-response', 'Theme response', 'palette', createChatLayout),
+      view('chat-parts', 'Custom buttons & embeds', 'smart_button', createChatPartsLayout),
     ],
   },
   {

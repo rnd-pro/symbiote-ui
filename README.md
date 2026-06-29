@@ -153,6 +153,70 @@ voices overlap, the timeline sequences turns with cues and overlap, and the
 player exposes `play`/`pause`/`resume`/`prev`/`next`/`seek`/`stop` plus a `done`
 promise.
 
+## Example: Presenter Cursor Scenario
+
+```js
+import {
+  createPresenterCursor,
+  playCursorScenario,
+} from 'symbiote-ui/chat/presenter-cursor.js';
+
+let cursor = createPresenterCursor(); // inert no-ops in Node; renders in the browser
+
+let scenario = {
+  steps: [
+    { target: 'sidebar', holdMs: 1500, label: 'Open the project sidebar' },
+    { target: 'canvas', label: 'Drop a node onto the canvas' },
+    { target: 'inspector', holdMs: 900, label: 'Edit it in the inspector' },
+  ],
+};
+
+await playCursorScenario(cursor, scenario, {
+  resolveTarget: (ref) => document.querySelector(`[data-tour="${ref}"]`),
+  onStep: (step) => console.log(step.label),
+  defaultHoldMs: 1200,
+});
+```
+
+The cursor draws an animated arrow with a marching-ants marquee and travels
+between checkpoints along a curved path. `resolveTarget` maps each agent-authored
+`target` reference to a DOM element; when it resolves the cursor moves there and
+holds `holdMs` (or `defaultHoldMs`), then `onStep` fires. Pass an `AbortSignal`
+as `signal` to stop playback and clear the cursor mid-run.
+
+## Example: Action Message Part
+
+```js
+import { defineModule } from 'symbiote-ui/ui';
+
+defineModule('chat-transcript');
+
+let message = {
+  role: 'agent',
+  parts: [
+    { type: 'text', text: 'Ready to apply the cascade theme?' },
+    {
+      type: 'actions',
+      actions: [
+        { id: 'apply', label: 'Apply', icon: 'check', variant: 'primary' },
+        { id: 'dismiss', label: 'Not now', variant: 'ghost' },
+      ],
+    },
+  ],
+};
+
+transcript.addEventListener('chat-message-action', (event) => {
+  // { id, actionId, payload }
+  console.log(event.detail.actionId);
+});
+```
+
+An `actions` part renders inline buttons and emits `chat-message-action` /
+`chat-workspace-action`. An `embed` part (`{ type: 'embed', key }`) renders a
+keyed slot instead; `ChatTranscript` emits `chat-transcript-embeds-ready` /
+`chat-workspace-embeds-ready` `{ embeds: [{ key, slot }] }` so the host can mount
+and re-attach a live widget into the message.
+
 ## CLI
 
 ```sh
