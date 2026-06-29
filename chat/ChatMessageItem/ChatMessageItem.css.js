@@ -925,6 +925,7 @@ h4.md-h {
 }
 
 .confirm-pill {
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   gap: var(--sn-step-4);
@@ -935,6 +936,16 @@ h4.md-h {
   padding: var(--sn-step-3) var(--sn-step-6);
   margin: var(--sn-step-3) 0;
   width: 100%;
+}
+/* full-width padded message-content blocks must include padding in their width
+   so they never overflow a narrow chat panel (same rule as msg-content/display-card) */
+.tool-code,
+.md-code-block,
+.md-table,
+.status-board,
+.action-card,
+.error-card {
+  box-sizing: border-box;
 }
 .confirm-pill-icon {
   font-size: var(--sn-chat-status-icon-size, 16px);
