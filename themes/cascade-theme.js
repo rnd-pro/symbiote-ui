@@ -775,11 +775,8 @@ export function createCascadeTheme(options = {}) {
   // padding only grows once panels round BEYOND the provider baseline, so default panels
   // keep their original (zero) content inset.
   let frameInsetCss = `calc(max(0px, ${frameRadiusCss} - 12px) * 0.7)`;
-  // tabs keep the provider top-round shape (+ chrome) at/below the baseline; above it they
-  // become gently rounded rectangles (capped) with the strip chrome removed.
-  let tabsRounded = frameFactor > 1;
-  let tabsScaleCss = `calc(8px * ${frameFactor.toFixed(3)})`;
-  let tabsRadiusCss = tabsRounded ? `min(${tabsScaleCss}, 10px)` : `${tabsScaleCss} ${tabsScaleCss} 0px 0px`;
+  // frameRadius intentionally does NOT touch the tabs — they keep the provider's own
+  // tab-strip shape regardless of the panel frame dial.
   let motionScale = state.motion / 100;
   let patternScale = state.pattern / 100;
   let motionEnabled = motionScale > 0;
@@ -882,9 +879,6 @@ export function createCascadeTheme(options = {}) {
     '--sn-frame-radius': frameRadiusCss,
     '--sn-frame-inset': frameInsetCss,
     '--sn-frame-gap': `${frameGapPx.toFixed(1)}px`,
-    '--sn-tabs-radius': tabsRadiusCss,
-    // strip the tab-strip chrome (underline + corner cuts) only once tabs become pills
-    '--sn-tabs-chrome': tabsRounded ? 'none' : 'block',
     '--sn-theme-elevation-scale': '1',
     '--sn-theme-pattern-brightness': patternScale.toFixed(2),
     '--sn-theme-motion-scale': motionScale.toFixed(2),
