@@ -248,29 +248,42 @@ export class LayoutNode extends Symbiote {
       : this.$.ratio;
 
 
-    let firstCollapsed = data?.first?.collapsed || false;
-    let secondCollapsed = data?.second?.collapsed || false;
+    // A child sizes to the collapsed rail not only when it is a collapsed leaf,
+    // but also when its whole sub-tree is collapsed and renders as a single rail.
+    let firstRail = this.#isRailSubtree(data?.first);
+    let secondRail = this.#isRailSubtree(data?.second);
 
 
-    const COLLAPSED_SIZE = dir === 'horizontal' ? '32px' : '28px';
+    const RAIL_SIZE = dir === 'horizontal'
+      ? 'var(--sn-layout-collapsed-horizontal-size, 32px)'
+      : 'var(--sn-layout-collapsed-vertical-size, 28px)';
 
-    if (firstCollapsed) {
+
+    // When both children resolve to rails this split is itself a rail. Two or more
+    // collapsed leaves sharing it become side-by-side ears in a single rail band.
+    let bothRail = firstRail && secondRail;
+    this.#syncHostAttribute('collapse-ears', bothRail ? dir : '');
+
+    if (bothRail) {
+      this.$.firstStyle = 'flex: 1 1 0; min-width: 0; min-height: 0;';
+      this.$.secondStyle = 'flex: 1 1 0; min-width: 0; min-height: 0;';
+    } else if (firstRail) {
 
       if (dir === 'horizontal') {
-        this.$.firstStyle = `width: ${COLLAPSED_SIZE}; height: 100%; flex: 0 0 ${COLLAPSED_SIZE};`;
+        this.$.firstStyle = `width: ${RAIL_SIZE}; height: 100%; flex: 0 0 ${RAIL_SIZE};`;
         this.$.secondStyle = 'flex: 1; height: 100%;';
       } else {
-        this.$.firstStyle = `height: ${COLLAPSED_SIZE}; width: 100%; flex: 0 0 ${COLLAPSED_SIZE};`;
+        this.$.firstStyle = `height: ${RAIL_SIZE}; width: 100%; flex: 0 0 ${RAIL_SIZE};`;
         this.$.secondStyle = 'flex: 1; width: 100%;';
       }
-    } else if (secondCollapsed) {
+    } else if (secondRail) {
 
       if (dir === 'horizontal') {
         this.$.firstStyle = 'flex: 1; height: 100%;';
-        this.$.secondStyle = `width: ${COLLAPSED_SIZE}; height: 100%; flex: 0 0 ${COLLAPSED_SIZE};`;
+        this.$.secondStyle = `width: ${RAIL_SIZE}; height: 100%; flex: 0 0 ${RAIL_SIZE};`;
       } else {
         this.$.firstStyle = 'flex: 1; width: 100%;';
-        this.$.secondStyle = `height: ${COLLAPSED_SIZE}; width: 100%; flex: 0 0 ${COLLAPSED_SIZE};`;
+        this.$.secondStyle = `height: ${RAIL_SIZE}; width: 100%; flex: 0 0 ${RAIL_SIZE};`;
       }
     } else {
 
@@ -282,6 +295,21 @@ export class LayoutNode extends Symbiote {
         this.$.secondStyle = `height: ${(1 - ratio) * 100}%; width: 100%;`;
       }
     }
+  }
+
+  /**
+   * A sub-tree renders as a single collapsed rail when it is a collapsed panel,
+   * or a split whose every descendant leaf panel is collapsed.
+   * @param {Object} node
+   * @returns {boolean}
+   */
+  #isRailSubtree(node) {
+    if (!node) return false;
+    if (node.type === 'panel') return Boolean(node.collapsed);
+    if (node.type === 'split') {
+      return this.#isRailSubtree(node.first) && this.#isRailSubtree(node.second);
+    }
+    return false;
   }
 
   _updatePanelInfo() {
@@ -331,11 +359,13 @@ export class LayoutNode extends Symbiote {
       this.$.collapseSlot = 'first';
       this.#syncHostAttribute('collapse-side', '');
 
+      // The sibling being collapsed no longer forbids this one: two or more
+      // adjacent siblings may collapse together and share a single ear rail.
+      void siblingCollapsed;
       this.$.canCollapse =
         this.$.layoutCollapsePolicy !== 'never' &&
         !!isSplitChild &&
-        siblingExists &&
-        !siblingCollapsed;
+        siblingExists;
 
       if (isSplitChild) {
         this.$.collapseSlot = isFirst ? 'first' : 'second';

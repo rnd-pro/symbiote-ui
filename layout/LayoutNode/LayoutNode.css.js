@@ -313,9 +313,9 @@ export let styles = css`
       height: var(--sn-layout-collapsed-vertical-size, 28px) !important;
       min-height: var(--sn-layout-collapsed-vertical-size, 28px) !important;
       max-height: var(--sn-layout-collapsed-vertical-size, 28px) !important;
-      /* a thin collapsed strip must not round into a pill — an over-large frame radius
-         plus overflow:hidden would clip the leading panel icon behind the rounded edge */
-      border-radius: min(var(--sn-frame-radius, 0px), calc(var(--sn-layout-collapsed-vertical-size, 28px) * 0.35));
+      /* a collapsed rail is a flat strip: its edges face the gap toward the expanded
+         sibling, so rounding them would break the join and clip the leading panel icon */
+      border-radius: 0;
 
       .panel-content,
       .panel-menu-drawer {
@@ -508,6 +508,30 @@ export let styles = css`
       &[direction='vertical'] {
         flex-direction: column;
       }
+    }
+
+    /* Ears: two or more collapsed siblings share one rail band, laid out side by
+       side as a row. The band keeps the themed gap between ears but never stretches
+       past the collapsed rail size. */
+    &[collapse-ears] > .split-view {
+      flex-direction: row;
+      align-items: stretch;
+
+      > .split-resizer {
+        display: none;
+      }
+    }
+
+    &[collapse-ears='vertical'] > .split-view {
+      height: var(--sn-layout-collapsed-vertical-size, 28px);
+      min-height: var(--sn-layout-collapsed-vertical-size, 28px);
+      max-height: var(--sn-layout-collapsed-vertical-size, 28px);
+    }
+
+    &[collapse-ears='horizontal'] > .split-view {
+      width: var(--sn-layout-collapsed-horizontal-size, 32px);
+      min-width: var(--sn-layout-collapsed-horizontal-size, 32px);
+      max-width: var(--sn-layout-collapsed-horizontal-size, 32px);
     }
 
     .split-first,
