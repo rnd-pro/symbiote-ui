@@ -54,7 +54,7 @@ project-tab-item {
   white-space: nowrap;
   transition: background var(--sn-transition-fast) var(--sn-transition-easing), color var(--sn-transition-fast) var(--sn-transition-easing);
   position: relative;
-  border-radius: var(--sn-tabs-radius);
+  border-radius: 0;
   margin: 0 var(--sn-tabs-item-margin-inline, 2px);
 }
 
@@ -86,6 +86,9 @@ project-tab-item[active] {
   border-color: color-mix(in oklab, var(--tab-accent, var(--sn-tabs-accent)) 44%, transparent);
   border-bottom: none;
   color: var(--sn-text);
+  /* the active tab inverts its background, so derive a legible label colour from
+     that background's own lightness instead of the surrounding text colour */
+  color: oklch(from var(--sn-tabs-active-bg) calc((l - 0.5) * -1000) 0 0);
 }
 
 .tab[active]::before,
