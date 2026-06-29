@@ -138,8 +138,22 @@ export class CascadeThemeWidget extends Symbiote {
   }
 
   setState(value, options = {}) {
-    this.#state = normalizeCascadeThemeOptions(value);
-    this.#apply(options.source || 'set-state');
+    let source = options.source || 'set-state';
+    let params = value;
+    // a snapshot may carry the geometry profile alongside the parameters (see
+    // copyParameters); split it back out so the preset round-trips too
+    let hasRegister = value && typeof value === 'object' && 'register' in value;
+    if (hasRegister) {
+      let { register, ...rest } = value;
+      params = rest;
+      this.#geometryRegister = GEOMETRY_PROFILE_NAMES.includes(register) ? register : '';
+    }
+    this.#state = normalizeCascadeThemeOptions(params);
+    this.#apply(source);
+    if (hasRegister) {
+      this.#applyGeometryRegister(source);
+      this.#syncRegisterButtons();
+    }
   }
 
   get storageKey() {
@@ -158,14 +172,25 @@ export class CascadeThemeWidget extends Symbiote {
   }
 
   reset() {
-    this.setState(this.defaultState, { source: 'reset' });
-    this.#geometryRegister = '';
-    this.#applyGeometryRegister('reset');
+    let def = this.defaultState;
+    let hasRegister = def && typeof def === 'object' && 'register' in def;
+    this.setState(def, { source: 'reset' });
+    // setState restores any profile the default carries; otherwise clear it so
+    // reset always lands on the default geometry
+    if (!hasRegister) {
+      this.#geometryRegister = '';
+      this.#applyGeometryRegister('reset');
+    }
     this.#syncRegisterButtons();
   }
 
   async copyParameters() {
-    let text = JSON.stringify(this.#state, null, 2);
+    // copy the full theme: the cascade parameters plus the active geometry profile,
+    // so the snapshot round-trips through setState (parameters alone drop the preset)
+    let payload = this.#geometryRegister
+      ? { ...this.#state, register: this.#geometryRegister }
+      : { ...this.#state };
+    let text = JSON.stringify(payload, null, 2);
     if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
       try {
         await navigator.clipboard.writeText(text);
@@ -179,7 +204,7 @@ export class CascadeThemeWidget extends Symbiote {
     this.dispatchEvent(new CustomEvent('cascade-theme-copy', {
       bubbles: true,
       composed: true,
-      detail: { state: this.state, text },
+      detail: { state: this.state, register: this.#geometryRegister || 'default', text },
     }));
   }
 
