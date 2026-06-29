@@ -320,11 +320,55 @@ export class CascadeThemeEditor extends Symbiote {
     this.#apply(options.source || 'set-state');
   }
 
+  // With multiple targets the reset is global: every host-fed scope returns to its
+  // own default (a target may carry a `defaultState`; otherwise the cascade default),
+  // and every individually-picked scope is cleared back to inherited and dropped.
   reset() {
-    this.setState(CASCADE_THEME_DEFAULTS, { source: 'reset' });
-    this.#geometryRegister = '';
-    this.#applyGeometryRegister('reset');
+    let defs = this.#targetDefs;
+    if (!defs.length) {
+      this.setState(CASCADE_THEME_DEFAULTS, { source: 'reset' });
+      this.#geometryRegister = '';
+      this.#applyGeometryRegister('reset');
+      this.#syncRegisterButtons();
+      return;
+    }
+    let originalId = this.#activeTargetId;
+    let kept = [];
+    for (let target of defs) {
+      if (String(target.id).startsWith('pick:')) {
+        this.#clearTargetTheme(target.selector, target.storageKey);
+        continue;
+      }
+      kept.push(target);
+      this.#switching = true;
+      if (target.selector != null) this.setAttribute('target-selector', String(target.selector));
+      if (target.storageKey != null) this.setAttribute('storage-key', String(target.storageKey));
+      this.#switching = false;
+      this.#state = normalizeCascadeThemeOptions(target.defaultState || CASCADE_THEME_DEFAULTS);
+      this.#geometryRegister = '';
+      this.#apply('reset');
+      this.#applyGeometryRegister('reset');
+    }
+    this.#targetDefs = kept;
+    let active = kept.find((entry) => entry.id === originalId) || kept[0] || null;
+    this.#activeTargetId = active ? active.id : '';
+    this.#renderTargets();
+    if (active) this.#setActiveTarget(active);
     this.#syncRegisterButtons();
+  }
+
+  // Strip a scope's inline cascade tokens so it inherits from its parent scope again.
+  #clearTargetTheme(selector, storageKey) {
+    let element = selector ? (this.ownerDocument || document).querySelector(selector) : null;
+    if (element && element.style) {
+      for (let prop of Array.from(element.style)) {
+        if (prop.startsWith('--sn')) element.style.removeProperty(prop);
+      }
+    }
+    let storage = getStorage();
+    if (storage && storageKey) {
+      try { storage.removeItem(storageKey); } catch (error) { /* storage unavailable */ }
+    }
   }
 
   async copyParameters() {
