@@ -307,6 +307,9 @@ export let styles = css`
     /* Collapsed state - vertical (bottom/top panels) */
     &[collapsed][collapse-dir='vertical'] {
       flex: 0 0 auto !important;
+      /* fill the cross-axis: the split slot wrapper is a row, so flex-basis:auto would
+         otherwise shrink the rail to its content width (a 2px sliver) */
+      width: 100% !important;
       height: var(--sn-layout-collapsed-vertical-size, 28px) !important;
       min-height: var(--sn-layout-collapsed-vertical-size, 28px) !important;
       max-height: var(--sn-layout-collapsed-vertical-size, 28px) !important;
