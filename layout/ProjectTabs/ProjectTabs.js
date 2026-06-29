@@ -12,6 +12,8 @@ export class ProjectTabs extends Symbiote {
     activeId: null,
     homeId: null,
     isHomeActive: true,
+    homeSelectedAttr: 'true',
+    homeTabIndexAttr: '0',
     tabs: [],
     homeIcon: 'home',
     homeLabel: translate('tabs.home'),
@@ -74,14 +76,6 @@ export class ProjectTabs extends Symbiote {
 
   connectedCallback() {
     super.connectedCallback?.();
-    const homeTab = this.querySelector('.tab');
-    if (homeTab) {
-      homeTab.setAttribute('role', 'tab');
-      homeTab.setAttribute('aria-selected', this.$.isHomeActive ? 'true' : 'false');
-      const tabIdx = this.$.isHomeActive ? 0 : -1;
-      homeTab.setAttribute('tabindex', String(tabIdx));
-      homeTab.tabIndex = tabIdx;
-    }
     this.addEventListener('keydown', this.#onKeydown);
   }
 
@@ -93,18 +87,8 @@ export class ProjectTabs extends Symbiote {
   renderCallback() {
     this.sub('activeId', (id) => this.setAttribute('active-id', id || ''));
     this.sub('isHomeActive', (isHomeActive) => {
-      const homeTab = this.querySelector('.tab');
-      if (homeTab) {
-        homeTab.setAttribute('aria-selected', isHomeActive ? 'true' : 'false');
-        const tabIdx = isHomeActive ? 0 : -1;
-        homeTab.setAttribute('tabindex', String(tabIdx));
-        homeTab.tabIndex = tabIdx;
-        if (isHomeActive) {
-          homeTab.setAttribute('active', '');
-        } else {
-          homeTab.removeAttribute('active');
-        }
-      }
+      this.$.homeSelectedAttr = isHomeActive ? 'true' : 'false';
+      this.$.homeTabIndexAttr = isHomeActive ? '0' : '-1';
     });
   }
 
@@ -114,14 +98,6 @@ export class ProjectTabs extends Symbiote {
     }
     this.$.activeId = activeId || null;
     this.$.isHomeActive = !this.$.activeId || this.$.activeId === this.$.homeId;
-
-    const homeTab = typeof this.querySelector === 'function' ? this.querySelector('.tab') : null;
-    if (homeTab) {
-      homeTab.setAttribute('aria-selected', this.$.isHomeActive ? 'true' : 'false');
-      const tabIdx = this.$.isHomeActive ? 0 : -1;
-      homeTab.setAttribute('tabindex', String(tabIdx));
-      homeTab.tabIndex = tabIdx;
-    }
 
     this.$.tabs = tabs.map((tab, index) => ({
       ...tab,

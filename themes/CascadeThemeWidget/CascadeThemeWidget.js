@@ -53,21 +53,17 @@ export class CascadeThemeWidget extends Symbiote {
   init$ = {
     isOpen: false,
     triggerTitle: 'Theme quick controls',
-    // Reactive mirror of #state.mode and #geometryRegister; the mode/register
-    // aria-pressed bindings derive from these, so a selection re-renders the
-    // toggle state in both the inline host DOM and the portaled popover.
-    mode: this.#state.mode,
-    register: this.#geometryRegister,
     // Compact slider list rendered by itemize on .ctw-controls. Reassigning
     // controlsList (see #syncControls) re-renders the values reactively.
     controlsList: [],
-
-    '+modeDarkActive': () => String(this.$.mode === 'dark'),
-    '+modeLightActive': () => String(this.$.mode === 'light'),
-    '+registerDefaultActive': () => String(this.$.register === ''),
-    '+registerProductActive': () => String(this.$.register === 'product'),
-    '+registerToolActive': () => String(this.$.register === 'tool'),
-    '+registerSpaciousActive': () => String(this.$.register === 'spacious'),
+    // mode + geometry-register button pressed flags, bound to aria-pressed.
+    // Kept in sync from #syncControls (mode) and #syncRegisterButtons (register).
+    modeDarkActive: 'true',
+    modeLightActive: 'false',
+    registerDefaultActive: 'true',
+    registerProductActive: 'false',
+    registerToolActive: 'false',
+    registerSpaciousActive: 'false',
 
     onToggle: () => {
       this.#setOpen(!this.$.isOpen);
@@ -325,12 +321,13 @@ export class CascadeThemeWidget extends Symbiote {
     }));
   }
 
-  // Push current #state into the reactive scope: the mode toggle derives from
-  // this.$.mode and the slider list re-renders its values from controlsList.
-  // Reactive bindings survive the popover portal move, so this keeps the inline
-  // host DOM and the document-mounted popover in sync from one place.
+  // Push current #state into the reactive scope: the mode toggle's aria-pressed
+  // flags derive from #state.mode and the slider list re-renders its values from
+  // controlsList. Reactive bindings survive the popover portal move, so this keeps
+  // the inline host DOM and the document-mounted popover in sync from one place.
   #syncControls() {
-    this.$.mode = this.#state.mode;
+    this.$.modeDarkActive = String(this.#state.mode === 'dark');
+    this.$.modeLightActive = String(this.#state.mode === 'light');
     this.$.controlsList = this.#controls.map((control) => ({
       name: control.name,
       icon: control.icon || 'tune',
@@ -372,8 +369,14 @@ export class CascadeThemeWidget extends Symbiote {
     }));
   }
 
+  // Drive the geometry-register buttons' aria-pressed reactively from the active
+  // register. Empty register means the Default button is pressed.
   #syncRegisterButtons() {
-    this.$.register = this.#geometryRegister;
+    let active = this.#geometryRegister;
+    this.$.registerDefaultActive = String(active === '');
+    this.$.registerProductActive = String(active === 'product');
+    this.$.registerToolActive = String(active === 'tool');
+    this.$.registerSpaciousActive = String(active === 'spacious');
   }
 
   #syncPopoverTheme(target = this.#resolveTarget()) {

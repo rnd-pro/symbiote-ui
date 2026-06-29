@@ -6,13 +6,13 @@ export let template = html`
     <span class="sn-node-label">{{nodeLabel}}</span>
   </div>
   <div class="sn-node-media" ${{ '@hidden': '!mediaSrc' }}>
-    <img ref="mediaImage" class="sn-node-media-img" alt="{{mediaAlt}}">
+    <img ref="mediaImage" class="sn-node-media-img" draggable="false" alt="{{mediaAlt}}" ${{ src: 'mediaSrc' }}>
   </div>
   <div class="sn-node-body">
     <div class="inputs" ${{ itemize: 'inputPorts', 'item-tag': 'port-item' }}></div>
     <div class="sn-node-content" ${{ '@hidden': '!summary' }}>
       <p class="sn-node-summary">{{summary}}</p>
-      <a ref="contentLink" class="sn-node-link" ${{ '@hidden': '!href' }}>
+      <a ref="contentLink" class="sn-node-link" ${{ '@hidden': '!href', '@href': 'linkHref', '@target': 'linkTarget', '@rel': 'linkRel' }}>
         <span>{{linkLabel}}</span>
         <span class="material-symbols-outlined">{{linkIcon}}</span>
       </a>

@@ -19,7 +19,7 @@ export class ChatList extends Symbiote {
     filterAllActive: true,
     filterProjectActive: false,
     filterActiveActive: false,
-    '+isEmpty': () => this.$.chatItems.length === 0,
+    isEmpty: true,
     onFilterClick: (event) => {
       this.setFilter(event.currentTarget?.dataset?.filter || 'all');
     },
@@ -53,6 +53,7 @@ export class ChatList extends Symbiote {
 
   setItems(items = []) {
     this.$.chatItems = Array.isArray(items) ? items : [];
+    this.$.isEmpty = this.$.chatItems.length === 0;
   }
 
   setEmptyMessage(message) {

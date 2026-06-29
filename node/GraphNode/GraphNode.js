@@ -55,6 +55,9 @@ export class GraphNode extends Symbiote {
     mediaAlt: '',
     summary: '',
     href: '',
+    linkHref: '',
+    linkTarget: '',
+    linkRel: '',
     linkLabel: 'Open',
     linkIcon: 'arrow_forward',
     hasItems: false,
@@ -75,40 +78,24 @@ export class GraphNode extends Symbiote {
       ensureMaterialSymbols([this.$.nodeIcon]);
     });
 
+    this.sub('mediaSrc', (src) => {
+      this.toggleAttribute('data-has-media', Boolean(src));
+    });
+
+    this.sub('href', (href) => {
+      let external = Boolean(href) && (href.startsWith('http://') || href.startsWith('https://'));
+      this.set$({
+        linkHref: href || '',
+        linkTarget: external ? '_blank' : '',
+        linkRel: external ? 'noopener noreferrer' : '',
+        linkIcon: external ? 'open_in_new' : 'arrow_forward',
+      });
+      ensureMaterialSymbols([this.$.linkIcon]);
+    });
 
     if (this._nodeData) {
       this.#populateFromNodeData(this._nodeData);
     }
-  }
-
-  #syncMedia() {
-    let src = this.$.mediaSrc;
-    if (src && this.ref.mediaImage) {
-      this.ref.mediaImage.src = src;
-      this.ref.mediaImage.alt = this.$.mediaAlt || '';
-      this.ref.mediaImage.draggable = false;
-    }
-    this.toggleAttribute('data-has-media', Boolean(src));
-  }
-
-  #syncLink() {
-    let href = this.$.href;
-    if (!this.ref.contentLink) return;
-    if (!href) {
-      this.ref.contentLink.removeAttribute('href');
-      return;
-    }
-    this.ref.contentLink.href = href;
-    if (href.startsWith('http://') || href.startsWith('https://')) {
-      this.ref.contentLink.target = '_blank';
-      this.ref.contentLink.rel = 'noopener noreferrer';
-      this.$.linkIcon = 'open_in_new';
-    } else {
-      this.ref.contentLink.removeAttribute('target');
-      this.ref.contentLink.removeAttribute('rel');
-      this.$.linkIcon = 'arrow_forward';
-    }
-    ensureMaterialSymbols([this.$.linkIcon]);
   }
 
   /**
@@ -162,8 +149,6 @@ export class GraphNode extends Symbiote {
       })),
     });
     ensureMaterialSymbols([this.$.nodeIcon]);
-    this.#syncMedia();
-    this.#syncLink();
   }
 }
 

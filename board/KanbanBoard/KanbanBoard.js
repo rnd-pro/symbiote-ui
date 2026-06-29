@@ -129,6 +129,7 @@ export class KanbanBoard extends Symbiote {
 
   init$ = {
     emptyText: 'No board columns.',
+    isEmpty: false,
   };
 
   #board = normalizeKanbanBoardModel();
@@ -237,7 +238,7 @@ export class KanbanBoard extends Symbiote {
   #render() {
     this.#syncAttributes();
     let columns = this.#board.columns;
-    this.ref.empty.hidden = columns.length > 0;
+    this.$.isEmpty = columns.length === 0;
     this.ref.columns.replaceChildren(...columns.map(column => this.#renderColumn(column)));
     this.#syncColumnHeaderHeights();
   }
