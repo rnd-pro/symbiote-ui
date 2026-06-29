@@ -787,6 +787,11 @@ test('cascade theme editor is a reusable browser module', async () => {
   assert.match(editor, /--cte-range-progress/);
   assert.match(editor, /new CustomEvent\('cascade-theme-change'/);
   assert.match(editor, /CascadeThemeEditor\.reg\('cascade-theme-editor'\)/);
+  // reactive scope/window picker: itemize-driven targets list built on the existing
+  // target-selector + storage-key capability (selecting one re-points the editor)
+  assert.match(editor, /set targets\(/);
+  assert.match(editor, /#pickTarget\(/);
+  assert.match(editor, /cascade-theme-target-change/);
   assert.match(widget, /class CascadeThemeWidget extends Symbiote/);
   assert.match(widget, /COMPACT_CONTROLS = \['brightness', 'contrast', 'chroma', 'hue', 'pattern'\]/);
   assert.match(widget, /syncOverlayTheme/);
@@ -834,7 +839,9 @@ test('cascade theme editor is a reusable browser module', async () => {
   assert.match(styles, /cte-control-icon/);
   assert.match(styles, /--sn-theme-editor-control-icon-size/);
   assert.match(styles, /::-webkit-slider-thumb/);
-  assert.match(styles, /\.cte-shell \{[\s\S]*?grid-template-rows: auto auto auto minmax\(0, 1fr\) auto;/);
+  assert.match(styles, /\.cte-shell \{[\s\S]*?display: flex;[\s\S]*?flex-direction: column;/);
+  assert.match(styles, /\.cte-controls \{[\s\S]*?flex: 1 1 auto;/);
+  assert.match(styles, /\.cte-target \{/);
   assert.match(styles, /container: cascade-theme-editor \/ inline-size/);
   assert.match(styles, /@container cascade-theme-editor \(max-width: 360px\) \{[\s\S]*?\.cte-status \{[\s\S]*?display: none;/);
   assert.match(styles, /@container cascade-theme-editor \(max-width: 360px\) \{[\s\S]*?\.cte-control \{[\s\S]*?grid-template-columns: minmax\(0, 1fr\) minmax\(92px, 1fr\) minmax\(28px, auto\);/);

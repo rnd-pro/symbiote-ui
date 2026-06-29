@@ -46,13 +46,36 @@ function escapeHtml(value) {
 }
 
 export class CascadeThemeEditor extends Symbiote {
-  static observedAttributes = ['storage-key', 'target-selector'];
+  static observedAttributes = ['storage-key', 'target-selector', 'pickable'];
 
   #controls = getCascadeThemeControls();
   #state = normalizeCascadeThemeOptions(CASCADE_THEME_DEFAULTS);
   #geometryRegister = '';
   #ready = false;
   #copyTimer = 0;
+  #targetDefs = [];
+  #activeTargetId = '';
+  #switching = false;
+  #picking = false;
+  #pickHandlers = null;
+  #pickHover = null;
+
+  init$ = {
+    // reactive scope picker: the host feeds `targets`; selecting one re-points the
+    // editor's target-selector + storage-key (see #setActiveTarget). itemize renders
+    // this list, so it updates live when the host adds/removes themeable windows.
+    targets: [],
+    hasTargets: false,
+    // eyedropper: when `pickable` (a host selector) is set, the pick button lets the
+    // user click any matching element to theme it individually (see #enterPickMode).
+    picking: 'false',
+    pickable: '',
+    onTargetPick: (event) => {
+      let id = event.currentTarget?.dataset?.targetId;
+      if (id) this.#pickTarget(id);
+    },
+    onPickStart: () => this.#enterPickMode(),
+  };
 
   initCallback() {
     ensureMaterialSymbols(ICONS);
@@ -63,6 +86,7 @@ export class CascadeThemeEditor extends Symbiote {
   disconnectedCallback() {
     this.removeEventListener('input', this.#onInput);
     this.removeEventListener('click', this.#onClick);
+    this.#exitPickMode();
     if (this.#copyTimer && typeof clearTimeout === 'function') {
       clearTimeout(this.#copyTimer);
     }
@@ -71,6 +95,7 @@ export class CascadeThemeEditor extends Symbiote {
 
   attributeChangedCallback(name, oldValue, newValue) {
     if (oldValue === newValue) return;
+    if (this.#switching) return;
     if (name === 'storage-key' && this.#ready) {
       this.#loadStoredState();
       this.#apply('storage-key');
@@ -79,11 +104,15 @@ export class CascadeThemeEditor extends Symbiote {
       this.#apply('target');
       this.#applyGeometryRegister('target');
     }
+    if (name === 'pickable') {
+      this.$.pickable = newValue || '';
+    }
   }
 
   renderCallback() {
     if (this.#ready) return;
     this.#ready = true;
+    this.$.pickable = this.getAttribute('pickable') || '';
     this.#renderControls();
     this.#loadStoredState();
     this.#apply('init');
@@ -115,6 +144,147 @@ export class CascadeThemeEditor extends Symbiote {
 
   get targetSelector() {
     return this.getAttribute('target-selector') || '';
+  }
+
+  get targets() {
+    return this.#targetDefs.slice();
+  }
+
+  // Host-fed list of theme scopes/windows: [{ id, label, selector, storageKey, icon?, hint? }].
+  // Two or more makes the picker visible; selecting one re-points the editor at that
+  // scope. The single-target capability (target-selector + storage-key) already exists —
+  // this just drives it reactively from a list.
+  set targets(list) {
+    this.#targetDefs = Array.isArray(list) ? list.filter((entry) => entry && entry.id) : [];
+    if (!this.#targetDefs.some((entry) => entry.id === this.#activeTargetId)) {
+      this.#activeTargetId = this.#targetDefs[0]?.id || '';
+    }
+    this.#renderTargets();
+    let active = this.#targetDefs.find((entry) => entry.id === this.#activeTargetId);
+    if (active) this.#setActiveTarget(active);
+  }
+
+  #renderTargets() {
+    this.$.targets = this.#targetDefs.map((entry) => ({
+      id: entry.id,
+      label: entry.label || entry.id,
+      icon: entry.icon || 'web_asset',
+      hint: entry.hint || entry.selector || '',
+      active: String(entry.id === this.#activeTargetId),
+    }));
+    this.$.hasTargets = this.#targetDefs.length > 1;
+  }
+
+  #pickTarget(id) {
+    let target = this.#targetDefs.find((entry) => entry.id === id);
+    if (!target || id === this.#activeTargetId) return;
+    this.#activeTargetId = id;
+    this.#renderTargets();
+    this.#setActiveTarget(target);
+    this.dispatchEvent(new CustomEvent('cascade-theme-target-change', {
+      bubbles: true,
+      composed: true,
+      detail: { id, selector: target.selector, storageKey: target.storageKey },
+    }));
+  }
+
+  // Re-point target-selector + storage-key, reload that scope's saved params, apply
+  // once. #switching suppresses attributeChangedCallback so the two attribute writes
+  // don't each trigger an intermediate apply on the wrong scope.
+  #setActiveTarget(target) {
+    this.#switching = true;
+    if (target.selector != null) this.setAttribute('target-selector', String(target.selector));
+    if (target.storageKey != null) this.setAttribute('storage-key', String(target.storageKey));
+    this.#switching = false;
+    if (!this.#ready) return;
+    this.#loadStoredState();
+    this.#apply('target-switch');
+    this.#applyGeometryRegister('target-switch');
+    this.#syncRegisterButtons();
+  }
+
+  get pickable() {
+    return this.getAttribute('pickable') || '';
+  }
+
+  // Eyedropper: enter pick mode, then the next click on an element matching `pickable`
+  // becomes an individual theme target. The host marks pickable elements with
+  // data-theme-id/-label/-key (or relies on the element id); the editor reads those.
+  #enterPickMode() {
+    if (this.#picking || !this.pickable) return;
+    this.#picking = true;
+    this.$.picking = 'true';
+    let doc = this.ownerDocument || document;
+    doc.documentElement.setAttribute('data-cascade-theme-picking', '');
+    let onOver = (event) => {
+      let element = event.target?.closest?.(this.pickable);
+      if (element === this.#pickHover) return;
+      this.#clearPickHover();
+      if (element) {
+        this.#pickHover = element;
+        element.setAttribute('data-cascade-theme-pick-hover', '');
+      }
+    };
+    let onClick = (event) => {
+      let element = event.target?.closest?.(this.pickable);
+      if (element) {
+        event.preventDefault();
+        event.stopPropagation();
+        this.#applyPickedTarget(element);
+      }
+      this.#exitPickMode();
+    };
+    let onKey = (event) => { if (event.key === 'Escape') this.#exitPickMode(); };
+    this.#pickHandlers = { doc, onOver, onClick, onKey };
+    doc.addEventListener('pointerover', onOver, true);
+    doc.addEventListener('click', onClick, true);
+    doc.addEventListener('keydown', onKey, true);
+  }
+
+  #clearPickHover() {
+    if (this.#pickHover) {
+      this.#pickHover.removeAttribute('data-cascade-theme-pick-hover');
+      this.#pickHover = null;
+    }
+  }
+
+  #exitPickMode() {
+    if (!this.#picking) return;
+    this.#picking = false;
+    this.$.picking = 'false';
+    this.#clearPickHover();
+    let handlers = this.#pickHandlers;
+    if (handlers) {
+      handlers.doc.removeEventListener('pointerover', handlers.onOver, true);
+      handlers.doc.removeEventListener('click', handlers.onClick, true);
+      handlers.doc.removeEventListener('keydown', handlers.onKey, true);
+      handlers.doc.documentElement.removeAttribute('data-cascade-theme-picking');
+      this.#pickHandlers = null;
+    }
+  }
+
+  #applyPickedTarget(element) {
+    let id = element.dataset.themeId || element.id;
+    let selector = element.dataset.themeTarget || (element.id ? `#${element.id}` : '');
+    if (!id || !selector) return;
+    let descriptor = {
+      id: `pick:${id}`,
+      label: element.dataset.themeLabel || id,
+      icon: element.dataset.themeIcon || 'colorize',
+      selector,
+      storageKey: element.dataset.themeKey || `${this.storageKey}::win::${id}`,
+    };
+    let existing = this.#targetDefs.findIndex((entry) => entry.id === descriptor.id);
+    if (existing >= 0) this.#targetDefs[existing] = descriptor;
+    else this.#targetDefs.push(descriptor);
+    this.#activeTargetId = descriptor.id;
+    this.#renderTargets();
+    this.#setActiveTarget(descriptor);
+    this.dispatchEvent(new CustomEvent('cascade-theme-target-change', {
+      bubbles: true,
+      composed: true,
+      detail: { id: descriptor.id, selector: descriptor.selector, storageKey: descriptor.storageKey, picked: true },
+    }));
   }
 
   setState(value, options = {}) {

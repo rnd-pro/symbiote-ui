@@ -14,8 +14,8 @@ export default css`
     }
 
     .cte-shell {
-      display: grid;
-      grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+      display: flex;
+      flex-direction: column;
       gap: var(--sn-theme-editor-gap, var(--sn-lab-panel-gap, 12px));
       height: 100%;
       min-height: 0;
@@ -146,9 +146,126 @@ export default css`
       color: var(--sn-button-primary-color, var(--sn-bg));
     }
 
+    .cte-targets {
+      display: flex;
+      align-items: center;
+      gap: var(--sn-theme-editor-mode-gap, var(--sn-lab-segment-gap, 6px));
+      padding: var(--sn-theme-editor-mode-padding, var(--sn-lab-segment-padding, 3px));
+      border: 1px solid var(--sn-node-border);
+      border-radius: var(--sn-node-radius, 8px);
+      background: var(--sn-bg);
+    }
+
+    .cte-targets[hidden] {
+      display: none;
+    }
+
+    .cte-target-list {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      flex: 1 1 auto;
+      min-width: 0;
+      gap: var(--sn-theme-editor-mode-gap, var(--sn-lab-segment-gap, 6px));
+      /* picking many windows must never starve the controls below: cap the list to
+         ~2 rows and scroll the rest */
+      max-height: var(--sn-theme-editor-targets-max-height, calc(2 * var(--sn-button-min-height, 30px) + var(--sn-lab-segment-gap, 6px)));
+      overflow-y: auto;
+      scrollbar-width: var(--sn-scrollbar-width, thin);
+    }
+
+    .cte-pick {
+      box-sizing: border-box;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex: 0 0 auto;
+      align-self: flex-start;
+      width: var(--sn-theme-editor-icon-button-size, var(--sn-button-icon-size, 28px));
+      height: var(--sn-theme-editor-icon-button-size, var(--sn-button-icon-size, 28px));
+      padding: 0;
+      border: 1px solid var(--sn-button-border, var(--sn-node-border));
+      border-radius: var(--sn-button-radius, 6px);
+      background: var(--sn-button-bg, var(--sn-node-bg));
+      color: var(--sn-text-dim);
+      cursor: pointer;
+      transition: var(--sn-effect-hover-transition);
+    }
+
+    .cte-pick[hidden] {
+      display: none;
+    }
+
+    .cte-pick .material-symbols-outlined {
+      font-size: var(--sn-button-icon-font-size, 16px);
+    }
+
+    .cte-pick:hover {
+      background: var(--sn-button-hover-bg, var(--sn-node-hover));
+      color: var(--sn-text);
+    }
+
+    .cte-pick:focus-visible {
+      outline: var(--sn-effect-focus-ring, 2px solid var(--sn-node-selected));
+      outline-offset: var(--sn-focus-outline-offset, 2px);
+    }
+
+    .cte-pick[aria-pressed="true"] {
+      border-color: var(--sn-button-primary-border, var(--sn-node-selected));
+      background: var(--sn-button-primary-bg, var(--sn-node-selected));
+      color: var(--sn-button-primary-color, var(--sn-bg));
+    }
+
+    .cte-target {
+      box-sizing: border-box;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--sn-theme-editor-target-gap, var(--sn-button-gap, 6px));
+      flex: 1 1 auto;
+      min-width: 0;
+      min-height: var(--sn-theme-editor-mode-height, var(--sn-button-min-height, 30px));
+      padding: var(--sn-theme-editor-mode-button-padding, var(--sn-button-padding, 6px 12px));
+      border: 1px solid var(--sn-button-border, var(--sn-node-border));
+      border-radius: var(--sn-button-radius, 6px);
+      background: var(--sn-button-bg, var(--sn-node-bg));
+      color: var(--sn-text-dim);
+      font: inherit;
+      font-size: var(--sn-theme-editor-control-size, var(--sn-button-font-size, 12px));
+      cursor: pointer;
+      transition: var(--sn-effect-hover-transition);
+    }
+
+    .cte-target .material-symbols-outlined {
+      font-size: var(--sn-button-icon-font-size, 16px);
+    }
+
+    .cte-target:hover {
+      background: var(--sn-button-hover-bg, var(--sn-node-hover));
+    }
+
+    .cte-target:focus-visible {
+      outline: var(--sn-effect-focus-ring, 2px solid var(--sn-node-selected));
+      outline-offset: var(--sn-focus-outline-offset, 2px);
+    }
+
+    .cte-target[aria-pressed="true"] {
+      border-color: var(--sn-button-primary-border, var(--sn-node-selected));
+      background: var(--sn-button-primary-bg, var(--sn-node-selected));
+      color: var(--sn-button-primary-color, var(--sn-bg));
+    }
+
+    .cte-target-label {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
     .cte-controls {
       display: grid;
       align-content: start;
+      flex: 1 1 auto;
       gap: var(--sn-theme-editor-control-gap, var(--sn-lab-control-gap, 8px));
       min-height: 0;
       overflow: auto;
@@ -313,5 +430,15 @@ export default css`
         grid-template-columns: minmax(0, 1fr) minmax(92px, 1fr) minmax(28px, auto);
       }
     }
+  }
+
+  html[data-cascade-theme-picking],
+  html[data-cascade-theme-picking] * {
+    cursor: crosshair !important;
+  }
+
+  [data-cascade-theme-pick-hover] {
+    outline: var(--sn-effect-focus-ring, 2px solid var(--sn-node-selected));
+    outline-offset: calc(-1 * var(--sn-focus-outline-offset, 2px));
   }
 `;
