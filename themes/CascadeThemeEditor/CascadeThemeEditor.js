@@ -405,6 +405,12 @@ export class CascadeThemeEditor extends Symbiote {
     let stored = parseStoredState(storage.getItem(this.storageKey));
     if (stored) {
       this.#state = normalizeCascadeThemeOptions(stored);
+    } else {
+      // no saved params for this scope: fall back to the scope's own declared default
+      // (or the cascade defaults) — never keep the previously edited scope's values,
+      // which would bleed one window type's theme into another when switching scopes
+      let active = this.#targetDefs.find((entry) => entry.id === this.#activeTargetId);
+      this.#state = normalizeCascadeThemeOptions(active && active.defaultState ? active.defaultState : CASCADE_THEME_DEFAULTS);
     }
     let register = storage.getItem(this.#geometryStorageKey());
     this.#geometryRegister = GEOMETRY_PROFILE_NAMES.includes(register) ? register : '';
