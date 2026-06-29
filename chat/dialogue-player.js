@@ -76,17 +76,19 @@ export function createDialoguePlayer(stage, timeline, options = {}) {
 
   function emitState(next) {
     state = next;
-    if (typeof onStateChange === 'function') {
+    let cb = controller.onStateChange;
+    if (typeof cb === 'function') {
       try {
-        onStateChange(next);
+        cb(next);
       } catch (_) {}
     }
   }
 
   function emitIndex() {
-    if (typeof onIndexChange === 'function') {
+    let cb = controller.onIndexChange;
+    if (typeof cb === 'function') {
       try {
-        onIndexChange(index);
+        cb(index);
       } catch (_) {}
     }
   }
@@ -131,9 +133,10 @@ export function createDialoguePlayer(stage, timeline, options = {}) {
     let fireCue = () => {
       if (cued) return;
       cued = true;
-      if (typeof onCue === 'function') {
+      let cb = controller.onCue;
+      if (typeof cb === 'function') {
         try {
-          onCue(turn?.cue, turn, index);
+          cb(turn?.cue, turn, index);
         } catch (_) {}
       }
     };
@@ -200,6 +203,12 @@ export function createDialoguePlayer(stage, timeline, options = {}) {
   }
 
   let controller = {
+    // Event handlers are settable so a UI can (re)bind after construction, not
+    // only pass them via options at creation time. Initialized from options here.
+    onCue,
+    onIndexChange,
+    onStateChange,
+
     /** Start from the current cursor, or resume if paused. */
     play() {
       if (state === 'paused') {
