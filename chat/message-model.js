@@ -107,6 +107,8 @@ export const MESSAGE_PART_KINDS = {
   ARTIFACT: 'artifact',
   APPROVAL: 'approval',
   ACTION: 'action',
+  ACTIONS: 'actions',
+  EMBED: 'embed',
   CONFIRM: 'confirm',
   RETRY: 'retry',
   CANCEL: 'cancel',
@@ -144,6 +146,25 @@ function normalizeDisplayPayload(display) {
   return next;
 }
 
+function normalizeMessageActions(actions) {
+  if (!Array.isArray(actions)) return [];
+  let result = [];
+  for (let entry of actions) {
+    if (!entry || typeof entry !== 'object') continue;
+    let id = entry.id != null ? String(entry.id) : '';
+    let label = entry.label ?? entry.title ?? entry.text ?? '';
+    label = label != null ? String(label) : '';
+    if (!id || !label) continue;
+    result.push({
+      id,
+      label,
+      icon: entry.icon != null ? String(entry.icon) : '',
+      variant: entry.variant != null ? String(entry.variant) : '',
+    });
+  }
+  return result;
+}
+
 export function normalizeChatMessagePart(part) {
   if (!part || typeof part !== 'object') {
     return {
@@ -165,6 +186,8 @@ export function normalizeChatMessagePart(part) {
       llmContent: '',
       payload: null,
       action: '',
+      actions: [],
+      key: '',
     };
   }
 
@@ -208,6 +231,8 @@ export function normalizeChatMessagePart(part) {
     llmContent: typeof part.llmContent === 'string' ? part.llmContent : '',
     payload: part.payload ?? null,
     action: part.action ?? '',
+    actions: type === 'actions' ? normalizeMessageActions(part.actions) : [],
+    key: type === 'embed' ? String(part.key ?? part.slot ?? '') : '',
   };
 }
 

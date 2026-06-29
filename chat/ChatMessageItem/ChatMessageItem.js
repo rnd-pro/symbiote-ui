@@ -64,6 +64,11 @@ export class ChatMessageItem extends Symbiote {
   }
 
   _handleConfirmClick(event) {
+    let actionBtn = event.target?.closest?.('.action-btn-group');
+    if (actionBtn && this.contains(actionBtn)) {
+      this._handleActionClick(event, actionBtn);
+      return;
+    }
     let btn = event.target?.closest?.('.confirm-btn');
     if (!btn || !this.contains(btn)) return;
     event.preventDefault();
@@ -85,6 +90,22 @@ export class ChatMessageItem extends Symbiote {
       part.resolved = action === 'cancel' ? 'cancel' : 'confirm';
       this.notify('parts');
     }
+  }
+
+  _handleActionClick(event, btn) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (btn.disabled) return;
+    let actionId = btn.dataset.actionId || '';
+    let card = btn.closest('.actions-card');
+    let cardId = card?.dataset.actionsId || '';
+    let part = (this.$.parts || []).find((p) => p.type === 'actions' && (p.id || '') === cardId);
+    let payload = part ? part.payload ?? null : null;
+    this.dispatchEvent(new CustomEvent('chat-message-action', {
+      bubbles: true,
+      composed: true,
+      detail: { id: part ? part.id || '' : cardId, actionId, payload },
+    }));
   }
 
   _renderParts() {
@@ -235,6 +256,10 @@ export class ChatMessageItem extends Symbiote {
         </div>`;
       } else if (type === 'confirm') {
         htmlStr += this._renderConfirmPart(part);
+      } else if (type === 'actions') {
+        htmlStr += this._renderActionsPart(part);
+      } else if (type === 'embed') {
+        htmlStr += `<div class="chat-embed" data-embed-key="${escapeHtml(part.key || '')}"></div>`;
       } else if (type === 'error' || type === 'cancelled') {
         let title = part.title || part.name || (type === 'cancelled' ? translate('chat.message.operationCancelled') : translate('chat.message.error'));
         let icon = type === 'cancelled' ? 'cancel' : 'error';
@@ -370,6 +395,20 @@ export class ChatMessageItem extends Symbiote {
         <button class="sn-btn confirm-pill-btn confirm-btn confirm${confirmActive}" type="button" data-confirm-action="confirm" data-id="${escapeHtml(id)}"${disabledAttr}>${escapeHtml(confirmLabel)}</button>
         <button class="sn-btn confirm-pill-btn confirm-btn cancel${cancelActive}" type="button" data-confirm-action="cancel" data-id="${escapeHtml(id)}"${disabledAttr}>${escapeHtml(cancelLabel)}</button>
       </div>
+    </div>`;
+  }
+
+  _renderActionsPart(part) {
+    let id = part.id || '';
+    let actions = Array.isArray(part.actions) ? part.actions : [];
+    let buttons = actions.map((action) => {
+      let iconHtml = action.icon
+        ? `<span class="material-symbols-outlined">${escapeHtml(action.icon)}</span>`
+        : '';
+      return `<button class="sn-btn action-btn-group" type="button" data-action-id="${escapeHtml(action.id)}" data-variant="${escapeHtml(action.variant || '')}">${iconHtml}${escapeHtml(action.label)}</button>`;
+    }).join('');
+    return `<div class="actions-card" data-actions-id="${escapeHtml(id)}">
+      <div class="actions-group">${buttons}</div>
     </div>`;
   }
 

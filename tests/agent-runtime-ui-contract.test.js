@@ -747,3 +747,107 @@ test('ChatWorkspace forwards transcript window APIs and load older events', asyn
 
   workspace.remove();
 });
+
+test('actions and embed parts normalize to forward-compatible shapes', () => {
+  assert.equal(MESSAGE_PART_KINDS.ACTIONS, 'actions');
+  assert.equal(MESSAGE_PART_KINDS.EMBED, 'embed');
+
+  let actionsPart = normalizeChatMessagePart({
+    type: 'actions',
+    id: 'act-1',
+    payload: { ref: 'r-1' },
+    actions: [
+      { id: 'approve', label: 'Approve', icon: 'check', variant: 'primary' },
+      { id: 'open', title: 'Open panel' },
+      { label: 'missing id' },
+      { id: 'no-label' },
+      'not-an-object',
+    ],
+  });
+  assert.equal(actionsPart.type, 'actions');
+  assert.equal(actionsPart.id, 'act-1');
+  assert.deepEqual(actionsPart.payload, { ref: 'r-1' });
+  assert.deepEqual(actionsPart.actions, [
+    { id: 'approve', label: 'Approve', icon: 'check', variant: 'primary' },
+    { id: 'open', label: 'Open panel', icon: '', variant: '' },
+  ]);
+
+  let embedPart = normalizeChatMessagePart({ type: 'embed', key: 'live-1', title: 'Live widget' });
+  assert.equal(embedPart.type, 'embed');
+  assert.equal(embedPart.key, 'live-1');
+  assert.equal(embedPart.title, 'Live widget');
+});
+
+test('actions part renders buttons and emits chat-message-action with the right actionId', async () => {
+  let el = document.createElement('chat-message-item');
+  document.body.append(el);
+  el.set$({
+    role: 'agent',
+    parts: [{
+      type: 'actions',
+      id: 'act-1',
+      payload: { ref: 'r-1' },
+      actions: [
+        { id: 'approve', label: 'Approve', icon: 'check', variant: 'primary' },
+        { id: 'snooze', label: 'Snooze' },
+      ],
+    }],
+  });
+
+  await nextRenderTick();
+
+  let root = el.shadowRoot || el;
+  let card = root.querySelector('.actions-card');
+  assert.ok(card);
+  assert.equal(card.dataset.actionsId, 'act-1');
+  let buttons = card.querySelectorAll('.action-btn-group');
+  assert.equal(buttons.length, 2);
+  assert.equal(buttons[0].dataset.actionId, 'approve');
+  assert.equal(buttons[0].dataset.variant, 'primary');
+  assert.match(buttons[0].textContent || '', /Approve/);
+  assert.equal(buttons[1].dataset.actionId, 'snooze');
+
+  let actionPromise = new Promise((resolve) => {
+    el.addEventListener('chat-message-action', (event) => resolve({ ...event.detail, event }));
+  });
+  buttons[1].click();
+  let actionDetail = await actionPromise;
+  assert.equal(actionDetail.id, 'act-1');
+  assert.equal(actionDetail.actionId, 'snooze');
+  assert.deepEqual(actionDetail.payload, { ref: 'r-1' });
+  assert.equal(actionDetail.event.bubbles, true);
+
+  el.remove();
+});
+
+test('embed part exposes a keyed slot and surfaces it through embeds-ready events', async () => {
+  let workspace = document.createElement('chat-workspace');
+  document.body.append(workspace);
+  await nextRenderTick();
+
+  let workspacePromise = new Promise((resolve) => {
+    workspace.addEventListener('chat-workspace-embeds-ready', (event) => resolve(event.detail));
+  });
+
+  workspace.setMessages([
+    toChatMessageItem({
+      role: 'assistant',
+      parts: [
+        { type: 'text', text: 'here is a widget' },
+        { type: 'embed', key: 'live-widget-1', title: 'Live widget' },
+      ],
+    }),
+  ]);
+
+  let workspaceDetail = await workspacePromise;
+  let forwarded = (workspaceDetail.embeds || []).find((entry) => entry.key === 'live-widget-1');
+  assert.ok(forwarded, 'workspace embeds-ready carries the keyed slot');
+  assert.equal(workspaceDetail.sourceEvent, 'chat-transcript-embeds-ready');
+
+  let slot = workspace.getTranscript().querySelector('[data-embed-key="live-widget-1"]');
+  assert.ok(slot);
+  assert.equal(slot.dataset.embedKey, 'live-widget-1');
+  assert.equal(forwarded.slot, slot);
+
+  workspace.remove();
+});

@@ -46,6 +46,7 @@ export class ChatTranscript extends Symbiote {
     if (!this._messageItemsSubscriptionReady) {
       this._messageItemsSubscriptionReady = true;
       this.sub('messageItems', (items) => {
+        this._scheduleEmbedsReady();
         if (items?.length > 0) {
           let wasAtBottom = this._messageItemsWasAtBottom ?? this.isAtBottom(32);
           this._messageItemsWasAtBottom = undefined;
@@ -57,6 +58,23 @@ export class ChatTranscript extends Symbiote {
       });
     }
     this._setupTopSentinelObserver();
+  }
+
+  _scheduleEmbedsReady() {
+    queueMicrotask(() => {
+      requestAnimationFrame(() => this._emitEmbedsReady());
+    });
+  }
+
+  _emitEmbedsReady() {
+    let container = this.getScrollContainer();
+    if (!container) return;
+    let slots = container.querySelectorAll('[data-embed-key]');
+    let embeds = [];
+    for (let slot of slots) {
+      embeds.push({ key: slot.dataset.embedKey || '', slot });
+    }
+    emit(this, 'chat-transcript-embeds-ready', { embeds });
   }
 
   disconnectedCallback() {

@@ -295,6 +295,8 @@ export class ChatWorkspace extends Symbiote {
     route('chat-composer-context-remove', 'chat-workspace-context-intent');
     route('chat-composer-context-drop', 'chat-workspace-context-intent');
     route('chat-transcript-load-older', 'chat-workspace-load-older');
+    route('chat-message-action', 'chat-workspace-action');
+    route('chat-transcript-embeds-ready', 'chat-workspace-embeds-ready');
     for (let name of [
       'chat-composer-voice-input',
       'chat-composer-wake-listen',
