@@ -220,11 +220,6 @@ export class LayoutNode extends Symbiote {
     this.sub('panelType', () => {
       this._updatePanelInfo();
     });
-
-
-    if (this.$.nodeData) {
-      this.sub('nodeData', () => {});
-    }
   }
 
   initCallback() {

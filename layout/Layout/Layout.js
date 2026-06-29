@@ -88,12 +88,7 @@ export class Layout extends Symbiote {
     },
 
 
-    onDrawerToggleClick: (e) => this._onDrawerToggleClick(e),
-    onDrawerHandlePointerDown: (e) => this._onDrawerHandlePointerDown(e),
     onDrawerBackdropClick: () => this.closeDrawer(),
-
-
-    onLayoutChange: () => this._saveLayout(),
   };
 
   /**
