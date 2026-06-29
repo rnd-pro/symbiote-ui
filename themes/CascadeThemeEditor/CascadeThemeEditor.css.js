@@ -4,7 +4,7 @@ export default css`
   cascade-theme-editor {
     display: block;
     min-width: 0;
-    height: 100%;
+    min-height: 100%;
     container: cascade-theme-editor / inline-size;
     color: var(--sn-text);
     font-family: var(--sn-font);
@@ -21,17 +21,18 @@ export default css`
       display: none !important;
     }
 
+    /* scroll as one panel: the editor grows to its natural height and the host
+       panel's own scroll area moves the whole thing, instead of a separate inner
+       scrollbar on the controls list. */
     .cte-shell {
       display: flex;
       flex-direction: column;
       gap: var(--sn-theme-editor-gap, var(--sn-lab-panel-gap, 12px));
-      height: 100%;
-      min-height: 0;
+      min-height: 100%;
       padding: var(--sn-theme-editor-padding, var(--sn-lab-panel-padding, 12px));
       border: 0;
       background: var(--sn-panel-bg);
       color: var(--sn-text);
-      overflow: hidden;
     }
 
     .cte-header,
@@ -179,11 +180,6 @@ export default css`
       flex: 1 1 auto;
       min-width: 0;
       gap: var(--sn-theme-editor-mode-gap, var(--sn-lab-segment-gap, 6px));
-      /* picking many windows must never starve the controls below: cap the list to
-         ~2 rows and scroll the rest */
-      max-height: var(--sn-theme-editor-targets-max-height, calc(2 * var(--sn-button-min-height, 30px) + var(--sn-lab-segment-gap, 6px)));
-      overflow-y: auto;
-      scrollbar-width: var(--sn-scrollbar-width, thin);
     }
 
     .cte-pick {
@@ -277,13 +273,8 @@ export default css`
     .cte-controls {
       display: grid;
       align-content: start;
-      flex: 1 1 auto;
+      flex: 0 0 auto;
       gap: var(--sn-theme-editor-control-gap, var(--sn-lab-control-gap, 8px));
-      min-height: 0;
-      overflow: auto;
-      padding-inline-end: var(--sn-theme-editor-scroll-padding, var(--sn-lab-scroll-padding, 8px));
-      scrollbar-color: var(--sn-scrollbar-thumb) var(--sn-scrollbar-track);
-      scrollbar-width: var(--sn-scrollbar-width, thin);
     }
 
     .cte-control {

@@ -839,8 +839,8 @@ test('cascade theme editor is a reusable browser module', async () => {
   assert.match(styles, /cte-control-icon/);
   assert.match(styles, /--sn-theme-editor-control-icon-size/);
   assert.match(styles, /::-webkit-slider-thumb/);
-  assert.match(styles, /\.cte-shell \{[\s\S]*?display: flex;[\s\S]*?flex-direction: column;/);
-  assert.match(styles, /\.cte-controls \{[\s\S]*?flex: 1 1 auto;/);
+  assert.match(styles, /\.cte-shell \{[\s\S]*?display: flex;[\s\S]*?flex-direction: column;[\s\S]*?min-height: 100%;/);
+  assert.match(styles, /\.cte-controls \{[\s\S]*?flex: 0 0 auto;/);
   assert.match(styles, /\.cte-target \{/);
   assert.match(styles, /container: cascade-theme-editor \/ inline-size/);
   assert.match(styles, /@container cascade-theme-editor \(max-width: 360px\) \{[\s\S]*?\.cte-status \{[\s\S]*?display: none;/);
