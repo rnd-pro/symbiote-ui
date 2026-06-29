@@ -8,6 +8,14 @@ export default css`
     container: cascade-theme-editor / inline-size;
     color: var(--sn-text);
     font-family: var(--sn-font);
+    /* the editor is a control surface, not a live preview of its target — pin its own
+       type + density scale to the baseline so it stays legible and unbroken even when it
+       edits (or sits inside) a scope cranked to extreme type/density. The geometry-register
+       and slider previews still apply to the target element, not here. */
+    --sn-theme-type-scale: 1;
+    --sn-theme-heading-scale: 1;
+    --sn-theme-density: 1;
+    --sn-theme-spacing-scale: 1;
 
     &[hidden] {
       display: none !important;
@@ -132,12 +140,16 @@ export default css`
     }
 
     .cte-mode button {
-      justify-content: center;
+      display: block;
+      text-align: center;
       min-width: 0;
       min-height: var(--sn-theme-editor-mode-height, var(--sn-button-min-height, 30px));
       padding: var(--sn-theme-editor-mode-button-padding, var(--sn-button-padding, 6px 14px));
       color: var(--sn-text-dim);
       font-size: var(--sn-theme-editor-control-size, var(--sn-button-font-size, 12px));
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .cte-mode button[aria-pressed="true"] {
