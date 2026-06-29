@@ -312,6 +312,84 @@ export class LayoutNode extends Symbiote {
     return false;
   }
 
+  /** @returns {Object|null} the live layout tree this node belongs to. */
+  #getLayoutTree() {
+    let host = this.closest?.('panel-layout') || (
+      this.getRootNode?.() instanceof ShadowRoot ? this.getRootNode().host : null
+    );
+    return host?.$?.layoutTree || null;
+  }
+
+  /**
+   * Walk the split-ancestor chain from this node up to the root to find which of
+   * its four sides lie on the layout's outer boundary. A split places a sibling
+   * on one side of each child, turning that side interior for the whole sub-tree.
+   * @param {Object} tree
+   * @returns {{top: boolean, right: boolean, bottom: boolean, left: boolean}}
+   */
+  #computeOuterEdges(tree) {
+    let edges = { top: true, right: true, bottom: true, left: true };
+    if (!tree || !this.$.nodeId) return edges;
+    let childId = this.$.nodeId;
+    let parentInfo = LayoutTree.findParent(tree, childId);
+    while (parentInfo) {
+      let { parent, which } = parentInfo;
+      if (parent.direction === 'vertical') {
+        if (which === 'first') edges.bottom = false;
+        else edges.top = false;
+      } else {
+        if (which === 'first') edges.right = false;
+        else edges.left = false;
+      }
+      childId = parent.id;
+      parentInfo = LayoutTree.findParent(tree, childId);
+    }
+    return edges;
+  }
+
+  /**
+   * Radius values for each of the node's four rounded joints. A joint stays rounded
+   * unless both of its adjacent sides lie on the layout's outer boundary (the
+   * layout's own outer edge meeting point), where it flattens. Emitted as four
+   * longhand vars so the collapsed-rail CSS can clamp each independently.
+   * @param {{top: boolean, right: boolean, bottom: boolean, left: boolean}} edges
+   * @returns {{tl: string, tr: string, br: string, bl: string}}
+   */
+  #edgeRadiusValues(edges) {
+    let r = 'var(--sn-frame-radius, 0px)';
+    let pick = (a, b) => (a && b ? '0px' : r);
+    return {
+      tl: pick(edges.top, edges.left),
+      tr: pick(edges.top, edges.right),
+      br: pick(edges.bottom, edges.right),
+      bl: pick(edges.bottom, edges.left),
+    };
+  }
+
+  /**
+   * Count panels that render expanded (a rail-subtree counts as zero expanded).
+   * @param {Object} node
+   * @returns {number}
+   */
+  #countExpandedPanels(node) {
+    if (!node) return 0;
+    if (node.type === 'panel') return node.collapsed ? 0 : 1;
+    if (node.type === 'split') {
+      return this.#countExpandedPanels(node.first) + this.#countExpandedPanels(node.second);
+    }
+    return 0;
+  }
+
+  /** Drive per-joint rounding from the node's position against the layout edges. */
+  #applyOuterEdgeRounding(tree) {
+    let edges = this.#computeOuterEdges(tree);
+    let { tl, tr, br, bl } = this.#edgeRadiusValues(edges);
+    this.style.setProperty('--sn-node-radius-tl', tl);
+    this.style.setProperty('--sn-node-radius-tr', tr);
+    this.style.setProperty('--sn-node-radius-br', br);
+    this.style.setProperty('--sn-node-radius-bl', bl);
+  }
+
   _updatePanelInfo() {
     let panelTypes = this.$['^panelTypes'] || {};
     let config = panelTypes[this.$.panelType] || {};
@@ -359,13 +437,22 @@ export class LayoutNode extends Symbiote {
       this.$.collapseSlot = 'first';
       this.#syncHostAttribute('collapse-side', '');
 
+      let tree = this.#getLayoutTree();
+      this.#applyOuterEdgeRounding(tree);
+
       // The sibling being collapsed no longer forbids this one: two or more
-      // adjacent siblings may collapse together and share a single ear rail.
+      // adjacent siblings may collapse together and share a single ear rail. The
+      // last expanded panel still cannot collapse — collapsing must leave at least
+      // one other expanded panel so the layout never collapses fully into empty
+      // space. A collapsed panel can always toggle back open.
       void siblingCollapsed;
+      let expandedCount = tree ? this.#countExpandedPanels(tree) : 0;
+      let toggleAllowed = this.$.isCollapsed || !tree || expandedCount >= 2;
       this.$.canCollapse =
         this.$.layoutCollapsePolicy !== 'never' &&
         !!isSplitChild &&
-        siblingExists;
+        siblingExists &&
+        toggleAllowed;
 
       if (isSplitChild) {
         this.$.collapseSlot = isFirst ? 'first' : 'second';
@@ -793,6 +880,9 @@ export class LayoutNode extends Symbiote {
   }
 
   _getCollapseIcon() {
+    // The chevron points the way the button acts: when expanded it shows the
+    // collapse direction (toward the panel's own edge of the split), when collapsed
+    // it shows the expand direction. Derived from slot + split direction + state.
     let isFirst = this.$.collapseSlot !== 'second';
     if (this.$.collapseDirection === 'horizontal') {
       if (this.$.isCollapsed) return isFirst ? 'chevron_right' : 'chevron_left';
