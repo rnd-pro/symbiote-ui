@@ -1313,7 +1313,7 @@ export function createCascadeTheme(options = {}) {
     '--sn-button-icon-size': densityToken(28),
     '--sn-tabs-bar-padding': `0 ${densityToken(12)}`,
     '--sn-tabs-item-gap': densityToken(6),
-    '--sn-tabs-item-padding': `0 ${densityToken(10)} 0 ${densityToken(12)}`,
+    '--sn-tabs-item-padding': `0 ${densityToken(10)}`,
     '--sn-tabs-item-margin-inline': densityToken(2),
     '--sn-tabs-close-size': densityToken(16),
     '--sn-tabs-add-size': densityToken(28),

@@ -43,7 +43,7 @@ project-tab-item {
   display: flex;
   align-items: center;
   gap: var(--sn-tabs-item-gap, 6px);
-  padding: var(--sn-tabs-item-padding, 0 10px 0 12px);
+  padding: var(--sn-tabs-item-padding, 0 10px);
   height: var(--sn-tabs-item-height);
   border: 1px solid transparent;
   background: transparent;
