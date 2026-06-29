@@ -14,7 +14,11 @@ export let styles = css`
     &[node-type='panel'] {
       flex-direction: column;
       background: var(--sn-node-bg);
-      border: 1px solid var(--sn-layout-border);
+      /* the panel frame stays transparent (panels are separated by their gap and
+         background, not an outline); --sn-layout-border drives the inner dividers
+         only, so a themed border value can't leak a hard edge along a panel that
+         sits flush against the layout boundary */
+      border: 1px solid transparent;
       border-radius: var(--sn-frame-radius, 0);
     }
 
