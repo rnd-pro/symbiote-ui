@@ -11,12 +11,13 @@ export let styles = css`
     gap: var(--sn-port-gap, 6px);
     padding: var(--sn-port-padding, 3px 12px);
     min-height: var(--sn-port-min-height, 28px);
+    --sn-port-item-socket-offset: calc((var(--sn-socket-size, 12px) + var(--sn-step-5, 10px)) * -1);
 
     &[data-side='input'] {
       flex-direction: row;
 
       & .sn-socket {
-        margin-left: var(--sn-step-0, -22px);
+        margin-left: var(--sn-port-item-socket-offset);
       }
     }
 
@@ -24,7 +25,7 @@ export let styles = css`
       flex-direction: row-reverse;
 
       & .sn-socket {
-        margin-right: var(--sn-step-0, -22px);
+        margin-right: var(--sn-port-item-socket-offset);
       }
     }
 

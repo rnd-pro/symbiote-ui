@@ -24,6 +24,8 @@ export let styles = css`
     --sn-svg-shape-media-clip: circle(50% at 50% 50%);
     --sn-node-category-accent: var(--sn-cat-default);
     --sn-node-accent: var(--sn-node-type-accent, var(--sn-node-category-accent));
+    --sn-node-port-socket-offset: calc((var(--sn-socket-size, 12px) + var(--sn-step-3, 6px)) * -1);
+    --sn-node-pill-port-socket-offset: calc((var(--sn-socket-size, 12px) + var(--sn-step-7, 14px)) * -1);
 
     /* Symbiote animateOut: CSS-driven exit transition */
     &[leaving] {
@@ -369,10 +371,10 @@ export let styles = css`
         padding: 0;
       }
       & .sn-port-in node-socket {
-        margin-left: var(--sn-step-0, -26px);
+        margin-left: var(--sn-node-pill-port-socket-offset);
       }
       & .sn-port-out node-socket {
-        margin-right: var(--sn-step-0, -26px);
+        margin-right: var(--sn-node-pill-port-socket-offset);
       }
       & .controls {
         display: none;
@@ -713,7 +715,7 @@ export let styles = css`
       flex-direction: row;
 
       & node-socket {
-        margin-left: var(--sn-step-0, -18px);
+        margin-left: var(--sn-node-port-socket-offset);
       }
     }
 
@@ -722,7 +724,7 @@ export let styles = css`
       justify-content: flex-end;
 
       & node-socket {
-        margin-right: var(--sn-step-0, -18px);
+        margin-right: var(--sn-node-port-socket-offset);
       }
     }
 

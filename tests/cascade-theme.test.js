@@ -1266,6 +1266,12 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(graphNode, /--sn-node-circle-icon-size/);
   assert.match(graphNode, /--sn-node-circle-media-size/);
   assert.match(graphNode, /--sn-node-circle-port-offset/);
+  assert.match(graphNode, /--sn-node-port-socket-offset/);
+  assert.match(graphNode, /--sn-node-pill-port-socket-offset/);
+  assert.doesNotMatch(graphNode, /margin-left:\s*var\(--sn-step-0,\s*-18px\)/);
+  assert.doesNotMatch(graphNode, /margin-right:\s*var\(--sn-step-0,\s*-18px\)/);
+  assert.doesNotMatch(graphNode, /margin-left:\s*var\(--sn-step-0,\s*-26px\)/);
+  assert.doesNotMatch(graphNode, /margin-right:\s*var\(--sn-step-0,\s*-26px\)/);
   assert.match(graphNode, /&\[data-has-media\] .sn-node-media/);
   assert.match(graphNode, /clip-path: circle\(50% at 50% 50%\)/);
   assert.match(graphNode, /object-fit: var\(--sn-node-circle-media-fit, cover\)/);
@@ -1274,6 +1280,9 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(graphNode, /stroke-width: var\(--sn-shape-stroke-width/);
   assert.match(graphNode, /--sn-shape-port-hint-stroke-width/);
   assert.match(portItem, /--sn-port-label-size/);
+  assert.match(portItem, /--sn-port-item-socket-offset/);
+  assert.doesNotMatch(portItem, /margin-left:\s*var\(--sn-step-0,\s*-22px\)/);
+  assert.doesNotMatch(portItem, /margin-right:\s*var\(--sn-step-0,\s*-22px\)/);
   assert.match(ctrlItem, /--sn-control-input-size/);
   assert.match(nodeSocket, /--sn-socket-hit-size/);
   assert.match(nodeCanvas, /--sn-conn-hover-width/);
