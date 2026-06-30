@@ -35,6 +35,10 @@ export default `
     white-space: pre;
     min-width: var(--sn-code-gutter-width, 32px);
     flex-shrink: 0;
+    /* size to the code's own height, not the scrollport, so the gutter background
+       covers every line number; min-height keeps it filling the panel for short files */
+    align-self: flex-start;
+    min-height: 100%;
   }
   code-block .cb-pre {
     margin: 0;
