@@ -674,6 +674,7 @@ test('panel layout drawer mode has gesture, theme, and metadata contracts', asyn
   assert.match(nodeStyles, /--sn-layout-fullscreen-host-bottom/);
   assert.match(nodeStyles, /z-index:\s*var\(--sn-fullscreen-panel-z,\s*30010\) !important;/);
   assert.match(nodeStyles, /layout-node\s*\{[\s\S]*?&\[fullscreen\]\s*\{[\s\S]*?height:\s*auto !important;/);
+  assert.match(nodeStyles, /&\[fullscreen\]\s*\{[\s\S]*?border-radius:\s*0 !important;/);
   assert.match(registry, /mobile-drawer/);
   assert.match(registry, /mobile-swipe-mode/);
   assert.match(registry, /swipe-island-control/);
