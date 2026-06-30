@@ -47,6 +47,12 @@ space for both child branches.
 At runtime `panel-layout` exposes resolved scroll axes through
 `scroll-inline-active` and `scroll-block-active` attributes so CSS, browser
 smoke tests, and agents can distinguish requested policy from active fallback.
+Separate `panel-layout` roots that are adjacent in a host shell can opt into the
+same `layout-peer-group`. Visible peers in the group expose root-panel collapse
+controls even when each layout has a single panel; the component resolves the
+collapse axis/side from peer geometry and reflects `layout-peer-active`,
+`layout-peer-collapse-dir`, `layout-peer-collapse-side`, `root-collapsed`,
+`root-collapse-dir`, and `root-collapse-side` for host flex/dock chrome.
 Drawer projection exposes `drawer-mode-active`, `drawer-start-open`, and
 `drawer-end-open` runtime attributes; opening drawers changes only presentation
 state and does not save or mutate the host layout tree.

@@ -174,6 +174,10 @@ export class LayoutNode extends Symbiote {
     '^panelTypes': {},
     '^fullscreenPanelId': null,
     '^panelChrome': true,
+    hasLayoutPeers: false,
+    peerCollapseDirection: 'horizontal',
+    peerCollapseSlot: 'first',
+    peerCollapseGroup: '',
 
 
     onTypeClick: (e) => this._showTypeMenu(e),
@@ -411,9 +415,11 @@ export class LayoutNode extends Symbiote {
       this.$.canCollapse = false;
       this.$.collapseSlot = 'first';
       this.#syncHostAttribute('collapse-side', '');
+      this.#syncHostAttribute('collapse-flat-edge', '');
 
       let tree = this.#getLayoutTree();
       let outerEdges = this.#computeOuterEdges(tree);
+      let peerCollapseAllowed = !isSplitChild && Boolean(this.$.hasLayoutPeers);
 
       // The sibling being collapsed no longer forbids this one: two or more
       // adjacent siblings may collapse together and share a single ear rail. The
@@ -422,11 +428,10 @@ export class LayoutNode extends Symbiote {
       // space. A collapsed panel can always toggle back open.
       void siblingCollapsed;
       let expandedCount = tree ? this.#countExpandedPanels(tree) : 0;
-      let toggleAllowed = this.$.isCollapsed || !tree || expandedCount >= 2;
+      let toggleAllowed = this.$.isCollapsed || !tree || expandedCount >= 2 || peerCollapseAllowed;
       this.$.canCollapse =
         this.$.layoutCollapsePolicy !== 'never' &&
-        !!isSplitChild &&
-        siblingExists &&
+        ((!!isSplitChild && siblingExists) || peerCollapseAllowed) &&
         toggleAllowed;
 
       if (isSplitChild) {
@@ -460,6 +465,18 @@ export class LayoutNode extends Symbiote {
         this.#syncHostAttribute('collapse-flat-edge', flatEdge);
 
         if (parentNode) this._syncCollapsePresentation();
+      } else if (peerCollapseAllowed) {
+        this.$.collapseDirection = this.$.peerCollapseDirection || 'horizontal';
+        this.$.collapseSlot = this.$.peerCollapseSlot || 'first';
+        this.#syncHostAttribute('collapse-side', this.$.collapseSlot);
+        let flatEdge = '';
+        if (this.$.isCollapsed) {
+          flatEdge = this.$.collapseDirection === 'horizontal'
+            ? (this.$.collapseSlot === 'second' ? 'right' : 'left')
+            : (this.$.collapseSlot === 'second' ? 'bottom' : 'top');
+        }
+        this.#syncHostAttribute('collapse-flat-edge', flatEdge);
+        this._syncCollapsePresentation();
       }
     }
     this._setPanelMenuActions(config.menuActions || []);

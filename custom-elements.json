@@ -30868,7 +30868,7 @@
           "name": "Layout",
           "tagName": "panel-layout",
           "description": "Panel-based application layout shell.",
-          "componentDescription": "Panel-based application layout shell. Use this layout composition and navigation surface when composing layout UI. Capabilities: layout-tree, split-panels, panel-registry, panel-menu-actions, ui-invoked-panels, responsive-behavior, importance-auto-collapse, min-size-fit, scroll-fallback, mobile-stack, mobile-drawer, mobile-swipe-mode, multi-drawer-handles, swipe-island-control, local-storage. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: panel_layout_set_behavior, panel_layout_register_panel_type, panel_layout_set_panel_menu_actions, panel_layout_open_panel, panel_layout_close_ui_panel, panel_layout_remove_ui_panel.",
+          "componentDescription": "Panel-based application layout shell. Use this layout composition and navigation surface when composing layout UI. Capabilities: layout-tree, split-panels, cross-layout-peer-collapse, panel-registry, panel-menu-actions, ui-invoked-panels, responsive-behavior, importance-auto-collapse, min-size-fit, scroll-fallback, mobile-stack, mobile-drawer, mobile-swipe-mode, multi-drawer-handles, swipe-island-control, local-storage. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: panel_layout_set_behavior, panel_layout_register_panel_type, panel_layout_set_panel_menu_actions, panel_layout_open_panel, panel_layout_close_ui_panel, panel_layout_remove_ui_panel.",
           "attributes": [
             {
               "name": "storage-key",
@@ -30925,6 +30925,55 @@
                 "text": "string"
               },
               "description": "Overflow fallback: collapse, scroll-inline, scroll-block, or scroll."
+            },
+            {
+              "name": "layout-peer-group",
+              "type": {
+                "text": "string"
+              },
+              "description": "Optional group id for separate panel-layout roots that should expose root-panel collapse controls when visible peers exist."
+            },
+            {
+              "name": "layout-peer-active",
+              "type": {
+                "text": "boolean"
+              },
+              "description": "Read-only runtime marker set when this layout has a visible peer in its layout-peer-group."
+            },
+            {
+              "name": "layout-peer-collapse-dir",
+              "type": {
+                "text": "string"
+              },
+              "description": "Read-only runtime collapse axis resolved from the visible peer geometry: horizontal or vertical."
+            },
+            {
+              "name": "layout-peer-collapse-side",
+              "type": {
+                "text": "string"
+              },
+              "description": "Read-only runtime collapse side for the root panel: first or second."
+            },
+            {
+              "name": "root-collapsed",
+              "type": {
+                "text": "boolean"
+              },
+              "description": "Read-only runtime marker set when the root panel is collapsed, allowing host containers to shrink external docks."
+            },
+            {
+              "name": "root-collapse-dir",
+              "type": {
+                "text": "string"
+              },
+              "description": "Read-only runtime collapse axis for a collapsed root panel."
+            },
+            {
+              "name": "root-collapse-side",
+              "type": {
+                "text": "string"
+              },
+              "description": "Read-only runtime collapse side for a collapsed root panel."
             },
             {
               "name": "scroll-inline-active",
@@ -31687,7 +31736,7 @@
             }
           },
           "agent": {
-            "componentDescription": "Panel-based application layout shell. Use this layout composition and navigation surface when composing layout UI. Capabilities: layout-tree, split-panels, panel-registry, panel-menu-actions, ui-invoked-panels, responsive-behavior, importance-auto-collapse, min-size-fit, scroll-fallback, mobile-stack, mobile-drawer, mobile-swipe-mode, multi-drawer-handles, swipe-island-control, local-storage. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: panel_layout_set_behavior, panel_layout_register_panel_type, panel_layout_set_panel_menu_actions, panel_layout_open_panel, panel_layout_close_ui_panel, panel_layout_remove_ui_panel.",
+            "componentDescription": "Panel-based application layout shell. Use this layout composition and navigation surface when composing layout UI. Capabilities: layout-tree, split-panels, cross-layout-peer-collapse, panel-registry, panel-menu-actions, ui-invoked-panels, responsive-behavior, importance-auto-collapse, min-size-fit, scroll-fallback, mobile-stack, mobile-drawer, mobile-swipe-mode, multi-drawer-handles, swipe-island-control, local-storage. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: panel_layout_set_behavior, panel_layout_register_panel_type, panel_layout_set_panel_menu_actions, panel_layout_open_panel, panel_layout_close_ui_panel, panel_layout_remove_ui_panel.",
             "semanticRole": "layout composition and navigation surface",
             "usage": "Render or compose <panel-layout> when the host needs panel-based application layout shell.",
             "dataOwnership": "host-owned model; component renders and emits intent events",
@@ -31716,6 +31765,7 @@
               "capabilities": [
                 "layout-tree",
                 "split-panels",
+                "cross-layout-peer-collapse",
                 "panel-registry",
                 "panel-menu-actions",
                 "ui-invoked-panels",
@@ -31770,6 +31820,41 @@
                   "name": "overflow-mode",
                   "type": "string",
                   "description": "Overflow fallback: collapse, scroll-inline, scroll-block, or scroll."
+                },
+                {
+                  "name": "layout-peer-group",
+                  "type": "string",
+                  "description": "Optional group id for separate panel-layout roots that should expose root-panel collapse controls when visible peers exist."
+                },
+                {
+                  "name": "layout-peer-active",
+                  "type": "boolean",
+                  "description": "Read-only runtime marker set when this layout has a visible peer in its layout-peer-group."
+                },
+                {
+                  "name": "layout-peer-collapse-dir",
+                  "type": "string",
+                  "description": "Read-only runtime collapse axis resolved from the visible peer geometry: horizontal or vertical."
+                },
+                {
+                  "name": "layout-peer-collapse-side",
+                  "type": "string",
+                  "description": "Read-only runtime collapse side for the root panel: first or second."
+                },
+                {
+                  "name": "root-collapsed",
+                  "type": "boolean",
+                  "description": "Read-only runtime marker set when the root panel is collapsed, allowing host containers to shrink external docks."
+                },
+                {
+                  "name": "root-collapse-dir",
+                  "type": "string",
+                  "description": "Read-only runtime collapse axis for a collapsed root panel."
+                },
+                {
+                  "name": "root-collapse-side",
+                  "type": "string",
+                  "description": "Read-only runtime collapse side for a collapsed root panel."
                 },
                 {
                   "name": "scroll-inline-active",

@@ -39,8 +39,113 @@ function setImportantStylePropertyIfChanged(style, name, value) {
   }
 }
 
+function syncOptionalAttribute(element, name, value) {
+  if (value === undefined || value === null || value === '') {
+    if (element.hasAttribute(name)) element.removeAttribute(name);
+    return;
+  }
+  setAttributeIfChanged(element, name, value);
+}
+
 function drawerTranslateTransform(value) {
   return `translate3d(${value}, 0, 0)`;
+}
+
+const LAYOUT_PEER_GROUPS = new Map();
+const LAYOUT_PEER_PENDING_GROUPS = new Set();
+let layoutPeerRefreshFrame = 0;
+
+function normalizeLayoutPeerGroup(value) {
+  return String(value || '').trim();
+}
+
+function hasHiddenAncestor(element) {
+  for (let node = element; node; node = node.parentElement) {
+    if (node.hidden || node.style?.display === 'none') return true;
+  }
+  return false;
+}
+
+function getLayoutPeerRect(layout) {
+  return layout.getBoundingClientRect?.() || { left: 0, top: 0, width: 0, height: 0 };
+}
+
+function isVisibleLayoutPeer(layout) {
+  if (!layout?.isConnected || hasHiddenAncestor(layout)) return false;
+  let rect = getLayoutPeerRect(layout);
+  return (rect.width || rect.height) ? true : layout.hasAttribute('root-collapsed');
+}
+
+function compareLayoutDocumentOrder(a, b) {
+  let position = a.compareDocumentPosition?.(b) || 0;
+  if (position & 4) return -1;
+  if (position & 2) return 1;
+  return 0;
+}
+
+function resolvePeerCollapseInfo(layout, peers) {
+  let visiblePeers = peers.filter((peer) => peer !== layout && isVisibleLayoutPeer(peer));
+  if (!visiblePeers.length) {
+    return { hasPeers: false, direction: 'horizontal', slot: 'first' };
+  }
+
+  let ownRect = getLayoutPeerRect(layout);
+  let ownCenterX = ownRect.left + (ownRect.width || 0) / 2;
+  let ownCenterY = ownRect.top + (ownRect.height || 0) / 2;
+  let peerCenters = visiblePeers.map((peer) => {
+    let rect = getLayoutPeerRect(peer);
+    return {
+      x: rect.left + (rect.width || 0) / 2,
+      y: rect.top + (rect.height || 0) / 2,
+    };
+  });
+  let peerCenterX = peerCenters.reduce((sum, item) => sum + item.x, 0) / peerCenters.length;
+  let peerCenterY = peerCenters.reduce((sum, item) => sum + item.y, 0) / peerCenters.length;
+  let dx = peerCenterX - ownCenterX;
+  let dy = peerCenterY - ownCenterY;
+
+  if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
+    if (Math.abs(dx) >= Math.abs(dy)) {
+      return { hasPeers: true, direction: 'horizontal', slot: dx < 0 ? 'second' : 'first' };
+    }
+    return { hasPeers: true, direction: 'vertical', slot: dy < 0 ? 'second' : 'first' };
+  }
+
+  let ordered = [layout, ...visiblePeers].sort(compareLayoutDocumentOrder);
+  return {
+    hasPeers: true,
+    direction: 'horizontal',
+    slot: ordered.indexOf(layout) === 0 ? 'first' : 'second',
+  };
+}
+
+function refreshLayoutPeerGroup(group) {
+  let layouts = LAYOUT_PEER_GROUPS.get(group);
+  if (!layouts) return;
+  for (let layout of Array.from(layouts)) {
+    if (!layout.isConnected) {
+      layouts.delete(layout);
+      continue;
+    }
+    layout._syncLayoutPeerState?.();
+  }
+  if (!layouts.size) LAYOUT_PEER_GROUPS.delete(group);
+}
+
+function scheduleLayoutPeerGroupRefresh(group) {
+  group = normalizeLayoutPeerGroup(group);
+  if (!group) return;
+  LAYOUT_PEER_PENDING_GROUPS.add(group);
+  if (layoutPeerRefreshFrame) return;
+  let schedule = typeof requestAnimationFrame === 'function'
+    ? requestAnimationFrame
+    : (callback) => setTimeout(callback, 0);
+  layoutPeerRefreshFrame = schedule(() => {
+    layoutPeerRefreshFrame = 0;
+    let groups = Array.from(LAYOUT_PEER_PENDING_GROUPS);
+    LAYOUT_PEER_PENDING_GROUPS.clear();
+    groups.forEach(refreshLayoutPeerGroup);
+  });
 }
 
 export class Layout extends Symbiote {
@@ -58,6 +163,7 @@ export class Layout extends Symbiote {
     '@overflow-mode': 'collapse',
     '@auto-collapse': true,
     '@drawer-hover-open': false,
+    '@layout-peer-group': '',
 
 
     layoutTree: null,
@@ -91,6 +197,11 @@ export class Layout extends Symbiote {
 
     onDrawerBackdropClick: () => this.closeDrawer(),
   };
+
+  connectedCallback() {
+    super.connectedCallback?.();
+    this._syncPeerGroupRegistration();
+  }
 
   /**
    * Register panel type
@@ -139,9 +250,15 @@ export class Layout extends Symbiote {
     this.addEventListener('click', this._drawerClickCaptureHandler, true);
 
 
-    this._resizeFallback = () => this._scheduleResponsiveLayout();
+    this._resizeFallback = () => {
+      this._scheduleResponsiveLayout();
+      scheduleLayoutPeerGroupRefresh(this._layoutPeerGroup);
+    };
     if (typeof ResizeObserver !== 'undefined') {
-      this._resizeObserver = new ResizeObserver(() => this._scheduleResponsiveLayout());
+      this._resizeObserver = new ResizeObserver(() => {
+        this._scheduleResponsiveLayout();
+        scheduleLayoutPeerGroupRefresh(this._layoutPeerGroup);
+      });
       this._resizeObserver.observe(this);
     } else if (typeof window !== 'undefined') {
       window.addEventListener('resize', this._resizeFallback);
@@ -149,6 +266,7 @@ export class Layout extends Symbiote {
   }
 
   disconnectedCallback() {
+    this._unregisterPeerGroup();
     this._resizeObserver?.disconnect();
     if (this._resizeFallback && typeof window !== 'undefined') {
       window.removeEventListener('resize', this._resizeFallback);
@@ -177,6 +295,7 @@ export class Layout extends Symbiote {
   renderCallback() {
     this._renderRoot();
     this._scheduleResponsiveLayout();
+    this.sub('@layout-peer-group', () => this._syncPeerGroupRegistration());
     this.sub('layoutTree', () => {
       this._renderRoot();
       this._scheduleResponsiveLayout();
@@ -319,6 +438,72 @@ export class Layout extends Symbiote {
         node.remove();
       }
     }
+    this._syncLayoutPeerState();
+  }
+
+  _syncPeerGroupRegistration() {
+    let nextGroup = normalizeLayoutPeerGroup(this.getAttribute('layout-peer-group') || this.$?.['@layout-peer-group']);
+    let previousGroup = this._layoutPeerGroup || '';
+    if (previousGroup === nextGroup) {
+      this._syncLayoutPeerState();
+      return;
+    }
+
+    if (previousGroup) {
+      let previousLayouts = LAYOUT_PEER_GROUPS.get(previousGroup);
+      previousLayouts?.delete(this);
+      if (!previousLayouts?.size) LAYOUT_PEER_GROUPS.delete(previousGroup);
+      scheduleLayoutPeerGroupRefresh(previousGroup);
+    }
+
+    this._layoutPeerGroup = nextGroup;
+    if (nextGroup) {
+      if (!LAYOUT_PEER_GROUPS.has(nextGroup)) LAYOUT_PEER_GROUPS.set(nextGroup, new Set());
+      LAYOUT_PEER_GROUPS.get(nextGroup).add(this);
+      scheduleLayoutPeerGroupRefresh(nextGroup);
+    }
+    this._syncLayoutPeerState();
+  }
+
+  _unregisterPeerGroup() {
+    let group = this._layoutPeerGroup || '';
+    if (!group) return;
+    let layouts = LAYOUT_PEER_GROUPS.get(group);
+    layouts?.delete(this);
+    if (!layouts?.size) LAYOUT_PEER_GROUPS.delete(group);
+    this._layoutPeerGroup = '';
+    scheduleLayoutPeerGroupRefresh(group);
+  }
+
+  _syncLayoutPeerState() {
+    let group = this._layoutPeerGroup || '';
+    let layouts = group ? Array.from(LAYOUT_PEER_GROUPS.get(group) || []) : [];
+    let peerInfo = group && isVisibleLayoutPeer(this)
+      ? resolvePeerCollapseInfo(this, layouts)
+      : { hasPeers: false, direction: 'horizontal', slot: 'first' };
+
+    toggleAttributeIfChanged(this, 'layout-peer-active', peerInfo.hasPeers);
+    syncOptionalAttribute(this, 'layout-peer-collapse-dir', peerInfo.hasPeers ? peerInfo.direction : '');
+    syncOptionalAttribute(this, 'layout-peer-collapse-side', peerInfo.hasPeers ? peerInfo.slot : '');
+
+    let rootNode = this.ref.root?.querySelector?.(':scope > layout-node');
+    if (!rootNode?.$) {
+      toggleAttributeIfChanged(this, 'root-collapsed', false);
+      syncOptionalAttribute(this, 'root-collapse-dir', '');
+      syncOptionalAttribute(this, 'root-collapse-side', '');
+      return;
+    }
+
+    rootNode.$.hasLayoutPeers = peerInfo.hasPeers;
+    rootNode.$.peerCollapseDirection = peerInfo.direction;
+    rootNode.$.peerCollapseSlot = peerInfo.slot;
+    rootNode.$.peerCollapseGroup = group;
+    rootNode._updatePanelInfo?.();
+
+    let rootCollapsed = rootNode.getAttribute('node-type') === 'panel' && Boolean(rootNode.$.isCollapsed);
+    toggleAttributeIfChanged(this, 'root-collapsed', rootCollapsed);
+    syncOptionalAttribute(this, 'root-collapse-dir', rootCollapsed ? rootNode.$.collapseDirection : '');
+    syncOptionalAttribute(this, 'root-collapse-side', rootCollapsed ? rootNode.$.collapseSlot : '');
   }
 
   _scheduleResponsiveLayout() {

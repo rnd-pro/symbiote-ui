@@ -243,6 +243,56 @@ test('joining panels promotes the surviving layout node without recreating its c
   assert.equal(layout.getLayout().id, survivorPanel.id);
 });
 
+test('separate panel-layout roots expose collapse controls through a peer group', async () => {
+  installLayoutDom();
+  let [{ createPanel }] = await Promise.all([
+    import('../layout/LayoutTree.js'),
+    import('../layout/Layout/Layout.js'),
+  ]);
+  await import('../layout/LayoutNode/LayoutNode.js');
+
+  let main = document.createElement('panel-layout');
+  let chat = document.createElement('panel-layout');
+  main.setAttribute('layout-peer-group', 'workspace');
+  chat.setAttribute('layout-peer-group', 'workspace');
+  main.getBoundingClientRect = () => ({ left: 0, top: 0, width: 600, height: 420, right: 600, bottom: 420 });
+  chat.getBoundingClientRect = () => ({ left: 608, top: 0, width: 320, height: 420, right: 928, bottom: 420 });
+
+  document.body.append(main, chat);
+  main.setLayout(createPanel('main', {}, { collapse: 'manual' }));
+  chat.setLayout(createPanel('chat', {}, { collapse: 'manual' }));
+  await nextLayoutRenderTick();
+  await nextLayoutRenderTick();
+
+  let mainNode = main.querySelector('layout-node[node-type="panel"]');
+  let chatNode = chat.querySelector('layout-node[node-type="panel"]');
+  assert.ok(mainNode);
+  assert.ok(chatNode);
+  assert.equal(main.hasAttribute('layout-peer-active'), true);
+  assert.equal(chat.hasAttribute('layout-peer-active'), true);
+  assert.equal(main.getAttribute('layout-peer-collapse-dir'), 'horizontal');
+  assert.equal(main.getAttribute('layout-peer-collapse-side'), 'first');
+  assert.equal(chat.getAttribute('layout-peer-collapse-side'), 'second');
+  assert.equal(mainNode.$.canCollapse, true);
+  assert.equal(chatNode.$.canCollapse, true);
+  assert.equal(chatNode.$.collapseIcon, 'chevron_right');
+
+  chatNode.querySelector('.collapse-btn')?.click();
+  await nextLayoutRenderTick();
+  chatNode = chat.querySelector('layout-node[node-type="panel"]');
+  assert.equal(chat.hasAttribute('root-collapsed'), true);
+  assert.equal(chat.getAttribute('root-collapse-dir'), 'horizontal');
+  assert.equal(chat.getAttribute('root-collapse-side'), 'second');
+  assert.equal(chatNode.hasAttribute('collapsed'), true);
+
+  chat.remove();
+  await nextLayoutRenderTick();
+  await nextLayoutRenderTick();
+  mainNode = main.querySelector('layout-node[node-type="panel"]');
+  assert.equal(main.hasAttribute('layout-peer-active'), false);
+  assert.equal(mainNode.$.canCollapse, false);
+});
+
 test('re-mounting the layout tree tears down replaced nodes without a stale panel-menu frame throwing', async () => {
   installLayoutDom();
   let [{ createPanel, createSplit }] = await Promise.all([
