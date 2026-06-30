@@ -28,6 +28,7 @@ function installLayoutDom() {
       CustomEvent: window.CustomEvent,
       MutationObserver: window.MutationObserver,
       CSSStyleSheet: TestCSSStyleSheet,
+      getComputedStyle: window.getComputedStyle || (() => ({ transitionDuration: '0s', animationDuration: '0s' })),
       requestAnimationFrame: (callback) => setTimeout(() => callback(Date.now()), 0),
       cancelAnimationFrame: (id) => clearTimeout(id),
     });
@@ -203,6 +204,43 @@ test('opening a UI panel preserves existing layout panel components by node id',
   assert.equal(layout.querySelector('test-lifecycle-graph-panel'), graphPanel);
   assert.equal(layout.querySelector('test-lifecycle-content-panel'), contentPanel);
   assert.equal(themeLifecycle.connected, 1);
+});
+
+test('joining panels promotes the surviving layout node without recreating its component', async () => {
+  installLayoutDom();
+  let [{ createPanel, createSplit }] = await Promise.all([
+    import('../layout/LayoutTree.js'),
+    import('../layout/Layout/Layout.js'),
+  ]);
+  let removedLifecycle = { connected: 0, disconnected: 0, teardown: 0, suspended: 0, resumed: 0 };
+  let survivorLifecycle = { connected: 0, disconnected: 0, teardown: 0, suspended: 0, resumed: 0 };
+
+  defineLayoutTestElement('test-join-removed-panel', removedLifecycle);
+  defineLayoutTestElement('test-join-survivor-panel', survivorLifecycle);
+
+  let removedPanel = createPanel('removed');
+  let survivorPanel = createPanel('survivor');
+  let layout = document.createElement('panel-layout');
+  document.body.append(layout);
+  layout.registerPanelType('removed', { component: 'test-join-removed-panel' });
+  layout.registerPanelType('survivor', { component: 'test-join-survivor-panel' });
+  layout.setLayout(createSplit('horizontal', removedPanel, survivorPanel, 0.5));
+  await nextLayoutRenderTick();
+
+  let survivorComponent = layout.querySelector('test-join-survivor-panel');
+  assert.ok(survivorComponent, 'expected survivor panel component to mount');
+  assert.equal(survivorLifecycle.connected, 1);
+
+  layout.joinPanels(removedPanel.id);
+  await nextLayoutRenderTick();
+
+  assert.equal(layout.querySelector('test-join-survivor-panel'), survivorComponent);
+  assert.equal(survivorLifecycle.teardown, 0);
+  assert.equal(survivorLifecycle.suspended, 1);
+  assert.equal(survivorLifecycle.resumed, 1);
+  assert.equal(layout.querySelector('test-join-removed-panel'), null);
+  assert.equal(layout.querySelector(':scope > * > layout-node')?.$.nodeId, survivorPanel.id);
+  assert.equal(layout.getLayout().id, survivorPanel.id);
 });
 
 test('re-mounting the layout tree tears down replaced nodes without a stale panel-menu frame throwing', async () => {

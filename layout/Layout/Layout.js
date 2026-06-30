@@ -7,6 +7,7 @@
 import Symbiote from '@symbiotejs/symbiote';
 import { ensureMaterialSymbols } from '../../icons/MaterialSymbols.js';
 import * as LayoutTree from './../LayoutTree.js';
+import { resumeLayoutSubtree, suspendLayoutSubtree } from './../lifecycle.js';
 import { template } from './Layout.tpl.js';
 import { styles } from './Layout.css.js';
 import './../LayoutNode/LayoutNode.js';
@@ -275,6 +276,21 @@ export class Layout extends Symbiote {
     let rootNodes = Array.from(this.ref.root.children)
       .filter((child) => child.localName === 'layout-node');
     let rootNode = rootNodes.find((node) => node.$?.nodeId === this.$.layoutTree.id);
+    if (!rootNode) {
+      let promotedRoot = Array.from(this.ref.root.querySelectorAll('layout-node'))
+        .find((node) => node.$?.nodeId === this.$.layoutTree.id);
+      if (promotedRoot) {
+        if (promotedRoot.parentElement !== this.ref.root) {
+          suspendLayoutSubtree(promotedRoot, { reason: 'layout-move' });
+          try {
+            this.ref.root.insertBefore(promotedRoot, rootNodes[0] || null);
+          } finally {
+            resumeLayoutSubtree(promotedRoot, { reason: 'layout-move' });
+          }
+        }
+        rootNode = promotedRoot;
+      }
+    }
     if (!rootNode) {
       let reusableRoot = rootNodes.find((node) => {
         let nodeId = node.$?.nodeId;
