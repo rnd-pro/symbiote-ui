@@ -1,4 +1,5 @@
 import Symbiote from '@symbiotejs/symbiote';
+import { slotProcessor } from '@symbiotejs/symbiote/core/slotProcessor.js';
 import template from './SegmentedControl.tpl.js';
 import css from './SegmentedControl.css.js';
 
@@ -13,6 +14,11 @@ export class SegmentedControl extends Symbiote {
   static observedAttributes = SEGMENTED_ATTRIBUTES;
 
   #slot = null;
+
+  constructor() {
+    super();
+    this.templateProcessors.add(slotProcessor);
+  }
 
   #onSlotChange = () => {
     this._syncItems();

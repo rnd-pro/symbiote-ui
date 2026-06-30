@@ -596,6 +596,8 @@ test('sn-segmented-control coordinates roving focus and selection', async () => 
 
   const items = el._getItems();
   assert.equal(items.length, 3);
+  assert.equal(el.querySelector('slot'), null);
+  assert.deepEqual(Array.from(el.children).map((child) => child.tagName.toLowerCase()), ['button', 'button', 'button']);
   assert.equal(items[0].getAttribute('aria-checked'), 'false');
   assert.equal(items[1].getAttribute('aria-checked'), 'true');
   assert.equal(items[1].getAttribute('tabindex'), '0');
