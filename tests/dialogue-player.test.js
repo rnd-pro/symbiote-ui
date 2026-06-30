@@ -268,6 +268,26 @@ test('player is a clean no-op against a non-browser stage', async () => {
   assert.equal(player.index, 2);
 });
 
+test('minTurnMs keeps no-op stages from flashing through the timeline', async () => {
+  let stage = createDialogueStage();
+  let cueTimes = [];
+  let player = createDialoguePlayer(stage, makeTimeline(), {
+    defaultGapMs: 0,
+    minTurnMs: 20,
+    onCue: () => cueTimes.push(Date.now()),
+  });
+
+  let started = Date.now();
+  player.play();
+  await player.done;
+  let elapsed = Date.now() - started;
+
+  assert.equal(cueTimes.length, 3);
+  assert.ok(elapsed >= 35, `expected visual dwell, got ${elapsed}ms`);
+  assert.ok(cueTimes[1] - cueTimes[0] >= 12, 'second cue waited after first');
+  assert.ok(cueTimes[2] - cueTimes[1] >= 12, 'third cue waited after second');
+});
+
 function makeLongTimeline() {
   return {
     personas: { ada: {}, linus: {} },

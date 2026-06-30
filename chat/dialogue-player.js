@@ -16,6 +16,7 @@
  */
 
 const DEFAULT_GAP_MS = 120;
+const DEFAULT_MIN_TURN_MS = 0;
 
 function nonNegative(value, fallback) {
   let n = Number(value);
@@ -42,13 +43,16 @@ function clampIndex(index, total) {
  * @param {(index:number) => void} [options.onIndexChange] - fired whenever the cursor moves.
  * @param {(state:string) => void} [options.onStateChange] - 'playing' | 'paused' | 'stopped' | 'finished'.
  * @param {number} [options.defaultGapMs=120] - gap between sequential turns.
+ * @param {number} [options.minTurnMs=0] - minimum visible time for each cue
+ *   before advancing. Useful when a speech engine resolves immediately.
  * @returns {object} controller (see the shared contract).
  */
 export function createDialoguePlayer(stage, timeline, options = {}) {
-  let { onCue, onIndexChange, onStateChange, defaultGapMs } = options;
+  let { onCue, onIndexChange, onStateChange, defaultGapMs, minTurnMs } = options;
   let personas = timeline?.personas || {};
   let turns = Array.isArray(timeline?.turns) ? timeline.turns : [];
   let baseGap = nonNegative(defaultGapMs, DEFAULT_GAP_MS);
+  let minTurn = nonNegative(minTurnMs, DEFAULT_MIN_TURN_MS);
   let total = turns.length;
 
   if (stage && typeof stage.persona === 'function') {
@@ -135,9 +139,11 @@ export function createDialoguePlayer(stage, timeline, options = {}) {
     let token = run;
     let turn = turns[index];
     let cued = false;
+    let cueStartedAt = 0;
     let fireCue = () => {
       if (cued) return;
       cued = true;
+      cueStartedAt = Date.now();
       let cb = controller.onCue;
       if (typeof cb === 'function') {
         try {
@@ -171,21 +177,19 @@ export function createDialoguePlayer(stage, timeline, options = {}) {
         return;
       }
       if (state !== 'playing') return;
-      scheduleAdvance(token);
+      scheduleAdvance(token, cueStartedAt);
     });
   }
 
   // After a turn ends, finish at the timeline's end or move to the next turn
   // after the gap. Pausing during the gap re-defers through `pendingAdvance`.
-  function scheduleAdvance(token) {
+  function scheduleAdvance(token, turnStartedAt = 0) {
     if (token !== run) return;
 
-    if (index >= total - 1) {
-      finish();
-      return;
-    }
+    let elapsed = turnStartedAt ? Date.now() - turnStartedAt : 0;
+    let delay = Math.max(baseGap, Math.max(0, minTurn - elapsed));
 
-    gapTimer = setTimeout(() => {
+    let advance = () => {
       gapTimer = null;
       if (token !== run) return;
       if (state === 'paused') {
@@ -193,10 +197,16 @@ export function createDialoguePlayer(stage, timeline, options = {}) {
         return;
       }
       if (state !== 'playing') return;
+      if (index >= total - 1) {
+        finish();
+        return;
+      }
       index += 1;
       emitIndex();
       speakCurrent();
-    }, baseGap);
+    };
+
+    gapTimer = setTimeout(advance, delay);
   }
 
   /** Move the cursor to `target` and speak it, cancelling anything in flight. */
