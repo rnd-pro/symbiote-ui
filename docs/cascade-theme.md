@@ -129,8 +129,9 @@ Browser hosts can mount the reusable editor module inside a layout panel:
 ```
 
 The editor reuses the same bounded cascade controls, auto-saves normalized
-parameters to `localStorage`, can reset to defaults, copies the current
-parameter JSON, and emits `cascade-theme-change` after applying tokens. The
+parameters to `localStorage`, can reset to defaults while clearing browser
+`localStorage`, copies the current parameter JSON, and emits
+`cascade-theme-change` after applying tokens. The
 layout owns where the module is shown; `panel-layout` can register it as a
 panel type while keeping the panel menu closed by default.
 Temporary UI-invoked panels use the built-in `Close` action and

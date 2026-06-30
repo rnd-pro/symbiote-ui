@@ -760,7 +760,7 @@ test('svg shape nodes keep visual icons without internal labels or watermarks', 
 });
 
 test('cascade theme editor is a reusable browser module', async () => {
-  const [editor, widget, widgetTemplate, widgetStyles, styles, uiIndex, registry, customElements, layoutNode] = await Promise.all([
+  const [editor, widget, widgetTemplate, widgetStyles, styles, uiIndex, registry, customElements, layoutNode, cascadeGuide] = await Promise.all([
     readFile(cascadeThemeEditorSource, 'utf8'),
     readFile(cascadeThemeWidgetSource, 'utf8'),
     readFile(new URL('../themes/CascadeThemeWidget/CascadeThemeWidget.tpl.js', import.meta.url), 'utf8'),
@@ -770,6 +770,7 @@ test('cascade theme editor is a reusable browser module', async () => {
     readFile(componentRegistrySource, 'utf8'),
     readFile(customElementsSource, 'utf8'),
     readFile(layoutNodeSource, 'utf8'),
+    readFile(cascadeThemeGuideSource, 'utf8'),
   ]);
 
   assert.match(editor, /class CascadeThemeEditor extends Symbiote/);
@@ -783,6 +784,9 @@ test('cascade theme editor is a reusable browser module', async () => {
   assert.match(editor, /storage\.setItem\(this\.storageKey/);
   assert.match(editor, /copyParameters\(\)/);
   assert.match(editor, /reset\(\)/);
+  assert.match(editor, /function clearLocalStorage\(\) \{[\s\S]*?storage\.clear\(\);[\s\S]*?\}/);
+  assert.match(editor, /this\.\#syncRegisterButtons\(\);\s+clearLocalStorage\(\);\s+return;/);
+  assert.match(editor, /if \(active\) this\.\#setActiveTarget\(active\);\s+this\.\#syncRegisterButtons\(\);\s+clearLocalStorage\(\);/);
   assert.match(editor, /rangeProgress/);
   assert.match(editor, /--cte-range-progress/);
   assert.match(editor, /new CustomEvent\('cascade-theme-change'/);
@@ -802,6 +806,8 @@ test('cascade theme editor is a reusable browser module', async () => {
   assert.match(widget, /modeDarkActive/);
   assert.match(widget, /onControlInput/);
   assert.match(widget, /onModePick/);
+  assert.match(widget, /function clearLocalStorage\(\) \{[\s\S]*?storage\.clear\(\);[\s\S]*?\}/);
+  assert.match(widget, /this\.\#syncRegisterButtons\(\);\s+clearLocalStorage\(\);/);
   assert.match(widget, /cascade-theme-open-full/);
   assert.match(widget, /mountOverlayToDocument\(popover, this\.\#resolveTarget\(\)\)/);
   assert.match(widget, /bringOverlayToFront\(popover\)/);
@@ -857,13 +863,16 @@ test('cascade theme editor is a reusable browser module', async () => {
   assert.match(registry, /cascade_theme_widget_open_full/);
   assert.match(registry, /cascade_theme_widget_apply_quick/);
   assert.match(registry, /pattern: \{ type: 'number', minimum: 0, maximum: 100 \}/);
+  assert.match(registry, /reset clears browser localStorage after applying defaults/);
   assert.match(registry, /panel_layout_open_panel/);
   assert.match(registry, /panel_layout_close_ui_panel/);
   assert.match(registry, /ui-invoked-panels/);
   assert.match(customElements, /"tagName": "cascade-theme-editor"/);
   assert.match(customElements, /"tagName": "cascade-theme-widget"/);
+  assert.match(customElements, /Restores cascade theme defaults and clears browser localStorage/);
   assert.match(customElements, /"pattern": \{\s*"type": "number",\s*"minimum": 0,\s*"maximum": 100\s*\}/);
   assert.match(customElements, /"componentDescription"/);
+  assert.match(cascadeGuide, /clearing browser\s+`localStorage`/);
   assert.match(layoutNode, /_applyPanelComponentConfig/);
   assert.match(layoutNode, /config\.attributes/);
   assert.match(layoutNode, /config\.properties/);

@@ -3014,7 +3014,7 @@ export let COMPONENTS = [
     agent: {
       semanticRole: 'global shell cascade theme quick control',
       usage: 'Mount in a layout shell action slot with a host-selected storage-key and target-selector. Pair it with cascade-theme-editor by listening for cascade-theme-open-full and opening a host-approved panel-layout panel that uses the same storage-key and target-selector.',
-      dataOwnership: 'component-owned normalized quick theme state persisted through the same host-selected localStorage key as cascade-theme-editor',
+      dataOwnership: 'component-owned normalized quick theme state persisted through the same host-selected localStorage key as cascade-theme-editor; reset clears browser localStorage after applying defaults',
     },
     contract: {
       status: 'draft',
@@ -3030,7 +3030,7 @@ export let COMPONENTS = [
       ],
       methods: [
         { name: 'setState', type: 'function', description: 'Applies normalized cascade theme parameters.' },
-        { name: 'reset', type: 'function', description: 'Restores cascade theme defaults.' },
+        { name: 'reset', type: 'function', description: 'Restores cascade theme defaults and clears browser localStorage.' },
         { name: 'copyParameters', type: 'function', description: 'Copies normalized theme parameters as JSON.' },
       ],
       events: [
@@ -3067,7 +3067,7 @@ export let COMPONENTS = [
     agent: {
       semanticRole: 'layout-hosted cascade theme control surface',
       usage: 'Mount as a layout panel when an agent or user needs bounded live theme controls for a host shell. When opened from cascade-theme-widget, use the same storage-key and target-selector so quick controls and full controls edit one cascade theme state.',
-      dataOwnership: 'component-owned normalized theme state persisted through host-selected localStorage key',
+      dataOwnership: 'component-owned normalized theme state persisted through host-selected localStorage key; reset clears browser localStorage after applying defaults',
     },
     contract: {
       status: 'draft',
@@ -3083,7 +3083,7 @@ export let COMPONENTS = [
       ],
       methods: [
         { name: 'setState', type: 'function', description: 'Applies normalized cascade theme parameters.' },
-        { name: 'reset', type: 'function', description: 'Restores cascade theme defaults.' },
+        { name: 'reset', type: 'function', description: 'Restores cascade theme defaults and clears browser localStorage.' },
         { name: 'copyParameters', type: 'function', description: 'Copies normalized theme parameters as JSON.' },
       ],
       events: [

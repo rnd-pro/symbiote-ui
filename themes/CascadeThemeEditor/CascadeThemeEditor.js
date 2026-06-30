@@ -29,6 +29,12 @@ function getStorage() {
   return null;
 }
 
+function clearLocalStorage() {
+  let storage = getStorage();
+  if (!storage) return;
+  try { storage.clear(); } catch (error) { /* storage unavailable */ }
+}
+
 function parseStoredState(value) {
   if (!value) return null;
   try {
@@ -363,6 +369,7 @@ export class CascadeThemeEditor extends Symbiote {
       this.#geometryRegister = '';
       this.#applyGeometryRegister('reset');
       this.#syncRegisterButtons();
+      clearLocalStorage();
       return;
     }
     let originalId = this.#activeTargetId;
@@ -388,6 +395,7 @@ export class CascadeThemeEditor extends Symbiote {
     this.#renderTargets();
     if (active) this.#setActiveTarget(active);
     this.#syncRegisterButtons();
+    clearLocalStorage();
   }
 
   // Strip a scope's inline cascade tokens so it inherits from its parent scope again.

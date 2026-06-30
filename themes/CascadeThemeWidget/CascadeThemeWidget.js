@@ -34,6 +34,12 @@ function getStorage() {
   return null;
 }
 
+function clearLocalStorage() {
+  let storage = getStorage();
+  if (!storage) return;
+  try { storage.clear(); } catch (error) { /* storage unavailable */ }
+}
+
 function parseStoredState(value) {
   if (!value) return null;
   try {
@@ -217,6 +223,7 @@ export class CascadeThemeWidget extends Symbiote {
       this.#applyGeometryRegister('reset');
     }
     this.#syncRegisterButtons();
+    clearLocalStorage();
   }
 
   async copyParameters() {

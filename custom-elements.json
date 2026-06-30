@@ -42306,7 +42306,7 @@
           "name": "CascadeThemeEditor",
           "tagName": "cascade-theme-editor",
           "description": "Reusable cascade theme editor module for host layouts.",
-          "componentDescription": "Reusable cascade theme editor module for host layouts. Use this layout-hosted cascade theme control surface when composing theme UI. Capabilities: cascade-theme-controls, copy-parameters, reset-defaults, local-storage, layout-panel. Data ownership: component-owned normalized theme state persisted through host-selected localStorage key. WebMCP tools: cascade_theme_editor_apply.",
+          "componentDescription": "Reusable cascade theme editor module for host layouts. Use this layout-hosted cascade theme control surface when composing theme UI. Capabilities: cascade-theme-controls, copy-parameters, reset-defaults, local-storage, layout-panel. Data ownership: component-owned normalized theme state persisted through host-selected localStorage key; reset clears browser localStorage after applying defaults. WebMCP tools: cascade_theme_editor_apply.",
           "attributes": [
             {
               "name": "storage-key",
@@ -42340,7 +42340,7 @@
             {
               "kind": "method",
               "name": "reset",
-              "description": "Restores cascade theme defaults."
+              "description": "Restores cascade theme defaults and clears browser localStorage."
             },
             {
               "kind": "method",
@@ -42453,7 +42453,7 @@
               {
                 "name": "reset",
                 "type": "function",
-                "description": "Restores cascade theme defaults."
+                "description": "Restores cascade theme defaults and clears browser localStorage."
               },
               {
                 "name": "copyParameters",
@@ -42594,10 +42594,10 @@
             }
           },
           "agent": {
-            "componentDescription": "Reusable cascade theme editor module for host layouts. Use this layout-hosted cascade theme control surface when composing theme UI. Capabilities: cascade-theme-controls, copy-parameters, reset-defaults, local-storage, layout-panel. Data ownership: component-owned normalized theme state persisted through host-selected localStorage key. WebMCP tools: cascade_theme_editor_apply.",
+            "componentDescription": "Reusable cascade theme editor module for host layouts. Use this layout-hosted cascade theme control surface when composing theme UI. Capabilities: cascade-theme-controls, copy-parameters, reset-defaults, local-storage, layout-panel. Data ownership: component-owned normalized theme state persisted through host-selected localStorage key; reset clears browser localStorage after applying defaults. WebMCP tools: cascade_theme_editor_apply.",
             "semanticRole": "layout-hosted cascade theme control surface",
             "usage": "Mount as a layout panel when an agent or user needs bounded live theme controls for a host shell. When opened from cascade-theme-widget, use the same storage-key and target-selector so quick controls and full controls edit one cascade theme state.",
-            "dataOwnership": "component-owned normalized theme state persisted through host-selected localStorage key",
+            "dataOwnership": "component-owned normalized theme state persisted through host-selected localStorage key; reset clears browser localStorage after applying defaults",
             "webmcp": {
               "mode": "explicit-descriptor",
               "toolNames": [
@@ -42650,7 +42650,7 @@
                 {
                   "name": "reset",
                   "type": "function",
-                  "description": "Restores cascade theme defaults."
+                  "description": "Restores cascade theme defaults and clears browser localStorage."
                 },
                 {
                   "name": "copyParameters",
@@ -42812,7 +42812,7 @@
           "name": "CascadeThemeWidget",
           "tagName": "cascade-theme-widget",
           "description": "Compact global header widget for cascade theme quick controls.",
-          "componentDescription": "Compact global header widget for cascade theme quick controls. Use this global shell cascade theme quick control when composing theme UI. Capabilities: cascade-theme-quick-controls, copy-parameters, reset-defaults, open-full-editor, local-storage, global-shell-action. Data ownership: component-owned normalized quick theme state persisted through the same host-selected localStorage key as cascade-theme-editor. WebMCP tools: cascade_theme_widget_open_full, cascade_theme_widget_apply_quick.",
+          "componentDescription": "Compact global header widget for cascade theme quick controls. Use this global shell cascade theme quick control when composing theme UI. Capabilities: cascade-theme-quick-controls, copy-parameters, reset-defaults, open-full-editor, local-storage, global-shell-action. Data ownership: component-owned normalized quick theme state persisted through the same host-selected localStorage key as cascade-theme-editor; reset clears browser localStorage after applying defaults. WebMCP tools: cascade_theme_widget_open_full, cascade_theme_widget_apply_quick.",
           "attributes": [
             {
               "name": "storage-key",
@@ -42846,7 +42846,7 @@
             {
               "kind": "method",
               "name": "reset",
-              "description": "Restores cascade theme defaults."
+              "description": "Restores cascade theme defaults and clears browser localStorage."
             },
             {
               "kind": "method",
@@ -42964,7 +42964,7 @@
               {
                 "name": "reset",
                 "type": "function",
-                "description": "Restores cascade theme defaults."
+                "description": "Restores cascade theme defaults and clears browser localStorage."
               },
               {
                 "name": "copyParameters",
@@ -43107,10 +43107,10 @@
             }
           },
           "agent": {
-            "componentDescription": "Compact global header widget for cascade theme quick controls. Use this global shell cascade theme quick control when composing theme UI. Capabilities: cascade-theme-quick-controls, copy-parameters, reset-defaults, open-full-editor, local-storage, global-shell-action. Data ownership: component-owned normalized quick theme state persisted through the same host-selected localStorage key as cascade-theme-editor. WebMCP tools: cascade_theme_widget_open_full, cascade_theme_widget_apply_quick.",
+            "componentDescription": "Compact global header widget for cascade theme quick controls. Use this global shell cascade theme quick control when composing theme UI. Capabilities: cascade-theme-quick-controls, copy-parameters, reset-defaults, open-full-editor, local-storage, global-shell-action. Data ownership: component-owned normalized quick theme state persisted through the same host-selected localStorage key as cascade-theme-editor; reset clears browser localStorage after applying defaults. WebMCP tools: cascade_theme_widget_open_full, cascade_theme_widget_apply_quick.",
             "semanticRole": "global shell cascade theme quick control",
             "usage": "Mount in a layout shell action slot with a host-selected storage-key and target-selector. Pair it with cascade-theme-editor by listening for cascade-theme-open-full and opening a host-approved panel-layout panel that uses the same storage-key and target-selector.",
-            "dataOwnership": "component-owned normalized quick theme state persisted through the same host-selected localStorage key as cascade-theme-editor",
+            "dataOwnership": "component-owned normalized quick theme state persisted through the same host-selected localStorage key as cascade-theme-editor; reset clears browser localStorage after applying defaults",
             "webmcp": {
               "mode": "explicit-descriptor",
               "toolNames": [
@@ -43165,7 +43165,7 @@
                 {
                   "name": "reset",
                   "type": "function",
-                  "description": "Restores cascade theme defaults."
+                  "description": "Restores cascade theme defaults and clears browser localStorage."
                 },
                 {
                   "name": "copyParameters",
