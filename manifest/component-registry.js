@@ -3525,7 +3525,7 @@ export let COMPONENTS = [
       status: 'draft',
       schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
-      capabilities: ['layout-tree', 'split-panels', 'cross-layout-peer-collapse', 'panel-registry', 'panel-menu-actions', 'ui-invoked-panels', 'responsive-behavior', 'importance-auto-collapse', 'min-size-fit', 'scroll-fallback', 'mobile-stack', 'mobile-drawer', 'mobile-swipe-mode', 'local-storage'],
+      capabilities: ['layout-tree', 'split-panels', 'cross-layout-peer-collapse', 'edge-collapse', 'panel-registry', 'panel-menu-actions', 'ui-invoked-panels', 'responsive-behavior', 'importance-auto-collapse', 'min-size-fit', 'scroll-fallback', 'mobile-stack', 'mobile-drawer', 'mobile-swipe-mode', 'local-storage'],
       attributes: [
         { name: 'storage-key', type: 'string', description: 'Optional key for persisted layout state.' },
         { name: 'min-panel-size', type: 'number', description: 'Minimum panel size in pixels.' },
@@ -3535,6 +3535,7 @@ export let COMPONENTS = [
         { name: 'responsive-breakpoint', type: 'number', description: 'Inline size where responsive mode activates.' },
         { name: 'swipe-control', type: 'string', description: 'Default mobile swipe source: edge, rail, or none.' },
         { name: 'overflow-mode', type: 'string', description: 'Overflow fallback: collapse, scroll-inline, scroll-block, or scroll.' },
+        { name: 'edge-collapse', type: 'boolean', description: 'When the root panel is collapsed, removes the theme frame gap only on the outer collapsed edge so rails can sit flush with a viewport or app edge.' },
         { name: 'layout-peer-group', type: 'string', description: 'Optional group id for separate panel-layout roots that should expose root-panel collapse controls when visible peers exist.' },
         { name: 'layout-peer-active', type: 'boolean', description: 'Read-only runtime marker set when this layout has a visible peer in its layout-peer-group.' },
         { name: 'layout-peer-collapse-dir', type: 'string', description: 'Read-only runtime collapse axis resolved from the visible peer geometry: horizontal or vertical.' },

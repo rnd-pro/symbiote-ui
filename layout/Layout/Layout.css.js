@@ -24,6 +24,22 @@ export let styles = css`
       background: var(--sn-layout-gap-bg);
     }
 
+    &[edge-collapse][root-collapsed][root-collapse-dir='horizontal'][root-collapse-side='first'] .layout-root {
+      padding-inline-start: 0;
+    }
+
+    &[edge-collapse][root-collapsed][root-collapse-dir='horizontal'][root-collapse-side='second'] .layout-root {
+      padding-inline-end: 0;
+    }
+
+    &[edge-collapse][root-collapsed][root-collapse-dir='vertical'][root-collapse-side='first'] .layout-root {
+      padding-block-start: 0;
+    }
+
+    &[edge-collapse][root-collapsed][root-collapse-dir='vertical'][root-collapse-side='second'] .layout-root {
+      padding-block-end: 0;
+    }
+
     &[scroll-inline-active] {
       overflow-x: auto;
 

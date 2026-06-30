@@ -3,6 +3,7 @@ await acquireCurrentTestFileLock(import.meta.url);
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { parseHTML } from 'linkedom';
 
 class TestCSSStyleSheet {
@@ -291,6 +292,21 @@ test('separate panel-layout roots expose collapse controls through a peer group'
   mainNode = main.querySelector('layout-node[node-type="panel"]');
   assert.equal(main.hasAttribute('layout-peer-active'), false);
   assert.equal(mainNode.$.canCollapse, false);
+});
+
+test('edge-collapse mode lets root rails sit flush on the outer edge', async () => {
+  const [layoutCss, registry, customElements] = await Promise.all([
+    readFile(new URL('../layout/Layout/Layout.css.js', import.meta.url), 'utf8'),
+    readFile(new URL('../manifest/component-registry.js', import.meta.url), 'utf8'),
+    readFile(new URL('../custom-elements.json', import.meta.url), 'utf8'),
+  ]);
+
+  assert.match(layoutCss, /\[edge-collapse\]\[root-collapsed\]\[root-collapse-dir='horizontal'\]\[root-collapse-side='first'\][\s\S]*padding-inline-start: 0/);
+  assert.match(layoutCss, /\[edge-collapse\]\[root-collapsed\]\[root-collapse-dir='horizontal'\]\[root-collapse-side='second'\][\s\S]*padding-inline-end: 0/);
+  assert.match(layoutCss, /\[edge-collapse\]\[root-collapsed\]\[root-collapse-dir='vertical'\]\[root-collapse-side='first'\][\s\S]*padding-block-start: 0/);
+  assert.match(layoutCss, /\[edge-collapse\]\[root-collapsed\]\[root-collapse-dir='vertical'\]\[root-collapse-side='second'\][\s\S]*padding-block-end: 0/);
+  assert.match(registry, /edge-collapse/);
+  assert.match(customElements, /"name": "edge-collapse"/);
 });
 
 test('re-mounting the layout tree tears down replaced nodes without a stale panel-menu frame throwing', async () => {

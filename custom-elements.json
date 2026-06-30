@@ -30868,7 +30868,7 @@
           "name": "Layout",
           "tagName": "panel-layout",
           "description": "Panel-based application layout shell.",
-          "componentDescription": "Panel-based application layout shell. Use this layout composition and navigation surface when composing layout UI. Capabilities: layout-tree, split-panels, cross-layout-peer-collapse, panel-registry, panel-menu-actions, ui-invoked-panels, responsive-behavior, importance-auto-collapse, min-size-fit, scroll-fallback, mobile-stack, mobile-drawer, mobile-swipe-mode, local-storage. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: panel_layout_set_behavior, panel_layout_register_panel_type, panel_layout_set_panel_menu_actions, panel_layout_open_panel, panel_layout_close_ui_panel, panel_layout_remove_ui_panel.",
+          "componentDescription": "Panel-based application layout shell. Use this layout composition and navigation surface when composing layout UI. Capabilities: layout-tree, split-panels, cross-layout-peer-collapse, edge-collapse, panel-registry, panel-menu-actions, ui-invoked-panels, responsive-behavior, importance-auto-collapse, min-size-fit, scroll-fallback, mobile-stack, mobile-drawer, mobile-swipe-mode, local-storage. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: panel_layout_set_behavior, panel_layout_register_panel_type, panel_layout_set_panel_menu_actions, panel_layout_open_panel, panel_layout_close_ui_panel, panel_layout_remove_ui_panel.",
           "attributes": [
             {
               "name": "storage-key",
@@ -30925,6 +30925,13 @@
                 "text": "string"
               },
               "description": "Overflow fallback: collapse, scroll-inline, scroll-block, or scroll."
+            },
+            {
+              "name": "edge-collapse",
+              "type": {
+                "text": "boolean"
+              },
+              "description": "When the root panel is collapsed, removes the theme frame gap only on the outer collapsed edge so rails can sit flush with a viewport or app edge."
             },
             {
               "name": "layout-peer-group",
@@ -31759,7 +31766,7 @@
             }
           },
           "agent": {
-            "componentDescription": "Panel-based application layout shell. Use this layout composition and navigation surface when composing layout UI. Capabilities: layout-tree, split-panels, cross-layout-peer-collapse, panel-registry, panel-menu-actions, ui-invoked-panels, responsive-behavior, importance-auto-collapse, min-size-fit, scroll-fallback, mobile-stack, mobile-drawer, mobile-swipe-mode, local-storage. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: panel_layout_set_behavior, panel_layout_register_panel_type, panel_layout_set_panel_menu_actions, panel_layout_open_panel, panel_layout_close_ui_panel, panel_layout_remove_ui_panel.",
+            "componentDescription": "Panel-based application layout shell. Use this layout composition and navigation surface when composing layout UI. Capabilities: layout-tree, split-panels, cross-layout-peer-collapse, edge-collapse, panel-registry, panel-menu-actions, ui-invoked-panels, responsive-behavior, importance-auto-collapse, min-size-fit, scroll-fallback, mobile-stack, mobile-drawer, mobile-swipe-mode, local-storage. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: panel_layout_set_behavior, panel_layout_register_panel_type, panel_layout_set_panel_menu_actions, panel_layout_open_panel, panel_layout_close_ui_panel, panel_layout_remove_ui_panel.",
             "semanticRole": "layout composition and navigation surface",
             "usage": "Render or compose <panel-layout> when the host needs panel-based application layout shell.",
             "dataOwnership": "host-owned model; component renders and emits intent events",
@@ -31789,6 +31796,7 @@
                 "layout-tree",
                 "split-panels",
                 "cross-layout-peer-collapse",
+                "edge-collapse",
                 "panel-registry",
                 "panel-menu-actions",
                 "ui-invoked-panels",
@@ -31841,6 +31849,11 @@
                   "name": "overflow-mode",
                   "type": "string",
                   "description": "Overflow fallback: collapse, scroll-inline, scroll-block, or scroll."
+                },
+                {
+                  "name": "edge-collapse",
+                  "type": "boolean",
+                  "description": "When the root panel is collapsed, removes the theme frame gap only on the outer collapsed edge so rails can sit flush with a viewport or app edge."
                 },
                 {
                   "name": "layout-peer-group",
