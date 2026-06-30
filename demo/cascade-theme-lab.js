@@ -2918,9 +2918,9 @@ const PRESENTER_CURSOR_TARGETS = [
 const PRESENTER_CURSOR_SCENARIO = {
   steps: [
     { target: 'context', label: 'Mapping the codebase', holdMs: 1100 },
-    { target: 'review', label: 'Reviewing the diff', holdMs: 1100 },
+    { target: 'review', label: 'Reviewing the diff', gesture: 'circle', holdMs: 1100 },
     { target: 'smoke', label: 'Running browser smoke', holdMs: 1100 },
-    { target: 'publish', label: 'Shipping the build', holdMs: 1300 },
+    { target: 'publish', label: 'Shipping the build', gesture: 'underline', holdMs: 1300 },
   ],
 };
 

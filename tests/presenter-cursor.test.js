@@ -11,14 +11,25 @@ import {
 /**
  * Fake cursor: records every `moveTo` element (and the opts it was given) plus
  * `clear` calls, so a test can assert what the scenario player drove without a
- * real DOM.
+ * real DOM. It also honors the gesture-settled contract: when a move carries a
+ * gesture it records the gesture name and (by default) reports settlement
+ * synchronously, standing in for a real flourish so the player can advance. Pass
+ * `{ settleGesture: false }` to leave a gesture pending (e.g. to exercise the
+ * watchdog or abort paths).
  */
-function makeFakeCursor() {
+function makeFakeCursor({ settleGesture = true } = {}) {
   let cursor = {
     moves: [],
+    gestures: [],
     clearCount: 0,
     moveTo(el, opts) {
       cursor.moves.push({ el, opts });
+      if (opts && typeof opts.gesture === 'string') {
+        cursor.gestures.push(opts.gesture);
+      }
+      if (settleGesture && opts && typeof opts.onGestureSettled === 'function') {
+        opts.onGestureSettled();
+      }
     },
     clear() {
       cursor.clearCount += 1;
@@ -174,6 +185,103 @@ test('playCursorScenario passes gesture and label through to the cursor opts', a
   assert.equal(cursor.moves.length, 1);
   assert.equal(cursor.moves[0].opts.gesture, 'circle');
   assert.equal(cursor.moves[0].opts.label, 'intro');
+});
+
+test('playCursorScenario runs a step gesture and keeps step order', async () => {
+  let cursor = makeFakeCursor();
+  let resolver = makeFakeResolver({ a: { id: 'a' }, b: { id: 'b' }, c: { id: 'c' } });
+  let seen = [];
+
+  let scenario = {
+    steps: [
+      { target: 'a', gesture: 'circle', label: 'one' },
+      { target: 'b', label: 'two' }, // no gesture
+      { target: 'c', gesture: 'underline', label: 'three' },
+    ],
+  };
+
+  await playCursorScenario(cursor, scenario, {
+    resolveTarget: resolver.resolve,
+    defaultHoldMs: 0,
+    onStep: (step, index) => seen.push({ index, gesture: step.gesture || null }),
+  });
+
+  // Every gesture fired through the cursor's gesture path, in order.
+  assert.deepEqual(cursor.gestures, ['circle', 'underline']);
+  // The cursor still visited each target in order.
+  assert.deepEqual(
+    cursor.moves.map((m) => m.el.id),
+    ['a', 'b', 'c'],
+  );
+  // The scenario completed in order, gesture steps included.
+  assert.deepEqual(seen, [
+    { index: 0, gesture: 'circle' },
+    { index: 1, gesture: null },
+    { index: 2, gesture: 'underline' },
+  ]);
+});
+
+test('playCursorScenario waits for a slow gesture before advancing', async () => {
+  // A cursor whose gesture settles asynchronously: the player must hold the step
+  // open until settlement, so the next step does not start mid-flourish.
+  let order = [];
+  let cursor = {
+    moves: [],
+    moveTo(el, opts) {
+      cursor.moves.push(el);
+      order.push(`move:${el.id}`);
+      if (opts && typeof opts.gesture === 'string' && typeof opts.onGestureSettled === 'function') {
+        // Settle a tick later, after the (zero) hold would otherwise advance.
+        setTimeout(() => {
+          order.push(`gesture-done:${el.id}`);
+          opts.onGestureSettled();
+        }, 30);
+      }
+    },
+    clear() {},
+  };
+  let resolver = makeFakeResolver({ a: { id: 'a' }, b: { id: 'b' } });
+
+  await playCursorScenario(
+    cursor,
+    { steps: [{ target: 'a', gesture: 'circle', holdMs: 0 }, { target: 'b', holdMs: 0 }] },
+    {
+      resolveTarget: resolver.resolve,
+      defaultHoldMs: 0,
+      onStep: (_step, index) => order.push(`step:${index}`),
+    },
+  );
+
+  // The gesture on 'a' completed before the cursor moved to 'b'.
+  assert.deepEqual(order, ['move:a', 'gesture-done:a', 'step:0', 'move:b', 'step:1']);
+});
+
+test('playCursorScenario does not stall when a gesture never settles', async () => {
+  // A cursor that ignores onGestureSettled must not hang the run: the watchdog
+  // cap lets the step advance. (Kept well under the cap via abort.)
+  let cursor = makeFakeCursor({ settleGesture: false });
+  let resolver = makeFakeResolver({ a: { id: 'a' }, b: { id: 'b' } });
+  let controller = new AbortController();
+  let seen = [];
+
+  // Abort shortly after the run starts so the never-settling gesture wait ends
+  // via the abort branch rather than the multi-second watchdog.
+  let timer = setTimeout(() => controller.abort(), 20);
+
+  await playCursorScenario(
+    cursor,
+    { steps: [{ target: 'a', gesture: 'circle', holdMs: 0 }, { target: 'b' }] },
+    { resolveTarget: resolver.resolve, signal: controller.signal, defaultHoldMs: 0 },
+  );
+  clearTimeout(timer);
+
+  // The gesture name was still recorded, and the run stopped at the aborted step.
+  assert.deepEqual(cursor.gestures, ['circle']);
+  assert.deepEqual(
+    cursor.moves.map((m) => m.el.id),
+    ['a'],
+  );
+  assert.deepEqual(seen, []);
 });
 
 test('playCursorScenario does nothing when already aborted', async () => {
