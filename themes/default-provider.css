@@ -384,7 +384,7 @@
   --sn-tab-accent-3: var(--sn-cat-instance);
   --sn-tab-accent-4: var(--sn-type-action);
   --sn-tab-accent-5: var(--sn-cat-class);
-  --sn-tabs-radius: 8px 8px 0 0;
+  --sn-tabs-radius: calc(8px * var(--sn-theme-radius-scale));
   --sn-tabs-corner-size: 12px;
   --sn-tabs-corner-cut: 11.5px;
   --sn-tree-gap: var(--sn-space-xs);

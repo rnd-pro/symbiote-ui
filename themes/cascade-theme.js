@@ -1450,7 +1450,7 @@ export function createCascadeTheme(options = {}) {
     '--sn-button-gap': densityToken(6),
     '--sn-button-min-height': densityToken(30),
     '--sn-button-icon-size': densityToken(28),
-    '--sn-tabs-radius': `${radiusToken(8)} ${radiusToken(8)} 0 0`,
+    '--sn-tabs-radius': radiusToken(8),
     '--sn-tabs-bar-padding': `0 ${densityToken(12)}`,
     '--sn-tabs-item-gap': densityToken(6),
     '--sn-tabs-item-padding': `0 ${densityToken(10)}`,
