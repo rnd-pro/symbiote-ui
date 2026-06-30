@@ -30868,7 +30868,7 @@
           "name": "Layout",
           "tagName": "panel-layout",
           "description": "Panel-based application layout shell.",
-          "componentDescription": "Panel-based application layout shell. Use this layout composition and navigation surface when composing layout UI. Capabilities: layout-tree, split-panels, cross-layout-peer-collapse, panel-registry, panel-menu-actions, ui-invoked-panels, responsive-behavior, importance-auto-collapse, min-size-fit, scroll-fallback, mobile-stack, mobile-drawer, mobile-swipe-mode, multi-drawer-handles, swipe-island-control, local-storage. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: panel_layout_set_behavior, panel_layout_register_panel_type, panel_layout_set_panel_menu_actions, panel_layout_open_panel, panel_layout_close_ui_panel, panel_layout_remove_ui_panel.",
+          "componentDescription": "Panel-based application layout shell. Use this layout composition and navigation surface when composing layout UI. Capabilities: layout-tree, split-panels, cross-layout-peer-collapse, panel-registry, panel-menu-actions, ui-invoked-panels, responsive-behavior, importance-auto-collapse, min-size-fit, scroll-fallback, mobile-stack, mobile-drawer, mobile-swipe-mode, local-storage. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: panel_layout_set_behavior, panel_layout_register_panel_type, panel_layout_set_panel_menu_actions, panel_layout_open_panel, panel_layout_close_ui_panel, panel_layout_remove_ui_panel.",
           "attributes": [
             {
               "name": "storage-key",
@@ -30917,7 +30917,7 @@
               "type": {
                 "text": "string"
               },
-              "description": "Default mobile swipe control: edge, island, or none."
+              "description": "Default mobile swipe source: edge, rail, or none."
             },
             {
               "name": "overflow-mode",
@@ -31055,7 +31055,7 @@
               "type": {
                 "text": "object"
               },
-              "description": "Host-provided panel type descriptors keyed by panel type; descriptor behavior may include mobileDock: auto, primary, start, or end and swipeControl: edge, island, or none."
+              "description": "Host-provided panel type descriptors keyed by panel type; descriptor behavior may include mobileDock: auto, primary, start, or end and swipeControl: edge, rail, or none."
             },
             {
               "kind": "field",
@@ -31222,23 +31222,43 @@
               "description": "Theme CSS custom property consumed by panel-layout."
             },
             {
-              "name": "--sn-layout-drawer-handle-bg",
+              "name": "--sn-fullscreen-tab-bar-bg",
               "description": "Theme CSS custom property consumed by panel-layout."
             },
             {
-              "name": "--sn-layout-drawer-handle-color",
+              "name": "--sn-fullscreen-tab-bar-color",
               "description": "Theme CSS custom property consumed by panel-layout."
             },
             {
-              "name": "--sn-layout-drawer-handle-shadow",
+              "name": "--sn-fullscreen-tab-bar-border",
               "description": "Theme CSS custom property consumed by panel-layout."
             },
             {
-              "name": "--sn-layout-drawer-handle-shadow-start",
+              "name": "--sn-fullscreen-tab-bg",
               "description": "Theme CSS custom property consumed by panel-layout."
             },
             {
-              "name": "--sn-layout-drawer-handle-shadow-end",
+              "name": "--sn-fullscreen-tab-color",
+              "description": "Theme CSS custom property consumed by panel-layout."
+            },
+            {
+              "name": "--sn-fullscreen-tab-hover-bg",
+              "description": "Theme CSS custom property consumed by panel-layout."
+            },
+            {
+              "name": "--sn-fullscreen-tab-hover-color",
+              "description": "Theme CSS custom property consumed by panel-layout."
+            },
+            {
+              "name": "--sn-fullscreen-tab-active-bg",
+              "description": "Theme CSS custom property consumed by panel-layout."
+            },
+            {
+              "name": "--sn-fullscreen-tab-active-color",
+              "description": "Theme CSS custom property consumed by panel-layout."
+            },
+            {
+              "name": "--sn-fullscreen-tab-border",
               "description": "Theme CSS custom property consumed by panel-layout."
             }
           ],
@@ -31256,8 +31276,6 @@
               "mobile-stack",
               "mobile-drawer",
               "mobile-swipe-mode",
-              "multi-drawer-handles",
-              "swipe-island-control",
               "local-storage"
             ],
             "attributes": [
@@ -31294,7 +31312,7 @@
               {
                 "name": "swipe-control",
                 "type": "string",
-                "description": "Default mobile swipe control: edge, island, or none."
+                "description": "Default mobile swipe source: edge, rail, or none."
               },
               {
                 "name": "overflow-mode",
@@ -31356,7 +31374,7 @@
               {
                 "name": "panelTypes",
                 "type": "object",
-                "description": "Host-provided panel type descriptors keyed by panel type; descriptor behavior may include mobileDock: auto, primary, start, or end and swipeControl: edge, island, or none."
+                "description": "Host-provided panel type descriptors keyed by panel type; descriptor behavior may include mobileDock: auto, primary, start, or end and swipeControl: edge, rail, or none."
               },
               {
                 "name": "panelChrome",
@@ -31459,11 +31477,16 @@
               "--sn-layout-drawer-border",
               "--sn-layout-drawer-shadow",
               "--sn-layout-drawer-backdrop-bg",
-              "--sn-layout-drawer-handle-bg",
-              "--sn-layout-drawer-handle-color",
-              "--sn-layout-drawer-handle-shadow",
-              "--sn-layout-drawer-handle-shadow-start",
-              "--sn-layout-drawer-handle-shadow-end"
+              "--sn-fullscreen-tab-bar-bg",
+              "--sn-fullscreen-tab-bar-color",
+              "--sn-fullscreen-tab-bar-border",
+              "--sn-fullscreen-tab-bg",
+              "--sn-fullscreen-tab-color",
+              "--sn-fullscreen-tab-hover-bg",
+              "--sn-fullscreen-tab-hover-color",
+              "--sn-fullscreen-tab-active-bg",
+              "--sn-fullscreen-tab-active-color",
+              "--sn-fullscreen-tab-border"
             ],
             "status": "draft",
             "schemaVersion": "component-descriptor-v2",
@@ -31540,7 +31563,7 @@
                       "swipeControl": {
                         "enum": [
                           "edge",
-                          "island",
+                          "rail",
                           "none"
                         ]
                       }
@@ -31736,7 +31759,7 @@
             }
           },
           "agent": {
-            "componentDescription": "Panel-based application layout shell. Use this layout composition and navigation surface when composing layout UI. Capabilities: layout-tree, split-panels, cross-layout-peer-collapse, panel-registry, panel-menu-actions, ui-invoked-panels, responsive-behavior, importance-auto-collapse, min-size-fit, scroll-fallback, mobile-stack, mobile-drawer, mobile-swipe-mode, multi-drawer-handles, swipe-island-control, local-storage. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: panel_layout_set_behavior, panel_layout_register_panel_type, panel_layout_set_panel_menu_actions, panel_layout_open_panel, panel_layout_close_ui_panel, panel_layout_remove_ui_panel.",
+            "componentDescription": "Panel-based application layout shell. Use this layout composition and navigation surface when composing layout UI. Capabilities: layout-tree, split-panels, cross-layout-peer-collapse, panel-registry, panel-menu-actions, ui-invoked-panels, responsive-behavior, importance-auto-collapse, min-size-fit, scroll-fallback, mobile-stack, mobile-drawer, mobile-swipe-mode, local-storage. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: panel_layout_set_behavior, panel_layout_register_panel_type, panel_layout_set_panel_menu_actions, panel_layout_open_panel, panel_layout_close_ui_panel, panel_layout_remove_ui_panel.",
             "semanticRole": "layout composition and navigation surface",
             "usage": "Render or compose <panel-layout> when the host needs panel-based application layout shell.",
             "dataOwnership": "host-owned model; component renders and emits intent events",
@@ -31776,8 +31799,6 @@
                 "mobile-stack",
                 "mobile-drawer",
                 "mobile-swipe-mode",
-                "multi-drawer-handles",
-                "swipe-island-control",
                 "local-storage"
               ],
               "attributes": [
@@ -31814,7 +31835,7 @@
                 {
                   "name": "swipe-control",
                   "type": "string",
-                  "description": "Default mobile swipe control: edge, island, or none."
+                  "description": "Default mobile swipe source: edge, rail, or none."
                 },
                 {
                   "name": "overflow-mode",
@@ -31911,7 +31932,7 @@
                 {
                   "name": "panelTypes",
                   "type": "object",
-                  "description": "Host-provided panel type descriptors keyed by panel type; descriptor behavior may include mobileDock: auto, primary, start, or end and swipeControl: edge, island, or none."
+                  "description": "Host-provided panel type descriptors keyed by panel type; descriptor behavior may include mobileDock: auto, primary, start, or end and swipeControl: edge, rail, or none."
                 },
                 {
                   "name": "panelChrome",
@@ -32013,12 +32034,7 @@
                 "--sn-layout-drawer-bg",
                 "--sn-layout-drawer-border",
                 "--sn-layout-drawer-shadow",
-                "--sn-layout-drawer-backdrop-bg",
-                "--sn-layout-drawer-handle-bg",
-                "--sn-layout-drawer-handle-color",
-                "--sn-layout-drawer-handle-shadow",
-                "--sn-layout-drawer-handle-shadow-start",
-                "--sn-layout-drawer-handle-shadow-end"
+                "--sn-layout-drawer-backdrop-bg"
               ],
               "status": "draft",
               "schemaVersion": "component-descriptor-v2",
@@ -32095,7 +32111,7 @@
                         "swipeControl": {
                           "enum": [
                             "edge",
-                            "island",
+                            "rail",
                             "none"
                           ]
                         }

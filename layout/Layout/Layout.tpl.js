@@ -8,16 +8,6 @@ export let template = html`
     aria-label="Close drawer"
     ${{ onclick: 'onDrawerBackdropClick' }}
   ></button>
-  <div
-    class="layout-drawer-handle-stack layout-drawer-handle-stack-start"
-    data-drawer-dock="start"
-    hidden
-  ></div>
-  <div
-    class="layout-drawer-handle-stack layout-drawer-handle-stack-end"
-    data-drawer-dock="end"
-    hidden
-  ></div>
   <panel-menu ref="menu"></panel-menu>
 
   <!-- Fullscreen tab bar (hidden by default) -->

@@ -49,6 +49,42 @@ const CASCADE_THEME_CONTROL_LIST = [
     description: 'Accent hue in native CSS HSL space.',
   },
   {
+    name: 'bgLightness',
+    type: 'number',
+    min: -1,
+    max: 100,
+    default: -1,
+    icon: 'format_color_fill',
+    description: 'Explicit background lightness (0 = black, 100 = white), overriding the brightness-derived value for the full range. -1 = auto (derive from brightness/mode).',
+  },
+  {
+    name: 'surfaceLightness',
+    type: 'number',
+    min: -1,
+    max: 100,
+    default: -1,
+    icon: 'layers',
+    description: 'Explicit surface / panel (accent-background) lightness, overriding the derived value so panels can be set independently of the page background. -1 = auto.',
+  },
+  {
+    name: 'accentLightness',
+    type: 'number',
+    min: -1,
+    max: 100,
+    default: -1,
+    icon: 'gradient',
+    description: 'Explicit accent-colour lightness (0-100), overriding the contrast-derived value — set a dark vivid accent on white or a bright accent on black for maximum contrast. -1 = auto.',
+  },
+  {
+    name: 'accentChroma',
+    type: 'number',
+    min: -1,
+    max: 100,
+    default: -1,
+    icon: 'invert_colors',
+    description: 'Explicit accent saturation for the accent colour only, overriding the global chroma. -1 = auto (use chroma).',
+  },
+  {
     name: 'pattern',
     type: 'number',
     min: 0,
@@ -889,6 +925,10 @@ export function normalizeCascadeThemeOptions(options = {}) {
     contrast: clamp(merged.contrast, 0, 100),
     chroma: clamp(merged.chroma, 0, 100),
     hue: clamp(merged.hue, 0, 360),
+    bgLightness: merged.bgLightness >= 0 ? clamp(merged.bgLightness, 0, 100) : -1,
+    surfaceLightness: merged.surfaceLightness >= 0 ? clamp(merged.surfaceLightness, 0, 100) : -1,
+    accentLightness: merged.accentLightness >= 0 ? clamp(merged.accentLightness, 0, 100) : -1,
+    accentChroma: merged.accentChroma >= 0 ? clamp(merged.accentChroma, 0, 100) : -1,
     pattern: clamp(merged.pattern, 0, 100),
     outline: clamp(merged.outline, 0, 100),
     type: clamp(merged.type, 80, 130),
@@ -927,9 +967,11 @@ export function createCascadeTheme(options = {}) {
   let bg = dark
     ? 10 + state.brightness * 0.18
     : 98 - state.brightness * 0.32;
+  if (state.bgLightness >= 0) bg = state.bgLightness; // explicit background lightness (full 0-100, reaches black/white)
   let surface = dark
     ? Math.min(34, bg + 3 + (state.contrast - 58) * 0.05)
     : Math.max(72, bg - 4 - state.contrast * 0.10);
+  if (state.surfaceLightness >= 0) surface = state.surfaceLightness; // explicit panel / accent-background lightness
   let text = dark
     ? Math.min(98, Math.max(72, 94 + (state.contrast - 58) * 0.12))
     : Math.max(8, 34 - state.contrast * 0.26);
@@ -945,6 +987,7 @@ export function createCascadeTheme(options = {}) {
   let accentLight = dark
     ? Math.min(72, Math.max(48, 63 + (state.contrast - 58) * 0.12))
     : Math.max(36, 62 - state.contrast * 0.10);
+  if (state.accentLightness >= 0) accentLight = state.accentLightness; // explicit accent lightness (vivid dark/light accents, full contrast)
   let dataLight = dark
     ? Math.max(34, accentLight - 21)
     : Math.max(34, accentLight - 10);
@@ -959,13 +1002,15 @@ export function createCascadeTheme(options = {}) {
     data: hueRotate(state.hue, -30),
   };
   let neutralChroma = percent(state.chroma);
+  let accentChromaNum = state.accentChroma >= 0 ? state.accentChroma : state.chroma; // accent-only saturation override
+  let accentChromaPct = percent(accentChromaNum);
   let bgColor = `hsl(0 0% ${bg.toFixed(1)}%)`;
   let panelColor = `hsl(0 0% ${surface.toFixed(1)}%)`;
   let textColor = `hsl(0 0% ${text.toFixed(1)}%)`;
   let textDimColor = `hsl(0 0% ${dim.toFixed(1)}%)`;
-  let accent = `hsl(${state.hue} ${neutralChroma} ${accentLight}%)`;
-  let accentSoft = `hsl(${state.hue} ${neutralChroma} ${accentLight}% / 0.18)`;
-  let primaryButtonColor = getReadableTextForHsl(state.hue, state.chroma, accentLight, text);
+  let accent = `hsl(${state.hue} ${accentChromaPct} ${accentLight}%)`;
+  let accentSoft = `hsl(${state.hue} ${accentChromaPct} ${accentLight}% / 0.18)`;
+  let primaryButtonColor = getReadableTextForHsl(state.hue, accentChromaNum, accentLight, text);
   let successButtonColor = getReadableTextForHsl(122, state.chroma, 57, text);
   let dangerButtonColor = getReadableTextForHsl(4, state.chroma, 58, text);
   let typeAction = `hsl(${semanticHues.danger} ${neutralChroma} ${actionLight.toFixed(1)}%)`;
@@ -1061,9 +1106,6 @@ export function createCascadeTheme(options = {}) {
     '--sn-shadow-xl': '0 -8px calc(28px * var(--sn-theme-elevation-scale)) hsl(0 0% 0% / 0.32)',
     '--sn-chat-item-child-shadow': '2px 0 4px color-mix(in oklab, var(--sn-bg) 70%, transparent)',
     '--sn-layout-drawer-shadow': 'var(--sn-shadow-xl)',
-    '--sn-layout-drawer-handle-shadow': 'var(--sn-chat-item-child-shadow)',
-    '--sn-layout-drawer-handle-shadow-start': 'var(--sn-layout-drawer-handle-shadow)',
-    '--sn-layout-drawer-handle-shadow-end': '-2px 0 4px color-mix(in oklab, var(--sn-bg) 70%, transparent)',
     '--sn-grid-dot': `hsl(0 0% ${text.toFixed(1)}% / ${gridDotAlpha.toFixed(3)})`,
     '--sn-grid-size': '20px',
     '--sn-cell-bg': 'var(--sn-bg)',
@@ -1336,6 +1378,9 @@ export function createCascadeTheme(options = {}) {
     '--sn-shape-icon-size': typeToken(40),
     '--sn-button-font-size': typeToken(12),
     '--sn-button-icon-font-size': typeToken(16),
+    // layout panel-header title — heading-driven, so the heading dial scales panel titles
+    // (not only card sub-titles); consumed via a host-scope alias where the chrome leaves it unset
+    '--sn-layout-header-title-size': headingToken(13),
     '--sn-card-title-size': headingToken(11),
     '--sn-banner-font-size': typeToken(12),
     '--sn-banner-icon-size': typeToken(18),
@@ -1446,6 +1491,12 @@ export function createCascadeTheme(options = {}) {
     '--sn-card-padding': densityToken(14),
     '--sn-card-title-margin-block-end': densityToken(12),
     '--sn-card-footer-gap': densityToken(8),
+    // description lists (card bodies — e.g. the asset & crew panels) follow the same type
+    // and density cascade as the rest of the card, instead of freezing on px fallbacks
+    '--sn-description-label-size': typeToken(12),
+    '--sn-description-value-size': typeToken(12),
+    '--sn-description-list-gap-y': densityToken(8),
+    '--sn-description-list-gap-x': densityToken(16),
     '--sn-button-padding': `${densityToken(6)} ${densityToken(14)}`,
     '--sn-button-gap': densityToken(6),
     '--sn-button-min-height': densityToken(30),

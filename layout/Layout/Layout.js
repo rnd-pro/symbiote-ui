@@ -826,7 +826,6 @@ export class Layout extends Symbiote {
         node.style.removeProperty('inset-inline-end');
       }
     }
-    this._syncDrawerHandleState(projection, startOpen, endOpen, startPanelId, endPanelId);
     this._scheduleDrawerRailPeek(startOpen, endOpen);
   }
 
@@ -845,7 +844,6 @@ export class Layout extends Symbiote {
     for (let node of this.querySelectorAll('layout-node[mobile-dock], layout-node[drawer-open]')) {
       this._clearDrawerNode(node);
     }
-    this._syncDrawerHandleState(null, false, false, '', '');
   }
 
   _clearDrawerNode(node) {
@@ -1013,101 +1011,6 @@ export class Layout extends Symbiote {
     return dock === 'start' ? this.$.drawerStartPanelId : this.$.drawerEndPanelId;
   }
 
-  _syncDrawerHandleState(projection, startOpen, endOpen, startPanelId, endPanelId) {
-    let panels = projection?.panels || [];
-    let startPanels = panels.filter((panel) => panel.dock === 'start');
-    let endPanels = panels.filter((panel) => panel.dock === 'end');
-    this._syncDrawerHandleStack('start', startPanels, startPanels.length > 0 && !startOpen && !endOpen, startOpen, startPanelId);
-    this._syncDrawerHandleStack('end', endPanels, endPanels.length > 0 && !startOpen && !endOpen, endOpen, endPanelId);
-  }
-
-  _syncDrawerHandleStack(dock, panels, available, open, activePanelId) {
-    let stack = this.querySelector(`.layout-drawer-handle-stack-${dock}`);
-    if (!stack) return;
-    if (!available || panels.length === 0) {
-      stack.hidden = true;
-      stack.replaceChildren();
-      stack.removeAttribute('data-swipe-control');
-      stack.style.removeProperty(dock === 'start' ? 'inset-inline-start' : 'inset-inline-end');
-      stack.style.removeProperty(dock === 'start' ? 'inset-inline-end' : 'inset-inline-start');
-      stack.style.removeProperty('transform');
-      return;
-    }
-    let swipeControl = this._resolveDrawerSwipeControl(panels);
-    this._renderDrawerHandleStack(stack, dock, panels, open, activePanelId, swipeControl);
-    this._setDrawerHandleVisualState(stack, dock, true, open, activePanelId, swipeControl);
-  }
-
-  _resolveDrawerSwipeControl(panels = []) {
-    if (panels.every((panel) => panel.swipeControl === 'none')) return 'none';
-    if (panels.some((panel) => panel.swipeControl === 'island')) return 'island';
-    if (panels.every((panel) => panel.swipeControl === 'rail' || panel.swipeControl === 'none')) return 'rail';
-    return 'edge';
-  }
-
-  _renderDrawerHandleStack(stack, dock, panels, open, activePanelId, swipeControl = 'edge') {
-    stack.replaceChildren();
-    stack.dataset.swipeControl = swipeControl;
-    let multiple = panels.length > 1;
-    for (let panel of panels) {
-      if (panel.swipeControl === 'none' || panel.swipeControl === 'rail') continue;
-      let config = this.$.panelTypes[panel.panelType] || {};
-      let title = config.title || panel.panelType || panel.id;
-      let icon = multiple
-        ? config.icon || 'dashboard'
-        : dock === 'start' ? 'chevron_right' : 'chevron_left';
-      let button = document.createElement('button');
-      button.className = `layout-drawer-handle layout-drawer-handle-${dock}`;
-      button.type = 'button';
-      button.dataset.drawerDock = dock;
-      button.dataset.drawerPanelId = panel.id;
-      button.dataset.swipeControl = panel.swipeControl || swipeControl;
-      button.setAttribute('aria-label', `Toggle ${title} drawer`);
-      button.setAttribute('aria-expanded', String(open && panel.id === activePanelId));
-      button.title = `Toggle ${title} drawer`;
-      if (panel.id === activePanelId) {
-        button.setAttribute('active', '');
-      }
-      let iconNode = document.createElement('span');
-      iconNode.className = 'material-symbols-outlined';
-      iconNode.textContent = icon;
-      button.append(iconNode);
-      button.addEventListener('click', (event) => this._onDrawerToggleClick(event));
-      button.addEventListener('pointerdown', (event) => this._onDrawerHandlePointerDown(event));
-      stack.append(button);
-    }
-  }
-
-  _setDrawerHandleVisualState(handle, dock, available, open, panelId = '', swipeControl = 'edge') {
-    if (!handle) return;
-    let active = Boolean(available) && swipeControl !== 'none' && swipeControl !== 'rail';
-    handle.hidden = !active;
-    if (swipeControl === 'island') {
-      handle.style.removeProperty('inset-inline-start');
-      handle.style.removeProperty('inset-inline-end');
-      handle.style.removeProperty('transform');
-      return;
-    }
-    let insetProperty = dock === 'start' ? 'inset-inline-start' : 'inset-inline-end';
-    let oppositeInsetProperty = dock === 'start' ? 'inset-inline-end' : 'inset-inline-start';
-    handle.style.removeProperty(oppositeInsetProperty);
-    if (!active) {
-      handle.style.removeProperty(insetProperty);
-      handle.style.removeProperty('transform');
-      return;
-    }
-    let offset = open ? `${this._getDrawerHandleOpenOffset(dock, handle, panelId)}px` : '0px';
-    setImportantStylePropertyIfChanged(handle.style, insetProperty, offset);
-    setImportantStylePropertyIfChanged(handle.style, 'transform', 'translateY(-50%)');
-  }
-
-  _getDrawerHandleOpenOffset(dock, handle, panelId = '') {
-    let drawerNode = this._getDrawerNode(dock, panelId);
-    let drawerWidth = drawerNode?.getBoundingClientRect?.().width || this._getFallbackDrawerWidth();
-    let handleWidth = handle?.getBoundingClientRect?.().width || 32;
-    return Math.max(0, drawerWidth - handleWidth);
-  }
-
   openDrawer(dock, panelId = '') {
     this._setDrawerOpen(dock, true, panelId);
   }
@@ -1150,23 +1053,7 @@ export class Layout extends Symbiote {
     this._syncDrawerProjection(this._lastResponsiveState, this._lastDrawerBehavior, this.$.layoutTree);
   }
 
-  _onDrawerToggleClick(e) {
-    if (this._ignoreNextDrawerClick) {
-      this._ignoreNextDrawerClick = false;
-      e.preventDefault();
-      e.stopPropagation();
-      return;
-    }
-    if (!this.hasAttribute('drawer-mode-active')) return;
-    let target = this._getDrawerGestureTarget(e);
-    let dock = target?.dataset?.drawerDock;
-    let panelId = target?.dataset?.drawerPanelId || '';
-    if (dock !== 'start' && dock !== 'end') return;
-    if (!this._isDrawerOpen(dock)) this._suppressDrawerContentClicks();
-    this.toggleDrawer(dock, panelId);
-  }
-
-  _onDrawerHandlePointerDown(e) {
+  _onDrawerDockPointerDown(e) {
     if (!this.hasAttribute('drawer-mode-active')) return;
     if (e.button !== undefined && e.button !== 0) return;
     let target = this._getDrawerGestureTarget(e);
@@ -1212,7 +1099,7 @@ export class Layout extends Symbiote {
         e.preventDefault();
         return;
       }
-      this._onDrawerHandlePointerDown(e);
+      this._onDrawerDockPointerDown(e);
       if (this._drawerGesture) {
         this._drawerGesture.source = 'rail';
       }
@@ -1423,7 +1310,7 @@ export class Layout extends Symbiote {
       || drawerNode.hasAttribute('drawer-rail-collapsed')
       || drawerNode.hasAttribute('drawer-dragging');
     if (!suppress) return;
-    if (target.closest?.('.collapse-btn, .layout-drawer-handle')) return;
+    if (target.closest?.('.collapse-btn')) return;
     e.preventDefault();
     e.stopPropagation();
     e.stopImmediatePropagation?.();
@@ -1474,22 +1361,6 @@ export class Layout extends Symbiote {
         node.style.removeProperty('inset-inline-start');
       }
     }
-    if (!rail) {
-      this._applyDrawerHandleProgress(dock, progress, width, panelId);
-    }
-  }
-
-  _applyDrawerHandleProgress(dock, progress, width = this._getFallbackDrawerWidth(), panelId = '') {
-    let handle = this.querySelector(`.layout-drawer-handle-stack-${dock}`);
-    if (!handle || handle.hidden) return;
-    if (handle.dataset.swipeControl === 'island') return;
-    let handleWidth = handle.getBoundingClientRect?.().width || 32;
-    let offset = Math.max(0, progress) * Math.max(0, width - handleWidth);
-    let insetProperty = dock === 'start' ? 'inset-inline-start' : 'inset-inline-end';
-    let oppositeInsetProperty = dock === 'start' ? 'inset-inline-end' : 'inset-inline-start';
-    handle.style.removeProperty(oppositeInsetProperty);
-    setImportantStylePropertyIfChanged(handle.style, insetProperty, `${offset}px`);
-    setImportantStylePropertyIfChanged(handle.style, 'transform', 'translateY(-50%)');
   }
 
   _setDrawerGestureDragging(gesture) {

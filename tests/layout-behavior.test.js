@@ -313,7 +313,7 @@ test('layout behavior normalizes responsive collapse and overflow policy', () =>
     responsiveMode: 'swipe',
     responsiveBreakpoint: 640,
     mobileDock: 'end',
-    swipeControl: 'island',
+    swipeControl: 'edge',
     drawerHoverOpen: true,
   });
 
@@ -325,7 +325,7 @@ test('layout behavior normalizes responsive collapse and overflow policy', () =>
   assert.equal(behavior.responsiveMode, 'swipe');
   assert.equal(behavior.responsiveBreakpoint, 640);
   assert.equal(behavior.mobileDock, 'end');
-  assert.equal(behavior.swipeControl, 'island');
+  assert.equal(behavior.swipeControl, 'edge');
   assert.equal(behavior.drawerHoverOpen, true);
   assert.equal(hasLayoutBehaviorMetadata(behavior), true);
   assert.equal(hasLayoutBehaviorMetadata({ ...behavior, overflow: 'invalid' }), false);
@@ -507,7 +507,7 @@ test('layout behavior resolves responsive state and scroll fallback axes', () =>
 test('layout tree resolves mobile drawer docks without product panel names', () => {
   let materials = createPanel('materials', {}, { importance: 60, mobileDock: 'start' });
   let content = createPanel('content', {}, { importance: 100, mobileDock: 'primary' });
-  let graph = createPanel('graph', {}, { importance: 80, mobileDock: 'end', swipeControl: 'island' });
+  let graph = createPanel('graph', {}, { importance: 80, mobileDock: 'end', swipeControl: 'edge' });
   let theme = createPanel('theme', {}, { importance: 70, mobileDock: 'end' });
   let root = createSplit(
     'horizontal',
@@ -524,7 +524,7 @@ test('layout tree resolves mobile drawer docks without product panel names', () 
   assert.equal(projection.panels.find((panel) => panel.id === materials.id).dock, 'start');
   assert.equal(projection.panels.find((panel) => panel.id === content.id).dock, 'primary');
   assert.equal(projection.panels.find((panel) => panel.id === graph.id).dock, 'end');
-  assert.equal(projection.panels.find((panel) => panel.id === graph.id).swipeControl, 'island');
+  assert.equal(projection.panels.find((panel) => panel.id === graph.id).swipeControl, 'edge');
   assert.equal(projection.panels.find((panel) => panel.id === theme.id).dock, 'end');
 
   let rail = createPanel('rail', {}, { importance: 55, mobileDock: 'start', swipeControl: 'rail', drawerHoverOpen: true });
@@ -573,8 +573,6 @@ test('panel layout drawer mode has gesture, theme, and metadata contracts', asyn
   assert.match(layout, /drawerEndPanelId/);
   assert.match(layout, /drawer-active-panel/);
   assert.match(layout, /dataset\.drawerPanelId/);
-  assert.match(layout, /_renderDrawerHandleStack/);
-  assert.match(layout, /_resolveDrawerSwipeControl/);
   assert.match(layout, /_onDrawerRailPointerDown/);
   assert.match(layout, /_onDrawerRailHover/);
   assert.match(layout, /_isDrawerContentSwipeBlocked\(target\)[\s\S]*?\.split-resizer/);
@@ -590,24 +588,19 @@ test('panel layout drawer mode has gesture, theme, and metadata contracts', asyn
   assert.match(layout, /drawer-rail-peeking/);
   assert.match(layout, /drawerHoverOpen/);
   assert.match(layout, /dataset\.swipeControl/);
-  assert.match(layout, /startPanels\.length > 0 && !startOpen && !endOpen/);
-  assert.match(layout, /endPanels\.length > 0 && !startOpen && !endOpen/);
-  assert.match(template, /layout-drawer-handle-stack-start/);
-  assert.match(template, /layout-drawer-handle-stack-end/);
+  assert.doesNotMatch(layout, /_renderDrawerHandleStack/);
+  assert.doesNotMatch(layout, /_syncDrawerHandleState/);
+  assert.doesNotMatch(template, /layout-drawer-handle/);
   assert.match(styles, /\[drawer-mode-active\]/);
-  assert.match(styles, /\.layout-drawer-handle-stack\s*\{/);
-  assert.match(styles, /\.layout-drawer-handle-stack\[data-swipe-control='island'\]\s*\{/);
+  assert.doesNotMatch(styles, /layout-drawer-handle/);
   assert.match(styles, /layout-node\[drawer-rail\]\[drawer-rail-collapsed\]/);
   assert.match(styles, /--sn-layout-drawer-rail-peek-distance:\s*20px/);
-  assert.match(styles, /--sn-layout-swipe-island-size/);
-  assert.match(styles, /touch-action:\s*none;/);
-  assert.match(styles, /cursor:\s*grab;/);
   assert.match(styles, /layout-node\[node-type='panel'\]\s*\{[\s\S]*?background-clip:\s*padding-box;[\s\S]*?isolation:\s*isolate;[\s\S]*?backface-visibility:\s*hidden;[\s\S]*?-webkit-backface-visibility:\s*hidden;[\s\S]*?transform:\s*translate3d\(var\(--sn-layout-drawer-translate,\s*0\),\s*0,\s*0\);/);
   assert.match(styles, /&\[drawer-mode-active\]\s*\{[\s\S]*?layout-node \.type-btn\s*\{[\s\S]*?display:\s*none !important;/);
   assert.match(styles, /layout-node\[mobile-dock='start'\],[\s\S]*?layout-node\[mobile-dock='end'\]\s*\{[\s\S]*?contain:\s*layout paint style;[\s\S]*?will-change:\s*transform;/);
   assert.match(styles, /layout-node\[drawer-expanded\]\s*\{[\s\S]*?\.panel-view\s*\{[\s\S]*?background:\s*inherit;[\s\S]*?isolation:\s*isolate;[\s\S]*?\.panel-content\s*\{[\s\S]*?background:\s*inherit;/);
   assert.match(styles, /layout-node\[drawer-dragging\]\s*\{[\s\S]*?transition:\s*none;[\s\S]*?will-change:\s*transform;/);
-  assert.match(styles, /&\[drawer-dragging\]\s*\{[\s\S]*?\.layout-drawer-handle-stack,[\s\S]*?\.layout-drawer-handle,[\s\S]*?transition:\s*none;/);
+  assert.match(styles, /&\[drawer-dragging\]\s*\{[\s\S]*?layout-node\[mobile-dock='start'\],[\s\S]*?layout-node\[mobile-dock='end'\]\s*\{[\s\S]*?transition:\s*none;/);
   assert.match(styles, /min-block-size:\s*var\(--sn-layout-drawer-min-block-size,\s*inherit\)/);
   assert.match(styles, /inset:\s*0;/);
   assert.match(styles, /--sn-layout-drawer-translate:\s*-100%/);
@@ -619,9 +612,9 @@ test('panel layout drawer mode has gesture, theme, and metadata contracts', asyn
   assert.match(layout, /function drawerTranslateTransform\(value\)/);
   assert.match(layout, /translate3d\(\$\{value\}, 0, 0\)/);
   assert.match(layout, /setImportantStylePropertyIfChanged\(node\.style,\s*'transform'/);
-  assert.match(layout, /_setDrawerHandleVisualState/);
-  assert.match(layout, /_applyDrawerHandleProgress/);
-  assert.match(layout, /_getDrawerHandleOpenOffset/);
+  assert.doesNotMatch(layout, /_setDrawerHandleVisualState/);
+  assert.doesNotMatch(layout, /_applyDrawerHandleProgress/);
+  assert.doesNotMatch(layout, /_getDrawerHandleOpenOffset/);
   assert.match(layout, /_setDrawerGestureDragging\(gesture\)/);
   assert.match(layout, /this\._setDrawerGestureDragging\(this\._drawerGesture\)/);
   assert.match(layout, /this\._setDrawerGestureDragging\(gesture\);\s*this\._captureDrawerGesturePointer\(gesture\)/);
@@ -630,28 +623,22 @@ test('panel layout drawer mode has gesture, theme, and metadata contracts', asyn
   assert.match(layout, /_restoreDrawerNodeCollapseState/);
   assert.match(layout, /drawer-expanded/);
   assert.match(layout, /_clearDrawerDrag\('all'\)/);
-  assert.match(styles, /--sn-layout-drawer-handle-inline-size/);
-  assert.match(styles, /--sn-layout-drawer-handle-gap/);
+  assert.doesNotMatch(styles, /--sn-layout-drawer-handle/);
   assert.match(layout, /inset-inline-start/);
   assert.match(layout, /inset-inline-end/);
   assert.doesNotMatch(layout, /open \? 'var\(--sn-layout-drawer-size\)'/);
-  assert.doesNotMatch(styles, /layout-drawer-handle-start[\s\S]{0,140}var\(--sn-layout-drawer-size\)/);
   assert.match(styles, /box-sizing:\s*border-box/);
   assert.match(styles, /touch-action:\s*pan-y;/);
   assert.match(styles, /overscroll-behavior:\s*contain;/);
   assert.match(styles, /--sn-layout-drawer-bg/);
   assert.match(styles, /--sn-layout-drawer-shadow/);
   assert.match(styles, /box-shadow:\s*var\(--sn-layout-drawer-shadow,\s*var\(--sn-shadow-xl\)\)/);
-  assert.match(styles, /--sn-layout-drawer-handle-bg/);
   assert.match(styles, /--sn-layout-drawer-backdrop-bg,\s*transparent/);
   assert.match(styles, /--sn-layout-drawer-backdrop-filter,\s*none/);
-  assert.match(styles, /border-inline-start-width:\s*0/);
-  assert.match(styles, /border-inline-end-width:\s*0/);
-  assert.doesNotMatch(styles, /--sn-layout-drawer-open-handle-radius/);
   assert.match(styles, /layout-node\[drawer-expanded\]/);
   assert.match(styles, /\.panel-content\s*\{[\s\S]*?display:\s*block !important;/);
   assert.match(styles, /layout-node\[drawer-expanded\]\s*\{[\s\S]*?\.type-btn,[\s\S]*?\.collapse-btn\s*\{[\s\S]*?display:\s*none !important;/);
-  assert.match(styles, /--sn-layout-drawer-handle-shadow,\s*none/);
+  assert.doesNotMatch(styles, /--sn-layout-drawer-handle-shadow/);
   assert.doesNotMatch(styles, /--sn-layout-drawer-backdrop-bg,\s*color-mix/);
   assert.doesNotMatch(styles, /--sn-layout-drawer-backdrop-filter,\s*blur/);
   assert.match(styles, /prefers-reduced-motion:\s*reduce/);
@@ -663,8 +650,12 @@ test('panel layout drawer mode has gesture, theme, and metadata contracts', asyn
   assert.match(layout, /--sn-layout-fullscreen-host-top', '0px'/);
   assert.match(styles, /\.fullscreen-tab-bar\s*\{[\s\S]*?top:\s*0;/);
   assert.match(styles, /height:\s*var\(--sn-fullscreen-tab-bar-height,\s*32px\)/);
+  assert.match(styles, /--sn-fullscreen-tab-bar-bg,\s*var\(--sn-bg\)/);
+  assert.match(styles, /--sn-fullscreen-tab-bg,\s*transparent/);
+  assert.match(styles, /--sn-fullscreen-tab-hover-bg,\s*var\(--sn-node-header-bg\)/);
+  assert.match(styles, /--sn-fullscreen-tab-active-bg,\s*var\(--sn-node-header-bg\)/);
   assert.match(styles, /z-index:\s*var\(--sn-fullscreen-tab-bar-z,\s*30020\)/);
-  assert.match(styles, /\[fullscreen-active\]\s*\{[\s\S]*?\.layout-drawer-backdrop,[\s\S]*?\.layout-drawer-handle-stack,[\s\S]*?\.layout-drawer-handle\s*\{[\s\S]*?display:\s*none !important;/);
+  assert.match(styles, /\[fullscreen-active\]\s*\{[\s\S]*?\.layout-drawer-backdrop\s*\{[\s\S]*?display:\s*none !important;/);
   assert.ok(
     styles.lastIndexOf('layout-node[fullscreen]') > styles.indexOf("layout-node[mobile-dock='start'],"),
     'drawer-mode fullscreen override must be after start/end drawer sizing'
@@ -677,21 +668,25 @@ test('panel layout drawer mode has gesture, theme, and metadata contracts', asyn
   assert.match(nodeStyles, /&\[fullscreen\]\s*\{[\s\S]*?border-radius:\s*0 !important;/);
   assert.match(registry, /mobile-drawer/);
   assert.match(registry, /mobile-swipe-mode/);
-  assert.match(registry, /swipe-island-control/);
-  assert.match(registry, /multi-drawer-handles/);
+  assert.doesNotMatch(registry, /swipe-island-control/);
+  assert.doesNotMatch(registry, /multi-drawer-handles/);
   assert.match(registry, /drawer-start-panel-id/);
   assert.match(registry, /drawer-end-panel-id/);
   assert.match(registry, /drawer/);
   assert.match(registry, /mobileDock/);
   assert.match(registry, /swipeControl/);
+  assert.match(registry, /--sn-fullscreen-tab-bar-bg/);
+  assert.match(registry, /--sn-fullscreen-tab-active-bg/);
   assert.match(customElements, /mobile-drawer/);
   assert.match(customElements, /mobile-swipe-mode/);
-  assert.match(customElements, /swipe-island-control/);
+  assert.doesNotMatch(customElements, /swipe-island-control/);
   assert.match(customElements, /drawer/);
   assert.match(customElements, /swipe/);
   assert.match(customElements, /mobileDock/);
   assert.match(customElements, /swipeControl/);
-  assert.doesNotMatch(customElements, /--sn-layout-drawer-open-handle-radius/);
+  assert.match(customElements, /--sn-fullscreen-tab-bar-bg/);
+  assert.match(customElements, /--sn-fullscreen-tab-active-bg/);
+  assert.doesNotMatch(customElements, /--sn-layout-drawer-handle/);
 });
 
 test('fullscreen tab layer stays above floating toolbars in theme defaults', async () => {
@@ -1086,7 +1081,7 @@ test('priority compression shrinks lower-importance wide panels before auto-coll
   );
 });
 
-test('panel layout drawer handle pointer gesture opens and closes drawer panels', async () => {
+test('panel layout drawer API and rail gestures open and close drawer panels without built-in handles', async () => {
   let { parseHTML } = await import('linkedom');
   let { window } = parseHTML('<!doctype html><html><body></body></html>');
   let TestCSSStyleSheet = class {
@@ -1151,83 +1146,24 @@ test('panel layout drawer handle pointer gesture opens and closes drawer panels'
   // Verify it is in drawer-mode-active
   assert.equal(layout.hasAttribute('drawer-mode-active'), true);
 
-  // Find the end drawer handle (stack-end)
-  const stackEnd = layout.querySelector('.layout-drawer-handle-stack-end');
-  assert.ok(stackEnd);
-  const handleButton = stackEnd.querySelector('.layout-drawer-handle');
-  assert.ok(handleButton);
+  assert.equal(layout.querySelector('.layout-drawer-handle-stack-end'), null);
+  assert.equal(layout.querySelector('.layout-drawer-handle'), null);
 
-  // Start gesture by pointerdown on the handle button
-  const pointerDownEvent = new Event('pointerdown');
-  pointerDownEvent.pointerId = 1;
-  pointerDownEvent.button = 0;
-  pointerDownEvent.clientX = 290;
-  pointerDownEvent.preventDefault = () => {};
-  handleButton.dispatchEvent(pointerDownEvent);
-
-  // Verify gesture is active
-  assert.ok(layout._drawerGesture);
-  assert.equal(layout.hasAttribute('drawer-dragging'), true);
-
-  // Move pointer to simulate drag
-  const pointerMoveEvent = new Event('pointermove');
-  pointerMoveEvent.pointerId = 1;
-  pointerMoveEvent.clientX = 150; // drag left to open the end drawer (dock end is at right)
-  pointerMoveEvent.preventDefault = () => {};
-  layout.dispatchEvent(pointerMoveEvent);
-
-  // Verify gesture progress
-  assert.ok(layout._drawerGesture.moved);
-  assert.equal(layout.getAttribute('drawer-dragging'), '');
-
-  // Release pointer to complete gesture and open
-  const pointerUpEvent = new Event('pointerup');
-  pointerUpEvent.pointerId = 1;
-  pointerUpEvent.clientX = 100;
-  pointerUpEvent.preventDefault = () => {};
-  layout.dispatchEvent(pointerUpEvent);
-
-  // Wait for sync
+  layout.openDrawer('end');
   await Promise.resolve();
   await new Promise((resolve) => setTimeout(resolve, 0));
 
-  // The drawer should be open now
   assert.equal(layout.$.drawerEndOpen, true);
   assert.equal(layout.hasAttribute('drawer-end-open'), true);
-  assert.equal(layout._drawerGesture, null);
-  assert.notEqual(stackEnd.style.getPropertyValue('inset-inline-end'), '0px');
+  assert.equal(layout.querySelector('layout-node[mobile-dock="end"]')?.hasAttribute('drawer-open'), true);
 
-  const closePointerDownEvent = new Event('pointerdown');
-  closePointerDownEvent.pointerId = 2;
-  closePointerDownEvent.button = 0;
-  closePointerDownEvent.clientX = 100;
-  closePointerDownEvent.preventDefault = () => {};
-  handleButton.dispatchEvent(closePointerDownEvent);
-
-  assert.ok(layout._drawerGesture);
-  assert.equal(layout._drawerGesture.startOpen, true);
-
-  const closePointerMoveEvent = new Event('pointermove');
-  closePointerMoveEvent.pointerId = 2;
-  closePointerMoveEvent.clientX = 260;
-  closePointerMoveEvent.preventDefault = () => {};
-  layout.dispatchEvent(closePointerMoveEvent);
-
-  assert.ok(layout._drawerGesture.moved);
-
-  const closePointerUpEvent = new Event('pointerup');
-  closePointerUpEvent.pointerId = 2;
-  closePointerUpEvent.clientX = 280;
-  closePointerUpEvent.preventDefault = () => {};
-  layout.dispatchEvent(closePointerUpEvent);
-
+  layout.closeDrawer('end');
   await Promise.resolve();
   await new Promise((resolve) => setTimeout(resolve, 0));
 
   assert.equal(layout.$.drawerEndOpen, false);
   assert.equal(layout.hasAttribute('drawer-end-open'), false);
-  assert.equal(layout._drawerGesture, null);
-  assert.equal(stackEnd.style.getPropertyValue('inset-inline-end'), '0px');
+  assert.equal(layout._drawerGesture ?? null, null);
 
   const railLayout = document.createElement('panel-layout');
   document.body.append(railLayout);
@@ -1271,7 +1207,7 @@ test('panel layout drawer handle pointer gesture opens and closes drawer panels'
   await new Promise((resolve) => setTimeout(resolve, 0));
 
   assert.equal(railLayout.hasAttribute('drawer-mode-active'), true);
-  assert.equal(railLayout.querySelector('.layout-drawer-handle-stack-start').hidden, true);
+  assert.equal(railLayout.querySelector('.layout-drawer-handle-stack-start'), null);
   assert.equal(railLayout._drawerRailPeekPlayed, true);
   assert.ok(railLayout._drawerRailPeekTimer);
 

@@ -24,7 +24,7 @@
  */
 
 /**
- * @typedef {'edge' | 'island' | 'rail' | 'none'} LayoutSwipeControl
+ * @typedef {'edge' | 'rail' | 'none'} LayoutSwipeControl
  */
 
 /**
@@ -37,7 +37,7 @@
  * @property {LayoutResponsiveMode} [responsiveMode] Root responsive behavior.
  * @property {number} [responsiveBreakpoint] Inline size where responsiveMode activates.
  * @property {LayoutMobileDock} [mobileDock] Mobile drawer placement preference.
- * @property {LayoutSwipeControl} [swipeControl] Mobile swipe handle placement.
+ * @property {LayoutSwipeControl} [swipeControl] Mobile swipe source.
  * @property {boolean} [drawerHoverOpen] Whether mouse hover over a drawer rail opens the drawer.
  */
 
@@ -94,7 +94,7 @@ const COLLAPSE_POLICIES = new Set(['auto', 'manual', 'never'])
 const OVERFLOW_POLICIES = new Set(['collapse', 'scroll-inline', 'scroll-block', 'scroll'])
 const RESPONSIVE_MODES = new Set(['preserve', 'stack', 'scroll-inline', 'drawer', 'swipe'])
 const MOBILE_DOCKS = new Set(['auto', 'primary', 'start', 'end'])
-const SWIPE_CONTROLS = new Set(['edge', 'island', 'rail', 'none'])
+const SWIPE_CONTROLS = new Set(['edge', 'rail', 'none'])
 
 let idCounter = 0
 
