@@ -1,10 +1,22 @@
 import {
   createProductContextAgentView,
+  createProductRuntimeContext,
   normalizeProductContext,
+  normalizeRuntimeContext,
 } from './runtime/product-context.js';
 
+export const PRODUCT_RUNTIME_CONTEXT_NAME = 'symbiote.productRuntimeContext';
+
+export {
+  createProductRuntimeContext,
+  normalizeRuntimeContext,
+};
+
 export function getModelContext(target = globalThis.document) {
-  return target?.modelContext || globalThis.navigator?.modelContext || null;
+  return target?.modelContext
+    || (typeof target?.registerTool === 'function' ? target : null)
+    || globalThis.navigator?.modelContext
+    || null;
 }
 
 export function createToolDescriptor(options) {
@@ -35,6 +47,11 @@ export function createComponentToolDescriptor(component, tool) {
   });
 }
 
+function registrationUnregister(registration) {
+  if (typeof registration === 'function') return registration;
+  return () => registration?.dispose?.() || registration?.unregister?.();
+}
+
 export async function createNativeToolDescriptor(options) {
   let { ToolDescriptor } = await import('@symbiotejs/symbiote/webmcp');
   return new ToolDescriptor(options);
@@ -58,9 +75,7 @@ export async function registerWebMcpTool(options, target = globalThis.document) 
     descriptor = createToolDescriptor(options);
   }
   let registration = context.registerTool(descriptor);
-  let unregister = typeof registration === 'function'
-    ? registration
-    : () => registration?.dispose?.() || registration?.unregister?.();
+  let unregister = registrationUnregister(registration);
 
   return { nativeActive, descriptor, unregister };
 }
@@ -72,6 +87,116 @@ export function triggerWebMcpCommand(element, command, args = {}) {
     composed: true,
     detail: { command, args },
   }));
+}
+
+function isObject(value) {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function looksLikeRuntimeContext(value) {
+  if (!isObject(value) || value.modelContext || typeof value.registerTool === 'function') return false;
+  return [
+    'activeViewId',
+    'activeSurfaceId',
+    'activeWindowId',
+    'activeTabId',
+    'selectedEntityRefs',
+    'safeActionRefs',
+    'safeActions',
+    'collapsed',
+    'layoutPresets',
+    'windows',
+    'tabs',
+    'surfaces',
+    'cues',
+    'targets',
+  ].some((key) => key in value);
+}
+
+function resolveProductContextToolOptions(targetOrOptions, runtimeInput) {
+  if (isObject(targetOrOptions)
+    && !targetOrOptions.modelContext
+    && typeof targetOrOptions.registerTool !== 'function'
+    && typeof targetOrOptions.createElement !== 'function'
+    && ('target' in targetOrOptions || 'runtime' in targetOrOptions || 'publishContext' in targetOrOptions)) {
+    return {
+      target: targetOrOptions.target || globalThis.document,
+      runtime: targetOrOptions.runtime,
+      publishContext: targetOrOptions.publishContext !== false,
+    };
+  }
+  if (looksLikeRuntimeContext(targetOrOptions) && runtimeInput === undefined) {
+    return {
+      target: globalThis.document,
+      runtime: targetOrOptions,
+      publishContext: true,
+    };
+  }
+  return {
+    target: targetOrOptions || globalThis.document,
+    runtime: runtimeInput,
+    publishContext: true,
+  };
+}
+
+function createProductRuntimeContextPayload(contextView) {
+  return {
+    name: PRODUCT_RUNTIME_CONTEXT_NAME,
+    version: contextView.version,
+    schema: contextView.schema,
+    productId: contextView.product?.id || '',
+    description: contextView.webmcp?.productDescription || contextView.agent?.summary || '',
+    value: contextView,
+  };
+}
+
+function callContextPublisher(modelContext, methodName, payload) {
+  let publish = modelContext?.[methodName];
+  if (typeof publish !== 'function') return null;
+  let registration = publish.length >= 2
+    ? publish.call(modelContext, payload.name, payload.value, payload)
+    : publish.call(modelContext, payload);
+  return {
+    published: true,
+    nativeActive: true,
+    method: methodName,
+    payload,
+    unregister: registrationUnregister(registration),
+  };
+}
+
+export function publishProductRuntimeContext(contextView, target = globalThis.document) {
+  let modelContext = getModelContext(target);
+  let payload = createProductRuntimeContextPayload(contextView);
+  if (!modelContext) {
+    return { published: false, nativeActive: false, method: '', payload, unregister: () => {} };
+  }
+
+  for (let methodName of ['registerContext', 'publishContext', 'setContext', 'addContext']) {
+    try {
+      let publication = callContextPublisher(modelContext, methodName, payload);
+      if (publication) return publication;
+    } catch {
+      // Try the next host surface, then fall back to a plain property.
+    }
+  }
+
+  modelContext[PRODUCT_RUNTIME_CONTEXT_NAME] = payload.value;
+  modelContext.productRuntimeContext = payload.value;
+  return {
+    published: true,
+    nativeActive: false,
+    method: 'property',
+    payload,
+    unregister() {
+      if (modelContext[PRODUCT_RUNTIME_CONTEXT_NAME] === payload.value) {
+        delete modelContext[PRODUCT_RUNTIME_CONTEXT_NAME];
+      }
+      if (modelContext.productRuntimeContext === payload.value) {
+        delete modelContext.productRuntimeContext;
+      }
+    },
+  };
 }
 
 function resolveProductAction(context, action = {}) {
@@ -130,22 +255,32 @@ export function createProductContextToolDescriptors(productContext) {
     .map((action) => createProductActionToolDescriptor(context, action));
 }
 
-export async function registerProductContextTools(productContext, target = globalThis.document) {
+export async function registerProductContextTools(productContext, targetOrOptions = globalThis.document, runtimeInput) {
+  let options = resolveProductContextToolOptions(targetOrOptions, runtimeInput);
   let context = normalizeProductContext(productContext);
+  let runtime = options.runtime === undefined && isObject(productContext) ? productContext.runtime : options.runtime;
+  let contextView = createProductRuntimeContext(context, runtime);
   let agentView = createProductContextAgentView(context);
   let descriptors = createProductContextToolDescriptors(context);
   let registrations = [];
   for (let descriptor of descriptors) {
-    registrations.push(await registerWebMcpTool(descriptor, target));
+    registrations.push(await registerWebMcpTool(descriptor, options.target));
   }
+  let publication = options.publishContext
+    ? publishProductRuntimeContext(contextView, options.target)
+    : { published: false, nativeActive: false, method: '', payload: null, unregister: () => {} };
   return {
     nativeActive: registrations.some((registration) => registration.nativeActive),
     context,
     agentView,
+    contextView,
+    runtime: contextView.runtime,
+    publication,
     descriptors,
     registrations,
     unregister() {
       for (let registration of registrations) registration.unregister?.();
+      publication.unregister?.();
     },
   };
 }

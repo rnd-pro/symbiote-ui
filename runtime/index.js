@@ -25,7 +25,9 @@ export {
   PRODUCT_CONTEXT_SCHEMA_ID,
   PRODUCT_CONTEXT_VERSION,
   createProductContextAgentView,
+  createProductRuntimeContext,
   normalizeProductContext,
+  normalizeRuntimeContext,
 } from './product-context.js';
 
 export const RUNTIME_UI_CONTRACT_VERSION = 'runtime-ui-v1';

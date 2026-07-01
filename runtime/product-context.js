@@ -75,6 +75,10 @@ function normalizeComponentRef(source = {}, index = 0) {
   return {
     id,
     component,
+    descriptor: normalizeText(source.descriptor || source.descriptorId || source.componentDescriptor),
+    schema: normalizeText(source.schema || source.descriptorSchema || source.schemaVersion),
+    version: normalizeText(source.version || source.descriptorVersion || source.contract?.schemaVersion),
+    capabilities: normalizeStringArray(source.capabilities || source.contract?.capabilities),
     componentId: normalizeText(source.componentId || source.runtimeId || source.elementId),
     selector: normalizeText(source.selector),
     viewId: normalizeId(source.viewId || source.view),
@@ -201,6 +205,142 @@ export function normalizeProductContext(input = {}) {
     eventLog,
     webmcp,
     metadata: normalizeRecord(source.metadata),
+  };
+}
+
+function normalizeRuntimeItem(source = {}, index = 0, fallbackKind = 'surface') {
+  let item = isObject(source) ? source : { id: source, title: source };
+  let kind = normalizeText(item.kind || item.type || item.resourceType || item.panelType, fallbackKind);
+  let id = normalizeText(item.id || item.runtimeId || item.targetId || item.panelId, `${kind}-${index + 1}`);
+  let children = Array.isArray(item.children)
+    ? item.children
+    : (Array.isArray(item.panels) ? item.panels : []);
+  return {
+    id,
+    kind,
+    title: normalizeText(item.title || item.label || item.name, id),
+    role: normalizeText(item.role || item.windowRole || item.semanticRole),
+    component: normalizeText(item.component || item.tagName || item.componentId),
+    viewId: normalizeId(item.viewId || item.view || item.resourceType),
+    resourceType: normalizeText(item.resourceType || item.panelType),
+    selector: normalizeText(item.selector),
+    summary: normalizeText(item.summary || item.description),
+    entityRefs: normalizeStringArray(item.entityRefs || item.entities),
+    actionRefs: normalizeStringArray(item.actionRefs || item.actions),
+    collapsed: Boolean(item.collapsed),
+    layoutPresetId: normalizeText(item.layoutPresetId || item.layoutPreset || item.presetId),
+    target: normalizeRuntimeTarget(item),
+    targetSemantics: normalizeText(item.targetSemantics || item.semantics || item.target?.semantics),
+    state: normalizeRecord(item.state),
+    metadata: normalizeRecord(item.metadata),
+    children: children.map((child, childIndex) => normalizeRuntimeItem(child, childIndex, 'component')),
+  };
+}
+
+function normalizeRuntimeTarget(source = {}) {
+  let target = isObject(source.target) ? source.target : {};
+  return {
+    id: normalizeText(target.id || source.targetId || source.id),
+    kind: normalizeText(target.kind || target.type || source.targetKind || source.kind || source.type),
+    selector: normalizeText(target.selector || source.targetSelector || source.selector),
+    component: normalizeText(target.component || source.targetComponent || source.component || source.tagName),
+    viewId: normalizeId(target.viewId || source.targetViewId || source.viewId || source.view),
+    entityRefs: normalizeStringArray(target.entityRefs || source.targetEntityRefs),
+    actionRefs: normalizeStringArray(target.actionRefs || source.targetActionRefs),
+    semantics: normalizeText(target.semantics || source.targetSemantics || source.semantics),
+    metadata: normalizeRecord(target.metadata),
+  };
+}
+
+function normalizeRuntimeLayoutPreset(source = {}, index = 0) {
+  let preset = isObject(source) ? source : { id: source, label: source };
+  let id = normalizeId(preset.id || preset.presetId || preset.name, `layout-preset-${index + 1}`);
+  return {
+    id,
+    label: normalizeText(preset.label || preset.title || preset.name, id),
+    description: normalizeText(preset.description || preset.summary),
+    componentRefs: normalizeStringArray(preset.componentRefs || preset.components),
+    viewRefs: normalizeStringArray(preset.viewRefs || preset.views),
+    metadata: normalizeRecord(preset.metadata),
+  };
+}
+
+function normalizeRuntimeAction(source = {}, index = 0) {
+  let action = isObject(source) ? source : { id: source, title: source };
+  let id = normalizeId(action.id || action.actionId || action.name || action.toolName, `safe-action-${index + 1}`);
+  return {
+    id,
+    name: normalizeText(action.name || action.toolName),
+    title: normalizeText(action.title || action.label || action.name, id),
+    reason: normalizeText(action.reason || action.description || action.summary),
+    componentRefs: normalizeStringArray(action.componentRefs || action.components),
+    entityRefs: normalizeStringArray(action.entityRefs || action.entities),
+    viewRefs: normalizeStringArray(action.viewRefs || action.views),
+    safe: action.safe !== false && action.allowed !== false,
+    metadata: normalizeRecord(action.metadata),
+  };
+}
+
+function normalizeRuntimeActionRefs(source = {}, safeActions = []) {
+  let explicitRefs = normalizeStringArray(source.safeActionRefs || source.allowedActionRefs || source.actionRefs);
+  return [...new Set([...explicitRefs, ...safeActions.map((action) => action.id).filter(Boolean)])];
+}
+
+function normalizeRuntimeLogItems(value) {
+  return (Array.isArray(value) ? value : []).map((item, index) => ({
+    id: normalizeText(item?.id || item?.eventId, `runtime-event-${index + 1}`),
+    type: normalizeText(item?.type || item?.kind, 'event'),
+    title: normalizeText(item?.title || item?.label),
+    detail: normalizeText(item?.detail || item?.description || item?.summary),
+    timestamp: normalizeText(item?.timestamp || item?.time),
+    data: isObject(item?.data) ? { ...item.data } : normalizeRecord(item),
+  }));
+}
+
+export function normalizeRuntimeContext(input = {}) {
+  let source = isObject(input) ? input : {};
+  let windows = Array.isArray(source.windows) ? source.windows : [];
+  let tabs = Array.isArray(source.tabs) ? source.tabs : [];
+  let surfaces = Array.isArray(source.surfaces)
+    ? source.surfaces
+    : (windows.length ? windows : (Array.isArray(source.openViews) ? source.openViews : []));
+  let cues = Array.isArray(source.cues)
+    ? source.cues
+    : (Array.isArray(source.targets) ? source.targets : []);
+  let safeActionSource = Array.isArray(source.safeActions)
+    ? source.safeActions
+    : (Array.isArray(source.allowedActions) ? source.allowedActions : []);
+  let safeActions = safeActionSource.map(normalizeRuntimeAction);
+  return {
+    activeViewId: normalizeText(source.activeViewId || source.activeId || source.activeTabId),
+    activeSurfaceId: normalizeText(source.activeSurfaceId || source.activeWindowId || source.activeBoardId),
+    activeWindowId: normalizeText(source.activeWindowId || source.activeSurfaceId),
+    activeTabId: normalizeText(source.activeTabId || source.activeViewId),
+    locale: normalizeText(source.locale),
+    selectedEntityRefs: normalizeStringArray(source.selectedEntityRefs || source.selectedEntities || source.selectedEntityIds),
+    safeActionRefs: normalizeRuntimeActionRefs(source, safeActions),
+    safeActions,
+    collapsed: normalizeRecord(source.collapsed || source.collapsedState),
+    layoutPresets: (Array.isArray(source.layoutPresets) ? source.layoutPresets : [])
+      .map(normalizeRuntimeLayoutPreset),
+    windows: windows.map((window, index) => normalizeRuntimeItem(window, index, 'window')),
+    tabs: tabs.map((tab, index) => normalizeRuntimeItem(tab, index, 'tab')),
+    surfaces: surfaces.map((surface, index) => normalizeRuntimeItem(surface, index, 'surface')),
+    cues: cues.map((cue, index) => normalizeRuntimeItem(cue, index, 'cue')),
+    focus: Array.isArray(source.focus) ? source.focus.map(normalizeRecord) : [],
+    capabilities: normalizeRecord(source.capabilities),
+    recentInteractions: normalizeRuntimeLogItems(source.recentInteractions || source.interactions),
+    recentDataChanges: normalizeRuntimeLogItems(source.recentDataChanges || source.dataChanges),
+    metadata: normalizeRecord(source.metadata),
+  };
+}
+
+export function createProductRuntimeContext(input = {}, runtime) {
+  let source = isObject(input) ? input : {};
+  let context = normalizeProductContext(input);
+  return {
+    ...context,
+    runtime: normalizeRuntimeContext(runtime === undefined ? source.runtime : runtime),
   };
 }
 

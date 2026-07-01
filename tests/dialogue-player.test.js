@@ -352,6 +352,37 @@ test('seek() while paused previews only that turn and stays paused', async () =>
   );
 });
 
+test('preview(i) plays only the selected turn and stays paused', async () => {
+  let { document } = makeSpeechDocument();
+  let stage = createDialogueStage({ document, locale: 'en' });
+  let cues = [];
+  let indices = [];
+  let states = [];
+  let player = createDialoguePlayer(stage, makeLongTimeline(), {
+    defaultGapMs: 0,
+    onCue: (cue, turn, index) => cues.push({ cue, text: turn.text, index }),
+    onIndexChange: (i) => indices.push(i),
+    onStateChange: (s) => states.push(s),
+  });
+
+  player.preview(2);
+  assert.equal(player.index, 2);
+  assert.equal(player.isPaused, true);
+  assert.equal(player.isPlaying, false);
+
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.ok(
+    cues.some((c) => c.index === 2 && c.text === 'three'),
+    'onCue fired for previewed turn 2',
+  );
+  assert.equal(player.index, 2, 'preview did not auto-advance');
+  assert.ok(!indices.includes(3), 'preview did not move to the next turn');
+  assert.deepEqual(states, ['paused']);
+
+  player.stop();
+  await player.done;
+});
+
 test('a paused preview does not resolve the done promise', async () => {
   let { document } = makeSpeechDocument();
   let stage = createDialogueStage({ document, locale: 'en' });

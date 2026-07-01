@@ -2,14 +2,18 @@ import { acquireCurrentTestFileLock } from './test-lock.js';
 await acquireCurrentTestFileLock(import.meta.url);
 
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
 
 import {
   PRODUCT_CONTEXT_VERSION,
   createProductContextAgentView,
+  createProductRuntimeContext,
   normalizeProductContext,
+  normalizeRuntimeContext,
 } from '../runtime/product-context.js';
 import {
+  PRODUCT_RUNTIME_CONTEXT_NAME,
   createProductActionToolDescriptor,
   createProductContextToolDescriptors,
   registerProductContextTools,
@@ -42,6 +46,10 @@ function sampleProductContext() {
       {
         id: 'release-board',
         component: 'sn-kanban-board',
+        descriptor: 'sn-kanban-board',
+        schema: 'component-descriptor-v2',
+        version: '0.3.0-alpha.50',
+        capabilities: ['selection', 'move-intent'],
         viewId: 'kanban-board',
         role: 'workflow board',
         selector: 'cascade-board-panel sn-kanban-board',
@@ -105,6 +113,127 @@ function sampleProductContext() {
   };
 }
 
+function sampleRuntimeContext() {
+  return {
+    activeSurfaceId: 'release-window',
+    activeWindowId: 'release-window',
+    activeTabId: 'release-tab',
+    locale: 'ru',
+    selectedEntityRefs: ['publish-pages'],
+    safeActions: [{
+      id: 'request-release-move',
+      name: 'release_flow_request_move',
+      title: 'Request release move',
+      reason: 'The selected task is ready and the action is non-destructive.',
+      componentRefs: ['release-board'],
+      entityRefs: ['publish-pages'],
+      viewRefs: ['kanban-board'],
+    }],
+    collapsed: { 'release-sidebar': true },
+    layoutPresets: [{
+      id: 'operations-board',
+      label: 'Operations board',
+      componentRefs: ['release-board'],
+      viewRefs: ['kanban-board'],
+    }],
+    windows: [{
+      id: 'release-window',
+      title: 'Release workspace',
+      resourceType: 'workflow-window',
+      windowRole: 'operations-board',
+      layoutPresetId: 'operations-board',
+      panels: [{
+        id: 'release-board-panel',
+        panelType: 'board-panel',
+        title: 'Release board',
+        component: 'sn-kanban-board',
+        collapsed: false,
+      }],
+    }],
+    tabs: [{
+      id: 'release-tab',
+      title: 'Release tab',
+      viewId: 'kanban-board',
+      component: 'sn-tab-panel',
+    }],
+    targets: [{
+      id: 'cue:release-board:selected-card',
+      kind: 'cue',
+      title: 'Selected release card',
+      component: 'sn-kanban-board',
+      target: {
+        id: 'publish-pages',
+        kind: 'entity-card',
+        selector: '[data-card-id="publish-pages"]',
+        component: 'sn-kanban-board',
+        viewId: 'kanban-board',
+        entityRefs: ['publish-pages'],
+        actionRefs: ['request-release-move'],
+        semantics: 'selected release task card',
+      },
+    }],
+    capabilities: { presentation: { canSwitchTabs: true } },
+  };
+}
+
+function resolveSchemaRef(root, ref) {
+  return ref.split('/').slice(1).reduce((node, part) => node?.[part], root);
+}
+
+function typeMatches(value, type) {
+  if (type === 'array') return Array.isArray(value);
+  if (type === 'object') return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+  return typeof value === type;
+}
+
+function assertSchemaValid(value, schema, root = schema, path = '$') {
+  if (value === undefined) return;
+  if (schema.$ref) {
+    assertSchemaValid(value, resolveSchemaRef(root, schema.$ref), root, path);
+    return;
+  }
+  if ('const' in schema) {
+    assert.equal(value, schema.const, `${path} const`);
+  }
+  if (schema.enum) {
+    assert.ok(schema.enum.includes(value), `${path} enum`);
+  }
+  if (schema.type) {
+    let types = Array.isArray(schema.type) ? schema.type : [schema.type];
+    assert.ok(types.some((type) => typeMatches(value, type)), `${path} type`);
+  }
+  if (schema.minLength !== undefined && typeof value === 'string') {
+    assert.ok(value.length >= schema.minLength, `${path} minLength`);
+  }
+  if (schema.type === 'array') {
+    if (schema.uniqueItems) {
+      assert.equal(new Set(value).size, value.length, `${path} uniqueItems`);
+    }
+    for (let [index, item] of value.entries()) {
+      assertSchemaValid(item, schema.items, root, `${path}[${index}]`);
+    }
+    return;
+  }
+  if (schema.type !== 'object' || !value || Array.isArray(value)) return;
+
+  for (let required of schema.required || []) {
+    assert.notEqual(value[required], undefined, `${path}.${required} required`);
+  }
+  let properties = schema.properties || {};
+  for (let [key, child] of Object.entries(value)) {
+    if (child === undefined) continue;
+    let propertySchema = properties[key];
+    if (!propertySchema) {
+      assert.notEqual(schema.additionalProperties, false, `${path}.${key} additionalProperties`);
+      if (schema.additionalProperties && typeof schema.additionalProperties === 'object') {
+        assertSchemaValid(child, schema.additionalProperties, root, `${path}.${key}`);
+      }
+      continue;
+    }
+    assertSchemaValid(child, propertySchema, root, `${path}.${key}`);
+  }
+}
+
 test('normalizeProductContext keeps product semantics above neutral component refs', () => {
   let context = normalizeProductContext(sampleProductContext());
 
@@ -114,6 +243,9 @@ test('normalizeProductContext keeps product semantics above neutral component re
   assert.equal(context.views[0].route, '#automation/kanban-board');
   assert.deepEqual(context.views[0].componentRefs, ['release-board']);
   assert.equal(context.componentRefs[0].component, 'sn-kanban-board');
+  assert.equal(context.componentRefs[0].descriptor, 'sn-kanban-board');
+  assert.equal(context.componentRefs[0].schema, 'component-descriptor-v2');
+  assert.deepEqual(context.componentRefs[0].capabilities, ['selection', 'move-intent']);
   assert.equal(context.componentRefs[0].role, 'workflow board');
   assert.equal(context.entities[0].type, 'release-task');
   assert.equal(context.actions[0].name, 'automation_release_demo_select_release_card');
@@ -140,6 +272,32 @@ test('createProductContextAgentView exposes what an agent needs to inspect a pro
   assert.match(view.webmcp.actionPolicy, /host-owned product intents/);
 });
 
+test('createProductRuntimeContext carries live browser UI context for narration', () => {
+  let runtime = normalizeRuntimeContext(sampleRuntimeContext());
+  let context = createProductRuntimeContext(sampleProductContext(), runtime);
+  let composed = createProductRuntimeContext({
+    ...sampleProductContext(),
+    runtime: sampleRuntimeContext(),
+  });
+
+  assert.equal(context.product.id, 'automation-release-demo');
+  assert.equal(composed.runtime.activeWindowId, 'release-window');
+  assert.match(context.agent.summary, /Automation release flow/);
+  assert.match(context.agent.summary, /Views: Kanban board/);
+  assert.equal(context.runtime.activeSurfaceId, 'release-window');
+  assert.equal(context.runtime.activeTabId, 'release-tab');
+  assert.deepEqual(context.runtime.selectedEntityRefs, ['publish-pages']);
+  assert.deepEqual(context.runtime.safeActionRefs, ['request-release-move']);
+  assert.equal(context.runtime.safeActions[0].safe, true);
+  assert.equal(context.runtime.collapsed['release-sidebar'], true);
+  assert.equal(context.runtime.layoutPresets[0].id, 'operations-board');
+  assert.equal(context.runtime.windows[0].children[0].component, 'sn-kanban-board');
+  assert.equal(context.runtime.tabs[0].id, 'release-tab');
+  assert.equal(context.runtime.surfaces[0].children[0].component, 'sn-kanban-board');
+  assert.equal(context.runtime.cues[0].target.semantics, 'selected release task card');
+  assert.equal(context.runtime.capabilities.presentation.canSwitchTabs, true);
+});
+
 test('product context actions become WebMCP descriptors without a browser-only dependency', async () => {
   let context = normalizeProductContext(sampleProductContext());
   let descriptor = createProductActionToolDescriptor(context, context.actions[0]);
@@ -159,26 +317,50 @@ test('product context actions become WebMCP descriptors without a browser-only d
   ]);
 
   let registered = [];
+  let published = [];
+  let unpublished = 0;
   let result = await registerProductContextTools(context, {
     modelContext: {
       registerTool(tool) {
         registered.push(tool);
         return () => {};
       },
+      registerContext(payload) {
+        published.push(payload);
+        return () => {
+          unpublished += 1;
+        };
+      },
     },
-  });
+  }, sampleRuntimeContext());
 
   assert.equal(result.nativeActive, false);
   assert.equal(result.descriptors.length, 2);
   assert.equal(registered.length, 2);
+  assert.equal(result.contextView.runtime.activeWindowId, 'release-window');
+  assert.equal(result.runtime.cues[0].target.entityRefs[0], 'publish-pages');
+  assert.equal(result.publication.published, true);
+  assert.equal(result.publication.method, 'registerContext');
+  assert.equal(published[0].name, PRODUCT_RUNTIME_CONTEXT_NAME);
+  assert.equal(published[0].value.runtime.safeActionRefs[0], 'request-release-move');
+  result.unregister();
+  assert.equal(unpublished, 1);
 });
 
-test('product context schema is published through the UI schema catalog', () => {
+test('product context schema is published through the UI schema catalog', async () => {
+  let diskSchema = JSON.parse(await readFile(new URL('../schemas/product-context-v1.json', import.meta.url), 'utf8'));
   let schema = getUiSchema('product-context-v1');
+  let context = createProductRuntimeContext(sampleProductContext(), sampleRuntimeContext());
 
   assert.ok(listUiSchemaVersions().includes('product-context-v1'));
+  assert.deepEqual(schema, diskSchema);
   assert.equal(schema.$id, 'https://rnd-pro.github.io/symbiote-ui/schemas/product-context-v1.json');
   assert.equal(schema.properties.product.$ref, '#/$defs/product');
   assert.equal(schema.properties.componentRefs.items.$ref, '#/$defs/componentRef');
   assert.equal(schema.properties.actions.items.$ref, '#/$defs/action');
+  assert.equal(schema.properties.runtime.$ref, '#/$defs/runtime');
+  assert.equal(schema.$defs.componentRef.properties.capabilities.$ref, '#/$defs/idArray');
+  assert.equal(schema.$defs.runtime.properties.windows.items.$ref, '#/$defs/runtimeItem');
+  assert.equal(schema.$defs.runtimeItem.properties.target.$ref, '#/$defs/runtimeTarget');
+  assertSchemaValid(context, diskSchema);
 });

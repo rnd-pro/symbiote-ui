@@ -2,7 +2,7 @@
  * Stateful dialogue player.
  *
  * Wraps a dialogue stage (see `dialogue-stage.js`) with transport controls —
- * play/pause/resume, next/prev/seek, and stop — over the same
+ * play/pause/resume, next/prev/seek/preview, and stop — over the same
  * `{ personas, turns }` timeline that `playDialogueTimeline` consumes. Where the
  * scheduler is a fire-and-forget run, this controller holds a cursor (`index`)
  * the host can steer, so a UI can drive playback like a media player.
@@ -236,6 +236,7 @@ export function createDialoguePlayer(stage, timeline, options = {}) {
     let next = clampIndex(target, total);
     halt();
     previewPause = true;
+    if (state !== 'paused') emitState('paused');
     if (stage && typeof stage.resume === 'function') {
       try {
         stage.resume();
@@ -340,6 +341,12 @@ export function createDialoguePlayer(stage, timeline, options = {}) {
     /** Stop the current speech and speak the previous turn (clamped at 0). */
     prev() {
       gotoAndSpeak(index - 1);
+      return controller;
+    },
+
+    /** Speak only turn `i` and stay paused; selecting timeline rows uses this. */
+    preview(i) {
+      previewWhilePaused(i);
       return controller;
     },
 
