@@ -10,6 +10,8 @@ const signalExitCodes = new Map([
   ['SIGKILL', 137],
 ]);
 const browserSmokeFile = 'tests/graph-browser-smoke.test.js';
+const chromiumSmokeEnv = 'SYMBIOTE_UI_CHROMIUM_SMOKE';
+const chromiumSmokeFlags = new Set(['--chromium-smoke', '--run-chromium-smoke']);
 const browserSmokeSegments = [
   'cascade lab graph nodes render non-empty with route styles and compact mode in a real browser',
   'design protocol applies recipe themes and policy diagnostics in a real browser',
@@ -39,6 +41,7 @@ const unsupportedMacBrowserCandidates = [
 
 function parseArgs(argv) {
   let suite = 'all';
+  let chromiumSmoke = isTruthy(process.env[chromiumSmokeEnv]);
   let separatorIndex = argv.indexOf('--');
   let optionArgs = separatorIndex === -1 ? argv : argv.slice(0, separatorIndex);
   let commandArgs = separatorIndex === -1 ? [] : argv.slice(separatorIndex + 1);
@@ -47,15 +50,23 @@ function parseArgs(argv) {
     if (optionArgs[index] === '--suite') {
       suite = optionArgs[index + 1] || suite;
       index++;
+    } else if (chromiumSmokeFlags.has(optionArgs[index])) {
+      chromiumSmoke = true;
     }
   }
 
-  return { suite, commandArgs };
+  return { suite, commandArgs, chromiumSmoke: chromiumSmoke || suite === 'browser' };
 }
 
-let { suite, commandArgs } = parseArgs(process.argv.slice(2));
+function isTruthy(value) {
+  return ['1', 'true', 'yes', 'on'].includes(String(value || '').toLowerCase());
+}
+
+let { suite, commandArgs, chromiumSmoke } = parseArgs(process.argv.slice(2));
 if (commandArgs.length === 0) {
-  console.error('Usage: node tests/run-tests.js [--suite name] -- node --test tests/*.test.js');
+  console.error(`Usage: node tests/run-tests.js [--suite name] [--chromium-smoke] -- node --test tests/*.test.js
+
+Set ${chromiumSmokeEnv}=1 as an alternative to --chromium-smoke.`);
   process.exit(2);
 }
 
@@ -99,16 +110,20 @@ function insertBeforeTestFiles(args, option) {
   return [...args.slice(0, index), option, ...args.slice(index)];
 }
 
-function browserPreflightError() {
+function browserPreflightStatus() {
   if (process.env.CHROME_BIN && !existsSync(process.env.CHROME_BIN)) {
-    return `CHROME_BIN does not exist: ${process.env.CHROME_BIN}`;
+    return {
+      ready: false,
+      hardError: true,
+      message: `CHROME_BIN does not exist: ${process.env.CHROME_BIN}`,
+    };
   }
-  if (process.env.SYMBIOTE_UI_ALLOW_SYSTEM_CHROME === '1') return '';
-  if (managedBrowserCandidates.some((candidate) => existsSync(candidate))) return '';
+  if (process.env.SYMBIOTE_UI_ALLOW_SYSTEM_CHROME === '1') return { ready: true };
+  if (managedBrowserCandidates.some((candidate) => existsSync(candidate))) return { ready: true };
 
   let systemBrowser = unsupportedMacBrowserCandidates.find((candidate) => existsSync(candidate));
   let message = [
-    'Browser smoke requires a managed Chrome binary.',
+    'Chromium smoke skipped: no managed Chrome binary was found.',
     'Install Chrome for Testing or Chromium, or set CHROME_BIN to a standalone browser executable.',
   ];
   if (systemBrowser) {
@@ -117,13 +132,20 @@ function browserPreflightError() {
   } else {
     message.splice(1, 0, 'No managed Chrome binary was found.');
   }
-  return message.join('\n');
+  return { ready: false, hardError: false, message: message.join('\n') };
 }
 
 function errorBatch(message) {
   return {
     command: process.execPath,
     args: ['--input-type=module', '-e', `console.error(${JSON.stringify(message)}); process.exit(1);`],
+  };
+}
+
+function skipBatch(message) {
+  return {
+    command: process.execPath,
+    args: ['--input-type=module', '-e', `console.error(${JSON.stringify(message)}); process.exit(0);`],
   };
 }
 
@@ -157,7 +179,7 @@ function replaceTestFileArgs(args, files) {
   });
 }
 
-async function createBatches(commandArgs) {
+async function createBatches(commandArgs, options = {}) {
   let [command, ...args] = commandArgs;
   let files = await resolveTestFileArgs(args);
   if (!args.includes('--test') || !files.includes(browserSmokeFile)) {
@@ -170,9 +192,14 @@ async function createBatches(commandArgs) {
     batches.push({ command, args: replaceTestFileArgs(args, nonBrowserFiles) });
   }
 
-  let preflightError = browserPreflightError();
-  if (preflightError) {
-    batches.push(errorBatch(preflightError));
+  if (!options.chromiumSmoke) {
+    batches.push(skipBatch(`Chromium smoke skipped: enable with --chromium-smoke or ${chromiumSmokeEnv}=1.`));
+    return batches;
+  }
+
+  let preflight = browserPreflightStatus();
+  if (!preflight.ready) {
+    batches.push(preflight.hardError ? errorBatch(preflight.message) : skipBatch(preflight.message));
     return batches;
   }
 
@@ -255,7 +282,7 @@ for (let signal of ['SIGHUP', 'SIGINT', 'SIGTERM']) {
 
 lock = await acquireTestSuiteLock(suite, { signals: false });
 let code = 0;
-let batches = await createBatches(commandArgs);
+let batches = await createBatches(commandArgs, { chromiumSmoke });
 for (let batch of batches) {
   let batchCode = await runChild(batch.command, batch.args);
   if (code === 0 && batchCode !== 0) code = batchCode;
