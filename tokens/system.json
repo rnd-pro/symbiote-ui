@@ -1,0 +1,596 @@
+{
+  "$schema": "https://design-tokens.github.io/community-group/format/",
+  "$description": "symbiote-ui T2 system-role contract (generated from tokens/tiers.js — do not edit by hand)",
+  "sys": {
+    "surface": {
+      "surface-sunken": {
+        "$type": "color",
+        "$value": "var(--sn-sys-surface-sunken)",
+        "$extensions": {
+          "symbiote-ui": {
+            "tier": "sys"
+          }
+        }
+      },
+      "surface": {
+        "$type": "color",
+        "$value": "var(--sn-sys-surface)",
+        "$extensions": {
+          "symbiote-ui": {
+            "tier": "sys"
+          }
+        }
+      },
+      "surface-panel": {
+        "$type": "color",
+        "$value": "var(--sn-sys-surface-panel)",
+        "$extensions": {
+          "symbiote-ui": {
+            "tier": "sys"
+          }
+        }
+      },
+      "surface-raised": {
+        "$type": "color",
+        "$value": "var(--sn-sys-surface-raised)",
+        "$extensions": {
+          "symbiote-ui": {
+            "tier": "sys"
+          }
+        }
+      },
+      "surface-toolbar": {
+        "$type": "color",
+        "$value": "var(--sn-sys-surface-toolbar)",
+        "$extensions": {
+          "symbiote-ui": {
+            "tier": "sys"
+          }
+        }
+      },
+      "surface-overlay": {
+        "$type": "color",
+        "$value": "var(--sn-sys-surface-overlay)",
+        "$extensions": {
+          "symbiote-ui": {
+            "tier": "sys"
+          }
+        }
+      },
+      "scrim": {
+        "$type": "color",
+        "$value": "var(--sn-sys-scrim)",
+        "$extensions": {
+          "symbiote-ui": {
+            "tier": "sys"
+          }
+        }
+      },
+      "on-surface": {
+        "$type": "color",
+        "$value": "var(--sn-sys-on-surface)",
+        "$extensions": {
+          "symbiote-ui": {
+            "tier": "sys"
+          }
+        }
+      },
+      "on-surface-dim": {
+        "$type": "color",
+        "$value": "var(--sn-sys-on-surface-dim)",
+        "$extensions": {
+          "symbiote-ui": {
+            "tier": "sys"
+          }
+        }
+      },
+      "on-surface-faint": {
+        "$type": "color",
+        "$value": "var(--sn-sys-on-surface-faint)",
+        "$extensions": {
+          "symbiote-ui": {
+            "tier": "sys"
+          }
+        }
+      }
+    },
+    "content": {
+      "on-accent": {
+        "$type": "color",
+        "$value": "var(--sn-sys-on-accent)",
+        "$extensions": {
+          "symbiote-ui": {
+            "tier": "sys"
+          }
+        }
+      },
+      "on-status": {
+        "$type": "color",
+        "$value": "var(--sn-sys-on-status)",
+        "$extensions": {
+          "symbiote-ui": {
+            "tier": "sys"
+          }
+        }
+      },
+      "on-success-container": {
+        "$type": "color",
+        "$value": "var(--sn-sys-on-success-container)",
+        "$extensions": {
+          "symbiote-ui": {
+            "tier": "sys"
+          }
+        }
+      },
+      "on-warning-container": {
+        "$type": "color",
+        "$value": "var(--sn-sys-on-warning-container)",
+        "$extensions": {
+          "symbiote-ui": {
+            "tier": "sys"
+          }
+        }
+      },
+      "on-danger-container": {
+        "$type": "color",
+        "$value": "var(--sn-sys-on-danger-container)",
+        "$extensions": {
+          "symbiote-ui": {
+            "tier": "sys"
+          }
+        }
+      },
+      "on-info-container": {
+        "$type": "color",
+        "$value": "var(--sn-sys-on-info-container)",
+        "$extensions": {
+          "symbiote-ui": {
+            "tier": "sys"
+          }
+        }
+      }
+    },
+    "outline": {
+      "outline-subtle": {
+        "$type": "color",
+        "$value": "var(--sn-sys-outline-subtle)",
+        "$extensions": {
+          "symbiote-ui": {
+            "tier": "sys"
+          }
+        }
+      },
+      "outline": {
+        "$type": "color",
+        "$value": "var(--sn-sys-outline)",
+        "$extensions": {
+          "symbiote-ui": {
+            "tier": "sys"
+          }
+        }
+      },
+      "outline-strong": {
+        "$type": "color",
+        "$value": "var(--sn-sys-outline-strong)",
+        "$extensions": {
+          "symbiote-ui": {
+            "tier": "sys"
+          }
+        }
+      },
+      "outline-focus": {
+        "$type": "color",
+        "$value": "var(--sn-sys-outline-focus)",
+        "$extensions": {
+          "symbiote-ui": {
+            "tier": "sys"
+          }
+        }
+      }
+    },
+    "accent-status": {
+      "accent": {
+        "$type": "color",
+        "$value": "var(--sn-sys-accent)",
+        "$extensions": {
+          "symbiote-ui": {
+            "tier": "sys"
+          }
+        }
+      },
+      "accent-container": {
+        "$type": "color",
+        "$value": "var(--sn-sys-accent-container)",
+        "$extensions": {
+          "symbiote-ui": {
+            "tier": "sys"
+          }
+        }
+      },
+      "success": {
+        "$type": "color",
+        "$value": "var(--sn-sys-success)",
+        "$extensions": {
+          "symbiote-ui": {
+            "tier": "sys"
+          }
+        }
+      },
+      "success-container": {
+        "$type": "color",
+        "$value": "var(--sn-sys-success-container)",
+        "$extensions": {
+          "symbiote-ui": {
+            "tier": "sys"
+          }
+        }
+      },
+      "warning": {
+        "$type": "color",
+        "$value": "var(--sn-sys-warning)",
+        "$extensions": {
+          "symbiote-ui": {
+            "tier": "sys"
+          }
+        }
+      },
+      "warning-container": {
+        "$type": "color",
+        "$value": "var(--sn-sys-warning-container)",
+        "$extensions": {
+          "symbiote-ui": {
+            "tier": "sys"
+          }
+        }
+      },
+      "danger": {
+        "$type": "color",
+        "$value": "var(--sn-sys-danger)",
+        "$extensions": {
+          "symbiote-ui": {
+            "tier": "sys"
+          }
+        }
+      },
+      "danger-container": {
+        "$type": "color",
+        "$value": "var(--sn-sys-danger-container)",
+        "$extensions": {
+          "symbiote-ui": {
+            "tier": "sys"
+          }
+        }
+      },
+      "info": {
+        "$type": "color",
+        "$value": "var(--sn-sys-info)",
+        "$extensions": {
+          "symbiote-ui": {
+            "tier": "sys"
+          }
+        }
+      },
+      "info-container": {
+        "$type": "color",
+        "$value": "var(--sn-sys-info-container)",
+        "$extensions": {
+          "symbiote-ui": {
+            "tier": "sys"
+          }
+        }
+      }
+    },
+    "state": {
+      "state-hover-mix": {
+        "$type": "number",
+        "$value": "var(--sn-sys-state-hover-mix)",
+        "$extensions": {
+          "symbiote-ui": {
+            "tier": "sys"
+          }
+        }
+      },
+      "state-pressed-mix": {
+        "$type": "number",
+        "$value": "var(--sn-sys-state-pressed-mix)",
+        "$extensions": {
+          "symbiote-ui": {
+            "tier": "sys"
+          }
+        }
+      },
+      "state-selected-mix": {
+        "$type": "number",
+        "$value": "var(--sn-sys-state-selected-mix)",
+        "$extensions": {
+          "symbiote-ui": {
+            "tier": "sys"
+          }
+        }
+      },
+      "state-dragged-mix": {
+        "$type": "number",
+        "$value": "var(--sn-sys-state-dragged-mix)",
+        "$extensions": {
+          "symbiote-ui": {
+            "tier": "sys"
+          }
+        }
+      },
+      "state-disabled-opacity": {
+        "$type": "number",
+        "$value": "var(--sn-sys-state-disabled-opacity)",
+        "$extensions": {
+          "symbiote-ui": {
+            "tier": "sys"
+          }
+        }
+      }
+    },
+    "focus": {
+      "focus-ring": {
+        "$type": "color",
+        "$value": "var(--sn-sys-focus-ring)",
+        "$extensions": {
+          "symbiote-ui": {
+            "tier": "sys"
+          }
+        }
+      },
+      "focus-ring-width": {
+        "$type": "dimension",
+        "$value": "var(--sn-sys-focus-ring-width)",
+        "$extensions": {
+          "symbiote-ui": {
+            "tier": "sys"
+          }
+        }
+      },
+      "focus-ring-offset": {
+        "$type": "dimension",
+        "$value": "var(--sn-sys-focus-ring-offset)",
+        "$extensions": {
+          "symbiote-ui": {
+            "tier": "sys"
+          }
+        }
+      }
+    },
+    "elevation": {
+      "shadow-raised": {
+        "$type": "shadow",
+        "$value": "var(--sn-sys-shadow-raised)",
+        "$extensions": {
+          "symbiote-ui": {
+            "tier": "sys"
+          }
+        }
+      },
+      "shadow-overlay": {
+        "$type": "shadow",
+        "$value": "var(--sn-sys-shadow-overlay)",
+        "$extensions": {
+          "symbiote-ui": {
+            "tier": "sys"
+          }
+        }
+      }
+    },
+    "geometry": {
+      "density": {
+        "$type": "dimension",
+        "$value": "var(--sn-sys-density)",
+        "$extensions": {
+          "symbiote-ui": {
+            "tier": "sys"
+          }
+        }
+      }
+    }
+  },
+  "state": {
+    "hover": {
+      "$type": "dimension",
+      "$value": "8%"
+    },
+    "pressed": {
+      "$type": "dimension",
+      "$value": "12%"
+    },
+    "selected": {
+      "$type": "dimension",
+      "$value": "16%"
+    },
+    "dragged": {
+      "$type": "dimension",
+      "$value": "20%"
+    },
+    "disabledOpacity": {
+      "$type": "number",
+      "$value": 0.38
+    }
+  },
+  "ref": {
+    "$description": "T1 ramps are implementation, not public API; listed for tooling completeness.",
+    "families": {
+      "$type": "string",
+      "$value": "neutral,accent,success,warning,danger,info"
+    },
+    "stops": {
+      "$type": "string",
+      "$value": "0,5,10,15,20,30,40,50,60,70,80,90,95,100"
+    }
+  },
+  "legacy": {
+    "bg": {
+      "$type": "color",
+      "$value": "var(--sn-sys-surface)",
+      "$extensions": {
+        "symbiote-ui": {
+          "tier": "legacy-alias",
+          "removal": "wave-3"
+        }
+      }
+    },
+    "layout-bg": {
+      "$type": "color",
+      "$value": "var(--sn-sys-surface-sunken)",
+      "$extensions": {
+        "symbiote-ui": {
+          "tier": "legacy-alias",
+          "removal": "wave-3"
+        }
+      }
+    },
+    "panel-bg": {
+      "$type": "color",
+      "$value": "var(--sn-sys-surface-panel)",
+      "$extensions": {
+        "symbiote-ui": {
+          "tier": "legacy-alias",
+          "removal": "wave-3"
+        }
+      }
+    },
+    "node-bg": {
+      "$type": "color",
+      "$value": "var(--sn-sys-surface-raised)",
+      "$extensions": {
+        "symbiote-ui": {
+          "tier": "legacy-alias",
+          "removal": "wave-3"
+        }
+      }
+    },
+    "ctx-bg": {
+      "$type": "color",
+      "$value": "var(--sn-sys-surface-overlay)",
+      "$extensions": {
+        "symbiote-ui": {
+          "tier": "legacy-alias",
+          "removal": "wave-3"
+        }
+      }
+    },
+    "surface": {
+      "$type": "color",
+      "$value": "var(--sn-sys-surface-raised)",
+      "$extensions": {
+        "symbiote-ui": {
+          "tier": "legacy-alias",
+          "removal": "wave-3"
+        }
+      }
+    },
+    "text": {
+      "$type": "color",
+      "$value": "var(--sn-sys-on-surface)",
+      "$extensions": {
+        "symbiote-ui": {
+          "tier": "legacy-alias",
+          "removal": "wave-3"
+        }
+      }
+    },
+    "text-dim": {
+      "$type": "color",
+      "$value": "var(--sn-sys-on-surface-dim)",
+      "$extensions": {
+        "symbiote-ui": {
+          "tier": "legacy-alias",
+          "removal": "wave-3"
+        }
+      }
+    },
+    "node-border": {
+      "$type": "color",
+      "$value": "var(--sn-sys-outline)",
+      "$extensions": {
+        "symbiote-ui": {
+          "tier": "legacy-alias",
+          "removal": "wave-3"
+        }
+      }
+    },
+    "lit-border": {
+      "$type": "color",
+      "$value": "var(--sn-sys-outline-subtle)",
+      "$extensions": {
+        "symbiote-ui": {
+          "tier": "legacy-alias",
+          "removal": "wave-3"
+        }
+      }
+    },
+    "node-selected": {
+      "$type": "color",
+      "$value": "var(--sn-sys-accent)",
+      "$extensions": {
+        "symbiote-ui": {
+          "tier": "legacy-alias",
+          "removal": "wave-3"
+        }
+      }
+    },
+    "node-hover": {
+      "$type": "color",
+      "$value": "var(--sn-sys-state-hover-mix)",
+      "$extensions": {
+        "symbiote-ui": {
+          "tier": "legacy-alias",
+          "removal": "wave-3"
+        }
+      }
+    },
+    "success-color": {
+      "$type": "color",
+      "$value": "var(--sn-sys-success)",
+      "$extensions": {
+        "symbiote-ui": {
+          "tier": "legacy-alias",
+          "removal": "wave-3"
+        }
+      }
+    },
+    "warning-color": {
+      "$type": "color",
+      "$value": "var(--sn-sys-warning)",
+      "$extensions": {
+        "symbiote-ui": {
+          "tier": "legacy-alias",
+          "removal": "wave-3"
+        }
+      }
+    },
+    "danger-color": {
+      "$type": "color",
+      "$value": "var(--sn-sys-danger)",
+      "$extensions": {
+        "symbiote-ui": {
+          "tier": "legacy-alias",
+          "removal": "wave-3"
+        }
+      }
+    },
+    "focus-ring-color": {
+      "$type": "color",
+      "$value": "var(--sn-sys-focus-ring)",
+      "$extensions": {
+        "symbiote-ui": {
+          "tier": "legacy-alias",
+          "removal": "wave-3"
+        }
+      }
+    },
+    "focus-outline-offset": {
+      "$type": "color",
+      "$value": "var(--sn-sys-focus-ring-offset)",
+      "$extensions": {
+        "symbiote-ui": {
+          "tier": "legacy-alias",
+          "removal": "wave-3"
+        }
+      }
+    }
+  }
+}
