@@ -28,15 +28,18 @@ sn-kanban-board .sn-kanban-columns {
   grid-auto-flow: column;
   grid-auto-columns: var(--sn-kanban-column-width, minmax(232px, 286px));
   align-items: var(--sn-kanban-columns-align, stretch);
-  gap: var(--sn-kanban-gap, 10px);
+  gap: var(--sn-kanban-gap, var(--sn-step-5));
   min-width: 0;
   min-height: var(--sn-kanban-columns-min-height, 0);
   height: var(--sn-kanban-columns-height, 100%);
   overflow: auto;
-  padding: var(--sn-kanban-padding, 0 0 4px);
+  padding: var(--sn-kanban-padding, 0 0 var(--sn-step-2));
 }
 
 sn-kanban-board .sn-kanban-column {
+  /* Named inline-size container (house pattern: ChatComposer/LayoutNode) for the
+     narrow-column adaptivity rules at the end of this sheet. */
+  container: kanban-column / inline-size;
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -65,7 +68,7 @@ sn-kanban-board .sn-kanban-column-header {
   grid-template-columns: minmax(0, 1fr) auto;
   gap: var(--sn-step-4);
   min-height: var(--sn-kanban-header-min-height, 54px);
-  padding: var(--sn-kanban-header-padding, 9px 10px);
+  padding: var(--sn-kanban-header-padding, var(--sn-step-4) var(--sn-step-5));
   border-block-end: 1px solid var(--sn-kanban-border);
   background: var(--sn-kanban-header-bg);
 }
@@ -112,8 +115,8 @@ sn-kanban-board .sn-kanban-column-body {
 sn-kanban-board .sn-kanban-card-list {
   display: flex;
   flex-direction: column;
-  gap: var(--sn-kanban-card-gap, 8px);
-  padding: var(--sn-kanban-card-list-padding, 8px);
+  gap: var(--sn-kanban-card-gap, var(--sn-step-4));
+  padding: var(--sn-kanban-card-list-padding, var(--sn-step-4));
   overflow: var(--sn-kanban-card-list-overflow, auto);
 }
 
@@ -131,6 +134,11 @@ sn-kanban-board .sn-kanban-column-empty {
   text-align: center;
 }
 
+/*
+ * Fixed widget geometry: every card is the same height (height, not min-height) and clips
+ * internally. Rows: meta (1 line, clipped) / title (2-line clamp) / ticker (1 line) /
+ * footer (1 line, no wrap — the host's chip budget + overflow chip guarantee fit).
+ */
 sn-kanban-board .sn-kanban-card {
   display: grid;
   flex: 0 0 auto;
@@ -138,14 +146,15 @@ sn-kanban-board .sn-kanban-card {
   gap: var(--sn-step-3);
   position: relative;
   width: 100%;
-  min-height: var(--sn-kanban-card-min-height, 118px);
-  padding: var(--sn-kanban-card-padding, 9px);
+  height: var(--sn-kanban-card-height, 148px);
+  padding: var(--sn-kanban-card-padding, var(--sn-step-4));
   border: 1px solid var(--sn-kanban-card-border);
   border-radius: var(--sn-kanban-card-radius, 7px);
   background: var(--sn-kanban-card-bg);
   color: var(--sn-sys-on-surface);
   font: inherit;
   text-align: start;
+  overflow: hidden;
   /* U08: draggable + clickable — grab affordance disambiguates from a plain button press. */
   cursor: grab;
 }
@@ -181,7 +190,7 @@ sn-kanban-board .sn-kanban-card-drag-handle {
 }
 
 sn-kanban-board .sn-kanban-card-drag-handle .material-symbols-outlined {
-  font-size: var(--sn-text-md, 16px);
+  font-size: var(--sn-text-lg);
 }
 
 sn-kanban-board .sn-kanban-card-title {
@@ -196,21 +205,64 @@ sn-kanban-board .sn-kanban-card-title {
 }
 
 sn-kanban-board .sn-kanban-card-title-text {
+  display: -webkit-box;
   min-width: 0;
+  overflow: hidden;
   overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--sn-kanban-card-title-lines, 2);
 }
 
-/* U02: multi-line clamp instead of unbounded raw prompt/summary text. */
+/*
+ * Host compat: the default card face no longer renders a summary (long texts live in the
+ * inspector), but custom renderCard hosts may still compose this class — the clamp and the
+ * --sn-kanban-card-summary-* vars stay accepted.
+ */
 sn-kanban-board .sn-kanban-card-summary {
   display: -webkit-box;
   min-width: 0;
   color: var(--sn-sys-on-surface-dim);
-  font-size: var(--sn-kanban-card-summary-size, 11px);
+  font-size: var(--sn-kanban-card-summary-size, var(--sn-text-xs));
   line-height: 1.35;
   overflow: hidden;
   overflow-wrap: anywhere;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: var(--sn-kanban-card-summary-lines, 3);
+}
+
+/* Ticker row: the one-line "last agent action / live status" line between title and footer. */
+sn-kanban-board .sn-kanban-card-ticker {
+  display: flex;
+  align-items: center;
+  align-self: start;
+  gap: var(--sn-step-2);
+  min-width: 0;
+  color: var(--sn-sys-on-surface-dim);
+  font-size: var(--sn-kanban-card-ticker-size, var(--sn-text-xs));
+  line-height: 1.35;
+}
+
+sn-kanban-board .sn-kanban-card-ticker .material-symbols-outlined {
+  font-size: 1.15em; /* audit-ok: icon scales with the ticker text, not an absolute rung */
+}
+
+sn-kanban-board .sn-kanban-card-ticker-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+sn-kanban-board .sn-kanban-card-ticker[data-kind="state"] {
+  color: color-mix(in oklch, var(--sn-sys-accent) 72%, var(--sn-sys-on-surface));
+}
+
+sn-kanban-board .sn-kanban-card-ticker[data-kind="warning"] {
+  color: color-mix(in oklch, var(--sn-sys-warning) 78%, var(--sn-sys-on-surface));
+}
+
+sn-kanban-board .sn-kanban-card-ticker[data-kind="error"] {
+  color: color-mix(in oklch, var(--sn-sys-danger) 78%, var(--sn-sys-on-surface));
 }
 
 @keyframes sn-kanban-card-spin { to { transform: rotate(360deg); } }
@@ -229,27 +281,33 @@ sn-kanban-board .sn-kanban-card[data-busy] {
   border-color: color-mix(in oklch, var(--sn-sys-accent) 45%, var(--sn-kanban-card-border));
 }
 
+/* Fixed geometry: the meta row is a single clipped line inside the uniform-height card. */
 sn-kanban-board .sn-kanban-card-meta {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: var(--sn-step-2);
   min-width: 0;
   color: var(--sn-sys-on-surface-dim);
   font-size: var(--sn-text-xs);
   line-height: 1.35;
+  overflow: hidden;
 }
 
-/* U01: footer chip row wraps instead of clipping mid-glyph in a non-wrapping grid. */
+/*
+ * Fixed geometry: the footer is one non-wrapping line — the host's chip budget plus the
+ * '+N' overflow chip guarantee the row fits (U01 lives in that contract, not in wrapping).
+ */
 sn-kanban-board .sn-kanban-card-footer {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: var(--sn-step-2);
   min-width: 0;
   color: var(--sn-sys-on-surface-dim);
   font-size: var(--sn-text-xs);
   line-height: 1.35;
+  overflow: hidden;
 }
 
 sn-kanban-board .sn-kanban-chip {
@@ -269,6 +327,20 @@ sn-kanban-board .sn-kanban-chip {
   white-space: nowrap;
 }
 
+/* Chip icons scale with the chip text instead of inheriting an oversized glyph size. */
+sn-kanban-board .sn-kanban-chip .material-symbols-outlined {
+  font-size: 1.15em; /* audit-ok: icon proportion relative to chip text, not an absolute rung */
+}
+
+/*
+ * Quiet '' chips (duration, tokens, project, kind telemetry) stay outline-only and step back
+ * further than kinded chips: dimmer border and text, no fill to fight the status containers.
+ */
+sn-kanban-board .sn-kanban-chip:not([data-kind]) {
+  border-color: color-mix(in oklch, var(--sn-kanban-card-border) 62%, transparent);
+  color: color-mix(in oklch, var(--sn-sys-on-surface-dim) 82%, var(--sn-kanban-card-bg));
+}
+
 /* U01: explicit "+N more" overflow affordance chip, never a mid-character clip. */
 sn-kanban-board .sn-kanban-chip[data-kind="overflow"] {
   color: var(--sn-kanban-description-color);
@@ -282,6 +354,25 @@ sn-kanban-board .sn-kanban-chip[data-kind="overflow"] {
  * U15: color is never the only signal — chip markup pairs an icon/text prefix with the label,
  * so kind is legible without relying on chip color alone.
  */
+/*
+ * 'state' — execution state (running/queued/recovering): accent-tinted fill, and the ONLY
+ * chip family allowed to animate (a quiet pulse alongside the card's busy spinner).
+ */
+sn-kanban-board .sn-kanban-chip[data-kind="state"] {
+  border-color: color-mix(in oklch, var(--sn-sys-accent) 46%, var(--sn-kanban-card-border));
+  background: color-mix(in oklch, var(--sn-sys-accent) 14%, var(--sn-kanban-card-bg));
+  color: var(--sn-sys-on-surface);
+  font-weight: 600;
+  animation: sn-kanban-chip-pulse var(--sn-animation-duration-slower) ease-in-out infinite;
+}
+
+@keyframes sn-kanban-chip-pulse {
+  50% {
+    border-color: color-mix(in oklch, var(--sn-sys-accent) 72%, var(--sn-kanban-card-border));
+    background: color-mix(in oklch, var(--sn-sys-accent) 22%, var(--sn-kanban-card-bg));
+  }
+}
+
 sn-kanban-board .sn-kanban-chip[data-kind="status"] {
   border-color: color-mix(in oklch, var(--sn-sys-success) 46%, var(--sn-kanban-card-border));
   background: var(--sn-sys-success-container);
@@ -401,5 +492,36 @@ sn-kanban-board .sn-kanban-empty {
 
 sn-kanban-board .sn-kanban-empty[hidden] {
   display: none !important;
+}
+
+/*
+ * Narrow-column adaptivity (house pattern: named inline-size @container queries, see
+ * ChatComposer.css.js / LayoutNode.css.js). The column is the container: as it narrows,
+ * quiet chips shed their icons, the drag handle goes, paddings tighten one rung; below
+ * ~210px quiet chips disappear entirely — identity/state/outcome chips survive.
+ */
+@container kanban-column (width <= 250px) {
+  sn-kanban-board .sn-kanban-chip:not([data-kind]) .material-symbols-outlined {
+    display: none;
+  }
+
+  sn-kanban-board .sn-kanban-card-drag-handle {
+    display: none;
+  }
+
+  sn-kanban-board .sn-kanban-card {
+    padding: var(--sn-kanban-card-padding-narrow, var(--sn-step-3));
+  }
+
+  sn-kanban-board .sn-kanban-card-list {
+    gap: var(--sn-step-3);
+    padding: var(--sn-step-3);
+  }
+}
+
+@container kanban-column (width <= 210px) {
+  sn-kanban-board .sn-kanban-chip:not([data-kind]) {
+    display: none;
+  }
 }
 `;

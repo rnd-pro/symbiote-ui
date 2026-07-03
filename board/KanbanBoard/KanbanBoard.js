@@ -63,6 +63,28 @@ function normalizeAction(value, index = 0) {
   };
 }
 
+/** The ticker's status vocabulary; anything else falls back to the quiet '' kind. */
+const TICKER_KINDS = new Set(['state', 'warning', 'error']);
+
+/*
+ * Ticker: the card's one-line "last agent action / live status" row between title and footer.
+ * '' is quiet telemetry, 'state' is execution state (accent tint), 'warning'/'error' carry the
+ * attention tints. Long texts belong in the inspector — the row always ellipsizes to one line.
+ */
+function normalizeTicker(value) {
+  if (value == null) return null;
+  let ticker = typeof value === 'object' ? value : { label: value };
+  let label = normalizeText(ticker.label ?? ticker.text ?? ticker.message);
+  if (!label) return null;
+  let kind = normalizeText(ticker.kind ?? ticker.variant);
+  return {
+    label,
+    icon: normalizeText(ticker.icon),
+    kind: TICKER_KINDS.has(kind) ? kind : '',
+    title: normalizeText(ticker.title),
+  };
+}
+
 export function normalizeKanbanCard(raw = {}, index = 0, fallbackColumnId = '') {
   let card = raw && typeof raw === 'object' ? raw : { title: raw };
   let title = normalizeText(card.title ?? card.label ?? card.name, `Card ${index + 1}`);
@@ -73,7 +95,9 @@ export function normalizeKanbanCard(raw = {}, index = 0, fallbackColumnId = '') 
     id,
     columnId,
     title,
+    // Accepted for host compat; the card face no longer renders it (inspector content).
     summary: normalizeText(card.summary ?? card.description ?? card.body),
+    ticker: normalizeTicker(card.ticker),
     meta: asArray(card.meta ?? card.badges ?? card.labels).map(normalizeChip).filter(Boolean),
     footer: asArray(card.footer ?? card.statuses ?? card.flags).map(normalizeChip).filter(Boolean),
     actions: asArray(card.actions).map(normalizeAction),
@@ -131,6 +155,81 @@ function appendNodes(parent, value) {
   }
 }
 
+function toNode(value) {
+  return typeof value === 'string' ? document.createTextNode(value) : value;
+}
+
+let snapshotNonce = 0;
+
+/** Stable change signature; non-serializable host data forces a re-render instead of a stale skip. */
+function toJson(value) {
+  try {
+    return JSON.stringify(value);
+  } catch {
+    snapshotNonce += 1;
+    return `unserializable-${snapshotNonce}`;
+  }
+}
+
+/** The action-menu identity: replace the live sn-dropdown only when this actually changes. */
+function actionSignatureValue(actions) {
+  return actions.map(action => [action.id, action.label, action.icon, action.title, action.disabled, action.kind]);
+}
+
+function actionSignature(actions) {
+  return toJson(actionSignatureValue(actions));
+}
+
+function chipSignatureValue(chip = {}) {
+  return [chip.label, chip.kind, chip.title, chip.icon, chip.accent];
+}
+
+function cardFaceSignature(card = {}) {
+  return toJson({
+    id: card.id,
+    columnId: card.columnId,
+    title: card.title,
+    ticker: card.ticker,
+    meta: card.meta.map(chipSignatureValue),
+    footer: card.footer.map(chipSignatureValue),
+    actions: actionSignatureValue(card.actions),
+    busy: card.busy,
+    draggable: card.draggable,
+  });
+}
+
+function headerBoardSignature(board = {}) {
+  let raw = board.raw && typeof board.raw === 'object' ? { ...board.raw } : {};
+  delete raw.columns;
+  delete raw.cards;
+  return {
+    id: board.id,
+    title: board.title,
+    raw,
+  };
+}
+
+function headerColumnSignature(column = {}) {
+  let raw = column.raw && typeof column.raw === 'object' ? { ...column.raw } : {};
+  delete raw.cards;
+  return {
+    id: column.id,
+    title: column.title,
+    description: column.description,
+    count: column.count,
+    raw,
+  };
+}
+
+/** linkedom/SSR DOMs cannot parse ':popover-open'; treat those environments as closed. */
+function isPopoverOpen(element) {
+  try {
+    return element.matches(':popover-open');
+  } catch {
+    return false;
+  }
+}
+
 export class KanbanBoard extends Symbiote {
   static observedAttributes = ['empty-text', 'label'];
 
@@ -144,6 +243,15 @@ export class KanbanBoard extends Symbiote {
   #dragCardId = '';
   #headerSyncId = 0;
   #resizeHandler = null;
+
+  // Keyed reconciliation state (NodeViewManager house style: Map<id, element> reuse).
+  #columnParts = new Map();
+  #headerSignatures = new Map();
+  #bodySignatures = new Map();
+  #cardNodes = new Map();
+  #cardSignatures = new Map();
+  #defaultCards = new WeakSet();
+  #actionSignatures = new WeakMap();
 
   renderCard = null;
   renderColumnBody = null;
@@ -186,9 +294,14 @@ export class KanbanBoard extends Symbiote {
   }
 
   setBoard(board = {}, options = {}) {
-    if ('renderCard' in options) this.renderCard = options.renderCard;
-    if ('renderColumnBody' in options) this.renderColumnBody = options.renderColumnBody;
-    if ('renderColumnHeader' in options) this.renderColumnHeader = options.renderColumnHeader;
+    let renderersChanged = false;
+    for (let key of ['renderCard', 'renderColumnBody', 'renderColumnHeader']) {
+      if (!(key in options) || options[key] === this[key]) continue;
+      this[key] = options[key];
+      renderersChanged = true;
+    }
+    // A different renderer invalidates every cached signature: rebuild from scratch.
+    if (renderersChanged) this.#resetReconcilerState();
     this.#board = normalizeKanbanBoardModel(board);
     this.#ensureSelection();
     this.#render();
@@ -242,96 +355,326 @@ export class KanbanBoard extends Symbiote {
     return this.#board.columns.find(column => column.id === id) || null;
   }
 
+  /*
+   * Keyed reconciliation: realtime board pushes patch the live DOM instead of wiping it, so
+   * open popovers, drag state, column/board scroll, and focus survive any update that does not
+   * remove the element they live in. Columns and cards are reused by id; an entry whose visible
+   * signature is unchanged is not touched at all.
+   */
   #render() {
     this.#syncAttributes();
     let columns = this.#board.columns;
     this.$.isEmpty = columns.length === 0;
-    this.ref.columns.replaceChildren(...columns.map(column => this.#renderColumn(column)));
-    this.#syncColumnHeaderHeights();
+    let headerChanged = this.#reconcile(columns);
+    this.#syncCardSelection();
+    if (headerChanged) this.#syncColumnHeaderHeights();
   }
 
-  #renderColumn(column) {
+  #resetReconcilerState() {
+    this.#columnParts.clear();
+    this.#headerSignatures.clear();
+    this.#bodySignatures.clear();
+    this.#cardNodes.clear();
+    this.#cardSignatures.clear();
+    this.ref.columns.replaceChildren();
+  }
+
+  #reconcile(columns) {
+    let root = this.ref.columns;
+    let headerChanged = false;
+    let liveColumnIds = new Set(columns.map(column => column.id));
+    for (let [id, parts] of this.#columnParts) {
+      if (liveColumnIds.has(id)) continue;
+      parts.lane.remove();
+      this.#columnParts.delete(id);
+      this.#headerSignatures.delete(id);
+      this.#bodySignatures.delete(id);
+      headerChanged = true;
+    }
+    let liveCardIds = new Set(columns.flatMap(column => column.cards.map(card => card.id)));
+    for (let [id, node] of this.#cardNodes) {
+      if (liveCardIds.has(id)) continue;
+      node.remove?.();
+      this.#cardNodes.delete(id);
+      this.#cardSignatures.delete(id);
+    }
+    let previousLane = null;
+    for (let column of columns) {
+      let parts = this.#columnParts.get(column.id);
+      if (!parts) {
+        parts = this.#createColumnParts(column);
+        headerChanged = true;
+      }
+      if (this.#updateColumn(parts, column)) headerChanged = true;
+      let anchor = previousLane ? previousLane.nextSibling : root.firstChild;
+      if (parts.lane !== anchor) root.insertBefore(parts.lane, anchor);
+      previousLane = parts.lane;
+    }
+    return headerChanged;
+  }
+
+  #createColumnParts(column) {
     let lane = makeElement('section', 'sn-kanban-column');
     lane.dataset.columnId = column.id;
-    lane.setAttribute('aria-label', column.title);
-
     let header = makeElement('header', 'sn-kanban-column-header');
-    let customHeader = typeof this.renderColumnHeader === 'function'
+    let body = makeElement('div', 'sn-kanban-column-body');
+    lane.append(header, body);
+    let parts = { lane, header, body, list: null, empty: null };
+    this.#columnParts.set(column.id, parts);
+    return parts;
+  }
+
+  #updateColumn(parts, column) {
+    parts.lane.setAttribute('aria-label', column.title);
+    let headerChanged = false;
+    let headerSignature = toJson({
+      column: headerColumnSignature(column),
+      board: headerBoardSignature(this.#board),
+    });
+    if (this.#headerSignatures.get(column.id) !== headerSignature) {
+      this.#renderColumnHeaderContent(parts.header, column);
+      this.#headerSignatures.set(column.id, headerSignature);
+      headerChanged = true;
+    }
+    if (typeof this.renderColumnBody === 'function') {
+      let bodySignature = toJson(column);
+      if (this.#bodySignatures.get(column.id) === bodySignature) return headerChanged;
+      let custom = this.renderColumnBody(column, { board: this.#board, host: this });
+      if (custom) {
+        parts.list = null;
+        parts.empty = null;
+        parts.body.replaceChildren();
+        appendNodes(parts.body, custom);
+        this.#bodySignatures.set(column.id, bodySignature);
+        return headerChanged;
+      }
+      this.#bodySignatures.delete(column.id);
+    }
+    this.#reconcileCardList(parts, column);
+    return headerChanged;
+  }
+
+  /*
+   * Header content is re-rendered only when its header-relevant data changed. When a host
+   * renderColumnHeader supplies interactive content, an open <details> or popover is carried
+   * to the replacement by matching its data attributes.
+   */
+  #renderColumnHeaderContent(header, column) {
+    let custom = typeof this.renderColumnHeader === 'function'
       ? this.renderColumnHeader(column, { board: this.#board, host: this })
       : null;
-    if (customHeader) {
-      appendNodes(header, customHeader);
-    } else {
-      let copy = makeElement('div');
-      copy.append(
-        makeElement('div', 'sn-kanban-column-title', column.title),
-        makeElement('div', 'sn-kanban-column-description', column.description || 'No description.'),
-      );
-      header.append(copy, makeElement('span', 'sn-kanban-column-count', String(column.count)));
+    if (custom) {
+      let openState = this.#captureHeaderOpenState(header);
+      header.replaceChildren();
+      appendNodes(header, custom);
+      this.#restoreHeaderOpenState(header, openState);
+      return;
     }
-
-    let body = makeElement('div', 'sn-kanban-column-body');
-    let customBody = typeof this.renderColumnBody === 'function'
-      ? this.renderColumnBody(column, { board: this.#board, host: this })
-      : null;
-    if (customBody) {
-      appendNodes(body, customBody);
-    } else {
-      body.append(this.#renderCardList(column));
-    }
-    lane.append(header, body);
-    return lane;
+    header.replaceChildren();
+    let copy = makeElement('div');
+    copy.append(
+      makeElement('div', 'sn-kanban-column-title', column.title),
+      makeElement('div', 'sn-kanban-column-description', column.description || 'No description.'),
+    );
+    header.append(copy, makeElement('span', 'sn-kanban-column-count', String(column.count)));
   }
 
-  #renderCardList(column) {
-    let list = makeElement('div', 'sn-kanban-card-list');
-    list.dataset.columnId = column.id;
-    if (!column.cards.length) {
-      list.append(makeElement('div', 'sn-kanban-column-empty', 'No cards in this column.'));
-      return list;
+  #captureHeaderOpenState(header) {
+    let entries = [];
+    for (let element of header.querySelectorAll('details[open], [popover]')) {
+      let popover = element.hasAttribute('popover');
+      if (popover && !isPopoverOpen(element)) continue;
+      let names = element.getAttributeNames().filter(name => name.startsWith('data-'));
+      if (!names.length) continue;
+      let selector = element.localName + names
+        .map(name => `[${name}="${element.getAttribute(name).replaceAll('"', '\\"')}"]`)
+        .join('');
+      entries.push({ selector, popover });
     }
-    list.replaceChildren(...column.cards.map(card => this.#renderCard(card, column)));
-    return list;
+    return entries;
   }
 
-  #renderCard(card, column) {
+  #restoreHeaderOpenState(header, entries) {
+    for (let entry of entries) {
+      let element = header.querySelector(entry.selector);
+      if (!element) continue;
+      if (entry.popover) element.showPopover?.();
+      else element.toggleAttribute('open', true);
+    }
+  }
+
+  #reconcileCardList(parts, column) {
+    if (!parts.list || parts.list.parentNode !== parts.body) {
+      parts.list = makeElement('div', 'sn-kanban-card-list');
+      parts.list.dataset.columnId = column.id;
+      parts.body.replaceChildren(parts.list);
+      parts.empty = null;
+    }
+    let list = parts.list;
+    if (parts.empty && column.cards.length) {
+      parts.empty.remove();
+      parts.empty = null;
+    }
+    let nodes = column.cards.map(card => this.#materializeCard(card, column));
+    let desired = new Set(nodes);
+    let previous = null;
+    for (let node of nodes) {
+      // Skip nodes departing to other columns so surviving cards are never moved needlessly.
+      let anchor = previous ? previous.nextSibling : list.firstChild;
+      while (anchor && !desired.has(anchor)) anchor = anchor.nextSibling;
+      if (node !== anchor) list.insertBefore(node, anchor);
+      previous = node;
+    }
+    // U11: one clearly-labeled empty state per column.
+    if (!column.cards.length && !parts.empty) {
+      parts.empty = makeElement('div', 'sn-kanban-column-empty', 'No cards in this column.');
+      list.append(parts.empty);
+    }
+  }
+
+  #materializeCard(card, column) {
+    let signature = this.#cardSignature(card, column);
+    let node = this.#cardNodes.get(card.id);
+    if (!node) {
+      node = this.#createCardNode(card, column);
+    } else if (this.#cardSignatures.get(card.id) !== signature) {
+      node = this.#updateCardNode(node, card, column);
+    }
+    this.#cardNodes.set(card.id, node);
+    this.#cardSignatures.set(card.id, signature);
+    return node;
+  }
+
+  #cardSignature(card, column) {
+    if (typeof this.renderCard === 'function') {
+      let explicit = card.raw?.renderSignature ?? card.raw?.signature ?? card.raw?.cardSignature;
+      if (explicit != null) {
+        return toJson({ id: card.id, columnId: card.columnId, signature: explicit });
+      }
+      return toJson({
+        card,
+        column: headerColumnSignature(column),
+        board: headerBoardSignature(this.#board),
+      });
+    }
+    return cardFaceSignature(card);
+  }
+
+  #createCardNode(card, column) {
     let custom = typeof this.renderCard === 'function'
       ? this.renderCard(card, { column, board: this.#board, host: this })
       : null;
-    if (custom) return custom;
+    if (custom) return toNode(custom);
+    return this.#renderDefaultCard(card);
+  }
 
+  #updateCardNode(node, card, column) {
+    let custom = typeof this.renderCard === 'function'
+      ? this.renderCard(card, { column, board: this.#board, host: this })
+      : null;
+    if (!custom && this.#defaultCards.has(node)) {
+      this.#patchCard(node, card);
+      return node;
+    }
+    let next = custom ? toNode(custom) : this.#renderDefaultCard(card);
+    node.replaceWith?.(next);
+    return next;
+  }
+
+  /*
+   * Fixed widget geometry: uniform-height card face of four one-purpose rows —
+   * meta (1 clipped line) / title (2-line clamp) / ticker (1 line) / footer (1 line, no wrap).
+   * Summary stays in the normalized model for hosts but is inspector content, not card face.
+   */
+  #renderDefaultCard(card) {
     let cardEl = makeElement('article', 'sn-kanban-card');
     cardEl.dataset.snBoardCardId = card.id;
-    cardEl.draggable = card.draggable;
     cardEl.tabIndex = 0;
     cardEl.setAttribute('role', 'button');
+    cardEl.append(
+      makeElement('div', 'sn-kanban-card-meta'),
+      makeElement('div', 'sn-kanban-card-title'),
+      makeElement('div', 'sn-kanban-card-ticker'),
+      makeElement('div', 'sn-kanban-card-footer'),
+    );
+    this.#defaultCards.add(cardEl);
+    this.#patchCard(cardEl, card);
+    return cardEl;
+  }
+
+  #patchCard(cardEl, card) {
+    let [meta, title, ticker, footer] = cardEl.children;
+    cardEl.draggable = card.draggable;
     cardEl.setAttribute('aria-selected', String(card.id === this.#selectedCardId));
     cardEl.setAttribute('aria-label', card.title);
+    if (card.busy) cardEl.dataset.busy = 'true';
+    else delete cardEl.dataset.busy;
 
-    let meta = makeElement('div', 'sn-kanban-card-meta');
-    for (let chip of card.meta) meta.append(this.#renderChip(chip));
-    let title = makeElement('div', 'sn-kanban-card-title');
+    meta.replaceChildren(...card.meta.map(chip => this.#renderChip(chip)));
+
+    let titleNodes = [];
     if (card.draggable) {
       // U08: explicit drag-handle affordance disambiguating click (select) from drag (move),
       // in addition to the whole-card grab/grabbing cursor set in KanbanBoard.css.js.
       let handle = makeElement('span', 'sn-kanban-card-drag-handle');
       handle.setAttribute('aria-hidden', 'true');
       handle.append(makeElement('span', 'material-symbols-outlined', 'drag_indicator'));
-      title.append(handle);
+      titleNodes.push(handle);
     }
     if (card.busy) {
-      cardEl.dataset.busy = 'true';
       let spinner = makeElement('span', 'sn-kanban-card-spinner');
       spinner.setAttribute('aria-hidden', 'true');
-      title.append(spinner);
+      titleNodes.push(spinner);
     }
-    title.append(makeElement('span', 'sn-kanban-card-title-text', card.title));
-    let summary = makeElement('div', 'sn-kanban-card-summary', card.summary || '');
-    let footer = makeElement('div', 'sn-kanban-card-footer');
-    for (let chip of card.footer) footer.append(this.#renderChip(chip));
-    if (card.actions.length) footer.append(this.#renderActionMenu(card));
-    cardEl.append(meta, title, summary, footer);
-    return cardEl;
+    titleNodes.push(makeElement('span', 'sn-kanban-card-title-text', card.title));
+    title.replaceChildren(...titleNodes);
+
+    this.#patchTicker(ticker, card.ticker);
+    this.#patchFooter(footer, card);
+  }
+
+  #patchTicker(element, ticker) {
+    if (!ticker) {
+      element.replaceChildren();
+      delete element.dataset.kind;
+      element.removeAttribute('title');
+      return;
+    }
+    if (ticker.kind) element.dataset.kind = ticker.kind;
+    else delete element.dataset.kind;
+    element.title = ticker.title || ticker.label;
+    let nodes = [];
+    if (ticker.icon) {
+      let icon = makeElement('span', 'material-symbols-outlined', ticker.icon);
+      icon.setAttribute('aria-hidden', 'true');
+      nodes.push(icon);
+    }
+    nodes.push(makeElement('span', 'sn-kanban-card-ticker-text', ticker.label));
+    element.replaceChildren(...nodes);
+  }
+
+  /*
+   * Chip rows rebuild wholesale (no interaction state lives there), but the actions
+   * <sn-dropdown> — which may host an open popover — is replaced only when the action
+   * list itself changed.
+   */
+  #patchFooter(footer, card) {
+    let dropdown = [...footer.children].find(child => child.classList?.contains('sn-kanban-card-actions')) || null;
+    for (let child of [...footer.children]) {
+      if (child !== dropdown) child.remove();
+    }
+    for (let chip of card.footer) {
+      footer.insertBefore(this.#renderChip(chip), dropdown);
+    }
+    if (!card.actions.length) {
+      dropdown?.remove();
+      return;
+    }
+    let signature = actionSignature(card.actions);
+    if (dropdown && this.#actionSignatures.get(dropdown) === signature) return;
+    let menu = this.#renderActionMenu(card);
+    if (dropdown) dropdown.replaceWith(menu);
+    else footer.append(menu);
   }
 
   #renderChip(chip) {
@@ -368,6 +711,7 @@ export class KanbanBoard extends Symbiote {
     menu.setAttribute('role', 'menu');
     for (let action of card.actions) menu.append(this.#renderAction(card, action));
     dropdown.append(menu);
+    this.#actionSignatures.set(dropdown, actionSignature(card.actions));
     return dropdown;
   }
 

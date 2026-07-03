@@ -114,6 +114,175 @@ test('sn-kanban-board renders columns and emits card intents', async () => {
   assert.equal(emptyState.hidden, false);
 });
 
+test('sn-kanban-board reconciles setBoard by key instead of rebuilding the DOM', async () => {
+  // Reuses the DOM + custom-element registry installed by the first test: the component is
+  // registered against that window, so a fresh installDom() would produce inert elements.
+  await import('../board/index.js');
+  let board = document.createElement('sn-kanban-board');
+  document.body.append(board);
+  await nextTick();
+
+  let model = (cards) => ({
+    columns: [{ id: 'ready', title: 'Ready' }, { id: 'doing', title: 'Doing' }],
+    cards,
+  });
+  board.setBoard(model([
+    { id: 'a', columnId: 'ready', title: 'Alpha', ticker: { label: 'Reviewing diff', icon: 'bolt', kind: 'state' } },
+    { id: 'b', columnId: 'ready', title: 'Beta' },
+  ]));
+
+  let cardA = board.querySelector('[data-sn-board-card-id="a"]');
+  let cardB = board.querySelector('[data-sn-board-card-id="b"]');
+  let readyList = board.querySelector('.sn-kanban-card-list[data-column-id="ready"]');
+  let titleTextB = cardB.querySelector('.sn-kanban-card-title-text');
+  cardA.testMarker = 'alpha';
+  cardB.testMarker = 'beta';
+
+  // Ticker renders as the dedicated one-line row between title and footer.
+  let ticker = cardA.querySelector('.sn-kanban-card-ticker');
+  assert.equal(ticker.dataset.kind, 'state');
+  assert.equal(ticker.querySelector('.sn-kanban-card-ticker-text')?.textContent, 'Reviewing diff');
+  assert.equal(ticker.querySelector('.material-symbols-outlined')?.textContent, 'bolt');
+  assert.equal([...cardA.children].indexOf(ticker), 2, 'ticker row sits between title and footer');
+
+  board.setBoard(model([
+    { id: 'a', columnId: 'ready', title: 'Alpha renamed', summary: 'A very long inspector-only text', ticker: { label: 'Running tests', kind: 'state' } },
+    {
+      id: 'b',
+      columnId: 'ready',
+      title: 'Beta',
+      body: 'Inspector-only body that should not repaint the card face.',
+      runs: [{ id: 'run-b', status: 'completed' }],
+      events: [{ id: 'event-b', eventType: 'note' }],
+      metadata: { realization: { total: 12, done: 7 } },
+    },
+  ]));
+
+  // (a) A changed card is PATCHED: the article element is the same node.
+  let patchedA = board.querySelector('[data-sn-board-card-id="a"]');
+  assert.equal(patchedA, cardA, 'changed card keeps element identity');
+  assert.equal(patchedA.testMarker, 'alpha');
+  assert.equal(patchedA.querySelector('.sn-kanban-card-title-text').textContent, 'Alpha renamed');
+  assert.equal(patchedA.getAttribute('aria-label'), 'Alpha renamed');
+  assert.equal(patchedA.querySelector('.sn-kanban-card-ticker-text').textContent, 'Running tests');
+  // Summary is inspector content — the card face never renders it.
+  assert.equal(patchedA.querySelector('.sn-kanban-card-summary'), null);
+
+  // (b) An unchanged card is not touched at all: same element, same child nodes.
+  let untouchedB = board.querySelector('[data-sn-board-card-id="b"]');
+  assert.equal(untouchedB, cardB);
+  assert.equal(untouchedB.testMarker, 'beta');
+  assert.equal(untouchedB.querySelector('.sn-kanban-card-title-text'), titleTextB, 'unchanged card children are untouched');
+  assert.equal(untouchedB.querySelector('.sn-kanban-card-summary'), null, 'inspector-only body stays off the card face');
+  // The column's card list (the scroll host) is never recreated for a surviving column.
+  assert.equal(board.querySelector('.sn-kanban-card-list[data-column-id="ready"]'), readyList);
+
+  // (c) A card moved between columns keeps element identity.
+  board.setBoard(model([
+    { id: 'a', columnId: 'doing', title: 'Alpha renamed', ticker: { label: 'Running tests', kind: 'state' } },
+    { id: 'b', columnId: 'ready', title: 'Beta' },
+  ]));
+  let movedA = board.querySelector('.sn-kanban-card-list[data-column-id="doing"] [data-sn-board-card-id="a"]');
+  assert.equal(movedA, cardA, 'moved card keeps element identity');
+  assert.equal(board.querySelector('.sn-kanban-card-list[data-column-id="ready"] [data-sn-board-card-id="a"]'), null);
+
+  // (d) A removed card leaves the DOM; the emptied column shows its placeholder.
+  board.setBoard(model([{ id: 'b', columnId: 'ready', title: 'Beta' }]));
+  assert.equal(board.querySelector('[data-sn-board-card-id="a"]'), null);
+  assert.equal(cardA.isConnected, false);
+  assert.ok(board.querySelector('.sn-kanban-card-list[data-column-id="doing"] .sn-kanban-column-empty'));
+
+  board.remove();
+});
+
+test('sn-kanban-board skips header measurement on card-only updates', async () => {
+  await import('../board/index.js');
+  let board = document.createElement('sn-kanban-board');
+  document.body.append(board);
+  await nextTick();
+
+  let originalRaf = globalThis.requestAnimationFrame;
+  let originalRect = window.HTMLElement.prototype.getBoundingClientRect;
+  let measureCount = 0;
+  globalThis.requestAnimationFrame = (callback) => {
+    callback();
+    return 1;
+  };
+  window.HTMLElement.prototype.getBoundingClientRect = function getBoundingClientRect() {
+    if (this.classList?.contains('sn-kanban-column-header')) measureCount += 1;
+    return { height: 24, width: 160, top: 0, left: 0, right: 160, bottom: 24 };
+  };
+
+  try {
+    let model = (columnTitle, cardTitle) => ({
+      columns: [{
+        id: 'ready',
+        title: columnTitle,
+        cards: [{ id: 'a', columnId: 'ready', title: cardTitle }],
+      }],
+    });
+
+    board.setBoard(model('Ready', 'Alpha'));
+    assert.equal(measureCount, 1, 'initial header render measures once');
+
+    measureCount = 0;
+    board.setBoard(model('Ready', 'Alpha renamed'));
+    assert.equal(measureCount, 0, 'card-only updates skip header measurement');
+
+    board.setBoard(model('Ready now', 'Alpha renamed'));
+    assert.equal(measureCount, 1, 'header changes still measure alignment');
+  } finally {
+    if (originalRaf) globalThis.requestAnimationFrame = originalRaf;
+    else delete globalThis.requestAnimationFrame;
+    if (originalRect) {
+      window.HTMLElement.prototype.getBoundingClientRect = originalRect;
+    } else {
+      delete window.HTMLElement.prototype.getBoundingClientRect;
+    }
+    board.remove();
+  }
+});
+
+test('sn-kanban-board updates custom headers only for header context changes', async () => {
+  await import('../board/index.js');
+  let board = document.createElement('sn-kanban-board');
+  document.body.append(board);
+  await nextTick();
+
+  let calls = 0;
+  let renderColumnHeader = (column, context) => {
+    calls += 1;
+    let node = document.createElement('div');
+    node.className = 'custom-header';
+    node.textContent = `${context.board.raw.mode}:${column.title}`;
+    return node;
+  };
+  let model = (mode, title = 'Alpha') => ({
+    mode,
+    columns: [{
+      id: 'ready',
+      title: 'Ready',
+      cards: [{ id: 'a', columnId: 'ready', title }],
+    }],
+  });
+
+  board.setBoard(model('manual'), { renderColumnHeader });
+  let header = board.querySelector('.custom-header');
+  assert.equal(header.textContent, 'manual:Ready');
+  assert.equal(calls, 1);
+
+  board.setBoard(model('manual', 'Alpha changed'), { renderColumnHeader });
+  assert.equal(board.querySelector('.custom-header'), header, 'card-only updates keep the header node');
+  assert.equal(calls, 1);
+
+  board.setBoard(model('autonomous', 'Alpha changed'), { renderColumnHeader });
+  assert.notEqual(board.querySelector('.custom-header'), header, 'board header context changes rebuild the header');
+  assert.equal(board.querySelector('.custom-header').textContent, 'autonomous:Ready');
+  assert.equal(calls, 2);
+
+  board.remove();
+});
+
 test('sn-kanban-board exposes column stretch sizing tokens', async () => {
   let { default: css } = await import('../board/KanbanBoard/KanbanBoard.css.js');
 
@@ -124,9 +293,30 @@ test('sn-kanban-board exposes column stretch sizing tokens', async () => {
   assert.match(css, /overflow: var\(--sn-kanban-card-list-overflow, auto\);/);
   assert.match(css, /sn-kanban-board \.sn-kanban-column-header \{[\s\S]*flex: 0 0 auto;/);
   assert.match(css, /sn-kanban-board \.sn-kanban-card \{[\s\S]*flex: 0 0 auto;/);
-  // U01: footer chip row wraps instead of clipping in a non-wrapping grid.
-  assert.match(css, /sn-kanban-board \.sn-kanban-card-footer \{[^}]*flex-wrap: wrap;/);
+  // Fixed widget geometry: meta and footer are single non-wrapping clipped lines; the
+  // host's chip budget + '+N' overflow chip (U01) guarantee the footer fits.
+  assert.match(css, /sn-kanban-board \.sn-kanban-card-footer \{[^}]*flex-wrap: nowrap;/);
+  assert.match(css, /sn-kanban-board \.sn-kanban-card-meta \{[^}]*flex-wrap: nowrap;/);
   assert.doesNotMatch(css, /sn-kanban-board \.sn-kanban-card-footer \{[^}]*display: grid;/);
+  // Uniform card height (height, not min-height) with internal clipping.
+  assert.match(css, /sn-kanban-board \.sn-kanban-card \{[^}]*height: var\(--sn-kanban-card-height, 148px\);/);
+  assert.match(css, /sn-kanban-board \.sn-kanban-card \{[^}]*overflow: hidden;/);
+  assert.doesNotMatch(css, /min-height: var\(--sn-kanban-card-min-height/);
+  // Title clamps to two lines on the fixed card face.
+  assert.match(css, /sn-kanban-board \.sn-kanban-card-title-text \{[^}]*-webkit-line-clamp: var\(--sn-kanban-card-title-lines, 2\);/);
+  // Ticker row: one ellipsized line with a text-relative icon.
+  assert.match(css, /sn-kanban-board \.sn-kanban-card-ticker-text \{[^}]*white-space: nowrap;/);
+  assert.match(css, /sn-kanban-board \.sn-kanban-card-ticker \.material-symbols-outlined \{[^}]*font-size: 1\.15em;/);
+  // Chip icons size relative to chip text instead of inheriting oversized glyphs.
+  assert.match(css, /sn-kanban-board \.sn-kanban-chip \.material-symbols-outlined \{[^}]*font-size: 1\.15em;/);
+  // 'state' chip kind: accent-tinted fill, the only animated chip family.
+  assert.match(css, /sn-kanban-board \.sn-kanban-chip\[data-kind="state"\] \{[^}]*background: color-mix\(in oklch, var\(--sn-sys-accent\) 14%, var\(--sn-kanban-card-bg\)\);/);
+  assert.match(css, /sn-kanban-board \.sn-kanban-chip\[data-kind="state"\] \{[^}]*animation: sn-kanban-chip-pulse var\(--sn-animation-duration-slower\)/);
+  assert.doesNotMatch(css, /sn-kanban-board \.sn-kanban-chip\[data-kind="(?:status|warning|error|agent)"\] \{[^}]*animation:/);
+  // Narrow-column adaptivity via named inline-size container queries on the column.
+  assert.match(css, /container: kanban-column \/ inline-size;/);
+  assert.match(css, /@container kanban-column \(width <= 250px\)/);
+  assert.match(css, /@container kanban-column \(width <= 210px\)/);
   // U07: the actions menu is the sn-dropdown native popover + anchor-positioning primitive —
   // no in-card grid-column: 1/-1 expansion class remains.
   assert.doesNotMatch(css, /grid-column:\s*1\s*\/\s*-1/);
