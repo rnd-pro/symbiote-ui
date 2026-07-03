@@ -248,3 +248,25 @@ export function undeclaredSystemRoles() {
   let css = systemCascadeCss();
   return SYSTEM_ROLES.filter(role => !css.includes(`${role}:`));
 }
+
+let systemCascadeSheet = null;
+
+/**
+ * Adopt the system-cascade stylesheet on a document (idempotent, one shared
+ * constructable sheet). Custom properties inherit into shadow trees and `@property`
+ * registrations are document-global, so document-level adoption lights up the T2 roles
+ * for every component regardless of shadow boundaries. No-op outside a DOM context.
+ * @param {Document} [doc]
+ * @returns {CSSStyleSheet | null}
+ */
+export function ensureSystemCascade(doc = globalThis.document) {
+  if (!doc || typeof CSSStyleSheet === 'undefined') return null;
+  if (!systemCascadeSheet) {
+    systemCascadeSheet = new CSSStyleSheet();
+    systemCascadeSheet.replaceSync(systemCascadeCss());
+  }
+  if (!doc.adoptedStyleSheets.includes(systemCascadeSheet)) {
+    doc.adoptedStyleSheets = [...doc.adoptedStyleSheets, systemCascadeSheet];
+  }
+  return systemCascadeSheet;
+}

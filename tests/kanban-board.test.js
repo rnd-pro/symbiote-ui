@@ -89,8 +89,12 @@ test('sn-kanban-board renders columns and emits card intents', async () => {
     'card actions should render behind one native-popover dropdown trigger, not an in-card expanding menu',
   );
   assert.ok(
-    board.querySelector('.sn-kanban-card-actions [slot="trigger"].sn-kanban-card-menu'),
-    'dropdown trigger slot should carry the card menu button',
+    board.querySelector('.sn-kanban-card-actions .sn-dropdown-trigger .sn-kanban-card-menu'),
+    'slot distribution should place the card menu button inside the dropdown trigger',
+  );
+  assert.ok(
+    board.querySelector('.sn-kanban-card-actions .sn-dropdown-popover sn-menu'),
+    'slot distribution should place the action menu inside the native popover, hidden until triggered',
   );
   board.querySelector('.sn-kanban-card').click();
   assert.equal(selected.card.id, 'task-1');

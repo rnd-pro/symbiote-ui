@@ -89,6 +89,7 @@ const LAYOUT_TOKEN_MAP = {
  * @param {ThemeDefinition} theme
  */
 export function applyTheme(element, theme) {
+  ensureSystemCascade(element?.ownerDocument ?? globalThis.document);
   for (const [key, value] of Object.entries(theme.tokens)) {
     element.style.setProperty(key, value);
   }
@@ -135,3 +136,5 @@ export {
   systemCascadeCss,
   undeclaredSystemRoles,
 } from './system-cascade.js';
+import { ensureSystemCascade } from './system-cascade.js';
+export { ensureSystemCascade };

@@ -67,6 +67,7 @@ export {
   resolveThemePresetsForTask,
   STATUS_HUE_OFFSETS,
   systemCascadeCss,
+  ensureSystemCascade,
   undeclaredSystemRoles,
 } from './themes/Theme.js';
 

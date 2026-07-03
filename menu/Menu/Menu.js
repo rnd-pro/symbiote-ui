@@ -1,4 +1,5 @@
 import Symbiote from '@symbiotejs/symbiote';
+import { slotProcessor } from '@symbiotejs/symbiote/core/slotProcessor.js';
 import { ensureMaterialSymbols } from '../../icons/MaterialSymbols.js';
 import { setupRovingFocus } from '../../ui/roving-focus.js';
 import { menuTemplate, menuItemTemplate, menuSeparatorTemplate, menuGroupTemplate, dropdownTemplate } from './Menu.tpl.js';
@@ -6,6 +7,11 @@ import css from './Menu.css.js';
 
 export class Menu extends Symbiote {
   #cleanupRoving = null;
+
+  constructor() {
+    super();
+    this.templateProcessors.add(slotProcessor);
+  }
 
   connectedCallback() {
     super.connectedCallback?.();
@@ -37,6 +43,11 @@ export class MenuItem extends Symbiote {
     shortcut: '',
     hasIconOrCheck: false,
   };
+
+  constructor() {
+    super();
+    this.templateProcessors.add(slotProcessor);
+  }
 
   #onKeyDown = (e) => {
     if (e.key === ' ' || e.key === 'Enter') {
@@ -175,6 +186,11 @@ export class MenuGroup extends Symbiote {
     label: '',
   };
 
+  constructor() {
+    super();
+    this.templateProcessors.add(slotProcessor);
+  }
+
   connectedCallback() {
     super.connectedCallback?.();
     this.$.label = this.getAttribute('label') || '';
@@ -198,10 +214,25 @@ MenuGroup.template = menuGroupTemplate;
 MenuGroup.reg('sn-menu-group');
 
 export class Dropdown extends Symbiote {
+  constructor() {
+    super();
+    this.templateProcessors.add(slotProcessor);
+  }
+
   onTriggerClick(event) {
     event.stopPropagation();
     const popover = this.querySelector('.sn-dropdown-popover');
-    popover?.togglePopover();
+    // The trigger wrapper becomes the popover's implicit anchor (per-instance, no
+    // document-global anchor-name), so position-area resolves against this dropdown.
+    popover?.togglePopover({ source: this.querySelector('.sn-dropdown-trigger') });
+  }
+
+  renderCallback() {
+    super.renderCallback?.();
+    // Selecting an item dismisses the menu, matching native <select>/popover UX.
+    this.addEventListener('sn-menu-item-select', () => {
+      this.querySelector('.sn-dropdown-popover')?.hidePopover?.();
+    });
   }
 }
 

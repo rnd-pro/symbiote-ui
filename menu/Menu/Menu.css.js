@@ -118,14 +118,15 @@ sn-dropdown[hidden] {
   display: none !important;
 }
 
+/* Real box (never display: contents) — the popover anchors to this element, and a boxless
+   element cannot serve as an anchor. Anchoring is per-instance via the popover's implicit
+   invoker anchor (togglePopover({ source })), so no document-global anchor-name collisions. */
 .sn-dropdown-trigger {
-  display: contents;
-  anchor-name: --sn-dropdown-trigger-anchor;
+  display: inline-flex;
 }
 
 .sn-dropdown-popover {
   position: fixed;
-  position-anchor: --sn-dropdown-trigger-anchor;
   position-area: var(--sn-dropdown-position-area, block-end span-inline-start);
   position-try-fallbacks: flip-block, flip-inline;
   margin: var(--sn-dropdown-gap, 4px) 0 0 0;
