@@ -119,6 +119,23 @@ test('recipe resolution preserves cascade order and bounded overrides', () => {
   assert.ok(resolved.relations.elevation);
 });
 
+test('recipe semantic hue overrides resolve against user-final params', () => {
+  let resolved = resolveCascadeThemeRecipe({
+    recipe: 'agent-console',
+    params: { hue: 0 },
+  });
+  let theme = createCascadeTheme({
+    recipe: 'agent-console',
+    params: { hue: 0 },
+  });
+
+  assert.equal(resolved.params.hue, 0);
+  assert.equal(resolved.overrides['--sn-hue-success'], '260');
+  assert.equal(resolved.overrides['--sn-hue-warning'], '182');
+  assert.equal(theme.tokens['--sn-hue-accent'], '0');
+  assert.equal(theme.tokens['--sn-hue-success'], '260');
+});
+
 test('bounded theme overrides reject non-token names and unsafe values', () => {
   assert.equal(isBoundedThemeOverride('--sn-data-table-radius', 'calc(8px * var(--sn-theme-density))'), true);
   assert.equal(isBoundedThemeOverride('--x-data-table-radius', '8px'), false);
@@ -132,7 +149,7 @@ test('createCascadeTheme resolves recipes without breaking raw params', () => {
   assert.equal(raw.state.mode, 'light');
   assert.equal(raw.state.hue, 33);
   assert.equal(raw.state.density, 110);
-  assert.equal(raw.state.radius, 20);
+  assert.equal(raw.state.radius, 17);
   assert.equal(raw.tokens['--sn-theme-radius-scale'], '1.00');
 
   let themed = createCascadeTheme({
@@ -142,7 +159,7 @@ test('createCascadeTheme resolves recipes without breaking raw params', () => {
   assert.equal(themed.recipe, 'ops-dashboard');
   assert.equal(themed.state.density, 100);
   assert.equal(themed.state.radius, 30);
-  assert.equal(themed.tokens['--sn-theme-radius-scale'], '1.50');
+  assert.equal(themed.tokens['--sn-theme-radius-scale'], '1.76');
   assert.match(themed.tokens['--sn-data-table-radius'], /var\(--sn-theme-radius-scale\)/);
   assert.equal(themed.tokens['--sn-theme-elevation-scale'], '1.1');
   assert.ok(themed.descriptor.recipeModel.recipeNames.includes('ops-dashboard'));

@@ -265,7 +265,7 @@ function normalizeRuntimeLayoutPreset(source = {}, index = 0) {
   };
 }
 
-function normalizeRuntimeAction(source = {}, index = 0) {
+export function normalizeRuntimeSafeAction(source = {}, index = 0) {
   let action = isObject(source) ? source : { id: source, title: source };
   let id = normalizeId(action.id || action.actionId || action.name || action.toolName, `safe-action-${index + 1}`);
   return {
@@ -276,6 +276,7 @@ function normalizeRuntimeAction(source = {}, index = 0) {
     componentRefs: normalizeStringArray(action.componentRefs || action.components),
     entityRefs: normalizeStringArray(action.entityRefs || action.entities),
     viewRefs: normalizeStringArray(action.viewRefs || action.views),
+    targetRefs: normalizeStringArray(action.targetRefs || action.targets),
     safe: action.safe !== false && action.allowed !== false,
     metadata: normalizeRecord(action.metadata),
   };
@@ -284,6 +285,60 @@ function normalizeRuntimeAction(source = {}, index = 0) {
 function normalizeRuntimeActionRefs(source = {}, safeActions = []) {
   let explicitRefs = normalizeStringArray(source.safeActionRefs || source.allowedActionRefs || source.actionRefs);
   return [...new Set([...explicitRefs, ...safeActions.map((action) => action.id).filter(Boolean)])];
+}
+
+export function createRuntimeSafeActionFromProductAction(action = {}, overrides = {}) {
+  let productAction = isObject(action) ? action : {};
+  return normalizeRuntimeSafeAction({
+    id: productAction.id || productAction.actionId || productAction.name || productAction.toolName,
+    name: productAction.name || productAction.toolName,
+    title: productAction.title || productAction.label || productAction.name,
+    reason: productAction.description || productAction.summary,
+    componentRefs: productAction.componentRefs || productAction.components,
+    entityRefs: productAction.entityRefs || productAction.entities,
+    viewRefs: productAction.viewRefs || productAction.views,
+    safe: productAction.destructive !== true && productAction.allowed !== false,
+    metadata: productAction.metadata,
+    ...overrides,
+  });
+}
+
+export function normalizeRuntimeEnrichment(source = {}, index = 0) {
+  let item = isObject(source) ? source : { id: source, title: source };
+  let id = normalizeId(item.id || item.enrichmentId || item.title, `enrichment-${index + 1}`);
+  return {
+    id,
+    type: normalizeText(item.type || item.kind || 'context'),
+    title: normalizeText(item.title || item.label || item.name, id),
+    detail: normalizeText(item.detail || item.description || item.summary),
+    source: normalizeText(item.source || item.owner || 'host'),
+    componentRefs: normalizeStringArray(item.componentRefs || item.components),
+    entityRefs: normalizeStringArray(item.entityRefs || item.entities),
+    viewRefs: normalizeStringArray(item.viewRefs || item.views),
+    targetRefs: normalizeStringArray(item.targetRefs || item.targets),
+    actionRefs: normalizeStringArray(item.actionRefs || item.actions),
+    priority: Number.isFinite(Number(item.priority)) ? Number(item.priority) : 0,
+    metadata: normalizeRecord(item.metadata),
+  };
+}
+
+export function normalizeRuntimeHook(source = {}, index = 0) {
+  let hook = isObject(source) ? source : { id: source, title: source };
+  let id = normalizeId(hook.id || hook.hookId || hook.title, `hook-${index + 1}`);
+  return {
+    id,
+    title: normalizeText(hook.title || hook.label || hook.name, id),
+    description: normalizeText(hook.description || hook.summary),
+    mode: normalizeText(hook.mode || hook.kind || 'assist'),
+    trigger: normalizeRecord(hook.trigger || hook.match),
+    componentRefs: normalizeStringArray(hook.componentRefs || hook.components),
+    entityRefs: normalizeStringArray(hook.entityRefs || hook.entities),
+    viewRefs: normalizeStringArray(hook.viewRefs || hook.views),
+    targetRefs: normalizeStringArray(hook.targetRefs || hook.targets),
+    actionRefs: normalizeStringArray(hook.actionRefs || hook.actions),
+    safeActionRefs: normalizeStringArray(hook.safeActionRefs || hook.safeActions),
+    metadata: normalizeRecord(hook.metadata),
+  };
 }
 
 function normalizeRuntimeLogItems(value) {
@@ -310,7 +365,7 @@ export function normalizeRuntimeContext(input = {}) {
   let safeActionSource = Array.isArray(source.safeActions)
     ? source.safeActions
     : (Array.isArray(source.allowedActions) ? source.allowedActions : []);
-  let safeActions = safeActionSource.map(normalizeRuntimeAction);
+  let safeActions = safeActionSource.map(normalizeRuntimeSafeAction);
   return {
     activeViewId: normalizeText(source.activeViewId || source.activeId || source.activeTabId),
     activeSurfaceId: normalizeText(source.activeSurfaceId || source.activeWindowId || source.activeBoardId),
@@ -329,6 +384,10 @@ export function normalizeRuntimeContext(input = {}) {
     cues: cues.map((cue, index) => normalizeRuntimeItem(cue, index, 'cue')),
     focus: Array.isArray(source.focus) ? source.focus.map(normalizeRecord) : [],
     capabilities: normalizeRecord(source.capabilities),
+    enrichment: (Array.isArray(source.enrichment) ? source.enrichment : [])
+      .map(normalizeRuntimeEnrichment),
+    hooks: (Array.isArray(source.hooks) ? source.hooks : [])
+      .map(normalizeRuntimeHook),
     recentInteractions: normalizeRuntimeLogItems(source.recentInteractions || source.interactions),
     recentDataChanges: normalizeRuntimeLogItems(source.recentDataChanges || source.dataChanges),
     metadata: normalizeRecord(source.metadata),

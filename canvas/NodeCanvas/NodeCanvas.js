@@ -34,6 +34,7 @@ import { CanvasConnectionRenderer } from '../CanvasConnectionRenderer.js';
 import { PseudoConnection } from '../PseudoConnection.js';
 import { ViewportActions } from '../ViewportActions.js';
 import { SubgraphManager } from '../SubgraphManager.js';
+import { FlowSimulator } from '../FlowSimulator.js';
 import '../../menu/ContextMenu/ContextMenu.js';
 import '../../toolbar/QuickToolbar/QuickToolbar.js';
 import '../../node/GraphFrame/GraphFrame.js';
@@ -72,6 +73,43 @@ function clampFlowSize(value, min, max) {
   if (Number.isFinite(min)) next = Math.max(min, next);
   if (Number.isFinite(max)) next = Math.min(max, next);
   return next;
+}
+
+const FLOW_MENU_GROUP = Object.freeze({
+  group: 'motion',
+  groupLabel: 'Motion',
+  groupOrder: 15,
+});
+
+function baseFlowMenuActions({ running = false, flowing = false, hasConnections = false } = {}) {
+  return [
+    {
+      id: 'flow:run',
+      label: 'Play',
+      icon: 'play_arrow',
+      title: 'Play graph flow animation',
+      disabled: !hasConnections || running,
+      active: running,
+      ...FLOW_MENU_GROUP,
+    },
+    {
+      id: 'flow:stop',
+      label: 'Stop',
+      icon: 'stop',
+      title: 'Stop graph flow animation',
+      disabled: !hasConnections || (!running && !flowing),
+      ...FLOW_MENU_GROUP,
+    },
+    {
+      id: 'flow:toggle',
+      label: 'Flow',
+      icon: 'timeline',
+      title: 'Toggle persistent connection flow',
+      disabled: !hasConnections,
+      active: flowing,
+      ...FLOW_MENU_GROUP,
+    },
+  ];
 }
 
 export class NodeCanvas extends Symbiote {
@@ -140,11 +178,23 @@ export class NodeCanvas extends Symbiote {
   /** @type {Set<string>} */
   _pendingConnectionNodeIds = new Set();
 
+  /** @type {ResizeObserver|null} */
+  _nodeResizeObserver = null;
+
+  /** @type {Map<string, { width: number, height: number }>} */
+  _nodeSizeCache = new Map();
+
   /** @type {number} */
   _connectionUpdateFrame = 0;
 
   /** @type {number} */
   _connectionUpdateTimer = 0;
+
+  /** @type {number} */
+  _connectionSettleFrame = 0;
+
+  /** @type {number} */
+  _connectionSettlePasses = 0;
 
   /** @type {number} */
   _lastConnectionUpdateTime = 0;
@@ -197,6 +247,12 @@ export class NodeCanvas extends Symbiote {
   /** @type {SubgraphManager} */
   _subgraphManager = new SubgraphManager();
 
+  /** @type {FlowSimulator|null} */
+  _flowSimulator = null;
+
+  /** @type {boolean} */
+  _allConnectionsFlowing = false;
+
   /** @type {boolean} - guard to prevent setEditor re-init during navigation */
   _navigating = false;
 
@@ -219,6 +275,7 @@ export class NodeCanvas extends Symbiote {
    */
   _clearViews() {
     this._clearScheduledConnectionUpdates();
+    this._disconnectNodeResizeObserver();
 
     for (const [, el] of this._nodeViews) {
       if (el._previewRaf) {
@@ -262,6 +319,7 @@ export class NodeCanvas extends Symbiote {
   setEditor(editor) {
 
     this._clearViews();
+    this._stopFlowAnimation({ emit: false });
 
     this._editor = editor;
 
@@ -423,6 +481,8 @@ export class NodeCanvas extends Symbiote {
       nodesLayer: this.ref.nodesLayer,
       canvas: this,
       onSvgShapeReady: (nodeId) => this._connRenderer?.renderFreeDots(nodeId),
+      onNodeViewReady: (nodeId, el) => this._observeNodeSize(nodeId, el),
+      onNodeViewRemoved: (nodeId, el) => this._unobserveNodeSize(nodeId, el),
     });
     this._viewManager.setReadonly(this._readonly);
     this._viewManager.setReadonlyNodeDragging(this._readonlyNodeDragging);
@@ -503,10 +563,15 @@ export class NodeCanvas extends Symbiote {
       }
       this.refreshFlowLayout();
     });
-    editor.on('connectioncreated', (conn) => this._connRenderer.add(conn));
+    editor.on('connectioncreated', (conn) => {
+      this._connRenderer.add(conn);
+      this._emitPanelMenuActions();
+      this._scheduleConnectionSettleRefresh(2);
+    });
     editor.on('connectionremoved', (conn) => {
       this._connRenderer.remove(conn);
       this._selector.getSelectedConnections().delete(conn.id);
+      this._emitPanelMenuActions();
     });
 
 
@@ -553,6 +618,9 @@ export class NodeCanvas extends Symbiote {
         });
       }
     }
+
+    this._emitPanelMenuActions();
+    this._scheduleConnectionSettleRefresh(3);
   }
 
   /** @returns {ConnectFlow|null} */
@@ -688,6 +756,8 @@ export class NodeCanvas extends Symbiote {
    */
   setAllFlowing(active) {
     this._connRenderer?.setAllFlowing(active);
+    this._allConnectionsFlowing = Boolean(active);
+    this._emitPanelMenuActions();
   }
 
   /**
@@ -747,6 +817,155 @@ export class NodeCanvas extends Symbiote {
   refreshConnections() {
     this._connRenderer?.refreshAll();
   }
+
+  _settleConnectionsAfterViewport(passes = 3) {
+    this._connRenderer?.refreshViewportTransform?.();
+    this._scheduleConnectionSettleRefresh(passes);
+  }
+
+  _readNodeElementSize(el, entry = null) {
+    let borderBox = Array.isArray(entry?.borderBoxSize) ? entry.borderBoxSize[0] : entry?.borderBoxSize;
+    let width = borderBox?.inlineSize || entry?.contentRect?.width || el?.offsetWidth || el?._cachedW || 0;
+    let height = borderBox?.blockSize || entry?.contentRect?.height || el?.offsetHeight || el?._cachedH || 0;
+    return { width, height };
+  }
+
+  _ensureNodeResizeObserver() {
+    if (this._nodeResizeObserver || typeof ResizeObserver !== 'function') return this._nodeResizeObserver;
+    this._nodeResizeObserver = new ResizeObserver((entries) => this._handleNodeResizeEntries(entries));
+    return this._nodeResizeObserver;
+  }
+
+  _observeNodeSize(nodeId, el) {
+    if (!nodeId || !el) return;
+    let observer = this._ensureNodeResizeObserver();
+    let id = String(nodeId);
+    this._nodeSizeCache.set(id, this._readNodeElementSize(el));
+    observer?.observe(el);
+  }
+
+  _unobserveNodeSize(nodeId, el) {
+    if (el) this._nodeResizeObserver?.unobserve(el);
+    if (nodeId) this._nodeSizeCache.delete(String(nodeId));
+  }
+
+  _disconnectNodeResizeObserver() {
+    this._nodeResizeObserver?.disconnect();
+    this._nodeResizeObserver = null;
+    this._nodeSizeCache.clear();
+  }
+
+  _handleNodeResizeEntries(entries) {
+    let changed = false;
+    for (const entry of entries) {
+      let el = entry.target;
+      if (!el?.isConnected) continue;
+      let nodeId = el.getAttribute?.('node-id');
+      if (!nodeId) continue;
+
+      let next = this._readNodeElementSize(el, entry);
+      let prev = this._nodeSizeCache.get(nodeId);
+      if (
+        !prev ||
+        Math.abs(next.width - prev.width) > 0.5 ||
+        Math.abs(next.height - prev.height) > 0.5
+      ) {
+        this._nodeSizeCache.set(nodeId, next);
+        this._scheduleConnectionUpdate(nodeId);
+        changed = true;
+      }
+    }
+    if (changed) this._scheduleConnectionSettleRefresh(2);
+  }
+
+  _scheduleConnectionSettleRefresh(passes = 2) {
+    this._connectionSettlePasses = Math.max(this._connectionSettlePasses, passes);
+    if (this._connectionSettleFrame) return;
+
+    let tick = () => {
+      this._connectionSettleFrame = 0;
+      if (!this.isConnected) {
+        this._connectionSettlePasses = 0;
+        return;
+      }
+      this.refreshConnections();
+      this._connectionSettlePasses -= 1;
+      if (this._connectionSettlePasses <= 0) return;
+      if (typeof requestAnimationFrame === 'function') {
+        this._connectionSettleFrame = requestAnimationFrame(tick);
+      } else {
+        tick();
+      }
+    };
+
+    if (typeof requestAnimationFrame === 'function') {
+      this._connectionSettleFrame = requestAnimationFrame(tick);
+    } else {
+      tick();
+    }
+  }
+
+  _clearConnectionSettleRefresh() {
+    if (this._connectionSettleFrame && typeof cancelAnimationFrame === 'function') {
+      cancelAnimationFrame(this._connectionSettleFrame);
+    }
+    this._connectionSettleFrame = 0;
+    this._connectionSettlePasses = 0;
+  }
+
+  _flowMenuActions() {
+    let hasConnections = Boolean(this._editor?.getConnections?.().length);
+    return baseFlowMenuActions({
+      running: Boolean(this._flowSimulator?.running),
+      flowing: this._allConnectionsFlowing,
+      hasConnections,
+    });
+  }
+
+  _emitPanelMenuActions() {
+    this.dispatchEvent(new CustomEvent('panel-menu-actions', {
+      bubbles: true,
+      composed: true,
+      detail: { actions: this._flowMenuActions() },
+    }));
+  }
+
+  _startFlowAnimation() {
+    if (!this._editor || !this._connRenderer || this._flowSimulator?.running) return;
+    this._flowSimulator = new FlowSimulator(this._editor, this);
+    this._flowSimulator.followActive = true;
+    this._emitPanelMenuActions();
+    this._flowSimulator.run().finally(() => {
+      this._flowSimulator = null;
+      this._allConnectionsFlowing = false;
+      this._emitPanelMenuActions();
+    });
+  }
+
+  _stopFlowAnimation({ emit = true } = {}) {
+    this._flowSimulator?.stop?.();
+    this._flowSimulator = null;
+    this._connRenderer?.setAllFlowing?.(false);
+    this._allConnectionsFlowing = false;
+    if (emit) this._emitPanelMenuActions();
+  }
+
+  _togglePersistentFlow() {
+    this.setAllFlowing(!this._allConnectionsFlowing);
+  }
+
+  _onPanelMenuAction = (event) => {
+    let actionId = event.detail?.actionId;
+    if (!String(actionId || '').startsWith('flow:')) return;
+    event.stopPropagation();
+    if (actionId === 'flow:run') {
+      this._startFlowAnimation();
+    } else if (actionId === 'flow:stop') {
+      this._stopFlowAnimation();
+    } else if (actionId === 'flow:toggle') {
+      this._togglePersistentFlow();
+    }
+  };
 
   /**
    * Set error state on a node with frame-style error display
@@ -845,7 +1064,11 @@ export class NodeCanvas extends Symbiote {
     }
     this.syncPhantom();
     this.refreshConnections();
-    if (options.fit === true) this.fitView();
+    if (options.fit === true) {
+      this.fitView();
+    } else {
+      this._scheduleConnectionSettleRefresh(3);
+    }
     return { algorithm, positions };
   }
 
@@ -865,6 +1088,7 @@ export class NodeCanvas extends Symbiote {
    */
   fitView() {
     this._viewport?.fitView();
+    this._settleConnectionsAfterViewport(3);
   }
 
   /**
@@ -876,7 +1100,9 @@ export class NodeCanvas extends Symbiote {
    * @returns {boolean}
    */
   flyToNode(nodeId, opts) {
-    return this._viewport?.flyToNode(nodeId, opts) || false;
+    let result = this._viewport?.flyToNode(nodeId, opts) || false;
+    if (result) this._settleConnectionsAfterViewport(3);
+    return result;
   }
 
   /**
@@ -890,7 +1116,9 @@ export class NodeCanvas extends Symbiote {
    * @returns {boolean}
    */
   flyToNodes(nodeIds, opts) {
-    return this._viewport?.flyToNodes(nodeIds, opts) || false;
+    let result = this._viewport?.flyToNodes(nodeIds, opts) || false;
+    if (result) this._settleConnectionsAfterViewport(3);
+    return result;
   }
 
   /**
@@ -1072,6 +1300,7 @@ export class NodeCanvas extends Symbiote {
     this.#setFlowContentSize(contentWidth, contentHeight);
     this.syncPhantom();
     this.refreshConnections();
+    this._scheduleConnectionSettleRefresh(3);
 
     return { width: contentWidth, height: contentHeight, positions };
   }
@@ -1118,6 +1347,7 @@ export class NodeCanvas extends Symbiote {
       }
     }
     this.refreshConnections();
+    this._scheduleConnectionSettleRefresh(3);
     return editor;
   }
 
@@ -1413,6 +1643,7 @@ export class NodeCanvas extends Symbiote {
     }
     this._connectionUpdateTimer = 0;
     this._pendingConnectionNodeIds.clear();
+    this._clearConnectionSettleRefresh();
   }
 
   _cancelNodeDragRelease() {
@@ -1709,7 +1940,8 @@ export class NodeCanvas extends Symbiote {
   }
 
   renderCallback() {
-    ensureMaterialSymbols(['map']);
+    ensureMaterialSymbols(['map', 'play_arrow', 'stop', 'timeline']);
+    this.addEventListener('panel-menu-action', this._onPanelMenuAction);
 
     let container = this.ref.canvasContainer;
     let content = this.ref.content;
@@ -1812,6 +2044,7 @@ export class NodeCanvas extends Symbiote {
         this.$.panX += ox;
         this.$.panY += oy;
         this._updateTransform();
+        this._scheduleConnectionSettleRefresh(2);
         this.dispatchEvent(new CustomEvent('manualviewport'));
 
 
@@ -1989,6 +2222,10 @@ export class NodeCanvas extends Symbiote {
   }
 
   destroyCallback() {
+    this.removeEventListener('panel-menu-action', this._onPanelMenuAction);
+    this._stopFlowAnimation({ emit: false });
+    this._clearConnectionSettleRefresh();
+    this._disconnectNodeResizeObserver();
     if (this._viewport) this._viewport.clear();
     if (this._drag) this._drag.destroy();
     if (this._zoom) this._zoom.destroy();

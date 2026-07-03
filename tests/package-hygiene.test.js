@@ -191,6 +191,9 @@ test('packed package imports from a consumer project with SSR-safe entrypoints',
       const runtime = await import('symbiote-ui/runtime');
       const manifest = await import('symbiote-ui/manifest');
       const webmcp = await import('symbiote-ui/webmcp');
+      const screencast = await import('symbiote-ui/ui/screencast-recorder.js');
+      const tourAudio = await import('symbiote-ui/ui/tour-audio-provider.js');
+      const tourMedia = await import('symbiote-ui/ui/tour-media-renderer.js');
 
       const xr = await import('symbiote-ui/xr');
       const spatialIndex = await import('symbiote-ui/xr/spatial-index');
@@ -207,6 +210,9 @@ test('packed package imports from a consumer project with SSR-safe entrypoints',
       if (runtime.RUNTIME_UI_CONTRACT.version !== 'runtime-ui-v1') throw new Error('bad runtime contract');
       if (typeof manifest.listComponents !== 'function') throw new Error('missing manifest listComponents');
       if (typeof webmcp.createToolDescriptor !== 'function') throw new Error('missing webmcp helper');
+      if (typeof screencast.installScreencastHotkeys !== 'function') throw new Error('missing screencast hotkey helper');
+      if (typeof tourAudio.createTourCueAudioProvider !== 'function') throw new Error('missing tour audio provider helper');
+      if (typeof tourMedia.renderTourVideo !== 'function') throw new Error('missing tour media renderer helper');
 
       if (typeof xr.createOctree !== 'function') throw new Error('missing xr.createOctree');
       if (typeof spatialIndex.createOctree !== 'function') throw new Error('missing spatialIndex.createOctree');

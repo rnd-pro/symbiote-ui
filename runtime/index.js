@@ -24,8 +24,12 @@ import {
 export {
   PRODUCT_CONTEXT_SCHEMA_ID,
   PRODUCT_CONTEXT_VERSION,
+  createRuntimeSafeActionFromProductAction,
   createProductContextAgentView,
   createProductRuntimeContext,
+  normalizeRuntimeEnrichment,
+  normalizeRuntimeHook,
+  normalizeRuntimeSafeAction,
   normalizeProductContext,
   normalizeRuntimeContext,
 } from './product-context.js';

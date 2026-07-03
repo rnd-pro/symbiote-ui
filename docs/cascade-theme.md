@@ -8,14 +8,14 @@ import { applyCascadeTheme, createCascadeTheme } from 'symbiote-ui';
 let theme = createCascadeTheme({
   mode: 'dark',
   brightness: 0,
-  contrast: 58,
-  chroma: 89,
-  hue: 218,
-  pattern: 60,
-  outline: 38,
+  contrast: 100,
+  chroma: 54,
+  hue: 205,
+  pattern: 0,
+  outline: 21,
   type: 100,
-  heading: 100,
-  density: 100,
+  heading: 111,
+  density: 114,
   motion: 100,
 });
 
@@ -129,8 +129,8 @@ Browser hosts can mount the reusable editor module inside a layout panel:
 ```
 
 The editor reuses the same bounded cascade controls, auto-saves normalized
-parameters to `localStorage`, can reset to defaults while clearing browser
-`localStorage`, copies the current parameter JSON, and emits
+parameters to `localStorage`, can reset to defaults while removing only cascade-owned
+`localStorage` keys, copies the current parameter JSON, and emits
 `cascade-theme-change` after applying tokens. The
 layout owns where the module is shown; `panel-layout` can register it as a
 panel type while keeping the panel menu closed by default.

@@ -32,7 +32,7 @@ project-tab-item {
   gap: var(--sn-tabs-item-gap, 6px);
   padding: var(--sn-tabs-item-padding, 0 10px);
   height: var(--sn-tabs-item-height);
-  border: 1px solid transparent;
+  border: 1px solid var(--sn-tabs-item-border, transparent);
   background: transparent;
   color: var(--sn-text-dim);
   cursor: pointer;
@@ -71,7 +71,6 @@ project-tab-item[disabled]:hover {
 project-tab-item[active] {
   background: var(--sn-tabs-active-bg);
   border-color: color-mix(in oklab, var(--tab-accent, var(--sn-tabs-accent)) 44%, transparent);
-  border-bottom: none;
   color: var(--sn-text);
   /* the active tab inverts its background, so derive a legible label colour from
      that background's own lightness instead of the surrounding text colour */

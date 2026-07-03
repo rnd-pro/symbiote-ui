@@ -8,6 +8,7 @@
 - `symbiote-ui/runtime` - Node-safe agent UI construction helpers.
 - `symbiote-ui/runtime/product-context` - Node-safe product context normalization for host-owned agent views.
 - `symbiote-ui/ui` - browser Web Component registration and UI runtime.
+- `symbiote-ui/ui/screencast-recorder.js` - browser Screen Capture API hotkey controller for host-owned screencast recording; default toggle hotkey is `Alt+Shift+R`, captured tab/display audio is requested by default, and no built-in indicator UI is rendered.
 - `symbiote-ui/webmcp` - WebMCP descriptor helpers and registration utilities.
 - `symbiote-ui/xr` - WebXR provider helpers, spatial algorithms, 3D graph layout, and multi-view coordination.
 - `symbiote-ui/locale` - Node-safe locale catalogs and translation helpers.
@@ -20,7 +21,7 @@
 - `symbiote-ui/chat/dialogue-stage.js` - multi-voice dialogue engine: each persona speaks through its own hidden-iframe `speechSynthesis` so voices can overlap, with `setLocale`, pause/resume, and a one-shot gesture unlock; spoken text is sanitized for TTS by default.
 - `symbiote-ui/chat/dialogue-timeline.js` - `playDialogueTimeline` and `buildAlternatingTimeline`: sequence dialogue turns with per-turn cues and overlap, building round-robin alternating conversations from plain lines.
 - `symbiote-ui/chat/dialogue-player.js` - `createDialoguePlayer` transport controller over a stage and timeline: `play`/`pause`/`resume`/`prev`/`next`/`seek`/`stop`, `index`/`total`/`isPlaying`/`isPaused` getters, a `done` promise, and settable `onCue`/`onIndexChange`/`onStateChange`.
-- `symbiote-ui/chat/presenter-cursor.js` - `createPresenterCursor` renders an animated arrow cursor that drag-selects any element with a Windows marching-ants marquee and travels between checkpoints along a curved path (`moveTo`/`clear`/`dispose`, Node-safe at import); `playCursorScenario` plays an agent-authored `{ steps: [{ target, holdMs?, gesture?, label? }] }` scenario with a host `resolveTarget`, per-step `onStep`, and `AbortSignal` support.
+- `symbiote-ui/chat/presenter-cursor.js` - `createPresenterCursor` renders a human-paced animated arrow cursor that drag-selects an edge-aware padded area around any element with a Windows marching-ants marquee and travels between checkpoints along a curved path (`moveTo`/`clear`/`dispose`, Node-safe at import); `playCursorScenario` plays an agent-authored `{ steps: [{ target, holdMs?, gesture?, label? }] }` scenario with a host `resolveTarget`, per-step `onStep`, and `AbortSignal` support.
 - `ChatMessageItem` / message-model custom-content parts - messages now carry an `actions` part (`{ type: 'actions', actions: [{ id, label, icon, variant }] }`) that renders inline action buttons and emits `chat-message-action` / `chat-workspace-action` `{ id, actionId, payload }`, and an `embed` part (`{ type: 'embed', key }`) that renders a keyed slot so `ChatTranscript` can emit `chat-transcript-embeds-ready` / `chat-workspace-embeds-ready` `{ embeds: [{ key, slot }] }` for the host to mount and re-attach a live widget.
 - `symbiote-ui/custom-elements.json` - Custom Elements manifest.
 - `symbiote-ui/schemas/*`, `symbiote-ui/tokens/*`, `symbiote-ui/rules/*` - machine-readable provider contracts.

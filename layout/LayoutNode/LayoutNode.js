@@ -59,6 +59,7 @@ const LAYOUT_UI_PANEL_MENU_ACTIONS = Object.freeze([
 
 const PANEL_MENU_GROUPS = Object.freeze({
   layout: { id: 'layout', label: 'Layout', order: 10 },
+  motion: { id: 'motion', label: 'Motion', order: 15 },
   path: { id: 'path', label: 'Connections', order: 20 },
   graph: { id: 'graph', label: 'Graph', order: 30 },
   panel: { id: 'panel', label: 'Panel', order: 40 },

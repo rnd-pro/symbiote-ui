@@ -613,6 +613,7 @@ export class ChatComposer extends Symbiote {
     try {
       let runtime = this._getVoiceRuntime();
       if (action === 'start') {
+        this._voiceCommandMode = true;
         this._localVoiceActiveMode = 'wake';
         this._localVoiceState = 'listening';
         this._localVoiceElapsed = 0;

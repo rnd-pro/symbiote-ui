@@ -199,6 +199,14 @@
           "items": { "type": "object", "additionalProperties": true }
         },
         "capabilities": { "type": "object", "additionalProperties": true },
+        "enrichment": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/runtimeEnrichment" }
+        },
+        "hooks": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/runtimeHook" }
+        },
         "recentInteractions": {
           "type": "array",
           "items": { "$ref": "#/$defs/runtimeLogItem" }
@@ -278,7 +286,46 @@
         "componentRefs": { "$ref": "#/$defs/idArray" },
         "entityRefs": { "$ref": "#/$defs/idArray" },
         "viewRefs": { "$ref": "#/$defs/idArray" },
+        "targetRefs": { "$ref": "#/$defs/idArray" },
         "safe": { "type": "boolean" },
+        "metadata": { "type": "object", "additionalProperties": true }
+      }
+    },
+    "runtimeEnrichment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "title"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "type": { "type": "string", "minLength": 1 },
+        "title": { "type": "string", "minLength": 1 },
+        "detail": { "type": "string" },
+        "source": { "type": "string" },
+        "componentRefs": { "$ref": "#/$defs/idArray" },
+        "entityRefs": { "$ref": "#/$defs/idArray" },
+        "viewRefs": { "$ref": "#/$defs/idArray" },
+        "targetRefs": { "$ref": "#/$defs/idArray" },
+        "actionRefs": { "$ref": "#/$defs/idArray" },
+        "priority": { "type": "number" },
+        "metadata": { "type": "object", "additionalProperties": true }
+      }
+    },
+    "runtimeHook": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "mode"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "title": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "mode": { "type": "string", "minLength": 1 },
+        "trigger": { "type": "object", "additionalProperties": true },
+        "componentRefs": { "$ref": "#/$defs/idArray" },
+        "entityRefs": { "$ref": "#/$defs/idArray" },
+        "viewRefs": { "$ref": "#/$defs/idArray" },
+        "targetRefs": { "$ref": "#/$defs/idArray" },
+        "actionRefs": { "$ref": "#/$defs/idArray" },
+        "safeActionRefs": { "$ref": "#/$defs/idArray" },
         "metadata": { "type": "object", "additionalProperties": true }
       }
     },

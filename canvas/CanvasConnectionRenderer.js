@@ -254,6 +254,28 @@ export class CanvasConnectionRenderer {
     return resolveCssVars(source, value);
   }
 
+  #getNodeSize(nodeEl, fallbackWidth, fallbackHeight) {
+    return {
+      width: nodeEl?.offsetWidth || nodeEl?._cachedW || fallbackWidth,
+      height: nodeEl?.offsetHeight || nodeEl?._cachedH || fallbackHeight,
+    };
+  }
+
+  #getLocalElementCenter(nodeEl, childEl) {
+    let nodeRect = nodeEl.getBoundingClientRect();
+    let childRect = childEl.getBoundingClientRect();
+    let localWidth = nodeEl.offsetWidth || nodeEl._cachedW || nodeRect.width;
+    let localHeight = nodeEl.offsetHeight || nodeEl._cachedH || nodeRect.height;
+    let scaleX = nodeRect.width && localWidth ? nodeRect.width / localWidth : this.#getZoom();
+    let scaleY = nodeRect.height && localHeight ? nodeRect.height / localHeight : this.#getZoom();
+    if (!Number.isFinite(scaleX) || scaleX === 0) scaleX = 1;
+    if (!Number.isFinite(scaleY) || scaleY === 0) scaleY = scaleX;
+    return {
+      x: (childRect.left - nodeRect.left + childRect.width / 2) / scaleX,
+      y: (childRect.top - nodeRect.top + childRect.height / 2) / scaleY,
+    };
+  }
+
   /** @param {'bezier'|'orthogonal'|'straight'|'pcb'} style */
   setPathStyle(style) {
     this.#pathStyle = style;
@@ -645,8 +667,9 @@ export class CanvasConnectionRenderer {
    */
   getSocketOffset(nodeEl, portKey, side, targetPos) {
     if (!nodeEl) return { x: 0, y: 0 };
-    let w = nodeEl._cachedW || nodeEl.offsetWidth || 180;
-    let h = nodeEl._cachedH || nodeEl.offsetHeight || 100;
+    let nodeSize = this.#getNodeSize(nodeEl, 180, 100);
+    let w = nodeSize.width;
+    let h = nodeSize.height;
 
     if (nodeEl._slotCache && nodeEl._slotCache.has(portKey)) {
       let cached = nodeEl._slotCache.get(portKey);
@@ -718,21 +741,15 @@ export class CanvasConnectionRenderer {
         if (String(portItem.$.key) === String(portKey)) {
           let socket = portItem.querySelector('.sn-socket');
           if (socket) {
-            let nodeRect = nodeEl.getBoundingClientRect();
-            let socketRect = socket.getBoundingClientRect();
-            let z = this.#getZoom();
-            return {
-              x: (socketRect.left - nodeRect.left + socketRect.width / 2) / z,
-              y: (socketRect.top - nodeRect.top + socketRect.height / 2) / z,
-            };
+            return this.#getLocalElementCenter(nodeEl, socket);
           }
         }
       }
     }
 
     return {
-      x: side === 'output' ? nodeEl._cachedW || nodeEl.offsetWidth || 180 : 0,
-      y: (nodeEl._cachedH || nodeEl.offsetHeight || 100) / 2,
+      x: side === 'output' ? w : 0,
+      y: h / 2,
     };
   }
 
@@ -787,12 +804,13 @@ export class CanvasConnectionRenderer {
     this._nodeRectMap = new Map();
     for (const [nid, el] of this.#nodeViews) {
       if (el && el._position) {
+        let size = this.#getNodeSize(el, 180, 60);
         this._nodeRectMap.set(nid, {
           id: nid,
           x: el._position.x,
           y: el._position.y,
-          w: el._cachedW || 180,
-          h: el._cachedH || 60,
+          w: size.width,
+          h: size.height,
           el: el,
         });
       }
@@ -1133,10 +1151,12 @@ export class CanvasConnectionRenderer {
       }
     }
 
-    let fromW = fromEl._cachedW || fromEl.offsetWidth || 180;
-    let fromH = fromEl._cachedH || fromEl.offsetHeight || 100;
-    let toW = toEl._cachedW || toEl.offsetWidth || 180;
-    let toH = toEl._cachedH || toEl.offsetHeight || 100;
+    let fromSizeMeasured = this.#getNodeSize(fromEl, 180, 100);
+    let toSizeMeasured = this.#getNodeSize(toEl, 180, 100);
+    let fromW = fromSizeMeasured.width;
+    let fromH = fromSizeMeasured.height;
+    let toW = toSizeMeasured.width;
+    let toH = toSizeMeasured.height;
 
     let fromSize = { width: fromW, height: fromH };
     let toSize = { width: toW, height: toH };

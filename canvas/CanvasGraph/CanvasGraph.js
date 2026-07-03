@@ -67,6 +67,8 @@ const SEEDED_LAYOUT_INITIAL_ALPHA = 0.22;
 const NODE_APPEARANCE_START_SCALE = 0.2;
 const ENTERING_LAYOUT_SIZE_SCALE = 0.18;
 const ENTERING_LAYOUT_SIZE_WARMUP_TICKS = 72;
+const DEFAULT_CANVAS_GRAPH_FOCUS_ZOOM = 1.6;
+const MAX_CANVAS_GRAPH_FOCUS_ZOOM = 2.4;
 
 function normalizeFocusNodeIds(nodeIds) {
   let ids = Array.isArray(nodeIds) ? nodeIds : [nodeIds];
@@ -1000,7 +1002,7 @@ export class CanvasGraph extends Symbiote {
       rect,
       padding: Number.isFinite(options.padding) ? options.padding : 80,
       minZoom: Number.isFinite(options.minZoom) ? options.minZoom : MIN_CANVAS_GRAPH_ZOOM,
-      maxZoom: Number.isFinite(options.maxZoom) ? options.maxZoom : 2,
+      maxZoom: Number.isFinite(options.maxZoom) ? options.maxZoom : MAX_CANVAS_GRAPH_FOCUS_ZOOM,
     });
 
     let selectedId = null;
@@ -1512,8 +1514,10 @@ export class CanvasGraph extends Symbiote {
     const rect = this.canvas.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) return false;
 
-    // Set zoom target: use provided zoom level, or force a comfortable minimum for focus
-    const targetZoom = options.zoom || Math.max(1.2, Math.min(2.0, this.zoom));
+    // Set zoom target: use provided zoom level, or force a readable minimum for focus.
+    const targetZoom = Number.isFinite(options.zoom)
+      ? options.zoom
+      : Math.max(DEFAULT_CANVAS_GRAPH_FOCUS_ZOOM, Math.min(MAX_CANVAS_GRAPH_FOCUS_ZOOM, this.zoom));
     let pendingViewport = {
       zoom: targetZoom,
       panX: rect.width / 2 - pos.x * targetZoom,
@@ -1561,7 +1565,7 @@ export class CanvasGraph extends Symbiote {
     }
     this.pulseNode(nodeId, 1800);
     requestAnimationFrame(() => {
-      this.flyToNode(nodeId, { zoom: 1.1 });
+      this.flyToNode(nodeId, { zoom: DEFAULT_CANVAS_GRAPH_FOCUS_ZOOM });
     });
   }
 

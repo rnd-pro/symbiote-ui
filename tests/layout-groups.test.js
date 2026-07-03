@@ -191,6 +191,7 @@ test('sidebar sections expose cancelable selection before router navigation', as
 test('layout shell menu emits normalized group intents without host executable state', async () => {
   installMinimalDom();
   let { LayoutShellMenu } = await import('../layout/LayoutShellMenu/LayoutShellMenu.js');
+  let source = await readFile(new URL('../layout/LayoutShellMenu/LayoutShellMenu.js', import.meta.url), 'utf8');
   let shell = new LayoutShellMenu();
   shell.initCallback();
 
@@ -231,6 +232,8 @@ test('layout shell menu emits normalized group intents without host executable s
   assert.equal(closes.length, 1);
   assert.equal(closes[0].id, 'graph');
   assert.equal(closes[0].source, 'tabs-close');
+  assert.match(source, /homeLabel:\s*home\?\.name \|\| home\?\.label \|\| ''/);
+  assert.match(source, /homeIcon:\s*home\?\.icon \|\| 'home'/);
 });
 
 test('project tabs require explicit closeable flag for close affordances', async () => {
@@ -247,12 +250,18 @@ test('project tabs require explicit closeable flag for close affordances', async
 
 test('project tabs mark the home button active when active group is hidden from tabs', async () => {
   let { ProjectTabs } = await import('../layout/ProjectTabs/ProjectTabs.js');
-  let tabs = { $: { activeId: null, homeId: null, isHomeActive: false, tabs: [] } };
+  let tabs = { $: { activeId: null, homeId: null, isHomeActive: false, tabs: [], homeIcon: 'home', homeLabel: 'Home' } };
 
-  ProjectTabs.prototype.setTabs.call(tabs, [{ id: 'graph', name: 'Graph' }], 'overview', { homeId: 'overview' });
+  ProjectTabs.prototype.setTabs.call(tabs, [{ id: 'graph', name: 'Graph' }], 'overview', {
+    homeId: 'overview',
+    homeIcon: 'bolt',
+    homeLabel: 'Главная',
+  });
 
   assert.equal(tabs.$.activeId, 'overview');
   assert.equal(tabs.$.homeId, 'overview');
+  assert.equal(tabs.$.homeIcon, 'bolt');
+  assert.equal(tabs.$.homeLabel, 'Главная');
   assert.equal(tabs.$.isHomeActive, true);
   assert.deepEqual(tabs.$.tabs.map((tab) => [tab.id, tab.isActive]), [
     ['graph', false],

@@ -113,6 +113,9 @@
       "import": "./ui/index.js",
       "default": "./ui/index.js"
     },
+    "./ui/screencast-recorder.js": "./ui/screencast-recorder.js",
+    "./ui/tour-audio-provider.js": "./ui/tour-audio-provider.js",
+    "./ui/tour-media-renderer.js": "./ui/tour-media-renderer.js",
     "./ui/scrollbar-styles.js": "./ui/scrollbar-styles.js",
     "./webmcp": {
       "import": "./webmcp.js",

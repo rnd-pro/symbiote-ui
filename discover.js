@@ -110,6 +110,21 @@ const EXPORT_ENTRYPOINTS = [
     description: 'Browser Web Components, layout modules, themes, router helpers, chat, navigation, and display modules.',
   },
   {
+    specifier: 'symbiote-ui/ui/screencast-recorder.js',
+    kind: 'browser',
+    description: 'Screen Capture API hotkey controller for browser screencast recording with captured tab/display audio requested by default and no built-in UI chrome.',
+  },
+  {
+    specifier: 'symbiote-ui/ui/tour-audio-provider.js',
+    kind: 'browser',
+    description: 'Web Audio provider for adding explicit tour timeline audio streams to rendered presentation videos.',
+  },
+  {
+    specifier: 'symbiote-ui/ui/tour-media-renderer.js',
+    kind: 'browser',
+    description: 'Canvas Capture and MediaRecorder helper for rendering agent tour timelines to video, with explicit audio-provider diagnostics.',
+  },
+  {
     specifier: 'symbiote-ui/board',
     kind: 'browser-component',
     description: 'Direct browser component entrypoint for reusable kanban boards with host-owned columns, cards, actions, selection, and move intents.',

@@ -175,8 +175,23 @@ export class ConnectionRenderer {
    */
   #getNodeSize(nodeEl, fallbackWidth, fallbackHeight) {
     return {
-      width: nodeEl._cachedW || nodeEl.offsetWidth || fallbackWidth,
-      height: nodeEl._cachedH || nodeEl.offsetHeight || fallbackHeight,
+      width: nodeEl.offsetWidth || nodeEl._cachedW || fallbackWidth,
+      height: nodeEl.offsetHeight || nodeEl._cachedH || fallbackHeight,
+    };
+  }
+
+  #getLocalElementCenter(nodeEl, childEl) {
+    let nodeRect = nodeEl.getBoundingClientRect();
+    let childRect = childEl.getBoundingClientRect();
+    let localWidth = nodeEl.offsetWidth || nodeEl._cachedW || nodeRect.width;
+    let localHeight = nodeEl.offsetHeight || nodeEl._cachedH || nodeRect.height;
+    let scaleX = nodeRect.width && localWidth ? nodeRect.width / localWidth : this.#getZoom();
+    let scaleY = nodeRect.height && localHeight ? nodeRect.height / localHeight : this.#getZoom();
+    if (!Number.isFinite(scaleX) || scaleX === 0) scaleX = 1;
+    if (!Number.isFinite(scaleY) || scaleY === 0) scaleY = scaleX;
+    return {
+      x: (childRect.left - nodeRect.left + childRect.width / 2) / scaleX,
+      y: (childRect.top - nodeRect.top + childRect.height / 2) / scaleY,
     };
   }
 
@@ -961,13 +976,7 @@ export class ConnectionRenderer {
         if (portItem.$.key === portKey) {
           let socket = portItem.querySelector('.sn-socket');
           if (socket) {
-            let nodeRect = nodeEl.getBoundingClientRect();
-            let socketRect = socket.getBoundingClientRect();
-            let z = this.#getZoom();
-            return {
-              x: (socketRect.left - nodeRect.left + socketRect.width / 2) / z,
-              y: (socketRect.top - nodeRect.top + socketRect.height / 2) / z,
-            };
+            return this.#getLocalElementCenter(nodeEl, socket);
           }
         }
       }
@@ -993,10 +1002,12 @@ export class ConnectionRenderer {
     let toPos = toEl._position;
 
 
-    let fromW = fromEl._cachedW || fromEl.offsetWidth || 180;
-    let fromH = fromEl._cachedH || fromEl.offsetHeight || 100;
-    let toW = toEl._cachedW || toEl.offsetWidth || 180;
-    let toH = toEl._cachedH || toEl.offsetHeight || 100;
+    let fromSizeMeasured = this.#getNodeSize(fromEl, 180, 100);
+    let toSizeMeasured = this.#getNodeSize(toEl, 180, 100);
+    let fromW = fromSizeMeasured.width;
+    let fromH = fromSizeMeasured.height;
+    let toW = toSizeMeasured.width;
+    let toH = toSizeMeasured.height;
     let fromCenter = {
       x: fromPos.x + fromW / 2,
       y: fromPos.y + fromH / 2,

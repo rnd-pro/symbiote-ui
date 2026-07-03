@@ -1,46 +1,10 @@
-const CASCADE_PARAM_NAMES = [
-  'mode',
-  'brightness',
-  'contrast',
-  'chroma',
-  'hue',
-  'bgLightness',
-  'surfaceLightness',
-  'accentLightness',
-  'accentChroma',
-  'pattern',
-  'outline',
-  'type',
-  'heading',
-  'density',
-  'radius',
-  'frameRadius',
-  'frameGap',
-  'motion',
-];
+import {
+  CASCADE_THEME_DEFAULTS,
+  CASCADE_THEME_PARAM_NAMES,
+} from './cascade-theme-controls.js';
 
+const CASCADE_PARAM_NAMES = CASCADE_THEME_PARAM_NAMES;
 const CASCADE_PARAM_SET = new Set(CASCADE_PARAM_NAMES);
-
-const DEFAULT_CASCADE_PARAMS = Object.freeze({
-  mode: 'dark',
-  brightness: 0,
-  contrast: 58,
-  chroma: 89,
-  hue: 218,
-  bgLightness: -1,
-  surfaceLightness: -1,
-  accentLightness: -1,
-  accentChroma: -1,
-  pattern: 60,
-  outline: 38,
-  type: 100,
-  heading: 100,
-  density: 100,
-  radius: 20,
-  frameRadius: 100,
-  frameGap: 0,
-  motion: 100,
-});
 
 const RELATION_DEFINITIONS = {
   surfaceLadder: {
@@ -327,7 +291,7 @@ function hue(value) {
 }
 
 function addParam(params, name, delta) {
-  params[name] = finiteNumber(params[name], DEFAULT_CASCADE_PARAMS[name]) + delta;
+  params[name] = finiteNumber(params[name], CASCADE_THEME_DEFAULTS[name]) + delta;
 }
 
 function setOverride(overrides, name, value) {
@@ -348,6 +312,14 @@ function relationScaleToken(px, scale) {
 
 function rotateHue(base, offset) {
   return String(hue(finiteNumber(base) + finiteNumber(offset)).toFixed(0));
+}
+
+function applySemanticHueOverrides(params, overrides, modifier) {
+  let spread = relationValue(modifier, 'semanticSpread');
+  setOverride(overrides, '--sn-hue-success', rotateHue(params.hue, -96 - spread * 5));
+  setOverride(overrides, '--sn-hue-warning', rotateHue(params.hue, 178 + spread * 5));
+  setOverride(overrides, '--sn-hue-danger', rotateHue(params.hue, 146 + spread * 7));
+  setOverride(overrides, '--sn-hue-data', rotateHue(params.hue, -30 - spread * 8));
 }
 
 function applyRelation(params, overrides, name, modifier) {
@@ -393,10 +365,7 @@ function applyRelation(params, overrides, name, modifier) {
     let spread = relationValue(modifier, 'semanticSpread');
     addParam(params, 'hue', hueShift);
     addParam(params, 'chroma', spread * 4);
-    setOverride(overrides, '--sn-hue-success', rotateHue(params.hue, -96 - spread * 5));
-    setOverride(overrides, '--sn-hue-warning', rotateHue(params.hue, 178 + spread * 5));
-    setOverride(overrides, '--sn-hue-danger', rotateHue(params.hue, 146 + spread * 7));
-    setOverride(overrides, '--sn-hue-data', rotateHue(params.hue, -30 - spread * 8));
+    applySemanticHueOverrides(params, overrides, modifier);
   } else if (name === 'graphDataPalette') {
     addParam(params, 'chroma', relationValue(modifier, 'dataChroma') * 5);
     addParam(params, 'contrast', relationValue(modifier, 'clusterContrast') * 2);
@@ -491,7 +460,7 @@ export function getCascadeThemeRecipeDescriptor() {
   return {
     version: 'theme-recipe-v1',
     cascadeOrder: ['default-provider', 'recipe.params', 'recipe.relations', 'user.params', 'bounded-overrides'],
-    params: CASCADE_PARAM_NAMES.map((name) => ({ name, default: DEFAULT_CASCADE_PARAMS[name] })),
+    params: CASCADE_PARAM_NAMES.map((name) => ({ name, default: CASCADE_THEME_DEFAULTS[name] })),
     relationNames: Object.keys(THEME_RELATION_DEFINITIONS),
     recipeNames: [...THEME_RECIPE_NAMES],
     boundedOverrides: {
@@ -507,7 +476,7 @@ export function resolveCascadeThemeRecipe(input = {}) {
   let recipeName = normalizeRecipeName(input);
   let recipe = recipeName ? getCascadeThemeRecipe(recipeName) : null;
   let params = {
-    ...DEFAULT_CASCADE_PARAMS,
+    ...CASCADE_THEME_DEFAULTS,
     ...(recipe?.params || {}),
   };
   let relationOverrides = {};
@@ -522,6 +491,10 @@ export function resolveCascadeThemeRecipe(input = {}) {
   }
 
   Object.assign(params, extractParams(input));
+  let relations = normalizeRelations(recipeRelations, userRelations);
+  if (relations.semanticHues) {
+    applySemanticHueOverrides(params, relationOverrides, relations.semanticHues);
+  }
 
   let overrides = normalizeThemeOverrides(
     relationOverrides,
@@ -529,8 +502,6 @@ export function resolveCascadeThemeRecipe(input = {}) {
     input?.theme?.overrides,
     input?.overrides
   );
-  let relations = normalizeRelations(recipeRelations, userRelations);
-
   for (let name of Object.keys(params)) {
     if (!CASCADE_PARAM_SET.has(name)) delete params[name];
   }

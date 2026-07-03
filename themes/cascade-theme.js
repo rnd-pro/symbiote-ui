@@ -2,174 +2,12 @@ import {
   getCascadeThemeRecipeDescriptor,
   resolveCascadeThemeRecipe,
 } from './theme-recipes.js';
-
-const CASCADE_THEME_CONTROL_LIST = [
-  {
-    name: 'mode',
-    type: 'enum',
-    values: ['dark', 'light'],
-    default: 'dark',
-    icon: 'routine',
-    description: 'Neutral luminance branch used to derive background, surface, text, border, and hover tokens.',
-  },
-  {
-    name: 'brightness',
-    type: 'number',
-    min: 0,
-    max: 100,
-    default: 0,
-    icon: 'brightness_6',
-    description: 'Global neutral brightness control. Dark mode moves surfaces upward; light mode moves them downward.',
-  },
-  {
-    name: 'contrast',
-    type: 'number',
-    min: 0,
-    max: 100,
-    default: 58,
-    icon: 'contrast',
-    description: 'Contrast control for text, borders, hover surfaces, and accent lightness.',
-  },
-  {
-    name: 'chroma',
-    type: 'number',
-    min: 0,
-    max: 100,
-    default: 89,
-    icon: 'opacity',
-    description: 'Accent saturation from grayscale to vivid color.',
-  },
-  {
-    name: 'hue',
-    type: 'number',
-    min: 0,
-    max: 360,
-    default: 218,
-    icon: 'palette',
-    description: 'Accent hue in native CSS HSL space.',
-  },
-  {
-    name: 'bgLightness',
-    type: 'number',
-    min: -1,
-    max: 100,
-    default: -1,
-    icon: 'format_color_fill',
-    description: 'Explicit background lightness (0 = black, 100 = white), overriding the brightness-derived value for the full range. -1 = auto (derive from brightness/mode).',
-  },
-  {
-    name: 'surfaceLightness',
-    type: 'number',
-    min: -1,
-    max: 100,
-    default: -1,
-    icon: 'layers',
-    description: 'Explicit surface / panel (accent-background) lightness, overriding the derived value so panels can be set independently of the page background. -1 = auto.',
-  },
-  {
-    name: 'accentLightness',
-    type: 'number',
-    min: -1,
-    max: 100,
-    default: -1,
-    icon: 'gradient',
-    description: 'Explicit accent-colour lightness (0-100), overriding the contrast-derived value — set a dark vivid accent on white or a bright accent on black for maximum contrast. -1 = auto.',
-  },
-  {
-    name: 'accentChroma',
-    type: 'number',
-    min: -1,
-    max: 100,
-    default: -1,
-    icon: 'invert_colors',
-    description: 'Explicit accent saturation for the accent colour only, overriding the global chroma. -1 = auto (use chroma).',
-  },
-  {
-    name: 'pattern',
-    type: 'number',
-    min: 0,
-    max: 100,
-    default: 60,
-    icon: 'grain',
-    description: 'Intensity of animated cell-bg dots; ambient gradients and noise stay stable.',
-  },
-  {
-    name: 'outline',
-    type: 'number',
-    min: 0,
-    max: 100,
-    default: 38,
-    icon: 'border_outer',
-    description: 'Outline visibility and emphasis for DOM borders, SVG shapes, split resizers, focus rings, sockets, and graph connections.',
-  },
-  {
-    name: 'type',
-    type: 'number',
-    min: 80,
-    max: 130,
-    default: 100,
-    icon: 'text_fields',
-    description: 'Typography scale for graph nodes, chat messages, controls, layout chrome, menus, tree rows, and demo labels.',
-  },
-  {
-    name: 'heading',
-    type: 'number',
-    min: 80,
-    max: 140,
-    default: 100,
-    icon: 'title',
-    description: 'Heading-to-body type balance for titles, graph labels, panel headings, cards, chat markdown, and document markdown.',
-  },
-  {
-    name: 'density',
-    type: 'number',
-    min: 75,
-    max: 140,
-    default: 100,
-    icon: 'density_medium',
-    description: 'Spacing and hit-target scale for graph nodes, ports, chat composer, controls, layout chrome, panel menus, and tree rows.',
-  },
-  {
-    name: 'radius',
-    type: 'number',
-    min: 0,
-    max: 100,
-    default: 20,
-    icon: 'rounded_corner',
-    description: 'Corner-radius scale for reusable controls, cards, tables, graph chrome, chat surfaces, and layout panels.',
-  },
-  {
-    name: 'frameRadius',
-    type: 'number',
-    min: 0,
-    max: 200,
-    default: 100,
-    icon: 'crop_square',
-    description: 'Corner radius of the outer layout frames (panels) and tabs, independent of the inner radius; also cascades into their inner padding so content stays clear of the rounded corners.',
-  },
-  {
-    name: 'frameGap',
-    type: 'number',
-    min: 0,
-    max: 20,
-    default: 0,
-    icon: 'space_dashboard',
-    description: 'Gap (px) between layout panels and inset from the window edges, so rounded frames float apart as separate cards instead of touching.',
-  },
-  {
-    name: 'motion',
-    type: 'number',
-    min: 0,
-    max: 200,
-    default: 100,
-    icon: 'directions_run',
-    description: 'Global motion scale (0-200%) for interactive transitions, animations, and cell effects.',
-  },
-];
-
-export const CASCADE_THEME_DEFAULTS = Object.freeze(Object.fromEntries(
-  CASCADE_THEME_CONTROL_LIST.map((control) => [control.name, control.default])
-));
+import { geometryRegisterScaleTokens, GEOMETRY_PROFILE_NAMES } from '../tokens/scale.js';
+import {
+  CASCADE_THEME_CONTROL_LIST,
+  CASCADE_THEME_DEFAULTS,
+} from './cascade-theme-controls.js';
+export { CASCADE_THEME_DEFAULTS } from './cascade-theme-controls.js';
 
 export const CASCADE_THEME_TOKEN_TARGETS = Object.freeze({
   color: [
@@ -579,6 +417,10 @@ export const CASCADE_THEME_DESCRIPTOR = Object.freeze({
       'applyCascadeTheme',
       'normalizeCascadeThemeOptions',
       'resolveCascadeThemeRecipe',
+      'serializeCascadeThemeBundle',
+      'applyCascadeThemeBundle',
+      'isCascadeThemeBundle',
+      'resetCascadeThemeScopes',
       'getCascadeThemeControls',
       'getReadableTextForHsl',
     ],
@@ -677,8 +519,14 @@ function completeCascadeThemeDescriptor(tokens = {}) {
   });
 }
 
-function clamp(value, min, max) {
-  return Math.min(max, Math.max(min, Number(value)));
+function finiteNumber(value, fallback) {
+  let number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+}
+
+function clamp(value, min, max, fallback = min) {
+  let number = finiteNumber(value, fallback);
+  return Math.min(max, Math.max(min, number));
 }
 
 function percent(value) {
@@ -694,7 +542,7 @@ function headingToken(px) {
 }
 
 function hueRotate(hue, offset) {
-  return String((((Number(hue) + offset) % 360) + 360) % 360);
+  return String((((finiteNumber(hue, CASCADE_THEME_DEFAULTS.hue) + finiteNumber(offset, 0)) % 360) + 360) % 360);
 }
 
 function densityToken(px) {
@@ -712,9 +560,9 @@ function svgStrokeToken(px, outlineStrength) {
 }
 
 function hslToRgb(hue, saturation, lightness) {
-  let h = (((Number(hue) % 360) + 360) % 360) / 360;
-  let s = clamp(saturation, 0, 100) / 100;
-  let l = clamp(lightness, 0, 100) / 100;
+  let h = (((finiteNumber(hue, CASCADE_THEME_DEFAULTS.hue) % 360) + 360) % 360) / 360;
+  let s = clamp(saturation, 0, 100, 0) / 100;
+  let l = clamp(lightness, 0, 100, 0) / 100;
 
   if (s === 0) {
     let value = l * 255;
@@ -751,7 +599,9 @@ function contrastRatio(a, b) {
 
 export function getReadableTextForHsl(hue, saturation, lightness, preferredLightness) {
   let bgLum = relativeLuminance(hslToRgb(hue, saturation, lightness));
-  let candidates = [preferredLightness, 8, 98].map((candidateLightness) => ({
+  let safeLightness = clamp(lightness, 0, 100, 50);
+  let preferred = finiteNumber(preferredLightness, safeLightness > 50 ? 8 : 98);
+  let candidates = [preferred, 8, 98].map((candidateLightness) => ({
     hue: 0,
     saturation: 0,
     lightness: candidateLightness,
@@ -827,10 +677,20 @@ export function serializeCascadeThemeBundle(scopeDefs, options = {}) {
       void error;
       stored = null;
     }
-    if (!stored) continue;
+    let register = readRegister(scopeDef.storageKey);
+    if (!stored) {
+      let hasDefault = scopeDef.defaultState !== undefined || options.defaultState !== undefined;
+      if (!hasDefault) continue;
+      let fallback = readScopeDefaultState(scopeDef, options.defaultState);
+      scopes[scopeDef.id] = {
+        ...fallback.state,
+        register: register || fallback.register,
+      };
+      continue;
+    }
     scopes[scopeDef.id] = {
       ...normalizeCascadeThemeOptions(stored),
-      register: readRegister(scopeDef.storageKey),
+      register,
     };
   }
 
@@ -915,29 +775,153 @@ export function applyCascadeThemeBundle(bundle, scopeDefs, options = {}) {
   }
 }
 
+export function clearCascadeThemeInlineTokens(element) {
+  if (!element?.style) return;
+  for (let prop of Array.from(element.style)) {
+    if (prop.startsWith('--sn')) element.style.removeProperty(prop);
+  }
+}
+
+function clearCascadeGeometryRegister(element) {
+  if (!element?.style) return;
+  for (let token of Object.keys(geometryRegisterScaleTokens('product'))) {
+    element.style.removeProperty(token);
+  }
+}
+
+function applyCascadeGeometryRegister(element, register) {
+  clearCascadeGeometryRegister(element);
+  if (!GEOMETRY_PROFILE_NAMES.includes(register)) return;
+  for (let [token, value] of Object.entries(geometryRegisterScaleTokens(register))) {
+    element.style.setProperty(token, value);
+  }
+}
+
+function removeCascadeThemeStorage(storage, storageKey) {
+  if (!storage || !storageKey) return;
+  try {
+    storage.removeItem(storageKey);
+    storage.removeItem(storageKey + CASCADE_BUNDLE_REGISTER_SUFFIX);
+  } catch (error) {
+    void error;
+  }
+}
+
+function readScopeDefaultState(scope, fallback) {
+  let raw = scope?.defaultState || fallback || CASCADE_THEME_DEFAULTS;
+  if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+    let { register, ...params } = raw;
+    return {
+      state: normalizeCascadeThemeOptions(params),
+      register: GEOMETRY_PROFILE_NAMES.includes(register) ? register : '',
+    };
+  }
+  return { state: normalizeCascadeThemeOptions(raw), register: '' };
+}
+
+function defaultResolveThemeTarget(scope, doc) {
+  if (!doc) return null;
+  if (scope?.selector) return doc.querySelector(scope.selector);
+  return doc.documentElement;
+}
+
+export function resetCascadeThemeScopes(scopeDefs = [], options = {}) {
+  let doc = options.document || (typeof document !== 'undefined' ? document : null);
+  let storage = options.storage || getCascadeThemeStorage();
+  let source = options.source || 'reset';
+  void source;
+  let fallbackState = options.defaultState || CASCADE_THEME_DEFAULTS;
+  let scopes = Array.isArray(scopeDefs) && scopeDefs.length
+    ? scopeDefs
+    : [{ id: 'default', selector: options.activeSelector || '', storageKey: options.activeStorageKey || '', defaultState: fallbackState }];
+  let resolveScopeTarget = typeof options.resolveScopeTarget === 'function'
+    ? options.resolveScopeTarget
+    : (scope) => defaultResolveThemeTarget(scope, doc);
+  let isNamedScope = typeof options.isNamedScope === 'function' ? options.isNamedScope : () => false;
+  let namedSelector = options.namedSelector || '[data-theme-key]';
+  let appliedTargets = new Set();
+  let keptScopes = [];
+  let activeState = null;
+  let activeRegister = '';
+  let resetScopes = [];
+
+  for (let scope of scopes) {
+    if (!scope) continue;
+    let target = resolveScopeTarget(scope);
+    if (isNamedScope(scope)) {
+      clearCascadeThemeInlineTokens(target);
+      removeCascadeThemeStorage(storage, scope.storageKey);
+      continue;
+    }
+    keptScopes.push(scope);
+    let { state, register } = readScopeDefaultState(scope, fallbackState);
+    if (target) {
+      appliedTargets.add(target);
+      clearCascadeThemeInlineTokens(target);
+      let theme = applyCascadeTheme(target, state, { notify: false });
+      if (register) applyCascadeGeometryRegister(target, register);
+      resetScopes.push({ scope, target, state: theme.state, register, theme });
+    }
+    if (
+      (options.activeId && scope.id === options.activeId)
+      || (options.activeStorageKey && scope.storageKey === options.activeStorageKey)
+      || (options.activeSelector && scope.selector === options.activeSelector)
+      || (!activeState && !options.activeId && !options.activeStorageKey && !options.activeSelector)
+    ) {
+      activeState = state;
+      activeRegister = register;
+    }
+    removeCascadeThemeStorage(storage, scope.storageKey);
+  }
+
+  if (doc && namedSelector) {
+    for (let target of doc.querySelectorAll(namedSelector)) {
+      if (appliedTargets.has(target)) continue;
+      clearCascadeThemeInlineTokens(target);
+      removeCascadeThemeStorage(storage, target.dataset?.themeKey);
+    }
+  }
+
+  if (options.clearStorage === true && storage) {
+    try { storage.clear(); } catch (error) { void error; }
+  }
+
+  return {
+    activeState: activeState || resetScopes[0]?.state || normalizeCascadeThemeOptions(fallbackState),
+    activeRegister,
+    appliedTargets,
+    keptScopes,
+    resetScopes,
+  };
+}
+
 export function normalizeCascadeThemeOptions(options = {}) {
   let resolved = resolveCascadeThemeRecipe(options);
   let merged = { ...CASCADE_THEME_DEFAULTS, ...resolved.params };
   let mode = merged.mode === 'light' ? 'light' : 'dark';
+  let bgLightness = finiteNumber(merged.bgLightness, CASCADE_THEME_DEFAULTS.bgLightness);
+  let surfaceLightness = finiteNumber(merged.surfaceLightness, CASCADE_THEME_DEFAULTS.surfaceLightness);
+  let accentLightness = finiteNumber(merged.accentLightness, CASCADE_THEME_DEFAULTS.accentLightness);
+  let accentChroma = finiteNumber(merged.accentChroma, CASCADE_THEME_DEFAULTS.accentChroma);
   return {
     mode,
-    brightness: clamp(merged.brightness, 0, 100),
-    contrast: clamp(merged.contrast, 0, 100),
-    chroma: clamp(merged.chroma, 0, 100),
-    hue: clamp(merged.hue, 0, 360),
-    bgLightness: merged.bgLightness >= 0 ? clamp(merged.bgLightness, 0, 100) : -1,
-    surfaceLightness: merged.surfaceLightness >= 0 ? clamp(merged.surfaceLightness, 0, 100) : -1,
-    accentLightness: merged.accentLightness >= 0 ? clamp(merged.accentLightness, 0, 100) : -1,
-    accentChroma: merged.accentChroma >= 0 ? clamp(merged.accentChroma, 0, 100) : -1,
-    pattern: clamp(merged.pattern, 0, 100),
-    outline: clamp(merged.outline, 0, 100),
-    type: clamp(merged.type, 80, 130),
-    heading: clamp(merged.heading, 80, 140),
-    density: clamp(merged.density, 75, 140),
-    radius: clamp(merged.radius, 0, 100),
-    frameRadius: clamp(merged.frameRadius, 0, 200),
-    frameGap: clamp(merged.frameGap, 0, 20),
-    motion: clamp(merged.motion, 0, 200),
+    brightness: clamp(merged.brightness, 0, 100, CASCADE_THEME_DEFAULTS.brightness),
+    contrast: clamp(merged.contrast, 0, 100, CASCADE_THEME_DEFAULTS.contrast),
+    chroma: clamp(merged.chroma, 0, 100, CASCADE_THEME_DEFAULTS.chroma),
+    hue: clamp(merged.hue, 0, 360, CASCADE_THEME_DEFAULTS.hue),
+    bgLightness: bgLightness >= 0 ? clamp(bgLightness, 0, 100, CASCADE_THEME_DEFAULTS.bgLightness) : -1,
+    surfaceLightness: surfaceLightness >= 0 ? clamp(surfaceLightness, 0, 100, CASCADE_THEME_DEFAULTS.surfaceLightness) : -1,
+    accentLightness: accentLightness >= 0 ? clamp(accentLightness, 0, 100, CASCADE_THEME_DEFAULTS.accentLightness) : -1,
+    accentChroma: accentChroma >= 0 ? clamp(accentChroma, 0, 100, CASCADE_THEME_DEFAULTS.accentChroma) : -1,
+    pattern: clamp(merged.pattern, 0, 100, CASCADE_THEME_DEFAULTS.pattern),
+    outline: clamp(merged.outline, 0, 100, CASCADE_THEME_DEFAULTS.outline),
+    type: clamp(merged.type, 80, 130, CASCADE_THEME_DEFAULTS.type),
+    heading: clamp(merged.heading, 80, 140, CASCADE_THEME_DEFAULTS.heading),
+    density: clamp(merged.density, 75, 140, CASCADE_THEME_DEFAULTS.density),
+    radius: clamp(merged.radius, 0, 100, CASCADE_THEME_DEFAULTS.radius),
+    frameRadius: clamp(merged.frameRadius, 0, 200, CASCADE_THEME_DEFAULTS.frameRadius),
+    frameGap: clamp(merged.frameGap, 0, 20, CASCADE_THEME_DEFAULTS.frameGap),
+    motion: clamp(merged.motion, 0, 200, CASCADE_THEME_DEFAULTS.motion),
   };
 }
 
@@ -1125,6 +1109,17 @@ export function createCascadeTheme(options = {}) {
     '--sn-danger-color': `hsl(${semanticHues.danger} ${neutralChroma} 58%)`,
     '--sn-success-color': `hsl(${semanticHues.success} ${neutralChroma} 57%)`,
     '--sn-warning-color': `hsl(${semanticHues.warning} ${neutralChroma} 58%)`,
+    '--sn-status-info': 'var(--sn-node-selected)',
+    '--sn-status-success': 'var(--sn-success-color)',
+    '--sn-status-warning': 'var(--sn-warning-color)',
+    '--sn-status-error': 'var(--sn-danger-color)',
+    '--sn-status-neutral': 'var(--sn-text-dim)',
+    '--sn-status-info-bg': 'color-mix(in oklab, var(--sn-status-info) 14%, transparent)',
+    '--sn-status-success-bg': 'color-mix(in oklab, var(--sn-status-success) 14%, transparent)',
+    '--sn-status-warning-bg': 'color-mix(in oklab, var(--sn-status-warning) 14%, transparent)',
+    '--sn-status-error-bg': 'color-mix(in oklab, var(--sn-status-error) 14%, transparent)',
+    '--sn-status-neutral-bg': 'color-mix(in oklab, var(--sn-status-neutral) 10%, transparent)',
+    '--sn-status-ok-bg': 'var(--sn-status-success-bg)',
     '--sn-node-selected': accent,
     '--sn-node-accent': accent,
     '--sn-cat-server': 'var(--sn-node-selected)',
@@ -1284,9 +1279,36 @@ export function createCascadeTheme(options = {}) {
     '--sn-banner-border': outlineColor,
     '--sn-banner-bg': 'var(--sn-node-bg)',
     '--sn-banner-color': 'var(--sn-text)',
+    '--sn-banner-info-bg': 'var(--sn-status-info-bg)',
+    '--sn-banner-info-color': 'var(--sn-status-info)',
+    '--sn-banner-info-border': 'color-mix(in oklab, var(--sn-status-info) 58%, transparent)',
+    '--sn-banner-success-bg': 'var(--sn-status-success-bg)',
+    '--sn-banner-success-color': 'var(--sn-status-success)',
+    '--sn-banner-success-border': 'color-mix(in oklab, var(--sn-status-success) 58%, transparent)',
+    '--sn-banner-warning-bg': 'var(--sn-status-warning-bg)',
+    '--sn-banner-warning-color': 'var(--sn-status-warning)',
+    '--sn-banner-warning-border': 'color-mix(in oklab, var(--sn-status-warning) 58%, transparent)',
+    '--sn-banner-error-bg': 'var(--sn-status-error-bg)',
+    '--sn-banner-error-color': 'var(--sn-status-error)',
+    '--sn-banner-error-border': 'color-mix(in oklab, var(--sn-status-error) 58%, transparent)',
     '--sn-badge-border': outlineColor,
     '--sn-badge-bg': 'var(--sn-node-bg)',
     '--sn-badge-color': 'var(--sn-text-dim)',
+    '--sn-badge-info-bg': 'var(--sn-status-info-bg)',
+    '--sn-badge-info-color': 'var(--sn-status-info)',
+    '--sn-badge-info-border': 'color-mix(in oklab, var(--sn-status-info) 76%, transparent)',
+    '--sn-badge-success-bg': 'var(--sn-status-success-bg)',
+    '--sn-badge-success-color': 'var(--sn-status-success)',
+    '--sn-badge-success-border': 'color-mix(in oklab, var(--sn-status-success) 76%, transparent)',
+    '--sn-badge-warning-bg': 'var(--sn-status-warning-bg)',
+    '--sn-badge-warning-color': 'var(--sn-status-warning)',
+    '--sn-badge-warning-border': 'color-mix(in oklab, var(--sn-status-warning) 76%, transparent)',
+    '--sn-badge-error-bg': 'var(--sn-status-error-bg)',
+    '--sn-badge-error-color': 'var(--sn-status-error)',
+    '--sn-badge-error-border': 'color-mix(in oklab, var(--sn-status-error) 76%, transparent)',
+    '--sn-badge-neutral-bg': 'var(--sn-status-neutral-bg)',
+    '--sn-badge-neutral-color': 'var(--sn-status-neutral)',
+    '--sn-badge-neutral-border': outlineColor,
     '--sn-field-control-border': outlineColor,
     '--sn-field-label-color': 'var(--sn-text-dim)',
     '--sn-field-control-bg': 'var(--sn-bg)',

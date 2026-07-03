@@ -98,7 +98,12 @@ export class LayoutShellMenu extends Symbiote {
   }
 
   _syncTabs() {
-    this.ref.tabs?.setTabs?.(this.$.tabs, this.$.activeId, { homeId: this.#homeGroupId });
+    let home = getHomeLayoutGroup(this.#groups);
+    this.ref.tabs?.setTabs?.(this.$.tabs, this.$.activeId, {
+      homeId: this.#homeGroupId,
+      homeIcon: home?.icon || 'home',
+      homeLabel: home?.name || home?.label || '',
+    });
   }
 
   _syncSidebar() {

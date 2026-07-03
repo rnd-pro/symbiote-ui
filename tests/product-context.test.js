@@ -7,16 +7,42 @@ import { test } from 'node:test';
 
 import {
   PRODUCT_CONTEXT_VERSION,
+  createRuntimeSafeActionFromProductAction,
   createProductContextAgentView,
   createProductRuntimeContext,
+  normalizeRuntimeEnrichment,
+  normalizeRuntimeHook,
+  normalizeRuntimeSafeAction,
   normalizeProductContext,
   normalizeRuntimeContext,
 } from '../runtime/product-context.js';
 import {
   PRODUCT_RUNTIME_CONTEXT_NAME,
+  buildWebMcpTourPrompt,
+  coerceWebMcpPresentationCommand,
+  coerceWebMcpTourTimelinePayload,
+  collectWebMcpComponentTargets,
   createProductActionToolDescriptor,
   createProductContextToolDescriptors,
+  createProductWebMcpBundle,
+  createWebMcpHookActionPlan,
+  createWebMcpPresentationActionPack,
+  createWebMcpPresentationActions,
+  createWebMcpPresentationController,
+  createWebMcpTourTurnActionPlan,
+  createWebMcpHooks,
+  createWebMcpObserver,
+  describeWebMcpPresentationActions,
+  formatWebMcpTargetLine,
+  getWebMcpPresentationActionPhase,
+  matchesWebMcpHookTrigger,
+  normalizeWebMcpTargetText,
   registerProductContextTools,
+  resolveWebMcpRuntimeTarget,
+  runWebMcpHookAction,
+  validateWebMcpPresentationCommand,
+  WEBMCP_PRESENTATION_TOUR_PHASES,
+  webMcpTargetAttrValue,
 } from '../webmcp.js';
 import {
   getUiSchema,
@@ -128,6 +154,7 @@ function sampleRuntimeContext() {
       componentRefs: ['release-board'],
       entityRefs: ['publish-pages'],
       viewRefs: ['kanban-board'],
+      targetRefs: ['cue:release-board:selected-card'],
     }],
     collapsed: { 'release-sidebar': true },
     layoutPresets: [{
@@ -173,6 +200,25 @@ function sampleRuntimeContext() {
       },
     }],
     capabilities: { presentation: { canSwitchTabs: true } },
+    enrichment: [{
+      id: 'release-flow-domain-semantics',
+      type: 'domain-runtime',
+      title: 'Release flow domain semantics',
+      detail: 'The host enriches neutral UI targets with release workflow meaning.',
+      source: 'test-host',
+      targetRefs: ['cue:release-board:selected-card'],
+      actionRefs: ['request-release-move'],
+      priority: 3,
+    }],
+    hooks: [{
+      id: 'ready-card-assist',
+      title: 'Ready card assist',
+      description: 'Suggests the safe move action when a ready release task is selected.',
+      mode: 'assist',
+      trigger: { type: 'interaction', action: 'select-card' },
+      entityRefs: ['publish-pages'],
+      safeActionRefs: ['request-release-move'],
+    }],
   };
 }
 
@@ -289,13 +335,26 @@ test('createProductRuntimeContext carries live browser UI context for narration'
   assert.deepEqual(context.runtime.selectedEntityRefs, ['publish-pages']);
   assert.deepEqual(context.runtime.safeActionRefs, ['request-release-move']);
   assert.equal(context.runtime.safeActions[0].safe, true);
+  assert.deepEqual(context.runtime.safeActions[0].targetRefs, ['cue:release-board:selected-card']);
   assert.equal(context.runtime.collapsed['release-sidebar'], true);
   assert.equal(context.runtime.layoutPresets[0].id, 'operations-board');
   assert.equal(context.runtime.windows[0].children[0].component, 'sn-kanban-board');
   assert.equal(context.runtime.tabs[0].id, 'release-tab');
   assert.equal(context.runtime.surfaces[0].children[0].component, 'sn-kanban-board');
   assert.equal(context.runtime.cues[0].target.semantics, 'selected release task card');
+  assert.equal(context.runtime.enrichment[0].source, 'test-host');
+  assert.equal(context.runtime.enrichment[0].priority, 3);
+  assert.equal(context.runtime.hooks[0].trigger.action, 'select-card');
   assert.equal(context.runtime.capabilities.presentation.canSwitchTabs, true);
+
+  let safeAction = createRuntimeSafeActionFromProductAction(sampleProductContext().actions[0], {
+    reason: 'Visible card selection is a non-mutating UI operation.',
+  });
+  assert.equal(safeAction.id, 'select-release-card');
+  assert.equal(safeAction.safe, true);
+  assert.equal(normalizeRuntimeSafeAction('quick-view').id, 'quick-view');
+  assert.equal(normalizeRuntimeEnrichment('extra-context').title, 'extra-context');
+  assert.equal(normalizeRuntimeHook('assist-hook').mode, 'assist');
 });
 
 test('product context actions become WebMCP descriptors without a browser-only dependency', async () => {
@@ -303,6 +362,18 @@ test('product context actions become WebMCP descriptors without a browser-only d
   let descriptor = createProductActionToolDescriptor(context, context.actions[0]);
   let rawDescriptor = createProductActionToolDescriptor(sampleProductContext(), sampleProductContext().actions[0]);
   let descriptors = createProductContextToolDescriptors(context);
+  let bundle = createProductWebMcpBundle(context, {
+    runtime: sampleRuntimeContext(),
+    enrichActionDescriptor(descriptor) {
+      return {
+        ...descriptor,
+        annotations: {
+          ...descriptor.annotations,
+          agentVisibleRuntimeContract: true,
+        },
+      };
+    },
+  });
 
   assert.equal(descriptor.name, 'automation_release_demo_select_release_card');
   assert.equal(rawDescriptor.name, 'automation_release_demo_select_release_card');
@@ -315,6 +386,9 @@ test('product context actions become WebMCP descriptors without a browser-only d
     'automation_release_demo_select_release_card',
     'release_flow_request_move',
   ]);
+  assert.equal(bundle.runtime.enrichment[0].id, 'release-flow-domain-semantics');
+  assert.equal(bundle.safeActionRefs[0], 'request-release-move');
+  assert.equal(bundle.descriptors[0].annotations.agentVisibleRuntimeContract, true);
 
   let registered = [];
   let published = [];
@@ -343,8 +417,548 @@ test('product context actions become WebMCP descriptors without a browser-only d
   assert.equal(result.publication.method, 'registerContext');
   assert.equal(published[0].name, PRODUCT_RUNTIME_CONTEXT_NAME);
   assert.equal(published[0].value.runtime.safeActionRefs[0], 'request-release-move');
-  result.unregister();
+  result.refresh({
+    ...sampleRuntimeContext(),
+    activeWindowId: 'release-window-updated',
+    cues: [{ id: 'window:release-window-updated', title: 'Updated release window' }],
+  });
+  assert.equal(registered.length, 2);
   assert.equal(unpublished, 1);
+  assert.equal(published.length, 2);
+  assert.equal(result.contextView.runtime.activeWindowId, 'release-window-updated');
+  assert.equal(result.runtime.cues[0].id, 'window:release-window-updated');
+  assert.equal(published[1].value.runtime.cues[0].id, 'window:release-window-updated');
+  result.unregister();
+  assert.equal(unpublished, 2);
+});
+
+test('createWebMcpObserver records recent events for WebMCP runtime refresh and hooks', () => {
+  let observer = createWebMcpObserver({ limit: 2 });
+  let seen = [];
+  let unsubscribe = observer.subscribe((entry) => seen.push(entry));
+
+  assert.deepEqual(observer.record({ type: 'interaction', action: 'open-tab' }), {
+    type: 'interaction',
+    action: 'open-tab',
+    seq: 1,
+  });
+  observer.record({ type: 'data', action: 'refresh' });
+  observer.record('plain-event');
+
+  assert.deepEqual(seen.map((entry) => entry.seq), [1, 2, 3]);
+  assert.deepEqual(observer.recent(3).map((entry) => entry.seq), [3, 2]);
+  assert.deepEqual(observer.recent(2, 'data').map((entry) => entry.action), ['refresh']);
+  assert.deepEqual(observer.recent(2, (entry) => entry.value === 'plain-event').map((entry) => entry.seq), [3]);
+
+  unsubscribe();
+  observer.record({ type: 'interaction', action: 'ignored' });
+  assert.deepEqual(seen.map((entry) => entry.seq), [1, 2, 3]);
+
+  observer.clear();
+  assert.deepEqual(observer.recent(), []);
+});
+
+test('createWebMcpHooks is a neutral observer rule engine', () => {
+  let subscribers = [];
+  let fired = [];
+  let hooks = createWebMcpHooks({
+    observer: {
+      subscribe(callback) {
+        subscribers.push(callback);
+        return () => {
+          subscribers = subscribers.filter((item) => item !== callback);
+        };
+      },
+    },
+  });
+
+  hooks.register({
+    id: 'ready-card-assist',
+    match: { type: 'interaction', action: 'select-card' },
+    cooldown: 2,
+    trigger: (entry) => fired.push(entry.seq),
+  });
+  subscribers[0]({ type: 'interaction', action: 'select-card', seq: 1 });
+  subscribers[0]({ type: 'interaction', action: 'select-card', seq: 2 });
+  subscribers[0]({ type: 'interaction', action: 'select-card', seq: 3 });
+  assert.deepEqual(fired, [1, 3]);
+
+  hooks.dispose();
+  assert.equal(subscribers.length, 0);
+});
+
+test('createWebMcpHooks registers runtime hook descriptors with constraints', () => {
+  let fired = [];
+  let hooks = createWebMcpHooks();
+  let unregister = hooks.registerRuntimeHooks(sampleRuntimeContext().hooks, {
+    enrichEntry(entry, hook) {
+      assert.equal(hook.id, 'ready-card-assist');
+      if (entry.cardId !== 'publish-pages') return null;
+      return { status: 'ready', entityRefs: ['publish-pages'] };
+    },
+    trigger(entry, hook) {
+      fired.push([entry.seq, hook.id, entry.status]);
+    },
+  });
+
+  assert.equal(matchesWebMcpHookTrigger({ constraints: { status: 'ready' } }, { status: 'ready' }), true);
+  assert.equal(matchesWebMcpHookTrigger({ constraints: { status: 'ready' } }, { status: 'draft' }), false);
+  hooks.evaluate({ type: 'interaction', action: 'select-card', cardId: 'other', seq: 1 });
+  hooks.evaluate({ type: 'interaction', action: 'select-card', cardId: 'publish-pages', seq: 2 });
+  assert.deepEqual(fired, [[2, 'ready-card-assist', 'ready']]);
+
+  unregister[0]();
+  hooks.evaluate({ type: 'interaction', action: 'select-card', cardId: 'publish-pages', seq: 3 });
+  assert.deepEqual(fired, [[2, 'ready-card-assist', 'ready']]);
+});
+
+test('WebMCP hook action planner routes descriptors through safe action commands', async () => {
+  let hook = {
+    id: 'ready-card-assist',
+    title: 'Approve selected card',
+    actionRefs: ['request_release_move'],
+    metadata: {
+      confirmationRequired: true,
+      actionInput: {
+        cardId: '$entry.card.id',
+        status: 'approved',
+        note: '$hook.title',
+      },
+    },
+  };
+  let action = {
+    id: 'request-release-move',
+    name: 'request_release_move',
+    metadata: { permission: 'operator-confirm' },
+  };
+  let entry = { card: { id: 'publish-pages' } };
+  let plan = createWebMcpHookActionPlan(entry, hook, { actions: [action] });
+
+  assert.deepEqual(plan.command, {
+    tool: 'request_release_move',
+    input: { cardId: 'publish-pages', status: 'approved', note: 'Approve selected card' },
+  });
+  assert.equal(plan.confirmationRequired, true);
+
+  let ran = [];
+  let result = await runWebMcpHookAction(entry, hook, {
+    actions: [action],
+    consumer: {
+      run(tool, input) {
+        ran.push({ tool, input });
+        return { ok: true };
+      },
+    },
+  });
+  assert.equal(result.planned, true);
+  assert.deepEqual(ran, [plan.command]);
+});
+
+test('WebMCP component target collector consumes component-authored catalogs', () => {
+  let rowEl = { dataset: { tourTargetId: 'element:release:queue:row:publish-pages' } };
+  let table = {
+    localName: 'sn-data-table',
+    getWebMcpTargets(options) {
+      assert.equal(options.tabId, 'release');
+      assert.equal(options.panelId, 'queue');
+      return [{
+        id: 'element:release:queue:row:publish-pages',
+        kind: 'detail',
+        title: 'Publish pages',
+        summary: 'ready · priority 1',
+        resourceType: 'release-task',
+        metadata: { rowId: 'publish-pages' },
+        element: rowEl,
+      }];
+    },
+  };
+  let panel = {
+    querySelectorAll() {
+      return [table];
+    },
+  };
+  let targets = collectWebMcpComponentTargets(panel, {
+    tabId: 'release',
+    panelId: 'queue',
+    enrichTarget(target) {
+      return { ...target, actionRefs: ['request_release_move'] };
+    },
+  });
+
+  assert.deepEqual(targets, [{
+    tabId: 'release',
+    panelId: 'queue',
+    resourceType: 'release-task',
+    component: 'sn-data-table',
+    id: 'element:release:queue:row:publish-pages',
+    kind: 'detail',
+    title: 'Publish pages',
+    summary: 'ready · priority 1',
+    metadata: { rowId: 'publish-pages' },
+    actionRefs: ['request_release_move'],
+  }]);
+});
+
+test('WebMCP runtime target helpers resolve neutral window panel and element ids', () => {
+  let detailEl = { textContent: 'Deploy TEST', dataset: {} };
+  let panelEl = {
+    textContent: 'Script sync Deploy TEST',
+    querySelectorAll(selector) {
+      assert.equal(selector, 'button');
+      return [detailEl];
+    },
+  };
+  let layout = {
+    querySelector(selector) {
+      return selector === '[data-panel-id="script-sync"]' ? panelEl : null;
+    },
+  };
+  let doc = { querySelector: () => null };
+  let windows = [{ id: 'code-workspace', layout, container: { textContent: 'Code workspace' } }];
+
+  assert.equal(normalizeWebMcpTargetText('undefined Deploy   TEST', 'fallback'), 'Deploy TEST');
+  assert.equal(webMcpTargetAttrValue('element:"quoted"'), 'element:\\"quoted\\"');
+  assert.equal(formatWebMcpTargetLine({ kind: 'panel', title: 'Script sync', resourceType: 'code', collapsed: true }), 'panel · Script sync · code · collapsed');
+  assert.equal(resolveWebMcpRuntimeTarget('window:code-workspace', { document: doc, windows })?.layout, layout);
+  assert.equal(resolveWebMcpRuntimeTarget('panel:code-workspace:script-sync', { document: doc, windows })?.el, panelEl);
+  let resolvedDetail = resolveWebMcpRuntimeTarget('element:code-workspace:script-sync:0', {
+    document: doc,
+    windows,
+    detailSelector: 'button',
+  });
+  assert.equal(resolvedDetail.el, detailEl);
+  assert.equal(detailEl.dataset.tourTargetId, 'element:code-workspace:script-sync:0');
+});
+
+test('WebMCP presentation action pack is reusable product-neutral context', () => {
+  let domainAction = {
+    id: 'select-release-card',
+    name: 'select_release_card',
+    title: 'Select release card',
+    description: 'Pure UI: select a release task card without changing policy.',
+    inputSchema: { type: 'object', required: ['cardId'], properties: { cardId: { type: 'string' } } },
+    metadata: { targetRefs: ['element:release-card'] },
+  };
+  let actions = createWebMcpPresentationActions({ additionalActions: [domainAction] });
+  let pack = createWebMcpPresentationActionPack({ additionalActions: [domainAction] });
+  let instructions = describeWebMcpPresentationActions(actions);
+
+  assert.ok(actions.some((action) => action.name === 'select_window'));
+  assert.ok(actions.some((action) => action.name === 'select_release_card'));
+  assert.deepEqual(pack.actionNames, actions.map((action) => action.name));
+  assert.ok(pack.safeActions.every((action) => action.safe));
+  assert.deepEqual(pack.safeActions.find((action) => action.id === 'select-release-card').targetRefs, ['element:release-card']);
+  assert.match(instructions, /select_window/);
+  assert.match(instructions, /select_release_card/);
+
+  assert.deepEqual(
+    pack.coerceCommand(
+      { tool: 'select_window', input: { targetId: 'window:release-board' } },
+      { allowedTargetIds: ['window:release-board'] },
+    ),
+    { tool: 'select_window', input: { targetId: 'window:release-board' } },
+  );
+  assert.equal(
+    coerceWebMcpPresentationCommand(
+      { tool: 'select_window', input: { targetId: 'window:missing' } },
+      { actions, allowedTargetIds: ['window:release-board'] },
+    ),
+    null,
+  );
+  assert.match(
+    validateWebMcpPresentationCommand(
+      { tool: 'select_release_card', input: {} },
+      { actions },
+    ).errors.join('\n'),
+    /input\.cardId is required/,
+  );
+  assert.equal(
+    getWebMcpPresentationActionPhase({ tool: 'select_window' }, { actions }),
+    WEBMCP_PRESENTATION_TOUR_PHASES.BEFORE_FOCUS,
+  );
+  assert.equal(
+    getWebMcpPresentationActionPhase({ tool: 'mark_ui' }, { actions }),
+    WEBMCP_PRESENTATION_TOUR_PHASES.AFTER_FOCUS_ANNOTATION,
+  );
+  assert.equal(
+    getWebMcpPresentationActionPhase({ tool: 'select_release_card' }, { actions }),
+    WEBMCP_PRESENTATION_TOUR_PHASES.AFTER_FOCUS,
+  );
+  assert.deepEqual(
+    createWebMcpTourTurnActionPlan(
+      { webmcp: { tool: 'select_release_card', input: { cardId: 'publish-pages' } } },
+      { actions },
+    ).command,
+    { tool: 'select_release_card', input: { cardId: 'publish-pages' } },
+  );
+  assert.equal(
+    createWebMcpTourTurnActionPlan({ webmcp: { tool: 'missing', input: {} } }, { actions }).phase,
+    WEBMCP_PRESENTATION_TOUR_PHASES.NONE,
+  );
+});
+
+test('WebMCP presentation controller drives native component adapters', () => {
+  let selectedWindow = '';
+  let clickedTab = false;
+  let tabControl = {
+    $: { id: 'release-board' },
+    click() { clickedTab = true; },
+  };
+  let shell = {
+    querySelector(selector) {
+      assert.equal(selector, 'project-tabs');
+      return {
+        querySelectorAll(query) {
+          assert.equal(query, 'project-tab-item');
+          return [tabControl];
+        },
+      };
+    },
+    selectGroup(id) {
+      selectedWindow = id;
+      return true;
+    },
+  };
+  let collapseNode = {
+    collapsed: false,
+    hasAttribute(name) { return name === 'collapsed' && this.collapsed; },
+    querySelector(selector) {
+      assert.equal(selector, '.collapse-btn:not([hidden])');
+      return { click: () => { this.collapsed = true; } };
+    },
+    dispatchEvent(event) {
+      if (event.type === 'panel-collapse-toggle') this.collapsed = event.detail.collapsed;
+    },
+  };
+  let tableSelectEvent = null;
+  let tableSelected = [];
+  let rowClicks = 0;
+  let row = {
+    dataset: { rowId: 'WO-1' },
+    click() { rowClicks += 1; },
+    querySelector() { return null; },
+  };
+  let table = {
+    get selectedRowIds() { return tableSelected; },
+    set selectedRowIds(value) { tableSelected = value; },
+    getData() { return { rows: [{ id: 'WO-1', cells: {} }] }; },
+    querySelector(selector) {
+      assert.equal(selector, 'tr[data-row-id="WO-1"]');
+      return row;
+    },
+    dispatchEvent(event) { tableSelectEvent = event; },
+  };
+  let panelEl = {
+    querySelector(selector) {
+      if (selector === 'sn-data-table') return table;
+      return null;
+    },
+    closest(selector) {
+      return selector === 'layout-node' ? collapseNode : null;
+    },
+  };
+  let layout = {
+    querySelector(selector) {
+      return selector === '[data-panel-id="queue"]' ? panelEl : null;
+    },
+  };
+  let controller = createWebMcpPresentationController({
+    shell,
+    windows: [{ id: 'release-board', layout }],
+    selectWindow(id) {
+      selectedWindow = id;
+      return true;
+    },
+  });
+
+  assert.deepEqual(
+    controller.selectWindow({ boardId: 'release-board' }),
+    { ok: true, windowId: 'release-board', visual: true, resolved: null },
+  );
+  assert.equal(clickedTab, true);
+  assert.equal(selectedWindow, 'release-board');
+
+  let collapsed = controller.setPanelCollapsed({ boardId: 'release-board', panelId: 'queue', collapsed: true });
+  assert.equal(collapsed.ok, true);
+  assert.equal(collapsed.collapsed, true);
+  assert.equal(collapseNode.collapsed, true);
+
+  let selectedRow = controller.selectDataTableRow({ boardId: 'release-board', panelId: 'queue', rowId: 'WO-1', visual: false });
+  assert.equal(selectedRow.ok, true);
+  assert.deepEqual(tableSelected, ['WO-1']);
+  assert.equal(tableSelectEvent.type, 'sn-data-table-select');
+  assert.equal(tableSelectEvent.detail.rowId, 'WO-1');
+
+  tableSelectEvent = null;
+  let selectedAgain = controller.selectDataTableRow({ boardId: 'release-board', panelId: 'queue', rowId: 'WO-1' });
+  assert.equal(selectedAgain.ok, true);
+  assert.equal(selectedAgain.changed, false);
+  assert.equal(selectedAgain.visual, true);
+  assert.equal(rowClicks, 1);
+  assert.equal(tableSelectEvent, null);
+});
+
+test('WebMCP presentation window selection settles before a slow visual cursor finishes', () => {
+  let selectedWindow = '';
+  let selectedCount = 0;
+  let gestureSettled = null;
+  let clickedControl = null;
+  let tabControl = { $: { id: 'release-board' } };
+  let shell = {
+    querySelector(selector) {
+      assert.equal(selector, 'project-tabs');
+      return {
+        querySelectorAll(query) {
+          assert.equal(query, 'project-tab-item');
+          return [tabControl];
+        },
+      };
+    },
+  };
+  let controller = createWebMcpPresentationController({
+    shell,
+    cursor: {
+      clickElement(el, opts) {
+        clickedControl = el;
+        gestureSettled = opts.onGestureSettled;
+      },
+    },
+    selectWindow(id) {
+      selectedWindow = id;
+      selectedCount += 1;
+      return true;
+    },
+  });
+  let settledCount = 0;
+
+  let selected = controller.selectWindow({ boardId: 'release-board', onSettled: () => { settledCount += 1; } });
+
+  assert.equal(selected.ok, true);
+  assert.equal(selected.visual, true);
+  assert.equal(clickedControl, tabControl);
+  assert.equal(selectedWindow, 'release-board');
+  assert.equal(selectedCount, 1);
+  assert.equal(settledCount, 1);
+
+  gestureSettled();
+
+  assert.equal(selectedCount, 1);
+  assert.equal(settledCount, 1);
+});
+
+test('WebMCP tour prompt is authored from browser context and safe actions', () => {
+  let prompt = buildWebMcpTourPrompt({
+    title: 'Release workspace',
+    language: 'Russian',
+    targets: [
+      {
+        id: 'window:release-board',
+        kind: 'window',
+        title: 'Release Board',
+        summary: 'Cards grouped by approval state.',
+        resourceType: 'kanban',
+        windowRole: 'primary',
+      },
+      {
+        id: 'element:release-board:publish-pages:0',
+        kind: 'detail',
+        title: 'Publish card',
+        summary: 'Selected release task card.',
+      },
+    ],
+  });
+
+  assert.match(prompt, /WebMCP context/);
+  assert.match(prompt, /window:release-board/);
+  assert.match(prompt, /element:release-board:publish-pages:0/);
+  assert.match(prompt, /Allowed tools only/);
+  assert.match(prompt, /select_window/);
+  assert.match(prompt, /set_panel_collapsed/);
+  assert.match(prompt, /Do NOT say undefined, null, NaN/);
+  assert.match(prompt, /Do NOT use words about position/);
+  assert.doesNotMatch(prompt, /In cue use ONLY these panelId values/);
+  assert.doesNotMatch(prompt, /"cue":\{"panelId"/);
+});
+
+test('WebMCP tour timeline coercion validates targets annotations and safe actions', () => {
+  let payload = coerceWebMcpTourTimelinePayload(`
+    Intro text ignored.
+    \`\`\`json
+    {
+      "turns": [
+        {
+          "persona": "ops",
+          "text": "This undefined release card is ready.",
+          "cue": { "targetId": "element:release-board:publish-pages:0" },
+          "annotations": [
+            { "kind": "symbol", "symbol": "check", "intent": "success", "placement": "corner" },
+            { "targetId": "window:release-board", "marker": "box" },
+            { "targetId": "element:missing", "marker": "box" }
+          ],
+          "webmcp": {
+            "tool": "mark_ui",
+            "input": {
+              "targetId": "element:release-board:publish-pages:0",
+              "marker": "underline",
+              "intent": "detail"
+            }
+          }
+        },
+        {
+          "persona": "guide",
+          "text": "Now open the board.",
+          "cue": { "targetId": "window:release-board" },
+          "marker": "box",
+          "webmcp": {
+            "tool": "select_window",
+            "input": { "targetId": "window:release-board" }
+          }
+        },
+        {
+          "persona": "guide",
+          "text": "This turn is invalid.",
+          "cue": { "targetId": "element:missing" },
+          "webmcp": { "tool": "dangerous", "input": {} }
+        }
+      ]
+    }
+    \`\`\`
+  `, {
+    runtimeTargets: [
+      { id: 'window:release-board', kind: 'window' },
+      { id: 'element:release-board:publish-pages:0', kind: 'detail', annotation: true },
+    ],
+    allowedToolNames: ['mark_ui', 'select_window'],
+  });
+
+  assert.equal(payload.turns.length, 2);
+  assert.equal(payload.turns[0].persona, 'ops');
+  assert.equal(payload.turns[0].text, 'This release card is ready.');
+  assert.deepEqual(payload.turns[0].cue, { targetId: 'element:release-board:publish-pages:0' });
+  assert.equal(payload.turns[0].annotations.length, 2);
+  assert.deepEqual(payload.turns[0].annotations[0], {
+    targetId: 'element:release-board:publish-pages:0',
+    kind: 'symbol',
+    intent: 'success',
+    symbol: 'check',
+    placement: 'corner',
+  });
+  assert.deepEqual(payload.turns[0].webmcp, {
+    tool: 'annotate_ui',
+    input: {
+      targetId: 'element:release-board:publish-pages:0',
+      kind: 'marker',
+      intent: 'detail',
+      marker: 'underline',
+      placement: 'over',
+    },
+  });
+  assert.deepEqual(payload.turns[1].webmcp, {
+    tool: 'select_window',
+    input: { targetId: 'window:release-board' },
+  });
+  assert.equal(payload.turns[1].annotations, undefined);
+  assert.equal(payload.turns.find((turn) => turn.text === 'This turn is invalid.'), undefined);
 });
 
 test('product context schema is published through the UI schema catalog', async () => {
@@ -361,6 +975,8 @@ test('product context schema is published through the UI schema catalog', async 
   assert.equal(schema.properties.runtime.$ref, '#/$defs/runtime');
   assert.equal(schema.$defs.componentRef.properties.capabilities.$ref, '#/$defs/idArray');
   assert.equal(schema.$defs.runtime.properties.windows.items.$ref, '#/$defs/runtimeItem');
+  assert.equal(schema.$defs.runtime.properties.enrichment.items.$ref, '#/$defs/runtimeEnrichment');
+  assert.equal(schema.$defs.runtime.properties.hooks.items.$ref, '#/$defs/runtimeHook');
   assert.equal(schema.$defs.runtimeItem.properties.target.$ref, '#/$defs/runtimeTarget');
   assertSchemaValid(context, diskSchema);
 });

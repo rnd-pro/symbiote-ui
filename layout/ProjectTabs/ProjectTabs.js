@@ -96,6 +96,12 @@ export class ProjectTabs extends Symbiote {
     if (Object.hasOwn(options, 'homeId')) {
       this.$.homeId = options.homeId || null;
     }
+    if (Object.hasOwn(options, 'homeLabel')) {
+      this.$.homeLabel = options.homeLabel || translate('tabs.home');
+    }
+    if (Object.hasOwn(options, 'homeIcon')) {
+      this.$.homeIcon = options.homeIcon || 'home';
+    }
     this.$.activeId = activeId || null;
     this.$.isHomeActive = !this.$.activeId || this.$.activeId === this.$.homeId;
 

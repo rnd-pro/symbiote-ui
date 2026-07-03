@@ -7,6 +7,7 @@ import {
   getCascadeThemeControls,
   isCascadeThemeBundle,
   normalizeCascadeThemeOptions,
+  resetCascadeThemeScopes,
   serializeCascadeThemeBundle,
 } from '../cascade-theme.js';
 import { geometryRegisterScaleTokens, GEOMETRY_PROFILE_NAMES } from '../../tokens/scale.js';
@@ -29,12 +30,6 @@ function getStorage() {
   return null;
 }
 
-function clearLocalStorage() {
-  let storage = getStorage();
-  if (!storage) return;
-  try { storage.clear(); } catch (error) { /* storage unavailable */ }
-}
-
 function parseStoredState(value) {
   if (!value) return null;
   try {
@@ -55,7 +50,7 @@ function rangeProgress(value, min, max) {
 }
 
 export class CascadeThemeEditor extends Symbiote {
-  static observedAttributes = ['storage-key', 'target-selector', 'pickable'];
+  static observedAttributes = ['storage-key', 'target-selector', 'default-state', 'pickable'];
 
   #controls = getCascadeThemeControls();
   #state = normalizeCascadeThemeOptions(CASCADE_THEME_DEFAULTS);
@@ -134,13 +129,14 @@ export class CascadeThemeEditor extends Symbiote {
   attributeChangedCallback(name, oldValue, newValue) {
     if (oldValue === newValue) return;
     if (this.#switching) return;
-    if (name === 'storage-key' && this.#ready) {
+    if ((name === 'storage-key' || name === 'default-state') && this.#ready) {
       this.#loadStoredState();
-      this.#apply('storage-key');
+      this.#syncControls();
+      this.#syncRegisterButtons();
     }
     if (name === 'target-selector' && this.#ready) {
-      this.#apply('target');
-      this.#applyGeometryRegister('target');
+      this.#syncControls();
+      this.#syncRegisterButtons();
     }
     if (name === 'pickable') {
       this.$.pickable = newValue || '';
@@ -152,8 +148,7 @@ export class CascadeThemeEditor extends Symbiote {
     this.#ready = true;
     this.$.pickable = this.getAttribute('pickable') || '';
     this.#loadStoredState();
-    this.#apply('init');
-    this.#applyGeometryRegister('init');
+    this.#syncControls();
     this.#syncRegisterButtons();
   }
 
@@ -177,6 +172,10 @@ export class CascadeThemeEditor extends Symbiote {
 
   get storageKey() {
     return this.getAttribute('storage-key') || DEFAULT_STORAGE_KEY;
+  }
+
+  get defaultState() {
+    return parseStoredState(this.getAttribute('default-state')) || CASCADE_THEME_DEFAULTS;
   }
 
   get targetSelector() {
@@ -225,18 +224,18 @@ export class CascadeThemeEditor extends Symbiote {
     }));
   }
 
-  // Re-point target-selector + storage-key, reload that scope's saved params, apply
-  // once. #switching suppresses attributeChangedCallback so the two attribute writes
-  // don't each trigger an intermediate apply on the wrong scope.
+  // Re-point target-selector + storage-key and reload that scope's saved params.
+  // Selecting a target is read-only: it updates controls, while input/mode/reset
+  // are the actions that apply and persist a theme.
   #setActiveTarget(target) {
     this.#switching = true;
+    if (target.defaultState !== undefined) this.setAttribute('default-state', JSON.stringify(target.defaultState || {}));
     if (target.selector != null) this.setAttribute('target-selector', String(target.selector));
     if (target.storageKey != null) this.setAttribute('storage-key', String(target.storageKey));
     this.#switching = false;
     if (!this.#ready) return;
     this.#loadStoredState();
-    this.#apply('target-switch');
-    this.#applyGeometryRegister('target-switch');
+    this.#syncControls();
     this.#syncRegisterButtons();
   }
 
@@ -363,58 +362,59 @@ export class CascadeThemeEditor extends Symbiote {
   // own default (a target may carry a `defaultState`; otherwise the cascade default),
   // and every individually-picked scope is cleared back to inherited and dropped.
   reset() {
+    let def = this.defaultState;
     let defs = this.#targetDefs;
-    if (!defs.length) {
-      this.setState(CASCADE_THEME_DEFAULTS, { source: 'reset' });
-      this.#geometryRegister = '';
-      this.#applyGeometryRegister('reset');
-      this.#syncRegisterButtons();
-      clearLocalStorage();
-      return;
-    }
+    let scopes = defs.length
+      ? defs
+      : [{ id: 'active', selector: this.targetSelector, storageKey: this.storageKey, defaultState: def }];
     let originalId = this.#activeTargetId;
-    let kept = [];
-    for (let target of defs) {
-      if (String(target.id).startsWith('pick:')) {
-        this.#clearTargetTheme(target.selector, target.storageKey);
-        continue;
-      }
-      kept.push(target);
-      this.#switching = true;
-      if (target.selector != null) this.setAttribute('target-selector', String(target.selector));
-      if (target.storageKey != null) this.setAttribute('storage-key', String(target.storageKey));
-      this.#switching = false;
-      this.#state = normalizeCascadeThemeOptions(target.defaultState || CASCADE_THEME_DEFAULTS);
-      this.#geometryRegister = '';
-      this.#apply('reset');
-      this.#applyGeometryRegister('reset');
+    let result = resetCascadeThemeScopes(scopes, {
+      source: 'reset',
+      defaultState: def,
+      activeId: originalId,
+      activeSelector: this.targetSelector,
+      activeStorageKey: this.storageKey,
+      isNamedScope: (target) => String(target.id).startsWith('pick:'),
+      resolveScopeTarget: (target) => this.#resolveScopeTarget(target),
+      namedSelector: '[data-theme-key]',
+    });
+    this.#geometryRegister = result.activeRegister || '';
+    this.#state = result.activeState || normalizeCascadeThemeOptions(def);
+    if (defs.length) {
+      this.#targetDefs = result.keptScopes;
+      let active = this.#targetDefs.find((entry) => entry.id === originalId) || this.#targetDefs[0] || null;
+      this.#activeTargetId = active ? active.id : '';
+      this.#renderTargets();
+      if (active) this.#setActiveTarget(active);
+    } else {
+      this.#syncControls();
     }
-    this.#targetDefs = kept;
-    let active = kept.find((entry) => entry.id === originalId) || kept[0] || null;
-    this.#activeTargetId = active ? active.id : '';
-    this.#renderTargets();
-    if (active) this.#setActiveTarget(active);
     this.#syncRegisterButtons();
-    clearLocalStorage();
-  }
-
-  // Strip a scope's inline cascade tokens so it inherits from its parent scope again.
-  #clearTargetTheme(selector, storageKey) {
-    let element = selector ? (this.ownerDocument || document).querySelector(selector) : null;
-    if (element && element.style) {
-      for (let prop of Array.from(element.style)) {
-        if (prop.startsWith('--sn')) element.style.removeProperty(prop);
-      }
-    }
-    let storage = getStorage();
-    if (storage && storageKey) {
-      try { storage.removeItem(storageKey); } catch (error) { /* storage unavailable */ }
-    }
+    this.#setStatus('saved');
+    this.dispatchEvent(new CustomEvent('cascade-theme-change', {
+      bubbles: true,
+      composed: true,
+      detail: {
+        source: 'reset',
+        state: this.state,
+        storageKey: this.storageKey,
+        targetSelector: this.targetSelector,
+      },
+    }));
+    this.dispatchEvent(new CustomEvent('cascade-geometry-register-change', {
+      bubbles: true,
+      composed: true,
+      detail: {
+        source: 'reset',
+        register: this.#geometryRegister || 'default',
+        targetSelector: this.targetSelector,
+      },
+    }));
   }
 
   async copyParameters() {
     let bundle = serializeCascadeThemeBundle(
-      this.#targetDefs.map((entry) => ({ id: entry.id, storageKey: entry.storageKey }))
+      this.#targetDefs.map((entry) => ({ id: entry.id, storageKey: entry.storageKey, defaultState: entry.defaultState }))
     );
     let payload = JSON.stringify(bundle, null, 2);
     try {
@@ -454,7 +454,7 @@ export class CascadeThemeEditor extends Symbiote {
       // (or the cascade defaults) — never keep the previously edited scope's values,
       // which would bleed one window type's theme into another when switching scopes
       let active = this.#targetDefs.find((entry) => entry.id === this.#activeTargetId);
-      this.#state = normalizeCascadeThemeOptions(active && active.defaultState ? active.defaultState : CASCADE_THEME_DEFAULTS);
+      this.#state = normalizeCascadeThemeOptions(active && active.defaultState ? active.defaultState : this.defaultState);
     }
     let register = storage.getItem(this.#geometryStorageKey());
     this.#geometryRegister = GEOMETRY_PROFILE_NAMES.includes(register) ? register : '';
@@ -515,6 +515,13 @@ export class CascadeThemeEditor extends Symbiote {
       return document.querySelector(this.targetSelector) || document.documentElement;
     }
     return document.documentElement;
+  }
+
+  #resolveScopeTarget(scope) {
+    if (typeof document === 'undefined') return null;
+    let doc = this.ownerDocument || document;
+    if (scope?.selector) return doc.querySelector(scope.selector);
+    return doc.documentElement;
   }
 
   // Preview a canonical geometry register on the target: writes the register's

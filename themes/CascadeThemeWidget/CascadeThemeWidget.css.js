@@ -55,7 +55,7 @@ export default css`
     --sn-overlay-z-base: var(--sn-theme-widget-z, 20000);
     z-index: var(--sn-theme-widget-z, var(--sn-overlay-z-base, 20000));
     display: grid;
-    grid-template-rows: auto auto auto;
+    grid-template-rows: auto auto auto auto;
     gap: var(--sn-theme-widget-gap, calc(var(--sn-step-4, 8px) * var(--sn-theme-density, 1)));
     width: min(92vw, var(--sn-theme-widget-width, 320px));
     max-width: calc(100vw - 16px);
@@ -123,8 +123,10 @@ export default css`
 
   cascade-theme-widget .ctw-header-actions button,
   cascade-theme-widget .ctw-mode button,
+  cascade-theme-widget .ctw-target,
   .ctw-popover[data-overlay-portal] .ctw-header-actions button,
-  .ctw-popover[data-overlay-portal] .ctw-mode button {
+  .ctw-popover[data-overlay-portal] .ctw-mode button,
+  .ctw-popover[data-overlay-portal] .ctw-target {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -155,8 +157,36 @@ export default css`
     background: var(--sn-bg);
   }
 
+  cascade-theme-widget .ctw-targets,
+  .ctw-popover[data-overlay-portal] .ctw-targets {
+    display: flex;
+    align-items: center;
+    gap: var(--sn-theme-widget-mode-gap, 4px);
+    padding: var(--sn-theme-widget-mode-padding, 3px);
+    border: 1px solid var(--sn-node-border);
+    border-radius: var(--sn-node-radius, 8px);
+    background: var(--sn-bg);
+  }
+
+  cascade-theme-widget .ctw-targets[hidden],
+  .ctw-popover[data-overlay-portal] .ctw-targets[hidden] {
+    display: none;
+  }
+
+  cascade-theme-widget .ctw-target-list,
+  .ctw-popover[data-overlay-portal] .ctw-target-list {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: var(--sn-theme-widget-mode-gap, 4px);
+  }
+
   cascade-theme-widget .ctw-mode button,
-  .ctw-popover[data-overlay-portal] .ctw-mode button {
+  cascade-theme-widget .ctw-target,
+  .ctw-popover[data-overlay-portal] .ctw-mode button,
+  .ctw-popover[data-overlay-portal] .ctw-target {
     min-width: 0;
     min-height: var(--sn-theme-widget-mode-height, var(--sn-button-min-height, 28px));
     padding: var(--sn-theme-widget-mode-button-padding, 5px 10px);
@@ -164,8 +194,29 @@ export default css`
     font-size: var(--sn-theme-widget-control-size, var(--sn-button-font-size, 12px));
   }
 
+  cascade-theme-widget .ctw-target,
+  .ctw-popover[data-overlay-portal] .ctw-target {
+    gap: var(--sn-theme-widget-target-gap, var(--sn-button-gap, 6px));
+    flex: 1 1 auto;
+  }
+
+  cascade-theme-widget .ctw-target .material-symbols-outlined,
+  .ctw-popover[data-overlay-portal] .ctw-target .material-symbols-outlined {
+    font-size: var(--sn-button-icon-font-size, 16px);
+  }
+
+  cascade-theme-widget .ctw-target-label,
+  .ctw-popover[data-overlay-portal] .ctw-target-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   cascade-theme-widget .ctw-mode button[aria-pressed="true"],
-  .ctw-popover[data-overlay-portal] .ctw-mode button[aria-pressed="true"] {
+  cascade-theme-widget .ctw-target[aria-pressed="true"],
+  .ctw-popover[data-overlay-portal] .ctw-mode button[aria-pressed="true"],
+  .ctw-popover[data-overlay-portal] .ctw-target[aria-pressed="true"] {
     border-color: var(--sn-button-primary-border, var(--sn-node-selected));
     background: var(--sn-button-primary-bg, var(--sn-node-selected));
     color: var(--sn-button-primary-color, var(--sn-bg));
@@ -225,17 +276,21 @@ export default css`
 
   cascade-theme-widget .ctw-header-actions button:hover,
   cascade-theme-widget .ctw-mode button:hover,
+  cascade-theme-widget .ctw-target:hover,
   .ctw-popover[data-overlay-portal] .ctw-header-actions button:hover,
-  .ctw-popover[data-overlay-portal] .ctw-mode button:hover {
+  .ctw-popover[data-overlay-portal] .ctw-mode button:hover,
+  .ctw-popover[data-overlay-portal] .ctw-target:hover {
     background: var(--sn-button-hover-bg, var(--sn-node-hover));
   }
 
   cascade-theme-widget .ctw-header-actions button:focus-visible,
   cascade-theme-widget .ctw-mode button:focus-visible,
+  cascade-theme-widget .ctw-target:focus-visible,
   cascade-theme-widget .ctw-control input:focus-visible,
   cascade-theme-widget .ctw-trigger:focus-visible,
   .ctw-popover[data-overlay-portal] .ctw-header-actions button:focus-visible,
   .ctw-popover[data-overlay-portal] .ctw-mode button:focus-visible,
+  .ctw-popover[data-overlay-portal] .ctw-target:focus-visible,
   .ctw-popover[data-overlay-portal] .ctw-control input:focus-visible {
     outline: var(--sn-effect-focus-ring, 2px solid var(--sn-node-selected));
     outline-offset: 2px;

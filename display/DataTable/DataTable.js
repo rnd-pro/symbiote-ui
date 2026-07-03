@@ -45,6 +45,24 @@ function resolveCell(row, column) {
   return { text: source };
 }
 
+function cellPlainText(cell) {
+  if (cell?.badge && typeof cell.badge === 'object') return String(cell.badge.label ?? cell.badge.text ?? '').trim();
+  return String(cell?.text ?? cell?.label ?? cell?.value ?? '').trim();
+}
+
+function rowTargetText(row, columns, limit = 4) {
+  return columns
+    .filter((column) => column.visible !== false)
+    .slice(0, limit)
+    .map((column) => cellPlainText(resolveCell(row, column)))
+    .filter(Boolean)
+    .join(' · ');
+}
+
+function encodeTargetSegment(value) {
+  return encodeURIComponent(String(value ?? '')).replace(/%20/g, '+');
+}
+
 function renderCellContent(cell) {
   let markerValue = normalizeMarker(cell.marker);
   let marker = markerValue
@@ -498,6 +516,37 @@ export class DataTable extends Symbiote {
       columns: [...this.#columns],
       rows: [...this.#rows],
     };
+  }
+
+  getWebMcpTargets({
+    tabId = '',
+    panelId = '',
+    resourceType = 'data-row',
+    maxRows = 6,
+    targetPrefix = '',
+  } = {}) {
+    let prefix = targetPrefix || (tabId && panelId ? `element:${tabId}:${panelId}:row` : 'element:data-table:row');
+    return this.#rows
+      .filter((row) => row && row.id != null)
+      .slice(0, Math.max(0, Number(maxRows) || 0))
+      .map((row) => {
+        let rowId = String(row.id);
+        let id = `${prefix}:${encodeTargetSegment(rowId)}`;
+        let el = [...this.querySelectorAll('tr[data-row-id]')].find((candidate) => candidate.dataset?.rowId === rowId) || null;
+        try { if (el) el.dataset.tourTargetId = id; } catch {}
+        let title = rowTargetText(row, this.#columns, 1) || rowId;
+        let summary = rowTargetText(row, this.#columns, 5) || rowId;
+        return {
+          id,
+          kind: 'detail',
+          title,
+          summary,
+          resourceType,
+          component: 'sn-data-table',
+          metadata: { rowId },
+          element: el,
+        };
+      });
   }
 
   toggleColumnVisibility(key, visible) {

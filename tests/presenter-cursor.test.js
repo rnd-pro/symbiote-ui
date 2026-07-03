@@ -3,9 +3,15 @@ await acquireCurrentTestFileLock(import.meta.url);
 
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { parseHTML } from 'linkedom';
 import {
   createPresenterCursor,
+  normalizePresenterAnnotation,
+  normalizePresenterMarker,
+  normalizePresenterSymbol,
   playCursorScenario,
+  resolvePresenterHighlightRect,
+  resolvePresenterTravelDuration,
 } from '../chat/presenter-cursor.js';
 
 /**
@@ -20,12 +26,17 @@ import {
 function makeFakeCursor({ settleGesture = true } = {}) {
   let cursor = {
     moves: [],
+    clicks: [],
     gestures: [],
+    markers: [],
     clearCount: 0,
     moveTo(el, opts) {
       cursor.moves.push({ el, opts });
       if (opts && typeof opts.gesture === 'string') {
         cursor.gestures.push(opts.gesture);
+      }
+      if (opts && typeof opts.marker === 'string') {
+        cursor.markers.push(opts.marker);
       }
       if (settleGesture && opts && typeof opts.onGestureSettled === 'function') {
         opts.onGestureSettled();
@@ -33,6 +44,24 @@ function makeFakeCursor({ settleGesture = true } = {}) {
     },
     clear() {
       cursor.clearCount += 1;
+    },
+    annotateElement(el, opts) {
+      cursor.moves.push({ el, opts, annotation: true });
+      if (opts && typeof opts.gesture === 'string') {
+        cursor.gestures.push(opts.gesture);
+      }
+      if (opts && typeof opts.marker === 'string') {
+        cursor.markers.push(opts.marker);
+      }
+      if (settleGesture && opts && typeof opts.onGestureSettled === 'function') {
+        opts.onGestureSettled();
+      }
+    },
+    clickElement(el, opts) {
+      cursor.clicks.push({ el, opts });
+      if (settleGesture && opts && typeof opts.onGestureSettled === 'function') {
+        opts.onGestureSettled();
+      }
     },
   };
   return cursor;
@@ -52,6 +81,38 @@ function makeFakeResolver(map = {}) {
     },
   };
   return resolver;
+}
+
+function makePresenterDom() {
+  let { window } = parseHTML('<!doctype html><html><body></body></html>');
+  let now = 0;
+  Object.defineProperty(window, 'performance', {
+    configurable: true,
+    value: { now: () => now },
+  });
+  Object.defineProperty(window, 'innerWidth', { configurable: true, value: 800 });
+  Object.defineProperty(window, 'innerHeight', { configurable: true, value: 600 });
+  window.requestAnimationFrame = (cb) => {
+    now += 1000;
+    return setTimeout(() => cb(now), 0);
+  };
+  window.cancelAnimationFrame = (id) => clearTimeout(id);
+  return window;
+}
+
+function boxElement(document, rect) {
+  let el = document.createElement('button');
+  el.getBoundingClientRect = () => ({
+    right: rect.left + rect.width,
+    bottom: rect.top + rect.height,
+    ...rect,
+  });
+  document.body.appendChild(el);
+  return el;
+}
+
+function nextFrame() {
+  return new Promise((resolve) => setTimeout(resolve, 5));
 }
 
 test('playCursorScenario visits each step target in order', async () => {
@@ -75,6 +136,40 @@ test('playCursorScenario visits each step target in order', async () => {
     cursor.moves.map((m) => m.el),
     [elA, elB, elC],
   );
+});
+
+test('normalizePresenterMarker accepts marker aliases and rejects unknown values', () => {
+  assert.equal(normalizePresenterMarker('circle'), 'circle');
+  assert.equal(normalizePresenterMarker('marker'), 'circle');
+  assert.equal(normalizePresenterMarker('highlight'), 'box');
+  assert.equal(normalizePresenterMarker('brackets'), 'bracket');
+  assert.equal(normalizePresenterMarker('diagonal'), 'slash');
+  assert.equal(normalizePresenterMarker('missing'), '');
+  assert.equal(normalizePresenterMarker('missing', 'underline'), 'underline');
+});
+
+test('normalizePresenterAnnotation separates semantic marks from cursor focus', () => {
+  assert.equal(normalizePresenterSymbol('?'), 'question');
+  assert.equal(normalizePresenterSymbol('x'), 'cross');
+  assert.deepEqual(normalizePresenterAnnotation({ intent: 'detail' }), {
+    kind: 'marker',
+    intent: 'detail',
+    marker: 'underline',
+    placement: 'over',
+  });
+  assert.deepEqual(normalizePresenterAnnotation({ intent: 'question' }), {
+    kind: 'symbol',
+    intent: 'question',
+    symbol: 'question',
+    placement: 'after',
+  });
+  assert.deepEqual(normalizePresenterAnnotation({ symbol: 'heart' }), {
+    kind: 'symbol',
+    intent: '',
+    symbol: 'heart',
+    placement: 'after',
+  });
+  assert.equal(normalizePresenterAnnotation({ kind: 'symbol', symbol: 'not-a-symbol' }), null);
 });
 
 test('playCursorScenario fires onStep(step, index) once per step', async () => {
@@ -185,6 +280,69 @@ test('playCursorScenario passes gesture and label through to the cursor opts', a
   assert.equal(cursor.moves.length, 1);
   assert.equal(cursor.moves[0].opts.gesture, 'circle');
   assert.equal(cursor.moves[0].opts.label, 'intro');
+});
+
+test('playCursorScenario passes marker through to the cursor opts', async () => {
+  let cursor = makeFakeCursor();
+  let resolver = makeFakeResolver({ a: { id: 'a' } });
+
+  await playCursorScenario(
+    cursor,
+    { steps: [{ target: 'a', marker: 'box', label: 'intro' }] },
+    { resolveTarget: resolver.resolve, defaultHoldMs: 0 },
+  );
+
+  assert.equal(cursor.moves.length, 1);
+  assert.equal(cursor.moves[0].opts.marker, 'box');
+  assert.equal(cursor.moves[0].opts.gesture, 'box');
+  assert.equal(cursor.moves[0].opts.label, 'intro');
+  assert.deepEqual(cursor.markers, ['box']);
+});
+
+test('playCursorScenario routes marker-only steps through semantic annotation when available', async () => {
+  let annotated = [];
+  let cursor = {
+    moves: [],
+    annotateElement(el, opts) {
+      annotated.push({ el, opts });
+      opts?.onGestureSettled?.();
+    },
+    moveTo(el, opts) {
+      cursor.moves.push({ el, opts });
+    },
+  };
+  let elA = { id: 'a' };
+  let resolver = makeFakeResolver({ a: elA });
+
+  await playCursorScenario(
+    cursor,
+    { steps: [{ target: 'a', gesture: 'underline', label: 'detail' }] },
+    { resolveTarget: resolver.resolve, defaultHoldMs: 0 },
+  );
+
+  assert.deepEqual(cursor.moves, []);
+  assert.equal(annotated.length, 1);
+  assert.equal(annotated[0].el, elA);
+  assert.equal(annotated[0].opts.kind, 'marker');
+  assert.equal(annotated[0].opts.marker, 'underline');
+  assert.equal(annotated[0].opts.label, 'detail');
+});
+
+test('playCursorScenario drives click steps through clickElement', async () => {
+  let cursor = makeFakeCursor();
+  let elA = { id: 'a' };
+  let elB = { id: 'b' };
+  let resolver = makeFakeResolver({ a: elA, b: elB });
+
+  await playCursorScenario(
+    cursor,
+    { steps: [{ target: 'a', action: 'click', label: 'open' }, { target: 'b', click: true }] },
+    { resolveTarget: resolver.resolve, defaultHoldMs: 0 },
+  );
+
+  assert.deepEqual(cursor.moves, []);
+  assert.deepEqual(cursor.clicks.map((entry) => entry.el), [elA, elB]);
+  assert.equal(cursor.clicks[0].opts.label, 'open');
 });
 
 test('playCursorScenario runs a step gesture and keeps step order', async () => {
@@ -363,8 +521,55 @@ test('createPresenterCursor returns inert no-ops with no document (Node import)'
   assert.equal(cursor.isSupported(), false);
   // Every handle is a safe no-op in a non-browser env.
   assert.doesNotThrow(() => cursor.moveTo({ getBoundingClientRect: () => ({}) }));
+  assert.doesNotThrow(() => cursor.annotateElement({ getBoundingClientRect: () => ({}) }, { intent: 'detail' }));
   assert.doesNotThrow(() => cursor.clear());
   assert.doesNotThrow(() => cursor.dispose());
+});
+
+test('annotateElement clears the focus marquee before drawing marker ink', async () => {
+  let window = makePresenterDom();
+  let cursor = createPresenterCursor(window.document);
+  let el = boxElement(window.document, { left: 120, top: 80, width: 160, height: 64 });
+
+  cursor.moveTo(el, { animate: false });
+  await nextFrame();
+
+  let marquee = window.document.querySelector('.pc-marquee');
+  assert.equal(marquee.style.width, '180px');
+  assert.equal(marquee.style.height, '84px');
+
+  cursor.annotateElement(el, { marker: 'underline' });
+  await nextFrame();
+
+  assert.equal(marquee.style.width, '0px');
+  assert.equal(marquee.style.height, '0px');
+  assert.ok(marquee.classList.contains('pc-marquee-faded'));
+
+  cursor.dispose();
+});
+
+test('resolvePresenterHighlightRect expands targets away from viewport edges', () => {
+  assert.deepEqual(
+    resolvePresenterHighlightRect({ left: 100, top: 80, width: 120, height: 40 }, { width: 500, height: 400 }),
+    { left: 90, top: 70, width: 140, height: 60 },
+  );
+});
+
+test('resolvePresenterHighlightRect keeps edge targets inset from the viewport', () => {
+  assert.deepEqual(
+    resolvePresenterHighlightRect({ left: 0, top: 2, width: 120, height: 40 }, { width: 500, height: 400 }),
+    { left: 8, top: 8, width: 122, height: 44 },
+  );
+  assert.deepEqual(
+    resolvePresenterHighlightRect({ left: 460, top: 370, width: 80, height: 50 }, { width: 500, height: 400 }),
+    { left: 450, top: 360, width: 42, height: 32 },
+  );
+});
+
+test('resolvePresenterTravelDuration uses human-paced cursor travel bounds', () => {
+  assert.equal(resolvePresenterTravelDuration(0), 850);
+  assert.ok(Math.abs(resolvePresenterTravelDuration(500) - 1176.67) < 0.01);
+  assert.equal(resolvePresenterTravelDuration(2000), 1600);
 });
 
 test('createPresenterCursor drives a scenario end to end through the real player', async () => {

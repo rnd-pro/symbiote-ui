@@ -149,6 +149,12 @@ export class NodeViewManager {
   /** @type {function|null} */
   #onSvgShapeReady = null;
 
+  /** @type {function|null} */
+  #onNodeViewReady = null;
+
+  /** @type {function|null} */
+  #onNodeViewRemoved = null;
+
   /** @type {boolean} */
   #readonly = false;
 
@@ -180,6 +186,8 @@ export class NodeViewManager {
    * @param {function} [config.onNodeDragEnd]
    * @param {HTMLElement} config.nodesLayer
    * @param {Object} config.canvas - NodeCanvas reference for socket registration
+   * @param {function} [config.onNodeViewReady]
+   * @param {function} [config.onNodeViewRemoved]
    */
   constructor({
     nodeViews,
@@ -197,6 +205,8 @@ export class NodeViewManager {
     nodesLayer,
     canvas,
     onSvgShapeReady,
+    onNodeViewReady,
+    onNodeViewRemoved,
   }) {
     this.#nodeViews = nodeViews;
     this.#editor = editor;
@@ -213,6 +223,8 @@ export class NodeViewManager {
     this.#nodesLayer = nodesLayer;
     this.#canvas = canvas;
     this.#onSvgShapeReady = onSvgShapeReady || null;
+    this.#onNodeViewReady = onNodeViewReady || null;
+    this.#onNodeViewRemoved = onNodeViewRemoved || null;
   }
 
   /** @param {boolean} readonly */
@@ -259,7 +271,10 @@ export class NodeViewManager {
 
     for (const node of nodes) {
       let el = this.#nodeViews.get(node.id);
-      if (el) this.#postProcessNodeView(node, el);
+      if (el) {
+        this.#onNodeViewReady?.(node.id, el);
+        this.#postProcessNodeView(node, el);
+      }
     }
   }
 
@@ -271,6 +286,7 @@ export class NodeViewManager {
     let el = this.#createNodeElement(node);
     this.#nodesLayer.appendChild(el);
     this.#nodeViews.set(node.id, el);
+    this.#onNodeViewReady?.(node.id, el);
     this.#postProcessNodeView(node, el);
   }
 
@@ -457,6 +473,7 @@ export class NodeViewManager {
     if (el._previewRaf) clearTimeout(el._previewRaf);
     el._previewRaf = null;
     if (el._drag) el._drag.destroy();
+    this.#onNodeViewRemoved?.(node.id, el);
     animateOut(el);
     this.#nodeViews.delete(node.id);
     this.#selector.getSelectedNodes().delete(node.id);
@@ -476,6 +493,7 @@ export class NodeViewManager {
     let h = el._cachedH || el.offsetHeight || 60;
     if (el._previewRaf) clearTimeout(el._previewRaf);
     if (el._drag) el._drag.destroy();
+    this.#onNodeViewRemoved?.(nodeId, el);
     el.remove();
     this.#nodeViews.delete(nodeId);
     this.#selector.getSelectedNodes().delete(nodeId);

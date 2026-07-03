@@ -50,6 +50,7 @@ export {
   CASCADE_THEME_DEFAULTS,
   CASCADE_THEME_DESCRIPTOR,
   CASCADE_THEME_TOKEN_TARGETS,
+  clearCascadeThemeInlineTokens,
   applyTheme,
   createCascadeTheme,
   extractTheme,
@@ -328,6 +329,32 @@ export {
   nextOverlayZIndex,
   resetOverlayStack,
 } from './overlay-stack.js';
+export {
+  DEFAULT_SCREENCAST_HOTKEY,
+  DEFAULT_SCREENCAST_MIME_TYPES,
+  ScreencastRecorder,
+  createScreencastRecorder,
+  installScreencastHotkeys,
+  matchesScreencastHotkey,
+} from './screencast-recorder.js';
+export {
+  DEFAULT_TOUR_MEDIA_MIME_TYPES,
+  TourMediaRenderError,
+  createTourCaptionTrack,
+  createTourMediaRenderPlan,
+  downloadTourVideoBlob,
+  drawTourCaptionOverlay,
+  drawTourMediaFrame,
+  getTourMediaSupport,
+  normalizeTourMediaTimeline,
+  renderTourVideo,
+} from './tour-media-renderer.js';
+export {
+  TourAudioProviderError,
+  createTourCueAudioPlan,
+  createTourCueAudioProvider,
+  getTourAudioProviderSupport,
+} from './tour-audio-provider.js';
 export { escapeHtml } from '../display/markdown-formatter.js';
 export {
   buildResourceTreeFromEntries,

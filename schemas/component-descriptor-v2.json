@@ -128,7 +128,35 @@
           "type": "array",
           "items": { "$ref": "#/$defs/webMcpTool" },
           "uniqueItems": true
+        },
+        "targetCatalog": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/webMcpTargetCatalogEntry" },
+          "uniqueItems": true
         }
+      }
+    },
+    "webMcpTargetCatalogEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "idTemplate"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "kind": { "type": "string", "minLength": 1 },
+        "role": { "type": "string" },
+        "selector": { "type": "string" },
+        "selectorTemplate": { "type": "string" },
+        "idTemplate": { "type": "string", "minLength": 1 },
+        "labelFrom": { "type": "string" },
+        "summaryFrom": { "type": "string" },
+        "controlSelector": { "type": "string" },
+        "intentEvent": { "type": "string" },
+        "actionRefs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "metadata": { "type": "object", "additionalProperties": true }
       }
     },
     "webMcpTool": {

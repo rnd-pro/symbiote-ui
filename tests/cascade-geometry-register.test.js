@@ -11,6 +11,7 @@ const editorSource = new URL('../themes/CascadeThemeEditor/CascadeThemeEditor.js
 const editorTemplate = new URL('../themes/CascadeThemeEditor/CascadeThemeEditor.tpl.js', import.meta.url);
 const widgetSource = new URL('../themes/CascadeThemeWidget/CascadeThemeWidget.js', import.meta.url);
 const widgetTemplate = new URL('../themes/CascadeThemeWidget/CascadeThemeWidget.tpl.js', import.meta.url);
+const sharedTemplate = new URL('../themes/CascadeThemeControls.tpl.js', import.meta.url);
 
 test('geometrySpacePrimitives emits the step ladder plus --sn-space-* aliases per register', () => {
   let product = geometrySpacePrimitives('product');
@@ -43,16 +44,19 @@ test('geometryRegisterScaleTokens emits the density knobs a register preview wri
 });
 
 test('the cascade theme editor exposes a geometry register toggle', async () => {
-  let [source, template] = await Promise.all([
+  let [source, template, controls] = await Promise.all([
     readFile(editorSource, 'utf8'),
     readFile(editorTemplate, 'utf8'),
+    readFile(sharedTemplate, 'utf8'),
   ]);
 
   // template offers Default + every canonical register
-  assert.match(template, /data-geometry-register=""/);
+  assert.match(template, /cascadeThemeRegisterControls/);
+  assert.match(controls, /data-geometry-register=""/);
   for (let register of GEOMETRY_PROFILE_NAMES) {
-    assert.match(template, new RegExp(`data-geometry-register="${register}"`));
+    assert.match(controls, new RegExp(`data-geometry-register="${register}"`));
   }
+  assert.doesNotMatch(template, /=\{\{/);
 
   // component wires the toggle to the scale and applies it to the target
   assert.match(source, /geometryRegisterScaleTokens/);
@@ -63,15 +67,18 @@ test('the cascade theme editor exposes a geometry register toggle', async () => 
 });
 
 test('the cascade theme widget exposes the same geometry register toggle', async () => {
-  let [source, template] = await Promise.all([
+  let [source, template, controls] = await Promise.all([
     readFile(widgetSource, 'utf8'),
     readFile(widgetTemplate, 'utf8'),
+    readFile(sharedTemplate, 'utf8'),
   ]);
 
-  assert.match(template, /data-geometry-register=""/);
+  assert.match(template, /cascadeThemeRegisterControls/);
+  assert.match(controls, /data-geometry-register=""/);
   for (let register of GEOMETRY_PROFILE_NAMES) {
-    assert.match(template, new RegExp(`data-geometry-register="${register}"`));
+    assert.match(controls, new RegExp(`data-geometry-register="${register}"`));
   }
+  assert.doesNotMatch(template, /'@aria-expanded': 'isOpen'/);
   assert.match(source, /geometryRegisterScaleTokens/);
   assert.match(source, /#applyGeometryRegister/);
   assert.match(source, /#syncRegisterButtons/);

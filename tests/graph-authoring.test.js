@@ -249,6 +249,21 @@ describe('Selector Model Extensions', () => {
 });
 
 describe('SelectionSync Connection Focus', () => {
+  it('settles connection geometry after viewport and layout changes', async () => {
+    let source = await readFile(
+      new URL('../canvas/NodeCanvas/NodeCanvas.js', import.meta.url),
+      'utf8'
+    );
+
+    assert.match(source, /_settleConnectionsAfterViewport\(passes = 3\) \{/);
+    assert.match(source, /this\._connRenderer\?\.refreshViewportTransform\?\.\(\);/);
+    assert.match(source, /this\._scheduleConnectionSettleRefresh\(passes\);/);
+    assert.match(source, /fitView\(\) \{\s+this\._viewport\?\.fitView\(\);\s+this\._settleConnectionsAfterViewport\(3\);/);
+    assert.match(source, /if \(result\) this\._settleConnectionsAfterViewport\(3\);/);
+    assert.match(source, /if \(options\.fit === true\) \{\s+this\.fitView\(\);\s+\} else \{\s+this\._scheduleConnectionSettleRefresh\(3\);/);
+    assert.match(source, /this\.refreshConnections\(\);\s+this\._scheduleConnectionSettleRefresh\(3\);\s+return editor;/);
+  });
+
   it('styles dimmed connection paths as neutral inactive wires', async () => {
     let source = await readFile(
       new URL('../canvas/NodeCanvas/NodeCanvas.css.js', import.meta.url),

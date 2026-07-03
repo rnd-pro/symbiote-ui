@@ -7,6 +7,7 @@ import {
   getCascadeThemeControls,
   isCascadeThemeBundle,
   normalizeCascadeThemeOptions,
+  resetCascadeThemeScopes,
   serializeCascadeThemeBundle,
 } from '../cascade-theme.js';
 import { geometryRegisterScaleTokens, GEOMETRY_PROFILE_NAMES } from '../../tokens/scale.js';
@@ -26,18 +27,13 @@ const COMPACT_CONTROLS = ['brightness', 'contrast', 'chroma', 'hue', 'pattern'];
 const CONTROL_ICONS = getCascadeThemeControls()
   .map((control) => control.icon)
   .filter(Boolean);
-const ICONS = [...new Set(['palette', 'content_copy', 'restart_alt', 'open_in_full', ...CONTROL_ICONS])];
+const TARGET_ICONS = ['web_asset', 'dashboard', 'tab', 'colorize'];
+const ICONS = [...new Set(['palette', 'content_copy', 'restart_alt', 'open_in_full', ...TARGET_ICONS, ...CONTROL_ICONS])];
 
 function getStorage() {
   if (typeof window !== 'undefined' && window.localStorage) return window.localStorage;
   if (typeof globalThis !== 'undefined' && globalThis.localStorage) return globalThis.localStorage;
   return null;
-}
-
-function clearLocalStorage() {
-  let storage = getStorage();
-  if (!storage) return;
-  try { storage.clear(); } catch (error) { /* storage unavailable */ }
 }
 
 function parseStoredState(value) {
@@ -52,20 +48,24 @@ function parseStoredState(value) {
 }
 
 export class CascadeThemeWidget extends Symbiote {
-  static observedAttributes = ['storage-key', 'target-selector', 'default-state', 'scopes'];
+  static observedAttributes = ['storage-key', 'target-selector', 'default-state', 'scopes', 'overlay-theme-selector'];
 
   #controls = getCascadeThemeControls().filter((control) => COMPACT_CONTROLS.includes(control.name));
   #state = normalizeCascadeThemeOptions(CASCADE_THEME_DEFAULTS);
   #geometryRegister = '';
   #scopes = [];
   #ready = false;
+  #switching = false;
 
   init$ = {
     isOpen: false,
+    ariaExpanded: 'false',
     triggerTitle: 'Theme quick controls',
     // Compact slider list rendered by itemize on .ctw-controls. Reassigning
     // controlsList (see #syncControls) re-renders the values reactively.
     controlsList: [],
+    targets: [],
+    hasTargets: false,
     // mode + geometry-register button pressed flags, bound to aria-pressed.
     // Kept in sync from #syncControls (mode) and #syncRegisterButtons (register).
     modeDarkActive: 'true',
@@ -97,6 +97,10 @@ export class CascadeThemeWidget extends Symbiote {
       this.#applyGeometryRegister('toggle');
       this.#syncRegisterButtons();
     },
+    onTargetPick: (event) => {
+      let id = event.currentTarget?.dataset?.targetId;
+      if (id) this.#pickScope(id);
+    },
     onCopy: () => {
       void this.copyParameters();
     },
@@ -124,12 +128,22 @@ export class CascadeThemeWidget extends Symbiote {
 
   attributeChangedCallback(name, oldValue, newValue) {
     if (oldValue === newValue || !this.#ready) return;
+    if (this.#switching) return;
+    if (name === 'overlay-theme-selector') {
+      this.#syncPopoverTheme();
+      return;
+    }
+    if (name === 'scopes') {
+      this.#renderTargets();
+      return;
+    }
     if (name === 'storage-key' || name === 'default-state') {
       this.#loadStoredState();
     }
     this.#apply(name);
     this.#applyGeometryRegister(name);
     this.#syncRegisterButtons();
+    if (name === 'storage-key' || name === 'target-selector') this.#renderTargets();
   }
 
   renderCallback() {
@@ -140,6 +154,7 @@ export class CascadeThemeWidget extends Symbiote {
     this.#apply('init');
     this.#applyGeometryRegister('init');
     this.#syncRegisterButtons();
+    this.#renderTargets();
     if (this.$.isOpen) this.#openPopover();
   }
 
@@ -199,6 +214,47 @@ export class CascadeThemeWidget extends Symbiote {
     return this.getAttribute('target-selector') || '';
   }
 
+  get overlayThemeSelector() {
+    return this.getAttribute('overlay-theme-selector') || '';
+  }
+
+  setTarget(target = {}, options = {}) {
+    let selector = target.targetSelector ?? target.selector;
+    this.#switching = true;
+    if (target.defaultState !== undefined) this.setAttribute('default-state', JSON.stringify(target.defaultState || {}));
+    if (selector != null) this.setAttribute('target-selector', String(selector));
+    if (target.storageKey != null) this.setAttribute('storage-key', String(target.storageKey));
+    this.#switching = false;
+    if (!this.#ready) return;
+    if (options.state) {
+      let hasRegister = options.state && typeof options.state === 'object' && 'register' in options.state;
+      let params = options.state;
+      if (hasRegister) {
+        let { register, ...rest } = options.state;
+        params = rest;
+        this.#geometryRegister = GEOMETRY_PROFILE_NAMES.includes(register) ? register : '';
+      }
+      this.#state = normalizeCascadeThemeOptions(params);
+    } else {
+      this.#loadStoredState();
+    }
+    this.#syncControls();
+    this.#syncPopoverTheme();
+    this.#syncRegisterButtons();
+    this.#renderTargets();
+    this.dispatchEvent(new CustomEvent('cascade-theme-target-change', {
+      bubbles: true,
+      composed: true,
+      detail: {
+        source: options.source || 'target-switch',
+        state: this.state,
+        register: this.#geometryRegister || 'default',
+        storageKey: this.storageKey,
+        targetSelector: this.targetSelector,
+      },
+    }));
+  }
+
   // The structural + picked scopes the bundle copy/apply spans, set by the host
   // like the editor's targets: Array<{ id, selector, storageKey }>. Falls back to
   // a `scopes` attribute (JSON) so a host can declare them declaratively.
@@ -210,20 +266,42 @@ export class CascadeThemeWidget extends Symbiote {
 
   set scopes(value) {
     this.#scopes = Array.isArray(value) ? value : [];
+    if (this.#ready) this.#renderTargets();
   }
 
   reset() {
     let def = this.defaultState;
-    let hasRegister = def && typeof def === 'object' && 'register' in def;
-    this.setState(def, { source: 'reset' });
-    // setState restores any profile the default carries; otherwise clear it so
-    // reset always lands on the default geometry
-    if (!hasRegister) {
-      this.#geometryRegister = '';
-      this.#applyGeometryRegister('reset');
-    }
+    let scopes = this.scopes.length
+      ? this.scopes
+      : [{ id: 'active', selector: this.targetSelector, storageKey: this.storageKey, defaultState: def }];
+    let result = resetCascadeThemeScopes(scopes, {
+      source: 'reset',
+      defaultState: def,
+      activeSelector: this.targetSelector,
+      activeStorageKey: this.storageKey,
+      resolveScopeTarget: (scope) => this.#resolveScopeTarget(scope),
+      namedSelector: '[data-theme-key]',
+    });
+    this.#geometryRegister = result.activeRegister || '';
+    this.#state = result.activeState || normalizeCascadeThemeOptions(def);
+    this.#syncControls();
+    this.#syncPopoverTheme();
     this.#syncRegisterButtons();
-    clearLocalStorage();
+    this.dispatchEvent(new CustomEvent('cascade-theme-change', {
+      bubbles: true,
+      composed: true,
+      detail: {
+        source: 'reset',
+        state: this.state,
+        storageKey: this.storageKey,
+        targetSelector: this.targetSelector,
+      },
+    }));
+    this.dispatchEvent(new CustomEvent('cascade-geometry-register-change', {
+      bubbles: true,
+      composed: true,
+      detail: { source: 'reset', register: this.#geometryRegister || 'default', targetSelector: this.targetSelector },
+    }));
   }
 
   async copyParameters() {
@@ -232,7 +310,7 @@ export class CascadeThemeWidget extends Symbiote {
     // setState; otherwise copy this scope's parameters plus its geometry profile.
     let scopes = this.scopes;
     let payload = scopes.length
-      ? serializeCascadeThemeBundle(scopes.map((scope) => ({ id: scope.id, storageKey: scope.storageKey })))
+      ? serializeCascadeThemeBundle(scopes.map((scope) => ({ id: scope.id, storageKey: scope.storageKey, defaultState: scope.defaultState })))
       : this.#geometryRegister
         ? { ...this.#state, register: this.#geometryRegister }
         : { ...this.#state };
@@ -257,10 +335,12 @@ export class CascadeThemeWidget extends Symbiote {
   #setOpen(open) {
     let nextOpen = Boolean(open);
     if (nextOpen === this.$.isOpen) {
+      this.$.ariaExpanded = String(nextOpen);
       if (nextOpen) this.#openPopover();
       return;
     }
     this.$.isOpen = nextOpen;
+    this.$.ariaExpanded = String(nextOpen);
     if (nextOpen) {
       this.#openPopover();
     } else {
@@ -272,7 +352,7 @@ export class CascadeThemeWidget extends Symbiote {
     let popover = this.ref.popover;
     if (!popover) return;
     popover.hidden = false;
-    mountOverlayToDocument(popover, this.#resolveTarget());
+    mountOverlayToDocument(popover, this.#resolveOverlayThemeTarget(this.#resolveTarget()));
     bringOverlayToFront(popover);
     this.#positionPopover();
     this.#bindOverlayListeners();
@@ -368,6 +448,31 @@ export class CascadeThemeWidget extends Symbiote {
     }));
   }
 
+  #renderTargets() {
+    let scopes = this.scopes;
+    let active = this.#activeScopeId(scopes);
+    this.$.targets = scopes.map((scope) => ({
+      id: scope.id,
+      label: scope.label || scope.id,
+      icon: scope.icon || 'web_asset',
+      hint: scope.hint || scope.selector || '',
+      active: String(scope.id === active),
+    }));
+    this.$.hasTargets = scopes.length > 1;
+  }
+
+  #activeScopeId(scopes = this.scopes) {
+    let storageKey = this.storageKey;
+    let selector = this.targetSelector;
+    return scopes.find((scope) => scope.storageKey === storageKey || scope.selector === selector)?.id || '';
+  }
+
+  #pickScope(id) {
+    let scope = this.scopes.find((entry) => entry.id === id);
+    if (!scope || scope.id === this.#activeScopeId()) return;
+    this.setTarget(scope, { source: 'target-switch' });
+  }
+
   #loadStoredState() {
     let stored = parseStoredState(getStorage()?.getItem(this.storageKey));
     this.#state = normalizeCascadeThemeOptions(stored || this.defaultState);
@@ -424,6 +529,13 @@ export class CascadeThemeWidget extends Symbiote {
     return document.documentElement;
   }
 
+  #resolveScopeTarget(scope) {
+    if (typeof document === 'undefined') return null;
+    let doc = this.ownerDocument || document;
+    if (scope?.selector) return doc.querySelector(scope.selector);
+    return doc.documentElement;
+  }
+
   // Preview a canonical geometry register: writes the register's density knobs
   // (--sn-base / --sn-density / --sn-theme-density|spacing-scale|radius-scale) so
   // the step ladder and every density-scaled semantic token shift together — the
@@ -460,7 +572,15 @@ export class CascadeThemeWidget extends Symbiote {
   #syncPopoverTheme(target = this.#resolveTarget()) {
     let popover = this.ref.popover;
     if (!popover) return;
-    syncOverlayTheme(popover, target);
+    syncOverlayTheme(popover, this.#resolveOverlayThemeTarget(target));
+  }
+
+  #resolveOverlayThemeTarget(fallback) {
+    if (typeof document === 'undefined') return fallback;
+    if (this.overlayThemeSelector) {
+      return document.querySelector(this.overlayThemeSelector) || fallback;
+    }
+    return fallback;
   }
 
   #copyWithFallback(text) {
