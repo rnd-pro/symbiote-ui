@@ -4,12 +4,14 @@ import assert from 'node:assert/strict';
 import {
   TOKEN_TIERS,
   SYSTEM_ROLES,
+  SYSTEM_ROLE_SYNTAX,
   STATE_LAYER_MIX,
   REF_RAMP_STOPS,
   REF_RAMP_FAMILIES,
   LEGACY_SYS_ALIASES,
   classifyToken,
   aliasingAllowed,
+  systemPropertyRegistrationsCss,
 } from '../tokens/tiers.js';
 
 // The tier contract is the machine half of docs/cascade-theme-architecture.md. These tests pin
@@ -65,6 +67,21 @@ describe('token tier contract', () => {
     assert.equal(classifyToken('--sn-bg'), 'legacy-alias');
     assert.equal(classifyToken('--sn-kanban-card-bg'), 'component');
     assert.equal(classifyToken('color'), null);
+  });
+
+  it('every system role registers as a typed @property (Chromium-latest mandate)', () => {
+    for (let role of Object.keys(SYSTEM_ROLE_SYNTAX)) {
+      assert.ok(SYSTEM_ROLES.includes(role), `${role} syntax override targets a declared role`);
+    }
+    let css = systemPropertyRegistrationsCss();
+    for (let role of SYSTEM_ROLES) {
+      assert.ok(css.includes(`@property ${role} {`), `${role} is registered`);
+    }
+    // Typed registrations carry an initial-value; universal ('*') ones must not.
+    assert.match(css, /syntax: '<color>';\n {2}inherits: true;\n {2}initial-value: transparent;/);
+    let densityBlock = css.split('@property').find(block => block.includes('--sn-sys-density'));
+    assert.ok(densityBlock && !densityBlock.includes('initial-value'), 'universal syntax omits initial-value');
+    assert.ok(css.includes("syntax: '<percentage>'"), 'state mixes are typed percentages');
   });
 
   it('aliasing direction is one-way: component→sys→ref→source; nothing references component', () => {

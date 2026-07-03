@@ -124,6 +124,48 @@ export const LEGACY_SYS_ALIASES = Object.freeze({
  */
 export const LITERAL_COLOR_ALLOWLIST = Object.freeze(['transparent', 'currentColor', '#fff', '#000']);
 
+/**
+ * `@property` syntax per T2 role — every system role is a REGISTERED, typed custom property
+ * (Chromium-latest mandate: typed tokens, computed-value guarantees, animatable theme changes).
+ * Roles not listed here default to `<color>`. Mirrors the geometry registrations in
+ * `tokens/scale.js`; `systemPropertyRegistrationsCss()` emits the CSS block.
+ */
+export const SYSTEM_ROLE_SYNTAX = Object.freeze({
+  '--sn-sys-state-hover-mix': '<percentage>',
+  '--sn-sys-state-pressed-mix': '<percentage>',
+  '--sn-sys-state-selected-mix': '<percentage>',
+  '--sn-sys-state-dragged-mix': '<percentage>',
+  '--sn-sys-state-disabled-opacity': '<number>',
+  '--sn-sys-focus-ring-width': '<length>',
+  '--sn-sys-focus-ring-offset': '<length>',
+  '--sn-sys-shadow-raised': '*',
+  '--sn-sys-shadow-overlay': '*',
+  '--sn-sys-density': '*',
+});
+
+const SYNTAX_INITIALS = Object.freeze({
+  '<color>': 'transparent',
+  '<percentage>': '0%',
+  '<number>': '0',
+  '<length>': '0px',
+});
+
+/** Emit the `@property` registration CSS block for every T2 system role (Node-safe string). */
+export function systemPropertyRegistrationsCss() {
+  return SYSTEM_ROLES.map((role) => {
+    let syntax = SYSTEM_ROLE_SYNTAX[role] ?? '<color>';
+    let lines = [
+      `@property ${role} {`,
+      `  syntax: '${syntax}';`,
+      '  inherits: true;',
+    ];
+    // `*` (universal) registrations must not declare an initial value; typed ones must.
+    if (syntax !== '*') lines.push(`  initial-value: ${SYNTAX_INITIALS[syntax]};`);
+    lines.push('}');
+    return lines.join('\n');
+  }).join('\n');
+}
+
 /** Classify a `--sn-*` token name into a tier. Unprefixed names are legacy or component tier. */
 export function classifyToken(name) {
   let token = String(name ?? '').trim();

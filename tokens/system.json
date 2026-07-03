@@ -8,7 +8,8 @@
         "$value": "var(--sn-sys-surface-sunken)",
         "$extensions": {
           "symbiote-ui": {
-            "tier": "sys"
+            "tier": "sys",
+            "registeredSyntax": "<color>"
           }
         }
       },
@@ -17,7 +18,8 @@
         "$value": "var(--sn-sys-surface)",
         "$extensions": {
           "symbiote-ui": {
-            "tier": "sys"
+            "tier": "sys",
+            "registeredSyntax": "<color>"
           }
         }
       },
@@ -26,7 +28,8 @@
         "$value": "var(--sn-sys-surface-panel)",
         "$extensions": {
           "symbiote-ui": {
-            "tier": "sys"
+            "tier": "sys",
+            "registeredSyntax": "<color>"
           }
         }
       },
@@ -35,7 +38,8 @@
         "$value": "var(--sn-sys-surface-raised)",
         "$extensions": {
           "symbiote-ui": {
-            "tier": "sys"
+            "tier": "sys",
+            "registeredSyntax": "<color>"
           }
         }
       },
@@ -44,7 +48,8 @@
         "$value": "var(--sn-sys-surface-toolbar)",
         "$extensions": {
           "symbiote-ui": {
-            "tier": "sys"
+            "tier": "sys",
+            "registeredSyntax": "<color>"
           }
         }
       },
@@ -53,7 +58,8 @@
         "$value": "var(--sn-sys-surface-overlay)",
         "$extensions": {
           "symbiote-ui": {
-            "tier": "sys"
+            "tier": "sys",
+            "registeredSyntax": "<color>"
           }
         }
       },
@@ -62,7 +68,8 @@
         "$value": "var(--sn-sys-scrim)",
         "$extensions": {
           "symbiote-ui": {
-            "tier": "sys"
+            "tier": "sys",
+            "registeredSyntax": "<color>"
           }
         }
       },
@@ -71,7 +78,8 @@
         "$value": "var(--sn-sys-on-surface)",
         "$extensions": {
           "symbiote-ui": {
-            "tier": "sys"
+            "tier": "sys",
+            "registeredSyntax": "<color>"
           }
         }
       },
@@ -80,7 +88,8 @@
         "$value": "var(--sn-sys-on-surface-dim)",
         "$extensions": {
           "symbiote-ui": {
-            "tier": "sys"
+            "tier": "sys",
+            "registeredSyntax": "<color>"
           }
         }
       },
@@ -89,7 +98,8 @@
         "$value": "var(--sn-sys-on-surface-faint)",
         "$extensions": {
           "symbiote-ui": {
-            "tier": "sys"
+            "tier": "sys",
+            "registeredSyntax": "<color>"
           }
         }
       }
@@ -100,7 +110,8 @@
         "$value": "var(--sn-sys-on-accent)",
         "$extensions": {
           "symbiote-ui": {
-            "tier": "sys"
+            "tier": "sys",
+            "registeredSyntax": "<color>"
           }
         }
       },
@@ -109,7 +120,8 @@
         "$value": "var(--sn-sys-on-status)",
         "$extensions": {
           "symbiote-ui": {
-            "tier": "sys"
+            "tier": "sys",
+            "registeredSyntax": "<color>"
           }
         }
       },
@@ -118,7 +130,8 @@
         "$value": "var(--sn-sys-on-success-container)",
         "$extensions": {
           "symbiote-ui": {
-            "tier": "sys"
+            "tier": "sys",
+            "registeredSyntax": "<color>"
           }
         }
       },
@@ -127,7 +140,8 @@
         "$value": "var(--sn-sys-on-warning-container)",
         "$extensions": {
           "symbiote-ui": {
-            "tier": "sys"
+            "tier": "sys",
+            "registeredSyntax": "<color>"
           }
         }
       },
@@ -136,7 +150,8 @@
         "$value": "var(--sn-sys-on-danger-container)",
         "$extensions": {
           "symbiote-ui": {
-            "tier": "sys"
+            "tier": "sys",
+            "registeredSyntax": "<color>"
           }
         }
       },
@@ -145,7 +160,8 @@
         "$value": "var(--sn-sys-on-info-container)",
         "$extensions": {
           "symbiote-ui": {
-            "tier": "sys"
+            "tier": "sys",
+            "registeredSyntax": "<color>"
           }
         }
       }
@@ -156,7 +172,8 @@
         "$value": "var(--sn-sys-outline-subtle)",
         "$extensions": {
           "symbiote-ui": {
-            "tier": "sys"
+            "tier": "sys",
+            "registeredSyntax": "<color>"
           }
         }
       },
@@ -165,7 +182,8 @@
         "$value": "var(--sn-sys-outline)",
         "$extensions": {
           "symbiote-ui": {
-            "tier": "sys"
+            "tier": "sys",
+            "registeredSyntax": "<color>"
           }
         }
       },
@@ -174,7 +192,8 @@
         "$value": "var(--sn-sys-outline-strong)",
         "$extensions": {
           "symbiote-ui": {
-            "tier": "sys"
+            "tier": "sys",
+            "registeredSyntax": "<color>"
           }
         }
       },
@@ -183,7 +202,8 @@
         "$value": "var(--sn-sys-outline-focus)",
         "$extensions": {
           "symbiote-ui": {
-            "tier": "sys"
+            "tier": "sys",
+            "registeredSyntax": "<color>"
           }
         }
       }
@@ -194,7 +214,8 @@
         "$value": "var(--sn-sys-accent)",
         "$extensions": {
           "symbiote-ui": {
-            "tier": "sys"
+            "tier": "sys",
+            "registeredSyntax": "<color>"
           }
         }
       },
@@ -203,7 +224,8 @@
         "$value": "var(--sn-sys-accent-container)",
         "$extensions": {
           "symbiote-ui": {
-            "tier": "sys"
+            "tier": "sys",
+            "registeredSyntax": "<color>"
           }
         }
       },
@@ -212,7 +234,8 @@
         "$value": "var(--sn-sys-success)",
         "$extensions": {
           "symbiote-ui": {
-            "tier": "sys"
+            "tier": "sys",
+            "registeredSyntax": "<color>"
           }
         }
       },
@@ -221,7 +244,8 @@
         "$value": "var(--sn-sys-success-container)",
         "$extensions": {
           "symbiote-ui": {
-            "tier": "sys"
+            "tier": "sys",
+            "registeredSyntax": "<color>"
           }
         }
       },
@@ -230,7 +254,8 @@
         "$value": "var(--sn-sys-warning)",
         "$extensions": {
           "symbiote-ui": {
-            "tier": "sys"
+            "tier": "sys",
+            "registeredSyntax": "<color>"
           }
         }
       },
@@ -239,7 +264,8 @@
         "$value": "var(--sn-sys-warning-container)",
         "$extensions": {
           "symbiote-ui": {
-            "tier": "sys"
+            "tier": "sys",
+            "registeredSyntax": "<color>"
           }
         }
       },
@@ -248,7 +274,8 @@
         "$value": "var(--sn-sys-danger)",
         "$extensions": {
           "symbiote-ui": {
-            "tier": "sys"
+            "tier": "sys",
+            "registeredSyntax": "<color>"
           }
         }
       },
@@ -257,7 +284,8 @@
         "$value": "var(--sn-sys-danger-container)",
         "$extensions": {
           "symbiote-ui": {
-            "tier": "sys"
+            "tier": "sys",
+            "registeredSyntax": "<color>"
           }
         }
       },
@@ -266,7 +294,8 @@
         "$value": "var(--sn-sys-info)",
         "$extensions": {
           "symbiote-ui": {
-            "tier": "sys"
+            "tier": "sys",
+            "registeredSyntax": "<color>"
           }
         }
       },
@@ -275,7 +304,8 @@
         "$value": "var(--sn-sys-info-container)",
         "$extensions": {
           "symbiote-ui": {
-            "tier": "sys"
+            "tier": "sys",
+            "registeredSyntax": "<color>"
           }
         }
       }
@@ -286,7 +316,8 @@
         "$value": "var(--sn-sys-state-hover-mix)",
         "$extensions": {
           "symbiote-ui": {
-            "tier": "sys"
+            "tier": "sys",
+            "registeredSyntax": "<percentage>"
           }
         }
       },
@@ -295,7 +326,8 @@
         "$value": "var(--sn-sys-state-pressed-mix)",
         "$extensions": {
           "symbiote-ui": {
-            "tier": "sys"
+            "tier": "sys",
+            "registeredSyntax": "<percentage>"
           }
         }
       },
@@ -304,7 +336,8 @@
         "$value": "var(--sn-sys-state-selected-mix)",
         "$extensions": {
           "symbiote-ui": {
-            "tier": "sys"
+            "tier": "sys",
+            "registeredSyntax": "<percentage>"
           }
         }
       },
@@ -313,7 +346,8 @@
         "$value": "var(--sn-sys-state-dragged-mix)",
         "$extensions": {
           "symbiote-ui": {
-            "tier": "sys"
+            "tier": "sys",
+            "registeredSyntax": "<percentage>"
           }
         }
       },
@@ -322,7 +356,8 @@
         "$value": "var(--sn-sys-state-disabled-opacity)",
         "$extensions": {
           "symbiote-ui": {
-            "tier": "sys"
+            "tier": "sys",
+            "registeredSyntax": "<number>"
           }
         }
       }
@@ -333,7 +368,8 @@
         "$value": "var(--sn-sys-focus-ring)",
         "$extensions": {
           "symbiote-ui": {
-            "tier": "sys"
+            "tier": "sys",
+            "registeredSyntax": "<color>"
           }
         }
       },
@@ -342,7 +378,8 @@
         "$value": "var(--sn-sys-focus-ring-width)",
         "$extensions": {
           "symbiote-ui": {
-            "tier": "sys"
+            "tier": "sys",
+            "registeredSyntax": "<length>"
           }
         }
       },
@@ -351,7 +388,8 @@
         "$value": "var(--sn-sys-focus-ring-offset)",
         "$extensions": {
           "symbiote-ui": {
-            "tier": "sys"
+            "tier": "sys",
+            "registeredSyntax": "<length>"
           }
         }
       }
@@ -362,7 +400,8 @@
         "$value": "var(--sn-sys-shadow-raised)",
         "$extensions": {
           "symbiote-ui": {
-            "tier": "sys"
+            "tier": "sys",
+            "registeredSyntax": "*"
           }
         }
       },
@@ -371,7 +410,8 @@
         "$value": "var(--sn-sys-shadow-overlay)",
         "$extensions": {
           "symbiote-ui": {
-            "tier": "sys"
+            "tier": "sys",
+            "registeredSyntax": "*"
           }
         }
       }
@@ -382,7 +422,8 @@
         "$value": "var(--sn-sys-density)",
         "$extensions": {
           "symbiote-ui": {
-            "tier": "sys"
+            "tier": "sys",
+            "registeredSyntax": "*"
           }
         }
       }

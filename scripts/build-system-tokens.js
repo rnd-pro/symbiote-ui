@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 
 import {
   SYSTEM_ROLES,
+  SYSTEM_ROLE_SYNTAX,
   STATE_LAYER_MIX,
   LEGACY_SYS_ALIASES,
   REF_RAMP_FAMILIES,
@@ -60,7 +61,7 @@ for (let role of SYSTEM_ROLES) {
   catalog.sys[group][role.replace('--sn-sys-', '')] = {
     $type: dtcgType(role),
     $value: `var(${role})`,
-    $extensions: { 'symbiote-ui': { tier: 'sys' } },
+    $extensions: { 'symbiote-ui': { tier: 'sys', registeredSyntax: SYSTEM_ROLE_SYNTAX[role] ?? '<color>' } },
   };
 }
 

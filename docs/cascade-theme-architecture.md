@@ -22,9 +22,41 @@ Material Design 3's three-tier token system (reference palettes → system roles
 tokens), adapted for **professional tool UIs** (graphic/video editors: Figma, Blender, Resolve):
 dense-first geometry, a dark-first surface ladder for panel chrome vs canvas vs floating
 surfaces, uniform state layers, and domain palettes as extension blocks rather than core roles.
-We keep our HSL cascade engine as the generator (it plays the role MD3's HCT source-color does);
-switching the color math to HCT/OKLCH later is an isolated generator change and does not affect
-this contract.
+
+## Platform & engine mandate (normative)
+
+The library targets **latest-stable Chromium only** (`docs/platform-baseline.md`,
+`CHROMIUM_BASELINE_TARGET`) with a **modern-only, no-fallback** policy for baseline CSS/DOM
+features, and must exercise Symbiote.js 3.x features first-class. This is not a footnote — it
+changes HOW the cascade is implemented:
+
+1. **The cascade lives in CSS, not JS.** T1 ramps and all derived colors are authored with
+   native **relative color syntax** in **OKLCH** (`oklch(from var(--sn-ref-accent-seed)
+   calc(l + 0.2) c h)`), state layers with `color-mix(in oklch, …)`, mode branching with
+   `light-dark()` + `color-scheme`. The JS engine's job shrinks to: write the T0 knobs, register
+   properties, persist bundles. Changing one knob re-derives the whole scheme by the CSS engine
+   itself — the "cascade theme" becomes a literal CSS cascade, SSR pages theme with zero JS
+   (declarative shadow DOM + adoptedStyleSheets are already baseline-ledger rows), and theme
+   knobs become animatable for free.
+2. **Every T0 knob and T2 role is a registered property** (`@property` with `syntax`,
+   `inherits`, `initial-value`) — typed tokens, computed-value guarantees, smooth transitions on
+   theme change. `tokens/scale.js` already does this for geometry
+   (`geometryRegisterScaleTokens`); `tokens/tiers.js` exposes the same for the color system
+   (`SYSTEM_ROLE_SYNTAX`, `systemPropertyRegistrationsCss()`). Perceptual color math (OKLCH)
+   replaces HSL as the ramp space — the knob names stay, their interpretation upgrades.
+3. **Density branches via container style queries** — `@container style(--sn-sys-density: tool)`
+   — never JS measurements or component-local breakpoints.
+4. **Component patterns (wave 2) use platform primitives**: floating menus/palettes are native
+   `popover` + CSS anchor positioning (kills the in-card expanding ⋯ menu class of bugs), scoped
+   theming uses `@scope`, theme switches may use view transitions (already a baseline row).
+5. **Symbiote.js lens**: styles are delivered ONLY via `rootStyles`/`shadowStyles`
+   (adoptedStyleSheets); reactive knob→CSS wiring uses Symbiote CSS-data bindings (css-data),
+   not manual `style.setProperty` loops; icon/template needs go through template processors;
+   theme controls stay agent-visible through the WebMCP surface (cascade widget already is).
+   No `.ui-*` shell classes (SYM-018), no runtime style tags, no per-component `<style>`.
+
+Feature-detection remains only for the ledger's explicit exception rows (e.g. WebMCP shim) —
+never for baseline CSS. A fallback for a baseline feature is a review-blocking defect.
 
 ## The four tiers + domain blocks
 
@@ -46,19 +78,27 @@ token. Fallback chains in `*.css.js` must terminate in a T2 role — never in a 
 accentChroma, …` (`themes/cascade-theme-controls.js`). Recipes (`themes/theme-recipes.js`)
 stay the preset layer over the knobs.
 
-### T1 — reference ramps (new, generated)
+### T1 — reference ramps (new, CSS-native)
 
-For each hue family the cascade generates a 13-stop lightness ramp (0,5,10,…,95,100 — stop
-names are lightness, not index):
+For each hue family the theme stylesheet derives a 13-stop lightness ramp (0,5,10,…,95,100 —
+stop names are lightness, not index) **in CSS via relative color syntax in OKLCH**, from one
+seed per family:
 
-- `--sn-ref-neutral-N` — from mode/brightness/contrast (surfaces, text, borders)
-- `--sn-ref-accent-N` — from hue/chroma
-- `--sn-ref-success-N`, `--sn-ref-warning-N`, `--sn-ref-danger-N`, `--sn-ref-info-N` — from
-  semantic hue offsets (existing `--sn-hue-*` machinery)
+```css
+--sn-ref-accent-seed: oklch(var(--sn-theme-accent-l) var(--sn-theme-accent-c) var(--sn-theme-hue));
+--sn-ref-accent-60: oklch(from var(--sn-ref-accent-seed) 0.6 c h);
+--sn-ref-neutral-20: oklch(from var(--sn-ref-neutral-seed) 0.2 calc(c * 0.25) h);
+```
 
-Ramps make every derived value auditable (a sys role is a pointer into a ramp, not an opaque
-`hsl()` computation) and give domain blocks a lawful base. Ramps are IMPLEMENTATION, not public
-API: components never consume them.
+- `--sn-ref-neutral-N` — from mode/brightness/contrast knobs (surfaces, text, borders)
+- `--sn-ref-accent-N` — from hue/chroma knobs
+- `--sn-ref-success-N`, `--sn-ref-warning-N`, `--sn-ref-danger-N`, `--sn-ref-info-N` — hue
+  rotations of the accent seed (existing `--sn-hue-*` offsets become `calc(h + <offset>)`)
+
+The JS engine writes ONLY the seeds/knobs; the browser derives everything else. Ramps make
+every derived value auditable (a sys role is a pointer into a ramp, not an opaque JS
+computation) and give domain blocks a lawful base. Ramps are IMPLEMENTATION, not public API:
+components never consume them.
 
 ### T2 — system roles (the contract, ~48 roles)
 
@@ -170,9 +210,11 @@ the footer chip-clipping and in-card menu defects logged in the agent-portal UI/
 
 ## Waves
 
-- **W1 — foundation (this repo, additive):** emit T1 ramps + T2 roles from the cascade engine;
-  legacy names become aliases; `tokens/tiers.js`; regenerate DTCG catalogs; audit checks land
-  as warnings. No component visually changes.
+- **W1 — foundation (this repo, additive):** author the T1/T2 derivation stylesheet (relative
+  color syntax in OKLCH, `light-dark()`, state mixes via `color-mix(in oklch)`), register T0/T2
+  as `@property` typed tokens, shrink the JS engine to knob-writing + registration + bundle
+  persistence; legacy names become aliases; regenerate DTCG catalogs; audit checks land as
+  warnings. No component visually changes.
 - **W2 — component re-base (top offenders first):** display → control → chat → board(Kanban:
   chips/footer/menu popover/summary clamp) → menu → list. Each component: literals → T2 roles,
   hovers → state layers, local tokens → T3 aliases, geometry → rungs. Audit numbers must go to
