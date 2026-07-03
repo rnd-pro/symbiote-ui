@@ -395,6 +395,19 @@ sn-kanban-board .sn-kanban-chip[data-kind="error"] {
 }
 
 /*
+ * Dependency counters: a quiet outline chip (never a filled status), tinted only on the lock icon
+ * so blocked (danger) vs unlocks (success) reads without competing with real status/outcome fills.
+ * The lock / lock_open icon + count is the primary signal (U15: not color-only).
+ */
+sn-kanban-board .sn-kanban-chip[data-kind="dep-blocked"] .material-symbols-outlined {
+  color: color-mix(in oklch, var(--sn-sys-danger) 72%, var(--sn-sys-on-surface-dim));
+}
+
+sn-kanban-board .sn-kanban-chip[data-kind="dep-unlocks"] .material-symbols-outlined {
+  color: color-mix(in oklch, var(--sn-sys-success) 72%, var(--sn-sys-on-surface-dim));
+}
+
+/*
  * Agent identity chip: --sn-kanban-chip-accent carries the agent's declared color (board DATA,
  * set per chip via the chip's accent field) — the container-fill/border math stays in the theme so an
  * arbitrary data color always lands on a readable, theme-consistent chip. Icon = the agent's
