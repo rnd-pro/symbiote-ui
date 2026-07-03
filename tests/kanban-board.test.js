@@ -134,11 +134,9 @@ test('sn-kanban-board exposes column stretch sizing tokens', async () => {
   // U08: grab/grabbing cursor affordance for the draggable card.
   assert.match(css, /sn-kanban-board \.sn-kanban-card \{[\s\S]*cursor: grab;/);
   assert.match(css, /sn-kanban-board \.sn-kanban-card:active \{[\s\S]*cursor: grabbing;/);
-  // No legacy flat token names or literal colors remain — only T2 system roles / T3 aliases.
-  // (--sn-text-xs/-xl/-2xs etc. are unrelated typography-scale tokens, not the legacy color alias.)
-  assert.doesNotMatch(css, /var\(--sn-text(?:-dim)?[,)]/);
-  assert.doesNotMatch(css, /var\(--sn-node-/);
-  assert.doesNotMatch(css, /var\(--sn-panel-bg/);
+  // No legacy flat token names or literal colors remain — only T2 system roles / T3 aliases
+  // (the repo-wide tier audit enforces the full contract; pin the removed families here).
+  assert.doesNotMatch(css, /var\(--sn-node-(?:bg|border|selected|hover)[,)]/);
   assert.doesNotMatch(css, /var\(--sn-(?:success|warning|danger)-color/);
   assert.doesNotMatch(css, /#[0-9a-fA-F]{3,8}\b/);
   assert.doesNotMatch(css, /\b(?:hsla?|rgba?)\(/);

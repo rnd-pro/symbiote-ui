@@ -7,8 +7,8 @@ export let styles = css`
     min-width: var(--sn-node-min-width);
     max-width: var(--sn-node-max-width);
     border-radius: var(--sn-node-radius);
-    background: var(--sn-node-bg);
-    border: var(--sn-node-border-width) solid var(--sn-node-border);
+    background: var(--sn-sys-surface-raised);
+    border: var(--sn-node-border-width) solid var(--sn-sys-outline);
     box-shadow: var(--sn-node-shadow);
     user-select: none;
     cursor: move;
@@ -39,8 +39,8 @@ export let styles = css`
     }
 
     &[data-selected] {
-      border-color: var(--sn-node-selected);
-      box-shadow: 0 0 20px color-mix(in oklab, var(--sn-node-selected) 30%, transparent);
+      border-color: var(--sn-sys-accent);
+      box-shadow: 0 0 20px color-mix(in oklab, var(--sn-sys-accent) 30%, transparent);
     }
 
     &[data-collapsed] {
@@ -94,8 +94,9 @@ export let styles = css`
       will-change: auto;
       pointer-events: auto;
 
+      /* LOD medium suppresses the hover state layer: 0% mix pins the resting outline */
       &:hover {
-        border-color: var(--sn-node-border);
+        border-color: color-mix(in oklch, var(--sn-sys-accent) 0%, var(--sn-sys-outline));
       }
 
       &[data-selected] {
@@ -148,7 +149,7 @@ export let styles = css`
     }
 
     &[data-processing] {
-      border-color: var(--sn-node-accent, var(--sn-node-selected));
+      border-color: var(--sn-node-accent, var(--sn-sys-accent));
       box-shadow:
         0 0 16px color-mix(in oklab, var(--sn-node-accent) 40%, transparent),
         0 0 4px color-mix(in oklab, var(--sn-node-accent) 60%, transparent);
@@ -157,17 +158,17 @@ export let styles = css`
     }
 
     &[data-completed] {
-      border-color: var(--sn-success-color);
-      box-shadow: 0 0 8px color-mix(in oklab, var(--sn-success-color) 30%, transparent);
+      border-color: var(--sn-sys-success);
+      box-shadow: 0 0 8px color-mix(in oklab, var(--sn-sys-success) 30%, transparent);
     }
 
     &[data-error] {
-      border-color: color-mix(in oklab, var(--sn-danger-color) 60%, transparent);
+      border-color: color-mix(in oklab, var(--sn-sys-danger) 60%, transparent);
       position: relative;
     }
 
     &[data-error] .sn-node-header {
-      background: color-mix(in oklab, var(--sn-danger-color) 10%, transparent);
+      background: color-mix(in oklab, var(--sn-sys-danger) 10%, transparent);
     }
 
     & .error-frame {
@@ -177,9 +178,9 @@ export let styles = css`
       transform: translateX(-50%);
       min-width: var(--sn-node-error-frame-min-width);
       max-width: var(--sn-node-error-frame-max-width);
-      border: var(--sn-node-error-frame-border-width) solid color-mix(in oklab, var(--sn-danger-color) 60%, transparent);
+      border: var(--sn-node-error-frame-border-width) solid color-mix(in oklab, var(--sn-sys-danger) 60%, transparent);
       border-radius: var(--sn-node-error-frame-radius);
-      background: color-mix(in oklab, var(--sn-danger-color) 8%, transparent);
+      background: color-mix(in oklab, var(--sn-sys-danger) 8%, transparent);
       pointer-events: none;
       z-index: 10;
       transition: bottom var(--sn-transition-fast) var(--sn-transition-easing);
@@ -192,8 +193,8 @@ export let styles = css`
       padding: var(--sn-node-error-frame-header-padding, 5px 10px);
       font-size: var(--sn-node-error-frame-header-size, 12px);
       font-weight: 600;
-      color: color-mix(in oklab, var(--sn-danger-color) 90%, white);
-      border-bottom: 1px solid color-mix(in oklab, var(--sn-danger-color) 20%, transparent);
+      color: color-mix(in oklab, var(--sn-sys-danger) 90%, white);
+      border-bottom: 1px solid color-mix(in oklab, var(--sn-sys-danger) 20%, transparent);
       user-select: none;
     }
 
@@ -206,7 +207,7 @@ export let styles = css`
       padding: var(--sn-node-error-frame-body-padding, 6px 10px);
       font-size: var(--sn-node-error-frame-body-size, 11px);
       line-height: 1.4;
-      color: color-mix(in oklab, var(--sn-danger-color) 75%, white);
+      color: color-mix(in oklab, var(--sn-sys-danger) 75%, white);
       word-wrap: break-word;
     }
 
@@ -234,7 +235,7 @@ export let styles = css`
 
     & .sn-node-summary {
       margin: 0;
-      color: var(--sn-text-dim);
+      color: var(--sn-sys-on-surface-dim);
       font-size: var(--sn-node-summary-size, 12px);
       line-height: 1.45;
     }
@@ -244,7 +245,7 @@ export let styles = css`
       align-items: center;
       gap: var(--sn-node-link-gap, 5px);
       margin-top: var(--sn-node-link-margin-block-start, 8px);
-      color: var(--sn-node-selected);
+      color: var(--sn-sys-accent);
       font-size: var(--sn-node-link-size, 12px);
       font-weight: 700;
       text-decoration: none;
@@ -294,7 +295,7 @@ export let styles = css`
     }
 
     & .sn-node-item-title {
-      color: var(--sn-text);
+      color: var(--sn-sys-on-surface);
       font-size: var(--sn-node-item-title-size, 13px);
       font-weight: 700;
       line-height: 1.25;
@@ -303,7 +304,7 @@ export let styles = css`
     & .sn-node-item-summary {
       display: -webkit-box;
       overflow: hidden;
-      color: var(--sn-text-dim);
+      color: var(--sn-sys-on-surface-dim);
       font-size: var(--sn-node-item-summary-size, 11px);
       line-height: 1.35;
       -webkit-box-orient: vertical;
@@ -315,7 +316,7 @@ export let styles = css`
     }
 
     &:hover {
-      border-color: var(--sn-node-hover);
+      border-color: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-outline));
     }
 
     &[node-category='server'] {
@@ -521,7 +522,7 @@ export let styles = css`
         & > path {
           pointer-events: visibleFill;
           cursor: move;
-          stroke: var(--sn-shape-stroke, var(--sn-node-border));
+          stroke: var(--sn-shape-stroke, var(--sn-sys-outline));
           stroke-width: var(--sn-shape-stroke-width, 0.4);
           transition: stroke var(--sn-transition-normal) var(--sn-transition-easing);
         }
@@ -548,7 +549,7 @@ export let styles = css`
         transform: translate(-50%, -50%);
         font-size: var(--sn-shape-icon-size, 40px);
         line-height: 1;
-        color: var(--sn-node-accent, var(--sn-text-dim));
+        color: var(--sn-node-accent, var(--sn-sys-on-surface-dim));
         pointer-events: none;
         z-index: 1;
       }
@@ -598,7 +599,7 @@ export let styles = css`
       --sn-shape-stroke: var(--sn-node-accent);
 
       & .sn-node-shape-icon {
-        color: var(--sn-node-bg);
+        color: var(--sn-sys-surface-raised);
       }
     }
 
@@ -607,12 +608,12 @@ export let styles = css`
      Only stroke COLOR changes on state — width stays the same as inactive,
      matching HTML nodes where border-width stays 1px on selection. */
     &[data-svg-shape][data-selected] > svg > path {
-      stroke: var(--sn-node-selected);
+      stroke: var(--sn-sys-accent);
       transition: stroke var(--sn-transition-normal) var(--sn-transition-easing);
     }
 
     &[data-svg-shape][data-error] > svg > path {
-      stroke: var(--sn-danger-color);
+      stroke: var(--sn-sys-danger);
       transition: stroke var(--sn-transition-normal) var(--sn-transition-easing);
     }
 
@@ -625,13 +626,13 @@ export let styles = css`
     }
 
     &[data-svg-shape][data-processing] > svg > path {
-      stroke: var(--sn-node-accent, var(--sn-node-selected));
+      stroke: var(--sn-node-accent, var(--sn-sys-accent));
       animation: sn-svg-pulse var(--sn-animation-duration-normal) var(--sn-transition-easing) infinite;
       animation-play-state: var(--sn-animation-play-state);
     }
 
     &[data-svg-shape][data-completed] > svg > path {
-      stroke: var(--sn-success-color);
+      stroke: var(--sn-sys-success);
       transition: stroke var(--sn-transition-normal) var(--sn-transition-easing);
     }
 
@@ -657,7 +658,7 @@ export let styles = css`
     & .sn-node-label {
       font-weight: 600;
       font-size: var(--sn-node-label-size, inherit);
-      color: var(--sn-text);
+      color: var(--sn-sys-on-surface);
       opacity: 1;
       white-space: nowrap;
       overflow: hidden;
@@ -689,7 +690,7 @@ export let styles = css`
 
     /* Compatible SVG node during drag: subtle outline hint only — dots handle highlight */
     &[data-svg-shape][data-port-hint] > svg > path {
-      stroke: var(--sn-node-selected);
+      stroke: var(--sn-sys-accent);
       stroke-width: var(--sn-shape-port-hint-stroke-width, 0.5);
       opacity: 0.8;
       transition:
@@ -729,7 +730,7 @@ export let styles = css`
     }
 
     & .port-label {
-      color: var(--sn-text-dim);
+      color: var(--sn-sys-on-surface-dim);
       font-size: var(--sn-port-label-size, 12px);
       white-space: nowrap;
     }
@@ -748,16 +749,16 @@ export let styles = css`
     & .sn-control-label {
       font-size: var(--sn-control-label-size, 10px);
       text-transform: uppercase;
-      color: var(--sn-text-dim);
+      color: var(--sn-sys-on-surface-dim);
       letter-spacing: 0.5px;
     }
 
     & .sn-control-input {
-      background: color-mix(in oklab, var(--sn-bg) 70%, transparent);
+      background: color-mix(in oklab, var(--sn-sys-surface) 70%, transparent);
       border: 1px solid var(--sn-control-input-border, color-mix(in oklab, currentColor 10%, transparent));
       border-radius: var(--sn-control-input-radius, 4px);
       padding: var(--sn-control-input-padding, 4px 8px);
-      color: var(--sn-text);
+      color: var(--sn-sys-on-surface);
       font-size: var(--sn-control-input-size, 12px);
       outline: none;
       font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
@@ -774,7 +775,7 @@ export let styles = css`
   }
 
   graph-node[data-svg-shape] > svg > path {
-    stroke: var(--sn-shape-stroke, var(--sn-node-border));
+    stroke: var(--sn-shape-stroke, var(--sn-sys-outline));
     stroke-width: var(--sn-shape-stroke-width, 0.4);
   }
 
@@ -783,33 +784,33 @@ export let styles = css`
   }
 
   graph-node[data-svg-shape][data-selected] > svg > path {
-    stroke: var(--sn-node-selected);
+    stroke: var(--sn-sys-accent);
   }
 
   graph-node[data-svg-shape][data-error] > svg > path {
-    stroke: var(--sn-danger-color);
+    stroke: var(--sn-sys-danger);
   }
 
   graph-node[data-svg-shape][data-processing] > svg > path {
-    stroke: var(--sn-node-accent, var(--sn-node-selected));
+    stroke: var(--sn-node-accent, var(--sn-sys-accent));
   }
 
   graph-node[data-svg-shape][data-completed] > svg > path {
-    stroke: var(--sn-success-color);
+    stroke: var(--sn-sys-success);
   }
 
   graph-node[data-svg-shape][data-port-hint] > svg > path {
-    stroke: var(--sn-node-selected);
+    stroke: var(--sn-sys-accent);
     stroke-width: var(--sn-shape-port-hint-stroke-width, 0.5);
   }
 
   /* Preview Area — image/text preview at bottom of node */
   .sn-preview {
-    border-top: 1px solid var(--sn-node-border);
+    border-top: 1px solid var(--sn-sys-outline);
     border-radius: 0 0 var(--sn-node-radius) var(--sn-node-radius);
     overflow: hidden;
     max-height: 120px;
-    background: color-mix(in oklab, var(--sn-bg) 55%, transparent);
+    background: color-mix(in oklab, var(--sn-sys-surface) 55%, transparent);
 
     &[hidden] {
       display: none;
@@ -826,7 +827,7 @@ export let styles = css`
     & .sn-preview-text {
       padding: var(--sn-node-preview-text-padding, 6px 10px);
       font-size: var(--sn-node-preview-text-size, 11px);
-      color: var(--sn-text-dim);
+      color: var(--sn-sys-on-surface-dim);
       font-family: 'JetBrains Mono', 'Fira Code', monospace;
       white-space: pre-wrap;
       word-break: break-all;
@@ -849,13 +850,13 @@ export let styles = css`
     0%,
     100% {
       box-shadow:
-        0 0 16px color-mix(in oklab, var(--sn-danger-color) 35%, transparent),
-        0 0 4px color-mix(in oklab, var(--sn-danger-color) 50%, transparent);
+        0 0 16px color-mix(in oklab, var(--sn-sys-danger) 35%, transparent),
+        0 0 4px color-mix(in oklab, var(--sn-sys-danger) 50%, transparent);
     }
     50% {
       box-shadow:
-        0 0 24px color-mix(in oklab, var(--sn-danger-color) 50%, transparent),
-        0 0 8px color-mix(in oklab, var(--sn-danger-color) 70%, transparent);
+        0 0 24px color-mix(in oklab, var(--sn-sys-danger) 50%, transparent),
+        0 0 8px color-mix(in oklab, var(--sn-sys-danger) 70%, transparent);
     }
   }
 

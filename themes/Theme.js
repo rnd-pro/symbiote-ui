@@ -67,19 +67,18 @@ export {
  * @type {Object<string, string>}
  */
 const LAYOUT_TOKEN_MAP = {
-  '--bg-panel': '--sn-node-bg',
-  '--bg-deeper': '--sn-bg',
+  '--bg-panel': '--sn-sys-surface-raised',
+  '--bg-deeper': '--sn-sys-surface',
   '--layout-gap-bg': '--sn-layout-gap-bg',
   '--bg-header': '--sn-node-header-bg',
-  '--bg-hover': '--sn-node-hover',
-  '--bg-popup': '--sn-ctx-bg',
-  '--text-main': '--sn-text',
-  '--text-dim': '--sn-text-dim',
-  '--text-muted': '--sn-text-dim',
+  '--bg-popup': '--sn-sys-surface-overlay',
+  '--text-main': '--sn-sys-on-surface',
+  '--text-dim': '--sn-sys-on-surface-dim',
+  '--text-muted': '--sn-sys-on-surface-dim',
   '--layout-border': '--sn-layout-border',
-  '--layout-highlight': '--sn-node-selected',
+  '--layout-highlight': '--sn-sys-accent',
   '--border-popup': '--sn-ctx-border',
-  '--accent': '--sn-node-selected',
+  '--accent': '--sn-sys-accent',
   '--font-main': '--sn-font',
 };
 

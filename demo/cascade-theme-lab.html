@@ -24,8 +24,8 @@
     body {
       margin: 0;
       min-height: 100%;
-      background: var(--sn-bg, #1a1a1a);
-      color: var(--sn-text, #f0f0f0);
+      background: var(--sn-sys-surface);
+      color: var(--sn-sys-on-surface);
       font-family: var(--sn-font, Inter, system-ui, sans-serif);
     }
 
@@ -40,14 +40,14 @@
       min-height: 100dvh;
       --sn-tabs-height: var(--sn-lab-tabs-height, 34px);
       --sn-tabs-item-height: var(--sn-lab-tabs-item-height, 30px);
-      --sn-tabs-border: var(--sn-node-border);
-      --sn-tabs-active-bg: var(--sn-panel-bg);
-      --sn-tabs-hover-bg: var(--sn-node-hover);
-      --sn-tabs-divider: var(--sn-node-border);
+      --sn-tabs-border: var(--sn-sys-outline);
+      --sn-tabs-active-bg: var(--sn-sys-surface-panel);
+      --sn-tabs-hover-bg: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface));
+      --sn-tabs-divider: var(--sn-sys-outline);
       --sn-tabs-radius: 6px 6px 0 0;
       --sn-tabs-corner-size: 8px;
       --sn-tabs-corner-cut: 7px;
-      --sn-tabs-accent: var(--sn-node-selected);
+      --sn-tabs-accent: var(--sn-sys-accent);
     }
 
     .lab-shell-action {
@@ -96,8 +96,8 @@
       gap: var(--sn-lab-panel-gap, 12px);
       height: 100%;
       padding: var(--sn-lab-panel-padding, 12px);
-      background: var(--sn-panel-bg);
-      color: var(--sn-text);
+      background: var(--sn-sys-surface-panel);
+      color: var(--sn-sys-on-surface);
       overflow: hidden;
     }
 
@@ -112,9 +112,9 @@
       min-height: 0;
       overflow: auto;
       padding: var(--sn-lab-scroll-padding, 8px);
-      border: 1px solid var(--sn-node-border);
+      border: 1px solid var(--sn-sys-outline);
       border-radius: var(--sn-node-radius);
-      background: var(--sn-bg);
+      background: var(--sn-sys-surface);
       scrollbar-color: var(--sn-scrollbar-thumb) var(--sn-scrollbar-track);
       scrollbar-width: var(--sn-scrollbar-width, thin);
     }
@@ -156,9 +156,9 @@
     .token-chip {
       min-width: 0;
       padding: var(--sn-lab-token-padding, 10px);
-      border: 1px solid var(--sn-node-border);
+      border: 1px solid var(--sn-sys-outline);
       border-radius: var(--sn-node-radius);
-      background: var(--sn-node-bg);
+      background: var(--sn-sys-surface-raised);
     }
 
     .token-chip strong,
@@ -170,13 +170,13 @@
     }
 
     .token-chip strong {
-      color: var(--sn-text);
+      color: var(--sn-sys-on-surface);
       font-size: var(--sn-lab-token-label-size, 12px);
     }
 
     .token-chip span {
       margin-top: 4px;
-      color: var(--sn-text-dim);
+      color: var(--sn-sys-on-surface-dim);
       font-size: var(--sn-lab-token-value-size, 11px);
       font-variant-numeric: tabular-nums;
     }

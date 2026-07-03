@@ -32,17 +32,17 @@ let agentSampleCache = null;
 
 const nodeKinds = {
   ingress: { label: 'Ingress', accent: 'var(--sn-cat-server, #c87533)' },
-  auth: { label: 'Auth gate', accent: 'var(--sn-success-color, #4caf50)' },
+  auth: { label: 'Auth gate', accent: 'var(--sn-sys-success)' },
   planner: { label: 'Planner', accent: 'var(--sn-cat-control, #d4a04a)' },
   compute: { label: 'Orbiting node', accent: 'var(--sn-cat-function, #4ade80)' },
-  hub: { label: 'Router hub', accent: 'var(--sn-node-selected, #d4a04a)' },
+  hub: { label: 'Router hub', accent: 'var(--sn-sys-accent)' },
   monitor: { label: 'Monitor', accent: 'var(--sn-cat-data, #5c8dbf)' },
   storage: { label: 'Storage', accent: 'var(--sn-cat-asset, #8b8b8b)' },
   control: { label: 'Control', accent: 'var(--sn-cat-control, #d4a04a)' },
-  trace: { label: 'Trace probe', accent: 'var(--sn-warning-color, #ff9800)' },
+  trace: { label: 'Trace probe', accent: 'var(--sn-sys-warning)' },
   archive: { label: 'Archive', accent: 'var(--sn-cat-asset, #8b8b8b)' },
   webhook: { label: 'Webhook', accent: 'var(--sn-cat-server, #c87533)' },
-  audit: { label: 'Audit', accent: 'var(--sn-danger-color, #f44336)' },
+  audit: { label: 'Audit', accent: 'var(--sn-sys-danger)' },
 };
 
 const connectionDefs = [

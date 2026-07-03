@@ -28,7 +28,6 @@ export let DARK_DEFAULT = {
 
     '--sn-lit-bg': '12%',
     '--sn-lit-surface': '18%',
-    '--sn-lit-border': '22%',
     '--sn-lit-hover': '28%',
     '--sn-lit-text': '89%',
     '--sn-lit-text-dim': '63%',
@@ -40,29 +39,28 @@ export let DARK_DEFAULT = {
     '--sn-alpha-faint': '0.06',
 
 
-    '--sn-danger-color': 'hsl(var(--sn-hue-danger), var(--sn-sat-vivid), var(--sn-lit-accent))',
-    '--sn-success-color': 'hsl(var(--sn-hue-success), var(--sn-sat-vivid), var(--sn-lit-accent))',
-    '--sn-warning-color': 'hsl(var(--sn-hue-warning), var(--sn-sat-vivid), var(--sn-lit-accent))',
+    '--sn-sys-danger': 'hsl(var(--sn-hue-danger), var(--sn-sat-vivid), var(--sn-lit-accent))',
+    '--sn-sys-success': 'hsl(var(--sn-hue-success), var(--sn-sat-vivid), var(--sn-lit-accent))',
+    '--sn-sys-warning': 'hsl(var(--sn-hue-warning), var(--sn-sat-vivid), var(--sn-lit-accent))',
 
 
-    '--sn-bg': 'hsl(var(--sn-hue-base), var(--sn-sat), var(--sn-lit-bg))',
+    '--sn-sys-surface': 'hsl(var(--sn-hue-base), var(--sn-sat), var(--sn-lit-bg))',
     '--sn-grid-dot': 'hsla(0, 0%, 100%, var(--sn-alpha-faint))',
     '--sn-grid-size': '20px',
 
 
-    '--sn-node-bg': 'hsl(var(--sn-hue-base), var(--sn-sat), var(--sn-lit-surface))',
-    '--sn-node-border': 'hsl(var(--sn-hue-base), var(--sn-sat-muted), var(--sn-lit-border))',
+    '--sn-sys-surface-raised': 'hsl(var(--sn-hue-base), var(--sn-sat), var(--sn-lit-surface))',
+    '--sn-sys-outline': 'hsl(var(--sn-hue-base), var(--sn-sat-muted), 22%)',
     '--sn-node-radius': '10px',
     '--sn-node-shadow': '0 4px 16px rgba(0, 0, 0, 0.3)',
     '--sn-shadow-color': 'rgba(0, 0, 0, 0.3)',
-    '--sn-node-selected': 'hsl(var(--sn-hue-accent), var(--sn-sat-vivid), var(--sn-lit-accent))',
-    '--sn-node-hover': 'hsl(var(--sn-hue-base), var(--sn-sat-muted), var(--sn-lit-hover))',
+    '--sn-sys-accent': 'hsl(var(--sn-hue-accent), var(--sn-sat-vivid), var(--sn-lit-accent))',
     '--sn-node-header-bg': 'hsl(var(--sn-hue-base), var(--sn-sat), 15%)',
 
 
     '--sn-font': "'Inter', sans-serif",
-    '--sn-text': 'hsl(var(--sn-hue-base), 15%, var(--sn-lit-text))',
-    '--sn-text-dim': 'hsl(var(--sn-hue-base), 15%, var(--sn-lit-text-dim))',
+    '--sn-sys-on-surface': 'hsl(var(--sn-hue-base), 15%, var(--sn-lit-text))',
+    '--sn-sys-on-surface-dim': 'hsl(var(--sn-hue-base), 15%, var(--sn-lit-text-dim))',
 
 
     '--sn-socket-size': '12px',
@@ -82,7 +80,7 @@ export let DARK_DEFAULT = {
     '--sn-subgraph-accent': 'var(--sn-cat-data)',
 
 
-    '--sn-ctx-bg': 'hsl(var(--sn-hue-base), var(--sn-sat), 15%)',
+    '--sn-sys-surface-overlay': 'hsl(var(--sn-hue-base), var(--sn-sat), 15%)',
     '--sn-ctx-border': 'hsl(var(--sn-hue-base), var(--sn-sat-muted), var(--sn-lit-hover))',
     '--sn-ctx-color': 'hsl(0, 0%, 88%)',
     '--sn-ctx-hover':
@@ -107,8 +105,8 @@ export let DARK_DEFAULT = {
       'hsl(var(--sn-hue-danger), var(--sn-sat-vivid), var(--sn-lit-accent))',
 
 
-    '--sn-shape-fill': 'var(--sn-node-bg)',
-    '--sn-shape-stroke': 'var(--sn-node-border)',
+    '--sn-shape-fill': 'var(--sn-sys-surface-raised)',
+    '--sn-shape-stroke': 'var(--sn-sys-outline)',
     '--sn-shape-stroke-width': '0.4',
   },
 };
@@ -128,7 +126,6 @@ export let DARK_PALETTE = {
     '--sn-sat-muted': '15%',
     '--sn-lit-bg': '12%',
     '--sn-lit-surface': '18%',
-    '--sn-lit-border': '22%',
     '--sn-lit-hover': '28%',
     '--sn-lit-text': '89%',
     '--sn-lit-text-dim': '63%',

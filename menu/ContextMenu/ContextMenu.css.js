@@ -2,7 +2,6 @@ import { css } from '@symbiotejs/symbiote';
 
 export let styles = css`
   context-menu {
-    --sn-ctx-bg: var(--sn-sys-surface-overlay);
     --sn-ctx-border: var(--sn-sys-outline-subtle);
     --sn-ctx-color: var(--sn-sys-on-surface);
     --sn-ctx-shadow-color: var(--sn-sys-shadow-overlay);
@@ -17,7 +16,7 @@ export let styles = css`
     inset: auto;
     position: fixed;
     min-width: 180px;
-    background: var(--sn-ctx-bg);
+    background: var(--sn-sys-surface-overlay);
     border: 1px solid var(--sn-ctx-border);
     border-radius: var(--sn-radius-lg);
     box-shadow: 0 8px 24px var(--sn-ctx-shadow-color);

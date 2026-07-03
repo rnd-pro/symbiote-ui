@@ -26,11 +26,11 @@ export const styles = css`
       box-sizing: border-box;
       max-inline-size: inherit;
       padding: var(--sn-node-callout-padding, 10px 12px);
-      border: 1px solid var(--sn-node-callout-border, var(--sn-node-border));
+      border: 1px solid var(--sn-node-callout-border, var(--sn-sys-outline));
       border-radius: var(--sn-node-callout-radius, var(--sn-node-radius));
-      background: var(--sn-node-callout-bg, var(--sn-node-bg));
+      background: var(--sn-node-callout-bg, var(--sn-sys-surface-raised));
       box-shadow: var(--sn-node-callout-shadow, var(--sn-shadow-lg));
-      color: var(--sn-node-callout-color, var(--sn-text));
+      color: var(--sn-node-callout-color, var(--sn-sys-on-surface));
       font-family: var(--sn-font);
       font-size: var(--sn-node-callout-font-size, 12px);
       font-weight: var(--sn-node-callout-font-weight, 700);
@@ -57,9 +57,9 @@ export const styles = css`
       position: absolute;
       inline-size: var(--sn-node-callout-arrow-size, 10px);
       block-size: var(--sn-node-callout-arrow-size, 10px);
-      border-inline-end: 1px solid var(--sn-node-callout-border, var(--sn-node-border));
-      border-block-end: 1px solid var(--sn-node-callout-border, var(--sn-node-border));
-      background: var(--sn-node-callout-bg, var(--sn-node-bg));
+      border-inline-end: 1px solid var(--sn-node-callout-border, var(--sn-sys-outline));
+      border-block-end: 1px solid var(--sn-node-callout-border, var(--sn-sys-outline));
+      background: var(--sn-node-callout-bg, var(--sn-sys-surface-raised));
       transform: rotate(45deg);
     }
 

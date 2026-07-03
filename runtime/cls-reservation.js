@@ -71,7 +71,7 @@ export function reserveLayoutFootprint(parent, options = {}) {
     inner.style.boxSizing = 'border-box';
     inner.style.borderRadius = 'var(--sn-node-radius, 8px)';
     inner.style.border = '1px dashed var(--sn-outline-color, rgba(255,255,255,0.15))';
-    inner.style.background = 'linear-gradient(90deg, var(--sn-panel-bg, #131721) 25%, var(--sn-bg, #090d16) 50%, var(--sn-panel-bg, #131721) 75%)';
+    inner.style.background = 'linear-gradient(90deg, var(--sn-sys-surface-panel) 25%, var(--sn-sys-surface) 50%, var(--sn-sys-surface-panel) 75%)';
     inner.style.backgroundSize = '200% 100%';
     if (animation) {
       inner.style.animation = 'sym-skeleton-glow 1.5s infinite linear';

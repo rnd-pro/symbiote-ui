@@ -6,7 +6,7 @@ export default css`
     min-width: 0;
     min-height: 100%;
     container: cascade-theme-editor / inline-size;
-    color: var(--sn-text);
+    color: var(--sn-sys-on-surface);
     font-family: var(--sn-font);
     /* the editor is a control surface, not a live preview of its target — pin its own
        type + density scale to the baseline so it stays legible and unbroken even when it
@@ -31,8 +31,8 @@ export default css`
       min-height: 100%;
       padding: var(--sn-theme-editor-padding, var(--sn-lab-panel-padding, 12px));
       border: 0;
-      background: var(--sn-panel-bg);
-      color: var(--sn-text);
+      background: var(--sn-sys-surface-panel);
+      color: var(--sn-sys-on-surface);
     }
 
     .cte-header,
@@ -70,17 +70,17 @@ export default css`
     }
 
     .cte-title .material-symbols-outlined {
-      color: var(--sn-node-selected);
+      color: var(--sn-sys-accent);
       font-size: var(--sn-theme-editor-title-icon-size, var(--sn-layout-header-icon-size, 16px));
     }
 
     .cte-status {
       flex: 0 0 auto;
       padding: var(--sn-theme-editor-status-padding, var(--sn-badge-padding, 2px 8px));
-      border: 1px solid var(--sn-badge-border, var(--sn-node-border));
+      border: 1px solid var(--sn-badge-border, var(--sn-sys-outline));
       border-radius: var(--sn-badge-radius, 999px);
-      background: var(--sn-badge-bg, var(--sn-node-bg));
-      color: var(--sn-badge-color, var(--sn-text-dim));
+      background: var(--sn-badge-bg, var(--sn-sys-surface-raised));
+      color: var(--sn-badge-color, var(--sn-sys-on-surface-dim));
       font-size: var(--sn-theme-editor-status-size, var(--sn-badge-font-size, 11px));
       font-variant-numeric: tabular-nums;
       white-space: nowrap;
@@ -94,10 +94,10 @@ export default css`
     .cte-icon-button,
     .cte-mode button {
       box-sizing: border-box;
-      border: 1px solid var(--sn-button-border, var(--sn-node-border));
+      border: 1px solid var(--sn-button-border, var(--sn-sys-outline));
       border-radius: var(--sn-button-radius, 6px);
-      background: var(--sn-button-bg, var(--sn-node-bg));
-      color: var(--sn-button-color, var(--sn-text));
+      background: var(--sn-button-bg, var(--sn-sys-surface-raised));
+      color: var(--sn-button-color, var(--sn-sys-on-surface));
       font: inherit;
       cursor: pointer;
       transition: var(--sn-effect-hover-transition);
@@ -105,15 +105,15 @@ export default css`
 
     .cte-icon-button:hover,
     .cte-mode button:hover {
-      background: var(--sn-button-hover-bg, var(--sn-node-hover));
+      background: var(--sn-button-hover-bg, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-raised)));
     }
 
     .cte-icon-button:focus-visible,
     .cte-mode button:focus-visible,
     .cte-control input:focus-visible,
     .cte-details summary:focus-visible {
-      outline: var(--sn-effect-focus-ring, 2px solid var(--sn-node-selected));
-      outline-offset: var(--sn-focus-outline-offset, 2px);
+      outline: var(--sn-effect-focus-ring, 2px solid var(--sn-sys-focus-ring));
+      outline-offset: var(--sn-sys-focus-ring-offset);
     }
 
     .cte-icon-button {
@@ -135,9 +135,9 @@ export default css`
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: var(--sn-theme-editor-mode-gap, var(--sn-lab-segment-gap, 6px));
       padding: var(--sn-theme-editor-mode-padding, var(--sn-lab-segment-padding, 3px));
-      border: 1px solid var(--sn-node-border);
+      border: 1px solid var(--sn-sys-outline);
       border-radius: var(--sn-node-radius, 8px);
-      background: var(--sn-bg);
+      background: var(--sn-sys-surface);
     }
 
     .cte-mode button {
@@ -146,7 +146,7 @@ export default css`
       min-width: 0;
       min-height: var(--sn-theme-editor-mode-height, var(--sn-button-min-height, 30px));
       padding: var(--sn-theme-editor-mode-button-padding, var(--sn-button-padding, 6px 14px));
-      color: var(--sn-text-dim);
+      color: var(--sn-sys-on-surface-dim);
       font-size: var(--sn-theme-editor-control-size, var(--sn-button-font-size, 12px));
       overflow: hidden;
       text-overflow: ellipsis;
@@ -154,9 +154,10 @@ export default css`
     }
 
     .cte-mode button[aria-pressed="true"] {
-      border-color: var(--sn-button-primary-border, var(--sn-node-selected));
-      background: var(--sn-button-primary-bg, var(--sn-node-selected));
-      color: var(--sn-button-primary-color, var(--sn-bg));
+      border-color: var(--sn-button-primary-border, var(--sn-sys-accent));
+      /* full-strength primary-pressed fill */
+      background: var(--sn-button-primary-bg, color-mix(in oklch, var(--sn-sys-accent) 100%, transparent));
+      color: var(--sn-button-primary-color, var(--sn-sys-surface));
     }
 
     .cte-targets {
@@ -164,9 +165,9 @@ export default css`
       align-items: center;
       gap: var(--sn-theme-editor-mode-gap, var(--sn-lab-segment-gap, 6px));
       padding: var(--sn-theme-editor-mode-padding, var(--sn-lab-segment-padding, 3px));
-      border: 1px solid var(--sn-node-border);
+      border: 1px solid var(--sn-sys-outline);
       border-radius: var(--sn-node-radius, 8px);
-      background: var(--sn-bg);
+      background: var(--sn-sys-surface);
     }
 
     .cte-targets[hidden] {
@@ -192,10 +193,10 @@ export default css`
       width: var(--sn-theme-editor-icon-button-size, var(--sn-button-icon-size, 28px));
       height: var(--sn-theme-editor-icon-button-size, var(--sn-button-icon-size, 28px));
       padding: 0;
-      border: 1px solid var(--sn-button-border, var(--sn-node-border));
+      border: 1px solid var(--sn-button-border, var(--sn-sys-outline));
       border-radius: var(--sn-button-radius, 6px);
-      background: var(--sn-button-bg, var(--sn-node-bg));
-      color: var(--sn-text-dim);
+      background: var(--sn-button-bg, var(--sn-sys-surface-raised));
+      color: var(--sn-sys-on-surface-dim);
       cursor: pointer;
       transition: var(--sn-effect-hover-transition);
     }
@@ -209,19 +210,20 @@ export default css`
     }
 
     .cte-pick:hover {
-      background: var(--sn-button-hover-bg, var(--sn-node-hover));
-      color: var(--sn-text);
+      background: var(--sn-button-hover-bg, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-raised)));
+      color: var(--sn-sys-on-surface);
     }
 
     .cte-pick:focus-visible {
-      outline: var(--sn-effect-focus-ring, 2px solid var(--sn-node-selected));
-      outline-offset: var(--sn-focus-outline-offset, 2px);
+      outline: var(--sn-effect-focus-ring, 2px solid var(--sn-sys-focus-ring));
+      outline-offset: var(--sn-sys-focus-ring-offset);
     }
 
     .cte-pick[aria-pressed="true"] {
-      border-color: var(--sn-button-primary-border, var(--sn-node-selected));
-      background: var(--sn-button-primary-bg, var(--sn-node-selected));
-      color: var(--sn-button-primary-color, var(--sn-bg));
+      border-color: var(--sn-button-primary-border, var(--sn-sys-accent));
+      /* full-strength primary-pressed fill */
+      background: var(--sn-button-primary-bg, color-mix(in oklch, var(--sn-sys-accent) 100%, transparent));
+      color: var(--sn-button-primary-color, var(--sn-sys-surface));
     }
 
     .cte-target {
@@ -234,10 +236,10 @@ export default css`
       min-width: 0;
       min-height: var(--sn-theme-editor-mode-height, var(--sn-button-min-height, 30px));
       padding: var(--sn-theme-editor-mode-button-padding, var(--sn-button-padding, 6px 12px));
-      border: 1px solid var(--sn-button-border, var(--sn-node-border));
+      border: 1px solid var(--sn-button-border, var(--sn-sys-outline));
       border-radius: var(--sn-button-radius, 6px);
-      background: var(--sn-button-bg, var(--sn-node-bg));
-      color: var(--sn-text-dim);
+      background: var(--sn-button-bg, var(--sn-sys-surface-raised));
+      color: var(--sn-sys-on-surface-dim);
       font: inherit;
       font-size: var(--sn-theme-editor-control-size, var(--sn-button-font-size, 12px));
       cursor: pointer;
@@ -249,18 +251,19 @@ export default css`
     }
 
     .cte-target:hover {
-      background: var(--sn-button-hover-bg, var(--sn-node-hover));
+      background: var(--sn-button-hover-bg, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-raised)));
     }
 
     .cte-target:focus-visible {
-      outline: var(--sn-effect-focus-ring, 2px solid var(--sn-node-selected));
-      outline-offset: var(--sn-focus-outline-offset, 2px);
+      outline: var(--sn-effect-focus-ring, 2px solid var(--sn-sys-focus-ring));
+      outline-offset: var(--sn-sys-focus-ring-offset);
     }
 
     .cte-target[aria-pressed="true"] {
-      border-color: var(--sn-button-primary-border, var(--sn-node-selected));
-      background: var(--sn-button-primary-bg, var(--sn-node-selected));
-      color: var(--sn-button-primary-color, var(--sn-bg));
+      border-color: var(--sn-button-primary-border, var(--sn-sys-accent));
+      /* full-strength primary-pressed fill */
+      background: var(--sn-button-primary-bg, color-mix(in oklch, var(--sn-sys-accent) 100%, transparent));
+      color: var(--sn-button-primary-color, var(--sn-sys-surface));
     }
 
     .cte-target-label {
@@ -282,7 +285,7 @@ export default css`
       grid-template-columns: minmax(92px, 0.65fr) minmax(96px, 1fr) minmax(38px, auto);
       gap: var(--sn-theme-editor-control-gap, var(--sn-lab-control-gap, 8px));
       min-width: 0;
-      color: var(--sn-text-dim);
+      color: var(--sn-sys-on-surface-dim);
       font-size: var(--sn-theme-editor-control-size, var(--sn-lab-control-font-size, 12px));
     }
 
@@ -294,7 +297,7 @@ export default css`
     .cte-control-icon {
       flex: 0 0 auto;
       width: var(--sn-theme-editor-control-icon-box, calc(18px * var(--sn-theme-density, 1)));
-      color: var(--sn-node-selected);
+      color: var(--sn-sys-accent);
       font-size: var(--sn-theme-editor-control-icon-size, var(--sn-layout-header-icon-size, 16px));
       line-height: 1;
       text-align: center;
@@ -303,7 +306,7 @@ export default css`
     .cte-control label {
       min-width: 0;
       overflow: hidden;
-      color: var(--sn-field-label-color, var(--sn-text-dim));
+      color: var(--sn-field-label-color, var(--sn-sys-on-surface-dim));
       text-overflow: ellipsis;
       white-space: nowrap;
     }
@@ -312,7 +315,7 @@ export default css`
       width: 100%;
       min-width: 0;
       height: var(--sn-theme-editor-range-hit-size, var(--sn-socket-hit-size, 44px));
-      accent-color: var(--sn-node-selected);
+      accent-color: var(--sn-sys-accent);
     }
 
     .cte-control input[type="range"] {
@@ -327,13 +330,13 @@ export default css`
 
     .cte-control input[type="range"]::-webkit-slider-runnable-track {
       height: var(--cte-range-track-height);
-      border: var(--cte-range-border-width) solid var(--sn-node-border);
+      border: var(--cte-range-border-width) solid var(--sn-sys-outline);
       border-radius: var(--sn-scrollbar-radius, 999px);
       background:
         linear-gradient(
           to right,
-          var(--sn-node-selected) 0 var(--cte-range-progress),
-          color-mix(in oklab, var(--sn-text) 22%, transparent) var(--cte-range-progress) 100%
+          var(--sn-sys-accent) 0 var(--cte-range-progress),
+          color-mix(in oklab, var(--sn-sys-on-surface) 22%, transparent) var(--cte-range-progress) 100%
         );
     }
 
@@ -342,9 +345,9 @@ export default css`
       width: var(--cte-range-thumb-size);
       height: var(--cte-range-thumb-size);
       margin-top: calc((var(--cte-range-track-height) - var(--cte-range-thumb-size)) / 2 - var(--cte-range-border-width));
-      border: var(--cte-range-border-width) solid var(--sn-node-border);
+      border: var(--cte-range-border-width) solid var(--sn-sys-outline);
       border-radius: 50%;
-      background: var(--sn-node-selected);
+      background: var(--sn-sys-accent);
       box-shadow: none;
     }
 
@@ -354,23 +357,23 @@ export default css`
     }
 
     .cte-control output {
-      color: var(--sn-text);
+      color: var(--sn-sys-on-surface);
       font-variant-numeric: tabular-nums;
       text-align: right;
     }
 
     .cte-details {
       min-width: 0;
-      border: 1px solid var(--sn-card-border, var(--sn-node-border));
+      border: 1px solid var(--sn-card-border, var(--sn-sys-outline));
       border-radius: var(--sn-card-radius, var(--sn-node-radius, 8px));
-      background: var(--sn-card-bg, var(--sn-node-bg));
+      background: var(--sn-card-bg, var(--sn-sys-surface-raised));
       overflow: hidden;
     }
 
     .cte-details summary {
       gap: var(--sn-theme-editor-control-gap, var(--sn-lab-control-gap, 8px));
       padding: var(--sn-theme-editor-summary-padding, var(--sn-button-padding, 6px 14px));
-      color: var(--sn-text-dim);
+      color: var(--sn-sys-on-surface-dim);
       cursor: pointer;
       font-size: var(--sn-theme-editor-control-size, var(--sn-button-font-size, 12px));
       user-select: none;
@@ -384,9 +387,9 @@ export default css`
       max-height: var(--sn-theme-editor-params-max-height, 180px);
       margin: 0;
       padding: var(--sn-theme-editor-params-padding, var(--sn-lab-token-padding, 10px));
-      border-top: 1px solid var(--sn-card-border, var(--sn-node-border));
-      background: var(--sn-source-bg, var(--sn-bg));
-      color: var(--sn-source-editor-color, var(--sn-text));
+      border-top: 1px solid var(--sn-card-border, var(--sn-sys-outline));
+      background: var(--sn-source-bg, var(--sn-sys-surface));
+      color: var(--sn-source-editor-color, var(--sn-sys-on-surface));
       font-family: var(--sn-mono-font, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
       font-size: var(--sn-theme-editor-params-size, var(--sn-lab-token-value-size, 11px));
       overflow: auto;
@@ -416,7 +419,7 @@ export default css`
 
     .cte-controls::-webkit-scrollbar-thumb:hover,
     .cte-params::-webkit-scrollbar-thumb:hover {
-      background: var(--sn-scrollbar-thumb-hover);
+      background: var(--sn-scrollbar-thumb-hover, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-scrollbar-thumb, transparent)));
       background-clip: content-box;
     }
 
@@ -441,7 +444,7 @@ export default css`
   }
 
   [data-cascade-theme-pick-hover] {
-    outline: var(--sn-effect-focus-ring, 2px solid var(--sn-node-selected));
-    outline-offset: calc(-1 * var(--sn-focus-outline-offset, 2px));
+    outline: var(--sn-effect-focus-ring, 2px solid var(--sn-sys-focus-ring));
+    outline-offset: calc(-1 * var(--sn-sys-focus-ring-offset));
   }
 `;

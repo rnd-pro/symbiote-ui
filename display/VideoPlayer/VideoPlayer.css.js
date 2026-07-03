@@ -66,7 +66,7 @@ sn-video-player {
 }
 
 .sn-video-btn:hover {
-  color: var(--sn-sys-accent);
+  color: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-video-btn-color, var(--sn-sys-on-status)));
 }
 
 .sn-video-scrub-bar {

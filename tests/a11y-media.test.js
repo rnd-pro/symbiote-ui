@@ -15,9 +15,9 @@ test('default-provider.css includes prefers-contrast and forced-colors media que
   
   assert.ok(content.includes('@media (prefers-contrast: more)'), 'Should contain prefers-contrast media query');
   assert.ok(content.includes('--sn-theme-outline-strength: 0.90'), 'Should contain high contrast outline override');
-  assert.ok(content.includes('--sn-text-dim: var(--sn-text)'), 'Should override text-dim for high contrast readability');
+  assert.ok(content.includes('--sn-sys-on-surface-dim: var(--sn-sys-on-surface)'), 'Should override text-dim for high contrast readability');
   
   assert.ok(content.includes('@media (forced-colors: active)'), 'Should contain forced-colors media query');
-  assert.ok(content.includes('--sn-bg: Canvas'), 'Should map --sn-bg to Canvas in forced-colors mode');
-  assert.ok(content.includes('--sn-text: CanvasText'), 'Should map --sn-text to CanvasText in forced-colors mode');
+  assert.ok(content.includes('--sn-sys-surface: Canvas'), 'Should map --sn-sys-surface to Canvas in forced-colors mode');
+  assert.ok(content.includes('--sn-sys-on-surface: CanvasText'), 'Should map --sn-sys-on-surface to CanvasText in forced-colors mode');
 });

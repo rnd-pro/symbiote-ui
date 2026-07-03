@@ -3,9 +3,9 @@ sn-transport {
   display: inline-flex;
   align-items: center;
   box-sizing: border-box;
-  background: var(--sn-transport-bg, color-mix(in oklab, var(--sn-text) 5%, transparent));
-  color: var(--sn-transport-fg, var(--sn-text));
-  border: 1px solid var(--sn-transport-border, color-mix(in oklab, var(--sn-text) 12%, transparent));
+  background: var(--sn-transport-bg, color-mix(in oklab, var(--sn-sys-on-surface) 5%, transparent));
+  color: var(--sn-transport-fg, var(--sn-sys-on-surface));
+  border: 1px solid var(--sn-transport-border, color-mix(in oklab, var(--sn-sys-on-surface) 12%, transparent));
   border-radius: var(--sn-transport-radius, var(--sn-field-control-radius, 4px));
   padding: var(--sn-step-2);
   gap: var(--sn-transport-gap, var(--sn-step-3));
@@ -42,11 +42,11 @@ sn-transport[disabled] {
 }
 
 .sn-transport-btn:hover:not(:disabled) {
-  background: var(--sn-transport-btn-hover, color-mix(in oklab, var(--sn-text) 8%, transparent));
+  background: var(--sn-transport-btn-hover, color-mix(in oklab, var(--sn-sys-on-surface) 8%, transparent));
 }
 
 .sn-transport-btn-play:not(:disabled) {
-  color: var(--sn-transport-accent, var(--sn-node-selected, var(--sn-sys-accent)));
+  color: var(--sn-transport-accent, var(--sn-sys-accent));
 }
 
 .sn-transport-btn:focus-visible {
@@ -73,7 +73,7 @@ sn-transport[disabled] {
   font-family: var(--sn-font-mono, ui-monospace, monospace);
   font-size: var(--sn-transport-time-font-size, var(--sn-text-xs, 11px));
   font-variant-numeric: tabular-nums;
-  color: var(--sn-transport-fg, var(--sn-text));
+  color: var(--sn-transport-fg, var(--sn-sys-on-surface));
   white-space: nowrap;
 }
 
@@ -82,7 +82,7 @@ sn-transport[disabled] {
   appearance: none;
   inline-size: var(--sn-transport-scrub-width, 140px);
   block-size: var(--sn-transport-scrub-height, 4px);
-  background: var(--sn-transport-track, color-mix(in oklab, var(--sn-text) 20%, transparent));
+  background: var(--sn-transport-track, color-mix(in oklab, var(--sn-sys-on-surface) 20%, transparent));
   border-radius: var(--sn-radius-xs, 2px);
   outline: none;
   cursor: pointer;
@@ -103,7 +103,7 @@ sn-transport[disabled] {
   inline-size: var(--sn-transport-thumb-size, 12px);
   block-size: var(--sn-transport-thumb-size, 12px);
   border-radius: 50%;
-  background: var(--sn-transport-accent, var(--sn-node-selected, var(--sn-sys-accent)));
+  background: var(--sn-transport-accent, var(--sn-sys-accent));
   cursor: pointer;
 }
 
@@ -112,7 +112,7 @@ sn-transport[disabled] {
   block-size: var(--sn-transport-thumb-size, 12px);
   border: 0;
   border-radius: 50%;
-  background: var(--sn-transport-accent, var(--sn-node-selected, var(--sn-sys-accent)));
+  background: var(--sn-transport-accent, var(--sn-sys-accent));
   cursor: pointer;
 }
 

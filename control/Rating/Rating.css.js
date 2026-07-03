@@ -3,7 +3,7 @@ sn-rating {
   display: inline-block;
   box-sizing: border-box;
   font-family: var(--sn-font);
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
   outline: none;
 }
 
@@ -20,7 +20,7 @@ sn-rating {
   justify-content: center;
   inline-size: var(--sn-rating-size, 20px);
   block-size: var(--sn-rating-size, 20px);
-  color: var(--sn-rating-star-empty-color, color-mix(in oklab, var(--sn-text) 20%, transparent));
+  color: var(--sn-rating-star-empty-color, color-mix(in oklab, var(--sn-sys-on-surface) 20%, transparent));
   transition: transform var(--sn-transition-fast, 100ms) ease, color var(--sn-transition-fast, 100ms) ease;
 }
 
@@ -31,7 +31,7 @@ sn-rating {
 }
 
 .sn-rating-star[data-active] {
-  color: var(--sn-rating-star-active-color, var(--sn-node-selected, var(--sn-sys-warning)));
+  color: var(--sn-rating-star-active-color, var(--sn-sys-accent));
 }
 
 sn-rating:not([disabled]):not([readonly]) .sn-rating-star:hover {

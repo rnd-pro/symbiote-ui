@@ -8,7 +8,7 @@ remain in force and this document is their concrete shape.
 ## Why (state of the world this replaces)
 
 The library exposes ~1200 flat `--sn-*` custom properties with no tier discipline: source knobs
-(`--sn-theme-hue`), semantic roles (`--sn-bg`, `--sn-text`), domain palettes (`--sn-type-*`,
+(`--sn-theme-hue`), semantic roles (`--sn-sys-surface`, `--sn-sys-on-surface`), domain palettes (`--sn-type-*`,
 `--sn-graph-type-*`, 25+ node-type hues), and per-component values (`--sn-button-primary-bg`,
 `--sn-tab-accent-3`) all live in one namespace and one cascade list. The DTCG catalog
 (`tokens/base.json`) describes 9 of them. There is no elevation ladder, no state-layer system
@@ -181,13 +181,13 @@ Domain blocks are opt-in per surface, keeping the core contract at ~48 roles ins
 
 ## Legacy names and migration
 
-`--sn-bg`, `--sn-text`, `--sn-text-dim`, `--sn-node-bg`, `--sn-panel-bg`, `--sn-node-border`,
-`--sn-node-selected`, status colors, etc. are consumed ~1200 times across this repo and
-consumers (agent-portal). They become **frozen T2 aliases** during migration (e.g.
-`--sn-bg: var(--sn-sys-surface)`) and are REMOVED in wave 3 — a scheduled rename sweep, not a
-permanent compatibility layer (no-legacy-compat). `custom-elements.json` + `discover` must list
-tier + status (`system|legacy-alias|component|domain`) for every token so agents see the
-contract, not the flat dump.
+The pre-tier flat names (background, panel, node, text, border, selection, and status colors)
+were consumed ~1200 times across this repo and consumers (agent-portal). During migration they
+were frozen as T2 aliases; wave 3 completed the scheduled rename sweep and REMOVED them — no
+permanent compatibility layer exists (no-legacy-compat). Themes, components, and consumers now
+write and read the `--sn-sys-*` roles directly. `custom-elements.json` + `discover` must list
+tier + status (`system|component|domain`) for every token so agents see the contract, not the
+flat dump.
 
 ## Enforcement (what makes the order stick)
 
@@ -196,7 +196,7 @@ contract, not the flat dump.
    nothing references T3), `no-literal-color-in-components` (`*.css.js` outside `themes/` and
    `tokens/`: zero `#hex`/`hsl()`/`rgb()` literals — semantic exceptions whitelisted in
    tiers.js), `state-layer-usage` (hover/active selectors must use the state-mix pattern —
-   warning first, error at wave 3).
+   warnings during migration, errors since wave 3).
 3. DTCG catalogs regenerated from tiers.js (`tokens/system.json`), replacing the 9-token stub —
    the discover/catalog output becomes the real public contract.
 
@@ -218,8 +218,9 @@ the footer chip-clipping and in-card menu defects logged in a separate agent-por
   chips/footer/menu popover/summary clamp) → menu → list. Each component: literals → T2 roles,
   hovers → state layers, local tokens → T3 aliases, geometry → rungs. Audit numbers must go to
   zero per directory as each lands.
-- **W3 — rename sweep:** consumers (agent-portal + demos) migrate off legacy aliases; aliases
-  deleted; audit checks flip to error; domain palettes complete their `--sn-dom-*` move.
+- **W3 — rename sweep (done):** consumers (agent-portal + demos) migrated off legacy aliases;
+  aliases deleted; audit checks flipped to error; domain palettes complete their `--sn-dom-*`
+  move.
 
 Provider discipline: every wave is committed and released in symbiote-ui, consumers bump the
 dependency — never patched from product CSS (the agent-portal UI audit found product styling

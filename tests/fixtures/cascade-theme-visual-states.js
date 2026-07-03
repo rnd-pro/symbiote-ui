@@ -87,8 +87,8 @@ export const CASCADE_THEME_VISUAL_SMOKE_TOKEN_GROUPS = Object.freeze({
     '--sn-cell-noise',
   ]),
   graph: Object.freeze([
-    '--sn-node-selected',
-    '--sn-node-bg',
+    '--sn-sys-accent',
+    '--sn-sys-surface-raised',
     '--sn-node-label-size',
     '--sn-node-circle-media-size',
     '--sn-shape-stroke',

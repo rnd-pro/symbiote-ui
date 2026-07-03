@@ -78,7 +78,7 @@ export class Minimap extends Symbiote {
     let nodeColor = cs.getPropertyValue('--sn-minimap-node').trim();
     let nodeStroke =
       cs.getPropertyValue('--sn-minimap-node-stroke').trim() ||
-      cs.getPropertyValue('--sn-node-border').trim();
+      cs.getPropertyValue('--sn-sys-outline').trim();
     let bypassedNodeColor = cs.getPropertyValue('--sn-minimap-bypassed-node').trim();
     let vpStroke = cs.getPropertyValue('--sn-minimap-viewport').trim();
     let vpFill = cs.getPropertyValue('--sn-minimap-viewport-fill').trim();

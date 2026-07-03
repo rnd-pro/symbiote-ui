@@ -23,7 +23,7 @@ sn-pagination[hidden] {
   background: var(--sn-pagination-btn-bg, transparent);
   border: 1px solid var(--sn-pagination-btn-border, var(--sn-outline-color-soft, var(--sn-sys-outline-subtle)));
   border-radius: var(--sn-pagination-btn-radius, 4px);
-  color: var(--sn-pagination-btn-color, var(--sn-text-dim, var(--sn-sys-on-surface-dim)));
+  color: var(--sn-pagination-btn-color, var(--sn-sys-on-surface-dim));
   cursor: pointer;
   user-select: none;
   font: inherit;
@@ -31,8 +31,8 @@ sn-pagination[hidden] {
 }
 
 .sn-pagination-btn:hover:not([disabled]) {
-  background: var(--sn-pagination-btn-hover-bg, var(--sn-node-hover, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), transparent)));
-  color: var(--sn-pagination-btn-hover-color, var(--sn-text, var(--sn-sys-on-surface)));
+  background: var(--sn-pagination-btn-hover-bg, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface)));
+  color: var(--sn-pagination-btn-hover-color, var(--sn-sys-on-surface));
 }
 
 .sn-pagination-btn:focus-visible {
@@ -41,9 +41,9 @@ sn-pagination[hidden] {
 }
 
 .sn-pagination-btn[active] {
-  background: var(--sn-pagination-btn-active-bg, var(--sn-node-selected, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-selected-mix), transparent)));
-  border-color: var(--sn-pagination-btn-active-border, var(--sn-node-selected, var(--sn-sys-accent)));
-  color: var(--sn-pagination-btn-active-color, var(--sn-text, var(--sn-sys-on-surface)));
+  background: var(--sn-pagination-btn-active-bg, var(--sn-sys-accent));
+  border-color: var(--sn-pagination-btn-active-border, var(--sn-sys-accent));
+  color: var(--sn-pagination-btn-active-color, var(--sn-sys-on-surface));
   font-weight: 600;
 }
 

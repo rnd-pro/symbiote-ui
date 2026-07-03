@@ -29,16 +29,19 @@ sn-split-panel {
 }
 
 .sn-split-divider {
-  background-color: var(--sn-outline-color-soft, rgba(255,255,255,0.08));
+  background-color: var(--sn-outline-color-soft, var(--sn-sys-outline-subtle));
   position: relative;
   z-index: 10;
   user-select: none;
   transition: background-color var(--sn-transition-fast, 120ms);
 }
 
-.sn-split-divider:hover,
+.sn-split-divider:hover {
+  background-color: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-outline-color-soft, var(--sn-sys-outline-subtle)));
+}
+
 .sn-split-divider[data-active] {
-  background-color: var(--sn-node-selected, #2e90fa);
+  background-color: var(--sn-sys-accent);
 }
 
 .sn-split-container[data-orientation="horizontal"] > .sn-split-divider {

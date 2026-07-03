@@ -15,7 +15,7 @@ import { styles } from './GraphFrame.css.js';
 export class GraphFrame extends Symbiote {
   init$ = {
     label: 'Group',
-    color: 'var(--sn-node-selected)',
+    color: 'var(--sn-sys-accent)',
   };
 
   renderCallback() {

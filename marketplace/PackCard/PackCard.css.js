@@ -4,7 +4,7 @@ sn-pack-card {
   box-sizing: border-box;
   min-width: 0;
   font-family: var(--sn-font);
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
 }
 
 sn-pack-card[hidden] {
@@ -21,7 +21,7 @@ sn-pack-card .sn-pack-card-head {
 
 sn-pack-card .sn-pack-card-name {
   min-width: 0;
-  color: var(--sn-pack-card-name-color, var(--sn-text));
+  color: var(--sn-pack-card-name-color, var(--sn-sys-on-surface));
   font-size: var(--sn-pack-card-name-size, var(--sn-text-md, 14px));
   font-weight: var(--sn-pack-card-name-weight, 600);
   overflow: hidden;
@@ -51,7 +51,7 @@ sn-pack-card .sn-pack-card-verified {
 
 sn-pack-card .sn-pack-card-description {
   margin-block: var(--sn-pack-card-description-margin, 8px);
-  color: var(--sn-pack-card-description-color, var(--sn-text-dim));
+  color: var(--sn-pack-card-description-color, var(--sn-sys-on-surface-dim));
   font-size: var(--sn-pack-card-description-size, var(--sn-text-sm, 12px));
   line-height: var(--sn-pack-card-description-line-height, 1.4);
   display: -webkit-box;
@@ -89,7 +89,7 @@ sn-pack-card .sn-pack-card-action {
   border: 1px solid var(--sn-pack-card-action-border, color-mix(in oklab, currentColor 16%, transparent));
   border-radius: var(--sn-pack-card-action-radius, var(--sn-radius-sm, 4px));
   background: var(--sn-pack-card-action-bg, transparent);
-  color: var(--sn-pack-card-action-color, var(--sn-text));
+  color: var(--sn-pack-card-action-color, var(--sn-sys-on-surface));
   font-family: inherit;
   font-size: var(--sn-pack-card-action-size, var(--sn-text-sm, 12px));
   cursor: pointer;
@@ -102,13 +102,13 @@ sn-pack-card .sn-pack-card-action:hover {
 }
 
 sn-pack-card .sn-pack-card-action:focus-visible {
-  outline: var(--sn-pack-card-action-focus-ring, 2px solid var(--sn-focus-ring-color, currentColor));
+  outline: var(--sn-pack-card-action-focus-ring, 2px solid var(--sn-sys-focus-ring));
   outline-offset: 2px;
 }
 
 sn-pack-card .sn-pack-card-action-primary {
   border-color: var(--sn-pack-card-action-primary-border, var(--sn-accent, currentColor));
   background: var(--sn-pack-card-action-primary-bg, var(--sn-accent, transparent));
-  color: var(--sn-pack-card-action-primary-color, var(--sn-accent-contrast, var(--sn-text)));
+  color: var(--sn-pack-card-action-primary-color, var(--sn-accent-contrast, var(--sn-sys-on-surface)));
 }
 `;

@@ -58,7 +58,7 @@ test('geometry token membership recognizes the canonical scale and rejects other
   for (let rung of SPACE_RUNGS) assert.ok(isGeometryToken(`--sn-space-${rung}`));
   assert.ok(isGeometryToken('--sn-node-radius'));
   assert.ok(isGeometryToken('--sn-font-size'));
-  assert.equal(isGeometryToken('--sn-bg'), false);
+  assert.equal(isGeometryToken('--sn-sys-surface'), false);
   assert.equal(isGeometryToken('--sn-space-2xl'), false);
   assert.ok(listGeometryTokens().includes('--sn-grid-size'));
 });

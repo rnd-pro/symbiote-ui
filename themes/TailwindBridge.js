@@ -32,11 +32,11 @@ export function applyTailwindBridge(element) {
   const style = window.getComputedStyle(target);
 
   const mappings = [
-    { sn: '--sn-bg', tw: '--color-background' },
-    { sn: '--sn-text', tw: '--color-foreground' },
-    { sn: '--sn-panel-bg', tw: '--color-surface' },
-    { sn: '--sn-panel-bg', tw: '--color-panel' },
-    { sn: '--sn-node-selected', tw: '--color-accent' },
+    { sn: '--sn-sys-surface', tw: '--color-background' },
+    { sn: '--sn-sys-on-surface', tw: '--color-foreground' },
+    { sn: '--sn-sys-surface-panel', tw: '--color-surface' },
+    { sn: '--sn-sys-surface-panel', tw: '--color-panel' },
+    { sn: '--sn-sys-accent', tw: '--color-accent' },
     { sn: '--sn-node-accent', tw: '--color-accent' },
     { sn: '--sn-tabs-accent', tw: '--color-accent' },
     { sn: '--sn-button-primary-bg', tw: '--color-primary' },

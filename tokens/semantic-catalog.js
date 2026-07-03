@@ -62,7 +62,7 @@ const COMPOUND_FAMILIES = Object.freeze([
  * `--sn-*` tokens, so they are surfaced under a single `_base` family rather
  * than dropped, but they sort first and are never the answer to "reuse the
  * card's tokens". A token belongs to `_base` when its first segment is one of
- * these, or when it is a bare single-segment token (`--sn-bg`, `--sn-text`).
+ * these, or when it is a bare single-segment token (`--sn-sys-surface`, `--sn-sys-on-surface`).
  */
 const BASE_FAMILY = '_base';
 const BASE_SEGMENTS = Object.freeze(new Set([
@@ -159,7 +159,7 @@ function familyForToken(token) {
   if (!token.startsWith('--sn-')) return BASE_FAMILY;
   let rest = token.slice('--sn-'.length);
   let segments = rest.split('-');
-  if (segments.length <= 1) return BASE_FAMILY; // bare `--sn-bg`, `--sn-text`
+  if (segments.length <= 1) return BASE_FAMILY; // bare `--sn-sys-surface`, `--sn-sys-on-surface`
 
   let twoSegment = `${segments[0]}-${segments[1]}`;
   if (COMPOUND_FAMILIES.includes(twoSegment)) return twoSegment;

@@ -117,7 +117,7 @@ class Tour extends Symbiote {
     let target = document.querySelector(step.target);
     if (target) {
       this.#highlightedEl = target;
-      target.style.outline = '2px solid var(--sn-node-selected, #2e90fa)';
+      target.style.outline = '2px solid var(--sn-sys-accent)';
       target.style.outlineOffset = '2px';
 
       popover.setAttribute('data-visible', '');

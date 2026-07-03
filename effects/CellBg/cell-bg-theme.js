@@ -57,8 +57,8 @@ export function readCellBgTheme(source, {
   let stepMs = Math.max(24, readNumber(source, '--sn-cell-step-ms', CELL_BG_DEFAULTS.stepMs));
   let fadeRate = clamp(readNumber(source, '--sn-cell-fade-rate', CELL_BG_DEFAULTS.fadeRate), 0.01, 0.18);
 
-  let bg = readToken(source, '--sn-cell-bg') || readToken(source, '--sn-bg');
-  let dot = readToken(source, '--sn-cell-dot') || readToken(source, '--sn-text-dim');
+  let bg = readToken(source, '--sn-cell-bg') || readToken(source, '--sn-sys-surface');
+  let dot = readToken(source, '--sn-cell-dot') || readToken(source, '--sn-sys-on-surface-dim');
   let bgRgb = parseRgb(source, bg) || [0, 0, 0];
   let dotRgb = parseRgb(source, dot) || bgRgb;
   let baseAlpha = finiteNumber(readToken(source, '--sn-cell-base-alpha'), 0);
@@ -201,8 +201,8 @@ export function createCellBgStandaloneScript({
         state.maxRadius = Math.max(state.minRadius + 0.5, readNumber('--sn-cell-max-radius', DEFAULTS.maxRadius));
         state.stepMs = Math.max(24, readNumber('--sn-cell-step-ms', DEFAULTS.stepMs));
         state.fadeRate = clamp(readNumber('--sn-cell-fade-rate', DEFAULTS.fadeRate), 0.01, 0.18);
-        const bg = readToken('--sn-cell-bg') || readToken('--sn-bg');
-        const dot = readToken('--sn-cell-dot') || readToken('--sn-text-dim');
+        const bg = readToken('--sn-cell-bg') || readToken('--sn-sys-surface');
+        const dot = readToken('--sn-cell-dot') || readToken('--sn-sys-on-surface-dim');
         const bgRgb = parseRgb(bg) || [0, 0, 0];
         const dotRgb = parseRgb(dot) || bgRgb;
         const baseAlpha = finiteNumber(readToken('--sn-cell-base-alpha'), 0);

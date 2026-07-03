@@ -38,16 +38,16 @@ export class CrossLayoutPortalBridge extends HTMLElement {
 
         path {
           fill: none;
-          stroke: var(--sn-portal-bridge-stroke, var(--sn-node-selected, var(--sn-node-accent, #4a9eff)));
+          stroke: var(--sn-portal-bridge-stroke, var(--sn-sys-accent));
           stroke-width: var(--sn-portal-bridge-width, 2);
           stroke-linecap: round;
           stroke-dasharray: var(--sn-portal-bridge-dash, 7 7);
-          filter: drop-shadow(0 0 5px color-mix(in oklab, var(--sn-portal-bridge-stroke, var(--sn-node-selected, #4a9eff)) 40%, transparent));
+          filter: drop-shadow(0 0 5px color-mix(in oklab, var(--sn-portal-bridge-stroke, var(--sn-sys-accent)) 40%, transparent));
         }
 
         circle {
-          fill: var(--sn-portal-bridge-dot, var(--sn-node-selected, var(--sn-node-accent, #4a9eff)));
-          stroke: var(--sn-bg, #f3f5f8);
+          fill: var(--sn-portal-bridge-dot, var(--sn-sys-accent));
+          stroke: var(--sn-sys-surface);
           stroke-width: 2;
         }
       </style>

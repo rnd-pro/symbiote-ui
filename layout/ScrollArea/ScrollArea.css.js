@@ -54,7 +54,7 @@ sn-scroll-area {
 }
 
 .sn-scrollbar-thumb {
-  background-color: var(--sn-scrollbar-thumb, var(--sn-text-dim, rgba(255,255,255,0.2)));
+  background-color: var(--sn-scrollbar-thumb, var(--sn-sys-on-surface-dim));
   border-radius: var(--sn-radius-xs, 3px);
   cursor: pointer;
   position: absolute;
@@ -63,9 +63,12 @@ sn-scroll-area {
   transition: background-color var(--sn-transition-fast, 120ms);
 }
 
-.sn-scrollbar-thumb:hover,
+.sn-scrollbar-thumb:hover {
+  background-color: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-scrollbar-thumb, var(--sn-sys-on-surface-dim)));
+}
+
 .sn-scrollbar-thumb[data-active] {
-  background-color: var(--sn-node-selected, #2e90fa);
+  background-color: var(--sn-sys-accent);
 }
 
 .sn-scrollbar-vertical .sn-scrollbar-thumb {

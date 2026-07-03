@@ -38,16 +38,16 @@ sn-stepper[hidden] {
   width: var(--sn-stepper-indicator-size, 24px);
   height: var(--sn-stepper-indicator-size, 24px);
   border-radius: 50%;
-  background: var(--sn-stepper-indicator-bg, var(--sn-bg, var(--sn-sys-surface)));
+  background: var(--sn-stepper-indicator-bg, var(--sn-sys-surface));
   border: 2px solid var(--sn-stepper-indicator-border, var(--sn-outline-color, var(--sn-sys-outline)));
-  color: var(--sn-stepper-indicator-color, var(--sn-text-dim, var(--sn-sys-on-surface-dim)));
+  color: var(--sn-stepper-indicator-color, var(--sn-sys-on-surface-dim));
   font-size: var(--sn-text-xs);
   font-weight: 600;
   transition: all var(--sn-transition-normal, 240ms);
 }
 
 .sn-stepper-label {
-  color: var(--sn-stepper-label-color, var(--sn-text-dim, var(--sn-sys-on-surface-dim)));
+  color: var(--sn-stepper-label-color, var(--sn-sys-on-surface-dim));
   white-space: nowrap;
 }
 
@@ -61,29 +61,30 @@ sn-stepper[hidden] {
 
 /* Completed state */
 .sn-stepper-step[data-state="completed"] .sn-stepper-indicator {
-  background: var(--sn-stepper-completed-bg, color-mix(in oklch, var(--sn-success-color, var(--sn-sys-success)) 100%, transparent));
-  border-color: var(--sn-stepper-completed-border, var(--sn-success-color, var(--sn-sys-success)));
-  color: var(--sn-stepper-completed-color, var(--sn-text, var(--sn-sys-on-status)));
+  /* full-strength completed fill */
+  background: var(--sn-stepper-completed-bg, color-mix(in oklch, var(--sn-sys-success) 100%, transparent));
+  border-color: var(--sn-stepper-completed-border, var(--sn-sys-success));
+  color: var(--sn-stepper-completed-color, var(--sn-sys-on-surface));
 }
 
 .sn-stepper-step[data-state="completed"] .sn-stepper-line {
-  background: var(--sn-stepper-completed-line, color-mix(in oklch, var(--sn-success-color, var(--sn-sys-success)) 100%, transparent));
+  background: var(--sn-stepper-completed-line, color-mix(in oklch, var(--sn-sys-success) 100%, transparent));
 }
 
 .sn-stepper-step[data-state="completed"] .sn-stepper-label {
-  color: var(--sn-stepper-completed-label-color, color-mix(in oklch, var(--sn-text, var(--sn-sys-on-status)) 100%, transparent));
+  color: var(--sn-stepper-completed-label-color, color-mix(in oklch, var(--sn-sys-on-surface) 100%, transparent));
 }
 
 /* Active state */
 .sn-stepper-step[data-state="active"] .sn-stepper-indicator {
-  background: var(--sn-stepper-active-bg, color-mix(in oklch, var(--sn-node-selected, var(--sn-sys-accent)) 100%, transparent));
-  border-color: var(--sn-stepper-active-border, var(--sn-node-selected, var(--sn-sys-accent)));
-  color: var(--sn-stepper-active-color, var(--sn-text, var(--sn-sys-on-status)));
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--sn-node-selected, var(--sn-sys-accent)) 25%, transparent);
+  background: var(--sn-stepper-active-bg, var(--sn-sys-accent));
+  border-color: var(--sn-stepper-active-border, var(--sn-sys-accent));
+  color: var(--sn-stepper-active-color, var(--sn-sys-on-surface));
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--sn-sys-accent) 25%, transparent);
 }
 
 .sn-stepper-step[data-state="active"] .sn-stepper-label {
-  color: var(--sn-stepper-active-label-color, color-mix(in oklch, var(--sn-text, var(--sn-sys-on-status)) 100%, transparent));
+  color: var(--sn-stepper-active-label-color, color-mix(in oklch, var(--sn-sys-on-surface) 100%, transparent));
   font-weight: 600;
 }
 

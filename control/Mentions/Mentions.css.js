@@ -16,7 +16,7 @@ sn-mentions {
   position: absolute;
   z-index: 1000;
   margin-top: var(--sn-step-2);
-  background-color: var(--sn-panel-bg, var(--sn-sys-surface-overlay));
+  background-color: var(--sn-sys-surface-panel);
   border: 1px solid var(--sn-outline-color-soft, var(--sn-sys-outline-subtle));
   border-radius: var(--sn-panel-radius, 6px);
   box-shadow: var(--sn-panel-shadow, var(--sn-sys-shadow-overlay));
@@ -42,7 +42,7 @@ sn-mentions {
   align-items: center;
   padding: calc(var(--sn-step-3, 6px) * var(--sn-theme-density, 1)) calc(var(--sn-step-5, 10px) * var(--sn-theme-density, 1));
   font-size: calc(var(--sn-text-sm, 12px) * var(--sn-theme-type-scale, 1));
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
   border-radius: var(--sn-radius-sm);
   cursor: pointer;
   user-select: none;
@@ -50,6 +50,6 @@ sn-mentions {
 
 .sn-mentions-option:hover,
 .sn-mentions-option[data-focused] {
-  background-color: var(--sn-node-hover, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), transparent));
+  background-color: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-panel));
 }
 `;

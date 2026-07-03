@@ -10,7 +10,7 @@ chat-workspace {
   height: 100%;
   overflow: hidden;
   background: var(--sn-chat-bg);
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
   font-family: var(--sn-font);
 }
 

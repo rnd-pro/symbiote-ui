@@ -5,7 +5,7 @@ sn-switch {
   display: inline-flex;
   box-sizing: border-box;
   max-width: 100%;
-  color: var(--sn-selection-color, var(--sn-text));
+  color: var(--sn-selection-color, var(--sn-sys-on-surface));
   font-family: var(--sn-font);
   font-size: var(--sn-selection-font-size, var(--sn-field-control-font-size, 12px));
   line-height: var(--sn-selection-line-height, var(--sn-field-control-line-height, 1.35));
@@ -59,7 +59,7 @@ sn-switch[hidden] {
   border: 1px solid var(--sn-selection-border, var(--sn-field-control-border));
   border-radius: var(--sn-selection-radius, var(--sn-field-control-radius, 4px));
   background: var(--sn-selection-bg, var(--sn-field-control-bg));
-  color: var(--sn-selection-mark-color, var(--sn-button-primary-color, var(--sn-text, #fff)));
+  color: var(--sn-selection-mark-color, var(--sn-button-primary-color, var(--sn-sys-on-surface)));
   transition:
     background var(--sn-transition-normal, 150ms) var(--sn-transition-easing, ease),
     border-color var(--sn-transition-normal, 150ms) var(--sn-transition-easing, ease),
@@ -94,11 +94,11 @@ sn-switch[hidden] {
 }
 
 .sn-selection-hint {
-  color: var(--sn-selection-hint-color, var(--sn-field-hint-color, var(--sn-text-dim)));
+  color: var(--sn-selection-hint-color, var(--sn-field-hint-color, var(--sn-sys-on-surface-dim)));
 }
 
 .sn-selection-error {
-  color: var(--sn-selection-error-color, var(--sn-status-error, var(--sn-danger-color, var(--sn-sys-danger))));
+  color: var(--sn-selection-error-color, var(--sn-status-error, var(--sn-sys-danger)));
 }
 
 sn-checkbox:not([invalid]) .sn-selection-error,
@@ -114,14 +114,14 @@ sn-switch:hover:not([disabled]):not([readonly]) .sn-selection-visual {
 }
 
 .sn-selection-input:focus-visible + .sn-selection-visual {
-  outline: var(--sn-selection-focus-ring, var(--sn-button-focus-ring, 2px solid var(--sn-focus-ring-color, currentColor)));
+  outline: var(--sn-selection-focus-ring, var(--sn-button-focus-ring, 2px solid var(--sn-sys-focus-ring)));
   outline-offset: var(--sn-selection-focus-offset, 2px);
 }
 
 .sn-selection-input:checked + .sn-selection-visual,
 sn-checkbox[indeterminate] .sn-selection-visual {
-  border-color: var(--sn-selection-checked-border, var(--sn-node-selected));
-  background: var(--sn-selection-checked-bg, var(--sn-node-selected));
+  border-color: var(--sn-selection-checked-border, var(--sn-sys-accent));
+  background: var(--sn-selection-checked-bg, var(--sn-sys-accent));
 }
 
 .sn-selection-input:checked + .sn-selection-visual .sn-selection-mark,
@@ -176,7 +176,7 @@ sn-switch .sn-selection-input-wrap {
 
 sn-switch .sn-selection-visual {
   border-radius: var(--sn-radius-full);
-  background: var(--sn-selection-switch-bg, var(--sn-field-toggle-bg, color-mix(in oklab, var(--sn-text) 12%, transparent)));
+  background: var(--sn-selection-switch-bg, var(--sn-field-toggle-bg, color-mix(in oklab, var(--sn-sys-on-surface) 12%, transparent)));
 }
 
 sn-switch .sn-selection-mark {
@@ -185,21 +185,21 @@ sn-switch .sn-selection-mark {
   inline-size: var(--sn-selection-switch-thumb-size, 14px);
   block-size: var(--sn-selection-switch-thumb-size, 14px);
   border-radius: var(--sn-radius-full);
-  background: var(--sn-selection-switch-thumb-bg, var(--sn-field-toggle-thumb-bg, var(--sn-node-bg, #fff)));
+  background: var(--sn-selection-switch-thumb-bg, var(--sn-field-toggle-thumb-bg, var(--sn-sys-surface-raised)));
   box-shadow: var(--sn-selection-switch-thumb-shadow, 0 1px 2px var(--sn-shadow-color, var(--sn-sys-shadow-raised)));
   opacity: 1;
   transform: translateX(0);
 }
 
 sn-switch .sn-selection-input:checked + .sn-selection-visual .sn-selection-mark {
-  background: var(--sn-selection-switch-thumb-active-bg, var(--sn-field-toggle-thumb-active-bg, var(--sn-node-bg, #fff)));
+  background: var(--sn-selection-switch-thumb-active-bg, var(--sn-field-toggle-thumb-active-bg, var(--sn-sys-surface-raised)));
   transform: translateX(calc(var(--sn-selection-switch-width, 32px) - var(--sn-selection-switch-thumb-size, 14px) - (var(--sn-selection-switch-padding, 2px) * 2)));
 }
 
 sn-checkbox[invalid] .sn-selection-visual,
 sn-radio[invalid] .sn-selection-visual,
 sn-switch[invalid] .sn-selection-visual {
-  border-color: var(--sn-selection-error-border, var(--sn-status-error, var(--sn-danger-color, var(--sn-sys-danger))));
+  border-color: var(--sn-selection-error-border, var(--sn-status-error, var(--sn-sys-danger)));
 }
 
 sn-checkbox[disabled],

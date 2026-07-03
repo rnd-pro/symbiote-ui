@@ -28,7 +28,6 @@ export let SYNTHWAVE = {
 
     '--sn-lit-bg': '6%',
     '--sn-lit-surface': '12%',
-    '--sn-lit-border': '25%',
     '--sn-lit-hover': '32%',
     '--sn-lit-text': '88%',
     '--sn-lit-text-dim': '48%',
@@ -40,29 +39,28 @@ export let SYNTHWAVE = {
     '--sn-alpha-faint': '0.08',
 
 
-    '--sn-danger-color': 'hsl(var(--sn-hue-danger), var(--sn-sat-vivid), var(--sn-lit-accent))',
-    '--sn-success-color': 'hsl(var(--sn-hue-success), var(--sn-sat-vivid), var(--sn-lit-accent))',
-    '--sn-warning-color': 'hsl(var(--sn-hue-warning), var(--sn-sat-vivid), var(--sn-lit-accent))',
+    '--sn-sys-danger': 'hsl(var(--sn-hue-danger), var(--sn-sat-vivid), var(--sn-lit-accent))',
+    '--sn-sys-success': 'hsl(var(--sn-hue-success), var(--sn-sat-vivid), var(--sn-lit-accent))',
+    '--sn-sys-warning': 'hsl(var(--sn-hue-warning), var(--sn-sat-vivid), var(--sn-lit-accent))',
 
 
-    '--sn-bg': 'hsl(var(--sn-hue-base), var(--sn-sat), var(--sn-lit-bg))',
+    '--sn-sys-surface': 'hsl(var(--sn-hue-base), var(--sn-sat), var(--sn-lit-bg))',
     '--sn-grid-dot': 'hsla(var(--sn-hue-accent), var(--sn-sat-vivid), 50%, var(--sn-alpha-faint))',
     '--sn-grid-size': '24px',
 
 
-    '--sn-node-bg': 'hsl(var(--sn-hue-base), var(--sn-sat), var(--sn-lit-surface))',
-    '--sn-node-border': 'hsl(var(--sn-hue-base), var(--sn-sat-muted), var(--sn-lit-border))',
+    '--sn-sys-surface-raised': 'hsl(var(--sn-hue-base), var(--sn-sat), var(--sn-lit-surface))',
+    '--sn-sys-outline': 'hsl(var(--sn-hue-base), var(--sn-sat-muted), 25%)',
     '--sn-node-radius': '12px',
     '--sn-node-shadow': '0 4px 20px hsla(var(--sn-hue-base), var(--sn-sat-vivid), 50%, 0.2)',
     '--sn-shadow-color': 'hsla(var(--sn-hue-base), var(--sn-sat-vivid), 50%, 0.2)',
-    '--sn-node-selected': 'hsl(var(--sn-hue-accent), var(--sn-sat-vivid), 50%)',
-    '--sn-node-hover': 'hsl(var(--sn-hue-base), var(--sn-sat-muted), var(--sn-lit-hover))',
+    '--sn-sys-accent': 'hsl(var(--sn-hue-accent), var(--sn-sat-vivid), 50%)',
     '--sn-node-header-bg': 'hsl(var(--sn-hue-base), var(--sn-sat), 9%)',
 
 
     '--sn-font': "'Space Grotesk', sans-serif",
-    '--sn-text': 'hsl(var(--sn-hue-base), 30%, var(--sn-lit-text))',
-    '--sn-text-dim': 'hsl(var(--sn-hue-base), 20%, var(--sn-lit-text-dim))',
+    '--sn-sys-on-surface': 'hsl(var(--sn-hue-base), 30%, var(--sn-lit-text))',
+    '--sn-sys-on-surface-dim': 'hsl(var(--sn-hue-base), 20%, var(--sn-lit-text-dim))',
 
 
     '--sn-socket-size': '14px',
@@ -82,8 +80,8 @@ export let SYNTHWAVE = {
     '--sn-subgraph-accent': 'var(--sn-cat-data)',
 
 
-    '--sn-ctx-bg': 'hsl(var(--sn-hue-base), var(--sn-sat), var(--sn-lit-surface))',
-    '--sn-ctx-border': 'hsl(var(--sn-hue-base), var(--sn-sat-muted), var(--sn-lit-border))',
+    '--sn-sys-surface-overlay': 'hsl(var(--sn-hue-base), var(--sn-sat), var(--sn-lit-surface))',
+    '--sn-ctx-border': 'hsl(var(--sn-hue-base), var(--sn-sat-muted), 25%)',
     '--sn-ctx-color': 'hsl(var(--sn-hue-base), 30%, var(--sn-lit-text))',
     '--sn-ctx-hover':
       'hsla(var(--sn-hue-accent), var(--sn-sat-vivid), 50%, var(--sn-alpha-subtle))',
@@ -105,8 +103,8 @@ export let SYNTHWAVE = {
     '--sn-toolbar-danger-color': 'hsl(var(--sn-hue-danger), 80%, 60%)',
 
 
-    '--sn-shape-fill': 'var(--sn-node-bg)',
-    '--sn-shape-stroke': 'var(--sn-node-border)',
+    '--sn-shape-fill': 'var(--sn-sys-surface-raised)',
+    '--sn-shape-stroke': 'var(--sn-sys-outline)',
     '--sn-shape-stroke-width': '0.4',
   },
 };
@@ -126,7 +124,6 @@ export let SYNTHWAVE_PALETTE = {
     '--sn-sat-muted': '25%',
     '--sn-lit-bg': '6%',
     '--sn-lit-surface': '12%',
-    '--sn-lit-border': '25%',
     '--sn-lit-hover': '32%',
     '--sn-lit-text': '88%',
     '--sn-lit-text-dim': '48%',

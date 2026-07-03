@@ -424,7 +424,7 @@ export class CascadeThemeWidget extends Symbiote {
       return;
     }
     let offset = Number.parseFloat(
-      getComputedStyle(trigger).getPropertyValue('--sn-theme-widget-offset') || '8'
+      getComputedStyle(trigger).getPropertyValue('--sn-ctw-offset') || '8'
     );
     positionOverlay(trigger, popover, 'bottom-end', {
       offset: Number.isFinite(offset) ? offset : 8,

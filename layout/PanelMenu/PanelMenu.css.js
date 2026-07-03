@@ -8,7 +8,7 @@ export let styles = css`
 
     .menu-container {
       pointer-events: auto;
-      background: var(--sn-ctx-bg);
+      background: var(--sn-sys-surface-overlay);
       border: var(--sn-panel-menu-border-width, 1px) solid var(--sn-ctx-border);
       border-radius: var(--sn-panel-menu-radius, 6px);
       box-shadow: 0 4px 12px var(--sn-shadow-color);
@@ -22,16 +22,16 @@ export let styles = css`
       gap: var(--sn-panel-menu-item-gap, 8px);
       padding: var(--sn-panel-menu-item-padding, 8px 12px);
       cursor: pointer;
-      color: var(--sn-text);
+      color: var(--sn-sys-on-surface);
       font-size: var(--sn-panel-menu-item-size, 0.85rem);
       transition: background var(--sn-transition-fast) var(--sn-transition-easing);
 
       &:hover {
-        background: var(--sn-node-hover);
+        background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-overlay));
       }
 
       &[active] {
-        color: var(--sn-node-selected);
+        color: var(--sn-sys-accent);
       }
 
       .material-symbols-outlined {

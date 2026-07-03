@@ -29,7 +29,6 @@ export let NEON_GLOW = {
 
     '--sn-lit-bg': '4%',
     '--sn-lit-surface': '8%',
-    '--sn-lit-border': '22%',
     '--sn-lit-hover': '14%',
     '--sn-lit-text': '90%',
     '--sn-lit-text-dim': '55%',
@@ -41,30 +40,29 @@ export let NEON_GLOW = {
     '--sn-alpha-faint': '0.06',
 
 
-    '--sn-danger-color': 'hsl(var(--sn-hue-danger), var(--sn-sat-vivid), var(--sn-lit-accent))',
-    '--sn-success-color': 'hsl(var(--sn-hue-success), var(--sn-sat-vivid), var(--sn-lit-accent))',
-    '--sn-warning-color': 'hsl(var(--sn-hue-warning), var(--sn-sat-vivid), var(--sn-lit-accent))',
+    '--sn-sys-danger': 'hsl(var(--sn-hue-danger), var(--sn-sat-vivid), var(--sn-lit-accent))',
+    '--sn-sys-success': 'hsl(var(--sn-hue-success), var(--sn-sat-vivid), var(--sn-lit-accent))',
+    '--sn-sys-warning': 'hsl(var(--sn-hue-warning), var(--sn-sat-vivid), var(--sn-lit-accent))',
 
 
-    '--sn-bg': 'hsl(var(--sn-hue-base), var(--sn-sat), var(--sn-lit-bg))',
+    '--sn-sys-surface': 'hsl(var(--sn-hue-base), var(--sn-sat), var(--sn-lit-bg))',
     '--sn-grid-dot': 'hsla(var(--sn-hue-accent), var(--sn-sat-vivid), 50%, 0.12)',
     '--sn-grid-size': '22px',
 
 
-    '--sn-node-bg': 'hsla(var(--sn-hue-base), var(--sn-sat), var(--sn-lit-surface), 0.9)',
-    '--sn-node-border': 'hsl(var(--sn-hue-accent), 60%, 30%)',
+    '--sn-sys-surface-raised': 'hsla(var(--sn-hue-base), var(--sn-sat), var(--sn-lit-surface), 0.9)',
+    '--sn-sys-outline': 'hsl(var(--sn-hue-accent), 60%, 30%)',
     '--sn-node-radius': '8px',
     '--sn-node-shadow':
       '0 0 12px hsla(var(--sn-hue-accent), var(--sn-sat-vivid), 50%, 0.15), 0 4px 16px rgba(0, 0, 0, 0.5)',
     '--sn-shadow-color': 'hsla(var(--sn-hue-accent), var(--sn-sat-vivid), 50%, 0.15)',
-    '--sn-node-selected': 'hsl(var(--sn-hue-accent), var(--sn-sat-vivid), 55%)',
-    '--sn-node-hover': 'hsl(var(--sn-hue-base), 25%, var(--sn-lit-hover))',
+    '--sn-sys-accent': 'hsl(var(--sn-hue-accent), var(--sn-sat-vivid), 55%)',
     '--sn-node-header-bg': 'hsla(var(--sn-hue-accent), 40%, 10%, 0.6)',
 
 
     '--sn-font': "'JetBrains Mono', 'Fira Code', monospace",
-    '--sn-text': 'hsl(var(--sn-hue-accent), 20%, var(--sn-lit-text))',
-    '--sn-text-dim': 'hsl(var(--sn-hue-accent), 15%, var(--sn-lit-text-dim))',
+    '--sn-sys-on-surface': 'hsl(var(--sn-hue-accent), 20%, var(--sn-lit-text))',
+    '--sn-sys-on-surface-dim': 'hsl(var(--sn-hue-accent), 15%, var(--sn-lit-text-dim))',
 
 
     '--sn-socket-size': '12px',
@@ -84,7 +82,7 @@ export let NEON_GLOW = {
     '--sn-subgraph-accent': 'var(--sn-cat-data)',
 
 
-    '--sn-ctx-bg': 'hsla(var(--sn-hue-base), var(--sn-sat), 6%, 0.96)',
+    '--sn-sys-surface-overlay': 'hsla(var(--sn-hue-base), var(--sn-sat), 6%, 0.96)',
     '--sn-ctx-border': 'hsl(var(--sn-hue-accent), 50%, 25%)',
     '--sn-ctx-color': 'hsl(var(--sn-hue-accent), 20%, var(--sn-lit-text))',
     '--sn-ctx-hover': 'hsla(var(--sn-hue-accent), var(--sn-sat-vivid), 50%, 0.15)',
@@ -105,7 +103,7 @@ export let NEON_GLOW = {
     '--sn-toolbar-danger-color': 'hsl(var(--sn-hue-danger), var(--sn-sat-vivid), 60%)',
 
 
-    '--sn-shape-fill': 'var(--sn-node-bg)',
+    '--sn-shape-fill': 'var(--sn-sys-surface-raised)',
     '--sn-shape-stroke': 'hsl(var(--sn-hue-accent), 60%, 35%)',
     '--sn-shape-stroke-width': '0.5',
   },
@@ -126,7 +124,6 @@ export let NEON_PALETTE = {
     '--sn-sat-muted': '15%',
     '--sn-lit-bg': '4%',
     '--sn-lit-surface': '8%',
-    '--sn-lit-border': '22%',
     '--sn-lit-hover': '14%',
     '--sn-lit-text': '90%',
     '--sn-lit-text-dim': '55%',

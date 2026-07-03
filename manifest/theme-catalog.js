@@ -139,7 +139,7 @@ export let THEME_ELEMENT_GROUPS = [
   {
     name: 'panel',
     description: 'Framed layout surfaces such as sidebars, graph panels, source panes, and dialogs.',
-    tokens: ['--sn-panel-bg', '--sn-surface', '--sn-border', '--sn-card-bg', '--sn-card-border', '--sn-card-radius', '--sn-card-padding', '--sn-dialog-bg', '--sn-dialog-border', '--sn-dialog-radius', '--sn-dialog-shadow', '--sn-dialog-backdrop', '--sn-node-border', '--sn-node-shadow', '--sn-node-radius', '--sn-overlay-z-base', '--sn-canvas-overlay-z-base'],
+    tokens: ['--sn-sys-surface-panel', '--sn-sys-surface-raised', '--sn-border', '--sn-card-bg', '--sn-card-border', '--sn-card-radius', '--sn-card-padding', '--sn-dialog-bg', '--sn-dialog-border', '--sn-dialog-radius', '--sn-dialog-shadow', '--sn-dialog-backdrop', '--sn-sys-outline', '--sn-node-shadow', '--sn-node-radius', '--sn-overlay-z-base', '--sn-canvas-overlay-z-base'],
     usedBy: ['panel-layout', 'sn-card', 'source-viewer', 'source-editor', 'chat-transcript', 'sn-loading-overlay'],
   },
   {
@@ -169,7 +169,7 @@ export let THEME_ELEMENT_GROUPS = [
   {
     name: 'status',
     description: 'Badges, loading, success, warning, danger, and transient status feedback.',
-    tokens: ['--sn-success-color', '--sn-success-bg', '--sn-success-border', '--sn-success-bg-hover', '--sn-success-border-hover', '--sn-warning-color', '--sn-danger-color', '--sn-danger-bg', '--sn-danger-border', '--sn-status-info', '--sn-status-success', '--sn-status-warning', '--sn-status-error', '--sn-status-neutral', '--sn-status-info-bg', '--sn-status-success-bg', '--sn-status-warning-bg', '--sn-status-error-bg', '--sn-status-neutral-bg', '--sn-engine-idle-color', '--sn-engine-running-color', '--sn-engine-success-color', '--sn-engine-error-color', '--sn-engine-state-color', '--sn-engine-state-bg', '--sn-engine-state-border', '--sn-subgraph-bg', '--sn-subgraph-bg-hover', '--sn-subgraph-border', '--sn-subgraph-border-hover', '--sn-badge-bg', '--sn-badge-border', '--sn-badge-color', '--sn-badge-success-bg', '--sn-badge-warning-bg', '--sn-badge-error-bg', '--sn-badge-neutral-bg', '--sn-banner-bg', '--sn-banner-border', '--sn-banner-color', '--sn-banner-success-bg', '--sn-banner-warning-bg', '--sn-banner-error-bg', '--sn-empty-state-color', '--sn-loading-bar-bg', '--sn-effect-loading-pulse'],
+    tokens: ['--sn-sys-success', '--sn-success-bg', '--sn-success-bg-hover', '--sn-success-border-hover', '--sn-sys-warning', '--sn-sys-danger', '--sn-danger-bg', '--sn-status-info', '--sn-status-success', '--sn-status-warning', '--sn-status-error', '--sn-status-neutral', '--sn-status-info-bg', '--sn-status-success-bg', '--sn-status-warning-bg', '--sn-status-error-bg', '--sn-status-neutral-bg', '--sn-engine-idle-color', '--sn-engine-running-color', '--sn-engine-success-color', '--sn-engine-error-color', '--sn-engine-state-color', '--sn-engine-state-bg', '--sn-engine-state-border', '--sn-subgraph-bg', '--sn-subgraph-bg-hover', '--sn-subgraph-border', '--sn-subgraph-border-hover', '--sn-badge-bg', '--sn-badge-border', '--sn-badge-color', '--sn-badge-success-bg', '--sn-badge-warning-bg', '--sn-badge-error-bg', '--sn-badge-neutral-bg', '--sn-banner-bg', '--sn-banner-border', '--sn-banner-color', '--sn-banner-success-bg', '--sn-banner-warning-bg', '--sn-banner-error-bg', '--sn-empty-state-color', '--sn-loading-bar-bg', '--sn-effect-loading-pulse'],
     usedBy: ['sn-loading-overlay', 'chat-transcript', 'chat-composer', 'inspector-panel'],
   },
   {
@@ -194,7 +194,7 @@ export let THEME_ELEMENT_GROUPS = [
   {
     name: 'graph',
     description: 'Graph nodes, edges, clusters, pins, sockets, and graph canvas feedback.',
-    tokens: ['--sn-node-bg', '--sn-node-border', '--sn-node-selected', '--sn-conn-color', '--sn-type-data', '--sn-type-action', '--sn-type-project', '--sn-type-profile', '--sn-type-pulse', '--sn-type-skill', '--sn-graph-type-data', '--sn-graph-type-action', '--sn-graph-type-project', '--sn-graph-type-profile-photo', '--sn-graph-type-pulse', '--sn-graph-type-skill', '--sn-canvas-graph-panel-bg', '--sn-canvas-graph-panel-border', '--sn-canvas-graph-ghost', '--sn-graph-cluster-0', '--sn-graph-cluster-1', '--sn-minimap-bg', '--sn-minimap-node', '--sn-minimap-viewport', '--sn-cat-server', '--sn-cat-control', '--sn-cat-data', '--sn-subgraph-accent'],
+    tokens: ['--sn-sys-surface-raised', '--sn-sys-outline', '--sn-sys-accent', '--sn-conn-color', '--sn-type-data', '--sn-type-action', '--sn-type-project', '--sn-type-profile', '--sn-type-pulse', '--sn-type-skill', '--sn-graph-type-data', '--sn-graph-type-action', '--sn-graph-type-project', '--sn-graph-type-profile-photo', '--sn-graph-type-pulse', '--sn-graph-type-skill', '--sn-canvas-graph-panel-bg', '--sn-canvas-graph-panel-border', '--sn-canvas-graph-ghost', '--sn-graph-cluster-0', '--sn-graph-cluster-1', '--sn-minimap-bg', '--sn-minimap-node', '--sn-minimap-viewport', '--sn-cat-server', '--sn-cat-control', '--sn-cat-data', '--sn-subgraph-accent'],
     usedBy: ['node-canvas', 'canvas-graph', 'graph-explorer-shell', 'node-minimap'],
   },
   {
@@ -300,9 +300,9 @@ export let THEME_RULE_BLOCKS = [
       { output: 'diagnostic.errorBackground', inputs: ['color.danger'], expression: 'color-mix(danger, 7%, transparent)', description: 'Diagnostic error rows reuse the danger branch.' },
       { output: 'diagnostic.warningBackground', inputs: ['color.warning'], expression: 'color-mix(warning, 5%, transparent)', description: 'Diagnostic warning rows reuse the warning branch.' },
       { output: 'provider.rndPro.color', inputs: ['color.data'], expression: 'var(--sn-cat-data)', description: 'RND-PRO provider badges use the data accent branch instead of fixed purple values.' },
-      { output: 'provider.official.color', inputs: ['color.accent'], expression: 'var(--sn-node-selected)', description: 'Official provider badges follow the primary accent.' },
-      { output: 'provider.google.color', inputs: ['color.success'], expression: 'var(--sn-success-color)', description: 'Google provider badges follow the success branch.' },
-      { output: 'provider.community.color', inputs: ['color.warning'], expression: 'var(--sn-warning-color)', description: 'Community provider badges follow the warning branch.' },
+      { output: 'provider.official.color', inputs: ['color.accent'], expression: 'var(--sn-sys-accent)', description: 'Official provider badges follow the primary accent.' },
+      { output: 'provider.google.color', inputs: ['color.success'], expression: 'var(--sn-sys-success)', description: 'Google provider badges follow the success branch.' },
+      { output: 'provider.community.color', inputs: ['color.warning'], expression: 'var(--sn-sys-warning)', description: 'Community provider badges follow the warning branch.' },
     ],
   },
   {
@@ -380,10 +380,10 @@ export let THEME_RULE_BLOCKS = [
     description: 'Maps standardized engine states to inherited status colors, state backgrounds, borders, and animation play state.',
     states: ['idle', 'running', 'success', 'error'],
     inputs: ['color.accent', 'color.success', 'color.danger', 'color.textDim', 'motion.enabled'],
-    outputs: ['--sn-engine-state-color', '--sn-engine-state-bg', '--sn-engine-state-border', '--sn-node-bg', '--sn-node-border'],
+    outputs: ['--sn-engine-state-color', '--sn-engine-state-bg', '--sn-engine-state-border', '--sn-sys-surface-raised', '--sn-sys-outline'],
     formula: 'Hosts set data-engine-state on a reusable surface; CSS variables cascade state color and motion without product-owned style branches.',
     derivations: [
-      { output: 'engine.idle', inputs: ['color.textDim'], expression: 'var(--sn-text-dim)', description: 'Idle state keeps neutral muted status styling.' },
+      { output: 'engine.idle', inputs: ['color.textDim'], expression: 'var(--sn-sys-on-surface-dim)', description: 'Idle state keeps neutral muted status styling.' },
       { output: 'engine.running', inputs: ['color.accent', 'motion.enabled'], expression: 'accent border plus pulse animation with var(--sn-animation-play-state)', description: 'Running state uses the primary accent and pauses when motion is disabled.' },
       { output: 'engine.success', inputs: ['color.success'], expression: 'success color mixed into surface and border', description: 'Success state inherits the success semantic branch.' },
       { output: 'engine.error', inputs: ['color.danger'], expression: 'danger color mixed into surface and border', description: 'Error state inherits the danger semantic branch.' },
@@ -398,18 +398,16 @@ export let THEME_RULE_BLOCKS = [
       { name: 'semantic.scope', type: 'string', default: '--sn-*', description: 'Public CSS custom property namespace exposed by symbiote-ui.' },
     ],
     inputs: ['color.*', 'size.*', 'radius.*', 'shadow.*', 'font.*'],
-    outputs: ['--sn-bg', '--sn-panel-bg', '--sn-node-bg', '--sn-node-border', '--sn-text', '--sn-text-dim', '--sn-success-bg', '--sn-success-border', '--sn-danger-bg', '--sn-danger-border'],
+    outputs: ['--sn-sys-surface', '--sn-sys-surface-panel', '--sn-sys-surface-raised', '--sn-sys-outline', '--sn-sys-on-surface', '--sn-sys-on-surface-dim', '--sn-success-bg', '--sn-danger-bg'],
     formula: 'Semantic aliases are CSS custom properties consumed through normal cascade inheritance.',
     derivations: [
-      { output: '--sn-bg', inputs: ['color.background'], expression: 'color.background', description: 'Root background token.' },
-      { output: '--sn-panel-bg', inputs: ['color.surface'], expression: 'color.surface', description: 'Panel background token.' },
-      { output: '--sn-node-border', inputs: ['color.border'], expression: 'color.border', description: 'Default node and source border token.' },
-      { output: '--sn-node-selected', inputs: ['color.accent'], expression: 'color.accent', description: 'Selected and focus accent token.' },
-      { output: '--sn-text-dim', inputs: ['color.textDim'], expression: 'color.textDim', description: 'Muted readable text token.' },
-      { output: '--sn-success-bg', inputs: ['component.successBackground'], expression: 'color-mix(in oklab, var(--sn-success-color) 18%, transparent)', description: 'Positive status surfaces follow the success branch.' },
-      { output: '--sn-success-border', inputs: ['component.successBorder'], expression: 'color-mix(in oklab, var(--sn-success-color) 32%, transparent)', description: 'Positive status borders follow the success branch.' },
-      { output: '--sn-danger-bg', inputs: ['component.dangerBackground'], expression: 'color-mix(in oklab, var(--sn-danger-color) 18%, transparent)', description: 'Negative status surfaces follow the danger branch.' },
-      { output: '--sn-danger-border', inputs: ['component.dangerBorder'], expression: 'color-mix(in oklab, var(--sn-danger-color) 32%, transparent)', description: 'Negative status borders follow the danger branch.' },
+      { output: '--sn-sys-surface', inputs: ['color.background'], expression: 'color.background', description: 'Root background token.' },
+      { output: '--sn-sys-surface-panel', inputs: ['color.surface'], expression: 'color.surface', description: 'Panel background token.' },
+      { output: '--sn-sys-outline', inputs: ['color.border'], expression: 'color.border', description: 'Default node and source border token.' },
+      { output: '--sn-sys-accent', inputs: ['color.accent'], expression: 'color.accent', description: 'Selected and focus accent token.' },
+      { output: '--sn-sys-on-surface-dim', inputs: ['color.textDim'], expression: 'color.textDim', description: 'Muted readable text token.' },
+      { output: '--sn-success-bg', inputs: ['component.successBackground'], expression: 'color-mix(in oklab, var(--sn-sys-success) 18%, transparent)', description: 'Positive status surfaces follow the success branch.' },
+      { output: '--sn-danger-bg', inputs: ['component.dangerBackground'], expression: 'color-mix(in oklab, var(--sn-sys-danger) 18%, transparent)', description: 'Negative status surfaces follow the danger branch.' },
     ],
   },
   {
@@ -516,62 +514,62 @@ export let THEME_RULE_BLOCKS = [
     formula: 'Component aliases bridge design tokens to component CSS without product-level style patches.',
     derivations: [
       { output: '--sn-layout-border', inputs: ['component.layoutBorder'], expression: 'transparent', description: 'Layout split gaps stay transparent without mutating the generic node border.' },
-      { output: '--sn-card-bg', inputs: ['--sn-node-bg'], expression: 'var(--sn-node-bg)', description: 'Cards inherit the reusable node surface by default.' },
-      { output: '--sn-card-border', inputs: ['--sn-node-border'], expression: 'var(--sn-node-border)', description: 'Cards share the provider border color.' },
-      { output: '--sn-button-bg', inputs: ['--sn-node-bg'], expression: 'var(--sn-node-bg)', description: 'Default action controls inherit the normal node surface.' },
-      { output: '--sn-button-primary-bg', inputs: ['--sn-node-selected'], expression: 'var(--sn-node-selected)', description: 'Primary actions use the shared selected/accent color.' },
-      { output: '--sn-field-control-bg', inputs: ['--sn-bg'], expression: 'var(--sn-bg)', description: 'Form controls inherit the app background inside reusable fields.' },
-      { output: '--sn-field-control-focus-border', inputs: ['--sn-node-selected'], expression: 'var(--sn-node-selected)', description: 'Field focus uses the shared selected/accent color.' },
+      { output: '--sn-card-bg', inputs: ['--sn-sys-surface-raised'], expression: 'var(--sn-sys-surface-raised)', description: 'Cards inherit the reusable node surface by default.' },
+      { output: '--sn-card-border', inputs: ['--sn-sys-outline'], expression: 'var(--sn-sys-outline)', description: 'Cards share the provider border color.' },
+      { output: '--sn-button-bg', inputs: ['--sn-sys-surface-raised'], expression: 'var(--sn-sys-surface-raised)', description: 'Default action controls inherit the normal node surface.' },
+      { output: '--sn-button-primary-bg', inputs: ['--sn-sys-accent'], expression: 'var(--sn-sys-accent)', description: 'Primary actions use the shared selected/accent color.' },
+      { output: '--sn-field-control-bg', inputs: ['--sn-sys-surface'], expression: 'var(--sn-sys-surface)', description: 'Form controls inherit the app background inside reusable fields.' },
+      { output: '--sn-field-control-focus-border', inputs: ['--sn-sys-accent'], expression: 'var(--sn-sys-accent)', description: 'Field focus uses the shared selected/accent color.' },
       { output: '--sn-field-control-subtle-border', inputs: ['color.text'], expression: 'hsl(text / faint alpha)', description: 'Inspector-local control borders use a provider-owned faint text divider.' },
       { output: '--sn-field-toggle-bg', inputs: ['color.text'], expression: 'hsl(text / 0.1)', description: 'Toggle tracks derive from the faint text branch.' },
-      { output: '--sn-badge-bg', inputs: ['--sn-node-bg'], expression: 'var(--sn-node-bg)', description: 'Badges inherit compact reusable node surfaces.' },
+      { output: '--sn-badge-bg', inputs: ['--sn-sys-surface-raised'], expression: 'var(--sn-sys-surface-raised)', description: 'Badges inherit compact reusable node surfaces.' },
       { output: '--sn-badge-success-bg', inputs: ['--sn-status-success-bg'], expression: 'var(--sn-status-success-bg)', description: 'Success badges inherit the shared semantic status surface.' },
       { output: '--sn-badge-warning-bg', inputs: ['--sn-status-warning-bg'], expression: 'var(--sn-status-warning-bg)', description: 'Warning badges inherit the shared semantic status surface.' },
       { output: '--sn-badge-error-bg', inputs: ['--sn-status-error-bg'], expression: 'var(--sn-status-error-bg)', description: 'Error badges inherit the shared semantic status surface.' },
-      { output: '--sn-badge-info-color', inputs: ['--sn-node-selected'], expression: 'var(--sn-node-selected)', description: 'Informational badges use the shared selected/accent color.' },
-      { output: '--sn-metric-border', inputs: ['--sn-node-hover'], expression: 'var(--sn-node-hover)', description: 'Metric dividers inherit the reusable low-contrast divider branch.' },
-      { output: '--sn-metric-label-color', inputs: ['--sn-text-dim'], expression: 'var(--sn-text-dim)', description: 'Metric labels inherit muted readable text.' },
-      { output: '--sn-metric-value-color', inputs: ['--sn-text'], expression: 'var(--sn-text)', description: 'Metric values inherit primary readable text.' },
-      { output: '--sn-metric-success-color', inputs: ['--sn-success-color'], expression: 'var(--sn-success-color)', description: 'Positive metric values follow the success branch.' },
-      { output: '--sn-metric-warning-color', inputs: ['--sn-warning-color'], expression: 'var(--sn-warning-color)', description: 'Warning metric values follow the warning branch.' },
-      { output: '--sn-metric-error-color', inputs: ['--sn-danger-color'], expression: 'var(--sn-danger-color)', description: 'Error metric values follow the danger branch.' },
-      { output: '--sn-data-table-bg', inputs: ['--sn-node-bg'], expression: 'var(--sn-node-bg)', description: 'Data tables inherit the reusable node surface.' },
-      { output: '--sn-data-table-border', inputs: ['--sn-node-border'], expression: 'var(--sn-node-border)', description: 'Data table frames use the provider border.' },
-      { output: '--sn-data-table-header-bg', inputs: ['--sn-panel-bg'], expression: 'var(--sn-panel-bg)', description: 'Data table headers inherit panel surfaces.' },
-      { output: '--sn-data-table-row-border', inputs: ['--sn-node-hover'], expression: 'var(--sn-node-hover)', description: 'Data table row dividers use the low-contrast row branch.' },
-      { output: '--sn-data-table-empty-color', inputs: ['--sn-text-dim'], expression: 'var(--sn-text-dim)', description: 'Data table empty states inherit muted readable text.' },
-      { output: '--sn-banner-bg', inputs: ['--sn-node-bg'], expression: 'var(--sn-node-bg)', description: 'Banners inherit the normal node surface for inline status feedback.' },
+      { output: '--sn-badge-info-color', inputs: ['--sn-sys-accent'], expression: 'var(--sn-sys-accent)', description: 'Informational badges use the shared selected/accent color.' },
+      { output: '--sn-metric-border', inputs: ['--sn-sys-outline-subtle'], expression: 'var(--sn-sys-outline-subtle)', description: 'Metric dividers inherit the reusable low-contrast divider branch.' },
+      { output: '--sn-metric-label-color', inputs: ['--sn-sys-on-surface-dim'], expression: 'var(--sn-sys-on-surface-dim)', description: 'Metric labels inherit muted readable text.' },
+      { output: '--sn-metric-value-color', inputs: ['--sn-sys-on-surface'], expression: 'var(--sn-sys-on-surface)', description: 'Metric values inherit primary readable text.' },
+      { output: '--sn-metric-success-color', inputs: ['--sn-sys-success'], expression: 'var(--sn-sys-success)', description: 'Positive metric values follow the success branch.' },
+      { output: '--sn-metric-warning-color', inputs: ['--sn-sys-warning'], expression: 'var(--sn-sys-warning)', description: 'Warning metric values follow the warning branch.' },
+      { output: '--sn-metric-error-color', inputs: ['--sn-sys-danger'], expression: 'var(--sn-sys-danger)', description: 'Error metric values follow the danger branch.' },
+      { output: '--sn-data-table-bg', inputs: ['--sn-sys-surface-raised'], expression: 'var(--sn-sys-surface-raised)', description: 'Data tables inherit the reusable node surface.' },
+      { output: '--sn-data-table-border', inputs: ['--sn-sys-outline'], expression: 'var(--sn-sys-outline)', description: 'Data table frames use the provider border.' },
+      { output: '--sn-data-table-header-bg', inputs: ['--sn-sys-surface-panel'], expression: 'var(--sn-sys-surface-panel)', description: 'Data table headers inherit panel surfaces.' },
+      { output: '--sn-data-table-row-border', inputs: ['--sn-sys-outline-subtle'], expression: 'var(--sn-sys-outline-subtle)', description: 'Data table row dividers use the low-contrast row branch.' },
+      { output: '--sn-data-table-empty-color', inputs: ['--sn-sys-on-surface-dim'], expression: 'var(--sn-sys-on-surface-dim)', description: 'Data table empty states inherit muted readable text.' },
+      { output: '--sn-banner-bg', inputs: ['--sn-sys-surface-raised'], expression: 'var(--sn-sys-surface-raised)', description: 'Banners inherit the normal node surface for inline status feedback.' },
       { output: '--sn-banner-info-bg', inputs: ['--sn-status-info-bg'], expression: 'var(--sn-status-info-bg)', description: 'Informational banners inherit the shared semantic status surface.' },
       { output: '--sn-banner-success-bg', inputs: ['--sn-status-success-bg'], expression: 'var(--sn-status-success-bg)', description: 'Success banners inherit the shared semantic status surface.' },
       { output: '--sn-banner-warning-bg', inputs: ['--sn-status-warning-bg'], expression: 'var(--sn-status-warning-bg)', description: 'Warning banners inherit the shared semantic status surface.' },
       { output: '--sn-banner-error-bg', inputs: ['--sn-status-error-bg'], expression: 'var(--sn-status-error-bg)', description: 'Error banners inherit the shared semantic status surface.' },
-      { output: '--sn-banner-info-color', inputs: ['--sn-node-selected'], expression: 'var(--sn-node-selected)', description: 'Informational and running banners use the shared selected/accent color.' },
-      { output: '--sn-empty-state-color', inputs: ['--sn-text-dim'], expression: 'var(--sn-text-dim)', description: 'Empty states inherit muted readable text.' },
+      { output: '--sn-banner-info-color', inputs: ['--sn-sys-accent'], expression: 'var(--sn-sys-accent)', description: 'Informational and running banners use the shared selected/accent color.' },
+      { output: '--sn-empty-state-color', inputs: ['--sn-sys-on-surface-dim'], expression: 'var(--sn-sys-on-surface-dim)', description: 'Empty states inherit muted readable text.' },
       { output: '--sn-empty-state-padding', inputs: ['geometry.spacing'], expression: '20px', description: 'Empty states use the provider spacing scale for placeholder breathing room.' },
       { output: '--sn-tree-row-selected-bg', inputs: ['--sn-accent-bg-subtle'], expression: 'var(--sn-accent-bg-subtle)', description: 'Tree selection uses the shared subtle accent surface.' },
       { output: '--sn-tree-panel-row-min-height', inputs: ['--sn-tree-row-min-height'], expression: 'var(--sn-tree-row-min-height)', description: 'Tree panels inherit the tree row geometry unless a host specializes the panel.' },
-      { output: '--sn-list-detail-bg', inputs: ['--sn-panel-bg'], expression: 'var(--sn-panel-bg)', description: 'List/detail shells inherit the shared panel surface.' },
-      { output: '--sn-list-detail-border', inputs: ['--sn-node-border'], expression: 'var(--sn-node-border)', description: 'List/detail shell dividers follow the provider border.' },
-      { output: '--sn-success-bg-hover', inputs: ['component.successBackgroundHover'], expression: 'color-mix(in oklab, var(--sn-success-color) 28%, transparent)', description: 'Positive action hover backgrounds follow the success branch.' },
-      { output: '--sn-success-border-hover', inputs: ['component.successBorderHover'], expression: 'color-mix(in oklab, var(--sn-success-color) 52%, transparent)', description: 'Positive action hover borders follow the success branch.' },
+      { output: '--sn-list-detail-bg', inputs: ['--sn-sys-surface-panel'], expression: 'var(--sn-sys-surface-panel)', description: 'List/detail shells inherit the shared panel surface.' },
+      { output: '--sn-list-detail-border', inputs: ['--sn-sys-outline'], expression: 'var(--sn-sys-outline)', description: 'List/detail shell dividers follow the provider border.' },
+      { output: '--sn-success-bg-hover', inputs: ['component.successBackgroundHover'], expression: 'color-mix(in oklab, var(--sn-sys-success) 28%, transparent)', description: 'Positive action hover backgrounds follow the success branch.' },
+      { output: '--sn-success-border-hover', inputs: ['component.successBorderHover'], expression: 'color-mix(in oklab, var(--sn-sys-success) 52%, transparent)', description: 'Positive action hover borders follow the success branch.' },
       { output: '--sn-subgraph-bg', inputs: ['component.subgraphBackground'], expression: 'var(--sn-subgraph-accent) gradient token', description: 'Subgraph action backgrounds are provider-owned gradient tokens.' },
       { output: '--sn-subgraph-bg-hover', inputs: ['component.subgraphBackgroundHover'], expression: 'var(--sn-subgraph-accent) hover gradient token', description: 'Subgraph action hover backgrounds are provider-owned gradient tokens.' },
       { output: '--sn-subgraph-border', inputs: ['component.subgraphBorder'], expression: 'color-mix(in oklab, var(--sn-subgraph-accent) 30%, transparent)', description: 'Subgraph action borders follow the data accent branch.' },
       { output: '--sn-subgraph-border-hover', inputs: ['component.subgraphBorderHover'], expression: 'color-mix(in oklab, var(--sn-subgraph-accent) 50%, transparent)', description: 'Subgraph action hover borders follow the data accent branch.' },
-      { output: '--sn-xr-panel-bg', inputs: ['--sn-panel-bg'], expression: 'var(--sn-panel-bg)', description: 'XR panel materials inherit provider panel surfaces.' },
-      { output: '--sn-xr-panel-border', inputs: ['--sn-node-border'], expression: 'var(--sn-node-border)', description: 'XR panel edges follow the shared provider border.' },
+      { output: '--sn-xr-panel-bg', inputs: ['--sn-sys-surface-panel'], expression: 'var(--sn-sys-surface-panel)', description: 'XR panel materials inherit provider panel surfaces.' },
+      { output: '--sn-xr-panel-border', inputs: ['--sn-sys-outline'], expression: 'var(--sn-sys-outline)', description: 'XR panel edges follow the shared provider border.' },
       { output: '--sn-xr-panel-radius', inputs: ['--sn-node-radius'], expression: 'var(--sn-node-radius)', description: 'XR panel geometry follows the provider radius cascade.' },
       { output: '--sn-xr-panel-shadow', inputs: ['--sn-node-shadow'], expression: 'var(--sn-node-shadow)', description: 'XR panel elevation follows the provider shadow cascade.' },
-      { output: '--sn-xr-pointer-color', inputs: ['--sn-node-selected'], expression: 'var(--sn-node-selected)', description: 'XR pointer feedback follows the shared selected/accent color.' },
-      { output: '--sn-composer-bg', inputs: ['--sn-node-bg'], expression: 'var(--sn-node-bg)', description: 'Chat composer inherits the normal node surface.' },
-      { output: '--sn-tabs-active-bg', inputs: ['--sn-node-bg'], expression: 'var(--sn-node-bg)', description: 'Active project tabs align with node surfaces.' },
-      { output: '--sn-tabs-accent', inputs: ['--sn-node-selected'], expression: 'var(--sn-node-selected)', description: 'Project tab icons inherit the shared selected/accent color unless the host supplies a semantic tab accent.' },
-      { output: '--sn-source-editor-bg', inputs: ['--sn-bg'], expression: 'var(--sn-bg)', description: 'Source editing uses the root background for code contrast.' },
+      { output: '--sn-xr-pointer-color', inputs: ['--sn-sys-accent'], expression: 'var(--sn-sys-accent)', description: 'XR pointer feedback follows the shared selected/accent color.' },
+      { output: '--sn-composer-bg', inputs: ['--sn-sys-surface-raised'], expression: 'var(--sn-sys-surface-raised)', description: 'Chat composer inherits the normal node surface.' },
+      { output: '--sn-tabs-active-bg', inputs: ['--sn-sys-surface-raised'], expression: 'var(--sn-sys-surface-raised)', description: 'Active project tabs align with node surfaces.' },
+      { output: '--sn-tabs-accent', inputs: ['--sn-sys-accent'], expression: 'var(--sn-sys-accent)', description: 'Project tab icons inherit the shared selected/accent color unless the host supplies a semantic tab accent.' },
+      { output: '--sn-source-editor-bg', inputs: ['--sn-sys-surface'], expression: 'var(--sn-sys-surface)', description: 'Source editing uses the root background for code contrast.' },
       { output: '--sn-syntax-keyword', inputs: ['syntax.keyword'], expression: 'hsl(var(--sn-hue-danger) var(--sn-sat-vivid) 82%)', description: 'Code keywords derive from the status hue cascade.' },
       { output: '--sn-syntax-string', inputs: ['syntax.string'], expression: 'hsl(var(--sn-hue-warning) var(--sn-sat-vivid) 65%)', description: 'Code strings derive from the warning hue cascade.' },
-      { output: '--sn-syntax-comment', inputs: ['--sn-text-dim'], expression: 'var(--sn-text-dim)', description: 'Code comments inherit muted text.' },
-      { output: '--sn-diagnostic-error-bg', inputs: ['--sn-danger-color'], expression: 'color-mix(in oklab, var(--sn-danger-color) 7%, transparent)', description: 'Diagnostic error backgrounds derive from danger color.' },
-      { output: '--sn-diagnostic-warning-bg', inputs: ['--sn-warning-color'], expression: 'color-mix(in oklab, var(--sn-warning-color) 5%, transparent)', description: 'Diagnostic warning backgrounds derive from warning color.' },
+      { output: '--sn-syntax-comment', inputs: ['--sn-sys-on-surface-dim'], expression: 'var(--sn-sys-on-surface-dim)', description: 'Code comments inherit muted text.' },
+      { output: '--sn-diagnostic-error-bg', inputs: ['--sn-sys-danger'], expression: 'color-mix(in oklab, var(--sn-sys-danger) 7%, transparent)', description: 'Diagnostic error backgrounds derive from danger color.' },
+      { output: '--sn-diagnostic-warning-bg', inputs: ['--sn-sys-warning'], expression: 'color-mix(in oklab, var(--sn-sys-warning) 5%, transparent)', description: 'Diagnostic warning backgrounds derive from warning color.' },
     ],
   },
 ];
@@ -711,11 +709,11 @@ export let THEME_TOKENS = {
       },
       "statusOkBg": {
         "$type": "color",
-        "$value": "color-mix(in oklab, var(--sn-success-color) 12%, transparent)"
+        "$value": "color-mix(in oklab, var(--sn-sys-success) 12%, transparent)"
       },
       "statusErrorBg": {
         "$type": "color",
-        "$value": "color-mix(in oklab, var(--sn-danger-color) 12%, transparent)"
+        "$value": "color-mix(in oklab, var(--sn-sys-danger) 12%, transparent)"
       },
       "messageEventBg": {
         "$type": "color",
@@ -745,11 +743,11 @@ export let THEME_TOKENS = {
       },
       "xrPanelBackground": {
         "$type": "color",
-        "$value": "var(--sn-panel-bg)"
+        "$value": "var(--sn-sys-surface-panel)"
       },
       "xrPanelBorder": {
         "$type": "color",
-        "$value": "var(--sn-node-border)"
+        "$value": "var(--sn-sys-outline)"
       },
       "xrPanelRadius": {
         "$type": "dimension",
@@ -761,11 +759,7 @@ export let THEME_TOKENS = {
       },
       "xrPointerColor": {
         "$type": "color",
-        "$value": "var(--sn-node-selected)"
-      },
-      "nodeHover": {
-        "$type": "color",
-        "$value": "hsl(var(--sn-hue-base) var(--sn-sat-muted) var(--sn-lit-hover))"
+        "$value": "var(--sn-sys-accent)"
       },
       "accentBackground": {
         "$type": "color",
@@ -781,27 +775,19 @@ export let THEME_TOKENS = {
       },
       "successBackground": {
         "$type": "color",
-        "$value": "color-mix(in oklab, var(--sn-success-color) 18%, transparent)"
-      },
-      "successBorder": {
-        "$type": "color",
-        "$value": "color-mix(in oklab, var(--sn-success-color) 32%, transparent)"
+        "$value": "color-mix(in oklab, var(--sn-sys-success) 18%, transparent)"
       },
       "successBackgroundHover": {
         "$type": "color",
-        "$value": "color-mix(in oklab, var(--sn-success-color) 28%, transparent)"
+        "$value": "color-mix(in oklab, var(--sn-sys-success) 28%, transparent)"
       },
       "successBorderHover": {
         "$type": "color",
-        "$value": "color-mix(in oklab, var(--sn-success-color) 52%, transparent)"
+        "$value": "color-mix(in oklab, var(--sn-sys-success) 52%, transparent)"
       },
       "dangerBackground": {
         "$type": "color",
-        "$value": "color-mix(in oklab, var(--sn-danger-color) 18%, transparent)"
-      },
-      "dangerBorder": {
-        "$type": "color",
-        "$value": "color-mix(in oklab, var(--sn-danger-color) 32%, transparent)"
+        "$value": "color-mix(in oklab, var(--sn-sys-danger) 18%, transparent)"
       },
       "subgraphBackground": {
         "$type": "gradient",
@@ -857,15 +843,15 @@ export let THEME_TOKENS = {
       },
       "dialogBackground": {
         "$type": "color",
-        "$value": "var(--sn-panel-bg)"
+        "$value": "var(--sn-sys-surface-panel)"
       },
       "dialogColor": {
         "$type": "color",
-        "$value": "var(--sn-text)"
+        "$value": "var(--sn-sys-on-surface)"
       },
       "dialogBorder": {
         "$type": "color",
-        "$value": "var(--sn-node-border)"
+        "$value": "var(--sn-sys-outline)"
       },
       "dialogBorderWidth": {
         "$type": "dimension",
@@ -917,7 +903,7 @@ export let THEME_TOKENS = {
       },
       "fieldSelectIndicator": {
         "$type": "gradient",
-        "$value": "linear-gradient(45deg, transparent 50%, var(--sn-text-dim) 50%), linear-gradient(135deg, var(--sn-text-dim) 50%, transparent 50%)"
+        "$value": "linear-gradient(45deg, transparent 50%, var(--sn-sys-on-surface-dim) 50%), linear-gradient(135deg, var(--sn-sys-on-surface-dim) 50%, transparent 50%)"
       },
       "fieldToggleBackground": {
         "$type": "color",
@@ -925,11 +911,11 @@ export let THEME_TOKENS = {
       },
       "fieldToggleThumbBackground": {
         "$type": "color",
-        "$value": "var(--sn-text-dim)"
+        "$value": "var(--sn-sys-on-surface-dim)"
       },
       "fieldToggleThumbActiveBackground": {
         "$type": "color",
-        "$value": "var(--sn-text)"
+        "$value": "var(--sn-sys-on-surface)"
       },
       "scrollbarThumb": {
         "$type": "color",
@@ -965,7 +951,7 @@ export let THEME_TOKENS = {
       },
       "nodeActiveBorder": {
         "$type": "color",
-        "$value": "color-mix(in oklab, var(--sn-node-selected) 50%, transparent)"
+        "$value": "color-mix(in oklab, var(--sn-sys-accent) 50%, transparent)"
       },
       "connectionLinecap": {
         "$type": "string",
@@ -981,7 +967,7 @@ export let THEME_TOKENS = {
       },
       "connectionDotStroke": {
         "$type": "color",
-        "$value": "var(--sn-node-bg)"
+        "$value": "var(--sn-sys-surface-raised)"
       },
       "dotOutput": {
         "$type": "color",
@@ -997,7 +983,7 @@ export let THEME_TOKENS = {
       },
       "dotCtrl": {
         "$type": "color",
-        "$value": "var(--sn-success-color)"
+        "$value": "var(--sn-sys-success)"
       },
       "outputPreviewBorder": {
         "$type": "color",
@@ -1005,19 +991,19 @@ export let THEME_TOKENS = {
       },
       "outputPreviewBackground": {
         "$type": "color",
-        "$value": "var(--sn-surface)"
+        "$value": "var(--sn-sys-surface-raised)"
       },
       "outputPreviewMuted": {
         "$type": "color",
-        "$value": "var(--sn-text-dim)"
+        "$value": "var(--sn-sys-on-surface-dim)"
       },
       "outputPreviewTitle": {
         "$type": "color",
-        "$value": "var(--sn-text)"
+        "$value": "var(--sn-sys-on-surface)"
       },
       "outputPreviewLabel": {
         "$type": "color",
-        "$value": "var(--sn-text)"
+        "$value": "var(--sn-sys-on-surface)"
       },
       "outputPreviewGrid": {
         "$type": "color",
@@ -1029,11 +1015,11 @@ export let THEME_TOKENS = {
       },
       "outputPreviewItemBackground": {
         "$type": "color",
-        "$value": "var(--sn-node-bg)"
+        "$value": "var(--sn-sys-surface-raised)"
       },
       "outputPreviewEdgeBackground": {
         "$type": "color",
-        "$value": "var(--sn-node-hover)"
+        "$value": "color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-output-preview-bg))"
       },
       "chatItemIconColor": {
         "$type": "color",
@@ -1041,47 +1027,47 @@ export let THEME_TOKENS = {
       },
       "chatItemChildShadow": {
         "$type": "shadow",
-        "$value": "2px 0 4px color-mix(in oklab, var(--sn-bg) 70%, transparent)"
+        "$value": "2px 0 4px color-mix(in oklab, var(--sn-sys-surface) 70%, transparent)"
       },
       "listItemDisabledColor": {
         "$type": "color",
-        "$value": "var(--sn-text-dim)"
+        "$value": "var(--sn-sys-on-surface-dim)"
       },
       "listItemIconColor": {
         "$type": "color",
-        "$value": "var(--sn-text-dim)"
+        "$value": "var(--sn-sys-on-surface-dim)"
       },
       "listItemLabelColor": {
         "$type": "color",
-        "$value": "var(--sn-text)"
+        "$value": "var(--sn-sys-on-surface)"
       },
       "listItemDescriptionColor": {
         "$type": "color",
-        "$value": "var(--sn-text-dim)"
+        "$value": "var(--sn-sys-on-surface-dim)"
       },
       "listItemMetaColor": {
         "$type": "color",
-        "$value": "var(--sn-text-dim)"
+        "$value": "var(--sn-sys-on-surface-dim)"
       },
       "listDetailColor": {
         "$type": "color",
-        "$value": "var(--sn-text)"
+        "$value": "var(--sn-sys-on-surface)"
       },
       "listDetailIconColor": {
         "$type": "color",
-        "$value": "var(--sn-text-dim)"
+        "$value": "var(--sn-sys-on-surface-dim)"
       },
       "listDetailTitleColor": {
         "$type": "color",
-        "$value": "var(--sn-text)"
+        "$value": "var(--sn-sys-on-surface)"
       },
       "listDetailDescriptionColor": {
         "$type": "color",
-        "$value": "var(--sn-text-dim)"
+        "$value": "var(--sn-sys-on-surface-dim)"
       },
       "sourceEditorPlaceholderColor": {
         "$type": "color",
-        "$value": "var(--sn-text-dim)"
+        "$value": "var(--sn-sys-on-surface-dim)"
       },
       "metricGap": {
         "$type": "dimension",
@@ -1093,15 +1079,15 @@ export let THEME_TOKENS = {
       },
       "metricBorder": {
         "$type": "color",
-        "$value": "var(--sn-node-hover)"
+        "$value": "var(--sn-sys-outline-subtle)"
       },
       "metricColor": {
         "$type": "color",
-        "$value": "var(--sn-text)"
+        "$value": "var(--sn-sys-on-surface)"
       },
       "metricLabelColor": {
         "$type": "color",
-        "$value": "var(--sn-text-dim)"
+        "$value": "var(--sn-sys-on-surface-dim)"
       },
       "metricLabelSize": {
         "$type": "dimension",
@@ -1109,7 +1095,7 @@ export let THEME_TOKENS = {
       },
       "metricValueColor": {
         "$type": "color",
-        "$value": "var(--sn-text)"
+        "$value": "var(--sn-sys-on-surface)"
       },
       "metricValueSize": {
         "$type": "dimension",
@@ -1125,23 +1111,23 @@ export let THEME_TOKENS = {
       },
       "metricSuccessColor": {
         "$type": "color",
-        "$value": "var(--sn-success-color)"
+        "$value": "var(--sn-sys-success)"
       },
       "metricWarningColor": {
         "$type": "color",
-        "$value": "var(--sn-warning-color)"
+        "$value": "var(--sn-sys-warning)"
       },
       "metricErrorColor": {
         "$type": "color",
-        "$value": "var(--sn-danger-color)"
+        "$value": "var(--sn-sys-danger)"
       },
       "dataTableBackground": {
         "$type": "color",
-        "$value": "var(--sn-node-bg)"
+        "$value": "var(--sn-sys-surface-raised)"
       },
       "dataTableBorder": {
         "$type": "color",
-        "$value": "var(--sn-node-border)"
+        "$value": "var(--sn-sys-outline)"
       },
       "dataTableRadius": {
         "$type": "dimension",
@@ -1149,19 +1135,19 @@ export let THEME_TOKENS = {
       },
       "dataTableColor": {
         "$type": "color",
-        "$value": "var(--sn-text)"
+        "$value": "var(--sn-sys-on-surface)"
       },
       "dataTableHeaderBackground": {
         "$type": "color",
-        "$value": "var(--sn-panel-bg)"
+        "$value": "var(--sn-sys-surface-panel)"
       },
       "dataTableHeaderColor": {
         "$type": "color",
-        "$value": "var(--sn-text-dim)"
+        "$value": "var(--sn-sys-on-surface-dim)"
       },
       "dataTableHeaderBorder": {
         "$type": "color",
-        "$value": "var(--sn-node-border)"
+        "$value": "var(--sn-sys-outline)"
       },
       "dataTableHeaderSize": {
         "$type": "dimension",
@@ -1177,7 +1163,7 @@ export let THEME_TOKENS = {
       },
       "dataTableRowBorder": {
         "$type": "color",
-        "$value": "var(--sn-node-hover)"
+        "$value": "var(--sn-sys-outline-subtle)"
       },
       "dataTableCellPadding": {
         "$type": "dimension",
@@ -1213,7 +1199,7 @@ export let THEME_TOKENS = {
       },
       "dataTableEmptyColor": {
         "$type": "color",
-        "$value": "var(--sn-text-dim)"
+        "$value": "var(--sn-sys-on-surface-dim)"
       }
     },
     "geometry": {
@@ -1323,7 +1309,7 @@ export let THEME_TOKENS = {
       },
       "toolbarOcclusionBackground": {
         "$type": "color",
-        "$value": "var(--sn-panel-bg)"
+        "$value": "var(--sn-sys-surface-panel)"
       },
       "loadingLabelSize": {
         "$type": "dimension",
@@ -1511,7 +1497,7 @@ export let THEME_TOKENS = {
       },
       "canvasGraphBackground": {
         "$type": "color",
-        "$value": "var(--sn-bg)"
+        "$value": "var(--sn-sys-surface)"
       },
       "canvasGraphEdge": {
         "$type": "color",
@@ -1519,35 +1505,35 @@ export let THEME_TOKENS = {
       },
       "canvasGraphPulse": {
         "$type": "color",
-        "$value": "var(--sn-node-selected)"
+        "$value": "var(--sn-sys-accent)"
       },
       "canvasGraphDanger": {
         "$type": "color",
-        "$value": "var(--sn-danger-color)"
+        "$value": "var(--sn-sys-danger)"
       },
       "canvasGraphText": {
         "$type": "color",
-        "$value": "var(--sn-text)"
+        "$value": "var(--sn-sys-on-surface)"
       },
       "canvasGraphTextDim": {
         "$type": "color",
-        "$value": "var(--sn-text-dim)"
+        "$value": "var(--sn-sys-on-surface-dim)"
       },
       "canvasGraphPanelBackground": {
         "$type": "color",
-        "$value": "var(--sn-panel-bg)"
+        "$value": "var(--sn-sys-surface-panel)"
       },
       "canvasGraphPanelBorder": {
         "$type": "color",
-        "$value": "var(--sn-node-border)"
+        "$value": "var(--sn-sys-outline)"
       },
       "canvasGraphGhost": {
         "$type": "color",
-        "$value": "var(--sn-text-dim)"
+        "$value": "var(--sn-sys-on-surface-dim)"
       },
       "canvasGraphRadialIcon": {
         "$type": "color",
-        "$value": "var(--sn-bg)"
+        "$value": "var(--sn-sys-surface)"
       },
       "graphCluster0": {
         "$type": "color",
@@ -1867,11 +1853,11 @@ export let THEME_TOKENS = {
       },
       "listDetailBackground": {
         "$type": "color",
-        "$value": "var(--sn-panel-bg)"
+        "$value": "var(--sn-sys-surface-panel)"
       },
       "listDetailBorder": {
         "$type": "color",
-        "$value": "var(--sn-node-border)"
+        "$value": "var(--sn-sys-outline)"
       },
       "listDetailRadius": {
         "$type": "dimension",
@@ -1883,7 +1869,7 @@ export let THEME_TOKENS = {
       },
       "listDetailSidebarBackground": {
         "$type": "color",
-        "$value": "var(--sn-node-bg)"
+        "$value": "var(--sn-sys-surface-raised)"
       },
       "listDetailMainBackground": {
         "$type": "color",
@@ -1907,15 +1893,15 @@ export let THEME_TOKENS = {
       },
       "listDetailTitleColor": {
         "$type": "color",
-        "$value": "var(--sn-text)"
+        "$value": "var(--sn-sys-on-surface)"
       },
       "composerBackground": {
         "$type": "color",
-        "$value": "var(--sn-node-bg)"
+        "$value": "var(--sn-sys-surface-raised)"
       },
       "composerActionBackground": {
         "$type": "color",
-        "$value": "var(--sn-node-hover)"
+        "$value": "color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-composer-bg))"
       },
       "tabsBackground": {
         "$type": "color",
@@ -1923,15 +1909,15 @@ export let THEME_TOKENS = {
       },
       "tabsActiveBackground": {
         "$type": "color",
-        "$value": "var(--sn-node-bg)"
+        "$value": "var(--sn-sys-surface-raised)"
       },
       "tabsAccent": {
         "$type": "color",
-        "$value": "var(--sn-node-selected)"
+        "$value": "var(--sn-sys-accent)"
       },
       "sourceBackground": {
         "$type": "color",
-        "$value": "var(--sn-bg)"
+        "$value": "var(--sn-sys-surface)"
       },
       "sourceHeaderBackground": {
         "$type": "color",
@@ -1939,19 +1925,19 @@ export let THEME_TOKENS = {
       },
       "sourceEditorBackground": {
         "$type": "color",
-        "$value": "var(--sn-bg)"
+        "$value": "var(--sn-sys-surface)"
       },
       "loadingBackground": {
         "$type": "color",
-        "$value": "var(--sn-bg)"
+        "$value": "var(--sn-sys-surface)"
       },
       "loadingLabelColor": {
         "$type": "color",
-        "$value": "var(--sn-text-dim)"
+        "$value": "var(--sn-sys-on-surface-dim)"
       },
       "loadingPhaseColor": {
         "$type": "color",
-        "$value": "var(--sn-node-selected)"
+        "$value": "var(--sn-sys-accent)"
       },
       "loadingTrackBg": {
         "$type": "color",
@@ -1959,15 +1945,15 @@ export let THEME_TOKENS = {
       },
       "loadingBarBg": {
         "$type": "color",
-        "$value": "var(--sn-node-selected)"
+        "$value": "var(--sn-sys-accent)"
       },
       "loadingBarShadow": {
         "$type": "shadow",
-        "$value": "0 0 8px color-mix(in oklab, var(--sn-node-selected) 45%, transparent)"
+        "$value": "0 0 8px color-mix(in oklab, var(--sn-sys-accent) 45%, transparent)"
       },
       "loadingSubColor": {
         "$type": "color",
-        "$value": "var(--sn-text-dim)"
+        "$value": "var(--sn-sys-on-surface-dim)"
       },
       "categoryDirectory": {
         "$type": "color",
@@ -1979,7 +1965,7 @@ export let THEME_TOKENS = {
       },
       "categoryFunction": {
         "$type": "color",
-        "$value": "var(--sn-success-color)"
+        "$value": "var(--sn-sys-success)"
       },
       "categoryClass": {
         "$type": "color",
@@ -2079,7 +2065,7 @@ export let THEME_TOKENS = {
       },
       "typeProfileInfo": {
         "$type": "color",
-        "$value": "var(--sn-success-color)"
+        "$value": "var(--sn-sys-success)"
       },
       "typeBio": {
         "$type": "color",
@@ -2103,7 +2089,7 @@ export let THEME_TOKENS = {
       },
       "accentWarning": {
         "$type": "color",
-        "$value": "var(--sn-warning-color)"
+        "$value": "var(--sn-sys-warning)"
       },
       "statusOkBg": {
         "$type": "color",
@@ -2132,7 +2118,7 @@ export let THEME_TOKENS = {
       "official": {
         "color": {
           "$type": "color",
-          "$value": "var(--sn-node-selected)"
+          "$value": "var(--sn-sys-accent)"
         },
         "background": {
           "$type": "color",
@@ -2142,7 +2128,7 @@ export let THEME_TOKENS = {
       "google": {
         "color": {
           "$type": "color",
-          "$value": "var(--sn-success-color)"
+          "$value": "var(--sn-sys-success)"
         },
         "background": {
           "$type": "color",
@@ -2152,7 +2138,7 @@ export let THEME_TOKENS = {
       "community": {
         "color": {
           "$type": "color",
-          "$value": "var(--sn-warning-color)"
+          "$value": "var(--sn-sys-warning)"
         },
         "background": {
           "$type": "color",
@@ -2162,11 +2148,11 @@ export let THEME_TOKENS = {
       "default": {
         "color": {
           "$type": "color",
-          "$value": "var(--sn-text-dim)"
+          "$value": "var(--sn-sys-on-surface-dim)"
         },
         "background": {
           "$type": "color",
-          "$value": "var(--sn-node-hover)"
+          "$value": "color-mix(in oklab, var(--sn-provider-default-color) 20%, transparent)"
         }
       }
     },
@@ -2181,7 +2167,7 @@ export let THEME_TOKENS = {
       },
       "comment": {
         "$type": "color",
-        "$value": "var(--sn-text-dim)"
+        "$value": "var(--sn-sys-on-surface-dim)"
       },
       "function": {
         "$type": "color",
@@ -2229,7 +2215,7 @@ export let THEME_TOKENS = {
       },
       "templateBracket": {
         "$type": "color",
-        "$value": "var(--sn-text-dim)"
+        "$value": "var(--sn-sys-on-surface-dim)"
       },
       "templateInterpolation": {
         "$type": "color",
@@ -2251,19 +2237,19 @@ export let THEME_TOKENS = {
     "diagnostic": {
       "errorBackground": {
         "$type": "color",
-        "$value": "color-mix(in oklab, var(--sn-danger-color) 7%, transparent)"
+        "$value": "color-mix(in oklab, var(--sn-sys-danger) 7%, transparent)"
       },
       "errorBorder": {
         "$type": "color",
-        "$value": "color-mix(in oklab, var(--sn-danger-color) 55%, transparent)"
+        "$value": "color-mix(in oklab, var(--sn-sys-danger) 55%, transparent)"
       },
       "warningBackground": {
         "$type": "color",
-        "$value": "color-mix(in oklab, var(--sn-warning-color) 5%, transparent)"
+        "$value": "color-mix(in oklab, var(--sn-sys-warning) 5%, transparent)"
       },
       "warningBorder": {
         "$type": "color",
-        "$value": "color-mix(in oklab, var(--sn-warning-color) 45%, transparent)"
+        "$value": "color-mix(in oklab, var(--sn-sys-warning) 45%, transparent)"
       }
     },
     "radius": {
@@ -2295,11 +2281,11 @@ export let THEME_TOKENS = {
       },
       "cellBackground": {
         "$type": "color",
-        "$value": "var(--sn-bg)"
+        "$value": "var(--sn-sys-surface)"
       },
       "cellDot": {
         "$type": "color",
-        "$value": "color-mix(in oklab, var(--sn-text-dim) 55%, var(--sn-bg))"
+        "$value": "color-mix(in oklab, var(--sn-sys-on-surface-dim) 55%, var(--sn-sys-surface))"
       },
       "cellBaseAlpha": {
         "$type": "number",
@@ -2319,7 +2305,7 @@ export let THEME_TOKENS = {
       },
       "cellVignetteEdge": {
         "$type": "color",
-        "$value": "var(--sn-bg)"
+        "$value": "var(--sn-sys-surface)"
       },
       "cellNoise": {
         "$type": "asset",

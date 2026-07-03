@@ -650,7 +650,7 @@ test('panel layout drawer mode has gesture, theme, and metadata contracts', asyn
   assert.match(layout, /--sn-layout-fullscreen-host-top', '0px'/);
   assert.match(styles, /\.fullscreen-tab-bar\s*\{[\s\S]*?top:\s*0;/);
   assert.match(styles, /height:\s*var\(--sn-fullscreen-tab-bar-height,\s*32px\)/);
-  assert.match(styles, /--sn-fullscreen-tab-bar-bg,\s*var\(--sn-bg\)/);
+  assert.match(styles, /--sn-fullscreen-tab-bar-bg,\s*var\(--sn-sys-surface\)/);
   assert.match(styles, /--sn-fullscreen-tab-bg,\s*transparent/);
   assert.match(styles, /--sn-fullscreen-tab-hover-bg,\s*var\(--sn-node-header-bg\)/);
   assert.match(styles, /--sn-fullscreen-tab-active-bg,\s*var\(--sn-node-header-bg\)/);

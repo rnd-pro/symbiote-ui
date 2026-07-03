@@ -1,20 +1,20 @@
 export default /*css*/ `
 :root {
-  --cat-bg: var(--sn-bg, #1a1a1a);
-  --cat-surface: var(--sn-surface, #232323);
-  --cat-text: var(--sn-text, #f0f0f0);
-  --cat-dim: var(--sn-text-dim, #9aa0a6);
+  --cat-bg: var(--sn-sys-surface);
+  --cat-surface: var(--sn-sys-surface-raised);
+  --cat-text: var(--sn-sys-on-surface);
+  --cat-dim: var(--sn-sys-on-surface-dim);
   --cat-border: var(--sn-border, #333);
   --cat-accent-bg: var(--sn-accent-bg, #3b82f6);
   --cat-accent-border: var(--sn-accent-border, #2563eb);
-  --cat-accent: var(--sn-node-selected, #3b82f6);
+  --cat-accent: var(--sn-sys-accent);
   --cat-font: var(--sn-font-family, var(--sn-font, Inter, system-ui, sans-serif));
   --cat-mono: var(--sn-font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
   --cat-radius: var(--sn-radius-md, var(--sn-radius, 8px));
-  --cat-inset: var(--sn-node-bg, #1c1c1c);
+  --cat-inset: var(--sn-sys-surface-raised);
   --cat-success: var(--sn-success, #2ea043);
   --cat-warn: var(--sn-warning, #d29922);
-  --cat-muted: var(--sn-text-dim, #9aa0a6);
+  --cat-muted: var(--sn-sys-on-surface-dim);
 }
 
 * {

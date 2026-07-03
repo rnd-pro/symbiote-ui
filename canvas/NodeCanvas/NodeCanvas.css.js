@@ -8,7 +8,7 @@ export let styles = css`
     height: 100%;
     overflow: hidden;
     position: relative;
-    background-color: var(--sn-bg);
+    background-color: var(--sn-sys-surface);
     background-image: radial-gradient(
       circle,
       var(--sn-grid-dot) 1px,
@@ -180,19 +180,19 @@ export let styles = css`
   }
 
   .sn-conn-path[data-active-conn] {
-    stroke: var(--sn-node-selected, var(--sn-conn-selected, var(--sn-conn-color)));
+    stroke: var(--sn-sys-accent);
     stroke-width: var(--sn-conn-selected-width, 3);
     opacity: 1;
   }
 
   .sn-conn-path[data-dimmed] {
-    stroke: var(--sn-conn-dimmed, var(--sn-text-dim));
+    stroke: var(--sn-conn-dimmed, var(--sn-sys-on-surface-dim));
     stroke-width: var(--sn-conn-width, 2);
     opacity: 0.24;
   }
 
   .sn-conn-drag-proxy {
-    stroke: var(--sn-node-selected, var(--sn-conn-color));
+    stroke: var(--sn-sys-accent);
     stroke-width: var(--sn-conn-selected-width, 3);
     stroke-linecap: var(--sn-conn-linecap, round);
     stroke-linejoin: var(--sn-conn-linejoin, round);
@@ -212,7 +212,7 @@ export let styles = css`
   .sn-conn-dot {
     display: none;
     fill: var(--sn-conn-dot-fill, var(--sn-conn-color));
-    stroke: var(--sn-conn-dot-stroke, var(--sn-node-bg));
+    stroke: var(--sn-conn-dot-stroke, var(--sn-sys-surface-raised));
     stroke-width: var(--sn-conn-dot-stroke-width, var(--sn-socket-border-width));
     r: var(
       --sn-conn-dot-r,
@@ -229,7 +229,7 @@ export let styles = css`
 
   .sn-conn-dot[data-active-conn] {
     opacity: 1;
-    fill: var(--sn-node-selected, var(--sn-conn-color));
+    fill: var(--sn-sys-accent);
   }
 
   .sn-conn-dot[data-dimmed] {
@@ -239,7 +239,7 @@ export let styles = css`
   /* Free dots for unconnected SVG ports */
   .sn-free-dot {
     fill: var(--sn-conn-color);
-    stroke: var(--sn-node-bg);
+    stroke: var(--sn-sys-surface-raised);
     stroke-width: var(--sn-conn-dot-stroke-width, var(--sn-socket-border-width));
     r: var(
       --sn-conn-dot-r,
@@ -282,10 +282,10 @@ export let styles = css`
 
   @keyframes sn-fire-pulse {
     0% {
-      box-shadow: 0 0 0 0 color-mix(in oklab, var(--sn-success-color) 70%, transparent);
+      box-shadow: 0 0 0 0 color-mix(in oklab, var(--sn-sys-success) 70%, transparent);
     }
     50% {
-      box-shadow: 0 0 20px 6px color-mix(in oklab, var(--sn-success-color) 50%, transparent);
+      box-shadow: 0 0 20px 6px color-mix(in oklab, var(--sn-sys-success) 50%, transparent);
     }
     100% {
       box-shadow: 0 0 0 0 transparent;
@@ -299,14 +299,14 @@ export let styles = css`
 
   node-canvas graph-node[data-fire-state='active'] {
     opacity: 1;
-    border-color: var(--sn-success-color);
+    border-color: var(--sn-sys-success);
     animation: sn-fire-pulse var(--sn-animation-duration-fast) var(--sn-transition-easing);
     animation-play-state: var(--sn-animation-play-state);
     z-index: 50;
   }
 
   node-canvas graph-node[data-fire-state='complete'] {
-    border-color: var(--sn-success-border);
+    border-color: color-mix(in oklch, var(--sn-sys-success) 40%, transparent);
     transition: border-color var(--sn-animation-duration-slower) var(--sn-transition-easing);
   }
 
@@ -338,7 +338,7 @@ export let styles = css`
   /* Plus indicator at connection drag endpoint */
   .plus-indicator {
     circle {
-      fill: var(--sn-node-bg);
+      fill: var(--sn-sys-surface-raised);
       stroke: var(--sn-conn-color);
       stroke-width: var(--sn-plus-indicator-stroke-width, 1.5);
       opacity: 0.9;
@@ -411,36 +411,36 @@ export let styles = css`
 
   .sn-conn-arrow[data-active-conn] {
     opacity: 1;
-    fill: var(--sn-node-selected, var(--sn-conn-color));
+    fill: var(--sn-sys-accent);
   }
 
   .sn-conn-arrow[data-dimmed] {
-    fill: var(--sn-conn-dimmed, var(--sn-text-dim));
+    fill: var(--sn-conn-dimmed, var(--sn-sys-on-surface-dim));
     opacity: 0.24;
   }
 
   /* Fire trace: sequential node execution highlighting */
   @keyframes sn-fire-pulse {
     0% {
-      box-shadow: 0 0 0 0 color-mix(in oklab, var(--sn-success-color) 60%, transparent);
+      box-shadow: 0 0 0 0 color-mix(in oklab, var(--sn-sys-success) 60%, transparent);
     }
     50% {
-      box-shadow: 0 0 16px 4px color-mix(in oklab, var(--sn-success-color) 40%, transparent);
+      box-shadow: 0 0 16px 4px color-mix(in oklab, var(--sn-sys-success) 40%, transparent);
     }
     100% {
-      box-shadow: 0 0 0 0 color-mix(in oklab, var(--sn-success-color) 0%, transparent);
+      box-shadow: 0 0 0 0 color-mix(in oklab, var(--sn-sys-success) 0%, transparent);
     }
   }
 
   graph-node[data-fire-state='active'] {
-    border-color: var(--sn-success-color) !important;
+    border-color: var(--sn-sys-success) !important;
     animation: sn-fire-pulse var(--sn-animation-duration-fast) var(--sn-transition-easing);
     animation-play-state: var(--sn-animation-play-state);
     z-index: 50;
   }
 
   graph-node[data-fire-state='done'] {
-    border-color: color-mix(in oklab, var(--sn-success-color) 40%, transparent) !important;
+    border-color: color-mix(in oklab, var(--sn-sys-success) 40%, transparent) !important;
     transition: border-color var(--sn-animation-duration-slower) var(--sn-transition-easing);
   }
 
@@ -451,8 +451,8 @@ export let styles = css`
 
   .sn-marquee {
     position: absolute;
-    border: 1px dashed var(--sn-accent-color, #3b82f6);
-    background-color: color-mix(in srgb, var(--sn-accent-color, #3b82f6) 15%, transparent);
+    border: 1px dashed var(--sn-sys-accent);
+    background-color: color-mix(in srgb, var(--sn-sys-accent) 15%, transparent);
     pointer-events: none;
     z-index: 1000;
   }
@@ -460,7 +460,7 @@ export let styles = css`
   .sn-conn-label {
     font-family: var(--sn-font-family, sans-serif);
     font-size: var(--sn-font-size-small, 10px);
-    fill: var(--sn-conn-label-color, var(--sn-text-muted, #8e8e93));
+    fill: var(--sn-conn-label-color, var(--sn-sys-on-surface-faint));
     pointer-events: none;
     user-select: none;
   }

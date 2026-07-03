@@ -10,10 +10,10 @@ sn-floating-panel {
 .sn-floating-container {
   display: flex;
   flex-direction: column;
-  background-color: var(--sn-panel-bg, #1e1e24);
-  border: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
+  background-color: var(--sn-sys-surface-panel);
+  border: 1px solid var(--sn-outline-color-soft, var(--sn-sys-outline-subtle));
   border-radius: var(--sn-panel-radius, 6px);
-  box-shadow: var(--sn-panel-shadow, 0 10px 25px rgba(0,0,0,0.35));
+  box-shadow: var(--sn-panel-shadow, var(--sn-sys-shadow-overlay));
   width: 100%;
   height: 100%;
   overflow: hidden;
@@ -25,8 +25,8 @@ sn-floating-panel {
   align-items: center;
   justify-content: space-between;
   padding: var(--sn-step-4) var(--sn-step-6);
-  background-color: var(--sn-panel-bg, #1e1e24);
-  border-bottom: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
+  background-color: var(--sn-sys-surface-panel);
+  border-bottom: 1px solid var(--sn-outline-color-soft, var(--sn-sys-outline-subtle));
   cursor: move;
   user-select: none;
 }
@@ -34,7 +34,7 @@ sn-floating-panel {
 .sn-floating-title {
   font-size: calc(var(--sn-text-md, 13px) * var(--sn-theme-type-scale, 1));
   font-weight: 500;
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
 }
 
 .sn-floating-actions {
@@ -46,7 +46,7 @@ sn-floating-panel {
 .sn-floating-action-btn {
   background: none;
   border: none;
-  color: var(--sn-text-dim, rgba(255,255,255,0.6));
+  color: var(--sn-sys-on-surface-dim);
   cursor: pointer;
   padding: var(--sn-step-1);
   border-radius: var(--sn-radius-sm);
@@ -55,8 +55,8 @@ sn-floating-panel {
 }
 
 .sn-floating-action-btn:hover {
-  color: var(--sn-text);
-  background-color: var(--sn-node-hover, rgba(255,255,255,0.05));
+  color: var(--sn-sys-on-surface);
+  background-color: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-panel));
 }
 
 .sn-floating-action-icon {
@@ -64,7 +64,8 @@ sn-floating-panel {
 }
 
 .sn-floating-action-btn[data-action="close"]:hover {
-  color: var(--sn-status-error, #ff4d4f);
+  background-color: color-mix(in oklch, var(--sn-sys-danger) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-panel));
+  color: var(--sn-sys-danger);
 }
 
 .sn-floating-body {

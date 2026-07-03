@@ -118,11 +118,11 @@
     },
     "statusOkBg": {
       "$type": "color",
-      "$value": "color-mix(in srgb, var(--sn-success-color) 12%, transparent)"
+      "$value": "color-mix(in srgb, var(--sn-sys-success) 12%, transparent)"
     },
     "statusErrorBg": {
       "$type": "color",
-      "$value": "color-mix(in srgb, var(--sn-danger-color) 12%, transparent)"
+      "$value": "color-mix(in srgb, var(--sn-sys-danger) 12%, transparent)"
     },
     "messageEventBg": {
       "$type": "color",
@@ -152,11 +152,11 @@
     },
     "xrPanelBackground": {
       "$type": "color",
-      "$value": "var(--sn-panel-bg)"
+      "$value": "var(--sn-sys-surface-panel)"
     },
     "xrPanelBorder": {
       "$type": "color",
-      "$value": "var(--sn-node-border)"
+      "$value": "var(--sn-sys-outline)"
     },
     "xrPanelRadius": {
       "$type": "dimension",
@@ -168,11 +168,7 @@
     },
     "xrPointerColor": {
       "$type": "color",
-      "$value": "var(--sn-node-selected)"
-    },
-    "nodeHover": {
-      "$type": "color",
-      "$value": "hsl(var(--sn-hue-base) var(--sn-sat-muted) var(--sn-lit-hover))"
+      "$value": "var(--sn-sys-accent)"
     },
     "accentBackground": {
       "$type": "color",
@@ -188,27 +184,19 @@
     },
     "successBackground": {
       "$type": "color",
-      "$value": "color-mix(in srgb, var(--sn-success-color) 18%, transparent)"
-    },
-    "successBorder": {
-      "$type": "color",
-      "$value": "color-mix(in srgb, var(--sn-success-color) 32%, transparent)"
+      "$value": "color-mix(in srgb, var(--sn-sys-success) 18%, transparent)"
     },
     "successBackgroundHover": {
       "$type": "color",
-      "$value": "color-mix(in srgb, var(--sn-success-color) 28%, transparent)"
+      "$value": "color-mix(in srgb, var(--sn-sys-success) 28%, transparent)"
     },
     "successBorderHover": {
       "$type": "color",
-      "$value": "color-mix(in srgb, var(--sn-success-color) 52%, transparent)"
+      "$value": "color-mix(in srgb, var(--sn-sys-success) 52%, transparent)"
     },
     "dangerBackground": {
       "$type": "color",
-      "$value": "color-mix(in srgb, var(--sn-danger-color) 18%, transparent)"
-    },
-    "dangerBorder": {
-      "$type": "color",
-      "$value": "color-mix(in srgb, var(--sn-danger-color) 32%, transparent)"
+      "$value": "color-mix(in srgb, var(--sn-sys-danger) 18%, transparent)"
     },
     "subgraphBackground": {
       "$type": "gradient",
@@ -264,15 +252,15 @@
     },
     "dialogBackground": {
       "$type": "color",
-      "$value": "var(--sn-panel-bg)"
+      "$value": "var(--sn-sys-surface-panel)"
     },
     "dialogColor": {
       "$type": "color",
-      "$value": "var(--sn-text)"
+      "$value": "var(--sn-sys-on-surface)"
     },
     "dialogBorder": {
       "$type": "color",
-      "$value": "var(--sn-node-border)"
+      "$value": "var(--sn-sys-outline)"
     },
     "dialogBorderWidth": {
       "$type": "dimension",
@@ -324,7 +312,7 @@
     },
     "fieldSelectIndicator": {
       "$type": "gradient",
-      "$value": "linear-gradient(45deg, transparent 50%, var(--sn-text-dim) 50%), linear-gradient(135deg, var(--sn-text-dim) 50%, transparent 50%)"
+      "$value": "linear-gradient(45deg, transparent 50%, var(--sn-sys-on-surface-dim) 50%), linear-gradient(135deg, var(--sn-sys-on-surface-dim) 50%, transparent 50%)"
     },
     "fieldToggleBackground": {
       "$type": "color",
@@ -332,11 +320,11 @@
     },
     "fieldToggleThumbBackground": {
       "$type": "color",
-      "$value": "var(--sn-text-dim)"
+      "$value": "var(--sn-sys-on-surface-dim)"
     },
     "fieldToggleThumbActiveBackground": {
       "$type": "color",
-      "$value": "var(--sn-text)"
+      "$value": "var(--sn-sys-on-surface)"
     },
     "scrollbarThumb": {
       "$type": "color",
@@ -372,7 +360,7 @@
     },
     "nodeActiveBorder": {
       "$type": "color",
-      "$value": "color-mix(in srgb, var(--sn-node-selected) 50%, transparent)"
+      "$value": "color-mix(in srgb, var(--sn-sys-accent) 50%, transparent)"
     },
     "connectionLinecap": {
       "$type": "string",
@@ -388,7 +376,7 @@
     },
     "connectionDotStroke": {
       "$type": "color",
-      "$value": "var(--sn-node-bg)"
+      "$value": "var(--sn-sys-surface-raised)"
     },
     "dotOutput": {
       "$type": "color",
@@ -404,7 +392,7 @@
     },
     "dotCtrl": {
       "$type": "color",
-      "$value": "var(--sn-success-color)"
+      "$value": "var(--sn-sys-success)"
     },
     "outputPreviewBorder": {
       "$type": "color",
@@ -412,19 +400,19 @@
     },
     "outputPreviewBackground": {
       "$type": "color",
-      "$value": "var(--sn-surface)"
+      "$value": "var(--sn-sys-surface-raised)"
     },
     "outputPreviewMuted": {
       "$type": "color",
-      "$value": "var(--sn-text-dim)"
+      "$value": "var(--sn-sys-on-surface-dim)"
     },
     "outputPreviewTitle": {
       "$type": "color",
-      "$value": "var(--sn-text)"
+      "$value": "var(--sn-sys-on-surface)"
     },
     "outputPreviewLabel": {
       "$type": "color",
-      "$value": "var(--sn-text)"
+      "$value": "var(--sn-sys-on-surface)"
     },
     "outputPreviewGrid": {
       "$type": "color",
@@ -436,11 +424,11 @@
     },
     "outputPreviewItemBackground": {
       "$type": "color",
-      "$value": "var(--sn-node-bg)"
+      "$value": "var(--sn-sys-surface-raised)"
     },
     "outputPreviewEdgeBackground": {
       "$type": "color",
-      "$value": "var(--sn-node-hover)"
+      "$value": "color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-output-preview-bg))"
     },
     "chatItemIconColor": {
       "$type": "color",
@@ -448,47 +436,47 @@
     },
     "chatItemChildShadow": {
       "$type": "shadow",
-      "$value": "2px 0 4px color-mix(in srgb, var(--sn-bg) 70%, transparent)"
+      "$value": "2px 0 4px color-mix(in srgb, var(--sn-sys-surface) 70%, transparent)"
     },
     "listItemDisabledColor": {
       "$type": "color",
-      "$value": "var(--sn-text-dim)"
+      "$value": "var(--sn-sys-on-surface-dim)"
     },
     "listItemIconColor": {
       "$type": "color",
-      "$value": "var(--sn-text-dim)"
+      "$value": "var(--sn-sys-on-surface-dim)"
     },
     "listItemLabelColor": {
       "$type": "color",
-      "$value": "var(--sn-text)"
+      "$value": "var(--sn-sys-on-surface)"
     },
     "listItemDescriptionColor": {
       "$type": "color",
-      "$value": "var(--sn-text-dim)"
+      "$value": "var(--sn-sys-on-surface-dim)"
     },
     "listItemMetaColor": {
       "$type": "color",
-      "$value": "var(--sn-text-dim)"
+      "$value": "var(--sn-sys-on-surface-dim)"
     },
     "listDetailColor": {
       "$type": "color",
-      "$value": "var(--sn-text)"
+      "$value": "var(--sn-sys-on-surface)"
     },
     "listDetailIconColor": {
       "$type": "color",
-      "$value": "var(--sn-text-dim)"
+      "$value": "var(--sn-sys-on-surface-dim)"
     },
     "listDetailTitleColor": {
       "$type": "color",
-      "$value": "var(--sn-text)"
+      "$value": "var(--sn-sys-on-surface)"
     },
     "listDetailDescriptionColor": {
       "$type": "color",
-      "$value": "var(--sn-text-dim)"
+      "$value": "var(--sn-sys-on-surface-dim)"
     },
     "sourceEditorPlaceholderColor": {
       "$type": "color",
-      "$value": "var(--sn-text-dim)"
+      "$value": "var(--sn-sys-on-surface-dim)"
     },
     "metricGap": {
       "$type": "dimension",
@@ -500,15 +488,15 @@
     },
     "metricBorder": {
       "$type": "color",
-      "$value": "var(--sn-node-hover)"
+      "$value": "var(--sn-sys-outline-subtle)"
     },
     "metricColor": {
       "$type": "color",
-      "$value": "var(--sn-text)"
+      "$value": "var(--sn-sys-on-surface)"
     },
     "metricLabelColor": {
       "$type": "color",
-      "$value": "var(--sn-text-dim)"
+      "$value": "var(--sn-sys-on-surface-dim)"
     },
     "metricLabelSize": {
       "$type": "dimension",
@@ -516,7 +504,7 @@
     },
     "metricValueColor": {
       "$type": "color",
-      "$value": "var(--sn-text)"
+      "$value": "var(--sn-sys-on-surface)"
     },
     "metricValueSize": {
       "$type": "dimension",
@@ -532,23 +520,23 @@
     },
     "metricSuccessColor": {
       "$type": "color",
-      "$value": "var(--sn-success-color)"
+      "$value": "var(--sn-sys-success)"
     },
     "metricWarningColor": {
       "$type": "color",
-      "$value": "var(--sn-warning-color)"
+      "$value": "var(--sn-sys-warning)"
     },
     "metricErrorColor": {
       "$type": "color",
-      "$value": "var(--sn-danger-color)"
+      "$value": "var(--sn-sys-danger)"
     },
     "dataTableBackground": {
       "$type": "color",
-      "$value": "var(--sn-node-bg)"
+      "$value": "var(--sn-sys-surface-raised)"
     },
     "dataTableBorder": {
       "$type": "color",
-      "$value": "var(--sn-node-border)"
+      "$value": "var(--sn-sys-outline)"
     },
     "dataTableRadius": {
       "$type": "dimension",
@@ -556,19 +544,19 @@
     },
     "dataTableColor": {
       "$type": "color",
-      "$value": "var(--sn-text)"
+      "$value": "var(--sn-sys-on-surface)"
     },
     "dataTableHeaderBackground": {
       "$type": "color",
-      "$value": "var(--sn-panel-bg)"
+      "$value": "var(--sn-sys-surface-panel)"
     },
     "dataTableHeaderColor": {
       "$type": "color",
-      "$value": "var(--sn-text-dim)"
+      "$value": "var(--sn-sys-on-surface-dim)"
     },
     "dataTableHeaderBorder": {
       "$type": "color",
-      "$value": "var(--sn-node-border)"
+      "$value": "var(--sn-sys-outline)"
     },
     "dataTableHeaderSize": {
       "$type": "dimension",
@@ -584,7 +572,7 @@
     },
     "dataTableRowBorder": {
       "$type": "color",
-      "$value": "var(--sn-node-hover)"
+      "$value": "var(--sn-sys-outline-subtle)"
     },
     "dataTableCellPadding": {
       "$type": "dimension",
@@ -620,7 +608,7 @@
     },
     "dataTableEmptyColor": {
       "$type": "color",
-      "$value": "var(--sn-text-dim)"
+      "$value": "var(--sn-sys-on-surface-dim)"
     }
   },
   "geometry": {
@@ -730,7 +718,7 @@
     },
     "toolbarOcclusionBackground": {
       "$type": "color",
-      "$value": "var(--sn-panel-bg)"
+      "$value": "var(--sn-sys-surface-panel)"
     },
     "loadingLabelSize": {
       "$type": "dimension",
@@ -918,7 +906,7 @@
     },
     "canvasGraphBackground": {
       "$type": "color",
-      "$value": "var(--sn-bg)"
+      "$value": "var(--sn-sys-surface)"
     },
     "canvasGraphEdge": {
       "$type": "color",
@@ -926,35 +914,35 @@
     },
     "canvasGraphPulse": {
       "$type": "color",
-      "$value": "var(--sn-node-selected)"
+      "$value": "var(--sn-sys-accent)"
     },
     "canvasGraphDanger": {
       "$type": "color",
-      "$value": "var(--sn-danger-color)"
+      "$value": "var(--sn-sys-danger)"
     },
     "canvasGraphText": {
       "$type": "color",
-      "$value": "var(--sn-text)"
+      "$value": "var(--sn-sys-on-surface)"
     },
     "canvasGraphTextDim": {
       "$type": "color",
-      "$value": "var(--sn-text-dim)"
+      "$value": "var(--sn-sys-on-surface-dim)"
     },
     "canvasGraphPanelBackground": {
       "$type": "color",
-      "$value": "var(--sn-panel-bg)"
+      "$value": "var(--sn-sys-surface-panel)"
     },
     "canvasGraphPanelBorder": {
       "$type": "color",
-      "$value": "var(--sn-node-border)"
+      "$value": "var(--sn-sys-outline)"
     },
     "canvasGraphGhost": {
       "$type": "color",
-      "$value": "var(--sn-text-dim)"
+      "$value": "var(--sn-sys-on-surface-dim)"
     },
     "canvasGraphRadialIcon": {
       "$type": "color",
-      "$value": "var(--sn-bg)"
+      "$value": "var(--sn-sys-surface)"
     },
     "graphCluster0": {
       "$type": "color",
@@ -1274,11 +1262,11 @@
     },
     "listDetailBackground": {
       "$type": "color",
-      "$value": "var(--sn-panel-bg)"
+      "$value": "var(--sn-sys-surface-panel)"
     },
     "listDetailBorder": {
       "$type": "color",
-      "$value": "var(--sn-node-border)"
+      "$value": "var(--sn-sys-outline)"
     },
     "listDetailRadius": {
       "$type": "dimension",
@@ -1290,7 +1278,7 @@
     },
     "listDetailSidebarBackground": {
       "$type": "color",
-      "$value": "var(--sn-node-bg)"
+      "$value": "var(--sn-sys-surface-raised)"
     },
     "listDetailMainBackground": {
       "$type": "color",
@@ -1314,15 +1302,15 @@
     },
     "listDetailTitleColor": {
       "$type": "color",
-      "$value": "var(--sn-text)"
+      "$value": "var(--sn-sys-on-surface)"
     },
     "composerBackground": {
       "$type": "color",
-      "$value": "var(--sn-node-bg)"
+      "$value": "var(--sn-sys-surface-raised)"
     },
     "composerActionBackground": {
       "$type": "color",
-      "$value": "var(--sn-node-hover)"
+      "$value": "color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-composer-bg))"
     },
     "tabsBackground": {
       "$type": "color",
@@ -1330,15 +1318,15 @@
     },
     "tabsActiveBackground": {
       "$type": "color",
-      "$value": "var(--sn-node-bg)"
+      "$value": "var(--sn-sys-surface-raised)"
     },
     "tabsAccent": {
       "$type": "color",
-      "$value": "var(--sn-node-selected)"
+      "$value": "var(--sn-sys-accent)"
     },
     "sourceBackground": {
       "$type": "color",
-      "$value": "var(--sn-bg)"
+      "$value": "var(--sn-sys-surface)"
     },
     "sourceHeaderBackground": {
       "$type": "color",
@@ -1346,19 +1334,19 @@
     },
     "sourceEditorBackground": {
       "$type": "color",
-      "$value": "var(--sn-bg)"
+      "$value": "var(--sn-sys-surface)"
     },
     "loadingBackground": {
       "$type": "color",
-      "$value": "var(--sn-bg)"
+      "$value": "var(--sn-sys-surface)"
     },
     "loadingLabelColor": {
       "$type": "color",
-      "$value": "var(--sn-text-dim)"
+      "$value": "var(--sn-sys-on-surface-dim)"
     },
     "loadingPhaseColor": {
       "$type": "color",
-      "$value": "var(--sn-node-selected)"
+      "$value": "var(--sn-sys-accent)"
     },
     "loadingTrackBg": {
       "$type": "color",
@@ -1366,15 +1354,15 @@
     },
     "loadingBarBg": {
       "$type": "color",
-      "$value": "var(--sn-node-selected)"
+      "$value": "var(--sn-sys-accent)"
     },
     "loadingBarShadow": {
       "$type": "shadow",
-      "$value": "0 0 8px color-mix(in srgb, var(--sn-node-selected) 45%, transparent)"
+      "$value": "0 0 8px color-mix(in srgb, var(--sn-sys-accent) 45%, transparent)"
     },
     "loadingSubColor": {
       "$type": "color",
-      "$value": "var(--sn-text-dim)"
+      "$value": "var(--sn-sys-on-surface-dim)"
     },
     "categoryDirectory": {
       "$type": "color",
@@ -1386,7 +1374,7 @@
     },
     "categoryFunction": {
       "$type": "color",
-      "$value": "var(--sn-success-color)"
+      "$value": "var(--sn-sys-success)"
     },
     "categoryClass": {
       "$type": "color",
@@ -1410,7 +1398,7 @@
     },
     "typeProfileInfo": {
       "$type": "color",
-      "$value": "var(--sn-success-color)"
+      "$value": "var(--sn-sys-success)"
     },
     "typeBio": {
       "$type": "color",
@@ -1434,7 +1422,7 @@
     },
     "accentWarning": {
       "$type": "color",
-      "$value": "var(--sn-warning-color)"
+      "$value": "var(--sn-sys-warning)"
     },
     "statusOkBg": {
       "$type": "color",
@@ -1463,7 +1451,7 @@
     "official": {
       "color": {
         "$type": "color",
-        "$value": "var(--sn-node-selected)"
+        "$value": "var(--sn-sys-accent)"
       },
       "background": {
         "$type": "color",
@@ -1473,7 +1461,7 @@
     "google": {
       "color": {
         "$type": "color",
-        "$value": "var(--sn-success-color)"
+        "$value": "var(--sn-sys-success)"
       },
       "background": {
         "$type": "color",
@@ -1483,7 +1471,7 @@
     "community": {
       "color": {
         "$type": "color",
-        "$value": "var(--sn-warning-color)"
+        "$value": "var(--sn-sys-warning)"
       },
       "background": {
         "$type": "color",
@@ -1493,11 +1481,11 @@
     "default": {
       "color": {
         "$type": "color",
-        "$value": "var(--sn-text-dim)"
+        "$value": "var(--sn-sys-on-surface-dim)"
       },
       "background": {
         "$type": "color",
-        "$value": "var(--sn-node-hover)"
+        "$value": "color-mix(in srgb, var(--sn-provider-default-color) 20%, transparent)"
       }
     }
   },
@@ -1512,7 +1500,7 @@
     },
     "comment": {
       "$type": "color",
-      "$value": "var(--sn-text-dim)"
+      "$value": "var(--sn-sys-on-surface-dim)"
     },
     "function": {
       "$type": "color",
@@ -1560,7 +1548,7 @@
     },
     "templateBracket": {
       "$type": "color",
-      "$value": "var(--sn-text-dim)"
+      "$value": "var(--sn-sys-on-surface-dim)"
     },
     "templateInterpolation": {
       "$type": "color",
@@ -1582,19 +1570,19 @@
   "diagnostic": {
     "errorBackground": {
       "$type": "color",
-      "$value": "color-mix(in srgb, var(--sn-danger-color) 7%, transparent)"
+      "$value": "color-mix(in srgb, var(--sn-sys-danger) 7%, transparent)"
     },
     "errorBorder": {
       "$type": "color",
-      "$value": "color-mix(in srgb, var(--sn-danger-color) 55%, transparent)"
+      "$value": "color-mix(in srgb, var(--sn-sys-danger) 55%, transparent)"
     },
     "warningBackground": {
       "$type": "color",
-      "$value": "color-mix(in srgb, var(--sn-warning-color) 5%, transparent)"
+      "$value": "color-mix(in srgb, var(--sn-sys-warning) 5%, transparent)"
     },
     "warningBorder": {
       "$type": "color",
-      "$value": "color-mix(in srgb, var(--sn-warning-color) 45%, transparent)"
+      "$value": "color-mix(in srgb, var(--sn-sys-warning) 45%, transparent)"
     }
   },
   "radius": {
@@ -1626,11 +1614,11 @@
     },
     "cellBackground": {
       "$type": "color",
-      "$value": "var(--sn-bg)"
+      "$value": "var(--sn-sys-surface)"
     },
     "cellDot": {
       "$type": "color",
-      "$value": "color-mix(in srgb, var(--sn-text-dim) 55%, var(--sn-bg))"
+      "$value": "color-mix(in srgb, var(--sn-sys-on-surface-dim) 55%, var(--sn-sys-surface))"
     },
     "cellBaseAlpha": {
       "$type": "number",
@@ -1650,7 +1638,7 @@
     },
     "cellVignetteEdge": {
       "$type": "color",
-      "$value": "var(--sn-bg)"
+      "$value": "var(--sn-sys-surface)"
     },
     "cellNoise": {
       "$type": "asset",

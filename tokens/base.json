@@ -1,15 +1,15 @@
 {
   "$schema": "https://design-tokens.github.io/community-group/format/",
   "color": {
-    "background": { "$type": "color", "$value": "var(--sn-bg)" },
-    "surface": { "$type": "color", "$value": "var(--sn-node-bg)" },
-    "border": { "$type": "color", "$value": "var(--sn-node-border)" },
-    "text": { "$type": "color", "$value": "var(--sn-text)" },
-    "textDim": { "$type": "color", "$value": "var(--sn-text-dim)" },
-    "accent": { "$type": "color", "$value": "var(--sn-node-selected)" },
-    "success": { "$type": "color", "$value": "var(--sn-success-color)" },
-    "warning": { "$type": "color", "$value": "var(--sn-warning-color)" },
-    "danger": { "$type": "color", "$value": "var(--sn-danger-color)" }
+    "background": { "$type": "color", "$value": "var(--sn-sys-surface)" },
+    "surface": { "$type": "color", "$value": "var(--sn-sys-surface-raised)" },
+    "border": { "$type": "color", "$value": "var(--sn-sys-outline)" },
+    "text": { "$type": "color", "$value": "var(--sn-sys-on-surface)" },
+    "textDim": { "$type": "color", "$value": "var(--sn-sys-on-surface-dim)" },
+    "accent": { "$type": "color", "$value": "var(--sn-sys-accent)" },
+    "success": { "$type": "color", "$value": "var(--sn-sys-success)" },
+    "warning": { "$type": "color", "$value": "var(--sn-sys-warning)" },
+    "danger": { "$type": "color", "$value": "var(--sn-sys-danger)" }
   },
   "size": {
     "grid": { "$type": "dimension", "$value": "var(--sn-grid-size)" },

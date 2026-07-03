@@ -235,17 +235,17 @@ export async function cmdAudit(options = {}) {
     });
   }
 
-  // 5. Token tier direction (wave 1, warning only — docs/cascade-theme-architecture.md,
-  // promoted to error in wave 3). Every --sn-* definition's right-hand var() references must
-  // obey tiers.js's aliasingAllowed(from, to): component→sys→ref→source; domain→ref/sys;
-  // legacy-alias→sys; nothing references component.
+  // 5. Token tier direction (error since wave 3 — docs/cascade-theme-architecture.md).
+  // Every --sn-* definition's right-hand var() references must obey tiers.js's
+  // aliasingAllowed(from, to): component→sys→ref→source; domain→ref/sys; nothing
+  // references component.
   try {
     let cssFiles = findCssFiles(__dirname);
     for (let file of cssFiles) {
       let content = readFileSync(file, 'utf-8');
       let relative = file.replace(__dirname + '/', '');
       for (let finding of findTierViolations(content, { file: relative })) {
-        warnings.push({
+        errors.push({
           type: 'token-tier-direction',
           file: finding.file,
           line: finding.line,
@@ -260,7 +260,7 @@ export async function cmdAudit(options = {}) {
     });
   }
 
-  // 6. No literal colors in component CSS (wave 1, warning only). *.css.js outside themes/ and
+  // 6. No literal colors in component CSS (error since wave 3). *.css.js outside themes/ and
   // tokens/ must resolve colors through a token chain ending in a T2 role; LITERAL_COLOR_ALLOWLIST
   // is the only sanctioned exception. Honors the same escape-comment convention as css-lint.
   try {
@@ -281,7 +281,7 @@ export async function cmdAudit(options = {}) {
         ) ? '' : line)
         .join('\n');
       for (let finding of findLiteralColors(scanned, { file: relative })) {
-        warnings.push({
+        errors.push({
           type: 'no-literal-color-in-components',
           file: finding.file,
           line: finding.line,
@@ -296,7 +296,7 @@ export async function cmdAudit(options = {}) {
     });
   }
 
-  // 7. State-layer usage (wave 1, warning only). hover/active/pressed/selected/dragged
+  // 7. State-layer usage (error since wave 3). hover/active/pressed/selected/dragged
   // pseudo-class or data-state selectors in *.css.js must recolor via color-mix() against one
   // of the --sn-sys-state-*-mix tokens (SYM-017) rather than a hand-rolled color.
   try {
@@ -305,7 +305,7 @@ export async function cmdAudit(options = {}) {
       let content = readFileSync(file, 'utf-8');
       let relative = file.replace(__dirname + '/', '');
       for (let finding of findBespokeStateEffects(content, { file: relative })) {
-        warnings.push({
+        errors.push({
           type: 'state-layer-usage',
           file: finding.file,
           line: finding.line,

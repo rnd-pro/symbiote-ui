@@ -8,7 +8,7 @@ cascade theme system.
 ```
 applyCascadeTheme(element, options)
        │
-       ├── Layer 1: COLOR  →  --sn-bg, --sn-text, --sn-hue-*, --sn-lit-*, ...
+       ├── Layer 1: COLOR  →  --sn-sys-surface, --sn-sys-on-surface, --sn-hue-*, --sn-lit-*, ...
        ├── Layer 2: SKIN   →  --sn-theme-density, --sn-node-*, --sn-layout-*, ...
        └── Layer 3: MOTION →  --sn-transition-*, --sn-theme-motion-scale
 ```
@@ -34,14 +34,13 @@ They inherit to all descendants via the CSS cascade.
 
 | Token | Purpose |
 |-------|---------|
-| `--sn-bg` | Page/app background |
-| `--sn-panel-bg` | Panel/card backgrounds |
-| `--sn-layout-bg` | Layout container (inherits `--sn-bg`) |
-| `--sn-node-bg` | Graph node backgrounds |
-| `--sn-surface` | Generic surface (inherits `--sn-node-bg`) |
-| `--sn-ctx-bg` | Context menu background |
-| `--sn-text` | Primary text color |
-| `--sn-text-dim` | Secondary/muted text |
+| `--sn-sys-surface` | Page/app background |
+| `--sn-sys-surface-panel` | Panel/card backgrounds |
+| `--sn-sys-surface-sunken` | Layout container (inherits `--sn-sys-surface`) |
+| `--sn-sys-surface-raised` | Graph node and generic raised surfaces |
+| `--sn-sys-surface-overlay` | Context menu background |
+| `--sn-sys-on-surface` | Primary text color |
+| `--sn-sys-on-surface-dim` | Secondary/muted text |
 
 ### Semantic Hue Rotation
 

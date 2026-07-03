@@ -127,7 +127,7 @@ export let styles = css`
         inset: 0;
         min-block-size: inherit;
         overflow: hidden;
-        background: var(--sn-layout-bg, var(--sn-bg));
+        background: var(--sn-sys-surface-sunken);
       }
 
       layout-node[node-type='split'],
@@ -150,7 +150,7 @@ export let styles = css`
         position: absolute;
         inset-block: 0;
         box-sizing: border-box;
-        background: var(--sn-layout-drawer-bg, var(--sn-panel-bg, var(--sn-node-bg)));
+        background: var(--sn-layout-drawer-bg, var(--sn-sys-surface-panel));
         background-clip: padding-box;
         isolation: isolate;
         touch-action: pan-y;
@@ -422,8 +422,8 @@ export let styles = css`
       left: 0;
       right: 0;
       height: var(--sn-fullscreen-tab-bar-height, 32px);
-      background: var(--sn-fullscreen-tab-bar-bg, var(--sn-bg));
-      color: var(--sn-fullscreen-tab-bar-color, var(--sn-text));
+      background: var(--sn-fullscreen-tab-bar-bg, var(--sn-sys-surface));
+      color: var(--sn-fullscreen-tab-bar-color, var(--sn-sys-on-surface));
       border-bottom: 1px solid var(--sn-fullscreen-tab-bar-border, transparent);
       display: flex;
       align-items: stretch;
@@ -450,7 +450,7 @@ export let styles = css`
       border-left: none;
       border-right: none;
       background: var(--sn-fullscreen-tab-bg, transparent);
-      color: var(--sn-fullscreen-tab-color, var(--sn-text-dim));
+      color: var(--sn-fullscreen-tab-color, var(--sn-sys-on-surface-dim));
       cursor: pointer;
       font-size: var(--sn-fullscreen-tab-size, 12px);
       font-family: inherit;
@@ -463,8 +463,8 @@ export let styles = css`
       }
 
       &:hover {
-        background: var(--sn-fullscreen-tab-hover-bg, var(--sn-node-header-bg));
-        color: var(--sn-fullscreen-tab-hover-color, var(--sn-text));
+        background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-fullscreen-tab-hover-bg, var(--sn-node-header-bg)));
+        color: var(--sn-fullscreen-tab-hover-color, var(--sn-sys-on-surface));
       }
 
       &[active] {
@@ -473,7 +473,7 @@ export let styles = css`
         position: relative;
         z-index: 1;
         background: var(--sn-fullscreen-tab-active-bg, var(--sn-node-header-bg));
-        color: var(--sn-fullscreen-tab-active-color, var(--sn-text));
+        color: var(--sn-fullscreen-tab-active-color, var(--sn-sys-on-surface));
         border-left: 1px solid var(--sn-fullscreen-tab-border, var(--sn-layout-border));
         border-right: 1px solid var(--sn-fullscreen-tab-border, var(--sn-layout-border));
       }
@@ -482,7 +482,7 @@ export let styles = css`
     .tab-filler {
       flex: 1;
       height: var(--sn-fullscreen-tab-bar-height, 32px);
-      background: var(--sn-fullscreen-tab-bar-bg, var(--sn-bg));
+      background: var(--sn-fullscreen-tab-bar-bg, var(--sn-sys-surface));
     }
   }
 `;

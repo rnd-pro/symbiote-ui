@@ -34,7 +34,7 @@ project-tab-item {
   height: var(--sn-tabs-item-height);
   border: 1px solid var(--sn-tabs-item-border, transparent);
   background: transparent;
-  color: var(--sn-text-dim);
+  color: var(--sn-sys-on-surface-dim);
   cursor: pointer;
   font-size: var(--sn-tabs-item-font-size, 12px);
   font-family: inherit;
@@ -52,9 +52,9 @@ project-tab-item .material-symbols-outlined {
 }
 
 .tab:hover,
-project-tab-item:hover {
-  background: var(--sn-tabs-hover-bg);
-  color: var(--sn-text);
+project-tab-item:hover:not([disabled]) {
+  background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-tabs-bg, transparent));
+  color: var(--sn-sys-on-surface);
 }
 
 project-tab-item[disabled] {
@@ -62,23 +62,18 @@ project-tab-item[disabled] {
   opacity: 0.46;
 }
 
-project-tab-item[disabled]:hover {
-  background: transparent;
-  color: var(--sn-text-dim);
-}
-
 .tab[active],
 project-tab-item[active] {
   background: var(--sn-tabs-active-bg);
   border-color: color-mix(in oklab, var(--tab-accent, var(--sn-tabs-accent)) 44%, transparent);
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
   /* the active tab inverts its background, so derive a legible label colour from
      that background's own lightness instead of the surrounding text colour */
   color: oklch(from var(--sn-tabs-active-bg) calc((l - 0.5) * -1000) 0 0);
 }
 
-.tab:not([active]):not(:hover)::after,
-project-tab-item:not([active]):not(:hover)::after {
+.tab::after,
+project-tab-item::after {
   content: '';
   display: var(--sn-tabs-chrome, block);
   position: absolute;
@@ -87,6 +82,13 @@ project-tab-item:not([active]):not(:hover)::after {
   height: 50%;
   width: 1px;
   background: var(--sn-tabs-divider);
+}
+
+.tab:hover::after,
+.tab[active]::after,
+project-tab-item:hover::after,
+project-tab-item[active]::after {
+  content: none;
 }
 
 .tab:not([active]):not(:hover):has(+ .tab[active])::after,
@@ -129,7 +131,7 @@ project-tab-item:not([active]):not(:hover):last-child::after,
   border-radius: 50%;
   background: transparent;
   border: none;
-  color: var(--sn-text-dim);
+  color: var(--sn-sys-on-surface-dim);
   cursor: pointer;
   font-size: var(--sn-tabs-close-font-size, 14px);
   padding: 0;
@@ -153,8 +155,8 @@ project-tab-item:hover .tab-close:not([hidden]) {
 }
 
 .tab-close:hover {
-  background: color-mix(in oklab, var(--sn-text) 20%, transparent);
-  color: var(--sn-text);
+  background: color-mix(in oklab, var(--sn-sys-on-surface) 20%, transparent);
+  color: var(--sn-sys-on-surface);
 }
 
 .tab-add {
@@ -166,7 +168,7 @@ project-tab-item:hover .tab-close:not([hidden]) {
   border-radius: 50%;
   border: none;
   background: transparent;
-  color: var(--sn-text-dim);
+  color: var(--sn-sys-on-surface-dim);
   cursor: pointer;
   font-size: var(--sn-tabs-add-font-size, 18px);
   transition: background var(--sn-transition-fast) var(--sn-transition-easing), color var(--sn-transition-fast) var(--sn-transition-easing);
@@ -175,8 +177,8 @@ project-tab-item:hover .tab-close:not([hidden]) {
 }
 
 .tab-add:hover {
-  background: color-mix(in oklab, var(--sn-text) 10%, transparent);
-  color: var(--sn-text);
+  background: color-mix(in oklab, var(--sn-sys-on-surface) 10%, transparent);
+  color: var(--sn-sys-on-surface);
 }
 
 .tab-filler {

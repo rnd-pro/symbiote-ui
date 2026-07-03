@@ -412,11 +412,11 @@ export class NodeViewManager {
         path.setAttribute('d', shape.pathData);
         path.setAttribute(
           'fill',
-          `var(--sn-shape-${shape.name}-fill, var(--sn-shape-fill, var(--sn-node-bg)))`
+          `var(--sn-shape-${shape.name}-fill, var(--sn-shape-fill, var(--sn-sys-surface-raised)))`
         );
         path.setAttribute(
           'stroke',
-          `var(--sn-shape-${shape.name}-stroke, var(--sn-shape-stroke, var(--sn-node-border)))`
+          `var(--sn-shape-${shape.name}-stroke, var(--sn-shape-stroke, var(--sn-sys-outline)))`
         );
         path.setAttribute('stroke-width', 'var(--sn-shape-stroke-width, 0.4)');
         path.setAttribute('stroke-linejoin', 'round');

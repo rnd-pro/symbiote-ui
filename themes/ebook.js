@@ -29,7 +29,6 @@ export let EBOOK = {
 
     '--sn-lit-bg': '93%',
     '--sn-lit-surface': '97%',
-    '--sn-lit-border': '82%',
     '--sn-lit-hover': '89%',
     '--sn-lit-text': '15%',
     '--sn-lit-text-dim': '42%',
@@ -41,29 +40,28 @@ export let EBOOK = {
     '--sn-alpha-faint': '0.06',
 
 
-    '--sn-danger-color': 'hsl(var(--sn-hue-danger), var(--sn-sat-vivid), 48%)',
-    '--sn-success-color': 'hsl(var(--sn-hue-success), var(--sn-sat-vivid), 38%)',
-    '--sn-warning-color': 'hsl(var(--sn-hue-warning), var(--sn-sat-vivid), 42%)',
+    '--sn-sys-danger': 'hsl(var(--sn-hue-danger), var(--sn-sat-vivid), 48%)',
+    '--sn-sys-success': 'hsl(var(--sn-hue-success), var(--sn-sat-vivid), 38%)',
+    '--sn-sys-warning': 'hsl(var(--sn-hue-warning), var(--sn-sat-vivid), 42%)',
 
 
-    '--sn-bg': 'hsl(37, 30%, 91%)',
+    '--sn-sys-surface': 'hsl(37, 30%, 91%)',
     '--sn-grid-dot': 'hsla(35, 15%, 50%, 0.12)',
     '--sn-grid-size': '20px',
 
 
-    '--sn-node-bg': 'hsl(40, 33%, 96%)',
-    '--sn-node-border': 'hsl(35, 18%, 80%)',
+    '--sn-sys-surface-raised': 'hsl(40, 33%, 96%)',
+    '--sn-sys-outline': 'hsl(35, 18%, 80%)',
     '--sn-node-radius': '8px',
     '--sn-node-shadow': '0 1px 4px rgba(100, 80, 40, 0.08)',
     '--sn-shadow-color': 'rgba(100, 80, 40, 0.1)',
-    '--sn-node-selected': 'hsl(var(--sn-hue-accent), var(--sn-sat-vivid), var(--sn-lit-accent))',
-    '--sn-node-hover': 'hsl(36, 22%, 88%)',
+    '--sn-sys-accent': 'hsl(var(--sn-hue-accent), var(--sn-sat-vivid), var(--sn-lit-accent))',
     '--sn-node-header-bg': 'hsl(37, 25%, 93%)',
 
 
     '--sn-font': "'Georgia', 'Palatino', 'Times New Roman', serif",
-    '--sn-text': 'hsl(30, 15%, 18%)',
-    '--sn-text-dim': 'hsl(30, 10%, 45%)',
+    '--sn-sys-on-surface': 'hsl(30, 15%, 18%)',
+    '--sn-sys-on-surface-dim': 'hsl(30, 10%, 45%)',
 
 
     '--sn-socket-size': '12px',
@@ -83,7 +81,7 @@ export let EBOOK = {
     '--sn-subgraph-accent': 'var(--sn-cat-data)',
 
 
-    '--sn-ctx-bg': 'hsl(40, 30%, 96%)',
+    '--sn-sys-surface-overlay': 'hsl(40, 30%, 96%)',
     '--sn-ctx-border': 'hsl(35, 15%, 82%)',
     '--sn-ctx-color': 'hsl(30, 12%, 20%)',
     '--sn-ctx-hover': 'hsla(210, 40%, 50%, 0.08)',
@@ -103,8 +101,8 @@ export let EBOOK = {
     '--sn-toolbar-danger-color': 'hsl(4, 55%, 50%)',
 
 
-    '--sn-shape-fill': 'var(--sn-node-bg)',
-    '--sn-shape-stroke': 'var(--sn-node-border)',
+    '--sn-shape-fill': 'var(--sn-sys-surface-raised)',
+    '--sn-shape-stroke': 'var(--sn-sys-outline)',
     '--sn-shape-stroke-width': '1.0',
   },
 };
@@ -124,7 +122,6 @@ export let EBOOK_PALETTE = {
     '--sn-sat-muted': '12%',
     '--sn-lit-bg': '93%',
     '--sn-lit-surface': '97%',
-    '--sn-lit-border': '82%',
     '--sn-lit-hover': '89%',
     '--sn-lit-text': '15%',
     '--sn-lit-text-dim': '42%',

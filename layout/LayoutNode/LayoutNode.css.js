@@ -13,7 +13,7 @@ export let styles = css`
     /* Panel mode */
     &[node-type='panel'] {
       flex-direction: column;
-      background: var(--sn-node-bg);
+      background: var(--sn-sys-surface-raised);
       border: 1px solid var(--sn-layout-border);
       border-radius: var(--sn-frame-radius, 0);
     }
@@ -78,7 +78,7 @@ export let styles = css`
       border: none;
       border-radius: var(--sn-layout-header-button-radius, 4px);
       cursor: pointer;
-      color: var(--sn-text-dim);
+      color: var(--sn-sys-on-surface-dim);
       font-size: var(--sn-layout-header-button-size, 0.75rem);
       box-sizing: border-box;
       min-inline-size: var(--sn-layout-header-button-min-inline-size, 24px);
@@ -95,8 +95,8 @@ export let styles = css`
       }
 
       &:hover {
-        background: var(--sn-node-hover);
-        color: var(--sn-text);
+        background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), transparent);
+        color: var(--sn-sys-on-surface);
       }
 
       .material-symbols-outlined {
@@ -135,8 +135,8 @@ export let styles = css`
       transform: none;
 
       &[active] {
-        background: var(--sn-node-hover);
-        color: var(--sn-text);
+        background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-selected-mix), transparent);
+        color: var(--sn-sys-on-surface);
       }
 
       .material-symbols-outlined + .material-symbols-outlined {
@@ -186,7 +186,7 @@ export let styles = css`
       min-height: var(--sn-layout-menu-min-height, var(--sn-layout-header-min-height, 28px));
       padding: 0;
       border-bottom: 1px solid var(--sn-layout-border);
-      background: color-mix(in oklab, var(--sn-node-header-bg) 88%, var(--sn-bg) 12%);
+      background: color-mix(in oklab, var(--sn-node-header-bg) 88%, var(--sn-sys-surface) 12%);
       overflow: hidden;
       ${themedScrollbarStyles}
     }
@@ -221,7 +221,7 @@ export let styles = css`
       min-width: var(--sn-layout-menu-row-label-width, calc(var(--sn-layout-header-min-height, 28px) * 2.35));
       padding: var(--sn-layout-menu-label-padding, 0 calc(var(--sn-layout-header-min-height, 28px) * 0.32));
       border-inline-end: 1px solid color-mix(in oklab, var(--sn-layout-border) 64%, transparent);
-      color: var(--sn-text-dim);
+      color: var(--sn-sys-on-surface-dim);
       font-size: var(--sn-layout-menu-label-size, calc(var(--sn-layout-header-button-size, 0.75rem) * 0.92));
       letter-spacing: 0;
       text-transform: uppercase;
@@ -253,7 +253,7 @@ export let styles = css`
       border: 1px solid transparent;
       border-radius: var(--sn-layout-header-button-radius, 4px);
       background: transparent;
-      color: var(--sn-text-dim);
+      color: var(--sn-sys-on-surface-dim);
       font: inherit;
       font-size: var(--sn-layout-menu-action-size, var(--sn-layout-header-button-size, 0.75rem));
       white-space: nowrap;
@@ -264,14 +264,14 @@ export let styles = css`
         color var(--sn-transition-fast) var(--sn-transition-easing);
 
       &:hover {
-        background: var(--sn-node-hover);
-        color: var(--sn-text);
+        background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), transparent);
+        color: var(--sn-sys-on-surface);
       }
 
       &[active] {
-        border-color: var(--sn-node-selected);
-        background: color-mix(in oklab, var(--sn-node-selected) 14%, transparent);
-        color: var(--sn-text);
+        border-color: var(--sn-sys-accent);
+        background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-selected-mix), transparent);
+        color: var(--sn-sys-on-surface);
       }
 
       &[disabled] {
@@ -594,11 +594,11 @@ export let styles = css`
     }
 
     .split-resizer:hover {
-      background: var(--sn-layout-resizer-hover-bg);
+      background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-layout-gap-bg));
     }
 
     &[resizing] .split-resizer {
-      background: var(--sn-layout-resizer-hover-bg);
+      background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-dragged-mix), var(--sn-layout-gap-bg));
     }
 
     &[resizing] {

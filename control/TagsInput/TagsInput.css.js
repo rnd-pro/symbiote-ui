@@ -14,15 +14,15 @@ sn-tags-input {
   width: 100%;
   min-height: calc(36px * var(--sn-theme-density, 1));
   padding: var(--sn-step-2, 4px) calc(12px * var(--sn-theme-density, 1));
-  background: var(--sn-field-control-bg, var(--sn-bg, var(--sn-sys-surface)));
+  background: var(--sn-field-control-bg, var(--sn-sys-surface));
   border: 1px solid var(--sn-field-control-border, var(--sn-outline-color-soft, var(--sn-sys-outline-subtle)));
   border-radius: var(--sn-field-control-radius, var(--sn-panel-radius, 6px));
   transition: border-color var(--sn-transition-fast, 120ms);
 }
 
 .sn-tags-container:focus-within {
-  border-color: var(--sn-field-control-focus-border, var(--sn-node-selected, var(--sn-sys-accent)));
-  box-shadow: 0 0 0 2px color-mix(in oklab, var(--sn-node-selected, var(--sn-sys-accent)) 25%, transparent);
+  border-color: var(--sn-field-control-focus-border, var(--sn-sys-accent));
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--sn-sys-accent) 25%, transparent);
 }
 
 .sn-tags-list {
@@ -39,18 +39,18 @@ sn-tags-input {
   align-items: center;
   gap: var(--sn-step-2);
   padding: var(--sn-step-1) var(--sn-step-4);
-  background-color: var(--sn-panel-bg, var(--sn-sys-surface-panel));
+  background-color: var(--sn-sys-surface-panel);
   border: 1px solid var(--sn-outline-color-soft, var(--sn-sys-outline-subtle));
   border-radius: var(--sn-radius-sm);
   font-size: calc(12px * var(--sn-theme-type-scale, 1));
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
   user-select: none;
 }
 
 .sn-tags-chip-remove {
   background: none;
   border: none;
-  color: var(--sn-text-dim, var(--sn-sys-on-surface-dim));
+  color: var(--sn-sys-on-surface-dim);
   cursor: pointer;
   padding: 0;
   display: inline-flex;
@@ -81,7 +81,7 @@ sn-tags-input {
   background: transparent;
   border: none;
   outline: none;
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
   font-size: calc(13px * var(--sn-theme-type-scale, 1));
   padding: var(--sn-step-2) 0;
 }

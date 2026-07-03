@@ -3,8 +3,8 @@ const sharedUiStyles = `
   display: block;
   height: 100%;
   width: 100%;
-  background: var(--sn-panel-bg);
-  color: var(--sn-text);
+  background: var(--sn-sys-surface-panel);
+  color: var(--sn-sys-on-surface);
   overflow: hidden;
   font-family: var(--sn-font);
   font-size: 13px;

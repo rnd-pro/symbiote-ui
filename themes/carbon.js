@@ -28,7 +28,6 @@ export let CARBON = {
 
     '--sn-lit-bg': '10%',
     '--sn-lit-surface': '13%',
-    '--sn-lit-border': '17%',
     '--sn-lit-hover': '27%',
     '--sn-lit-text': '94%',
     '--sn-lit-text-dim': '60%',
@@ -40,29 +39,28 @@ export let CARBON = {
     '--sn-alpha-faint': '0.06',
 
 
-    '--sn-danger-color': '#f44336',
-    '--sn-success-color': '#4caf50',
-    '--sn-warning-color': '#ff9800',
+    '--sn-sys-danger': '#f44336',
+    '--sn-sys-success': '#4caf50',
+    '--sn-sys-warning': '#ff9800',
 
 
-    '--sn-bg': '#1a1a1a',
+    '--sn-sys-surface': '#1a1a1a',
     '--sn-grid-dot': 'rgba(255, 255, 255, 0.06)',
     '--sn-grid-size': '20px',
 
 
-    '--sn-node-bg': '#222222',
-    '--sn-node-border': 'rgba(255, 255, 255, 0.1)',
+    '--sn-sys-surface-raised': '#222222',
+    '--sn-sys-outline': 'rgba(255, 255, 255, 0.1)',
     '--sn-node-radius': '6px',
     '--sn-node-shadow': '0 2px 8px rgba(0, 0, 0, 0.4)',
     '--sn-shadow-color': 'rgba(0, 0, 0, 0.4)',
     '--sn-node-header-bg': '#222222',
-    '--sn-node-selected': '#4c8bf5',
-    '--sn-node-hover': '#444444',
+    '--sn-sys-accent': '#4c8bf5',
 
 
     '--sn-font': "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-    '--sn-text': '#f0f0f0',
-    '--sn-text-dim': '#999999',
+    '--sn-sys-on-surface': '#f0f0f0',
+    '--sn-sys-on-surface-dim': '#999999',
 
 
     '--sn-socket-size': '12px',
@@ -82,7 +80,7 @@ export let CARBON = {
     '--sn-subgraph-accent': 'var(--sn-cat-data)',
 
 
-    '--sn-ctx-bg': '#2a2a2a',
+    '--sn-sys-surface-overlay': '#2a2a2a',
     '--sn-ctx-border': 'rgba(255, 255, 255, 0.1)',
     '--sn-ctx-color': '#f0f0f0',
     '--sn-ctx-hover': 'rgba(76, 139, 245, 0.15)',
@@ -102,8 +100,8 @@ export let CARBON = {
     '--sn-toolbar-danger-color': '#f44336',
 
 
-    '--sn-shape-fill': 'var(--sn-node-bg)',
-    '--sn-shape-stroke': 'var(--sn-node-border)',
+    '--sn-shape-fill': 'var(--sn-sys-surface-raised)',
+    '--sn-shape-stroke': 'var(--sn-sys-outline)',
     '--sn-shape-stroke-width': '0.4',
   },
 };
@@ -123,7 +121,6 @@ export let CARBON_PALETTE = {
     '--sn-sat-muted': '0%',
     '--sn-lit-bg': '10%',
     '--sn-lit-surface': '13%',
-    '--sn-lit-border': '17%',
     '--sn-lit-hover': '27%',
     '--sn-lit-text': '94%',
     '--sn-lit-text-dim': '60%',

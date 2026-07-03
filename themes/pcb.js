@@ -18,23 +18,22 @@ export let PCB_DARK = {
   tokens: {
 
 
-    '--sn-bg': '#1a1a1a',
+    '--sn-sys-surface': '#1a1a1a',
     '--sn-grid-dot': 'rgba(255, 255, 255, 0.04)',
     '--sn-grid-size': '20px',
 
 
-    '--sn-node-bg': '#222222',
-    '--sn-node-border': 'rgba(255, 255, 255, 0.12)',
+    '--sn-sys-surface-raised': '#222222',
+    '--sn-sys-outline': 'rgba(255, 255, 255, 0.12)',
     '--sn-node-shadow': '0 1px 4px rgba(0, 0, 0, 0.5)',
     '--sn-shadow-color': 'rgba(0, 0, 0, 0.5)',
     '--sn-node-header-bg': '#252525',
-    '--sn-node-selected': '#d4a04a',
-    '--sn-node-hover': '#2d2d2d',
+    '--sn-sys-accent': '#d4a04a',
 
 
     '--sn-font': "'Inter', sans-serif",
-    '--sn-text': '#e0e0e0',
-    '--sn-text-dim': '#888888',
+    '--sn-sys-on-surface': '#e0e0e0',
+    '--sn-sys-on-surface-dim': '#888888',
 
 
     '--sn-socket-size': '10px',
@@ -74,7 +73,7 @@ export let PCB_DARK = {
     '--sn-cat-asset': '#8b8b8b',
 
 
-    '--sn-ctx-bg': '#2a2a2a',
+    '--sn-sys-surface-overlay': '#2a2a2a',
     '--sn-ctx-border': 'rgba(255, 255, 255, 0.1)',
     '--sn-ctx-color': '#e0e0e0',
     '--sn-ctx-hover': 'rgba(200, 117, 51, 0.15)',
@@ -94,14 +93,14 @@ export let PCB_DARK = {
     '--sn-toolbar-danger-color': '#f44336',
 
 
-    '--sn-shape-fill': 'var(--sn-node-bg)',
-    '--sn-shape-stroke': 'var(--sn-node-border)',
+    '--sn-shape-fill': 'var(--sn-sys-surface-raised)',
+    '--sn-shape-stroke': 'var(--sn-sys-outline)',
     '--sn-shape-stroke-width': '0.5',
 
 
-    '--sn-danger-color': '#f44336',
-    '--sn-success-color': '#4caf50',
-    '--sn-warning-color': '#ff9800',
+    '--sn-sys-danger': '#f44336',
+    '--sn-sys-success': '#4caf50',
+    '--sn-sys-warning': '#ff9800',
 
 
     '--sn-hue-base': '0',
@@ -115,7 +114,6 @@ export let PCB_DARK = {
     '--sn-sat-muted': '0%',
     '--sn-lit-bg': '10%',
     '--sn-lit-surface': '13%',
-    '--sn-lit-border': '17%',
     '--sn-lit-hover': '18%',
     '--sn-lit-text': '88%',
     '--sn-lit-text-dim': '53%',
@@ -138,9 +136,9 @@ export let PCB_DARK = {
       transform: translateX(-50%);
       width: 16px;
       height: 4px;
-      background: var(--sn-bg, #1a1a1a);
+      background: var(--sn-sys-surface);
       border-radius: 0 0 4px 4px;
-      border: 1px solid var(--sn-node-border, rgba(255,255,255,0.12));
+      border: 1px solid var(--sn-sys-outline);
       border-top: none;
       z-index: 1;
     }
@@ -165,7 +163,7 @@ export let PCB_DARK = {
     .sn-conn-path[data-active-conn] {
       opacity: 1 !important;
       stroke-width: 2.5 !important;
-      stroke: var(--sn-node-selected, #d4a04a) !important;
+      stroke: var(--sn-sys-accent) !important;
     }
 
     /* Dim non-active connections when a node is selected */

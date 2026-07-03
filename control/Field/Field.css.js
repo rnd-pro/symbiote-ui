@@ -3,7 +3,7 @@ sn-field {
   display: block;
   box-sizing: border-box;
   margin-block-end: var(--sn-field-margin-block-end);
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
   font-family: var(--sn-font);
 }
 
@@ -88,7 +88,7 @@ sn-field[disabled] input,
 sn-field[disabled] select,
 sn-field[disabled] textarea {
   cursor: not-allowed;
-  background: var(--sn-field-control-disabled-bg, color-mix(in oklab, var(--sn-text) 5%, transparent));
+  background: var(--sn-field-control-disabled-bg, color-mix(in oklab, var(--sn-sys-on-surface) 5%, transparent));
 }
 
 sn-field[readonly] input,
@@ -170,6 +170,6 @@ sn-field [slot="prefix"],
 sn-field [slot="suffix"] {
   display: inline-flex;
   align-items: center;
-  color: var(--sn-text-dim);
+  color: var(--sn-sys-on-surface-dim);
 }
 `;

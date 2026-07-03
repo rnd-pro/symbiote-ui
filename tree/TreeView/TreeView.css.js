@@ -2,7 +2,7 @@ export default /*css*/ `
 :host,
 sn-tree-view {
   display: block;
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
   font-family: var(--sn-font-family);
 }
 
@@ -40,20 +40,21 @@ sn-tree-view[hidden] {
 }
 
 .sn-tree-row:hover {
-  background: var(--sn-tree-row-hover-bg, var(--sn-node-hover));
+  background: var(--sn-tree-row-hover-bg, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-panel)));
 }
 
 .sn-tree-row:focus-visible {
-  border-color: var(--sn-tree-row-focus-border, var(--sn-node-selected));
+  outline: var(--sn-sys-focus-ring-width) solid var(--sn-tree-row-focus-border, var(--sn-sys-focus-ring));
+  outline-offset: calc(-1 * var(--sn-sys-focus-ring-width));
 }
 
 .sn-tree-row[aria-selected="true"] {
-  background: var(--sn-tree-row-selected-bg, var(--sn-node-bg));
-  border-color: var(--sn-tree-row-selected-border, var(--sn-node-selected));
+  background: var(--sn-tree-row-selected-bg, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-selected-mix), var(--sn-sys-surface-panel)));
+  border-color: var(--sn-tree-row-selected-border, var(--sn-sys-accent));
 }
 
 .sn-tree-row[muted] {
-  color: var(--sn-tree-muted-color, var(--sn-text-dim));
+  color: var(--sn-tree-muted-color, var(--sn-sys-on-surface-dim));
 }
 
 .sn-tree-toggle,
@@ -63,7 +64,7 @@ sn-tree-view[hidden] {
   justify-content: center;
   width: var(--sn-tree-icon-width);
   height: var(--sn-tree-icon-width);
-  color: var(--sn-tree-icon-color, var(--sn-text-dim));
+  color: var(--sn-tree-icon-color, var(--sn-sys-on-surface-dim));
   font-family: var(--sn-icon-font);
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
   font-size: var(--sn-tree-icon-size);
@@ -84,7 +85,7 @@ sn-tree-view[hidden] {
 .sn-tree-label {
   min-width: 0;
   overflow: hidden;
-  color: var(--sn-tree-label-color, var(--sn-text));
+  color: var(--sn-tree-label-color, var(--sn-sys-on-surface));
   font-size: var(--sn-tree-label-size);
   font-weight: var(--sn-tree-label-weight);
   text-overflow: ellipsis;
@@ -94,7 +95,7 @@ sn-tree-view[hidden] {
 .sn-tree-kind {
   overflow: hidden;
   max-width: var(--sn-tree-kind-max-width);
-  color: var(--sn-tree-kind-color, var(--sn-text-dim));
+  color: var(--sn-tree-kind-color, var(--sn-sys-on-surface-dim));
   font-size: var(--sn-tree-kind-size);
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -112,8 +113,8 @@ sn-tree-view[hidden] {
   overflow: hidden;
   padding: var(--sn-tree-badge-padding, 1px 5px);
   border-radius: var(--sn-tree-badge-radius);
-  background: var(--sn-tree-badge-bg, var(--sn-node-hover));
-  color: var(--sn-tree-badge-color, var(--sn-text-dim));
+  background: var(--sn-tree-badge-bg, var(--sn-sys-accent-container));
+  color: var(--sn-tree-badge-color, var(--sn-sys-on-surface-dim));
   font-size: var(--sn-tree-badge-size);
   line-height: 1.35;
   text-overflow: ellipsis;

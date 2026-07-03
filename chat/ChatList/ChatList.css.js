@@ -10,8 +10,8 @@ chat-list {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: var(--sn-node-bg);
-  color: var(--sn-text);
+  background: var(--sn-sys-surface-raised);
+  color: var(--sn-sys-on-surface);
   overflow: hidden;
 }
 
@@ -21,7 +21,7 @@ chat-list {
   gap: var(--sn-chat-list-header-gap, 8px);
   min-height: var(--sn-chat-list-header-min-height, 36px);
   padding: var(--sn-chat-list-header-padding, 6px 12px);
-  border-bottom: 1px solid var(--sn-node-border);
+  border-bottom: 1px solid var(--sn-sys-outline);
   flex-shrink: 0;
 }
 
@@ -32,7 +32,7 @@ chat-list {
   white-space: nowrap;
   font-size: var(--sn-chat-list-title-size, 13px);
   font-weight: 600;
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
 }
 
 .chat-list-content {
@@ -71,14 +71,14 @@ chat-list {
   display: flex;
   gap: var(--sn-chat-list-filter-gap, 4px);
   padding: var(--sn-chat-list-filter-padding, 6px 12px);
-  border-bottom: 1px solid var(--sn-node-border);
+  border-bottom: 1px solid var(--sn-sys-outline);
   flex-shrink: 0;
 }
 
 .chat-list-filter-btn {
   --sn-button-bg: transparent;
   --sn-button-border: transparent;
-  --sn-button-color: var(--sn-text-dim);
+  --sn-button-color: var(--sn-sys-on-surface-dim);
   --sn-button-hover-bg: transparent;
   --sn-button-hover-border: transparent;
   --sn-button-padding: var(--sn-chat-list-filter-button-padding, 3px 8px);
@@ -86,17 +86,18 @@ chat-list {
   --sn-button-min-height: var(--sn-chat-list-filter-button-min-height, 24px);
   --sn-button-font-size: var(--sn-chat-list-filter-button-size, 11px);
   --sn-button-font-weight: 500;
-  color: var(--sn-text-dim);
+  color: var(--sn-sys-on-surface-dim);
   transition: color var(--sn-transition-fast) var(--sn-transition-easing), background var(--sn-transition-fast) var(--sn-transition-easing), border-color var(--sn-transition-fast) var(--sn-transition-easing);
 }
 
 .chat-list-filter-btn:hover {
-  color: var(--sn-text);
+  /* text emphasis only — the sn-button state layer owns the background (0% mix) */
+  color: color-mix(in oklch, var(--sn-sys-accent) 0%, var(--sn-sys-on-surface));
 }
 
 .chat-list-filter-btn[active] {
-  --sn-button-bg: var(--sn-node-bg);
-  --sn-button-border: var(--sn-node-border);
-  color: var(--sn-text);
+  --sn-button-bg: var(--sn-sys-surface-raised);
+  --sn-button-border: var(--sn-sys-outline);
+  color: var(--sn-sys-on-surface);
 }
 `;

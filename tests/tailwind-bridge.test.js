@@ -48,10 +48,10 @@ test('applyTailwindBridge programmatically bridges variables', () => {
   
   applyTailwindBridge(el);
   
-  assert.equal(el.style.getPropertyValue('--sn-bg'), 'var(--color-background)');
-  assert.equal(el.style.getPropertyValue('--sn-text'), 'var(--color-foreground)');
-  assert.equal(el.style.getPropertyValue('--sn-panel-bg'), 'var(--color-panel)');
-  assert.equal(el.style.getPropertyValue('--sn-node-selected'), 'var(--color-accent)');
+  assert.equal(el.style.getPropertyValue('--sn-sys-surface'), 'var(--color-background)');
+  assert.equal(el.style.getPropertyValue('--sn-sys-on-surface'), 'var(--color-foreground)');
+  assert.equal(el.style.getPropertyValue('--sn-sys-surface-panel'), 'var(--color-panel)');
+  assert.equal(el.style.getPropertyValue('--sn-sys-accent'), 'var(--color-accent)');
   assert.equal(el.style.getPropertyValue('--sn-font'), 'var(--font-sans)');
 });
 

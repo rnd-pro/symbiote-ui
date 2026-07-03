@@ -5,7 +5,7 @@ export default css`
     position: relative;
     display: inline-flex;
     align-items: center;
-    color: var(--sn-text);
+    color: var(--sn-sys-on-surface);
     font-family: var(--sn-font);
   }
 
@@ -24,7 +24,7 @@ export default css`
     border: 1px solid transparent;
     border-radius: var(--sn-layout-header-button-radius, 4px);
     background: var(--sn-shell-menu-action-bg, transparent);
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
     font: inherit;
     font-size: var(--sn-shell-menu-action-size, 11px);
     font-weight: 600;
@@ -38,9 +38,9 @@ export default css`
 
   notification-widget .nw-trigger:hover,
   notification-widget .nw-trigger[active] {
-    border-color: var(--sn-node-border);
-    background: var(--sn-node-hover);
-    color: var(--sn-text);
+    border-color: var(--sn-sys-outline);
+    background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), transparent);
+    color: var(--sn-sys-on-surface);
   }
 
   notification-widget .nw-trigger .material-symbols-outlined,
@@ -62,11 +62,11 @@ export default css`
     max-height: min(78vh, var(--sn-notification-widget-max-height, 560px));
     padding: var(--sn-notification-widget-padding, calc(var(--sn-step-5, 10px) * var(--sn-theme-density, 1)));
     overflow: auto;
-    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border: var(--sn-node-border-width, 1px) solid var(--sn-sys-outline);
     border-radius: var(--sn-node-radius, 8px);
-    background: var(--sn-panel-bg);
-    box-shadow: var(--sn-panel-shadow, 0 16px 48px var(--sn-shadow-color, hsl(0 0% 0% / 0.28)));
-    color: var(--sn-text);
+    background: var(--sn-sys-surface-panel);
+    box-shadow: var(--sn-panel-shadow, var(--sn-sys-shadow-overlay));
+    color: var(--sn-sys-on-surface);
     font-family: var(--sn-font);
   }
 
@@ -122,17 +122,17 @@ export default css`
     min-width: var(--sn-notification-widget-icon-button-size, var(--sn-theme-editor-icon-button-size, 28px));
     height: var(--sn-notification-widget-icon-button-size, var(--sn-theme-editor-icon-button-size, 28px));
     padding: 0;
-    border: 1px solid var(--sn-button-border, var(--sn-node-border));
+    border: 1px solid var(--sn-button-border, var(--sn-sys-outline));
     border-radius: var(--sn-button-radius, 6px);
-    background: var(--sn-button-bg, var(--sn-node-bg));
-    color: var(--sn-button-color, var(--sn-text));
+    background: var(--sn-button-bg, var(--sn-sys-surface-raised));
+    color: var(--sn-button-color, var(--sn-sys-on-surface));
     font: inherit;
     cursor: pointer;
   }
 
   notification-widget .nw-header-actions button:hover,
   .nw-popover[data-overlay-portal] .nw-header-actions button:hover {
-    background: var(--sn-button-hover-bg, var(--sn-node-hover));
+    background: var(--sn-button-hover-bg, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-raised)));
   }
 
   notification-widget .nw-compact,
@@ -148,7 +148,7 @@ export default css`
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     gap: var(--sn-notification-widget-control-gap, 9px);
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
     font-size: var(--sn-notification-widget-control-size, var(--sn-theme-editor-control-size, 12px));
   }
 
@@ -167,7 +167,7 @@ export default css`
   .nw-popover[data-overlay-portal] .nw-row label .material-symbols-outlined {
     flex: none;
     font-size: var(--sn-notification-widget-label-icon-size, 15px);
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
   }
 
   notification-widget .nw-row input[type="range"],
@@ -175,14 +175,14 @@ export default css`
     width: 100%;
     min-width: 0;
     height: var(--sn-notification-widget-range-hit-size, 34px);
-    accent-color: var(--sn-node-selected);
+    accent-color: var(--sn-sys-accent);
   }
 
   notification-widget .nw-row input[type="checkbox"],
   .nw-popover[data-overlay-portal] .nw-row input[type="checkbox"] {
     width: var(--sn-notification-widget-switch-size, 18px);
     height: var(--sn-notification-widget-switch-size, 18px);
-    accent-color: var(--sn-node-selected);
+    accent-color: var(--sn-sys-accent);
   }
 
   notification-widget .nw-trigger:focus-visible,
@@ -190,7 +190,7 @@ export default css`
   notification-widget .nw-row input:focus-visible,
   .nw-popover[data-overlay-portal] .nw-header-actions button:focus-visible,
   .nw-popover[data-overlay-portal] .nw-row input:focus-visible {
-    outline: var(--sn-effect-focus-ring, 2px solid var(--sn-node-selected));
+    outline: var(--sn-effect-focus-ring, 2px solid var(--sn-sys-focus-ring));
     outline-offset: 2px;
   }
 

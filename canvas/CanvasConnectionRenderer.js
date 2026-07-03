@@ -229,11 +229,11 @@ export class CanvasConnectionRenderer {
   #updateStyles() {
     let source = resolveThemeSource(this.#canvasLayer);
     let computed = getComputedStyle(source);
-    this.#colorParams.normal = resolveThemeValue(source, '--sn-conn-color', '--sn-node-selected');
-    this.#colorParams.selected = resolveThemeValue(source, '--sn-conn-selected', '--sn-danger-color');
-    this.#colorParams.outline = resolveThemeValue(source, '--sn-port-outline', '--sn-node-bg');
-    this.#colorParams.bg = resolveThemeValue(source, '--sn-bg');
-    this.#colorParams.text = resolveThemeValue(source, '--sn-text');
+    this.#colorParams.normal = resolveThemeValue(source, '--sn-conn-color', '--sn-sys-accent');
+    this.#colorParams.selected = resolveThemeValue(source, '--sn-conn-selected', '--sn-sys-danger');
+    this.#colorParams.outline = resolveThemeValue(source, '--sn-port-outline', '--sn-sys-surface-raised');
+    this.#colorParams.bg = resolveThemeValue(source, '--sn-sys-surface');
+    this.#colorParams.text = resolveThemeValue(source, '--sn-sys-on-surface');
     this.#colorParams.width = parseFloat(computed.getPropertyValue('--sn-conn-width')) || 2;
     let socketSize = resolveThemeLength(source, '--sn-socket-size', 12);
     let socketBorderWidth = resolveThemeLength(source, '--sn-socket-border-width', 2);

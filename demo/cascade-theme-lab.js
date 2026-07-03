@@ -275,8 +275,8 @@ CascadeOverviewPanel.rootStyles = `
     width: 100%;
     height: 100%;
     min-height: 0;
-    background: var(--sn-panel-bg);
-    color: var(--sn-text);
+    background: var(--sn-sys-surface-panel);
+    color: var(--sn-sys-on-surface);
   }
 
   cascade-overview-panel .showcase-overview {
@@ -296,11 +296,11 @@ CascadeOverviewPanel.rootStyles = `
     gap: 14px;
     align-items: center;
     padding: clamp(14px, 2vw, 24px);
-    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border: var(--sn-node-border-width, 1px) solid var(--sn-sys-outline);
     border-radius: var(--sn-node-radius);
     background:
-      radial-gradient(circle at 10% 0%, color-mix(in oklab, var(--sn-node-selected) 24%, transparent), transparent 38%),
-      color-mix(in oklab, var(--sn-node-bg) 90%, var(--sn-bg));
+      radial-gradient(circle at 10% 0%, color-mix(in oklab, var(--sn-sys-accent) 24%, transparent), transparent 38%),
+      color-mix(in oklab, var(--sn-sys-surface-raised) 90%, var(--sn-sys-surface));
   }
 
   cascade-overview-panel .showcase-overview-hero > .material-symbols-outlined {
@@ -309,8 +309,8 @@ CascadeOverviewPanel.rootStyles = `
     width: calc(58px * var(--sn-theme-density, 1));
     aspect-ratio: 1;
     border-radius: 50%;
-    background: var(--sn-node-bg);
-    color: var(--sn-node-selected);
+    background: var(--sn-sys-surface-raised);
+    color: var(--sn-sys-accent);
     font-size: calc(30px * var(--sn-theme-icon-scale, 1));
   }
 
@@ -321,7 +321,7 @@ CascadeOverviewPanel.rootStyles = `
   }
 
   cascade-overview-panel .showcase-overview-hero p {
-    color: var(--sn-node-selected);
+    color: var(--sn-sys-accent);
     font-size: calc(12px * var(--sn-theme-type-scale, 1));
     font-weight: 700;
     text-transform: uppercase;
@@ -329,7 +329,7 @@ CascadeOverviewPanel.rootStyles = `
 
   cascade-overview-panel .showcase-overview-hero h1 {
     margin-top: 4px;
-    color: var(--sn-text);
+    color: var(--sn-sys-on-surface);
     font-size: calc(26px * var(--sn-theme-heading-scale, 1));
     line-height: 1.08;
   }
@@ -338,7 +338,7 @@ CascadeOverviewPanel.rootStyles = `
     display: block;
     margin-top: 8px;
     max-width: 760px;
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
     font-size: calc(14px * var(--sn-theme-type-scale, 1));
     line-height: 1.45;
   }
@@ -353,13 +353,13 @@ CascadeOverviewPanel.rootStyles = `
   cascade-overview-panel .showcase-project-map {
     min-width: 0;
     padding: var(--sn-lab-panel-padding, 12px);
-    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border: var(--sn-node-border-width, 1px) solid var(--sn-sys-outline);
     border-radius: var(--sn-node-radius);
-    background: var(--sn-node-bg);
+    background: var(--sn-sys-surface-raised);
   }
 
   cascade-overview-panel article .material-symbols-outlined {
-    color: var(--sn-node-selected);
+    color: var(--sn-sys-accent);
     font-size: calc(21px * var(--sn-theme-icon-scale, 1));
   }
 
@@ -371,7 +371,7 @@ CascadeOverviewPanel.rootStyles = `
 
   cascade-overview-panel article p {
     margin: 6px 0 0;
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
     font-size: calc(12px * var(--sn-theme-type-scale, 1));
     line-height: 1.4;
   }
@@ -385,7 +385,7 @@ CascadeOverviewPanel.rootStyles = `
     display: flex;
     align-items: center;
     gap: 8px;
-    color: var(--sn-text);
+    color: var(--sn-sys-on-surface);
   }
 
   cascade-overview-panel .showcase-project-list {
@@ -401,14 +401,14 @@ CascadeOverviewPanel.rootStyles = `
     align-items: center;
     min-width: 0;
     padding: 9px 10px;
-    border: 1px solid color-mix(in oklab, var(--sn-node-border) 72%, transparent);
+    border: 1px solid color-mix(in oklab, var(--sn-sys-outline) 72%, transparent);
     border-radius: var(--sn-node-radius);
-    background: color-mix(in oklab, var(--sn-bg) 72%, var(--sn-node-bg));
+    background: color-mix(in oklab, var(--sn-sys-surface) 72%, var(--sn-sys-surface-raised));
   }
 
   cascade-overview-panel .showcase-project-pill .material-symbols-outlined {
     grid-row: span 2;
-    color: var(--sn-node-selected);
+    color: var(--sn-sys-accent);
     font-size: calc(18px * var(--sn-theme-icon-scale, 1));
   }
 
@@ -425,7 +425,7 @@ CascadeOverviewPanel.rootStyles = `
   }
 
   cascade-overview-panel .showcase-project-pill small {
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
     font-size: calc(11px * var(--sn-theme-type-scale, 1));
   }
 
@@ -486,7 +486,7 @@ class CascadeGraphPanel extends Symbiote {
     this._ready = true;
     const canvas = this.ref.canvas;
     const socket = new Socket('flow', {
-      color: 'var(--sn-node-selected)',
+      color: 'var(--sn-sys-accent)',
     });
     const editor = new NodeEditor();
     this._editor = editor;
@@ -785,7 +785,7 @@ CascadeGraphPanel.rootStyles = `
   }
 
   cascade-graph-panel .lab-graph-stats {
-    color: var(--sn-text-muted, var(--sn-text-dim, currentColor));
+    color: var(--sn-text-muted, var(--sn-sys-on-surface-dim));
     font-size: var(--sn-small-size, 0.78rem);
     white-space: nowrap;
   }
@@ -800,11 +800,11 @@ class CascadeUiPanel extends Symbiote {
     const grid = this.ref.grid;
     const tree = this.ref.tree;
     const tokenNames = [
-      '--sn-bg',
-      '--sn-panel-bg',
-      '--sn-node-bg',
-      '--sn-node-border',
-      '--sn-node-selected',
+      '--sn-sys-surface',
+      '--sn-sys-surface-panel',
+      '--sn-sys-surface-raised',
+      '--sn-sys-outline',
+      '--sn-sys-accent',
       '--sn-cat-server',
       '--sn-cat-control',
       '--sn-cat-data',
@@ -816,8 +816,8 @@ class CascadeUiPanel extends Symbiote {
       '--sn-tab-accent-0',
       '--sn-tab-accent-1',
       '--sn-tab-accent-2',
-      '--sn-text',
-      '--sn-text-dim',
+      '--sn-sys-on-surface',
+      '--sn-sys-on-surface-dim',
       '--sn-scrollbar-thumb',
       '--sn-theme-outline-strength',
       '--sn-theme-type-scale',
@@ -1026,9 +1026,9 @@ CascadeUiPanel.rootStyles = `
   cascade-ui-panel sn-status-ribbon,
   cascade-ui-panel sn-empty-state {
     min-height: 84px;
-    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border: var(--sn-node-border-width, 1px) solid var(--sn-sys-outline);
     border-radius: var(--sn-node-radius, 8px);
-    background: var(--sn-panel-bg, var(--sn-bg));
+    background: var(--sn-sys-surface-panel);
   }
 
   cascade-ui-panel .constructor-overlay-sample {
@@ -1049,11 +1049,11 @@ CascadeUiPanel.rootStyles = `
     justify-content: center;
     gap: calc(var(--sn-space, 1rem) * 0.28);
     padding: calc(var(--sn-space, 1rem) * 0.65);
-    color: var(--sn-text-dim, currentColor);
+    color: var(--sn-sys-on-surface-dim);
   }
 
   cascade-ui-panel sn-empty-state strong {
-    color: var(--sn-text, currentColor);
+    color: var(--sn-sys-on-surface);
   }
 
   cascade-ui-panel sn-event-feed,
@@ -1082,17 +1082,17 @@ CascadeUiPanel.rootStyles = `
   cascade-ui-panel .constructor-list-item {
     min-width: 0;
     min-height: calc(var(--sn-control-height, 2rem) * 0.9);
-    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border: var(--sn-node-border-width, 1px) solid var(--sn-sys-outline);
     border-radius: var(--sn-control-radius, 0.45rem);
-    background: var(--sn-control-bg, var(--sn-node-bg));
-    color: var(--sn-control-fg, var(--sn-text));
+    background: var(--sn-control-bg, var(--sn-sys-surface-raised));
+    color: var(--sn-control-fg, var(--sn-sys-on-surface));
     font: inherit;
     text-align: left;
     padding: 0 calc(var(--sn-space, 1rem) * 0.55);
   }
 
   cascade-ui-panel .constructor-list-item[data-active] {
-    border-color: var(--sn-node-selected);
+    border-color: var(--sn-sys-accent);
     background: var(--sn-node-selected-bg, var(--sn-accent-bg-subtle));
   }
 
@@ -1336,17 +1336,17 @@ const PROJECT_WORKSPACE_STYLES = `
     min-height: 0;
     padding: var(--sn-lab-panel-padding, 12px);
     overflow: hidden;
-    background: var(--sn-panel-bg);
-    color: var(--sn-text);
+    background: var(--sn-sys-surface-panel);
+    color: var(--sn-sys-on-surface);
   }
 
   cascade-project-panel .project-file-tree {
     flex: 1 1 auto;
     min-width: 0;
     min-height: 0;
-    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border: var(--sn-node-border-width, 1px) solid var(--sn-sys-outline);
     border-radius: var(--sn-node-radius);
-    background: var(--sn-bg);
+    background: var(--sn-sys-surface);
   }
 
   cascade-project-panel .project-files-contract,
@@ -1356,17 +1356,17 @@ const PROJECT_WORKSPACE_STYLES = `
     gap: var(--sn-lab-panel-gap, 12px);
     min-height: calc(var(--sn-layout-header-height, 32px) * 1.4);
     padding: 8px 10px;
-    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border: var(--sn-node-border-width, 1px) solid var(--sn-sys-outline);
     border-radius: var(--sn-node-radius);
-    background: var(--sn-node-bg);
-    color: var(--sn-text-dim);
+    background: var(--sn-sys-surface-raised);
+    color: var(--sn-sys-on-surface-dim);
     font-size: var(--sn-small-size, 0.78rem);
     line-height: 1.35;
   }
 
   cascade-source-panel .project-panel-intro strong {
     display: block;
-    color: var(--sn-text);
+    color: var(--sn-sys-on-surface);
     font-size: calc(var(--sn-body-size, 1rem) * 0.96);
   }
 
@@ -1386,9 +1386,9 @@ const PROJECT_WORKSPACE_STYLES = `
     flex: 1 1 auto;
     min-width: 0;
     min-height: 0;
-    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border: var(--sn-node-border-width, 1px) solid var(--sn-sys-outline);
     border-radius: var(--sn-node-radius);
-    background: var(--sn-bg);
+    background: var(--sn-sys-surface);
     overflow: hidden;
   }
 
@@ -1405,7 +1405,7 @@ const PROJECT_WORKSPACE_STYLES = `
   cascade-project-map-panel .project-graph-stats {
     display: inline-flex;
     gap: 8px;
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
     font-size: var(--sn-small-size, 0.78rem);
   }
 
@@ -2720,8 +2720,8 @@ CascadeDialogueTourPanel.rootStyles = `
     width: 100%;
     height: 100%;
     min-height: 0;
-    background: var(--sn-panel-bg);
-    color: var(--sn-text);
+    background: var(--sn-sys-surface-panel);
+    color: var(--sn-sys-on-surface);
   }
 
   cascade-dialogue-tour-panel .dialogue-tour-panel {
@@ -2740,9 +2740,9 @@ CascadeDialogueTourPanel.rootStyles = `
     gap: 12px;
     align-items: center;
     padding: clamp(12px, 1.8vw, 18px);
-    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border: var(--sn-node-border-width, 1px) solid var(--sn-sys-outline);
     border-radius: var(--sn-node-radius);
-    background: color-mix(in oklab, var(--sn-node-bg) 90%, var(--sn-bg));
+    background: color-mix(in oklab, var(--sn-sys-surface-raised) 90%, var(--sn-sys-surface));
   }
 
   cascade-dialogue-tour-panel .dialogue-tour-head > .material-symbols-outlined {
@@ -2751,20 +2751,20 @@ CascadeDialogueTourPanel.rootStyles = `
     width: calc(44px * var(--sn-theme-density, 1));
     aspect-ratio: 1;
     border-radius: 50%;
-    background: var(--sn-node-bg);
-    color: var(--sn-node-selected);
+    background: var(--sn-sys-surface-raised);
+    color: var(--sn-sys-accent);
     font-size: calc(24px * var(--sn-theme-icon-scale, 1));
   }
 
   cascade-dialogue-tour-panel .dialogue-tour-head strong {
     display: block;
-    color: var(--sn-text);
+    color: var(--sn-sys-on-surface);
     font-size: calc(16px * var(--sn-theme-heading-scale, 1));
   }
 
   cascade-dialogue-tour-panel .dialogue-tour-head p {
     margin: 4px 0 0;
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
     font-size: var(--sn-small-size, 0.82rem);
     line-height: 1.4;
   }
@@ -2775,9 +2775,9 @@ CascadeDialogueTourPanel.rootStyles = `
     align-items: center;
     gap: 8px;
     padding: 8px;
-    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border: var(--sn-node-border-width, 1px) solid var(--sn-sys-outline);
     border-radius: var(--sn-node-radius);
-    background: var(--sn-node-bg);
+    background: var(--sn-sys-surface-raised);
   }
 
   cascade-dialogue-tour-panel .dialogue-btn {
@@ -2785,17 +2785,17 @@ CascadeDialogueTourPanel.rootStyles = `
     place-items: center;
     width: calc(36px * var(--sn-theme-density, 1));
     aspect-ratio: 1;
-    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border: var(--sn-node-border-width, 1px) solid var(--sn-sys-outline);
     border-radius: var(--sn-node-radius);
-    background: var(--sn-panel-bg);
-    color: var(--sn-text);
+    background: var(--sn-sys-surface-panel);
+    color: var(--sn-sys-on-surface);
     cursor: pointer;
     transition: background 0.16s ease, color 0.16s ease;
   }
 
   cascade-dialogue-tour-panel .dialogue-btn:hover {
-    background: var(--sn-node-selected);
-    color: var(--sn-node-bg);
+    background: var(--sn-sys-accent);
+    color: var(--sn-sys-surface-raised);
   }
 
   cascade-dialogue-tour-panel .dialogue-btn .material-symbols-outlined {
@@ -2809,18 +2809,18 @@ CascadeDialogueTourPanel.rootStyles = `
     margin-left: auto;
     padding: 4px 10px;
     border-radius: var(--sn-node-radius);
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
     font-size: var(--sn-small-size, 0.82rem);
   }
 
   cascade-dialogue-tour-panel .dialogue-status .material-symbols-outlined {
     font-size: calc(18px * var(--sn-theme-icon-scale, 1));
-    color: var(--sn-node-selected);
+    color: var(--sn-sys-accent);
   }
 
   cascade-dialogue-tour-panel .dialogue-status em {
     font-style: normal;
-    color: var(--sn-text);
+    color: var(--sn-sys-on-surface);
   }
 
   cascade-dialogue-tour-panel .dialogue-tour-turns {
@@ -2841,26 +2841,26 @@ CascadeDialogueTourPanel.rootStyles = `
     width: 100%;
     text-align: left;
     padding: 10px 12px;
-    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border: var(--sn-node-border-width, 1px) solid var(--sn-sys-outline);
     border-radius: var(--sn-node-radius);
-    background: var(--sn-node-bg);
-    color: var(--sn-text);
+    background: var(--sn-sys-surface-raised);
+    color: var(--sn-sys-on-surface);
     cursor: pointer;
     transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease;
   }
 
   cascade-dialogue-tour-panel .dialogue-turn:hover {
-    border-color: var(--sn-node-selected);
+    border-color: var(--sn-sys-accent);
   }
 
   cascade-dialogue-tour-panel .dialogue-turn.is-active {
-    border-color: var(--sn-node-selected);
-    background: color-mix(in oklab, var(--sn-node-selected) 18%, var(--sn-node-bg));
+    border-color: var(--sn-sys-accent);
+    background: color-mix(in oklab, var(--sn-sys-accent) 18%, var(--sn-sys-surface-raised));
   }
 
   cascade-dialogue-tour-panel .dialogue-turn.is-cued {
     transform: translateX(2px);
-    box-shadow: 0 0 0 2px color-mix(in oklab, var(--sn-node-selected) 60%, transparent);
+    box-shadow: 0 0 0 2px color-mix(in oklab, var(--sn-sys-accent) 60%, transparent);
   }
 
   cascade-dialogue-tour-panel .dialogue-turn-persona {
@@ -2879,13 +2879,13 @@ CascadeDialogueTourPanel.rootStyles = `
   }
 
   cascade-dialogue-tour-panel .dialogue-turn-guide {
-    color: var(--sn-node-selected);
-    background: color-mix(in oklab, var(--sn-node-selected) 16%, transparent);
+    color: var(--sn-sys-accent);
+    background: color-mix(in oklab, var(--sn-sys-accent) 16%, transparent);
   }
 
   cascade-dialogue-tour-panel .dialogue-turn-ops {
-    color: var(--sn-text);
-    background: color-mix(in oklab, var(--sn-text) 12%, transparent);
+    color: var(--sn-sys-on-surface);
+    background: color-mix(in oklab, var(--sn-sys-on-surface) 12%, transparent);
   }
 
   cascade-dialogue-tour-panel .dialogue-turn-text {
@@ -2897,7 +2897,7 @@ CascadeDialogueTourPanel.rootStyles = `
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
     font-size: var(--sn-small-size, 0.78rem);
   }
 
@@ -3055,8 +3055,8 @@ CascadeCursorPanel.rootStyles = `
     width: 100%;
     height: 100%;
     min-height: 0;
-    background: var(--sn-panel-bg);
-    color: var(--sn-text);
+    background: var(--sn-sys-surface-panel);
+    color: var(--sn-sys-on-surface);
   }
 
   cascade-cursor-panel .cursor-panel {
@@ -3075,9 +3075,9 @@ CascadeCursorPanel.rootStyles = `
     gap: 12px;
     align-items: center;
     padding: clamp(12px, 1.8vw, 18px);
-    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border: var(--sn-node-border-width, 1px) solid var(--sn-sys-outline);
     border-radius: var(--sn-node-radius);
-    background: color-mix(in oklab, var(--sn-node-bg) 90%, var(--sn-bg));
+    background: color-mix(in oklab, var(--sn-sys-surface-raised) 90%, var(--sn-sys-surface));
   }
 
   cascade-cursor-panel .cursor-head > .material-symbols-outlined {
@@ -3086,20 +3086,20 @@ CascadeCursorPanel.rootStyles = `
     width: calc(44px * var(--sn-theme-density, 1));
     aspect-ratio: 1;
     border-radius: 50%;
-    background: var(--sn-node-bg);
-    color: var(--sn-node-selected);
+    background: var(--sn-sys-surface-raised);
+    color: var(--sn-sys-accent);
     font-size: calc(24px * var(--sn-theme-icon-scale, 1));
   }
 
   cascade-cursor-panel .cursor-head strong {
     display: block;
-    color: var(--sn-text);
+    color: var(--sn-sys-on-surface);
     font-size: calc(16px * var(--sn-theme-heading-scale, 1));
   }
 
   cascade-cursor-panel .cursor-head p {
     margin: 4px 0 0;
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
     font-size: var(--sn-small-size, 0.82rem);
     line-height: 1.4;
   }
@@ -3110,9 +3110,9 @@ CascadeCursorPanel.rootStyles = `
     align-items: center;
     gap: 10px;
     padding: 8px;
-    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border: var(--sn-node-border-width, 1px) solid var(--sn-sys-outline);
     border-radius: var(--sn-node-radius);
-    background: var(--sn-node-bg);
+    background: var(--sn-sys-surface-raised);
   }
 
   cascade-cursor-panel .cursor-btn {
@@ -3120,18 +3120,18 @@ CascadeCursorPanel.rootStyles = `
     align-items: center;
     gap: 8px;
     padding: 6px 14px;
-    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border: var(--sn-node-border-width, 1px) solid var(--sn-sys-outline);
     border-radius: var(--sn-node-radius);
-    background: var(--sn-panel-bg);
-    color: var(--sn-text);
+    background: var(--sn-sys-surface-panel);
+    color: var(--sn-sys-on-surface);
     cursor: pointer;
     font: inherit;
     transition: background 0.16s ease, color 0.16s ease;
   }
 
   cascade-cursor-panel .cursor-btn:hover {
-    background: var(--sn-node-selected);
-    color: var(--sn-node-bg);
+    background: var(--sn-sys-accent);
+    color: var(--sn-sys-surface-raised);
   }
 
   cascade-cursor-panel .cursor-btn .material-symbols-outlined {
@@ -3145,13 +3145,13 @@ CascadeCursorPanel.rootStyles = `
     margin-left: auto;
     padding: 4px 10px;
     border-radius: var(--sn-node-radius);
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
     font-size: var(--sn-small-size, 0.82rem);
   }
 
   cascade-cursor-panel .cursor-status .material-symbols-outlined {
     font-size: calc(18px * var(--sn-theme-icon-scale, 1));
-    color: var(--sn-node-selected);
+    color: var(--sn-sys-accent);
   }
 
   cascade-cursor-panel .cursor-targets {
@@ -3171,15 +3171,15 @@ CascadeCursorPanel.rootStyles = `
     gap: 12px;
     align-items: start;
     padding: 14px;
-    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border: var(--sn-node-border-width, 1px) solid var(--sn-sys-outline);
     border-radius: var(--sn-node-radius);
-    background: var(--sn-node-bg);
+    background: var(--sn-sys-surface-raised);
     transition: border-color 0.18s ease, background 0.18s ease;
   }
 
   cascade-cursor-panel .cursor-target.is-active {
-    border-color: var(--sn-node-selected);
-    background: color-mix(in oklab, var(--sn-node-selected) 18%, var(--sn-node-bg));
+    border-color: var(--sn-sys-accent);
+    background: color-mix(in oklab, var(--sn-sys-accent) 18%, var(--sn-sys-surface-raised));
   }
 
   cascade-cursor-panel .cursor-target-icon {
@@ -3188,21 +3188,21 @@ CascadeCursorPanel.rootStyles = `
     width: calc(38px * var(--sn-theme-density, 1));
     aspect-ratio: 1;
     border-radius: var(--sn-node-radius);
-    background: var(--sn-panel-bg);
-    color: var(--sn-node-selected);
+    background: var(--sn-sys-surface-panel);
+    color: var(--sn-sys-accent);
     font-size: calc(22px * var(--sn-theme-icon-scale, 1));
   }
 
   cascade-cursor-panel .cursor-target-body strong {
     display: block;
-    color: var(--sn-text);
+    color: var(--sn-sys-on-surface);
     font-size: calc(14px * var(--sn-theme-type-scale, 1));
   }
 
   cascade-cursor-panel .cursor-target-body span {
     display: block;
     margin-top: 4px;
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
     font-size: var(--sn-small-size, 0.78rem);
     line-height: 1.4;
   }
@@ -3211,7 +3211,7 @@ CascadeCursorPanel.rootStyles = `
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
     font-size: var(--sn-small-size, 0.78rem);
   }
 
@@ -3384,23 +3384,23 @@ CascadeChatPartsPanel.rootStyles = `
     display: grid;
     gap: 10px;
     padding: 14px;
-    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border: var(--sn-node-border-width, 1px) solid var(--sn-sys-outline);
     border-radius: var(--sn-node-radius);
-    background: var(--sn-node-bg);
-    color: var(--sn-text);
+    background: var(--sn-sys-surface-raised);
+    color: var(--sn-sys-on-surface);
   }
 
   cascade-chat-parts-panel .parts-embed-widget .embed-title {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
     font-size: var(--sn-small-size, 0.78rem);
   }
 
   cascade-chat-parts-panel .parts-embed-widget .embed-title .material-symbols-outlined {
     font-size: calc(18px * var(--sn-theme-icon-scale, 1));
-    color: var(--sn-node-selected);
+    color: var(--sn-sys-accent);
   }
 
   cascade-chat-parts-panel .parts-embed-widget .embed-controls {
@@ -3413,7 +3413,7 @@ CascadeChatPartsPanel.rootStyles = `
     min-width: 2ch;
     text-align: center;
     font-size: calc(22px * var(--sn-theme-heading-scale, 1));
-    color: var(--sn-text);
+    color: var(--sn-sys-on-surface);
   }
 
   cascade-chat-parts-panel .parts-embed-widget .embed-btn {
@@ -3421,21 +3421,21 @@ CascadeChatPartsPanel.rootStyles = `
     place-items: center;
     width: calc(34px * var(--sn-theme-density, 1));
     aspect-ratio: 1;
-    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border: var(--sn-node-border-width, 1px) solid var(--sn-sys-outline);
     border-radius: var(--sn-node-radius);
-    background: var(--sn-panel-bg);
-    color: var(--sn-text);
+    background: var(--sn-sys-surface-panel);
+    color: var(--sn-sys-on-surface);
     cursor: pointer;
     transition: background 0.16s ease, color 0.16s ease;
   }
 
   cascade-chat-parts-panel .parts-embed-widget .embed-btn:hover {
-    background: var(--sn-node-selected);
-    color: var(--sn-node-bg);
+    background: var(--sn-sys-accent);
+    color: var(--sn-sys-surface-raised);
   }
 
   cascade-chat-parts-panel .parts-embed-widget .embed-note {
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
     font-size: var(--sn-small-size, 0.78rem);
   }
 `;
@@ -3517,8 +3517,8 @@ CascadeRuntimePanel.rootStyles = `
     min-height: 0;
     padding: var(--sn-lab-panel-padding, 12px);
     overflow: auto;
-    background: var(--sn-panel-bg);
-    color: var(--sn-text);
+    background: var(--sn-sys-surface-panel);
+    color: var(--sn-sys-on-surface);
     scrollbar-color: var(--sn-scrollbar-thumb) var(--sn-scrollbar-track);
     scrollbar-width: var(--sn-scrollbar-width, thin);
   }
@@ -3532,26 +3532,26 @@ CascadeRuntimePanel.rootStyles = `
   .workspace-feature-card {
     min-width: 0;
     padding: calc(12px * var(--sn-theme-density, 1));
-    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border: var(--sn-node-border-width, 1px) solid var(--sn-sys-outline);
     border-radius: var(--sn-node-radius);
-    background: var(--sn-node-bg);
+    background: var(--sn-sys-surface-raised);
   }
 
   .workspace-feature-card .material-symbols-outlined {
-    color: var(--sn-node-selected);
+    color: var(--sn-sys-accent);
     font-size: calc(24px * var(--sn-theme-icon-scale, 1));
   }
 
   .workspace-feature-card strong {
     display: block;
     margin-top: 8px;
-    color: var(--sn-text);
+    color: var(--sn-sys-on-surface);
     font-size: calc(14px * var(--sn-theme-heading-scale, 1));
   }
 
   .workspace-feature-card p {
     margin: 6px 0 0;
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
     font-size: calc(12px * var(--sn-theme-type-scale, 1));
     line-height: 1.45;
   }
@@ -3964,8 +3964,8 @@ CascadeBoardPanel.rootStyles = `
     min-height: 0;
     padding: var(--sn-lab-panel-padding, 12px);
     overflow: hidden;
-    background: var(--sn-panel-bg);
-    color: var(--sn-text);
+    background: var(--sn-sys-surface-panel);
+    color: var(--sn-sys-on-surface);
   }
 
   cascade-board-panel .board-workbench {
@@ -3987,9 +3987,9 @@ CascadeBoardPanel.rootStyles = `
     grid-template-rows: auto minmax(0, 1fr);
     gap: 10px;
     padding: 10px;
-    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border: var(--sn-node-border-width, 1px) solid var(--sn-sys-outline);
     border-radius: var(--sn-node-radius);
-    background: var(--sn-bg);
+    background: var(--sn-sys-surface);
     overflow: hidden;
   }
 
@@ -4000,13 +4000,13 @@ CascadeBoardPanel.rootStyles = `
     min-width: 0;
     min-height: 48px;
     padding: 8px 10px;
-    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border: var(--sn-node-border-width, 1px) solid var(--sn-sys-outline);
     border-radius: var(--sn-control-radius, 6px);
-    background: var(--sn-node-bg);
+    background: var(--sn-sys-surface-raised);
   }
 
   cascade-board-panel .board-preview-header .material-symbols-outlined {
-    color: var(--sn-node-selected);
+    color: var(--sn-sys-accent);
     font-size: calc(24px * var(--sn-theme-icon-scale, 1));
   }
 
@@ -4018,13 +4018,13 @@ CascadeBoardPanel.rootStyles = `
   }
 
   cascade-board-panel .board-preview-header strong {
-    color: var(--sn-text);
+    color: var(--sn-sys-on-surface);
     font-size: calc(14px * var(--sn-theme-heading-scale, 1));
   }
 
   cascade-board-panel .board-preview-header span:not(.material-symbols-outlined) {
     margin-top: 3px;
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
     font-size: calc(11px * var(--sn-theme-type-scale, 1));
     line-height: 1.35;
   }
@@ -4048,9 +4048,9 @@ CascadeBoardPanel.rootStyles = `
   cascade-board-panel sn-event-feed {
     min-width: 0;
     min-height: 0;
-    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border: var(--sn-node-border-width, 1px) solid var(--sn-sys-outline);
     border-radius: var(--sn-node-radius);
-    background: var(--sn-bg);
+    background: var(--sn-sys-surface);
     overflow: auto;
   }
 
@@ -4152,8 +4152,8 @@ CascadeProductContextPanel.rootStyles = `
     width: 100%;
     height: 100%;
     min-height: 0;
-    background: var(--sn-panel-bg);
-    color: var(--sn-text);
+    background: var(--sn-sys-surface-panel);
+    color: var(--sn-sys-on-surface);
   }
 
   cascade-product-context-panel .product-context-panel {
@@ -4173,13 +4173,13 @@ CascadeProductContextPanel.rootStyles = `
     gap: 12px;
     min-width: 0;
     padding: 12px;
-    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border: var(--sn-node-border-width, 1px) solid var(--sn-sys-outline);
     border-radius: var(--sn-node-radius);
-    background: var(--sn-node-bg);
+    background: var(--sn-sys-surface-raised);
   }
 
   cascade-product-context-panel .product-context-header > .material-symbols-outlined {
-    color: var(--sn-node-selected);
+    color: var(--sn-sys-accent);
     font-size: calc(28px * var(--sn-theme-icon-scale, 1));
   }
 
@@ -4193,7 +4193,7 @@ CascadeProductContextPanel.rootStyles = `
   }
 
   cascade-product-context-panel .product-context-header p {
-    color: var(--sn-node-selected);
+    color: var(--sn-sys-accent);
     font-size: calc(11px * var(--sn-theme-type-scale, 1));
     font-weight: 700;
     text-transform: uppercase;
@@ -4201,14 +4201,14 @@ CascadeProductContextPanel.rootStyles = `
 
   cascade-product-context-panel .product-context-header h2 {
     margin-top: 3px;
-    color: var(--sn-text);
+    color: var(--sn-sys-on-surface);
     font-size: calc(18px * var(--sn-theme-heading-scale, 1));
     line-height: 1.15;
   }
 
   cascade-product-context-panel .product-context-header span {
     margin-top: 5px;
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
     font-size: calc(12px * var(--sn-theme-type-scale, 1));
     line-height: 1.4;
   }
@@ -4247,9 +4247,9 @@ CascadeProductContextPanel.rootStyles = `
   cascade-product-context-panel .product-context-tools {
     min-width: 0;
     padding: 10px;
-    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border: var(--sn-node-border-width, 1px) solid var(--sn-sys-outline);
     border-radius: var(--sn-node-radius);
-    background: var(--sn-node-bg);
+    background: var(--sn-sys-surface-raised);
   }
 
   cascade-product-context-panel .product-context-metrics strong,
@@ -4262,13 +4262,13 @@ CascadeProductContextPanel.rootStyles = `
   }
 
   cascade-product-context-panel .product-context-metrics strong {
-    color: var(--sn-text);
+    color: var(--sn-sys-on-surface);
     font-size: calc(18px * var(--sn-theme-heading-scale, 1));
   }
 
   cascade-product-context-panel .product-context-metrics span {
     margin-top: 3px;
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
     font-size: calc(11px * var(--sn-theme-type-scale, 1));
   }
 
@@ -4285,7 +4285,7 @@ CascadeProductContextPanel.rootStyles = `
   }
 
   cascade-product-context-panel .product-context-tools header .material-symbols-outlined {
-    color: var(--sn-node-selected);
+    color: var(--sn-sys-accent);
     font-size: calc(18px * var(--sn-theme-icon-scale, 1));
   }
 
@@ -4302,9 +4302,9 @@ CascadeProductContextPanel.rootStyles = `
     gap: 3px;
     min-width: 0;
     padding: 7px 8px;
-    border: 1px solid color-mix(in oklab, var(--sn-node-border) 72%, transparent);
+    border: 1px solid color-mix(in oklab, var(--sn-sys-outline) 72%, transparent);
     border-radius: var(--sn-control-radius, 6px);
-    background: var(--sn-bg);
+    background: var(--sn-sys-surface);
   }
 
   cascade-product-context-panel .product-context-tools article strong,
@@ -4317,13 +4317,13 @@ CascadeProductContextPanel.rootStyles = `
   }
 
   cascade-product-context-panel .product-context-tools article strong {
-    color: var(--sn-text);
+    color: var(--sn-sys-on-surface);
     font-size: calc(12px * var(--sn-theme-type-scale, 1));
   }
 
   cascade-product-context-panel .product-context-tools article span,
   cascade-product-context-panel .product-context-tools article small {
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
     font-size: calc(11px * var(--sn-theme-type-scale, 1));
   }
 
@@ -4331,9 +4331,9 @@ CascadeProductContextPanel.rootStyles = `
   cascade-product-context-panel sn-event-feed {
     min-width: 0;
     min-height: 0;
-    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border: var(--sn-node-border-width, 1px) solid var(--sn-sys-outline);
     border-radius: var(--sn-node-radius);
-    background: var(--sn-bg);
+    background: var(--sn-sys-surface);
     overflow: auto;
   }
 
@@ -4481,9 +4481,9 @@ CascadeSpatialPanel.rootStyles = `
     padding: var(--sn-lab-panel-padding, 12px);
     overflow: hidden;
     background:
-      radial-gradient(circle at 50% 42%, color-mix(in oklab, var(--sn-node-selected) 14%, transparent), transparent 44%),
-      var(--sn-panel-bg);
-    color: var(--sn-text);
+      radial-gradient(circle at 50% 42%, color-mix(in oklab, var(--sn-sys-accent) 14%, transparent), transparent 44%),
+      var(--sn-sys-surface-panel);
+    color: var(--sn-sys-on-surface);
   }
 
   cascade-spatial-panel .spatial-copy {
@@ -4502,15 +4502,15 @@ CascadeSpatialPanel.rootStyles = `
     align-items: center;
     gap: 5px;
     padding: 4px 8px;
-    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border: var(--sn-node-border-width, 1px) solid var(--sn-sys-outline);
     border-radius: 999px;
-    background: var(--sn-node-bg);
-    color: var(--sn-text-dim);
+    background: var(--sn-sys-surface-raised);
+    color: var(--sn-sys-on-surface-dim);
     font-size: calc(11px * var(--sn-theme-type-scale, 1));
   }
 
   cascade-spatial-panel .spatial-contracts .material-symbols-outlined {
-    color: var(--sn-node-selected);
+    color: var(--sn-sys-accent);
     font-size: calc(16px * var(--sn-theme-icon-scale, 1));
   }
 
@@ -4518,12 +4518,12 @@ CascadeSpatialPanel.rootStyles = `
     position: relative;
     min-height: 360px;
     overflow: hidden;
-    border: var(--sn-node-border-width, 1px) solid var(--sn-node-border);
+    border: var(--sn-node-border-width, 1px) solid var(--sn-sys-outline);
     border-radius: var(--sn-node-radius);
     background:
-      linear-gradient(color-mix(in oklab, var(--sn-text) 5%, transparent) 1px, transparent 1px),
-      linear-gradient(90deg, color-mix(in oklab, var(--sn-text) 5%, transparent) 1px, transparent 1px),
-      color-mix(in oklab, var(--sn-bg) 86%, var(--sn-node-selected) 6%);
+      linear-gradient(color-mix(in oklab, var(--sn-sys-on-surface) 5%, transparent) 1px, transparent 1px),
+      linear-gradient(90deg, color-mix(in oklab, var(--sn-sys-on-surface) 5%, transparent) 1px, transparent 1px),
+      color-mix(in oklab, var(--sn-sys-surface) 86%, var(--sn-sys-accent) 6%);
     background-size: 32px 32px;
     perspective: 900px;
     touch-action: none;
@@ -4532,7 +4532,7 @@ CascadeSpatialPanel.rootStyles = `
   cascade-spatial-panel .spatial-orbit {
     position: absolute;
     inset: 12%;
-    border: 1px solid color-mix(in oklab, var(--sn-node-selected) 36%, transparent);
+    border: 1px solid color-mix(in oklab, var(--sn-sys-accent) 36%, transparent);
     border-radius: 50%;
     transform: rotateX(68deg);
     opacity: 0.72;
@@ -4545,7 +4545,7 @@ CascadeSpatialPanel.rootStyles = `
     width: 38%;
     height: 2px;
     border-radius: 999px;
-    background: linear-gradient(90deg, transparent, var(--sn-node-selected), transparent);
+    background: linear-gradient(90deg, transparent, var(--sn-sys-accent), transparent);
     transform-origin: 0 50%;
     opacity: 0.62;
   }
@@ -4567,13 +4567,13 @@ CascadeSpatialPanel.rootStyles = `
     width: calc(82px * var(--sn-theme-density, 1));
     aspect-ratio: 1;
     min-width: 58px;
-    border: var(--sn-node-border-width, 1px) solid color-mix(in oklab, var(--node-color, var(--sn-node-selected)) 56%, var(--sn-node-border));
+    border: var(--sn-node-border-width, 1px) solid color-mix(in oklab, var(--node-color, var(--sn-sys-accent)) 56%, var(--sn-sys-outline));
     border-radius: 50%;
     background:
-      radial-gradient(circle at 32% 26%, color-mix(in oklab, white 42%, var(--node-color, var(--sn-node-selected))), transparent 0 12%, transparent 13%),
-      radial-gradient(circle at 40% 32%, color-mix(in oklab, var(--node-color, var(--sn-node-selected)) 64%, white), var(--node-color, var(--sn-node-selected)) 50%, color-mix(in oklab, var(--sn-bg) 72%, black) 100%);
-    color: var(--sn-bg);
-    box-shadow: 0 18px 42px color-mix(in oklab, var(--node-color, var(--sn-node-selected)) 24%, transparent);
+      radial-gradient(circle at 32% 26%, color-mix(in oklab, white 42%, var(--node-color, var(--sn-sys-accent))), transparent 0 12%, transparent 13%),
+      radial-gradient(circle at 40% 32%, color-mix(in oklab, var(--node-color, var(--sn-sys-accent)) 64%, white), var(--node-color, var(--sn-sys-accent)) 50%, color-mix(in oklab, var(--sn-sys-surface) 72%, black) 100%);
+    color: var(--sn-sys-surface);
+    box-shadow: 0 18px 42px color-mix(in oklab, var(--node-color, var(--sn-sys-accent)) 24%, transparent);
     transform:
       translate3d(calc(var(--x) * 1px), calc(var(--y) * 1px), calc(var(--z) * 1px))
       translate(-50%, -50%)
@@ -4613,8 +4613,8 @@ CascadeSpatialPanel.rootStyles = `
     max-width: calc(100% - 20px);
     padding: 5px 8px;
     border-radius: 999px;
-    background: color-mix(in oklab, var(--sn-bg) 82%, transparent);
-    color: var(--sn-text-dim);
+    background: color-mix(in oklab, var(--sn-sys-surface) 82%, transparent);
+    color: var(--sn-sys-on-surface-dim);
     font-size: calc(11px * var(--sn-theme-type-scale, 1));
   }
 `;

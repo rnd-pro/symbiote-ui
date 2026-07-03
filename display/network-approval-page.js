@@ -60,17 +60,17 @@ export function createNetworkApprovalPageStyles() {
       --sn-lit-text: var(--sn-theme-text-lightness);
       --sn-lit-text-dim: 60%;
       --sn-lit-accent: 63%;
-      --sn-bg: hsl(0 0% var(--sn-lit-bg));
-      --sn-panel-bg: hsl(0 0% var(--sn-lit-surface));
-      --sn-node-border: hsl(var(--sn-hue-base) var(--sn-sat-muted) var(--sn-lit-text) / 0.1);
-      --sn-node-selected: hsl(var(--sn-hue-accent) var(--sn-sat-vivid) var(--sn-lit-accent));
+      --sn-sys-surface: hsl(0 0% var(--sn-lit-bg));
+      --sn-sys-surface-panel: hsl(0 0% var(--sn-lit-surface));
+      --sn-sys-outline: hsl(var(--sn-hue-base) var(--sn-sat-muted) var(--sn-lit-text) / 0.1);
+      --sn-sys-accent: hsl(var(--sn-hue-accent) var(--sn-sat-vivid) var(--sn-lit-accent));
       --sn-node-radius: calc(6px * var(--sn-theme-radius-scale));
       --sn-node-shadow: 0 2px calc(8px * var(--sn-theme-elevation-scale)) hsl(var(--sn-hue-base) var(--sn-sat-muted) 0% / 0.4);
-      --sn-text: hsl(var(--sn-hue-base) var(--sn-sat-muted) var(--sn-lit-text));
-      --sn-text-dim: hsl(var(--sn-hue-base) var(--sn-sat-muted) var(--sn-lit-text-dim));
+      --sn-sys-on-surface: hsl(var(--sn-hue-base) var(--sn-sat-muted) var(--sn-lit-text));
+      --sn-sys-on-surface-dim: hsl(var(--sn-hue-base) var(--sn-sat-muted) var(--sn-lit-text-dim));
       --sn-font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       --sn-font-mono: 'JetBrains Mono', 'Fira Code', monospace;
-      --sn-cell-bg: var(--sn-bg);
+      --sn-cell-bg: var(--sn-sys-surface);
       --sn-cell-dot: hsl(var(--sn-hue-base) var(--sn-sat-muted) 31%);
       --sn-cell-base-alpha: 0.06;
       --sn-cell-alpha-span: 0.18;
@@ -81,7 +81,7 @@ export function createNetworkApprovalPageStyles() {
       --sn-cell-fade-rate: 0.04;
       --sn-cell-glare: hsl(var(--sn-hue-base) var(--sn-sat-muted) var(--sn-lit-text) / 0.02);
       --sn-cell-vignette-mid: hsl(var(--sn-hue-base) var(--sn-sat-muted) var(--sn-lit-bg) / 0.7);
-      --sn-cell-vignette-edge: var(--sn-bg);
+      --sn-cell-vignette-edge: var(--sn-sys-surface);
       --sn-cell-noise: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.5' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
     }
 
@@ -96,7 +96,7 @@ export function createNetworkApprovalPageStyles() {
       place-items: center;
       overflow: hidden;
       background: var(--sn-cell-bg);
-      color: var(--sn-text);
+      color: var(--sn-sys-on-surface);
       font: 14px var(--sn-font);
     }
 
@@ -131,10 +131,10 @@ export function createNetworkApprovalPageStyles() {
 
     body::after {
       background:
-        linear-gradient(to bottom, var(--sn-bg) 0%, transparent 18%),
-        linear-gradient(to top, var(--sn-bg) 0%, transparent 18%),
-        linear-gradient(to right, var(--sn-bg) 0%, transparent 18%),
-        linear-gradient(to left, var(--sn-bg) 0%, transparent 18%);
+        linear-gradient(to bottom, var(--sn-sys-surface) 0%, transparent 18%),
+        linear-gradient(to top, var(--sn-sys-surface) 0%, transparent 18%),
+        linear-gradient(to right, var(--sn-sys-surface) 0%, transparent 18%),
+        linear-gradient(to left, var(--sn-sys-surface) 0%, transparent 18%);
       z-index: 1;
     }
 
@@ -142,9 +142,9 @@ export function createNetworkApprovalPageStyles() {
       position: relative;
       width: min(520px, calc(100vw - 32px));
       padding: 22px;
-      border: 1px solid var(--sn-node-border);
+      border: 1px solid var(--sn-sys-outline);
       border-radius: var(--sn-node-radius);
-      background: color-mix(in oklab, var(--sn-panel-bg) 92%, transparent);
+      background: color-mix(in oklab, var(--sn-sys-surface-panel) 92%, transparent);
       box-shadow: var(--sn-node-shadow), 0 18px 60px hsl(var(--sn-hue-base) var(--sn-sat-muted) 0% / 0.32);
       backdrop-filter: blur(18px);
       z-index: 2;
@@ -159,18 +159,18 @@ export function createNetworkApprovalPageStyles() {
 
     p {
       margin: 10px 0 0;
-      color: var(--sn-text-dim);
+      color: var(--sn-sys-on-surface-dim);
       line-height: 1.45;
     }
 
     code {
-      color: var(--sn-node-selected);
+      color: var(--sn-sys-accent);
       font-family: var(--sn-font-mono);
       font-size: 12px;
     }
 
     #status {
-      color: var(--sn-text);
+      color: var(--sn-sys-on-surface);
     }
 
     @media (prefers-reduced-motion: reduce) {

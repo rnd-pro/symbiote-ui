@@ -4,12 +4,12 @@ let css = /*css*/`
     flex-direction: column;
     min-height: 100px;
     height: 100%;
-    background: var(--sn-panel-bg);
-    color: var(--sn-text);
+    background: var(--sn-sys-surface-panel);
+    color: var(--sn-sys-on-surface);
     font-family: var(--sn-font);
     font-size: var(--sn-text-xs);
     overflow: hidden;
-    --vp-border: var(--sn-viewport-border, var(--sn-node-border));
+    --vp-border: var(--sn-viewport-border, var(--sn-sys-outline));
     --vp-safe-zone: var(--sn-viewport-safe-zone, color-mix(in oklch, var(--sn-sys-on-surface) 12%, transparent));
     --vp-checker-light: var(--sn-viewport-checker-light, color-mix(in oklch, var(--sn-sys-on-surface) 4%, transparent));
     --vp-checker-dark: var(--sn-viewport-checker-dark, color-mix(in oklch, var(--sn-sys-surface-sunken) 10%, transparent));
@@ -22,15 +22,15 @@ let css = /*css*/`
     gap: var(--sn-step-3);
     height: 28px;
     padding: 0 var(--sn-step-4);
-    background: var(--sn-panel-bg);
+    background: var(--sn-sys-surface-panel);
     border-bottom: 1px solid var(--vp-border);
     flex-shrink: 0;
   }
 
   .vp-header select {
-    background: var(--sn-node-bg);
+    background: var(--sn-sys-surface-raised);
     border: 1px solid var(--vp-border);
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
     padding: var(--sn-step-0, 1px) var(--sn-step-2);
     border-radius: calc(3px * var(--sn-theme-radius-scale, 1));
     font-family: inherit;
@@ -44,9 +44,9 @@ let css = /*css*/`
   }
 
   .vp-header button {
-    background: var(--sn-node-bg);
+    background: var(--sn-sys-surface-raised);
     border: 1px solid var(--vp-border);
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
     padding: var(--sn-step-1) var(--sn-step-3);
     border-radius: calc(3px * var(--sn-theme-radius-scale, 1));
     cursor: pointer;
@@ -64,13 +64,13 @@ let css = /*css*/`
 
   .vp-zoom-label {
     font-size: var(--sn-text-2xs);
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
     font-family: var(--sn-font-mono);
   }
 
   .vp-frame-label {
     font-size: var(--sn-text-2xs);
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
     font-family: var(--sn-font-mono);
   }
 
@@ -123,7 +123,7 @@ let css = /*css*/`
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
     font-size: var(--sn-text-sm);
     font-style: italic;
     opacity: 0.5;

@@ -287,13 +287,13 @@ ${overlaySelector} .pc-ink{
 ${overlaySelector} .pc-ink.is-inking{opacity:0.55;}
 ${overlaySelector} .pc-ink path{
   fill:none;
-  stroke:var(--sn-presenter-marker, var(--sn-node-selected, var(--sn-accent-color, #7ccfff)));
+  stroke:var(--sn-presenter-marker, var(--sn-sys-accent));
   stroke-width:2.6;
   stroke-opacity:0.86;
   stroke-linecap:round;
   stroke-linejoin:round;
   shape-rendering:geometricPrecision;
-  filter:drop-shadow(0 0 3px color-mix(in oklab, var(--sn-presenter-marker, var(--sn-node-selected, #7ccfff)) 35%, transparent));
+  filter:drop-shadow(0 0 3px color-mix(in oklab, var(--sn-presenter-marker, var(--sn-sys-accent)) 35%, transparent));
 }
 ${overlaySelector} .pc-click{
   position:absolute;
@@ -301,11 +301,11 @@ ${overlaySelector} .pc-click{
   left:0;
   min-width:${CLICK_ZONE_MIN_SIZE_PX}px;
   min-height:${CLICK_ZONE_MIN_SIZE_PX}px;
-  border:2px solid var(--sn-presenter-click, var(--sn-node-selected, var(--sn-accent-color, #7ccfff)));
+  border:2px solid var(--sn-presenter-click, var(--sn-sys-accent));
   border-radius:999px;
-  background:color-mix(in oklab, var(--sn-presenter-click, var(--sn-node-selected, #7ccfff)) 18%, transparent);
-  box-shadow:0 0 0 1px color-mix(in oklab, var(--sn-bg, #111) 40%, transparent),
-    0 0 14px color-mix(in oklab, var(--sn-presenter-click, var(--sn-node-selected, #7ccfff)) 42%, transparent);
+  background:color-mix(in oklab, var(--sn-presenter-click, var(--sn-sys-accent)) 18%, transparent);
+  box-shadow:0 0 0 1px color-mix(in oklab, var(--sn-sys-surface) 40%, transparent),
+    0 0 14px color-mix(in oklab, var(--sn-presenter-click, var(--sn-sys-accent)) 42%, transparent);
   opacity:0;
   transform:scale(0.78);
   transition:opacity ${CLICK_FADE_MS}ms ease, transform ${CLICK_FADE_MS}ms ease;

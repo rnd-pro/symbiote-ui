@@ -9,11 +9,11 @@ export let styles = css`
     display: flex;
     align-items: stretch;
     height: 32px;
-    background: var(--sn-ctx-bg);
-    border-bottom: 1px solid var(--sn-node-border);
+    background: var(--sn-sys-surface-overlay);
+    border-bottom: 1px solid var(--sn-sys-outline);
     font-family: var(--sn-font);
     font-size: var(--sn-text-sm);
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
     overflow-x: auto;
     overflow-y: hidden;
     user-select: none;
@@ -31,7 +31,7 @@ export let styles = css`
     padding: 0 var(--sn-step-7);
     cursor: pointer;
     white-space: nowrap;
-    border-right: 1px solid var(--sn-node-border);
+    border-right: 1px solid var(--sn-sys-outline);
     transition:
       background 0.15s ease-out,
       color 0.15s ease-out;
@@ -39,12 +39,12 @@ export let styles = css`
 
     &:hover {
       background: color-mix(in oklab, currentColor 4%, transparent);
-      color: var(--sn-text);
+      color: var(--sn-sys-on-surface);
     }
 
     &[data-active] {
-      background: var(--sn-node-bg);
-      color: var(--sn-text);
+      background: var(--sn-sys-surface-raised);
+      color: var(--sn-sys-on-surface);
 
       &::after {
         content: '';
@@ -53,7 +53,7 @@ export let styles = css`
         left: 0;
         right: 0;
         height: 2px;
-        background: var(--sn-node-selected);
+        background: var(--sn-sys-accent);
       }
     }
 
@@ -84,14 +84,14 @@ export let styles = css`
     justify-content: center;
     width: 32px;
     cursor: pointer;
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
     transition:
       background 0.15s ease-out,
       color 0.15s ease-out;
 
     &:hover {
       background: color-mix(in oklab, currentColor 4%, transparent);
-      color: var(--sn-text);
+      color: var(--sn-sys-on-surface);
     }
 
     & .material-symbols-outlined {

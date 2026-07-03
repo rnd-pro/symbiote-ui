@@ -16,7 +16,7 @@ sn-transfer {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: var(--sn-field-control-bg, var(--sn-bg, var(--sn-sys-surface)));
+  background: var(--sn-field-control-bg, var(--sn-sys-surface));
   border: 1px solid var(--sn-field-control-border, var(--sn-outline-color-soft, var(--sn-sys-outline-subtle)));
   border-radius: var(--sn-panel-radius, 6px);
   min-height: 200px;
@@ -27,10 +27,10 @@ sn-transfer {
 
 .sn-transfer-panel-header {
   padding: var(--sn-step-4) var(--sn-step-6);
-  background: var(--sn-panel-bg, var(--sn-sys-surface-panel));
+  background: var(--sn-sys-surface-panel);
   border-bottom: 1px solid var(--sn-outline-color-soft, var(--sn-sys-outline-subtle));
   font-size: var(--sn-text-sm);
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
   font-weight: 500;
 }
 
@@ -48,23 +48,23 @@ sn-transfer {
   gap: var(--sn-step-4);
   padding: calc(6px * var(--sn-theme-density, 1)) calc(8px * var(--sn-theme-density, 1));
   font-size: calc(12px * var(--sn-theme-type-scale, 1));
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
   border-radius: var(--sn-radius-sm);
   cursor: pointer;
   user-select: none;
 }
 
 .sn-transfer-item:hover {
-  background-color: var(--sn-node-hover, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), transparent));
+  background-color: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface));
 }
 
 .sn-transfer-item:focus-visible {
   outline: var(--sn-focus-outline, 2px solid var(--sn-sys-focus-ring, currentColor));
-  outline-offset: var(--sn-focus-outline-offset, -1px);
+  outline-offset: var(--sn-sys-focus-ring-offset);
 }
 
 .sn-transfer-item[data-selected] {
-  background-color: color-mix(in oklab, var(--sn-node-selected, var(--sn-sys-accent)) 10%, transparent);
+  background-color: color-mix(in oklab, var(--sn-sys-accent) 10%, transparent);
 }
 
 .sn-transfer-buttons {
@@ -79,21 +79,21 @@ sn-transfer {
   justify-content: center;
   width: 32px;
   height: 32px;
-  background: var(--sn-panel-bg, var(--sn-sys-surface-panel));
+  background: var(--sn-sys-surface-panel);
   border: 1px solid var(--sn-outline-color-soft, var(--sn-sys-outline-subtle));
   border-radius: var(--sn-radius-md);
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
   cursor: pointer;
 }
 
 .sn-transfer-btn:hover:not([disabled]) {
-  background: var(--sn-node-hover, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), transparent));
-  border-color: var(--sn-node-selected, var(--sn-sys-accent));
+  background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-panel));
+  border-color: var(--sn-sys-accent);
 }
 
 .sn-transfer-btn:focus-visible {
   outline: var(--sn-focus-outline, 2px solid var(--sn-sys-focus-ring, currentColor));
-  outline-offset: var(--sn-focus-outline-offset, 2px);
+  outline-offset: var(--sn-sys-focus-ring-offset);
 }
 
 .sn-transfer-btn[disabled] {

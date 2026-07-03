@@ -1,15 +1,15 @@
 /**
- * Tier-contract audit checks (W1 of docs/cascade-theme-architecture.md, warning level).
- * Pure functions over CSS text — `scripts/tier-audit.js` is the CLI walker; the main audit
- * pipeline adopts these when it stabilizes. Node-safe, no DOM, no filesystem here.
+ * Tier-contract audit checks (docs/cascade-theme-architecture.md, error level since wave 3).
+ * Pure functions over CSS text — `scripts/tier-audit.js` is the CLI walker; `audit.js` runs
+ * them in the main pipeline. Node-safe, no DOM, no filesystem here.
  *
  * Checks:
  *  - `literal-color`: component CSS must not carry literal colors (LITERAL_COLOR_ALLOWLIST
  *    excepted) — every color resolves through a token chain terminating in a T2 role.
  *  - `tier-direction`: a token definition may only reference tokens its tier is allowed to
- *    see (component→sys, sys→ref, domain→ref/sys, legacy-alias→sys; nothing→component).
+ *    see (component→sys, sys→ref, domain→ref/sys; nothing→component).
  *  - `state-layer`: :hover/:active/[aria-selected] rules that recolor without the state-mix
- *    system are bespoke effects (SYM-017) — flagged so wave 2 can burn them down.
+ *    system are bespoke effects (SYM-017).
  *
  * @module symbiote-ui/tokens/tier-audit
  */

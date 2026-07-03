@@ -23,15 +23,15 @@ export let styles = css`
       align-items: center;
       gap: var(--sn-step-4);
       padding: var(--sn-step-4) var(--sn-step-7);
-      background: var(--sn-node-bg);
-      border: 1px solid var(--sn-node-border);
+      background: var(--sn-sys-surface-raised);
+      border: 1px solid var(--sn-sys-outline);
       border-radius: var(--sn-radius-lg, 10px);
       box-shadow: 0 8px 32px var(--sn-shadow-color);
     }
 
     & .search-icon {
       font-size: var(--sn-text-2xl);
-      color: var(--sn-text-dim);
+      color: var(--sn-sys-on-surface-dim);
     }
 
     & .search-input {
@@ -39,28 +39,28 @@ export let styles = css`
       background: none;
       border: none;
       outline: none;
-      color: var(--sn-text);
+      color: var(--sn-sys-on-surface);
       font-size: var(--sn-text-lg);
       font-family: inherit;
     }
 
     & .search-input::placeholder {
-      color: var(--sn-text-dim);
+      color: var(--sn-sys-on-surface-dim);
     }
 
     & .search-hint {
       font-size: var(--sn-text-xs);
-      color: var(--sn-text-dim);
+      color: var(--sn-sys-on-surface-dim);
       padding: var(--sn-step-1) var(--sn-step-3);
-      border: 1px solid var(--sn-node-border);
+      border: 1px solid var(--sn-sys-outline);
       border-radius: var(--sn-radius-sm);
     }
 
     & .search-results {
       margin-top: var(--sn-step-2);
-      background: var(--sn-node-bg);
+      background: var(--sn-sys-surface-raised);
       border-radius: var(--sn-radius-lg);
-      border: 1px solid var(--sn-node-border);
+      border: 1px solid var(--sn-sys-outline);
       box-shadow: 0 4px 16px var(--sn-shadow-color);
       overflow: hidden;
       max-height: 300px;
@@ -78,7 +78,7 @@ export let styles = css`
     justify-content: space-between;
     padding: var(--sn-step-4) var(--sn-step-7);
     cursor: pointer;
-    color: var(--sn-text);
+    color: var(--sn-sys-on-surface);
     font-size: var(--sn-text-md);
     transition: background var(--sn-transition-fast) var(--sn-transition-easing);
 
@@ -89,7 +89,7 @@ export let styles = css`
 
   .search-result-type {
     font-size: var(--sn-text-xs);
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
     padding: var(--sn-step-0, 1px) var(--sn-step-3);
     border-radius: var(--sn-radius-sm);
     background: color-mix(in oklab, currentColor 5%, transparent);

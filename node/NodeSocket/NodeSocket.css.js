@@ -11,7 +11,7 @@ export let styles = css`
     height: var(--sn-socket-size);
     border-radius: 50%;
     background: var(--socket-color, var(--sn-node-accent));
-    border: var(--sn-socket-border-width) solid var(--sn-node-bg);
+    border: var(--sn-socket-border-width) solid var(--sn-sys-surface-raised);
     cursor: crosshair;
     flex-shrink: 0;
     transition:

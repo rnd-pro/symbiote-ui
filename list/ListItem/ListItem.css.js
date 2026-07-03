@@ -35,8 +35,7 @@ sn-list-item[hidden]  {
 }
 
 .sn-list-item:focus-visible {
-  border-color: var(--sn-list-item-focus-border, var(--sn-sys-focus-ring));
-  box-shadow: 0 0 0 var(--sn-sys-focus-ring-width, 2px) var(--sn-sys-focus-ring);
+  box-shadow: 0 0 0 var(--sn-sys-focus-ring-width) var(--sn-list-item-focus-border, var(--sn-sys-focus-ring));
 }
 
 :host([active]) .sn-list-item,
@@ -65,9 +64,10 @@ sn-list-item[disabled] .sn-list-item {
   opacity: var(--sn-sys-state-disabled-opacity, 0.38);
 }
 
+/* Disabled rows suppress the hover state layer: 0% mix pins the resting background */
 :host([disabled]) .sn-list-item:hover,
 sn-list-item[disabled] .sn-list-item:hover {
-  background: transparent;
+  background: color-mix(in oklch, var(--sn-sys-accent) 0%, var(--sn-list-item-bg, transparent));
 }
 
 :host([loading]) .sn-list-item,

@@ -97,7 +97,7 @@ test('lintComponentCss flags anti-slop only when two or more signals coincide', 
   let { findings } = lintComponentCss({ content: slop, file: 'hero.css.js' });
   assert.equal(findings.filter((f) => f.type === 'anti-slop').length, 1);
 
-  let clean = 'sn-hero {\n  background: var(--sn-bg);\n  border-radius: var(--sn-node-radius);\n}';
+  let clean = 'sn-hero {\n  background: var(--sn-sys-surface);\n  border-radius: var(--sn-node-radius);\n}';
   assert.equal(lintComponentCss({ content: clean }).findings.filter((f) => f.type === 'anti-slop').length, 0);
 });
 
@@ -120,7 +120,7 @@ test('contrast parses hex, rgb, and hsl but reports unresolved cascade chains', 
   assert.equal(resolved.resolved, true);
   assert.ok(resolved.passesAA);
 
-  let unresolved = checkContrast('var(--sn-text)', 'var(--sn-bg)');
+  let unresolved = checkContrast('var(--sn-sys-on-surface)', 'var(--sn-sys-surface)');
   assert.equal(unresolved.resolved, false);
   assert.equal(unresolved.passesAA, false);
 });

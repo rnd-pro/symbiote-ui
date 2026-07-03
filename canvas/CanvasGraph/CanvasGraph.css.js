@@ -6,7 +6,7 @@ export default `
     width: 100%;
     height: 100%;
     overflow: hidden;
-    background: var(--sn-bg);
+    background: var(--sn-sys-surface);
   }
   canvas-graph > canvas {
     position: absolute;

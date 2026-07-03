@@ -30,7 +30,7 @@ chat-sidebar-shell[resizing] .chat-nav  {
   display: flex;
   flex-direction: column;
   border-right: none;
-  background: var(--sn-node-bg);
+  background: var(--sn-sys-surface-raised);
   overflow: hidden;
   transition: width var(--sn-transition-normal) var(--sn-transition-easing), min-width var(--sn-transition-normal) var(--sn-transition-easing);
   user-select: none;
@@ -62,7 +62,7 @@ chat-sidebar-shell[resizing] .chat-nav  {
 .chat-nav-resize-handle:hover,
 .chat-nav-resize-handle.dragging,
 .chat-nav[resizing] .chat-nav-resize-handle  {
-  background: var(--sn-layout-resizer-hover-bg);
+  background: var(--sn-layout-resizer-hover-bg, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), transparent));
 }
 
 .chat-nav-header {
@@ -71,7 +71,7 @@ chat-sidebar-shell[resizing] .chat-nav  {
   gap: var(--sn-chat-sidebar-header-gap, 2px);
   padding: var(--sn-chat-sidebar-header-padding, 2px 4px);
   min-height: var(--sn-chat-sidebar-header-min-height, 28px);
-  background: var(--sn-node-bg);
+  background: var(--sn-sys-surface-raised);
   border-bottom: none;
   flex-shrink: 0;
 }
@@ -94,7 +94,7 @@ chat-sidebar-shell[resizing] .chat-nav  {
 .chat-nav-header .nav-title {
   font-size: var(--sn-chat-sidebar-title-size, 11px);
   font-weight: 600;
-  color: var(--sn-text-dim);
+  color: var(--sn-sys-on-surface-dim);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   white-space: nowrap;
@@ -122,7 +122,7 @@ chat-sidebar-shell[resizing] .chat-nav  {
   border: none;
   border-radius: var(--sn-chat-sidebar-button-radius, 4px);
   cursor: pointer;
-  color: var(--sn-text-dim);
+  color: var(--sn-sys-on-surface-dim);
   font-size: var(--sn-chat-sidebar-button-size, 0.75rem);
   transition: background var(--sn-transition-fast) var(--sn-transition-easing), color var(--sn-transition-fast) var(--sn-transition-easing);
   flex-shrink: 0;
@@ -134,7 +134,7 @@ chat-sidebar-shell[resizing] .chat-nav  {
 
 .nav-btn:hover {
   background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-raised));
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
 }
 
 .chat-items {

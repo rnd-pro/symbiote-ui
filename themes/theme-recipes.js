@@ -15,7 +15,7 @@ const RELATION_DEFINITIONS = {
       { name: 'depth', type: 'number', min: -2, max: 2, default: 0 },
       { name: 'contrastBias', type: 'number', min: -2, max: 2, default: 0 },
     ],
-    affects: ['brightness', 'contrast', 'pattern', '--sn-panel-bg', '--sn-node-hover'],
+    affects: ['brightness', 'contrast', 'pattern', '--sn-sys-surface-panel', '--sn-sys-state-hover-mix'],
   },
   stateLayers: {
     name: 'stateLayers',

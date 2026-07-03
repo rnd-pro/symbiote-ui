@@ -48,7 +48,7 @@ export let styles = css`
         height: var(--sn-socket-size);
         border-radius: 50%;
         background: var(--socket-color, var(--sn-node-accent));
-        border: var(--sn-socket-border-width) solid var(--sn-node-bg);
+        border: var(--sn-socket-border-width) solid var(--sn-sys-surface-raised);
         transition:
           transform 0.2s ease-out,
           box-shadow 0.2s ease-out;
@@ -86,7 +86,7 @@ export let styles = css`
     }
 
     & .port-label {
-      color: var(--sn-text-dim);
+      color: var(--sn-sys-on-surface-dim);
       font-size: var(--sn-port-label-size, 12px);
       white-space: nowrap;
     }

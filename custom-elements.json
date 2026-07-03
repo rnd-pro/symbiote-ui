@@ -45,7 +45,7 @@
           "slots": [],
           "cssProperties": [
             {
-              "name": "--sn-ctx-bg",
+              "name": "--sn-sys-surface-overlay",
               "description": "Theme CSS custom property consumed by graph-breadcrumb."
             },
             {
@@ -53,7 +53,7 @@
               "description": "Theme CSS custom property consumed by graph-breadcrumb."
             },
             {
-              "name": "--sn-node-border",
+              "name": "--sn-sys-outline",
               "description": "Theme CSS custom property consumed by graph-breadcrumb."
             },
             {
@@ -65,11 +65,11 @@
               "description": "Theme CSS custom property consumed by graph-breadcrumb."
             },
             {
-              "name": "--sn-text",
+              "name": "--sn-sys-on-surface",
               "description": "Theme CSS custom property consumed by graph-breadcrumb."
             },
             {
-              "name": "--sn-text-dim",
+              "name": "--sn-sys-on-surface-dim",
               "description": "Theme CSS custom property consumed by graph-breadcrumb."
             }
           ],
@@ -108,13 +108,13 @@
             "events": [],
             "slots": [],
             "themeAliases": [
-              "--sn-ctx-bg",
+              "--sn-sys-surface-overlay",
               "--sn-ctx-hover",
-              "--sn-node-border",
+              "--sn-sys-outline",
               "--sn-shadow-color",
               "--sn-font",
-              "--sn-text",
-              "--sn-text-dim"
+              "--sn-sys-on-surface",
+              "--sn-sys-on-surface-dim"
             ],
             "status": "draft",
             "schemaVersion": "component-descriptor-v2",
@@ -187,13 +187,13 @@
               "events": [],
               "slots": [],
               "themeAliases": [
-                "--sn-ctx-bg",
+                "--sn-sys-surface-overlay",
                 "--sn-ctx-hover",
-                "--sn-node-border",
+                "--sn-sys-outline",
                 "--sn-shadow-color",
                 "--sn-font",
-                "--sn-text",
-                "--sn-text-dim"
+                "--sn-sys-on-surface",
+                "--sn-sys-on-surface-dim"
               ],
               "status": "draft",
               "schemaVersion": "component-descriptor-v2",
@@ -455,19 +455,19 @@
           "slots": [],
           "cssProperties": [
             {
-              "name": "--sn-bg",
+              "name": "--sn-sys-surface",
               "description": "Theme CSS custom property consumed by canvas-graph."
             },
             {
-              "name": "--sn-node-bg",
+              "name": "--sn-sys-surface-raised",
               "description": "Theme CSS custom property consumed by canvas-graph."
             },
             {
-              "name": "--sn-node-border",
+              "name": "--sn-sys-outline",
               "description": "Theme CSS custom property consumed by canvas-graph."
             },
             {
-              "name": "--sn-node-selected",
+              "name": "--sn-sys-accent",
               "description": "Theme CSS custom property consumed by canvas-graph."
             },
             {
@@ -763,10 +763,10 @@
             ],
             "slots": [],
             "themeAliases": [
-              "--sn-bg",
-              "--sn-node-bg",
-              "--sn-node-border",
-              "--sn-node-selected",
+              "--sn-sys-surface",
+              "--sn-sys-surface-raised",
+              "--sn-sys-outline",
+              "--sn-sys-accent",
               "--sn-conn-color",
               "--sn-canvas-graph-bg",
               "--sn-canvas-graph-edge",
@@ -1183,10 +1183,10 @@
               ],
               "slots": [],
               "themeAliases": [
-                "--sn-bg",
-                "--sn-node-bg",
-                "--sn-node-border",
-                "--sn-node-selected",
+                "--sn-sys-surface",
+                "--sn-sys-surface-raised",
+                "--sn-sys-outline",
+                "--sn-sys-accent",
                 "--sn-conn-color",
                 "--sn-canvas-graph-bg",
                 "--sn-canvas-graph-edge",
@@ -1524,11 +1524,11 @@
           ],
           "cssProperties": [
             {
-              "name": "--sn-panel-bg",
+              "name": "--sn-sys-surface-panel",
               "description": "Theme CSS custom property consumed by graph-explorer-shell."
             },
             {
-              "name": "--sn-node-border",
+              "name": "--sn-sys-outline",
               "description": "Theme CSS custom property consumed by graph-explorer-shell."
             },
             {
@@ -1666,8 +1666,8 @@
               }
             ],
             "themeAliases": [
-              "--sn-panel-bg",
-              "--sn-node-border",
+              "--sn-sys-surface-panel",
+              "--sn-sys-outline",
               "--sn-toolbar-bg",
               "--sn-toolbar-border",
               "--sn-toolbar-color",
@@ -1937,8 +1937,8 @@
                 }
               ],
               "themeAliases": [
-                "--sn-panel-bg",
-                "--sn-node-border",
+                "--sn-sys-surface-panel",
+                "--sn-sys-outline",
                 "--sn-toolbar-bg",
                 "--sn-toolbar-border",
                 "--sn-toolbar-color",
@@ -2151,19 +2151,19 @@
           "slots": [],
           "cssProperties": [
             {
-              "name": "--sn-ctx-bg",
+              "name": "--sn-sys-surface-overlay",
               "description": "Theme CSS custom property consumed by graph-tabs."
             },
             {
-              "name": "--sn-node-bg",
+              "name": "--sn-sys-surface-raised",
               "description": "Theme CSS custom property consumed by graph-tabs."
             },
             {
-              "name": "--sn-node-border",
+              "name": "--sn-sys-outline",
               "description": "Theme CSS custom property consumed by graph-tabs."
             },
             {
-              "name": "--sn-node-selected",
+              "name": "--sn-sys-accent",
               "description": "Theme CSS custom property consumed by graph-tabs."
             },
             {
@@ -2171,11 +2171,11 @@
               "description": "Theme CSS custom property consumed by graph-tabs."
             },
             {
-              "name": "--sn-text",
+              "name": "--sn-sys-on-surface",
               "description": "Theme CSS custom property consumed by graph-tabs."
             },
             {
-              "name": "--sn-text-dim",
+              "name": "--sn-sys-on-surface-dim",
               "description": "Theme CSS custom property consumed by graph-tabs."
             }
           ],
@@ -2242,13 +2242,13 @@
             "events": [],
             "slots": [],
             "themeAliases": [
-              "--sn-ctx-bg",
-              "--sn-node-bg",
-              "--sn-node-border",
-              "--sn-node-selected",
+              "--sn-sys-surface-overlay",
+              "--sn-sys-surface-raised",
+              "--sn-sys-outline",
+              "--sn-sys-accent",
               "--sn-font",
-              "--sn-text",
-              "--sn-text-dim"
+              "--sn-sys-on-surface",
+              "--sn-sys-on-surface-dim"
             ],
             "status": "draft",
             "schemaVersion": "component-descriptor-v2",
@@ -2349,13 +2349,13 @@
               "events": [],
               "slots": [],
               "themeAliases": [
-                "--sn-ctx-bg",
-                "--sn-node-bg",
-                "--sn-node-border",
-                "--sn-node-selected",
+                "--sn-sys-surface-overlay",
+                "--sn-sys-surface-raised",
+                "--sn-sys-outline",
+                "--sn-sys-accent",
                 "--sn-font",
-                "--sn-text",
-                "--sn-text-dim"
+                "--sn-sys-on-surface",
+                "--sn-sys-on-surface-dim"
               ],
               "status": "draft",
               "schemaVersion": "component-descriptor-v2",
@@ -2436,15 +2436,15 @@
           "slots": [],
           "cssProperties": [
             {
-              "name": "--sn-node-bg",
+              "name": "--sn-sys-surface-raised",
               "description": "Theme CSS custom property consumed by node-minimap."
             },
             {
-              "name": "--sn-node-border",
+              "name": "--sn-sys-outline",
               "description": "Theme CSS custom property consumed by node-minimap."
             },
             {
-              "name": "--sn-node-selected",
+              "name": "--sn-sys-accent",
               "description": "Theme CSS custom property consumed by node-minimap."
             },
             {
@@ -2452,11 +2452,11 @@
               "description": "Theme CSS custom property consumed by node-minimap."
             },
             {
-              "name": "--sn-text",
+              "name": "--sn-sys-on-surface",
               "description": "Theme CSS custom property consumed by node-minimap."
             },
             {
-              "name": "--sn-text-dim",
+              "name": "--sn-sys-on-surface-dim",
               "description": "Theme CSS custom property consumed by node-minimap."
             }
           ],
@@ -2500,12 +2500,12 @@
             ],
             "slots": [],
             "themeAliases": [
-              "--sn-node-bg",
-              "--sn-node-border",
-              "--sn-node-selected",
+              "--sn-sys-surface-raised",
+              "--sn-sys-outline",
+              "--sn-sys-accent",
               "--sn-shadow-color",
-              "--sn-text",
-              "--sn-text-dim"
+              "--sn-sys-on-surface",
+              "--sn-sys-on-surface-dim"
             ],
             "status": "draft",
             "schemaVersion": "component-descriptor-v2",
@@ -2583,12 +2583,12 @@
               ],
               "slots": [],
               "themeAliases": [
-                "--sn-node-bg",
-                "--sn-node-border",
-                "--sn-node-selected",
+                "--sn-sys-surface-raised",
+                "--sn-sys-outline",
+                "--sn-sys-accent",
                 "--sn-shadow-color",
-                "--sn-text",
-                "--sn-text-dim"
+                "--sn-sys-on-surface",
+                "--sn-sys-on-surface-dim"
               ],
               "status": "draft",
               "schemaVersion": "component-descriptor-v2",
@@ -2844,7 +2844,7 @@
           "slots": [],
           "cssProperties": [
             {
-              "name": "--sn-bg",
+              "name": "--sn-sys-surface",
               "description": "Theme CSS custom property consumed by node-canvas."
             },
             {
@@ -2872,11 +2872,11 @@
               "description": "Theme CSS custom property consumed by node-canvas."
             },
             {
-              "name": "--sn-node-bg",
+              "name": "--sn-sys-surface-raised",
               "description": "Theme CSS custom property consumed by node-canvas."
             },
             {
-              "name": "--sn-node-border",
+              "name": "--sn-sys-outline",
               "description": "Theme CSS custom property consumed by node-canvas."
             },
             {
@@ -3076,15 +3076,15 @@
             ],
             "slots": [],
             "themeAliases": [
-              "--sn-bg",
+              "--sn-sys-surface",
               "--sn-grid-dot",
               "--sn-grid-size",
               "--sn-conn-color",
               "--sn-conn-selected",
               "--sn-accent-color",
               "--sn-conn-label-color",
-              "--sn-node-bg",
-              "--sn-node-border",
+              "--sn-sys-surface-raised",
+              "--sn-sys-outline",
               "--sn-text-muted"
             ],
             "status": "draft",
@@ -3570,15 +3570,15 @@
               ],
               "slots": [],
               "themeAliases": [
-                "--sn-bg",
+                "--sn-sys-surface",
                 "--sn-grid-dot",
                 "--sn-grid-size",
                 "--sn-conn-color",
                 "--sn-conn-selected",
                 "--sn-accent-color",
                 "--sn-conn-label-color",
-                "--sn-node-bg",
-                "--sn-node-border",
+                "--sn-sys-surface-raised",
+                "--sn-sys-outline",
                 "--sn-text-muted"
               ],
               "status": "draft",
@@ -3925,11 +3925,11 @@
               "description": "Theme CSS custom property consumed by node-search."
             },
             {
-              "name": "--sn-node-bg",
+              "name": "--sn-sys-surface-raised",
               "description": "Theme CSS custom property consumed by node-search."
             },
             {
-              "name": "--sn-node-border",
+              "name": "--sn-sys-outline",
               "description": "Theme CSS custom property consumed by node-search."
             },
             {
@@ -3937,11 +3937,11 @@
               "description": "Theme CSS custom property consumed by node-search."
             },
             {
-              "name": "--sn-text",
+              "name": "--sn-sys-on-surface",
               "description": "Theme CSS custom property consumed by node-search."
             },
             {
-              "name": "--sn-text-dim",
+              "name": "--sn-sys-on-surface-dim",
               "description": "Theme CSS custom property consumed by node-search."
             }
           ],
@@ -3996,11 +3996,11 @@
             "slots": [],
             "themeAliases": [
               "--sn-font",
-              "--sn-node-bg",
-              "--sn-node-border",
+              "--sn-sys-surface-raised",
+              "--sn-sys-outline",
               "--sn-shadow-color",
-              "--sn-text",
-              "--sn-text-dim"
+              "--sn-sys-on-surface",
+              "--sn-sys-on-surface-dim"
             ],
             "status": "draft",
             "schemaVersion": "component-descriptor-v2",
@@ -4089,11 +4089,11 @@
               "slots": [],
               "themeAliases": [
                 "--sn-font",
-                "--sn-node-bg",
-                "--sn-node-border",
+                "--sn-sys-surface-raised",
+                "--sn-sys-outline",
                 "--sn-shadow-color",
-                "--sn-text",
-                "--sn-text-dim"
+                "--sn-sys-on-surface",
+                "--sn-sys-on-surface-dim"
               ],
               "status": "draft",
               "schemaVersion": "component-descriptor-v2",
@@ -6537,27 +6537,27 @@
           "slots": [],
           "cssProperties": [
             {
-              "name": "--sn-node-bg",
+              "name": "--sn-sys-surface-raised",
               "description": "Theme CSS custom property consumed by chat-list."
             },
             {
-              "name": "--sn-node-border",
+              "name": "--sn-sys-outline",
               "description": "Theme CSS custom property consumed by chat-list."
             },
             {
-              "name": "--sn-node-hover",
+              "name": "--sn-sys-state-hover-mix",
               "description": "Theme CSS custom property consumed by chat-list."
             },
             {
-              "name": "--sn-node-selected",
+              "name": "--sn-sys-accent",
               "description": "Theme CSS custom property consumed by chat-list."
             },
             {
-              "name": "--sn-text",
+              "name": "--sn-sys-on-surface",
               "description": "Theme CSS custom property consumed by chat-list."
             },
             {
-              "name": "--sn-text-dim",
+              "name": "--sn-sys-on-surface-dim",
               "description": "Theme CSS custom property consumed by chat-list."
             },
             {
@@ -6694,12 +6694,12 @@
             ],
             "slots": [],
             "themeAliases": [
-              "--sn-node-bg",
-              "--sn-node-border",
-              "--sn-node-hover",
-              "--sn-node-selected",
-              "--sn-text",
-              "--sn-text-dim",
+              "--sn-sys-surface-raised",
+              "--sn-sys-outline",
+              "--sn-sys-state-hover-mix",
+              "--sn-sys-accent",
+              "--sn-sys-on-surface",
+              "--sn-sys-on-surface-dim",
               "--sn-chat-list-header-gap",
               "--sn-chat-list-header-min-height",
               "--sn-chat-list-header-padding",
@@ -6824,12 +6824,12 @@
               ],
               "slots": [],
               "themeAliases": [
-                "--sn-node-bg",
-                "--sn-node-border",
-                "--sn-node-hover",
-                "--sn-node-selected",
-                "--sn-text",
-                "--sn-text-dim",
+                "--sn-sys-surface-raised",
+                "--sn-sys-outline",
+                "--sn-sys-state-hover-mix",
+                "--sn-sys-accent",
+                "--sn-sys-on-surface",
+                "--sn-sys-on-surface-dim",
                 "--sn-chat-list-header-gap",
                 "--sn-chat-list-header-min-height",
                 "--sn-chat-list-header-padding",
@@ -6964,31 +6964,31 @@
           "slots": [],
           "cssProperties": [
             {
-              "name": "--sn-node-bg",
+              "name": "--sn-sys-surface-raised",
               "description": "Theme CSS custom property consumed by chat-list-item."
             },
             {
-              "name": "--sn-node-border",
+              "name": "--sn-sys-outline",
               "description": "Theme CSS custom property consumed by chat-list-item."
             },
             {
-              "name": "--sn-node-hover",
+              "name": "--sn-sys-state-hover-mix",
               "description": "Theme CSS custom property consumed by chat-list-item."
             },
             {
-              "name": "--sn-node-selected",
+              "name": "--sn-sys-accent",
               "description": "Theme CSS custom property consumed by chat-list-item."
             },
             {
-              "name": "--sn-text",
+              "name": "--sn-sys-on-surface",
               "description": "Theme CSS custom property consumed by chat-list-item."
             },
             {
-              "name": "--sn-text-dim",
+              "name": "--sn-sys-on-surface-dim",
               "description": "Theme CSS custom property consumed by chat-list-item."
             },
             {
-              "name": "--sn-danger-color",
+              "name": "--sn-sys-danger",
               "description": "Theme CSS custom property consumed by chat-list-item."
             },
             {
@@ -7128,13 +7128,13 @@
             "events": [],
             "slots": [],
             "themeAliases": [
-              "--sn-node-bg",
-              "--sn-node-border",
-              "--sn-node-hover",
-              "--sn-node-selected",
-              "--sn-text",
-              "--sn-text-dim",
-              "--sn-danger-color",
+              "--sn-sys-surface-raised",
+              "--sn-sys-outline",
+              "--sn-sys-state-hover-mix",
+              "--sn-sys-accent",
+              "--sn-sys-on-surface",
+              "--sn-sys-on-surface-dim",
+              "--sn-sys-danger",
               "--sn-chat-list-item-padding",
               "--sn-chat-list-item-gap",
               "--sn-chat-list-item-active-border-width",
@@ -7250,13 +7250,13 @@
               "events": [],
               "slots": [],
               "themeAliases": [
-                "--sn-node-bg",
-                "--sn-node-border",
-                "--sn-node-hover",
-                "--sn-node-selected",
-                "--sn-text",
-                "--sn-text-dim",
-                "--sn-danger-color",
+                "--sn-sys-surface-raised",
+                "--sn-sys-outline",
+                "--sn-sys-state-hover-mix",
+                "--sn-sys-accent",
+                "--sn-sys-on-surface",
+                "--sn-sys-on-surface-dim",
+                "--sn-sys-danger",
                 "--sn-chat-list-item-padding",
                 "--sn-chat-list-item-gap",
                 "--sn-chat-list-item-active-border-width",
@@ -7443,15 +7443,15 @@
           "slots": [],
           "cssProperties": [
             {
-              "name": "--sn-bg",
+              "name": "--sn-sys-surface",
               "description": "Theme CSS custom property consumed by chat-message-item."
             },
             {
-              "name": "--sn-text",
+              "name": "--sn-sys-on-surface",
               "description": "Theme CSS custom property consumed by chat-message-item."
             },
             {
-              "name": "--sn-text-dim",
+              "name": "--sn-sys-on-surface-dim",
               "description": "Theme CSS custom property consumed by chat-message-item."
             },
             {
@@ -7459,19 +7459,19 @@
               "description": "Theme CSS custom property consumed by chat-message-item."
             },
             {
-              "name": "--sn-node-bg",
+              "name": "--sn-sys-surface-raised",
               "description": "Theme CSS custom property consumed by chat-message-item."
             },
             {
-              "name": "--sn-node-border",
+              "name": "--sn-sys-outline",
               "description": "Theme CSS custom property consumed by chat-message-item."
             },
             {
-              "name": "--sn-node-hover",
+              "name": "--sn-sys-state-hover-mix",
               "description": "Theme CSS custom property consumed by chat-message-item."
             },
             {
-              "name": "--sn-node-selected",
+              "name": "--sn-sys-accent",
               "description": "Theme CSS custom property consumed by chat-message-item."
             },
             {
@@ -7483,11 +7483,11 @@
               "description": "Theme CSS custom property consumed by chat-message-item."
             },
             {
-              "name": "--sn-success-color",
+              "name": "--sn-sys-success",
               "description": "Theme CSS custom property consumed by chat-message-item."
             },
             {
-              "name": "--sn-danger-color",
+              "name": "--sn-sys-danger",
               "description": "Theme CSS custom property consumed by chat-message-item."
             },
             {
@@ -7634,18 +7634,18 @@
             "events": [],
             "slots": [],
             "themeAliases": [
-              "--sn-bg",
-              "--sn-text",
-              "--sn-text-dim",
+              "--sn-sys-surface",
+              "--sn-sys-on-surface",
+              "--sn-sys-on-surface-dim",
               "--sn-font-mono",
-              "--sn-node-bg",
-              "--sn-node-border",
-              "--sn-node-hover",
-              "--sn-node-selected",
+              "--sn-sys-surface-raised",
+              "--sn-sys-outline",
+              "--sn-sys-state-hover-mix",
+              "--sn-sys-accent",
               "--sn-accent-bg",
               "--sn-accent-bg-subtle",
-              "--sn-success-color",
-              "--sn-danger-color",
+              "--sn-sys-success",
+              "--sn-sys-danger",
               "--sn-chat-message-font-size",
               "--sn-chat-small-size",
               "--sn-chat-tool-font-size",
@@ -7786,18 +7786,18 @@
               "events": [],
               "slots": [],
               "themeAliases": [
-                "--sn-bg",
-                "--sn-text",
-                "--sn-text-dim",
+                "--sn-sys-surface",
+                "--sn-sys-on-surface",
+                "--sn-sys-on-surface-dim",
                 "--sn-font-mono",
-                "--sn-node-bg",
-                "--sn-node-border",
-                "--sn-node-hover",
-                "--sn-node-selected",
+                "--sn-sys-surface-raised",
+                "--sn-sys-outline",
+                "--sn-sys-state-hover-mix",
+                "--sn-sys-accent",
                 "--sn-accent-bg",
                 "--sn-accent-bg-subtle",
-                "--sn-success-color",
-                "--sn-danger-color",
+                "--sn-sys-success",
+                "--sn-sys-danger",
                 "--sn-chat-message-font-size",
                 "--sn-chat-small-size",
                 "--sn-chat-tool-font-size",
@@ -7962,19 +7962,19 @@
           "slots": [],
           "cssProperties": [
             {
-              "name": "--sn-node-bg",
+              "name": "--sn-sys-surface-raised",
               "description": "Theme CSS custom property consumed by chat-sidebar-shell."
             },
             {
-              "name": "--sn-node-hover",
+              "name": "--sn-sys-state-hover-mix",
               "description": "Theme CSS custom property consumed by chat-sidebar-shell."
             },
             {
-              "name": "--sn-text",
+              "name": "--sn-sys-on-surface",
               "description": "Theme CSS custom property consumed by chat-sidebar-shell."
             },
             {
-              "name": "--sn-text-dim",
+              "name": "--sn-sys-on-surface-dim",
               "description": "Theme CSS custom property consumed by chat-sidebar-shell."
             },
             {
@@ -8131,10 +8131,10 @@
             ],
             "slots": [],
             "themeAliases": [
-              "--sn-node-bg",
-              "--sn-node-hover",
-              "--sn-text",
-              "--sn-text-dim",
+              "--sn-sys-surface-raised",
+              "--sn-sys-state-hover-mix",
+              "--sn-sys-on-surface",
+              "--sn-sys-on-surface-dim",
               "--sn-chat-sidebar-width",
               "--sn-chat-sidebar-collapsed-width",
               "--sn-chat-sidebar-resize-hit-size",
@@ -8398,10 +8398,10 @@
               ],
               "slots": [],
               "themeAliases": [
-                "--sn-node-bg",
-                "--sn-node-hover",
-                "--sn-text",
-                "--sn-text-dim",
+                "--sn-sys-surface-raised",
+                "--sn-sys-state-hover-mix",
+                "--sn-sys-on-surface",
+                "--sn-sys-on-surface-dim",
                 "--sn-chat-sidebar-width",
                 "--sn-chat-sidebar-collapsed-width",
                 "--sn-chat-sidebar-resize-hit-size",
@@ -8719,19 +8719,19 @@
           "slots": [],
           "cssProperties": [
             {
-              "name": "--sn-node-bg",
+              "name": "--sn-sys-surface-raised",
               "description": "Theme CSS custom property consumed by chat-sidebar-item."
             },
             {
-              "name": "--sn-node-hover",
+              "name": "--sn-sys-state-hover-mix",
               "description": "Theme CSS custom property consumed by chat-sidebar-item."
             },
             {
-              "name": "--sn-text",
+              "name": "--sn-sys-on-surface",
               "description": "Theme CSS custom property consumed by chat-sidebar-item."
             },
             {
-              "name": "--sn-text-dim",
+              "name": "--sn-sys-on-surface-dim",
               "description": "Theme CSS custom property consumed by chat-sidebar-item."
             },
             {
@@ -8739,7 +8739,7 @@
               "description": "Theme CSS custom property consumed by chat-sidebar-item."
             },
             {
-              "name": "--sn-danger-color",
+              "name": "--sn-sys-danger",
               "description": "Theme CSS custom property consumed by chat-sidebar-item."
             },
             {
@@ -9015,12 +9015,12 @@
             ],
             "slots": [],
             "themeAliases": [
-              "--sn-node-bg",
-              "--sn-node-hover",
-              "--sn-text",
-              "--sn-text-dim",
+              "--sn-sys-surface-raised",
+              "--sn-sys-state-hover-mix",
+              "--sn-sys-on-surface",
+              "--sn-sys-on-surface-dim",
               "--sn-cat-server",
-              "--sn-danger-color",
+              "--sn-sys-danger",
               "--sn-chat-sidebar-compact-label-min",
               "--sn-chat-sidebar-compact-label-ch-width",
               "--sn-chat-sidebar-compact-label-extra",
@@ -9206,12 +9206,12 @@
               ],
               "slots": [],
               "themeAliases": [
-                "--sn-node-bg",
-                "--sn-node-hover",
-                "--sn-text",
-                "--sn-text-dim",
+                "--sn-sys-surface-raised",
+                "--sn-sys-state-hover-mix",
+                "--sn-sys-on-surface",
+                "--sn-sys-on-surface-dim",
                 "--sn-cat-server",
-                "--sn-danger-color",
+                "--sn-sys-danger",
                 "--sn-chat-sidebar-compact-label-min",
                 "--sn-chat-sidebar-compact-label-ch-width",
                 "--sn-chat-sidebar-compact-label-extra",
@@ -9422,19 +9422,19 @@
           "slots": [],
           "cssProperties": [
             {
-              "name": "--sn-node-bg",
+              "name": "--sn-sys-surface-raised",
               "description": "Theme CSS custom property consumed by chat-sidebar-sub-item."
             },
             {
-              "name": "--sn-node-hover",
+              "name": "--sn-sys-state-hover-mix",
               "description": "Theme CSS custom property consumed by chat-sidebar-sub-item."
             },
             {
-              "name": "--sn-text",
+              "name": "--sn-sys-on-surface",
               "description": "Theme CSS custom property consumed by chat-sidebar-sub-item."
             },
             {
-              "name": "--sn-text-dim",
+              "name": "--sn-sys-on-surface-dim",
               "description": "Theme CSS custom property consumed by chat-sidebar-sub-item."
             },
             {
@@ -9446,7 +9446,7 @@
               "description": "Theme CSS custom property consumed by chat-sidebar-sub-item."
             },
             {
-              "name": "--sn-danger-color",
+              "name": "--sn-sys-danger",
               "description": "Theme CSS custom property consumed by chat-sidebar-sub-item."
             },
             {
@@ -9665,13 +9665,13 @@
             ],
             "slots": [],
             "themeAliases": [
-              "--sn-node-bg",
-              "--sn-node-hover",
-              "--sn-text",
-              "--sn-text-dim",
+              "--sn-sys-surface-raised",
+              "--sn-sys-state-hover-mix",
+              "--sn-sys-on-surface",
+              "--sn-sys-on-surface-dim",
               "--sn-font-mono",
               "--sn-cat-server",
-              "--sn-danger-color",
+              "--sn-sys-danger",
               "--sn-chat-sidebar-row-gap",
               "--sn-chat-sidebar-icon-size",
               "--sn-chat-sidebar-icon-box-size",
@@ -9839,13 +9839,13 @@
               ],
               "slots": [],
               "themeAliases": [
-                "--sn-node-bg",
-                "--sn-node-hover",
-                "--sn-text",
-                "--sn-text-dim",
+                "--sn-sys-surface-raised",
+                "--sn-sys-state-hover-mix",
+                "--sn-sys-on-surface",
+                "--sn-sys-on-surface-dim",
                 "--sn-font-mono",
                 "--sn-cat-server",
-                "--sn-danger-color",
+                "--sn-sys-danger",
                 "--sn-chat-sidebar-row-gap",
                 "--sn-chat-sidebar-icon-size",
                 "--sn-chat-sidebar-icon-box-size",
@@ -10758,7 +10758,7 @@
               "description": "Theme CSS custom property consumed by chat-workspace."
             },
             {
-              "name": "--sn-text",
+              "name": "--sn-sys-on-surface",
               "description": "Theme CSS custom property consumed by chat-workspace."
             },
             {
@@ -11086,7 +11086,7 @@
             "slots": [],
             "themeAliases": [
               "--sn-chat-bg",
-              "--sn-text",
+              "--sn-sys-on-surface",
               "--sn-font",
               "--sn-chat-sidebar-width",
               "--sn-chat-sidebar-collapsed-width",
@@ -11587,7 +11587,7 @@
               "slots": [],
               "themeAliases": [
                 "--sn-chat-bg",
-                "--sn-text",
+                "--sn-sys-on-surface",
                 "--sn-font",
                 "--sn-chat-sidebar-width",
                 "--sn-chat-sidebar-collapsed-width",
@@ -12226,7 +12226,7 @@
           "slots": [],
           "cssProperties": [
             {
-              "name": "--sn-bg",
+              "name": "--sn-sys-surface",
               "description": "Theme CSS custom property consumed by sn-color-picker."
             },
             {
@@ -12250,7 +12250,7 @@
               "description": "Theme CSS custom property consumed by sn-color-picker."
             },
             {
-              "name": "--sn-node-selected",
+              "name": "--sn-sys-accent",
               "description": "Theme CSS custom property consumed by sn-color-picker."
             },
             {
@@ -12258,7 +12258,7 @@
               "description": "Theme CSS custom property consumed by sn-color-picker."
             },
             {
-              "name": "--sn-panel-bg",
+              "name": "--sn-sys-surface-panel",
               "description": "Theme CSS custom property consumed by sn-color-picker."
             },
             {
@@ -12270,7 +12270,7 @@
               "description": "Theme CSS custom property consumed by sn-color-picker."
             },
             {
-              "name": "--sn-text",
+              "name": "--sn-sys-on-surface",
               "description": "Theme CSS custom property consumed by sn-color-picker."
             },
             {
@@ -12330,18 +12330,18 @@
             ],
             "slots": [],
             "themeAliases": [
-              "--sn-bg",
+              "--sn-sys-surface",
               "--sn-field-control-bg",
               "--sn-field-control-border",
               "--sn-field-control-focus-border",
               "--sn-field-control-radius",
               "--sn-font",
-              "--sn-node-selected",
+              "--sn-sys-accent",
               "--sn-outline-color-soft",
-              "--sn-panel-bg",
+              "--sn-sys-surface-panel",
               "--sn-panel-radius",
               "--sn-panel-shadow",
-              "--sn-text",
+              "--sn-sys-on-surface",
               "--sn-theme-density",
               "--sn-theme-type-scale"
             ],
@@ -12426,18 +12426,18 @@
               ],
               "slots": [],
               "themeAliases": [
-                "--sn-bg",
+                "--sn-sys-surface",
                 "--sn-field-control-bg",
                 "--sn-field-control-border",
                 "--sn-field-control-focus-border",
                 "--sn-field-control-radius",
                 "--sn-font",
-                "--sn-node-selected",
+                "--sn-sys-accent",
                 "--sn-outline-color-soft",
-                "--sn-panel-bg",
+                "--sn-sys-surface-panel",
                 "--sn-panel-radius",
                 "--sn-panel-shadow",
-                "--sn-text",
+                "--sn-sys-on-surface",
                 "--sn-theme-density",
                 "--sn-theme-type-scale"
               ],
@@ -12894,7 +12894,7 @@
           "slots": [],
           "cssProperties": [
             {
-              "name": "--sn-bg",
+              "name": "--sn-sys-surface",
               "description": "Theme CSS custom property consumed by sn-date-picker."
             },
             {
@@ -12918,11 +12918,11 @@
               "description": "Theme CSS custom property consumed by sn-date-picker."
             },
             {
-              "name": "--sn-node-hover",
+              "name": "--sn-sys-state-hover-mix",
               "description": "Theme CSS custom property consumed by sn-date-picker."
             },
             {
-              "name": "--sn-node-selected",
+              "name": "--sn-sys-accent",
               "description": "Theme CSS custom property consumed by sn-date-picker."
             },
             {
@@ -12930,7 +12930,7 @@
               "description": "Theme CSS custom property consumed by sn-date-picker."
             },
             {
-              "name": "--sn-panel-bg",
+              "name": "--sn-sys-surface-panel",
               "description": "Theme CSS custom property consumed by sn-date-picker."
             },
             {
@@ -12942,11 +12942,11 @@
               "description": "Theme CSS custom property consumed by sn-date-picker."
             },
             {
-              "name": "--sn-text",
+              "name": "--sn-sys-on-surface",
               "description": "Theme CSS custom property consumed by sn-date-picker."
             },
             {
-              "name": "--sn-text-dim",
+              "name": "--sn-sys-on-surface-dim",
               "description": "Theme CSS custom property consumed by sn-date-picker."
             },
             {
@@ -13011,20 +13011,20 @@
             ],
             "slots": [],
             "themeAliases": [
-              "--sn-bg",
+              "--sn-sys-surface",
               "--sn-field-control-bg",
               "--sn-field-control-border",
               "--sn-field-control-focus-border",
               "--sn-field-control-radius",
               "--sn-font",
-              "--sn-node-hover",
-              "--sn-node-selected",
+              "--sn-sys-state-hover-mix",
+              "--sn-sys-accent",
               "--sn-outline-color-soft",
-              "--sn-panel-bg",
+              "--sn-sys-surface-panel",
               "--sn-panel-radius",
               "--sn-panel-shadow",
-              "--sn-text",
-              "--sn-text-dim",
+              "--sn-sys-on-surface",
+              "--sn-sys-on-surface-dim",
               "--sn-theme-density",
               "--sn-theme-type-scale"
             ],
@@ -13114,20 +13114,20 @@
               ],
               "slots": [],
               "themeAliases": [
-                "--sn-bg",
+                "--sn-sys-surface",
                 "--sn-field-control-bg",
                 "--sn-field-control-border",
                 "--sn-field-control-focus-border",
                 "--sn-field-control-radius",
                 "--sn-font",
-                "--sn-node-hover",
-                "--sn-node-selected",
+                "--sn-sys-state-hover-mix",
+                "--sn-sys-accent",
                 "--sn-outline-color-soft",
-                "--sn-panel-bg",
+                "--sn-sys-surface-panel",
                 "--sn-panel-radius",
                 "--sn-panel-shadow",
-                "--sn-text",
-                "--sn-text-dim",
+                "--sn-sys-on-surface",
+                "--sn-sys-on-surface-dim",
                 "--sn-theme-density",
                 "--sn-theme-type-scale"
               ],
@@ -13562,7 +13562,7 @@
           "slots": [],
           "cssProperties": [
             {
-              "name": "--sn-bg",
+              "name": "--sn-sys-surface",
               "description": "Theme CSS custom property consumed by sn-file-upload."
             },
             {
@@ -13574,11 +13574,11 @@
               "description": "Theme CSS custom property consumed by sn-file-upload."
             },
             {
-              "name": "--sn-node-hover",
+              "name": "--sn-sys-state-hover-mix",
               "description": "Theme CSS custom property consumed by sn-file-upload."
             },
             {
-              "name": "--sn-node-selected",
+              "name": "--sn-sys-accent",
               "description": "Theme CSS custom property consumed by sn-file-upload."
             },
             {
@@ -13586,7 +13586,7 @@
               "description": "Theme CSS custom property consumed by sn-file-upload."
             },
             {
-              "name": "--sn-panel-bg",
+              "name": "--sn-sys-surface-panel",
               "description": "Theme CSS custom property consumed by sn-file-upload."
             },
             {
@@ -13598,11 +13598,11 @@
               "description": "Theme CSS custom property consumed by sn-file-upload."
             },
             {
-              "name": "--sn-text",
+              "name": "--sn-sys-on-surface",
               "description": "Theme CSS custom property consumed by sn-file-upload."
             },
             {
-              "name": "--sn-text-dim",
+              "name": "--sn-sys-on-surface-dim",
               "description": "Theme CSS custom property consumed by sn-file-upload."
             },
             {
@@ -13690,17 +13690,17 @@
             ],
             "slots": [],
             "themeAliases": [
-              "--sn-bg",
+              "--sn-sys-surface",
               "--sn-field-control-bg",
               "--sn-font",
-              "--sn-node-hover",
-              "--sn-node-selected",
+              "--sn-sys-state-hover-mix",
+              "--sn-sys-accent",
               "--sn-outline-color-soft",
-              "--sn-panel-bg",
+              "--sn-sys-surface-panel",
               "--sn-panel-radius",
               "--sn-status-error",
-              "--sn-text",
-              "--sn-text-dim",
+              "--sn-sys-on-surface",
+              "--sn-sys-on-surface-dim",
               "--sn-theme-density",
               "--sn-theme-type-scale",
               "--sn-transition-fast"
@@ -13810,17 +13810,17 @@
               ],
               "slots": [],
               "themeAliases": [
-                "--sn-bg",
+                "--sn-sys-surface",
                 "--sn-field-control-bg",
                 "--sn-font",
-                "--sn-node-hover",
-                "--sn-node-selected",
+                "--sn-sys-state-hover-mix",
+                "--sn-sys-accent",
                 "--sn-outline-color-soft",
-                "--sn-panel-bg",
+                "--sn-sys-surface-panel",
                 "--sn-panel-radius",
                 "--sn-status-error",
-                "--sn-text",
-                "--sn-text-dim",
+                "--sn-sys-on-surface",
+                "--sn-sys-on-surface-dim",
                 "--sn-theme-density",
                 "--sn-theme-type-scale",
                 "--sn-transition-fast"
@@ -13893,7 +13893,7 @@
               "description": "Theme CSS custom property consumed by sn-mentions."
             },
             {
-              "name": "--sn-node-hover",
+              "name": "--sn-sys-state-hover-mix",
               "description": "Theme CSS custom property consumed by sn-mentions."
             },
             {
@@ -13901,7 +13901,7 @@
               "description": "Theme CSS custom property consumed by sn-mentions."
             },
             {
-              "name": "--sn-panel-bg",
+              "name": "--sn-sys-surface-panel",
               "description": "Theme CSS custom property consumed by sn-mentions."
             },
             {
@@ -13913,7 +13913,7 @@
               "description": "Theme CSS custom property consumed by sn-mentions."
             },
             {
-              "name": "--sn-text",
+              "name": "--sn-sys-on-surface",
               "description": "Theme CSS custom property consumed by sn-mentions."
             },
             {
@@ -13954,12 +13954,12 @@
             "slots": [],
             "themeAliases": [
               "--sn-font",
-              "--sn-node-hover",
+              "--sn-sys-state-hover-mix",
               "--sn-outline-color-soft",
-              "--sn-panel-bg",
+              "--sn-sys-surface-panel",
               "--sn-panel-radius",
               "--sn-panel-shadow",
-              "--sn-text",
+              "--sn-sys-on-surface",
               "--sn-theme-density",
               "--sn-theme-type-scale"
             ],
@@ -14025,12 +14025,12 @@
               "slots": [],
               "themeAliases": [
                 "--sn-font",
-                "--sn-node-hover",
+                "--sn-sys-state-hover-mix",
                 "--sn-outline-color-soft",
-                "--sn-panel-bg",
+                "--sn-sys-surface-panel",
                 "--sn-panel-radius",
                 "--sn-panel-shadow",
-                "--sn-text",
+                "--sn-sys-on-surface",
                 "--sn-theme-density",
                 "--sn-theme-type-scale"
               ],
@@ -14300,7 +14300,7 @@
           "slots": [],
           "cssProperties": [
             {
-              "name": "--sn-bg",
+              "name": "--sn-sys-surface",
               "description": "Theme CSS custom property consumed by sn-pin-input."
             },
             {
@@ -14324,7 +14324,7 @@
               "description": "Theme CSS custom property consumed by sn-pin-input."
             },
             {
-              "name": "--sn-node-selected",
+              "name": "--sn-sys-accent",
               "description": "Theme CSS custom property consumed by sn-pin-input."
             },
             {
@@ -14336,11 +14336,11 @@
               "description": "Theme CSS custom property consumed by sn-pin-input."
             },
             {
-              "name": "--sn-text",
+              "name": "--sn-sys-on-surface",
               "description": "Theme CSS custom property consumed by sn-pin-input."
             },
             {
-              "name": "--sn-text-dim",
+              "name": "--sn-sys-on-surface-dim",
               "description": "Theme CSS custom property consumed by sn-pin-input."
             },
             {
@@ -14409,17 +14409,17 @@
             ],
             "slots": [],
             "themeAliases": [
-              "--sn-bg",
+              "--sn-sys-surface",
               "--sn-field-control-bg",
               "--sn-field-control-border",
               "--sn-field-control-focus-border",
               "--sn-field-control-radius",
               "--sn-font",
-              "--sn-node-selected",
+              "--sn-sys-accent",
               "--sn-outline-color-soft",
               "--sn-panel-radius",
-              "--sn-text",
-              "--sn-text-dim",
+              "--sn-sys-on-surface",
+              "--sn-sys-on-surface-dim",
               "--sn-theme-density",
               "--sn-theme-type-scale",
               "--sn-transition-fast"
@@ -14510,17 +14510,17 @@
               ],
               "slots": [],
               "themeAliases": [
-                "--sn-bg",
+                "--sn-sys-surface",
                 "--sn-field-control-bg",
                 "--sn-field-control-border",
                 "--sn-field-control-focus-border",
                 "--sn-field-control-radius",
                 "--sn-font",
-                "--sn-node-selected",
+                "--sn-sys-accent",
                 "--sn-outline-color-soft",
                 "--sn-panel-radius",
-                "--sn-text",
-                "--sn-text-dim",
+                "--sn-sys-on-surface",
+                "--sn-sys-on-surface-dim",
                 "--sn-theme-density",
                 "--sn-theme-type-scale",
                 "--sn-transition-fast"
@@ -14996,7 +14996,7 @@
           "slots": [],
           "cssProperties": [
             {
-              "name": "--sn-bg",
+              "name": "--sn-sys-surface",
               "description": "Theme CSS custom property consumed by sn-rich-text-editor."
             },
             {
@@ -15012,11 +15012,11 @@
               "description": "Theme CSS custom property consumed by sn-rich-text-editor."
             },
             {
-              "name": "--sn-node-hover",
+              "name": "--sn-sys-state-hover-mix",
               "description": "Theme CSS custom property consumed by sn-rich-text-editor."
             },
             {
-              "name": "--sn-node-selected",
+              "name": "--sn-sys-accent",
               "description": "Theme CSS custom property consumed by sn-rich-text-editor."
             },
             {
@@ -15024,7 +15024,7 @@
               "description": "Theme CSS custom property consumed by sn-rich-text-editor."
             },
             {
-              "name": "--sn-panel-bg",
+              "name": "--sn-sys-surface-panel",
               "description": "Theme CSS custom property consumed by sn-rich-text-editor."
             },
             {
@@ -15032,11 +15032,11 @@
               "description": "Theme CSS custom property consumed by sn-rich-text-editor."
             },
             {
-              "name": "--sn-text",
+              "name": "--sn-sys-on-surface",
               "description": "Theme CSS custom property consumed by sn-rich-text-editor."
             },
             {
-              "name": "--sn-text-dim",
+              "name": "--sn-sys-on-surface-dim",
               "description": "Theme CSS custom property consumed by sn-rich-text-editor."
             },
             {
@@ -15092,17 +15092,17 @@
             ],
             "slots": [],
             "themeAliases": [
-              "--sn-bg",
+              "--sn-sys-surface",
               "--sn-field-control-bg",
               "--sn-field-control-border",
               "--sn-font",
-              "--sn-node-hover",
-              "--sn-node-selected",
+              "--sn-sys-state-hover-mix",
+              "--sn-sys-accent",
               "--sn-outline-color-soft",
-              "--sn-panel-bg",
+              "--sn-sys-surface-panel",
               "--sn-panel-radius",
-              "--sn-text",
-              "--sn-text-dim",
+              "--sn-sys-on-surface",
+              "--sn-sys-on-surface-dim",
               "--sn-theme-type-scale"
             ],
             "status": "draft",
@@ -15186,17 +15186,17 @@
               ],
               "slots": [],
               "themeAliases": [
-                "--sn-bg",
+                "--sn-sys-surface",
                 "--sn-field-control-bg",
                 "--sn-field-control-border",
                 "--sn-font",
-                "--sn-node-hover",
-                "--sn-node-selected",
+                "--sn-sys-state-hover-mix",
+                "--sn-sys-accent",
                 "--sn-outline-color-soft",
-                "--sn-panel-bg",
+                "--sn-sys-surface-panel",
                 "--sn-panel-radius",
-                "--sn-text",
-                "--sn-text-dim",
+                "--sn-sys-on-surface",
+                "--sn-sys-on-surface-dim",
                 "--sn-theme-type-scale"
               ],
               "status": "draft",
@@ -19465,7 +19465,7 @@
           "slots": [],
           "cssProperties": [
             {
-              "name": "--sn-bg",
+              "name": "--sn-sys-surface",
               "description": "Theme CSS custom property consumed by sn-tags-input."
             },
             {
@@ -19489,7 +19489,7 @@
               "description": "Theme CSS custom property consumed by sn-tags-input."
             },
             {
-              "name": "--sn-node-selected",
+              "name": "--sn-sys-accent",
               "description": "Theme CSS custom property consumed by sn-tags-input."
             },
             {
@@ -19497,7 +19497,7 @@
               "description": "Theme CSS custom property consumed by sn-tags-input."
             },
             {
-              "name": "--sn-panel-bg",
+              "name": "--sn-sys-surface-panel",
               "description": "Theme CSS custom property consumed by sn-tags-input."
             },
             {
@@ -19509,11 +19509,11 @@
               "description": "Theme CSS custom property consumed by sn-tags-input."
             },
             {
-              "name": "--sn-text",
+              "name": "--sn-sys-on-surface",
               "description": "Theme CSS custom property consumed by sn-tags-input."
             },
             {
-              "name": "--sn-text-dim",
+              "name": "--sn-sys-on-surface-dim",
               "description": "Theme CSS custom property consumed by sn-tags-input."
             },
             {
@@ -19577,19 +19577,19 @@
             ],
             "slots": [],
             "themeAliases": [
-              "--sn-bg",
+              "--sn-sys-surface",
               "--sn-field-control-bg",
               "--sn-field-control-border",
               "--sn-field-control-focus-border",
               "--sn-field-control-radius",
               "--sn-font",
-              "--sn-node-selected",
+              "--sn-sys-accent",
               "--sn-outline-color-soft",
-              "--sn-panel-bg",
+              "--sn-sys-surface-panel",
               "--sn-panel-radius",
               "--sn-status-error",
-              "--sn-text",
-              "--sn-text-dim",
+              "--sn-sys-on-surface",
+              "--sn-sys-on-surface-dim",
               "--sn-theme-density",
               "--sn-theme-type-scale",
               "--sn-transition-fast"
@@ -19675,19 +19675,19 @@
               ],
               "slots": [],
               "themeAliases": [
-                "--sn-bg",
+                "--sn-sys-surface",
                 "--sn-field-control-bg",
                 "--sn-field-control-border",
                 "--sn-field-control-focus-border",
                 "--sn-field-control-radius",
                 "--sn-font",
-                "--sn-node-selected",
+                "--sn-sys-accent",
                 "--sn-outline-color-soft",
-                "--sn-panel-bg",
+                "--sn-sys-surface-panel",
                 "--sn-panel-radius",
                 "--sn-status-error",
-                "--sn-text",
-                "--sn-text-dim",
+                "--sn-sys-on-surface",
+                "--sn-sys-on-surface-dim",
                 "--sn-theme-density",
                 "--sn-theme-type-scale",
                 "--sn-transition-fast"
@@ -19789,7 +19789,7 @@
           "slots": [],
           "cssProperties": [
             {
-              "name": "--sn-bg",
+              "name": "--sn-sys-surface",
               "description": "Theme CSS custom property consumed by sn-transfer."
             },
             {
@@ -19805,11 +19805,11 @@
               "description": "Theme CSS custom property consumed by sn-transfer."
             },
             {
-              "name": "--sn-node-hover",
+              "name": "--sn-sys-state-hover-mix",
               "description": "Theme CSS custom property consumed by sn-transfer."
             },
             {
-              "name": "--sn-node-selected",
+              "name": "--sn-sys-accent",
               "description": "Theme CSS custom property consumed by sn-transfer."
             },
             {
@@ -19817,7 +19817,7 @@
               "description": "Theme CSS custom property consumed by sn-transfer."
             },
             {
-              "name": "--sn-panel-bg",
+              "name": "--sn-sys-surface-panel",
               "description": "Theme CSS custom property consumed by sn-transfer."
             },
             {
@@ -19825,7 +19825,7 @@
               "description": "Theme CSS custom property consumed by sn-transfer."
             },
             {
-              "name": "--sn-text",
+              "name": "--sn-sys-on-surface",
               "description": "Theme CSS custom property consumed by sn-transfer."
             },
             {
@@ -19890,16 +19890,16 @@
             ],
             "slots": [],
             "themeAliases": [
-              "--sn-bg",
+              "--sn-sys-surface",
               "--sn-field-control-bg",
               "--sn-field-control-border",
               "--sn-font",
-              "--sn-node-hover",
-              "--sn-node-selected",
+              "--sn-sys-state-hover-mix",
+              "--sn-sys-accent",
               "--sn-outline-color-soft",
-              "--sn-panel-bg",
+              "--sn-sys-surface-panel",
               "--sn-panel-radius",
-              "--sn-text",
+              "--sn-sys-on-surface",
               "--sn-theme-density",
               "--sn-theme-type-scale"
             ],
@@ -19989,16 +19989,16 @@
               ],
               "slots": [],
               "themeAliases": [
-                "--sn-bg",
+                "--sn-sys-surface",
                 "--sn-field-control-bg",
                 "--sn-field-control-border",
                 "--sn-font",
-                "--sn-node-hover",
-                "--sn-node-selected",
+                "--sn-sys-state-hover-mix",
+                "--sn-sys-accent",
                 "--sn-outline-color-soft",
-                "--sn-panel-bg",
+                "--sn-sys-surface-panel",
                 "--sn-panel-radius",
-                "--sn-text",
+                "--sn-sys-on-surface",
                 "--sn-theme-density",
                 "--sn-theme-type-scale"
               ],
@@ -20789,11 +20789,11 @@
               "description": "Theme CSS custom property consumed by sn-carousel."
             },
             {
-              "name": "--sn-node-hover",
+              "name": "--sn-sys-state-hover-mix",
               "description": "Theme CSS custom property consumed by sn-carousel."
             },
             {
-              "name": "--sn-node-selected",
+              "name": "--sn-sys-accent",
               "description": "Theme CSS custom property consumed by sn-carousel."
             },
             {
@@ -20801,15 +20801,15 @@
               "description": "Theme CSS custom property consumed by sn-carousel."
             },
             {
-              "name": "--sn-panel-bg",
+              "name": "--sn-sys-surface-panel",
               "description": "Theme CSS custom property consumed by sn-carousel."
             },
             {
-              "name": "--sn-text",
+              "name": "--sn-sys-on-surface",
               "description": "Theme CSS custom property consumed by sn-carousel."
             },
             {
-              "name": "--sn-text-dim",
+              "name": "--sn-sys-on-surface-dim",
               "description": "Theme CSS custom property consumed by sn-carousel."
             },
             {
@@ -20846,12 +20846,12 @@
             "slots": [],
             "themeAliases": [
               "--sn-font",
-              "--sn-node-hover",
-              "--sn-node-selected",
+              "--sn-sys-state-hover-mix",
+              "--sn-sys-accent",
               "--sn-outline-color-soft",
-              "--sn-panel-bg",
-              "--sn-text",
-              "--sn-text-dim",
+              "--sn-sys-surface-panel",
+              "--sn-sys-on-surface",
+              "--sn-sys-on-surface-dim",
               "--sn-transition-fast"
             ],
             "status": "draft",
@@ -20916,12 +20916,12 @@
               "slots": [],
               "themeAliases": [
                 "--sn-font",
-                "--sn-node-hover",
-                "--sn-node-selected",
+                "--sn-sys-state-hover-mix",
+                "--sn-sys-accent",
                 "--sn-outline-color-soft",
-                "--sn-panel-bg",
-                "--sn-text",
-                "--sn-text-dim",
+                "--sn-sys-surface-panel",
+                "--sn-sys-on-surface",
+                "--sn-sys-on-surface-dim",
                 "--sn-transition-fast"
               ],
               "status": "draft",
@@ -21355,19 +21355,19 @@
           "slots": [],
           "cssProperties": [
             {
-              "name": "--sn-bg",
+              "name": "--sn-sys-surface",
               "description": "Theme CSS custom property consumed by code-block."
             },
             {
-              "name": "--sn-text",
+              "name": "--sn-sys-on-surface",
               "description": "Theme CSS custom property consumed by code-block."
             },
             {
-              "name": "--sn-text-dim",
+              "name": "--sn-sys-on-surface-dim",
               "description": "Theme CSS custom property consumed by code-block."
             },
             {
-              "name": "--sn-node-border",
+              "name": "--sn-sys-outline",
               "description": "Theme CSS custom property consumed by code-block."
             },
             {
@@ -21375,7 +21375,7 @@
               "description": "Theme CSS custom property consumed by code-block."
             },
             {
-              "name": "--sn-warning-color",
+              "name": "--sn-sys-warning",
               "description": "Theme CSS custom property consumed by code-block."
             },
             {
@@ -21512,12 +21512,12 @@
             "events": [],
             "slots": [],
             "themeAliases": [
-              "--sn-bg",
-              "--sn-text",
-              "--sn-text-dim",
-              "--sn-node-border",
+              "--sn-sys-surface",
+              "--sn-sys-on-surface",
+              "--sn-sys-on-surface-dim",
+              "--sn-sys-outline",
               "--sn-cat-server",
-              "--sn-warning-color",
+              "--sn-sys-warning",
               "--sn-syntax-keyword",
               "--sn-syntax-string",
               "--sn-syntax-comment",
@@ -21695,12 +21695,12 @@
               "events": [],
               "slots": [],
               "themeAliases": [
-                "--sn-bg",
-                "--sn-text",
-                "--sn-text-dim",
-                "--sn-node-border",
+                "--sn-sys-surface",
+                "--sn-sys-on-surface",
+                "--sn-sys-on-surface-dim",
+                "--sn-sys-outline",
                 "--sn-cat-server",
-                "--sn-warning-color",
+                "--sn-sys-warning",
                 "--sn-syntax-keyword",
                 "--sn-syntax-string",
                 "--sn-syntax-comment",
@@ -22823,7 +22823,7 @@
               "description": "Theme CSS custom property consumed by sn-event-feed."
             },
             {
-              "name": "--sn-danger-color",
+              "name": "--sn-sys-danger",
               "description": "Theme CSS custom property consumed by sn-event-feed."
             },
             {
@@ -22839,7 +22839,7 @@
               "description": "Theme CSS custom property consumed by sn-event-feed."
             },
             {
-              "name": "--sn-node-border",
+              "name": "--sn-sys-outline",
               "description": "Theme CSS custom property consumed by sn-event-feed."
             },
             {
@@ -22847,15 +22847,15 @@
               "description": "Theme CSS custom property consumed by sn-event-feed."
             },
             {
-              "name": "--sn-success-color",
+              "name": "--sn-sys-success",
               "description": "Theme CSS custom property consumed by sn-event-feed."
             },
             {
-              "name": "--sn-text",
+              "name": "--sn-sys-on-surface",
               "description": "Theme CSS custom property consumed by sn-event-feed."
             },
             {
-              "name": "--sn-text-dim",
+              "name": "--sn-sys-on-surface-dim",
               "description": "Theme CSS custom property consumed by sn-event-feed."
             }
           ],
@@ -22914,15 +22914,15 @@
               "--sn-card-radius",
               "--sn-cat-data",
               "--sn-cat-server",
-              "--sn-danger-color",
+              "--sn-sys-danger",
               "--sn-font",
               "--sn-font-mono",
               "--sn-list-item-radius",
-              "--sn-node-border",
+              "--sn-sys-outline",
               "--sn-node-header-bg",
-              "--sn-success-color",
-              "--sn-text",
-              "--sn-text-dim"
+              "--sn-sys-success",
+              "--sn-sys-on-surface",
+              "--sn-sys-on-surface-dim"
             ],
             "status": "draft",
             "schemaVersion": "component-descriptor-v2",
@@ -23010,15 +23010,15 @@
                 "--sn-card-radius",
                 "--sn-cat-data",
                 "--sn-cat-server",
-                "--sn-danger-color",
+                "--sn-sys-danger",
                 "--sn-font",
                 "--sn-font-mono",
                 "--sn-list-item-radius",
-                "--sn-node-border",
+                "--sn-sys-outline",
                 "--sn-node-header-bg",
-                "--sn-success-color",
-                "--sn-text",
-                "--sn-text-dim"
+                "--sn-sys-success",
+                "--sn-sys-on-surface",
+                "--sn-sys-on-surface-dim"
               ],
               "status": "draft",
               "schemaVersion": "component-descriptor-v2",
@@ -23701,11 +23701,11 @@
           "slots": [],
           "cssProperties": [
             {
-              "name": "--sn-text",
+              "name": "--sn-sys-on-surface",
               "description": "Theme CSS custom property consumed by output-graph-preview."
             },
             {
-              "name": "--sn-text-dim",
+              "name": "--sn-sys-on-surface-dim",
               "description": "Theme CSS custom property consumed by output-graph-preview."
             },
             {
@@ -23717,15 +23717,15 @@
               "description": "Theme CSS custom property consumed by output-graph-preview."
             },
             {
-              "name": "--sn-node-bg",
+              "name": "--sn-sys-surface-raised",
               "description": "Theme CSS custom property consumed by output-graph-preview."
             },
             {
-              "name": "--sn-node-border",
+              "name": "--sn-sys-outline",
               "description": "Theme CSS custom property consumed by output-graph-preview."
             },
             {
-              "name": "--sn-node-hover",
+              "name": "--sn-sys-state-hover-mix",
               "description": "Theme CSS custom property consumed by output-graph-preview."
             }
           ],
@@ -23795,13 +23795,13 @@
             "events": [],
             "slots": [],
             "themeAliases": [
-              "--sn-text",
-              "--sn-text-dim",
+              "--sn-sys-on-surface",
+              "--sn-sys-on-surface-dim",
               "--sn-font-ui",
               "--sn-font-mono",
-              "--sn-node-bg",
-              "--sn-node-border",
-              "--sn-node-hover"
+              "--sn-sys-surface-raised",
+              "--sn-sys-outline",
+              "--sn-sys-state-hover-mix"
             ],
             "status": "draft",
             "schemaVersion": "component-descriptor-v2",
@@ -23902,13 +23902,13 @@
               "events": [],
               "slots": [],
               "themeAliases": [
-                "--sn-text",
-                "--sn-text-dim",
+                "--sn-sys-on-surface",
+                "--sn-sys-on-surface-dim",
                 "--sn-font-ui",
                 "--sn-font-mono",
-                "--sn-node-bg",
-                "--sn-node-border",
-                "--sn-node-hover"
+                "--sn-sys-surface-raised",
+                "--sn-sys-outline",
+                "--sn-sys-state-hover-mix"
               ],
               "status": "draft",
               "schemaVersion": "component-descriptor-v2",
@@ -24022,11 +24022,11 @@
           "slots": [],
           "cssProperties": [
             {
-              "name": "--sn-text",
+              "name": "--sn-sys-on-surface",
               "description": "Theme CSS custom property consumed by output-list-preview."
             },
             {
-              "name": "--sn-text-dim",
+              "name": "--sn-sys-on-surface-dim",
               "description": "Theme CSS custom property consumed by output-list-preview."
             },
             {
@@ -24038,11 +24038,11 @@
               "description": "Theme CSS custom property consumed by output-list-preview."
             },
             {
-              "name": "--sn-node-bg",
+              "name": "--sn-sys-surface-raised",
               "description": "Theme CSS custom property consumed by output-list-preview."
             },
             {
-              "name": "--sn-node-border",
+              "name": "--sn-sys-outline",
               "description": "Theme CSS custom property consumed by output-list-preview."
             }
           ],
@@ -24112,12 +24112,12 @@
             "events": [],
             "slots": [],
             "themeAliases": [
-              "--sn-text",
-              "--sn-text-dim",
+              "--sn-sys-on-surface",
+              "--sn-sys-on-surface-dim",
               "--sn-font-ui",
               "--sn-font-mono",
-              "--sn-node-bg",
-              "--sn-node-border"
+              "--sn-sys-surface-raised",
+              "--sn-sys-outline"
             ],
             "status": "draft",
             "schemaVersion": "component-descriptor-v2",
@@ -24218,12 +24218,12 @@
               "events": [],
               "slots": [],
               "themeAliases": [
-                "--sn-text",
-                "--sn-text-dim",
+                "--sn-sys-on-surface",
+                "--sn-sys-on-surface-dim",
                 "--sn-font-ui",
                 "--sn-font-mono",
-                "--sn-node-bg",
-                "--sn-node-border"
+                "--sn-sys-surface-raised",
+                "--sn-sys-outline"
               ],
               "status": "draft",
               "schemaVersion": "component-descriptor-v2",
@@ -24692,7 +24692,7 @@
               "description": "Theme CSS custom property consumed by sn-qr-code."
             },
             {
-              "name": "--sn-panel-bg",
+              "name": "--sn-sys-surface-panel",
               "description": "Theme CSS custom property consumed by sn-qr-code."
             },
             {
@@ -24708,7 +24708,7 @@
               "description": "Theme CSS custom property consumed by sn-qr-code."
             },
             {
-              "name": "--sn-text-dim",
+              "name": "--sn-sys-on-surface-dim",
               "description": "Theme CSS custom property consumed by sn-qr-code."
             }
           ],
@@ -24746,11 +24746,11 @@
             "themeAliases": [
               "--sn-font",
               "--sn-outline-color-soft",
-              "--sn-panel-bg",
+              "--sn-sys-surface-panel",
               "--sn-panel-radius",
               "--sn-qr-background",
               "--sn-qr-module-color",
-              "--sn-text-dim"
+              "--sn-sys-on-surface-dim"
             ],
             "status": "draft",
             "schemaVersion": "component-descriptor-v2",
@@ -24819,11 +24819,11 @@
               "themeAliases": [
                 "--sn-font",
                 "--sn-outline-color-soft",
-                "--sn-panel-bg",
+                "--sn-sys-surface-panel",
                 "--sn-panel-radius",
                 "--sn-qr-background",
                 "--sn-qr-module-color",
-                "--sn-text-dim"
+                "--sn-sys-on-surface-dim"
               ],
               "status": "draft",
               "schemaVersion": "component-descriptor-v2",
@@ -25064,7 +25064,7 @@
               "description": "Theme CSS custom property consumed by sn-source-diff."
             },
             {
-              "name": "--sn-panel-bg",
+              "name": "--sn-sys-surface-panel",
               "description": "Theme CSS custom property consumed by sn-source-diff."
             },
             {
@@ -25076,15 +25076,15 @@
               "description": "Theme CSS custom property consumed by sn-source-diff."
             },
             {
-              "name": "--sn-surface",
+              "name": "--sn-sys-surface-raised",
               "description": "Theme CSS custom property consumed by sn-source-diff."
             },
             {
-              "name": "--sn-text",
+              "name": "--sn-sys-on-surface",
               "description": "Theme CSS custom property consumed by sn-source-diff."
             },
             {
-              "name": "--sn-text-dim",
+              "name": "--sn-sys-on-surface-dim",
               "description": "Theme CSS custom property consumed by sn-source-diff."
             },
             {
@@ -25162,12 +25162,12 @@
             "slots": [],
             "themeAliases": [
               "--sn-font",
-              "--sn-panel-bg",
+              "--sn-sys-surface-panel",
               "--sn-panel-radius",
               "--sn-outline-color-soft",
-              "--sn-surface",
-              "--sn-text",
-              "--sn-text-dim",
+              "--sn-sys-surface-raised",
+              "--sn-sys-on-surface",
+              "--sn-sys-on-surface-dim",
               "--sn-hue-success",
               "--sn-hue-danger",
               "--sn-hue-warning",
@@ -25264,12 +25264,12 @@
               "slots": [],
               "themeAliases": [
                 "--sn-font",
-                "--sn-panel-bg",
+                "--sn-sys-surface-panel",
                 "--sn-panel-radius",
                 "--sn-outline-color-soft",
-                "--sn-surface",
-                "--sn-text",
-                "--sn-text-dim",
+                "--sn-sys-surface-raised",
+                "--sn-sys-on-surface",
+                "--sn-sys-on-surface-dim",
                 "--sn-hue-success",
                 "--sn-hue-danger",
                 "--sn-hue-warning",
@@ -27251,11 +27251,11 @@
               "description": "Theme CSS custom property consumed by sn-status-ribbon."
             },
             {
-              "name": "--sn-text",
+              "name": "--sn-sys-on-surface",
               "description": "Theme CSS custom property consumed by sn-status-ribbon."
             },
             {
-              "name": "--sn-text-dim",
+              "name": "--sn-sys-on-surface-dim",
               "description": "Theme CSS custom property consumed by sn-status-ribbon."
             }
           ],
@@ -27298,8 +27298,8 @@
               "--sn-shadow-lg",
               "--sn-accent-glow",
               "--sn-font-ui",
-              "--sn-text",
-              "--sn-text-dim"
+              "--sn-sys-on-surface",
+              "--sn-sys-on-surface-dim"
             ],
             "status": "draft",
             "schemaVersion": "component-descriptor-v2",
@@ -27373,8 +27373,8 @@
                 "--sn-shadow-lg",
                 "--sn-accent-glow",
                 "--sn-font-ui",
-                "--sn-text",
-                "--sn-text-dim"
+                "--sn-sys-on-surface",
+                "--sn-sys-on-surface-dim"
               ],
               "status": "draft",
               "schemaVersion": "component-descriptor-v2",
@@ -28501,11 +28501,11 @@
               "description": "Theme CSS custom property consumed by sn-tour."
             },
             {
-              "name": "--sn-node-hover",
+              "name": "--sn-sys-state-hover-mix",
               "description": "Theme CSS custom property consumed by sn-tour."
             },
             {
-              "name": "--sn-node-selected",
+              "name": "--sn-sys-accent",
               "description": "Theme CSS custom property consumed by sn-tour."
             },
             {
@@ -28513,7 +28513,7 @@
               "description": "Theme CSS custom property consumed by sn-tour."
             },
             {
-              "name": "--sn-panel-bg",
+              "name": "--sn-sys-surface-panel",
               "description": "Theme CSS custom property consumed by sn-tour."
             },
             {
@@ -28525,11 +28525,11 @@
               "description": "Theme CSS custom property consumed by sn-tour."
             },
             {
-              "name": "--sn-text",
+              "name": "--sn-sys-on-surface",
               "description": "Theme CSS custom property consumed by sn-tour."
             },
             {
-              "name": "--sn-text-dim",
+              "name": "--sn-sys-on-surface-dim",
               "description": "Theme CSS custom property consumed by sn-tour."
             },
             {
@@ -28574,14 +28574,14 @@
             "slots": [],
             "themeAliases": [
               "--sn-font",
-              "--sn-node-hover",
-              "--sn-node-selected",
+              "--sn-sys-state-hover-mix",
+              "--sn-sys-accent",
               "--sn-outline-color-soft",
-              "--sn-panel-bg",
+              "--sn-sys-surface-panel",
               "--sn-panel-radius",
               "--sn-panel-shadow",
-              "--sn-text",
-              "--sn-text-dim",
+              "--sn-sys-on-surface",
+              "--sn-sys-on-surface-dim",
               "--sn-theme-type-scale"
             ],
             "status": "draft",
@@ -28654,14 +28654,14 @@
               "slots": [],
               "themeAliases": [
                 "--sn-font",
-                "--sn-node-hover",
-                "--sn-node-selected",
+                "--sn-sys-state-hover-mix",
+                "--sn-sys-accent",
                 "--sn-outline-color-soft",
-                "--sn-panel-bg",
+                "--sn-sys-surface-panel",
                 "--sn-panel-radius",
                 "--sn-panel-shadow",
-                "--sn-text",
-                "--sn-text-dim",
+                "--sn-sys-on-surface",
+                "--sn-sys-on-surface-dim",
                 "--sn-theme-type-scale"
               ],
               "status": "draft",
@@ -28736,7 +28736,7 @@
           "slots": [],
           "cssProperties": [
             {
-              "name": "--sn-bg",
+              "name": "--sn-sys-surface",
               "description": "Theme CSS custom property consumed by sn-video-player."
             },
             {
@@ -28744,7 +28744,7 @@
               "description": "Theme CSS custom property consumed by sn-video-player."
             },
             {
-              "name": "--sn-node-selected",
+              "name": "--sn-sys-accent",
               "description": "Theme CSS custom property consumed by sn-video-player."
             },
             {
@@ -28816,9 +28816,9 @@
             "events": [],
             "slots": [],
             "themeAliases": [
-              "--sn-bg",
+              "--sn-sys-surface",
               "--sn-font",
-              "--sn-node-selected",
+              "--sn-sys-accent",
               "--sn-panel-radius",
               "--sn-transition-fast",
               "--sn-transition-normal",
@@ -28894,9 +28894,9 @@
               "events": [],
               "slots": [],
               "themeAliases": [
-                "--sn-bg",
+                "--sn-sys-surface",
                 "--sn-font",
-                "--sn-node-selected",
+                "--sn-sys-accent",
                 "--sn-panel-radius",
                 "--sn-transition-fast",
                 "--sn-transition-normal",
@@ -29097,7 +29097,7 @@
           "slots": [],
           "cssProperties": [
             {
-              "name": "--sn-bg",
+              "name": "--sn-sys-surface",
               "description": "Theme CSS custom property consumed by cell-bg."
             },
             {
@@ -29298,7 +29298,7 @@
             ],
             "slots": [],
             "themeAliases": [
-              "--sn-bg",
+              "--sn-sys-surface",
               "--sn-theme-pattern-brightness",
               "--sn-cell-bg",
               "--sn-cell-dot",
@@ -29562,7 +29562,7 @@
               ],
               "slots": [],
               "themeAliases": [
-                "--sn-bg",
+                "--sn-sys-surface",
                 "--sn-theme-pattern-brightness",
                 "--sn-cell-bg",
                 "--sn-cell-dot",
@@ -29805,15 +29805,15 @@
           "slots": [],
           "cssProperties": [
             {
-              "name": "--sn-node-bg",
+              "name": "--sn-sys-surface-raised",
               "description": "Theme CSS custom property consumed by inspector-panel."
             },
             {
-              "name": "--sn-node-border",
+              "name": "--sn-sys-outline",
               "description": "Theme CSS custom property consumed by inspector-panel."
             },
             {
-              "name": "--sn-node-selected",
+              "name": "--sn-sys-accent",
               "description": "Theme CSS custom property consumed by inspector-panel."
             },
             {
@@ -29821,11 +29821,11 @@
               "description": "Theme CSS custom property consumed by inspector-panel."
             },
             {
-              "name": "--sn-text",
+              "name": "--sn-sys-on-surface",
               "description": "Theme CSS custom property consumed by inspector-panel."
             },
             {
-              "name": "--sn-text-dim",
+              "name": "--sn-sys-on-surface-dim",
               "description": "Theme CSS custom property consumed by inspector-panel."
             },
             {
@@ -29837,7 +29837,7 @@
               "description": "Theme CSS custom property consumed by inspector-panel."
             },
             {
-              "name": "--sn-success-color",
+              "name": "--sn-sys-success",
               "description": "Theme CSS custom property consumed by inspector-panel."
             }
           ],
@@ -29938,15 +29938,15 @@
             ],
             "slots": [],
             "themeAliases": [
-              "--sn-node-bg",
-              "--sn-node-border",
-              "--sn-node-selected",
+              "--sn-sys-surface-raised",
+              "--sn-sys-outline",
+              "--sn-sys-accent",
               "--sn-font",
-              "--sn-text",
-              "--sn-text-dim",
+              "--sn-sys-on-surface",
+              "--sn-sys-on-surface-dim",
               "--sn-cat-server",
               "--sn-subgraph-accent",
-              "--sn-success-color"
+              "--sn-sys-success"
             ],
             "status": "draft",
             "schemaVersion": "component-descriptor-v2",
@@ -30081,15 +30081,15 @@
               ],
               "slots": [],
               "themeAliases": [
-                "--sn-node-bg",
-                "--sn-node-border",
-                "--sn-node-selected",
+                "--sn-sys-surface-raised",
+                "--sn-sys-outline",
+                "--sn-sys-accent",
                 "--sn-font",
-                "--sn-text",
-                "--sn-text-dim",
+                "--sn-sys-on-surface",
+                "--sn-sys-on-surface-dim",
                 "--sn-cat-server",
                 "--sn-subgraph-accent",
-                "--sn-success-color"
+                "--sn-sys-success"
               ],
               "status": "draft",
               "schemaVersion": "component-descriptor-v2",
@@ -30664,7 +30664,7 @@
               "description": "Theme CSS custom property consumed by sn-floating-panel."
             },
             {
-              "name": "--sn-node-hover",
+              "name": "--sn-sys-state-hover-mix",
               "description": "Theme CSS custom property consumed by sn-floating-panel."
             },
             {
@@ -30672,7 +30672,7 @@
               "description": "Theme CSS custom property consumed by sn-floating-panel."
             },
             {
-              "name": "--sn-panel-bg",
+              "name": "--sn-sys-surface-panel",
               "description": "Theme CSS custom property consumed by sn-floating-panel."
             },
             {
@@ -30688,11 +30688,11 @@
               "description": "Theme CSS custom property consumed by sn-floating-panel."
             },
             {
-              "name": "--sn-text",
+              "name": "--sn-sys-on-surface",
               "description": "Theme CSS custom property consumed by sn-floating-panel."
             },
             {
-              "name": "--sn-text-dim",
+              "name": "--sn-sys-on-surface-dim",
               "description": "Theme CSS custom property consumed by sn-floating-panel."
             },
             {
@@ -30773,14 +30773,14 @@
             "slots": [],
             "themeAliases": [
               "--sn-font",
-              "--sn-node-hover",
+              "--sn-sys-state-hover-mix",
               "--sn-outline-color-soft",
-              "--sn-panel-bg",
+              "--sn-sys-surface-panel",
               "--sn-panel-radius",
               "--sn-panel-shadow",
               "--sn-status-error",
-              "--sn-text",
-              "--sn-text-dim",
+              "--sn-sys-on-surface",
+              "--sn-sys-on-surface-dim",
               "--sn-theme-type-scale"
             ],
             "status": "draft",
@@ -30889,14 +30889,14 @@
               "slots": [],
               "themeAliases": [
                 "--sn-font",
-                "--sn-node-hover",
+                "--sn-sys-state-hover-mix",
                 "--sn-outline-color-soft",
-                "--sn-panel-bg",
+                "--sn-sys-surface-panel",
                 "--sn-panel-radius",
                 "--sn-panel-shadow",
                 "--sn-status-error",
-                "--sn-text",
-                "--sn-text-dim",
+                "--sn-sys-on-surface",
+                "--sn-sys-on-surface-dim",
                 "--sn-theme-type-scale"
               ],
               "status": "draft",
@@ -31220,7 +31220,7 @@
           "slots": [],
           "cssProperties": [
             {
-              "name": "--sn-layout-bg",
+              "name": "--sn-sys-surface-sunken",
               "description": "Theme CSS custom property consumed by panel-layout."
             },
             {
@@ -31532,7 +31532,7 @@
             ],
             "slots": [],
             "themeAliases": [
-              "--sn-layout-bg",
+              "--sn-sys-surface-sunken",
               "--sn-layout-gap-bg",
               "--sn-layout-border",
               "--sn-layout-resizer-size",
@@ -32096,7 +32096,7 @@
               ],
               "slots": [],
               "themeAliases": [
-                "--sn-layout-bg",
+                "--sn-sys-surface-sunken",
                 "--sn-layout-gap-bg",
                 "--sn-layout-border",
                 "--sn-layout-resizer-size",
@@ -32489,11 +32489,11 @@
           "slots": [],
           "cssProperties": [
             {
-              "name": "--sn-node-bg",
+              "name": "--sn-sys-surface-raised",
               "description": "Theme CSS custom property consumed by layout-node."
             },
             {
-              "name": "--sn-node-border",
+              "name": "--sn-sys-outline",
               "description": "Theme CSS custom property consumed by layout-node."
             },
             {
@@ -32501,15 +32501,15 @@
               "description": "Theme CSS custom property consumed by layout-node."
             },
             {
-              "name": "--sn-node-selected",
+              "name": "--sn-sys-accent",
               "description": "Theme CSS custom property consumed by layout-node."
             },
             {
-              "name": "--sn-text",
+              "name": "--sn-sys-on-surface",
               "description": "Theme CSS custom property consumed by layout-node."
             },
             {
-              "name": "--sn-text-dim",
+              "name": "--sn-sys-on-surface-dim",
               "description": "Theme CSS custom property consumed by layout-node."
             },
             {
@@ -32651,12 +32651,12 @@
             ],
             "slots": [],
             "themeAliases": [
-              "--sn-node-bg",
-              "--sn-node-border",
+              "--sn-sys-surface-raised",
+              "--sn-sys-outline",
               "--sn-node-header-bg",
-              "--sn-node-selected",
-              "--sn-text",
-              "--sn-text-dim",
+              "--sn-sys-accent",
+              "--sn-sys-on-surface",
+              "--sn-sys-on-surface-dim",
               "--sn-layout-gap-bg",
               "--sn-layout-menu-action-size",
               "--sn-layout-menu-icon-size",
@@ -32781,12 +32781,12 @@
               ],
               "slots": [],
               "themeAliases": [
-                "--sn-node-bg",
-                "--sn-node-border",
+                "--sn-sys-surface-raised",
+                "--sn-sys-outline",
                 "--sn-node-header-bg",
-                "--sn-node-selected",
-                "--sn-text",
-                "--sn-text-dim",
+                "--sn-sys-accent",
+                "--sn-sys-on-surface",
+                "--sn-sys-on-surface-dim",
                 "--sn-layout-gap-bg",
                 "--sn-layout-menu-action-size",
                 "--sn-layout-menu-icon-size",
@@ -33040,31 +33040,31 @@
           ],
           "cssProperties": [
             {
-              "name": "--sn-bg",
+              "name": "--sn-sys-surface",
               "description": "Theme CSS custom property consumed by layout-shell-menu."
             },
             {
-              "name": "--sn-node-bg",
+              "name": "--sn-sys-surface-raised",
               "description": "Theme CSS custom property consumed by layout-shell-menu."
             },
             {
-              "name": "--sn-node-border",
+              "name": "--sn-sys-outline",
               "description": "Theme CSS custom property consumed by layout-shell-menu."
             },
             {
-              "name": "--sn-node-hover",
+              "name": "--sn-sys-state-hover-mix",
               "description": "Theme CSS custom property consumed by layout-shell-menu."
             },
             {
-              "name": "--sn-node-selected",
+              "name": "--sn-sys-accent",
               "description": "Theme CSS custom property consumed by layout-shell-menu."
             },
             {
-              "name": "--sn-text",
+              "name": "--sn-sys-on-surface",
               "description": "Theme CSS custom property consumed by layout-shell-menu."
             },
             {
-              "name": "--sn-text-dim",
+              "name": "--sn-sys-on-surface-dim",
               "description": "Theme CSS custom property consumed by layout-shell-menu."
             },
             {
@@ -33264,13 +33264,13 @@
               }
             ],
             "themeAliases": [
-              "--sn-bg",
-              "--sn-node-bg",
-              "--sn-node-border",
-              "--sn-node-hover",
-              "--sn-node-selected",
-              "--sn-text",
-              "--sn-text-dim",
+              "--sn-sys-surface",
+              "--sn-sys-surface-raised",
+              "--sn-sys-outline",
+              "--sn-sys-state-hover-mix",
+              "--sn-sys-accent",
+              "--sn-sys-on-surface",
+              "--sn-sys-on-surface-dim",
               "--sn-tabs-height",
               "--sn-tabs-bg",
               "--sn-tabs-active-bg",
@@ -33595,13 +33595,13 @@
                 }
               ],
               "themeAliases": [
-                "--sn-bg",
-                "--sn-node-bg",
-                "--sn-node-border",
-                "--sn-node-hover",
-                "--sn-node-selected",
-                "--sn-text",
-                "--sn-text-dim",
+                "--sn-sys-surface",
+                "--sn-sys-surface-raised",
+                "--sn-sys-outline",
+                "--sn-sys-state-hover-mix",
+                "--sn-sys-accent",
+                "--sn-sys-on-surface",
+                "--sn-sys-on-surface-dim",
                 "--sn-tabs-height",
                 "--sn-tabs-bg",
                 "--sn-tabs-active-bg",
@@ -33862,27 +33862,27 @@
           "slots": [],
           "cssProperties": [
             {
-              "name": "--sn-bg",
+              "name": "--sn-sys-surface",
               "description": "Theme CSS custom property consumed by layout-sidebar."
             },
             {
-              "name": "--sn-node-border",
+              "name": "--sn-sys-outline",
               "description": "Theme CSS custom property consumed by layout-sidebar."
             },
             {
-              "name": "--sn-node-selected",
+              "name": "--sn-sys-accent",
               "description": "Theme CSS custom property consumed by layout-sidebar."
             },
             {
-              "name": "--sn-node-hover",
+              "name": "--sn-sys-state-hover-mix",
               "description": "Theme CSS custom property consumed by layout-sidebar."
             },
             {
-              "name": "--sn-text",
+              "name": "--sn-sys-on-surface",
               "description": "Theme CSS custom property consumed by layout-sidebar."
             },
             {
-              "name": "--sn-text-dim",
+              "name": "--sn-sys-on-surface-dim",
               "description": "Theme CSS custom property consumed by layout-sidebar."
             }
           ],
@@ -33984,12 +33984,12 @@
             ],
             "slots": [],
             "themeAliases": [
-              "--sn-bg",
-              "--sn-node-border",
-              "--sn-node-selected",
-              "--sn-node-hover",
-              "--sn-text",
-              "--sn-text-dim"
+              "--sn-sys-surface",
+              "--sn-sys-outline",
+              "--sn-sys-accent",
+              "--sn-sys-state-hover-mix",
+              "--sn-sys-on-surface",
+              "--sn-sys-on-surface-dim"
             ],
             "status": "draft",
             "schemaVersion": "component-descriptor-v2",
@@ -34203,12 +34203,12 @@
               ],
               "slots": [],
               "themeAliases": [
-                "--sn-bg",
-                "--sn-node-border",
-                "--sn-node-selected",
-                "--sn-node-hover",
-                "--sn-text",
-                "--sn-text-dim"
+                "--sn-sys-surface",
+                "--sn-sys-outline",
+                "--sn-sys-accent",
+                "--sn-sys-state-hover-mix",
+                "--sn-sys-on-surface",
+                "--sn-sys-on-surface-dim"
               ],
               "status": "draft",
               "schemaVersion": "component-descriptor-v2",
@@ -34615,11 +34615,11 @@
               "description": "Theme CSS custom property consumed by project-tabs."
             },
             {
-              "name": "--sn-text",
+              "name": "--sn-sys-on-surface",
               "description": "Theme CSS custom property consumed by project-tabs."
             },
             {
-              "name": "--sn-text-dim",
+              "name": "--sn-sys-on-surface-dim",
               "description": "Theme CSS custom property consumed by project-tabs."
             }
           ],
@@ -34718,8 +34718,8 @@
               "--sn-tab-accent-3",
               "--sn-tab-accent-4",
               "--sn-tab-accent-5",
-              "--sn-text",
-              "--sn-text-dim"
+              "--sn-sys-on-surface",
+              "--sn-sys-on-surface-dim"
             ],
             "status": "draft",
             "schemaVersion": "component-descriptor-v2",
@@ -34883,8 +34883,8 @@
                 "--sn-tab-accent-3",
                 "--sn-tab-accent-4",
                 "--sn-tab-accent-5",
-                "--sn-text",
-                "--sn-text-dim"
+                "--sn-sys-on-surface",
+                "--sn-sys-on-surface-dim"
               ],
               "status": "draft",
               "schemaVersion": "component-descriptor-v2",
@@ -35006,7 +35006,7 @@
               "description": "Theme CSS custom property consumed by sn-scroll-area."
             },
             {
-              "name": "--sn-node-selected",
+              "name": "--sn-sys-accent",
               "description": "Theme CSS custom property consumed by sn-scroll-area."
             },
             {
@@ -35014,7 +35014,7 @@
               "description": "Theme CSS custom property consumed by sn-scroll-area."
             },
             {
-              "name": "--sn-text-dim",
+              "name": "--sn-sys-on-surface-dim",
               "description": "Theme CSS custom property consumed by sn-scroll-area."
             },
             {
@@ -35066,9 +35066,9 @@
             "slots": [],
             "themeAliases": [
               "--sn-font",
-              "--sn-node-selected",
+              "--sn-sys-accent",
               "--sn-scrollbar-thumb",
-              "--sn-text-dim",
+              "--sn-sys-on-surface-dim",
               "--sn-transition-fast"
             ],
             "status": "draft",
@@ -35148,9 +35148,9 @@
               "slots": [],
               "themeAliases": [
                 "--sn-font",
-                "--sn-node-selected",
+                "--sn-sys-accent",
                 "--sn-scrollbar-thumb",
-                "--sn-text-dim",
+                "--sn-sys-on-surface-dim",
                 "--sn-transition-fast"
               ],
               "status": "draft",
@@ -35235,7 +35235,7 @@
               "description": "Theme CSS custom property consumed by sn-split-panel."
             },
             {
-              "name": "--sn-node-selected",
+              "name": "--sn-sys-accent",
               "description": "Theme CSS custom property consumed by sn-split-panel."
             },
             {
@@ -35286,7 +35286,7 @@
             "slots": [],
             "themeAliases": [
               "--sn-font",
-              "--sn-node-selected",
+              "--sn-sys-accent",
               "--sn-outline-color-soft",
               "--sn-transition-fast"
             ],
@@ -35362,7 +35362,7 @@
               "slots": [],
               "themeAliases": [
                 "--sn-font",
-                "--sn-node-selected",
+                "--sn-sys-accent",
                 "--sn-outline-color-soft",
                 "--sn-transition-fast"
               ],
@@ -36697,7 +36697,7 @@
           "slots": [],
           "cssProperties": [
             {
-              "name": "--sn-ctx-bg",
+              "name": "--sn-sys-surface-overlay",
               "description": "Theme CSS custom property consumed by context-menu."
             },
             {
@@ -36775,7 +36775,7 @@
             "events": [],
             "slots": [],
             "themeAliases": [
-              "--sn-ctx-bg",
+              "--sn-sys-surface-overlay",
               "--sn-ctx-border",
               "--sn-ctx-color",
               "--sn-ctx-shadow-color",
@@ -36863,7 +36863,7 @@
               "events": [],
               "slots": [],
               "themeAliases": [
-                "--sn-ctx-bg",
+                "--sn-sys-surface-overlay",
                 "--sn-ctx-border",
                 "--sn-ctx-color",
                 "--sn-ctx-shadow-color",
@@ -38307,23 +38307,23 @@
               "description": "Theme CSS custom property consumed by quick-open."
             },
             {
-              "name": "--sn-panel-bg",
+              "name": "--sn-sys-surface-panel",
               "description": "Theme CSS custom property consumed by quick-open."
             },
             {
-              "name": "--sn-node-border",
+              "name": "--sn-sys-outline",
               "description": "Theme CSS custom property consumed by quick-open."
             },
             {
-              "name": "--sn-node-hover",
+              "name": "--sn-sys-state-hover-mix",
               "description": "Theme CSS custom property consumed by quick-open."
             },
             {
-              "name": "--sn-text",
+              "name": "--sn-sys-on-surface",
               "description": "Theme CSS custom property consumed by quick-open."
             },
             {
-              "name": "--sn-text-dim",
+              "name": "--sn-sys-on-surface-dim",
               "description": "Theme CSS custom property consumed by quick-open."
             }
           ],
@@ -38398,11 +38398,11 @@
             "slots": [],
             "themeAliases": [
               "--sn-bg-overlay",
-              "--sn-panel-bg",
-              "--sn-node-border",
-              "--sn-node-hover",
-              "--sn-text",
-              "--sn-text-dim"
+              "--sn-sys-surface-panel",
+              "--sn-sys-outline",
+              "--sn-sys-state-hover-mix",
+              "--sn-sys-on-surface",
+              "--sn-sys-on-surface-dim"
             ],
             "status": "draft",
             "schemaVersion": "component-descriptor-v2",
@@ -38542,11 +38542,11 @@
               "slots": [],
               "themeAliases": [
                 "--sn-bg-overlay",
-                "--sn-panel-bg",
-                "--sn-node-border",
-                "--sn-node-hover",
-                "--sn-text",
-                "--sn-text-dim"
+                "--sn-sys-surface-panel",
+                "--sn-sys-outline",
+                "--sn-sys-state-hover-mix",
+                "--sn-sys-on-surface",
+                "--sn-sys-on-surface-dim"
               ],
               "status": "draft",
               "schemaVersion": "component-descriptor-v2",
@@ -38935,11 +38935,11 @@
           "slots": [],
           "cssProperties": [
             {
-              "name": "--sn-node-bg",
+              "name": "--sn-sys-surface-raised",
               "description": "Theme CSS custom property consumed by graph-node."
             },
             {
-              "name": "--sn-node-border",
+              "name": "--sn-sys-outline",
               "description": "Theme CSS custom property consumed by graph-node."
             },
             {
@@ -38947,7 +38947,7 @@
               "description": "Theme CSS custom property consumed by graph-node."
             },
             {
-              "name": "--sn-node-selected",
+              "name": "--sn-sys-accent",
               "description": "Theme CSS custom property consumed by graph-node."
             },
             {
@@ -39261,10 +39261,10 @@
             "events": [],
             "slots": [],
             "themeAliases": [
-              "--sn-node-bg",
-              "--sn-node-border",
+              "--sn-sys-surface-raised",
+              "--sn-sys-outline",
               "--sn-node-border-width",
-              "--sn-node-selected",
+              "--sn-sys-accent",
               "--sn-node-radius",
               "--sn-node-accent",
               "--sn-node-header-bg",
@@ -39435,10 +39435,10 @@
               "events": [],
               "slots": [],
               "themeAliases": [
-                "--sn-node-bg",
-                "--sn-node-border",
+                "--sn-sys-surface-raised",
+                "--sn-sys-outline",
                 "--sn-node-border-width",
-                "--sn-node-selected",
+                "--sn-sys-accent",
                 "--sn-node-radius",
                 "--sn-node-accent",
                 "--sn-node-header-bg",
@@ -39944,7 +39944,7 @@
               "description": "Theme CSS custom property consumed by node-socket."
             },
             {
-              "name": "--sn-node-bg",
+              "name": "--sn-sys-surface-raised",
               "description": "Theme CSS custom property consumed by node-socket."
             }
           ],
@@ -39973,7 +39973,7 @@
             "slots": [],
             "themeAliases": [
               "--sn-node-accent",
-              "--sn-node-bg"
+              "--sn-sys-surface-raised"
             ],
             "status": "draft",
             "schemaVersion": "component-descriptor-v2",
@@ -40036,7 +40036,7 @@
               "slots": [],
               "themeAliases": [
                 "--sn-node-accent",
-                "--sn-node-bg"
+                "--sn-sys-surface-raised"
               ],
               "status": "draft",
               "schemaVersion": "component-descriptor-v2",
@@ -40150,7 +40150,7 @@
           "slots": [],
           "cssProperties": [
             {
-              "name": "--sn-ctx-bg",
+              "name": "--sn-sys-surface-overlay",
               "description": "Theme CSS custom property consumed by palette-browser."
             },
             {
@@ -40158,11 +40158,11 @@
               "description": "Theme CSS custom property consumed by palette-browser."
             },
             {
-              "name": "--sn-node-border",
+              "name": "--sn-sys-outline",
               "description": "Theme CSS custom property consumed by palette-browser."
             },
             {
-              "name": "--sn-node-selected",
+              "name": "--sn-sys-accent",
               "description": "Theme CSS custom property consumed by palette-browser."
             },
             {
@@ -40170,11 +40170,11 @@
               "description": "Theme CSS custom property consumed by palette-browser."
             },
             {
-              "name": "--sn-text",
+              "name": "--sn-sys-on-surface",
               "description": "Theme CSS custom property consumed by palette-browser."
             },
             {
-              "name": "--sn-text-dim",
+              "name": "--sn-sys-on-surface-dim",
               "description": "Theme CSS custom property consumed by palette-browser."
             }
           ],
@@ -40208,13 +40208,13 @@
             "events": [],
             "slots": [],
             "themeAliases": [
-              "--sn-ctx-bg",
+              "--sn-sys-surface-overlay",
               "--sn-ctx-hover",
-              "--sn-node-border",
-              "--sn-node-selected",
+              "--sn-sys-outline",
+              "--sn-sys-accent",
               "--sn-font",
-              "--sn-text",
-              "--sn-text-dim"
+              "--sn-sys-on-surface",
+              "--sn-sys-on-surface-dim"
             ],
             "status": "draft",
             "schemaVersion": "component-descriptor-v2",
@@ -40282,13 +40282,13 @@
               "events": [],
               "slots": [],
               "themeAliases": [
-                "--sn-ctx-bg",
+                "--sn-sys-surface-overlay",
                 "--sn-ctx-hover",
-                "--sn-node-border",
-                "--sn-node-selected",
+                "--sn-sys-outline",
+                "--sn-sys-accent",
                 "--sn-font",
-                "--sn-text",
-                "--sn-text-dim"
+                "--sn-sys-on-surface",
+                "--sn-sys-on-surface-dim"
               ],
               "status": "draft",
               "schemaVersion": "component-descriptor-v2",
@@ -42540,27 +42540,27 @@
           "slots": [],
           "cssProperties": [
             {
-              "name": "--sn-bg",
+              "name": "--sn-sys-surface",
               "description": "Theme CSS custom property consumed by cascade-theme-editor."
             },
             {
-              "name": "--sn-panel-bg",
+              "name": "--sn-sys-surface-panel",
               "description": "Theme CSS custom property consumed by cascade-theme-editor."
             },
             {
-              "name": "--sn-text",
+              "name": "--sn-sys-on-surface",
               "description": "Theme CSS custom property consumed by cascade-theme-editor."
             },
             {
-              "name": "--sn-text-dim",
+              "name": "--sn-sys-on-surface-dim",
               "description": "Theme CSS custom property consumed by cascade-theme-editor."
             },
             {
-              "name": "--sn-node-border",
+              "name": "--sn-sys-outline",
               "description": "Theme CSS custom property consumed by cascade-theme-editor."
             },
             {
-              "name": "--sn-node-selected",
+              "name": "--sn-sys-accent",
               "description": "Theme CSS custom property consumed by cascade-theme-editor."
             },
             {
@@ -42648,12 +42648,12 @@
             ],
             "slots": [],
             "themeAliases": [
-              "--sn-bg",
-              "--sn-panel-bg",
-              "--sn-text",
-              "--sn-text-dim",
-              "--sn-node-border",
-              "--sn-node-selected",
+              "--sn-sys-surface",
+              "--sn-sys-surface-panel",
+              "--sn-sys-on-surface",
+              "--sn-sys-on-surface-dim",
+              "--sn-sys-outline",
+              "--sn-sys-accent",
               "--sn-scrollbar-thumb",
               "--sn-theme-density",
               "--sn-theme-type-scale",
@@ -42855,12 +42855,12 @@
               ],
               "slots": [],
               "themeAliases": [
-                "--sn-bg",
-                "--sn-panel-bg",
-                "--sn-text",
-                "--sn-text-dim",
-                "--sn-node-border",
-                "--sn-node-selected",
+                "--sn-sys-surface",
+                "--sn-sys-surface-panel",
+                "--sn-sys-on-surface",
+                "--sn-sys-on-surface-dim",
+                "--sn-sys-outline",
+                "--sn-sys-accent",
                 "--sn-scrollbar-thumb",
                 "--sn-theme-density",
                 "--sn-theme-type-scale",
@@ -43080,23 +43080,23 @@
           "slots": [],
           "cssProperties": [
             {
-              "name": "--sn-panel-bg",
+              "name": "--sn-sys-surface-panel",
               "description": "Theme CSS custom property consumed by cascade-theme-widget."
             },
             {
-              "name": "--sn-text",
+              "name": "--sn-sys-on-surface",
               "description": "Theme CSS custom property consumed by cascade-theme-widget."
             },
             {
-              "name": "--sn-text-dim",
+              "name": "--sn-sys-on-surface-dim",
               "description": "Theme CSS custom property consumed by cascade-theme-widget."
             },
             {
-              "name": "--sn-node-border",
+              "name": "--sn-sys-outline",
               "description": "Theme CSS custom property consumed by cascade-theme-widget."
             },
             {
-              "name": "--sn-node-selected",
+              "name": "--sn-sys-accent",
               "description": "Theme CSS custom property consumed by cascade-theme-widget."
             },
             {
@@ -43191,11 +43191,11 @@
             ],
             "slots": [],
             "themeAliases": [
-              "--sn-panel-bg",
-              "--sn-text",
-              "--sn-text-dim",
-              "--sn-node-border",
-              "--sn-node-selected",
+              "--sn-sys-surface-panel",
+              "--sn-sys-on-surface",
+              "--sn-sys-on-surface-dim",
+              "--sn-sys-outline",
+              "--sn-sys-accent",
               "--sn-theme-density",
               "--sn-theme-type-scale",
               "--sn-theme-pattern-brightness"
@@ -43407,11 +43407,11 @@
               ],
               "slots": [],
               "themeAliases": [
-                "--sn-panel-bg",
-                "--sn-text",
-                "--sn-text-dim",
-                "--sn-node-border",
-                "--sn-node-selected",
+                "--sn-sys-surface-panel",
+                "--sn-sys-on-surface",
+                "--sn-sys-on-surface-dim",
+                "--sn-sys-outline",
+                "--sn-sys-accent",
                 "--sn-theme-density",
                 "--sn-theme-type-scale",
                 "--sn-theme-pattern-brightness"

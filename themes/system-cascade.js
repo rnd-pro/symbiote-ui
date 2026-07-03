@@ -6,8 +6,7 @@
  *  - T1 ramps derive from knob seeds via native relative color syntax in OKLCH;
  *  - T2 roles point into ramps; state layers are `color-mix(in oklch, …)` inputs;
  *  - mode branching (surface-ladder direction, on-surface text) uses `light-dark()` +
- *    `color-scheme` — never duplicated light/dark rule blocks;
- *  - legacy flat names bridge to T2 roles (LEGACY_SYS_ALIASES) at ZERO specificity.
+ *    `color-scheme` — never duplicated light/dark rule blocks.
  *
  * Everything value-bearing lives in `:where(:root, :host)` — zero specificity — so any theme,
  * engine-written inline token, or component override wins unchanged: adding this stylesheet is
@@ -27,7 +26,6 @@ import {
   STATE_LAYER_MIX,
   REF_RAMP_STOPS,
   REF_RAMP_FAMILIES,
-  LEGACY_SYS_ALIASES,
   systemPropertyRegistrationsCss,
 } from '../tokens/tiers.js';
 
@@ -221,11 +219,6 @@ function systemRoleDeclarations() {
   return lines;
 }
 
-/** Legacy flat names bridge to T2 (zero specificity — any theme definition wins until W3). */
-function legacyBridgeDeclarations() {
-  return Object.entries(LEGACY_SYS_ALIASES).map(([legacy, sys]) => `${legacy}: var(${sys});`);
-}
-
 /** The complete W1 system-cascade stylesheet. */
 export function systemCascadeCss() {
   let block = [
@@ -233,7 +226,6 @@ export function systemCascadeCss() {
     ...seedDeclarations(),
     ...rampDeclarations(),
     ...systemRoleDeclarations(),
-    ...legacyBridgeDeclarations(),
   ].map(line => `  ${line}`).join('\n');
   return [
     knobRegistrationsCss(),

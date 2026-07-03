@@ -2,14 +2,14 @@ export default /*css*/ `
 sn-segmented-control {
   display: inline-flex;
   box-sizing: border-box;
-  background: var(--sn-segmented-bg, color-mix(in oklab, var(--sn-text) 5%, transparent));
-  border: 1px solid var(--sn-segmented-border, color-mix(in oklab, var(--sn-text) 12%, transparent));
+  background: var(--sn-segmented-bg, color-mix(in oklab, var(--sn-sys-on-surface) 5%, transparent));
+  border: 1px solid var(--sn-segmented-border, color-mix(in oklab, var(--sn-sys-on-surface) 12%, transparent));
   border-radius: var(--sn-segmented-radius, var(--sn-field-control-radius, 4px));
   padding: var(--sn-step-1);
   max-width: 100%;
   overflow-x: auto;
   font-family: var(--sn-font);
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
   gap: var(--sn-segmented-gap, 2px);
 }
 
@@ -44,11 +44,11 @@ sn-segmented-control > * {
 }
 
 sn-segmented-control > *:hover:not([disabled]):not([aria-checked="true"]) {
-  background: var(--sn-segmented-hover-bg, color-mix(in oklab, var(--sn-text) 8%, transparent));
+  background: var(--sn-segmented-hover-bg, color-mix(in oklab, var(--sn-sys-on-surface) 8%, transparent));
 }
 
 sn-segmented-control > *[aria-checked="true"] {
-  background: var(--sn-segmented-selected-bg, var(--sn-node-selected, var(--sn-sys-accent)));
+  background: var(--sn-segmented-selected-bg, var(--sn-sys-accent));
   color: var(--sn-segmented-selected-color, var(--sn-sys-on-accent));
   box-shadow: var(--sn-segmented-selected-shadow, var(--sn-sys-shadow-raised));
 }

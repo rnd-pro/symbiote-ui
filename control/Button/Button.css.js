@@ -133,11 +133,12 @@ sn-button[variant="icon"] {
   padding: 0;
   border-color: transparent;
   background: transparent;
-  color: var(--sn-text-dim);
+  color: var(--sn-sys-on-surface-dim);
 }
 
 sn-button[variant="icon"]:hover:not([disabled]):not([loading]) {
-  color: var(--sn-text, color-mix(in oklch, var(--sn-sys-on-surface) var(--sn-sys-state-hover-mix), var(--sn-sys-on-surface-dim)));
+  background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), transparent);
+  color: var(--sn-sys-on-surface);
 }
 
 sn-button .material-symbols-outlined {

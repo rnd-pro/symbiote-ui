@@ -11,13 +11,13 @@ export let styles = css`
     right: 0;
     bottom: 0;
     width: 280px;
-    background: var(--sn-node-bg);
-    border-left: 1px solid var(--sn-node-border);
+    background: var(--sn-sys-surface-raised);
+    border-left: 1px solid var(--sn-sys-outline);
     display: flex;
     flex-direction: column;
     z-index: 100;
     font-family: var(--sn-font);
-    color: var(--sn-text);
+    color: var(--sn-sys-on-surface);
     overflow-y: auto;
     transition: transform var(--sn-transition-normal, 0.2s) ease;
 
@@ -35,10 +35,12 @@ export let styles = css`
       z-index: 110;
       transition: background var(--sn-transition-fast, 0.15s);
 
-      &:hover,
+      &:hover {
+        background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-panel));
+      }
+
       &.dragging {
-        background: var(--sn-node-selected);
-        opacity: 0.5;
+        background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-dragged-mix), var(--sn-sys-surface-panel));
       }
     }
 
@@ -49,8 +51,8 @@ export let styles = css`
       padding: var(--sn-step-6) var(--sn-step-8);
       font-size: var(--sn-text-lg);
       font-weight: 600;
-      border-bottom: 1px solid var(--sn-node-border);
-      background: var(--sn-node-bg);
+      border-bottom: 1px solid var(--sn-sys-outline);
+      background: var(--sn-sys-surface-raised);
     }
 
     & .insp-header .material-symbols-outlined {
@@ -69,7 +71,7 @@ export let styles = css`
       align-items: center;
       gap: var(--sn-step-4);
       padding: var(--sn-step-12, 40px) 0;
-      color: var(--sn-text-dim);
+      color: var(--sn-sys-on-surface-dim);
       font-size: var(--sn-text-md);
 
       &[hidden] {
@@ -91,7 +93,7 @@ export let styles = css`
       font-size: var(--sn-text-xs);
       font-weight: 600;
       text-transform: uppercase;
-      color: var(--sn-text-dim);
+      color: var(--sn-sys-on-surface-dim);
       margin-bottom: var(--sn-step-2);
       letter-spacing: 0.5px;
     }
@@ -128,7 +130,7 @@ export let styles = css`
       gap: var(--sn-step-3);
       font-size: var(--sn-text-sm);
       font-weight: 600;
-      color: var(--sn-text-dim);
+      color: var(--sn-sys-on-surface-dim);
       margin-bottom: var(--sn-step-4);
       text-transform: uppercase;
       letter-spacing: 0.5px;
@@ -168,7 +170,7 @@ export let styles = css`
 
   .insp-port-type {
     font-size: var(--sn-text-2xs);
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
     font-family: 'SF Mono', 'Fira Code', monospace;
   }
 
@@ -181,7 +183,7 @@ export let styles = css`
     font-size: var(--sn-text-xs);
     font-weight: 600;
     text-transform: uppercase;
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
     margin-bottom: var(--sn-step-2);
     letter-spacing: 0.5px;
   }
@@ -192,7 +194,7 @@ export let styles = css`
     padding: var(--sn-step-3) var(--sn-step-4);
     font-size: var(--sn-text-sm);
     font-family: 'SF Mono', 'Fira Code', monospace;
-    color: var(--sn-text);
+    color: var(--sn-sys-on-surface);
     background: color-mix(in oklab, currentColor 6%, transparent);
     border: 1px solid var(--sn-field-control-subtle-border);
     border-radius: var(--sn-radius-sm);
@@ -201,7 +203,7 @@ export let styles = css`
     transition: border-color var(--sn-transition-fast, 0.15s);
 
     &:focus {
-      border-color: var(--sn-node-selected);
+      border-color: var(--sn-sys-accent);
     }
   }
 
@@ -210,7 +212,7 @@ export let styles = css`
     padding: var(--sn-step-3) var(--sn-step-4);
     font-size: var(--sn-text-xs);
     font-family: 'SF Mono', 'Fira Code', monospace;
-    color: var(--sn-text);
+    color: var(--sn-sys-on-surface);
     background: color-mix(in oklab, currentColor 6%, transparent);
     border: 1px solid var(--sn-field-control-subtle-border);
     border-radius: var(--sn-radius-sm);
@@ -222,7 +224,7 @@ export let styles = css`
     transition: border-color var(--sn-transition-fast, 0.15s);
 
     &:focus {
-      border-color: var(--sn-node-selected);
+      border-color: var(--sn-sys-accent);
     }
   }
 
@@ -240,8 +242,8 @@ export let styles = css`
     padding-right: var(--sn-step-10);
 
     & option {
-      background: var(--sn-node-bg);
-      color: var(--sn-text);
+      background: var(--sn-sys-surface-raised);
+      color: var(--sn-sys-on-surface);
     }
   }
 
@@ -281,7 +283,7 @@ export let styles = css`
     }
 
     & input:checked + .insp-ctrl-slider {
-      background: var(--sn-node-selected);
+      background: var(--sn-sys-accent);
 
       &::before {
         transform: translateX(16px);
@@ -313,8 +315,12 @@ export let styles = css`
   }
 
   .insp-enter-btn:hover {
-    background: var(--sn-subgraph-bg-hover);
-    border-color: var(--sn-subgraph-border-hover);
+    background: linear-gradient(
+      135deg,
+      color-mix(in oklch, var(--sn-subgraph-accent) 22%, transparent) 0%,
+      color-mix(in oklch, var(--sn-subgraph-accent) 15%, transparent) 100%
+    );
+    border-color: color-mix(in oklch, var(--sn-subgraph-accent) 50%, transparent);
   }
 
   .insp-enter-btn:active {
@@ -336,10 +342,10 @@ export let styles = css`
     gap: var(--sn-step-3);
     width: 100%;
     padding: var(--sn-step-5) var(--sn-step-8);
-    border: 1px solid var(--sn-success-border);
+    border: 1px solid color-mix(in oklch, var(--sn-sys-success) 40%, transparent);
     border-radius: var(--sn-radius-lg);
-    background: var(--sn-success-bg);
-    color: var(--sn-success-color);
+    background: var(--sn-sys-success-container);
+    color: var(--sn-sys-success);
     font-family: var(--sn-font);
     font-size: var(--sn-text-md);
     font-weight: 600;
@@ -350,8 +356,8 @@ export let styles = css`
       transform 0.1s;
 
     &:hover {
-      background: var(--sn-success-bg-hover);
-      border-color: var(--sn-success-border-hover);
+      background: color-mix(in oklch, var(--sn-sys-success) var(--sn-sys-state-hover-mix), var(--sn-sys-success-container));
+      border-color: var(--sn-sys-success);
     }
 
     &:active {

@@ -10,7 +10,7 @@ export let sidebarStyles = css`
     flex-direction: column;
     width: var(--sn-sidebar-width);
     min-width: var(--sn-sidebar-width);
-    background: var(--sn-bg);
+    background: var(--sn-sys-surface);
     border-right: 1px solid var(--sn-layout-border);
     overflow: hidden;
     transition:
@@ -38,7 +38,7 @@ export let sidebarStyles = css`
 
     &:hover,
     &.dragging {
-      background: var(--sn-layout-resizer-hover-bg);
+      background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), transparent);
     }
 
     layout-sidebar[collapsed] & {
@@ -83,15 +83,15 @@ export let sidebarStyles = css`
     border: none;
     border-radius: var(--sn-layout-header-button-radius, 4px);
     cursor: pointer;
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
     font-size: var(--sn-layout-header-button-size, 0.75rem);
     transition:
       background 0.1s,
       color 0.1s;
 
     &:hover {
-      background: var(--sn-node-hover);
-      color: var(--sn-text);
+      background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-panel));
+      color: var(--sn-sys-on-surface);
     }
 
     & .material-symbols-outlined {
@@ -118,7 +118,8 @@ export let sidebarStyles = css`
     }
 
     &:hover {
-      color: var(--sn-accent-warn);
+      background: color-mix(in oklch, var(--sn-sys-warning) var(--sn-sys-state-hover-mix), transparent);
+      color: var(--sn-sys-warning);
     }
   }
 
@@ -192,14 +193,14 @@ export let sidebarStyles = css`
     align-items: center;
     padding: 0 var(--sn-step-1);
     cursor: grab;
-    color: var(--sn-text-dim);
-
-    &:active {
-      cursor: grabbing;
-    }
+    color: var(--sn-sys-on-surface-dim);
 
     & .material-symbols-outlined {
       font-size: var(--sn-text-xl);
+    }
+
+    &:active {
+      cursor: grabbing;
     }
 
     layout-sidebar[edit-mode] & {
@@ -220,7 +221,7 @@ export let sidebarStyles = css`
     padding: var(--sn-step-3) var(--sn-step-7);
     min-height: 28px;
     cursor: pointer;
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
     transition:
       background 0.12s,
       color 0.12s;
@@ -232,8 +233,8 @@ export let sidebarStyles = css`
     }
 
     &:hover {
-      background: var(--sn-node-hover);
-      color: var(--sn-text);
+      background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface));
+      color: var(--sn-sys-on-surface);
     }
   }
 
@@ -276,8 +277,8 @@ export let sidebarStyles = css`
 
   /* Active section */
   sidebar-section[data-active] > .sec-item {
-    color: var(--sn-text);
-    background: var(--sn-node-bg);
+    color: var(--sn-sys-on-surface);
+    background: var(--sn-sys-surface-raised);
     border-left: 2px solid var(--sn-cat-server);
     padding-left: var(--sn-step-6);
 
@@ -296,15 +297,15 @@ export let sidebarStyles = css`
     border: none;
     border-radius: var(--sn-radius-sm);
     cursor: pointer;
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
     transition:
       color 0.15s,
       background 0.15s;
     flex-shrink: 0;
 
     &:hover {
-      background: var(--sn-node-hover);
-      color: var(--sn-text);
+      background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface));
+      color: var(--sn-sys-on-surface);
     }
 
     & .material-symbols-outlined {
@@ -355,15 +356,15 @@ export let sidebarStyles = css`
     padding: var(--sn-step-2) var(--sn-step-7) var(--sn-step-2) var(--sn-step-12, 38px);
     min-height: 24px;
     font-size: var(--sn-text-sm);
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
     cursor: default;
     transition:
       background 0.12s,
       color 0.12s;
 
     &:hover {
-      background: var(--sn-node-hover);
-      color: var(--sn-text);
+      background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface));
+      color: var(--sn-sys-on-surface);
     }
 
     & .material-symbols-outlined {
@@ -383,7 +384,7 @@ export let sidebarStyles = css`
     border: none;
     border-radius: var(--sn-radius-xs, 3px);
     cursor: pointer;
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
     opacity: 0;
     transition:
       opacity 0.12s,
@@ -395,8 +396,8 @@ export let sidebarStyles = css`
     }
 
     &:hover {
-      background: color-mix(in oklab, var(--sn-danger-color) 15%, transparent);
-      color: var(--sn-danger-color);
+      background: color-mix(in oklch, var(--sn-sys-danger) var(--sn-sys-state-hover-mix), transparent);
+      color: var(--sn-sys-danger);
     }
   }
 

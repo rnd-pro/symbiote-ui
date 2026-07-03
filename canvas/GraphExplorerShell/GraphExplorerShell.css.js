@@ -4,7 +4,7 @@ graph-explorer-shell {
   height: 100%;
   position: relative;
   overflow: hidden;
-  background: var(--sn-bg);
+  background: var(--sn-sys-surface);
   contain: strict;
 }
 
@@ -59,10 +59,10 @@ graph-explorer-shell .graph-explorer-btn {
   align-items: center;
   gap: var(--sn-graph-explorer-button-gap, 4px);
   padding: var(--sn-graph-explorer-button-padding, 4px 10px);
-  border: 1px solid var(--sn-node-border);
+  border: 1px solid var(--sn-sys-outline);
   border-radius: var(--sn-graph-explorer-button-radius, 3px);
-  background: var(--sn-node-bg);
-  color: var(--sn-text);
+  background: var(--sn-sys-surface-raised);
+  color: var(--sn-sys-on-surface);
   cursor: pointer;
   font-family: var(--sn-font);
   font-size: var(--sn-graph-explorer-button-size, 10px);
@@ -72,16 +72,16 @@ graph-explorer-shell .graph-explorer-btn {
 
 graph-explorer-shell .graph-explorer-btn:focus-visible,
 graph-explorer-shell .graph-explorer-icon-btn:focus-visible {
-  outline: 2px solid var(--sn-node-selected);
+  outline: 2px solid var(--sn-sys-focus-ring);
   outline-offset: 2px;
 }
 
 graph-explorer-shell .graph-explorer-btn:hover {
-  background: var(--sn-node-hover);
+  background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-raised));
 }
 
 graph-explorer-shell .graph-explorer-btn[data-active] {
-  border-color: var(--sn-node-selected);
+  border-color: var(--sn-sys-accent);
   background: var(--sn-accent-bg-subtle);
 }
 
@@ -93,7 +93,7 @@ graph-explorer-shell .graph-explorer-toolbar-sep {
   width: var(--sn-graph-explorer-toolbar-sep-width, 1px);
   align-self: stretch;
   margin: var(--sn-graph-explorer-toolbar-sep-margin, 0 4px);
-  background: var(--sn-node-border);
+  background: var(--sn-sys-outline);
 }
 
 graph-explorer-shell .graph-explorer-layer-btn {
@@ -121,16 +121,16 @@ graph-explorer-shell .graph-explorer-stats {
   max-height: var(--sn-graph-explorer-stats-max-height, 280px);
   overflow-y: auto;
   padding: var(--sn-graph-explorer-stats-padding, 4px 10px);
-  border: 1px solid var(--sn-node-border);
+  border: 1px solid var(--sn-sys-outline);
   border-radius: var(--sn-graph-explorer-stats-radius, 3px);
   background: var(--sn-bg-overlay);
-  color: var(--sn-text-dim);
+  color: var(--sn-sys-on-surface-dim);
   font-family: var(--sn-font);
   font-size: var(--sn-graph-explorer-stats-size, 10px);
 }
 
 graph-explorer-shell .graph-explorer-stat-val {
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
   font-weight: 600;
 }
 `;

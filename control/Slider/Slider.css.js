@@ -4,7 +4,7 @@ sn-slider {
   box-sizing: border-box;
   width: 100%;
   font-family: var(--sn-font);
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
   margin-block: var(--sn-slider-margin, 4px);
 }
 
@@ -20,7 +20,7 @@ sn-slider {
   position: relative;
   inline-size: 100%;
   block-size: var(--sn-slider-track-height, 4px);
-  background: var(--sn-slider-track-bg, color-mix(in oklab, var(--sn-text) 12%, transparent));
+  background: var(--sn-slider-track-bg, color-mix(in oklab, var(--sn-sys-on-surface) 12%, transparent));
   border-radius: var(--sn-radius-full);
   pointer-events: none;
 }
@@ -29,7 +29,7 @@ sn-slider {
   position: absolute;
   inset-block: 0;
   inset-inline-start: 0;
-  background: var(--sn-slider-active-bg, var(--sn-node-selected, var(--sn-sys-accent)));
+  background: var(--sn-slider-active-bg, var(--sn-sys-accent));
   border-radius: var(--sn-radius-full);
 }
 
@@ -40,7 +40,7 @@ sn-slider {
   block-size: var(--sn-slider-thumb-size, 12px);
   border-radius: var(--sn-radius-full);
   background: var(--sn-slider-thumb-bg, var(--sn-sys-on-accent));
-  border: 1px solid var(--sn-slider-thumb-border, var(--sn-slider-active-bg, var(--sn-node-selected, var(--sn-sys-accent))));
+  border: 1px solid var(--sn-slider-thumb-border, var(--sn-slider-active-bg, var(--sn-sys-accent)));
   box-shadow: var(--sn-slider-thumb-shadow, var(--sn-sys-shadow-raised));
   transform: translate(-50%, -50%);
   pointer-events: none;

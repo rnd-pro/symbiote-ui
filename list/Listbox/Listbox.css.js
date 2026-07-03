@@ -17,7 +17,8 @@ sn-listbox {
 }
 
 .sn-listbox:focus-within {
-  border-color: var(--sn-listbox-border-focus, var(--sn-sys-outline-focus));
+  outline: var(--sn-sys-focus-ring-width) solid var(--sn-listbox-border-focus, var(--sn-sys-focus-ring));
+  outline-offset: calc(-1 * var(--sn-sys-focus-ring-width));
 }
 
 .sn-listbox [role="option"] {

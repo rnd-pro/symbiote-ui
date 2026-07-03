@@ -14,7 +14,7 @@ export let styles = css`
     & .sn-ctrl-label {
       font-size: var(--sn-control-label-size, 10px);
       text-transform: uppercase;
-      color: var(--sn-text-dim);
+      color: var(--sn-sys-on-surface-dim);
       letter-spacing: 0.5px;
     }
 
@@ -23,7 +23,7 @@ export let styles = css`
       border: 1px solid var(--sn-control-input-border, color-mix(in oklab, currentColor 10%, transparent));
       border-radius: var(--sn-control-input-radius, 4px);
       padding: var(--sn-control-input-padding, 4px 8px);
-      color: var(--sn-text);
+      color: var(--sn-sys-on-surface);
       font-size: var(--sn-control-input-size, 12px);
       outline: none;
       font-family: inherit;

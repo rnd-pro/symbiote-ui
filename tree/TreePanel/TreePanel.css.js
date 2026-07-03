@@ -34,8 +34,8 @@ sn-tree-panel[hidden] {
   align-items: center;
   gap: var(--sn-tree-panel-title-gap);
   padding: var(--sn-tree-panel-title-padding);
-  border-bottom: 1px solid var(--sn-node-border);
-  color: var(--sn-text-dim);
+  border-bottom: 1px solid var(--sn-sys-outline);
+  color: var(--sn-sys-on-surface-dim);
   font-size: var(--sn-tree-panel-title-size);
   font-weight: var(--sn-tree-panel-title-weight);
   text-transform: uppercase;
@@ -55,38 +55,39 @@ sn-tree-panel[hidden] {
   flex: 0 0 auto;
   gap: var(--sn-tree-panel-toolbar-gap);
   padding: var(--sn-tree-panel-toolbar-padding);
-  border-bottom: 1px solid var(--sn-node-border);
+  border-bottom: 1px solid var(--sn-sys-outline);
 }
 
 .sn-tree-panel-filter {
   flex: 1;
   min-width: 0;
   padding: var(--sn-tree-panel-input-padding);
-  border: 1px solid var(--sn-node-border);
+  border: 1px solid var(--sn-sys-outline);
   border-radius: var(--sn-tree-panel-input-radius);
   outline: none;
-  background: var(--sn-bg);
-  color: var(--sn-text);
+  background: var(--sn-sys-surface);
+  color: var(--sn-sys-on-surface);
   font-family: inherit;
   font-size: var(--sn-tree-panel-input-size);
 }
 
 .sn-tree-panel-filter:focus {
-  border-color: var(--sn-node-selected);
+  outline: var(--sn-sys-focus-ring-width) solid var(--sn-sys-focus-ring);
+  outline-offset: var(--sn-sys-focus-ring-offset);
 }
 
 .sn-tree-panel-collapse {
   --sn-button-icon-size: auto;
   --sn-button-icon-font-size: var(--sn-tree-panel-icon-size);
   --sn-button-padding: var(--sn-tree-panel-collapse-padding);
-  --sn-button-border: var(--sn-node-border);
+  --sn-button-border: var(--sn-sys-outline);
   --sn-button-radius: var(--sn-tree-panel-input-radius);
-  --sn-button-bg: var(--sn-bg);
-  --sn-button-hover-bg: var(--sn-node-hover);
-  --sn-button-hover-border: var(--sn-node-border);
-  --sn-button-color: var(--sn-text);
+  --sn-button-bg: var(--sn-sys-surface);
+  --sn-button-hover-bg: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface));
+  --sn-button-hover-border: var(--sn-sys-outline);
+  --sn-button-color: var(--sn-sys-on-surface);
   --sn-button-focus-ring: var(--sn-effect-focus-ring);
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
   transition: background var(--sn-transition-fast) var(--sn-transition-easing);
 }
 
@@ -99,7 +100,7 @@ sn-tree-panel[hidden] {
 
 .sn-tree-panel-placeholder {
   padding: var(--sn-tree-panel-placeholder-padding);
-  color: var(--sn-text-dim);
+  color: var(--sn-sys-on-surface-dim);
   font-size: var(--sn-tree-panel-placeholder-size);
 }
 
@@ -115,17 +116,17 @@ sn-tree-view {
   --sn-tree-row-min-height: var(--sn-tree-panel-row-min-height, var(--sn-tree-row-height));
   --sn-tree-row-padding-block: var(--sn-tree-panel-row-padding-block, var(--sn-tree-row-padding-block));
   --sn-tree-row-radius: var(--sn-tree-panel-row-radius, var(--sn-tree-row-radius));
-  --sn-tree-row-hover-bg: var(--sn-node-hover);
-  --sn-tree-row-selected-bg: var(--sn-node-selected-soft, var(--sn-node-hover));
+  --sn-tree-row-hover-bg: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-panel));
+  --sn-tree-row-selected-bg: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-selected-mix), var(--sn-sys-surface-panel));
   --sn-tree-row-selected-border: transparent;
-  --sn-tree-label-color: var(--sn-text-dim);
+  --sn-tree-label-color: var(--sn-sys-on-surface-dim);
   --sn-tree-label-size: var(--sn-tree-panel-label-size, var(--sn-tree-label-size));
   --sn-tree-label-weight: var(--sn-tree-panel-label-weight, var(--sn-tree-label-weight));
-  --sn-tree-muted-color: var(--sn-text-dim);
+  --sn-tree-muted-color: var(--sn-sys-on-surface-dim);
   --sn-tree-icon-size: var(--sn-tree-panel-icon-size, var(--sn-tree-icon-size));
   --sn-tree-badge-radius: var(--sn-tree-panel-badge-radius, var(--sn-tree-badge-radius));
-  --sn-tree-badge-bg: var(--sn-node-hover);
-  --sn-tree-badge-color: var(--sn-text-dim);
+  --sn-tree-badge-bg: var(--sn-sys-accent-container);
+  --sn-tree-badge-color: var(--sn-sys-on-surface-dim);
   --sn-tree-badge-size: var(--sn-tree-panel-badge-size, var(--sn-tree-badge-size));
 }
 

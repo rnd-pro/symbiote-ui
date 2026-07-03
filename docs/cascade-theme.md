@@ -88,8 +88,8 @@ available.
 The contract writes both low-level controls such as `--sn-theme-bg-lightness`,
 `--sn-theme-outline-strength`, `--sn-theme-type-scale`, and
 `--sn-theme-heading-scale`, `--sn-theme-density`, and
-`--sn-theme-pattern-brightness`, `--sn-theme-motion-scale`, and public component aliases such as `--sn-bg`,
-`--sn-text`, `--sn-node-bg`, `--sn-panel-bg`, `--sn-ctx-bg`,
+`--sn-theme-pattern-brightness`, `--sn-theme-motion-scale`, and public component aliases such as `--sn-sys-surface`,
+`--sn-sys-on-surface`, `--sn-sys-surface-raised`, `--sn-sys-surface-panel`, `--sn-sys-surface-overlay`,
 `--sn-button-bg`, and `--sn-field-control-bg`. Motion also exposes
 `--sn-motion-enabled`, `--sn-animation-play-state`,
 `--sn-animation-duration-scale`, and `--sn-transition-easing`; disabled

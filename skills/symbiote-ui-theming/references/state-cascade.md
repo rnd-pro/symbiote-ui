@@ -66,7 +66,7 @@ The theme provider CSS (`default-provider.css`) contains rules like:
 
 /* Running — animated pulse on accent */
 [data-engine-state="running"] {
-  background: color-mix(in oklch, var(--sn-bg) 92%, oklch(0.7 0.15 var(--sn-theme-hue)));
+  background: color-mix(in oklch, var(--sn-sys-surface) 92%, oklch(0.7 0.15 var(--sn-theme-hue)));
   animation: sn-engine-pulse 2s ease-in-out infinite;
 }
 
@@ -77,12 +77,12 @@ The theme provider CSS (`default-provider.css`) contains rules like:
 
 /* Success — green tint */
 [data-engine-state="success"] {
-  background: color-mix(in oklch, var(--sn-bg) 90%, oklch(0.65 0.18 var(--sn-hue-success)));
+  background: color-mix(in oklch, var(--sn-sys-surface) 90%, oklch(0.65 0.18 var(--sn-hue-success)));
 }
 
 /* Error — red/danger tint */
 [data-engine-state="error"] {
-  background: color-mix(in oklch, var(--sn-bg) 88%, oklch(0.55 0.22 var(--sn-hue-danger)));
+  background: color-mix(in oklch, var(--sn-sys-surface) 88%, oklch(0.55 0.22 var(--sn-hue-danger)));
 }
 
 /* Paused — dimmed */
@@ -125,7 +125,7 @@ applyThemePresets(panel, { color: 'pcb', skin: 'compact' });
 applyRuntimeUiState(panel, { attrs: { 'data-engine-state': 'running' } });
 ```
 
-The `color-mix()` blends use `var(--sn-bg)` which already holds the themed
+The `color-mix()` blends use `var(--sn-sys-surface)` which already holds the themed
 background, so the state overlay respects the current theme automatically.
 
 ## Integration with Intent Orchestrator
@@ -157,12 +157,12 @@ You can define your own `data-engine-state` values and add CSS rules:
 
 ```css
 [data-engine-state="syncing"] {
-  background: color-mix(in oklch, var(--sn-bg) 90%, oklch(0.6 0.12 var(--sn-hue-data)));
+  background: color-mix(in oklch, var(--sn-sys-surface) 90%, oklch(0.6 0.12 var(--sn-hue-data)));
   animation: sn-engine-pulse 1.5s ease-in-out infinite;
 }
 
 [data-engine-state="warning"] {
-  background: color-mix(in oklch, var(--sn-bg) 88%, oklch(0.7 0.18 var(--sn-hue-warning)));
+  background: color-mix(in oklch, var(--sn-sys-surface) 88%, oklch(0.7 0.18 var(--sn-hue-warning)));
 }
 ```
 

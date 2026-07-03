@@ -2427,20 +2427,20 @@ export class CanvasGraph extends Symbiote {
   }
 
   syncCanvasTheme() {
-    this._bgRgb = readThemeRgbAny(this, ['--sn-canvas-graph-bg', '--sn-bg'], this._bgRgb);
-    this._edgeRgb = readThemeRgbAny(this, ['--sn-canvas-graph-edge', '--sn-conn-color', '--sn-node-selected'], this._edgeRgb);
-    this._pulseRgb = readThemeRgbAny(this, ['--sn-canvas-graph-pulse', '--sn-node-selected'], this._pulseRgb);
-    this._dangerRgb = readThemeRgbAny(this, ['--sn-canvas-graph-danger', '--sn-danger-color', '--sn-status-error'], this._dangerRgb);
-    this._textRgb = readThemeRgbAny(this, ['--sn-canvas-graph-text', '--sn-text'], this._textRgb);
-    this._textDimRgb = readThemeRgbAny(this, ['--sn-canvas-graph-text-dim', '--sn-text-dim'], this._textDimRgb);
+    this._bgRgb = readThemeRgbAny(this, ['--sn-canvas-graph-bg', '--sn-sys-surface'], this._bgRgb);
+    this._edgeRgb = readThemeRgbAny(this, ['--sn-canvas-graph-edge', '--sn-conn-color', '--sn-sys-accent'], this._edgeRgb);
+    this._pulseRgb = readThemeRgbAny(this, ['--sn-canvas-graph-pulse', '--sn-sys-accent'], this._pulseRgb);
+    this._dangerRgb = readThemeRgbAny(this, ['--sn-canvas-graph-danger', '--sn-sys-danger'], this._dangerRgb);
+    this._textRgb = readThemeRgbAny(this, ['--sn-canvas-graph-text', '--sn-sys-on-surface'], this._textRgb);
+    this._textDimRgb = readThemeRgbAny(this, ['--sn-canvas-graph-text-dim', '--sn-sys-on-surface-dim'], this._textDimRgb);
     this._panelBgRgb = readThemeRgbAny(
       this,
-      ['--sn-canvas-graph-panel-bg', '--sn-canvas-graph-bg', '--sn-bg', '--sn-panel-bg', '--sn-node-bg'],
+      ['--sn-canvas-graph-panel-bg', '--sn-canvas-graph-bg', '--sn-sys-surface'],
       this._bgRgb
     );
-    this._panelBorderRgb = readThemeRgbAny(this, ['--sn-canvas-graph-panel-border', '--sn-node-border', '--sn-outline-color-soft', '--sn-text-dim'], this._panelBorderRgb);
-    this._menuIconRgb = readThemeRgbAny(this, ['--sn-canvas-graph-radial-icon', '--sn-panel-bg', '--sn-bg'], this._menuIconRgb);
-    this._ghostRgb = readThemeRgbAny(this, ['--sn-canvas-graph-ghost', '--sn-text-dim', '--sn-node-hover'], this._ghostRgb);
+    this._panelBorderRgb = readThemeRgbAny(this, ['--sn-canvas-graph-panel-border', '--sn-sys-outline'], this._panelBorderRgb);
+    this._menuIconRgb = readThemeRgbAny(this, ['--sn-canvas-graph-radial-icon', '--sn-sys-surface-panel'], this._menuIconRgb);
+    this._ghostRgb = readThemeRgbAny(this, ['--sn-canvas-graph-ghost', '--sn-sys-on-surface-dim'], this._ghostRgb);
     for (let [type, token] of Object.entries(GRAPH_TYPE_COLOR_TOKENS)) {
       this._typeColorRgb[type] = readThemeRgb(this, token, this._typeColorRgb[type] || this._edgeRgb);
     }

@@ -947,8 +947,8 @@ async function evaluateDesignProtocolThemeSmoke(page) {
           'gap:12px',
           'opacity:0.01',
           'pointer-events:none',
-          'background:var(--sn-panel-bg)',
-          'color:var(--sn-text)',
+          'background:var(--sn-sys-surface-panel)',
+          'color:var(--sn-sys-on-surface)',
         ].join(';');
         fixture.innerHTML = [
           '<sn-button variant="primary">Run</sn-button>',
@@ -1006,7 +1006,7 @@ async function evaluateDesignProtocolThemeSmoke(page) {
             density: getComputedStyle(fixture).getPropertyValue('--sn-theme-density').trim(),
             typeScale: getComputedStyle(fixture).getPropertyValue('--sn-theme-type-scale').trim(),
             outline: getComputedStyle(fixture).getPropertyValue('--sn-theme-outline-strength').trim(),
-            panel: getComputedStyle(fixture).getPropertyValue('--sn-panel-bg').trim(),
+            panel: getComputedStyle(fixture).getPropertyValue('--sn-sys-surface-panel').trim(),
           },
           primaryButton: read('sn-button[variant="primary"]'),
           composer: read('chat-composer'),
@@ -1272,7 +1272,7 @@ async function evaluateCanvasGraphGravityVisualSmoke(page) {
         'width:760px',
         'height:460px',
         'z-index:20',
-        'background:var(--sn-bg, #151515)',
+        'background:var(--sn-sys-surface)',
       ].join(';');
       const graph = document.createElement('canvas-graph');
       graph.style.cssText = 'display:block;width:760px;height:460px;';

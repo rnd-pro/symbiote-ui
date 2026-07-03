@@ -307,7 +307,7 @@ export class Chart extends Symbiote {
         x: '50%',
         y: '50%',
         'text-anchor': 'middle',
-        fill: 'var(--sn-text-dim, #888)',
+        fill: 'var(--sn-sys-on-surface-dim)',
         'font-size': '12px',
       });
       emptyText.textContent = 'No active series to display';
@@ -382,7 +382,7 @@ export class Chart extends Symbiote {
         x: padding - 8,
         y: y + 4,
         'text-anchor': 'end',
-        fill: 'var(--sn-text-dim, rgba(255,255,255,0.4))',
+        fill: 'var(--sn-sys-on-surface-dim)',
         'font-size': '10px',
       });
       label.textContent = String(Math.round(val));
@@ -422,7 +422,7 @@ export class Chart extends Symbiote {
         x,
         y: height - padding + 15,
         'text-anchor': 'middle',
-        fill: 'var(--sn-text-dim, rgba(255,255,255,0.4))',
+        fill: 'var(--sn-sys-on-surface-dim)',
         'font-size': '10px',
       });
       label.textContent = String(cat);
@@ -501,7 +501,7 @@ export class Chart extends Symbiote {
             r: 4,
             class: 'sn-chart-line-point',
             stroke: color,
-            fill: 'var(--sn-panel-bg, #1e1e24)',
+            fill: 'var(--sn-sys-surface-panel)',
           });
           this.#addTooltipEvents(circle, series.name, categories[idx] || `Index ${idx}`, val);
           svg.appendChild(circle);

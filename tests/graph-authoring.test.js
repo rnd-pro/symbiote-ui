@@ -271,13 +271,13 @@ describe('SelectionSync Connection Focus', () => {
     );
 
     assert.match(source, /\.sn-conn-path\[data-dimmed\]/);
-    assert.match(source, /stroke: var\(--sn-conn-dimmed, var\(--sn-text-dim\)\);/);
+    assert.match(source, /stroke: var\(--sn-conn-dimmed, var\(--sn-sys-on-surface-dim\)\);/);
     assert.match(source, /\.sn-conn-path\[data-active-conn\]/);
-    assert.match(source, /stroke: var\(--sn-node-selected, var\(--sn-conn-selected, var\(--sn-conn-color\)\)\);/);
+    assert.match(source, /stroke: var\(--sn-sys-accent\);/);
     assert.match(source, /\.sn-conn-arrow\[data-dimmed\]/);
-    assert.match(source, /fill: var\(--sn-conn-dimmed, var\(--sn-text-dim\)\);/);
+    assert.match(source, /fill: var\(--sn-conn-dimmed, var\(--sn-sys-on-surface-dim\)\);/);
     assert.match(source, /\.sn-conn-arrow\[data-active-conn\]/);
-    assert.match(source, /fill: var\(--sn-node-selected, var\(--sn-conn-color\)\);/);
+    assert.match(source, /fill: var\(--sn-sys-accent\);/);
   });
 
   it('syncs active and dimmed state to connection paths, arrows, and endpoint dots', () => {

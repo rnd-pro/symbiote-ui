@@ -9,7 +9,6 @@ import {
   STATE_LAYER_MIX,
   REF_RAMP_STOPS,
   REF_RAMP_FAMILIES,
-  LEGACY_SYS_ALIASES,
 } from '../tokens/tiers.js';
 import {
   STATUS_HUE_OFFSETS,
@@ -20,8 +19,8 @@ import {
 // system-cascade.js is the W1 T1/T2 derivation stylesheet (docs/cascade-theme-architecture.md).
 // These tests pin the CSS-native contract: relative color syntax in OKLCH, `@property`
 // registrations sourced from tokens/tiers.js (never hand-duplicated), color-mix state layers,
-// light-dark() mode branching, and the legacy alias bridge — all as plain strings (Node-safe,
-// no DOM/browser CSS engine required).
+// and light-dark() mode branching — all as plain strings (Node-safe, no DOM/browser CSS engine
+// required).
 describe('system cascade stylesheet', () => {
   it('registers every T1 ramp stop and every T2 role as a typed @property', () => {
     let css = systemCascadeCss();
@@ -102,10 +101,14 @@ describe('system cascade stylesheet', () => {
     }
   });
 
-  it('emits the legacy alias bridge for every LEGACY_SYS_ALIASES entry, at zero specificity', () => {
+  it('emits only tiered token names at zero specificity — the legacy alias bridge is gone', () => {
     let css = systemCascadeCss();
-    for (let [legacy, sys] of Object.entries(LEGACY_SYS_ALIASES)) {
-      assert.ok(css.includes(`${legacy}: var(${sys});`), `${legacy} bridges to ${sys}`);
+    // every declaration in the value-bearing block is a knob, ramp stop, sys role, or color-scheme
+    let block = css.split(':where(:root, :host) {')[1] ?? '';
+    for (let line of block.split('\n')) {
+      let name = line.trim().split(':')[0];
+      if (!name.startsWith('--')) continue;
+      assert.match(name, /^--sn-(theme|ref|sys)-/, `${name} is a tiered token, not a legacy alias`);
     }
     // the whole value-bearing block lives inside :where() so it carries zero specificity
     assert.match(css, /:where\(:root, :host\) \{/);

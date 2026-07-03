@@ -15,7 +15,7 @@ chat-sidebar-sub-item {
   padding: var(--sn-chat-sidebar-row-padding, 6px 14px);
   min-height: var(--sn-chat-sidebar-row-min-height, 28px);
   cursor: pointer;
-  color: var(--sn-text-dim);
+  color: var(--sn-sys-on-surface-dim);
   transition: background var(--sn-transition-fast) var(--sn-transition-easing), color var(--sn-transition-fast) var(--sn-transition-easing);
   white-space: nowrap;
   overflow: hidden;
@@ -23,22 +23,22 @@ chat-sidebar-sub-item {
 
 .chat-item:hover {
   background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-raised));
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
 }
 
 :host([data-active]) > .chat-item,
 :host([data-active]) > .chat-item-child,
 chat-sidebar-item[data-active] > .chat-item,
 chat-sidebar-sub-item[data-active] > .chat-item-child {
-  color: var(--sn-text);
-  background: color-mix(in oklab, var(--sn-chat-item-icon-color, var(--sn-cat-server)) 14%, var(--sn-node-hover));
+  color: var(--sn-sys-on-surface);
+  background: color-mix(in oklab, var(--sn-chat-item-icon-color, var(--sn-cat-server)) 14%, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-raised)));
   border-left: var(--sn-chat-sidebar-active-border-width, 2px) solid var(--sn-chat-item-icon-color, var(--sn-cat-server));
   padding-left: var(--sn-chat-sidebar-active-padding-left, 12px);
 }
 
 :host([data-group]) > .chat-item,
 chat-sidebar-item[data-group] > .chat-item {
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
   font-weight: 600;
 }
 
@@ -60,7 +60,7 @@ chat-sidebar-item[data-group] > .chat-item {
 
 :host([data-group]) > .chat-item .chat-item-label,
 chat-sidebar-item[data-group] > .chat-item .chat-item-label {
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
 }
 
 :host([data-group]) > .chat-item .chat-item-delete,
@@ -95,7 +95,7 @@ chat-sidebar-item[data-group] > .chat-item .chat-item-delete {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
 }
 
 .chat-status-icon {
@@ -108,7 +108,7 @@ chat-sidebar-item[data-group] > .chat-item .chat-item-delete {
 }
 
 .chat-status-icon[data-status="running"] {
-  color: var(--sn-node-selected);
+  color: var(--sn-sys-accent);
 }
 
 .chat-status-icon[data-status="running"] {
@@ -117,11 +117,11 @@ chat-sidebar-item[data-group] > .chat-item .chat-item-delete {
 }
 
 .chat-status-icon[data-status="done"] {
-  color: var(--sn-success-color);
+  color: var(--sn-sys-success);
 }
 
 .chat-status-icon[data-status="error"] {
-  color: var(--sn-danger-color);
+  color: var(--sn-sys-danger);
 }
 
 @keyframes spin {
@@ -130,7 +130,7 @@ chat-sidebar-item[data-group] > .chat-item .chat-item-delete {
 
 .chat-item-adapter {
   font-size: var(--sn-chat-sidebar-meta-size, 9px);
-  color: var(--sn-text-dim);
+  color: var(--sn-sys-on-surface-dim);
   font-family: var(--sn-font-mono, monospace);
   margin-left: var(--sn-chat-sidebar-meta-margin, 6px);
 }
@@ -160,7 +160,7 @@ chat-sidebar-item[data-group] > .chat-item .chat-item-delete {
   height: var(--sn-chat-sidebar-delete-box-size, 16px);
   border: none;
   background: transparent;
-  color: var(--sn-text-dim);
+  color: var(--sn-sys-on-surface-dim);
   cursor: pointer;
   font-size: var(--sn-chat-sidebar-delete-size, 14px);
   padding: 0;
@@ -199,7 +199,8 @@ chat-sidebar-item[data-group] > .chat-item .chat-item-delete {
 .chat-item-delete:hover {
   opacity: 1;
   pointer-events: auto;
-  color: var(--sn-danger-color);
+  color: var(--sn-sys-danger);
+  background: color-mix(in oklch, var(--sn-sys-danger) var(--sn-sys-state-hover-mix), transparent);
 }
 
 .chat-expand-icon {
@@ -250,14 +251,14 @@ chat-sidebar-sub-item[data-expanded] > .chat-sub-items {
   font-size: var(--sn-chat-sidebar-child-size, 12px);
   min-height: var(--sn-chat-sidebar-child-min-height, 24px);
   position: relative;
-  color: var(--sn-text-dim);
+  color: var(--sn-sys-on-surface-dim);
   cursor: pointer;
   transition: background var(--sn-transition-fast) var(--sn-transition-easing), color var(--sn-transition-fast) var(--sn-transition-easing);
 }
 
 .chat-item-child:hover {
   background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-raised));
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
 }
 
 .chat-item-child::before {
@@ -267,7 +268,7 @@ chat-sidebar-sub-item[data-expanded] > .chat-sub-items {
   top: 0;
   bottom: 0;
   width: 1px;
-  background: var(--sn-node-hover);
+  background: var(--sn-sys-outline-subtle);
 }
 
 chat-sidebar-sub-item .chat-sub-items chat-sidebar-sub-item .chat-item-child {
@@ -363,8 +364,8 @@ chat-sidebar-sub-item .chat-sub-items chat-sidebar-sub-item .chat-item-child::be
   display: flex;
   align-items: center;
   padding-inline: var(--sn-chat-sidebar-compact-label-padding, 10px 0);
-  background: var(--sn-node-bg);
-  color: var(--sn-text);
+  background: var(--sn-sys-surface-raised);
+  color: var(--sn-sys-on-surface);
   box-shadow: var(--sn-chat-item-child-shadow);
   z-index: 29;
   opacity: 0;
@@ -418,7 +419,7 @@ chat-sidebar-sub-item .chat-sub-items chat-sidebar-sub-item .chat-item-child::be
   inset: 0 auto 0 calc(var(--sn-chat-sidebar-compact-label-inset, 46px) + var(--sn-chat-compact-label-width));
   width: var(--sn-chat-compact-delete-width);
   height: 100%;
-  background: var(--sn-node-bg);
+  background: var(--sn-sys-surface-raised);
   border-radius: 0 var(--sn-radius-sm) var(--sn-radius-sm) 0;
   z-index: 31;
   transition: color var(--sn-transition-fast) var(--sn-transition-easing), opacity var(--sn-transition-fast) var(--sn-transition-easing);

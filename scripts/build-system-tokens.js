@@ -13,7 +13,6 @@ import {
   SYSTEM_ROLES,
   SYSTEM_ROLE_SYNTAX,
   STATE_LAYER_MIX,
-  LEGACY_SYS_ALIASES,
   REF_RAMP_FAMILIES,
   REF_RAMP_STOPS,
 } from '../tokens/tiers.js';
@@ -52,7 +51,6 @@ let catalog = {
     families: { $type: 'string', $value: REF_RAMP_FAMILIES.join(',') },
     stops: { $type: 'string', $value: REF_RAMP_STOPS.join(',') },
   },
-  legacy: {},
 };
 
 for (let role of SYSTEM_ROLES) {
@@ -65,13 +63,5 @@ for (let role of SYSTEM_ROLES) {
   };
 }
 
-for (let [legacy, target] of Object.entries(LEGACY_SYS_ALIASES)) {
-  catalog.legacy[legacy.replace('--sn-', '')] = {
-    $type: 'color',
-    $value: `var(${target})`,
-    $extensions: { 'symbiote-ui': { tier: 'legacy-alias', removal: 'wave-3' } },
-  };
-}
-
 fs.writeFileSync(outPath, `${JSON.stringify(catalog, null, 2)}\n`);
-console.log(`wrote ${path.relative(process.cwd(), outPath)}: ${SYSTEM_ROLES.length} roles, ${Object.keys(LEGACY_SYS_ALIASES).length} legacy aliases`);
+console.log(`wrote ${path.relative(process.cwd(), outPath)}: ${SYSTEM_ROLES.length} roles`);

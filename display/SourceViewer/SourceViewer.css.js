@@ -110,7 +110,7 @@ export default `
     line-height: 1;
   }
   .sv-action:hover {
-    background: var(--sn-source-action-hover-bg);
+    background: var(--sn-source-action-hover-bg, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface)));
     color: var(--sn-sys-on-surface);
   }
   source-viewer[mode-raw] .sv-action {

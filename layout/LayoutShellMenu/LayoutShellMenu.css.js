@@ -7,11 +7,11 @@ layout-shell-menu {
   height: 100%;
   min-height: 0;
   overflow: hidden;
-  background-color: var(--sn-bg, #1a1a1a);
-  background-image: linear-gradient(to bottom, var(--sn-node-bg, #202020), var(--sn-bg, #1a1a1a));
+  background-color: var(--sn-sys-surface);
+  background-image: linear-gradient(to bottom, var(--sn-sys-surface-raised), var(--sn-sys-surface));
   background-repeat: no-repeat;
   background-size: 100% var(--sn-shell-top-gradient-size, 78px);
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
   font-family: var(--sn-font, Inter, system-ui, sans-serif);
 }
 
@@ -47,7 +47,7 @@ layout-shell-menu {
   left: 50%;
   max-width: min(40vw, var(--sn-shell-menu-center-max, 640px));
   gap: var(--sn-shell-menu-center-gap, 6px);
-  color: var(--sn-text-dim);
+  color: var(--sn-sys-on-surface-dim);
   font-family: var(--sn-font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
   font-size: var(--sn-app-topbar-meta-size, 11px);
   line-height: 1;
@@ -63,13 +63,13 @@ layout-shell-menu {
 
 .app-title-icon {
   flex: 0 0 auto;
-  color: var(--project-accent, var(--sn-node-selected));
+  color: var(--project-accent, var(--sn-sys-accent));
   font-size: var(--sn-app-title-icon-size, 16px);
 }
 
 .app-title {
   overflow: hidden;
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
   font-size: var(--sn-app-title-size, 13px);
   font-weight: 700;
   letter-spacing: var(--sn-app-title-letter-spacing, 0.5px);
@@ -80,7 +80,7 @@ layout-shell-menu {
 
 .topbar-project-icon {
   flex: 0 0 auto;
-  color: var(--sn-text-dim);
+  color: var(--sn-sys-on-surface-dim);
   font-size: var(--sn-shell-menu-path-icon-size, 12px);
 }
 
@@ -101,7 +101,7 @@ layout-shell-menu {
   border: 1px solid transparent;
   border-radius: var(--sn-layout-header-button-radius, 4px);
   background: transparent;
-  color: var(--sn-text-dim);
+  color: var(--sn-sys-on-surface-dim);
   font: inherit;
   font-size: var(--sn-shell-menu-action-size, 11px);
   font-weight: 600;
@@ -114,9 +114,9 @@ layout-shell-menu {
 .topbar-right button[active],
 .shell-action:hover,
 .shell-action[active] {
-  border-color: var(--sn-node-border);
-  background: var(--sn-node-hover);
-  color: var(--sn-text);
+  border-color: var(--sn-sys-outline);
+  background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface));
+  color: var(--sn-sys-on-surface);
 }
 
 .topbar-right button .material-symbols-outlined,

@@ -34,7 +34,7 @@ chat-message-item {
   font-size: var(--sn-chat-small-size, 11px);
   min-width: 0;
   max-width: 90%;
-  color: var(--sn-text-dim);
+  color: var(--sn-sys-on-surface-dim);
 }
 
 .message.system .msg-content {
@@ -43,7 +43,7 @@ chat-message-item {
   gap: var(--sn-step-2);
   min-width: 0;
   max-width: 100%;
-  background: color-mix(in srgb, var(--sn-text-dim) 9%, transparent);
+  background: color-mix(in srgb, var(--sn-sys-on-surface-dim) 9%, transparent);
   border-radius: var(--sn-radius-lg, 12px);
   text-align: left;
   font-style: normal;
@@ -55,7 +55,7 @@ chat-message-item {
 .message.system .system-note-icon {
   flex: 0 0 auto;
   font-size: var(--sn-chat-meta-icon-size);
-  color: var(--sn-text-dim);
+  color: var(--sn-sys-on-surface-dim);
 }
 
 .msg-content {
@@ -72,18 +72,18 @@ chat-message-item {
 }
 
 .message.user .msg-content {
-  background: var(--sn-chat-user-message-bg, var(--sn-composer-bg, var(--sn-chat-message-bg, var(--sn-node-bg))));
-  color: var(--sn-text);
+  background: var(--sn-chat-user-message-bg, var(--sn-composer-bg, var(--sn-chat-message-bg, var(--sn-sys-surface-raised))));
+  color: var(--sn-sys-on-surface);
 }
 
 .message.agent .msg-content {
-  background: var(--sn-chat-agent-message-bg, var(--sn-node-bg));
-  color: var(--sn-text);
+  background: var(--sn-chat-agent-message-bg, var(--sn-sys-surface-raised));
+  color: var(--sn-sys-on-surface);
 }
 
 .tool-card {
   border-radius: var(--sn-radius-xl);
-  background: var(--sn-node-hover);
+  background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface));
   overflow: hidden;
   width: 100%;
   min-width: 0;
@@ -91,7 +91,7 @@ chat-message-item {
 }
 
 .tool-card[open] {
-  background: var(--sn-node-hover);
+  background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface));
 }
 
 .tool-header {
@@ -101,7 +101,7 @@ chat-message-item {
   padding: var(--sn-chat-tool-padding, 8px 12px);
   font-size: var(--sn-chat-tool-font-size, 12px);
   font-weight: 600;
-  color: var(--sn-text-dim);
+  color: var(--sn-sys-on-surface-dim);
   cursor: pointer;
   user-select: none;
   list-style: none;
@@ -115,7 +115,7 @@ chat-message-item {
   content: '>';
   font-size: var(--sn-chat-tool-label-size, 10px);
   transition: transform var(--sn-transition-fast) var(--sn-transition-easing);
-  color: var(--sn-text-dim);
+  color: var(--sn-sys-on-surface-dim);
 }
 
 .tool-card[open] .tool-header::before {
@@ -123,7 +123,7 @@ chat-message-item {
 }
 
 .tool-header .material-symbols-outlined {
-  color: var(--sn-text-dim);
+  color: var(--sn-sys-on-surface-dim);
 }
 
 .tool-icon {
@@ -140,7 +140,7 @@ chat-message-item {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
   opacity: 0.72;
   font-weight: 500;
 }
@@ -148,12 +148,12 @@ chat-message-item {
 .tool-summary::before {
   content: '-';
   margin-inline-end: var(--sn-step-3);
-  color: var(--sn-text-dim);
+  color: var(--sn-sys-on-surface-dim);
 }
 
 .tool-card[open] .tool-header {
   border-bottom: none;
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
 }
 
 .tool-section {
@@ -165,14 +165,14 @@ chat-message-item {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--sn-text-dim);
+  color: var(--sn-sys-on-surface-dim);
   margin-bottom: var(--sn-step-2);
 }
 
 .tool-result-summary {
   font-size: var(--sn-chat-tool-font-size, 12px);
   font-weight: 600;
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
   line-height: 1.4;
 }
 
@@ -190,7 +190,7 @@ chat-message-item {
   align-items: flex-start;
   gap: var(--sn-step-2);
   font-size: var(--sn-chat-small-size, 11px);
-  color: var(--sn-warning-color, var(--sn-danger-color, var(--sn-sys-warning)));
+  color: var(--sn-sys-warning);
   line-height: 1.4;
 }
 
@@ -200,12 +200,12 @@ chat-message-item {
 }
 
 .tool-code {
-  background: var(--sn-bg);
+  background: var(--sn-sys-surface);
   border-radius: var(--sn-radius-md);
   padding: var(--sn-chat-code-padding, 8px);
   font-family: var(--sn-font-mono);
   font-size: var(--sn-chat-code-size, 11px);
-  color: var(--sn-text-dim);
+  color: var(--sn-sys-on-surface-dim);
   white-space: pre-wrap;
   word-break: break-all;
   overflow-wrap: anywhere;
@@ -216,7 +216,7 @@ chat-message-item {
 }
 
 .tool-waiting {
-  color: var(--sn-text-dim);
+  color: var(--sn-sys-on-surface-dim);
   font-style: italic;
   font-size: var(--sn-chat-small-size, 11px);
 }
@@ -234,7 +234,7 @@ chat-message-item {
   display: inline-block;
   width: 6px;
   height: 14px;
-  background-color: var(--sn-text-dim);
+  background-color: var(--sn-sys-on-surface-dim);
   vertical-align: middle;
   margin-left: var(--sn-step-2);
   animation: blink var(--sn-animation-duration-normal) step-end infinite;
@@ -246,7 +246,7 @@ chat-message-item {
 }
 
 .md-code-block {
-  background: var(--sn-bg);
+  background: var(--sn-sys-surface);
   border-radius: var(--sn-radius-lg);
   padding: var(--sn-chat-code-padding, 12px);
   min-width: 0;
@@ -259,16 +259,16 @@ chat-message-item {
 }
 
 .md-inline-code {
-  background: var(--sn-node-hover);
+  background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface));
   padding: var(--sn-step-1) var(--sn-step-2, 5px);
   border-radius: var(--sn-radius-sm);
   font-family: var(--sn-font-mono);
   font-size: var(--sn-chat-code-size, 11px);
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
 }
 
 .markdown-mention {
-  color: var(--sn-node-selected);
+  color: var(--sn-sys-accent);
   background: var(--sn-accent-bg);
   padding: var(--sn-step-0, 1px) var(--sn-step-2);
   border-radius: var(--sn-radius-sm);
@@ -277,32 +277,33 @@ chat-message-item {
 }
 
 .md-link {
-  color: var(--sn-text-dim);
+  color: var(--sn-sys-on-surface-dim);
   text-decoration: underline;
-  text-decoration-color: var(--sn-node-border);
+  text-decoration-color: var(--sn-sys-outline);
   overflow-wrap: anywhere;
   word-break: break-word;
 }
 
 .md-link:hover {
-  color: var(--sn-text);
+  /* text emphasis only — links keep their underline affordance (0% state layer) */
+  color: color-mix(in oklch, var(--sn-sys-accent) 0%, var(--sn-sys-on-surface));
 }
 
 .md-h {
   margin: var(--sn-step-8) 0 var(--sn-step-4);
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
   font-weight: 700;
 }
 
 h1.md-h {
   font-size: var(--sn-chat-markdown-h1-size, 20px);
-  border-bottom: 1px solid var(--sn-node-border);
+  border-bottom: 1px solid var(--sn-sys-outline);
   padding-bottom: var(--sn-step-3);
 }
 
 h2.md-h {
   font-size: var(--sn-chat-markdown-h2-size, 18px);
-  border-bottom: 1px solid var(--sn-node-border);
+  border-bottom: 1px solid var(--sn-sys-outline);
   padding-bottom: var(--sn-step-2);
 }
 
@@ -321,11 +322,11 @@ h4.md-h {
 .md-quote {
   margin: var(--sn-step-4) 0;
   padding: var(--sn-step-4) var(--sn-step-8);
-  border-left: 4px solid var(--sn-node-selected);
+  border-left: 4px solid var(--sn-sys-accent);
   background: var(--sn-accent-bg-subtle);
   border-radius: 0 var(--sn-radius-sm) var(--sn-radius-sm) 0;
   font-style: italic;
-  color: var(--sn-text-dim);
+  color: var(--sn-sys-on-surface-dim);
 }
 
 .md-list {
@@ -342,12 +343,12 @@ h4.md-h {
   height: auto;
   border-radius: var(--sn-radius-md);
   margin: var(--sn-step-4) 0;
-  border: 1px solid var(--sn-node-border);
+  border: 1px solid var(--sn-sys-outline);
 }
 
 .md-hr {
   border: none;
-  border-top: 1px solid var(--sn-node-border);
+  border-top: 1px solid var(--sn-sys-outline);
   margin: var(--sn-step-8) 0;
 }
 
@@ -361,12 +362,12 @@ h4.md-h {
 .md-table th,
 .md-table td {
   padding: var(--sn-step-3) var(--sn-step-6);
-  border: 1px solid var(--sn-node-border);
+  border: 1px solid var(--sn-sys-outline);
   text-align: left;
 }
 
 .md-table th {
-  background: var(--sn-node-hover);
+  background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface));
   font-weight: 600;
 }
 
@@ -404,7 +405,7 @@ h4.md-h {
 .work-body .t-lit,
 .display-card-body .t-kw,
 .display-card-body .t-lit {
-  color: var(--sn-chat-syntax-keyword, color-mix(in srgb, var(--sn-syntax-keyword) 55%, var(--sn-text-dim)));
+  color: var(--sn-chat-syntax-keyword, color-mix(in srgb, var(--sn-syntax-keyword) 55%, var(--sn-sys-on-surface-dim)));
 }
 
 .msg-content .t-str,
@@ -413,7 +414,7 @@ h4.md-h {
 .work-body .t-num,
 .display-card-body .t-str,
 .display-card-body .t-num {
-  color: var(--sn-chat-syntax-string, color-mix(in srgb, var(--sn-syntax-string) 55%, var(--sn-text-dim)));
+  color: var(--sn-chat-syntax-string, color-mix(in srgb, var(--sn-syntax-string) 55%, var(--sn-sys-on-surface-dim)));
 }
 
 .msg-content .t-fn,
@@ -422,13 +423,13 @@ h4.md-h {
 .work-body .t-bi,
 .display-card-body .t-fn,
 .display-card-body .t-bi {
-  color: var(--sn-chat-syntax-function, color-mix(in srgb, var(--sn-syntax-function) 55%, var(--sn-text-dim)));
+  color: var(--sn-chat-syntax-function, color-mix(in srgb, var(--sn-syntax-function) 55%, var(--sn-sys-on-surface-dim)));
 }
 
 .msg-content .t-prop,
 .work-body .t-prop,
 .display-card-body .t-prop {
-  color: var(--sn-chat-syntax-property, color-mix(in srgb, var(--sn-syntax-property) 55%, var(--sn-text-dim)));
+  color: var(--sn-chat-syntax-property, color-mix(in srgb, var(--sn-syntax-property) 55%, var(--sn-sys-on-surface-dim)));
 }
 
 .work-summary-wrap {
@@ -451,7 +452,7 @@ h4.md-h {
 .thinking-block,
 .work-summary {
   font-size: var(--sn-chat-tool-font-size, 12px);
-  color: var(--sn-text-dim);
+  color: var(--sn-sys-on-surface-dim);
 }
 
 .thinking-block summary,
@@ -486,12 +487,12 @@ h4.md-h {
 }
 
 .work-summary summary > .work-summary-icon {
-  color: var(--sn-success-color);
+  color: var(--sn-sys-success);
 }
 
 .work-summary-icon {
   font-size: var(--sn-chat-summary-icon-size);
-  color: var(--sn-success-color);
+  color: var(--sn-sys-success);
 }
 
 .work-copy-btn {
@@ -502,7 +503,7 @@ h4.md-h {
   border: none;
   border-radius: var(--sn-radius-lg);
   background: transparent;
-  color: var(--sn-text-dim);
+  color: var(--sn-sys-on-surface-dim);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -513,7 +514,7 @@ h4.md-h {
 
 .work-copy-btn:hover {
   background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-raised));
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
   opacity: 1;
 }
 
@@ -522,15 +523,15 @@ h4.md-h {
 }
 
 .work-copy-btn.copied {
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
 }
 
 .work-copy-btn.copied .material-symbols-outlined {
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
 }
 
 .work-copy-btn.copy-error {
-  color: var(--sn-danger-color);
+  color: var(--sn-sys-danger);
 }
 
 .work-body {
@@ -556,8 +557,8 @@ h4.md-h {
   font-weight: 500;
   padding: var(--sn-step-1) var(--sn-step-3, 7px);
   border-radius: var(--sn-radius-sm);
-  background: var(--sn-node-hover);
-  color: var(--sn-text-dim);
+  background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface));
+  color: var(--sn-sys-on-surface-dim);
   white-space: nowrap;
   font-family: var(--sn-font-mono, monospace);
   letter-spacing: 0.2px;
@@ -568,12 +569,12 @@ h4.md-h {
 }
 
 .meta-chip.meta-ok {
-  color: var(--sn-success-color);
+  color: var(--sn-sys-success);
   background: var(--sn-status-ok-bg);
 }
 
 .meta-chip.meta-err {
-  color: var(--sn-danger-color);
+  color: var(--sn-sys-danger);
   background: var(--sn-status-error-bg);
 }
 
@@ -589,7 +590,7 @@ h4.md-h {
   margin-left: var(--sn-step-4);
   font-size: var(--sn-chat-small-size, 11px);
   font-weight: 400;
-  color: var(--sn-text-dim);
+  color: var(--sn-sys-on-surface-dim);
   font-style: italic;
 }
 
@@ -604,8 +605,8 @@ h4.md-h {
 .status-card {
   flex: 1 1 220px;
   max-width: 320px;
-  background: var(--sn-node-hover);
-  border: 1px solid var(--sn-node-hover);
+  background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface));
+  border: 1px solid color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface));
   border-radius: var(--sn-radius-lg);
   padding: var(--sn-chat-status-card-padding, 10px 12px);
   display: flex;
@@ -623,7 +624,7 @@ h4.md-h {
   left: 0;
   right: 0;
   height: 2px;
-  background: var(--card-accent, var(--sn-node-hover));
+  background: var(--card-accent, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface)));
   transition: background var(--sn-transition-normal) var(--sn-transition-easing);
 }
 
@@ -643,13 +644,13 @@ h4.md-h {
 }
 
 .status-card[data-status="done"] {
-  border-color: var(--sn-success-border);
-  --card-accent: var(--sn-success-color);
+  border-color: color-mix(in oklch, var(--sn-sys-success) 40%, transparent);
+  --card-accent: var(--sn-sys-success);
 }
 
 .status-card[data-status="error"] {
-  border-color: var(--sn-danger-border);
-  --card-accent: var(--sn-danger-color);
+  border-color: color-mix(in oklch, var(--sn-sys-danger) 40%, transparent);
+  --card-accent: var(--sn-sys-danger);
 }
 
 .status-card-linked {
@@ -657,7 +658,7 @@ h4.md-h {
 }
 
 .status-card-linked:hover {
-  border-color: var(--sn-node-border);
+  border-color: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-outline));
   box-shadow: var(--sn-accent-glow);
 }
 
@@ -667,7 +668,7 @@ h4.md-h {
   gap: var(--sn-chat-status-card-gap, 6px);
   font-size: var(--sn-chat-status-card-size, 12px);
   font-weight: 500;
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
 }
 
 .status-card-header .material-symbols-outlined {
@@ -681,7 +682,7 @@ h4.md-h {
 
 .status-card-status {
   font-size: var(--sn-chat-small-size, 11px);
-  color: var(--sn-text-dim);
+  color: var(--sn-sys-on-surface-dim);
   display: flex;
   align-items: center;
   gap: var(--sn-step-2);
@@ -695,8 +696,8 @@ h4.md-h {
 
 .status-card-event {
   display: inline-block;
-  background: var(--sn-node-bg);
-  color: var(--sn-text-dim);
+  background: var(--sn-sys-surface-raised);
+  color: var(--sn-sys-on-surface-dim);
   padding: var(--sn-composer-footer-btn-padding, 2px 6px);
   border-radius: var(--sn-radius-sm);
   font-size: var(--sn-chat-small-size, 11px);
@@ -704,19 +705,19 @@ h4.md-h {
   max-width: 120px;
   overflow: hidden;
   text-overflow: ellipsis;
-  border: 1px solid var(--border-color, var(--sn-node-border));
+  border: 1px solid var(--border-color, var(--sn-sys-outline));
 }
 
 .status-card-event[data-type="tool_use"],
 .status-card-event[data-type="tool_result"] {
-  color: var(--sn-text);
-  border-color: var(--sn-node-selected);
+  color: var(--sn-sys-on-surface);
+  border-color: var(--sn-sys-accent);
   background: var(--sn-accent-bg);
 }
 
 .status-card-event[data-status="error"] {
-  color: var(--sn-danger-color);
-  border-color: var(--sn-danger-color);
+  color: var(--sn-sys-danger);
+  border-color: var(--sn-sys-danger);
   background: var(--sn-danger-bg);
 }
 
@@ -729,12 +730,12 @@ h4.md-h {
   display: inline-flex;
   align-items: center;
   gap: var(--sn-step-3);
-  background: var(--sn-node-hover);
-  border: 1px solid var(--sn-node-border);
+  background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface));
+  border: 1px solid var(--sn-sys-outline);
   padding: var(--sn-step-2) var(--sn-step-4);
   border-radius: var(--sn-radius-md);
   font-size: var(--sn-chat-small-size, 11px);
-  color: var(--sn-text-dim);
+  color: var(--sn-sys-on-surface-dim);
   margin-top: var(--sn-step-2);
 }
 .source-badge .material-symbols-outlined {
@@ -745,8 +746,8 @@ h4.md-h {
   display: flex;
   align-items: center;
   gap: var(--sn-step-4);
-  background: var(--sn-node-hover);
-  border: 1px solid var(--sn-node-border);
+  background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface));
+  border: 1px solid var(--sn-sys-outline);
   padding: var(--sn-step-4) var(--sn-step-6);
   border-radius: var(--sn-radius-lg);
   margin: var(--sn-step-2) 0;
@@ -754,7 +755,7 @@ h4.md-h {
 }
 .attachment-card .material-symbols-outlined {
   font-size: var(--sn-text-2xl, 20px);
-  color: var(--sn-text-dim);
+  color: var(--sn-sys-on-surface-dim);
 }
 .attachment-info {
   display: flex;
@@ -764,12 +765,12 @@ h4.md-h {
 .attachment-title {
   font-size: var(--sn-chat-small-size, 12px);
   font-weight: 500;
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
 }
 
 .artifact-card {
-  background: var(--sn-node-hover);
-  border: 1px solid var(--sn-node-border);
+  background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface));
+  border: 1px solid var(--sn-sys-outline);
   border-radius: var(--sn-radius-lg);
   overflow: hidden;
   margin: var(--sn-step-3) 0;
@@ -779,25 +780,25 @@ h4.md-h {
   display: flex;
   align-items: center;
   gap: var(--sn-step-3);
-  background: var(--sn-bg);
+  background: var(--sn-sys-surface);
   padding: var(--sn-step-3) var(--sn-step-6);
-  border-bottom: 1px solid var(--sn-node-border);
+  border-bottom: 1px solid var(--sn-sys-outline);
 }
 .artifact-header .material-symbols-outlined {
   font-size: var(--sn-text-xl);
-  color: var(--sn-text-dim);
+  color: var(--sn-sys-on-surface-dim);
 }
 .artifact-title {
   font-size: var(--sn-chat-small-size, 11px);
   font-weight: 600;
-  color: var(--sn-text-dim);
+  color: var(--sn-sys-on-surface-dim);
   text-transform: uppercase;
 }
 
 .approval-card,
 .action-card {
-  background: var(--sn-node-hover);
-  border: 1px solid var(--sn-accent-border, var(--sn-node-border));
+  background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface));
+  border: 1px solid var(--sn-accent-border, var(--sn-sys-outline));
   border-radius: var(--sn-radius-lg);
   padding: var(--sn-step-6);
   margin: var(--sn-step-4) 0;
@@ -813,18 +814,18 @@ h4.md-h {
   gap: var(--sn-step-4);
   font-size: var(--sn-chat-status-card-size, 12px);
   font-weight: 600;
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
 }
 .approval-header .material-symbols-outlined {
-  color: var(--sn-cat-server, var(--sn-text-dim));
+  color: var(--sn-cat-server, var(--sn-sys-on-surface-dim));
 }
 .action-header .material-symbols-outlined {
-  color: var(--sn-accent-color, var(--sn-text-dim));
+  color: var(--sn-accent-color, var(--sn-sys-on-surface-dim));
 }
 .approval-body,
 .action-body {
   font-size: var(--sn-chat-small-size, 12px);
-  color: var(--sn-text-dim);
+  color: var(--sn-sys-on-surface-dim);
   line-height: 1.4;
 }
 .approval-actions,
@@ -839,38 +840,38 @@ h4.md-h {
   font-weight: 600;
   padding: var(--sn-step-3) var(--sn-step-6);
   border-radius: var(--sn-radius-md);
-  border: 1px solid var(--sn-node-border);
-  background: var(--sn-node-bg);
-  color: var(--sn-text);
+  border: 1px solid var(--sn-sys-outline);
+  background: var(--sn-sys-surface-raised);
+  color: var(--sn-sys-on-surface);
   cursor: pointer;
   transition: background var(--sn-transition-fast) var(--sn-transition-easing), border-color var(--sn-transition-fast) var(--sn-transition-easing);
 }
 .sn-btn:hover {
   background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-raised));
-  border-color: var(--sn-text-dim);
+  border-color: var(--sn-sys-on-surface-dim);
 }
 .sn-btn.approve {
-  background: var(--sn-success-color, var(--sn-sys-success));
+  background: var(--sn-sys-success);
   color: #fff;
-  color: oklch(from var(--sn-success-color, var(--sn-sys-success)) calc((l - 0.5) * -1000) 0 0);
-  border-color: var(--sn-success-border, var(--sn-sys-success));
+  color: oklch(from var(--sn-sys-success) calc((l - 0.5) * -1000) 0 0);
+  border-color: var(--sn-sys-success);
 }
 .sn-btn.approve:hover {
-  background: color-mix(in oklch, var(--sn-success-color, var(--sn-sys-success)) calc(100% - var(--sn-sys-state-hover-mix)), black);
+  background: color-mix(in oklch, var(--sn-sys-success) calc(100% - var(--sn-sys-state-hover-mix)), black);
 }
 .sn-btn.reject {
-  background: var(--sn-danger-color, var(--sn-sys-danger));
+  background: var(--sn-sys-danger);
   color: #fff;
-  color: oklch(from var(--sn-danger-color, var(--sn-sys-danger)) calc((l - 0.5) * -1000) 0 0);
-  border-color: var(--sn-danger-border, var(--sn-sys-danger));
+  color: oklch(from var(--sn-sys-danger) calc((l - 0.5) * -1000) 0 0);
+  border-color: var(--sn-sys-danger);
 }
 .sn-btn.reject:hover {
-  background: color-mix(in oklch, var(--sn-danger-color, var(--sn-sys-danger)) calc(100% - var(--sn-sys-state-hover-mix)), black);
+  background: color-mix(in oklch, var(--sn-sys-danger) calc(100% - var(--sn-sys-state-hover-mix)), black);
 }
 
 .error-card {
   background: var(--sn-danger-bg, color-mix(in oklch, var(--sn-sys-danger) 8%, transparent));
-  border: 1px solid var(--sn-danger-border, var(--sn-node-border));
+  border: 1px solid color-mix(in oklch, var(--sn-sys-danger) 40%, transparent);
   border-radius: var(--sn-radius-lg);
   padding: var(--sn-step-6);
   margin: var(--sn-step-3) 0;
@@ -880,8 +881,8 @@ h4.md-h {
   width: 100%;
 }
 .error-card.cancelled {
-  background: var(--sn-node-hover);
-  border-color: var(--sn-node-border);
+  background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface));
+  border-color: var(--sn-sys-outline);
 }
 .error-header {
   display: flex;
@@ -889,25 +890,25 @@ h4.md-h {
   gap: var(--sn-step-3);
   font-size: var(--sn-chat-status-card-size, 12px);
   font-weight: 600;
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
 }
 .error-header .material-symbols-outlined {
-  color: var(--sn-danger-color);
+  color: var(--sn-sys-danger);
 }
 .error-card.cancelled .error-header .material-symbols-outlined {
-  color: var(--sn-text-dim);
+  color: var(--sn-sys-on-surface-dim);
 }
 .error-body {
   font-size: var(--sn-chat-small-size, 11px);
-  color: var(--sn-text-dim);
+  color: var(--sn-sys-on-surface-dim);
   font-family: var(--sn-font-mono, monospace);
   white-space: pre-wrap;
 }
 
 .display-card {
   box-sizing: border-box;
-  background: var(--sn-node-bg);
-  border: 1px solid var(--sn-node-border);
+  background: var(--sn-sys-surface-raised);
+  border: 1px solid var(--sn-sys-outline);
   border-radius: var(--sn-radius-xl, 16px);
   padding: var(--sn-chat-message-padding, 12px 16px);
   margin: var(--sn-step-2) 0;
@@ -921,7 +922,7 @@ h4.md-h {
 .display-card-body {
   font-size: var(--sn-chat-message-font-size, 13px);
   line-height: 1.5;
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
   min-width: 0;
   max-width: 100%;
   word-break: break-word;
@@ -947,8 +948,8 @@ h4.md-h {
   align-items: center;
   gap: var(--sn-step-4);
   flex-wrap: wrap;
-  background: var(--sn-node-hover);
-  border: 1px solid var(--sn-accent-border, var(--sn-node-border));
+  background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface));
+  border: 1px solid var(--sn-accent-border, var(--sn-sys-outline));
   border-radius: var(--sn-radius-xl, 16px);
   padding: var(--sn-step-3) var(--sn-step-6);
   margin: var(--sn-step-3) 0;
@@ -966,7 +967,7 @@ h4.md-h {
 }
 .confirm-pill-icon {
   font-size: var(--sn-chat-status-icon-size, 16px);
-  color: var(--sn-accent-color, var(--sn-text-dim));
+  color: var(--sn-accent-color, var(--sn-sys-on-surface-dim));
 }
 .confirm-pill-info {
   display: flex;
@@ -978,11 +979,11 @@ h4.md-h {
 .confirm-pill-title {
   font-size: var(--sn-chat-status-card-size, 12px);
   font-weight: 600;
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
 }
 .confirm-pill-text {
   font-size: var(--sn-chat-small-size, 12px);
-  color: var(--sn-text-dim);
+  color: var(--sn-sys-on-surface-dim);
   line-height: 1.4;
 }
 .confirm-pill-actions {
@@ -991,32 +992,32 @@ h4.md-h {
   flex: 0 0 auto;
 }
 .sn-btn.confirm {
-  background: var(--sn-success-color, var(--sn-sys-success));
+  background: var(--sn-sys-success);
   color: var(--sn-text-on-accent, var(--sn-sys-on-status));
-  border-color: var(--sn-success-border, var(--sn-sys-success));
+  border-color: var(--sn-sys-success);
 }
 .sn-btn.confirm:hover {
-  background: color-mix(in oklch, var(--sn-success-color, var(--sn-sys-success)) calc(100% - var(--sn-sys-state-hover-mix)), black);
+  background: color-mix(in oklch, var(--sn-sys-success) calc(100% - var(--sn-sys-state-hover-mix)), black);
 }
 .sn-btn.cancel {
-  background: var(--sn-node-bg);
-  color: var(--sn-text);
-  border-color: var(--sn-node-border);
+  background: var(--sn-sys-surface-raised);
+  color: var(--sn-sys-on-surface);
+  border-color: var(--sn-sys-outline);
 }
 .sn-btn.cancel:hover {
   background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-raised));
-  border-color: var(--sn-text-dim);
+  border-color: var(--sn-sys-on-surface-dim);
 }
 
 .confirm-pill.resolved {
   opacity: 0.85;
-  border-color: var(--sn-node-border);
+  border-color: var(--sn-sys-outline);
 }
 .confirm-pill.resolved .confirm-pill-icon {
-  color: var(--sn-text-dim);
+  color: var(--sn-sys-on-surface-dim);
 }
 .confirm-pill[data-resolved='confirm'] .confirm-pill-icon {
-  color: var(--sn-success-color, var(--sn-sys-success));
+  color: var(--sn-sys-success);
 }
 .confirm-pill.resolved .confirm-btn {
   cursor: default;
@@ -1048,20 +1049,20 @@ h4.md-h {
   font-size: var(--sn-chat-status-icon-size, 16px);
 }
 .sn-btn.action-btn-group[data-variant='primary'] {
-  background: var(--sn-success-color, var(--sn-sys-success));
+  background: var(--sn-sys-success);
   color: var(--sn-text-on-accent, var(--sn-sys-on-status));
-  border-color: var(--sn-success-border, var(--sn-sys-success));
+  border-color: var(--sn-sys-success);
 }
 .sn-btn.action-btn-group[data-variant='primary']:hover {
-  background: color-mix(in oklch, var(--sn-success-color, var(--sn-sys-success)) calc(100% - var(--sn-sys-state-hover-mix)), black);
+  background: color-mix(in oklch, var(--sn-sys-success) calc(100% - var(--sn-sys-state-hover-mix)), black);
 }
 .sn-btn.action-btn-group[data-variant='danger'] {
-  background: var(--sn-danger-color, var(--sn-sys-danger));
+  background: var(--sn-sys-danger);
   color: var(--sn-text-on-accent, var(--sn-sys-on-status));
-  border-color: var(--sn-danger-border, var(--sn-sys-danger));
+  border-color: var(--sn-sys-danger);
 }
 .sn-btn.action-btn-group[data-variant='danger']:hover {
-  background: color-mix(in oklch, var(--sn-danger-color, var(--sn-sys-danger)) calc(100% - var(--sn-sys-state-hover-mix)), black);
+  background: color-mix(in oklch, var(--sn-sys-danger) calc(100% - var(--sn-sys-state-hover-mix)), black);
 }
 
 .chat-embed {

@@ -8,7 +8,6 @@ import {
   STATE_LAYER_MIX,
   REF_RAMP_STOPS,
   REF_RAMP_FAMILIES,
-  LEGACY_SYS_ALIASES,
   classifyToken,
   aliasingAllowed,
   systemPropertyRegistrationsCss,
@@ -52,19 +51,11 @@ describe('token tier contract', () => {
     assert.deepEqual(REF_RAMP_FAMILIES, ['neutral', 'accent', 'success', 'warning', 'danger', 'info']);
   });
 
-  it('every legacy alias targets a declared system role', () => {
-    for (let [legacy, target] of Object.entries(LEGACY_SYS_ALIASES)) {
-      assert.match(legacy, /^--sn-/);
-      assert.ok(SYSTEM_ROLES.includes(target), `${legacy} → ${target} must target a system role`);
-    }
-  });
-
-  it('classifyToken maps prefixes, legacy names, and the component fallback', () => {
+  it('classifyToken maps prefixes and the component fallback (legacy aliases are gone)', () => {
     assert.equal(classifyToken('--sn-theme-hue'), 'source');
     assert.equal(classifyToken('--sn-ref-neutral-20'), 'ref');
     assert.equal(classifyToken('--sn-sys-surface'), 'sys');
     assert.equal(classifyToken('--sn-dom-graph-type-data'), 'domain');
-    assert.equal(classifyToken('--sn-bg'), 'legacy-alias');
     assert.equal(classifyToken('--sn-kanban-card-bg'), 'component');
     assert.equal(classifyToken('color'), null);
   });
@@ -89,7 +80,6 @@ describe('token tier contract', () => {
     assert.equal(aliasingAllowed('sys', 'ref'), true);
     assert.equal(aliasingAllowed('ref', 'source'), true);
     assert.equal(aliasingAllowed('domain', 'ref'), true);
-    assert.equal(aliasingAllowed('legacy-alias', 'sys'), true);
     // forbidden directions
     assert.equal(aliasingAllowed('component', 'ref'), false, 'components never reach into ramps');
     assert.equal(aliasingAllowed('sys', 'component'), false, 'sys never depends on a component');

@@ -12,8 +12,8 @@ export let styles = css`
     padding: var(--sn-step-3) var(--sn-step-6);
     font-family: var(--sn-font);
     font-size: var(--sn-text-sm);
-    color: var(--sn-text-dim);
-    background: var(--sn-ctx-bg);
+    color: var(--sn-sys-on-surface-dim);
+    background: var(--sn-sys-surface-overlay);
     border-radius: var(--sn-radius-md);
     backdrop-filter: blur(8px);
     pointer-events: auto;
@@ -23,7 +23,7 @@ export let styles = css`
     left: var(--sn-step-5);
     z-index: 50;
     box-shadow: 0 2px 8px var(--sn-shadow-color);
-    border: 1px solid var(--sn-node-border);
+    border: 1px solid var(--sn-sys-outline);
     transition: opacity var(--sn-transition-normal) var(--sn-transition-easing);
 
     &[hidden] {
@@ -35,13 +35,9 @@ export let styles = css`
     display: contents;
 
     &[data-active] .bc-label {
-      color: var(--sn-text);
+      color: var(--sn-sys-on-surface);
       font-weight: 500;
       cursor: default;
-
-      &:hover {
-        background: transparent;
-      }
     }
   }
 
@@ -56,9 +52,9 @@ export let styles = css`
     align-items: center;
     gap: var(--sn-step-2);
 
-    &:hover {
-      background: var(--sn-ctx-hover);
-      color: var(--sn-text);
+    breadcrumb-item:not([data-active]) &:hover {
+      background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-overlay));
+      color: var(--sn-sys-on-surface);
     }
 
     & .material-symbols-outlined {
@@ -67,7 +63,7 @@ export let styles = css`
   }
 
   .bc-sep {
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
     opacity: 0.5;
     font-size: var(--sn-text-xs);
     padding: 0 var(--sn-step-1);

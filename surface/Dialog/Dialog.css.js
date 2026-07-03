@@ -68,9 +68,9 @@ sn-dialog {
 }
 
 .sn-dialog-close-btn:focus-visible {
-  /* audit-ok: focus-ring emphasis swap between two on-surface sys roles, not a state-layer mix */
   outline: var(--sn-sys-focus-ring-width) solid var(--sn-sys-focus-ring);
   outline-offset: 2px;
+  background-color: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), transparent);
   color: var(--sn-sys-on-surface);
 }
 

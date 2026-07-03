@@ -71,8 +71,8 @@ chat-message-item {
   height: var(--sn-composer-send-size, 32px);
   border: none;
   border-radius: 50%;
-  background: var(--sn-node-bg);
-  color: var(--sn-text-dim);
+  background: var(--sn-sys-surface-raised);
+  color: var(--sn-sys-on-surface-dim);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -92,7 +92,7 @@ chat-message-item {
 
 .scroll-bottom-btn:hover {
   background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-raised));
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
 }
 
 .scroll-bottom-btn .material-symbols-outlined {
@@ -105,7 +105,7 @@ chat-message-item {
   gap: var(--sn-chat-gap, 8px);
   padding: var(--sn-chat-tool-padding, 8px 16px);
   font-size: var(--sn-chat-tool-font-size, 12px);
-  color: var(--sn-text-dim);
+  color: var(--sn-sys-on-surface-dim);
   animation: status-fade-in var(--sn-transition-normal) var(--sn-transition-easing);
   animation-play-state: var(--sn-animation-play-state);
 }
@@ -120,11 +120,11 @@ chat-message-item {
 }
 
 .status-card-header .material-symbols-outlined[data-status="done"] {
-  color: var(--sn-success-color);
+  color: var(--sn-sys-success);
 }
 
 .status-card-header .material-symbols-outlined[data-status="error"] {
-  color: var(--sn-danger-color);
+  color: var(--sn-sys-danger);
 }
 
 @keyframes status-fade-in {

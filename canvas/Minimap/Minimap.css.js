@@ -13,7 +13,7 @@ export let styles = css`
     height: 140px;
     border-radius: var(--sn-radius-lg);
     overflow: hidden;
-    border: 1px solid var(--sn-node-border);
+    border: 1px solid var(--sn-sys-outline);
     box-shadow: 0 4px 16px var(--sn-shadow-color);
     z-index: 90;
     cursor: crosshair;
@@ -43,9 +43,9 @@ export let styles = css`
     width: 32px;
     height: 32px;
     border-radius: var(--sn-radius-md);
-    border: 1px solid var(--sn-node-border);
-    background: var(--sn-node-bg);
-    color: var(--sn-text-dim);
+    border: 1px solid var(--sn-sys-outline);
+    background: var(--sn-sys-surface-raised);
+    color: var(--sn-sys-on-surface-dim);
     cursor: pointer;
     z-index: 89;
     display: flex;
@@ -61,13 +61,13 @@ export let styles = css`
     }
 
     &:hover {
-      color: var(--sn-text);
-      border-color: var(--sn-node-selected);
+      background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-raised));
+      color: var(--sn-sys-on-surface);
     }
 
     &[data-active] {
-      color: var(--sn-node-selected);
-      border-color: var(--sn-node-selected);
+      color: var(--sn-sys-accent);
+      border-color: var(--sn-sys-accent);
     }
   }
 `;
