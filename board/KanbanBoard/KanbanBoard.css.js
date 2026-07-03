@@ -303,6 +303,23 @@ sn-kanban-board .sn-kanban-chip[data-kind="error"] {
   font-weight: 600;
 }
 
+/*
+ * Agent identity chip: --sn-kanban-chip-accent carries the agent's declared color (board DATA,
+ * set per chip via the chip's accent field) — the container-fill/border math stays in the theme so an
+ * arbitrary data color always lands on a readable, theme-consistent chip. Icon = the agent's
+ * declared symbol; text stays on-surface (U15: color is identity, never the only signal).
+ */
+sn-kanban-board .sn-kanban-chip[data-kind="agent"] {
+  border-color: color-mix(in oklch, var(--sn-kanban-chip-accent, var(--sn-sys-accent)) 46%, var(--sn-kanban-card-border));
+  background: color-mix(in oklch, var(--sn-kanban-chip-accent, var(--sn-sys-accent)) 14%, var(--sn-sys-surface-raised));
+  color: var(--sn-sys-on-surface);
+  font-weight: 600;
+}
+
+sn-kanban-board .sn-kanban-chip[data-kind="agent"] .material-symbols-outlined {
+  color: color-mix(in oklch, var(--sn-kanban-chip-accent, var(--sn-sys-accent)) 78%, var(--sn-sys-on-surface));
+}
+
 sn-kanban-board .sn-kanban-card-action {
   display: flex;
   align-items: center;

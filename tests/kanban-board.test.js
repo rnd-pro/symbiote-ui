@@ -74,6 +74,7 @@ test('sn-kanban-board renders columns and emits card intents', async () => {
         title: 'Task 1',
         summary: 'Accepted work',
         meta: ['project-a'],
+        footer: [{ label: 'qa-engineer', icon: 'bug_report', kind: 'agent', accent: '#6A1B9A' }],
         actions: [{ id: 'move-next', icon: 'arrow_forward', title: 'Move next' }],
       }],
     }],
@@ -96,6 +97,11 @@ test('sn-kanban-board renders columns and emits card intents', async () => {
     board.querySelector('.sn-kanban-card-actions .sn-dropdown-popover sn-menu'),
     'slot distribution should place the action menu inside the native popover, hidden until triggered',
   );
+  // Agent identity chip: the data-carried accent lands as a custom property the theme's
+  // container-fill math consumes; kind switches the chip to the agent variant.
+  let agentChip = board.querySelector('.sn-kanban-chip[data-kind="agent"]');
+  assert.ok(agentChip, 'footer renders the agent identity chip');
+  assert.equal(agentChip.style.getPropertyValue('--sn-kanban-chip-accent'), '#6A1B9A');
   board.querySelector('.sn-kanban-card').click();
   assert.equal(selected.card.id, 'task-1');
   board.querySelector('[data-sn-board-action]').click();
@@ -130,6 +136,8 @@ test('sn-kanban-board exposes column stretch sizing tokens', async () => {
   assert.match(css, /sn-kanban-board \.sn-kanban-card-summary \{[^}]*-webkit-line-clamp: var\(--sn-kanban-card-summary-lines, 3\);/);
   // U05: status/priority chips carry container-fill weight; plain chips stay outline-only.
   assert.match(css, /sn-kanban-board \.sn-kanban-chip\[data-kind="status"\] \{[^}]*background: var\(--sn-sys-success-container\);/);
+  // Agent identity chips blend the data-carried accent through theme-owned container math.
+  assert.match(css, /sn-kanban-board \.sn-kanban-chip\[data-kind="agent"\] \{[^}]*var\(--sn-kanban-chip-accent, var\(--sn-sys-accent\)\)/);
   assert.doesNotMatch(css, /sn-kanban-board \.sn-kanban-chip \{[^}]*background:/);
   // U08: grab/grabbing cursor affordance for the draggable card.
   assert.match(css, /sn-kanban-board \.sn-kanban-card \{[\s\S]*cursor: grab;/);

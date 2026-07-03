@@ -39,10 +39,13 @@ function normalizeChip(value) {
       // U15: chip semantics must never rely on color alone. `label` already carries text; an
       // optional icon glyph is a second, non-color signal a host can pair with it.
       icon: normalizeText(value.icon),
+      // Optional data-carried identity color (e.g. an agent's declared color); the stylesheet
+      // owns all fill/contrast math against this single input.
+      accent: normalizeText(value.accent ?? value.color),
     };
   }
   let label = normalizeText(value);
-  return label ? { label, kind: '', title: '', icon: '' } : null;
+  return label ? { label, kind: '', title: '', icon: '', accent: '' } : null;
 }
 
 function normalizeAction(value, index = 0) {
@@ -341,6 +344,9 @@ export class KanbanBoard extends Symbiote {
     node.append(document.createTextNode(chip.label));
     if (chip.kind) node.dataset.kind = chip.kind;
     if (chip.title) node.title = chip.title;
+    // Data-carried identity color (e.g. an agent's declared color): the value is data, but all
+    // fill/border/contrast math stays in the stylesheet against this one custom property.
+    if (chip.accent) node.style.setProperty('--sn-kanban-chip-accent', chip.accent);
     return node;
   }
 
