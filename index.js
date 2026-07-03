@@ -37,6 +37,7 @@ export {
   CASCADE_THEME_DEFAULTS,
   CASCADE_THEME_DESCRIPTOR,
   CASCADE_THEME_TOKEN_TARGETS,
+  clearCascadeThemeInlineTokens,
   createCascadeTheme,
   DEFAULT_PROVIDER_THEME,
   DEFAULT_THEME,
@@ -64,6 +65,9 @@ export {
   applyThemePresets,
   resolveThemePresets,
   resolveThemePresetsForTask,
+  STATUS_HUE_OFFSETS,
+  systemCascadeCss,
+  undeclaredSystemRoles,
 } from './themes/Theme.js';
 
 export {

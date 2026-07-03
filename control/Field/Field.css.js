@@ -32,7 +32,7 @@ sn-field[required] > label::after,
 sn-field[required] > [slot="label"]::after,
 sn-field[required] > .sn-field-label::after {
   content: ' *';
-  color: var(--sn-field-required-color, var(--sn-status-error, #ff4d4f));
+  color: var(--sn-field-required-color, var(--sn-status-error, var(--sn-sys-danger)));
 }
 
 .sn-field-control-wrapper {
@@ -69,14 +69,14 @@ sn-field input:focus,
 sn-field select:focus,
 sn-field textarea:focus {
   outline: none;
-  border-color: var(--sn-field-control-focus-border);
-  box-shadow: var(--sn-field-control-focus-shadow);
+  border-color: var(--sn-field-control-focus-border, var(--sn-sys-accent));
+  box-shadow: var(--sn-field-control-focus-shadow, 0 0 0 2px color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-selected-mix), transparent));
 }
 
 sn-field input:focus-visible,
 sn-field select:focus-visible,
 sn-field textarea:focus-visible {
-  outline: var(--sn-field-control-focus-ring, var(--sn-button-focus-ring, 2px solid var(--sn-focus-ring-color, currentColor)));
+  outline: var(--sn-field-control-focus-ring, var(--sn-button-focus-ring, 2px solid var(--sn-sys-focus-ring, currentColor)));
   outline-offset: var(--sn-field-control-focus-offset, 1px);
 }
 
@@ -101,13 +101,13 @@ sn-field[readonly] textarea {
 sn-field[invalid] input,
 sn-field[invalid] select,
 sn-field[invalid] textarea {
-  border-color: var(--sn-field-control-error-border, var(--sn-status-error, #ff4d4f));
+  border-color: var(--sn-field-control-error-border, var(--sn-status-error, var(--sn-sys-danger)));
 }
 
 sn-field[invalid] input:focus,
 sn-field[invalid] select:focus,
 sn-field[invalid] textarea:focus {
-  box-shadow: var(--sn-field-control-error-shadow, 0 0 0 2px rgba(255, 77, 79, 0.2));
+  box-shadow: var(--sn-field-control-error-shadow, 0 0 0 2px color-mix(in oklch, var(--sn-sys-danger) var(--sn-sys-state-selected-mix), transparent));
 }
 
 sn-field textarea {
@@ -128,7 +128,7 @@ sn-field [slot="error"],
 sn-field .sn-field-error {
   display: block;
   margin-block-start: var(--sn-field-error-margin-block-start, 4px);
-  color: var(--sn-field-error-color, var(--sn-status-error, #ff4d4f));
+  color: var(--sn-field-error-color, var(--sn-status-error, var(--sn-sys-danger)));
   font-size: var(--sn-field-error-size, 11px);
   line-height: var(--sn-field-error-line-height, 1.2);
 }

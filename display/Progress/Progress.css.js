@@ -4,7 +4,7 @@ sn-progress-bar {
   box-sizing: border-box;
   width: 100%;
   height: var(--sn-progress-bar-height, 6px);
-  background: var(--sn-progress-bg, var(--sn-outline-color-soft, rgba(255, 255, 255, 0.08)));
+  background: var(--sn-progress-bg, var(--sn-sys-outline-subtle));
   border-radius: var(--sn-progress-radius, 3px);
   overflow: hidden;
   position: relative;
@@ -16,7 +16,7 @@ sn-progress-bar[hidden] {
 
 .sn-progress-bar-fill {
   height: 100%;
-  background: var(--sn-progress-fill, var(--sn-node-selected, #2196f3));
+  background: var(--sn-progress-fill, var(--sn-sys-accent));
   transition: width var(--sn-transition-normal, 240ms) ease;
   width: 0%;
 }
@@ -63,13 +63,13 @@ sn-progress-ring[hidden] {
 
 .sn-progress-ring-track {
   fill: none;
-  stroke: var(--sn-progress-bg, var(--sn-outline-color-soft, rgba(255, 255, 255, 0.08)));
+  stroke: var(--sn-progress-bg, var(--sn-sys-outline-subtle));
   stroke-width: var(--sn-progress-ring-stroke, 4px);
 }
 
 .sn-progress-ring-fill {
   fill: none;
-  stroke: var(--sn-progress-fill, var(--sn-node-selected, #2196f3));
+  stroke: var(--sn-progress-fill, var(--sn-sys-accent));
   stroke-width: var(--sn-progress-ring-stroke, 4px);
   stroke-linecap: round;
   transition: stroke-dashoffset var(--sn-transition-normal, 240ms) ease;

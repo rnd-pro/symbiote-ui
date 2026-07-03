@@ -2,7 +2,7 @@ export default /*css*/ `
 :host,
 sn-list-item {
   display: block;
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
 }
 
 :host([hidden]),
@@ -31,38 +31,38 @@ sn-list-item[hidden]  {
 }
 
 .sn-list-item:hover {
-  background: var(--sn-list-item-hover-bg, rgba(255, 255, 255, 0.05));
+  background: var(--sn-list-item-hover-bg, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-list-item-bg, var(--sn-sys-surface-raised))));
 }
 
 .sn-list-item:focus-visible {
-  border-color: var(--sn-list-item-focus-border, var(--sn-focus-ring-color, currentColor));
-  box-shadow: 0 0 0 2px var(--sn-focus-ring-color, currentColor);
+  border-color: var(--sn-list-item-focus-border, var(--sn-sys-focus-ring));
+  box-shadow: 0 0 0 var(--sn-sys-focus-ring-width, 2px) var(--sn-sys-focus-ring);
 }
 
 :host([active]) .sn-list-item,
 sn-list-item[active] .sn-list-item,
 :host([selected]) .sn-list-item,
 sn-list-item[selected] .sn-list-item {
-  background: var(--sn-list-item-active-bg, rgba(0, 122, 204, 0.15));
-  border-color: var(--sn-list-item-active-border, var(--sn-tabs-accent, #007acc));
+  background: var(--sn-list-item-active-bg, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-selected-mix), var(--sn-list-item-bg, var(--sn-sys-surface-raised))));
+  border-color: var(--sn-list-item-active-border, var(--sn-sys-accent));
 }
 
 :host([current]) .sn-list-item,
 sn-list-item[current] .sn-list-item {
   font-weight: 600;
-  color: var(--sn-list-item-active-color, var(--sn-text));
-  background: var(--sn-list-item-hover-bg, rgba(255, 255, 255, 0.05));
+  color: var(--sn-list-item-active-color, var(--sn-sys-on-surface));
+  background: var(--sn-list-item-hover-bg, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-list-item-bg, var(--sn-sys-surface-raised))));
 }
 
 :host([disabled]),
 sn-list-item[disabled]  {
-  color: var(--sn-list-item-disabled-color, var(--sn-text-dim, #888));
+  color: var(--sn-list-item-disabled-color, var(--sn-sys-on-surface-dim));
 }
 
 :host([disabled]) .sn-list-item,
 sn-list-item[disabled] .sn-list-item {
   cursor: not-allowed;
-  opacity: 0.5;
+  opacity: var(--sn-sys-state-disabled-opacity, 0.38);
 }
 
 :host([disabled]) .sn-list-item:hover,

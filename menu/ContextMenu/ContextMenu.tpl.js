@@ -1,10 +1,7 @@
 import { html } from '@symbiotejs/symbiote';
 
 export default html`
-  <div class="sn-ctx-backdrop" ${{ onclick: 'onBackdropClick' }}></div>
-  <div class="sn-ctx-menu" role="menu" ${{ onkeydown: 'onKeydown' }}>
-    <div class="ctx-items" ${{ itemize: 'items', 'item-tag': 'ctx-item' }}></div>
-  </div>
+  <div class="ctx-items" role="menu" ${{ onkeydown: 'onKeydown' }} ${{ itemize: 'items', 'item-tag': 'ctx-item' }}></div>
 `;
 
 export let ctxItemTemplate = html`

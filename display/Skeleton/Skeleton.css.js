@@ -2,7 +2,7 @@ export default /*css*/ `
 sn-skeleton {
   display: block;
   box-sizing: border-box;
-  background: var(--sn-skeleton-bg, var(--sn-outline-color-soft, rgba(255, 255, 255, 0.08)));
+  background: var(--sn-skeleton-bg, var(--sn-sys-outline-subtle));
   border-radius: var(--sn-skeleton-radius, 4px);
   width: var(--sn-skeleton-width, 100%);
   height: var(--sn-skeleton-height, 1em);
@@ -42,10 +42,10 @@ sn-skeleton[animation="shimmer"]::after {
   transform: translateX(-100%);
   background-image: linear-gradient(
     90deg,
-    var(--sn-node-hover, rgba(255, 255, 255, 0)) 0%,
-    var(--sn-node-hover, rgba(255, 255, 255, 0.06)) 20%,
-    var(--sn-node-border, rgba(255, 255, 255, 0.1)) 60%,
-    var(--sn-node-hover, rgba(255, 255, 255, 0)) 100%
+    transparent 0%,
+    color-mix(in oklch, var(--sn-sys-on-surface) var(--sn-sys-state-hover-mix), transparent) 20%,
+    var(--sn-sys-outline) 60%,
+    transparent 100%
   );
   animation: sn-skeleton-shimmer var(--sn-transition-slow, 1.2s) infinite;
 }

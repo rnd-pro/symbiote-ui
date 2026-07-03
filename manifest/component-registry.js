@@ -1907,7 +1907,7 @@ const BATCH_EXPANSION_COMPONENTS = [
       slots: [
         { name: 'default', description: 'Menu items.' }
       ],
-      themeAliases: ['--sn-menu-bg', '--sn-menu-border', '--sn-menu-padding']
+      themeAliases: ['--sn-menu-bg', '--sn-menu-border', '--sn-menu-padding', '--sn-menu-shadow-color']
     }
   },
   {
@@ -1966,16 +1966,25 @@ const BATCH_EXPANSION_COMPONENTS = [
     className: 'Dropdown',
     module: 'menu/Menu/Menu.js',
     category: 'menu',
-    description: 'Toggle button dropdown menu overlay.',
+    description: 'Toggle button dropdown menu overlay. The floating panel is a native `popover` (popover="auto") positioned with CSS anchor positioning (position-anchor / position-area) against the trigger slot — no JS-computed coordinates. Reusable as the base floating-menu primitive for other trigger-anchored menus (e.g. card action menus).',
     contract: {
       status: 'draft',
       schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
-      capabilities: ['dropdown', 'overlay', 'trigger'],
+      capabilities: ['dropdown', 'native-popover', 'anchor-positioned', 'trigger', 'light-dismiss'],
       slots: [
-        { name: 'trigger', description: 'Trigger button element.' },
-        { name: 'default', description: 'Dropdown menu content.' }
-      ]
+        { name: 'trigger', description: 'Trigger element; anchor-name is set on its wrapper.' },
+        { name: 'default', description: 'Dropdown menu content, rendered inside the popover panel (typically sn-menu / sn-menu-item children).' }
+      ],
+      themeAliases: [
+        '--sn-dropdown-bg',
+        '--sn-dropdown-border',
+        '--sn-dropdown-shadow-color',
+        '--sn-dropdown-shadow',
+        '--sn-dropdown-position-area',
+        '--sn-dropdown-gap',
+        '--sn-dropdown-min-width',
+      ],
     }
   },
   {
@@ -2804,15 +2813,17 @@ export let COMPONENTS = [
         { name: 'sn-chart-zoom-reset', description: 'Fired when zoom is reset.' }
       ],
       themeAliases: [
+        '--sn-chart-brush-stroke',
         '--sn-font',
-        '--sn-node-selected',
-        '--sn-outline-color-soft',
-        '--sn-panel-bg',
         '--sn-panel-radius',
-        '--sn-shadow-md',
-        '--sn-tabs-accent',
-        '--sn-text',
-        '--sn-text-dim',
+        '--sn-sys-accent',
+        '--sn-sys-on-surface',
+        '--sn-sys-on-surface-dim',
+        '--sn-sys-outline-subtle',
+        '--sn-sys-shadow-overlay',
+        '--sn-sys-state-hover-mix',
+        '--sn-sys-surface-overlay',
+        '--sn-sys-surface-panel',
         '--sn-theme-type-scale',
         '--sn-tooltip-bg',
         '--sn-tooltip-color',
@@ -3014,7 +3025,7 @@ export let COMPONENTS = [
     agent: {
       semanticRole: 'global shell cascade theme quick control',
       usage: 'Mount in a layout shell action slot with a host-selected storage-key and target-selector. Pair it with cascade-theme-editor by listening for cascade-theme-open-full and opening a host-approved panel-layout panel that uses the same storage-key and target-selector.',
-      dataOwnership: 'component-owned normalized quick theme state persisted through the same host-selected localStorage key as cascade-theme-editor; reset clears browser localStorage after applying defaults',
+      dataOwnership: 'component-owned normalized quick theme state persisted through the same host-selected localStorage key as cascade-theme-editor; reset removes cascade-owned storage keys after applying defaults',
     },
     contract: {
       status: 'draft',
@@ -3024,13 +3035,16 @@ export let COMPONENTS = [
       attributes: [
         { name: 'storage-key', type: 'string', description: 'Optional localStorage key shared with cascade-theme-editor for automatic theme parameter persistence.' },
         { name: 'target-selector', type: 'string', description: 'Optional CSS selector for the theme cascade target. Defaults to documentElement.' },
+        { name: 'default-state', type: 'string', description: 'Optional JSON object or parameter string used as the reset fallback state.' },
+        { name: 'scopes', type: 'string', description: 'Optional JSON array of cascade theme scopes for scoped reset and persistence.' },
+        { name: 'overlay-theme-selector', type: 'string', description: 'Optional selector for the overlay theme target when the popover is mounted to document.' },
       ],
       properties: [
         { name: 'state', type: 'object', description: 'Normalized cascade theme state.' },
       ],
       methods: [
         { name: 'setState', type: 'function', description: 'Applies normalized cascade theme parameters.' },
-        { name: 'reset', type: 'function', description: 'Restores cascade theme defaults and clears browser localStorage.' },
+        { name: 'reset', type: 'function', description: 'Restores cascade theme defaults and removes cascade-owned storage keys.' },
         { name: 'copyParameters', type: 'function', description: 'Copies normalized theme parameters as JSON.' },
       ],
       events: [
@@ -3067,7 +3081,7 @@ export let COMPONENTS = [
     agent: {
       semanticRole: 'layout-hosted cascade theme control surface',
       usage: 'Mount as a layout panel when an agent or user needs bounded live theme controls for a host shell. When opened from cascade-theme-widget, use the same storage-key and target-selector so quick controls and full controls edit one cascade theme state.',
-      dataOwnership: 'component-owned normalized theme state persisted through host-selected localStorage key; reset clears browser localStorage after applying defaults',
+      dataOwnership: 'component-owned normalized theme state persisted through host-selected localStorage key; reset removes cascade-owned storage keys after applying defaults',
     },
     contract: {
       status: 'draft',
@@ -3077,13 +3091,15 @@ export let COMPONENTS = [
       attributes: [
         { name: 'storage-key', type: 'string', description: 'Optional localStorage key used for automatic theme parameter persistence.' },
         { name: 'target-selector', type: 'string', description: 'Optional CSS selector for the theme cascade target. Defaults to documentElement.' },
+        { name: 'default-state', type: 'string', description: 'Optional JSON object or parameter string used as the reset fallback state.' },
+        { name: 'pickable', type: 'boolean', description: 'Enables host target picking controls when present.' },
       ],
       properties: [
         { name: 'state', type: 'object', description: 'Normalized cascade theme state.' },
       ],
       methods: [
         { name: 'setState', type: 'function', description: 'Applies normalized cascade theme parameters.' },
-        { name: 'reset', type: 'function', description: 'Restores cascade theme defaults and clears browser localStorage.' },
+        { name: 'reset', type: 'function', description: 'Restores cascade theme defaults and removes cascade-owned storage keys.' },
         { name: 'copyParameters', type: 'function', description: 'Copies normalized theme parameters as JSON.' },
       ],
       events: [
@@ -3480,30 +3496,33 @@ export let COMPONENTS = [
     className: 'ContextMenu',
     module: 'menu/ContextMenu/ContextMenu.js',
     category: 'menu',
-    description: 'Generic context menu custom element for graph and canvas actions.',
+    description: 'Generic context menu custom element for graph and canvas actions. Renders via the native `popover` attribute (popover="auto") for top-layer stacking and light-dismiss (outside click / Escape); `show(x, y, items)` still places it at explicit screen coordinates.',
     contract: {
       status: 'draft',
       schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
-      capabilities: ['context-menu', 'positioned-overlay', 'action-list', 'backdrop-dismiss'],
+      capabilities: ['context-menu', 'positioned-overlay', 'action-list', 'native-popover', 'light-dismiss'],
+      attributes: [
+        { name: 'popover', type: 'string', description: 'Native popover mode; defaults to "auto" (top-layer + light-dismiss) if unset.' },
+      ],
       properties: [
         { name: 'items', type: 'array', description: 'Menu item descriptors with label and icon.' },
         { name: 'visible', type: 'boolean', description: 'Menu visibility state.' },
       ],
       methods: [
-        { name: 'show', type: 'function', description: 'Shows the menu at screen coordinates with action descriptors.' },
-        { name: 'hide', type: 'function', description: 'Hides the menu and clears actions.' },
+        { name: 'show', type: 'function', description: 'Shows the menu at screen coordinates with action descriptors (calls showPopover()).' },
+        { name: 'hide', type: 'function', description: 'Hides the menu and clears actions (calls hidePopover()).' },
       ],
       events: [],
       themeAliases: [
-        '--sn-overlay-z-base',
-        '--sn-canvas-overlay-z-base',
         '--sn-ctx-bg',
         '--sn-ctx-border',
         '--sn-ctx-color',
-        '--sn-ctx-hover',
-        '--sn-ctx-z',
-        '--sn-shadow-color',
+        '--sn-ctx-shadow-color',
+        '--sn-ctx-divider-color',
+        '--sn-ctx-check-color',
+        '--sn-ctx-detail-color',
+        '--sn-ctx-destructive-color',
         '--sn-font',
       ],
     },
@@ -5811,7 +5830,7 @@ export let COMPONENTS = [
       dataSchema: 'schemas/runtime-ui-v1.json',
       capabilities: ['status', 'badge', 'slots', 'themeable'],
       attributes: [
-        { name: 'variant', type: 'string', description: 'Status variant: default, success, info, warning, or error.' },
+        { name: 'variant', type: 'string', description: 'Status variant: default, success, info, warning, error, or neutral.' },
       ],
       slots: [
         { name: 'default', description: 'Badge label and optional icon content.' },
@@ -5827,14 +5846,21 @@ export let COMPONENTS = [
         '--sn-badge-font-size',
         '--sn-badge-font-weight',
         '--sn-badge-line-height',
+        '--sn-badge-success-bg',
         '--sn-badge-success-color',
         '--sn-badge-success-border',
+        '--sn-badge-info-bg',
         '--sn-badge-info-color',
         '--sn-badge-info-border',
+        '--sn-badge-warning-bg',
         '--sn-badge-warning-color',
         '--sn-badge-warning-border',
+        '--sn-badge-error-bg',
         '--sn-badge-error-color',
         '--sn-badge-error-border',
+        '--sn-badge-neutral-bg',
+        '--sn-badge-neutral-color',
+        '--sn-badge-neutral-border',
       ],
     },
   },
@@ -5903,6 +5929,7 @@ export let COMPONENTS = [
         { name: 'setRows', type: 'function', description: 'Sets row records or cell descriptor maps.' },
         { name: 'setData', type: 'function', description: 'Sets columns, rows, and optional empty text in one call.' },
         { name: 'getData', type: 'function', description: 'Returns the current column and row descriptors.' },
+        { name: 'getWebMcpTargets', type: 'function', description: 'Returns component-authored WebMCP row target descriptors for the visible table model.' },
         { name: 'toggleColumnVisibility', type: 'function', description: 'Toggles column visibility.' },
         { name: 'setColumnWidth', type: 'function', description: 'Sets column width.' },
         { name: 'toggleColumnPinning', type: 'function', description: 'Toggles column pinning.' }
@@ -5913,6 +5940,22 @@ export let COMPONENTS = [
         { name: 'sn-data-table-edit', description: 'Fired when cell editing is requested.' },
         { name: 'sn-data-table-visible-window', description: 'Fired when visible scroll window changes.' }
       ],
+      webmcp: {
+        documentation: 'Rows are declared WebMCP targets through getWebMcpTargets(); products add domain entity/action semantics while the component owns row ids and row-control resolution.',
+        targetCatalog: [
+          {
+            id: 'data-table-row',
+            kind: 'detail',
+            role: 'data row',
+            selector: 'tr[data-row-id]',
+            idTemplate: 'element:{tabId}:{panelId}:row:{rowId}',
+            labelFrom: 'first visible cell',
+            summaryFrom: 'visible row cells',
+            controlSelector: 'tr[data-row-id]',
+            intentEvent: 'sn-data-table-select'
+          }
+        ]
+      },
       themeAliases: [
         '--sn-data-table-bg',
         '--sn-data-table-border',
@@ -5943,12 +5986,12 @@ export let COMPONENTS = [
     className: 'KanbanBoard',
     module: 'board/KanbanBoard/KanbanBoard.js',
     category: 'board',
-    description: 'Generic themeable kanban board for host-owned columns, cards, actions, selection, and move intents.',
+    description: 'Generic themeable kanban board for host-owned columns, cards, actions, selection, and move intents. Card actions render behind a native `popover` + anchor-positioned sn-dropdown (reused from menu/) so the menu floats over the board instead of reflowing the card; the card summary clamps to a fixed line count and the footer chip row wraps instead of clipping.',
     contract: {
       status: 'draft',
       schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
-      capabilities: ['kanban-board', 'columns', 'cards', 'selection', 'move-intent', 'themeable'],
+      capabilities: ['kanban-board', 'columns', 'cards', 'selection', 'move-intent', 'native-popover-actions', 'summary-clamp', 'wrapping-footer-chips', 'themeable'],
       attributes: [
         { name: 'empty-text', type: 'string', description: 'Message shown when the board has no columns.' },
         { name: 'label', type: 'string', description: 'Accessible region label.' },
@@ -5971,6 +6014,10 @@ export let COMPONENTS = [
         { name: 'sn-board-card-drop', description: 'Emits host-owned move intent when a card is dropped on another column.' },
       ],
       slots: [],
+      dataNotes: [
+        'card.meta / card.footer chip descriptors accept an optional `icon` field (material-symbols glyph name) rendered before the label, so chip kind is never carried by color alone.',
+        'card.actions descriptors are unchanged (id/label/icon/title/disabled/kind); each renders as an sn-menu-item inside the card’s sn-dropdown instead of a plain button.',
+      ],
       themeAliases: [
         '--sn-kanban-column-width',
         '--sn-kanban-gap',
@@ -5981,10 +6028,17 @@ export let COMPONENTS = [
         '--sn-kanban-header-bg',
         '--sn-kanban-title-color',
         '--sn-kanban-description-color',
+        '--sn-kanban-count-color',
         '--sn-kanban-card-bg',
         '--sn-kanban-card-border',
         '--sn-kanban-card-radius',
         '--sn-kanban-card-gap',
+        '--sn-kanban-card-hover-border',
+        '--sn-kanban-drop-border',
+        '--sn-kanban-drop-bg',
+        '--sn-kanban-card-summary-lines',
+        '--sn-dropdown-position-area',
+        '--sn-dropdown-min-width',
       ],
     },
   },
@@ -6065,12 +6119,16 @@ export let COMPONENTS = [
         '--sn-banner-font-weight',
         '--sn-banner-line-height',
         '--sn-banner-icon-size',
+        '--sn-banner-info-bg',
         '--sn-banner-info-color',
         '--sn-banner-info-border',
+        '--sn-banner-success-bg',
         '--sn-banner-success-color',
         '--sn-banner-success-border',
+        '--sn-banner-warning-bg',
         '--sn-banner-warning-color',
         '--sn-banner-warning-border',
+        '--sn-banner-error-bg',
         '--sn-banner-error-color',
         '--sn-banner-error-border',
         '--sn-banner-running-spin-duration',

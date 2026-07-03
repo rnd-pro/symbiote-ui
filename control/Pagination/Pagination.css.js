@@ -21,9 +21,9 @@ sn-pagination[hidden] {
   padding: 0 var(--sn-step-3);
   box-sizing: border-box;
   background: var(--sn-pagination-btn-bg, transparent);
-  border: 1px solid var(--sn-pagination-btn-border, var(--sn-outline-color-soft, rgba(255, 255, 255, 0.08)));
+  border: 1px solid var(--sn-pagination-btn-border, var(--sn-outline-color-soft, var(--sn-sys-outline-subtle)));
   border-radius: var(--sn-pagination-btn-radius, 4px);
-  color: var(--sn-pagination-btn-color, var(--sn-text-dim, rgba(255, 255, 255, 0.7)));
+  color: var(--sn-pagination-btn-color, var(--sn-text-dim, var(--sn-sys-on-surface-dim)));
   cursor: pointer;
   user-select: none;
   font: inherit;
@@ -31,19 +31,19 @@ sn-pagination[hidden] {
 }
 
 .sn-pagination-btn:hover:not([disabled]) {
-  background: var(--sn-pagination-btn-hover-bg, var(--sn-node-hover, rgba(255, 255, 255, 0.05)));
-  color: var(--sn-pagination-btn-hover-color, var(--sn-text, #ffffff));
+  background: var(--sn-pagination-btn-hover-bg, var(--sn-node-hover, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), transparent)));
+  color: var(--sn-pagination-btn-hover-color, var(--sn-text, var(--sn-sys-on-surface)));
 }
 
 .sn-pagination-btn:focus-visible {
-  outline: var(--sn-pagination-focus-ring, 2px solid var(--sn-focus-ring-color, currentColor));
+  outline: var(--sn-pagination-focus-ring, 2px solid var(--sn-sys-focus-ring, currentColor));
   outline-offset: 2px;
 }
 
 .sn-pagination-btn[active] {
-  background: var(--sn-pagination-btn-active-bg, var(--sn-node-selected, rgba(255, 255, 255, 0.15)));
-  border-color: var(--sn-pagination-btn-active-border, var(--sn-node-selected, rgba(255, 255, 255, 0.3)));
-  color: var(--sn-pagination-btn-active-color, var(--sn-text, #ffffff));
+  background: var(--sn-pagination-btn-active-bg, var(--sn-node-selected, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-selected-mix), transparent)));
+  border-color: var(--sn-pagination-btn-active-border, var(--sn-node-selected, var(--sn-sys-accent)));
+  color: var(--sn-pagination-btn-active-color, var(--sn-text, var(--sn-sys-on-surface)));
   font-weight: 600;
 }
 
@@ -57,7 +57,7 @@ sn-pagination[hidden] {
   align-items: center;
   justify-content: center;
   min-width: var(--sn-pagination-btn-size, 28px);
-  color: var(--sn-text-dim-extra, rgba(255, 255, 255, 0.4));
+  color: var(--sn-text-dim-extra, var(--sn-sys-on-surface-faint));
   user-select: none;
 }
 

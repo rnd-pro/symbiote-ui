@@ -91,7 +91,7 @@ chat-message-item {
 }
 
 .scroll-bottom-btn:hover {
-  background: var(--sn-node-hover);
+  background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-raised));
   color: var(--sn-text);
 }
 

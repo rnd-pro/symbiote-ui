@@ -1,5 +1,8 @@
 export default /*css*/ `
 sn-drawer {
+  --sn-drawer-backdrop-bg: var(--sn-sys-scrim);
+  --sn-drawer-bg: var(--sn-sys-surface-overlay);
+
   display: contents;
 }
 
@@ -10,7 +13,7 @@ sn-drawer {
   left: 0;
   width: 100vw;
   height: 100vh;
-  background-color: var(--sn-drawer-backdrop-bg, rgba(0, 0, 0, 0.45));
+  background-color: var(--sn-drawer-backdrop-bg);
   backdrop-filter: blur(4px);
   z-index: var(--sn-overlay-z-base, 20000);
   opacity: 0;
@@ -26,9 +29,9 @@ sn-drawer {
   display: flex;
   flex-direction: column;
   position: fixed;
-  background-color: var(--sn-drawer-bg, var(--sn-panel-bg, #1e1e24));
-  border: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
-  box-shadow: var(--sn-panel-shadow, 0 12px 32px rgba(0,0,0,0.4));
+  background-color: var(--sn-drawer-bg);
+  border: 1px solid var(--sn-sys-outline-subtle);
+  box-shadow: var(--sn-sys-shadow-overlay);
   z-index: calc(var(--sn-overlay-z-base, 20000) + 1);
   overflow: hidden;
   box-sizing: border-box;
@@ -80,7 +83,7 @@ sn-drawer {
   align-items: center;
   justify-content: space-between;
   padding: calc(16px * var(--sn-theme-density, 1)) calc(20px * var(--sn-theme-density, 1));
-  border-bottom: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
+  border-bottom: 1px solid var(--sn-sys-outline-subtle);
 }
 
 .sn-drawer-title {
@@ -88,13 +91,13 @@ sn-drawer {
   font-family: var(--sn-font, sans-serif);
   font-size: calc(18px * var(--sn-theme-type-scale, 1) * var(--sn-theme-heading-scale, 1));
   font-weight: 600;
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
 }
 
 .sn-drawer-close-btn {
   background: transparent;
   border: none;
-  color: var(--sn-text-dim, rgba(255,255,255,0.6));
+  color: var(--sn-sys-on-surface-dim);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -105,8 +108,8 @@ sn-drawer {
 }
 
 .sn-drawer-close-btn:hover {
-  background-color: var(--sn-node-hover, rgba(255,255,255,0.05));
-  color: var(--sn-text);
+  background-color: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), transparent);
+  color: var(--sn-sys-on-surface);
 }
 
 .sn-drawer-body {
@@ -124,7 +127,7 @@ sn-drawer {
   justify-content: flex-end;
   gap: var(--sn-step-6);
   padding: calc(16px * var(--sn-theme-density, 1)) calc(20px * var(--sn-theme-density, 1));
-  border-top: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
-  background-color: color-mix(in oklab, var(--sn-panel-bg) 95%, var(--sn-text) 5%);
+  border-top: 1px solid var(--sn-sys-outline-subtle);
+  background-color: var(--sn-sys-surface-toolbar);
 }
 `;

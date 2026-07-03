@@ -22,7 +22,7 @@ chat-sidebar-sub-item {
 }
 
 .chat-item:hover {
-  background: var(--sn-node-hover);
+  background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-raised));
   color: var(--sn-text);
 }
 
@@ -256,7 +256,7 @@ chat-sidebar-sub-item[data-expanded] > .chat-sub-items {
 }
 
 .chat-item-child:hover {
-  background: var(--sn-node-hover);
+  background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-raised));
   color: var(--sn-text);
 }
 

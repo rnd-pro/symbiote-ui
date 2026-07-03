@@ -28,7 +28,7 @@ sn-metric[variant="stacked"] {
 
 .sn-metric-label {
   min-width: 0;
-  color: var(--sn-metric-label-color, var(--sn-text-dim));
+  color: var(--sn-metric-label-color, var(--sn-sys-on-surface-dim));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -36,7 +36,7 @@ sn-metric[variant="stacked"] {
 
 .sn-metric-value {
   min-width: 0;
-  color: var(--sn-metric-value-color, var(--sn-text));
+  color: var(--sn-metric-value-color, var(--sn-sys-on-surface));
   font-family: var(--sn-metric-value-font, var(--sn-font-mono, monospace));
   font-size: var(--sn-metric-value-size, 13px);
   font-weight: var(--sn-metric-value-weight, 600);
@@ -47,14 +47,14 @@ sn-metric[variant="stacked"] {
 }
 
 sn-metric[status="success"] .sn-metric-value {
-  color: var(--sn-metric-success-color, var(--sn-status-success, var(--sn-success-color, #3fb950)));
+  color: var(--sn-metric-success-color, var(--sn-sys-success));
 }
 
 sn-metric[status="warning"] .sn-metric-value {
-  color: var(--sn-metric-warning-color, var(--sn-status-warning, var(--sn-warning-color, #d29922)));
+  color: var(--sn-metric-warning-color, var(--sn-sys-warning));
 }
 
 sn-metric[status="error"] .sn-metric-value {
-  color: var(--sn-metric-error-color, var(--sn-status-error, var(--sn-danger-color, #f85149)));
+  color: var(--sn-metric-error-color, var(--sn-sys-danger));
 }
 `;

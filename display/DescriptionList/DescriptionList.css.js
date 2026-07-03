@@ -19,14 +19,14 @@ sn-description-item {
   font-family: var(--sn-font, sans-serif);
   font-size: var(--sn-description-label-size, 12px);
   font-weight: 500;
-  color: var(--sn-description-label-color, var(--sn-text-dim, rgba(255, 255, 255, 0.6)));
+  color: var(--sn-description-label-color, var(--sn-sys-on-surface-dim));
   align-self: start;
 }
 
 .sn-description-value {
   font-family: var(--sn-font, sans-serif);
   font-size: var(--sn-description-value-size, 12px);
-  color: var(--sn-description-value-color, var(--sn-text, #ffffff));
+  color: var(--sn-description-value-color, var(--sn-sys-on-surface));
   margin: 0;
   align-self: start;
   min-width: 0;

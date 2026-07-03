@@ -19,12 +19,14 @@ import Symbiote from '@symbiotejs/symbiote';
 import { timelineEditorTemplate } from './TimelineEditor.tpl.js';
 import css from './TimelineEditor.css.js';
 
-let TRACK_COLORS = {
-  video: 'hsl(210 55% 42%)',
-  audio: 'hsl(45 65% 42%)',
-  text: 'hsl(150 45% 38%)',
-  effect: 'hsl(280 50% 45%)',
-  default: 'hsl(200 30% 40%)',
+// Track/clip colors resolve through the cascade (--sn-dom-timeline-clip-*, defined in
+// TimelineEditor.css.js as a DOM domain block aliasing T2 system roles) rather than literals.
+let TRACK_COLOR_VARS = {
+  video: '--sn-dom-timeline-clip-video',
+  audio: '--sn-dom-timeline-clip-audio',
+  text: '--sn-dom-timeline-clip-text',
+  effect: '--sn-dom-timeline-clip-effect',
+  default: '--sn-dom-timeline-clip-default',
 };
 
 let TRACK_ICONS = {
@@ -327,15 +329,21 @@ export class TimelineEditor extends Symbiote {
     if (!this.#data || !this.ref.headersList) return;
     let markup = this.#data.tracks.map(track => {
       let type = track.type || 'default';
-      let color = TRACK_COLORS[type] || TRACK_COLORS.default;
       let icon = TRACK_ICONS[type] || TRACK_ICONS.default;
       return `<div class="te-header-track">
-        <span class="te-header-icon" style="background: ${color}">${icon}</span>
+        <span class="te-header-icon" data-track-type="${type}">${icon}</span>
         <span class="te-header-label">${track.label || track.id}</span>
         <button class="te-header-mute" title="Mute">M</button>
       </div>`;
     }).join('');
     this.ref.headersList.innerHTML = markup;
+  }
+
+  /** Resolve a clip-type domain color from the cascade (falls back to the default clip role). */
+  #clipColor(type, computed) {
+    let varName = TRACK_COLOR_VARS[type] || TRACK_COLOR_VARS.default;
+    return computed.getPropertyValue(varName).trim()
+      || computed.getPropertyValue(TRACK_COLOR_VARS.default).trim();
   }
 
   #renderRuler() {
@@ -369,10 +377,11 @@ export class TimelineEditor extends Symbiote {
 
     let majorInterval = tickInterval * 4;
 
-    // Read colors from cascade
+    // Read colors from cascade — no literal fallbacks; the system-cascade stylesheet (W1
+    // foundation) guarantees --sn-sys-* roles are always registered with an initial value.
     let computed = getComputedStyle(this);
-    let tickColor = computed.getPropertyValue('--sn-text-dim').trim() || 'rgba(255,255,255,0.4)';
-    let lineColor = computed.getPropertyValue('--te-border').trim() || 'rgba(255,255,255,0.12)';
+    let tickColor = computed.getPropertyValue('--sn-sys-on-surface-dim').trim();
+    let lineColor = computed.getPropertyValue('--te-border').trim();
 
     ctx.strokeStyle = lineColor;
     ctx.fillStyle = tickColor;
@@ -397,8 +406,7 @@ export class TimelineEditor extends Symbiote {
 
     // Draw markers
     if (this.#data.markers) {
-      let markerColor = computed.getPropertyValue('--te-marker-color').trim() || 'hsla(40, 70%, 55%, 0.6)';
-      ctx.strokeStyle = markerColor;
+      ctx.strokeStyle = computed.getPropertyValue('--te-marker-color').trim();
       for (let marker of this.#data.markers) {
         let x = marker.frame * ppf;
         if (x > width) continue;
@@ -431,14 +439,29 @@ export class TimelineEditor extends Symbiote {
 
     let ppf = this.#pixelsPerFrame;
 
+    // Read colors from cascade — track striping, borders, labels, and handles are all
+    // on-surface overlays at different state-mix strengths (SYM-017 vocabulary reused for
+    // canvas-drawn, not just DOM-styled, surfaces); no literal fallbacks.
+    let computed = getComputedStyle(this);
+    let onSurface = computed.getPropertyValue('--sn-sys-on-surface').trim();
+    let hoverMix = computed.getPropertyValue('--sn-sys-state-hover-mix').trim();
+    let selectedMix = computed.getPropertyValue('--sn-sys-state-selected-mix').trim();
+    let stripeEven = `color-mix(in oklch, ${onSurface} calc(${hoverMix} / 4), transparent)`;
+    let stripeOdd = `color-mix(in oklch, ${onSurface} calc(${hoverMix} / 8), transparent)`;
+    let trackBorder = `color-mix(in oklch, ${onSurface} calc(${hoverMix} / 1.6), transparent)`;
+    let onAccent = computed.getPropertyValue('--sn-sys-on-accent').trim();
+    let labelColor = `color-mix(in oklch, ${onAccent} 85%, transparent)`;
+    let handleColor = `color-mix(in oklch, ${onAccent} 50%, transparent)`;
+    let markerLineColor = `color-mix(in oklch, ${computed.getPropertyValue('--te-marker-color').trim()} 40%, transparent)`;
+
     // Draw track backgrounds
     this.#data.tracks.forEach((track, i) => {
       let y = i * trackH;
-      ctx.fillStyle = i % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.01)';
+      ctx.fillStyle = i % 2 === 0 ? stripeEven : stripeOdd;
       ctx.fillRect(0, y, totalWidth, trackH);
 
       // Track border
-      ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+      ctx.strokeStyle = trackBorder;
       ctx.beginPath();
       ctx.moveTo(0, y + trackH);
       ctx.lineTo(totalWidth, y + trackH);
@@ -446,7 +469,7 @@ export class TimelineEditor extends Symbiote {
 
       // Draw clips
       let type = track.type || 'default';
-      let clipColor = TRACK_COLORS[type] || TRACK_COLORS.default;
+      let clipColor = this.#clipColor(type, computed);
 
       if (track.clips) {
         for (let clip of track.clips) {
@@ -463,9 +486,9 @@ export class TimelineEditor extends Symbiote {
           this.#roundRect(ctx, cx, cy, cw, ch, 3);
           ctx.fill();
 
-          // Selection outline
+          // Selection outline — state-mix layer against the clip's own color, not a raw white
           if (isSelected) {
-            ctx.strokeStyle = '#fff';
+            ctx.strokeStyle = `color-mix(in oklch, ${onAccent} ${selectedMix}, ${clipColor})`;
             ctx.lineWidth = 1.5;
             this.#roundRect(ctx, cx, cy, cw, ch, 3);
             ctx.stroke();
@@ -476,8 +499,8 @@ export class TimelineEditor extends Symbiote {
 
           // Clip label
           if (cw > 30 && clip.label) {
-            ctx.fillStyle = 'rgba(255,255,255,0.85)';
-            ctx.font = '10px Inter, system-ui, sans-serif';
+            ctx.fillStyle = labelColor;
+            ctx.font = `10px ${computed.getPropertyValue('--sn-font').trim() || 'Inter, system-ui, sans-serif'}`;
             ctx.textBaseline = 'middle';
             let maxW = cw - 8;
             let text = clip.label;
@@ -493,7 +516,7 @@ export class TimelineEditor extends Symbiote {
 
           // Clip edge handles
           if (isSelected) {
-            ctx.fillStyle = 'rgba(255,255,255,0.5)';
+            ctx.fillStyle = handleColor;
             ctx.fillRect(cx, cy + 4, 2, ch - 8);
             ctx.fillRect(cx + cw - 2, cy + 4, 2, ch - 8);
           }
@@ -503,7 +526,7 @@ export class TimelineEditor extends Symbiote {
 
     // Draw markers
     if (this.#data.markers) {
-      ctx.strokeStyle = 'hsla(40, 70%, 55%, 0.4)';
+      ctx.strokeStyle = markerLineColor;
       ctx.setLineDash([4, 4]);
       for (let marker of this.#data.markers) {
         let x = marker.frame * ppf;

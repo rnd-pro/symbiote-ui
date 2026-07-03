@@ -8,7 +8,7 @@ sn-breadcrumb {
   padding: var(--sn-breadcrumb-padding, 4px 8px);
   font-family: var(--sn-font, sans-serif);
   font-size: var(--sn-breadcrumb-font-size, 12px);
-  color: var(--sn-breadcrumb-color, var(--sn-text-dim, rgba(255, 255, 255, 0.7)));
+  color: var(--sn-breadcrumb-color, var(--sn-sys-on-surface-dim));
 }
 
 sn-breadcrumb[hidden] {
@@ -22,7 +22,7 @@ sn-breadcrumb-item {
 }
 
 .bc-sep {
-  color: var(--sn-breadcrumb-separator-color, var(--sn-text-dim-extra, rgba(255, 255, 255, 0.4)));
+  color: var(--sn-breadcrumb-separator-color, var(--sn-sys-on-surface-faint));
   font-size: var(--sn-breadcrumb-separator-size, 1.1em);
   user-select: none;
 }
@@ -43,18 +43,19 @@ sn-breadcrumb-item {
 }
 
 button.bc-label:hover {
-  color: var(--sn-breadcrumb-hover-color, var(--sn-text, #ffffff));
+  color: var(--sn-breadcrumb-hover-color, var(--sn-sys-on-surface));
+  background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), transparent);
 }
 
 button.bc-label:focus-visible {
-  outline: 2px solid var(--sn-focus-ring-color, currentColor);
-  outline-offset: var(--sn-focus-outline-offset, 2px);
+  outline: var(--sn-sys-focus-ring-width, 2px) solid var(--sn-sys-focus-ring);
+  outline-offset: var(--sn-sys-focus-ring-offset, 2px);
   border-radius: var(--sn-radius-xs, 3px);
 }
 
 sn-breadcrumb-item[data-active] .bc-label {
   font-weight: 500;
-  color: var(--sn-breadcrumb-active-color, var(--sn-text, #ffffff));
+  color: var(--sn-breadcrumb-active-color, var(--sn-sys-on-surface));
   cursor: default;
   pointer-events: none;
 }

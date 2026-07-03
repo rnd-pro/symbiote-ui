@@ -62,6 +62,10 @@ chat-composer {
   overflow-y: auto;
 }
 
+.composer-body textarea:placeholder-shown {
+  overflow-y: hidden;
+}
+
 .composer-leading-controls {
   grid-column: 1;
   grid-row: 1;
@@ -132,7 +136,9 @@ chat-composer[leading-controls] .composer-body > sn-button.btn-send {
 }
 
 .composer-body textarea::placeholder {
-  color: var(--sn-text-dim);
+  color: color-mix(in oklab, var(--sn-text-dim) 72%, transparent);
+  color: var(--sn-composer-placeholder-color, color-mix(in oklab, var(--sn-text-dim) 72%, transparent));
+  opacity: 1;
 }
 
 sn-button.btn-send[variant="icon"] {
@@ -235,7 +241,7 @@ sn-button.btn-send[variant="icon"].btn-stop::after {
 
 .composer-leading-btn:hover,
 .composer-leading-btn.active {
-  background: var(--sn-node-hover);
+  background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-raised));
   color: var(--sn-text);
 }
 
@@ -282,7 +288,7 @@ sn-button.btn-send[variant="icon"].btn-stop::after {
 }
 
 .composer-footer-btn:hover {
-  background: var(--sn-node-hover);
+  background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-raised));
   color: var(--sn-text);
 }
 
@@ -530,7 +536,7 @@ chat-composer.drag-over .composer-body {
 
 .autocomplete-item:hover,
 .autocomplete-item.active {
-  background: var(--sn-node-hover);
+  background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-raised));
   color: var(--sn-text);
   opacity: 1;
 }
@@ -579,7 +585,7 @@ chat-composer.drag-over .composer-body {
 .btn-voice-command:hover,
 .btn-voice-language:hover {
   color: var(--sn-text);
-  background: var(--sn-node-hover);
+  background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-raised));
 }
 
 .btn-mic .material-symbols-outlined,
@@ -669,7 +675,7 @@ chat-composer.drag-over .composer-body {
 
 .voice-language-option.active {
   color: var(--sn-text);
-  background: var(--sn-node-hover);
+  background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-selected-mix), var(--sn-sys-surface-raised));
 }
 
 .btn-voice-command {
@@ -678,13 +684,13 @@ chat-composer.drag-over .composer-body {
   padding: 0 var(--sn-composer-control-gap, 10px);
   gap: var(--sn-composer-footer-gap, 6px);
   border-radius: var(--sn-radius-full);
-  background: color-mix(in oklab, var(--sn-node-bg) 88%, var(--sn-text) 12%);
+  background: color-mix(in oklch, var(--sn-sys-on-surface) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-raised));
   color: var(--sn-text-dim);
 }
 
 .btn-voice-command.active {
   color: var(--sn-text);
-  background: color-mix(in oklab, var(--sn-node-bg) 72%, var(--sn-text) 28%);
+  background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-selected-mix), var(--sn-sys-surface-raised));
 }
 
 .voice-command-button-text {
@@ -709,12 +715,12 @@ chat-composer.drag-over .composer-body {
 .btn-voice-response.active,
 .btn-voice-response.speaking {
   color: var(--sn-node-selected);
-  background: var(--sn-node-hover);
+  background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-selected-mix), var(--sn-sys-surface-raised));
 }
 
 .btn-wake-listen.listening {
   color: var(--sn-node-selected);
-  background: var(--sn-node-hover);
+  background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-selected-mix), var(--sn-sys-surface-raised));
 }
 
 .btn-wake-listen.listening .material-symbols-outlined {

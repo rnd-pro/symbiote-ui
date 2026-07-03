@@ -9,8 +9,8 @@ sn-chart {
 .sn-chart-container {
   display: flex;
   flex-direction: column;
-  background: var(--sn-panel-bg, #1e1e24);
-  border: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
+  background: var(--sn-sys-surface-panel);
+  border: 1px solid var(--sn-sys-outline-subtle);
   border-radius: var(--sn-panel-radius, 6px);
   padding: 16px;
   box-sizing: border-box;
@@ -28,7 +28,7 @@ sn-chart {
 .sn-chart-title {
   font-size: calc(14px * var(--sn-theme-type-scale, 1));
   font-weight: 500;
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
 }
 
 .sn-chart-legend {
@@ -36,7 +36,7 @@ sn-chart {
   flex-wrap: wrap;
   gap: 12px;
   font-size: 11px;
-  color: var(--sn-text-dim, #888);
+  color: var(--sn-sys-on-surface-dim);
 }
 
 .sn-chart-legend-item {
@@ -73,12 +73,12 @@ sn-chart {
 }
 
 .sn-chart-axis {
-  stroke: var(--sn-outline-color-soft, rgba(255,255,255,0.15));
+  stroke: var(--sn-sys-outline-subtle);
   stroke-width: 1;
 }
 
 .sn-chart-grid-line {
-  stroke: var(--sn-outline-color-soft, rgba(255,255,255,0.05));
+  stroke: var(--sn-sys-outline-subtle);
   stroke-dasharray: 2 2;
   stroke-width: 1;
 }
@@ -89,7 +89,7 @@ sn-chart {
 }
 
 .sn-chart-bar:hover {
-  filter: brightness(1.2);
+  fill: color-mix(in oklch, var(--sn-sys-on-surface) var(--sn-sys-state-hover-mix), currentColor);
 }
 
 .sn-chart-line {
@@ -103,7 +103,7 @@ sn-chart {
 }
 
 .sn-chart-line-point {
-  fill: var(--sn-panel-bg, #1e1e24);
+  fill: var(--sn-sys-surface-panel);
   stroke-width: 2;
   cursor: pointer;
   transition: r var(--sn-transition-fast, 0.1s) ease, fill var(--sn-transition-fast, 0.1s) ease;
@@ -133,22 +133,22 @@ sn-chart {
 }
 
 .sn-chart-brush-overlay {
-  fill: rgba(0, 122, 204, 0.15);
-  stroke: var(--sn-tabs-accent, #007acc);
+  fill: color-mix(in oklch, var(--sn-sys-accent) 15%, transparent);
+  stroke: var(--sn-chart-brush-stroke, var(--sn-sys-accent));
   stroke-width: 1;
   pointer-events: none;
 }
 
 .sn-chart-tooltip {
   position: absolute;
-  background-color: var(--sn-tooltip-bg, rgba(0, 0, 0, 0.85));
-  color: var(--sn-tooltip-color, #fff);
+  background-color: var(--sn-tooltip-bg, var(--sn-sys-surface-overlay));
+  color: var(--sn-tooltip-color, var(--sn-sys-on-surface));
   padding: 6px 10px;
   border-radius: 4px;
   font-size: 11px;
   pointer-events: none;
   z-index: 100;
-  box-shadow: var(--sn-shadow-md, 0 2px 8px rgba(0,0,0,0.5));
+  box-shadow: var(--sn-sys-shadow-overlay);
   line-height: 1.4;
 }
 

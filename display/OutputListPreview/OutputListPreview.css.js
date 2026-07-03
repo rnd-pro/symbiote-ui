@@ -2,7 +2,7 @@ export default /*css*/ `
 :host,
 output-list-preview {
   display: block;
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
   font-family: var(--sn-font-ui, inherit);
 }
 
@@ -30,13 +30,13 @@ output-list-preview[hidden] {
   justify-content: space-between;
   gap: var(--sn-step-5);
   min-height: 18px;
-  color: var(--sn-output-preview-muted, var(--sn-text-dim));
+  color: var(--sn-output-preview-muted, var(--sn-sys-on-surface-dim));
   font-size: var(--sn-text-xs);
 }
 
 .output-list-preview-title {
   overflow: hidden;
-  color: var(--sn-output-preview-title, var(--sn-text));
+  color: var(--sn-output-preview-title, var(--sn-sys-on-surface));
   font-size: var(--sn-text-sm);
   font-weight: 600;
   text-overflow: ellipsis;
@@ -57,7 +57,7 @@ output-list-preview[hidden] {
 
 .output-list-preview-empty {
   padding: var(--sn-step-4) 0;
-  color: var(--sn-output-preview-muted, var(--sn-text-dim));
+  color: var(--sn-output-preview-muted, var(--sn-sys-on-surface-dim));
   font-size: var(--sn-text-sm);
 }
 
@@ -83,21 +83,21 @@ output-list-preview[hidden] {
 }
 
 .output-list-preview-label {
-  color: var(--sn-output-preview-label, var(--sn-text));
+  color: var(--sn-output-preview-label, var(--sn-sys-on-surface));
   font-size: var(--sn-text-sm);
   font-weight: 500;
 }
 
 .output-list-preview-description {
   grid-column: 1 / -1;
-  color: var(--sn-output-preview-muted, var(--sn-text-dim));
+  color: var(--sn-output-preview-muted, var(--sn-sys-on-surface-dim));
   font-size: var(--sn-text-xs);
   line-height: 1.35;
 }
 
 .output-list-preview-meta,
 .output-list-preview-status {
-  color: var(--sn-output-preview-muted, var(--sn-text-dim));
+  color: var(--sn-output-preview-muted, var(--sn-sys-on-surface-dim));
   font-family: var(--sn-font-mono, monospace);
   font-size: var(--sn-text-2xs);
 }

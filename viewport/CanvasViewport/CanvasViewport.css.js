@@ -9,10 +9,10 @@ let css = /*css*/`
     font-family: var(--sn-font);
     font-size: var(--sn-text-xs);
     overflow: hidden;
-    --vp-border: var(--sn-node-border);
-    --vp-safe-zone: hsl(var(--sn-hue-base) var(--sn-sat-muted) var(--sn-lit-text) / 0.12);
-    --vp-checker-light: hsl(var(--sn-hue-base) var(--sn-sat-muted) var(--sn-lit-text) / 0.04);
-    --vp-checker-dark: hsl(var(--sn-hue-base) var(--sn-sat-muted) 0% / 0.1);
+    --vp-border: var(--sn-viewport-border, var(--sn-node-border));
+    --vp-safe-zone: var(--sn-viewport-safe-zone, color-mix(in oklch, var(--sn-sys-on-surface) 12%, transparent));
+    --vp-checker-light: var(--sn-viewport-checker-light, color-mix(in oklch, var(--sn-sys-on-surface) 4%, transparent));
+    --vp-checker-dark: var(--sn-viewport-checker-dark, color-mix(in oklch, var(--sn-sys-surface-sunken) 10%, transparent));
   }
 
   /* ── Header bar ── */
@@ -40,7 +40,7 @@ let css = /*css*/`
   }
 
   .vp-header select:hover {
-    border-color: var(--sn-node-selected);
+    border-color: var(--sn-viewport-control-hover-border, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--vp-border)));
   }
 
   .vp-header button {
@@ -56,8 +56,8 @@ let css = /*css*/`
   }
 
   .vp-header button:hover {
-    background: var(--sn-node-hover);
-    color: var(--sn-text);
+    background: var(--sn-viewport-control-hover-bg, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-panel)));
+    color: var(--sn-sys-on-surface);
   }
 
   .vp-spacer { flex: 1; }

@@ -48,13 +48,13 @@ sn-segmented-control > *:hover:not([disabled]):not([aria-checked="true"]) {
 }
 
 sn-segmented-control > *[aria-checked="true"] {
-  background: var(--sn-segmented-selected-bg, var(--sn-node-selected, #0056b3));
-  color: var(--sn-segmented-selected-color, #fff);
-  box-shadow: var(--sn-segmented-selected-shadow, 0 1px 3px rgba(0, 0, 0, 0.1));
+  background: var(--sn-segmented-selected-bg, var(--sn-node-selected, var(--sn-sys-accent)));
+  color: var(--sn-segmented-selected-color, var(--sn-sys-on-accent));
+  box-shadow: var(--sn-segmented-selected-shadow, var(--sn-sys-shadow-raised));
 }
 
 sn-segmented-control > *:focus-visible {
-  outline: var(--sn-segmented-focus-ring, 2px solid var(--sn-focus-ring-color, currentColor));
+  outline: var(--sn-segmented-focus-ring, 2px solid var(--sn-sys-focus-ring, currentColor));
   outline-offset: -1px;
 }
 `;

@@ -46,11 +46,11 @@ sn-transport[disabled] {
 }
 
 .sn-transport-btn-play:not(:disabled) {
-  color: var(--sn-transport-accent, var(--sn-node-selected, #0056b3));
+  color: var(--sn-transport-accent, var(--sn-node-selected, var(--sn-sys-accent)));
 }
 
 .sn-transport-btn:focus-visible {
-  outline: var(--sn-transport-focus-ring, 2px solid var(--sn-focus-ring-color, currentColor));
+  outline: var(--sn-transport-focus-ring, 2px solid var(--sn-sys-focus-ring, currentColor));
   outline-offset: -1px;
 }
 
@@ -103,7 +103,7 @@ sn-transport[disabled] {
   inline-size: var(--sn-transport-thumb-size, 12px);
   block-size: var(--sn-transport-thumb-size, 12px);
   border-radius: 50%;
-  background: var(--sn-transport-accent, var(--sn-node-selected, #0056b3));
+  background: var(--sn-transport-accent, var(--sn-node-selected, var(--sn-sys-accent)));
   cursor: pointer;
 }
 
@@ -112,12 +112,12 @@ sn-transport[disabled] {
   block-size: var(--sn-transport-thumb-size, 12px);
   border: 0;
   border-radius: 50%;
-  background: var(--sn-transport-accent, var(--sn-node-selected, #0056b3));
+  background: var(--sn-transport-accent, var(--sn-node-selected, var(--sn-sys-accent)));
   cursor: pointer;
 }
 
 .sn-transport-scrub:focus-visible {
-  outline: var(--sn-transport-focus-ring, 2px solid var(--sn-focus-ring-color, currentColor));
+  outline: var(--sn-transport-focus-ring, 2px solid var(--sn-sys-focus-ring, currentColor));
   outline-offset: 2px;
 }
 `;

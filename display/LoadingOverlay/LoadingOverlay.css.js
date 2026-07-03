@@ -5,7 +5,7 @@ loading-overlay {
   position: absolute;
   inset: 0;
   display: block;
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
   font-family: var(--sn-font-ui);
   z-index: var(--sn-loading-overlay-z);
   pointer-events: none;

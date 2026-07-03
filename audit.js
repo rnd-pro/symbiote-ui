@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { RULES } from './manifest/rule-catalog.js';
 import { listComponents } from './manifest/component-registry.js';
 import { lintComponentCss } from './tokens/geometry-lint.js';
+import { findLiteralColors, findTierViolations, findBespokeStateEffects } from './tokens/tier-audit.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -231,6 +232,91 @@ export async function cmdAudit(options = {}) {
     errors.push({
       type: 'geometry-lint',
       message: `Failed to lint component geometry: ${err.message}`
+    });
+  }
+
+  // 5. Token tier direction (wave 1, warning only — docs/cascade-theme-architecture.md,
+  // promoted to error in wave 3). Every --sn-* definition's right-hand var() references must
+  // obey tiers.js's aliasingAllowed(from, to): component→sys→ref→source; domain→ref/sys;
+  // legacy-alias→sys; nothing references component.
+  try {
+    let cssFiles = findCssFiles(__dirname);
+    for (let file of cssFiles) {
+      let content = readFileSync(file, 'utf-8');
+      let relative = file.replace(__dirname + '/', '');
+      for (let finding of findTierViolations(content, { file: relative })) {
+        warnings.push({
+          type: 'token-tier-direction',
+          file: finding.file,
+          line: finding.line,
+          message: finding.detail,
+        });
+      }
+    }
+  } catch (err) {
+    errors.push({
+      type: 'token-tier-direction',
+      message: `Failed to lint token tier direction: ${err.message}`
+    });
+  }
+
+  // 6. No literal colors in component CSS (wave 1, warning only). *.css.js outside themes/ and
+  // tokens/ must resolve colors through a token chain ending in a T2 role; LITERAL_COLOR_ALLOWLIST
+  // is the only sanctioned exception. Honors the same escape-comment convention as css-lint.
+  try {
+    let cssFiles = findCssFiles(__dirname).filter((file) => {
+      let relative = file.replace(__dirname + '/', '');
+      return !relative.startsWith('themes/') && !relative.startsWith('tokens/');
+    });
+    for (let file of cssFiles) {
+      let content = readFileSync(file, 'utf-8');
+      let relative = file.replace(__dirname + '/', '');
+      let lines = content.split('\n');
+      let scanned = lines
+        .map((line) => (
+          line.includes('lint-allow')
+          || line.includes('audit-ok')
+          || line.includes('audit-allow')
+          || line.includes('lint-ok')
+        ) ? '' : line)
+        .join('\n');
+      for (let finding of findLiteralColors(scanned, { file: relative })) {
+        warnings.push({
+          type: 'no-literal-color-in-components',
+          file: finding.file,
+          line: finding.line,
+          message: finding.detail,
+        });
+      }
+    }
+  } catch (err) {
+    errors.push({
+      type: 'no-literal-color-in-components',
+      message: `Failed to lint literal colors in components: ${err.message}`
+    });
+  }
+
+  // 7. State-layer usage (wave 1, warning only). hover/active/pressed/selected/dragged
+  // pseudo-class or data-state selectors in *.css.js must recolor via color-mix() against one
+  // of the --sn-sys-state-*-mix tokens (SYM-017) rather than a hand-rolled color.
+  try {
+    let cssFiles = findCssFiles(__dirname);
+    for (let file of cssFiles) {
+      let content = readFileSync(file, 'utf-8');
+      let relative = file.replace(__dirname + '/', '');
+      for (let finding of findBespokeStateEffects(content, { file: relative })) {
+        warnings.push({
+          type: 'state-layer-usage',
+          file: finding.file,
+          line: finding.line,
+          message: finding.detail,
+        });
+      }
+    }
+  } catch (err) {
+    errors.push({
+      type: 'state-layer-usage',
+      message: `Failed to lint state-layer usage: ${err.message}`
     });
   }
 

@@ -1,5 +1,9 @@
 export default /*css*/ `
 sn-popover {
+  --sn-popover-bg: var(--sn-sys-surface-overlay);
+  --sn-popover-border: var(--sn-sys-outline-subtle);
+  --sn-popover-shadow: var(--sn-sys-shadow-overlay);
+
   display: inline-block;
   position: relative;
 }
@@ -12,12 +16,12 @@ sn-popover {
   display: none;
   position: fixed;
   z-index: var(--sn-overlay-z-base, 20000);
-  background-color: var(--sn-popover-bg, var(--sn-panel-bg, #1e1e24));
-  border: 1px solid var(--sn-popover-border, var(--sn-outline-color-soft, rgba(255,255,255,0.08)));
+  background-color: var(--sn-popover-bg);
+  border: 1px solid var(--sn-popover-border);
   border-radius: var(--sn-popover-radius, var(--sn-panel-radius, 8px));
   padding: calc(var(--sn-step-6, 12px) * var(--sn-theme-density, 1));
-  box-shadow: var(--sn-popover-shadow, 0 8px 24px var(--sn-shadow-color, rgba(0, 0, 0, 0.3)));
-  color: var(--sn-text);
+  box-shadow: var(--sn-popover-shadow);
+  color: var(--sn-sys-on-surface);
   font-family: var(--sn-font, sans-serif);
   font-size: calc(var(--sn-text-md, 13px) * var(--sn-theme-type-scale, 1));
   box-sizing: border-box;

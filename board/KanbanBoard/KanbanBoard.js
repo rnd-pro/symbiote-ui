@@ -1,5 +1,6 @@
 import Symbiote from '@symbiotejs/symbiote';
 import '../../display/EmptyState/EmptyState.js';
+import '../../menu/Menu/Menu.js';
 import template from './KanbanBoard.tpl.js';
 import css from './KanbanBoard.css.js';
 
@@ -35,10 +36,13 @@ function normalizeChip(value) {
       label,
       kind: normalizeText(value.kind ?? value.variant ?? value.status),
       title: normalizeText(value.title),
+      // U15: chip semantics must never rely on color alone. `label` already carries text; an
+      // optional icon glyph is a second, non-color signal a host can pair with it.
+      icon: normalizeText(value.icon),
     };
   }
   let label = normalizeText(value);
-  return label ? { label, kind: '', title: '' } : null;
+  return label ? { label, kind: '', title: '', icon: '' } : null;
 }
 
 function normalizeAction(value, index = 0) {
@@ -303,13 +307,22 @@ export class KanbanBoard extends Symbiote {
 
     let meta = makeElement('div', 'sn-kanban-card-meta');
     for (let chip of card.meta) meta.append(this.#renderChip(chip));
-    let title = makeElement('div', 'sn-kanban-card-title', card.title);
+    let title = makeElement('div', 'sn-kanban-card-title');
+    if (card.draggable) {
+      // U08: explicit drag-handle affordance disambiguating click (select) from drag (move),
+      // in addition to the whole-card grab/grabbing cursor set in KanbanBoard.css.js.
+      let handle = makeElement('span', 'sn-kanban-card-drag-handle');
+      handle.setAttribute('aria-hidden', 'true');
+      handle.append(makeElement('span', 'material-symbols-outlined', 'drag_indicator'));
+      title.append(handle);
+    }
     if (card.busy) {
       cardEl.dataset.busy = 'true';
       let spinner = makeElement('span', 'sn-kanban-card-spinner');
       spinner.setAttribute('aria-hidden', 'true');
-      title.prepend(spinner);
+      title.append(spinner);
     }
+    title.append(makeElement('span', 'sn-kanban-card-title-text', card.title));
     let summary = makeElement('div', 'sn-kanban-card-summary', card.summary || '');
     let footer = makeElement('div', 'sn-kanban-card-footer');
     for (let chip of card.footer) footer.append(this.#renderChip(chip));
@@ -319,38 +332,50 @@ export class KanbanBoard extends Symbiote {
   }
 
   #renderChip(chip) {
-    let node = makeElement('span', 'sn-kanban-chip', chip.label);
+    let node = makeElement('span', 'sn-kanban-chip');
+    if (chip.icon) {
+      let icon = makeElement('span', 'material-symbols-outlined', chip.icon);
+      icon.setAttribute('aria-hidden', 'true');
+      node.append(icon);
+    }
+    node.append(document.createTextNode(chip.label));
     if (chip.kind) node.dataset.kind = chip.kind;
     if (chip.title) node.title = chip.title;
     return node;
   }
 
+  /*
+   * U07: reuse the sn-dropdown native popover + anchor-positioned floating-menu primitive
+   * (menu/Menu/Menu.js) instead of the old <details> that expanded grid-column: 1/-1 inside
+   * the card. The panel now floats over the board and never reflows card/column layout.
+   */
   #renderActionMenu(card) {
-    let details = makeElement('details', 'sn-kanban-card-actions');
-    let summary = makeElement('summary', 'sn-kanban-card-menu');
-    summary.title = 'Card actions';
-    summary.setAttribute('aria-label', 'Card actions');
-    summary.append(makeElement('span', 'material-symbols-outlined', 'more_horiz'));
-    let menu = makeElement('div', 'sn-kanban-card-menu-list');
+    let dropdown = makeElement('sn-dropdown', 'sn-kanban-card-actions');
+    let trigger = makeElement('button', 'sn-kanban-card-menu');
+    trigger.type = 'button';
+    trigger.slot = 'trigger';
+    trigger.title = 'Card actions';
+    trigger.setAttribute('aria-label', 'Card actions');
+    trigger.append(makeElement('span', 'material-symbols-outlined', 'more_horiz'));
+    dropdown.append(trigger);
+    let menu = makeElement('sn-menu');
+    menu.setAttribute('role', 'menu');
     for (let action of card.actions) menu.append(this.#renderAction(card, action));
-    details.append(summary, menu);
-    return details;
+    dropdown.append(menu);
+    return dropdown;
   }
 
   #renderAction(card, action) {
-    let button = makeElement('button', 'sn-kanban-card-action');
-    button.type = 'button';
-    button.dataset.snBoardAction = action.id;
-    button.dataset.snBoardCardId = card.id;
-    button.disabled = action.disabled;
-    button.title = action.title;
-    button.setAttribute('aria-label', action.title);
-    if (action.kind) button.dataset.kind = action.kind;
-    if (action.icon) {
-      button.append(makeElement('span', 'material-symbols-outlined', action.icon));
-    }
-    button.append(makeElement('span', 'sn-kanban-card-action-label', action.label || action.title));
-    return button;
+    let item = makeElement('sn-menu-item', 'sn-kanban-card-action');
+    item.dataset.snBoardAction = action.id;
+    item.dataset.snBoardCardId = card.id;
+    item.title = action.title;
+    item.setAttribute('aria-label', action.title);
+    if (action.disabled) item.setAttribute('disabled', '');
+    if (action.kind) item.dataset.kind = action.kind;
+    if (action.icon) item.setAttribute('icon', action.icon);
+    item.append(document.createTextNode(action.label || action.title));
+    return item;
   }
 
   #onClick(event) {

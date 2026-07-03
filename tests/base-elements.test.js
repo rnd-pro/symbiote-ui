@@ -36,6 +36,42 @@ function installSsrDom() {
       this.__symbioteSsrSheets = value;
     },
   });
+  // linkedom does not implement the Popover API; polyfill just enough of it for SSR
+  // rendering tests. Real Chromium-latest runtimes use the native implementation —
+  // this is test-harness scaffolding, not a production fallback.
+  if (!window.HTMLElement.prototype.showPopover) {
+    Object.defineProperties(window.HTMLElement.prototype, {
+      showPopover: {
+        configurable: true,
+        value() {
+          this.__symbiotePopoverOpen = true;
+          this.setAttribute('data-ssr-popover-open', '');
+          let event = new window.Event('toggle');
+          event.oldState = 'closed';
+          event.newState = 'open';
+          this.dispatchEvent(event);
+        },
+      },
+      hidePopover: {
+        configurable: true,
+        value() {
+          this.__symbiotePopoverOpen = false;
+          this.removeAttribute('data-ssr-popover-open');
+          let event = new window.Event('toggle');
+          event.oldState = 'open';
+          event.newState = 'closed';
+          this.dispatchEvent(event);
+        },
+      },
+      togglePopover: {
+        configurable: true,
+        value(force) {
+          let next = force ?? !this.__symbiotePopoverOpen;
+          next ? this.showPopover() : this.hidePopover();
+        },
+      },
+    });
+  }
   globalThis.getComputedStyle = (element) => {
     return {
       getPropertyValue(prop) {

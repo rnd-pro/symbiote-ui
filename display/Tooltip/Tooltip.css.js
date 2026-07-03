@@ -12,12 +12,12 @@ sn-tooltip {
   max-width: var(--sn-tooltip-max-width, 200px);
   padding: var(--sn-tooltip-padding, 4px 8px);
   border-radius: var(--sn-tooltip-radius, 4px);
-  background: var(--sn-tooltip-bg, var(--sn-node-bg, #1e1e1e));
-  color: var(--sn-tooltip-color, var(--sn-text, #fff));
+  background: var(--sn-tooltip-bg, var(--sn-sys-surface-overlay));
+  color: var(--sn-tooltip-color, var(--sn-sys-on-surface));
   font-family: var(--sn-font);
   font-size: var(--sn-tooltip-font-size, 11px);
   line-height: var(--sn-tooltip-line-height, 1.35);
-  box-shadow: var(--sn-tooltip-shadow, 0 2px 8px var(--sn-shadow-color, rgba(0, 0, 0, 0.15)));
+  box-shadow: var(--sn-tooltip-shadow, var(--sn-sys-shadow-overlay));
   pointer-events: none;
   white-space: nowrap;
 }

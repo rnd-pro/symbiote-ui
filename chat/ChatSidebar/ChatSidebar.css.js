@@ -133,7 +133,7 @@ chat-sidebar-shell[resizing] .chat-nav  {
 }
 
 .nav-btn:hover {
-  background: var(--sn-node-hover);
+  background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-raised));
   color: var(--sn-text);
 }
 

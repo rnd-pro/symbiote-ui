@@ -32,19 +32,24 @@ chat-message-item {
 .message.system {
   align-self: center;
   font-size: var(--sn-chat-small-size, 11px);
+  min-width: 0;
   max-width: 90%;
   color: var(--sn-text-dim);
 }
 
 .message.system .msg-content {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: var(--sn-step-2);
+  min-width: 0;
+  max-width: 100%;
   background: color-mix(in srgb, var(--sn-text-dim) 9%, transparent);
   border-radius: var(--sn-radius-lg, 12px);
   text-align: left;
   font-style: normal;
   padding: var(--sn-step-2) var(--sn-step-4);
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .message.system .system-note-icon {
@@ -185,7 +190,7 @@ chat-message-item {
   align-items: flex-start;
   gap: var(--sn-step-2);
   font-size: var(--sn-chat-small-size, 11px);
-  color: var(--sn-warning-color, var(--sn-danger-color, #b45309));
+  color: var(--sn-warning-color, var(--sn-danger-color, var(--sn-sys-warning)));
   line-height: 1.4;
 }
 
@@ -366,7 +371,7 @@ h4.md-h {
 }
 
 .md-table tr:hover td {
-  background: var(--sn-node-hover);
+  background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-raised));
 }
 
 .t-kw,
@@ -507,7 +512,7 @@ h4.md-h {
 }
 
 .work-copy-btn:hover {
-  background: var(--sn-node-hover);
+  background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-raised));
   color: var(--sn-text);
   opacity: 1;
 }
@@ -841,30 +846,30 @@ h4.md-h {
   transition: background var(--sn-transition-fast) var(--sn-transition-easing), border-color var(--sn-transition-fast) var(--sn-transition-easing);
 }
 .sn-btn:hover {
-  background: var(--sn-node-hover);
+  background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-raised));
   border-color: var(--sn-text-dim);
 }
 .sn-btn.approve {
-  background: var(--sn-success-color, #22c55e);
+  background: var(--sn-success-color, var(--sn-sys-success));
   color: #fff;
-  color: oklch(from var(--sn-success-color, #22c55e) calc((l - 0.5) * -1000) 0 0);
-  border-color: var(--sn-success-border, #15803d);
+  color: oklch(from var(--sn-success-color, var(--sn-sys-success)) calc((l - 0.5) * -1000) 0 0);
+  border-color: var(--sn-success-border, var(--sn-sys-success));
 }
 .sn-btn.approve:hover {
-  background: var(--sn-success-hover, #16a34a);
+  background: color-mix(in oklch, var(--sn-success-color, var(--sn-sys-success)) calc(100% - var(--sn-sys-state-hover-mix)), black);
 }
 .sn-btn.reject {
-  background: var(--sn-danger-color, #ef4444);
+  background: var(--sn-danger-color, var(--sn-sys-danger));
   color: #fff;
-  color: oklch(from var(--sn-danger-color, #ef4444) calc((l - 0.5) * -1000) 0 0);
-  border-color: var(--sn-danger-border, #b91c1c);
+  color: oklch(from var(--sn-danger-color, var(--sn-sys-danger)) calc((l - 0.5) * -1000) 0 0);
+  border-color: var(--sn-danger-border, var(--sn-sys-danger));
 }
 .sn-btn.reject:hover {
-  background: var(--sn-danger-hover, #dc2626);
+  background: color-mix(in oklch, var(--sn-danger-color, var(--sn-sys-danger)) calc(100% - var(--sn-sys-state-hover-mix)), black);
 }
 
 .error-card {
-  background: var(--sn-danger-bg, rgba(239, 68, 68, 0.08));
+  background: var(--sn-danger-bg, color-mix(in oklch, var(--sn-sys-danger) 8%, transparent));
   border: 1px solid var(--sn-danger-border, var(--sn-node-border));
   border-radius: var(--sn-radius-lg);
   padding: var(--sn-step-6);
@@ -986,12 +991,12 @@ h4.md-h {
   flex: 0 0 auto;
 }
 .sn-btn.confirm {
-  background: var(--sn-success-color, #22c55e);
-  color: var(--sn-text-on-accent, #fff);
-  border-color: var(--sn-success-border, #15803d);
+  background: var(--sn-success-color, var(--sn-sys-success));
+  color: var(--sn-text-on-accent, var(--sn-sys-on-status));
+  border-color: var(--sn-success-border, var(--sn-sys-success));
 }
 .sn-btn.confirm:hover {
-  background: var(--sn-success-hover, #16a34a);
+  background: color-mix(in oklch, var(--sn-success-color, var(--sn-sys-success)) calc(100% - var(--sn-sys-state-hover-mix)), black);
 }
 .sn-btn.cancel {
   background: var(--sn-node-bg);
@@ -999,7 +1004,7 @@ h4.md-h {
   border-color: var(--sn-node-border);
 }
 .sn-btn.cancel:hover {
-  background: var(--sn-node-hover);
+  background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-raised));
   border-color: var(--sn-text-dim);
 }
 
@@ -1011,7 +1016,7 @@ h4.md-h {
   color: var(--sn-text-dim);
 }
 .confirm-pill[data-resolved='confirm'] .confirm-pill-icon {
-  color: var(--sn-success-color, #22c55e);
+  color: var(--sn-success-color, var(--sn-sys-success));
 }
 .confirm-pill.resolved .confirm-btn {
   cursor: default;
@@ -1043,20 +1048,20 @@ h4.md-h {
   font-size: var(--sn-chat-status-icon-size, 16px);
 }
 .sn-btn.action-btn-group[data-variant='primary'] {
-  background: var(--sn-success-color, #22c55e);
-  color: var(--sn-text-on-accent, #fff);
-  border-color: var(--sn-success-border, #15803d);
+  background: var(--sn-success-color, var(--sn-sys-success));
+  color: var(--sn-text-on-accent, var(--sn-sys-on-status));
+  border-color: var(--sn-success-border, var(--sn-sys-success));
 }
 .sn-btn.action-btn-group[data-variant='primary']:hover {
-  background: var(--sn-success-hover, #16a34a);
+  background: color-mix(in oklch, var(--sn-success-color, var(--sn-sys-success)) calc(100% - var(--sn-sys-state-hover-mix)), black);
 }
 .sn-btn.action-btn-group[data-variant='danger'] {
-  background: var(--sn-danger-color, #ef4444);
-  color: var(--sn-text-on-accent, #fff);
-  border-color: var(--sn-danger-border, #b91c1c);
+  background: var(--sn-danger-color, var(--sn-sys-danger));
+  color: var(--sn-text-on-accent, var(--sn-sys-on-status));
+  border-color: var(--sn-danger-border, var(--sn-sys-danger));
 }
 .sn-btn.action-btn-group[data-variant='danger']:hover {
-  background: var(--sn-danger-hover, #dc2626);
+  background: color-mix(in oklch, var(--sn-danger-color, var(--sn-sys-danger)) calc(100% - var(--sn-sys-state-hover-mix)), black);
 }
 
 .chat-embed {

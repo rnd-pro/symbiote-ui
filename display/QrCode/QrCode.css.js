@@ -9,8 +9,8 @@ sn-qr-code {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background-color: var(--sn-panel-bg, #1e1e24);
-  border: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
+  background-color: var(--sn-sys-surface-panel);
+  border: 1px solid var(--sn-sys-outline-subtle);
   border-radius: var(--sn-panel-radius, 6px);
   padding: var(--sn-step-6);
   box-sizing: border-box;
@@ -38,7 +38,7 @@ sn-qr-code {
   margin-top: var(--sn-step-4);
   max-width: 120px;
   font-size: var(--sn-text-xs);
-  color: var(--sn-text-dim, rgba(255,255,255,0.5));
+  color: var(--sn-sys-on-surface-dim);
   overflow-wrap: anywhere;
 }
 `;

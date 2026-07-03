@@ -98,7 +98,7 @@ sn-switch[hidden] {
 }
 
 .sn-selection-error {
-  color: var(--sn-selection-error-color, var(--sn-status-error, var(--sn-danger-color, #ff4d4f)));
+  color: var(--sn-selection-error-color, var(--sn-status-error, var(--sn-danger-color, var(--sn-sys-danger))));
 }
 
 sn-checkbox:not([invalid]) .sn-selection-error,
@@ -110,7 +110,7 @@ sn-switch:not([invalid]) .sn-selection-error {
 sn-checkbox:hover:not([disabled]):not([readonly]) .sn-selection-visual,
 sn-radio:hover:not([disabled]):not([readonly]) .sn-selection-visual,
 sn-switch:hover:not([disabled]):not([readonly]) .sn-selection-visual {
-  border-color: var(--sn-selection-hover-border, var(--sn-field-control-focus-border));
+  border-color: var(--sn-selection-hover-border, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-field-control-border, var(--sn-sys-outline))));
 }
 
 .sn-selection-input:focus-visible + .sn-selection-visual {
@@ -186,7 +186,7 @@ sn-switch .sn-selection-mark {
   block-size: var(--sn-selection-switch-thumb-size, 14px);
   border-radius: var(--sn-radius-full);
   background: var(--sn-selection-switch-thumb-bg, var(--sn-field-toggle-thumb-bg, var(--sn-node-bg, #fff)));
-  box-shadow: var(--sn-selection-switch-thumb-shadow, 0 1px 2px var(--sn-shadow-color, rgba(0, 0, 0, 0.2)));
+  box-shadow: var(--sn-selection-switch-thumb-shadow, 0 1px 2px var(--sn-shadow-color, var(--sn-sys-shadow-raised)));
   opacity: 1;
   transform: translateX(0);
 }
@@ -199,7 +199,7 @@ sn-switch .sn-selection-input:checked + .sn-selection-visual .sn-selection-mark 
 sn-checkbox[invalid] .sn-selection-visual,
 sn-radio[invalid] .sn-selection-visual,
 sn-switch[invalid] .sn-selection-visual {
-  border-color: var(--sn-selection-error-border, var(--sn-status-error, var(--sn-danger-color, #ff4d4f)));
+  border-color: var(--sn-selection-error-border, var(--sn-status-error, var(--sn-danger-color, var(--sn-sys-danger))));
 }
 
 sn-checkbox[disabled],

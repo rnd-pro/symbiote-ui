@@ -9,7 +9,7 @@ sn-video-player {
 .sn-video-container {
   position: relative;
   width: 100%;
-  background-color: var(--sn-video-bg, var(--sn-bg, #000));
+  background-color: var(--sn-video-bg, var(--sn-sys-surface-sunken));
   border-radius: var(--sn-panel-radius, 6px);
   overflow: hidden;
   box-sizing: border-box;
@@ -25,7 +25,7 @@ sn-video-player {
   bottom: 0;
   left: 0;
   right: 0;
-  background: var(--sn-video-controls-bg, linear-gradient(transparent, rgba(0, 0, 0, 0.85)));
+  background: var(--sn-video-controls-bg, linear-gradient(transparent, color-mix(in oklch, var(--sn-sys-scrim) 85%, transparent)));
   padding: var(--sn-step-4) var(--sn-step-6);
   display: flex;
   flex-direction: column;
@@ -55,7 +55,7 @@ sn-video-player {
 .sn-video-btn {
   background: none;
   border: none;
-  color: var(--sn-video-btn-color, #fff);
+  color: var(--sn-video-btn-color, var(--sn-sys-on-status));
   cursor: pointer;
   padding: var(--sn-step-2);
   border-radius: var(--sn-radius-sm);
@@ -66,14 +66,14 @@ sn-video-player {
 }
 
 .sn-video-btn:hover {
-  color: var(--sn-node-selected, #2e90fa);
+  color: var(--sn-sys-accent);
 }
 
 .sn-video-scrub-bar {
   -webkit-appearance: none;
   width: 100%;
   height: 4px;
-  background: var(--sn-video-track, rgba(255, 255, 255, 0.3));
+  background: var(--sn-video-track, color-mix(in oklch, var(--sn-sys-on-status) 30%, transparent));
   border-radius: var(--sn-radius-xs);
   outline: none;
   cursor: pointer;
@@ -90,14 +90,14 @@ sn-video-player {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: var(--sn-node-selected, #2e90fa);
+  background: var(--sn-sys-accent);
   cursor: pointer;
   margin-top: var(--sn-step-0, -3px);
 }
 
 .sn-video-time {
   font-size: var(--sn-text-xs);
-  color: var(--sn-video-text, #fff);
+  color: var(--sn-video-text, var(--sn-sys-on-status));
   font-variant-numeric: tabular-nums;
 }
 
@@ -105,7 +105,7 @@ sn-video-player {
   -webkit-appearance: none;
   width: 60px;
   height: 4px;
-  background: var(--sn-video-track, rgba(255, 255, 255, 0.3));
+  background: var(--sn-video-track, color-mix(in oklch, var(--sn-sys-on-status) 30%, transparent));
   border-radius: var(--sn-radius-xs);
   outline: none;
   cursor: pointer;
@@ -117,6 +117,6 @@ sn-video-player {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--sn-video-thumb, #fff);
+  background: var(--sn-video-thumb, var(--sn-sys-on-status));
 }
 `;

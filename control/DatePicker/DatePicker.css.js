@@ -19,8 +19,8 @@ sn-date-picker {
   width: 100%;
   min-height: calc(36px * var(--sn-theme-density, 1));
   padding: 0 calc(12px * var(--sn-theme-density, 1));
-  background: var(--sn-field-control-bg, var(--sn-bg, #0c0c0e));
-  border: 1px solid var(--sn-field-control-border, var(--sn-outline-color-soft, rgba(255,255,255,0.08)));
+  background: var(--sn-field-control-bg, var(--sn-bg, var(--sn-sys-surface)));
+  border: 1px solid var(--sn-field-control-border, var(--sn-outline-color-soft, var(--sn-sys-outline-subtle)));
   border-radius: var(--sn-field-control-radius, var(--sn-panel-radius, 6px));
   color: var(--sn-text);
   font-size: calc(13px * var(--sn-theme-type-scale, 1));
@@ -30,12 +30,12 @@ sn-date-picker {
 
 .sn-date-trigger:focus-visible {
   outline: none;
-  border-color: var(--sn-field-control-focus-border, var(--sn-node-selected, #2e90fa));
-  box-shadow: 0 0 0 2px color-mix(in oklab, var(--sn-node-selected, #2e90fa) 25%, transparent);
+  border-color: var(--sn-field-control-focus-border, var(--sn-node-selected, var(--sn-sys-accent)));
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--sn-node-selected, var(--sn-sys-accent)) 25%, transparent);
 }
 
 .sn-date-calendar-icon {
-  color: var(--sn-text-dim, rgba(255,255,255,0.6));
+  color: var(--sn-text-dim, var(--sn-sys-on-surface-dim));
 }
 
 .sn-date-dropdown {
@@ -45,10 +45,10 @@ sn-date-picker {
   left: 0;
   z-index: 1000;
   margin-top: var(--sn-step-2);
-  background-color: var(--sn-panel-bg, #1e1e24);
-  border: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
+  background-color: var(--sn-panel-bg, var(--sn-sys-surface-overlay));
+  border: 1px solid var(--sn-outline-color-soft, var(--sn-sys-outline-subtle));
   border-radius: var(--sn-panel-radius, 6px);
-  box-shadow: var(--sn-panel-shadow, 0 10px 25px rgba(0,0,0,0.35));
+  box-shadow: var(--sn-panel-shadow, var(--sn-sys-shadow-overlay));
   padding: var(--sn-step-4);
   box-sizing: border-box;
   min-width: 260px;
@@ -79,7 +79,7 @@ sn-date-picker {
 }
 
 .sn-calendar-nav-btn:hover {
-  background-color: var(--sn-node-hover, rgba(255,255,255,0.05));
+  background-color: var(--sn-node-hover, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), transparent));
 }
 
 .sn-calendar-title {
@@ -104,7 +104,7 @@ sn-date-picker {
 .sn-calendar-weekday {
   font-size: var(--sn-text-xs);
   font-weight: 500;
-  color: var(--sn-text-dim, rgba(255,255,255,0.6));
+  color: var(--sn-text-dim, var(--sn-sys-on-surface-dim));
   padding: var(--sn-step-2) 0;
 }
 
@@ -117,23 +117,27 @@ sn-date-picker {
 }
 
 .sn-calendar-day:hover {
-  background-color: var(--sn-node-hover, rgba(255,255,255,0.05));
+  background-color: var(--sn-node-hover, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), transparent));
 }
 
 .sn-calendar-day:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px color-mix(in oklab, var(--sn-node-selected, #2e90fa) 60%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--sn-node-selected, var(--sn-sys-accent)) 60%, transparent);
 }
 
 .sn-calendar-nav-btn:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px color-mix(in oklab, var(--sn-node-selected, #2e90fa) 60%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--sn-node-selected, var(--sn-sys-accent)) 60%, transparent);
 }
 
 .sn-calendar-day[data-selected] {
-  background-color: var(--sn-node-selected, #2e90fa);
-  color: var(--sn-node-selected-text, #fff);
+  background-color: var(--sn-node-selected, color-mix(in oklch, var(--sn-sys-accent) 100%, var(--sn-sys-surface-overlay)));
+  color: var(--sn-node-selected-text, var(--sn-sys-on-accent));
   font-weight: bold;
+}
+
+.sn-calendar-day[data-selected]:hover {
+  background-color: color-mix(in oklch, var(--sn-sys-on-surface) var(--sn-sys-state-hover-mix), var(--sn-node-selected, var(--sn-sys-accent)));
 }
 
 .sn-calendar-day[data-other-month] {

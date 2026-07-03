@@ -24,7 +24,10 @@ const nodeViewManagerSource = new URL('../canvas/NodeViewManager.js', import.met
 const portItemStyles = new URL('../node/PortItem/PortItem.css.js', import.meta.url);
 const ctrlItemStyles = new URL('../node/CtrlItem/CtrlItem.css.js', import.meta.url);
 const nodeSocketStyles = new URL('../node/NodeSocket/NodeSocket.css.js', import.meta.url);
+const nodeCanvasSource = new URL('../canvas/NodeCanvas/NodeCanvas.js', import.meta.url);
 const nodeCanvasStyles = new URL('../canvas/NodeCanvas/NodeCanvas.css.js', import.meta.url);
+const connectionRendererSource = new URL('../canvas/ConnectionRenderer.js', import.meta.url);
+const canvasConnectionRendererSource = new URL('../canvas/CanvasConnectionRenderer.js', import.meta.url);
 const layoutStyles = new URL('../layout/Layout/Layout.css.js', import.meta.url);
 const layoutSource = new URL('../layout/Layout/Layout.js', import.meta.url);
 const layoutNodeSource = new URL('../layout/LayoutNode/LayoutNode.js', import.meta.url);
@@ -89,6 +92,56 @@ function parseRgbToken(_source, value) {
 
 function flattenTokenTargets(tokenTargets = {}) {
   return new Set(Object.values(tokenTargets).flat());
+}
+
+function createMemoryStorage(initialEntries = []) {
+  let store = new Map(initialEntries);
+  let calls = [];
+  return {
+    calls,
+    get length() {
+      return store.size;
+    },
+    key(index) {
+      return Array.from(store.keys())[index] ?? null;
+    },
+    getItem(key) {
+      return store.has(key) ? store.get(key) : null;
+    },
+    setItem(key, value) {
+      calls.push(['setItem', key, value]);
+      store.set(key, String(value));
+    },
+    removeItem(key) {
+      calls.push(['removeItem', key]);
+      store.delete(key);
+    },
+    clear() {
+      calls.push(['clear']);
+      store.clear();
+    },
+    entries() {
+      return Array.from(store.entries());
+    },
+  };
+}
+
+function createStyleStub() {
+  let values = new Map();
+  return {
+    setProperty(name, value) {
+      values.set(name, value);
+    },
+    removeProperty(name) {
+      values.delete(name);
+    },
+    getPropertyValue(name) {
+      return values.get(name) || '';
+    },
+    [Symbol.iterator]() {
+      return values.keys();
+    },
+  };
 }
 
 test('theme scrollbar normal state uses the normal thumb token', async () => {
@@ -491,10 +544,10 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.equal(theme.tokens['--sn-theme-name'], 'cascade-theme');
   assert.equal(theme.tokens['--sn-theme-bg-lightness'], '10.0%');
   assert.equal(theme.tokens['--sn-theme-text-lightness'], '94.0%');
-  assert.equal(theme.tokens['--sn-theme-heading-scale'], '1.00');
+  assert.equal(theme.tokens['--sn-theme-heading-scale'], '1.11');
   assert.equal(balancedHeadingTheme.tokens['--sn-theme-heading-scale'], '1.20');
-  assert.equal(theme.state.pattern, 60);
-  assert.equal(theme.tokens['--sn-theme-pattern-brightness'], '0.60');
+  assert.equal(theme.state.pattern, 0);
+  assert.equal(theme.tokens['--sn-theme-pattern-brightness'], '0.00');
   assert.equal(theme.state.motion, 100);
   assert.equal(theme.tokens['--sn-theme-motion-scale'], '1.00');
   assert.equal(theme.tokens['--sn-motion-enabled'], '1');
@@ -526,12 +579,12 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.equal(theme.tokens['--sn-field-control-bg'], 'var(--sn-bg)');
   assert.equal(theme.tokens['--sn-chat-user-message-bg'], 'color-mix(in oklab, var(--sn-panel-bg) 88%, var(--sn-node-selected) 12%)');
   assert.equal(theme.tokens['--sn-composer-bg'], 'color-mix(in oklab, var(--sn-panel-bg) 90%, var(--sn-text) 4%)');
-  assert.equal(theme.tokens['--sn-grid-dot'], 'hsl(0 0% 94.0% / 0.060)');
-  assert.equal(noPatternTheme.tokens['--sn-grid-dot'], 'hsl(0 0% 94.0% / 0.018)');
-  assert.equal(fullPatternTheme.tokens['--sn-grid-dot'], 'hsl(0 0% 94.0% / 0.088)');
+  assert.equal(theme.tokens['--sn-grid-dot'], 'hsl(0 0% 94.0% / 0.018)');
+  assert.equal(noPatternTheme.tokens['--sn-grid-dot'], 'hsl(0 0% 98.0% / 0.018)');
+  assert.equal(fullPatternTheme.tokens['--sn-grid-dot'], 'hsl(0 0% 98.0% / 0.088)');
   assert.equal(theme.tokens['--sn-cell-dot'], 'hsl(0 0% 60.0%)');
-  assert.equal(theme.tokens['--sn-cell-base-alpha'], '0.033');
-  assert.equal(theme.tokens['--sn-cell-alpha-span'], '0.133');
+  assert.equal(theme.tokens['--sn-cell-base-alpha'], '0.012');
+  assert.equal(theme.tokens['--sn-cell-alpha-span'], '0.070');
   assert.equal(theme.tokens['--sn-hue-accent'], '218');
   assert.equal(theme.tokens['--sn-hue-warning'], '36');
   assert.equal(theme.tokens['--sn-hue-data'], '188');
@@ -557,12 +610,12 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.equal(theme.tokens['--sn-button-primary-color'], 'hsl(0 0% 8.0%)');
   assert.equal(theme.tokens['--sn-button-success-color'], 'hsl(0 0% 8.0%)');
   assert.equal(theme.tokens['--sn-button-danger-hover-color'], 'hsl(0 0% 8.0%)');
-  assert.equal(theme.tokens['--sn-shape-stroke-width'], '0.40');
-  assert.equal(theme.tokens['--sn-shape-port-hint-stroke-width'], '0.50');
+  assert.equal(theme.tokens['--sn-shape-stroke-width'], '0.72');
+  assert.equal(theme.tokens['--sn-shape-port-hint-stroke-width'], '0.90');
   assert.equal(noOutlineTheme.tokens['--sn-shape-stroke-width'], '0.00');
   assert.equal(noOutlineTheme.tokens['--sn-shape-port-hint-stroke-width'], '0.00');
-  assert.equal(fullOutlineTheme.tokens['--sn-shape-stroke-width'], '1.05');
-  assert.equal(fullOutlineTheme.tokens['--sn-shape-port-hint-stroke-width'], '1.32');
+  assert.equal(fullOutlineTheme.tokens['--sn-shape-stroke-width'], '1.90');
+  assert.equal(fullOutlineTheme.tokens['--sn-shape-port-hint-stroke-width'], '2.38');
   assert.equal(theme.tokens['--sn-node-label-size'], 'calc(13px * var(--sn-theme-type-scale) * var(--sn-theme-heading-scale))');
   assert.equal(theme.tokens['--sn-markdown-h1-size'], 'calc(24px * var(--sn-theme-type-scale) * var(--sn-theme-heading-scale))');
   assert.equal(theme.tokens['--sn-chat-markdown-h2-size'], 'calc(18px * var(--sn-theme-type-scale) * var(--sn-theme-heading-scale))');
@@ -597,6 +650,14 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.match(source, /headingToken/);
   assert.match(source, /hueRotate/);
   assert.match(source, /getReadableTextForHsl/);
+  for (let exportedName of [
+    'serializeCascadeThemeBundle',
+    'applyCascadeThemeBundle',
+    'isCascadeThemeBundle',
+    'resetCascadeThemeScopes',
+  ]) {
+    assert.ok(theme.descriptor.exports.includes(exportedName), `${exportedName} missing`);
+  }
   assert.match(source, /symbiote-ui\.createCascadeTheme/);
   assert.match(source, /theme:compose/);
   assert.match(source, /--sn-shape-stroke/);
@@ -702,6 +763,26 @@ test('canvas graph refreshes cached flat renderer colors from cascade theme chan
   assert.ok(canvasGraph.metadata.contract.themeAliases.includes('--sn-canvas-graph-ghost'));
 });
 
+test('node graph focus zoom and connectors settle after DOM size changes', async () => {
+  const [canvasGraph, nodeCanvas, nodeViewManager] = await Promise.all([
+    readFile(canvasGraphSource, 'utf8'),
+    readFile(nodeCanvasSource, 'utf8'),
+    readFile(nodeViewManagerSource, 'utf8'),
+  ]);
+
+  assert.match(canvasGraph, /DEFAULT_CANVAS_GRAPH_FOCUS_ZOOM = 1\.6/);
+  assert.match(canvasGraph, /MAX_CANVAS_GRAPH_FOCUS_ZOOM = 2\.4/);
+  assert.match(canvasGraph, /this\.flyToNode\(nodeId, \{ zoom: DEFAULT_CANVAS_GRAPH_FOCUS_ZOOM \}\)/);
+  assert.match(nodeCanvas, /_nodeResizeObserver = null/);
+  assert.match(nodeCanvas, /new ResizeObserver\(\(entries\) => this\._handleNodeResizeEntries\(entries\)\)/);
+  assert.match(nodeCanvas, /this\._scheduleConnectionUpdate\(nodeId\)/);
+  assert.match(nodeCanvas, /this\._scheduleConnectionSettleRefresh\(2\)/);
+  assert.match(nodeViewManager, /#onNodeViewReady/);
+  assert.match(nodeViewManager, /#onNodeViewRemoved/);
+  assert.match(nodeViewManager, /this\.#onNodeViewReady\?\.\(node\.id, el\)/);
+  assert.match(nodeViewManager, /this\.#onNodeViewRemoved\?\.\(nodeId, el\)/);
+});
+
 test('node type color tokens are canonical across themes and graph aliases', async () => {
   const [cascadeSource, defaultProviderTheme] = await Promise.all([
     readFile(cascadeThemeSource, 'utf8'),
@@ -760,10 +841,12 @@ test('svg shape nodes keep visual icons without internal labels or watermarks', 
 });
 
 test('cascade theme editor is a reusable browser module', async () => {
-  const [editor, widget, widgetTemplate, widgetStyles, styles, uiIndex, registry, customElements, layoutNode, cascadeGuide] = await Promise.all([
+  const [editor, widget, editorTemplate, widgetTemplate, sharedTemplate, widgetStyles, styles, uiIndex, registry, customElements, layoutNode, cascadeGuide, cascadeTheme] = await Promise.all([
     readFile(cascadeThemeEditorSource, 'utf8'),
     readFile(cascadeThemeWidgetSource, 'utf8'),
+    readFile(new URL('../themes/CascadeThemeEditor/CascadeThemeEditor.tpl.js', import.meta.url), 'utf8'),
     readFile(new URL('../themes/CascadeThemeWidget/CascadeThemeWidget.tpl.js', import.meta.url), 'utf8'),
+    readFile(new URL('../themes/CascadeThemeControls.tpl.js', import.meta.url), 'utf8'),
     readFile(new URL('../themes/CascadeThemeWidget/CascadeThemeWidget.css.js', import.meta.url), 'utf8'),
     readFile(new URL('../themes/CascadeThemeEditor/CascadeThemeEditor.css.js', import.meta.url), 'utf8'),
     readFile(uiIndexSource, 'utf8'),
@@ -771,6 +854,7 @@ test('cascade theme editor is a reusable browser module', async () => {
     readFile(customElementsSource, 'utf8'),
     readFile(layoutNodeSource, 'utf8'),
     readFile(cascadeThemeGuideSource, 'utf8'),
+    readFile(cascadeThemeSource, 'utf8'),
   ]);
 
   assert.match(editor, /class CascadeThemeEditor extends Symbiote/);
@@ -784,15 +868,21 @@ test('cascade theme editor is a reusable browser module', async () => {
   assert.match(editor, /storage\.setItem\(this\.storageKey/);
   assert.match(editor, /copyParameters\(\)/);
   assert.match(editor, /reset\(\)/);
-  assert.match(editor, /function clearLocalStorage\(\) \{[\s\S]*?storage\.clear\(\);[\s\S]*?\}/);
-  assert.match(editor, /this\.\#syncRegisterButtons\(\);\s+clearLocalStorage\(\);\s+return;/);
-  assert.match(editor, /if \(active\) this\.\#setActiveTarget\(active\);\s+this\.\#syncRegisterButtons\(\);\s+clearLocalStorage\(\);/);
+  assert.match(editor, /resetCascadeThemeScopes\(scopes, \{/);
+  assert.match(editor, /isNamedScope: \(target\) => String\(target\.id\)\.startsWith\('pick:'\)/);
+  assert.match(cascadeTheme, /if \(options\.clearStorage === true && storage\) \{[\s\S]*storage\.clear\(\);/);
   assert.match(editor, /rangeProgress/);
   assert.match(editor, /--cte-range-progress/);
   assert.match(editor, /new CustomEvent\('cascade-theme-change'/);
   assert.match(editor, /CascadeThemeEditor\.reg\('cascade-theme-editor'\)/);
   // reactive scope/window picker: itemize-driven targets list built on the existing
   // target-selector + storage-key capability (selecting one re-points the editor)
+  assert.match(sharedTemplate, /export function cascadeThemeTargetControls/);
+  assert.match(sharedTemplate, /itemize="targets"/);
+  assert.match(sharedTemplate, /data-target-id/);
+  assert.match(editorTemplate, /cascadeThemeTargetControls\(\{/);
+  assert.match(editorTemplate, /className: 'cte-targets'/);
+  assert.match(editorTemplate, /includePick: true/);
   assert.match(editor, /set targets\(/);
   assert.match(editor, /#pickTarget\(/);
   assert.match(editor, /cascade-theme-target-change/);
@@ -806,10 +896,13 @@ test('cascade theme editor is a reusable browser module', async () => {
   assert.match(widget, /modeDarkActive/);
   assert.match(widget, /onControlInput/);
   assert.match(widget, /onModePick/);
-  assert.match(widget, /function clearLocalStorage\(\) \{[\s\S]*?storage\.clear\(\);[\s\S]*?\}/);
-  assert.match(widget, /this\.\#syncRegisterButtons\(\);\s+clearLocalStorage\(\);/);
+  assert.match(widget, /onTargetPick/);
+  assert.match(widget, /#pickScope\(id\)/);
+  assert.match(widget, /#renderTargets\(\)/);
+  assert.match(widget, /resetCascadeThemeScopes\(scopes, \{/);
+  assert.match(widget, /this\.\#syncRegisterButtons\(\);/);
   assert.match(widget, /cascade-theme-open-full/);
-  assert.match(widget, /mountOverlayToDocument\(popover, this\.\#resolveTarget\(\)\)/);
+  assert.match(widget, /mountOverlayToDocument\(popover, this\.\#resolveOverlayThemeTarget\(this\.\#resolveTarget\(\)\)\)/);
   assert.match(widget, /bringOverlayToFront\(popover\)/);
   assert.match(widget, /restoreOverlayHome\(popover\)/);
   assert.match(widget, /positionOverlay\(trigger, popover, 'bottom-end'/);
@@ -817,6 +910,8 @@ test('cascade theme editor is a reusable browser module', async () => {
   assert.match(widget, /CascadeThemeWidget\.reg\('cascade-theme-widget'\)/);
   assert.match(widgetTemplate, /ref="trigger"/);
   assert.match(widgetTemplate, /ref="popover"/);
+  assert.match(widgetTemplate, /cascadeThemeTargetControls\(\{/);
+  assert.match(widgetTemplate, /className: 'ctw-targets'/);
   assert.match(widgetStyles, /cascade-theme-widget/);
   assert.match(widgetStyles, /cascade-theme-widget \.ctw-trigger \{/);
   assert.match(widgetStyles, /min-height: var\(--sn-shell-menu-action-height/);
@@ -828,6 +923,9 @@ test('cascade theme editor is a reusable browser module', async () => {
   assert.match(widgetStyles, /font-size: var\(--sn-shell-menu-action-size/);
   assert.match(widgetStyles, /cascade-theme-widget \.ctw-trigger:hover/);
   assert.match(widgetStyles, /background: var\(--sn-node-hover\)/);
+  assert.match(widgetStyles, /cascade-theme-widget \.ctw-targets/);
+  assert.match(widgetStyles, /\.ctw-popover\[data-overlay-portal\] \.ctw-targets/);
+  assert.match(widgetStyles, /cascade-theme-widget \.ctw-target\[aria-pressed="true"\]/);
   assert.match(widgetStyles, /\.ctw-popover\[data-overlay-portal\]/);
   assert.match(widgetStyles, /--sn-overlay-z-base, 20000/);
   assert.doesNotMatch(widgetStyles, /--sn-theme-widget-z, 80/);
@@ -863,19 +961,67 @@ test('cascade theme editor is a reusable browser module', async () => {
   assert.match(registry, /cascade_theme_widget_open_full/);
   assert.match(registry, /cascade_theme_widget_apply_quick/);
   assert.match(registry, /pattern: \{ type: 'number', minimum: 0, maximum: 100 \}/);
-  assert.match(registry, /reset clears browser localStorage after applying defaults/);
+  assert.match(registry, /reset removes cascade-owned storage keys after applying defaults/);
   assert.match(registry, /panel_layout_open_panel/);
   assert.match(registry, /panel_layout_close_ui_panel/);
   assert.match(registry, /ui-invoked-panels/);
   assert.match(customElements, /"tagName": "cascade-theme-editor"/);
   assert.match(customElements, /"tagName": "cascade-theme-widget"/);
-  assert.match(customElements, /Restores cascade theme defaults and clears browser localStorage/);
+  assert.match(customElements, /Restores cascade theme defaults and removes cascade-owned storage keys/);
   assert.match(customElements, /"pattern": \{\s*"type": "number",\s*"minimum": 0,\s*"maximum": 100\s*\}/);
   assert.match(customElements, /"componentDescription"/);
-  assert.match(cascadeGuide, /clearing browser\s+`localStorage`/);
+  assert.match(cascadeGuide, /removing only cascade-owned\s+`localStorage` keys/);
   assert.match(layoutNode, /_applyPanelComponentConfig/);
   assert.match(layoutNode, /config\.attributes/);
   assert.match(layoutNode, /config\.properties/);
+});
+
+test('cascade theme reset only removes cascade-owned storage keys by default', async () => {
+  let { resetCascadeThemeScopes } = await import(cascadeThemeSource.href);
+  let storage = createMemoryStorage([
+    ['theme:main', JSON.stringify({ hue: 44 })],
+    ['theme:main::geometry-register', 'tool'],
+    ['theme:main::win::Inspector', JSON.stringify({ hue: 220 })],
+    ['theme:main::win::Inspector::geometry-register', 'spacious'],
+    ['voice-settings', JSON.stringify({ enabled: true })],
+  ]);
+  let root = { style: createStyleStub(), dataset: {} };
+
+  resetCascadeThemeScopes(
+    [{ id: 'main', storageKey: 'theme:main', defaultState: { hue: 205 } }],
+    {
+      storage,
+      resolveScopeTarget: () => root,
+      document: {
+        querySelectorAll: () => [{
+          style: root.style,
+          dataset: { themeKey: 'theme:main::win::Inspector' },
+        }],
+      },
+    }
+  );
+
+  assert.equal(storage.calls.some(([method]) => method === 'clear'), false);
+  assert.deepEqual(storage.entries(), [['voice-settings', JSON.stringify({ enabled: true })]]);
+});
+
+test('cascade theme normalizes invalid numeric params without NaN tokens', async () => {
+  let themeModule = await import(cascadeThemeSource.href);
+  let theme = themeModule.createCascadeTheme({
+    hue: 'blue',
+    chroma: 'bad',
+    density: 'wide',
+    contrast: 'max',
+    bgLightness: 'none',
+  });
+  let serializedTokens = JSON.stringify(theme.tokens);
+
+  assert.equal(theme.state.hue, themeModule.CASCADE_THEME_DEFAULTS.hue);
+  assert.equal(theme.state.chroma, themeModule.CASCADE_THEME_DEFAULTS.chroma);
+  assert.equal(theme.state.density, themeModule.CASCADE_THEME_DEFAULTS.density);
+  assert.equal(theme.state.contrast, themeModule.CASCADE_THEME_DEFAULTS.contrast);
+  assert.equal(serializedTokens.includes('NaN'), false);
+  assert.match(themeModule.getReadableTextForHsl(218, 89, 63), /^hsl\(0 0% (8|98)\.0%\)$/);
 });
 
 test('component descriptor v2 includes agent-facing WebMCP context', async () => {
@@ -948,7 +1094,7 @@ test('documentation guides preserve public agent UI constructor contracts', asyn
   assert.match(runtimeGuide, /chat-composer-recorder-intent/);
   assert.match(runtimeGuide, /chat-composer-transcription-intent/);
   assert.match(runtimeGuide, /chat-workspace/);
-  assert.match(cascadeGuide, /heading: 100/);
+  assert.match(cascadeGuide, /heading: 111/);
   assert.match(cascadeGuide, /motion: 100/);
   assert.match(cascadeGuide, /--sn-theme-heading-scale/);
   assert.match(cascadeGuide, /--sn-motion-enabled/);
@@ -1050,8 +1196,8 @@ test('cascade theme derives distinct dark and light branches', async () => {
   assert.equal(lightTheme.tokens['color-scheme'], 'light');
   assert.equal(darkTheme.tokens['--sn-bg'], 'hsl(0 0% 10.0%)');
   assert.equal(lightTheme.tokens['--sn-bg'], 'hsl(0 0% 98.0%)');
-  assert.equal(darkTheme.tokens['--sn-text'], 'hsl(0 0% 94.0%)');
-  assert.equal(lightTheme.tokens['--sn-text'], 'hsl(0 0% 18.9%)');
+  assert.equal(darkTheme.tokens['--sn-text'], 'hsl(0 0% 98.0%)');
+  assert.equal(lightTheme.tokens['--sn-text'], 'hsl(0 0% 8.0%)');
   assert.equal(darkTheme.tokens['--sn-theme-outline-strength'], lightTheme.tokens['--sn-theme-outline-strength']);
   assert.equal(darkTheme.tokens['--sn-field-control-bg'], 'var(--sn-bg)');
   assert.equal(lightTheme.tokens['--sn-field-control-bg'], 'var(--sn-bg)');
@@ -1433,7 +1579,7 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(codeBlock, /--sn-markdown-h4-size/);
   assert.match(codeBlock, /--sn-code-font-size/);
   assert.match(codeBlock, /--sn-code-padding/);
-  assert.match(codeBlock, /--sn-code-table-row-hover-bg, var\(--sn-bg\)/);
+  assert.match(codeBlock, /--sn-code-table-row-hover-bg, color-mix\(in oklch, var\(--sn-sys-accent\) var\(--sn-sys-state-hover-mix\), var\(--sn-sys-surface\)\)/);
   assert.doesNotMatch(codeBlock, /md-table tr:hover td \{\s*background: var\(--sn-bg-overlay\);/);
   assert.match(chatMessage, /--sn-chat-markdown-h1-size/);
   assert.match(chatMessage, /--sn-chat-markdown-h4-size/);
@@ -1442,6 +1588,8 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(chatMessage, /--sn-chat-status-card-size/);
   assert.match(chatMessage, /--sn-chat-user-message-bg/);
   assert.match(chatMessage, /--sn-chat-agent-message-bg/);
+  assert.match(chatMessage, /\.message\.system \{[\s\S]*min-width: 0/);
+  assert.match(chatMessage, /\.message\.system \.msg-content \{[\s\S]*display: flex[\s\S]*overflow-wrap: anywhere/);
   assert.match(chatMessage, /--sn-syntax-keyword/);
   assert.match(chatTranscript, /--sn-chat-bg/);
   assert.match(chatTranscript, /--sn-chat-transcript-padding/);
@@ -1452,6 +1600,7 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(chatComposer, /--sn-composer-send-size/);
   assert.match(chatComposer, /--sn-composer-input-size/);
   assert.match(chatComposer, /--sn-composer-input-min-inline-size/);
+  assert.match(chatComposer, /textarea::placeholder \{[\s\S]*color: color-mix\(in oklab, var\(--sn-text-dim\) 72%, transparent\)/);
   assert.match(chatComposer, /grid-template-columns: minmax\(0, 1fr\) auto auto/);
   assert.match(chatComposer, /grid-template-rows: auto/);
   assert.match(chatComposer, /container: chat-composer \/ inline-size/);
@@ -1641,6 +1790,31 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(customElements, /Control variant: default, primary, success, danger, or icon\./);
   assert.match(customElements, /"name": "--sn-tabs-accent"/);
   assert.match(customElements, /"name": "--sn-tab-accent-5"/);
+});
+
+test('layout chrome exposes canvas motion controls and full tab frames', async () => {
+  const [layoutNodeSourceText, nodeCanvasSourceText, connectionRendererSourceText, canvasConnectionRendererSourceText, projectTabsCss] = await Promise.all([
+    readFile(layoutNodeSource, 'utf8'),
+    readFile(nodeCanvasSource, 'utf8'),
+    readFile(connectionRendererSource, 'utf8'),
+    readFile(canvasConnectionRendererSource, 'utf8'),
+    readFile(projectTabsStyles, 'utf8'),
+  ]);
+
+  assert.match(layoutNodeSourceText, /motion: \{ id: 'motion', label: 'Motion', order: 15 \}/);
+  assert.match(nodeCanvasSourceText, /group: 'motion'/);
+  assert.match(nodeCanvasSourceText, /id: 'flow:run'/);
+  assert.match(nodeCanvasSourceText, /id: 'flow:stop'/);
+  assert.match(nodeCanvasSourceText, /id: 'flow:toggle'/);
+  assert.match(nodeCanvasSourceText, /new FlowSimulator/);
+  assert.match(nodeCanvasSourceText, /_scheduleConnectionSettleRefresh\(3\)/);
+  assert.match(connectionRendererSourceText, /#getLocalElementCenter/);
+  assert.match(connectionRendererSourceText, /nodeRect\.width && localWidth \? nodeRect\.width \/ localWidth/);
+  assert.match(canvasConnectionRendererSourceText, /#getLocalElementCenter/);
+  assert.match(canvasConnectionRendererSourceText, /nodeRect\.width && localWidth \? nodeRect\.width \/ localWidth/);
+  assert.match(canvasConnectionRendererSourceText, /#getNodeSize/);
+  assert.match(projectTabsCss, /border: 1px solid var\(--sn-tabs-item-border, transparent\)/);
+  assert.doesNotMatch(projectTabsCss, /border-bottom: none/);
 });
 
 test('default provider exposes cascade control and scrollbar parity tokens', async () => {
@@ -1868,6 +2042,7 @@ test('chat composer exposes reusable voice controls and agent-facing metadata', 
   assert.match(composer, /chat-composer-footer-control/);
   assert.match(composer, /chat-composer-leading-control/);
   assert.match(composer, /chat-composer-footer-control-change/);
+  assert.match(composer, /if \(action === 'start'\) \{\n\s+this\._voiceCommandMode = true;\n\s+this\._localVoiceActiveMode = 'wake'/);
   assert.match(composer, /_handleDefaultVoiceApprove/);
   assert.match(composer, /_showLocalRecordingPreview\(''\)/);
   assert.match(composer, /_showLocalWakePreview\(\)/);

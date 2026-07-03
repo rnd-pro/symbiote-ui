@@ -72,19 +72,13 @@ export class ContextMenu extends Symbiote {
   init$ = {
     items: [],
     visible: false,
-    onBackdropClick: () => this.hide(),
     onItemClick: (label) => {
       let action = this._actions.get(label);
       if (action) action();
       this.hide();
     },
     onKeydown: (e) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        this.hide();
-        return;
-      }
-
+      // Escape is handled natively by the `popover` light-dismiss behavior (see #onToggle).
       const items = this.getItemsElements();
       if (items.length === 0) return;
 
@@ -143,13 +137,11 @@ export class ContextMenu extends Symbiote {
       divider: Boolean(i.divider),
     }));
 
-    let menu = this.querySelector('.sn-ctx-menu');
-    if (menu) {
-      menu.style.left = `${x}px`;
-      menu.style.top = `${y}px`;
-    }
+    this.style.left = `${x}px`;
+    this.style.top = `${y}px`;
     bringOverlayToFront(this);
     this.$.visible = true;
+    this.showPopover();
 
     setTimeout(() => {
       this.focusFirstItem();
@@ -157,13 +149,36 @@ export class ContextMenu extends Symbiote {
   }
 
   hide() {
+    if (!this.$.visible) return;
     this.$.visible = false;
+    this.hidePopover();
     this.$.items = [];
     this._actions.clear();
     if (this.#triggerEl && typeof this.#triggerEl.focus === 'function') {
       this.#triggerEl.focus();
     }
     this.#triggerEl = null;
+  }
+
+  // Fires for native light-dismiss (Escape / outside click) as well as our own
+  // showPopover()/hidePopover() calls; hide() is idempotent once $.visible is false.
+  #onToggle = (event) => {
+    if (event.newState === 'closed') {
+      this.hide();
+    }
+  };
+
+  connectedCallback() {
+    super.connectedCallback?.();
+    if (!this.hasAttribute('popover')) {
+      this.setAttribute('popover', 'auto');
+    }
+    this.addEventListener('toggle', this.#onToggle);
+  }
+
+  disconnectedCallback() {
+    this.removeEventListener('toggle', this.#onToggle);
+    super.disconnectedCallback?.();
   }
 
   renderCallback() {

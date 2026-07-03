@@ -2,39 +2,42 @@ import { css } from '@symbiotejs/symbiote';
 
 export let styles = css`
   context-menu {
-    --sn-overlay-z-tier: local;
-    --sn-overlay-z-base: var(--sn-ctx-z, var(--sn-canvas-overlay-z-base, 12000));
-    position: absolute;
-    inset: 0;
-    z-index: var(--sn-ctx-z, var(--sn-canvas-overlay-z-base, 12000));
-    pointer-events: none;
+    --sn-ctx-bg: var(--sn-sys-surface-overlay);
+    --sn-ctx-border: var(--sn-sys-outline-subtle);
+    --sn-ctx-color: var(--sn-sys-on-surface);
+    --sn-ctx-shadow-color: var(--sn-sys-shadow-overlay);
+    --sn-ctx-divider-color: var(--sn-sys-outline-subtle);
+    --sn-ctx-check-color: var(--sn-sys-accent);
+    --sn-ctx-detail-color: var(--sn-sys-on-surface-dim);
+    --sn-ctx-destructive-color: var(--sn-sys-danger);
 
-    &[hidden] {
+    margin: 0;
+    padding: 0;
+    border: none;
+    inset: auto;
+    position: fixed;
+    min-width: 180px;
+    background: var(--sn-ctx-bg);
+    border: 1px solid var(--sn-ctx-border);
+    border-radius: var(--sn-radius-lg);
+    box-shadow: 0 8px 24px var(--sn-ctx-shadow-color);
+    padding: var(--sn-step-2);
+    overflow: hidden;
+    color: var(--sn-ctx-color);
+
+    &:not(:popover-open) {
       display: none;
     }
+  }
 
-    & .sn-ctx-backdrop {
-      position: absolute;
-      inset: 0;
-      pointer-events: all;
-    }
-
-    & .sn-ctx-menu {
-      position: absolute;
-      pointer-events: all;
-      min-width: 180px;
-      background: var(--sn-ctx-bg, #1e1e1e);
-      border: 1px solid var(--sn-ctx-border, #333);
-      border-radius: var(--sn-radius-lg);
-      box-shadow: 0 8px 24px var(--sn-shadow-color, rgba(0,0,0,0.5));
-      padding: var(--sn-step-2);
-      overflow: hidden;
-    }
+  .ctx-items {
+    display: flex;
+    flex-direction: column;
   }
 
   .sn-ctx-divider {
     height: 1px;
-    background: var(--sn-ctx-divider-color, var(--sn-tabs-divider, #333));
+    background: var(--sn-ctx-divider-color);
     margin: var(--sn-step-2) var(--sn-step-3);
   }
 
@@ -54,7 +57,7 @@ export let styles = css`
     padding: var(--sn-step-3) var(--sn-step-6);
     border: none;
     background: transparent;
-    color: var(--sn-ctx-color, #e0e0e0);
+    color: var(--sn-ctx-color);
     font-family: var(--sn-font);
     font-size: var(--sn-text-md);
     cursor: pointer;
@@ -63,12 +66,12 @@ export let styles = css`
     outline: none;
 
     &:hover {
-      background: var(--sn-ctx-hover, #2d2d2d);
+      background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), transparent);
     }
 
     &:focus-visible {
-      background: var(--sn-ctx-hover, #2d2d2d);
-      box-shadow: 0 0 0 2px var(--sn-focus-ring-color, currentColor);
+      background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), transparent);
+      box-shadow: 0 0 0 2px var(--sn-sys-focus-ring, currentColor);
     }
   }
 
@@ -83,7 +86,7 @@ export let styles = css`
     justify-content: center;
     width: 16px;
     font-size: var(--sn-text-sm);
-    color: var(--tab-accent, var(--sn-tabs-accent, #007acc));
+    color: var(--sn-ctx-check-color);
   }
 
   .sn-ctx-label {
@@ -94,33 +97,35 @@ export let styles = css`
   .sn-ctx-detail {
     margin-left: auto;
     font-size: var(--sn-text-xs);
-    color: var(--sn-text-dim, #888);
+    color: var(--sn-ctx-detail-color);
     padding-left: var(--sn-step-6);
   }
 
   .sn-ctx-btn[destructive] {
-    color: var(--sn-status-error, #f85149);
+    color: var(--sn-ctx-destructive-color);
   }
 
   .sn-ctx-btn[destructive]:hover {
-    background: var(--sn-ctx-destructive-hover-bg, rgba(248, 81, 73, 0.15));
+    background: color-mix(in oklch, var(--sn-sys-danger) var(--sn-sys-state-hover-mix), transparent);
   }
 
   .sn-ctx-btn[destructive]:focus-visible {
-    background: var(--sn-ctx-destructive-hover-bg, rgba(248, 81, 73, 0.15));
+    background: color-mix(in oklch, var(--sn-sys-danger) var(--sn-sys-state-hover-mix), transparent);
   }
 
   .sn-ctx-btn[disabled] {
-    opacity: 0.5;
+    opacity: var(--sn-sys-state-disabled-opacity);
     cursor: not-allowed;
   }
 
   .sn-ctx-btn[disabled]:hover {
-    background: transparent;
+    /* disabled items never receive a state layer — mix a zero-strength state color so this
+       stays inside the sanctioned color-mix system instead of a hand-rolled transparent. audit-ok */
+    background: color-mix(in oklch, var(--sn-sys-accent) 0%, transparent);
   }
 
   .sn-ctx-btn[disabled]:focus-visible {
-    background: transparent;
+    background: color-mix(in oklch, var(--sn-sys-accent) 0%, transparent);
     box-shadow: none;
   }
 `;

@@ -38,9 +38,9 @@ sn-carousel {
   top: 50%;
   transform: translateY(-50%);
   z-index: 10;
-  background-color: var(--sn-panel-bg, #1e1e24);
-  border: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
-  color: var(--sn-text);
+  background-color: var(--sn-sys-surface-panel);
+  border: 1px solid var(--sn-sys-outline-subtle);
+  color: var(--sn-sys-on-surface);
   border-radius: 50%;
   width: 32px;
   height: 32px;
@@ -48,13 +48,13 @@ sn-carousel {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 8px var(--sn-shadow-color, rgba(0,0,0,0.3));
+  box-shadow: var(--sn-sys-shadow-raised);
   transition: opacity var(--sn-transition-fast, 120ms);
 }
 
 .sn-carousel-nav-btn:hover {
-  background: var(--sn-node-hover, rgba(255,255,255,0.05));
-  border-color: var(--sn-node-selected, #2e90fa);
+  background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-panel));
+  border-color: var(--sn-sys-accent);
 }
 
 .sn-carousel-nav-prev {
@@ -76,7 +76,7 @@ sn-carousel {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background-color: var(--sn-text-dim, rgba(255,255,255,0.25));
+  background-color: var(--sn-sys-on-surface-dim);
   cursor: pointer;
   padding: 0;
   border: none;
@@ -84,6 +84,6 @@ sn-carousel {
 }
 
 .sn-carousel-dot[data-active] {
-  background-color: var(--sn-node-selected, #2e90fa);
+  background-color: var(--sn-sys-accent);
 }
 `;

@@ -16,7 +16,7 @@ chat-list-item {
 }
 
 .chat-list-item:hover {
-  background: var(--sn-node-hover);
+  background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-raised));
 }
 
 :host([active]) .chat-list-item,

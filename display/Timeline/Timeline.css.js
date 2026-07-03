@@ -34,7 +34,7 @@ sn-timeline-item:last-child {
 .sn-timeline-connector {
   width: 2px;
   flex: 1;
-  background: var(--sn-timeline-connector-color, var(--sn-outline-color-soft, rgba(255, 255, 255, 0.08)));
+  background: var(--sn-timeline-connector-color, var(--sn-sys-outline-subtle));
   margin-top: var(--sn-step-2);
 }
 
@@ -49,25 +49,25 @@ sn-timeline-item:last-child .sn-timeline-connector {
   width: var(--sn-timeline-indicator-size, 10px);
   height: var(--sn-timeline-indicator-size, 10px);
   border-radius: 50%;
-  background: var(--sn-timeline-indicator-bg, var(--sn-outline-color, rgba(255, 255, 255, 0.12)));
-  border: 2px solid var(--sn-timeline-indicator-border, var(--sn-panel-bg, #1e1e24));
+  background: var(--sn-timeline-indicator-bg, var(--sn-sys-outline));
+  border: 2px solid var(--sn-timeline-indicator-border, var(--sn-sys-surface-panel));
   transition: all var(--sn-transition-normal, 240ms);
 }
 
 sn-timeline-item[variant="success"] .sn-timeline-indicator {
-  background: var(--sn-success-color, #4caf50);
+  background: var(--sn-sys-success);
 }
 
 sn-timeline-item[variant="warning"] .sn-timeline-indicator {
-  background: var(--sn-warning-color, #ff9800);
+  background: var(--sn-sys-warning);
 }
 
 sn-timeline-item[variant="error"] .sn-timeline-indicator {
-  background: var(--sn-danger-color, #f44336);
+  background: var(--sn-sys-danger);
 }
 
 sn-timeline-item[variant="info"] .sn-timeline-indicator {
-  background: var(--sn-node-selected, #2196f3);
+  background: var(--sn-sys-info);
 }
 
 .sn-timeline-item-content {
@@ -82,17 +82,17 @@ sn-timeline-item[variant="info"] .sn-timeline-indicator {
 .sn-timeline-title {
   font-size: var(--sn-timeline-title-size, 12px);
   font-weight: 600;
-  color: var(--sn-timeline-title-color, var(--sn-text, #ffffff));
+  color: var(--sn-timeline-title-color, var(--sn-sys-on-surface));
 }
 
 .sn-timeline-time {
   font-size: var(--sn-timeline-time-size, 10px);
-  color: var(--sn-timeline-time-color, var(--sn-text-dim-extra, rgba(255, 255, 255, 0.4)));
+  color: var(--sn-timeline-time-color, var(--sn-sys-on-surface-faint));
 }
 
 .sn-timeline-body {
   font-size: var(--sn-timeline-body-size, 11px);
-  color: var(--sn-timeline-body-color, var(--sn-text-dim, rgba(255, 255, 255, 0.7)));
+  color: var(--sn-timeline-body-color, var(--sn-sys-on-surface-dim));
   line-height: 1.4;
 }
 `;

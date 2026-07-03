@@ -20,7 +20,7 @@ sn-nav-item {
   padding: var(--sn-nav-item-padding, 6px 12px);
   font-family: var(--sn-font, sans-serif);
   font-size: var(--sn-nav-item-font-size, 12px);
-  color: var(--sn-nav-item-color, var(--sn-text-dim, rgba(255, 255, 255, 0.7)));
+  color: var(--sn-nav-item-color, var(--sn-sys-on-surface-dim));
   cursor: pointer;
   user-select: none;
   gap: var(--sn-nav-item-gap, 8px);
@@ -32,24 +32,24 @@ sn-nav-item {
 
 sn-nav-item:hover,
 sn-nav-item:focus-visible {
-  background: var(--sn-nav-item-hover-bg, var(--sn-node-hover, rgba(255, 255, 255, 0.05)));
-  color: var(--sn-nav-item-hover-color, var(--sn-text, #ffffff));
+  background: var(--sn-nav-item-hover-bg, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), transparent));
+  color: var(--sn-nav-item-hover-color, var(--sn-sys-on-surface));
 }
 
 sn-nav-item:focus-visible {
-  outline: 2px solid var(--sn-focus-ring-color, currentColor);
+  outline: var(--sn-sys-focus-ring-width, 2px) solid var(--sn-sys-focus-ring);
   outline-offset: -2px;
 }
 
 sn-nav-item[active] {
-  background: var(--sn-nav-item-active-bg, var(--sn-node-selected, rgba(255, 255, 255, 0.15)));
-  color: var(--sn-nav-item-active-color, var(--sn-text, #ffffff));
+  background: var(--sn-nav-item-active-bg, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-selected-mix), transparent));
+  color: var(--sn-nav-item-active-color, var(--sn-sys-on-surface));
   font-weight: 500;
 }
 
 sn-nav-item[disabled] {
   cursor: not-allowed;
-  opacity: var(--sn-nav-item-disabled-opacity, 0.45);
+  opacity: var(--sn-nav-item-disabled-opacity, var(--sn-sys-state-disabled-opacity, 0.38));
   pointer-events: none;
 }
 
@@ -69,8 +69,8 @@ sn-nav-item[disabled] {
   min-width: 16px;
   height: 16px;
   border-radius: var(--sn-radius-lg);
-  background: var(--sn-nav-item-badge-bg, var(--sn-outline-color, rgba(255, 255, 255, 0.12)));
-  color: var(--sn-nav-item-badge-color, var(--sn-text, #ffffff));
+  background: var(--sn-nav-item-badge-bg, var(--sn-sys-outline));
+  color: var(--sn-nav-item-badge-color, var(--sn-sys-on-surface));
   font-size: var(--sn-text-2xs, 9px);
   font-weight: 600;
 }

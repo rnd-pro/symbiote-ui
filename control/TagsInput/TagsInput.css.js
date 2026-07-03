@@ -14,15 +14,15 @@ sn-tags-input {
   width: 100%;
   min-height: calc(36px * var(--sn-theme-density, 1));
   padding: var(--sn-step-2, 4px) calc(12px * var(--sn-theme-density, 1));
-  background: var(--sn-field-control-bg, var(--sn-bg, #0c0c0e));
-  border: 1px solid var(--sn-field-control-border, var(--sn-outline-color-soft, rgba(255,255,255,0.08)));
+  background: var(--sn-field-control-bg, var(--sn-bg, var(--sn-sys-surface)));
+  border: 1px solid var(--sn-field-control-border, var(--sn-outline-color-soft, var(--sn-sys-outline-subtle)));
   border-radius: var(--sn-field-control-radius, var(--sn-panel-radius, 6px));
   transition: border-color var(--sn-transition-fast, 120ms);
 }
 
 .sn-tags-container:focus-within {
-  border-color: var(--sn-field-control-focus-border, var(--sn-node-selected, #2e90fa));
-  box-shadow: 0 0 0 2px color-mix(in oklab, var(--sn-node-selected, #2e90fa) 25%, transparent);
+  border-color: var(--sn-field-control-focus-border, var(--sn-node-selected, var(--sn-sys-accent)));
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--sn-node-selected, var(--sn-sys-accent)) 25%, transparent);
 }
 
 .sn-tags-list {
@@ -39,8 +39,8 @@ sn-tags-input {
   align-items: center;
   gap: var(--sn-step-2);
   padding: var(--sn-step-1) var(--sn-step-4);
-  background-color: var(--sn-panel-bg, #1e1e24);
-  border: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
+  background-color: var(--sn-panel-bg, var(--sn-sys-surface-panel));
+  border: 1px solid var(--sn-outline-color-soft, var(--sn-sys-outline-subtle));
   border-radius: var(--sn-radius-sm);
   font-size: calc(12px * var(--sn-theme-type-scale, 1));
   color: var(--sn-text);
@@ -50,7 +50,7 @@ sn-tags-input {
 .sn-tags-chip-remove {
   background: none;
   border: none;
-  color: var(--sn-text-dim, rgba(255,255,255,0.5));
+  color: var(--sn-text-dim, var(--sn-sys-on-surface-dim));
   cursor: pointer;
   padding: 0;
   display: inline-flex;
@@ -58,11 +58,11 @@ sn-tags-input {
 }
 
 .sn-tags-chip-remove:hover:not([disabled]) {
-  color: var(--sn-status-error, #ff4d4f);
+  color: var(--sn-status-error, color-mix(in oklch, var(--sn-sys-on-surface) var(--sn-sys-state-hover-mix), var(--sn-sys-danger)));
 }
 
 .sn-tags-chip-remove:focus-visible {
-  outline: var(--sn-tags-focus-ring, 2px solid var(--sn-focus-ring-color, currentColor));
+  outline: var(--sn-tags-focus-ring, 2px solid var(--sn-sys-focus-ring, currentColor));
   outline-offset: 2px;
   border-radius: var(--sn-radius-sm);
 }

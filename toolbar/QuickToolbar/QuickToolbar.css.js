@@ -135,23 +135,25 @@ export let styles = css`
     }
 
     &:hover {
-      color: var(--sn-toolbar-active);
+      color: var(--sn-toolbar-active, var(--sn-sys-on-surface));
+      background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), transparent);
       transform: scale(1.1);
     }
 
     &:active {
+      background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-pressed-mix), transparent);
       transform: scale(0.95);
     }
   }
 
   .tb-btn--danger:hover {
-    --sn-button-hover-bg: var(--sn-toolbar-danger);
-    color: var(--sn-toolbar-danger-color);
+    --sn-button-hover-bg: var(--sn-toolbar-danger, color-mix(in oklch, var(--sn-sys-danger) var(--sn-sys-state-hover-mix), transparent));
+    color: var(--sn-toolbar-danger-color, var(--sn-sys-danger));
   }
 
   .tb-btn--enter:hover {
-    --sn-button-hover-bg: color-mix(in oklab, var(--sn-cat-data) 25%, transparent);
-    color: var(--sn-cat-data);
+    --sn-button-hover-bg: color-mix(in oklch, var(--sn-cat-data, var(--sn-sys-accent)) var(--sn-sys-state-hover-mix), transparent);
+    color: var(--sn-cat-data, var(--sn-sys-accent));
   }
 
   .tb-icon {

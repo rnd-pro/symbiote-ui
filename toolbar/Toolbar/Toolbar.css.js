@@ -3,12 +3,12 @@ sn-toolbar {
   display: inline-flex;
   align-items: center;
   box-sizing: border-box;
-  background: var(--sn-toolbar-bg, color-mix(in oklab, var(--sn-panel-bg, #1e1e24) 94%, transparent));
-  border: 1px solid var(--sn-toolbar-border, var(--sn-outline-color, rgba(255, 255, 255, 0.12)));
+  background: var(--sn-toolbar-bg, color-mix(in oklch, var(--sn-sys-surface-toolbar) 94%, transparent));
+  border: 1px solid var(--sn-toolbar-border, var(--sn-sys-outline));
   border-radius: var(--sn-toolbar-radius, 4px);
   padding: var(--sn-toolbar-padding, 4px);
   gap: var(--sn-toolbar-gap, 4px);
-  color: var(--sn-toolbar-color, var(--sn-text-dim, rgba(255, 255, 255, 0.7)));
+  color: var(--sn-toolbar-color, var(--sn-sys-on-surface-dim));
   min-height: var(--sn-toolbar-height, 36px);
   max-width: 100%;
 }

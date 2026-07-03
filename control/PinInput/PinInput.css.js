@@ -21,8 +21,8 @@ sn-pin-input {
   width: calc(40px * var(--sn-theme-density, 1));
   height: calc(40px * var(--sn-theme-density, 1));
   text-align: center;
-  background: var(--sn-field-control-bg, var(--sn-bg, #0c0c0e));
-  border: 1px solid var(--sn-field-control-border, var(--sn-outline-color-soft, rgba(255,255,255,0.08)));
+  background: var(--sn-field-control-bg, var(--sn-bg, var(--sn-sys-surface)));
+  border: 1px solid var(--sn-field-control-border, var(--sn-outline-color-soft, var(--sn-sys-outline-subtle)));
   border-radius: var(--sn-field-control-radius, var(--sn-panel-radius, 6px));
   color: var(--sn-text);
   font-size: calc(var(--sn-text-xl, 16px) * var(--sn-theme-type-scale, 1));
@@ -32,14 +32,14 @@ sn-pin-input {
 }
 
 .sn-pin-cell:focus {
-  border-color: var(--sn-field-control-focus-border, var(--sn-node-selected, #2e90fa));
-  box-shadow: 0 0 0 2px color-mix(in oklab, var(--sn-node-selected, #2e90fa) 25%, transparent);
+  border-color: var(--sn-field-control-focus-border, var(--sn-node-selected, var(--sn-sys-accent)));
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--sn-node-selected, var(--sn-sys-accent)) 25%, transparent);
 }
 
 .sn-pin-mask-toggle {
   background: none;
   border: none;
-  color: var(--sn-text-dim, rgba(255,255,255,0.6));
+  color: var(--sn-text-dim, var(--sn-sys-on-surface-dim));
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -47,7 +47,7 @@ sn-pin-input {
 }
 
 .sn-pin-mask-toggle:hover {
-  color: var(--sn-text);
+  color: var(--sn-text, color-mix(in oklch, var(--sn-sys-on-surface) var(--sn-sys-state-hover-mix), var(--sn-sys-on-surface-dim)));
 }
 
 sn-pin-input[disabled] .sn-pin-cell {

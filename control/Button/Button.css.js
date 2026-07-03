@@ -29,12 +29,12 @@ sn-button[hidden] {
 }
 
 sn-button:hover:not([disabled]):not([loading]) {
-  border-color: var(--sn-button-hover-border);
-  background: var(--sn-button-hover-bg);
+  border-color: var(--sn-button-hover-border, var(--sn-sys-outline));
+  background: var(--sn-button-hover-bg, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-raised)));
 }
 
 sn-button:focus-visible {
-  outline: var(--sn-button-focus-ring, 2px solid var(--sn-focus-ring-color, currentColor));
+  outline: var(--sn-button-focus-ring, 2px solid var(--sn-sys-focus-ring, currentColor));
   outline-offset: 2px;
 }
 
@@ -88,9 +88,9 @@ sn-button[size="lg"] {
 sn-button[pressed]:not([pressed="false"]),
 sn-button[selected],
 sn-button[current] {
-  border-color: var(--sn-button-active-border, var(--sn-button-hover-border));
-  background: var(--sn-button-active-bg, var(--sn-button-hover-bg));
-  color: var(--sn-button-active-color, var(--sn-button-color));
+  border-color: var(--sn-button-active-border, var(--sn-button-hover-border, var(--sn-sys-outline)));
+  background: var(--sn-button-active-bg, var(--sn-button-hover-bg, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-selected-mix), var(--sn-sys-surface-raised))));
+  color: var(--sn-button-active-color, var(--sn-button-color, var(--sn-sys-on-surface)));
 }
 
 sn-button[variant="primary"] {
@@ -110,9 +110,9 @@ sn-button[variant="success"] {
 }
 
 sn-button[variant="success"]:hover:not([disabled]):not([loading]) {
-  border-color: var(--sn-button-success-hover-border);
-  background: var(--sn-button-success-hover-bg);
-  color: var(--sn-button-success-hover-color);
+  border-color: var(--sn-button-success-hover-border, var(--sn-sys-success));
+  background: var(--sn-button-success-hover-bg, color-mix(in oklch, var(--sn-sys-on-surface) var(--sn-sys-state-hover-mix), var(--sn-sys-success)));
+  color: var(--sn-button-success-hover-color, var(--sn-sys-on-status));
 }
 
 sn-button[variant="danger"] {
@@ -122,9 +122,9 @@ sn-button[variant="danger"] {
 }
 
 sn-button[variant="danger"]:hover:not([disabled]):not([loading]) {
-  border-color: var(--sn-button-danger-hover-border);
-  background: var(--sn-button-danger-hover-bg);
-  color: var(--sn-button-danger-hover-color);
+  border-color: var(--sn-button-danger-hover-border, var(--sn-sys-danger));
+  background: var(--sn-button-danger-hover-bg, color-mix(in oklch, var(--sn-sys-on-surface) var(--sn-sys-state-hover-mix), var(--sn-sys-danger)));
+  color: var(--sn-button-danger-hover-color, var(--sn-sys-on-status));
 }
 
 sn-button[variant="icon"] {
@@ -137,7 +137,7 @@ sn-button[variant="icon"] {
 }
 
 sn-button[variant="icon"]:hover:not([disabled]):not([loading]) {
-  color: var(--sn-text);
+  color: var(--sn-text, color-mix(in oklch, var(--sn-sys-on-surface) var(--sn-sys-state-hover-mix), var(--sn-sys-on-surface-dim)));
 }
 
 sn-button .material-symbols-outlined {

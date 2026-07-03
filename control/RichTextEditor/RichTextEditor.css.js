@@ -9,8 +9,8 @@ sn-rich-text-editor {
 .sn-editor-container {
   display: flex;
   flex-direction: column;
-  background: var(--sn-field-control-bg, var(--sn-bg, #0c0c0e));
-  border: 1px solid var(--sn-field-control-border, var(--sn-outline-color-soft, rgba(255,255,255,0.08)));
+  background: var(--sn-field-control-bg, var(--sn-bg, var(--sn-sys-surface)));
+  border: 1px solid var(--sn-field-control-border, var(--sn-outline-color-soft, var(--sn-sys-outline-subtle)));
   border-radius: var(--sn-panel-radius, 6px);
   overflow: hidden;
   width: 100%;
@@ -22,14 +22,14 @@ sn-rich-text-editor {
   flex-wrap: wrap;
   gap: var(--sn-step-2);
   padding: var(--sn-step-3);
-  background-color: var(--sn-panel-bg, #1e1e24);
-  border-bottom: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
+  background-color: var(--sn-panel-bg, var(--sn-sys-surface-panel));
+  border-bottom: 1px solid var(--sn-outline-color-soft, var(--sn-sys-outline-subtle));
 }
 
 .sn-editor-btn {
   background: none;
   border: none;
-  color: var(--sn-text-dim, rgba(255,255,255,0.6));
+  color: var(--sn-text-dim, var(--sn-sys-on-surface-dim));
   cursor: pointer;
   padding: var(--sn-step-2);
   border-radius: var(--sn-radius-sm);
@@ -39,13 +39,13 @@ sn-rich-text-editor {
 }
 
 .sn-editor-btn:hover {
-  color: var(--sn-text);
-  background-color: var(--sn-node-hover, rgba(255,255,255,0.05));
+  color: var(--sn-text, var(--sn-sys-on-surface));
+  background-color: var(--sn-node-hover, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), transparent));
 }
 
 .sn-editor-btn[data-active] {
-  color: var(--sn-node-selected, #2e90fa);
-  background-color: color-mix(in oklab, var(--sn-node-selected, #2e90fa) 10%, transparent);
+  color: var(--sn-node-selected, var(--sn-sys-accent));
+  background-color: color-mix(in oklab, var(--sn-node-selected, var(--sn-sys-accent)) 10%, transparent);
 }
 
 .sn-editor-icon {
@@ -60,12 +60,12 @@ sn-rich-text-editor {
   right: var(--sn-step-3);
   top: 50%;
   transform: translateY(-50%);
-  background-color: var(--sn-panel-bg, #1e1e24);
-  border: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
+  background-color: var(--sn-panel-bg, var(--sn-sys-surface-panel));
+  border: 1px solid var(--sn-outline-color-soft, var(--sn-sys-outline-subtle));
   border-radius: var(--sn-radius-sm);
   padding: var(--sn-step-2) var(--sn-step-3);
   z-index: 10;
-  box-shadow: 0 2px 8px var(--sn-shadow-color, rgba(0, 0, 0, 0.3));
+  box-shadow: 0 2px 8px var(--sn-shadow-color, var(--sn-sys-shadow-overlay));
 }
 
 .sn-editor-link-overlay[hidden] {
@@ -73,8 +73,8 @@ sn-rich-text-editor {
 }
 
 .sn-editor-link-input {
-  background: var(--sn-field-control-bg, var(--sn-bg, #0c0c0e));
-  border: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
+  background: var(--sn-field-control-bg, var(--sn-bg, var(--sn-sys-surface)));
+  border: 1px solid var(--sn-outline-color-soft, var(--sn-sys-outline-subtle));
   border-radius: var(--sn-radius-sm);
   color: var(--sn-text);
   padding: var(--sn-step-2) var(--sn-step-4);
@@ -83,12 +83,13 @@ sn-rich-text-editor {
 }
 
 .sn-editor-link-input:focus {
-  border-color: var(--sn-node-selected, #2e90fa);
+  border-color: var(--sn-node-selected, var(--sn-sys-accent));
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-selected-mix), transparent);
 }
 
 .sn-editor-link-btn {
-  background: var(--sn-node-hover, rgba(255,255,255,0.05));
-  border: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
+  background: var(--sn-node-hover, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), transparent));
+  border: 1px solid var(--sn-outline-color-soft, var(--sn-sys-outline-subtle));
   color: var(--sn-text);
   border-radius: var(--sn-radius-sm);
   padding: var(--sn-step-2) var(--sn-step-4);
@@ -97,17 +98,17 @@ sn-rich-text-editor {
 }
 
 .sn-editor-link-btn:hover {
-  background: var(--sn-node-hover, rgba(255,255,255,0.1));
+  background: var(--sn-node-hover, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-pressed-mix), transparent));
 }
 
 .sn-editor-link-btn.confirm {
-  background: var(--sn-node-selected, #2e90fa);
-  color: var(--sn-text, #fff);
+  background: var(--sn-node-selected, var(--sn-sys-accent));
+  color: var(--sn-text, var(--sn-sys-on-accent));
   border: none;
 }
 
 .sn-editor-link-btn.confirm:hover {
-  background: color-mix(in oklab, var(--sn-node-selected, #2e90fa) 90%, #fff);
+  background: color-mix(in oklch, var(--sn-sys-on-surface) var(--sn-sys-state-hover-mix), var(--sn-node-selected, var(--sn-sys-accent)));
 }
 
 .sn-editor-body {

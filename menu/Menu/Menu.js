@@ -201,13 +201,7 @@ export class Dropdown extends Symbiote {
   onTriggerClick(event) {
     event.stopPropagation();
     const popover = this.querySelector('.sn-dropdown-popover');
-    if (popover) {
-      if (popover.open) {
-        popover.close();
-      } else {
-        popover.show();
-      }
-    }
+    popover?.togglePopover();
   }
 }
 

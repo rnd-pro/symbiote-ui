@@ -16,10 +16,10 @@ sn-mentions {
   position: absolute;
   z-index: 1000;
   margin-top: var(--sn-step-2);
-  background-color: var(--sn-panel-bg, #1e1e24);
-  border: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
+  background-color: var(--sn-panel-bg, var(--sn-sys-surface-overlay));
+  border: 1px solid var(--sn-outline-color-soft, var(--sn-sys-outline-subtle));
   border-radius: var(--sn-panel-radius, 6px);
-  box-shadow: var(--sn-panel-shadow, 0 10px 25px rgba(0,0,0,0.35));
+  box-shadow: var(--sn-panel-shadow, var(--sn-sys-shadow-overlay));
   overflow-y: auto;
   max-height: 180px;
   min-width: 150px;
@@ -50,6 +50,6 @@ sn-mentions {
 
 .sn-mentions-option:hover,
 .sn-mentions-option[data-focused] {
-  background-color: var(--sn-node-hover, rgba(255,255,255,0.04));
+  background-color: var(--sn-node-hover, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), transparent));
 }
 `;

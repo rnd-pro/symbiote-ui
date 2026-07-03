@@ -4,8 +4,8 @@ let css = /*css*/`
     flex-direction: column;
     min-height: 120px;
     height: 100%;
-    background: var(--sn-panel-bg);
-    color: var(--sn-text);
+    background: var(--sn-sys-surface-panel);
+    color: var(--sn-sys-on-surface);
     font-family: var(--sn-font);
     font-size: var(--sn-text-xs);
     overflow: hidden;
@@ -13,17 +13,21 @@ let css = /*css*/`
     --te-track-height: 36px;
     --te-ruler-height: 28px;
     --te-header-width: 140px;
-    --te-playhead-color: var(--sn-danger-color);
+    /* T3 component aliases — component->sys only, per docs/cascade-theme-architecture.md */
+    --te-playhead-color: var(--sn-sys-danger);
     --te-clip-radius: calc(3px * var(--sn-theme-radius-scale, 1));
-    --te-border: var(--sn-node-border);
-    --te-track-bg: var(--sn-bg);
-    --te-track-bg-alt: color-mix(in srgb, var(--sn-bg) 85%, var(--sn-panel-bg));
-    --te-clip-video: var(--sn-node-selected, hsl(var(--sn-hue-accent) var(--sn-sat-vivid) 42%));
-    --te-clip-audio: var(--sn-warning-color, hsl(var(--sn-hue-warning) var(--sn-sat-vivid) 42%));
-    --te-clip-text: var(--sn-success-color, hsl(var(--sn-hue-success) var(--sn-sat-vivid) 38%));
-    --te-clip-effect: var(--sn-node-selected, hsl(280 50% 45%));
-    --te-marker-color: var(--sn-warning-color);
-    --te-selection: var(--sn-node-selected, hsl(var(--sn-hue-accent) var(--sn-sat-vivid) 50% / 0.25));
+    --te-border: var(--sn-sys-outline);
+    --te-track-bg: var(--sn-sys-surface);
+    --te-track-bg-alt: color-mix(in oklch, var(--sn-sys-surface) 85%, var(--sn-sys-surface-panel));
+    --te-marker-color: var(--sn-sys-warning);
+    --te-selection: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-selected-mix), transparent);
+    /* DOM domain block — per-clip-type palette (analogous to --sn-dom-graph-type-*), derived
+       from existing T2 status/accent roles rather than component-local literals. */
+    --sn-dom-timeline-clip-video: var(--sn-sys-accent);
+    --sn-dom-timeline-clip-audio: var(--sn-sys-warning);
+    --sn-dom-timeline-clip-text: var(--sn-sys-success);
+    --sn-dom-timeline-clip-effect: var(--sn-sys-info);
+    --sn-dom-timeline-clip-default: var(--sn-sys-outline-strong);
   }
 
   /* ── Transport bar ── */
@@ -33,15 +37,15 @@ let css = /*css*/`
     gap: var(--sn-step-4);
     height: 28px;
     padding: 0 var(--sn-step-4);
-    background: var(--sn-panel-bg);
+    background: var(--sn-sys-surface-panel);
     border-bottom: 1px solid var(--te-border);
     flex-shrink: 0;
   }
 
   .te-transport button {
-    background: var(--sn-node-bg);
+    background: var(--sn-sys-surface-raised);
     border: 1px solid var(--te-border);
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
     padding: var(--sn-step-1) var(--sn-step-3);
     border-radius: calc(var(--sn-radius-xs, 3px) * var(--sn-theme-radius-scale, 1));
     cursor: pointer;
@@ -52,20 +56,20 @@ let css = /*css*/`
   }
 
   .te-transport button:hover {
-    background: var(--sn-node-hover);
-    color: var(--sn-text);
+    background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-raised));
+    color: var(--sn-sys-on-surface);
   }
 
   .te-transport button[data-active] {
     background: var(--te-playhead-color);
     border-color: var(--te-playhead-color);
-    color: var(--sn-bg, hsl(0 0% 8%));
+    color: var(--sn-sys-on-status);
   }
 
   .te-transport .te-time {
     font-family: var(--sn-font-mono);
     font-size: var(--sn-text-xs);
-    color: var(--sn-text);
+    color: var(--sn-sys-on-surface);
     min-width: 80px;
     text-align: center;
   }
@@ -76,7 +80,7 @@ let css = /*css*/`
 
   .te-transport .te-zoom-label {
     font-size: var(--sn-text-2xs);
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
   }
 
   /* ── Main area ── */
@@ -102,7 +106,7 @@ let css = /*css*/`
     align-items: center;
     padding: 0 var(--sn-step-4);
     font-size: var(--sn-text-2xs);
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
   }
 
   .te-header-track {
@@ -128,6 +132,23 @@ let css = /*css*/`
     height: 14px;
     border-radius: var(--sn-radius-xs);
     flex-shrink: 0;
+    background: var(--sn-dom-timeline-clip-default);
+  }
+
+  .te-header-icon[data-track-type="video"] {
+    background: var(--sn-dom-timeline-clip-video);
+  }
+
+  .te-header-icon[data-track-type="audio"] {
+    background: var(--sn-dom-timeline-clip-audio);
+  }
+
+  .te-header-icon[data-track-type="text"] {
+    background: var(--sn-dom-timeline-clip-text);
+  }
+
+  .te-header-icon[data-track-type="effect"] {
+    background: var(--sn-dom-timeline-clip-effect);
   }
 
   .te-header-label {
@@ -143,7 +164,7 @@ let css = /*css*/`
     height: 16px;
     border: none;
     background: none;
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
     cursor: pointer;
     font-size: var(--sn-text-sm);
     padding: 0;
@@ -227,7 +248,7 @@ let css = /*css*/`
     align-items: center;
     justify-content: center;
     flex: 1;
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
     font-size: var(--sn-text-sm);
     font-style: italic;
     opacity: 0.5;

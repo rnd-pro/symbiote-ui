@@ -2,7 +2,7 @@ export default /*css*/ `
 :host,
 output-graph-preview {
   display: block;
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
   font-family: var(--sn-font-ui, inherit);
 }
 
@@ -30,13 +30,13 @@ output-graph-preview[hidden] {
   justify-content: space-between;
   gap: var(--sn-step-5);
   min-height: 18px;
-  color: var(--sn-output-preview-muted, var(--sn-text-dim));
+  color: var(--sn-output-preview-muted, var(--sn-sys-on-surface-dim));
   font-size: var(--sn-text-xs);
 }
 
 .output-graph-preview-title {
   overflow: hidden;
-  color: var(--sn-output-preview-title, var(--sn-text));
+  color: var(--sn-output-preview-title, var(--sn-sys-on-surface));
   font-size: var(--sn-text-sm);
   font-weight: 600;
   text-overflow: ellipsis;
@@ -50,7 +50,7 @@ output-graph-preview[hidden] {
 
 .output-graph-preview-empty {
   padding: var(--sn-step-4) 0;
-  color: var(--sn-output-preview-muted, var(--sn-text-dim));
+  color: var(--sn-output-preview-muted, var(--sn-sys-on-surface-dim));
   font-size: var(--sn-text-sm);
 }
 
@@ -88,7 +88,7 @@ output-graph-preview[hidden] {
 }
 
 .output-graph-preview-node-label {
-  color: var(--sn-output-preview-label, var(--sn-text));
+  color: var(--sn-output-preview-label, var(--sn-sys-on-surface));
   font-size: var(--sn-text-sm);
   font-weight: 500;
 }
@@ -96,7 +96,7 @@ output-graph-preview[hidden] {
 .output-graph-preview-node-kind,
 .output-graph-preview-node-description,
 .output-graph-preview-edge {
-  color: var(--sn-output-preview-muted, var(--sn-text-dim));
+  color: var(--sn-output-preview-muted, var(--sn-sys-on-surface-dim));
   font-size: var(--sn-text-2xs);
   line-height: 1.35;
 }

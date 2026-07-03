@@ -80,10 +80,18 @@ test('sn-kanban-board renders columns and emits card intents', async () => {
   });
 
   assert.equal(board.querySelectorAll('.sn-kanban-column').length, 1);
-  assert.equal(board.querySelector('.sn-kanban-card-title')?.textContent, 'Task 1');
+  assert.equal(board.querySelector('.sn-kanban-card-title-text')?.textContent, 'Task 1');
   assert.equal(board.querySelector('.sn-kanban-card')?.tagName.toLowerCase(), 'article');
   assert.equal(board.querySelector('.sn-kanban-card')?.getAttribute('role'), 'button');
-  assert.ok(board.querySelector('details.sn-kanban-card-actions'), 'card actions should render behind one menu trigger');
+  assert.equal(
+    board.querySelector('.sn-kanban-card-actions')?.tagName.toLowerCase(),
+    'sn-dropdown',
+    'card actions should render behind one native-popover dropdown trigger, not an in-card expanding menu',
+  );
+  assert.ok(
+    board.querySelector('.sn-kanban-card-actions [slot="trigger"].sn-kanban-card-menu'),
+    'dropdown trigger slot should carry the card menu button',
+  );
   board.querySelector('.sn-kanban-card').click();
   assert.equal(selected.card.id, 'task-1');
   board.querySelector('[data-sn-board-action]').click();
@@ -106,8 +114,28 @@ test('sn-kanban-board exposes column stretch sizing tokens', async () => {
   assert.match(css, /overflow: var\(--sn-kanban-card-list-overflow, auto\);/);
   assert.match(css, /sn-kanban-board \.sn-kanban-column-header \{[\s\S]*flex: 0 0 auto;/);
   assert.match(css, /sn-kanban-board \.sn-kanban-card \{[\s\S]*flex: 0 0 auto;/);
-  assert.match(css, /sn-kanban-board \.sn-kanban-card-footer \{[\s\S]*display: grid;/);
-  assert.match(css, /sn-kanban-board \.sn-kanban-card-actions\[open\] \{[\s\S]*grid-column: 1 \/ -1;/);
-  assert.match(css, /sn-kanban-board \.sn-kanban-card-menu-list/);
-  assert.doesNotMatch(css, /sn-kanban-board \.sn-kanban-card-menu-list \{[\s\S]*position: absolute;/);
+  // U01: footer chip row wraps instead of clipping in a non-wrapping grid.
+  assert.match(css, /sn-kanban-board \.sn-kanban-card-footer \{[^}]*flex-wrap: wrap;/);
+  assert.doesNotMatch(css, /sn-kanban-board \.sn-kanban-card-footer \{[^}]*display: grid;/);
+  // U07: the actions menu is the sn-dropdown native popover + anchor-positioning primitive —
+  // no in-card grid-column: 1/-1 expansion class remains.
+  assert.doesNotMatch(css, /grid-column:\s*1\s*\/\s*-1/);
+  assert.doesNotMatch(css, /\[open\]/);
+  assert.match(css, /sn-kanban-board \.sn-kanban-card-actions \{[^}]*--sn-dropdown-position-area/);
+  // U02: card summary clamps instead of rendering unbounded raw text.
+  assert.match(css, /sn-kanban-board \.sn-kanban-card-summary \{[^}]*-webkit-line-clamp: var\(--sn-kanban-card-summary-lines, 3\);/);
+  // U05: status/priority chips carry container-fill weight; plain chips stay outline-only.
+  assert.match(css, /sn-kanban-board \.sn-kanban-chip\[data-kind="status"\] \{[^}]*background: var\(--sn-sys-success-container\);/);
+  assert.doesNotMatch(css, /sn-kanban-board \.sn-kanban-chip \{[^}]*background:/);
+  // U08: grab/grabbing cursor affordance for the draggable card.
+  assert.match(css, /sn-kanban-board \.sn-kanban-card \{[\s\S]*cursor: grab;/);
+  assert.match(css, /sn-kanban-board \.sn-kanban-card:active \{[\s\S]*cursor: grabbing;/);
+  // No legacy flat token names or literal colors remain — only T2 system roles / T3 aliases.
+  // (--sn-text-xs/-xl/-2xs etc. are unrelated typography-scale tokens, not the legacy color alias.)
+  assert.doesNotMatch(css, /var\(--sn-text(?:-dim)?[,)]/);
+  assert.doesNotMatch(css, /var\(--sn-node-/);
+  assert.doesNotMatch(css, /var\(--sn-panel-bg/);
+  assert.doesNotMatch(css, /var\(--sn-(?:success|warning|danger)-color/);
+  assert.doesNotMatch(css, /#[0-9a-fA-F]{3,8}\b/);
+  assert.doesNotMatch(css, /\b(?:hsla?|rgba?)\(/);
 });

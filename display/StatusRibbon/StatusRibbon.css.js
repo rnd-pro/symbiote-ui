@@ -25,15 +25,15 @@ export default `
     gap: var(--sn-status-ribbon-gap, 10px);
     padding: var(--sn-status-ribbon-padding, 8px 20px);
     border-radius: var(--sn-status-ribbon-radius, 24px);
-    background: var(--sn-status-ribbon-bg, var(--sn-bg-overlay));
+    background: var(--sn-status-ribbon-bg, var(--sn-sys-surface-overlay));
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    border: 1px solid var(--sn-status-ribbon-border, var(--sn-cat-server));
-    box-shadow: var(--sn-shadow-lg), var(--sn-accent-glow);
+    border: 1px solid var(--sn-status-ribbon-border, var(--sn-sys-accent));
+    box-shadow: var(--sn-sys-shadow-overlay);
     font-family: var(--sn-font-ui);
     font-size: var(--sn-status-ribbon-size, 12px);
     font-weight: 500;
-    color: var(--sn-status-ribbon-color, var(--sn-text));
+    color: var(--sn-status-ribbon-color, var(--sn-sys-on-surface));
     white-space: nowrap;
     max-width: var(--sn-status-ribbon-max-width, 500px);
   }
@@ -41,7 +41,7 @@ export default `
   .fr-icon {
     font-family: var(--sn-icon-font, 'Material Symbols Outlined');
     font-size: var(--sn-status-ribbon-icon-size, 16px);
-    color: var(--sn-cat-server);
+    color: var(--sn-sys-accent);
     animation: fr-pulse var(--sn-animation-duration-slower) var(--sn-transition-easing) infinite;
     animation-play-state: var(--sn-animation-play-state);
   }
@@ -58,7 +58,7 @@ export default `
     display: inline-block;
     width: var(--sn-status-ribbon-dots-width, 16px);
     text-align: left;
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
   }
 
   @keyframes fr-pulse {

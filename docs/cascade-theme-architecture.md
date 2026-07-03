@@ -205,8 +205,7 @@ contract, not the flat dump.
 Hardcoded color literals per directory: display 128, control 102, chat 24, menu 12, list 9,
 timeline 6, surface 5, navigation 5, viewport 3, toolbar 1. State-layer coverage: focus-ring
 only (25 uses); zero shared hover/pressed/selected tokens. Board/KanbanBoard additionally has
-the footer chip-clipping and in-card menu defects logged in the agent-portal UI/UX audit
-(team-memory: `delegation/workflow-board-ui-ux-audit-2026-07-03.md`).
+the footer chip-clipping and in-card menu defects logged in a separate agent-portal UI/UX audit.
 
 ## Waves
 

@@ -29,7 +29,7 @@ sn-slider {
   position: absolute;
   inset-block: 0;
   inset-inline-start: 0;
-  background: var(--sn-slider-active-bg, var(--sn-node-selected, #0056b3));
+  background: var(--sn-slider-active-bg, var(--sn-node-selected, var(--sn-sys-accent)));
   border-radius: var(--sn-radius-full);
 }
 
@@ -39,9 +39,9 @@ sn-slider {
   inline-size: var(--sn-slider-thumb-size, 12px);
   block-size: var(--sn-slider-thumb-size, 12px);
   border-radius: var(--sn-radius-full);
-  background: var(--sn-slider-thumb-bg, #fff);
-  border: 1px solid var(--sn-slider-thumb-border, var(--sn-slider-active-bg, var(--sn-node-selected, #0056b3)));
-  box-shadow: var(--sn-slider-thumb-shadow, 0 1px 3px rgba(0, 0, 0, 0.25));
+  background: var(--sn-slider-thumb-bg, var(--sn-sys-on-accent));
+  border: 1px solid var(--sn-slider-thumb-border, var(--sn-slider-active-bg, var(--sn-node-selected, var(--sn-sys-accent))));
+  box-shadow: var(--sn-slider-thumb-shadow, var(--sn-sys-shadow-raised));
   transform: translate(-50%, -50%);
   pointer-events: none;
   transition: transform var(--sn-transition-fast, 100ms) ease, background-color var(--sn-transition-fast, 100ms) ease;
@@ -59,7 +59,7 @@ sn-slider {
 }
 
 .sn-slider-wrapper:focus-within .sn-slider-track-wrap {
-  outline: var(--sn-slider-focus-ring, 2px solid var(--sn-focus-ring-color, currentColor));
+  outline: var(--sn-slider-focus-ring, 2px solid var(--sn-sys-focus-ring, currentColor));
   outline-offset: 4px;
 }
 

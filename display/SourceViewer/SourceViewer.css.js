@@ -36,7 +36,7 @@ export default `
     padding: var(--sn-source-header-padding, 4px 12px);
     font-family: var(--sn-font-mono, 'SF Mono', 'Fira Code', monospace);
     font-size: var(--sn-source-header-size, 11px);
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
     border-bottom: 1px solid var(--sn-source-border);
     background: var(--sn-source-header-bg);
     overflow: hidden;
@@ -81,7 +81,7 @@ export default `
     border: 1px solid var(--sn-source-border);
     border-radius: var(--sn-source-action-radius);
     background: var(--sn-source-action-bg);
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
     font-family: inherit;
     font-size: var(--sn-source-action-size, 10px);
     cursor: pointer;
@@ -111,7 +111,7 @@ export default `
   }
   .sv-action:hover {
     background: var(--sn-source-action-hover-bg);
-    color: var(--sn-text);
+    color: var(--sn-sys-on-surface);
   }
   source-viewer[mode-raw] .sv-action {
     background: var(--sn-accent-bg-subtle);

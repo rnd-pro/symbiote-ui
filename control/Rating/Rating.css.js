@@ -31,7 +31,7 @@ sn-rating {
 }
 
 .sn-rating-star[data-active] {
-  color: var(--sn-rating-star-active-color, var(--sn-node-selected, #fadb14));
+  color: var(--sn-rating-star-active-color, var(--sn-node-selected, var(--sn-sys-warning)));
 }
 
 sn-rating:not([disabled]):not([readonly]) .sn-rating-star:hover {
@@ -39,7 +39,7 @@ sn-rating:not([disabled]):not([readonly]) .sn-rating-star:hover {
 }
 
 sn-rating:focus-visible .sn-rating-container {
-  outline: var(--sn-rating-focus-ring, 2px solid var(--sn-focus-ring-color, currentColor));
+  outline: var(--sn-rating-focus-ring, 2px solid var(--sn-sys-focus-ring, currentColor));
   outline-offset: 4px;
   border-radius: var(--sn-radius-xs);
 }

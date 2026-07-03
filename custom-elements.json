@@ -20215,7 +20215,7 @@
               "type": {
                 "text": "string"
               },
-              "description": "Status variant: default, success, info, warning, or error."
+              "description": "Status variant: default, success, info, warning, error, or neutral."
             }
           ],
           "members": [],
@@ -20264,11 +20264,19 @@
               "description": "Theme CSS custom property consumed by sn-badge."
             },
             {
+              "name": "--sn-badge-success-bg",
+              "description": "Theme CSS custom property consumed by sn-badge."
+            },
+            {
               "name": "--sn-badge-success-color",
               "description": "Theme CSS custom property consumed by sn-badge."
             },
             {
               "name": "--sn-badge-success-border",
+              "description": "Theme CSS custom property consumed by sn-badge."
+            },
+            {
+              "name": "--sn-badge-info-bg",
               "description": "Theme CSS custom property consumed by sn-badge."
             },
             {
@@ -20280,6 +20288,10 @@
               "description": "Theme CSS custom property consumed by sn-badge."
             },
             {
+              "name": "--sn-badge-warning-bg",
+              "description": "Theme CSS custom property consumed by sn-badge."
+            },
+            {
               "name": "--sn-badge-warning-color",
               "description": "Theme CSS custom property consumed by sn-badge."
             },
@@ -20288,11 +20300,27 @@
               "description": "Theme CSS custom property consumed by sn-badge."
             },
             {
+              "name": "--sn-badge-error-bg",
+              "description": "Theme CSS custom property consumed by sn-badge."
+            },
+            {
               "name": "--sn-badge-error-color",
               "description": "Theme CSS custom property consumed by sn-badge."
             },
             {
               "name": "--sn-badge-error-border",
+              "description": "Theme CSS custom property consumed by sn-badge."
+            },
+            {
+              "name": "--sn-badge-neutral-bg",
+              "description": "Theme CSS custom property consumed by sn-badge."
+            },
+            {
+              "name": "--sn-badge-neutral-color",
+              "description": "Theme CSS custom property consumed by sn-badge."
+            },
+            {
+              "name": "--sn-badge-neutral-border",
               "description": "Theme CSS custom property consumed by sn-badge."
             }
           ],
@@ -20307,7 +20335,7 @@
               {
                 "name": "variant",
                 "type": "string",
-                "description": "Status variant: default, success, info, warning, or error."
+                "description": "Status variant: default, success, info, warning, error, or neutral."
               }
             ],
             "properties": [],
@@ -20329,14 +20357,21 @@
               "--sn-badge-font-size",
               "--sn-badge-font-weight",
               "--sn-badge-line-height",
+              "--sn-badge-success-bg",
               "--sn-badge-success-color",
               "--sn-badge-success-border",
+              "--sn-badge-info-bg",
               "--sn-badge-info-color",
               "--sn-badge-info-border",
+              "--sn-badge-warning-bg",
               "--sn-badge-warning-color",
               "--sn-badge-warning-border",
+              "--sn-badge-error-bg",
               "--sn-badge-error-color",
-              "--sn-badge-error-border"
+              "--sn-badge-error-border",
+              "--sn-badge-neutral-bg",
+              "--sn-badge-neutral-color",
+              "--sn-badge-neutral-border"
             ],
             "status": "draft",
             "schemaVersion": "component-descriptor-v2",
@@ -20380,7 +20415,7 @@
                 {
                   "name": "variant",
                   "type": "string",
-                  "description": "Status variant: default, success, info, warning, or error."
+                  "description": "Status variant: default, success, info, warning, error, or neutral."
                 }
               ],
               "properties": [],
@@ -20509,11 +20544,19 @@
               "description": "Theme CSS custom property consumed by sn-banner."
             },
             {
+              "name": "--sn-banner-info-bg",
+              "description": "Theme CSS custom property consumed by sn-banner."
+            },
+            {
               "name": "--sn-banner-info-color",
               "description": "Theme CSS custom property consumed by sn-banner."
             },
             {
               "name": "--sn-banner-info-border",
+              "description": "Theme CSS custom property consumed by sn-banner."
+            },
+            {
+              "name": "--sn-banner-success-bg",
               "description": "Theme CSS custom property consumed by sn-banner."
             },
             {
@@ -20525,11 +20568,19 @@
               "description": "Theme CSS custom property consumed by sn-banner."
             },
             {
+              "name": "--sn-banner-warning-bg",
+              "description": "Theme CSS custom property consumed by sn-banner."
+            },
+            {
               "name": "--sn-banner-warning-color",
               "description": "Theme CSS custom property consumed by sn-banner."
             },
             {
               "name": "--sn-banner-warning-border",
+              "description": "Theme CSS custom property consumed by sn-banner."
+            },
+            {
+              "name": "--sn-banner-error-bg",
               "description": "Theme CSS custom property consumed by sn-banner."
             },
             {
@@ -20581,12 +20632,16 @@
               "--sn-banner-font-weight",
               "--sn-banner-line-height",
               "--sn-banner-icon-size",
+              "--sn-banner-info-bg",
               "--sn-banner-info-color",
               "--sn-banner-info-border",
+              "--sn-banner-success-bg",
               "--sn-banner-success-color",
               "--sn-banner-success-border",
+              "--sn-banner-warning-bg",
               "--sn-banner-warning-color",
               "--sn-banner-warning-border",
+              "--sn-banner-error-bg",
               "--sn-banner-error-color",
               "--sn-banner-error-border",
               "--sn-banner-running-spin-duration"
@@ -20959,19 +21014,11 @@
           "slots": [],
           "cssProperties": [
             {
+              "name": "--sn-chart-brush-stroke",
+              "description": "Theme CSS custom property consumed by sn-chart."
+            },
+            {
               "name": "--sn-font",
-              "description": "Theme CSS custom property consumed by sn-chart."
-            },
-            {
-              "name": "--sn-node-selected",
-              "description": "Theme CSS custom property consumed by sn-chart."
-            },
-            {
-              "name": "--sn-outline-color-soft",
-              "description": "Theme CSS custom property consumed by sn-chart."
-            },
-            {
-              "name": "--sn-panel-bg",
               "description": "Theme CSS custom property consumed by sn-chart."
             },
             {
@@ -20979,19 +21026,35 @@
               "description": "Theme CSS custom property consumed by sn-chart."
             },
             {
-              "name": "--sn-shadow-md",
+              "name": "--sn-sys-accent",
               "description": "Theme CSS custom property consumed by sn-chart."
             },
             {
-              "name": "--sn-tabs-accent",
+              "name": "--sn-sys-on-surface",
               "description": "Theme CSS custom property consumed by sn-chart."
             },
             {
-              "name": "--sn-text",
+              "name": "--sn-sys-on-surface-dim",
               "description": "Theme CSS custom property consumed by sn-chart."
             },
             {
-              "name": "--sn-text-dim",
+              "name": "--sn-sys-outline-subtle",
+              "description": "Theme CSS custom property consumed by sn-chart."
+            },
+            {
+              "name": "--sn-sys-shadow-overlay",
+              "description": "Theme CSS custom property consumed by sn-chart."
+            },
+            {
+              "name": "--sn-sys-state-hover-mix",
+              "description": "Theme CSS custom property consumed by sn-chart."
+            },
+            {
+              "name": "--sn-sys-surface-overlay",
+              "description": "Theme CSS custom property consumed by sn-chart."
+            },
+            {
+              "name": "--sn-sys-surface-panel",
               "description": "Theme CSS custom property consumed by sn-chart."
             },
             {
@@ -21062,15 +21125,17 @@
             ],
             "slots": [],
             "themeAliases": [
+              "--sn-chart-brush-stroke",
               "--sn-font",
-              "--sn-node-selected",
-              "--sn-outline-color-soft",
-              "--sn-panel-bg",
               "--sn-panel-radius",
-              "--sn-shadow-md",
-              "--sn-tabs-accent",
-              "--sn-text",
-              "--sn-text-dim",
+              "--sn-sys-accent",
+              "--sn-sys-on-surface",
+              "--sn-sys-on-surface-dim",
+              "--sn-sys-outline-subtle",
+              "--sn-sys-shadow-overlay",
+              "--sn-sys-state-hover-mix",
+              "--sn-sys-surface-overlay",
+              "--sn-sys-surface-panel",
               "--sn-theme-type-scale",
               "--sn-tooltip-bg",
               "--sn-tooltip-color",
@@ -21160,15 +21225,17 @@
               ],
               "slots": [],
               "themeAliases": [
+                "--sn-chart-brush-stroke",
                 "--sn-font",
-                "--sn-node-selected",
-                "--sn-outline-color-soft",
-                "--sn-panel-bg",
                 "--sn-panel-radius",
-                "--sn-shadow-md",
-                "--sn-tabs-accent",
-                "--sn-text",
-                "--sn-text-dim",
+                "--sn-sys-accent",
+                "--sn-sys-on-surface",
+                "--sn-sys-on-surface-dim",
+                "--sn-sys-outline-subtle",
+                "--sn-sys-shadow-overlay",
+                "--sn-sys-state-hover-mix",
+                "--sn-sys-surface-overlay",
+                "--sn-sys-surface-panel",
                 "--sn-theme-type-scale",
                 "--sn-tooltip-bg",
                 "--sn-tooltip-color",
@@ -36587,9 +36654,17 @@
           "customElement": true,
           "name": "ContextMenu",
           "tagName": "context-menu",
-          "description": "Generic context menu custom element for graph and canvas actions.",
-          "componentDescription": "Generic context menu custom element for graph and canvas actions. Use this menu UI component when composing menu UI. Capabilities: context-menu, positioned-overlay, action-list, backdrop-dismiss. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
-          "attributes": [],
+          "description": "Generic context menu custom element for graph and canvas actions. Renders via the native `popover` attribute (popover=\"auto\") for top-layer stacking and light-dismiss (outside click / Escape); `show(x, y, items)` still places it at explicit screen coordinates.",
+          "componentDescription": "Generic context menu custom element for graph and canvas actions. Renders via the native `popover` attribute (popover=\"auto\") for top-layer stacking and light-dismiss (outside click / Escape); `show(x, y, items)` still places it at explicit screen coordinates. Use this menu UI component when composing menu UI. Capabilities: context-menu, positioned-overlay, action-list, native-popover, light-dismiss. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "attributes": [
+            {
+              "name": "popover",
+              "type": {
+                "text": "string"
+              },
+              "description": "Native popover mode; defaults to \"auto\" (top-layer + light-dismiss) if unset."
+            }
+          ],
           "members": [
             {
               "kind": "field",
@@ -36622,14 +36697,6 @@
           "slots": [],
           "cssProperties": [
             {
-              "name": "--sn-overlay-z-base",
-              "description": "Theme CSS custom property consumed by context-menu."
-            },
-            {
-              "name": "--sn-canvas-overlay-z-base",
-              "description": "Base z-index for local canvas overlays."
-            },
-            {
               "name": "--sn-ctx-bg",
               "description": "Theme CSS custom property consumed by context-menu."
             },
@@ -36642,15 +36709,23 @@
               "description": "Theme CSS custom property consumed by context-menu."
             },
             {
-              "name": "--sn-ctx-hover",
+              "name": "--sn-ctx-shadow-color",
               "description": "Theme CSS custom property consumed by context-menu."
             },
             {
-              "name": "--sn-ctx-z",
+              "name": "--sn-ctx-divider-color",
               "description": "Theme CSS custom property consumed by context-menu."
             },
             {
-              "name": "--sn-shadow-color",
+              "name": "--sn-ctx-check-color",
+              "description": "Theme CSS custom property consumed by context-menu."
+            },
+            {
+              "name": "--sn-ctx-detail-color",
+              "description": "Theme CSS custom property consumed by context-menu."
+            },
+            {
+              "name": "--sn-ctx-destructive-color",
               "description": "Theme CSS custom property consumed by context-menu."
             },
             {
@@ -36663,9 +36738,16 @@
               "context-menu",
               "positioned-overlay",
               "action-list",
-              "backdrop-dismiss"
+              "native-popover",
+              "light-dismiss"
             ],
-            "attributes": [],
+            "attributes": [
+              {
+                "name": "popover",
+                "type": "string",
+                "description": "Native popover mode; defaults to \"auto\" (top-layer + light-dismiss) if unset."
+              }
+            ],
             "properties": [
               {
                 "name": "items",
@@ -36682,25 +36764,25 @@
               {
                 "name": "show",
                 "type": "function",
-                "description": "Shows the menu at screen coordinates with action descriptors."
+                "description": "Shows the menu at screen coordinates with action descriptors (calls showPopover())."
               },
               {
                 "name": "hide",
                 "type": "function",
-                "description": "Hides the menu and clears actions."
+                "description": "Hides the menu and clears actions (calls hidePopover())."
               }
             ],
             "events": [],
             "slots": [],
             "themeAliases": [
-              "--sn-overlay-z-base",
-              "--sn-canvas-overlay-z-base",
               "--sn-ctx-bg",
               "--sn-ctx-border",
               "--sn-ctx-color",
-              "--sn-ctx-hover",
-              "--sn-ctx-z",
-              "--sn-shadow-color",
+              "--sn-ctx-shadow-color",
+              "--sn-ctx-divider-color",
+              "--sn-ctx-check-color",
+              "--sn-ctx-detail-color",
+              "--sn-ctx-destructive-color",
               "--sn-font"
             ],
             "status": "draft",
@@ -36721,9 +36803,9 @@
             }
           },
           "agent": {
-            "componentDescription": "Generic context menu custom element for graph and canvas actions. Use this menu UI component when composing menu UI. Capabilities: context-menu, positioned-overlay, action-list, backdrop-dismiss. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "componentDescription": "Generic context menu custom element for graph and canvas actions. Renders via the native `popover` attribute (popover=\"auto\") for top-layer stacking and light-dismiss (outside click / Escape); `show(x, y, items)` still places it at explicit screen coordinates. Use this menu UI component when composing menu UI. Capabilities: context-menu, positioned-overlay, action-list, native-popover, light-dismiss. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
             "semanticRole": "menu UI component",
-            "usage": "Render or compose <context-menu> when the host needs generic context menu custom element for graph and canvas actions.",
+            "usage": "Render or compose <context-menu> when the host needs generic context menu custom element for graph and canvas actions. renders via the native `popover` attribute (popover=\"auto\") for top-layer stacking and light-dismiss (outside click / escape); `show(x, y, items)` still places it at explicit screen coordinates.",
             "dataOwnership": "host-owned props and attributes; component owns presentation state",
             "webmcp": {
               "mode": "described-only",
@@ -36744,9 +36826,16 @@
                 "context-menu",
                 "positioned-overlay",
                 "action-list",
-                "backdrop-dismiss"
+                "native-popover",
+                "light-dismiss"
               ],
-              "attributes": [],
+              "attributes": [
+                {
+                  "name": "popover",
+                  "type": "string",
+                  "description": "Native popover mode; defaults to \"auto\" (top-layer + light-dismiss) if unset."
+                }
+              ],
               "properties": [
                 {
                   "name": "items",
@@ -36763,25 +36852,25 @@
                 {
                   "name": "show",
                   "type": "function",
-                  "description": "Shows the menu at screen coordinates with action descriptors."
+                  "description": "Shows the menu at screen coordinates with action descriptors (calls showPopover())."
                 },
                 {
                   "name": "hide",
                   "type": "function",
-                  "description": "Hides the menu and clears actions."
+                  "description": "Hides the menu and clears actions (calls hidePopover())."
                 }
               ],
               "events": [],
               "slots": [],
               "themeAliases": [
-                "--sn-overlay-z-base",
-                "--sn-canvas-overlay-z-base",
                 "--sn-ctx-bg",
                 "--sn-ctx-border",
                 "--sn-ctx-color",
-                "--sn-ctx-hover",
-                "--sn-ctx-z",
-                "--sn-shadow-color",
+                "--sn-ctx-shadow-color",
+                "--sn-ctx-divider-color",
+                "--sn-ctx-check-color",
+                "--sn-ctx-detail-color",
+                "--sn-ctx-destructive-color",
                 "--sn-font"
               ],
               "status": "draft",
@@ -36845,6 +36934,10 @@
             {
               "name": "--sn-menu-padding",
               "description": "Theme CSS custom property consumed by sn-menu."
+            },
+            {
+              "name": "--sn-menu-shadow-color",
+              "description": "Theme CSS custom property consumed by sn-menu."
             }
           ],
           "contract": {
@@ -36867,7 +36960,8 @@
             "themeAliases": [
               "--sn-menu-bg",
               "--sn-menu-border",
-              "--sn-menu-padding"
+              "--sn-menu-padding",
+              "--sn-menu-shadow-color"
             ],
             "status": "draft",
             "schemaVersion": "component-descriptor-v2",
@@ -36925,7 +37019,8 @@
               "themeAliases": [
                 "--sn-menu-bg",
                 "--sn-menu-border",
-                "--sn-menu-padding"
+                "--sn-menu-padding",
+                "--sn-menu-shadow-color"
               ],
               "status": "draft",
               "schemaVersion": "component-descriptor-v2",
@@ -37327,27 +37422,58 @@
           "customElement": true,
           "name": "Dropdown",
           "tagName": "sn-dropdown",
-          "description": "Toggle button dropdown menu overlay.",
-          "componentDescription": "Toggle button dropdown menu overlay. Use this menu UI component when composing menu UI. Capabilities: dropdown, overlay, trigger. Data ownership: host-owned content or slotted DOM. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "description": "Toggle button dropdown menu overlay. The floating panel is a native `popover` (popover=\"auto\") positioned with CSS anchor positioning (position-anchor / position-area) against the trigger slot — no JS-computed coordinates. Reusable as the base floating-menu primitive for other trigger-anchored menus (e.g. card action menus).",
+          "componentDescription": "Toggle button dropdown menu overlay. The floating panel is a native `popover` (popover=\"auto\") positioned with CSS anchor positioning (position-anchor / position-area) against the trigger slot — no JS-computed coordinates. Reusable as the base floating-menu primitive for other trigger-anchored menus (e.g. card action menus). Use this menu UI component when composing menu UI. Capabilities: dropdown, native-popover, anchor-positioned, trigger, light-dismiss. Data ownership: host-owned content or slotted DOM. WebMCP tools are not enabled unless an explicit descriptor is declared.",
           "attributes": [],
           "members": [],
           "events": [],
           "slots": [
             {
               "name": "trigger",
-              "description": "Trigger button element."
+              "description": "Trigger element; anchor-name is set on its wrapper."
             },
             {
               "name": "default",
-              "description": "Dropdown menu content."
+              "description": "Dropdown menu content, rendered inside the popover panel (typically sn-menu / sn-menu-item children)."
             }
           ],
-          "cssProperties": [],
+          "cssProperties": [
+            {
+              "name": "--sn-dropdown-bg",
+              "description": "Theme CSS custom property consumed by sn-dropdown."
+            },
+            {
+              "name": "--sn-dropdown-border",
+              "description": "Theme CSS custom property consumed by sn-dropdown."
+            },
+            {
+              "name": "--sn-dropdown-shadow-color",
+              "description": "Theme CSS custom property consumed by sn-dropdown."
+            },
+            {
+              "name": "--sn-dropdown-shadow",
+              "description": "Theme CSS custom property consumed by sn-dropdown."
+            },
+            {
+              "name": "--sn-dropdown-position-area",
+              "description": "Theme CSS custom property consumed by sn-dropdown."
+            },
+            {
+              "name": "--sn-dropdown-gap",
+              "description": "Theme CSS custom property consumed by sn-dropdown."
+            },
+            {
+              "name": "--sn-dropdown-min-width",
+              "description": "Theme CSS custom property consumed by sn-dropdown."
+            }
+          ],
           "contract": {
             "capabilities": [
               "dropdown",
-              "overlay",
-              "trigger"
+              "native-popover",
+              "anchor-positioned",
+              "trigger",
+              "light-dismiss"
             ],
             "attributes": [],
             "properties": [],
@@ -37356,14 +37482,22 @@
             "slots": [
               {
                 "name": "trigger",
-                "description": "Trigger button element."
+                "description": "Trigger element; anchor-name is set on its wrapper."
               },
               {
                 "name": "default",
-                "description": "Dropdown menu content."
+                "description": "Dropdown menu content, rendered inside the popover panel (typically sn-menu / sn-menu-item children)."
               }
             ],
-            "themeAliases": [],
+            "themeAliases": [
+              "--sn-dropdown-bg",
+              "--sn-dropdown-border",
+              "--sn-dropdown-shadow-color",
+              "--sn-dropdown-shadow",
+              "--sn-dropdown-position-area",
+              "--sn-dropdown-gap",
+              "--sn-dropdown-min-width"
+            ],
             "status": "draft",
             "schemaVersion": "component-descriptor-v2",
             "dataSchema": "schemas/runtime-ui-v1.json",
@@ -37382,9 +37516,9 @@
             }
           },
           "agent": {
-            "componentDescription": "Toggle button dropdown menu overlay. Use this menu UI component when composing menu UI. Capabilities: dropdown, overlay, trigger. Data ownership: host-owned content or slotted DOM. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "componentDescription": "Toggle button dropdown menu overlay. The floating panel is a native `popover` (popover=\"auto\") positioned with CSS anchor positioning (position-anchor / position-area) against the trigger slot — no JS-computed coordinates. Reusable as the base floating-menu primitive for other trigger-anchored menus (e.g. card action menus). Use this menu UI component when composing menu UI. Capabilities: dropdown, native-popover, anchor-positioned, trigger, light-dismiss. Data ownership: host-owned content or slotted DOM. WebMCP tools are not enabled unless an explicit descriptor is declared.",
             "semanticRole": "menu UI component",
-            "usage": "Render or compose <sn-dropdown> when the host needs toggle button dropdown menu overlay.",
+            "usage": "Render or compose <sn-dropdown> when the host needs toggle button dropdown menu overlay. the floating panel is a native `popover` (popover=\"auto\") positioned with css anchor positioning (position-anchor / position-area) against the trigger slot — no js-computed coordinates. reusable as the base floating-menu primitive for other trigger-anchored menus (e.g. card action menus).",
             "dataOwnership": "host-owned content or slotted DOM",
             "webmcp": {
               "mode": "described-only",
@@ -37403,8 +37537,10 @@
             "contract": {
               "capabilities": [
                 "dropdown",
-                "overlay",
-                "trigger"
+                "native-popover",
+                "anchor-positioned",
+                "trigger",
+                "light-dismiss"
               ],
               "attributes": [],
               "properties": [],
@@ -37413,14 +37549,22 @@
               "slots": [
                 {
                   "name": "trigger",
-                  "description": "Trigger button element."
+                  "description": "Trigger element; anchor-name is set on its wrapper."
                 },
                 {
                   "name": "default",
-                  "description": "Dropdown menu content."
+                  "description": "Dropdown menu content, rendered inside the popover panel (typically sn-menu / sn-menu-item children)."
                 }
               ],
-              "themeAliases": [],
+              "themeAliases": [
+                "--sn-dropdown-bg",
+                "--sn-dropdown-border",
+                "--sn-dropdown-shadow-color",
+                "--sn-dropdown-shadow",
+                "--sn-dropdown-position-area",
+                "--sn-dropdown-gap",
+                "--sn-dropdown-min-width"
+              ],
               "status": "draft",
               "schemaVersion": "component-descriptor-v2",
               "dataSchema": "schemas/runtime-ui-v1.json",
@@ -42319,21 +42463,27 @@
           "name": "CascadeThemeEditor",
           "tagName": "cascade-theme-editor",
           "description": "Reusable cascade theme editor module for host layouts.",
-          "componentDescription": "Reusable cascade theme editor module for host layouts. Use this layout-hosted cascade theme control surface when composing theme UI. Capabilities: cascade-theme-controls, copy-parameters, reset-defaults, local-storage, layout-panel. Data ownership: component-owned normalized theme state persisted through host-selected localStorage key; reset clears browser localStorage after applying defaults. WebMCP tools: cascade_theme_editor_apply.",
+          "componentDescription": "Reusable cascade theme editor module for host layouts. Use this layout-hosted cascade theme control surface when composing theme UI. Capabilities: cascade-theme-controls, copy-parameters, reset-defaults, local-storage, layout-panel. Data ownership: component-owned normalized theme state persisted through host-selected localStorage key; reset removes cascade-owned storage keys after applying defaults. WebMCP tools: cascade_theme_editor_apply.",
           "attributes": [
             {
               "name": "storage-key",
-              "type": {
-                "text": "string"
-              },
+              "type": "string",
               "description": "Optional localStorage key used for automatic theme parameter persistence."
             },
             {
               "name": "target-selector",
-              "type": {
-                "text": "string"
-              },
+              "type": "string",
               "description": "Optional CSS selector for the theme cascade target. Defaults to documentElement."
+            },
+            {
+              "name": "default-state",
+              "description": "Optional JSON object or parameter string used as the reset fallback state.",
+              "type": "string"
+            },
+            {
+              "name": "pickable",
+              "description": "Enables host target picking controls when present.",
+              "type": "boolean"
             }
           ],
           "members": [
@@ -42353,7 +42503,7 @@
             {
               "kind": "method",
               "name": "reset",
-              "description": "Restores cascade theme defaults and clears browser localStorage."
+              "description": "Restores cascade theme defaults and removes cascade-owned storage keys."
             },
             {
               "kind": "method",
@@ -42466,7 +42616,7 @@
               {
                 "name": "reset",
                 "type": "function",
-                "description": "Restores cascade theme defaults and clears browser localStorage."
+                "description": "Restores cascade theme defaults and removes cascade-owned storage keys."
               },
               {
                 "name": "copyParameters",
@@ -42607,10 +42757,10 @@
             }
           },
           "agent": {
-            "componentDescription": "Reusable cascade theme editor module for host layouts. Use this layout-hosted cascade theme control surface when composing theme UI. Capabilities: cascade-theme-controls, copy-parameters, reset-defaults, local-storage, layout-panel. Data ownership: component-owned normalized theme state persisted through host-selected localStorage key; reset clears browser localStorage after applying defaults. WebMCP tools: cascade_theme_editor_apply.",
+            "componentDescription": "Reusable cascade theme editor module for host layouts. Use this layout-hosted cascade theme control surface when composing theme UI. Capabilities: cascade-theme-controls, copy-parameters, reset-defaults, local-storage, layout-panel. Data ownership: component-owned normalized theme state persisted through host-selected localStorage key; reset removes cascade-owned storage keys after applying defaults. WebMCP tools: cascade_theme_editor_apply.",
             "semanticRole": "layout-hosted cascade theme control surface",
             "usage": "Mount as a layout panel when an agent or user needs bounded live theme controls for a host shell. When opened from cascade-theme-widget, use the same storage-key and target-selector so quick controls and full controls edit one cascade theme state.",
-            "dataOwnership": "component-owned normalized theme state persisted through host-selected localStorage key; reset clears browser localStorage after applying defaults",
+            "dataOwnership": "component-owned normalized theme state persisted through host-selected localStorage key; reset removes cascade-owned storage keys after applying defaults",
             "webmcp": {
               "mode": "explicit-descriptor",
               "toolNames": [
@@ -42645,6 +42795,16 @@
                   "name": "target-selector",
                   "type": "string",
                   "description": "Optional CSS selector for the theme cascade target. Defaults to documentElement."
+                },
+                {
+                  "name": "default-state",
+                  "description": "Optional JSON object or parameter string used as the reset fallback state.",
+                  "type": "string"
+                },
+                {
+                  "name": "pickable",
+                  "description": "Enables host target picking controls when present.",
+                  "type": "boolean"
                 }
               ],
               "properties": [
@@ -42663,7 +42823,7 @@
                 {
                   "name": "reset",
                   "type": "function",
-                  "description": "Restores cascade theme defaults and clears browser localStorage."
+                  "description": "Restores cascade theme defaults and removes cascade-owned storage keys."
                 },
                 {
                   "name": "copyParameters",
@@ -42801,7 +42961,8 @@
                     ]
                   }
                 ]
-              }
+              },
+              "dataOwnership": "component-owned normalized theme state persisted through host-selected localStorage key; reset removes cascade-owned storage keys after applying defaults"
             }
           }
         }
@@ -42825,21 +42986,32 @@
           "name": "CascadeThemeWidget",
           "tagName": "cascade-theme-widget",
           "description": "Compact global header widget for cascade theme quick controls.",
-          "componentDescription": "Compact global header widget for cascade theme quick controls. Use this global shell cascade theme quick control when composing theme UI. Capabilities: cascade-theme-quick-controls, copy-parameters, reset-defaults, open-full-editor, local-storage, global-shell-action. Data ownership: component-owned normalized quick theme state persisted through the same host-selected localStorage key as cascade-theme-editor; reset clears browser localStorage after applying defaults. WebMCP tools: cascade_theme_widget_open_full, cascade_theme_widget_apply_quick.",
+          "componentDescription": "Compact global header widget for cascade theme quick controls. Use this global shell cascade theme quick control when composing theme UI. Capabilities: cascade-theme-quick-controls, copy-parameters, reset-defaults, open-full-editor, local-storage, global-shell-action. Data ownership: component-owned normalized quick theme state persisted through the same host-selected localStorage key as cascade-theme-editor; reset removes cascade-owned storage keys after applying defaults. WebMCP tools: cascade_theme_widget_open_full, cascade_theme_widget_apply_quick.",
           "attributes": [
             {
               "name": "storage-key",
-              "type": {
-                "text": "string"
-              },
+              "type": "string",
               "description": "Optional localStorage key shared with cascade-theme-editor for automatic theme parameter persistence."
             },
             {
               "name": "target-selector",
-              "type": {
-                "text": "string"
-              },
+              "type": "string",
               "description": "Optional CSS selector for the theme cascade target. Defaults to documentElement."
+            },
+            {
+              "name": "default-state",
+              "description": "Optional JSON object or parameter string used as the reset fallback state.",
+              "type": "string"
+            },
+            {
+              "name": "scopes",
+              "description": "Optional JSON array of cascade theme scopes for scoped reset and persistence.",
+              "type": "string"
+            },
+            {
+              "name": "overlay-theme-selector",
+              "description": "Optional selector for the overlay theme target when the popover is mounted to document.",
+              "type": "string"
             }
           ],
           "members": [
@@ -42859,7 +43031,7 @@
             {
               "kind": "method",
               "name": "reset",
-              "description": "Restores cascade theme defaults and clears browser localStorage."
+              "description": "Restores cascade theme defaults and removes cascade-owned storage keys."
             },
             {
               "kind": "method",
@@ -42977,7 +43149,7 @@
               {
                 "name": "reset",
                 "type": "function",
-                "description": "Restores cascade theme defaults and clears browser localStorage."
+                "description": "Restores cascade theme defaults and removes cascade-owned storage keys."
               },
               {
                 "name": "copyParameters",
@@ -43120,10 +43292,10 @@
             }
           },
           "agent": {
-            "componentDescription": "Compact global header widget for cascade theme quick controls. Use this global shell cascade theme quick control when composing theme UI. Capabilities: cascade-theme-quick-controls, copy-parameters, reset-defaults, open-full-editor, local-storage, global-shell-action. Data ownership: component-owned normalized quick theme state persisted through the same host-selected localStorage key as cascade-theme-editor; reset clears browser localStorage after applying defaults. WebMCP tools: cascade_theme_widget_open_full, cascade_theme_widget_apply_quick.",
+            "componentDescription": "Compact global header widget for cascade theme quick controls. Use this global shell cascade theme quick control when composing theme UI. Capabilities: cascade-theme-quick-controls, copy-parameters, reset-defaults, open-full-editor, local-storage, global-shell-action. Data ownership: component-owned normalized quick theme state persisted through the same host-selected localStorage key as cascade-theme-editor; reset removes cascade-owned storage keys after applying defaults. WebMCP tools: cascade_theme_widget_open_full, cascade_theme_widget_apply_quick.",
             "semanticRole": "global shell cascade theme quick control",
             "usage": "Mount in a layout shell action slot with a host-selected storage-key and target-selector. Pair it with cascade-theme-editor by listening for cascade-theme-open-full and opening a host-approved panel-layout panel that uses the same storage-key and target-selector.",
-            "dataOwnership": "component-owned normalized quick theme state persisted through the same host-selected localStorage key as cascade-theme-editor; reset clears browser localStorage after applying defaults",
+            "dataOwnership": "component-owned normalized quick theme state persisted through the same host-selected localStorage key as cascade-theme-editor; reset removes cascade-owned storage keys after applying defaults",
             "webmcp": {
               "mode": "explicit-descriptor",
               "toolNames": [
@@ -43160,6 +43332,21 @@
                   "name": "target-selector",
                   "type": "string",
                   "description": "Optional CSS selector for the theme cascade target. Defaults to documentElement."
+                },
+                {
+                  "name": "default-state",
+                  "description": "Optional JSON object or parameter string used as the reset fallback state.",
+                  "type": "string"
+                },
+                {
+                  "name": "scopes",
+                  "description": "Optional JSON array of cascade theme scopes for scoped reset and persistence.",
+                  "type": "string"
+                },
+                {
+                  "name": "overlay-theme-selector",
+                  "description": "Optional selector for the overlay theme target when the popover is mounted to document.",
+                  "type": "string"
                 }
               ],
               "properties": [
@@ -43178,7 +43365,7 @@
                 {
                   "name": "reset",
                   "type": "function",
-                  "description": "Restores cascade theme defaults and clears browser localStorage."
+                  "description": "Restores cascade theme defaults and removes cascade-owned storage keys."
                 },
                 {
                   "name": "copyParameters",
@@ -43318,7 +43505,8 @@
                     ]
                   }
                 ]
-              }
+              },
+              "dataOwnership": "component-owned normalized quick theme state persisted through the same host-selected localStorage key as cascade-theme-editor; reset removes cascade-owned storage keys after applying defaults"
             }
           }
         }
@@ -44983,8 +45171,8 @@
           "customElement": true,
           "name": "KanbanBoard",
           "tagName": "sn-kanban-board",
-          "description": "Generic themeable kanban board for host-owned columns, cards, actions, selection, and move intents.",
-          "componentDescription": "Generic themeable kanban board for host-owned columns, cards, actions, selection, and move intents. Use this board UI component when composing board UI. Capabilities: kanban-board, columns, cards, selection, move-intent, themeable. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "description": "Generic themeable kanban board for host-owned columns, cards, actions, selection, and move intents. Card actions render behind a native `popover` + anchor-positioned sn-dropdown (reused from menu/) so the menu floats over the board instead of reflowing the card; the card summary clamps to a fixed line count and the footer chip row wraps instead of clipping.",
+          "componentDescription": "Generic themeable kanban board for host-owned columns, cards, actions, selection, and move intents. Card actions render behind a native `popover` + anchor-positioned sn-dropdown (reused from menu/) so the menu floats over the board instead of reflowing the card; the card summary clamps to a fixed line count and the footer chip row wraps instead of clipping. Use this board UI component when composing board UI. Capabilities: kanban-board, columns, cards, selection, move-intent, native-popover-actions, summary-clamp, wrapping-footer-chips, themeable. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
           "attributes": [
             {
               "name": "empty-text",
@@ -45105,6 +45293,10 @@
               "description": "Theme CSS custom property consumed by sn-kanban-board."
             },
             {
+              "name": "--sn-kanban-count-color",
+              "description": "Theme CSS custom property consumed by sn-kanban-board."
+            },
+            {
               "name": "--sn-kanban-card-bg",
               "description": "Theme CSS custom property consumed by sn-kanban-board."
             },
@@ -45119,6 +45311,30 @@
             {
               "name": "--sn-kanban-card-gap",
               "description": "Theme CSS custom property consumed by sn-kanban-board."
+            },
+            {
+              "name": "--sn-kanban-card-hover-border",
+              "description": "Theme CSS custom property consumed by sn-kanban-board."
+            },
+            {
+              "name": "--sn-kanban-drop-border",
+              "description": "Theme CSS custom property consumed by sn-kanban-board."
+            },
+            {
+              "name": "--sn-kanban-drop-bg",
+              "description": "Theme CSS custom property consumed by sn-kanban-board."
+            },
+            {
+              "name": "--sn-kanban-card-summary-lines",
+              "description": "Theme CSS custom property consumed by sn-kanban-board."
+            },
+            {
+              "name": "--sn-dropdown-position-area",
+              "description": "Theme CSS custom property consumed by sn-kanban-board."
+            },
+            {
+              "name": "--sn-dropdown-min-width",
+              "description": "Theme CSS custom property consumed by sn-kanban-board."
             }
           ],
           "contract": {
@@ -45128,6 +45344,9 @@
               "cards",
               "selection",
               "move-intent",
+              "native-popover-actions",
+              "summary-clamp",
+              "wrapping-footer-chips",
               "themeable"
             ],
             "attributes": [
@@ -45211,10 +45430,17 @@
               "--sn-kanban-header-bg",
               "--sn-kanban-title-color",
               "--sn-kanban-description-color",
+              "--sn-kanban-count-color",
               "--sn-kanban-card-bg",
               "--sn-kanban-card-border",
               "--sn-kanban-card-radius",
-              "--sn-kanban-card-gap"
+              "--sn-kanban-card-gap",
+              "--sn-kanban-card-hover-border",
+              "--sn-kanban-drop-border",
+              "--sn-kanban-drop-bg",
+              "--sn-kanban-card-summary-lines",
+              "--sn-dropdown-position-area",
+              "--sn-dropdown-min-width"
             ],
             "status": "draft",
             "schemaVersion": "component-descriptor-v2",
@@ -45233,9 +45459,9 @@
             }
           },
           "agent": {
-            "componentDescription": "Generic themeable kanban board for host-owned columns, cards, actions, selection, and move intents. Use this board UI component when composing board UI. Capabilities: kanban-board, columns, cards, selection, move-intent, themeable. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "componentDescription": "Generic themeable kanban board for host-owned columns, cards, actions, selection, and move intents. Card actions render behind a native `popover` + anchor-positioned sn-dropdown (reused from menu/) so the menu floats over the board instead of reflowing the card; the card summary clamps to a fixed line count and the footer chip row wraps instead of clipping. Use this board UI component when composing board UI. Capabilities: kanban-board, columns, cards, selection, move-intent, native-popover-actions, summary-clamp, wrapping-footer-chips, themeable. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
             "semanticRole": "board UI component",
-            "usage": "Render or compose <sn-kanban-board> when the host needs generic themeable kanban board for host-owned columns, cards, actions, selection, and move intents.",
+            "usage": "Render or compose <sn-kanban-board> when the host needs generic themeable kanban board for host-owned columns, cards, actions, selection, and move intents. card actions render behind a native `popover` + anchor-positioned sn-dropdown (reused from menu/) so the menu floats over the board instead of reflowing the card; the card summary clamps to a fixed line count and the footer chip row wraps instead of clipping.",
             "dataOwnership": "host-owned props and attributes; component owns presentation state",
             "webmcp": {
               "mode": "described-only",
@@ -45258,6 +45484,9 @@
                 "cards",
                 "selection",
                 "move-intent",
+                "native-popover-actions",
+                "summary-clamp",
+                "wrapping-footer-chips",
                 "themeable"
               ],
               "attributes": [
@@ -45341,10 +45570,17 @@
                 "--sn-kanban-header-bg",
                 "--sn-kanban-title-color",
                 "--sn-kanban-description-color",
+                "--sn-kanban-count-color",
                 "--sn-kanban-card-bg",
                 "--sn-kanban-card-border",
                 "--sn-kanban-card-radius",
-                "--sn-kanban-card-gap"
+                "--sn-kanban-card-gap",
+                "--sn-kanban-card-hover-border",
+                "--sn-kanban-drop-border",
+                "--sn-kanban-drop-bg",
+                "--sn-kanban-card-summary-lines",
+                "--sn-dropdown-position-area",
+                "--sn-dropdown-min-width"
               ],
               "status": "draft",
               "schemaVersion": "component-descriptor-v2",

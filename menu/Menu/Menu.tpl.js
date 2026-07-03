@@ -22,10 +22,10 @@ export let menuGroupTemplate = html`
 `;
 
 export let dropdownTemplate = html`
-  <div class="sn-dropdown-trigger" style="display: contents;" ${{ onclick: 'onTriggerClick' }}>
+  <div class="sn-dropdown-trigger" ${{ onclick: 'onTriggerClick' }}>
     <slot name="trigger"></slot>
   </div>
-  <sn-popover style="display: contents;" class="sn-dropdown-popover" placement="bottom-start">
+  <div class="sn-dropdown-popover" popover="auto" role="menu">
     <slot></slot>
-  </sn-popover>
+  </div>
 `;

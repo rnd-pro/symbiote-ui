@@ -9,10 +9,10 @@ sn-tour {
 
 .sn-tour-popover {
   display: none;
-  background-color: var(--sn-panel-bg, #1e1e24);
-  border: 1px solid var(--sn-node-selected, #2e90fa);
+  background-color: var(--sn-sys-surface-overlay);
+  border: 1px solid var(--sn-sys-accent);
   border-radius: var(--sn-panel-radius, 6px);
-  box-shadow: var(--sn-panel-shadow, 0 10px 25px rgba(0,0,0,0.35));
+  box-shadow: var(--sn-sys-shadow-overlay);
   padding: var(--sn-step-6);
   width: 240px;
   box-sizing: border-box;
@@ -33,13 +33,13 @@ sn-tour {
 .sn-tour-title {
   font-size: calc(var(--sn-text-md, 13px) * var(--sn-theme-type-scale, 1));
   font-weight: 600;
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
 }
 
 .sn-tour-close-btn {
   background: none;
   border: none;
-  color: var(--sn-text-dim, rgba(255,255,255,0.6));
+  color: var(--sn-sys-on-surface-dim);
   cursor: pointer;
   padding: var(--sn-step-1);
   border-radius: var(--sn-radius-sm);
@@ -51,7 +51,7 @@ sn-tour {
 
 .sn-tour-body {
   font-size: calc(var(--sn-text-sm, 12px) * var(--sn-theme-type-scale, 1));
-  color: var(--sn-text-dim, rgba(255,255,255,0.8));
+  color: var(--sn-sys-on-surface-dim);
   line-height: 1.4;
 }
 
@@ -64,7 +64,7 @@ sn-tour {
 
 .sn-tour-progress {
   font-size: var(--sn-text-xs);
-  color: var(--sn-text-dim, rgba(255,255,255,0.5));
+  color: var(--sn-sys-on-surface-faint);
 }
 
 .sn-tour-buttons {
@@ -73,9 +73,9 @@ sn-tour {
 }
 
 .sn-tour-btn {
-  background: var(--sn-panel-bg, #1e1e24);
-  border: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
-  color: var(--sn-text);
+  background: var(--sn-sys-surface-panel);
+  border: 1px solid var(--sn-sys-outline-subtle);
+  color: var(--sn-sys-on-surface);
   padding: var(--sn-step-2) var(--sn-step-4);
   border-radius: var(--sn-radius-sm);
   font-size: var(--sn-text-xs);
@@ -83,12 +83,12 @@ sn-tour {
 }
 
 .sn-tour-btn:hover {
-  background: var(--sn-node-hover, rgba(255,255,255,0.05));
+  background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-panel));
 }
 
 .sn-tour-btn[data-primary] {
-  background: var(--sn-node-selected, #2e90fa);
-  border-color: var(--sn-node-selected, #2e90fa);
-  color: var(--sn-node-selected-text, #fff);
+  background: var(--sn-sys-accent);
+  border-color: var(--sn-sys-accent);
+  color: var(--sn-sys-on-accent);
 }
 `;

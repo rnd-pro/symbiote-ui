@@ -11,8 +11,8 @@ sn-combobox {
 .sn-combobox-input-container {
   display: flex;
   align-items: center;
-  background-color: var(--sn-field-bg, #1a1a1f);
-  border: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
+  background-color: var(--sn-field-bg, var(--sn-sys-surface-panel));
+  border: 1px solid var(--sn-outline-color-soft, var(--sn-sys-outline-subtle));
   border-radius: var(--sn-panel-radius, 8px);
   overflow: hidden;
   box-sizing: border-box;
@@ -20,14 +20,15 @@ sn-combobox {
 }
 
 .sn-combobox-input-container:focus-within {
-  border-color: var(--sn-primary, #3b82f6);
+  border-color: var(--sn-primary, var(--sn-sys-accent));
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-selected-mix), transparent);
 }
 
 .sn-combobox-input {
   flex: 1;
   background: transparent;
   border: none;
-  color: var(--sn-text, #ffffff);
+  color: var(--sn-text, var(--sn-sys-on-surface));
   padding: calc(var(--sn-step-4, 8px) * var(--sn-theme-density, 1)) calc(var(--sn-step-6, 12px) * var(--sn-theme-density, 1));
   font-family: var(--sn-font, sans-serif);
   font-size: calc(var(--sn-text-md, 13px) * var(--sn-theme-type-scale, 1));
@@ -37,7 +38,7 @@ sn-combobox {
 .sn-combobox-trigger {
   background: transparent;
   border: none;
-  color: var(--sn-text-dim, rgba(255,255,255,0.6));
+  color: var(--sn-text-dim, var(--sn-sys-on-surface-dim));
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -47,17 +48,17 @@ sn-combobox {
 }
 
 .sn-combobox-trigger:hover {
-  color: var(--sn-text, #ffffff);
+  color: var(--sn-text, color-mix(in oklch, var(--sn-sys-on-surface) var(--sn-sys-state-hover-mix), var(--sn-sys-on-surface-dim)));
 }
 
 .sn-combobox-dropdown {
   display: none;
   position: fixed;
   z-index: var(--sn-overlay-z-base, 20000);
-  background-color: var(--sn-panel-bg, #1e1e24);
-  border: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
+  background-color: var(--sn-panel-bg, var(--sn-sys-surface-overlay));
+  border: 1px solid var(--sn-outline-color-soft, var(--sn-sys-outline-subtle));
   border-radius: var(--sn-panel-radius, 8px);
-  box-shadow: var(--sn-panel-shadow, 0 8px 24px rgba(0, 0, 0, 0.3));
+  box-shadow: var(--sn-panel-shadow, var(--sn-sys-shadow-overlay));
   max-height: 240px;
   overflow-y: auto;
   box-sizing: border-box;
@@ -78,7 +79,7 @@ sn-combobox {
   padding: calc(var(--sn-step-4, 8px) * var(--sn-theme-density, 1)) calc(var(--sn-step-6, 12px) * var(--sn-theme-density, 1));
   font-family: var(--sn-font, sans-serif);
   font-size: calc(var(--sn-text-md, 13px) * var(--sn-theme-type-scale, 1));
-  color: var(--sn-text, #ffffff);
+  color: var(--sn-text, var(--sn-sys-on-surface));
   border-radius: calc(var(--sn-panel-radius, 8px) - 4px);
   cursor: pointer;
   user-select: none;
@@ -87,23 +88,23 @@ sn-combobox {
 }
 
 .sn-combobox-option:hover {
-  background-color: var(--sn-node-hover, rgba(255,255,255,0.05));
+  background-color: var(--sn-node-hover, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), transparent));
 }
 
 .sn-combobox-option[data-focused] {
-  background-color: var(--sn-node-selected, rgba(59, 130, 246, 0.15));
+  background-color: var(--sn-node-selected, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-selected-mix), transparent));
 }
 
 .sn-combobox-option[aria-selected="true"] {
-  background-color: var(--sn-primary, #3b82f6);
-  color: var(--sn-text, #ffffff);
+  background-color: var(--sn-primary, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-selected-mix), var(--sn-sys-surface-overlay)));
+  color: var(--sn-text, var(--sn-sys-on-accent));
 }
 
 .sn-combobox-empty {
   display: none;
   padding: calc(var(--sn-step-6, 12px) * var(--sn-theme-density, 1));
   text-align: center;
-  color: var(--sn-text-dim, rgba(255,255,255,0.6));
+  color: var(--sn-text-dim, var(--sn-sys-on-surface-dim));
   font-family: var(--sn-font, sans-serif);
   font-size: calc(var(--sn-text-md, 13px) * var(--sn-theme-type-scale, 1));
 }

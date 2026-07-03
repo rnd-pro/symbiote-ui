@@ -5,19 +5,19 @@ sn-listbox {
 
 .sn-listbox {
   outline: none;
-  background-color: var(--sn-listbox-bg, var(--sn-panel-bg, #1e1e24));
-  border: 1px solid var(--sn-listbox-border, var(--sn-outline-color-soft, rgba(255,255,255,0.08)));
+  background-color: var(--sn-listbox-bg, var(--sn-sys-surface-panel));
+  border: 1px solid var(--sn-listbox-border, var(--sn-sys-outline-subtle));
   border-radius: var(--sn-listbox-radius, var(--sn-panel-radius, 8px));
   padding: var(--sn-step-2);
   max-height: var(--sn-listbox-max-height, 280px);
   overflow-y: auto;
   box-sizing: border-box;
-  box-shadow: var(--sn-listbox-shadow, 0 4px 16px rgba(0,0,0,0.2));
+  box-shadow: var(--sn-listbox-shadow, var(--sn-sys-shadow-overlay));
   transition: border-color var(--sn-transition-fast, 120ms) ease;
 }
 
 .sn-listbox:focus-within {
-  border-color: var(--sn-listbox-border-focus, var(--sn-outline-color-hover, #3b82f6));
+  border-color: var(--sn-listbox-border-focus, var(--sn-sys-outline-focus));
 }
 
 .sn-listbox [role="option"] {
@@ -26,7 +26,7 @@ sn-listbox {
   padding: calc(var(--sn-step-4, 8px) * var(--sn-theme-density, 1)) calc(var(--sn-step-6, 12px) * var(--sn-theme-density, 1));
   font-family: var(--sn-font, sans-serif);
   font-size: calc(var(--sn-text-md, 13px) * var(--sn-theme-type-scale, 1));
-  color: var(--sn-listbox-text, var(--sn-text, #ffffff));
+  color: var(--sn-listbox-text, var(--sn-sys-on-surface));
   border-radius: calc(var(--sn-panel-radius, 8px) - var(--sn-radius-sm, 4px));
   cursor: pointer;
   user-select: none;
@@ -39,24 +39,24 @@ sn-listbox {
 }
 
 .sn-listbox [role="option"]:hover:not([disabled]):not([aria-disabled="true"]) {
-  background-color: var(--sn-listbox-hover-bg, var(--sn-node-hover, rgba(255,255,255,0.05)));
-  color: var(--sn-listbox-hover-text, var(--sn-text, #ffffff));
+  background-color: var(--sn-listbox-hover-bg, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-panel)));
+  color: var(--sn-listbox-hover-text, var(--sn-sys-on-surface));
 }
 
 .sn-listbox [role="option"][data-focused] {
-  background-color: var(--sn-listbox-focus-bg, rgba(59, 130, 246, 0.15));
-  color: var(--sn-listbox-focus-text, var(--sn-text, #ffffff));
+  background-color: var(--sn-listbox-focus-bg, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-selected-mix), var(--sn-sys-surface-panel)));
+  color: var(--sn-listbox-focus-text, var(--sn-sys-on-surface));
 }
 
 .sn-listbox [role="option"][aria-selected="true"] {
-  background-color: var(--sn-listbox-selected-bg, var(--sn-primary, #3b82f6));
-  color: var(--sn-listbox-selected-text, #ffffff);
+  background-color: var(--sn-listbox-selected-bg, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-selected-mix), var(--sn-sys-surface-panel)));
+  color: var(--sn-listbox-selected-text, var(--sn-sys-on-surface));
   font-weight: 500;
 }
 
 .sn-listbox [role="option"][disabled],
 .sn-listbox [role="option"][aria-disabled="true"] {
-  opacity: 0.4;
+  opacity: var(--sn-sys-state-disabled-opacity, 0.38);
   cursor: not-allowed;
 }
 `;

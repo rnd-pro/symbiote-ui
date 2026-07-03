@@ -1,5 +1,7 @@
 export default /*css*/ `
 sn-dialog {
+  --sn-dialog-backdrop-bg: var(--sn-sys-scrim);
+
   display: contents;
 }
 
@@ -7,17 +9,17 @@ sn-dialog {
   padding: 0;
   border: none;
   background: transparent;
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
   max-width: min(calc(100% - 32px), var(--sn-dialog-max-width, 560px));
   max-height: min(calc(100% - 32px), var(--sn-dialog-max-height, 80vh));
   border-radius: var(--sn-panel-radius, 8px);
-  box-shadow: var(--sn-panel-shadow, 0 12px 32px rgba(0,0,0,0.4));
+  box-shadow: var(--sn-sys-shadow-overlay);
   overflow: hidden;
   box-sizing: border-box;
 }
 
 .sn-dialog::backdrop {
-  background-color: var(--sn-dialog-backdrop-bg, rgba(0, 0, 0, 0.45));
+  background-color: var(--sn-dialog-backdrop-bg);
   backdrop-filter: blur(4px);
   transition: backdrop-filter var(--sn-transition-normal, 240ms) ease;
 }
@@ -25,8 +27,8 @@ sn-dialog {
 .sn-dialog-panel {
   display: flex;
   flex-direction: column;
-  background-color: var(--sn-panel-bg, #1e1e24);
-  border: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
+  background-color: var(--sn-sys-surface-overlay);
+  border: 1px solid var(--sn-sys-outline-subtle);
   border-radius: var(--sn-panel-radius, 8px);
   overflow: hidden;
 }
@@ -36,7 +38,7 @@ sn-dialog {
   align-items: center;
   justify-content: space-between;
   padding: calc(var(--sn-step-8, 16px) * var(--sn-theme-density, 1)) calc(var(--sn-step-9, 20px) * var(--sn-theme-density, 1));
-  border-bottom: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
+  border-bottom: 1px solid var(--sn-sys-outline-subtle);
 }
 
 .sn-dialog-title {
@@ -44,13 +46,13 @@ sn-dialog {
   font-family: var(--sn-font, sans-serif);
   font-size: calc(var(--sn-text-2xl, 18px) * var(--sn-theme-type-scale, 1) * var(--sn-theme-heading-scale, 1));
   font-weight: 600;
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
 }
 
 .sn-dialog-close-btn {
   background: transparent;
   border: none;
-  color: var(--sn-text-dim, rgba(255,255,255,0.6));
+  color: var(--sn-sys-on-surface-dim);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -61,14 +63,15 @@ sn-dialog {
 }
 
 .sn-dialog-close-btn:hover {
-  background-color: var(--sn-node-hover, rgba(255,255,255,0.05));
-  color: var(--sn-text);
+  background-color: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), transparent);
+  color: var(--sn-sys-on-surface);
 }
 
 .sn-dialog-close-btn:focus-visible {
-  outline: 2px solid var(--sn-focus-ring-color, currentColor);
+  /* audit-ok: focus-ring emphasis swap between two on-surface sys roles, not a state-layer mix */
+  outline: var(--sn-sys-focus-ring-width) solid var(--sn-sys-focus-ring);
   outline-offset: 2px;
-  color: var(--sn-text);
+  color: var(--sn-sys-on-surface);
 }
 
 .sn-dialog-body {
@@ -85,7 +88,7 @@ sn-dialog {
   justify-content: flex-end;
   gap: var(--sn-step-6);
   padding: calc(var(--sn-step-8, 16px) * var(--sn-theme-density, 1)) calc(var(--sn-step-9, 20px) * var(--sn-theme-density, 1));
-  border-top: 1px solid var(--sn-outline-color-soft, rgba(255,255,255,0.08));
-  background-color: color-mix(in oklab, var(--sn-panel-bg) 95%, var(--sn-text) 5%);
+  border-top: 1px solid var(--sn-sys-outline-subtle);
+  background-color: var(--sn-sys-surface-toolbar);
 }
 `;
