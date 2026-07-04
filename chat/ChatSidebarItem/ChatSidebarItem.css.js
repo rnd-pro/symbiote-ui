@@ -3,6 +3,8 @@ export default `
 chat-sidebar-item,
 chat-sidebar-sub-item {
   display: block;
+  content-visibility: auto;
+  contain-intrinsic-size: auto var(--sn-chat-sidebar-item-intrinsic-height, 28px);
   --sn-chat-compact-label-width: clamp(var(--sn-chat-sidebar-compact-label-min, 72px), calc(var(--sn-chat-compact-label-ch, 18) * var(--sn-chat-sidebar-compact-label-ch-width, 5px) + var(--sn-chat-sidebar-compact-label-extra, 20px)), var(--sn-chat-sidebar-compact-label-max, 320px));
   --sn-chat-compact-delete-width: var(--sn-chat-sidebar-compact-delete-width, 44px);
   --sn-chat-compact-flyout-width: calc(var(--sn-chat-compact-label-width) + var(--sn-chat-compact-delete-width));
