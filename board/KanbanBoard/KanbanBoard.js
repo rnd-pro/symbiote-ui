@@ -367,6 +367,8 @@ export class KanbanBoard extends Symbiote {
     this.$.isEmpty = columns.length === 0;
     let headerChanged = this.#reconcile(columns);
     this.#syncCardSelection();
+    // The action dropdowns are connected now, so their popovers exist: arm the lazy-open build.
+    this.#connectPendingActionListeners();
     if (headerChanged) this.#syncColumnHeaderHeights();
   }
 
@@ -672,9 +674,22 @@ export class KanbanBoard extends Symbiote {
     }
     let signature = actionSignature(card.actions);
     if (dropdown && this.#actionSignatures.get(dropdown) === signature) return;
-    let menu = this.#renderActionMenu(card);
-    if (dropdown) dropdown.replaceWith(menu);
-    else footer.append(menu);
+    // The action list changed. Reuse the live dropdown (trigger + popover anchor + any open
+    // state survive), just re-arm its lazy menu against the new actions: the items rebuild on
+    // the next open, or immediately if the popover is currently open.
+    if (dropdown) {
+      let menu = dropdown.__snActionsMenu || dropdown.querySelector('sn-menu');
+      if (menu) {
+        this.#armLazyActions(dropdown, menu, card);
+        this.#actionSignatures.set(dropdown, signature);
+        let popover = dropdown.querySelector('.sn-dropdown-popover');
+        if (popover && isPopoverOpen(popover)) this.#populateActionMenu(dropdown);
+        return;
+      }
+      dropdown.replaceWith(this.#renderActionMenu(card));
+      return;
+    }
+    footer.append(this.#renderActionMenu(card));
   }
 
   #renderChip(chip) {
@@ -697,6 +712,11 @@ export class KanbanBoard extends Symbiote {
    * U07: reuse the sn-dropdown native popover + anchor-positioned floating-menu primitive
    * (menu/Menu/Menu.js) instead of the old <details> that expanded grid-column: 1/-1 inside
    * the card. The panel now floats over the board and never reflows card/column layout.
+   *
+   * The trigger button and empty <sn-menu> are built eagerly (they are the ⋯ affordance and
+   * the popover's anchor), but the menu items are materialized lazily on first open: across a
+   * full board that is hundreds of hidden nodes never built until a menu is actually used. The
+   * card's normalized `actions` model is unchanged — only the DOM of the items is deferred.
    */
   #renderActionMenu(card) {
     let dropdown = makeElement('sn-dropdown', 'sn-kanban-card-actions');
@@ -709,10 +729,65 @@ export class KanbanBoard extends Symbiote {
     dropdown.append(trigger);
     let menu = makeElement('sn-menu');
     menu.setAttribute('role', 'menu');
-    for (let action of card.actions) menu.append(this.#renderAction(card, action));
     dropdown.append(menu);
+    this.#armLazyActions(dropdown, menu, card);
     this.#actionSignatures.set(dropdown, actionSignature(card.actions));
     return dropdown;
+  }
+
+  /*
+   * Point the dropdown's lazy menu at a card's live actions and mark it unbuilt. The item
+   * source is stashed on the dropdown; the open listeners that trigger the one-shot build are
+   * wired later, once the dropdown is connected (#connectActionListeners), because the native
+   * popover element only exists after the dropdown renders its shadow tree.
+   */
+  #armLazyActions(dropdown, menu, card) {
+    dropdown.__snActionsCard = card;
+    dropdown.__snActionsMenu = menu;
+    dropdown.__snActionsPopulated = false;
+    // Re-arming a menu that was already built (its action list changed) drops the stale items
+    // so the closed menu is empty again until the next open rebuilds it from the new actions.
+    if (menu.firstChild) menu.replaceChildren();
+  }
+
+  /*
+   * Wire the one-shot populate to the first popover-open signal — the native
+   * 'beforetoggle'/'toggle' to newState 'open' — plus a redundant trigger press path. Runs
+   * after the dropdown is connected so the shadow-rendered popover and trigger exist; the
+   * listeners are attached once per dropdown and reused across re-arms.
+   */
+  #connectActionListeners(dropdown) {
+    if (dropdown.__snActionsListening) return;
+    let popover = dropdown.querySelector('.sn-dropdown-popover');
+    let trigger = dropdown.querySelector('.sn-dropdown-trigger');
+    if (!popover && !trigger) return;
+    dropdown.__snActionsListening = true;
+    let populate = () => this.#populateActionMenu(dropdown);
+    let onToggle = (event) => {
+      if (!event || event.newState == null || event.newState === 'open') populate();
+    };
+    if (popover) {
+      popover.addEventListener('beforetoggle', onToggle);
+      popover.addEventListener('toggle', onToggle);
+    }
+    // Redundant eager path: a trigger press opens the popover, so build before it shows.
+    (trigger || dropdown).addEventListener('pointerdown', populate);
+    (trigger || dropdown).addEventListener('click', populate);
+  }
+
+  #connectPendingActionListeners() {
+    for (let dropdown of this.ref.columns.querySelectorAll('.sn-kanban-card-actions')) {
+      this.#connectActionListeners(dropdown);
+    }
+  }
+
+  #populateActionMenu(dropdown) {
+    if (dropdown.__snActionsPopulated) return;
+    let card = dropdown.__snActionsCard;
+    let menu = dropdown.__snActionsMenu;
+    if (!card || !menu) return;
+    dropdown.__snActionsPopulated = true;
+    menu.replaceChildren(...card.actions.map(action => this.#renderAction(card, action)));
   }
 
   #renderAction(card, action) {

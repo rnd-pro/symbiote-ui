@@ -93,9 +93,30 @@ test('sn-kanban-board renders columns and emits card intents', async () => {
     board.querySelector('.sn-kanban-card-actions .sn-dropdown-trigger .sn-kanban-card-menu'),
     'slot distribution should place the card menu button inside the dropdown trigger',
   );
+  let actionMenu = board.querySelector('.sn-kanban-card-actions .sn-dropdown-popover sn-menu');
   assert.ok(
-    board.querySelector('.sn-kanban-card-actions .sn-dropdown-popover sn-menu'),
+    actionMenu,
     'slot distribution should place the action menu inside the native popover, hidden until triggered',
+  );
+  // Lazy population: the sn-menu shell exists eagerly (it is the popover anchor), but its
+  // items are deferred until the popover first opens — nothing to render across a whole board
+  // of closed menus.
+  assert.equal(
+    actionMenu.querySelectorAll('sn-menu-item').length,
+    0,
+    'action items are not materialized until the popover is first opened',
+  );
+  let dropdown = board.querySelector('.sn-kanban-card-actions');
+  let popover = dropdown.querySelector('.sn-dropdown-popover');
+  popover.dispatchEvent(new CustomEvent('beforetoggle', { detail: {} }));
+  assert.equal(
+    actionMenu.querySelectorAll('sn-menu-item').length,
+    1,
+    'opening the popover materializes the action items once',
+  );
+  assert.ok(
+    board.querySelector('.sn-kanban-card-actions .sn-dropdown-popover sn-menu [data-sn-board-action="move-next"]'),
+    'the materialized item carries its action id for the select handler',
   );
   // Agent identity chip: the data-carried accent lands as a custom property the theme's
   // container-fill math consumes; kind switches the chip to the agent variant.
@@ -191,6 +212,67 @@ test('sn-kanban-board reconciles setBoard by key instead of rebuilding the DOM',
   assert.equal(board.querySelector('[data-sn-board-card-id="a"]'), null);
   assert.equal(cardA.isConnected, false);
   assert.ok(board.querySelector('.sn-kanban-card-list[data-column-id="doing"] .sn-kanban-column-empty'));
+
+  board.remove();
+});
+
+test('sn-kanban-board defers action items until first open and re-arms on action change', async () => {
+  await import('../board/index.js');
+  let board = document.createElement('sn-kanban-board');
+  document.body.append(board);
+  await nextTick();
+
+  let openMenu = (dropdown) =>
+    dropdown.querySelector('.sn-dropdown-popover')
+      .dispatchEvent(new CustomEvent('beforetoggle', { detail: {} }));
+
+  board.setBoard({
+    columns: [{
+      id: 'ready',
+      title: 'Ready',
+      cards: [{ id: 'a', title: 'Alpha', actions: [{ id: 'edit', title: 'Edit' }, { id: 'del', title: 'Delete' }] }],
+    }],
+  });
+
+  let dropdown = board.querySelector('.sn-kanban-card-actions');
+  let menu = dropdown.querySelector('.sn-dropdown-popover sn-menu');
+  // Closed: the sn-menu shell exists (popover anchor) but carries no items.
+  assert.equal(menu.querySelectorAll('sn-menu-item').length, 0, 'items are deferred until first open');
+
+  openMenu(dropdown);
+  assert.equal(menu.querySelectorAll('sn-menu-item').length, 2, 'first open materializes the items once');
+  let firstItem = menu.querySelector('sn-menu-item');
+
+  // Re-open with unchanged actions: the built items are reused, not rebuilt.
+  openMenu(dropdown);
+  assert.equal(menu.querySelectorAll('sn-menu-item').length, 2, 'a second open reuses the built items');
+  assert.equal(menu.querySelector('sn-menu-item'), firstItem, 'built items are reused across opens');
+
+  // An unchanged card on a fresh setBoard keeps its live dropdown and does not rebuild the menu.
+  board.setBoard({
+    columns: [{
+      id: 'ready',
+      title: 'Ready',
+      cards: [{ id: 'a', title: 'Alpha', actions: [{ id: 'edit', title: 'Edit' }, { id: 'del', title: 'Delete' }] }],
+    }],
+  });
+  assert.equal(board.querySelector('.sn-kanban-card-actions'), dropdown, 'unchanged actions keep the dropdown');
+  assert.equal(menu.querySelector('sn-menu-item'), firstItem, 'unchanged actions keep the built items');
+
+  // Changing the action list re-arms the lazy menu: it empties and rebuilds on the next open.
+  board.setBoard({
+    columns: [{
+      id: 'ready',
+      title: 'Ready',
+      cards: [{ id: 'a', title: 'Alpha', actions: [{ id: 'edit', title: 'Edit' }] }],
+    }],
+  });
+  assert.equal(board.querySelector('.sn-kanban-card-actions'), dropdown, 'changed actions reuse the dropdown + trigger');
+  assert.equal(menu.querySelectorAll('sn-menu-item').length, 0, 'changed actions clear the lazy menu until re-opened');
+  openMenu(dropdown);
+  assert.equal(menu.querySelectorAll('sn-menu-item').length, 1, 'the re-armed menu rebuilds from the new actions on open');
+  assert.ok(menu.querySelector('[data-sn-board-action="edit"]'));
+  assert.equal(menu.querySelector('[data-sn-board-action="del"]'), null, 'the removed action is gone from the rebuilt menu');
 
   board.remove();
 });
