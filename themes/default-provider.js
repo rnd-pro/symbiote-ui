@@ -149,6 +149,13 @@ const DEFAULT_PROVIDER_THEME_TOKENS = {
   '--sn-cell-noise': 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'1.5\' numOctaves=\'2\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\' opacity=\'0.030\'/%3E%3C/svg%3E")',
 
   '--sn-sys-surface-raised': 'var(--sn-sys-surface-panel)',
+  // Toolbars/headers sit one rung above raised: a hair lighter than the panel they cap, a hair
+  // darker than the overlay ladder. Defined in the theme's neutral system so it matches the rest of
+  // the surfaces (without it, this role leaks to the OKLCH cascade and reads as a darker, blue-tinted
+  // band that inverts the elevation ladder above the raised cards).
+  '--sn-sys-surface-toolbar': 'color-mix(in oklab, var(--sn-sys-surface-panel) 97%, var(--sn-sys-on-surface) 3%)',
+  // Modal backdrop — a neutral, near-black translucent veil consistent with the dark surface system.
+  '--sn-sys-scrim': 'hsl(0 0% 2% / 0.6)',
   '--sn-sys-outline': 'hsl(var(--sn-hue-base) var(--sn-sat-muted) var(--sn-lit-text) / 0.1)',
   '--sn-border': 'var(--sn-sys-outline)',
   '--sn-node-min-width': '180px',
