@@ -349,6 +349,29 @@ export {
   normalizeTourMediaTimeline,
   renderTourVideo,
 } from './tour-media-renderer.js';
+export {
+  MEDIA_FRAME_SOURCE_PROVIDER_METADATA,
+  MEDIA_PREVIEW_STATES,
+  MEDIA_STUDIO_CSS_PARTS,
+  MEDIA_STUDIO_FRAME_SOURCE_TYPES,
+  MEDIA_STUDIO_PANEL_TYPES,
+  MEDIA_STUDIO_SURFACE_STYLES,
+  MEDIA_STUDIO_STYLE_TOKENS,
+  MEDIA_STUDIO_SURFACE_CONTRACT,
+  createMediaStudioLayout,
+  createMediaStudioPanelTypes,
+  ensureMediaStudioSurfaceStyles,
+  getMediaFrameSourceProvider,
+  getMediaFrameSourceSupport,
+  getMediaStudioTopology,
+  hasMediaStudioTopology,
+  listMediaFrameSourceProviders,
+  normalizeMediaFrameSource,
+  normalizeMediaPreviewState,
+  renderMediaStudioPreviewPanelMarkup,
+  renderMediaStudioProgressPanelMarkup,
+  renderMediaStudioTimelinePanelMarkup,
+} from './media-studio-surface.js';
 export { recordTourScreencast } from './tour-screencast.js';
 export {
   TOUR_AUDIO_PROVIDER_BROWSER_ID,
