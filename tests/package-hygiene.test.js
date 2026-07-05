@@ -129,6 +129,10 @@ test('npm pack output excludes private memory and scratch artifacts', async () =
   let result = run('npm', ['pack', '--dry-run', '--json', '--ignore-scripts']);
   let [pack] = JSON.parse(result.stdout);
   let files = pack.files.map((file) => file.path);
+  let uiSource = await readFile(join(repoRoot, 'ui', 'index.js'), 'utf8');
+  let uiDynamicImports = [...uiSource.matchAll(/import\(['"]\.\.\/([^'"]+)['"]\)/g)]
+    .map((match) => match[1])
+    .sort();
 
   assert.equal(pack.name, 'symbiote-ui');
   assert.ok(files.includes('package.json'));
@@ -140,6 +144,9 @@ test('npm pack output excludes private memory and scratch artifacts', async () =
   assert.ok(files.includes('ui/index.js'));
   assert.ok(files.includes('runtime/index.js'));
   assert.ok(files.includes('manifest/component-registry.js'));
+  for (let importPath of uiDynamicImports) {
+    assert.ok(files.includes(importPath), `ui dynamic import missing from pack output: ${importPath}`);
+  }
   assertNoPrivatePackFiles(files);
 });
 
