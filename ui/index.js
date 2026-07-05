@@ -299,6 +299,7 @@ export let DescriptionList;
 export let DescriptionItem;
 export let Timeline;
 export let TimelineItem;
+export let TimelineEditor;
 export let Avatar;
 export let Tag;
 export let DatePicker;
@@ -774,6 +775,7 @@ if (hasDOMGlobals) {
     carousel,
     qrCode,
     videoPlayer,
+    timelineEditor,
   ] = await Promise.all([
     import('../canvas/NodeCanvas/NodeCanvas.js'),
     import('../canvas/CanvasGraph/CanvasGraph.js'),
@@ -880,6 +882,7 @@ if (hasDOMGlobals) {
     import('../display/Carousel/Carousel.js'),
     import('../display/QrCode/QrCode.js'),
     import('../display/VideoPlayer/VideoPlayer.js'),
+    import('../timeline/TimelineEditor/TimelineEditor.js'),
   ]);
 
   ({ NodeCanvas } = nodeCanvas);
@@ -981,6 +984,7 @@ if (hasDOMGlobals) {
   ({ PackDetail } = packDetail);
   ({ DescriptionList, DescriptionItem } = descriptionList);
   ({ Timeline, TimelineItem } = timeline);
+  ({ default: TimelineEditor } = timelineEditor);
   ({ Avatar } = avatar);
   ({ Tag } = tag);
   ({ default: DatePicker } = datePicker);
@@ -1101,6 +1105,7 @@ if (hasDOMGlobals) {
     DescriptionItem,
     Timeline,
     TimelineItem,
+    TimelineEditor,
     Avatar,
     Tag,
     DatePicker,
@@ -1120,6 +1125,7 @@ if (hasDOMGlobals) {
     Carousel,
     QrCode,
     VideoPlayer,
+    TimelineEditor,
   });
 }
 

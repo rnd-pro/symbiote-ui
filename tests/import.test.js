@@ -1661,11 +1661,15 @@ test('discover exposes the standalone package contract', async () => {
   assert.ok(sourceEditorAgentItem.webmcp.toolNames.includes('source_editor_save'));
   let sourceViewer = data.manifest.components.find((item) => item.tagName === 'source-viewer');
   let sourceEditor = data.manifest.components.find((item) => item.tagName === 'source-editor');
+  let timelineEditor = data.manifest.components.find((item) => item.tagName === 'sn-timeline-editor');
   let checkbox = data.manifest.components.find((item) => item.tagName === 'sn-checkbox');
   let radio = data.manifest.components.find((item) => item.tagName === 'sn-radio');
   let sw = data.manifest.components.find((item) => item.tagName === 'sn-switch');
   assert.ok(sourceViewer.contract.capabilities.includes('directory-summary'));
   assert.ok(sourceEditor.contract.capabilities.includes('markdown-editing'));
+  assert.ok(timelineEditor);
+  assert.ok(timelineEditor.contract.capabilities.includes('nle-timeline'));
+  assert.ok(timelineEditor.contract.methods.some((method) => method.name === 'loadTimeline'));
   assert.ok(checkbox.contract.capabilities.includes('mixed-state'));
   assert.ok(checkbox.contract.attributes.some((attribute) => attribute.name === 'indeterminate'));
   assert.ok(checkbox.contract.events.some((event) => event.name === 'sn-checkbox-change'));
@@ -1678,8 +1682,14 @@ test('discover exposes the standalone package contract', async () => {
   let checkboxDeclaration = customElements.modules
     .flatMap((module) => module.declarations || [])
     .find((declaration) => declaration.tagName === 'sn-checkbox');
+  let timelineEditorDeclaration = customElements.modules
+    .flatMap((module) => module.declarations || [])
+    .find((declaration) => declaration.tagName === 'sn-timeline-editor');
   assert.ok(sourceEditorDeclaration.componentDescription.includes('markdown-editing'));
   assert.ok(sourceEditorDeclaration.agent.webmcp.toolNames.includes('source_editor_save'));
+  assert.ok(timelineEditorDeclaration);
+  assert.ok(timelineEditorDeclaration.componentDescription.includes('multi-track timeline editor'));
+  assert.ok(timelineEditorDeclaration.metadata.contract.methods.some((method) => method.name === 'loadTimeline'));
   assert.ok(checkboxDeclaration.componentDescription.includes('mixed state'));
   assert.ok(checkboxDeclaration.metadata.contract.themeAliases.includes('--sn-selection-checked-bg'));
   let cascadeDescriptor = data.manifest.themeRuntimeDescriptors.find((descriptor) => descriptor.name === 'cascade-theme');

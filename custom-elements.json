@@ -28968,6 +28968,427 @@
       ]
     },
     {
+      "path": "timeline/TimelineEditor/TimelineEditor.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "customElement": true,
+          "name": "TimelineEditor",
+          "tagName": "sn-timeline-editor",
+          "description": "NLE-style multi-track timeline editor with playhead, clips, zoom, and transport events.",
+          "componentDescription": "NLE-style multi-track timeline editor with playhead, clips, zoom, and transport events. Use this multi-track timeline editor when composing timeline UI. Capabilities: timeline-editor, nle-timeline, multi-track, playhead, media-editing. Data ownership: component-owned playhead and selection state with host-supplied timeline data. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "attributes": [],
+          "members": [
+            {
+              "kind": "method",
+              "name": "loadTimeline",
+              "description": "Loads normalized timeline data with fps, duration, tracks, clips, and markers."
+            },
+            {
+              "kind": "field",
+              "name": "currentFrame",
+              "type": {
+                "text": "number"
+              },
+              "description": "Current playhead frame."
+            },
+            {
+              "kind": "field",
+              "name": "currentTime",
+              "type": {
+                "text": "number"
+              },
+              "description": "Current playhead time in seconds."
+            }
+          ],
+          "events": [
+            {
+              "name": "playhead-change",
+              "description": "Emits when the playhead frame changes."
+            },
+            {
+              "name": "clip-select",
+              "description": "Emits when a clip is selected."
+            },
+            {
+              "name": "clip-move",
+              "description": "Emits when a clip range changes."
+            },
+            {
+              "name": "transport-change",
+              "description": "Emits when timeline playback transport changes."
+            },
+            {
+              "name": "zoom-change",
+              "description": "Emits when timeline zoom changes."
+            }
+          ],
+          "slots": [],
+          "cssProperties": [
+            {
+              "name": "--sn-sys-surface-panel",
+              "description": "Theme CSS custom property consumed by sn-timeline-editor."
+            },
+            {
+              "name": "--sn-sys-surface",
+              "description": "Theme CSS custom property consumed by sn-timeline-editor."
+            },
+            {
+              "name": "--sn-sys-on-surface",
+              "description": "Theme CSS custom property consumed by sn-timeline-editor."
+            },
+            {
+              "name": "--sn-sys-on-surface-dim",
+              "description": "Theme CSS custom property consumed by sn-timeline-editor."
+            },
+            {
+              "name": "--sn-sys-accent",
+              "description": "Theme CSS custom property consumed by sn-timeline-editor."
+            },
+            {
+              "name": "--sn-sys-danger",
+              "description": "Theme CSS custom property consumed by sn-timeline-editor."
+            },
+            {
+              "name": "--sn-sys-warning",
+              "description": "Theme CSS custom property consumed by sn-timeline-editor."
+            },
+            {
+              "name": "--sn-sys-success",
+              "description": "Theme CSS custom property consumed by sn-timeline-editor."
+            },
+            {
+              "name": "--sn-sys-info",
+              "description": "Theme CSS custom property consumed by sn-timeline-editor."
+            },
+            {
+              "name": "--sn-sys-outline",
+              "description": "Theme CSS custom property consumed by sn-timeline-editor."
+            },
+            {
+              "name": "--sn-dom-timeline-clip-video",
+              "description": "Theme CSS custom property consumed by sn-timeline-editor."
+            },
+            {
+              "name": "--sn-dom-timeline-clip-audio",
+              "description": "Theme CSS custom property consumed by sn-timeline-editor."
+            },
+            {
+              "name": "--sn-dom-timeline-clip-text",
+              "description": "Theme CSS custom property consumed by sn-timeline-editor."
+            },
+            {
+              "name": "--sn-dom-timeline-clip-effect",
+              "description": "Theme CSS custom property consumed by sn-timeline-editor."
+            },
+            {
+              "name": "--sn-dom-timeline-clip-default",
+              "description": "Theme CSS custom property consumed by sn-timeline-editor."
+            }
+          ],
+          "contract": {
+            "capabilities": [
+              "timeline-editor",
+              "nle-timeline",
+              "multi-track",
+              "playhead",
+              "media-editing"
+            ],
+            "attributes": [],
+            "properties": [
+              {
+                "name": "currentFrame",
+                "type": "number",
+                "description": "Current playhead frame."
+              },
+              {
+                "name": "currentTime",
+                "type": "number",
+                "description": "Current playhead time in seconds."
+              }
+            ],
+            "methods": [
+              {
+                "name": "loadTimeline",
+                "type": "function",
+                "description": "Loads normalized timeline data with fps, duration, tracks, clips, and markers."
+              }
+            ],
+            "events": [
+              {
+                "name": "playhead-change",
+                "description": "Emits when the playhead frame changes.",
+                "detail": [
+                  {
+                    "name": "frame",
+                    "type": "number"
+                  },
+                  {
+                    "name": "time",
+                    "type": "number"
+                  }
+                ]
+              },
+              {
+                "name": "clip-select",
+                "description": "Emits when a clip is selected.",
+                "detail": [
+                  {
+                    "name": "clipId",
+                    "type": "string"
+                  },
+                  {
+                    "name": "trackId",
+                    "type": "string"
+                  },
+                  {
+                    "name": "clip",
+                    "type": "object"
+                  }
+                ]
+              },
+              {
+                "name": "clip-move",
+                "description": "Emits when a clip range changes.",
+                "detail": [
+                  {
+                    "name": "clipId",
+                    "type": "string"
+                  },
+                  {
+                    "name": "start",
+                    "type": "number"
+                  },
+                  {
+                    "name": "end",
+                    "type": "number"
+                  }
+                ]
+              },
+              {
+                "name": "transport-change",
+                "description": "Emits when timeline playback transport changes.",
+                "detail": [
+                  {
+                    "name": "action",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "name": "zoom-change",
+                "description": "Emits when timeline zoom changes.",
+                "detail": [
+                  {
+                    "name": "pixelsPerFrame",
+                    "type": "number"
+                  }
+                ]
+              }
+            ],
+            "slots": [],
+            "themeAliases": [
+              "--sn-sys-surface-panel",
+              "--sn-sys-surface",
+              "--sn-sys-on-surface",
+              "--sn-sys-on-surface-dim",
+              "--sn-sys-accent",
+              "--sn-sys-danger",
+              "--sn-sys-warning",
+              "--sn-sys-success",
+              "--sn-sys-info",
+              "--sn-sys-outline",
+              "--sn-dom-timeline-clip-video",
+              "--sn-dom-timeline-clip-audio",
+              "--sn-dom-timeline-clip-text",
+              "--sn-dom-timeline-clip-effect",
+              "--sn-dom-timeline-clip-default"
+            ],
+            "status": "draft",
+            "schemaVersion": "component-descriptor-v2",
+            "dataSchema": "schemas/runtime-ui-v1.json",
+            "ssr": {
+              "mode": "hydrate-only",
+              "importSafe": false,
+              "jsdaRenderable": false,
+              "requiresDom": true,
+              "browserApis": [
+                "custom-elements",
+                "events",
+                "canvas",
+                "resize-observer"
+              ],
+              "notes": "Timeline editor renders canvas-backed tracks and must hydrate in the browser."
+            }
+          },
+          "agent": {
+            "componentDescription": "NLE-style multi-track timeline editor with playhead, clips, zoom, and transport events. Use this multi-track timeline editor when composing timeline UI. Capabilities: timeline-editor, nle-timeline, multi-track, playhead, media-editing. Data ownership: component-owned playhead and selection state with host-supplied timeline data. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "multi-track timeline editor",
+            "usage": "Use as the bottom timeline surface in media editors, video workflows, and render review workspaces.",
+            "dataOwnership": "component-owned playhead and selection state with host-supplied timeline data",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          },
+          "metadata": {
+            "contract": {
+              "capabilities": [
+                "timeline-editor",
+                "nle-timeline",
+                "multi-track",
+                "playhead",
+                "media-editing"
+              ],
+              "attributes": [],
+              "properties": [
+                {
+                  "name": "currentFrame",
+                  "type": "number",
+                  "description": "Current playhead frame."
+                },
+                {
+                  "name": "currentTime",
+                  "type": "number",
+                  "description": "Current playhead time in seconds."
+                }
+              ],
+              "methods": [
+                {
+                  "name": "loadTimeline",
+                  "type": "function",
+                  "description": "Loads normalized timeline data with fps, duration, tracks, clips, and markers."
+                }
+              ],
+              "events": [
+                {
+                  "name": "playhead-change",
+                  "description": "Emits when the playhead frame changes.",
+                  "detail": [
+                    {
+                      "name": "frame",
+                      "type": "number"
+                    },
+                    {
+                      "name": "time",
+                      "type": "number"
+                    }
+                  ]
+                },
+                {
+                  "name": "clip-select",
+                  "description": "Emits when a clip is selected.",
+                  "detail": [
+                    {
+                      "name": "clipId",
+                      "type": "string"
+                    },
+                    {
+                      "name": "trackId",
+                      "type": "string"
+                    },
+                    {
+                      "name": "clip",
+                      "type": "object"
+                    }
+                  ]
+                },
+                {
+                  "name": "clip-move",
+                  "description": "Emits when a clip range changes.",
+                  "detail": [
+                    {
+                      "name": "clipId",
+                      "type": "string"
+                    },
+                    {
+                      "name": "start",
+                      "type": "number"
+                    },
+                    {
+                      "name": "end",
+                      "type": "number"
+                    }
+                  ]
+                },
+                {
+                  "name": "transport-change",
+                  "description": "Emits when timeline playback transport changes.",
+                  "detail": [
+                    {
+                      "name": "action",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "name": "zoom-change",
+                  "description": "Emits when timeline zoom changes.",
+                  "detail": [
+                    {
+                      "name": "pixelsPerFrame",
+                      "type": "number"
+                    }
+                  ]
+                }
+              ],
+              "slots": [],
+              "themeAliases": [
+                "--sn-sys-surface-panel",
+                "--sn-sys-surface",
+                "--sn-sys-on-surface",
+                "--sn-sys-on-surface-dim",
+                "--sn-sys-accent",
+                "--sn-sys-danger",
+                "--sn-sys-warning",
+                "--sn-sys-success",
+                "--sn-sys-info",
+                "--sn-sys-outline",
+                "--sn-dom-timeline-clip-video",
+                "--sn-dom-timeline-clip-audio",
+                "--sn-dom-timeline-clip-text",
+                "--sn-dom-timeline-clip-effect",
+                "--sn-dom-timeline-clip-default"
+              ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
+              "ssr": {
+                "mode": "hydrate-only",
+                "importSafe": false,
+                "jsdaRenderable": false,
+                "requiresDom": true,
+                "browserApis": [
+                  "custom-elements",
+                  "events",
+                  "canvas",
+                  "resize-observer"
+                ],
+                "notes": "Timeline editor renders canvas-backed tracks and must hydrate in the browser."
+              }
+            }
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "custom-element-definition",
+          "name": "sn-timeline-editor",
+          "declaration": {
+            "name": "TimelineEditor"
+          }
+        }
+      ]
+    },
+    {
       "path": "effects/CellBg/CellBg.js",
       "declarations": [
         {

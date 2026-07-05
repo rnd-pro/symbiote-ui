@@ -1260,6 +1260,7 @@ const UI_NAMED_EXPORTS = new Set([
   'DescriptionItem',
   'Timeline',
   'TimelineItem',
+  'TimelineEditor',
   'Avatar',
   'Tag',
   'DatePicker',
@@ -3021,6 +3022,55 @@ export let COMPONENTS = [
         '--sn-video-text',
         '--sn-video-thumb',
         '--sn-video-track'
+      ]
+    }
+  },
+  {
+    tagName: 'sn-timeline-editor',
+    className: 'TimelineEditor',
+    module: 'timeline/TimelineEditor/TimelineEditor.js',
+    category: 'timeline',
+    description: 'NLE-style multi-track timeline editor with playhead, clips, zoom, and transport events.',
+    agent: {
+      semanticRole: 'multi-track timeline editor',
+      usage: 'Use as the bottom timeline surface in media editors, video workflows, and render review workspaces.',
+      dataOwnership: 'component-owned playhead and selection state with host-supplied timeline data',
+    },
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['timeline-editor', 'nle-timeline', 'multi-track', 'playhead', 'media-editing'],
+      properties: [
+        { name: 'currentFrame', type: 'number', description: 'Current playhead frame.' },
+        { name: 'currentTime', type: 'number', description: 'Current playhead time in seconds.' }
+      ],
+      methods: [
+        { name: 'loadTimeline', type: 'function', description: 'Loads normalized timeline data with fps, duration, tracks, clips, and markers.' }
+      ],
+      events: [
+        { name: 'playhead-change', description: 'Emits when the playhead frame changes.', detail: [{ name: 'frame', type: 'number' }, { name: 'time', type: 'number' }] },
+        { name: 'clip-select', description: 'Emits when a clip is selected.', detail: [{ name: 'clipId', type: 'string' }, { name: 'trackId', type: 'string' }, { name: 'clip', type: 'object' }] },
+        { name: 'clip-move', description: 'Emits when a clip range changes.', detail: [{ name: 'clipId', type: 'string' }, { name: 'start', type: 'number' }, { name: 'end', type: 'number' }] },
+        { name: 'transport-change', description: 'Emits when timeline playback transport changes.', detail: [{ name: 'action', type: 'string' }] },
+        { name: 'zoom-change', description: 'Emits when timeline zoom changes.', detail: [{ name: 'pixelsPerFrame', type: 'number' }] }
+      ],
+      themeAliases: [
+        '--sn-sys-surface-panel',
+        '--sn-sys-surface',
+        '--sn-sys-on-surface',
+        '--sn-sys-on-surface-dim',
+        '--sn-sys-accent',
+        '--sn-sys-danger',
+        '--sn-sys-warning',
+        '--sn-sys-success',
+        '--sn-sys-info',
+        '--sn-sys-outline',
+        '--sn-dom-timeline-clip-video',
+        '--sn-dom-timeline-clip-audio',
+        '--sn-dom-timeline-clip-text',
+        '--sn-dom-timeline-clip-effect',
+        '--sn-dom-timeline-clip-default'
       ]
     }
   },
