@@ -24,6 +24,7 @@ import {
   renderMediaStudioProgressPanelMarkup,
   renderMediaStudioTimelinePanelMarkup,
 } from '../ui/media-studio-surface.js';
+import { createCascadeTheme } from '../themes/cascade-theme.js';
 
 function createCaptureTarget() {
   class CanvasRenderingContext2D {}
@@ -98,6 +99,26 @@ test('media studio panel config and surface contract stay product neutral', () =
   assert.ok(MEDIA_STUDIO_SURFACE_CONTRACT.capabilities.includes('replaceable-frame-sources'));
   assert.ok(MEDIA_STUDIO_SURFACE_CONTRACT.themeAliases.includes('--sn-media-studio-preview-bg'));
   assert.doesNotMatch(serialized, /maximo/i);
+});
+
+test('media studio theme aliases are cascade-authored and consumed by styles', () => {
+  let theme = createCascadeTheme({ recipe: 'media-studio', mode: 'dark' });
+
+  for (let alias of MEDIA_STUDIO_SURFACE_CONTRACT.themeAliases) {
+    let value = theme.tokens[alias];
+    assert.equal(typeof value, 'string', `${alias} must be authored by cascade-theme`);
+    assert.ok(value.length > 0, `${alias} must resolve to a non-empty token value`);
+    assert.match(
+      value,
+      /var\(--sn-sys-|color-mix\(in oklab, var\(--sn-sys-|px|var\(--sn-node-radius\)/,
+      `${alias} must derive from system cascade tokens or bounded geometry tokens`,
+    );
+    assert.match(MEDIA_STUDIO_SURFACE_STYLES, new RegExp(alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  }
+
+  assert.equal(theme.tokens['--sn-media-studio-progress-color'], 'var(--sn-sys-accent)');
+  assert.match(theme.tokens['--sn-media-studio-preview-bg'], /var\(--sn-sys-surface\)/);
+  assert.match(theme.tokens['--sn-media-studio-pane-bg'], /var\(--sn-sys-surface-panel\)/);
 });
 
 test('frame source provider metadata reports browser capability fallbacks', () => {

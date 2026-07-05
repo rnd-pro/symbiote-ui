@@ -85,15 +85,20 @@ export const MEDIA_STUDIO_SURFACE_STYLES = `
     gap: calc(8px * var(--sn-theme-density, 1));
     align-content: start;
     padding: calc(2px * var(--sn-theme-density, 1));
+    min-inline-size: min(100%, var(--sn-media-studio-pane-width, 260px));
+    border: 1px solid var(--sn-media-studio-border, color-mix(in srgb, var(--sn-sys-on-surface) 12%, transparent));
+    border-radius: var(--sn-media-studio-preview-radius, var(--sn-node-radius, 8px));
+    background: var(--sn-media-studio-pane-bg, color-mix(in srgb, var(--sn-sys-surface-panel) 92%, var(--sn-sys-surface)));
   }
 
   .sn-media-studio-preview-stage {
+    display: grid;
     box-sizing: border-box;
     min-width: 0;
     min-height: 240px;
-    border: 1px solid var(--sn-media-studio-border, color-mix(in srgb, var(--sn-text) 12%, transparent));
+    border: 1px solid var(--sn-media-studio-border, color-mix(in srgb, var(--sn-sys-on-surface) 12%, transparent));
     border-radius: var(--sn-media-studio-preview-radius, var(--sn-node-radius, 8px));
-    background: var(--sn-media-studio-bg, color-mix(in srgb, var(--sn-bg) 92%, black));
+    background: var(--sn-media-studio-bg, color-mix(in srgb, var(--sn-sys-surface) 92%, black));
     padding: calc(10px * var(--sn-theme-density, 1));
     overflow: hidden;
   }
@@ -108,10 +113,22 @@ export const MEDIA_STUDIO_SURFACE_STYLES = `
     min-width: 0;
     min-height: 220px;
     overflow: hidden;
-    border: 1px solid color-mix(in srgb, var(--sn-text) 10%, transparent);
+    border: 1px solid color-mix(in srgb, var(--sn-sys-on-surface) 10%, transparent);
     border-radius: var(--sn-media-studio-preview-radius, var(--sn-node-radius, 8px));
-    background: var(--sn-media-studio-preview-bg, color-mix(in srgb, var(--sn-node-bg, transparent) 82%, var(--sn-bg, transparent)));
-    box-shadow: var(--sn-media-studio-preview-shadow, inset 0 0 0 1px color-mix(in srgb, var(--sn-text) 4%, transparent));
+    background:
+      radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--sn-sys-on-surface) 5%, transparent), transparent 42%),
+      linear-gradient(180deg, color-mix(in srgb, var(--sn-sys-on-surface) 3%, transparent), transparent 40%),
+      var(--sn-media-studio-preview-bg, color-mix(in srgb, var(--sn-sys-surface) 86%, black));
+    box-shadow: var(--sn-media-studio-preview-shadow, inset 0 0 0 1px color-mix(in srgb, var(--sn-sys-on-surface) 4%, transparent));
+  }
+
+  .sn-media-studio-preview-window::before {
+    content: "";
+    position: absolute;
+    inset: clamp(18px, 5%, 42px);
+    border: 1px dashed color-mix(in srgb, var(--sn-sys-on-surface) 18%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, black 18%, transparent);
+    pointer-events: none;
   }
 
   .sn-media-studio-frame {
@@ -127,13 +144,13 @@ export const MEDIA_STUDIO_SURFACE_STYLES = `
     place-items: center;
     gap: 8px;
     padding: 18px;
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
     text-align: center;
     min-width: 0;
   }
 
   .sn-media-studio-frame-placeholder strong {
-    color: var(--sn-text);
+    color: var(--sn-sys-on-surface);
     font-size: calc(13px * var(--sn-theme-type-scale, 1));
   }
 
@@ -154,9 +171,9 @@ export const MEDIA_STUDIO_SURFACE_STYLES = `
     max-width: calc(100% - 20px);
     min-width: 0;
     padding: 8px 10px;
-    border: 1px solid color-mix(in srgb, var(--sn-text) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--sn-sys-on-surface) 12%, transparent);
     border-radius: var(--sn-node-radius, 8px);
-    background: color-mix(in srgb, var(--sn-bg) 78%, transparent);
+    background: color-mix(in srgb, var(--sn-sys-surface) 78%, transparent);
     backdrop-filter: blur(10px);
     font-size: calc(12px * var(--sn-theme-type-scale, 1));
   }
@@ -169,7 +186,40 @@ export const MEDIA_STUDIO_SURFACE_STYLES = `
   }
 
   .sn-media-studio-overlay span {
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
+  }
+
+  .sn-media-studio-transport {
+    position: absolute;
+    inset-inline: 10px;
+    inset-block-start: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    max-width: calc(100% - 20px);
+    min-width: 0;
+    color: var(--sn-sys-on-surface-dim);
+    font-family: var(--sn-font-mono, monospace);
+    font-size: calc(11px * var(--sn-theme-type-scale, 1));
+    pointer-events: none;
+  }
+
+  .sn-media-studio-transport span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    padding: 4px 7px;
+    border: 1px solid color-mix(in srgb, var(--sn-sys-on-surface) 10%, transparent);
+    border-radius: calc(var(--sn-node-radius, 8px) - 2px);
+    background: color-mix(in srgb, var(--sn-sys-surface) 58%, transparent);
+  }
+
+  .sn-media-studio-transport .material-symbols-outlined {
+    color: var(--sn-media-studio-progress-color, var(--sn-sys-accent));
+    font-size: 16px;
+    line-height: 1;
   }
 
   .sn-media-studio-timeline-panel {
@@ -177,21 +227,34 @@ export const MEDIA_STUDIO_SURFACE_STYLES = `
     gap: calc(7px * var(--sn-theme-density, 1));
     align-content: start;
     padding: calc(2px * var(--sn-theme-density, 1));
+    min-block-size: var(--sn-media-studio-timeline-height, 132px);
   }
 
   .sn-media-studio-ruler {
     display: flex;
     justify-content: space-between;
     gap: 8px;
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
     font-family: var(--sn-font-mono, monospace);
     font-size: calc(11px * var(--sn-theme-type-scale, 1));
   }
 
   .sn-media-studio-track-stack {
+    position: relative;
     display: grid;
     gap: calc(7px * var(--sn-theme-density, 1));
     min-width: 0;
+  }
+
+  .sn-media-studio-track-stack::before {
+    content: "";
+    position: absolute;
+    inset-block: -2px;
+    inset-inline-start: 42%;
+    z-index: 2;
+    border-inline-start: 2px solid var(--sn-media-studio-progress-color, var(--sn-sys-accent));
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--sn-sys-surface) 70%, transparent);
+    pointer-events: none;
   }
 
   .sn-media-studio-track-row {
@@ -203,7 +266,7 @@ export const MEDIA_STUDIO_SURFACE_STYLES = `
   }
 
   .sn-media-studio-track-name {
-    color: var(--sn-text-dim);
+    color: var(--sn-sys-on-surface-dim);
     font-size: calc(11px * var(--sn-theme-type-scale, 1));
     text-transform: uppercase;
   }
@@ -213,8 +276,14 @@ export const MEDIA_STUDIO_SURFACE_STYLES = `
     min-width: 0;
     min-height: var(--sn-media-studio-control-height, 28px);
     border-radius: var(--sn-node-radius, 8px);
-    background: var(--sn-media-studio-timeline-bg, color-mix(in srgb, var(--sn-text) 5%, transparent));
+    background: var(--sn-media-studio-timeline-bg, color-mix(in srgb, var(--sn-sys-on-surface) 5%, transparent));
     overflow: hidden;
+  }
+
+  .sn-media-studio-track-row:first-child .sn-media-studio-track-rail {
+    background:
+      repeating-linear-gradient(90deg, color-mix(in srgb, var(--sn-sys-on-surface) 10%, transparent) 0 1px, transparent 1px 18px),
+      var(--sn-media-studio-timeline-bg, color-mix(in srgb, var(--sn-sys-on-surface) 5%, transparent));
   }
 
   .sn-media-studio-track-clip {
@@ -227,11 +296,27 @@ export const MEDIA_STUDIO_SURFACE_STYLES = `
     max-width: 100%;
     padding: 4px 8px;
     border-radius: calc(var(--sn-node-radius, 8px) - 2px);
-    background: color-mix(in srgb, var(--sn-node-selected) 38%, var(--sn-text) 5%, transparent);
+    background: color-mix(in srgb, var(--sn-media-studio-progress-color, var(--sn-sys-accent)) 38%, var(--sn-sys-on-surface) 5%, transparent);
+    border: 1px solid color-mix(in srgb, var(--sn-media-studio-progress-color, var(--sn-sys-accent)) 54%, transparent);
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
     font-size: calc(12px * var(--sn-theme-type-scale, 1));
+  }
+
+  .sn-media-studio-track-row:nth-child(2) .sn-media-studio-track-clip {
+    background: color-mix(in srgb, var(--sn-sys-success) 34%, var(--sn-sys-on-surface) 5%, transparent);
+    border-color: color-mix(in srgb, var(--sn-sys-success) 50%, transparent);
+  }
+
+  .sn-media-studio-track-row:nth-child(3) .sn-media-studio-track-clip {
+    background: color-mix(in srgb, var(--sn-sys-warning) 30%, var(--sn-sys-on-surface) 5%, transparent);
+    border-color: color-mix(in srgb, var(--sn-sys-warning) 48%, transparent);
+  }
+
+  .sn-media-studio-track-row:nth-child(n + 4) .sn-media-studio-track-clip {
+    background: color-mix(in srgb, var(--sn-sys-danger) 24%, var(--sn-sys-on-surface) 5%, transparent);
+    border-color: color-mix(in srgb, var(--sn-sys-danger) 42%, transparent);
   }
 
   .sn-media-studio-progress-shell {
@@ -244,6 +329,10 @@ export const MEDIA_STUDIO_SURFACE_STYLES = `
   .sn-media-studio-progress-shell sn-description-list {
     grid-column: 1 / -1;
     --sn-description-list-columns: minmax(min(9ch, 34%), max-content) minmax(0, 1fr);
+  }
+
+  .sn-media-studio-progress-shell sn-metric {
+    --sn-metric-value-color: var(--sn-media-studio-progress-color, var(--sn-sys-accent));
   }
 
   @container (max-width: 520px) {
@@ -851,6 +940,10 @@ export function renderMediaStudioPreviewPanelMarkup(options = {}) {
               <strong>${escapeHtml(previewState.state)}</strong>
               <span>${escapeHtml(previewState.reason || 'waiting-for-frames')}</span>
             </div>`}
+          <div class="sn-media-studio-transport" aria-hidden="true">
+            <span><i class="material-symbols-outlined">play_arrow</i> TC 00:00:00</span>
+            <span>${escapeHtml(frames ? `${frames}f` : percentLabel(previewState.progress))}</span>
+          </div>
           <div class="sn-media-studio-overlay">
             <strong>${escapeHtml(sourceTitle)}</strong>
             <span>${escapeHtml(detail)}</span>
