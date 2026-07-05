@@ -82,7 +82,29 @@ await Promise.all([
 ]);
 
 const CASCADE_THEME_STORAGE_KEY = 'symbiote-ui:cascade-theme-lab';
+const VIDEO_STUDIO_THEME_STORAGE_KEY = 'symbiote-ui:video-editor:studio:theme:v1:workspace-windows';
 const CASCADE_CHAT_VOICE_STORAGE_KEY = 'symbiote-ui:cascade-theme-lab:voice';
+const VIDEO_STUDIO_CASCADE_THEME = {
+  mode: 'dark',
+  brightness: 1,
+  contrast: 84,
+  chroma: 62,
+  hue: 83,
+  bgLightness: -1,
+  surfaceLightness: -1,
+  accentLightness: -1,
+  accentChroma: -1,
+  pattern: 60,
+  outline: 43,
+  type: 105,
+  heading: 104,
+  density: 114,
+  radius: 0,
+  frameRadius: 55,
+  frameGap: 0,
+  motion: 100,
+  register: '',
+};
 const CASCADE_THEME_QUERY_KEYS = [
   'mode',
   'brightness',
@@ -97,16 +119,58 @@ const CASCADE_THEME_QUERY_KEYS = [
 ];
 const urlParams = new URLSearchParams(location.search);
 
-function readStoredCascadeTheme() {
-  if (typeof localStorage === 'undefined') return CASCADE_THEME_DEFAULTS;
+function readHashProjectId(hash = location.hash) {
+  let raw = String(hash || '').replace(/^#\/?/, '').split(/[?#]/)[0];
+  return raw.split('/')[0] || '';
+}
+
+function cascadeThemeScopeForProject(projectId = readHashProjectId()) {
+  if (projectId === 'video-editor') {
+    return {
+      id: 'video-studio',
+      label: 'Video studio windows',
+      icon: 'movie',
+      storageKey: VIDEO_STUDIO_THEME_STORAGE_KEY,
+      defaultState: VIDEO_STUDIO_CASCADE_THEME,
+    };
+  }
+  return {
+    id: 'showcase',
+    label: 'Showcase',
+    icon: 'hub',
+    storageKey: CASCADE_THEME_STORAGE_KEY,
+    defaultState: CASCADE_THEME_DEFAULTS,
+  };
+}
+
+function cascadeThemeStatesMatch(left, right) {
+  let a = normalizeCascadeThemeOptions(left);
+  let b = normalizeCascadeThemeOptions(right);
+  let keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+  for (let key of keys) {
+    if (a[key] !== b[key]) return false;
+  }
+  return true;
+}
+
+function readStoredCascadeTheme(projectId = readHashProjectId()) {
+  let scope = cascadeThemeScopeForProject(projectId);
+  let fallbackState = normalizeCascadeThemeOptions(scope.defaultState);
+  if (typeof localStorage === 'undefined') return fallbackState;
   try {
-    let stored = JSON.parse(localStorage.getItem(CASCADE_THEME_STORAGE_KEY) || 'null');
-    return stored && typeof stored === 'object'
-      ? normalizeCascadeThemeOptions(stored)
-      : CASCADE_THEME_DEFAULTS;
+    let stored = JSON.parse(localStorage.getItem(scope.storageKey) || 'null');
+    if (!stored || typeof stored !== 'object') {
+      localStorage.setItem(scope.storageKey, JSON.stringify(fallbackState));
+      return fallbackState;
+    }
+    if (projectId === 'video-editor' && cascadeThemeStatesMatch(stored, CASCADE_THEME_DEFAULTS)) {
+      localStorage.setItem(scope.storageKey, JSON.stringify(fallbackState));
+      return fallbackState;
+    }
+    return normalizeCascadeThemeOptions(stored);
   } catch (error) {
     void error;
-    return CASCADE_THEME_DEFAULTS;
+    return fallbackState;
   }
 }
 
@@ -123,6 +187,49 @@ function readUrlCascadeTheme() {
 
 function readInitialCascadeTheme() {
   return readUrlCascadeTheme() || readStoredCascadeTheme();
+}
+
+function configureCascadeThemeElement(element, projectId = readHashProjectId()) {
+  if (!element) return;
+  let scope = cascadeThemeScopeForProject(projectId);
+  let defaultState = normalizeCascadeThemeOptions(scope.defaultState);
+  let defaultStateJson = JSON.stringify(defaultState);
+  element.setAttribute('target-selector', ':root');
+  element.setAttribute('storage-key', scope.storageKey);
+  element.setAttribute('default-state', defaultStateJson);
+  if (element.matches?.('cascade-theme-widget')) {
+    element.setAttribute('overlay-theme-selector', ':root');
+    element.scopes = [{
+      id: scope.id,
+      label: scope.label,
+      icon: scope.icon,
+      selector: ':root',
+      storageKey: scope.storageKey,
+      defaultState,
+    }];
+  }
+  if (element.matches?.('cascade-theme-editor')) {
+    element.targets = [{
+      id: scope.id,
+      label: scope.label,
+      icon: scope.icon,
+      selector: ':root',
+      storageKey: scope.storageKey,
+      defaultState,
+    }];
+  }
+}
+
+function syncCascadeThemeSurface(projectId = readHashProjectId(), source = 'cascade-lab-scope-sync') {
+  let state = readUrlCascadeTheme() || readStoredCascadeTheme(projectId);
+  configureCascadeThemeElement(document.querySelector('cascade-theme-widget'), projectId);
+  document.querySelectorAll('cascade-theme-editor').forEach((editor) => {
+    configureCascadeThemeElement(editor, projectId);
+  });
+  applyCascadeTheme(document.documentElement, state, {
+    source,
+    targetSelector: ':root',
+  });
 }
 
 function readStoredChatVoiceSettings() {
@@ -160,6 +267,7 @@ applyCascadeTheme(document.documentElement, readInitialCascadeTheme(), {
   source: 'cascade-lab-init',
   targetSelector: ':root',
 });
+syncCascadeThemeSurface(readHashProjectId(), 'cascade-lab-init-scope');
 
 const chatSmokeWidth = Number(urlParams.get('chatSmokeWidth') || 0);
 
@@ -5333,6 +5441,8 @@ function applyShowcaseView(projectId = activeProjectId, viewId = activeViewByPro
   syncProjectSidebar(project, viewConfig.id);
   document.documentElement.dataset.showcaseProject = project.id;
   document.documentElement.dataset.showcaseView = viewConfig.id;
+  syncCascadeThemeSurface(project.id, `cascade-lab-${project.id}-scope`);
+  if (project.id === 'video-editor') scheduleVideoPanelInit();
   if (options.writeHash !== false) writeHashState(project.id, viewConfig.id);
 }
 
@@ -5356,6 +5466,7 @@ sidebar?.addEventListener('sidebar-section-select', (event) => {
   applyShowcaseView(projectId, viewId);
 });
 shellMenu?.addEventListener('cascade-theme-open-full', (event) => {
+  let scope = cascadeThemeScopeForProject(activeProjectId);
   layout.openPanel('theme', {
     behavior: {
       importance: 100,
@@ -5365,11 +5476,16 @@ shellMenu?.addEventListener('cascade-theme-open-full', (event) => {
     },
     direction: 'horizontal',
     panelState: {
-      storageKey: event.detail?.storageKey || CASCADE_THEME_STORAGE_KEY,
+      storageKey: event.detail?.storageKey || scope.storageKey,
     },
     ratio: 0.66,
     source: 'theme-widget',
     uiInvoked: true,
+  });
+  queueMicrotask(() => {
+    document.querySelectorAll('cascade-theme-editor').forEach((editor) => {
+      configureCascadeThemeElement(editor, activeProjectId);
+    });
   });
 });
 window.addEventListener('hashchange', () => {
@@ -5453,6 +5569,19 @@ function initVideoPanel(el) {
   }
 }
 
+function initVideoPanels(root = layout) {
+  if (!root) return;
+  initVideoPanel(root);
+  root.querySelectorAll?.('sn-timeline-editor, sn-canvas-viewport').forEach(initVideoPanel);
+}
+
+function scheduleVideoPanelInit() {
+  queueMicrotask(() => {
+    initVideoPanels(layout);
+    requestAnimationFrame(() => initVideoPanels(layout));
+  });
+}
+
 // Sync playhead between timeline and viewport
 layout.addEventListener('playhead-change', (e) => {
   let frame = e.detail?.frame;
@@ -5468,8 +5597,7 @@ let videoObserver = new MutationObserver((mutations) => {
   for (let m of mutations) {
     for (let node of m.addedNodes) {
       if (node.nodeType !== 1) continue;
-      initVideoPanel(node);
-      node.querySelectorAll?.('sn-timeline-editor, sn-canvas-viewport').forEach(initVideoPanel);
+      initVideoPanels(node);
     }
   }
 });

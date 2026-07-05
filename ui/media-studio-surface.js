@@ -59,6 +59,14 @@ export const MEDIA_STUDIO_STYLE_TOKENS = Object.freeze([
   '--sn-media-studio-timeline-height',
   '--sn-media-studio-control-height',
   '--sn-media-studio-progress-color',
+  '--sn-media-studio-panel-gap',
+  '--sn-media-studio-toolbar-bg',
+  '--sn-media-studio-status-bg',
+  '--sn-media-studio-checker-a',
+  '--sn-media-studio-checker-b',
+  '--sn-media-studio-track-video-bg',
+  '--sn-media-studio-track-audio-bg',
+  '--sn-media-studio-playhead-color',
 ]);
 
 export const MEDIA_STUDIO_SURFACE_STYLES = `
@@ -75,31 +83,44 @@ export const MEDIA_STUDIO_SURFACE_STYLES = `
 
   .sn-media-studio-panel {
     display: grid;
-    grid-template-rows: minmax(0, 1fr) auto;
-    gap: calc(8px * var(--sn-theme-density, 1));
+    grid-template-rows: minmax(0, 1fr);
+    gap: var(--sn-media-studio-panel-gap, var(--sn-frame-gap, 0px));
     align-content: stretch;
+    background: var(--sn-media-studio-bg, var(--sn-media-studio-pane-bg, var(--sn-sys-surface-panel)));
   }
 
   .sn-media-studio-side-panel {
     display: grid;
-    gap: calc(8px * var(--sn-theme-density, 1));
+    gap: var(--sn-media-studio-panel-gap, var(--sn-frame-gap, 0px));
     align-content: start;
-    padding: calc(2px * var(--sn-theme-density, 1));
+    padding: calc(10px * var(--sn-theme-density, 1));
     min-inline-size: min(100%, var(--sn-media-studio-pane-width, 260px));
     border: 1px solid var(--sn-media-studio-border, color-mix(in srgb, var(--sn-sys-on-surface) 12%, transparent));
-    border-radius: var(--sn-media-studio-preview-radius, var(--sn-node-radius, 8px));
+    border-radius: var(--sn-media-studio-preview-radius, var(--sn-node-radius, 0px));
     background: var(--sn-media-studio-pane-bg, color-mix(in srgb, var(--sn-sys-surface-panel) 92%, var(--sn-sys-surface)));
   }
 
   .sn-media-studio-preview-stage {
     display: grid;
+    place-items: stretch;
     box-sizing: border-box;
     min-width: 0;
-    min-height: 240px;
+    min-height: 0;
+    height: 100%;
     border: 1px solid var(--sn-media-studio-border, color-mix(in srgb, var(--sn-sys-on-surface) 12%, transparent));
-    border-radius: var(--sn-media-studio-preview-radius, var(--sn-node-radius, 8px));
-    background: var(--sn-media-studio-bg, color-mix(in srgb, var(--sn-sys-surface) 92%, black));
-    padding: calc(10px * var(--sn-theme-density, 1));
+    border-radius: var(--sn-media-studio-preview-radius, var(--sn-node-radius, 0px));
+    background-color: var(--sn-media-studio-checker-a, var(--sn-media-studio-bg, var(--sn-media-studio-preview-bg, color-mix(in srgb, var(--sn-sys-surface) 84%, black))));
+    background-image:
+      conic-gradient(
+        var(--sn-media-studio-checker-b, color-mix(in srgb, var(--sn-sys-surface) 70%, black)) 25%,
+        transparent 25%,
+        transparent 50%,
+        var(--sn-media-studio-checker-b, color-mix(in srgb, var(--sn-sys-surface) 70%, black)) 50%,
+        var(--sn-media-studio-checker-b, color-mix(in srgb, var(--sn-sys-surface) 70%, black)) 75%,
+        transparent 75%
+      );
+    background-size: 20px 20px;
+    padding: 0;
     overflow: hidden;
   }
 
@@ -111,32 +132,27 @@ export const MEDIA_STUDIO_SURFACE_STYLES = `
     width: 100%;
     height: 100%;
     min-width: 0;
-    min-height: 220px;
+    min-height: 0;
     overflow: hidden;
-    border: 1px solid color-mix(in srgb, var(--sn-sys-on-surface) 10%, transparent);
-    border-radius: var(--sn-media-studio-preview-radius, var(--sn-node-radius, 8px));
-    background:
-      radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--sn-sys-on-surface) 5%, transparent), transparent 42%),
-      linear-gradient(180deg, color-mix(in srgb, var(--sn-sys-on-surface) 3%, transparent), transparent 40%),
-      var(--sn-media-studio-preview-bg, color-mix(in srgb, var(--sn-sys-surface) 86%, black));
+    border: 0;
+    border-radius: 0;
+    background: transparent;
     box-shadow: var(--sn-media-studio-preview-shadow, inset 0 0 0 1px color-mix(in srgb, var(--sn-sys-on-surface) 4%, transparent));
   }
 
   .sn-media-studio-preview-window::before {
-    content: "";
-    position: absolute;
-    inset: clamp(18px, 5%, 42px);
-    border: 1px dashed color-mix(in srgb, var(--sn-sys-on-surface) 18%, transparent);
-    box-shadow: 0 0 0 1px color-mix(in srgb, black 18%, transparent);
-    pointer-events: none;
+    display: none;
   }
 
   .sn-media-studio-frame {
     display: block;
     width: 100%;
     height: 100%;
+    max-width: 100%;
+    max-height: 100%;
     object-fit: contain;
-    background: black;
+    background: transparent;
+    box-shadow: 0 0 0 1px color-mix(in srgb, black 60%, transparent);
   }
 
   .sn-media-studio-frame-placeholder {
@@ -160,80 +176,125 @@ export const MEDIA_STUDIO_SURFACE_STYLES = `
     font-size: calc(12px * var(--sn-theme-type-scale, 1));
   }
 
-  .sn-media-studio-overlay {
-    position: absolute;
-    inset-inline: 10px;
-    inset-block-end: 10px;
+  .sn-media-studio-preview-stage[data-preview-state='ready'] .sn-media-studio-frame-placeholder {
+    display: none;
+  }
+
+  .sn-media-studio-timeline-status {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     gap: 8px;
-    max-width: calc(100% - 20px);
     min-width: 0;
-    padding: 8px 10px;
-    border: 1px solid color-mix(in srgb, var(--sn-sys-on-surface) 12%, transparent);
-    border-radius: var(--sn-node-radius, 8px);
-    background: color-mix(in srgb, var(--sn-sys-surface) 78%, transparent);
-    backdrop-filter: blur(10px);
-    font-size: calc(12px * var(--sn-theme-type-scale, 1));
-  }
-
-  .sn-media-studio-overlay strong,
-  .sn-media-studio-overlay span {
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-  }
-
-  .sn-media-studio-overlay span {
-    color: var(--sn-sys-on-surface-dim);
-  }
-
-  .sn-media-studio-transport {
-    position: absolute;
-    inset-inline: 10px;
-    inset-block-start: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    max-width: calc(100% - 20px);
-    min-width: 0;
+    min-height: var(--sn-media-studio-control-height, 28px);
+    padding: 0 10px;
+    border-top: 1px solid var(--sn-media-studio-border, color-mix(in srgb, var(--sn-sys-on-surface) 12%, transparent));
+    background: var(--sn-media-studio-status-bg, var(--sn-media-studio-toolbar-bg, var(--sn-sys-surface-panel)));
     color: var(--sn-sys-on-surface-dim);
     font-family: var(--sn-font-mono, monospace);
     font-size: calc(11px * var(--sn-theme-type-scale, 1));
-    pointer-events: none;
+    overflow: hidden;
+    white-space: nowrap;
   }
 
-  .sn-media-studio-transport span {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    min-width: 0;
-    padding: 4px 7px;
-    border: 1px solid color-mix(in srgb, var(--sn-sys-on-surface) 10%, transparent);
-    border-radius: calc(var(--sn-node-radius, 8px) - 2px);
-    background: color-mix(in srgb, var(--sn-sys-surface) 58%, transparent);
+  .sn-media-studio-timeline-status strong {
+    color: var(--sn-sys-on-surface);
+    font-weight: 600;
   }
 
-  .sn-media-studio-transport .material-symbols-outlined {
+  .sn-media-studio-timeline-status [data-media-studio-accent] {
     color: var(--sn-media-studio-progress-color, var(--sn-sys-accent));
-    font-size: 16px;
-    line-height: 1;
   }
 
   .sn-media-studio-timeline-panel {
     display: grid;
-    gap: calc(7px * var(--sn-theme-density, 1));
-    align-content: start;
-    padding: calc(2px * var(--sn-theme-density, 1));
-    min-block-size: var(--sn-media-studio-timeline-height, 132px);
+    grid-template-rows: minmax(0, 1fr);
+    gap: 0;
+    align-content: stretch;
+    min-block-size: var(--sn-media-studio-timeline-height, 172px);
+    height: 100%;
+    overflow: hidden;
+    border: 1px solid var(--sn-media-studio-border, color-mix(in srgb, var(--sn-sys-on-surface) 12%, transparent));
+    background: var(--sn-media-studio-timeline-bg, color-mix(in srgb, var(--sn-sys-surface) 86%, black));
+  }
+
+  .sn-media-studio-timeline-editor {
+    min-block-size: 0;
+    block-size: 100%;
+    inline-size: 100%;
+    --te-header-width: 112px;
+    --te-track-height: var(--sn-media-studio-control-height, 28px);
+    --te-ruler-height: var(--sn-media-studio-control-height, 28px);
+    --te-playhead-color: var(--sn-media-studio-playhead-color, var(--sn-media-studio-progress-color, var(--sn-sys-accent)));
+    --te-track-bg: var(--sn-media-studio-timeline-bg, var(--sn-sys-surface));
+    --te-track-bg-alt: color-mix(in srgb, var(--sn-media-studio-timeline-bg, var(--sn-sys-surface)) 82%, var(--sn-sys-surface-panel));
+  }
+
+  .sn-media-studio-timeline-toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    padding: 0 10px;
+    border-bottom: 1px solid var(--sn-media-studio-border, color-mix(in srgb, var(--sn-sys-on-surface) 12%, transparent));
+    background: var(--sn-media-studio-toolbar-bg, var(--sn-sys-surface-panel));
+    color: var(--sn-sys-on-surface-dim);
+  }
+
+  .sn-media-studio-tool-group,
+  .sn-media-studio-transport-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .sn-media-studio-transport-controls {
+    justify-content: center;
+  }
+
+  .sn-media-studio-tool-group[data-align="end"] {
+    justify-content: flex-end;
+  }
+
+  .sn-media-studio-icon-button {
+    display: inline-grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    border: 0;
+    border-radius: calc(var(--sn-node-radius, 0px) + 2px);
+    background: transparent;
+    color: inherit;
+  }
+
+  .sn-media-studio-icon-button[data-active="true"],
+  .sn-media-studio-icon-button:hover {
+    background: color-mix(in srgb, var(--sn-sys-on-surface) 8%, transparent);
+    color: var(--sn-media-studio-progress-color, var(--sn-sys-accent));
+  }
+
+  .sn-media-studio-icon-button .material-symbols-outlined {
+    font-size: 18px;
+  }
+
+  .sn-media-studio-timeline-canvas {
+    display: grid;
+    grid-template-rows: 22px minmax(0, 1fr);
+    --sn-media-studio-track-label-width: 112px;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
   }
 
   .sn-media-studio-ruler {
-    display: flex;
-    justify-content: space-between;
-    gap: 8px;
+    display: grid;
+    grid-template-columns: var(--sn-media-studio-track-label-width, 112px) repeat(4, minmax(0, 1fr));
+    align-items: center;
+    min-width: 0;
+    padding-inline-end: 10px;
+    border-bottom: 1px solid color-mix(in srgb, var(--sn-sys-on-surface) 8%, transparent);
     color: var(--sn-sys-on-surface-dim);
     font-family: var(--sn-font-mono, monospace);
     font-size: calc(11px * var(--sn-theme-type-scale, 1));
@@ -242,62 +303,82 @@ export const MEDIA_STUDIO_SURFACE_STYLES = `
   .sn-media-studio-track-stack {
     position: relative;
     display: grid;
-    gap: calc(7px * var(--sn-theme-density, 1));
+    grid-auto-rows: minmax(var(--sn-media-studio-control-height, 28px), 1fr);
+    gap: 0;
     min-width: 0;
-  }
-
-  .sn-media-studio-track-stack::before {
-    content: "";
-    position: absolute;
-    inset-block: -2px;
-    inset-inline-start: 42%;
-    z-index: 2;
-    border-inline-start: 2px solid var(--sn-media-studio-progress-color, var(--sn-sys-accent));
-    box-shadow: 0 0 0 1px color-mix(in srgb, var(--sn-sys-surface) 70%, transparent);
-    pointer-events: none;
+    min-height: 0;
+    background: var(--sn-media-studio-timeline-bg, color-mix(in srgb, var(--sn-sys-surface) 86%, black));
   }
 
   .sn-media-studio-track-row {
     display: grid;
-    grid-template-columns: 72px minmax(0, 1fr);
-    gap: 8px;
+    grid-template-columns: var(--sn-media-studio-track-label-width, 112px) minmax(0, 1fr);
+    gap: 0;
     align-items: center;
     min-width: 0;
+    min-height: 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--sn-sys-on-surface) 8%, transparent);
   }
 
   .sn-media-studio-track-name {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    padding-inline: 10px;
+    border-inline-end: 1px solid color-mix(in srgb, var(--sn-sys-on-surface) 8%, transparent);
     color: var(--sn-sys-on-surface-dim);
     font-size: calc(11px * var(--sn-theme-type-scale, 1));
-    text-transform: uppercase;
+    text-transform: none;
   }
 
   .sn-media-studio-track-rail {
     position: relative;
     min-width: 0;
+    height: 100%;
     min-height: var(--sn-media-studio-control-height, 28px);
-    border-radius: var(--sn-node-radius, 8px);
-    background: var(--sn-media-studio-timeline-bg, color-mix(in srgb, var(--sn-sys-on-surface) 5%, transparent));
+    border-radius: 0;
+    background:
+      repeating-linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--sn-sys-on-surface) 9%, transparent) 0 1px,
+        transparent 1px 25%
+      );
     overflow: hidden;
   }
 
   .sn-media-studio-track-row:first-child .sn-media-studio-track-rail {
     background:
-      repeating-linear-gradient(90deg, color-mix(in srgb, var(--sn-sys-on-surface) 10%, transparent) 0 1px, transparent 1px 18px),
-      var(--sn-media-studio-timeline-bg, color-mix(in srgb, var(--sn-sys-on-surface) 5%, transparent));
+      repeating-linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--sn-sys-on-surface) 9%, transparent) 0 1px,
+        transparent 1px 25%
+      );
+  }
+
+  .sn-media-studio-track-rail::before {
+    content: "";
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: var(--sn-media-studio-playhead-position, 13%);
+    z-index: 2;
+    border-inline-start: 2px solid var(--sn-media-studio-playhead-color, var(--sn-media-studio-progress-color, var(--sn-sys-accent)));
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--sn-sys-surface) 70%, transparent);
+    pointer-events: none;
   }
 
   .sn-media-studio-track-clip {
     box-sizing: border-box;
     position: absolute;
-    inset-block: 3px;
+    inset-block: 4px;
     inset-inline-start: var(--clip-start, 0%);
     width: var(--clip-size, 68%);
+    z-index: 1;
     min-width: 42px;
     max-width: 100%;
-    padding: 4px 8px;
+    padding: 3px 8px;
     border-radius: calc(var(--sn-node-radius, 8px) - 2px);
-    background: color-mix(in srgb, var(--sn-media-studio-progress-color, var(--sn-sys-accent)) 38%, var(--sn-sys-on-surface) 5%, transparent);
-    border: 1px solid color-mix(in srgb, var(--sn-media-studio-progress-color, var(--sn-sys-accent)) 54%, transparent);
+    background: var(--sn-media-studio-track-video-bg, color-mix(in srgb, var(--sn-media-studio-progress-color, var(--sn-sys-accent)) 42%, var(--sn-sys-surface)));
+    border: 1px solid color-mix(in srgb, var(--sn-media-studio-progress-color, var(--sn-sys-accent)) 48%, transparent);
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
@@ -305,8 +386,8 @@ export const MEDIA_STUDIO_SURFACE_STYLES = `
   }
 
   .sn-media-studio-track-row:nth-child(2) .sn-media-studio-track-clip {
-    background: color-mix(in srgb, var(--sn-sys-success) 34%, var(--sn-sys-on-surface) 5%, transparent);
-    border-color: color-mix(in srgb, var(--sn-sys-success) 50%, transparent);
+    background: var(--sn-media-studio-track-audio-bg, color-mix(in srgb, var(--sn-sys-warning) 42%, var(--sn-sys-surface)));
+    border-color: color-mix(in srgb, var(--sn-sys-warning) 48%, transparent);
   }
 
   .sn-media-studio-track-row:nth-child(3) .sn-media-studio-track-clip {
@@ -326,6 +407,66 @@ export const MEDIA_STUDIO_SURFACE_STYLES = `
     align-content: start;
   }
 
+  .sn-media-studio-inspector-panel {
+    display: grid;
+    gap: calc(12px * var(--sn-theme-density, 1));
+    align-content: start;
+    min-width: 0;
+    color: var(--sn-sys-on-surface);
+  }
+
+  .sn-media-studio-inspector-section {
+    display: grid;
+    gap: calc(8px * var(--sn-theme-density, 1));
+    min-width: 0;
+    padding-block-end: calc(10px * var(--sn-theme-density, 1));
+    border-block-end: 1px solid color-mix(in srgb, var(--sn-sys-on-surface) 9%, transparent);
+  }
+
+  .sn-media-studio-inspector-section:last-child {
+    border-block-end: 0;
+  }
+
+  .sn-media-studio-inspector-heading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    color: var(--sn-sys-on-surface);
+    font-size: calc(13px * var(--sn-theme-type-scale, 1));
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: uppercase;
+  }
+
+  .sn-media-studio-inspector-heading .material-symbols-outlined {
+    color: var(--sn-media-studio-progress-color, var(--sn-sys-accent));
+    font-size: 16px;
+  }
+
+  .sn-media-studio-field-row {
+    display: grid;
+    grid-template-columns: minmax(80px, 0.48fr) minmax(0, 1fr);
+    gap: 10px;
+    align-items: center;
+    min-width: 0;
+    color: var(--sn-sys-on-surface-dim);
+    font-size: calc(12px * var(--sn-theme-type-scale, 1));
+  }
+
+  .sn-media-studio-field-value {
+    min-width: 0;
+    padding: 5px 8px;
+    border: 1px solid color-mix(in srgb, var(--sn-sys-on-surface) 8%, transparent);
+    border-radius: calc(var(--sn-node-radius, 0px) + 2px);
+    background: color-mix(in srgb, black 18%, transparent);
+    color: var(--sn-sys-on-surface);
+    font-family: var(--sn-font-mono, monospace);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .sn-media-studio-progress-shell sn-description-list {
     grid-column: 1 / -1;
     --sn-description-list-columns: minmax(min(9ch, 34%), max-content) minmax(0, 1fr);
@@ -335,12 +476,6 @@ export const MEDIA_STUDIO_SURFACE_STYLES = `
     --sn-metric-value-color: var(--sn-media-studio-progress-color, var(--sn-sys-accent));
   }
 
-  @container (max-width: 520px) {
-    .sn-media-studio-overlay {
-      align-items: flex-start;
-      flex-direction: column;
-    }
-  }
 `;
 
 const MEDIA_STUDIO_PANEL_BEHAVIORS = Object.freeze({
@@ -505,7 +640,7 @@ export const MEDIA_STUDIO_SURFACE_CONTRACT = Object.freeze({
     preview: 'center',
     timeline: 'bottom',
     sidePanes: ['source', 'inspector'],
-    sidePaneDefault: 'collapsed',
+    sidePaneDefault: { source: 'collapsed', inspector: 'expanded' },
   },
   panelTypes: MEDIA_STUDIO_PANEL_TYPES,
   frameSourceTypes: MEDIA_STUDIO_FRAME_SOURCE_TYPES,
@@ -514,6 +649,7 @@ export const MEDIA_STUDIO_SURFACE_CONTRACT = Object.freeze({
     'central-preview',
     'bottom-timeline',
     'collapsible-side-panes',
+    'expanded-inspector',
     'replaceable-frame-sources',
     'preview-fallback-state',
   ],
@@ -638,7 +774,7 @@ export function createMediaStudioLayout(options = {}) {
     id: ids.inspector,
     region: 'end',
     behavior: MEDIA_STUDIO_PANEL_BEHAVIORS.side,
-    collapsed: options.inspectorCollapsed ?? true,
+    collapsed: options.inspectorCollapsed ?? false,
   });
   let timeline = createMediaPanel(MEDIA_STUDIO_PANEL_TYPES.timeline, {
     ...options,
@@ -648,8 +784,8 @@ export function createMediaStudioLayout(options = {}) {
     collapsed: options.timelineCollapsed ?? false,
   });
 
-  let previewInspectorRatio = finiteNumber(options.previewInspectorRatio, 0.78, 0.35, 0.92);
-  let sourcePreviewRatio = finiteNumber(options.sourcePreviewRatio, 0.18, 0.08, 0.45);
+  let previewInspectorRatio = finiteNumber(options.previewInspectorRatio, 0.74, 0.35, 0.92);
+  let sourcePreviewRatio = finiteNumber(options.sourcePreviewRatio, 0.16, 0.08, 0.45);
   let previewTimelineRatio = finiteNumber(options.previewTimelineRatio, 0.72, 0.42, 0.88);
   let previewWithInspector = createSplit('horizontal', preview, inspector, previewInspectorRatio, MEDIA_STUDIO_PANEL_BEHAVIORS.row);
   let editorRow = createSplit('horizontal', source, previewWithInspector, sourcePreviewRatio, MEDIA_STUDIO_PANEL_BEHAVIORS.row);
@@ -671,6 +807,8 @@ export function getMediaStudioTopology(layoutTree) {
   let sidePanes = [source, inspector].filter(Boolean);
   let sidePanesCollapsible = sidePanes.every((panel) => panel.behavior?.collapse !== 'never');
   let sidePanesCollapsed = sidePanes.every((panel) => panel.collapsed === true);
+  let sourceCollapsed = source?.collapsed === true;
+  let inspectorExpanded = inspector?.collapsed !== true;
 
   return {
     panelTypes,
@@ -681,6 +819,8 @@ export function getMediaStudioTopology(layoutTree) {
     previewIsCentral,
     timelineIsBottom,
     sidePanesCollapsed,
+    sourceCollapsed,
+    inspectorExpanded,
     sidePanesCollapsible,
     behaviorMetadata: layoutHasBehaviorMetadata(layoutTree),
     valid: Boolean(preview && timeline && timelineIsBottom && previewIsCentral && sidePanesCollapsible),
@@ -914,6 +1054,57 @@ function timelineClip(input = {}, index = 0) {
   };
 }
 
+function timelineTrackType(lane = '') {
+  let value = String(lane || '').toLowerCase();
+  if (value.includes('voice') || value.includes('audio') || value.includes('sound') || value.includes('narration')) return 'audio';
+  if (value.includes('caption') || value.includes('subtitle') || value.includes('title') || value.includes('text')) return 'text';
+  if (value.includes('effect') || value.includes('action') || value.includes('sync')) return 'effect';
+  return 'video';
+}
+
+export function normalizeMediaStudioTimelineData(options = {}) {
+  let clips = (Array.isArray(options.clips) && options.clips.length ? options.clips : [
+    { lane: 'video', label: 'FrameSource cache', startPercent: 0, sizePercent: 78 },
+    { lane: 'voice', label: 'Narration provider', startPercent: 8, sizePercent: 64 },
+    { lane: 'captions', label: 'Whisper sync', startPercent: 14, sizePercent: 58 },
+    { lane: 'actions', label: 'Workspace actions', startPercent: 22, sizePercent: 46 },
+  ]).map(timelineClip);
+  let fps = Math.max(1, Math.round(finiteNumber(options.fps, 30, 1, 120)));
+  let duration = Math.max(1, Math.round(finiteNumber(options.durationFrames ?? options.duration, fps * 15, 1, fps * 3600)));
+  let tracks = [];
+  let trackByLane = new Map();
+
+  clips.forEach((clip, index) => {
+    let laneId = clip.lane.toLowerCase().replace(/[^a-z0-9]+/g, '-') || `track-${index + 1}`;
+    let track = trackByLane.get(laneId);
+    if (!track) {
+      track = {
+        id: laneId,
+        type: timelineTrackType(clip.lane),
+        label: clip.lane,
+        clips: [],
+      };
+      trackByLane.set(laneId, track);
+      tracks.push(track);
+    }
+    let start = Math.round((clip.start / 100) * duration);
+    let end = Math.max(start + 1, Math.round(((clip.start + clip.size) / 100) * duration));
+    track.clips.push({
+      id: `${laneId}-${track.clips.length + 1}`,
+      start,
+      end: Math.min(end, duration),
+      label: clip.label,
+    });
+  });
+
+  return {
+    fps,
+    duration,
+    tracks,
+    markers: Array.isArray(options.markers) ? options.markers : [],
+  };
+}
+
 export function renderMediaStudioPreviewPanelMarkup(options = {}) {
   let preview = options.preview && typeof options.preview === 'object' ? options.preview : {};
   let previewState = normalizeMediaPreviewState({
@@ -926,59 +1117,93 @@ export function renderMediaStudioPreviewPanelMarkup(options = {}) {
   let sourceTitle = cleanText(options.sourceTitle || preview.sourceTitle, 'Workspace source');
   let provider = cleanText(previewState.frameSource?.providerId || options.provider, MEDIA_STUDIO_FRAME_SOURCE_TYPES.externalBrowser);
   let cacheKey = cleanText(previewState.frameSource?.cacheKey || options.cacheKey, '');
-  let frames = frameCount(preview);
-  let detail = cleanText(
-    options.detail || `${provider} · ${frames ? `${frames} cached frames` : previewState.reason || previewState.state}`,
-    provider
-  );
   return `
     <div class="sn-media-studio-panel" data-media-studio-role="preview" data-preview-state="${escapeHtml(previewState.state)}" data-frame-source-provider="${escapeHtml(provider)}" data-frame-cache-key="${escapeHtml(cacheKey)}">
-      <div class="sn-media-studio-preview-stage" aria-label="FrameSource preview">
+      <div class="sn-media-studio-preview-stage" aria-label="FrameSource preview" data-preview-state="${escapeHtml(previewState.state)}" data-frame-progress="${escapeHtml(percentLabel(previewState.progress))}">
         <div class="sn-media-studio-preview-window" data-render-proof="frame-source-cache">
           ${frameUrl ? `<img class="sn-media-studio-frame" src="${escapeHtml(frameUrl)}" alt="${escapeHtml(sourceTitle)} frame">` : `
             <div class="sn-media-studio-frame-placeholder" data-frame-source-state="${escapeHtml(previewState.state)}">
               <strong>${escapeHtml(previewState.state)}</strong>
               <span>${escapeHtml(previewState.reason || 'waiting-for-frames')}</span>
             </div>`}
-          <div class="sn-media-studio-transport" aria-hidden="true">
-            <span><i class="material-symbols-outlined">play_arrow</i> TC 00:00:00</span>
-            <span>${escapeHtml(frames ? `${frames}f` : percentLabel(previewState.progress))}</span>
-          </div>
-          <div class="sn-media-studio-overlay">
-            <strong>${escapeHtml(sourceTitle)}</strong>
-            <span>${escapeHtml(detail)}</span>
-          </div>
         </div>
       </div>
-      <sn-description-list>
-        ${options.surfaceRoute ? `<sn-description-item label="Surface">${escapeHtml(options.surfaceRoute)}</sn-description-item>` : ''}
-        <sn-description-item label="Provider">${escapeHtml(provider)}</sn-description-item>
-        <sn-description-item label="Status">${escapeHtml(previewState.state)}</sn-description-item>
-        <sn-description-item label="Progress">${escapeHtml(percentLabel(previewState.progress))}</sn-description-item>
-      </sn-description-list>
     </div>`;
 }
 
 export function renderMediaStudioTimelinePanelMarkup(options = {}) {
-  let clips = (Array.isArray(options.clips) && options.clips.length ? options.clips : [
-    { lane: 'video', label: 'FrameSource cache', startPercent: 0, sizePercent: 78 },
-    { lane: 'voice', label: 'Narration provider', startPercent: 8, sizePercent: 64 },
-    { lane: 'captions', label: 'Whisper sync', startPercent: 14, sizePercent: 58 },
-    { lane: 'actions', label: 'Workspace actions', startPercent: 22, sizePercent: 46 },
-  ]).map(timelineClip);
-  let marks = Array.isArray(options.marks) && options.marks.length ? options.marks : ['F00', '00:01.8', '00:05.0'];
+  let data = normalizeMediaStudioTimelineData(options);
   return `
     <div class="sn-media-studio-timeline-panel" data-media-studio-role="timeline">
-      <div class="sn-media-studio-ruler">${marks.map((mark) => `<span>${escapeHtml(mark)}</span>`).join('')}</div>
-      <div class="sn-media-studio-track-stack">
-        ${clips.map((clip) => `
-          <div class="sn-media-studio-track-row">
-            <span class="sn-media-studio-track-name">${escapeHtml(clip.lane)}</span>
-            <span class="sn-media-studio-track-rail">
-              <span class="sn-media-studio-track-clip" style="--clip-start:${clip.start}%; --clip-size:${clip.size}%">${escapeHtml(clip.label)}</span>
-            </span>
-          </div>`).join('')}
-      </div>
+      <sn-timeline-editor class="sn-media-studio-timeline-editor" data-media-studio-timeline-editor data-track-count="${data.tracks.length}" data-duration-frames="${data.duration}"></sn-timeline-editor>
+    </div>`;
+}
+
+export function hydrateMediaStudioTimelinePanel(root, options = {}) {
+  let host = root?.matches?.('[data-media-studio-timeline-editor]')
+    ? root
+    : root?.querySelector?.('[data-media-studio-timeline-editor]');
+  if (!host) return null;
+  let data = normalizeMediaStudioTimelineData(options);
+  let currentFrame = Math.round(finiteNumber(options.currentFrame ?? options.frame, 0, 0, data.duration));
+  let load = () => {
+    if (typeof host.loadTimeline !== 'function') return false;
+    host.loadTimeline(data);
+    try { host.setFrame?.(currentFrame); } catch {}
+    return true;
+  };
+  if (load()) return data;
+  try {
+    globalThis.customElements?.whenDefined?.('sn-timeline-editor')?.then(load).catch(() => {});
+  } catch {}
+  return data;
+}
+
+function inspectorRows(rows = []) {
+  return rows.map((row) => `
+    <div class="sn-media-studio-field-row">
+      <span>${escapeHtml(row.label)}</span>
+      <span class="sn-media-studio-field-value">${escapeHtml(row.value)}</span>
+    </div>`).join('');
+}
+
+export function renderMediaStudioInspectorPanelMarkup(options = {}) {
+  let state = options.state && typeof options.state === 'object' ? options.state : {};
+  let status = cleanText(options.status || state.status, 'idle');
+  let progress = normalizeMediaProgress(options.progress ?? state.progress);
+  let source = cleanText(options.source || state.source, MEDIA_STUDIO_FRAME_SOURCE_TYPES.externalBrowser);
+  let frames = Number(state.frameCount || options.frameCount || 0);
+  let output = cleanText(options.output || state.output || 'workspace-tour.mp4');
+  let formatRows = options.formatRows || [
+    { label: 'Aspect ratio', value: cleanText(options.aspectRatio || state.aspectRatio, '16:9') },
+    { label: 'Source', value: source },
+  ];
+  let renderRows = options.renderRows || [
+    { label: 'Status', value: status },
+    { label: 'Progress', value: percentLabel(progress) },
+    { label: 'Frames', value: Number.isFinite(frames) && frames > 0 ? String(frames) : 'pending' },
+  ];
+  let outputRows = options.outputRows || [
+    { label: 'Codec', value: cleanText(options.codec || state.codec, 'H.264') },
+    { label: 'Format', value: cleanText(options.format || state.format, 'MP4') },
+    { label: 'Output', value: output },
+  ];
+
+  return `
+    <div class="sn-media-studio-inspector-panel" data-media-studio-role="inspector" data-render-status="${escapeHtml(status)}">
+      <section class="sn-media-studio-inspector-section">
+        <h3 class="sn-media-studio-inspector-heading"><i class="material-symbols-outlined">aspect_ratio</i> Format</h3>
+        ${inspectorRows(formatRows)}
+      </section>
+      <section class="sn-media-studio-inspector-section">
+        <h3 class="sn-media-studio-inspector-heading"><i class="material-symbols-outlined">movie_filter</i> Render</h3>
+        ${inspectorRows(renderRows)}
+      </section>
+      <section class="sn-media-studio-inspector-section">
+        <h3 class="sn-media-studio-inspector-heading"><i class="material-symbols-outlined">drive_folder_upload</i> Output</h3>
+        ${inspectorRows(outputRows)}
+      </section>
+      ${renderMediaStudioProgressPanelMarkup(options)}
     </div>`;
 }
 

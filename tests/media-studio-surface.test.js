@@ -17,9 +17,12 @@ import {
   getMediaFrameSourceSupport,
   getMediaStudioTopology,
   hasMediaStudioTopology,
+  hydrateMediaStudioTimelinePanel,
   listMediaFrameSourceProviders,
   normalizeMediaFrameSource,
   normalizeMediaPreviewState,
+  normalizeMediaStudioTimelineData,
+  renderMediaStudioInspectorPanelMarkup,
   renderMediaStudioPreviewPanelMarkup,
   renderMediaStudioProgressPanelMarkup,
   renderMediaStudioTimelinePanelMarkup,
@@ -54,7 +57,7 @@ function createCaptureTarget() {
   };
 }
 
-test('media studio layout uses central preview, bottom timeline, and collapsed side panes', () => {
+test('media studio layout uses central preview, bottom timeline, collapsed source, and expanded inspector', () => {
   let layout = createMediaStudioLayout({
     ids: {
       source: 'source',
@@ -72,7 +75,9 @@ test('media studio layout uses central preview, bottom timeline, and collapsed s
   assert.equal(topology.inspectorPanelId, 'inspector');
   assert.equal(topology.previewIsCentral, true);
   assert.equal(topology.timelineIsBottom, true);
-  assert.equal(topology.sidePanesCollapsed, true);
+  assert.equal(topology.sidePanesCollapsed, false);
+  assert.equal(topology.sourceCollapsed, true);
+  assert.equal(topology.inspectorExpanded, true);
   assert.equal(topology.sidePanesCollapsible, true);
   assert.equal(topology.behaviorMetadata, true);
   assert.equal(hasMediaStudioTopology(layout), true);
@@ -110,7 +115,7 @@ test('media studio theme aliases are cascade-authored and consumed by styles', (
     assert.ok(value.length > 0, `${alias} must resolve to a non-empty token value`);
     assert.match(
       value,
-      /var\(--sn-sys-|color-mix\(in oklab, var\(--sn-sys-|px|var\(--sn-node-radius\)/,
+      /var\(--sn-sys-|color-mix\(in oklab, var\(--sn-sys-|px|var\(--sn-node-radius\)|var\(--sn-frame-gap\)/,
       `${alias} must derive from system cascade tokens or bounded geometry tokens`,
     );
     assert.match(MEDIA_STUDIO_SURFACE_STYLES, new RegExp(alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
@@ -211,6 +216,7 @@ test('media studio helpers are exported from the browser UI entrypoint', async (
   assert.equal(typeof ui.listMediaFrameSourceProviders, 'function');
   assert.equal(typeof ui.normalizeMediaPreviewState, 'function');
   assert.equal(typeof ui.renderMediaStudioPreviewPanelMarkup, 'function');
+  assert.equal(typeof ui.renderMediaStudioInspectorPanelMarkup, 'function');
   assert.equal(ui.MEDIA_STUDIO_FRAME_SOURCE_TYPES.htmlInCanvas, MEDIA_STUDIO_FRAME_SOURCE_TYPES.htmlInCanvas);
 });
 
@@ -238,16 +244,70 @@ test('media studio visual layer renders reusable preview, timeline, and progress
     progressChannel: 'RT_WORKSPACE_EXECUTION_NODE_PROGRESS',
     state: { frameCount: 12, cacheKey: 'maximo-current-ui' },
   });
+  let inspector = renderMediaStudioInspectorPanelMarkup({
+    status: 'capturing',
+    progress: 0.42,
+    source: MEDIA_STUDIO_FRAME_SOURCE_TYPES.externalBrowser,
+    state: { frameCount: 12, output: 'workspace-tour.mp4' },
+  });
 
   assert.match(MEDIA_STUDIO_SURFACE_STYLES, /\.sn-media-studio-preview-stage/);
+  assert.match(MEDIA_STUDIO_SURFACE_STYLES, /\.sn-media-studio-timeline-toolbar/);
+  assert.match(MEDIA_STUDIO_SURFACE_STYLES, /\.sn-media-studio-inspector-section/);
   assert.match(preview, /data-render-proof="frame-source-cache"/);
   assert.match(preview, /data-frame-source-provider="external-browser"/);
+  assert.match(preview, /data-preview-state="loading"/);
+  assert.match(preview, /data-frame-progress="42%"/);
   assert.match(preview, /src="\.\/cache\/frame-0001\.png"/);
+  assert.doesNotMatch(preview, /waiting-for-frames/);
   assert.doesNotMatch(preview, /clone|iframe|live-dom/i);
-  assert.match(timeline, /sn-media-studio-track-row/);
-  assert.match(timeline, /Current UI frames/);
+  assert.doesNotMatch(preview, /sn-media-studio-preview-footer/);
+  assert.doesNotMatch(preview, /sn-media-studio-overlay/);
+  assert.doesNotMatch(preview, /sn-media-studio-transport/);
+  assert.match(timeline, /sn-timeline-editor/);
+  assert.match(timeline, /data-media-studio-timeline-editor/);
+  assert.match(MEDIA_STUDIO_SURFACE_STYLES, /\.sn-media-studio-timeline-editor/);
+  assert.doesNotMatch(timeline, /sn-media-studio-track-row/);
+  assert.doesNotMatch(timeline, /sn-media-studio-timeline-toolbar/);
+  assert.match(inspector, /sn-media-studio-inspector-panel/);
+  assert.match(inspector, /workspace-tour\.mp4/);
   assert.match(progress, /data-progress-channel="RT_WORKSPACE_EXECUTION_NODE_PROGRESS"/);
   assert.match(progress, /maximo-current-ui/);
+});
+
+test('media studio timeline uses the library timeline editor data contract', () => {
+  let data = normalizeMediaStudioTimelineData({
+    durationFrames: 300,
+    clips: [
+      { lane: 'video', label: 'Current UI frames', startPercent: 0, sizePercent: 50 },
+      { lane: 'voice', label: 'Narration', startPercent: 10, sizePercent: 40 },
+    ],
+  });
+  assert.equal(data.duration, 300);
+  assert.equal(data.tracks.length, 2);
+  assert.equal(data.tracks[0].type, 'video');
+  assert.equal(data.tracks[1].type, 'audio');
+
+  let loaded = null;
+  let frame = null;
+  let editor = {
+    loadTimeline(value) { loaded = value; },
+    setFrame(value) { frame = value; },
+  };
+  let root = {
+    matches(selector) { return selector === '[data-media-studio-timeline-editor]'; },
+    querySelector() { return null; },
+    loadTimeline: editor.loadTimeline,
+    setFrame: editor.setFrame,
+  };
+  let hydrated = hydrateMediaStudioTimelinePanel(root, {
+    durationFrames: 300,
+    currentFrame: 42,
+    clips: [{ lane: 'video', label: 'Current UI frames', startPercent: 0, sizePercent: 50 }],
+  });
+  assert.equal(loaded.duration, 300);
+  assert.equal(hydrated.tracks.length, 1);
+  assert.equal(frame, 42);
 });
 
 test('media studio styles install once into a browser document', () => {

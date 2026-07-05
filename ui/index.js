@@ -366,10 +366,13 @@ export {
   getMediaFrameSourceSupport,
   getMediaStudioTopology,
   hasMediaStudioTopology,
+  hydrateMediaStudioTimelinePanel,
   listMediaFrameSourceProviders,
   normalizeMediaFrameSource,
+  normalizeMediaStudioTimelineData,
   normalizeMediaPreviewState,
   renderMediaStudioPreviewPanelMarkup,
+  renderMediaStudioInspectorPanelMarkup,
   renderMediaStudioProgressPanelMarkup,
   renderMediaStudioTimelinePanelMarkup,
 } from './media-studio-surface.js';
