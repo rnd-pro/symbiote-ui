@@ -68,6 +68,8 @@ const DEFAULT_MENU_ITEMS = Object.freeze([
 
 const INCREMENTAL_LAYOUT_INITIAL_ALPHA = 0.045;
 const SEEDED_LAYOUT_INITIAL_ALPHA = 0.22;
+const VISUAL_FOCUS_LAYOUT_INITIAL_ALPHA = 0.18;
+const VISUAL_FOCUS_LAYOUT_PADDING = 8;
 const NODE_APPEARANCE_START_SCALE = 0.2;
 const ENTERING_LAYOUT_SIZE_SCALE = 0.18;
 const ENTERING_LAYOUT_SIZE_WARMUP_TICKS = 72;
@@ -663,6 +665,7 @@ export class CanvasGraph extends Symbiote {
   attributeChangedCallback(name, oldValue, newValue) {
     if (oldValue === newValue) return;
     if (name === 'active-node-scale' || name === 'info-panel-scale') {
+      this._restartWorkerForVisualFocus();
       this.needsDraw = true;
       this._wakeLoop?.();
       return;
@@ -1295,6 +1298,7 @@ export class CanvasGraph extends Symbiote {
       this._queueTransitionMarker(previousNode.id, node.id, options);
     }
     this.updateInteractionDepths();
+    if (isNewActivation) this._restartWorkerForVisualFocus();
     return true;
   }
 
@@ -1998,8 +2002,47 @@ export class CanvasGraph extends Symbiote {
         max: 4,
       });
     }
+    this._restartWorkerForVisualFocus();
     this.needsDraw = true;
     this._wakeLoop();
+  }
+
+  _getWorkerNodeDimensions(node) {
+    let width = node?.w;
+    let height = node?.h;
+    if (this.renderMode === 'dots') {
+      const conns = this.adjMap.get(node.id)?.size || 0;
+      const isActiveLayoutNode = this.activeNode?.id === node.id;
+      const scale = isActiveLayoutNode ? this._resolveActiveNodeScale() : 1;
+      const radius = getNodeRadius(node, conns, { scale });
+      const layoutRadius = radius + (isActiveLayoutNode ? VISUAL_FOCUS_LAYOUT_PADDING : 0);
+      width = layoutRadius * 2;
+      height = layoutRadius * 2;
+    }
+    return { width, height };
+  }
+
+  _getWorkerRestartOptions(options = {}) {
+    const baseOptions = this._lastWorkerOptions && typeof this._lastWorkerOptions === 'object'
+      ? { ...this._lastWorkerOptions }
+      : {};
+    return {
+      ...baseOptions,
+      activeGroupId: this.currentGroupId,
+      boundaryRadius: this.currentGroupId ? this.graphDB.nodes.get(this.currentGroupId)?.w / 2 : null,
+      attractors: baseOptions.attractors ?? null,
+      ...options,
+    };
+  }
+
+  _restartWorkerForVisualFocus() {
+    if (this._layoutSuspended || !this.worker || !this.nodes?.length || this.renderMode !== 'dots') return;
+    const baseAlpha = Number.isFinite(this._lastWorkerOptions?.initialAlpha)
+      ? this._lastWorkerOptions.initialAlpha
+      : 0;
+    this.startWorker(this._getWorkerRestartOptions({
+      initialAlpha: Math.max(baseAlpha, VISUAL_FOCUS_LAYOUT_INITIAL_ALPHA),
+    }));
   }
 
   _queueNodeAppearances(nodeIds, options = {}) {
@@ -2382,12 +2425,8 @@ export class CanvasGraph extends Symbiote {
         if (restoredPos && !this.nodePositions.has(n.id)) {
           this.nodePositions.set(n.id, { x: restoredPos.x, y: restoredPos.y });
         }
-        let finalW = n.w, finalH = n.h;
-        if (this.renderMode === 'dots') {
-          const conns = this.adjMap.get(n.id)?.size || 0;
-          const r = getNodeRadius(n, conns);
-          finalW = finalH = r * 2;
-        }
+        const dimensions = this._getWorkerNodeDimensions(n);
+        let finalW = dimensions.width, finalH = dimensions.height;
         const isEntering = this._layoutWarmupIds?.has(n.id);
         const isPreserved = this._layoutPreserveIds?.has(n.id);
         const workerX = pos ? pos.x + finalW / 2 : undefined;

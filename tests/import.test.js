@@ -723,6 +723,14 @@ test('canvas graph visual scale options stay in the library contract', async () 
   assert.match(source, /activeNodeScale: DEFAULT_ACTIVE_NODE_SCALE/);
   assert.match(source, /infoPanelScale: DEFAULT_INFO_PANEL_SCALE/);
   assert.match(source, /setVisualOptions\(options = \{\}\) {/);
+  assert.match(source, /_getWorkerNodeDimensions\(node\) {/);
+  assert.match(source, /const isActiveLayoutNode = this\.activeNode\?\.id === node\.id;/);
+  assert.match(source, /const scale = isActiveLayoutNode \? this\._resolveActiveNodeScale\(\) : 1;/);
+  assert.match(source, /_restartWorkerForVisualFocus\(\) {/);
+  assert.match(source, /VISUAL_FOCUS_LAYOUT_INITIAL_ALPHA/);
+  assert.match(source, /VISUAL_FOCUS_LAYOUT_PADDING/);
+  assert.match(source, /const layoutRadius = radius \+ \(isActiveLayoutNode \? VISUAL_FOCUS_LAYOUT_PADDING : 0\);/);
+  assert.match(source, /const dimensions = this\._getWorkerNodeDimensions\(n\);/);
   assert.match(source, /const targetScale = isActive \? activeNodeScale : 1;/);
   assert.match(source, /this\.activeNode\.aScale \|\| activeNodeScale/);
   assert.match(source, /resolveCanvasGraphInfoPanelMetrics\(\{/);
