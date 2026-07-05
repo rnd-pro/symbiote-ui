@@ -115,7 +115,9 @@ export class LayoutShellMenu extends Symbiote {
   }
 
   #getSidebar() {
-    return this.querySelector('[slot="sidebar"]') || this.querySelector('layout-sidebar');
+    let slotted = this.ref.sidebarSlot?.assignedElements?.({ flatten: true }) || [];
+    return slotted.find((el) => el?.matches?.('layout-sidebar') || el?.tagName?.toLowerCase?.() === 'layout-sidebar')
+      || this.querySelector(':scope > layout-sidebar[slot="sidebar"], :scope > [slot="sidebar"]');
   }
 
   #onTabsHome = () => {

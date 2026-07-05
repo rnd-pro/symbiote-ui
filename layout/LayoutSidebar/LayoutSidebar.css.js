@@ -11,6 +11,7 @@ export let sidebarStyles = css`
     width: var(--sn-sidebar-width);
     min-width: var(--sn-sidebar-width);
     background: var(--sn-sys-surface);
+    border-top: 1px solid var(--sn-layout-border);
     border-right: 1px solid var(--sn-layout-border);
     overflow: hidden;
     transition:
@@ -53,14 +54,17 @@ export let sidebarStyles = css`
     gap: var(--sn-layout-header-gap, 2px);
     padding: var(--sn-layout-header-padding, 2px 4px);
     min-height: var(--sn-layout-header-min-height, 28px);
-    background: var(--sn-node-header-bg);
-    border-bottom: 1px solid var(--sn-layout-border);
+    block-size: var(--sn-layout-header-block-size, calc(var(--sn-layout-header-min-height, 28px) + 3px));
+    min-block-size: var(--sn-layout-header-block-size, calc(var(--sn-layout-header-min-height, 28px) + 3px));
+    background: var(--sn-layout-sidebar-header-bg, var(--sn-node-header-bg));
+    box-sizing: border-box;
+    border-bottom: 1px solid var(--sn-layout-sidebar-header-border, var(--sn-layout-border));
     flex-shrink: 0;
 
     /* Collapsed: center the collapse button */
     layout-sidebar[collapsed] & {
       justify-content: center;
-      padding: var(--sn-step-1) 0;
+      padding: var(--sn-layout-header-padding, 2px 4px);
     }
   }
 
@@ -76,7 +80,6 @@ export let sidebarStyles = css`
   layout-sidebar .sb-header-btn {
     display: flex;
     align-items: center;
-    justify-content: center;
     gap: var(--sn-layout-header-button-gap, 4px);
     padding: var(--sn-layout-header-button-padding, 4px 6px);
     background: transparent;
@@ -85,12 +88,18 @@ export let sidebarStyles = css`
     cursor: pointer;
     color: var(--sn-sys-on-surface-dim);
     font-size: var(--sn-layout-header-button-size, 0.75rem);
+    box-sizing: border-box;
+    min-inline-size: var(--sn-layout-header-button-min-inline-size, 24px);
+    block-size: var(--sn-layout-header-button-block-size, var(--sn-layout-header-button-min-block-size, 24px));
+    min-block-size: var(--sn-layout-header-button-block-size, var(--sn-layout-header-button-min-block-size, 24px));
+    min-width: 0;
+    line-height: 1;
     transition:
-      background 0.1s,
-      color 0.1s;
+      background var(--sn-transition-fast) var(--sn-transition-easing),
+      color var(--sn-transition-fast) var(--sn-transition-easing);
 
     &:hover {
-      background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-panel));
+      background: var(--sn-layout-sidebar-header-button-hover-bg, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), transparent));
       color: var(--sn-sys-on-surface);
     }
 
@@ -101,7 +110,7 @@ export let sidebarStyles = css`
     /* Active tune button in edit mode */
     layout-sidebar[edit-mode] &:first-child {
       color: var(--sn-cat-server);
-      background: color-mix(in oklab, var(--sn-cat-server) 10%, transparent);
+      background: var(--sn-layout-sidebar-header-button-active-bg, color-mix(in oklab, var(--sn-cat-server) 10%, transparent));
     }
   }
 
@@ -143,6 +152,10 @@ export let sidebarStyles = css`
     overflow-y: auto;
     overflow-x: hidden;
     padding: var(--sn-step-2) 0;
+
+    layout-sidebar[collapsed] & {
+      padding: var(--sn-sidebar-collapsed-sections-padding, var(--sn-step-2, 4px) 0);
+    }
   }
 
   /* ═══════════════════════ SidebarSection ═══════════════════════ */
@@ -218,8 +231,10 @@ export let sidebarStyles = css`
     align-items: center;
     gap: var(--sn-step-5);
     flex: 1;
-    padding: var(--sn-step-3) var(--sn-step-7);
-    min-height: 28px;
+    padding: var(--sn-layout-sidebar-item-padding, var(--sn-step-2) var(--sn-step-7));
+    box-sizing: border-box;
+    block-size: var(--sn-layout-sidebar-item-block-size, var(--sn-layout-header-block-size, calc(var(--sn-layout-header-min-height, 28px) + 3px)));
+    min-height: var(--sn-layout-sidebar-item-block-size, var(--sn-layout-header-block-size, calc(var(--sn-layout-header-min-height, 28px) + 3px)));
     cursor: pointer;
     color: var(--sn-sys-on-surface-dim);
     transition:
@@ -235,6 +250,18 @@ export let sidebarStyles = css`
     &:hover {
       background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface));
       color: var(--sn-sys-on-surface);
+    }
+
+    layout-sidebar[collapsed] & {
+      justify-content: center;
+      flex: 0 0 auto;
+      inline-size: var(--sn-sidebar-collapsed-item-size, var(--sn-layout-sidebar-item-block-size, var(--sn-layout-header-block-size, calc(var(--sn-layout-header-min-height, 28px) + 3px))));
+      block-size: var(--sn-sidebar-collapsed-item-size, var(--sn-layout-sidebar-item-block-size, var(--sn-layout-header-block-size, calc(var(--sn-layout-header-min-height, 28px) + 3px))));
+      min-height: var(--sn-sidebar-collapsed-item-size, var(--sn-layout-sidebar-item-block-size, var(--sn-layout-header-block-size, calc(var(--sn-layout-header-min-height, 28px) + 3px))));
+      margin-inline: auto;
+      padding: 0;
+      border-radius: var(--sn-sidebar-collapsed-item-radius, var(--sn-radius-sm, 4px));
+      box-sizing: border-box;
     }
   }
 
@@ -284,6 +311,15 @@ export let sidebarStyles = css`
 
     layout-sidebar[edit-mode] & {
       padding-left: var(--sn-step-1);
+    }
+
+    layout-sidebar[collapsed] & {
+      justify-content: flex-start;
+      inline-size: 100%;
+      margin-inline: 0;
+      border-radius: 0;
+      padding-left: var(--sn-step-6);
+      border-left: 2px solid var(--sn-cat-server);
     }
   }
 

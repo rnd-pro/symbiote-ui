@@ -253,6 +253,9 @@ test('layout node panel header adapts without overlapping actions', async () => 
   assert.match(styles, /\.type-btn\s*\{[\s\S]*?grid-column: 1;[\s\S]*?overflow: hidden;/);
   assert.match(styles, /\.panel-menu-toggle\s*\{[\s\S]*?grid-column: 2;[\s\S]*?position: static;[\s\S]*?transform: none;/);
   assert.match(styles, /\.panel-actions\s*\{[\s\S]*?grid-column: 3;[\s\S]*?justify-content: flex-end;[\s\S]*?overflow: hidden;/);
+  assert.match(styles, /\.panel-title\s*\{[\s\S]*?font-size: var\(--sn-layout-header-title-size, var\(--sn-layout-header-button-size, 0\.75rem\)\);[\s\S]*?line-height: var\(--sn-layout-header-title-line-height, 1\.2\);/);
+  assert.match(styles, /\.panel-content\s*\{[\s\S]*?box-sizing: border-box;[\s\S]*?min-inline-size: 0;[\s\S]*?min-block-size: 0;/);
+  assert.match(styles, /\.panel-content > sn-card\s*\{[\s\S]*?--sn-card-bg: var\(--sn-layout-panel-card-bg, transparent\);[\s\S]*?--sn-card-border: var\(--sn-layout-panel-card-border, transparent\);[\s\S]*?--sn-card-radius: var\(--sn-layout-panel-card-radius, 0\);[\s\S]*?box-sizing: border-box;[\s\S]*?inline-size: var\(--sn-layout-panel-card-inline-size, 100%\);[\s\S]*?min-block-size: var\(--sn-layout-panel-card-min-block-size, 100%\);/);
   assert.match(styles, /\.panel-menu-row\s*\{[\s\S]*?min-block-size: calc\(var\(--sn-layout-menu-row-height,/);
   assert.doesNotMatch(styles, /\.panel-menu-row\s*\{[\s\S]*?height: calc\(var\(--sn-layout-menu-row-height,/);
   assert.match(styles, /\.panel-menu-actions\s*\{[\s\S]*?flex-wrap: wrap;[\s\S]*?overflow: hidden;/);

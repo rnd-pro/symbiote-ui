@@ -192,6 +192,7 @@ test('packed package imports from a consumer project with SSR-safe entrypoints',
       const manifest = await import('symbiote-ui/manifest');
       const webmcp = await import('symbiote-ui/webmcp');
       const screencast = await import('symbiote-ui/ui/screencast-recorder.js');
+      const tourScreencast = await import('symbiote-ui/ui/tour-screencast.js');
       const tourAudio = await import('symbiote-ui/ui/tour-audio-provider.js');
       const tourMedia = await import('symbiote-ui/ui/tour-media-renderer.js');
 
@@ -211,6 +212,8 @@ test('packed package imports from a consumer project with SSR-safe entrypoints',
       if (typeof manifest.listComponents !== 'function') throw new Error('missing manifest listComponents');
       if (typeof webmcp.createToolDescriptor !== 'function') throw new Error('missing webmcp helper');
       if (typeof screencast.installScreencastHotkeys !== 'function') throw new Error('missing screencast hotkey helper');
+      if (typeof tourScreencast.recordTourScreencast !== 'function') throw new Error('missing tour screencast helper');
+      if (typeof tourAudio.createTourAudioProvider !== 'function') throw new Error('missing tour audio provider registry');
       if (typeof tourAudio.createTourCueAudioProvider !== 'function') throw new Error('missing tour audio provider helper');
       if (typeof tourMedia.renderTourVideo !== 'function') throw new Error('missing tour media renderer helper');
 

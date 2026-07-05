@@ -12,6 +12,7 @@ import {
   playCursorScenario,
   resolvePresenterHighlightRect,
   resolvePresenterTravelDuration,
+  resolvePresenterVisibleRect,
 } from '../chat/presenter-cursor.js';
 
 /**
@@ -97,6 +98,13 @@ function makePresenterDom() {
     return setTimeout(() => cb(now), 0);
   };
   window.cancelAnimationFrame = (id) => clearTimeout(id);
+  window.getComputedStyle = (el) => ({
+    overflow: el.style?.overflow || 'visible',
+    overflowX: el.style?.overflowX || el.style?.overflow || 'visible',
+    overflowY: el.style?.overflowY || el.style?.overflow || 'visible',
+    clipPath: el.style?.clipPath || 'none',
+    contain: el.style?.contain || '',
+  });
   return window;
 }
 
@@ -545,6 +553,59 @@ test('annotateElement clears the focus marquee before drawing marker ink', async
   assert.equal(marquee.style.height, '0px');
   assert.ok(marquee.classList.contains('pc-marquee-faded'));
 
+  cursor.dispose();
+});
+
+test('resolvePresenterVisibleRect clips large targets to viewport and scroll containers', () => {
+  let window = makePresenterDom();
+  let { document } = window;
+  let scroller = boxElement(document, { left: 100, top: 90, width: 220, height: 150 });
+  scroller.style.overflow = 'auto';
+  let target = document.createElement('section');
+  target.getBoundingClientRect = () => ({
+    left: 80,
+    top: 70,
+    right: 580,
+    bottom: 520,
+    width: 500,
+    height: 450,
+  });
+  scroller.appendChild(target);
+
+  assert.deepEqual(resolvePresenterVisibleRect(target, { width: 400, height: 300 }), {
+    left: 100,
+    top: 90,
+    right: 320,
+    bottom: 240,
+    width: 220,
+    height: 150,
+  });
+});
+
+test('moveTo draws the focus frame around only the visible part of a scrollable target', async () => {
+  let window = makePresenterDom();
+  let { document } = window;
+  let scroller = boxElement(document, { left: 100, top: 90, width: 220, height: 150 });
+  scroller.style.overflow = 'auto';
+  let target = document.createElement('section');
+  target.getBoundingClientRect = () => ({
+    left: 80,
+    top: 70,
+    right: 580,
+    bottom: 520,
+    width: 500,
+    height: 450,
+  });
+  scroller.appendChild(target);
+
+  let cursor = createPresenterCursor(document);
+  cursor.moveTo(target);
+  await nextFrame();
+
+  let marquee = document.querySelector('.pc-marquee');
+  assert.equal(marquee.style.transform, 'translate(90px, 80px)');
+  assert.equal(marquee.style.width, '240px');
+  assert.equal(marquee.style.height, '170px');
   cursor.dispose();
 });
 

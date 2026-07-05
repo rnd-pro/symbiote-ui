@@ -349,11 +349,18 @@ export {
   normalizeTourMediaTimeline,
   renderTourVideo,
 } from './tour-media-renderer.js';
+export { recordTourScreencast } from './tour-screencast.js';
 export {
+  TOUR_AUDIO_PROVIDER_BROWSER_ID,
+  TOUR_AUDIO_PROVIDER_SYNTHETIC_CUES_ID,
   TourAudioProviderError,
+  createBrowserTourAudioProvider,
+  createTourAudioProvider,
   createTourCueAudioPlan,
   createTourCueAudioProvider,
   getTourAudioProviderSupport,
+  listTourAudioProviders,
+  resolveTourAudioProvider,
 } from './tour-audio-provider.js';
 export { escapeHtml } from '../display/markdown-formatter.js';
 export {

@@ -28,6 +28,12 @@ All notable changes to `symbiote-ui` will be documented in this file.
   `chat-workspace-embeds-ready` `{ embeds: [{ key, slot }] }` for hosts to mount
   and re-attach live widgets.
 
+### Fixed
+
+- Added themed content insets for `sn-description-list` and `sn-scroll-area`,
+  and centered collapsed `layout-sidebar` items so library-composed workspaces
+  do not need local padding fixes.
+
 ## [0.3.0-alpha.50] - 2026-06-27
 
 ### Fixed

@@ -15,6 +15,25 @@ const PERSONA_FREQUENCIES = Object.freeze({
   system: 198,
 });
 
+export const TOUR_AUDIO_PROVIDER_BROWSER_ID = 'browser';
+export const TOUR_AUDIO_PROVIDER_SYNTHETIC_CUES_ID = 'synthetic-cues';
+
+const BUILTIN_TOUR_AUDIO_PROVIDERS = Object.freeze([
+  {
+    id: TOUR_AUDIO_PROVIDER_BROWSER_ID,
+    label: 'Browser audio',
+    strategy: 'display-capture',
+    live: true,
+    default: true,
+  },
+  {
+    id: TOUR_AUDIO_PROVIDER_SYNTHETIC_CUES_ID,
+    label: 'Synthetic cue track',
+    strategy: 'media-stream',
+    live: false,
+  },
+]);
+
 export class TourAudioProviderError extends Error {
   constructor(code, message, detail = {}) {
     super(message);
@@ -63,6 +82,70 @@ function wordsFor(text) {
 function personaBaseFrequency(persona) {
   let key = cleanText(persona, 'guide').toLowerCase();
   return PERSONA_FREQUENCIES[key] || PERSONA_FREQUENCIES.guide;
+}
+
+function normalizeTourAudioProviderDefinition(definition = {}) {
+  let id = cleanText(definition.id, '');
+  if (!id) return null;
+  return {
+    id,
+    label: cleanText(definition.label, id),
+    strategy: cleanText(definition.strategy, 'custom'),
+    live: definition.live !== false,
+    default: Boolean(definition.default),
+    createProvider: typeof definition.createProvider === 'function' ? definition.createProvider : null,
+    getExtraAudioInput: typeof definition.getExtraAudioInput === 'function' ? definition.getExtraAudioInput : null,
+  };
+}
+
+export function listTourAudioProviders(extraProviders = []) {
+  let providers = [
+    ...BUILTIN_TOUR_AUDIO_PROVIDERS,
+    ...(Array.isArray(extraProviders) ? extraProviders : []),
+  ]
+    .map(normalizeTourAudioProviderDefinition)
+    .filter(Boolean);
+  let seen = new Set();
+  return providers.filter((provider) => {
+    if (seen.has(provider.id)) return false;
+    seen.add(provider.id);
+    return true;
+  });
+}
+
+export function resolveTourAudioProvider(id = TOUR_AUDIO_PROVIDER_BROWSER_ID, options = {}) {
+  let requested = cleanText(id, TOUR_AUDIO_PROVIDER_BROWSER_ID);
+  let providers = listTourAudioProviders(options.providers || options.extraProviders || []);
+  let provider = providers.find((item) => item.id === requested);
+  if (!provider && requested !== TOUR_AUDIO_PROVIDER_BROWSER_ID) {
+    throw new TourAudioProviderError('unknown-audio-provider', `Unknown tour audio provider "${requested}".`, {
+      requested,
+      available: providers.map((item) => item.id),
+    });
+  }
+  provider = provider ||
+    providers.find((item) => item.default) ||
+    providers.find((item) => item.id === TOUR_AUDIO_PROVIDER_BROWSER_ID);
+  if (!provider) {
+    throw new TourAudioProviderError('unknown-audio-provider', `Unknown tour audio provider "${requested}".`, {
+      requested,
+      available: providers.map((item) => item.id),
+    });
+  }
+  return provider;
+}
+
+export function createBrowserTourAudioProvider(providerOptions = {}) {
+  let definition = resolveTourAudioProvider(TOUR_AUDIO_PROVIDER_BROWSER_ID, providerOptions);
+  return {
+    ...definition,
+    kind: 'browser-tour-audio-provider',
+    captureAudio: true,
+    async getExtraAudioInput() {
+      return null;
+    },
+    async close() {},
+  };
 }
 
 function resolveAudioContext(options = {}) {
@@ -279,4 +362,44 @@ export function createTourCueAudioProvider(providerOptions = {}) {
       close,
     };
   };
+}
+
+export function createTourAudioProvider(id = TOUR_AUDIO_PROVIDER_BROWSER_ID, providerOptions = {}) {
+  let definition = resolveTourAudioProvider(id, providerOptions);
+  if (definition.id === TOUR_AUDIO_PROVIDER_BROWSER_ID) return createBrowserTourAudioProvider(providerOptions);
+  if (definition.id === TOUR_AUDIO_PROVIDER_SYNTHETIC_CUES_ID) {
+    return {
+      ...definition,
+      kind: 'synthetic-cue-tour-audio-provider',
+      captureAudio: false,
+      async getExtraAudioInput(args = {}) {
+        let provider = createTourCueAudioProvider(providerOptions);
+        return provider(args);
+      },
+      createRenderAudioProvider() {
+        return createTourCueAudioProvider(providerOptions);
+      },
+    };
+  }
+  if (definition.getExtraAudioInput) {
+    return {
+      ...definition,
+      kind: 'custom-tour-audio-provider',
+      captureAudio: !definition.live,
+      getExtraAudioInput: definition.getExtraAudioInput,
+    };
+  }
+  if (definition.createProvider) {
+    let provider = definition.createProvider(providerOptions);
+    if (!provider || typeof provider !== 'object') {
+      throw new TourAudioProviderError('invalid-audio-provider', `Tour audio provider "${definition.id}" did not return an object.`);
+    }
+    return {
+      ...definition,
+      ...provider,
+      id: definition.id,
+      label: provider.label || definition.label,
+    };
+  }
+  throw new TourAudioProviderError('invalid-audio-provider', `Tour audio provider "${definition.id}" has no provider factory.`);
 }

@@ -22331,7 +22331,28 @@
               "description": "Description items."
             }
           ],
-          "cssProperties": [],
+          "cssProperties": [
+            {
+              "name": "--sn-description-list-padding",
+              "description": "Theme CSS custom property consumed by sn-description-list."
+            },
+            {
+              "name": "--sn-description-list-gap-y",
+              "description": "Theme CSS custom property consumed by sn-description-list."
+            },
+            {
+              "name": "--sn-description-list-gap-x",
+              "description": "Theme CSS custom property consumed by sn-description-list."
+            },
+            {
+              "name": "--sn-description-label-size",
+              "description": "Theme CSS custom property consumed by sn-description-list."
+            },
+            {
+              "name": "--sn-description-value-size",
+              "description": "Theme CSS custom property consumed by sn-description-list."
+            }
+          ],
           "contract": {
             "capabilities": [
               "description-list",
@@ -22347,7 +22368,13 @@
                 "description": "Description items."
               }
             ],
-            "themeAliases": [],
+            "themeAliases": [
+              "--sn-description-list-padding",
+              "--sn-description-list-gap-y",
+              "--sn-description-list-gap-x",
+              "--sn-description-label-size",
+              "--sn-description-value-size"
+            ],
             "status": "draft",
             "schemaVersion": "component-descriptor-v2",
             "dataSchema": "schemas/runtime-ui-v1.json",
@@ -22396,7 +22423,13 @@
                   "description": "Description items."
                 }
               ],
-              "themeAliases": [],
+              "themeAliases": [
+                "--sn-description-list-padding",
+                "--sn-description-list-gap-y",
+                "--sn-description-list-gap-x",
+                "--sn-description-label-size",
+                "--sn-description-value-size"
+              ],
               "status": "draft",
               "schemaVersion": "component-descriptor-v2",
               "dataSchema": "schemas/runtime-ui-v1.json",
@@ -32517,6 +32550,62 @@
               "description": "Theme CSS custom property consumed by layout-node."
             },
             {
+              "name": "--sn-layout-header-gap",
+              "description": "Theme CSS custom property consumed by layout-node."
+            },
+            {
+              "name": "--sn-layout-header-padding",
+              "description": "Theme CSS custom property consumed by layout-node."
+            },
+            {
+              "name": "--sn-layout-header-min-height",
+              "description": "Theme CSS custom property consumed by layout-node."
+            },
+            {
+              "name": "--sn-layout-header-block-size",
+              "description": "Theme CSS custom property consumed by layout-node."
+            },
+            {
+              "name": "--sn-layout-header-title-size",
+              "description": "Theme CSS custom property consumed by layout-node."
+            },
+            {
+              "name": "--sn-layout-header-title-line-height",
+              "description": "Theme CSS custom property consumed by layout-node."
+            },
+            {
+              "name": "--sn-layout-header-button-size",
+              "description": "Theme CSS custom property consumed by layout-node."
+            },
+            {
+              "name": "--sn-layout-header-icon-size",
+              "description": "Theme CSS custom property consumed by layout-node."
+            },
+            {
+              "name": "--sn-layout-header-button-gap",
+              "description": "Theme CSS custom property consumed by layout-node."
+            },
+            {
+              "name": "--sn-layout-header-button-padding",
+              "description": "Theme CSS custom property consumed by layout-node."
+            },
+            {
+              "name": "--sn-layout-header-button-radius",
+              "description": "Theme CSS custom property consumed by layout-node."
+            },
+            {
+              "name": "--sn-layout-header-button-min-inline-size",
+              "description": "Theme CSS custom property consumed by layout-node."
+            },
+            {
+              "name": "--sn-layout-header-button-min-block-size",
+              "description": "Theme CSS custom property consumed by layout-node."
+            },
+            {
+              "name": "--sn-layout-header-button-block-size",
+              "description": "Theme CSS custom property consumed by layout-node."
+            },
+            {
               "name": "--sn-layout-menu-action-size",
               "description": "Theme CSS custom property consumed by layout-node."
             },
@@ -32574,6 +32663,26 @@
             },
             {
               "name": "--sn-layout-panel-min-block-size",
+              "description": "Theme CSS custom property consumed by layout-node."
+            },
+            {
+              "name": "--sn-layout-panel-card-bg",
+              "description": "Theme CSS custom property consumed by layout-node."
+            },
+            {
+              "name": "--sn-layout-panel-card-border",
+              "description": "Theme CSS custom property consumed by layout-node."
+            },
+            {
+              "name": "--sn-layout-panel-card-radius",
+              "description": "Theme CSS custom property consumed by layout-node."
+            },
+            {
+              "name": "--sn-layout-panel-card-inline-size",
+              "description": "Theme CSS custom property consumed by layout-node."
+            },
+            {
+              "name": "--sn-layout-panel-card-min-block-size",
               "description": "Theme CSS custom property consumed by layout-node."
             }
           ],
@@ -32788,6 +32897,20 @@
                 "--sn-sys-on-surface",
                 "--sn-sys-on-surface-dim",
                 "--sn-layout-gap-bg",
+                "--sn-layout-header-gap",
+                "--sn-layout-header-padding",
+                "--sn-layout-header-min-height",
+                "--sn-layout-header-block-size",
+                "--sn-layout-header-title-size",
+                "--sn-layout-header-title-line-height",
+                "--sn-layout-header-button-size",
+                "--sn-layout-header-icon-size",
+                "--sn-layout-header-button-gap",
+                "--sn-layout-header-button-padding",
+                "--sn-layout-header-button-radius",
+                "--sn-layout-header-button-min-inline-size",
+                "--sn-layout-header-button-min-block-size",
+                "--sn-layout-header-button-block-size",
                 "--sn-layout-menu-action-size",
                 "--sn-layout-menu-icon-size",
                 "--sn-layout-menu-min-height",
@@ -32802,7 +32925,12 @@
                 "--sn-layout-menu-label-padding",
                 "--sn-layout-menu-label-size",
                 "--sn-layout-panel-min-inline-size",
-                "--sn-layout-panel-min-block-size"
+                "--sn-layout-panel-min-block-size",
+                "--sn-layout-panel-card-bg",
+                "--sn-layout-panel-card-border",
+                "--sn-layout-panel-card-radius",
+                "--sn-layout-panel-card-inline-size",
+                "--sn-layout-panel-card-min-block-size"
               ],
               "status": "draft",
               "schemaVersion": "component-descriptor-v2",
@@ -33884,6 +34012,90 @@
             {
               "name": "--sn-sys-on-surface-dim",
               "description": "Theme CSS custom property consumed by layout-sidebar."
+            },
+            {
+              "name": "--sn-layout-header-gap",
+              "description": "Theme CSS custom property consumed by layout-sidebar."
+            },
+            {
+              "name": "--sn-layout-header-padding",
+              "description": "Theme CSS custom property consumed by layout-sidebar."
+            },
+            {
+              "name": "--sn-layout-header-min-height",
+              "description": "Theme CSS custom property consumed by layout-sidebar."
+            },
+            {
+              "name": "--sn-layout-header-block-size",
+              "description": "Theme CSS custom property consumed by layout-sidebar."
+            },
+            {
+              "name": "--sn-layout-header-button-size",
+              "description": "Theme CSS custom property consumed by layout-sidebar."
+            },
+            {
+              "name": "--sn-layout-header-icon-size",
+              "description": "Theme CSS custom property consumed by layout-sidebar."
+            },
+            {
+              "name": "--sn-layout-header-button-gap",
+              "description": "Theme CSS custom property consumed by layout-sidebar."
+            },
+            {
+              "name": "--sn-layout-header-button-padding",
+              "description": "Theme CSS custom property consumed by layout-sidebar."
+            },
+            {
+              "name": "--sn-layout-header-button-radius",
+              "description": "Theme CSS custom property consumed by layout-sidebar."
+            },
+            {
+              "name": "--sn-layout-header-button-min-inline-size",
+              "description": "Theme CSS custom property consumed by layout-sidebar."
+            },
+            {
+              "name": "--sn-layout-header-button-min-block-size",
+              "description": "Theme CSS custom property consumed by layout-sidebar."
+            },
+            {
+              "name": "--sn-layout-header-button-block-size",
+              "description": "Theme CSS custom property consumed by layout-sidebar."
+            },
+            {
+              "name": "--sn-layout-sidebar-header-bg",
+              "description": "Theme CSS custom property consumed by layout-sidebar."
+            },
+            {
+              "name": "--sn-layout-sidebar-header-border",
+              "description": "Theme CSS custom property consumed by layout-sidebar."
+            },
+            {
+              "name": "--sn-layout-sidebar-header-button-hover-bg",
+              "description": "Theme CSS custom property consumed by layout-sidebar."
+            },
+            {
+              "name": "--sn-layout-sidebar-header-button-active-bg",
+              "description": "Theme CSS custom property consumed by layout-sidebar."
+            },
+            {
+              "name": "--sn-layout-sidebar-item-block-size",
+              "description": "Theme CSS custom property consumed by layout-sidebar."
+            },
+            {
+              "name": "--sn-layout-sidebar-item-padding",
+              "description": "Theme CSS custom property consumed by layout-sidebar."
+            },
+            {
+              "name": "--sn-sidebar-collapsed-item-size",
+              "description": "Theme CSS custom property consumed by layout-sidebar."
+            },
+            {
+              "name": "--sn-sidebar-collapsed-item-radius",
+              "description": "Theme CSS custom property consumed by layout-sidebar."
+            },
+            {
+              "name": "--sn-sidebar-collapsed-sections-padding",
+              "description": "Theme CSS custom property consumed by layout-sidebar."
             }
           ],
           "contract": {
@@ -33989,7 +34201,28 @@
               "--sn-sys-accent",
               "--sn-sys-state-hover-mix",
               "--sn-sys-on-surface",
-              "--sn-sys-on-surface-dim"
+              "--sn-sys-on-surface-dim",
+              "--sn-layout-header-gap",
+              "--sn-layout-header-padding",
+              "--sn-layout-header-min-height",
+              "--sn-layout-header-block-size",
+              "--sn-layout-header-button-size",
+              "--sn-layout-header-icon-size",
+              "--sn-layout-header-button-gap",
+              "--sn-layout-header-button-padding",
+              "--sn-layout-header-button-radius",
+              "--sn-layout-header-button-min-inline-size",
+              "--sn-layout-header-button-min-block-size",
+              "--sn-layout-header-button-block-size",
+              "--sn-layout-sidebar-header-bg",
+              "--sn-layout-sidebar-header-border",
+              "--sn-layout-sidebar-header-button-hover-bg",
+              "--sn-layout-sidebar-header-button-active-bg",
+              "--sn-layout-sidebar-item-block-size",
+              "--sn-layout-sidebar-item-padding",
+              "--sn-sidebar-collapsed-item-size",
+              "--sn-sidebar-collapsed-item-radius",
+              "--sn-sidebar-collapsed-sections-padding"
             ],
             "status": "draft",
             "schemaVersion": "component-descriptor-v2",
@@ -34208,7 +34441,28 @@
                 "--sn-sys-accent",
                 "--sn-sys-state-hover-mix",
                 "--sn-sys-on-surface",
-                "--sn-sys-on-surface-dim"
+                "--sn-sys-on-surface-dim",
+                "--sn-layout-header-gap",
+                "--sn-layout-header-padding",
+                "--sn-layout-header-min-height",
+                "--sn-layout-header-block-size",
+                "--sn-layout-header-button-size",
+                "--sn-layout-header-icon-size",
+                "--sn-layout-header-button-gap",
+                "--sn-layout-header-button-padding",
+                "--sn-layout-header-button-radius",
+                "--sn-layout-header-button-min-inline-size",
+                "--sn-layout-header-button-min-block-size",
+                "--sn-layout-header-button-block-size",
+                "--sn-layout-sidebar-header-bg",
+                "--sn-layout-sidebar-header-border",
+                "--sn-layout-sidebar-header-button-hover-bg",
+                "--sn-layout-sidebar-header-button-active-bg",
+                "--sn-layout-sidebar-item-block-size",
+                "--sn-layout-sidebar-item-padding",
+                "--sn-sidebar-collapsed-item-size",
+                "--sn-sidebar-collapsed-item-radius",
+                "--sn-sidebar-collapsed-sections-padding"
               ],
               "status": "draft",
               "schemaVersion": "component-descriptor-v2",
@@ -35010,6 +35264,10 @@
               "description": "Theme CSS custom property consumed by sn-scroll-area."
             },
             {
+              "name": "--sn-scroll-area-padding",
+              "description": "Theme CSS custom property consumed by sn-scroll-area."
+            },
+            {
               "name": "--sn-scrollbar-thumb",
               "description": "Theme CSS custom property consumed by sn-scroll-area."
             },
@@ -35067,6 +35325,7 @@
             "themeAliases": [
               "--sn-font",
               "--sn-sys-accent",
+              "--sn-scroll-area-padding",
               "--sn-scrollbar-thumb",
               "--sn-sys-on-surface-dim",
               "--sn-transition-fast"
@@ -35149,6 +35408,7 @@
               "themeAliases": [
                 "--sn-font",
                 "--sn-sys-accent",
+                "--sn-scroll-area-padding",
                 "--sn-scrollbar-thumb",
                 "--sn-sys-on-surface-dim",
                 "--sn-transition-fast"

@@ -10,6 +10,7 @@ import {
   installScreencastHotkeys,
   matchesScreencastHotkey,
 } from '../ui/screencast-recorder.js';
+import { recordTourScreencast } from '../ui/tour-screencast.js';
 
 class ListenerTarget {
   constructor() {
@@ -35,8 +36,9 @@ class ListenerTarget {
 }
 
 class FakeTrack extends ListenerTarget {
-  constructor() {
+  constructor(kind = '') {
     super();
+    this.kind = kind;
     this.stopped = false;
   }
 
@@ -50,13 +52,21 @@ class FakeTrack extends ListenerTarget {
 }
 
 class FakeStream {
-  constructor({ audio = true, video = true } = {}) {
-    this.videoTrack = video ? new FakeTrack() : null;
-    this.audioTrack = audio ? new FakeTrack() : null;
+  constructor(input = {}) {
+    if (Array.isArray(input)) {
+      this.tracks = input;
+      this.videoTrack = input.find((track) => track.kind === 'video') || null;
+      this.audioTrack = input.find((track) => track.kind === 'audio') || null;
+      return;
+    }
+    let { audio = true, video = true } = input;
+    this.videoTrack = video ? new FakeTrack('video') : null;
+    this.audioTrack = audio ? new FakeTrack('audio') : null;
+    this.tracks = [this.videoTrack, this.audioTrack].filter(Boolean);
   }
 
   getTracks() {
-    return [this.videoTrack, this.audioTrack].filter(Boolean);
+    return this.tracks;
   }
 
   getVideoTracks() {
@@ -220,6 +230,7 @@ test('screencast recorder starts from hotkey, stops from hotkey, and downloads t
   assert.equal(starts.length, 1);
   assert.equal(starts[0].capture.audioRequested, true);
   assert.equal(starts[0].capture.audioTrackCount, 1);
+  assert.equal(starts[0].capture.extraAudioTrackCount, 0);
   assert.equal(starts[0].capture.hasAudio, true);
   assert.equal(starts[0].capture.videoTrackCount, 1);
   assert.equal(starts[0].capture.hasVideo, true);
@@ -292,4 +303,136 @@ test('screencast recorder reports when capture returns no audio track', async ()
   assert.equal(stops[0].capture.audioRequested, true);
   assert.equal(stops[0].capture.audioTrackCount, 0);
   assert.equal(stops[0].capture.hasAudio, false);
+});
+
+test('screencast recorder muxes provider audio into the recorded stream', async () => {
+  let displayStream = new FakeStream({ audio: false });
+  let extraTrack = new FakeTrack('audio');
+  let closed = 0;
+  let recorder = new ScreencastRecorder({
+    download: false,
+    navigator: { mediaDevices: { getDisplayMedia: async () => displayStream } },
+    MediaRecorder: FakeMediaRecorder,
+    MediaStream: FakeStream,
+  });
+
+  await recorder.start({
+    filename: 'tour.webm',
+    audioTrackProvider: async () => ({
+      track: extraTrack,
+      close() {
+        closed += 1;
+      },
+    }),
+  });
+
+  let activeRecorder = FakeMediaRecorder.instances.at(-1);
+  assert.equal(activeRecorder.stream.getVideoTracks().length, 1);
+  assert.equal(activeRecorder.stream.getAudioTracks().length, 1);
+  assert.equal(recorder.state, 'recording');
+
+  let detail = await recorder.stop();
+  assert.equal(detail.filename, 'tour.webm');
+  assert.equal(detail.capture.audioTrackCount, 1);
+  assert.equal(detail.capture.extraAudioTrackCount, 1);
+  assert.equal(detail.capture.hasAudio, true);
+  assert.equal(displayStream.videoTrack.stopped, true);
+  assert.equal(extraTrack.stopped, true);
+  assert.equal(closed, 1);
+});
+
+test('screencast recorder returns to idle when display capture is denied', async () => {
+  let errors = [];
+  let recorder = new ScreencastRecorder({
+    download: false,
+    eventTarget: {
+      dispatchEvent(event) {
+        if (event.type === 'sn-screencast-error') errors.push(event.detail.error);
+      },
+    },
+    navigator: {
+      mediaDevices: {
+        async getDisplayMedia() {
+          let error = new Error('Not allowed');
+          error.name = 'NotAllowedError';
+          throw error;
+        },
+      },
+    },
+    MediaRecorder: FakeMediaRecorder,
+  });
+
+  await assert.rejects(recorder.start(), { name: 'NotAllowedError' });
+  assert.equal(recorder.state, 'idle');
+  assert.equal(errors.length, 1);
+});
+
+test('recordTourScreencast starts capture before playback and stops after playback', async () => {
+  let order = [];
+  let recorder = {
+    async start() {
+      order.push('start');
+    },
+    async stop() {
+      order.push('stop');
+      return { blob: new Blob(['ok']) };
+    },
+  };
+
+  let result = await recordTourScreencast({
+    recorder,
+    tailMs: 0,
+    play: async () => {
+      order.push('play');
+      return 'played';
+    },
+  });
+
+  assert.deepEqual(order, ['start', 'play', 'stop']);
+  assert.equal(result.value, 'played');
+  assert.equal(result.recording.blob.size, 2);
+});
+
+test('recordTourScreencast does not play when capture start fails', async () => {
+  let played = false;
+  let stopped = false;
+  await assert.rejects(
+    recordTourScreencast({
+      recorder: {
+        async start() {
+          throw new Error('capture denied');
+        },
+        async stop() {
+          stopped = true;
+        },
+      },
+      play: async () => {
+        played = true;
+      },
+    }),
+    /capture denied/,
+  );
+
+  assert.equal(played, false);
+  assert.equal(stopped, false);
+});
+
+test('recordTourScreencast stops an active recording when playback fails', async () => {
+  let stopped = false;
+  await assert.rejects(
+    recordTourScreencast({
+      recorder: {
+        async start() {},
+        async stop(reason) {
+          stopped = reason;
+        },
+      },
+      play: async () => {
+        throw new Error('tour failed');
+      },
+    }),
+    /tour failed/,
+  );
+
+  assert.equal(stopped, 'tour-screencast-error');
 });

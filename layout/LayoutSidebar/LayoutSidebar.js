@@ -32,6 +32,7 @@ export class LayoutSidebar extends Symbiote {
   init$ = {
     '@disabled': false,
     '@sidebar-disabled': false,
+    '@storage-key': '',
     activeSection: '',
     collapsed: false,
     editMode: false,
@@ -51,7 +52,7 @@ export class LayoutSidebar extends Symbiote {
     onResetAllLayouts: () => {
       this.resetConfig();
       if (typeof localStorage !== 'undefined') {
-        localStorage.removeItem(STORAGE_KEY_WIDTH);
+        localStorage.removeItem(this.#storageKey('width'));
       }
       this.#clearSidebarWidth();
       this.dispatchEvent(new CustomEvent('layout-sidebar-reset', {
@@ -84,26 +85,26 @@ export class LayoutSidebar extends Symbiote {
 
 
     if (typeof localStorage !== 'undefined') {
-      let stored = localStorage.getItem(STORAGE_KEY_COLLAPSED);
+      let stored = localStorage.getItem(this.#storageKey('collapsed'));
       if (stored === null || stored === 'true') {
         this.$.collapsed = true;
       }
 
 
-      let savedWidth = localStorage.getItem(STORAGE_KEY_WIDTH);
+      let savedWidth = localStorage.getItem(this.#storageKey('width'));
       if (savedWidth) this.#setSidebarWidth(savedWidth);
     }
 
 
     this.sub('collapsed', (val) => {
       if (typeof localStorage !== 'undefined') {
-        localStorage.setItem(STORAGE_KEY_COLLAPSED, String(val));
+        localStorage.setItem(this.#storageKey('collapsed'), String(val));
 
         if (val) {
           this.#clearSidebarWidth();
         } else {
 
-          let w = localStorage.getItem(STORAGE_KEY_WIDTH);
+          let w = localStorage.getItem(this.#storageKey('width'));
           if (w) {
             this.#setSidebarWidth(w);
           }
@@ -128,7 +129,7 @@ export class LayoutSidebar extends Symbiote {
         this.#setResizeActive(false);
         let w = this.offsetWidth;
         if (typeof localStorage !== 'undefined') {
-          localStorage.setItem(STORAGE_KEY_WIDTH, w);
+          localStorage.setItem(this.#storageKey('width'), w);
         }
         if (typeof document !== 'undefined') {
           document.removeEventListener('pointermove', onMove);
@@ -160,6 +161,15 @@ export class LayoutSidebar extends Symbiote {
       this.$['@sidebar-disabled'] === true ||
       this.$['@sidebar-disabled'] === 'true'
     );
+  }
+
+  #storageKey(kind) {
+    let base = String(this.$['@storage-key'] || this.getAttribute('storage-key') || '').trim();
+    if (base) return `${base}:${kind}`;
+    if (kind === 'collapsed') return STORAGE_KEY_COLLAPSED;
+    if (kind === 'config') return STORAGE_KEY_CONFIG;
+    if (kind === 'width') return STORAGE_KEY_WIDTH;
+    return `sn-sidebar-${kind}`;
   }
 
   #syncDisabled() {
@@ -277,7 +287,7 @@ export class LayoutSidebar extends Symbiote {
    */
   resetConfig() {
     if (typeof localStorage !== 'undefined') {
-      localStorage.removeItem(STORAGE_KEY_CONFIG);
+      localStorage.removeItem(this.#storageKey('config'));
     }
     this.#buildSections(this.#allSections, null);
   }
@@ -291,7 +301,7 @@ export class LayoutSidebar extends Symbiote {
       visible: s.isVisible,
     }));
     if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(STORAGE_KEY_CONFIG, JSON.stringify(config));
+      localStorage.setItem(this.#storageKey('config'), JSON.stringify(config));
     }
   }
 
@@ -302,7 +312,7 @@ export class LayoutSidebar extends Symbiote {
   #loadConfig() {
     try {
       if (typeof localStorage !== 'undefined') {
-        let raw = localStorage.getItem(STORAGE_KEY_CONFIG);
+        let raw = localStorage.getItem(this.#storageKey('config'));
         return raw ? JSON.parse(raw) : null;
       }
     } catch {

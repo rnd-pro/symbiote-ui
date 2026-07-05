@@ -5,6 +5,15 @@ sn-scroll-area {
   width: 100%;
   height: 100%;
   box-sizing: border-box;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--sn-scroll-area-padding);
+}
+
+sn-scroll-area:has(> .sn-scroll-container) {
+  overflow: hidden;
+  padding: 0;
 }
 
 .sn-scroll-container {
@@ -19,6 +28,8 @@ sn-scroll-area {
   height: 100%;
   overflow: scroll;
   scrollbar-width: none; /* Firefox */
+  box-sizing: border-box;
+  padding: var(--sn-scroll-area-padding);
 }
 
 .sn-scroll-viewport::-webkit-scrollbar {

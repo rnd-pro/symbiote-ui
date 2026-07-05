@@ -157,6 +157,8 @@ export let styles = css`
 
     .panel-title {
       font-weight: 500;
+      font-size: var(--sn-layout-header-title-size, var(--sn-layout-header-button-size, 0.75rem));
+      line-height: var(--sn-layout-header-title-line-height, 1.2);
       min-inline-size: 0;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -316,11 +318,23 @@ export let styles = css`
     }
 
     .panel-content {
+      box-sizing: border-box;
       flex: 1;
+      min-inline-size: 0;
+      min-block-size: 0;
       overflow: auto;
       position: relative;
       padding: var(--sn-frame-inset, 0);
       ${themedScrollbarStyles}
+    }
+
+    .panel-content > sn-card {
+      --sn-card-bg: var(--sn-layout-panel-card-bg, transparent);
+      --sn-card-border: var(--sn-layout-panel-card-border, transparent);
+      --sn-card-radius: var(--sn-layout-panel-card-radius, 0);
+      box-sizing: border-box;
+      inline-size: var(--sn-layout-panel-card-inline-size, 100%);
+      min-block-size: var(--sn-layout-panel-card-min-block-size, 100%);
     }
 
     /* Collapsed state - vertical (bottom/top panels) */

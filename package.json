@@ -114,6 +114,7 @@
       "default": "./ui/index.js"
     },
     "./ui/screencast-recorder.js": "./ui/screencast-recorder.js",
+    "./ui/tour-screencast.js": "./ui/tour-screencast.js",
     "./ui/tour-audio-provider.js": "./ui/tour-audio-provider.js",
     "./ui/tour-media-renderer.js": "./ui/tour-media-renderer.js",
     "./ui/scrollbar-styles.js": "./ui/scrollbar-styles.js",
@@ -224,7 +225,10 @@
     "catalog:build": "jsda build && node scripts/copy-static-assets.js && node scripts/copy-404.js",
     "catalog:dev": "jsda ssg",
     "catalog:serve": "npx -y serve catalog/dist -l 3001",
-    "catalog:site": "npm run catalog:build && node scripts/assemble-site.js"
+    "catalog:site": "npm run catalog:build && node scripts/assemble-site.js",
+    "libs:status": "node ../symbiote-dev-plane/bin/symbiote-libs.js status",
+    "libs:link": "node ../symbiote-dev-plane/bin/symbiote-libs.js link",
+    "libs:unlink": "node ../symbiote-dev-plane/bin/symbiote-libs.js unlink --install"
   },
   "keywords": [
     "node-editor",

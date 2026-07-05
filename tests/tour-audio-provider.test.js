@@ -5,9 +5,15 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import {
+  TOUR_AUDIO_PROVIDER_BROWSER_ID,
+  TOUR_AUDIO_PROVIDER_SYNTHETIC_CUES_ID,
+  TourAudioProviderError,
+  createTourAudioProvider,
   createTourCueAudioPlan,
   createTourCueAudioProvider,
   getTourAudioProviderSupport,
+  listTourAudioProviders,
+  resolveTourAudioProvider,
 } from '../ui/tour-audio-provider.js';
 
 class FakeTrack {
@@ -204,4 +210,54 @@ test('reports provider support from injected AudioContext capability', () => {
   assert.equal(support.audioContext, true);
   assert.equal(support.mediaStreamDestination, true);
   assert.equal(support.supported, true);
+});
+
+test('lists browser audio as the default tour provider', () => {
+  let providers = listTourAudioProviders();
+  assert.deepEqual(
+    providers.map((provider) => provider.id),
+    [TOUR_AUDIO_PROVIDER_BROWSER_ID, TOUR_AUDIO_PROVIDER_SYNTHETIC_CUES_ID],
+  );
+
+  let browser = resolveTourAudioProvider();
+  assert.equal(browser.id, TOUR_AUDIO_PROVIDER_BROWSER_ID);
+  assert.equal(browser.live, true);
+
+  let provider = createTourAudioProvider();
+  assert.equal(provider.id, TOUR_AUDIO_PROVIDER_BROWSER_ID);
+  assert.equal(provider.captureAudio, true);
+  assert.equal(typeof provider.getExtraAudioInput, 'function');
+});
+
+test('creates a synthetic cue provider as an explicit non-default option', async () => {
+  let fakeCtx = new FakeAudioContext();
+  let provider = createTourAudioProvider(TOUR_AUDIO_PROVIDER_SYNTHETIC_CUES_ID, {
+    audioContext: fakeCtx,
+  });
+
+  assert.equal(provider.id, TOUR_AUDIO_PROVIDER_SYNTHETIC_CUES_ID);
+  assert.equal(provider.live, false);
+  assert.equal(provider.captureAudio, false);
+
+  let input = await provider.getExtraAudioInput({
+    timeline: { turns: [{ text: 'Generated cue track', durationMs: 1000 }] },
+  });
+
+  assert.equal(input.track.kind, 'audio');
+  await input.close();
+});
+
+test('rejects unknown tour audio provider ids', () => {
+  assert.throws(
+    () => resolveTourAudioProvider('symbiote-engine-local'),
+    (error) => {
+      assert.ok(error instanceof TourAudioProviderError);
+      assert.equal(error.code, 'unknown-audio-provider');
+      assert.deepEqual(error.detail.available, [
+        TOUR_AUDIO_PROVIDER_BROWSER_ID,
+        TOUR_AUDIO_PROVIDER_SYNTHETIC_CUES_ID,
+      ]);
+      return true;
+    },
+  );
 });

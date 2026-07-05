@@ -360,6 +360,11 @@ export const WEBMCP_PRESENTATION_TOUR_PHASES = Object.freeze({
   NONE: 'none',
 });
 
+export const WEBMCP_WINDOW_LAYOUT_ACTION_ID = 'set_window_layout';
+export const WEBMCP_WINDOW_ADD_PANEL_ACTION_ID = 'add_window_panel';
+export const WEBMCP_WINDOW_REMOVE_PANEL_ACTION_ID = 'remove_window_panel';
+export const WEBMCP_PANEL_BEHAVIOR_ACTION_ID = 'set_panel_behavior';
+
 const PRESENTATION_ACTIONS = Object.freeze([
   {
     id: 'select_window',
@@ -437,6 +442,23 @@ const PRESENTATION_ACTIONS = Object.freeze([
   },
 ]);
 
+const DEFAULT_WINDOW_LAYOUT_INPUT_SCHEMA = Object.freeze({
+  type: 'object',
+  properties: {
+    boardId: { type: 'string', description: 'Target window id from current runtime context; defaults to the active window.' },
+    tabId: { type: 'string', description: 'Alias for boardId.' },
+    targetId: { type: 'string', description: 'Declared window target id, e.g. window:<id>.' },
+    windowRole: { type: 'string', description: 'Host-defined window role.' },
+    layoutPreset: { type: 'string', description: 'Host-defined layout preset.' },
+    panelBehaviors: { type: 'object', additionalProperties: { type: 'object' } },
+  },
+});
+
+const DEFAULT_PANEL_BEHAVIOR_SCHEMA = Object.freeze({
+  type: 'object',
+  additionalProperties: true,
+});
+
 function cloneJson(value) {
   return JSON.parse(JSON.stringify(value));
 }
@@ -472,6 +494,107 @@ export function createWebMcpPresentationActionPack(options = {}) {
     coerceCommand(command, validationOptions = {}) {
       return coerceWebMcpPresentationCommand(command, { ...validationOptions, actions });
     },
+  };
+}
+
+export function createWebMcpWindowRuntimeActions({
+  windowLayoutInputSchema = DEFAULT_WINDOW_LAYOUT_INPUT_SCHEMA,
+  panelBehaviorSchema = DEFAULT_PANEL_BEHAVIOR_SCHEMA,
+  additionalActions = [],
+} = {}) {
+  return [
+    {
+      id: WEBMCP_WINDOW_LAYOUT_ACTION_ID,
+      name: WEBMCP_WINDOW_LAYOUT_ACTION_ID,
+      title: 'Set window layout',
+      description: 'Pure UI: update the layout role, preset, or responsive behavior of an existing window. Does not change product data.',
+      type: 'intent',
+      eventName: 'webmcp-command',
+      inputSchema: windowLayoutInputSchema,
+      metadata: { webmcpRole: 'runtime-window-action', gesture: 'native-control', targetRefs: ['window:*'] },
+    },
+    {
+      id: WEBMCP_WINDOW_ADD_PANEL_ACTION_ID,
+      name: WEBMCP_WINDOW_ADD_PANEL_ACTION_ID,
+      title: 'Add window panel',
+      description: 'Pure UI: add an available panel type to an existing window. Does not change product data.',
+      type: 'intent',
+      eventName: 'webmcp-command',
+      inputSchema: {
+        type: 'object',
+        required: ['panelType'],
+        properties: {
+          boardId: { type: 'string', description: 'Target window id from current runtime context; defaults to the active window.' },
+          tabId: { type: 'string', description: 'Alias for boardId.' },
+          targetId: { type: 'string', description: 'Declared window target id, e.g. window:<id>.' },
+          panelType: { type: 'string', description: 'Available panel type from current runtime context.' },
+          direction: { type: 'string', enum: ['horizontal', 'vertical'], description: 'Split direction for the new panel.' },
+          ratio: { type: 'number', description: 'Panel split ratio between 0.2 and 0.8.' },
+          behavior: panelBehaviorSchema,
+          reuseExisting: { type: 'boolean', description: 'When false, force a new panel instead of reusing an existing one.' },
+        },
+      },
+      metadata: { webmcpRole: 'runtime-window-action', gesture: 'native-control', targetRefs: ['window:*'] },
+    },
+    {
+      id: WEBMCP_WINDOW_REMOVE_PANEL_ACTION_ID,
+      name: WEBMCP_WINDOW_REMOVE_PANEL_ACTION_ID,
+      title: 'Remove window panel',
+      description: 'Pure UI: remove an existing non-last panel from a window. Does not change product data.',
+      type: 'intent',
+      eventName: 'webmcp-command',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          boardId: { type: 'string', description: 'Target window id from current runtime context; defaults to the active window.' },
+          tabId: { type: 'string', description: 'Alias for boardId.' },
+          targetId: { type: 'string', description: 'Declared panel target id, e.g. panel:<id>:<panelId>.' },
+          panelId: { type: 'string', description: 'Exact panel id from runtime context.' },
+          panelType: { type: 'string', description: 'Panel type from runtime context.' },
+        },
+      },
+      metadata: { webmcpRole: 'runtime-window-action', gesture: 'native-control', targetRefs: ['panel:*'] },
+    },
+    {
+      id: WEBMCP_PANEL_BEHAVIOR_ACTION_ID,
+      name: WEBMCP_PANEL_BEHAVIOR_ACTION_ID,
+      title: 'Set panel behavior',
+      description: 'Pure UI: update responsive behavior for an existing panel. Does not change product data.',
+      type: 'intent',
+      eventName: 'webmcp-command',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          boardId: { type: 'string', description: 'Target window id from current runtime context; defaults to the active window.' },
+          tabId: { type: 'string', description: 'Alias for boardId.' },
+          targetId: { type: 'string', description: 'Declared panel target id, e.g. panel:<id>:<panelId>.' },
+          panelId: { type: 'string', description: 'Exact panel id from runtime context.' },
+          panelType: { type: 'string', description: 'Panel type from runtime context.' },
+          behavior: panelBehaviorSchema,
+        },
+      },
+      metadata: { webmcpRole: 'runtime-window-action', gesture: 'native-control', targetRefs: ['panel:*'] },
+    },
+    ...(Array.isArray(additionalActions) ? additionalActions : []),
+  ].filter(isObject).map(cloneJson);
+}
+
+export function createWebMcpWindowRuntimeActionPack(options = {}) {
+  let actions = createWebMcpWindowRuntimeActions(options);
+  let safeActions = actions.map((action) => normalizeRuntimeSafeAction({
+    ...action,
+    reason: action.description,
+    targetRefs: action.targetRefs || action.metadata?.targetRefs,
+    metadata: {
+      webmcpRole: 'runtime-window-action',
+      ...(action.metadata || {}),
+    },
+  }));
+  return {
+    actions,
+    safeActions,
+    actionNames: actions.map((action) => action.name).filter(Boolean),
+    actionIds: actions.map((action) => action.id).filter(Boolean),
   };
 }
 
@@ -1038,6 +1161,11 @@ function syncPresentationPanelState(layout, options = {}) {
   try { options.syncPanelState?.(layout); } catch {}
 }
 
+function shouldUseVisualPresentation(input = {}) {
+  let source = String(input?.source || '');
+  return source.startsWith('tour-') || input?.visual !== false;
+}
+
 function setPresentationPanelCollapsed(input = {}, options = {}) {
   let target = presentationPanelTarget(input, options);
   let { layout, panelId } = target;
@@ -1059,7 +1187,7 @@ function setPresentationPanelCollapsed(input = {}, options = {}) {
     dispatchWebMcpDomEvent(node, 'panel-collapse-toggle', { panelId, collapsed });
     settle();
   };
-  if (input.visual !== false) {
+  if (shouldUseVisualPresentation(input)) {
     let control = presentationPanelControl(layout, panelId, options);
     if (control) {
       clickPresentationControl(control, options, () => {
@@ -1091,7 +1219,7 @@ function selectPresentationWindow(input = {}, options = {}) {
     }
     try { input.onSettled?.(); } catch {}
   };
-  if (input.visual !== false) {
+  if (shouldUseVisualPresentation(input)) {
     let control = presentationWindowControl(windowId, options);
     if (control) {
       clickPresentationControl(control, options, settle);
@@ -1135,14 +1263,14 @@ function selectPresentationDataTableRow(input = {}, options = {}) {
     try { options.onDataTableRowSelected?.({ ...target, row: rowData, input }); } catch {}
   };
   if (selected) {
-    if (input.visual !== false && control) {
+    if (shouldUseVisualPresentation(input) && control) {
       clickPresentationControl(control, options, settle);
       return { ok: true, changed: false, selected: true, visual: true, ...target };
     }
     settle();
     return { ok: true, changed: false, selected: true, ...target };
   }
-  if (input.visual !== false && control) {
+  if (shouldUseVisualPresentation(input) && control) {
     clickPresentationControl(control, options, settle);
     return { ok: true, changed: true, selected: true, visual: true, ...target };
   }

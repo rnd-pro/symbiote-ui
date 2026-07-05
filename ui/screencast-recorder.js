@@ -81,6 +81,10 @@ function getGlobalMediaRecorder() {
   return typeof MediaRecorder !== 'undefined' ? MediaRecorder : null;
 }
 
+function getGlobalMediaStream() {
+  return typeof MediaStream !== 'undefined' ? MediaStream : null;
+}
+
 function getGlobalUrl() {
   return typeof URL !== 'undefined' ? URL : null;
 }
@@ -131,6 +135,66 @@ function isCaptureKindRequested(captureOptions, kind) {
 function getTrackCount(stream, method) {
   let tracks = stream?.[method]?.();
   return Array.isArray(tracks) ? tracks.length : 0;
+}
+
+function audioTrackFromInput(input) {
+  if (!input) return null;
+  if (input.kind === 'audio') return input;
+  if (input.track?.kind === 'audio') return input.track;
+  return null;
+}
+
+function audioTracksFromInput(input) {
+  if (!input) return [];
+  if (Array.isArray(input)) return input.filter((track) => track?.kind === 'audio');
+  if (Array.isArray(input.tracks)) return input.tracks.filter((track) => track?.kind === 'audio');
+  let track = audioTrackFromInput(input);
+  if (track) return [track];
+  if (input?.stream?.getAudioTracks) return input.stream.getAudioTracks();
+  if (input?.getAudioTracks) return input.getAudioTracks();
+  return [];
+}
+
+async function closeAudioInput(input) {
+  if (!input) return;
+  if (typeof input.close === 'function') {
+    await input.close();
+    return;
+  }
+  if (typeof input.dispose === 'function') await input.dispose();
+}
+
+async function resolveExtraAudioInput(options = {}, recorder) {
+  if (typeof options.audioTrackProvider === 'function') {
+    return options.audioTrackProvider({ recorder, signal: options.signal, options });
+  }
+  if (options.audioInput) return options.audioInput;
+  if (options.audioStream) return options.audioStream;
+  if (options.audioTrack) return options.audioTrack;
+  if (options.extraAudioTracks) return { tracks: options.extraAudioTracks };
+  return null;
+}
+
+function hasExtraAudioInput(options = {}) {
+  return Boolean(
+    options.audioTrackProvider ||
+    options.audioInput ||
+    options.audioStream ||
+    options.audioTrack ||
+    (Array.isArray(options.extraAudioTracks) && options.extraAudioTracks.length)
+  );
+}
+
+function createRecordingStream(displayStream, extraAudioTracks, StreamCtor) {
+  if (!extraAudioTracks.length) return displayStream;
+  if (!StreamCtor) {
+    throw new Error('MediaStream constructor is not available for screencast audio muxing');
+  }
+  return new StreamCtor([
+    ...(displayStream?.getVideoTracks?.() || []),
+    ...(displayStream?.getAudioTracks?.() || []),
+    ...extraAudioTracks,
+  ]);
 }
 
 function getCaptureDiagnostics(stream, captureOptions) {
@@ -191,15 +255,22 @@ export class ScreencastRecorder extends RuntimeEventTarget {
     this.document = options.document || getGlobalDocument();
     this.navigator = options.navigator || getGlobalNavigator();
     this.MediaRecorder = options.MediaRecorder || getGlobalMediaRecorder();
+    this.MediaStream = options.MediaStream || getGlobalMediaStream();
     this.URL = options.URL || getGlobalUrl();
     this.eventTarget = options.eventTarget || null;
+    this.audioTrackProvider = options.audioTrackProvider || null;
+    this.extraAudioTracks = Array.isArray(options.extraAudioTracks) ? [...options.extraAudioTracks] : [];
     this.stopPropagation = options.stopPropagation ?? false;
     this._hotkeyTarget = null;
     this._onKeydown = (event) => this._handleKeydown(event);
     this._mediaRecorder = null;
     this._stream = null;
+    this._displayStream = null;
+    this._extraAudioInput = null;
+    this._extraAudioTracks = [];
     this._chunks = [];
     this._mimeType = '';
+    this._activeFilename = '';
     this._startedAt = 0;
     this._stopPromise = null;
     this._resolveStop = null;
@@ -244,7 +315,16 @@ export class ScreencastRecorder extends RuntimeEventTarget {
     return this._stopPromise || undefined;
   }
 
-  async start({ reason = 'api' } = {}) {
+  async start({
+    reason = 'api',
+    filename = '',
+    audioTrackProvider = this.audioTrackProvider,
+    extraAudioTracks = this.extraAudioTracks,
+    audioInput = null,
+    audioStream = null,
+    audioTrack = null,
+    signal = null,
+  } = {}) {
     if (this.state !== 'idle') return this._stopPromise || undefined;
     if (!this.navigator?.mediaDevices?.getDisplayMedia) {
       throw this._emitError(new Error('Screen Capture API not supported'), { reason });
@@ -256,11 +336,23 @@ export class ScreencastRecorder extends RuntimeEventTarget {
     this._setState('starting', { reason });
     this._chunks = [];
     this._mimeType = pickMimeType(this.MediaRecorder, this.preferredMimeTypes);
+    this._activeFilename = filename ? String(filename) : '';
     this._startedAt = Date.now();
     this._captureDiagnostics = getCaptureDiagnostics(null, this.captureOptions);
 
     try {
-      this._stream = await this.navigator.mediaDevices.getDisplayMedia(this.captureOptions);
+      this._displayStream = await this.navigator.mediaDevices.getDisplayMedia(this.captureOptions);
+      let audioOptions = {
+        audioTrackProvider,
+        extraAudioTracks,
+        audioInput,
+        audioStream,
+        audioTrack,
+        signal,
+      };
+      this._extraAudioInput = hasExtraAudioInput(audioOptions) ? await resolveExtraAudioInput(audioOptions, this) : null;
+      this._extraAudioTracks = audioTracksFromInput(this._extraAudioInput);
+      this._stream = createRecordingStream(this._displayStream, this._extraAudioTracks, this.MediaStream);
       this._captureDiagnostics = getCaptureDiagnostics(this._stream, this.captureOptions);
       let options = this._mimeType ? { mimeType: this._mimeType } : undefined;
       this._mediaRecorder = new this.MediaRecorder(this._stream, options);
@@ -276,8 +368,14 @@ export class ScreencastRecorder extends RuntimeEventTarget {
       return this;
     } catch (error) {
       stopStreamTracks(this._stream);
+      if (this._displayStream && this._displayStream !== this._stream) stopStreamTracks(this._displayStream);
+      await closeAudioInput(this._extraAudioInput).catch(() => {});
       this._stream = null;
+      this._displayStream = null;
+      this._extraAudioInput = null;
+      this._extraAudioTracks = [];
       this._mediaRecorder = null;
+      this._activeFilename = '';
       this._setState('idle', { reason, error });
       throw this._emitError(error, { reason });
     }
@@ -333,17 +431,26 @@ export class ScreencastRecorder extends RuntimeEventTarget {
     }
   }
 
-  _finishStop(reason) {
+  async _finishStop(reason) {
     let recorder = this._mediaRecorder;
     let type = recorder?.mimeType || this._mimeType || 'video/webm';
     let blob = new Blob(this._chunks, { type });
-    let filename = createFilename(this.filename, this.filenamePrefix);
-    let capture = this._captureDiagnostics || getCaptureDiagnostics(this._stream, this.captureOptions);
+    let filename = this._activeFilename || createFilename(this.filename, this.filenamePrefix);
+    let capture = {
+      ...(this._captureDiagnostics || getCaptureDiagnostics(this._stream, this.captureOptions)),
+      extraAudioTrackCount: this._extraAudioTracks.length,
+    };
 
     stopStreamTracks(this._stream);
+    if (this._displayStream && this._displayStream !== this._stream) stopStreamTracks(this._displayStream);
+    await closeAudioInput(this._extraAudioInput).catch(() => {});
     this._stream = null;
+    this._displayStream = null;
+    this._extraAudioInput = null;
+    this._extraAudioTracks = [];
     this._mediaRecorder = null;
     this._chunks = [];
+    this._activeFilename = '';
     this._setState('idle', { reason });
     let detail = this._detail({ reason, blob, filename, type, capture });
     this._emit('sn-screencast-ready', detail);
@@ -357,14 +464,18 @@ export class ScreencastRecorder extends RuntimeEventTarget {
   }
 
   _detail(extra = {}) {
+    let capture = extra.capture || this._captureDiagnostics || getCaptureDiagnostics(this._stream, this.captureOptions);
+    if (capture && capture.extraAudioTrackCount == null) {
+      capture = { ...capture, extraAudioTrackCount: this._extraAudioTracks.length };
+    }
     return {
       state: this.state,
       startedAt: this._startedAt,
       elapsedMs: this._startedAt ? Date.now() - this._startedAt : 0,
       mimeType: this._mimeType,
       hotkey: { ...this.hotkey },
-      capture: this._captureDiagnostics || getCaptureDiagnostics(this._stream, this.captureOptions),
       ...extra,
+      capture,
     };
   }
 

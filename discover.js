@@ -115,6 +115,11 @@ const EXPORT_ENTRYPOINTS = [
     description: 'Screen Capture API hotkey controller for browser screencast recording with captured tab/display audio requested by default and no built-in UI chrome.',
   },
   {
+    specifier: 'symbiote-ui/ui/tour-screencast.js',
+    kind: 'browser',
+    description: 'Presentation tour screencast wrapper that records the live browser surface while the host-owned tour player runs.',
+  },
+  {
     specifier: 'symbiote-ui/ui/tour-audio-provider.js',
     kind: 'browser',
     description: 'Web Audio provider for adding explicit tour timeline audio streams to rendered presentation videos.',

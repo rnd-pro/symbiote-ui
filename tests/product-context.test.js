@@ -29,6 +29,8 @@ import {
   createWebMcpPresentationActionPack,
   createWebMcpPresentationActions,
   createWebMcpPresentationController,
+  createWebMcpWindowRuntimeActionPack,
+  createWebMcpWindowRuntimeActions,
   createWebMcpTourTurnActionPlan,
   createWebMcpHooks,
   createWebMcpObserver,
@@ -41,7 +43,11 @@ import {
   resolveWebMcpRuntimeTarget,
   runWebMcpHookAction,
   validateWebMcpPresentationCommand,
+  WEBMCP_PANEL_BEHAVIOR_ACTION_ID,
   WEBMCP_PRESENTATION_TOUR_PHASES,
+  WEBMCP_WINDOW_ADD_PANEL_ACTION_ID,
+  WEBMCP_WINDOW_LAYOUT_ACTION_ID,
+  WEBMCP_WINDOW_REMOVE_PANEL_ACTION_ID,
   webMcpTargetAttrValue,
 } from '../webmcp.js';
 import {
@@ -697,6 +703,35 @@ test('WebMCP presentation action pack is reusable product-neutral context', () =
   );
 });
 
+test('WebMCP window runtime action pack exposes product-neutral UI mutation contracts', () => {
+  let workspaceAction = {
+    id: 'select-workspace-view',
+    name: 'select_workspace_view',
+    title: 'Select workspace view',
+    description: 'Pure UI: switch one existing workspace view.',
+    inputSchema: { type: 'object', properties: { workspaceId: { type: 'string' } } },
+    metadata: { targetRefs: ['element:*:workspace:*'] },
+  };
+  let actions = createWebMcpWindowRuntimeActions({
+    windowLayoutInputSchema: { type: 'object', properties: { boardId: { type: 'string' }, layoutPreset: { type: 'string' } } },
+    panelBehaviorSchema: { type: 'object', properties: { collapse: { type: 'string' } } },
+    additionalActions: [workspaceAction],
+  });
+  let pack = createWebMcpWindowRuntimeActionPack({ additionalActions: [workspaceAction] });
+
+  assert.deepEqual(actions.map((action) => action.id).slice(0, 4), [
+    WEBMCP_WINDOW_LAYOUT_ACTION_ID,
+    WEBMCP_WINDOW_ADD_PANEL_ACTION_ID,
+    WEBMCP_WINDOW_REMOVE_PANEL_ACTION_ID,
+    WEBMCP_PANEL_BEHAVIOR_ACTION_ID,
+  ]);
+  assert.ok(actions.some((action) => action.name === 'select_workspace_view'));
+  assert.ok(pack.actionNames.includes('add_window_panel'));
+  assert.ok(pack.actionIds.includes('select-workspace-view'));
+  assert.ok(pack.safeActions.every((action) => action.safe));
+  assert.deepEqual(pack.safeActions.find((action) => action.id === 'select-workspace-view').targetRefs, ['element:*:workspace:*']);
+});
+
 test('WebMCP presentation controller drives native component adapters', () => {
   let selectedWindow = '';
   let clickedTab = false;
@@ -721,10 +756,16 @@ test('WebMCP presentation controller drives native component adapters', () => {
   };
   let collapseNode = {
     collapsed: false,
+    clickCount: 0,
     hasAttribute(name) { return name === 'collapsed' && this.collapsed; },
     querySelector(selector) {
       assert.equal(selector, '.collapse-btn:not([hidden])');
-      return { click: () => { this.collapsed = true; } };
+      return {
+        click: () => {
+          this.clickCount += 1;
+          this.collapsed = true;
+        },
+      };
     },
     dispatchEvent(event) {
       if (event.type === 'panel-collapse-toggle') this.collapsed = event.detail.collapsed;
@@ -781,7 +822,23 @@ test('WebMCP presentation controller drives native component adapters', () => {
   let collapsed = controller.setPanelCollapsed({ boardId: 'release-board', panelId: 'queue', collapsed: true });
   assert.equal(collapsed.ok, true);
   assert.equal(collapsed.collapsed, true);
+  assert.equal(collapsed.visual, true);
   assert.equal(collapseNode.collapsed, true);
+  assert.equal(collapseNode.clickCount, 1);
+
+  collapseNode.collapsed = false;
+  let silentCollapsed = controller.setPanelCollapsed({ boardId: 'release-board', panelId: 'queue', collapsed: true, visual: false });
+  assert.equal(silentCollapsed.ok, true);
+  assert.equal(silentCollapsed.visual, false);
+  assert.equal(collapseNode.collapsed, true);
+  assert.equal(collapseNode.clickCount, 1);
+
+  collapseNode.collapsed = false;
+  let tourCollapsed = controller.setPanelCollapsed({ boardId: 'release-board', panelId: 'queue', collapsed: true, visual: false, source: 'tour-webmcp' });
+  assert.equal(tourCollapsed.ok, true);
+  assert.equal(tourCollapsed.visual, true);
+  assert.equal(collapseNode.collapsed, true);
+  assert.equal(collapseNode.clickCount, 2);
 
   let selectedRow = controller.selectDataTableRow({ boardId: 'release-board', panelId: 'queue', rowId: 'WO-1', visual: false });
   assert.equal(selectedRow.ok, true);

@@ -331,6 +331,8 @@ test('project-tabs coordinates roving tabindex and keys', async () => {
 
 test('sn-list-item enforces selection events and loading states', async () => {
   installSsrDom();
+  const styles = await readFile(new URL('../list/ListItem/ListItem.css.js', import.meta.url), 'utf8');
+  const template = await readFile(new URL('../list/ListItem/ListItem.tpl.js', import.meta.url), 'utf8');
   await import('../list/ListItem/ListItem.js');
 
   const el = document.createElement('sn-list-item');
@@ -349,6 +351,32 @@ test('sn-list-item enforces selection events and loading states', async () => {
 
   const innerItem = el.ref.item;
   assert.equal(innerItem.getAttribute('aria-selected'), 'true');
+  const spinner = el.querySelector('.sn-list-item-spinner');
+  const prefix = el.querySelector('.sn-list-item-prefix');
+  const suffix = el.querySelector('.sn-list-item-suffix');
+  const meta = el.querySelector('.sn-list-item-meta');
+  assert.ok(prefix);
+  assert.ok(suffix);
+  assert.ok(meta);
+  assert.match(styles, /\.sn-list-item-spinner\[hidden\]\s*\{[\s\S]*?display: none !important;/);
+  assert.doesNotMatch(styles, /slot\[name=|::slotted/);
+  assert.match(styles, /\.sn-list-item-prefix,[\s\S]*?\.sn-list-item-suffix\s*\{[\s\S]*?min-inline-size: 0;/);
+  assert.match(styles, /\.sn-list-item-suffix\s*\{[\s\S]*?flex: 0 0 auto;[\s\S]*?max-inline-size: var\(--sn-list-item-meta-max-width, 38%\);[\s\S]*?overflow: hidden;/);
+  assert.match(styles, /\.sn-list-item-meta\s*\{[\s\S]*?min-inline-size: 0;[\s\S]*?max-inline-size: 100%;/);
+  assert.match(template, /class="sn-list-item-prefix"[\s\S]*?<slot name="prefix">/);
+  assert.match(template, /class="sn-list-item-suffix"[\s\S]*?<slot name="suffix">/);
+  assert.match(styles, /font-size: var\(--sn-list-item-label-size, 12px\);/);
+  assert.match(styles, /font-size: var\(--sn-list-item-description-size, 11px\);/);
+  assert.match(styles, /font-size: var\(--sn-list-item-meta-size, 10px\);/);
+  assert.equal(spinner.hidden, true);
+
+  el.loading = true;
+  await nextRenderTick();
+  assert.equal(spinner.hidden, false);
+
+  el.loading = false;
+  await nextRenderTick();
+  assert.equal(spinner.hidden, true);
 
   innerItem.dispatchEvent(new window.Event('click', { bubbles: true, composed: true }));
   assert.equal(selectTriggered, true);
@@ -421,6 +449,93 @@ test('sn-metric renders with ARIA role and status-based live region', async () =
   assert.equal(el.hasAttribute('aria-live'), false);
 
   el.remove();
+});
+
+test('content surfaces expose themed inset and collapsed sidebar geometry', async () => {
+  let [
+    descriptionList,
+    scrollArea,
+    layoutNode,
+    layoutSidebar,
+    defaultProvider,
+    defaultProviderCss,
+    cascadeTheme,
+    registry,
+    customElements,
+  ] = await Promise.all([
+    readFile(new URL('../display/DescriptionList/DescriptionList.css.js', import.meta.url), 'utf8'),
+    readFile(new URL('../layout/ScrollArea/ScrollArea.css.js', import.meta.url), 'utf8'),
+    readFile(new URL('../layout/LayoutNode/LayoutNode.css.js', import.meta.url), 'utf8'),
+    readFile(new URL('../layout/LayoutSidebar/LayoutSidebar.css.js', import.meta.url), 'utf8'),
+    readFile(new URL('../themes/default-provider.js', import.meta.url), 'utf8'),
+    readFile(new URL('../themes/default-provider.css', import.meta.url), 'utf8'),
+    readFile(new URL('../themes/cascade-theme.js', import.meta.url), 'utf8'),
+    readFile(new URL('../manifest/component-registry.js', import.meta.url), 'utf8'),
+    readFile(new URL('../custom-elements.json', import.meta.url), 'utf8'),
+  ]);
+
+  assert.match(descriptionList, /grid-template-columns: var\(--sn-description-list-columns, minmax\(120px, max-content\) minmax\(0, 1fr\)\);/);
+  assert.match(descriptionList, /padding: var\(--sn-description-list-padding\);/);
+  assert.match(descriptionList, /\.sn-description-label \{[\s\S]*?min-width: 0;[\s\S]*?text-overflow: ellipsis;/);
+  assert.match(scrollArea, /sn-scroll-area \{[\s\S]*?min-width: 0;[\s\S]*?min-height: 0;/);
+  assert.match(scrollArea, /sn-scroll-area \{[\s\S]*?overflow: auto;[\s\S]*?padding: var\(--sn-scroll-area-padding\);/);
+  assert.match(scrollArea, /sn-scroll-area:has\(> \.sn-scroll-container\) \{[\s\S]*?overflow: hidden;[\s\S]*?padding: 0;/);
+  assert.match(scrollArea, /\.sn-scroll-viewport \{[\s\S]*?box-sizing: border-box;[\s\S]*?padding: var\(--sn-scroll-area-padding\);/);
+  assert.match(layoutNode, /\.panel-title \{[\s\S]*?font-size: var\(--sn-layout-header-title-size, var\(--sn-layout-header-button-size, 0\.75rem\)\);[\s\S]*?line-height: var\(--sn-layout-header-title-line-height, 1\.2\);/);
+  assert.match(layoutNode, /\.panel-content \{[\s\S]*?box-sizing: border-box;[\s\S]*?min-inline-size: 0;[\s\S]*?min-block-size: 0;/);
+  assert.match(layoutNode, /\.panel-content > sn-card \{[\s\S]*?--sn-card-bg: var\(--sn-layout-panel-card-bg, transparent\);[\s\S]*?--sn-card-border: var\(--sn-layout-panel-card-border, transparent\);[\s\S]*?--sn-card-radius: var\(--sn-layout-panel-card-radius, 0\);[\s\S]*?box-sizing: border-box;[\s\S]*?inline-size: var\(--sn-layout-panel-card-inline-size, 100%\);[\s\S]*?min-block-size: var\(--sn-layout-panel-card-min-block-size, 100%\);/);
+  assert.match(layoutSidebar, /layout-sidebar \{[\s\S]*?border-top: 1px solid var\(--sn-layout-border\);[\s\S]*?border-right: 1px solid var\(--sn-layout-border\);/);
+  assert.match(layoutSidebar, /\.sb-header \{[\s\S]*?block-size: var\(--sn-layout-header-block-size, calc\(var\(--sn-layout-header-min-height, 28px\) \+ 3px\)\);[\s\S]*?background: var\(--sn-layout-sidebar-header-bg, var\(--sn-node-header-bg\)\);[\s\S]*?box-sizing: border-box;[\s\S]*?border-bottom: 1px solid var\(--sn-layout-sidebar-header-border, var\(--sn-layout-border\)\);/);
+  assert.doesNotMatch(layoutSidebar, /\.sb-header \{[\s\S]*?border-right:/);
+  assert.match(layoutSidebar, /\.sb-header-btn \{[\s\S]*?box-sizing: border-box;[\s\S]*?min-inline-size: var\(--sn-layout-header-button-min-inline-size, 24px\);[\s\S]*?block-size: var\(--sn-layout-header-button-block-size, var\(--sn-layout-header-button-min-block-size, 24px\)\);[\s\S]*?line-height: 1;[\s\S]*?&:hover \{[\s\S]*?background: var\(--sn-layout-sidebar-header-button-hover-bg, color-mix\(in oklch, var\(--sn-sys-accent\) var\(--sn-sys-state-hover-mix\), transparent\)\);/);
+  assert.match(layoutSidebar, /layout-sidebar\[collapsed\] & \{[\s\S]*?justify-content: center;[\s\S]*?padding: var\(--sn-layout-header-padding, 2px 4px\);/);
+  assert.match(layoutSidebar, /sidebar-section \.sec-item \{[\s\S]*?padding: var\(--sn-layout-sidebar-item-padding, var\(--sn-step-2\) var\(--sn-step-7\)\);[\s\S]*?box-sizing: border-box;[\s\S]*?block-size: var\(--sn-layout-sidebar-item-block-size, var\(--sn-layout-header-block-size, calc\(var\(--sn-layout-header-min-height, 28px\) \+ 3px\)\)\);/);
+  assert.match(layoutSidebar, /layout-sidebar\[edit-mode\] &:first-child \{[\s\S]*?background: var\(--sn-layout-sidebar-header-button-active-bg, color-mix\(in oklab, var\(--sn-cat-server\) 10%, transparent\)\);/);
+  assert.match(layoutSidebar, /layout-sidebar\[collapsed\] & \{[\s\S]*?inline-size: var\(--sn-sidebar-collapsed-item-size, var\(--sn-layout-sidebar-item-block-size, var\(--sn-layout-header-block-size, calc\(var\(--sn-layout-header-min-height, 28px\) \+ 3px\)\)\)\);[\s\S]*?block-size: var\(--sn-sidebar-collapsed-item-size, var\(--sn-layout-sidebar-item-block-size, var\(--sn-layout-header-block-size, calc\(var\(--sn-layout-header-min-height, 28px\) \+ 3px\)\)\)\);[\s\S]*?margin-inline: auto;/);
+  assert.match(layoutSidebar, /sidebar-section\[data-active\] > \.sec-item \{[\s\S]*?padding-left: var\(--sn-step-6\);[\s\S]*?layout-sidebar\[collapsed\] & \{[\s\S]*?justify-content: flex-start;[\s\S]*?inline-size: 100%;[\s\S]*?margin-inline: 0;[\s\S]*?border-radius: 0;[\s\S]*?padding-left: var\(--sn-step-6\);[\s\S]*?border-left: 2px solid var\(--sn-cat-server\);/);
+  assert.doesNotMatch(layoutSidebar, /sidebar-section\[data-active\] > \.sec-item \{[\s\S]*?layout-sidebar\[collapsed\] & \{[\s\S]*?padding-left: 0;/);
+  assert.match(defaultProvider, /'--sn-sidebar-collapsed-item-size': 'var\(--sn-layout-sidebar-item-block-size\)'/);
+  assert.match(defaultProviderCss, /--sn-sidebar-collapsed-item-size: var\(--sn-layout-sidebar-item-block-size\);/);
+  assert.match(cascadeTheme, /'--sn-sidebar-collapsed-item-size': 'var\(--sn-layout-sidebar-item-block-size\)'/);
+
+  for (let token of [
+    '--sn-description-list-padding',
+    '--sn-scroll-area-padding',
+    '--sn-layout-header-gap',
+    '--sn-layout-header-padding',
+    '--sn-layout-header-min-height',
+    '--sn-layout-header-block-size',
+    '--sn-layout-header-title-size',
+    '--sn-layout-header-title-line-height',
+    '--sn-layout-header-button-size',
+    '--sn-layout-header-icon-size',
+    '--sn-layout-header-button-gap',
+    '--sn-layout-header-button-padding',
+    '--sn-layout-header-button-radius',
+    '--sn-layout-header-button-min-inline-size',
+    '--sn-layout-header-button-min-block-size',
+    '--sn-layout-header-button-block-size',
+    '--sn-layout-panel-card-bg',
+    '--sn-layout-panel-card-border',
+    '--sn-layout-panel-card-radius',
+    '--sn-layout-panel-card-inline-size',
+    '--sn-layout-panel-card-min-block-size',
+    '--sn-layout-sidebar-header-bg',
+    '--sn-layout-sidebar-header-border',
+    '--sn-layout-sidebar-header-button-hover-bg',
+    '--sn-layout-sidebar-header-button-active-bg',
+    '--sn-layout-sidebar-item-block-size',
+    '--sn-layout-sidebar-item-padding',
+    '--sn-sidebar-collapsed-item-size',
+    '--sn-sidebar-collapsed-item-radius',
+    '--sn-sidebar-collapsed-sections-padding',
+  ]) {
+    assert.match(defaultProvider, new RegExp(`'${token}'`));
+    assert.match(defaultProviderCss, new RegExp(`${token}:`));
+    assert.match(cascadeTheme, new RegExp(`'${token}'`));
+    assert.match(registry, new RegExp(token));
+    assert.match(customElements, new RegExp(token));
+  }
 });
 
 test('sn-card renders with ARIA role and interactive focus support', async () => {

@@ -56,6 +56,12 @@ test('root and metadata entrypoints import in Node', async () => {
   assert.equal(typeof webmcp.createComponentToolDescriptor, 'function');
   assert.equal(typeof webmcp.createProductWebMcpBundle, 'function');
   assert.equal(typeof webmcp.createWebMcpPresentationActionPack, 'function');
+  assert.equal(typeof webmcp.createWebMcpWindowRuntimeActions, 'function');
+  assert.equal(typeof webmcp.createWebMcpWindowRuntimeActionPack, 'function');
+  assert.equal(webmcp.WEBMCP_WINDOW_LAYOUT_ACTION_ID, 'set_window_layout');
+  assert.equal(webmcp.WEBMCP_WINDOW_ADD_PANEL_ACTION_ID, 'add_window_panel');
+  assert.equal(webmcp.WEBMCP_WINDOW_REMOVE_PANEL_ACTION_ID, 'remove_window_panel');
+  assert.equal(webmcp.WEBMCP_PANEL_BEHAVIOR_ACTION_ID, 'set_panel_behavior');
   assert.equal(typeof webmcp.createWebMcpPresentationController, 'function');
   assert.equal(typeof webmcp.getWebMcpPresentationActionPhase, 'function');
   assert.equal(typeof webmcp.createWebMcpTourTurnActionPlan, 'function');
@@ -186,6 +192,10 @@ test('voice command helpers are importable without browser component registratio
   assert.equal(typeof ui.layoutOverlayStack, 'function');
   assert.equal(typeof ui.measureOverlayStackReserve, 'function');
   assert.equal(typeof ui.installScreencastHotkeys, 'function');
+  assert.equal(typeof ui.recordTourScreencast, 'function');
+  assert.equal(ui.TOUR_AUDIO_PROVIDER_BROWSER_ID, 'browser');
+  assert.equal(typeof ui.createTourAudioProvider, 'function');
+  assert.equal(typeof ui.listTourAudioProviders, 'function');
   assert.equal(typeof ui.createTourCueAudioProvider, 'function');
   assert.equal(typeof ui.createTourCueAudioPlan, 'function');
   assert.equal(typeof ui.renderTourVideo, 'function');
@@ -1497,6 +1507,7 @@ test('discover exposes the standalone package contract', async () => {
   assert.equal(entrypoints.get('symbiote-ui')?.kind, 'node-safe');
   assert.equal(entrypoints.get('symbiote-ui/board')?.kind, 'browser-component');
   assert.equal(entrypoints.get('symbiote-ui/ui/screencast-recorder.js')?.kind, 'browser');
+  assert.equal(entrypoints.get('symbiote-ui/ui/tour-screencast.js')?.kind, 'browser');
   assert.equal(entrypoints.get('symbiote-ui/ui/tour-audio-provider.js')?.kind, 'browser');
   assert.equal(entrypoints.get('symbiote-ui/ui/tour-media-renderer.js')?.kind, 'browser');
   assert.equal(entrypoints.get('symbiote-ui/layout')?.kind, 'ssr-entry-safe');

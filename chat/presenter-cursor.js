@@ -135,6 +135,7 @@ const HIGHLIGHT_EDGE_INSET_PX = 8;
 const HIGHLIGHT_MIN_SIZE_PX = 8;
 const CLICK_ZONE_PADDING_PX = 6;
 const CLICK_ZONE_MIN_SIZE_PX = 28;
+const CLICK_RIPPLE_SIZE_PX = 36;
 const CLICK_PRESS_MS = 240;
 const CLICK_FADE_MS = 220;
 
@@ -299,26 +300,26 @@ ${overlaySelector} .pc-click{
   position:absolute;
   top:0;
   left:0;
-  min-width:${CLICK_ZONE_MIN_SIZE_PX}px;
-  min-height:${CLICK_ZONE_MIN_SIZE_PX}px;
+  width:${CLICK_RIPPLE_SIZE_PX}px;
+  height:${CLICK_RIPPLE_SIZE_PX}px;
   border:2px solid var(--sn-presenter-click, var(--sn-sys-accent));
   border-radius:999px;
   background:color-mix(in oklab, var(--sn-presenter-click, var(--sn-sys-accent)) 18%, transparent);
   box-shadow:0 0 0 1px color-mix(in oklab, var(--sn-sys-surface) 40%, transparent),
     0 0 14px color-mix(in oklab, var(--sn-presenter-click, var(--sn-sys-accent)) 42%, transparent);
   opacity:0;
-  transform:scale(0.78);
+  transform:translate(-50%, -50%) scale(0.45);
   transition:opacity ${CLICK_FADE_MS}ms ease, transform ${CLICK_FADE_MS}ms ease;
   pointer-events:none;
-  will-change:opacity,transform,left,top,width,height;
+  will-change:opacity,transform,left,top;
 }
 ${overlaySelector} .pc-click.is-clicking{
   opacity:1;
-  transform:scale(1);
+  transform:translate(-50%, -50%) scale(1.85);
 }
 ${overlaySelector} .pc-click.pc-click-fired{
   opacity:0;
-  transform:scale(0.58);
+  transform:translate(-50%, -50%) scale(2.15);
 }
 ${overlaySelector} .pc-cursor{
   position:absolute;
@@ -380,6 +381,96 @@ function sizeMarqueeSvg(svg, rects, w, h) {
     rect.setAttribute('width', String(Math.max(0, w - 1)));
     rect.setAttribute('height', String(Math.max(0, h - 1)));
   }
+}
+
+function normalizePresenterRect(rect = {}) {
+  let left = Number(rect.left);
+  let top = Number(rect.top);
+  let right = Number(rect.right);
+  let bottom = Number(rect.bottom);
+  let width = Number(rect.width);
+  let height = Number(rect.height);
+  if (!Number.isFinite(left)) left = 0;
+  if (!Number.isFinite(top)) top = 0;
+  if (!Number.isFinite(right) && Number.isFinite(width)) right = left + width;
+  if (!Number.isFinite(bottom) && Number.isFinite(height)) bottom = top + height;
+  if (!Number.isFinite(width) && Number.isFinite(right)) width = right - left;
+  if (!Number.isFinite(height) && Number.isFinite(bottom)) height = bottom - top;
+  if (!Number.isFinite(width) || width < 0) width = 0;
+  if (!Number.isFinite(height) || height < 0) height = 0;
+  if (!Number.isFinite(right)) right = left + width;
+  if (!Number.isFinite(bottom)) bottom = top + height;
+  return { left, top, right, bottom, width, height };
+}
+
+function intersectPresenterRects(a, b) {
+  let left = Math.max(a.left, b.left);
+  let top = Math.max(a.top, b.top);
+  let right = Math.min(a.right, b.right);
+  let bottom = Math.min(a.bottom, b.bottom);
+  let width = right - left;
+  let height = bottom - top;
+  if (width <= 0 || height <= 0) return null;
+  return { left, top, right, bottom, width, height };
+}
+
+function presenterViewportRect(viewport = {}) {
+  let width = Number(viewport.width);
+  let height = Number(viewport.height);
+  if (!Number.isFinite(width) || width <= 0) width = 0;
+  if (!Number.isFinite(height) || height <= 0) height = 0;
+  if (width <= 0 || height <= 0) return null;
+  return { left: 0, top: 0, right: width, bottom: height, width, height };
+}
+
+function clipsPresenterTarget(el, win) {
+  let style = null;
+  try { style = win?.getComputedStyle?.(el); } catch {}
+  let overflow = [
+    style?.overflow,
+    style?.overflowX,
+    style?.overflowY,
+  ].filter(Boolean).join(' ');
+  if (/(auto|scroll|hidden|clip)/.test(overflow)) return true;
+  if (style?.clipPath && style.clipPath !== 'none') return true;
+  if (style?.contain && String(style.contain).split(/\s+/).includes('paint')) return true;
+  return false;
+}
+
+function presenterClipAncestors(el, doc) {
+  let out = [];
+  let root = doc?.documentElement || null;
+  let node = el?.parentElement || el?.parentNode || null;
+  while (node && node !== doc && node !== doc?.body) {
+    if (node.nodeType === 1) out.push(node);
+    node = node.parentElement || node.parentNode || node.host || null;
+  }
+  if (root && root !== el) out.push(root);
+  return out;
+}
+
+export function resolvePresenterVisibleRect(el, viewport = {}) {
+  if (!el || typeof el.getBoundingClientRect !== 'function') return null;
+  let doc = el.ownerDocument || null;
+  let win = doc?.defaultView || globalThis;
+  let visible = normalizePresenterRect(el.getBoundingClientRect());
+  if (visible.width <= 0 || visible.height <= 0) return null;
+
+  let viewportClip = presenterViewportRect(viewport);
+  if (viewportClip) {
+    visible = intersectPresenterRects(visible, viewportClip);
+    if (!visible) return null;
+  }
+
+  for (let ancestor of presenterClipAncestors(el, doc)) {
+    if (!clipsPresenterTarget(ancestor, win) && ancestor !== doc?.documentElement) continue;
+    if (typeof ancestor.getBoundingClientRect !== 'function') continue;
+    let clipRect = normalizePresenterRect(ancestor.getBoundingClientRect());
+    if (clipRect.width <= 0 || clipRect.height <= 0) continue;
+    visible = intersectPresenterRects(visible, clipRect);
+    if (!visible) return null;
+  }
+  return visible;
 }
 
 export function resolvePresenterHighlightRect(rect, viewport = {}) {
@@ -1154,18 +1245,19 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
       return;
     }
 
-    // Always recompute against live viewport coords.
-    let rect = el.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) {
+    let viewport = {
+      width: win?.innerWidth || doc.documentElement?.clientWidth || 0,
+      height: win?.innerHeight || doc.documentElement?.clientHeight || 0,
+    };
+    // Always recompute against live viewport coords and clip to the part that
+    // can actually be seen inside scroll/overflow containers.
+    let rect = resolvePresenterVisibleRect(el, viewport);
+    if (!rect) {
       clear();
       settle(opts);
       return;
     }
 
-    let viewport = {
-      width: win?.innerWidth || doc.documentElement?.clientWidth || 0,
-      height: win?.innerHeight || doc.documentElement?.clientHeight || 0,
-    };
     let highlightRect = resolvePresenterHighlightRect(rect, viewport);
     let left = highlightRect.left;
     let top = highlightRect.top;
@@ -1249,15 +1341,15 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
       settle(opts);
       return;
     }
-    let rect = el.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) {
-      settle(opts);
-      return;
-    }
     let viewport = {
       width: win?.innerWidth || doc.documentElement?.clientWidth || 0,
       height: win?.innerHeight || doc.documentElement?.clientHeight || 0,
     };
+    let rect = resolvePresenterVisibleRect(el, viewport);
+    if (!rect) {
+      settle(opts);
+      return;
+    }
     let zone = clickZoneRectFor(rect, viewport);
 
     cancelTravel();
@@ -1280,10 +1372,8 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
     clickResolve = () => settle(opts);
 
     let pulse = () => {
-      clickHalo.style.left = `${zone.left}px`;
-      clickHalo.style.top = `${zone.top}px`;
-      clickHalo.style.width = `${zone.width}px`;
-      clickHalo.style.height = `${zone.height}px`;
+      clickHalo.style.left = `${zone.x}px`;
+      clickHalo.style.top = `${zone.y}px`;
       clickHalo.classList.remove('pc-click-fired');
       clickHalo.classList.add('is-clicking');
       setClickTimer(() => {
@@ -1327,15 +1417,15 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
       settle(opts);
       return;
     }
-    let rect = el.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) {
-      settle(opts);
-      return;
-    }
     let viewport = {
       width: win?.innerWidth || doc.documentElement?.clientWidth || 0,
       height: win?.innerHeight || doc.documentElement?.clientHeight || 0,
     };
+    let rect = resolvePresenterVisibleRect(el, viewport);
+    if (!rect) {
+      settle(opts);
+      return;
+    }
     let drawRect = annotationRectFor(rect, viewport, annotation);
     let start = annotation.kind === 'symbol'
       ? symbolRect(drawRect, annotation.placement)

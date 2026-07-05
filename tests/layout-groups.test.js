@@ -236,6 +236,43 @@ test('layout shell menu emits normalized group intents without host executable s
   assert.match(source, /homeIcon:\s*home\?\.icon \|\| 'home'/);
 });
 
+test('layout shell menu does not sync nested workspace sidebars as shell navigation', async () => {
+  installMinimalDom();
+  let { LayoutShellMenu } = await import('../layout/LayoutShellMenu/LayoutShellMenu.js');
+  let source = await readFile(new URL('../layout/LayoutShellMenu/LayoutShellMenu.js', import.meta.url), 'utf8');
+  let shell = new LayoutShellMenu();
+  shell.initCallback();
+
+  let nestedSyncs = 0;
+  let slottedSections = null;
+  let slottedActiveCalls = 0;
+  let nestedWorkspaceSidebar = {
+    setSections() { nestedSyncs += 1; },
+    setActiveSection() { nestedSyncs += 1; },
+  };
+  let slottedSidebar = {
+    tagName: 'LAYOUT-SIDEBAR',
+    matches: (selector) => selector === 'layout-sidebar',
+    setSections(items) { slottedSections = items; },
+    setActiveSection() { slottedActiveCalls += 1; },
+  };
+
+  shell.querySelector = (selector) => (selector === 'layout-sidebar' ? nestedWorkspaceSidebar : null);
+  shell.ref.sidebarSlot = { assignedElements: () => [] };
+  shell.setGroups([{ id: 'home', name: 'Home', icon: 'home' }, { id: 'ops', name: 'Ops', icon: 'bolt' }], 'ops');
+
+  assert.equal(nestedSyncs, 0);
+  assert.equal(slottedSections, null);
+  assert.doesNotMatch(source, /querySelector\('layout-sidebar'\)/);
+
+  shell.ref.sidebarSlot = { assignedElements: () => [slottedSidebar] };
+  shell.setGroups([{ id: 'home', name: 'Home', icon: 'home' }, { id: 'ops', name: 'Ops', icon: 'bolt' }], 'ops');
+
+  assert.deepEqual(slottedSections.map((section) => section.id), ['home', 'ops']);
+  assert.equal(slottedActiveCalls, 1);
+  assert.equal(slottedSidebar.routerSync, false);
+});
+
 test('project tabs require explicit closeable flag for close affordances', async () => {
   let [source, styles] = await Promise.all([
     readFile(new URL('../layout/ProjectTabs/ProjectTabs.js', import.meta.url), 'utf8'),
