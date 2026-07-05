@@ -3432,6 +3432,8 @@ export let COMPONENTS = [
       dataSchema: 'schemas/graph-model-v1.json',
       capabilities: ['hierarchical-graph', 'overview-read-renderer', 'force-layout', 'semantic-clusters', 'focus-selection', 'layout-snapshot', 'device-orientation-parallax'],
       attributes: [
+        { name: 'active-node-scale', type: 'number', description: 'Visual scale target for the selected node; defaults to 1.5.' },
+        { name: 'info-panel-scale', type: 'number', description: 'Visual scale for the active node information panel; defaults to 1.' },
         { name: 'device-orientation-parallax', type: 'boolean', description: 'Requests device-orientation parallax on the first user gesture.' },
         { name: 'device-orientation-parallax-strength', type: 'number', description: 'Maximum parallax offset in CSS pixels.' },
         { name: 'device-orientation-parallax-max-tilt', type: 'number', description: 'Tilt angle that maps to full parallax strength.' },
@@ -3442,6 +3444,8 @@ export let COMPONENTS = [
         { name: 'currentGroupId', type: 'string', description: 'Current drilled group id, or empty at root.' },
         { name: 'activeNode', type: 'object', description: 'Currently focused graph node.' },
         { name: 'renderMode', type: 'string', description: 'Graph rendering mode, such as dots or cards.' },
+        { name: 'activeNodeScale', type: 'number', description: 'Visual scale target for the selected node; defaults to 1.5.' },
+        { name: 'infoPanelScale', type: 'number', description: 'Visual scale for the active node information panel; defaults to 1.' },
       ],
       methods: [
         { name: 'setGraphModel', type: 'function', description: 'Loads normalized graph data into the canvas renderer.' },
@@ -3452,6 +3456,7 @@ export let COMPONENTS = [
         { name: 'focusNodes', type: 'function', description: 'Agent-facing alias for fitting one or more graph node ids into the viewport.' },
         { name: 'queueTransitionMarkers', type: 'function', description: 'Queues animated route markers from one graph node to multiple target node ids without changing the host-owned graph model.' },
         { name: 'fitView', type: 'function', description: 'Fits the visible graph into the canvas viewport; accepts optional viewportEase for live replay tracking.' },
+        { name: 'setVisualOptions', type: 'function', description: 'Applies visual tuning options such as activeNodeScale and infoPanelScale without changing the host-owned graph model.' },
         { name: 'setForceLayoutOptions', type: 'function', description: 'Applies force-layout tuning options, including layoutAlgorithm: organic, oil-cloud, or spring, without changing the host-owned graph model.' },
         { name: 'animateNodeAppearance', type: 'function', description: 'Replays node appearance animation for visible graph nodes or a supplied node id set.' },
         { name: 'resetView', type: 'function', description: 'Resets viewport pan and zoom.' },

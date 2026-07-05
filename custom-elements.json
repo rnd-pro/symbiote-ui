@@ -237,6 +237,20 @@
           "componentDescription": "Generic hierarchical graph overview/read renderer with force layout, semantic navigation, selection events, and optional device-orientation parallax. Use this interactive visual graph surface when composing canvas UI. Capabilities: hierarchical-graph, overview-read-renderer, force-layout, semantic-clusters, focus-selection, layout-snapshot, device-orientation-parallax. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: canvas_graph_set_model, canvas_graph_focus_node, canvas_graph_focus_nodes, canvas_graph_set_path.",
           "attributes": [
             {
+              "name": "active-node-scale",
+              "type": {
+                "text": "number"
+              },
+              "description": "Visual scale target for the selected node; defaults to 1.5."
+            },
+            {
+              "name": "info-panel-scale",
+              "type": {
+                "text": "number"
+              },
+              "description": "Visual scale for the active node information panel; defaults to 1."
+            },
+            {
               "name": "device-orientation-parallax",
               "type": {
                 "text": "boolean"
@@ -299,6 +313,22 @@
               "description": "Graph rendering mode, such as dots or cards."
             },
             {
+              "kind": "field",
+              "name": "activeNodeScale",
+              "type": {
+                "text": "number"
+              },
+              "description": "Visual scale target for the selected node; defaults to 1.5."
+            },
+            {
+              "kind": "field",
+              "name": "infoPanelScale",
+              "type": {
+                "text": "number"
+              },
+              "description": "Visual scale for the active node information panel; defaults to 1."
+            },
+            {
               "kind": "method",
               "name": "setGraphModel",
               "description": "Loads normalized graph data into the canvas renderer."
@@ -337,6 +367,11 @@
               "kind": "method",
               "name": "fitView",
               "description": "Fits the visible graph into the canvas viewport; accepts optional viewportEase for live replay tracking."
+            },
+            {
+              "kind": "method",
+              "name": "setVisualOptions",
+              "description": "Applies visual tuning options such as activeNodeScale and infoPanelScale without changing the host-owned graph model."
             },
             {
               "kind": "method",
@@ -571,6 +606,16 @@
             ],
             "attributes": [
               {
+                "name": "active-node-scale",
+                "type": "number",
+                "description": "Visual scale target for the selected node; defaults to 1.5."
+              },
+              {
+                "name": "info-panel-scale",
+                "type": "number",
+                "description": "Visual scale for the active node information panel; defaults to 1."
+              },
+              {
                 "name": "device-orientation-parallax",
                 "type": "boolean",
                 "description": "Requests device-orientation parallax on the first user gesture."
@@ -611,6 +656,16 @@
                 "name": "renderMode",
                 "type": "string",
                 "description": "Graph rendering mode, such as dots or cards."
+              },
+              {
+                "name": "activeNodeScale",
+                "type": "number",
+                "description": "Visual scale target for the selected node; defaults to 1.5."
+              },
+              {
+                "name": "infoPanelScale",
+                "type": "number",
+                "description": "Visual scale for the active node information panel; defaults to 1."
               }
             ],
             "methods": [
@@ -648,6 +703,11 @@
                 "name": "fitView",
                 "type": "function",
                 "description": "Fits the visible graph into the canvas viewport; accepts optional viewportEase for live replay tracking."
+              },
+              {
+                "name": "setVisualOptions",
+                "type": "function",
+                "description": "Applies visual tuning options such as activeNodeScale and infoPanelScale without changing the host-owned graph model."
               },
               {
                 "name": "resetView",
@@ -991,6 +1051,16 @@
               ],
               "attributes": [
                 {
+                  "name": "active-node-scale",
+                  "type": "number",
+                  "description": "Visual scale target for the selected node; defaults to 1.5."
+                },
+                {
+                  "name": "info-panel-scale",
+                  "type": "number",
+                  "description": "Visual scale for the active node information panel; defaults to 1."
+                },
+                {
                   "name": "device-orientation-parallax",
                   "type": "boolean",
                   "description": "Requests device-orientation parallax on the first user gesture."
@@ -1031,6 +1101,16 @@
                   "name": "renderMode",
                   "type": "string",
                   "description": "Graph rendering mode, such as dots or cards."
+                },
+                {
+                  "name": "activeNodeScale",
+                  "type": "number",
+                  "description": "Visual scale target for the selected node; defaults to 1.5."
+                },
+                {
+                  "name": "infoPanelScale",
+                  "type": "number",
+                  "description": "Visual scale for the active node information panel; defaults to 1."
                 }
               ],
               "methods": [
@@ -1073,6 +1153,11 @@
                   "name": "fitView",
                   "type": "function",
                   "description": "Fits the visible graph into the canvas viewport; accepts optional viewportEase for live replay tracking."
+                },
+                {
+                  "name": "setVisualOptions",
+                  "type": "function",
+                  "description": "Applies visual tuning options such as activeNodeScale and infoPanelScale without changing the host-owned graph model."
                 },
                 {
                   "name": "resetView",

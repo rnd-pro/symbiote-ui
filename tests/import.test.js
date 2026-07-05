@@ -684,14 +684,51 @@ test('canvas graph waits for complete transition routes before moving marker dot
 });
 
 test('canvas graph dot radius follows semantic node weight', async () => {
-  let { getNodeRadius, getNodeWeightScale } = await import('../canvas/CanvasGraph/CanvasGraphGeometry.js');
+  let {
+    DEFAULT_ACTIVE_NODE_SCALE,
+    DEFAULT_INFO_PANEL_SCALE,
+    getNodeRadius,
+    getNodeWeightScale,
+    normalizeCanvasGraphScale,
+    resolveCanvasGraphInfoPanelMetrics,
+  } = await import('../canvas/CanvasGraph/CanvasGraphGeometry.js');
   let normalRadius = getNodeRadius({ id: 'normal', weight: 1 }, 0);
   let heavyRadius = getNodeRadius({ id: 'heavy', weight: 4 }, 0);
   let lightRadius = getNodeRadius({ id: 'light', weight: 0.35 }, 0);
+  let normalPanel = resolveCanvasGraphInfoPanelMetrics({ scale: 1, lineCount: 4, menuExtent: 20, maxTextWidth: 120 });
+  let halfPanel = resolveCanvasGraphInfoPanelMetrics({ scale: 0.5, lineCount: 4, menuExtent: 20, maxTextWidth: 60 });
 
   assert.ok(heavyRadius > normalRadius * 1.7);
   assert.ok(lightRadius < normalRadius);
   assert.equal(getNodeWeightScale({ weight: 100 }), 1.9);
+  assert.equal(DEFAULT_ACTIVE_NODE_SCALE, 1.5);
+  assert.equal(DEFAULT_INFO_PANEL_SCALE, 1);
+  assert.equal(normalizeCanvasGraphScale(0, DEFAULT_ACTIVE_NODE_SCALE), DEFAULT_ACTIVE_NODE_SCALE);
+  assert.equal(normalizeCanvasGraphScale(-1, DEFAULT_ACTIVE_NODE_SCALE), DEFAULT_ACTIVE_NODE_SCALE);
+  assert.equal(normalizeCanvasGraphScale(Number.NaN, DEFAULT_INFO_PANEL_SCALE), DEFAULT_INFO_PANEL_SCALE);
+  assert.equal(normalizeCanvasGraphScale(Number.POSITIVE_INFINITY, DEFAULT_INFO_PANEL_SCALE), DEFAULT_INFO_PANEL_SCALE);
+  assert.equal(normalizeCanvasGraphScale(12, DEFAULT_INFO_PANEL_SCALE, { min: 0.1, max: 4 }), 4);
+  assert.equal(halfPanel.fontSize, normalPanel.fontSize * 0.5);
+  assert.equal(halfPanel.padX, normalPanel.padX * 0.5);
+  assert.equal(halfPanel.panelGap, normalPanel.panelGap * 0.5);
+  assert.equal(halfPanel.panelW, normalPanel.panelW * 0.5);
+  assert.equal(halfPanel.totalExtent, 20 + halfPanel.panelGap + halfPanel.panelW);
+  assert.equal(halfPanel.totalExtentY, halfPanel.panelOuterH / 2 - halfPanel.padY);
+});
+
+test('canvas graph visual scale options stay in the library contract', async () => {
+  let source = await readFile(new URL('../canvas/CanvasGraph/CanvasGraph.js', import.meta.url), 'utf8');
+
+  assert.match(source, /static observedAttributes = \['active-node-scale', 'info-panel-scale'\]/);
+  assert.match(source, /activeNodeScale: DEFAULT_ACTIVE_NODE_SCALE/);
+  assert.match(source, /infoPanelScale: DEFAULT_INFO_PANEL_SCALE/);
+  assert.match(source, /setVisualOptions\(options = \{\}\) {/);
+  assert.match(source, /const targetScale = isActive \? activeNodeScale : 1;/);
+  assert.match(source, /this\.activeNode\.aScale \|\| activeNodeScale/);
+  assert.match(source, /resolveCanvasGraphInfoPanelMetrics\(\{/);
+  assert.match(source, /this\._resolveNodeHitRadius\(node\)/);
+  assert.doesNotMatch(source, /isActive \? 1\.5 : 1/);
+  assert.doesNotMatch(source, /this\.activeNode\.aScale \|\| 1\.5/);
 });
 
 test('canvas graph focus transition uses queued activation before depth recalculation', async () => {
@@ -1610,12 +1647,32 @@ test('discover exposes the standalone package contract', async () => {
   assert.ok(canvasGraphAgentItem.componentDescription.includes('overview-read-renderer'));
   assert.ok(data.manifest.components
     .find((item) => item.tagName === 'canvas-graph')
+    .contract.attributes
+    .some((attribute) => attribute.name === 'active-node-scale'));
+  assert.ok(data.manifest.components
+    .find((item) => item.tagName === 'canvas-graph')
+    .contract.attributes
+    .some((attribute) => attribute.name === 'info-panel-scale'));
+  assert.ok(data.manifest.components
+    .find((item) => item.tagName === 'canvas-graph')
+    .contract.properties
+    .some((property) => property.name === 'activeNodeScale'));
+  assert.ok(data.manifest.components
+    .find((item) => item.tagName === 'canvas-graph')
+    .contract.properties
+    .some((property) => property.name === 'infoPanelScale'));
+  assert.ok(data.manifest.components
+    .find((item) => item.tagName === 'canvas-graph')
     .contract.methods
     .some((method) => method.name === 'suspendLayout'));
   assert.ok(data.manifest.components
     .find((item) => item.tagName === 'canvas-graph')
     .contract.methods
     .some((method) => method.name === 'resumeLayout'));
+  assert.ok(data.manifest.components
+    .find((item) => item.tagName === 'canvas-graph')
+    .contract.methods
+    .some((method) => method.name === 'setVisualOptions'));
   assert.ok(data.manifest.components
     .find((item) => item.tagName === 'canvas-graph')
     .contract.methods

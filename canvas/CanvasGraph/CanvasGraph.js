@@ -10,6 +10,8 @@ import css from './CanvasGraph.css.js';
 import {
   DOT_RADIUS,
   HIT_RADIUS,
+  DEFAULT_ACTIVE_NODE_SCALE,
+  DEFAULT_INFO_PANEL_SCALE,
   getCanvasNodeScreenHit,
   getGroupOrbitMetrics,
   getLayerTransform,
@@ -19,6 +21,8 @@ import {
   getNodeWeight,
   getRadialMenuHit,
   getRadialMenuLayout,
+  normalizeCanvasGraphScale,
+  resolveCanvasGraphInfoPanelMetrics,
 } from './CanvasGraphGeometry.js';
 import { GRAPH_TYPE_COLOR_TOKENS } from '../../graph/theme-contract.js';
 import {
@@ -612,6 +616,8 @@ function sanitizeForceLayoutOptions(options = {}) {
 }
 
 export class CanvasGraph extends Symbiote {
+  static observedAttributes = ['active-node-scale', 'info-panel-scale'];
+
   init$ = {
     // These defaults will be updated from external controller if needed
     chargeStrength: -150,
@@ -634,6 +640,8 @@ export class CanvasGraph extends Symbiote {
     centerPull: 0.3,
     wellRepulsion: 5.0,
     crossLinkScale: 0.2,
+    activeNodeScale: DEFAULT_ACTIVE_NODE_SCALE,
+    infoPanelScale: DEFAULT_INFO_PANEL_SCALE,
   };
 
   _bgR = 15;
@@ -651,6 +659,16 @@ export class CanvasGraph extends Symbiote {
   _ghostRgb = [51, 51, 51];
   _typeColorRgb = {};
   _ghostColor = 'rgb(51,51,51)';
+
+  attributeChangedCallback(name, oldValue, newValue) {
+    if (oldValue === newValue) return;
+    if (name === 'active-node-scale' || name === 'info-panel-scale') {
+      this.needsDraw = true;
+      this._wakeLoop?.();
+      return;
+    }
+    super.attributeChangedCallback?.(name, oldValue, newValue);
+  }
 
   initCallback() {
     this.eventNames = { ...DEFAULT_EVENT_NAMES, ...this.eventNames };
@@ -1944,6 +1962,46 @@ export class CanvasGraph extends Symbiote {
     this._wakeLoop();
   }
 
+  _resolveVisualScale(stateKey, attributeName, fallback, options = {}) {
+    let attributeValue = this.getAttribute?.(attributeName);
+    let value = attributeValue !== null && attributeValue !== undefined
+      ? attributeValue
+      : this.$?.[stateKey];
+    return normalizeCanvasGraphScale(value, fallback, options);
+  }
+
+  _resolveActiveNodeScale() {
+    return this._resolveVisualScale('activeNodeScale', 'active-node-scale', DEFAULT_ACTIVE_NODE_SCALE, {
+      min: 0.1,
+      max: 6,
+    });
+  }
+
+  _resolveInfoPanelScale() {
+    return this._resolveVisualScale('infoPanelScale', 'info-panel-scale', DEFAULT_INFO_PANEL_SCALE, {
+      min: 0.1,
+      max: 4,
+    });
+  }
+
+  setVisualOptions(options = {}) {
+    options ||= {};
+    if (Object.hasOwn(options, 'activeNodeScale')) {
+      this.$.activeNodeScale = normalizeCanvasGraphScale(options.activeNodeScale, DEFAULT_ACTIVE_NODE_SCALE, {
+        min: 0.1,
+        max: 6,
+      });
+    }
+    if (Object.hasOwn(options, 'infoPanelScale')) {
+      this.$.infoPanelScale = normalizeCanvasGraphScale(options.infoPanelScale, DEFAULT_INFO_PANEL_SCALE, {
+        min: 0.1,
+        max: 4,
+      });
+    }
+    this.needsDraw = true;
+    this._wakeLoop();
+  }
+
   _queueNodeAppearances(nodeIds, options = {}) {
     if (!Array.isArray(nodeIds) || nodeIds.length === 0) return;
     let now = globalThis.performance?.now?.() ?? Date.now();
@@ -2748,6 +2806,7 @@ export class CanvasGraph extends Symbiote {
       }
 
       // Nodes
+      const activeNodeScale = this._resolveActiveNodeScale();
       for (const node of this.depthGroups[d].nodes) {
         if (this.currentGroupId && node.id === this.currentGroupId) continue;
         const pos = this.getSmooth(node.id);
@@ -2756,7 +2815,7 @@ export class CanvasGraph extends Symbiote {
         const tc = getNodeColor(node, this._typeColorRgb);
         const conns = this.adjMap.get(node.id)?.size || 0;
 
-        const targetScale = isActive ? 1.5 : 1;
+        const targetScale = isActive ? activeNodeScale : 1;
         node.aScale = node.aScale !== undefined ? node.aScale : 1;
         node.aScale += (targetScale - node.aScale) * 0.12;
 
@@ -3089,104 +3148,110 @@ export class CanvasGraph extends Symbiote {
       ctx.setTransform(dpr * this.zoom, 0, 0, dpr * this.zoom, dpr * this.panX, dpr * this.panY);
     }
 
-    // All dimensions in world units
-    const fontSize = 11;
-    const smallFontSize = 9;
-    const lineHeight = 15;
-    const padX = 14;
-    const padY = 10;
-
     // Compute actual node radius to avoid overlap
     // Must account for: dot radius + glow + radial menu items
     const conns = this.adjMap.get(this.activeNode.id)?.size || 0;
-    const dotR = getNodeRadius(this.activeNode, conns, { scale: this.activeNode.aScale || 1.5 });
+    const activeNodeScale = this._resolveActiveNodeScale();
+    const dotR = getNodeRadius(this.activeNode, conns, { scale: this.activeNode.aScale || activeNodeScale });
     // Menu orbits at dotR + 14, each item has radius 6
     const menuExtent = dotR + 14 + 6;
-    const panelGap = 10;
-    const panelX = apos.x + menuExtent + panelGap;
-    const panelY = apos.y - padY;
+    const initialPanelMetrics = resolveCanvasGraphInfoPanelMetrics({
+      scale: this._resolveInfoPanelScale(),
+      lineCount: ip.lines.length,
+      menuExtent,
+    });
 
-    ctx.font = `600 ${fontSize}px 'Inter', 'SF Mono', system-ui, sans-serif`;
+    ctx.font = `600 ${initialPanelMetrics.fontSize}px 'Inter', 'SF Mono', system-ui, sans-serif`;
 
     // Measure panel width from FULL text content (not just revealed)
     // This ensures totalExtent is stable from the first frame — no oscillation
-    let maxW = 60;
+    let maxW = initialPanelMetrics.minWidth;
     for (const line of ip.lines) {
       const w = ctx.measureText(line.text).width;
       if (w > maxW) maxW = w;
     }
-    const panelW = maxW + padX * 2;
-    const panelH = ip.lines.length * lineHeight + padY * 2;
+    const panelMetrics = resolveCanvasGraphInfoPanelMetrics({
+      scale: initialPanelMetrics.scale,
+      lineCount: ip.lines.length,
+      menuExtent,
+      maxTextWidth: maxW,
+    });
+    const panelX = apos.x + menuExtent + panelMetrics.panelGap;
+    const panelY = apos.y - panelMetrics.padY;
 
     // Store total extent for focus centering
-    ip.totalExtent = menuExtent + panelGap + panelW;
-    // Vertical: panel extends from (apos.y - padY) to (apos.y - padY + panelH + 16)
+    ip.totalExtent = panelMetrics.totalExtent;
+    // Vertical: panel extends from panelY to panelY + panelOuterH
     // The offset from node center to the vertical midpoint of the panel
-    ip.totalExtentY = (panelH + 16) / 2 - padY;
+    ip.totalExtentY = panelMetrics.totalExtentY;
 
     const tc = getNodeColor(this.activeNode || {}, this._typeColorRgb);
-    const cornerR = 6;
 
     ctx.save();
     ctx.globalAlpha = ip.opacity;
 
     // Blurred backdrop
-    ctx.filter = 'blur(16px)';
+    ctx.filter = `blur(${panelMetrics.blurRadius}px)`;
     ctx.beginPath();
-    ctx.roundRect(panelX, panelY, panelW, panelH + 16, cornerR);
+    ctx.roundRect(panelX, panelY, panelMetrics.panelW, panelMetrics.panelOuterH, panelMetrics.cornerR);
     ctx.fillStyle = toRgba(this._panelBgRgb, 0.85 * ip.opacity);
     ctx.fill();
     ctx.filter = 'none';
 
     // Border
     ctx.beginPath();
-    ctx.roundRect(panelX, panelY, panelW, panelH + 16, cornerR);
+    ctx.roundRect(panelX, panelY, panelMetrics.panelW, panelMetrics.panelOuterH, panelMetrics.cornerR);
     ctx.strokeStyle = toRgba(this._panelBorderRgb, 0.5 * ip.opacity);
-    ctx.lineWidth = 0.8;
+    ctx.lineWidth = panelMetrics.borderWidth;
     ctx.stroke();
 
     // Left accent
     ctx.beginPath();
-    ctx.moveTo(panelX, panelY + cornerR);
-    ctx.lineTo(panelX, panelY + panelH + 16 - cornerR);
+    ctx.moveTo(panelX, panelY + panelMetrics.cornerR);
+    ctx.lineTo(panelX, panelY + panelMetrics.panelOuterH - panelMetrics.cornerR);
     ctx.strokeStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${0.5 * ip.opacity})`;
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = panelMetrics.accentWidth;
     ctx.stroke();
 
     // Text lines
-    let textY = panelY + padY + fontSize;
+    let textY = panelY + panelMetrics.padY + panelMetrics.fontSize;
     for (let i = 0; i < ip.lines.length; i++) {
       const line = ip.lines[i];
       const text = line.text.substring(0, line.revealed);
-      if (!text) { textY += lineHeight; continue; }
+      if (!text) { textY += panelMetrics.lineHeight; continue; }
 
       if (i === 0) {
-        ctx.font = `700 ${fontSize}px 'Inter', 'SF Mono', system-ui, sans-serif`;
+        ctx.font = `700 ${panelMetrics.fontSize}px 'Inter', 'SF Mono', system-ui, sans-serif`;
         ctx.fillStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${ip.opacity})`;
       } else if (i === 1 && this.activeNode?.id !== this.activeNode?.label) {
-        ctx.font = `400 ${smallFontSize}px 'SF Mono', 'JetBrains Mono', monospace`;
+        ctx.font = `400 ${panelMetrics.smallFontSize}px 'SF Mono', 'JetBrains Mono', monospace`;
         ctx.fillStyle = toRgba(this._textDimRgb, 0.35 * ip.opacity);
       } else if (line.text.startsWith('  ')) {
-        ctx.font = `400 ${smallFontSize}px 'SF Mono', 'JetBrains Mono', monospace`;
+        ctx.font = `400 ${panelMetrics.smallFontSize}px 'SF Mono', 'JetBrains Mono', monospace`;
         ctx.fillStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${0.6 * ip.opacity})`;
       } else if (line.text.includes(':')) {
-        ctx.font = `500 ${smallFontSize}px 'Inter', system-ui, sans-serif`;
+        ctx.font = `500 ${panelMetrics.smallFontSize}px 'Inter', system-ui, sans-serif`;
         ctx.fillStyle = toRgba(this._textRgb, 0.5 * ip.opacity);
       } else {
-        ctx.font = `500 ${smallFontSize}px 'Inter', system-ui, sans-serif`;
+        ctx.font = `500 ${panelMetrics.smallFontSize}px 'Inter', system-ui, sans-serif`;
         ctx.fillStyle = toRgba(this._textRgb, 0.6 * ip.opacity);
       }
 
-      ctx.fillText(text, panelX + padX, textY);
+      ctx.fillText(text, panelX + panelMetrics.padX, textY);
 
       if (line.revealed < line.text.length && line.revealed > 0) {
-        const cursorX = panelX + padX + ctx.measureText(text).width + 2;
+        const cursorX = panelX + panelMetrics.padX + ctx.measureText(text).width + panelMetrics.cursorGap;
         if (Math.floor(performance.now() / 400) % 2 === 0) {
           ctx.fillStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${0.8 * ip.opacity})`;
-          ctx.fillRect(cursorX, textY - fontSize + 2, 1.5, fontSize);
+          ctx.fillRect(
+            cursorX,
+            textY - panelMetrics.fontSize + panelMetrics.cursorYOffset,
+            panelMetrics.cursorWidth,
+            panelMetrics.fontSize
+          );
         }
       }
-      textY += lineHeight;
+      textY += panelMetrics.lineHeight;
     }
 
     ctx.restore();
@@ -3221,6 +3286,17 @@ export class CanvasGraph extends Symbiote {
     };
   }
 
+  _resolveNodeHitRadius(node) {
+    let hitRadius = getNodeHitRadius(node, HIT_RADIUS);
+    if (!node || this.renderMode !== 'dots' || this.activeNode?.id !== node.id) return hitRadius;
+
+    let conns = this.adjMap.get(node.id)?.size || 0;
+    let visualRadius = getNodeRadius(node, conns, {
+      scale: node.aScale || this._resolveActiveNodeScale(),
+    });
+    return Math.max(hitRadius, visualRadius);
+  }
+
   hitTest(wx, wy) {
     const inGroup = !!this.currentGroupId;
     const activeGroupId = this.currentGroupId;
@@ -3232,7 +3308,7 @@ export class CanvasGraph extends Symbiote {
 
       if (this.renderMode === 'dots') {
         const dx = wx - pos.x, dy = wy - pos.y;
-        const hitR = node.isGroup ? HIT_RADIUS * 1.5 : HIT_RADIUS;
+        const hitR = this._resolveNodeHitRadius(node);
         if (dx * dx + dy * dy <= hitR * hitR) return node;
       }
     }
@@ -3261,7 +3337,7 @@ export class CanvasGraph extends Symbiote {
           position: pos,
           transform: this.getVisualLayerTransform(depth),
           dpr,
-          hitRadius: getNodeHitRadius(node, HIT_RADIUS),
+          hitRadius: this._resolveNodeHitRadius(node),
         });
         if (hit?.hit) return node;
       }

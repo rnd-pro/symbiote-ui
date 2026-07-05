@@ -143,6 +143,9 @@ grow without a full random recomposition.
 `setForceLayoutOptions({ layoutAlgorithm })` accepts `organic`, `oil-cloud`, or
 `spring`: use `organic` for the default grouped force model, `oil-cloud` for
 slower cloud-body separation, and `spring` as a plain force-directed baseline.
+`setVisualOptions({ activeNodeScale, infoPanelScale })` adjusts the selected
+node target scale and active-node info panel scale; the equivalent attributes
+are `active-node-scale` and `info-panel-scale`.
 Use `resetLayoutState()` before replaying the same process graph from the
 beginning when old node positions should not seed the next force-layout run.
 

@@ -1,6 +1,71 @@
 export const DOT_RADIUS = 6;
 export const HIT_RADIUS = 14;
 export const DEFAULT_NODE_COLOR = [120, 180, 255];
+export const DEFAULT_ACTIVE_NODE_SCALE = 1.5;
+export const DEFAULT_INFO_PANEL_SCALE = 1;
+
+export function normalizeCanvasGraphScale(value, fallback = 1, options = {}) {
+  let min = Number.isFinite(options.min) ? options.min : 0.1;
+  let max = Number.isFinite(options.max) ? options.max : 6;
+  if (max < min) max = min;
+
+  let fallbackValue = Number.parseFloat(String(fallback ?? ''));
+  if (!Number.isFinite(fallbackValue) || fallbackValue <= 0) fallbackValue = 1;
+
+  let scale = Number.parseFloat(String(value ?? ''));
+  if (!Number.isFinite(scale) || scale <= 0) scale = fallbackValue;
+
+  return Math.max(min, Math.min(max, scale));
+}
+
+export function resolveCanvasGraphInfoPanelMetrics(options = {}) {
+  let scale = normalizeCanvasGraphScale(options.scale, DEFAULT_INFO_PANEL_SCALE, {
+    min: 0.1,
+    max: 4,
+  });
+  let lineCount = Number.isFinite(options.lineCount) ? Math.max(0, Math.floor(options.lineCount)) : 0;
+  let minWidth = 60 * scale;
+  let measuredTextWidth = Number.isFinite(options.maxTextWidth)
+    ? Math.max(0, options.maxTextWidth)
+    : minWidth;
+  let maxTextWidth = Math.max(minWidth, measuredTextWidth);
+  let menuExtent = Number.isFinite(options.menuExtent) ? Math.max(0, options.menuExtent) : 0;
+  let fontSize = 11 * scale;
+  let smallFontSize = 9 * scale;
+  let lineHeight = 15 * scale;
+  let padX = 14 * scale;
+  let padY = 10 * scale;
+  let extraBlockSize = 16 * scale;
+  let panelGap = 10 * scale;
+  let panelW = maxTextWidth + padX * 2;
+  let panelH = lineCount * lineHeight + padY * 2;
+  let panelOuterH = panelH + extraBlockSize;
+
+  return {
+    scale,
+    fontSize,
+    smallFontSize,
+    lineHeight,
+    padX,
+    padY,
+    extraBlockSize,
+    panelGap,
+    cornerR: 6 * scale,
+    blurRadius: 16 * scale,
+    borderWidth: 0.8 * scale,
+    accentWidth: 1.5 * scale,
+    cursorGap: 2 * scale,
+    cursorWidth: 1.5 * scale,
+    cursorYOffset: 2 * scale,
+    minWidth,
+    maxTextWidth,
+    panelW,
+    panelH,
+    panelOuterH,
+    totalExtent: menuExtent + panelGap + panelW,
+    totalExtentY: panelOuterH / 2 - padY,
+  };
+}
 
 export function parseHexColor(value) {
   if (typeof value !== 'string') return null;

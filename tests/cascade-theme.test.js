@@ -1178,6 +1178,11 @@ test('static custom elements catalog mirrors agent-facing WebMCP metadata', asyn
     false
   );
   assert.ok(canvasGraph.metadata.contract.capabilities.includes('overview-read-renderer'));
+  assert.ok(canvasGraph.metadata.contract.attributes.some((attribute) => attribute.name === 'active-node-scale'));
+  assert.ok(canvasGraph.metadata.contract.attributes.some((attribute) => attribute.name === 'info-panel-scale'));
+  assert.ok(canvasGraph.metadata.contract.properties.some((property) => property.name === 'activeNodeScale'));
+  assert.ok(canvasGraph.metadata.contract.properties.some((property) => property.name === 'infoPanelScale'));
+  assert.ok(canvasGraph.metadata.contract.methods.some((method) => method.name === 'setVisualOptions'));
   assert.ok(canvasGraph.metadata.contract.methods.some((method) => method.name === 'suspendLayout'));
   assert.ok(canvasGraph.metadata.contract.methods.some((method) => method.name === 'resumeLayout'));
   assert.ok(canvasGraph.metadata.contract.methods.some((method) => method.name === 'queueTransitionMarkers'));
