@@ -196,6 +196,19 @@ themeWidget.scopes = scopes;
 themeEditor.targets = scopes;
 ```
 
+The full editor also supports scoped editing affordances that stay host-agnostic:
+
+- `pickable="[data-theme-pickable]"` enables the eyedropper. The selected
+  element becomes an individual target button using its `data-theme-id`,
+  `data-theme-label`, `data-theme-target`, and `data-theme-key` hints, with the
+  active theme and geometry register seeded as that target's starting state.
+- `applyToAllTargets()` and the editor's select-all action copy the active
+  theme state plus geometry register to every configured or picked target.
+- `locale="en|ru|es"` renders the optional language segment and emits
+  `cascade-theme-locale-change`. Locale is intentionally outside the cascade
+  theme state and copied bundles; hosts apply it through their localization
+  layer.
+
 The shared helpers keep persistence and application behavior out of product
 code:
 

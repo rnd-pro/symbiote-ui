@@ -1,5 +1,6 @@
 import Symbiote from '@symbiotejs/symbiote';
 import { ensureMaterialSymbols } from '../../icons/MaterialSymbols.js';
+import { normalizeLocale, SUPPORTED_LOCALES } from '../../locale/index.js';
 import {
   applyCascadeGeometryRegister,
   applyCascadeTheme,
@@ -24,7 +25,8 @@ const DEFAULT_STORAGE_KEY = 'symbiote-ui:cascade-theme-editor';
 const CONTROL_ICONS = getCascadeThemeControls()
   .map((control) => control.icon)
   .filter(Boolean);
-const ICONS = [...new Set(['palette', 'content_copy', 'restart_alt', 'data_object', ...CONTROL_ICONS])];
+const ICONS = [...new Set(['palette', 'content_copy', 'restart_alt', 'data_object', 'language', 'select_all', ...CONTROL_ICONS])];
+const LOCALE_VALUES = SUPPORTED_LOCALES.filter((locale) => ['en', 'ru', 'es'].includes(locale));
 
 function parseStoredState(value) {
   if (!value) return null;
@@ -45,8 +47,13 @@ function rangeProgress(value, min, max) {
   return `${Math.min(100, Math.max(0, progress)).toFixed(2)}%`;
 }
 
+function cssIdent(value) {
+  if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') return CSS.escape(String(value));
+  return String(value).replace(/[^a-zA-Z0-9_-]/g, (char) => `\\${char}`);
+}
+
 export class CascadeThemeEditor extends Symbiote {
-  static observedAttributes = ['storage-key', 'target-selector', 'default-state', 'pickable'];
+  static observedAttributes = ['storage-key', 'target-selector', 'default-state', 'pickable', 'locale'];
 
   #controls = getCascadeThemeControls();
   #state = normalizeCascadeThemeOptions(CASCADE_THEME_DEFAULTS);
@@ -59,6 +66,7 @@ export class CascadeThemeEditor extends Symbiote {
   #picking = false;
   #pickHandlers = null;
   #pickHover = null;
+  #locale = 'en';
   #controlSyncFrame = 0;
   #controlInputHandler = (event) => this.#handleControlInput(event);
 
@@ -83,6 +91,10 @@ export class CascadeThemeEditor extends Symbiote {
     registerProduct: 'false',
     registerTool: 'false',
     registerSpacious: 'false',
+    hasLocale: false,
+    localeEn: 'true',
+    localeRu: 'false',
+    localeEs: 'false',
     status: 'ready',
     params: '',
     // eyedropper: when `pickable` (a host selector) is set, the pick button lets the
@@ -120,6 +132,11 @@ export class CascadeThemeEditor extends Symbiote {
       this.#applyGeometryRegister('toggle');
       this.#syncRegisterButtons();
     },
+    onLocalePick: (event) => {
+      let locale = event.currentTarget?.dataset?.locale;
+      this.setLocale(locale, { source: 'locale-control' });
+    },
+    onApplyAll: () => this.applyToAllTargets(),
     onCopy: () => void this.copyParameters(),
     onReset: () => this.reset(),
   };
@@ -156,16 +173,22 @@ export class CascadeThemeEditor extends Symbiote {
     if (name === 'pickable') {
       this.$.pickable = newValue || '';
     }
+    if (name === 'locale') {
+      this.#locale = normalizeLocale(newValue, { fallback: this.#locale || 'en' });
+      this.#syncLocaleButtons();
+    }
   }
 
   renderCallback() {
     if (this.#ready) return;
     this.#ready = true;
     this.$.pickable = this.getAttribute('pickable') || '';
+    this.#locale = normalizeLocale(this.getAttribute('locale'), { fallback: 'en' });
     this.#bindControlEvents();
     this.#loadStoredState();
     this.#syncControls();
     this.#syncRegisterButtons();
+    this.#syncLocaleButtons();
   }
 
   get geometryRegister() {
@@ -196,6 +219,31 @@ export class CascadeThemeEditor extends Symbiote {
 
   get targetSelector() {
     return this.getAttribute('target-selector') || '';
+  }
+
+  get locale() {
+    return this.#locale;
+  }
+
+  set locale(value) {
+    this.setLocale(value, { source: 'property' });
+  }
+
+  setLocale(value, options = {}) {
+    let locale = normalizeLocale(value, { fallback: this.#locale || 'en' });
+    if (!LOCALE_VALUES.includes(locale)) return this.#locale;
+    let changed = locale !== this.#locale || this.getAttribute('locale') !== locale;
+    this.#locale = locale;
+    if (this.getAttribute('locale') !== locale) this.setAttribute('locale', locale);
+    this.#syncLocaleButtons();
+    if (changed) {
+      this.dispatchEvent(new CustomEvent('cascade-theme-locale-change', {
+        bubbles: true,
+        composed: true,
+        detail: { locale, source: options.source || 'set-locale' },
+      }));
+    }
+    return this.#locale;
   }
 
   get targets() {
@@ -317,7 +365,7 @@ export class CascadeThemeEditor extends Symbiote {
 
   #applyPickedTarget(element) {
     let id = element.dataset.themeId || element.id;
-    let selector = element.dataset.themeTarget || (element.id ? `#${element.id}` : '');
+    let selector = element.dataset.themeTarget || (element.id ? `#${cssIdent(element.id)}` : '');
     if (!id || !selector) return;
     // Key picked windows by their NAME (portable across rebuilds) so a copied bundle's
     // `named` entries match back via [data-theme-label]. Fall back to a visible title,
@@ -329,17 +377,22 @@ export class CascadeThemeEditor extends Symbiote {
       || id;
     // ensure the element advertises the name so resolveNamed can find it on apply.
     if (element.dataset.themeLabel !== name) element.dataset.themeLabel = name;
+    let storageKey = element.dataset.themeKey || `${this.#targetDefs[0]?.storageKey || this.storageKey}::win::${name}`;
+    if (!element.dataset.themeKey) element.dataset.themeKey = storageKey;
     let descriptor = {
       id: `pick:${id}`,
       name,
       label: name,
       icon: element.dataset.themeIcon || 'colorize',
       selector,
-      storageKey: element.dataset.themeKey || `${this.#targetDefs[0]?.storageKey || this.storageKey}::win::${name}`,
+      storageKey,
     };
     let existing = this.#targetDefs.findIndex((entry) => entry.id === descriptor.id);
     if (existing >= 0) this.#targetDefs[existing] = descriptor;
-    else this.#targetDefs.push(descriptor);
+    else {
+      this.#targetDefs.push(descriptor);
+      this.#seedPickedTarget(descriptor);
+    }
     this.#activeTargetId = descriptor.id;
     this.#renderTargets();
     this.#setActiveTarget(descriptor);
@@ -348,6 +401,20 @@ export class CascadeThemeEditor extends Symbiote {
       composed: true,
       detail: { id: descriptor.id, selector: descriptor.selector, storageKey: descriptor.storageKey, picked: true },
     }));
+  }
+
+  #seedPickedTarget(descriptor) {
+    let target = this.#resolveScopeTarget(descriptor);
+    let state = normalizeCascadeThemeOptions(this.#state);
+    if (target) {
+      let theme = applyCascadeTheme(target, state, { notify: false });
+      state = theme.state;
+      applyCascadeGeometryRegister(target, this.#geometryRegister);
+    }
+    persistCascadeThemeScopeState({ storageKey: descriptor.storageKey }, {
+      ...state,
+      register: this.#geometryRegister,
+    });
   }
 
   setState(value, options = {}) {
@@ -372,6 +439,71 @@ export class CascadeThemeEditor extends Symbiote {
     }
     this.#state = normalizeCascadeThemeOptions(value);
     this.#apply(options.source || 'set-state');
+  }
+
+  applyToAllTargets(options = {}) {
+    let state = normalizeCascadeThemeOptions(this.#state);
+    let register = normalizeCascadeGeometryRegister(this.#geometryRegister);
+    let scopes = this.#targetDefs.length
+      ? this.#targetDefs
+      : [{ id: 'active', selector: this.targetSelector, storageKey: this.storageKey, defaultState: this.defaultState }];
+    let applied = [];
+    for (let scope of scopes) {
+      if (!scope) continue;
+      let target = this.#resolveScopeTarget(scope);
+      let appliedState = state;
+      let appliedRegister = register;
+      if (target) {
+        let theme = applyCascadeTheme(target, state, { notify: false });
+        appliedState = theme.state;
+        appliedRegister = applyCascadeGeometryRegister(target, register);
+      }
+      persistCascadeThemeScopeState({ storageKey: scope.storageKey }, {
+        ...appliedState,
+        register: appliedRegister,
+      });
+      applied.push({
+        id: scope.id,
+        selector: scope.selector || '',
+        storageKey: scope.storageKey || '',
+        state: appliedState,
+        register: appliedRegister,
+      });
+    }
+    this.#state = state;
+    this.#geometryRegister = register;
+    this.#syncControls();
+    this.#syncRegisterButtons();
+    this.#setStatus('saved');
+    let detail = {
+      source: options.source || 'apply-all',
+      state: this.state,
+      register: this.#geometryRegister || 'default',
+      targetSelector: this.targetSelector,
+      storageKey: this.storageKey,
+      targets: applied,
+    };
+    this.dispatchEvent(new CustomEvent('cascade-theme-apply-all', {
+      bubbles: true,
+      composed: true,
+      detail,
+    }));
+    this.dispatchEvent(new CustomEvent('cascade-theme-change', {
+      bubbles: true,
+      composed: true,
+      detail,
+    }));
+    this.dispatchEvent(new CustomEvent('cascade-geometry-register-change', {
+      bubbles: true,
+      composed: true,
+      detail: {
+        source: detail.source,
+        register: detail.register,
+        targetSelector: this.targetSelector,
+        targets: applied,
+      },
+    }));
+    return applied;
   }
 
   // With multiple targets the reset is global: every host-fed scope returns to its
@@ -614,6 +746,14 @@ export class CascadeThemeEditor extends Symbiote {
     this.$.registerProduct = String(active === 'product');
     this.$.registerTool = String(active === 'tool');
     this.$.registerSpacious = String(active === 'spacious');
+  }
+
+  #syncLocaleButtons() {
+    let hasLocale = this.hasAttribute('locale');
+    this.$.hasLocale = hasLocale;
+    this.$.localeEn = String(this.#locale === 'en');
+    this.$.localeRu = String(this.#locale === 'ru');
+    this.$.localeEs = String(this.#locale === 'es');
   }
 
   #setStatus(value) {

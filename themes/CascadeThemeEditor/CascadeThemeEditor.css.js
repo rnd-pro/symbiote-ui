@@ -165,6 +165,9 @@ export default css`
     }
 
     .cte-targets {
+      position: sticky;
+      top: var(--sn-theme-editor-sticky-top, 0);
+      z-index: var(--sn-theme-editor-sticky-z, 4);
       display: flex;
       align-items: center;
       gap: var(--sn-theme-editor-mode-gap, var(--sn-lab-segment-gap, 6px));
@@ -172,10 +175,19 @@ export default css`
       border: 1px solid var(--sn-sys-outline);
       border-radius: var(--sn-node-radius, 8px);
       background: var(--sn-sys-surface);
+      box-shadow: var(--sn-theme-editor-sticky-shadow, 0 1px 0 color-mix(in oklch, var(--sn-sys-outline) 55%, transparent));
     }
 
     .cte-targets[hidden] {
       display: none;
+    }
+
+    .cte-mode[hidden] {
+      display: none;
+    }
+
+    .cte-register {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
     }
 
     .cte-target-list {
@@ -187,7 +199,8 @@ export default css`
       gap: var(--sn-theme-editor-mode-gap, var(--sn-lab-segment-gap, 6px));
     }
 
-    .cte-pick {
+    .cte-pick,
+    .cte-apply-all {
       box-sizing: border-box;
       display: inline-flex;
       align-items: center;
@@ -205,20 +218,24 @@ export default css`
       transition: var(--sn-effect-hover-transition);
     }
 
-    .cte-pick[hidden] {
+    .cte-pick[hidden],
+    .cte-apply-all[hidden] {
       display: none;
     }
 
-    .cte-pick .material-symbols-outlined {
+    .cte-pick .material-symbols-outlined,
+    .cte-apply-all .material-symbols-outlined {
       font-size: var(--sn-button-icon-font-size, 16px);
     }
 
-    .cte-pick:hover {
+    .cte-pick:hover,
+    .cte-apply-all:hover {
       background: var(--sn-button-hover-bg, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-raised)));
       color: var(--sn-sys-on-surface);
     }
 
-    .cte-pick:focus-visible {
+    .cte-pick:focus-visible,
+    .cte-apply-all:focus-visible {
       outline: var(--sn-effect-focus-ring, 2px solid var(--sn-sys-focus-ring));
       outline-offset: var(--sn-sys-focus-ring-offset);
     }

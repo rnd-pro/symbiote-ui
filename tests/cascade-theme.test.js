@@ -975,8 +975,13 @@ test('cascade theme editor is a reusable browser module', async () => {
   assert.match(editor, /this\.\#geometryRegister = applyCascadeGeometryRegister\(target, this\.\#geometryRegister\);[\s\S]*if \(!this\.\#geometryRegister\) \{[\s\S]*applyCascadeTheme\(target, this\.\#state, \{ notify: false \}\)/);
   assert.match(editor, /copyParameters\(\)/);
   assert.match(editor, /reset\(\)/);
+  assert.match(editor, /applyToAllTargets\(/);
   assert.match(editor, /resetCascadeThemeScopes\(scopes, \{/);
   assert.match(editor, /isNamedScope: \(target\) => String\(target\.id\)\.startsWith\('pick:'\)/);
+  assert.match(editor, /normalizeLocale/);
+  assert.match(editor, /cascade-theme-locale-change/);
+  assert.match(editor, /cascade-theme-apply-all/);
+  assert.match(editor, /#seedPickedTarget\(/);
   assert.match(cascadeTheme, /if \(options\.clearStorage === true && storage\) \{[\s\S]*storage\.clear\(\);/);
   assert.match(editor, /rangeProgress/);
   assert.match(editor, /--cte-range-progress/);
@@ -992,11 +997,19 @@ test('cascade theme editor is a reusable browser module', async () => {
   // reactive scope/window picker: itemize-driven targets list built on the existing
   // target-selector + storage-key capability (selecting one re-points the editor)
   assert.match(sharedTemplate, /export function cascadeThemeTargetControls/);
+  assert.match(sharedTemplate, /export function cascadeThemeLocaleControls/);
   assert.match(sharedTemplate, /itemize="targets"/);
   assert.match(sharedTemplate, /data-target-id/);
+  assert.match(sharedTemplate, /data-locale="en"/);
+  assert.match(sharedTemplate, /data-locale="ru"/);
+  assert.match(sharedTemplate, /data-locale="es"/);
+  assert.match(sharedTemplate, /select_all/);
   assert.match(editorTemplate, /cascadeThemeTargetControls\(\{/);
   assert.match(editorTemplate, /className: 'cte-targets'/);
   assert.match(editorTemplate, /includePick: true/);
+  assert.match(editorTemplate, /includeApplyAll: true/);
+  assert.match(editorTemplate, /cascadeThemeLocaleControls\(\{/);
+  assert.match(editorTemplate, /cascadeThemeRegisterControls\(\{/);
   assert.match(editor, /set targets\(/);
   assert.match(editor, /#pickTarget\(/);
   assert.match(editor, /cascade-theme-target-change/);
@@ -1068,6 +1081,9 @@ test('cascade theme editor is a reusable browser module', async () => {
   assert.match(styles, /::-webkit-slider-thumb/);
   assert.match(styles, /\.cte-shell \{[\s\S]*?display: flex;[\s\S]*?flex-direction: column;[\s\S]*?min-height: 100%;/);
   assert.match(styles, /\.cte-controls \{[\s\S]*?flex: 0 0 auto;/);
+  assert.match(styles, /\.cte-targets \{[\s\S]*?position: sticky;/);
+  assert.match(styles, /\.cte-register \{[\s\S]*?repeat\(4, minmax\(0, 1fr\)\)/);
+  assert.match(styles, /\.cte-apply-all/);
   assert.match(styles, /\.cte-target \{/);
   assert.match(styles, /container: cascade-theme-editor \/ inline-size/);
   assert.match(styles, /@container cascade-theme-editor \(max-width: 360px\) \{[\s\S]*?\.cte-status \{[\s\S]*?display: none;/);
@@ -1083,6 +1099,8 @@ test('cascade theme editor is a reusable browser module', async () => {
   assert.match(registry, /cascade_theme_editor_apply/);
   assert.match(registry, /cascade-geometry-register-change/);
   assert.match(registry, /cascade-theme-target-change/);
+  assert.match(registry, /cascade-theme-locale-change/);
+  assert.match(registry, /cascade-theme-apply-all/);
   assert.match(registry, /cascade_theme_widget_open_full/);
   assert.match(registry, /cascade_theme_widget_apply_quick/);
   assert.match(registry, /pattern: \{ type: 'number', minimum: 0, maximum: 100 \}/);
@@ -1098,6 +1116,8 @@ test('cascade theme editor is a reusable browser module', async () => {
   assert.match(customElements, /"composerRadius": \{\s*"type": "number",\s*"minimum": 0,\s*"maximum": 100\s*\}/);
   assert.match(customElements, /"name": "cascade-geometry-register-change"/);
   assert.match(customElements, /"name": "cascade-theme-target-change"/);
+  assert.match(customElements, /"name": "cascade-theme-locale-change"/);
+  assert.match(customElements, /"name": "cascade-theme-apply-all"/);
   assert.match(customElements, /Restores cascade theme defaults and removes cascade-owned storage keys/);
   assert.match(customElements, /"pattern": \{\s*"type": "number",\s*"minimum": 0,\s*"maximum": 100\s*\}/);
   assert.match(customElements, /"componentDescription"/);

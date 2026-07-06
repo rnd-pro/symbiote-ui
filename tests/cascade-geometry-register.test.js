@@ -50,7 +50,7 @@ test('the cascade theme editor keeps geometry register APIs while exposing varia
     readFile(sharedTemplate, 'utf8'),
   ]);
 
-  assert.doesNotMatch(template, /cascadeThemeRegisterControls/);
+  assert.match(template, /cascadeThemeRegisterControls/);
   assert.match(template, /cascadeThemeVariantControls/);
   assert.match(template, /cascadeThemeTabShapeControls/);
   assert.match(controls, /data-theme-variant="modern"/);
@@ -58,7 +58,8 @@ test('the cascade theme editor keeps geometry register APIs while exposing varia
   assert.match(controls, /data-tab-shape="frame"/);
   assert.match(controls, /data-tab-shape="ear"/);
   assert.match(controls, /data-tab-shape="classic-ear"/);
-  // The helper stays exported for stored bundles and host-driven geometry previews.
+  // The editor renders register buttons so each selected scope can carry its own
+  // layout density/radius profile beside the color theme.
   for (let register of GEOMETRY_PROFILE_NAMES) {
     assert.match(controls, new RegExp(`data-geometry-register="${register}"`));
   }

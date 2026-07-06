@@ -36,6 +36,22 @@ export function cascadeThemeTabShapeControls({ className, framePressed, earPress
   `;
 }
 
+export function cascadeThemeLocaleControls({
+  className,
+  hidden = '!hasLocale',
+  enPressed,
+  ruPressed,
+  esPressed,
+}) {
+  return html`
+    <div class="${className}" aria-label="Language" ${{ '@hidden': hidden }}>
+      <button type="button" data-locale="en" ${{ onclick: 'onLocalePick', '@aria-pressed': enPressed }}>EN</button>
+      <button type="button" data-locale="ru" ${{ onclick: 'onLocalePick', '@aria-pressed': ruPressed }}>RU</button>
+      <button type="button" data-locale="es" ${{ onclick: 'onLocalePick', '@aria-pressed': esPressed }}>ES</button>
+    </div>
+  `;
+}
+
 export function cascadeThemeRegisterControls({
   className,
   defaultPressed,
@@ -65,6 +81,10 @@ export function cascadeThemeTargetControls({
   pickHidden = '!pickable',
   pickPressed = 'picking',
   onPickStart = 'onPickStart',
+  includeApplyAll = false,
+  applyAllClassName = '',
+  applyAllHidden = '!hasTargets',
+  onApplyAll = 'onApplyAll',
 }) {
   return html`
     <div class="${className}" aria-label="Theme target" ${{ '@hidden': hidden }}>
@@ -79,6 +99,11 @@ export function cascadeThemeTargetControls({
       ${includePick ? html`
         <button type="button" class="${pickClassName}" ${{ onclick: onPickStart, '@aria-pressed': pickPressed, '@hidden': pickHidden }} title="Pick theme target" aria-label="Pick theme target">
           <span class="material-symbols-outlined" aria-hidden="true">colorize</span>
+        </button>
+      ` : ''}
+      ${includeApplyAll ? html`
+        <button type="button" class="${applyAllClassName}" ${{ onclick: onApplyAll, '@hidden': applyAllHidden }} title="Apply active theme to all targets" aria-label="Apply active theme to all targets">
+          <span class="material-symbols-outlined" aria-hidden="true">select_all</span>
         </button>
       ` : ''}
     </div>

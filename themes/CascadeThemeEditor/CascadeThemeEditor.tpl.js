@@ -1,7 +1,9 @@
 import { html } from '@symbiotejs/symbiote';
 import {
   cascadeThemeActionButton,
+  cascadeThemeLocaleControls,
   cascadeThemeModeControls,
+  cascadeThemeRegisterControls,
   cascadeThemeTabShapeControls,
   cascadeThemeTargetControls,
   cascadeThemeVariantControls,
@@ -28,6 +30,15 @@ export default html`
       labelClassName: 'cte-target-label',
       includePick: true,
       pickClassName: 'cte-pick',
+      includeApplyAll: true,
+      applyAllClassName: 'cte-apply-all',
+    })}
+
+    ${cascadeThemeLocaleControls({
+      className: 'cte-mode cte-locale',
+      enPressed: 'localeEn',
+      ruPressed: 'localeRu',
+      esPressed: 'localeEs',
     })}
 
     ${cascadeThemeModeControls({ className: 'cte-mode', darkPressed: 'modeDark', lightPressed: 'modeLight' })}
@@ -39,6 +50,14 @@ export default html`
       framePressed: 'tabShapeFrame',
       earPressed: 'tabShapeEar',
       classicEarPressed: 'tabShapeClassicEar',
+    })}
+
+    ${cascadeThemeRegisterControls({
+      className: 'cte-mode cte-register',
+      defaultPressed: 'registerDefault',
+      productPressed: 'registerProduct',
+      toolPressed: 'registerTool',
+      spaciousPressed: 'registerSpacious',
     })}
 
     <div class="cte-controls" ref="controls" itemize="controlsList">

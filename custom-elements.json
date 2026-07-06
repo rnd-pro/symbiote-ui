@@ -43278,7 +43278,7 @@
           "name": "CascadeThemeEditor",
           "tagName": "cascade-theme-editor",
           "description": "Reusable cascade theme editor module for host layouts.",
-          "componentDescription": "Reusable cascade theme editor module for host layouts. Use this layout-hosted cascade theme control surface when composing theme UI. Capabilities: cascade-theme-controls, theme-variants, tab-shape-controls, copy-parameters, reset-defaults, local-storage, layout-panel. Data ownership: component-owned normalized theme state persisted through host-selected localStorage key; reset removes cascade-owned storage keys after applying defaults. WebMCP tools: cascade_theme_editor_apply.",
+          "componentDescription": "Reusable cascade theme editor module for host layouts. Use this layout-hosted cascade theme control surface when composing theme UI. Capabilities: cascade-theme-controls, theme-variants, tab-shape-controls, geometry-registers, locale-controls, scope-apply-all, scope-picking, copy-parameters, reset-defaults, local-storage, layout-panel. Data ownership: component-owned normalized theme state persisted through host-selected localStorage key; reset removes cascade-owned storage keys after applying defaults. WebMCP tools: cascade_theme_editor_apply.",
           "attributes": [
             {
               "name": "storage-key",
@@ -43297,8 +43297,13 @@
             },
             {
               "name": "pickable",
-              "description": "Enables host target picking controls when present.",
-              "type": "boolean"
+              "description": "Optional CSS selector for host elements the editor can add as individual theme targets.",
+              "type": "string"
+            },
+            {
+              "name": "locale",
+              "description": "Optional active UI locale; when present the editor renders EN/RU/ES locale controls and emits cascade-theme-locale-change.",
+              "type": "string"
             }
           ],
           "members": [
@@ -43314,6 +43319,24 @@
               "kind": "method",
               "name": "setState",
               "description": "Applies normalized cascade theme parameters."
+            },
+            {
+              "kind": "field",
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "description": "Current locale shown by the optional locale controls."
+            },
+            {
+              "kind": "method",
+              "name": "setLocale",
+              "description": "Updates the optional locale control and emits cascade-theme-locale-change."
+            },
+            {
+              "kind": "method",
+              "name": "applyToAllTargets",
+              "description": "Applies the active theme state and geometry register to every configured or picked theme target."
             },
             {
               "kind": "method",
@@ -43347,7 +43370,7 @@
             },
             {
               "name": "cascade-theme-target-change",
-              "description": "Emits after the active cascade theme target changes.",
+              "description": "Emits after the active cascade theme target changes or the eyedropper adds a picked target.",
               "detail": [
                 {
                   "name": "targetSelector",
@@ -43357,6 +43380,48 @@
                 },
                 {
                   "name": "storageKey",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "picked",
+                  "type": {
+                    "text": "boolean"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "cascade-theme-apply-all",
+              "description": "Emits after the active theme is applied to every configured target.",
+              "detail": [
+                {
+                  "name": "state",
+                  "type": {
+                    "text": "object"
+                  }
+                },
+                {
+                  "name": "targets",
+                  "type": {
+                    "text": "array"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "cascade-theme-locale-change",
+              "description": "Emits after the optional locale controls change language.",
+              "detail": [
+                {
+                  "name": "locale",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "source",
                   "type": {
                     "text": "string"
                   }
@@ -43448,6 +43513,10 @@
               "cascade-theme-controls",
               "theme-variants",
               "tab-shape-controls",
+              "geometry-registers",
+              "locale-controls",
+              "scope-apply-all",
+              "scope-picking",
               "copy-parameters",
               "reset-defaults",
               "local-storage",
@@ -43463,6 +43532,21 @@
                 "name": "target-selector",
                 "type": "string",
                 "description": "Optional CSS selector for the theme cascade target. Defaults to documentElement."
+              },
+              {
+                "name": "default-state",
+                "type": "string",
+                "description": "Optional JSON object or parameter string used as the reset fallback state."
+              },
+              {
+                "name": "pickable",
+                "type": "string",
+                "description": "Optional CSS selector for host elements the editor can add as individual theme targets."
+              },
+              {
+                "name": "locale",
+                "type": "string",
+                "description": "Optional active UI locale; when present the editor renders EN/RU/ES locale controls and emits cascade-theme-locale-change."
               }
             ],
             "properties": [
@@ -43470,6 +43554,11 @@
                 "name": "state",
                 "type": "object",
                 "description": "Normalized cascade theme state."
+              },
+              {
+                "name": "locale",
+                "type": "string",
+                "description": "Current locale shown by the optional locale controls."
               }
             ],
             "methods": [
@@ -43477,6 +43566,16 @@
                 "name": "setState",
                 "type": "function",
                 "description": "Applies normalized cascade theme parameters."
+              },
+              {
+                "name": "setLocale",
+                "type": "function",
+                "description": "Updates the optional locale control and emits cascade-theme-locale-change."
+              },
+              {
+                "name": "applyToAllTargets",
+                "type": "function",
+                "description": "Applies the active theme state and geometry register to every configured or picked theme target."
               },
               {
                 "name": "reset",
@@ -43506,7 +43605,7 @@
               },
               {
                 "name": "cascade-theme-target-change",
-                "description": "Emits after the active cascade theme target changes.",
+                "description": "Emits after the active cascade theme target changes or the eyedropper adds a picked target.",
                 "detail": [
                   {
                     "name": "targetSelector",
@@ -43514,6 +43613,38 @@
                   },
                   {
                     "name": "storageKey",
+                    "type": "string"
+                  },
+                  {
+                    "name": "picked",
+                    "type": "boolean"
+                  }
+                ]
+              },
+              {
+                "name": "cascade-theme-apply-all",
+                "description": "Emits after the active theme is applied to every configured target.",
+                "detail": [
+                  {
+                    "name": "state",
+                    "type": "object"
+                  },
+                  {
+                    "name": "targets",
+                    "type": "array"
+                  }
+                ]
+              },
+              {
+                "name": "cascade-theme-locale-change",
+                "description": "Emits after the optional locale controls change language.",
+                "detail": [
+                  {
+                    "name": "locale",
+                    "type": "string"
+                  },
+                  {
+                    "name": "source",
                     "type": "string"
                   }
                 ]
@@ -43701,7 +43832,7 @@
             }
           },
           "agent": {
-            "componentDescription": "Reusable cascade theme editor module for host layouts. Use this layout-hosted cascade theme control surface when composing theme UI. Capabilities: cascade-theme-controls, theme-variants, tab-shape-controls, copy-parameters, reset-defaults, local-storage, layout-panel. Data ownership: component-owned normalized theme state persisted through host-selected localStorage key; reset removes cascade-owned storage keys after applying defaults. WebMCP tools: cascade_theme_editor_apply.",
+            "componentDescription": "Reusable cascade theme editor module for host layouts. Use this layout-hosted cascade theme control surface when composing theme UI. Capabilities: cascade-theme-controls, theme-variants, tab-shape-controls, geometry-registers, locale-controls, scope-apply-all, scope-picking, copy-parameters, reset-defaults, local-storage, layout-panel. Data ownership: component-owned normalized theme state persisted through host-selected localStorage key; reset removes cascade-owned storage keys after applying defaults. WebMCP tools: cascade_theme_editor_apply.",
             "semanticRole": "layout-hosted cascade theme control surface",
             "usage": "Mount as a layout panel when an agent or user needs bounded live theme controls for a host shell. When opened from cascade-theme-widget, use the same storage-key and target-selector so quick controls and full controls edit one cascade theme state.",
             "dataOwnership": "component-owned normalized theme state persisted through host-selected localStorage key; reset removes cascade-owned storage keys after applying defaults",
@@ -43726,6 +43857,10 @@
                 "cascade-theme-controls",
                 "theme-variants",
                 "tab-shape-controls",
+                "geometry-registers",
+                "locale-controls",
+                "scope-apply-all",
+                "scope-picking",
                 "copy-parameters",
                 "reset-defaults",
                 "local-storage",
@@ -43749,8 +43884,13 @@
                 },
                 {
                   "name": "pickable",
-                  "description": "Enables host target picking controls when present.",
-                  "type": "boolean"
+                  "description": "Optional CSS selector for host elements the editor can add as individual theme targets.",
+                  "type": "string"
+                },
+                {
+                  "name": "locale",
+                  "description": "Optional active UI locale; when present the editor renders EN/RU/ES locale controls and emits cascade-theme-locale-change.",
+                  "type": "string"
                 }
               ],
               "properties": [
@@ -43758,6 +43898,11 @@
                   "name": "state",
                   "type": "object",
                   "description": "Normalized cascade theme state."
+                },
+                {
+                  "name": "locale",
+                  "type": "string",
+                  "description": "Current locale shown by the optional locale controls."
                 }
               ],
               "methods": [
@@ -43765,6 +43910,16 @@
                   "name": "setState",
                   "type": "function",
                   "description": "Applies normalized cascade theme parameters."
+                },
+                {
+                  "name": "setLocale",
+                  "type": "function",
+                  "description": "Updates the optional locale control and emits cascade-theme-locale-change."
+                },
+                {
+                  "name": "applyToAllTargets",
+                  "type": "function",
+                  "description": "Applies the active theme state and geometry register to every configured or picked theme target."
                 },
                 {
                   "name": "reset",
@@ -43794,6 +43949,52 @@
                   "detail": [
                     {
                       "name": "text",
+                      "type": "string"
+                    }
+                  ]
+                },
+                {
+                  "name": "cascade-theme-target-change",
+                  "description": "Emits after the active cascade theme target changes or the eyedropper adds a picked target.",
+                  "detail": [
+                    {
+                      "name": "targetSelector",
+                      "type": "string"
+                    },
+                    {
+                      "name": "storageKey",
+                      "type": "string"
+                    },
+                    {
+                      "name": "picked",
+                      "type": "boolean"
+                    }
+                  ]
+                },
+                {
+                  "name": "cascade-theme-apply-all",
+                  "description": "Emits after the active theme is applied to every configured target.",
+                  "detail": [
+                    {
+                      "name": "state",
+                      "type": "object"
+                    },
+                    {
+                      "name": "targets",
+                      "type": "array"
+                    }
+                  ]
+                },
+                {
+                  "name": "cascade-theme-locale-change",
+                  "description": "Emits after the optional locale controls change language.",
+                  "detail": [
+                    {
+                      "name": "locale",
+                      "type": "string"
+                    },
+                    {
+                      "name": "source",
                       "type": "string"
                     }
                   ]
