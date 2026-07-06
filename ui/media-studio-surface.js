@@ -57,6 +57,9 @@ export const MEDIA_STUDIO_STYLE_TOKENS = Object.freeze([
   '--sn-media-studio-pane-bg',
   '--sn-media-studio-pane-width',
   '--sn-media-studio-timeline-height',
+  '--sn-media-studio-timeline-header-width',
+  '--sn-media-studio-ruler-height',
+  '--sn-media-studio-track-height',
   '--sn-media-studio-control-height',
   '--sn-media-studio-progress-color',
   '--sn-media-studio-panel-gap',
@@ -210,7 +213,7 @@ export const MEDIA_STUDIO_SURFACE_STYLES = `
     grid-template-rows: minmax(0, 1fr);
     gap: 0;
     align-content: stretch;
-    min-block-size: var(--sn-media-studio-timeline-height, 172px);
+    min-block-size: var(--sn-media-studio-timeline-height, 220px);
     height: 100%;
     overflow: hidden;
     border: 1px solid var(--sn-media-studio-border, color-mix(in srgb, var(--sn-sys-on-surface) 12%, transparent));
@@ -221,9 +224,9 @@ export const MEDIA_STUDIO_SURFACE_STYLES = `
     min-block-size: 0;
     block-size: 100%;
     inline-size: 100%;
-    --te-header-width: 112px;
-    --te-track-height: var(--sn-media-studio-control-height, 28px);
-    --te-ruler-height: var(--sn-media-studio-control-height, 28px);
+    --te-header-width: var(--sn-media-studio-timeline-header-width, 140px);
+    --te-track-height: var(--sn-media-studio-track-height, 36px);
+    --te-ruler-height: var(--sn-media-studio-ruler-height, 28px);
     --te-playhead-color: var(--sn-media-studio-playhead-color, var(--sn-media-studio-progress-color, var(--sn-sys-accent)));
     --te-track-bg: var(--sn-media-studio-timeline-bg, var(--sn-sys-surface));
     --te-track-bg-alt: color-mix(in srgb, var(--sn-media-studio-timeline-bg, var(--sn-sys-surface)) 82%, var(--sn-sys-surface-panel));

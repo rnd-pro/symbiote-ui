@@ -124,6 +124,13 @@ test('media studio theme aliases are cascade-authored and consumed by styles', (
   assert.equal(theme.tokens['--sn-media-studio-progress-color'], 'var(--sn-sys-accent)');
   assert.match(theme.tokens['--sn-media-studio-preview-bg'], /var\(--sn-sys-surface\)/);
   assert.match(theme.tokens['--sn-media-studio-pane-bg'], /var\(--sn-sys-surface-panel\)/);
+  assert.equal(theme.tokens['--sn-media-studio-timeline-height'], '220px');
+  assert.equal(theme.tokens['--sn-media-studio-timeline-header-width'], '140px');
+  assert.equal(theme.tokens['--sn-media-studio-ruler-height'], '28px');
+  assert.equal(theme.tokens['--sn-media-studio-track-height'], '36px');
+  assert.match(MEDIA_STUDIO_SURFACE_STYLES, /--te-header-width: var\(--sn-media-studio-timeline-header-width, 140px\)/);
+  assert.match(MEDIA_STUDIO_SURFACE_STYLES, /--te-track-height: var\(--sn-media-studio-track-height, 36px\)/);
+  assert.match(MEDIA_STUDIO_SURFACE_STYLES, /--te-ruler-height: var\(--sn-media-studio-ruler-height, 28px\)/);
 });
 
 test('frame source provider metadata reports browser capability fallbacks', () => {
