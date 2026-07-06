@@ -29676,6 +29676,10 @@
               "description": "Theme CSS custom property consumed by cell-bg."
             },
             {
+              "name": "--sn-theme-cell-radius-scale",
+              "description": "Theme CSS custom property consumed by cell-bg."
+            },
+            {
               "name": "--sn-cell-size",
               "description": "Theme CSS custom property consumed by cell-bg."
             },
@@ -29847,6 +29851,7 @@
               "--sn-cell-vignette-mid",
               "--sn-cell-vignette-edge",
               "--sn-cell-noise",
+              "--sn-theme-cell-radius-scale",
               "--sn-cell-size",
               "--sn-cell-min-radius",
               "--sn-cell-max-radius",
@@ -30111,6 +30116,7 @@
                 "--sn-cell-vignette-mid",
                 "--sn-cell-vignette-edge",
                 "--sn-cell-noise",
+                "--sn-theme-cell-radius-scale",
                 "--sn-cell-size",
                 "--sn-cell-min-radius",
                 "--sn-cell-max-radius",
@@ -35319,7 +35325,19 @@
               "description": "Theme CSS custom property consumed by project-tabs."
             },
             {
+              "name": "--sn-tabs-shape",
+              "description": "Theme CSS custom property consumed by project-tabs."
+            },
+            {
               "name": "--sn-tabs-active-bg",
+              "description": "Theme CSS custom property consumed by project-tabs."
+            },
+            {
+              "name": "--sn-tabs-active-color",
+              "description": "Theme CSS custom property consumed by project-tabs."
+            },
+            {
+              "name": "--sn-tabs-active-border",
               "description": "Theme CSS custom property consumed by project-tabs."
             },
             {
@@ -35339,7 +35357,27 @@
               "description": "Theme CSS custom property consumed by project-tabs."
             },
             {
+              "name": "--sn-tabs-corner-radius",
+              "description": "Theme CSS custom property consumed by project-tabs."
+            },
+            {
               "name": "--sn-tabs-radius",
+              "description": "Theme CSS custom property consumed by project-tabs."
+            },
+            {
+              "name": "--sn-tabs-bar-align",
+              "description": "Theme CSS custom property consumed by project-tabs."
+            },
+            {
+              "name": "--sn-tabs-item-border-bottom",
+              "description": "Theme CSS custom property consumed by project-tabs."
+            },
+            {
+              "name": "--sn-tabs-active-border-bottom",
+              "description": "Theme CSS custom property consumed by project-tabs."
+            },
+            {
+              "name": "--sn-tabs-active-corner-display",
               "description": "Theme CSS custom property consumed by project-tabs."
             },
             {
@@ -35464,12 +35502,20 @@
               "--sn-tabs-height",
               "--sn-tabs-item-height",
               "--sn-tabs-bg",
+              "--sn-tabs-shape",
               "--sn-tabs-active-bg",
+              "--sn-tabs-active-color",
+              "--sn-tabs-active-border",
               "--sn-tabs-hover-bg",
               "--sn-tabs-border",
               "--sn-tabs-divider",
               "--sn-tabs-accent",
+              "--sn-tabs-corner-radius",
               "--sn-tabs-radius",
+              "--sn-tabs-bar-align",
+              "--sn-tabs-item-border-bottom",
+              "--sn-tabs-active-border-bottom",
+              "--sn-tabs-active-corner-display",
               "--sn-tabs-corner-size",
               "--sn-tabs-corner-cut",
               "--sn-tab-accent-0",
@@ -35634,6 +35680,9 @@
                 "--sn-tabs-border",
                 "--sn-tabs-divider",
                 "--sn-tabs-accent",
+                "--sn-tabs-active-color",
+                "--sn-tabs-active-border",
+                "--sn-tabs-corner-radius",
                 "--sn-tabs-radius",
                 "--sn-tabs-corner-size",
                 "--sn-tabs-corner-cut",
@@ -43229,7 +43278,7 @@
           "name": "CascadeThemeEditor",
           "tagName": "cascade-theme-editor",
           "description": "Reusable cascade theme editor module for host layouts.",
-          "componentDescription": "Reusable cascade theme editor module for host layouts. Use this layout-hosted cascade theme control surface when composing theme UI. Capabilities: cascade-theme-controls, copy-parameters, reset-defaults, local-storage, layout-panel. Data ownership: component-owned normalized theme state persisted through host-selected localStorage key; reset removes cascade-owned storage keys after applying defaults. WebMCP tools: cascade_theme_editor_apply.",
+          "componentDescription": "Reusable cascade theme editor module for host layouts. Use this layout-hosted cascade theme control surface when composing theme UI. Capabilities: cascade-theme-controls, theme-variants, tab-shape-controls, copy-parameters, reset-defaults, local-storage, layout-panel. Data ownership: component-owned normalized theme state persisted through host-selected localStorage key; reset removes cascade-owned storage keys after applying defaults. WebMCP tools: cascade_theme_editor_apply.",
           "attributes": [
             {
               "name": "storage-key",
@@ -43286,6 +43335,54 @@
                   "name": "state",
                   "type": {
                     "text": "object"
+                  }
+                },
+                {
+                  "name": "targetSelector",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "cascade-theme-target-change",
+              "description": "Emits after the active cascade theme target changes.",
+              "detail": [
+                {
+                  "name": "targetSelector",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "storageKey",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "cascade-geometry-register-change",
+              "description": "Emits after the active geometry register changes.",
+              "detail": [
+                {
+                  "name": "source",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "register",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "targetSelector",
+                  "type": {
+                    "text": "string"
                   }
                 }
               ]
@@ -43349,6 +43446,8 @@
           "contract": {
             "capabilities": [
               "cascade-theme-controls",
+              "theme-variants",
+              "tab-shape-controls",
               "copy-parameters",
               "reset-defaults",
               "local-storage",
@@ -43398,6 +43497,42 @@
                   {
                     "name": "state",
                     "type": "object"
+                  },
+                  {
+                    "name": "targetSelector",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "name": "cascade-theme-target-change",
+                "description": "Emits after the active cascade theme target changes.",
+                "detail": [
+                  {
+                    "name": "targetSelector",
+                    "type": "string"
+                  },
+                  {
+                    "name": "storageKey",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "name": "cascade-geometry-register-change",
+                "description": "Emits after the active geometry register changes.",
+                "detail": [
+                  {
+                    "name": "source",
+                    "type": "string"
+                  },
+                  {
+                    "name": "register",
+                    "type": "string"
+                  },
+                  {
+                    "name": "targetSelector",
+                    "type": "string"
                   }
                 ]
               },
@@ -43450,6 +43585,19 @@
                     "type": "object",
                     "additionalProperties": false,
                     "properties": {
+                      "themeVariant": {
+                        "enum": [
+                          "modern",
+                          "classic"
+                        ]
+                      },
+                      "tabShape": {
+                        "enum": [
+                          "frame",
+                          "ear",
+                          "classic-ear"
+                        ]
+                      },
                       "mode": {
                         "enum": [
                           "dark",
@@ -43501,6 +43649,26 @@
                         "minimum": 75,
                         "maximum": 140
                       },
+                      "radius": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "tabRadius": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "frameRadius": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 200
+                      },
+                      "frameGap": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 20
+                      },
                       "motion": {
                         "type": "number",
                         "minimum": 0,
@@ -43523,7 +43691,7 @@
             }
           },
           "agent": {
-            "componentDescription": "Reusable cascade theme editor module for host layouts. Use this layout-hosted cascade theme control surface when composing theme UI. Capabilities: cascade-theme-controls, copy-parameters, reset-defaults, local-storage, layout-panel. Data ownership: component-owned normalized theme state persisted through host-selected localStorage key; reset removes cascade-owned storage keys after applying defaults. WebMCP tools: cascade_theme_editor_apply.",
+            "componentDescription": "Reusable cascade theme editor module for host layouts. Use this layout-hosted cascade theme control surface when composing theme UI. Capabilities: cascade-theme-controls, theme-variants, tab-shape-controls, copy-parameters, reset-defaults, local-storage, layout-panel. Data ownership: component-owned normalized theme state persisted through host-selected localStorage key; reset removes cascade-owned storage keys after applying defaults. WebMCP tools: cascade_theme_editor_apply.",
             "semanticRole": "layout-hosted cascade theme control surface",
             "usage": "Mount as a layout panel when an agent or user needs bounded live theme controls for a host shell. When opened from cascade-theme-widget, use the same storage-key and target-selector so quick controls and full controls edit one cascade theme state.",
             "dataOwnership": "component-owned normalized theme state persisted through host-selected localStorage key; reset removes cascade-owned storage keys after applying defaults",
@@ -43546,6 +43714,8 @@
             "contract": {
               "capabilities": [
                 "cascade-theme-controls",
+                "theme-variants",
+                "tab-shape-controls",
                 "copy-parameters",
                 "reset-defaults",
                 "local-storage",
@@ -43657,6 +43827,19 @@
                       "type": "object",
                       "additionalProperties": false,
                       "properties": {
+                        "themeVariant": {
+                          "enum": [
+                            "modern",
+                            "classic"
+                          ]
+                        },
+                        "tabShape": {
+                          "enum": [
+                            "frame",
+                            "ear",
+                            "classic-ear"
+                          ]
+                        },
                         "mode": {
                           "enum": [
                             "dark",
@@ -43708,6 +43891,26 @@
                           "minimum": 75,
                           "maximum": 140
                         },
+                        "radius": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 100
+                        },
+                        "tabRadius": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 100
+                        },
+                        "frameRadius": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 200
+                        },
+                        "frameGap": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 20
+                        },
                         "motion": {
                           "type": "number",
                           "minimum": 0,
@@ -43752,7 +43955,7 @@
           "name": "CascadeThemeWidget",
           "tagName": "cascade-theme-widget",
           "description": "Compact global header widget for cascade theme quick controls.",
-          "componentDescription": "Compact global header widget for cascade theme quick controls. Use this global shell cascade theme quick control when composing theme UI. Capabilities: cascade-theme-quick-controls, copy-parameters, reset-defaults, open-full-editor, local-storage, global-shell-action. Data ownership: component-owned normalized quick theme state persisted through the same host-selected localStorage key as cascade-theme-editor; reset removes cascade-owned storage keys after applying defaults. WebMCP tools: cascade_theme_widget_open_full, cascade_theme_widget_apply_quick.",
+          "componentDescription": "Compact global header widget for cascade theme quick controls. Use this global shell cascade theme quick control when composing theme UI. Capabilities: cascade-theme-quick-controls, theme-variants, tab-shape-controls, copy-parameters, reset-defaults, open-full-editor, local-storage, global-shell-action. Data ownership: component-owned normalized quick theme state persisted through the same host-selected localStorage key as cascade-theme-editor; reset removes cascade-owned storage keys after applying defaults. WebMCP tools: cascade_theme_widget_open_full, cascade_theme_widget_apply_quick.",
           "attributes": [
             {
               "name": "storage-key",
@@ -43814,6 +44017,54 @@
                   "name": "state",
                   "type": {
                     "text": "object"
+                  }
+                },
+                {
+                  "name": "targetSelector",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "cascade-theme-target-change",
+              "description": "Emits after the active cascade theme target changes.",
+              "detail": [
+                {
+                  "name": "targetSelector",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "storageKey",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "cascade-geometry-register-change",
+              "description": "Emits after the active geometry register changes.",
+              "detail": [
+                {
+                  "name": "source",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "register",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "targetSelector",
+                  "type": {
+                    "text": "string"
                   }
                 }
               ]
@@ -43881,6 +44132,8 @@
           "contract": {
             "capabilities": [
               "cascade-theme-quick-controls",
+              "theme-variants",
+              "tab-shape-controls",
               "copy-parameters",
               "reset-defaults",
               "open-full-editor",
@@ -43931,6 +44184,42 @@
                   {
                     "name": "state",
                     "type": "object"
+                  },
+                  {
+                    "name": "targetSelector",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "name": "cascade-theme-target-change",
+                "description": "Emits after the active cascade theme target changes.",
+                "detail": [
+                  {
+                    "name": "targetSelector",
+                    "type": "string"
+                  },
+                  {
+                    "name": "storageKey",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "name": "cascade-geometry-register-change",
+                "description": "Emits after the active geometry register changes.",
+                "detail": [
+                  {
+                    "name": "source",
+                    "type": "string"
+                  },
+                  {
+                    "name": "register",
+                    "type": "string"
+                  },
+                  {
+                    "name": "targetSelector",
+                    "type": "string"
                   }
                 ]
               },
@@ -44010,6 +44299,19 @@
                     "type": "object",
                     "additionalProperties": false,
                     "properties": {
+                      "themeVariant": {
+                        "enum": [
+                          "modern",
+                          "classic"
+                        ]
+                      },
+                      "tabShape": {
+                        "enum": [
+                          "frame",
+                          "ear",
+                          "classic-ear"
+                        ]
+                      },
                       "mode": {
                         "enum": [
                           "dark",
@@ -44058,7 +44360,7 @@
             }
           },
           "agent": {
-            "componentDescription": "Compact global header widget for cascade theme quick controls. Use this global shell cascade theme quick control when composing theme UI. Capabilities: cascade-theme-quick-controls, copy-parameters, reset-defaults, open-full-editor, local-storage, global-shell-action. Data ownership: component-owned normalized quick theme state persisted through the same host-selected localStorage key as cascade-theme-editor; reset removes cascade-owned storage keys after applying defaults. WebMCP tools: cascade_theme_widget_open_full, cascade_theme_widget_apply_quick.",
+            "componentDescription": "Compact global header widget for cascade theme quick controls. Use this global shell cascade theme quick control when composing theme UI. Capabilities: cascade-theme-quick-controls, theme-variants, tab-shape-controls, copy-parameters, reset-defaults, open-full-editor, local-storage, global-shell-action. Data ownership: component-owned normalized quick theme state persisted through the same host-selected localStorage key as cascade-theme-editor; reset removes cascade-owned storage keys after applying defaults. WebMCP tools: cascade_theme_widget_open_full, cascade_theme_widget_apply_quick.",
             "semanticRole": "global shell cascade theme quick control",
             "usage": "Mount in a layout shell action slot with a host-selected storage-key and target-selector. Pair it with cascade-theme-editor by listening for cascade-theme-open-full and opening a host-approved panel-layout panel that uses the same storage-key and target-selector.",
             "dataOwnership": "component-owned normalized quick theme state persisted through the same host-selected localStorage key as cascade-theme-editor; reset removes cascade-owned storage keys after applying defaults",
@@ -44082,6 +44384,8 @@
             "contract": {
               "capabilities": [
                 "cascade-theme-quick-controls",
+                "theme-variants",
+                "tab-shape-controls",
                 "copy-parameters",
                 "reset-defaults",
                 "open-full-editor",
@@ -44226,6 +44530,19 @@
                       "type": "object",
                       "additionalProperties": false,
                       "properties": {
+                        "themeVariant": {
+                          "enum": [
+                            "modern",
+                            "classic"
+                          ]
+                        },
+                        "tabShape": {
+                          "enum": [
+                            "frame",
+                            "ear",
+                            "classic-ear"
+                          ]
+                        },
                         "mode": {
                           "enum": [
                             "dark",

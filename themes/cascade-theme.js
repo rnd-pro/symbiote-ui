@@ -6,12 +6,21 @@ import { geometryRegisterScaleTokens, GEOMETRY_PROFILE_NAMES } from '../tokens/s
 import {
   CASCADE_THEME_CONTROL_LIST,
   CASCADE_THEME_DEFAULTS,
+  CASCADE_THEME_TAB_SHAPES,
+  CASCADE_THEME_VARIANTS,
+  CASCADE_THEME_VARIANT_PRESETS,
 } from './cascade-theme-controls.js';
-export { CASCADE_THEME_DEFAULTS } from './cascade-theme-controls.js';
+export {
+  CASCADE_THEME_DEFAULTS,
+  CASCADE_THEME_TAB_SHAPES,
+  CASCADE_THEME_VARIANTS,
+  CASCADE_THEME_VARIANT_PRESETS,
+} from './cascade-theme-controls.js';
 
 export const CASCADE_THEME_TOKEN_TARGETS = Object.freeze({
   color: [
     '--sn-theme-name',
+    '--sn-theme-variant',
     '--sn-theme-hue',
     '--sn-theme-chroma',
     '--sn-theme-bg-lightness',
@@ -96,6 +105,9 @@ export const CASCADE_THEME_TOKEN_TARGETS = Object.freeze({
     '--sn-graph-type-class',
     '--sn-graph-type-module',
     '--sn-tabs-accent',
+    '--sn-tabs-shape',
+    '--sn-tabs-active-color',
+    '--sn-tabs-active-border',
     '--sn-tab-accent-0',
     '--sn-tab-accent-1',
     '--sn-tab-accent-2',
@@ -252,6 +264,8 @@ export const CASCADE_THEME_TOKEN_TARGETS = Object.freeze({
     '--sn-theme-density',
     '--sn-theme-spacing-scale',
     '--sn-theme-radius-scale',
+    '--sn-theme-tab-radius-scale',
+    '--sn-theme-cell-radius-scale',
     '--sn-node-header-gap',
     '--sn-node-header-padding',
     '--sn-node-collapsed-body-padding',
@@ -315,6 +329,11 @@ export const CASCADE_THEME_TOKEN_TARGETS = Object.freeze({
     '--sn-layout-scroll-inline-extra',
     '--sn-layout-overflow-block-size',
     '--sn-layout-responsive-panel-min-block-size',
+    '--sn-tabs-active-border-bottom',
+    '--sn-tabs-active-corner-display',
+    '--sn-tabs-bar-align',
+    '--sn-tabs-corner-radius',
+    '--sn-tabs-item-border-bottom',
     '--sn-lab-menu-gap',
     '--sn-lab-menu-separator-height',
     '--sn-lab-menu-button-gap',
@@ -465,8 +484,23 @@ export const CASCADE_THEME_DESCRIPTOR = Object.freeze({
       'applyCascadeThemeBundle',
       'isCascadeThemeBundle',
       'resetCascadeThemeScopes',
+      'readCascadeThemeScopeState',
+      'persistCascadeThemeScopeState',
+      'persistCascadeThemeScopeRegister',
+      'seedCascadeThemeScopeState',
+      'removeCascadeThemeScopeState',
+      'resolveCascadeThemeScopeTarget',
+      'applyCascadeThemeScope',
+      'applyCascadeThemeScopes',
+      'clearCascadeGeometryRegister',
+      'applyCascadeGeometryRegister',
+      'normalizeCascadeGeometryRegister',
+      'getCascadeThemeVariantPreset',
       'getCascadeThemeControls',
       'getReadableTextForHsl',
+      'normalizeCascadeTabShape',
+      'normalizeCascadeThemeVariant',
+      'resolveCascadeThemeVariantState',
     ],
   cascade: 'Apply once at :root, an app shell, or a subtree boundary. Components consume inherited --sn-* tokens through the CSS cascade.',
   controls: CASCADE_THEME_CONTROL_LIST,
@@ -665,9 +699,51 @@ export function getCascadeThemeControls() {
   return CASCADE_THEME_CONTROL_LIST.map((control) => ({ ...control }));
 }
 
+export function normalizeCascadeThemeVariant(value) {
+  return CASCADE_THEME_VARIANTS.includes(value) ? value : CASCADE_THEME_DEFAULTS.themeVariant;
+}
+
+export function normalizeCascadeTabShape(value) {
+  return CASCADE_THEME_TAB_SHAPES.includes(value) ? value : CASCADE_THEME_DEFAULTS.tabShape;
+}
+
+export function getCascadeThemeVariantPreset(variant) {
+  let normalized = normalizeCascadeThemeVariant(variant);
+  return { ...CASCADE_THEME_VARIANT_PRESETS[normalized] };
+}
+
+export function resolveCascadeThemeVariantState(variant, overrides = {}) {
+  let normalized = normalizeCascadeThemeVariant(variant);
+  return normalizeCascadeThemeOptions({
+    ...getCascadeThemeVariantPreset(normalized),
+    ...(overrides && typeof overrides === 'object' ? overrides : {}),
+    themeVariant: normalized,
+  });
+}
+
+function hasExplicitCascadeParam(input, key) {
+  if (!input || typeof input !== 'object') return false;
+  return input?.theme?.params?.[key] !== undefined
+    || input?.params?.[key] !== undefined
+    || input[key] !== undefined;
+}
+
+function applyVariantDefaults(params, input) {
+  let variant = normalizeCascadeThemeVariant(params.themeVariant);
+  let preset = CASCADE_THEME_VARIANT_PRESETS[variant] || CASCADE_THEME_VARIANT_PRESETS.modern;
+  let merged = { ...params, themeVariant: variant };
+  for (let [key, value] of Object.entries(preset)) {
+    if (key === 'themeVariant') continue;
+    if (!hasExplicitCascadeParam(input, key)) merged[key] = value;
+  }
+  merged.tabShape = normalizeCascadeTabShape(merged.tabShape);
+  return merged;
+}
+
 export const CASCADE_BUNDLE_VERSION = 1;
 const CASCADE_BUNDLE_NAMED_MARKER = '::win::';
-const CASCADE_BUNDLE_REGISTER_SUFFIX = '::geometry-register';
+export const CASCADE_THEME_REGISTER_STORAGE_SUFFIX = '::geometry-register';
+const CASCADE_BUNDLE_REGISTER_SUFFIX = CASCADE_THEME_REGISTER_STORAGE_SUFFIX;
 
 function getCascadeThemeStorage() {
   if (typeof window !== 'undefined' && window.localStorage) return window.localStorage;
@@ -684,6 +760,16 @@ function parseStoredState(value) {
     void error;
     return null;
   }
+}
+
+function scopeStorageKey(scope) {
+  if (typeof scope === 'string') return scope;
+  return scope?.storageKey || '';
+}
+
+export function normalizeCascadeGeometryRegister(register) {
+  if (register === 'default') return '';
+  return GEOMETRY_PROFILE_NAMES.includes(register) ? register : '';
 }
 
 export function isCascadeThemeBundle(value) {
@@ -794,9 +880,9 @@ export function applyCascadeThemeBundle(bundle, scopeDefs, options = {}) {
   let runApply = (target, entry) => {
     if (!applyState || target == null) return;
     let { register, ...params } = entry || {};
-    void register;
     try {
       applyState(target, params);
+      applyCascadeGeometryRegister(target, register);
     } catch (error) {
       void error;
     }
@@ -824,21 +910,25 @@ export function clearCascadeThemeInlineTokens(element) {
   for (let prop of Array.from(element.style)) {
     if (prop.startsWith('--sn')) element.style.removeProperty(prop);
   }
+  element.removeAttribute?.('data-cascade-theme-variant');
+  element.removeAttribute?.('data-cascade-tab-shape');
 }
 
-function clearCascadeGeometryRegister(element) {
+export function clearCascadeGeometryRegister(element) {
   if (!element?.style) return;
   for (let token of Object.keys(geometryRegisterScaleTokens('product'))) {
     element.style.removeProperty(token);
   }
 }
 
-function applyCascadeGeometryRegister(element, register) {
+export function applyCascadeGeometryRegister(element, register) {
   clearCascadeGeometryRegister(element);
-  if (!GEOMETRY_PROFILE_NAMES.includes(register)) return;
-  for (let [token, value] of Object.entries(geometryRegisterScaleTokens(register))) {
+  let normalized = normalizeCascadeGeometryRegister(register);
+  if (!normalized) return '';
+  for (let [token, value] of Object.entries(geometryRegisterScaleTokens(normalized))) {
     element.style.setProperty(token, value);
   }
+  return normalized;
 }
 
 function removeCascadeThemeStorage(storage, storageKey) {
@@ -857,7 +947,7 @@ function readScopeDefaultState(scope, fallback) {
     let { register, ...params } = raw;
     return {
       state: normalizeCascadeThemeOptions(params),
-      register: GEOMETRY_PROFILE_NAMES.includes(register) ? register : '',
+      register: normalizeCascadeGeometryRegister(register),
     };
   }
   return { state: normalizeCascadeThemeOptions(raw), register: '' };
@@ -867,6 +957,128 @@ function defaultResolveThemeTarget(scope, doc) {
   if (!doc) return null;
   if (scope?.selector) return doc.querySelector(scope.selector);
   return doc.documentElement;
+}
+
+export function readCascadeThemeScopeState(scope, options = {}) {
+  let storage = options.storage || getCascadeThemeStorage();
+  let storageKey = scopeStorageKey(scope);
+  let stored = null;
+  if (storage && storageKey) {
+    try {
+      stored = parseStoredState(storage.getItem(storageKey));
+    } catch (error) {
+      void error;
+    }
+  }
+  let base = stored
+    ? readScopeDefaultState({ defaultState: stored }, options.defaultState)
+    : readScopeDefaultState(scope, options.defaultState);
+  let register = base.register;
+  if (storage && storageKey) {
+    try {
+      let rawRegister = storage.getItem(storageKey + CASCADE_BUNDLE_REGISTER_SUFFIX);
+      if (rawRegister !== null) register = normalizeCascadeGeometryRegister(rawRegister);
+    } catch (error) {
+      void error;
+    }
+  }
+  return { ...base.state, register };
+}
+
+export function persistCascadeThemeScopeState(scope, state = {}, options = {}) {
+  let storage = options.storage || getCascadeThemeStorage();
+  let storageKey = scopeStorageKey(scope);
+  if (!storage || !storageKey) return readCascadeThemeScopeState(scope, options);
+  let source = state && typeof state === 'object' ? state : {};
+  let { register, ...params } = source;
+  let normalized = normalizeCascadeThemeOptions(params);
+  try {
+    storage.setItem(storageKey, JSON.stringify(normalized));
+    if ('register' in source) {
+      storage.setItem(storageKey + CASCADE_BUNDLE_REGISTER_SUFFIX, normalizeCascadeGeometryRegister(register));
+    }
+  } catch (error) {
+    void error;
+  }
+  return 'register' in source
+    ? { ...normalized, register: normalizeCascadeGeometryRegister(register) }
+    : readCascadeThemeScopeState(scope, options);
+}
+
+export function persistCascadeThemeScopeRegister(scope, register, options = {}) {
+  let storage = options.storage || getCascadeThemeStorage();
+  let storageKey = scopeStorageKey(scope);
+  let normalized = normalizeCascadeGeometryRegister(register);
+  if (!storage || !storageKey) return normalized;
+  try {
+    storage.setItem(storageKey + CASCADE_BUNDLE_REGISTER_SUFFIX, normalized);
+  } catch (error) {
+    void error;
+  }
+  return normalized;
+}
+
+export function seedCascadeThemeScopeState(scope, options = {}) {
+  let storage = options.storage || getCascadeThemeStorage();
+  let storageKey = scopeStorageKey(scope);
+  let fallback = readScopeDefaultState(scope, options.defaultState);
+  if (!storage || !storageKey) return { ...fallback.state, register: fallback.register };
+  let stored = null;
+  try {
+    stored = parseStoredState(storage.getItem(storageKey));
+    if (!stored) storage.setItem(storageKey, JSON.stringify(fallback.state));
+    if (storage.getItem(storageKey + CASCADE_BUNDLE_REGISTER_SUFFIX) === null && fallback.register) {
+      storage.setItem(storageKey + CASCADE_BUNDLE_REGISTER_SUFFIX, fallback.register);
+    }
+  } catch (error) {
+    void error;
+  }
+  return readCascadeThemeScopeState(scope, { ...options, storage });
+}
+
+export function removeCascadeThemeScopeState(scope, options = {}) {
+  let storage = options.storage || getCascadeThemeStorage();
+  removeCascadeThemeStorage(storage, scopeStorageKey(scope));
+}
+
+export function resolveCascadeThemeScopeTarget(scope, options = {}) {
+  let doc = options.document || (typeof document !== 'undefined' ? document : null);
+  return defaultResolveThemeTarget(scope, doc);
+}
+
+export function applyCascadeThemeScope(scope, options = {}) {
+  let target = options.target || resolveCascadeThemeScopeTarget(scope, options);
+  if (!target) return null;
+  let rawState = options.state
+    ? { ...options.state }
+    : readCascadeThemeScopeState(scope, options);
+  let { register, ...params } = rawState;
+  let theme = applyCascadeTheme(target, normalizeCascadeThemeOptions(params), {
+    notify: options.notify ?? false,
+    source: options.source || 'theme-scope',
+    targetSelector: scope?.selector,
+    ...(options.eventOptions || {}),
+  });
+  let normalizedRegister = applyCascadeGeometryRegister(target, register);
+  if (options.persist) {
+    persistCascadeThemeScopeState(scope, { ...theme.state, register: normalizedRegister }, options);
+  }
+  return {
+    scope,
+    target,
+    state: theme.state,
+    register: normalizedRegister,
+    theme,
+  };
+}
+
+export function applyCascadeThemeScopes(scopeDefs = [], options = {}) {
+  let results = [];
+  for (let scope of scopeDefs || []) {
+    let result = applyCascadeThemeScope(scope, options);
+    if (result) results.push(result);
+  }
+  return results;
 }
 
 export function resetCascadeThemeScopes(scopeDefs = [], options = {}) {
@@ -941,13 +1153,15 @@ export function resetCascadeThemeScopes(scopeDefs = [], options = {}) {
 
 export function normalizeCascadeThemeOptions(options = {}) {
   let resolved = resolveCascadeThemeRecipe(options);
-  let merged = { ...CASCADE_THEME_DEFAULTS, ...resolved.params };
+  let merged = applyVariantDefaults({ ...CASCADE_THEME_DEFAULTS, ...resolved.params }, options);
   let mode = merged.mode === 'light' ? 'light' : 'dark';
   let bgLightness = finiteNumber(merged.bgLightness, CASCADE_THEME_DEFAULTS.bgLightness);
   let surfaceLightness = finiteNumber(merged.surfaceLightness, CASCADE_THEME_DEFAULTS.surfaceLightness);
   let accentLightness = finiteNumber(merged.accentLightness, CASCADE_THEME_DEFAULTS.accentLightness);
   let accentChroma = finiteNumber(merged.accentChroma, CASCADE_THEME_DEFAULTS.accentChroma);
   return {
+    themeVariant: normalizeCascadeThemeVariant(merged.themeVariant),
+    tabShape: normalizeCascadeTabShape(merged.tabShape),
     mode,
     brightness: clamp(merged.brightness, 0, 100, CASCADE_THEME_DEFAULTS.brightness),
     contrast: clamp(merged.contrast, 0, 100, CASCADE_THEME_DEFAULTS.contrast),
@@ -963,6 +1177,8 @@ export function normalizeCascadeThemeOptions(options = {}) {
     heading: clamp(merged.heading, 80, 140, CASCADE_THEME_DEFAULTS.heading),
     density: clamp(merged.density, 75, 140, CASCADE_THEME_DEFAULTS.density),
     radius: clamp(merged.radius, 0, 100, CASCADE_THEME_DEFAULTS.radius),
+    tabRadius: clamp(merged.tabRadius, 0, 100, CASCADE_THEME_DEFAULTS.tabRadius),
+    cellRadius: clamp(merged.cellRadius, 0, 100, CASCADE_THEME_DEFAULTS.cellRadius),
     frameRadius: clamp(merged.frameRadius, 0, 200, CASCADE_THEME_DEFAULTS.frameRadius),
     frameGap: clamp(merged.frameGap, 0, 20, CASCADE_THEME_DEFAULTS.frameGap),
     motion: clamp(merged.motion, 0, 200, CASCADE_THEME_DEFAULTS.motion),
@@ -971,15 +1187,18 @@ export function normalizeCascadeThemeOptions(options = {}) {
 
 export function createCascadeTheme(options = {}) {
   let resolvedRecipe = resolveCascadeThemeRecipe(options);
-  let state = normalizeCascadeThemeOptions(resolvedRecipe.params);
+  let state = normalizeCascadeThemeOptions(options);
+  resolvedRecipe = { ...resolvedRecipe, params: state };
   let dark = state.mode === 'dark';
   let outlineStrength = state.outline / 100;
   let typeScale = state.type / 100;
   let headingScale = state.heading / 100;
   let densityScale = state.density / 100;
   let radiusScale = state.radius / CASCADE_THEME_DEFAULTS.radius;
+  let tabRadiusScale = state.tabRadius / CASCADE_THEME_DEFAULTS.tabRadius;
+  let cellRadiusScale = state.cellRadius / CASCADE_THEME_DEFAULTS.cellRadius;
   // frameRadius is a 0-200 dial referenced to 100 = the provider baseline (panels round
-  // 12px * radius-scale, tabs are top-round). At the default (100) the emitted frame/tabs
+  // 12px * radius-scale). At the default (100) the emitted frame
   // tokens equal the provider's, so existing layouts are unchanged; 0 flattens, 200 doubles.
   let frameFactor = state.frameRadius / 100;
   let frameGapPx = state.frameGap;
@@ -987,8 +1206,13 @@ export function createCascadeTheme(options = {}) {
   // padding only grows once panels round BEYOND the provider baseline, so default panels
   // keep their original (zero) content inset.
   let frameInsetCss = `calc(max(0px, ${frameRadiusCss} - 12px) * 0.7)`;
-  // frameRadius intentionally does NOT touch the tabs — they keep the provider's own
-  // tab-strip shape regardless of the panel frame dial.
+  let tabIsEar = state.tabShape === 'ear' || state.tabShape === 'classic-ear';
+  let tabIsClassicEar = state.tabShape === 'classic-ear';
+  let tabRadiusCss = `calc(8px * var(--sn-theme-density, 1) * ${tabRadiusScale.toFixed(3)})`;
+  let tabShapeRadius = tabIsEar ? `${tabRadiusCss} ${tabRadiusCss} 0 0` : tabRadiusCss;
+  let activeTabBorder = state.outline === 0
+    ? 'transparent'
+    : 'color-mix(in oklab, var(--tab-accent, var(--sn-tabs-accent)) 44%, transparent)';
   let motionScale = state.motion / 100;
   let patternScale = state.pattern / 100;
   let motionEnabled = motionScale > 0;
@@ -1077,6 +1301,8 @@ export function createCascadeTheme(options = {}) {
 
   let tokens = {
     'color-scheme': dark ? 'dark' : 'light',
+    '--sn-theme-variant': state.themeVariant,
+    '--sn-tabs-shape': state.tabShape,
     '--sn-theme-name': 'cascade-theme',
     '--sn-theme-hue': String(state.hue),
     '--sn-theme-chroma': neutralChroma,
@@ -1089,6 +1315,8 @@ export function createCascadeTheme(options = {}) {
     '--sn-theme-density': densityScale.toFixed(2),
     '--sn-theme-spacing-scale': densityScale.toFixed(2),
     '--sn-theme-radius-scale': radiusScale.toFixed(2),
+    '--sn-theme-tab-radius-scale': tabRadiusScale.toFixed(2),
+    '--sn-theme-cell-radius-scale': cellRadiusScale.toFixed(2),
     '--sn-theme-frame-radius-scale': frameFactor.toFixed(2),
     '--sn-frame-radius': frameRadiusCss,
     '--sn-frame-inset': frameInsetCss,
@@ -1238,6 +1466,8 @@ export function createCascadeTheme(options = {}) {
     '--sn-canvas-graph-radial-icon': 'var(--sn-sys-surface)',
     '--sn-tabs-accent': 'var(--sn-cat-server)',
     '--sn-tabs-active-bg': 'var(--sn-sys-surface-raised)',
+    '--sn-tabs-active-color': 'var(--sn-sys-on-surface)',
+    '--sn-tabs-active-border': activeTabBorder,
     '--sn-tab-accent-0': 'var(--sn-cat-server)',
     '--sn-tab-accent-1': 'var(--sn-cat-data)',
     '--sn-tab-accent-2': 'var(--sn-cat-control)',
@@ -1590,7 +1820,16 @@ export function createCascadeTheme(options = {}) {
     '--sn-button-gap': densityToken(6),
     '--sn-button-min-height': densityToken(30),
     '--sn-button-icon-size': densityToken(28),
-    '--sn-tabs-radius': radiusToken(8),
+    '--sn-tabs-corner-radius': tabRadiusCss,
+    '--sn-tabs-radius': tabShapeRadius,
+    '--sn-tabs-bar-align': tabIsEar ? 'flex-end' : 'center',
+    '--sn-tabs-item-border-bottom': tabIsEar ? 'none' : '1px solid var(--sn-tabs-item-border, transparent)',
+    '--sn-tabs-active-border-bottom': tabIsEar
+      ? 'none'
+      : '1px solid var(--sn-tabs-active-border, color-mix(in oklab, var(--tab-accent, var(--sn-tabs-accent)) 44%, transparent))',
+    '--sn-tabs-active-corner-display': tabIsClassicEar ? 'block' : 'none',
+    '--sn-tabs-corner-size': '12px',
+    '--sn-tabs-corner-cut': '11.5px',
     '--sn-tabs-bar-padding': `0 ${densityToken(12)}`,
     '--sn-tabs-item-gap': densityToken(6),
     '--sn-tabs-item-padding': `0 ${densityToken(10)}`,
@@ -1781,8 +2020,8 @@ export function createCascadeTheme(options = {}) {
     '--sn-status-ribbon-max-width': densityToken(500),
     '--sn-status-ribbon-dots-width': densityToken(16),
     '--sn-cell-size': densityToken(14),
-    '--sn-cell-min-radius': radiusToken(2),
-    '--sn-cell-max-radius': radiusToken(5),
+    '--sn-cell-min-radius': `calc(2px * var(--sn-theme-cell-radius-scale, 1))`,
+    '--sn-cell-max-radius': `calc(5px * var(--sn-theme-cell-radius-scale, 1))`,
     '--sn-cell-step-ms': `${Math.round(75 / densityScale)}ms`,
     '--sn-cell-fade-rate': `${(0.025 + (1 / densityScale) * 0.015).toFixed(3)}`,
     '--sn-lab-toolbar-gap': densityToken(12),
@@ -1939,6 +2178,8 @@ export function applyCascadeTheme(element, options = {}, eventOptions = {}) {
   for (let [key, value] of Object.entries(theme.tokens)) {
     element?.style?.setProperty(key, value);
   }
+  element?.setAttribute?.('data-cascade-theme-variant', theme.state.themeVariant);
+  element?.setAttribute?.('data-cascade-tab-shape', theme.state.tabShape);
   if (eventOptions.notify !== false && typeof CustomEvent === 'function') {
     element?.dispatchEvent?.(new CustomEvent('cascade-theme-change', {
       bubbles: true,

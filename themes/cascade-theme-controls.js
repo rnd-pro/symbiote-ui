@@ -1,4 +1,25 @@
+export const CASCADE_THEME_VARIANTS = Object.freeze(['modern', 'classic']);
+export const CASCADE_THEME_TAB_SHAPES = Object.freeze(['frame', 'ear', 'classic-ear']);
+
 export const CASCADE_THEME_CONTROL_LIST = Object.freeze([
+  {
+    name: 'themeVariant',
+    type: 'enum',
+    values: CASCADE_THEME_VARIANTS,
+    default: 'modern',
+    labels: { modern: 'Modern', classic: 'Classic' },
+    icon: 'palette',
+    description: 'Top-level visual theme family. Modern is the current cascade; Classic recreates the earlier Agent Portal shell direction.',
+  },
+  {
+    name: 'tabShape',
+    type: 'enum',
+    values: CASCADE_THEME_TAB_SHAPES,
+    default: 'frame',
+    labels: { frame: 'Frame', ear: 'Ear', 'classic-ear': 'Classic ear' },
+    icon: 'tab',
+    description: 'Project tab geometry: current framed tabs, flat-bottom ear tabs, or the classic ear tabs with outward rounded joins.',
+  },
   {
     name: 'mode',
     type: 'enum',
@@ -89,6 +110,15 @@ export const CASCADE_THEME_CONTROL_LIST = Object.freeze([
     description: 'Intensity of animated cell-bg dots; ambient gradients and noise stay stable.',
   },
   {
+    name: 'cellRadius',
+    type: 'number',
+    min: 0,
+    max: 100,
+    default: 17,
+    icon: 'blur_circular',
+    description: 'Animated cell-bg dot radius scale, independent from UI corner radius so sharp panels do not shrink chat background circles.',
+  },
+  {
     name: 'outline',
     type: 'number',
     min: 0,
@@ -134,13 +164,22 @@ export const CASCADE_THEME_CONTROL_LIST = Object.freeze([
     description: 'Corner-radius scale for reusable controls, cards, tables, graph chrome, chat surfaces, and layout panels.',
   },
   {
+    name: 'tabRadius',
+    type: 'number',
+    min: 0,
+    max: 100,
+    default: 17,
+    icon: 'tab',
+    description: 'Project tab corner-radius scale. Frame tabs use it on all corners; ear and classic-ear tabs use it only on the top corners.',
+  },
+  {
     name: 'frameRadius',
     type: 'number',
     min: 0,
     max: 200,
     default: 80,
     icon: 'crop_square',
-    description: 'Corner radius of the outer layout frames (panels) and tabs, independent of the inner radius; also cascades into their inner padding so content stays clear of the rounded corners.',
+    description: 'Corner radius of the outer layout frames (panels), independent of the inner radius; also cascades into their inner padding so content stays clear of the rounded corners.',
   },
   {
     name: 'frameGap',
@@ -169,3 +208,35 @@ export const CASCADE_THEME_PARAM_NAMES = Object.freeze(
 export const CASCADE_THEME_DEFAULTS = Object.freeze(Object.fromEntries(
   CASCADE_THEME_CONTROL_LIST.map((control) => [control.name, control.default])
 ));
+
+export const CASCADE_THEME_VARIANT_PRESETS = Object.freeze({
+  modern: Object.freeze({
+    ...CASCADE_THEME_DEFAULTS,
+    themeVariant: 'modern',
+    tabShape: 'frame',
+  }),
+  classic: Object.freeze({
+    ...CASCADE_THEME_DEFAULTS,
+    themeVariant: 'classic',
+    tabShape: 'classic-ear',
+    mode: 'dark',
+    brightness: 0,
+    contrast: 58,
+    chroma: 89,
+    hue: 218,
+    bgLightness: -1,
+    surfaceLightness: -1,
+    accentLightness: -1,
+    accentChroma: -1,
+    pattern: 60,
+    outline: 0,
+    type: 100,
+    heading: 100,
+    density: 100,
+    radius: 0,
+    tabRadius: 17,
+    frameRadius: 0,
+    frameGap: 0,
+    motion: 100,
+  }),
+});

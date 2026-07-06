@@ -17,6 +17,25 @@ export function cascadeThemeModeControls({ className, darkPressed, lightPressed 
   `;
 }
 
+export function cascadeThemeVariantControls({ className, modernPressed, classicPressed }) {
+  return html`
+    <div class="${className}" aria-label="Theme variant">
+      <button type="button" data-theme-variant="modern" ${{ onclick: 'onVariantPick', '@aria-pressed': modernPressed }}>Modern</button>
+      <button type="button" data-theme-variant="classic" ${{ onclick: 'onVariantPick', '@aria-pressed': classicPressed }}>Classic</button>
+    </div>
+  `;
+}
+
+export function cascadeThemeTabShapeControls({ className, framePressed, earPressed, classicEarPressed }) {
+  return html`
+    <div class="${className}" aria-label="Tab shape">
+      <button type="button" data-tab-shape="frame" ${{ onclick: 'onTabShapePick', '@aria-pressed': framePressed }}>Frame</button>
+      <button type="button" data-tab-shape="ear" ${{ onclick: 'onTabShapePick', '@aria-pressed': earPressed }}>Ear</button>
+      <button type="button" data-tab-shape="classic-ear" ${{ onclick: 'onTabShapePick', '@aria-pressed': classicEarPressed }}>Classic ear</button>
+    </div>
+  `;
+}
+
 export function cascadeThemeRegisterControls({
   className,
   defaultPressed,

@@ -2,8 +2,9 @@ import { html } from '@symbiotejs/symbiote';
 import {
   cascadeThemeActionButton,
   cascadeThemeModeControls,
-  cascadeThemeRegisterControls,
+  cascadeThemeTabShapeControls,
   cascadeThemeTargetControls,
+  cascadeThemeVariantControls,
 } from '../CascadeThemeControls.tpl.js';
 
 export default html`
@@ -31,12 +32,13 @@ export default html`
 
     ${cascadeThemeModeControls({ className: 'cte-mode', darkPressed: 'modeDark', lightPressed: 'modeLight' })}
 
-    ${cascadeThemeRegisterControls({
-      className: 'cte-mode cte-register',
-      defaultPressed: 'registerDefault',
-      productPressed: 'registerProduct',
-      toolPressed: 'registerTool',
-      spaciousPressed: 'registerSpacious',
+    ${cascadeThemeVariantControls({ className: 'cte-mode cte-variant', modernPressed: 'variantModern', classicPressed: 'variantClassic' })}
+
+    ${cascadeThemeTabShapeControls({
+      className: 'cte-mode cte-tab-shape',
+      framePressed: 'tabShapeFrame',
+      earPressed: 'tabShapeEar',
+      classicEarPressed: 'tabShapeClassicEar',
     })}
 
     <div class="cte-controls" ref="controls" itemize="controlsList">

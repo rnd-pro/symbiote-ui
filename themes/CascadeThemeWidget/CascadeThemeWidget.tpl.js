@@ -2,8 +2,9 @@ import { html } from '@symbiotejs/symbiote';
 import {
   cascadeThemeActionButton,
   cascadeThemeModeControls,
-  cascadeThemeRegisterControls,
+  cascadeThemeTabShapeControls,
   cascadeThemeTargetControls,
+  cascadeThemeVariantControls,
 } from '../CascadeThemeControls.tpl.js';
 
 export default html`
@@ -44,12 +45,12 @@ export default html`
       labelClassName: 'ctw-target-label',
     })}
     ${cascadeThemeModeControls({ className: 'ctw-mode', darkPressed: 'modeDarkActive', lightPressed: 'modeLightActive' })}
-    ${cascadeThemeRegisterControls({
-      className: 'ctw-mode ctw-register',
-      defaultPressed: 'registerDefaultActive',
-      productPressed: 'registerProductActive',
-      toolPressed: 'registerToolActive',
-      spaciousPressed: 'registerSpaciousActive',
+    ${cascadeThemeVariantControls({ className: 'ctw-mode ctw-variant', modernPressed: 'variantModernActive', classicPressed: 'variantClassicActive' })}
+    ${cascadeThemeTabShapeControls({
+      className: 'ctw-mode ctw-tab-shape',
+      framePressed: 'tabShapeFrameActive',
+      earPressed: 'tabShapeEarActive',
+      classicEarPressed: 'tabShapeClassicEarActive',
     })}
     <div class="ctw-controls" ref="controls" itemize="controlsList">
       <template>

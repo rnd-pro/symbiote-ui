@@ -43,43 +43,57 @@ test('geometryRegisterScaleTokens emits the density knobs a register preview wri
   assert.equal('--sn-step-6' in tool, false);
 });
 
-test('the cascade theme editor exposes a geometry register toggle', async () => {
+test('the cascade theme editor keeps geometry register APIs while exposing variant and tab shape controls', async () => {
   let [source, template, controls] = await Promise.all([
     readFile(editorSource, 'utf8'),
     readFile(editorTemplate, 'utf8'),
     readFile(sharedTemplate, 'utf8'),
   ]);
 
-  // template offers Default + every canonical register
-  assert.match(template, /cascadeThemeRegisterControls/);
-  assert.match(controls, /data-geometry-register=""/);
+  assert.doesNotMatch(template, /cascadeThemeRegisterControls/);
+  assert.match(template, /cascadeThemeVariantControls/);
+  assert.match(template, /cascadeThemeTabShapeControls/);
+  assert.match(controls, /data-theme-variant="modern"/);
+  assert.match(controls, /data-theme-variant="classic"/);
+  assert.match(controls, /data-tab-shape="frame"/);
+  assert.match(controls, /data-tab-shape="ear"/);
+  assert.match(controls, /data-tab-shape="classic-ear"/);
+  // The helper stays exported for stored bundles and host-driven geometry previews.
   for (let register of GEOMETRY_PROFILE_NAMES) {
     assert.match(controls, new RegExp(`data-geometry-register="${register}"`));
   }
   assert.doesNotMatch(template, /=\{\{/);
 
-  // component wires the toggle to the scale and applies it to the target
-  assert.match(source, /geometryRegisterScaleTokens/);
+  // component wires the toggle through the shared provider helper.
+  assert.match(source, /applyCascadeGeometryRegister/);
+  assert.match(source, /persistCascadeThemeScopeRegister/);
   assert.match(source, /onRegisterPick/);
   assert.match(source, /#applyGeometryRegister/);
   assert.match(source, /cascade-geometry-register-change/);
   assert.match(source, /get geometryRegister\(\)/);
 });
 
-test('the cascade theme widget exposes the same geometry register toggle', async () => {
+test('the cascade theme widget keeps geometry register APIs while exposing variant and tab shape controls', async () => {
   let [source, template, controls] = await Promise.all([
     readFile(widgetSource, 'utf8'),
     readFile(widgetTemplate, 'utf8'),
     readFile(sharedTemplate, 'utf8'),
   ]);
 
-  assert.match(template, /cascadeThemeRegisterControls/);
-  assert.match(controls, /data-geometry-register=""/);
+  assert.doesNotMatch(template, /cascadeThemeRegisterControls/);
+  assert.match(template, /cascadeThemeVariantControls/);
+  assert.match(template, /cascadeThemeTabShapeControls/);
+  assert.match(controls, /data-theme-variant="modern"/);
+  assert.match(controls, /data-theme-variant="classic"/);
+  assert.match(controls, /data-tab-shape="frame"/);
+  assert.match(controls, /data-tab-shape="ear"/);
+  assert.match(controls, /data-tab-shape="classic-ear"/);
   for (let register of GEOMETRY_PROFILE_NAMES) {
     assert.match(controls, new RegExp(`data-geometry-register="${register}"`));
   }
   assert.doesNotMatch(template, /'@aria-expanded': 'isOpen'/);
-  assert.match(source, /geometryRegisterScaleTokens/);
+  assert.match(source, /applyCascadeGeometryRegister/);
+  assert.match(source, /persistCascadeThemeScopeRegister/);
   assert.match(source, /#applyGeometryRegister/);
   assert.match(source, /#syncRegisterButtons/);
 });

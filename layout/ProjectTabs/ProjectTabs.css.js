@@ -9,9 +9,30 @@ project-tabs {
   position: relative;
 }
 
+[data-cascade-tab-shape="ear"] project-tabs,
+[data-cascade-tab-shape="classic-ear"] project-tabs,
+project-tabs[data-cascade-tab-shape="ear"],
+project-tabs[data-cascade-tab-shape="classic-ear"],
+:host([data-cascade-tab-shape="ear"]),
+:host([data-cascade-tab-shape="classic-ear"]) {
+  --sn-tabs-ear-radius: var(--sn-tabs-corner-radius, var(--sn-tabs-radius, 8px));
+  --sn-tabs-bar-align: flex-end;
+  --sn-tabs-item-border-bottom: none;
+  --sn-tabs-active-border-bottom: none;
+  --sn-tabs-radius: var(--sn-tabs-ear-radius) var(--sn-tabs-ear-radius) 0 0;
+}
+
+[data-cascade-tab-shape="classic-ear"] project-tabs,
+project-tabs[data-cascade-tab-shape="classic-ear"],
+:host([data-cascade-tab-shape="classic-ear"]) {
+  --sn-tabs-active-corner-display: block;
+  --sn-tabs-corner-size: 12px;
+  --sn-tabs-corner-cut: 11.5px;
+}
+
 .tab-bar {
   display: flex;
-  align-items: center;
+  align-items: var(--sn-tabs-bar-align, center);
   height: 100%;
   padding: var(--sn-tabs-bar-padding, 0 12px);
   overflow-x: auto;
@@ -33,6 +54,7 @@ project-tab-item {
   padding: var(--sn-tabs-item-padding, 0 10px);
   height: var(--sn-tabs-item-height);
   border: 1px solid var(--sn-tabs-item-border, transparent);
+  border-bottom: var(--sn-tabs-item-border-bottom, 1px solid var(--sn-tabs-item-border, transparent));
   background: transparent;
   color: var(--sn-sys-on-surface-dim);
   cursor: pointer;
@@ -65,17 +87,44 @@ project-tab-item[disabled] {
 .tab[active],
 project-tab-item[active] {
   background: var(--sn-tabs-active-bg);
-  border-color: color-mix(in oklab, var(--tab-accent, var(--sn-tabs-accent)) 44%, transparent);
+  border-color: var(--sn-tabs-active-border, color-mix(in oklab, var(--tab-accent, var(--sn-tabs-accent)) 44%, transparent));
+  border-bottom: var(--sn-tabs-active-border-bottom, 1px solid var(--sn-tabs-active-border, color-mix(in oklab, var(--tab-accent, var(--sn-tabs-accent)) 44%, transparent)));
   color: var(--sn-sys-on-surface);
   /* the active tab inverts its background, so derive a legible label colour from
      that background's own lightness instead of the surrounding text colour */
-  color: oklch(from var(--sn-tabs-active-bg) calc((l - 0.5) * -1000) 0 0);
+  color: var(--sn-tabs-active-color, oklch(from var(--sn-tabs-active-bg) calc((l - 0.5) * -1000) 0 0));
+  z-index: 3;
 }
 
-.tab::after,
-project-tab-item::after {
+.tab[active]::before,
+project-tab-item[active]::before,
+.tab[active]::after,
+project-tab-item[active]::after {
   content: '';
-  display: var(--sn-tabs-chrome, block);
+  display: var(--sn-tabs-active-corner-display, none);
+  position: absolute;
+  bottom: 0;
+  width: var(--sn-tabs-corner-size, 12px);
+  height: var(--sn-tabs-corner-size, 12px);
+  pointer-events: none;
+}
+
+.tab[active]::before,
+project-tab-item[active]::before {
+  left: calc(-1 * var(--sn-tabs-corner-size, 12px));
+  background: radial-gradient(circle at 0 0, transparent var(--sn-tabs-corner-cut, 11.5px), var(--sn-tabs-active-bg) var(--sn-tabs-corner-size, 12px));
+}
+
+.tab[active]::after,
+project-tab-item[active]::after {
+  right: calc(-1 * var(--sn-tabs-corner-size, 12px));
+  background: radial-gradient(circle at 100% 0, transparent var(--sn-tabs-corner-cut, 11.5px), var(--sn-tabs-active-bg) var(--sn-tabs-corner-size, 12px));
+}
+
+.tab:not([active])::after,
+project-tab-item:not([active])::after {
+  content: '';
+  display: var(--sn-tabs-divider-display, var(--sn-tabs-chrome, block));
   position: absolute;
   right: var(--sn-step-0, -2px);
   top: 25%;
@@ -84,10 +133,8 @@ project-tab-item::after {
   background: var(--sn-tabs-divider);
 }
 
-.tab:hover::after,
-.tab[active]::after,
-project-tab-item:hover::after,
-project-tab-item[active]::after {
+.tab:not([active]):hover::after,
+project-tab-item:not([active]):hover::after {
   content: none;
 }
 

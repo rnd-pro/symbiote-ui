@@ -98,6 +98,10 @@ The `pattern` control tunes animated background dots through
 `--sn-cell-base-alpha`, `--sn-cell-alpha-span`, and
 `--sn-theme-pattern-brightness`; glare, vignette, and noise stay stable so the
 ambient gradient does not shift with dot intensity.
+The `cellRadius` control is separate from UI corner radius and writes
+`--sn-theme-cell-radius-scale`, which drives `--sn-cell-min-radius` and
+`--sn-cell-max-radius` for `cell-bg`. Sharp panels can therefore use
+`radius: 0` without shrinking the animated chat background circles.
 
 `createCascadeTheme()` also derives readable foreground tokens for colored
 controls. The same Node-safe formula is exposed as `getReadableTextForHsl()`;
@@ -140,3 +144,74 @@ surface remains recoverable. `removeUiPanel()` is the destructive operation that
 physically removes a temporary panel and may restore the captured host layout
 when the last temporary panel is removed. Persistent host layout panels use
 `Remove` when the host deliberately edits the split tree.
+
+## Theme Variants and Tab Shape
+
+The bounded cascade state includes two discrete theme variants:
+
+- `themeVariant: "modern"` is the current runtime cascade and defaults to
+  `tabShape: "frame"`.
+- `themeVariant: "classic"` restores the earlier Agent Portal shell direction
+  (`hue: 218`, `chroma: 89`, dark 10/13 derived surfaces, pattern 0.60),
+  uses sharp/no-outline chrome, and defaults to `tabShape: "classic-ear"`.
+  It keeps `bgLightness`, `surfaceLightness`, `accentLightness`, and
+  `accentChroma` on auto so the brightness and chroma sliders keep affecting
+  the whole cascade instead of only part of the UI.
+
+`tabShape` is a separate enum so hosts can mix the visual family and tab
+geometry without changing theme recipes or geometry registers:
+
+- `frame` keeps the current fully framed tab button.
+- `ear` uses a flat-bottom active tab aligned to the tab-strip baseline.
+- `classic-ear` adds the old outward rounded joins using the
+  `--sn-tabs-corner-size` and `--sn-tabs-corner-cut` tokens. It does not draw a
+  tab-strip separator line.
+
+`tabRadius` is independent from the general `radius` control. `frame` applies
+the derived `--sn-tabs-radius` to all tab corners; `ear` and `classic-ear`
+apply it only to the top corners. Hosts that need a window scope to colour an
+outer tab strip should copy public tab tokens such as `--sn-tabs-active-bg`,
+`--sn-tabs-active-color`, and `--sn-tabs-accent` onto that tab strip instead of
+duplicating component CSS.
+
+`applyCascadeTheme()` writes `data-cascade-theme-variant` and
+`data-cascade-tab-shape` on the target for scoped CSS inspection while keeping
+the portable values in the normalized `cascade-theme-change` state.
+
+## Scoped Theme State
+
+Hosts with more than one cascade boundary should pass explicit scope
+descriptors to `cascade-theme-widget` and `cascade-theme-editor`:
+
+```js
+let scopes = [
+  { id: 'base', selector: '#app-shell', storageKey: 'app:theme:base', defaultState: baseTheme },
+  { id: 'windows', selector: '#window-host', storageKey: 'app:theme:windows', defaultState: windowTheme },
+];
+
+themeWidget.scopes = scopes;
+themeEditor.targets = scopes;
+```
+
+The shared helpers keep persistence and application behavior out of product
+code:
+
+```js
+import {
+  applyCascadeThemeScope,
+  readCascadeThemeScopeState,
+  seedCascadeThemeScopeState,
+  removeCascadeThemeScopeState,
+} from 'symbiote-ui';
+
+seedCascadeThemeScopeState(scopes[0]);
+let state = readCascadeThemeScopeState(scopes[0]);
+applyCascadeThemeScope(scopes[0], { state, persist: true });
+```
+
+Geometry registers are stored beside the scope using
+`CASCADE_THEME_REGISTER_STORAGE_SUFFIX` and applied with
+`applyCascadeGeometryRegister()`. The public helper and
+`cascade-geometry-register-change` event remain for stored bundles and
+host-driven geometry previews; the visible editor controls use `themeVariant`
+and `tabShape` instead of exposing the register presets directly.

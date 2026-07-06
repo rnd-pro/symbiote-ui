@@ -140,6 +140,10 @@ export default css`
       background: var(--sn-sys-surface);
     }
 
+    .cte-tab-shape {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
     .cte-mode button {
       display: block;
       text-align: center;

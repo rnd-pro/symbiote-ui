@@ -81,6 +81,7 @@ export const CASCADE_THEME_VISUAL_SMOKE_TOKEN_GROUPS = Object.freeze({
     '--sn-grid-size',
     '--sn-cell-bg',
     '--sn-cell-dot',
+    '--sn-theme-cell-radius-scale',
     '--sn-theme-pattern-brightness',
     '--sn-cell-base-alpha',
     '--sn-cell-alpha-span',

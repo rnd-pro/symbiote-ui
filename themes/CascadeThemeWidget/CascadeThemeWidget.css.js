@@ -55,7 +55,7 @@ export default css`
     --sn-overlay-z-base: var(--sn-ctw-z, 20000);
     z-index: var(--sn-ctw-z, var(--sn-overlay-z-base, 20000));
     display: grid;
-    grid-template-rows: auto auto auto auto;
+    grid-auto-rows: auto;
     gap: var(--sn-ctw-gap, calc(var(--sn-step-4, 8px) * var(--sn-theme-density, 1)));
     width: min(92vw, var(--sn-ctw-width, 320px));
     max-width: calc(100vw - 16px);
@@ -155,6 +155,11 @@ export default css`
     border: 1px solid var(--sn-sys-outline);
     border-radius: var(--sn-node-radius, 8px);
     background: var(--sn-sys-surface);
+  }
+
+  cascade-theme-widget .ctw-tab-shape,
+  .ctw-popover[data-overlay-portal] .ctw-tab-shape {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   cascade-theme-widget .ctw-targets,

@@ -31,6 +31,7 @@ export let THEME_METADATA = {
       '--sn-theme-text-lightness',
       '--sn-theme-density',
       '--sn-theme-radius-scale',
+      '--sn-theme-cell-radius-scale',
       '--sn-theme-pattern-brightness',
       '--sn-theme-motion-scale',
       '--sn-motion-enabled',
@@ -128,6 +129,7 @@ export let THEME_CONTROLS = {
     { name: 'textLightness', type: 'percentage', default: '94%', cssVar: '--sn-theme-text-lightness', description: 'Foreground text lightness inherited by text aliases.' },
     { name: 'density', type: 'number', default: '1', cssVar: '--sn-theme-density', description: 'Density multiplier for repeated navigation row height.' },
     { name: 'radius', type: 'number', default: '1', cssVar: '--sn-theme-radius-scale', description: 'Radius multiplier for node, row, list, composer, and source action corners.' },
+    { name: 'cellRadius', type: 'number', default: '1', cssVar: '--sn-theme-cell-radius-scale', description: 'Cellular background dot-radius multiplier, independent from UI corner radius.' },
     { name: 'pattern', type: 'number', default: '0.60', cssVar: '--sn-theme-pattern-brightness', description: 'Animated cell dot intensity; gradients, glare, and noise stay independent.' },
     { name: 'motion', type: 'number', default: '1', cssVar: '--sn-theme-motion-scale', description: 'Global motion multiplier for transitions and feedback effects.' },
     { name: 'elevation', type: 'number', default: '1', cssVar: '--sn-theme-elevation-scale', description: 'Global shadow and overlay intensity multiplier.' },
@@ -206,7 +208,7 @@ export let THEME_ELEMENT_GROUPS = [
   {
     name: 'tab',
     description: 'Project and document tabs with active, hover, divider, and close affordances.',
-    tokens: ['--sn-tabs-bg', '--sn-tabs-border', '--sn-tabs-active-bg', '--sn-tabs-hover-bg', '--sn-tabs-accent', '--sn-tabs-radius'],
+    tokens: ['--sn-tabs-bg', '--sn-tabs-border', '--sn-tabs-active-bg', '--sn-tabs-active-color', '--sn-tabs-active-border', '--sn-tabs-hover-bg', '--sn-tabs-accent', '--sn-tabs-corner-radius', '--sn-tabs-radius'],
     usedBy: ['project-tabs'],
   },
 ];
@@ -477,6 +479,8 @@ export let THEME_RULE_BLOCKS = [
       '--sn-chat-user-message-bg',
       '--sn-chat-agent-message-bg',
       '--sn-tabs-active-bg',
+      '--sn-tabs-active-color',
+      '--sn-tabs-active-border',
       '--sn-source-header-bg',
       '--sn-source-editor-bg',
       '--sn-syntax-keyword',
@@ -563,6 +567,8 @@ export let THEME_RULE_BLOCKS = [
       { output: '--sn-xr-pointer-color', inputs: ['--sn-sys-accent'], expression: 'var(--sn-sys-accent)', description: 'XR pointer feedback follows the shared selected/accent color.' },
       { output: '--sn-composer-bg', inputs: ['--sn-sys-surface-raised'], expression: 'var(--sn-sys-surface-raised)', description: 'Chat composer inherits the normal node surface.' },
       { output: '--sn-tabs-active-bg', inputs: ['--sn-sys-surface-raised'], expression: 'var(--sn-sys-surface-raised)', description: 'Active project tabs align with node surfaces.' },
+      { output: '--sn-tabs-active-color', inputs: ['--sn-sys-on-surface'], expression: 'var(--sn-sys-on-surface)', description: 'Active project tab text follows readable provider foreground text.' },
+      { output: '--sn-tabs-active-border', inputs: ['--sn-tabs-accent'], expression: 'color-mix(in oklab, var(--tab-accent, var(--sn-tabs-accent)) 44%, transparent)', description: 'Active project tab outlines can be themed or made transparent by the cascade.' },
       { output: '--sn-tabs-accent', inputs: ['--sn-sys-accent'], expression: 'var(--sn-sys-accent)', description: 'Project tab icons inherit the shared selected/accent color unless the host supplies a semantic tab accent.' },
       { output: '--sn-source-editor-bg', inputs: ['--sn-sys-surface'], expression: 'var(--sn-sys-surface)', description: 'Source editing uses the root background for code contrast.' },
       { output: '--sn-syntax-keyword', inputs: ['syntax.keyword'], expression: 'hsl(var(--sn-hue-danger) var(--sn-sat-vivid) 82%)', description: 'Code keywords derive from the status hue cascade.' },
@@ -603,6 +609,7 @@ export let THEME_TOKENS = {
           "--sn-theme-text-lightness",
           "--sn-theme-density",
           "--sn-theme-radius-scale",
+          "--sn-theme-cell-radius-scale",
           "--sn-theme-pattern-brightness",
           "--sn-theme-motion-scale",
           "--sn-motion-enabled",
@@ -654,6 +661,10 @@ export let THEME_TOKENS = {
         "$value": "1"
       },
       "radius": {
+        "$type": "number",
+        "$value": "1"
+      },
+      "cellRadius": {
         "$type": "number",
         "$value": "1"
       },

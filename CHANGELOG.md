@@ -6,6 +6,13 @@ All notable changes to `symbiote-ui` will be documented in this file.
 
 ### Added
 
+- Added cascade theme variants (`modern`, `classic`) and project tab shape
+  controls (`frame`, `ear`, `classic-ear`) so hosts can restore the older Agent
+  Portal tab geometry without product-local CSS.
+- Added an independent `tabRadius` cascade control and public active-tab color
+  tokens, and removed the experimental tab-strip separator line.
+- Added an independent `cellRadius` cascade control so animated `cell-bg` dot
+  sizes are no longer coupled to UI corner radius.
 - Added `createDialogueStage`, `playDialogueTimeline`, `buildAlternatingTimeline`,
   and `createDialoguePlayer` for multi-voice narrated tours — overlapping
   per-persona speechSynthesis, a cue-driven timeline, and a play/pause/seek
@@ -30,6 +37,10 @@ All notable changes to `symbiote-ui` will be documented in this file.
 
 ### Fixed
 
+- Fixed cascade theme widget/editor slider rows staying stale or failing to
+  apply range input after switching theme variants, and tuned the `classic`
+  preset to sharp, no-outline chrome while keeping its lightness and chroma
+  controls fully live.
 - Added themed content insets for `sn-description-list` and `sn-scroll-area`,
   and centered collapsed `layout-sidebar` items so library-composed workspaces
   do not need local padding fixes.

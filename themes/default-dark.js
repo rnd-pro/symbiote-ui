@@ -10,6 +10,7 @@
 import { themedScrollbarRootStyles } from './scrollbar-styles.js';
 
 const DEFAULT_DARK_TOKENS = {
+  '--sn-theme-variant': 'modern',
   '--sn-theme-hue': '218',
   '--sn-theme-chroma': '89%',
   '--sn-theme-bg-lightness': '10%',
@@ -17,6 +18,8 @@ const DEFAULT_DARK_TOKENS = {
   '--sn-theme-text-lightness': '94%',
   '--sn-theme-density': '1',
   '--sn-theme-radius-scale': '1',
+  '--sn-theme-tab-radius-scale': '1',
+  '--sn-theme-cell-radius-scale': '1',
   '--sn-theme-pattern-brightness': '0.60',
   '--sn-theme-motion-scale': '1',
   '--sn-theme-elevation-scale': '1',
@@ -114,6 +117,8 @@ const DEFAULT_DARK_TOKENS = {
   '--sn-cell-vignette-mid': 'hsl(var(--sn-hue-base) var(--sn-sat-muted) var(--sn-lit-bg) / 0.7)',
   '--sn-cell-vignette-edge': 'var(--sn-sys-surface)',
   '--sn-cell-noise': 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'1.5\' numOctaves=\'2\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\' opacity=\'0.030\'/%3E%3C/svg%3E")',
+  '--sn-cell-min-radius': 'calc(2px * var(--sn-theme-cell-radius-scale, 1))',
+  '--sn-cell-max-radius': 'calc(5px * var(--sn-theme-cell-radius-scale, 1))',
 
   '--sn-sys-surface-raised': 'var(--sn-sys-surface-panel)',
   '--sn-sys-outline': 'hsl(var(--sn-hue-base) var(--sn-sat-muted) var(--sn-lit-text) / 0.1)',
@@ -352,8 +357,11 @@ const DEFAULT_DARK_TOKENS = {
   '--sn-tabs-height': '38px',
   '--sn-tabs-item-height': '32px',
   '--sn-tabs-bg': 'transparent',
+  '--sn-tabs-shape': 'frame',
   '--sn-tabs-border': 'hsl(var(--sn-hue-base) var(--sn-sat-muted) var(--sn-lit-text) / 0.08)',
   '--sn-tabs-active-bg': 'var(--sn-sys-surface-raised)',
+  '--sn-tabs-active-color': 'var(--sn-sys-on-surface)',
+  '--sn-tabs-active-border': 'color-mix(in oklab, var(--tab-accent, var(--sn-tabs-accent)) 44%, transparent)',
   '--sn-tabs-hover-bg': 'hsl(var(--sn-hue-base) var(--sn-sat-muted) var(--sn-lit-text) / 0.04)',
   '--sn-tabs-divider': 'hsl(var(--sn-hue-base) var(--sn-sat-muted) var(--sn-lit-text) / 0.1)',
   '--sn-tabs-accent': 'var(--sn-sys-accent)',
@@ -363,7 +371,8 @@ const DEFAULT_DARK_TOKENS = {
   '--sn-tab-accent-3': 'var(--sn-cat-instance)',
   '--sn-tab-accent-4': 'var(--sn-type-action)',
   '--sn-tab-accent-5': 'var(--sn-cat-class)',
-  '--sn-tabs-radius': 'calc(8px * var(--sn-theme-radius-scale))',
+  '--sn-tabs-corner-radius': 'calc(8px * var(--sn-theme-density, 1) * var(--sn-theme-tab-radius-scale, 1))',
+  '--sn-tabs-radius': 'var(--sn-tabs-corner-radius)',
   '--sn-tabs-corner-size': '12px',
   '--sn-tabs-corner-cut': '11.5px',
 
@@ -779,6 +788,8 @@ const DEFAULT_DARK_PALETTE_COLORS = {
   '--sn-theme-text-lightness': '94%',
   '--sn-theme-density': '1',
   '--sn-theme-radius-scale': '1',
+  '--sn-theme-tab-radius-scale': '1',
+  '--sn-theme-cell-radius-scale': '1',
   '--sn-theme-motion-scale': '1',
   '--sn-theme-elevation-scale': '1',
   '--sn-hue-base': '0',
