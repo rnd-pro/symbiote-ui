@@ -156,8 +156,18 @@ test('theme scroll chrome helpers use cascade tokens', async () => {
     /const SCROLLBAR_COLOR = 'var\(--sn-scrollbar-thumb, currentColor\) var\(--sn-scrollbar-track, transparent\)'/
   );
   assert.match(scrollFade, /const SCROLL_SHADOW_SIZE = 'var\(--sn-scroll-shadow-size, 14px\)'/);
-  assert.match(scrollFade, /mask-image: \$\{mask\};/);
-  assert.match(scrollFade, /-webkit-mask-image: \$\{mask\};/);
+  assert.match(scrollFade, /const SCROLL_FADE_MASK_PROPERTY = '--sn-scroll-fade-mask'/);
+  assert.match(scrollFade, /const SCROLL_FADE_THRESHOLD = 1/);
+  assert.match(scrollFade, /\$\{SCROLL_FADE_AXIS_PROPERTY\}: \$\{axis\};/);
+  assert.match(scrollFade, /\$\{SCROLL_FADE_ACTIVE_MASK_PROPERTY\}: \$\{mask\};/);
+  assert.match(scrollFade, /-webkit-mask-image: var\(\$\{SCROLL_FADE_MASK_PROPERTY\}\);/);
+  assert.match(scrollFade, /mask-image: var\(\$\{SCROLL_FADE_MASK_PROPERTY\}\);/);
+  assert.match(scrollFade, /maskSize\.includes\('100% 100%'\)/);
+  assert.match(scrollFade, /maskRepeat\.includes\('no-repeat'\)/);
+  assert.match(scrollFade, /inlineOverflow && !blockOverflow/);
+  assert.match(scrollFade, /blockOverflow && !inlineOverflow/);
+  assert.match(scrollFade, /updateScrollFadeAncestors/);
+  assert.match(scrollFade, /ResizeObserver/);
 });
 
 test('cascade theme lab mutates root tokens instead of applying local component themes', async () => {
@@ -2405,6 +2415,9 @@ test('scroll edge fade is available on reusable scroll hosts', async () => {
   assert.match(scrollFade, /--sn-scroll-shadow-size/);
   assert.match(scrollFade, /themedScrollFadeBlockStyles/);
   assert.match(scrollFade, /themedScrollFadeInlineStyles/);
+  assert.match(scrollFade, /data-sn-scroll-fade-active/);
+  assert.match(scrollFade, /scrollHeight > element\.clientHeight/);
+  assert.match(scrollFade, /scrollWidth > element\.clientWidth/);
 
   let scrollFadeHosts = [
     '../board/KanbanBoard/KanbanBoard.css.js',

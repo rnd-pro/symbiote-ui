@@ -109,9 +109,10 @@ The composer textarea uses `--sn-composer-input-padding`, whose inline inset
 expands from `--sn-composer-radius` so text stays visually aligned inside
 rounded composer surfaces.
 `scrollShadow` writes `--sn-scroll-shadow-size` and controls the short
-scroll-edge fade used by reusable scroll hosts. The effect uses a CSS mask
-rather than a colored overlay, so clipped content fades into the actual
-surface behind it and the visible edge always inherits the local background.
+scroll-edge fade used by reusable scroll hosts. The reusable scroll-fade
+controller keeps the CSS mask disabled until the host actually overflows on its
+configured single axis, so empty or not-yet-scrollable regions do not show edge
+gradients.
 Set `scrollShadow: 0` to disable the fade.
 Pan/drag canvases such as `node-canvas` and `canvas-graph` do not use the
 scroll-edge fade; it is reserved for conventional one-axis scroll surfaces such
