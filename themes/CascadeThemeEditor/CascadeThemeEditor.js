@@ -6,6 +6,8 @@ import {
   applyCascadeTheme,
   applyCascadeThemeBundle,
   CASCADE_THEME_DEFAULTS,
+  clearCascadeGeometryRegister,
+  clearCascadeThemeInlineTokens,
   getCascadeThemeControls,
   isCascadeThemeBundle,
   normalizeCascadeGeometryRegister,
@@ -14,6 +16,7 @@ import {
   persistCascadeThemeScopeRegister,
   persistCascadeThemeScopeState,
   readCascadeThemeScopeState,
+  removeCascadeThemeScopeState,
   resetCascadeThemeScopes,
   resolveCascadeThemeVariantState,
   serializeCascadeThemeBundle,
@@ -25,7 +28,7 @@ const DEFAULT_STORAGE_KEY = 'symbiote-ui:cascade-theme-editor';
 const CONTROL_ICONS = getCascadeThemeControls()
   .map((control) => control.icon)
   .filter(Boolean);
-const ICONS = [...new Set(['palette', 'content_copy', 'restart_alt', 'data_object', 'language', 'select_all', ...CONTROL_ICONS])];
+const ICONS = [...new Set(['palette', 'content_copy', 'restart_alt', 'data_object', 'language', 'select_all', 'delete', ...CONTROL_ICONS])];
 const LOCALE_VALUES = SUPPORTED_LOCALES.filter((locale) => ['en', 'ru', 'es'].includes(locale));
 
 function parseStoredState(value) {
@@ -104,6 +107,12 @@ export class CascadeThemeEditor extends Symbiote {
     onTargetPick: (event) => {
       let id = event.currentTarget?.dataset?.targetId;
       if (id) this.#pickTarget(id);
+    },
+    onTargetRemove: (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      let id = event.currentTarget?.dataset?.targetId;
+      if (id) this.removeTarget(id);
     },
     onPickStart: () => this.#enterPickMode(),
     onControlInput: (event) => {
@@ -271,8 +280,28 @@ export class CascadeThemeEditor extends Symbiote {
       icon: entry.icon || 'web_asset',
       hint: entry.hint || entry.selector || '',
       active: String(entry.id === this.#activeTargetId),
+      removable: this.#isRemovableTarget(entry),
+      removeHidden: !this.#isRemovableTarget(entry),
+      removeLabel: `Remove ${entry.label || entry.id}`,
     }));
     this.$.hasTargets = this.#targetDefs.length > 1;
+  }
+
+  #isRemovableTarget(target) {
+    return Boolean(target?.removable || String(target?.id || '').startsWith('pick:'));
+  }
+
+  #targetEventDetail(target, extra = {}) {
+    return {
+      id: target.id,
+      name: target.name || target.label || target.id,
+      label: target.label || target.name || target.id,
+      icon: target.icon || 'web_asset',
+      selector: target.selector || '',
+      storageKey: target.storageKey || '',
+      picked: this.#isRemovableTarget(target),
+      ...extra,
+    };
   }
 
   #pickTarget(id) {
@@ -284,7 +313,51 @@ export class CascadeThemeEditor extends Symbiote {
     this.dispatchEvent(new CustomEvent('cascade-theme-target-change', {
       bubbles: true,
       composed: true,
-      detail: { id, selector: target.selector, storageKey: target.storageKey },
+      detail: this.#targetEventDetail(target),
+    }));
+  }
+
+  removeTarget(id, options = {}) {
+    let index = this.#targetDefs.findIndex((entry) => entry.id === id);
+    let target = this.#targetDefs[index];
+    if (index < 0 || !this.#isRemovableTarget(target)) return false;
+    this.#exitPickMode();
+    let wasActive = target.id === this.#activeTargetId;
+    this.#teardownTarget(target);
+    this.#targetDefs.splice(index, 1);
+    let active = this.#targetDefs.find((entry) => entry.id === this.#activeTargetId) || this.#targetDefs[0] || null;
+    this.#activeTargetId = active ? active.id : '';
+    this.#renderTargets();
+    if (active) this.#setActiveTarget(active);
+    else {
+      this.#syncControls();
+      this.#syncRegisterButtons();
+    }
+    this.#dispatchTargetRemove(target, options.source || 'remove-target');
+    if (wasActive && active) {
+      this.dispatchEvent(new CustomEvent('cascade-theme-target-change', {
+        bubbles: true,
+        composed: true,
+        detail: this.#targetEventDetail(active, { source: options.source || 'remove-target' }),
+      }));
+    }
+    return true;
+  }
+
+  #teardownTarget(target) {
+    let element = this.#resolveScopeTarget(target);
+    if (element) {
+      clearCascadeThemeInlineTokens(element);
+      clearCascadeGeometryRegister(element);
+    }
+    removeCascadeThemeScopeState({ storageKey: target.storageKey });
+  }
+
+  #dispatchTargetRemove(target, source) {
+    this.dispatchEvent(new CustomEvent('cascade-theme-target-remove', {
+      bubbles: true,
+      composed: true,
+      detail: this.#targetEventDetail(target, { source }),
     }));
   }
 
@@ -399,7 +472,7 @@ export class CascadeThemeEditor extends Symbiote {
     this.dispatchEvent(new CustomEvent('cascade-theme-target-change', {
       bubbles: true,
       composed: true,
-      detail: { id: descriptor.id, selector: descriptor.selector, storageKey: descriptor.storageKey, picked: true },
+      detail: this.#targetEventDetail(descriptor, { source: 'pick', picked: true }),
     }));
   }
 
@@ -516,13 +589,14 @@ export class CascadeThemeEditor extends Symbiote {
       ? defs
       : [{ id: 'active', selector: this.targetSelector, storageKey: this.storageKey, defaultState: def }];
     let originalId = this.#activeTargetId;
+    let removedTargets = defs.filter((target) => this.#isRemovableTarget(target));
     let result = resetCascadeThemeScopes(scopes, {
       source: 'reset',
       defaultState: def,
       activeId: originalId,
       activeSelector: this.targetSelector,
       activeStorageKey: this.storageKey,
-      isNamedScope: (target) => String(target.id).startsWith('pick:'),
+      isNamedScope: (target) => this.#isRemovableTarget(target),
       resolveScopeTarget: (target) => this.#resolveScopeTarget(target),
       namedSelector: '[data-theme-key]',
     });
@@ -537,6 +611,7 @@ export class CascadeThemeEditor extends Symbiote {
     } else {
       this.#syncControls();
     }
+    for (let target of removedTargets) this.#dispatchTargetRemove(target, 'reset');
     this.#syncRegisterButtons();
     this.#setStatus('saved');
     this.dispatchEvent(new CustomEvent('cascade-theme-change', {

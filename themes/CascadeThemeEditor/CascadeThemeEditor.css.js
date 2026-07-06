@@ -199,8 +199,17 @@ export default css`
       gap: var(--sn-theme-editor-mode-gap, var(--sn-lab-segment-gap, 6px));
     }
 
+    .cte-target-item {
+      display: inline-flex;
+      align-items: stretch;
+      flex: 1 1 auto;
+      min-width: 0;
+      gap: var(--sn-theme-editor-target-item-gap, 3px);
+    }
+
     .cte-pick,
-    .cte-apply-all {
+    .cte-apply-all,
+    .cte-target-remove {
       box-sizing: border-box;
       display: inline-flex;
       align-items: center;
@@ -219,23 +228,27 @@ export default css`
     }
 
     .cte-pick[hidden],
-    .cte-apply-all[hidden] {
+    .cte-apply-all[hidden],
+    .cte-target-remove[hidden] {
       display: none;
     }
 
     .cte-pick .material-symbols-outlined,
-    .cte-apply-all .material-symbols-outlined {
+    .cte-apply-all .material-symbols-outlined,
+    .cte-target-remove .material-symbols-outlined {
       font-size: var(--sn-button-icon-font-size, 16px);
     }
 
     .cte-pick:hover,
-    .cte-apply-all:hover {
+    .cte-apply-all:hover,
+    .cte-target-remove:hover {
       background: var(--sn-button-hover-bg, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-raised)));
       color: var(--sn-sys-on-surface);
     }
 
     .cte-pick:focus-visible,
-    .cte-apply-all:focus-visible {
+    .cte-apply-all:focus-visible,
+    .cte-target-remove:focus-visible {
       outline: var(--sn-effect-focus-ring, 2px solid var(--sn-sys-focus-ring));
       outline-offset: var(--sn-sys-focus-ring-offset);
     }

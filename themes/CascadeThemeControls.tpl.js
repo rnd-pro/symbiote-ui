@@ -74,8 +74,13 @@ export function cascadeThemeTargetControls({
   listClassName,
   targetClassName,
   labelClassName,
+  targetItemClassName = '',
   hidden = '!hasTargets',
   onTargetPick = '^onTargetPick',
+  includeRemove = false,
+  removeClassName = '',
+  removeHidden = 'removeHidden',
+  onTargetRemove = '^onTargetRemove',
   includePick = false,
   pickClassName = '',
   pickHidden = '!pickable',
@@ -90,10 +95,22 @@ export function cascadeThemeTargetControls({
     <div class="${className}" aria-label="Theme target" ${{ '@hidden': hidden }}>
       <div class="${listClassName}" itemize="targets">
         <template>
-          <button type="button" class="${targetClassName}" ${{ onclick: onTargetPick, '@data-target-id': 'id', '@aria-pressed': 'active', title: 'hint' }}>
-            <span class="material-symbols-outlined" aria-hidden="true">{{icon}}</span>
-            <span class="${labelClassName}">{{label}}</span>
-          </button>
+          ${includeRemove ? html`
+            <div class="${targetItemClassName}">
+              <button type="button" class="${targetClassName}" ${{ onclick: onTargetPick, '@data-target-id': 'id', '@aria-pressed': 'active', title: 'hint' }}>
+                <span class="material-symbols-outlined" aria-hidden="true">{{icon}}</span>
+                <span class="${labelClassName}">{{label}}</span>
+              </button>
+              <button type="button" class="${removeClassName}" ${{ onclick: onTargetRemove, '@data-target-id': 'id', '@hidden': removeHidden, title: 'removeLabel', '@aria-label': 'removeLabel' }}>
+                <span class="material-symbols-outlined" aria-hidden="true">delete</span>
+              </button>
+            </div>
+          ` : html`
+            <button type="button" class="${targetClassName}" ${{ onclick: onTargetPick, '@data-target-id': 'id', '@aria-pressed': 'active', title: 'hint' }}>
+              <span class="material-symbols-outlined" aria-hidden="true">{{icon}}</span>
+              <span class="${labelClassName}">{{label}}</span>
+            </button>
+          `}
         </template>
       </div>
       ${includePick ? html`

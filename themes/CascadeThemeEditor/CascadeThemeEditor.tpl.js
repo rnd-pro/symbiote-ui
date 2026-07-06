@@ -26,8 +26,11 @@ export default html`
     ${cascadeThemeTargetControls({
       className: 'cte-targets',
       listClassName: 'cte-target-list',
+      targetItemClassName: 'cte-target-item',
       targetClassName: 'cte-target',
       labelClassName: 'cte-target-label',
+      includeRemove: true,
+      removeClassName: 'cte-target-remove',
       includePick: true,
       pickClassName: 'cte-pick',
       includeApplyAll: true,
