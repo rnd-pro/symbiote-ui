@@ -973,7 +973,7 @@ export function normalizeMediaPreviewState(preview = {}, options = {}) {
   if (['queued', 'loading', 'capturing', 'rendering', 'buffering'].includes(status)) {
     return {
       state: MEDIA_PREVIEW_STATES.loading,
-      reason: status,
+      reason: cleanText(input.reason, status),
       frameSource,
       progress,
       fallback: null,
@@ -994,12 +994,12 @@ export function normalizeMediaPreviewState(preview = {}, options = {}) {
   if (frameSource) {
     return {
       state: MEDIA_PREVIEW_STATES.waiting,
-      reason: 'waiting-for-frames',
+      reason: cleanText(input.reason, 'waiting-for-frames'),
       frameSource,
       progress,
       fallback: {
         state: MEDIA_PREVIEW_STATES.waiting,
-        reason: 'waiting-for-frames',
+        reason: cleanText(input.reason, 'waiting-for-frames'),
       },
     };
   }

@@ -190,6 +190,7 @@ test('preview state normalization covers empty, loading, unsupported, and cached
   let loading = normalizeMediaPreviewState({
     status: 'rendering',
     progress: 32,
+    reason: 'Generating narration',
     frameSource: {
       provider: MEDIA_STUDIO_FRAME_SOURCE_TYPES.externalBrowser,
       source: '/workspace/surface',
@@ -198,6 +199,7 @@ test('preview state normalization covers empty, loading, unsupported, and cached
     externalBrowserFrameSource: true,
   });
   assert.equal(loading.state, MEDIA_PREVIEW_STATES.loading);
+  assert.equal(loading.reason, 'Generating narration');
   assert.equal(loading.progress, 0.32);
 
   let cached = normalizeMediaPreviewState({
