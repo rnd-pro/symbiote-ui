@@ -20,6 +20,8 @@
         "--sn-theme-text-lightness",
         "--sn-theme-density",
         "--sn-theme-radius-scale",
+        "--sn-theme-cell-radius-scale",
+        "--sn-theme-composer-radius-scale",
         "--sn-theme-pattern-brightness",
         "--sn-theme-motion-scale",
         "--sn-theme-elevation-scale"
@@ -666,7 +668,7 @@
     },
     "composerRadius": {
       "$type": "dimension",
-      "$value": "20px"
+      "$value": "calc(20px * var(--sn-theme-composer-radius-scale, 1))"
     },
     "composerControlGap": {
       "$type": "dimension",

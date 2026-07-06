@@ -72,6 +72,8 @@ export const CASCADE_THEME_VISUAL_SMOKE_TOKEN_GROUPS = Object.freeze({
     '--sn-chat-user-message-bg',
     '--sn-chat-agent-message-bg',
     '--sn-composer-bg',
+    '--sn-theme-composer-radius-scale',
+    '--sn-composer-radius',
     '--sn-composer-input-size',
     '--sn-chat-markdown-h1-size',
     '--sn-syntax-keyword',

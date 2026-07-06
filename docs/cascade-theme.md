@@ -8,14 +8,14 @@ import { applyCascadeTheme, createCascadeTheme } from 'symbiote-ui';
 let theme = createCascadeTheme({
   mode: 'dark',
   brightness: 0,
-  contrast: 100,
-  chroma: 54,
-  hue: 205,
-  pattern: 0,
-  outline: 21,
+  contrast: 58,
+  chroma: 89,
+  hue: 218,
+  pattern: 60,
+  outline: 0,
   type: 100,
-  heading: 111,
-  density: 114,
+  heading: 100,
+  density: 100,
   motion: 100,
 });
 
@@ -102,6 +102,9 @@ The `cellRadius` control is separate from UI corner radius and writes
 `--sn-theme-cell-radius-scale`, which drives `--sn-cell-min-radius` and
 `--sn-cell-max-radius` for `cell-bg`. Sharp panels can therefore use
 `radius: 0` without shrinking the animated chat background circles.
+`composerRadius` is also independent and writes
+`--sn-theme-composer-radius-scale`, so hosts can keep the chat composer input
+rounded while cards, tables, and layout chrome use a sharp classic geometry.
 
 `createCascadeTheme()` also derives readable foreground tokens for colored
 controls. The same Node-safe formula is exposed as `getReadableTextForHsl()`;
@@ -149,14 +152,14 @@ when the last temporary panel is removed. Persistent host layout panels use
 
 The bounded cascade state includes two discrete theme variants:
 
-- `themeVariant: "modern"` is the current runtime cascade and defaults to
-  `tabShape: "frame"`.
-- `themeVariant: "classic"` restores the earlier Agent Portal shell direction
+- `themeVariant: "classic"` is the library default and restores the earlier Agent Portal shell direction
   (`hue: 218`, `chroma: 89`, dark 10/13 derived surfaces, pattern 0.60),
   uses sharp/no-outline chrome, and defaults to `tabShape: "classic-ear"`.
   It keeps `bgLightness`, `surfaceLightness`, `accentLightness`, and
   `accentChroma` on auto so the brightness and chroma sliders keep affecting
   the whole cascade instead of only part of the UI.
+- `themeVariant: "modern"` keeps the framed cascade direction and defaults to
+  `tabShape: "frame"`.
 
 `tabShape` is a separate enum so hosts can mix the visual family and tab
 geometry without changing theme recipes or geometry registers:

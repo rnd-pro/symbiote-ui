@@ -582,6 +582,8 @@ const WEBMCP_TOOLS = {
           density: { type: 'number', minimum: 75, maximum: 140 },
           radius: { type: 'number', minimum: 0, maximum: 100 },
           tabRadius: { type: 'number', minimum: 0, maximum: 100 },
+          cellRadius: { type: 'number', minimum: 0, maximum: 100 },
+          composerRadius: { type: 'number', minimum: 0, maximum: 100 },
           frameRadius: { type: 'number', minimum: 0, maximum: 200 },
           frameGap: { type: 'number', minimum: 0, maximum: 20 },
           motion: { type: 'number', minimum: 0, maximum: 200 },

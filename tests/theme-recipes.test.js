@@ -149,8 +149,8 @@ test('createCascadeTheme resolves recipes without breaking raw params', () => {
   assert.equal(raw.state.mode, 'light');
   assert.equal(raw.state.hue, 33);
   assert.equal(raw.state.density, 110);
-  assert.equal(raw.state.radius, 17);
-  assert.equal(raw.tokens['--sn-theme-radius-scale'], '1.00');
+  assert.equal(raw.state.radius, 0);
+  assert.equal(raw.tokens['--sn-theme-radius-scale'], '0.00');
 
   let themed = createCascadeTheme({
     recipe: 'ops-dashboard',

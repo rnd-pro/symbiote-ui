@@ -17,6 +17,11 @@ export {
   CASCADE_THEME_VARIANT_PRESETS,
 } from './cascade-theme-controls.js';
 
+const CASCADE_THEME_RADIUS_BASE = 17;
+const CASCADE_THEME_TAB_RADIUS_BASE = 17;
+const CASCADE_THEME_CELL_RADIUS_BASE = 17;
+const CASCADE_THEME_OUTLINE_BASE = 21;
+
 export const CASCADE_THEME_TOKEN_TARGETS = Object.freeze({
   color: [
     '--sn-theme-name',
@@ -266,6 +271,7 @@ export const CASCADE_THEME_TOKEN_TARGETS = Object.freeze({
     '--sn-theme-radius-scale',
     '--sn-theme-tab-radius-scale',
     '--sn-theme-cell-radius-scale',
+    '--sn-theme-composer-radius-scale',
     '--sn-node-header-gap',
     '--sn-node-header-padding',
     '--sn-node-collapsed-body-padding',
@@ -420,6 +426,7 @@ export const CASCADE_THEME_TOKEN_TARGETS = Object.freeze({
     '--sn-chat-list-badge-radius',
     '--sn-chat-list-meta-gap',
     '--sn-chat-list-delete-padding',
+    '--sn-composer-radius',
     '--sn-composer-padding',
     '--sn-composer-body-padding',
     '--sn-composer-control-gap',
@@ -632,7 +639,7 @@ function radiusToken(px) {
 }
 
 function svgStrokeToken(px, outlineStrength) {
-  let defaultOutlineStrength = CASCADE_THEME_DEFAULTS.outline / 100;
+  let defaultOutlineStrength = CASCADE_THEME_OUTLINE_BASE / 100;
   let scale = defaultOutlineStrength <= 0 ? outlineStrength : outlineStrength / defaultOutlineStrength;
   return (px * scale).toFixed(2);
 }
@@ -1179,6 +1186,7 @@ export function normalizeCascadeThemeOptions(options = {}) {
     radius: clamp(merged.radius, 0, 100, CASCADE_THEME_DEFAULTS.radius),
     tabRadius: clamp(merged.tabRadius, 0, 100, CASCADE_THEME_DEFAULTS.tabRadius),
     cellRadius: clamp(merged.cellRadius, 0, 100, CASCADE_THEME_DEFAULTS.cellRadius),
+    composerRadius: clamp(merged.composerRadius, 0, 100, CASCADE_THEME_DEFAULTS.composerRadius),
     frameRadius: clamp(merged.frameRadius, 0, 200, CASCADE_THEME_DEFAULTS.frameRadius),
     frameGap: clamp(merged.frameGap, 0, 20, CASCADE_THEME_DEFAULTS.frameGap),
     motion: clamp(merged.motion, 0, 200, CASCADE_THEME_DEFAULTS.motion),
@@ -1194,9 +1202,10 @@ export function createCascadeTheme(options = {}) {
   let typeScale = state.type / 100;
   let headingScale = state.heading / 100;
   let densityScale = state.density / 100;
-  let radiusScale = state.radius / CASCADE_THEME_DEFAULTS.radius;
-  let tabRadiusScale = state.tabRadius / CASCADE_THEME_DEFAULTS.tabRadius;
-  let cellRadiusScale = state.cellRadius / CASCADE_THEME_DEFAULTS.cellRadius;
+  let radiusScale = state.radius / CASCADE_THEME_RADIUS_BASE;
+  let tabRadiusScale = state.tabRadius / CASCADE_THEME_TAB_RADIUS_BASE;
+  let cellRadiusScale = state.cellRadius / CASCADE_THEME_CELL_RADIUS_BASE;
+  let composerRadiusScale = state.composerRadius / 100;
   // frameRadius is a 0-200 dial referenced to 100 = the provider baseline (panels round
   // 12px * radius-scale). At the default (100) the emitted frame
   // tokens equal the provider's, so existing layouts are unchanged; 0 flattens, 200 doubles.
@@ -1317,6 +1326,7 @@ export function createCascadeTheme(options = {}) {
     '--sn-theme-radius-scale': radiusScale.toFixed(2),
     '--sn-theme-tab-radius-scale': tabRadiusScale.toFixed(2),
     '--sn-theme-cell-radius-scale': cellRadiusScale.toFixed(2),
+    '--sn-theme-composer-radius-scale': composerRadiusScale.toFixed(2),
     '--sn-theme-frame-radius-scale': frameFactor.toFixed(2),
     '--sn-frame-radius': frameRadiusCss,
     '--sn-frame-inset': frameInsetCss,
@@ -1657,6 +1667,7 @@ export function createCascadeTheme(options = {}) {
     '--sn-composer-bg': 'color-mix(in oklab, var(--sn-sys-surface-panel) 90%, var(--sn-sys-on-surface) 4%)',
     '--sn-composer-border': outlineColor,
     '--sn-composer-action-bg': 'color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-composer-bg))',
+    '--sn-composer-radius': 'calc(20px * var(--sn-theme-composer-radius-scale, 1))',
     '--sn-composer-send-hover-bg': 'var(--sn-sys-accent)',
     '--sn-syntax-keyword': `hsl(${semanticHues.danger} ${neutralChroma} ${Math.min(86, actionLight + 4).toFixed(1)}%)`,
     '--sn-syntax-string': `hsl(${semanticHues.warning} ${neutralChroma} ${Math.min(78, accentLight + 2).toFixed(1)}%)`,

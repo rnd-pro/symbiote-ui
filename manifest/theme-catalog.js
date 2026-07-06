@@ -32,6 +32,7 @@ export let THEME_METADATA = {
       '--sn-theme-density',
       '--sn-theme-radius-scale',
       '--sn-theme-cell-radius-scale',
+      '--sn-theme-composer-radius-scale',
       '--sn-theme-pattern-brightness',
       '--sn-theme-motion-scale',
       '--sn-motion-enabled',
@@ -128,8 +129,9 @@ export let THEME_CONTROLS = {
     { name: 'surfaceLightness', type: 'percentage', default: '13%', cssVar: '--sn-theme-surface-lightness', description: 'Panel and control surface lightness derived near the background.' },
     { name: 'textLightness', type: 'percentage', default: '94%', cssVar: '--sn-theme-text-lightness', description: 'Foreground text lightness inherited by text aliases.' },
     { name: 'density', type: 'number', default: '1', cssVar: '--sn-theme-density', description: 'Density multiplier for repeated navigation row height.' },
-    { name: 'radius', type: 'number', default: '1', cssVar: '--sn-theme-radius-scale', description: 'Radius multiplier for node, row, list, composer, and source action corners.' },
+    { name: 'radius', type: 'number', default: '1', cssVar: '--sn-theme-radius-scale', description: 'Radius multiplier for node, row, list, and source action corners.' },
     { name: 'cellRadius', type: 'number', default: '1', cssVar: '--sn-theme-cell-radius-scale', description: 'Cellular background dot-radius multiplier, independent from UI corner radius.' },
+    { name: 'composerRadius', type: 'number', default: '1', cssVar: '--sn-theme-composer-radius-scale', description: 'Chat composer corner-radius multiplier, independent from UI corner radius.' },
     { name: 'pattern', type: 'number', default: '0.60', cssVar: '--sn-theme-pattern-brightness', description: 'Animated cell dot intensity; gradients, glare, and noise stay independent.' },
     { name: 'motion', type: 'number', default: '1', cssVar: '--sn-theme-motion-scale', description: 'Global motion multiplier for transitions and feedback effects.' },
     { name: 'elevation', type: 'number', default: '1', cssVar: '--sn-theme-elevation-scale', description: 'Global shadow and overlay intensity multiplier.' },
@@ -331,7 +333,7 @@ export let THEME_RULE_BLOCKS = [
       { output: 'geometry.treeIndent', inputs: ['size.unit'], expression: 'size.unit * 4', description: 'Nested tree levels indent by four spacing units.' },
       { output: 'geometry.treeRowHeight', inputs: ['size.unit', 'density.scale'], expression: 'size.unit * 5.5 when density.scale = compact', description: 'Compact navigation rows stay scan-friendly without wasting vertical space.' },
       { output: 'geometry.tabsHeight', inputs: ['size.unit'], expression: 'size.unit * 9.5', description: 'Project tabs keep enough height for icon, label, and close affordance.' },
-      { output: 'geometry.composerRadius', inputs: ['radius.unit'], expression: 'radius.unit * 5', description: 'The main chat input uses a pill radius derived from the same radius unit.' },
+      { output: 'geometry.composerRadius', inputs: ['--sn-theme-composer-radius-scale'], expression: '20px * composer radius scale', description: 'The main chat input uses its own pill radius scale independent from the general UI radius.' },
     ],
   },
   {
@@ -610,6 +612,7 @@ export let THEME_TOKENS = {
           "--sn-theme-density",
           "--sn-theme-radius-scale",
           "--sn-theme-cell-radius-scale",
+          "--sn-theme-composer-radius-scale",
           "--sn-theme-pattern-brightness",
           "--sn-theme-motion-scale",
           "--sn-motion-enabled",
@@ -1268,7 +1271,7 @@ export let THEME_TOKENS = {
       },
       "composerRadius": {
         "$type": "dimension",
-        "$value": "20px"
+        "$value": "calc(20px * var(--sn-theme-composer-radius-scale, 1))"
       },
       "composerControlGap": {
         "$type": "dimension",

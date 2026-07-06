@@ -43659,6 +43659,16 @@
                         "minimum": 0,
                         "maximum": 100
                       },
+                      "cellRadius": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "composerRadius": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
                       "frameRadius": {
                         "type": "number",
                         "minimum": 0,
@@ -43897,6 +43907,16 @@
                           "maximum": 100
                         },
                         "tabRadius": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 100
+                        },
+                        "cellRadius": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 100
+                        },
+                        "composerRadius": {
                           "type": "number",
                           "minimum": 0,
                           "maximum": 100
