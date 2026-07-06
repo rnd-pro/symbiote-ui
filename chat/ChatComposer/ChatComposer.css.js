@@ -491,7 +491,6 @@ sn-button.btn-send[variant="icon"].btn-stop::after {
   max-inline-size: 100%;
   max-block-size: min(72vh, 560px);
   overflow: auto;
-  ${themedScrollFadeBlockStyles}
   margin-bottom: var(--sn-composer-footer-gap, 8px);
   padding: var(--sn-composer-context-details-padding, 16px);
   border: 1px solid color-mix(in oklab, var(--sn-sys-on-surface-dim) 22%, transparent);
