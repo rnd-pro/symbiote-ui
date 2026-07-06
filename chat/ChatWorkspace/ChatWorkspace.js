@@ -288,6 +288,10 @@ export class ChatWorkspace extends Symbiote {
       value: this.getComposer()?.$.value || '',
       sending: Boolean(this.getComposer()?.$.isSending),
     }));
+    route('chat-composer-stop', 'chat-workspace-stop', () => ({
+      value: this.getComposer()?.$.value || '',
+      sending: Boolean(this.getComposer()?.$.isSending),
+    }));
     route('chat-composer-leading-control', 'chat-workspace-leading-intent');
     route('chat-composer-footer-control', 'chat-workspace-footer-intent');
     route('chat-composer-footer-control-change', 'chat-workspace-footer-intent');

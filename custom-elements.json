@@ -4411,8 +4411,20 @@
             },
             {
               "name": "chat-composer-send",
-              "description": "Requests send or stop from the send button.",
+              "description": "Requests send from the send button.",
               "detail": []
+            },
+            {
+              "name": "chat-composer-stop",
+              "description": "Requests stopping the current send from the stop button state.",
+              "detail": [
+                {
+                  "name": "sending",
+                  "type": {
+                    "text": "boolean"
+                  }
+                }
+              ]
             },
             {
               "name": "chat-composer-voice-input",
@@ -5125,7 +5137,17 @@
               },
               {
                 "name": "chat-composer-send",
-                "description": "Requests send or stop from the send button."
+                "description": "Requests send from the send button."
+              },
+              {
+                "name": "chat-composer-stop",
+                "description": "Requests stopping the current send from the stop button state.",
+                "detail": [
+                  {
+                    "name": "sending",
+                    "type": "boolean"
+                  }
+                ]
               },
               {
                 "name": "chat-composer-voice-input",
@@ -5494,7 +5516,10 @@
                   "annotations": {
                     "readOnlyHint": false,
                     "destructiveHint": false,
-                    "intentEvent": "chat-composer-send"
+                    "intentEvents": [
+                      "chat-composer-send",
+                      "chat-composer-stop"
+                    ]
                   },
                   "exposedTo": [
                     "agent",
@@ -5924,7 +5949,17 @@
                 },
                 {
                   "name": "chat-composer-send",
-                  "description": "Requests send or stop from the send button."
+                  "description": "Requests send from the send button."
+                },
+                {
+                  "name": "chat-composer-stop",
+                  "description": "Requests stopping the current send from the stop button state.",
+                  "detail": [
+                    {
+                      "name": "sending",
+                      "type": "boolean"
+                    }
+                  ]
                 },
                 {
                   "name": "chat-composer-voice-input",
@@ -6293,7 +6328,10 @@
                     "annotations": {
                       "readOnlyHint": false,
                       "destructiveHint": false,
-                      "intentEvent": "chat-composer-send"
+                      "intentEvents": [
+                        "chat-composer-send",
+                        "chat-composer-stop"
+                      ]
                     },
                     "exposedTo": [
                       "agent",
@@ -10784,7 +10822,25 @@
             },
             {
               "name": "chat-workspace-send",
-              "description": "Requests send or stop from the composed composer.",
+              "description": "Requests send from the composed composer.",
+              "detail": [
+                {
+                  "name": "value",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "sending",
+                  "type": {
+                    "text": "boolean"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "chat-workspace-stop",
+              "description": "Requests stopping the current composed composer send.",
               "detail": [
                 {
                   "name": "value",
@@ -11127,7 +11183,21 @@
               },
               {
                 "name": "chat-workspace-send",
-                "description": "Requests send or stop from the composed composer.",
+                "description": "Requests send from the composed composer.",
+                "detail": [
+                  {
+                    "name": "value",
+                    "type": "string"
+                  },
+                  {
+                    "name": "sending",
+                    "type": "boolean"
+                  }
+                ]
+              },
+              {
+                "name": "chat-workspace-stop",
+                "description": "Requests stopping the current composed composer send.",
                 "detail": [
                   {
                     "name": "value",
@@ -11357,7 +11427,8 @@
                     "destructiveHint": false,
                     "intentEvents": [
                       "chat-workspace-submit",
-                      "chat-workspace-send"
+                      "chat-workspace-send",
+                      "chat-workspace-stop"
                     ]
                   },
                   "exposedTo": [
@@ -11628,7 +11699,21 @@
                 },
                 {
                   "name": "chat-workspace-send",
-                  "description": "Requests send or stop from the composed composer.",
+                  "description": "Requests send from the composed composer.",
+                  "detail": [
+                    {
+                      "name": "value",
+                      "type": "string"
+                    },
+                    {
+                      "name": "sending",
+                      "type": "boolean"
+                    }
+                  ]
+                },
+                {
+                  "name": "chat-workspace-stop",
+                  "description": "Requests stopping the current composed composer send.",
                   "detail": [
                     {
                       "name": "value",
@@ -11858,7 +11943,8 @@
                       "destructiveHint": false,
                       "intentEvents": [
                         "chat-workspace-submit",
-                        "chat-workspace-send"
+                        "chat-workspace-send",
+                        "chat-workspace-stop"
                       ]
                     },
                     "exposedTo": [

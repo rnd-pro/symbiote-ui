@@ -140,7 +140,7 @@ const WEBMCP_TOOLS = {
       annotations: {
         readOnlyHint: false,
         destructiveHint: false,
-        intentEvents: ['chat-workspace-submit', 'chat-workspace-send'],
+        intentEvents: ['chat-workspace-submit', 'chat-workspace-send', 'chat-workspace-stop'],
       },
       exposedTo: ['agent', 'assistant'],
     },
@@ -158,7 +158,7 @@ const WEBMCP_TOOLS = {
         },
         required: ['action'],
       },
-      annotations: { readOnlyHint: false, destructiveHint: false, intentEvent: 'chat-composer-send' },
+      annotations: { readOnlyHint: false, destructiveHint: false, intentEvents: ['chat-composer-send', 'chat-composer-stop'] },
       exposedTo: ['agent', 'assistant'],
     },
     {
@@ -4982,7 +4982,8 @@ export let COMPONENTS = [
         { name: 'chat-workspace-input', description: 'Reports draft input changes from the composed composer.', detail: [{ name: 'value', type: 'string' }, { name: 'caretPosition', type: 'number' }] },
         { name: 'chat-workspace-key', description: 'Routes key events from the composed composer for host-owned autocomplete and navigation.' },
         { name: 'chat-workspace-submit', description: 'Requests submit from the composed composer.', detail: [{ name: 'value', type: 'string' }] },
-        { name: 'chat-workspace-send', description: 'Requests send or stop from the composed composer.', detail: [{ name: 'value', type: 'string' }, { name: 'sending', type: 'boolean' }] },
+        { name: 'chat-workspace-send', description: 'Requests send from the composed composer.', detail: [{ name: 'value', type: 'string' }, { name: 'sending', type: 'boolean' }] },
+        { name: 'chat-workspace-stop', description: 'Requests stopping the current composed composer send.', detail: [{ name: 'value', type: 'string' }, { name: 'sending', type: 'boolean' }] },
         { name: 'chat-workspace-leading-intent', description: 'Routes product-neutral inline leading control activation intents.' },
         { name: 'chat-workspace-voice-intent', description: 'Routes cancelable voice permission, recorder, transcription, raw audio capture, wake, response, command, language, and preview intents from the composed composer while preserving host override semantics.' },
         { name: 'chat-workspace-footer-intent', description: 'Routes product-neutral footer control activation and change intents.' },
@@ -5188,7 +5189,8 @@ export let COMPONENTS = [
       events: [
         { name: 'chat-composer-input', description: 'Emits input value and caret position.' },
         { name: 'chat-composer-submit', description: 'Requests submit from Enter.' },
-        { name: 'chat-composer-send', description: 'Requests send or stop from the send button.' },
+        { name: 'chat-composer-send', description: 'Requests send from the send button.' },
+        { name: 'chat-composer-stop', description: 'Requests stopping the current send from the stop button state.', detail: [{ name: 'sending', type: 'boolean' }] },
         { name: 'chat-composer-voice-input', description: 'Cancelable voice input capture request; hosts can prevent default or allow browser VoiceRuntime fallback.', detail: [{ name: 'action', type: 'string' }, { name: 'currentState', type: 'string' }, { name: 'permission', type: 'string' }, { name: 'source', type: 'string' }] },
         { name: 'chat-composer-wake-listen', description: 'Cancelable wake listening request; hosts can prevent default or allow browser VoiceRuntime fallback.', detail: [{ name: 'action', type: 'string' }, { name: 'currentState', type: 'string' }, { name: 'mode', type: 'string' }, { name: 'permission', type: 'string' }, { name: 'source', type: 'string' }] },
         { name: 'chat-composer-voice-response-toggle', description: 'Cancelable voice response toggle request.' },

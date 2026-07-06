@@ -13,14 +13,15 @@ chat-composer {
 .composer-body {
   container: composer-body / inline-size;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto auto;
-  grid-template-rows: auto;
-  align-items: stretch;
-  align-content: end;
+  grid-template-columns: auto minmax(0, 1fr) auto auto auto;
+  grid-template-rows: minmax(var(--sn-composer-input-min-height), auto) auto;
+  align-items: end;
+  align-content: stretch;
   gap: var(--sn-composer-control-gap);
   background: var(--chat-composer-bg);
   border-radius: var(--sn-composer-radius);
   padding: var(--sn-composer-body-padding);
+  min-block-size: calc(var(--sn-composer-send-size) * 2.75);
   transition: background var(--sn-transition-fast) var(--sn-transition-easing);
 }
 
@@ -38,9 +39,9 @@ chat-composer {
 
 
 .composer-body textarea {
-  grid-column: 1;
+  grid-column: 1 / -1;
   grid-row: 1;
-  align-self: end;
+  align-self: stretch;
   min-width: 0;
   min-inline-size: min(100%, var(--sn-composer-input-min-inline-size, 160px));
   width: 100%;
@@ -64,7 +65,7 @@ chat-composer {
 
 .composer-leading-controls {
   grid-column: 1;
-  grid-row: 1;
+  grid-row: 2;
   align-self: end;
   display: none;
   min-inline-size: 0;
@@ -72,7 +73,6 @@ chat-composer {
 
 :host([leading-controls]) .composer-body,
 chat-composer[leading-controls] .composer-body {
-  grid-template-columns: auto minmax(0, 1fr) auto auto auto;
   padding-inline-start: var(--sn-composer-body-leading-padding-inline-start, 8px);
 }
 
@@ -85,7 +85,7 @@ chat-composer[leading-controls] .composer-leading-controls {
 
 :host([leading-controls]) .composer-body textarea,
 chat-composer[leading-controls] .composer-body textarea {
-  grid-column: 2;
+  grid-column: 1 / -1;
 }
 
 :host([leading-controls]) .composer-actions,
@@ -104,8 +104,8 @@ chat-composer[leading-controls] .composer-body > sn-button.btn-send {
 }
 
 .composer-actions {
-  grid-column: 2;
-  grid-row: 1;
+  grid-column: 3;
+  grid-row: 2;
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
@@ -119,14 +119,14 @@ chat-composer[leading-controls] .composer-body > sn-button.btn-send {
 }
 
 .btn-mic {
-  grid-column: 3;
-  grid-row: 1;
+  grid-column: 4;
+  grid-row: 2;
   align-self: end;
 }
 
 .composer-body > sn-button.btn-send {
-  grid-column: 4;
-  grid-row: 1;
+  grid-column: 5;
+  grid-row: 2;
   align-self: end;
   justify-self: end;
 }
@@ -207,13 +207,18 @@ sn-button.btn-send[variant="icon"].btn-stop::after {
 
 .composer-footer {
   container: composer-footer / inline-size;
+  grid-column: 2;
+  grid-row: 2;
+  align-self: end;
+  justify-self: stretch;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: var(--sn-composer-footer-gap, 4px);
-  padding: var(--sn-composer-footer-padding, 6px 16px 0);
+  padding: 0;
   min-height: 0;
-  overflow: visible;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .composer-footer:empty {
@@ -225,15 +230,26 @@ sn-button.btn-send[variant="icon"].btn-stop::after {
   align-items: center;
   justify-content: center;
   gap: var(--sn-composer-footer-gap, 4px);
-  inline-size: var(--sn-composer-send-size);
+  min-inline-size: var(--sn-composer-send-size);
+  inline-size: auto;
+  max-inline-size: min(var(--sn-composer-leading-control-max-inline-size, 220px), 44cqi);
   block-size: var(--sn-composer-send-size);
   border: 0;
-  border-radius: 50%;
+  border-radius: var(--sn-radius-full);
+  padding: 0 var(--sn-composer-control-gap, 8px);
   background: transparent;
   color: var(--sn-sys-on-surface-dim);
   font-family: inherit;
   cursor: pointer;
   transition: background var(--sn-transition-fast) var(--sn-transition-easing), color var(--sn-transition-fast) var(--sn-transition-easing), transform var(--sn-transition-fast) var(--sn-transition-easing);
+}
+
+.composer-leading-btn.icon-only,
+.composer-leading-btn.composer-leading-collapsed {
+  inline-size: var(--sn-composer-send-size);
+  max-inline-size: var(--sn-composer-send-size);
+  padding: 0;
+  border-radius: 50%;
 }
 
 .composer-leading-btn:hover,
@@ -262,6 +278,8 @@ sn-button.btn-send[variant="icon"].btn-stop::after {
   max-inline-size: var(--sn-composer-leading-label-max, 120px);
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: var(--sn-composer-footer-size, 11px);
+  font-weight: 650;
 }
 
 .composer-footer-btn {
@@ -282,6 +300,7 @@ sn-button.btn-send[variant="icon"].btn-stop::after {
   min-width: 0;
   max-width: 100%;
   flex: 0 1 auto;
+  overflow: hidden;
 }
 
 .composer-footer-btn:hover {
@@ -298,6 +317,12 @@ sn-button.btn-send[variant="icon"].btn-stop::after {
   font-size: var(--sn-composer-footer-icon-size);
   opacity: 0.75;
   flex: 0 0 auto;
+}
+
+.composer-footer-divider-before {
+  border-inline-start: 1px solid color-mix(in oklab, var(--sn-sys-on-surface-dim) 18%, transparent);
+  margin-inline-start: var(--sn-composer-footer-gap, 4px);
+  padding-inline-start: calc(var(--sn-composer-footer-gap, 4px) + var(--sn-composer-control-gap, 8px));
 }
 
 .composer-footer-btn:hover .material-symbols-outlined {
@@ -355,6 +380,14 @@ sn-button.btn-send[variant="icon"].btn-stop::after {
   text-overflow: ellipsis;
 }
 
+.composer-footer-suffix {
+  overflow: hidden;
+  color: var(--sn-sys-on-surface-dim);
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .composer-footer-value {
   overflow: hidden;
   max-width: var(--sn-composer-footer-value-max, 92px);
@@ -365,65 +398,136 @@ sn-button.btn-send[variant="icon"].btn-stop::after {
 
 .composer-param-collapsed .composer-footer-select,
 .composer-param-collapsed .composer-footer-label,
-.composer-param-collapsed .composer-footer-value {
+.composer-param-collapsed .composer-footer-value,
+.composer-param-collapsed .composer-footer-suffix {
   width: var(--sn-composer-collapsed-control-width);
   max-width: var(--sn-composer-collapsed-control-width);
   padding-right: var(--sn-composer-collapsed-control-padding);
   color: transparent !important;
 }
 
+.composer-param-collapsed .composer-footer-label,
+.composer-param-collapsed .composer-footer-value,
+.composer-param-collapsed .composer-footer-suffix {
+  display: none;
+}
+
 @container composer-footer (width <= 560px) {
   .composer-priority-1 .composer-footer-select,
   .composer-priority-1 .composer-footer-label,
-  .composer-priority-1 .composer-footer-value {
+  .composer-priority-1 .composer-footer-value,
+  .composer-priority-1 .composer-footer-suffix {
     width: var(--sn-composer-collapsed-control-width);
     max-width: var(--sn-composer-collapsed-control-width);
     padding-right: var(--sn-composer-collapsed-control-padding);
     color: transparent !important;
   }
+
+  .composer-priority-1 .composer-footer-label,
+  .composer-priority-1 .composer-footer-value,
+  .composer-priority-1 .composer-footer-suffix {
+    display: none;
+  }
 }
 
 @container composer-footer (width <= 500px) {
-  .composer-priority-2 .composer-footer-select,
-  .composer-priority-2 .composer-footer-label,
-  .composer-priority-2 .composer-footer-value {
+  .composer-param-model.composer-long-value .composer-footer-select,
+  .composer-param-model.composer-long-value .composer-footer-label,
+  .composer-param-model.composer-long-value .composer-footer-value,
+  .composer-param-model.composer-long-value .composer-footer-suffix {
     width: var(--sn-composer-collapsed-control-width);
     max-width: var(--sn-composer-collapsed-control-width);
     padding-right: var(--sn-composer-collapsed-control-padding);
     color: transparent !important;
+  }
+
+  .composer-param-model.composer-long-value .composer-footer-label,
+  .composer-param-model.composer-long-value .composer-footer-value,
+  .composer-param-model.composer-long-value .composer-footer-suffix {
+    display: none;
+  }
+
+  .composer-priority-2 .composer-footer-select,
+  .composer-priority-2 .composer-footer-label,
+  .composer-priority-2 .composer-footer-value,
+  .composer-priority-2 .composer-footer-suffix {
+    width: var(--sn-composer-collapsed-control-width);
+    max-width: var(--sn-composer-collapsed-control-width);
+    padding-right: var(--sn-composer-collapsed-control-padding);
+    color: transparent !important;
+  }
+
+  .composer-priority-2 .composer-footer-label,
+  .composer-priority-2 .composer-footer-value,
+  .composer-priority-2 .composer-footer-suffix {
+    display: none;
   }
 }
 
 @container composer-footer (width <= 440px) {
   .composer-priority-3 .composer-footer-select,
   .composer-priority-3 .composer-footer-label,
-  .composer-priority-3 .composer-footer-value {
+  .composer-priority-3 .composer-footer-value,
+  .composer-priority-3 .composer-footer-suffix {
     width: var(--sn-composer-collapsed-control-width);
     max-width: var(--sn-composer-collapsed-control-width);
     padding-right: var(--sn-composer-collapsed-control-padding);
     color: transparent !important;
+  }
+
+  .composer-priority-3 .composer-footer-label,
+  .composer-priority-3 .composer-footer-value,
+  .composer-priority-3 .composer-footer-suffix {
+    display: none;
   }
 }
 
 @container composer-footer (width <= 380px) {
   .composer-priority-4 .composer-footer-select,
   .composer-priority-4 .composer-footer-label,
-  .composer-priority-4 .composer-footer-value {
+  .composer-priority-4 .composer-footer-value,
+  .composer-priority-4 .composer-footer-suffix {
     width: var(--sn-composer-collapsed-control-width);
     max-width: var(--sn-composer-collapsed-control-width);
     padding-right: var(--sn-composer-collapsed-control-padding);
     color: transparent !important;
+  }
+
+  .composer-priority-4 .composer-footer-label,
+  .composer-priority-4 .composer-footer-value,
+  .composer-priority-4 .composer-footer-suffix {
+    display: none;
   }
 }
 
 @container composer-footer (width <= 320px) {
   .composer-priority-5 .composer-footer-select,
   .composer-priority-5 .composer-footer-label,
-  .composer-priority-5 .composer-footer-value {
+  .composer-priority-5 .composer-footer-value,
+  .composer-priority-5 .composer-footer-suffix {
     width: var(--sn-composer-collapsed-control-width);
     max-width: var(--sn-composer-collapsed-control-width);
     padding-right: var(--sn-composer-collapsed-control-padding);
     color: transparent !important;
+  }
+
+  .composer-priority-5 .composer-footer-label,
+  .composer-priority-5 .composer-footer-value,
+  .composer-priority-5 .composer-footer-suffix {
+    display: none;
+  }
+}
+
+@container composer-footer (width <= 320px) {
+  .composer-footer-optional {
+    display: none;
+  }
+
+  .composer-param-model.composer-compact-value .composer-footer-select {
+    width: min(7ch, 100%);
+    max-width: min(7ch, 100%);
+    padding-right: 0;
+    color: var(--sn-sys-on-surface) !important;
   }
 }
 
@@ -754,54 +858,59 @@ chat-composer.drag-over .composer-body {
 
 @container chat-composer (width <= 480px) {
   .composer-body {
-    grid-template-columns: minmax(0, 1fr) auto auto;
-    grid-template-rows: auto auto;
+    grid-template-columns: auto minmax(0, 1fr) auto auto auto;
+    grid-template-rows: minmax(var(--sn-composer-input-min-height), auto) auto;
   }
 
   :host([leading-controls]) .composer-body,
   chat-composer[leading-controls] .composer-body {
-    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    grid-template-columns: auto minmax(0, 1fr) auto auto auto;
   }
 
   :host([leading-controls]) .composer-leading-controls,
   chat-composer[leading-controls] .composer-leading-controls {
     grid-column: 1;
-    grid-row: 1;
+    grid-row: 2;
   }
 
   :host([leading-controls]) .composer-body textarea,
   chat-composer[leading-controls] .composer-body textarea {
-    grid-column: 2;
+    grid-column: 1 / -1;
   }
 
   .composer-actions {
-    grid-column: 1 / -1;
+    grid-column: 3;
     grid-row: 2;
-    width: 100%;
-    max-width: 100%;
-    flex-wrap: wrap;
-    overflow: visible;
+    width: auto;
+    max-width: min(54cqi, var(--sn-composer-actions-max-inline-size, 460px));
+    flex-wrap: nowrap;
+    overflow: hidden;
   }
 
   .btn-mic {
-    grid-column: 2;
-    grid-row: 1;
+    grid-column: 4;
+    grid-row: 2;
     align-self: end;
   }
 
   .composer-body > sn-button.btn-send {
+    grid-column: 5;
+    grid-row: 2;
+  }
+
+  :host([leading-controls]) .composer-actions,
+  chat-composer[leading-controls] .composer-actions {
     grid-column: 3;
-    grid-row: 1;
   }
 
   :host([leading-controls]) .btn-mic,
   chat-composer[leading-controls] .btn-mic {
-    grid-column: 3;
+    grid-column: 4;
   }
 
   :host([leading-controls]) .composer-body > sn-button.btn-send,
   chat-composer[leading-controls] .composer-body > sn-button.btn-send {
-    grid-column: 4;
+    grid-column: 5;
   }
 
   .btn-voice-language {

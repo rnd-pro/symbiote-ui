@@ -34,7 +34,7 @@ function normalizeFooterControl(control, index) {
     id,
     kind,
     priority,
-    label: control?.label || id,
+    label: Object.prototype.hasOwnProperty.call(control || {}, 'label') ? control.label : id,
     title: control?.title || control?.label || id,
     value: control?.value ?? '',
   };
@@ -50,7 +50,7 @@ function normalizeLeadingControl(control, index) {
     id,
     kind,
     priority,
-    label: control?.label || id,
+    label: Object.prototype.hasOwnProperty.call(control || {}, 'label') ? control.label : id,
     title: control?.title || control?.label || id,
     value: control?.value ?? '',
   };
@@ -63,6 +63,7 @@ function decorateFooterControl(item) {
   let isButton = !isSelect && !isCheckbox;
   let labelText = String(item.label || '');
   let valueText = item.value ? String(item.value) : '';
+  let suffixText = String(item.suffix || item.meta || '');
   let baseClass = [
     'composer-footer-btn',
     'composer-footer-control',
@@ -93,6 +94,8 @@ function decorateFooterControl(item) {
     hasLabel: Boolean(labelText),
     value: valueText,
     hasValue: Boolean(valueText),
+    suffix: suffixText,
+    hasSuffix: Boolean(suffixText),
     disabled: Boolean(item.disabled),
     checked: Boolean(item.checked || item.value === true),
     selectClass: isSelect ? wrapClass.join(' ') : '',
@@ -107,6 +110,8 @@ function decorateLeadingControl(item) {
   let itemClass = [
     'composer-leading-btn',
     'composer-leading-control',
+    labelText ? 'has-label' : 'icon-only',
+    item.compact ? 'composer-leading-collapsed' : '',
     item.active ? 'active' : '',
     item.className || '',
   ].filter(Boolean).join(' ');
@@ -169,6 +174,10 @@ export class ChatComposer extends Symbiote {
     },
 
     onSend: () => {
+      if (this.$.isSending) {
+        emit(this, 'chat-composer-stop', { sending: true });
+        return;
+      }
       emit(this, 'chat-composer-send');
     },
 
@@ -1388,7 +1397,7 @@ export class ChatComposer extends Symbiote {
 ChatComposer.template = html`
 <div ${{ ondragover: 'onDragOver', ondragleave: 'onDragLeave', ondrop: 'onDrop' }}>
   <div class="chat-context-bar" itemize="attachedContext">
-    <div class="context-chip" title="{{title}}">
+    <div class="context-chip" ${{ '@title': 'title' }}>
       <span class="material-symbols-outlined icon-sm">{{icon}}</span>
       <span class="context-path">{{name}}</span>
       <sn-button class="context-remove" variant="icon" ${{ '@data-key': 'key', onclick: '^onRemoveContext' }}>
@@ -1426,6 +1435,30 @@ ChatComposer.template = html`
     <textarea ref="chatInput" rows="1"
       ${{ value: 'value', disabled: 'disabled', placeholder: 'placeholder',
           oninput: 'onInput', onkeydown: 'onKeyDown' }}></textarea>
+    <div class="composer-footer" ref="footer" itemize="footerControls" ${{ onchange: 'onParamChange', onclick: 'onFooterClick' }}>
+      <template>
+        <label ${{ '@class': 'selectClass', '@data-footer-control-id': 'id', '@data-footer-control-kind': 'kind', '@title': 'title', '@hidden': '!isSelect' }}>
+          <span class="material-symbols-outlined" ${{ '@hidden': '!hasIcon' }}>{{icon}}</span>
+          <span class="composer-footer-label" ${{ '@hidden': '!hasLabel' }}>{{label}}</span>
+          <select class="composer-footer-select" ${{ '@data-footer-control-id': 'id', '@data-footer-control-kind': 'kind', '@disabled': 'disabled' }} itemize="options">
+            <template>
+              <option ${{ '@value': 'value', '@selected': 'selected' }}>{{label}}</option>
+            </template>
+          </select>
+          <span class="composer-footer-suffix" ${{ '@hidden': '!hasSuffix' }}>{{suffix}}</span>
+        </label>
+        <label ${{ '@class': 'checkboxClass', '@data-footer-control-id': 'id', '@data-footer-control-kind': 'kind', '@title': 'title', '@hidden': '!isCheckbox' }}>
+          <span class="material-symbols-outlined" ${{ '@hidden': '!hasIcon' }}>{{icon}}</span>
+          <input class="composer-footer-checkbox" type="checkbox" ${{ '@data-footer-control-id': 'id', '@data-footer-control-kind': 'kind', checked: 'checked', '@disabled': 'disabled' }}>
+          <span class="composer-footer-label" ${{ '@hidden': '!hasLabel' }}>{{label}}</span>
+        </label>
+        <button type="button" ${{ '@class': 'buttonClass', '@data-footer-control-id': 'id', '@data-footer-control-kind': 'kind', '@title': 'title', '@disabled': 'disabled', '@hidden': '!isButton' }}>
+          <span class="material-symbols-outlined" ${{ '@hidden': '!hasIcon' }}>{{icon}}</span>
+          <span class="composer-footer-label" ${{ '@hidden': '!hasLabel' }}>{{label}}</span>
+          <span class="composer-footer-value" ${{ '@hidden': '!hasValue' }}>{{value}}</span>
+        </button>
+      </template>
+    </div>
     <div class="composer-actions">
       <button class="btn-wake-listen" ref="wakeListenBtn" type="button" title="Wake listening" hidden ${{ onclick: 'onWakeListen' }}>
         <span class="material-symbols-outlined">hearing</span>
@@ -1449,29 +1482,6 @@ ChatComposer.template = html`
     <sn-button class="btn-send" ref="btnSend" variant="icon" ${{ onclick: 'onSend' }}>
       <span class="material-symbols-outlined" ref="sendIcon">arrow_upward</span>
     </sn-button>
-  </div>
-  <div class="composer-footer" ref="footer" itemize="footerControls" ${{ onchange: 'onParamChange', onclick: 'onFooterClick' }}>
-    <template>
-      <label ${{ '@class': 'selectClass', '@data-footer-control-id': 'id', '@data-footer-control-kind': 'kind', '@title': 'title', '@hidden': '!isSelect' }}>
-        <span class="material-symbols-outlined" ${{ '@hidden': '!hasIcon' }}>{{icon}}</span>
-        <span class="composer-footer-label" ${{ '@hidden': '!hasLabel' }}>{{label}}</span>
-        <select class="composer-footer-select" ${{ '@data-footer-control-id': 'id', '@data-footer-control-kind': 'kind', '@disabled': 'disabled' }} itemize="options">
-          <template>
-            <option ${{ '@value': 'value', '@selected': 'selected' }}>{{label}}</option>
-          </template>
-        </select>
-      </label>
-      <label ${{ '@class': 'checkboxClass', '@data-footer-control-id': 'id', '@data-footer-control-kind': 'kind', '@title': 'title', '@hidden': '!isCheckbox' }}>
-        <span class="material-symbols-outlined" ${{ '@hidden': '!hasIcon' }}>{{icon}}</span>
-        <input class="composer-footer-checkbox" type="checkbox" ${{ '@data-footer-control-id': 'id', '@data-footer-control-kind': 'kind', checked: 'checked', '@disabled': 'disabled' }}>
-        <span class="composer-footer-label" ${{ '@hidden': '!hasLabel' }}>{{label}}</span>
-      </label>
-      <button type="button" ${{ '@class': 'buttonClass', '@data-footer-control-id': 'id', '@data-footer-control-kind': 'kind', '@title': 'title', '@disabled': 'disabled', '@hidden': '!isButton' }}>
-        <span class="material-symbols-outlined" ${{ '@hidden': '!hasIcon' }}>{{icon}}</span>
-        <span class="composer-footer-label" ${{ '@hidden': '!hasLabel' }}>{{label}}</span>
-        <span class="composer-footer-value" ${{ '@hidden': '!hasValue' }}>{{value}}</span>
-      </button>
-    </template>
   </div>
   <div class="autocomplete-popup" ref="autocompletePopup"></div>
 </div>
