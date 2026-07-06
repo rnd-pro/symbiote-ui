@@ -2376,6 +2376,7 @@ test('side-scroll contracts are explicit across reusable surfaces', async () => 
   assert.doesNotMatch(layout, /\[responsive-active\]\[responsive-mode='stack'\]\s*\{\s*overflow-x: hidden;/);
   assert.match(nodeCanvas, /contain: size layout paint/);
   assert.match(nodeCanvas, /\[data-flow-scroll='horizontal'\][\s\S]*overflow-x: auto/);
+  assert.doesNotMatch(nodeCanvas, /themedScrollFade(Block|Inline)Styles/);
   assert.match(graphNode, /min-width: var\(--sn-node-min-width/);
   assert.match(graphNode, /overflow-y: auto/);
   assert.match(chatComposer, /container: composer-body \/ inline-size/);
@@ -2409,7 +2410,6 @@ test('scroll edge fade is available on reusable scroll hosts', async () => {
     '../board/KanbanBoard/KanbanBoard.css.js',
     '../canvas/GraphExplorerShell/GraphExplorerShell.css.js',
     '../canvas/GraphTabs/GraphTabs.css.js',
-    '../canvas/NodeCanvas/NodeCanvas.css.js',
     '../canvas/NodeSearch/NodeSearch.css.js',
     '../catalog/src/css/index.css.js',
     '../chat/ChatComposer/ChatComposer.css.js',

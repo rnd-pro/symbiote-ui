@@ -113,6 +113,9 @@ scroll-edge fade used by reusable scroll hosts. The effect uses a CSS mask
 rather than a colored overlay, so clipped content fades into the actual
 surface behind it and the visible edge always inherits the local background.
 Set `scrollShadow: 0` to disable the fade.
+Pan/drag canvases such as `node-canvas` and `canvas-graph` do not use the
+scroll-edge fade; it is reserved for conventional one-axis scroll surfaces such
+as lists, tab strips, menus, and code/data panes.
 
 `createCascadeTheme()` also derives readable foreground tokens for colored
 controls. The same Node-safe formula is exposed as `getReadableTextForHsl()`;
