@@ -11,7 +11,7 @@ let theme = createCascadeTheme({
   contrast: 58,
   chroma: 89,
   hue: 218,
-  pattern: 60,
+  pattern: 0,
   outline: 0,
   type: 100,
   heading: 100,
@@ -153,7 +153,7 @@ when the last temporary panel is removed. Persistent host layout panels use
 The bounded cascade state includes two discrete theme variants:
 
 - `themeVariant: "classic"` is the library default and restores the earlier Agent Portal shell direction
-  (`hue: 218`, `chroma: 89`, dark 10/13 derived surfaces, pattern 0.60),
+  (`hue: 218`, `chroma: 89`, dark 10/13 derived surfaces, pattern 0),
   uses sharp/no-outline chrome, and defaults to `tabShape: "classic-ear"`.
   It keeps `bgLightness`, `surfaceLightness`, `accentLightness`, and
   `accentChroma` on auto so the brightness and chroma sliders keep affecting

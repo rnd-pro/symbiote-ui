@@ -36,7 +36,7 @@ const DEFAULT_PROVIDER_THEME_TOKENS = {
   '--sn-theme-tab-radius-scale': '1',
   '--sn-theme-cell-radius-scale': '1',
   '--sn-theme-composer-radius-scale': '1',
-  '--sn-theme-pattern-brightness': '0.60',
+  '--sn-theme-pattern-brightness': '0',
   '--sn-theme-motion-scale': '1',
   '--sn-motion-enabled': '1',
   '--sn-animation-play-state': 'running',

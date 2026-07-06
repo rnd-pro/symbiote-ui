@@ -132,7 +132,7 @@ export let THEME_CONTROLS = {
     { name: 'radius', type: 'number', default: '1', cssVar: '--sn-theme-radius-scale', description: 'Radius multiplier for node, row, list, and source action corners.' },
     { name: 'cellRadius', type: 'number', default: '1', cssVar: '--sn-theme-cell-radius-scale', description: 'Cellular background dot-radius multiplier, independent from UI corner radius.' },
     { name: 'composerRadius', type: 'number', default: '1', cssVar: '--sn-theme-composer-radius-scale', description: 'Chat composer corner-radius multiplier, independent from UI corner radius.' },
-    { name: 'pattern', type: 'number', default: '0.60', cssVar: '--sn-theme-pattern-brightness', description: 'Animated cell dot intensity; gradients, glare, and noise stay independent.' },
+    { name: 'pattern', type: 'number', default: '0', cssVar: '--sn-theme-pattern-brightness', description: 'Animated cell dot intensity; gradients, glare, and noise stay independent.' },
     { name: 'motion', type: 'number', default: '1', cssVar: '--sn-theme-motion-scale', description: 'Global motion multiplier for transitions and feedback effects.' },
     { name: 'elevation', type: 'number', default: '1', cssVar: '--sn-theme-elevation-scale', description: 'Global shadow and overlay intensity multiplier.' },
   ],

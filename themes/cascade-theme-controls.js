@@ -105,7 +105,7 @@ export const CASCADE_THEME_CONTROL_LIST = Object.freeze([
     type: 'number',
     min: 0,
     max: 100,
-    default: 60,
+    default: 0,
     icon: 'grain',
     description: 'Intensity of animated cell-bg dots; ambient gradients and noise stay stable.',
   },

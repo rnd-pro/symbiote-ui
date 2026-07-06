@@ -554,7 +554,7 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.equal(defaultTheme.state.contrast, 58);
   assert.equal(defaultTheme.state.chroma, 89);
   assert.equal(defaultTheme.state.hue, 218);
-  assert.equal(defaultTheme.state.pattern, 60);
+  assert.equal(defaultTheme.state.pattern, 0);
   assert.equal(defaultTheme.state.outline, 0);
   assert.equal(defaultTheme.state.radius, 0);
   assert.equal(defaultTheme.state.composerRadius, 100);
@@ -576,6 +576,7 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.equal(balancedHeadingTheme.tokens['--sn-theme-heading-scale'], '1.20');
   assert.equal(theme.state.pattern, 0);
   assert.equal(theme.tokens['--sn-theme-pattern-brightness'], '0.00');
+  assert.equal(defaultTheme.tokens['--sn-theme-pattern-brightness'], '0.00');
   assert.equal(theme.state.motion, 100);
   assert.equal(theme.tokens['--sn-theme-motion-scale'], '1.00');
   assert.equal(theme.tokens['--sn-motion-enabled'], '1');
@@ -625,7 +626,7 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.equal(classicTheme.state.surfaceLightness, -1);
   assert.equal(classicTheme.state.accentLightness, -1);
   assert.equal(classicTheme.state.accentChroma, -1);
-  assert.equal(classicTheme.state.pattern, 60);
+  assert.equal(classicTheme.state.pattern, 0);
   assert.equal(classicTheme.state.outline, 0);
   assert.equal(classicTheme.state.radius, 0);
   assert.equal(classicTheme.state.frameRadius, 0);
@@ -2129,6 +2130,7 @@ test('default provider exposes cascade control and scrollbar parity tokens', asy
   assert.equal(tokens['--sn-theme-tab-radius-scale'], '1');
   assert.equal(tokens['--sn-theme-cell-radius-scale'], '1');
   assert.equal(tokens['--sn-theme-composer-radius-scale'], '1');
+  assert.equal(tokens['--sn-theme-pattern-brightness'], '0');
   assert.equal(tokens['--sn-composer-radius'], 'calc(20px * var(--sn-theme-composer-radius-scale, 1))');
   assert.equal(tokens['--sn-cell-min-radius'], 'calc(2px * var(--sn-theme-cell-radius-scale, 1))');
   assert.equal(tokens['--sn-cell-max-radius'], 'calc(5px * var(--sn-theme-cell-radius-scale, 1))');
@@ -2178,6 +2180,7 @@ test('default provider exposes cascade control and scrollbar parity tokens', asy
   assert.match(css, /--sn-theme-radius-scale: 0;/);
   assert.match(css, /--sn-theme-cell-radius-scale: 1;/);
   assert.match(css, /--sn-theme-composer-radius-scale: 1;/);
+  assert.match(css, /--sn-theme-pattern-brightness: 0;/);
   assert.match(css, /--sn-composer-radius: calc\(20px \* var\(--sn-theme-composer-radius-scale, 1\)\);/);
   assert.match(css, /--sn-cell-min-radius: calc\(2px \* var\(--sn-theme-cell-radius-scale, 1\)\);/);
   assert.match(css, /--sn-cell-max-radius: calc\(5px \* var\(--sn-theme-cell-radius-scale, 1\)\);/);
