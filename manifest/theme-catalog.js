@@ -326,6 +326,7 @@ export let THEME_RULE_BLOCKS = [
       'component.layoutGapBackground',
       'geometry.treeRowHeight',
       'geometry.composerInputMinHeight',
+      'geometry.composerInputPadding',
       'radius.node',
       'radius.control',
     ],
@@ -336,6 +337,7 @@ export let THEME_RULE_BLOCKS = [
       { output: 'geometry.treeRowHeight', inputs: ['size.unit', 'density.scale'], expression: 'size.unit * 5.5 when density.scale = compact', description: 'Compact navigation rows stay scan-friendly without wasting vertical space.' },
       { output: 'geometry.tabsHeight', inputs: ['size.unit'], expression: 'size.unit * 9.5', description: 'Project tabs keep enough height for icon, label, and close affordance.' },
       { output: 'geometry.composerRadius', inputs: ['--sn-theme-composer-radius-scale'], expression: '20px * composer radius scale', description: 'The main chat input uses its own pill radius scale independent from the general UI radius.' },
+      { output: 'geometry.composerInputPadding', inputs: ['geometry.composerRadius', 'density.scale'], expression: '4px * density plus 45% of composer radius inline', description: 'Composer textarea text inset expands with rounded corners so placeholder and input text stay optically aligned.' },
     ],
   },
   {
@@ -1286,6 +1288,10 @@ export let THEME_TOKENS = {
       "composerInputMinHeight": {
         "$type": "dimension",
         "$value": "20px"
+      },
+      "composerInputPadding": {
+        "$type": "dimension",
+        "$value": "calc(4px * var(--sn-theme-density)) max(0px, calc(var(--sn-composer-radius) * 0.45))"
       },
       "chatGap": {
         "$type": "dimension",

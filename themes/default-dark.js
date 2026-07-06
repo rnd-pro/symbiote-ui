@@ -660,6 +660,7 @@ const DEFAULT_DARK_TOKENS = {
   '--sn-composer-padding': '12px 20px 16px',
   '--sn-composer-body-padding': '8px 8px 8px 16px',
   '--sn-composer-input-min-height': '20px',
+  '--sn-composer-input-padding': 'calc(4px * var(--sn-theme-density)) max(0px, calc(var(--sn-composer-radius) * 0.45))',
 
   '--sn-chat-bg': 'transparent',
   '--sn-chat-gap': '8px',

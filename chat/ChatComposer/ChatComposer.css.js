@@ -46,6 +46,7 @@ chat-composer {
   align-self: stretch;
   min-width: 0;
   min-inline-size: min(100%, var(--sn-composer-input-min-inline-size, 160px));
+  box-sizing: border-box;
   width: 100%;
   background: transparent;
   border: none;

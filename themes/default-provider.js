@@ -719,6 +719,7 @@ const DEFAULT_PROVIDER_THEME_TOKENS = {
   '--sn-composer-padding': 'var(--sn-step-6) var(--sn-step-9) var(--sn-step-8)',
   '--sn-composer-body-padding': 'var(--sn-space-sm) var(--sn-space-sm) var(--sn-space-sm) var(--sn-space-lg)',
   '--sn-composer-input-min-height': 'var(--sn-step-9)',
+  '--sn-composer-input-padding': 'calc(4px * var(--sn-theme-density)) max(0px, calc(var(--sn-composer-radius) * 0.45))',
 
   '--sn-chat-bg': 'transparent',
   '--sn-chat-gap': 'var(--sn-space-sm)',

@@ -730,6 +730,7 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.equal(theme.tokens['--sn-chat-message-font-size'], 'calc(13px * var(--sn-theme-type-scale))');
   assert.equal(theme.tokens['--sn-composer-input-size'], 'calc(13px * var(--sn-theme-type-scale))');
   assert.equal(theme.tokens['--sn-composer-input-min-inline-size'], 'calc(160px * var(--sn-theme-density))');
+  assert.equal(theme.tokens['--sn-composer-input-padding'], 'calc(4px * var(--sn-theme-density)) max(0px, calc(var(--sn-composer-radius) * 0.45))');
   assert.equal(theme.tokens['--sn-code-font-size'], 'calc(12px * var(--sn-theme-type-scale))');
   assert.equal(theme.tokens['--sn-composer-send-size'], 'calc(32px * var(--sn-theme-density))');
   assert.equal(theme.tokens['--sn-grid-size'], '20px');
@@ -1896,6 +1897,8 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(chatComposer, /--sn-composer-send-size/);
   assert.match(chatComposer, /--sn-composer-input-size/);
   assert.match(chatComposer, /--sn-composer-input-min-inline-size/);
+  assert.match(chatComposer, /--sn-composer-input-padding/);
+  assert.match(chatComposer, /box-sizing: border-box/);
   assert.match(chatComposer, /textarea::placeholder \{[\s\S]*color: color-mix\(in oklab, var\(--sn-sys-on-surface-dim\) 72%, transparent\)/);
   assert.match(chatComposer, /grid-template-columns: auto minmax\(0, 1fr\) auto auto auto/);
   assert.match(chatComposer, /grid-template-rows: minmax\(var\(--sn-composer-input-min-height\), auto\) auto/);
@@ -2191,6 +2194,7 @@ test('default provider exposes cascade control and scrollbar parity tokens', asy
   assert.equal(tokens['--sn-theme-composer-radius-scale'], '1');
   assert.equal(tokens['--sn-theme-pattern-brightness'], '0');
   assert.equal(tokens['--sn-composer-radius'], 'calc(20px * var(--sn-theme-composer-radius-scale, 1))');
+  assert.equal(tokens['--sn-composer-input-padding'], 'calc(4px * var(--sn-theme-density)) max(0px, calc(var(--sn-composer-radius) * 0.45))');
   assert.equal(tokens['--sn-cell-min-radius'], 'calc(2px * var(--sn-theme-cell-radius-scale, 1))');
   assert.equal(tokens['--sn-cell-max-radius'], 'calc(5px * var(--sn-theme-cell-radius-scale, 1))');
   assert.equal(tokens['--sn-motion-enabled'], '1');
@@ -2242,6 +2246,7 @@ test('default provider exposes cascade control and scrollbar parity tokens', asy
   assert.match(css, /--sn-theme-composer-radius-scale: 1;/);
   assert.match(css, /--sn-theme-pattern-brightness: 0;/);
   assert.match(css, /--sn-composer-radius: calc\(20px \* var\(--sn-theme-composer-radius-scale, 1\)\);/);
+  assert.match(css, /--sn-composer-input-padding: calc\(4px \* var\(--sn-theme-density\)\) max\(0px, calc\(var\(--sn-composer-radius\) \* 0\.45\)\);/);
   assert.match(css, /--sn-cell-min-radius: calc\(2px \* var\(--sn-theme-cell-radius-scale, 1\)\);/);
   assert.match(css, /--sn-cell-max-radius: calc\(5px \* var\(--sn-theme-cell-radius-scale, 1\)\);/);
   assert.match(css, /--sn-button-primary-color: hsl\(0 0% 8%\);/);
@@ -2605,6 +2610,7 @@ test('chat composer exposes reusable voice controls and agent-facing metadata', 
   assert.match(styles, /36cqi/);
   assert.match(styles, /38cqi/);
   assert.match(styles, /--sn-composer-input-min-inline-size/);
+  assert.match(styles, /box-sizing: border-box/);
   assert.match(styles, /--sn-composer-wake-command-max/);
   assert.doesNotMatch(styles, /28vw/);
   assert.match(registry, /component-descriptor-v2/);

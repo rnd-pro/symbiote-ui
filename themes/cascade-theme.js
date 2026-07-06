@@ -1946,7 +1946,7 @@ export function createCascadeTheme(options = {}) {
     '--sn-composer-control-gap': densityToken(8),
     '--sn-composer-send-size': densityToken(32),
     '--sn-composer-input-min-height': densityToken(20),
-    '--sn-composer-input-padding': `${densityToken(4)} 0`,
+    '--sn-composer-input-padding': `${densityToken(4)} max(0px, calc(var(--sn-composer-radius) * 0.45))`,
     '--sn-composer-footer-gap': densityToken(4),
     '--sn-composer-footer-padding': `${densityToken(6)} ${densityToken(16)} 0`,
     '--sn-composer-footer-btn-min-height': densityToken(24),

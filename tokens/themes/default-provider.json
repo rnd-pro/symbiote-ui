@@ -682,6 +682,10 @@
       "$type": "dimension",
       "$value": "20px"
     },
+    "composerInputPadding": {
+      "$type": "dimension",
+      "$value": "calc(4px * var(--sn-theme-density)) max(0px, calc(var(--sn-composer-radius) * 0.45))"
+    },
     "chatGap": {
       "$type": "dimension",
       "$value": "8px"

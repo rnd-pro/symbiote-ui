@@ -105,6 +105,9 @@ The `cellRadius` control is separate from UI corner radius and writes
 `composerRadius` is also independent and writes
 `--sn-theme-composer-radius-scale`, so hosts can keep the chat composer input
 rounded while cards, tables, and layout chrome use a sharp classic geometry.
+The composer textarea uses `--sn-composer-input-padding`, whose inline inset
+expands from `--sn-composer-radius` so text stays visually aligned inside
+rounded composer surfaces.
 `scrollShadow` writes `--sn-scroll-shadow-size` and controls the short
 scroll-edge fade used by reusable scroll hosts. The effect uses a CSS mask
 rather than a colored overlay, so clipped content fades into the actual
