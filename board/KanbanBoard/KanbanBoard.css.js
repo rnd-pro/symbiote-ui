@@ -1,3 +1,5 @@
+import { themedScrollFadeInlineStyles } from '../../themes/scroll-fade-styles.js';
+
 export default /*css*/ `
 sn-kanban-board {
   --sn-kanban-border: var(--sn-sys-outline-subtle);
@@ -33,6 +35,7 @@ sn-kanban-board .sn-kanban-columns {
   min-height: var(--sn-kanban-columns-min-height, 0);
   height: var(--sn-kanban-columns-height, 100%);
   overflow: auto;
+  ${themedScrollFadeInlineStyles}
   padding: var(--sn-kanban-padding, 0 0 var(--sn-step-2));
 }
 

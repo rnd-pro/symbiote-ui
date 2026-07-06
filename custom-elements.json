@@ -43582,6 +43582,10 @@
               "description": "Theme CSS custom property consumed by cascade-theme-editor."
             },
             {
+              "name": "--sn-scroll-shadow-size",
+              "description": "Theme CSS custom property consumed by cascade-theme-editor."
+            },
+            {
               "name": "--sn-theme-density",
               "description": "Theme CSS custom property consumed by cascade-theme-editor."
             },
@@ -43885,6 +43889,11 @@
                         "type": "number",
                         "minimum": 0,
                         "maximum": 100
+                      },
+                      "scrollShadow": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 48
                       },
                       "frameRadius": {
                         "type": "number",
@@ -44208,6 +44217,11 @@
                           "minimum": 0,
                           "maximum": 100
                         },
+                        "scrollShadow": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 48
+                        },
                         "frameRadius": {
                           "type": "number",
                           "minimum": 0,
@@ -44421,6 +44435,10 @@
             },
             {
               "name": "--sn-sys-accent",
+              "description": "Theme CSS custom property consumed by cascade-theme-widget."
+            },
+            {
+              "name": "--sn-scroll-shadow-size",
               "description": "Theme CSS custom property consumed by cascade-theme-widget."
             },
             {

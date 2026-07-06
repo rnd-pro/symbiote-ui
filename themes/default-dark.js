@@ -354,6 +354,7 @@ const DEFAULT_DARK_TOKENS = {
   '--sn-scrollbar-radius': '999px',
   '--sn-scrollbar-thumb-border': '3px solid transparent',
   '--sn-scrollbar-thumb-min-size': '36px',
+  '--sn-scroll-shadow-size': '14px',
 
   '--sn-tabs-height': '38px',
   '--sn-tabs-item-height': '32px',

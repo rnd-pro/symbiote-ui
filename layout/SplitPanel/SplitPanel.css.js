@@ -1,3 +1,5 @@
+import { themedScrollFadeBlockStyles } from '../../themes/scroll-fade-styles.js';
+
 export default /*css*/ `
 sn-split-panel {
   display: block;
@@ -26,6 +28,7 @@ sn-split-panel {
 .sn-split-panel-primary,
 .sn-split-panel-secondary {
   overflow: auto;
+  ${themedScrollFadeBlockStyles}
 }
 
 .sn-split-divider {

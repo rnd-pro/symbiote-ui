@@ -1,3 +1,5 @@
+import { themedScrollFadeBlockStyles } from '../../themes/scroll-fade-styles.js';
+
 export default /*css*/ `
 :host,
 chat-list {
@@ -38,6 +40,7 @@ chat-list {
 .chat-list-content {
   min-height: 0;
   overflow: auto;
+  ${themedScrollFadeBlockStyles}
 }
 
 .chat-list-icon {

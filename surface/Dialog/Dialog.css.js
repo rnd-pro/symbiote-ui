@@ -1,3 +1,5 @@
+import { themedScrollFadeBlockStyles } from '../../themes/scroll-fade-styles.js';
+
 export default /*css*/ `
 sn-dialog {
   --sn-dialog-backdrop-bg: var(--sn-sys-scrim);
@@ -77,6 +79,7 @@ sn-dialog {
 .sn-dialog-body {
   padding: calc(var(--sn-step-9, 20px) * var(--sn-theme-density, 1));
   overflow-y: auto;
+  ${themedScrollFadeBlockStyles}
   font-family: var(--sn-font, sans-serif);
   font-size: calc(var(--sn-text-md, 13px) * var(--sn-theme-type-scale, 1));
   line-height: 1.5;

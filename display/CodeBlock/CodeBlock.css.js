@@ -1,3 +1,5 @@
+import { themedScrollFadeInlineStyles } from '../../themes/scroll-fade-styles.js';
+
 export default `
 :host {
   display: block;
@@ -13,6 +15,7 @@ export default `
     height: 100%;
     min-inline-size: 0;
     overflow: auto;
+    ${themedScrollFadeInlineStyles}
     align-items: stretch;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
@@ -123,6 +126,7 @@ export default `
     font-size: var(--sn-code-font-size, 12px);
     line-height: 1.6;
     overflow-x: auto;
+    ${themedScrollFadeInlineStyles}
     white-space: pre;
   }
   code-block .md-inline-code {

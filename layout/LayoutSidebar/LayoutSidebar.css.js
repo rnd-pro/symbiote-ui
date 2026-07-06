@@ -3,6 +3,7 @@
  * @module symbiote-ui/layout/LayoutSidebar
  */
 import { css } from '@symbiotejs/symbiote';
+import { themedScrollFadeBlockStyles } from '../../themes/scroll-fade-styles.js';
 
 export let sidebarStyles = css`
   layout-sidebar {
@@ -151,6 +152,7 @@ export let sidebarStyles = css`
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
+    ${themedScrollFadeBlockStyles}
     padding: var(--sn-step-2) 0;
 
     layout-sidebar[collapsed] & {

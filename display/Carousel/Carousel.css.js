@@ -1,3 +1,5 @@
+import { themedScrollFadeInlineStyles } from '../../themes/scroll-fade-styles.js';
+
 export default /*css*/ `
 sn-carousel {
   display: block;
@@ -16,6 +18,7 @@ sn-carousel {
 .sn-carousel-viewport {
   display: flex;
   overflow-x: auto;
+  ${themedScrollFadeInlineStyles}
   scroll-snap-type: x mandatory;
   scroll-behavior: smooth;
   width: 100%;

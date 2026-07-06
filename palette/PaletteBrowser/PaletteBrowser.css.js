@@ -3,6 +3,7 @@
  * @module symbiote-ui/palette/PaletteBrowser.css
  */
 import { css } from '@symbiotejs/symbiote';
+import { themedScrollFadeBlockStyles } from '../../themes/scroll-fade-styles.js';
 
 export let styles = css`
   palette-browser {
@@ -65,6 +66,7 @@ export let styles = css`
   .pal-list {
     flex: 1;
     overflow-y: auto;
+    ${themedScrollFadeBlockStyles}
     padding: var(--sn-step-2) 0;
   }
 

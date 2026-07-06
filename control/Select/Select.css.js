@@ -1,3 +1,5 @@
+import { themedScrollFadeBlockStyles } from '../../themes/scroll-fade-styles.js';
+
 export default /*css*/ `
 sn-select {
   display: block;
@@ -58,6 +60,7 @@ sn-select {
   border-radius: var(--sn-panel-radius, 6px);
   box-shadow: var(--sn-panel-shadow, var(--sn-sys-shadow-overlay));
   overflow-y: auto;
+  ${themedScrollFadeBlockStyles}
   max-height: 240px;
   box-sizing: border-box;
 }

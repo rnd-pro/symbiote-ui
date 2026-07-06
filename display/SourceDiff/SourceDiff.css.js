@@ -1,3 +1,5 @@
+import { themedScrollFadeBlockStyles } from '../../themes/scroll-fade-styles.js';
+
 export default /*css*/ `
 sn-source-diff {
   display: block;
@@ -106,6 +108,7 @@ sn-source-diff {
 
 .sn-source-diff-body {
   overflow: auto;
+  ${themedScrollFadeBlockStyles}
   max-height: 500px;
   min-height: 100px;
 }

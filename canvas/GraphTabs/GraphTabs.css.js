@@ -3,6 +3,7 @@
  * @module symbiote-ui/canvas/GraphTabs.css
  */
 import { css } from '@symbiotejs/symbiote';
+import { themedScrollFadeInlineStyles } from '../../themes/scroll-fade-styles.js';
 
 export let styles = css`
   graph-tabs {
@@ -16,6 +17,7 @@ export let styles = css`
     color: var(--sn-sys-on-surface-dim);
     overflow-x: auto;
     overflow-y: hidden;
+    ${themedScrollFadeInlineStyles}
     user-select: none;
     scrollbar-width: none;
 

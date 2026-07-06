@@ -1,3 +1,5 @@
+import { themedScrollFadeInlineStyles } from '../../themes/scroll-fade-styles.js';
+
 export default /*css*/ `
 sn-data-table {
   display: block;
@@ -24,6 +26,7 @@ sn-data-table[hidden] {
 .sn-data-table-scroll {
   min-width: 0;
   overflow: auto;
+  ${themedScrollFadeInlineStyles}
 }
 
 .sn-data-table table {

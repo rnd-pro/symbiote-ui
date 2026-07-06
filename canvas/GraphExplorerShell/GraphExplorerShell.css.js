@@ -1,3 +1,5 @@
+import { themedScrollFadeBlockStyles } from '../../themes/scroll-fade-styles.js';
+
 export default /*css*/ `
 graph-explorer-shell {
   display: block;
@@ -120,6 +122,7 @@ graph-explorer-shell .graph-explorer-stats {
   z-index: var(--sn-graph-explorer-stats-z);
   max-height: var(--sn-graph-explorer-stats-max-height, 280px);
   overflow-y: auto;
+  ${themedScrollFadeBlockStyles}
   padding: var(--sn-graph-explorer-stats-padding, 4px 10px);
   border: 1px solid var(--sn-sys-outline);
   border-radius: var(--sn-graph-explorer-stats-radius, 3px);

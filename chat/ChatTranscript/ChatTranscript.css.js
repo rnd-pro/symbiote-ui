@@ -1,3 +1,5 @@
+import { themedScrollFadeBlockStyles } from '../../themes/scroll-fade-styles.js';
+
 export default `
 :host,
 chat-transcript {
@@ -34,6 +36,7 @@ chat-transcript > [slot="background"] {
 .chat-messages {
   flex: 1;
   overflow-y: auto;
+  ${themedScrollFadeBlockStyles}
   padding: var(--sn-chat-transcript-padding);
   padding-block-end: calc(
     var(--sn-chat-transcript-padding-block-end, 16px) + var(--sn-chat-overlay-stack-reserve, 0px)

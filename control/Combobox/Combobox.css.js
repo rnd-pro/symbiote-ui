@@ -1,3 +1,5 @@
+import { themedScrollFadeBlockStyles } from '../../themes/scroll-fade-styles.js';
+
 export default /*css*/ `
 sn-combobox {
   display: block;
@@ -62,6 +64,7 @@ sn-combobox {
   box-shadow: var(--sn-panel-shadow, var(--sn-sys-shadow-overlay));
   max-height: 240px;
   overflow-y: auto;
+  ${themedScrollFadeBlockStyles}
   box-sizing: border-box;
   padding: var(--sn-step-2);
 }

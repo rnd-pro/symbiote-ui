@@ -1,3 +1,5 @@
+import { themedScrollFadeBlockStyles } from '../../themes/scroll-fade-styles.js';
+
 export default /*css*/ `
 sn-scroll-area {
   display: block;
@@ -14,6 +16,10 @@ sn-scroll-area {
 sn-scroll-area:has(> .sn-scroll-container) {
   overflow: hidden;
   padding: 0;
+}
+
+sn-scroll-area:not(:has(> .sn-scroll-container)) {
+  ${themedScrollFadeBlockStyles}
 }
 
 .sn-scroll-container {

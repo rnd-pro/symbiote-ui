@@ -584,6 +584,7 @@ const WEBMCP_TOOLS = {
           tabRadius: { type: 'number', minimum: 0, maximum: 100 },
           cellRadius: { type: 'number', minimum: 0, maximum: 100 },
           composerRadius: { type: 'number', minimum: 0, maximum: 100 },
+          scrollShadow: { type: 'number', minimum: 0, maximum: 48 },
           frameRadius: { type: 'number', minimum: 0, maximum: 200 },
           frameGap: { type: 'number', minimum: 0, maximum: 20 },
           motion: { type: 'number', minimum: 0, maximum: 200 },
@@ -3131,6 +3132,7 @@ export let COMPONENTS = [
         '--sn-theme-density',
         '--sn-theme-type-scale',
         '--sn-theme-pattern-brightness',
+        '--sn-scroll-shadow-size',
       ],
       ssr: {
         mode: 'hydrate-only',
@@ -3192,6 +3194,7 @@ export let COMPONENTS = [
         '--sn-sys-outline',
         '--sn-sys-accent',
         '--sn-scrollbar-thumb',
+        '--sn-scroll-shadow-size',
         '--sn-theme-density',
         '--sn-theme-type-scale',
         '--sn-theme-pattern-brightness',

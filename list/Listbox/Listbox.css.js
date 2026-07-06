@@ -1,3 +1,5 @@
+import { themedScrollFadeBlockStyles } from '../../themes/scroll-fade-styles.js';
+
 export default /*css*/ `
 sn-listbox {
   display: block;
@@ -11,6 +13,7 @@ sn-listbox {
   padding: var(--sn-step-2);
   max-height: var(--sn-listbox-max-height, 280px);
   overflow-y: auto;
+  ${themedScrollFadeBlockStyles}
   box-sizing: border-box;
   box-shadow: var(--sn-listbox-shadow, var(--sn-sys-shadow-overlay));
   transition: border-color var(--sn-transition-fast, 120ms) ease;

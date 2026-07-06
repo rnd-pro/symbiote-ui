@@ -105,6 +105,11 @@ The `cellRadius` control is separate from UI corner radius and writes
 `composerRadius` is also independent and writes
 `--sn-theme-composer-radius-scale`, so hosts can keep the chat composer input
 rounded while cards, tables, and layout chrome use a sharp classic geometry.
+`scrollShadow` writes `--sn-scroll-shadow-size` and controls the short
+scroll-edge fade used by reusable scroll hosts. The effect uses a CSS mask
+rather than a colored overlay, so clipped content fades into the actual
+surface behind it and the visible edge always inherits the local background.
+Set `scrollShadow: 0` to disable the fade.
 
 `createCascadeTheme()` also derives readable foreground tokens for colored
 controls. The same Node-safe formula is exposed as `getReadableTextForHsl()`;

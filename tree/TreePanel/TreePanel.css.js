@@ -1,3 +1,5 @@
+import { themedScrollFadeBlockStyles } from '../../themes/scroll-fade-styles.js';
+
 export default /*css*/ `
 :host,
 sn-tree-panel {
@@ -95,6 +97,7 @@ sn-tree-panel[hidden] {
   flex: 1 1 auto;
   min-block-size: 0;
   overflow: auto;
+  ${themedScrollFadeBlockStyles}
   padding: var(--sn-tree-panel-content-padding);
 }
 

@@ -335,6 +335,7 @@ export const CASCADE_THEME_TOKEN_TARGETS = Object.freeze({
     '--sn-layout-scroll-inline-extra',
     '--sn-layout-overflow-block-size',
     '--sn-layout-responsive-panel-min-block-size',
+    '--sn-scroll-shadow-size',
     '--sn-tabs-active-border-bottom',
     '--sn-tabs-active-corner-display',
     '--sn-tabs-bar-align',
@@ -1187,6 +1188,7 @@ export function normalizeCascadeThemeOptions(options = {}) {
     tabRadius: clamp(merged.tabRadius, 0, 100, CASCADE_THEME_DEFAULTS.tabRadius),
     cellRadius: clamp(merged.cellRadius, 0, 100, CASCADE_THEME_DEFAULTS.cellRadius),
     composerRadius: clamp(merged.composerRadius, 0, 100, CASCADE_THEME_DEFAULTS.composerRadius),
+    scrollShadow: clamp(merged.scrollShadow, 0, 48, CASCADE_THEME_DEFAULTS.scrollShadow),
     frameRadius: clamp(merged.frameRadius, 0, 200, CASCADE_THEME_DEFAULTS.frameRadius),
     frameGap: clamp(merged.frameGap, 0, 20, CASCADE_THEME_DEFAULTS.frameGap),
     motion: clamp(merged.motion, 0, 200, CASCADE_THEME_DEFAULTS.motion),
@@ -2155,6 +2157,7 @@ export function createCascadeTheme(options = {}) {
     '--sn-scrollbar-radius': '999px',
     '--sn-scrollbar-thumb-border': '3px solid transparent',
     '--sn-scrollbar-thumb-min-size': '36px',
+    '--sn-scroll-shadow-size': `${state.scrollShadow.toFixed(1)}px`,
     '--sn-scroll-area-padding': `${densityToken(6)} ${densityToken(8)}`,
     ...resolvedRecipe.overrides,
   };

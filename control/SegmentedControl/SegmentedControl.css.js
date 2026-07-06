@@ -1,3 +1,5 @@
+import { themedScrollFadeInlineStyles } from '../../themes/scroll-fade-styles.js';
+
 export default /*css*/ `
 sn-segmented-control {
   display: inline-flex;
@@ -8,6 +10,7 @@ sn-segmented-control {
   padding: var(--sn-step-1);
   max-width: 100%;
   overflow-x: auto;
+  ${themedScrollFadeInlineStyles}
   font-family: var(--sn-font);
   color: var(--sn-sys-on-surface);
   gap: var(--sn-segmented-gap, 2px);

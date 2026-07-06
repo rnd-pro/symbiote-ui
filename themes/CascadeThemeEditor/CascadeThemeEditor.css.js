@@ -1,4 +1,5 @@
 import { css } from '@symbiotejs/symbiote';
+import { themedScrollFadeBlockStyles } from '../scroll-fade-styles.js';
 
 export default css`
   cascade-theme-editor {
@@ -427,6 +428,7 @@ export default css`
       font-family: var(--sn-mono-font, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
       font-size: var(--sn-theme-editor-params-size, var(--sn-lab-token-value-size, 11px));
       overflow: auto;
+      ${themedScrollFadeBlockStyles}
       white-space: pre-wrap;
       word-break: break-word;
     }

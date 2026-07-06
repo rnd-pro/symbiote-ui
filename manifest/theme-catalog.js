@@ -33,6 +33,7 @@ export let THEME_METADATA = {
       '--sn-theme-radius-scale',
       '--sn-theme-cell-radius-scale',
       '--sn-theme-composer-radius-scale',
+      '--sn-scroll-shadow-size',
       '--sn-theme-pattern-brightness',
       '--sn-theme-motion-scale',
       '--sn-motion-enabled',
@@ -105,6 +106,7 @@ const CSS_TOKEN_CLASSIFIERS = [
   { kind: 'typography-cascade', group: 'typography', pattern: /^--sn-(font|icon-font)/ },
   { kind: 'motion-effects', group: 'effect', pattern: /^--sn-(effect|shadow|cell|motion|animation|transition)-/ },
   { kind: 'motion-effects', group: 'scrollbar', pattern: /^--sn-scrollbar-/ },
+  { kind: 'motion-effects', group: 'scroll-shadow', pattern: /^--sn-scroll-shadow-/ },
   { kind: 'host-bridge-alias', group: 'host-bridge', pattern: /^--(bg-level-2|border-color|text-color|text-color-muted)$/ },
 ];
 
@@ -962,6 +964,10 @@ export let THEME_TOKENS = {
       "scrollbarThumbMinSize": {
         "$type": "dimension",
         "$value": "36px"
+      },
+      "scrollShadowSize": {
+        "$type": "dimension",
+        "$value": "14px"
       },
       "nodeActiveBorder": {
         "$type": "color",

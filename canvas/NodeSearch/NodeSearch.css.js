@@ -3,6 +3,7 @@
  * @module symbiote-ui/canvas/NodeSearch.css
  */
 import { css } from '@symbiotejs/symbiote';
+import { themedScrollFadeBlockStyles } from '../../themes/scroll-fade-styles.js';
 
 export let styles = css`
   node-search {
@@ -65,6 +66,7 @@ export let styles = css`
       overflow: hidden;
       max-height: 300px;
       overflow-y: auto;
+      ${themedScrollFadeBlockStyles}
     }
 
     & .search-results:empty {

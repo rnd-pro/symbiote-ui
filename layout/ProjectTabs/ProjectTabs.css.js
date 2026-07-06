@@ -1,3 +1,5 @@
+import { themedScrollFadeInlineStyles } from '../../themes/scroll-fade-styles.js';
+
 export default /*css*/ `
 :host,
 project-tabs {
@@ -36,6 +38,7 @@ project-tabs[data-cascade-tab-shape="classic-ear"],
   height: 100%;
   padding: var(--sn-tabs-bar-padding, 0 12px);
   overflow-x: auto;
+  ${themedScrollFadeInlineStyles}
   scrollbar-width: none;
   position: relative;
   z-index: 2;

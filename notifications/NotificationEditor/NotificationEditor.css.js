@@ -1,4 +1,5 @@
 import { css } from '@symbiotejs/symbiote';
+import { themedScrollFadeBlockStyles } from '../../themes/scroll-fade-styles.js';
 
 export default css`
   notification-editor {
@@ -79,6 +80,7 @@ export default css`
     min-width: 0;
     min-height: 0;
     overflow: auto;
+    ${themedScrollFadeBlockStyles}
     display: grid;
     gap: var(--sn-notification-editor-section-gap, 14px);
     align-content: start;

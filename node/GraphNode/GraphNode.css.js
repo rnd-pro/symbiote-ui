@@ -1,4 +1,5 @@
 import { css } from '@symbiotejs/symbiote';
+import { themedScrollFadeBlockStyles } from '../../themes/scroll-fade-styles.js';
 import { themedScrollbarStyles } from '../../themes/scrollbar-styles.js';
 
 export let styles = css`
@@ -266,6 +267,7 @@ export let styles = css`
       gap: var(--sn-node-items-gap, 6px);
       max-block-size: var(--sn-node-items-max-height);
       overflow-y: auto;
+      ${themedScrollFadeBlockStyles}
       ${themedScrollbarStyles}
     }
 

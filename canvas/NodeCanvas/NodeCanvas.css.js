@@ -1,4 +1,8 @@
 import { css } from '@symbiotejs/symbiote';
+import {
+  themedScrollFadeBlockStyles,
+  themedScrollFadeInlineStyles,
+} from '../../themes/scroll-fade-styles.js';
 import { themedScrollbarStyles } from '../../themes/scrollbar-styles.js';
 
 export let styles = css`
@@ -45,12 +49,14 @@ export let styles = css`
     &[data-flow-scroll='vertical'] {
       overflow-y: auto;
       overflow-x: hidden;
+      ${themedScrollFadeBlockStyles}
       touch-action: pan-y;
     }
 
     &[data-flow-scroll='horizontal'] {
       overflow-x: auto;
       overflow-y: hidden;
+      ${themedScrollFadeInlineStyles}
       touch-action: pan-x;
     }
 

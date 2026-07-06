@@ -1,3 +1,5 @@
+import { themedScrollFadeBlockStyles } from '../../themes/scroll-fade-styles.js';
+
 export default /*css*/ `
 sn-drawer {
   --sn-drawer-backdrop-bg: var(--sn-sys-scrim);
@@ -116,6 +118,7 @@ sn-drawer {
   flex: 1;
   padding: calc(20px * var(--sn-theme-density, 1));
   overflow-y: auto;
+  ${themedScrollFadeBlockStyles}
   font-family: var(--sn-font, sans-serif);
   font-size: calc(13px * var(--sn-theme-type-scale, 1));
   line-height: 1.5;

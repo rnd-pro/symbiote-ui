@@ -480,7 +480,9 @@ test('content surfaces expose themed inset and collapsed sidebar geometry', asyn
   assert.match(scrollArea, /sn-scroll-area \{[\s\S]*?min-width: 0;[\s\S]*?min-height: 0;/);
   assert.match(scrollArea, /sn-scroll-area \{[\s\S]*?overflow: auto;[\s\S]*?padding: var\(--sn-scroll-area-padding\);/);
   assert.match(scrollArea, /sn-scroll-area:has\(> \.sn-scroll-container\) \{[\s\S]*?overflow: hidden;[\s\S]*?padding: 0;/);
+  assert.match(scrollArea, /sn-scroll-area:not\(:has\(> \.sn-scroll-container\)\) \{[\s\S]*?themedScrollFadeBlockStyles/);
   assert.match(scrollArea, /\.sn-scroll-viewport \{[\s\S]*?box-sizing: border-box;[\s\S]*?padding: var\(--sn-scroll-area-padding\);/);
+  assert.doesNotMatch(scrollArea, /\.sn-scroll-viewport \{[\s\S]*?themedScrollFadeBlockStyles/);
   assert.match(layoutNode, /\.panel-title \{[\s\S]*?font-size: var\(--sn-layout-header-title-size, var\(--sn-layout-header-button-size, 0\.75rem\)\);[\s\S]*?line-height: var\(--sn-layout-header-title-line-height, 1\.2\);/);
   assert.match(layoutNode, /\.panel-content \{[\s\S]*?box-sizing: border-box;[\s\S]*?min-inline-size: 0;[\s\S]*?min-block-size: 0;/);
   assert.match(layoutNode, /\.panel-content > sn-card \{[\s\S]*?--sn-card-bg: var\(--sn-layout-panel-card-bg, transparent\);[\s\S]*?--sn-card-border: var\(--sn-layout-panel-card-border, transparent\);[\s\S]*?--sn-card-radius: var\(--sn-layout-panel-card-radius, 0\);[\s\S]*?box-sizing: border-box;[\s\S]*?inline-size: var\(--sn-layout-panel-card-inline-size, 100%\);[\s\S]*?min-block-size: var\(--sn-layout-panel-card-min-block-size, 100%\);/);

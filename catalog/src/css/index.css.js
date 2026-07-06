@@ -1,3 +1,8 @@
+import {
+  themedScrollFadeBlockStyles,
+  themedScrollFadeInlineStyles,
+} from '../../../themes/scroll-fade-styles.js';
+
 export default /*css*/ `
 :root {
   --cat-bg: var(--sn-sys-surface);
@@ -49,6 +54,7 @@ body {
   min-height: 0;
   padding: 24px;
   overflow-y: auto;
+  ${themedScrollFadeBlockStyles}
   overscroll-behavior: contain;
   scrollbar-width: thin;
   scrollbar-color: var(--cat-border) transparent;
@@ -269,6 +275,7 @@ catalog-component-card[hidden] {
   padding: 12px;
   max-width: 100%;
   overflow-x: auto;
+  ${themedScrollFadeInlineStyles}
   background: var(--cat-inset);
   border: 1px solid var(--cat-border);
   border-radius: var(--cat-radius);

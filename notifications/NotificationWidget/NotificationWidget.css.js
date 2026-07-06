@@ -1,4 +1,5 @@
 import { css } from '@symbiotejs/symbiote';
+import { themedScrollFadeBlockStyles } from '../../themes/scroll-fade-styles.js';
 
 export default css`
   notification-widget {
@@ -62,6 +63,7 @@ export default css`
     max-height: min(78vh, var(--sn-notification-widget-max-height, 560px));
     padding: var(--sn-notification-widget-padding, calc(var(--sn-step-5, 10px) * var(--sn-theme-density, 1)));
     overflow: auto;
+    ${themedScrollFadeBlockStyles}
     border: var(--sn-node-border-width, 1px) solid var(--sn-sys-outline);
     border-radius: var(--sn-node-radius, 8px);
     background: var(--sn-sys-surface-panel);

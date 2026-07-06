@@ -1,3 +1,5 @@
+import { themedScrollFadeBlockStyles } from '../../themes/scroll-fade-styles.js';
+
 export default `
 :host,
 quick-open {
@@ -56,6 +58,7 @@ quick-open {
   }
   .qo-results {
     overflow-y: auto;
+    ${themedScrollFadeBlockStyles}
     padding: var(--sn-step-2) 0;
     max-height: 350px;
   }

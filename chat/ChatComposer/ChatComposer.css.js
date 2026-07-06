@@ -1,3 +1,5 @@
+import { themedScrollFadeBlockStyles } from '../../themes/scroll-fade-styles.js';
+
 export default `
 :host,
 chat-composer {
@@ -57,10 +59,13 @@ chat-composer {
   min-height: var(--sn-composer-input-min-height);
   max-height: var(--sn-composer-input-max-height, calc(200px * var(--sn-theme-density)));
   overflow-y: auto;
+  ${themedScrollFadeBlockStyles}
 }
 
 .composer-body textarea:placeholder-shown {
   overflow-y: hidden;
+  -webkit-mask-image: none;
+  mask-image: none;
 }
 
 .composer-leading-controls {
@@ -485,6 +490,7 @@ sn-button.btn-send[variant="icon"].btn-stop::after {
   max-inline-size: 100%;
   max-block-size: min(72vh, 560px);
   overflow: auto;
+  ${themedScrollFadeBlockStyles}
   margin-bottom: var(--sn-composer-footer-gap, 8px);
   padding: var(--sn-composer-context-details-padding, 16px);
   border: 1px solid color-mix(in oklab, var(--sn-sys-on-surface-dim) 22%, transparent);
@@ -967,6 +973,7 @@ chat-composer.drag-over .composer-body {
   right: var(--sn-composer-popup-inset, 20px);
   max-height: 240px;
   overflow-y: auto;
+  ${themedScrollFadeBlockStyles}
   background: color-mix(in oklab, var(--sn-sys-surface-raised) 95%, transparent);
   border: 1px solid color-mix(in oklab, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-raised)) 45%, transparent);
   border-radius: var(--sn-radius-xl, 16px);

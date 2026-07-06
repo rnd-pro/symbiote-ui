@@ -1,3 +1,8 @@
+import {
+  themedScrollFadeBlockStyles,
+  themedScrollFadeInlineStyles,
+} from '../../themes/scroll-fade-styles.js';
+
 export default `
 :host,
 chat-message-item {
@@ -213,6 +218,7 @@ chat-message-item {
   max-width: 100%;
   max-height: 200px;
   overflow-y: auto;
+  ${themedScrollFadeBlockStyles}
 }
 
 .tool-waiting {
@@ -252,6 +258,7 @@ chat-message-item {
   min-width: 0;
   max-width: 100%;
   overflow-x: auto;
+  ${themedScrollFadeInlineStyles}
   margin: var(--sn-step-3) 0;
   font-family: var(--sn-font-mono);
   font-size: var(--sn-chat-code-size, 12px);

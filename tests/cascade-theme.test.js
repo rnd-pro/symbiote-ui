@@ -6,6 +6,7 @@ import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
 
 const scrollbarSource = new URL('../themes/scrollbar-styles.js', import.meta.url);
+const scrollFadeSource = new URL('../themes/scroll-fade-styles.js', import.meta.url);
 const cascadeThemeSource = new URL('../themes/cascade-theme.js', import.meta.url);
 const defaultProviderThemeSource = new URL('../themes/default-provider.js', import.meta.url);
 const cascadeThemeEditorSource = new URL('../themes/CascadeThemeEditor/CascadeThemeEditor.js', import.meta.url);
@@ -144,13 +145,19 @@ function createStyleStub() {
   };
 }
 
-test('theme scrollbar normal state uses the normal thumb token', async () => {
-  const source = await readFile(scrollbarSource, 'utf8');
+test('theme scroll chrome helpers use cascade tokens', async () => {
+  const [source, scrollFade] = await Promise.all([
+    readFile(scrollbarSource, 'utf8'),
+    readFile(scrollFadeSource, 'utf8'),
+  ]);
 
   assert.match(
     source,
     /const SCROLLBAR_COLOR = 'var\(--sn-scrollbar-thumb, currentColor\) var\(--sn-scrollbar-track, transparent\)'/
   );
+  assert.match(scrollFade, /const SCROLL_SHADOW_SIZE = 'var\(--sn-scroll-shadow-size, 14px\)'/);
+  assert.match(scrollFade, /mask-image: \$\{mask\};/);
+  assert.match(scrollFade, /-webkit-mask-image: \$\{mask\};/);
 });
 
 test('cascade theme lab mutates root tokens instead of applying local component themes', async () => {
@@ -548,6 +555,9 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   const flatTabRadiusTheme = themeModule.createCascadeTheme({ themeVariant: 'modern', tabRadius: 0 });
   const flatCellRadiusTheme = themeModule.createCascadeTheme({ themeVariant: 'modern', cellRadius: 0 });
   const flatComposerRadiusTheme = themeModule.createCascadeTheme({ themeVariant: 'modern', composerRadius: 0 });
+  const noScrollShadowTheme = themeModule.createCascadeTheme({ themeVariant: 'modern', scrollShadow: 0 });
+  const largerScrollShadowTheme = themeModule.createCascadeTheme({ themeVariant: 'modern', scrollShadow: 22 });
+  const cappedScrollShadowTheme = themeModule.createCascadeTheme({ themeVariant: 'modern', scrollShadow: 99 });
 
   assert.equal(defaultTheme.state.themeVariant, 'classic');
   assert.equal(defaultTheme.state.tabShape, 'classic-ear');
@@ -558,6 +568,7 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.equal(defaultTheme.state.outline, 0);
   assert.equal(defaultTheme.state.radius, 0);
   assert.equal(defaultTheme.state.composerRadius, 100);
+  assert.equal(defaultTheme.state.scrollShadow, 14);
   assert.equal(defaultTheme.state.frameRadius, 0);
   assert.equal(defaultTheme.tokens['--sn-theme-variant'], 'classic');
   assert.equal(defaultTheme.tokens['--sn-tabs-shape'], 'classic-ear');
@@ -614,6 +625,10 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.equal(flatComposerRadiusTheme.tokens['--sn-theme-radius-scale'], '1.00');
   assert.equal(flatComposerRadiusTheme.tokens['--sn-theme-composer-radius-scale'], '0.00');
   assert.equal(flatComposerRadiusTheme.tokens['--sn-composer-radius'], theme.tokens['--sn-composer-radius']);
+  assert.equal(theme.tokens['--sn-scroll-shadow-size'], '14.0px');
+  assert.equal(noScrollShadowTheme.tokens['--sn-scroll-shadow-size'], '0.0px');
+  assert.equal(largerScrollShadowTheme.tokens['--sn-scroll-shadow-size'], '22.0px');
+  assert.equal(cappedScrollShadowTheme.tokens['--sn-scroll-shadow-size'], '48.0px');
   assert.equal(theme.tokens['--sn-tabs-active-corner-display'], 'none');
   assert.equal('--sn-tabs-strip-line-display' in theme.tokens, false);
   assert.equal(earTheme.state.tabShape, 'ear');
@@ -665,6 +680,7 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.equal(theme.descriptor.controls.find((control) => control.name === 'brightness')?.icon, 'brightness_6');
   assert.equal(theme.descriptor.controls.find((control) => control.name === 'pattern')?.icon, 'grain');
   assert.equal(theme.descriptor.controls.find((control) => control.name === 'heading')?.icon, 'title');
+  assert.equal(theme.descriptor.controls.find((control) => control.name === 'scrollShadow')?.icon, 'gradient');
   assert.equal(theme.tokens['--sn-sys-surface'], 'hsl(0 0% 10.0%)');
   assert.equal(theme.tokens['--sn-sys-on-surface'], 'hsl(0 0% 94.0%)');
   assert.equal(theme.tokens['--sn-sys-surface-raised'], 'var(--sn-sys-surface-panel)');
@@ -736,6 +752,7 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.equal(theme.tokens['--sn-scrollbar-radius'], '999px');
   assert.equal(theme.tokens['--sn-scrollbar-thumb-border'], '3px solid transparent');
   assert.equal(theme.tokens['--sn-scrollbar-thumb-min-size'], '36px');
+  assert.equal(theme.tokens['--sn-scroll-shadow-size'], '14.0px');
   let tokenTargets = flattenTokenTargets(theme.descriptor.tokenTargets);
   let missingTargets = Object.keys(theme.tokens).filter((token) => !tokenTargets.has(token));
   assert.deepEqual(missingTargets, []);
@@ -1133,6 +1150,7 @@ test('cascade theme editor is a reusable browser module', async () => {
   assert.match(customElements, /"tagName": "cascade-theme-widget"/);
   assert.match(customElements, /"tabRadius": \{\s*"type": "number",\s*"minimum": 0,\s*"maximum": 100\s*\}/);
   assert.match(customElements, /"composerRadius": \{\s*"type": "number",\s*"minimum": 0,\s*"maximum": 100\s*\}/);
+  assert.match(customElements, /"scrollShadow": \{\s*"type": "number",\s*"minimum": 0,\s*"maximum": 48\s*\}/);
   assert.match(customElements, /"name": "cascade-geometry-register-change"/);
   assert.match(customElements, /"name": "cascade-theme-target-change"/);
   assert.match(customElements, /"name": "cascade-theme-locale-change"/);
@@ -2063,6 +2081,7 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.doesNotMatch(customElements, /action-zone/);
   assert.doesNotMatch(customElements, /layout-preview/);
   assert.match(customElements, /"name": "--sn-theme-pattern-brightness"/);
+  assert.match(customElements, /"name": "--sn-scroll-shadow-size"/);
   assert.match(customElements, /"name": "--sn-cell-noise"/);
   assert.match(customElements, /"name": "background"/);
   assert.match(customElements, /"animated-background-slot"/);
@@ -2209,6 +2228,7 @@ test('default provider exposes cascade control and scrollbar parity tokens', asy
   assert.equal(tokens['--sn-scrollbar-radius'], '999px');
   assert.equal(tokens['--sn-scrollbar-thumb-border'], '3px solid transparent');
   assert.equal(tokens['--sn-scrollbar-thumb-min-size'], '36px');
+  assert.equal(tokens['--sn-scroll-shadow-size'], '14px');
   assert.equal(tokens['--sn-transition-fast'], 'calc(120ms * var(--sn-theme-motion-scale))');
   assert.equal(tokens['--sn-transition-normal'], 'calc(240ms * var(--sn-theme-motion-scale))');
   assert.equal(tokens['--sn-transition-slow'], 'calc(400ms * var(--sn-theme-motion-scale))');
@@ -2233,6 +2253,7 @@ test('default provider exposes cascade control and scrollbar parity tokens', asy
   assert.match(css, /--sn-layout-menu-action-height: calc\(28px \* var\(--sn-theme-density\)\);/);
   assert.match(css, /--sn-layout-menu-icon-size: calc\(16px \* var\(--sn-theme-type-scale\)\);/);
   assert.match(css, /--sn-panel-shadow: var\(--sn-shadow-md\);/);
+  assert.match(css, /--sn-scroll-shadow-size: 14px;/);
   assert.match(css, /--sn-transition-fast: calc\(120ms \* var\(--sn-theme-motion-scale\)\);/);
   assert.match(css, /--sn-transition-normal: calc\(240ms \* var\(--sn-theme-motion-scale\)\);/);
   assert.match(css, /--sn-transition-slow: calc\(400ms \* var\(--sn-theme-motion-scale\)\);/);
@@ -2300,6 +2321,7 @@ test('theme metadata exposes provider-neutral motion and engine state contracts'
   assert.ok(metadata.controlTokens.includes('--sn-motion-enabled'));
   assert.ok(metadata.controlTokens.includes('--sn-theme-cell-radius-scale'));
   assert.ok(metadata.controlTokens.includes('--sn-theme-composer-radius-scale'));
+  assert.ok(metadata.controlTokens.includes('--sn-scroll-shadow-size'));
   assert.ok(metadata.controlTokens.includes('--sn-animation-play-state'));
   assert.ok(metadata.controlTokens.includes('--sn-animation-duration-slow'));
   assert.ok(catalog.THEME_ELEMENT_GROUPS.some((group) => group.name === 'engine-state'));
@@ -2370,6 +2392,66 @@ test('side-scroll contracts are explicit across reusable surfaces', async () => 
   assert.match(themeEditor, /\.cte-controls[\s\S]*overflow: auto/);
   assert.match(themeEditor, /\.cte-params[\s\S]*overflow: auto/);
   assert.match(themeEditor, /\.cte-controls::-webkit-scrollbar/);
+});
+
+test('scroll edge fade is available on reusable scroll hosts', async () => {
+  let scrollFade = await readFile(scrollFadeSource, 'utf8');
+  assert.match(scrollFade, /--sn-scroll-shadow-size/);
+  assert.match(scrollFade, /themedScrollFadeBlockStyles/);
+  assert.match(scrollFade, /themedScrollFadeInlineStyles/);
+
+  let scrollFadeHosts = [
+    '../board/KanbanBoard/KanbanBoard.css.js',
+    '../canvas/GraphExplorerShell/GraphExplorerShell.css.js',
+    '../canvas/GraphTabs/GraphTabs.css.js',
+    '../canvas/NodeCanvas/NodeCanvas.css.js',
+    '../canvas/NodeSearch/NodeSearch.css.js',
+    '../catalog/src/css/index.css.js',
+    '../chat/ChatComposer/ChatComposer.css.js',
+    '../chat/ChatList/ChatList.css.js',
+    '../chat/ChatMessageItem/ChatMessageItem.css.js',
+    '../chat/ChatSidebar/ChatSidebar.css.js',
+    '../chat/ChatTranscript/ChatTranscript.css.js',
+    '../control/Combobox/Combobox.css.js',
+    '../control/Mentions/Mentions.css.js',
+    '../control/RichTextEditor/RichTextEditor.css.js',
+    '../control/SegmentedControl/SegmentedControl.css.js',
+    '../control/Select/Select.css.js',
+    '../control/Transfer/Transfer.css.js',
+    '../display/Carousel/Carousel.css.js',
+    '../display/CodeBlock/CodeBlock.css.js',
+    '../display/DataTable/DataTable.css.js',
+    '../display/EventFeed/EventFeed.css.js',
+    '../display/SourceDiff/SourceDiff.css.js',
+    '../inspector/InspectorPanel/InspectorPanel.css.js',
+    '../layout/FloatingPanel/FloatingPanel.css.js',
+    '../layout/Layout/Layout.css.js',
+    '../layout/LayoutNode/LayoutNode.css.js',
+    '../layout/LayoutSidebar/LayoutSidebar.css.js',
+    '../layout/ProjectTabs/ProjectTabs.css.js',
+    '../layout/SplitPanel/SplitPanel.css.js',
+    '../list/ListDetailShell/ListDetailShell.css.js',
+    '../list/Listbox/Listbox.css.js',
+    '../navigation/QuickOpen/QuickOpen.css.js',
+    '../node/GraphNode/GraphNode.css.js',
+    '../notifications/NotificationEditor/NotificationEditor.css.js',
+    '../notifications/NotificationWidget/NotificationWidget.css.js',
+    '../palette/PaletteBrowser/PaletteBrowser.css.js',
+    '../surface/Dialog/Dialog.css.js',
+    '../surface/Drawer/Drawer.css.js',
+    '../themes/CascadeThemeEditor/CascadeThemeEditor.css.js',
+    '../themes/CascadeThemeWidget/CascadeThemeWidget.css.js',
+    '../timeline/TimelineEditor/TimelineEditor.css.js',
+    '../tree/TreePanel/TreePanel.css.js',
+  ];
+  let hostSources = await Promise.all(scrollFadeHosts.map((path) => readFile(new URL(path, import.meta.url), 'utf8')));
+  for (let index = 0; index < scrollFadeHosts.length; index += 1) {
+    assert.match(hostSources[index], /themedScrollFade(Block|Inline)Styles/, scrollFadeHosts[index]);
+  }
+
+  let scrollArea = await readFile(new URL('../layout/ScrollArea/ScrollArea.css.js', import.meta.url), 'utf8');
+  assert.match(scrollArea, /sn-scroll-area:not\(:has\(> \.sn-scroll-container\)\) \{[\s\S]*?themedScrollFadeBlockStyles/);
+  assert.doesNotMatch(scrollArea, /\.sn-scroll-viewport \{[\s\S]*?themedScrollFadeBlockStyles/);
 });
 
 test('chat composer exposes reusable voice controls and agent-facing metadata', async () => {

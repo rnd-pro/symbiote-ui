@@ -1,3 +1,5 @@
+import { themedScrollFadeBlockStyles } from '../../themes/scroll-fade-styles.js';
+
 export default `
 :host,
 chat-sidebar-shell {
@@ -140,6 +142,7 @@ chat-sidebar-shell[resizing] .chat-nav  {
 .chat-items {
   flex: 1;
   overflow-y: auto;
+  ${themedScrollFadeBlockStyles}
   padding: var(--sn-chat-sidebar-items-padding, 4px 0);
 }
 

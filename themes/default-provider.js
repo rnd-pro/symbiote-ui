@@ -401,6 +401,7 @@ const DEFAULT_PROVIDER_THEME_TOKENS = {
   '--sn-scrollbar-radius': '999px',
   '--sn-scrollbar-thumb-border': '3px solid transparent',
   '--sn-scrollbar-thumb-min-size': '36px',
+  '--sn-scroll-shadow-size': '14px',
   '--sn-scroll-area-padding': 'var(--sn-step-3) var(--sn-step-4)',
 
   '--sn-tabs-height': 'calc(38px * var(--sn-theme-density))',

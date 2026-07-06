@@ -360,6 +360,10 @@
       "$type": "dimension",
       "$value": "36px"
     },
+    "scrollShadowSize": {
+      "$type": "dimension",
+      "$value": "14px"
+    },
     "nodeActiveBorder": {
       "$type": "color",
       "$value": "color-mix(in srgb, var(--sn-sys-accent) 50%, transparent)"

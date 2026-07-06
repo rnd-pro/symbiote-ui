@@ -1,3 +1,5 @@
+import { themedScrollFadeBlockStyles } from '../../themes/scroll-fade-styles.js';
+
 export default /*css*/ `
 sn-list-detail-shell {
   display: grid;
@@ -89,6 +91,7 @@ sn-list-detail-shell .sn-list-detail-body {
   min-width: 0;
   min-height: 0;
   overflow: auto;
+  ${themedScrollFadeBlockStyles}
 }
 
 sn-list-detail-shell .sn-list-detail-list {

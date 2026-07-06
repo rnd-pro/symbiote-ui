@@ -1,3 +1,5 @@
+import { themedScrollFadeBlockStyles } from '../../themes/scroll-fade-styles.js';
+
 export default /*css*/ `
 sn-transfer {
   display: block;
@@ -39,6 +41,7 @@ sn-transfer {
   margin: 0;
   padding: var(--sn-step-2);
   overflow-y: auto;
+  ${themedScrollFadeBlockStyles}
   flex: 1;
 }
 

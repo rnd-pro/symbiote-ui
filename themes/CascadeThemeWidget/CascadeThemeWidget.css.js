@@ -1,4 +1,5 @@
 import { css } from '@symbiotejs/symbiote';
+import { themedScrollFadeBlockStyles } from '../scroll-fade-styles.js';
 
 export default css`
   cascade-theme-widget {
@@ -320,6 +321,7 @@ export default css`
           max(var(--sn-ctw-mobile-inset, 8px), env(safe-area-inset-bottom))
       );
       overflow: auto;
+      ${themedScrollFadeBlockStyles}
       transform: none;
     }
   }

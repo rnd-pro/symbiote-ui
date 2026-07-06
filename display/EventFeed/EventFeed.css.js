@@ -1,3 +1,5 @@
+import { themedScrollFadeBlockStyles } from '../../themes/scroll-fade-styles.js';
+
 export default /*css*/ `
 sn-event-feed {
   display: flex;
@@ -42,6 +44,7 @@ sn-event-feed-item[hidden] {
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
+  ${themedScrollFadeBlockStyles}
   padding: var(--sn-event-feed-body-padding, 8px);
 }
 
@@ -129,6 +132,7 @@ sn-event-feed-item:hover {
   max-height: var(--sn-event-feed-raw-max-height, 200px);
   margin: 0;
   overflow: auto;
+  ${themedScrollFadeBlockStyles}
   color: var(--sn-sys-on-surface-dim);
   font-size: var(--sn-event-feed-raw-size, 10px);
   white-space: pre-wrap;

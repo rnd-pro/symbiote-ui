@@ -1,3 +1,5 @@
+import { themedScrollFadeBlockStyles } from '../../themes/scroll-fade-styles.js';
+
 export default /*css*/ `
 sn-floating-panel {
   display: block;
@@ -71,6 +73,7 @@ sn-floating-panel {
 .sn-floating-body {
   flex: 1;
   overflow: auto;
+  ${themedScrollFadeBlockStyles}
   padding: var(--sn-step-6);
   box-sizing: border-box;
 }

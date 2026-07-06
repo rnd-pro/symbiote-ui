@@ -1,3 +1,5 @@
+import { themedScrollFadeInlineStyles } from '../../themes/scroll-fade-styles.js';
+
 let css = /*css*/`
   sn-timeline-editor {
     display: flex;
@@ -204,6 +206,7 @@ let css = /*css*/`
     flex: 1;
     overflow-x: auto;
     overflow-y: auto;
+    ${themedScrollFadeInlineStyles}
     position: relative;
     scrollbar-color: var(--sn-scrollbar-thumb) var(--sn-scrollbar-track);
     scrollbar-width: var(--sn-scrollbar-width, thin);

@@ -182,6 +182,15 @@ export const CASCADE_THEME_CONTROL_LIST = Object.freeze([
     description: 'Chat composer corner-radius scale, independent from the general UI radius so sharp panels can keep a rounded input surface.',
   },
   {
+    name: 'scrollShadow',
+    type: 'number',
+    min: 0,
+    max: 48,
+    default: 14,
+    icon: 'gradient',
+    description: 'Size in px of the scroll-edge fade. 0 disables the fade; larger values make content disappear under a stronger surface-colored edge.',
+  },
+  {
     name: 'frameRadius',
     type: 'number',
     min: 0,

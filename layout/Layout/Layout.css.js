@@ -1,4 +1,8 @@
 import { css } from '@symbiotejs/symbiote';
+import {
+  themedScrollFadeBlockStyles,
+  themedScrollFadeInlineStyles,
+} from '../../themes/scroll-fade-styles.js';
 import { themedScrollbarStyles } from '../../themes/scrollbar-styles.js';
 
 export let styles = css`
@@ -42,6 +46,7 @@ export let styles = css`
 
     &[scroll-inline-active] {
       overflow-x: auto;
+      ${themedScrollFadeInlineStyles}
 
       .layout-root {
         min-width: var(--sn-layout-overflow-inline-size, 960px);
@@ -54,6 +59,7 @@ export let styles = css`
 
     &[scroll-block-active] {
       overflow-y: auto;
+      ${themedScrollFadeBlockStyles}
 
       .layout-root {
         min-height: var(--sn-layout-overflow-block-size, 720px);
@@ -66,6 +72,7 @@ export let styles = css`
 
     &[scroll-inline-active][scroll-block-active] {
       overflow: auto;
+      ${themedScrollFadeBlockStyles}
 
       .layout-root {
         min-width: var(--sn-layout-overflow-inline-size, 960px);

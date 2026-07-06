@@ -1,3 +1,5 @@
+import { themedScrollFadeBlockStyles } from '../../themes/scroll-fade-styles.js';
+
 export default /*css*/ `
 sn-rich-text-editor {
   display: block;
@@ -115,6 +117,7 @@ sn-rich-text-editor {
   min-height: 120px;
   max-height: 300px;
   overflow-y: auto;
+  ${themedScrollFadeBlockStyles}
   padding: var(--sn-step-6);
   color: var(--sn-sys-on-surface);
   font-size: calc(var(--sn-text-md, 13px) * var(--sn-theme-type-scale, 1));

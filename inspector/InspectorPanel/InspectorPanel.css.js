@@ -3,6 +3,7 @@
  * @module symbiote-ui/inspector/InspectorPanel.css
  */
 import { css } from '@symbiotejs/symbiote';
+import { themedScrollFadeBlockStyles } from '../../themes/scroll-fade-styles.js';
 
 export let styles = css`
   inspector-panel {
@@ -19,6 +20,7 @@ export let styles = css`
     font-family: var(--sn-font);
     color: var(--sn-sys-on-surface);
     overflow-y: auto;
+    ${themedScrollFadeBlockStyles}
     transition: transform var(--sn-transition-normal, 0.2s) ease;
 
     &[hidden] {
