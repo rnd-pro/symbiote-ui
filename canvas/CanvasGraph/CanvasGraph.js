@@ -2367,6 +2367,8 @@ export class CanvasGraph extends Symbiote {
       nodeWidth: this.renderMode === 'dots' ? DOT_RADIUS * 2 : 160,
       nodeHeight: this.renderMode === 'dots' ? DOT_RADIUS * 2 : 40,
       mode: 'continuous',
+      positionOrigin: this.renderMode === 'dots' ? 'center' : 'top-left',
+      activeVisualNodeId: this.renderMode === 'dots' ? this.activeNode?.id || null : null,
       ...autoOptions,
       ...this._forceLayoutOverrides,
       ...(customOptions || {}),
@@ -2429,8 +2431,9 @@ export class CanvasGraph extends Symbiote {
         let finalW = dimensions.width, finalH = dimensions.height;
         const isEntering = this._layoutWarmupIds?.has(n.id);
         const isPreserved = this._layoutPreserveIds?.has(n.id);
-        const workerX = pos ? pos.x + finalW / 2 : undefined;
-        const workerY = pos ? pos.y + finalH / 2 : undefined;
+        const usesCenterPosition = this.renderMode === 'dots';
+        const workerX = pos ? pos.x + (usesCenterPosition ? 0 : finalW / 2) : undefined;
+        const workerY = pos ? pos.y + (usesCenterPosition ? 0 : finalH / 2) : undefined;
         return {
           id: n.id, type: n.type, parentId: n.parentId, isGroup: !!n.isGroup,
           children: n.children || [], group: findForceNodeGroup(forceGroups, n.id),

@@ -31,6 +31,7 @@ const FALLBACK_DEFAULT_OPTIONS = Object.freeze({
   alphaTarget: 0,
   initialAlpha: 1,
   layoutAlgorithm: 'organic',
+  positionOrigin: 'center',
   contAlphaFloor: 0.001,
   contAlphaTarget: 0.001,
   brownian: 0,
@@ -63,6 +64,10 @@ function normalizeSizeScale(value) {
 
 function normalizeLayoutAlgorithm(value) {
   return value === 'spring' || value === 'oil-cloud' ? value : 'organic';
+}
+
+function normalizePositionOrigin(value) {
+  return value === 'center' ? 'center' : 'top-left';
 }
 
 function getParticipation(node) {
@@ -205,6 +210,7 @@ function resolveFallbackOptions(options = {}) {
     1
   );
   resolved.layoutAlgorithm = normalizeLayoutAlgorithm(options.layoutAlgorithm);
+  resolved.positionOrigin = normalizePositionOrigin(options.positionOrigin ?? resolved.positionOrigin);
   resolved.mode = options.mode === 'continuous' ? 'continuous' : 'converge';
   return resolved;
 }
@@ -811,7 +817,9 @@ export class ForceLayout {
   #getFallbackPositions(state) {
     let positions = {};
     for (const node of state.nodes) {
-      positions[node.id] = { x: node.x, y: node.y };
+      positions[node.id] = state.options.positionOrigin === 'center'
+        ? { x: node.x, y: node.y }
+        : { x: node.x - node.w / 2, y: node.y - node.h / 2 };
     }
     return positions;
   }

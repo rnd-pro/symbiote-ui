@@ -57,6 +57,10 @@ function normalizeLayoutAlgorithm(value) {
   return value === 'spring' || value === 'oil-cloud' ? value : 'organic';
 }
 
+function normalizePositionOrigin(value) {
+  return value === 'center' ? 'center' : 'top-left';
+}
+
 function getCloudRadiusEasing() {
   return config.layoutAlgorithm === 'oil-cloud' ? 0.025 : 0.08;
 }
@@ -454,8 +458,12 @@ function resolveOverlap(nodes, i, j, padX, padY, strength) {
   let participation = Math.min(getCollisionParticipation(a), getCollisionParticipation(b));
   if (participation <= 0.05) return;
 
+  let involvesActiveVisualNode = config.activeVisualNodeId && (
+    a.id === config.activeVisualNodeId ||
+    b.id === config.activeVisualNodeId
+  );
 
-  if (a.parentId !== b.parentId) {
+  if (a.parentId !== b.parentId && !involvesActiveVisualNode) {
     if (a.id !== config.activeGroupId && b.id !== config.activeGroupId) {
       return;
     }
@@ -659,6 +667,7 @@ let config = {
   alphaTarget: 0,
   initialAlpha: 1,
   layoutAlgorithm: 'organic',
+  positionOrigin: 'top-left',
 
   contAlphaFloor: 0.001,
   contAlphaTarget: 0.001,
@@ -671,6 +680,7 @@ let config = {
 
 
   activeGroupId: null,
+  activeVisualNodeId: null,
   boundaryRadius: null,
   boundaryStrength: 0.2,
   attractors: null,
@@ -687,6 +697,7 @@ function initSimulation(data) {
 
   Object.assign(config, options);
   config.layoutAlgorithm = normalizeLayoutAlgorithm(config.layoutAlgorithm);
+  config.positionOrigin = normalizePositionOrigin(config.positionOrigin);
   simMode = options.mode || 'converge';
 
 
@@ -1046,7 +1057,9 @@ function tick(alpha) {
 function getPositions() {
   let positions = {};
   for (const n of nodes) {
-    positions[n.id] = { x: Math.round(n.x - n.w / 2), y: Math.round(n.y - n.h / 2) };
+    positions[n.id] = config.positionOrigin === 'center'
+      ? { x: Math.round(n.x), y: Math.round(n.y) }
+      : { x: Math.round(n.x - n.w / 2), y: Math.round(n.y - n.h / 2) };
   }
   return positions;
 }
@@ -1060,8 +1073,8 @@ function getPositions() {
 function getPositionsPacked() {
   let buf = new Float32Array(nodes.length * 2);
   for (let i = 0; i < nodes.length; i++) {
-    buf[i * 2] = nodes[i].x - nodes[i].w / 2;
-    buf[i * 2 + 1] = nodes[i].y - nodes[i].h / 2;
+    buf[i * 2] = config.positionOrigin === 'center' ? nodes[i].x : nodes[i].x - nodes[i].w / 2;
+    buf[i * 2 + 1] = config.positionOrigin === 'center' ? nodes[i].y : nodes[i].y - nodes[i].h / 2;
   }
   return buf;
 }

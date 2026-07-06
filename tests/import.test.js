@@ -730,6 +730,10 @@ test('canvas graph visual scale options stay in the library contract', async () 
   assert.match(source, /VISUAL_FOCUS_LAYOUT_INITIAL_ALPHA/);
   assert.match(source, /VISUAL_FOCUS_LAYOUT_PADDING/);
   assert.match(source, /const layoutRadius = radius \+ \(isActiveLayoutNode \? VISUAL_FOCUS_LAYOUT_PADDING : 0\);/);
+  assert.match(source, /positionOrigin: this\.renderMode === 'dots' \? 'center' : 'top-left'/);
+  assert.match(source, /activeVisualNodeId: this\.renderMode === 'dots' \? this\.activeNode\?\.id \|\| null : null/);
+  assert.match(source, /const usesCenterPosition = this\.renderMode === 'dots';/);
+  assert.match(source, /const workerX = pos \? pos\.x \+ \(usesCenterPosition \? 0 : finalW \/ 2\) : undefined/);
   assert.match(source, /const dimensions = this\._getWorkerNodeDimensions\(n\);/);
   assert.match(source, /const targetScale = isActive \? activeNodeScale : 1;/);
   assert.match(source, /this\.activeNode\.aScale \|\| activeNodeScale/);
@@ -884,7 +888,8 @@ test('canvas graph seeds entering node positions and eases appearance', async ()
   assert.match(source, /layoutSizeScale: isEntering \? ENTERING_LAYOUT_SIZE_SCALE : 1/);
   assert.match(source, /layoutSizeWarmupTicks: isEntering \? ENTERING_LAYOUT_SIZE_WARMUP_TICKS : 0/);
   assert.match(source, /layoutFixedTicks: isPreserved \? 42 : 0/);
-  assert.match(source, /const workerX = pos \? pos\.x \+ finalW \/ 2 : undefined/);
+  assert.match(source, /const usesCenterPosition = this\.renderMode === 'dots';/);
+  assert.match(source, /const workerX = pos \? pos\.x \+ \(usesCenterPosition \? 0 : finalW \/ 2\) : undefined/);
   assert.match(source, /x: workerX, y: workerY, w: finalW, h: finalH/);
   assert.match(source, /workerOptions\.initialAlpha = INCREMENTAL_LAYOUT_INITIAL_ALPHA/);
   assert.match(source, /contAlphaFloor: this\.\$\.alphaFloor/);
@@ -898,10 +903,13 @@ test('canvas graph seeds entering node positions and eases appearance', async ()
   let worker = await readFile(new URL('../canvas/ForceWorker.js', import.meta.url), 'utf8');
   assert.match(fallback, /function normalizeSizeScale\(value\)/);
   assert.match(fallback, /function normalizeLayoutAlgorithm\(value\)/);
+  assert.match(fallback, /function normalizePositionOrigin\(value\)/);
   assert.match(fallback, /function getEffectiveMass\(node\)/);
   assert.match(fallback, /function getEffectiveWidth\(node\)/);
   assert.match(fallback, /layoutAlgorithm: 'organic'/);
+  assert.match(fallback, /positionOrigin: 'center'/);
   assert.match(fallback, /resolved\.layoutAlgorithm = normalizeLayoutAlgorithm\(options\.layoutAlgorithm\)/);
+  assert.match(fallback, /resolved\.positionOrigin = normalizePositionOrigin\(options\.positionOrigin \?\? resolved\.positionOrigin\)/);
   assert.match(fallback, /function getFallbackClouds\(nodeById, groups, options\)/);
   assert.match(fallback, /function applyFallbackCloudForces\(nodeById, groups, options, alpha\)/);
   assert.match(fallback, /options\.layoutAlgorithm !== 'oil-cloud'/);
@@ -912,20 +920,28 @@ test('canvas graph seeds entering node positions and eases appearance', async ()
   assert.match(fallback, /0\.18 \+ participation \* 0\.82/);
   assert.match(fallback, /initialAlpha: 1/);
   assert.match(fallback, /alpha: options\.initialAlpha/);
+  assert.match(fallback, /state\.options\.positionOrigin === 'center'/);
   assert.match(fallback, /layoutFixedTicks: Math\.max\(0, finiteNumber\(rawNode\.layoutFixedTicks, 0\)\)/);
   assert.match(fallback, /node\.layoutFixedTicks -= 1/);
   assert.match(worker, /function normalizeSizeScale\(value\)/);
   assert.match(worker, /function normalizeLayoutAlgorithm\(value\)/);
+  assert.match(worker, /function normalizePositionOrigin\(value\)/);
   assert.match(worker, /function getEffectiveMass\(node\)/);
   assert.match(worker, /function getEffectiveWidth\(node\)/);
   assert.match(worker, /layoutAlgorithm: 'organic'/);
+  assert.match(worker, /positionOrigin: 'top-left'/);
   assert.match(worker, /config\.layoutAlgorithm = normalizeLayoutAlgorithm\(config\.layoutAlgorithm\)/);
+  assert.match(worker, /config\.positionOrigin = normalizePositionOrigin\(config\.positionOrigin\)/);
   assert.match(worker, /if \(config\.layoutAlgorithm === 'spring'\) return/);
   assert.match(worker, /config\.layoutAlgorithm === 'oil-cloud' \? 0\.025 : 0\.08/);
   assert.match(worker, /config\.layoutAlgorithm === 'oil-cloud' \? 1\.35 : 1/);
   assert.match(worker, /layoutSizeScale: normalizeSizeScale\(n\.layoutSizeScale\)/);
   assert.match(worker, /node\.layoutSizeScale = Math\.min\(1, node\.layoutSizeScale \+ 1 \/ sizeWarmupTicks\)/);
   assert.match(worker, /let hwA = getEffectiveWidth\(a\) \/ 2 \+ padX \+ massPadA/);
+  assert.match(worker, /activeVisualNodeId: null/);
+  assert.match(worker, /let involvesActiveVisualNode = config\.activeVisualNodeId && \(/);
+  assert.match(worker, /if \(a\.parentId !== b\.parentId && !involvesActiveVisualNode\) {/);
+  assert.match(worker, /config\.positionOrigin === 'center'/);
   assert.match(worker, /0\.18 \+ participation \* 0\.82/);
   assert.match(worker, /initialAlpha: 1/);
   assert.match(worker, /continuousAlpha = clampNumber\(finiteNumber\(config\.initialAlpha, 1\), config\.contAlphaFloor, 1\)/);
@@ -1226,6 +1242,72 @@ test('force layout fallback preserves continuous drag dynamics without a browser
     assert.equal(released.meta.fallback, true);
     assert.ok(ticks.length >= 3);
     force.stop();
+  } finally {
+    console.warn = nativeWarn;
+    if (NativeWorker) {
+      globalThis.Worker = NativeWorker;
+    } else {
+      delete globalThis.Worker;
+    }
+    if (nativeRaf) {
+      globalThis.requestAnimationFrame = nativeRaf;
+    } else {
+      delete globalThis.requestAnimationFrame;
+    }
+    if (nativeCancelRaf) {
+      globalThis.cancelAnimationFrame = nativeCancelRaf;
+    } else {
+      delete globalThis.cancelAnimationFrame;
+    }
+  }
+});
+
+test('force layout fallback supports explicit position origin output', async () => {
+  let NativeWorker = globalThis.Worker;
+  let nativeRaf = globalThis.requestAnimationFrame;
+  let nativeCancelRaf = globalThis.cancelAnimationFrame;
+  let nativeWarn = console.warn;
+  globalThis.requestAnimationFrame = (callback) => setTimeout(() => callback(Date.now()), 0);
+  globalThis.cancelAnimationFrame = (id) => clearTimeout(id);
+  console.warn = () => {};
+
+  try {
+    delete globalThis.Worker;
+    let { ForceLayout } = await import('../canvas/ForceLayout.js');
+    let readFirstTick = (options = {}) => new Promise((resolve, reject) => {
+      let force = new ForceLayout('/missing-force-worker.js');
+      let timer = setTimeout(() => {
+        force.stop();
+        reject(new Error('force layout fallback origin test did not tick'));
+      }, 200);
+      force.onTick = (positions, meta) => {
+        clearTimeout(timer);
+        force.stop();
+        resolve({ positions, meta });
+      };
+      force.start({
+        nodes: [{ id: 'box', x: 50, y: 60, w: 80, h: 40, layoutFixedTicks: 2 }],
+        edges: [],
+        options: {
+          mode: 'continuous',
+          alphaDecay: 0.5,
+          brownian: 0,
+          chargeStrength: 0,
+          centerStrength: 0,
+          centerPull: 0,
+          collideStrength: 0,
+          ...options,
+        },
+      });
+    });
+
+    let center = await readFirstTick();
+    assert.equal(center.meta.fallback, true);
+    assert.deepEqual(center.positions.box, { x: 50, y: 60 });
+
+    let topLeft = await readFirstTick({ positionOrigin: 'top-left' });
+    assert.equal(topLeft.meta.fallback, true);
+    assert.deepEqual(topLeft.positions.box, { x: 10, y: 40 });
   } finally {
     console.warn = nativeWarn;
     if (NativeWorker) {
