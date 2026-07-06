@@ -225,6 +225,15 @@ sn-button.btn-send[variant="icon"].btn-stop::after {
   display: none;
 }
 
+.composer-footer-item {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+  gap: var(--sn-composer-footer-gap, 4px);
+  flex: 0 1 auto;
+}
+
 .composer-leading-btn {
   display: inline-flex;
   align-items: center;
@@ -329,6 +338,59 @@ sn-button.btn-send[variant="icon"].btn-stop::after {
   opacity: 1;
 }
 
+.composer-footer-meter {
+  --composer-meter-progress: 0%;
+  --composer-meter-size: var(--sn-composer-context-meter-size, calc(var(--sn-composer-send-size) * 0.58));
+  --composer-meter-thickness: var(--sn-composer-context-meter-thickness, calc(var(--composer-meter-size) * 0.22));
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 var(--composer-meter-size);
+  inline-size: var(--composer-meter-size);
+  block-size: var(--composer-meter-size);
+  border: 0;
+  border-radius: 50%;
+  padding: 0;
+  background: transparent;
+  color: var(--sn-sys-on-surface-dim);
+  cursor: pointer;
+}
+
+.composer-footer-meter[hidden] {
+  display: none;
+}
+
+.composer-footer-meter:hover,
+.composer-footer-meter[aria-expanded="true"] {
+  color: var(--sn-sys-on-surface);
+}
+
+.composer-footer-meter:focus-visible {
+  outline: var(--sn-effect-focus-ring);
+  outline-offset: 2px;
+}
+
+.composer-footer-meter-ring {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  border-radius: 50%;
+  background:
+    radial-gradient(farthest-side, var(--chat-composer-bg) calc(100% - var(--composer-meter-thickness)), transparent calc(100% - var(--composer-meter-thickness) + 0.5px)),
+    conic-gradient(var(--sn-sys-accent) var(--composer-meter-progress), color-mix(in oklab, var(--sn-sys-on-surface-dim) 24%, transparent) 0);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--sn-sys-on-surface-dim) 12%, transparent);
+}
+
+.composer-footer-meter-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
 .composer-footer-select {
   background: transparent;
   border: none;
@@ -410,6 +472,311 @@ sn-button.btn-send[variant="icon"].btn-stop::after {
 .composer-param-collapsed .composer-footer-value,
 .composer-param-collapsed .composer-footer-suffix {
   display: none;
+}
+
+.composer-footer-details-popover {
+  --composer-detail-panel-bg: color-mix(in oklab, var(--sn-sys-surface-raised) 94%, var(--sn-sys-on-surface) 6%);
+  position: absolute;
+  right: 0;
+  bottom: 100%;
+  z-index: 18;
+  box-sizing: border-box;
+  inline-size: min(var(--sn-composer-context-details-width, 520px), 100%);
+  max-inline-size: 100%;
+  max-block-size: min(72vh, 560px);
+  overflow: auto;
+  margin-bottom: var(--sn-composer-footer-gap, 8px);
+  padding: var(--sn-composer-context-details-padding, 16px);
+  border: 1px solid color-mix(in oklab, var(--sn-sys-on-surface-dim) 22%, transparent);
+  border-radius: var(--sn-composer-context-details-radius, var(--sn-radius-xl, 16px));
+  background: var(--composer-detail-panel-bg);
+  color: var(--sn-sys-on-surface);
+  box-shadow: var(--sn-shadow-xl);
+  backdrop-filter: blur(12px);
+}
+
+.composer-footer-details-popover[hidden] {
+  display: none;
+}
+
+.composer-footer-details-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--sn-composer-control-gap, 8px);
+  inline-size: 100%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.composer-footer-details-head:hover .composer-footer-details-title,
+.composer-footer-details-head:focus-visible .composer-footer-details-title,
+.composer-footer-details-head:hover .composer-footer-details-summary,
+.composer-footer-details-head:focus-visible .composer-footer-details-summary {
+  color: var(--sn-sys-on-surface);
+}
+
+.composer-footer-details-head:focus-visible {
+  outline: var(--sn-effect-focus-ring);
+  outline-offset: 3px;
+}
+
+.composer-footer-details-head .material-symbols-outlined {
+  color: var(--sn-sys-on-surface-dim);
+  font-size: var(--sn-composer-footer-toggle-icon-size, 18px);
+}
+
+.composer-footer-details-title {
+  min-width: 0;
+  color: var(--sn-sys-on-surface-dim);
+  font-size: var(--sn-composer-popup-item-size, 13px);
+  font-weight: 560;
+}
+
+.composer-footer-details-summary {
+  color: var(--sn-sys-on-surface-dim);
+  font-size: var(--sn-composer-popup-item-size, 13px);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.composer-footer-details-track,
+.composer-footer-usage-track {
+  --composer-meter-progress: 0%;
+  position: relative;
+  overflow: hidden;
+  block-size: var(--sn-composer-context-track-size, 7px);
+  margin-top: var(--sn-composer-control-gap, 8px);
+  border-radius: var(--sn-radius-full);
+  background: color-mix(in oklab, var(--sn-sys-on-surface-dim) 22%, transparent);
+}
+
+.composer-footer-details-fill,
+.composer-footer-usage-track span {
+  display: block;
+  block-size: 100%;
+  inline-size: var(--composer-meter-progress);
+  border-radius: inherit;
+  background: var(--sn-sys-accent);
+}
+
+.composer-footer-detail-segments {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.composer-footer-detail-segment {
+  flex: 0 0 var(--composer-detail-segment-size, 0%);
+  min-inline-size: 2px;
+  background: var(--sn-sys-accent);
+}
+
+.composer-footer-detail-segment.tone-tools,
+.composer-footer-detail-segment.tone-memory,
+.composer-footer-detail-segment.tone-system,
+.composer-footer-detail-segment.tone-skills {
+  background: color-mix(in oklab, var(--sn-sys-accent) 72%, var(--sn-sys-on-surface) 28%);
+}
+
+.composer-footer-details-progress-label {
+  margin-top: var(--sn-composer-footer-gap, 4px);
+  color: var(--sn-sys-on-surface-dim);
+  font-size: var(--sn-composer-popup-hint-size, 10px);
+  text-align: end;
+}
+
+.composer-footer-details-rows {
+  display: grid;
+  gap: calc(var(--sn-composer-footer-gap, 4px) * 0.5);
+  margin-top: var(--sn-composer-footer-gap, 6px);
+}
+
+.composer-footer-details-rows[hidden],
+.composer-footer-usage-rows[hidden] {
+  display: none;
+}
+
+.composer-footer-usage[hidden] {
+  display: none;
+}
+
+.composer-footer-details-toggle {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: var(--sn-composer-footer-gap, 6px);
+  inline-size: 100%;
+  min-block-size: var(--sn-step-8, 32px);
+  border: 0;
+  border-radius: var(--sn-radius-md, 8px);
+  padding: var(--sn-step-1, 4px) var(--sn-step-2, 8px);
+  background: transparent;
+  color: var(--sn-sys-on-surface-dim);
+  font: inherit;
+  font-size: var(--sn-composer-popup-item-size, 13px);
+  text-align: start;
+  cursor: pointer;
+}
+
+.composer-footer-details-toggle[hidden],
+.composer-footer-usage-head[hidden] {
+  display: none;
+}
+
+.composer-footer-details-toggle:hover,
+.composer-footer-details-toggle:focus-visible {
+  background: color-mix(in oklab, var(--sn-sys-on-surface-dim) 10%, transparent);
+  color: var(--sn-sys-on-surface);
+}
+
+.composer-footer-details-toggle:focus-visible {
+  outline: var(--sn-effect-focus-ring);
+  outline-offset: 2px;
+}
+
+.composer-footer-details-toggle .material-symbols-outlined {
+  flex: 0 0 auto;
+  font-size: var(--sn-composer-footer-toggle-icon-size, 18px);
+}
+
+.composer-footer-details-action {
+  margin-inline-start: auto;
+  opacity: 0.7;
+}
+
+.composer-footer-detail-row {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--sn-composer-footer-gap, 6px);
+  min-width: 0;
+  color: var(--sn-sys-on-surface);
+  font-size: var(--sn-composer-popup-item-size, 13px);
+  line-height: 1.25;
+}
+
+.composer-footer-detail-row.is-muted {
+  color: var(--sn-sys-on-surface-dim);
+}
+
+.composer-footer-detail-row.depth-1 {
+  padding-inline-start: calc(var(--sn-composer-control-gap, 8px) * 1.4);
+}
+
+.composer-footer-detail-prefix {
+  color: var(--sn-sys-on-surface-dim);
+}
+
+.composer-footer-detail-swatch {
+  inline-size: 8px;
+  block-size: 8px;
+  border-radius: 2px;
+  background: var(--sn-sys-accent);
+}
+
+.composer-footer-detail-row.tone-free .composer-footer-detail-swatch,
+.composer-footer-detail-row.tone-deferred .composer-footer-detail-swatch {
+  background: color-mix(in oklab, var(--sn-sys-on-surface-dim) 38%, transparent);
+}
+
+.composer-footer-detail-row.tone-free,
+.composer-footer-detail-row.tone-deferred {
+  color: var(--sn-sys-on-surface-dim);
+}
+
+.composer-footer-detail-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.composer-footer-detail-value,
+.composer-footer-detail-meta {
+  color: var(--sn-sys-on-surface-dim);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.composer-footer-detail-meta {
+  min-inline-size: 4ch;
+  text-align: end;
+  color: var(--sn-sys-on-surface);
+}
+
+.composer-footer-usage {
+  margin-top: var(--sn-composer-control-gap, 12px);
+  padding-top: var(--sn-composer-control-gap, 10px);
+  border-top: 1px solid color-mix(in oklab, var(--sn-sys-on-surface-dim) 20%, transparent);
+}
+
+.composer-footer-usage-head,
+.composer-footer-usage-line {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sn-composer-footer-gap, 6px);
+  min-width: 0;
+}
+
+.composer-footer-usage-head {
+  justify-content: space-between;
+  margin-bottom: var(--sn-composer-control-gap, 8px);
+  color: var(--sn-sys-on-surface-dim);
+  font-size: var(--sn-composer-popup-item-size, 13px);
+}
+
+.composer-footer-usage-head .material-symbols-outlined {
+  font-size: var(--sn-composer-footer-toggle-icon-size, 18px);
+}
+
+.composer-footer-usage-rows {
+  display: grid;
+  gap: var(--sn-composer-control-gap, 8px);
+}
+
+.composer-footer-usage-line {
+  color: var(--sn-sys-on-surface);
+  font-size: var(--sn-composer-popup-item-size, 13px);
+}
+
+.composer-footer-usage-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.composer-footer-usage-value {
+  margin-inline-start: auto;
+  color: var(--sn-sys-on-surface-dim);
+  white-space: nowrap;
+}
+
+.composer-footer-usage-meta {
+  color: var(--sn-sys-on-surface-dim);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.composer-footer-usage-row.tone-warning .composer-footer-usage-track span {
+  background: var(--sn-sys-warning, #facc15);
+}
+
+@media (width <= 560px) {
+  .composer-footer-details-popover {
+    left: 0;
+    right: 0;
+    inline-size: auto;
+  }
 }
 
 @container composer-footer (width <= 560px) {

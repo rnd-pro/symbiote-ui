@@ -25,6 +25,105 @@ function normalizeVoiceInputState(state) {
   return state === 'recording' ? 'listening' : state === 'processing' ? 'transcribing' : state || 'idle';
 }
 
+function clampNumber(value, min = 0, max = 1, fallback = 0) {
+  let number = Number(value);
+  if (!Number.isFinite(number)) number = fallback;
+  return Math.min(max, Math.max(min, number));
+}
+
+function normalizeProgress(value) {
+  let number = clampNumber(value, 0, 1, 0);
+  return number > 1 ? 1 : number;
+}
+
+function progressStyle(value) {
+  return `--composer-meter-progress: ${(normalizeProgress(value) * 100).toFixed(2)}%;`;
+}
+
+function normalizeDetailSegments(segments = []) {
+  return (Array.isArray(segments) ? segments : [])
+    .map((segment, index) => {
+      let value = normalizeProgress(segment?.value ?? segment?.progress ?? 0);
+      let tone = String(segment?.tone || segment?.kind || `tone-${index + 1}`).replace(/[^a-z0-9_-]/gi, '');
+      return {
+        tone,
+        label: String(segment?.label || ''),
+        segmentClass: ['composer-footer-detail-segment', `tone-${tone}`].filter(Boolean).join(' '),
+        segmentStyle: `--composer-detail-segment-size: ${(value * 100).toFixed(2)}%;`,
+      };
+    })
+    .filter((segment) => segment.segmentStyle);
+}
+
+function normalizeDetailRows(rows = []) {
+  return (Array.isArray(rows) ? rows : []).map((row = {}) => {
+    let tone = String(row.tone || row.kind || '').replace(/[^a-z0-9_-]/gi, '');
+    let depth = Math.min(2, Math.max(0, Number(row.depth || row.level || 0) || 0));
+    return {
+      label: String(row.label || ''),
+      value: String(row.value ?? ''),
+      meta: String(row.meta ?? row.percent ?? ''),
+      prefix: String(row.prefix || ''),
+      rowClass: [
+        'composer-footer-detail-row',
+        tone ? `tone-${tone}` : '',
+        depth ? `depth-${depth}` : '',
+        row.muted ? 'is-muted' : '',
+      ].filter(Boolean).join(' '),
+      hasMeta: row.meta != null || row.percent != null,
+      hasPrefix: Boolean(row.prefix),
+      hasSwatch: Boolean(tone),
+    };
+  });
+}
+
+function normalizeUsageRows(rows = []) {
+  return (Array.isArray(rows) ? rows : []).map((row = {}) => {
+    let progress = normalizeProgress(row.progress ?? row.valueProgress ?? 0);
+    let tone = String(row.tone || row.kind || '').replace(/[^a-z0-9_-]/gi, '');
+    return {
+      label: String(row.label || ''),
+      value: String(row.value ?? ''),
+      meta: String(row.meta ?? ''),
+      rowClass: ['composer-footer-usage-row', tone ? `tone-${tone}` : ''].filter(Boolean).join(' '),
+      progressStyle: progressStyle(progress),
+      hasMeta: row.meta != null,
+    };
+  });
+}
+
+function normalizeFooterDetails(details = null) {
+  if (!details || typeof details !== 'object') return null;
+  let progress = normalizeProgress(details.progress ?? details.value ?? 0);
+  let segments = normalizeDetailSegments(details.segments);
+  let rows = normalizeDetailRows(details.rows);
+  let usageRows = normalizeUsageRows(details.usageRows || details.planRows);
+  return {
+    title: String(details.title || ''),
+    summary: String(details.summary || ''),
+    progress,
+    progressLabel: String(details.progressLabel || ''),
+    progressStyle: progressStyle(progress),
+    segments,
+    rowsExpanded: details.rowsExpanded === true,
+    rows,
+    usageTitle: String(details.usageTitle || ''),
+    usageAction: String(details.usageAction || ''),
+    usageExpanded: details.usageExpanded === true,
+    usageCollapsible: details.usageCollapsible === true,
+    usageRows,
+    hasTitle: Boolean(details.title),
+    hasSummary: Boolean(details.summary),
+    hasProgressLabel: Boolean(details.progressLabel),
+    hasSegments: segments.length > 0,
+    hasRows: rows.length > 0,
+    hasUsage: Boolean(details.usageTitle || usageRows.length),
+    hasUsageRows: usageRows.length > 0,
+    hasUsageAction: Boolean(details.usageAction),
+    hasUsageToggle: Boolean(details.usageCollapsible && usageRows.length),
+  };
+}
+
 function normalizeFooterControl(control, index) {
   let id = String(control?.id || control?.name || `control-${index + 1}`);
   let kind = String(control?.kind || control?.type || 'button');
@@ -64,6 +163,12 @@ function decorateFooterControl(item) {
   let labelText = String(item.label || '');
   let valueText = item.value ? String(item.value) : '';
   let suffixText = String(item.suffix || item.meta || '');
+  let details = normalizeFooterDetails(item.details);
+  let meterSource = item.meter && typeof item.meter === 'object' ? item.meter : {};
+  let meterValue = normalizeProgress(meterSource.value ?? meterSource.progress ?? details?.progress ?? item.progress ?? 0);
+  let meterLabel = String(meterSource.label || '');
+  let meterTitle = String(meterSource.title || details?.title || item.title || item.label || item.id || '');
+  let hasMeter = Boolean(item.meter || details);
   let baseClass = [
     'composer-footer-btn',
     'composer-footer-control',
@@ -101,6 +206,20 @@ function decorateFooterControl(item) {
     selectClass: isSelect ? wrapClass.join(' ') : '',
     checkboxClass: isCheckbox ? wrapClass.join(' ') : '',
     buttonClass: isButton ? baseClass.join(' ') : '',
+    itemClass: [
+      'composer-footer-item',
+      `composer-priority-${item.priority}`,
+      hasMeter ? 'has-meter' : '',
+      item.detailsOpen ? 'details-open' : '',
+    ].filter(Boolean).join(' '),
+    details,
+    hasDetails: Boolean(details),
+    detailsExpanded: String(Boolean(item.detailsOpen)),
+    meterTitle,
+    meterLabel,
+    hasMeter,
+    hasMeterLabel: Boolean(meterLabel),
+    meterStyle: progressStyle(meterValue),
     options,
   };
 }
@@ -150,6 +269,31 @@ export class ChatComposer extends Symbiote {
     leadingControls: [],
     footerControls: [],
     footerHtml: '',
+    footerDetailsOpen: false,
+    footerDetailsTitle: '',
+    footerDetailsSummary: '',
+    footerDetailsProgressLabel: '',
+    footerDetailsProgressStyle: progressStyle(0),
+    footerDetailsSegments: [],
+    footerDetailsRowsExpanded: 'false',
+    footerDetailsRowsToggleIcon: 'keyboard_arrow_right',
+    footerDetailsRowsCollapsed: true,
+    footerDetailsRows: [],
+    footerDetailsUsageTitle: '',
+    footerDetailsUsageAction: '',
+    footerDetailsUsageExpanded: 'false',
+    footerDetailsUsageToggleIcon: 'keyboard_arrow_right',
+    footerDetailsUsageCollapsed: true,
+    footerDetailsUsageRows: [],
+    footerDetailsHasTitle: false,
+    footerDetailsHasSummary: false,
+    footerDetailsHasProgressLabel: false,
+    footerDetailsHasSegments: false,
+    footerDetailsHasRows: false,
+    footerDetailsHasUsage: false,
+    footerDetailsHasUsageRows: false,
+    footerDetailsHasUsageAction: false,
+    footerDetailsHasUsageToggle: false,
     isSending: false,
 
     onInput: (event) => {
@@ -310,6 +454,13 @@ export class ChatComposer extends Symbiote {
     },
 
     onFooterClick: (event) => {
+      let meter = event.target?.closest?.('button[data-footer-details-id]');
+      if (meter) {
+        event.preventDefault();
+        event.stopPropagation();
+        this.toggleFooterDetails(meter.dataset.footerDetailsId);
+        return;
+      }
       let btn = event.target?.closest?.('button[data-footer-control-id]');
       if (!btn || btn.disabled) return;
       let id = btn.dataset.footerControlId;
@@ -340,6 +491,15 @@ export class ChatComposer extends Symbiote {
       emit(this, 'chat-composer-context-remove', {
         key: event.currentTarget?.dataset?.key,
       });
+    },
+
+    onFooterDetailsRowsToggle: () => {
+      this._footerDetailsRowsExpanded = !this._footerDetailsRowsExpanded;
+      this._syncFooterDetailsState(this._activeFooterDetails);
+    },
+    onFooterDetailsUsageToggle: () => {
+      this._footerDetailsUsageExpanded = !this._footerDetailsUsageExpanded;
+      this._syncFooterDetailsState(this._activeFooterDetails);
     },
 
     onDragOver: (event) => {
@@ -379,6 +539,7 @@ export class ChatComposer extends Symbiote {
   }
 
   disconnectedCallback() {
+    this._unbindFooterDetailsDismiss();
     this._stopLocalWakeRecognition();
     if (this._voiceRuntime) {
       this._voiceRuntime.destroy();
@@ -1096,6 +1257,7 @@ export class ChatComposer extends Symbiote {
   }
 
   setFooterHtml(htmlStr) {
+    this.closeFooterDetails();
     this.$.footerControls = [];
     this.$.footerHtml = htmlStr || '';
     queueMicrotask(() => this._applyFooterHtml());
@@ -1105,7 +1267,121 @@ export class ChatComposer extends Symbiote {
     let normalized = Array.isArray(controls) ? controls.map((control, index) => normalizeFooterControl(control, index)) : [];
     this.$.footerHtml = '';
     this._clearFooterHtml();
+    if (this._activeFooterDetailsId && !normalized.some((control) => control.id === this._activeFooterDetailsId && control.hasDetails)) {
+      this.closeFooterDetails();
+    } else if (this._activeFooterDetailsId) {
+      let active = normalized.find((control) => control.id === this._activeFooterDetailsId);
+      if (active) {
+        active.detailsOpen = true;
+        active.detailsExpanded = 'true';
+        this._activeFooterDetails = active.details;
+        this._syncFooterDetailsState(active.details);
+      }
+    }
     this.$.footerControls = normalized;
+  }
+
+  toggleFooterDetails(id) {
+    let control = (this.$.footerControls || []).find((item) => item.id === id);
+    if (!control?.hasDetails) return;
+    if (this._activeFooterDetailsId === id && this.$.footerDetailsOpen) {
+      this.closeFooterDetails();
+      return;
+    }
+    this._activeFooterDetailsId = id;
+    this._activeFooterDetails = control.details;
+    this._footerDetailsRowsExpanded = Boolean(control.details.rowsExpanded);
+    this._footerDetailsUsageExpanded = Boolean(control.details.usageExpanded);
+    this._syncFooterDetailsState(control.details);
+    this.$.footerControls = (this.$.footerControls || []).map((item) => ({
+      ...item,
+      detailsOpen: item.id === id,
+      detailsExpanded: String(item.id === id),
+    }));
+    this._bindFooterDetailsDismiss();
+    emit(this, 'chat-composer-footer-details-toggle', {
+      id,
+      open: true,
+      control,
+      details: control.details,
+    });
+  }
+
+  closeFooterDetails() {
+    if (!this._activeFooterDetailsId && !this.$.footerDetailsOpen) return;
+    let id = this._activeFooterDetailsId;
+    this._activeFooterDetailsId = '';
+    this._activeFooterDetails = null;
+    this._footerDetailsRowsExpanded = false;
+    this._footerDetailsUsageExpanded = false;
+    this._syncFooterDetailsState(null);
+    this.$.footerControls = (this.$.footerControls || []).map((item) => ({
+      ...item,
+      detailsOpen: false,
+      detailsExpanded: 'false',
+    }));
+    this._unbindFooterDetailsDismiss();
+    emit(this, 'chat-composer-footer-details-toggle', {
+      id,
+      open: false,
+    });
+  }
+
+  _syncFooterDetailsState(details = null) {
+    let next = details || null;
+    let rowsExpanded = Boolean(next?.hasRows && this._footerDetailsRowsExpanded);
+    let usageExpanded = Boolean(next?.hasUsageRows && this._footerDetailsUsageExpanded);
+    this.$.footerDetailsOpen = Boolean(next);
+    this.$.footerDetailsTitle = next?.title || '';
+    this.$.footerDetailsSummary = next?.summary || '';
+    this.$.footerDetailsProgressLabel = next?.progressLabel || '';
+    this.$.footerDetailsProgressStyle = next?.progressStyle || progressStyle(0);
+    this.$.footerDetailsSegments = next?.segments || [];
+    this.$.footerDetailsRowsExpanded = String(rowsExpanded);
+    this.$.footerDetailsRowsToggleIcon = rowsExpanded ? 'keyboard_arrow_down' : 'keyboard_arrow_right';
+    this.$.footerDetailsRowsCollapsed = !rowsExpanded;
+    this.$.footerDetailsRows = next?.rows || [];
+    this.$.footerDetailsUsageTitle = next?.usageTitle || '';
+    this.$.footerDetailsUsageAction = next?.usageAction || '';
+    this.$.footerDetailsUsageExpanded = String(usageExpanded);
+    this.$.footerDetailsUsageToggleIcon = usageExpanded ? 'keyboard_arrow_down' : 'keyboard_arrow_right';
+    this.$.footerDetailsUsageCollapsed = !usageExpanded;
+    this.$.footerDetailsUsageRows = next?.usageRows || [];
+    this.$.footerDetailsHasTitle = Boolean(next?.hasTitle);
+    this.$.footerDetailsHasSummary = Boolean(next?.hasSummary);
+    this.$.footerDetailsHasProgressLabel = Boolean(next?.hasProgressLabel);
+    this.$.footerDetailsHasSegments = Boolean(next?.hasSegments);
+    this.$.footerDetailsHasRows = Boolean(next?.hasRows);
+    this.$.footerDetailsHasUsage = Boolean(next?.hasUsage);
+    this.$.footerDetailsHasUsageRows = Boolean(next?.hasUsageRows);
+    this.$.footerDetailsHasUsageAction = Boolean(next?.hasUsageAction);
+    this.$.footerDetailsHasUsageToggle = Boolean(next?.hasUsageToggle);
+  }
+
+  _bindFooterDetailsDismiss() {
+    if (this._footerDetailsDismissBound) return;
+    this._footerDetailsDismissBound = true;
+    let doc = this.ownerDocument || document;
+    this._footerDetailsOutsideHandler = (event) => {
+      let path = event.composedPath?.() || [];
+      if (path.includes(this.ref.footerDetails) || path.some((node) => node?.classList?.contains?.('composer-footer-meter'))) return;
+      this.closeFooterDetails();
+    };
+    this._footerDetailsKeyHandler = (event) => {
+      if (event.key === 'Escape') this.closeFooterDetails();
+    };
+    doc.addEventListener('click', this._footerDetailsOutsideHandler, true);
+    doc.addEventListener('keydown', this._footerDetailsKeyHandler, true);
+  }
+
+  _unbindFooterDetailsDismiss() {
+    if (!this._footerDetailsDismissBound) return;
+    this._footerDetailsDismissBound = false;
+    let doc = this.ownerDocument || document;
+    if (this._footerDetailsOutsideHandler) doc.removeEventListener('click', this._footerDetailsOutsideHandler, true);
+    if (this._footerDetailsKeyHandler) doc.removeEventListener('keydown', this._footerDetailsKeyHandler, true);
+    this._footerDetailsOutsideHandler = null;
+    this._footerDetailsKeyHandler = null;
   }
 
   _applyFooterHtml() {
@@ -1437,28 +1713,84 @@ ChatComposer.template = html`
           oninput: 'onInput', onkeydown: 'onKeyDown' }}></textarea>
     <div class="composer-footer" ref="footer" itemize="footerControls" ${{ onchange: 'onParamChange', onclick: 'onFooterClick' }}>
       <template>
-        <label ${{ '@class': 'selectClass', '@data-footer-control-id': 'id', '@data-footer-control-kind': 'kind', '@title': 'title', '@hidden': '!isSelect' }}>
-          <span class="material-symbols-outlined" ${{ '@hidden': '!hasIcon' }}>{{icon}}</span>
-          <span class="composer-footer-label" ${{ '@hidden': '!hasLabel' }}>{{label}}</span>
-          <select class="composer-footer-select" ${{ '@data-footer-control-id': 'id', '@data-footer-control-kind': 'kind', '@disabled': 'disabled' }} itemize="options">
-            <template>
-              <option ${{ '@value': 'value', '@selected': 'selected' }}>{{label}}</option>
-            </template>
-          </select>
-          <span class="composer-footer-suffix" ${{ '@hidden': '!hasSuffix' }}>{{suffix}}</span>
-        </label>
-        <label ${{ '@class': 'checkboxClass', '@data-footer-control-id': 'id', '@data-footer-control-kind': 'kind', '@title': 'title', '@hidden': '!isCheckbox' }}>
-          <span class="material-symbols-outlined" ${{ '@hidden': '!hasIcon' }}>{{icon}}</span>
-          <input class="composer-footer-checkbox" type="checkbox" ${{ '@data-footer-control-id': 'id', '@data-footer-control-kind': 'kind', checked: 'checked', '@disabled': 'disabled' }}>
-          <span class="composer-footer-label" ${{ '@hidden': '!hasLabel' }}>{{label}}</span>
-        </label>
-        <button type="button" ${{ '@class': 'buttonClass', '@data-footer-control-id': 'id', '@data-footer-control-kind': 'kind', '@title': 'title', '@disabled': 'disabled', '@hidden': '!isButton' }}>
-          <span class="material-symbols-outlined" ${{ '@hidden': '!hasIcon' }}>{{icon}}</span>
-          <span class="composer-footer-label" ${{ '@hidden': '!hasLabel' }}>{{label}}</span>
-          <span class="composer-footer-value" ${{ '@hidden': '!hasValue' }}>{{value}}</span>
-        </button>
+        <span ${{ '@class': 'itemClass' }}>
+          <label ${{ '@class': 'selectClass', '@data-footer-control-id': 'id', '@data-footer-control-kind': 'kind', '@title': 'title', '@hidden': '!isSelect' }}>
+            <span class="material-symbols-outlined" ${{ '@hidden': '!hasIcon' }}>{{icon}}</span>
+            <span class="composer-footer-label" ${{ '@hidden': '!hasLabel' }}>{{label}}</span>
+            <select class="composer-footer-select" ${{ '@data-footer-control-id': 'id', '@data-footer-control-kind': 'kind', '@disabled': 'disabled' }} itemize="options">
+              <template>
+                <option ${{ '@value': 'value', '@selected': 'selected' }}>{{label}}</option>
+              </template>
+            </select>
+            <span class="composer-footer-suffix" ${{ '@hidden': '!hasSuffix' }}>{{suffix}}</span>
+          </label>
+          <label ${{ '@class': 'checkboxClass', '@data-footer-control-id': 'id', '@data-footer-control-kind': 'kind', '@title': 'title', '@hidden': '!isCheckbox' }}>
+            <span class="material-symbols-outlined" ${{ '@hidden': '!hasIcon' }}>{{icon}}</span>
+            <input class="composer-footer-checkbox" type="checkbox" ${{ '@data-footer-control-id': 'id', '@data-footer-control-kind': 'kind', checked: 'checked', '@disabled': 'disabled' }}>
+            <span class="composer-footer-label" ${{ '@hidden': '!hasLabel' }}>{{label}}</span>
+          </label>
+          <button type="button" ${{ '@class': 'buttonClass', '@data-footer-control-id': 'id', '@data-footer-control-kind': 'kind', '@title': 'title', '@disabled': 'disabled', '@hidden': '!isButton' }}>
+            <span class="material-symbols-outlined" ${{ '@hidden': '!hasIcon' }}>{{icon}}</span>
+            <span class="composer-footer-label" ${{ '@hidden': '!hasLabel' }}>{{label}}</span>
+            <span class="composer-footer-value" ${{ '@hidden': '!hasValue' }}>{{value}}</span>
+          </button>
+          <button type="button" class="composer-footer-meter" aria-controls="composer-footer-details-popover" ${{ '@data-footer-details-id': 'id', '@title': 'meterTitle', '@aria-label': 'meterTitle', '@aria-expanded': 'detailsExpanded', '@hidden': '!hasMeter' }}>
+            <span class="composer-footer-meter-ring" aria-hidden="true" ${{ '@style': 'meterStyle' }}></span>
+            <span class="composer-footer-meter-label" ${{ '@hidden': '!hasMeterLabel' }}>{{meterLabel}}</span>
+          </button>
+        </span>
       </template>
     </div>
+    <section id="composer-footer-details-popover" class="composer-footer-details-popover" ref="footerDetails" role="dialog" aria-live="polite" ${{ '@hidden': '!footerDetailsOpen' }}>
+      <button type="button" class="composer-footer-details-head" aria-controls="composer-footer-detail-rows" ${{ '@aria-expanded': 'footerDetailsRowsExpanded', onclick: 'onFooterDetailsRowsToggle' }}>
+        <span class="composer-footer-details-title" ${{ '@hidden': '!footerDetailsHasTitle' }}>{{footerDetailsTitle}}</span>
+        <span class="composer-footer-details-summary" ${{ '@hidden': '!footerDetailsHasSummary' }}>{{footerDetailsSummary}}</span>
+        <span class="material-symbols-outlined" aria-hidden="true">{{footerDetailsRowsToggleIcon}}</span>
+      </button>
+      <div class="composer-footer-details-track" ${{ '@style': 'footerDetailsProgressStyle' }}>
+        <div class="composer-footer-details-fill"></div>
+        <div class="composer-footer-detail-segments" itemize="footerDetailsSegments" ${{ '@hidden': '!footerDetailsHasSegments' }}>
+          <template>
+            <span ${{ '@class': 'segmentClass', '@style': 'segmentStyle', '@title': 'label' }}></span>
+          </template>
+        </div>
+      </div>
+      <div class="composer-footer-details-progress-label" ${{ '@hidden': '!footerDetailsHasProgressLabel' }}>{{footerDetailsProgressLabel}}</div>
+      <div id="composer-footer-detail-rows" class="composer-footer-details-rows" itemize="footerDetailsRows" ${{ '@hidden': 'footerDetailsRowsCollapsed' }}>
+        <template>
+          <div ${{ '@class': 'rowClass' }}>
+            <span class="composer-footer-detail-prefix" ${{ '@hidden': '!hasPrefix' }}>{{prefix}}</span>
+            <span class="composer-footer-detail-swatch" ${{ '@hidden': '!hasSwatch' }}></span>
+            <span class="composer-footer-detail-label">{{label}}</span>
+            <span class="composer-footer-detail-value">{{value}}</span>
+            <span class="composer-footer-detail-meta" ${{ '@hidden': '!hasMeta' }}>{{meta}}</span>
+          </div>
+        </template>
+      </div>
+      <div class="composer-footer-usage" ${{ '@hidden': '!footerDetailsHasUsage' }}>
+        <button type="button" class="composer-footer-details-toggle composer-footer-usage-head" aria-controls="composer-footer-usage-rows" ${{ '@aria-expanded': 'footerDetailsUsageExpanded', '@hidden': '!footerDetailsHasUsageToggle', onclick: 'onFooterDetailsUsageToggle' }}>
+          <span class="material-symbols-outlined" aria-hidden="true">{{footerDetailsUsageToggleIcon}}</span>
+          <span>{{footerDetailsUsageTitle}}</span>
+          <span class="material-symbols-outlined composer-footer-details-action" ${{ '@hidden': '!footerDetailsHasUsageAction' }}>{{footerDetailsUsageAction}}</span>
+        </button>
+        <div class="composer-footer-usage-head" ${{ '@hidden': 'footerDetailsHasUsageToggle' }}>
+          <span>{{footerDetailsUsageTitle}}</span>
+          <span class="material-symbols-outlined composer-footer-details-action" ${{ '@hidden': '!footerDetailsHasUsageAction' }}>{{footerDetailsUsageAction}}</span>
+        </div>
+        <div id="composer-footer-usage-rows" class="composer-footer-usage-rows" itemize="footerDetailsUsageRows" ${{ '@hidden': 'footerDetailsUsageCollapsed' }}>
+          <template>
+            <div ${{ '@class': 'rowClass' }}>
+              <div class="composer-footer-usage-line">
+                <span class="composer-footer-usage-label">{{label}}</span>
+                <span class="composer-footer-usage-value">{{value}}</span>
+                <span class="composer-footer-usage-meta" ${{ '@hidden': '!hasMeta' }}>{{meta}}</span>
+              </div>
+              <div class="composer-footer-usage-track" ${{ '@style': 'progressStyle' }}><span></span></div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </section>
     <div class="composer-actions">
       <button class="btn-wake-listen" ref="wakeListenBtn" type="button" title="Wake listening" hidden ${{ onclick: 'onWakeListen' }}>
         <span class="material-symbols-outlined">hearing</span>
