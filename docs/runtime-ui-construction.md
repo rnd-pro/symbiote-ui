@@ -140,9 +140,11 @@ During incremental model growth, `canvas-graph` seeds entering node positions
 near linked visible nodes, starts them with a small effective collision size,
 and restarts the force layout with low initial heat, so live process replay can
 grow without a full random recomposition.
-`setForceLayoutOptions({ layoutAlgorithm })` accepts `organic`, `oil-cloud`, or
-`spring`: use `organic` for the default grouped force model, `oil-cloud` for
-slower cloud-body separation, and `spring` as a plain force-directed baseline.
+`setForceLayoutOptions({ layoutAlgorithm })` accepts `organic`, `oil-cloud`,
+`crystal`, or `spring`: use `organic` for the default grouped force model,
+`oil-cloud` for slower cloud-body separation, `crystal` for deterministic
+topology shells around the graph center of mass, and `spring` as a plain
+force-directed baseline.
 `setVisualOptions({ activeNodeScale, infoPanelScale })` adjusts the selected
 node target scale and active-node info panel scale; the equivalent attributes
 are `active-node-scale` and `info-panel-scale`.

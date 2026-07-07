@@ -757,7 +757,7 @@
               {
                 "name": "setForceLayoutOptions",
                 "type": "function",
-                "description": "Applies force-layout tuning options, including layoutAlgorithm: organic, oil-cloud, or spring, without changing the host-owned graph model."
+                "description": "Applies force-layout tuning options, including layoutAlgorithm: organic, oil-cloud, crystal, or spring, without changing the host-owned graph model."
               },
               {
                 "name": "animateNodeAppearance",
@@ -1202,7 +1202,7 @@
                 {
                   "name": "setForceLayoutOptions",
                   "type": "function",
-                  "description": "Applies force-layout tuning options, including layoutAlgorithm: organic, oil-cloud, or spring, without changing the host-owned graph model."
+                  "description": "Applies force-layout tuning options, including layoutAlgorithm: organic, oil-cloud, crystal, or spring, without changing the host-owned graph model."
                 },
                 {
                   "name": "animateNodeAppearance",
@@ -21594,6 +21594,14 @@
               "description": "Theme CSS custom property consumed by code-block."
             },
             {
+              "name": "--sn-code-gutter-bg",
+              "description": "Theme CSS custom property consumed by code-block."
+            },
+            {
+              "name": "--sn-code-gutter-color",
+              "description": "Theme CSS custom property consumed by code-block."
+            },
+            {
               "name": "--sn-code-gutter-padding",
               "description": "Theme CSS custom property consumed by code-block."
             },
@@ -21700,6 +21708,8 @@
               "--sn-code-markdown-size",
               "--sn-code-table-size",
               "--sn-code-padding",
+              "--sn-code-gutter-bg",
+              "--sn-code-gutter-color",
               "--sn-code-gutter-padding",
               "--sn-code-gutter-width",
               "--sn-code-markdown-padding",
@@ -21883,6 +21893,8 @@
                 "--sn-code-markdown-size",
                 "--sn-code-table-size",
                 "--sn-code-padding",
+                "--sn-code-gutter-bg",
+                "--sn-code-gutter-color",
                 "--sn-code-gutter-padding",
                 "--sn-code-gutter-width",
                 "--sn-code-markdown-padding",
@@ -34684,6 +34696,10 @@
               "description": "Theme CSS custom property consumed by layout-sidebar."
             },
             {
+              "name": "--sn-sidebar-collapsed-width",
+              "description": "Theme CSS custom property consumed by layout-sidebar."
+            },
+            {
               "name": "--sn-sidebar-collapsed-item-size",
               "description": "Theme CSS custom property consumed by layout-sidebar."
             },
@@ -34818,6 +34834,7 @@
               "--sn-layout-sidebar-header-button-active-bg",
               "--sn-layout-sidebar-item-block-size",
               "--sn-layout-sidebar-item-padding",
+              "--sn-sidebar-collapsed-width",
               "--sn-sidebar-collapsed-item-size",
               "--sn-sidebar-collapsed-item-radius",
               "--sn-sidebar-collapsed-sections-padding"
@@ -35058,6 +35075,7 @@
                 "--sn-layout-sidebar-header-button-active-bg",
                 "--sn-layout-sidebar-item-block-size",
                 "--sn-layout-sidebar-item-padding",
+                "--sn-sidebar-collapsed-width",
                 "--sn-sidebar-collapsed-item-size",
                 "--sn-sidebar-collapsed-item-radius",
                 "--sn-sidebar-collapsed-sections-padding"

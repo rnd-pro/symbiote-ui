@@ -487,6 +487,7 @@ test('content surfaces expose themed inset and collapsed sidebar geometry', asyn
   assert.match(layoutNode, /\.panel-content \{[\s\S]*?box-sizing: border-box;[\s\S]*?min-inline-size: 0;[\s\S]*?min-block-size: 0;/);
   assert.match(layoutNode, /\.panel-content > sn-card \{[\s\S]*?--sn-card-bg: var\(--sn-layout-panel-card-bg, transparent\);[\s\S]*?--sn-card-border: var\(--sn-layout-panel-card-border, transparent\);[\s\S]*?--sn-card-radius: var\(--sn-layout-panel-card-radius, 0\);[\s\S]*?box-sizing: border-box;[\s\S]*?inline-size: var\(--sn-layout-panel-card-inline-size, 100%\);[\s\S]*?min-block-size: var\(--sn-layout-panel-card-min-block-size, 100%\);/);
   assert.match(layoutSidebar, /layout-sidebar \{[\s\S]*?border-top: 1px solid var\(--sn-layout-border\);[\s\S]*?border-right: 1px solid var\(--sn-layout-border\);/);
+  assert.match(layoutSidebar, /&\[collapsed\] \{[\s\S]*?width: var\(--sn-sidebar-collapsed-width, var\(--sn-layout-header-block-size, calc\(var\(--sn-layout-header-min-height, 28px\) \+ 3px\)\)\);[\s\S]*?min-width: var\(--sn-sidebar-collapsed-width, var\(--sn-layout-header-block-size, calc\(var\(--sn-layout-header-min-height, 28px\) \+ 3px\)\)\);/);
   assert.match(layoutSidebar, /\.sb-header \{[\s\S]*?block-size: var\(--sn-layout-header-block-size, calc\(var\(--sn-layout-header-min-height, 28px\) \+ 3px\)\);[\s\S]*?background: var\(--sn-layout-sidebar-header-bg, var\(--sn-node-header-bg\)\);[\s\S]*?box-sizing: border-box;[\s\S]*?border-bottom: 1px solid var\(--sn-layout-sidebar-header-border, var\(--sn-layout-border\)\);/);
   assert.doesNotMatch(layoutSidebar, /\.sb-header \{[\s\S]*?border-right:/);
   assert.match(layoutSidebar, /\.sb-header-btn \{[\s\S]*?box-sizing: border-box;[\s\S]*?min-inline-size: var\(--sn-layout-header-button-min-inline-size, 24px\);[\s\S]*?block-size: var\(--sn-layout-header-button-block-size, var\(--sn-layout-header-button-min-block-size, 24px\)\);[\s\S]*?line-height: 1;[\s\S]*?&:hover \{[\s\S]*?background: var\(--sn-layout-sidebar-header-button-hover-bg, color-mix\(in oklch, var\(--sn-sys-accent\) var\(--sn-sys-state-hover-mix\), transparent\)\);/);
@@ -494,10 +495,13 @@ test('content surfaces expose themed inset and collapsed sidebar geometry', asyn
   assert.match(layoutSidebar, /sidebar-section \.sec-item \{[\s\S]*?padding: var\(--sn-layout-sidebar-item-padding, var\(--sn-step-2\) var\(--sn-step-7\)\);[\s\S]*?box-sizing: border-box;[\s\S]*?block-size: var\(--sn-layout-sidebar-item-block-size, var\(--sn-layout-header-block-size, calc\(var\(--sn-layout-header-min-height, 28px\) \+ 3px\)\)\);/);
   assert.match(layoutSidebar, /layout-sidebar\[edit-mode\] &:first-child \{[\s\S]*?background: var\(--sn-layout-sidebar-header-button-active-bg, color-mix\(in oklab, var\(--sn-cat-server\) 10%, transparent\)\);/);
   assert.match(layoutSidebar, /layout-sidebar\[collapsed\] & \{[\s\S]*?inline-size: var\(--sn-sidebar-collapsed-item-size, var\(--sn-layout-sidebar-item-block-size, var\(--sn-layout-header-block-size, calc\(var\(--sn-layout-header-min-height, 28px\) \+ 3px\)\)\)\);[\s\S]*?block-size: var\(--sn-sidebar-collapsed-item-size, var\(--sn-layout-sidebar-item-block-size, var\(--sn-layout-header-block-size, calc\(var\(--sn-layout-header-min-height, 28px\) \+ 3px\)\)\)\);[\s\S]*?margin-inline: auto;/);
-  assert.match(layoutSidebar, /sidebar-section\[data-active\] > \.sec-item \{[\s\S]*?padding-left: var\(--sn-step-6\);[\s\S]*?layout-sidebar\[collapsed\] & \{[\s\S]*?justify-content: flex-start;[\s\S]*?inline-size: 100%;[\s\S]*?margin-inline: 0;[\s\S]*?border-radius: 0;[\s\S]*?padding-left: var\(--sn-step-6\);[\s\S]*?border-left: 2px solid var\(--sn-cat-server\);/);
-  assert.doesNotMatch(layoutSidebar, /sidebar-section\[data-active\] > \.sec-item \{[\s\S]*?layout-sidebar\[collapsed\] & \{[\s\S]*?padding-left: 0;/);
+  assert.match(layoutSidebar, /sidebar-section\[data-active\] > \.sec-item \{[\s\S]*?padding-left: var\(--sn-step-6\);[\s\S]*?layout-sidebar\[collapsed\] & \{[\s\S]*?justify-content: center;[\s\S]*?inline-size: var\(--sn-sidebar-collapsed-item-size, var\(--sn-layout-sidebar-item-block-size, var\(--sn-layout-header-block-size, calc\(var\(--sn-layout-header-min-height, 28px\) \+ 3px\)\)\)\);[\s\S]*?margin-inline: auto;[\s\S]*?border-radius: var\(--sn-sidebar-collapsed-item-radius, var\(--sn-radius-sm, 4px\)\);[\s\S]*?padding: 0;[\s\S]*?border-left: 0;[\s\S]*?box-shadow: inset 2px 0 0 var\(--sn-cat-server\);/);
+  assert.doesNotMatch(layoutSidebar, /sidebar-section\[data-active\] > \.sec-item \{[\s\S]*?layout-sidebar\[collapsed\] & \{[\s\S]*?inline-size: 100%;/);
   assert.match(defaultProvider, /'--sn-sidebar-collapsed-item-size': 'var\(--sn-layout-sidebar-item-block-size\)'/);
+  assert.match(defaultProvider, /'--sn-sidebar-collapsed-width': 'var\(--sn-layout-header-block-size, calc\(var\(--sn-layout-header-min-height, 28px\) \+ 3px\)\)'/);
+  assert.match(defaultProviderCss, /--sn-sidebar-collapsed-width: var\(--sn-layout-header-block-size, calc\(var\(--sn-layout-header-min-height, 28px\) \+ 3px\)\);/);
   assert.match(defaultProviderCss, /--sn-sidebar-collapsed-item-size: var\(--sn-layout-sidebar-item-block-size\);/);
+  assert.match(cascadeTheme, /'--sn-sidebar-collapsed-width': 'var\(--sn-layout-header-block-size, calc\(var\(--sn-layout-header-min-height, 28px\) \+ 3px\)\)'/);
   assert.match(cascadeTheme, /'--sn-sidebar-collapsed-item-size': 'var\(--sn-layout-sidebar-item-block-size\)'/);
 
   for (let token of [
@@ -528,6 +532,7 @@ test('content surfaces expose themed inset and collapsed sidebar geometry', asyn
     '--sn-layout-sidebar-header-button-active-bg',
     '--sn-layout-sidebar-item-block-size',
     '--sn-layout-sidebar-item-padding',
+    '--sn-sidebar-collapsed-width',
     '--sn-sidebar-collapsed-item-size',
     '--sn-sidebar-collapsed-item-radius',
     '--sn-sidebar-collapsed-sections-padding',

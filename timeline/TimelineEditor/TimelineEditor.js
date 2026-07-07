@@ -1,9 +1,10 @@
 /**
- * TimelineEditor — NLE-style timeline editor component.
+ * TimelineEditor - NLE-style timeline editor component.
  *
- * Provides multi-track timeline with playhead, clip display, zoom/pan,
- * and transport controls. Works standalone with mock data or connected
- * to symbiote-engine for real-time sync.
+ * Provides a multi-track timeline with one shared geometry model for ruler,
+ * clips, markers, and playhead. Transport and track headers stay in DOM for
+ * accessibility and real icon controls, while the timeline body uses canvas for
+ * stable media-editor geometry.
  *
  * @element sn-timeline-editor
  *
@@ -19,26 +20,35 @@ import Symbiote from '@symbiotejs/symbiote';
 import { timelineEditorTemplate } from './TimelineEditor.tpl.js';
 import css from './TimelineEditor.css.js';
 
-// Track/clip colors resolve through the cascade (--sn-dom-timeline-clip-*, defined in
-// TimelineEditor.css.js as a DOM domain block aliasing T2 system roles) rather than literals.
-let TRACK_COLOR_VARS = {
+const TRACK_COLOR_VARS = {
   video: '--sn-dom-timeline-clip-video',
   audio: '--sn-dom-timeline-clip-audio',
+  voice: '--sn-dom-timeline-clip-audio',
   text: '--sn-dom-timeline-clip-text',
+  captions: '--sn-dom-timeline-clip-text',
+  caption: '--sn-dom-timeline-clip-text',
   effect: '--sn-dom-timeline-clip-effect',
+  actions: '--sn-dom-timeline-clip-effect',
+  action: '--sn-dom-timeline-clip-effect',
   default: '--sn-dom-timeline-clip-default',
-};
-
-let TRACK_ICONS = {
-  video: '🎬',
-  audio: '🎵',
-  text: '📝',
-  effect: '✨',
-  default: '📦',
 };
 
 function emit(el, type, detail = {}) {
   el.dispatchEvent(new CustomEvent(type, { bubbles: true, composed: true, detail }));
+}
+
+function finiteNumber(value, fallback = 0) {
+  let number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function formatTimecode(frame, fps) {
@@ -49,9 +59,73 @@ function formatTimecode(frame, fps) {
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}:${String(frames).padStart(2, '0')}`;
 }
 
+function cssPixelValue(computed, property, fallback) {
+  let raw = computed.getPropertyValue(property).trim();
+  let value = Number.parseFloat(raw);
+  return Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
+function cssValue(computed, property, fallback = '') {
+  return computed.getPropertyValue(property).trim() || fallback;
+}
+
+function normalizeClip(clip = {}, index = 0, duration = 1) {
+  let start = finiteNumber(clip.start ?? clip.from, 0);
+  let end = clip.end == null
+    ? start + finiteNumber(clip.duration, duration - start)
+    : finiteNumber(clip.end, start + 1);
+  start = Math.max(0, Math.min(Math.round(start), duration));
+  end = Math.max(start + 1, Math.min(Math.round(end), duration));
+  return {
+    ...clip,
+    id: clip.id || `clip-${index + 1}`,
+    start,
+    end,
+    label: clip.label || clip.title || clip.text || clip.id || `clip ${index + 1}`,
+  };
+}
+
+function normalizeMarkerFrame(marker, fps) {
+  if (typeof marker === 'number') return Math.round(marker);
+  if (Number.isFinite(Number(marker?.frame))) return Math.round(Number(marker.frame));
+  if (Number.isFinite(Number(marker?.time))) return Math.round(Number(marker.time) * fps);
+  return null;
+}
+
+function normalizeTimelineData(data = {}) {
+  let fps = Math.max(1, Math.round(finiteNumber(data.fps, 30)));
+  let duration = Math.max(1, Math.round(finiteNumber(data.duration, fps * 15)));
+  let tracks = (Array.isArray(data.tracks) ? data.tracks : []).map((track, trackIndex) => {
+    let id = track.id || `track-${trackIndex + 1}`;
+    let type = track.type || 'default';
+    let clips = (Array.isArray(track.clips) ? track.clips : [])
+      .map((clip, clipIndex) => normalizeClip(clip, clipIndex, duration));
+    return {
+      ...track,
+      id,
+      type,
+      label: track.label || id,
+      clips,
+    };
+  });
+  let markers = (Array.isArray(data.markers) ? data.markers : [])
+    .map((marker) => {
+      let frame = normalizeMarkerFrame(marker, fps);
+      return frame == null ? null : { ...(typeof marker === 'object' ? marker : {}), frame };
+    })
+    .filter(Boolean);
+  return {
+    ...data,
+    fps,
+    duration,
+    tracks,
+    markers,
+  };
+}
+
 export class TimelineEditor extends Symbiote {
 
-  /** @type {{ fps: number, duration: number, tracks: Array, markers?: Array }} */
+  /** @type {{ fps: number, duration: number, tracks: Array, markers?: Array } | null} */
   #data = null;
 
   /** @type {number} Current playhead frame */
@@ -62,6 +136,9 @@ export class TimelineEditor extends Symbiote {
 
   /** @type {number|null} Animation frame ID */
   #animationId = null;
+
+  /** @type {number|null} Render frame ID */
+  #renderId = null;
 
   /** @type {boolean} Is playing */
   #playing = false;
@@ -75,8 +152,27 @@ export class TimelineEditor extends Symbiote {
   /** @type {string|null} Selected clip ID */
   #selectedClipId = null;
 
-  /** @type {ResizeObserver} */
+  /** @type {ResizeObserver|null} */
   #resizeObserver = null;
+
+  /** @type {number} Timestamp until which automatic horizontal follow is paused */
+  #manualScrollUntil = 0;
+
+  /** @type {boolean} */
+  #internalScroll = false;
+
+  /** @type {{ trackH: number, rulerH: number, contentW: number, contentH: number, tracksH: number, dpr: number }} */
+  #metrics = {
+    trackH: 36,
+    rulerH: 28,
+    contentW: 0,
+    contentH: 0,
+    tracksH: 0,
+    dpr: 1,
+  };
+
+  /** @type {Record<string, string>} */
+  #theme = {};
 
   init$ = {
     timeDisplay: '00:00:00',
@@ -84,61 +180,17 @@ export class TimelineEditor extends Symbiote {
     hasData: false,
     zoomLabel: '4 px/fr',
 
-    rulerClick: (e) => {
-      if (!this.#data) return;
-      let rect = e.currentTarget.getBoundingClientRect();
-      let x = e.clientX - rect.left;
-      let frame = Math.round(x / this.#pixelsPerFrame);
-      frame = Math.max(0, Math.min(frame, this.#data.duration));
-      this.#setPlayhead(frame);
-    },
-
-    canvasClick: (e) => {
-      if (!this.#data) return;
-      let rect = e.target.getBoundingClientRect();
-      let x = e.clientX - rect.left;
-      let y = e.clientY - rect.top;
-      let frame = Math.round(x / this.#pixelsPerFrame);
-      let trackIndex = Math.floor(y / 36); // --te-track-height = 36
-
-      // Check if click is on a clip
-      let track = this.#data.tracks[trackIndex];
-      if (track) {
-        let clip = track.clips?.find(c => {
-          let cx = c.start * this.#pixelsPerFrame;
-          let cw = (c.end - c.start) * this.#pixelsPerFrame;
-          return x >= cx && x <= cx + cw;
-        });
-        if (clip) {
-          this.#selectedClipId = clip.id;
-          this.#renderTracks();
-          emit(this, 'clip-select', { clipId: clip.id, trackId: track.id, clip });
-          return;
-        }
-      }
-
-      // Click on empty area — move playhead
-      this.#selectedClipId = null;
-      frame = Math.max(0, Math.min(frame, this.#data.duration));
-      this.#setPlayhead(frame);
-      this.#renderTracks();
-    },
+    timelineClick: (e) => this.#handleTimelineClick(e),
+    timelineScroll: () => this.#handleTimelineScroll(),
   };
 
   connectedCallback() {
     super.connectedCallback?.();
 
-    // Listen for transport button clicks
     this.addEventListener('click', this.#onTransportClick);
 
-    // Setup resize observer
     this.#resizeObserver = new ResizeObserver(() => {
-      if (this.#data) {
-        requestAnimationFrame(() => {
-          this.#renderRuler();
-          this.#renderTracks();
-        });
-      }
+      if (this.#data) this.#scheduleRender(true);
     });
     this.#resizeObserver.observe(this);
   }
@@ -147,6 +199,8 @@ export class TimelineEditor extends Symbiote {
     super.disconnectedCallback?.();
     this.removeEventListener('click', this.#onTransportClick);
     this.#stopPlayback();
+    if (this.#renderId) cancelAnimationFrame(this.#renderId);
+    this.#renderId = null;
     this.#resizeObserver?.disconnect();
   }
 
@@ -186,24 +240,20 @@ export class TimelineEditor extends Symbiote {
     }
   };
 
-  // ── Public API ──
-
   /**
    * Load timeline data.
-   * @param {{ fps: number, duration: number, tracks: Array<{ id: string, type?: string, label: string, clips: Array<{ id: string, start: number, end: number, label?: string }> }>, markers?: Array<{ frame: number, label?: string }> }} data
+   * @param {{ fps: number, duration: number, tracks: Array<{ id: string, type?: string, label: string, clips: Array<{ id: string, start?: number, end?: number, from?: number, duration?: number, label?: string }> }>, markers?: Array<{ frame?: number, time?: number, label?: string }|number> }} data
    */
   loadTimeline(data) {
-    this.#data = data;
+    this.#data = normalizeTimelineData(data);
     this.#playheadFrame = 0;
+    let hasTracks = this.#data.tracks.length > 0;
     this.set$({
-      hasData: true,
-      timeDisplay: formatTimecode(0, data.fps || 30),
+      hasData: hasTracks,
+      timeDisplay: formatTimecode(0, this.#data.fps),
     });
     this.#renderHeaders();
-    requestAnimationFrame(() => {
-      this.#renderRuler();
-      this.#renderTracks();
-    });
+    this.#scheduleRender(true);
   }
 
   /** Get current playhead frame */
@@ -219,7 +269,7 @@ export class TimelineEditor extends Symbiote {
   /** Get current time in seconds */
   get currentTime() {
     if (!this.#data) return 0;
-    return this.#playheadFrame / (this.#data.fps || 30);
+    return this.#playheadFrame / this.#data.fps;
   }
 
   /** Get timeline data */
@@ -232,20 +282,48 @@ export class TimelineEditor extends Symbiote {
     this.#setPlayhead(frame);
   }
 
-  // ── Internal ──
-
-  #setPlayhead(frame) {
+  #setPlayhead(frame, silent = false) {
     if (!this.#data) return;
-    this.#playheadFrame = Math.max(0, Math.min(frame, this.#data.duration));
+    this.#playheadFrame = Math.max(0, Math.min(Math.round(frame), this.#data.duration));
+    this.$.timeDisplay = formatTimecode(this.#playheadFrame, this.#data.fps);
+    this.#positionPlayhead();
+    this.#focusPlayhead();
+    if (!silent) {
+      emit(this, 'playhead-change', {
+        frame: this.#playheadFrame,
+        time: this.#playheadFrame / this.#data.fps,
+      });
+    }
+  }
+
+  #positionPlayhead() {
+    let el = this.ref.playhead;
+    if (!el) return;
     let x = this.#playheadFrame * this.#pixelsPerFrame;
-    this.$.timeDisplay = formatTimecode(this.#playheadFrame, this.#data.fps || 30);
-    // Update playhead DOM via refs
-    if (this.ref.rulerPlayhead) this.ref.rulerPlayhead.style.left = x + 'px';
-    if (this.ref.tracksPlayhead) this.ref.tracksPlayhead.style.left = x + 'px';
-    emit(this, 'playhead-change', {
-      frame: this.#playheadFrame,
-      time: this.#playheadFrame / (this.#data.fps || 30),
-    });
+    el.style.left = `${x}px`;
+    el.style.height = `${this.#metrics.contentH || 1}px`;
+  }
+
+  #focusPlayhead() {
+    let scroll = this.ref.timelineScroll;
+    if (!scroll) return;
+    if (Date.now() < this.#manualScrollUntil) return;
+
+    let x = this.#playheadFrame * this.#pixelsPerFrame;
+    let target = Math.max(0, x - scroll.clientWidth * 0.5);
+    if (this.#playing) {
+      this.#internalScroll = true;
+      scroll.scrollLeft += (target - scroll.scrollLeft) * 0.12;
+      requestAnimationFrame(() => { this.#internalScroll = false; });
+    } else {
+      let min = scroll.scrollLeft + Math.max(40, scroll.clientWidth * 0.12);
+      let max = scroll.scrollLeft + scroll.clientWidth - Math.max(40, scroll.clientWidth * 0.12);
+      if (x < min || x > max) {
+        this.#internalScroll = true;
+        scroll.scrollLeft = target;
+        requestAnimationFrame(() => { this.#internalScroll = false; });
+      }
+    }
   }
 
   #setZoom(ppf) {
@@ -254,33 +332,26 @@ export class TimelineEditor extends Symbiote {
       ? `${this.#pixelsPerFrame.toFixed(1)} px/fr`
       : `${(1 / this.#pixelsPerFrame).toFixed(1)} fr/px`;
     this.$.zoomLabel = label;
-    this.#setPlayhead(this.#playheadFrame); // update playhead position
-    this.#renderRuler();
-    this.#renderTracks();
+    this.#scheduleRender(true);
     emit(this, 'zoom-change', { pixelsPerFrame: this.#pixelsPerFrame });
   }
 
   #fitToView() {
     if (!this.#data) return;
-    let scroll = this.ref.tracksScroll;
+    let scroll = this.ref.timelineScroll;
     if (!scroll) return;
-    let availWidth = scroll.clientWidth - 20;
-    let ppf = availWidth / this.#data.duration;
-    this.#setZoom(ppf);
+    let width = Math.max(1, scroll.clientWidth - 20);
+    this.#setZoom(width / this.#data.duration);
   }
 
   #startPlayback() {
     if (!this.#data || this.#playing) return;
     this.#playing = true;
     this.$.playing = true;
+    this.toggleAttribute('playing', true);
     this.#playStartTime = performance.now();
-    this.#playStartFrame = this.#playheadFrame;
-
-    // If at end, restart from beginning
-    if (this.#playheadFrame >= this.#data.duration) {
-      this.#playStartFrame = 0;
-      this.#playheadFrame = 0;
-    }
+    this.#playStartFrame = this.#playheadFrame >= this.#data.duration ? 0 : this.#playheadFrame;
+    if (this.#playheadFrame >= this.#data.duration) this.#playheadFrame = 0;
 
     emit(this, 'transport-change', { action: 'play' });
     this.#animationLoop();
@@ -289,6 +360,7 @@ export class TimelineEditor extends Symbiote {
   #pausePlayback() {
     this.#playing = false;
     this.$.playing = false;
+    this.toggleAttribute('playing', false);
     if (this.#animationId) {
       cancelAnimationFrame(this.#animationId);
       this.#animationId = null;
@@ -299,6 +371,7 @@ export class TimelineEditor extends Symbiote {
   #stopPlayback() {
     this.#playing = false;
     this.$.playing = false;
+    this.toggleAttribute('playing', false);
     if (this.#animationId) {
       cancelAnimationFrame(this.#animationId);
       this.#animationId = null;
@@ -323,96 +396,198 @@ export class TimelineEditor extends Symbiote {
     this.#animationId = requestAnimationFrame(this.#animationLoop);
   };
 
-  // ── Rendering ──
-
   #renderHeaders() {
     if (!this.#data || !this.ref.headersList) return;
-    let markup = this.#data.tracks.map(track => {
-      let type = track.type || 'default';
-      let icon = TRACK_ICONS[type] || TRACK_ICONS.default;
+    let markup = this.#data.tracks.map((track) => {
+      let type = escapeHtml(track.type || 'default');
       return `<div class="te-header-track">
-        <span class="te-header-icon" data-track-type="${type}">${icon}</span>
-        <span class="te-header-label">${track.label || track.id}</span>
-        <button class="te-header-mute" title="Mute">M</button>
+        <span class="te-header-icon" data-track-type="${type}" aria-hidden="true"></span>
+        <span class="te-header-label">${escapeHtml(track.label || track.id)}</span>
+        <button class="te-header-mute" title="Mute" aria-label="Mute ${escapeHtml(track.label || track.id)}"><span class="material-symbols-outlined" aria-hidden="true">volume_off</span></button>
       </div>`;
     }).join('');
     this.ref.headersList.innerHTML = markup;
   }
 
-  /** Resolve a clip-type domain color from the cascade (falls back to the default clip role). */
-  #clipColor(type, computed) {
-    let varName = TRACK_COLOR_VARS[type] || TRACK_COLOR_VARS.default;
-    return computed.getPropertyValue(varName).trim()
-      || computed.getPropertyValue(TRACK_COLOR_VARS.default).trim();
+  #handleTimelineScroll() {
+    let scroll = this.ref.timelineScroll;
+    if (!scroll) return;
+    if (!this.#internalScroll) this.#manualScrollUntil = Date.now() + 2000;
+    this.#syncHeaderScroll();
+  }
+
+  #syncHeaderScroll() {
+    let scroll = this.ref.timelineScroll;
+    if (!scroll || !this.ref.headersList) return;
+    this.ref.headersList.style.transform = `translateY(${-scroll.scrollTop}px)`;
+  }
+
+  #handleTimelineClick(e) {
+    if (!this.#data || !this.ref.timelineScroll) return;
+    let scroll = this.ref.timelineScroll;
+    let rect = scroll.getBoundingClientRect();
+    let x = Math.max(0, e.clientX - rect.left + scroll.scrollLeft);
+    let viewportY = e.clientY - rect.top;
+    let contentY = viewportY + scroll.scrollTop;
+    let frame = Math.max(0, Math.min(Math.round(x / this.#pixelsPerFrame), this.#data.duration));
+
+    if (viewportY <= this.#metrics.rulerH || e.target === this.ref.rulerCanvas) {
+      this.#selectedClipId = null;
+      this.#setPlayhead(frame);
+      this.#renderTracks();
+      return;
+    }
+
+    let trackIndex = Math.floor((contentY - this.#metrics.rulerH) / this.#metrics.trackH);
+    let track = this.#data.tracks[trackIndex];
+    if (track) {
+      let clip = track.clips?.find(c => frame >= c.start && frame <= c.end);
+      if (clip) {
+        this.#selectedClipId = clip.id;
+        this.#setPlayhead(frame);
+        this.#renderTracks();
+        emit(this, 'clip-select', { clipId: clip.id, trackId: track.id, clip });
+        return;
+      }
+    }
+
+    this.#selectedClipId = null;
+    this.#setPlayhead(frame);
+    this.#renderTracks();
+  }
+
+  #scheduleRender(updateTheme = false) {
+    if (this.#renderId) cancelAnimationFrame(this.#renderId);
+    this.#renderId = requestAnimationFrame(() => {
+      this.#renderId = null;
+      this.#renderAll(updateTheme);
+    });
+  }
+
+  #readTheme() {
+    let computed = getComputedStyle(this);
+    this.#metrics.trackH = cssPixelValue(computed, '--te-track-height', 36);
+    this.#metrics.rulerH = cssPixelValue(computed, '--te-ruler-height', 28);
+    this.#theme = {
+      border: cssValue(computed, '--te-border'),
+      marker: cssValue(computed, '--te-marker-color'),
+      playhead: cssValue(computed, '--te-playhead-color'),
+      trackBg: cssValue(computed, '--te-track-bg'),
+      trackBgAlt: cssValue(computed, '--te-track-bg-alt'),
+      surfacePanel: cssValue(computed, '--sn-sys-surface-panel'),
+      onSurface: cssValue(computed, '--sn-sys-on-surface'),
+      onSurfaceDim: cssValue(computed, '--sn-sys-on-surface-dim'),
+      onAccent: cssValue(computed, '--sn-sys-on-accent', cssValue(computed, '--sn-sys-on-surface')),
+      hoverMix: cssValue(computed, '--sn-sys-state-hover-mix', '10%'),
+      selectedMix: cssValue(computed, '--sn-sys-state-selected-mix', '34%'),
+      font: cssValue(computed, '--sn-font', 'Inter, system-ui, sans-serif'),
+      mono: cssValue(computed, '--sn-font-mono', 'ui-monospace, SFMono-Regular, Menlo, monospace'),
+    };
+    for (let [name, property] of Object.entries(TRACK_COLOR_VARS)) {
+      this.#theme[`clip:${name}`] = cssValue(computed, property, this.#theme.onSurfaceDim);
+    }
+  }
+
+  #clipColor(type) {
+    return this.#theme[`clip:${type}`] || this.#theme['clip:default'] || this.#theme.onSurfaceDim;
+  }
+
+  #renderAll(updateTheme = false) {
+    if (!this.#data) return;
+    if (updateTheme || !this.#theme.onSurface) this.#readTheme();
+    this.#layoutTimeline();
+    this.#renderRuler();
+    this.#renderTracks();
+    this.#positionPlayhead();
+    this.#syncHeaderScroll();
+  }
+
+  #layoutTimeline() {
+    let scroll = this.ref.timelineScroll;
+    let content = this.ref.timelineContent;
+    let ruler = this.ref.rulerCanvas;
+    let tracks = this.ref.tracksCanvas;
+    if (!scroll || !content || !ruler || !tracks || !this.#data) return;
+
+    let dpr = window.devicePixelRatio || 1;
+    let tracksH = this.#data.tracks.length * this.#metrics.trackH;
+    let naturalW = this.#data.duration * this.#pixelsPerFrame + 20;
+    let contentW = Math.max(scroll.clientWidth || 1, naturalW);
+    let contentH = Math.max(scroll.clientHeight || 1, this.#metrics.rulerH + tracksH);
+
+    this.#metrics = {
+      ...this.#metrics,
+      contentW,
+      contentH,
+      tracksH,
+      dpr,
+    };
+
+    content.style.width = `${contentW}px`;
+    content.style.height = `${contentH}px`;
+    ruler.style.width = `${contentW}px`;
+    ruler.style.height = `${this.#metrics.rulerH}px`;
+    tracks.style.width = `${contentW}px`;
+    tracks.style.height = `${tracksH}px`;
+    tracks.style.top = `${this.#metrics.rulerH}px`;
+    if (this.ref.headersList) this.ref.headersList.style.height = `${tracksH}px`;
+
+    this.#resizeCanvas(ruler, contentW, this.#metrics.rulerH, dpr);
+    this.#resizeCanvas(tracks, contentW, tracksH, dpr);
+  }
+
+  #resizeCanvas(canvas, width, height, dpr) {
+    let nextW = Math.max(1, Math.round(width * dpr));
+    let nextH = Math.max(1, Math.round(height * dpr));
+    if (canvas.width !== nextW) canvas.width = nextW;
+    if (canvas.height !== nextH) canvas.height = nextH;
   }
 
   #renderRuler() {
     let canvas = this.ref.rulerCanvas;
     if (!canvas || !this.#data) return;
-
-    let container = canvas.parentElement;
-    let width = container.clientWidth;
-    let height = 28;
-    let dpr = window.devicePixelRatio || 1;
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
-    canvas.style.width = width + 'px';
-    canvas.style.height = height + 'px';
-
     let ctx = canvas.getContext('2d');
-    ctx.scale(dpr, dpr);
-    ctx.clearRect(0, 0, width, height);
+    let { contentW, rulerH, dpr } = this.#metrics;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, contentW, rulerH);
+    ctx.fillStyle = this.#theme.surfacePanel;
+    ctx.fillRect(0, 0, contentW, rulerH);
 
-    let fps = this.#data.fps || 30;
+    let fps = this.#data.fps;
     let ppf = this.#pixelsPerFrame;
     let duration = this.#data.duration;
-
-    // Determine tick interval
     let secondWidth = ppf * fps;
-    let tickInterval; // in frames
+    let tickInterval;
     if (secondWidth > 200) tickInterval = fps / 4;
     else if (secondWidth > 60) tickInterval = fps;
     else if (secondWidth > 15) tickInterval = fps * 5;
     else tickInterval = fps * 10;
-
     let majorInterval = tickInterval * 4;
 
-    // Read colors from cascade — no literal fallbacks; the system-cascade stylesheet (W1
-    // foundation) guarantees --sn-sys-* roles are always registered with an initial value.
-    let computed = getComputedStyle(this);
-    let tickColor = computed.getPropertyValue('--sn-sys-on-surface-dim').trim();
-    let lineColor = computed.getPropertyValue('--te-border').trim();
-
-    ctx.strokeStyle = lineColor;
-    ctx.fillStyle = tickColor;
-    ctx.font = `9px ${computed.getPropertyValue('--sn-font').trim() || 'Inter, system-ui, sans-serif'}`;
+    ctx.strokeStyle = this.#theme.border;
+    ctx.fillStyle = this.#theme.onSurfaceDim;
+    ctx.font = `9px ${this.#theme.mono || this.#theme.font}`;
     ctx.textBaseline = 'top';
 
     for (let f = 0; f <= duration; f += tickInterval) {
-      let x = f * ppf;
-      if (x > width) break;
-
+      let x = Math.round(f * ppf) + 0.5;
+      if (x > contentW) break;
       let isMajor = f % majorInterval < tickInterval;
       ctx.beginPath();
       ctx.moveTo(x, isMajor ? 8 : 18);
-      ctx.lineTo(x, height);
+      ctx.lineTo(x, rulerH);
       ctx.stroke();
-
-      if (isMajor) {
-        let label = formatTimecode(f, fps);
-        ctx.fillText(label, x + 2, 2);
-      }
+      if (isMajor) ctx.fillText(formatTimecode(f, fps), x + 2, 2);
     }
 
-    // Draw markers
     if (this.#data.markers) {
-      ctx.strokeStyle = computed.getPropertyValue('--te-marker-color').trim();
+      ctx.strokeStyle = this.#theme.marker;
       for (let marker of this.#data.markers) {
-        let x = marker.frame * ppf;
-        if (x > width) continue;
+        let x = Math.round(marker.frame * ppf) + 0.5;
+        if (x > contentW) continue;
         ctx.beginPath();
         ctx.moveTo(x, 0);
-        ctx.lineTo(x, height);
+        ctx.lineTo(x, rulerH);
         ctx.stroke();
       }
     }
@@ -421,118 +596,79 @@ export class TimelineEditor extends Symbiote {
   #renderTracks() {
     let canvas = this.ref.tracksCanvas;
     if (!canvas || !this.#data) return;
-
-    let container = canvas.parentElement;
-    let trackH = 36;
-    let totalHeight = this.#data.tracks.length * trackH;
-    let totalWidth = Math.max(container.clientWidth, this.#data.duration * this.#pixelsPerFrame + 20);
-    let dpr = window.devicePixelRatio || 1;
-
-    canvas.width = totalWidth * dpr;
-    canvas.height = totalHeight * dpr;
-    canvas.style.width = totalWidth + 'px';
-    canvas.style.height = totalHeight + 'px';
-
     let ctx = canvas.getContext('2d');
-    ctx.scale(dpr, dpr);
-    ctx.clearRect(0, 0, totalWidth, totalHeight);
+    let { contentW, tracksH, trackH, dpr } = this.#metrics;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, contentW, tracksH);
 
-    let ppf = this.#pixelsPerFrame;
+    let labelColor = `color-mix(in oklch, ${this.#theme.onAccent} 85%, transparent)`;
+    let handleColor = `color-mix(in oklch, ${this.#theme.onAccent} 50%, transparent)`;
+    let selectedOutline = this.#theme.onAccent;
 
-    // Read colors from cascade — track striping, borders, labels, and handles are all
-    // on-surface overlays at different state-mix strengths (SYM-017 vocabulary reused for
-    // canvas-drawn, not just DOM-styled, surfaces); no literal fallbacks.
-    let computed = getComputedStyle(this);
-    let onSurface = computed.getPropertyValue('--sn-sys-on-surface').trim();
-    let hoverMix = computed.getPropertyValue('--sn-sys-state-hover-mix').trim();
-    let selectedMix = computed.getPropertyValue('--sn-sys-state-selected-mix').trim();
-    let stripeEven = `color-mix(in oklch, ${onSurface} calc(${hoverMix} / 4), transparent)`;
-    let stripeOdd = `color-mix(in oklch, ${onSurface} calc(${hoverMix} / 8), transparent)`;
-    let trackBorder = `color-mix(in oklch, ${onSurface} calc(${hoverMix} / 1.6), transparent)`;
-    let onAccent = computed.getPropertyValue('--sn-sys-on-accent').trim();
-    let labelColor = `color-mix(in oklch, ${onAccent} 85%, transparent)`;
-    let handleColor = `color-mix(in oklch, ${onAccent} 50%, transparent)`;
-    let markerLineColor = `color-mix(in oklch, ${computed.getPropertyValue('--te-marker-color').trim()} 40%, transparent)`;
-
-    // Draw track backgrounds
     this.#data.tracks.forEach((track, i) => {
       let y = i * trackH;
-      ctx.fillStyle = i % 2 === 0 ? stripeEven : stripeOdd;
-      ctx.fillRect(0, y, totalWidth, trackH);
+      ctx.fillStyle = i % 2 === 0 ? this.#theme.trackBg : this.#theme.trackBgAlt;
+      ctx.fillRect(0, y, contentW, trackH);
 
-      // Track border
-      ctx.strokeStyle = trackBorder;
+      ctx.strokeStyle = this.#theme.border;
       ctx.beginPath();
-      ctx.moveTo(0, y + trackH);
-      ctx.lineTo(totalWidth, y + trackH);
+      ctx.moveTo(0, y + trackH + 0.5);
+      ctx.lineTo(contentW, y + trackH + 0.5);
       ctx.stroke();
 
-      // Draw clips
-      let type = track.type || 'default';
-      let clipColor = this.#clipColor(type, computed);
+      let clipColor = this.#clipColor(track.type || 'default');
+      for (let clip of track.clips || []) {
+        let cx = clip.start * this.#pixelsPerFrame;
+        let cw = Math.max(1, (clip.end - clip.start) * this.#pixelsPerFrame);
+        let cy = y + 3;
+        let ch = Math.max(1, trackH - 6);
+        let isSelected = this.#selectedClipId === clip.id;
 
-      if (track.clips) {
-        for (let clip of track.clips) {
-          let cx = clip.start * ppf;
-          let cw = (clip.end - clip.start) * ppf;
-          let cy = y + 3;
-          let ch = trackH - 6;
+        ctx.fillStyle = clipColor;
+        ctx.globalAlpha = isSelected ? 1 : 0.78;
+        this.#roundRect(ctx, cx, cy, cw, ch, 3);
+        ctx.fill();
 
-          let isSelected = this.#selectedClipId === clip.id;
-
-          // Clip body
-          ctx.fillStyle = clipColor;
-          ctx.globalAlpha = isSelected ? 1 : 0.75;
-          this.#roundRect(ctx, cx, cy, cw, ch, 3);
-          ctx.fill();
-
-          // Selection outline — state-mix layer against the clip's own color, not a raw white
-          if (isSelected) {
-            ctx.strokeStyle = `color-mix(in oklch, ${onAccent} ${selectedMix}, ${clipColor})`;
-            ctx.lineWidth = 1.5;
-            this.#roundRect(ctx, cx, cy, cw, ch, 3);
-            ctx.stroke();
-            ctx.lineWidth = 1;
-          }
-
+        if (isSelected) {
           ctx.globalAlpha = 1;
+          ctx.strokeStyle = selectedOutline;
+          ctx.lineWidth = 1.5;
+          this.#roundRect(ctx, cx, cy, cw, ch, 3);
+          ctx.stroke();
+          ctx.lineWidth = 1;
+        }
+        ctx.globalAlpha = 1;
 
-          // Clip label
-          if (cw > 30 && clip.label) {
-            ctx.fillStyle = labelColor;
-            ctx.font = `10px ${computed.getPropertyValue('--sn-font').trim() || 'Inter, system-ui, sans-serif'}`;
-            ctx.textBaseline = 'middle';
-            let maxW = cw - 8;
-            let text = clip.label;
-            let metrics = ctx.measureText(text);
-            if (metrics.width > maxW) {
-              while (text.length > 1 && ctx.measureText(text + '…').width > maxW) {
-                text = text.slice(0, -1);
-              }
-              text += '…';
-            }
-            ctx.fillText(text, cx + 4, cy + ch / 2);
+        if (cw > 30 && clip.label) {
+          ctx.fillStyle = labelColor;
+          ctx.font = `10px ${this.#theme.font}`;
+          ctx.textBaseline = 'middle';
+          let text = String(clip.label);
+          let maxW = cw - 8;
+          while (text.length > 1 && ctx.measureText(text + '...').width > maxW) {
+            text = text.slice(0, -1);
           }
+          if (text !== String(clip.label)) text += '...';
+          ctx.fillText(text, cx + 4, cy + ch / 2);
+        }
 
-          // Clip edge handles
-          if (isSelected) {
-            ctx.fillStyle = handleColor;
-            ctx.fillRect(cx, cy + 4, 2, ch - 8);
-            ctx.fillRect(cx + cw - 2, cy + 4, 2, ch - 8);
-          }
+        if (isSelected) {
+          ctx.fillStyle = handleColor;
+          ctx.fillRect(cx, cy + 4, 2, Math.max(1, ch - 8));
+          ctx.fillRect(cx + cw - 2, cy + 4, 2, Math.max(1, ch - 8));
         }
       }
     });
 
-    // Draw markers
     if (this.#data.markers) {
-      ctx.strokeStyle = markerLineColor;
+      ctx.strokeStyle = `color-mix(in oklch, ${this.#theme.marker} 44%, transparent)`;
       ctx.setLineDash([4, 4]);
       for (let marker of this.#data.markers) {
-        let x = marker.frame * ppf;
+        let x = Math.round(marker.frame * this.#pixelsPerFrame) + 0.5;
+        if (x > contentW) continue;
         ctx.beginPath();
         ctx.moveTo(x, 0);
-        ctx.lineTo(x, totalHeight);
+        ctx.lineTo(x, tracksH);
         ctx.stroke();
       }
       ctx.setLineDash([]);
@@ -547,7 +683,7 @@ export class TimelineEditor extends Symbiote {
     ctx.arcTo(x + w, y, x + w, y + h, r);
     ctx.arcTo(x + w, y + h, x, y + h, r);
     ctx.arcTo(x, y + h, x, y, r);
-    ctx.arcTo(x, y, x + w, y, r);
+    ctx.arcTo(x, y, x + r, y, r);
     ctx.closePath();
   }
 }

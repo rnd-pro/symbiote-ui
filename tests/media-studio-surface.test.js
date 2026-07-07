@@ -2,6 +2,7 @@ import { acquireCurrentTestFileLock } from './test-lock.js';
 await acquireCurrentTestFileLock(import.meta.url);
 
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
 
 import {
@@ -252,8 +253,9 @@ test('media studio visual layer renders reusable preview, timeline, and progress
   });
 
   assert.match(MEDIA_STUDIO_SURFACE_STYLES, /\.sn-media-studio-preview-stage/);
-  assert.match(MEDIA_STUDIO_SURFACE_STYLES, /\.sn-media-studio-timeline-toolbar/);
   assert.match(MEDIA_STUDIO_SURFACE_STYLES, /\.sn-media-studio-inspector-section/);
+  assert.doesNotMatch(MEDIA_STUDIO_SURFACE_STYLES, /\.sn-media-studio-timeline-toolbar/);
+  assert.doesNotMatch(MEDIA_STUDIO_SURFACE_STYLES, /\.sn-media-studio-track-row/);
   assert.match(preview, /data-render-proof="frame-source-cache"/);
   assert.match(preview, /data-frame-source-provider="external-browser"/);
   assert.match(preview, /data-preview-state="loading"/);
@@ -275,7 +277,67 @@ test('media studio visual layer renders reusable preview, timeline, and progress
   assert.match(progress, /maximo-current-ui/);
 });
 
+test('media studio timeline visual geometry is driven by the timeline editor theme contract', async () => {
+  let [editorSource, editorStyles, editorTemplate] = await Promise.all([
+    readFile(new URL('../timeline/TimelineEditor/TimelineEditor.js', import.meta.url), 'utf8'),
+    readFile(new URL('../timeline/TimelineEditor/TimelineEditor.css.js', import.meta.url), 'utf8'),
+    readFile(new URL('../timeline/TimelineEditor/TimelineEditor.tpl.js', import.meta.url), 'utf8'),
+  ]);
+
+  assert.match(MEDIA_STUDIO_SURFACE_STYLES, /--te-track-height: var\(--sn-media-studio-control-height, 28px\)/);
+  assert.match(MEDIA_STUDIO_SURFACE_STYLES, /--te-ruler-height: var\(--sn-media-studio-control-height, 28px\)/);
+  assert.match(MEDIA_STUDIO_SURFACE_STYLES, /--te-transport-height: var\(--sn-media-studio-control-height, 28px\)/);
+  assert.match(editorSource, /cssPixelValue\(computed, '--te-track-height', 36\)/);
+  assert.match(editorSource, /cssPixelValue\(computed, '--te-ruler-height', 28\)/);
+  assert.doesNotMatch(editorSource, /Math\.floor\(y \/ 36\)/);
+  assert.doesNotMatch(editorSource, /let trackH = 36/);
+  assert.doesNotMatch(editorSource, /TRACK_ICONS/);
+  assert.doesNotMatch(editorSource, /LAYER_COLORS/);
+  assert.doesNotMatch(editorSource, /theme\.timeline/);
+  assert.match(editorSource, /toggleAttribute\('playing', true\)/);
+  assert.match(editorSource, /#focusPlayhead\(\)/);
+  assert.match(editorSource, /#syncHeaderScroll\(\)/);
+  assert.match(editorSource, /#manualScrollUntil/);
+  assert.match(editorSource, /#readTheme\(\)/);
+  assert.match(editorSource, /normalizeClip/);
+  assert.match(editorStyles, /--te-transport-height: 28px/);
+  assert.match(editorStyles, /\.te-transport \{[\s\S]*?display: grid;[\s\S]*?grid-template-columns: minmax\(0, 1fr\) auto minmax\(0, 1fr\)/);
+  assert.match(editorStyles, /\.te-transport-playback \{[\s\S]*?justify-content: center/);
+  assert.match(editorStyles, /\.te-body \{[\s\S]*?display: grid;[\s\S]*?grid-template-columns: var\(--te-header-width\) minmax\(0, 1fr\)/);
+  assert.match(editorStyles, /\.te-headers-list/);
+  assert.match(editorStyles, /\.te-headers-scroll \{[\s\S]*?overflow: hidden/);
+  assert.match(editorStyles, /\.te-timeline-viewport \{[\s\S]*?overflow: auto/);
+  assert.match(editorStyles, /\.te-ruler-canvas \{[\s\S]*?position: sticky/);
+  assert.match(editorStyles, /\.te-tracks-canvas \{[\s\S]*?position: absolute/);
+  assert.match(editorStyles, /color: transparent/);
+  assert.doesNotMatch(editorStyles, /themedScrollFadeInlineStyles/);
+  assert.doesNotMatch(editorStyles, /\.te-canvas-area/);
+  assert.match(editorStyles, /\.te-playhead::before/);
+  assert.match(editorTemplate, /material-symbols-outlined/);
+  assert.match(editorTemplate, /te-transport-playback/);
+  assert.match(editorTemplate, /te-timeline-viewport/);
+  assert.match(editorTemplate, /te-timeline-content/);
+  assert.match(editorTemplate, /te-ruler-canvas/);
+  assert.match(editorTemplate, /te-tracks-canvas/);
+  assert.equal([...editorTemplate.matchAll(/class="te-playhead"/g)].length, 1);
+  assert.doesNotMatch(editorTemplate, /te-playhead-ruler/);
+  assert.doesNotMatch(editorTemplate, /te-playhead-tracks/);
+  assert.doesNotMatch(editorTemplate, /[\u23ee\u25b6\u23f9\u23ed\u229e]/);
+  assert.match(editorSource, /material-symbols-outlined[\s\S]*?volume_off/);
+  assert.doesNotMatch(editorSource, />M<\/button>/);
+  assert.match(MEDIA_STUDIO_SURFACE_STYLES, /layout-node:has\(\.sn-media-studio-panel\) \.panel-content/);
+  assert.match(MEDIA_STUDIO_SURFACE_STYLES, /\.sn-media-studio-timeline-panel \{[\s\S]*?border: 0/);
+  assert.match(MEDIA_STUDIO_SURFACE_STYLES, /\.sn-media-studio-preview-stage \{[\s\S]*?border: 0/);
+  assert.match(MEDIA_STUDIO_SURFACE_STYLES, /\.sn-media-studio-frame \{[\s\S]*?position: absolute/);
+  assert.match(MEDIA_STUDIO_SURFACE_STYLES, /\.sn-media-studio-frame \{[\s\S]*?object-fit: contain/);
+  assert.doesNotMatch(MEDIA_STUDIO_SURFACE_STYLES, /sn-media-studio-frame \{[\s\S]*?box-shadow: 0 0 0 1px/);
+});
+
 test('media studio timeline uses the library timeline editor data contract', () => {
+  let empty = normalizeMediaStudioTimelineData({ durationFrames: 300 });
+  assert.equal(empty.duration, 300);
+  assert.equal(empty.tracks.length, 0);
+
   let data = normalizeMediaStudioTimelineData({
     durationFrames: 300,
     clips: [
@@ -287,6 +349,19 @@ test('media studio timeline uses the library timeline editor data contract', () 
   assert.equal(data.tracks.length, 2);
   assert.equal(data.tracks[0].type, 'video');
   assert.equal(data.tracks[1].type, 'audio');
+
+  let multiLane = normalizeMediaStudioTimelineData({
+    durationFrames: 300,
+    clips: [
+      { lane: 'video', label: 'FrameSource cache', startPercent: 0, sizePercent: 90 },
+      { lane: 'voice:guide', label: 'Guide voice', startPercent: 10, sizePercent: 50 },
+      { lane: 'voice:ops', label: 'Ops voice', startPercent: 20, sizePercent: 50 },
+      { lane: 'captions', label: 'Whisper captions', startPercent: 30, sizePercent: 50 },
+      { lane: 'actions', label: 'Workspace actions', startPercent: 40, sizePercent: 50 },
+    ],
+  });
+  assert.equal(multiLane.tracks.length, 5);
+  assert.deepEqual(multiLane.tracks.map((track) => track.type), ['video', 'audio', 'audio', 'text', 'effect']);
 
   let loaded = null;
   let frame = null;

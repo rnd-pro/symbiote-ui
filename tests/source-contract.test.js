@@ -221,6 +221,9 @@ test('code block raw mode preserves long lines for horizontal scrolling', async 
   const styles = await readFile(codeBlockStylesUrl, 'utf8');
 
   assert.match(styles, /\.cb-scroll \{[\s\S]*?min-inline-size: 0;[\s\S]*?overflow: auto;/);
+  assert.match(styles, /\.cb-gutter \{[\s\S]*?color: var\(\s*--sn-code-gutter-color,[\s\S]*?color-mix\(in oklch, var\(--sn-sys-on-surface-dim\) 64%, var\(--sn-sys-surface\)\)[\s\S]*?\);/);
+  assert.match(styles, /\.cb-gutter \{[\s\S]*?background: var\(\s*--sn-code-gutter-bg,[\s\S]*?color-mix\(in oklch, var\(--sn-sys-surface\) 92%, black\)[\s\S]*?\);/);
+  assert.doesNotMatch(styles, /\.cb-gutter \{[\s\S]*?opacity:/);
   assert.match(styles, /\.cb-pre \{[\s\S]*?flex: 1 0 max-content;[\s\S]*?min-inline-size: var\(--sn-code-content-min-inline-size, 0\);[\s\S]*?white-space: pre;/);
   assert.doesNotMatch(styles, /\.cb-pre \{[^}]*flex: 1;[^}]*min-width: 0;/);
 });

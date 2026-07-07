@@ -40,6 +40,10 @@ const FALLBACK_DEFAULT_OPTIONS = Object.freeze({
   pinCap: 0.1,
   resumeReheat: 0.05,
   resumeCap: 0.1,
+  crystalStrength: 0.18,
+  crystalRingDistance: 118,
+  crystalSpokes: 6,
+  crystalAngleJitter: 0.16,
 });
 
 function finiteNumber(value, fallback = 0) {
@@ -63,7 +67,7 @@ function normalizeSizeScale(value) {
 }
 
 function normalizeLayoutAlgorithm(value) {
-  return value === 'spring' || value === 'oil-cloud' ? value : 'organic';
+  return value === 'spring' || value === 'oil-cloud' || value === 'crystal' ? value : 'organic';
 }
 
 function normalizePositionOrigin(value) {
@@ -125,6 +129,327 @@ function hashUnit(value) {
 
 function fallbackJitter(id, axis) {
   return (hashUnit(`${id}:${axis}`) - 0.5) * 0.01;
+}
+
+function getCrystalSpokeCount(options) {
+  return Math.round(clamp(finiteNumber(options.crystalSpokes, FALLBACK_DEFAULT_OPTIONS.crystalSpokes), 3, 12));
+}
+
+function getCrystalRingDistance(options) {
+  let configured = finiteNumber(options.crystalRingDistance, 0);
+  if (configured > 0) return configured;
+  return Math.max(
+    92,
+    finiteNumber(options.linkDistance, FALLBACK_DEFAULT_OPTIONS.linkDistance) * 0.72,
+    finiteNumber(options.groupDistance, FALLBACK_DEFAULT_OPTIONS.groupDistance) * 0.62
+  );
+}
+
+function getCrystalNodeRadius(node) {
+  return Math.max(getEffectiveWidth(node), getEffectiveHeight(node)) / 2;
+}
+
+function getCrystalTargetNodeScore(node, index, degree) {
+  let childCount = Array.isArray(node.children) ? node.children.length : 0;
+  let groupScore = node.isGroup ? 5 : 0;
+  let parentPenalty = node.parentId ? 0 : 0.35;
+  return (degree[index] || 0) + childCount * 1.15 + groupScore + normalizeMass(node.mass) * 0.35 + parentPenalty;
+}
+
+function getCrystalTargetCenter(rawNodes) {
+  let x = 0;
+  let y = 0;
+  let total = 0;
+  for (const node of rawNodes) {
+    if (!Number.isFinite(node?.x) || !Number.isFinite(node?.y)) continue;
+    let mass = normalizeMass(node.mass);
+    x += node.x * mass;
+    y += node.y * mass;
+    total += mass;
+  }
+  if (total <= 0) return { x: 0, y: 0 };
+  return { x: x / total, y: y / total };
+}
+
+function getCrystalBranchStep(parent, child, ringDistance) {
+  let padding = Math.max(16, ringDistance * 0.32);
+  return Math.max(
+    ringDistance,
+    getCrystalNodeRadius(parent) + getCrystalNodeRadius(child) + padding
+  );
+}
+
+function getCrystalMemberRingStep(members, ringDistance) {
+  let maxRadius = 0;
+  for (const member of members) {
+    maxRadius = Math.max(maxRadius, getCrystalNodeRadius(member));
+  }
+  return Math.max(ringDistance * 0.92, maxRadius * 2 + Math.max(14, ringDistance * 0.24));
+}
+
+function getCrystalClusterRadius(hub, members, ringDistance, spokes) {
+  let hubRadius = getCrystalNodeRadius(hub);
+  if (!members.length) return hubRadius + Math.max(18, ringDistance * 0.42);
+  let baseRadius = 0;
+  let maxLeafRadius = 0;
+  for (const member of members) {
+    maxLeafRadius = Math.max(maxLeafRadius, getCrystalNodeRadius(member));
+    baseRadius = Math.max(baseRadius, getCrystalBranchStep(hub, member, ringDistance));
+  }
+  let rings = Math.max(1, Math.ceil(members.length / Math.max(1, spokes)));
+  return baseRadius + (rings - 1) * getCrystalMemberRingStep(members, ringDistance) + maxLeafRadius;
+}
+
+function getCrystalSortedIndexes(indexes, nodes) {
+  return [...indexes].sort((a, b) => {
+    let hashDelta = hashUnit(`${nodes[a].id}:crystal-slot`) - hashUnit(`${nodes[b].id}:crystal-slot`);
+    if (Math.abs(hashDelta) > 0.0001) return hashDelta;
+    return String(nodes[a].id).localeCompare(String(nodes[b].id));
+  });
+}
+
+function computeCrystalTargets(rawNodes = [], rawEdges = [], rawGroups = {}, rawOptions = {}) {
+  let options = resolveFallbackOptions(rawOptions);
+  let nodes = rawNodes.filter((node) => node?.id);
+  if (nodes.length === 0) return {};
+
+  let nodeIds = new Set(nodes.map((node) => node.id));
+  let nodeIndex = new Map(nodes.map((node, index) => [node.id, index]));
+  let adjacency = nodes.map(() => []);
+  let degree = new Array(nodes.length).fill(0);
+  let addEdge = (sourceId, targetId) => {
+    let source = nodeIndex.get(sourceId);
+    let target = nodeIndex.get(targetId);
+    if (source === undefined || target === undefined || source === target) return;
+    adjacency[source].push(target);
+    adjacency[target].push(source);
+    degree[source]++;
+    degree[target]++;
+  };
+
+  for (const edge of rawEdges || []) {
+    addEdge(edge?.from ?? edge?.source, edge?.to ?? edge?.target);
+  }
+
+  for (const node of nodes) {
+    if (node.parentId && nodeIds.has(node.parentId)) addEdge(node.id, node.parentId);
+    if (Array.isArray(node.children)) {
+      for (const childId of node.children) {
+        if (nodeIds.has(childId)) addEdge(node.id, childId);
+      }
+    }
+  }
+
+  let groups = normalizeForceGroups(rawGroups || {}, nodeIds);
+  let preferredHubByMember = new Map();
+  for (const [groupId, memberIds] of Object.entries(groups)) {
+    if (memberIds.length < 2) continue;
+    let hubId = nodeIndex.has(groupId) ? groupId : '';
+    if (!hubId) {
+      for (const memberId of memberIds) {
+        let member = nodes[nodeIndex.get(memberId)];
+        if (member?.isGroup) {
+          hubId = memberId;
+          break;
+        }
+      }
+    }
+    if (!hubId) {
+      hubId = memberIds[0];
+      let maxDegree = -1;
+      for (const memberId of memberIds) {
+        let index = nodeIndex.get(memberId);
+        let memberDegree = index === undefined ? -1 : degree[index];
+        if (memberDegree > maxDegree) {
+          maxDegree = memberDegree;
+          hubId = memberId;
+        }
+      }
+    }
+    for (const memberId of memberIds) {
+      if (memberId !== hubId) {
+        addEdge(hubId, memberId);
+        preferredHubByMember.set(memberId, hubId);
+      }
+    }
+  }
+
+  let candidates = nodes
+    .map((node, index) => ({ node, index, score: getCrystalTargetNodeScore(node, index, degree) }))
+    .sort((a, b) => b.score - a.score || String(a.node.id).localeCompare(String(b.node.id)));
+  let activeRootIndex = options.activeVisualNodeId
+    ? nodes.findIndex((node) => node.id === options.activeVisualNodeId)
+    : -1;
+  let rootIndex = activeRootIndex >= 0 ? activeRootIndex : candidates[0]?.index ?? 0;
+  let center = getCrystalTargetCenter(nodes);
+  let ringDistance = getCrystalRingDistance(options);
+  let spokes = getCrystalSpokeCount(options);
+  let angleStep = (Math.PI * 2) / spokes;
+  let angleJitter = clamp(
+    finiteNumber(options.crystalAngleJitter, FALLBACK_DEFAULT_OPTIONS.crystalAngleJitter),
+    0,
+    0.22
+  );
+  let hubIndexes = new Set();
+  for (const { node, index } of candidates) {
+    let childCount = Array.isArray(node.children) ? node.children.length : 0;
+    if (node.isGroup || childCount > 0 || degree[index] >= 5) hubIndexes.add(index);
+  }
+  hubIndexes.add(rootIndex);
+  if (hubIndexes.size === 0) hubIndexes.add(candidates[0]?.index ?? 0);
+
+  let hubMembers = new Map([...hubIndexes].map((index) => [index, []]));
+  let assignMember = (memberIndex, hubIndex) => {
+    if (!hubIndexes.has(hubIndex) || hubIndexes.has(memberIndex) || memberIndex === hubIndex) return false;
+    let members = hubMembers.get(hubIndex);
+    if (!members.includes(memberIndex)) members.push(memberIndex);
+    return true;
+  };
+
+  for (let index = 0; index < nodes.length; index++) {
+    if (hubIndexes.has(index)) continue;
+    let node = nodes[index];
+    let assigned = false;
+    if (node.parentId && nodeIndex.has(node.parentId)) {
+      assigned = assignMember(index, nodeIndex.get(node.parentId));
+    }
+    if (!assigned && preferredHubByMember.has(node.id)) {
+      assigned = assignMember(index, nodeIndex.get(preferredHubByMember.get(node.id)));
+    }
+    if (!assigned) {
+      for (const hubIndex of hubIndexes) {
+        let hub = nodes[hubIndex];
+        if (Array.isArray(hub.children) && hub.children.includes(node.id)) {
+          assigned = assignMember(index, hubIndex);
+          break;
+        }
+      }
+    }
+    if (!assigned) {
+      let adjacentHub = adjacency[index]
+        .filter((candidateIndex) => hubIndexes.has(candidateIndex))
+        .sort((a, b) => {
+          let rootBias = (a === rootIndex ? -1 : 0) - (b === rootIndex ? -1 : 0);
+          if (rootBias) return rootBias;
+          return getCrystalTargetNodeScore(nodes[b], b, degree) - getCrystalTargetNodeScore(nodes[a], a, degree);
+        })[0];
+      assigned = assignMember(index, adjacentHub);
+    }
+    if (!assigned) assignMember(index, rootIndex);
+  }
+
+  for (const [hubIndex, members] of hubMembers) {
+    hubMembers.set(hubIndex, getCrystalSortedIndexes(members, nodes));
+  }
+
+  let hubClusterRadius = new Map();
+  for (const hubIndex of hubIndexes) {
+    hubClusterRadius.set(
+      hubIndex,
+      getCrystalClusterRadius(hubIndexes.has(hubIndex) ? nodes[hubIndex] : nodes[rootIndex], hubMembers.get(hubIndex) || [], ringDistance, spokes)
+    );
+  }
+
+  let hubTargets = new Map();
+  hubTargets.set(rootIndex, { x: center.x, y: center.y, angle: -Math.PI / 2, shell: 0 });
+  let orderedHubs = [...hubIndexes]
+    .filter((index) => index !== rootIndex)
+    .sort((a, b) => {
+      let linkedDelta = Number(adjacency[rootIndex]?.includes?.(b) || false) - Number(adjacency[rootIndex]?.includes?.(a) || false);
+      if (linkedDelta) return linkedDelta;
+      return getCrystalTargetNodeScore(nodes[b], b, degree) - getCrystalTargetNodeScore(nodes[a], a, degree)
+        || String(nodes[a].id).localeCompare(String(nodes[b].id));
+    });
+  let rootClusterRadius = hubClusterRadius.get(rootIndex) || ringDistance;
+  let hubPadding = Math.max(ringDistance * 1.3, 48);
+  for (let slot = 0; slot < orderedHubs.length; slot++) {
+    let hubIndex = orderedHubs[slot];
+    let ring = Math.floor(slot / spokes);
+    let spoke = slot % spokes;
+    let jitter = (hashUnit(`${nodes[hubIndex].id}:crystal-hub-angle`) - 0.5) * angleStep * angleJitter;
+    let angle = -Math.PI / 2 + spoke * angleStep + jitter;
+    let radius = Math.max(
+      ringDistance * (3.2 + ring * 1.8),
+      rootClusterRadius + (hubClusterRadius.get(hubIndex) || ringDistance) + hubPadding + ring * ringDistance * 1.8
+    );
+    hubTargets.set(hubIndex, {
+      x: center.x + Math.cos(angle) * radius,
+      y: center.y + Math.sin(angle) * radius,
+      angle,
+      shell: ring + 1,
+    });
+  }
+
+  let targets = {};
+  for (const hubIndex of hubIndexes) {
+    let hubTarget = hubTargets.get(hubIndex) || hubTargets.get(rootIndex);
+    let hub = nodes[hubIndex];
+    targets[hub.id] = {
+      x: hubTarget.x,
+      y: hubTarget.y,
+      seedX: hubTarget.x,
+      seedY: hubTarget.y,
+      shell: hubTarget.shell,
+      center: true,
+    };
+
+    let members = hubMembers.get(hubIndex) || [];
+    let ringStep = getCrystalMemberRingStep(members.map((index) => nodes[index]), ringDistance);
+    for (let memberSlot = 0; memberSlot < members.length; memberSlot++) {
+      let memberIndex = members[memberSlot];
+      let member = nodes[memberIndex];
+      let ring = Math.floor(memberSlot / spokes);
+      let spoke = memberSlot % spokes;
+      let jitter = (hashUnit(`${member.id}:crystal-angle`) - 0.5) * angleStep * angleJitter;
+      let angle = hubTarget.angle + spoke * angleStep + jitter;
+      let radius = getCrystalBranchStep(hub, member, ringDistance) + ring * ringStep;
+      targets[member.id] = {
+        x: hubTarget.x + Math.cos(angle) * radius,
+        y: hubTarget.y + Math.sin(angle) * radius,
+        seedX: hubTarget.x + Math.cos(angle) * radius,
+        seedY: hubTarget.y + Math.sin(angle) * radius,
+        shell: hubTarget.shell + ring + 1,
+        center: false,
+      };
+    }
+  }
+
+  for (const { node } of candidates) {
+    if (targets[node.id]) continue;
+    let angle = -Math.PI / 2 + hashUnit(`${node.id}:crystal-orphan`) * Math.PI * 2;
+    let radius = rootClusterRadius + getCrystalNodeRadius(node) + hubPadding;
+    targets[node.id] = {
+      x: center.x + Math.cos(angle) * radius,
+      y: center.y + Math.sin(angle) * radius,
+      seedX: center.x + Math.cos(angle) * radius,
+      seedY: center.y + Math.sin(angle) * radius,
+      shell: 1,
+      center: false,
+    };
+  }
+
+  return targets;
+}
+
+function applyFallbackCrystalForces(nodes, options, alpha) {
+  if (options.layoutAlgorithm !== 'crystal') return;
+  let strength = clamp(finiteNumber(options.crystalStrength, FALLBACK_DEFAULT_OPTIONS.crystalStrength), 0.01, 0.8);
+  let sizeScale = clamp(26 / Math.max(6, Math.sqrt(nodes.length) * 3.2), 0.5, 1);
+  for (const node of nodes) {
+    if (!Number.isFinite(node.crystalTargetX) || !Number.isFinite(node.crystalTargetY)) continue;
+    let scale = getMovementScale(node);
+    if (scale <= 0) continue;
+    let dx = node.x - node.crystalTargetX;
+    let dy = node.y - node.crystalTargetY;
+    let distance = Math.sqrt(dx * dx + dy * dy);
+    if (distance < 0.35) continue;
+    let shellScale = node.crystalShell === 0 ? 1.35 : 1;
+    let pull = clamp(strength * alpha * 0.95 * sizeScale * shellScale * scale, 0.006, 0.24);
+    node.x -= dx * pull;
+    node.y -= dy * pull;
+    node.vx -= dx * pull * 0.18;
+    node.vy -= dy * pull * 0.18;
+  }
 }
 
 function getFallbackClouds(nodeById, groups, options) {
@@ -270,6 +595,21 @@ export class ForceLayout {
     let nodes = Array.isArray(data.nodes) ? data.nodes : [];
     let positions = {};
     if (nodes.length === 0) return positions;
+
+    let options = resolveFallbackOptions(data.options || {});
+    if (options.layoutAlgorithm === 'crystal') {
+      let targets = computeCrystalTargets(nodes, data.edges || [], data.groups || {}, options);
+      for (const node of nodes) {
+        if (!node?.id) continue;
+        if (Number.isFinite(node.x) && Number.isFinite(node.y)) {
+          positions[node.id] = { x: node.x, y: node.y };
+          continue;
+        }
+        let target = targets[node.id] || { x: fallbackJitter(node.id, 'x') * 100, y: fallbackJitter(node.id, 'y') * 100 };
+        positions[node.id] = { x: target.x, y: target.y };
+      }
+      return positions;
+    }
 
     let radius = Math.max(120, Math.sqrt(nodes.length) * 95);
     let goldenAngle = Math.PI * (3 - Math.sqrt(5));
@@ -418,8 +758,10 @@ export class ForceLayout {
     }
     let node = this.#fallbackState?.nodeById.get(id);
     if (!node) return;
-    node.fx = finiteNumber(x, node.x);
-    node.fy = finiteNumber(y, node.y);
+    let originOffsetX = this.#fallbackState.options.positionOrigin === 'center' ? 0 : node.w / 2;
+    let originOffsetY = this.#fallbackState.options.positionOrigin === 'center' ? 0 : node.h / 2;
+    node.fx = finiteNumber(x, node.x) + originOffsetX;
+    node.fy = finiteNumber(y, node.y) + originOffsetY;
     node.x = node.fx;
     node.y = node.fy;
     node.vx = 0;
@@ -546,6 +888,9 @@ export class ForceLayout {
     let rawNodes = Array.isArray(data.nodes) ? data.nodes : [];
     let rawEdges = Array.isArray(data.edges) ? data.edges : [];
     let options = resolveFallbackOptions(data.options || {});
+    let crystalTargets = options.layoutAlgorithm === 'crystal'
+      ? computeCrystalTargets(rawNodes, rawEdges, data.groups || {}, options)
+      : {};
     let fallbackPositions = ForceLayout.createFallbackPositions(data);
     let nodes = [];
     let nodeById = new Map();
@@ -554,10 +899,18 @@ export class ForceLayout {
       let rawNode = rawNodes[index];
       if (!rawNode?.id) continue;
       let position = fallbackPositions[rawNode.id] || {};
+      let crystalTarget = crystalTargets[rawNode.id] || {};
+      let crystalSeed = options.layoutAlgorithm === 'crystal'
+        && !Number.isFinite(rawNode.x)
+        && !Number.isFinite(rawNode.y)
+        && Number.isFinite(crystalTarget.seedX)
+        && Number.isFinite(crystalTarget.seedY)
+        ? { x: crystalTarget.seedX, y: crystalTarget.seedY }
+        : null;
       let node = {
         id: rawNode.id,
-        x: finiteNumber(rawNode.x, finiteNumber(position.x, fallbackJitter(rawNode.id, 'x') * 100)),
-        y: finiteNumber(rawNode.y, finiteNumber(position.y, fallbackJitter(rawNode.id, 'y') * 100)),
+        x: finiteNumber(rawNode.x, finiteNumber(crystalSeed?.x, finiteNumber(position.x, fallbackJitter(rawNode.id, 'x') * 100))),
+        y: finiteNumber(rawNode.y, finiteNumber(crystalSeed?.y, finiteNumber(position.y, fallbackJitter(rawNode.id, 'y') * 100))),
         vx: 0,
         vy: 0,
         w: Math.max(1, finiteNumber(rawNode.w, options.nodeWidth || 80)),
@@ -568,6 +921,9 @@ export class ForceLayout {
         layoutSizeScale: normalizeSizeScale(rawNode.layoutSizeScale),
         layoutSizeWarmupTicks: Math.max(0, finiteNumber(rawNode.layoutSizeWarmupTicks, 0)),
         layoutFixedTicks: Math.max(0, finiteNumber(rawNode.layoutFixedTicks, 0)),
+        crystalTargetX: crystalTarget.x,
+        crystalTargetY: crystalTarget.y,
+        crystalShell: crystalTarget.shell,
       };
       node.layoutFixedX = node.x;
       node.layoutFixedY = node.y;
@@ -723,7 +1079,8 @@ export class ForceLayout {
         dy = fallbackJitter(`${source.id}:${target.id}`, 'link-y');
       }
       let distance = Math.sqrt(dx * dx + dy * dy) || 1;
-      let force = ((distance - edge.restLength) / distance) * edge.strength * alpha * participation;
+      let linkScale = options.layoutAlgorithm === 'crystal' ? 0.28 : 1;
+      let force = ((distance - edge.restLength) / distance) * edge.strength * alpha * participation * linkScale;
       let fx = dx * force;
       let fy = dy * force;
       source.vx += fx / Math.max(1, getEffectiveMass(source));
@@ -732,7 +1089,8 @@ export class ForceLayout {
       target.vy -= fy / Math.max(1, getEffectiveMass(target));
     }
 
-    let charge = Math.abs(finiteNumber(options.chargeStrength, FALLBACK_DEFAULT_OPTIONS.chargeStrength)) * alpha;
+    let chargeScale = options.layoutAlgorithm === 'crystal' ? 0.18 : 1;
+    let charge = Math.abs(finiteNumber(options.chargeStrength, FALLBACK_DEFAULT_OPTIONS.chargeStrength)) * alpha * chargeScale;
     for (let i = 0; i < nodes.length; i++) {
       let a = nodes[i];
       for (let j = i + 1; j < nodes.length; j++) {
@@ -772,18 +1130,26 @@ export class ForceLayout {
     }
 
     applyFallbackCloudForces(state.nodeById, state.groups, options, alpha);
+    applyFallbackCrystalForces(nodes, options, alpha);
 
-    let centerStrength = finiteNumber(options.centerStrength, 0);
-    if (centerStrength <= 0) {
-      centerStrength = finiteNumber(options.centerPull, FALLBACK_DEFAULT_OPTIONS.centerPull) * 0.02;
-    }
-    for (const node of nodes) {
-      let scale = getMovementScale(node);
-      node.vx -= node.x * centerStrength * alpha * scale;
-      node.vy -= node.y * centerStrength * alpha * scale;
-      if (options.brownian > 0 && alpha < options.brownianThresh && node.fx === undefined) {
-        node.vx += fallbackJitter(`${node.id}:${state.iteration}`, 'brownian-x') * options.brownian;
-        node.vy += fallbackJitter(`${node.id}:${state.iteration}`, 'brownian-y') * options.brownian;
+    if (options.layoutAlgorithm !== 'crystal') {
+      let centerStrength = finiteNumber(options.centerStrength, 0);
+      if (centerStrength <= 0) {
+        centerStrength = finiteNumber(options.centerPull, FALLBACK_DEFAULT_OPTIONS.centerPull) * 0.02;
+      }
+      for (const node of nodes) {
+        let scale = getMovementScale(node);
+        node.vx -= node.x * centerStrength * alpha * scale;
+        node.vy -= node.y * centerStrength * alpha * scale;
+        if (options.brownian > 0 && alpha < options.brownianThresh && node.fx === undefined) {
+          node.vx += fallbackJitter(`${node.id}:${state.iteration}`, 'brownian-x') * options.brownian;
+          node.vy += fallbackJitter(`${node.id}:${state.iteration}`, 'brownian-y') * options.brownian;
+        }
+      }
+    } else if (options.brownian > 0 && alpha < options.brownianThresh) {
+      for (const node of nodes) {
+        if (node.fx === undefined) node.vx += fallbackJitter(`${node.id}:${state.iteration}`, 'brownian-x') * options.brownian;
+        if (node.fy === undefined) node.vy += fallbackJitter(`${node.id}:${state.iteration}`, 'brownian-y') * options.brownian;
       }
     }
 

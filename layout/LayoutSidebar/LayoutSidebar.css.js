@@ -22,8 +22,8 @@ export let sidebarStyles = css`
     position: relative;
 
     &[collapsed] {
-      width: var(--sn-sidebar-collapsed-width);
-      min-width: var(--sn-sidebar-collapsed-width);
+      width: var(--sn-sidebar-collapsed-width, var(--sn-layout-header-block-size, calc(var(--sn-layout-header-min-height, 28px) + 3px)));
+      min-width: var(--sn-sidebar-collapsed-width, var(--sn-layout-header-block-size, calc(var(--sn-layout-header-min-height, 28px) + 3px)));
     }
   }
 
@@ -316,12 +316,13 @@ export let sidebarStyles = css`
     }
 
     layout-sidebar[collapsed] & {
-      justify-content: flex-start;
-      inline-size: 100%;
-      margin-inline: 0;
-      border-radius: 0;
-      padding-left: var(--sn-step-6);
-      border-left: 2px solid var(--sn-cat-server);
+      justify-content: center;
+      inline-size: var(--sn-sidebar-collapsed-item-size, var(--sn-layout-sidebar-item-block-size, var(--sn-layout-header-block-size, calc(var(--sn-layout-header-min-height, 28px) + 3px))));
+      margin-inline: auto;
+      border-radius: var(--sn-sidebar-collapsed-item-radius, var(--sn-radius-sm, 4px));
+      padding: 0;
+      border-left: 0;
+      box-shadow: inset 2px 0 0 var(--sn-cat-server);
     }
   }
 

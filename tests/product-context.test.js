@@ -937,6 +937,32 @@ test('WebMCP tour prompt is authored from browser context and safe actions', () 
   assert.doesNotMatch(prompt, /"cue":\{"panelId"/);
 });
 
+test('WebMCP tour prompt carries task scope and turn budget when provided', () => {
+  let prompt = buildWebMcpTourPrompt({
+    title: 'Release workspace',
+    language: 'English',
+    taskText: 'Show the publish flow for the release board',
+    profile: 'full',
+    turnBudget: { min: 8, max: 12 },
+    requestedSurfaceIds: ['window:release-board'],
+    selectedTabIds: ['release-board'],
+    targets: [
+      {
+        id: 'window:release-board',
+        kind: 'window',
+        title: 'Release Board',
+        summary: 'Cards grouped by approval state.',
+      },
+    ],
+  });
+
+  assert.match(prompt, /User task: "Show the publish flow for the release board"/);
+  assert.match(prompt, /Presentation profile: "full"/);
+  assert.match(prompt, /Requested targetIds to cover when possible: window:release-board/);
+  assert.match(prompt, /Requested tab\/window ids to include: release-board/);
+  assert.match(prompt, /Rules: 8-12 turns/);
+});
+
 test('WebMCP tour timeline coercion validates targets annotations and safe actions', () => {
   let payload = coerceWebMcpTourTimelinePayload(`
     Intro text ignored.

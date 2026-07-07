@@ -59,6 +59,7 @@ const chatListStyles = new URL('../chat/ChatList/ChatList.css.js', import.meta.u
 const chatListItemStyles = new URL('../chat/ChatListItem/ChatListItem.css.js', import.meta.url);
 const chatSidebarSource = new URL('../chat/ChatSidebar/ChatSidebar.js', import.meta.url);
 const chatSidebarStyles = new URL('../chat/ChatSidebar/ChatSidebar.css.js', import.meta.url);
+const chatSidebarConstants = new URL('../chat/ChatSidebar/constants.js', import.meta.url);
 const chatWorkspaceSource = new URL('../chat/ChatWorkspace/ChatWorkspace.js', import.meta.url);
 const chatNavTreeSource = new URL('../chat/ChatWorkspace/chat-nav-tree.js', import.meta.url);
 const chatWorkspaceTemplate = new URL('../chat/ChatWorkspace/ChatWorkspace.tpl.js', import.meta.url);
@@ -472,7 +473,7 @@ test('cascade theme lab mutates root tokens instead of applying local component 
   assert.doesNotMatch(html, /100vh/);
   assert.doesNotMatch(html, /--sn-tabs-bg/);
   assert.match(html, /project-path="project-type workspaces \/ agent constructor"/);
-  assert.match(html, /product-context-demo-1/);
+  assert.match(source, /route: '#automation\/product-context'/);
   assert.match(html, /<layout-sidebar id="lab-sidebar" slot="sidebar"/);
   assert.doesNotMatch(html, /agent-chat-rail/);
   assert.match(source, /createCollapsedAgentChatPanel/);
@@ -861,6 +862,20 @@ test('applyCascadeTheme notifies subtree targets by default', async () => {
       delete globalThis.CustomEvent;
     }
   }
+});
+
+test('applyCascadeTheme emits selected state layer tokens for component selection', async () => {
+  const { applyCascadeTheme } = await import(cascadeThemeSource.href);
+  let target = { style: createStyleStub() };
+
+  applyCascadeTheme(target, { mode: 'dark' }, { notify: false });
+
+  assert.equal(target.style.getPropertyValue('--sn-sys-state-hover-mix'), '18%');
+  assert.equal(target.style.getPropertyValue('--sn-sys-state-selected-mix'), '26%');
+  assert.equal(
+    target.style.getPropertyValue('--sn-tree-row-selected-bg'),
+    'color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-selected-mix), var(--sn-sys-surface-panel))'
+  );
 });
 
 test('canvas graph refreshes cached flat renderer colors from cascade theme changes', async () => {
@@ -1629,12 +1644,14 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
     chatList,
     chatListItem,
     chatSidebarSourceText,
+    chatSidebarConstantsText,
     chatSidebar,
     chatSidebarItemSourceText,
     chatSidebarItem,
     cellBgComponent,
     cellBg,
     cellBgTheme,
+    cascadeTheme,
     registry,
     customElements,
   ] = await Promise.all([
@@ -1668,12 +1685,14 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
     readFile(chatListStyles, 'utf8'),
     readFile(chatListItemStyles, 'utf8'),
     readFile(chatSidebarSource, 'utf8'),
+    readFile(chatSidebarConstants, 'utf8'),
     readFile(chatSidebarStyles, 'utf8'),
     readFile(chatSidebarItemSource, 'utf8'),
     readFile(chatSidebarItemStyles, 'utf8'),
     readFile(cellBgSource, 'utf8'),
     readFile(cellBgStyles, 'utf8'),
     readFile(cellBgThemeSource, 'utf8'),
+    readFile(cascadeThemeSource, 'utf8'),
     readFile(componentRegistrySource, 'utf8'),
     readFile(customElementsSource, 'utf8'),
   ]);
@@ -1927,12 +1946,18 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(chatListItem, /--sn-chat-list-delete-size/);
   assert.match(chatSidebarSourceText, /--sn-chat-sidebar-width/);
   assert.match(chatSidebarSourceText, /--sn-chat-sidebar-collapsed-width/);
+  assert.match(chatSidebarSourceText, /COLLAPSED_NAV_WIDTH_TOKEN/);
+  assert.match(chatSidebarConstantsText, /COLLAPSED_NAV_WIDTH = 31/);
+  assert.match(chatSidebarSourceText, /navWidth = nav\.getBoundingClientRect\(\)\.width/);
+  assert.match(chatSidebarSourceText, /navWidth > 0 \? navWidth : readCssPixelValue\(this, '--sn-chat-sidebar-collapsed-width', COLLAPSED_NAV_WIDTH\)/);
   assert.match(chatSidebarSourceText, /observedAttributes/);
   assert.match(chatSidebarSourceText, /'auto-collapse'/);
   assert.match(chatSidebarSourceText, /setAutoCollapse/);
   assert.match(chatSidebarSourceText, /_hasExplicitNavWidth/);
+  assert.match(chatSidebar, /\.chat-nav\[collapsed\]\s*\{[\s\S]*?width: var\(--chat-nav-width, var\(--sn-chat-sidebar-collapsed-width, var\(--sn-layout-header-block-size, calc\(var\(--sn-layout-header-min-height, 28px\) \+ 3px\)\)\)\);[\s\S]*?min-width: var\(--chat-nav-width, var\(--sn-chat-sidebar-collapsed-width, var\(--sn-layout-header-block-size, calc\(var\(--sn-layout-header-min-height, 28px\) \+ 3px\)\)\)\);/);
   assert.match(chatSidebar, /--sn-chat-sidebar-header-padding/);
   assert.match(chatSidebar, /--sn-chat-sidebar-button-icon-size/);
+  assert.match(cascadeTheme, /'--sn-chat-sidebar-collapsed-width': 'var\(--sn-layout-header-block-size, calc\(var\(--sn-layout-header-min-height, 28px\) \+ 3px\)\)'/);
   assert.match(chatSidebarItemSourceText, /--sn-chat-sidebar-title-size/);
   assert.match(chatSidebarItemSourceText, /--sn-chat-sidebar-compact-label-extra/);
   assert.match(chatSidebarItem, /--sn-chat-sidebar-row-padding/);
@@ -2459,13 +2484,15 @@ test('scroll edge fade is available on reusable scroll hosts', async () => {
     '../surface/Drawer/Drawer.css.js',
     '../themes/CascadeThemeEditor/CascadeThemeEditor.css.js',
     '../themes/CascadeThemeWidget/CascadeThemeWidget.css.js',
-    '../timeline/TimelineEditor/TimelineEditor.css.js',
     '../tree/TreePanel/TreePanel.css.js',
   ];
   let hostSources = await Promise.all(scrollFadeHosts.map((path) => readFile(new URL(path, import.meta.url), 'utf8')));
   for (let index = 0; index < scrollFadeHosts.length; index += 1) {
     assert.match(hostSources[index], /themedScrollFade(Block|Inline)Styles/, scrollFadeHosts[index]);
   }
+
+  let timelineEditor = await readFile(new URL('../timeline/TimelineEditor/TimelineEditor.css.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(timelineEditor, /themedScrollFade(Block|Inline)Styles/);
 
   let scrollArea = await readFile(new URL('../layout/ScrollArea/ScrollArea.css.js', import.meta.url), 'utf8');
   assert.match(scrollArea, /sn-scroll-area:not\(:has\(> \.sn-scroll-container\)\) \{[\s\S]*?themedScrollFadeBlockStyles/);

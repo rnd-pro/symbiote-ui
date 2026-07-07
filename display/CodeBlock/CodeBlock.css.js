@@ -30,9 +30,14 @@ export default `
     font-size: var(--sn-code-font-size, 12px);
     line-height: 1.6;
     text-align: right;
-    color: var(--sn-sys-on-surface-dim);
-    opacity: 0.45;
-    background: var(--sn-sys-surface);
+    color: var(
+      --sn-code-gutter-color,
+      color-mix(in oklch, var(--sn-sys-on-surface-dim) 64%, var(--sn-sys-surface))
+    );
+    background: var(
+      --sn-code-gutter-bg,
+      color-mix(in oklch, var(--sn-sys-surface) 92%, black)
+    );
     border-right: 1px solid var(--sn-sys-outline);
     user-select: none;
     white-space: pre;

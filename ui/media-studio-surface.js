@@ -60,8 +60,6 @@ export const MEDIA_STUDIO_STYLE_TOKENS = Object.freeze([
   '--sn-media-studio-control-height',
   '--sn-media-studio-progress-color',
   '--sn-media-studio-panel-gap',
-  '--sn-media-studio-toolbar-bg',
-  '--sn-media-studio-status-bg',
   '--sn-media-studio-checker-a',
   '--sn-media-studio-checker-b',
   '--sn-media-studio-track-video-bg',
@@ -89,6 +87,19 @@ export const MEDIA_STUDIO_SURFACE_STYLES = `
     background: var(--sn-media-studio-bg, var(--sn-media-studio-pane-bg, var(--sn-sys-surface-panel)));
   }
 
+  layout-node:has(.sn-media-studio-panel) .panel-view,
+  layout-node:has(.sn-media-studio-timeline-panel) .panel-view {
+    box-shadow: none;
+    background: transparent;
+  }
+
+  layout-node:has(.sn-media-studio-panel) .panel-content,
+  layout-node:has(.sn-media-studio-timeline-panel) .panel-content {
+    padding: 0;
+    box-shadow: none;
+    background: transparent;
+  }
+
   .sn-media-studio-side-panel {
     display: grid;
     gap: var(--sn-media-studio-panel-gap, var(--sn-frame-gap, 0px));
@@ -107,8 +118,8 @@ export const MEDIA_STUDIO_SURFACE_STYLES = `
     min-width: 0;
     min-height: 0;
     height: 100%;
-    border: 1px solid var(--sn-media-studio-border, color-mix(in srgb, var(--sn-sys-on-surface) 12%, transparent));
-    border-radius: var(--sn-media-studio-preview-radius, var(--sn-node-radius, 0px));
+    border: 0;
+    border-radius: 0;
     background-color: var(--sn-media-studio-checker-a, var(--sn-media-studio-bg, var(--sn-media-studio-preview-bg, color-mix(in srgb, var(--sn-sys-surface) 84%, black))));
     background-image:
       conic-gradient(
@@ -137,7 +148,7 @@ export const MEDIA_STUDIO_SURFACE_STYLES = `
     border: 0;
     border-radius: 0;
     background: transparent;
-    box-shadow: var(--sn-media-studio-preview-shadow, inset 0 0 0 1px color-mix(in srgb, var(--sn-sys-on-surface) 4%, transparent));
+    box-shadow: var(--sn-media-studio-preview-shadow, none);
   }
 
   .sn-media-studio-preview-window::before {
@@ -145,6 +156,8 @@ export const MEDIA_STUDIO_SURFACE_STYLES = `
   }
 
   .sn-media-studio-frame {
+    position: absolute;
+    inset: 0;
     display: block;
     width: 100%;
     height: 100%;
@@ -152,7 +165,7 @@ export const MEDIA_STUDIO_SURFACE_STYLES = `
     max-height: 100%;
     object-fit: contain;
     background: transparent;
-    box-shadow: 0 0 0 1px color-mix(in srgb, black 60%, transparent);
+    box-shadow: none;
   }
 
   .sn-media-studio-frame-placeholder {
@@ -180,31 +193,6 @@ export const MEDIA_STUDIO_SURFACE_STYLES = `
     display: none;
   }
 
-  .sn-media-studio-timeline-status {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-width: 0;
-    min-height: var(--sn-media-studio-control-height, 28px);
-    padding: 0 10px;
-    border-top: 1px solid var(--sn-media-studio-border, color-mix(in srgb, var(--sn-sys-on-surface) 12%, transparent));
-    background: var(--sn-media-studio-status-bg, var(--sn-media-studio-toolbar-bg, var(--sn-sys-surface-panel)));
-    color: var(--sn-sys-on-surface-dim);
-    font-family: var(--sn-font-mono, monospace);
-    font-size: calc(11px * var(--sn-theme-type-scale, 1));
-    overflow: hidden;
-    white-space: nowrap;
-  }
-
-  .sn-media-studio-timeline-status strong {
-    color: var(--sn-sys-on-surface);
-    font-weight: 600;
-  }
-
-  .sn-media-studio-timeline-status [data-media-studio-accent] {
-    color: var(--sn-media-studio-progress-color, var(--sn-sys-accent));
-  }
-
   .sn-media-studio-timeline-panel {
     display: grid;
     grid-template-rows: minmax(0, 1fr);
@@ -213,7 +201,7 @@ export const MEDIA_STUDIO_SURFACE_STYLES = `
     min-block-size: var(--sn-media-studio-timeline-height, 172px);
     height: 100%;
     overflow: hidden;
-    border: 1px solid var(--sn-media-studio-border, color-mix(in srgb, var(--sn-sys-on-surface) 12%, transparent));
+    border: 0;
     background: var(--sn-media-studio-timeline-bg, color-mix(in srgb, var(--sn-sys-surface) 86%, black));
   }
 
@@ -224,180 +212,12 @@ export const MEDIA_STUDIO_SURFACE_STYLES = `
     --te-header-width: 112px;
     --te-track-height: var(--sn-media-studio-control-height, 28px);
     --te-ruler-height: var(--sn-media-studio-control-height, 28px);
+    --te-transport-height: var(--sn-media-studio-control-height, 28px);
     --te-playhead-color: var(--sn-media-studio-playhead-color, var(--sn-media-studio-progress-color, var(--sn-sys-accent)));
     --te-track-bg: var(--sn-media-studio-timeline-bg, var(--sn-sys-surface));
     --te-track-bg-alt: color-mix(in srgb, var(--sn-media-studio-timeline-bg, var(--sn-sys-surface)) 82%, var(--sn-sys-surface-panel));
-  }
-
-  .sn-media-studio-timeline-toolbar {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-    align-items: center;
-    gap: 8px;
-    min-width: 0;
-    padding: 0 10px;
-    border-bottom: 1px solid var(--sn-media-studio-border, color-mix(in srgb, var(--sn-sys-on-surface) 12%, transparent));
-    background: var(--sn-media-studio-toolbar-bg, var(--sn-sys-surface-panel));
-    color: var(--sn-sys-on-surface-dim);
-  }
-
-  .sn-media-studio-tool-group,
-  .sn-media-studio-transport-controls {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    min-width: 0;
-  }
-
-  .sn-media-studio-transport-controls {
-    justify-content: center;
-  }
-
-  .sn-media-studio-tool-group[data-align="end"] {
-    justify-content: flex-end;
-  }
-
-  .sn-media-studio-icon-button {
-    display: inline-grid;
-    place-items: center;
-    width: 24px;
-    height: 24px;
-    min-width: 24px;
-    border: 0;
-    border-radius: calc(var(--sn-node-radius, 0px) + 2px);
-    background: transparent;
-    color: inherit;
-  }
-
-  .sn-media-studio-icon-button[data-active="true"],
-  .sn-media-studio-icon-button:hover {
-    background: color-mix(in srgb, var(--sn-sys-on-surface) 8%, transparent);
-    color: var(--sn-media-studio-progress-color, var(--sn-sys-accent));
-  }
-
-  .sn-media-studio-icon-button .material-symbols-outlined {
-    font-size: 18px;
-  }
-
-  .sn-media-studio-timeline-canvas {
-    display: grid;
-    grid-template-rows: 22px minmax(0, 1fr);
-    --sn-media-studio-track-label-width: 112px;
-    min-width: 0;
-    min-height: 0;
-    overflow: hidden;
-  }
-
-  .sn-media-studio-ruler {
-    display: grid;
-    grid-template-columns: var(--sn-media-studio-track-label-width, 112px) repeat(4, minmax(0, 1fr));
-    align-items: center;
-    min-width: 0;
-    padding-inline-end: 10px;
-    border-bottom: 1px solid color-mix(in srgb, var(--sn-sys-on-surface) 8%, transparent);
-    color: var(--sn-sys-on-surface-dim);
-    font-family: var(--sn-font-mono, monospace);
-    font-size: calc(11px * var(--sn-theme-type-scale, 1));
-  }
-
-  .sn-media-studio-track-stack {
-    position: relative;
-    display: grid;
-    grid-auto-rows: minmax(var(--sn-media-studio-control-height, 28px), 1fr);
-    gap: 0;
-    min-width: 0;
-    min-height: 0;
-    background: var(--sn-media-studio-timeline-bg, color-mix(in srgb, var(--sn-sys-surface) 86%, black));
-  }
-
-  .sn-media-studio-track-row {
-    display: grid;
-    grid-template-columns: var(--sn-media-studio-track-label-width, 112px) minmax(0, 1fr);
-    gap: 0;
-    align-items: center;
-    min-width: 0;
-    min-height: 0;
-    border-bottom: 1px solid color-mix(in srgb, var(--sn-sys-on-surface) 8%, transparent);
-  }
-
-  .sn-media-studio-track-name {
-    display: flex;
-    align-items: center;
-    height: 100%;
-    padding-inline: 10px;
-    border-inline-end: 1px solid color-mix(in srgb, var(--sn-sys-on-surface) 8%, transparent);
-    color: var(--sn-sys-on-surface-dim);
-    font-size: calc(11px * var(--sn-theme-type-scale, 1));
-    text-transform: none;
-  }
-
-  .sn-media-studio-track-rail {
-    position: relative;
-    min-width: 0;
-    height: 100%;
-    min-height: var(--sn-media-studio-control-height, 28px);
-    border-radius: 0;
-    background:
-      repeating-linear-gradient(
-        90deg,
-        color-mix(in srgb, var(--sn-sys-on-surface) 9%, transparent) 0 1px,
-        transparent 1px 25%
-      );
-    overflow: hidden;
-  }
-
-  .sn-media-studio-track-row:first-child .sn-media-studio-track-rail {
-    background:
-      repeating-linear-gradient(
-        90deg,
-        color-mix(in srgb, var(--sn-sys-on-surface) 9%, transparent) 0 1px,
-        transparent 1px 25%
-      );
-  }
-
-  .sn-media-studio-track-rail::before {
-    content: "";
-    position: absolute;
-    inset-block: 0;
-    inset-inline-start: var(--sn-media-studio-playhead-position, 13%);
-    z-index: 2;
-    border-inline-start: 2px solid var(--sn-media-studio-playhead-color, var(--sn-media-studio-progress-color, var(--sn-sys-accent)));
-    box-shadow: 0 0 0 1px color-mix(in srgb, var(--sn-sys-surface) 70%, transparent);
-    pointer-events: none;
-  }
-
-  .sn-media-studio-track-clip {
-    box-sizing: border-box;
-    position: absolute;
-    inset-block: 4px;
-    inset-inline-start: var(--clip-start, 0%);
-    width: var(--clip-size, 68%);
-    z-index: 1;
-    min-width: 42px;
-    max-width: 100%;
-    padding: 3px 8px;
-    border-radius: calc(var(--sn-node-radius, 8px) - 2px);
-    background: var(--sn-media-studio-track-video-bg, color-mix(in srgb, var(--sn-media-studio-progress-color, var(--sn-sys-accent)) 42%, var(--sn-sys-surface)));
-    border: 1px solid color-mix(in srgb, var(--sn-media-studio-progress-color, var(--sn-sys-accent)) 48%, transparent);
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-    font-size: calc(12px * var(--sn-theme-type-scale, 1));
-  }
-
-  .sn-media-studio-track-row:nth-child(2) .sn-media-studio-track-clip {
-    background: var(--sn-media-studio-track-audio-bg, color-mix(in srgb, var(--sn-sys-warning) 42%, var(--sn-sys-surface)));
-    border-color: color-mix(in srgb, var(--sn-sys-warning) 48%, transparent);
-  }
-
-  .sn-media-studio-track-row:nth-child(3) .sn-media-studio-track-clip {
-    background: color-mix(in srgb, var(--sn-sys-warning) 30%, var(--sn-sys-on-surface) 5%, transparent);
-    border-color: color-mix(in srgb, var(--sn-sys-warning) 48%, transparent);
-  }
-
-  .sn-media-studio-track-row:nth-child(n + 4) .sn-media-studio-track-clip {
-    background: color-mix(in srgb, var(--sn-sys-danger) 24%, var(--sn-sys-on-surface) 5%, transparent);
-    border-color: color-mix(in srgb, var(--sn-sys-danger) 42%, transparent);
+    --sn-dom-timeline-clip-video: var(--sn-media-studio-track-video-bg, var(--sn-sys-accent));
+    --sn-dom-timeline-clip-audio: var(--sn-media-studio-track-audio-bg, var(--sn-sys-warning));
   }
 
   .sn-media-studio-progress-shell {
@@ -1063,12 +883,7 @@ function timelineTrackType(lane = '') {
 }
 
 export function normalizeMediaStudioTimelineData(options = {}) {
-  let clips = (Array.isArray(options.clips) && options.clips.length ? options.clips : [
-    { lane: 'video', label: 'FrameSource cache', startPercent: 0, sizePercent: 78 },
-    { lane: 'voice', label: 'Narration provider', startPercent: 8, sizePercent: 64 },
-    { lane: 'captions', label: 'Whisper sync', startPercent: 14, sizePercent: 58 },
-    { lane: 'actions', label: 'Workspace actions', startPercent: 22, sizePercent: 46 },
-  ]).map(timelineClip);
+  let clips = (Array.isArray(options.clips) ? options.clips : []).map(timelineClip);
   let fps = Math.max(1, Math.round(finiteNumber(options.fps, 30, 1, 120)));
   let duration = Math.max(1, Math.round(finiteNumber(options.durationFrames ?? options.duration, fps * 15, 1, fps * 3600)));
   let tracks = [];

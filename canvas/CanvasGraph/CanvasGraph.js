@@ -69,6 +69,7 @@ const DEFAULT_MENU_ITEMS = Object.freeze([
 const INCREMENTAL_LAYOUT_INITIAL_ALPHA = 0.045;
 const SEEDED_LAYOUT_INITIAL_ALPHA = 0.22;
 const VISUAL_FOCUS_LAYOUT_INITIAL_ALPHA = 0.18;
+const CRYSTAL_FOCUS_LAYOUT_INITIAL_ALPHA = 0.07;
 const VISUAL_FOCUS_LAYOUT_PADDING = 8;
 const NODE_APPEARANCE_START_SCALE = 0.2;
 const ENTERING_LAYOUT_SIZE_SCALE = 0.18;
@@ -605,9 +606,13 @@ function sanitizeForceLayoutOptions(options = {}) {
     'centerPull',
     'wellRepulsion',
     'crossLinkScale',
+    'crystalStrength',
+    'crystalRingDistance',
+    'crystalSpokes',
+    'crystalAngleJitter',
   ]);
   let normalized = {};
-  if (algorithm === 'spring' || algorithm === 'organic' || algorithm === 'oil-cloud') {
+  if (algorithm === 'spring' || algorithm === 'organic' || algorithm === 'oil-cloud' || algorithm === 'crystal') {
     normalized.layoutAlgorithm = algorithm;
   }
   for (const [key, value] of Object.entries(options || {})) {
@@ -1819,13 +1824,14 @@ export class CanvasGraph extends Symbiote {
     let nextIds = [...this.graphDB.nodes.keys()];
     let nextIdSet = new Set(nextIds);
     this._pruneGraphState(nextIdSet);
-    let initialLayoutSeeded = previousIds.size === 0 && this._seedInitialNodePositions(nextIds);
+    let useCrystalLayout = this._usesCrystalForceLayout();
+    let initialLayoutSeeded = previousIds.size === 0 && !useCrystalLayout && this._seedInitialNodePositions(nextIds);
     let enteringIds = previousIds.size === 0
       ? nextIds
       : nextIds.filter((id) => !previousIds.has(id));
     let retainedIds = nextIds.filter((id) => previousIds.has(id));
     this._layoutWarmupIds = previousIds.size === 0 ? new Set() : new Set(enteringIds);
-    this._seedEnteringNodePositions(enteringIds);
+    if (!useCrystalLayout) this._seedEnteringNodePositions(enteringIds);
     this._queueNodeAppearances(enteringIds);
     let retainedPositionIds = retainedIds.filter((id) => this._getPositionForNode(id));
     let retainedPositionCount = retainedPositionIds.length;
@@ -1966,6 +1972,10 @@ export class CanvasGraph extends Symbiote {
     this._wakeLoop();
   }
 
+  _usesCrystalForceLayout() {
+    return this._forceLayoutOverrides?.layoutAlgorithm === 'crystal';
+  }
+
   _resolveVisualScale(stateKey, attributeName, fallback, options = {}) {
     let attributeValue = this.getAttribute?.(attributeName);
     let value = attributeValue !== null && attributeValue !== undefined
@@ -2040,8 +2050,12 @@ export class CanvasGraph extends Symbiote {
     const baseAlpha = Number.isFinite(this._lastWorkerOptions?.initialAlpha)
       ? this._lastWorkerOptions.initialAlpha
       : 0;
+    const focusAlpha = this._usesCrystalForceLayout()
+      ? CRYSTAL_FOCUS_LAYOUT_INITIAL_ALPHA
+      : VISUAL_FOCUS_LAYOUT_INITIAL_ALPHA;
     this.startWorker(this._getWorkerRestartOptions({
-      initialAlpha: Math.max(baseAlpha, VISUAL_FOCUS_LAYOUT_INITIAL_ALPHA),
+      initialAlpha: Math.max(baseAlpha, focusAlpha),
+      crystalReseed: this._usesCrystalForceLayout(),
     }));
   }
 
@@ -2419,12 +2433,15 @@ export class CanvasGraph extends Symbiote {
 
     const forceGroups = this.getVisibleForceGroups();
     const options = this.getWorkerOptions(customOptions, forceGroups);
+    const reseedCrystalLayout = options.layoutAlgorithm === 'crystal' && customOptions?.crystalReseed === true;
 
     this.worker.start({
       nodes: this.nodes.map(n => {
         const restoredPos = this._layoutSnapshot?.positions?.[n.id];
-        const pos = this.smoothPositions.get(n.id) || this.nodePositions.get(n.id) || restoredPos;
-        if (restoredPos && !this.nodePositions.has(n.id)) {
+        const pos = reseedCrystalLayout
+          ? null
+          : this.smoothPositions.get(n.id) || this.nodePositions.get(n.id) || restoredPos;
+        if (!reseedCrystalLayout && restoredPos && !this.nodePositions.has(n.id)) {
           this.nodePositions.set(n.id, { x: restoredPos.x, y: restoredPos.y });
         }
         const dimensions = this._getWorkerNodeDimensions(n);

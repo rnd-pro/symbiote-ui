@@ -753,7 +753,7 @@ const DEFAULT_PROVIDER_THEME_TOKENS = {
   '--sn-output-preview-edge-bg': 'color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-output-preview-bg))',
 
   '--sn-sidebar-width': '220px',
-  '--sn-sidebar-collapsed-width': '48px',
+  '--sn-sidebar-collapsed-width': 'var(--sn-layout-header-block-size, calc(var(--sn-layout-header-min-height, 28px) + 3px))',
   '--sn-sidebar-collapsed-item-size': 'var(--sn-layout-sidebar-item-block-size)',
   '--sn-sidebar-collapsed-item-radius': 'var(--sn-radius-sm)',
   '--sn-sidebar-collapsed-sections-padding': 'var(--sn-step-2) 0',

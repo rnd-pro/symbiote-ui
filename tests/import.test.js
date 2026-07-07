@@ -92,6 +92,35 @@ test('root and metadata entrypoints import in Node', async () => {
   assert.equal(typeof xr.createDualViewController, 'function');
 });
 
+test('ui browser entrypoint wires catalog module exports once', async () => {
+  let source = await readFile(new URL('../ui/index.js', import.meta.url), 'utf8');
+  let { listComponents } = await import('../manifest/index.js');
+  let match = source.match(/registerCatalogModules\(\{([\s\S]*?)\n  \}\);/);
+
+  assert.ok(match, 'registerCatalogModules object is present');
+
+  let registeredKeys = [...match[1].matchAll(/^\s*([A-Za-z_$][\w$]*),\s*$/gm)]
+    .map((entry) => entry[1]);
+  let keyCounts = new Map();
+  for (let key of registeredKeys) {
+    keyCounts.set(key, (keyCounts.get(key) || 0) + 1);
+  }
+  let duplicateKeys = [...keyCounts]
+    .filter(([, count]) => count > 1)
+    .map(([key]) => key);
+  let expectedExportNames = listComponents({ includeInternal: true, includeExperimental: true })
+    .map((component) => component.exportName)
+    .filter(Boolean);
+  let missingExportNames = expectedExportNames
+    .filter((exportName) => !registeredKeys.includes(exportName));
+
+  assert.deepEqual(duplicateKeys, []);
+  assert.deepEqual(missingExportNames, []);
+  for (let lateCatalogExport of ['QrCode', 'VideoPlayer', 'TimelineEditor']) {
+    assert.ok(registeredKeys.includes(lateCatalogExport), lateCatalogExport);
+  }
+});
+
 test('locale auto mode resolves browser preferences from the library contract', async () => {
   let {
     applyLocalizationToDocument,
@@ -728,6 +757,8 @@ test('canvas graph visual scale options stay in the library contract', async () 
   assert.match(source, /const scale = isActiveLayoutNode \? this\._resolveActiveNodeScale\(\) : 1;/);
   assert.match(source, /_restartWorkerForVisualFocus\(\) {/);
   assert.match(source, /VISUAL_FOCUS_LAYOUT_INITIAL_ALPHA/);
+  assert.match(source, /CRYSTAL_FOCUS_LAYOUT_INITIAL_ALPHA = 0\.07/);
+  assert.match(source, /const focusAlpha = this\._usesCrystalForceLayout\(\)\s*\? CRYSTAL_FOCUS_LAYOUT_INITIAL_ALPHA\s*: VISUAL_FOCUS_LAYOUT_INITIAL_ALPHA;/);
   assert.match(source, /VISUAL_FOCUS_LAYOUT_PADDING/);
   assert.match(source, /const layoutRadius = radius \+ \(isActiveLayoutNode \? VISUAL_FOCUS_LAYOUT_PADDING : 0\);/);
   assert.match(source, /positionOrigin: this\.renderMode === 'dots' \? 'center' : 'top-left'/);
@@ -832,8 +863,10 @@ test('canvas graph prunes stale state when replacing the graph model', async () 
   let source = await readFile(new URL('../canvas/CanvasGraph/CanvasGraph.js', import.meta.url), 'utf8');
 
   assert.match(source, /this\._pruneGraphState\(nextIdSet\)/);
-  assert.match(source, /let initialLayoutSeeded = previousIds\.size === 0 && this\._seedInitialNodePositions\(nextIds\);/);
+  assert.match(source, /let useCrystalLayout = this\._usesCrystalForceLayout\(\);/);
+  assert.match(source, /let initialLayoutSeeded = previousIds\.size === 0 && !useCrystalLayout && this\._seedInitialNodePositions\(nextIds\);/);
   assert.match(source, /this\.loadLevel\(null, \{ incrementalLayout, initialLayoutSeeded \}\)/);
+  assert.match(source, /if \(!useCrystalLayout\) this\._seedEnteringNodePositions\(enteringIds\);/);
   assert.match(source, /for \(const id of this\.nodePositions\.keys\(\)\)/);
   assert.match(source, /for \(const id of this\.smoothPositions\.keys\(\)\)/);
   assert.match(source, /for \(const id of this\._nodeAppearances\.keys\(\)\)/);
@@ -867,17 +900,24 @@ test('canvas graph seeds entering node positions and eases appearance', async ()
   assert.match(source, /ENTERING_LAYOUT_SIZE_SCALE = 0\.18/);
   assert.match(source, /ENTERING_LAYOUT_SIZE_WARMUP_TICKS = 72/);
   assert.match(source, /_seedInitialNodePositions\(nodeIds\) \{/);
+  assert.match(source, /_usesCrystalForceLayout\(\) \{/);
+  assert.match(source, /return this\._forceLayoutOverrides\?\.layoutAlgorithm === 'crystal';/);
   assert.match(source, /let groups = normalizeForceGroups\(this\.graphDB\?\.groups \|\| \{\}, idSet\);/);
   assert.match(source, /workerOptions\.initialAlpha = SEEDED_LAYOUT_INITIAL_ALPHA;/);
   assert.match(source, /const algorithm = options\?\.layoutAlgorithm/);
+  assert.match(source, /algorithm === 'spring' \|\| algorithm === 'organic' \|\| algorithm === 'oil-cloud' \|\| algorithm === 'crystal'/);
   assert.match(source, /normalized\.layoutAlgorithm = algorithm/);
+  assert.match(source, /'crystalStrength'/);
+  assert.match(source, /'crystalRingDistance'/);
+  assert.match(source, /'crystalSpokes'/);
+  assert.match(source, /'crystalAngleJitter'/);
   assert.match(source, /let retainedPositionCount = retainedPositionIds\.length/);
   assert.match(source, /let incrementalLayout = retainedPositionCount > 0/);
   assert.match(source, /this\._layoutPreserveIds = incrementalLayout \? new Set\(retainedPositionIds\) : new Set\(\)/);
   assert.match(source, /this\._workerGeneration \+= 1/);
   assert.match(source, /const workerGeneration = this\._workerGeneration/);
   assert.match(source, /if \(workerGeneration !== this\._workerGeneration\) return/);
-  assert.match(source, /this\._seedEnteringNodePositions\(enteringIds\)/);
+  assert.match(source, /if \(!useCrystalLayout\) this\._seedEnteringNodePositions\(enteringIds\);/);
   assert.match(source, /_resolveEnteringNodeSeedPosition\(id, index, count\)/);
   assert.match(source, /for \(const edge of this\.graphDB\?\.edges \|\| \[\]\)/);
   assert.match(source, /this\.nodePositions\.set\(id, position\)/);
@@ -889,6 +929,9 @@ test('canvas graph seeds entering node positions and eases appearance', async ()
   assert.match(source, /layoutSizeWarmupTicks: isEntering \? ENTERING_LAYOUT_SIZE_WARMUP_TICKS : 0/);
   assert.match(source, /layoutFixedTicks: isPreserved \? 42 : 0/);
   assert.match(source, /const usesCenterPosition = this\.renderMode === 'dots';/);
+  assert.match(source, /crystalReseed: this\._usesCrystalForceLayout\(\)/);
+  assert.match(source, /const reseedCrystalLayout = options\.layoutAlgorithm === 'crystal' && customOptions\?\.crystalReseed === true;/);
+  assert.match(source, /const pos = reseedCrystalLayout\s*\? null\s*: this\.smoothPositions\.get\(n\.id\) \|\| this\.nodePositions\.get\(n\.id\) \|\| restoredPos;/);
   assert.match(source, /const workerX = pos \? pos\.x \+ \(usesCenterPosition \? 0 : finalW \/ 2\) : undefined/);
   assert.match(source, /x: workerX, y: workerY, w: finalW, h: finalH/);
   assert.match(source, /workerOptions\.initialAlpha = INCREMENTAL_LAYOUT_INITIAL_ALPHA/);
@@ -904,15 +947,26 @@ test('canvas graph seeds entering node positions and eases appearance', async ()
   assert.match(fallback, /function normalizeSizeScale\(value\)/);
   assert.match(fallback, /function normalizeLayoutAlgorithm\(value\)/);
   assert.match(fallback, /function normalizePositionOrigin\(value\)/);
+  assert.match(fallback, /value === 'spring' \|\| value === 'oil-cloud' \|\| value === 'crystal'/);
   assert.match(fallback, /function getEffectiveMass\(node\)/);
   assert.match(fallback, /function getEffectiveWidth\(node\)/);
   assert.match(fallback, /layoutAlgorithm: 'organic'/);
+  assert.match(fallback, /crystalStrength: 0\.18/);
   assert.match(fallback, /positionOrigin: 'center'/);
   assert.match(fallback, /resolved\.layoutAlgorithm = normalizeLayoutAlgorithm\(options\.layoutAlgorithm\)/);
   assert.match(fallback, /resolved\.positionOrigin = normalizePositionOrigin\(options\.positionOrigin \?\? resolved\.positionOrigin\)/);
+  assert.match(fallback, /function computeCrystalTargets\(rawNodes = \[\], rawEdges = \[\], rawGroups = \{\}, rawOptions = \{\}\)/);
+  assert.match(fallback, /function getCrystalBranchStep\(parent, child, ringDistance\)/);
+  assert.match(fallback, /function getCrystalClusterRadius\(hub, members, ringDistance, spokes\)/);
+  assert.match(fallback, /function applyFallbackCrystalForces\(nodes, options, alpha\)/);
+  assert.match(fallback, /options\.layoutAlgorithm === 'crystal'/);
+  assert.match(fallback, /let linkScale = options\.layoutAlgorithm === 'crystal' \? 0\.28 : 1/);
+  assert.match(fallback, /let chargeScale = options\.layoutAlgorithm === 'crystal' \? 0\.18 : 1/);
   assert.match(fallback, /function getFallbackClouds\(nodeById, groups, options\)/);
   assert.match(fallback, /function applyFallbackCloudForces\(nodeById, groups, options, alpha\)/);
   assert.match(fallback, /options\.layoutAlgorithm !== 'oil-cloud'/);
+  assert.match(fallback, /applyFallbackCrystalForces\(nodes, options, alpha\)/);
+  assert.match(fallback, /options\.layoutAlgorithm !== 'crystal'/);
   assert.match(fallback, /applyFallbackCloudForces\(state\.nodeById, state\.groups, options, alpha\)/);
   assert.match(fallback, /layoutSizeScale: normalizeSizeScale\(rawNode\.layoutSizeScale\)/);
   assert.match(fallback, /node\.layoutSizeScale = Math\.min\(1, node\.layoutSizeScale \+ 1 \/ sizeWarmupTicks\)/);
@@ -921,18 +975,30 @@ test('canvas graph seeds entering node positions and eases appearance', async ()
   assert.match(fallback, /initialAlpha: 1/);
   assert.match(fallback, /alpha: options\.initialAlpha/);
   assert.match(fallback, /state\.options\.positionOrigin === 'center'/);
+  assert.match(fallback, /let originOffsetX = this\.\#fallbackState\.options\.positionOrigin === 'center' \? 0 : node\.w \/ 2/);
+  assert.match(fallback, /node\.fx = finiteNumber\(x, node\.x\) \+ originOffsetX/);
   assert.match(fallback, /layoutFixedTicks: Math\.max\(0, finiteNumber\(rawNode\.layoutFixedTicks, 0\)\)/);
   assert.match(fallback, /node\.layoutFixedTicks -= 1/);
   assert.match(worker, /function normalizeSizeScale\(value\)/);
   assert.match(worker, /function normalizeLayoutAlgorithm\(value\)/);
   assert.match(worker, /function normalizePositionOrigin\(value\)/);
+  assert.match(worker, /value === 'spring' \|\| value === 'oil-cloud' \|\| value === 'crystal'/);
   assert.match(worker, /function getEffectiveMass\(node\)/);
   assert.match(worker, /function getEffectiveWidth\(node\)/);
   assert.match(worker, /layoutAlgorithm: 'organic'/);
+  assert.match(worker, /crystalStrength: 0\.18/);
   assert.match(worker, /positionOrigin: 'top-left'/);
   assert.match(worker, /config\.layoutAlgorithm = normalizeLayoutAlgorithm\(config\.layoutAlgorithm\)/);
   assert.match(worker, /config\.positionOrigin = normalizePositionOrigin\(config\.positionOrigin\)/);
-  assert.match(worker, /if \(config\.layoutAlgorithm === 'spring'\) return/);
+  assert.match(worker, /function isCrystalLayout\(\)/);
+  assert.match(worker, /function getCrystalBranchStep\(parent, child, ringDistance\)/);
+  assert.match(worker, /function getCrystalClusterRadius\(hub, members, ringDistance, spokes\)/);
+  assert.match(worker, /function assignCrystalTargets\(degree\)/);
+  assert.match(worker, /function applyCrystalForces\(alpha\)/);
+  assert.match(worker, /config\.groups = groups/);
+  assert.match(worker, /let layoutScale = isCrystalLayout\(\) \? 0\.28 : 1/);
+  assert.match(worker, /let chargeScale = isCrystalLayout\(\) \? 0\.18 : config\.layoutAlgorithm === 'oil-cloud' \? 0\.72 : 1/);
+  assert.match(worker, /if \(config\.layoutAlgorithm === 'spring' \|\| isCrystalLayout\(\)\) return/);
   assert.match(worker, /config\.layoutAlgorithm === 'oil-cloud' \? 0\.025 : 0\.08/);
   assert.match(worker, /config\.layoutAlgorithm === 'oil-cloud' \? 1\.35 : 1/);
   assert.match(worker, /layoutSizeScale: normalizeSizeScale\(n\.layoutSizeScale\)/);
@@ -942,6 +1008,8 @@ test('canvas graph seeds entering node positions and eases appearance', async ()
   assert.match(worker, /let involvesActiveVisualNode = config\.activeVisualNodeId && \(/);
   assert.match(worker, /if \(a\.parentId !== b\.parentId && !involvesActiveVisualNode\) {/);
   assert.match(worker, /config\.positionOrigin === 'center'/);
+  assert.match(worker, /let originOffsetX = config\.positionOrigin === 'center' \? 0 : node\.w \/ 2/);
+  assert.match(worker, /node\.fx = x \+ originOffsetX/);
   assert.match(worker, /0\.18 \+ participation \* 0\.82/);
   assert.match(worker, /initialAlpha: 1/);
   assert.match(worker, /continuousAlpha = clampNumber\(finiteNumber\(config\.initialAlpha, 1\), config\.contAlphaFloor, 1\)/);
@@ -959,6 +1027,7 @@ test('canvas graph gravity lab simulates orchestration event replay', async () =
   assert.match(source, /layoutAlgorithms\s*=\s*Object\.freeze/);
   assert.match(source, /id:\s*'organic', label:\s*'organic force'/);
   assert.match(source, /id:\s*'oil-cloud', label:\s*'oil-cloud bodies'/);
+  assert.match(source, /id:\s*'crystal', label:\s*'crystal growth'/);
   assert.match(source, /id:\s*'spring', label:\s*'spring baseline'/);
   assert.match(source, /state\.layoutAlgorithm = 'organic'/);
   assert.match(source, /layoutAlgorithm: state\.layoutAlgorithm/);
@@ -1666,6 +1735,7 @@ test('discover exposes the standalone package contract', async () => {
   let canvasGraphAgentItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'canvas-graph');
   let graphExplorerAgentItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'graph-explorer-shell');
   let cellBgAgentItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'cell-bg');
+  let codeBlock = data.manifest.components.find((item) => item.tagName === 'code-block');
   let codeBlockAgentItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'code-block');
   let sourceViewerAgentItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'source-viewer');
   let sourceEditorAgentItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'source-editor');
@@ -1798,6 +1868,8 @@ test('discover exposes the standalone package contract', async () => {
   assert.ok(cellBgAgentItem.webmcp.toolNames.includes('cell_bg_trigger'));
   assert.ok(cellBgAgentItem.webmcp.toolNames.includes('cell_bg_start'));
   assert.ok(cellBgAgentItem.webmcp.toolNames.includes('cell_bg_stop'));
+  assert.ok(codeBlock.contract.themeAliases.includes('--sn-code-gutter-bg'));
+  assert.ok(codeBlock.contract.themeAliases.includes('--sn-code-gutter-color'));
   assert.ok(codeBlockAgentItem.componentDescription.includes('markdown document'));
   assert.ok(codeBlockAgentItem.webmcp.toolNames.includes('code_block_set_content'));
   assert.ok(sourceViewerAgentItem.componentDescription.includes('markdown-document-viewer'));
@@ -1823,6 +1895,9 @@ test('discover exposes the standalone package contract', async () => {
   assert.ok(radio.contract.capabilities.includes('single-selection'));
   assert.ok(sw.contract.capabilities.includes('switch'));
   let customElements = JSON.parse(await readFile(new URL('../custom-elements.json', import.meta.url), 'utf8'));
+  let codeBlockDeclaration = customElements.modules
+    .flatMap((module) => module.declarations || [])
+    .find((declaration) => declaration.tagName === 'code-block');
   let sourceEditorDeclaration = customElements.modules
     .flatMap((module) => module.declarations || [])
     .find((declaration) => declaration.tagName === 'source-editor');
@@ -1833,6 +1908,8 @@ test('discover exposes the standalone package contract', async () => {
     .flatMap((module) => module.declarations || [])
     .find((declaration) => declaration.tagName === 'sn-timeline-editor');
   assert.ok(sourceEditorDeclaration.componentDescription.includes('markdown-editing'));
+  assert.ok(codeBlockDeclaration.metadata.contract.themeAliases.includes('--sn-code-gutter-bg'));
+  assert.ok(codeBlockDeclaration.metadata.contract.themeAliases.includes('--sn-code-gutter-color'));
   assert.ok(sourceEditorDeclaration.agent.webmcp.toolNames.includes('source_editor_save'));
   assert.ok(timelineEditorDeclaration);
   assert.ok(timelineEditorDeclaration.componentDescription.includes('multi-track timeline editor'));

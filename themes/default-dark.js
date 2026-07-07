@@ -694,7 +694,7 @@ const DEFAULT_DARK_TOKENS = {
   '--sn-output-preview-edge-bg': 'color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-output-preview-bg))',
 
   '--sn-sidebar-width': '220px',
-  '--sn-sidebar-collapsed-width': '48px',
+  '--sn-sidebar-collapsed-width': 'var(--sn-layout-header-block-size, calc(var(--sn-layout-header-min-height, 28px) + 3px))',
   '--sn-sidebar-resize-width': '5px',
   '--sn-sidebar-resize-offset': '2px',
 

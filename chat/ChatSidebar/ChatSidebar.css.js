@@ -38,9 +38,9 @@ chat-sidebar-shell[resizing] .chat-nav  {
   user-select: none;
 }
 
-.chat-nav[collapsed]  {
-  width: var(--chat-nav-width, var(--sn-chat-sidebar-collapsed-width, 48px));
-  min-width: var(--chat-nav-width, var(--sn-chat-sidebar-collapsed-width, 48px));
+.chat-nav[collapsed] {
+  width: var(--chat-nav-width, var(--sn-chat-sidebar-collapsed-width, var(--sn-layout-header-block-size, calc(var(--sn-layout-header-min-height, 28px) + 3px))));
+  min-width: var(--chat-nav-width, var(--sn-chat-sidebar-collapsed-width, var(--sn-layout-header-block-size, calc(var(--sn-layout-header-min-height, 28px) + 3px))));
   overflow: visible;
 }
 

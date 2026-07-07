@@ -29,6 +29,11 @@ function emit(el, type, detail = {}) {
   el.dispatchEvent(new CustomEvent(type, { bubbles: true, composed: true, detail }));
 }
 
+const COLLAPSED_NAV_WIDTH_TOKEN = [
+  'var(--sn-chat-sidebar-collapsed-width,',
+  'var(--sn-layout-header-block-size, calc(var(--sn-layout-header-min-height, 28px) + 3px)))',
+].join(' ');
+
 function readCssPixelValue(element, name, fallback) {
   if (typeof getComputedStyle !== 'function') return fallback;
   let raw = getComputedStyle(element).getPropertyValue(name).trim();
@@ -136,7 +141,7 @@ export class ChatSidebarShell extends Symbiote {
 
   _applyNavWidth() {
     if (this.$.navCollapsed) {
-      this.style.setProperty('--chat-nav-width', 'var(--sn-chat-sidebar-collapsed-width, 48px)');
+      this.style.setProperty('--chat-nav-width', COLLAPSED_NAV_WIDTH_TOKEN);
     } else if (this._hasExplicitNavWidth) {
       this.style.setProperty('--chat-nav-width', `${clampChatSidebarWidth(this.$.navWidth)}px`);
     } else {
@@ -172,9 +177,10 @@ export class ChatSidebarShell extends Symbiote {
     if (!nav) return;
 
     let startX = event.clientX;
+    let navWidth = nav.getBoundingClientRect().width;
     let startWidth = this.$.navCollapsed
-      ? readCssPixelValue(this, '--sn-chat-sidebar-collapsed-width', COLLAPSED_NAV_WIDTH)
-      : nav.getBoundingClientRect().width;
+      ? (navWidth > 0 ? navWidth : readCssPixelValue(this, '--sn-chat-sidebar-collapsed-width', COLLAPSED_NAV_WIDTH))
+      : navWidth;
     let wasCollapsed = this.$.navCollapsed;
     this._isResizing = true;
     this.setAttribute('resizing', '');

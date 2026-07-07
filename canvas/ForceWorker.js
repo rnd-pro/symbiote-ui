@@ -54,11 +54,21 @@ function normalizeSizeScale(value) {
 }
 
 function normalizeLayoutAlgorithm(value) {
-  return value === 'spring' || value === 'oil-cloud' ? value : 'organic';
+  return value === 'spring' || value === 'oil-cloud' || value === 'crystal' ? value : 'organic';
 }
 
 function normalizePositionOrigin(value) {
   return value === 'center' ? 'center' : 'top-left';
+}
+
+function hashUnit(value) {
+  let text = String(value || '');
+  let hash = 2166136261;
+  for (let i = 0; i < text.length; i++) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return ((hash >>> 0) % 10000) / 10000;
 }
 
 function getCloudRadiusEasing() {
@@ -608,7 +618,8 @@ function applyLinkForce(nodes, edges, alpha) {
     }
 
     let dist = Math.sqrt(dx * dx + dy * dy) || 1;
-    let force = ((dist - e.restLength) / dist) * alpha * e.strength * participation;
+    let layoutScale = isCrystalLayout() ? 0.28 : 1;
+    let force = ((dist - e.restLength) / dist) * alpha * e.strength * participation * layoutScale;
     let fx = dx * force;
     let fy = dy * force;
 
@@ -689,13 +700,346 @@ let config = {
   centerPull: 0.3,
   wellRepulsion: 5.0,
   crossLinkScale: 0.2,
+  crystalStrength: 0.18,
+  crystalRingDistance: 118,
+  crystalSpokes: 6,
+  crystalAngleJitter: 0.16,
 };
+
+function isCrystalLayout() {
+  return config.layoutAlgorithm === 'crystal';
+}
+
+function getCrystalSpokeCount() {
+  return Math.round(clampNumber(finiteNumber(config.crystalSpokes, 6), 3, 12));
+}
+
+function getCrystalRingDistance() {
+  let configured = finiteNumber(config.crystalRingDistance, 0);
+  if (configured > 0) return configured;
+  return Math.max(
+    92,
+    finiteNumber(config.linkDistance, 150) * 0.72,
+    finiteNumber(config.groupDistance, 120) * 0.62
+  );
+}
+
+function getCrystalNodeRadius(node) {
+  return Math.max(getEffectiveWidth(node), getEffectiveHeight(node)) / 2;
+}
+
+function getCrystalNodeScore(node, index, degree) {
+  let childCount = Array.isArray(node.children) ? node.children.length : 0;
+  let groupScore = node.isGroup ? 5 : 0;
+  let parentPenalty = node.parentId ? 0 : 0.35;
+  return (degree[index] || 0) + childCount * 1.15 + groupScore + getEffectiveMass(node) * 0.35 + parentPenalty;
+}
+
+function getCrystalCenter() {
+  let x = 0;
+  let y = 0;
+  let total = 0;
+  for (const node of nodes) {
+    if (!node._hadPos || !Number.isFinite(node.x) || !Number.isFinite(node.y)) continue;
+    let mass = getEffectiveMass(node);
+    x += node.x * mass;
+    y += node.y * mass;
+    total += mass;
+  }
+  if (total <= 0) return { x: 0, y: 0 };
+  return { x: x / total, y: y / total };
+}
+
+function getCrystalBranchStep(parent, child, ringDistance) {
+  let padding = Math.max(16, ringDistance * 0.32);
+  return Math.max(
+    ringDistance,
+    getCrystalNodeRadius(parent) + getCrystalNodeRadius(child) + padding
+  );
+}
+
+function getCrystalMemberRingStep(members, ringDistance) {
+  let maxRadius = 0;
+  for (const member of members) {
+    maxRadius = Math.max(maxRadius, getCrystalNodeRadius(member));
+  }
+  return Math.max(ringDistance * 0.92, maxRadius * 2 + Math.max(14, ringDistance * 0.24));
+}
+
+function getCrystalClusterRadius(hub, members, ringDistance, spokes) {
+  let hubRadius = getCrystalNodeRadius(hub);
+  if (!members.length) return hubRadius + Math.max(18, ringDistance * 0.42);
+  let baseRadius = 0;
+  let maxLeafRadius = 0;
+  for (const member of members) {
+    maxLeafRadius = Math.max(maxLeafRadius, getCrystalNodeRadius(member));
+    baseRadius = Math.max(baseRadius, getCrystalBranchStep(hub, member, ringDistance));
+  }
+  let rings = Math.max(1, Math.ceil(members.length / Math.max(1, spokes)));
+  return baseRadius + (rings - 1) * getCrystalMemberRingStep(members, ringDistance) + maxLeafRadius;
+}
+
+function getCrystalSortedIndexes(indexes) {
+  return [...indexes].sort((a, b) => {
+    let hashDelta = hashUnit(`${nodes[a].id}:crystal-slot`) - hashUnit(`${nodes[b].id}:crystal-slot`);
+    if (Math.abs(hashDelta) > 0.0001) return hashDelta;
+    return String(nodes[a].id).localeCompare(String(nodes[b].id));
+  });
+}
+
+function buildCrystalAdjacency() {
+  let adjacency = nodes.map(() => []);
+  let nodeIndex = new Map(nodes.map((node, index) => [node.id, index]));
+  let addAdjacency = (source, target) => {
+    if (source === undefined || target === undefined || source === target) return;
+    adjacency[source].push(target);
+    adjacency[target].push(source);
+  };
+  for (const edge of edges) {
+    addAdjacency(edge.source, edge.target);
+  }
+  for (let index = 0; index < nodes.length; index++) {
+    let node = nodes[index];
+    if (node.parentId && nodeIndex.has(node.parentId)) {
+      addAdjacency(index, nodeIndex.get(node.parentId));
+    }
+    if (Array.isArray(node.children)) {
+      for (const childId of node.children) {
+        if (nodeIndex.has(childId)) addAdjacency(index, nodeIndex.get(childId));
+      }
+    }
+  }
+
+  return { adjacency, nodeIndex, addAdjacency };
+}
+
+function assignCrystalTargets(degree) {
+  if (!isCrystalLayout() || nodes.length === 0) return;
+
+  let center = getCrystalCenter();
+  let { adjacency, nodeIndex, addAdjacency } = buildCrystalAdjacency();
+  let preferredHubByMember = new Map();
+  let nodeIds = new Set(nodes.map((node) => node.id));
+  if (config.groups && typeof config.groups === 'object') {
+    for (const [groupId, rawMemberIds] of Object.entries(config.groups)) {
+      let memberIds = Array.isArray(rawMemberIds)
+        ? rawMemberIds.filter((id) => nodeIds.has(id))
+        : [];
+      if (memberIds.length < 2) continue;
+      let hubId = nodeIndex.has(groupId) ? groupId : '';
+      if (!hubId) {
+        for (const memberId of memberIds) {
+          let member = nodes[nodeIndex.get(memberId)];
+          if (member?.isGroup) {
+            hubId = memberId;
+            break;
+          }
+        }
+      }
+      if (!hubId) {
+        hubId = memberIds[0];
+        let maxDegree = -1;
+        for (const memberId of memberIds) {
+          let index = nodeIndex.get(memberId);
+          let memberDegree = index === undefined ? -1 : degree[index];
+          if (memberDegree > maxDegree) {
+            maxDegree = memberDegree;
+            hubId = memberId;
+          }
+        }
+      }
+      for (const memberId of memberIds) {
+        if (memberId !== hubId) {
+          addAdjacency(nodeIndex.get(hubId), nodeIndex.get(memberId));
+          preferredHubByMember.set(memberId, hubId);
+        }
+      }
+    }
+  }
+
+  let candidates = nodes
+    .map((node, index) => ({ node, index, score: getCrystalNodeScore(node, index, degree) }))
+    .sort((a, b) => b.score - a.score || String(a.node.id).localeCompare(String(b.node.id)));
+  let activeRootIndex = config.activeVisualNodeId
+    ? nodes.findIndex((node) => node.id === config.activeVisualNodeId)
+    : -1;
+  let rootIndex = activeRootIndex >= 0 ? activeRootIndex : candidates[0]?.index ?? 0;
+  let ringDistance = getCrystalRingDistance();
+  let spokes = getCrystalSpokeCount();
+  let angleStep = (Math.PI * 2) / spokes;
+  let angleJitter = clampNumber(finiteNumber(config.crystalAngleJitter, 0.16), 0, 0.22);
+  let hubIndexes = new Set();
+  for (const { node, index } of candidates) {
+    let childCount = Array.isArray(node.children) ? node.children.length : 0;
+    if (node.isGroup || childCount > 0 || degree[index] >= 5) hubIndexes.add(index);
+  }
+  hubIndexes.add(rootIndex);
+  if (hubIndexes.size === 0) hubIndexes.add(candidates[0]?.index ?? 0);
+
+  let hubMembers = new Map([...hubIndexes].map((index) => [index, []]));
+  let assignMember = (memberIndex, hubIndex) => {
+    if (!hubIndexes.has(hubIndex) || hubIndexes.has(memberIndex) || memberIndex === hubIndex) return false;
+    let members = hubMembers.get(hubIndex);
+    if (!members.includes(memberIndex)) members.push(memberIndex);
+    return true;
+  };
+
+  for (let index = 0; index < nodes.length; index++) {
+    if (hubIndexes.has(index)) continue;
+    let node = nodes[index];
+    let assigned = false;
+    if (node.parentId && nodeIndex.has(node.parentId)) {
+      assigned = assignMember(index, nodeIndex.get(node.parentId));
+    }
+    if (!assigned && preferredHubByMember.has(node.id)) {
+      assigned = assignMember(index, nodeIndex.get(preferredHubByMember.get(node.id)));
+    }
+    if (!assigned) {
+      for (const hubIndex of hubIndexes) {
+        let hub = nodes[hubIndex];
+        if (Array.isArray(hub.children) && hub.children.includes(node.id)) {
+          assigned = assignMember(index, hubIndex);
+          break;
+        }
+      }
+    }
+    if (!assigned) {
+      let adjacentHub = adjacency[index]
+        .filter((candidateIndex) => hubIndexes.has(candidateIndex))
+        .sort((a, b) => {
+          let rootBias = (a === rootIndex ? -1 : 0) - (b === rootIndex ? -1 : 0);
+          if (rootBias) return rootBias;
+          return getCrystalNodeScore(nodes[b], b, degree) - getCrystalNodeScore(nodes[a], a, degree);
+        })[0];
+      assigned = assignMember(index, adjacentHub);
+    }
+    if (!assigned) assignMember(index, rootIndex);
+  }
+
+  for (const [hubIndex, members] of hubMembers) {
+    hubMembers.set(hubIndex, getCrystalSortedIndexes(members));
+  }
+
+  let hubClusterRadius = new Map();
+  for (const hubIndex of hubIndexes) {
+    hubClusterRadius.set(
+      hubIndex,
+      getCrystalClusterRadius(nodes[hubIndex], (hubMembers.get(hubIndex) || []).map((index) => nodes[index]), ringDistance, spokes)
+    );
+  }
+
+  let hubTargets = new Map();
+  hubTargets.set(rootIndex, { x: center.x, y: center.y, angle: -Math.PI / 2, shell: 0 });
+  let orderedHubs = [...hubIndexes]
+    .filter((index) => index !== rootIndex)
+    .sort((a, b) => {
+      let linkedDelta = Number(adjacency[rootIndex]?.includes?.(b) || false) - Number(adjacency[rootIndex]?.includes?.(a) || false);
+      if (linkedDelta) return linkedDelta;
+      return getCrystalNodeScore(nodes[b], b, degree) - getCrystalNodeScore(nodes[a], a, degree)
+        || String(nodes[a].id).localeCompare(String(nodes[b].id));
+    });
+  let rootClusterRadius = hubClusterRadius.get(rootIndex) || ringDistance;
+  let hubPadding = Math.max(ringDistance * 1.3, 48);
+  for (let slot = 0; slot < orderedHubs.length; slot++) {
+    let hubIndex = orderedHubs[slot];
+    let ring = Math.floor(slot / spokes);
+    let spoke = slot % spokes;
+    let jitter = (hashUnit(`${nodes[hubIndex].id}:crystal-hub-angle`) - 0.5) * angleStep * angleJitter;
+    let angle = -Math.PI / 2 + spoke * angleStep + jitter;
+    let radius = Math.max(
+      ringDistance * (3.2 + ring * 1.8),
+      rootClusterRadius + (hubClusterRadius.get(hubIndex) || ringDistance) + hubPadding + ring * ringDistance * 1.8
+    );
+    hubTargets.set(hubIndex, {
+      x: center.x + Math.cos(angle) * radius,
+      y: center.y + Math.sin(angle) * radius,
+      angle,
+      shell: ring + 1,
+    });
+  }
+
+  let targets = new Map();
+  for (const hubIndex of hubIndexes) {
+    let hubTarget = hubTargets.get(hubIndex) || hubTargets.get(rootIndex);
+    let hub = nodes[hubIndex];
+    targets.set(hubIndex, { ...hubTarget, center: true });
+    let members = hubMembers.get(hubIndex) || [];
+    let memberNodes = members.map((index) => nodes[index]);
+    let ringStep = getCrystalMemberRingStep(memberNodes, ringDistance);
+    for (let memberSlot = 0; memberSlot < members.length; memberSlot++) {
+      let memberIndex = members[memberSlot];
+      let member = nodes[memberIndex];
+      let ring = Math.floor(memberSlot / spokes);
+      let spoke = memberSlot % spokes;
+      let jitter = (hashUnit(`${member.id}:crystal-angle`) - 0.5) * angleStep * angleJitter;
+      let angle = hubTarget.angle + spoke * angleStep + jitter;
+      let radius = getCrystalBranchStep(hub, member, ringDistance) + ring * ringStep;
+      targets.set(memberIndex, {
+        x: hubTarget.x + Math.cos(angle) * radius,
+        y: hubTarget.y + Math.sin(angle) * radius,
+        shell: hubTarget.shell + ring + 1,
+        center: false,
+      });
+    }
+  }
+
+  for (const { node, index } of candidates) {
+    if (targets.has(index)) continue;
+    let angle = -Math.PI / 2 + hashUnit(`${node.id}:crystal-orphan`) * Math.PI * 2;
+    let radius = rootClusterRadius + getCrystalNodeRadius(node) + hubPadding;
+    targets.set(index, {
+      x: center.x + Math.cos(angle) * radius,
+      y: center.y + Math.sin(angle) * radius,
+      shell: 1,
+      center: false,
+    });
+  }
+
+  for (const [index, target] of targets) {
+    let node = nodes[index];
+    node.crystalTargetX = target.x;
+    node.crystalTargetY = target.y;
+    node.crystalShell = target.shell;
+    // Crystal owns layout mass; gravity wells are skipped for this algorithm.
+    node.mass = Math.max(node.baseMass, target.center ? Math.min(4.5, (degree[index] || 0) * 0.35 + 2) : node.isGroup ? 2.2 : node.baseMass);
+    if (!node._hadPos) {
+      node.x = target.x;
+      node.y = target.y;
+      node.layoutFixedX = target.x;
+      node.layoutFixedY = target.y;
+      node.vx = 0;
+      node.vy = 0;
+    }
+  }
+}
+
+function applyCrystalForces(alpha) {
+  if (!isCrystalLayout()) return;
+  let strength = clampNumber(finiteNumber(config.crystalStrength, 0.18), 0.01, 0.8);
+  let sizeScale = clampNumber(26 / Math.max(6, Math.sqrt(nodes.length) * 3.2), 0.5, 1);
+  for (const node of nodes) {
+    if (!Number.isFinite(node.crystalTargetX) || !Number.isFinite(node.crystalTargetY)) continue;
+    let scale = getMovementScale(node);
+    if (scale <= 0) continue;
+    let dx = node.x - node.crystalTargetX;
+    let dy = node.y - node.crystalTargetY;
+    let distance = Math.sqrt(dx * dx + dy * dy);
+    if (distance < 0.35) continue;
+    let shellScale = node.crystalShell === 0 ? 1.35 : 1;
+    let pull = clampNumber(strength * alpha * 0.95 * sizeScale * shellScale * scale, 0.006, 0.24);
+    node.x -= dx * pull;
+    node.y -= dy * pull;
+    node.vx -= dx * pull * 0.18;
+    node.vy -= dy * pull * 0.18;
+  }
+}
 
 function initSimulation(data) {
   let { nodes: rawNodes, edges: rawEdges, groups = {}, options = {} } = data;
 
 
   Object.assign(config, options);
+  config.groups = groups;
   config.layoutAlgorithm = normalizeLayoutAlgorithm(config.layoutAlgorithm);
   config.positionOrigin = normalizePositionOrigin(config.positionOrigin);
   simMode = options.mode || 'converge';
@@ -740,7 +1084,7 @@ function initSimulation(data) {
   });
 
 
-  if (options.activeGroupId) {
+  if (options.activeGroupId && !isCrystalLayout()) {
     let parentNode = nodes.find((n) => n.id === options.activeGroupId);
     if (parentNode) {
 
@@ -840,6 +1184,7 @@ function initSimulation(data) {
   }
 
 
+  assignCrystalTargets(degree);
   computeGravityWells(degree);
 }
 
@@ -859,7 +1204,7 @@ function computeGravityWells(degree) {
     n.mySun = null;
   }
 
-  if (config.layoutAlgorithm === 'spring') return;
+  if (config.layoutAlgorithm === 'spring' || isCrystalLayout()) return;
 
   let medianDeg =
     degree.length > 0 ? [...degree].sort((a, b) => a - b)[Math.floor(degree.length / 2)] : 1;
@@ -936,14 +1281,14 @@ function computeGravityWells(degree) {
 
 function tick(alpha) {
 
-  let chargeScale = config.layoutAlgorithm === 'oil-cloud' ? 0.72 : 1;
+  let chargeScale = isCrystalLayout() ? 0.18 : config.layoutAlgorithm === 'oil-cloud' ? 0.72 : 1;
   applyChargeForce(nodes, config.chargeStrength * alpha * chargeScale, config.theta);
 
 
   applyLinkForce(nodes, edges, alpha);
 
 
-  applyCollisionForce(nodes, config.collideStrength, config.layoutAlgorithm === 'oil-cloud' ? 8 : 6);
+  applyCollisionForce(nodes, config.collideStrength, config.layoutAlgorithm === 'oil-cloud' || isCrystalLayout() ? 8 : 6);
 
   if (config.layoutAlgorithm === 'spring') {
     for (const n of nodes) {
@@ -951,6 +1296,8 @@ function tick(alpha) {
       n.vx -= n.x * config.centerPull * alpha * 0.02 * scale;
       n.vy -= n.y * config.centerPull * alpha * 0.02 * scale;
     }
+  } else if (isCrystalLayout()) {
+    applyCrystalForces(alpha);
   }
 
 
@@ -1124,8 +1471,10 @@ self.onmessage = function (e) {
     let node = nodes.find((n) => n.id === id);
     if (node) {
 
-      node.fx = x + node.w / 2;
-      node.fy = y + node.h / 2;
+      let originOffsetX = config.positionOrigin === 'center' ? 0 : node.w / 2;
+      let originOffsetY = config.positionOrigin === 'center' ? 0 : node.h / 2;
+      node.fx = x + originOffsetX;
+      node.fy = y + originOffsetY;
 
       if (simMode === 'continuous') {
         continuousAlpha = Math.min(continuousAlpha + config.pinReheat, config.pinCap);

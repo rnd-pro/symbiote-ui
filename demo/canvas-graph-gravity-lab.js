@@ -29,6 +29,7 @@ const viewControls = [
 const layoutAlgorithms = Object.freeze([
   { id: 'organic', label: 'organic force' },
   { id: 'oil-cloud', label: 'oil-cloud bodies' },
+  { id: 'crystal', label: 'crystal growth' },
   { id: 'spring', label: 'spring baseline' },
 ]);
 

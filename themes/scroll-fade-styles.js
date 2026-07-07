@@ -1,18 +1,36 @@
 const SCROLL_SHADOW_SIZE = 'var(--sn-scroll-shadow-size, 14px)';
+const SCROLL_FADE_MASK_COLOR = 'var(--sn-scroll-fade-mask-color, var(--sn-sys-on-surface))';
 const SCROLL_FADE_AXIS_PROPERTY = '--sn-scroll-fade-axis';
 const SCROLL_FADE_MASK_PROPERTY = '--sn-scroll-fade-mask';
 const SCROLL_FADE_ACTIVE_MASK_PROPERTY = '--sn-scroll-fade-mask-active';
 const SCROLL_FADE_THRESHOLD = 1;
 
 function scrollFadeMask(direction) {
-  return `linear-gradient(${direction}, transparent 0, #000 ${SCROLL_SHADOW_SIZE}, #000 calc(100% - ${SCROLL_SHADOW_SIZE}), transparent 100%)`;
+  return `linear-gradient(${direction}, transparent 0, ${SCROLL_FADE_MASK_COLOR} ${SCROLL_SHADOW_SIZE}, ${SCROLL_FADE_MASK_COLOR} calc(100% - ${SCROLL_SHADOW_SIZE}), transparent 100%)`;
 }
 
 let observedScrollFadeHosts = new WeakSet();
 let scrollFadeResizeObserver = null;
 let scrollFadeScanPending = false;
 
-function readScrollFadeAxis(element, styles = getComputedStyle(element)) {
+function ownerWindow(node) {
+  return node?.ownerDocument?.defaultView || globalThis.window || globalThis;
+}
+
+function isElementNode(node) {
+  let ElementCtor = ownerWindow(node)?.Element || globalThis.Element;
+  return typeof ElementCtor === 'function' && node instanceof ElementCtor;
+}
+
+function computedStylesFor(element) {
+  let getStyles = ownerWindow(element)?.getComputedStyle || globalThis.getComputedStyle;
+  if (typeof getStyles !== 'function') return null;
+  let styles = getStyles(element);
+  return styles && typeof styles.getPropertyValue === 'function' ? styles : null;
+}
+
+function readScrollFadeAxis(element, styles = computedStylesFor(element)) {
+  if (!styles) return '';
   let axis = styles.getPropertyValue(SCROLL_FADE_AXIS_PROPERTY).trim();
   if (axis !== 'block' && axis !== 'inline') return '';
 
@@ -32,7 +50,8 @@ function hasAxisOverflow(element, axis) {
 }
 
 function updateScrollFadeHost(element) {
-  let styles = getComputedStyle(element);
+  let styles = computedStylesFor(element);
+  if (!styles) return;
   let axis = readScrollFadeAxis(element, styles);
   if (axis !== 'block' && axis !== 'inline') return;
 
@@ -48,7 +67,7 @@ function updateScrollFadeHost(element) {
 }
 
 function updateScrollFadeAncestors(node) {
-  let current = node instanceof Element ? node : node?.parentElement;
+  let current = isElementNode(node) ? node : node?.parentElement;
   while (current) {
     if (observedScrollFadeHosts.has(current)) updateScrollFadeHost(current);
     let root = current.parentElement ? null : current.getRootNode?.();
@@ -78,7 +97,13 @@ function scanScrollFadeHosts(root = document) {
 function scheduleScrollFadeScan(root = document) {
   if (scrollFadeScanPending) return;
   scrollFadeScanPending = true;
-  requestAnimationFrame(() => {
+  let schedule = ownerWindow(root)?.requestAnimationFrame || globalThis.requestAnimationFrame;
+  if (typeof schedule !== 'function') {
+    scrollFadeScanPending = false;
+    scanScrollFadeHosts(root);
+    return;
+  }
+  schedule(() => {
     scrollFadeScanPending = false;
     scanScrollFadeHosts(root);
   });
@@ -95,12 +120,18 @@ function installScrollFadeController() {
     })
     : null;
 
-  let mutationObserver = new MutationObserver((mutations) => {
+  let MutationObserverCtor = window.MutationObserver || globalThis.MutationObserver;
+  if (typeof MutationObserverCtor !== 'function') {
+    scheduleScrollFadeScan();
+    return;
+  }
+
+  let mutationObserver = new MutationObserverCtor((mutations) => {
     for (let mutation of mutations) {
-      if (mutation.target instanceof Element) observeScrollFadeHost(mutation.target);
+      if (isElementNode(mutation.target)) observeScrollFadeHost(mutation.target);
       updateScrollFadeAncestors(mutation.target);
       for (let node of mutation.addedNodes) {
-        if (node instanceof Element) scanScrollFadeHosts(node);
+        if (isElementNode(node)) scanScrollFadeHosts(node);
         updateScrollFadeAncestors(node);
       }
     }

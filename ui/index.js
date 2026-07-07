@@ -1151,7 +1151,6 @@ if (hasDOMGlobals) {
     Carousel,
     QrCode,
     VideoPlayer,
-    TimelineEditor,
   });
 }
 

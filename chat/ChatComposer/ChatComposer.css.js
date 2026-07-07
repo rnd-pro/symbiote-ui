@@ -369,7 +369,7 @@ sn-button.btn-send[variant="icon"].btn-stop::after {
 
 .composer-footer-meter:hover,
 .composer-footer-meter[aria-expanded="true"] {
-  color: var(--sn-sys-on-surface);
+  color: color-mix(in oklch, var(--sn-sys-on-surface) calc(100% - var(--sn-sys-state-hover-mix)), var(--sn-sys-on-surface-dim));
 }
 
 .composer-footer-meter:focus-visible {
@@ -524,7 +524,7 @@ sn-button.btn-send[variant="icon"].btn-stop::after {
 .composer-footer-details-head:focus-visible .composer-footer-details-title,
 .composer-footer-details-head:hover .composer-footer-details-summary,
 .composer-footer-details-head:focus-visible .composer-footer-details-summary {
-  color: var(--sn-sys-on-surface);
+  color: color-mix(in oklch, var(--sn-sys-on-surface) calc(100% - var(--sn-sys-state-hover-mix)), var(--sn-sys-on-surface-dim));
 }
 
 .composer-footer-details-head:focus-visible {
@@ -685,7 +685,7 @@ sn-button.btn-send[variant="icon"].btn-stop::after {
 .composer-footer-detail-swatch {
   inline-size: 8px;
   block-size: 8px;
-  border-radius: 2px;
+  border-radius: var(--sn-radius-xs);
   background: var(--sn-sys-accent);
 }
 
@@ -774,7 +774,7 @@ sn-button.btn-send[variant="icon"].btn-stop::after {
 }
 
 .composer-footer-usage-row.tone-warning .composer-footer-usage-track span {
-  background: var(--sn-sys-warning, #facc15);
+  background: var(--sn-sys-warning, var(--sn-cat-warning));
 }
 
 @media (width <= 560px) {

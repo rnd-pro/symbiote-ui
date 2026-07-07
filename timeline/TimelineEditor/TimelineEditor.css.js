@@ -1,5 +1,3 @@
-import { themedScrollFadeInlineStyles } from '../../themes/scroll-fade-styles.js';
-
 let css = /*css*/`
   sn-timeline-editor {
     display: flex;
@@ -14,8 +12,8 @@ let css = /*css*/`
     user-select: none;
     --te-track-height: 36px;
     --te-ruler-height: 28px;
+    --te-transport-height: 28px;
     --te-header-width: 140px;
-    /* T3 component aliases — component->sys only, per docs/cascade-theme-architecture.md */
     --te-playhead-color: var(--sn-sys-danger);
     --te-clip-radius: calc(3px * var(--sn-theme-radius-scale, 1));
     --te-border: var(--sn-sys-outline);
@@ -23,8 +21,6 @@ let css = /*css*/`
     --te-track-bg-alt: color-mix(in oklch, var(--sn-sys-surface) 85%, var(--sn-sys-surface-panel));
     --te-marker-color: var(--sn-sys-warning);
     --te-selection: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-selected-mix), transparent);
-    /* DOM domain block — per-clip-type palette (analogous to --sn-dom-graph-type-*), derived
-       from existing T2 status/accent roles rather than component-local literals. */
     --sn-dom-timeline-clip-video: var(--sn-sys-accent);
     --sn-dom-timeline-clip-audio: var(--sn-sys-warning);
     --sn-dom-timeline-clip-text: var(--sn-sys-success);
@@ -32,23 +28,49 @@ let css = /*css*/`
     --sn-dom-timeline-clip-default: var(--sn-sys-outline-strong);
   }
 
-  /* ── Transport bar ── */
   .te-transport {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     align-items: center;
     gap: var(--sn-step-4);
-    height: 28px;
+    height: var(--te-transport-height);
+    min-height: var(--te-transport-height);
     padding: 0 var(--sn-step-4);
     background: var(--sn-sys-surface-panel);
     border-bottom: 1px solid var(--te-border);
     flex-shrink: 0;
+    min-width: 0;
+  }
+
+  .te-transport-group {
+    display: flex;
+    align-items: center;
+    gap: var(--sn-step-3);
+    min-width: 0;
+  }
+
+  .te-transport-time {
+    justify-content: flex-start;
+  }
+
+  .te-transport-playback {
+    justify-content: center;
+  }
+
+  .te-transport-tools {
+    justify-content: flex-end;
   }
 
   .te-transport button {
+    display: inline-grid;
+    place-items: center;
+    width: calc(var(--te-transport-height) - 6px);
+    height: calc(var(--te-transport-height) - 6px);
+    min-width: calc(var(--te-transport-height) - 6px);
     background: var(--sn-sys-surface-raised);
     border: 1px solid var(--te-border);
     color: var(--sn-sys-on-surface-dim);
-    padding: var(--sn-step-1) var(--sn-step-3);
+    padding: 0;
     border-radius: calc(var(--sn-radius-xs, 3px) * var(--sn-theme-radius-scale, 1));
     cursor: pointer;
     font-family: inherit;
@@ -68,6 +90,11 @@ let css = /*css*/`
     color: var(--sn-sys-on-status);
   }
 
+  .te-transport .material-symbols-outlined {
+    font-size: calc(var(--te-transport-height) - var(--sn-step-6));
+    line-height: 1;
+  }
+
   .te-transport .te-time {
     font-family: var(--sn-font-mono);
     font-size: var(--sn-text-xs);
@@ -76,43 +103,60 @@ let css = /*css*/`
     text-align: center;
   }
 
-  .te-transport .te-spacer {
-    flex: 1;
-  }
-
   .te-transport .te-zoom-label {
     font-size: var(--sn-text-2xs);
     color: var(--sn-sys-on-surface-dim);
+    white-space: nowrap;
   }
 
-  /* ── Main area ── */
   .te-body {
-    display: flex;
+    display: grid;
+    grid-template-columns: var(--te-header-width) minmax(0, 1fr);
     flex: 1;
+    min-height: 0;
     overflow: hidden;
+    background: var(--sn-sys-surface-panel);
   }
 
-  /* ── Track headers (left) ── */
   .te-headers {
-    width: var(--te-header-width);
-    flex-shrink: 0;
-    border-right: 1px solid var(--te-border);
+    grid-column: 1;
     display: flex;
     flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    border-right: 1px solid var(--te-border);
+    overflow: hidden;
   }
 
   .te-headers-ruler-pad {
     height: var(--te-ruler-height);
+    min-height: var(--te-ruler-height);
     border-bottom: 1px solid var(--te-border);
     display: flex;
     align-items: center;
     padding: 0 var(--sn-step-4);
     font-size: var(--sn-text-2xs);
     color: var(--sn-sys-on-surface-dim);
+    background: var(--sn-sys-surface-panel);
+  }
+
+  .te-headers-scroll {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .te-headers-list {
+    position: relative;
+    min-width: 0;
+    will-change: transform;
   }
 
   .te-header-track {
     height: var(--te-track-height);
+    min-height: var(--te-track-height);
     display: flex;
     align-items: center;
     padding: 0 var(--sn-step-4);
@@ -135,21 +179,29 @@ let css = /*css*/`
     border-radius: var(--sn-radius-xs);
     flex-shrink: 0;
     background: var(--sn-dom-timeline-clip-default);
+    overflow: hidden;
+    color: transparent;
+    font-size: 0;
   }
 
   .te-header-icon[data-track-type="video"] {
     background: var(--sn-dom-timeline-clip-video);
   }
 
-  .te-header-icon[data-track-type="audio"] {
+  .te-header-icon[data-track-type="audio"],
+  .te-header-icon[data-track-type="voice"] {
     background: var(--sn-dom-timeline-clip-audio);
   }
 
-  .te-header-icon[data-track-type="text"] {
+  .te-header-icon[data-track-type="text"],
+  .te-header-icon[data-track-type="captions"],
+  .te-header-icon[data-track-type="caption"] {
     background: var(--sn-dom-timeline-clip-text);
   }
 
-  .te-header-icon[data-track-type="effect"] {
+  .te-header-icon[data-track-type="effect"],
+  .te-header-icon[data-track-type="actions"],
+  .te-header-icon[data-track-type="action"] {
     background: var(--sn-dom-timeline-clip-effect);
   }
 
@@ -162,8 +214,11 @@ let css = /*css*/`
   }
 
   .te-header-mute {
+    display: inline-grid;
+    place-items: center;
     width: 16px;
     height: 16px;
+    min-width: 16px;
     border: none;
     background: none;
     color: var(--sn-sys-on-surface-dim);
@@ -174,63 +229,56 @@ let css = /*css*/`
     transition: opacity var(--sn-transition-fast);
   }
 
+  .te-header-mute .material-symbols-outlined {
+    font-size: var(--sn-text-lg);
+    line-height: 1;
+  }
+
   .te-header-mute:hover {
     opacity: 1;
   }
 
-  /* ── Canvas area (right) ── */
-  .te-canvas-area {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    position: relative;
-  }
-
-  .te-ruler {
-    height: var(--te-ruler-height);
-    position: relative;
-    border-bottom: 1px solid var(--te-border);
-    cursor: pointer;
-    overflow: hidden;
-    flex-shrink: 0;
-  }
-
-  .te-ruler canvas {
-    width: 100%;
-    height: 100%;
-    display: block;
-  }
-
-  .te-tracks-scroll {
-    flex: 1;
-    overflow-x: auto;
-    overflow-y: auto;
-    ${themedScrollFadeInlineStyles}
+  .te-timeline-viewport {
+    grid-column: 2;
+    min-width: 0;
+    min-height: 0;
+    overflow: auto;
     position: relative;
     scrollbar-color: var(--sn-scrollbar-thumb) var(--sn-scrollbar-track);
     scrollbar-width: var(--sn-scrollbar-width, thin);
+    background: var(--sn-sys-surface);
   }
 
-  .te-tracks-canvas {
+  .te-timeline-content {
     position: relative;
+    min-width: 100%;
     min-height: 100%;
   }
 
-  .te-tracks-canvas canvas {
+  .te-ruler-canvas {
+    position: sticky;
+    top: 0;
+    z-index: 4;
     display: block;
-    width: 100%;
+    height: var(--te-ruler-height);
+    background: var(--sn-sys-surface-panel);
+    border-bottom: 1px solid var(--te-border);
   }
 
-  /* ── Playhead ── */
+  .te-tracks-canvas {
+    position: absolute;
+    left: 0;
+    z-index: 1;
+    display: block;
+  }
+
   .te-playhead {
     position: absolute;
     top: 0;
-    bottom: 0;
     width: 1px;
     background: var(--te-playhead-color);
     pointer-events: none;
-    z-index: 10;
+    z-index: 5;
     transition: left var(--sn-transition-fast, 0.03s) linear;
   }
 
@@ -238,15 +286,20 @@ let css = /*css*/`
     content: '';
     position: absolute;
     top: 0;
-    left: var(--sn-step-0, -5px);
+    left: var(--te-playhead-cap-offset, calc(-1 * var(--sn-step-3)));
     width: 11px;
     height: 8px;
     background: var(--te-playhead-color);
     clip-path: polygon(0 0, 100% 0, 50% 100%);
   }
 
-  /* ── Empty state ── */
+  sn-timeline-editor[playing] .te-playhead {
+    width: 2px;
+    box-shadow: 0 0 0 1px color-mix(in oklch, var(--te-playhead-color) 24%, transparent);
+  }
+
   .te-empty {
+    grid-column: 1 / -1;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -259,7 +312,7 @@ let css = /*css*/`
 
   .te-empty[hidden],
   .te-headers[hidden],
-  .te-canvas-area[hidden] {
+  .te-timeline-viewport[hidden] {
     display: none;
   }
 `;
