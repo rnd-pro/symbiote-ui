@@ -863,14 +863,39 @@ function percentLabel(progress) {
   return `${Math.round(value * 100)}%`;
 }
 
-function timelineClip(input = {}, index = 0) {
-  let start = finiteNumber(input.startPercent ?? input.start, Math.min(index * 8, 40), 0, 96);
-  let size = finiteNumber(input.sizePercent ?? input.size ?? input.durationPercent, Math.max(20, 72 - index * 8), 4, 100);
+function msToFrame(value, fps) {
+  return Math.round((Math.max(0, finiteNumber(value, 0)) / 1000) * fps);
+}
+
+function timelineClip(input = {}, index = 0, { duration = 1, fps = 30 } = {}) {
+  let hasPercent = input.startPercent != null
+    || input.sizePercent != null
+    || input.durationPercent != null;
+  let start;
+  let end;
+  if (hasPercent) {
+    let startPercent = finiteNumber(input.startPercent ?? input.start, Math.min(index * 8, 40), 0, 96);
+    let sizePercent = finiteNumber(input.sizePercent ?? input.size ?? input.durationPercent, Math.max(20, 72 - index * 8), 4, 100);
+    start = Math.round((startPercent / 100) * duration);
+    end = Math.max(start + 1, Math.round(((startPercent + Math.min(sizePercent, 100 - startPercent)) / 100) * duration));
+  } else if (input.startMs != null || input.endMs != null || input.durationMs != null) {
+    start = msToFrame(input.startMs ?? input.start ?? input.from, fps);
+    end = input.endMs == null
+      ? start + Math.max(1, msToFrame(input.durationMs ?? input.duration, fps))
+      : msToFrame(input.endMs, fps);
+  } else {
+    start = Math.round(finiteNumber(input.startFrame ?? input.frameStart ?? input.start ?? input.from, 0, 0, duration));
+    end = input.endFrame == null && input.end == null
+      ? start + Math.round(finiteNumber(input.durationFrames ?? input.duration ?? input.frames, Math.max(1, duration - start), 1, duration))
+      : Math.round(finiteNumber(input.endFrame ?? input.end, start + 1, start + 1, duration));
+  }
+  start = Math.max(0, Math.min(start, duration));
+  end = Math.max(start + 1, Math.min(end, duration));
   return {
     lane: cleanText(input.lane || input.track || input.name, index === 0 ? 'video' : `track ${index + 1}`),
     label: cleanText(input.label || input.title || input.text, `clip ${index + 1}`),
     start,
-    size: Math.min(size, 100 - start),
+    end,
   };
 }
 
@@ -883,9 +908,12 @@ function timelineTrackType(lane = '') {
 }
 
 export function normalizeMediaStudioTimelineData(options = {}) {
-  let clips = (Array.isArray(options.clips) ? options.clips : []).map(timelineClip);
   let fps = Math.max(1, Math.round(finiteNumber(options.fps, 30, 1, 120)));
-  let duration = Math.max(1, Math.round(finiteNumber(options.durationFrames ?? options.duration, fps * 15, 1, fps * 3600)));
+  let durationFromMs = options.durationMs == null ? 0 : msToFrame(options.durationMs, fps);
+  let duration = Math.max(1, Math.round(finiteNumber(options.durationFrames ?? options.duration, durationFromMs || fps * 15, 1, fps * 3600)));
+  let clips = (Array.isArray(options.clips) ? options.clips : []).map((clip, index) => timelineClip(clip, index, { duration, fps }));
+  let clipDuration = clips.reduce((max, clip) => Math.max(max, clip.end || 0), 0);
+  duration = Math.max(duration, clipDuration);
   let tracks = [];
   let trackByLane = new Map();
 
@@ -902,12 +930,10 @@ export function normalizeMediaStudioTimelineData(options = {}) {
       trackByLane.set(laneId, track);
       tracks.push(track);
     }
-    let start = Math.round((clip.start / 100) * duration);
-    let end = Math.max(start + 1, Math.round(((clip.start + clip.size) / 100) * duration));
     track.clips.push({
       id: `${laneId}-${track.clips.length + 1}`,
-      start,
-      end: Math.min(end, duration),
+      start: clip.start,
+      end: Math.min(clip.end, duration),
       label: clip.label,
     });
   });

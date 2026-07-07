@@ -363,6 +363,22 @@ test('media studio timeline uses the library timeline editor data contract', () 
   assert.equal(multiLane.tracks.length, 5);
   assert.deepEqual(multiLane.tracks.map((track) => track.type), ['video', 'audio', 'audio', 'text', 'effect']);
 
+  let frameAndAudioTimed = normalizeMediaStudioTimelineData({
+    fps: 30,
+    durationMs: 12000,
+    clips: [
+      { lane: 'video', label: 'Captured frames', startFrame: 0, endFrame: 240 },
+      { lane: 'voice:guide', label: 'Narration', startMs: 1000, durationMs: 2500 },
+      { lane: 'captions', label: 'Caption', startMs: 1500, endMs: 3200 },
+    ],
+  });
+  assert.equal(frameAndAudioTimed.duration, 360);
+  assert.equal(frameAndAudioTimed.tracks[0].clips[0].end, 240);
+  assert.equal(frameAndAudioTimed.tracks[1].clips[0].start, 30);
+  assert.equal(frameAndAudioTimed.tracks[1].clips[0].end, 105);
+  assert.equal(frameAndAudioTimed.tracks[2].clips[0].start, 45);
+  assert.equal(frameAndAudioTimed.tracks[2].clips[0].end, 96);
+
   let loaded = null;
   let frame = null;
   let editor = {
