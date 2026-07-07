@@ -84,20 +84,52 @@ export const MEDIA_STUDIO_SURFACE_STYLES = `
     grid-template-rows: minmax(0, 1fr);
     gap: var(--sn-media-studio-panel-gap, var(--sn-frame-gap, 0px));
     align-content: stretch;
+    border: 0;
+    outline: 0;
+    box-shadow: none;
+    overflow: hidden;
     background: var(--sn-media-studio-bg, var(--sn-media-studio-pane-bg, var(--sn-sys-surface-panel)));
   }
 
   layout-node:has(.sn-media-studio-panel) .panel-view,
   layout-node:has(.sn-media-studio-timeline-panel) .panel-view {
+    border: 0;
+    outline: 0;
     box-shadow: none;
     background: transparent;
+    overflow: hidden;
   }
 
   layout-node:has(.sn-media-studio-panel) .panel-content,
   layout-node:has(.sn-media-studio-timeline-panel) .panel-content {
+    --sn-scroll-area-padding: 0px;
+    --sn-scroll-shadow-size: 0px;
+    --sn-scroll-fade-mask: none;
     padding: 0;
+    border: 0;
+    outline: 0;
     box-shadow: none;
     background: transparent;
+    overflow: hidden;
+  }
+
+  layout-node:has(.sn-media-studio-panel) .panel-content > sn-scroll-area,
+  layout-node:has(.sn-media-studio-timeline-panel) .panel-content > sn-scroll-area {
+    --sn-scroll-area-padding: 0px;
+    --sn-scroll-shadow-size: 0px;
+    --sn-scroll-fade-mask: none;
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    outline: 0;
+    box-shadow: none;
+    background: transparent;
+    overflow: hidden;
   }
 
   .sn-media-studio-side-panel {
@@ -202,6 +234,8 @@ export const MEDIA_STUDIO_SURFACE_STYLES = `
     height: 100%;
     overflow: hidden;
     border: 0;
+    outline: 0;
+    box-shadow: none;
     background: var(--sn-media-studio-timeline-bg, color-mix(in srgb, var(--sn-sys-surface) 86%, black));
   }
 
@@ -218,6 +252,9 @@ export const MEDIA_STUDIO_SURFACE_STYLES = `
     --te-track-bg-alt: color-mix(in srgb, var(--sn-media-studio-timeline-bg, var(--sn-sys-surface)) 82%, var(--sn-sys-surface-panel));
     --sn-dom-timeline-clip-video: var(--sn-media-studio-track-video-bg, var(--sn-sys-accent));
     --sn-dom-timeline-clip-audio: var(--sn-media-studio-track-audio-bg, var(--sn-sys-warning));
+    border: 0;
+    outline: 0;
+    box-shadow: none;
   }
 
   .sn-media-studio-progress-shell {

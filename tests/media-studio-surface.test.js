@@ -326,7 +326,11 @@ test('media studio timeline visual geometry is driven by the timeline editor the
   assert.match(editorSource, /material-symbols-outlined[\s\S]*?volume_off/);
   assert.doesNotMatch(editorSource, />M<\/button>/);
   assert.match(MEDIA_STUDIO_SURFACE_STYLES, /layout-node:has\(\.sn-media-studio-panel\) \.panel-content/);
+  assert.match(MEDIA_STUDIO_SURFACE_STYLES, /layout-node:has\(\.sn-media-studio-panel\) \.panel-content,[\s\S]*?layout-node:has\(\.sn-media-studio-timeline-panel\) \.panel-content \{[\s\S]*?--sn-scroll-area-padding: 0px;[\s\S]*?--sn-scroll-shadow-size: 0px;[\s\S]*?--sn-scroll-fade-mask: none;[\s\S]*?padding: 0;[\s\S]*?border: 0;[\s\S]*?box-shadow: none;[\s\S]*?overflow: hidden;/);
+  assert.match(MEDIA_STUDIO_SURFACE_STYLES, /layout-node:has\(\.sn-media-studio-panel\) \.panel-content > sn-scroll-area,[\s\S]*?layout-node:has\(\.sn-media-studio-timeline-panel\) \.panel-content > sn-scroll-area \{[\s\S]*?--sn-scroll-area-padding: 0px;[\s\S]*?--sn-scroll-shadow-size: 0px;[\s\S]*?padding: 0;[\s\S]*?margin: 0;[\s\S]*?border: 0;[\s\S]*?box-shadow: none;[\s\S]*?overflow: hidden;/);
   assert.match(MEDIA_STUDIO_SURFACE_STYLES, /\.sn-media-studio-timeline-panel \{[\s\S]*?border: 0/);
+  assert.match(MEDIA_STUDIO_SURFACE_STYLES, /\.sn-media-studio-timeline-panel \{[\s\S]*?outline: 0;[\s\S]*?box-shadow: none/);
+  assert.match(MEDIA_STUDIO_SURFACE_STYLES, /\.sn-media-studio-timeline-editor \{[\s\S]*?border: 0;[\s\S]*?outline: 0;[\s\S]*?box-shadow: none/);
   assert.match(MEDIA_STUDIO_SURFACE_STYLES, /\.sn-media-studio-preview-stage \{[\s\S]*?border: 0/);
   assert.match(MEDIA_STUDIO_SURFACE_STYLES, /\.sn-media-studio-frame \{[\s\S]*?position: absolute/);
   assert.match(MEDIA_STUDIO_SURFACE_STYLES, /\.sn-media-studio-frame \{[\s\S]*?object-fit: contain/);
