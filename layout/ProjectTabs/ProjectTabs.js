@@ -14,6 +14,7 @@ export class ProjectTabs extends Symbiote {
     isHomeActive: true,
     homeSelectedAttr: 'true',
     homeTabIndexAttr: '0',
+    homeTabIdAttr: 'home',
     tabs: [],
     homeIcon: 'home',
     homeLabel: translate('tabs.home'),
@@ -90,6 +91,7 @@ export class ProjectTabs extends Symbiote {
       this.$.homeSelectedAttr = isHomeActive ? 'true' : 'false';
       this.$.homeTabIndexAttr = isHomeActive ? '0' : '-1';
     });
+    this.sub('homeId', (id) => { this.$.homeTabIdAttr = id || 'home'; });
   }
 
   setTabs(tabs = [], activeId = this.$.activeId, options = {}) {
@@ -142,6 +144,10 @@ class ProjectTabItem extends Symbiote {
 
   renderCallback() {
     this.setAttribute('role', 'tab');
+    this.sub('id', (id) => {
+      if (id) this.setAttribute('data-tab-id', id);
+      else this.removeAttribute('data-tab-id');
+    });
     this.sub('color', (color) => {
       if (color) this.style.setProperty('--tab-accent', color);
       else this.style.removeProperty('--tab-accent');

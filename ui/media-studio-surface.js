@@ -25,6 +25,11 @@ export const MEDIA_STUDIO_FRAME_SOURCE_TYPES = Object.freeze({
   mediaStream: 'media-stream',
 });
 
+export const MEDIA_STUDIO_PREVIEW_MODES = Object.freeze({
+  sequence: 'sequence',
+  output: 'output',
+});
+
 export const MEDIA_PREVIEW_STATES = Object.freeze({
   empty: 'empty',
   loading: 'loading',
@@ -43,6 +48,7 @@ export const MEDIA_STUDIO_CSS_PARTS = Object.freeze([
   'transport',
   'timeline',
   'inspector-pane',
+  'settings',
   'fallback',
   'progress',
 ]);
@@ -81,7 +87,7 @@ export const MEDIA_STUDIO_SURFACE_STYLES = `
 
   .sn-media-studio-panel {
     display: grid;
-    grid-template-rows: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
     gap: var(--sn-media-studio-panel-gap, var(--sn-frame-gap, 0px));
     align-content: stretch;
     border: 0;
@@ -144,6 +150,8 @@ export const MEDIA_STUDIO_SURFACE_STYLES = `
   }
 
   .sn-media-studio-preview-stage {
+    grid-row: 2;
+    position: relative;
     display: grid;
     place-items: stretch;
     box-sizing: border-box;
@@ -165,6 +173,14 @@ export const MEDIA_STUDIO_SURFACE_STYLES = `
     background-size: 20px 20px;
     padding: 0;
     overflow: hidden;
+  }
+
+  .sn-media-studio-preview-stage > .sn-media-studio-progress-failures {
+    position: absolute;
+    inset-block-start: 12px;
+    inset-inline: 12px;
+    z-index: 3;
+    max-inline-size: min(560px, calc(100% - 24px));
   }
 
   .sn-media-studio-preview-window {
@@ -198,6 +214,76 @@ export const MEDIA_STUDIO_SURFACE_STYLES = `
     object-fit: contain;
     background: transparent;
     box-shadow: none;
+  }
+
+  .sn-media-studio-caption-overlay {
+    position: absolute;
+    inset-inline: clamp(18px, 8%, 96px);
+    inset-block-end: clamp(22px, 8%, 96px);
+    z-index: 2;
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
+  }
+
+  .sn-media-studio-caption-line {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 4px 6px;
+    max-inline-size: min(100%, 760px);
+    padding: 8px 14px;
+    border-radius: 8px;
+    background: color-mix(in srgb, black 72%, transparent);
+    color: var(--sn-media-studio-caption-color, white);
+    font: 800 calc(24px * var(--sn-theme-type-scale, 1)) / 1.12 var(--sn-font, Inter, system-ui, sans-serif);
+    text-align: center;
+    text-transform: none;
+    text-shadow: 0 2px 6px rgb(0 0 0 / 70%);
+    overflow-wrap: anywhere;
+  }
+
+  .sn-media-studio-caption-line[data-caption-style='tiktok'] {
+    color: var(--sn-media-studio-caption-tiktok-color, #fff);
+    background: color-mix(in srgb, black 62%, transparent);
+    box-shadow: 0 0 0 1px rgb(255 255 255 / 16%);
+  }
+
+  .sn-media-studio-caption-word {
+    display: inline-block;
+    min-inline-size: 0;
+    padding: 1px 3px;
+    border-radius: 4px;
+    color: inherit;
+  }
+
+  .sn-media-studio-caption-word[data-caption-word-state='past'] {
+    opacity: .72;
+  }
+
+  .sn-media-studio-caption-word[data-caption-word-state='future'] {
+    opacity: .9;
+  }
+
+  .sn-media-studio-caption-word[data-caption-word-state='active'] {
+    background: var(--sn-media-studio-caption-highlight-bg, #fff176);
+    color: var(--sn-media-studio-caption-highlight-fg, #111);
+    text-shadow: none;
+  }
+
+  .sn-media-studio-caption-line[data-caption-speaker]:not([data-caption-speaker=''])::before {
+    content: attr(data-caption-speaker);
+    margin-inline-end: 8px;
+    padding: 3px 6px;
+    border-radius: 999px;
+    background: var(--sn-media-studio-caption-speaker-bg, color-mix(in srgb, var(--sn-sys-accent) 82%, black));
+    color: var(--sn-media-studio-caption-speaker-fg, var(--sn-sys-on-accent, white));
+    font-size: calc(11px * var(--sn-theme-type-scale, 1));
+    line-height: 1;
+    text-transform: uppercase;
+    white-space: nowrap;
   }
 
   .sn-media-studio-frame-placeholder {
@@ -264,6 +350,49 @@ export const MEDIA_STUDIO_SURFACE_STYLES = `
     align-content: start;
   }
 
+  .sn-media-studio-prep-progress {
+    display: grid;
+    gap: 5px;
+    padding: 8px 10px;
+    border-block-end: 1px solid color-mix(in srgb, var(--sn-sys-on-surface) 10%, transparent);
+    background: color-mix(in srgb, var(--sn-sys-surface-panel) 76%, transparent);
+    color: var(--sn-sys-on-surface);
+    font-size: calc(12px * var(--sn-theme-type-scale, 1));
+  }
+
+  .sn-media-studio-prep-progress-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .sn-media-studio-prep-progress-stage,
+  .sn-media-studio-prep-progress-count {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sn-media-studio-prep-progress-count {
+    color: var(--sn-sys-on-surface-dim);
+    font-family: var(--sn-font-mono, monospace);
+  }
+
+  .sn-media-studio-prep-progress-track {
+    block-size: 4px;
+    overflow: hidden;
+    background: color-mix(in srgb, var(--sn-sys-on-surface) 12%, transparent);
+  }
+
+  .sn-media-studio-prep-progress-fill {
+    display: block;
+    block-size: 100%;
+    inline-size: var(--sn-media-studio-prep-progress, 0%);
+    background: var(--sn-media-studio-progress-color, var(--sn-sys-accent));
+  }
+
   .sn-media-studio-inspector-panel {
     display: grid;
     gap: calc(12px * var(--sn-theme-density, 1));
@@ -301,6 +430,132 @@ export const MEDIA_STUDIO_SURFACE_STYLES = `
     font-size: 16px;
   }
 
+  .sn-media-studio-settings-grid {
+    display: grid;
+    gap: calc(7px * var(--sn-theme-density, 1));
+    min-width: 0;
+  }
+
+  .sn-media-studio-setting-row {
+    display: grid;
+    grid-template-columns: minmax(92px, 0.52fr) minmax(0, 1fr);
+    gap: 10px;
+    align-items: center;
+    min-width: 0;
+    color: var(--sn-sys-on-surface-dim);
+    font-size: calc(12px * var(--sn-theme-type-scale, 1));
+  }
+
+  .sn-media-studio-setting-row.is-toggle {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .sn-media-studio-setting-row input[type='checkbox'] {
+    inline-size: 16px;
+    block-size: 16px;
+    accent-color: var(--sn-media-studio-progress-color, var(--sn-sys-accent));
+  }
+
+  .sn-media-studio-setting-control {
+    box-sizing: border-box;
+    min-inline-size: 0;
+    inline-size: 100%;
+    min-block-size: 28px;
+    padding: 4px 8px;
+    border: 1px solid color-mix(in srgb, var(--sn-sys-on-surface) 10%, transparent);
+    border-radius: var(--sn-node-radius, 0px);
+    background: color-mix(in srgb, black 18%, transparent);
+    color: var(--sn-sys-on-surface);
+    font: inherit;
+  }
+
+  .sn-media-studio-setting-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .sn-media-studio-action-button {
+    min-block-size: 30px;
+    padding: 5px 10px;
+    border: 1px solid color-mix(in srgb, var(--sn-media-studio-progress-color, var(--sn-sys-accent)) 42%, transparent);
+    border-radius: var(--sn-node-radius, 0px);
+    background: color-mix(in srgb, var(--sn-media-studio-progress-color, var(--sn-sys-accent)) 20%, transparent);
+    color: var(--sn-sys-on-surface);
+    font: inherit;
+    font-weight: 700;
+  }
+
+  .sn-media-studio-action-button:disabled {
+    opacity: 0.48;
+  }
+
+  .sn-media-studio-action-button.is-compact {
+    min-block-size: 26px;
+    padding: 3px 8px;
+    font-size: calc(11px * var(--sn-theme-type-scale, 1));
+  }
+
+  .sn-media-studio-voice-list {
+    display: grid;
+    gap: calc(8px * var(--sn-theme-density, 1));
+    min-width: 0;
+  }
+
+  .sn-media-studio-voice-provider {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    min-width: 0;
+    color: var(--sn-sys-on-surface-dim);
+    font-size: calc(12px * var(--sn-theme-type-scale, 1));
+  }
+
+  .sn-media-studio-voice-row {
+    display: grid;
+    grid-template-columns: minmax(70px, 0.32fr) minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+    min-width: 0;
+  }
+
+  .sn-media-studio-voice-persona,
+  .sn-media-studio-voice-provider strong {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--sn-sys-on-surface);
+    font-size: calc(12px * var(--sn-theme-type-scale, 1));
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sn-media-studio-voice-clips {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .sn-media-studio-voice-clip {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+    min-width: 0;
+    color: var(--sn-sys-on-surface-dim);
+    font-size: calc(11px * var(--sn-theme-type-scale, 1));
+  }
+
+  .sn-media-studio-voice-clip span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .sn-media-studio-field-row {
     display: grid;
     grid-template-columns: minmax(80px, 0.48fr) minmax(0, 1fr);
@@ -331,6 +586,48 @@ export const MEDIA_STUDIO_SURFACE_STYLES = `
 
   .sn-media-studio-progress-shell sn-metric {
     --sn-metric-value-color: var(--sn-media-studio-progress-color, var(--sn-sys-accent));
+  }
+
+  .sn-media-studio-progress-failures {
+    grid-column: 1 / -1;
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .sn-media-studio-progress-failure {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+    min-width: 0;
+    padding: 7px 8px;
+    border: 1px solid color-mix(in srgb, var(--sn-sys-error, #ff6b6b) 38%, transparent);
+    background: color-mix(in srgb, var(--sn-sys-error, #ff6b6b) 12%, transparent);
+    color: var(--sn-sys-on-surface);
+    font-size: calc(12px * var(--sn-theme-type-scale, 1));
+  }
+
+  .sn-media-studio-progress-failure-text {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .sn-media-studio-progress-failure-stage,
+  .sn-media-studio-progress-failure-message {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sn-media-studio-progress-failure-stage {
+    font-weight: 700;
+  }
+
+  .sn-media-studio-progress-failure-message {
+    color: var(--sn-sys-on-surface-dim);
   }
 
 `;
@@ -766,6 +1063,9 @@ export function normalizeMediaFrameSource(source = {}, options = {}) {
     source: input.source || input.url || input.route || input.surfaceId || null,
     target: input.target || input.element || input.region || null,
     cacheKey: input.cacheKey || input.sequenceId || null,
+    outputUrl: cleanText(input.outputUrl || input.output?.url || input.videoUrl, ''),
+    output: input.output && typeof input.output === 'object' ? clonePlain(input.output) : null,
+    captionsUrl: cleanText(input.captionsUrl || input.captions?.url, ''),
     progress: normalizeMediaProgress(input.progress),
     provider: providerState,
     capabilities: [...provider.capabilities],
@@ -783,6 +1083,9 @@ function normalizeMediaProgress(value) {
 
 function hasRenderablePreview(input) {
   return Boolean(
+    input.videoUrl ||
+    input.outputUrl ||
+    input.output?.url ||
     input.src ||
     input.url ||
     input.blob ||
@@ -888,6 +1191,147 @@ function firstFrameUrl(input = {}) {
   return frame?.url || frame?.src || frame?.href || input.src || input.url || '';
 }
 
+function previewVideoUrl(input = {}, frameSource = null) {
+  return cleanText(
+    input.videoUrl ||
+    input.outputUrl ||
+    input.output?.url ||
+    frameSource?.outputUrl ||
+    frameSource?.output?.url,
+    ''
+  );
+}
+
+function normalizeMediaStudioPreviewMode(value, fallback = '') {
+  let text = cleanText(value, '').toLowerCase();
+  if (text === MEDIA_STUDIO_PREVIEW_MODES.sequence || text === MEDIA_STUDIO_FRAME_SOURCE_TYPES.cachedSequence) {
+    return MEDIA_STUDIO_PREVIEW_MODES.sequence;
+  }
+  if (text === MEDIA_STUDIO_PREVIEW_MODES.output || text === 'final' || text === 'video') {
+    return MEDIA_STUDIO_PREVIEW_MODES.output;
+  }
+  return fallback;
+}
+
+function resolveMediaStudioPreviewMode(input = {}, frameUrl = '', videoUrl = '', previewState = {}) {
+  let requested = normalizeMediaStudioPreviewMode(
+    input.previewMode || input.mode || input.viewMode || input.previewSource,
+    ''
+  );
+  if (requested === MEDIA_STUDIO_PREVIEW_MODES.output && videoUrl) return MEDIA_STUDIO_PREVIEW_MODES.output;
+  if (requested === MEDIA_STUDIO_PREVIEW_MODES.sequence && frameUrl) return MEDIA_STUDIO_PREVIEW_MODES.sequence;
+  if (frameUrl) return MEDIA_STUDIO_PREVIEW_MODES.sequence;
+  if (videoUrl) return MEDIA_STUDIO_PREVIEW_MODES.output;
+  return normalizeMediaStudioPreviewMode(previewState.mode, MEDIA_STUDIO_PREVIEW_MODES.sequence);
+}
+
+function cueTimeSeconds(cue = {}, key = 'start', fallback = 0) {
+  let secKey = `${key}Sec`;
+  let msKey = `${key}Ms`;
+  if (cue[secKey] != null) return finiteNumber(cue[secKey], fallback, 0);
+  if (cue[msKey] != null) return finiteNumber(cue[msKey], fallback * 1000, 0) / 1000;
+  return finiteNumber(cue[key], fallback, 0);
+}
+
+function cueWordTimeSeconds(word = {}, key = 'start', fallback = null) {
+  let secKey = `${key}Sec`;
+  let msKey = `${key}Ms`;
+  if (word[secKey] != null) return finiteNumber(word[secKey], fallback, 0);
+  if (word[msKey] != null) return finiteNumber(word[msKey], Number(fallback || 0) * 1000, 0) / 1000;
+  if (word[key] != null) return finiteNumber(word[key], fallback, 0);
+  return fallback;
+}
+
+function normalizeCaptionWordEntries(input = []) {
+  if (!Array.isArray(input)) return [];
+  return input.map((word) => {
+    let source = word && typeof word === 'object' ? word : { text: word };
+    let text = cleanText(source.text || source.word);
+    if (!text) return null;
+    let startSec = cueWordTimeSeconds(source, 'start', null);
+    let endSec = cueWordTimeSeconds(source, 'end', null);
+    return {
+      text,
+      startSec: Number.isFinite(startSec) ? startSec : null,
+      endSec: Number.isFinite(endSec) ? Math.max(startSec ?? 0, endSec) : null,
+    };
+  }).filter(Boolean);
+}
+
+function captionWordState(word = {}, currentTimeSec = 0) {
+  if (!Number.isFinite(word.startSec) || !Number.isFinite(word.endSec)) return 'plain';
+  if (currentTimeSec < word.startSec) return 'future';
+  if (currentTimeSec <= word.endSec) return 'active';
+  return 'past';
+}
+
+function normalizeCaptionCue(input = {}, index = 0) {
+  let source = input && typeof input === 'object' ? input : { text: input };
+  let startSec = cueTimeSeconds(source, 'start', 0);
+  let endSec = source.endSec != null || source.endMs != null || source.end != null
+    ? cueTimeSeconds(source, 'end', startSec + 1.5)
+    : startSec + finiteNumber(source.durationSec ?? source.duration, finiteNumber(source.durationMs, 1500, 1) / 1000, 0.05);
+  let wordEntries = normalizeCaptionWordEntries(source.wordEntries || source.words);
+  let words = wordEntries.map((word) => word.text);
+  let text = cleanText(source.text || source.label || words.join(' '));
+  return {
+    index: Number.isFinite(Number(source.index)) ? Number(source.index) : index,
+    startSec,
+    endSec: Math.max(startSec + 0.05, endSec),
+    speaker: cleanText(source.speaker || source.persona || source.role),
+    text,
+    words,
+    wordEntries,
+  };
+}
+
+export function normalizeMediaStudioCaptionOverlayState(options = {}) {
+  let preview = options.preview && typeof options.preview === 'object' ? options.preview : {};
+  let renderSettings = normalizeMediaStudioRenderSettings(options);
+  let cues = (
+    Array.isArray(preview.captionCues) ? preview.captionCues :
+      Array.isArray(preview.captions) ? preview.captions :
+        Array.isArray(options.captionCues) ? options.captionCues :
+          Array.isArray(options.captions) ? options.captions :
+            Array.isArray(options.frameSource?.captionCues) ? options.frameSource.captionCues : []
+  ).map(normalizeCaptionCue).filter((cue) => cue.text);
+  let currentTimeSec = finiteNumber(
+    preview.currentTimeSec ?? preview.timeSec ?? options.currentTimeSec ?? options.timeSec,
+    finiteNumber(preview.currentTimeMs ?? options.currentTimeMs, 0, 0) / 1000,
+    0
+  );
+  let cue = cues.find((item) => currentTimeSec >= item.startSec && currentTimeSec <= item.endSec) || null;
+  if (cue) {
+    cue = {
+      ...cue,
+      wordEntries: cue.wordEntries.map((word) => ({
+        ...word,
+        state: captionWordState(word, currentTimeSec),
+      })),
+    };
+  }
+  let enabled = renderSettings.captionsEnabled !== false && renderSettings.captionsMode !== 'off';
+  return {
+    enabled: enabled && !!cue,
+    currentTimeSec,
+    cue,
+    cues,
+    style: cleanText(renderSettings.captionStyle?.preset || preview.captionStyle?.preset || options.captionStyle?.preset, 'tiktok'),
+  };
+}
+
+export function renderMediaStudioCaptionLineMarkup(cue = {}, options = {}) {
+  let currentTimeSec = finiteNumber(options.currentTimeSec ?? options.timeSec, 0, 0);
+  let normalized = normalizeCaptionCue(cue, Number(cue?.index || 0));
+  let wordEntries = normalized.wordEntries.map((word) => ({
+    ...word,
+    state: word.state || captionWordState(word, currentTimeSec),
+  }));
+  if (!wordEntries.length) return escapeHtml(normalized.text);
+  return wordEntries.map((word, index) => `
+              <span class="sn-media-studio-caption-word" data-caption-word-index="${escapeHtml(index)}" data-caption-word-state="${escapeHtml(word.state)}">${escapeHtml(word.text)}</span>`).join('');
+}
+
 function frameCount(input = {}) {
   if (Array.isArray(input.frames)) return input.frames.length;
   let count = Number(input.frameCount || input.cacheFrameCount || input.manifest?.frameCount);
@@ -900,8 +1344,564 @@ function percentLabel(progress) {
   return `${Math.round(value * 100)}%`;
 }
 
+function boolSetting(value, fallback = false) {
+  if (value === undefined || value === null || value === '') return fallback;
+  if (typeof value === 'boolean') return value;
+  let text = String(value).trim().toLowerCase();
+  if (['1', 'true', 'yes', 'on', 'enabled'].includes(text)) return true;
+  if (['0', 'false', 'no', 'off', 'disabled'].includes(text)) return false;
+  return fallback;
+}
+
+function positiveIntegerSetting(value, fallback, min = 1, max = 16384) {
+  let number = Math.round(Number(value));
+  if (!Number.isFinite(number)) return fallback;
+  return Math.max(min, Math.min(max, number));
+}
+
+export function normalizeMediaStudioRenderSettings(options = {}) {
+  let source = options.renderSettings || options.settings || options.state?.renderSettings || options.state?.settings || {};
+  let orientationInput = cleanText(source.orientation || options.orientation).toLowerCase();
+  let aspectInput = cleanText(source.aspectRatio || options.aspectRatio);
+  let vertical = boolSetting(source.vertical ?? options.vertical, orientationInput === 'vertical' || aspectInput === '9:16');
+  let orientation = vertical || orientationInput === 'vertical' ? 'vertical' : 'horizontal';
+  let width = positiveIntegerSetting(source.width ?? options.width, orientation === 'vertical' ? 1080 : 1920);
+  let height = positiveIntegerSetting(source.height ?? options.height, orientation === 'vertical' ? 1920 : 1080);
+  return {
+    autoRender: boolSetting(source.autoRender ?? options.autoRender, true),
+    captionsEnabled: boolSetting(source.captionsEnabled ?? options.captionsEnabled, cleanText(source.captionsMode || options.captionsMode, 'on') !== 'off'),
+    captionsMode: cleanText(source.captionsMode || options.captionsMode, boolSetting(source.captionsEnabled ?? options.captionsEnabled, true) ? 'on' : 'off'),
+    orientation,
+    aspectRatio: cleanText(source.aspectRatio || options.aspectRatio, orientation === 'vertical' ? '9:16' : '16:9'),
+    width,
+    height,
+    fps: positiveIntegerSetting(source.fps ?? options.fps, 30, 1, 120),
+    providerId: cleanText(source.providerId || source.audioProviderId || options.providerId || options.audioProviderId),
+    voiceRefs: clonePlain(source.voiceRefs || options.voiceRefs || {}),
+    outputFormat: cleanText(source.outputFormat || source.format || options.outputFormat || options.format, 'MP4'),
+  };
+}
+
+function normalizeAudioProviderOption(input = {}, index = 0) {
+  let source = input && typeof input === 'object' ? input : { id: input };
+  let id = cleanText(source.id || source.providerId || source.value || source.key, `provider-${index + 1}`);
+  return {
+    id,
+    label: cleanText(source.label || source.name || source.title, id),
+    disabled: source.disabled === true || source.available === false,
+  };
+}
+
+function normalizeMediaStudioAudioProviderOptions(options = {}, selectedProviderId = '') {
+  let source = options.audioProviders || options.audioProviderOptions || options.voiceProviders || [];
+  let providers = (Array.isArray(source) ? source : [])
+    .map(normalizeAudioProviderOption)
+    .filter((provider) => provider.id);
+  let selected = cleanText(selectedProviderId);
+  if (selected && !providers.some((provider) => provider.id === selected)) {
+    providers.unshift({ id: selected, label: selected, disabled: false });
+  }
+  return providers;
+}
+
+function normalizeVoiceItem(input = {}, index = 0) {
+  let source = input && typeof input === 'object' ? input : { id: input };
+  let id = cleanText(source.id || source.voiceRef || source.ref || source.value, `voice-${index + 1}`);
+  return {
+    id,
+    label: cleanText(source.label || source.name || source.title, id),
+    persona: cleanText(source.persona || source.role || source.speaker),
+    language: cleanText(source.language || source.locale || source.lang),
+    disabled: source.disabled === true,
+  };
+}
+
+function normalizeSpeakerLayer(input = {}, index = 0) {
+  let source = input && typeof input === 'object' ? input : {};
+  let persona = cleanText(source.persona || source.speaker || source.id, `speaker-${index + 1}`);
+  return {
+    persona,
+    label: cleanText(source.label || source.title, persona),
+    voiceRef: cleanText(source.voiceRef || source.voice || source.providerVoiceRef),
+    clips: (Array.isArray(source.clips) ? source.clips : []).map((clip = {}, clipIndex) => ({
+      id: cleanText(clip.id || clip.turnId || clip.artifactId, `${persona}-${clipIndex + 1}`),
+      turnId: cleanText(clip.turnId || clip.id),
+      persona: cleanText(clip.persona || source.persona || source.speaker, persona),
+      label: cleanText(clip.label || clip.text || clip.title, `segment ${clipIndex + 1}`),
+      startMs: finiteNumber(clip.startMs, 0, 0),
+      endMs: finiteNumber(clip.endMs, finiteNumber(clip.startMs, 0, 0) + finiteNumber(clip.durationMs, 0, 0), 0),
+    })),
+  };
+}
+
+function normalizePersonaList({ personas = [], layers = [], turns = [], voiceRefs = {} } = {}) {
+  let ids = new Set();
+  for (let value of personas) {
+    let id = cleanText(typeof value === 'string' ? value : value?.id || value?.persona || value?.speaker);
+    if (id) ids.add(id);
+  }
+  for (let layer of layers) if (layer.persona) ids.add(layer.persona);
+  for (let turn of Array.isArray(turns) ? turns : []) {
+    let id = cleanText(turn?.persona || turn?.speaker || turn?.role);
+    if (id) ids.add(id);
+  }
+  for (let id of Object.keys(voiceRefs || {})) {
+    if (cleanText(id)) ids.add(cleanText(id));
+  }
+  if (!ids.size) ids.add('guide');
+  return [...ids].map((persona) => ({
+    id: persona,
+    label: cleanText(persona).replace(/[-_]+/g, ' '),
+  }));
+}
+
+export function normalizeMediaStudioVoiceProviderState(options = {}) {
+  let renderSettings = normalizeMediaStudioRenderSettings(options);
+  let source = options.voiceProvider || options.audioProvider || options.provider || options.state?.voiceProvider || {};
+  if (typeof source === 'string') source = { id: source, label: source };
+  let voiceRefs = {
+    ...(source.voiceRefs && typeof source.voiceRefs === 'object' ? source.voiceRefs : {}),
+    ...(renderSettings.voiceRefs && typeof renderSettings.voiceRefs === 'object' ? renderSettings.voiceRefs : {}),
+  };
+  let voices = (Array.isArray(source.voices) ? source.voices : Array.isArray(options.voices) ? options.voices : [])
+    .map(normalizeVoiceItem)
+    .filter((voice) => voice.id);
+  let layers = (Array.isArray(source.speakerLayers) ? source.speakerLayers : Array.isArray(options.speakerLayers) ? options.speakerLayers : [])
+    .map(normalizeSpeakerLayer)
+    .filter((layer) => layer.persona);
+  for (let layer of layers) {
+    if (layer.voiceRef && !voiceRefs[layer.persona]) voiceRefs[layer.persona] = layer.voiceRef;
+  }
+  let capabilities = Array.isArray(source.capabilities) ? source.capabilities.map((capability) => cleanText(capability)).filter(Boolean) : [];
+  let canCreateVoice = source.canCreateVoice === false
+    ? false
+    : source.canCreateVoice === true ||
+      capabilities.includes('voice.create') ||
+      capabilities.includes('voice.clone');
+  return {
+    providerId: cleanText(source.providerId || source.id || renderSettings.providerId),
+    label: cleanText(source.label || source.name || renderSettings.providerId, renderSettings.providerId || 'audio provider'),
+    status: cleanText(source.status, renderSettings.providerId ? 'ready' : 'unavailable'),
+    canCreateVoice,
+    capabilities,
+    voiceRefs,
+    voices,
+    personas: normalizePersonaList({
+      personas: source.personas || options.personas,
+      layers,
+      turns: options.turns || options.state?.turns,
+      voiceRefs,
+    }),
+    speakerLayers: layers,
+  };
+}
+
+function checkedAttr(value) {
+  return value ? ' checked' : '';
+}
+
+function selectedAttr(value) {
+  return value ? ' selected' : '';
+}
+
+function renderMediaStudioRenderSettingsControls(options = {}) {
+  let settings = normalizeMediaStudioRenderSettings(options);
+  let audioProviders = normalizeMediaStudioAudioProviderOptions(options, settings.providerId);
+  let canManualRender = options.canManualRender !== false;
+  return `
+      <section class="sn-media-studio-inspector-section" data-media-render-settings data-auto-render="${settings.autoRender ? 'true' : 'false'}" data-orientation="${escapeHtml(settings.orientation)}">
+        <h3 class="sn-media-studio-inspector-heading"><i class="material-symbols-outlined">tune</i> Settings</h3>
+        <div class="sn-media-studio-settings-grid">
+          <label class="sn-media-studio-setting-row is-toggle">
+            <span>Auto render</span>
+            <input type="checkbox" data-media-setting="autoRender"${checkedAttr(settings.autoRender)}>
+          </label>
+          <label class="sn-media-studio-setting-row is-toggle">
+            <span>Captions</span>
+            <input type="checkbox" data-media-setting="captionsEnabled"${checkedAttr(settings.captionsEnabled)}>
+          </label>
+          <label class="sn-media-studio-setting-row">
+            <span>Orientation</span>
+            <select class="sn-media-studio-setting-control" data-media-setting="orientation">
+              <option value="horizontal"${selectedAttr(settings.orientation === 'horizontal')}>Horizontal 16:9</option>
+              <option value="vertical"${selectedAttr(settings.orientation === 'vertical')}>Vertical 9:16</option>
+            </select>
+          </label>
+          <label class="sn-media-studio-setting-row">
+            <span>Width</span>
+            <input class="sn-media-studio-setting-control" type="number" min="1" max="16384" step="1" data-media-setting="width" value="${escapeHtml(settings.width)}">
+          </label>
+          <label class="sn-media-studio-setting-row">
+            <span>Height</span>
+            <input class="sn-media-studio-setting-control" type="number" min="1" max="16384" step="1" data-media-setting="height" value="${escapeHtml(settings.height)}">
+          </label>
+          <label class="sn-media-studio-setting-row">
+            <span>FPS</span>
+            <input class="sn-media-studio-setting-control" type="number" min="1" max="120" step="1" data-media-setting="fps" value="${escapeHtml(settings.fps)}">
+          </label>
+          <label class="sn-media-studio-setting-row">
+            <span>Provider</span>
+            ${audioProviders.length ? `
+            <select class="sn-media-studio-setting-control" data-media-setting="providerId">
+              ${audioProviders.map((provider) => `
+              <option value="${escapeHtml(provider.id)}"${selectedAttr(provider.id === settings.providerId)}${provider.disabled ? ' disabled' : ''}>${escapeHtml(provider.label)}</option>`).join('')}
+            </select>` : `
+            <input class="sn-media-studio-setting-control" type="text" data-media-setting="providerId" value="${escapeHtml(settings.providerId)}">`}
+          </label>
+          <div class="sn-media-studio-setting-actions">
+            <button class="sn-media-studio-action-button" type="button" data-media-action="render-final"${canManualRender ? '' : ' disabled'}>${escapeHtml(settings.outputFormat)} render</button>
+          </div>
+        </div>
+      </section>`;
+}
+
+function renderVoiceOptions(voices = [], selectedVoiceRef = '') {
+  let selected = cleanText(selectedVoiceRef);
+  let options = voices.slice();
+  if (selected && !options.some((voice) => voice.id === selected)) {
+    options.unshift({ id: selected, label: selected, disabled: false });
+  }
+  if (!options.length) options.push({ id: '', label: 'No provider voices', disabled: true });
+  return options.map((voice) => `
+              <option value="${escapeHtml(voice.id)}"${selectedAttr(voice.id === selected)}${voice.disabled ? ' disabled' : ''}>${escapeHtml(voice.label)}</option>`).join('');
+}
+
+function clipsForPersona(provider, persona) {
+  return provider.speakerLayers
+    .filter((layer) => layer.persona === persona)
+    .flatMap((layer) => layer.clips || []);
+}
+
+function renderMediaStudioVoiceProviderControls(options = {}) {
+  let provider = normalizeMediaStudioVoiceProviderState(options);
+  if (!provider.providerId && !provider.voices.length && !provider.speakerLayers.length) return '';
+  let hasVoices = provider.voices.length > 0;
+  return `
+      <section class="sn-media-studio-inspector-section" data-media-voice-provider data-provider-id="${escapeHtml(provider.providerId)}" data-provider-status="${escapeHtml(provider.status)}" data-provider-voices="${escapeHtml(provider.voices.length)}">
+        <h3 class="sn-media-studio-inspector-heading"><i class="material-symbols-outlined">record_voice_over</i> Voice</h3>
+        <div class="sn-media-studio-voice-list">
+          <div class="sn-media-studio-voice-provider">
+            <strong>${escapeHtml(provider.label)}</strong>
+            <span>${escapeHtml(provider.status)}</span>
+          </div>
+          ${provider.personas.map((persona) => {
+            let clips = clipsForPersona(provider, persona.id);
+            let selectedVoice = provider.voiceRefs?.[persona.id] || '';
+            return `
+          <div class="sn-media-studio-voice-row" data-media-voice-persona="${escapeHtml(persona.id)}">
+            <span class="sn-media-studio-voice-persona">${escapeHtml(persona.label)}</span>
+            <select class="sn-media-studio-setting-control" data-media-voice-ref data-media-voice-persona="${escapeHtml(persona.id)}"${hasVoices ? '' : ' disabled'}>
+              ${renderVoiceOptions(provider.voices, selectedVoice)}
+            </select>
+            <button class="sn-media-studio-action-button is-compact" type="button" data-media-action="rerender-voice" data-media-voice-persona="${escapeHtml(persona.id)}"${clips.length ? '' : ' disabled'}>Rerender</button>
+          </div>
+          ${clips.length ? `
+          <div class="sn-media-studio-voice-clips">
+            ${clips.map((clip) => `
+            <div class="sn-media-studio-voice-clip" data-media-voice-clip="${escapeHtml(clip.id)}">
+              <span>${escapeHtml(clip.label)}</span>
+              <button class="sn-media-studio-action-button is-compact" type="button" data-media-action="rerender-voice" data-media-voice-persona="${escapeHtml(persona.id)}" data-media-turn-id="${escapeHtml(clip.turnId || clip.id)}">Rerender</button>
+            </div>`).join('')}
+          </div>` : ''}`;
+          }).join('')}
+          <div class="sn-media-studio-setting-actions">
+            <button class="sn-media-studio-action-button" type="button" data-media-action="create-voice"${provider.canCreateVoice ? '' : ' disabled'}>Create voice</button>
+          </div>
+        </div>
+      </section>`;
+}
+
+function normalizeMediaReadinessState(input = {}) {
+  let source = input && typeof input === 'object' ? input : {};
+  let expectedFiles = Math.max(0, Math.round(Number(source.expectedFiles || source.expected || 0) || 0));
+  let completedFiles = Math.max(0, Math.round(Number(source.completedFiles || source.completed || 0) || 0));
+  let progress = normalizeMediaProgress(source.progress ?? (expectedFiles ? completedFiles / expectedFiles : undefined));
+  return {
+    status: cleanText(source.status, progress === 1 ? 'ready' : 'preparing'),
+    stage: cleanText(source.stage || source.stageLabel, 'Preparing files'),
+    progress,
+    expectedFiles,
+    completedFiles: Math.min(completedFiles, expectedFiles || completedFiles),
+  };
+}
+
+function renderMediaPreparationProgress(options = {}) {
+  let readiness = options.readiness || options.renderState || options.preparation || options.state?.renderState;
+  if (!readiness || typeof readiness !== 'object') return '';
+  let state = normalizeMediaReadinessState(readiness);
+  let progress = state.progress ?? 0;
+  let percent = Math.round(progress * 100);
+  let count = state.expectedFiles > 0
+    ? `${state.completedFiles}/${state.expectedFiles} files`
+    : percentLabel(state.progress);
+  return `
+      <div class="sn-media-studio-prep-progress" data-media-prep-progress data-prep-status="${escapeHtml(state.status)}" data-prep-stage="${escapeHtml(state.stage)}" style="--sn-media-studio-prep-progress: ${percent}%">
+        <div class="sn-media-studio-prep-progress-meta">
+          <span class="sn-media-studio-prep-progress-stage">${escapeHtml(state.stage)}</span>
+          <span class="sn-media-studio-prep-progress-count">${escapeHtml(count)} · ${escapeHtml(percentLabel(state.progress))}</span>
+        </div>
+        <div class="sn-media-studio-prep-progress-track" aria-hidden="true">
+          <span class="sn-media-studio-prep-progress-fill"></span>
+        </div>
+      </div>`;
+}
+
+function normalizeMediaStudioFailures(input = []) {
+  if (!Array.isArray(input)) return [];
+  return input
+    .map((failure, index) => {
+      if (!failure || typeof failure !== 'object') return null;
+      let stage = cleanText(failure.stage || failure.status || failure.id, `failure-${index + 1}`);
+      return {
+        stage,
+        message: cleanText(failure.message || failure.error || failure.reason, 'Render stage failed'),
+        recoverable: failure.recoverable !== false,
+      };
+    })
+    .filter(Boolean);
+}
+
+function renderMediaStudioFailureRows(failures = []) {
+  let rows = normalizeMediaStudioFailures(failures);
+  if (!rows.length) return '';
+  return `
+      <section class="sn-media-studio-progress-failures" data-media-failures>
+        ${rows.map((failure) => `
+        <div class="sn-media-studio-progress-failure" data-media-failure-stage="${escapeHtml(failure.stage)}" data-media-failure-recoverable="${failure.recoverable ? 'true' : 'false'}">
+          <span class="sn-media-studio-progress-failure-text">
+            <span class="sn-media-studio-progress-failure-stage">${escapeHtml(failure.stage)}</span>
+            <span class="sn-media-studio-progress-failure-message">${escapeHtml(failure.message)}</span>
+          </span>
+          <button class="sn-media-studio-action-button is-compact" type="button" data-media-action="retry-render-stage" data-media-retry-stage="${escapeHtml(failure.stage)}"${failure.recoverable ? '' : ' disabled'}>Retry</button>
+        </div>`).join('')}
+      </section>`;
+}
+
+export function renderMediaStudioCaptionOverlayMarkup(options = {}) {
+  let state = normalizeMediaStudioCaptionOverlayState(options);
+  if (!state.enabled || !state.cue) return '';
+  return `
+          <div class="sn-media-studio-caption-overlay" data-media-caption-overlay data-caption-style="${escapeHtml(state.style)}" data-caption-index="${escapeHtml(state.cue.index)}">
+            <span class="sn-media-studio-caption-line" data-caption-style="${escapeHtml(state.style)}" data-caption-speaker="${escapeHtml(state.cue.speaker)}">${renderMediaStudioCaptionLineMarkup(state.cue, { currentTimeSec: state.currentTimeSec, style: state.style })}</span>
+          </div>`;
+}
+
 function msToFrame(value, fps) {
   return Math.round((Math.max(0, finiteNumber(value, 0)) / 1000) * fps);
+}
+
+function mediaStudioSequenceFrameUrl(frame = {}) {
+  return cleanText(frame.url || frame.src || frame.href || frame.path, '');
+}
+
+function normalizeMediaStudioSequenceFrames(frames = []) {
+  return (Array.isArray(frames) ? frames : [])
+    .map((frame, index) => {
+      let frameIndex = Math.round(finiteNumber(frame?.index ?? frame?.frame ?? frame?.frameNumber, index, 0));
+      let url = mediaStudioSequenceFrameUrl(frame);
+      return url ? { ...frame, index: frameIndex, url } : null;
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.index - b.index);
+}
+
+function mediaStudioSequenceFrameCount(frames = [], requested = undefined) {
+  let maxFrame = frames.reduce((max, frame) => Math.max(max, Math.round(finiteNumber(frame.index, 0))), -1);
+  return Math.max(1, Math.round(finiteNumber(requested, Math.max(frames.length, maxFrame + 1), 1)));
+}
+
+function mediaStudioSequenceFrameAt(frames = [], frame = 0) {
+  if (!frames.length) return null;
+  let target = Math.max(0, Math.round(finiteNumber(frame, 0)));
+  let exact = frames.find((item) => item.index === target);
+  if (exact) return exact;
+  let nearest = frames[0];
+  let nearestDistance = Math.abs((nearest?.index || 0) - target);
+  for (let item of frames.slice(1)) {
+    let distance = Math.abs((item?.index || 0) - target);
+    if (distance < nearestDistance) {
+      nearest = item;
+      nearestDistance = distance;
+    }
+  }
+  return nearest || null;
+}
+
+export function mediaStudioFrameIndexForTime(timeSec = 0, options = {}) {
+  let fps = Math.max(1, Math.round(finiteNumber(options.fps, 30, 1, 240)));
+  let frameCount = Math.max(1, Math.round(finiteNumber(options.frameCount ?? options.durationFrames, 1, 1)));
+  let rounding = cleanText(options.rounding, 'round');
+  let raw = Math.max(0, finiteNumber(timeSec, 0)) * fps;
+  let frame = rounding === 'round' ? Math.round(raw) : Math.floor(raw);
+  return Math.max(0, Math.min(frame, frameCount - 1));
+}
+
+export function normalizeMediaStudioSequencePlaybackState(options = {}) {
+  let frames = normalizeMediaStudioSequenceFrames(options.frames);
+  let fps = Math.max(1, Math.round(finiteNumber(options.fps, 30, 1, 240)));
+  let frameCount = mediaStudioSequenceFrameCount(frames, options.frameCount ?? options.durationFrames);
+  let currentFrame = mediaStudioFrameIndexForTime(options.currentTimeSec, { fps, frameCount });
+  if (options.currentFrame != null) {
+    currentFrame = Math.max(0, Math.min(Math.round(finiteNumber(options.currentFrame, currentFrame)), frameCount - 1));
+  }
+  let preloadBehindSec = finiteNumber(options.preloadBehindSec, 1, 0, 30);
+  let preloadAheadSec = finiteNumber(options.preloadAheadSec, 2, 0, 30);
+  let defaultCacheSize = Math.ceil(fps * Math.max(1, preloadBehindSec + preloadAheadSec + 1));
+  let maxCachedFrames = Math.max(1, Math.round(finiteNumber(options.maxCachedFrames, defaultCacheSize, 1, 600)));
+  return {
+    frames,
+    fps,
+    frameCount,
+    durationSec: frameCount / fps,
+    currentFrame,
+    audioUrl: cleanText(options.audioUrl, ''),
+    preloadBehindSec,
+    preloadAheadSec,
+    maxCachedFrames,
+  };
+}
+
+function releaseMediaStudioFrame(value) {
+  if (!value || typeof value !== 'object') return;
+  if ('src' in value) {
+    try { value.src = ''; } catch {}
+  }
+  try { value.close?.(); } catch {}
+}
+
+function defaultMediaStudioFrameLoader(frame = {}) {
+  let url = mediaStudioSequenceFrameUrl(frame);
+  if (!url) return null;
+  if (typeof globalThis.Image !== 'function') return url;
+  let image = new globalThis.Image();
+  let cancelled = false;
+  image.decoding = 'async';
+  image.src = url;
+  let promise = typeof image.decode === 'function'
+    ? image.decode().catch(() => {}).then(() => image)
+    : Promise.resolve(image);
+  return {
+    promise: promise.then((value) => {
+      if (cancelled) releaseMediaStudioFrame(value);
+      return value;
+    }),
+    cancel() {
+      cancelled = true;
+      releaseMediaStudioFrame(image);
+    },
+  };
+}
+
+export function createMediaStudioSequenceFrameWindow(options = {}) {
+  let state = normalizeMediaStudioSequencePlaybackState(options);
+  let cache = new Map();
+  let loadFrame = typeof options.loadFrame === 'function' ? options.loadFrame : defaultMediaStudioFrameLoader;
+  let disposeFrame = typeof options.disposeFrame === 'function' ? options.disposeFrame : releaseMediaStudioFrame;
+  let evictRecord = (record) => {
+    if (!record || record.cancelled) return;
+    record.cancelled = true;
+    try { record.cancel?.(); } catch {}
+    if (record.status === 'ready') disposeFrame(record.resource);
+  };
+  let requestFrame = (frameIndex) => {
+    let frame = mediaStudioSequenceFrameAt(state.frames, frameIndex);
+    if (!frame) return null;
+    let key = String(frame.index);
+    if (!cache.has(key)) {
+      let record = {
+        frame: frame.index,
+        url: frame.url,
+        status: 'loading',
+        value: null,
+        resource: null,
+        error: null,
+        cancelled: false,
+        cancel: null,
+      };
+      cache.set(key, record);
+      try {
+        let result = loadFrame(frame, frame.url, frame.index);
+        let loadValue = result;
+        if (result && typeof result === 'object' && 'promise' in result) {
+          loadValue = result.promise;
+          record.cancel = typeof result.cancel === 'function' ? result.cancel : null;
+        }
+        record.value = Promise.resolve(loadValue)
+          .then((value) => {
+            if (record.cancelled) {
+              disposeFrame(value);
+              return null;
+            }
+            record.status = 'ready';
+            record.resource = value;
+            record.value = value;
+            return value;
+          })
+          .catch((error) => {
+            if (record.cancelled) return null;
+            record.status = 'error';
+            record.error = error;
+            return null;
+          });
+      } catch (error) {
+        record.status = 'error';
+        record.error = error;
+      }
+    }
+    return cache.get(key);
+  };
+  return {
+    update(centerFrame = state.currentFrame) {
+      let center = Math.max(0, Math.min(Math.round(finiteNumber(centerFrame, state.currentFrame)), state.frameCount - 1));
+      let behind = Math.round(state.fps * state.preloadBehindSec);
+      let ahead = Math.round(state.fps * state.preloadAheadSec);
+      let start = Math.max(0, center - behind);
+      let end = Math.min(state.frameCount - 1, center + ahead);
+      while (end - start + 1 > state.maxCachedFrames) {
+        if (end - center > center - start) end -= 1;
+        else start += 1;
+      }
+      let keep = new Set();
+      let requested = [];
+      for (let frame = start; frame <= end; frame += 1) {
+        let record = requestFrame(frame);
+        if (!record) continue;
+        keep.add(String(record.frame));
+        requested.push(record.frame);
+      }
+      let evicted = [];
+      for (let key of Array.from(cache.keys())) {
+        if (keep.has(key)) continue;
+        evicted.push(Number(key));
+        evictRecord(cache.get(key));
+        cache.delete(key);
+      }
+      return {
+        centerFrame: center,
+        startFrame: start,
+        endFrame: end,
+        requestedFrames: requested,
+        evictedFrames: evicted,
+        cachedFrames: cache.size,
+      };
+    },
+    has(frameIndex) {
+      return cache.has(String(Math.round(finiteNumber(frameIndex, 0))));
+    },
+    get(frameIndex) {
+      return cache.get(String(Math.round(finiteNumber(frameIndex, 0)))) || null;
+    },
+    dispose() {
+      for (let record of cache.values()) evictRecord(record);
+      cache.clear();
+    },
+    get size() {
+      return cache.size;
+    },
+    get state() {
+      return { ...state, frames: state.frames.slice() };
+    },
+  };
 }
 
 function timelineClip(input = {}, index = 0, { duration = 1, fps = 30 } = {}) {
@@ -929,10 +1929,16 @@ function timelineClip(input = {}, index = 0, { duration = 1, fps = 30 } = {}) {
   start = Math.max(0, Math.min(start, duration));
   end = Math.max(start + 1, Math.min(end, duration));
   return {
+    id: cleanText(input.id || input.clipId || input.turnId),
     lane: cleanText(input.lane || input.track || input.name, index === 0 ? 'video' : `track ${index + 1}`),
     label: cleanText(input.label || input.title || input.text, `clip ${index + 1}`),
     start,
     end,
+    kind: cleanText(input.kind || input.type),
+    frameCount: Math.max(0, Math.round(finiteNumber(input.frameCount, 0))),
+    sampleCount: Math.max(0, Math.round(finiteNumber(input.sampleCount, Array.isArray(input.samples) ? input.samples.length : 0))),
+    sequenceFormat: cleanText(input.sequenceFormat || input.format),
+    samples: Array.isArray(input.samples) ? input.samples : [],
   };
 }
 
@@ -947,8 +1953,10 @@ function timelineTrackType(lane = '') {
 export function normalizeMediaStudioTimelineData(options = {}) {
   let fps = Math.max(1, Math.round(finiteNumber(options.fps, 30, 1, 120)));
   let durationFromMs = options.durationMs == null ? 0 : msToFrame(options.durationMs, fps);
-  let duration = Math.max(1, Math.round(finiteNumber(options.durationFrames ?? options.duration, durationFromMs || fps * 15, 1, fps * 3600)));
-  let clips = (Array.isArray(options.clips) ? options.clips : []).map((clip, index) => timelineClip(clip, index, { duration, fps }));
+  let sourceClips = Array.isArray(options.clips) ? options.clips : [];
+  let durationFallback = durationFromMs || (sourceClips.length ? fps * 15 : 1);
+  let duration = Math.max(1, Math.round(finiteNumber(options.durationFrames ?? options.duration, durationFallback, 1, fps * 3600)));
+  let clips = sourceClips.map((clip, index) => timelineClip(clip, index, { duration, fps }));
   let clipDuration = clips.reduce((max, clip) => Math.max(max, clip.end || 0), 0);
   duration = Math.max(duration, clipDuration);
   let tracks = [];
@@ -968,18 +1976,32 @@ export function normalizeMediaStudioTimelineData(options = {}) {
       tracks.push(track);
     }
     track.clips.push({
-      id: `${laneId}-${track.clips.length + 1}`,
+      id: clip.id || `${laneId}-${track.clips.length + 1}`,
       start: clip.start,
       end: Math.min(clip.end, duration),
       label: clip.label,
+      kind: clip.kind,
+      frameCount: clip.frameCount,
+      sampleCount: clip.sampleCount,
+      sequenceFormat: clip.sequenceFormat,
+      samples: clip.samples,
     });
   });
+  let requestedFocusFrame = options.focusFrame ?? options.timelineFocusFrame;
+  if (requestedFocusFrame == null && options.focusTimeMs != null) requestedFocusFrame = msToFrame(options.focusTimeMs, fps);
+  if (requestedFocusFrame == null && options.focusTimeSec != null) requestedFocusFrame = Math.round(finiteNumber(options.focusTimeSec, 0) * fps);
+  let focusFrame = Number.isFinite(Number(requestedFocusFrame))
+    ? Math.max(0, Math.min(Math.round(Number(requestedFocusFrame)), duration))
+    : null;
+  let selectedClipId = cleanText(options.selectedClipId || options.focusClipId || options.timelineFocusClipId, '');
 
   return {
     fps,
     duration,
     tracks,
     markers: Array.isArray(options.markers) ? options.markers : [],
+    focusFrame,
+    selectedClipId,
   };
 }
 
@@ -992,19 +2014,26 @@ export function renderMediaStudioPreviewPanelMarkup(options = {}) {
     frameSource: options.frameSource || preview.frameSource,
   }, options.support || options);
   let frameUrl = firstFrameUrl(preview);
+  let videoUrl = previewVideoUrl(preview, previewState.frameSource);
+  let previewMode = resolveMediaStudioPreviewMode(preview, frameUrl, videoUrl, previewState);
+  let showOutputVideo = previewMode === MEDIA_STUDIO_PREVIEW_MODES.output && videoUrl;
   let sourceTitle = cleanText(options.sourceTitle || preview.sourceTitle, 'Workspace source');
   let provider = cleanText(previewState.frameSource?.providerId || options.provider, MEDIA_STUDIO_FRAME_SOURCE_TYPES.externalBrowser);
   let cacheKey = cleanText(previewState.frameSource?.cacheKey || options.cacheKey, '');
+  let failures = normalizeMediaStudioFailures(preview.failures || options.failures || options.renderState?.failures);
   return `
-    <div class="sn-media-studio-panel" data-media-studio-role="preview" data-preview-state="${escapeHtml(previewState.state)}" data-frame-source-provider="${escapeHtml(provider)}" data-frame-cache-key="${escapeHtml(cacheKey)}">
-      <div class="sn-media-studio-preview-stage" aria-label="FrameSource preview" data-preview-state="${escapeHtml(previewState.state)}" data-frame-progress="${escapeHtml(percentLabel(previewState.progress))}">
-        <div class="sn-media-studio-preview-window" data-render-proof="frame-source-cache">
-          ${frameUrl ? `<img class="sn-media-studio-frame" src="${escapeHtml(frameUrl)}" alt="${escapeHtml(sourceTitle)} frame">` : `
+    <div class="sn-media-studio-panel" data-media-studio-role="preview" data-preview-state="${escapeHtml(previewState.state)}" data-preview-mode="${escapeHtml(previewMode)}" data-frame-source-provider="${escapeHtml(provider)}" data-frame-cache-key="${escapeHtml(cacheKey)}">
+      ${renderMediaPreparationProgress(options)}
+      <div class="sn-media-studio-preview-stage" aria-label="FrameSource preview" data-preview-state="${escapeHtml(previewState.state)}" data-preview-mode="${escapeHtml(previewMode)}" data-frame-progress="${escapeHtml(percentLabel(previewState.progress))}">
+        <div class="sn-media-studio-preview-window" data-render-proof="frame-source-cache" data-preview-mode="${escapeHtml(previewMode)}">
+          ${showOutputVideo ? `<video class="sn-media-studio-frame sn-media-studio-video" data-media-preview-video data-render-proof="final-output-video" src="${escapeHtml(videoUrl)}"${frameUrl ? ` poster="${escapeHtml(frameUrl)}"` : ''} preload="metadata" playsinline aria-label="${escapeHtml(sourceTitle)} video preview"></video>` : frameUrl ? `<img class="sn-media-studio-frame" data-media-preview-sequence data-render-proof="cached-frame-sequence" src="${escapeHtml(frameUrl)}" alt="${escapeHtml(sourceTitle)} frame">` : `
             <div class="sn-media-studio-frame-placeholder" data-frame-source-state="${escapeHtml(previewState.state)}">
               <strong>${escapeHtml(previewState.state)}</strong>
               <span>${escapeHtml(previewState.reason || 'waiting-for-frames')}</span>
             </div>`}
+          ${renderMediaStudioCaptionOverlayMarkup({ ...options, preview })}
         </div>
+        ${renderMediaStudioFailureRows(failures)}
       </div>
     </div>`;
 }
@@ -1022,17 +2051,55 @@ export function hydrateMediaStudioTimelinePanel(root, options = {}) {
     ? root
     : root?.querySelector?.('[data-media-studio-timeline-editor]');
   if (!host) return null;
+  let hydrationEpoch = Math.max(0, Number(host.__snMediaStudioTimelineEpoch) || 0) + 1;
+  host.__snMediaStudioTimelineEpoch = hydrationEpoch;
+  let isCurrent = () => host.__snMediaStudioTimelineEpoch === hydrationEpoch;
   let data = normalizeMediaStudioTimelineData(options);
   let currentFrame = Math.round(finiteNumber(options.currentFrame ?? options.frame, 0, 0, data.duration));
+  let bindEvents = () => {
+    if (typeof host.addEventListener !== 'function') return;
+    let previous = host.__snMediaStudioTimelineHandlers || {};
+    if (previous.playhead && typeof host.removeEventListener === 'function') {
+      host.removeEventListener('playhead-change', previous.playhead);
+    }
+    if (previous.transport && typeof host.removeEventListener === 'function') {
+      host.removeEventListener('transport-change', previous.transport);
+    }
+    let next = {};
+    if (typeof options.onPlayheadChange === 'function') {
+      next.playhead = (event) => options.onPlayheadChange(event?.detail || {}, event);
+      host.addEventListener('playhead-change', next.playhead);
+    }
+    if (typeof options.onTransportChange === 'function') {
+      next.transport = (event) => options.onTransportChange(event?.detail || {}, event);
+      host.addEventListener('transport-change', next.transport);
+    }
+    host.__snMediaStudioTimelineHandlers = next;
+  };
   let load = () => {
-    if (typeof host.loadTimeline !== 'function') return false;
+    if (!isCurrent() || typeof host.loadTimeline !== 'function') return false;
+    bindEvents();
     host.loadTimeline(data);
-    try { host.setFrame?.(currentFrame); } catch {}
+    try { host.setFrame?.(currentFrame, { silent: true }); } catch {}
+    if (data.focusFrame !== null) {
+      try { host.focusFrame?.(data.focusFrame); } catch {}
+    }
     return true;
   };
   if (load()) return data;
   try {
-    globalThis.customElements?.whenDefined?.('sn-timeline-editor')?.then(load).catch(() => {});
+    import('../timeline/TimelineEditor/TimelineEditor.js')
+      .then(() => {
+        if (!isCurrent()) return false;
+        let registry = globalThis.customElements || globalThis.window?.customElements;
+        let ready = registry?.whenDefined?.('sn-timeline-editor');
+        if (ready && typeof ready.then === 'function') return ready.then(() => load());
+        return load();
+      })
+      .then((loaded) => {
+        if (!loaded && isCurrent()) globalThis.setTimeout?.(load, 0);
+      })
+      .catch(() => {});
   } catch {}
   return data;
 }
@@ -1069,6 +2136,8 @@ export function renderMediaStudioInspectorPanelMarkup(options = {}) {
 
   return `
     <div class="sn-media-studio-inspector-panel" data-media-studio-role="inspector" data-render-status="${escapeHtml(status)}">
+      ${renderMediaStudioRenderSettingsControls(options)}
+      ${renderMediaStudioVoiceProviderControls(options)}
       <section class="sn-media-studio-inspector-section">
         <h3 class="sn-media-studio-inspector-heading"><i class="material-symbols-outlined">aspect_ratio</i> Format</h3>
         ${inspectorRows(formatRows)}
@@ -1092,6 +2161,9 @@ export function renderMediaStudioProgressPanelMarkup(options = {}) {
   let channel = cleanText(options.progressChannel || state.progressChannel, 'media.frame-source.progress');
   let source = cleanText(options.source || state.source, MEDIA_STUDIO_FRAME_SOURCE_TYPES.externalBrowser);
   let frames = Number(state.frameCount || options.frameCount || 0);
+  let failures = normalizeMediaStudioFailures(
+    state.failures || options.failures || state.renderState?.failures || options.renderState?.failures,
+  );
   return `
     <div class="sn-media-studio-progress-shell" data-render-status="${escapeHtml(status)}" data-progress-channel="${escapeHtml(channel)}">
       <sn-metric>
@@ -1108,5 +2180,6 @@ export function renderMediaStudioProgressPanelMarkup(options = {}) {
         ${state.cacheKey || options.cacheKey ? `<sn-description-item label="Cache">${escapeHtml(state.cacheKey || options.cacheKey)}</sn-description-item>` : ''}
         ${state.error ? `<sn-description-item label="Error">${escapeHtml(state.error)}</sn-description-item>` : ''}
       </sn-description-list>
+      ${renderMediaStudioFailureRows(failures)}
     </div>`;
 }

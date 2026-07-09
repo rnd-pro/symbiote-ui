@@ -29168,6 +29168,16 @@
               "description": "Loads normalized timeline data with fps, duration, tracks, clips, and markers."
             },
             {
+              "kind": "method",
+              "name": "setFrame",
+              "description": "Sets the playhead from an external media clock and can suppress playhead-change events."
+            },
+            {
+              "kind": "method",
+              "name": "setPlaybackState",
+              "description": "Synchronizes transport visuals with an external media player's playing state."
+            },
+            {
               "kind": "field",
               "name": "currentFrame",
               "type": {

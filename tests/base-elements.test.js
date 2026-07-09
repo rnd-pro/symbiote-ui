@@ -319,10 +319,13 @@ test('project-tabs coordinates roving tabindex and keys', async () => {
   const items = el.querySelectorAll('project-tab-item');
 
   assert.equal(homeTab.getAttribute('role'), 'tab');
+  assert.equal(homeTab.getAttribute('data-tab-id'), 'home');
   assert.equal(items.length, 2);
   assert.equal(items[0].getAttribute('role'), 'tab');
+  assert.equal(items[0].getAttribute('data-tab-id'), 'tab1');
   assert.equal(items[0].getAttribute('aria-selected'), 'true');
   assert.equal(items[0].getAttribute('tabindex'), '0');
+  assert.equal(items[1].getAttribute('data-tab-id'), 'tab2');
   assert.equal(items[1].getAttribute('aria-selected'), 'false');
   assert.equal(items[1].getAttribute('tabindex'), '-1');
 

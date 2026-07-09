@@ -7,7 +7,7 @@ export let timelineEditorTemplate = html`
     </div>
     <div class="te-transport-group te-transport-playback">
       <button data-action="skip-start" title="Skip to Start"><span class="material-symbols-outlined" aria-hidden="true">skip_previous</span></button>
-      <button data-action="play" title="Play / Pause"><span class="material-symbols-outlined" aria-hidden="true">play_arrow</span></button>
+      <button data-action="play" title="Play / Pause"><span class="material-symbols-outlined" aria-hidden="true" ${{ textContent: 'playIcon' }}></span></button>
       <button data-action="stop" title="Stop"><span class="material-symbols-outlined" aria-hidden="true">stop</span></button>
       <button data-action="skip-end" title="Skip to End"><span class="material-symbols-outlined" aria-hidden="true">skip_next</span></button>
     </div>

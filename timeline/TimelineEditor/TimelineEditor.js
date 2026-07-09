@@ -85,6 +85,13 @@ function normalizeClip(clip = {}, index = 0, duration = 1) {
   };
 }
 
+function isSequenceClip(clip = {}) {
+  return clip.kind === 'frame-sequence'
+    || clip.kind === 'sequence'
+    || clip.sequenceFormat
+    || Number(clip.sampleCount || clip.frameCount || 0) > 1;
+}
+
 function normalizeMarkerFrame(marker, fps) {
   if (typeof marker === 'number') return Math.round(marker);
   if (Number.isFinite(Number(marker?.frame))) return Math.round(Number(marker.frame));
@@ -120,6 +127,8 @@ function normalizeTimelineData(data = {}) {
     duration,
     tracks,
     markers,
+    focusFrame: Number.isFinite(Number(data.focusFrame)) ? Math.max(0, Math.min(Math.round(Number(data.focusFrame)), duration)) : null,
+    selectedClipId: data.selectedClipId == null ? '' : String(data.selectedClipId),
   };
 }
 
@@ -152,6 +161,9 @@ export class TimelineEditor extends Symbiote {
   /** @type {string|null} Selected clip ID */
   #selectedClipId = null;
 
+  /** @type {number|null} Timeline frame to scroll into view after layout */
+  #pendingFocusFrame = null;
+
   /** @type {ResizeObserver|null} */
   #resizeObserver = null;
 
@@ -177,6 +189,7 @@ export class TimelineEditor extends Symbiote {
   init$ = {
     timeDisplay: '00:00:00',
     playing: false,
+    playIcon: 'play_arrow',
     hasData: false,
     zoomLabel: '4 px/fr',
 
@@ -245,12 +258,21 @@ export class TimelineEditor extends Symbiote {
    * @param {{ fps: number, duration: number, tracks: Array<{ id: string, type?: string, label: string, clips: Array<{ id: string, start?: number, end?: number, from?: number, duration?: number, label?: string }> }>, markers?: Array<{ frame?: number, time?: number, label?: string }|number> }} data
    */
   loadTimeline(data) {
+    this.#stopPlayback();
     this.#data = normalizeTimelineData(data);
     this.#playheadFrame = 0;
+    this.#pendingFocusFrame = this.#data.focusFrame;
+    let requestedSelectedClipId = this.#data.selectedClipId;
+    let selectedClipStillExists = this.#data.tracks.some((track) => {
+      return track.clips.some((clip) => clip.id === this.#selectedClipId);
+    });
+    this.#selectedClipId = requestedSelectedClipId || (selectedClipStillExists ? this.#selectedClipId : null);
     let hasTracks = this.#data.tracks.length > 0;
     this.set$({
       hasData: hasTracks,
       timeDisplay: formatTimecode(0, this.#data.fps),
+      playing: false,
+      playIcon: 'play_arrow',
     });
     this.#renderHeaders();
     this.#scheduleRender(true);
@@ -277,9 +299,21 @@ export class TimelineEditor extends Symbiote {
     return this.#data;
   }
 
-  /** Set playhead to specific frame from external source */
-  setFrame(frame) {
-    this.#setPlayhead(frame);
+  /** Set playhead to specific frame from an external source. */
+  setFrame(frame, options = {}) {
+    this.#setPlayhead(frame, options?.silent === true);
+  }
+
+  /** Update transport visuals when an external player owns the clock. */
+  setPlaybackState(playing) {
+    this.#setPlaybackUi(Boolean(playing));
+  }
+
+  /** Scroll the timeline viewport to a frame without changing the playhead. */
+  focusFrame(frame) {
+    if (!this.#data) return;
+    this.#pendingFocusFrame = Math.max(0, Math.min(Math.round(Number(frame) || 0), this.#data.duration));
+    this.#applyPendingFocusFrame();
   }
 
   #setPlayhead(frame, silent = false) {
@@ -326,6 +360,17 @@ export class TimelineEditor extends Symbiote {
     }
   }
 
+  #applyPendingFocusFrame() {
+    if (!this.#data || this.#pendingFocusFrame === null) return;
+    let scroll = this.ref.timelineScroll;
+    if (!scroll) return;
+    let x = this.#pendingFocusFrame * this.#pixelsPerFrame;
+    this.#internalScroll = true;
+    scroll.scrollLeft = Math.max(0, x - scroll.clientWidth * 0.5);
+    requestAnimationFrame(() => { this.#internalScroll = false; });
+    this.#pendingFocusFrame = null;
+  }
+
   #setZoom(ppf) {
     this.#pixelsPerFrame = Math.max(0.5, Math.min(20, ppf));
     let label = this.#pixelsPerFrame >= 1
@@ -344,11 +389,25 @@ export class TimelineEditor extends Symbiote {
     this.#setZoom(width / this.#data.duration);
   }
 
+  #setPlaybackUi(playing) {
+    this.#playing = Boolean(playing);
+    this.$.playing = this.#playing;
+    if (this.#playing) {
+      this.$.playIcon = 'pause';
+      this.toggleAttribute('playing', true);
+    } else {
+      this.$.playIcon = 'play_arrow';
+      this.toggleAttribute('playing', false);
+    }
+    if (!this.#playing && this.#animationId) {
+      cancelAnimationFrame(this.#animationId);
+      this.#animationId = null;
+    }
+  }
+
   #startPlayback() {
     if (!this.#data || this.#playing) return;
-    this.#playing = true;
-    this.$.playing = true;
-    this.toggleAttribute('playing', true);
+    this.#setPlaybackUi(true);
     this.#playStartTime = performance.now();
     this.#playStartFrame = this.#playheadFrame >= this.#data.duration ? 0 : this.#playheadFrame;
     if (this.#playheadFrame >= this.#data.duration) this.#playheadFrame = 0;
@@ -358,24 +417,12 @@ export class TimelineEditor extends Symbiote {
   }
 
   #pausePlayback() {
-    this.#playing = false;
-    this.$.playing = false;
-    this.toggleAttribute('playing', false);
-    if (this.#animationId) {
-      cancelAnimationFrame(this.#animationId);
-      this.#animationId = null;
-    }
+    this.#setPlaybackUi(false);
     emit(this, 'transport-change', { action: 'pause' });
   }
 
   #stopPlayback() {
-    this.#playing = false;
-    this.$.playing = false;
-    this.toggleAttribute('playing', false);
-    if (this.#animationId) {
-      cancelAnimationFrame(this.#animationId);
-      this.#animationId = null;
-    }
+    this.#setPlaybackUi(false);
     emit(this, 'transport-change', { action: 'stop' });
   }
 
@@ -500,6 +547,7 @@ export class TimelineEditor extends Symbiote {
     this.#renderTracks();
     this.#positionPlayhead();
     this.#syncHeaderScroll();
+    this.#applyPendingFocusFrame();
   }
 
   #layoutTimeline() {
@@ -628,6 +676,34 @@ export class TimelineEditor extends Symbiote {
         ctx.globalAlpha = isSelected ? 1 : 0.78;
         this.#roundRect(ctx, cx, cy, cw, ch, 3);
         ctx.fill();
+
+        if (isSequenceClip(clip) && cw > 8) {
+          let sampleCount = Math.max(2, Math.round(Number(clip.sampleCount || clip.samples?.length || clip.frameCount || 0) || 0));
+          let visibleTicks = Math.min(sampleCount, Math.max(2, Math.floor(cw / 7)));
+          ctx.save();
+          ctx.beginPath();
+          this.#roundRect(ctx, cx, cy, cw, ch, 3);
+          ctx.clip();
+          ctx.globalAlpha = isSelected ? 0.34 : 0.24;
+          ctx.strokeStyle = this.#theme.onAccent;
+          for (let tick = 1; tick < visibleTicks; tick += 1) {
+            let x = cx + (cw * tick) / visibleTicks;
+            ctx.beginPath();
+            ctx.moveTo(Math.round(x) + 0.5, cy + 2);
+            ctx.lineTo(Math.round(x) + 0.5, cy + ch - 2);
+            ctx.stroke();
+          }
+          if (cw > 90) {
+            let thumbCount = Math.min(visibleTicks, Math.max(2, Math.floor(cw / 34)));
+            ctx.fillStyle = this.#theme.onAccent;
+            ctx.globalAlpha = isSelected ? 0.22 : 0.16;
+            for (let thumb = 0; thumb < thumbCount; thumb += 1) {
+              let x = cx + 5 + (cw - 18) * (thumb / Math.max(1, thumbCount - 1));
+              ctx.fillRect(Math.round(x), cy + 4, 10, Math.max(4, ch - 8));
+            }
+          }
+          ctx.restore();
+        }
 
         if (isSelected) {
           ctx.globalAlpha = 1;

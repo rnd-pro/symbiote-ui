@@ -10,19 +10,28 @@ import {
   MEDIA_PREVIEW_STATES,
   MEDIA_STUDIO_FRAME_SOURCE_TYPES,
   MEDIA_STUDIO_PANEL_TYPES,
+  MEDIA_STUDIO_PREVIEW_MODES,
   MEDIA_STUDIO_SURFACE_STYLES,
   MEDIA_STUDIO_SURFACE_CONTRACT,
   createMediaStudioLayout,
   createMediaStudioPanelTypes,
+  createMediaStudioSequenceFrameWindow,
   ensureMediaStudioSurfaceStyles,
   getMediaFrameSourceSupport,
   getMediaStudioTopology,
   hasMediaStudioTopology,
   hydrateMediaStudioTimelinePanel,
   listMediaFrameSourceProviders,
+  mediaStudioFrameIndexForTime,
   normalizeMediaFrameSource,
   normalizeMediaPreviewState,
+  normalizeMediaStudioCaptionOverlayState,
+  normalizeMediaStudioRenderSettings,
+  normalizeMediaStudioSequencePlaybackState,
   normalizeMediaStudioTimelineData,
+  normalizeMediaStudioVoiceProviderState,
+  renderMediaStudioCaptionOverlayMarkup,
+  renderMediaStudioCaptionLineMarkup,
   renderMediaStudioInspectorPanelMarkup,
   renderMediaStudioPreviewPanelMarkup,
   renderMediaStudioProgressPanelMarkup,
@@ -206,6 +215,18 @@ test('preview state normalization covers empty, loading, unsupported, and cached
   assert.equal(cached.state, MEDIA_PREVIEW_STATES.ready);
   assert.equal(cached.mode, MEDIA_STUDIO_FRAME_SOURCE_TYPES.cachedSequence);
   assert.equal(cached.progress, 1);
+
+  let finalOutput = normalizeMediaPreviewState({
+    outputUrl: './render.mp4',
+    frameSource: {
+      provider: MEDIA_STUDIO_FRAME_SOURCE_TYPES.cachedSequence,
+      output: { url: './render.mp4' },
+    },
+  }, {
+    cachedSequence: true,
+  });
+  assert.equal(finalOutput.state, MEDIA_PREVIEW_STATES.ready);
+  assert.equal(finalOutput.frameSource.outputUrl, './render.mp4');
 });
 
 test('media studio helpers are exported from the browser UI entrypoint', async () => {
@@ -214,8 +235,16 @@ test('media studio helpers are exported from the browser UI entrypoint', async (
   assert.equal(typeof ui.createMediaStudioLayout, 'function');
   assert.equal(typeof ui.createMediaStudioPanelTypes, 'function');
   assert.equal(typeof ui.ensureMediaStudioSurfaceStyles, 'function');
+  assert.equal(typeof ui.createMediaStudioSequenceFrameWindow, 'function');
+  assert.equal(typeof ui.mediaStudioFrameIndexForTime, 'function');
   assert.equal(typeof ui.listMediaFrameSourceProviders, 'function');
   assert.equal(typeof ui.normalizeMediaPreviewState, 'function');
+  assert.equal(typeof ui.normalizeMediaStudioRenderSettings, 'function');
+  assert.equal(typeof ui.normalizeMediaStudioSequencePlaybackState, 'function');
+  assert.equal(typeof ui.normalizeMediaStudioCaptionOverlayState, 'function');
+  assert.equal(typeof ui.normalizeMediaStudioVoiceProviderState, 'function');
+  assert.equal(typeof ui.renderMediaStudioCaptionOverlayMarkup, 'function');
+  assert.equal(typeof ui.renderMediaStudioCaptionLineMarkup, 'function');
   assert.equal(typeof ui.renderMediaStudioPreviewPanelMarkup, 'function');
   assert.equal(typeof ui.renderMediaStudioInspectorPanelMarkup, 'function');
   assert.equal(ui.MEDIA_STUDIO_FRAME_SOURCE_TYPES.htmlInCanvas, MEDIA_STUDIO_FRAME_SOURCE_TYPES.htmlInCanvas);
@@ -234,6 +263,30 @@ test('media studio visual layer renders reusable preview, timeline, and progress
     preview: {
       status: 'rendering',
       frames: [{ url: './cache/frame-0001.png' }],
+      currentTimeSec: 1.2,
+      captionCues: [
+        {
+          startSec: 0.8,
+          endSec: 2.1,
+          speaker: 'guide',
+          text: 'Welcome to the workspace.',
+          words: [
+            { text: 'Welcome', startSec: 0.8, endSec: 1.1 },
+            { text: 'to', startSec: 1.1, endSec: 1.5 },
+            { text: 'workspace.', startSec: 1.5, endSec: 2.1 },
+          ],
+        },
+      ],
+    },
+    renderSettings: { captionsEnabled: true, captionsMode: 'karaoke', captionStyle: { preset: 'tiktok' } },
+    renderState: {
+      status: 'preparing',
+      stage: 'audio.turn.rendering',
+      completedFiles: 2,
+      expectedFiles: 5,
+      failures: [
+        { stage: 'capture', message: 'browser disconnected', recoverable: true },
+      ],
     },
   });
   let timeline = renderMediaStudioTimelinePanelMarkup({
@@ -243,28 +296,77 @@ test('media studio visual layer renders reusable preview, timeline, and progress
     status: 'capturing',
     progress: 0.42,
     progressChannel: 'RT_WORKSPACE_EXECUTION_NODE_PROGRESS',
-    state: { frameCount: 12, cacheKey: 'maximo-current-ui' },
+    state: {
+      frameCount: 12,
+      cacheKey: 'maximo-current-ui',
+      failures: [
+        { stage: 'capture', message: 'browser disconnected', recoverable: true },
+      ],
+    },
   });
   let inspector = renderMediaStudioInspectorPanelMarkup({
     status: 'capturing',
     progress: 0.42,
     source: MEDIA_STUDIO_FRAME_SOURCE_TYPES.externalBrowser,
+    renderSettings: {
+      autoRender: true,
+      captionsEnabled: true,
+      orientation: 'vertical',
+      width: 1080,
+      height: 1920,
+      fps: 30,
+      providerId: 'symbiote-model-service',
+      voiceRefs: { guide: 'qwen3:speaker:vivian' },
+    },
+    audioProviders: [
+      { id: 'browser', label: 'Browser audio' },
+      { id: 'symbiote-model-service', label: 'Symbiote model service' },
+    ],
+    voiceProvider: {
+      id: 'symbiote-model-service',
+      label: 'Local model service',
+      capabilities: ['voice.create'],
+      voices: [
+        { id: 'qwen3:speaker:vivian', label: 'Vivian' },
+        { id: 'qwen3:speaker:eric', label: 'Eric' },
+      ],
+      speakerLayers: [
+        {
+          persona: 'guide',
+          clips: [{ id: 'turn-1', turnId: 'turn-1', text: 'Welcome to the workspace.' }],
+        },
+      ],
+    },
     state: { frameCount: 12, output: 'workspace-tour.mp4' },
   });
 
   assert.match(MEDIA_STUDIO_SURFACE_STYLES, /\.sn-media-studio-preview-stage/);
+  assert.match(MEDIA_STUDIO_SURFACE_STYLES, /\.sn-media-studio-prep-progress/);
   assert.match(MEDIA_STUDIO_SURFACE_STYLES, /\.sn-media-studio-inspector-section/);
   assert.doesNotMatch(MEDIA_STUDIO_SURFACE_STYLES, /\.sn-media-studio-timeline-toolbar/);
   assert.doesNotMatch(MEDIA_STUDIO_SURFACE_STYLES, /\.sn-media-studio-track-row/);
   assert.match(preview, /data-render-proof="frame-source-cache"/);
   assert.match(preview, /data-frame-source-provider="external-browser"/);
   assert.match(preview, /data-preview-state="loading"/);
+  assert.match(preview, /data-preview-mode="sequence"/);
   assert.match(preview, /data-frame-progress="42%"/);
+  assert.match(preview, /data-media-prep-progress/);
+  assert.match(preview, /data-prep-stage="audio\.turn\.rendering"/);
+  assert.match(preview, /2\/5 files · 40%/);
   assert.match(preview, /src="\.\/cache\/frame-0001\.png"/);
+  assert.match(preview, /data-media-preview-sequence/);
+  assert.match(preview, /data-render-proof="cached-frame-sequence"/);
   assert.doesNotMatch(preview, /waiting-for-frames/);
   assert.doesNotMatch(preview, /clone|iframe|live-dom/i);
   assert.doesNotMatch(preview, /sn-media-studio-preview-footer/);
-  assert.doesNotMatch(preview, /sn-media-studio-overlay/);
+  assert.match(preview, /data-media-caption-overlay/);
+  assert.match(preview, /data-caption-style="tiktok"/);
+  assert.match(preview, /data-caption-speaker="guide"/);
+  assert.match(preview, /sn-media-studio-caption-word/);
+  assert.match(preview, /data-caption-word-state="active">to<\/span>/);
+  assert.match(preview, /Welcome[\s\S]*workspace\./);
+  assert.match(preview, /data-media-failures/);
+  assert.match(preview, /data-media-action="retry-render-stage"/);
   assert.doesNotMatch(preview, /sn-media-studio-transport/);
   assert.match(timeline, /sn-timeline-editor/);
   assert.match(timeline, /data-media-studio-timeline-editor/);
@@ -272,9 +374,228 @@ test('media studio visual layer renders reusable preview, timeline, and progress
   assert.doesNotMatch(timeline, /sn-media-studio-track-row/);
   assert.doesNotMatch(timeline, /sn-media-studio-timeline-toolbar/);
   assert.match(inspector, /sn-media-studio-inspector-panel/);
+  assert.match(inspector, /data-media-render-settings/);
+  assert.match(inspector, /data-auto-render="true"/);
+  assert.match(inspector, /data-orientation="vertical"/);
+  assert.match(inspector, /data-media-setting="autoRender" checked/);
+  assert.match(inspector, /data-media-setting="captionsEnabled" checked/);
+  assert.match(inspector, /<option value="vertical" selected>Vertical 9:16<\/option>/);
+  assert.match(inspector, /data-media-setting="width" value="1080"/);
+  assert.match(inspector, /data-media-setting="height" value="1920"/);
+  assert.match(inspector, /<select class="sn-media-studio-setting-control" data-media-setting="providerId">/);
+  assert.match(inspector, /<option value="symbiote-model-service" selected>Symbiote model service<\/option>/);
+  assert.match(inspector, /data-media-action="render-final"/);
+  assert.match(inspector, /data-media-voice-provider/);
+  assert.match(inspector, /data-provider-id="symbiote-model-service"/);
+  assert.match(inspector, /data-media-voice-persona="guide"/);
+  assert.match(inspector, /data-media-voice-ref/);
+  assert.match(inspector, /<option value="qwen3:speaker:vivian" selected>Vivian<\/option>/);
+  assert.match(inspector, /data-media-action="rerender-voice"/);
+  assert.match(inspector, /data-media-turn-id="turn-1"/);
+  assert.match(inspector, /data-media-action="create-voice"/);
   assert.match(inspector, /workspace-tour\.mp4/);
   assert.match(progress, /data-progress-channel="RT_WORKSPACE_EXECUTION_NODE_PROGRESS"/);
   assert.match(progress, /maximo-current-ui/);
+  assert.match(progress, /data-media-failures/);
+  assert.match(progress, /data-media-failure-stage="capture"/);
+  assert.match(progress, /browser disconnected/);
+  assert.match(progress, /data-media-action="retry-render-stage"/);
+  assert.match(progress, /data-media-retry-stage="capture"/);
+});
+
+test('media studio preview keeps cached sequence visible when output is also available', () => {
+  let preview = renderMediaStudioPreviewPanelMarkup({
+    sourceTitle: 'Current UI',
+    support: { cachedSequence: true },
+    frameSource: {
+      provider: MEDIA_STUDIO_FRAME_SOURCE_TYPES.cachedSequence,
+      outputUrl: './render.mp4',
+    },
+    preview: {
+      status: 'complete',
+      currentFrame: './cache/frame-0001.png',
+      videoUrl: './render.mp4',
+    },
+  });
+
+  assert.match(preview, /data-preview-mode="sequence"/);
+  assert.match(preview, /data-media-preview-sequence/);
+  assert.match(preview, /data-render-proof="cached-frame-sequence"/);
+  assert.match(preview, /src="\.\/cache\/frame-0001\.png"/);
+  assert.doesNotMatch(preview, /data-media-preview-video/);
+});
+
+test('media studio preview renders completed final output as a video surface when selected', () => {
+  let preview = renderMediaStudioPreviewPanelMarkup({
+    sourceTitle: 'Current UI',
+    support: { cachedSequence: true },
+    frameSource: {
+      provider: MEDIA_STUDIO_FRAME_SOURCE_TYPES.cachedSequence,
+      outputUrl: './render.mp4',
+    },
+    preview: {
+      status: 'complete',
+      previewMode: MEDIA_STUDIO_PREVIEW_MODES.output,
+      currentFrame: './cache/frame-0001.png',
+      videoUrl: './render.mp4',
+    },
+  });
+
+  assert.match(preview, /data-preview-mode="output"/);
+  assert.match(preview, /<video class="sn-media-studio-frame sn-media-studio-video"/);
+  assert.match(preview, /data-media-preview-video/);
+  assert.match(preview, /data-render-proof="final-output-video"/);
+  assert.match(preview, /src="\.\/render\.mp4"/);
+  assert.match(preview, /poster="\.\/cache\/frame-0001\.png"/);
+  assert.doesNotMatch(preview, /<img class="sn-media-studio-frame"/);
+});
+
+test('media studio caption overlay normalizes active TikTok-style cues', () => {
+  let overlay = normalizeMediaStudioCaptionOverlayState({
+    currentTimeSec: 1.4,
+    renderSettings: {
+      captionsEnabled: true,
+      captionsMode: 'karaoke',
+      captionStyle: { preset: 'tiktok' },
+    },
+    captionCues: [
+      { startSec: 0, endSec: 1, text: 'Too early' },
+      {
+        startSec: 1,
+        endSec: 2,
+        speaker: 'ops',
+        words: [
+          { text: 'Active', startSec: 1, endSec: 1.3 },
+          { text: 'caption', startSec: 1.3, endSec: 2 },
+        ],
+      },
+    ],
+  });
+
+  assert.equal(overlay.enabled, true);
+  assert.equal(overlay.style, 'tiktok');
+  assert.equal(overlay.cue.text, 'Active caption');
+  assert.equal(overlay.cue.speaker, 'ops');
+  assert.deepEqual(overlay.cue.wordEntries.map((word) => word.state), ['past', 'active']);
+  assert.match(
+    renderMediaStudioCaptionLineMarkup(overlay.cue, { currentTimeSec: overlay.currentTimeSec }),
+    /data-caption-word-state="active">caption<\/span>/,
+  );
+  assert.match(
+    renderMediaStudioCaptionOverlayMarkup({
+      currentTimeSec: 1.4,
+      renderSettings: { captionsEnabled: true, captionsMode: 'karaoke' },
+      captionCues: [{ startSec: 1, endSec: 2, text: 'Created during playback' }],
+    }),
+    /data-media-caption-overlay/,
+  );
+
+  let disabled = normalizeMediaStudioCaptionOverlayState({
+    currentTimeSec: 1.4,
+    renderSettings: { captionsEnabled: false, captionsMode: 'off' },
+    captionCues: [{ startSec: 1, endSec: 2, text: 'Hidden' }],
+  });
+  assert.equal(disabled.enabled, false);
+});
+
+test('media studio render settings normalize auto-render, captions, and vertical geometry', () => {
+  let defaults = normalizeMediaStudioRenderSettings({});
+  assert.equal(defaults.autoRender, true);
+  assert.equal(defaults.captionsEnabled, true);
+  assert.equal(defaults.orientation, 'horizontal');
+  assert.equal(defaults.width, 1920);
+  assert.equal(defaults.height, 1080);
+
+  let vertical = normalizeMediaStudioRenderSettings({
+    renderSettings: {
+      vertical: true,
+      width: 1080,
+      height: 1920,
+      fps: 12,
+      captionsMode: 'off',
+      autoRender: false,
+      audioProviderId: 'local-voice-provider',
+    },
+  });
+  assert.equal(vertical.autoRender, false);
+  assert.equal(vertical.captionsEnabled, false);
+  assert.equal(vertical.orientation, 'vertical');
+  assert.equal(vertical.aspectRatio, '9:16');
+  assert.equal(vertical.width, 1080);
+  assert.equal(vertical.height, 1920);
+  assert.equal(vertical.fps, 12);
+  assert.equal(vertical.providerId, 'local-voice-provider');
+});
+
+test('media studio voice provider state normalizes personas, voices, and capabilities', () => {
+  let provider = normalizeMediaStudioVoiceProviderState({
+    renderSettings: {
+      providerId: 'local-model-service',
+      voiceRefs: { ops: 'voice-eric' },
+    },
+    voiceProvider: {
+      voices: [{ voiceRef: 'voice-eric', name: 'Eric' }],
+      speakerLayers: [{ persona: 'guide', voiceRef: 'voice-vivian', clips: [{ id: 'clip-1' }] }],
+      capabilities: ['voice.clone'],
+    },
+    turns: [{ persona: 'ops' }],
+  });
+
+  assert.equal(provider.providerId, 'local-model-service');
+  assert.equal(provider.canCreateVoice, true);
+  assert.equal(provider.voiceRefs.ops, 'voice-eric');
+  assert.equal(provider.voiceRefs.guide, 'voice-vivian');
+  assert.deepEqual(provider.personas.map((persona) => persona.id).sort(), ['guide', 'ops']);
+  assert.equal(provider.voices[0].id, 'voice-eric');
+  assert.equal(provider.speakerLayers[0].clips[0].id, 'clip-1');
+});
+
+test('media studio voice provider state lets hosts disable voice creation explicitly', () => {
+  let provider = normalizeMediaStudioVoiceProviderState({
+    renderSettings: { providerId: 'browser' },
+    voiceProvider: {
+      id: 'browser',
+      label: 'Browser audio',
+      canCreateVoice: false,
+      capabilities: ['voice.create'],
+      speakerLayers: [{ persona: 'guide' }],
+    },
+  });
+  let inspector = renderMediaStudioInspectorPanelMarkup({
+    renderSettings: { providerId: 'browser' },
+    voiceProvider: {
+      id: 'browser',
+      label: 'Browser audio',
+      canCreateVoice: false,
+      capabilities: ['voice.create'],
+      speakerLayers: [{ persona: 'guide' }],
+    },
+    turns: [{ persona: 'guide' }],
+  });
+
+  assert.equal(provider.providerId, 'browser');
+  assert.equal(provider.canCreateVoice, false);
+  assert.match(inspector, /data-media-action="create-voice" disabled/);
+});
+
+test('media studio voice controls expose unavailable provider voices as disabled', () => {
+  let inspector = renderMediaStudioInspectorPanelMarkup({
+    renderSettings: {
+      providerId: 'local-model-service',
+      voiceRefs: { guide: '' },
+    },
+    voiceProvider: {
+      id: 'local-model-service',
+      label: 'Local model service',
+      status: 'ready',
+      voices: [],
+    },
+    turns: [{ persona: 'guide' }],
+  });
+
+  assert.match(inspector, /data-provider-voices="0"/);
+  assert.match(inspector, /data-media-voice-ref[^>]* disabled/);
+  assert.match(inspector, /<option value="" selected disabled>No provider voices<\/option>/);
 });
 
 test('media studio timeline visual geometry is driven by the timeline editor theme contract', async () => {
@@ -298,8 +619,13 @@ test('media studio timeline visual geometry is driven by the timeline editor the
   assert.match(editorSource, /#focusPlayhead\(\)/);
   assert.match(editorSource, /#syncHeaderScroll\(\)/);
   assert.match(editorSource, /#manualScrollUntil/);
+  assert.match(editorSource, /selectedClipId: data\.selectedClipId == null \? '' : String\(data\.selectedClipId\)/);
+  assert.match(editorSource, /requestedSelectedClipId/);
   assert.match(editorSource, /#readTheme\(\)/);
   assert.match(editorSource, /normalizeClip/);
+  assert.match(editorSource, /function isSequenceClip/);
+  assert.match(editorSource, /clip\.kind === 'frame-sequence'/);
+  assert.match(editorSource, /visibleTicks/);
   assert.match(editorStyles, /--te-transport-height: 28px/);
   assert.match(editorStyles, /\.te-transport \{[\s\S]*?display: grid;[\s\S]*?grid-template-columns: minmax\(0, 1fr\) auto minmax\(0, 1fr\)/);
   assert.match(editorStyles, /\.te-transport-playback \{[\s\S]*?justify-content: center/);
@@ -323,6 +649,15 @@ test('media studio timeline visual geometry is driven by the timeline editor the
   assert.doesNotMatch(editorTemplate, /te-playhead-ruler/);
   assert.doesNotMatch(editorTemplate, /te-playhead-tracks/);
   assert.doesNotMatch(editorTemplate, /[\u23ee\u25b6\u23f9\u23ed\u229e]/);
+  assert.match(editorTemplate, /textContent: 'playIcon'/);
+  assert.match(editorSource, /playIcon: 'play_arrow'/);
+  assert.match(editorSource, /this\.\$\.playIcon = 'pause'/);
+  let mediaStudioSource = await readFile(new URL('../ui/media-studio-surface.js', import.meta.url), 'utf8');
+  assert.match(mediaStudioSource, /import\('\.\.\/timeline\/TimelineEditor\/TimelineEditor\.js'\)/);
+  assert.match(mediaStudioSource, /ready\.then\(\(\) => load\(\)\)/);
+  assert.match(mediaStudioSource, /setTimeout\?\.\(load, 0\)/);
+  assert.doesNotMatch(mediaStudioSource, /defined && load\(\)/);
+  assert.match(mediaStudioSource, /selectedClipId/);
   assert.match(editorSource, /material-symbols-outlined[\s\S]*?volume_off/);
   assert.doesNotMatch(editorSource, />M<\/button>/);
   assert.match(MEDIA_STUDIO_SURFACE_STYLES, /layout-node:has\(\.sn-media-studio-panel\) \.panel-content/);
@@ -331,16 +666,24 @@ test('media studio timeline visual geometry is driven by the timeline editor the
   assert.match(MEDIA_STUDIO_SURFACE_STYLES, /\.sn-media-studio-timeline-panel \{[\s\S]*?border: 0/);
   assert.match(MEDIA_STUDIO_SURFACE_STYLES, /\.sn-media-studio-timeline-panel \{[\s\S]*?outline: 0;[\s\S]*?box-shadow: none/);
   assert.match(MEDIA_STUDIO_SURFACE_STYLES, /\.sn-media-studio-timeline-editor \{[\s\S]*?border: 0;[\s\S]*?outline: 0;[\s\S]*?box-shadow: none/);
+  assert.match(MEDIA_STUDIO_SURFACE_STYLES, /\.sn-media-studio-panel \{[\s\S]*?grid-template-rows: auto minmax\(0, 1fr\)/);
+  assert.match(MEDIA_STUDIO_SURFACE_STYLES, /\.sn-media-studio-preview-stage \{[\s\S]*?grid-row: 2/);
   assert.match(MEDIA_STUDIO_SURFACE_STYLES, /\.sn-media-studio-preview-stage \{[\s\S]*?border: 0/);
   assert.match(MEDIA_STUDIO_SURFACE_STYLES, /\.sn-media-studio-frame \{[\s\S]*?position: absolute/);
   assert.match(MEDIA_STUDIO_SURFACE_STYLES, /\.sn-media-studio-frame \{[\s\S]*?object-fit: contain/);
-  assert.doesNotMatch(MEDIA_STUDIO_SURFACE_STYLES, /sn-media-studio-frame \{[\s\S]*?box-shadow: 0 0 0 1px/);
+  let frameStyle = MEDIA_STUDIO_SURFACE_STYLES.match(/\.sn-media-studio-frame \{[\s\S]*?\n  \}/)?.[0] || '';
+  assert.match(frameStyle, /box-shadow: none/);
+  assert.doesNotMatch(frameStyle, /box-shadow: 0 0 0 1px/);
 });
 
 test('media studio timeline uses the library timeline editor data contract', () => {
   let empty = normalizeMediaStudioTimelineData({ durationFrames: 300 });
   assert.equal(empty.duration, 300);
   assert.equal(empty.tracks.length, 0);
+
+  let pending = normalizeMediaStudioTimelineData({});
+  assert.equal(pending.duration, 1);
+  assert.equal(pending.tracks.length, 0);
 
   let data = normalizeMediaStudioTimelineData({
     durationFrames: 300,
@@ -367,12 +710,36 @@ test('media studio timeline uses the library timeline editor data contract', () 
   assert.equal(multiLane.tracks.length, 5);
   assert.deepEqual(multiLane.tracks.map((track) => track.type), ['video', 'audio', 'audio', 'text', 'effect']);
 
+  let sequence = normalizeMediaStudioTimelineData({
+    durationFrames: 120,
+    clips: [{
+      lane: 'video',
+      id: 'video:sequence',
+      label: 'WebP sequence · 120f',
+      startFrame: 0,
+      endFrame: 120,
+      kind: 'frame-sequence',
+      frameCount: 120,
+      sampleCount: 4,
+      sequenceFormat: 'WebP',
+      samples: [{ index: 0 }, { index: 40 }, { index: 80 }, { index: 119 }],
+    }],
+  });
+  assert.equal(sequence.tracks[0].clips[0].kind, 'frame-sequence');
+  assert.equal(sequence.tracks[0].clips[0].id, 'video:sequence');
+  assert.equal(sequence.tracks[0].clips[0].frameCount, 120);
+  assert.equal(sequence.tracks[0].clips[0].sampleCount, 4);
+  assert.equal(sequence.tracks[0].clips[0].sequenceFormat, 'WebP');
+  assert.equal(sequence.tracks[0].clips[0].samples.length, 4);
+
   let frameAndAudioTimed = normalizeMediaStudioTimelineData({
     fps: 30,
     durationMs: 12000,
+    focusTimeMs: 2500,
+    selectedClipId: 'voice:1:guide',
     clips: [
       { lane: 'video', label: 'Captured frames', startFrame: 0, endFrame: 240 },
-      { lane: 'voice:guide', label: 'Narration', startMs: 1000, durationMs: 2500 },
+      { lane: 'voice:guide', id: 'voice:1:guide', label: 'Narration', startMs: 1000, durationMs: 2500 },
       { lane: 'captions', label: 'Caption', startMs: 1500, endMs: 3200 },
     ],
   });
@@ -382,27 +749,215 @@ test('media studio timeline uses the library timeline editor data contract', () 
   assert.equal(frameAndAudioTimed.tracks[1].clips[0].end, 105);
   assert.equal(frameAndAudioTimed.tracks[2].clips[0].start, 45);
   assert.equal(frameAndAudioTimed.tracks[2].clips[0].end, 96);
+  assert.equal(frameAndAudioTimed.focusFrame, 75);
+  assert.equal(frameAndAudioTimed.selectedClipId, 'voice:1:guide');
 
   let loaded = null;
   let frame = null;
+  let focusedFrame = null;
+  let playheadDetail = null;
+  let transportDetail = null;
+  let listeners = new Map();
   let editor = {
     loadTimeline(value) { loaded = value; },
     setFrame(value) { frame = value; },
+    focusFrame(value) { focusedFrame = value; },
+    addEventListener(type, handler) { listeners.set(type, handler); },
+    removeEventListener(type, handler) {
+      if (listeners.get(type) === handler) listeners.delete(type);
+    },
   };
   let root = {
     matches(selector) { return selector === '[data-media-studio-timeline-editor]'; },
     querySelector() { return null; },
     loadTimeline: editor.loadTimeline,
     setFrame: editor.setFrame,
+    focusFrame: editor.focusFrame,
+    addEventListener: editor.addEventListener,
+    removeEventListener: editor.removeEventListener,
   };
   let hydrated = hydrateMediaStudioTimelinePanel(root, {
     durationFrames: 300,
     currentFrame: 42,
-    clips: [{ lane: 'video', label: 'Current UI frames', startPercent: 0, sizePercent: 50 }],
+    focusFrame: 120,
+    selectedClipId: 'video-main',
+    clips: [{ lane: 'video', id: 'video-main', label: 'Current UI frames', startPercent: 0, sizePercent: 50 }],
+    onPlayheadChange(detail) { playheadDetail = detail; },
+    onTransportChange(detail) { transportDetail = detail; },
   });
   assert.equal(loaded.duration, 300);
+  assert.equal(loaded.focusFrame, 120);
+  assert.equal(loaded.selectedClipId, 'video-main');
   assert.equal(hydrated.tracks.length, 1);
   assert.equal(frame, 42);
+  assert.equal(focusedFrame, 120);
+  listeners.get('playhead-change')({ detail: { frame: 43, time: 1.4 } });
+  listeners.get('transport-change')({ detail: { action: 'play' } });
+  assert.deepEqual(playheadDetail, { frame: 43, time: 1.4 });
+  assert.deepEqual(transportDetail, { action: 'play' });
+});
+
+test('media studio sequence playback helpers map time and bound cached frames', () => {
+  assert.equal(mediaStudioFrameIndexForTime(0, { fps: 30, frameCount: 90 }), 0);
+  assert.equal(mediaStudioFrameIndexForTime(0.5, { fps: 30, frameCount: 90 }), 15);
+  assert.equal(mediaStudioFrameIndexForTime(0.06, { fps: 10, frameCount: 10 }), 1);
+  assert.equal(mediaStudioFrameIndexForTime(0.06, { fps: 10, frameCount: 10, rounding: 'floor' }), 0);
+  assert.equal(mediaStudioFrameIndexForTime(5, { fps: 30, frameCount: 90 }), 89);
+
+  let frames = Array.from({ length: 12 }, (_, index) => ({
+    index,
+    url: `./frames/frame-${String(index).padStart(5, '0')}.webp`,
+  }));
+  let state = normalizeMediaStudioSequencePlaybackState({
+    frames,
+    fps: 2,
+    frameCount: 12,
+    currentTimeSec: 3,
+    preloadBehindSec: 1,
+    preloadAheadSec: 2,
+    maxCachedFrames: 5,
+  });
+  assert.equal(state.currentFrame, 6);
+  assert.equal(state.durationSec, 6);
+  assert.equal(state.maxCachedFrames, 5);
+
+  let loaded = [];
+  let window = createMediaStudioSequenceFrameWindow({
+    frames,
+    fps: 2,
+    preloadBehindSec: 1,
+    preloadAheadSec: 2,
+    maxCachedFrames: 5,
+    loadFrame(frame) {
+      loaded.push(frame.index);
+      return frame.url;
+    },
+  });
+  let first = window.update(5);
+  assert.equal(first.cachedFrames, 5);
+  assert.deepEqual(first.requestedFrames, [3, 4, 5, 6, 7]);
+  assert.equal(window.has(5), true);
+
+  let second = window.update(10);
+  assert.equal(second.cachedFrames, 4);
+  assert.deepEqual(second.requestedFrames, [8, 9, 10, 11]);
+  assert.equal(window.has(3), false);
+  assert.equal(window.has(10), true);
+  assert.ok(loaded.includes(10));
+  window.dispose();
+  assert.equal(window.size, 0);
+});
+
+test('media studio sequence frame window tolerates missing, slow, and failed frames', async () => {
+  let sparseWindow = createMediaStudioSequenceFrameWindow({
+    frames: [
+      { index: 0, url: './frames/frame-00000.webp' },
+      { index: 3, url: './frames/frame-00003.webp' },
+      { index: 9, url: './frames/frame-00009.webp' },
+    ],
+    fps: 1,
+    frameCount: 10,
+    preloadBehindSec: 0,
+    preloadAheadSec: 0,
+    maxCachedFrames: 1,
+    loadFrame(frame) {
+      return frame.url;
+    },
+  });
+  let sparse = sparseWindow.update(4);
+  assert.deepEqual(sparse.requestedFrames, [3]);
+  assert.equal(sparseWindow.has(3), true);
+  sparseWindow.dispose();
+
+  let resolveSlow;
+  let loaded = [];
+  let window = createMediaStudioSequenceFrameWindow({
+    frames: Array.from({ length: 8 }, (_, index) => ({
+      index,
+      url: `./frames/frame-${String(index).padStart(5, '0')}.webp`,
+    })),
+    fps: 1,
+    frameCount: 8,
+    preloadBehindSec: 1,
+    preloadAheadSec: 1,
+    maxCachedFrames: 3,
+    loadFrame(frame) {
+      loaded.push(frame.index);
+      if (frame.index === 2) {
+        return new Promise((resolve) => { resolveSlow = resolve; });
+      }
+      if (frame.index === 5) {
+        return Promise.reject(new Error('frame missing'));
+      }
+      return frame.url;
+    },
+  });
+
+  let first = window.update(2);
+  assert.equal(first.cachedFrames, 3);
+  assert.deepEqual(first.requestedFrames, [1, 2, 3]);
+  assert.equal(window.get(2).status, 'loading');
+  resolveSlow('./frames/frame-00002.webp');
+  assert.equal(await window.get(2).value, './frames/frame-00002.webp');
+  assert.equal(window.get(2).status, 'ready');
+
+  let second = window.update(5);
+  assert.equal(second.cachedFrames, 3);
+  assert.deepEqual(second.requestedFrames, [4, 5, 6]);
+  assert.deepEqual(second.evictedFrames, [1, 2, 3]);
+  assert.equal(window.get(1), null);
+  assert.equal(window.get(5).status, 'loading');
+  assert.equal(await window.get(5).value, null);
+  assert.equal(window.get(5).status, 'error');
+  assert.ok(loaded.includes(6));
+  window.dispose();
+  assert.equal(window.size, 0);
+});
+
+test('media studio sequence frame window cancels evicted in-flight loads', async () => {
+  let pending = new Map();
+  let cancelled = [];
+  let disposed = [];
+  let frames = Array.from({ length: 4 }, (_, index) => ({
+    index,
+    url: `./frames/frame-${String(index).padStart(5, '0')}.webp`,
+  }));
+  let window = createMediaStudioSequenceFrameWindow({
+    frames,
+    fps: 1,
+    frameCount: 4,
+    preloadBehindSec: 0,
+    preloadAheadSec: 0,
+    maxCachedFrames: 1,
+    loadFrame(frame) {
+      let resolve;
+      let promise = new Promise((done) => { resolve = done; });
+      pending.set(frame.index, resolve);
+      return {
+        promise,
+        cancel() { cancelled.push(frame.index); },
+      };
+    },
+    disposeFrame(value) { disposed.push(value); },
+  });
+
+  window.update(0);
+  let evictedLoad = window.get(0).value;
+  window.update(3);
+  assert.deepEqual(cancelled, [0]);
+  assert.equal(window.get(0), null);
+
+  pending.get(0)('decoded-frame-0');
+  assert.equal(await evictedLoad, null);
+  assert.deepEqual(disposed, ['decoded-frame-0']);
+
+  let currentLoad = window.get(3).value;
+  pending.get(3)('decoded-frame-3');
+  assert.equal(await currentLoad, 'decoded-frame-3');
+  assert.equal(window.get(3).status, 'ready');
+  window.dispose();
+  assert.deepEqual(cancelled, [0, 3]);
+  assert.deepEqual(disposed, ['decoded-frame-0', 'decoded-frame-3']);
 });
 
 test('media studio styles install once into a browser document', () => {
