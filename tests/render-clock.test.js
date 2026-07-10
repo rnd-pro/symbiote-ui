@@ -58,4 +58,7 @@ test('CanvasGraph visual effect timestamps use the shared render clock', async (
   assert.match(source, /const now = renderNow\(\);[\s\S]*?this\._pulses = this\._pulses\.filter/);
   assert.match(source, /ip\.startTime = renderNow\(\);/);
   assert.match(source, /const elapsed = renderNow\(\) - ip\.startTime;/);
+  assert.match(source, /let now = Number\.isFinite\(options\.startTime\) \? options\.startTime : renderNow\(\);/);
+  assert.match(source, /clearPulses\(\) \{/);
+  assert.match(source, /marker\.pendingPulse = null;/);
 });

@@ -1088,7 +1088,7 @@ export class CanvasGraph extends Symbiote {
   }
 
   pulseNode(nodeId, durationMs = 1500, options = {}) {
-    let now = renderNow();
+    let now = Number.isFinite(options.startTime) ? options.startTime : renderNow();
     let marker = options.deferUntilTransition === false
       ? null
       : findActiveTransitionMarker(this._transitionMarkers, nodeId, now);
@@ -1103,6 +1103,18 @@ export class CanvasGraph extends Symbiote {
       return;
     }
     this._queuePulseNow(nodeId, durationMs, options, now);
+  }
+
+  clearPulses() {
+    let count = this._pulses?.length || 0;
+    this._pulses = [];
+    for (let marker of this._transitionMarkers || []) {
+      if (marker.pendingPulse) count += 1;
+      marker.pendingPulse = null;
+    }
+    this.needsDraw = true;
+    this._wakeLoop();
+    return count;
   }
 
   _queuePulseNow(nodeId, durationMs = 1500, options = {}, startTime = renderNow()) {
