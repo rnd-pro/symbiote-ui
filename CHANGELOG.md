@@ -11,6 +11,8 @@ All notable changes to `symbiote-ui` will be documented in this file.
   audio, seek, pause, and resume workflows.
 - Added a Node-safe installable render clock for deterministic UI animation,
   plus decoded-byte-bounded LRU proxy-frame caching with explicit bitmap release.
+- Added seekable CanvasGraph pulses through `pulseNode(..., { startTime })` and
+  `clearPulses()` for deterministic offline frame projection.
 - Added cascade theme variants (`modern`, `classic`) and project tab shape
   controls (`frame`, `ear`, `classic-ear`) so hosts can restore the older Agent
   Portal tab geometry without product-local CSS.
