@@ -314,6 +314,14 @@
             },
             {
               "kind": "field",
+              "name": "layoutSettled",
+              "type": {
+                "text": "boolean"
+              },
+              "description": "Whether the current force-layout run reached its deterministic settled state."
+            },
+            {
+              "kind": "field",
               "name": "activeNodeScale",
               "type": {
                 "text": "number"
@@ -372,6 +380,31 @@
               "kind": "method",
               "name": "setVisualOptions",
               "description": "Applies visual tuning options such as activeNodeScale and infoPanelScale without changing the host-owned graph model."
+            },
+            {
+              "kind": "method",
+              "name": "pulseNode",
+              "description": "Projects a timed pulse around one node, optionally from an explicit render-clock start time."
+            },
+            {
+              "kind": "method",
+              "name": "clearPulses",
+              "description": "Clears active and queued node pulses."
+            },
+            {
+              "kind": "method",
+              "name": "animateNodeAppearance",
+              "description": "Replays node appearance animation for visible graph nodes or a supplied node id set."
+            },
+            {
+              "kind": "method",
+              "name": "setFrameDriver",
+              "description": "Switches canvas presentation between the self-scheduled animation loop and an external frame driver."
+            },
+            {
+              "kind": "method",
+              "name": "presentFrame",
+              "description": "Synchronously presents the current externally driven canvas state without starting a competing animation-frame loop."
             },
             {
               "kind": "method",

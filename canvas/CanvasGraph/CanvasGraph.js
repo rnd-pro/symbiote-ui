@@ -613,6 +613,9 @@ function sanitizeForceLayoutOptions(options = {}) {
     'crystalAngleJitter',
   ]);
   let normalized = {};
+  if (options?.mode === 'converge' || options?.mode === 'continuous') {
+    normalized.mode = options.mode;
+  }
   if (algorithm === 'spring' || algorithm === 'organic' || algorithm === 'oil-cloud' || algorithm === 'crystal') {
     normalized.layoutAlgorithm = algorithm;
   }
@@ -760,6 +763,9 @@ export class CanvasGraph extends Symbiote {
     this._cancelThemeSync = null;
     this._layoutSuspended = false;
     this._layoutSuspendReason = '';
+    this.layoutSettled = false;
+    this._inDraw = false;
+    this._externalFrameDrive = false;
 
     // Info panel state (typewriter HUD to the right of active node)
     this._infoPanel = {
@@ -872,10 +878,54 @@ export class CanvasGraph extends Symbiote {
    */
   _wakeLoop() {
     if (this._layoutSuspended) return;
+    if (this._externalFrameDrive) return;
     if (this._loopRunning) return;
     this._loopRunning = true;
     this._idleFrames = 0;
     this._animationFrame = requestAnimationFrame(() => this.draw());
+  }
+
+  setFrameDriver(mode = 'self') {
+    if (mode !== 'self' && mode !== 'external') {
+      throw new TypeError('frame driver must be self or external');
+    }
+    this._externalFrameDrive = mode === 'external';
+    if (this._externalFrameDrive) {
+      if (this._animationFrame) cancelAnimationFrame(this._animationFrame);
+      this._animationFrame = 0;
+      this._loopRunning = false;
+    } else {
+      this._wakeLoop();
+    }
+    return mode;
+  }
+
+  presentFrame() {
+    if (this._inDraw) {
+      this.needsDraw = true;
+      return false;
+    }
+    if (!this.canvas || this.canvas.width <= 0 || this.canvas.height <= 0) {
+      this._animationFrame = 0;
+      this._loopRunning = false;
+      return false;
+    }
+    if (this._animationFrame) cancelAnimationFrame(this._animationFrame);
+    this._animationFrame = 0;
+    this._idleFrames = 0;
+    this.needsDraw = true;
+    this._loopRunning = true;
+    let externalFrameDrive = this._externalFrameDrive;
+    this._externalFrameDrive = true;
+    try {
+      return this.draw();
+    } finally {
+      if (this._animationFrame) cancelAnimationFrame(this._animationFrame);
+      this._animationFrame = 0;
+      this._loopRunning = false;
+      this._externalFrameDrive = externalFrameDrive;
+      if (!externalFrameDrive) this._wakeLoop();
+    }
   }
 
   resizeCanvas() {
@@ -2102,7 +2152,6 @@ export class CanvasGraph extends Symbiote {
     if (!marker) return { alpha: 1, scale: 1 };
     let elapsed = now - marker.startTime;
     if (elapsed >= marker.duration) {
-      this._nodeAppearances.delete(nodeId);
       return { alpha: 1, scale: 1 };
     }
     let progress = Math.max(0, Math.min(1, elapsed / Math.max(1, marker.duration)));
@@ -2114,6 +2163,13 @@ export class CanvasGraph extends Symbiote {
       alpha: eased,
       scale: NODE_APPEARANCE_START_SCALE + (1 - NODE_APPEARANCE_START_SCALE) * eased,
     };
+  }
+
+  _hasActiveNodeAppearances(now = renderNow()) {
+    for (let marker of this._nodeAppearances?.values() || []) {
+      if (now < marker.startTime + marker.duration) return true;
+    }
+    return false;
   }
 
   _hasAnimatingNodeStatuses() {
@@ -2409,6 +2465,7 @@ export class CanvasGraph extends Symbiote {
     this.worker = null;
     if (this._layoutSuspended) return;
     const workerGeneration = this._workerGeneration;
+    this.layoutSettled = false;
     this.worker = new ForceLayout(ForceLayout.defaultWorkerUrl());
 
     this.worker.onTick = (positions, meta = {}) => {
@@ -2440,6 +2497,7 @@ export class CanvasGraph extends Symbiote {
         }
       }
       this._pruneGraphState(new Set(this.graphDB.nodes.keys()));
+      this.layoutSettled = true;
       this._emitGraphEvent('layoutDone');
       this._emitLayoutSnapshot();
     };
@@ -2580,7 +2638,24 @@ export class CanvasGraph extends Symbiote {
   }
 
   draw() {
-    if (!this.canvas) return;
+    if (this._inDraw) {
+      this.needsDraw = true;
+      return false;
+    }
+    if (!this.canvas) {
+      this._animationFrame = 0;
+      this._loopRunning = false;
+      return false;
+    }
+    this._inDraw = true;
+    try {
+      return this._drawFrame();
+    } finally {
+      this._inDraw = false;
+    }
+  }
+
+  _drawFrame() {
     const dpr = window.devicePixelRatio || 1;
 
     this._updateTransitionMarkerViewport();
@@ -3102,7 +3177,7 @@ export class CanvasGraph extends Symbiote {
       deactivating: this.deactivating,
       targetPanX: this._targetPanX,
       infoPanel: this._infoPanel,
-      nodeAppearancesActive: this._nodeAppearances?.size > 0,
+      nodeAppearancesActive: this._hasActiveNodeAppearances(),
       pulsesActive: this._pulses?.length > 0,
       statusAnimationsActive: this._hasAnimatingNodeStatuses(),
       idleFrames: this._idleFrames,
@@ -3118,10 +3193,17 @@ export class CanvasGraph extends Symbiote {
     // Allow 3 extra frames after convergence to flush final sub-pixel lerps
     if (idle.shouldStop) {
       this._loopRunning = false;
-      return;
+      this._animationFrame = 0;
+      return true;
     }
 
+    if (this._externalFrameDrive) {
+      this._loopRunning = false;
+      this._animationFrame = 0;
+      return true;
+    }
     this._animationFrame = requestAnimationFrame(() => this.draw());
+    return true;
   }
 
   /**

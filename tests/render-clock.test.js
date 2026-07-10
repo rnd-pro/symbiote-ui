@@ -112,3 +112,87 @@ test('CanvasGraph pulse APIs honor explicit seek time and clear queued effects',
     }
   }
 });
+
+test('CanvasGraph presents externally driven frames without leaving a stale loop', async () => {
+  let { window } = parseHTML('<html><body></body></html>');
+  let globalKeys = ['window', 'document', 'HTMLElement', 'customElements', 'CustomEvent', 'Event', 'EventTarget', 'Node', 'CSSStyleSheet', 'requestAnimationFrame', 'cancelAnimationFrame'];
+  let descriptors = new Map(globalKeys.map((key) => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
+  for (let key of globalKeys.slice(0, -3)) {
+    Object.defineProperty(globalThis, key, {
+      configurable: true,
+      value: window[key] || window,
+    });
+  }
+  Object.defineProperty(globalThis, 'CSSStyleSheet', {
+    configurable: true,
+    value: class CSSStyleSheet { replaceSync() {} },
+  });
+  let canceled = [];
+  let nextFrameId = 100;
+  Object.defineProperty(globalThis, 'requestAnimationFrame', {
+    configurable: true,
+    value: () => ++nextFrameId,
+  });
+  Object.defineProperty(globalThis, 'cancelAnimationFrame', {
+    configurable: true,
+    value: (id) => canceled.push(id),
+  });
+  try {
+    let { CanvasGraph } = await import('../canvas/CanvasGraph/CanvasGraph.js');
+    let graph = Object.create(CanvasGraph.prototype);
+    let draws = 0;
+    graph.canvas = { width: 640, height: 360 };
+    graph._animationFrame = 42;
+    graph._loopRunning = true;
+    graph._idleFrames = 8;
+    graph._inDraw = false;
+    graph._externalFrameDrive = false;
+    graph.draw = () => { draws += 1; return true; };
+
+    assert.equal(graph.presentFrame(), true);
+    assert.deepEqual(canceled, [42]);
+    assert.equal(draws, 1);
+    assert.equal(graph._animationFrame, 101);
+    assert.equal(graph._loopRunning, true);
+    assert.equal(graph._externalFrameDrive, false);
+
+    assert.equal(graph.setFrameDriver('external'), 'external');
+    assert.deepEqual(canceled, [42, 101]);
+    assert.equal(graph.presentFrame(), true);
+    assert.equal(draws, 2);
+    assert.equal(graph._externalFrameDrive, true);
+    assert.equal(graph._loopRunning, false);
+    assert.throws(() => graph.setFrameDriver('timer'), /frame driver/);
+
+    graph._inDraw = true;
+    assert.equal(graph.presentFrame(), false);
+    assert.equal(draws, 2);
+    graph._inDraw = false;
+    graph.canvas = { width: 0, height: 0 };
+    assert.equal(graph.presentFrame(), false);
+
+    graph._nodeAppearances = new Map([
+      ['node', { startTime: 0, duration: 900 }],
+      ['future', { startTime: 500, duration: 900 }],
+    ]);
+    assert.equal(graph._hasActiveNodeAppearances(100), true);
+    assert.equal(graph._hasActiveNodeAppearances(2000), false);
+    assert.deepEqual(graph._resolveNodeAppearance('node', 12000), { alpha: 1, scale: 1 });
+    let rewound = graph._resolveNodeAppearance('node', 100);
+    assert.ok(rewound.alpha > 0 && rewound.alpha < 1);
+    assert.ok(rewound.scale > 0 && rewound.scale < 1);
+    assert.equal(graph._nodeAppearances.has('node'), true);
+  } finally {
+    for (let key of globalKeys) {
+      let descriptor = descriptors.get(key);
+      if (descriptor) Object.defineProperty(globalThis, key, descriptor);
+      else delete globalThis[key];
+    }
+  }
+});
+
+test('CanvasGraph node appearance remains seekable after a later frame', async () => {
+  let source = await readFile(new URL('../canvas/CanvasGraph/CanvasGraph.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(source, /_nodeAppearances\.delete\(nodeId\)/);
+  assert.match(source, /if \(elapsed >= marker\.duration\) \{\s+return \{ alpha: 1, scale: 1 \};/);
+});
