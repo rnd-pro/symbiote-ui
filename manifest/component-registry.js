@@ -4440,6 +4440,7 @@ export let COMPONENTS = [
         'resize-aware',
         'reduced-motion-friendly',
         'layout-lifecycle',
+        'deterministic-render',
       ],
       properties: [
         { name: 'active', type: 'boolean', description: 'Persistent animation state.' },
@@ -4450,6 +4451,7 @@ export let COMPONENTS = [
         { name: 'active', type: 'boolean', description: 'Starts persistent animation when present.' },
         { name: 'auto-trigger', type: 'boolean', description: 'Set to false/off to disable mount and resize pulses.' },
         { name: 'pulse-duration', type: 'number', description: 'Default timed pulse duration in milliseconds.' },
+        { name: 'seed', type: 'string', description: 'Stable seed used by deterministic external-frame rendering.' },
       ],
       methods: [
         { name: 'start', type: 'function', description: 'Starts persistent animation with smooth acceleration.' },
@@ -4461,6 +4463,9 @@ export let COMPONENTS = [
         { name: 'resize', type: 'function', description: 'Resizes the canvas to its host bounds.' },
         { name: 'suspendLayout', type: 'function', description: 'Immediately stops animation work while the containing layout group is hidden.' },
         { name: 'resumeLayout', type: 'function', description: 'Restores persistent animation only when it was active before layout suspension.' },
+        { name: 'setFrameDriver', type: 'function', description: 'Selects self-driven live animation or externally driven deterministic rendering.' },
+        { name: 'presentFrame', type: 'function', description: 'Synchronously paints the current shared render-clock time.' },
+        { name: 'getFramePresentation', type: 'function', description: 'Returns deterministic frame metrics and the current grid hash.' },
       ],
       events: [
         { name: 'cell-bg-animation-trigger', description: 'Emits when a timed activity pulse is requested.', detail: [{ name: 'duration', type: 'number' }] },

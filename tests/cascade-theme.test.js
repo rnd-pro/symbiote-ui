@@ -1981,6 +1981,12 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(cellBgComponent, /stop\(\)/);
   assert.match(cellBgComponent, /suspendLayout/);
   assert.match(cellBgComponent, /resumeLayout/);
+  assert.match(cellBgComponent, /setFrameDriver\(mode = 'self'\)/);
+  assert.match(cellBgComponent, /presentFrame\(\)/);
+  assert.match(cellBgComponent, /getFramePresentation\(\)/);
+  assert.match(cellBgComponent, /cellBgRenderHash/);
+  assert.match(cellBgComponent, /if \(this\._externalFrameDrive\) \{\s*this\.presentFrame\(\);\s*return;/);
+  assert.match(cellBgComponent, /_recordExternalPersistent/);
   assert.match(cellBgComponent, /trigger\(duration = 10000\)/);
   assert.match(cellBgComponent, /cell-bg-animation-trigger/);
   assert.match(cellBgComponent, /cell-bg-animation-start/);
@@ -2010,6 +2016,7 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(registry, /responsive-behavior/);
   assert.match(registry, /min-size-fit/);
   assert.match(registry, /mobile-stack/);
+  assert.match(registry, /deterministic-render/);
   assert.match(registry, /not persisted into saved layout trees/);
   assert.match(registry, /ui-invoked-panels/);
   assert.match(registry, /setLayoutBehavior/);

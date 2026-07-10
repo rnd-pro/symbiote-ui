@@ -2,6 +2,13 @@ import Symbiote from '@symbiotejs/symbiote';
 import template from './CellBg.tpl.js';
 import css from './CellBg.css.js';
 import { CELL_BG_DEFAULTS, readCellBgTheme } from './cell-bg-theme.js';
+import { renderNow } from '../../core/render-clock.js';
+import {
+  cellBgRenderFrame,
+  cellBgRenderHash,
+  createCellBgRenderState,
+  seekCellBgRenderState,
+} from './cell-bg-render-state.js';
 
 /**
  * Cellular Automaton Background Component
@@ -17,12 +24,20 @@ import { CELL_BG_DEFAULTS, readCellBgTheme } from './cell-bg-theme.js';
 const RULE_B = [3];
 const RULE_S = [2, 3];
 const PALETTE_SIZE = CELL_BG_DEFAULTS.paletteSize;
-const now = () => globalThis.performance?.now?.() ?? Date.now();
+const now = () => renderNow();
 const requestFrame = (callback) => {
   if (typeof globalThis.requestAnimationFrame === 'function') {
     return globalThis.requestAnimationFrame(callback);
   }
   return setTimeout(() => callback(now()), 16);
+};
+const cancelFrame = (handle) => {
+  if (handle === null || handle === undefined) return;
+  if (typeof globalThis.cancelAnimationFrame === 'function') {
+    globalThis.cancelAnimationFrame(handle);
+  } else {
+    clearTimeout(handle);
+  }
 };
 const getReducedMotionQuery = () => globalThis.matchMedia?.('(prefers-reduced-motion: reduce)') || null;
 
@@ -89,7 +104,7 @@ function readCssNumber(source, token, fallback) {
 
 export class CellBg extends Symbiote {
   static get observedAttributes() {
-    return ['active', 'auto-trigger', 'pulse-duration'];
+    return ['active', 'auto-trigger', 'pulse-duration', 'seed'];
   }
 
   init$ = {
@@ -112,6 +127,10 @@ export class CellBg extends Symbiote {
     this._prefersReducedMotion = Boolean(this._motionQuery?.matches);
     this._motionChangeHandler = (event) => {
       this._prefersReducedMotion = Boolean(event.matches);
+      if (this._externalFrameDrive) {
+        this.presentFrame();
+        return;
+      }
       if (this._prefersReducedMotion) {
         if (this._pulseTimer) clearTimeout(this._pulseTimer);
         this._pulseTimer = null;
@@ -137,6 +156,11 @@ export class CellBg extends Symbiote {
     this.lastTime = now();
     this.isAnimating = false;
     this._stagnantCount = 0;
+    this._frameRequest = null;
+    this._externalFrameDrive = false;
+    this._externalRenderState = null;
+    this._externalRenderFrame = null;
+    this._externalRestoreState = null;
 
     // We only redraw on rAF if running, or if a single frame is needed after resize
     this.resize = this.resize.bind(this);
@@ -146,6 +170,7 @@ export class CellBg extends Symbiote {
     // Debounce: resize canvas immediately (prevents flash), pulse only after settle
     const onResize = () => {
       this.resize();
+      if (this._externalFrameDrive) return;
       if (this._resizeDebounce) clearTimeout(this._resizeDebounce);
       this._resizeDebounce = setTimeout(() => {
         this._resizeDebounce = null;
@@ -194,6 +219,9 @@ export class CellBg extends Symbiote {
       this.$.autoTrigger = this._readAutoTriggerAttribute();
     } else if (name === 'pulse-duration') {
       this.$.pulseDuration = this._readPulseDurationAttribute();
+    } else if (name === 'seed' && this._externalFrameDrive) {
+      this._externalRenderState = null;
+      this.presentFrame();
     }
   }
 
@@ -204,6 +232,10 @@ export class CellBg extends Symbiote {
    */
   toggle(state) {
     let next = !!state;
+    if (this._externalFrameDrive) {
+      this._recordExternalPersistent(next);
+      return;
+    }
     if (this.$.active !== next) {
       this.$.active = next;
       return;
@@ -211,7 +243,113 @@ export class CellBg extends Symbiote {
     this._setPersistent(next);
   }
 
+  setFrameDriver(mode = 'self') {
+    let nextMode = String(mode || 'self').trim().toLowerCase();
+    if (nextMode !== 'self' && nextMode !== 'external') {
+      throw new TypeError('CellBg frame driver must be self or external');
+    }
+    if (nextMode === 'external') {
+      if (!this._externalFrameDrive) {
+        this._externalRestoreState = {
+          toggled: Boolean(this._toggled),
+          active: Boolean(this.$?.active),
+          running: Boolean(this.running),
+        };
+      }
+      this._externalFrameDrive = true;
+      this.running = false;
+      this.isAnimating = false;
+      this.currentSpeed = 0;
+      if (this._frameRequest !== null) cancelFrame(this._frameRequest);
+      this._frameRequest = null;
+      if (this._pulseTimer) clearTimeout(this._pulseTimer);
+      if (this._resizeDebounce) clearTimeout(this._resizeDebounce);
+      this._pulseTimer = null;
+      this._resizeDebounce = null;
+      this._externalRenderState = null;
+      this.resize();
+      return 'external';
+    }
+
+    if (!this._externalFrameDrive) return 'self';
+    let restore = this._externalRestoreState || {};
+    if (this._externalRenderFrame) {
+      this.grid = new Uint8Array(this._externalRenderFrame.grid);
+      this.radii = new Float32Array(this._externalRenderFrame.radii);
+    }
+    this._externalFrameDrive = false;
+    this._externalRenderState = null;
+    this._externalRenderFrame = null;
+    this._externalRestoreState = null;
+    this._toggled = Boolean(restore.toggled);
+    this.$.active = Boolean(restore.active);
+    this.running = false;
+    this.isAnimating = false;
+    this.currentSpeed = 0;
+    this.lastTime = now();
+    if (restore.running || restore.toggled || restore.active) this._start('frame-driver-restore');
+    else this._draw();
+    return 'self';
+  }
+
+  presentFrame() {
+    if (!this._available) return false;
+    this.resize();
+    if (!this.canvas?._w || !this.canvas?._h) return false;
+    if (!this._externalFrameDrive) {
+      this._draw();
+      return true;
+    }
+    let options = this._externalRenderOptions();
+    this._externalRenderState = seekCellBgRenderState(this._externalRenderState, now(), options);
+    this._externalRenderFrame = cellBgRenderFrame(this._externalRenderState);
+    this._draw(this._externalRenderFrame);
+    return true;
+  }
+
+  getFramePresentation() {
+    if (!this._externalRenderState || !this._externalRenderFrame) return null;
+    return {
+      seed: this._externalRenderState.seed,
+      width: this.canvas?._w || 0,
+      height: this.canvas?._h || 0,
+      cols: this._externalRenderState.cols,
+      rows: this._externalRenderState.rows,
+      cellSize: this._cellSize,
+      stepMs: this._externalRenderState.stepMs,
+      stepIndex: this._externalRenderState.stepIndex,
+      timeMs: this._externalRenderState.timeMs,
+      gridHash: cellBgRenderHash(this._externalRenderState, this._externalRenderFrame),
+      activity: 'continuous',
+      reducedMotion: false,
+    };
+  }
+
+  _externalRenderOptions() {
+    return {
+      seed: this.getAttribute('seed') || 'symbiote-cell-bg',
+      cols: this.cols,
+      rows: this.rows,
+      stepMs: this._stepMs,
+      minRadius: this._minRadius,
+      maxRadius: this._maxRadius,
+      fadeRate: this._fadeRate,
+    };
+  }
+
+  _recordExternalPersistent(state) {
+    if (!this._externalRestoreState) return;
+    let active = Boolean(state);
+    this._externalRestoreState.toggled = active;
+    this._externalRestoreState.active = active;
+    this._externalRestoreState.running = active;
+  }
+
   _setPersistent(state) {
+    if (this._externalFrameDrive) {
+      this._recordExternalPersistent(state);
+      return;
+    }
     this._toggled = !!state;
     if (state && this._pulseTimer) {
       clearTimeout(this._pulseTimer);
@@ -240,6 +378,10 @@ export class CellBg extends Symbiote {
    * Stop persistent or timed animation with smooth deceleration.
    */
   stop() {
+    if (this._externalFrameDrive) {
+      this._recordExternalPersistent(false);
+      return;
+    }
     if (this._pulseTimer) clearTimeout(this._pulseTimer);
     this._pulseTimer = null;
     this._toggled = false;
@@ -252,6 +394,7 @@ export class CellBg extends Symbiote {
   }
 
   suspendLayout({ reason = 'layout-suspend' } = {}) {
+    if (this._externalFrameDrive) return;
     this._resumePersistentAfterSuspend = Boolean(this._toggled || this.$.active);
     if (this._pulseTimer) clearTimeout(this._pulseTimer);
     this._pulseTimer = null;
@@ -276,6 +419,7 @@ export class CellBg extends Symbiote {
   }
 
   resumeLayout() {
+    if (this._externalFrameDrive) return;
     if (this._resumePersistentAfterSuspend) this.start();
     this._resumePersistentAfterSuspend = false;
   }
@@ -287,6 +431,7 @@ export class CellBg extends Symbiote {
    * @param {number} [duration=10000]
    */
   pulse(duration = 10000) {
+    if (this._externalFrameDrive) return;
     if (this._toggled) return; // Already running persistently
     let safeDuration = this._normalizePulseDuration(duration);
     if (this._prefersReducedMotion) {
@@ -321,6 +466,8 @@ export class CellBg extends Symbiote {
     if (this._resizeDebounce) clearTimeout(this._resizeDebounce);
     this._pulseTimer = null;
     this._resizeDebounce = null;
+    if (this._frameRequest !== null) cancelFrame(this._frameRequest);
+    this._frameRequest = null;
     this._themeObserver?.disconnect();
     this.ownerDocument?.removeEventListener?.('cascade-theme-change', this._themeChangeHandler);
     if (typeof this._motionQuery?.removeEventListener === 'function') {
@@ -336,13 +483,18 @@ export class CellBg extends Symbiote {
     let previousCellSize = this._cellSize;
     let previousMinRadius = this._minRadius;
     let previousMaxRadius = this._maxRadius;
+    let previousStepMs = this._stepMs;
+    let previousFadeRate = this._fadeRate;
     this._buildPalette();
 
     let geometryChanged = previousCellSize !== this._cellSize
       || previousMinRadius !== this._minRadius
-      || previousMaxRadius !== this._maxRadius;
+      || previousMaxRadius !== this._maxRadius
+      || previousStepMs !== this._stepMs
+      || previousFadeRate !== this._fadeRate;
     if (geometryChanged) {
-      this.resize();
+      if (this._externalFrameDrive) this._externalRenderState = null;
+      this.resize({ force: true });
     } else {
       this._draw();
     }
@@ -350,6 +502,10 @@ export class CellBg extends Symbiote {
   }
 
   _scheduleThemeRefresh() {
+    if (this._externalFrameDrive) {
+      this.refreshTheme({ pulse: false });
+      return;
+    }
     if (this._themeRefreshQueued) return;
     this._themeRefreshQueued = true;
     requestFrame(() => {
@@ -381,6 +537,7 @@ export class CellBg extends Symbiote {
   }
 
   _triggerIfEnabled() {
+    if (this._externalFrameDrive) return;
     if (this.$.autoTrigger === false) return;
     this.trigger(this.$.pulseDuration);
   }
@@ -402,13 +559,16 @@ export class CellBg extends Symbiote {
     return theme;
   }
 
-  resize() {
+  resize({ force = false } = {}) {
     if (!this._available || !this.canvas.parentElement) return;
     let dpr = globalThis.devicePixelRatio || 1;
     let w = this.canvas.parentElement.clientWidth;
     let h = this.canvas.parentElement.clientHeight;
 
     if (w === 0 || h === 0) return; // Hidden or not attached
+
+    let sameSize = this.canvas._w === w && this.canvas._h === h;
+    if (sameSize && !force && (!this._externalFrameDrive || this._externalRenderState)) return;
 
     this.canvas.width = w * dpr;
     this.canvas.height = h * dpr;
@@ -427,6 +587,16 @@ export class CellBg extends Symbiote {
 
     this.cols = Math.ceil(w / this._cellSize) + 1;
     this.rows = Math.ceil(h / this._cellSize) + 1;
+
+    if (this._externalFrameDrive) {
+      this.grid = new Uint8Array(this.cols * this.rows);
+      this.radii = new Float32Array(this.cols * this.rows);
+      this.radii.fill(this._minRadius);
+      this._externalRenderState = createCellBgRenderState(this._externalRenderOptions());
+      this._externalRenderFrame = cellBgRenderFrame(this._externalRenderState);
+      this._draw(this._externalRenderFrame);
+      return;
+    }
 
     this.grid = new Uint8Array(this.cols * this.rows);
     this.radii = new Float32Array(this.cols * this.rows);
@@ -460,6 +630,7 @@ export class CellBg extends Symbiote {
   }
 
   _start(reason = 'manual') {
+    if (this._externalFrameDrive) return;
     if (!this._available) return;
     if (this.running) return;
     this.running = true;
@@ -471,11 +642,12 @@ export class CellBg extends Symbiote {
     if (!this.isAnimating) {
       this.lastTime = now();
       this.isAnimating = true;
-      requestFrame(this.renderLoop);
+      this._scheduleFrame();
     }
   }
 
   _stop(reason = 'manual') {
+    if (this._externalFrameDrive) return;
     if (!this.running) return;
     this.running = false;
     this.dispatchEvent(new CustomEvent('cell-bg-animation-stop', {
@@ -484,6 +656,11 @@ export class CellBg extends Symbiote {
       detail: { reason, smooth: true },
     }));
     // Loop will smoothly decelerate and stop in renderLoop
+  }
+
+  _scheduleFrame() {
+    if (this._externalFrameDrive || this._frameRequest !== null) return;
+    this._frameRequest = requestFrame(this.renderLoop);
   }
 
   _step() {
@@ -551,6 +728,8 @@ export class CellBg extends Symbiote {
   }
 
   renderLoop(ts) {
+    this._frameRequest = null;
+    if (this._externalFrameDrive) return;
     if (!this.isAnimating) return;
 
     let time = now();
@@ -559,7 +738,8 @@ export class CellBg extends Symbiote {
 
     // Smoothly accelerate/decelerate
     let targetSpeed = this.running ? 1.0 : 0.0;
-    this.currentSpeed += (targetSpeed - this.currentSpeed) * 0.03; // Smooth transition factor
+    let speedBlend = 1 - Math.pow(1 - 0.03, dt / (1000 / 60));
+    this.currentSpeed += (targetSpeed - this.currentSpeed) * speedBlend;
 
     // If we're fully stopped and radii have faded (we just wait for speed to drop near 0)
     if (!this.running && this.currentSpeed < 0.005) {
@@ -582,17 +762,29 @@ export class CellBg extends Symbiote {
       maxSteps--;
     }
 
+    this._advanceLiveRadii(dt);
     this._draw();
 
     if (this.isAnimating) {
-      requestFrame(this.renderLoop);
+      this._scheduleFrame();
     }
   }
 
-  _draw() {
+  _advanceLiveRadii(elapsedMs) {
+    let frames = Math.max(0, Number(elapsedMs) || 0) / (1000 / 60);
+    for (let index = 0; index < this.radii.length; index += 1) {
+      let alive = this.grid[index] === 1;
+      let target = alive ? this._maxRadius : this._minRadius;
+      let factor = alive ? 0.2 : this._fadeRate;
+      this.radii[index] = target + (this.radii[index] - target) * Math.pow(1 - factor, frames);
+    }
+  }
+
+  _draw(frame = null) {
     if (!this._available || !this.canvas._w) return;
     let w = this.canvas._w;
     let h = this.canvas._h;
+    let radii = frame?.radii || this.radii;
 
     this.ctx.clearRect(0, 0, w, h);
     this.ctx.fillStyle = this._bgFill;
@@ -603,18 +795,7 @@ export class CellBg extends Symbiote {
     for (let y = 0; y < this.rows; y++) {
       for (let x = 0; x < this.cols; x++) {
         let idx = y * this.cols + x;
-        let alive = this.grid[idx];
-
-        let targetR = alive ? this._maxRadius : this._minRadius;
-        let currentR = this.radii[idx];
-
-        if (alive) {
-          this.radii[idx] = currentR + (targetR - currentR) * 0.2;
-        } else {
-          this.radii[idx] = currentR + (targetR - currentR) * this._fadeRate;
-        }
-
-        let r = this.radii[idx];
+        let r = radii[idx];
         let cx = x * this._cellSize;
         let cy = y * this._cellSize;
 

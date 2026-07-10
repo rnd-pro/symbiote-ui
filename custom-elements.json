@@ -29623,7 +29623,7 @@
           "name": "CellBg",
           "tagName": "cell-bg",
           "description": "Animated cellular automaton background effect.",
-          "componentDescription": "Animated cellular automaton background effect. Use this effects UI component when composing effects UI. Capabilities: animated-background, canvas-effect, activity-trigger, smooth-start, smooth-stop, pulse, resize-aware, reduced-motion-friendly, layout-lifecycle. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: cell_bg_trigger, cell_bg_start, cell_bg_stop.",
+          "componentDescription": "Animated cellular automaton background effect. Use this effects UI component when composing effects UI. Capabilities: animated-background, canvas-effect, activity-trigger, smooth-start, smooth-stop, pulse, resize-aware, reduced-motion-friendly, layout-lifecycle, deterministic-render. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: cell_bg_trigger, cell_bg_start, cell_bg_stop.",
           "attributes": [
             {
               "name": "active",
@@ -29645,6 +29645,13 @@
                 "text": "number"
               },
               "description": "Default timed pulse duration in milliseconds."
+            },
+            {
+              "name": "seed",
+              "type": {
+                "text": "string"
+              },
+              "description": "Stable seed used by deterministic external-frame rendering."
             }
           ],
           "members": [
@@ -29716,6 +29723,21 @@
               "kind": "method",
               "name": "resumeLayout",
               "description": "Restores persistent animation only when it was active before layout suspension."
+            },
+            {
+              "kind": "method",
+              "name": "setFrameDriver",
+              "description": "Selects self-driven live animation or externally driven deterministic rendering."
+            },
+            {
+              "kind": "method",
+              "name": "presentFrame",
+              "description": "Synchronously paints the current shared render-clock time."
+            },
+            {
+              "kind": "method",
+              "name": "getFramePresentation",
+              "description": "Returns deterministic frame metrics and the current grid hash."
             }
           ],
           "events": [
@@ -30084,7 +30106,7 @@
             }
           },
           "agent": {
-            "componentDescription": "Animated cellular automaton background effect. Use this effects UI component when composing effects UI. Capabilities: animated-background, canvas-effect, activity-trigger, smooth-start, smooth-stop, pulse, resize-aware, reduced-motion-friendly, layout-lifecycle. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: cell_bg_trigger, cell_bg_start, cell_bg_stop.",
+            "componentDescription": "Animated cellular automaton background effect. Use this effects UI component when composing effects UI. Capabilities: animated-background, canvas-effect, activity-trigger, smooth-start, smooth-stop, pulse, resize-aware, reduced-motion-friendly, layout-lifecycle, deterministic-render. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: cell_bg_trigger, cell_bg_start, cell_bg_stop.",
             "semanticRole": "effects UI component",
             "usage": "Render or compose <cell-bg> when the host needs animated cellular automaton background effect.",
             "dataOwnership": "host-owned props and attributes; component owns presentation state",
