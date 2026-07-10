@@ -1690,16 +1690,85 @@ function msToFrame(value, fps) {
   return Math.round((Math.max(0, finiteNumber(value, 0)) / 1000) * fps);
 }
 
+const DEFAULT_MEDIA_STUDIO_DECODED_WIDTH = 1920;
+const DEFAULT_MEDIA_STUDIO_DECODED_HEIGHT = 1080;
+const DEFAULT_MEDIA_STUDIO_MAX_DECODED_BYTES = 256 * 1024 * 1024;
+
 function mediaStudioSequenceFrameUrl(frame = {}) {
-  return cleanText(frame.url || frame.src || frame.href || frame.path, '');
+  return cleanText(
+    frame.proxy?.url
+      || frame.proxy?.src
+      || frame.proxyUrl
+      || frame.url
+      || frame.src
+      || frame.href
+      || frame.path,
+    '',
+  );
 }
 
-function normalizeMediaStudioSequenceFrames(frames = []) {
+function mediaStudioSequenceDimensions(options = {}) {
+  let manifest = options.manifest && typeof options.manifest === 'object' ? options.manifest : {};
+  let proxy = options.proxy
+    || options.previewProxy
+    || manifest.proxy
+    || manifest.previewProxy
+    || manifest.preview?.proxy
+    || manifest.preview
+    || {};
+  let width = finiteNumber(
+    options.proxyWidth
+      ?? options.decodedWidth
+      ?? options.frameWidth
+      ?? proxy.width
+      ?? proxy.frameWidth
+      ?? manifest.frameWidth
+      ?? manifest.width,
+    DEFAULT_MEDIA_STUDIO_DECODED_WIDTH,
+    1,
+  );
+  let height = finiteNumber(
+    options.proxyHeight
+      ?? options.decodedHeight
+      ?? options.frameHeight
+      ?? proxy.height
+      ?? proxy.frameHeight
+      ?? manifest.frameHeight
+      ?? manifest.height,
+    DEFAULT_MEDIA_STUDIO_DECODED_HEIGHT,
+    1,
+  );
+  return { width: Math.round(width), height: Math.round(height) };
+}
+
+function mediaStudioDecodedBytes(width, height) {
+  return Math.ceil(Math.max(1, width) * Math.max(1, height) * 4);
+}
+
+function normalizeMediaStudioSequenceFrames(frames = [], options = {}) {
+  let fallbackDimensions = mediaStudioSequenceDimensions(options);
   return (Array.isArray(frames) ? frames : [])
     .map((frame, index) => {
       let frameIndex = Math.round(finiteNumber(frame?.index ?? frame?.frame ?? frame?.frameNumber, index, 0));
       let url = mediaStudioSequenceFrameUrl(frame);
-      return url ? { ...frame, index: frameIndex, url } : null;
+      let decodedWidth = Math.round(finiteNumber(
+        frame?.proxy?.width ?? frame?.proxyWidth ?? frame?.decodedWidth ?? frame?.width,
+        fallbackDimensions.width,
+        1,
+      ));
+      let decodedHeight = Math.round(finiteNumber(
+        frame?.proxy?.height ?? frame?.proxyHeight ?? frame?.decodedHeight ?? frame?.height,
+        fallbackDimensions.height,
+        1,
+      ));
+      return url ? {
+        ...frame,
+        index: frameIndex,
+        url,
+        decodedWidth,
+        decodedHeight,
+        decodedBytes: mediaStudioDecodedBytes(decodedWidth, decodedHeight),
+      } : null;
     })
     .filter(Boolean)
     .sort((a, b) => a.index - b.index);
@@ -1737,7 +1806,7 @@ export function mediaStudioFrameIndexForTime(timeSec = 0, options = {}) {
 }
 
 export function normalizeMediaStudioSequencePlaybackState(options = {}) {
-  let frames = normalizeMediaStudioSequenceFrames(options.frames);
+  let frames = normalizeMediaStudioSequenceFrames(options.frames, options);
   let fps = Math.max(1, Math.round(finiteNumber(options.fps, 30, 1, 240)));
   let frameCount = mediaStudioSequenceFrameCount(frames, options.frameCount ?? options.durationFrames);
   let currentFrame = mediaStudioFrameIndexForTime(options.currentTimeSec, { fps, frameCount });
@@ -1748,6 +1817,12 @@ export function normalizeMediaStudioSequencePlaybackState(options = {}) {
   let preloadAheadSec = finiteNumber(options.preloadAheadSec, 2, 0, 30);
   let defaultCacheSize = Math.ceil(fps * Math.max(1, preloadBehindSec + preloadAheadSec + 1));
   let maxCachedFrames = Math.max(1, Math.round(finiteNumber(options.maxCachedFrames, defaultCacheSize, 1, 600)));
+  let maxDecodedBytes = Math.max(1, Math.round(finiteNumber(
+    options.maxDecodedBytes,
+    DEFAULT_MEDIA_STUDIO_MAX_DECODED_BYTES,
+    1,
+    Number.MAX_SAFE_INTEGER,
+  )));
   return {
     frames,
     fps,
@@ -1758,6 +1833,7 @@ export function normalizeMediaStudioSequencePlaybackState(options = {}) {
     preloadBehindSec,
     preloadAheadSec,
     maxCachedFrames,
+    maxDecodedBytes,
   };
 }
 
@@ -1772,17 +1848,45 @@ function releaseMediaStudioFrame(value) {
 function defaultMediaStudioFrameLoader(frame = {}) {
   let url = mediaStudioSequenceFrameUrl(frame);
   if (!url) return null;
+  if (typeof globalThis.fetch === 'function' && typeof globalThis.createImageBitmap === 'function') {
+    let controller = typeof globalThis.AbortController === 'function'
+      ? new globalThis.AbortController()
+      : null;
+    let cancelled = false;
+    let promise = globalThis.fetch(url, controller ? { signal: controller.signal } : undefined)
+      .then((response) => {
+        if (response?.ok === false) throw new Error(`Unable to load frame: ${response.status || 'request failed'}`);
+        if (typeof response?.blob !== 'function') throw new TypeError('Frame response must provide blob()');
+        return response.blob();
+      })
+      .then((blob) => globalThis.createImageBitmap(blob))
+      .then((bitmap) => {
+        if (!cancelled) return bitmap;
+        releaseMediaStudioFrame(bitmap);
+        return null;
+      });
+    return {
+      promise,
+      cancel() {
+        cancelled = true;
+        controller?.abort();
+      },
+    };
+  }
   if (typeof globalThis.Image !== 'function') return url;
   let image = new globalThis.Image();
   let cancelled = false;
   image.decoding = 'async';
   image.src = url;
   let promise = typeof image.decode === 'function'
-    ? image.decode().catch(() => {}).then(() => image)
+    ? image.decode().then(() => image)
     : Promise.resolve(image);
   return {
     promise: promise.then((value) => {
-      if (cancelled) releaseMediaStudioFrame(value);
+      if (cancelled) {
+        releaseMediaStudioFrame(value);
+        return null;
+      }
       return value;
     }),
     cancel() {
@@ -1795,30 +1899,91 @@ function defaultMediaStudioFrameLoader(frame = {}) {
 export function createMediaStudioSequenceFrameWindow(options = {}) {
   let state = normalizeMediaStudioSequencePlaybackState(options);
   let cache = new Map();
+  let accessSequence = 0;
+  let cachedDecodedBytes = 0;
+  let reservedDecodedBytes = 0;
+  let evictions = 0;
   let loadFrame = typeof options.loadFrame === 'function' ? options.loadFrame : defaultMediaStudioFrameLoader;
   let disposeFrame = typeof options.disposeFrame === 'function' ? options.disposeFrame : releaseMediaStudioFrame;
-  let evictRecord = (record) => {
-    if (!record || record.cancelled) return;
+  let touchRecord = (record) => {
+    if (!record) return null;
+    record.lastAccess = ++accessSequence;
+    return record;
+  };
+  let diagnostics = () => ({
+    cachedFrames: cache.size,
+    readyFrames: Array.from(cache.values()).filter((record) => record.status === 'ready').length,
+    loadingFrames: Array.from(cache.values()).filter((record) => record.status === 'loading').length,
+    cachedDecodedBytes,
+    reservedDecodedBytes,
+    totalDecodedBytes: cachedDecodedBytes + reservedDecodedBytes,
+    evictions,
+    maxCachedFrames: state.maxCachedFrames,
+    maxDecodedBytes: state.maxDecodedBytes,
+  });
+  let evictRecord = (record, { count = true, evictedFrames = null } = {}) => {
+    if (!record || record.cancelled) return false;
     record.cancelled = true;
+    if (record.reservedDecodedBytes > 0) {
+      reservedDecodedBytes = Math.max(0, reservedDecodedBytes - record.reservedDecodedBytes);
+      record.reservedDecodedBytes = 0;
+    }
+    if (record.decodedBytes > 0) {
+      cachedDecodedBytes = Math.max(0, cachedDecodedBytes - record.decodedBytes);
+      record.decodedBytes = 0;
+    }
     try { record.cancel?.(); } catch {}
     if (record.status === 'ready') disposeFrame(record.resource);
+    if (cache.get(record.key) === record) cache.delete(record.key);
+    if (count) {
+      evictions += 1;
+      evictedFrames?.push(record.frame);
+    }
+    return true;
   };
-  let requestFrame = (frameIndex) => {
-    let frame = mediaStudioSequenceFrameAt(state.frames, frameIndex);
+  let leastRecentlyUsedRecord = (exclude = null) => Array.from(cache.values())
+    .filter((record) => record !== exclude && !record.cancelled)
+    .sort((a, b) => a.lastAccess - b.lastAccess)[0] || null;
+  let makeRoom = (decodedBytes, { evict = false, evictedFrames = null, exclude = null } = {}) => {
+    if (decodedBytes > state.maxDecodedBytes) return false;
+    while (
+      cache.size >= state.maxCachedFrames
+      || cachedDecodedBytes + reservedDecodedBytes + decodedBytes > state.maxDecodedBytes
+    ) {
+      if (!evict) return false;
+      let record = leastRecentlyUsedRecord(exclude);
+      if (!record) return false;
+      evictRecord(record, { evictedFrames });
+    }
+    return true;
+  };
+  let requestFrame = (frameOrIndex, requestOptions = {}) => {
+    let frame = typeof frameOrIndex === 'object'
+      ? frameOrIndex
+      : mediaStudioSequenceFrameAt(state.frames, frameOrIndex);
     if (!frame) return null;
     let key = String(frame.index);
+    if (cache.has(key)) return touchRecord(cache.get(key));
+    let estimatedDecodedBytes = frame.decodedBytes;
+    if (!makeRoom(estimatedDecodedBytes, requestOptions)) return null;
     if (!cache.has(key)) {
       let record = {
+        key,
         frame: frame.index,
         url: frame.url,
+        estimatedDecodedBytes,
+        decodedBytes: 0,
+        reservedDecodedBytes: estimatedDecodedBytes,
         status: 'loading',
         value: null,
         resource: null,
         error: null,
         cancelled: false,
         cancel: null,
+        lastAccess: ++accessSequence,
       };
       cache.set(key, record);
+      reservedDecodedBytes += estimatedDecodedBytes;
       try {
         let result = loadFrame(frame, frame.url, frame.index);
         let loadValue = result;
@@ -1832,23 +1997,48 @@ export function createMediaStudioSequenceFrameWindow(options = {}) {
               disposeFrame(value);
               return null;
             }
+            reservedDecodedBytes = Math.max(0, reservedDecodedBytes - record.reservedDecodedBytes);
+            record.reservedDecodedBytes = 0;
+            let decodedBytes = value && typeof value === 'object'
+              && Number.isFinite(value.width) && Number.isFinite(value.height)
+              ? mediaStudioDecodedBytes(value.width, value.height)
+              : record.estimatedDecodedBytes;
+            while (cachedDecodedBytes + reservedDecodedBytes + decodedBytes > state.maxDecodedBytes) {
+              let candidate = leastRecentlyUsedRecord(record);
+              if (!candidate) break;
+              evictRecord(candidate);
+            }
+            if (decodedBytes > state.maxDecodedBytes
+              || cachedDecodedBytes + reservedDecodedBytes + decodedBytes > state.maxDecodedBytes) {
+              disposeFrame(value);
+              record.status = 'error';
+              record.error = new RangeError('Decoded frame exceeds maxDecodedBytes');
+              record.value = null;
+              return null;
+            }
             record.status = 'ready';
             record.resource = value;
+            record.decodedBytes = decodedBytes;
+            cachedDecodedBytes += decodedBytes;
             record.value = value;
             return value;
           })
           .catch((error) => {
             if (record.cancelled) return null;
+            reservedDecodedBytes = Math.max(0, reservedDecodedBytes - record.reservedDecodedBytes);
+            record.reservedDecodedBytes = 0;
             record.status = 'error';
             record.error = error;
             return null;
           });
       } catch (error) {
+        reservedDecodedBytes = Math.max(0, reservedDecodedBytes - record.reservedDecodedBytes);
+        record.reservedDecodedBytes = 0;
         record.status = 'error';
         record.error = error;
       }
     }
-    return cache.get(key);
+    return touchRecord(cache.get(key));
   };
   return {
     update(centerFrame = state.currentFrame) {
@@ -1857,42 +2047,43 @@ export function createMediaStudioSequenceFrameWindow(options = {}) {
       let ahead = Math.round(state.fps * state.preloadAheadSec);
       let start = Math.max(0, center - behind);
       let end = Math.min(state.frameCount - 1, center + ahead);
-      while (end - start + 1 > state.maxCachedFrames) {
-        if (end - center > center - start) end -= 1;
-        else start += 1;
-      }
-      let keep = new Set();
-      let requested = [];
+      let activeFrames = new Map();
       for (let frame = start; frame <= end; frame += 1) {
-        let record = requestFrame(frame);
-        if (!record) continue;
-        keep.add(String(record.frame));
-        requested.push(record.frame);
+        let item = mediaStudioSequenceFrameAt(state.frames, frame);
+        if (item) activeFrames.set(String(item.index), item);
       }
       let evicted = [];
       for (let key of Array.from(cache.keys())) {
-        if (keep.has(key)) continue;
-        evicted.push(Number(key));
-        evictRecord(cache.get(key));
-        cache.delete(key);
+        if (activeFrames.has(key)) continue;
+        evictRecord(cache.get(key), { evictedFrames: evicted });
       }
+      let current = mediaStudioSequenceFrameAt(state.frames, center);
+      if (current) requestFrame(current, { evict: true, evictedFrames: evicted });
+      let candidates = Array.from(activeFrames.values())
+        .filter((frame) => !cache.has(String(frame.index)))
+        .sort((a, b) => Math.abs(a.index - center) - Math.abs(b.index - center) || a.index - b.index);
+      for (let frame of candidates) requestFrame(frame);
+      let requested = Array.from(cache.values())
+        .filter((record) => activeFrames.has(record.key))
+        .map((record) => record.frame)
+        .sort((a, b) => a - b);
       return {
         centerFrame: center,
         startFrame: start,
         endFrame: end,
         requestedFrames: requested,
-        evictedFrames: evicted,
-        cachedFrames: cache.size,
+        evictedFrames: evicted.sort((a, b) => a - b),
+        ...diagnostics(),
       };
     },
     has(frameIndex) {
       return cache.has(String(Math.round(finiteNumber(frameIndex, 0))));
     },
     get(frameIndex) {
-      return cache.get(String(Math.round(finiteNumber(frameIndex, 0)))) || null;
+      return touchRecord(cache.get(String(Math.round(finiteNumber(frameIndex, 0))))) || null;
     },
     dispose() {
-      for (let record of cache.values()) evictRecord(record);
+      for (let record of Array.from(cache.values())) evictRecord(record, { count: false });
       cache.clear();
     },
     get size() {
@@ -1900,6 +2091,9 @@ export function createMediaStudioSequenceFrameWindow(options = {}) {
     },
     get state() {
       return { ...state, frames: state.frames.slice() };
+    },
+    get diagnostics() {
+      return diagnostics();
     },
   };
 }

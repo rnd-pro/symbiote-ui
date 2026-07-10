@@ -9,6 +9,8 @@ All notable changes to `symbiote-ui` will be documented in this file.
 - Added bounded, cancellation-aware Media Studio frame-sequence playback,
   caption overlays, and external-clock timeline controls for synchronized
   audio, seek, pause, and resume workflows.
+- Added a Node-safe installable render clock for deterministic UI animation,
+  plus decoded-byte-bounded LRU proxy-frame caching with explicit bitmap release.
 - Added cascade theme variants (`modern`, `classic`) and project tab shape
   controls (`frame`, `ear`, `classic-ear`) so hosts can restore the older Agent
   Portal tab geometry without product-local CSS.

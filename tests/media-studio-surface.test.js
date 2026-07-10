@@ -960,6 +960,162 @@ test('media studio sequence frame window cancels evicted in-flight loads', async
   assert.deepEqual(disposed, ['decoded-frame-0', 'decoded-frame-3']);
 });
 
+test('media studio sequence normalization resolves proxy dimensions and byte limits', () => {
+  let state = normalizeMediaStudioSequencePlaybackState({
+    frames: [
+      { index: 0, url: './full-0.png', proxy: { url: './proxy-0.webp', width: 160, height: 90 } },
+      { index: 1, url: './proxy-1.webp' },
+    ],
+    manifest: { proxy: { width: 320, height: 180 } },
+    maxDecodedBytes: 12_345_678,
+  });
+
+  assert.equal(state.maxDecodedBytes, 12_345_678);
+  assert.equal(state.frames[0].url, './proxy-0.webp');
+  assert.equal(state.frames[0].decodedWidth, 160);
+  assert.equal(state.frames[0].decodedHeight, 90);
+  assert.equal(state.frames[0].decodedBytes, 160 * 90 * 4);
+  assert.equal(state.frames[1].decodedWidth, 320);
+  assert.equal(state.frames[1].decodedHeight, 180);
+  assert.equal(state.frames[1].decodedBytes, 320 * 180 * 4);
+});
+
+test('media studio sequence frame window enforces decoded-byte reservations and diagnostics', async () => {
+  let frames = Array.from({ length: 3 }, (_, index) => ({
+    index,
+    url: `./frame-${index}.webp`,
+    width: 10,
+    height: 10,
+  }));
+  let window = createMediaStudioSequenceFrameWindow({
+    frames,
+    fps: 1,
+    frameCount: 3,
+    preloadBehindSec: 1,
+    preloadAheadSec: 1,
+    maxCachedFrames: 3,
+    maxDecodedBytes: 800,
+    loadFrame(frame) {
+      return { id: frame.index, width: 10, height: 10 };
+    },
+  });
+
+  let update = window.update(1);
+  assert.equal(update.cachedFrames, 2);
+  assert.equal(update.cachedDecodedBytes, 0);
+  assert.equal(update.reservedDecodedBytes, 800);
+  assert.equal(update.maxCachedFrames, 3);
+  assert.equal(update.maxDecodedBytes, 800);
+  await Promise.all(update.requestedFrames.map((frame) => window.get(frame)?.value));
+  assert.equal(window.diagnostics.cachedDecodedBytes, 800);
+  assert.equal(window.diagnostics.reservedDecodedBytes, 0);
+  assert.equal(window.diagnostics.totalDecodedBytes, 800);
+  assert.equal(typeof window.diagnostics.evictions, 'number');
+  window.dispose();
+  assert.equal(window.diagnostics.cachedDecodedBytes, 0);
+});
+
+test('media studio sequence frame window evicts the least recently used active frame', () => {
+  let frames = Array.from({ length: 4 }, (_, index) => ({
+    index,
+    url: `./frame-${index}.webp`,
+    width: 10,
+    height: 10,
+  }));
+  let window = createMediaStudioSequenceFrameWindow({
+    frames,
+    fps: 1,
+    frameCount: 4,
+    preloadBehindSec: 3,
+    preloadAheadSec: 3,
+    maxCachedFrames: 2,
+    maxDecodedBytes: 800,
+    loadFrame(frame) { return frame.url; },
+  });
+
+  window.update(1);
+  assert.deepEqual([0, 1].map((frame) => window.has(frame)), [true, true]);
+  window.get(0);
+  let update = window.update(2);
+  assert.equal(window.has(0), true);
+  assert.equal(window.has(1), false);
+  assert.equal(window.has(2), true);
+  assert.deepEqual(update.evictedFrames, [1]);
+  window.dispose();
+});
+
+test('media studio sequence frame window cancels reserved loads and releases late decoded resources', async () => {
+  let resolveLoad;
+  let cancelled = 0;
+  let closed = 0;
+  let window = createMediaStudioSequenceFrameWindow({
+    frames: [{ index: 0, url: './frame-0.webp', width: 20, height: 10 }],
+    maxCachedFrames: 1,
+    maxDecodedBytes: 800,
+    loadFrame() {
+      return {
+        promise: new Promise((resolve) => { resolveLoad = resolve; }),
+        cancel() { cancelled += 1; },
+      };
+    },
+    disposeFrame(resource) { resource.close(); },
+  });
+
+  window.update(0);
+  let pending = window.get(0).value;
+  assert.equal(window.diagnostics.reservedDecodedBytes, 800);
+  window.dispose();
+  assert.equal(cancelled, 1);
+  assert.equal(window.diagnostics.reservedDecodedBytes, 0);
+  resolveLoad({ close() { closed += 1; } });
+  assert.equal(await pending, null);
+  assert.equal(closed, 1);
+  assert.equal(window.diagnostics.cachedDecodedBytes, 0);
+});
+
+test('media studio default frame loader prefers abortable bitmap decoding and closes resources', async () => {
+  let originalFetch = globalThis.fetch;
+  let originalCreateImageBitmap = globalThis.createImageBitmap;
+  let originalAbortController = globalThis.AbortController;
+  let aborted = false;
+  let closeCount = 0;
+  class AbortControllerStub {
+    constructor() {
+      this.signal = {};
+    }
+    abort() {
+      aborted = true;
+    }
+  }
+  globalThis.AbortController = AbortControllerStub;
+  globalThis.fetch = async (_url, options) => {
+    assert.equal(typeof options.signal, 'object');
+    return { ok: true, blob: async () => ({ type: 'image/webp' }) };
+  };
+  globalThis.createImageBitmap = async () => ({
+    width: 10,
+    height: 10,
+    close() { closeCount += 1; },
+  });
+  try {
+    let window = createMediaStudioSequenceFrameWindow({
+      frames: [{ index: 0, url: './frame-0.webp', width: 10, height: 10 }],
+      maxCachedFrames: 1,
+      maxDecodedBytes: 400,
+    });
+    window.update(0);
+    let resource = await window.get(0).value;
+    assert.equal(resource.width, 10);
+    window.dispose();
+    assert.equal(aborted, true);
+    assert.equal(closeCount, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+    globalThis.createImageBitmap = originalCreateImageBitmap;
+    globalThis.AbortController = originalAbortController;
+  }
+});
+
 test('media studio styles install once into a browser document', () => {
   let appended = [];
   let existing = null;

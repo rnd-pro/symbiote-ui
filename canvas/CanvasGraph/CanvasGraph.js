@@ -47,6 +47,7 @@ import {
   resolveFrameFitZoom,
 } from './CanvasGraphViewport.js';
 import { resolveWheelZoomFactor } from '../../interactions/Zoom.js';
+import { renderNow } from '../../core/render-clock.js';
 
 const DEFAULT_EVENT_NAMES = Object.freeze({
   fileSelected: 'file-selected',
@@ -1087,7 +1088,7 @@ export class CanvasGraph extends Symbiote {
   }
 
   pulseNode(nodeId, durationMs = 1500, options = {}) {
-    let now = globalThis.performance?.now?.() ?? Date.now();
+    let now = renderNow();
     let marker = options.deferUntilTransition === false
       ? null
       : findActiveTransitionMarker(this._transitionMarkers, nodeId, now);
@@ -1104,7 +1105,7 @@ export class CanvasGraph extends Symbiote {
     this._queuePulseNow(nodeId, durationMs, options, now);
   }
 
-  _queuePulseNow(nodeId, durationMs = 1500, options = {}, startTime = globalThis.performance?.now?.() ?? Date.now()) {
+  _queuePulseNow(nodeId, durationMs = 1500, options = {}, startTime = renderNow()) {
     this._pulses = getNextPulseQueue({
       pulses: this._pulses || [],
       nodeId,
@@ -1245,7 +1246,7 @@ export class CanvasGraph extends Symbiote {
     );
   }
 
-  _updateTransitionMarkerViewport(now = globalThis.performance?.now?.() ?? Date.now()) {
+  _updateTransitionMarkerViewport(now = renderNow()) {
     let marker = (this._transitionMarkers || []).find((item) => item?.pendingActivation && item.routeViewport && item.pendingViewport);
     if (!marker) return false;
 
@@ -1336,7 +1337,7 @@ export class CanvasGraph extends Symbiote {
     let path = this._findTransitionPath(from, to);
     if (path.length < 2) return;
 
-    let now = globalThis.performance?.now?.() ?? Date.now();
+    let now = renderNow();
     let duration = Number.isFinite(options.transitionMarkerMs)
       ? options.transitionMarkerMs
       : Number.isFinite(options.transitionMs)
@@ -1455,7 +1456,7 @@ export class CanvasGraph extends Symbiote {
 
   _drawTransitionMarkers(ctx) {
     if (!this._transitionMarkers?.length) return false;
-    let now = globalThis.performance?.now?.() ?? Date.now();
+    let now = renderNow();
     let hasActiveMarkers = false;
     let dpr = globalThis.devicePixelRatio || 1;
     ctx.save();
@@ -1501,7 +1502,7 @@ export class CanvasGraph extends Symbiote {
     return hasActiveMarkers;
   }
 
-  _completeTransitionMarker(marker, now = globalThis.performance?.now?.() ?? Date.now()) {
+  _completeTransitionMarker(marker, now = renderNow()) {
     if (marker?.pendingViewport) {
       if (marker.routeViewport) this._setViewportImmediate(marker.pendingViewport);
       this._applyViewportTarget(marker.pendingViewport);
@@ -2061,7 +2062,7 @@ export class CanvasGraph extends Symbiote {
 
   _queueNodeAppearances(nodeIds, options = {}) {
     if (!Array.isArray(nodeIds) || nodeIds.length === 0) return;
-    let now = globalThis.performance?.now?.() ?? Date.now();
+    let now = renderNow();
     let duration = Number.isFinite(options.durationMs) ? options.durationMs : 700;
     let stagger = Number.isFinite(options.staggerMs) ? options.staggerMs : 12;
     for (let index = 0; index < nodeIds.length; index++) {
@@ -2084,7 +2085,7 @@ export class CanvasGraph extends Symbiote {
     return ids.length;
   }
 
-  _resolveNodeAppearance(nodeId, now = globalThis.performance?.now?.() ?? Date.now()) {
+  _resolveNodeAppearance(nodeId, now = renderNow()) {
     let marker = this._nodeAppearances?.get(nodeId);
     if (!marker) return { alpha: 1, scale: 1 };
     let elapsed = now - marker.startTime;
@@ -2752,7 +2753,7 @@ export class CanvasGraph extends Symbiote {
         return { x: (screenX - tCurrent.E) / tCurrent.A, y: (screenY - tCurrent.F) / tCurrent.A };
       };
 
-      const nodeAppearanceNow = globalThis.performance?.now?.() ?? Date.now();
+      const nodeAppearanceNow = renderNow();
       const focusNodeId = this.dragNode?.id || this.activeNode?.id || null;
 
       currentCtx.strokeStyle = toRgba(this._edgeRgb, 0.25);
@@ -2987,7 +2988,7 @@ export class CanvasGraph extends Symbiote {
       drawDepth(0, mainCtx);
 
       if (this._pulses && this._pulses.length > 0) {
-        const now = performance.now();
+        const now = renderNow();
         this._pulses = this._pulses.filter(p => {
           const elapsed = now - p.startTime;
           if (elapsed > p.duration) return false;
@@ -3173,7 +3174,7 @@ export class CanvasGraph extends Symbiote {
       if (ip.nodeId !== this.activeNode.id) {
         ip.nodeId = this.activeNode.id;
         ip.lines = this._buildInfoLines(this.activeNode).map(text => ({ text, revealed: 0 }));
-        ip.startTime = performance.now();
+        ip.startTime = renderNow();
         ip.opacity = 0;
       }
       ip.opacity = Math.min(1, ip.opacity + 0.06);
@@ -3184,7 +3185,7 @@ export class CanvasGraph extends Symbiote {
 
     if (ip.opacity <= 0.01 || ip.lines.length === 0) return;
 
-    const elapsed = performance.now() - ip.startTime;
+    const elapsed = renderNow() - ip.startTime;
     const CHAR_SPEED = 18;
     const LINE_DELAY = 60;
     let charBudget = Math.floor(elapsed / CHAR_SPEED);
@@ -3300,7 +3301,7 @@ export class CanvasGraph extends Symbiote {
 
       if (line.revealed < line.text.length && line.revealed > 0) {
         const cursorX = panelX + panelMetrics.padX + ctx.measureText(text).width + panelMetrics.cursorGap;
-        if (Math.floor(performance.now() / 400) % 2 === 0) {
+        if (Math.floor(renderNow() / 400) % 2 === 0) {
           ctx.fillStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${0.8 * ip.opacity})`;
           ctx.fillRect(
             cursorX,

@@ -16,3 +16,4 @@ export { SubgraphNode } from './SubgraphNode.js';
 export { readJsonCache, writeJsonCache, readStringCache, writeStringCache } from './local-cache.js';
 export { waitForElementApi } from './dom-utils.js';
 export { createStateSync } from './state-sync.js';
+export { installRenderClock, renderNow } from './render-clock.js';

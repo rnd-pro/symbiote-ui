@@ -32,6 +32,8 @@ test('root and metadata entrypoints import in Node', async () => {
   assert.equal(typeof root.normalizeResourceTreeItem, 'function');
   assert.equal(typeof root.normalizeSourceDocument, 'function');
   assert.equal(typeof root.normalizeCanvasGraphGroups, 'function');
+  assert.equal(typeof root.installRenderClock, 'function');
+  assert.equal(typeof root.renderNow, 'function');
   assert.equal(typeof root.normalizeForceGroups, 'function');
   assert.equal(typeof root.resolveCanvasGraphViewportFit, 'function');
   assert.equal(typeof root.resolveCanvasGraphMinZoom, 'function');
@@ -665,7 +667,7 @@ test('canvas graph moves a marker dot along formed links before starting node pu
   assert.match(source, /easeOutCubic\(p \/ routeFitProgress\)/);
   assert.match(source, /let targetStart = Math\.max\(routeFitProgress, 1 - targetFitProgress\);/);
   assert.match(source, /easeInOutCubic\(\(p - targetStart\) \/ Math\.max\(0\.01, 1 - targetStart\)\)/);
-  assert.match(source, /_updateTransitionMarkerViewport\(now = globalThis\.performance\?\.now\?\.\(\) \?\? Date\.now\(\)\) \{/);
+  assert.match(source, /_updateTransitionMarkerViewport\(now = renderNow\(\)\) \{/);
   assert.match(source, /return this\._setViewportImmediate\(viewport\);/);
   assert.match(source, /marker\.pendingActivation = node\.id;/);
   assert.match(source, /marker\.pendingViewport = options\.pendingViewport \|\| null;/);
