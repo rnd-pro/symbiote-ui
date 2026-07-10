@@ -2,7 +2,7 @@
 
 All notable changes to `symbiote-ui` will be documented in this file.
 
-## Unreleased
+## [0.3.0-alpha.52] - 2026-07-10
 
 ### Added
 

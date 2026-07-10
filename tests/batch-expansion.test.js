@@ -51,6 +51,15 @@ async function nextRenderTick() {
   await new Promise((resolve) => setTimeout(resolve, 0));
 }
 
+async function waitForCondition(check, timeoutMs = 1000) {
+  const startedAt = Date.now();
+  while (!check()) {
+    if (Date.now() - startedAt > timeoutMs) return false;
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  return true;
+}
+
 test('sn-dialog manages visibility, events, and focus behavior', async () => {
   installSsrDom();
   await import('../surface/Dialog/Dialog.js');
@@ -183,9 +192,8 @@ test('sn-toast and sn-toast-region handle notifications, timeouts, and programma
   assert.equal(toast.duration, 10);
   assert.ok(region.contains(toast));
 
-  // Wait for duration + transition fade out to verify self dismissal
-  await new Promise(resolve => setTimeout(resolve, 300));
-  assert.equal(region.contains(toast), false, 'Toast should dismiss itself after duration');
+  const dismissed = await waitForCondition(() => !region.contains(toast));
+  assert.equal(dismissed, true, 'Toast should dismiss itself after duration');
 
   region.remove();
 });
