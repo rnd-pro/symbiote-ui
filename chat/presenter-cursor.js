@@ -17,6 +17,9 @@
  * same deterministic move counter as the travel arc, so runs differ yet stay
  * reproducible without `Math.random`. A faint, themed ink trail traces under the
  * cursor so the flourish reads, then fades.
+ * `presentAnnotationFrame` projects those same paths synchronously from explicit
+ * progress and seed values. It uses no animation frame, timer, or prior cursor
+ * position, so offline render workers can reproduce any frame independently.
  *
  * `clickElement(el)` is the native-control gesture: the cursor travels to a real
  * button/tab/control, pulses a click target ring, and then calls the element's
@@ -148,6 +151,7 @@ const TRAVEL_PX_PER_MS = 0.75; // longer hops take a little more time
 const GESTURE_MS = 720; // base duration of a single gesture pass
 const GESTURE_JITTER_PX = 2.4; // peak per-frame hand-tremor amplitude
 const INK_FADE_MS = 520; // how long the ink trail lingers before it clears
+const DETERMINISTIC_GESTURE_STEPS = 96;
 
 const DEFAULT_HOLD_MS = 1200;
 
@@ -887,6 +891,9 @@ function inertCursor() {
         } catch (_) {}
       }
     },
+    presentAnnotationFrame() {
+      return { presented: false, reason: 'unsupported' };
+    },
     clear() {},
     dispose() {},
     isSupported() {
@@ -903,7 +910,7 @@ function inertCursor() {
  * env this returns inert no-ops and `isSupported()` is false.
  *
  * @param {Document} [doc] - document to render into (defaults to the global one).
- * @returns {{ moveTo: (el: Element, opts?: object) => void, markElement: (el: Element, opts?: object) => void, annotateElement: (el: Element, opts?: object) => void, clickElement: (el: Element, opts?: object) => void, clear: () => void, dispose: () => void, isSupported: () => boolean }}
+ * @returns {{ moveTo: (el: Element, opts?: object) => void, markElement: (el: Element, opts?: object) => void, annotateElement: (el: Element, opts?: object) => void, presentAnnotationFrame: (el: Element, annotation: object, frame: object) => object, clickElement: (el: Element, opts?: object) => void, clear: () => void, dispose: () => void, isSupported: () => boolean }}
  */
 export function createPresenterCursor(doc = typeof document !== 'undefined' ? document : null) {
   if (!hasDocument(doc)) return inertCursor();
@@ -1456,6 +1463,93 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
     }
   }
 
+  function presentAnnotationFrame(el, value, frame = {}) {
+    if (disposed) return { presented: false, reason: 'disposed' };
+    let annotation = normalizePresenterAnnotation(value);
+    if (!annotation) {
+      clear();
+      return { presented: false, reason: 'invalid-annotation' };
+    }
+    if (!el || typeof el.getBoundingClientRect !== 'function') {
+      clear();
+      return { presented: false, reason: 'invalid-target' };
+    }
+    let viewport = {
+      width: win?.innerWidth || doc.documentElement?.clientWidth || 0,
+      height: win?.innerHeight || doc.documentElement?.clientHeight || 0,
+    };
+    let rect = resolvePresenterVisibleRect(el, viewport);
+    if (!rect) {
+      clear();
+      return { presented: false, reason: 'hidden-target' };
+    }
+    let progress = Math.max(0, Math.min(1, Number(frame.progress) || 0));
+    let seed = Number(frame.seed);
+    if (!Number.isFinite(seed)) seed = 0;
+    let drawRect = annotationRectFor(rect, viewport, annotation);
+    let factory = annotation.kind === 'symbol'
+      ? SYMBOLS[annotation.symbol]
+      : GESTURES[annotation.marker];
+    let options = annotation.kind === 'symbol' ? { placement: annotation.placement } : {};
+    let plan = factory?.(drawRect, seed, options);
+    if (!plan || typeof plan.point !== 'function') {
+      clear();
+      return { presented: false, reason: 'unsupported-annotation' };
+    }
+
+    cancelTravel();
+    cancelDrag();
+    cancelGesture();
+    cancelClick();
+    overlay.classList.remove('is-paused');
+    overlay.classList.add('is-visible');
+    hideMarqueeFrame();
+
+    let pointCount = progress > 0
+      ? Math.max(2, Math.floor(progress * DETERMINISTIC_GESTURE_STEPS) + 1)
+      : 0;
+    let points = [];
+    let amp = GESTURE_JITTER_PX * (0.85 + (variation(seed, 31) * 0.5 + 0.5) * 0.4);
+    for (let index = 0; index < pointCount; index += 1) {
+      let t = Math.min(1, index / DETERMINISTIC_GESTURE_STEPS);
+      let eased = easeInOutCubic(t);
+      let ideal = plan.point(eased);
+      let fade = 1 - eased * eased;
+      points.push({
+        x: ideal.x + jitter(seed, eased, amp, 0) * fade,
+        y: ideal.y + jitter(seed, eased, amp, 1) * fade,
+      });
+    }
+    let path = points.length >= 2
+      ? points.reduce((d, point, index) => `${d}${index ? 'L' : 'M'}${point.x.toFixed(1)} ${point.y.toFixed(1)}`, '')
+      : '';
+    inkPath.setAttribute('d', path);
+    ink.classList.toggle('is-inking', Boolean(path));
+    let startIdeal = plan.point(0);
+    let startPoint = {
+      x: startIdeal.x + jitter(seed, 0, amp, 0),
+      y: startIdeal.y + jitter(seed, 0, amp, 1),
+    };
+    let cursorPoint = progress >= 1 ? (plan.rest || plan.point(1)) : (points.at(-1) || startPoint);
+    setCursor(cursorPoint.x, cursorPoint.y);
+    let pathDigest = 2166136261;
+    for (let index = 0; index < path.length; index += 1) {
+      pathDigest ^= path.charCodeAt(index);
+      pathDigest = Math.imul(pathDigest, 16777619);
+    }
+    return {
+      presented: true,
+      kind: annotation.kind,
+      name: annotation.marker || annotation.symbol,
+      progress,
+      seed,
+      rect: drawRect,
+      cursor: cursorPoint,
+      pathPoints: points.length,
+      pathDigest: (pathDigest >>> 0).toString(16).padStart(8, '0'),
+    };
+  }
+
   function clear() {
     if (disposed) return;
     cancelTravel();
@@ -1483,6 +1577,7 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
     moveTo,
     markElement,
     annotateElement,
+    presentAnnotationFrame,
     clickElement,
     clear,
     dispose,

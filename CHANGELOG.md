@@ -35,6 +35,9 @@ All notable changes to `symbiote-ui` will be documented in this file.
   `{ steps: [{ target, holdMs?, gesture?, label? }] }` scenarios with a host
   `resolveTarget`, per-step `onStep`, configurable `defaultHoldMs`, and
   `AbortSignal` support.
+- Added synchronous, seed-driven `presentAnnotationFrame` projection to the
+  presenter cursor so offline render workers can reproduce all marker and symbol
+  gestures without wall-clock or prior-frame state.
 - Added `actions` and `embed` custom-content message parts to `ChatMessageItem`
   and the message model: an `actions` part
   (`{ type: 'actions', actions: [{ id, label, icon, variant }] }`) renders inline
