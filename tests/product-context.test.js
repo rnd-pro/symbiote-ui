@@ -32,6 +32,7 @@ import {
   createWebMcpWindowRuntimeActionPack,
   createWebMcpWindowRuntimeActions,
   createWebMcpTourTurnActionPlan,
+  createWebMcpTourTurnActionPlans,
   createWebMcpHooks,
   createWebMcpObserver,
   describeWebMcpPresentationActions,
@@ -692,15 +693,19 @@ test('WebMCP presentation action pack is reusable product-neutral context', () =
   );
   assert.deepEqual(
     createWebMcpTourTurnActionPlan(
-      { webmcp: { tool: 'select_release_card', input: { cardId: 'publish-pages' } } },
+      { cues: [{ kind: 'interaction', targetId: 'card:publish-pages', interaction: { binding: { source: 'webmcp', tool: 'select_release_card', input: { cardId: 'publish-pages' } } } }] },
       { actions },
     ).command,
     { tool: 'select_release_card', input: { cardId: 'publish-pages' } },
   );
   assert.equal(
-    createWebMcpTourTurnActionPlan({ webmcp: { tool: 'missing', input: {} } }, { actions }).phase,
+    createWebMcpTourTurnActionPlan({ cues: [{ kind: 'interaction', interaction: { binding: { source: 'webmcp', tool: 'missing', input: {} } } }] }, { actions }).phase,
     WEBMCP_PRESENTATION_TOUR_PHASES.NONE,
   );
+  assert.equal(createWebMcpTourTurnActionPlans({ cues: [
+    { kind: 'interaction', interaction: { binding: { source: 'webmcp', tool: 'select_window', input: {} } } },
+    { kind: 'interaction', interaction: { binding: { source: 'webmcp', tool: 'mark_ui', input: {} } } },
+  ] }, { actions }).length, 2);
 });
 
 test('WebMCP window runtime action pack exposes product-neutral UI mutation contracts', () => {

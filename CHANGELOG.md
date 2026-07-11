@@ -6,6 +6,9 @@ All notable changes to `symbiote-ui` will be documented in this file.
 
 ### Added
 
+- Added ordered v3 interaction-cue planning through
+  `createWebMcpTourTurnActionPlans`; presentation tools now consume cue bindings
+  directly and preserve strict tool input schemas.
 - Added bounded, cancellation-aware Media Studio frame-sequence playback,
   caption overlays, and external-clock timeline controls for synchronized
   audio, seek, pause, and resume workflows.

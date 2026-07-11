@@ -702,23 +702,42 @@ export function getWebMcpPresentationActionPhase(value, options = {}) {
   return WEBMCP_PRESENTATION_TOUR_PHASES.AFTER_FOCUS;
 }
 
-export function createWebMcpTourTurnActionPlan(turn = {}, options = {}) {
+export function createWebMcpTourTurnActionPlans(turn = {}, options = {}) {
   let actions = webMcpPresentationActionsFromOptions(options);
-  let source = isObject(turn?.webmcp) ? turn.webmcp : null;
-  let action = webMcpPresentationActionFromValue(source, actions);
-  let phase = source ? getWebMcpPresentationActionPhase(source, { ...options, actions }) : WEBMCP_PRESENTATION_TOUR_PHASES.NONE;
-  let command = action && phase !== WEBMCP_PRESENTATION_TOUR_PHASES.NONE ? {
-    tool: action.name || action.id,
-    input: isObject(source.input) ? { ...source.input } : {},
-  } : null;
-  return {
-    action,
-    command,
-    phase,
-    runBeforeFocus: phase === WEBMCP_PRESENTATION_TOUR_PHASES.BEFORE_FOCUS,
-    runAfterFocus: phase === WEBMCP_PRESENTATION_TOUR_PHASES.AFTER_FOCUS,
-    runAsAnnotation: phase === WEBMCP_PRESENTATION_TOUR_PHASES.AFTER_FOCUS_ANNOTATION,
-    runAsEffect: phase === WEBMCP_PRESENTATION_TOUR_PHASES.AFTER_FOCUS,
+  return (Array.isArray(turn?.cues) ? turn.cues : [])
+    .filter((cue) => cue?.kind === 'interaction' && isObject(cue.interaction?.binding))
+    .map((cue) => {
+      let binding = cue.interaction.binding;
+      let source = { tool: binding.tool, input: { ...(isObject(binding.input) ? binding.input : {}) } };
+      let action = webMcpPresentationActionFromValue(source, actions);
+      if (cue.targetId && action?.inputSchema?.properties?.targetId) source.input.targetId = cue.targetId;
+      let phase = getWebMcpPresentationActionPhase(source, { ...options, actions });
+      let command = action && phase !== WEBMCP_PRESENTATION_TOUR_PHASES.NONE ? {
+        tool: action.name || action.id,
+        input: source.input,
+      } : null;
+      return {
+        cue,
+        action,
+        command,
+        phase,
+        runBeforeFocus: phase === WEBMCP_PRESENTATION_TOUR_PHASES.BEFORE_FOCUS,
+        runAfterFocus: phase === WEBMCP_PRESENTATION_TOUR_PHASES.AFTER_FOCUS,
+        runAsAnnotation: phase === WEBMCP_PRESENTATION_TOUR_PHASES.AFTER_FOCUS_ANNOTATION,
+        runAsEffect: phase === WEBMCP_PRESENTATION_TOUR_PHASES.AFTER_FOCUS,
+      };
+    });
+}
+
+export function createWebMcpTourTurnActionPlan(turn = {}, options = {}) {
+  return createWebMcpTourTurnActionPlans(turn, options)[0] || {
+    action: null,
+    command: null,
+    phase: WEBMCP_PRESENTATION_TOUR_PHASES.NONE,
+    runBeforeFocus: false,
+    runAfterFocus: false,
+    runAsAnnotation: false,
+    runAsEffect: false,
   };
 }
 
