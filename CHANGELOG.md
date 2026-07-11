@@ -6,6 +6,10 @@ All notable changes to `symbiote-ui` will be documented in this file.
 
 ### Added
 
+- Added exact annotation path samples and a public geometry safety analyzer for
+  deterministic presenter collision checks against protected targets, captions,
+  controls, and cursor bounds; circle annotations now trace an external rounded
+  perimeter instead of crossing target content.
 - Added public `CanvasGraph.getViewport()` and `setViewport()` camera contracts
   for clamped absolute live and deterministic viewport projection.
 - Added ordered v3 interaction-cue planning through

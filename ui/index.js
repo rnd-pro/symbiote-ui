@@ -501,7 +501,14 @@ export { sanitizeVoiceResponseText } from '../chat/voice-response-sanitizer.js';
 export { createDialogueStage } from '../chat/dialogue-stage.js';
 export { playDialogueTimeline, buildAlternatingTimeline } from '../chat/dialogue-timeline.js';
 export { createDialoguePlayer } from '../chat/dialogue-player.js';
-export { createPresenterCursor, playCursorScenario } from '../chat/presenter-cursor.js';
+export {
+  PRESENTER_ANNOTATION_COLLISION_ALLOWANCE_PX,
+  PRESENTER_ANNOTATION_TARGET_INSET_PX,
+  PRESENTER_CURSOR_SIZE_PX,
+  analyzePresenterAnnotationSafety,
+  createPresenterCursor,
+  playCursorScenario,
+} from '../chat/presenter-cursor.js';
 
 export {
   DEFAULT_VOICE_SETTINGS,

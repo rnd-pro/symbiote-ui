@@ -129,11 +129,15 @@ const INTENT_DEFAULTS = Object.freeze({
 const ANNOTATION_PLACEMENTS = new Set(['over', 'after', 'before', 'corner', 'below']);
 
 const CURSOR_SIZE = 18; // px; the hotspot is the arrow's top-left tip
+export const PRESENTER_ANNOTATION_COLLISION_ALLOWANCE_PX = 4.4;
+export const PRESENTER_ANNOTATION_TARGET_INSET_PX = 8;
+export const PRESENTER_CURSOR_SIZE_PX = CURSOR_SIZE;
 const DRAG_MS = 720; // cursor + marquee growth duration
 const FADE_MS = 200; // clear() fade-out duration
 const MARCH_MS = 600; // marching-ants loop duration
 const MARQUEE_FADE_MS = 180; // previous marquee fades as the cursor leaves it
 const HIGHLIGHT_PADDING_PX = 10;
+const ANNOTATION_PADDING_PX = 26;
 const HIGHLIGHT_EDGE_INSET_PX = 8;
 const HIGHLIGHT_MIN_SIZE_PX = 8;
 const CLICK_ZONE_PADDING_PX = 6;
@@ -141,6 +145,138 @@ const CLICK_ZONE_MIN_SIZE_PX = 28;
 const CLICK_RIPPLE_SIZE_PX = 36;
 const CLICK_PRESS_MS = 240;
 const CLICK_FADE_MS = 220;
+
+function collisionRect(value = {}) {
+  if (!value || typeof value !== 'object') return null;
+  let left = Number(value.left ?? value.x);
+  let top = Number(value.top ?? value.y);
+  let width = Number(value.width);
+  let height = Number(value.height);
+  if (![left, top, width, height].every(Number.isFinite) || width < 0 || height < 0) return null;
+  return { left, top, width, height, right: left + width, bottom: top + height };
+}
+
+function expandCollisionRect(rect, amount) {
+  return {
+    left: rect.left - amount,
+    top: rect.top - amount,
+    width: rect.width + amount * 2,
+    height: rect.height + amount * 2,
+    right: rect.right + amount,
+    bottom: rect.bottom + amount,
+  };
+}
+
+function rectsIntersect(left, right) {
+  return left.left <= right.right
+    && left.right >= right.left
+    && left.top <= right.bottom
+    && left.bottom >= right.top;
+}
+
+function segmentIntersectsRect(from, to, rect) {
+  let dx = to.x - from.x;
+  let dy = to.y - from.y;
+  let t0 = 0;
+  let t1 = 1;
+  for (let [p, q] of [
+    [-dx, from.x - rect.left],
+    [dx, rect.right - from.x],
+    [-dy, from.y - rect.top],
+    [dy, rect.bottom - from.y],
+  ]) {
+    if (p === 0) {
+      if (q < 0) return false;
+      continue;
+    }
+    let ratio = q / p;
+    if (p < 0) {
+      if (ratio > t1) return false;
+      t0 = Math.max(t0, ratio);
+    } else {
+      if (ratio < t0) return false;
+      t1 = Math.min(t1, ratio);
+    }
+  }
+  return true;
+}
+
+function pathIntersectsRect(samples, rect) {
+  if (!samples.length) return false;
+  if (samples.length === 1) {
+    let point = samples[0];
+    return point.x >= rect.left && point.x <= rect.right && point.y >= rect.top && point.y <= rect.bottom;
+  }
+  for (let index = 1; index < samples.length; index += 1) {
+    if (segmentIntersectsRect(samples[index - 1], samples[index], rect)) return true;
+  }
+  return false;
+}
+
+export function analyzePresenterAnnotationSafety({
+  pathSamples = [],
+  cursor = null,
+  targetRect = null,
+  obstacles = [],
+  allowancePx = PRESENTER_ANNOTATION_COLLISION_ALLOWANCE_PX,
+  targetInsetPx = PRESENTER_ANNOTATION_TARGET_INSET_PX,
+  cursorSizePx = PRESENTER_CURSOR_SIZE_PX,
+} = {}) {
+  let samples = Array.isArray(pathSamples)
+    ? pathSamples.map((point) => ({ x: Number(point?.x), y: Number(point?.y) }))
+      .filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y))
+    : [];
+  let allowance = Number.isFinite(allowancePx) ? Math.max(0, allowancePx) : PRESENTER_ANNOTATION_COLLISION_ALLOWANCE_PX;
+  let normalizedTarget = collisionRect(targetRect);
+  let missingTarget = !normalizedTarget;
+  let protectedTarget = null;
+  if (normalizedTarget) {
+    let insetLimit = Math.min(normalizedTarget.width, normalizedTarget.height) * 0.25;
+    let inset = Math.min(Math.max(0, Number(targetInsetPx) || 0), insetLimit);
+    protectedTarget = collisionRect({
+      left: normalizedTarget.left + inset,
+      top: normalizedTarget.top + inset,
+      width: Math.max(0, normalizedTarget.width - inset * 2),
+      height: Math.max(0, normalizedTarget.height - inset * 2),
+    });
+  }
+  let cursorPoint = cursor && Number.isFinite(Number(cursor.x)) && Number.isFinite(Number(cursor.y))
+    ? { x: Number(cursor.x), y: Number(cursor.y) }
+    : null;
+  let cursorSize = Number.isFinite(cursorSizePx) ? Math.max(0, cursorSizePx) : PRESENTER_CURSOR_SIZE_PX;
+  let cursorRect = cursorPoint ? collisionRect({ ...cursorPoint, width: cursorSize, height: cursorSize }) : null;
+  let targetCollisionRect = protectedTarget ? expandCollisionRect(protectedTarget, allowance) : null;
+  let targetInteriorCollision = Boolean(targetCollisionRect && pathIntersectsRect(samples, targetCollisionRect));
+  let cursorTargetCollision = Boolean(targetCollisionRect && cursorRect && rectsIntersect(cursorRect, targetCollisionRect));
+  let collisions = [];
+  for (let [index, obstacle] of (Array.isArray(obstacles) ? obstacles : []).entries()) {
+    let rect = collisionRect(obstacle?.rect || obstacle);
+    if (!rect) continue;
+    let protectedRect = expandCollisionRect(rect, allowance);
+    let ink = pathIntersectsRect(samples, protectedRect);
+    let cursorCollision = Boolean(cursorRect && rectsIntersect(cursorRect, protectedRect));
+    if (ink || cursorCollision) {
+      collisions.push({
+        id: String(obstacle?.id || `obstacle-${index + 1}`),
+        kind: String(obstacle?.kind || 'obstacle'),
+        ink,
+        cursor: cursorCollision,
+        rect,
+      });
+    }
+  }
+  return {
+    safe: !missingTarget && !targetInteriorCollision && !cursorTargetCollision && collisions.length === 0,
+    allowancePx: allowance,
+    targetInsetPx: normalizedTarget && protectedTarget ? protectedTarget.left - normalizedTarget.left : 0,
+    cursorSizePx: cursorSize,
+    sampleCount: samples.length,
+    missingTarget,
+    targetInteriorCollision,
+    cursorTargetCollision,
+    collisions,
+  };
+}
 
 // Travel-between-checkpoints tuning.
 const TRAVEL_MIN_MS = 850;
@@ -594,37 +730,23 @@ function variation(seed, salt) {
  * }} GesturePlan
  */
 const GESTURES = {
-  // One or two slightly elliptical loops around the target's center. Radius and
-  // loop count vary a touch per move; the ellipse is squashed and tilted so it
-  // never reads as a machine-perfect circle.
+  // A hand-drawn rounded perimeter outside the target content. The asymmetric
+  // corners keep the mark organic while preserving room for the cursor body.
   circle(rect, seed) {
-    let cx = rect.left + rect.width / 2;
-    let cy = rect.top + rect.height / 2;
-    let minSide = Math.min(rect.width, rect.height);
-    let baseR = minSide * (0.4 + 0.1 * (variation(seed, 3) * 0.5 + 0.5)); // 40-50% of the smaller side
-    let loops = variation(seed, 7) > 0.2 ? 2 : 1;
-    let squash = 0.82 + variation(seed, 11) * 0.12; // gentle ellipse
-    let tilt = variation(seed, 13) * 0.5; // small rotation, radians
-    let dir = variation(seed, 17) >= 0 ? 1 : -1; // clockwise or not
-    let cos = Math.cos(tilt);
-    let sin = Math.sin(tilt);
-    return {
-      loops,
-      rest: { x: cx, y: cy },
-      point(t) {
-        // Ease the radius open at the start and closed at the end so the loop
-        // grows out of, and settles back into, the rest point.
-        let grow = Math.sin(Math.min(1, t * 1.15) * Math.PI);
-        let r = baseR * (0.35 + 0.65 * grow);
-        let a = dir * t * loops * Math.PI * 2 - Math.PI / 2;
-        let ex = Math.cos(a) * r;
-        let ey = Math.sin(a) * r * squash;
-        return {
-          x: cx + ex * cos - ey * sin,
-          y: cy + ex * sin + ey * cos,
-        };
-      },
-    };
+    let corner = Math.max(8, Math.min(24, Math.min(rect.width, rect.height) * 0.2));
+    let wobble = variation(seed, 11) * 1.5;
+    let points = [
+      { x: rect.left + corner, y: rect.top + wobble },
+      { x: rect.left + rect.width - corner, y: rect.top },
+      { x: rect.left + rect.width, y: rect.top + corner },
+      { x: rect.left + rect.width, y: rect.top + rect.height - corner },
+      { x: rect.left + rect.width - corner, y: rect.top + rect.height },
+      { x: rect.left + corner, y: rect.top + rect.height - wobble },
+      { x: rect.left, y: rect.top + rect.height - corner },
+      { x: rect.left, y: rect.top + corner },
+      { x: rect.left + corner, y: rect.top + wobble },
+    ];
+    return pointListPlan(points, points[0], variation(seed, 7) > 0.35 ? 0.18 : 0);
   },
 
   // A left-to-right stroke just below the target, as if underlining it, with a
@@ -1401,9 +1523,15 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
   }
 
   function annotationRectFor(rect, viewport, annotation) {
-    let source = annotation?.kind === 'marker' && annotation.marker !== 'underline'
-      ? resolvePresenterHighlightRect(rect, viewport)
-      : rect;
+    let source = rect;
+    if (annotation?.kind === 'marker' && annotation.marker !== 'underline') {
+      source = resolvePresenterHighlightRect({
+        left: rect.left - (ANNOTATION_PADDING_PX - HIGHLIGHT_PADDING_PX),
+        top: rect.top - (ANNOTATION_PADDING_PX - HIGHLIGHT_PADDING_PX),
+        width: rect.width + (ANNOTATION_PADDING_PX - HIGHLIGHT_PADDING_PX) * 2,
+        height: rect.height + (ANNOTATION_PADDING_PX - HIGHLIGHT_PADDING_PX) * 2,
+      }, viewport);
+    }
     let left = Math.max(HIGHLIGHT_EDGE_INSET_PX, Number(source.left) || 0);
     let top = Math.max(HIGHLIGHT_EDGE_INSET_PX, Number(source.top) || 0);
     let maxRight = Math.max(left + HIGHLIGHT_MIN_SIZE_PX, (viewport.width || left + source.width) - HIGHLIGHT_EDGE_INSET_PX);
@@ -1520,8 +1648,12 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
         y: ideal.y + jitter(seed, eased, amp, 1) * fade,
       });
     }
-    let path = points.length >= 2
-      ? points.reduce((d, point, index) => `${d}${index ? 'L' : 'M'}${point.x.toFixed(1)} ${point.y.toFixed(1)}`, '')
+    let pathSamples = points.map((point) => ({
+      x: Number(point.x.toFixed(1)),
+      y: Number(point.y.toFixed(1)),
+    }));
+    let path = pathSamples.length >= 2
+      ? pathSamples.reduce((d, point, index) => `${d}${index ? 'L' : 'M'}${point.x.toFixed(1)} ${point.y.toFixed(1)}`, '')
       : '';
     inkPath.setAttribute('d', path);
     ink.classList.toggle('is-inking', Boolean(path));
@@ -1545,7 +1677,8 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
       seed,
       rect: drawRect,
       cursor: cursorPoint,
-      pathPoints: points.length,
+      pathPoints: pathSamples.length,
+      pathSamples,
       pathDigest: (pathDigest >>> 0).toString(16).padStart(8, '0'),
     };
   }

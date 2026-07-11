@@ -5,6 +5,10 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { parseHTML } from 'linkedom';
 import {
+  PRESENTER_ANNOTATION_COLLISION_ALLOWANCE_PX,
+  PRESENTER_ANNOTATION_TARGET_INSET_PX,
+  PRESENTER_CURSOR_SIZE_PX,
+  analyzePresenterAnnotationSafety,
   createPresenterCursor,
   PRESENTER_MARKERS,
   PRESENTER_SYMBOLS,
@@ -75,10 +79,114 @@ test('deterministic annotation frame clamps progress and respects explicit seed'
   let firstPath = inkPath(window.document);
   assert.equal(full.progress, 1);
   assert.equal(full.pathPoints, 97);
+  assert.equal(
+    firstPath,
+    full.pathSamples.reduce((path, point, index) => (
+      `${path}${index ? 'L' : 'M'}${point.x.toFixed(1)} ${point.y.toFixed(1)}`
+    ), ''),
+  );
   let changedSeed = cursor.presentAnnotationFrame(el, { marker: 'underline' }, { progress: 1, seed: 6 });
   assert.notEqual(inkPath(window.document), firstPath);
   assert.notEqual(changedSeed.pathDigest, full.pathDigest);
 
+  cursor.dispose();
+});
+
+test('annotation safety accepts perimeter ink and rejects protected content', () => {
+  let targetRect = { left: 100, top: 100, width: 200, height: 100 };
+  let safe = analyzePresenterAnnotationSafety({
+    pathSamples: [{ x: 90, y: 90 }, { x: 310, y: 90 }],
+    cursor: { x: 80, y: 80 },
+    targetRect,
+  });
+  assert.equal(safe.safe, true);
+  assert.equal(safe.allowancePx, PRESENTER_ANNOTATION_COLLISION_ALLOWANCE_PX);
+  assert.equal(safe.targetInsetPx, PRESENTER_ANNOTATION_TARGET_INSET_PX);
+  assert.equal(safe.cursorSizePx, PRESENTER_CURSOR_SIZE_PX);
+
+  let unsafe = analyzePresenterAnnotationSafety({
+    pathSamples: [{ x: 80, y: 150 }, { x: 320, y: 150 }],
+    cursor: { x: 80, y: 80 },
+    targetRect,
+  });
+  assert.equal(unsafe.safe, false);
+  assert.equal(unsafe.targetInteriorCollision, true);
+});
+
+test('annotation safety includes stroke allowance, cursor body, and obstacle identity', () => {
+  let obstacle = { id: 'caption', kind: 'caption', rect: { left: 300, top: 200, width: 180, height: 40 } };
+  let edgeTouch = analyzePresenterAnnotationSafety({
+    pathSamples: [{ x: 200, y: 195.7 }, { x: 500, y: 195.7 }],
+    cursor: { x: 40, y: 40 },
+    targetRect: { left: 40, top: 40, width: 80, height: 80 },
+    obstacles: [obstacle],
+  });
+  assert.equal(edgeTouch.safe, false);
+  assert.deepEqual(edgeTouch.collisions.map(({ id, ink, cursor }) => ({ id, ink, cursor })), [
+    { id: 'caption', ink: true, cursor: false },
+  ]);
+
+  let cursorCollision = analyzePresenterAnnotationSafety({
+    pathSamples: [],
+    cursor: { x: 290, y: 190 },
+    targetRect: { left: 40, top: 40, width: 80, height: 80 },
+    obstacles: [obstacle],
+  });
+  assert.equal(cursorCollision.safe, false);
+  assert.equal(cursorCollision.collisions[0].cursor, true);
+});
+
+test('annotation safety caps target inset at one quarter of the smaller side', () => {
+  let result = analyzePresenterAnnotationSafety({
+    pathSamples: [{ x: 0, y: 2.6 }, { x: 100, y: 2.6 }],
+    cursor: null,
+    targetRect: { left: 0, top: 0, width: 100, height: 20 },
+    targetInsetPx: 8,
+  });
+  assert.equal(result.targetInsetPx, 5);
+  assert.equal(result.targetInteriorCollision, true);
+});
+
+test('annotation safety fails closed when the target rect is unavailable', () => {
+  let result = analyzePresenterAnnotationSafety({
+    pathSamples: [{ x: 20, y: 20 }, { x: 40, y: 40 }],
+    targetRect: null,
+  });
+  assert.equal(result.safe, false);
+  assert.equal(result.missingTarget, true);
+});
+
+test('box annotation keeps its exact ink and cursor outside protected target content', () => {
+  let window = makeDom();
+  let el = target(window.document);
+  let cursor = createPresenterCursor(window.document);
+  let targetRect = el.getBoundingClientRect();
+  for (let progress of [0, 0.25, 0.5, 0.75, 1]) {
+    let frame = cursor.presentAnnotationFrame(el, { marker: 'box' }, { progress, seed: 17 });
+    let safety = analyzePresenterAnnotationSafety({
+      pathSamples: frame.pathSamples,
+      cursor: frame.cursor,
+      targetRect,
+    });
+    assert.equal(safety.safe, true, `box must remain safe at progress ${progress}`);
+  }
+  cursor.dispose();
+});
+
+test('circle annotation traces an external rounded perimeter', () => {
+  let window = makeDom();
+  let el = target(window.document, { left: 120, top: 100, width: 360, height: 72 });
+  let cursor = createPresenterCursor(window.document);
+  let targetRect = el.getBoundingClientRect();
+  for (let progress of [0, 0.25, 0.5, 0.75, 1]) {
+    let frame = cursor.presentAnnotationFrame(el, { marker: 'circle' }, { progress, seed: 23 });
+    let safety = analyzePresenterAnnotationSafety({
+      pathSamples: frame.pathSamples,
+      cursor: frame.cursor,
+      targetRect,
+    });
+    assert.equal(safety.safe, true, `circle must remain safe at progress ${progress}`);
+  }
   cursor.dispose();
 });
 
