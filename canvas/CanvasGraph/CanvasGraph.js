@@ -1208,6 +1208,37 @@ export class CanvasGraph extends Symbiote {
     return true;
   }
 
+  getViewport() {
+    return {
+      zoom: this.zoom,
+      panX: this.panX,
+      panY: this.panY,
+    };
+  }
+
+  setViewport(viewport = {}) {
+    if (!Number.isFinite(viewport.zoom)
+      || !Number.isFinite(viewport.panX)
+      || !Number.isFinite(viewport.panY)) {
+      throw new TypeError('canvas-graph viewport requires finite zoom, panX, and panY');
+    }
+    let rect = this.canvas?.getBoundingClientRect?.();
+    let target = {
+      zoom: this._clampZoom(viewport.zoom, rect),
+      panX: viewport.panX,
+      panY: viewport.panY,
+      animate: viewport.animate === true,
+      viewportEase: viewport.viewportEase,
+    };
+    let applied = target.animate
+      ? this._applyViewportTarget(target)
+      : this._setViewportImmediate(target);
+    if (!applied) return false;
+    this.needsDraw = true;
+    this._wakeLoop();
+    return this.getViewport();
+  }
+
   _captureViewportState() {
     return {
       zoom: this.zoom,

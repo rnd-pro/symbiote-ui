@@ -6,6 +6,8 @@ All notable changes to `symbiote-ui` will be documented in this file.
 
 ### Added
 
+- Added public `CanvasGraph.getViewport()` and `setViewport()` camera contracts
+  for clamped absolute live and deterministic viewport projection.
 - Added ordered v3 interaction-cue planning through
   `createWebMcpTourTurnActionPlans`; presentation tools now consume cue bindings
   directly and preserve strict tool input schemas.

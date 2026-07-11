@@ -3453,7 +3453,7 @@ export let COMPONENTS = [
       status: 'draft',
       schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/graph-model-v1.json',
-      capabilities: ['hierarchical-graph', 'overview-read-renderer', 'force-layout', 'semantic-clusters', 'focus-selection', 'layout-snapshot', 'device-orientation-parallax'],
+      capabilities: ['hierarchical-graph', 'overview-read-renderer', 'force-layout', 'semantic-clusters', 'focus-selection', 'layout-snapshot', 'viewport-control', 'device-orientation-parallax'],
       attributes: [
         { name: 'active-node-scale', type: 'number', description: 'Visual scale target for the selected node; defaults to 1.5.' },
         { name: 'info-panel-scale', type: 'number', description: 'Visual scale for the active node information panel; defaults to 1.' },
@@ -3480,6 +3480,8 @@ export let COMPONENTS = [
         { name: 'focusNodes', type: 'function', description: 'Agent-facing alias for fitting one or more graph node ids into the viewport.' },
         { name: 'queueTransitionMarkers', type: 'function', description: 'Queues animated route markers from one graph node to multiple target node ids without changing the host-owned graph model.' },
         { name: 'fitView', type: 'function', description: 'Fits the visible graph into the canvas viewport; accepts optional viewportEase for live replay tracking.' },
+        { name: 'getViewport', type: 'function', description: 'Returns the current zoom and pan viewport as a portable snapshot.' },
+        { name: 'setViewport', type: 'function', description: 'Applies an absolute, clamped zoom and pan viewport immediately or through the graph camera easing loop.' },
         { name: 'setVisualOptions', type: 'function', description: 'Applies visual tuning options such as activeNodeScale and infoPanelScale without changing the host-owned graph model.' },
         { name: 'setForceLayoutOptions', type: 'function', description: 'Applies force-layout tuning options, including layoutAlgorithm: organic, oil-cloud, crystal, or spring, without changing the host-owned graph model.' },
         { name: 'pulseNode', type: 'function', description: 'Projects a timed pulse around one node, optionally from an explicit render-clock start time.' },

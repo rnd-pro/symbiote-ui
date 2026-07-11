@@ -234,7 +234,7 @@
           "name": "CanvasGraph",
           "tagName": "canvas-graph",
           "description": "Generic hierarchical graph overview/read renderer with force layout, semantic navigation, selection events, and optional device-orientation parallax.",
-          "componentDescription": "Generic hierarchical graph overview/read renderer with force layout, semantic navigation, selection events, and optional device-orientation parallax. Use this interactive visual graph surface when composing canvas UI. Capabilities: hierarchical-graph, overview-read-renderer, force-layout, semantic-clusters, focus-selection, layout-snapshot, device-orientation-parallax. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: canvas_graph_set_model, canvas_graph_focus_node, canvas_graph_focus_nodes, canvas_graph_set_path.",
+          "componentDescription": "Generic hierarchical graph overview/read renderer with force layout, semantic navigation, selection events, and optional device-orientation parallax. Use this interactive visual graph surface when composing canvas UI. Capabilities: hierarchical-graph, overview-read-renderer, force-layout, semantic-clusters, focus-selection, layout-snapshot, viewport-control, device-orientation-parallax. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: canvas_graph_set_model, canvas_graph_focus_node, canvas_graph_focus_nodes, canvas_graph_set_path.",
           "attributes": [
             {
               "name": "active-node-scale",
@@ -375,6 +375,16 @@
               "kind": "method",
               "name": "fitView",
               "description": "Fits the visible graph into the canvas viewport; accepts optional viewportEase for live replay tracking."
+            },
+            {
+              "kind": "method",
+              "name": "getViewport",
+              "description": "Returns the current zoom and pan viewport as a portable snapshot."
+            },
+            {
+              "kind": "method",
+              "name": "setViewport",
+              "description": "Applies an absolute, clamped zoom and pan viewport immediately or through the graph camera easing loop."
             },
             {
               "kind": "method",
@@ -1049,7 +1059,7 @@
             }
           },
           "agent": {
-            "componentDescription": "Generic hierarchical graph overview/read renderer with force layout, semantic navigation, selection events, and optional device-orientation parallax. Use this interactive visual graph surface when composing canvas UI. Capabilities: hierarchical-graph, overview-read-renderer, force-layout, semantic-clusters, focus-selection, layout-snapshot, device-orientation-parallax. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: canvas_graph_set_model, canvas_graph_focus_node, canvas_graph_focus_nodes, canvas_graph_set_path.",
+            "componentDescription": "Generic hierarchical graph overview/read renderer with force layout, semantic navigation, selection events, and optional device-orientation parallax. Use this interactive visual graph surface when composing canvas UI. Capabilities: hierarchical-graph, overview-read-renderer, force-layout, semantic-clusters, focus-selection, layout-snapshot, viewport-control, device-orientation-parallax. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: canvas_graph_set_model, canvas_graph_focus_node, canvas_graph_focus_nodes, canvas_graph_set_path.",
             "semanticRole": "interactive visual graph surface",
             "usage": "Render or compose <canvas-graph> when the host needs generic hierarchical graph overview/read renderer with force layout, semantic navigation, selection events, and optional device-orientation parallax.",
             "dataOwnership": "host-owned model; component renders and emits intent events",

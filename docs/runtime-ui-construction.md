@@ -136,6 +136,11 @@ changing the host-owned graph model.
 Use `fitNodes(ids, { viewportEase })` or `fitView({ viewportEase })` when a
 live replay should track a changing area of interest with a slower camera path
 than ordinary user-initiated focus.
+Use `getViewport()` to capture the current `{ zoom, panX, panY }` camera and
+`setViewport({ zoom, panX, panY, animate })` to restore or project an absolute
+camera state. `setViewport()` clamps zoom through the graph's normal viewport
+rules and cancels stale immediate-camera targets, so deterministic replay must
+prefer it over writing graph fields directly.
 During incremental model growth, `canvas-graph` seeds entering node positions
 near linked visible nodes, starts them with a small effective collision size,
 and restarts the force layout with low initial heat, so live process replay can
