@@ -214,6 +214,7 @@ export let styles = css`
 
     & .sn-node-media {
       inline-size: 100%;
+      aspect-ratio: 16 / 9;
       overflow: hidden;
       border-bottom: 1px solid color-mix(in oklab, currentColor 8%, transparent);
       background: color-mix(in oklab, var(--sn-node-accent) 10%, transparent);
@@ -222,7 +223,7 @@ export let styles = css`
     & .sn-node-media-img {
       display: block;
       inline-size: 100%;
-      aspect-ratio: 16 / 9;
+      block-size: 100%;
       object-fit: cover;
       pointer-events: none;
       user-select: none;

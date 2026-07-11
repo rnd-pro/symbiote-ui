@@ -2108,6 +2108,8 @@ test('graph node exposes media fit strategy for transparent and cropped media', 
   assert.match(nodeSource, /fit === 'fit'\) return 'contain';/);
   assert.match(nodeSource, /fit === 'crop'\) return 'cover';/);
   assert.match(nodeSource, /setOptionalAttribute\(this, 'data-media-fit', normalizeMediaFit\(params\.mediaFit \|\| params\.imageFit \|\| params\.avatarFit\)\);/);
+  assert.match(nodeStyles, /\& \.sn-node-media {\s*inline-size: 100%;\s*aspect-ratio: 16 \/ 9;/);
+  assert.match(nodeStyles, /\& \.sn-node-media-img {\s*display: block;\s*inline-size: 100%;\s*block-size: 100%;/);
   assert.match(nodeStyles, /\&\[data-media-fit='contain'\] \.sn-node-media-img {\s*object-fit: contain;/);
   assert.match(nodeStyles, /\&\[data-media-fit='cover'\] \.sn-node-media-img {\s*object-fit: cover;/);
   assert.ok(graphNode.contract.capabilities.includes('media-fit'));
