@@ -23,7 +23,6 @@ export {
 export function getModelContext(target = globalThis.document) {
   return target?.modelContext
     || (typeof target?.registerTool === 'function' ? target : null)
-    || globalThis.navigator?.modelContext
     || null;
 }
 
@@ -65,7 +64,7 @@ export async function createNativeToolDescriptor(options) {
   return new ToolDescriptor(options);
 }
 
-export async function registerWebMcpTool(options, target = globalThis.document) {
+export async function registerWebMcpTool(options, target = globalThis.document, registrationOptions = {}) {
   let context = getModelContext(target);
   if (!context || typeof context.registerTool !== 'function') {
     return { nativeActive: false, descriptor: createToolDescriptor(options), unregister: () => {} };
@@ -82,7 +81,7 @@ export async function registerWebMcpTool(options, target = globalThis.document) 
     nativeActive = false;
     descriptor = createToolDescriptor(options);
   }
-  let registration = context.registerTool(descriptor);
+  let registration = await context.registerTool(descriptor, registrationOptions);
   let unregister = registrationUnregister(registration);
 
   return { nativeActive, descriptor, unregister };

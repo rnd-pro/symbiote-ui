@@ -49,6 +49,8 @@ All notable changes to `symbiote-ui` will be documented in this file.
 
 ### Fixed
 
+- `registerWebMcpTool()` now forwards native registration options, including
+  `AbortSignal` and origin exposure, to `document.modelContext.registerTool()`.
 - Fixed cascade theme widget/editor slider rows staying stale or failing to
   apply range input after switching theme variants, and tuned the `classic`
   preset to sharp, no-outline chrome while keeping its lightness and chroma
