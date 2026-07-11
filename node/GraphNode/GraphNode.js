@@ -43,6 +43,14 @@ function normalizeNodeTone(value) {
   return tone;
 }
 
+function normalizeMediaFit(value) {
+  let fit = String(value || '').trim().toLowerCase();
+  if (fit === 'fit') return 'contain';
+  if (fit === 'crop') return 'cover';
+  if (fit === 'contain' || fit === 'cover') return fit;
+  return '';
+}
+
 export class GraphNode extends Symbiote {
   destructionDelay = 200;
 
@@ -108,6 +116,7 @@ export class GraphNode extends Symbiote {
     this.toggleAttribute('data-header-hidden', Boolean(params.hideHeader || params.headerHidden));
     this.toggleAttribute('data-content-hidden', contentHidden);
     setOptionalAttribute(this, 'data-node-tone', normalizeNodeTone(params.tone || params.nodeTone));
+    setOptionalAttribute(this, 'data-media-fit', normalizeMediaFit(params.mediaFit || params.imageFit || params.avatarFit));
     this.set$({
       nodeIcon: node.icon || CATEGORY_ICONS[node.category] || CATEGORY_ICONS.default,
       mediaSrc: params.media || params.image || params.avatar || '',

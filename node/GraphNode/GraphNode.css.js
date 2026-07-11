@@ -229,6 +229,14 @@ export let styles = css`
       -webkit-user-drag: none;
     }
 
+    &[data-media-fit='contain'] .sn-node-media-img {
+      object-fit: contain;
+    }
+
+    &[data-media-fit='cover'] .sn-node-media-img {
+      object-fit: cover;
+    }
+
     & .sn-node-content {
       padding: var(--sn-node-content-padding, 8px 12px 10px);
       min-width: 0;

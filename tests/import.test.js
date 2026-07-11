@@ -755,16 +755,15 @@ test('canvas graph visual scale options stay in the library contract', async () 
   assert.match(source, /infoPanelScale: DEFAULT_INFO_PANEL_SCALE/);
   assert.match(source, /setVisualOptions\(options = \{\}\) {/);
   assert.match(source, /_getWorkerNodeDimensions\(node\) {/);
-  assert.match(source, /const isActiveLayoutNode = this\.activeNode\?\.id === node\.id;/);
-  assert.match(source, /const scale = isActiveLayoutNode \? this\._resolveActiveNodeScale\(\) : 1;/);
-  assert.match(source, /_restartWorkerForVisualFocus\(\) {/);
-  assert.match(source, /VISUAL_FOCUS_LAYOUT_INITIAL_ALPHA/);
-  assert.match(source, /CRYSTAL_FOCUS_LAYOUT_INITIAL_ALPHA = 0\.07/);
-  assert.match(source, /const focusAlpha = this\._usesCrystalForceLayout\(\)\s*\? CRYSTAL_FOCUS_LAYOUT_INITIAL_ALPHA\s*: VISUAL_FOCUS_LAYOUT_INITIAL_ALPHA;/);
-  assert.match(source, /VISUAL_FOCUS_LAYOUT_PADDING/);
-  assert.match(source, /const layoutRadius = radius \+ \(isActiveLayoutNode \? VISUAL_FOCUS_LAYOUT_PADDING : 0\);/);
+  assert.match(source, /const radius = getNodeRadius\(node, conns, \{ scale: 1 \}\);/);
+  assert.doesNotMatch(source, /isActiveLayoutNode/);
+  assert.doesNotMatch(source, /_restartWorkerForVisualFocus/);
+  assert.doesNotMatch(source, /VISUAL_FOCUS_LAYOUT/);
+  assert.doesNotMatch(source, /CRYSTAL_FOCUS_LAYOUT/);
   assert.match(source, /positionOrigin: this\.renderMode === 'dots' \? 'center' : 'top-left'/);
-  assert.match(source, /activeVisualNodeId: this\.renderMode === 'dots' \? this\.activeNode\?\.id \|\| null : null/);
+  assert.match(source, /activeVisualNodeId: null/);
+  assert.doesNotMatch(source, /activeVisualNodeId: this\.renderMode === 'dots'/);
+  assert.match(source, /this\.updateInteractionDepths\(\);\s+if \(isNewActivation\) \{\s+this\.needsDraw = true;\s+this\._wakeLoop\(\);\s+\}/);
   assert.match(source, /const usesCenterPosition = this\.renderMode === 'dots';/);
   assert.match(source, /const workerX = pos \? pos\.x \+ \(usesCenterPosition \? 0 : finalW \/ 2\) : undefined/);
   assert.match(source, /const dimensions = this\._getWorkerNodeDimensions\(n\);/);
@@ -931,7 +930,7 @@ test('canvas graph seeds entering node positions and eases appearance', async ()
   assert.match(source, /layoutSizeWarmupTicks: isEntering \? ENTERING_LAYOUT_SIZE_WARMUP_TICKS : 0/);
   assert.match(source, /layoutFixedTicks: isPreserved \? 42 : 0/);
   assert.match(source, /const usesCenterPosition = this\.renderMode === 'dots';/);
-  assert.match(source, /crystalReseed: this\._usesCrystalForceLayout\(\)/);
+  assert.doesNotMatch(source, /crystalReseed: this\._usesCrystalForceLayout\(\)/);
   assert.match(source, /const reseedCrystalLayout = options\.layoutAlgorithm === 'crystal' && customOptions\?\.crystalReseed === true;/);
   assert.match(source, /const pos = reseedCrystalLayout\s*\? null\s*: this\.smoothPositions\.get\(n\.id\) \|\| this\.nodePositions\.get\(n\.id\) \|\| restoredPos;/);
   assert.match(source, /const workerX = pos \? pos\.x \+ \(usesCenterPosition \? 0 : finalW \/ 2\) : undefined/);
@@ -2093,6 +2092,28 @@ test('node shape registry exposes disc as a supported SVG node preset', async ()
   assert.ok(
     graphNode.contract.attributes.some((attribute) =>
       attribute.name === 'node-shape' && attribute.description.includes('disc')
+    )
+  );
+});
+
+test('graph node exposes media fit strategy for transparent and cropped media', async () => {
+  let [nodeSource, nodeStyles] = await Promise.all([
+    readFile(new URL('../node/GraphNode/GraphNode.js', import.meta.url), 'utf8'),
+    readFile(new URL('../node/GraphNode/GraphNode.css.js', import.meta.url), 'utf8'),
+  ]);
+  let { getComponent } = await import('../manifest/index.js');
+  let graphNode = getComponent('graph-node');
+
+  assert.match(nodeSource, /function normalizeMediaFit\(value\) {/);
+  assert.match(nodeSource, /fit === 'fit'\) return 'contain';/);
+  assert.match(nodeSource, /fit === 'crop'\) return 'cover';/);
+  assert.match(nodeSource, /setOptionalAttribute\(this, 'data-media-fit', normalizeMediaFit\(params\.mediaFit \|\| params\.imageFit \|\| params\.avatarFit\)\);/);
+  assert.match(nodeStyles, /\&\[data-media-fit='contain'\] \.sn-node-media-img {\s*object-fit: contain;/);
+  assert.match(nodeStyles, /\&\[data-media-fit='cover'\] \.sn-node-media-img {\s*object-fit: cover;/);
+  assert.ok(graphNode.contract.capabilities.includes('media-fit'));
+  assert.ok(
+    graphNode.contract.attributes.some((attribute) =>
+      attribute.name === 'data-media-fit' && attribute.description.includes('contain')
     )
   );
 });

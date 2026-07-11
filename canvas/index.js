@@ -36,11 +36,14 @@ export {
 } from './CanvasGraph/CanvasGraphViewport.js';
 export {
   GRAPH_DIRECTORY_FRAME_COLORS,
+  GRAPH_PATH_STYLE_MENU_GROUP,
+  GRAPH_PATH_STYLE_MENU_ITEMS,
   GRAPH_PATH_STYLES,
   GRAPH_VIEW_MODES,
   addGraphDirectoryFrames,
   applyGraphExplorerViewMode,
   buildFlatPathHash,
+  createGraphPathStyleMenuActions,
   createGraphExplorerViewController,
   createGraphViewModeController,
   getFileSelectionNodeId,
@@ -52,6 +55,7 @@ export {
   normalizeGraphViewMode,
   renderGraphPathStyleButton,
   renderGraphViewModeButton,
+  resolveGraphPathStyleAction,
   resolveFlatHashChange,
   resolveInitialGraphViewMode,
   selectGraphLabelMode,

@@ -1,5 +1,16 @@
 export const GRAPH_PATH_STYLES = ['pcb', 'bezier', 'orthogonal', 'straight'];
 export const GRAPH_VIEW_MODES = ['structured', 'flat'];
+export const GRAPH_PATH_STYLE_MENU_GROUP = Object.freeze({
+  group: 'path',
+  groupLabel: 'Connections',
+  groupOrder: 20,
+});
+export const GRAPH_PATH_STYLE_MENU_ITEMS = Object.freeze({
+  pcb: Object.freeze({ label: 'Routed', icon: 'route' }),
+  orthogonal: Object.freeze({ label: 'Right angles', icon: 'account_tree' }),
+  bezier: Object.freeze({ label: 'Curved', icon: 'gesture' }),
+  straight: Object.freeze({ label: 'Straight', icon: 'trending_flat' }),
+});
 
 export const GRAPH_DIRECTORY_FRAME_COLORS = [
   'var(--sn-graph-cluster-0)',
@@ -21,6 +32,43 @@ export function normalizeGraphExplorerViewMode(mode) {
 }
 
 export const normalizeGraphViewMode = normalizeGraphExplorerViewMode;
+
+function supportsGraphPathStyleMenuActions(mode) {
+  return mode === 'structured';
+}
+
+export function resolveGraphPathStyleAction(actionId) {
+  const id = String(actionId || '');
+  if (!id.startsWith('path:')) return '';
+  const style = id.slice('path:'.length);
+  return GRAPH_PATH_STYLES.includes(style) ? style : '';
+}
+
+export function createGraphPathStyleMenuActions({
+  mode = 'structured',
+  pathStyle = 'pcb',
+  labels = {},
+  titles = {},
+  group = GRAPH_PATH_STYLE_MENU_GROUP.group,
+  groupLabel = GRAPH_PATH_STYLE_MENU_GROUP.groupLabel,
+  groupOrder = GRAPH_PATH_STYLE_MENU_GROUP.groupOrder,
+} = {}) {
+  if (!supportsGraphPathStyleMenuActions(mode)) return [];
+  return GRAPH_PATH_STYLES.map((style) => {
+    const item = GRAPH_PATH_STYLE_MENU_ITEMS[style] || {};
+    const label = labels[style] || item.label || style;
+    return {
+      id: `path:${style}`,
+      label,
+      icon: item.icon || 'route',
+      title: titles[style] || `Use ${label} connection paths`,
+      group,
+      groupLabel,
+      groupOrder,
+      active: style === pathStyle,
+    };
+  });
+}
 
 function scheduleGraphExplorerFrame(callback) {
   if (typeof requestAnimationFrame === 'function') {
@@ -344,6 +392,21 @@ export function createGraphExplorerViewController({
       state.structuredCanvas?.refreshConnections?.();
       notify('path-style');
       return api;
+    },
+
+    getPathStyleMenuActions(options = {}) {
+      return createGraphPathStyleMenuActions({
+        ...options,
+        mode: state.mode,
+        pathStyle: state.pathStyle,
+      });
+    },
+
+    runPathStyleMenuAction(actionId) {
+      const style = resolveGraphPathStyleAction(actionId);
+      if (!style || state.mode !== 'structured') return false;
+      api.setPathStyle(style);
+      return true;
     },
 
     fitView({ structuredArgs = [], flatArgs = [] } = {}) {
