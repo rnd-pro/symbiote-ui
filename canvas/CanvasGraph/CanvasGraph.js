@@ -928,10 +928,12 @@ export class CanvasGraph extends Symbiote {
     const dpr = window.devicePixelRatio || 1;
     const rect = this.getBoundingClientRect();
     if (rect.width === 0) return;
+    const width = Math.max(1, Math.round(rect.width * dpr));
+    const height = Math.max(1, Math.round(rect.height * dpr));
     this.canvas.style.width = rect.width + 'px';
     this.canvas.style.height = rect.height + 'px';
-    this.canvas.width = rect.width * dpr;
-    this.canvas.height = rect.height * dpr;
+    if (this.canvas.width !== width) this.canvas.width = width;
+    if (this.canvas.height !== height) this.canvas.height = height;
     this._wakeLoop();  // Dimensions changed — redraw
   }
 

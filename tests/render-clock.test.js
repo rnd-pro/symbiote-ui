@@ -171,6 +171,23 @@ test('CanvasGraph presents externally driven frames without leaving a stale loop
     graph.canvas = { width: 0, height: 0 };
     assert.equal(graph.presentFrame(), false);
 
+    let width = 640;
+    let height = 360;
+    let dimensionWrites = 0;
+    graph.canvas = {
+      style: {},
+      get width() { return width; },
+      set width(value) { width = value; dimensionWrites += 1; },
+      get height() { return height; },
+      set height(value) { height = value; dimensionWrites += 1; },
+    };
+    graph.getBoundingClientRect = () => ({ width: 640, height: 360 });
+    graph.resizeCanvas();
+    assert.equal(dimensionWrites, 0);
+    graph.getBoundingClientRect = () => ({ width: 641, height: 361 });
+    graph.resizeCanvas();
+    assert.equal(dimensionWrites, 2);
+
     graph._nodeAppearances = new Map([
       ['node', { startTime: 0, duration: 900 }],
       ['future', { startTime: 500, duration: 900 }],
