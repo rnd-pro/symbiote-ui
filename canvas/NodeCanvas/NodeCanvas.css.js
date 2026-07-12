@@ -151,6 +151,30 @@ export let styles = css`
       pointer-events: none;
       z-index: 100;
     }
+
+    & .sn-focus-transition-marker {
+      --sn-focus-marker-size: 18px;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: var(--sn-focus-marker-size);
+      height: var(--sn-focus-marker-size);
+      margin:
+        calc(var(--sn-focus-marker-size) / -2)
+        0
+        0
+        calc(var(--sn-focus-marker-size) / -2);
+      border-radius: var(--sn-radius-full);
+      background: var(--sn-sys-accent);
+      border: 2px solid var(--sn-sys-surface-raised);
+      box-shadow:
+        0 0 0 3px color-mix(in oklab, var(--sn-sys-accent) 24%, transparent),
+        0 10px 22px color-mix(in oklab, var(--sn-sys-accent) 34%, transparent);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 140;
+      will-change: transform, opacity;
+    }
   }
 
   /* Connection paths */

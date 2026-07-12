@@ -27,10 +27,15 @@ import {
 import { GRAPH_TYPE_COLOR_TOKENS } from '../../graph/theme-contract.js';
 import {
   CANVAS_GRAPH_LAYER_TARGETS,
+  CANVAS_GRAPH_RENDER_SNAPSHOT_KIND,
+  CANVAS_GRAPH_RENDER_SNAPSHOT_VERSION,
+  normalizeCanvasGraphRenderSnapshot,
   findActiveTransitionMarker,
   getDepthGroupsFrame,
   getLayerAnimationFrame,
   getNextPulseQueue,
+  resolveCanvasGraphFrameContext,
+  resolveCanvasGraphFrameEase,
   resolveGroupOrbitRotationFrame,
   resolveCanvasGraphEdgeFocus,
   resolveDeactivationFrame,
@@ -41,10 +46,14 @@ import {
 import {
   MAX_CANVAS_GRAPH_ZOOM,
   MIN_CANVAS_GRAPH_ZOOM,
+  resolveCanvasGraphCameraArc,
   resolveCanvasGraphMinZoom,
+  resolveCanvasGraphTransitionDuration,
+  resolveCanvasGraphTransitionProgress,
   resolveCanvasGraphViewportFit,
   resolveFitPadding,
   resolveFrameFitZoom,
+  viewportToCameraCenter,
 } from './CanvasGraphViewport.js';
 import { resolveWheelZoomFactor } from '../../interactions/Zoom.js';
 import { renderNow } from '../../core/render-clock.js';
@@ -529,8 +538,6 @@ function scheduleFrame(callback) {
 }
 
 const DEFAULT_VIEWPORT_EASE = 0.15;
-const TRANSITION_ROUTE_FIT_PROGRESS = 0.5;
-const TRANSITION_TARGET_FIT_PROGRESS = 0.5;
 
 function normalizeViewportEase(value, fallback = DEFAULT_VIEWPORT_EASE) {
   return Math.max(0.015, Math.min(0.35, Number.isFinite(value) ? value : fallback));
@@ -540,27 +547,15 @@ function clampTransitionProgress(value) {
   return Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
 }
 
-function easeOutCubic(progress) {
-  let t = clampTransitionProgress(progress);
-  return 1 - Math.pow(1 - t, 3);
-}
-
-function easeInOutCubic(progress) {
-  let t = clampTransitionProgress(progress);
-  return t < 0.5
-    ? 4 * t * t * t
-    : 1 - Math.pow(-2 * t + 2, 3) / 2;
-}
-
-function mixTransitionViewport(from, to, progress) {
-  if (!from || !to) return null;
-  let t = clampTransitionProgress(progress);
-  return {
-    zoom: from.zoom + (to.zoom - from.zoom) * t,
-    panX: from.panX + (to.panX - from.panX) * t,
-    panY: from.panY + (to.panY - from.panY) * t,
-    animate: false,
-  };
+function getTransitionRouteLength(points = []) {
+  let distance = 0;
+  for (let index = 1; index < points.length; index++) {
+    distance += Math.hypot(
+      points[index].x - points[index - 1].x,
+      points[index].y - points[index - 1].y
+    );
+  }
+  return distance;
 }
 
 function normalizeFitViewArgs(padding, animate) {
@@ -720,6 +715,7 @@ export class CanvasGraph extends Symbiote {
 
     this.frameCount = 0;
     this.tickCount = 0;
+    this._lastRenderTime = null;
     this.lastFpsTime = performance.now();
     this.lastAlpha = 0;
 
@@ -934,14 +930,14 @@ export class CanvasGraph extends Symbiote {
     this.canvas.style.height = rect.height + 'px';
     if (this.canvas.width !== width) this.canvas.width = width;
     if (this.canvas.height !== height) this.canvas.height = height;
-    this._wakeLoop();  // Dimensions changed — redraw
+    this._wakeLoop();
   }
 
   resetView() {
     this.fitView();
   }
 
-  _getVisibleFocusFrame(nodeId, { fallbackToParent = true } = {}) {
+  _getVisibleFocusFrame(nodeId, { fallbackToParent = true, includeInfoPanel = false } = {}) {
     let id = String(nodeId || '').trim();
     if (!id) return null;
 
@@ -966,7 +962,7 @@ export class CanvasGraph extends Symbiote {
     if (this.renderMode === 'dots') {
       let connections = this.adjMap?.get(id)?.size || 0;
       let radius = getNodeRadius(node, connections);
-      return {
+      let frame = {
         id,
         node,
         minX: pos.x - radius,
@@ -974,17 +970,70 @@ export class CanvasGraph extends Symbiote {
         maxX: pos.x + radius,
         maxY: pos.y + radius,
       };
+      return includeInfoPanel ? this._extendFocusFrameWithInfoPanel(frame, pos) : frame;
     }
 
     let width = Number.isFinite(node.w) ? node.w : 160;
     let height = Number.isFinite(node.h) ? node.h : 40;
-    return {
+    let frame = {
       id,
       node,
       minX: pos.x,
       minY: pos.y,
       maxX: pos.x + width,
       maxY: pos.y + height,
+    };
+    return includeInfoPanel ? this._extendFocusFrameWithInfoPanel(frame, pos) : frame;
+  }
+
+  _extendFocusFrameWithInfoPanel(frame, pos) {
+    let node = frame?.node;
+    if (!node || !pos || !this.ctx) return frame;
+    let lines = this._buildInfoLines(node);
+    let layout = this._measureInfoPanelLayout(node, pos, lines);
+    if (!layout) return frame;
+    let { metrics, panelX, panelY, menuExtent } = layout;
+    return {
+      ...frame,
+      minX: Math.min(frame.minX, pos.x - menuExtent),
+      minY: Math.min(frame.minY, pos.y - menuExtent, panelY),
+      maxX: Math.max(frame.maxX, panelX + metrics.panelW),
+      maxY: Math.max(frame.maxY, pos.y + menuExtent, panelY + metrics.panelOuterH),
+    };
+  }
+
+  _measureInfoPanelLayout(node, pos, lines = []) {
+    if (!node || !pos || !this.ctx || !lines.length) return null;
+    let textLines = lines.map((line) => typeof line === 'string' ? line : line?.text || '');
+    let connections = this.adjMap?.get(node.id)?.size || 0;
+    let activeNodeScale = this._resolveActiveNodeScale();
+    let dotRadius = getNodeRadius(node, connections, {
+      scale: node.aScale || activeNodeScale,
+    });
+    let menuExtent = dotRadius + 20;
+    let initialMetrics = resolveCanvasGraphInfoPanelMetrics({
+      scale: this._resolveInfoPanelScale(),
+      lineCount: textLines.length,
+      menuExtent,
+    });
+    this.ctx.save();
+    this.ctx.font = `600 ${initialMetrics.fontSize}px 'Inter', 'SF Mono', system-ui, sans-serif`;
+    let maxTextWidth = initialMetrics.minWidth;
+    for (const text of textLines) {
+      maxTextWidth = Math.max(maxTextWidth, this.ctx.measureText(text).width);
+    }
+    this.ctx.restore();
+    let metrics = resolveCanvasGraphInfoPanelMetrics({
+      scale: initialMetrics.scale,
+      lineCount: textLines.length,
+      menuExtent,
+      maxTextWidth,
+    });
+    return {
+      metrics,
+      menuExtent,
+      panelX: pos.x + menuExtent + metrics.panelGap,
+      panelY: pos.y - metrics.padY,
     };
   }
 
@@ -1061,8 +1110,17 @@ export class CanvasGraph extends Symbiote {
     const rect = this.canvas.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) return false;
 
+    let selectedId = null;
+    if (typeof options.select === 'string') {
+      selectedId = options.select;
+    } else if (options.select === true) {
+      selectedId = ids[0] || null;
+    }
     let frames = ids
-      .map((id) => this._getVisibleFocusFrame(id, { fallbackToParent: options.fallbackToParent !== false }))
+      .map((id) => this._getVisibleFocusFrame(id, {
+        fallbackToParent: options.fallbackToParent !== false,
+        includeInfoPanel: options.includeInfoPanel !== false && id === selectedId,
+      }))
       .filter(Boolean);
     if (frames.length === 0) return false;
 
@@ -1079,13 +1137,6 @@ export class CanvasGraph extends Symbiote {
       minZoom: Number.isFinite(options.minZoom) ? options.minZoom : MIN_CANVAS_GRAPH_ZOOM,
       maxZoom: Number.isFinite(options.maxZoom) ? options.maxZoom : MAX_CANVAS_GRAPH_FOCUS_ZOOM,
     });
-
-    let selectedId = null;
-    if (typeof options.select === 'string') {
-      selectedId = options.select;
-    } else if (options.select === true) {
-      selectedId = frames[0]?.id || null;
-    }
     let pendingViewport = {
       zoom: fit.zoom,
       panX: fit.panX,
@@ -1096,10 +1147,8 @@ export class CanvasGraph extends Symbiote {
     if (selectedId && this._shouldDeferFocusTransition(selectedId, options)) {
       this._cancelViewportGestureTarget();
       this._activateNode(selectedId, {
+        ...options,
         transition: true,
-        transitionMarkerMs: options.transitionMarkerMs,
-        transitionMs: options.transitionMs,
-        marker: options.marker,
         pendingViewport,
       });
       this.needsDraw = true;
@@ -1110,10 +1159,8 @@ export class CanvasGraph extends Symbiote {
     this._applyViewportTarget(pendingViewport);
     if (selectedId && this.nodeMap?.has(selectedId)) {
       this._activateNode(selectedId, {
+        ...options,
         transition: options.transition !== false,
-        transitionMarkerMs: options.transitionMarkerMs,
-        transitionMs: options.transitionMs,
-        marker: options.marker,
       });
     }
 
@@ -1277,6 +1324,13 @@ export class CanvasGraph extends Symbiote {
       maxX: Math.max(...frames.map((item) => item.maxX)),
       maxY: Math.max(...frames.map((item) => item.maxY)),
     };
+    let routePoints = this._resolveTransitionWorldRoutePoints(marker);
+    for (let point of routePoints || []) {
+      frame.minX = Math.min(frame.minX, point.x);
+      frame.minY = Math.min(frame.minY, point.y);
+      frame.maxX = Math.max(frame.maxX, point.x);
+      frame.maxY = Math.max(frame.maxY, point.y);
+    }
     let fit = resolveCanvasGraphViewportFit({
       frame,
       rect,
@@ -1300,48 +1354,56 @@ export class CanvasGraph extends Symbiote {
   _prepareTransitionMarkerViewport(marker, options = {}) {
     if (!marker?.pendingViewport) return false;
     let routeViewport = options.routeViewport || this._resolveTransitionRouteViewport(marker, options);
-    if (!routeViewport) return false;
+    let rect = this.canvas.getBoundingClientRect();
+    if (!routeViewport || rect.width === 0 || rect.height === 0) return false;
 
+    this._prewarmTransitionPath(marker);
     marker.initialViewport = this._captureViewportState();
     marker.routeViewport = routeViewport;
-    marker.routeFitProgress = Number.isFinite(options.transitionRouteFitProgress)
-      ? clampTransitionProgress(options.transitionRouteFitProgress)
-      : TRANSITION_ROUTE_FIT_PROGRESS;
-    marker.targetFitProgress = Number.isFinite(options.transitionTargetFitProgress)
-      ? clampTransitionProgress(options.transitionTargetFitProgress)
-      : TRANSITION_TARGET_FIT_PROGRESS;
+    marker.initialCenter = viewportToCameraCenter(marker.initialViewport, rect);
+    marker.routeCenter = viewportToCameraCenter(routeViewport, rect);
+    marker.targetCenter = viewportToCameraCenter(marker.pendingViewport, rect);
+    let targetNodeCenter = this.nodeCenter(marker.toId);
+    marker.targetCenterOffset = targetNodeCenter ? {
+      x: marker.targetCenter.x - targetNodeCenter.x,
+      y: marker.targetCenter.y - targetNodeCenter.y,
+    } : null;
     return true;
   }
 
   _resolveTransitionMarkerViewport(marker, progress) {
-    if (!marker?.initialViewport || !marker.routeViewport || !marker.pendingViewport) return null;
-    let routeFitProgress = Math.max(0.01, Math.min(0.5, marker.routeFitProgress || TRANSITION_ROUTE_FIT_PROGRESS));
-    let targetFitProgress = Math.max(0.01, Math.min(0.5, marker.targetFitProgress || TRANSITION_TARGET_FIT_PROGRESS));
-    let p = clampTransitionProgress(progress);
-
-    if (p <= routeFitProgress) {
-      return mixTransitionViewport(
-        marker.initialViewport,
-        marker.routeViewport,
-        easeOutCubic(p / routeFitProgress)
-      );
-    }
-
-    let targetStart = Math.max(routeFitProgress, 1 - targetFitProgress);
-    if (p < targetStart) return marker.routeViewport;
-
-    return mixTransitionViewport(
-      marker.routeViewport,
-      marker.pendingViewport,
-      easeInOutCubic((p - targetStart) / Math.max(0.01, 1 - targetStart))
-    );
+    if (!marker?.initialCenter || !marker.routeCenter || !marker.pendingViewport) return null;
+    let rect = this.canvas.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return null;
+    let liveNodeCenter = this.nodeCenter(marker.pendingActivation || marker.toId);
+    let targetCenter = liveNodeCenter && marker.targetCenterOffset
+      ? {
+          x: liveNodeCenter.x + marker.targetCenterOffset.x,
+          y: liveNodeCenter.y + marker.targetCenterOffset.y,
+        }
+      : marker.targetCenter;
+    if (!targetCenter) return null;
+    marker.targetCenter = targetCenter;
+    return resolveCanvasGraphCameraArc({
+      startCenter: marker.initialCenter,
+      routeCenter: marker.routeCenter,
+      targetCenter,
+      startZoom: marker.initialViewport.zoom,
+      routeZoom: marker.routeViewport.zoom,
+      targetZoom: marker.pendingViewport.zoom,
+      rect,
+      progress,
+      minZoom: this._resolveMinZoom(rect),
+      maxZoom: MAX_CANVAS_GRAPH_ZOOM,
+    });
   }
 
   _updateTransitionMarkerViewport(now = renderNow()) {
     let marker = (this._transitionMarkers || []).find((item) => item?.pendingActivation && item.routeViewport && item.pendingViewport);
     if (!marker) return false;
 
-    let duration = Math.max(1, marker.duration || 850);
+    let duration = Number.isFinite(marker.duration) ? marker.duration : 850;
+    if (duration <= 0) return false;
     let progress = clampTransitionProgress((now - marker.startTime) / duration);
     let viewport = this._resolveTransitionMarkerViewport(marker, progress);
     if (!viewport) return false;
@@ -1378,6 +1440,10 @@ export class CanvasGraph extends Symbiote {
         marker.pendingActivation = node.id;
         marker.pendingViewport = options.pendingViewport || null;
         this._prepareTransitionMarkerViewport(marker, options);
+        if (marker.duration <= 0) {
+          this._transitionMarkers = this._transitionMarkers.filter((item) => item !== marker);
+          this._completeTransitionMarker(marker, marker.startTime);
+        }
         this.needsDraw = true;
         this._wakeLoop();
         return true;
@@ -1432,11 +1498,26 @@ export class CanvasGraph extends Symbiote {
     if (path.length < 2) return;
 
     let now = renderNow();
-    let duration = Number.isFinite(options.transitionMarkerMs)
-      ? options.transitionMarkerMs
-      : Number.isFinite(options.transitionMs)
-        ? options.transitionMs
-        : 850;
+    let routePoints = path
+      .map((id) => this.nodeCenter(id))
+      .filter((point) => Number.isFinite(point?.x) && Number.isFinite(point?.y));
+    let styles = typeof getComputedStyle === 'function' ? getComputedStyle(this) : null;
+    let motionScale = Number(styles?.getPropertyValue('--sn-theme-motion-scale'));
+    let duration = resolveCanvasGraphTransitionDuration({
+      transitionMs: options.transitionMs,
+      duration: options.duration,
+      transitionMarkerMs: options.transitionMarkerMs,
+      routeDistance: routePoints.length === path.length ? getTransitionRouteLength(routePoints) : 0,
+      distanceScale: Number.isFinite(this.zoom) ? this.zoom : 1,
+      speed: options.transitionSpeed,
+      minMs: options.transitionMinMs,
+      maxMs: options.transitionMaxMs,
+      motionScale,
+      disabled: options.transition === false
+        || options.animate === false
+        || styles?.getPropertyValue('--sn-motion-enabled').trim() === '0'
+        || globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true,
+    });
     let marker = { fromId: from, toId: to, path, startTime: now, duration };
     this._transitionMarkers = [
       ...(this._transitionMarkers || []).filter((marker) => marker.toId !== to),
@@ -1501,6 +1582,16 @@ export class CanvasGraph extends Symbiote {
     };
   }
 
+  _resolveTransitionWorldRoutePoints(marker) {
+    let points = [];
+    for (let id of marker?.path || []) {
+      let point = this.nodeCenter(id);
+      if (!point) return null;
+      points.push(point);
+    }
+    return points.length >= 2 ? points : null;
+  }
+
   _resolveTransitionRoutePoints(marker) {
     let points = [];
     for (let id of marker.path || []) {
@@ -1548,15 +1639,24 @@ export class CanvasGraph extends Symbiote {
     return segments.at(-1)?.to || null;
   }
 
-  _drawTransitionMarkers(ctx) {
+  _prewarmTransitionPath(marker) {
+    for (let id of marker?.path || []) {
+      this._nodeAppearances?.delete?.(id);
+    }
+  }
+
+  _drawTransitionMarkers(ctx, now = renderNow()) {
     if (!this._transitionMarkers?.length) return false;
-    let now = renderNow();
     let hasActiveMarkers = false;
     let dpr = globalThis.devicePixelRatio || 1;
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     this._transitionMarkers = this._transitionMarkers.filter((marker) => {
-      let duration = Math.max(1, marker.duration || 850);
+      let duration = Number.isFinite(marker.duration) ? marker.duration : 850;
+      if (duration <= 0) {
+        this._completeTransitionMarker(marker, now);
+        return false;
+      }
       let elapsed = now - marker.startTime;
       if (elapsed >= duration) {
         this._completeTransitionMarker(marker, now);
@@ -1564,9 +1664,7 @@ export class CanvasGraph extends Symbiote {
       }
 
       let progress = Math.max(0, Math.min(1, elapsed / duration));
-      let eased = progress < 0.5
-        ? 2 * progress * progress
-        : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+      let eased = resolveCanvasGraphTransitionProgress(progress);
       let point = this._getTransitionRoutePoint(marker, eased);
       if (!point) {
         this._completeTransitionMarker(marker, now);
@@ -1598,12 +1696,14 @@ export class CanvasGraph extends Symbiote {
 
   _completeTransitionMarker(marker, now = renderNow()) {
     if (marker?.pendingViewport) {
-      if (marker.routeViewport) this._setViewportImmediate(marker.pendingViewport);
-      this._applyViewportTarget(marker.pendingViewport);
+      let landingViewport = this._resolveTransitionMarkerViewport(marker, 1) || marker.pendingViewport;
+      this._setViewportImmediate(landingViewport);
       marker.pendingViewport = null;
     }
     if (marker?.pendingActivation && this.nodeMap?.has(marker.pendingActivation)) {
-      this._activateNode(marker.pendingActivation, { transition: false, marker: false });
+      let targetId = marker.pendingActivation;
+      this._activateNode(targetId, { transition: false, marker: false });
+      this._infoPanel._centeredForNode = targetId;
       marker.pendingActivation = null;
     }
     let pulse = marker?.pendingPulse;
@@ -1640,10 +1740,21 @@ export class CanvasGraph extends Symbiote {
     const targetZoom = Number.isFinite(options.zoom)
       ? options.zoom
       : Math.max(DEFAULT_CANVAS_GRAPH_FOCUS_ZOOM, Math.min(MAX_CANVAS_GRAPH_FOCUS_ZOOM, this.zoom));
+    let focusFrame = this._getVisibleFocusFrame(nodeId, {
+      fallbackToParent: options.fallbackToParent !== false,
+      includeInfoPanel: options.includeInfoPanel !== false,
+    });
+    let focusFit = focusFrame ? resolveCanvasGraphViewportFit({
+      frame: focusFrame,
+      rect,
+      padding: Number.isFinite(options.padding) ? options.padding : 48,
+      minZoom: Number.isFinite(options.minZoom) ? options.minZoom : MIN_CANVAS_GRAPH_ZOOM,
+      maxZoom: targetZoom,
+    }) : null;
     let pendingViewport = {
-      zoom: targetZoom,
-      panX: rect.width / 2 - pos.x * targetZoom,
-      panY: rect.height / 2 - pos.y * targetZoom,
+      zoom: focusFit?.zoom ?? targetZoom,
+      panX: focusFit?.panX ?? rect.width / 2 - pos.x * targetZoom,
+      panY: focusFit?.panY ?? rect.height / 2 - pos.y * targetZoom,
       animate: true,
       viewportEase: normalizeViewportEase(options.viewportEase),
     };
@@ -1654,10 +1765,8 @@ export class CanvasGraph extends Symbiote {
       if (this._shouldDeferFocusTransition(nodeId, options)) {
         this._cancelViewportGestureTarget();
         this._activateNode(foundNode, {
+          ...options,
           transition: true,
-          transitionMarkerMs: options.transitionMarkerMs,
-          transitionMs: options.transitionMs,
-          marker: options.marker,
           pendingViewport,
         });
         this.needsDraw = true;
@@ -1666,10 +1775,8 @@ export class CanvasGraph extends Symbiote {
       }
       this._applyViewportTarget(pendingViewport);
       this._activateNode(foundNode, {
+        ...options,
         transition: options.transition !== false,
-        transitionMarkerMs: options.transitionMarkerMs,
-        transitionMs: options.transitionMs,
-        marker: options.marker,
       });
     } else {
       this._applyViewportTarget(pendingViewport);
@@ -1718,6 +1825,7 @@ export class CanvasGraph extends Symbiote {
     this.lastAlpha = 0;
     this.tickCount = 0;
     this.frameCount = 0;
+    this._lastRenderTime = null;
     this.needsDraw = true;
     this._wakeLoop();
   }
@@ -1743,6 +1851,373 @@ export class CanvasGraph extends Symbiote {
 
   _emitLayoutSnapshot() {
     this._emitGraphEvent('layoutSnapshot', this.getLayoutSnapshot());
+  }
+
+  /** @returns {{ vcx: number, vcy: number }} */
+  _focusCanvasCenter() {
+    let width = Number(this.canvas?.width) || 0;
+    let height = Number(this.canvas?.height) || 0;
+    return { vcx: width / 2, vcy: height / 2 };
+  }
+
+  _getRenderSurface() {
+    let backingWidth = Math.max(0, Math.floor(Number(this.canvas?.width) || 0));
+    let backingHeight = Math.max(0, Math.floor(Number(this.canvas?.height) || 0));
+    let dpr = Number(globalThis.devicePixelRatio || globalThis.window?.devicePixelRatio || 1);
+    if (!Number.isFinite(dpr) || dpr <= 0) dpr = 1;
+    let rect = this.canvas?.getBoundingClientRect?.();
+    let cssWidth = Number(rect?.width);
+    let cssHeight = Number(rect?.height);
+    if (!Number.isFinite(cssWidth) || cssWidth < 0) cssWidth = backingWidth / dpr;
+    if (!Number.isFinite(cssHeight) || cssHeight < 0) cssHeight = backingHeight / dpr;
+    return { backingWidth, backingHeight, cssWidth, cssHeight, dpr };
+  }
+
+  _matchesRenderSurface(surface) {
+    let current = this._getRenderSurface();
+    let currentInitialized = current.backingWidth > 0 || current.backingHeight > 0
+      || current.cssWidth > 0 || current.cssHeight > 0;
+    if (!currentInitialized) return true;
+    let sameFloat = (left, right) => Math.abs(left - right) <= 0.001;
+    return current.backingWidth === surface.backingWidth
+      && current.backingHeight === surface.backingHeight
+      && sameFloat(current.cssWidth, surface.cssWidth)
+      && sameFloat(current.cssHeight, surface.cssHeight)
+      && sameFloat(current.dpr, surface.dpr);
+  }
+
+  /** @returns {object} */
+  getRenderSnapshot() {
+    if (!this.layoutSettled) {
+      throw new Error('CanvasGraph render snapshot requires a settled layout');
+    }
+    let nodeIds = this.graphDB?.nodes ? this.graphDB.nodes : new Map();
+
+    let positions = {};
+    for (let [id, pos] of this.nodePositions.entries()) {
+      if (!nodeIds.has(id)) continue;
+      if (!Number.isFinite(pos?.x) || !Number.isFinite(pos?.y)) continue;
+      positions[id] = { x: pos.x, y: pos.y };
+    }
+
+    let smoothPositions = {};
+    for (let [id, pos] of this.smoothPositions.entries()) {
+      if (!nodeIds.has(id)) continue;
+      if (!Number.isFinite(pos?.x) || !Number.isFinite(pos?.y)) continue;
+      smoothPositions[id] = { x: pos.x, y: pos.y };
+    }
+
+    let nodeAnim = {};
+    for (let node of this.nodes || []) {
+      nodeAnim[node.id] = {
+        aScale: Number.isFinite(node.aScale) ? node.aScale : 1,
+        aGlow: Number.isFinite(node.aGlow) ? node.aGlow : 0,
+        aRot: Number.isFinite(node.aRot) ? node.aRot : 0,
+        aRotSpeed: Number.isFinite(node.aRotSpeed) ? node.aRotSpeed : 0,
+      };
+    }
+
+    let edgeAnim = (this.edges || []).map((edge, index) => ({
+      index,
+      from: edge.from,
+      to: edge.to,
+      aAlpha: Number.isFinite(edge.aAlpha) ? edge.aAlpha : 0.5,
+      aWidth: Number.isFinite(edge.aWidth) ? edge.aWidth : 1.5,
+    }));
+
+    let { vcx: focusCenterX, vcy: focusCenterY } = this._focusCanvasCenter();
+
+    let ip = this._infoPanel || {};
+    let infoPanel = {
+      nodeId: ip.nodeId || null,
+      lines: Array.isArray(ip.lines)
+        ? ip.lines.map((line) => ({ text: String(line?.text ?? ''), revealed: Number(line?.revealed) || 0 }))
+        : [],
+      opacity: Number.isFinite(ip.opacity) ? ip.opacity : 0,
+      startTime: Number.isFinite(ip.startTime) ? ip.startTime : 0,
+      totalExtent: Number.isFinite(ip.totalExtent) ? ip.totalExtent : 0,
+      totalExtentY: Number.isFinite(ip.totalExtentY) ? ip.totalExtentY : 0,
+      centeredForNode: ip._centeredForNode || null,
+    };
+
+    let snapshot = JSON.parse(JSON.stringify({
+      kind: CANVAS_GRAPH_RENDER_SNAPSHOT_KIND,
+      version: CANVAS_GRAPH_RENDER_SNAPSHOT_VERSION,
+      renderMode: this.renderMode,
+      surface: this._getRenderSurface(),
+      graph: {
+        nodeIds: (this.nodes || []).map((node) => node.id).sort(),
+        edges: (this.edges || []).map((edge, index) => ({ index, from: edge.from, to: edge.to })),
+      },
+      viewport: {
+        zoom: this.zoom,
+        panX: this.panX,
+        panY: this.panY,
+        targetZoom: this._targetZoom,
+        targetPanX: this._targetPanX,
+        targetPanY: this._targetPanY,
+        zoomAnchor: this._zoomAnchor ? { mx: this._zoomAnchor.mx, my: this._zoomAnchor.my } : null,
+        viewportEase: this._viewportEase,
+      },
+      focus: {
+        focusX: this.focusX - focusCenterX,
+        focusY: this.focusY - focusCenterY,
+        focusActive: !!this.focusActive,
+        prevDragDeltaX: this._prevDragDeltaX,
+        prevDragDeltaY: this._prevDragDeltaY,
+        orientationParallaxEnabled: !!this._orientationParallaxEnabled,
+        orientationParallaxX: this._orientationParallaxX,
+        orientationParallaxY: this._orientationParallaxY,
+        orientationParallaxTargetX: this._orientationParallaxTargetX,
+        orientationParallaxTargetY: this._orientationParallaxTargetY,
+      },
+      layerAnim: this.layerAnim,
+      positions,
+      smoothPositions,
+      nodeAnim,
+      edgeAnim,
+      interaction: {
+        activeNodeId: this.activeNode?.id || null,
+        nextActiveNodeId: this.nextActiveNode?.id || null,
+        hoverNodeId: this.hoverNode?.id || null,
+        dragNodeId: this.dragNode?.id || null,
+        currentGroupId: this.currentGroupId || null,
+        deactivating: !!this.deactivating,
+        menuAnim: this.menuAnim,
+        hoverAction: this._hoverAction || '',
+      },
+      transitionMarkers: (this._transitionMarkers || []).map((marker) => this._serializeTransitionMarker(marker)),
+      pulses: (this._pulses || []).map((pulse) => ({
+        id: pulse.id,
+        startTime: pulse.startTime,
+        duration: pulse.duration,
+        waves: pulse.waves,
+      })),
+      nodeAppearances: [...(this._nodeAppearances?.entries?.() || [])].map(([id, marker]) => ({
+        id,
+        startTime: marker.startTime,
+        duration: marker.duration,
+      })),
+      infoPanel,
+      meta: {
+        idleFrames: this._idleFrames,
+        lastAlpha: this.lastAlpha,
+        frameCount: this.frameCount,
+        tickCount: this.tickCount,
+        layoutSettled: !!this.layoutSettled,
+        lastRenderTime: Number.isFinite(this._lastRenderTime) ? this._lastRenderTime : null,
+      },
+    }));
+    if (!normalizeCanvasGraphRenderSnapshot(snapshot)) {
+      throw new Error('CanvasGraph render state is not serializable');
+    }
+    return snapshot;
+  }
+
+  _serializeTransitionMarker(marker) {
+    let out = {
+      fromId: marker.fromId,
+      toId: marker.toId,
+      path: Array.isArray(marker.path) ? [...marker.path] : [],
+      startTime: marker.startTime,
+      duration: marker.duration,
+    };
+    if (marker.pendingActivation) out.pendingActivation = marker.pendingActivation;
+    for (let key of ['pendingViewport', 'initialViewport', 'routeViewport']) {
+      let vp = marker[key];
+      if (vp && Number.isFinite(vp.zoom)) {
+        out[key] = { zoom: vp.zoom, panX: vp.panX, panY: vp.panY };
+        if (Number.isFinite(vp.viewportEase)) out[key].viewportEase = vp.viewportEase;
+      }
+    }
+    for (let key of ['initialCenter', 'routeCenter', 'targetCenter', 'targetCenterOffset']) {
+      let vec = marker[key];
+      if (vec && Number.isFinite(vec.x) && Number.isFinite(vec.y)) out[key] = { x: vec.x, y: vec.y };
+    }
+    if (marker.pendingPulse) {
+      out.pendingPulse = { duration: marker.pendingPulse.duration, waves: marker.pendingPulse.waves };
+    }
+    return out;
+  }
+
+  /**
+   * @param {object} snapshot
+   * @returns {boolean}
+   */
+  setRenderSnapshot(snapshot) {
+    let normalized = normalizeCanvasGraphRenderSnapshot(snapshot);
+    if (!normalized) return false;
+    if (!normalized.meta.layoutSettled || !this._matchesRenderSurface(normalized.surface)) return false;
+
+    let nodeMap = this.nodeMap instanceof Map ? this.nodeMap : new Map();
+    let graphNodeIds = this.graphDB?.nodes instanceof Map ? this.graphDB.nodes : new Map();
+    let currentNodeIds = (this.nodes || []).map((node) => node.id).sort();
+    let allNodeIds = [...graphNodeIds.keys()].sort();
+    if (normalized.renderMode !== this.renderMode
+      || JSON.stringify(normalized.graph.nodeIds) !== JSON.stringify(currentNodeIds)
+      || normalized.graph.edges.length !== (this.edges || []).length
+      || normalized.graph.edges.some((entry, index) => (
+        entry.index !== index
+        || entry.from !== this.edges[index]?.from
+        || entry.to !== this.edges[index]?.to
+      ))) return false;
+
+    let resolveIdentity = (id) => {
+      if (!id) return { ok: true, node: null };
+      let node = nodeMap.get(id);
+      return node ? { ok: true, node } : { ok: false, node: null };
+    };
+    let activeResolve = resolveIdentity(normalized.interaction.activeNodeId);
+    let nextResolve = resolveIdentity(normalized.interaction.nextActiveNodeId);
+    let hoverResolve = resolveIdentity(normalized.interaction.hoverNodeId);
+    let dragResolve = resolveIdentity(normalized.interaction.dragNodeId);
+    if (!activeResolve.ok || !nextResolve.ok || !hoverResolve.ok || !dragResolve.ok) return false;
+
+    let groupId = normalized.interaction.currentGroupId;
+    if (groupId && !graphNodeIds.has(groupId)) return false;
+
+    let referencedNodeIds = [
+      ...normalized.positions.map(([id]) => id),
+      ...normalized.smoothPositions.map(([id]) => id),
+      ...normalized.nodeAnim.map(([id]) => id),
+      ...normalized.pulses.map((entry) => entry.id),
+      ...normalized.nodeAppearances.map((entry) => entry.id),
+      normalized.infoPanel.nodeId,
+      normalized.infoPanel.centeredForNode,
+      ...normalized.transitionMarkers.flatMap((marker) => [
+        marker.fromId,
+        marker.toId,
+        marker.pendingActivation,
+        ...marker.path,
+      ]),
+    ].filter(Boolean);
+    if (referencedNodeIds.some((id) => !graphNodeIds.has(id))) return false;
+    let snapshotNodeAnimIds = normalized.nodeAnim.map(([id]) => id).sort();
+    if (JSON.stringify(snapshotNodeAnimIds) !== JSON.stringify(currentNodeIds)) return false;
+    if (normalized.meta.layoutSettled) {
+      let positionIds = normalized.positions.map(([id]) => id).sort();
+      let smoothPositionIds = normalized.smoothPositions.map(([id]) => id).sort();
+      if (JSON.stringify(positionIds) !== JSON.stringify(allNodeIds)
+        || JSON.stringify(smoothPositionIds) !== JSON.stringify(allNodeIds)) return false;
+    }
+    if (normalized.edgeAnim.length !== (this.edges || []).length
+      || normalized.edgeAnim.some((entry, index) => (
+        entry.index !== index
+        || entry.from !== this.edges[index]?.from
+        || entry.to !== this.edges[index]?.to
+      ))) return false;
+
+    let stagedPositions = new Map();
+    for (let [id, vec] of normalized.positions) {
+      stagedPositions.set(id, { x: vec.x, y: vec.y });
+    }
+    let stagedSmooth = new Map();
+    for (let [id, vec] of normalized.smoothPositions) {
+      stagedSmooth.set(id, { x: vec.x, y: vec.y });
+    }
+    let stagedNodeAnim = new Map(normalized.nodeAnim);
+    let stagedPulses = normalized.pulses.map((pulse) => ({ ...pulse }));
+    let stagedAppearances = new Map();
+    for (let appearance of normalized.nodeAppearances) {
+      stagedAppearances.set(appearance.id, { startTime: appearance.startTime, duration: appearance.duration });
+    }
+    let stagedMarkers = normalized.transitionMarkers.map((marker) => this._serializeTransitionMarker(marker));
+
+    if (this.worker) {
+      try {
+        this.worker.stop();
+      } catch {
+        return false;
+      }
+    }
+    this._workerGeneration = (this._workerGeneration || 0) + 1;
+    this.worker = null;
+    this.zoom = normalized.viewport.zoom;
+    this.panX = normalized.viewport.panX;
+    this.panY = normalized.viewport.panY;
+    this._targetZoom = normalized.viewport.targetZoom;
+    this._targetPanX = normalized.viewport.targetPanX;
+    this._targetPanY = normalized.viewport.targetPanY;
+    this._viewportEase = normalized.viewport.viewportEase;
+    this._zoomAnchor = normalized.viewport.zoomAnchor
+      ? { mx: normalized.viewport.zoomAnchor.mx, my: normalized.viewport.zoomAnchor.my }
+      : null;
+
+    let { vcx: focusCenterX, vcy: focusCenterY } = this._focusCanvasCenter();
+    this.focusX = normalized.focus.focusX + focusCenterX;
+    this.focusY = normalized.focus.focusY + focusCenterY;
+    this.focusActive = normalized.focus.focusActive;
+    this._prevDragDeltaX = normalized.focus.prevDragDeltaX;
+    this._prevDragDeltaY = normalized.focus.prevDragDeltaY;
+    this._orientationParallaxEnabled = normalized.focus.orientationParallaxEnabled;
+    this._orientationParallaxX = normalized.focus.orientationParallaxX;
+    this._orientationParallaxY = normalized.focus.orientationParallaxY;
+    this._orientationParallaxTargetX = normalized.focus.orientationParallaxTargetX;
+    this._orientationParallaxTargetY = normalized.focus.orientationParallaxTargetY;
+
+    this.layerAnim = {};
+    for (let d = 0; d <= 4; d++) {
+      this.layerAnim[d] = { ...normalized.layerAnim[d] };
+    }
+
+    this.nodePositions = stagedPositions;
+    this.smoothPositions = stagedSmooth;
+
+    for (let node of this.nodes || []) {
+      let anim = stagedNodeAnim.get(node.id);
+      if (anim) {
+        node.aScale = anim.aScale;
+        node.aGlow = anim.aGlow;
+        node.aRot = anim.aRot;
+        node.aRotSpeed = anim.aRotSpeed;
+      } else {
+        delete node.aScale;
+        delete node.aGlow;
+        delete node.aRot;
+        delete node.aRotSpeed;
+      }
+    }
+
+    for (let [index, edge] of (this.edges || []).entries()) {
+      edge.aAlpha = normalized.edgeAnim[index].aAlpha;
+      edge.aWidth = normalized.edgeAnim[index].aWidth;
+    }
+
+    this.activeNode = activeResolve.node;
+    this.nextActiveNode = nextResolve.node;
+    this.hoverNode = hoverResolve.node;
+    this.dragNode = dragResolve.node;
+    this.currentGroupId = groupId;
+    this.deactivating = normalized.interaction.deactivating;
+    this.menuAnim = normalized.interaction.menuAnim;
+    this._hoverAction = normalized.interaction.hoverAction;
+
+    this._transitionMarkers = stagedMarkers;
+    this._pulses = stagedPulses;
+    this._nodeAppearances = stagedAppearances;
+
+    this._infoPanel = {
+      nodeId: normalized.infoPanel.nodeId,
+      lines: normalized.infoPanel.lines.map((line) => ({ text: line.text, revealed: line.revealed })),
+      opacity: normalized.infoPanel.opacity,
+      startTime: normalized.infoPanel.startTime,
+      totalExtent: normalized.infoPanel.totalExtent,
+      totalExtentY: normalized.infoPanel.totalExtentY,
+      _centeredForNode: normalized.infoPanel.centeredForNode,
+    };
+
+    this._idleFrames = normalized.meta.idleFrames;
+    this.lastAlpha = normalized.meta.lastAlpha;
+    this.frameCount = normalized.meta.frameCount;
+    this.tickCount = normalized.meta.tickCount;
+    this.layoutSettled = normalized.meta.layoutSettled;
+    this._lastRenderTime = normalized.meta.lastRenderTime;
+
+    this.updateInteractionDepths();
+
+    this.needsDraw = true;
+    this._wakeLoop?.();
+    return true;
   }
 
   setEventNames(eventNames = {}) {
@@ -2658,8 +3133,11 @@ export class CanvasGraph extends Symbiote {
 
   _drawFrame() {
     const dpr = window.devicePixelRatio || 1;
+    let frameContext = resolveCanvasGraphFrameContext(renderNow(), this._lastRenderTime);
+    let { now, frameStep } = frameContext;
+    this._lastRenderTime = now;
 
-    this._updateTransitionMarkerViewport();
+    this._updateTransitionMarkerViewport(now);
     let viewport = resolveViewportAnimation({
       zoom: this.zoom,
       targetZoom: this._targetZoom,
@@ -2669,6 +3147,7 @@ export class CanvasGraph extends Symbiote {
       targetPanY: this._targetPanY,
       zoomAnchor: this._zoomAnchor,
       viewportEase: this._viewportEase,
+      frameStep,
     });
     this.zoom = viewport.zoom;
     this.panX = viewport.panX;
@@ -2715,6 +3194,7 @@ export class CanvasGraph extends Symbiote {
       layerTargets: this.LAYER_TARGETS,
       isIdle,
       inGroupMode,
+      frameStep,
     });
 
     const vcx = this.canvas.width / 2;
@@ -2745,6 +3225,7 @@ export class CanvasGraph extends Symbiote {
       focusActive: this.focusActive,
       vcx,
       vcy,
+      frameStep,
     });
     this.focusX = focus.focusX;
     this.focusY = focus.focusY;
@@ -2752,8 +3233,9 @@ export class CanvasGraph extends Symbiote {
     dragDeltaX = focus.dragDeltaX;
     dragDeltaY = focus.dragDeltaY;
     if (this._orientationParallaxEnabled) {
-      this._orientationParallaxX += (this._orientationParallaxTargetX - this._orientationParallaxX) * 0.12;
-      this._orientationParallaxY += (this._orientationParallaxTargetY - this._orientationParallaxY) * 0.12;
+      let orientationEase = resolveCanvasGraphFrameEase(0.12, frameStep);
+      this._orientationParallaxX += (this._orientationParallaxTargetX - this._orientationParallaxX) * orientationEase;
+      this._orientationParallaxY += (this._orientationParallaxTargetY - this._orientationParallaxY) * orientationEase;
       if (
         Math.abs(this._orientationParallaxTargetX - this._orientationParallaxX) > 0.05
         || Math.abs(this._orientationParallaxTargetY - this._orientationParallaxY) > 0.05
@@ -2785,7 +3267,7 @@ export class CanvasGraph extends Symbiote {
                         s * dpr * this.panY + vcy * (1 - s) + pOffY);
     }
 
-    const t = 1 - this.smoothing;
+    const t = resolveCanvasGraphFrameEase(1 - this.smoothing, frameStep);
     for (const [id, raw] of this.nodePositions) {
       const prev = this.smoothPositions.get(id);
       if (!prev) {
@@ -2841,7 +3323,7 @@ export class CanvasGraph extends Symbiote {
         return { x: (screenX - tCurrent.E) / tCurrent.A, y: (screenY - tCurrent.F) / tCurrent.A };
       };
 
-      const nodeAppearanceNow = renderNow();
+      const nodeAppearanceNow = now;
       const focusNodeId = this.dragNode?.id || this.activeNode?.id || null;
 
       currentCtx.strokeStyle = toRgba(this._edgeRgb, 0.25);
@@ -2891,8 +3373,9 @@ export class CanvasGraph extends Symbiote {
         const edgeOpacity = tAlpha * layerOpacity;
         edge.aAlpha = edge.aAlpha !== undefined ? edge.aAlpha : 0.5;
         edge.aWidth = edge.aWidth || 1.5;
-        edge.aAlpha += (edgeOpacity - edge.aAlpha) * 0.1;
-        edge.aWidth += (tWidth - edge.aWidth) * 0.1;
+        let edgeEase = resolveCanvasGraphFrameEase(0.1, frameStep);
+        edge.aAlpha += (edgeOpacity - edge.aAlpha) * edgeEase;
+        edge.aWidth += (tWidth - edge.aWidth) * edgeEase;
 
         const nodeFrom = this.nodeMap ? this.nodeMap.get(edge.from) : null;
         const nodeTo = this.nodeMap ? this.nodeMap.get(edge.to) : null;
@@ -2965,10 +3448,10 @@ export class CanvasGraph extends Symbiote {
 
         const targetScale = isActive ? activeNodeScale : 1;
         node.aScale = node.aScale !== undefined ? node.aScale : 1;
-        node.aScale += (targetScale - node.aScale) * 0.12;
+        node.aScale += (targetScale - node.aScale) * resolveCanvasGraphFrameEase(0.12, frameStep);
 
         node.aGlow = node.aGlow !== undefined ? node.aGlow : 0;
-        node.aGlow += ((isActive ? 1 : 0) - node.aGlow) * 0.1;
+        node.aGlow += ((isActive ? 1 : 0) - node.aGlow) * resolveCanvasGraphFrameEase(0.1, frameStep);
 
         const appearance = this._resolveNodeAppearance(node.id, nodeAppearanceNow);
         currentCtx.save();
@@ -3013,6 +3496,7 @@ export class CanvasGraph extends Symbiote {
               rotationSpeed: node.aRotSpeed,
               hovered: isHovered,
               dragged: isDragged,
+              frameStep,
             });
             node.aRotSpeed = rotation.rotationSpeed;
             node.aRot = rotation.rotation;
@@ -3076,7 +3560,6 @@ export class CanvasGraph extends Symbiote {
       drawDepth(0, mainCtx);
 
       if (this._pulses && this._pulses.length > 0) {
-        const now = renderNow();
         this._pulses = this._pulses.filter(p => {
           const elapsed = now - p.startTime;
           if (elapsed > p.duration) return false;
@@ -3096,15 +3579,15 @@ export class CanvasGraph extends Symbiote {
           return true;
         });
       }
-      this._drawTransitionMarkers(mainCtx);
+      this._drawTransitionMarkers(mainCtx, now);
       if (this._pulses?.length) this.needsDraw = true;
     }
 
     const showMenu = this.activeNode && !this.dragNode && !this.deactivating;
     if (showMenu) {
-      this.menuAnim = Math.min(1, this.menuAnim + 0.08);
+      this.menuAnim = Math.min(1, this.menuAnim + 0.08 * frameStep);
     } else {
-      this.menuAnim = Math.max(0, this.menuAnim - 0.15);
+      this.menuAnim = Math.max(0, this.menuAnim - 0.15 * frameStep);
     }
 
     if (this.menuAnim > 0.01 && this.activeNode) {
@@ -3160,7 +3643,7 @@ export class CanvasGraph extends Symbiote {
     }
 
     // Info panel — typewriter HUD to the right of active node
-    this._drawInfoPanel(mainCtx, dpr, dragDeltaX, dragDeltaY, vcx, vcy);
+    this._drawInfoPanel(mainCtx, dpr, dragDeltaX, dragDeltaY, vcx, vcy, now, frameStep);
 
     let idle = resolveIdleFrame({
       targetZoom: this._targetZoom,
@@ -3182,6 +3665,7 @@ export class CanvasGraph extends Symbiote {
       pulsesActive: this._pulses?.length > 0,
       statusAnimationsActive: this._hasAnimatingNodeStatuses(),
       idleFrames: this._idleFrames,
+      frameStep,
     });
     this._prevDragDeltaX = idle.prevDragDeltaX;
     this._prevDragDeltaY = idle.prevDragDeltaY;
@@ -3261,7 +3745,7 @@ export class CanvasGraph extends Symbiote {
    * @param {number} vcx
    * @param {number} vcy
    */
-  _drawInfoPanel(ctx, dpr, dragDeltaX, dragDeltaY, vcx, vcy) {
+  _drawInfoPanel(ctx, dpr, dragDeltaX, dragDeltaY, vcx, vcy, now = renderNow(), frameStep = 1) {
     const ip = this._infoPanel;
     const showPanel = this.activeNode && !this.dragNode && !this.deactivating;
 
@@ -3269,18 +3753,18 @@ export class CanvasGraph extends Symbiote {
       if (ip.nodeId !== this.activeNode.id) {
         ip.nodeId = this.activeNode.id;
         ip.lines = this._buildInfoLines(this.activeNode).map(text => ({ text, revealed: 0 }));
-        ip.startTime = renderNow();
+        ip.startTime = now;
         ip.opacity = 0;
       }
-      ip.opacity = Math.min(1, ip.opacity + 0.06);
+      ip.opacity = Math.min(1, ip.opacity + 0.06 * frameStep);
     } else {
-      ip.opacity = Math.max(0, ip.opacity - 0.12);
+      ip.opacity = Math.max(0, ip.opacity - 0.12 * frameStep);
       if (ip.opacity <= 0) { ip.nodeId = null; ip.lines = []; ip.totalExtent = 0; ip.totalExtentY = 0; ip._centeredForNode = null; }
     }
 
     if (ip.opacity <= 0.01 || ip.lines.length === 0) return;
 
-    const elapsed = renderNow() - ip.startTime;
+    const elapsed = now - ip.startTime;
     const CHAR_SPEED = 18;
     const LINE_DELAY = 60;
     let charBudget = Math.floor(elapsed / CHAR_SPEED);
@@ -3303,36 +3787,13 @@ export class CanvasGraph extends Symbiote {
       ctx.setTransform(dpr * this.zoom, 0, 0, dpr * this.zoom, dpr * this.panX, dpr * this.panY);
     }
 
-    // Compute actual node radius to avoid overlap
-    // Must account for: dot radius + glow + radial menu items
-    const conns = this.adjMap.get(this.activeNode.id)?.size || 0;
-    const activeNodeScale = this._resolveActiveNodeScale();
-    const dotR = getNodeRadius(this.activeNode, conns, { scale: this.activeNode.aScale || activeNodeScale });
-    // Menu orbits at dotR + 14, each item has radius 6
-    const menuExtent = dotR + 14 + 6;
-    const initialPanelMetrics = resolveCanvasGraphInfoPanelMetrics({
-      scale: this._resolveInfoPanelScale(),
-      lineCount: ip.lines.length,
-      menuExtent,
-    });
-
-    ctx.font = `600 ${initialPanelMetrics.fontSize}px 'Inter', 'SF Mono', system-ui, sans-serif`;
-
-    // Measure panel width from FULL text content (not just revealed)
-    // This ensures totalExtent is stable from the first frame — no oscillation
-    let maxW = initialPanelMetrics.minWidth;
-    for (const line of ip.lines) {
-      const w = ctx.measureText(line.text).width;
-      if (w > maxW) maxW = w;
-    }
-    const panelMetrics = resolveCanvasGraphInfoPanelMetrics({
-      scale: initialPanelMetrics.scale,
-      lineCount: ip.lines.length,
-      menuExtent,
-      maxTextWidth: maxW,
-    });
-    const panelX = apos.x + menuExtent + panelMetrics.panelGap;
-    const panelY = apos.y - panelMetrics.padY;
+    const panelLayout = this._measureInfoPanelLayout(this.activeNode, apos, ip.lines);
+    if (!panelLayout) return;
+    const {
+      metrics: panelMetrics,
+      panelX,
+      panelY,
+    } = panelLayout;
 
     // Store total extent for focus centering
     ip.totalExtent = panelMetrics.totalExtent;
@@ -3396,7 +3857,7 @@ export class CanvasGraph extends Symbiote {
 
       if (line.revealed < line.text.length && line.revealed > 0) {
         const cursorX = panelX + panelMetrics.padX + ctx.measureText(text).width + panelMetrics.cursorGap;
-        if (Math.floor(renderNow() / 400) % 2 === 0) {
+        if (Math.floor(now / 400) % 2 === 0) {
           ctx.fillStyle = `rgba(${tc[0]}, ${tc[1]}, ${tc[2]}, ${0.8 * ip.opacity})`;
           ctx.fillRect(
             cursorX,

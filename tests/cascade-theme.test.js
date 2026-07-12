@@ -726,9 +726,9 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.equal(theme.tokens['--sn-tab-accent-2'], 'var(--sn-cat-control)');
   assert.equal(theme.tokens['--sn-tab-accent-4'], 'var(--sn-type-action)');
   assert.equal(theme.tokens['--sn-button-primary-bg'], 'var(--sn-sys-accent)');
-  assert.equal(theme.tokens['--sn-button-primary-color'], 'hsl(0 0% 8.0%)');
-  assert.equal(theme.tokens['--sn-button-success-color'], 'hsl(0 0% 8.0%)');
-  assert.equal(theme.tokens['--sn-button-danger-hover-color'], 'hsl(0 0% 8.0%)');
+  assert.equal(theme.tokens['--sn-button-primary-color'], 'hsl(0 0% 7.5%)');
+  assert.equal(theme.tokens['--sn-button-success-color'], 'hsl(0 0% 7.5%)');
+  assert.equal(theme.tokens['--sn-button-danger-hover-color'], 'hsl(0 0% 7.5%)');
   assert.equal(theme.tokens['--sn-shape-stroke-width'], '0.72');
   assert.equal(theme.tokens['--sn-shape-port-hint-stroke-width'], '0.90');
   assert.equal(noOutlineTheme.tokens['--sn-shape-stroke-width'], '0.00');
@@ -1295,7 +1295,7 @@ test('cascade theme normalizes invalid numeric params without NaN tokens', async
   assert.equal(theme.state.density, themeModule.CASCADE_THEME_DEFAULTS.density);
   assert.equal(theme.state.contrast, themeModule.CASCADE_THEME_DEFAULTS.contrast);
   assert.equal(serializedTokens.includes('NaN'), false);
-  assert.match(themeModule.getReadableTextForHsl(218, 89, 63), /^hsl\(0 0% (8|98)\.0%\)$/);
+  assert.match(themeModule.getReadableTextForHsl(218, 89, 63), /^hsl\(0 0% (7\.5|98\.0)%\)$/);
 });
 
 test('component descriptor v2 includes agent-facing WebMCP context', async () => {
@@ -1480,10 +1480,10 @@ test('cascade theme derives distinct dark and light branches', async () => {
   assert.equal(darkTheme.tokens['--sn-theme-outline-strength'], lightTheme.tokens['--sn-theme-outline-strength']);
   assert.equal(darkTheme.tokens['--sn-field-control-bg'], 'var(--sn-sys-surface)');
   assert.equal(lightTheme.tokens['--sn-field-control-bg'], 'var(--sn-sys-surface)');
-  assert.equal(lightTheme.tokens['--sn-button-primary-color'], 'hsl(0 0% 8.0%)');
-  assert.equal(lightTheme.tokens['--sn-button-success-color'], 'hsl(0 0% 8.0%)');
-  assert.equal(themeModule.getReadableTextForHsl(218, 89, 63, 94), 'hsl(0 0% 8.0%)');
-  assert.equal(themeModule.getReadableTextForHsl(218, 89, 56.2, 18.9), 'hsl(0 0% 8.0%)');
+  assert.equal(lightTheme.tokens['--sn-button-primary-color'], 'hsl(0 0% 7.5%)');
+  assert.equal(lightTheme.tokens['--sn-button-success-color'], 'hsl(0 0% 7.5%)');
+  assert.equal(themeModule.getReadableTextForHsl(218, 89, 63, 94), 'hsl(0 0% 7.5%)');
+  assert.equal(themeModule.getReadableTextForHsl(218, 89, 56.2, 18.9), 'hsl(0 0% 7.5%)');
 });
 
 test('cascade theme visual smoke fixtures cover luminance and chroma states', async () => {
@@ -2648,11 +2648,13 @@ test('chat composer exposes reusable voice controls and agent-facing metadata', 
   assert.match(styles, /\.composer-leading-btn\.composer-leading-collapsed/);
   assert.match(styles, /@container composer-body \(width <= 960px\)/);
   assert.match(styles, /container: chat-composer \/ inline-size/);
+  assert.match(styles, /@container chat-composer \(width <= 480px\)[\s\S]*grid-template-rows: minmax\(var\(--sn-composer-input-min-height\), auto\) auto auto/);
+  assert.match(styles, /@container chat-composer \(width <= 480px\)[\s\S]*\.composer-footer[\s\S]*grid-column: 1 \/ -1;[\s\S]*grid-row: 2/);
   assert.match(styles, /@container chat-composer \(width <= 480px\)[\s\S]*\.composer-actions[\s\S]*flex-wrap: nowrap/);
-  assert.match(styles, /@container chat-composer \(width <= 480px\)[\s\S]*\.composer-actions[\s\S]*grid-column: 3/);
-  assert.match(styles, /@container chat-composer \(width <= 480px\)[\s\S]*\.btn-mic[\s\S]*grid-column: 4/);
-  assert.match(styles, /@container chat-composer \(width <= 480px\)[\s\S]*\.composer-body > sn-button\.btn-send[\s\S]*grid-column: 5/);
-  assert.match(styles, /@container chat-composer \(width <= 480px\)[\s\S]*\[leading-controls\][\s\S]*\.composer-actions[\s\S]*grid-column: 3/);
+  assert.match(styles, /@container chat-composer \(width <= 480px\)[\s\S]*\.composer-actions[\s\S]*grid-column: 2;[\s\S]*grid-row: 3/);
+  assert.match(styles, /@container chat-composer \(width <= 480px\)[\s\S]*\.btn-mic[\s\S]*grid-column: 3;[\s\S]*grid-row: 3/);
+  assert.match(styles, /@container chat-composer \(width <= 480px\)[\s\S]*\.composer-body > sn-button\.btn-send[\s\S]*grid-column: 4;[\s\S]*grid-row: 3/);
+  assert.match(styles, /@container chat-composer \(width <= 480px\)[\s\S]*\[leading-controls\][\s\S]*\.composer-actions[\s\S]*grid-column: 2/);
   assert.match(styles, /@container composer-body \(width <= 340px\)/);
   assert.match(styles, /36cqi/);
   assert.match(styles, /38cqi/);

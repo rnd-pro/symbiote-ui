@@ -689,7 +689,7 @@ export function getReadableTextForHsl(hue, saturation, lightness, preferredLight
   let bgLum = relativeLuminance(hslToRgb(hue, saturation, lightness));
   let safeLightness = clamp(lightness, 0, 100, 50);
   let preferred = finiteNumber(preferredLightness, safeLightness > 50 ? 8 : 98);
-  let candidates = [preferred, 8, 98].map((candidateLightness) => ({
+  let candidates = [preferred, 7.5, 98].map((candidateLightness) => ({
     hue: 0,
     saturation: 0,
     lightness: candidateLightness,

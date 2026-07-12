@@ -8,6 +8,12 @@ import {
   HTML_IN_CANVAS_RENDERER,
   getHtmlInCanvasSupport,
 } from '../canvas/html-in-canvas.js';
+import {
+  WORKSPACE_VIRTUAL_SEQUENCE_SCHEMA,
+  createVirtualSequenceProjection,
+} from './virtual-sequence.js';
+import { getPrecisionVideoDecodeSupport } from './precision-video-decoder.js';
+import { createVideoFrameClock } from './video-frame-clock.js';
 
 export const MEDIA_STUDIO_PANEL_TYPES = Object.freeze({
   source: 'media-source',
@@ -17,6 +23,7 @@ export const MEDIA_STUDIO_PANEL_TYPES = Object.freeze({
 });
 
 export const MEDIA_STUDIO_FRAME_SOURCE_TYPES = Object.freeze({
+  virtualSequence: 'virtual-sequence',
   externalBrowser: 'external-browser',
   elementCapture: 'element-capture',
   regionCapture: 'region-capture',
@@ -700,6 +707,29 @@ const DEFAULT_PANEL_ICONS = Object.freeze({
 
 export const MEDIA_FRAME_SOURCE_PROVIDER_METADATA = Object.freeze([
   Object.freeze({
+    id: MEDIA_STUDIO_FRAME_SOURCE_TYPES.virtualSequence,
+    label: 'Virtual sequence',
+    status: 'draft',
+    runtime: 'browser-api',
+    schemaVersion: WORKSPACE_VIRTUAL_SEQUENCE_SCHEMA,
+    sourceKinds: [WORKSPACE_VIRTUAL_SEQUENCE_SCHEMA, 'playback-proxy', 'scrub-proxy'],
+    outputKinds: ['html-video-playback', 'scrub-proxy', 'precision-frame'],
+    capabilities: [
+      'html-video-playback',
+      'request-video-frame-callback',
+      'bounded-precision-decode',
+      'scrub-proxy',
+      'sprite-thumbnails',
+      'keyframe-index',
+      'partial-rerender',
+    ],
+    supportKey: 'virtualSequence',
+    fallback: {
+      state: MEDIA_PREVIEW_STATES.waiting,
+      reason: 'missing-virtual-sequence',
+    },
+  }),
+  Object.freeze({
     id: MEDIA_STUDIO_FRAME_SOURCE_TYPES.externalBrowser,
     label: 'External browser frames',
     status: 'service-required',
@@ -757,16 +787,16 @@ export const MEDIA_FRAME_SOURCE_PROVIDER_METADATA = Object.freeze([
   }),
   Object.freeze({
     id: MEDIA_STUDIO_FRAME_SOURCE_TYPES.cachedSequence,
-    label: 'Cached frame sequence',
+    label: 'Bitmap preview cache',
     status: 'draft',
     runtime: 'library',
-    sourceKinds: ['image-sequence', 'frame-cache'],
-    outputKinds: ['scrubbable-preview', 'encoder-input'],
-    capabilities: ['replay', 'scrub', 'filmstrip', 'offline-preview'],
+    sourceKinds: ['sprite-sheet', 'thumbnail', 'scrub-proxy-frame'],
+    outputKinds: ['sprite-preview', 'thumbnail-preview', 'filmstrip'],
+    capabilities: ['bounded-bitmap-window', 'sprite-preview', 'thumbnail', 'filmstrip'],
     supportKey: 'cachedSequence',
     fallback: {
       state: MEDIA_PREVIEW_STATES.empty,
-      reason: 'missing-cached-frames',
+      reason: 'missing-bitmap-preview',
     },
   }),
   Object.freeze({
@@ -806,7 +836,17 @@ export const MEDIA_STUDIO_SURFACE_CONTRACT = Object.freeze({
     'expanded-inspector',
     'replaceable-frame-sources',
     'preview-fallback-state',
+    'virtual-sequence-projection',
+    'html-video-playback',
+    'bounded-precision-decode',
   ],
+  primaryPlayback: {
+    frameSource: MEDIA_STUDIO_FRAME_SOURCE_TYPES.virtualSequence,
+    schemaVersion: WORKSPACE_VIRTUAL_SEQUENCE_SCHEMA,
+    playback: 'html-video',
+    frameClock: 'request-video-frame-callback',
+    precisionDecode: 'bounded-webcodecs',
+  },
   parts: MEDIA_STUDIO_CSS_PARTS,
   themeAliases: MEDIA_STUDIO_STYLE_TOKENS,
 });
@@ -1010,19 +1050,49 @@ function hasElementCapture(target, options = {}) {
   return hasFn(RestrictionTarget, 'fromElement') && hasFn(Track?.prototype, 'restrictTo');
 }
 
+function hasVideoFrameCallback(target, options = {}) {
+  let VideoElement = options.HTMLVideoElement || target?.HTMLVideoElement;
+  return hasFn(VideoElement?.prototype, 'requestVideoFrameCallback')
+    && hasFn(VideoElement?.prototype, 'cancelVideoFrameCallback');
+}
+
 export function getMediaFrameSourceSupport(options = {}) {
   let target = getTarget(options);
   let htmlInCanvas = getHtmlInCanvasSupport(target);
   let cachedSequence = Boolean(options.cachedSequence || options.frameCache || options.sequenceCache || options.cachedFrames);
+  let precisionVideoDecode = getPrecisionVideoDecodeSupport({
+    VideoDecoder: options.VideoDecoder || target?.VideoDecoder,
+    EncodedVideoChunk: options.EncodedVideoChunk || target?.EncodedVideoChunk,
+    secureContext: options.secureContext ?? target?.isSecureContext,
+  });
+  // Virtual-sequence playback is HTML video + requestVideoFrameCallback; report it
+  // from the actual video-frame-callback surface. Precision WebCodecs is separate.
+  let virtualSequence = typeof options.virtualSequence === 'boolean'
+    ? options.virtualSequence
+    : hasVideoFrameCallback(target, options);
   return {
+    virtualSequence,
     externalBrowserFrameSource: Boolean(options.externalBrowserFrameSource || options.browserFrameSourceService),
     displayMedia: hasDisplayMedia(target, options),
     elementCapture: hasElementCapture(target, options),
     regionCapture: hasRegionCapture(target, options),
     htmlInCanvas: Boolean(htmlInCanvas.supported),
     cachedSequence,
+    precisionVideoDecode: precisionVideoDecode.supported,
     htmlInCanvasDetail: htmlInCanvas,
+    precisionVideoDecodeDetail: precisionVideoDecode,
   };
+}
+
+export { WORKSPACE_VIRTUAL_SEQUENCE_SCHEMA };
+
+/**
+ * @param {object} sequence A producer-validated `workspace-virtual-sequence-v1` artifact.
+ * @param {{ resolvePath: (path: string) => string }} options
+ * @returns {ReturnType<typeof createVirtualSequenceProjection>}
+ */
+export function createMediaStudioVirtualSequence(sequence, options = {}) {
+  return createVirtualSequenceProjection(sequence, options);
 }
 
 export function getMediaFrameSourceProvider(providerId) {
@@ -1048,10 +1118,10 @@ export function normalizeMediaFrameSource(source = {}, options = {}) {
   let input = source && typeof source === 'object' ? source : {};
   let providerId = cleanText(
     input.providerId || input.provider || input.type || input.id,
-    MEDIA_STUDIO_FRAME_SOURCE_TYPES.cachedSequence
+    MEDIA_STUDIO_FRAME_SOURCE_TYPES.virtualSequence
   );
   let provider = getMediaFrameSourceProvider(providerId) ||
-    getMediaFrameSourceProvider(MEDIA_STUDIO_FRAME_SOURCE_TYPES.cachedSequence);
+    getMediaFrameSourceProvider(MEDIA_STUDIO_FRAME_SOURCE_TYPES.virtualSequence);
   let providerState = listMediaFrameSourceProviders(options).find((item) => item.id === provider.id);
   let status = cleanText(input.status, providerState.supported ? 'ready' : 'unavailable');
 
@@ -1063,6 +1133,7 @@ export function normalizeMediaFrameSource(source = {}, options = {}) {
     source: input.source || input.url || input.route || input.surfaceId || null,
     target: input.target || input.element || input.region || null,
     cacheKey: input.cacheKey || input.sequenceId || null,
+    playbackUrl: cleanText(input.playbackUrl || input.playbackProxyUrl || input.playback?.url, ''),
     outputUrl: cleanText(input.outputUrl || input.output?.url || input.videoUrl, ''),
     output: input.output && typeof input.output === 'object' ? clonePlain(input.output) : null,
     captionsUrl: cleanText(input.captionsUrl || input.captions?.url, ''),
@@ -1081,8 +1152,10 @@ function normalizeMediaProgress(value) {
   return Math.min(1, Math.max(0, number));
 }
 
-function hasRenderablePreview(input) {
+function hasRenderablePreview(input, frameSource = null) {
   return Boolean(
+    input.playbackUrl ||
+    input.playbackProxyUrl ||
     input.videoUrl ||
     input.outputUrl ||
     input.output?.url ||
@@ -1092,7 +1165,10 @@ function hasRenderablePreview(input) {
     input.stream ||
     input.currentFrame ||
     input.frame ||
-    (Array.isArray(input.frames) && input.frames.length)
+    (Array.isArray(input.frames) && input.frames.length) ||
+    frameSource?.playbackUrl ||
+    frameSource?.outputUrl ||
+    frameSource?.output?.url
   );
 }
 
@@ -1117,7 +1193,7 @@ export function normalizeMediaPreviewState(preview = {}, options = {}) {
     };
   }
 
-  if (frameSource?.fallback && (status === 'unavailable' || status === MEDIA_PREVIEW_STATES.unsupported || !hasRenderablePreview(input))) {
+  if (frameSource?.fallback && (status === 'unavailable' || status === MEDIA_PREVIEW_STATES.unsupported || !hasRenderablePreview(input, frameSource))) {
     return {
       state: frameSource.fallback.state,
       reason: frameSource.fallback.reason,
@@ -1137,11 +1213,16 @@ export function normalizeMediaPreviewState(preview = {}, options = {}) {
     };
   }
 
-  if (hasRenderablePreview(input)) {
+  if (hasRenderablePreview(input, frameSource)) {
+    let hasVideo = Boolean(
+      input.playbackUrl || input.playbackProxyUrl || input.videoUrl || input.outputUrl || input.output?.url ||
+      frameSource?.playbackUrl || frameSource?.outputUrl || frameSource?.output?.url
+    );
+    let hasFrames = Array.isArray(input.frames) && input.frames.length;
     return {
       state: MEDIA_PREVIEW_STATES.ready,
-      reason: Array.isArray(input.frames) && input.frames.length ? 'cached-sequence-ready' : 'preview-ready',
-      mode: Array.isArray(input.frames) && input.frames.length ? MEDIA_STUDIO_FRAME_SOURCE_TYPES.cachedSequence : 'live',
+      reason: hasVideo ? 'video-ready' : hasFrames ? 'bitmap-preview-ready' : 'preview-ready',
+      mode: hasVideo ? 'live' : hasFrames ? MEDIA_STUDIO_FRAME_SOURCE_TYPES.cachedSequence : 'live',
       frameSource,
       progress: progress ?? 1,
       fallback: null,
@@ -1191,7 +1272,11 @@ function firstFrameUrl(input = {}) {
   return frame?.url || frame?.src || frame?.href || input.src || input.url || '';
 }
 
-function previewVideoUrl(input = {}, frameSource = null) {
+function previewPlaybackProxyUrl(input = {}, frameSource = null) {
+  return cleanText(input.playbackUrl || input.playbackProxyUrl || input.playback?.url || frameSource?.playbackUrl, '');
+}
+
+function previewFinalOutputUrl(input = {}, frameSource = null) {
   return cleanText(
     input.videoUrl ||
     input.outputUrl ||
@@ -1204,24 +1289,31 @@ function previewVideoUrl(input = {}, frameSource = null) {
 
 function normalizeMediaStudioPreviewMode(value, fallback = '') {
   let text = cleanText(value, '').toLowerCase();
-  if (text === MEDIA_STUDIO_PREVIEW_MODES.sequence || text === MEDIA_STUDIO_FRAME_SOURCE_TYPES.cachedSequence) {
+  if (
+    text === MEDIA_STUDIO_PREVIEW_MODES.sequence ||
+    text === MEDIA_STUDIO_FRAME_SOURCE_TYPES.cachedSequence ||
+    text === 'image' || text === 'sprite' || text === 'thumbnail' || text === 'filmstrip'
+  ) {
     return MEDIA_STUDIO_PREVIEW_MODES.sequence;
   }
-  if (text === MEDIA_STUDIO_PREVIEW_MODES.output || text === 'final' || text === 'video') {
+  if (text === MEDIA_STUDIO_PREVIEW_MODES.output || text === 'final' || text === 'video' || text === 'playback') {
     return MEDIA_STUDIO_PREVIEW_MODES.output;
   }
   return fallback;
 }
 
+// Locked primary path: prefer encoded video whenever a virtual-sequence/video URL
+// exists. An image is used only on an explicit sequence/sprite/thumbnail request
+// or when no video URL is available.
 function resolveMediaStudioPreviewMode(input = {}, frameUrl = '', videoUrl = '', previewState = {}) {
   let requested = normalizeMediaStudioPreviewMode(
     input.previewMode || input.mode || input.viewMode || input.previewSource,
     ''
   );
-  if (requested === MEDIA_STUDIO_PREVIEW_MODES.output && videoUrl) return MEDIA_STUDIO_PREVIEW_MODES.output;
   if (requested === MEDIA_STUDIO_PREVIEW_MODES.sequence && frameUrl) return MEDIA_STUDIO_PREVIEW_MODES.sequence;
-  if (frameUrl) return MEDIA_STUDIO_PREVIEW_MODES.sequence;
+  if (requested === MEDIA_STUDIO_PREVIEW_MODES.output && videoUrl) return MEDIA_STUDIO_PREVIEW_MODES.output;
   if (videoUrl) return MEDIA_STUDIO_PREVIEW_MODES.output;
+  if (frameUrl) return MEDIA_STUDIO_PREVIEW_MODES.sequence;
   return normalizeMediaStudioPreviewMode(previewState.mode, MEDIA_STUDIO_PREVIEW_MODES.sequence);
 }
 
@@ -2208,19 +2300,35 @@ export function renderMediaStudioPreviewPanelMarkup(options = {}) {
     frameSource: options.frameSource || preview.frameSource,
   }, options.support || options);
   let frameUrl = firstFrameUrl(preview);
-  let videoUrl = previewVideoUrl(preview, previewState.frameSource);
+  let playbackProxyUrl = previewPlaybackProxyUrl(preview, previewState.frameSource);
+  let finalOutputUrl = previewFinalOutputUrl(preview, previewState.frameSource);
+  let videoUrl = playbackProxyUrl || finalOutputUrl;
+  let requestedSource = cleanText(
+    preview.previewMode || preview.mode || preview.viewMode || preview.previewSource,
+    ''
+  ).toLowerCase();
+  let requestedMode = normalizeMediaStudioPreviewMode(requestedSource, '');
   let previewMode = resolveMediaStudioPreviewMode(preview, frameUrl, videoUrl, previewState);
-  let showOutputVideo = previewMode === MEDIA_STUDIO_PREVIEW_MODES.output && videoUrl;
+  let showVideo = previewMode === MEDIA_STUDIO_PREVIEW_MODES.output && Boolean(videoUrl);
+  let useFinalOutput = Boolean(finalOutputUrl)
+    && (!playbackProxyUrl || ['output', 'final', 'video'].includes(requestedSource));
+  let videoSrc = showVideo ? (useFinalOutput ? finalOutputUrl : playbackProxyUrl) : '';
+  let videoKind = useFinalOutput ? 'final-output' : 'playback-proxy';
+  let videoProof = useFinalOutput ? 'final-output-video' : 'virtual-sequence-playback-proxy';
+  let previewProof = showVideo ? videoProof : 'frame-source-cache';
   let sourceTitle = cleanText(options.sourceTitle || preview.sourceTitle, 'Workspace source');
-  let provider = cleanText(previewState.frameSource?.providerId || options.provider, MEDIA_STUDIO_FRAME_SOURCE_TYPES.externalBrowser);
+  let defaultProvider = showVideo && !useFinalOutput
+    ? MEDIA_STUDIO_FRAME_SOURCE_TYPES.virtualSequence
+    : MEDIA_STUDIO_FRAME_SOURCE_TYPES.externalBrowser;
+  let provider = cleanText(previewState.frameSource?.providerId || options.provider, defaultProvider);
   let cacheKey = cleanText(previewState.frameSource?.cacheKey || options.cacheKey, '');
   let failures = normalizeMediaStudioFailures(preview.failures || options.failures || options.renderState?.failures);
   return `
     <div class="sn-media-studio-panel" data-media-studio-role="preview" data-preview-state="${escapeHtml(previewState.state)}" data-preview-mode="${escapeHtml(previewMode)}" data-frame-source-provider="${escapeHtml(provider)}" data-frame-cache-key="${escapeHtml(cacheKey)}">
       ${renderMediaPreparationProgress(options)}
       <div class="sn-media-studio-preview-stage" aria-label="FrameSource preview" data-preview-state="${escapeHtml(previewState.state)}" data-preview-mode="${escapeHtml(previewMode)}" data-frame-progress="${escapeHtml(percentLabel(previewState.progress))}">
-        <div class="sn-media-studio-preview-window" data-render-proof="frame-source-cache" data-preview-mode="${escapeHtml(previewMode)}">
-          ${showOutputVideo ? `<video class="sn-media-studio-frame sn-media-studio-video" data-media-preview-video data-render-proof="final-output-video" src="${escapeHtml(videoUrl)}"${frameUrl ? ` poster="${escapeHtml(frameUrl)}"` : ''} preload="metadata" playsinline aria-label="${escapeHtml(sourceTitle)} video preview"></video>` : frameUrl ? `<img class="sn-media-studio-frame" data-media-preview-sequence data-render-proof="cached-frame-sequence" src="${escapeHtml(frameUrl)}" alt="${escapeHtml(sourceTitle)} frame">` : `
+        <div class="sn-media-studio-preview-window" data-render-proof="${escapeHtml(previewProof)}" data-preview-mode="${escapeHtml(previewMode)}">
+          ${showVideo ? `<video class="sn-media-studio-frame sn-media-studio-video" data-media-preview-video data-video-source="${escapeHtml(videoKind)}" data-render-proof="${escapeHtml(videoProof)}" src="${escapeHtml(videoSrc)}"${frameUrl ? ` poster="${escapeHtml(frameUrl)}"` : ''} preload="metadata" playsinline aria-label="${escapeHtml(sourceTitle)} video preview"></video>` : frameUrl ? `<img class="sn-media-studio-frame" data-media-preview-sequence data-render-proof="cached-frame-sequence" src="${escapeHtml(frameUrl)}" alt="${escapeHtml(sourceTitle)} frame">` : `
             <div class="sn-media-studio-frame-placeholder" data-frame-source-state="${escapeHtml(previewState.state)}">
               <strong>${escapeHtml(previewState.state)}</strong>
               <span>${escapeHtml(previewState.reason || 'waiting-for-frames')}</span>
@@ -2238,6 +2346,76 @@ export function renderMediaStudioTimelinePanelMarkup(options = {}) {
     <div class="sn-media-studio-timeline-panel" data-media-studio-role="timeline">
       <sn-timeline-editor class="sn-media-studio-timeline-editor" data-media-studio-timeline-editor data-track-count="${data.tracks.length}" data-duration-frames="${data.duration}"></sn-timeline-editor>
     </div>`;
+}
+
+function resolvePreviewVideoElement(root) {
+  if (!root) return null;
+  if (typeof root.matches === 'function' && root.matches('video')) return root;
+  if (root.tagName === 'VIDEO') return root;
+  return root.querySelector?.('[data-media-preview-video]') || root.querySelector?.('video') || null;
+}
+
+function resolvePreviewTimelineElement(root, options) {
+  if (options.timeline) return options.timeline;
+  return root?.querySelector?.('[data-media-studio-timeline-editor]') || null;
+}
+
+/**
+ * @typedef {object} MediaStudioPreviewHydration
+ * @property {HTMLVideoElement|null} video
+ * @property {object|null} clock
+ * @property {() => void} dispose
+ */
+
+/**
+ * Connect the preview `<video>` to one authoritative video-frame clock; derives
+ * frame/tick via an injected projection and optionally advances a timeline.
+ *
+ * @param {ParentNode|HTMLVideoElement} root
+ * @param {{ projection?: object, timeline?: object, onFrame?: (detail: object) => void }} [options]
+ * @returns {MediaStudioPreviewHydration}
+ */
+export function hydrateMediaStudioPreviewPanel(root, options = {}) {
+  let video = resolvePreviewVideoElement(root);
+  let previous = video?.__snMediaStudioPreviewClock;
+  if (previous) {
+    previous.dispose();
+    video.__snMediaStudioPreviewClock = null;
+  }
+  if (!video) {
+    return { video: null, clock: null, dispose() {} };
+  }
+
+  let projection = options.projection && typeof options.projection === 'object' ? options.projection : null;
+  let timeline = resolvePreviewTimelineElement(root, options);
+  let onFrame = typeof options.onFrame === 'function' ? options.onFrame : null;
+
+  let clock = createVideoFrameClock(video, {
+    onFrame: (detail) => {
+      let frame = null;
+      let tick = null;
+      if (projection) {
+        if (typeof projection.timeToTick === 'function') tick = projection.timeToTick(detail.mediaTime);
+        if (typeof projection.timeToFrame === 'function') frame = projection.timeToFrame(detail.mediaTime);
+        if (frame !== null && timeline && typeof timeline.setFrame === 'function') {
+          timeline.setFrame(frame, { silent: true });
+        }
+      }
+      onFrame?.({ ...detail, frame, tick });
+    },
+  });
+  clock.start();
+
+  let controller = {
+    video,
+    clock,
+    dispose() {
+      clock.dispose();
+      if (video.__snMediaStudioPreviewClock === controller) video.__snMediaStudioPreviewClock = null;
+    },
+  };
+  video.__snMediaStudioPreviewClock = controller;
+  return controller;
 }
 
 export function hydrateMediaStudioTimelinePanel(root, options = {}) {

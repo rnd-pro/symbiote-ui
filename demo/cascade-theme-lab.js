@@ -1577,6 +1577,7 @@ class CascadeChatPanel extends Symbiote {
     });
     this.addEventListener('chat-workspace-submit', (event) => this._handleWorkspaceSend(event));
     this.addEventListener('chat-workspace-send', (event) => this._handleWorkspaceSend(event));
+    this.addEventListener('chat-workspace-stop', () => this._stopMockStream('manual-stop'));
     this.addEventListener('chat-workspace-chat-select', (event) => this._selectMockChat(event.detail?.chatId));
     this.addEventListener('chat-workspace-footer-intent', (event) => this._handleWorkspaceFooterIntent(event));
     this.addEventListener('chat-workspace-context-intent', (event) => this._handleWorkspaceContextIntent(event));

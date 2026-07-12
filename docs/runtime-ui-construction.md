@@ -183,6 +183,42 @@ is intentional.
 `panel-layout` owns reusable split and panel behavior only. Product routes,
 transport, persistence, and permission checks remain host policy:
 
+Use `LayoutTree.createSplit(..., behavior, { lockRatio: true })` when responsive
+priority compression may resize surrounding branches but must preserve that
+split's authored ratio. A later `LayoutTree.resizeSplit()` call updates the
+authored ratio that remains locked.
+
+For deterministic CanvasGraph continuation, call `getRenderSnapshot()` only
+after the layout is settled. `setRenderSnapshot()` accepts snapshot v3 only on
+an equivalent backing-store size, CSS size, and device-pixel ratio; it validates
+the complete state atomically and invalidates any older layout worker. CanvasGraph
+animation uses elapsed frame time, so capture cadence does not change motion
+speed.
+
+Media Studio normal playback uses an encoded `workspace-virtual-sequence-v1`
+proxy. Project producer-validated data through an injected path resolver, render
+the preview, then hydrate its video clock. The projection exposes scrub chunks,
+sprites, audio, active layers, and affected ranges without importing the
+producer package. WebCodecs is reserved for bounded precision scrub and
+frame-step windows; callers supply demuxed chunks and the decoder closes all
+frames it owns.
+
+```js
+import {
+  createMediaStudioVirtualSequence,
+  hydrateMediaStudioPreviewPanel,
+} from 'symbiote-ui/ui';
+
+let projection = createMediaStudioVirtualSequence(sequence, { resolvePath });
+let hydration = hydrateMediaStudioPreviewPanel(previewRoot, {
+  projection,
+  timeline,
+  onFrame: ({ frame, tick }) => updatePlaybackState({ frame, tick }),
+});
+
+hydration.dispose();
+```
+
 ```js
 layout.registerPanelType('chat', {
   title: 'Chat',

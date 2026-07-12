@@ -438,6 +438,16 @@
             },
             {
               "kind": "method",
+              "name": "getRenderSnapshot",
+              "description": "Returns snapshot v3 render-continuation state for a settled layout, including full-precision positions, render-surface identity, camera, focus, animation, selection, transition, pulse, group-orbit, appearance, and info-panel state."
+            },
+            {
+              "kind": "method",
+              "name": "setRenderSnapshot",
+              "description": "Atomically restores a valid snapshot v3 on an equivalent backing/CSS/DPR render surface, invalidates stale layout work, and returns whether the snapshot was applied."
+            },
+            {
+              "kind": "method",
               "name": "getDeviceOrientationParallaxStatus",
               "description": "Returns current device-orientation parallax support, permission, and enabled state."
             },
@@ -771,6 +781,16 @@
                 "name": "getLayoutSnapshot",
                 "type": "function",
                 "description": "Returns serializable node positions and viewport state."
+              },
+              {
+                "name": "getRenderSnapshot",
+                "type": "function",
+                "description": "Returns snapshot v3 render-continuation state for a settled layout, including full-precision positions, render-surface identity, camera, focus, animation, selection, transition, pulse, group-orbit, appearance, and info-panel state."
+              },
+              {
+                "name": "setRenderSnapshot",
+                "type": "function",
+                "description": "Atomically restores a valid snapshot v3 on an equivalent backing/CSS/DPR render surface, invalidates stale layout work, and returns whether the snapshot was applied."
               },
               {
                 "name": "getDeviceOrientationParallaxStatus",
@@ -1216,6 +1236,16 @@
                   "name": "getLayoutSnapshot",
                   "type": "function",
                   "description": "Returns serializable node positions and viewport state."
+                },
+                {
+                  "name": "getRenderSnapshot",
+                  "type": "function",
+                  "description": "Returns snapshot v3 render-continuation state for a settled layout, including full-precision positions, render-surface identity, camera, focus, animation, selection, transition, pulse, group-orbit, appearance, and info-panel state."
+                },
+                {
+                  "name": "setRenderSnapshot",
+                  "type": "function",
+                  "description": "Atomically restores a valid snapshot v3 on an equivalent backing/CSS/DPR render surface, invalidates stale layout work, and returns whether the snapshot was applied."
                 },
                 {
                   "name": "getDeviceOrientationParallaxStatus",
@@ -39836,7 +39866,7 @@
           "name": "GraphNode",
           "tagName": "graph-node",
           "description": "Interactive graph node component for the node canvas.",
-          "componentDescription": "Interactive graph node component for the node canvas. Use this graph node presentation primitive when composing node UI. Capabilities: node-card, ports, controls, shape-variant, media-avatar, category-accent, type-accent, error-state. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "componentDescription": "Interactive graph node component for the node canvas. Use this graph node presentation primitive when composing node UI. Capabilities: node-card, ports, controls, shape-variant, media-avatar, media-fit, category-accent, type-accent, error-state. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
           "attributes": [
             {
               "name": "node-label",
@@ -40188,6 +40218,7 @@
               "controls",
               "shape-variant",
               "media-avatar",
+              "media-fit",
               "category-accent",
               "type-accent",
               "error-state"
@@ -40337,7 +40368,7 @@
             }
           },
           "agent": {
-            "componentDescription": "Interactive graph node component for the node canvas. Use this graph node presentation primitive when composing node UI. Capabilities: node-card, ports, controls, shape-variant, media-avatar, category-accent, type-accent, error-state. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "componentDescription": "Interactive graph node component for the node canvas. Use this graph node presentation primitive when composing node UI. Capabilities: node-card, ports, controls, shape-variant, media-avatar, media-fit, category-accent, type-accent, error-state. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
             "semanticRole": "graph node presentation primitive",
             "usage": "Render or compose <graph-node> when the host needs interactive graph node component for the node canvas.",
             "dataOwnership": "host-owned props and attributes; component owns presentation state",
@@ -40362,6 +40393,7 @@
                 "controls",
                 "shape-variant",
                 "media-avatar",
+                "media-fit",
                 "category-accent",
                 "type-accent",
                 "error-state"

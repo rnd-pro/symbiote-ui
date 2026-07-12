@@ -8,8 +8,20 @@
  * @module symbiote-ui/canvas/CanvasViewport
  */
 
+import {
+  createFocusTransitionClock,
+  resolveCanvasGraphCameraArc,
+  resolveCanvasGraphTransitionProgress,
+} from './CanvasGraph/CanvasGraphViewport.js';
+
 const NODE_CANVAS_MIN_FIT_ZOOM = 0.08;
 const NODE_CANVAS_MIN_FIT_VIEWPORT_SIZE = 48;
+const MANUAL_INTERACTION_CULLING_SETTLE_MS = 180;
+
+function finiteNumber(value) {
+  let number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
 
 function resolveFitPadding(padding, viewport) {
   let minSide = Math.min(viewport.width, viewport.height);
@@ -116,6 +128,25 @@ export class CanvasViewport {
       cancelAnimationFrame(this.#panAnimFrame);
       this.#panAnimFrame = null;
     }
+    this.#canvas._viewportProtectedNodeIds = null;
+    this.#canvas._viewportResizeSettleSuppressUntil = 0;
+    this.#canvas._viewportAnimating = false;
+    this.#canvas.toggleAttribute?.('data-viewport-animating', false);
+    this.#canvas._clearSuppressedNodeResizeUpdates?.();
+    this.#getConnRenderer()?.resumeProgressiveRendering?.('viewport-motion');
+  }
+
+  cancelAnimation() {
+    let active = Boolean(this.#panAnimFrame || this.#canvas._viewportAnimating);
+    if (this.#panAnimFrame) cancelAnimationFrame(this.#panAnimFrame);
+    this.#panAnimFrame = null;
+    this.#canvas._viewportProtectedNodeIds = null;
+    this.#canvas._viewportResizeSettleSuppressUntil = 0;
+    this.#canvas._viewportAnimating = false;
+    this.#canvas.toggleAttribute?.('data-viewport-animating', false);
+    this.#canvas._flushSuppressedNodeResizeUpdates?.();
+    this.#getConnRenderer()?.resumeProgressiveRendering?.('viewport-motion');
+    return active;
   }
 
   /**
@@ -158,7 +189,7 @@ export class CanvasViewport {
   /**
    * Update viewport transform and schedule culling
    */
-  updateTransform() {
+  updateTransform(options = {}) {
 
     if (this.#canvas._gridBase === undefined) {
       this.#canvas._gridBase =
@@ -178,6 +209,10 @@ export class CanvasViewport {
       if (toolbar._nodeEl) toolbar.updatePosition(toolbar._nodeEl);
     }
 
+    this.#getConnRenderer()?.refreshViewportTransform?.();
+    this.#canvas._refreshFocusTransitionMarker?.();
+
+    if (options.deferCulling) return;
 
     if (!this.#canvas._cullingScheduled) {
       this.#canvas._cullingScheduled = true;
@@ -188,6 +223,184 @@ export class CanvasViewport {
     }
   }
 
+  #resolveViewportTransitionDuration(options = {}, fallback = 520) {
+    if (options.transition === false || options.animate === false) return 0;
+    if (globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true) return 0;
+
+    let explicitDuration = finiteNumber(options.transitionMs) ?? finiteNumber(options.duration);
+    let duration = explicitDuration ?? fallback;
+
+    let styles = getComputedStyle(this.#canvas);
+    if (styles.getPropertyValue('--sn-motion-enabled').trim() === '0') return 0;
+
+    if (explicitDuration === null) {
+      let motionScale = finiteNumber(styles.getPropertyValue('--sn-theme-motion-scale'));
+      if (motionScale !== null) duration *= motionScale;
+    }
+
+    return Math.max(0, duration);
+  }
+
+  #setViewportTransform({ zoom, panX, panY }, options = {}) {
+    this.#canvas.$.zoom = zoom;
+    this.#canvas.$.panX = panX;
+    this.#canvas.$.panY = panY;
+    this.updateTransform(options);
+  }
+
+  #viewportGraphCenter(start, routeCenter) {
+    let zoom = Math.max(0.0001, start.zoom);
+    return {
+      x: (routeCenter.x - start.panX) / zoom,
+      y: (routeCenter.y - start.panY) / zoom,
+    };
+  }
+
+  #resolveFitTarget(bounds, {
+    padding = 80,
+    minZoom = NODE_CANVAS_MIN_FIT_ZOOM,
+    maxZoom = 1.5,
+  } = {}) {
+    if (!bounds) return null;
+    let viewport = this.#getVisibleViewportSize();
+    let safePadding = resolveFitPadding(padding, viewport);
+    if (safePadding === null) return null;
+    let graphW = Math.max(1, bounds.maxX - bounds.minX);
+    let graphH = Math.max(1, bounds.maxY - bounds.minY);
+    let availableW = Math.max(1, viewport.width - safePadding * 2);
+    let availableH = Math.max(1, viewport.height - safePadding * 2);
+    let scaleX = availableW / graphW;
+    let scaleY = availableH / graphH;
+    let min = Math.max(NODE_CANVAS_MIN_FIT_ZOOM, Number(minZoom) || NODE_CANVAS_MIN_FIT_ZOOM);
+    let max = Math.max(min, Number(maxZoom) || 1.5);
+    let zoom = Math.max(min, Math.min(scaleX, scaleY, max));
+    let center = {
+      x: (bounds.minX + bounds.maxX) / 2,
+      y: (bounds.minY + bounds.maxY) / 2,
+    };
+
+    return {
+      zoom,
+      center,
+      panX: viewport.width / 2 - center.x * zoom,
+      panY: viewport.height / 2 - center.y * zoom,
+      viewport,
+    };
+  }
+
+  #animateViewportTo(target, options = {}) {
+    let connRenderer = this.#getConnRenderer();
+    connRenderer?.resumeProgressiveRendering?.('viewport-motion');
+    this.#canvas._flushSuppressedNodeResizeUpdates?.();
+    this.#canvas._viewportProtectedNodeIds = null;
+    this.#canvas._viewportResizeSettleSuppressUntil = 0;
+    this.#canvas._viewportAnimating = false;
+    this.#canvas.toggleAttribute?.('data-viewport-animating', false);
+    if (this.#panAnimFrame) {
+      cancelAnimationFrame(this.#panAnimFrame);
+      this.#panAnimFrame = null;
+    }
+
+    let start = {
+      zoom: this.#canvas.$.zoom,
+      panX: this.#canvas.$.panX,
+      panY: this.#canvas.$.panY,
+    };
+    let dz = Math.abs(start.zoom - target.zoom);
+    let dx = Math.abs(start.panX - target.panX);
+    let dy = Math.abs(start.panY - target.panY);
+    if (dz < 0.01 && dx < 2 && dy < 2) {
+      this.#setViewportTransform(target);
+      return;
+    }
+
+    let duration = this.#resolveViewportTransitionDuration(options);
+    if (!duration || typeof requestAnimationFrame !== 'function') {
+      this.#setViewportTransform(target);
+      return;
+    }
+
+    connRenderer?.suspendProgressiveRendering?.('viewport-motion');
+    let protectedNodeIds = Array.isArray(options.viewportProtectedNodeIds)
+      ? options.viewportProtectedNodeIds.map(String).filter(Boolean)
+      : [];
+    this.#canvas._viewportProtectedNodeIds = protectedNodeIds.length ? new Set(protectedNodeIds) : null;
+    this.#canvas._viewportResizeSettleSuppressUntil = Number.POSITIVE_INFINITY;
+    this.#canvas._viewportAnimating = true;
+    this.#canvas.toggleAttribute?.('data-viewport-animating', true);
+
+    let clock = options.transitionClock || createFocusTransitionClock(options.transitionStartTime);
+
+    let routeCenter = options.viewportRouteCenter || null;
+    let startCenter = routeCenter ? this.#viewportGraphCenter(start, routeCenter) : null;
+    let frozenTargetCenter = routeCenter ? {
+      x: (routeCenter.x - target.panX) / Math.max(0.0001, target.zoom),
+      y: (routeCenter.y - target.panY) / Math.max(0.0001, target.zoom),
+    } : null;
+    let lastViewport = target;
+
+    let step = (now) => {
+      let elapsed = now - clock.resolveStart(now);
+      let t = Math.min(elapsed / duration, 1);
+      let fitTarget = options.viewportRouteFitBounds
+        ? this.#resolveFitTarget(options.viewportRouteFitBounds, {
+            padding: options.viewportRouteFitPadding ?? options.padding ?? 128,
+            minZoom: options.viewportRouteFitMinZoom ?? NODE_CANVAS_MIN_FIT_ZOOM,
+            maxZoom: options.viewportRouteFitMaxZoom ?? Math.min(target.zoom, options.maxZoom ?? 1.5),
+          })
+        : null;
+
+      if (startCenter && fitTarget) {
+        let liveTargetCenter = this.#canvas._getNodeGraphCenter?.(options.viewportTargetNodeId)
+          || frozenTargetCenter;
+        let viewport = fitTarget.viewport;
+        lastViewport = resolveCanvasGraphCameraArc({
+          startCenter,
+          routeCenter: fitTarget.center,
+          targetCenter: liveTargetCenter,
+          startZoom: start.zoom,
+          routeZoom: fitTarget.zoom,
+          targetZoom: target.zoom,
+          rect: viewport,
+          progress: t,
+          minZoom: NODE_CANVAS_MIN_FIT_ZOOM,
+          maxZoom: Math.max(start.zoom, target.zoom, fitTarget.zoom, options.maxZoom ?? 1.5),
+        });
+        this.#setViewportTransform(lastViewport, {
+          deferCulling: t < 1,
+        });
+      } else {
+        let ease = resolveCanvasGraphTransitionProgress(t);
+        lastViewport = {
+          zoom: start.zoom + (target.zoom - start.zoom) * ease,
+          panX: start.panX + (target.panX - start.panX) * ease,
+          panY: start.panY + (target.panY - start.panY) * ease,
+        };
+        this.#setViewportTransform({
+          ...lastViewport,
+        }, {
+          deferCulling: t < 1,
+        });
+      }
+
+      if (t < 1) {
+        this.#panAnimFrame = requestAnimationFrame(step);
+        return;
+      }
+
+      this.#panAnimFrame = null;
+      this.#setViewportTransform(lastViewport);
+      this.#canvas._viewportAnimating = false;
+      this.#canvas._viewportProtectedNodeIds = null;
+      this.#canvas._viewportResizeSettleSuppressUntil = now + 320;
+      this.#canvas.toggleAttribute?.('data-viewport-animating', false);
+      connRenderer?.resumeProgressiveRendering?.('viewport-motion');
+      this.#canvas._flushSuppressedNodeResizeUpdates?.();
+    };
+
+    this.#panAnimFrame = requestAnimationFrame(step);
+  }
+
   /**
    * Apply culling and level of detail logic based on zoom/pan
    * @private
@@ -195,6 +408,20 @@ export class CanvasViewport {
   #applyCullingAndLOD() {
     if (!this.#canvas.ref.canvasContainer) return;
     if (this.#nodeViews.size === 0 && this.#phantomData.size === 0) return;
+    if (this.#canvas.hasAttribute?.('data-interacting')) {
+      this.#deferCullingUntilInteractionSettles();
+      return;
+    }
+    let protectedNodeIds = this.#canvas._viewportProtectedNodeIds;
+    let promotedProtectedNode = false;
+    if (protectedNodeIds?.size) {
+      for (const nodeId of protectedNodeIds) {
+        if (!this.#phantomData.has(nodeId)) continue;
+        this.#promoteNode(nodeId);
+        promotedProtectedNode = true;
+      }
+    }
+    if (promotedProtectedNode) this.#syncPhantomToRenderer();
 
     let cw = this.#canvas.ref.canvasContainer.clientWidth;
     let ch = this.#canvas.ref.canvasContainer.clientHeight;
@@ -223,6 +450,11 @@ export class CanvasViewport {
     for (const [id, el] of this.#nodeViews) {
       let pos = el._position;
       if (!pos) continue;
+      if (protectedNodeIds?.has(id)) {
+        if (el.style.visibility !== '') el.style.visibility = '';
+        if (el.getAttribute('data-lod') !== lod) el.setAttribute('data-lod', lod);
+        continue;
+      }
 
       let screenX = pos.x * zoom + panX;
       let screenY = pos.y * zoom + panY;
@@ -287,6 +519,14 @@ export class CanvasViewport {
       this.#phantomDirty = false;
       this.#syncPhantomToRenderer();
     }
+  }
+
+  #deferCullingUntilInteractionSettles() {
+    if (this.#virtTimer) clearTimeout(this.#virtTimer);
+    this.#virtTimer = setTimeout(() => {
+      this.#virtTimer = null;
+      this.#applyCullingAndLOD();
+    }, MANUAL_INTERACTION_CULLING_SETTLE_MS);
   }
 
   /**
@@ -358,6 +598,35 @@ export class CanvasViewport {
     this.#syncPhantomToRenderer();
   }
 
+  ensureNodeView(nodeId) {
+    let id = String(nodeId || '');
+    if (!id) return null;
+    if (this.#phantomData.has(id)) {
+      this.#promoteNode(id);
+      this.#syncPhantomToRenderer();
+    }
+    return this.#nodeViews.get(id) || null;
+  }
+
+  prewarmFocusNodes({ nodeIds = [] } = {}) {
+    let protectedIds = new Set(Array.isArray(nodeIds) ? nodeIds.map(String).filter(Boolean) : []);
+    let promoted = false;
+    for (const id of protectedIds) {
+      if (this.#phantomData.has(id)) {
+        this.#promoteNode(id);
+        promoted = true;
+      }
+      let el = this.#nodeViews.get(id);
+      if (!el) continue;
+      if (el.style.visibility !== '') el.style.visibility = '';
+      el.getBoundingClientRect?.();
+    }
+    if (promoted) this.#syncPhantomToRenderer();
+    let ids = [...protectedIds];
+    this.#getConnRenderer()?.prewarmNodes?.(ids);
+    return ids;
+  }
+
   #getVisibleViewportSize() {
     let canvasRect = this.#canvas.ref.canvasContainer.getBoundingClientRect();
     let visibleWidth = canvasRect.width;
@@ -378,8 +647,8 @@ export class CanvasViewport {
         id: nodeId,
         x: el._position.x,
         y: el._position.y,
-        w: el._cachedW || el.offsetWidth || 150,
-        h: el._cachedH || el.offsetHeight || 40,
+        w: el.offsetWidth || el._cachedW || 150,
+        h: el.offsetHeight || el._cachedH || 40,
       };
     }
 
@@ -421,27 +690,19 @@ export class CanvasViewport {
     padding = 80,
     minZoom = NODE_CANVAS_MIN_FIT_ZOOM,
     maxZoom = 1.5,
+    ...options
   } = {}) {
-    if (!bounds) return false;
-    let viewport = this.#getVisibleViewportSize();
-    let safePadding = resolveFitPadding(padding, viewport);
-    if (safePadding === null) return false;
-    let graphW = Math.max(1, bounds.maxX - bounds.minX);
-    let graphH = Math.max(1, bounds.maxY - bounds.minY);
-    let availableW = Math.max(1, viewport.width - safePadding * 2);
-    let availableH = Math.max(1, viewport.height - safePadding * 2);
-    let scaleX = availableW / graphW;
-    let scaleY = availableH / graphH;
-    let min = Math.max(NODE_CANVAS_MIN_FIT_ZOOM, Number(minZoom) || NODE_CANVAS_MIN_FIT_ZOOM);
-    let max = Math.max(min, Number(maxZoom) || 1.5);
-    let scale = Math.max(min, Math.min(scaleX, scaleY, max));
-    let centerX = (bounds.minX + bounds.maxX) / 2;
-    let centerY = (bounds.minY + bounds.maxY) / 2;
+    let target = this.#resolveFitTarget(bounds, { padding, minZoom, maxZoom });
+    if (!target) return false;
 
-    this.#canvas.$.zoom = scale;
-    this.#canvas.$.panX = viewport.width / 2 - centerX * scale;
-    this.#canvas.$.panY = viewport.height / 2 - centerY * scale;
-    this.updateTransform();
+    this.#animateViewportTo({
+      zoom: target.zoom,
+      panX: target.panX,
+      panY: target.panY,
+    }, {
+      ...options,
+      viewportRouteCenter: { x: target.viewport.width / 2, y: target.viewport.height / 2 },
+    });
     return true;
   }
 
@@ -460,8 +721,8 @@ export class CanvasViewport {
       if (!el._position) continue;
       let x = el._position.x;
       let y = el._position.y;
-      let w = el._cachedW || el.offsetWidth || 150;
-      let h = el._cachedH || el.offsetHeight || 40;
+      let w = el.offsetWidth || el._cachedW || 150;
+      let h = el.offsetHeight || el._cachedH || 40;
       if (x < minX) minX = x;
       if (y < minY) minY = y;
       if (x + w > maxX) maxX = x + w;
@@ -489,10 +750,13 @@ export class CanvasViewport {
     let centerX = (minX + maxX) / 2;
     let centerY = (minY + maxY) / 2;
 
-    this.#canvas.$.zoom = scale;
-    this.#canvas.$.panX = viewport.width / 2 - centerX * scale;
-    this.#canvas.$.panY = viewport.height / 2 - centerY * scale;
-    this.updateTransform();
+    this.#animateViewportTo({
+      zoom: scale,
+      panX: viewport.width / 2 - centerX * scale,
+      panY: viewport.height / 2 - centerY * scale,
+    }, {
+      viewportRouteCenter: { x: viewport.width / 2, y: viewport.height / 2 },
+    });
   }
 
   /**
@@ -507,10 +771,14 @@ export class CanvasViewport {
    */
   flyToNodes(nodeIds, options = {}) {
     let ids = Array.isArray(nodeIds) ? nodeIds : [nodeIds];
+    let protectedNodeIds = this.prewarmFocusNodes({ nodeIds: ids });
     let bounds = this.#getBoundsForNodeIds(ids);
     if (!bounds) return false;
 
-    let result = this.#fitBounds(bounds, options);
+    let result = this.#fitBounds(bounds, {
+      ...options,
+      viewportProtectedNodeIds: options.viewportProtectedNodeIds || protectedNodeIds,
+    });
     let select = options.select;
     if (select === true) select = bounds.ids[0];
     if (typeof select === 'string' && select) {
@@ -524,6 +792,7 @@ export class CanvasViewport {
    * @param {string|string[]} nodeId
    * @param {Object} [options]
    * @param {number} [options.zoom=0.8]
+   * @param {string|boolean} [options.select=true]
    * @returns {boolean} True if successful
    */
   flyToNode(nodeId, options = {}) {
@@ -558,8 +827,8 @@ export class CanvasViewport {
       visibleWidth -= inspector.offsetWidth;
     }
 
-    let elWidth = el._cachedW || el.offsetWidth || 150;
-    let elHeight = el._cachedH || el.offsetHeight || 40;
+    let elWidth = el.offsetWidth || el._cachedW || 150;
+    let elHeight = el.offsetHeight || el._cachedH || 40;
 
     let nodeX = pos.x + elWidth / 2;
     let nodeY = pos.y + elHeight / 2;
@@ -570,9 +839,12 @@ export class CanvasViewport {
     let dz = Math.abs(this.#canvas.$.zoom - zoom);
     let dx = Math.abs(this.#canvas.$.panX - newPanX);
     let dy = Math.abs(this.#canvas.$.panY - newPanY);
+    let select = options.select;
+    let shouldSelect = select !== false;
+    let selectId = typeof select === 'string' && select ? select : nodeId;
 
     if (dz < 0.01 && dx < 2 && dy < 2) {
-      this.#canvas.selectNode(nodeId);
+      if (shouldSelect) this.#canvas.selectNode(selectId);
       if (!this.#canvas._cullingScheduled) {
         this.#canvas._cullingScheduled = true;
         requestAnimationFrame(() => {
@@ -583,12 +855,15 @@ export class CanvasViewport {
       return true;
     }
 
-    this.#canvas.$.zoom = zoom;
-    this.#canvas.$.panX = newPanX;
-    this.#canvas.$.panY = newPanY;
-
-    this.#canvas.selectNode(nodeId);
-    this.updateTransform();
+    if (shouldSelect) this.#canvas.selectNode(selectId);
+    this.#animateViewportTo({
+      zoom,
+      panX: newPanX,
+      panY: newPanY,
+    }, {
+      ...options,
+      viewportRouteCenter: { x: visibleWidth / 2, y: canvasRect.height / 2 },
+    });
     return true;
   }
 
@@ -625,32 +900,11 @@ export class CanvasViewport {
       this.#panAnimFrame = null;
     }
 
-    let startX = this.#canvas.$.panX;
-    let startY = this.#canvas.$.panY;
-    let dx = targetX - startX;
-    let dy = targetY - startY;
-
-    if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
-
-    let startTime = performance.now();
-
-    let step = (now) => {
-      let elapsed = now - startTime;
-      let t = Math.min(elapsed / duration, 1);
-      let ease = 1 - Math.pow(1 - t, 3);
-
-      this.#canvas.$.panX = startX + dx * ease;
-      this.#canvas.$.panY = startY + dy * ease;
-      this.updateTransform();
-
-      if (t < 1) {
-        this.#panAnimFrame = requestAnimationFrame(step);
-      } else {
-        this.#panAnimFrame = null;
-      }
-    };
-
-    this.#panAnimFrame = requestAnimationFrame(step);
+    this.#animateViewportTo({
+      zoom: this.#canvas.$.zoom,
+      panX: targetX,
+      panY: targetY,
+    }, { transitionMs: duration });
   }
 
   getPositions() {

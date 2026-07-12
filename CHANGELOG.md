@@ -6,6 +6,15 @@ All notable changes to `symbiote-ui` will be documented in this file.
 
 ### Added
 
+- Added `lockRatio` split options to `LayoutTree.createSplit()` so hosts can
+  preserve authored panel proportions while surrounding branches use responsive
+  priority compression.
+- Added versioned `CanvasGraph.getRenderSnapshot()` and
+  `setRenderSnapshot()` contracts for atomic render continuation across
+  deterministic workers, including full-precision layout, camera, focus,
+  interaction, transition, pulse, group-orbit, and info-panel state.
+- Added a shared elapsed-time frame clock for CanvasGraph easing and procedural
+  motion, keeping animation speed stable when capture cadence changes.
 - Added exact annotation path samples and a public geometry safety analyzer for
   deterministic presenter collision checks against protected targets, captions,
   controls, and cursor bounds; circle annotations now trace an external rounded
@@ -15,9 +24,12 @@ All notable changes to `symbiote-ui` will be documented in this file.
 - Added ordered v3 interaction-cue planning through
   `createWebMcpTourTurnActionPlans`; presentation tools now consume cue bindings
   directly and preserve strict tool input schemas.
-- Added bounded, cancellation-aware Media Studio frame-sequence playback,
-  caption overlays, and external-clock timeline controls for synchronized
-  audio, seek, pause, and resume workflows.
+- Added exact `workspace-virtual-sequence-v1` projection, encoded playback and
+  scrub proxy selection, sprite/audio/layer indexes, and affected-range lookups
+  without importing the producer package.
+- Added video-first Media Studio preview with `requestVideoFrameCallback`
+  timeline hydration and a bounded WebCodecs precision decoder for scrub and
+  frame-step windows; bitmap caching remains limited to sprites and thumbnails.
 - Added a Node-safe installable render clock for deterministic UI animation,
   plus decoded-byte-bounded LRU proxy-frame caching with explicit bitmap release.
 - Added seekable CanvasGraph pulses through `pulseNode(..., { startTime })` and
@@ -58,6 +70,26 @@ All notable changes to `symbiote-ui` will be documented in this file.
 
 ### Fixed
 
+- Media Studio preview now prefers an encoded playback proxy over cached bitmap
+  frames, reports rVFC and secure WebCodecs capabilities honestly, and closes or
+  cancels every decoder, frame, listener, and video-frame callback it owns.
+- Narrow ChatComposer layouts now place footer and voice controls on stable
+  rows without clipping or overflow, and the showcase host handles the distinct
+  stream-stop event.
+- Cascade theme primary action text now retains WCAG 4.5 contrast after browser
+  color quantization.
+- Manual viewport input now cancels competing focus-camera motion and defers
+  virtualization until interaction settles, preventing repeated connection
+  rebuilds during wheel and pan gestures.
+- Medium graph LOD now preserves node bounds and connector anchors while hiding
+  expensive visual details, avoiding ResizeObserver-driven connection refreshes.
+- Focus-transition markers now share a stall-safe animation clock and use live
+  connector endpoints without flattening the sampled route shape.
+- `CanvasGraph.getRenderSnapshot()`/`setRenderSnapshot()` (snapshot v3) now use
+  the visible graph projection for identity checks, reject unsettled layouts and
+  semantically invalid animation state, stop stale layout workers on restore,
+  and require an equivalent backing/CSS/DPR render surface for deterministic
+  continuation.
 - `registerWebMcpTool()` now forwards native registration options, including
   `AbortSignal` and origin exposure, to `document.modelContext.registerTool()`.
 - Fixed cascade theme widget/editor slider rows staying stale or failing to

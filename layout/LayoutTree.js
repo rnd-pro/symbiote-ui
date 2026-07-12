@@ -59,6 +59,7 @@
  * @property {'split'} type - Node type
  * @property {SplitDirection} direction - Split direction
  * @property {number} ratio - Split ratio (0-1), size of first child
+ * @property {boolean} [lockRatio]
  * @property {LayoutBehavior} [behavior] Responsive behavior for this branch.
  * @property {LayoutNode} first - First child node
  * @property {LayoutNode} second - Second child node
@@ -204,9 +205,18 @@ export function createPanel(panelType, panelState = {}, behavior = undefined) {
  * @param {LayoutNode} first - First child
  * @param {LayoutNode} second - Second child
  * @param {number} [ratio=0.5] - Split ratio
+ * @param {LayoutBehavior} [behavior]
+ * @param {{lockRatio?: boolean}} [options]
  * @returns {SplitNode}
  */
-export function createSplit(direction, first, second, ratio = 0.5, behavior = undefined) {
+export function createSplit(
+  direction,
+  first,
+  second,
+  ratio = 0.5,
+  behavior = undefined,
+  options = {}
+) {
   let split = {
     id: generateId(),
     type: 'split',
@@ -215,6 +225,7 @@ export function createSplit(direction, first, second, ratio = 0.5, behavior = un
     first,
     second,
   }
+  if (options.lockRatio === true) split.lockRatio = true
   let normalizedBehavior = optionalBehavior(behavior)
   if (normalizedBehavior) split.behavior = normalizedBehavior
   return split
@@ -823,6 +834,15 @@ export function applyPriorityCompression(root, viewport = {}, options = {}) {
   let changed = false
   function apply(node) {
     if (!isSplitNode(node)) return
+    if (node.lockRatio === true) {
+      if (node[RUNTIME_SPLIT_RATIO] !== undefined) {
+        delete node[RUNTIME_SPLIT_RATIO]
+        changed = true
+      }
+      apply(node.first)
+      apply(node.second)
+      return
+    }
     let firstShare = subtreeShare(node.first)
     let secondShare = subtreeShare(node.second)
     let totalShare = firstShare + secondShare

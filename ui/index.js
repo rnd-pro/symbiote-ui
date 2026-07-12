@@ -395,8 +395,10 @@ export {
   getMediaStudioTopology,
   hasMediaStudioTopology,
   hydrateMediaStudioTimelinePanel,
+  hydrateMediaStudioPreviewPanel,
   listMediaFrameSourceProviders,
   createMediaStudioSequenceFrameWindow,
+  createMediaStudioVirtualSequence,
   mediaStudioFrameIndexForTime,
   normalizeMediaFrameSource,
   normalizeMediaStudioTimelineData,
@@ -412,6 +414,16 @@ export {
   renderMediaStudioProgressPanelMarkup,
   renderMediaStudioTimelinePanelMarkup,
 } from './media-studio-surface.js';
+export { createVideoFrameClock } from './video-frame-clock.js';
+export {
+  WORKSPACE_VIRTUAL_SEQUENCE_SCHEMA,
+  createVirtualSequenceProjection,
+} from './virtual-sequence.js';
+export {
+  PrecisionVideoDecodeError,
+  createPrecisionVideoDecoder,
+  getPrecisionVideoDecodeSupport,
+} from './precision-video-decoder.js';
 export { recordTourScreencast } from './tour-screencast.js';
 export {
   TOUR_AUDIO_PROVIDER_BROWSER_ID,

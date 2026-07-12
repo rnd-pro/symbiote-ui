@@ -20,6 +20,7 @@ import {
   getNodeBehavior,
   hasLayoutBehaviorMetadata,
   joinPanels,
+  resizeSplit,
   layoutHasBehaviorMetadata,
   normalizeLayoutBehavior,
   openPanel,
@@ -256,12 +257,15 @@ test('layout node panel header adapts without overlapping actions', async () => 
   assert.match(styles, /\.panel-title\s*\{[\s\S]*?font-size: var\(--sn-layout-header-title-size, var\(--sn-layout-header-button-size, 0\.75rem\)\);[\s\S]*?line-height: var\(--sn-layout-header-title-line-height, 1\.2\);/);
   assert.match(styles, /\.panel-content\s*\{[\s\S]*?box-sizing: border-box;[\s\S]*?min-inline-size: 0;[\s\S]*?min-block-size: 0;/);
   assert.match(styles, /\.panel-content > sn-card\s*\{[\s\S]*?--sn-card-bg: var\(--sn-layout-panel-card-bg, transparent\);[\s\S]*?--sn-card-border: var\(--sn-layout-panel-card-border, transparent\);[\s\S]*?--sn-card-radius: var\(--sn-layout-panel-card-radius, 0\);[\s\S]*?box-sizing: border-box;[\s\S]*?inline-size: var\(--sn-layout-panel-card-inline-size, 100%\);[\s\S]*?min-block-size: var\(--sn-layout-panel-card-min-block-size, 100%\);/);
-  assert.match(styles, /\.panel-menu-row\s*\{[\s\S]*?min-block-size: calc\(var\(--sn-layout-menu-row-height,/);
+  assert.match(styles, /\.panel-menu-rows\s*\{[\s\S]*?gap: var\(--sn-layout-menu-section-gap,/);
+  assert.match(styles, /\.panel-menu-row\s*\{[\s\S]*?grid-template-columns: minmax\(0, 1fr\);[\s\S]*?min-block-size: calc\(var\(--sn-layout-menu-row-height,/);
+  assert.match(styles, /\.panel-menu-row\s*\{[\s\S]*?border: 1px solid color-mix\(in oklab, var\(--sn-layout-border\) 62%, transparent\);[\s\S]*?border-radius: var\(--sn-layout-menu-section-radius,/);
   assert.doesNotMatch(styles, /\.panel-menu-row\s*\{[\s\S]*?height: calc\(var\(--sn-layout-menu-row-height,/);
+  assert.match(styles, /\.panel-menu-row-label\s*\{[\s\S]*?border-block-end: 1px solid color-mix\(in oklab, var\(--sn-layout-border\) 58%, transparent\);[\s\S]*?font-weight: 600;/);
   assert.match(styles, /\.panel-menu-actions\s*\{[\s\S]*?flex-wrap: wrap;[\s\S]*?overflow: hidden;/);
   assert.match(styles, /\.panel-menu-action-label\s*\{[\s\S]*?text-overflow: ellipsis;/);
   assert.match(styles, /@container layout-panel \(max-width: 360px\) \{[\s\S]*?\.panel-menu-action-label \{[\s\S]*?display: none;/);
-  assert.match(styles, /@container layout-panel \(max-width: 280px\) \{[\s\S]*?\.panel-menu-row \{[\s\S]*?grid-template-columns: 1fr;/);
+  assert.match(styles, /@container layout-panel \(max-width: 280px\) \{[\s\S]*?\.panel-menu-row-label \{[\s\S]*?min-block-size: var\(--sn-layout-menu-section-label-compact-height,/);
   assert.match(styles, /@container layout-panel \(max-width: 360px\) \{[\s\S]*?\.panel-title \{[\s\S]*?display: none;/);
   assert.match(styles, /@container layout-panel \(max-width: 260px\) \{[\s\S]*?\.dropdown-arrow \{[\s\S]*?display: none;/);
   assert.match(styles, /@container layout-panel \(max-width: 220px\) \{[\s\S]*?\.fullscreen-btn \{[\s\S]*?display: none;/);
@@ -773,11 +777,24 @@ test('node canvas fit view avoids microscopic startup zoom', async () => {
   assert.doesNotMatch(source, /minZoom = 0\.001/);
 });
 
-test('node canvas single-node focus applies the viewport transform immediately', async () => {
+test('node canvas single-node focus uses viewport transition by default', async () => {
   let source = await readFile(canvasViewportSource, 'utf8');
 
   assert.match(source, /flyToNode\(nodeId, options = {}\) {/);
-  assert.match(source, /this\.#canvas\.\$\.zoom = zoom;\s*this\.#canvas\.\$\.panX = newPanX;\s*this\.#canvas\.\$\.panY = newPanY;\s*this\.#canvas\.selectNode\(nodeId\);\s*this\.updateTransform\(\);/);
+  assert.match(source, /#resolveViewportTransitionDuration\(options = \{\}, fallback = 520\)/);
+  assert.match(source, /let clock = options\.transitionClock \|\| createFocusTransitionClock\(options\.transitionStartTime\);/);
+  assert.match(source, /let elapsed = now - clock\.resolveStart\(now\);/);
+  assert.match(source, /#resolveFitTarget\(bounds,/);
+  assert.match(source, /viewportRouteFitBounds/);
+  assert.match(source, /resolveCanvasGraphCameraArc\(\{/);
+  assert.match(source, /this\.#canvas\._getNodeGraphCenter\?\.\(options\.viewportTargetNodeId\)/);
+  assert.match(source, /this\.#setViewportTransform\(lastViewport\);/);
+  assert.doesNotMatch(source, /pointAtRouteProgress/);
+  assert.doesNotMatch(source, /viewportRouteTravelEnd/);
+  assert.doesNotMatch(source, /interpolatePoint/);
+  assert.match(source, /viewportRouteCenter: \{ x: visibleWidth \/ 2, y: canvasRect\.height \/ 2 \}/);
+  assert.match(source, /if \(shouldSelect\) this\.#canvas\.selectNode\(selectId\);\s*this\.#animateViewportTo\(\{\s*zoom,\s*panX: newPanX,\s*panY: newPanY,\s*\}, \{\s*\.\.\.options,/);
+  assert.match(source, /options\.transition === false \|\| options\.animate === false/);
 });
 
 test('layout minimum size estimate follows split direction and node behavior', () => {
@@ -1082,6 +1099,30 @@ test('priority compression shrinks lower-importance wide panels before auto-coll
     applyPriorityCompression(root, { inlineSize: 1300 }),
     false
   );
+});
+
+test('locked split ratio survives priority compression and explicit resize', () => {
+  let tree = createPanel('tree', {}, { importance: 82, minInlineSize: 200 });
+  let details = createPanel('details', {}, { importance: 100, minInlineSize: 320 });
+  let graph = createPanel('graph', {}, { importance: 70, minInlineSize: 320 });
+  let content = createSplit('horizontal', details, graph, 0.5, undefined, { lockRatio: true });
+  let root = createSplit('horizontal', tree, content, 0.22, { minInlineSize: 960 });
+
+  assert.equal(applyPriorityCompression(root, { inlineSize: 960 }), true);
+  assert.ok(root[RUNTIME_SPLIT_RATIO] !== undefined);
+  assert.equal(content[RUNTIME_SPLIT_RATIO], undefined);
+  assert.equal(content.lockRatio, true);
+
+  resizeSplit(root, content.id, 0.6);
+  assert.equal(clearPriorityCompression(root), true);
+  assert.equal(applyPriorityCompression(root, { inlineSize: 960 }), false);
+  assert.equal(content.ratio, 0.6);
+  assert.equal(content[RUNTIME_SPLIT_RATIO], undefined);
+
+  content[RUNTIME_SPLIT_RATIO] = 0.4;
+  assert.equal(applyPriorityCompression(root, { inlineSize: 960 }), true);
+  assert.equal(content[RUNTIME_SPLIT_RATIO], undefined);
+  assert.equal(JSON.parse(JSON.stringify(content)).lockRatio, true);
 });
 
 test('panel layout drawer API and rail gestures open and close drawer panels without built-in handles', async () => {

@@ -123,11 +123,8 @@ export let styles = css`
       & .sn-subgraph-preview,
       & .error-frame,
       & .sn-quick-toolbar {
-        display: none;
-      }
-
-      & .sn-node-body {
-        padding: var(--sn-node-lod-body-padding, 2px 0);
+        visibility: hidden;
+        pointer-events: none;
       }
 
       & node-socket {

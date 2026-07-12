@@ -29,6 +29,11 @@ import { NodeViewManager } from '../NodeViewManager.js';
 import { FrameManager } from '../FrameManager.js';
 import { SelectionSync } from '../SelectionSync.js';
 import { CanvasViewport } from '../CanvasViewport.js';
+import {
+  createFocusTransitionClock,
+  resolveCanvasGraphTransitionDuration,
+  resolveCanvasGraphTransitionProgress,
+} from '../CanvasGraph/CanvasGraphViewport.js';
 import { ConnectionRenderer } from '../ConnectionRenderer.js';
 import { CanvasConnectionRenderer } from '../CanvasConnectionRenderer.js';
 import { PseudoConnection } from '../PseudoConnection.js';
@@ -184,6 +189,12 @@ export class NodeCanvas extends Symbiote {
   /** @type {Map<string, { width: number, height: number }>} */
   _nodeSizeCache = new Map();
 
+  /** @type {Set<string>} */
+  _suppressedResizeNodeIds = new Set();
+
+  /** @type {number} */
+  _suppressedResizeFlushTimer = 0;
+
   /** @type {number} */
   _connectionUpdateFrame = 0;
 
@@ -235,6 +246,9 @@ export class NodeCanvas extends Symbiote {
   /** @type {Map<string, { style: 'bezier'|'orthogonal'|'straight'|'pcb'|'pcb-drag-proxy', connectionIds: Iterable<string>|null, draggedNodeId?: string }>} */
   _transientPathStyleRequests = new Map();
 
+  /** @type {Set<string>} */
+  _progressiveConnectionSuspensions = new Set();
+
   /** @type {''|'bezier'|'orthogonal'|'straight'|'pcb'|'pcb-drag-proxy'} */
   _activeTransientPathStyle = '';
 
@@ -268,6 +282,24 @@ export class NodeCanvas extends Symbiote {
   /** @type {string} */
   _layoutSuspendReason = '';
 
+  /** @type {string} */
+  _lastFocusTransitionNodeId = '';
+
+  /** @type {number} */
+  _focusTransitionTimer = 0;
+
+  /** @type {number} */
+  _focusTransitionCleanupTimer = 0;
+
+  /** @type {number} */
+  _focusTransitionFrame = 0;
+
+  /** @type {Object|null} */
+  _activeFocusTransitionOptions = null;
+
+  /** @type {Object|null} */
+  _activeFocusTransitionMarkerState = null;
+
 
   /**
    * Clear all existing node, connection, and frame views from the DOM.
@@ -288,6 +320,8 @@ export class NodeCanvas extends Symbiote {
     }
     this._nodeViews.clear();
     if (this._viewport) this._viewport.clear();
+    this._lastFocusTransitionNodeId = '';
+    this._hideFocusTransitionMarker();
 
 
     if (this._editor) {
@@ -417,6 +451,9 @@ export class NodeCanvas extends Symbiote {
         draggedNodeId: request.draggedNodeId,
       });
     }
+    for (const source of this._progressiveConnectionSuspensions) {
+      this._connRenderer.suspendProgressiveRendering?.(source);
+    }
 
     this._pseudo = new PseudoConnection(this.ref.pseudoSvg);
 
@@ -480,7 +517,7 @@ export class NodeCanvas extends Symbiote {
       onNodeDragEnd: (id, el, e) => this._handleNodeDragEnd(id, el, e),
       nodesLayer: this.ref.nodesLayer,
       canvas: this,
-      onSvgShapeReady: (nodeId) => this._connRenderer?.renderFreeDots(nodeId),
+      onSvgShapeReady: (nodeId) => this._connRenderer?.prewarmNodes?.([nodeId]),
       onNodeViewReady: (nodeId, el) => this._observeNodeSize(nodeId, el),
       onNodeViewRemoved: (nodeId, el) => this._unobserveNodeSize(nodeId, el),
     });
@@ -797,9 +834,360 @@ export class NodeCanvas extends Symbiote {
     });
   }
 
+  /**
+   * @param {boolean} [enabled]
+   * @param {string} [source]
+   */
+  setProgressiveConnectionRendering(enabled = true, source = 'default') {
+    if (enabled) {
+      this._progressiveConnectionSuspensions.delete(source);
+      this._connRenderer?.resumeProgressiveRendering?.(source);
+    } else {
+      this._progressiveConnectionSuspensions.add(source);
+      this._connRenderer?.suspendProgressiveRendering?.(source);
+    }
+  }
+
   /** @returns {'bezier'|'orthogonal'|'straight'|'pcb'} */
   getPathStyle() {
     return this._pathStyle;
+  }
+
+  _getSingleSelectedNodeId() {
+    let selected = this._selector?.getSelectedNodes?.();
+    if (selected?.size === 1) return [...selected][0];
+    for (const [id, el] of this._nodeViews) {
+      if (el?.hasAttribute?.('data-selected')) return id;
+    }
+    return this._lastFocusTransitionNodeId || '';
+  }
+
+  _getNodeViewportCenter(nodeId) {
+    let el = this._nodeViews.get(nodeId);
+    let container = this.ref?.canvasContainer;
+    if (!el || !container) return null;
+    let nodeRect = el.getBoundingClientRect();
+    let containerRect = container.getBoundingClientRect();
+    if (nodeRect.width <= 0 || nodeRect.height <= 0) return null;
+    return {
+      x: nodeRect.left - containerRect.left + nodeRect.width / 2,
+      y: nodeRect.top - containerRect.top + nodeRect.height / 2,
+    };
+  }
+
+  _getNodeGraphCenter(nodeId) {
+    let el = this._nodeViews.get(nodeId);
+    if (!el?._position) return null;
+    let width = el._cachedW || el.offsetWidth || 150;
+    let height = el._cachedH || el.offsetHeight || 40;
+    return {
+      x: el._position.x + width / 2,
+      y: el._position.y + height / 2,
+    };
+  }
+
+  _getNodeGraphBounds(nodeId) {
+    let el = this._nodeViews.get(nodeId);
+    if (!el?._position) return null;
+    let width = el._cachedW || el.offsetWidth || 150;
+    let height = el._cachedH || el.offsetHeight || 40;
+    return {
+      minX: el._position.x,
+      minY: el._position.y,
+      maxX: el._position.x + width,
+      maxY: el._position.y + height,
+    };
+  }
+
+  _getFocusTransitionBounds(nodeIds, routePoints = null) {
+    let bounds = (nodeIds || [])
+      .map((nodeId) => this._getNodeGraphBounds(nodeId))
+      .filter(Boolean);
+    if (Array.isArray(routePoints)) {
+      let routeBounds = this._getRouteGraphBounds(routePoints);
+      if (routeBounds) bounds.push(routeBounds);
+    }
+    if (!bounds.length) return null;
+    return bounds.reduce((acc, item) => ({
+      minX: Math.min(acc.minX, item.minX),
+      minY: Math.min(acc.minY, item.minY),
+      maxX: Math.max(acc.maxX, item.maxX),
+      maxY: Math.max(acc.maxY, item.maxY),
+    }));
+  }
+
+  _getRouteGraphBounds(routePoints) {
+    let points = routePoints
+      .map((point) => ({
+        x: Number(point?.x),
+        y: Number(point?.y),
+      }))
+      .filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y));
+    if (!points.length) return null;
+    return points.reduce((acc, point) => ({
+      minX: Math.min(acc.minX, point.x),
+      minY: Math.min(acc.minY, point.y),
+      maxX: Math.max(acc.maxX, point.x),
+      maxY: Math.max(acc.maxY, point.y),
+    }), {
+      minX: points[0].x,
+      minY: points[0].y,
+      maxX: points[0].x,
+      maxY: points[0].y,
+    });
+  }
+
+  _graphPointToViewport(point) {
+    return {
+      x: point.x * this.$.zoom + this.$.panX,
+      y: point.y * this.$.zoom + this.$.panY,
+    };
+  }
+
+  _routeLength(points) {
+    let length = 0;
+    for (let i = 1; i < points.length; i++) {
+      length += Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y);
+    }
+    return length;
+  }
+
+  _pointAtRouteProgress(points, progress) {
+    if (!points?.length) return null;
+    if (points.length === 1) return points[0];
+    let total = this._routeLength(points);
+    if (!Number.isFinite(total) || total <= 0) return points.at(-1);
+    let target = Math.max(0, Math.min(1, progress)) * total;
+    let walked = 0;
+    for (let i = 1; i < points.length; i++) {
+      let start = points[i - 1];
+      let end = points[i];
+      let segment = Math.hypot(end.x - start.x, end.y - start.y);
+      if (segment <= 0) continue;
+      if (walked + segment >= target) {
+        let local = (target - walked) / segment;
+        return {
+          x: start.x + (end.x - start.x) * local,
+          y: start.y + (end.y - start.y) * local,
+        };
+      }
+      walked += segment;
+    }
+    return points.at(-1);
+  }
+
+  _prepareFocusTransition(targetNodeId, options = {}) {
+    let target = String(targetNodeId || '');
+    if (!target) return null;
+    this._viewport?.ensureNodeView?.(target);
+    if (!this._nodeViews.has(target)) return null;
+    let fromId = this._getSingleSelectedNodeId();
+    return this._prepareFocusTransitionFromIds(fromId, target, options);
+  }
+
+  _prepareFocusTransitionFromIds(fromNodeId, targetNodeId, options = {}) {
+    if (options.transition === false || options.marker === false) return null;
+    let fromId = String(fromNodeId || '');
+    let target = String(targetNodeId || '');
+    if (!fromId || !target || fromId === target) return null;
+    this._viewport?.ensureNodeView?.(fromId);
+    this._viewport?.ensureNodeView?.(target);
+    if (!this._nodeViews.has(fromId) || !this._nodeViews.has(target)) return null;
+    let fromCenter = this._getNodeViewportCenter(fromId);
+    let graphFrom = this._getNodeGraphCenter(fromId);
+    let graphTo = this._getNodeGraphCenter(target);
+    let route = this._connRenderer?.getRouteBetweenNodes?.(fromId, target) || null;
+    let routePoints = route?.points || null;
+    let routeNodeIds = route?.nodeIds?.length ? route.nodeIds : [fromId, target];
+    let protectedNodeIds = this._viewport?.prewarmFocusNodes?.({
+      nodeIds: routeNodeIds,
+    }) || routeNodeIds;
+    if (!routePoints?.length) {
+      if (graphFrom && graphTo) routePoints = [graphFrom, graphTo];
+    } else {
+      routePoints = [...routePoints];
+    }
+    let focusBounds = this._getFocusTransitionBounds(routeNodeIds, routePoints);
+    if (!fromCenter && !routePoints?.length) return null;
+    return {
+      fromId,
+      target,
+      fromCenter,
+      routePoints,
+      routeNodeIds,
+      routeConnectionIds: route?.connectionIds || [],
+      protectedNodeIds,
+      focusBounds,
+    };
+  }
+
+  _resolveFocusTransitionMs(prepared, options = {}) {
+    let styles = typeof getComputedStyle === 'function' ? getComputedStyle(this) : null;
+    let routeDistance = prepared?.routePoints?.length >= 2
+      ? this._routeLength(prepared.routePoints)
+      : 0;
+    let motionScale = Number(styles?.getPropertyValue('--sn-theme-motion-scale'));
+    let reducedMotion = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true;
+    return resolveCanvasGraphTransitionDuration({
+      transitionMs: options.transitionMs,
+      duration: options.duration,
+      transitionMarkerMs: options.transitionMarkerMs,
+      routeDistance,
+      distanceScale: Number.isFinite(this.$?.zoom) ? this.$.zoom : 1,
+      speed: options.transitionSpeed,
+      minMs: options.transitionMinMs,
+      maxMs: options.transitionMaxMs,
+      motionScale,
+      disabled: options.transition === false
+        || options.animate === false
+        || styles?.getPropertyValue('--sn-motion-enabled').trim() === '0'
+        || reducedMotion,
+    });
+  }
+
+  _normalizeFocusTransitionOptions(prepared, options = {}) {
+    if (!prepared?.routePoints?.length) return options;
+    let transitionMs = this._resolveFocusTransitionMs(prepared, options);
+    let routeStart = Number.isFinite(options.transitionRouteStart)
+      ? Math.max(0, Math.min(0.9, options.transitionRouteStart))
+      : 0;
+    let routeEnd = Number.isFinite(options.transitionRouteEnd)
+      ? Math.max(routeStart + 0.05, Math.min(1, options.transitionRouteEnd))
+      : 1;
+    let protectedNodeIds = prepared.protectedNodeIds || prepared.routeNodeIds;
+
+    return {
+      ...options,
+      transitionMs,
+      transitionMarkerMs: transitionMs,
+      transitionClock: createFocusTransitionClock(options.transitionStartTime),
+      transitionRouteStart: routeStart,
+      transitionRouteEnd: routeEnd,
+      viewportRoutePoints: prepared.routePoints,
+      viewportRouteConnectionIds: prepared.routeConnectionIds,
+      viewportRouteFitBounds: prepared.focusBounds,
+      viewportRouteFitPadding: options.transitionFitPadding ?? options.viewportRouteFitPadding ?? 128,
+      viewportProtectedNodeIds: protectedNodeIds,
+      viewportTargetNodeId: prepared.target,
+    };
+  }
+
+  _hideFocusTransitionMarker() {
+    if (this._focusTransitionTimer) {
+      clearTimeout(this._focusTransitionTimer);
+      this._focusTransitionTimer = 0;
+    }
+    if (this._focusTransitionCleanupTimer) {
+      clearTimeout(this._focusTransitionCleanupTimer);
+      this._focusTransitionCleanupTimer = 0;
+    }
+    if (this._focusTransitionFrame && typeof cancelAnimationFrame === 'function') {
+      cancelAnimationFrame(this._focusTransitionFrame);
+      this._focusTransitionFrame = 0;
+    }
+    this._activeFocusTransitionMarkerState = null;
+    let marker = this.ref?.focusTransitionMarker;
+    if (!marker) return;
+    marker.getAnimations?.().forEach((animation) => animation.cancel());
+    marker.style.transition = '';
+    marker.style.opacity = '0';
+    marker.style.transform = '';
+  }
+
+  _renderFocusTransitionMarker(now) {
+    let state = this._activeFocusTransitionMarkerState;
+    let marker = this.ref?.focusTransitionMarker;
+    if (!state || !marker) return 1;
+
+    let { duration, clock, routePoints, target, start, options } = state;
+    let startedAt = clock.resolveStart(now);
+    let elapsed = now - startedAt;
+    let progress = Math.max(0, Math.min(1, elapsed / duration));
+    let ease = 1 - Math.pow(1 - progress, 3);
+    let viewportPoint;
+    if (routePoints) {
+      let routeStart = Number.isFinite(options.transitionRouteStart) ? options.transitionRouteStart : 0;
+      let routeEnd = Number.isFinite(options.transitionRouteEnd) ? options.transitionRouteEnd : 1;
+      let routeProgress = routeEnd > routeStart
+        ? Math.max(0, Math.min(1, (progress - routeStart) / (routeEnd - routeStart)))
+        : ease;
+      let routeEase = resolveCanvasGraphTransitionProgress(routeProgress);
+      viewportPoint = this._graphPointToViewport(this._pointAtRouteProgress(routePoints, routeEase));
+    } else {
+      let end = this._getNodeViewportCenter(target);
+      if (!end || !start) return progress;
+      viewportPoint = {
+        x: start.x + (end.x - start.x) * ease,
+        y: start.y + (end.y - start.y) * ease,
+      };
+    }
+    marker.style.transform = `translate3d(${viewportPoint.x}px, ${viewportPoint.y}px, 0) scale(0.82)`;
+    return progress;
+  }
+
+  _refreshFocusTransitionMarker() {
+    if (!this._activeFocusTransitionMarkerState) return;
+    let now = typeof performance !== 'undefined' && performance.now
+      ? performance.now()
+      : Date.now();
+    this._renderFocusTransitionMarker(now);
+  }
+
+  _runFocusTransition(targetNodeId, prepared, options = {}) {
+    let target = String(targetNodeId || '');
+    if (!target) return;
+    this._lastFocusTransitionNodeId = target;
+    if (!prepared?.fromCenter && !prepared?.routePoints?.length) return;
+
+    let marker = this.ref?.focusTransitionMarker;
+    if (!marker) return;
+
+    let duration = Number.isFinite(options.transitionMarkerMs)
+      ? Math.max(0, options.transitionMarkerMs)
+      : 680;
+    if (!duration) {
+      this._hideFocusTransitionMarker();
+      return;
+    }
+    let start = prepared.fromCenter;
+
+    let routePoints = prepared.routePoints?.length >= 2 ? prepared.routePoints : null;
+    let clock = options.transitionClock || createFocusTransitionClock(options.transitionStartTime);
+
+    this._hideFocusTransitionMarker();
+    this._activeFocusTransitionMarkerState = {
+      duration,
+      clock,
+      routePoints,
+      target,
+      start,
+      options,
+    };
+    marker.style.transition = 'opacity 160ms ease';
+    marker.style.opacity = '1';
+
+    let render = (now) => {
+      let progress = this._renderFocusTransitionMarker(now);
+
+      if (progress < 1) {
+        this._focusTransitionFrame = requestAnimationFrame(render);
+        return;
+      }
+
+      this._focusTransitionFrame = 0;
+      this._focusTransitionTimer = setTimeout(() => {
+        marker.style.transition = `opacity ${Math.max(160, duration * 0.38)}ms ease`;
+        marker.style.opacity = '0';
+        this._focusTransitionTimer = 0;
+        this._focusTransitionCleanupTimer = setTimeout(() => {
+          marker.style.transition = '';
+          this._activeFocusTransitionMarkerState = null;
+          this._focusTransitionCleanupTimer = 0;
+        }, Math.max(180, duration * 0.4));
+      }, 80);
+    };
+
+    this._focusTransitionFrame = requestAnimationFrame(render);
   }
 
   /**
@@ -807,7 +1195,10 @@ export class NodeCanvas extends Symbiote {
    * @param {string} nodeId
    */
   selectNode(nodeId) {
+    let options = this._activeFocusTransitionOptions || {};
+    let prepared = this._prepareFocusTransition(nodeId, options);
     this._selector?.selectNode(nodeId);
+    this._runFocusTransition(nodeId, prepared, options);
   }
 
   /**
@@ -818,9 +1209,8 @@ export class NodeCanvas extends Symbiote {
     this._connRenderer?.refreshAll();
   }
 
-  _settleConnectionsAfterViewport(passes = 3) {
+  _settleConnectionsAfterViewport(_passes = 3) {
     this._connRenderer?.refreshViewportTransform?.();
-    this._scheduleConnectionSettleRefresh(passes);
   }
 
   _readNodeElementSize(el, entry = null) {
@@ -828,6 +1218,12 @@ export class NodeCanvas extends Symbiote {
     let width = borderBox?.inlineSize || entry?.contentRect?.width || el?.offsetWidth || el?._cachedW || 0;
     let height = borderBox?.blockSize || entry?.contentRect?.height || el?.offsetHeight || el?._cachedH || 0;
     return { width, height };
+  }
+
+  _cacheNodeElementSize(nodeId, el, size) {
+    this._nodeSizeCache.set(nodeId, size);
+    if (size.width > 0) el._cachedW = size.width;
+    if (size.height > 0) el._cachedH = size.height;
   }
 
   _ensureNodeResizeObserver() {
@@ -840,7 +1236,7 @@ export class NodeCanvas extends Symbiote {
     if (!nodeId || !el) return;
     let observer = this._ensureNodeResizeObserver();
     let id = String(nodeId);
-    this._nodeSizeCache.set(id, this._readNodeElementSize(el));
+    this._cacheNodeElementSize(id, el, this._readNodeElementSize(el));
     observer?.observe(el);
   }
 
@@ -853,9 +1249,42 @@ export class NodeCanvas extends Symbiote {
     this._nodeResizeObserver?.disconnect();
     this._nodeResizeObserver = null;
     this._nodeSizeCache.clear();
+    this._clearSuppressedNodeResizeUpdates();
+  }
+
+  _clearSuppressedNodeResizeUpdates() {
+    if (this._suppressedResizeFlushTimer) {
+      clearTimeout(this._suppressedResizeFlushTimer);
+      this._suppressedResizeFlushTimer = 0;
+    }
+    this._suppressedResizeNodeIds.clear();
+  }
+
+  _flushSuppressedNodeResizeUpdates() {
+    if (this._suppressedResizeFlushTimer) {
+      clearTimeout(this._suppressedResizeFlushTimer);
+      this._suppressedResizeFlushTimer = 0;
+    }
+    let nodeIds = [...this._suppressedResizeNodeIds];
+    this._suppressedResizeNodeIds.clear();
+    for (const nodeId of nodeIds) this._scheduleConnectionUpdate(nodeId);
+    return nodeIds;
+  }
+
+  _queueSuppressedNodeResizeUpdate(nodeId, now) {
+    this._suppressedResizeNodeIds.add(nodeId);
+    let suppressUntil = this._viewportResizeSettleSuppressUntil || 0;
+    if (!Number.isFinite(suppressUntil) || this._suppressedResizeFlushTimer) return;
+    let delay = Math.max(0, suppressUntil - now);
+    this._suppressedResizeFlushTimer = setTimeout(() => {
+      this._suppressedResizeFlushTimer = 0;
+      this._flushSuppressedNodeResizeUpdates();
+    }, delay);
   }
 
   _handleNodeResizeEntries(entries) {
+    let now = typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now();
+    let suppressConnectionResizeSettle = now < (this._viewportResizeSettleSuppressUntil || 0);
     let changed = false;
     for (const entry of entries) {
       let el = entry.target;
@@ -870,9 +1299,13 @@ export class NodeCanvas extends Symbiote {
         Math.abs(next.width - prev.width) > 0.5 ||
         Math.abs(next.height - prev.height) > 0.5
       ) {
-        this._nodeSizeCache.set(nodeId, next);
-        this._scheduleConnectionUpdate(nodeId);
-        changed = true;
+        this._cacheNodeElementSize(nodeId, el, next);
+        if (suppressConnectionResizeSettle) {
+          this._queueSuppressedNodeResizeUpdate(nodeId, now);
+        } else {
+          this._scheduleConnectionUpdate(nodeId);
+          changed = true;
+        }
       }
     }
     if (changed) this._scheduleConnectionSettleRefresh(2);
@@ -1100,8 +1533,26 @@ export class NodeCanvas extends Symbiote {
    * @returns {boolean}
    */
   flyToNode(nodeId, opts) {
-    let result = this._viewport?.flyToNode(nodeId, opts) || false;
-    if (result) this._settleConnectionsAfterViewport(3);
+    let previousOptions = this._activeFocusTransitionOptions;
+    let options = opts || {};
+    let prepared = Array.isArray(nodeId) ? null : this._prepareFocusTransition(nodeId, options);
+    if (prepared?.routePoints?.length >= 2) {
+      options = this._normalizeFocusTransitionOptions(prepared, options);
+    }
+    this._activeFocusTransitionOptions = options;
+    this._clearConnectionSettleRefresh();
+    let result = false;
+    try {
+      result = this._viewport?.flyToNode(nodeId, options) || false;
+    } finally {
+      this._activeFocusTransitionOptions = previousOptions;
+    }
+    if (result) {
+      if (options.select === false) {
+        this._runFocusTransition(nodeId, prepared, options);
+      }
+      this._settleConnectionsAfterViewport(3);
+    }
     return result;
   }
 
@@ -1116,8 +1567,38 @@ export class NodeCanvas extends Symbiote {
    * @returns {boolean}
    */
   flyToNodes(nodeIds, opts) {
-    let result = this._viewport?.flyToNodes(nodeIds, opts) || false;
-    if (result) this._settleConnectionsAfterViewport(3);
+    let previousOptions = this._activeFocusTransitionOptions;
+    let options = opts || {};
+    let select = options.select;
+    let ids = Array.isArray(nodeIds) ? nodeIds : [nodeIds];
+    if (select === true) select = ids[0];
+    let transitionTarget = typeof options.transitionTarget === 'string' && options.transitionTarget
+      ? options.transitionTarget
+      : typeof select === 'string'
+        ? select
+        : ids.length === 1
+          ? ids[0]
+          : null;
+    let prepared = typeof transitionTarget === 'string'
+      ? this._prepareFocusTransition(transitionTarget, options)
+      : null;
+    if (prepared?.routePoints?.length >= 2) {
+      options = this._normalizeFocusTransitionOptions(prepared, options);
+    }
+    this._activeFocusTransitionOptions = options;
+    this._clearConnectionSettleRefresh();
+    let result = false;
+    try {
+      result = this._viewport?.flyToNodes(nodeIds, options) || false;
+    } finally {
+      this._activeFocusTransitionOptions = previousOptions;
+    }
+    if (result) {
+      if (options.select === false && transitionTarget) {
+        this._runFocusTransition(transitionTarget, prepared, options);
+      }
+      this._settleConnectionsAfterViewport(3);
+    }
     return result;
   }
 
@@ -1848,6 +2329,11 @@ export class NodeCanvas extends Symbiote {
     this._viewport?.updateTransform();
   }
 
+  _cancelViewportMotionForManualInteraction() {
+    this._viewport?.cancelAnimation?.();
+    this._hideFocusTransitionMarker();
+  }
+
   /** Public: force sync phantom data to renderer (for use after batch setNodePosition) */
   syncPhantom() {
     this._viewport?.syncPhantom();
@@ -1975,6 +2461,7 @@ export class NodeCanvas extends Symbiote {
           if (this._viewportLocked) return;
           if (this._zoom?.isTranslating()) return;
           if (this._connectFlow?.isPicking()) return;
+          this._cancelViewportMotionForManualInteraction();
           if (this._isMarqueeSelection && e) {
             let rect = container.getBoundingClientRect();
             this._marqueeEnd = {
@@ -2037,6 +2524,7 @@ export class NodeCanvas extends Symbiote {
       content,
       (delta, ox, oy) => {
         if (this._viewportLocked) return;
+        this._cancelViewportMotionForManualInteraction();
         let k = this.$.zoom;
         let newK = k * (1 + delta);
         if (newK < 0.001 || newK > 5) return;
@@ -2044,7 +2532,6 @@ export class NodeCanvas extends Symbiote {
         this.$.panX += ox;
         this.$.panY += oy;
         this._updateTransform();
-        this._scheduleConnectionSettleRefresh(2);
         this.dispatchEvent(new CustomEvent('manualviewport'));
 
 
@@ -2226,6 +2713,7 @@ export class NodeCanvas extends Symbiote {
     this._stopFlowAnimation({ emit: false });
     this._clearConnectionSettleRefresh();
     this._disconnectNodeResizeObserver();
+    this._hideFocusTransitionMarker();
     if (this._viewport) this._viewport.clear();
     if (this._drag) this._drag.destroy();
     if (this._zoom) this._zoom.destroy();

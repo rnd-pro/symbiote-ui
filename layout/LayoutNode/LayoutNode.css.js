@@ -203,35 +203,39 @@ export let styles = css`
     .panel-menu-rows {
       display: flex;
       flex-direction: column;
+      gap: var(--sn-layout-menu-section-gap, 4px);
       min-width: 0;
+      padding: var(--sn-layout-menu-section-padding, 4px);
     }
 
     .panel-menu-row {
       --sn-layout-menu-row-span: 1;
       display: grid;
-      grid-template-columns: auto minmax(0, 1fr);
+      grid-template-columns: minmax(0, 1fr);
       align-items: stretch;
       box-sizing: border-box;
       min-block-size: calc(var(--sn-layout-menu-row-height, var(--sn-layout-header-block-size, calc(var(--sn-layout-header-min-height, 28px) + 3px))) * var(--sn-layout-menu-row-span));
-      border-top: 1px solid color-mix(in oklab, var(--sn-layout-border) 56%, transparent);
-    }
-
-    .panel-menu-row:first-child {
-      border-top: 0;
+      border: 1px solid color-mix(in oklab, var(--sn-layout-border) 62%, transparent);
+      border-radius: var(--sn-layout-menu-section-radius, var(--sn-layout-header-button-radius, 4px));
+      background: color-mix(in oklab, var(--sn-sys-surface-raised) 74%, transparent);
+      overflow: hidden;
     }
 
     .panel-menu-row-label {
       display: flex;
       align-items: center;
-      min-width: var(--sn-layout-menu-row-label-width, calc(var(--sn-layout-header-min-height, 28px) * 2.35));
-      padding: var(--sn-layout-menu-label-padding, 0 calc(var(--sn-layout-header-min-height, 28px) * 0.32));
-      border-inline-end: 1px solid color-mix(in oklab, var(--sn-layout-border) 64%, transparent);
+      min-width: 0;
+      min-block-size: var(--sn-layout-menu-section-label-height, calc(var(--sn-layout-header-min-height, 28px) * 0.72));
+      padding: var(--sn-layout-menu-label-padding, 3px 8px);
+      border-block-end: 1px solid color-mix(in oklab, var(--sn-layout-border) 58%, transparent);
+      background: color-mix(in oklab, var(--sn-node-header-bg) 76%, var(--sn-sys-surface) 24%);
       color: var(--sn-sys-on-surface-dim);
       font-size: var(--sn-layout-menu-label-size, calc(var(--sn-layout-header-button-size, 0.75rem) * 0.92));
-      letter-spacing: 0;
+      font-weight: 600;
+      letter-spacing: 0.045em;
       text-transform: uppercase;
       white-space: nowrap;
-      opacity: 0.72;
+      opacity: 0.86;
     }
 
     .panel-menu-actions {
@@ -240,9 +244,9 @@ export let styles = css`
       flex-wrap: wrap;
       gap: var(--sn-layout-menu-gap, var(--sn-layout-header-button-gap, 4px));
       box-sizing: border-box;
-      min-block-size: calc(var(--sn-layout-menu-row-height, var(--sn-layout-header-block-size, calc(var(--sn-layout-header-min-height, 28px) + 3px))) * var(--sn-layout-menu-row-span));
+      min-block-size: var(--sn-layout-menu-row-height, var(--sn-layout-header-block-size, calc(var(--sn-layout-header-min-height, 28px) + 3px)));
       min-width: min-content;
-      padding: var(--sn-layout-menu-row-padding, 0 4px);
+      padding: var(--sn-layout-menu-row-padding, 4px);
       overflow: hidden;
       ${themedScrollbarStyles}
     }
@@ -307,12 +311,9 @@ export let styles = css`
     }
 
     @container layout-panel (max-width: 280px) {
-      .panel-menu-row {
-        grid-template-columns: 1fr;
-      }
-
       .panel-menu-row-label {
-        display: none;
+        min-block-size: var(--sn-layout-menu-section-label-compact-height, calc(var(--sn-layout-header-min-height, 28px) * 0.62));
+        padding-block: var(--sn-layout-menu-label-compact-padding-block, 2px);
       }
 
       .panel-menu-actions {

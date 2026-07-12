@@ -30,6 +30,7 @@ export {
   MAX_CANVAS_GRAPH_ZOOM,
   MIN_CANVAS_GRAPH_ZOOM,
   resolveCanvasGraphMinZoom,
+  resolveCanvasGraphTransitionDuration,
   resolveCanvasGraphViewportFit,
   resolveFitPadding,
   resolveFrameFitZoom,

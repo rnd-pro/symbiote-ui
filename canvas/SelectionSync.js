@@ -65,6 +65,26 @@ export class SelectionSync {
   sync(selectedNodes, selectedConnections) {
     this.#zCounter++;
     let editor = this.#getEditor();
+    let nextSingleNodeId = selectedNodes.size === 1 ? [...selectedNodes][0] : '';
+    let previousSingleNodeId = '';
+
+    if (nextSingleNodeId) {
+      for (const [id, el] of this.#nodeViews) {
+        if (el.hasAttribute('data-selected')) {
+          previousSingleNodeId = id;
+          break;
+        }
+      }
+    }
+
+    let transitionOptions = this.#canvas._activeFocusTransitionOptions || {};
+    let selectionTransition = previousSingleNodeId
+      ? this.#canvas._prepareFocusTransitionFromIds?.(
+          previousSingleNodeId,
+          nextSingleNodeId,
+          transitionOptions
+        )
+      : null;
 
 
     let neighbors = new Set();
@@ -93,6 +113,10 @@ export class SelectionSync {
       } else if (!shouldNeighbor && isNeighbor) {
         el.removeAttribute('data-neighbor-focused');
       }
+    }
+
+    if (nextSingleNodeId) {
+      this.#canvas._runFocusTransition?.(nextSingleNodeId, selectionTransition, transitionOptions);
     }
 
 

@@ -1,3 +1,25 @@
+export const CANVAS_GRAPH_BASE_FRAME_MS = 1000 / 60;
+const MAX_CANVAS_GRAPH_FRAME_DELTA_MS = 250;
+
+export function resolveCanvasGraphFrameContext(now, previousNow = null) {
+  let current = Number(now);
+  if (!Number.isFinite(current)) throw new RangeError('CanvasGraph frame time must be finite');
+  let firstFrame = !Number.isFinite(previousNow);
+  let deltaMs = firstFrame ? CANVAS_GRAPH_BASE_FRAME_MS : Math.max(0, current - previousNow);
+  deltaMs = Math.min(deltaMs, MAX_CANVAS_GRAPH_FRAME_DELTA_MS);
+  return {
+    now: current,
+    deltaMs,
+    frameStep: deltaMs / CANVAS_GRAPH_BASE_FRAME_MS,
+  };
+}
+
+export function resolveCanvasGraphFrameEase(ease, frameStep = 1) {
+  let amount = Math.max(0, Math.min(1, Number(ease) || 0));
+  let step = Math.max(0, Number(frameStep) || 0);
+  return 1 - Math.pow(1 - amount, step);
+}
+
 export function resolveViewportAnimation(options) {
   let {
     zoom,
@@ -8,8 +30,10 @@ export function resolveViewportAnimation(options) {
     targetPanY,
     zoomAnchor,
     viewportEase = 0.15,
+    frameStep = 1,
   } = options;
-  let ease = Math.max(0.015, Math.min(0.35, Number.isFinite(viewportEase) ? viewportEase : 0.15));
+  let baseEase = Math.max(0.015, Math.min(0.35, Number.isFinite(viewportEase) ? viewportEase : 0.15));
+  let ease = resolveCanvasGraphFrameEase(baseEase, frameStep);
 
   let next = {
     zoom,
@@ -79,14 +103,19 @@ export function resolveGroupOrbitRotationFrame(options) {
     rotationSpeed = 0,
     hovered = false,
     dragged = false,
+    frameStep = 1,
   } = options;
 
   let targetSpeed = (hovered || dragged) ? 0.025 : 0;
-  let nextSpeed = rotationSpeed + (targetSpeed - rotationSpeed) * 0.05;
+  let step = Math.max(0, Number(frameStep) || 0);
+  let decay = Math.pow(0.95, step);
+  let nextSpeed = targetSpeed + (rotationSpeed - targetSpeed) * decay;
+  let speedSum = targetSpeed * step
+    + (rotationSpeed - targetSpeed) * 0.95 * (1 - decay) / 0.05;
   if (Math.abs(nextSpeed) < 0.0001) nextSpeed = 0;
 
   return {
-    rotation: rotation + nextSpeed,
+    rotation: rotation + speedSum,
     rotationSpeed: nextSpeed,
   };
 }
@@ -154,7 +183,7 @@ export function resolveCanvasGraphEdgeFocus(options) {
 }
 
 export function getLayerAnimationFrame(options) {
-  let { layerAnim, layerTargets, isIdle, inGroupMode } = options;
+  let { layerAnim, layerTargets, isIdle, inGroupMode, frameStep = 1 } = options;
   let next = {};
   let lerpSpeed = isIdle ? 0.08 : 0.06;
 
@@ -163,7 +192,7 @@ export function getLayerAnimationFrame(options) {
     let tScale = isIdle ? 1 : layerTargets.scale[d];
     let tOpacity = isIdle ? 1 : layerTargets.opacity[d];
     let tParallax = isIdle ? 0 : layerTargets.parallax[d];
-    let speed = (inGroupMode && d >= 3) ? 0.3 : lerpSpeed;
+    let speed = resolveCanvasGraphFrameEase((inGroupMode && d >= 3) ? 0.3 : lerpSpeed, frameStep);
 
     next[d] = {
       ...la,
@@ -192,7 +221,10 @@ export function resolveFocusFrame(options) {
     focusActive,
     vcx,
     vcy,
+    frameStep = 1,
   } = options;
+  let activeEase = resolveCanvasGraphFrameEase(0.12, frameStep);
+  let idleEase = resolveCanvasGraphFrameEase(0.08, frameStep);
 
   let next = {
     focusX,
@@ -227,16 +259,16 @@ export function resolveFocusFrame(options) {
       next.focusY = targetFY;
       next.focusActive = true;
     } else {
-      next.focusX += (targetFX - focusX) * 0.12;
-      next.focusY += (targetFY - focusY) * 0.12;
+      next.focusX += (targetFX - focusX) * activeEase;
+      next.focusY += (targetFY - focusY) * activeEase;
     }
     next.dragDeltaX = next.focusX - vcx;
     next.dragDeltaY = next.focusY - vcy;
     return next;
   }
 
-  next.focusX += (vcx - focusX) * 0.08;
-  next.focusY += (vcy - focusY) * 0.08;
+  next.focusX += (vcx - focusX) * idleEase;
+  next.focusY += (vcy - focusY) * idleEase;
   next.dragDeltaX = next.focusX - vcx;
   next.dragDeltaY = next.focusY - vcy;
   if (Math.abs(next.dragDeltaX) < 1 && Math.abs(next.dragDeltaY) < 1) {
@@ -278,6 +310,338 @@ export function getDepthGroupsFrame(options) {
   return groups;
 }
 
+export const CANVAS_GRAPH_RENDER_SNAPSHOT_KIND = 'canvas-graph-render';
+export const CANVAS_GRAPH_RENDER_SNAPSHOT_VERSION = 3;
+
+function snapshotFail(label) {
+  throw new TypeError(`Invalid CanvasGraph render snapshot: ${label}`);
+}
+
+function requireFinite(value, label) {
+  if (!Number.isFinite(value)) snapshotFail(label);
+  return value;
+}
+
+function requireCanvasDimension(value, label) {
+  let dimension = requireFinite(value, label);
+  if (!Number.isInteger(dimension) || dimension < 0) snapshotFail(label);
+  return dimension;
+}
+
+function requirePositive(value, label) {
+  let number = requireFinite(value, label);
+  if (number <= 0) snapshotFail(label);
+  return number;
+}
+
+function requireNonNegative(value, label) {
+  let number = requireFinite(value, label);
+  if (number < 0) snapshotFail(label);
+  return number;
+}
+
+function requireUnit(value, label) {
+  let number = requireFinite(value, label);
+  if (number < 0 || number > 1) snapshotFail(label);
+  return number;
+}
+
+function nullableFinite(value, label) {
+  if (value === undefined || value === null) return null;
+  return requireFinite(value, label);
+}
+
+function requireBoolean(value, label) {
+  if (typeof value !== 'boolean') snapshotFail(label);
+  return value;
+}
+
+function requirePlainObject(value, label) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) snapshotFail(label);
+  return value;
+}
+
+function cleanSnapshotId(value) {
+  let id = typeof value === 'string' ? value.trim() : '';
+  return id || null;
+}
+
+function requireSnapshotId(value, label) {
+  let id = cleanSnapshotId(value);
+  if (!id) snapshotFail(label);
+  return id;
+}
+
+function optionalSnapshotId(value, label) {
+  if (value === undefined || value === null || value === '') return null;
+  return requireSnapshotId(value, label);
+}
+
+function normalizeVec(value, label) {
+  let source = requirePlainObject(value, label);
+  return {
+    x: requireFinite(source.x, `${label}.x`),
+    y: requireFinite(source.y, `${label}.y`),
+  };
+}
+
+function normalizeViewportLike(value) {
+  if (!value || typeof value !== 'object') return null;
+  if (!Number.isFinite(value.zoom) || !Number.isFinite(value.panX) || !Number.isFinite(value.panY)) {
+    return null;
+  }
+  let normalized = { zoom: value.zoom, panX: value.panX, panY: value.panY };
+  if (Number.isFinite(value.viewportEase)) normalized.viewportEase = value.viewportEase;
+  if (typeof value.animate === 'boolean') normalized.animate = value.animate;
+  return normalized;
+}
+
+function normalizeIdVecPairs(source, label) {
+  requirePlainObject(source, label);
+  let pairs = [];
+  for (let [key, value] of Object.entries(source)) {
+    pairs.push([requireSnapshotId(key, `${label}.id`), normalizeVec(value, `${label}.${key}`)]);
+  }
+  return pairs;
+}
+
+function normalizeTransitionMarker(raw) {
+  requirePlainObject(raw, 'transitionMarker');
+  let fromId = requireSnapshotId(raw.fromId, 'transitionMarker.fromId');
+  let toId = requireSnapshotId(raw.toId, 'transitionMarker.toId');
+  if (!Array.isArray(raw.path)) snapshotFail('transitionMarker.path');
+  let path = raw.path.map((id, index) => requireSnapshotId(id, `transitionMarker.path[${index}]`));
+
+  let marker = {
+    fromId,
+    toId,
+    path,
+    startTime: requireFinite(raw.startTime, 'transitionMarker.startTime'),
+    duration: requirePositive(raw.duration, 'transitionMarker.duration'),
+  };
+
+  if (raw.pendingActivation !== undefined && raw.pendingActivation !== null) {
+    marker.pendingActivation = requireSnapshotId(raw.pendingActivation, 'transitionMarker.pendingActivation');
+  }
+
+  for (let key of ['pendingViewport', 'initialViewport', 'routeViewport']) {
+    if (raw[key] === undefined || raw[key] === null) continue;
+    let viewport = normalizeViewportLike(raw[key]);
+    if (!viewport) snapshotFail(`transitionMarker.${key}`);
+    marker[key] = viewport;
+  }
+  for (let key of ['initialCenter', 'routeCenter', 'targetCenter', 'targetCenterOffset']) {
+    if (raw[key] === undefined || raw[key] === null) continue;
+    marker[key] = normalizeVec(raw[key], `transitionMarker.${key}`);
+  }
+  if (raw.pendingPulse !== undefined && raw.pendingPulse !== null) {
+    requirePlainObject(raw.pendingPulse, 'transitionMarker.pendingPulse');
+    let duration = requirePositive(raw.pendingPulse.duration, 'transitionMarker.pendingPulse.duration');
+    let waves = requirePositive(raw.pendingPulse.waves, 'transitionMarker.pendingPulse.waves');
+    marker.pendingPulse = { duration, waves };
+  }
+  return marker;
+}
+
+function buildNormalizedRenderSnapshot(raw) {
+  requirePlainObject(raw, 'root');
+  if (raw.kind !== CANVAS_GRAPH_RENDER_SNAPSHOT_KIND) snapshotFail('kind');
+  if (raw.version !== CANVAS_GRAPH_RENDER_SNAPSHOT_VERSION) snapshotFail('version');
+  let renderMode = requireSnapshotId(raw.renderMode, 'renderMode');
+  let surfaceSource = requirePlainObject(raw.surface, 'surface');
+  let surface = {
+    backingWidth: requireCanvasDimension(surfaceSource.backingWidth, 'surface.backingWidth'),
+    backingHeight: requireCanvasDimension(surfaceSource.backingHeight, 'surface.backingHeight'),
+    cssWidth: requireNonNegative(surfaceSource.cssWidth, 'surface.cssWidth'),
+    cssHeight: requireNonNegative(surfaceSource.cssHeight, 'surface.cssHeight'),
+    dpr: requirePositive(surfaceSource.dpr, 'surface.dpr'),
+  };
+  let graphSource = requirePlainObject(raw.graph, 'graph');
+  if (!Array.isArray(graphSource.nodeIds) || !Array.isArray(graphSource.edges)) snapshotFail('graph identity');
+  let nodeIds = graphSource.nodeIds.map((id, index) => requireSnapshotId(id, `graph.nodeIds[${index}]`));
+  if (new Set(nodeIds).size !== nodeIds.length) snapshotFail('graph.nodeIds duplicate');
+  let graphEdges = graphSource.edges.map((edge, index) => {
+    requirePlainObject(edge, `graph.edges[${index}]`);
+    if (edge.index !== index) snapshotFail(`graph.edges[${index}].index`);
+    return {
+      index,
+      from: requireSnapshotId(edge.from, `graph.edges[${index}].from`),
+      to: requireSnapshotId(edge.to, `graph.edges[${index}].to`),
+    };
+  });
+
+  let viewportSource = requirePlainObject(raw.viewport, 'viewport');
+  let viewport = {
+    zoom: requirePositive(viewportSource.zoom, 'viewport.zoom'),
+    panX: requireFinite(viewportSource.panX, 'viewport.panX'),
+    panY: requireFinite(viewportSource.panY, 'viewport.panY'),
+    targetZoom: requirePositive(viewportSource.targetZoom, 'viewport.targetZoom'),
+    targetPanX: nullableFinite(viewportSource.targetPanX, 'viewport.targetPanX'),
+    targetPanY: nullableFinite(viewportSource.targetPanY, 'viewport.targetPanY'),
+    viewportEase: requireUnit(viewportSource.viewportEase, 'viewport.viewportEase'),
+    zoomAnchor: null,
+  };
+  if (viewportSource.zoomAnchor !== undefined && viewportSource.zoomAnchor !== null) {
+    let zoomAnchor = requirePlainObject(viewportSource.zoomAnchor, 'viewport.zoomAnchor');
+    viewport.zoomAnchor = {
+      mx: requireFinite(zoomAnchor.mx, 'viewport.zoomAnchor.mx'),
+      my: requireFinite(zoomAnchor.my, 'viewport.zoomAnchor.my'),
+    };
+  }
+
+  let focusSource = requirePlainObject(raw.focus, 'focus');
+  let focus = {
+    focusX: requireFinite(focusSource.focusX, 'focus.focusX'),
+    focusY: requireFinite(focusSource.focusY, 'focus.focusY'),
+    focusActive: requireBoolean(focusSource.focusActive, 'focus.focusActive'),
+    prevDragDeltaX: requireFinite(focusSource.prevDragDeltaX, 'focus.prevDragDeltaX'),
+    prevDragDeltaY: requireFinite(focusSource.prevDragDeltaY, 'focus.prevDragDeltaY'),
+    orientationParallaxEnabled: requireBoolean(focusSource.orientationParallaxEnabled, 'focus.orientationParallaxEnabled'),
+    orientationParallaxX: requireFinite(focusSource.orientationParallaxX, 'focus.orientationParallaxX'),
+    orientationParallaxY: requireFinite(focusSource.orientationParallaxY, 'focus.orientationParallaxY'),
+    orientationParallaxTargetX: requireFinite(focusSource.orientationParallaxTargetX, 'focus.orientationParallaxTargetX'),
+    orientationParallaxTargetY: requireFinite(focusSource.orientationParallaxTargetY, 'focus.orientationParallaxTargetY'),
+  };
+
+  let layerAnimSource = requirePlainObject(raw.layerAnim, 'layerAnim');
+  let layerAnim = {};
+  for (let d = 0; d <= 4; d++) {
+    let la = requirePlainObject(layerAnimSource[d], `layerAnim[${d}]`);
+    layerAnim[d] = {
+      scale: requirePositive(la.scale, `layerAnim[${d}].scale`),
+      opacity: requireUnit(la.opacity, `layerAnim[${d}].opacity`),
+      parallax: requireFinite(la.parallax, `layerAnim[${d}].parallax`),
+    };
+  }
+
+  let nodeAnimSource = requirePlainObject(raw.nodeAnim, 'nodeAnim');
+  let nodeAnim = [];
+  for (let [key, value] of Object.entries(nodeAnimSource)) {
+    let id = requireSnapshotId(key, 'nodeAnim.id');
+    requirePlainObject(value, `nodeAnim.${id}`);
+    nodeAnim.push([id, {
+      aScale: requirePositive(value.aScale, `nodeAnim.${id}.aScale`),
+      aGlow: requireUnit(value.aGlow, `nodeAnim.${id}.aGlow`),
+      aRot: requireFinite(value.aRot, `nodeAnim.${id}.aRot`),
+      aRotSpeed: requireFinite(value.aRotSpeed, `nodeAnim.${id}.aRotSpeed`),
+    }]);
+  }
+
+  if (!Array.isArray(raw.edgeAnim)) snapshotFail('edgeAnim');
+  let edgeAnim = [];
+  for (let [index, entry] of raw.edgeAnim.entries()) {
+    requirePlainObject(entry, `edgeAnim[${index}]`);
+    if (entry.index !== index) snapshotFail(`edgeAnim[${index}].index`);
+    edgeAnim.push({
+      index,
+      from: requireSnapshotId(entry.from, `edgeAnim[${index}].from`),
+      to: requireSnapshotId(entry.to, `edgeAnim[${index}].to`),
+      aAlpha: requireUnit(entry.aAlpha, `edgeAnim[${index}].aAlpha`),
+      aWidth: requirePositive(entry.aWidth, `edgeAnim[${index}].aWidth`),
+    });
+  }
+
+  let interactionSource = requirePlainObject(raw.interaction, 'interaction');
+  let interaction = {
+    activeNodeId: optionalSnapshotId(interactionSource.activeNodeId, 'interaction.activeNodeId'),
+    nextActiveNodeId: optionalSnapshotId(interactionSource.nextActiveNodeId, 'interaction.nextActiveNodeId'),
+    hoverNodeId: optionalSnapshotId(interactionSource.hoverNodeId, 'interaction.hoverNodeId'),
+    dragNodeId: optionalSnapshotId(interactionSource.dragNodeId, 'interaction.dragNodeId'),
+    currentGroupId: optionalSnapshotId(interactionSource.currentGroupId, 'interaction.currentGroupId'),
+    deactivating: requireBoolean(interactionSource.deactivating, 'interaction.deactivating'),
+    menuAnim: requireUnit(interactionSource.menuAnim, 'interaction.menuAnim'),
+    hoverAction: typeof interactionSource.hoverAction === 'string'
+      ? interactionSource.hoverAction
+      : snapshotFail('interaction.hoverAction'),
+  };
+
+  if (!Array.isArray(raw.pulses)) snapshotFail('pulses');
+  let pulses = raw.pulses.map((pulse, index) => {
+    requirePlainObject(pulse, `pulses[${index}]`);
+    return {
+      id: requireSnapshotId(pulse.id, `pulses[${index}].id`),
+      startTime: requireFinite(pulse.startTime, `pulses[${index}].startTime`),
+      duration: requirePositive(pulse.duration, `pulses[${index}].duration`),
+      waves: requirePositive(pulse.waves, `pulses[${index}].waves`),
+    };
+  });
+
+  if (!Array.isArray(raw.nodeAppearances)) snapshotFail('nodeAppearances');
+  let nodeAppearances = raw.nodeAppearances.map((appearance, index) => {
+    requirePlainObject(appearance, `nodeAppearances[${index}]`);
+    return {
+      id: requireSnapshotId(appearance.id, `nodeAppearances[${index}].id`),
+      startTime: requireFinite(appearance.startTime, `nodeAppearances[${index}].startTime`),
+      duration: requirePositive(appearance.duration, `nodeAppearances[${index}].duration`),
+    };
+  });
+
+  if (!Array.isArray(raw.transitionMarkers)) snapshotFail('transitionMarkers');
+  let transitionMarkers = raw.transitionMarkers.map(normalizeTransitionMarker);
+
+  let infoPanelSource = requirePlainObject(raw.infoPanel, 'infoPanel');
+  if (!Array.isArray(infoPanelSource.lines)) snapshotFail('infoPanel.lines');
+  let lines = infoPanelSource.lines.map((line, index) => {
+    requirePlainObject(line, `infoPanel.lines[${index}]`);
+    if (typeof line.text !== 'string') snapshotFail(`infoPanel.lines[${index}].text`);
+    return {
+      text: line.text,
+      revealed: requireCanvasDimension(line.revealed, `infoPanel.lines[${index}].revealed`),
+    };
+  });
+  if (lines.some((line) => line.revealed > line.text.length)) snapshotFail('infoPanel.lines.revealed');
+  let infoPanel = {
+    nodeId: optionalSnapshotId(infoPanelSource.nodeId, 'infoPanel.nodeId'),
+    lines,
+    opacity: requireUnit(infoPanelSource.opacity, 'infoPanel.opacity'),
+    startTime: requireFinite(infoPanelSource.startTime, 'infoPanel.startTime'),
+    totalExtent: requireNonNegative(infoPanelSource.totalExtent, 'infoPanel.totalExtent'),
+    totalExtentY: requireNonNegative(infoPanelSource.totalExtentY, 'infoPanel.totalExtentY'),
+    centeredForNode: optionalSnapshotId(infoPanelSource.centeredForNode, 'infoPanel.centeredForNode'),
+  };
+
+  let metaSource = requirePlainObject(raw.meta, 'meta');
+  let meta = {
+    idleFrames: Math.max(0, Math.floor(requireFinite(metaSource.idleFrames, 'meta.idleFrames'))),
+    lastAlpha: requireFinite(metaSource.lastAlpha, 'meta.lastAlpha'),
+    frameCount: Math.max(0, Math.floor(requireFinite(metaSource.frameCount, 'meta.frameCount'))),
+    tickCount: Math.max(0, Math.floor(requireFinite(metaSource.tickCount, 'meta.tickCount'))),
+    layoutSettled: requireBoolean(metaSource.layoutSettled, 'meta.layoutSettled'),
+    lastRenderTime: nullableFinite(metaSource.lastRenderTime, 'meta.lastRenderTime'),
+  };
+
+  return {
+    renderMode,
+    surface,
+    graph: { nodeIds, edges: graphEdges },
+    viewport,
+    focus,
+    layerAnim,
+    positions: normalizeIdVecPairs(raw.positions, 'positions'),
+    smoothPositions: normalizeIdVecPairs(raw.smoothPositions, 'smoothPositions'),
+    nodeAnim,
+    edgeAnim,
+    interaction,
+    pulses,
+    nodeAppearances,
+    transitionMarkers,
+    infoPanel,
+    meta,
+  };
+}
+
+/**
+ * @param {unknown} raw
+ * @returns {object|null}
+ */
+export function normalizeCanvasGraphRenderSnapshot(raw) {
+  try {
+    return buildNormalizedRenderSnapshot(raw);
+  } catch {
+    return null;
+  }
+}
+
 export function resolveIdleFrame(options) {
   let {
     targetZoom,
@@ -299,6 +663,7 @@ export function resolveIdleFrame(options) {
     pulsesActive = false,
     statusAnimationsActive = false,
     idleFrames,
+    frameStep = 1,
   } = options;
 
   let zoomSettled = Math.abs(targetZoom - zoom) < 0.001;
@@ -325,7 +690,7 @@ export function resolveIdleFrame(options) {
     && !statusAnimationsActive
     && !infoPanelAnimating;
 
-  let nextIdleFrames = shouldIdle ? idleFrames + 1 : 0;
+  let nextIdleFrames = shouldIdle ? idleFrames + Math.max(0, frameStep) : 0;
   return {
     idleFrames: nextIdleFrames,
     prevDragDeltaX: dragDeltaX,

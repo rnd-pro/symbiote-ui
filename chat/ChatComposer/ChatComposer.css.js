@@ -1232,19 +1232,19 @@ chat-composer.drag-over .composer-body {
 
 @container chat-composer (width <= 480px) {
   .composer-body {
-    grid-template-columns: auto minmax(0, 1fr) auto auto auto;
-    grid-template-rows: minmax(var(--sn-composer-input-min-height), auto) auto;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    grid-template-rows: minmax(var(--sn-composer-input-min-height), auto) auto auto;
   }
 
   :host([leading-controls]) .composer-body,
   chat-composer[leading-controls] .composer-body {
-    grid-template-columns: auto minmax(0, 1fr) auto auto auto;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
   }
 
   :host([leading-controls]) .composer-leading-controls,
   chat-composer[leading-controls] .composer-leading-controls {
     grid-column: 1;
-    grid-row: 2;
+    grid-row: 3;
   }
 
   :host([leading-controls]) .composer-body textarea,
@@ -1252,9 +1252,14 @@ chat-composer.drag-over .composer-body {
     grid-column: 1 / -1;
   }
 
-  .composer-actions {
-    grid-column: 3;
+  .composer-footer {
+    grid-column: 1 / -1;
     grid-row: 2;
+  }
+
+  .composer-actions {
+    grid-column: 2;
+    grid-row: 3;
     width: auto;
     max-width: min(54cqi, var(--sn-composer-actions-max-inline-size, 460px));
     flex-wrap: nowrap;
@@ -1262,29 +1267,29 @@ chat-composer.drag-over .composer-body {
   }
 
   .btn-mic {
-    grid-column: 4;
-    grid-row: 2;
+    grid-column: 3;
+    grid-row: 3;
     align-self: end;
   }
 
   .composer-body > sn-button.btn-send {
-    grid-column: 5;
-    grid-row: 2;
+    grid-column: 4;
+    grid-row: 3;
   }
 
   :host([leading-controls]) .composer-actions,
   chat-composer[leading-controls] .composer-actions {
-    grid-column: 3;
+    grid-column: 2;
   }
 
   :host([leading-controls]) .btn-mic,
   chat-composer[leading-controls] .btn-mic {
-    grid-column: 4;
+    grid-column: 3;
   }
 
   :host([leading-controls]) .composer-body > sn-button.btn-send,
   chat-composer[leading-controls] .composer-body > sn-button.btn-send {
-    grid-column: 5;
+    grid-column: 4;
   }
 
   .btn-voice-language {

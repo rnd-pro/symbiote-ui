@@ -19,9 +19,13 @@ import {
   normalizeCanvasGraphModel,
 } from '../canvas/graph-model.js';
 import {
+  cameraCenterToViewport,
   MIN_CANVAS_GRAPH_ZOOM,
+  resolveCanvasGraphCameraArc,
   resolveCanvasGraphMinZoom,
+  resolveCanvasGraphTransitionDuration,
   resolveCanvasGraphViewportFit,
+  viewportToCameraCenter,
 } from '../canvas/CanvasGraph/CanvasGraphViewport.js';
 
 function createEditor(nodes, connections = []) {
@@ -251,6 +255,96 @@ describe('node graph layout helpers', () => {
     assert.equal(fit.panX, 240);
     assert.equal(fit.panY, 160);
     assert.equal(resolveCanvasGraphMinZoom({ frame, rect, visibleNodeCount: 1 }), MIN_CANVAS_GRAPH_ZOOM);
+  });
+
+  it('passes the camera arc through route fit and lands centered on the target', () => {
+    let rect = { width: 1000, height: 700 };
+    let startCenter = { x: 120, y: 80 };
+    let routeCenter = { x: 520, y: 310 };
+    let targetCenter = { x: 920, y: 540 };
+    let options = {
+      startCenter,
+      routeCenter,
+      targetCenter,
+      startZoom: 1.4,
+      routeZoom: 0.42,
+      targetZoom: 1.1,
+      rect,
+      minZoom: 0.02,
+      maxZoom: 5,
+    };
+
+    let start = resolveCanvasGraphCameraArc({ ...options, progress: 0 });
+    let apex = resolveCanvasGraphCameraArc({ ...options, progress: 0.5 });
+    let target = resolveCanvasGraphCameraArc({ ...options, progress: 1 });
+
+    let assertCenter = (actual, expected) => {
+      assert.ok(Math.abs(actual.x - expected.x) < 1e-10);
+      assert.ok(Math.abs(actual.y - expected.y) < 1e-10);
+    };
+    assertCenter(viewportToCameraCenter(start, rect), startCenter);
+    assertCenter(viewportToCameraCenter(apex, rect), routeCenter);
+    assertCenter(viewportToCameraCenter(target, rect), targetCenter);
+    assert.ok(Math.abs(apex.zoom - options.routeZoom) < 1e-10);
+    assert.ok(Math.abs(target.zoom - options.targetZoom) < 1e-10);
+    assert.deepEqual(target, cameraCenterToViewport(targetCenter, options.targetZoom, rect));
+  });
+
+  it('keeps the camera arc positive and continuous across extreme zooms', () => {
+    let rect = { width: 1280, height: 720 };
+    let samples = Array.from({ length: 101 }, (_, index) => resolveCanvasGraphCameraArc({
+      startCenter: { x: -800, y: 200 },
+      routeCenter: { x: 0, y: 0 },
+      targetCenter: { x: 900, y: -300 },
+      startZoom: 4.8,
+      routeZoom: 0.02,
+      targetZoom: 3.7,
+      rect,
+      progress: index / 100,
+      minZoom: 0.02,
+      maxZoom: 5,
+    }));
+
+    assert.ok(samples.every((sample) => Number.isFinite(sample.zoom)));
+    assert.ok(samples.every((sample) => sample.zoom >= 0.02 && sample.zoom <= 5));
+    for (let index = 1; index < samples.length; index++) {
+      assert.ok(Math.abs(samples[index].zoom - samples[index - 1].zoom) < 0.5);
+      assert.ok(Math.abs(samples[index].panX - samples[index - 1].panX) < 260);
+      assert.ok(Math.abs(samples[index].panY - samples[index - 1].panY) < 160);
+    }
+  });
+
+  it('uses one scale-aware duration contract for graph camera transitions', () => {
+    assert.equal(resolveCanvasGraphTransitionDuration({}), 680);
+    assert.equal(resolveCanvasGraphTransitionDuration({
+      routeDistance: 900,
+      distanceScale: 1,
+    }), 1000);
+    assert.equal(resolveCanvasGraphTransitionDuration({
+      routeDistance: 9000,
+      distanceScale: 1,
+    }), 1800);
+    assert.equal(resolveCanvasGraphTransitionDuration({
+      routeDistance: 90,
+      distanceScale: 1,
+    }), 620);
+    assert.equal(resolveCanvasGraphTransitionDuration({
+      transitionMs: 1200,
+      duration: 1100,
+      transitionMarkerMs: 1000,
+    }), 1200);
+    assert.equal(resolveCanvasGraphTransitionDuration({
+      duration: 1100,
+      transitionMarkerMs: 1000,
+    }), 1100);
+    assert.equal(resolveCanvasGraphTransitionDuration({
+      transitionMarkerMs: 1000,
+      motionScale: 0.5,
+    }), 500);
+    assert.equal(resolveCanvasGraphTransitionDuration({
+      transitionMs: 1200,
+      disabled: true,
+    }), 0);
   });
 
   it('computes deterministic grouped flat positions with an injected random source', () => {

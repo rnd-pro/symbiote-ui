@@ -11,6 +11,7 @@
 
 import { getShape } from '../shapes/index.js';
 import { routePcbTrace } from './PcbRouter.js';
+import { alignSampledRouteEndpoints } from './CanvasGraph/CanvasGraphViewport.js';
 
 function svgPathIdForConnection(connId) {
   let encoded = Array.from(String(connId), (char) => char.codePointAt(0).toString(16)).join('-');
@@ -66,6 +67,28 @@ function parsePathPoints(d) {
   }
 
   return compactPathPoints(points);
+}
+
+function sampleSvgPathPoints(path, sampleCount = 36) {
+  if (!path?.getTotalLength || !path?.getPointAtLength) return [];
+  let total = path.getTotalLength();
+  if (!Number.isFinite(total) || total <= 0) return parsePathPoints(path.getAttribute('d') || '');
+  let count = Math.max(2, Math.round(sampleCount));
+  let points = [];
+  for (let i = 0; i < count; i++) {
+    let point = path.getPointAtLength((total * i) / (count - 1));
+    points.push({ x: point.x, y: point.y });
+  }
+  return compactPathPoints(points);
+}
+
+function appendRouteSegment(route, points) {
+  for (let point of points) {
+    let previous = route.at(-1);
+    if (!previous || Math.abs(previous.x - point.x) > 0.5 || Math.abs(previous.y - point.y) > 0.5) {
+      route.push(point);
+    }
+  }
 }
 
 export class ConnectionRenderer {
@@ -157,6 +180,97 @@ export class ConnectionRenderer {
   /** @returns {Map<string, import('../core/Connection.js').Connection>} */
   get data() {
     return this.#connectionData;
+  }
+
+  getConnectionPathPoints(connId) {
+    let path = this.#svgLayer.querySelector(`[data-conn-id="${connId}"]`);
+    return sampleSvgPathPoints(path);
+  }
+
+  #connectionsForRouting() {
+    let connections = [...this.#connectionData.values()];
+    if (connections.length) return connections;
+    return this.#editor?.getConnections?.() || [];
+  }
+
+  #connectionForId(connId) {
+    let key = String(connId);
+    return this.#connectionsForRouting().find((conn) => String(conn.id) === key) || null;
+  }
+
+  getConnectionEndpoints(connId) {
+    let conn = this.#connectionForId(connId);
+    if (!conn) return null;
+    let fromEl = this.#nodeViews.get(conn.from);
+    let toEl = this.#nodeViews.get(conn.to);
+    if (!fromEl?._position || !toEl?._position) return null;
+    let fromPos = fromEl._position;
+    let toPos = toEl._position;
+    let fromSize = this.#getNodeSize(fromEl, 180, 100);
+    let toSize = this.#getNodeSize(toEl, 180, 100);
+    let fromCenter = { x: fromPos.x + fromSize.width / 2, y: fromPos.y + fromSize.height / 2 };
+    let toCenter = { x: toPos.x + toSize.width / 2, y: toPos.y + toSize.height / 2 };
+    let fromOffset = this.getSocketOffset(fromEl, conn.out, 'output', toCenter);
+    let toOffset = this.getSocketOffset(toEl, conn.in, 'input', fromCenter);
+    return {
+      start: { x: fromPos.x + fromOffset.x, y: fromPos.y + fromOffset.y },
+      end: { x: toPos.x + toOffset.x, y: toPos.y + toOffset.y },
+    };
+  }
+
+  getRouteBetweenNodes(fromNodeId, toNodeId, { maxDepth = 8 } = {}) {
+    let fromId = String(fromNodeId || '');
+    let toId = String(toNodeId || '');
+    if (!fromId || !toId || fromId === toId) return null;
+
+    let adjacency = new Map();
+    let ensure = (id) => {
+      if (!adjacency.has(id)) adjacency.set(id, []);
+      return adjacency.get(id);
+    };
+    for (const conn of this.#connectionsForRouting()) {
+      ensure(conn.from).push({ nodeId: conn.to, connId: conn.id, reverse: false });
+      ensure(conn.to).push({ nodeId: conn.from, connId: conn.id, reverse: true });
+    }
+
+    let queue = [{ nodeId: fromId, segments: [] }];
+    let visited = new Set([fromId]);
+    while (queue.length) {
+      let current = queue.shift();
+      if (!current || current.segments.length >= maxDepth) continue;
+      for (let edge of adjacency.get(current.nodeId) || []) {
+        if (visited.has(edge.nodeId)) continue;
+        let nextSegments = [...current.segments, edge];
+        if (edge.nodeId === toId) {
+          let route = [];
+          for (let segment of nextSegments) {
+            let endpoints = this.getConnectionEndpoints(segment.connId);
+            let sampled = this.getConnectionPathPoints(segment.connId);
+            if (segment.reverse) sampled = [...sampled].reverse();
+            let points;
+            if (endpoints) {
+              let start = segment.reverse ? endpoints.end : endpoints.start;
+              let end = segment.reverse ? endpoints.start : endpoints.end;
+              points = sampled.length >= 2
+                ? alignSampledRouteEndpoints(sampled, start, end)
+                : [start, end];
+            } else {
+              points = sampled;
+            }
+            appendRouteSegment(route, points);
+          }
+          return {
+            points: route.length >= 2 ? route : [],
+            nodeIds: [fromId, ...nextSegments.map((segment) => segment.nodeId)],
+            connectionIds: nextSegments.map((segment) => segment.connId),
+          };
+        }
+        visited.add(edge.nodeId);
+        queue.push({ nodeId: edge.nodeId, segments: nextSegments });
+      }
+    }
+
+    return null;
   }
 
   /**
@@ -410,6 +524,16 @@ export class ConnectionRenderer {
     } finally {
       this._nodeRectCache = previousRectCache || null;
     }
+  }
+
+  prewarmNodes(nodeIds = []) {
+    let ids = [...new Set((nodeIds || []).map(String).filter(Boolean))];
+    for (let nodeId of ids) {
+      if (!this.#nodeViews.has(nodeId)) continue;
+      this.updateForNode(nodeId);
+      this.refreshFreeDots(nodeId);
+    }
+    return ids;
   }
 
   /**
@@ -707,6 +831,20 @@ export class ConnectionRenderer {
       this.#progressivePcbFrame = 0;
       this.#processProgressivePcb();
     });
+  }
+
+  suspendProgressiveRendering(source = 'viewport-motion') {
+    this.#transientPathStyleRequests.set(source, {
+      style: this.#pathStyle,
+      connectionIds: new Set(),
+      suspendProgressivePcb: true,
+    });
+    this.#cancelProgressivePcbFrame();
+  }
+
+  resumeProgressiveRendering(source = 'viewport-motion') {
+    let changed = this.#transientPathStyleRequests.delete(source);
+    if (changed) this.#requestProgressivePcbFrame();
   }
 
   #connectionHasTransientRequest(connId) {
@@ -1039,6 +1177,7 @@ export class ConnectionRenderer {
     let transientRequest = this.#transientRequestForConnection(conn);
     let pathStyle = transientRequest?.style || this.#pathStyle;
     let path = this.#svgLayer.querySelector(`[data-conn-id="${conn.id}"]`);
+    let renderFullPcb = options.fullPcb === true || this.#progressivePcbSuspended();
     let pcbSignature = '';
     if (pathStyle === 'pcb') {
       pcbSignature = this.#pcbPathSignature(conn, pathStyle, {
@@ -1056,7 +1195,7 @@ export class ConnectionRenderer {
         toAngle: toOffset.angle ?? 180,
       });
       if (
-        !options.fullPcb &&
+        !renderFullPcb &&
         path?.getAttribute('data-pcb-quality') === 'full' &&
         path.getAttribute('data-pcb-signature') === pcbSignature
       ) {
@@ -1199,10 +1338,10 @@ export class ConnectionRenderer {
         rects: this._nodeRectCache ? [...this._nodeRectCache.values()] : this.#nodeRects(),
         connections: [...this.#connectionData.values()],
         conn,
-        quality: options.fullPcb ? 'full' : 'draft',
+        quality: renderFullPcb ? 'full' : 'draft',
       });
       d = routed.path;
-      if (!options.fullPcb) {
+      if (!renderFullPcb) {
         this.#scheduleProgressivePcb(conn.id);
       }
     } else {
@@ -1254,7 +1393,7 @@ export class ConnectionRenderer {
     path.setAttribute('id', pathId);
     path.setAttribute('d', d);
     if (pathStyle === 'pcb') {
-      path.setAttribute('data-pcb-quality', options.fullPcb ? 'full' : 'draft');
+      path.setAttribute('data-pcb-quality', renderFullPcb ? 'full' : 'draft');
       path.setAttribute('data-pcb-signature', pcbSignature);
     } else {
       path.removeAttribute('data-pcb-quality');

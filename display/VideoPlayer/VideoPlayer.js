@@ -1,9 +1,12 @@
 import Symbiote from '@symbiotejs/symbiote';
 import template from './VideoPlayer.tpl.js';
 import css from './VideoPlayer.css.js';
+import { createVideoFrameClock } from '../../ui/video-frame-clock.js';
 
 class VideoPlayer extends Symbiote {
   static observedAttributes = ['src', 'autoplay', 'loop', 'muted'];
+
+  #frameClock = null;
 
   #onPlayToggle = () => {
     const video = this.ref.video;
@@ -52,15 +55,15 @@ class VideoPlayer extends Symbiote {
     }
   };
 
-  #onTimeUpdate = () => {
+  #onVideoFrame = (detail) => {
     const video = this.ref.video;
     if (!video || !video.duration) return;
 
-    const percent = (video.currentTime / video.duration) * 100;
+    const percent = (detail.mediaTime / video.duration) * 100;
     if (this.ref.scrubBar) {
       this.ref.scrubBar.value = String(percent);
     }
-    this.#updateTimeDisplay();
+    this.#updateTimeDisplay(detail.mediaTime);
   };
 
   #onLoadedMetadata = () => {
@@ -83,7 +86,6 @@ class VideoPlayer extends Symbiote {
     const video = this.ref.video;
 
     video?.addEventListener('click', this.#onPlayToggle);
-    video?.addEventListener('timeupdate', this.#onTimeUpdate);
     video?.addEventListener('loadedmetadata', this.#onLoadedMetadata);
     video?.addEventListener('play', this.#onPlayStateChange);
     video?.addEventListener('pause', this.#onPlayStateChange);
@@ -94,14 +96,19 @@ class VideoPlayer extends Symbiote {
     this.ref.scrubBar?.addEventListener('input', this.#onScrubInput);
     this.ref.fullscreenBtn?.addEventListener('click', this.#onFullscreenToggle);
 
+    this.#frameClock = createVideoFrameClock(video, { onFrame: this.#onVideoFrame });
+    this.#frameClock.start();
+
     this.#syncAttributes();
   }
 
   disconnectedCallback() {
     const video = this.ref.video;
 
+    this.#frameClock?.dispose();
+    this.#frameClock = null;
+
     video?.removeEventListener('click', this.#onPlayToggle);
-    video?.removeEventListener('timeupdate', this.#onTimeUpdate);
     video?.removeEventListener('loadedmetadata', this.#onLoadedMetadata);
     video?.removeEventListener('play', this.#onPlayStateChange);
     video?.removeEventListener('pause', this.#onPlayStateChange);
@@ -182,12 +189,12 @@ class VideoPlayer extends Symbiote {
     }
   }
 
-  #updateTimeDisplay() {
+  #updateTimeDisplay(currentTime = this.ref.video?.currentTime) {
     const video = this.ref.video;
     const display = this.ref.timeDisplay;
     if (!video || !display) return;
 
-    const current = this.#formatTime(video.currentTime);
+    const current = this.#formatTime(Number.isFinite(currentTime) ? currentTime : video.currentTime);
     const duration = this.#formatTime(video.duration || 0);
     display.textContent = `${current} / ${duration}`;
   }

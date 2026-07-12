@@ -10,6 +10,7 @@ export let template = html`
       <div ref="nodesLayer" class="sn-nodes"></div>
       <svg ref="pseudoSvg" class="pseudo-svg"></svg>
     </div>
+    <div ref="focusTransitionMarker" class="sn-focus-transition-marker" aria-hidden="true"></div>
     <quick-toolbar ref="quickToolbar" hidden></quick-toolbar>
     <context-menu ref="contextMenu" hidden></context-menu>
     <node-minimap ref="minimap" hidden></node-minimap>

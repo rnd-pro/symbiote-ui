@@ -1204,11 +1204,26 @@ async function evaluateNodeCanvasMultiFocusSmoke(page) {
       canvas.setNodePosition('far-archive', 1800, 900);
       await settle();
 
+      const beforeFocus = ['hero', 'bio', 'agent-portal'].map((id) => {
+        const el = canvas.querySelector('graph-node[node-id="' + id + '"]');
+        return el ? {
+          id,
+          offsetWidth: el.offsetWidth,
+          offsetHeight: el.offsetHeight,
+          cachedWidth: el._cachedW,
+          cachedHeight: el._cachedH,
+          lod: el.getAttribute('data-lod')
+        } : null;
+      });
+
       const ok = canvas.flyToNodes(['hero', 'bio', 'agent-portal'], {
         padding: 36,
         maxZoom: 1,
         select: 'hero'
       });
+      for (let index = 0; index < 120 && canvas.hasAttribute('data-viewport-animating'); index += 1) {
+        await frame();
+      }
       await settle();
 
       const canvasRect = canvas.querySelector('.canvas-container').getBoundingClientRect();
@@ -1221,7 +1236,11 @@ async function evaluateNodeCanvasMultiFocusSmoke(page) {
           top: rect.top - canvasRect.top,
           right: rect.right - canvasRect.left,
           bottom: rect.bottom - canvasRect.top,
-          selected: el.hasAttribute('data-selected')
+          selected: el.hasAttribute('data-selected'),
+          offsetWidth: el.offsetWidth,
+          offsetHeight: el.offsetHeight,
+          cachedWidth: el._cachedW,
+          cachedHeight: el._cachedH
         } : null;
       };
       const focused = ['hero', 'bio', 'agent-portal'].map(readNode);
@@ -1239,6 +1258,7 @@ async function evaluateNodeCanvasMultiFocusSmoke(page) {
         panX: canvas.$.panX,
         panY: canvas.$.panY,
         canvas: { width: canvasRect.width, height: canvasRect.height },
+        beforeFocus,
         focused,
         far,
         allFocusedVisible
@@ -1458,6 +1478,7 @@ async function evaluateComposerSmoke(page, width = 0) {
           gridColumn: style.gridColumn,
           gridRow: style.gridRow,
           alignSelf: style.alignSelf,
+          justifySelf: style.justifySelf,
           alignItems: style.alignItems,
           overflow: style.overflow,
           textOverflow: style.textOverflow,
@@ -3104,7 +3125,11 @@ test('cascade lab chat composer keeps voice controls inside the input surface re
       assert.ok(smoke.chat.footerControls.length >= 5);
       assert.ok(smoke.chat.chips.length >= 2);
       assert.deepEqual(smoke.controls.filter((control) => !control.insideBody), []);
-      assert.deepEqual(smoke.chat.footerControls.filter((control) => !control.insideFooter), []);
+      assert.deepEqual(
+        smoke.chat.footerControls.filter((control) => !control.insideFooter),
+        [],
+        JSON.stringify({ viewport: smoke.viewport, composer: smoke.composer, body: smoke.body, footer: smoke.chat.footer, controls: smoke.chat.footerControls }),
+      );
       assert.deepEqual(smoke.chat.chips.filter((chip) => !chip.insideContextBar), []);
       assert.ok(smoke.chat.footer.scrollWidth <= smoke.chat.footer.clientWidth + 1);
       assert.ok(smoke.chat.contextBar.scrollWidth <= smoke.chat.contextBar.clientWidth + 1);
@@ -3128,11 +3153,11 @@ test('cascade lab chat composer keeps voice controls inside the input surface re
         assert.ok(smoke.chat.transcript.scrollWidth <= smoke.chat.transcript.clientWidth + 1);
         assert.ok(smoke.chat.messages.scrollWidth <= smoke.chat.messages.clientWidth + 1);
       }
-      assert.ok(['1', '2'].includes(smoke.actions.gridRow));
-      assert.equal(smoke.send.gridRow, '1');
-      if (smoke.actions.gridRow === '2') {
-        assert.equal(smoke.actions.gridColumn, '1 / -1');
-      }
+      const compactComposer = smoke.body.width <= 480;
+      assert.equal(smoke.actions.gridRow, compactComposer ? '3' : '2');
+      assert.equal(smoke.send.gridRow, smoke.actions.gridRow);
+      assert.equal(smoke.actions.gridColumn, compactComposer ? '2' : '3');
+      assert.equal(smoke.send.gridColumn, compactComposer ? '4' : '5');
     }
   } finally {
     await page?.close?.();

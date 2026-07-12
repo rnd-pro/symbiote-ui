@@ -36,6 +36,7 @@ test('root and metadata entrypoints import in Node', async () => {
   assert.equal(typeof root.renderNow, 'function');
   assert.equal(typeof root.normalizeForceGroups, 'function');
   assert.equal(typeof root.resolveCanvasGraphViewportFit, 'function');
+  assert.equal(typeof root.resolveCanvasGraphTransitionDuration, 'function');
   assert.equal(typeof root.resolveCanvasGraphMinZoom, 'function');
   assert.equal(typeof root.createGraphViewModeController, 'function');
   assert.equal(typeof root.configureAutoLocalization, 'function');
@@ -254,6 +255,7 @@ test('canvas public entrypoint exposes graph and routing helpers', async () => {
   assert.equal(typeof canvas.createGraphViewModeController, 'function');
   assert.equal(typeof canvas.applyGraphExplorerViewMode, 'function');
   assert.equal(typeof canvas.resolveCanvasGraphViewportFit, 'function');
+  assert.equal(typeof canvas.resolveCanvasGraphTransitionDuration, 'function');
   assert.equal(typeof canvas.resolveCanvasGraphMinZoom, 'function');
   assert.deepEqual(canvas.GRAPH_VIEW_MODES, ['structured', 'flat']);
   assert.equal(canvas.normalizeGraphExplorerViewMode('flat'), 'flat');
@@ -651,43 +653,50 @@ test('canvas graph moves a marker dot along formed links before starting node pu
   assert.match(source, /let ids = normalizeFocusNodeIds\(marker\?\.path \|\| \[\]\);/);
   assert.match(source, /options\.transitionRoutePadding/);
   assert.match(source, /options\.transitionRouteMaxZoom\) \? options\.transitionRouteMaxZoom : 1\.35/);
-  assert.match(source, /TRANSITION_ROUTE_FIT_PROGRESS = 0\.5/);
-  assert.match(source, /TRANSITION_TARGET_FIT_PROGRESS = 0\.5/);
-  assert.match(source, /function easeOutCubic\(progress\) \{/);
-  assert.match(source, /function easeInOutCubic\(progress\) \{/);
-  assert.match(source, /function mixTransitionViewport\(from, to, progress\) \{/);
   assert.match(source, /_prepareTransitionMarkerViewport\(marker, options\)/);
   assert.match(source, /marker\.initialViewport = this\._captureViewportState\(\);/);
   assert.match(source, /marker\.routeViewport = routeViewport;/);
-  assert.match(source, /marker\.routeFitProgress = Number\.isFinite\(options\.transitionRouteFitProgress\)/);
-  assert.match(source, /marker\.targetFitProgress = Number\.isFinite\(options\.transitionTargetFitProgress\)/);
+  assert.match(source, /marker\.initialCenter = viewportToCameraCenter\(marker\.initialViewport, rect\);/);
+  assert.match(source, /marker\.routeCenter = viewportToCameraCenter\(routeViewport, rect\);/);
+  assert.match(source, /marker\.targetCenter = viewportToCameraCenter\(marker\.pendingViewport, rect\);/);
+  assert.match(source, /marker\.targetCenterOffset = targetNodeCenter \? \{/);
+  assert.match(source, /_resolveTransitionWorldRoutePoints\(marker\) \{/);
+  assert.match(source, /this\._prewarmTransitionPath\(marker\);/);
+  assert.match(source, /this\._nodeAppearances\?\.delete\?\.\(id\);/);
   assert.match(source, /_resolveTransitionMarkerViewport\(marker, progress\) \{/);
-  assert.match(source, /Math\.min\(0\.5, marker\.routeFitProgress \|\| TRANSITION_ROUTE_FIT_PROGRESS\)/);
-  assert.match(source, /Math\.min\(0\.5, marker\.targetFitProgress \|\| TRANSITION_TARGET_FIT_PROGRESS\)/);
-  assert.match(source, /easeOutCubic\(p \/ routeFitProgress\)/);
-  assert.match(source, /let targetStart = Math\.max\(routeFitProgress, 1 - targetFitProgress\);/);
-  assert.match(source, /easeInOutCubic\(\(p - targetStart\) \/ Math\.max\(0\.01, 1 - targetStart\)\)/);
+  assert.match(source, /let liveNodeCenter = this\.nodeCenter\(marker\.pendingActivation \|\| marker\.toId\);/);
+  assert.match(source, /liveNodeCenter\.x \+ marker\.targetCenterOffset\.x/);
+  assert.match(source, /_extendFocusFrameWithInfoPanel\(frame, pos\) \{/);
+  assert.match(source, /_measureInfoPanelLayout\(node, pos, lines = \[\]\) \{/);
+  assert.match(source, /const panelLayout = this\._measureInfoPanelLayout\(this\.activeNode, apos, ip\.lines\);/);
+  assert.match(source, /includeInfoPanel: options\.includeInfoPanel !== false/);
+  assert.match(source, /let focusFit = focusFrame \? resolveCanvasGraphViewportFit\(\{/);
+  assert.match(source, /return resolveCanvasGraphCameraArc\(\{/);
   assert.match(source, /_updateTransitionMarkerViewport\(now = renderNow\(\)\) \{/);
   assert.match(source, /return this\._setViewportImmediate\(viewport\);/);
   assert.match(source, /marker\.pendingActivation = node\.id;/);
   assert.match(source, /marker\.pendingViewport = options\.pendingViewport \|\| null;/);
   assert.match(source, /this\._prepareTransitionMarkerViewport\(marker, options\);/);
-  assert.match(source, /this\._updateTransitionMarkerViewport\(\);/);
-  assert.match(source, /this\._applyViewportTarget\(marker\.pendingViewport\);/);
-  assert.match(source, /this\._activateNode\(marker\.pendingActivation, \{ transition: false, marker: false \}\);/);
+  assert.match(source, /this\._updateTransitionMarkerViewport\(now\);/);
+  assert.match(source, /let landingViewport = this\._resolveTransitionMarkerViewport\(marker, 1\)/);
+  assert.match(source, /this\._infoPanel\._centeredForNode = targetId;/);
+  assert.match(source, /let eased = resolveCanvasGraphTransitionProgress\(progress\);/);
+  assert.match(source, /resolveCanvasGraphTransitionDuration\(\{/);
+  assert.match(source, /transitionMs: options\.transitionMs,[\s\S]*?duration: options\.duration,[\s\S]*?transitionMarkerMs: options\.transitionMarkerMs/);
+  assert.match(source, /distanceScale: Number\.isFinite\(this\.zoom\) \? this\.zoom : 1/);
+  assert.match(source, /globalThis\.matchMedia\?\.\('\(prefers-reduced-motion: reduce\)'\)\?\.matches === true/);
+  assert.match(source, /if \(marker\.duration <= 0\) \{[\s\S]*?this\._completeTransitionMarker\(marker, marker\.startTime\);/);
+  assert.match(source, /let duration = Number\.isFinite\(marker\.duration\) \? marker\.duration : 850;/);
+  assert.doesNotMatch(source, /marker\.duration \|\| 850/);
+  assert.match(source, /this\._activateNode\(selectedId, \{\s+\.\.\.options,\s+transition: true,\s+pendingViewport,/);
+  assert.match(source, /this\._activateNode\(foundNode, \{\s+\.\.\.options,\s+transition: true,\s+pendingViewport,/);
   assert.match(source, /this\._queuePulseNow\(marker\.toId, pulse\.duration, \{ waves: pulse\.waves \}, now\)/);
   assert.ok(
-    source.indexOf('this._updateTransitionMarkerViewport();') <
+    source.indexOf('this._updateTransitionMarkerViewport(now);') <
       source.indexOf('let viewport = resolveViewportAnimation({')
   );
-  assert.ok(
-    source.indexOf('this._applyViewportTarget(marker.pendingViewport);') <
-      source.indexOf('this._activateNode(marker.pendingActivation, { transition: false, marker: false });')
-  );
-  assert.ok(
-    source.indexOf('this._activateNode(marker.pendingActivation, { transition: false, marker: false });') <
-      source.indexOf('this._queuePulseNow(marker.toId, pulse.duration, { waves: pulse.waves }, now)')
-  );
+  assert.ok(source.indexOf('this._infoPanel._centeredForNode = targetId;') <
+    source.indexOf('this._queuePulseNow(marker.toId, pulse.duration, { waves: pulse.waves }, now)'));
 });
 
 test('canvas graph radial action buttons respond to pointer hover', async () => {
@@ -768,7 +777,7 @@ test('canvas graph visual scale options stay in the library contract', async () 
   assert.match(source, /const workerX = pos \? pos\.x \+ \(usesCenterPosition \? 0 : finalW \/ 2\) : undefined/);
   assert.match(source, /const dimensions = this\._getWorkerNodeDimensions\(n\);/);
   assert.match(source, /const targetScale = isActive \? activeNodeScale : 1;/);
-  assert.match(source, /this\.activeNode\.aScale \|\| activeNodeScale/);
+  assert.match(source, /scale: node\.aScale \|\| activeNodeScale/);
   assert.match(source, /resolveCanvasGraphInfoPanelMetrics\(\{/);
   assert.match(source, /this\._resolveNodeHitRadius\(node\)/);
   assert.doesNotMatch(source, /isActive \? 1\.5 : 1/);
@@ -810,7 +819,7 @@ test('canvas graph focus transition uses queued activation before depth recalcul
   assert.match(source, /const viewportTargetActive = this\._targetPanX !== null/);
   assert.match(source, /&& !viewportTargetActive\s+&& this\._infoPanel\._centeredForNode !== this\.activeNode\.id/);
   assert.match(source, /_queueTransitionMarker\(previousNode\.id, node\.id, options\)/);
-  assert.match(source, /_drawTransitionMarkers\(mainCtx\)/);
+  assert.match(source, /_drawTransitionMarkers\(mainCtx, now\)/);
 });
 
 test('canvas graph edge focus keeps only one-hop selected-node links active', async () => {

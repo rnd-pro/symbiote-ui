@@ -13,9 +13,11 @@ import {
   MEDIA_STUDIO_PREVIEW_MODES,
   MEDIA_STUDIO_SURFACE_STYLES,
   MEDIA_STUDIO_SURFACE_CONTRACT,
+  WORKSPACE_VIRTUAL_SEQUENCE_SCHEMA,
   createMediaStudioLayout,
   createMediaStudioPanelTypes,
   createMediaStudioSequenceFrameWindow,
+  createMediaStudioVirtualSequence,
   ensureMediaStudioSurfaceStyles,
   getMediaFrameSourceSupport,
   getMediaStudioTopology,
@@ -97,6 +99,116 @@ test('media studio layout uses central preview, bottom timeline, collapsed sourc
     MEDIA_STUDIO_PANEL_TYPES.inspector,
     MEDIA_STUDIO_PANEL_TYPES.timeline,
   ]);
+});
+
+test('media studio advertises virtual-sequence HTML-video playback as the primary contract', () => {
+  let virtual = MEDIA_FRAME_SOURCE_PROVIDER_METADATA.find(
+    (provider) => provider.id === MEDIA_STUDIO_FRAME_SOURCE_TYPES.virtualSequence,
+  );
+  assert.ok(virtual, 'a virtual-sequence provider exists');
+  assert.equal(virtual.schemaVersion, WORKSPACE_VIRTUAL_SEQUENCE_SCHEMA);
+  assert.ok(virtual.capabilities.includes('html-video-playback'));
+  assert.ok(virtual.capabilities.includes('request-video-frame-callback'));
+  assert.ok(virtual.capabilities.includes('bounded-precision-decode'));
+
+  assert.equal(MEDIA_STUDIO_SURFACE_CONTRACT.primaryPlayback.frameSource, MEDIA_STUDIO_FRAME_SOURCE_TYPES.virtualSequence);
+  assert.equal(MEDIA_STUDIO_SURFACE_CONTRACT.primaryPlayback.playback, 'html-video');
+  assert.equal(MEDIA_STUDIO_SURFACE_CONTRACT.primaryPlayback.frameClock, 'request-video-frame-callback');
+
+  // No provider may advertise a full cached image sequence as primary playback.
+  for (let provider of MEDIA_FRAME_SOURCE_PROVIDER_METADATA) {
+    assert.ok(!provider.sourceKinds.includes('image-sequence'), `${provider.id} must not source a full image sequence`);
+    assert.ok(!provider.outputKinds.includes('scrubbable-preview'), `${provider.id} must not output a cached scrub sequence`);
+    assert.ok(!provider.capabilities.includes('replay'), `${provider.id} must not claim cached-sequence replay`);
+    assert.ok(!provider.capabilities.includes('offline-preview'), `${provider.id} must not claim offline sequence preview`);
+  }
+
+  let bitmap = MEDIA_FRAME_SOURCE_PROVIDER_METADATA.find(
+    (provider) => provider.id === MEDIA_STUDIO_FRAME_SOURCE_TYPES.cachedSequence,
+  );
+  assert.notEqual(bitmap.label, 'Cached frame sequence');
+  assert.ok(bitmap.capabilities.includes('bounded-bitmap-window'));
+  assert.ok(bitmap.capabilities.includes('sprite-preview'));
+});
+
+test('media studio support probe reports virtual-sequence and precision decode capability honestly', () => {
+  // A DOM-less Node target has no requestVideoFrameCallback surface.
+  let domless = getMediaFrameSourceSupport({ globalThis: {} });
+  assert.equal(domless.virtualSequence, false, 'no video-frame-callback surface means no authoritative playback');
+  assert.equal(domless.precisionVideoDecode, false, 'WebCodecs is capability-reported and absent here');
+
+  // A modern-Chrome-like target exposes HTMLVideoElement.prototype.requestVideoFrameCallback.
+  function HTMLVideoElement() {}
+  HTMLVideoElement.prototype.requestVideoFrameCallback = () => 1;
+  HTMLVideoElement.prototype.cancelVideoFrameCallback = () => {};
+  let browser = getMediaFrameSourceSupport({
+    globalThis: {
+      HTMLVideoElement,
+      VideoDecoder: function VideoDecoder() {},
+      EncodedVideoChunk: function EncodedVideoChunk() {},
+    },
+  });
+  assert.equal(browser.virtualSequence, true);
+  assert.equal(browser.precisionVideoDecode, true);
+  assert.equal(browser.precisionVideoDecodeDetail.videoDecoder, true);
+
+  // Explicit override remains available for deterministic tests.
+  assert.equal(getMediaFrameSourceSupport({ globalThis: {}, virtualSequence: true }).virtualSequence, true);
+
+  let supported = listMediaFrameSourceProviders({ globalThis: { HTMLVideoElement } })
+    .find((provider) => provider.id === MEDIA_STUDIO_FRAME_SOURCE_TYPES.virtualSequence);
+  assert.equal(supported.supported, true);
+
+  delete HTMLVideoElement.prototype.cancelVideoFrameCallback;
+  assert.equal(getMediaFrameSourceSupport({ globalThis: { HTMLVideoElement } }).virtualSequence, false);
+  let unsupported = listMediaFrameSourceProviders({ globalThis: {} })
+    .find((provider) => provider.id === MEDIA_STUDIO_FRAME_SOURCE_TYPES.virtualSequence);
+  assert.equal(unsupported.supported, false);
+});
+
+test('media studio projects a host virtual-sequence artifact through an injected resolver', () => {
+  let hash = 'sha256-0000000000000000000000000000000000000000000000000000000000000000';
+  let projection = createMediaStudioVirtualSequence(
+    {
+      schemaVersion: WORKSPACE_VIRTUAL_SEQUENCE_SCHEMA,
+      executionTier: 'sequential-realtime',
+      timebase: { num: 1, den: 30 },
+      frameRate: { num: 30, den: 1 },
+      duration: 60,
+      masters: [
+        {
+          id: 'm0',
+          path: 'masters/0.mp4',
+          contentHash: hash,
+          codec: 'h264',
+          container: 'mp4',
+          range: { startTick: 0, endTick: 60 },
+          keyframes: [0, 30],
+        },
+      ],
+      playbackProxy: { path: 'proxies/playback.mp4', contentHash: hash, codec: 'h264', container: 'mp4' },
+      scrub: {
+        mode: 'chunks',
+        maxChunkDurationTicks: 30,
+        chunks: [
+          { id: 'c0', path: 'scrub/0.mp4', contentHash: hash, codec: 'h264', container: 'mp4', range: { startTick: 0, endTick: 30 } },
+          { id: 'c1', path: 'scrub/1.mp4', contentHash: hash, codec: 'h264', container: 'mp4', range: { startTick: 30, endTick: 60 } },
+        ],
+      },
+      index: { keyframes: [0, 30], timestamps: [0, 30] },
+      layers: [
+        { id: 'base', kind: 'base', invalidation: 'opaque', range: { startTick: 0, endTick: 60 }, dependsOn: [], affectedRanges: [{ startTick: 0, endTick: 60 }] },
+      ],
+    },
+    { resolvePath: (path) => `blob:media/${path}` },
+  );
+
+  assert.equal(projection.executionTier, 'sequential-realtime');
+  assert.equal(projection.playbackUrl(), 'blob:media/proxies/playback.mp4');
+  assert.equal(projection.frameCount, 60);
+  assert.equal(projection.scrubMode, 'chunks');
+  assert.equal(projection.scrubForTick(30).url, 'blob:media/scrub/1.mp4');
+  assert.throws(() => createMediaStudioVirtualSequence({}, {}), /resolvePath/);
 });
 
 test('media studio panel config and surface contract stay product neutral', () => {
@@ -236,6 +348,12 @@ test('media studio helpers are exported from the browser UI entrypoint', async (
   assert.equal(typeof ui.createMediaStudioPanelTypes, 'function');
   assert.equal(typeof ui.ensureMediaStudioSurfaceStyles, 'function');
   assert.equal(typeof ui.createMediaStudioSequenceFrameWindow, 'function');
+  assert.equal(typeof ui.createMediaStudioVirtualSequence, 'function');
+  assert.equal(typeof ui.createVideoFrameClock, 'function');
+  assert.equal(typeof ui.createVirtualSequenceProjection, 'function');
+  assert.equal(typeof ui.createPrecisionVideoDecoder, 'function');
+  assert.equal(typeof ui.getPrecisionVideoDecodeSupport, 'function');
+  assert.equal(ui.WORKSPACE_VIRTUAL_SEQUENCE_SCHEMA, 'workspace-virtual-sequence-v1');
   assert.equal(typeof ui.mediaStudioFrameIndexForTime, 'function');
   assert.equal(typeof ui.listMediaFrameSourceProviders, 'function');
   assert.equal(typeof ui.normalizeMediaPreviewState, 'function');
@@ -403,7 +521,7 @@ test('media studio visual layer renders reusable preview, timeline, and progress
   assert.match(progress, /data-media-retry-stage="capture"/);
 });
 
-test('media studio preview keeps cached sequence visible when output is also available', () => {
+test('media studio preview defaults to encoded video when both a video and a frame exist', () => {
   let preview = renderMediaStudioPreviewPanelMarkup({
     sourceTitle: 'Current UI',
     support: { cachedSequence: true },
@@ -418,11 +536,79 @@ test('media studio preview keeps cached sequence visible when output is also ava
     },
   });
 
+  assert.match(preview, /data-preview-mode="output"/);
+  assert.match(preview, /data-media-preview-video/);
+  assert.match(preview, /src="\.\/render\.mp4"/);
+  assert.match(preview, /poster="\.\/cache\/frame-0001\.png"/, 'the frame becomes the video poster');
+  assert.doesNotMatch(preview, /<img class="sn-media-studio-frame"/);
+});
+
+test('media studio preview uses an image only on an explicit sequence request', () => {
+  let preview = renderMediaStudioPreviewPanelMarkup({
+    sourceTitle: 'Current UI',
+    preview: {
+      status: 'complete',
+      previewMode: 'sequence',
+      currentFrame: './cache/frame-0001.png',
+      videoUrl: './render.mp4',
+    },
+  });
+
   assert.match(preview, /data-preview-mode="sequence"/);
   assert.match(preview, /data-media-preview-sequence/);
   assert.match(preview, /data-render-proof="cached-frame-sequence"/);
   assert.match(preview, /src="\.\/cache\/frame-0001\.png"/);
   assert.doesNotMatch(preview, /data-media-preview-video/);
+});
+
+test('media studio preview falls back to an image when no video url exists', () => {
+  let preview = renderMediaStudioPreviewPanelMarkup({
+    sourceTitle: 'Current UI',
+    preview: { status: 'complete', currentFrame: './cache/frame-0001.png' },
+  });
+
+  assert.match(preview, /data-preview-mode="sequence"/);
+  assert.match(preview, /data-media-preview-sequence/);
+  assert.doesNotMatch(preview, /data-media-preview-video/);
+});
+
+test('media studio preview emits a playback-proxy video for a virtual-sequence source', () => {
+  let preview = renderMediaStudioPreviewPanelMarkup({
+    sourceTitle: 'Current UI',
+    frameSource: {
+      provider: MEDIA_STUDIO_FRAME_SOURCE_TYPES.virtualSequence,
+      playbackUrl: './proxies/playback.mp4',
+    },
+    preview: {
+      status: 'ready',
+      currentFrame: './sprites/thumb-0.webp',
+    },
+  });
+
+  assert.match(preview, /data-preview-mode="output"/);
+  assert.match(preview, /data-media-preview-video/);
+  assert.match(preview, /data-video-source="playback-proxy"/);
+  assert.match(preview, /data-render-proof="virtual-sequence-playback-proxy"/);
+  assert.match(preview, /src="\.\/proxies\/playback\.mp4"/);
+  assert.match(preview, /data-frame-source-provider="virtual-sequence"/);
+  assert.match(preview, /data-preview-state="ready"/);
+  assert.doesNotMatch(preview, /data-render-proof="final-output-video"/);
+});
+
+test('media studio preview keeps an explicit playback request on the proxy', () => {
+  let preview = renderMediaStudioPreviewPanelMarkup({
+    support: { virtualSequence: true },
+    frameSource: {
+      provider: MEDIA_STUDIO_FRAME_SOURCE_TYPES.virtualSequence,
+      playbackUrl: './proxies/playback.mp4',
+      outputUrl: './final.mp4',
+    },
+    preview: { status: 'ready', previewMode: 'playback' },
+  });
+
+  assert.match(preview, /src="\.\/proxies\/playback\.mp4"/);
+  assert.match(preview, /data-video-source="playback-proxy"/);
+  assert.doesNotMatch(preview, /src="\.\/final\.mp4"/);
 });
 
 test('media studio preview renders completed final output as a video surface when selected', () => {
