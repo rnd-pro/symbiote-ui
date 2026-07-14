@@ -51,7 +51,7 @@ export class SelectionSync {
     let dotSvg = this.#canvas.ref.pseudoSvg || connSvg;
     return [
       path,
-      this.#findConnectionPart(connSvg, 'data-conn-arrow', id),
+      this.#findConnectionPart(connSvg, 'data-conn-marker', id),
       this.#findConnectionPart(dotSvg, 'data-conn-dot', `${id}-start`),
       this.#findConnectionPart(dotSvg, 'data-conn-dot', `${id}-end`),
     ].filter(Boolean);
@@ -161,9 +161,23 @@ export class SelectionSync {
       }
     }
 
+    // Reconcile selected/active/dimmed states on derived containment junctions
+    const junctionEls = Array.from(connSvg.querySelectorAll('g[data-conn-marker^="junction::"]'));
+    for (const el of junctionEls) {
+      const connectionIds = el.getAttribute('data-connection-ids')?.split(',') || [];
+      const isJunctionSelected = connectionIds.some(cid => selectedConnections.has(cid));
+      const isJunctionActive = connectionIds.some(cid => activeConnIds.has(cid));
+      const isJunctionDimmed = !isJunctionActive && selectedNodes.size > 0;
+
+      this.#toggleAttribute(el, 'data-selected', isJunctionSelected);
+      this.#toggleAttribute(el, 'data-active-conn', isJunctionActive);
+      this.#toggleAttribute(el, 'data-dimmed', isJunctionDimmed);
+    }
+
 
     if (connRenderer && typeof connRenderer.setSelectionState === 'function') {
-      connRenderer.setSelectionState(selectedNodes.size > 0, activeConnIds);
+      const allSelectedConnIds = new Set([...activeConnIds, ...selectedConnections]);
+      connRenderer.setSelectionState(selectedNodes.size > 0 || selectedConnections.size > 0, allSelectedConnIds);
     }
 
 

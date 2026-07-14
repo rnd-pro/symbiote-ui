@@ -4,6 +4,21 @@ All notable changes to `symbiote-ui` will be documented in this file.
 
 ## Unreleased
 
+## [0.3.0-alpha.59] - 2026-07-14
+
+### Added
+
+- Added deterministic PCB marker semantics for directed primary graph edges,
+  with shared SVG/Canvas geometry for flow diodes, explicit gates, and derived
+  containment junctions.
+
+### Changed
+
+- Fixed context-menu pointer handling across document realms and kept late or
+  long menu content inside narrow viewports.
+- Extended graph models, schemas, and provider metadata with connection kind,
+  direction, and marker-role contracts.
+
 ## [0.3.0-alpha.58] - 2026-07-14
 
 ### Added

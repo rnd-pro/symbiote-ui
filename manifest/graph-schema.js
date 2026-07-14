@@ -120,6 +120,21 @@ export let GRAPH_SCHEMAS = {
         additionalProperties: false,
         properties: {
           id: { type: 'string', minLength: 1 },
+          kind: { type: 'string', minLength: 1 },
+          direction: { type: 'string', enum: ['none', 'forward', 'reverse', 'both'] },
+          design: {
+            type: 'object',
+            additionalProperties: true,
+            properties: {
+              marker: {
+                type: 'object',
+                additionalProperties: true,
+                properties: {
+                  role: { type: 'string', enum: ['none', 'flow', 'gate'] },
+                },
+              },
+            },
+          },
           source: { $ref: '#/$defs/endpoint' },
           target: { $ref: '#/$defs/endpoint' },
           label: { type: 'string' },
@@ -295,6 +310,20 @@ export let GRAPH_SCHEMAS = {
         properties: {
           id: { type: 'string', minLength: 1 },
           kind: { type: 'string', minLength: 1 },
+          direction: { type: 'string', enum: ['none', 'forward', 'reverse', 'both'] },
+          design: {
+            type: 'object',
+            additionalProperties: true,
+            properties: {
+              marker: {
+                type: 'object',
+                additionalProperties: true,
+                properties: {
+                  role: { type: 'string', enum: ['none', 'flow', 'gate'] },
+                },
+              },
+            },
+          },
           label: { type: 'string' },
           source: { $ref: '#/$defs/endpoint' },
           target: { $ref: '#/$defs/endpoint' },

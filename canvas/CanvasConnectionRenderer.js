@@ -1,6 +1,31 @@
 import { getShape } from '../shapes/index.js';
 import { routePcbTrace } from './PcbRouter.js';
 import { alignSampledRouteEndpoints } from './CanvasGraph/CanvasGraphViewport.js';
+import { resolveConnectionMarker, drawCanvasMarker, resolveContainmentJunctions } from './ConnectionMarker.js';
+
+export function shouldRenderConnectionDetail(zoom, isActive) {
+  return zoom >= 0.5 || isActive;
+}
+
+export function isCanvasConnectionPathCacheValid(cached, connection, pathStyle) {
+  return pathStyle !== 'pcb-drag-proxy'
+    && cached?.pathStyle === pathStyle
+    && cached?.kind === connection.kind
+    && cached?.direction === connection.direction
+    && cached?.role === (connection.design?.marker?.role || 'none');
+}
+
+function sampleBezier(startX, startY, cp1x, cp1y, cp2x, cp2y, endX, endY, count = 20) {
+  const points = [];
+  for (let i = 0; i <= count; i++) {
+    const t = i / count;
+    const mt = 1 - t;
+    const x = mt*mt*mt*startX + 3*mt*mt*t*cp1x + 3*mt*t*t*cp2x + t*t*t*endX;
+    const y = mt*mt*mt*startY + 3*mt*mt*t*cp1y + 3*mt*t*t*cp2y + t*t*t*endY;
+    points.push({ x, y });
+  }
+  return points;
+}
 
 function resolveThemeSource(canvasLayer) {
   return canvasLayer?.parentElement || canvasLayer?.getRootNode?.()?.host || canvasLayer || document.documentElement;
@@ -984,12 +1009,28 @@ export class CanvasConnectionRenderer {
       return;
     }
 
+    const coordsById = new Map();
+    const connectionPoints = new Map();
+    for (const [id, connection] of this.#connectionData) {
+      const coords = this.#plotPath(ctx, connection);
+      if (coords) {
+        coordsById.set(connection.id, coords);
+        if (coords.points) {
+          connectionPoints.set(connection.id, coords.points);
+        }
+      }
+    }
+
     let socketsToDraw = new Map();
 
-    let drawConnection = (id, connection) => {
+    let drawTrace = (id, connection) => {
+      let coords = coordsById.get(id);
+      if (!coords) return;
+
+      let isActive = this.#activeConnIds ? this.#activeConnIds.has(connection.id) : false;
+      if (!shouldRenderConnectionDetail(zoom, isActive)) return;
 
       let isFlowing = connection.flowing;
-      let isActive = this.#activeConnIds ? this.#activeConnIds.has(connection.id) : false;
       let isSelected = isActive;
       let isDimmed = !isActive && this.#hasSelection;
 
@@ -998,7 +1039,6 @@ export class CanvasConnectionRenderer {
       let fromColor = this.#resolveColor(fromNode?.outputs?.[connection.out]?.socket?.color);
       let toColor = this.#resolveColor(toNode?.inputs?.[connection.in]?.socket?.color);
 
-
       let baseWidth = this.#colorParams.width;
       ctx.lineWidth = Math.max(baseWidth, 1.5 / zoom);
       ctx.lineCap = 'round';
@@ -1006,16 +1046,6 @@ export class CanvasConnectionRenderer {
       ctx.globalAlpha = 1.0;
 
       ctx.beginPath();
-      let coords = null;
-      try {
-        coords = this.#plotPath(ctx, connection);
-      } catch (err) {
-        if (CanvasConnectionRenderer.debug) {
-          console.warn('[CanvasConnectionRenderer] Path failed:', err);
-        }
-      }
-      if (!coords) return;
-
 
       socketsToDraw.set(`${connection.from}:${connection.out}`, {
         x: coords.startX,
@@ -1039,7 +1069,6 @@ export class CanvasConnectionRenderer {
       }
 
       if (isDimmed) {
-
         let baseColor = fromColor || this.#colorParams.normal;
         let source = resolveThemeSource(this.#canvasLayer);
         let baseRgb = parseCssRgb(baseColor, source);
@@ -1060,7 +1089,6 @@ export class CanvasConnectionRenderer {
         ctx.setLineDash([]);
       }
 
-
       if (isSelected && !isDimmed) {
         ctx.shadowColor = ctx.strokeStyle;
         ctx.shadowBlur = 8;
@@ -1079,36 +1107,100 @@ export class CanvasConnectionRenderer {
         ctx.stroke(coords.dragProxyPath2D);
         ctx.restore();
       }
+    };
 
+    let drawMarker = (id, connection) => {
+      let coords = coordsById.get(id);
+      if (!coords) return;
 
-      if (coords.arrow) {
-        ctx.save();
-        ctx.translate(coords.arrow.x, coords.arrow.y);
+      let isActive = this.#activeConnIds ? this.#activeConnIds.has(connection.id) : false;
+      if (!shouldRenderConnectionDetail(zoom, isActive)) return;
 
-        ctx.rotate(coords.arrow.angle);
-        ctx.beginPath();
-        ctx.moveTo(-5, -3.5);
-        ctx.lineTo(5, 0);
-        ctx.lineTo(-5, 3.5);
-        ctx.closePath();
-        ctx.fillStyle = ctx.strokeStyle;
-        ctx.fill();
-        ctx.restore();
+      let isDimmed = this.#activeConnIds && !this.#activeConnIds.has(connection.id) && this.#hasSelection;
+      let fromNode = this.#editor?.getNode(connection.from);
+      let fromColor = this.#resolveColor(fromNode?.outputs?.[connection.out]?.socket?.color) || this.#colorParams.normal;
+
+      if (isDimmed) {
+        let source = resolveThemeSource(this.#canvasLayer);
+        let baseRgb = parseCssRgb(fromColor, source);
+        let bgRgb = parseCssRgb(this.#colorParams.bg, source);
+        if (baseRgb && bgRgb) {
+          fromColor = toRgba(mixRgb(baseRgb, bgRgb, 0.15));
+        }
+      }
+
+      ctx.strokeStyle = fromColor;
+      ctx.fillStyle = fromColor;
+      ctx.shadowBlur = 0;
+
+      const marker = resolveConnectionMarker(coords.points || [], connection, {
+        connections: [...this.#connectionData.values()],
+        connectionPoints,
+      });
+      if (marker && marker.type !== 'none') {
+        drawCanvasMarker(ctx, marker, ctx.strokeStyle, this.#colorParams.bg);
+      }
+    };
+
+    let drawJunctions = () => {
+      const connections = [...this.#connectionData.values()];
+      const junctions = resolveContainmentJunctions(connections, connectionPoints);
+
+      for (const j of junctions) {
+        const isJunctionActive = j.connectionIds.some(cid => this.#activeConnIds ? this.#activeConnIds.has(cid) : false);
+        if (!shouldRenderConnectionDetail(zoom, isJunctionActive)) continue;
+
+        const isJunctionDimmed = !isJunctionActive && this.#hasSelection;
+
+        let fromColor = this.#colorParams.normal;
+        const ownerConn = this.#connectionData.get(j.ownerId);
+        if (ownerConn) {
+          const fromNode = this.#editor?.getNode(ownerConn.from);
+          fromColor = this.#resolveColor(fromNode?.outputs?.[ownerConn.out]?.socket?.color) || this.#colorParams.normal;
+        }
+
+        if (isJunctionActive && !isJunctionDimmed) {
+          fromColor = this.#colorParams.selected || fromColor;
+        } else if (isJunctionDimmed) {
+          let source = resolveThemeSource(this.#canvasLayer);
+          let baseRgb = parseCssRgb(fromColor, source);
+          let bgRgb = parseCssRgb(this.#colorParams.bg, source);
+          if (baseRgb && bgRgb) {
+            fromColor = toRgba(mixRgb(baseRgb, bgRgb, 0.15));
+          }
+        }
+
+        ctx.strokeStyle = fromColor;
+        ctx.fillStyle = fromColor;
+        ctx.shadowBlur = 0;
+
+        drawCanvasMarker(ctx, j, ctx.strokeStyle, this.#colorParams.bg);
       }
     };
 
     if (this.#hasSelection) {
       for (const [id, connection] of this.#connectionData) {
-        if (!this.#activeConnIds.has(connection.id)) drawConnection(id, connection);
+        if (!this.#activeConnIds.has(connection.id)) drawTrace(id, connection);
       }
       for (const [id, connection] of this.#connectionData) {
-        if (this.#activeConnIds.has(connection.id)) drawConnection(id, connection);
+        if (this.#activeConnIds.has(connection.id)) drawTrace(id, connection);
+      }
+      for (const [id, connection] of this.#connectionData) {
+        if (!this.#activeConnIds.has(connection.id)) drawMarker(id, connection);
+      }
+      for (const [id, connection] of this.#connectionData) {
+        if (this.#activeConnIds.has(connection.id)) drawMarker(id, connection);
       }
     } else {
       for (const [id, connection] of this.#connectionData) {
-        drawConnection(id, connection);
+        drawTrace(id, connection);
+      }
+      for (const [id, connection] of this.#connectionData) {
+        drawMarker(id, connection);
       }
     }
+
+    drawJunctions();
 
 
     ctx.setLineDash([]);
@@ -1250,7 +1342,7 @@ export class CanvasConnectionRenderer {
     let effectiveStyle = transientRequest?.style || this.#pathStyle;
     let cached = this.#pathCache.get(conn.id);
     let renderFullPcb = options.fullPcb === true || this.#progressivePcbSuspended();
-    if (effectiveStyle !== 'pcb-drag-proxy' && cached?.pathStyle === effectiveStyle) {
+    if (isCanvasConnectionPathCacheValid(cached, conn, effectiveStyle)) {
       return cached;
     }
     if (
@@ -1313,15 +1405,12 @@ export class CanvasConnectionRenderer {
     let startY = fromPos.y + fromOffset.y;
     let endX = toPos.x + toOffset.x;
     let endY = toPos.y + toOffset.y;
-
     let d;
-    let arrow = { x: endX, y: endY, angle: 0 };
     let cachePathStyle = effectiveStyle;
+    let points = [];
     if (effectiveStyle === 'straight') {
       d = `M ${startX} ${startY} L ${endX} ${endY}`;
-      arrow.x = (startX + endX) / 2;
-      arrow.y = (startY + endY) / 2;
-      arrow.angle = Math.atan2(endY - startY, endX - startX);
+      points = [{ x: startX, y: startY }, { x: endX, y: endY }];
     } else if (effectiveStyle === 'orthogonal') {
       let connIndex = this._connIndexMap ? (this._connIndexMap.get(conn.id) ?? 0) : 0;
       let traceOffset = (connIndex > -1 ? connIndex % 10 : 0) * 4;
@@ -1439,17 +1528,9 @@ export class CanvasConnectionRenderer {
           path += ` V ${curr.y}`;
         }
       }
-      if (pts.length >= 2) {
-        let midIndex = Math.floor(pts.length / 2);
-        let p1 = pts[midIndex - 1];
-        let p2 = pts[midIndex];
-        if (p1 && p2) {
-          arrow.x = (p1.x + p2.x) / 2;
-          arrow.y = (p1.y + p2.y) / 2;
-          arrow.angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
-        }
-      }
+
       d = path;
+      points = pts;
     } else if (effectiveStyle === 'pcb-drag-proxy') {
       let proxyD =
         this.#buildPcbDragProxyPath(conn, transientRequest, {
@@ -1468,7 +1549,7 @@ export class CanvasConnectionRenderer {
           endY,
           d: straight,
           path2D: new Path2D(straight),
-          arrow: null,
+          points: [{ x: startX, y: startY }, { x: endX, y: endY }],
           pathStyle: 'pcb',
         };
       }
@@ -1495,7 +1576,7 @@ export class CanvasConnectionRenderer {
         quality: renderFullPcb ? 'full' : 'draft',
       });
       d = routed.path;
-      arrow = routed.arrow;
+      points = routed.renderPoints || routed.points || [];
       if (!renderFullPcb) {
         this.#scheduleProgressivePcb(conn.id);
         cachePathStyle = 'pcb-draft';
@@ -1536,9 +1617,7 @@ export class CanvasConnectionRenderer {
 
       d = `M ${startX} ${startY} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${endX} ${endY}`;
 
-      arrow.x = (startX + 3 * cp1x + 3 * cp2x + endX) / 8;
-      arrow.y = (startY + 3 * cp1y + 3 * cp2y + endY) / 8;
-      arrow.angle = Math.atan2(endY + cp2y - cp1y - startY, endX + cp2x - cp1x - startX);
+      points = sampleBezier(startX, startY, cp1x, cp1y, cp2x, cp2y, endX, endY);
     }
 
     let coords = {
@@ -1548,8 +1627,11 @@ export class CanvasConnectionRenderer {
       endY,
       d,
       path2D: new Path2D(d),
-      arrow,
+      points,
       pathStyle: cachePathStyle,
+      kind: conn.kind,
+      direction: conn.direction,
+      role: conn.design?.marker?.role || 'none',
     };
     this.#pathCache.set(conn.id, coords);
     return coords;

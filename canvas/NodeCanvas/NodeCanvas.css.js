@@ -425,20 +425,26 @@ export let styles = css`
     r: 4;
   }
 
-  /* Direction arrow on wire midpoint */
-  .sn-conn-arrow {
-    fill: var(--sn-conn-color);
-    opacity: 0.5;
+  /* Connection PCB Marker */
+  .sn-conn-marker {
+    color: var(--sn-conn-marker-color, var(--sn-conn-color));
+    opacity: 0.8;
     pointer-events: none;
+    transition: color var(--sn-transition-fast) var(--sn-transition-easing), opacity var(--sn-transition-fast) var(--sn-transition-easing);
   }
 
-  .sn-conn-arrow[data-active-conn] {
+  .sn-conn-marker[data-selected] {
+    filter: drop-shadow(0 0 3px var(--sn-sys-accent));
     opacity: 1;
-    fill: var(--sn-sys-accent);
   }
 
-  .sn-conn-arrow[data-dimmed] {
-    fill: var(--sn-conn-dimmed, var(--sn-sys-on-surface-dim));
+  .sn-conn-marker[data-active-conn] {
+    opacity: 1;
+    color: var(--sn-sys-accent);
+  }
+
+  .sn-conn-marker[data-dimmed] {
+    color: var(--sn-conn-dimmed, var(--sn-sys-on-surface-dim));
     opacity: 0.24;
   }
 

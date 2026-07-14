@@ -3392,7 +3392,7 @@ test('node-canvas context menu uses viewport coordinates and clamps to visible b
         clientX: edgeX,
         clientY: edgeY,
       }));
-      for (let index = 0; index < 2; index += 1) await frame();
+      for (let index = 0; index < 6; index += 1) await frame();
       const menu = canvas.ref.contextMenu;
       const edgeRect = menu.getBoundingClientRect();
       const edgeOpen = menu.matches(':popover-open');
@@ -3405,7 +3405,7 @@ test('node-canvas context menu uses viewport coordinates and clamps to visible b
         clientX: innerX,
         clientY: innerY,
       }));
-      for (let index = 0; index < 2; index += 1) await frame();
+      for (let index = 0; index < 6; index += 1) await frame();
       const innerRect = menu.getBoundingClientRect();
       const innerOpen = menu.matches(':popover-open');
       const result = {
@@ -3749,6 +3749,236 @@ test('node-canvas context menu survives native right-click pointer sequencing', 
     if (cleanup.exceptionDetails) {
       throw new Error(cleanup.exceptionDetails.text || 'Native right-click cleanup failed');
     }
+  } finally {
+    await page?.close?.();
+    await closeChromeSession(chromeSession);
+    await server.close();
+  }
+});
+
+test('standalone applyCascadeTheme computed style regression without preloading', { timeout: BROWSER_SMOKE_TIMEOUT_MS }, async () => {
+  const chromePath = findChrome();
+  assertBrowserSmokeRuntime();
+
+  const server = await createStaticServer();
+  let chromeSession;
+  let page;
+  try {
+    chromeSession = await launchChromeSession(chromePath, 'cascade theme computed style regression');
+    page = await withTimeout(
+      openPage(chromeSession.endpoint, `${server.url}/demo/standalone-theme-fixture.html?v=cascade-theme-regression`),
+      22000,
+      'cascade theme regression page open'
+    );
+    const expression = String.raw`
+    (async () => {
+      const errors = [];
+      const handleErr = (msg) => errors.push(String(msg));
+      window.addEventListener('error', (e) => handleErr(e.message));
+      window.addEventListener('unhandledrejection', (e) => handleErr(e.reason));
+
+      const iframe = document.createElement('iframe');
+      iframe.width = '360';
+      iframe.height = '280';
+      iframe.style.border = '0';
+      const loaded = new Promise((resolve, reject) => {
+        iframe.addEventListener('load', resolve, { once: true });
+        iframe.addEventListener('error', reject, { once: true });
+      });
+      iframe.src = location.href;
+      document.body.append(iframe);
+      await loaded;
+
+      const iframeWindow = iframe.contentWindow;
+      const idoc = iframe.contentDocument;
+      iframeWindow.addEventListener('error', (e) => handleErr(e.message));
+      iframeWindow.addEventListener('unhandledrejection', (e) => handleErr(e.reason));
+      const [, themeModule, rendererModule, nodeCanvasStyles] = await iframeWindow.eval(
+        "Promise.all([import('../menu/ContextMenu/ContextMenu.js'), import('../themes/cascade-theme.js'), import('../canvas/ConnectionRenderer.js'), import('../canvas/NodeCanvas/NodeCanvas.css.js')])"
+      );
+      await iframeWindow.customElements.whenDefined('context-menu');
+      const { applyCascadeTheme } = themeModule;
+      const frame = () => new Promise((resolve) => iframeWindow.requestAnimationFrame(resolve));
+
+      idoc.documentElement.style.cssText = 'width:100%;height:100%;';
+      idoc.body.style.cssText = 'width:100%;height:100%;margin:0;overflow:hidden;';
+      const container = idoc.createElement('div');
+      container.id = 'theme-regression-fixture';
+      container.style.cssText = 'position:fixed;inset:0;';
+      idoc.body.append(container);
+      applyCascadeTheme(container, { mode: 'dark', radius: 'medium', density: 'product' });
+      idoc.adoptedStyleSheets = [...idoc.adoptedStyleSheets, nodeCanvasStyles.styles];
+
+      const markerSvg = idoc.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      container.append(markerSvg);
+      rendererModule.updateSvgMarker('trace-color', {
+        type: 'flow',
+        direction: 'forward',
+        x: 20,
+        y: 20,
+        angle: 0,
+      }, markerSvg, '#010203');
+      const traceMarker = markerSvg.querySelector('[data-conn-marker="trace-color"]');
+      const traceMarkerColor = iframeWindow.getComputedStyle(traceMarker).color;
+
+      const hasSystemSheet = Array.from(idoc.adoptedStyleSheets).some(sheet => {
+        try {
+          return Array.from(sheet.cssRules).some(rule => rule.cssText.includes('--sn-sys-surface'));
+        } catch {
+          return false;
+        }
+      });
+      const hasFoundationSheet = Array.from(idoc.adoptedStyleSheets).some(sheet => {
+        try {
+          return Array.from(sheet.cssRules).some(rule => rule.cssText.includes('--sn-font'));
+        } catch {
+          return false;
+        }
+      });
+
+      const menu = idoc.createElement('context-menu');
+      container.append(menu);
+
+      const items = iframeWindow.eval("[\n" +
+        "  { label: 'Option 1', icon: 'check', action: function() {} },\n" +
+        "  { label: 'Option 2', icon: 'close', action: function() {} },\n" +
+        "]");
+
+      menu.show(150, 150, items);
+      for (let i = 0; i < 3; i++) await frame();
+
+      menu.show(iframeWindow.innerWidth - 4, iframeWindow.innerHeight - 4, items);
+      for (let i = 0; i < 3; i++) await frame();
+
+      const buttonsDark = Array.from(menu.querySelectorAll('.sn-ctx-btn'));
+      const heightsDark = buttonsDark.map(b => b.getBoundingClientRect().height);
+      const stylesDark = buttonsDark.map(b => iframeWindow.getComputedStyle(b));
+      const fontSizesDark = stylesDark.map(style => style.fontSize);
+      const paddingsDark = stylesDark.map(style => style.padding);
+      const radiusesDark = stylesDark.map(style => style.borderRadius);
+      const buttonColorDark = stylesDark[0]?.color || '';
+      const menuBgDark = iframeWindow.getComputedStyle(menu).backgroundColor;
+
+      let overlapDark = false;
+      for (let i = 0; i < buttonsDark.length - 1; i++) {
+        const rectA = buttonsDark[i].getBoundingClientRect();
+        const rectB = buttonsDark[i + 1].getBoundingClientRect();
+        if (rectA.bottom > rectB.top + 0.1) {
+          overlapDark = true;
+        }
+      }
+
+      const lateItems = iframeWindow.eval("[\n" +
+        "  { label: 'Option 1', icon: 'check', action: function() {} },\n" +
+        "  { label: 'Option 2', icon: 'close', action: function() {} },\n" +
+        "  { label: 'An Extremely Long Option Label For Testing Stability and Late Growth', icon: 'edit', action: function() {} },\n" +
+        "  { label: 'Option 4', icon: 'delete', action: function() {} },\n" +
+        "  { label: 'Option 5', icon: 'settings', action: function() {} },\n" +
+        "]");
+      menu.show(iframeWindow.innerWidth - 4, iframeWindow.innerHeight - 4, lateItems);
+      for (let i = 0; i < 5; i++) await frame();
+
+      const rectLate = menu.getBoundingClientRect();
+      const fitsInViewport = rectLate.left >= 0 && rectLate.top >= 0 &&
+        rectLate.right <= iframeWindow.innerWidth &&
+        rectLate.bottom <= iframeWindow.innerHeight;
+
+      iframe.width = '160';
+      for (let i = 0; i < 3; i++) await frame();
+      const narrowItems = iframeWindow.eval("[{ label: 'Action', detail: 'unbreakable-detail-value-that-must-not-overflow', action: function() {} }]");
+      menu.show(iframeWindow.innerWidth - 2, 40, narrowItems);
+      for (let i = 0; i < 3; i++) await frame();
+      const narrowRect = menu.getBoundingClientRect();
+      const narrowDetail = menu.querySelector('.sn-ctx-detail');
+      const narrowDetailRect = narrowDetail.getBoundingClientRect();
+      const narrowFitsInViewport = narrowRect.left >= 0 &&
+        narrowRect.right <= iframeWindow.innerWidth &&
+        menu.scrollWidth <= menu.clientWidth &&
+        narrowDetailRect.right <= narrowRect.right;
+
+      iframe.width = '360';
+      for (let i = 0; i < 3; i++) await frame();
+
+      applyCascadeTheme(container, { mode: 'light' });
+      menu.show(100, 100, items);
+      for (let i = 0; i < 3; i++) await frame();
+
+      const containerStyle = iframeWindow.getComputedStyle(container);
+      const menuStyle = iframeWindow.getComputedStyle(menu);
+      const lightButton = menu.querySelector('.sn-ctx-btn');
+      if (!lightButton) {
+        throw new Error('Iframe context menu did not render items: ' + menu.innerHTML);
+      }
+      const buttonStyleLight = iframeWindow.getComputedStyle(lightButton);
+
+      const results = {
+        hasSystemSheet,
+        hasFoundationSheet,
+        ownerRealm: menu.ownerDocument === idoc,
+        allHeightsNonZero: heightsDark.every(h => h > 0),
+        overlapDark,
+        fitsInViewport,
+        narrowFitsInViewport,
+        fontSizesDark,
+        paddingsDark,
+        radiusesDark,
+        buttonColorDark,
+        buttonColorLight: buttonStyleLight.color,
+        rowPaddingLight: buttonStyleLight.padding,
+        menuBgDark,
+        menuBgLight: menuStyle.backgroundColor,
+        traceMarkerColor,
+        traceMarkerType: traceMarker.getAttribute('data-type'),
+        traceMarkerHasDiodeBody: Boolean(traceMarker.querySelector('rect') && traceMarker.querySelector('polygon')),
+        errors,
+        containerBg: containerStyle.getPropertyValue('--sn-sys-surface').trim(),
+        menuPadding: menuStyle.padding,
+        menuFont: menuStyle.fontFamily,
+        menuRadius: menuStyle.borderRadius,
+        menuBorder: menuStyle.border,
+        menuShadow: menuStyle.boxShadow,
+      };
+
+      menu.hide();
+      iframe.remove();
+      return results;
+    })()
+    `;
+
+    const evaluation = await withTimeout(page.send('Runtime.evaluate', {
+      expression,
+      awaitPromise: true,
+      returnByValue: true,
+    }), 15000, 'computed style evaluation');
+    if (evaluation.exceptionDetails) {
+      throw new Error(evaluation.exceptionDetails.text || 'Computed style evaluation failed');
+    }
+    const res = evaluation.result.value;
+
+    assert.equal(res.errors.length, 0, 'Should have no errors: ' + JSON.stringify(res.errors));
+    assert.equal(res.hasSystemSheet, true, 'Iframe should have system sheet');
+    assert.equal(res.hasFoundationSheet, true, 'Iframe should have foundation sheet');
+    assert.equal(res.ownerRealm, true, 'Menu should execute in its iframe owner realm');
+    assert.equal(res.allHeightsNonZero, true, 'All button heights must be nonzero');
+    assert.equal(res.overlapDark, false, 'Buttons must not overlap');
+    assert.equal(res.fitsInViewport, true, 'Menu must be clamped to the iframe viewport');
+    assert.equal(res.narrowFitsInViewport, true, 'Menu detail must not overflow a 160px iframe viewport');
+
+    assert.ok(res.containerBg.startsWith('oklch') || res.containerBg.startsWith('rgb'), 'Container background must resolve: ' + res.containerBg);
+    assert.notEqual(res.buttonColorDark, res.buttonColorLight, 'Dark and light menu rows must resolve distinct foreground colors');
+    assert.notEqual(res.menuBgDark, res.menuBgLight, 'Dark and light menu surfaces must resolve distinct backgrounds');
+    assert.equal(res.traceMarkerColor, 'rgb(1, 2, 3)', 'SVG marker must inherit the routed trace color');
+    assert.equal(res.traceMarkerType, 'flow');
+    assert.equal(res.traceMarkerHasDiodeBody, true);
+    assert.ok(res.paddingsDark.every((padding) => padding && padding !== '0px'), 'Dark menu rows must keep token padding');
+    assert.ok(res.rowPaddingLight && res.rowPaddingLight !== '0px', 'Light menu rows must keep token padding');
+
+    assert.ok(res.menuPadding && res.menuPadding !== '0px', 'Menu padding must be derived: ' + res.menuPadding);
+    assert.ok(res.menuFont && (res.menuFont.includes('sans') || res.menuFont.includes('system-ui')), 'Menu font must be token-driven sans-serif: ' + res.menuFont);
+    assert.ok(res.menuRadius && res.menuRadius !== '0px', 'Menu border radius must be token-driven: ' + res.menuRadius);
+    assert.ok(res.menuBorder && res.menuBorder !== 'none' && res.menuBorder !== '', 'Menu border must be token-driven: ' + res.menuBorder);
+    assert.ok(res.menuShadow && res.menuShadow !== 'none' && res.menuShadow !== '', 'Menu shadow must be token-driven: ' + res.menuShadow);
+
   } finally {
     await page?.close?.();
     await closeChromeSession(chromeSession);

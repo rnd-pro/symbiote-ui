@@ -55,4 +55,10 @@ export {
   buildCanvasGraphModelFromSkeleton,
   buildGraphModelFromSkeleton,
 } from '../canvas/project-graph-model.js'
-export { buildFileGraph, buildStructuredGraph } from '../canvas/project-graph-builder.js'
+export { buildFileGraph, buildStructuredGraph } from '../canvas/project-graph-builder.js';
+export { CONNECTION_MARKER_METRICS } from '../tokens/scale.js';
+export {
+  projectConnectionMarkerGeometry,
+  resolveConnectionMarker,
+  resolveContainmentJunctions,
+} from '../canvas/ConnectionMarker.js';

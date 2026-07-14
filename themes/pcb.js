@@ -173,11 +173,11 @@ export let PCB_DARK = {
 
     /* LOD: at low zoom, hide connections but keep active visible */
     [data-lod-dimmed] .sn-conn-path,
-    [data-lod-dimmed] .sn-conn-arrow {
+    [data-lod-dimmed] .sn-conn-marker {
       visibility: hidden;
     }
     [data-lod-dimmed] .sn-conn-path[data-active-conn],
-    [data-lod-dimmed] .sn-conn-arrow[data-active-conn] {
+    [data-lod-dimmed] .sn-conn-marker[data-active-conn] {
       visibility: visible;
       opacity: 1 !important;
     }

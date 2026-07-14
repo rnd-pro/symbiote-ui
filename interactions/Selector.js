@@ -127,6 +127,11 @@ export class Selector {
     this.#notify();
   }
 
+  deselectConnection(connId) {
+    if (!this.#selectedConnections.delete(connId)) return;
+    this.#notify();
+  }
+
   /**
    * Deselect everything
    */

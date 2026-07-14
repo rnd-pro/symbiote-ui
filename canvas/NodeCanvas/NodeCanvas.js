@@ -610,7 +610,7 @@ export class NodeCanvas extends Symbiote {
     });
     editor.on('connectionremoved', (conn) => {
       this._connRenderer.remove(conn);
-      this._selector.getSelectedConnections().delete(conn.id);
+      this._selector.deselectConnection(conn.id);
       this._emitPanelMenuActions();
     });
 

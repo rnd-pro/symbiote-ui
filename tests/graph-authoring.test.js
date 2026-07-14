@@ -225,6 +225,10 @@ describe('Selector Model Extensions', () => {
 
     selector.toggleConnection('conn-1');
     assert.equal(selector.isConnectionSelected('conn-1'), false);
+
+    selector.selectConnection('conn-2');
+    selector.deselectConnection('conn-2');
+    assert.equal(selector.isConnectionSelected('conn-2'), false);
   });
 
   it('can retain selected nodes while adding marquee-selected connections', () => {
@@ -475,10 +479,10 @@ describe('SelectionSync Connection Focus', () => {
     assert.match(source, /stroke: var\(--sn-conn-dimmed, var\(--sn-sys-on-surface-dim\)\);/);
     assert.match(source, /\.sn-conn-path\[data-active-conn\]/);
     assert.match(source, /stroke: var\(--sn-sys-accent\);/);
-    assert.match(source, /\.sn-conn-arrow\[data-dimmed\]/);
-    assert.match(source, /fill: var\(--sn-conn-dimmed, var\(--sn-sys-on-surface-dim\)\);/);
-    assert.match(source, /\.sn-conn-arrow\[data-active-conn\]/);
-    assert.match(source, /fill: var\(--sn-sys-accent\);/);
+    assert.match(source, /\.sn-conn-marker\[data-dimmed\]/);
+    assert.match(source, /color: var\(--sn-conn-dimmed, var\(--sn-sys-on-surface-dim\)\);/);
+    assert.match(source, /\.sn-conn-marker\[data-active-conn\]/);
+    assert.match(source, /color: var\(--sn-sys-accent\);/);
   });
 
   it('does not permanently promote the full graph content to a compositor layer', async () => {
@@ -492,14 +496,14 @@ describe('SelectionSync Connection Focus', () => {
     assert.doesNotMatch(contentRule, /will-change\s*:/);
   });
 
-  it('syncs active and dimmed state to connection paths, arrows, and endpoint dots', () => {
+  it('syncs active and dimmed state to connection paths, markers, and endpoint dots', () => {
     let connections = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     let pseudoSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     connections.innerHTML = `
       <path data-conn-id="active-conn"></path>
-      <polygon data-conn-arrow="active-conn"></polygon>
+      <g data-conn-marker="active-conn"></g>
       <path data-conn-id="dimmed-conn"></path>
-      <polygon data-conn-arrow="dimmed-conn"></polygon>
+      <g data-conn-marker="dimmed-conn"></g>
     `;
     pseudoSvg.innerHTML = `
       <circle data-conn-dot="active-conn-start"></circle>
@@ -540,7 +544,7 @@ describe('SelectionSync Connection Focus', () => {
 
     for (const selector of [
       '[data-conn-id="active-conn"]',
-      '[data-conn-arrow="active-conn"]',
+      '[data-conn-marker="active-conn"]',
       '[data-conn-dot="active-conn-start"]',
       '[data-conn-dot="active-conn-end"]',
     ]) {
@@ -552,7 +556,7 @@ describe('SelectionSync Connection Focus', () => {
 
     for (const selector of [
       '[data-conn-id="dimmed-conn"]',
-      '[data-conn-arrow="dimmed-conn"]',
+      '[data-conn-marker="dimmed-conn"]',
       '[data-conn-dot="dimmed-conn-start"]',
       '[data-conn-dot="dimmed-conn-end"]',
     ]) {

@@ -28,6 +28,7 @@ import {
   REF_RAMP_FAMILIES,
   systemPropertyRegistrationsCss,
 } from '../tokens/tiers.js';
+import { DEFAULT_PROVIDER_THEME } from './default-provider.js';
 
 /** Semantic hue offsets (degrees from the accent hue) for the status ramp families. */
 export const STATUS_HUE_OFFSETS = Object.freeze({
@@ -241,24 +242,71 @@ export function undeclaredSystemRoles() {
   return SYSTEM_ROLES.filter(role => !css.includes(`${role}:`));
 }
 
-let systemCascadeSheet = null;
+const foundationSheets = new WeakMap();
+const systemCascadeSheets = new WeakMap();
 
 /**
- * Adopt the system-cascade stylesheet on a document (idempotent, one shared
- * constructable sheet). Custom properties inherit into shadow trees and `@property`
+ * Node-safe provider-foundation CSS generator sourced directly from default provider tokens.
+ * @returns {string}
+ */
+export function providerFoundationCss() {
+  const rules = [];
+  for (const [key, value] of Object.entries(DEFAULT_PROVIDER_THEME.tokens)) {
+    rules.push(`  ${key}: ${value};`);
+  }
+  return `:where(:root, :host) {\n${rules.join('\n')}\n}`;
+}
+
+/**
+ * Adopt the provider-foundation stylesheet on a document (idempotent, WeakMap-cached).
+ * @param {Document} [doc]
+ * @returns {CSSStyleSheet | null}
+ */
+export function ensureProviderFoundation(doc = globalThis.document) {
+  if (!doc) return null;
+  const Ctor = doc.defaultView?.CSSStyleSheet || (typeof CSSStyleSheet !== 'undefined' ? CSSStyleSheet : null);
+  if (!Ctor) return null;
+  let sheet = foundationSheets.get(doc);
+  if (!sheet) {
+    sheet = new Ctor();
+    sheet.replaceSync(providerFoundationCss());
+    foundationSheets.set(doc, sheet);
+  }
+  const systemCascadeSheet = systemCascadeSheets.get(doc);
+  const index = doc.adoptedStyleSheets.indexOf(systemCascadeSheet);
+  if (!doc.adoptedStyleSheets.includes(sheet)) {
+    if (index !== -1) {
+      const nextSheets = [...doc.adoptedStyleSheets];
+      nextSheets.splice(index, 0, sheet);
+      doc.adoptedStyleSheets = nextSheets;
+    } else {
+      doc.adoptedStyleSheets = [sheet, ...doc.adoptedStyleSheets];
+    }
+  }
+  return sheet;
+}
+
+/**
+ * Adopt the system-cascade stylesheet on a document (idempotent, WeakMap-cached).
+ * Custom properties inherit into shadow trees and `@property`
  * registrations are document-global, so document-level adoption lights up the T2 roles
  * for every component regardless of shadow boundaries. No-op outside a DOM context.
  * @param {Document} [doc]
  * @returns {CSSStyleSheet | null}
  */
 export function ensureSystemCascade(doc = globalThis.document) {
-  if (!doc || typeof CSSStyleSheet === 'undefined') return null;
-  if (!systemCascadeSheet) {
-    systemCascadeSheet = new CSSStyleSheet();
-    systemCascadeSheet.replaceSync(systemCascadeCss());
+  if (!doc) return null;
+  const Ctor = doc.defaultView?.CSSStyleSheet || (typeof CSSStyleSheet !== 'undefined' ? CSSStyleSheet : null);
+  if (!Ctor) return null;
+  let sheet = systemCascadeSheets.get(doc);
+  if (!sheet) {
+    sheet = new Ctor();
+    sheet.replaceSync(systemCascadeCss());
+    systemCascadeSheets.set(doc, sheet);
   }
-  if (!doc.adoptedStyleSheets.includes(systemCascadeSheet)) {
-    doc.adoptedStyleSheets = [...doc.adoptedStyleSheets, systemCascadeSheet];
+  ensureProviderFoundation(doc);
+  if (!doc.adoptedStyleSheets.includes(sheet)) {
+    doc.adoptedStyleSheets = [...doc.adoptedStyleSheets, sheet];
   }
-  return systemCascadeSheet;
+  return sheet;
 }

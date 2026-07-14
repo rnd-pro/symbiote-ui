@@ -160,6 +160,25 @@ flow hosts the real player mounted through the slot the author placed between th
 relevant paragraphs. Route, hash, and media policy stay with the host;
 `symbiote-ui` owns only the generic slot point and the readiness-safe host.
 
+## Connection and PCB Markers
+
+Edges use `kind`, `direction` (`none`, `forward`, `reverse`, `both`), and
+`design.marker.role` (`none`, `flow`, `gate`) to declare marker semantics.
+
+- `flow` is a trace-colored rectangle with a graph-background arrow cutout. It
+  appears only on directed primary edges and uses the longest safe routed segment.
+- `gate` is an explicit square on a directed primary edge. The library never
+  infers it from layout or assigns it randomly.
+- Containment, reference, association, secondary, and non-directional edges have
+  no edge-local marker.
+- Circular junctions are derived from real containment branches. Routes must
+  share the same `(from, out)` connector and a common trunk before splitting;
+  authoring `design.marker.role: junction` on an edge has no effect.
+
+`projectConnectionMarkerGeometry()` is the shared geometry projection for SVG
+and Canvas renderers. The animated focus-transition ball remains independent of
+the marker lifecycle.
+
 ## Package Boundary
 
 `symbiote-ui` owns Web Components, UI/layout primitives, manifests, schemas, rules, tokens, themes, locale helpers, provider-facing graph metadata, WebMCP metadata, and `custom-elements.json`.

@@ -73,6 +73,47 @@ export class ContextMenu extends Symbiote {
   #openTimer = null;
   #releaseController = null;
   #popoverOpen = false;
+  #targetX = 0;
+  #targetY = 0;
+  #resizeObserver = null;
+  #rafId = null;
+  #resizeRafId = null;
+
+  #view() {
+    return this.ownerDocument?.defaultView || globalThis.window || globalThis;
+  }
+
+  #requestAnimationFrame(callback) {
+    const view = this.#view();
+    if (typeof view.requestAnimationFrame === 'function') {
+      return view.requestAnimationFrame(callback);
+    }
+    return setTimeout(callback, 16);
+  }
+
+  #cancelRaf() {
+    if (this.#rafId !== null) {
+      const view = this.#view();
+      if (typeof view.cancelAnimationFrame === 'function') {
+        view.cancelAnimationFrame(this.#rafId);
+      } else {
+        clearTimeout(this.#rafId);
+      }
+      this.#rafId = null;
+    }
+  }
+
+  #cancelResizeRaf() {
+    if (this.#resizeRafId !== null) {
+      const view = this.#view();
+      if (typeof view.cancelAnimationFrame === 'function') {
+        view.cancelAnimationFrame(this.#resizeRafId);
+      } else {
+        clearTimeout(this.#resizeRafId);
+      }
+      this.#resizeRafId = null;
+    }
+  }
 
   init$ = {
     items: [],
@@ -87,7 +128,7 @@ export class ContextMenu extends Symbiote {
       const items = this.getItemsElements();
       if (items.length === 0) return;
 
-      const activeEl = document.activeElement;
+      const activeEl = this.ownerDocument?.activeElement;
       const activeItem = activeEl?.closest('ctx-item');
       let index = items.indexOf(activeItem);
 
@@ -128,8 +169,9 @@ export class ContextMenu extends Symbiote {
     if (!Number.isFinite(top)) top = CONTEXT_MENU_VIEWPORT_GUTTER;
 
     let rect = this.getBoundingClientRect();
-    let viewportWidth = Number(window.innerWidth);
-    let viewportHeight = Number(window.innerHeight);
+    const view = this.#view();
+    let viewportWidth = Number(view.innerWidth);
+    let viewportHeight = Number(view.innerHeight);
     if (Number.isFinite(viewportWidth) && viewportWidth > 0) {
       let maxLeft = Math.max(CONTEXT_MENU_VIEWPORT_GUTTER, viewportWidth - rect.width - CONTEXT_MENU_VIEWPORT_GUTTER);
       left = Math.min(Math.max(CONTEXT_MENU_VIEWPORT_GUTTER, left), maxLeft);
@@ -144,12 +186,22 @@ export class ContextMenu extends Symbiote {
   }
 
   #scheduleOpen(x, y) {
+    this.#targetX = x;
+    this.#targetY = y;
     if (this.#openTimer !== null) clearTimeout(this.#openTimer);
+    this.#cancelRaf();
     this.#openTimer = setTimeout(() => {
       this.#openTimer = null;
       if (!this.$.visible || !this.isConnected) return;
       this.#showNativePopover();
       this.#placeInViewport(x, y);
+      this.#rafId = this.#requestAnimationFrame(() => {
+        this.#rafId = null;
+        if (!this.$.visible || !this.isConnected) return;
+        if (this.matches(':popover-open')) {
+          this.#placeInViewport(x, y);
+        }
+      });
       this.focusFirstItem();
     }, 0);
   }
@@ -177,7 +229,9 @@ export class ContextMenu extends Symbiote {
 
   #openAfterPointerRelease(event, x, y) {
     this.#cancelPendingRelease();
-    let controller = new AbortController();
+    const view = this.#view();
+    const AbortControllerCtor = view.AbortController || globalThis.AbortController;
+    let controller = new AbortControllerCtor();
     this.#releaseController = controller;
     let sourcePointerId = Number(event.pointerId);
     if (!Number.isFinite(sourcePointerId)) sourcePointerId = null;
@@ -196,9 +250,9 @@ export class ContextMenu extends Symbiote {
       controller.abort();
       this.#scheduleOpen(x, y);
     };
-    window.addEventListener('pointerup', release, { signal: controller.signal });
-    window.addEventListener('pointercancel', cancel, { signal: controller.signal });
-    window.addEventListener('blur', cancel, { signal: controller.signal });
+    view.addEventListener('pointerup', release, { signal: controller.signal });
+    view.addEventListener('pointercancel', cancel, { signal: controller.signal });
+    view.addEventListener('blur', cancel, { signal: controller.signal });
   }
 
   /**
@@ -209,13 +263,17 @@ export class ContextMenu extends Symbiote {
    * @param {Element|null} [triggerEl]
    * @param {PointerEvent|MouseEvent|null} [activationEvent]
    */
-  show(x, y, items, triggerEl = document.activeElement, activationEvent = null) {
+  show(x, y, items, triggerEl = undefined, activationEvent = null) {
     this.#cancelPendingRelease();
+    this.#targetX = x;
+    this.#targetY = y;
     if (this.#openTimer !== null) {
       clearTimeout(this.#openTimer);
       this.#openTimer = null;
     }
-    this.#triggerEl = triggerEl;
+    this.#triggerEl = triggerEl === undefined
+      ? this.ownerDocument?.activeElement || null
+      : triggerEl;
     let iconNames = items.filter(i => i.icon).map((item) => item.icon);
     if (items.some((item) => item.checked)) iconNames.push('check');
     ensureMaterialSymbols(iconNames);
@@ -252,6 +310,8 @@ export class ContextMenu extends Symbiote {
       clearTimeout(this.#openTimer);
       this.#openTimer = null;
     }
+    this.#cancelRaf();
+    this.#cancelResizeRaf();
     this.$.visible = false;
     this.#hideNativePopover();
     this.$.items = [];
@@ -282,6 +342,19 @@ export class ContextMenu extends Symbiote {
     }
     this.addEventListener('beforetoggle', this.#onBeforeToggle);
     this.addEventListener('toggle', this.#onToggle);
+    const ResizeObserverCtor = this.#view().ResizeObserver || globalThis.ResizeObserver;
+    if (typeof ResizeObserverCtor === 'function') {
+      this.#resizeObserver = new ResizeObserverCtor(() => {
+        this.#cancelResizeRaf();
+        this.#resizeRafId = this.#requestAnimationFrame(() => {
+          this.#resizeRafId = null;
+          if (this.matches(':popover-open')) {
+            this.#placeInViewport(this.#targetX, this.#targetY);
+          }
+        });
+      });
+      this.#resizeObserver.observe(this);
+    }
   }
 
   disconnectedCallback() {
@@ -290,8 +363,14 @@ export class ContextMenu extends Symbiote {
       clearTimeout(this.#openTimer);
       this.#openTimer = null;
     }
+    this.#cancelRaf();
+    this.#cancelResizeRaf();
     this.removeEventListener('beforetoggle', this.#onBeforeToggle);
     this.removeEventListener('toggle', this.#onToggle);
+    if (this.#resizeObserver) {
+      this.#resizeObserver.disconnect();
+      this.#resizeObserver = null;
+    }
     super.disconnectedCallback?.();
   }
 

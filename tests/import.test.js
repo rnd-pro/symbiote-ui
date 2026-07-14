@@ -2255,3 +2255,19 @@ test('canvas graph source no longer exposes the plaque anchor or post-scene seam
   assert.doesNotMatch(source, /_postSceneRenderers/);
   assert.doesNotMatch(source, /projectCanvasRectFromWorld/);
 });
+
+test('disk JSON schemas exactly match inline manifest schemas', async () => {
+  const manifest = await import('../manifest/index.js');
+
+  const graphV1Disk = JSON.parse(await readFile(new URL('../schemas/graph-v1.json', import.meta.url), 'utf8'));
+  const graphModelV1Disk = JSON.parse(await readFile(new URL('../schemas/graph-model-v1.json', import.meta.url), 'utf8'));
+
+  const graphV1Inline = manifest.GRAPH_SCHEMAS['v1'];
+  const graphModelV1Inline = manifest.GRAPH_SCHEMAS['graph-model-v1'];
+
+  assert.ok(graphV1Inline);
+  assert.ok(graphModelV1Inline);
+
+  assert.deepEqual(graphV1Disk, graphV1Inline);
+  assert.deepEqual(graphModelV1Disk, graphModelV1Inline);
+});

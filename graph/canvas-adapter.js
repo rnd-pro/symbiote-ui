@@ -128,6 +128,9 @@ export function graphModelToCanvasGraphModel(rawModel, options = {}) {
       out: edge.source.port,
       in: edge.target.port,
       type: edge.kind,
+      kind: edge.kind,
+      direction: edge.direction || 'none',
+      design: copyObject(edge.design),
       label: edge.label,
       params: copyObject(edge.params),
       metadata: copyObject(edge.metadata),
@@ -183,6 +186,8 @@ export function canvasGraphModelToGraphModel(rawCanvasModel = {}, options = {}) 
     edges: edges.map((edge) => normalizeGraphEdge({
       id: edge.id,
       kind: edge.kind ?? edge.type,
+      direction: edge.direction,
+      design: edge.design,
       label: edge.label,
       source: { nodeId: edge.from, port: edge.out },
       target: { nodeId: edge.to, port: edge.in },

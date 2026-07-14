@@ -282,13 +282,19 @@ export class NodeEditor {
         }
         return obj;
       }),
-      connections: this.getConnections().map((c) => ({
-        id: c.id,
-        from: c.from,
-        out: c.out,
-        to: c.to,
-        in: c.in,
-      })),
+      connections: this.getConnections().map((c) => {
+        let obj = {
+          id: c.id,
+          from: c.from,
+          out: c.out,
+          to: c.to,
+          in: c.in,
+        };
+        if (c.kind !== undefined) obj.kind = c.kind;
+        if (c.direction !== undefined) obj.direction = c.direction;
+        if (c.design !== undefined) obj.design = c.design;
+        return obj;
+      }),
       frames: this.getFrames().map((f) => ({
         id: f.id,
         label: f.label,
@@ -409,6 +415,9 @@ export class NodeEditor {
 
       let conn = new Connection(srcNode, cd.out, tgtNode, cd.in);
       if (cd.id) conn.id = cd.id;
+      if (cd.kind !== undefined) conn.kind = cd.kind;
+      if (cd.direction !== undefined) conn.direction = cd.direction;
+      if (cd.design !== undefined) conn.design = cd.design;
       this.connections.set(conn.id, conn);
     }
 

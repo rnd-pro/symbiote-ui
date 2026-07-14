@@ -41,6 +41,15 @@ export class Connection {
 
     /** @type {boolean} */
     this.selected = false;
+
+    /** @type {string|undefined} */
+    this.kind = undefined;
+
+    /** @type {'none'|'forward'|'reverse'|'both'|undefined} */
+    this.direction = undefined;
+
+    /** @type {object|undefined} */
+    this.design = undefined;
   }
 }
 

@@ -245,3 +245,10 @@ Geometry registers are stored beside the scope using
 `cascade-geometry-register-change` event remain for stored bundles and
 host-driven geometry previews; the visible editor controls use `themeVariant`
 and `tabShape` instead of exposing the register presets directly.
+
+## Standalone document adoption
+
+`applyCascadeTheme(element, options)` adopts the provider foundation and system
+cascade in `element.ownerDocument`. Adoption is idempotent per document, so
+theme tokens resolve in iframes and other same-origin document realms without a
+separate global-style preload.

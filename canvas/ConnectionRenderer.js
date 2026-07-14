@@ -12,6 +12,23 @@
 import { getShape } from '../shapes/index.js';
 import { routePcbTrace } from './PcbRouter.js';
 import { alignSampledRouteEndpoints } from './CanvasGraph/CanvasGraphViewport.js';
+import {
+  projectConnectionMarkerGeometry,
+  resolveConnectionMarker,
+  resolveContainmentJunctions,
+} from './ConnectionMarker.js';
+
+function sampleBezier(startX, startY, cp1x, cp1y, cp2x, cp2y, endX, endY, count = 20) {
+  const points = [];
+  for (let i = 0; i <= count; i++) {
+    const t = i / count;
+    const mt = 1 - t;
+    const x = mt*mt*mt*startX + 3*mt*mt*t*cp1x + 3*mt*t*t*cp2x + t*t*t*endX;
+    const y = mt*mt*mt*startY + 3*mt*mt*t*cp1y + 3*mt*t*t*cp2y + t*t*t*endY;
+    points.push({ x, y });
+  }
+  return points;
+}
 
 function svgPathIdForConnection(connId) {
   let encoded = Array.from(String(connId), (char) => char.codePointAt(0).toString(16)).join('-');
@@ -91,9 +108,64 @@ function appendRouteSegment(route, points) {
   }
 }
 
+function applySvgJunctionState(junctionEl, pathById) {
+  const connectionIds = junctionEl.getAttribute('data-connection-ids')?.split(',') || [];
+  const paths = connectionIds.map((id) => pathById.get(id)).filter(Boolean);
+  const isSelected = paths.some((path) => path.hasAttribute('data-selected'));
+  const isActive = paths.some((path) => path.hasAttribute('data-active-conn'));
+  const isDimmed = !isActive && paths.some((path) => path.hasAttribute('data-dimmed'));
+  junctionEl.toggleAttribute('data-selected', isSelected);
+  junctionEl.toggleAttribute('data-active-conn', isActive);
+  junctionEl.toggleAttribute('data-dimmed', isDimmed);
+}
+
+export function reconcileSvgJunctionMarkers(svgLayer, connections, connectionPoints, editor) {
+  const junctions = resolveContainmentJunctions(connections, connectionPoints);
+  const activeKeys = new Set(junctions.map((junction) => junction.key));
+  const connectionById = new Map(connections.map((connection) => [String(connection.id), connection]));
+  const pathById = new Map(
+    Array.from(svgLayer.querySelectorAll('[data-conn-id]'), (path) => [
+      path.getAttribute('data-conn-id'),
+      path,
+    ])
+  );
+
+  for (const element of svgLayer.querySelectorAll('g[data-conn-marker^="junction::"]')) {
+    if (!activeKeys.has(element.getAttribute('data-conn-marker'))) element.remove();
+  }
+
+  for (const junction of junctions) {
+    const owner = connectionById.get(junction.ownerId);
+    const source = owner ? editor?.getNode(owner.from || owner.source?.nodeId) : null;
+    const color = source?.outputs?.[owner?.out]?.socket?.color || '';
+    updateSvgMarker(junction.key, junction, svgLayer, color);
+    const element = svgLayer.querySelector(`[data-conn-marker="${junction.key}"]`);
+    element.setAttribute('data-connection-ids', junction.connectionIds.join(','));
+    applySvgJunctionState(element, pathById);
+  }
+
+  return junctions;
+}
+
+export function renderConnectionBatch(connections, renderConnection, reconcileMarkers) {
+  let rendered = 0;
+  try {
+    for (const connection of connections) {
+      renderConnection(connection);
+      rendered++;
+    }
+  } finally {
+    reconcileMarkers();
+  }
+  return rendered;
+}
+
 export class ConnectionRenderer {
   /** @type {Map<string, import('../core/Connection.js').Connection>} */
   #connectionData = new Map();
+
+  /** @type {Map<string, Array<{x: number, y: number}>>} */
+  #connectionPoints = new Map();
 
   /** @type {SVGElement} */
   #svgLayer;
@@ -130,6 +202,9 @@ export class ConnectionRenderer {
   #progressivePcbBatchSize = 4;
   #processingProgressivePcb = false;
 
+  #batchMode = false;
+  #junctionsDirty = false;
+
   #pcbPathSignature(conn, pathStyle, geometry) {
     let rounded = [
       geometry.startX,
@@ -153,6 +228,9 @@ export class ConnectionRenderer {
       conn.out,
       conn.to,
       conn.in,
+      conn.kind || '',
+      conn.direction || '',
+      conn.design?.marker?.role || '',
       ...rounded,
     ].join(':');
   }
@@ -273,11 +351,15 @@ export class ConnectionRenderer {
     return null;
   }
 
-  /**
-   * Keep the SVG renderer compatible with NodeCanvas batch initialization.
-   * @param {boolean} _on
-   */
-  setBatchMode(_on) {}
+  /** Defer derived-junction reconciliation during NodeCanvas batch initialization. */
+  setBatchMode(on) {
+    const wasBatching = this.#batchMode;
+    this.#batchMode = Boolean(on);
+    if (wasBatching && !this.#batchMode && this.#junctionsDirty) {
+      this.#junctionsDirty = false;
+      this.#reconcileJunctions();
+    }
+  }
 
   /**
    * Read the current rendered node size. SVG nodes can resize after creation
@@ -404,9 +486,11 @@ export class ConnectionRenderer {
     const previousRectCache = this._nodeRectCache;
     this._nodeRectCache = this.#buildNodeRectCache();
     try {
-      for (const conn of conns) {
-        this.#render(conn);
-      }
+      renderConnectionBatch(
+        conns,
+        (conn) => this.#render(conn),
+        () => this.#reconcileJunctions(),
+      );
     } finally {
       this._nodeRectCache = previousRectCache || null;
     }
@@ -421,6 +505,7 @@ export class ConnectionRenderer {
     let toId = conn.to;
     this.#connectionData.delete(conn.id);
     this.#progressivePcbQueue.delete(conn.id);
+    this.#connectionPoints.delete(conn.id);
     let path = this.#svgLayer.querySelector(`[data-conn-id="${conn.id}"]`);
     if (path) {
 
@@ -436,14 +521,15 @@ export class ConnectionRenderer {
       let dot = this.#dotLayer.querySelector(`[data-conn-dot="${conn.id}-${end}"]`);
       if (dot) dot.remove();
     }
-    let arrow = this.#svgLayer.querySelector(`[data-conn-arrow="${conn.id}"]`);
-    if (arrow) arrow.remove();
+    let markerEl = this.#svgLayer.querySelector(`[data-conn-marker="${conn.id}"]`);
+    if (markerEl) markerEl.remove();
 
     let textEl = this.#getConnectionText(conn.id);
     if (textEl) textEl.remove();
 
     this.renderFreeDots(fromId);
     this.renderFreeDots(toId);
+    this.#reconcileJunctions();
   }
 
   #getConnectionText(connId) {
@@ -518,9 +604,11 @@ export class ConnectionRenderer {
     const previousRectCache = this._nodeRectCache;
     this._nodeRectCache = this.#buildNodeRectCache();
     try {
-      for (const conn of touchedConns) {
-        this.#render(conn, nodeId);
-      }
+      renderConnectionBatch(
+        touchedConns,
+        (conn) => this.#render(conn, nodeId),
+        () => this.#reconcileJunctions(),
+      );
     } finally {
       this._nodeRectCache = previousRectCache || null;
     }
@@ -659,9 +747,11 @@ export class ConnectionRenderer {
     }
 
 
-    for (const conn of conns) {
-      this.#render(conn);
-    }
+    renderConnectionBatch(
+      conns,
+      (conn) => this.#render(conn),
+      () => this.#reconcileJunctions(),
+    );
 
 
     for (const [nodeId, el] of this.#nodeViews) {
@@ -784,17 +874,21 @@ export class ConnectionRenderer {
   #rerenderAllConnections() {
     this.#cancelProgressivePcb();
     this.#clearAllSlots();
-    for (const [, conn] of this.#connectionData) {
-      this.#render(conn);
-    }
+    renderConnectionBatch(
+      this.#connectionData.values(),
+      (conn) => this.#render(conn),
+      () => this.#reconcileJunctions(),
+    );
   }
 
   #rerenderConnections(connIds) {
     for (const connId of connIds) this.#progressivePcbQueue.delete(connId);
-    for (const connId of connIds) {
-      let conn = this.#connectionData.get(connId);
-      if (conn) this.#render(conn);
-    }
+    const connections = Array.from(connIds, (connId) => this.#connectionData.get(connId)).filter(Boolean);
+    renderConnectionBatch(
+      connections,
+      (conn) => this.#render(conn),
+      () => this.#reconcileJunctions(),
+    );
   }
 
   #cancelProgressivePcb() {
@@ -874,11 +968,15 @@ export class ConnectionRenderer {
     this._nodeRectCache = this.#buildNodeRectCache();
     this.#processingProgressivePcb = true;
     try {
-      for (const connId of batch) {
-        this.#progressivePcbQueue.delete(connId);
-        let conn = this.#connectionData.get(connId);
-        if (conn) this.#render(conn, '', { fullPcb: true });
-      }
+      renderConnectionBatch(
+        batch,
+        (connId) => {
+          this.#progressivePcbQueue.delete(connId);
+          let conn = this.#connectionData.get(connId);
+          if (conn) this.#render(conn, '', { fullPcb: true });
+        },
+        () => this.#reconcileJunctions(),
+      );
     } finally {
       this.#processingProgressivePcb = false;
       this._nodeRectCache = previousRectCache || null;
@@ -922,6 +1020,20 @@ export class ConnectionRenderer {
       let connId = proxy.getAttribute('data-conn-proxy-id') || '';
       if (!keep || !keep.has(connId)) proxy.remove();
     }
+  }
+
+  #reconcileJunctions() {
+    if (this.#batchMode) {
+      this.#junctionsDirty = true;
+      return [];
+    }
+    this.#junctionsDirty = false;
+    return reconcileSvgJunctionMarkers(
+      this.#svgLayer,
+      [...this.#connectionData.values()],
+      this.#connectionPoints,
+      this.#editor
+    );
   }
 
   #globalTransientPathStyle() {
@@ -1202,9 +1314,12 @@ export class ConnectionRenderer {
         return;
       }
     }
+
     let d;
+    let points = [];
     if (pathStyle === 'straight') {
       d = `M ${startX} ${startY} L ${endX} ${endY}`;
+      points = [{ x: startX, y: startY }, { x: endX, y: endY }];
     } else if (pathStyle === 'orthogonal') {
       let connKeys = Array.from(this.#connectionData.keys());
       let connIndex = connKeys.indexOf(conn.id);
@@ -1318,6 +1433,7 @@ export class ConnectionRenderer {
         }
       }
       d = path;
+      points = pts;
     } else if (pathStyle === 'pcb-drag-proxy') {
       d = this.#buildPcbDragProxyPath(conn, transientRequest, {
         start: { x: startX, y: startY },
@@ -1325,6 +1441,8 @@ export class ConnectionRenderer {
         fromAngle: fromOffset.angle ?? 0,
         toAngle: toOffset.angle ?? 180,
       }) || `M ${startX} ${startY} L ${endX} ${endY}`;
+      points = [{ x: startX, y: startY }, { x: endX, y: endY }];
+      this.#connectionPoints.set(conn.id, points);
       this.#renderDragProxy(conn.id, d);
       return;
     } else if (pathStyle === 'pcb') {
@@ -1341,11 +1459,11 @@ export class ConnectionRenderer {
         quality: renderFullPcb ? 'full' : 'draft',
       });
       d = routed.path;
+      points = routed.renderPoints || routed.points || [];
       if (!renderFullPcb) {
         this.#scheduleProgressivePcb(conn.id);
       }
     } else {
-
       let fromAngleDeg, toAngleDeg;
 
       if (fromOffset.angle !== undefined) {
@@ -1377,7 +1495,9 @@ export class ConnectionRenderer {
       let cp2y = endY + Math.sin(toRad) * cpLen;
 
       d = `M ${startX} ${startY} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${endX} ${endY}`;
+      points = sampleBezier(startX, startY, cp1x, cp1y, cp2x, cp2y, endX, endY);
     }
+    this.#connectionPoints.set(conn.id, points);
 
     if (!path) {
       path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -1436,7 +1556,12 @@ export class ConnectionRenderer {
     this.#updateDot(conn.id, 'end', endX, endY, 'input', inSocketName);
 
 
-    this.#updateArrow(conn.id, d);
+    const marker = resolveConnectionMarker(points, conn, {
+      connections: [...this.#connectionData.values()],
+      connectionPoints: this.#connectionPoints,
+    });
+    let fromColor = fromNode?.outputs?.[conn.out]?.socket?.color;
+    updateSvgMarker(conn.id, marker, this.#svgLayer, fromColor);
 
     let labelText = conn.label || conn.metadata?.label || '';
     let textEl = this.#getConnectionText(conn.id);
@@ -1537,45 +1662,7 @@ export class ConnectionRenderer {
     dot.setAttribute('class', `sn-conn-dot ${sideClass} ${typeClass}`);
   }
 
-  /**
-   * Create or update a direction arrow at the midpoint of a bezier path
-   * @param {string} connId
-   * @param {string} pathD - SVG path d attribute
-   */
-  #updateArrow(connId, pathD) {
 
-    let tempPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    tempPath.setAttribute('d', pathD);
-
-
-    this.#svgLayer.appendChild(tempPath);
-    let totalLen = tempPath.getTotalLength();
-    if (totalLen < 1) {
-      tempPath.remove();
-      return;
-    }
-
-
-    let mid = tempPath.getPointAtLength(totalLen * 0.5);
-
-
-    let delta = Math.max(0.5, totalLen * 0.005);
-    let p1 = tempPath.getPointAtLength(Math.max(0, totalLen * 0.5 - delta));
-    let p2 = tempPath.getPointAtLength(Math.min(totalLen, totalLen * 0.5 + delta));
-    tempPath.remove();
-
-    let angle = (Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180) / Math.PI;
-
-    let arrow = this.#svgLayer.querySelector(`[data-conn-arrow="${connId}"]`);
-    if (!arrow) {
-      arrow = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-      arrow.setAttribute('data-conn-arrow', connId);
-      arrow.setAttribute('class', 'sn-conn-arrow');
-      arrow.setAttribute('points', '-5,-3.5 5,0 -5,3.5');
-      this.#svgLayer.appendChild(arrow);
-    }
-    arrow.setAttribute('transform', `translate(${mid.x},${mid.y}) rotate(${angle})`);
-  }
 
   /**
    * Apply socket-color gradient to connection path
@@ -1857,3 +1944,58 @@ export class ConnectionRenderer {
 
 /** @type {boolean} Set to true to enable debug logging for pin placement and routing */
 ConnectionRenderer.debug = false;
+
+/**
+ * Updates/renders the SVG marker.
+ * @param {string} connId - Connection ID
+ * @param {object} marker - Draw model
+ * @param {SVGElement} svgLayer - SVG layer to append to
+ * @param {string} traceColor - Trace color
+ */
+export function updateSvgMarker(connId, marker, svgLayer, traceColor) {
+  let markerEl = svgLayer.querySelector(`[data-conn-marker="${connId}"]`);
+
+  if (!marker || marker.type === 'none') {
+    if (markerEl) markerEl.remove();
+    return;
+  }
+
+  if (!markerEl) {
+    markerEl = svgLayer.ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'g');
+    markerEl.setAttribute('data-conn-marker', connId);
+    svgLayer.appendChild(markerEl);
+  }
+
+  markerEl.innerHTML = '';
+  markerEl.setAttribute('transform', `translate(${marker.x},${marker.y}) rotate(${(marker.angle * 180) / Math.PI})`);
+  markerEl.setAttribute('class', 'sn-conn-marker');
+  markerEl.setAttribute('data-type', marker.type);
+  if (traceColor) {
+    markerEl.style.setProperty('--sn-conn-marker-color', traceColor);
+  } else {
+    markerEl.style.removeProperty('--sn-conn-marker-color');
+  }
+
+  const backgroundFill = 'var(--sn-canvas-graph-bg, var(--sn-sys-surface))';
+  for (const primitive of projectConnectionMarkerGeometry(marker)) {
+    let element;
+    if (primitive.type === 'rect') {
+      element = svgLayer.ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      element.setAttribute('x', String(primitive.x));
+      element.setAttribute('y', String(primitive.y));
+      element.setAttribute('width', String(primitive.width));
+      element.setAttribute('height', String(primitive.height));
+    } else if (primitive.type === 'circle') {
+      element = svgLayer.ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      element.setAttribute('cx', String(primitive.x));
+      element.setAttribute('cy', String(primitive.y));
+      element.setAttribute('r', String(primitive.radius));
+    } else if (primitive.type === 'polygon') {
+      element = svgLayer.ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+      element.setAttribute('points', primitive.points.map((point) => point.join(',')).join(' '));
+    }
+    if (!element) continue;
+    element.setAttribute('fill', primitive.fill === 'background' ? backgroundFill : 'currentColor');
+    markerEl.appendChild(element);
+  }
+}

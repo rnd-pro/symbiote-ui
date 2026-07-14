@@ -594,3 +594,22 @@ function deepFreeze(value) {
   for (let child of Object.values(value)) deepFreeze(child);
   return Object.freeze(value);
 }
+
+export const CONNECTION_MARKER_METRICS = deepFreeze({
+  portClearance: 24,
+  bendClearance: 16,
+  labelClearance: 30,
+  minMarkerLength: 15,
+  minTrunk: 10,
+  minTail: 10,
+  flowWidth: 12,
+  flowHeight: 8,
+  flowArrowTailX: -3,
+  flowArrowTipX: 2.5,
+  flowArrowHalfHeight: 2.5,
+  flowBidirectionalTipX: 4.5,
+  flowBidirectionalBaseX: 1,
+  flowBidirectionalHalfHeight: 2,
+  junctionRadius: 3.5,
+  gateSize: 8,
+});

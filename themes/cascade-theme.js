@@ -2,6 +2,7 @@ import {
   getCascadeThemeRecipeDescriptor,
   resolveCascadeThemeRecipe,
 } from './theme-recipes.js';
+import { ensureSystemCascade } from './system-cascade.js';
 import { geometryRegisterScaleTokens, GEOMETRY_PROFILE_NAMES } from '../tokens/scale.js';
 import {
   CASCADE_THEME_CONTROL_LIST,
@@ -2198,6 +2199,7 @@ export {
 } from './theme-recipes.js';
 
 export function applyCascadeTheme(element, options = {}, eventOptions = {}) {
+  ensureSystemCascade(element?.ownerDocument ?? globalThis.document);
   let theme = createCascadeTheme(options);
   for (let [key, value] of Object.entries(theme.tokens)) {
     element?.style?.setProperty(key, value);

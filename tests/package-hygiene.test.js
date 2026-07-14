@@ -287,3 +287,37 @@ test('browser component modules stay behind the explicit UI entrypoint DOM guard
   assert.match(uiSource, /typeof window !== 'undefined'/);
   assert.match(uiSource, /typeof customElements !== 'undefined'/);
 });
+
+test('runner contract test: every browser test in graph-browser-smoke.test.js is in run-tests.js browserSmokeSegments', async () => {
+  const runTestsSource = await readFile(new URL('./run-tests.js', import.meta.url), 'utf8');
+  const smokeTestsSource = await readFile(new URL('./graph-browser-smoke.test.js', import.meta.url), 'utf8');
+
+  // Extract browserSmokeSegments array content
+  const segmentsMatch = runTestsSource.match(/const\s+browserSmokeSegments\s*=\s*\[([\s\S]*?)\];/);
+  assert.ok(segmentsMatch, 'Could not find browserSmokeSegments in run-tests.js');
+  const segmentLines = segmentsMatch[1]
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line.startsWith("'") || line.startsWith('"'))
+    .map(line => line.replace(/^['"]|['"],?$/g, ''));
+
+  const segmentsSet = new Set(segmentLines);
+
+  // Extract all test definitions in graph-browser-smoke.test.js
+  const testNameRegex = /test\(\s*(['"`])(.*?)\1/g;
+  let match;
+  const foundTests = [];
+  while ((match = testNameRegex.exec(smokeTestsSource)) !== null) {
+    foundTests.push(match[2]);
+  }
+
+  assert.ok(foundTests.length > 0, 'Should find at least some tests in graph-browser-smoke.test.js');
+
+  for (const testName of foundTests) {
+    assert.ok(
+      segmentsSet.has(testName),
+      `Browser test "${testName}" in graph-browser-smoke.test.js is missing from browserSmokeSegments in run-tests.js. ` +
+      `Please add it to the list.`
+    );
+  }
+});

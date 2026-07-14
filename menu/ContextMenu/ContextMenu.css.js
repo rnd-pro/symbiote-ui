@@ -15,14 +15,18 @@ export let styles = css`
     border: none;
     inset: auto;
     position: fixed;
-    min-width: 180px;
+    min-width: min(180px, calc(100vw - 16px));
+    max-width: calc(100vw - 16px);
+    max-height: calc(100vh - 16px);
+    box-sizing: border-box;
     background: var(--sn-sys-surface-overlay);
     border: 1px solid var(--sn-ctx-border);
     border-radius: var(--sn-radius-lg);
-    box-shadow: 0 8px 24px var(--sn-ctx-shadow-color);
+    box-shadow: var(--sn-ctx-shadow-color);
     padding: var(--sn-step-2);
-    overflow: hidden;
+    overflow: auto;
     color: var(--sn-ctx-color);
+    font-family: var(--sn-font, sans-serif);
 
     &:not(:popover-open) {
       display: none;
@@ -32,6 +36,7 @@ export let styles = css`
   .ctx-items {
     display: flex;
     flex-direction: column;
+    min-width: 0;
   }
 
   .sn-ctx-divider {
@@ -53,6 +58,9 @@ export let styles = css`
     align-items: center;
     gap: var(--sn-step-4);
     width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    overflow: hidden;
     padding: var(--sn-step-3) var(--sn-step-6);
     border: none;
     background: transparent;
@@ -90,11 +98,20 @@ export let styles = css`
 
   .sn-ctx-label {
     flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
     text-align: start;
   }
 
   .sn-ctx-detail {
+    flex: 0 1 40%;
+    min-width: 0;
+    max-width: 40%;
     margin-left: auto;
+    box-sizing: border-box;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     font-size: var(--sn-text-xs);
     color: var(--sn-ctx-detail-color);
     padding-left: var(--sn-step-6);

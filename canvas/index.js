@@ -7,6 +7,12 @@ export { PinExpansion } from './PinExpansion.js';
 export { ForceLayout } from './ForceLayout.js';
 export { FlowSimulator } from './FlowSimulator.js';
 export { routePcbTrace } from './PcbRouter.js';
+export {
+  drawCanvasMarker,
+  projectConnectionMarkerGeometry,
+  resolveConnectionMarker,
+  resolveContainmentJunctions,
+} from './ConnectionMarker.js';
 export { analyzePcbRoute, analyzePcbRouteSet, summarizePcbRouteQuality } from './PcbRouteDiagnostics.js';
 export {
   addNodesToGroup,

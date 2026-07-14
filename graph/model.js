@@ -106,6 +106,14 @@ export function normalizeGraphEdge(rawEdge) {
     params: asObject(data.params),
   };
 
+  const allowedDirections = new Set(['none', 'forward', 'reverse', 'both']);
+  edge.direction = allowedDirections.has(data.direction) ? data.direction : 'none';
+
+  edge.design = asObject(data.design);
+  edge.design.marker = asObject(edge.design.marker);
+  const role = edge.design.marker.role;
+  edge.design.marker.role = (role === 'flow' || role === 'gate') ? role : 'none';
+
   if (data.label != null) edge.label = String(data.label);
   if (data.metadata != null) edge.metadata = asObject(data.metadata);
 

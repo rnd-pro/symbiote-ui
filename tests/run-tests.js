@@ -26,6 +26,7 @@ const browserSmokeSegments = [
   'node-canvas grid LOD and chat pattern aliases remain independent in computed styles',
   'node-canvas context menu uses viewport coordinates and clamps to visible bounds',
   'node-canvas context menu survives native right-click pointer sequencing',
+  'standalone applyCascadeTheme computed style regression without preloading',
 ];
 const managedBrowserCandidates = [
   process.env.CHROME_BIN,

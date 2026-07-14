@@ -23,13 +23,15 @@ function snapDir(deg) {
 }
 
 function parallelGroup(connections, conn) {
-  return connections.filter((candidate) =>
+  const group = connections.filter((candidate) =>
     candidate.from === conn.from ||
     candidate.from === conn.to ||
     candidate.to === conn.from ||
     candidate.to === conn.to ||
     (candidate.from === conn.from && candidate.to === conn.to)
   );
+  group.sort((a, b) => String(a.id).localeCompare(String(b.id)));
+  return group;
 }
 
 function parallelShift(connections, conn, grid) {
@@ -427,6 +429,7 @@ function chooseFallbackRoute(candidates, rects, fromRect, toRect, grid, pad, end
 function buildPath(points, chamfer = 0) {
   const pts = simplifyCollinear(points);
   let path = `M ${pts[0].x} ${pts[0].y}`;
+  const renderPoints = [{ x: pts[0].x, y: pts[0].y }];
 
   for (let index = 1; index < pts.length; index += 1) {
     const prev = pts[index - 1];
@@ -452,6 +455,8 @@ function buildPath(points, chamfer = 0) {
           const postX = curr.x + (dx2 / len2) * c;
           const postY = curr.y + (dy2 / len2) * c;
           path += ` L ${preX} ${preY} L ${postX} ${postY}`;
+          renderPoints.push({ x: preX, y: preY });
+          renderPoints.push({ x: postX, y: postY });
           continue;
         }
       }
@@ -459,26 +464,20 @@ function buildPath(points, chamfer = 0) {
 
     if (Math.abs(curr.y - prev.y) < 0.5) {
       path += ` H ${curr.x}`;
+      renderPoints.push({ x: curr.x, y: prev.y });
     } else if (Math.abs(curr.x - prev.x) < 0.5) {
       path += ` V ${curr.y}`;
+      renderPoints.push({ x: prev.x, y: curr.y });
     } else {
       path += ` L ${curr.x} ${curr.y}`;
+      renderPoints.push({ x: curr.x, y: curr.y });
     }
   }
 
-  return { path, points: pts };
+  return { path, points: pts, renderPoints };
 }
 
-function midpointArrow(points) {
-  const index = Math.max(1, Math.floor(points.length / 2));
-  const p1 = points[index - 1];
-  const p2 = points[index] || points[index - 1];
-  return {
-    x: (p1.x + p2.x) / 2,
-    y: (p1.y + p2.y) / 2,
-    angle: Math.atan2(p2.y - p1.y, p2.x - p1.x),
-  };
-}
+
 
 function pointsHaveMinimumSegments(points, minLength) {
   return segmentDirections(points).every((segment) => segment.length >= minLength);
@@ -633,7 +632,7 @@ function compactTraceRoute({
     return {
       path: routed.path,
       points: routed.points,
-      arrow: midpointArrow(routed.points),
+      renderPoints: routed.renderPoints,
       strategy: 'compact-direct',
     };
   }
@@ -658,7 +657,7 @@ function compactTraceRoute({
       return {
         path: routed.path,
         points: routed.points,
-        arrow: midpointArrow(routed.points),
+        renderPoints: routed.renderPoints,
         strategy: 'compact-elbow',
       };
     }
@@ -696,7 +695,7 @@ function compactDirectRoute({
   return {
     path: routed.path,
     points: routed.points,
-    arrow: midpointArrow(routed.points),
+    renderPoints: routed.renderPoints,
     strategy: 'compact-direct',
   };
 }
@@ -712,7 +711,7 @@ function draftTraceRoute({ start, end, stubFrom, stubTo, grid, snapToGrid }) {
   return {
     path: routed.path,
     points: routed.points,
-    arrow: midpointArrow(routed.points),
+    renderPoints: routed.renderPoints,
     strategy: 'pcb-draft',
   };
 }
@@ -955,7 +954,7 @@ export function routePcbTrace({
   return {
     path: routed.path,
     points: routed.points,
-    arrow: midpointArrow(routed.points),
+    renderPoints: routed.renderPoints,
     strategy: 'pcb-lane',
   };
 }
