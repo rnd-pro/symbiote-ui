@@ -88,43 +88,9 @@ All notable changes to `symbiote-ui` will be documented in this file.
 - Added video-first Media Studio preview with `requestVideoFrameCallback`
   timeline hydration and a bounded WebCodecs precision decoder for scrub and
   frame-step windows; bitmap caching remains limited to sprites and thumbnails.
-- Added a Node-safe installable render clock for deterministic UI animation,
-  plus decoded-byte-bounded LRU proxy-frame caching with explicit bitmap release.
-- Added seekable CanvasGraph pulses through `pulseNode(..., { startTime })` and
-  `clearPulses()` for deterministic offline frame projection.
-- Added `CanvasGraph.setFrameDriver()` and `presentFrame()` for synchronous
-  externally driven canvas presentation without a competing animation-frame loop.
-- Added cascade theme variants (`modern`, `classic`) and project tab shape
-  controls (`frame`, `ear`, `classic-ear`) so hosts can restore the older Agent
-  Portal tab geometry without product-local CSS.
-- Added an independent `tabRadius` cascade control and public active-tab color
-  tokens, and removed the experimental tab-strip separator line.
-- Added an independent `cellRadius` cascade control so animated `cell-bg` dot
-  sizes are no longer coupled to UI corner radius.
-- Added `createDialogueStage`, `playDialogueTimeline`, `buildAlternatingTimeline`,
-  and `createDialoguePlayer` for multi-voice narrated tours — overlapping
-  per-persona speechSynthesis, a cue-driven timeline, and a play/pause/seek
-  transport controller; plus `sanitizeVoiceResponseText` now runs inside the
-  dialogue stage so spoken text is markdown/symbol-free.
-- Added `createPresenterCursor` and `playCursorScenario`
-  (`symbiote-ui/chat/presenter-cursor.js`) — an animated arrow cursor that
-  drag-selects any element with a marching-ants marquee and travels between
-  checkpoints along a curved path (`moveTo`/`clear`/`dispose`, Node-safe at
-  import), plus a player for agent-authored
-  `{ steps: [{ target, holdMs?, gesture?, label? }] }` scenarios with a host
-  `resolveTarget`, per-step `onStep`, configurable `defaultHoldMs`, and
-  `AbortSignal` support.
 - Added synchronous, seed-driven `presentAnnotationFrame` projection to the
   presenter cursor so offline render workers can reproduce all marker and symbol
   gestures without wall-clock or prior-frame state.
-- Added `actions` and `embed` custom-content message parts to `ChatMessageItem`
-  and the message model: an `actions` part
-  (`{ type: 'actions', actions: [{ id, label, icon, variant }] }`) renders inline
-  action buttons and emits `chat-message-action` / `chat-workspace-action`
-  `{ id, actionId, payload }`, while an `embed` part (`{ type: 'embed', key }`)
-  renders a keyed slot so `ChatTranscript` emits `chat-transcript-embeds-ready` /
-  `chat-workspace-embeds-ready` `{ embeds: [{ key, slot }] }` for hosts to mount
-  and re-attach live widgets.
 
 ### Fixed
 
@@ -157,6 +123,51 @@ All notable changes to `symbiote-ui` will be documented in this file.
   continuation.
 - `registerWebMcpTool()` now forwards native registration options, including
   `AbortSignal` and origin exposure, to `document.modelContext.registerTool()`.
+
+## [0.3.0-alpha.52] - 2026-07-10
+
+### Added
+
+- Added bounded, cancellation-aware Media Studio frame-sequence playback,
+  caption overlays, and external-clock timeline controls for synchronized
+  audio, seek, pause, and resume workflows.
+- Added a Node-safe installable render clock for deterministic UI animation,
+  plus decoded-byte-bounded LRU proxy-frame caching with explicit bitmap release.
+- Added seekable CanvasGraph pulses through `pulseNode(..., { startTime })` and
+  `clearPulses()` for deterministic offline frame projection.
+- Added `CanvasGraph.setFrameDriver()` and `presentFrame()` for synchronous
+  externally driven canvas presentation without a competing animation-frame loop.
+- Added cascade theme variants (`modern`, `classic`) and project tab shape
+  controls (`frame`, `ear`, `classic-ear`) so hosts can restore the older Agent
+  Portal tab geometry without product-local CSS.
+- Added an independent `tabRadius` cascade control and public active-tab color
+  tokens, and removed the experimental tab-strip separator line.
+- Added an independent `cellRadius` cascade control so animated `cell-bg` dot
+  sizes are no longer coupled to UI corner radius.
+- Added `createDialogueStage`, `playDialogueTimeline`, `buildAlternatingTimeline`,
+  and `createDialoguePlayer` for multi-voice narrated tours — overlapping
+  per-persona speechSynthesis, a cue-driven timeline, and a play/pause/seek
+  transport controller; plus `sanitizeVoiceResponseText` now runs inside the
+  dialogue stage so spoken text is markdown/symbol-free.
+- Added `createPresenterCursor` and `playCursorScenario`
+  (`symbiote-ui/chat/presenter-cursor.js`) — an animated arrow cursor that
+  drag-selects any element with a marching-ants marquee and travels between
+  checkpoints along a curved path (`moveTo`/`clear`/`dispose`, Node-safe at
+  import), plus a player for agent-authored
+  `{ steps: [{ target, holdMs?, gesture?, label? }] }` scenarios with a host
+  `resolveTarget`, per-step `onStep`, configurable `defaultHoldMs`, and
+  `AbortSignal` support.
+- Added `actions` and `embed` custom-content message parts to `ChatMessageItem`
+  and the message model: an `actions` part
+  (`{ type: 'actions', actions: [{ id, label, icon, variant }] }`) renders inline
+  action buttons and emits `chat-message-action` / `chat-workspace-action`
+  `{ id, actionId, payload }`, while an `embed` part (`{ type: 'embed', key }`)
+  renders a keyed slot so `ChatTranscript` emits `chat-transcript-embeds-ready` /
+  `chat-workspace-embeds-ready` `{ embeds: [{ key, slot }] }` for hosts to mount
+  and re-attach live widgets.
+
+### Fixed
+
 - Fixed cascade theme widget/editor slider rows staying stale or failing to
   apply range input after switching theme variants, and tuned the `classic`
   preset to sharp, no-outline chrome while keeping its lightness and chroma

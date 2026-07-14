@@ -2,6 +2,7 @@ import { acquireCurrentTestFileLock } from './test-lock.js';
 await acquireCurrentTestFileLock(import.meta.url);
 
 import assert from 'node:assert/strict';
+import { access } from 'node:fs/promises';
 import { test } from 'node:test';
 import { parseHTML } from 'linkedom';
 
@@ -54,6 +55,17 @@ installSsrDom();
 await import('../marketplace/PackCard/PackCard.js');
 await import('../marketplace/PackDetail/PackDetail.js');
 
+const WORKSPACE_PACKAGE_URL = new URL('../../symbiote-workspace/sharing/workspace-package.js', import.meta.url);
+
+async function fileExists(url) {
+  try {
+    await access(url);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function samplePackage(overrides = {}) {
   return {
     kind: 'symbiote-workspace-package',
@@ -104,10 +116,13 @@ test('pack-readiness helpers map projection status to display values', async () 
   assert.equal(summary.dependencies.components.length, 2);
 });
 
-test('pack-readiness projection from inspectWorkspacePackage feeds the variant mapping', async () => {
-  let { createPackageReadinessProjection } = await import(
-    '../../symbiote-workspace/sharing/workspace-package.js'
-  );
+test('pack-readiness projection from inspectWorkspacePackage feeds the variant mapping', async (t) => {
+  if (!await fileExists(WORKSPACE_PACKAGE_URL)) {
+    t.skip('symbiote-workspace is not available in this checkout');
+    return;
+  }
+
+  let { createPackageReadinessProjection } = await import(WORKSPACE_PACKAGE_URL.href);
   let { readinessVariant } = await import('../marketplace/pack-readiness.js');
 
   let ready = createPackageReadinessProjection({ valid: true, ready: true });
