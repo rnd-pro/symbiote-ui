@@ -23,6 +23,9 @@ const browserSmokeSegments = [
   'three spatial graph adapter renders and drags through the browser module path',
   'cascade lab chat composer keeps voice controls inside the input surface responsively',
   'node-canvas setEditorModel renders the advertised serializable WebMCP model path',
+  'node-canvas grid LOD and chat pattern aliases remain independent in computed styles',
+  'node-canvas context menu uses viewport coordinates and clamps to visible bounds',
+  'node-canvas context menu survives native right-click pointer sequencing',
 ];
 const managedBrowserCandidates = [
   process.env.CHROME_BIN,

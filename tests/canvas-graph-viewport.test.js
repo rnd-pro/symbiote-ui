@@ -58,3 +58,35 @@ test('CanvasGraph exposes clamped absolute viewport projection', async () => {
     }
   }
 });
+
+test('CanvasViewport grid LOD keeps dots legible across deep zoom', async () => {
+  const { resolveGridLOD } = await import('../canvas/CanvasViewport.js');
+
+  const zooms = [1, 0.5, 0.49, 0.24, 0.170527, 0.08, 0.0742262, 0.001];
+  const expectedScales = {
+    '1': 1,
+    '0.5': 1,
+    '0.49': 2,
+    '0.24': 4,
+    '0.170527': 4,
+    '0.08': 8,
+    '0.0742262': 8,
+    '0.001': 512,
+  };
+
+  for (const zoom of zooms) {
+    const scale = resolveGridLOD(zoom);
+    const expectedScale = expectedScales[String(zoom)];
+    assert.equal(scale, expectedScale, `zoom ${zoom} expected scale ${expectedScale} but got ${scale}`);
+
+    const finalScreenScale = zoom * scale;
+    assert.ok(
+      finalScreenScale >= 0.5 && finalScreenScale <= 1.0,
+      `zoom ${zoom} with scale ${scale} gave screen scale ${finalScreenScale} outside [0.5, 1]`
+    );
+  }
+
+  for (const invalidZoom of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
+    assert.equal(resolveGridLOD(invalidZoom), 1);
+  }
+});

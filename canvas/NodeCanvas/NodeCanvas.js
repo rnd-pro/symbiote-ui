@@ -577,15 +577,16 @@ export class NodeCanvas extends Symbiote {
       onDropEmpty: (x, y, socketData) => {
         this._actions.handleDropEmpty(x, y, socketData);
 
-        let menuX = x * this.$.zoom + this.$.panX;
-        let menuY = y * this.$.zoom + this.$.panY;
+        let rect = this.ref.canvasContainer.getBoundingClientRect();
+        let menuX = rect.left + x * this.$.zoom + this.$.panX;
+        let menuY = rect.top + y * this.$.zoom + this.$.panY;
         this.ref.contextMenu?.show(menuX, menuY, [
           {
             label: translate('nodeCanvas.addNode'),
             icon: 'add_box',
             action: () => this._editor?.emit('contextadd', { x, y }),
           },
-        ]);
+        ], this.ref.canvasContainer);
       },
       findNearestDot: (wx, wy) => this._connRenderer?.findNearestDot(wx, wy),
     });

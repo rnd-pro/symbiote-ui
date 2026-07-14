@@ -39,6 +39,8 @@ chat-workspace[sidebar="hidden"] {
   inset: 0;
   z-index: 0;
   pointer-events: none;
+  --sn-cell-base-alpha: var(--sn-chat-cell-base-alpha);
+  --sn-cell-alpha-span: var(--sn-chat-cell-alpha-span);
 }
 
 .chat-workspace-transcript {

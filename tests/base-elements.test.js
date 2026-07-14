@@ -298,6 +298,18 @@ test('context-menu implements roving focus and APG item styling', async () => {
 
   el.hide();
   assert.equal(el.$.visible, false);
+
+  Object.defineProperties(window, {
+    innerWidth: { configurable: true, value: 320 },
+    innerHeight: { configurable: true, value: 240 },
+  });
+  el.getBoundingClientRect = () => ({ width: 180, height: 120 });
+  el.show(310, 230, items);
+  await nextRenderTick();
+  assert.equal(el.style.left, '132px');
+  assert.equal(el.style.top, '112px');
+  el.hide();
+
   el.remove();
 });
 

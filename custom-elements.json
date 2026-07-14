@@ -10530,6 +10530,14 @@
             {
               "name": "--sn-chat-transcript-top-sentinel-height",
               "description": "Theme CSS custom property consumed by chat-transcript."
+            },
+            {
+              "name": "--sn-chat-cell-base-alpha",
+              "description": "Theme CSS custom property consumed by chat-transcript."
+            },
+            {
+              "name": "--sn-chat-cell-alpha-span",
+              "description": "Theme CSS custom property consumed by chat-transcript."
             }
           ],
           "contract": {
@@ -10665,7 +10673,9 @@
               "--sn-chat-live-icon-size",
               "--sn-composer-send-size",
               "--sn-composer-send-icon-size",
-              "--sn-chat-transcript-top-sentinel-height"
+              "--sn-chat-transcript-top-sentinel-height",
+              "--sn-chat-cell-base-alpha",
+              "--sn-chat-cell-alpha-span"
             ],
             "status": "draft",
             "schemaVersion": "component-descriptor-v2",
@@ -10835,7 +10845,9 @@
                 "--sn-chat-live-icon-size",
                 "--sn-composer-send-size",
                 "--sn-composer-send-icon-size",
-                "--sn-chat-transcript-top-sentinel-height"
+                "--sn-chat-transcript-top-sentinel-height",
+                "--sn-chat-cell-base-alpha",
+                "--sn-chat-cell-alpha-span"
               ],
               "status": "draft",
               "schemaVersion": "component-descriptor-v2",
@@ -11244,7 +11256,11 @@
               "description": "Theme CSS custom property consumed by chat-workspace."
             },
             {
-              "name": "--sn-theme-pattern-brightness",
+              "name": "--sn-chat-cell-base-alpha",
+              "description": "Theme CSS custom property consumed by chat-workspace."
+            },
+            {
+              "name": "--sn-chat-cell-alpha-span",
               "description": "Theme CSS custom property consumed by chat-workspace."
             },
             {
@@ -11559,7 +11575,8 @@
               "--sn-chat-gap",
               "--sn-composer-bg",
               "--sn-composer-padding",
-              "--sn-theme-pattern-brightness",
+              "--sn-chat-cell-base-alpha",
+              "--sn-chat-cell-alpha-span",
               "--sn-cell-bg",
               "--sn-chat-transcript-top-sentinel-height"
             ],
@@ -12075,7 +12092,8 @@
                 "--sn-chat-gap",
                 "--sn-composer-bg",
                 "--sn-composer-padding",
-                "--sn-theme-pattern-brightness",
+                "--sn-chat-cell-base-alpha",
+                "--sn-chat-cell-alpha-span",
                 "--sn-cell-bg",
                 "--sn-chat-transcript-top-sentinel-height"
               ],
@@ -38287,8 +38305,8 @@
           "customElement": true,
           "name": "ContextMenu",
           "tagName": "context-menu",
-          "description": "Generic context menu custom element for graph and canvas actions. Renders via the native `popover` attribute (popover=\"auto\") for top-layer stacking and light-dismiss (outside click / Escape); `show(x, y, items)` still places it at explicit screen coordinates.",
-          "componentDescription": "Generic context menu custom element for graph and canvas actions. Renders via the native `popover` attribute (popover=\"auto\") for top-layer stacking and light-dismiss (outside click / Escape); `show(x, y, items)` still places it at explicit screen coordinates. Use this menu UI component when composing menu UI. Capabilities: context-menu, positioned-overlay, action-list, native-popover, light-dismiss. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "description": "Generic context menu custom element for graph and canvas actions. Renders via the native `popover` attribute (popover=\"auto\") for top-layer stacking and light-dismiss (outside click / Escape); `show(x, y, items, triggerEl?, activationEvent?)` places it at viewport coordinates and can defer opening until a secondary-button release.",
+          "componentDescription": "Generic context menu custom element for graph and canvas actions. Renders via the native `popover` attribute (popover=\"auto\") for top-layer stacking and light-dismiss (outside click / Escape); `show(x, y, items, triggerEl?, activationEvent?)` places it at viewport coordinates and can defer opening until a secondary-button release. Use this menu UI component when composing menu UI. Capabilities: context-menu, positioned-overlay, action-list, native-popover, light-dismiss. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
           "attributes": [
             {
               "name": "popover",
@@ -38318,12 +38336,12 @@
             {
               "kind": "method",
               "name": "show",
-              "description": "Shows the menu at screen coordinates with action descriptors."
+              "description": "show(x, y, items, triggerEl?, activationEvent?) opens at viewport coordinates; an active secondary-button event defers showPopover() until its matching pointerup."
             },
             {
               "kind": "method",
               "name": "hide",
-              "description": "Hides the menu and clears actions."
+              "description": "Hides the menu and clears actions; a pending or already closed native popover is handled without an invalid state transition."
             }
           ],
           "events": [],
@@ -38397,12 +38415,12 @@
               {
                 "name": "show",
                 "type": "function",
-                "description": "Shows the menu at screen coordinates with action descriptors (calls showPopover())."
+                "description": "show(x, y, items, triggerEl?, activationEvent?) opens at viewport coordinates; an active secondary-button event defers showPopover() until its matching pointerup."
               },
               {
                 "name": "hide",
                 "type": "function",
-                "description": "Hides the menu and clears actions (calls hidePopover())."
+                "description": "Hides the menu and clears actions; a pending or already closed native popover is handled without an invalid state transition."
               }
             ],
             "events": [],
@@ -38436,9 +38454,9 @@
             }
           },
           "agent": {
-            "componentDescription": "Generic context menu custom element for graph and canvas actions. Renders via the native `popover` attribute (popover=\"auto\") for top-layer stacking and light-dismiss (outside click / Escape); `show(x, y, items)` still places it at explicit screen coordinates. Use this menu UI component when composing menu UI. Capabilities: context-menu, positioned-overlay, action-list, native-popover, light-dismiss. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "componentDescription": "Generic context menu custom element for graph and canvas actions. Renders via the native `popover` attribute (popover=\"auto\") for top-layer stacking and light-dismiss (outside click / Escape); `show(x, y, items, triggerEl?, activationEvent?)` places it at viewport coordinates and can defer opening until a secondary-button release. Use this menu UI component when composing menu UI. Capabilities: context-menu, positioned-overlay, action-list, native-popover, light-dismiss. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
             "semanticRole": "menu UI component",
-            "usage": "Render or compose <context-menu> when the host needs generic context menu custom element for graph and canvas actions. renders via the native `popover` attribute (popover=\"auto\") for top-layer stacking and light-dismiss (outside click / escape); `show(x, y, items)` still places it at explicit screen coordinates.",
+            "usage": "Render or compose <context-menu> when the host needs generic context menu custom element for graph and canvas actions. renders via the native `popover` attribute (popover=\"auto\") for top-layer stacking and light-dismiss (outside click / escape); `show(x, y, items, triggerel?, activationevent?)` places it at viewport coordinates and can defer opening until a secondary-button release.",
             "dataOwnership": "host-owned props and attributes; component owns presentation state",
             "webmcp": {
               "mode": "described-only",
@@ -38485,12 +38503,12 @@
                 {
                   "name": "show",
                   "type": "function",
-                  "description": "Shows the menu at screen coordinates with action descriptors (calls showPopover())."
+                  "description": "show(x, y, items, triggerEl?, activationEvent?) opens at viewport coordinates; an active secondary-button event defers showPopover() until its matching pointerup."
                 },
                 {
                   "name": "hide",
                   "type": "function",
-                  "description": "Hides the menu and clears actions (calls hidePopover())."
+                  "description": "Hides the menu and clears actions; a pending or already closed native popover is handled without an invalid state transition."
                 }
               ],
               "events": [],

@@ -11,7 +11,7 @@ let theme = createCascadeTheme({
   contrast: 58,
   chroma: 89,
   hue: 218,
-  pattern: 0,
+  pattern: 100,
   outline: 0,
   type: 100,
   heading: 100,
@@ -96,8 +96,10 @@ The contract writes both low-level controls such as `--sn-theme-bg-lightness`,
 motion sets transition durations to zero and pauses cascade-driven animations.
 The `pattern` control tunes animated background dots through
 `--sn-cell-base-alpha`, `--sn-cell-alpha-span`, and
-`--sn-theme-pattern-brightness`; glare, vignette, and noise stay stable so the
-ambient gradient does not shift with dot intensity.
+`--sn-theme-pattern-brightness`, while chat backgrounds remain on fixed
+`--sn-chat-cell-base-alpha` and `--sn-chat-cell-alpha-span` aliases independently
+of global pattern; glare, vignette, and noise stay stable so the ambient
+gradient does not shift with dot intensity.
 The `cellRadius` control is separate from UI corner radius and writes
 `--sn-theme-cell-radius-scale`, which drives `--sn-cell-min-radius` and
 `--sn-cell-max-radius` for `cell-bg`. Sharp panels can therefore use
@@ -165,7 +167,7 @@ when the last temporary panel is removed. Persistent host layout panels use
 The bounded cascade state includes two discrete theme variants:
 
 - `themeVariant: "classic"` is the library default and restores the earlier Agent Portal shell direction
-  (`hue: 218`, `chroma: 89`, dark 10/13 derived surfaces, pattern 0),
+  (`hue: 218`, `chroma: 89`, dark 10/13 derived surfaces, pattern 100),
   uses sharp/no-outline chrome, and defaults to `tabShape: "classic-ear"`.
   It keeps `bgLightness`, `surfaceLightness`, `accentLightness`, and
   `accentChroma` on auto so the brightness and chroma sliders keep affecting

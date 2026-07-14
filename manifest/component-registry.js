@@ -3679,7 +3679,7 @@ export let COMPONENTS = [
     className: 'ContextMenu',
     module: 'menu/ContextMenu/ContextMenu.js',
     category: 'menu',
-    description: 'Generic context menu custom element for graph and canvas actions. Renders via the native `popover` attribute (popover="auto") for top-layer stacking and light-dismiss (outside click / Escape); `show(x, y, items)` still places it at explicit screen coordinates.',
+    description: 'Generic context menu custom element for graph and canvas actions. Renders via the native `popover` attribute (popover="auto") for top-layer stacking and light-dismiss (outside click / Escape); `show(x, y, items, triggerEl?, activationEvent?)` places it at viewport coordinates and can defer opening until a secondary-button release.',
     contract: {
       status: 'draft',
       schemaVersion: 'component-descriptor-v2',
@@ -3693,8 +3693,8 @@ export let COMPONENTS = [
         { name: 'visible', type: 'boolean', description: 'Menu visibility state.' },
       ],
       methods: [
-        { name: 'show', type: 'function', description: 'Shows the menu at screen coordinates with action descriptors (calls showPopover()).' },
-        { name: 'hide', type: 'function', description: 'Hides the menu and clears actions (calls hidePopover()).' },
+        { name: 'show', type: 'function', description: 'show(x, y, items, triggerEl?, activationEvent?) opens at viewport coordinates; an active secondary-button event defers showPopover() until its matching pointerup.' },
+        { name: 'hide', type: 'function', description: 'Hides the menu and clears actions; a pending or already closed native popover is handled without an invalid state transition.' },
       ],
       events: [],
       themeAliases: [
@@ -5120,7 +5120,8 @@ export let COMPONENTS = [
         '--sn-chat-gap',
         '--sn-composer-bg',
         '--sn-composer-padding',
-        '--sn-theme-pattern-brightness',
+        '--sn-chat-cell-base-alpha',
+        '--sn-chat-cell-alpha-span',
         '--sn-cell-bg',
       ],
     },
@@ -5230,6 +5231,8 @@ export let COMPONENTS = [
         '--sn-chat-gap',
         '--sn-chat-transcript-padding',
         '--sn-chat-transcript-top-sentinel-height',
+        '--sn-chat-cell-base-alpha',
+        '--sn-chat-cell-alpha-span',
         '--sn-chat-scroll-bottom',
         '--sn-chat-tool-padding',
         '--sn-chat-tool-font-size',

@@ -4,6 +4,16 @@ All notable changes to `symbiote-ui` will be documented in this file.
 
 ## Unreleased
 
+## [0.3.0-alpha.58] - 2026-07-14
+
+### Added
+- Added mode-aware fixed aliases `--sn-chat-cell-base-alpha` and `--sn-chat-cell-alpha-span` for chat background independence.
+- Added internal power-of-two level-of-detail (LOD) grid calculation for CanvasViewport.
+
+### Changed
+- Default cascade `Pattern` to 100 for library defaults and both variant reset presets.
+- Fixed graph context menus to use viewport coordinates and remain inside the visible browser area.
+
 ## [0.3.0-alpha.57] - 2026-07-14
 
 ### Added

@@ -241,8 +241,8 @@ export class ViewportActions {
     if (!contextMenuEl) return;
 
     let rect = container.getBoundingClientRect();
-    let menuX = e.clientX - rect.left;
-    let menuY = e.clientY - rect.top;
+    let menuX = e.clientX;
+    let menuY = e.clientY;
 
     if (target) {
       let nodeId = target.getAttribute('node-id');
@@ -250,7 +250,7 @@ export class ViewportActions {
         { label: translate('context.deleteNode'), icon: 'delete', action: () => this.deleteNode(nodeId) },
         { label: translate('context.cloneNode'), icon: 'content_copy', action: () => this.cloneNode(nodeId) },
         { label: translate('context.selectAll'), icon: 'select_all', action: () => this.selectAll() },
-      ]);
+      ], e.target, e);
     } else if (connTarget) {
       let connId = connTarget.getAttribute('data-conn-id');
       contextMenuEl.show(menuX, menuY, [
@@ -259,7 +259,7 @@ export class ViewportActions {
           icon: 'link_off',
           action: () => this.deleteConnection(connId),
         },
-      ]);
+      ], e.target, e);
     } else {
       let graphX = (e.clientX - rect.left - transform.panX) / transform.zoom;
       let graphY = (e.clientY - rect.top - transform.panY) / transform.zoom;
@@ -287,7 +287,7 @@ export class ViewportActions {
           icon: 'auto_fix_high',
           action: () => this.#editor?.emit('autolayout'),
         },
-      ]);
+      ], e.target, e);
     }
   }
 

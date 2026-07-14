@@ -4,6 +4,8 @@ import { bringOverlayToFront } from '../../ui/overlay-stack.js';
 import template, { ctxItemTemplate } from './ContextMenu.tpl.js';
 import { styles } from './ContextMenu.css.js';
 
+const CONTEXT_MENU_VIEWPORT_GUTTER = 8;
+
 class CtxItem extends Symbiote {
   init$ = {
     label: '',
@@ -68,6 +70,9 @@ CtxItem.reg('ctx-item');
 export class ContextMenu extends Symbiote {
   _actions = new Map();
   #triggerEl = null;
+  #openTimer = null;
+  #releaseController = null;
+  #popoverOpen = false;
 
   init$ = {
     items: [],
@@ -116,7 +121,100 @@ export class ContextMenu extends Symbiote {
     }
   }
 
-  show(x, y, items, triggerEl = document.activeElement) {
+  #placeInViewport(x, y) {
+    let left = Number(x);
+    let top = Number(y);
+    if (!Number.isFinite(left)) left = CONTEXT_MENU_VIEWPORT_GUTTER;
+    if (!Number.isFinite(top)) top = CONTEXT_MENU_VIEWPORT_GUTTER;
+
+    let rect = this.getBoundingClientRect();
+    let viewportWidth = Number(window.innerWidth);
+    let viewportHeight = Number(window.innerHeight);
+    if (Number.isFinite(viewportWidth) && viewportWidth > 0) {
+      let maxLeft = Math.max(CONTEXT_MENU_VIEWPORT_GUTTER, viewportWidth - rect.width - CONTEXT_MENU_VIEWPORT_GUTTER);
+      left = Math.min(Math.max(CONTEXT_MENU_VIEWPORT_GUTTER, left), maxLeft);
+    }
+    if (Number.isFinite(viewportHeight) && viewportHeight > 0) {
+      let maxTop = Math.max(CONTEXT_MENU_VIEWPORT_GUTTER, viewportHeight - rect.height - CONTEXT_MENU_VIEWPORT_GUTTER);
+      top = Math.min(Math.max(CONTEXT_MENU_VIEWPORT_GUTTER, top), maxTop);
+    }
+
+    this.style.left = `${left}px`;
+    this.style.top = `${top}px`;
+  }
+
+  #scheduleOpen(x, y) {
+    if (this.#openTimer !== null) clearTimeout(this.#openTimer);
+    this.#openTimer = setTimeout(() => {
+      this.#openTimer = null;
+      if (!this.$.visible || !this.isConnected) return;
+      this.#showNativePopover();
+      this.#placeInViewport(x, y);
+      this.focusFirstItem();
+    }, 0);
+  }
+
+  #showNativePopover() {
+    if (this.#popoverOpen) return;
+    this.showPopover();
+    this.#popoverOpen = true;
+  }
+
+  #hideNativePopover() {
+    if (!this.#popoverOpen) return;
+    try {
+      this.hidePopover();
+    } finally {
+      this.#popoverOpen = false;
+    }
+  }
+
+  #cancelPendingRelease() {
+    if (this.#releaseController === null) return;
+    this.#releaseController.abort();
+    this.#releaseController = null;
+  }
+
+  #openAfterPointerRelease(event, x, y) {
+    this.#cancelPendingRelease();
+    let controller = new AbortController();
+    this.#releaseController = controller;
+    let sourcePointerId = Number(event.pointerId);
+    if (!Number.isFinite(sourcePointerId)) sourcePointerId = null;
+
+    let cancel = () => {
+      if (this.#releaseController !== controller) return;
+      this.#releaseController = null;
+      controller.abort();
+      this.hide();
+    };
+    let release = (pointerEvent) => {
+      if (sourcePointerId !== null && pointerEvent.pointerId !== sourcePointerId) return;
+      if (pointerEvent.button !== 2) return;
+      if (this.#releaseController !== controller) return;
+      this.#releaseController = null;
+      controller.abort();
+      this.#scheduleOpen(x, y);
+    };
+    window.addEventListener('pointerup', release, { signal: controller.signal });
+    window.addEventListener('pointercancel', cancel, { signal: controller.signal });
+    window.addEventListener('blur', cancel, { signal: controller.signal });
+  }
+
+  /**
+   * Show action descriptors at viewport coordinates.
+   * @param {number} x
+   * @param {number} y
+   * @param {Array<object>} items
+   * @param {Element|null} [triggerEl]
+   * @param {PointerEvent|MouseEvent|null} [activationEvent]
+   */
+  show(x, y, items, triggerEl = document.activeElement, activationEvent = null) {
+    this.#cancelPendingRelease();
+    if (this.#openTimer !== null) {
+      clearTimeout(this.#openTimer);
+      this.#openTimer = null;
+    }
     this.#triggerEl = triggerEl;
     let iconNames = items.filter(i => i.icon).map((item) => item.icon);
     if (items.some((item) => item.checked)) iconNames.push('check');
@@ -141,17 +239,21 @@ export class ContextMenu extends Symbiote {
     this.style.top = `${y}px`;
     bringOverlayToFront(this);
     this.$.visible = true;
-    this.showPopover();
-
-    setTimeout(() => {
-      this.focusFirstItem();
-    }, 0);
+    if (activationEvent && (activationEvent.buttons & 2) !== 0) {
+      this.#openAfterPointerRelease(activationEvent, x, y);
+    } else {
+      this.#scheduleOpen(x, y);
+    }
   }
 
   hide() {
-    if (!this.$.visible) return;
+    this.#cancelPendingRelease();
+    if (this.#openTimer !== null) {
+      clearTimeout(this.#openTimer);
+      this.#openTimer = null;
+    }
     this.$.visible = false;
-    this.hidePopover();
+    this.#hideNativePopover();
     this.$.items = [];
     this._actions.clear();
     if (this.#triggerEl && typeof this.#triggerEl.focus === 'function') {
@@ -162,8 +264,13 @@ export class ContextMenu extends Symbiote {
 
   // Fires for native light-dismiss (Escape / outside click) as well as our own
   // showPopover()/hidePopover() calls; hide() is idempotent once $.visible is false.
+  #onBeforeToggle = (event) => {
+    this.#popoverOpen = event.newState === 'open';
+  };
+
   #onToggle = (event) => {
-    if (event.newState === 'closed') {
+    this.#popoverOpen = event.newState === 'open';
+    if (event.newState === 'closed' && this.#releaseController === null && this.#openTimer === null) {
       this.hide();
     }
   };
@@ -173,10 +280,17 @@ export class ContextMenu extends Symbiote {
     if (!this.hasAttribute('popover')) {
       this.setAttribute('popover', 'auto');
     }
+    this.addEventListener('beforetoggle', this.#onBeforeToggle);
     this.addEventListener('toggle', this.#onToggle);
   }
 
   disconnectedCallback() {
+    this.#cancelPendingRelease();
+    if (this.#openTimer !== null) {
+      clearTimeout(this.#openTimer);
+      this.#openTimer = null;
+    }
+    this.removeEventListener('beforetoggle', this.#onBeforeToggle);
     this.removeEventListener('toggle', this.#onToggle);
     super.disconnectedCallback?.();
   }

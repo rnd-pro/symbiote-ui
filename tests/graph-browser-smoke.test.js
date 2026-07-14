@@ -3257,3 +3257,501 @@ test('node-canvas setEditorModel renders the advertised serializable WebMCP mode
     await server.close();
   }
 });
+
+test('node-canvas grid LOD and chat pattern aliases remain independent in computed styles', { timeout: BROWSER_SMOKE_TIMEOUT_MS }, async () => {
+  const chromePath = findChrome();
+  assertBrowserSmokeRuntime();
+
+  const server = await createStaticServer();
+  let chromeSession;
+  let page;
+  try {
+    chromeSession = await launchChromeSession(chromePath, 'grid LOD and chat pattern smoke');
+    page = await withTimeout(
+      openPage(chromeSession.endpoint, `${server.url}/demo/cascade-theme-lab.html?v=grid-chat-pattern-smoke`),
+      22000,
+      'grid and chat pattern page open'
+    );
+    const expression = String.raw`
+    (async () => {
+      const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+      await Promise.all([
+        customElements.whenDefined('node-canvas'),
+        customElements.whenDefined('cell-bg'),
+        customElements.whenDefined('chat-workspace'),
+        customElements.whenDefined('chat-transcript')
+      ]);
+
+      const canvas = document.createElement('node-canvas');
+      canvas.style.cssText = 'display:block;width:640px;height:360px;--sn-grid-size:20px;';
+      document.body.append(canvas);
+      canvas.setEditorModel({ readonly: true, nodes: [], connections: [], positions: {} });
+      await frame();
+      canvas.$.zoom = 0.08;
+      canvas._updateTransform();
+      await frame();
+      const gridAt20 = getComputedStyle(canvas).backgroundSize;
+      canvas.style.setProperty('--sn-grid-size', '24px');
+      await frame();
+      const gridAt24 = getComputedStyle(canvas).backgroundSize;
+
+      document.documentElement.style.setProperty('--sn-cell-base-alpha', '0.047');
+      document.documentElement.style.setProperty('--sn-cell-alpha-span', '0.175');
+      document.documentElement.style.setProperty('--sn-chat-cell-base-alpha', '0.012');
+      document.documentElement.style.setProperty('--sn-chat-cell-alpha-span', '0.070');
+
+      const generic = document.createElement('cell-bg');
+      const workspace = document.createElement('chat-workspace');
+      const transcript = document.createElement('chat-transcript');
+      const transcriptBackground = document.createElement('cell-bg');
+      transcriptBackground.slot = 'background';
+      transcript.append(transcriptBackground);
+      document.body.append(generic, workspace, transcript);
+      for (let index = 0; index < 4; index += 1) await frame();
+
+      const workspaceBackground = workspace.getBackground();
+      const readAlpha = (element) => {
+        const style = getComputedStyle(element);
+        return {
+          base: style.getPropertyValue('--sn-cell-base-alpha').trim(),
+          span: style.getPropertyValue('--sn-cell-alpha-span').trim()
+        };
+      };
+      const result = {
+        gridAt20,
+        gridAt24,
+        generic: readAlpha(generic),
+        workspace: readAlpha(workspaceBackground),
+        transcript: readAlpha(transcriptBackground)
+      };
+      canvas.remove();
+      generic.remove();
+      workspace.remove();
+      transcript.remove();
+      return result;
+    })()
+    `;
+    const evaluation = await withTimeout(page.send('Runtime.evaluate', {
+      expression,
+      awaitPromise: true,
+      returnByValue: true,
+    }), 15000, 'grid and chat pattern Runtime.evaluate');
+    if (evaluation.exceptionDetails) {
+      throw new Error(evaluation.exceptionDetails.text || 'Grid and chat pattern evaluation failed');
+    }
+    const result = evaluation.result.value;
+
+    assert.ok(Math.abs(cssNumber(result.gridAt20) - 12.8) < 0.02, JSON.stringify(result));
+    assert.ok(Math.abs(cssNumber(result.gridAt24) - 15.36) < 0.02, JSON.stringify(result));
+    assert.deepEqual(result.generic, { base: '0.047', span: '0.175' });
+    assert.deepEqual(result.workspace, { base: '0.012', span: '0.070' });
+    assert.deepEqual(result.transcript, { base: '0.012', span: '0.070' });
+  } finally {
+    await page?.close?.();
+    await closeChromeSession(chromeSession);
+    await server.close();
+  }
+});
+
+test('node-canvas context menu uses viewport coordinates and clamps to visible bounds', { timeout: BROWSER_SMOKE_TIMEOUT_MS }, async () => {
+  const chromePath = findChrome();
+  assertBrowserSmokeRuntime();
+
+  const server = await createStaticServer();
+  let chromeSession;
+  let page;
+  try {
+    chromeSession = await launchChromeSession(chromePath, 'node canvas context menu positioning smoke');
+    page = await withTimeout(
+      openPage(chromeSession.endpoint, `${server.url}/demo/cascade-theme-lab.html?v=context-menu-position-smoke`),
+      22000,
+      'context menu positioning page open'
+    );
+    const expression = String.raw`
+    (async () => {
+      const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+      await customElements.whenDefined('node-canvas');
+
+      const fixture = document.createElement('div');
+      fixture.style.cssText = 'position:fixed;left:320px;top:120px;width:640px;height:360px;z-index:2147483000;';
+      const canvas = document.createElement('node-canvas');
+      canvas.style.cssText = 'display:block;width:100%;height:100%;';
+      fixture.append(canvas);
+      document.body.append(fixture);
+      canvas.setEditorModel({ readonly: false, nodes: [], connections: [], positions: {} });
+      canvas.setChrome(true);
+      for (let index = 0; index < 3; index += 1) await frame();
+
+      const container = canvas.ref.canvasContainer;
+      const canvasRect = container.getBoundingClientRect();
+      const edgeX = Math.min(window.innerWidth - 2, canvasRect.right - 2);
+      const edgeY = Math.min(window.innerHeight - 2, canvasRect.bottom - 2);
+      container.dispatchEvent(new MouseEvent('contextmenu', {
+        bubbles: true,
+        cancelable: true,
+        clientX: edgeX,
+        clientY: edgeY,
+      }));
+      for (let index = 0; index < 2; index += 1) await frame();
+      const menu = canvas.ref.contextMenu;
+      const edgeRect = menu.getBoundingClientRect();
+      const edgeOpen = menu.matches(':popover-open');
+
+      const innerX = canvasRect.left + 120;
+      const innerY = canvasRect.top + 80;
+      container.dispatchEvent(new MouseEvent('contextmenu', {
+        bubbles: true,
+        cancelable: true,
+        clientX: innerX,
+        clientY: innerY,
+      }));
+      for (let index = 0; index < 2; index += 1) await frame();
+      const innerRect = menu.getBoundingClientRect();
+      const innerOpen = menu.matches(':popover-open');
+      const result = {
+        viewport: { width: window.innerWidth, height: window.innerHeight },
+        canvas: { left: canvasRect.left, top: canvasRect.top },
+        edge: { left: edgeRect.left, top: edgeRect.top, right: edgeRect.right, bottom: edgeRect.bottom, open: edgeOpen },
+        inner: { left: innerRect.left, top: innerRect.top, open: innerOpen },
+        requested: { x: innerX, y: innerY },
+      };
+      menu.hide();
+      fixture.remove();
+      return result;
+    })()
+    `;
+    const evaluation = await withTimeout(page.send('Runtime.evaluate', {
+      expression,
+      awaitPromise: true,
+      returnByValue: true,
+    }), 15000, 'context menu positioning Runtime.evaluate');
+    if (evaluation.exceptionDetails) {
+      throw new Error(evaluation.exceptionDetails.text || 'Context menu positioning evaluation failed');
+    }
+    const result = evaluation.result.value;
+
+    assert.equal(result.edge.open, true, JSON.stringify(result));
+    assert.ok(result.edge.left >= 7.5, JSON.stringify(result));
+    assert.ok(result.edge.top >= 7.5, JSON.stringify(result));
+    assert.ok(result.edge.right <= result.viewport.width - 7.5, JSON.stringify(result));
+    assert.ok(result.edge.bottom <= result.viewport.height - 7.5, JSON.stringify(result));
+    assert.equal(result.inner.open, true, JSON.stringify(result));
+    assert.ok(Math.abs(result.inner.left - result.requested.x) < 0.75, JSON.stringify(result));
+    assert.ok(Math.abs(result.inner.top - result.requested.y) < 0.75, JSON.stringify(result));
+  } finally {
+    await page?.close?.();
+    await closeChromeSession(chromeSession);
+    await server.close();
+  }
+});
+
+test('node-canvas context menu survives native right-click pointer sequencing', { timeout: BROWSER_SMOKE_TIMEOUT_MS }, async () => {
+  const chromePath = findChrome();
+  assertBrowserSmokeRuntime();
+
+  const server = await createStaticServer();
+  let chromeSession;
+  let page;
+  try {
+    chromeSession = await launchChromeSession(chromePath, 'node canvas native right-click smoke');
+    page = await withTimeout(
+      openPage(chromeSession.endpoint, `${server.url}/demo/cascade-theme-lab.html?v=context-menu-native-pointer-smoke`),
+      22000,
+      'native right-click page open'
+    );
+    const setup = await page.send('Runtime.evaluate', {
+      expression: String.raw`
+      (async () => {
+        const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+        await customElements.whenDefined('node-canvas');
+        const fixture = document.createElement('div');
+        fixture.id = 'context-menu-native-pointer-fixture';
+        fixture.style.cssText = 'position:fixed;left:320px;top:120px;width:640px;height:360px;z-index:2147483000;';
+        const canvas = document.createElement('node-canvas');
+        canvas.style.cssText = 'display:block;width:100%;height:100%;';
+        fixture.append(canvas);
+        document.body.append(fixture);
+        canvas.setEditorModel({ readonly: false, nodes: [], connections: [], positions: {} });
+        canvas.setChrome(true);
+        for (let index = 0; index < 3; index += 1) await frame();
+        const container = canvas.ref.canvasContainer;
+        const menu = canvas.ref.contextMenu;
+        window.__snContextTrace = [];
+        for (const type of ['pointerdown', 'contextmenu', 'pointerup']) {
+          container.addEventListener(type, (event) => window.__snContextTrace.push({ type, buttons: event.buttons }));
+        }
+        for (const type of ['beforetoggle', 'toggle']) {
+          menu.addEventListener(type, (event) => window.__snContextTrace.push({ type, state: event.newState }));
+        }
+        const rect = container.getBoundingClientRect();
+        return { x: rect.left + 160, y: rect.top + 120 };
+      })()
+      `,
+      awaitPromise: true,
+      returnByValue: true,
+    });
+    if (setup.exceptionDetails) {
+      throw new Error(setup.exceptionDetails.text || 'Native right-click setup failed');
+    }
+    const point = setup.result.value;
+
+    const pendingLifecycleInspection = await page.send('Runtime.evaluate', {
+      expression: String.raw`
+      (async () => {
+        const fixture = document.getElementById('context-menu-native-pointer-fixture');
+        const canvas = fixture.querySelector('node-canvas');
+        const menu = canvas.ref.contextMenu;
+        const container = canvas.ref.canvasContainer;
+        const items = [{ label: 'Inspect', action: () => {} }];
+        const errors = [];
+        const onError = (event) => errors.push(event.error?.name || event.message || 'unknown');
+        window.addEventListener('error', onError);
+
+        const pendingEvent = (pointerId) => new PointerEvent('contextmenu', {
+          bubbles: true,
+          button: 2,
+          buttons: 2,
+          pointerId,
+        });
+        const snapshot = () => ({
+          open: menu.matches(':popover-open'),
+          visible: menu.$.visible,
+          itemCount: menu.querySelectorAll('ctx-item').length,
+        });
+
+        menu.show(${point.x}, ${point.y}, items, container, pendingEvent(41));
+        menu.hide();
+        await new Promise((resolve) => setTimeout(resolve, 30));
+        const hiddenBeforeFirstOpen = snapshot();
+
+        menu.show(${point.x}, ${point.y}, items, container, pendingEvent(42));
+        window.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 42 }));
+        await new Promise((resolve) => setTimeout(resolve, 30));
+        const cancelledBeforeFirstOpen = snapshot();
+
+        menu.show(${point.x}, ${point.y}, items, container, pendingEvent(43));
+        window.dispatchEvent(new Event('blur'));
+        await new Promise((resolve) => setTimeout(resolve, 30));
+        const blurredBeforeFirstOpen = snapshot();
+
+        window.removeEventListener('error', onError);
+        return { hiddenBeforeFirstOpen, cancelledBeforeFirstOpen, blurredBeforeFirstOpen, errors };
+      })()
+      `,
+      awaitPromise: true,
+      returnByValue: true,
+    });
+    if (pendingLifecycleInspection.exceptionDetails) {
+      throw new Error(pendingLifecycleInspection.exceptionDetails.text || 'Pending context-menu lifecycle inspection failed');
+    }
+    const pendingLifecycle = pendingLifecycleInspection.result.value;
+    assert.deepEqual(pendingLifecycle.hiddenBeforeFirstOpen, { open: false, visible: false, itemCount: 0 });
+    assert.deepEqual(pendingLifecycle.cancelledBeforeFirstOpen, { open: false, visible: false, itemCount: 0 });
+    assert.deepEqual(pendingLifecycle.blurredBeforeFirstOpen, { open: false, visible: false, itemCount: 0 });
+    assert.deepEqual(pendingLifecycle.errors, []);
+
+    await page.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: point.x, y: point.y });
+    await page.send('Input.dispatchMouseEvent', {
+      type: 'mousePressed',
+      x: point.x,
+      y: point.y,
+      button: 'right',
+      buttons: 2,
+      clickCount: 1,
+    });
+    const heldInspection = await page.send('Runtime.evaluate', {
+      expression: String.raw`
+      (async () => {
+        await new Promise((resolve) => setTimeout(resolve, 120));
+        const fixture = document.getElementById('context-menu-native-pointer-fixture');
+        const menu = fixture.querySelector('node-canvas').ref.contextMenu;
+        return {
+          open: menu.matches(':popover-open'),
+          visible: menu.$.visible,
+          trace: [...window.__snContextTrace],
+        };
+      })()
+      `,
+      awaitPromise: true,
+      returnByValue: true,
+    });
+    if (heldInspection.exceptionDetails) {
+      throw new Error(heldInspection.exceptionDetails.text || 'Held right-click inspection failed');
+    }
+    const heldResult = heldInspection.result.value;
+    assert.equal(heldResult.open, false, JSON.stringify(heldResult));
+    await page.send('Input.dispatchMouseEvent', {
+      type: 'mouseReleased',
+      x: point.x,
+      y: point.y,
+      button: 'right',
+      buttons: 0,
+      clickCount: 1,
+    });
+
+    const inspectOpenMenu = String.raw`
+      (async () => {
+        await new Promise((resolve) => setTimeout(resolve, 120));
+        const fixture = document.getElementById('context-menu-native-pointer-fixture');
+        const menu = fixture.querySelector('node-canvas').ref.contextMenu;
+        return {
+          open: menu.matches(':popover-open'),
+          visible: menu.$.visible,
+          itemCount: menu.querySelectorAll('ctx-item').length,
+          trace: [...window.__snContextTrace],
+        };
+      })()
+    `;
+    const firstInspection = await page.send('Runtime.evaluate', {
+      expression: inspectOpenMenu,
+      awaitPromise: true,
+      returnByValue: true,
+    });
+    if (firstInspection.exceptionDetails) {
+      throw new Error(firstInspection.exceptionDetails.text || 'Initial native right-click inspection failed');
+    }
+    const firstResult = firstInspection.result.value;
+    assert.equal(firstResult.open, true, JSON.stringify(firstResult));
+    assert.equal(firstResult.visible, true, JSON.stringify(firstResult));
+    assert.ok(firstResult.itemCount > 0, JSON.stringify(firstResult));
+
+    const directRepeatInspection = await page.send('Runtime.evaluate', {
+      expression: String.raw`
+      (async () => {
+        const fixture = document.getElementById('context-menu-native-pointer-fixture');
+        const canvas = fixture.querySelector('node-canvas');
+        const menu = canvas.ref.contextMenu;
+        const container = canvas.ref.canvasContainer;
+        const items = [{ label: 'Inspect', action: () => {} }];
+        const errors = [];
+        const onError = (event) => errors.push(event.error?.name || event.message || 'unknown');
+        window.addEventListener('error', onError);
+        menu.show(${point.x + 12}, ${point.y + 12}, items, container);
+        await new Promise((resolve) => setTimeout(resolve, 30));
+        menu.show(${point.x + 24}, ${point.y + 24}, items, container);
+        await new Promise((resolve) => setTimeout(resolve, 30));
+        window.removeEventListener('error', onError);
+        return {
+          open: menu.matches(':popover-open'),
+          visible: menu.$.visible,
+          itemCount: menu.querySelectorAll('ctx-item').length,
+          errors,
+        };
+      })()
+      `,
+      awaitPromise: true,
+      returnByValue: true,
+    });
+    if (directRepeatInspection.exceptionDetails) {
+      throw new Error(directRepeatInspection.exceptionDetails.text || 'Direct repeated context-menu show inspection failed');
+    }
+    const directRepeat = directRepeatInspection.result.value;
+    assert.equal(directRepeat.open, true, JSON.stringify(directRepeat));
+    assert.equal(directRepeat.visible, true, JSON.stringify(directRepeat));
+    assert.ok(directRepeat.itemCount > 0, JSON.stringify(directRepeat));
+    assert.deepEqual(directRepeat.errors, []);
+
+    await page.send('Runtime.evaluate', {
+      expression: 'window.__snContextTrace.length = 0',
+      returnByValue: true,
+    });
+    const secondPoint = { x: point.x + 40, y: point.y + 30 };
+    await page.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: secondPoint.x, y: secondPoint.y });
+    await page.send('Input.dispatchMouseEvent', {
+      type: 'mousePressed',
+      x: secondPoint.x,
+      y: secondPoint.y,
+      button: 'right',
+      buttons: 2,
+      clickCount: 1,
+    });
+    await page.send('Input.dispatchMouseEvent', {
+      type: 'mouseReleased',
+      x: secondPoint.x,
+      y: secondPoint.y,
+      button: 'right',
+      buttons: 0,
+      clickCount: 1,
+    });
+
+    const secondInspection = await page.send('Runtime.evaluate', {
+      expression: inspectOpenMenu,
+      awaitPromise: true,
+      returnByValue: true,
+    });
+    if (secondInspection.exceptionDetails) {
+      throw new Error(secondInspection.exceptionDetails.text || 'Repeated native right-click inspection failed');
+    }
+    const secondResult = secondInspection.result.value;
+    assert.equal(secondResult.open, true, JSON.stringify(secondResult));
+    assert.equal(secondResult.visible, true, JSON.stringify(secondResult));
+    assert.ok(secondResult.itemCount > 0, JSON.stringify(secondResult));
+
+    await page.send('Runtime.evaluate', {
+      expression: 'window.__snContextTrace.length = 0',
+      returnByValue: true,
+    });
+    const cancelledPoint = { x: point.x + 80, y: point.y + 60 };
+    await page.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: cancelledPoint.x, y: cancelledPoint.y });
+    await page.send('Input.dispatchMouseEvent', {
+      type: 'mousePressed',
+      x: cancelledPoint.x,
+      y: cancelledPoint.y,
+      button: 'right',
+      buttons: 2,
+      clickCount: 1,
+    });
+    await page.send('Runtime.evaluate', {
+      expression: String.raw`
+      (() => {
+        const fixture = document.getElementById('context-menu-native-pointer-fixture');
+        fixture.querySelector('node-canvas').ref.contextMenu.hide();
+        return true;
+      })()
+      `,
+      returnByValue: true,
+    });
+    await page.send('Input.dispatchMouseEvent', {
+      type: 'mouseReleased',
+      x: cancelledPoint.x,
+      y: cancelledPoint.y,
+      button: 'right',
+      buttons: 0,
+      clickCount: 1,
+    });
+    const cancelledInspection = await page.send('Runtime.evaluate', {
+      expression: inspectOpenMenu,
+      awaitPromise: true,
+      returnByValue: true,
+    });
+    if (cancelledInspection.exceptionDetails) {
+      throw new Error(cancelledInspection.exceptionDetails.text || 'Cancelled native right-click inspection failed');
+    }
+    const cancelledResult = cancelledInspection.result.value;
+    assert.equal(cancelledResult.open, false, JSON.stringify(cancelledResult));
+    assert.equal(cancelledResult.visible, false, JSON.stringify(cancelledResult));
+    assert.equal(cancelledResult.itemCount, 0, JSON.stringify(cancelledResult));
+
+    const cleanup = await page.send('Runtime.evaluate', {
+      expression: String.raw`
+      (async () => {
+        const fixture = document.getElementById('context-menu-native-pointer-fixture');
+        const menu = fixture.querySelector('node-canvas').ref.contextMenu;
+        menu.hide();
+        fixture.remove();
+        delete window.__snContextTrace;
+        return true;
+      })()
+      `,
+      awaitPromise: true,
+      returnByValue: true,
+    });
+    if (cleanup.exceptionDetails) {
+      throw new Error(cleanup.exceptionDetails.text || 'Native right-click cleanup failed');
+    }
+  } finally {
+    await page?.close?.();
+    await closeChromeSession(chromeSession);
+    await server.close();
+  }
+});

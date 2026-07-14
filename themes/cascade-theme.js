@@ -155,6 +155,8 @@ export const CASCADE_THEME_TOKEN_TARGETS = Object.freeze({
     '--sn-cell-dot',
     '--sn-cell-base-alpha',
     '--sn-cell-alpha-span',
+    '--sn-chat-cell-base-alpha',
+    '--sn-chat-cell-alpha-span',
     '--sn-cell-glare',
     '--sn-cell-vignette-mid',
     '--sn-cell-vignette-edge',
@@ -1309,6 +1311,8 @@ export function createCascadeTheme(options = {}) {
   let cellAlphaSpan = dark
     ? 0.070 + patternScale * 0.105
     : 0.050 + patternScale * 0.075;
+  let chatCellBaseAlpha = dark ? 0.012 : 0.010;
+  let chatCellAlphaSpan = dark ? 0.070 : 0.050;
   let cellGlareAlpha = dark ? 0.019 : 0.066;
   let cellNoiseOpacity = dark ? 0.030 : 0.021;
 
@@ -1377,6 +1381,8 @@ export function createCascadeTheme(options = {}) {
     '--sn-cell-dot': `hsl(0 0% ${dim.toFixed(1)}%)`,
     '--sn-cell-base-alpha': cellBaseAlpha.toFixed(3),
     '--sn-cell-alpha-span': cellAlphaSpan.toFixed(3),
+    '--sn-chat-cell-base-alpha': chatCellBaseAlpha.toFixed(3),
+    '--sn-chat-cell-alpha-span': chatCellAlphaSpan.toFixed(3),
     '--sn-cell-glare': `hsl(0 0% ${text.toFixed(1)}% / ${cellGlareAlpha.toFixed(3)})`,
     '--sn-cell-vignette-mid': `hsl(0 0% ${bg.toFixed(1)}% / ${dark ? '0.70' : '0.36'})`,
     '--sn-cell-vignette-edge': 'var(--sn-sys-surface)',

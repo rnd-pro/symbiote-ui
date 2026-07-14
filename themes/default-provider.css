@@ -49,7 +49,7 @@
   --sn-theme-tab-radius-scale: 1;
   --sn-theme-cell-radius-scale: 1;
   --sn-theme-composer-radius-scale: 1;
-  --sn-theme-pattern-brightness: 0;
+  --sn-theme-pattern-brightness: 1.00;
   --sn-theme-motion-scale: 1;
   --sn-motion-enabled: 1;
   --sn-animation-play-state: running;
@@ -157,12 +157,14 @@
   --sn-xr-panel-shadow: var(--sn-node-shadow);
   --sn-xr-pointer-color: var(--sn-sys-accent);
   --sn-bg-overlay: hsl(var(--sn-hue-base) var(--sn-sat-muted) 0% / 0.45);
-  --sn-grid-dot: hsl(var(--sn-hue-base) var(--sn-sat-muted) var(--sn-lit-text) / 0.06);
+  --sn-grid-dot: hsl(var(--sn-hue-base) var(--sn-sat-muted) var(--sn-lit-text) / 0.088);
   --sn-grid-size: 20px;
   --sn-cell-bg: var(--sn-sys-surface);
   --sn-cell-dot: hsl(var(--sn-hue-base) var(--sn-sat-muted) 31%);
-  --sn-cell-base-alpha: 0.033;
-  --sn-cell-alpha-span: 0.133;
+  --sn-cell-base-alpha: 0.047;
+  --sn-cell-alpha-span: 0.175;
+  --sn-chat-cell-base-alpha: 0.012;
+  --sn-chat-cell-alpha-span: 0.070;
   --sn-cell-glare: hsl(var(--sn-hue-base) var(--sn-sat-muted) var(--sn-lit-text) / 0.019);
   --sn-cell-vignette-mid: hsl(var(--sn-hue-base) var(--sn-sat-muted) var(--sn-lit-bg) / 0.7);
   --sn-cell-vignette-edge: var(--sn-sys-surface);

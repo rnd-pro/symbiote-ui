@@ -18,6 +18,12 @@ const NODE_CANVAS_MIN_FIT_ZOOM = 0.08;
 const NODE_CANVAS_MIN_FIT_VIEWPORT_SIZE = 48;
 const MANUAL_INTERACTION_CULLING_SETTLE_MS = 180;
 
+export function resolveGridLOD(zoom) {
+  let normalized = Number(zoom);
+  if (!Number.isFinite(normalized) || normalized <= 0 || normalized >= 0.5) return 1;
+  return 2 ** Math.ceil(Math.log2(0.5 / normalized));
+}
+
 function finiteNumber(value) {
   let number = Number(value);
   return Number.isFinite(number) ? number : null;
@@ -191,15 +197,11 @@ export class CanvasViewport {
    */
   updateTransform(options = {}) {
 
-    if (this.#canvas._gridBase === undefined) {
-      this.#canvas._gridBase =
-        parseInt(getComputedStyle(this.#canvas).getPropertyValue('--sn-grid-size')) || 20;
-    }
-    let gridBase = this.#canvas._gridBase;
-    let zoom = this.#canvas.$.zoom;
-    let multiplier = zoom < 0.5 ? 2 : 1;
-    let gridSize = gridBase * multiplier * zoom;
-    this.#canvas.style.backgroundSize = `${gridSize}px ${gridSize}px`;
+    let zoom = finiteNumber(this.#canvas.$.zoom);
+    if (zoom === null || zoom <= 0) zoom = 1;
+    let scaleFactor = resolveGridLOD(zoom);
+    let scale = scaleFactor * zoom;
+    this.#canvas.style.backgroundSize = `calc(var(--sn-grid-size) * ${scale}) calc(var(--sn-grid-size) * ${scale})`;
     this.#canvas.style.backgroundPosition = `${this.#canvas.$.panX}px ${this.#canvas.$.panY}px`;
 
 

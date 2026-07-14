@@ -31,6 +31,8 @@ chat-transcript > [slot="background"] {
   width: 100%;
   height: 100%;
   pointer-events: none;
+  --sn-cell-base-alpha: var(--sn-chat-cell-base-alpha);
+  --sn-cell-alpha-span: var(--sn-chat-cell-alpha-span);
 }
 
 .chat-messages {

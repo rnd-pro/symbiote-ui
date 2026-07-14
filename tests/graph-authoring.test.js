@@ -628,6 +628,45 @@ describe('Group/Subgraph Model Helpers', () => {
 });
 
 describe('ViewportActions Clipboard & History & Alignment Intents', () => {
+  it('uses viewport coordinates for fixed context menus and world coordinates for graph actions', () => {
+    let emitted = [];
+    let editor = {
+      getNode() {},
+      removeNode() {},
+      removeConnection() {},
+      emit(type, detail) {
+        emitted.push({ type, detail });
+      },
+    };
+    let selector = new Selector();
+    let canvas = document.createElement('div');
+    let container = document.createElement('div');
+    container.getBoundingClientRect = () => ({ left: 800, top: 100, width: 480, height: 700 });
+    let actions = new ViewportActions({ editor, selector, nodeViews: new Map(), canvas });
+    let shown = null;
+    let contextMenu = {
+      show(x, y, items, trigger) {
+        shown = { x, y, items, trigger };
+      },
+    };
+    let prevented = false;
+    actions.showContextMenu({
+      clientX: 900,
+      clientY: 280,
+      target: container,
+      preventDefault() {
+        prevented = true;
+      },
+    }, contextMenu, container, { panX: 40, panY: 20, zoom: 2 });
+
+    assert.equal(prevented, true);
+    assert.equal(shown.x, 900);
+    assert.equal(shown.y, 280);
+    assert.equal(shown.trigger, container);
+    shown.items[0].action();
+    assert.deepEqual(emitted, [{ type: 'contextadd', detail: { x: 30, y: 80 } }]);
+  });
+
   it('aligns selected nodes only when enough nodes are selected', () => {
     let emitted = [];
     let mockEditor = {

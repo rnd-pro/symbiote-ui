@@ -68,6 +68,10 @@
       "$type": "number",
       "$value": "1"
     },
+    "pattern": {
+      "$type": "number",
+      "$value": "1.00"
+    },
     "motion": {
       "$type": "number",
       "$value": "1"
@@ -1632,11 +1636,19 @@
     },
     "cellBaseAlpha": {
       "$type": "number",
-      "$value": "0.033"
+      "$value": "0.047"
     },
     "cellAlphaSpan": {
       "$type": "number",
-      "$value": "0.133"
+      "$value": "0.175"
+    },
+    "chatCellBaseAlpha": {
+      "$type": "number",
+      "$value": "0.012"
+    },
+    "chatCellAlphaSpan": {
+      "$type": "number",
+      "$value": "0.070"
     },
     "cellGlare": {
       "$type": "color",
