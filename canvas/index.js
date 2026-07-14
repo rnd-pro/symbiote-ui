@@ -1,4 +1,5 @@
 export { computeAutoLayout, computeTreeLayout } from './AutoLayout.js';
+export { computeCrystalLayout, computeCrystalTargets } from './CrystalLayout.js';
 export { SubgraphManager } from './SubgraphManager.js';
 export { SubgraphRouter } from './SubgraphRouter.js';
 export { LODManager } from './LODManager.js';

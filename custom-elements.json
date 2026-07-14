@@ -368,6 +368,11 @@
             },
             {
               "kind": "method",
+              "name": "activateNode",
+              "description": "Immediately activates a node by id without moving or targeting the viewport; defaults skip transition markers and it returns false for a missing or unknown id."
+            },
+            {
+              "kind": "method",
               "name": "queueTransitionMarkers",
               "description": "Queues animated route markers from one graph node to multiple target node ids without changing the host-owned graph model."
             },
@@ -470,6 +475,11 @@
               "kind": "method",
               "name": "resumeLayout",
               "description": "Resumes graph drawing and theme sync after layout suspension."
+            },
+            {
+              "kind": "method",
+              "name": "applyWheelZoom",
+              "description": "Applies wheel zoom at client coordinates through the shared clamp, zoom-anchor, and wake-loop path."
             }
           ],
           "events": [
@@ -753,6 +763,11 @@
                 "description": "Agent-facing alias for fitting one or more graph node ids into the viewport."
               },
               {
+                "name": "activateNode",
+                "type": "function",
+                "description": "Immediately activates a node by id without moving or targeting the viewport; defaults skip transition markers and it returns false for a missing or unknown id."
+              },
+              {
                 "name": "fitView",
                 "type": "function",
                 "description": "Fits the visible graph into the canvas viewport; accepts optional viewportEase for live replay tracking."
@@ -816,6 +831,11 @@
                 "name": "resumeLayout",
                 "type": "function",
                 "description": "Resumes graph drawing and theme sync after layout suspension."
+              },
+              {
+                "name": "applyWheelZoom",
+                "type": "function",
+                "description": "Applies wheel zoom at client coordinates through the shared clamp, zoom-anchor, and wake-loop path."
               },
               {
                 "name": "setForceLayoutOptions",
@@ -1208,6 +1228,11 @@
                   "description": "Agent-facing alias for fitting one or more graph node ids into the viewport."
                 },
                 {
+                  "name": "activateNode",
+                  "type": "function",
+                  "description": "Immediately activates a node by id without moving or targeting the viewport; defaults skip transition markers and it returns false for a missing or unknown id."
+                },
+                {
                   "name": "queueTransitionMarkers",
                   "type": "function",
                   "description": "Queues animated route markers from one graph node to multiple target node ids without changing the host-owned graph model."
@@ -1271,6 +1296,11 @@
                   "name": "resumeLayout",
                   "type": "function",
                   "description": "Resumes graph drawing and theme sync after layout suspension."
+                },
+                {
+                  "name": "applyWheelZoom",
+                  "type": "function",
+                  "description": "Applies wheel zoom at client coordinates through the shared clamp, zoom-anchor, and wake-loop path."
                 },
                 {
                   "name": "setForceLayoutOptions",
@@ -2875,7 +2905,7 @@
             {
               "kind": "method",
               "name": "applyLayout",
-              "description": "Applies auto, tree, or flow node layout and returns the resulting positions."
+              "description": "Applies auto, tree, flow, or crystal node layout and returns top-left positions. Crystal options include rootNodeId, startX, startY, crystalRingDistance, crystalSpokes, and crystalAngleJitter."
             },
             {
               "kind": "method",
@@ -3131,7 +3161,7 @@
               {
                 "name": "applyLayout",
                 "type": "function",
-                "description": "Applies auto, tree, or flow node layout and returns the resulting positions."
+                "description": "Applies auto, tree, flow, or crystal node layout and returns top-left positions. Crystal options include rootNodeId, startX, startY, crystalRingDistance, crystalSpokes, and crystalAngleJitter."
               },
               {
                 "name": "autoLayout",
@@ -3379,7 +3409,7 @@
                 },
                 {
                   "name": "node_canvas_apply_layout",
-                  "description": "Apply a reusable node-canvas layout algorithm: grouped auto layout, tree layout, or document-flow layout, with optional viewport fit.",
+                  "description": "Apply grouped auto, tree, document-flow, or deterministic crystal layout to a node canvas, with optional viewport fit.",
                   "inputSchema": {
                     "type": "object",
                     "additionalProperties": false,
@@ -3388,14 +3418,99 @@
                         "enum": [
                           "auto",
                           "tree",
-                          "flow"
+                          "flow",
+                          "crystal"
                         ]
                       },
                       "fit": {
                         "type": "boolean"
                       },
                       "groups": {
-                        "type": "object"
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "additionalProperties": {
+                              "oneOf": [
+                                {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                },
+                                {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "nodeIds": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "nodes": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "children": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "members": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string"
+                                      }
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "nodeIds": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                },
+                                "nodes": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                },
+                                "children": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                },
+                                "members": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                }
+                              },
+                              "required": [
+                                "id"
+                              ]
+                            }
+                          }
+                        ]
                       },
                       "nodeSizes": {
                         "type": "object"
@@ -3416,6 +3531,24 @@
                       },
                       "startY": {
                         "type": "number"
+                      },
+                      "rootNodeId": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "crystalRingDistance": {
+                        "type": "number",
+                        "exclusiveMinimum": 0
+                      },
+                      "crystalSpokes": {
+                        "type": "integer",
+                        "minimum": 3,
+                        "maximum": 12
+                      },
+                      "crystalAngleJitter": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 0.22
                       },
                       "crossingPasses": {
                         "type": "number",
@@ -3625,7 +3758,7 @@
                 {
                   "name": "applyLayout",
                   "type": "function",
-                  "description": "Applies auto, tree, or flow node layout and returns the resulting positions."
+                  "description": "Applies auto, tree, flow, or crystal node layout and returns top-left positions. Crystal options include rootNodeId, startX, startY, crystalRingDistance, crystalSpokes, and crystalAngleJitter."
                 },
                 {
                   "name": "autoLayout",
@@ -3873,7 +4006,7 @@
                   },
                   {
                     "name": "node_canvas_apply_layout",
-                    "description": "Apply a reusable node-canvas layout algorithm: grouped auto layout, tree layout, or document-flow layout, with optional viewport fit.",
+                    "description": "Apply grouped auto, tree, document-flow, or deterministic crystal layout to a node canvas, with optional viewport fit.",
                     "inputSchema": {
                       "type": "object",
                       "additionalProperties": false,
@@ -3882,14 +4015,99 @@
                           "enum": [
                             "auto",
                             "tree",
-                            "flow"
+                            "flow",
+                            "crystal"
                           ]
                         },
                         "fit": {
                           "type": "boolean"
                         },
                         "groups": {
-                          "type": "object"
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "additionalProperties": {
+                                "oneOf": [
+                                  {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "nodeIds": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "nodes": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "children": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "members": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string"
+                                        }
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            },
+                            {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "nodeIds": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "nodes": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "children": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "members": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string"
+                                    }
+                                  }
+                                },
+                                "required": [
+                                  "id"
+                                ]
+                              }
+                            }
+                          ]
                         },
                         "nodeSizes": {
                           "type": "object"
@@ -3910,6 +4128,24 @@
                         },
                         "startY": {
                           "type": "number"
+                        },
+                        "rootNodeId": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "crystalRingDistance": {
+                          "type": "number",
+                          "exclusiveMinimum": 0
+                        },
+                        "crystalSpokes": {
+                          "type": "integer",
+                          "minimum": 3,
+                          "maximum": 12
+                        },
+                        "crystalAngleJitter": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 0.22
                         },
                         "crossingPasses": {
                           "type": "number",
@@ -21521,7 +21757,7 @@
           "name": "CodeBlock",
           "tagName": "code-block",
           "description": "Code, markdown document, image, and diagnostics display component for reusable agent output surfaces.",
-          "componentDescription": "Code, markdown document, image, and diagnostics display component for reusable agent output surfaces. Use this data and content presentation surface when composing display UI. Capabilities: syntax-highlight, markdown-render, markdown-document-viewer, image-render, line-gutter, diagnostics. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: code_block_set_content.",
+          "componentDescription": "Code, markdown document, image, and diagnostics display component for reusable agent output surfaces. Use this data and content presentation surface when composing display UI. Capabilities: syntax-highlight, markdown-render, markdown-document-viewer, image-render, line-gutter, diagnostics, content-slots. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: code_block_set_content.",
           "attributes": [
             {
               "name": "image-api-base",
@@ -21593,6 +21829,26 @@
               "kind": "method",
               "name": "clearDiagnostics",
               "description": "Clears diagnostic squiggles."
+            },
+            {
+              "kind": "method",
+              "name": "renderContentSlots",
+              "description": "Registers a composer(hostElement, slotKey, { scrollRoot }) invoked once for every `:::content-slot <key>` placeholder rendered in the markdown body, in document order; composes immediately against existing slots and re-composes on binding-driven markdown replacement via a scoped MutationObserver. `scrollRoot` is the code-block-owned scroll viewport element."
+            },
+            {
+              "kind": "method",
+              "name": "clearContentSlots",
+              "description": "Drops the registered content-slot composer and disconnects the markdown-root observer."
+            },
+            {
+              "kind": "method",
+              "name": "scrollToTop",
+              "description": "Resets the internal scroll viewport to its top-left origin, honoring an explicit scroll behavior or reduced-motion default."
+            },
+            {
+              "kind": "method",
+              "name": "scrollToFragment",
+              "description": "Scrolls the internal viewport to a rendered-flow element by id; no-op for a missing id, honoring an explicit scroll behavior or reduced-motion default."
             }
           ],
           "events": [],
@@ -21698,7 +21954,8 @@
               "markdown-document-viewer",
               "image-render",
               "line-gutter",
-              "diagnostics"
+              "diagnostics",
+              "content-slots"
             ],
             "attributes": [
               {
@@ -21759,6 +22016,26 @@
                 "name": "clearDiagnostics",
                 "type": "function",
                 "description": "Clears diagnostic squiggles."
+              },
+              {
+                "name": "renderContentSlots",
+                "type": "function",
+                "description": "Registers a composer(hostElement, slotKey, { scrollRoot }) invoked once for every `:::content-slot <key>` placeholder rendered in the markdown body, in document order; composes immediately against existing slots and re-composes on binding-driven markdown replacement via a scoped MutationObserver. `scrollRoot` is the code-block-owned scroll viewport element."
+              },
+              {
+                "name": "clearContentSlots",
+                "type": "function",
+                "description": "Drops the registered content-slot composer and disconnects the markdown-root observer."
+              },
+              {
+                "name": "scrollToTop",
+                "type": "function",
+                "description": "Resets the internal scroll viewport to its top-left origin, honoring an explicit scroll behavior or reduced-motion default."
+              },
+              {
+                "name": "scrollToFragment",
+                "type": "function",
+                "description": "Scrolls the internal viewport to a rendered-flow element by id; no-op for a missing id, honoring an explicit scroll behavior or reduced-motion default."
               }
             ],
             "events": [],
@@ -21856,7 +22133,7 @@
             }
           },
           "agent": {
-            "componentDescription": "Code, markdown document, image, and diagnostics display component for reusable agent output surfaces. Use this data and content presentation surface when composing display UI. Capabilities: syntax-highlight, markdown-render, markdown-document-viewer, image-render, line-gutter, diagnostics. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: code_block_set_content.",
+            "componentDescription": "Code, markdown document, image, and diagnostics display component for reusable agent output surfaces. Use this data and content presentation surface when composing display UI. Capabilities: syntax-highlight, markdown-render, markdown-document-viewer, image-render, line-gutter, diagnostics, content-slots. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: code_block_set_content.",
             "semanticRole": "data and content presentation surface",
             "usage": "Render or compose <code-block> when the host needs code, markdown document, image, and diagnostics display component for reusable agent output surfaces.",
             "dataOwnership": "host-owned props and attributes; component owns presentation state",
@@ -21883,7 +22160,8 @@
                 "markdown-document-viewer",
                 "image-render",
                 "line-gutter",
-                "diagnostics"
+                "diagnostics",
+                "content-slots"
               ],
               "attributes": [
                 {
@@ -21944,6 +22222,26 @@
                   "name": "clearDiagnostics",
                   "type": "function",
                   "description": "Clears diagnostic squiggles."
+                },
+                {
+                  "name": "renderContentSlots",
+                  "type": "function",
+                  "description": "Registers a composer(hostElement, slotKey, { scrollRoot }) invoked once for every `:::content-slot <key>` placeholder rendered in the markdown body, in document order; composes immediately against existing slots and re-composes on binding-driven markdown replacement via a scoped MutationObserver. `scrollRoot` is the code-block-owned scroll viewport element."
+                },
+                {
+                  "name": "clearContentSlots",
+                  "type": "function",
+                  "description": "Drops the registered content-slot composer and disconnects the markdown-root observer."
+                },
+                {
+                  "name": "scrollToTop",
+                  "type": "function",
+                  "description": "Resets the internal scroll viewport to its top-left origin, honoring an explicit scroll behavior or reduced-motion default."
+                },
+                {
+                  "name": "scrollToFragment",
+                  "type": "function",
+                  "description": "Scrolls the internal viewport to a rendered-flow element by id; no-op for a missing id, honoring an explicit scroll behavior or reduced-motion default."
                 }
               ],
               "events": [],
@@ -26515,7 +26813,7 @@
           "name": "SourceViewer",
           "tagName": "source-viewer",
           "description": "Source and markdown document viewer with code, rendered markdown, image, directory metadata, save actions, syntax theme tokens, diagnostics, and transform modes.",
-          "componentDescription": "Source and markdown document viewer with code, rendered markdown, image, directory metadata, save actions, syntax theme tokens, diagnostics, and transform modes. Use this data and content presentation surface when composing display UI. Capabilities: source-code, markdown-preview, markdown-document-viewer, image-preview, directory-summary, diagnostics, save-action-intent, syntax-theme-tokens, transform-toggle. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: source_viewer_set_document, source_viewer_action.",
+          "componentDescription": "Source and markdown document viewer with code, rendered markdown, image, directory metadata, save actions, syntax theme tokens, diagnostics, and transform modes. Use this data and content presentation surface when composing display UI. Capabilities: source-code, markdown-preview, markdown-document-viewer, image-preview, directory-summary, diagnostics, save-action-intent, syntax-theme-tokens, transform-toggle, content-slots. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: source_viewer_set_document, source_viewer_action.",
           "attributes": [
             {
               "name": "image-api-base",
@@ -26577,7 +26875,7 @@
             {
               "kind": "method",
               "name": "showFile",
-              "description": "Displays a source or markdown file from pure path, language, code, and optional transform data."
+              "description": "Displays a source or markdown file; optional renderedRaw keeps rendered directives separate from the clean raw source."
             },
             {
               "kind": "method",
@@ -26628,6 +26926,26 @@
               "kind": "method",
               "name": "setDiagnostics",
               "description": "Passes diagnostics to nested code-block."
+            },
+            {
+              "kind": "method",
+              "name": "renderContentSlots",
+              "description": "Forwards a content-slot composer to the nested code-block, mounting host-owned content into every `:::content-slot <key>` placeholder in the rendered markdown body; the composer receives the same (hostElement, slotKey, { scrollRoot }) context."
+            },
+            {
+              "kind": "method",
+              "name": "clearContentSlots",
+              "description": "Clears the nested code-block content-slot composer."
+            },
+            {
+              "kind": "method",
+              "name": "scrollToTop",
+              "description": "Forwards a top-left viewport reset to the nested code-block."
+            },
+            {
+              "kind": "method",
+              "name": "scrollToFragment",
+              "description": "Forwards a rendered-flow fragment scroll request to the nested code-block."
             }
           ],
           "events": [
@@ -26745,7 +27063,8 @@
               "diagnostics",
               "save-action-intent",
               "syntax-theme-tokens",
-              "transform-toggle"
+              "transform-toggle",
+              "content-slots"
             ],
             "attributes": [
               {
@@ -26790,7 +27109,7 @@
               {
                 "name": "showFile",
                 "type": "function",
-                "description": "Displays a source or markdown file from pure path, language, code, and optional transform data."
+                "description": "Displays a source or markdown file; optional renderedRaw keeps rendered directives separate from the clean raw source."
               },
               {
                 "name": "showDirectory",
@@ -26841,6 +27160,26 @@
                 "name": "setDiagnostics",
                 "type": "function",
                 "description": "Passes diagnostics to nested code-block."
+              },
+              {
+                "name": "renderContentSlots",
+                "type": "function",
+                "description": "Forwards a content-slot composer to the nested code-block, mounting host-owned content into every `:::content-slot <key>` placeholder in the rendered markdown body; the composer receives the same (hostElement, slotKey, { scrollRoot }) context."
+              },
+              {
+                "name": "clearContentSlots",
+                "type": "function",
+                "description": "Clears the nested code-block content-slot composer."
+              },
+              {
+                "name": "scrollToTop",
+                "type": "function",
+                "description": "Forwards a top-left viewport reset to the nested code-block."
+              },
+              {
+                "name": "scrollToFragment",
+                "type": "function",
+                "description": "Forwards a rendered-flow fragment scroll request to the nested code-block."
               }
             ],
             "events": [
@@ -27031,7 +27370,7 @@
             }
           },
           "agent": {
-            "componentDescription": "Source and markdown document viewer with code, rendered markdown, image, directory metadata, save actions, syntax theme tokens, diagnostics, and transform modes. Use this data and content presentation surface when composing display UI. Capabilities: source-code, markdown-preview, markdown-document-viewer, image-preview, directory-summary, diagnostics, save-action-intent, syntax-theme-tokens, transform-toggle. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: source_viewer_set_document, source_viewer_action.",
+            "componentDescription": "Source and markdown document viewer with code, rendered markdown, image, directory metadata, save actions, syntax theme tokens, diagnostics, and transform modes. Use this data and content presentation surface when composing display UI. Capabilities: source-code, markdown-preview, markdown-document-viewer, image-preview, directory-summary, diagnostics, save-action-intent, syntax-theme-tokens, transform-toggle, content-slots. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools: source_viewer_set_document, source_viewer_action.",
             "semanticRole": "data and content presentation surface",
             "usage": "Render or compose <source-viewer> when the host needs source and markdown document viewer with code, rendered markdown, image, directory metadata, save actions, syntax theme tokens, diagnostics, and transform modes.",
             "dataOwnership": "host-owned props and attributes; component owns presentation state",
@@ -27062,7 +27401,8 @@
                 "diagnostics",
                 "save-action-intent",
                 "syntax-theme-tokens",
-                "transform-toggle"
+                "transform-toggle",
+                "content-slots"
               ],
               "attributes": [
                 {
@@ -27107,7 +27447,7 @@
                 {
                   "name": "showFile",
                   "type": "function",
-                  "description": "Displays a source or markdown file from pure path, language, code, and optional transform data."
+                  "description": "Displays a source or markdown file; optional renderedRaw keeps rendered directives separate from the clean raw source."
                 },
                 {
                   "name": "showDirectory",
@@ -27158,6 +27498,26 @@
                   "name": "setDiagnostics",
                   "type": "function",
                   "description": "Passes diagnostics to nested code-block."
+                },
+                {
+                  "name": "renderContentSlots",
+                  "type": "function",
+                  "description": "Forwards a content-slot composer to the nested code-block, mounting host-owned content into every `:::content-slot <key>` placeholder in the rendered markdown body; the composer receives the same (hostElement, slotKey, { scrollRoot }) context."
+                },
+                {
+                  "name": "clearContentSlots",
+                  "type": "function",
+                  "description": "Clears the nested code-block content-slot composer."
+                },
+                {
+                  "name": "scrollToTop",
+                  "type": "function",
+                  "description": "Forwards a top-left viewport reset to the nested code-block."
+                },
+                {
+                  "name": "scrollToFragment",
+                  "type": "function",
+                  "description": "Forwards a rendered-flow fragment scroll request to the nested code-block."
                 }
               ],
               "events": [
@@ -29219,6 +29579,255 @@
           "name": "sn-video-player",
           "declaration": {
             "name": "VideoPlayer"
+          }
+        }
+      ]
+    },
+    {
+      "path": "ui/media/MediaHost/MediaHost.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "customElement": true,
+          "name": "MediaHost",
+          "tagName": "sn-media-host",
+          "description": "Accessible lazy media host that mounts exactly one provider adapter on user activation and falls back to poster plus external link.",
+          "componentDescription": "Accessible lazy media host that mounts exactly one provider adapter on user activation and falls back to poster plus external link. Use this lazy provider-neutral media host when composing display UI. Capabilities: media-host, lazy-activation, provider-registry, poster-fallback. Data ownership: host-supplied normalized media descriptor; the host owns adapter mount/unmount lifecycle. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "attributes": [],
+          "members": [
+            {
+              "kind": "field",
+              "name": "descriptor",
+              "type": {
+                "text": "object"
+              },
+              "description": "Normalized media descriptor { kind, poster, alt, fit, activation:{provider,...}, targetIds }."
+            },
+            {
+              "kind": "method",
+              "name": "activate",
+              "description": "Mounts the active provider adapter; degrades to poster plus external link on unknown provider or mount failure."
+            }
+          ],
+          "events": [
+            {
+              "name": "sn-media-mount",
+              "description": "Fired after a provider adapter mounts. detail: { provider }.",
+              "detail": []
+            },
+            {
+              "name": "sn-media-error",
+              "description": "Fired when activation degrades to poster/link fallback. detail: { provider, reason }.",
+              "detail": []
+            }
+          ],
+          "slots": [],
+          "cssProperties": [
+            {
+              "name": "--sn-media-bg",
+              "description": "Theme CSS custom property consumed by sn-media-host."
+            },
+            {
+              "name": "--sn-media-aspect",
+              "description": "Theme CSS custom property consumed by sn-media-host."
+            },
+            {
+              "name": "--sn-media-poster-bg",
+              "description": "Theme CSS custom property consumed by sn-media-host."
+            },
+            {
+              "name": "--sn-media-badge-bg",
+              "description": "Theme CSS custom property consumed by sn-media-host."
+            },
+            {
+              "name": "--sn-media-badge-color",
+              "description": "Theme CSS custom property consumed by sn-media-host."
+            },
+            {
+              "name": "--sn-media-activate-bg",
+              "description": "Theme CSS custom property consumed by sn-media-host."
+            },
+            {
+              "name": "--sn-media-activate-hover-bg",
+              "description": "Theme CSS custom property consumed by sn-media-host."
+            },
+            {
+              "name": "--sn-media-activate-color",
+              "description": "Theme CSS custom property consumed by sn-media-host."
+            },
+            {
+              "name": "--sn-media-activate-label-bg",
+              "description": "Theme CSS custom property consumed by sn-media-host."
+            },
+            {
+              "name": "--sn-media-link-color",
+              "description": "Theme CSS custom property consumed by sn-media-host."
+            },
+            {
+              "name": "--sn-sys-accent",
+              "description": "Theme CSS custom property consumed by sn-media-host."
+            },
+            {
+              "name": "--sn-font",
+              "description": "Theme CSS custom property consumed by sn-media-host."
+            },
+            {
+              "name": "--sn-transition-fast",
+              "description": "Theme CSS custom property consumed by sn-media-host."
+            }
+          ],
+          "contract": {
+            "capabilities": [
+              "media-host",
+              "lazy-activation",
+              "provider-registry",
+              "poster-fallback"
+            ],
+            "attributes": [],
+            "properties": [
+              {
+                "name": "descriptor",
+                "type": "object",
+                "description": "Normalized media descriptor { kind, poster, alt, fit, activation:{provider,...}, targetIds }."
+              }
+            ],
+            "methods": [
+              {
+                "name": "activate",
+                "type": "function",
+                "description": "Mounts the active provider adapter; degrades to poster plus external link on unknown provider or mount failure."
+              }
+            ],
+            "events": [
+              {
+                "name": "sn-media-mount",
+                "description": "Fired after a provider adapter mounts. detail: { provider }."
+              },
+              {
+                "name": "sn-media-error",
+                "description": "Fired when activation degrades to poster/link fallback. detail: { provider, reason }."
+              }
+            ],
+            "slots": [],
+            "themeAliases": [
+              "--sn-media-bg",
+              "--sn-media-aspect",
+              "--sn-media-poster-bg",
+              "--sn-media-badge-bg",
+              "--sn-media-badge-color",
+              "--sn-media-activate-bg",
+              "--sn-media-activate-hover-bg",
+              "--sn-media-activate-color",
+              "--sn-media-activate-label-bg",
+              "--sn-media-link-color",
+              "--sn-sys-accent",
+              "--sn-font",
+              "--sn-transition-fast"
+            ],
+            "status": "draft",
+            "schemaVersion": "component-descriptor-v2",
+            "dataSchema": "schemas/media-descriptor-v1.json",
+            "ssr": {
+              "mode": "hydrate-only",
+              "importSafe": false,
+              "jsdaRenderable": false,
+              "requiresDom": true,
+              "browserApis": [
+                "events"
+              ],
+              "notes": "Default browser component classification pending component-specific JSDA SSR smoke coverage."
+            }
+          },
+          "agent": {
+            "componentDescription": "Accessible lazy media host that mounts exactly one provider adapter on user activation and falls back to poster plus external link. Use this lazy provider-neutral media host when composing display UI. Capabilities: media-host, lazy-activation, provider-registry, poster-fallback. Data ownership: host-supplied normalized media descriptor; the host owns adapter mount/unmount lifecycle. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "lazy provider-neutral media host",
+            "usage": "Use to activate a normalized media descriptor on demand; graph nodes render poster/badge only and emit an activation intent this host consumes.",
+            "dataOwnership": "host-supplied normalized media descriptor; the host owns adapter mount/unmount lifecycle",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          },
+          "metadata": {
+            "contract": {
+              "capabilities": [
+                "media-host",
+                "lazy-activation",
+                "provider-registry",
+                "poster-fallback"
+              ],
+              "attributes": [],
+              "properties": [
+                {
+                  "name": "descriptor",
+                  "type": "object",
+                  "description": "Normalized media descriptor { kind, poster, alt, fit, activation:{provider,...}, targetIds }."
+                }
+              ],
+              "methods": [
+                {
+                  "name": "activate",
+                  "type": "function",
+                  "description": "Mounts the active provider adapter; degrades to poster plus external link on unknown provider or mount failure."
+                }
+              ],
+              "events": [
+                {
+                  "name": "sn-media-mount",
+                  "description": "Fired after a provider adapter mounts. detail: { provider }."
+                },
+                {
+                  "name": "sn-media-error",
+                  "description": "Fired when activation degrades to poster/link fallback. detail: { provider, reason }."
+                }
+              ],
+              "slots": [],
+              "themeAliases": [
+                "--sn-media-bg",
+                "--sn-media-aspect",
+                "--sn-media-poster-bg",
+                "--sn-media-badge-bg",
+                "--sn-media-badge-color",
+                "--sn-media-activate-bg",
+                "--sn-media-activate-hover-bg",
+                "--sn-media-activate-color",
+                "--sn-media-activate-label-bg",
+                "--sn-media-link-color",
+                "--sn-sys-accent",
+                "--sn-font",
+                "--sn-transition-fast"
+              ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/media-descriptor-v1.json",
+              "ssr": {
+                "mode": "hydrate-only",
+                "importSafe": false,
+                "jsdaRenderable": false,
+                "requiresDom": true,
+                "browserApis": [
+                  "events"
+                ],
+                "notes": "Default browser component classification pending component-specific JSDA SSR smoke coverage."
+              }
+            }
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "custom-element-definition",
+          "name": "sn-media-host",
+          "declaration": {
+            "name": "MediaHost"
           }
         }
       ]
@@ -39866,7 +40475,7 @@
           "name": "GraphNode",
           "tagName": "graph-node",
           "description": "Interactive graph node component for the node canvas.",
-          "componentDescription": "Interactive graph node component for the node canvas. Use this graph node presentation primitive when composing node UI. Capabilities: node-card, ports, controls, shape-variant, media-avatar, media-fit, category-accent, type-accent, error-state. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "componentDescription": "Interactive graph node component for the node canvas. Use this graph node presentation primitive when composing node UI. Capabilities: node-card, ports, controls, shape-variant, media-avatar, media-fit, media-poster, media-activation, category-accent, type-accent, error-state. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
           "attributes": [
             {
               "name": "node-label",
@@ -39904,7 +40513,23 @@
               "type": {
                 "text": "string"
               },
-              "description": "Media or avatar image URL derived from node params."
+              "description": "Poster image URL derived from node params (media descriptor poster or legacy image/avatar)."
+            },
+            {
+              "kind": "field",
+              "name": "mediaKind",
+              "type": {
+                "text": "string"
+              },
+              "description": "Readable media-kind badge label derived from the node media descriptor."
+            },
+            {
+              "kind": "field",
+              "name": "isMediaActivatable",
+              "type": {
+                "text": "boolean"
+              },
+              "description": "True when the node carries an activatable media descriptor and renders a keyboard-activatable button."
             },
             {
               "kind": "field",
@@ -39955,7 +40580,13 @@
               "description": "Control descriptors rendered inside the node body."
             }
           ],
-          "events": [],
+          "events": [
+            {
+              "name": "sn-media-activate",
+              "description": "Bubbling, composed activation intent emitted on poster activation. detail: { descriptor, nodeId }. The graph never mounts a player; a media host consumes this intent.",
+              "detail": []
+            }
+          ],
           "slots": [],
           "cssProperties": [
             {
@@ -40219,6 +40850,8 @@
               "shape-variant",
               "media-avatar",
               "media-fit",
+              "media-poster",
+              "media-activation",
               "category-accent",
               "type-accent",
               "error-state"
@@ -40249,7 +40882,17 @@
               {
                 "name": "mediaSrc",
                 "type": "string",
-                "description": "Media or avatar image URL derived from node params."
+                "description": "Poster image URL derived from node params (media descriptor poster or legacy image/avatar)."
+              },
+              {
+                "name": "mediaKind",
+                "type": "string",
+                "description": "Readable media-kind badge label derived from the node media descriptor."
+              },
+              {
+                "name": "isMediaActivatable",
+                "type": "boolean",
+                "description": "True when the node carries an activatable media descriptor and renders a keyboard-activatable button."
               },
               {
                 "name": "summary",
@@ -40283,7 +40926,12 @@
               }
             ],
             "methods": [],
-            "events": [],
+            "events": [
+              {
+                "name": "sn-media-activate",
+                "description": "Bubbling, composed activation intent emitted on poster activation. detail: { descriptor, nodeId }. The graph never mounts a player; a media host consumes this intent."
+              }
+            ],
             "slots": [],
             "themeAliases": [
               "--sn-sys-surface-raised",
@@ -40368,7 +41016,7 @@
             }
           },
           "agent": {
-            "componentDescription": "Interactive graph node component for the node canvas. Use this graph node presentation primitive when composing node UI. Capabilities: node-card, ports, controls, shape-variant, media-avatar, media-fit, category-accent, type-accent, error-state. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "componentDescription": "Interactive graph node component for the node canvas. Use this graph node presentation primitive when composing node UI. Capabilities: node-card, ports, controls, shape-variant, media-avatar, media-fit, media-poster, media-activation, category-accent, type-accent, error-state. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
             "semanticRole": "graph node presentation primitive",
             "usage": "Render or compose <graph-node> when the host needs interactive graph node component for the node canvas.",
             "dataOwnership": "host-owned props and attributes; component owns presentation state",
@@ -40394,6 +41042,8 @@
                 "shape-variant",
                 "media-avatar",
                 "media-fit",
+                "media-poster",
+                "media-activation",
                 "category-accent",
                 "type-accent",
                 "error-state"
@@ -40424,7 +41074,17 @@
                 {
                   "name": "mediaSrc",
                   "type": "string",
-                  "description": "Media or avatar image URL derived from node params."
+                  "description": "Poster image URL derived from node params (media descriptor poster or legacy image/avatar)."
+                },
+                {
+                  "name": "mediaKind",
+                  "type": "string",
+                  "description": "Readable media-kind badge label derived from the node media descriptor."
+                },
+                {
+                  "name": "isMediaActivatable",
+                  "type": "boolean",
+                  "description": "True when the node carries an activatable media descriptor and renders a keyboard-activatable button."
                 },
                 {
                   "name": "summary",
@@ -40458,7 +41118,12 @@
                 }
               ],
               "methods": [],
-              "events": [],
+              "events": [
+                {
+                  "name": "sn-media-activate",
+                  "description": "Bubbling, composed activation intent emitted on poster activation. detail: { descriptor, nodeId }. The graph never mounts a player; a media host consumes this intent."
+                }
+              ],
               "slots": [],
               "themeAliases": [
                 "--sn-sys-surface-raised",

@@ -33,6 +33,10 @@ export class CodeBlock extends Symbiote {
     squiggles: [],
   };
 
+  _slotComposer = null;
+  _slotObserver = null;
+  _slotRoot = null;
+
   renderCallback() {
     this.sub("code", (code) => {
       if (!code) {
@@ -163,6 +167,88 @@ export class CodeBlock extends Symbiote {
     if (/^(https?:|data:|blob:|file:)/.test(src)) return src;
     let base = this.$.imageApiBase || this.getAttribute("image-api-base") || "";
     return base ? `${base}${encodeURIComponent(src)}` : src;
+  }
+
+  renderContentSlots(composer) {
+    this._slotComposer = typeof composer === "function" ? composer : null;
+    this._ensureSlotObserver();
+    return this._composeSlots();
+  }
+
+  clearContentSlots() {
+    this._slotComposer = null;
+    this._slotObserver?.disconnect();
+    this._slotObserver = null;
+  }
+
+  _ensureSlotObserver() {
+    let root = this.querySelector(".cb-md");
+    if (!root) return;
+    if (this._slotRoot === root && this._slotObserver) return;
+    this._slotObserver?.disconnect();
+    this._slotObserver = new MutationObserver(() => this._composeSlots());
+    this._slotObserver.observe(root, { childList: true });
+    this._slotRoot = root;
+  }
+
+  _composeSlots() {
+    if (!this._slotComposer) return [];
+    this._ensureSlotObserver();
+    let scrollRoot = this.querySelector(".cb-scroll");
+    let slots = [];
+    for (const slot of this.querySelectorAll(".cb-md .cb-content-slot[data-content-slot]")) {
+      slot.replaceChildren();
+      this._slotComposer(slot, slot.getAttribute("data-content-slot"), { scrollRoot });
+      slots.push(slot);
+    }
+    return slots;
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback?.();
+    this._slotObserver?.disconnect();
+    this._slotObserver = null;
+  }
+
+  scrollToTop(options = {}) {
+    let scroll = this.querySelector('.cb-scroll');
+    if (!scroll) return;
+
+    scroll.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: this._resolveScrollBehavior(options),
+    });
+  }
+
+  scrollToFragment(id, options = {}) {
+    if (!id || typeof id !== "string") return;
+    let scroll = this.querySelector(".cb-scroll");
+    if (!scroll) return;
+
+    let target = this._findRenderedElementById(scroll, id);
+    if (!target) return;
+
+    let scrollRect = scroll.getBoundingClientRect();
+    let targetRect = target.getBoundingClientRect();
+    let top = Math.max(0, (scroll.scrollTop || 0) + (targetRect.top - scrollRect.top));
+
+    scroll.scrollTo({ top, behavior: this._resolveScrollBehavior(options) });
+  }
+
+  _findRenderedElementById(scroll, id) {
+    for (const element of scroll.querySelectorAll("[id]")) {
+      if (element.id === id) return element;
+    }
+    return null;
+  }
+
+  _resolveScrollBehavior(options) {
+    if (options.behavior) return options.behavior;
+    let reduced =
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    return reduced ? "auto" : "smooth";
   }
 
   scrollToLine(line) {

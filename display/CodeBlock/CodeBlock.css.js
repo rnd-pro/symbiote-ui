@@ -61,18 +61,28 @@ export default `
     white-space: pre;
     box-sizing: border-box;
   }
-  /* Markdown container — hidden by default */
-  code-block .cb-md {
+  /* Rendered content flow — markdown body with inline content slots, hidden by default */
+  code-block .cb-flow {
     display: none;
-    padding: var(--sn-code-markdown-padding, 20px 28px);
+    flex-direction: column;
     flex: 1;
     min-width: 0;
+    padding: var(--sn-code-markdown-padding, 20px 28px);
+  }
+  code-block .cb-md {
     overflow-wrap: break-word;
     word-wrap: break-word;
     line-height: 1.7;
     color: var(--sn-sys-on-surface);
     font-family: var(--sn-font);
     font-size: var(--sn-code-markdown-size, 14px);
+    min-width: 0;
+  }
+  code-block .cb-content-slot {
+    min-width: 0;
+  }
+  code-block .cb-content-slot:empty {
+    display: none;
   }
   /* Image container — hidden by default */
   code-block .cb-img-wrap {
@@ -93,7 +103,7 @@ export default `
   /* In markdown mode: hide code, show md */
   code-block[mode-markdown] .cb-gutter { display: none; }
   code-block[mode-markdown] .cb-pre { display: none; }
-  code-block[mode-markdown] .cb-md { display: block; }
+  code-block[mode-markdown] .cb-flow { display: flex; }
   /* In image mode: hide code, show image */
   code-block[mode-image] .cb-gutter { display: none; }
   code-block[mode-image] .cb-pre { display: none; }

@@ -34,12 +34,13 @@ Symbiote UI lets agents and host apps assemble dense professional interfaces fro
 - [theme-rule-block-v1](https://github.com/rnd-pro/symbiote-ui/blob/main/schemas/theme-rule-block-v1.json): composable Cascade theme rule blocks
 - [project-package-v1](https://github.com/rnd-pro/symbiote-ui/blob/main/schemas/project-package-v1.json): portable project package metadata
 - [project-transaction-v1](https://github.com/rnd-pro/symbiote-ui/blob/main/schemas/project-transaction-v1.json): project graph transaction metadata
+- [graph-layout-quality-v1](https://github.com/rnd-pro/symbiote-ui/blob/main/schemas/graph-layout-quality-v1.json): exact graph layout audit input, report, policy, coverage, and finding contract
 
 ## Component and layout guidance
 
 - Use `symbiote-ui/ui` for browser Web Components and shared UI modules.
 - Use `symbiote-ui/layout` for layout shells, routers, sidebars, project tabs, panel menus, and region orchestration.
-- Use `symbiote-ui/canvas` or `symbiote-ui/graph` for graph explorers, node canvases, structured/flat graph modes, graph metadata, and transactions.
+- Use `symbiote-ui/canvas` or `symbiote-ui/graph` for graph explorers, node canvases, structured/flat graph modes, graph metadata, transactions, and deterministic layout-quality reports.
 - Use `symbiote-ui/chat` for chat composers, transcripts, message lists, sidebars, and message models.
 - Use `symbiote-ui/display` for source viewers/editors, code blocks, data tables, metrics, banners, event feeds, and output previews.
 - Use `symbiote-ui/themes`, `symbiote-ui/tokens`, and `symbiote-ui/manifest` for Cascade theme metadata, aliases, and provider catalogs.
@@ -47,3 +48,5 @@ Symbiote UI lets agents and host apps assemble dense professional interfaces fro
 ## Graph explorer guidance
 
 Register `graph-explorer-shell`, `node-canvas`, `canvas-graph`, and `graph-node` when building graph editing or project graph interfaces. Use `createGraphViewModeController` from `symbiote-ui/ui` or `symbiote-ui/canvas` to switch structured and flat renderer visibility, fit/focus state, path style, and host-owned flat graph models. Use `flatNodeIds` when fitting several `canvas-graph` nodes in flat mode; `flatNodeId` is single-node focus and can enter a hierarchical parent group. `canvas-graph` reads `--sn-canvas-graph-*` and `--sn-graph-type-*` aliases from the Cascade theme, so host apps should pass semantic node types instead of local canvas color constants.
+
+Before accepting a settled graph layout, call `analyzeGraphLayout` from `symbiote-ui/graph` with a JSON-compatible snapshot or run `symbiote-ui layout-audit <snapshot.json>`. Read the operation, numeric domain, policy fields, report invariants, per-rule payload schemas/types/units, and `graph-layout-quality-v1` input/output schema from `symbiote-ui discover` → `manifest.graphAnalysis`. Treat `fail` and `incomplete` as blocking; use stable finding rule IDs and involved node/edge IDs for repairs. `layout.numeric-underflow` means a non-zero derived center delta, direct metric, or aggregate ratio materialized as zero and the result is intentionally incomplete. `coverage.checks.*.required` counts entity pairs, `status` is `complete` or `skipped-budget`, and `budgetCost` is the worst-case primitive geometry cost. Do not infer quality from screenshots, mutate geometry inside the analyzer, or apply product-specific article/media rules as library defaults.

@@ -262,3 +262,77 @@ test('crystal runtime fallback starts from non-overlapping target geometry', asy
     }
   }
 });
+
+import { computeCrystalLayout, computeCrystalTargets } from '../canvas/CrystalLayout.js';
+
+test('computeCrystalLayout returns deterministic positions regardless of input order', () => {
+  let nodes1 = [
+    { id: 'profile/photo', w: 80, h: 80 },
+    { id: 'projects/a', w: 60, h: 40 },
+    { id: 'projects/b', w: 60, h: 40 },
+    { id: 'media/a1', w: 40, h: 40 },
+  ];
+  let edges1 = [
+    { from: 'profile/photo', to: 'projects/a' },
+    { from: 'profile/photo', to: 'projects/b' },
+    { from: 'projects/a', to: 'media/a1' },
+  ];
+  let groups1 = {
+    'projects/a': ['projects/a', 'media/a1'],
+  };
+
+  let nodes2 = [...nodes1].reverse();
+  let edges2 = [...edges1].reverse();
+  let groups2 = {
+    'projects/a': ['media/a1', 'projects/a'],
+  };
+
+  let mockEditor1 = {
+    getNodes: () => nodes1,
+    getConnections: () => edges1,
+  };
+  let mockEditor2 = {
+    getNodes: () => nodes2,
+    getConnections: () => edges2,
+  };
+
+  let result1 = computeCrystalLayout(mockEditor1, {
+    rootNodeId: 'profile/photo',
+    groups: groups1,
+    startX: 100,
+    startY: 200,
+  });
+
+  let result2 = computeCrystalLayout(mockEditor2, {
+    rootNodeId: 'profile/photo',
+    groups: groups2,
+    startX: 100,
+    startY: 200,
+  });
+
+  assert.deepEqual(result1, result2);
+});
+
+test('computeCrystalLayout anchors the root node top-left exactly at startX, startY', () => {
+  let nodes = [
+    { id: 'profile/photo', w: 100, h: 80 },
+    { id: 'other', w: 50, h: 50 },
+  ];
+  let edges = [{ from: 'profile/photo', to: 'other' }];
+
+  let mockEditor = {
+    getNodes: () => nodes,
+    getConnections: () => edges,
+  };
+
+  let startX = 150;
+  let startY = 250;
+  let result = computeCrystalLayout(mockEditor, {
+    rootNodeId: 'profile/photo',
+    startX,
+    startY,
+  });
+
+  assert.equal(result['profile/photo'].x, startX);
+  assert.equal(result['profile/photo'].y, startY);
+});

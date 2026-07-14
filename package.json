@@ -1,6 +1,6 @@
 {
   "name": "symbiote-ui",
-  "version": "0.3.0-alpha.56",
+  "version": "0.3.0-alpha.57",
   "type": "module",
   "description": "Agent-ready Web Components, layouts, themes, manifests, and UI contracts for Symbiote systems.",
   "main": "index.js",
@@ -252,6 +252,7 @@
   },
   "devDependencies": {
     "@symbiotejs/symbiote": "3.8.0-webmcp.2",
+    "ajv": "^8.20.0",
     "jsda-kit": "^1.5.4",
     "linkedom": "^0.18.12"
   },

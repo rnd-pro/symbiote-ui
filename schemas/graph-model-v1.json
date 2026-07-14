@@ -33,6 +33,30 @@
     "theme": { "$ref": "#/$defs/themeRef" }
   },
   "$defs": {
+    "media": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "activation"],
+      "properties": {
+        "kind": { "type": "string", "minLength": 1 },
+        "poster": { "type": "string" },
+        "alt": { "type": "string" },
+        "fit": { "enum": ["contain", "cover"] },
+        "activation": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": ["provider"],
+          "properties": {
+            "provider": { "type": "string", "minLength": 1 }
+          }
+        },
+        "targetIds": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        }
+      }
+    },
     "layout": {
       "type": "object",
       "additionalProperties": true,
@@ -91,7 +115,10 @@
         "flow": { "$ref": "#/$defs/flow" },
         "params": {
           "type": "object",
-          "additionalProperties": true
+          "additionalProperties": true,
+          "properties": {
+            "media": { "$ref": "#/$defs/media" }
+          }
         },
         "design": { "$ref": "#/$defs/design" },
         "children": {

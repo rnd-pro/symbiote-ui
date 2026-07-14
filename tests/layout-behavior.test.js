@@ -745,11 +745,11 @@ test('canvas graph wheel zoom uses deltaMode-aware half-strength scaling', async
   let viewportSource = await readFile(canvasGraphViewportSource, 'utf8');
 
   assert.equal(DEFAULT_WHEEL_ZOOM_SENSITIVITY, 0.5);
-  assert.match(source, /resolveWheelZoomFactor\(e\)/);
+  assert.match(source, /resolveWheelZoomFactor\(event\)/);
   assert.doesNotMatch(source, /e\.deltaY > 0 \? 0\.92 : 1\.08/);
   assert.match(viewportSource, /export const MAX_ZOOM_OUT_FIT_MULTIPLIER = 4;/);
   assert.match(source, /_resolveMinZoom\(rect[\s\S]*return resolveCanvasGraphMinZoom\(\{/);
-  assert.match(source, /_clampZoom\(this\._targetZoom \* factor,\s*rect\)/);
+  assert.match(source, /_clampZoom\(targetZoom \* factor,\s*rect\)/);
   assert.match(source, /_clampZoom\(this\._pinchGesture\.zoom \* \(distance \/ this\._pinchGesture\.distance\),\s*rect\)/);
   assert.doesNotMatch(source, /this\._targetZoom = Math\.max\(0\.02,\s*Math\.min\(5,\s*this\._targetZoom \* factor\)\)/);
 
@@ -764,6 +764,171 @@ test('canvas graph wheel zoom uses deltaMode-aware half-strength scaling', async
   assert.equal(resolveWheelZoomDelta(pixelWheel, 1), resolveWheelZoomDelta(pixelWheel) * 2);
   assert.ok(resolveWheelZoomFactor(trackpadWheel) > 0.99);
   assert.ok(resolveWheelZoomFactor(pixelWheel) < 0.93);
+});
+
+function withCanvasGraphGlobals(run) {
+  return (async () => {
+    let { parseHTML } = await import('linkedom');
+    let { window } = parseHTML('<html><body></body></html>');
+    let globalKeys = [
+      'window',
+      'document',
+      'HTMLElement',
+      'customElements',
+      'CustomEvent',
+      'Event',
+      'EventTarget',
+      'Node',
+      'CSSStyleSheet',
+    ];
+    let descriptors = new Map(
+      globalKeys.map((key) => [key, Object.getOwnPropertyDescriptor(globalThis, key)]),
+    );
+    for (let key of globalKeys.slice(0, -1)) {
+      Object.defineProperty(globalThis, key, {
+        configurable: true,
+        value: window[key] || window,
+      });
+    }
+    Object.defineProperty(globalThis, 'CSSStyleSheet', {
+      configurable: true,
+      value: class CSSStyleSheet { replaceSync() {} },
+    });
+    try {
+      let { CanvasGraph } = await import('../canvas/CanvasGraph/CanvasGraph.js');
+      return await run(CanvasGraph);
+    } finally {
+      for (let key of globalKeys) {
+        let descriptor = descriptors.get(key);
+        if (descriptor) Object.defineProperty(globalThis, key, descriptor);
+        else delete globalThis[key];
+      }
+    }
+  })();
+}
+
+test('CanvasGraph applies pointer-relative wheel zoom through one public path', async () => {
+  await withCanvasGraphGlobals((CanvasGraph) => {
+    let graph = Object.create(CanvasGraph.prototype);
+    let wakeCount = 0;
+    let clampCalls = [];
+    let rect = { left: 40, top: 20, width: 800, height: 600 };
+    graph.canvas = { getBoundingClientRect: () => rect };
+    graph._targetZoom = 0.5;
+    graph._zoomAnchor = null;
+    graph._clampZoom = (zoom, targetRect) => {
+      clampCalls.push({ zoom, rect: targetRect });
+      return Math.max(0.25, Math.min(2, zoom));
+    };
+    graph._wakeLoop = () => { wakeCount += 1; };
+    let event = { clientX: 240, clientY: 120, deltaY: -120, deltaMode: 0 };
+    let factor = resolveWheelZoomFactor(event);
+
+    assert.equal(graph.applyWheelZoom(event), true);
+    assert.equal(graph._targetZoom, Math.max(0.25, Math.min(2, 0.5 * factor)));
+    assert.deepEqual(graph._zoomAnchor, { mx: 200, my: 100 });
+    assert.equal(wakeCount, 1);
+    assert.deepEqual(clampCalls[0].rect, rect);
+    assert.equal(graph.applyWheelZoom({ clientX: 0, clientY: 0, deltaY: Number.NaN }), false);
+  });
+});
+
+test('CanvasGraph canvas wheel listener delegates to the public zoom path', async () => {
+  await withCanvasGraphGlobals((CanvasGraph) => {
+    let graph = Object.create(CanvasGraph.prototype);
+    let listeners = {};
+    graph.canvas = {
+      addEventListener(type, fn) { (listeners[type] ||= []).push(fn); },
+      setPointerCapture() {},
+      style: {},
+    };
+    graph._activePointers = new Map();
+    let wheelCalls = [];
+    graph.applyWheelZoom = (event) => { wheelCalls.push(event); };
+    graph.bindEvents();
+    let event = { preventDefault() {} };
+
+    listeners.wheel[0](event);
+
+    assert.equal(wheelCalls.length, 1);
+    assert.equal(wheelCalls[0], event);
+  });
+});
+
+function makeActivationGraph(CanvasGraph) {
+  let graph = Object.create(CanvasGraph.prototype);
+  graph.nodeMap = new Map([
+    ['alpha', { id: 'alpha' }],
+    ['beta', { id: 'beta' }],
+  ]);
+  graph.activeNode = null;
+  graph.nextActiveNode = null;
+  graph.deactivating = false;
+  graph.dragNode = null;
+  graph.isPanning = false;
+  graph._infoPanel = { nodeId: null, lines: [], totalExtent: 0, totalExtentY: 0, _centeredForNode: null };
+  graph._transitionMarkers = [];
+  graph.zoom = 0.5;
+  graph.panX = 120;
+  graph.panY = -40;
+  graph._targetZoom = 0.5;
+  graph._targetPanX = null;
+  graph._targetPanY = null;
+  graph.markerCalls = 0;
+  graph._queueTransitionMarker = () => { graph.markerCalls += 1; return null; };
+  graph._setHoverAction = () => {};
+  graph.updateInteractionDepths = () => {};
+  graph._wakeLoop = () => {};
+  return graph;
+}
+
+test('CanvasGraph.activateNode sets active state immediately without moving the viewport', async () => {
+  await withCanvasGraphGlobals((CanvasGraph) => {
+    let graph = makeActivationGraph(CanvasGraph);
+    assert.equal(graph.activateNode('missing'), false);
+    assert.equal(graph.activateNode(''), false);
+    assert.equal(graph.activeNode, null);
+
+    graph._targetPanX = 900;
+    graph._targetPanY = 700;
+    graph._targetZoom = 1.4;
+    graph._transitionMarkers = [{ pendingActivation: 'beta', pendingViewport: { panX: 1 } }];
+    let viewportBefore = { zoom: graph.zoom, panX: graph.panX, panY: graph.panY };
+    assert.equal(graph.activateNode('alpha'), true);
+    assert.equal(graph.activeNode?.id, 'alpha');
+    assert.deepEqual({ zoom: graph.zoom, panX: graph.panX, panY: graph.panY }, viewportBefore);
+    assert.equal(graph._targetPanX, null);
+    assert.equal(graph._targetPanY, null);
+    assert.equal(graph._targetZoom, graph.zoom);
+    assert.equal(graph.markerCalls, 0);
+    assert.equal(graph._transitionMarkers.length, 0);
+    assert.equal(graph._infoPanel._centeredForNode, 'alpha');
+
+    assert.equal(graph.activateNode('beta'), true);
+    assert.equal(graph.activeNode?.id, 'beta');
+    assert.equal(graph.markerCalls, 0);
+    assert.deepEqual({ zoom: graph.zoom, panX: graph.panX, panY: graph.panY }, viewportBefore);
+    assert.equal(graph._infoPanel._centeredForNode, 'beta');
+
+    assert.equal(graph.activateNode('beta'), true);
+    assert.equal(graph.markerCalls, 0);
+
+    graph.activeNode = graph.nodeMap.get('alpha');
+    assert.equal(graph.activateNode('beta', { marker: true }), true);
+    assert.equal(graph.markerCalls, 1);
+  });
+});
+
+test('CanvasGraph.activateNode is a viewport-free delegation to the private activation path', async () => {
+  let source = await readFile(canvasGraphSource, 'utf8');
+
+  assert.match(source, /activateNode\(nodeId, \{ transition = false, marker = false \} = \{\}\) \{/);
+  assert.match(source, /let id = String\(nodeId \|\| ''\)\.trim\(\);/);
+  assert.match(source, /this\._cancelViewportGestureTarget\(\);/);
+  assert.match(source, /!item\?\.pendingActivation && !item\?\.pendingViewport/);
+  assert.match(source, /let activated = this\._activateNode\(id, \{ transition, marker \}\);/);
+  assert.match(source, /this\._infoPanel\._centeredForNode = id;/);
+  assert.match(source, /return activated;/);
 });
 
 test('node canvas fit view avoids microscopic startup zoom', async () => {

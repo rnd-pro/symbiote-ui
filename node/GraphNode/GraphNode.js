@@ -9,10 +9,13 @@
 
 import Symbiote from '@symbiotejs/symbiote';
 import { ensureMaterialSymbols } from '../../icons/MaterialSymbols.js';
+import { isMediaDescriptor } from '../../graph/media-descriptor.js';
 import { template } from './GraphNode.tpl.js';
 import { styles } from './GraphNode.css.js';
 import '../PortItem/PortItem.js';
 import '../CtrlItem/CtrlItem.js';
+
+const MEDIA_ACTIVATE_ICON = 'play_circle';
 
 /** @type {Object<string, string>} */
 const CATEGORY_ICONS = {
@@ -54,6 +57,9 @@ function normalizeMediaFit(value) {
 export class GraphNode extends Symbiote {
   destructionDelay = 200;
 
+  /** @type {import('../../graph/media-descriptor.js').MediaDescriptor|null} */
+  #mediaDescriptor = null;
+
   init$ = {
     '@node-label': '',
     '@node-category': 'default',
@@ -61,6 +67,9 @@ export class GraphNode extends Symbiote {
     nodeIcon: 'radio_button_checked',
     mediaSrc: '',
     mediaAlt: '',
+    mediaKind: '',
+    isMediaActivatable: false,
+    mediaActivateLabel: '',
     summary: '',
     href: '',
     linkHref: '',
@@ -113,14 +122,26 @@ export class GraphNode extends Symbiote {
   #populateFromNodeData(node) {
     let params = node.params || {};
     let contentHidden = Boolean(params.hideContent || params.contentHidden);
+    let media = isMediaDescriptor(params.media) ? params.media : null;
+    this.#mediaDescriptor = media;
     this.toggleAttribute('data-header-hidden', Boolean(params.hideHeader || params.headerHidden));
     this.toggleAttribute('data-content-hidden', contentHidden);
     setOptionalAttribute(this, 'data-node-tone', normalizeNodeTone(params.tone || params.nodeTone));
-    setOptionalAttribute(this, 'data-media-fit', normalizeMediaFit(params.mediaFit || params.imageFit || params.avatarFit));
+    setOptionalAttribute(
+      this,
+      'data-media-fit',
+      media?.fit || normalizeMediaFit(params.mediaFit || params.imageFit || params.avatarFit)
+    );
+    if (media) ensureMaterialSymbols([MEDIA_ACTIVATE_ICON]);
+    let mediaAlt = media?.alt || params.mediaAlt || params.imageAlt || params.avatarAlt || node.label || '';
+    let mediaKind = media ? String(media.kind || '') : '';
     this.set$({
       nodeIcon: node.icon || CATEGORY_ICONS[node.category] || CATEGORY_ICONS.default,
-      mediaSrc: params.media || params.image || params.avatar || '',
-      mediaAlt: params.mediaAlt || params.imageAlt || params.avatarAlt || node.label || '',
+      mediaSrc: (media ? media.poster : params.media || params.image || params.avatar) || '',
+      mediaAlt,
+      mediaKind,
+      isMediaActivatable: Boolean(media),
+      mediaActivateLabel: media ? (mediaAlt ? `Activate ${mediaAlt}` : `Activate ${mediaKind || 'media'}`) : '',
       summary: contentHidden ? '' : params.summary || '',
       href: params.href || '',
       linkLabel: params.linkLabel || 'Open',
@@ -158,6 +179,31 @@ export class GraphNode extends Symbiote {
       })),
     });
     ensureMaterialSymbols([this.$.nodeIcon]);
+  }
+
+  /**
+   * Emit a bubbling media activation intent carrying the normalized descriptor.
+   * The graph never mounts a player itself; a media host listens for this intent.
+   * A native `<button>` provides keyboard (Enter/Space) activation.
+   * @param {Event} [event]
+   */
+  onMediaActivate(event) {
+    let descriptor = this.#mediaDescriptor;
+    if (!descriptor) return;
+    event?.stopPropagation();
+    this.dispatchEvent(new CustomEvent('sn-media-activate', {
+      bubbles: true,
+      composed: true,
+      detail: {
+        descriptor,
+        nodeId: this.getAttribute('node-id') || this._nodeData?.id || '',
+      },
+    }));
+  }
+
+  onMediaPointerDown(event) {
+    if (!this.#mediaDescriptor) return;
+    event?.stopPropagation();
   }
 }
 

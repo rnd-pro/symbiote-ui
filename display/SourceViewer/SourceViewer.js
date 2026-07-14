@@ -265,6 +265,7 @@ export class SourceViewer extends Symbiote {
     this.setSaveAction(null);
     this.setSyntaxTheme(null);
     this.getCodeBlock()?.clearDiagnostics?.();
+    this.getCodeBlock()?.clearContentSlots?.();
   }
 
   showDirectory(path, text) {
@@ -299,11 +300,12 @@ export class SourceViewer extends Symbiote {
     const path = options.path || "";
     const lang = options.lang || getSourceLanguage(path);
     const raw = options.raw ?? options.code ?? "";
+    let renderedRaw = options.renderedRaw ?? raw;
     this._resetForPath(path);
     this._isReadable = options.isReadable !== false;
     this._baseStatsText = options.statsText || "";
     this._transformSource = typeof options.transform === "function" ? options.transform : null;
-    this._fileData = { raw, lang };
+    this._fileData = { raw, renderedRaw, lang };
     this.$.statsText = this._baseStatsText;
     this.setSaveAction(options.saveAction || options.save || null);
     this.setSyntaxTheme(options.syntaxTheme || { tokens: options.syntaxTokens });
@@ -314,7 +316,7 @@ export class SourceViewer extends Symbiote {
       this.$.modeLabel = "rendered";
       this.$.showToggle = true;
       if (codeBlock) {
-        codeBlock.setContent(raw, "md", {
+        codeBlock.setContent(renderedRaw, "md", {
           basePath: path,
           syntaxTheme: this._syntaxTheme,
         });
@@ -405,7 +407,7 @@ export class SourceViewer extends Symbiote {
 
     if (lang === "md" || lang === "markdown") {
       if (this.$.viewMode === "rendered") {
-        codeBlock.setContent(this._fileData.raw, "md", {
+        codeBlock.setContent(this._fileData.renderedRaw, "md", {
           basePath: this._currentPath,
           syntaxTheme: this._syntaxTheme,
         });
@@ -474,6 +476,23 @@ export class SourceViewer extends Symbiote {
     this.setSaveAction(null);
     this.setSyntaxTheme(null);
     this.getCodeBlock()?.clearDiagnostics?.();
+    this.getCodeBlock()?.clearContentSlots?.();
+  }
+
+  renderContentSlots(composer) {
+    return this.getCodeBlock()?.renderContentSlots?.(composer);
+  }
+
+  clearContentSlots() {
+    this.getCodeBlock()?.clearContentSlots?.();
+  }
+
+  scrollToTop(options = {}) {
+    this.getCodeBlock()?.scrollToTop?.(options);
+  }
+
+  scrollToFragment(id, options = {}) {
+    this.getCodeBlock()?.scrollToFragment?.(id, options);
   }
 
   scrollToLine(line) {

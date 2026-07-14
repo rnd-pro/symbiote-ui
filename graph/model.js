@@ -1,3 +1,5 @@
+import { normalizeMediaDescriptor } from './media-descriptor.js';
+
 const DEFAULT_PORT = 'default';
 
 function asObject(value) {
@@ -67,12 +69,14 @@ export function normalizeGraphNode(rawNode) {
   const data = asObject(rawNode);
   const id = normalizeId(data.id, 'node.id');
   const kind = normalizeId(data.kind, 'node.kind');
+  let params = asObject(data.params);
+  if (params.media != null) params = { ...params, media: normalizeMediaDescriptor(params.media) };
   const node = {
     id,
     kind,
     label: data.label == null ? id : String(data.label),
     flow: normalizeFlow(data.flow),
-    params: asObject(data.params),
+    params,
     design: normalizeDesign(data.design),
     children: Array.isArray(data.children) ? data.children.map((childId) => normalizeId(childId, 'node.children')) : [],
     state: asObject(data.state),

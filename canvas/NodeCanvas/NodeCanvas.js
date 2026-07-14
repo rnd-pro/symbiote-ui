@@ -48,10 +48,12 @@ import '../Minimap/Minimap.js';
 import '../NodeSearch/NodeSearch.js';
 import '../Breadcrumb/Breadcrumb.js';
 import { computeAutoLayout, computeTreeLayout } from '../AutoLayout.js';
+import { computeCrystalLayout } from '../CrystalLayout.js';
 import { NodeEditor } from '../../core/Editor.js';
 import { translate } from '../../locale/index.js';
 
 const FLOW_DIRECTIONS = new Set(['vertical', 'horizontal']);
+const NODE_LAYOUT_ALGORITHMS = new Set(['auto', 'tree', 'flow', 'crystal']);
 
 function toFiniteNumber(value, fallback) {
   let number = Number(value);
@@ -1458,16 +1460,27 @@ export class NodeCanvas extends Symbiote {
   /**
    * Apply a graph layout to rendered nodes.
    * @param {Object} [options]
-   * @param {'auto'|'tree'|'flow'} [options.algorithm='auto']
+   * @param {'auto'|'tree'|'flow'|'crystal'} [options.algorithm='auto']
    * @param {boolean} [options.fit=false]
+   * @param {Object<string, string[]>|Array<object>} [options.groups]
+   * @param {Object<string, {w: number, h: number}>} [options.nodeSizes]
+   * @param {string} [options.rootNodeId]
+   * @param {number} [options.startX=0]
+   * @param {number} [options.startY=0]
+   * @param {number} [options.crystalRingDistance]
+   * @param {number} [options.crystalSpokes=6]
+   * @param {number} [options.crystalAngleJitter=0.16]
    * @returns {{algorithm: string, positions: Object<string, {x: number, y: number}>}|null}
    */
   applyLayout(options = {}) {
     if (!this._editor) return null;
 
-    let algorithm = ['auto', 'tree', 'flow'].includes(options.algorithm)
-      ? options.algorithm
-      : 'auto';
+    let algorithm = options.algorithm || 'auto';
+    if (!NODE_LAYOUT_ALGORITHMS.has(algorithm)) {
+      throw new Error(
+        `Unknown node layout algorithm "${algorithm}". Supported: ${[...NODE_LAYOUT_ALGORITHMS].join(', ')}.`,
+      );
+    }
 
     if (algorithm === 'flow') {
       let result = this.setFlowLayout(options);
@@ -1485,6 +1498,8 @@ export class NodeCanvas extends Symbiote {
 
     let positions = algorithm === 'tree'
       ? computeTreeLayout(this._editor, layoutOptions)
+      : algorithm === 'crystal'
+      ? computeCrystalLayout(this._editor, layoutOptions)
       : computeAutoLayout(this._editor, layoutOptions);
 
     this.setBatchMode(true);
@@ -1499,8 +1514,6 @@ export class NodeCanvas extends Symbiote {
     this.refreshConnections();
     if (options.fit === true) {
       this.fitView();
-    } else {
-      this._scheduleConnectionSettleRefresh(3);
     }
     return { algorithm, positions };
   }

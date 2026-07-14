@@ -965,9 +965,9 @@ test('canvas graph seeds entering node positions and eases appearance', async ()
   assert.match(fallback, /positionOrigin: 'center'/);
   assert.match(fallback, /resolved\.layoutAlgorithm = normalizeLayoutAlgorithm\(options\.layoutAlgorithm\)/);
   assert.match(fallback, /resolved\.positionOrigin = normalizePositionOrigin\(options\.positionOrigin \?\? resolved\.positionOrigin\)/);
-  assert.match(fallback, /function computeCrystalTargets\(rawNodes = \[\], rawEdges = \[\], rawGroups = \{\}, rawOptions = \{\}\)/);
-  assert.match(fallback, /function getCrystalBranchStep\(parent, child, ringDistance\)/);
-  assert.match(fallback, /function getCrystalClusterRadius\(hub, members, ringDistance, spokes\)/);
+  assert.match(fallback, /import \{ computeCrystalTargets \} from '\.\/CrystalLayout\.js';/);
+  assert.doesNotMatch(fallback, /function computeCrystalTargets\(/);
+  assert.doesNotMatch(fallback, /function getCrystalBranchStep\(|function getCrystalClusterRadius\(/);
   assert.match(fallback, /function applyFallbackCrystalForces\(nodes, options, alpha\)/);
   assert.match(fallback, /options\.layoutAlgorithm === 'crystal'/);
   assert.match(fallback, /let linkScale = options\.layoutAlgorithm === 'crystal' \? 0\.28 : 1/);
@@ -1001,9 +1001,9 @@ test('canvas graph seeds entering node positions and eases appearance', async ()
   assert.match(worker, /config\.layoutAlgorithm = normalizeLayoutAlgorithm\(config\.layoutAlgorithm\)/);
   assert.match(worker, /config\.positionOrigin = normalizePositionOrigin\(config\.positionOrigin\)/);
   assert.match(worker, /function isCrystalLayout\(\)/);
-  assert.match(worker, /function getCrystalBranchStep\(parent, child, ringDistance\)/);
-  assert.match(worker, /function getCrystalClusterRadius\(hub, members, ringDistance, spokes\)/);
-  assert.match(worker, /function assignCrystalTargets\(degree\)/);
+  assert.match(worker, /function applyCrystalTargetsToWorkerNodes\(crystalTargets, seedPositions\)/);
+  assert.match(worker, /applyCrystalTargetsToWorkerNodes\(data\.crystalTargets, true\)/);
+  assert.doesNotMatch(worker, /assignCrystalTargets|getCrystalBranchStep|getCrystalClusterRadius/);
   assert.match(worker, /function applyCrystalForces\(alpha\)/);
   assert.match(worker, /config\.groups = groups/);
   assert.match(worker, /let layoutScale = isCrystalLayout\(\) \? 0\.28 : 1/);
@@ -1741,6 +1741,7 @@ test('discover exposes the standalone package contract', async () => {
   let chatWorkspaceAgentItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'chat-workspace');
   let kanbanBoard = data.manifest.components.find((item) => item.tagName === 'sn-kanban-board');
   let kanbanBoardAgentItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'sn-kanban-board');
+  let nodeCanvas = data.manifest.components.find((item) => item.tagName === 'node-canvas');
   let nodeCanvasAgentItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'node-canvas');
   let canvasGraphAgentItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'canvas-graph');
   let graphExplorerAgentItem = data.manifest.componentAgentCatalog.find((item) => item.tagName === 'graph-explorer-shell');
@@ -1811,6 +1812,45 @@ test('discover exposes the standalone package contract', async () => {
   assert.ok(nodeCanvasAgentItem.webmcp.toolNames.includes('node_canvas_focus_nodes'));
   assert.ok(nodeCanvasAgentItem.componentDescription.includes('node-editor-canvas'));
   assert.ok(nodeCanvasAgentItem.componentDescription.includes('graph-layout'));
+  let discoveredLayoutTool = nodeCanvas.contract.webmcp.tools
+    .find((tool) => tool.name === 'node_canvas_apply_layout');
+  assert.deepEqual(discoveredLayoutTool.inputSchema.properties.groups, {
+    oneOf: [
+      {
+        type: 'object',
+        additionalProperties: {
+          oneOf: [
+            { type: 'array', items: { type: 'string' } },
+            {
+              type: 'object',
+              additionalProperties: false,
+              properties: {
+                nodeIds: { type: 'array', items: { type: 'string' } },
+                nodes: { type: 'array', items: { type: 'string' } },
+                children: { type: 'array', items: { type: 'string' } },
+                members: { type: 'array', items: { type: 'string' } },
+              },
+            },
+          ],
+        },
+      },
+      {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            id: { type: 'string', minLength: 1 },
+            nodeIds: { type: 'array', items: { type: 'string' } },
+            nodes: { type: 'array', items: { type: 'string' } },
+            children: { type: 'array', items: { type: 'string' } },
+            members: { type: 'array', items: { type: 'string' } },
+          },
+          required: ['id'],
+        },
+      },
+    ],
+  });
   assert.ok(canvasGraphAgentItem.webmcp.toolNames.includes('canvas_graph_set_model'));
   assert.ok(canvasGraphAgentItem.webmcp.toolNames.includes('canvas_graph_focus_node'));
   assert.ok(canvasGraphAgentItem.webmcp.toolNames.includes('canvas_graph_set_path'));
@@ -2076,7 +2116,62 @@ test('node-canvas exposes the agent-facing serializable model adapter promised b
   assert.equal(layoutTool.annotations.runtimeMethod, 'applyLayout');
   assert.ok(component.contract.methods.some((method) => method.name === 'applyLayout'));
   assert.ok(component.contract.methods.some((method) => method.name === 'autoLayout'));
-  assert.deepEqual(layoutTool.inputSchema.properties.algorithm.enum, ['auto', 'tree', 'flow']);
+  assert.deepEqual(layoutTool.inputSchema.properties.algorithm.enum, ['auto', 'tree', 'flow', 'crystal']);
+  assert.deepEqual(layoutTool.inputSchema.properties.groups, {
+    oneOf: [
+      {
+        type: 'object',
+        additionalProperties: {
+          oneOf: [
+            { type: 'array', items: { type: 'string' } },
+            {
+              type: 'object',
+              additionalProperties: false,
+              properties: {
+                nodeIds: { type: 'array', items: { type: 'string' } },
+                nodes: { type: 'array', items: { type: 'string' } },
+                children: { type: 'array', items: { type: 'string' } },
+                members: { type: 'array', items: { type: 'string' } },
+              },
+            },
+          ],
+        },
+      },
+      {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            id: { type: 'string', minLength: 1 },
+            nodeIds: { type: 'array', items: { type: 'string' } },
+            nodes: { type: 'array', items: { type: 'string' } },
+            children: { type: 'array', items: { type: 'string' } },
+            members: { type: 'array', items: { type: 'string' } },
+          },
+          required: ['id'],
+        },
+      },
+    ],
+  });
+  assert.deepEqual(layoutTool.inputSchema.properties.rootNodeId, { type: 'string', minLength: 1 });
+  assert.deepEqual(layoutTool.inputSchema.properties.crystalRingDistance, {
+    type: 'number',
+    exclusiveMinimum: 0,
+  });
+  assert.deepEqual(layoutTool.inputSchema.properties.crystalSpokes, {
+    type: 'integer',
+    minimum: 3,
+    maximum: 12,
+  });
+  assert.deepEqual(layoutTool.inputSchema.properties.crystalAngleJitter, {
+    type: 'number',
+    minimum: 0,
+    maximum: 0.22,
+  });
+  let canvas = await import('../canvas/index.js');
+  assert.equal(typeof canvas.computeCrystalLayout, 'function');
+  assert.equal(typeof canvas.computeCrystalTargets, 'function');
   assert.equal(focusTool.annotations.runtimeMethod, 'focusNodes');
   assert.ok(component.contract.methods.some((method) => method.name === 'focusNodes'));
   assert.ok(component.contract.methods.some((method) => method.name === 'flyToNodes'));
@@ -2116,8 +2211,11 @@ test('graph node exposes media fit strategy for transparent and cropped media', 
   assert.match(nodeSource, /function normalizeMediaFit\(value\) {/);
   assert.match(nodeSource, /fit === 'fit'\) return 'contain';/);
   assert.match(nodeSource, /fit === 'crop'\) return 'cover';/);
-  assert.match(nodeSource, /setOptionalAttribute\(this, 'data-media-fit', normalizeMediaFit\(params\.mediaFit \|\| params\.imageFit \|\| params\.avatarFit\)\);/);
-  assert.match(nodeStyles, /\& \.sn-node-media {\s*inline-size: 100%;\s*aspect-ratio: 16 \/ 9;/);
+  assert.match(
+    nodeSource,
+    /'data-media-fit',\s*media\?\.fit \|\| normalizeMediaFit\(params\.mediaFit \|\| params\.imageFit \|\| params\.avatarFit\)/
+  );
+  assert.match(nodeStyles, /\& \.sn-node-media {[\s\S]*?inline-size: 100%;\s*aspect-ratio: 16 \/ 9;/);
   assert.match(nodeStyles, /\& \.sn-node-media-img {\s*display: block;\s*inline-size: 100%;\s*block-size: 100%;/);
   assert.match(nodeStyles, /\&\[data-media-fit='contain'\] \.sn-node-media-img {\s*object-fit: contain;/);
   assert.match(nodeStyles, /\&\[data-media-fit='cover'\] \.sn-node-media-img {\s*object-fit: cover;/);
@@ -2133,4 +2231,27 @@ test('source component registry does not keep legacy descriptor-v1 contracts', a
   let source = await readFile(new URL('../manifest/component-registry.js', import.meta.url), 'utf8');
 
   assert.doesNotMatch(source, /component-descriptor-v1/);
+});
+
+test('canvas and ui entrypoints no longer export the html-in-canvas plaque contract', async () => {
+  let canvas = await import('../canvas/index.js');
+  let ui = await import('../ui/index.js');
+
+  for (let entrypoint of [canvas, ui]) {
+    assert.equal(typeof entrypoint.createCanvasHtmlPlaqueController, 'undefined');
+    assert.equal(typeof entrypoint.resolveCanvasHtmlPlaqueEligibility, 'undefined');
+    assert.equal(entrypoint.CANVAS_HTML_PLAQUE_MODE, undefined);
+    assert.equal(entrypoint.BUILTIN_MEDIA_PLAQUE_CAPABILITIES, undefined);
+    assert.equal(typeof entrypoint.createHtmlInCanvasAdapter, 'function');
+  }
+});
+
+test('canvas graph source no longer exposes the plaque anchor or post-scene seam', async () => {
+  let source = await readFile(new URL('../canvas/CanvasGraph/CanvasGraph.js', import.meta.url), 'utf8');
+
+  assert.doesNotMatch(source, /measureNodePlaqueAnchor/);
+  assert.doesNotMatch(source, /addPostSceneRenderer/);
+  assert.doesNotMatch(source, /removePostSceneRenderer/);
+  assert.doesNotMatch(source, /_postSceneRenderers/);
+  assert.doesNotMatch(source, /projectCanvasRectFromWorld/);
 });

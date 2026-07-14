@@ -1093,6 +1093,7 @@ async function evaluateFlowScrollDragSmoke(page) {
           scrollLeft: canvas.scrollLeft,
           contentTop: content.getBoundingClientRect().top - container.getBoundingClientRect().top,
           transform: content.style.transform,
+          willChange: getComputedStyle(content).willChange,
         };
       };
 
@@ -2526,6 +2527,7 @@ test('node-canvas flow-scroll drag keeps repeated pan gestures continuous', { ti
     const smoke = await evaluateFlowScrollDragSmoke(page);
 
     assert.equal(smoke.initial.panY, 0);
+    assert.equal(smoke.initial.willChange, 'auto');
     assert.equal(smoke.afterFirst.panY, 0);
     assert.equal(smoke.afterSecond.panY, 0);
     assert.ok(smoke.afterFirst.scrollTop > smoke.initial.scrollTop, JSON.stringify(smoke, null, 2));

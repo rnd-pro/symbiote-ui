@@ -51,6 +51,9 @@ dynamically.
 - **Product-context projection** — host-owned product context becomes
   agent-facing views, component refs, entities, actions, and tool descriptors
   without moving host policy into reusable UI code.
+- **Graph layout quality reports** — a Node-safe analyzer and CLI detect
+  overlaps, obstructed or crossing connections, distance outliers, viewport
+  readability, locality, and instability with deterministic agent-readable IDs.
 
 ### Web Component Runtime
 
@@ -221,10 +224,13 @@ and re-attach a live widget into the message.
 
 ```sh
 symbiote-ui discover
+symbiote-ui layout-audit graph-layout-snapshot.json
 ```
 
 The discovery command prints the export map, component catalog, schemas, rules,
-tokens, theme recipes, WebMCP metadata, and agent-facing descriptors.
+tokens, theme recipes, graph-analysis operations, WebMCP metadata, and
+agent-facing descriptors. The layout audit prints a versioned quality report
+and exits non-zero when analysis fails or is incomplete.
 
 ## Documentation
 

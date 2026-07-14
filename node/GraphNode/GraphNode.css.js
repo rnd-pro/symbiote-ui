@@ -210,6 +210,7 @@ export let styles = css`
     }
 
     & .sn-node-media {
+      position: relative;
       inline-size: 100%;
       aspect-ratio: 16 / 9;
       overflow: hidden;
@@ -235,6 +236,40 @@ export let styles = css`
       object-fit: cover;
     }
 
+    & .sn-node-media-activate {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      background: color-mix(in oklab, var(--sn-sys-surface) 10%, transparent);
+      color: var(--sn-sys-on-surface);
+      cursor: pointer;
+      opacity: var(--sn-node-media-activate-opacity, 0.85);
+      transition: opacity var(--sn-transition-fast) var(--sn-transition-easing);
+    }
+
+    & .sn-node-media-activate[hidden] {
+      display: none;
+    }
+
+    & .sn-node-media-activate:hover {
+      opacity: 1;
+    }
+
+    & .sn-node-media-activate:focus-visible {
+      outline: var(--sn-focus-ring-width, 2px) solid var(--sn-sys-accent);
+      outline-offset: calc(var(--sn-focus-ring-width, 2px) * -1);
+    }
+
+    & .sn-node-media-activate-icon {
+      font-size: var(--sn-node-media-activate-icon-size, 40px);
+      color: var(--sn-sys-surface-raised);
+      filter: drop-shadow(0 1px 3px color-mix(in oklab, black 45%, transparent));
+    }
     & .sn-node-content {
       padding: var(--sn-node-content-padding, 8px 12px 10px);
       min-width: 0;

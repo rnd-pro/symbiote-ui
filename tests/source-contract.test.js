@@ -276,6 +276,321 @@ test('source editor accepts source documents and emits host save intents', async
   });
 });
 
+test('renderMarkdown emits a content-slot placeholder for a valid directive', async () => {
+  let { renderMarkdown } = await import('../display/highlight.js');
+  let html = renderMarkdown('Intro paragraph.\n\n:::content-slot hero\n\nOutro paragraph.');
+  let placeholders = html.match(/class="cb-content-slot"/g) || [];
+  assert.equal(placeholders.length, 1);
+  assert.match(html, /<div class="cb-content-slot" data-content-slot="hero"><\/div>/);
+});
+
+test('renderMarkdown emits content-slot placeholders in document order', async () => {
+  let { renderMarkdown } = await import('../display/highlight.js');
+  let html = renderMarkdown(':::content-slot first\n\n:::content-slot second\n\n:::content-slot third');
+  let keys = [...html.matchAll(/data-content-slot="([^"]+)"/g)].map((match) => match[1]);
+  assert.deepEqual(keys, ['first', 'second', 'third']);
+});
+
+test('renderMarkdown treats unsafe content-slot directives as inert escaped text', async () => {
+  let { renderMarkdown } = await import('../display/highlight.js');
+  let unsafe = [
+    ':::content-slot "quoted"',
+    ':::content-slot <script>',
+    ':::content-slot has space',
+    ':::content-slot key attr=val',
+    ':::content-slot key>evil',
+  ];
+  for (let source of unsafe) {
+    let html = renderMarkdown(source);
+    assert.doesNotMatch(html, /cb-content-slot/, `no placeholder for: ${source}`);
+    assert.doesNotMatch(html, /<script>/, `no raw markup for: ${source}`);
+  }
+});
+
+async function mountMarkdownViewer(raw = '# One') {
+  installDom();
+  await defineSourceViewerElements();
+  let viewer = document.createElement('source-viewer');
+  document.body.append(viewer);
+  await nextRenderTick();
+  viewer.showFile({ path: 'docs/a.md', raw, lang: 'md' });
+  await nextRenderTick();
+  let codeBlock = viewer.querySelector('code-block');
+  return { viewer, codeBlock };
+}
+
+test('code block renders content slots inside the markdown body', async () => {
+  let { codeBlock } = await mountMarkdownViewer('# Doc\n\n:::content-slot main');
+
+  let scroll = codeBlock.querySelector('.cb-scroll');
+  let flow = scroll.querySelector('.cb-flow');
+  let markdown = flow.querySelector('.cb-md');
+  assert.ok(markdown, 'the markdown body lives in the flow wrapper');
+  assert.equal(flow.querySelector('.cb-ext-host'), null, 'the legacy extension host is gone');
+
+  let slot = markdown.querySelector('.cb-content-slot[data-content-slot="main"]');
+  assert.ok(slot, 'the directive placeholder is part of the rendered markdown body');
+  assert.equal(slot.closest('.cb-md'), markdown, 'slots are descendants of the markdown body');
+});
+
+test('code block composes content slots against already-rendered markdown', async () => {
+  let { codeBlock } = await mountMarkdownViewer('# Doc\n\n:::content-slot alpha\n\nBetween.\n\n:::content-slot beta');
+
+  let received = [];
+  let composed = codeBlock.renderContentSlots((slot, key) => {
+    received.push(key);
+    let marker = document.createElement('div');
+    marker.className = 'slot-marker';
+    slot.append(marker);
+  });
+
+  assert.deepEqual(received, ['alpha', 'beta'], 'the composer receives every slot key in document order');
+  assert.equal(composed.length, 2, 'renderContentSlots returns the composed host elements');
+  let slots = codeBlock.querySelectorAll('.cb-md .cb-content-slot');
+  assert.equal(slots.length, 2);
+  for (let slot of slots) {
+    assert.equal(slot.querySelectorAll('.slot-marker').length, 1, 'each slot has exactly one composed child');
+  }
+});
+
+test('code block hands the composer its owned scroll viewport as scrollRoot', async () => {
+  let { codeBlock } = await mountMarkdownViewer('# Doc\n\n:::content-slot main');
+  let scroll = codeBlock.querySelector('.cb-scroll');
+  let seen = [];
+
+  codeBlock.renderContentSlots((slot, key, context) => {
+    seen.push({ key, context });
+  });
+
+  assert.equal(seen.length, 1);
+  assert.equal(seen[0].key, 'main');
+  assert.equal(seen[0].context.scrollRoot, scroll);
+});
+
+test('code block keeps handing the same scrollRoot across re-compositions', async () => {
+  let { codeBlock } = await mountMarkdownViewer('# One\n\n:::content-slot main');
+  let roots = [];
+
+  codeBlock.renderContentSlots((slot, key, context) => {
+    roots.push(context.scrollRoot);
+  });
+  codeBlock.setContent('# Two\n\n:::content-slot main', 'md');
+  await nextRenderTick();
+  codeBlock.setContent('# Three\n\n:::content-slot main', 'md');
+  await nextRenderTick();
+
+  assert.equal(roots.length, 3);
+  let scroll = codeBlock.querySelector('.cb-scroll');
+  assert.ok(roots.every((root) => root === scroll));
+});
+
+test('source viewer forwards the scrollRoot composer context without loss', async () => {
+  let { viewer, codeBlock } = await mountMarkdownViewer('# A\n\n:::content-slot main');
+  let scroll = codeBlock.querySelector('.cb-scroll');
+  let seen = [];
+
+  viewer.renderContentSlots((slot, key, context) => {
+    seen.push({ key, context });
+  });
+
+  assert.equal(seen.length, 1);
+  assert.equal(seen[0].key, 'main');
+  assert.equal(seen[0].context.scrollRoot, scroll);
+});
+
+test('code block recomposes content slots after each markdown replacement', async () => {
+  let { codeBlock } = await mountMarkdownViewer('# One\n\n:::content-slot main');
+  let root = codeBlock.querySelector('.cb-md');
+
+  let composeCount = 0;
+  codeBlock.renderContentSlots((slot) => {
+    composeCount += 1;
+    slot.append(document.createElement('div'));
+  });
+  assert.equal(composeCount, 1, 'registration composes once against the current content');
+
+  codeBlock.setContent('# Two\n\n:::content-slot main', 'md');
+  await nextRenderTick();
+  assert.equal(composeCount, 2, 'a markdown replacement recomposes');
+
+  codeBlock.setContent('# Three\n\n:::content-slot main', 'md');
+  await nextRenderTick();
+  codeBlock.setContent('# Four\n\n:::content-slot main', 'md');
+  await nextRenderTick();
+  assert.equal(composeCount, 4, 'each subsequent replacement recomposes exactly once');
+
+  assert.equal(codeBlock.querySelector('.cb-md'), root, 'the markdown root node identity is stable across replacements');
+  let slot = codeBlock.querySelector('.cb-md .cb-content-slot');
+  assert.equal(slot.children.length, 1, 'each render composes exactly one child per slot');
+});
+
+test('code block stops composing content slots after clear', async () => {
+  let { codeBlock } = await mountMarkdownViewer('# One\n\n:::content-slot main');
+
+  let composeCount = 0;
+  codeBlock.renderContentSlots((slot) => {
+    composeCount += 1;
+    slot.append(document.createElement('div'));
+  });
+  assert.equal(composeCount, 1);
+
+  codeBlock.clearContentSlots();
+
+  codeBlock.setContent('# Two\n\n:::content-slot main', 'md');
+  await nextRenderTick();
+  assert.equal(composeCount, 1, 'a cleared composer never recomposes');
+  let slot = codeBlock.querySelector('.cb-md .cb-content-slot');
+  assert.equal(slot.children.length, 0, 'no stale composed content remains');
+});
+
+test('code block disconnects the slot observer when removed from the document', async () => {
+  let { codeBlock } = await mountMarkdownViewer('# One\n\n:::content-slot main');
+
+  let composeCount = 0;
+  codeBlock.renderContentSlots((slot) => {
+    composeCount += 1;
+    slot.append(document.createElement('div'));
+  });
+  assert.equal(composeCount, 1);
+
+  codeBlock.remove();
+  await nextRenderTick();
+
+  codeBlock.setContent('# Two\n\n:::content-slot main', 'md');
+  await nextRenderTick();
+  assert.equal(composeCount, 1, 'a disconnected code block no longer composes on later renders');
+});
+
+test('source viewer forwards content slot and scroll APIs to the code block', async () => {
+  let { viewer, codeBlock } = await mountMarkdownViewer();
+
+  let calls = [];
+  codeBlock.renderContentSlots = (composer) => { calls.push(['render', composer]); return ['slot']; };
+  codeBlock.clearContentSlots = () => { calls.push(['clear']); };
+  codeBlock.scrollToTop = (options) => { calls.push(['top', options]); };
+  codeBlock.scrollToFragment = (id, options) => { calls.push(['scroll', id, options]); };
+
+  let composer = () => {};
+  assert.deepEqual(viewer.renderContentSlots(composer), ['slot']);
+  viewer.clearContentSlots();
+  viewer.scrollToTop({ behavior: 'auto' });
+  viewer.scrollToFragment('sec', { behavior: 'auto' });
+
+  assert.deepEqual(calls, [
+    ['render', composer],
+    ['clear'],
+    ['top', { behavior: 'auto' }],
+    ['scroll', 'sec', { behavior: 'auto' }],
+  ]);
+  assert.equal(typeof viewer.renderContentExtension, 'undefined', 'the legacy extension API is gone');
+  assert.equal(typeof viewer.clearContentExtension, 'undefined', 'the legacy extension API is gone');
+});
+
+test('source viewer resets slot composition across files', async () => {
+  let { viewer, codeBlock } = await mountMarkdownViewer('# A\n\n:::content-slot main');
+
+  let composeCount = 0;
+  viewer.renderContentSlots((slot) => {
+    composeCount += 1;
+    slot.append(document.createElement('div'));
+  });
+  assert.equal(composeCount, 1);
+
+  viewer.showFile({ path: 'docs/b.md', raw: '# B\n\n:::content-slot main', lang: 'md' });
+  await nextRenderTick();
+  assert.equal(composeCount, 1, 'a stale composer never leaks into the next file');
+  let slot = codeBlock.querySelector('.cb-md .cb-content-slot');
+  assert.equal(slot.children.length, 0, 'the next file renders its slots empty');
+});
+
+test('source viewer keeps clean markdown source separate from rendered slot directives', async () => {
+  let { viewer, codeBlock } = await mountMarkdownViewer();
+  viewer.showFile({
+    path: 'docs/media.md',
+    raw: '# Article\n\n[Original link](https://example.test/video)',
+    renderedRaw: '# Article\n\n:::content-slot media-player',
+    lang: 'md',
+  });
+  viewer.renderContentSlots((slot) => slot.append(document.createElement('div')));
+
+  assert.ok(codeBlock.querySelector('[data-content-slot="media-player"]'));
+  await viewer.toggleMode();
+  assert.match(codeBlock.textContent, /Original link/);
+  assert.doesNotMatch(codeBlock.textContent, /content-slot/);
+
+  await viewer.toggleMode();
+  await nextRenderTick();
+  assert.ok(codeBlock.querySelector('[data-content-slot="media-player"]'));
+});
+
+test('code block scrollToFragment scrolls the scroll container to a rendered anchor', async () => {
+  let { codeBlock } = await mountMarkdownViewer('# Doc\n\n:::content-slot main');
+  codeBlock.renderContentSlots((slot) => {
+    let anchor = document.createElement('div');
+    anchor.id = 'section-2';
+    slot.append(anchor);
+  });
+
+  let scroll = codeBlock.querySelector('.cb-scroll');
+  assert.ok(scroll.contains(document.getElementById('section-2')), 'anchor is part of the rendered flow');
+
+  let scrolledTop = null;
+  scroll.scrollTo = (opts) => { scrolledTop = opts.top; };
+  codeBlock.scrollToFragment('section-2');
+  assert.equal(typeof scrolledTop, 'number', 'the scroll container is scrolled to the anchor');
+});
+
+test('code block scrollToTop resets both viewport axes with the requested behavior', async () => {
+  let { codeBlock } = await mountMarkdownViewer('# Doc');
+  let scroll = codeBlock.querySelector('.cb-scroll');
+  let scrollOptions = null;
+  scroll.scrollTo = (options) => { scrollOptions = options; };
+
+  codeBlock.scrollToTop({ behavior: 'auto' });
+
+  assert.deepEqual(scrollOptions, {
+    top: 0,
+    left: 0,
+    behavior: 'auto',
+  });
+});
+
+test('code block scrollToFragment is a no-op for a missing or invalid id', async () => {
+  let { codeBlock } = await mountMarkdownViewer();
+  let scroll = codeBlock.querySelector('.cb-scroll');
+  scroll.scrollTo = () => { throw new Error('unexpected scroll'); };
+
+  assert.doesNotThrow(() => codeBlock.scrollToFragment('does-not-exist'));
+  assert.doesNotThrow(() => codeBlock.scrollToFragment(''));
+  assert.doesNotThrow(() => codeBlock.scrollToFragment(null));
+});
+
+test('code block scrollToFragment honors reduced motion and explicit behavior', async () => {
+  let { codeBlock } = await mountMarkdownViewer('# Doc\n\n:::content-slot main');
+  codeBlock.renderContentSlots((slot) => {
+    let anchor = document.createElement('div');
+    anchor.id = 'section-x';
+    slot.append(anchor);
+  });
+
+  let scroll = codeBlock.querySelector('.cb-scroll');
+  let behaviorSeen = null;
+  scroll.scrollTo = (opts) => { behaviorSeen = opts.behavior; };
+
+  window.matchMedia = () => ({ matches: true });
+  codeBlock.scrollToFragment('section-x');
+  assert.equal(behaviorSeen, 'auto', 'reduced motion resolves the default behavior to auto');
+
+  codeBlock.scrollToFragment('section-x', { behavior: 'smooth' });
+  assert.equal(behaviorSeen, 'smooth', 'an explicit behavior is honored under reduced motion');
+
+  window.matchMedia = () => ({ matches: false });
+  codeBlock.scrollToFragment('section-x');
+  assert.equal(behaviorSeen, 'smooth', 'without reduced motion the default behavior is smooth');
+
+  delete window.matchMedia;
+});
+
 test('source-contract: parseGitDiffPatch parses raw diff patches', async () => {
   const patch = `
 --- a/src/index.js

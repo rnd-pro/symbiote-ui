@@ -66,6 +66,134 @@ adapters in a hidden layout subtree. `chat-workspace`, `chat-composer`, and
 backgrounds, wake listeners, voice capture, and UI timers without destroying
 host-owned chat, route, or layout state.
 
+## Node Canvas Layout
+
+`node-canvas.applyLayout()` supports `auto`, `tree`, `flow`, and `crystal`.
+Every algorithm returns top-left positions. Non-flow algorithms measure the
+rendered node rectangles by default, batch position writes, refresh connections
+once, and fit the viewport only when `fit: true` is supplied.
+
+```js
+let result = canvas.applyLayout({
+  algorithm: 'crystal',
+  rootNodeId: 'workspace-root',
+  groups: {
+    'cluster-a': ['cluster-a', 'leaf-a', 'leaf-b'],
+  },
+  startX: 80,
+  startY: 64,
+  crystalRingDistance: 120,
+  crystalSpokes: 6,
+  crystalAngleJitter: 0.12,
+  fit: true,
+});
+```
+
+Crystal layout is deterministic for equivalent node, edge, and group data.
+`rootNodeId` selects the growth root and takes precedence over the
+force-layout-only `activeVisualNodeId`. An invalid explicit root resolves to a
+deterministic graph root instead of following transient focus. `startX` and
+`startY` anchor the resolved root's top-left corner. `groups` identify generic
+hub/member clusters; the layout does not infer product-specific ownership.
+`crystalRingDistance` must be positive, `crystalSpokes` is normalized to 3–12,
+and `crystalAngleJitter` is normalized to 0–0.22. Successive rings increase
+their capacity by the configured spoke count, producing bounded hexagonal
+growth instead of adding one fixed-size ring per spoke batch. Explicit groups
+are authoritative layout hubs; automatic degree-based hubs are used only when
+the graph supplies no groups. In a grouped graph, an explicit semantic hub
+accepts only its declared members. Nodes not claimed by an explicit group or
+an existing `isGroup`/`children` structural hub fall back to the root. This
+keeps article/media clusters local without absorbing adjacent skills, sections,
+or timeline nodes.
+
+The Node-safe `computeCrystalTargets()` planner uses center coordinates for
+force simulation. Each target also exposes `layoutParentId`: `null` for the
+root, the root ID for hub targets, and the assigned hub ID for member targets.
+Agents and diagnostics can therefore verify semantic ownership without
+inferring it from proximity. `ForceLayout` sends those canonical targets to the
+classic worker, which applies forces without maintaining a second crystal planner.
+`computeCrystalLayout()` adapts the same plan to top-left node-canvas
+coordinates and ignores prior node positions during explicit relayout.
+
+## Graph Layout Quality
+
+`symbiote-ui/graph` exposes a pure, Node-safe quality audit for settled 2D graph
+geometry. It does not move nodes or choose a layout algorithm. Hosts provide a
+JSON-compatible snapshot with final node bounds, connections, optional routed
+points, viewport, and baseline; the analyzer returns stable finding codes with
+the exact node and edge IDs that need attention.
+
+```js
+import { analyzeGraphLayout } from 'symbiote-ui/graph';
+
+let report = analyzeGraphLayout({
+  version: 'graph-layout-snapshot-v1',
+  nodes: [
+    { id: 'article', bounds: { x: 0, y: 0, width: 240, height: 160 } },
+    {
+      id: 'media',
+      parentId: 'article',
+      bounds: { x: 320, y: 30, width: 180, height: 120 },
+    },
+  ],
+  edges: [
+    { id: 'article-media', sourceId: 'article', targetId: 'media' },
+  ],
+  viewport: { width: 960, height: 640, padding: 48 },
+  policy: { idealEdgeLength: 160 },
+});
+```
+
+The report uses `graph-layout-quality-v1` and contains:
+
+- `status`: `pass`, `warn`, `fail`, or `incomplete`;
+- `pass` and `complete` for CI and agent gates;
+- normalized node, edge, bounds, viewport, locality, and stability metrics;
+- `findings[]` with `ruleId`, severity, involved IDs, actual value, and limit;
+- `coverage` where every check records its `required` entity-pair count,
+  `complete` or `skipped-budget` status, and worst-case primitive
+  geometry-comparison `budgetCost`;
+- the resolved `policy` and normalization basis needed to reproduce the result.
+
+Overlaps above the area-valued `overlapTolerance` and connections crossing the
+interior of unrelated nodes are failures. Invalid input, malformed geometry,
+invalid parent or baseline data, and an exhausted geometry-comparison budget are
+blocking `incomplete` results. Edge crossings, excessive distances, unreadable viewport
+fit, and layout instability are warnings by default. Routed `points` enable
+checks against the rendered connection path; otherwise the analyzer evaluates
+a straight center-to-center segment. Boundary tangency does not count as an
+interior node intersection.
+
+Baseline nodes may be an array of `{ id, bounds }` or flat
+`{ id, x, y, width, height }` records, or an ID-keyed object whose values are
+bounds or `{ bounds }`. Duplicate IDs are never resolved by input order: every
+ambiguous occurrence is skipped and reported.
+
+Node and edge IDs are canonical non-empty strings without leading or trailing
+whitespace. Geometry and route points stay inside the published numeric domain,
+which keeps distances, areas, normalization ratios, and serialized reports
+finite across very small and very large layouts. Coverage records malformed
+entries through `skippedCount` and `unidentifiedCount`; it never invents IDs
+that could collide with graph data. If a non-zero derived center delta, area,
+ratio, fit scale, rendered size, or aggregate ratio materializes as zero in
+IEEE-754, the audit returns `incomplete` with `layout.numeric-underflow`
+instead of silently passing. Center differences use cancellation-stable bounds
+arithmetic before distance and baseline calculations.
+
+Agents discover the operation, exact input/output schema, report invariants,
+status semantics, stable rule catalog with payload schemas, types and units,
+default policy, per-field policy constraints, and numeric domain through
+`symbiote-ui discover` at `manifest.graphAnalysis`. They can import the function
+or run the same contract from a file:
+
+```sh
+symbiote-ui layout-audit graph-layout-snapshot.json
+```
+
+The CLI prints the JSON report and exits non-zero for `fail` or `incomplete`.
+It does not persist reports, mutate graph state, or apply product-specific
+article/media policy.
+
 ## Spatial Algorithms
 
 `symbiote-ui/xr` includes a set of dependency-free spatial primitives for 3D

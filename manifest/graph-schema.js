@@ -1,3 +1,6 @@
+import { GRAPH_LAYOUT_QUALITY_VERSION } from '../graph/layout-quality.js';
+import { GRAPH_LAYOUT_QUALITY_SCHEMA } from './graph-analysis-catalog.js';
+
 export let GRAPH_SCHEMA_VERSIONS = [
   {
     version: 'v1',
@@ -8,6 +11,16 @@ export let GRAPH_SCHEMA_VERSIONS = [
     version: 'graph-model-v1',
     path: 'schemas/graph-model-v1.json',
     description: 'JSON Schema for universal graph models shared by UI, workflow, automation, and media projects.',
+  },
+  {
+    version: 'media-descriptor-v1',
+    path: 'schemas/media-descriptor-v1.json',
+    description: 'JSON Schema for the normalized graph media descriptor activated by the browser media host.',
+  },
+  {
+    version: GRAPH_LAYOUT_QUALITY_VERSION,
+    path: 'schemas/graph-layout-quality-v1.json',
+    description: 'JSON Schema for deterministic, agent-readable graph layout quality reports and audit inputs.',
   },
 ];
 
@@ -47,6 +60,30 @@ export let GRAPH_SCHEMAS = {
       },
     },
     $defs: {
+      media: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['kind', 'activation'],
+        properties: {
+          kind: { type: 'string', minLength: 1 },
+          poster: { type: 'string' },
+          alt: { type: 'string' },
+          fit: { enum: ['contain', 'cover'] },
+          activation: {
+            type: 'object',
+            additionalProperties: true,
+            required: ['provider'],
+            properties: {
+              provider: { type: 'string', minLength: 1 },
+            },
+          },
+          targetIds: {
+            type: 'array',
+            items: { type: 'string', minLength: 1 },
+            uniqueItems: true,
+          },
+        },
+      },
       point: {
         type: 'object',
         required: ['x', 'y'],
@@ -66,7 +103,13 @@ export let GRAPH_SCHEMAS = {
           label: { type: 'string' },
           position: { $ref: '#/$defs/point' },
           size: { $ref: '#/$defs/point' },
-          params: { type: 'object', additionalProperties: true },
+          params: {
+            type: 'object',
+            additionalProperties: true,
+            properties: {
+              media: { $ref: '#/$defs/media' },
+            },
+          },
           inputs: { type: 'array', items: { type: 'string' } },
           outputs: { type: 'array', items: { type: 'string' } },
         },
@@ -139,6 +182,30 @@ export let GRAPH_SCHEMAS = {
       theme: { $ref: '#/$defs/themeRef' },
     },
     $defs: {
+      media: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['kind', 'activation'],
+        properties: {
+          kind: { type: 'string', minLength: 1 },
+          poster: { type: 'string' },
+          alt: { type: 'string' },
+          fit: { enum: ['contain', 'cover'] },
+          activation: {
+            type: 'object',
+            additionalProperties: true,
+            required: ['provider'],
+            properties: {
+              provider: { type: 'string', minLength: 1 },
+            },
+          },
+          targetIds: {
+            type: 'array',
+            items: { type: 'string', minLength: 1 },
+            uniqueItems: true,
+          },
+        },
+      },
       layout: {
         type: 'object',
         additionalProperties: true,
@@ -195,7 +262,13 @@ export let GRAPH_SCHEMAS = {
           label: { type: 'string' },
           parentId: { type: 'string', minLength: 1 },
           flow: { $ref: '#/$defs/flow' },
-          params: { type: 'object', additionalProperties: true },
+          params: {
+            type: 'object',
+            additionalProperties: true,
+            properties: {
+              media: { $ref: '#/$defs/media' },
+            },
+          },
           design: { $ref: '#/$defs/design' },
           children: {
             type: 'array',
@@ -275,6 +348,36 @@ export let GRAPH_SCHEMAS = {
     },
   },
 };
+
+GRAPH_SCHEMAS['media-descriptor-v1'] = {
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  $id: 'https://rnd-pro.github.io/symbiote-ui/schemas/media-descriptor-v1.json',
+  title: 'Symbiote Media Descriptor',
+  type: 'object',
+  additionalProperties: false,
+  required: ['kind', 'activation'],
+  properties: {
+    kind: { type: 'string', minLength: 1 },
+    poster: { type: 'string' },
+    alt: { type: 'string' },
+    fit: { enum: ['contain', 'cover'] },
+    activation: {
+      type: 'object',
+      additionalProperties: true,
+      required: ['provider'],
+      properties: {
+        provider: { type: 'string', minLength: 1 },
+      },
+    },
+    targetIds: {
+      type: 'array',
+      items: { type: 'string', minLength: 1 },
+      uniqueItems: true,
+    },
+  },
+};
+
+GRAPH_SCHEMAS[GRAPH_LAYOUT_QUALITY_VERSION] = GRAPH_LAYOUT_QUALITY_SCHEMA;
 
 export function listGraphVersions() {
   return GRAPH_SCHEMA_VERSIONS.map((schema) => schema.version);

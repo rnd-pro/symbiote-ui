@@ -19,6 +19,7 @@ import {
   getThemeRecipe,
   getThemeTokens,
   getUiSchema,
+  listGraphAnalysisOperations,
   listAgentComponentDescriptions,
   listComponents,
   listGraphSchemas,
@@ -72,7 +73,7 @@ const EXPORT_ENTRYPOINTS = [
   {
     specifier: 'symbiote-ui/graph',
     kind: 'node-safe',
-    description: 'Universal graph model normalization for UI, workflow, automation, and media projects.',
+    description: 'Universal graph models, projections, and deterministic layout quality analysis.',
   },
   {
     specifier: 'symbiote-ui/locale',
@@ -367,6 +368,7 @@ export async function cmdDiscover(options = {}) {
       motionScale: getMotionScaleDescriptor(),
       semanticTokenCatalog: getSemanticTokenCatalog(),
       componentRecipes: getComponentRecipesDescriptor(),
+      graphAnalysis: listGraphAnalysisOperations(),
       rulesets: RULESETS.map((rs) => ({
         name: rs.name,
         version: rs.version,

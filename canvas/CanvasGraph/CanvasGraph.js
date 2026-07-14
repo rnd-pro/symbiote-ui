@@ -57,6 +57,11 @@ import {
 } from './CanvasGraphViewport.js';
 import { resolveWheelZoomFactor } from '../../interactions/Zoom.js';
 import { renderNow } from '../../core/render-clock.js';
+import {
+  CanvasGraphMediaImages,
+  getCanvasGraphNodeMedia,
+  drawCanvasGraphNodeMedia,
+} from '../canvas-graph-media.js';
 
 const DEFAULT_EVENT_NAMES = Object.freeze({
   fileSelected: 'file-selected',
@@ -748,6 +753,7 @@ export class CanvasGraph extends Symbiote {
     this._layoutSnapshot = null;
     this._forceLayoutOverrides = {};
     this._nodeAppearances = new Map();
+    this._mediaImages = new CanvasGraphMediaImages(() => this._wakeLoop());
     this._layoutWarmupIds = new Set();
     this._layoutPreserveIds = new Set();
     this._workerGeneration = 0;
@@ -830,6 +836,7 @@ export class CanvasGraph extends Symbiote {
     this.ownerDocument?.removeEventListener?.('cascade-theme-change', this._themeChangeHandler);
     this._themeObserver?.disconnect();
     this.disableDeviceOrientationParallax();
+    this._mediaImages?.clear();
     if (this.worker) this.worker.stop();
   }
 
@@ -1786,6 +1793,29 @@ export class CanvasGraph extends Symbiote {
     return true;
   }
 
+  /**
+   * Immediately set the active node without moving or targeting the viewport.
+   *
+   * @param {string} nodeId - id of the node to activate
+   * @param {{ transition?: boolean, marker?: boolean }} [options]
+   * @returns {boolean} true for a matching node, false for a missing or unknown id
+   */
+  activateNode(nodeId, { transition = false, marker = false } = {}) {
+    let id = String(nodeId || '').trim();
+    if (!id) return false;
+    if (!transition) {
+      this._cancelViewportGestureTarget();
+      this._transitionMarkers = (this._transitionMarkers || []).filter((item) => (
+        !item?.pendingActivation && !item?.pendingViewport
+      ));
+    }
+    let activated = this._activateNode(id, { transition, marker });
+    if (activated && !transition && this.activeNode?.id === id) {
+      this._infoPanel._centeredForNode = id;
+    }
+    return activated;
+  }
+
   focusSemanticCluster(nodeId) {
     const node = this.graphDB?.nodes.get(nodeId);
     if (!node?.isSemanticCluster) return;
@@ -2669,6 +2699,27 @@ export class CanvasGraph extends Symbiote {
     drawCanvasGraphIcon(ctx, icon, pos.x, pos.y, iconSize, toRgba(iconRgb, 0.9 * layerOpacity), layerOpacity);
   }
 
+  /**
+   * Draw the reusable poster for a node carrying a
+   * normalized `params.media` descriptor. Returns true when a poster was drawn
+   * so the caller can skip the fallback icon. Never mounts a player/iframe.
+   * @returns {boolean}
+   */
+  _drawNodeMedia(ctx, node, pos, radius, typeRgb, layerOpacity) {
+    let descriptor = getCanvasGraphNodeMedia(node);
+    if (!descriptor || radius <= 0) return false;
+
+    let drewPoster = drawCanvasGraphNodeMedia(ctx, {
+      descriptor,
+      x: pos.x,
+      y: pos.y,
+      radius,
+      images: this._mediaImages,
+      layerOpacity,
+    });
+    return drewPoster;
+  }
+
   _drawStatusBadge(ctx, pos, radius, typeRgb, status, layerOpacity) {
     let badgeRadius = Math.max(radius * 0.22, 4 / Math.max(0.45, this.zoom));
     let x = pos.x + radius * 0.62;
@@ -3533,7 +3584,10 @@ export class CanvasGraph extends Symbiote {
         }
         if (!isGhost && drawnRadius > 0) {
           this._drawNodeStatusIndicator(currentCtx, node, pos, drawnRadius, tc, layerOpacity, nodeAppearanceNow);
-          this._drawNodeIcon(currentCtx, node, pos, drawnRadius, tc, layerOpacity);
+          let drewMedia = !node.isGroup && this._drawNodeMedia(currentCtx, node, pos, drawnRadius, tc, layerOpacity);
+          if (!drewMedia) {
+            this._drawNodeIcon(currentCtx, node, pos, drawnRadius, tc, layerOpacity);
+          }
         }
         currentCtx.restore();
       }
@@ -4067,6 +4121,26 @@ export class CanvasGraph extends Symbiote {
     this.canvas.style.cursor = hitItem ? 'pointer' : 'default';
   }
 
+  /**
+   * @param {{ clientX: number, clientY: number, deltaY: number, deltaMode?: number, ctrlKey?: boolean }} event
+   * @returns {boolean}
+   */
+  applyWheelZoom(event) {
+    if (!this.canvas || !Number.isFinite(event?.clientX) || !Number.isFinite(event?.clientY)) {
+      return false;
+    }
+    let factor = resolveWheelZoomFactor(event);
+    let targetZoom = Number.isFinite(this._targetZoom) ? this._targetZoom : this.zoom;
+    if (!Number.isFinite(factor) || factor <= 0 || !Number.isFinite(targetZoom)) return false;
+    let rect = this.canvas.getBoundingClientRect();
+    let mx = event.clientX - rect.left;
+    let my = event.clientY - rect.top;
+    this._targetZoom = this._clampZoom(targetZoom * factor, rect);
+    this._zoomAnchor = { mx, my };
+    this._wakeLoop();
+    return true;
+  }
+
   bindEvents() {
     this.canvas.addEventListener('pointerdown', (e) => {
       this._requestDeviceOrientationParallaxFromGesture();
@@ -4284,12 +4358,7 @@ export class CanvasGraph extends Symbiote {
 
     this.canvas.addEventListener('wheel', (e) => {
       e.preventDefault();
-      const rect = this.canvas.getBoundingClientRect();
-      const mx = e.clientX - rect.left, my = e.clientY - rect.top;
-      const factor = resolveWheelZoomFactor(e);
-      this._targetZoom = this._clampZoom(this._targetZoom * factor, rect);
-      this._zoomAnchor = { mx, my };
-      this._wakeLoop();  // Zoom changed — resume rendering
+      this.applyWheelZoom(e);
     }, { passive: false });
 
     this.canvas.addEventListener('dblclick', (e) => {

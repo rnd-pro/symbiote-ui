@@ -33,6 +33,30 @@
     }
   },
   "$defs": {
+    "media": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "activation"],
+      "properties": {
+        "kind": { "type": "string", "minLength": 1 },
+        "poster": { "type": "string" },
+        "alt": { "type": "string" },
+        "fit": { "enum": ["contain", "cover"] },
+        "activation": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": ["provider"],
+          "properties": {
+            "provider": { "type": "string", "minLength": 1 }
+          }
+        },
+        "targetIds": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        }
+      }
+    },
     "point": {
       "type": "object",
       "required": ["x", "y"],
@@ -52,7 +76,13 @@
         "label": { "type": "string" },
         "position": { "$ref": "#/$defs/point" },
         "size": { "$ref": "#/$defs/point" },
-        "params": { "type": "object", "additionalProperties": true },
+        "params": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "media": { "$ref": "#/$defs/media" }
+          }
+        },
         "inputs": { "type": "array", "items": { "type": "string" } },
         "outputs": { "type": "array", "items": { "type": "string" } }
       }

@@ -5,6 +5,18 @@ export {
   normalizeGraphModel,
 } from './model.js';
 export {
+  normalizeMediaDescriptor,
+  isMediaDescriptor,
+  MEDIA_DESCRIPTOR_SCHEMA_ID,
+} from './media-descriptor.js';
+export {
+  GRAPH_LAYOUT_QUALITY_DEFAULT_POLICY,
+  GRAPH_LAYOUT_QUALITY_NUMERIC_DOMAIN,
+  GRAPH_LAYOUT_QUALITY_SCHEMA_ID,
+  GRAPH_LAYOUT_QUALITY_VERSION,
+  analyzeGraphLayout,
+} from './layout-quality.js';
+export {
   canvasGraphModelToGraphModel,
   graphModelToCanvasGraphModel,
 } from './canvas-adapter.js';

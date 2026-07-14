@@ -4,8 +4,66 @@ All notable changes to `symbiote-ui` will be documented in this file.
 
 ## Unreleased
 
+## [0.3.0-alpha.57] - 2026-07-14
+
 ### Added
 
+- Added the Node-safe `analyzeGraphLayout()` contract and
+  `graph-layout-quality-v1` schema for deterministic node overlap,
+  edge/node intersection, edge crossing, distance, viewport readability,
+  parent locality, and translation-aligned stability diagnostics. The same
+  read-only operation is agent-discoverable through `manifest.graphAnalysis`
+  with canonical-ID and numeric-domain constraints, per-rule payload metadata,
+  explicit non-zero-derived-value underflow reporting, exact coverage/budget
+  accounting, and executable through `symbiote-ui layout-audit <snapshot.json>`.
+- Added a Node-safe media descriptor contract (`normalizeMediaDescriptor`,
+  `isMediaDescriptor`, `MEDIA_DESCRIPTOR_SCHEMA_ID`) exported from
+  `symbiote-ui`/`symbiote-ui/graph`, plus `schemas/media-descriptor-v1.json` and
+  a shared `media` definition in `graph-model-v1`/`graph-v1`. A node's
+  `params.media` is normalized to `{ kind, poster, alt, fit, activation:
+  { provider, ... }, targetIds }`; a missing `activation.provider` is rejected.
+- Extended `graph-node` to render a lightweight poster plus a readable media-kind
+  badge for activatable media, and to emit a bubbling, composed
+  `sn-media-activate` intent (`detail: { descriptor, nodeId }`) on keyboard or
+  pointer activation. The graph never mounts a player during render, pan, or zoom.
+- Added a browser media provider registry (`registerMediaProvider`,
+  `getMediaProvider`, `hasMediaProvider`, `listMediaProviders`,
+  `unregisterMediaProvider`) with fixed provider keys and explicit
+  `{ mount, unmount }` adapters, plus built-in `image` and privacy-hardened
+  `youtube` adapters (`youtube-nocookie.com`, `loading=lazy`, minimal `allow`,
+  sandboxed, `referrerpolicy=strict-origin-when-cross-origin`).
+- Added the accessible `sn-media-host` Web Component (`symbiote-ui/ui`) that
+  mounts exactly one active adapter on user activation, unmounts on descriptor
+  replacement and disconnect, and degrades to poster plus external link on an
+  unknown provider or adapter failure without throwing.
+- Added a reusable canvas poster/badge path so `CanvasGraph` draws the same
+  `node.params.media` poster (clipped to the node dot, `cover`/`contain` fit)
+  and a media-kind badge, with lazy image caching and icon fallback and without
+  mounting any player. New `symbiote-ui/ui` exports: `getCanvasGraphNodeMedia`,
+  `CanvasGraphMediaImages`, `drawCanvasGraphNodeMedia`, `drawCanvasGraphImageFit`,
+  `drawCanvasGraphMediaBadge`, and `CANVAS_MEDIA_IMAGE_STATUS`.
+- Added a generic rendered-content slot seam to `code-block` and `source-viewer`.
+  A safe standalone markdown directive `:::content-slot <key>` (constrained key
+  charset `[A-Za-z0-9_-]`; malformed, quoted, raw-HTML, or extra-attribute
+  payloads stay inert escaped text) emits a library-owned placeholder inside the
+  rendered markdown body. `renderContentSlots(composer)` invokes
+  `composer(hostElement, slotKey)` once for every rendered slot in document order
+  and returns the composed host elements; `clearContentSlots()` drops the
+  composer. Composition is binding-driven: a scoped `MutationObserver` on the
+  innerHTML-bound `.cb-md` markdown root re-composes after each markdown
+  replacement (surviving repeated content swaps on the same block) with no
+  timer/rAF, no observer feedback loop, and no duplicate composition.
+  `scrollToFragment(id, options)` still scrolls the rendered flow to an element by
+  id (reduced-motion aware, no-op for a missing id). The seam carries no HTML
+  strings or media/route concepts, so real article players live semantically
+  between the markdown paragraphs while graph media nodes stay lightweight
+  posters.
+- Made `sn-media-host.activate()` readiness-safe: an activation requested before
+  the provider stage/refs are ready is remembered as a single pending request and
+  fulfilled from the Symbiote render lifecycle (`renderCallback`), not a timer.
+  A descriptor replacement or disconnect cancels a stale pending request, so a
+  rapid reselect never mounts the previous host late and exactly one current host
+  activates.
 - Added `lockRatio` split options to `LayoutTree.createSplit()` so hosts can
   preserve authored panel proportions while surrounding branches use responsive
   priority compression.
@@ -70,6 +128,13 @@ All notable changes to `symbiote-ui` will be documented in this file.
 
 ### Fixed
 
+- Media fallback links now accept only HTTP(S) and safely resolved relative
+  URLs, preventing executable URL schemes from reaching browser navigation
+  sinks.
+- Added `scrollToTop(options)` to `code-block` and `source-viewer` so hosts can
+  reset the owned article viewport during document navigation without querying
+  component internals, while preserving reduced-motion and explicit scroll
+  behavior.
 - Media Studio preview now prefers an encoded playback proxy over cached bitmap
   frames, reports rVFC and secure WebCodecs capabilities honestly, and closes or
   cancels every decoder, frame, listener, and video-frame callback it owns.

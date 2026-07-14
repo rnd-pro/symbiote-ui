@@ -3,7 +3,7 @@
 - `symbiote-ui` - Node-safe core primitives.
 - `symbiote-ui/core` - graph editor data primitives.
 - `symbiote-ui/layout` - SSR-safe layout, behavior, and lifecycle helpers.
-- `symbiote-ui/graph` - provider graph normalization and projection helpers.
+- `symbiote-ui/graph` - provider graph normalization, projection, and deterministic layout-quality analysis.
 - `symbiote-ui/manifest` - component, schema, rule, theme, and provider catalogs.
 - `symbiote-ui/runtime` - Node-safe agent UI construction helpers.
 - `symbiote-ui/runtime/product-context` - Node-safe product context normalization for host-owned agent views.

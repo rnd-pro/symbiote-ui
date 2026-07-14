@@ -346,8 +346,26 @@ export let Tour;
 export let Carousel;
 export let QrCode;
 export let VideoPlayer;
+export let MediaHost;
 export let stringifyBlock;
 export let truncateResult;
+export {
+  registerMediaProvider,
+  getMediaProvider,
+  hasMediaProvider,
+  listMediaProviders,
+  unregisterMediaProvider,
+} from './media/provider-registry.js';
+export { IMAGE_MEDIA_ADAPTER, IMAGE_PROVIDER_KEY } from './media/adapters/image-adapter.js';
+export { YOUTUBE_MEDIA_ADAPTER, YOUTUBE_PROVIDER_KEY } from './media/adapters/youtube-adapter.js';
+export {
+  CANVAS_MEDIA_IMAGE_STATUS,
+  CanvasGraphMediaImages,
+  getCanvasGraphNodeMedia,
+  drawCanvasGraphImageFit,
+  drawCanvasGraphNodeMedia,
+  drawCanvasGraphMediaBadge,
+} from '../canvas/canvas-graph-media.js';
 export { sharedUiStyles } from './shared-styles.js';
 export {
   bringOverlayToFront,
@@ -834,6 +852,7 @@ if (hasDOMGlobals) {
     qrCode,
     videoPlayer,
     timelineEditor,
+    mediaHost,
   ] = await Promise.all([
     import('../canvas/NodeCanvas/NodeCanvas.js'),
     import('../canvas/CanvasGraph/CanvasGraph.js'),
@@ -941,6 +960,7 @@ if (hasDOMGlobals) {
     import('../display/QrCode/QrCode.js'),
     import('../display/VideoPlayer/VideoPlayer.js'),
     import('../timeline/TimelineEditor/TimelineEditor.js'),
+    import('./media/MediaHost/MediaHost.js'),
   ]);
 
   ({ NodeCanvas } = nodeCanvas);
@@ -1062,6 +1082,7 @@ if (hasDOMGlobals) {
   ({ default: Carousel } = carousel);
   ({ default: QrCode } = qrCode);
   ({ default: VideoPlayer } = videoPlayer);
+  ({ default: MediaHost } = mediaHost);
 
   registerCatalogModules({
     NodeCanvas,
@@ -1183,6 +1204,7 @@ if (hasDOMGlobals) {
     Carousel,
     QrCode,
     VideoPlayer,
+    MediaHost,
   });
 }
 

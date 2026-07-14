@@ -363,7 +363,12 @@ describe('SelectionSync Connection Focus', () => {
     assert.match(source, /let suppressConnectionResizeSettle = now < \(this\._viewportResizeSettleSuppressUntil \|\| 0\);/);
     assert.match(source, /if \(suppressConnectionResizeSettle\) \{\s+this\._queueSuppressedNodeResizeUpdate\(nodeId, now\);\s+} else \{\s+this\._scheduleConnectionUpdate\(nodeId\);\s+changed = true;\s+}/);
     assert.match(source, /_flushSuppressedNodeResizeUpdates\(\) \{/);
-    assert.match(source, /if \(options\.fit === true\) \{\s+this\.fitView\(\);\s+\} else \{\s+this\._scheduleConnectionSettleRefresh\(3\);/);
+    let applyLayoutBlock = source.match(
+      /  applyLayout\(options = \{\}\) \{([\s\S]*?)\n  \}\n\n  \/\*\*\n   \* Apply auto layout/
+    )?.[1] || '';
+    assert.equal((applyLayoutBlock.match(/this\.refreshConnections\(\);/g) || []).length, 1);
+    assert.match(applyLayoutBlock, /if \(options\.fit === true\) \{\s+this\.fitView\(\);\s+\}/);
+    assert.doesNotMatch(applyLayoutBlock, /_scheduleConnectionSettleRefresh/);
     assert.match(source, /this\.refreshConnections\(\);\s+this\._scheduleConnectionSettleRefresh\(3\);\s+return editor;/);
   });
 
@@ -474,6 +479,17 @@ describe('SelectionSync Connection Focus', () => {
     assert.match(source, /fill: var\(--sn-conn-dimmed, var\(--sn-sys-on-surface-dim\)\);/);
     assert.match(source, /\.sn-conn-arrow\[data-active-conn\]/);
     assert.match(source, /fill: var\(--sn-sys-accent\);/);
+  });
+
+  it('does not permanently promote the full graph content to a compositor layer', async () => {
+    let source = await readFile(
+      new URL('../canvas/NodeCanvas/NodeCanvas.css.js', import.meta.url),
+      'utf8'
+    );
+    let contentRule = source.match(/& \.content \{([\s\S]*?)\n    \}/)?.[1] || '';
+
+    assert.ok(contentRule);
+    assert.doesNotMatch(contentRule, /will-change\s*:/);
   });
 
   it('syncs active and dimmed state to connection paths, arrows, and endpoint dots', () => {

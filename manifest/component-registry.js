@@ -680,20 +680,60 @@ const WEBMCP_TOOLS = {
     },
     {
       name: 'node_canvas_apply_layout',
-      description: 'Apply a reusable node-canvas layout algorithm: grouped auto layout, tree layout, or document-flow layout, with optional viewport fit.',
+      description: 'Apply grouped auto, tree, document-flow, or deterministic crystal layout to a node canvas, with optional viewport fit.',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
         properties: {
-          algorithm: { enum: ['auto', 'tree', 'flow'] },
+          algorithm: { enum: ['auto', 'tree', 'flow', 'crystal'] },
           fit: { type: 'boolean' },
-          groups: { type: 'object' },
+          groups: {
+            oneOf: [
+              {
+                type: 'object',
+                additionalProperties: {
+                  oneOf: [
+                    { type: 'array', items: { type: 'string' } },
+                    {
+                      type: 'object',
+                      additionalProperties: false,
+                      properties: {
+                        nodeIds: { type: 'array', items: { type: 'string' } },
+                        nodes: { type: 'array', items: { type: 'string' } },
+                        children: { type: 'array', items: { type: 'string' } },
+                        members: { type: 'array', items: { type: 'string' } },
+                      },
+                    },
+                  ],
+                },
+              },
+              {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  additionalProperties: false,
+                  properties: {
+                    id: { type: 'string', minLength: 1 },
+                    nodeIds: { type: 'array', items: { type: 'string' } },
+                    nodes: { type: 'array', items: { type: 'string' } },
+                    children: { type: 'array', items: { type: 'string' } },
+                    members: { type: 'array', items: { type: 'string' } },
+                  },
+                  required: ['id'],
+                },
+              },
+            ],
+          },
           nodeSizes: { type: 'object' },
           direction: { type: 'string' },
           gapX: { type: 'number', minimum: 0 },
           gapY: { type: 'number', minimum: 0 },
           startX: { type: 'number' },
           startY: { type: 'number' },
+          rootNodeId: { type: 'string', minLength: 1 },
+          crystalRingDistance: { type: 'number', exclusiveMinimum: 0 },
+          crystalSpokes: { type: 'integer', minimum: 3, maximum: 12 },
+          crystalAngleJitter: { type: 'number', minimum: 0, maximum: 0.22 },
           crossingPasses: { type: 'number', minimum: 0 },
           nodeIds: { type: 'array', items: { type: 'string' } },
           gap: { type: 'number', minimum: 0 },
@@ -1291,6 +1331,7 @@ const UI_NAMED_EXPORTS = new Set([
   'Carousel',
   'QrCode',
   'VideoPlayer',
+  'MediaHost',
   'PackCard',
   'PackDetail',
 ]);
@@ -3037,6 +3078,49 @@ export let COMPONENTS = [
     }
   },
   {
+    tagName: 'sn-media-host',
+    className: 'MediaHost',
+    module: 'ui/media/MediaHost/MediaHost.js',
+    category: 'display',
+    description: 'Accessible lazy media host that mounts exactly one provider adapter on user activation and falls back to poster plus external link.',
+    agent: {
+      semanticRole: 'lazy provider-neutral media host',
+      usage: 'Use to activate a normalized media descriptor on demand; graph nodes render poster/badge only and emit an activation intent this host consumes.',
+      dataOwnership: 'host-supplied normalized media descriptor; the host owns adapter mount/unmount lifecycle',
+    },
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/media-descriptor-v1.json',
+      capabilities: ['media-host', 'lazy-activation', 'provider-registry', 'poster-fallback'],
+      properties: [
+        { name: 'descriptor', type: 'object', description: 'Normalized media descriptor { kind, poster, alt, fit, activation:{provider,...}, targetIds }.' },
+      ],
+      methods: [
+        { name: 'activate', type: 'function', description: 'Mounts the active provider adapter; degrades to poster plus external link on unknown provider or mount failure.' },
+      ],
+      events: [
+        { name: 'sn-media-mount', description: 'Fired after a provider adapter mounts. detail: { provider }.' },
+        { name: 'sn-media-error', description: 'Fired when activation degrades to poster/link fallback. detail: { provider, reason }.' },
+      ],
+      themeAliases: [
+        '--sn-media-bg',
+        '--sn-media-aspect',
+        '--sn-media-poster-bg',
+        '--sn-media-badge-bg',
+        '--sn-media-badge-color',
+        '--sn-media-activate-bg',
+        '--sn-media-activate-hover-bg',
+        '--sn-media-activate-color',
+        '--sn-media-activate-label-bg',
+        '--sn-media-link-color',
+        '--sn-sys-accent',
+        '--sn-font',
+        '--sn-transition-fast',
+      ]
+    }
+  },
+  {
     tagName: 'sn-timeline-editor',
     className: 'TimelineEditor',
     module: 'timeline/TimelineEditor/TimelineEditor.js',
@@ -3219,7 +3303,7 @@ export let COMPONENTS = [
       status: 'draft',
       schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/graph-model-v1.json',
-      capabilities: ['node-card', 'ports', 'controls', 'shape-variant', 'media-avatar', 'media-fit', 'category-accent', 'type-accent', 'error-state'],
+      capabilities: ['node-card', 'ports', 'controls', 'shape-variant', 'media-avatar', 'media-fit', 'media-poster', 'media-activation', 'category-accent', 'type-accent', 'error-state'],
       attributes: [
         { name: 'node-label', type: 'string', description: 'Rendered node label.' },
         { name: 'node-category', type: 'string', description: 'Semantic node category used for icon and accent selection.' },
@@ -3228,7 +3312,9 @@ export let COMPONENTS = [
         { name: 'data-media-fit', type: 'string', description: 'Resolved media object-fit strategy: contain for transparent/logo media, cover for cropped photo media.' },
       ],
       properties: [
-        { name: 'mediaSrc', type: 'string', description: 'Media or avatar image URL derived from node params.' },
+        { name: 'mediaSrc', type: 'string', description: 'Poster image URL derived from node params (media descriptor poster or legacy image/avatar).' },
+        { name: 'mediaKind', type: 'string', description: 'Readable media-kind badge label derived from the node media descriptor.' },
+        { name: 'isMediaActivatable', type: 'boolean', description: 'True when the node carries an activatable media descriptor and renders a keyboard-activatable button.' },
         { name: 'summary', type: 'string', description: 'Presentation summary derived from node params.' },
         { name: 'href', type: 'string', description: 'Presentation link derived from node params.' },
         { name: 'itemsList', type: 'array', description: 'Presentation list items derived from node params.' },
@@ -3236,7 +3322,9 @@ export let COMPONENTS = [
         { name: 'outputPorts', type: 'array', description: 'Output port descriptors derived from node output data.' },
         { name: 'controlsList', type: 'array', description: 'Control descriptors rendered inside the node body.' },
       ],
-      events: [],
+      events: [
+        { name: 'sn-media-activate', description: 'Bubbling, composed activation intent emitted on poster activation. detail: { descriptor, nodeId }. The graph never mounts a player; a media host consumes this intent.' },
+      ],
       themeAliases: [
         '--sn-sys-surface-raised',
         '--sn-sys-outline',
@@ -3405,7 +3493,7 @@ export let COMPONENTS = [
         { name: 'setViewportLocked', type: 'function', description: 'Locks pan and zoom while preserving rendering.' },
         { name: 'setCompactMode', type: 'function', description: 'Toggles compact node rendering.' },
         { name: 'setPathStyle', type: 'function', description: 'Sets connection path rendering style.' },
-        { name: 'applyLayout', type: 'function', description: 'Applies auto, tree, or flow node layout and returns the resulting positions.' },
+        { name: 'applyLayout', type: 'function', description: 'Applies auto, tree, flow, or crystal node layout and returns top-left positions. Crystal options include rootNodeId, startX, startY, crystalRingDistance, crystalSpokes, and crystalAngleJitter.' },
         { name: 'autoLayout', type: 'function', description: 'Applies grouped automatic graph layout to all nodes.' },
         { name: 'setFlowLayout', type: 'function', description: 'Positions nodes in vertical or horizontal document flow and can enable native canvas scrolling.' },
         { name: 'clearFlowLayout', type: 'function', description: 'Clears flow layout sizing and scroll mode.' },
@@ -3479,6 +3567,7 @@ export let COMPONENTS = [
         { name: 'flyToNodes', type: 'function', description: 'Fits one or more visible graph node ids into the canvas viewport; accepts optional viewportEase for live replay tracking.' },
         { name: 'fitNodes', type: 'function', description: 'Fits one or more visible graph node ids into the canvas viewport; accepts optional viewportEase for live replay tracking.' },
         { name: 'focusNodes', type: 'function', description: 'Agent-facing alias for fitting one or more graph node ids into the viewport.' },
+        { name: 'activateNode', type: 'function', description: 'Immediately activates a node by id without moving or targeting the viewport; defaults skip transition markers and it returns false for a missing or unknown id.' },
         { name: 'queueTransitionMarkers', type: 'function', description: 'Queues animated route markers from one graph node to multiple target node ids without changing the host-owned graph model.' },
         { name: 'fitView', type: 'function', description: 'Fits the visible graph into the canvas viewport; accepts optional viewportEase for live replay tracking.' },
         { name: 'getViewport', type: 'function', description: 'Returns the current zoom and pan viewport as a portable snapshot.' },
@@ -4084,7 +4173,7 @@ export let COMPONENTS = [
       status: 'draft',
       schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
-      capabilities: ['syntax-highlight', 'markdown-render', 'markdown-document-viewer', 'image-render', 'line-gutter', 'diagnostics'],
+      capabilities: ['syntax-highlight', 'markdown-render', 'markdown-document-viewer', 'image-render', 'line-gutter', 'diagnostics', 'content-slots'],
       attributes: [
         { name: 'image-api-base', type: 'string', description: 'Optional base URL for resolving image preview sources.' },
       ],
@@ -4101,6 +4190,10 @@ export let COMPONENTS = [
         { name: 'scrollToLine', type: 'function', description: 'Scrolls the code viewport to a line.' },
         { name: 'setDiagnostics', type: 'function', description: 'Sets diagnostic squiggle data.' },
         { name: 'clearDiagnostics', type: 'function', description: 'Clears diagnostic squiggles.' },
+        { name: 'renderContentSlots', type: 'function', description: 'Registers a composer(hostElement, slotKey, { scrollRoot }) invoked once for every `:::content-slot <key>` placeholder rendered in the markdown body, in document order; composes immediately against existing slots and re-composes on binding-driven markdown replacement via a scoped MutationObserver. `scrollRoot` is the code-block-owned scroll viewport element.' },
+        { name: 'clearContentSlots', type: 'function', description: 'Drops the registered content-slot composer and disconnects the markdown-root observer.' },
+        { name: 'scrollToTop', type: 'function', description: 'Resets the internal scroll viewport to its top-left origin, honoring an explicit scroll behavior or reduced-motion default.' },
+        { name: 'scrollToFragment', type: 'function', description: 'Scrolls the internal viewport to a rendered-flow element by id; no-op for a missing id, honoring an explicit scroll behavior or reduced-motion default.' },
       ],
       events: [],
       themeAliases: [
@@ -4147,7 +4240,7 @@ export let COMPONENTS = [
       status: 'draft',
       schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
-      capabilities: ['source-code', 'markdown-preview', 'markdown-document-viewer', 'image-preview', 'directory-summary', 'diagnostics', 'save-action-intent', 'syntax-theme-tokens', 'transform-toggle'],
+      capabilities: ['source-code', 'markdown-preview', 'markdown-document-viewer', 'image-preview', 'directory-summary', 'diagnostics', 'save-action-intent', 'syntax-theme-tokens', 'transform-toggle', 'content-slots'],
       attributes: [
         { name: 'image-api-base', type: 'string', description: 'Optional base URL for resolving image preview sources.' },
       ],
@@ -4160,7 +4253,7 @@ export let COMPONENTS = [
         { name: 'syntaxTokens', type: 'object', description: 'Optional shorthand token map applied to code-block syntax variables.' },
       ],
       methods: [
-        { name: 'showFile', type: 'function', description: 'Displays a source or markdown file from pure path, language, code, and optional transform data.' },
+        { name: 'showFile', type: 'function', description: 'Displays a source or markdown file; optional renderedRaw keeps rendered directives separate from the clean raw source.' },
         { name: 'showDirectory', type: 'function', description: 'Displays normalized directory text.' },
         { name: 'showImage', type: 'function', description: 'Displays an image path through the nested code-block renderer.' },
         { name: 'showBinary', type: 'function', description: 'Displays a binary file placeholder for host-owned non-text content.' },
@@ -4171,6 +4264,10 @@ export let COMPONENTS = [
         { name: 'triggerSourceAction', type: 'function', description: 'Emits the configured source action intent without owning persistence.' },
         { name: 'scrollToLine', type: 'function', description: 'Scrolls nested code-block to a line.' },
         { name: 'setDiagnostics', type: 'function', description: 'Passes diagnostics to nested code-block.' },
+        { name: 'renderContentSlots', type: 'function', description: 'Forwards a content-slot composer to the nested code-block, mounting host-owned content into every `:::content-slot <key>` placeholder in the rendered markdown body; the composer receives the same (hostElement, slotKey, { scrollRoot }) context.' },
+        { name: 'clearContentSlots', type: 'function', description: 'Clears the nested code-block content-slot composer.' },
+        { name: 'scrollToTop', type: 'function', description: 'Forwards a top-left viewport reset to the nested code-block.' },
+        { name: 'scrollToFragment', type: 'function', description: 'Forwards a rendered-flow fragment scroll request to the nested code-block.' },
       ],
       events: [
         {

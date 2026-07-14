@@ -169,6 +169,14 @@ export function renderMarkdown(src, options = {}) {
       continue;
     }
 
+    let sm = trimmed.match(/^:::content-slot\s+([A-Za-z0-9_-]+)$/);
+    if (sm) {
+      flushP();
+      closeList();
+      out.push(`<div class="cb-content-slot" data-content-slot="${escAttr(sm[1])}"></div>`);
+      continue;
+    }
+
     // Blockquote
     if (trimmed.startsWith('> ')) {
       flushP();

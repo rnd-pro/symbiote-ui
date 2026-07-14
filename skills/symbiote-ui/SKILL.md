@@ -5,11 +5,12 @@ description: >
   Symbiote UI Web Component library. Covers component lifecycle
   (create/update/destroy), bidirectional WebSocket protocol, dynamic Web
   Component registration with code sandboxing, and transactional agent-intent
-  orchestration with automatic rollback. Use when building agent-driven UI,
-  runtime dashboards, node graph editors, or any interface assembled
-  programmatically without a build step.
+  orchestration with automatic rollback. Also audits settled graph layouts for
+  overlaps, obstructed or crossing connections, distance outliers, viewport
+  readability, locality, and stability. Use when building agent-driven UI,
+  runtime dashboards, node graph editors, validating graph layout quality, or
+  assembling an interface programmatically without a build step.
 license: MIT
-compatibility: Requires a browser or DOM-compatible environment (linkedom for SSR). No build step or bundler needed.
 metadata:
   author: rnd-pro
   version: "1.0"
@@ -20,6 +21,9 @@ metadata:
 Symbiote UI is a **runtime Web Component library** — agents use its programmatic
 API to create and manage UI, not static templates. All components are standard
 Custom Elements; no build step, no framework lock-in.
+
+Graph layout auditing and metadata discovery are Node-safe. Web Component
+workflows require a browser or DOM-compatible environment such as linkedom.
 
 ## Quick Start
 
@@ -233,6 +237,61 @@ let { descriptor, unregister } = await registerWebMcpTool({
 
 // Trigger a command (bubbles to controller via webmcp-command event)
 triggerWebMcpCommand(element, 'refresh-data', { source: 'chat' });
+```
+
+## Graph Layout Quality
+
+Discover the operation before auditing:
+
+```sh
+symbiote-ui discover
+```
+
+Read `manifest.graphAnalysis` for the public function, CLI command, status
+semantics, stable rule IDs, default policy, per-field policy constraints,
+per-rule payload schemas, types and units, report invariants, numeric domain,
+annotations, and exact `graph-layout-quality-v1` input/output schema. Supply a
+JSON-compatible snapshot with top-left node bounds from a settled layout;
+include routed edge points, viewport, parent relations, or a baseline only when
+they are available.
+
+```javascript
+import { analyzeGraphLayout } from 'symbiote-ui/graph';
+
+let report = analyzeGraphLayout({
+  version: 'graph-layout-snapshot-v1',
+  nodes: [
+    { id: 'hub', bounds: { x: 0, y: 0, width: 240, height: 160 } },
+    {
+      id: 'leaf',
+      parentId: 'hub',
+      bounds: { x: 320, y: 20, width: 180, height: 120 },
+    },
+  ],
+  edges: [{ id: 'hub-leaf', sourceId: 'hub', targetId: 'leaf' }],
+  policy: { idealEdgeLength: 160 },
+});
+```
+
+Block acceptance when `report.pass` is false. Use `findings[].ruleId`, involved
+node/edge IDs, `actual`, and `limit` to adjust the caller's layout parameters,
+then audit a new settled snapshot. Treat `incomplete` as a failed gate; never
+assume an unevaluated pair set is clean. Do not mutate node positions or encode
+product-specific geometry rules inside the analyzer.
+
+Use canonical IDs without surrounding whitespace and geometry inside the
+published numeric domain. In `coverage.checks`, `required` counts entity pairs,
+`status` is `complete` or `skipped-budget`, and `budgetCost` reserves worst-case
+primitive segment comparisons. `skippedCount` includes every skipped
+occurrence, while `unidentifiedCount` covers entries that cannot appear in
+`skippedIds`. Treat `layout.numeric-underflow` as blocking: a non-zero derived
+center delta, direct metric, or aggregate ratio materialized as zero, so the
+analyzer deliberately refused a clean result.
+
+Run the same contract without writing code:
+
+```sh
+symbiote-ui layout-audit graph-layout-snapshot.json
 ```
 
 ## Studio UX Philosophy
