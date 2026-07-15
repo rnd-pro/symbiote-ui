@@ -102,6 +102,8 @@ test('media node renders a clean poster and keyboard-activatable button, never a
   assert.equal(button.tagName.toLowerCase(), 'button', 'native button gives keyboard activation');
   assert.equal(button.getAttribute('type'), 'button');
   assert.ok((button.getAttribute('aria-label') || '').includes('Lesson intro'), 'accessible name present');
+  assert.equal(button.textContent.trim(), '', 'activation affordance does not depend on an icon font glyph');
+  assert.equal(button.querySelector('.material-symbols-outlined'), null, 'activation affordance has no Material Symbols dependency');
 
   assert.equal(el.querySelectorAll('iframe').length, 0, 'graph node never mounts a player');
   assert.equal(el.getAttribute('data-media-fit'), 'cover', 'descriptor fit maps to object-fit attribute');
@@ -175,4 +177,40 @@ test('hidden media activation controls stay out of layout', async () => {
     /\.sn-node-media-activate\[hidden\]\s*\{[^}]*display:\s*none;/s,
     'component styles must preserve the native hidden contract',
   );
+});
+
+test('media activation affordance uses an opaque accent mask with a transparent play cutout', async () => {
+  let source = await readFile(new URL('../node/GraphNode/GraphNode.css.js', import.meta.url), 'utf8');
+
+  assert.match(
+    source,
+    /\.sn-node-media-activate\s*\{[^}]*background:\s*transparent;[^}]*opacity:\s*1;/s,
+    'poster hit area must remain transparent while the affordance stays fully opaque',
+  );
+  assert.match(
+    source,
+    /\.sn-node-media-activate::after\s*\{[^}]*background:\s*var\(--sn-node-media-activate-bg,\s*var\(--sn-sys-accent\)\);/s,
+    'play affordance must use a solid theme color',
+  );
+  assert.match(source, /fill-rule='evenodd'/, 'mask must subtract the play triangle from the solid body');
+  assert.match(source, /-webkit-mask:\s*url\(/, 'WebKit mask must be supplied for Chromium/WebKit rendering');
+  assert.match(source, /\n\s*mask:\s*url\(/, 'standard mask must be supplied');
+});
+
+test('graph media activation theme aliases are agent-discoverable', async () => {
+  let [{ getComponent }, customElements] = await Promise.all([
+    import('../manifest/component-registry.js'),
+    readFile(new URL('../custom-elements.json', import.meta.url), 'utf8').then(JSON.parse),
+  ]);
+  let registryComponent = getComponent('graph-node');
+  let declaration = customElements.modules
+    .flatMap((module) => module.declarations || [])
+    .find((item) => item.tagName === 'graph-node');
+
+  for (let token of ['--sn-node-media-activate-icon-size', '--sn-node-media-activate-bg']) {
+    assert.ok(registryComponent.contract.themeAliases.includes(token), `registry is missing ${token}`);
+    assert.ok(declaration.cssProperties.some((property) => property.name === token), `CEM CSS properties are missing ${token}`);
+    assert.ok(declaration.contract.themeAliases.includes(token), `CEM contract is missing ${token}`);
+    assert.ok(declaration.metadata.contract.themeAliases.includes(token), `CEM metadata is missing ${token}`);
+  }
 });

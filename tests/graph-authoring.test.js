@@ -482,7 +482,37 @@ describe('SelectionSync Connection Focus', () => {
     assert.match(source, /\.sn-conn-marker\[data-dimmed\]/);
     assert.match(source, /color: var\(--sn-conn-dimmed, var\(--sn-sys-on-surface-dim\)\);/);
     assert.match(source, /\.sn-conn-marker\[data-active-conn\]/);
-    assert.match(source, /color: var\(--sn-sys-accent\);/);
+    assert.match(
+      source,
+      /color: color-mix\(in oklab, var\(--sn-sys-accent\) 100%, var\(--sn-sys-surface\)\);/,
+    );
+    let markerRule = source.match(/\.sn-conn-marker \{([\s\S]*?)\n  \}/)?.[1] || '';
+    let dimmedMarkerRule = source.match(/\.sn-conn-marker\[data-dimmed\] \{([\s\S]*?)\n  \}/)?.[1] || '';
+    assert.match(markerRule, /opacity: 1;/);
+    assert.match(dimmedMarkerRule, /opacity: 1;/);
+    assert.ok(
+      source.indexOf('.sn-conn-marker[data-active-conn]')
+        > source.indexOf('.sn-conn-marker[data-dimmed]'),
+    );
+  });
+
+  it('keeps Canvas marker collisions stable during viewport-only redraws', async () => {
+    let source = await readFile(
+      new URL('../canvas/CanvasConnectionRenderer.js', import.meta.url),
+      'utf8'
+    );
+    let viewportRefresh = source.match(
+      /refreshViewportTransform\(\) \{([\s\S]*?)\n  \}/,
+    )?.[1] || '';
+    let collisionRefresh = source.match(
+      /#refreshMarkerCollisions\(coordsById, connectionPoints\) \{([\s\S]*?)\n  \}/,
+    )?.[1] || '';
+
+    assert.match(viewportRefresh, /this\.redraw\(\);/);
+    assert.doesNotMatch(viewportRefresh, /markerCollisionsDirty/);
+    assert.match(collisionRefresh, /if \(!this\.#markerCollisionsDirty\) return;/);
+    assert.match(collisionRefresh, /if \(priority === 0\) continue;/);
+    assert.match(source, /this\.#markerCollisionsDirty = true;\n    return coords;/);
   });
 
   it('does not permanently promote the full graph content to a compositor layer', async () => {

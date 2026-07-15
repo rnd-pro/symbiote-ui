@@ -2,6 +2,7 @@ import { acquireCurrentTestFileLock } from './test-lock.js';
 await acquireCurrentTestFileLock(import.meta.url);
 
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
 import { parseHTML } from 'linkedom';
 
@@ -87,6 +88,28 @@ function imageDescriptor(overrides = {}) {
     targetIds: [],
     ...overrides,
   };
+}
+
+function registerCountingProvider(key) {
+  let state = {
+    mountCount: 0,
+    unmountCount: 0,
+    activeElement: null,
+  };
+  registerMediaProvider(key, {
+    mount(stage) {
+      state.mountCount += 1;
+      state.activeElement = document.createElement('div');
+      state.activeElement.className = 'fake-player';
+      stage.append(state.activeElement);
+      return { element: state.activeElement };
+    },
+    unmount(stage, mountState) {
+      state.unmountCount += 1;
+      mountState?.element?.remove();
+    },
+  });
+  return state;
 }
 
 async function mountHost(descriptor) {
@@ -438,6 +461,135 @@ test('rapid reselect A->B activates only the current host', async () => {
   assert.equal(hostB.querySelectorAll('iframe').length, 1, 'exactly the current host B activates');
 
   hostB.remove();
+});
+
+test('retains active adapter across layout reparenting', async () => {
+  let key = 'counting-fake';
+
+  try {
+    let provider = registerCountingProvider(key);
+
+    let host = await mountHost({
+      kind: 'video',
+      poster: 'https://example.test/poster.jpg',
+      alt: 'Fake Video',
+      activation: { provider: key },
+    });
+    let destination = document.createElement('section');
+    document.body.append(destination);
+
+    host.activate();
+    await nextRenderTick();
+    let stage = host.ref.stage;
+    let activeElement = provider.activeElement;
+
+    assert.equal(provider.mountCount, 1);
+    assert.equal(provider.unmountCount, 0);
+    assert.equal(stage.querySelector('.fake-player'), activeElement);
+
+    host.suspendLayout({ reason: 'layout-move' });
+    destination.append(host);
+    host.resumeLayout({ reason: 'layout-move' });
+    await nextRenderTick();
+
+    assert.equal(provider.mountCount, 1);
+    assert.equal(provider.unmountCount, 0);
+    assert.equal(host.ref.stage, stage);
+    assert.equal(stage.querySelector('.fake-player'), activeElement);
+    assert.equal(host.hasAttribute('data-activated'), true);
+
+    host.remove();
+    await nextRenderTick();
+    assert.equal(provider.unmountCount, 1);
+
+    destination.remove();
+  } finally {
+    unregisterMediaProvider(key);
+  }
+});
+
+test('terminal disconnect restores an activatable poster after reconnect', async () => {
+  let key = 'counting-reconnect-fake';
+
+  try {
+    let provider = registerCountingProvider(key);
+    let host = await mountHost({
+      kind: 'video',
+      poster: 'https://example.test/poster.jpg',
+      alt: 'Reconnect Video',
+      activation: { provider: key },
+    });
+    host.activate();
+    await nextRenderTick();
+
+    host.remove();
+    await nextRenderTick();
+    assert.equal(provider.unmountCount, 1);
+    assert.equal(host.hasAttribute('data-activated'), false);
+    assert.equal(host.ref.poster.hidden, false);
+    assert.equal(host.ref.stage.childElementCount, 0);
+
+    document.body.append(host);
+    await nextRenderTick();
+    host.ref.button.dispatchEvent(new window.Event('click', { bubbles: true }));
+    await nextRenderTick();
+
+    assert.equal(provider.mountCount, 2);
+    assert.equal(host.hasAttribute('data-activated'), true);
+    assert.equal(host.ref.stage.querySelector('.fake-player'), provider.activeElement);
+
+    host.remove();
+    await nextRenderTick();
+    assert.equal(provider.unmountCount, 2);
+  } finally {
+    unregisterMediaProvider(key);
+  }
+});
+
+test('aborted layout move tears down the active adapter exactly once', async () => {
+  let key = 'counting-aborted-move-fake';
+
+  try {
+    let provider = registerCountingProvider(key);
+    let host = await mountHost({
+      kind: 'video',
+      poster: 'https://example.test/poster.jpg',
+      alt: 'Aborted Move Video',
+      activation: { provider: key },
+    });
+    host.activate();
+    await nextRenderTick();
+
+    host.suspendLayout({ reason: 'layout-move' });
+    host.remove();
+    host.resumeLayout({ reason: 'layout-move' });
+    await nextRenderTick();
+
+    assert.equal(provider.mountCount, 1);
+    assert.equal(provider.unmountCount, 1);
+    assert.equal(host.hasAttribute('data-activated'), false);
+    assert.equal(host.ref.poster.hidden, false);
+    assert.equal(host.ref.stage.childElementCount, 0);
+  } finally {
+    unregisterMediaProvider(key);
+  }
+});
+
+test('MediaHost layout lifecycle is agent-readable in all metadata views', async () => {
+  let [{ getComponent }, customElementsSource] = await Promise.all([
+    import('../manifest/component-registry.js'),
+    readFile(new URL('../custom-elements.json', import.meta.url), 'utf8'),
+  ]);
+  let component = getComponent('sn-media-host');
+  let declaration = JSON.parse(customElementsSource).modules
+    .flatMap((module) => module.declarations || [])
+    .find((item) => item.tagName === 'sn-media-host');
+  let expected = ['activate', 'suspendLayout', 'resumeLayout'];
+
+  assert.deepEqual(component.contract.methods.map((method) => method.name), expected);
+  assert.deepEqual(declaration.members.filter((member) => member.kind === 'method').map((method) => method.name), expected);
+  assert.deepEqual(declaration.contract.methods.map((method) => method.name), expected);
+  assert.deepEqual(declaration.metadata.contract.methods.map((method) => method.name), expected);
 });
 
 test('MediaHost is exported and registered', () => {

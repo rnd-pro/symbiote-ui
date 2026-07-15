@@ -4,6 +4,22 @@ All notable changes to `symbiote-ui` will be documented in this file.
 
 ## Unreleased
 
+## [0.3.0-alpha.60] - 2026-07-15
+
+### Changed
+
+- Preserved active media hosts across layout-managed reparenting, while making
+  aborted moves and terminal disconnect/reconnect cycles teardown-safe.
+- Resized PCB flow-diode bodies and their arrow cutouts to the final themed
+  proportions while keeping SVG, Canvas, placement, and occlusion geometry aligned.
+- Replaced the graph media activation glyph with an opaque themed play control
+  whose triangle is a transparent mask cutout over the poster.
+- Coalesced intersecting nested containment junctions within each source-port
+  group while preserving independent branch semantics.
+- Hid lower-priority connection markers when their projected footprint
+  overlaps an unrelated focused route, without repeating collision work during
+  Canvas viewport transforms.
+
 ## [0.3.0-alpha.59] - 2026-07-14
 
 ### Added

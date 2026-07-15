@@ -10,13 +10,19 @@ import css from './MediaHost.css.js';
  *
  * The host renders only a poster and an activation control until an explicit
  * user activation. Provider adapters (iframes, players) mount into a dedicated
- * stage exactly once and are torn down on descriptor replacement or disconnect.
+ * stage exactly once and are torn down on descriptor replacement or terminal
+ * disconnect. A layout-managed reparent preserves the mounted adapter.
  * Unknown providers and adapter failures degrade to a poster + external link
  * without throwing, so graph render/pan/zoom can never instantiate an embed.
  */
 class MediaHost extends Symbiote {
   /** @type {object | null} */
   #descriptor = null;
+
+  #layoutSuspendReason = '';
+
+  /** @type {boolean} */
+  #layoutMoveDisconnected = false;
 
   /** @type {import('../provider-registry.js').MediaProviderAdapter | null} */
   #activeAdapter = null;
@@ -66,14 +72,18 @@ class MediaHost extends Symbiote {
   connectedCallback() {
     super.connectedCallback?.();
     this.setAttribute('role', 'group');
+    if (this.#ready) {
+      this.#bindActivationListeners();
+    }
   }
 
   renderCallback() {
-    this.ref.button?.addEventListener('click', this.#onActivate);
-    this.ref.button?.addEventListener('keydown', this.#onKeydown);
+    this.#bindActivationListeners();
 
     this.#ready = true;
-    this.#renderPoster();
+    if (!this.hasAttribute('data-activated')) {
+      this.#renderPoster();
+    }
 
     if (this.#pendingActivation) {
       this.#pendingActivation = false;
@@ -82,11 +92,37 @@ class MediaHost extends Symbiote {
   }
 
   disconnectedCallback() {
-    this.#unmountActive();
-    this.ref.button?.removeEventListener('click', this.#onActivate);
-    this.ref.button?.removeEventListener('keydown', this.#onKeydown);
-    this.#pendingActivation = false;
+    if (this.#layoutSuspendReason === 'layout-move') {
+      this.#layoutMoveDisconnected = true;
+      return;
+    }
+    this.#teardownTerminal();
     super.disconnectedCallback?.();
+  }
+
+  /**
+   * Mark a transient layout move so the mounted adapter survives reparenting.
+   * @param {{ reason?: string }} [context]
+   */
+  suspendLayout({ reason = 'layout-suspend' } = {}) {
+    this.#layoutSuspendReason = reason;
+    this.#layoutMoveDisconnected = false;
+  }
+
+  /**
+   * Finish a transient layout move, tearing down if reparenting was aborted.
+   */
+  resumeLayout() {
+    let abortedMove = this.#layoutSuspendReason === 'layout-move'
+      && this.#layoutMoveDisconnected
+      && !this.isConnected;
+    this.#layoutSuspendReason = '';
+    this.#layoutMoveDisconnected = false;
+
+    if (abortedMove) {
+      this.#teardownTerminal();
+      super.disconnectedCallback?.();
+    }
   }
 
   /**
@@ -164,6 +200,21 @@ class MediaHost extends Symbiote {
 
   #hidePoster() {
     if (this.ref.poster) this.ref.poster.hidden = true;
+  }
+
+  #bindActivationListeners() {
+    this.ref.button?.addEventListener('click', this.#onActivate);
+    this.ref.button?.addEventListener('keydown', this.#onKeydown);
+  }
+
+  #teardownTerminal() {
+    this.#unmountActive();
+    this.ref.button?.removeEventListener('click', this.#onActivate);
+    this.ref.button?.removeEventListener('keydown', this.#onKeydown);
+    this.#pendingActivation = false;
+    if (this.#ready) {
+      this.#renderPoster();
+    }
   }
 
   /**

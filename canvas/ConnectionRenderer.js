@@ -10,13 +10,24 @@
  */
 
 import { getShape } from '../shapes/index.js';
+import { CONNECTION_MARKER_METRICS } from '../tokens/scale.js';
 import { routePcbTrace } from './PcbRouter.js';
 import { alignSampledRouteEndpoints } from './CanvasGraph/CanvasGraphViewport.js';
 import {
   projectConnectionMarkerGeometry,
   resolveConnectionMarker,
   resolveContainmentJunctions,
+  isConnectionMarkerOccluded,
 } from './ConnectionMarker.js';
+
+function getSvgRouteHalfWidth(path) {
+  try {
+    const view = path?.ownerDocument?.defaultView;
+    const strokeWidth = Number.parseFloat(view?.getComputedStyle?.(path)?.strokeWidth || '');
+    if (Number.isFinite(strokeWidth) && strokeWidth > 0) return strokeWidth / 2;
+  } catch {}
+  return CONNECTION_MARKER_METRICS.protectedRouteHalfWidth;
+}
 
 function sampleBezier(startX, startY, cp1x, cp1y, cp2x, cp2y, endX, endY, count = 20) {
   const points = [];
@@ -166,6 +177,10 @@ export class ConnectionRenderer {
 
   /** @type {Map<string, Array<{x: number, y: number}>>} */
   #connectionPoints = new Map();
+
+  #markerModels = new Map();
+  #activeConnIds = new Set();
+  #selectedConnIds = new Set();
 
   /** @type {SVGElement} */
   #svgLayer;
@@ -506,6 +521,7 @@ export class ConnectionRenderer {
     this.#connectionData.delete(conn.id);
     this.#progressivePcbQueue.delete(conn.id);
     this.#connectionPoints.delete(conn.id);
+    this.#markerModels.delete(conn.id);
     let path = this.#svgLayer.querySelector(`[data-conn-id="${conn.id}"]`);
     if (path) {
 
@@ -1028,12 +1044,22 @@ export class ConnectionRenderer {
       return [];
     }
     this.#junctionsDirty = false;
-    return reconcileSvgJunctionMarkers(
+    const junctions = reconcileSvgJunctionMarkers(
       this.#svgLayer,
       [...this.#connectionData.values()],
       this.#connectionPoints,
       this.#editor
     );
+    for (const key of this.#markerModels.keys()) {
+      if (typeof key === 'string' && key.startsWith('junction::')) {
+        this.#markerModels.delete(key);
+      }
+    }
+    for (const j of junctions) {
+      this.#markerModels.set(j.key, j);
+    }
+    this.updateSvgMarkerCollisions();
+    return junctions;
   }
 
   #globalTransientPathStyle() {
@@ -1560,6 +1586,11 @@ export class ConnectionRenderer {
       connections: [...this.#connectionData.values()],
       connectionPoints: this.#connectionPoints,
     });
+    if (marker && marker.type !== 'none') {
+      this.#markerModels.set(conn.id, marker);
+    } else {
+      this.#markerModels.delete(conn.id);
+    }
     let fromColor = fromNode?.outputs?.[conn.out]?.socket?.color;
     updateSvgMarker(conn.id, marker, this.#svgLayer, fromColor);
 
@@ -1940,6 +1971,65 @@ export class ConnectionRenderer {
 
     return best;
   }
+
+  setSelectionState(_hasSelection, activeConnIds, selectedConnections) {
+    this.#activeConnIds = new Set(activeConnIds || []);
+    this.#selectedConnIds = new Set(selectedConnections || []);
+    this.updateSvgMarkerCollisions();
+  }
+
+  updateSvgMarkerCollisions() {
+    const protectedRoutes = [];
+    for (const [id, conn] of this.#connectionData) {
+      const points = this.#connectionPoints.get(id);
+      if (!points || points.length < 2) continue;
+
+      const path = this.#svgLayer.querySelector(`[data-conn-id="${id}"]`);
+      if (!path) continue;
+
+      const isSelected = this.#selectedConnIds.has(id);
+      const isActive = this.#activeConnIds.has(id);
+      const priority = isSelected ? 2 : (isActive ? 1 : 0);
+      if (priority === 0) continue;
+
+      const halfWidth = getSvgRouteHalfWidth(path);
+
+      protectedRoutes.push({
+        id,
+        points,
+        priority,
+        halfWidth,
+      });
+    }
+
+    for (const [key, marker] of this.#markerModels) {
+      const markerEl = this.#svgLayer.querySelector(`[data-conn-marker="${key}"]`);
+      if (!markerEl) continue;
+
+      let ownerIds;
+      let markerPriority = 0;
+
+      if (marker.type === 'junction') {
+        ownerIds = marker.connectionIds;
+        for (const ownerId of ownerIds) {
+          const isSelected = this.#selectedConnIds.has(ownerId);
+          const isActive = this.#activeConnIds.has(ownerId);
+          const priority = isSelected ? 2 : (isActive ? 1 : 0);
+          if (priority > markerPriority) {
+            markerPriority = priority;
+          }
+        }
+      } else {
+        ownerIds = [key];
+        const isSelected = this.#selectedConnIds.has(key);
+        const isActive = this.#activeConnIds.has(key);
+        markerPriority = isSelected ? 2 : (isActive ? 1 : 0);
+      }
+
+      const isOccluded = isConnectionMarkerOccluded(marker, ownerIds, markerPriority, protectedRoutes);
+      markerEl.toggleAttribute('data-collision-hidden', isOccluded);
+    }
+  }
 }
 
 /** @type {boolean} Set to true to enable debug logging for pin placement and routing */
@@ -1970,6 +2060,10 @@ export function updateSvgMarker(connId, marker, svgLayer, traceColor) {
   markerEl.setAttribute('transform', `translate(${marker.x},${marker.y}) rotate(${(marker.angle * 180) / Math.PI})`);
   markerEl.setAttribute('class', 'sn-conn-marker');
   markerEl.setAttribute('data-type', marker.type);
+  const connectionPath = svgLayer.querySelector(`[data-conn-id="${connId}"]`);
+  for (const attribute of ['data-selected', 'data-active-conn', 'data-dimmed']) {
+    markerEl.toggleAttribute(attribute, connectionPath?.hasAttribute(attribute) || false);
+  }
   if (traceColor) {
     markerEl.style.setProperty('--sn-conn-marker-color', traceColor);
   } else {

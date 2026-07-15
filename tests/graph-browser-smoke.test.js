@@ -3793,8 +3793,8 @@ test('standalone applyCascadeTheme computed style regression without preloading'
       const idoc = iframe.contentDocument;
       iframeWindow.addEventListener('error', (e) => handleErr(e.message));
       iframeWindow.addEventListener('unhandledrejection', (e) => handleErr(e.reason));
-      const [, themeModule, rendererModule, nodeCanvasStyles] = await iframeWindow.eval(
-        "Promise.all([import('../menu/ContextMenu/ContextMenu.js'), import('../themes/cascade-theme.js'), import('../canvas/ConnectionRenderer.js'), import('../canvas/NodeCanvas/NodeCanvas.css.js')])"
+      const [, themeModule, rendererModule, nodeCanvasStyles, canvasRendererModule] = await iframeWindow.eval(
+        "Promise.all([import('../menu/ContextMenu/ContextMenu.js'), import('../themes/cascade-theme.js'), import('../canvas/ConnectionRenderer.js'), import('../canvas/NodeCanvas/NodeCanvas.css.js'), import('../canvas/CanvasConnectionRenderer.js')])"
       );
       await iframeWindow.customElements.whenDefined('context-menu');
       const { applyCascadeTheme } = themeModule;
@@ -3809,17 +3809,177 @@ test('standalone applyCascadeTheme computed style regression without preloading'
       applyCascadeTheme(container, { mode: 'dark', radius: 'medium', density: 'product' });
       idoc.adoptedStyleSheets = [...idoc.adoptedStyleSheets, nodeCanvasStyles.styles];
 
+      const graphHost = idoc.createElement('node-canvas');
       const markerSvg = idoc.createElementNS('http://www.w3.org/2000/svg', 'svg');
-      container.append(markerSvg);
-      rendererModule.updateSvgMarker('trace-color', {
-        type: 'flow',
+      container.append(graphHost);
+      graphHost.append(markerSvg);
+
+      const nodeViews = new Map();
+      const createNodeView = (id, x, y) => {
+        const el = idoc.createElement('div');
+        el._position = { x, y };
+        el._usedCoords = [];
+        el._slotCache = new Map();
+        el.offsetWidth = 10;
+        el.offsetHeight = 10;
+        el._cachedW = 10;
+        el._cachedH = 10;
+        nodeViews.set(id, el);
+      };
+
+      createNodeView('nodeA', -100, 25);
+      createNodeView('nodeB', 150, 25);
+      createNodeView('nodeC', 20, -50);
+      createNodeView('nodeD', 30, 100);
+
+      const editor = {
+        getNode: () => ({
+          shape: 'rectangle',
+          outputs: { out: { socket: { color: '#010203', name: 'data' } } },
+          inputs: { in: { socket: { color: '#010203', name: 'data' } } },
+        }),
+      };
+      const connRenderer = new rendererModule.ConnectionRenderer({
+        svgLayer: markerSvg,
+        nodeViews,
+        editor,
+        onConnectionClick: () => {},
+        getZoom: () => 1
+      });
+      connRenderer.setPathStyle('straight');
+
+      const connDimmed = {
+        id: 'trace-color',
+        from: 'nodeA',
+        out: 'out',
+        to: 'nodeB',
+        in: 'in',
         direction: 'forward',
-        x: 20,
+        design: { marker: { role: 'flow' } },
+      };
+
+      connRenderer.add(connDimmed);
+
+      const traceMarker = markerSvg.querySelector('[data-conn-marker="trace-color"]');
+      const traceMarkerStyle = iframeWindow.getComputedStyle(traceMarker);
+      const traceMarkerColor = traceMarkerStyle.color;
+      const traceMarkerOpacity = traceMarkerStyle.opacity;
+      const traceMarkerBody = traceMarker.querySelector('rect');
+      const traceMarkerArrowPoints = traceMarker.querySelector('polygon')?.getAttribute('points') || '';
+
+      const connActive = {
+        id: 'active-color',
+        from: 'nodeC',
+        out: 'out',
+        to: 'nodeD',
+        in: 'in',
+        direction: 'forward',
+        design: { marker: { role: 'flow' } },
+      };
+      connRenderer.add(connActive);
+
+      const pathDimmed = markerSvg.querySelector('[data-conn-id="trace-color"]');
+      const pathActive = markerSvg.querySelector('[data-conn-id="active-color"]');
+      pathDimmed.setAttribute('data-dimmed', '');
+      pathActive.setAttribute('data-active-conn', '');
+
+      connRenderer.setSelectionState(true, new Set(['active-color']), new Set());
+
+      const dimmedTraceMarkerStyle = iframeWindow.getComputedStyle(traceMarker);
+      const dimmedTraceMarkerOpacity = dimmedTraceMarkerStyle.opacity;
+      const dimmedTraceMarkerVisibility = dimmedTraceMarkerStyle.visibility;
+
+      rendererModule.updateSvgMarker('active-color', {
+        type: 'flow',
+        x: 30,
+        y: 30,
+        angle: Math.PI / 2,
+        direction: 'forward',
+      }, markerSvg, '#010203');
+      const activeMarker = markerSvg.querySelector('[data-conn-marker="active-color"]');
+      const activeMarkerColor = iframeWindow.getComputedStyle(activeMarker).color;
+      const activePathColor = iframeWindow.getComputedStyle(pathActive).stroke;
+      const colorProbeCanvas = idoc.createElement('canvas');
+      colorProbeCanvas.width = 1;
+      colorProbeCanvas.height = 1;
+      const colorProbeContext = colorProbeCanvas.getContext('2d');
+      const resolveColorPixel = (color) => {
+        colorProbeContext.clearRect(0, 0, 1, 1);
+        colorProbeContext.fillStyle = color;
+        colorProbeContext.fillRect(0, 0, 1, 1);
+        return Array.from(colorProbeContext.getImageData(0, 0, 1, 1).data);
+      };
+      const activeMarkerPixel = resolveColorPixel(activeMarkerColor);
+      const activePathPixel = resolveColorPixel(activePathColor);
+
+      rendererModule.updateSvgMarker('junction-ring', {
+        type: 'junction',
+        x: 80,
         y: 20,
         angle: 0,
       }, markerSvg, '#010203');
-      const traceMarker = markerSvg.querySelector('[data-conn-marker="trace-color"]');
-      const traceMarkerColor = iframeWindow.getComputedStyle(traceMarker).color;
+      const junctionCircles = Array.from(
+        markerSvg.querySelectorAll('[data-conn-marker="junction-ring"] circle'),
+      );
+
+      const canvas = idoc.createElement('canvas');
+      const dotLayer = idoc.createElement('div');
+      graphHost.append(canvas, dotLayer);
+      const canvasContext = canvas.getContext('2d');
+      const markerRects = [];
+      const pathStrokes = [];
+      const nativeFillRect = canvasContext.fillRect.bind(canvasContext);
+      const nativeStroke = canvasContext.stroke.bind(canvasContext);
+      canvasContext.fillRect = (...args) => {
+        markerRects.push({ args, color: canvasContext.fillStyle });
+        return nativeFillRect(...args);
+      };
+      canvasContext.stroke = (...args) => {
+        pathStrokes.push({
+          color: canvasContext.strokeStyle,
+          lineWidth: canvasContext.lineWidth,
+        });
+        return nativeStroke(...args);
+      };
+      const canvasRenderer = new canvasRendererModule.CanvasConnectionRenderer({
+        canvasLayer: canvas,
+        dotLayer,
+        nodeViews,
+        editor,
+        getZoom: () => 1,
+        getPan: () => ({ x: 0, y: 0 }),
+      });
+      canvasRenderer.setPathStyle('straight');
+      canvasRenderer.addBatch([connDimmed, connActive]);
+
+      markerRects.length = 0;
+      canvasRenderer.setSelectionState(true, new Set(['active-color']), new Set());
+      const canvasVisibleMarkerCount = markerRects.length;
+
+      markerRects.length = 0;
+      pathStrokes.length = 0;
+      canvasRenderer.setSelectionState(
+        true,
+        new Set(['active-color']),
+        new Set(['active-color']),
+      );
+      const canvasSelectedMarkerColor = markerRects.at(-1)?.color || '';
+      const canvasSelectedPathColor = pathStrokes.reduce(
+        (widest, entry) => entry.lineWidth > widest.lineWidth ? entry : widest,
+        { color: '', lineWidth: 0 },
+      ).color;
+      const selectedColorProbe = idoc.createElement('span');
+      selectedColorProbe.style.color = 'var(--sn-conn-selected)';
+      container.append(selectedColorProbe);
+      const selectedResolvedColor = iframeWindow.getComputedStyle(selectedColorProbe).color;
+      selectedColorProbe.remove();
+      const previousCanvasColor = canvasContext.fillStyle;
+      canvasContext.fillStyle = selectedResolvedColor;
+      const canvasSelectedExpectedColor = canvasContext.fillStyle;
+      canvasContext.fillStyle = previousCanvasColor;
+      canvasRenderer.destroy();
+      canvas.remove();
+      dotLayer.remove();
 
       const hasSystemSheet = Array.from(idoc.adoptedStyleSheets).some(sheet => {
         try {
@@ -3928,8 +4088,30 @@ test('standalone applyCascadeTheme computed style regression without preloading'
         menuBgDark,
         menuBgLight: menuStyle.backgroundColor,
         traceMarkerColor,
+        traceMarkerOpacity,
+        dimmedTraceMarkerOpacity,
+        dimmedTraceMarkerVisibility,
+        traceMarkerHidden: traceMarker.hasAttribute('data-collision-hidden'),
+        traceMarkerTransform: traceMarker.getAttribute('transform'),
+        dimmedPathD: pathDimmed.getAttribute('d'),
+        activePathD: pathActive.getAttribute('d'),
         traceMarkerType: traceMarker.getAttribute('data-type'),
         traceMarkerHasDiodeBody: Boolean(traceMarker.querySelector('rect') && traceMarker.querySelector('polygon')),
+        traceMarkerWidth: Number(traceMarkerBody?.getAttribute('width')),
+        traceMarkerHeight: Number(traceMarkerBody?.getAttribute('height')),
+        traceMarkerArrowPoints,
+        activeMarkerColor,
+        activePathColor,
+        activeMarkerPixel,
+        activePathPixel,
+        activeMarkerHasState: activeMarker.hasAttribute('data-active-conn'),
+        junctionRadii: junctionCircles.map(circle => Number(circle.getAttribute('r'))),
+        junctionFills: junctionCircles.map(circle => circle.getAttribute('fill')),
+        canvasVisibleMarkerCount,
+        canvasSelectedMarkerColor,
+        canvasSelectedPathColor,
+        canvasSelectedExpectedColor,
+        canvasPathStrokes: pathStrokes,
         errors,
         containerBg: containerStyle.getPropertyValue('--sn-sys-surface').trim(),
         menuPadding: menuStyle.padding,
@@ -3951,7 +4133,16 @@ test('standalone applyCascadeTheme computed style regression without preloading'
       returnByValue: true,
     }), 15000, 'computed style evaluation');
     if (evaluation.exceptionDetails) {
-      throw new Error(evaluation.exceptionDetails.text || 'Computed style evaluation failed');
+      const callFrames = evaluation.exceptionDetails.stackTrace?.callFrames
+        ?.map((frame) => `${frame.functionName || '<anonymous>'} (${frame.url}:${frame.lineNumber + 1}:${frame.columnNumber + 1})`)
+        .join('\n');
+      throw new Error(
+        [evaluation.exceptionDetails.exception?.description, callFrames]
+          .filter(Boolean)
+          .join('\n')
+          || evaluation.exceptionDetails.text
+          || 'Computed style evaluation failed',
+      );
     }
     const res = evaluation.result.value;
 
@@ -3968,8 +4159,44 @@ test('standalone applyCascadeTheme computed style regression without preloading'
     assert.notEqual(res.buttonColorDark, res.buttonColorLight, 'Dark and light menu rows must resolve distinct foreground colors');
     assert.notEqual(res.menuBgDark, res.menuBgLight, 'Dark and light menu surfaces must resolve distinct backgrounds');
     assert.equal(res.traceMarkerColor, 'rgb(1, 2, 3)', 'SVG marker must inherit the routed trace color');
+    assert.equal(res.traceMarkerOpacity, '1', 'SVG marker must remain fully opaque');
+    assert.equal(
+      res.dimmedTraceMarkerVisibility,
+      'hidden',
+      'Dimmed SVG marker crossing active route must be hidden: ' + JSON.stringify({
+        hidden: res.traceMarkerHidden,
+        marker: res.traceMarkerTransform,
+        dimmedPath: res.dimmedPathD,
+        activePath: res.activePathD,
+      }),
+    );
     assert.equal(res.traceMarkerType, 'flow');
     assert.equal(res.traceMarkerHasDiodeBody, true);
+    assert.equal(res.traceMarkerWidth, 28.8, 'SVG flow marker width must match the scaled diode body');
+    assert.equal(res.traceMarkerHeight, 16, 'SVG flow marker height must match the scaled diode body');
+    assert.equal(res.traceMarkerArrowPoints, '-7.2,-5 6,0 -7.2,5', 'SVG flow marker arrow must scale with its body');
+    assert.equal(res.activeMarkerHasState, true, 'Late-rendered marker must inherit active connection state');
+    assert.deepEqual(
+      res.activeMarkerPixel,
+      res.activePathPixel,
+      'Active marker and connection must resolve the same color: ' + JSON.stringify({
+        markerHasState: res.activeMarkerHasState,
+        markerColor: res.activeMarkerColor,
+        pathColor: res.activePathColor,
+      }),
+    );
+    assert.deepEqual(res.junctionRadii, [14, 6], 'Junction must render an outer marker and connector-sized inner cutout');
+    assert.deepEqual(res.junctionFills, [
+      'currentColor',
+      'var(--sn-canvas-graph-bg, var(--sn-sys-surface))',
+    ]);
+    assert.equal(res.canvasVisibleMarkerCount, 1, 'Canvas must hide only the marker crossed by the active route');
+    assert.equal(res.canvasSelectedMarkerColor, res.canvasSelectedExpectedColor, 'Canvas selected marker must use the selected trace color');
+    assert.equal(
+      res.canvasSelectedPathColor,
+      res.canvasSelectedExpectedColor,
+      'Canvas selected path must use the selected trace color: ' + JSON.stringify(res.canvasPathStrokes),
+    );
     assert.ok(res.paddingsDark.every((padding) => padding && padding !== '0px'), 'Dark menu rows must keep token padding');
     assert.ok(res.rowPaddingLight && res.rowPaddingLight !== '0px', 'Light menu rows must keep token padding');
 

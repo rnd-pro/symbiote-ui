@@ -7,9 +7,7 @@ export let template = html`
   </div>
   <div class="sn-node-media" ${{ '@hidden': '!mediaSrc' }}>
     <img ref="mediaImage" class="sn-node-media-img" draggable="false" alt="{{mediaAlt}}" ${{ src: 'mediaSrc' }}>
-    <button ref="mediaActivate" type="button" class="sn-node-media-activate" ${{ '@hidden': '!isMediaActivatable', '@aria-label': 'mediaActivateLabel', onpointerdown: 'onMediaPointerDown', onclick: 'onMediaActivate' }}>
-      <span class="sn-node-media-activate-icon material-symbols-outlined">play_circle</span>
-    </button>
+    <button ref="mediaActivate" type="button" class="sn-node-media-activate" ${{ '@hidden': '!isMediaActivatable', '@aria-label': 'mediaActivateLabel', onpointerdown: 'onMediaPointerDown', onclick: 'onMediaActivate' }}></button>
   </div>
   <div class="sn-node-body">
     <div class="inputs" ${{ itemize: 'inputPorts', 'item-tag': 'port-item' }}></div>

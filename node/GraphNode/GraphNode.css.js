@@ -245,30 +245,30 @@ export let styles = css`
       margin: 0;
       padding: 0;
       border: 0;
-      background: color-mix(in oklab, var(--sn-sys-surface) 10%, transparent);
+      background: transparent;
       color: var(--sn-sys-on-surface);
       cursor: pointer;
-      opacity: var(--sn-node-media-activate-opacity, 0.85);
-      transition: opacity var(--sn-transition-fast) var(--sn-transition-easing);
+      opacity: 1;
+    }
+
+    & .sn-node-media-activate::after {
+      content: '';
+      inline-size: var(--sn-node-media-activate-icon-size, 40px);
+      block-size: var(--sn-node-media-activate-icon-size, 40px);
+      background: var(--sn-node-media-activate-bg, var(--sn-sys-accent));
+      -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath fill='black' fill-rule='evenodd' d='M24 2a22 22 0 1 1 0 44 22 22 0 0 1 0-44Zm-5 12.5v19L35 24 19 14.5Z'/%3E%3C/svg%3E") center / contain no-repeat;
+      mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath fill='black' fill-rule='evenodd' d='M24 2a22 22 0 1 1 0 44 22 22 0 0 1 0-44Zm-5 12.5v19L35 24 19 14.5Z'/%3E%3C/svg%3E") center / contain no-repeat;
+      pointer-events: none;
+      filter: drop-shadow(0 1px 3px color-mix(in oklab, black 45%, transparent));
     }
 
     & .sn-node-media-activate[hidden] {
       display: none;
     }
 
-    & .sn-node-media-activate:hover {
-      opacity: 1;
-    }
-
     & .sn-node-media-activate:focus-visible {
       outline: var(--sn-focus-ring-width, 2px) solid var(--sn-sys-accent);
       outline-offset: calc(var(--sn-focus-ring-width, 2px) * -1);
-    }
-
-    & .sn-node-media-activate-icon {
-      font-size: var(--sn-node-media-activate-icon-size, 40px);
-      color: var(--sn-sys-surface-raised);
-      filter: drop-shadow(0 1px 3px color-mix(in oklab, black 45%, transparent));
     }
     & .sn-node-content {
       padding: var(--sn-node-content-padding, 8px 12px 10px);
@@ -920,6 +920,13 @@ export let styles = css`
     graph-node {
       transition: none;
       animation: none;
+    }
+  }
+
+  @media (forced-colors: active) {
+    graph-node .sn-node-media-activate::after {
+      background: ButtonText;
+      forced-color-adjust: none;
     }
   }
 `;

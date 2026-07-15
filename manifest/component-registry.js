@@ -3098,6 +3098,8 @@ export let COMPONENTS = [
       ],
       methods: [
         { name: 'activate', type: 'function', description: 'Mounts the active provider adapter; degrades to poster plus external link on unknown provider or mount failure.' },
+        { name: 'suspendLayout', type: 'function', description: 'Marks a transient layout move so the mounted adapter and stage survive synchronous reparenting.' },
+        { name: 'resumeLayout', type: 'function', description: 'Finishes a transient layout move and tears down the adapter if reparenting was aborted.' },
       ],
       events: [
         { name: 'sn-media-mount', description: 'Fired after a provider adapter mounts. detail: { provider }.' },
@@ -3313,7 +3315,7 @@ export let COMPONENTS = [
       ],
       properties: [
         { name: 'mediaSrc', type: 'string', description: 'Poster image URL derived from node params (media descriptor poster or legacy image/avatar).' },
-        { name: 'mediaKind', type: 'string', description: 'Readable media-kind badge label derived from the node media descriptor.' },
+        { name: 'mediaKind', type: 'string', description: 'Normalized media kind derived from the node media descriptor.' },
         { name: 'isMediaActivatable', type: 'boolean', description: 'True when the node carries an activatable media descriptor and renders a keyboard-activatable button.' },
         { name: 'summary', type: 'string', description: 'Presentation summary derived from node params.' },
         { name: 'href', type: 'string', description: 'Presentation link derived from node params.' },
@@ -3339,6 +3341,8 @@ export let COMPONENTS = [
         '--sn-node-label-size',
         '--sn-node-summary-size',
         '--sn-node-icon-size',
+        '--sn-node-media-activate-icon-size',
+        '--sn-node-media-activate-bg',
         '--sn-node-link-size',
         '--sn-node-link-icon-size',
         '--sn-node-item-kicker-size',

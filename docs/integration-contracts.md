@@ -53,9 +53,10 @@ is normalized; a missing `activation.provider` is rejected.
 
 Presentation and activation are split so the graph stays cheap:
 
-- `graph-node` renders only a lightweight poster (`alt`/`fit`) plus a readable
-  media-kind badge. It never mounts an iframe or player during render, pan, or
-  zoom. Activating the poster (pointer or keyboard, via a native `<button>`)
+- `graph-node` renders only a lightweight poster (`alt`/`fit`) plus a themed,
+  solid play affordance with a transparent cutout. It never mounts an iframe or
+  player during render, pan, or zoom. Activating the poster (pointer or keyboard,
+  via a native `<button>`)
   emits a bubbling, composed `sn-media-activate` event with
   `detail: { descriptor, nodeId }`.
 - The browser `sn-media-host` component (`symbiote-ui/ui`) consumes a descriptor
@@ -68,7 +69,13 @@ Presentation and activation are split so the graph stays cheap:
   stage is ready is remembered as a single pending activation and fulfilled from
   the Symbiote render lifecycle (not a timer), and a descriptor replacement or
   disconnect cancels a stale pending request so a rapid reselect never mounts the
-  previous host late.
+  previous host late. To survive temporary layout reparents, it implements
+  `suspendLayout({ reason })` and `resumeLayout()`; if suspended with the
+  reason `layout-move`, the subsequent disconnection is treated as a move rather
+  than a terminal removal, preserving the active adapter and mounted DOM stage
+  across the transition. `resumeLayout()` performs terminal teardown when the
+  move ends without reconnecting. A later ordinary reconnect returns to the
+  poster state with its activation listeners restored.
 
 The same descriptor drives the canvas render path. `CanvasGraph` draws a poster
 clipped to the node dot plus a media-kind badge directly from
@@ -173,12 +180,23 @@ Edges use `kind`, `direction` (`none`, `forward`, `reverse`, `both`), and
   no edge-local marker.
 - Circular junctions are derived from real containment branches. Routes must
   share the same `(from, out)` connector and a common trunk before splitting;
-  authoring `design.marker.role: junction` on an edge has no effect.
+  authoring `design.marker.role: junction` on an edge has no effect. Nested or
+  equal junction candidates within the same group are coalesced using a spatial
+  hash when their circles intersect, while non-nested overlapping junctions
+  remain distinct.
 
 `projectConnectionMarkerGeometry()` is the shared geometry projection for SVG
 and Canvas renderers. The animated focus-transition ball remains independent of
 the marker lifecycle.
 
+- Connection markers are hidden when their rendered footprint intersects an
+  unrelated, higher-priority focused route. Owner routes are always exempt.
+- Priority is selected, active, then ordinary or dimmed. Equal-priority
+  markers remain visible.
+- SVG uses the focused path's rendered width and toggles
+  `data-collision-hidden`. Canvas uses its focused trace width and caches the
+  result until graph geometry or selection changes; viewport-only transforms
+  do not repeat collision detection.
 ## Package Boundary
 
 `symbiote-ui` owns Web Components, UI/layout primitives, manifests, schemas, rules, tokens, themes, locale helpers, provider-facing graph metadata, WebMCP metadata, and `custom-elements.json`.

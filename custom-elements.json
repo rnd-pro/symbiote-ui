@@ -29625,6 +29625,16 @@
               "kind": "method",
               "name": "activate",
               "description": "Mounts the active provider adapter; degrades to poster plus external link on unknown provider or mount failure."
+            },
+            {
+              "kind": "method",
+              "name": "suspendLayout",
+              "description": "Marks a transient layout move so the mounted adapter and stage survive synchronous reparenting."
+            },
+            {
+              "kind": "method",
+              "name": "resumeLayout",
+              "description": "Finishes a transient layout move and tears down the adapter if reparenting was aborted."
             }
           ],
           "events": [
@@ -29714,6 +29724,16 @@
                 "name": "activate",
                 "type": "function",
                 "description": "Mounts the active provider adapter; degrades to poster plus external link on unknown provider or mount failure."
+              },
+              {
+                "name": "suspendLayout",
+                "type": "function",
+                "description": "Marks a transient layout move so the mounted adapter and stage survive synchronous reparenting."
+              },
+              {
+                "name": "resumeLayout",
+                "type": "function",
+                "description": "Finishes a transient layout move and tears down the adapter if reparenting was aborted."
               }
             ],
             "events": [
@@ -29795,6 +29815,16 @@
                   "name": "activate",
                   "type": "function",
                   "description": "Mounts the active provider adapter; degrades to poster plus external link on unknown provider or mount failure."
+                },
+                {
+                  "name": "suspendLayout",
+                  "type": "function",
+                  "description": "Marks a transient layout move so the mounted adapter and stage survive synchronous reparenting."
+                },
+                {
+                  "name": "resumeLayout",
+                  "type": "function",
+                  "description": "Finishes a transient layout move and tears down the adapter if reparenting was aborted."
                 }
               ],
               "events": [
@@ -40539,7 +40569,7 @@
               "type": {
                 "text": "string"
               },
-              "description": "Readable media-kind badge label derived from the node media descriptor."
+              "description": "Normalized media kind derived from the node media descriptor."
             },
             {
               "kind": "field",
@@ -40658,6 +40688,14 @@
             {
               "name": "--sn-node-icon-size",
               "description": "Theme CSS custom property consumed by graph-node."
+            },
+            {
+              "name": "--sn-node-media-activate-icon-size",
+              "description": "Diameter of the solid graph media activation affordance."
+            },
+            {
+              "name": "--sn-node-media-activate-bg",
+              "description": "Solid fill color of the graph media activation affordance."
             },
             {
               "name": "--sn-node-link-size",
@@ -40905,7 +40943,7 @@
               {
                 "name": "mediaKind",
                 "type": "string",
-                "description": "Readable media-kind badge label derived from the node media descriptor."
+                "description": "Normalized media kind derived from the node media descriptor."
               },
               {
                 "name": "isMediaActivatable",
@@ -40965,6 +41003,8 @@
               "--sn-node-label-size",
               "--sn-node-summary-size",
               "--sn-node-icon-size",
+              "--sn-node-media-activate-icon-size",
+              "--sn-node-media-activate-bg",
               "--sn-node-link-size",
               "--sn-node-link-icon-size",
               "--sn-node-item-kicker-size",
@@ -41097,7 +41137,7 @@
                 {
                   "name": "mediaKind",
                   "type": "string",
-                  "description": "Readable media-kind badge label derived from the node media descriptor."
+                  "description": "Normalized media kind derived from the node media descriptor."
                 },
                 {
                   "name": "isMediaActivatable",
@@ -41157,6 +41197,8 @@
                 "--sn-node-label-size",
                 "--sn-node-summary-size",
                 "--sn-node-icon-size",
+                "--sn-node-media-activate-icon-size",
+                "--sn-node-media-activate-bg",
                 "--sn-node-link-size",
                 "--sn-node-link-icon-size",
                 "--sn-node-item-kicker-size",

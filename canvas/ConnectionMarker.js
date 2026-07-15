@@ -20,7 +20,13 @@ export function resolveConnectionMarker(points, conn, options = {}) {
   const portClearance = options.portClearance ?? CONNECTION_MARKER_METRICS.portClearance;
   const bendClearance = options.bendClearance ?? CONNECTION_MARKER_METRICS.bendClearance;
   const labelClearance = options.labelClearance ?? CONNECTION_MARKER_METRICS.labelClearance;
-  const minMarkerLength = options.minMarkerLength ?? CONNECTION_MARKER_METRICS.minMarkerLength;
+  const configuredMinMarkerLength = options.minMarkerLength ?? CONNECTION_MARKER_METRICS.minMarkerLength;
+  const markerFootprint = role === 'flow'
+    ? CONNECTION_MARKER_METRICS.flowWidth
+    : role === 'gate'
+      ? CONNECTION_MARKER_METRICS.gateSize
+      : 0;
+  const minMarkerLength = Math.max(configuredMinMarkerLength, markerFootprint);
 
   const hasLabel = Boolean(conn.label || conn.metadata?.label);
 
@@ -79,7 +85,7 @@ export function resolveConnectionMarker(points, conn, options = {}) {
     }
 
     const safeLength = endSafe - startSafe;
-    if (safeLength > minMarkerLength) {
+    if (safeLength + 1e-5 >= minMarkerLength) {
       const localMid = (startSafe + endSafe) * 0.5;
       const midDistAlongRoute = dists[i] + localMid;
       const distToCenter = Math.abs(midDistAlongRoute - totalLength * 0.5);
@@ -142,8 +148,14 @@ export function resolveConnectionMarker(points, conn, options = {}) {
 }
 
 export function resolveContainmentJunctions(connections, routePointsById, options = {}) {
-  const minTrunk = options.minTrunk ?? CONNECTION_MARKER_METRICS.minTrunk;
-  const minTail = options.minTail ?? CONNECTION_MARKER_METRICS.minTail;
+  const minTrunk = Math.max(
+    options.minTrunk ?? CONNECTION_MARKER_METRICS.minTrunk,
+    CONNECTION_MARKER_METRICS.junctionRadius,
+  );
+  const minTail = Math.max(
+    options.minTail ?? CONNECTION_MARKER_METRICS.minTail,
+    CONNECTION_MARKER_METRICS.junctionRadius,
+  );
 
   const getPoints = (id) => {
     if (routePointsById instanceof Map) return routePointsById.get(id);
@@ -229,19 +241,14 @@ export function resolveContainmentJunctions(connections, routePointsById, option
       }
     }
 
-    uniqueJunctions.sort((a, b) =>
-      a.branchDistance - b.branchDistance
-      || a.x - b.x
-      || a.y - b.y
-      || a.connectionIds.join('\u001f').localeCompare(b.connectionIds.join('\u001f'))
-    );
+    let resolvedJunctions = coalesceNestedJunctions(uniqueJunctions);
 
-    const occurrences = new Map();
-    for (const junction of uniqueJunctions) {
-      const signature = `${groupKey}\u001e${junction.connectionIds.join('\u001f')}`;
-      const occurrence = occurrences.get(signature) || 0;
+    let occurrences = new Map();
+    for (let junction of resolvedJunctions) {
+      let signature = `${groupKey}\u001e${junction.connectionIds.join('\u001f')}`;
+      let occurrence = occurrences.get(signature) || 0;
       occurrences.set(signature, occurrence + 1);
-      const result = { ...junction };
+      let result = { ...junction };
       delete result.branchDistance;
       junctions.push({
         ...result,
@@ -251,6 +258,111 @@ export function resolveContainmentJunctions(connections, routePointsById, option
   }
 
   return junctions;
+}
+
+function coalesceNestedJunctions(junctions) {
+  let cellSize = CONNECTION_MARKER_METRICS.junctionRadius * 2;
+  let collisionDistanceSq = cellSize * cellSize;
+  let candidates = [...junctions].sort(compareJunctionPriority);
+  let representatives = [];
+  let spatialHash = new Map();
+
+  for (let candidate of candidates) {
+    let cellX = Math.floor(candidate.x / cellSize);
+    let cellY = Math.floor(candidate.y / cellSize);
+    let representative = findNestedRepresentative(
+      spatialHash,
+      candidate,
+      cellX,
+      cellY,
+      collisionDistanceSq,
+    );
+
+    if (representative) {
+      let connectionIds = [...new Set([
+        ...representative.junction.connectionIds,
+        ...candidate.connectionIds,
+      ])].sort();
+      representative.junction.connectionIds = connectionIds;
+      representative.junction.ownerId = connectionIds[0];
+      continue;
+    }
+
+    let entry = {
+      junction: {
+        ...candidate,
+        connectionIds: [...candidate.connectionIds],
+      },
+      priority: representatives.length,
+    };
+    representatives.push(entry);
+
+    let key = `${cellX},${cellY}`;
+    let entries = spatialHash.get(key);
+    if (!entries) {
+      entries = [];
+      spatialHash.set(key, entries);
+    }
+    entries.push(entry);
+  }
+
+  return representatives
+    .map(entry => entry.junction)
+    .sort(compareJunctionPosition);
+}
+
+function findNestedRepresentative(spatialHash, candidate, cellX, cellY, collisionDistanceSq) {
+  let best = null;
+
+  for (let dx = -1; dx <= 1; dx++) {
+    for (let dy = -1; dy <= 1; dy++) {
+      let entries = spatialHash.get(`${cellX + dx},${cellY + dy}`);
+      if (!entries) continue;
+
+      for (let entry of entries) {
+        if (!isSortedSubset(candidate.connectionIds, entry.junction.connectionIds)) continue;
+
+        let distanceSq = (entry.junction.x - candidate.x) ** 2
+          + (entry.junction.y - candidate.y) ** 2;
+        if (distanceSq >= collisionDistanceSq) continue;
+        if (!best || entry.priority < best.priority) {
+          best = entry;
+        }
+      }
+    }
+  }
+
+  return best;
+}
+
+function isSortedSubset(subset, superset) {
+  let subsetIndex = 0;
+  let supersetIndex = 0;
+
+  while (subsetIndex < subset.length && supersetIndex < superset.length) {
+    if (subset[subsetIndex] === superset[supersetIndex]) {
+      subsetIndex++;
+      supersetIndex++;
+    } else if (subset[subsetIndex] > superset[supersetIndex]) {
+      supersetIndex++;
+    } else {
+      return false;
+    }
+  }
+
+  return subsetIndex === subset.length;
+}
+
+function compareJunctionPriority(a, b) {
+  return b.connectionIds.length - a.connectionIds.length
+    || compareJunctionPosition(a, b);
+}
+
+function compareJunctionPosition(a, b) {
+  return a.branchDistance - b.branchDistance
+    || a.x - b.x
+    || a.y - b.y
+    || a.connectionIds.join('\u001f').localeCompare(b.connectionIds.join('\u001f'));
 }
 
 function getRouteLength(points) {
@@ -390,13 +502,22 @@ export function projectConnectionMarkerGeometry(marker) {
   }
 
   if (marker.type === 'junction') {
-    return [{
-      type: 'circle',
-      x: 0,
-      y: 0,
-      radius: CONNECTION_MARKER_METRICS.junctionRadius,
-      fill: 'trace',
-    }];
+    return [
+      {
+        type: 'circle',
+        x: 0,
+        y: 0,
+        radius: CONNECTION_MARKER_METRICS.junctionRadius,
+        fill: 'trace',
+      },
+      {
+        type: 'circle',
+        x: 0,
+        y: 0,
+        radius: CONNECTION_MARKER_METRICS.junctionInnerRadius,
+        fill: 'background',
+      },
+    ];
   }
 
   if (marker.type === 'gate') {
@@ -443,4 +564,121 @@ export function drawCanvasMarker(ctx, marker, traceColor, bgColor) {
   }
 
   ctx.restore();
+}
+
+function orientation(px, py, qx, qy, rx, ry) {
+  const val = (qy - py) * (rx - qx) - (qx - px) * (ry - qy);
+  if (Math.abs(val) < 1e-9) return 0;
+  return (val > 0) ? 1 : 2;
+}
+
+function onSegment(px, py, qx, qy, rx, ry) {
+  return px <= Math.max(qx, rx) && px >= Math.min(qx, rx) &&
+         py <= Math.max(qy, ry) && py >= Math.min(qy, ry);
+}
+
+function segmentsIntersect(ax, ay, bx, by, cx, cy, dx, dy) {
+  const o1 = orientation(ax, ay, bx, by, cx, cy);
+  const o2 = orientation(ax, ay, bx, by, dx, dy);
+  const o3 = orientation(cx, cy, dx, dy, ax, ay);
+  const o4 = orientation(cx, cy, dx, dy, bx, by);
+
+  if (o1 !== o2 && o3 !== o4) return true;
+
+  if (o1 === 0 && onSegment(cx, cy, ax, ay, bx, by)) return true;
+  if (o2 === 0 && onSegment(dx, dy, ax, ay, bx, by)) return true;
+  if (o3 === 0 && onSegment(ax, ay, cx, cy, dx, dy)) return true;
+  if (o4 === 0 && onSegment(bx, by, cx, cy, dx, dy)) return true;
+
+  return false;
+}
+
+function lineSegmentIntersectsBox(x1, y1, x2, y2, xmin, xmax, ymin, ymax) {
+  if (x1 >= xmin && x1 <= xmax && y1 >= ymin && y1 <= ymax) return true;
+  if (x2 >= xmin && x2 <= xmax && y2 >= ymin && y2 <= ymax) return true;
+
+  if (segmentsIntersect(x1, y1, x2, y2, xmin, ymin, xmax, ymin)) return true;
+  if (segmentsIntersect(x1, y1, x2, y2, xmax, ymin, xmax, ymax)) return true;
+  if (segmentsIntersect(x1, y1, x2, y2, xmax, ymax, xmin, ymax)) return true;
+  if (segmentsIntersect(x1, y1, x2, y2, xmin, ymax, xmin, ymin)) return true;
+
+  return false;
+}
+
+function pointToSegmentDistance(px, py, ax, ay, bx, by) {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq < 1e-6) {
+    return Math.hypot(px - ax, py - ay);
+  }
+  let t = ((px - ax) * dx + (py - ay) * dy) / lenSq;
+  t = Math.max(0, Math.min(1, t));
+  const cx = ax + t * dx;
+  const cy = ay + t * dy;
+  return Math.hypot(px - cx, py - cy);
+}
+
+export function isConnectionMarkerOccluded(marker, ownerIds, markerPriority, protectedRoutes) {
+  if (!marker || marker.type === 'none') {
+    return false;
+  }
+
+  const isOwner = (routeId) => {
+    if (!ownerIds) return false;
+    if (typeof ownerIds.has === 'function') return ownerIds.has(routeId);
+    if (typeof ownerIds.includes === 'function') return ownerIds.includes(routeId);
+    return ownerIds === routeId;
+  };
+
+  for (const route of protectedRoutes) {
+    if (isOwner(route.id)) continue;
+    if (route.priority <= markerPriority) continue;
+
+    const points = route.points;
+    if (!points || points.length < 2) continue;
+
+    if (marker.type === 'junction') {
+      const radius = CONNECTION_MARKER_METRICS.junctionRadius;
+      const limit = radius + route.halfWidth;
+      for (let i = 0; i < points.length - 1; i++) {
+        const d = pointToSegmentDistance(marker.x, marker.y, points[i].x, points[i].y, points[i + 1].x, points[i + 1].y);
+        if (d <= limit) {
+          return true;
+        }
+      }
+    } else if (marker.type === 'flow' || marker.type === 'gate') {
+      const width = marker.type === 'flow' ? CONNECTION_MARKER_METRICS.flowWidth : CONNECTION_MARKER_METRICS.gateSize;
+      const height = marker.type === 'flow' ? CONNECTION_MARKER_METRICS.flowHeight : CONNECTION_MARKER_METRICS.gateSize;
+      const r = route.halfWidth;
+      const xmin = -width / 2 - r;
+      const xmax = width / 2 + r;
+      const ymin = -height / 2 - r;
+      const ymax = height / 2 + r;
+
+      const cos = Math.cos(marker.angle);
+      const sin = Math.sin(marker.angle);
+
+      for (let i = 0; i < points.length - 1; i++) {
+        const p1 = points[i];
+        const p2 = points[i + 1];
+
+        const dx1 = p1.x - marker.x;
+        const dy1 = p1.y - marker.y;
+        const lx1 = dx1 * cos + dy1 * sin;
+        const ly1 = -dx1 * sin + dy1 * cos;
+
+        const dx2 = p2.x - marker.x;
+        const dy2 = p2.y - marker.y;
+        const lx2 = dx2 * cos + dy2 * sin;
+        const ly2 = -dx2 * sin + dy2 * cos;
+
+        if (lineSegmentIntersectsBox(lx1, ly1, lx2, ly2, xmin, xmax, ymin, ymax)) {
+          return true;
+        }
+      }
+    }
+  }
+
+  return false;
 }

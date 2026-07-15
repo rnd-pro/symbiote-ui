@@ -177,7 +177,7 @@ export class SelectionSync {
 
     if (connRenderer && typeof connRenderer.setSelectionState === 'function') {
       const allSelectedConnIds = new Set([...activeConnIds, ...selectedConnections]);
-      connRenderer.setSelectionState(selectedNodes.size > 0 || selectedConnections.size > 0, allSelectedConnIds);
+      connRenderer.setSelectionState(selectedNodes.size > 0 || selectedConnections.size > 0, allSelectedConnIds, selectedConnections);
     }
 
 

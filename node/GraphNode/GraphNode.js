@@ -15,8 +15,6 @@ import { styles } from './GraphNode.css.js';
 import '../PortItem/PortItem.js';
 import '../CtrlItem/CtrlItem.js';
 
-const MEDIA_ACTIVATE_ICON = 'play_circle';
-
 /** @type {Object<string, string>} */
 const CATEGORY_ICONS = {
   server: 'dns',
@@ -132,7 +130,6 @@ export class GraphNode extends Symbiote {
       'data-media-fit',
       media?.fit || normalizeMediaFit(params.mediaFit || params.imageFit || params.avatarFit)
     );
-    if (media) ensureMaterialSymbols([MEDIA_ACTIVATE_ICON]);
     let mediaAlt = media?.alt || params.mediaAlt || params.imageAlt || params.avatarAlt || node.label || '';
     let mediaKind = media ? String(media.kind || '') : '';
     this.set$({

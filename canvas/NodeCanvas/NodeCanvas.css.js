@@ -428,24 +428,34 @@ export let styles = css`
   /* Connection PCB Marker */
   .sn-conn-marker {
     color: var(--sn-conn-marker-color, var(--sn-conn-color));
-    opacity: 0.8;
+    opacity: 1;
     pointer-events: none;
-    transition: color var(--sn-transition-fast) var(--sn-transition-easing), opacity var(--sn-transition-fast) var(--sn-transition-easing);
   }
 
   .sn-conn-marker[data-selected] {
+    color: color-mix(
+      in oklab,
+      var(--sn-conn-selected, var(--sn-sys-accent)) 100%,
+      var(--sn-sys-surface)
+    );
     filter: drop-shadow(0 0 3px var(--sn-sys-accent));
+    opacity: 1;
+  }
+
+  .sn-conn-marker[data-collision-hidden] {
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+
+  .sn-conn-marker[data-dimmed] {
+    color: var(--sn-conn-dimmed, var(--sn-sys-on-surface-dim));
     opacity: 1;
   }
 
   .sn-conn-marker[data-active-conn] {
     opacity: 1;
-    color: var(--sn-sys-accent);
-  }
-
-  .sn-conn-marker[data-dimmed] {
-    color: var(--sn-conn-dimmed, var(--sn-sys-on-surface-dim));
-    opacity: 0.24;
+    color: color-mix(in oklab, var(--sn-sys-accent) 100%, var(--sn-sys-surface));
   }
 
   /* Fire trace: sequential node execution highlighting */

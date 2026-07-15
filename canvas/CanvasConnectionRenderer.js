@@ -1,7 +1,12 @@
 import { getShape } from '../shapes/index.js';
 import { routePcbTrace } from './PcbRouter.js';
 import { alignSampledRouteEndpoints } from './CanvasGraph/CanvasGraphViewport.js';
-import { resolveConnectionMarker, drawCanvasMarker, resolveContainmentJunctions } from './ConnectionMarker.js';
+import {
+  resolveConnectionMarker,
+  drawCanvasMarker,
+  resolveContainmentJunctions,
+  isConnectionMarkerOccluded,
+} from './ConnectionMarker.js';
 
 export function shouldRenderConnectionDetail(zoom, isActive) {
   return zoom >= 0.5 || isActive;
@@ -204,6 +209,11 @@ export class CanvasConnectionRenderer {
   #progressivePcbBatchSize = 4;
   #processingProgressivePcb = false;
   #phantomSignature = '';
+  #markerCollisionsDirty = true;
+  #connectionMarkers = new Map();
+  #hiddenConnectionMarkers = new Set();
+  #junctionMarkers = [];
+  #hiddenJunctionMarkers = new Set();
 
   /** @type {Array<{id:string, x:number, y:number, w:number, h:number, degree:number, color:string, label:string}>} */
   #phantomNodes = [];
@@ -213,11 +223,13 @@ export class CanvasConnectionRenderer {
 
   #colorParams = {
     normal: '',
+    active: '',
     selected: '',
     outline: '',
     bg: '',
     text: '',
     width: 2,
+    selectedWidth: 3,
     dotRadius: 7,
     dotStrokeWidth: 2,
   };
@@ -284,12 +296,18 @@ export class CanvasConnectionRenderer {
   #updateStyles() {
     let source = resolveThemeSource(this.#canvasLayer);
     let computed = getComputedStyle(source);
+    let previousSelectedWidth = this.#colorParams.selectedWidth;
     this.#colorParams.normal = resolveThemeValue(source, '--sn-conn-color', '--sn-sys-accent');
+    this.#colorParams.active = resolveThemeValue(source, '--sn-sys-accent', '--sn-conn-color');
     this.#colorParams.selected = resolveThemeValue(source, '--sn-conn-selected', '--sn-sys-danger');
     this.#colorParams.outline = resolveThemeValue(source, '--sn-port-outline', '--sn-sys-surface-raised');
-    this.#colorParams.bg = resolveThemeValue(source, '--sn-sys-surface');
+    this.#colorParams.bg = resolveThemeValue(source, '--sn-canvas-graph-bg', '--sn-sys-surface');
     this.#colorParams.text = resolveThemeValue(source, '--sn-sys-on-surface');
     this.#colorParams.width = parseFloat(computed.getPropertyValue('--sn-conn-width')) || 2;
+    this.#colorParams.selectedWidth = resolveThemeLength(source, '--sn-conn-selected-width', 3);
+    if (this.#colorParams.selectedWidth !== previousSelectedWidth) {
+      this.#markerCollisionsDirty = true;
+    }
     let socketSize = resolveThemeLength(source, '--sn-socket-size', 12);
     let socketBorderWidth = resolveThemeLength(source, '--sn-socket-border-width', 2);
     this.#colorParams.dotStrokeWidth = resolveThemeLength(
@@ -462,6 +480,7 @@ export class CanvasConnectionRenderer {
     this.#connectionData.delete(conn.id);
     this.#pathCache.delete(conn.id);
     this.#progressivePcbQueue.delete(conn.id);
+    this.#markerCollisionsDirty = true;
     this.redraw();
   }
 
@@ -616,6 +635,7 @@ export class CanvasConnectionRenderer {
   #invalidatePathCache() {
     this.#pathCache.clear();
     this.#frozenConnectionLayer = null;
+    this.#markerCollisionsDirty = true;
     this.#cancelProgressivePcb();
   }
 
@@ -917,11 +937,78 @@ export class CanvasConnectionRenderer {
 
   #hasSelection = false;
   #activeConnIds = new Set();
+  #selectedConnIds = new Set();
 
-  setSelectionState(hasSelection, activeConnIds) {
+  setSelectionState(hasSelection, activeConnIds, selectedConnections) {
     this.#hasSelection = hasSelection;
-    this.#activeConnIds = activeConnIds;
+    this.#activeConnIds = new Set(activeConnIds || []);
+    this.#selectedConnIds = new Set(selectedConnections || []);
+    this.#markerCollisionsDirty = true;
     this.redraw();
+  }
+
+  #refreshMarkerCollisions(coordsById, connectionPoints) {
+    if (!this.#markerCollisionsDirty) return;
+
+    const protectedRoutes = [];
+    for (const connection of this.#connectionData.values()) {
+      const coords = coordsById.get(connection.id);
+      if (!coords?.points || coords.points.length < 2) continue;
+
+      const isSelected = this.#selectedConnIds.has(connection.id);
+      const isActive = this.#activeConnIds.has(connection.id);
+      const priority = isSelected ? 2 : (isActive ? 1 : 0);
+      if (priority === 0) continue;
+
+      protectedRoutes.push({
+        id: connection.id,
+        points: coords.points,
+        priority,
+        halfWidth: this.#colorParams.selectedWidth / 2,
+      });
+    }
+
+    const connections = [...this.#connectionData.values()];
+    this.#connectionMarkers.clear();
+    this.#hiddenConnectionMarkers.clear();
+    for (const connection of connections) {
+      const coords = coordsById.get(connection.id);
+      if (!coords) continue;
+      const marker = resolveConnectionMarker(coords.points || [], connection, {
+        connections,
+        connectionPoints,
+      });
+      if (!marker || marker.type === 'none') continue;
+
+      this.#connectionMarkers.set(connection.id, marker);
+      const isSelected = this.#selectedConnIds.has(connection.id);
+      const isActive = this.#activeConnIds.has(connection.id);
+      const priority = isSelected ? 2 : (isActive ? 1 : 0);
+      if (isConnectionMarkerOccluded(marker, [connection.id], priority, protectedRoutes)) {
+        this.#hiddenConnectionMarkers.add(connection.id);
+      }
+    }
+
+    this.#junctionMarkers = resolveContainmentJunctions(connections, connectionPoints);
+    this.#hiddenJunctionMarkers.clear();
+    for (const junction of this.#junctionMarkers) {
+      let priority = 0;
+      for (const ownerId of junction.connectionIds) {
+        const isSelected = this.#selectedConnIds.has(ownerId);
+        const isActive = this.#activeConnIds.has(ownerId);
+        priority = Math.max(priority, isSelected ? 2 : (isActive ? 1 : 0));
+      }
+      if (isConnectionMarkerOccluded(
+        junction,
+        junction.connectionIds,
+        priority,
+        protectedRoutes,
+      )) {
+        this.#hiddenJunctionMarkers.add(junction.key);
+      }
+    }
+
+    this.#markerCollisionsDirty = false;
   }
 
   /** Suppress redraws during batch operations (e.g. setEditor initialization) */
@@ -1021,17 +1108,19 @@ export class CanvasConnectionRenderer {
       }
     }
 
+    this.#refreshMarkerCollisions(coordsById, connectionPoints);
+
     let socketsToDraw = new Map();
 
     let drawTrace = (id, connection) => {
       let coords = coordsById.get(id);
       if (!coords) return;
 
-      let isActive = this.#activeConnIds ? this.#activeConnIds.has(connection.id) : false;
+      let isActive = this.#activeConnIds.has(connection.id);
+      let isSelected = this.#selectedConnIds.has(connection.id);
       if (!shouldRenderConnectionDetail(zoom, isActive)) return;
 
       let isFlowing = connection.flowing;
-      let isSelected = isActive;
       let isDimmed = !isActive && this.#hasSelection;
 
       let fromNode = this.#editor?.getNode(connection.from);
@@ -1040,7 +1129,9 @@ export class CanvasConnectionRenderer {
       let toColor = this.#resolveColor(toNode?.inputs?.[connection.in]?.socket?.color);
 
       let baseWidth = this.#colorParams.width;
-      ctx.lineWidth = Math.max(baseWidth, 1.5 / zoom);
+      ctx.lineWidth = isActive
+        ? Math.max(this.#colorParams.selectedWidth, 1.5 / zoom)
+        : Math.max(baseWidth, 1.5 / zoom);
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       ctx.globalAlpha = 1.0;
@@ -1068,7 +1159,11 @@ export class CanvasConnectionRenderer {
         finalColor = fromColor || this.#colorParams.normal;
       }
 
-      if (isDimmed) {
+      if (isSelected) {
+        finalColor = this.#colorParams.selected || finalColor;
+      } else if (isActive) {
+        finalColor = this.#colorParams.active || finalColor;
+      } else if (isDimmed) {
         let baseColor = fromColor || this.#colorParams.normal;
         let source = resolveThemeSource(this.#canvasLayer);
         let baseRgb = parseCssRgb(baseColor, source);
@@ -1089,7 +1184,7 @@ export class CanvasConnectionRenderer {
         ctx.setLineDash([]);
       }
 
-      if (isSelected && !isDimmed) {
+      if (isActive && !isDimmed) {
         ctx.shadowColor = ctx.strokeStyle;
         ctx.shadowBlur = 8;
       } else {
@@ -1113,14 +1208,19 @@ export class CanvasConnectionRenderer {
       let coords = coordsById.get(id);
       if (!coords) return;
 
-      let isActive = this.#activeConnIds ? this.#activeConnIds.has(connection.id) : false;
+      let isActive = this.#activeConnIds.has(connection.id);
+      let isSelected = this.#selectedConnIds.has(connection.id);
       if (!shouldRenderConnectionDetail(zoom, isActive)) return;
 
-      let isDimmed = this.#activeConnIds && !this.#activeConnIds.has(connection.id) && this.#hasSelection;
+      let isDimmed = !isActive && this.#hasSelection;
       let fromNode = this.#editor?.getNode(connection.from);
       let fromColor = this.#resolveColor(fromNode?.outputs?.[connection.out]?.socket?.color) || this.#colorParams.normal;
 
-      if (isDimmed) {
+      if (isSelected) {
+        fromColor = this.#colorParams.selected || fromColor;
+      } else if (isActive) {
+        fromColor = this.#colorParams.active || fromColor;
+      } else if (isDimmed) {
         let source = resolveThemeSource(this.#canvasLayer);
         let baseRgb = parseCssRgb(fromColor, source);
         let bgRgb = parseCssRgb(this.#colorParams.bg, source);
@@ -1133,21 +1233,16 @@ export class CanvasConnectionRenderer {
       ctx.fillStyle = fromColor;
       ctx.shadowBlur = 0;
 
-      const marker = resolveConnectionMarker(coords.points || [], connection, {
-        connections: [...this.#connectionData.values()],
-        connectionPoints,
-      });
-      if (marker && marker.type !== 'none') {
+      const marker = this.#connectionMarkers.get(connection.id);
+      if (marker && !this.#hiddenConnectionMarkers.has(connection.id)) {
         drawCanvasMarker(ctx, marker, ctx.strokeStyle, this.#colorParams.bg);
       }
     };
 
     let drawJunctions = () => {
-      const connections = [...this.#connectionData.values()];
-      const junctions = resolveContainmentJunctions(connections, connectionPoints);
-
-      for (const j of junctions) {
-        const isJunctionActive = j.connectionIds.some(cid => this.#activeConnIds ? this.#activeConnIds.has(cid) : false);
+      for (const j of this.#junctionMarkers) {
+        const isJunctionSelected = j.connectionIds.some(cid => this.#selectedConnIds.has(cid));
+        const isJunctionActive = j.connectionIds.some(cid => this.#activeConnIds.has(cid));
         if (!shouldRenderConnectionDetail(zoom, isJunctionActive)) continue;
 
         const isJunctionDimmed = !isJunctionActive && this.#hasSelection;
@@ -1159,8 +1254,10 @@ export class CanvasConnectionRenderer {
           fromColor = this.#resolveColor(fromNode?.outputs?.[ownerConn.out]?.socket?.color) || this.#colorParams.normal;
         }
 
-        if (isJunctionActive && !isJunctionDimmed) {
+        if (isJunctionSelected) {
           fromColor = this.#colorParams.selected || fromColor;
+        } else if (isJunctionActive && !isJunctionDimmed) {
+          fromColor = this.#colorParams.active || fromColor;
         } else if (isJunctionDimmed) {
           let source = resolveThemeSource(this.#canvasLayer);
           let baseRgb = parseCssRgb(fromColor, source);
@@ -1173,6 +1270,8 @@ export class CanvasConnectionRenderer {
         ctx.strokeStyle = fromColor;
         ctx.fillStyle = fromColor;
         ctx.shadowBlur = 0;
+
+        if (this.#hiddenJunctionMarkers.has(j.key)) continue;
 
         drawCanvasMarker(ctx, j, ctx.strokeStyle, this.#colorParams.bg);
       }
@@ -1634,6 +1733,7 @@ export class CanvasConnectionRenderer {
       role: conn.design?.marker?.role || 'none',
     };
     this.#pathCache.set(conn.id, coords);
+    this.#markerCollisionsDirty = true;
     return coords;
   }
 

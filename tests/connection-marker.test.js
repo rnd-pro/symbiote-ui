@@ -6,12 +6,14 @@ import {
   projectConnectionMarkerGeometry,
   resolveConnectionMarker,
   resolveContainmentJunctions,
+  isConnectionMarkerOccluded,
 } from '../canvas/ConnectionMarker.js';
 import {
   isCanvasConnectionPathCacheValid,
   shouldRenderConnectionDetail,
 } from '../canvas/CanvasConnectionRenderer.js';
 import {
+  ConnectionRenderer,
   reconcileSvgJunctionMarkers,
   renderConnectionBatch,
   updateSvgMarker,
@@ -469,6 +471,42 @@ function createMockCanvasContext() {
 
 test('CONNECTION_MARKER_METRICS and renderer-neutral projection parity (Canvas and SVG)', () => {
   assert.equal(Object.isFrozen(CONNECTION_MARKER_METRICS), true);
+  assert.deepEqual(CONNECTION_MARKER_METRICS, {
+    portClearance: 24,
+    bendClearance: 16,
+    labelClearance: 30,
+    minMarkerLength: 15,
+    minTrunk: 10,
+    minTail: 10,
+    flowWidth: 28.8,
+    flowHeight: 16,
+    flowArrowTailX: -7.2,
+    flowArrowTipX: 6,
+    flowArrowHalfHeight: 5,
+    flowBidirectionalTipX: 10.8,
+    flowBidirectionalBaseX: 2.4,
+    flowBidirectionalHalfHeight: 4,
+    junctionRadius: 14,
+    junctionInnerRadius: 6,
+    gateSize: 32,
+    protectedRouteHalfWidth: 1.5,
+  });
+  assert.deepEqual(projectConnectionMarkerGeometry({ type: 'flow', direction: 'forward' }), [
+    { type: 'rect', x: -14.4, y: -8, width: 28.8, height: 16, fill: 'trace' },
+    { type: 'polygon', points: [[-7.2, -5], [6, 0], [-7.2, 5]], fill: 'background' },
+  ]);
+  assert.deepEqual(projectConnectionMarkerGeometry({ type: 'flow', direction: 'both' }), [
+    { type: 'rect', x: -14.4, y: -8, width: 28.8, height: 16, fill: 'trace' },
+    { type: 'polygon', points: [[-10.8, 0], [-2.4, -4], [-2.4, 4]], fill: 'background' },
+    { type: 'polygon', points: [[10.8, 0], [2.4, -4], [2.4, 4]], fill: 'background' },
+  ]);
+  assert.deepEqual(projectConnectionMarkerGeometry({ type: 'junction' }), [
+    { type: 'circle', x: 0, y: 0, radius: 14, fill: 'trace' },
+    { type: 'circle', x: 0, y: 0, radius: 6, fill: 'background' },
+  ]);
+  assert.deepEqual(projectConnectionMarkerGeometry({ type: 'gate' }), [
+    { type: 'rect', x: -16, y: -16, width: 32, height: 32, fill: 'trace' },
+  ]);
   const cases = [
     { type: 'flow', direction: 'forward', x: 10, y: 20, angle: Math.PI / 4 },
     { type: 'flow', direction: 'both', x: 30, y: 40, angle: 0 },
@@ -488,6 +526,10 @@ test('CONNECTION_MARKER_METRICS and renderer-neutral projection parity (Canvas a
       primitives.filter((primitive) => primitive.type === 'circle').length);
     assert.equal(canvas.calls.filter((call) => call.name === 'moveTo').length,
       primitives.filter((primitive) => primitive.type === 'polygon').length);
+    assert.deepEqual(
+      canvas.calls.filter((call) => call.name === 'fillStyle').map((call) => call.val),
+      primitives.map((primitive) => primitive.fill === 'background' ? '#abcdef' : '#123456'),
+    );
 
     const { document } = parseHTML('<!doctype html><html><body></body></html>');
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -500,6 +542,12 @@ test('CONNECTION_MARKER_METRICS and renderer-neutral projection parity (Canvas a
     primitives.forEach((primitive, index) => {
       const element = markerEl.children[index];
       assert.equal(element.localName, primitive.type);
+      assert.equal(
+        element.getAttribute('fill'),
+        primitive.fill === 'background'
+          ? 'var(--sn-canvas-graph-bg, var(--sn-sys-surface))'
+          : 'currentColor',
+      );
       if (primitive.type === 'rect') {
         assert.equal(Number(element.getAttribute('x')), primitive.x);
         assert.equal(Number(element.getAttribute('y')), primitive.y);
@@ -513,6 +561,84 @@ test('CONNECTION_MARKER_METRICS and renderer-neutral projection parity (Canvas a
       }
     });
   }
+});
+
+test('updateSvgMarker inherits late-rendered connection state', () => {
+  const { document } = parseHTML('<!doctype html><html><body></body></html>');
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('data-conn-id', 'active-conn');
+  path.setAttribute('data-active-conn', '');
+  svg.append(path);
+
+  const marker = {
+    type: 'flow',
+    direction: 'forward',
+    x: 0,
+    y: 0,
+    angle: 0,
+  };
+  updateSvgMarker('active-conn', marker, svg, '#999999');
+
+  const markerElement = svg.querySelector('[data-conn-marker="active-conn"]');
+  assert.equal(markerElement.hasAttribute('data-active-conn'), true);
+  assert.equal(markerElement.hasAttribute('data-dimmed'), false);
+
+  path.removeAttribute('data-active-conn');
+  path.setAttribute('data-dimmed', '');
+  updateSvgMarker('active-conn', marker, svg, '#999999');
+  assert.equal(markerElement.hasAttribute('data-active-conn'), false);
+  assert.equal(markerElement.hasAttribute('data-dimmed'), true);
+});
+
+test('resolveConnectionMarker requires enough room for the rendered marker footprint', () => {
+  const conn = {
+    direction: 'forward',
+    kind: 'uses',
+    design: { marker: { role: 'flow' } },
+  };
+
+  const requiredFlowRoute = CONNECTION_MARKER_METRICS.portClearance * 2
+    + CONNECTION_MARKER_METRICS.flowWidth;
+  assert.equal(resolveConnectionMarker([
+    { x: 0, y: 0 },
+    { x: requiredFlowRoute - 0.1, y: 0 },
+  ], conn, { minMarkerLength: 1 }).type, 'none');
+
+  assert.equal(resolveConnectionMarker([
+    { x: 0, y: 0 },
+    { x: requiredFlowRoute, y: 0 },
+  ], conn, { minMarkerLength: 1 }).type, 'flow');
+
+  const gateConn = {
+    direction: 'forward',
+    kind: 'uses',
+    design: { marker: { role: 'gate' } },
+  };
+  assert.equal(resolveConnectionMarker([
+    { x: 0, y: 0 },
+    { x: 79, y: 0 },
+  ], gateConn, { minMarkerLength: 1 }).type, 'none');
+  assert.equal(resolveConnectionMarker([
+    { x: 0, y: 0 },
+    { x: 80, y: 0 },
+  ], gateConn, { minMarkerLength: 1 }).type, 'gate');
+});
+
+test('resolveContainmentJunctions requires trunk and tails to contain the junction radius', () => {
+  const connections = [
+    { id: 'short-a', from: 'source', kind: 'containment' },
+    { id: 'short-b', from: 'source', kind: 'containment' },
+  ];
+  const routes = new Map([
+    ['short-a', [{ x: 0, y: 0 }, { x: 12, y: 0 }, { x: 12, y: 40 }]],
+    ['short-b', [{ x: 0, y: 0 }, { x: 12, y: 0 }, { x: 12, y: -40 }]],
+  ]);
+
+  assert.deepEqual(resolveContainmentJunctions(connections, routes, {
+    minTrunk: 1,
+    minTail: 1,
+  }), []);
 });
 
 test('LOD: normal/low zoom suppression in Canvas rendering', () => {
@@ -637,4 +763,332 @@ test('SVG derived junctions reconciliation lifecycle (route update & owner remov
 
   reconcileSvgJunctionMarkers(svg, [connections[2]], points, editor);
   assert.equal(svg.querySelectorAll('g[data-conn-marker^="junction::"]').length, 0);
+});
+
+function createNestedJunctionFixture(branchGap) {
+  let connections = [
+    { id: 'connA', from: 'nodeA', out: 'out', kind: 'containment' },
+    { id: 'connB', from: 'nodeA', out: 'out', kind: 'containment' },
+    { id: 'connC', from: 'nodeA', out: 'out', kind: 'containment' },
+  ];
+  let secondBranchX = 20 + branchGap;
+  let points = new Map([
+    ['connA', [{ x: 0, y: 0 }, { x: 20, y: 0 }, { x: secondBranchX, y: 0 }, { x: 100, y: 0 }]],
+    ['connB', [{ x: 0, y: 0 }, { x: 20, y: 0 }, { x: secondBranchX, y: 0 }, { x: 100, y: 50 }]],
+    ['connC', [{ x: 0, y: 0 }, { x: 20, y: 0 }, { x: 20, y: -50 }]],
+  ]);
+  return { connections, points };
+}
+
+test('resolveContainmentJunctions coalesces intersecting nested branches', () => {
+  let { connections, points } = createNestedJunctionFixture(5);
+  let junctions = resolveContainmentJunctions(connections, points);
+
+  assert.equal(junctions.length, 1);
+  assert.equal(junctions[0].x, 20);
+  assert.equal(junctions[0].y, 0);
+  assert.deepEqual(junctions[0].connectionIds, ['connA', 'connB', 'connC']);
+  assert.equal(junctions[0].ownerId, 'connA');
+});
+
+test('resolveContainmentJunctions preserves tangential nested branches', () => {
+  let { connections, points } = createNestedJunctionFixture(
+    CONNECTION_MARKER_METRICS.junctionRadius * 2,
+  );
+  let junctions = resolveContainmentJunctions(connections, points);
+
+  assert.deepEqual(junctions.map(junction => junction.x), [20, 48]);
+});
+
+test('resolveContainmentJunctions coalescing is stable across input order', () => {
+  let { connections, points } = createNestedJunctionFixture(5);
+  let forward = resolveContainmentJunctions(connections, points);
+  let reversed = resolveContainmentJunctions([...connections].reverse(), points);
+
+  assert.deepEqual(reversed, forward);
+});
+
+test('resolveContainmentJunctions preserves intersecting non-nested branches', () => {
+  let connections = [
+    { id: 'connA', from: 'nodeA', out: 'out', kind: 'containment' },
+    { id: 'connB', from: 'nodeA', out: 'out', kind: 'containment' },
+    { id: 'connC', from: 'nodeA', out: 'out', kind: 'containment' },
+    { id: 'connD', from: 'nodeA', out: 'out', kind: 'containment' },
+  ];
+  let points = new Map([
+    ['connA', [{ x: 0, y: 0 }, { x: 20, y: 0 }, { x: 70, y: 0 }]],
+    ['connB', [{ x: 0, y: 0 }, { x: 20, y: 0 }, { x: 20, y: 50 }]],
+    ['connC', [{ x: 0, y: 0 }, { x: 0, y: 20 }, { x: 25, y: 20 }, { x: 75, y: 20 }]],
+    ['connD', [{ x: 0, y: 0 }, { x: 0, y: 20 }, { x: 25, y: 20 }, { x: 25, y: 70 }]],
+  ]);
+  let junctions = resolveContainmentJunctions(connections, points);
+
+  assert.equal(junctions.length, 2);
+  assert.deepEqual(junctions.map(junction => junction.connectionIds), [
+    ['connA', 'connB'],
+    ['connC', 'connD'],
+  ]);
+  assert.ok(Math.hypot(
+    junctions[0].x - junctions[1].x,
+    junctions[0].y - junctions[1].y,
+  ) < CONNECTION_MARKER_METRICS.junctionRadius * 2);
+});
+
+test('resolveContainmentJunctions keeps coincident source-port groups isolated', () => {
+  let connections = [
+    { id: 'a1', from: 'nodeA', out: 'outA', kind: 'containment' },
+    { id: 'a2', from: 'nodeA', out: 'outA', kind: 'containment' },
+    { id: 'b1', from: 'nodeA', out: 'outB', kind: 'containment' },
+    { id: 'b2', from: 'nodeA', out: 'outB', kind: 'containment' },
+  ];
+  let points = new Map([
+    ['a1', [{ x: 0, y: 0 }, { x: 20, y: 0 }, { x: 70, y: 0 }]],
+    ['a2', [{ x: 0, y: 0 }, { x: 20, y: 0 }, { x: 20, y: 50 }]],
+    ['b1', [{ x: 0, y: 0 }, { x: 20, y: 0 }, { x: 70, y: 0 }]],
+    ['b2', [{ x: 0, y: 0 }, { x: 20, y: 0 }, { x: 20, y: -50 }]],
+  ]);
+  let junctions = resolveContainmentJunctions(connections, points);
+
+  assert.equal(junctions.length, 2);
+  assert.deepEqual(junctions.map(junction => junction.connectionIds), [
+    ['a1', 'a2'],
+    ['b1', 'b2'],
+  ]);
+  assert.deepEqual(junctions.map(junction => [junction.x, junction.y]), [[20, 0], [20, 0]]);
+});
+
+test('isConnectionMarkerOccluded - flow at 8 units hidden / 9 visible using the scaled footprint', () => {
+  const marker = {
+    type: 'flow',
+    x: 0,
+    y: 0,
+    angle: 0,
+  };
+  const ownerIds = ['owner-route'];
+  const markerPriority = 0;
+
+  const protectedRoutesHidden = [{
+    id: 'other-route',
+    points: [{ x: -50, y: 8 }, { x: 50, y: 8 }],
+    priority: 1,
+    halfWidth: 0.5,
+  }];
+  assert.equal(isConnectionMarkerOccluded(marker, ownerIds, markerPriority, protectedRoutesHidden), true);
+
+  const protectedRoutesVisible = [{
+    id: 'other-route',
+    points: [{ x: -50, y: 9 }, { x: 50, y: 9 }],
+    priority: 1,
+    halfWidth: 0.5,
+  }];
+  assert.equal(isConnectionMarkerOccluded(marker, ownerIds, markerPriority, protectedRoutesVisible), false);
+});
+
+test('isConnectionMarkerOccluded - rotated flow', () => {
+  const marker = {
+    type: 'flow',
+    x: 0,
+    y: 0,
+    angle: Math.PI / 2,
+  };
+  const ownerIds = ['owner-route'];
+  const markerPriority = 0;
+
+  const protectedRoutes = [{
+    id: 'other-route',
+    points: [{ x: -50, y: 14 }, { x: 50, y: 14 }],
+    priority: 1,
+    halfWidth: 0.5,
+  }];
+  assert.equal(isConnectionMarkerOccluded(marker, ownerIds, markerPriority, protectedRoutes), true);
+});
+
+test('isConnectionMarkerOccluded - owner exemption', () => {
+  const marker = {
+    type: 'flow',
+    x: 0,
+    y: 0,
+    angle: 0,
+  };
+  const ownerIds = ['owner-route'];
+  const markerPriority = 0;
+
+  const protectedRoutes = [{
+    id: 'owner-route',
+    points: [{ x: -50, y: 15 }, { x: 50, y: 15 }],
+    priority: 1,
+    halfWidth: 0.5,
+  }];
+  assert.equal(isConnectionMarkerOccluded(marker, ownerIds, markerPriority, protectedRoutes), false);
+});
+
+test('isConnectionMarkerOccluded - junction distance 13 hidden / 17 visible', () => {
+  const marker = {
+    type: 'junction',
+    x: 0,
+    y: 0,
+    angle: 0,
+  };
+  const ownerIds = ['junction-owner'];
+  const markerPriority = 0;
+
+  const protectedRoutesHidden = [{
+    id: 'other-route',
+    points: [{ x: -50, y: 13 }, { x: 50, y: 13 }],
+    priority: 1,
+    halfWidth: 1.0,
+  }];
+  assert.equal(isConnectionMarkerOccluded(marker, ownerIds, markerPriority, protectedRoutesHidden), true);
+
+  const protectedRoutesVisible = [{
+    id: 'other-route',
+    points: [{ x: -50, y: 17 }, { x: 50, y: 17 }],
+    priority: 1,
+    halfWidth: 1.0,
+  }];
+  assert.equal(isConnectionMarkerOccluded(marker, ownerIds, markerPriority, protectedRoutesVisible), false);
+});
+
+test('isConnectionMarkerOccluded - equal/higher priority', () => {
+  const marker = {
+    type: 'flow',
+    x: 0,
+    y: 0,
+    angle: 0,
+  };
+  const ownerIds = ['owner-route'];
+
+  const points = [{ x: -50, y: 8 }, { x: 50, y: 8 }];
+
+  assert.equal(isConnectionMarkerOccluded(marker, ownerIds, 1, [{
+    id: 'other',
+    points,
+    priority: 1,
+    halfWidth: 0.5,
+  }]), false);
+
+  assert.equal(isConnectionMarkerOccluded(marker, ownerIds, 1, [{
+    id: 'other',
+    points,
+    priority: 2,
+    halfWidth: 0.5,
+  }]), true);
+
+  assert.equal(isConnectionMarkerOccluded(marker, ownerIds, 1, [{
+    id: 'other',
+    points,
+    priority: 0,
+    halfWidth: 0.5,
+  }]), false);
+});
+
+test('isConnectionMarkerOccluded - multi-owner junction max state', () => {
+  const marker = {
+    type: 'junction',
+    x: 0,
+    y: 0,
+    angle: 0,
+    connectionIds: ['c1', 'c2'],
+  };
+  const ownerIds = ['c1', 'c2'];
+
+  const protectedRoutes = [{
+    id: 'other',
+    points: [{ x: -50, y: 13 }, { x: 50, y: 13 }],
+    priority: 1,
+    halfWidth: 1.0,
+  }];
+
+  assert.equal(isConnectionMarkerOccluded(marker, ownerIds, 0, protectedRoutes), true);
+
+  assert.equal(isConnectionMarkerOccluded(marker, ownerIds, 1, protectedRoutes), false);
+});
+
+test('ConnectionRenderer - SVG marker occlusion lifecycle (adding crossing routes and selection updates)', () => {
+  const { document } = parseHTML('<!doctype html><html><body></body></html>');
+  const oldDocument = globalThis.document;
+  globalThis.document = document;
+
+  try {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+
+    const nodeViews = new Map();
+    const createNodeView = (id, x, y) => {
+      const el = document.createElement('div');
+      el._position = { x, y };
+      el.offsetWidth = 10;
+      el.offsetHeight = 10;
+      el._cachedW = 10;
+      el._cachedH = 10;
+      nodeViews.set(id, el);
+    };
+    createNodeView('nodeA', -100, 25);
+    createNodeView('nodeB', 150, 25);
+    createNodeView('nodeC', 20, -50);
+    createNodeView('nodeD', 30, 100);
+
+    const connRenderer = new ConnectionRenderer({
+      svgLayer: svg,
+      nodeViews,
+      editor: {
+        getNode: (id) => {
+          return {
+            shape: 'rectangle',
+            outputs: { out: { socket: { color: '#010203', name: 'data' } } },
+            inputs: { in: { socket: { color: '#010203', name: 'data' } } },
+          };
+        }
+      },
+      onConnectionClick: () => {},
+      getZoom: () => 1
+    });
+    connRenderer.setPathStyle('straight');
+
+    const connDimmed = {
+      id: 'trace-color',
+      from: 'nodeA',
+      out: 'out',
+      to: 'nodeB',
+      in: 'in',
+      direction: 'forward',
+      design: { marker: { role: 'flow' } },
+    };
+
+    connRenderer.add(connDimmed);
+    const traceMarker = svg.querySelector('[data-conn-marker="trace-color"]');
+    assert.ok(traceMarker);
+    assert.equal(traceMarker.hasAttribute('data-collision-hidden'), false);
+
+    const connActive = {
+      id: 'active-color',
+      from: 'nodeC',
+      out: 'out',
+      to: 'nodeD',
+      in: 'in',
+      direction: 'forward',
+      design: { marker: { role: 'flow' } },
+    };
+    connRenderer.add(connActive);
+
+    const pathDimmed = svg.querySelector('[data-conn-id="trace-color"]');
+    const pathActive = svg.querySelector('[data-conn-id="active-color"]');
+    pathDimmed.setAttribute('data-dimmed', '');
+    pathActive.setAttribute('data-active-conn', '');
+
+    connRenderer.setSelectionState(true, new Set(['active-color']), new Set());
+
+    assert.equal(traceMarker.hasAttribute('data-collision-hidden'), true);
+
+    pathDimmed.removeAttribute('data-dimmed');
+    pathDimmed.setAttribute('data-active-conn', '');
+    connRenderer.setSelectionState(true, new Set(['active-color', 'trace-color']), new Set());
+
+    assert.equal(traceMarker.hasAttribute('data-collision-hidden'), false);
+
+    connRenderer.remove(connActive);
+
+    assert.equal(traceMarker.hasAttribute('data-collision-hidden'), false);
+  } finally {
+    globalThis.document = oldDocument;
+  }
 });

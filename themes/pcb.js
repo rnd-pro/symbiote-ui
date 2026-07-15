@@ -43,6 +43,7 @@ export let PCB_DARK = {
     '--sn-conn-color': '#c87533',
     '--sn-conn-width': '1.5',
     '--sn-conn-selected': '#d4a04a',
+    '--sn-conn-selected-width': '2.5',
     '--sn-conn-linecap': 'square',
     '--sn-conn-linejoin': 'miter',
 
@@ -162,7 +163,7 @@ export let PCB_DARK = {
     /* Selected node connections — full opacity, gold, thick */
     .sn-conn-path[data-active-conn] {
       opacity: 1 !important;
-      stroke-width: 2.5 !important;
+      stroke-width: var(--sn-conn-selected-width, 2.5) !important;
       stroke: var(--sn-sys-accent) !important;
     }
 
@@ -180,6 +181,11 @@ export let PCB_DARK = {
     [data-lod-dimmed] .sn-conn-marker[data-active-conn] {
       visibility: visible;
       opacity: 1 !important;
+    }
+    .sn-conn-marker[data-collision-hidden] {
+      visibility: hidden !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
     }
 
     /* ── Compact SVG Shape Sizing ── */
