@@ -42,7 +42,7 @@ export const CASCADE_THEME_CONTROL_LIST = Object.freeze([
     type: 'number',
     min: 0,
     max: 100,
-    default: 58,
+    default: 100,
     icon: 'contrast',
     description: 'Contrast control for text, borders, hover surfaces, and accent lightness.',
   },

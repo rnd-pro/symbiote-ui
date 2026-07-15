@@ -66,7 +66,7 @@ Controls palette via `oklch` color space parameters.
 | `hue` | `number` | `0–360` | `218` | Color wheel angle |
 | `chroma` | `number` | `0–100` | `89` | Color saturation intensity |
 | `brightness` | `number` | `0–20` | `0` | Base lightness offset |
-| `contrast` | `number` | `40–80` | `58` | Foreground/background separation |
+| `contrast` | `number` | `0–100` | `100` | Foreground/background separation |
 
 ### Layer 2: Skins
 
@@ -97,8 +97,8 @@ Controls transition timing.
 | `neon` | dark | 280 | 80 | 5 | 65 | Vibrant purple |
 | `pcb` | dark | 148 | 70 | 2 | 60 | Matrix/circuit green |
 | `ebook` | light | 35 | 12 | 0 | 55 | Warm parchment |
-| `dark` | dark | 218 | 89 | 0 | 58 | Standard dark blue |
-| `light` | light | 218 | 89 | 0 | 58 | Standard light blue |
+| `dark` | dark | 218 | 89 | 0 | 100 | Standard dark blue |
+| `light` | light | 218 | 89 | 0 | 100 | Standard light blue |
 
 ### Skin Presets
 

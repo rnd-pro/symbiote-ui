@@ -26,8 +26,8 @@ They inherit to all descendants via the CSS cascade.
 | `--sn-theme-hue` | `'218'` | `options.hue` |
 | `--sn-theme-chroma` | `'89%'` | `options.chroma` |
 | `--sn-theme-bg-lightness` | `'10.0%'` | Computed from `mode` + `brightness` |
-| `--sn-theme-surface-lightness` | `'13.0%'` | Computed from `mode` + `contrast` |
-| `--sn-theme-text-lightness` | `'94.0%'` | Computed from `mode` + `contrast` |
+| `--sn-theme-surface-lightness` | `'15.1%'` | Computed from `mode` + `contrast` |
+| `--sn-theme-text-lightness` | `'98.0%'` | Computed from `mode` + `contrast` |
 | `color-scheme` | `'dark'` or `'light'` | `options.mode` |
 
 ### Semantic Surfaces

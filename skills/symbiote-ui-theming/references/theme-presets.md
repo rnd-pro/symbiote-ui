@@ -57,7 +57,7 @@ Warm parchment light theme. Best for reading interfaces.
 Standard dark blue theme. Default for all panels.
 
 ```javascript
-{ mode: 'dark', hue: 218, chroma: 89, brightness: 0, contrast: 58 }
+{ mode: 'dark', hue: 218, chroma: 89, brightness: 0, contrast: 100 }
 ```
 
 ### light
@@ -65,7 +65,7 @@ Standard dark blue theme. Default for all panels.
 Standard light blue theme. Mirror of `dark`.
 
 ```javascript
-{ mode: 'light', hue: 218, chroma: 89, brightness: 0, contrast: 58 }
+{ mode: 'light', hue: 218, chroma: 89, brightness: 0, contrast: 100 }
 ```
 
 ## Skin Presets (SKIN_PRESETS)

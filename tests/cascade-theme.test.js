@@ -574,7 +574,7 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
 
   assert.equal(defaultTheme.state.themeVariant, 'classic');
   assert.equal(defaultTheme.state.tabShape, 'classic-ear');
-  assert.equal(defaultTheme.state.contrast, 58);
+  assert.equal(defaultTheme.state.contrast, 100);
   assert.equal(defaultTheme.state.chroma, 89);
   assert.equal(defaultTheme.state.hue, 218);
   assert.equal(defaultTheme.state.pattern, 100);
@@ -663,7 +663,7 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.equal(classicTheme.tokens['--sn-theme-variant'], 'classic');
   assert.equal(classicTheme.tokens['--sn-tabs-shape'], 'classic-ear');
   assert.equal(classicTheme.tokens['--sn-theme-bg-lightness'], '10.0%');
-  assert.equal(classicTheme.tokens['--sn-theme-surface-lightness'], '13.0%');
+  assert.equal(classicTheme.tokens['--sn-theme-surface-lightness'], '15.1%');
   assert.equal(classicTheme.tokens['--sn-theme-outline-strength'], '0.00');
   assert.equal(classicTheme.tokens['--sn-theme-radius-scale'], '0.00');
   assert.equal(classicTheme.tokens['--sn-theme-cell-radius-scale'], '1.00');
@@ -673,14 +673,14 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.equal(classicTheme.tokens['--sn-cell-max-radius'], theme.tokens['--sn-cell-max-radius']);
   assert.equal(classicTheme.tokens['--sn-theme-frame-radius-scale'], '0.00');
   assert.equal(classicTheme.tokens['--sn-sys-outline'], 'hsl(0 0% 62.0% / 0.000)');
-  assert.equal(classicTheme.tokens['--sn-sys-accent'], 'hsl(218 89% 63%)');
+  assert.equal(classicTheme.tokens['--sn-sys-accent'], 'hsl(218 89% 68.04%)');
   assert.equal(classicTheme.tokens['--sn-tabs-active-border'], 'transparent');
   assert.equal(classicTheme.tokens['--sn-tabs-active-corner-display'], 'block');
   assert.equal(classicTheme.tokens['--sn-tabs-corner-cut'], '11.5px');
   assert.equal(classicBrightTheme.tokens['--sn-theme-bg-lightness'], '19.0%');
-  assert.equal(classicBrightTheme.tokens['--sn-theme-surface-lightness'], '22.0%');
+  assert.equal(classicBrightTheme.tokens['--sn-theme-surface-lightness'], '24.1%');
   assert.equal(classicLowChromaTheme.tokens['--sn-theme-chroma'], '0%');
-  assert.equal(classicLowChromaTheme.tokens['--sn-sys-accent'], 'hsl(218 0% 63%)');
+  assert.equal(classicLowChromaTheme.tokens['--sn-sys-accent'], 'hsl(218 0% 68.04%)');
   assert.equal(motionScaleTheme.state.motion, 60);
   assert.equal(motionScaleTheme.tokens['--sn-theme-motion-scale'], '0.60');
   assert.equal(motionScaleTheme.tokens['--sn-transition-fast'], '72ms');
@@ -701,8 +701,8 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.equal(theme.tokens['--sn-chat-user-message-bg'], 'color-mix(in oklab, var(--sn-sys-surface-panel) 88%, var(--sn-sys-accent) 12%)');
   assert.equal(theme.tokens['--sn-composer-bg'], 'color-mix(in oklab, var(--sn-sys-surface-panel) 90%, var(--sn-sys-on-surface) 4%)');
   assert.equal(theme.tokens['--sn-grid-dot'], 'hsl(0 0% 94.0% / 0.088)');
-  assert.equal(noPatternTheme.tokens['--sn-grid-dot'], 'hsl(0 0% 94.0% / 0.018)');
-  assert.equal(fullPatternTheme.tokens['--sn-grid-dot'], 'hsl(0 0% 94.0% / 0.088)');
+  assert.equal(noPatternTheme.tokens['--sn-grid-dot'], 'hsl(0 0% 98.0% / 0.018)');
+  assert.equal(fullPatternTheme.tokens['--sn-grid-dot'], 'hsl(0 0% 98.0% / 0.088)');
   assert.equal(theme.tokens['--sn-cell-dot'], 'hsl(0 0% 60.0%)');
   assert.equal(theme.tokens['--sn-cell-base-alpha'], '0.047');
   assert.equal(theme.tokens['--sn-cell-alpha-span'], '0.175');
@@ -967,7 +967,7 @@ test('node type color tokens are canonical across themes and graph aliases', asy
   assert.equal(defaultProviderTheme.DEFAULT_PROVIDER_THEME.tokens['--sn-graph-type-project'], 'var(--sn-type-project)');
   assert.equal(defaultProviderTheme.DEFAULT_PROVIDER_THEME.tokens['--sn-canvas-graph-panel-bg'], 'var(--sn-canvas-graph-bg)');
   assert.equal(defaultProviderTheme.DEFAULT_PROVIDER_THEME.tokens['--sn-canvas-graph-ghost'], 'var(--sn-sys-on-surface-dim)');
-  assert.equal(defaultProviderTheme.DEFAULT_PROVIDER_THEME.tokens['--sn-type-action'], 'hsl(var(--sn-hue-danger) var(--sn-sat-vivid) 78%)');
+  assert.equal(defaultProviderTheme.DEFAULT_PROVIDER_THEME.tokens['--sn-type-action'], 'hsl(var(--sn-hue-danger) var(--sn-sat-vivid) 82.0%)');
   assert.equal(defaultProviderTheme.DEFAULT_PROVIDER_THEME.tokens['--sn-type-source'], 'var(--sn-cat-server)');
   assert.equal(defaultProviderTheme.DEFAULT_PROVIDER_THEME.tokens['--sn-type-profile-photo'], 'var(--sn-type-profile)');
   assert.equal(defaultProviderTheme.DEFAULT_PROVIDER_THEME.tokens['--sn-type-skill'], 'var(--sn-cat-control)');
@@ -1477,12 +1477,12 @@ test('cascade theme derives distinct dark and light branches', async () => {
   assert.equal(lightTheme.tokens['color-scheme'], 'light');
   assert.equal(darkTheme.tokens['--sn-sys-surface'], 'hsl(0 0% 10.0%)');
   assert.equal(lightTheme.tokens['--sn-sys-surface'], 'hsl(0 0% 98.0%)');
-  assert.equal(darkTheme.tokens['--sn-sys-on-surface'], 'hsl(0 0% 94.0%)');
-  assert.equal(lightTheme.tokens['--sn-sys-on-surface'], 'hsl(0 0% 18.9%)');
+  assert.equal(darkTheme.tokens['--sn-sys-on-surface'], 'hsl(0 0% 98.0%)');
+  assert.equal(lightTheme.tokens['--sn-sys-on-surface'], 'hsl(0 0% 8.0%)');
   assert.equal(darkTheme.tokens['--sn-theme-outline-strength'], lightTheme.tokens['--sn-theme-outline-strength']);
   assert.equal(darkTheme.tokens['--sn-field-control-bg'], 'var(--sn-sys-surface)');
   assert.equal(lightTheme.tokens['--sn-field-control-bg'], 'var(--sn-sys-surface)');
-  assert.equal(lightTheme.tokens['--sn-button-primary-color'], 'hsl(0 0% 7.5%)');
+  assert.equal(lightTheme.tokens['--sn-button-primary-color'], 'hsl(0 0% 98.0%)');
   assert.equal(lightTheme.tokens['--sn-button-success-color'], 'hsl(0 0% 7.5%)');
   assert.equal(themeModule.getReadableTextForHsl(218, 89, 63, 94), 'hsl(0 0% 7.5%)');
   assert.equal(themeModule.getReadableTextForHsl(218, 89, 56.2, 18.9), 'hsl(0 0% 7.5%)');
@@ -2226,6 +2226,24 @@ test('default provider exposes cascade control and scrollbar parity tokens', asy
     readFile(new URL('../themes/default-provider.css', import.meta.url), 'utf8'),
   ]);
   let tokens = themeModule.DEFAULT_PROVIDER_THEME.tokens;
+  let parityTokens = {
+    '--sn-theme-surface-lightness': '15.1%',
+    '--sn-theme-text-lightness': '98.0%',
+    '--sn-lit-hover': '31.2%',
+    '--sn-lit-text-dim': '67.6%',
+    '--sn-lit-accent': '68.0%',
+    '--sn-cat-data': 'hsl(var(--sn-hue-data) var(--sn-sat-vivid) 47.0%)',
+    '--sn-type-action': 'hsl(var(--sn-hue-danger) var(--sn-sat-vivid) 82.0%)',
+    '--sn-type-data': 'hsl(var(--sn-hue-accent) var(--sn-sat-vivid) 79.0%)',
+    '--sn-type-docs': 'hsl(var(--sn-hue-base) var(--sn-sat-muted) 85.0%)',
+    '--sn-syntax-keyword': 'hsl(var(--sn-hue-danger) var(--sn-sat-vivid) 86.0%)',
+    '--sn-syntax-string': 'hsl(var(--sn-hue-warning) var(--sn-sat-vivid) 70.0%)',
+  };
+
+  for (let [name, value] of Object.entries(parityTokens)) {
+    assert.equal(tokens[name], value);
+    assert.ok(css.includes(`  ${name}: ${value};`), `expected ${name} in default-provider.css`);
+  }
 
   assert.equal(tokens['--sn-theme-outline-strength'], '0');
   assert.equal(tokens['--sn-theme-variant'], 'classic');
@@ -3091,33 +3109,42 @@ test('ThemeFactory resolves presets, resolves task mapping, and applies to eleme
   assert.equal(styles.get('--sn-animation-play-state'), 'paused');
 });
 
-test('cascade Pattern defaults and chat cell-alpha aliases stay synchronized', async () => {
+test('cascade Classic defaults and chat cell-alpha aliases stay synchronized', async () => {
   const { createCascadeTheme, CASCADE_THEME_DEFAULTS, CASCADE_THEME_VARIANT_PRESETS } = await import('../themes/Theme.js');
+  assert.equal(CASCADE_THEME_DEFAULTS.contrast, 100);
+  assert.equal(CASCADE_THEME_VARIANT_PRESETS.classic.contrast, 100);
+  assert.equal(CASCADE_THEME_VARIANT_PRESETS.modern.contrast, 100);
   assert.equal(CASCADE_THEME_DEFAULTS.pattern, 100);
   assert.equal(CASCADE_THEME_VARIANT_PRESETS.modern.pattern, 100);
   assert.equal(CASCADE_THEME_VARIANT_PRESETS.classic.pattern, 100);
 
   const defaultTheme = createCascadeTheme();
+  assert.equal(defaultTheme.state.contrast, 100);
   assert.equal(defaultTheme.state.pattern, 100);
   assert.equal(defaultTheme.tokens['--sn-theme-pattern-brightness'], '1.00');
 
   const classicTheme = createCascadeTheme({ themeVariant: 'classic' });
+  assert.equal(classicTheme.state.contrast, 100);
   assert.equal(classicTheme.state.pattern, 100);
 
   const modernTheme = createCascadeTheme({ themeVariant: 'modern' });
+  assert.equal(modernTheme.state.contrast, 100);
   assert.equal(modernTheme.state.pattern, 100);
+
+  const explicitLegacyContrast = createCascadeTheme({ themeVariant: 'classic', contrast: 58 });
+  assert.equal(explicitLegacyContrast.state.contrast, 58);
 
   const explicitZeroDark = createCascadeTheme({ mode: 'dark', pattern: 0 });
   assert.equal(explicitZeroDark.tokens['--sn-cell-base-alpha'], '0.012');
   assert.equal(explicitZeroDark.tokens['--sn-cell-alpha-span'], '0.070');
-  assert.equal(explicitZeroDark.tokens['--sn-grid-dot'], 'hsl(0 0% 94.0% / 0.018)');
+  assert.equal(explicitZeroDark.tokens['--sn-grid-dot'], 'hsl(0 0% 98.0% / 0.018)');
 
   const explicitZeroLight = createCascadeTheme({ mode: 'light', pattern: 0 });
   assert.equal(explicitZeroLight.tokens['--sn-cell-base-alpha'], '0.010');
   assert.equal(explicitZeroLight.tokens['--sn-cell-alpha-span'], '0.050');
 
   const explicitHundredDark = createCascadeTheme({ mode: 'dark', pattern: 100 });
-  assert.equal(explicitHundredDark.tokens['--sn-grid-dot'], 'hsl(0 0% 94.0% / 0.088)');
+  assert.equal(explicitHundredDark.tokens['--sn-grid-dot'], 'hsl(0 0% 98.0% / 0.088)');
   assert.equal(explicitHundredDark.tokens['--sn-cell-base-alpha'], '0.047');
   assert.equal(explicitHundredDark.tokens['--sn-cell-alpha-span'], '0.175');
   assert.equal(explicitHundredDark.tokens['--sn-chat-cell-base-alpha'], '0.012');
@@ -3141,34 +3168,85 @@ test('cascade Pattern defaults and chat cell-alpha aliases stay synchronized', a
   const dtcg = JSON.parse(dtcgSource);
   const darkDtcg = JSON.parse(darkDtcgSource);
   assert.equal(DEFAULT_PROVIDER_THEME.tokens['--sn-theme-pattern-brightness'], explicitHundredDark.tokens['--sn-theme-pattern-brightness']);
+  assert.equal(DEFAULT_PROVIDER_THEME.tokens['--sn-theme-surface-lightness'], defaultTheme.tokens['--sn-theme-surface-lightness']);
+  assert.equal(DEFAULT_PROVIDER_THEME.tokens['--sn-theme-text-lightness'], defaultTheme.tokens['--sn-theme-text-lightness']);
+  assert.equal(DEFAULT_PROVIDER_THEME.tokens['--sn-lit-hover'], defaultTheme.tokens['--sn-lit-hover']);
+  assert.equal(DEFAULT_PROVIDER_THEME.tokens['--sn-lit-text-dim'], defaultTheme.tokens['--sn-lit-text-dim']);
+  assert.equal(DEFAULT_PROVIDER_THEME.tokens['--sn-lit-accent'], defaultTheme.tokens['--sn-lit-accent']);
   assert.match(DEFAULT_PROVIDER_THEME.tokens['--sn-grid-dot'], /\/ 0\.088\)$/);
   assert.equal(DEFAULT_PROVIDER_THEME.tokens['--sn-cell-base-alpha'], explicitHundredDark.tokens['--sn-cell-base-alpha']);
   assert.equal(DEFAULT_PROVIDER_THEME.tokens['--sn-cell-alpha-span'], explicitHundredDark.tokens['--sn-cell-alpha-span']);
   assert.equal(DEFAULT_PROVIDER_THEME.tokens['--sn-chat-cell-base-alpha'], '0.012');
   assert.equal(DEFAULT_PROVIDER_THEME.tokens['--sn-chat-cell-alpha-span'], '0.070');
   assert.equal(DEFAULT_DARK.tokens['--sn-theme-pattern-brightness'], explicitHundredDark.tokens['--sn-theme-pattern-brightness']);
+  assert.equal(DEFAULT_DARK.tokens['--sn-theme-surface-lightness'], defaultTheme.tokens['--sn-theme-surface-lightness']);
+  assert.equal(DEFAULT_DARK.tokens['--sn-theme-text-lightness'], defaultTheme.tokens['--sn-theme-text-lightness']);
+  assert.equal(DEFAULT_DARK.tokens['--sn-lit-hover'], defaultTheme.tokens['--sn-lit-hover']);
+  assert.equal(DEFAULT_DARK.tokens['--sn-lit-text-dim'], defaultTheme.tokens['--sn-lit-text-dim']);
+  assert.equal(DEFAULT_DARK.tokens['--sn-lit-accent'], defaultTheme.tokens['--sn-lit-accent']);
   assert.match(DEFAULT_DARK.tokens['--sn-grid-dot'], /\/ 0\.088\)$/);
   assert.equal(DEFAULT_DARK.tokens['--sn-cell-base-alpha'], explicitHundredDark.tokens['--sn-cell-base-alpha']);
   assert.equal(DEFAULT_DARK.tokens['--sn-cell-alpha-span'], explicitHundredDark.tokens['--sn-cell-alpha-span']);
   assert.equal(DEFAULT_DARK.tokens['--sn-chat-cell-base-alpha'], '0.012');
   assert.equal(DEFAULT_DARK.tokens['--sn-chat-cell-alpha-span'], '0.070');
 
+  let runtimeTokenExpectations = {
+    '--sn-cat-data': 'hsl(188 89% 47.0%)',
+    '--sn-type-action': 'hsl(4 89% 82.0%)',
+    '--sn-type-data': 'hsl(218 89% 79.0%)',
+    '--sn-type-docs': 'hsl(0 0% 85.0%)',
+    '--sn-syntax-keyword': 'hsl(4 89% 86.0%)',
+    '--sn-syntax-string': 'hsl(36 89% 70.0%)',
+  };
+  for (let [name, value] of Object.entries(runtimeTokenExpectations)) {
+    assert.equal(DEFAULT_DARK.tokens[name], DEFAULT_PROVIDER_THEME.tokens[name]);
+    assert.equal(defaultTheme.tokens[name], value);
+  }
+
+  const { COLOR_PRESETS } = await import('../themes/ThemeFactory.js');
+  assert.equal(COLOR_PRESETS.dark.contrast, 100);
+  assert.equal(COLOR_PRESETS.light.contrast, 100);
   assert.equal(dtcg.control.pattern.$value, '1.00');
+  assert.equal(dtcg.control.surfaceLightness.$value, '15.1%');
+  assert.equal(dtcg.control.textLightness.$value, '98.0%');
   assert.equal(dtcg.effect.cellBaseAlpha.$value, '0.047');
   assert.equal(dtcg.effect.cellAlphaSpan.$value, '0.175');
   assert.equal(dtcg.effect.chatCellBaseAlpha.$value, '0.012');
   assert.equal(dtcg.effect.chatCellAlphaSpan.$value, '0.070');
   assert.equal(darkDtcg.control.pattern.$value, '1.00');
+  assert.equal(darkDtcg.control.surfaceLightness.$value, '15.1%');
+  assert.equal(darkDtcg.control.textLightness.$value, '98.0%');
   assert.equal(darkDtcg.effect.cellBaseAlpha.$value, '0.047');
   assert.equal(darkDtcg.effect.cellAlphaSpan.$value, '0.175');
   assert.equal(darkDtcg.effect.chatCellBaseAlpha.$value, '0.012');
   assert.equal(darkDtcg.effect.chatCellAlphaSpan.$value, '0.070');
   assert.equal(themeCatalog.THEME_TOKENS['default-provider'].control.pattern.$value, '1.00');
+  assert.equal(themeCatalog.THEME_TOKENS['default-provider'].control.surfaceLightness.$value, '15.1%');
+  assert.equal(themeCatalog.THEME_TOKENS['default-provider'].control.textLightness.$value, '98.0%');
   assert.equal(themeCatalog.THEME_TOKENS['default-provider'].effect.cellBaseAlpha.$value, '0.047');
   assert.equal(themeCatalog.THEME_TOKENS['default-provider'].effect.cellAlphaSpan.$value, '0.175');
   assert.equal(themeCatalog.THEME_TOKENS['default-provider'].effect.chatCellBaseAlpha.$value, '0.012');
   assert.equal(themeCatalog.THEME_TOKENS['default-provider'].effect.chatCellAlphaSpan.$value, '0.070');
   assert.equal(themeCatalog.getThemeControls('default-provider').find((control) => control.name === 'pattern').default, '1.00');
+  assert.equal(themeCatalog.getThemeControls('default-provider').find((control) => control.name === 'surfaceLightness').default, '15.1%');
+  assert.equal(themeCatalog.getThemeControls('default-provider').find((control) => control.name === 'textLightness').default, '98.0%');
+  assert.equal(themeCatalog.getThemeControls('cascade-theme').find((control) => control.name === 'contrast').default, 100);
+
+  let serializedTokenExpectations = [
+    ['geometry', 'graphTypeAction', 'typeAction', 'hsl(var(--sn-hue-danger) var(--sn-sat-vivid) 82%)'],
+    ['geometry', 'graphTypeData', 'typeData', 'hsl(var(--sn-hue-accent) var(--sn-sat-vivid) 79%)'],
+    ['geometry', 'graphTypeDocs', 'typeDocs', 'hsl(var(--sn-hue-base) var(--sn-sat-muted) 85%)'],
+    ['syntax', 'keyword', null, 'hsl(var(--sn-hue-danger) var(--sn-sat-vivid) 86%)'],
+    ['syntax', 'string', null, 'hsl(var(--sn-hue-warning) var(--sn-sat-vivid) 70%)'],
+  ];
+  for (let [group, name, alias, value] of serializedTokenExpectations) {
+    assert.equal(dtcg[group][name].$value, value);
+    assert.equal(darkDtcg[group][name].$value, value);
+    assert.equal(themeCatalog.THEME_TOKENS['default-provider'][group][name].$value, value);
+    if (alias) {
+      assert.equal(themeCatalog.THEME_TOKENS['default-provider'].alias[alias].$value, value);
+    }
+  }
 
   const storage = createMemoryStorage([['theme:main', JSON.stringify({ pattern: 0 })]]);
   const { readCascadeThemeScopeState } = await import(cascadeThemeSource.href);

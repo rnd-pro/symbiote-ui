@@ -4,6 +4,16 @@ All notable changes to `symbiote-ui` will be documented in this file.
 
 ## Unreleased
 
+## [0.3.0-alpha.62] - 2026-07-15
+
+### Changed
+
+- Set the reusable Classic cascade default contrast to 100 across library
+  defaults, ThemeFactory presets, static derived tokens, the theme catalog,
+  documentation, and agent-facing theme references.
+- Updated the default-provider category, type, and syntax HSL tokens derived
+  from the Contrast 100 state.
+
 ## [0.3.0-alpha.61] - 2026-07-15
 
 ### Fixed

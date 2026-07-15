@@ -54,11 +54,11 @@
     },
     "surfaceLightness": {
       "$type": "percentage",
-      "$value": "13%"
+      "$value": "15.1%"
     },
     "textLightness": {
       "$type": "percentage",
-      "$value": "94%"
+      "$value": "98.0%"
     },
     "density": {
       "$type": "number",
@@ -816,7 +816,7 @@
     },
     "graphTypeAction": {
       "$type": "color",
-      "$value": "hsl(var(--sn-hue-danger) var(--sn-sat-vivid) 78%)"
+      "$value": "hsl(var(--sn-hue-danger) var(--sn-sat-vivid) 82%)"
     },
     "graphTypeOutput": {
       "$type": "color",
@@ -824,7 +824,7 @@
     },
     "graphTypeData": {
       "$type": "color",
-      "$value": "hsl(var(--sn-hue-accent) var(--sn-sat-vivid) 74%)"
+      "$value": "hsl(var(--sn-hue-accent) var(--sn-sat-vivid) 79%)"
     },
     "graphTypeConfig": {
       "$type": "color",
@@ -840,7 +840,7 @@
     },
     "graphTypeDocs": {
       "$type": "color",
-      "$value": "hsl(var(--sn-hue-base) var(--sn-sat-muted) 81%)"
+      "$value": "hsl(var(--sn-hue-base) var(--sn-sat-muted) 85%)"
     },
     "graphTypeAsset": {
       "$type": "color",
@@ -1506,11 +1506,11 @@
   "syntax": {
     "keyword": {
       "$type": "color",
-      "$value": "hsl(var(--sn-hue-danger) var(--sn-sat-vivid) 82%)"
+      "$value": "hsl(var(--sn-hue-danger) var(--sn-sat-vivid) 86%)"
     },
     "string": {
       "$type": "color",
-      "$value": "hsl(var(--sn-hue-warning) var(--sn-sat-vivid) 65%)"
+      "$value": "hsl(var(--sn-hue-warning) var(--sn-sat-vivid) 70%)"
     },
     "comment": {
       "$type": "color",

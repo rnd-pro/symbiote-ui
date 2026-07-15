@@ -128,8 +128,8 @@ export let THEME_CONTROLS = {
     { name: 'hue', type: 'number', default: '218', cssVar: '--sn-theme-hue', description: 'Primary accent hue in native CSS HSL space.' },
     { name: 'chroma', type: 'percentage', default: '89%', cssVar: '--sn-theme-chroma', description: 'Primary accent saturation/chroma used by selected, focus, and loading states.' },
     { name: 'backgroundLightness', type: 'percentage', default: '10%', cssVar: '--sn-theme-bg-lightness', description: 'Root surface lightness; can move the preset between darker and lighter modes.' },
-    { name: 'surfaceLightness', type: 'percentage', default: '13%', cssVar: '--sn-theme-surface-lightness', description: 'Panel and control surface lightness derived near the background.' },
-    { name: 'textLightness', type: 'percentage', default: '94%', cssVar: '--sn-theme-text-lightness', description: 'Foreground text lightness inherited by text aliases.' },
+    { name: 'surfaceLightness', type: 'percentage', default: '15.1%', cssVar: '--sn-theme-surface-lightness', description: 'Panel and control surface lightness derived near the background.' },
+    { name: 'textLightness', type: 'percentage', default: '98.0%', cssVar: '--sn-theme-text-lightness', description: 'Foreground text lightness inherited by text aliases.' },
     { name: 'density', type: 'number', default: '1', cssVar: '--sn-theme-density', description: 'Density multiplier for repeated navigation row height.' },
     { name: 'radius', type: 'number', default: '1', cssVar: '--sn-theme-radius-scale', description: 'Radius multiplier for node, row, list, and source action corners.' },
     { name: 'cellRadius', type: 'number', default: '1', cssVar: '--sn-theme-cell-radius-scale', description: 'Cellular background dot-radius multiplier, independent from UI corner radius.' },
@@ -227,8 +227,8 @@ export let THEME_RULE_BLOCKS = [
       { name: 'hue', type: 'number', default: '218', description: 'Native CSS HSL hue for primary accent and derived state colors.' },
       { name: 'chroma', type: 'percentage', default: '89%', description: 'Native CSS HSL saturation/chroma for accent-derived colors.' },
       { name: 'backgroundLightness', type: 'percentage', default: '10%', description: 'Root surface lightness, adjustable from darker to lighter modes.' },
-      { name: 'surfaceLightness', type: 'percentage', default: '13%', description: 'Panel and control surface lightness near the root background.' },
-      { name: 'textLightness', type: 'percentage', default: '94%', description: 'Primary foreground lightness for contrast tuning.' },
+      { name: 'surfaceLightness', type: 'percentage', default: '15.1%', description: 'Panel and control surface lightness near the root background.' },
+      { name: 'textLightness', type: 'percentage', default: '98.0%', description: 'Primary foreground lightness for contrast tuning.' },
       { name: 'density', type: 'number', default: '1', description: 'User density modifier for repeated operational surfaces.' },
     ],
     inputs: ['hue', 'chroma', 'backgroundLightness', 'surfaceLightness', 'textLightness', 'density'],
@@ -300,8 +300,8 @@ export let THEME_RULE_BLOCKS = [
       { output: 'component.subgraphBackgroundHover', inputs: ['color.data'], expression: 'linear-gradient(data accent at 22% and 15%)', description: 'Subgraph entry hover surfaces strengthen the same data-accent gradient.' },
       { output: 'component.subgraphBorder', inputs: ['color.data'], expression: 'color-mix(data, 30%, transparent)', description: 'Subgraph action borders follow the data accent branch.' },
       { output: 'component.subgraphBorderHover', inputs: ['color.data'], expression: 'color-mix(data, 50%, transparent)', description: 'Subgraph action hover borders follow the data accent branch at stronger opacity.' },
-      { output: 'syntax.keyword', inputs: ['color.danger'], expression: 'hsl(danger.hue vivid 82%)', description: 'Syntax keywords use the danger hue branch at readable high lightness.' },
-      { output: 'syntax.string', inputs: ['color.warning'], expression: 'hsl(warning.hue vivid 65%)', description: 'String and numeric syntax tokens use the warning branch.' },
+      { output: 'syntax.keyword', inputs: ['color.danger'], expression: 'hsl(danger.hue vivid 86%)', description: 'Syntax keywords use the danger hue branch at readable high lightness.' },
+      { output: 'syntax.string', inputs: ['color.warning'], expression: 'hsl(warning.hue vivid 70%)', description: 'String and numeric syntax tokens use the warning branch.' },
       { output: 'syntax.comment', inputs: ['color.textDim'], expression: 'color.textDim', description: 'Comments inherit muted text so they follow contrast controls.' },
       { output: 'diagnostic.errorBackground', inputs: ['color.danger'], expression: 'color-mix(danger, 7%, transparent)', description: 'Diagnostic error rows reuse the danger branch.' },
       { output: 'diagnostic.warningBackground', inputs: ['color.warning'], expression: 'color-mix(warning, 5%, transparent)', description: 'Diagnostic warning rows reuse the warning branch.' },
@@ -577,8 +577,8 @@ export let THEME_RULE_BLOCKS = [
       { output: '--sn-tabs-active-border', inputs: ['--sn-tabs-accent'], expression: 'color-mix(in oklab, var(--tab-accent, var(--sn-tabs-accent)) 44%, transparent)', description: 'Active project tab outlines can be themed or made transparent by the cascade.' },
       { output: '--sn-tabs-accent', inputs: ['--sn-sys-accent'], expression: 'var(--sn-sys-accent)', description: 'Project tab icons inherit the shared selected/accent color unless the host supplies a semantic tab accent.' },
       { output: '--sn-source-editor-bg', inputs: ['--sn-sys-surface'], expression: 'var(--sn-sys-surface)', description: 'Source editing uses the root background for code contrast.' },
-      { output: '--sn-syntax-keyword', inputs: ['syntax.keyword'], expression: 'hsl(var(--sn-hue-danger) var(--sn-sat-vivid) 82%)', description: 'Code keywords derive from the status hue cascade.' },
-      { output: '--sn-syntax-string', inputs: ['syntax.string'], expression: 'hsl(var(--sn-hue-warning) var(--sn-sat-vivid) 65%)', description: 'Code strings derive from the warning hue cascade.' },
+      { output: '--sn-syntax-keyword', inputs: ['syntax.keyword'], expression: 'hsl(var(--sn-hue-danger) var(--sn-sat-vivid) 86%)', description: 'Code keywords derive from the status hue cascade.' },
+      { output: '--sn-syntax-string', inputs: ['syntax.string'], expression: 'hsl(var(--sn-hue-warning) var(--sn-sat-vivid) 70%)', description: 'Code strings derive from the warning hue cascade.' },
       { output: '--sn-syntax-comment', inputs: ['--sn-sys-on-surface-dim'], expression: 'var(--sn-sys-on-surface-dim)', description: 'Code comments inherit muted text.' },
       { output: '--sn-diagnostic-error-bg', inputs: ['--sn-sys-danger'], expression: 'color-mix(in oklab, var(--sn-sys-danger) 7%, transparent)', description: 'Diagnostic error backgrounds derive from danger color.' },
       { output: '--sn-diagnostic-warning-bg', inputs: ['--sn-sys-warning'], expression: 'color-mix(in oklab, var(--sn-sys-warning) 5%, transparent)', description: 'Diagnostic warning backgrounds derive from warning color.' },
@@ -657,11 +657,11 @@ export let THEME_TOKENS = {
       },
       "surfaceLightness": {
         "$type": "percentage",
-        "$value": "13%"
+        "$value": "15.1%"
       },
       "textLightness": {
         "$type": "percentage",
-        "$value": "94%"
+        "$value": "98.0%"
       },
       "density": {
         "$type": "number",
@@ -1423,7 +1423,7 @@ export let THEME_TOKENS = {
       },
       "graphTypeAction": {
         "$type": "color",
-        "$value": "hsl(var(--sn-hue-danger) var(--sn-sat-vivid) 78%)"
+        "$value": "hsl(var(--sn-hue-danger) var(--sn-sat-vivid) 82%)"
       },
       "graphTypeOutput": {
         "$type": "color",
@@ -1431,7 +1431,7 @@ export let THEME_TOKENS = {
       },
       "graphTypeData": {
         "$type": "color",
-        "$value": "hsl(var(--sn-hue-accent) var(--sn-sat-vivid) 74%)"
+        "$value": "hsl(var(--sn-hue-accent) var(--sn-sat-vivid) 79%)"
       },
       "graphTypeConfig": {
         "$type": "color",
@@ -1447,7 +1447,7 @@ export let THEME_TOKENS = {
       },
       "graphTypeDocs": {
         "$type": "color",
-        "$value": "hsl(var(--sn-hue-base) var(--sn-sat-muted) 81%)"
+        "$value": "hsl(var(--sn-hue-base) var(--sn-sat-muted) 85%)"
       },
       "graphTypeAsset": {
         "$type": "color",
@@ -2011,7 +2011,7 @@ export let THEME_TOKENS = {
       },
       "typeAction": {
         "$type": "color",
-        "$value": "hsl(var(--sn-hue-danger) var(--sn-sat-vivid) 78%)"
+        "$value": "hsl(var(--sn-hue-danger) var(--sn-sat-vivid) 82%)"
       },
       "typeOutput": {
         "$type": "color",
@@ -2019,7 +2019,7 @@ export let THEME_TOKENS = {
       },
       "typeData": {
         "$type": "color",
-        "$value": "hsl(var(--sn-hue-accent) var(--sn-sat-vivid) 74%)"
+        "$value": "hsl(var(--sn-hue-accent) var(--sn-sat-vivid) 79%)"
       },
       "typeConfig": {
         "$type": "color",
@@ -2035,7 +2035,7 @@ export let THEME_TOKENS = {
       },
       "typeDocs": {
         "$type": "color",
-        "$value": "hsl(var(--sn-hue-base) var(--sn-sat-muted) 81%)"
+        "$value": "hsl(var(--sn-hue-base) var(--sn-sat-muted) 85%)"
       },
       "typeAsset": {
         "$type": "color",
@@ -2189,11 +2189,11 @@ export let THEME_TOKENS = {
     "syntax": {
       "keyword": {
         "$type": "color",
-        "$value": "hsl(var(--sn-hue-danger) var(--sn-sat-vivid) 82%)"
+        "$value": "hsl(var(--sn-hue-danger) var(--sn-sat-vivid) 86%)"
       },
       "string": {
         "$type": "color",
-        "$value": "hsl(var(--sn-hue-warning) var(--sn-sat-vivid) 65%)"
+        "$value": "hsl(var(--sn-hue-warning) var(--sn-sat-vivid) 70%)"
       },
       "comment": {
         "$type": "color",

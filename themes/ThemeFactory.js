@@ -9,8 +9,8 @@ export const COLOR_PRESETS = Object.freeze({
   neon: { mode: 'dark', hue: 280, chroma: 80, brightness: 5, contrast: 65 },
   pcb: { mode: 'dark', hue: 148, chroma: 70, brightness: 2, contrast: 60 },
   ebook: { mode: 'light', hue: 35, chroma: 12, brightness: 0, contrast: 55 },
-  dark: { mode: 'dark', hue: 218, chroma: 89, brightness: 0, contrast: 58 },
-  light: { mode: 'light', hue: 218, chroma: 89, brightness: 0, contrast: 58 },
+  dark: { mode: 'dark', hue: 218, chroma: 89, brightness: 0, contrast: 100 },
+  light: { mode: 'light', hue: 218, chroma: 89, brightness: 0, contrast: 100 },
 });
 
 export const SKIN_PRESETS = Object.freeze({
