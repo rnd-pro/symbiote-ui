@@ -4,6 +4,14 @@ All notable changes to `symbiote-ui` will be documented in this file.
 
 ## Unreleased
 
+## [0.3.0-alpha.61] - 2026-07-15
+
+### Fixed
+
+- Aligned `sn-media-host` teardown with the native delayed Symbiote lifecycle,
+  preserving active providers across synchronous DOM reparenting while still
+  releasing them after a terminal disconnect without public layout-move APIs.
+
 ## [0.3.0-alpha.60] - 2026-07-15
 
 ### Changed

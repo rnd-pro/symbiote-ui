@@ -3098,8 +3098,6 @@ export let COMPONENTS = [
       ],
       methods: [
         { name: 'activate', type: 'function', description: 'Mounts the active provider adapter; degrades to poster plus external link on unknown provider or mount failure.' },
-        { name: 'suspendLayout', type: 'function', description: 'Marks a transient layout move so the mounted adapter and stage survive synchronous reparenting.' },
-        { name: 'resumeLayout', type: 'function', description: 'Finishes a transient layout move and tears down the adapter if reparenting was aborted.' },
       ],
       events: [
         { name: 'sn-media-mount', description: 'Fired after a provider adapter mounts. detail: { provider }.' },

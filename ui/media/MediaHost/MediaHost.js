@@ -19,11 +19,6 @@ class MediaHost extends Symbiote {
   /** @type {object | null} */
   #descriptor = null;
 
-  #layoutSuspendReason = '';
-
-  /** @type {boolean} */
-  #layoutMoveDisconnected = false;
-
   /** @type {import('../provider-registry.js').MediaProviderAdapter | null} */
   #activeAdapter = null;
 
@@ -92,37 +87,18 @@ class MediaHost extends Symbiote {
   }
 
   disconnectedCallback() {
-    if (this.#layoutSuspendReason === 'layout-move') {
-      this.#layoutMoveDisconnected = true;
-      return;
-    }
-    this.#teardownTerminal();
+    this.ref.button?.removeEventListener('click', this.#onActivate);
+    this.ref.button?.removeEventListener('keydown', this.#onKeydown);
     super.disconnectedCallback?.();
   }
 
-  /**
-   * Mark a transient layout move so the mounted adapter survives reparenting.
-   * @param {{ reason?: string }} [context]
-   */
-  suspendLayout({ reason = 'layout-suspend' } = {}) {
-    this.#layoutSuspendReason = reason;
-    this.#layoutMoveDisconnected = false;
-  }
-
-  /**
-   * Finish a transient layout move, tearing down if reparenting was aborted.
-   */
-  resumeLayout() {
-    let abortedMove = this.#layoutSuspendReason === 'layout-move'
-      && this.#layoutMoveDisconnected
-      && !this.isConnected;
-    this.#layoutSuspendReason = '';
-    this.#layoutMoveDisconnected = false;
-
-    if (abortedMove) {
-      this.#teardownTerminal();
-      super.disconnectedCallback?.();
+  destroyCallback() {
+    this.#unmountActive();
+    this.#pendingActivation = false;
+    if (this.#ready) {
+      this.#renderPoster();
     }
+    super.destroyCallback?.();
   }
 
   /**
@@ -205,16 +181,6 @@ class MediaHost extends Symbiote {
   #bindActivationListeners() {
     this.ref.button?.addEventListener('click', this.#onActivate);
     this.ref.button?.addEventListener('keydown', this.#onKeydown);
-  }
-
-  #teardownTerminal() {
-    this.#unmountActive();
-    this.ref.button?.removeEventListener('click', this.#onActivate);
-    this.ref.button?.removeEventListener('keydown', this.#onKeydown);
-    this.#pendingActivation = false;
-    if (this.#ready) {
-      this.#renderPoster();
-    }
   }
 
   /**
