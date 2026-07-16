@@ -14,6 +14,7 @@ import {
 } from './virtual-sequence.js';
 import { getPrecisionVideoDecodeSupport } from './precision-video-decoder.js';
 import { createVideoFrameClock } from './video-frame-clock.js';
+import { assertCaptionPlacementTrack } from 'symbiote-engine/render-captions';
 
 export const MEDIA_STUDIO_PANEL_TYPES = Object.freeze({
   source: 'media-source',
@@ -45,6 +46,26 @@ export const MEDIA_PREVIEW_STATES = Object.freeze({
   unsupported: 'unsupported',
   error: 'error',
 });
+
+const MEDIA_STUDIO_CAPTION_PROFILES = Object.freeze([
+  'youtube',
+  'tiktok',
+  'square',
+  'live',
+]);
+
+const MEDIA_STUDIO_CAPTION_PLACEMENTS = Object.freeze([
+  'bottom',
+  'top',
+  'middle',
+]);
+
+const NON_CANONICAL_CAPTION_SETTINGS = Object.freeze([
+  'captionStyleOptions',
+  'captionPlacementOptions',
+  'captionHighContrast',
+  'captionFontSize',
+]);
 
 export const MEDIA_STUDIO_CSS_PARTS = Object.freeze([
   'surface',
@@ -204,6 +225,7 @@ export const MEDIA_STUDIO_SURFACE_STYLES = `
     border-radius: 0;
     background: transparent;
     box-shadow: var(--sn-media-studio-preview-shadow, none);
+    container-type: size;
   }
 
   .sn-media-studio-preview-window::before {
@@ -225,72 +247,46 @@ export const MEDIA_STUDIO_SURFACE_STYLES = `
 
   .sn-media-studio-caption-overlay {
     position: absolute;
-    inset-inline: clamp(18px, 8%, 96px);
-    inset-block-end: clamp(22px, 8%, 96px);
+    inset: 0;
+    margin: auto;
     z-index: 2;
-    display: flex;
-    justify-content: center;
+    overflow: hidden;
     pointer-events: none;
+    container-type: size;
   }
 
   .sn-media-studio-caption-line {
+    position: absolute;
     box-sizing: border-box;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 4px 6px;
-    max-inline-size: min(100%, 760px);
-    padding: 8px 14px;
-    border-radius: 8px;
-    background: color-mix(in srgb, black 72%, transparent);
-    color: var(--sn-media-studio-caption-color, white);
-    font: 800 calc(24px * var(--sn-theme-type-scale, 1)) / 1.12 var(--sn-font, Inter, system-ui, sans-serif);
+    display: block;
+    overflow: hidden;
+    font-weight: 700;
     text-align: center;
-    text-transform: none;
-    text-shadow: 0 2px 6px rgb(0 0 0 / 70%);
-    overflow-wrap: anywhere;
+    letter-spacing: 0;
   }
 
-  .sn-media-studio-caption-line[data-caption-style='tiktok'] {
-    color: var(--sn-media-studio-caption-tiktok-color, #fff);
-    background: color-mix(in srgb, black 62%, transparent);
-    box-shadow: 0 0 0 1px rgb(255 255 255 / 16%);
+  .sn-media-studio-caption-row {
+    display: block;
+    white-space: nowrap;
   }
 
   .sn-media-studio-caption-word {
     display: inline-block;
     min-inline-size: 0;
-    padding: 1px 3px;
-    border-radius: 4px;
     color: inherit;
   }
 
   .sn-media-studio-caption-word[data-caption-word-state='past'] {
-    opacity: .72;
+    color: var(--sn-media-studio-caption-primary);
   }
 
   .sn-media-studio-caption-word[data-caption-word-state='future'] {
-    opacity: .9;
+    color: var(--sn-media-studio-caption-primary);
+    opacity: .82;
   }
 
   .sn-media-studio-caption-word[data-caption-word-state='active'] {
-    background: var(--sn-media-studio-caption-highlight-bg, #fff176);
-    color: var(--sn-media-studio-caption-highlight-fg, #111);
-    text-shadow: none;
-  }
-
-  .sn-media-studio-caption-line[data-caption-speaker]:not([data-caption-speaker=''])::before {
-    content: attr(data-caption-speaker);
-    margin-inline-end: 8px;
-    padding: 3px 6px;
-    border-radius: 999px;
-    background: var(--sn-media-studio-caption-speaker-bg, color-mix(in srgb, var(--sn-sys-accent) 82%, black));
-    color: var(--sn-media-studio-caption-speaker-fg, var(--sn-sys-on-accent, white));
-    font-size: calc(11px * var(--sn-theme-type-scale, 1));
-    line-height: 1;
-    text-transform: uppercase;
-    white-space: nowrap;
+    color: var(--sn-media-studio-caption-highlight);
   }
 
   .sn-media-studio-frame-placeholder {
@@ -1317,111 +1313,79 @@ function resolveMediaStudioPreviewMode(input = {}, frameUrl = '', videoUrl = '',
   return normalizeMediaStudioPreviewMode(previewState.mode, MEDIA_STUDIO_PREVIEW_MODES.sequence);
 }
 
-function cueTimeSeconds(cue = {}, key = 'start', fallback = 0) {
-  let secKey = `${key}Sec`;
-  let msKey = `${key}Ms`;
-  if (cue[secKey] != null) return finiteNumber(cue[secKey], fallback, 0);
-  if (cue[msKey] != null) return finiteNumber(cue[msKey], fallback * 1000, 0) / 1000;
-  return finiteNumber(cue[key], fallback, 0);
-}
-
-function cueWordTimeSeconds(word = {}, key = 'start', fallback = null) {
-  let secKey = `${key}Sec`;
-  let msKey = `${key}Ms`;
-  if (word[secKey] != null) return finiteNumber(word[secKey], fallback, 0);
-  if (word[msKey] != null) return finiteNumber(word[msKey], Number(fallback || 0) * 1000, 0) / 1000;
-  if (word[key] != null) return finiteNumber(word[key], fallback, 0);
-  return fallback;
-}
-
-function normalizeCaptionWordEntries(input = []) {
-  if (!Array.isArray(input)) return [];
-  return input.map((word) => {
-    let source = word && typeof word === 'object' ? word : { text: word };
-    let text = cleanText(source.text || source.word);
-    if (!text) return null;
-    let startSec = cueWordTimeSeconds(source, 'start', null);
-    let endSec = cueWordTimeSeconds(source, 'end', null);
-    return {
-      text,
-      startSec: Number.isFinite(startSec) ? startSec : null,
-      endSec: Number.isFinite(endSec) ? Math.max(startSec ?? 0, endSec) : null,
-    };
-  }).filter(Boolean);
-}
-
 function captionWordState(word = {}, currentTimeSec = 0) {
   if (!Number.isFinite(word.startSec) || !Number.isFinite(word.endSec)) return 'plain';
   if (currentTimeSec < word.startSec) return 'future';
-  if (currentTimeSec <= word.endSec) return 'active';
+  if (currentTimeSec < word.endSec) return 'active';
   return 'past';
 }
 
-function normalizeCaptionCue(input = {}, index = 0) {
-  let source = input && typeof input === 'object' ? input : { text: input };
-  let startSec = cueTimeSeconds(source, 'start', 0);
-  let endSec = source.endSec != null || source.endMs != null || source.end != null
-    ? cueTimeSeconds(source, 'end', startSec + 1.5)
-    : startSec + finiteNumber(source.durationSec ?? source.duration, finiteNumber(source.durationMs, 1500, 1) / 1000, 0.05);
-  let wordEntries = normalizeCaptionWordEntries(source.wordEntries || source.words);
-  let words = wordEntries.map((word) => word.text);
-  let text = cleanText(source.text || source.label || words.join(' '));
-  return {
-    index: Number.isFinite(Number(source.index)) ? Number(source.index) : index,
-    startSec,
-    endSec: Math.max(startSec + 0.05, endSec),
-    speaker: cleanText(source.speaker || source.persona || source.role),
-    text,
-    words,
-    wordEntries,
-  };
+function mediaStudioCaptionTrack(options = {}, preview = {}) {
+  let candidate = preview.captionTrack
+    || options.captionTrack
+    || options.frameSource?.captionTrack
+    || null;
+  if (!candidate) return null;
+  return assertCaptionPlacementTrack(candidate);
+}
+
+function normalizedCaptionToken(value) {
+  return String(value || '')
+    .toLocaleLowerCase()
+    .replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '');
 }
 
 export function normalizeMediaStudioCaptionOverlayState(options = {}) {
   let preview = options.preview && typeof options.preview === 'object' ? options.preview : {};
   let renderSettings = normalizeMediaStudioRenderSettings(options);
-  let cues = (
-    Array.isArray(preview.captionCues) ? preview.captionCues :
-      Array.isArray(preview.captions) ? preview.captions :
-        Array.isArray(options.captionCues) ? options.captionCues :
-          Array.isArray(options.captions) ? options.captions :
-            Array.isArray(options.frameSource?.captionCues) ? options.frameSource.captionCues : []
-  ).map(normalizeCaptionCue).filter((cue) => cue.text);
+  let track = mediaStudioCaptionTrack(options, preview);
   let currentTimeSec = finiteNumber(
     preview.currentTimeSec ?? preview.timeSec ?? options.currentTimeSec ?? options.timeSec,
     finiteNumber(preview.currentTimeMs ?? options.currentTimeMs, 0, 0) / 1000,
     0
   );
-  let cue = cues.find((item) => currentTimeSec >= item.startSec && currentTimeSec <= item.endSec) || null;
-  if (cue) {
-    cue = {
+  let activeCues = (track?.cues || [])
+    .filter((cue) => currentTimeSec >= cue.startSec && currentTimeSec < cue.endSec)
+    .map((cue) => ({
       ...cue,
-      wordEntries: cue.wordEntries.map((word) => ({
+      wordEntries: cue.wordTimings.map((word) => ({
         ...word,
         state: captionWordState(word, currentTimeSec),
       })),
-    };
-  }
+    }));
   let enabled = renderSettings.captionsEnabled !== false && renderSettings.captionsMode !== 'off';
   return {
-    enabled: enabled && !!cue,
+    enabled: enabled && activeCues.length > 0,
     currentTimeSec,
-    cue,
-    cues,
-    style: cleanText(renderSettings.captionStyle?.preset || preview.captionStyle?.preset || options.captionStyle?.preset, 'tiktok'),
+    activeCues,
+    track,
+    profile: track?.profile || null,
   };
 }
 
 export function renderMediaStudioCaptionLineMarkup(cue = {}, options = {}) {
   let currentTimeSec = finiteNumber(options.currentTimeSec ?? options.timeSec, 0, 0);
-  let normalized = normalizeCaptionCue(cue, Number(cue?.index || 0));
-  let wordEntries = normalized.wordEntries.map((word) => ({
-    ...word,
-    state: word.state || captionWordState(word, currentTimeSec),
-  }));
-  if (!wordEntries.length) return escapeHtml(normalized.text);
-  return wordEntries.map((word, index) => `
-              <span class="sn-media-studio-caption-word" data-caption-word-index="${escapeHtml(index)}" data-caption-word-state="${escapeHtml(word.state)}">${escapeHtml(word.text)}</span>`).join('');
+  if (!Array.isArray(cue.wrappedLines) || !cue.wrappedLines.length || !Array.isArray(cue.wordTimings)) {
+    throw new TypeError('media studio caption markup requires an engine placement cue');
+  }
+  let timingIndex = 0;
+  let tokenIndex = 0;
+  return cue.wrappedLines.map((lineText) => {
+    let tokens = String(lineText).split(/\s+/).filter(Boolean);
+    let markup = tokens.map((token) => {
+      let timing = cue.wordTimings[timingIndex];
+      let matches = timing
+        && normalizedCaptionToken(timing.text) === normalizedCaptionToken(token);
+      let state = matches ? captionWordState(timing, currentTimeSec) : 'plain';
+      if (matches) timingIndex += 1;
+      let index = tokenIndex;
+      tokenIndex += 1;
+      return `<span class="sn-media-studio-caption-word"`
+        + ` data-caption-word-index="${index}"`
+        + ` data-caption-word-state="${state}">${escapeHtml(token)}</span>`;
+    }).join(' ');
+    return `<span class="sn-media-studio-caption-row">${markup}</span>`;
+  }).join('');
 }
 
 function frameCount(input = {}) {
@@ -1451,26 +1415,123 @@ function positiveIntegerSetting(value, fallback, min = 1, max = 16384) {
   return Math.max(min, Math.min(max, number));
 }
 
+function canonicalCaptionChoice(value, fallback, choices, label) {
+  let choice = cleanText(value, fallback).toLowerCase();
+  if (choices.includes(choice)) return choice;
+  throw new TypeError(
+    `${label} must be a canonical caption value. Supported: ${choices.join(', ')}.`,
+  );
+}
+
+function assertCanonicalCaptionSettings(...sources) {
+  for (let source of sources) {
+    if (!source || typeof source !== 'object') continue;
+    for (let name of NON_CANONICAL_CAPTION_SETTINGS) {
+      if (Object.prototype.hasOwnProperty.call(source, name)) {
+        throw new TypeError(
+          `${name} is not a canonical caption setting. Use captionStyle profile fields instead.`,
+        );
+      }
+    }
+  }
+}
+
+function normalizeCaptionPreferredZones(value) {
+  if (!Array.isArray(value) || !value.length) {
+    throw new TypeError(
+      `captionStyle.preferredZones must contain: ${MEDIA_STUDIO_CAPTION_PLACEMENTS.join(', ')}.`,
+    );
+  }
+  let zones = value.map((zone) => canonicalCaptionChoice(
+    zone,
+    '',
+    MEDIA_STUDIO_CAPTION_PLACEMENTS,
+    'captionStyle.preferredZones entry',
+  ));
+  if (new Set(zones).size !== zones.length) {
+    throw new TypeError('captionStyle.preferredZones must not contain duplicates.');
+  }
+  return zones;
+}
+
 export function normalizeMediaStudioRenderSettings(options = {}) {
-  let source = options.renderSettings || options.settings || options.state?.renderSettings || options.state?.settings || {};
+  let source = options.renderSettings
+    || options.settings
+    || options.state?.renderSettings
+    || options.state?.settings
+    || {};
+  assertCanonicalCaptionSettings(source, options);
   let orientationInput = cleanText(source.orientation || options.orientation).toLowerCase();
   let aspectInput = cleanText(source.aspectRatio || options.aspectRatio);
-  let vertical = boolSetting(source.vertical ?? options.vertical, orientationInput === 'vertical' || aspectInput === '9:16');
+  let vertical = boolSetting(
+    source.vertical ?? options.vertical,
+    orientationInput === 'vertical' || aspectInput === '9:16',
+  );
   let orientation = vertical || orientationInput === 'vertical' ? 'vertical' : 'horizontal';
   let width = positiveIntegerSetting(source.width ?? options.width, orientation === 'vertical' ? 1080 : 1920);
-  let height = positiveIntegerSetting(source.height ?? options.height, orientation === 'vertical' ? 1920 : 1080);
+  let height = positiveIntegerSetting(
+    source.height ?? options.height,
+    orientation === 'vertical' ? 1920 : 1080,
+  );
+  let rawCaptionStyle = source.captionStyle ?? options.captionStyle ?? {};
+  if (!rawCaptionStyle || typeof rawCaptionStyle !== 'object' || Array.isArray(rawCaptionStyle)) {
+    throw new TypeError('captionStyle must be a canonical caption profile object.');
+  }
+  let captionStyle = clonePlain(rawCaptionStyle);
+  let captionProfile = canonicalCaptionChoice(
+    source.captionProfile ?? options.captionProfile ?? captionStyle.preset,
+    orientation === 'vertical' ? 'tiktok' : 'youtube',
+    MEDIA_STUDIO_CAPTION_PROFILES,
+    'captionProfile',
+  );
+  let requestedPlacement = source.captionPlacement ?? options.captionPlacement;
+  let preferredZones = captionStyle.preferredZones === undefined
+    ? null
+    : normalizeCaptionPreferredZones(captionStyle.preferredZones);
+  let captionPlacement = canonicalCaptionChoice(
+    requestedPlacement ?? preferredZones?.[0],
+    'bottom',
+    MEDIA_STUDIO_CAPTION_PLACEMENTS,
+    'captionPlacement',
+  );
+  if (requestedPlacement !== undefined && preferredZones?.[0] !== captionPlacement) {
+    preferredZones = [
+      captionPlacement,
+      ...MEDIA_STUDIO_CAPTION_PLACEMENTS.filter((zone) => zone !== captionPlacement),
+    ];
+  }
+  captionStyle.preset = captionProfile;
+  if (preferredZones) captionStyle.preferredZones = preferredZones;
+  let captionsEnabled = boolSetting(
+    source.captionsEnabled ?? options.captionsEnabled,
+    cleanText(source.captionsMode || options.captionsMode, 'on') !== 'off',
+  );
   return {
     autoRender: boolSetting(source.autoRender ?? options.autoRender, true),
-    captionsEnabled: boolSetting(source.captionsEnabled ?? options.captionsEnabled, cleanText(source.captionsMode || options.captionsMode, 'on') !== 'off'),
-    captionsMode: cleanText(source.captionsMode || options.captionsMode, boolSetting(source.captionsEnabled ?? options.captionsEnabled, true) ? 'on' : 'off'),
+    captionsEnabled,
+    captionsMode: cleanText(
+      source.captionsMode || options.captionsMode,
+      captionsEnabled ? 'on' : 'off',
+    ),
     orientation,
-    aspectRatio: cleanText(source.aspectRatio || options.aspectRatio, orientation === 'vertical' ? '9:16' : '16:9'),
+    aspectRatio: cleanText(
+      source.aspectRatio || options.aspectRatio,
+      orientation === 'vertical' ? '9:16' : '16:9',
+    ),
     width,
     height,
     fps: positiveIntegerSetting(source.fps ?? options.fps, 30, 1, 120),
-    providerId: cleanText(source.providerId || source.audioProviderId || options.providerId || options.audioProviderId),
+    providerId: cleanText(
+      source.providerId || source.audioProviderId || options.providerId || options.audioProviderId,
+    ),
     voiceRefs: clonePlain(source.voiceRefs || options.voiceRefs || {}),
-    outputFormat: cleanText(source.outputFormat || source.format || options.outputFormat || options.format, 'MP4'),
+    outputFormat: cleanText(
+      source.outputFormat || source.format || options.outputFormat || options.format,
+      'MP4',
+    ),
+    captionProfile,
+    captionPlacement,
+    captionStyle,
   };
 }
 
@@ -1611,6 +1672,23 @@ function renderMediaStudioRenderSettingsControls(options = {}) {
           <label class="sn-media-studio-setting-row is-toggle">
             <span>Captions</span>
             <input type="checkbox" data-media-setting="captionsEnabled"${checkedAttr(settings.captionsEnabled)}>
+          </label>
+          <label class="sn-media-studio-setting-row">
+            <span>Caption Profile</span>
+            <select class="sn-media-studio-setting-control" data-media-setting="captionProfile">
+              <option value="youtube"${selectedAttr(settings.captionProfile === 'youtube')}>YouTube</option>
+              <option value="tiktok"${selectedAttr(settings.captionProfile === 'tiktok')}>TikTok</option>
+              <option value="square"${selectedAttr(settings.captionProfile === 'square')}>Square</option>
+              <option value="live"${selectedAttr(settings.captionProfile === 'live')}>Live</option>
+            </select>
+          </label>
+          <label class="sn-media-studio-setting-row">
+            <span>Caption Placement</span>
+            <select class="sn-media-studio-setting-control" data-media-setting="captionPlacement">
+              <option value="bottom"${selectedAttr(settings.captionPlacement === 'bottom')}>Bottom</option>
+              <option value="top"${selectedAttr(settings.captionPlacement === 'top')}>Top</option>
+              <option value="middle"${selectedAttr(settings.captionPlacement === 'middle')}>Middle</option>
+            </select>
           </label>
           <label class="sn-media-studio-setting-row">
             <span>Orientation</span>
@@ -1769,12 +1847,60 @@ function renderMediaStudioFailureRows(failures = []) {
       </section>`;
 }
 
+function mediaStudioCaptionLineStyle(cue, profile) {
+  let rect = cue.measuredRect;
+  let pct = (value, total) => `${(value / total) * 100}%`;
+  let fontName = cleanText(profile.fontName, 'Arial')
+    .replace(/[^A-Za-z0-9 _,-]/g, '') || 'Arial';
+  let outline = (100 / profile.height) * 0.75;
+  let textShadow = [
+    `${outline}cqh 0 ${profile.outlineColor}`,
+    `-${outline}cqh 0 ${profile.outlineColor}`,
+    `0 ${outline}cqh ${profile.outlineColor}`,
+    `0 -${outline}cqh ${profile.outlineColor}`,
+  ].join(',');
+  return [
+    `inset-inline-start:${pct(rect.x, profile.width)}`,
+    `inset-block-start:${pct(rect.y, profile.height)}`,
+    `inline-size:${pct(rect.width, profile.width)}`,
+    `block-size:${pct(rect.height, profile.height)}`,
+    `font-family:${fontName}`,
+    `font-size:${(profile.fontSize / profile.height) * 100}cqh`,
+    `line-height:${(profile.lineHeight / profile.height) * 100}cqh`,
+    `color:${profile.primaryColor}`,
+    `background:${profile.backColor}`,
+    `--sn-media-studio-caption-primary:${profile.primaryColor}`,
+    `--sn-media-studio-caption-highlight:${profile.highlightColor}`,
+    `text-shadow:${textShadow}`,
+  ].join(';');
+}
+
+function renderMediaStudioCaptionCueMarkup(cue, state) {
+  return '<span class="sn-media-studio-caption-line"'
+    + ` data-caption-cue-id="${escapeHtml(cue.cueId)}"`
+    + ` data-caption-placement-zone="${escapeHtml(cue.placement.zone)}"`
+    + ` style="${mediaStudioCaptionLineStyle(cue, state.profile)}">`
+    + renderMediaStudioCaptionLineMarkup(cue, { currentTimeSec: state.currentTimeSec })
+    + '</span>';
+}
+
 export function renderMediaStudioCaptionOverlayMarkup(options = {}) {
   let state = normalizeMediaStudioCaptionOverlayState(options);
-  if (!state.enabled || !state.cue) return '';
+  if (!state.enabled) return '';
+  let { activeCues, profile } = state;
+  let ratio = profile.width / profile.height;
+  let canvasStyle = [
+    `inline-size:min(100cqw, ${ratio * 100}cqh)`,
+    `block-size:min(100cqh, ${(1 / ratio) * 100}cqw)`,
+    `aspect-ratio:${profile.width}/${profile.height}`,
+  ].join(';');
+
   return `
-          <div class="sn-media-studio-caption-overlay" data-media-caption-overlay data-caption-style="${escapeHtml(state.style)}" data-caption-index="${escapeHtml(state.cue.index)}">
-            <span class="sn-media-studio-caption-line" data-caption-style="${escapeHtml(state.style)}" data-caption-speaker="${escapeHtml(state.cue.speaker)}">${renderMediaStudioCaptionLineMarkup(state.cue, { currentTimeSec: state.currentTimeSec, style: state.style })}</span>
+          <div class="sn-media-studio-caption-overlay" data-media-caption-overlay
+            data-caption-track="caption-presentation-track-v1"
+            data-caption-style="${escapeHtml(profile.preset)}" aria-hidden="true"
+            style="${canvasStyle}">
+            ${activeCues.map((cue) => renderMediaStudioCaptionCueMarkup(cue, state)).join('')}
           </div>`;
 }
 

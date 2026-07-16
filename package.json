@@ -117,6 +117,7 @@
     "./ui/tour-screencast.js": "./ui/tour-screencast.js",
     "./ui/tour-audio-provider.js": "./ui/tour-audio-provider.js",
     "./ui/tour-media-renderer.js": "./ui/tour-media-renderer.js",
+    "./ui/live-captions.js": "./ui/live-captions.js",
     "./ui/scrollbar-styles.js": "./ui/scrollbar-styles.js",
     "./webmcp": {
       "import": "./webmcp.js",

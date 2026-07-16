@@ -4,3 +4,4 @@ export * from './rule-catalog.js';
 export * from './graph-schema.js';
 export * from './project-schema-catalog.js';
 export * from './ui-schema-catalog.js';
+export * from './provider-conformance-atlas.js';

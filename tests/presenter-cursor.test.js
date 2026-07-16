@@ -147,11 +147,11 @@ test('playCursorScenario visits each step target in order', async () => {
 });
 
 test('normalizePresenterMarker accepts marker aliases and rejects unknown values', () => {
-  assert.equal(normalizePresenterMarker('circle'), 'circle');
-  assert.equal(normalizePresenterMarker('marker'), 'circle');
-  assert.equal(normalizePresenterMarker('highlight'), 'box');
-  assert.equal(normalizePresenterMarker('brackets'), 'bracket');
-  assert.equal(normalizePresenterMarker('diagonal'), 'slash');
+  assert.equal(normalizePresenterMarker('circle'), 'oval');
+  assert.equal(normalizePresenterMarker('marker'), 'oval');
+  assert.equal(normalizePresenterMarker('highlight'), '');
+  assert.equal(normalizePresenterMarker('brackets'), '');
+  assert.equal(normalizePresenterMarker('diagonal'), '');
   assert.equal(normalizePresenterMarker('missing'), '');
   assert.equal(normalizePresenterMarker('missing', 'underline'), 'underline');
 });
@@ -281,12 +281,12 @@ test('playCursorScenario passes gesture and label through to the cursor opts', a
 
   await playCursorScenario(
     cursor,
-    { steps: [{ target: 'a', gesture: 'circle', label: 'intro' }] },
+    { steps: [{ target: 'a', gesture: 'oval', label: 'intro' }] },
     { resolveTarget: resolver.resolve, defaultHoldMs: 0 },
   );
 
   assert.equal(cursor.moves.length, 1);
-  assert.equal(cursor.moves[0].opts.gesture, 'circle');
+  assert.equal(cursor.moves[0].opts.gesture, 'oval');
   assert.equal(cursor.moves[0].opts.label, 'intro');
 });
 
@@ -296,15 +296,15 @@ test('playCursorScenario passes marker through to the cursor opts', async () => 
 
   await playCursorScenario(
     cursor,
-    { steps: [{ target: 'a', marker: 'box', label: 'intro' }] },
+    { steps: [{ target: 'a', marker: 'freehand', label: 'intro' }] },
     { resolveTarget: resolver.resolve, defaultHoldMs: 0 },
   );
 
   assert.equal(cursor.moves.length, 1);
-  assert.equal(cursor.moves[0].opts.marker, 'box');
-  assert.equal(cursor.moves[0].opts.gesture, 'box');
+  assert.equal(cursor.moves[0].opts.marker, 'freehand');
+  assert.equal(cursor.moves[0].opts.gesture, 'freehand');
   assert.equal(cursor.moves[0].opts.label, 'intro');
-  assert.deepEqual(cursor.markers, ['box']);
+  assert.deepEqual(cursor.markers, ['freehand']);
 });
 
 test('playCursorScenario routes marker-only steps through semantic annotation when available', async () => {
@@ -353,6 +353,38 @@ test('playCursorScenario drives click steps through clickElement', async () => {
   assert.equal(cursor.clicks[0].opts.label, 'open');
 });
 
+test('playCursorScenario preserves click action IDs across replay', async () => {
+  let actions = new Map();
+  let invocations = [];
+  let fired = 0;
+  let cursor = {
+    moveTo() {},
+    clickElement(el, opts) {
+      invocations.push({ el, actionId: opts.actionId });
+      if (actions.has(opts.actionId)) return actions.get(opts.actionId);
+      fired += 1;
+      opts.onGestureSettled();
+      let action = Promise.resolve({ actionId: opts.actionId, fired: true });
+      actions.set(opts.actionId, action);
+      return action;
+    },
+  };
+  let el = { id: 'open' };
+  let scenario = {
+    steps: [{ target: 'open', action: 'click', actionId: 'open-workspace', holdMs: 0 }],
+  };
+  let options = { resolveTarget: () => el, defaultHoldMs: 0 };
+
+  await playCursorScenario(cursor, scenario, options);
+  await playCursorScenario(cursor, scenario, options);
+
+  assert.deepEqual(invocations.map((entry) => entry.actionId), [
+    'open-workspace',
+    'open-workspace',
+  ]);
+  assert.equal(fired, 1);
+});
+
 test('playCursorScenario runs a step gesture and keeps step order', async () => {
   let cursor = makeFakeCursor();
   let resolver = makeFakeResolver({ a: { id: 'a' }, b: { id: 'b' }, c: { id: 'c' } });
@@ -360,7 +392,7 @@ test('playCursorScenario runs a step gesture and keeps step order', async () => 
 
   let scenario = {
     steps: [
-      { target: 'a', gesture: 'circle', label: 'one' },
+      { target: 'a', gesture: 'oval', label: 'one' },
       { target: 'b', label: 'two' }, // no gesture
       { target: 'c', gesture: 'underline', label: 'three' },
     ],
@@ -373,7 +405,7 @@ test('playCursorScenario runs a step gesture and keeps step order', async () => 
   });
 
   // Every gesture fired through the cursor's gesture path, in order.
-  assert.deepEqual(cursor.gestures, ['circle', 'underline']);
+  assert.deepEqual(cursor.gestures, ['oval', 'underline']);
   // The cursor still visited each target in order.
   assert.deepEqual(
     cursor.moves.map((m) => m.el.id),
@@ -381,7 +413,7 @@ test('playCursorScenario runs a step gesture and keeps step order', async () => 
   );
   // The scenario completed in order, gesture steps included.
   assert.deepEqual(seen, [
-    { index: 0, gesture: 'circle' },
+    { index: 0, gesture: 'oval' },
     { index: 1, gesture: null },
     { index: 2, gesture: 'underline' },
   ]);
@@ -436,13 +468,13 @@ test('playCursorScenario does not stall when a gesture never settles', async () 
 
   await playCursorScenario(
     cursor,
-    { steps: [{ target: 'a', gesture: 'circle', holdMs: 0 }, { target: 'b' }] },
+    { steps: [{ target: 'a', gesture: 'oval', holdMs: 0 }, { target: 'b' }] },
     { resolveTarget: resolver.resolve, signal: controller.signal, defaultHoldMs: 0 },
   );
   clearTimeout(timer);
 
   // The gesture name was still recorded, and the run stopped at the aborted step.
-  assert.deepEqual(cursor.gestures, ['circle']);
+  assert.deepEqual(cursor.gestures, ['oval']);
   assert.deepEqual(
     cursor.moves.map((m) => m.el.id),
     ['a'],
@@ -542,17 +574,78 @@ test('annotateElement clears the focus marquee before drawing marker ink', async
   cursor.moveTo(el, { animate: false });
   await nextFrame();
 
+  let overlay = window.document.querySelector('.symbiote-presenter-cursor');
   let marquee = window.document.querySelector('.pc-marquee');
+  assert.ok(overlay.classList.contains('is-visible'));
   assert.equal(marquee.style.width, '180px');
   assert.equal(marquee.style.height, '84px');
 
   cursor.annotateElement(el, { marker: 'underline' });
   await nextFrame();
 
+  assert.ok(overlay.classList.contains('is-visible'));
   assert.equal(marquee.style.width, '0px');
   assert.equal(marquee.style.height, '0px');
   assert.ok(marquee.classList.contains('pc-marquee-faded'));
 
+  cursor.dispose();
+});
+
+test('annotateElement flips bottom-edge underlines and returns live safety evidence', async () => {
+  let window = makePresenterDom();
+  let cursor = createPresenterCursor(window.document);
+  let el = boxElement(window.document, { left: 120, top: 562, width: 160, height: 28 });
+  let obstacle = {
+    id: 'captions',
+    kind: 'caption',
+    rect: { left: 100, top: 526, width: 200, height: 28 },
+  };
+
+  let receipt = await cursor.annotateElement(el, {
+    marker: 'underline',
+    obstacles: [obstacle],
+  });
+
+  assert.equal(receipt.status, 'settled');
+  assert.equal(receipt.placement, 'above');
+  assert.equal(receipt.safety.viewportCollision, false);
+  assert.equal(receipt.safety.safe, false);
+  assert.deepEqual(receipt.safety.collisions.map((collision) => collision.id), ['captions']);
+  cursor.dispose();
+});
+
+test('clickElement fires one semantic click for duplicate action IDs', async () => {
+  let window = makePresenterDom();
+  let cursor = createPresenterCursor(window.document);
+  let el = boxElement(window.document, { left: 120, top: 80, width: 160, height: 64 });
+  let clickCount = 0;
+  el.click = () => { clickCount += 1; };
+
+  let first = cursor.clickElement(el, { actionId: 'open-workspace' });
+  let duplicate = cursor.clickElement(el, { actionId: 'open-workspace' });
+  assert.ok(window.document.querySelector('.symbiote-presenter-cursor').classList.contains('is-visible'));
+  assert.equal(duplicate, first);
+
+  let receipt = await first;
+  assert.equal(receipt.fired, true);
+  assert.equal(clickCount, 1);
+  cursor.dispose();
+});
+
+test('clearing a pending click prevents the semantic action from firing', async () => {
+  let window = makePresenterDom();
+  let cursor = createPresenterCursor(window.document);
+  let el = boxElement(window.document, { left: 500, top: 420, width: 120, height: 40 });
+  let clickCount = 0;
+  el.click = () => { clickCount += 1; };
+
+  let pending = cursor.clickElement(el, { actionId: 'cancelled-click' });
+  cursor.clear();
+  let receipt = await pending;
+
+  assert.equal(receipt.status, 'aborted');
+  assert.equal(receipt.fired, false);
+  assert.equal(clickCount, 0);
   cursor.dispose();
 });
 
@@ -603,6 +696,7 @@ test('moveTo draws the focus frame around only the visible part of a scrollable 
   await nextFrame();
 
   let marquee = document.querySelector('.pc-marquee');
+  assert.ok(document.querySelector('.symbiote-presenter-cursor').classList.contains('is-visible'));
   assert.equal(marquee.style.transform, 'translate(90px, 80px)');
   assert.equal(marquee.style.width, '240px');
   assert.equal(marquee.style.height, '170px');

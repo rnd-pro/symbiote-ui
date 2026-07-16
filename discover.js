@@ -34,6 +34,7 @@ import {
   RULESETS,
   THEME_NAMES,
   UI_SCHEMA_VERSIONS,
+  getProviderConformanceAtlas,
 } from './manifest/index.js';
 import { DEFAULT_LOCALE, LOCALE_CATALOG_KEYS, SUPPORTED_LOCALES } from './locale/index.js';
 import { getGeometryScaleDescriptor, getStepScaleDescriptor, getTypeScaleDescriptor, getRadiusScaleDescriptor, getMotionScaleDescriptor } from './tokens/scale.js';
@@ -385,6 +386,7 @@ export async function cmdDiscover(options = {}) {
           ...getUiSchema(sv.version),
         })),
       ],
+      conformanceAtlas: getProviderConformanceAtlas({ includeCases: false }),
     },
   };
 }
