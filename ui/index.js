@@ -1222,6 +1222,11 @@ export {
 export { registerDismissableLayer } from './dismissable-layer.js';
 export { FocusTrap, getFocusableElements } from './focus-trap.js';
 export { positionOverlay } from './overlay-positioner.js';
+export {
+  createLiveCaptionTrack,
+  inspectLiveCaptionOverflow,
+  LiveCaptionController,
+} from './live-captions.js';
 export { Collection } from './collection.js';
 export { setupRovingFocus } from './roving-focus.js';
 export { Typeahead } from './typeahead.js';

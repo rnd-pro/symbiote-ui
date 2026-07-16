@@ -4,6 +4,30 @@ All notable changes to `symbiote-ui` will be documented in this file.
 
 ## Unreleased
 
+- Programmatic chat composer updates now resize and scroll the input to the
+  newest text without stealing focus, while changed drafts and real typing
+  refresh the workspace's existing background activity.
+- Unified timed live-caption segmentation with rendered captions. Authored live
+  speech now keeps exact text and word timing while using the same bounded
+  five-word cue cadence, so large vertical captions remain readable instead of
+  failing on a full spoken turn.
+- Added synchronous `presentFocusFrame()` projection with separate cursor and
+  frame modes, media-time-driven marching ants, and returned target/frame
+  geometry so live capture and offline rendering share the same focus pixels.
+
+### Added
+
+- Added `LiveCaptionController` and `createLiveCaptionTrack` for the same
+  engine-resolved caption profile and collision-aware placement contract in
+  live presentations, Media Studio previews, and deterministic canvas renders;
+  cue hooks now fire after DOM projection and support evidence-only capture
+  without painting caption pixels. Resolved profile font weights now match ASS
+  output, and cue hooks include measured line/container overflow evidence so
+  clipped live text fails verification.
+- Added a registry-derived provider conformance atlas covering every declared
+  component event, component input, native HTML input type, and WebMCP tool
+  input variant, with executable action, result, and reset receipts.
+
 ## [0.3.0-alpha.62] - 2026-07-15
 
 ### Changed
@@ -134,8 +158,9 @@ All notable changes to `symbiote-ui` will be documented in this file.
   motion, keeping animation speed stable when capture cadence changes.
 - Added exact annotation path samples and a public geometry safety analyzer for
   deterministic presenter collision checks against protected targets, captions,
-  controls, and cursor bounds; circle annotations now trace an external rounded
-  perimeter instead of crossing target content.
+  controls, and cursor bounds; oval annotations now trace a compact external
+  rounded perimeter, active drawing uses the marker nib's actual bounds, and
+  live/offline hosts share the public annotation duration contract.
 - Added public `CanvasGraph.getViewport()` and `setViewport()` camera contracts
   for clamped absolute live and deterministic viewport projection.
 - Added ordered v3 interaction-cue planning through
@@ -215,7 +240,9 @@ All notable changes to `symbiote-ui` will be documented in this file.
   import), plus a player for agent-authored
   `{ steps: [{ target, holdMs?, gesture?, label? }] }` scenarios with a host
   `resolveTarget`, per-step `onStep`, configurable `defaultHoldMs`, and
-  `AbortSignal` support.
+  `AbortSignal` support; separate focus frames,
+  handwritten freehand/underline/oval annotations, expanding click feedback,
+  and exactly-once semantic activation on a deterministic 30 FPS projector.
 - Added `actions` and `embed` custom-content message parts to `ChatMessageItem`
   and the message model: an `actions` part
   (`{ type: 'actions', actions: [{ id, label, icon, variant }] }`) renders inline

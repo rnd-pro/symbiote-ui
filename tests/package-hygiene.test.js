@@ -342,3 +342,19 @@ test('runner contract test: every browser test in graph-browser-smoke.test.js is
     );
   }
 });
+
+test('browser UI modules use explicit symbiote-engine subpaths', async () => {
+  let uiDir = resolve(repoRoot, 'ui');
+  let files = (await readdir(uiDir))
+    .filter((file) => file.endsWith('.js'))
+    .sort();
+
+  for (let file of files) {
+    let source = await readFile(join(uiDir, file), 'utf8');
+    assert.doesNotMatch(
+      source,
+      /(?:from\s+|import\()\s*['"]symbiote-engine['"]/,
+      `ui/${file} must not import the Node-safe package root from browser code`
+    );
+  }
+});

@@ -5076,7 +5076,7 @@ export let COMPONENTS = [
         { name: 'replaceMessageWindow', type: 'function', description: 'Replaces the visible transcript message window with host-owned window metadata.' },
         { name: 'prependMessages', type: 'function', description: 'Prepends older transcript message descriptors while preserving the current scroll anchor.' },
         { name: 'getMessageWindow', type: 'function', description: 'Returns the composed transcript message window metadata.' },
-        { name: 'setComposerState', type: 'function', description: 'Sets composer value, context chips, leading controls, footer controls, disabled/sending state, voice controls, and voice preview.' },
+        { name: 'setComposerState', type: 'function', description: 'Sets composer value, context chips, leading controls, footer controls, disabled/sending state, voice controls, and voice preview; changed non-empty values refresh background activity.' },
         { name: 'setVoiceControls', type: 'function', description: 'Sets visible voice control state while hosts may override or allow browser VoiceRuntime behavior.' },
         { name: 'setVoicePreview', type: 'function', description: 'Shows a voice transcription preview supplied by the host or browser VoiceRuntime.' },
         { name: 'clearVoicePreview', type: 'function', description: 'Clears the voice transcription preview.' },
@@ -5287,7 +5287,7 @@ export let COMPONENTS = [
         { name: 'voiceControls', type: 'object', description: 'Host-owned voice control state rendered by setVoiceControls.' },
       ],
       methods: [
-        { name: 'setValue', type: 'function', description: 'Sets input value.' },
+        { name: 'setValue', type: 'function', description: 'Sets input value and keeps the programmatic caret and scroll viewport at the newest text.' },
         { name: 'setAttachedContext', type: 'function', description: 'Sets context chip descriptors.' },
         { name: 'setLeadingControls', type: 'function', description: 'Sets structured inline controls before the input for host-owned action entry points.' },
         { name: 'setFooterControls', type: 'function', description: 'Sets structured footer controls for provider, model, agent, resource group, settings, or other host-owned intents.' },

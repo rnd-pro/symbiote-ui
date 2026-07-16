@@ -524,9 +524,22 @@ export class ChatComposer extends Symbiote {
   renderCallback() {
     this.sub('value', (value) => {
       let input = this.getInputElement();
-      if (input && input.value !== value) {
-        input.value = value || '';
-        this.resizeInput();
+      if (input) {
+        if (this._isProgrammaticUpdate) {
+          input.value = value || '';
+          this.resizeInput();
+          queueMicrotask(() => {
+            let currentInput = this.getInputElement();
+            if (currentInput) {
+              let len = currentInput.value.length;
+              currentInput.setSelectionRange(len, len);
+              currentInput.scrollTop = currentInput.scrollHeight;
+            }
+          });
+        } else if (input.value !== value) {
+          input.value = value || '';
+          this.resizeInput();
+        }
       }
     });
     this.sub('isSending', () => this._syncSendingState());
@@ -1242,7 +1255,9 @@ export class ChatComposer extends Symbiote {
   }
 
   setValue(value) {
+    this._isProgrammaticUpdate = true;
     this.$.value = value || '';
+    this._isProgrammaticUpdate = false;
   }
 
   setAttachedContext(items) {
