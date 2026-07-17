@@ -938,6 +938,9 @@ test('WebMCP tour prompt is authored from browser context and safe actions', () 
   assert.match(prompt, /set_panel_collapsed/);
   assert.match(prompt, /Do NOT say undefined, null, NaN/);
   assert.match(prompt, /Do NOT use words about position/);
+  assert.match(prompt, /Choose the number of turns from the user task and grounded UI actions/);
+  assert.doesNotMatch(prompt, /5-8 turns/);
+  assert.match(prompt, /Use guide as the single narrator/);
   assert.doesNotMatch(prompt, /In cue use ONLY these panelId values/);
   assert.doesNotMatch(prompt, /"cue":\{"panelId"/);
 });
@@ -948,6 +951,7 @@ test('WebMCP tour prompt carries task scope and turn budget when provided', () =
     language: 'English',
     taskText: 'Show the publish flow for the release board',
     profile: 'full',
+    speakerMode: 'dialogue',
     turnBudget: { min: 8, max: 12 },
     requestedSurfaceIds: ['window:release-board'],
     selectedTabIds: ['release-board'],
@@ -965,7 +969,9 @@ test('WebMCP tour prompt carries task scope and turn budget when provided', () =
   assert.match(prompt, /Presentation profile: "full"/);
   assert.match(prompt, /Requested targetIds to cover when possible: window:release-board/);
   assert.match(prompt, /Requested tab\/window ids to include: release-board/);
-  assert.match(prompt, /Rules: 8-12 turns/);
+  assert.match(prompt, /Rules: Use 8-12 turns because the request explicitly sets that budget/);
+  assert.match(prompt, /Both selected voices must contribute/);
+  assert.match(prompt, /do not force alternation, reply pairs, an opening, a closing/);
 });
 
 test('WebMCP tour timeline coercion validates targets annotations and safe actions', () => {

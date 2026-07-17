@@ -559,7 +559,7 @@
   --sn-badge-padding: var(--sn-step-1) var(--sn-step-4);
   --sn-badge-radius: calc(12px * var(--sn-theme-radius-scale));
   --sn-badge-gap: var(--sn-space-xs);
-  --sn-badge-font-size: 11px;
+  --sn-badge-font-size: 12px;
   --sn-badge-font-weight: 500;
   --sn-badge-line-height: 1.2;
   --sn-badge-success-bg: var(--sn-status-success-bg);

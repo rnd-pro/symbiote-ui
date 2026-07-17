@@ -435,6 +435,24 @@ test('sn-badge renders with status role', async () => {
   el.remove();
 });
 
+test('sn-badge keeps a readable 12px typography floor across theme entrypoints', async () => {
+  let [badge, defaultProvider, defaultProviderCss, defaultDark, cascadeTheme, editor] = await Promise.all([
+    readFile(new URL('../display/Badge/Badge.css.js', import.meta.url), 'utf8'),
+    readFile(new URL('../themes/default-provider.js', import.meta.url), 'utf8'),
+    readFile(new URL('../themes/default-provider.css', import.meta.url), 'utf8'),
+    readFile(new URL('../themes/default-dark.js', import.meta.url), 'utf8'),
+    readFile(new URL('../themes/cascade-theme.js', import.meta.url), 'utf8'),
+    readFile(new URL('../themes/CascadeThemeEditor/CascadeThemeEditor.css.js', import.meta.url), 'utf8'),
+  ]);
+
+  assert.match(badge, /font-size: var\(--sn-badge-font-size, 12px\);/);
+  assert.match(defaultProvider, /'--sn-badge-font-size': '12px'/);
+  assert.match(defaultProviderCss, /--sn-badge-font-size: 12px;/);
+  assert.match(defaultDark, /'--sn-badge-font-size': '12px'/);
+  assert.match(cascadeTheme, /'--sn-badge-font-size': typeToken\(12\)/);
+  assert.match(editor, /var\(--sn-badge-font-size, 12px\)/);
+});
+
 test('sn-metric renders with ARIA role and status-based live region', async () => {
   installSsrDom();
   await import('../display/Metric/Metric.js');

@@ -515,7 +515,7 @@ const DEFAULT_DARK_TOKENS = {
   '--sn-badge-padding': '2px 8px',
   '--sn-badge-radius': 'calc(12px * var(--sn-theme-radius-scale))',
   '--sn-badge-gap': '4px',
-  '--sn-badge-font-size': '11px',
+  '--sn-badge-font-size': '12px',
   '--sn-badge-font-weight': '500',
   '--sn-badge-line-height': '1.2',
   '--sn-badge-success-bg': 'var(--sn-status-success-bg)',

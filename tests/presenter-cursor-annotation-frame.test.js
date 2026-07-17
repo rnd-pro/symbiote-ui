@@ -10,6 +10,7 @@ import {
   PRESENTER_ANNOTATION_COLLISION_ALLOWANCE_PX,
   PRESENTER_ANNOTATION_TARGET_INSET_PX,
   PRESENTER_CURSOR_SIZE_PX,
+  PRESENTER_FOCUS_REVEAL_DURATION_MS,
   analyzePresenterAnnotationSafety,
   createPresenterCursor,
   PRESENTER_FRAME_MS,
@@ -79,14 +80,37 @@ test('deterministic focus frame projects cursor and frame modes without scheduli
   assert.equal(framed.visible, true);
   assert.equal(framed.mode, 'frame');
   assert.equal(framed.cursor, null);
+  assert.equal(framed.revealProgress, 0);
+  assert.equal(framed.revealing, true);
+  assert.equal(framed.frameRect.width, 1);
+  assert.equal(framed.frameRect.height, 1);
+  assert.equal(framed.dragHandle.visible, true);
   assert.equal(window.document.querySelector('.pc-cursor').style.opacity, '0');
 
-  let pointed = cursor.presentFocusFrame(el, { elapsedMs: 250, seed: 7, mode: 'cursor' });
+  let pointed = cursor.presentFocusFrame(el, {
+    elapsedMs: PRESENTER_FOCUS_REVEAL_DURATION_MS / 2,
+    seed: 7,
+    mode: 'cursor',
+  });
   assert.equal(pointed.mode, 'cursor');
   assert.equal(pointed.cursor.visible, true);
   assert.equal(window.document.querySelector('.pc-cursor').style.opacity, '1');
   assert.notEqual(pointed.antsDashOffset, framed.antsDashOffset);
-  assert.deepEqual(pointed.frameRect, framed.frameRect);
+  assert.ok(pointed.revealProgress > framed.revealProgress);
+  assert.ok(pointed.frameRect.width > framed.frameRect.width);
+  assert.ok(pointed.frameRect.height > framed.frameRect.height);
+  assert.equal(pointed.dragHandle.visible, true);
+
+  let complete = cursor.presentFocusFrame(el, {
+    elapsedMs: PRESENTER_FOCUS_REVEAL_DURATION_MS,
+    seed: 7,
+    mode: 'frame',
+  });
+  assert.equal(complete.revealProgress, 1);
+  assert.equal(complete.revealing, false);
+  assert.equal(complete.dragHandle.visible, false);
+  assert.ok(complete.frameRect.width > pointed.frameRect.width);
+  assert.ok(complete.frameRect.height > pointed.frameRect.height);
 
   cursor.dispose();
 });
@@ -111,7 +135,7 @@ test('deterministic annotation frame clamps progress and respects explicit seed'
   let changedSeed = cursor.presentAnnotationFrame(el, { marker: 'underline' }, { progress: 1, seed: 6 });
   assert.notEqual(inkPath(window.document), firstPath);
   assert.notEqual(changedSeed.pathDigest, full.pathDigest);
-  assert.equal(PRESENTER_ANNOTATION_DURATION_MS, 720);
+  assert.equal(PRESENTER_ANNOTATION_DURATION_MS, 1000);
 
   cursor.dispose();
 });
@@ -258,6 +282,27 @@ test('small oval stays compact between its target and an adjacent control', () =
   cursor.dispose();
 });
 
+test('compact status oval keeps its nib outside protected content at every 30 FPS phase', () => {
+  let window = makeDom();
+  let targetRect = { left: 1201.406, top: 148, width: 49.688, height: 20.391 };
+  let el = target(window.document, targetRect);
+  let cursor = createPresenterCursor(window.document);
+
+  for (let frameIndex = 0; frameIndex <= 30; frameIndex += 1) {
+    let progress = frameIndex / 30;
+    let frame = cursor.presentAnnotationFrame(el, { marker: 'oval' }, {
+      progress,
+      seed: 3931985963,
+      viewport: { width: 1920, height: 1080 },
+    });
+    assert.equal(frame.safety.safe, true, `status oval must remain safe at frame ${frameIndex}`);
+    assert.equal(frame.safety.cursorTargetCollision, false);
+    assert.equal(frame.safety.targetInteriorCollision, false);
+  }
+
+  cursor.dispose();
+});
+
 test('progress zero cursor projection is independent of presentation history', () => {
   let firstWindow = makeDom();
   let firstCursor = createPresenterCursor(firstWindow.document);
@@ -331,6 +376,32 @@ test('deterministic underline flips above a bottom-edge target and clamps every 
   assert.ok(frame.pathSamples.every((point) => point.y >= 0 && point.y <= viewport.height));
   assert.ok(frame.cursor.x >= 0 && frame.cursor.x + PRESENTER_CURSOR_SIZE_PX <= viewport.width);
   assert.ok(frame.cursor.y >= 0 && frame.cursor.y + PRESENTER_CURSOR_SIZE_PX <= viewport.height);
+  cursor.dispose();
+});
+
+test('explicit above underline avoids the adjacent control from the square capture geometry', () => {
+  let window = makeDom();
+  Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1080 });
+  Object.defineProperty(window, 'innerHeight', { configurable: true, value: 1080 });
+  let cursor = createPresenterCursor(window.document);
+  let el = target(window.document, { left: 927, top: 707, width: 24, height: 24 });
+  let obstacle = {
+    id: 'tour-control-39',
+    kind: 'critical-control',
+    rect: { left: 778.6, top: 749, width: 277.4, height: 47.6 },
+  };
+
+  for (let progress of [0, 0.25, 0.5, 0.75, 1]) {
+    let frame = cursor.presentAnnotationFrame(
+      el,
+      { marker: 'underline', placement: 'above' },
+      { progress, seed: 2544744498, viewport: { width: 1080, height: 1080 }, obstacles: [obstacle] },
+    );
+    assert.equal(frame.placement, 'above');
+    assert.equal(frame.safety.safe, true, `above underline must remain safe at progress ${progress}`);
+    assert.deepEqual(frame.safety.collisions, []);
+  }
+
   cursor.dispose();
 });
 
@@ -415,10 +486,35 @@ test('deterministic annotation frame renders every marker and symbol', () => {
   cursor.dispose();
 });
 
+test('every marker exposes a monotonic three-stage drawing path', () => {
+  let window = makeDom();
+  let cursor = createPresenterCursor(window.document);
+  let el = target(window.document, { left: 180, top: 140, width: 120, height: 84 });
+
+  for (let [index, marker] of PRESENTER_MARKERS.entries()) {
+    let early = cursor.presentAnnotationFrame(el, { kind: 'marker', marker }, { progress: 0.25, seed: index + 31 });
+    let middle = cursor.presentAnnotationFrame(el, { kind: 'marker', marker }, { progress: 0.55, seed: index + 31 });
+    let complete = cursor.presentAnnotationFrame(el, { kind: 'marker', marker }, { progress: 1, seed: index + 31 });
+
+    assert.ok(early.pathPoints > 2, marker);
+    assert.ok(middle.pathPoints > early.pathPoints, marker);
+    assert.ok(complete.pathPoints > middle.pathPoints, marker);
+    assert.deepEqual(middle.pathSamples.slice(0, early.pathSamples.length), early.pathSamples, marker);
+    assert.deepEqual(complete.pathSamples.slice(0, middle.pathSamples.length), middle.pathSamples, marker);
+  }
+
+  cursor.dispose();
+});
+
 test('presenter layers share one constant 30 FPS projector', () => {
   let layers = {
     focus: { active: true, rect: { left: 20, top: 30, width: 540, height: 260 } },
-    marker: { active: true, name: 'oval', rect: { left: 20, top: 30, width: 540, height: 260 }, duration: 720 },
+    marker: {
+      active: true,
+      name: 'oval',
+      rect: { left: 20, top: 30, width: 540, height: 260 },
+      duration: PRESENTER_ANNOTATION_DURATION_MS,
+    },
     click: { active: true, x: 240, y: 180 },
     cursor: { active: true, fromX: 10, fromY: 10, toX: 240, toY: 180, duration: 850 },
   };
@@ -434,6 +530,30 @@ test('presenter layers share one constant 30 FPS projector', () => {
   assert.equal(first.click.visible, true);
 });
 
+test('focus reveal stays monotonic and bounded in horizontal, vertical, and square frames', () => {
+  let cases = [
+    { viewport: { width: 1920, height: 1080 }, rect: { left: 240, top: 160, width: 880, height: 420 } },
+    { viewport: { width: 1080, height: 1920 }, rect: { left: 90, top: 420, width: 760, height: 620 } },
+    { viewport: { width: 1080, height: 1080 }, rect: { left: 140, top: 210, width: 720, height: 480 } },
+  ];
+
+  for (let { viewport, rect } of cases) {
+    let layers = { focus: { active: true, rect, duration: PRESENTER_FOCUS_REVEAL_DURATION_MS } };
+    let first = projectPresenterState(layers, 0, 11, viewport).focus;
+    let middle = projectPresenterState(layers, PRESENTER_FOCUS_REVEAL_DURATION_MS / 2, 11, viewport).focus;
+    let complete = projectPresenterState(layers, PRESENTER_FOCUS_REVEAL_DURATION_MS, 11, viewport).focus;
+
+    assert.ok(first.width < middle.width && middle.width < complete.width);
+    assert.ok(first.height < middle.height && middle.height < complete.height);
+    assert.ok(first.revealProgress < middle.revealProgress && middle.revealProgress < complete.revealProgress);
+    assert.equal(complete.width, rect.width);
+    assert.equal(complete.height, rect.height);
+    assert.equal(complete.dragHandle.visible, false);
+    assert.ok(complete.left + complete.width <= viewport.width);
+    assert.ok(complete.top + complete.height <= viewport.height);
+  }
+});
+
 test('projectPresenterState resolves edge placement and exposes annotation safety', () => {
   let viewport = { width: 200, height: 140 };
   let frame = projectPresenterState({
@@ -443,9 +563,9 @@ test('projectPresenterState resolves edge placement and exposes annotation safet
       rect: { left: 168, top: 48, width: 28, height: 28 },
       placement: 'after',
       obstacles: [{ id: 'left-rail', rect: { left: 100, top: 32, width: 36, height: 72 } }],
-      duration: 720,
+      duration: PRESENTER_ANNOTATION_DURATION_MS,
     },
-  }, 720, 17, viewport);
+  }, PRESENTER_ANNOTATION_DURATION_MS, 17, viewport);
 
   assert.equal(frame.symbol.placement, 'before');
   assert.equal(frame.annotation.placement, 'before');
@@ -462,7 +582,7 @@ test('large annotation targets remain marker ink instead of becoming focus frame
       active: true,
       name: 'oval',
       rect: { left: 40, top: 40, width: 960, height: 420 },
-      duration: 720,
+      duration: PRESENTER_ANNOTATION_DURATION_MS,
     },
   }, 500, 9);
 

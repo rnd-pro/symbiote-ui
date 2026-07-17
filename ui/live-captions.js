@@ -264,8 +264,8 @@ export class LiveCaptionController {
     style.width = `${rect.width * scale}px`;
     style.height = `${rect.height * scale}px`;
     style.fontFamily = profile.fontName;
-    style.fontSize = `${profile.fontSize * scale}px`;
-    style.lineHeight = `${profile.lineHeight * scale}px`;
+    style.fontSize = `${cue.fontSize * scale}px`;
+    style.lineHeight = `${cue.lineHeight * scale}px`;
     style.fontWeight = String(profile.fontWeight);
     style.color = profile.primaryColor;
     style.backgroundColor = profile.backColor;
