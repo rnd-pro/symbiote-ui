@@ -4,12 +4,13 @@ description: >
   Build and control professional Studio UX interfaces at runtime using the
   Symbiote UI Web Component library. Covers component lifecycle
   (create/update/destroy), bidirectional WebSocket protocol, dynamic Web
-  Component registration with code sandboxing, and transactional agent-intent
-  orchestration with automatic rollback. Also audits settled graph layouts for
-  overlaps, obstructed or crossing connections, distance outliers, viewport
-  readability, locality, and stability. Use when building agent-driven UI,
-  runtime dashboards, node graph editors, validating graph layout quality, or
-  assembling an interface programmatically without a build step.
+  Component registration with trusted-host lexical validation and
+  same-page-realm loading, and agent-intent orchestration with best-effort
+  rollback for supported reversible effects. Also audits settled graph layouts for overlaps,
+  obstructed or crossing connections, distance outliers, viewport readability,
+  locality, and stability. Use when building agent-driven UI, runtime
+  dashboards, node graph editors, validating graph layout quality, or assembling
+  an interface programmatically without a build step.
 license: MIT
 metadata:
   author: rnd-pro
@@ -155,55 +156,90 @@ controller.connect('ws://localhost:8080/runtime', {
 
 ## Agent Intent Orchestrator
 
-Execute multi-step UI transactions with automatic rollback on failure:
+Execute multi-step UI intents. On failure, the orchestrator attempts
+best-effort rollback for the supported reversible effects.
+
+The agent-intent route requires the host `allowIrreversible` policy and a
+dedicated single-operation intent for `register-component`. Component and
+driver registration cannot be rolled back. Any intent that combines an
+irreversible operation with other operations is invalid and must be split:
 
 ```javascript
 import { executeAgentIntent } from 'symbiote-ui/runtime';
 
-let intent = {
+// Register in a dedicated, host-approved intent.
+let registerIntent = {
   version: 'agent-intent-v1',
-  intentId: 'build-chat-panel',
+  intentId: 'register-chat-component',
   operations: [
-    { type: 'register-component', params: { tagName: 'sym-chat', code: '...' } },
+    {
+      type: 'register-component',
+      params: {
+        tagName: 'sym-chat',
+        code: 'export default class DynamicWidget extends HTMLElement {}',
+      },
+    },
+  ],
+};
+
+await executeAgentIntent(controller, registerIntent, {
+  document,
+  allowIrreversible: true,
+});
+
+// Compose the reversible UI in a separate intent.
+let composeIntent = {
+  version: 'agent-intent-v1',
+  intentId: 'compose-chat-panel',
+  operations: [
     { type: 'ui', params: { action: 'create', node: { id: 'chat-1', component: 'sym-chat' }, targetSelector: '#workspace' } },
     { type: 'theme', params: { targetSelector: '#workspace', presets: { color: 'carbon', skin: 'compact', motion: 'fast' } } },
     { type: 'state', params: { id: 'chat-1', state: { props: { placeholder: 'Ask anything...' } } } }
   ]
 };
 
-let result = await executeAgentIntent(controller, intent, {
+let result = await executeAgentIntent(controller, composeIntent, {
   document,
-  onRegisterDriver: async (params) => { /* load server-side driver */ }
 });
-// → { success: true, executedCount: 4 }
+// → { success: true, executedCount: 3 }
 ```
 
 **Operation Types:**
 
 | Type | Purpose | Rollback |
 |------|---------|----------|
-| `register-component` | Register a Web Component via DynamicComponentRegistry | Tracked (no browser undo) |
-| `register-driver` | Load a server-side handler (via `onRegisterDriver` callback) | Tracked |
-| `layout` | Apply panel layout action (`open-panel`, etc.) | Reverse action |
-| `ui` | Create or destroy component instances | Destroy created / n/a |
+| `register-component` | Register a Web Component via DynamicComponentRegistry | None (irreversible) |
+| `register-driver` | Invoke `onRegisterDriver`; otherwise record a no-op | None (irreversible) |
+| `layout` | Apply panel layout action | `open-panel` only; remove is irreversible |
+| `ui` | Create or destroy component instances | Create only; destroy is irreversible |
 | `theme` | Apply cascade theme to a target element | Restore original CSS vars |
-| `state` | Update component state | Restore original props/attrs |
+| `state` | Update component state | Restore props/attrs; method effects remain |
 
-If **any operation fails**, all previously executed operations are rolled back in reverse order.
+If an operation fails, the orchestrator attempts the listed rollback actions in
+reverse order. Rollback errors are logged and suppressed; close-panel effects
+and state method calls have no automatic rollback. Irreversible operations must
+run alone and have no rollback.
 
 ## Dynamic Component Registry
 
-Register Web Components at runtime with code sandboxing:
+Register Web Components at runtime with trusted-host lexical validation and
+same-page-realm loading.
+
+String input is turned into Blob/data ESM and dynamically imported in the
+current page realm. There is no iframe, worker, separate realm, capability
+isolation, or sandbox. Direct registry calls have no host-approval gate. The API
+is only for trusted local/host-authored input; remote/community code is
+forbidden.
 
 ```javascript
 import { createDynamicComponentRegistry, validateComponentCode } from 'symbiote-ui/runtime';
 
 let registry = createDynamicComponentRegistry();
 
-// Register from a class
+// Register from class constructor (bypasses string validation)
 await registry.register('my-widget', MyWidgetClass);
 
-// Register from code string (sandboxed)
+// Register from code string (lexically validated)
 await registry.register('my-dynamic', `
   export default class MyDynamic extends HTMLElement {
     connectedCallback() { this.textContent = 'Hello'; }
@@ -215,9 +251,13 @@ registry.has('my-widget');  // true
 registry.list();            // [{ tagName, classDefinition, ... }]
 ```
 
-**Blocked Keywords** (default sandbox): `document.cookie`, `document.write`,
+`validateComponentCode()` performs a case-sensitive substring deny-list plus an
+optional custom callback.
+
+**Blocked Keywords** (default deny-list): `document.cookie`, `document.write`,
 `localStorage`, `sessionStorage`, `IndexedDB`, `eval(`, `new Function(`,
-`process.env`, `process.exit`, `require(`.
+`process.env`, `process.exit`, `require(`. Additional `blockedKeywords` extend
+the defaults; they do not replace them.
 
 Custom validators can be passed via `options.validate`.
 
@@ -306,8 +346,11 @@ Symbiote UI targets **professional tool interfaces** (IDE, DAW, CAD), not consum
 
 ## Common Mistakes
 
-- **Never call `customElements.define()` directly** — use `DynamicComponentRegistry` to avoid fatal duplicate-tag crashes.
-- **Never use `eval()` or `new Function()` in component code** — the sandbox will reject it.
+- **Do not redefine an existing Custom Element tag** — use
+  `DynamicComponentRegistry` to avoid the duplicate-definition exception and
+  preserve the browser's existing immutable registration.
+- **Do not treat lexical validation as isolation** — it rejects known substrings
+  but does not make dynamically imported code safe.
 - **Always set `version: 'agent-intent-v1'`** in intents — the orchestrator throws on mismatched versions.
 - **Apply themes to containers, not `:root`** — cascade isolation prevents token leaks between panels.
 - **Use `controller.destroy(id)` for cleanup** — don't manually call `element.remove()`, or subscriptions leak.
@@ -317,5 +360,5 @@ Symbiote UI targets **professional tool interfaces** (IDE, DAW, CAD), not consum
 For detailed API documentation, see:
 - [Runtime API Reference](references/runtime-api.md) — Full function signatures and WebSocket message formats.
 - [Intent Orchestrator Reference](references/intent-orchestrator.md) — Complete `agent-intent-v1` schema and rollback rules.
-- [Dynamic Registry Reference](references/dynamic-registry.md) — Component loading, sandbox, and duplicate handling.
+- [Dynamic Registry Reference](references/dynamic-registry.md) — Component loading, trusted-host validation, same-page-realm loading, and duplicate handling.
 - [WebMCP Bridge Reference](references/webmcp-bridge.md) — Tool registration, command events, and graceful degradation.
