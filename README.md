@@ -28,14 +28,6 @@ product app or frontend framework.
   helpers stay importable in Node while Web Components stay behind
   `symbiote-ui/ui`.
 
-## What is symbiote-ui?
-
-`symbiote-ui` is the provider UI layer for Symbiote systems. It exposes the
-component catalog, layout primitives, graph and board helpers, display
-utilities, Cascade theme contracts, WebMCP descriptors, and Custom Elements
-registration surface used by agents and hosts that construct interfaces
-dynamically.
-
 > **Learn more**: [Agent UI Construction Principles](https://rnd-pro.github.io/symbiote-ui/)
 
 ## Key Features
@@ -187,10 +179,8 @@ between checkpoints along a curved path. `resolveTarget` maps each agent-authore
 holds `holdMs` (or `defaultHoldMs`), then `onStep` fires. Pass an `AbortSignal`
 as `signal` to stop playback and clear the cursor mid-run.
 
-For native browser text emphasis, import `applyPresenterTextSelection` from
-`symbiote-ui/chat/presenter-text-selection.js`. It selects one exact or
-whitespace-normalized quote (or an explicit offset range), returns a portable
-receipt, and provides deterministic `clear()` and `restore()` operations.
+`applyPresenterTextSelection` selects an exact or whitespace-normalized quote,
+or an offset range, and returns a portable receipt with `clear()` and `restore()`.
 
 ## Example: Action Message Part
 
