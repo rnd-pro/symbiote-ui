@@ -3,12 +3,12 @@ export default /*html*/ `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<base href="/">
 <title>Symbiote UI — Component Catalog</title>
 <link rel="stylesheet" href="./css/index.css">
 <script type="module" src="./js/index.js"></script>
 </head>
 <body>
+<a href="#workspace-content" class="sn-skip-link">Skip to main content</a>
 <layout-shell-menu
   id="catalog-shell"
   title="Symbiote UI"

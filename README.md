@@ -2,6 +2,8 @@
 
 # symbiote-ui
 
+[Website, documentation, catalog, and demos](https://rnd-pro.github.io/symbiote-ui/)
+
 **symbiote-ui turns provider metadata into agent-ready Web Components,
 layouts, themes, and UI contracts. Fast.**
 

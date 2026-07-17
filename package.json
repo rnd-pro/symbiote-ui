@@ -224,10 +224,10 @@
   "scripts": {
     "test": "node tests/run-tests.js -- node --test tests/*.test.js",
     "test:browser": "node tests/run-tests.js --suite browser -- node --test tests/graph-browser-smoke.test.js",
-    "catalog:build": "jsda build && node scripts/copy-static-assets.js && node scripts/copy-404.js",
+    "catalog:build": "rm -rf _site && jsda build",
     "catalog:dev": "jsda ssg",
-    "catalog:serve": "npx -y serve catalog/dist -l 3001",
-    "catalog:site": "npm run catalog:build && node scripts/assemble-site.js",
+    "catalog:serve": "npx -y serve _site -l 3001",
+    "catalog:site": "npm run catalog:build && node scripts/assemble-site.js && node tests/validate-site.js",
     "libs:status": "node ../symbiote-dev-plane/bin/symbiote-libs.js status",
     "libs:link": "node ../symbiote-dev-plane/bin/symbiote-libs.js link",
     "libs:unlink": "node ../symbiote-dev-plane/bin/symbiote-libs.js unlink --install"
@@ -253,14 +253,14 @@
   "devDependencies": {
     "@symbiotejs/symbiote": "3.8.0-webmcp.2",
     "ajv": "^8.20.0",
-    "jsda-kit": "^1.5.4",
+    "jsda-kit": "1.6.0",
     "linkedom": "^0.18.12"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/RND-PRO/symbiote-ui.git"
   },
-  "homepage": "https://github.com/RND-PRO/symbiote-ui#readme",
+  "homepage": "https://rnd-pro.github.io/symbiote-ui/",
   "bugs": {
     "url": "https://github.com/RND-PRO/symbiote-ui/issues"
   },
