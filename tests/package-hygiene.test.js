@@ -47,12 +47,25 @@ function assertNoPrivatePackFiles(files) {
   }
 }
 
-function listTrackedFiles() {
-  let result = run('git', ['ls-files']);
-  return result.stdout
+function parseGitFileList(output) {
+  return output
     .split(/\r?\n/)
     .map((file) => file.trim())
     .filter(Boolean);
+}
+
+function listPublicFilesAndPendingAdditions() {
+  let listed = run('git', ['ls-files', '--cached', '--others', '--exclude-standard']);
+  return parseGitFileList(listed.stdout);
+}
+
+async function readPublicFile(file) {
+  try {
+    return await readFile(join(repoRoot, file), 'utf8');
+  } catch (error) {
+    if (error?.code !== 'ENOENT') throw error;
+    return run('git', ['show', `:${file}`]).stdout;
+  }
 }
 
 function isTextScanCandidate(file) {
@@ -98,7 +111,7 @@ async function assertNoPrivatePackContent(packageDir) {
   }
 }
 
-test('tracked public repository files pass private hygiene scan', async () => {
+test('public repository files and pending additions pass private hygiene scan', async () => {
   // Shared-clone architecture: team memory is a configured directory, not a
   // submodule. A .gitmodules may be absent; if present it must never expose a
   // remote URL or reference the private team-memory repository.
@@ -117,8 +130,8 @@ test('tracked public repository files pass private hygiene scan', async () => {
     { pattern: /\bnpm_[A-Za-z0-9]{20,}\b/, label: 'npm token' },
   ];
 
-  for (let file of listTrackedFiles().filter(isTextScanCandidate)) {
-    let text = await readFile(join(repoRoot, file), 'utf8');
+  for (let file of listPublicFilesAndPendingAdditions().filter(isTextScanCandidate)) {
+    let text = await readPublicFile(file);
     for (let { pattern, label } of blockedPatterns) {
       assert.equal(pattern.test(text), false, `${file} contains ${label}`);
     }
@@ -144,6 +157,14 @@ test('npm pack output excludes private memory and scratch artifacts', async () =
   assert.ok(files.includes('ui/index.js'));
   assert.ok(files.includes('runtime/index.js'));
   assert.ok(files.includes('manifest/component-registry.js'));
+  for (let excludedPath of ['site/', '_site/', '.github/', 'tests/', 'scripts/']) {
+    assert.equal(
+      files.some((file) => file.startsWith(excludedPath)),
+      false,
+      `${excludedPath} must stay outside the runtime package`
+    );
+  }
+  assert.equal(files.includes('project.cfg.js'), false);
   for (let importPath of uiDynamicImports) {
     assert.ok(files.includes(importPath), `ui dynamic import missing from pack output: ${importPath}`);
   }

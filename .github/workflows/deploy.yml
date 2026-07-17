@@ -17,14 +17,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v6
         with: { node-version: 24, cache: npm }
       - run: npm ci
-      - run: npm run catalog:build
-        env: { PAGES_BASE: /symbiote-ui/ }
-      - run: node scripts/assemble-site.js
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v5
+      - run: npm test
+      - id: pages
+        uses: actions/configure-pages@v5
+      - run: npm run catalog:site
+        env:
+          PAGES_BASE_URL: ${{ steps.pages.outputs.base_url }}
+          PAGES_BASE_PATH: ${{ steps.pages.outputs.base_path }}
+      - uses: actions/upload-pages-artifact@v4
         with: { path: _site }
   deploy:
     needs: build
@@ -34,4 +37,4 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v5
+        uses: actions/deploy-pages@v4

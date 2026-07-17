@@ -2476,7 +2476,7 @@ test('scroll edge fade is available on reusable scroll hosts', async () => {
     '../canvas/GraphExplorerShell/GraphExplorerShell.css.js',
     '../canvas/GraphTabs/GraphTabs.css.js',
     '../canvas/NodeSearch/NodeSearch.css.js',
-    '../catalog/src/css/index.css.js',
+    '../site/catalog/css/index.css.js',
     '../chat/ChatComposer/ChatComposer.css.js',
     '../chat/ChatList/ChatList.css.js',
     '../chat/ChatMessageItem/ChatMessageItem.css.js',

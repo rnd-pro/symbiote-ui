@@ -37,6 +37,15 @@ const DEMOS = [
   },
 ];
 
+function getRepositoryBase() {
+  const path = window.location.pathname;
+  const index = path.indexOf('/catalog/');
+  if (index !== -1) {
+    return path.slice(0, index + 1);
+  }
+  return '/';
+}
+
 export class DemosPanel extends HTMLElement {
   #rendered = false;
 
@@ -61,7 +70,7 @@ export class DemosPanel extends HTMLElement {
     for (const demo of DEMOS) {
       const card = document.createElement('a');
       card.className = 'demo-card';
-      card.href = demo.href;
+      card.href = getRepositoryBase() + demo.href;
 
       const icon = document.createElement('span');
       icon.className = 'material-symbols-outlined demo-card-icon';
