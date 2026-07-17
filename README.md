@@ -2,12 +2,10 @@
 
 # symbiote-ui
 
-[Website, documentation, catalog, and demos](https://rnd-pro.github.io/symbiote-ui/)
-
 **symbiote-ui turns provider metadata into agent-ready Web Components,
 layouts, themes, and UI contracts. Fast.**
 
-Build browser-facing and agent-facing interfaces from reusable Symbiote
+Build browser-facing and agent-facing interfaces from Symbiote
 primitives: Web Components, layout shells, graph and board surfaces, display
 widgets, Cascade themes, manifests, schemas, rules, WebMCP descriptors, and
 SSR-safe runtime helpers. The package gives agents and hosts a direct path from
@@ -38,7 +36,7 @@ utilities, Cascade theme contracts, WebMCP descriptors, and Custom Elements
 registration surface used by agents and hosts that construct interfaces
 dynamically.
 
-> **Learn more**: [Agent UI Construction Principles](./docs/agent-ui-principles.md)
+> **Learn more**: [Agent UI Construction Principles](https://rnd-pro.github.io/symbiote-ui/)
 
 ## Key Features
 
