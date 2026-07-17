@@ -55,6 +55,13 @@ function cleanText(value, fallback = '') {
   return text && text !== 'undefined' && text !== 'null' ? text : String(fallback || '').trim();
 }
 
+function explicitCueId(cue, index) {
+  if (typeof cue?.cueId !== 'string' || !cue.cueId.trim()) {
+    throw new TypeError(`tour caption frame ${index} requires a non-empty cueId`);
+  }
+  return cue.cueId;
+}
+
 function normalizeCaptionMode(value) {
   let mode = cleanText(value, DEFAULT_CAPTION_MODE).toLowerCase();
   return CAPTION_MODES.has(mode) ? mode : DEFAULT_CAPTION_MODE;
@@ -88,6 +95,7 @@ export function normalizeTourMediaTimeline(timeline = {}, options = {}) {
   let turns = (Array.isArray(timeline?.turns) ? timeline.turns : [])
     .map((turn, index) => ({
       index,
+      ...(Object.hasOwn(turn || {}, 'cueId') ? { cueId: turn.cueId } : {}),
       persona: cleanText(turn?.persona, index % 2 ? 'ops' : 'guide') || 'guide',
       text: cleanText(turn?.text, ''),
       cue: turn?.cue && typeof turn.cue === 'object' ? { ...turn.cue } : {},
@@ -167,7 +175,7 @@ export function createTourCaptionTrack(timelineOrPlan = {}, options = {}) {
       .filter(Boolean)
       .sort((a, b) => a.startSec - b.startSec || (a.wordIndex ?? 0) - (b.wordIndex ?? 0));
     return {
-      id: `tour-cue-${frame.index + 1}`,
+      cueId: explicitCueId(frame, frame.index),
       index: frame.index,
       speaker: cleanText(frame.persona, 'guide'),
       text: cleanText(frame.text, ''),
@@ -597,7 +605,7 @@ function validateCaptionTrack(value) {
   } catch (cause) {
     throw new TourMediaRenderError(
       'invalid-caption-track',
-      `options.captionTrack must use caption-presentation-track-v1: ${cause.message}`,
+      `options.captionTrack must use caption-presentation-track-v2: ${cause.message}`,
       { cause },
     );
   }

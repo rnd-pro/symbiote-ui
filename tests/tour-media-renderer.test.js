@@ -14,6 +14,7 @@ import {
   normalizeTourMediaTimeline,
   renderTourVideo,
 } from '../ui/tour-media-renderer.js';
+import { createLiveCaptionTrack } from '../ui/live-captions.js';
 
 class FakeTrack {
   constructor(kind, options = {}) {
@@ -230,7 +231,14 @@ test('renders a webm blob when an audio stream is supplied', async () => {
 test('creates karaoke caption tracks from audio word timings', () => {
   let track = createTourCaptionTrack({
     title: 'Workspace tour',
-    turns: [{ persona: 'guide', text: 'Hello board', durationMs: 120 }],
+    turns: [{
+      cueId: 'caption:hello-board',
+      id: 'legacy-tour-id',
+      index: 91,
+      persona: 'guide',
+      text: 'Hello board',
+      durationMs: 120,
+    }],
   }, {
     captionsMode: 'karaoke',
     width: 1280,
@@ -243,7 +251,8 @@ test('creates karaoke caption tracks from audio word timings', () => {
   });
 
   assert.equal(track.mode, 'karaoke');
-  assert.equal(track.schemaVersion, 'caption-presentation-track-v1');
+  assert.equal(track.schemaVersion, 'caption-presentation-track-v2');
+  assert.equal(track.cues[0].cueId, 'caption:hello-board');
   assert.equal(track.wordTimingCount, 2);
   assert.deepEqual(
     track.cues[0].wordTimings.map((word) => [word.text, word.startSec, word.endSec]),
@@ -251,10 +260,62 @@ test('creates karaoke caption tracks from audio word timings', () => {
   );
 });
 
+test('live and tour preview captions share canonical v2 cue identity', () => {
+  let cueId = 'caption:shared-live-preview';
+  let liveTrack = createLiveCaptionTrack([{
+    cueId,
+    id: 'legacy-live-id',
+    index: 17,
+    speaker: 'guide',
+    text: 'Shared identity',
+    startSec: 0,
+    endSec: 1,
+  }], {
+    width: 1280,
+    height: 720,
+    captionStyle: { preset: 'youtube' },
+  });
+  let previewTrack = createTourCaptionTrack({
+    turns: [{
+      cueId,
+      id: 'legacy-preview-id',
+      index: 23,
+      persona: 'guide',
+      text: 'Shared identity',
+      durationMs: 1000,
+    }],
+  }, {
+    captionsMode: 'karaoke',
+    width: 1280,
+    height: 720,
+    captionStyle: { preset: 'youtube' },
+  });
+
+  assert.equal(liveTrack.schemaVersion, 'caption-presentation-track-v2');
+  assert.equal(previewTrack.schemaVersion, liveTrack.schemaVersion);
+  assert.equal(liveTrack.cues[0].cueId, cueId);
+  assert.equal(previewTrack.cues[0].cueId, cueId);
+});
+
+test('tour caption tracks reject legacy identity aliases without cueId', () => {
+  let options = {
+    captionsMode: 'karaoke',
+    width: 1280,
+    height: 720,
+    captionStyle: { preset: 'youtube' },
+  };
+  assert.throws(() => createTourCaptionTrack({
+    turns: [{ id: 'legacy-id', text: 'Legacy ID', durationMs: 1000 }],
+  }, options), /requires a non-empty cueId/);
+  assert.throws(() => createTourCaptionTrack({
+    turns: [{ index: 5, text: 'Legacy index', durationMs: 1000 }],
+  }, options), /requires a non-empty cueId/);
+});
+
 test('canvas captions use the engine-selected rectangle and output profile', () => {
   let plan = createTourMediaRenderPlan({
     title: 'Workspace tour',
-    turns: [{ persona: 'guide', text: 'Hello board', durationMs: 1000 }],
+    turns: [{ cueId: 'caption:canvas-hello', persona: 'guide', text: 'Hello board', durationMs: 1000 }],
   });
   let track = createTourCaptionTrack(plan, {
     captionsMode: 'karaoke',
@@ -291,8 +352,8 @@ test('canvas captions render every simultaneously active canonical cue', () => {
     turns: [{ persona: 'guide', text: 'Host frame', durationMs: 1000 }],
   });
   let track = deepFreeze(buildCaptionPlacementTrack([
-    { id: 'primary', startSec: 0, endSec: 1, text: 'Primary cue' },
-    { id: 'secondary', startSec: 0.2, endSec: 0.8, text: 'Secondary cue' },
+    { cueId: 'primary', startSec: 0, endSec: 1, text: 'Primary cue' },
+    { cueId: 'secondary', startSec: 0.2, endSec: 0.8, text: 'Secondary cue' },
   ], {
     width: 1280,
     height: 720,
@@ -322,7 +383,7 @@ test('burns karaoke captions into rendered tour video and returns caption sideca
   let canvas = new FakeCanvas({ clock: frameClock });
   let closed = 0;
   let result = await renderTourVideo(
-    { title: 'Demo', turns: [{ text: 'Hello board', durationMs: 1000 }] },
+    { title: 'Demo', turns: [{ cueId: 'caption:rendered-hello', text: 'Hello board', durationMs: 1000 }] },
     rendererOptions({
       canvas,
       frameClock,
@@ -357,7 +418,7 @@ test('accepts a custom frame renderer for host UI capture and overlays captions 
   let canvas = new FakeCanvas({ clock: frameClock });
   let frames = [];
   let result = await renderTourVideo(
-    { title: 'Live UI', turns: [{ persona: 'guide', text: 'Panel status', durationMs: 500 }] },
+    { title: 'Live UI', turns: [{ cueId: 'caption:panel-status', persona: 'guide', text: 'Panel status', durationMs: 500 }] },
     rendererOptions({
       canvas,
       frameClock,
@@ -433,7 +494,7 @@ test('requests exact manual canvas frames on the absolute fps schedule', async (
 test('uses a frozen canonical caption track by identity without rebuilding it', async () => {
   let timeline = {
     title: 'Canonical captions',
-    turns: [{ text: 'Immutable handoff', durationMs: 1000 }],
+    turns: [{ cueId: 'caption:immutable-handoff', text: 'Immutable handoff', durationMs: 1000 }],
   };
   let captionTrack = deepFreeze(createTourCaptionTrack(timeline, {
     captionsMode: 'karaoke',
@@ -459,6 +520,7 @@ test('uses a frozen canonical caption track by identity without rebuilding it', 
   }));
 
   assert.equal(result.captions.track, captionTrack);
+  assert.equal(result.captions.track.cues[0].cueId, 'caption:immutable-handoff');
   assert.ok(seenTracks.every((track) => track === captionTrack));
   assert.equal(JSON.stringify(captionTrack), before);
 });
@@ -480,7 +542,7 @@ test('rejects a non-canonical caption track before acquiring audio', async () =>
     (error) => {
       assert.ok(error instanceof TourMediaRenderError);
       assert.equal(error.code, 'invalid-caption-track');
-      assert.match(error.message, /caption-presentation-track-v1/);
+      assert.match(error.message, /caption-presentation-track-v2/);
       return true;
     },
   );

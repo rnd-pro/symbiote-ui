@@ -4,6 +4,20 @@ All notable changes to `symbiote-ui` will be documented in this file.
 
 ## Unreleased
 
+## [0.3.0-alpha.63] - 2026-07-17
+
+- Keep cascade-theme control foregrounds above WCAG AA after browser RGB quantization.
+- Updated the presenter projection contract to support idle cursor visibility, completed/motorActive states, validation priority, and completed residue coexistence.
+- Preserve idle cursor visibility and endpoint position after travel is completed.
+- Preserve completed stroke cursor and rest projection to keep completed ink/frame residue visible.
+- Compute presenter projections first, then validate mutual exclusion conflicts on actual active motor phases (`ERR_MUTUALLY_EXCLUSIVE_LAYERS`), ensuring ordered active layer names.
+- Allowed future layers and completed residue (including idle cursors) to coexist with active gestures.
+- Sequence cursor travel before focus reveal and use the annotation projector as the sole drawing motor for live presenter actions.
+- Publish the canonical caption presentation track v2 identifier consistently in live captions, media studio markup, and renderer diagnostics.
+- Require explicit non-empty `cueId` values for live and tour captions, reject
+  legacy `id`/`index` aliases, and preserve the canonical v2 identity through
+  live, preview, and rendered caption consumers; update `symbiote-engine` to
+  `0.3.0-alpha.13`.
 - Status badges now keep a 12px minimum font size across standalone, default,
   dark, and cascade themes so compact state labels remain presentation-readable.
 - Live captions now apply the canonical cue-level font size and line height

@@ -13,7 +13,9 @@ import {
 function turns() {
   return [
     {
-      id: 'intro',
+      cueId: 'intro',
+      id: 'legacy-intro',
+      index: 41,
       speaker: 'guide',
       text: 'Caption test one',
       startSec: 0,
@@ -25,7 +27,7 @@ function turns() {
       ],
     },
     {
-      id: 'result',
+      cueId: 'result',
       speaker: 'ops',
       text: 'Caption test two',
       startSec: 1,
@@ -48,7 +50,7 @@ test('live captions remain Node-safe while retaining the engine track contract',
   delete globalThis.document;
   try {
     let controller = new LiveCaptionController({ track: track() });
-    assert.equal(controller.track.schemaVersion, 'caption-presentation-track-v1');
+    assert.equal(controller.track.schemaVersion, 'caption-presentation-track-v2');
     assert.equal(controller.update(0.2).cueId, 'intro');
     assert.doesNotThrow(() => controller.dispose());
   } finally {
@@ -58,18 +60,42 @@ test('live captions remain Node-safe while retaining the engine track contract',
 
 test('authored live turns require real timing and reject ad hoc tracks', () => {
   assert.throws(() => createLiveCaptionTrack([
-    { speaker: 'guide', text: 'Missing timing', durationMs: 1000 },
+    { cueId: 'missing-timing', speaker: 'guide', text: 'Missing timing', durationMs: 1000 },
   ], { width: 1280, height: 720 }), /requires explicit start and end timing/);
   assert.throws(() => new LiveCaptionController({
     track: { cues: [{ text: 'legacy' }] },
-  }), /caption-presentation-track-v1/);
+  }), /caption-presentation-track-v2/);
+});
+
+test('live captions require explicit cueId and reject legacy identity aliases', () => {
+  let base = { speaker: 'guide', text: 'Canonical identity', startSec: 0, endSec: 1 };
+  assert.throws(
+    () => createLiveCaptionTrack([{ ...base, id: 'legacy-id' }], { width: 1280, height: 720 }),
+    /requires a non-empty cueId/,
+  );
+  assert.throws(
+    () => createLiveCaptionTrack([{ ...base, index: 7 }], { width: 1280, height: 720 }),
+    /requires a non-empty cueId/,
+  );
+  assert.throws(
+    () => createLiveCaptionTrack([{ ...base, cueId: '   ' }], { width: 1280, height: 720 }),
+    /requires a non-empty cueId/,
+  );
+
+  let result = createLiveCaptionTrack([{
+    ...base,
+    cueId: 'caption:canonical-live',
+    id: 'legacy-id',
+    index: 7,
+  }], { width: 1280, height: 720 });
+  assert.equal(result.cues[0].cueId, 'caption:canonical-live');
 });
 
 test('live captions use the rendered five-word cue cadence for timed authored speech', () => {
   let text = 'Now the workspace explains the result without hiding the active input.';
   let tokens = text.split(/\s+/);
   let result = createLiveCaptionTrack([{
-    id: 'guide-result',
+    cueId: 'guide-result',
     speaker: 'guide',
     text,
     startSec: 0,
@@ -181,7 +207,7 @@ test('live captions render the cue-level font selected for a narrow safe shelf',
   let container = window.document.getElementById('container');
   container.getBoundingClientRect = () => ({ width: 1080, height: 1080 });
   let placementTrack = createLiveCaptionTrack([{
-    id: 'proof-explain-map:caption-3',
+    cueId: 'proof-explain-map:caption-3',
     speaker: 'ops',
     text: 'double-clicking empty space to',
     startSec: 0,

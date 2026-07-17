@@ -1300,6 +1300,27 @@ test('cascade theme normalizes invalid numeric params without NaN tokens', async
   assert.match(themeModule.getReadableTextForHsl(218, 89, 63), /^hsl\(0 0% (7\.5|98\.0)%\)$/);
 });
 
+test('cascade theme keeps quantized editor button contrast above its safety target', async () => {
+  let themeModule = await import(cascadeThemeSource.href);
+  let theme = themeModule.createCascadeTheme({
+    recipe: 'editor-pro',
+    params: { contrast: 74, hue: 230 },
+  });
+  let quantizedForeground = [16, 16, 16];
+  let quantizedBackground = [86, 113, 245];
+  let luminance = (rgb) => rgb.map((channel) => {
+    let value = channel / 255;
+    return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  }).reduce((sum, channel, index) => sum + channel * [0.2126, 0.7152, 0.0722][index], 0);
+  let foregroundLuminance = luminance(quantizedForeground);
+  let backgroundLuminance = luminance(quantizedBackground);
+  let contrast = (backgroundLuminance + 0.05) / (foregroundLuminance + 0.05);
+
+  assert.equal(theme.tokens['--sn-sys-accent'], 'hsl(230 89% 64.92%)');
+  assert.equal(theme.tokens['--sn-button-primary-color'], 'hsl(0 0% 6.4%)');
+  assert.ok(contrast >= 4.55, `expected quantized contrast >= 4.55, got ${contrast}`);
+});
+
 test('component descriptor v2 includes agent-facing WebMCP context', async () => {
   const schema = await readFile(componentDescriptorV2Source, 'utf8');
 
@@ -1485,7 +1506,7 @@ test('cascade theme derives distinct dark and light branches', async () => {
   assert.equal(lightTheme.tokens['--sn-button-primary-color'], 'hsl(0 0% 98.0%)');
   assert.equal(lightTheme.tokens['--sn-button-success-color'], 'hsl(0 0% 7.5%)');
   assert.equal(themeModule.getReadableTextForHsl(218, 89, 63, 94), 'hsl(0 0% 7.5%)');
-  assert.equal(themeModule.getReadableTextForHsl(218, 89, 56.2, 18.9), 'hsl(0 0% 7.5%)');
+  assert.equal(themeModule.getReadableTextForHsl(218, 89, 56.2, 18.9), 'hsl(0 0% 5.2%)');
 });
 
 test('cascade theme visual smoke fixtures cover luminance and chroma states', async () => {

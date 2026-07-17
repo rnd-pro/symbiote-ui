@@ -394,7 +394,7 @@ test('media studio visual layer renders reusable preview, timeline, and progress
       currentTimeSec: 1.2,
       captionTrack: captionTrack([
         {
-          id: 'welcome',
+          cueId: 'welcome',
           startSec: 0.8,
           endSec: 2.1,
           speaker: 'guide',
@@ -489,7 +489,7 @@ test('media studio visual layer renders reusable preview, timeline, and progress
   assert.doesNotMatch(preview, /clone|iframe|live-dom/i);
   assert.doesNotMatch(preview, /sn-media-studio-preview-footer/);
   assert.match(preview, /data-media-caption-overlay/);
-  assert.match(preview, /data-caption-track="caption-presentation-track-v1"/);
+  assert.match(preview, /data-caption-track="caption-presentation-track-v2"/);
   assert.match(preview, /data-caption-style="tiktok"/);
   assert.match(preview, /data-caption-cue-id="welcome"/);
   assert.match(preview, /sn-media-studio-caption-word/);
@@ -655,9 +655,10 @@ test('media studio preview renders completed final output as a video surface whe
 
 test('media studio caption overlay normalizes active TikTok-style cues', () => {
   let placementTrack = captionTrack([
-    { id: 'early', startSec: 0, endSec: 1, text: 'Too early' },
+    { cueId: 'early', startSec: 0, endSec: 1, text: 'Too early' },
     {
-      id: 'active',
+      cueId: 'active',
+      id: 'legacy-active',
       startSec: 1,
       endSec: 2,
       speaker: 'ops',
@@ -668,7 +669,7 @@ test('media studio caption overlay normalizes active TikTok-style cues', () => {
       ],
     },
     {
-      id: 'simultaneous',
+      cueId: 'simultaneous',
       startSec: 1.2,
       endSec: 1.8,
       text: 'Second active cue',
@@ -709,7 +710,7 @@ test('media studio caption overlay normalizes active TikTok-style cues', () => {
     renderSettings: { captionsEnabled: true, captionsMode: 'karaoke' },
     captionTrack: placementTrack,
   });
-  assert.match(markup, /data-caption-track="caption-presentation-track-v1"/);
+  assert.match(markup, /data-caption-track="caption-presentation-track-v2"/);
   assert.match(markup, /data-caption-cue-id="active"/);
   assert.match(markup, /data-caption-cue-id="simultaneous"/);
   assert.match(markup, /Active[\s\S]*Second[\s\S]*active[\s\S]*cue/);
@@ -724,7 +725,7 @@ test('media studio caption overlay normalizes active TikTok-style cues', () => {
   assert.throws(() => normalizeMediaStudioCaptionOverlayState({
     currentTimeSec: 1.4,
     captionTrack: { cues: [{ text: 'legacy' }] },
-  }), /caption-presentation-track-v1/);
+  }), /caption-presentation-track-v2/);
 });
 
 test('media studio render settings normalize auto-render, captions, and vertical geometry', () => {

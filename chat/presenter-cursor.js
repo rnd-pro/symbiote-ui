@@ -1151,6 +1151,8 @@ function projectStroke(layer, timeMs, seed, registry, normalizeName, options = {
     rect: null,
     cursor: null,
     safety: null,
+    completed: false,
+    motorActive: false,
   };
   if (!layer?.active || !layer.rect || Number(timeMs) < layerStartMs(layer)) return result;
   let name = normalizeName(layer.name);
@@ -1192,6 +1194,7 @@ function projectStroke(layer, timeMs, seed, registry, normalizeName, options = {
     viewport,
     cursorSizePx: INK_CURSOR_SIZE,
   });
+  let hideCursor = layer.hideCursor === true || layer.cursor === false;
   return {
     visible: true,
     path: smoothPresenterPath(points),
@@ -1201,9 +1204,11 @@ function projectStroke(layer, timeMs, seed, registry, normalizeName, options = {
     placement: layout.annotation.placement,
     rect: layout.geometryRect,
     drawRect: layout.drawRect,
-    cursor: cursorPoint,
+    cursor: hideCursor ? null : cursorPoint,
     cursorSizePx: INK_CURSOR_SIZE,
     safety,
+    completed: progress >= 1,
+    motorActive: progress < 1,
   };
 }
 
@@ -1218,6 +1223,8 @@ function projectFocusLayer(layer, timeMs, viewport) {
     antsDashOffset: 0,
     revealProgress: 0,
     revealing: false,
+    completed: false,
+    motorActive: false,
     dragHandle: null,
     targetRect: null,
   };
@@ -1249,6 +1256,8 @@ function projectFocusLayer(layer, timeMs, viewport) {
     antsDashOffset: -8 * ((marchTime % MARCH_MS) / MARCH_MS),
     revealProgress,
     revealing: timeProgress < 1,
+    completed: timeProgress >= 1,
+    motorActive: timeProgress < 1,
     dragHandle: {
       x: targetRect.left + width,
       y: targetRect.top + height,
@@ -1279,7 +1288,7 @@ export function projectPresenterState(layers = {}, timeMs = 0, seed = 0, viewpor
   );
 
   let click = layers.click;
-  let clickRes = { visible: false, x: 0, y: 0, scale: 0.45, opacity: 0 };
+  let clickRes = { visible: false, x: 0, y: 0, scale: 0.45, opacity: 0, completed: false, motorActive: false };
   let clickDuration = CLICK_PRESS_MS + CLICK_FADE_MS;
   if (click?.active && Number(timeMs) >= layerStartMs(click)) {
     let progress = frameElapsed(timeMs, click, clickDuration) / clickDuration;
@@ -1289,17 +1298,24 @@ export function projectPresenterState(layers = {}, timeMs = 0, seed = 0, viewpor
       y: click.y,
       scale: 0.45 + (2.15 - 0.45) * progress,
       opacity: progress < 0.5 ? 1 : Math.max(0, 1 - (progress - 0.5) / 0.5),
+      completed: progress >= 1,
+      motorActive: progress < 1,
     };
   }
 
   let cursorLayer = layers.cursor;
-  let cursorRes = { visible: false, x: 0, y: 0, opacity: 1 };
+  let cursorRes = { visible: false, x: 0, y: 0, opacity: 1, completed: false, motorActive: false };
   if (cursorLayer?.active && Number(timeMs) >= layerStartMs(cursorLayer)) {
     cursorRes.visible = true;
     let duration = Math.max(1, Number(cursorLayer.durationMs ?? cursorLayer.duration) || TRAVEL_MIN_MS);
     let progress = frameElapsed(timeMs, cursorLayer, duration) / duration;
-    let eased = easeInOutCubic(progress);
-    if (cursorLayer.fromX !== undefined && cursorLayer.toX !== undefined) {
+    let isTraveling = cursorLayer.fromX !== undefined && cursorLayer.toX !== undefined && progress < 1;
+
+    cursorRes.motorActive = isTraveling;
+    cursorRes.completed = !isTraveling;
+
+    if (isTraveling) {
+      let eased = easeInOutCubic(progress);
       let dx = cursorLayer.toX - cursorLayer.fromX;
       let dy = cursorLayer.toY - cursorLayer.fromY;
       let distance = Math.hypot(dx, dy);
@@ -1322,20 +1338,66 @@ export function projectPresenterState(layers = {}, timeMs = 0, seed = 0, viewpor
           + 2 * inverse * eased * controlY
           + eased * eased * cursorLayer.toY;
       }
+    } else if (cursorLayer.fromX !== undefined && cursorLayer.toX !== undefined && progress >= 1) {
+      cursorRes.x = cursorLayer.toX;
+      cursorRes.y = cursorLayer.toY;
     } else {
-      cursorRes.x = Number(cursorLayer.x) || 0;
-      cursorRes.y = Number(cursorLayer.y) || 0;
+      cursorRes.x = cursorLayer.x !== undefined ? Number(cursorLayer.x) : (cursorLayer.toX !== undefined ? Number(cursorLayer.toX) : 0);
+      cursorRes.y = cursorLayer.y !== undefined ? Number(cursorLayer.y) : (cursorLayer.toY !== undefined ? Number(cursorLayer.toY) : 0);
+      if (!Number.isFinite(cursorRes.x)) cursorRes.x = 0;
+      if (!Number.isFinite(cursorRes.y)) cursorRes.y = 0;
     }
+
     let clampedCursor = clampPresenterPoint(cursorRes, viewport);
     cursorRes.x = clampedCursor.x;
     cursorRes.y = clampedCursor.y;
   }
 
-  let activeAnnotation = markerRes.visible
-    ? { kind: 'marker', ...markerRes }
-    : symbolRes.visible
-      ? { kind: 'symbol', ...symbolRes }
-      : null;
+  let activeMotorLayers = [];
+  if (focusRes.visible && focusRes.motorActive) {
+    activeMotorLayers.push('focus');
+  }
+  if (markerRes.visible && markerRes.motorActive) {
+    activeMotorLayers.push('marker');
+  }
+  if (symbolRes.visible && symbolRes.motorActive) {
+    activeMotorLayers.push('symbol');
+  }
+  if (cursorRes.visible && cursorRes.motorActive) {
+    activeMotorLayers.push('cursor');
+  }
+  if (clickRes.visible && clickRes.motorActive) {
+    activeMotorLayers.push('click');
+  }
+
+  if (activeMotorLayers.length > 1) {
+    activeMotorLayers.sort();
+    let err = new Error(`Malformed input: Mutually exclusive emphasis layers (${activeMotorLayers.join(', ')}) active simultaneously.`);
+    err.code = 'ERR_MUTUALLY_EXCLUSIVE_LAYERS';
+    err.diagnostics = {
+      error: 'Mutually exclusive emphasis layers active simultaneously',
+      code: 'ERR_MUTUALLY_EXCLUSIVE_LAYERS',
+      activeLayers: activeMotorLayers,
+      focus: layers.focus,
+      marker: layers.marker,
+      symbol: layers.symbol,
+      cursor: layers.cursor,
+      click: layers.click,
+    };
+    throw err;
+  }
+
+  let activeAnnotation = null;
+  if (markerRes.visible && !markerRes.completed) {
+    activeAnnotation = { kind: 'marker', ...markerRes };
+  } else if (symbolRes.visible && !symbolRes.completed) {
+    activeAnnotation = { kind: 'symbol', ...symbolRes };
+  } else if (markerRes.visible) {
+    activeAnnotation = { kind: 'marker', ...markerRes };
+  } else if (symbolRes.visible) {
+    activeAnnotation = { kind: 'symbol', ...symbolRes };
+  }
+
   return {
     focus: focusRes,
     marker: markerRes,
@@ -1461,15 +1523,17 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
         hideMarqueeFrame();
       }
 
-      let d = '';
+      let dParts = [];
       if (projected.marker.visible && projected.marker.path) {
-        d = projected.marker.path;
-      } else if (projected.symbol.visible && projected.symbol.path) {
-        d = projected.symbol.path;
+        dParts.push(projected.marker.path);
       }
+      if (projected.symbol.visible && projected.symbol.path) {
+        dParts.push(projected.symbol.path);
+      }
+      let d = dParts.join(' ');
       inkPath.setAttribute('d', d);
       ink.classList.toggle('is-inking', Boolean(d));
-      cursor.classList.toggle('is-inking', Boolean(projected.annotation));
+      cursor.classList.toggle('is-inking', Boolean(projected.annotation && !projected.annotation.completed));
 
       if (projected.click.visible) {
         clickHalo.style.left = `${projected.click.x}px`;
@@ -1481,10 +1545,14 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
         clickHalo.style.display = 'none';
       }
 
-      if (projected.annotation?.cursor) {
+      if (projected.annotation?.cursor && !projected.annotation.completed) {
         setCursor(projected.annotation.cursor.x, projected.annotation.cursor.y);
       } else if (projected.cursor.visible) {
         setCursor(projected.cursor.x, projected.cursor.y);
+      } else if (projected.annotation?.cursor) {
+        setCursor(projected.annotation.cursor.x, projected.annotation.cursor.y);
+      } else {
+        cursor.style.opacity = '0';
       }
 
       let needsNextFrame = false;
@@ -1646,6 +1714,7 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
     activeLayers.focus = {
       active: true,
       rect: { left, top, width: w, height: h },
+      startTime: duration,
       duration: PRESENTER_FOCUS_REVEAL_DURATION_MS,
     };
     activeLayers.cursor = {
@@ -1847,7 +1916,7 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
     } else {
       focusHandle.style.display = 'none';
     }
-    if (mode === 'cursor') setCursor(projected.cursor.x, projected.cursor.y);
+    if (mode === 'cursor' && projected.cursor.visible) setCursor(projected.cursor.x, projected.cursor.y);
     else cursor.style.opacity = '0';
 
     return {
@@ -2028,12 +2097,8 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
         let rest = clampPresenterPoint(plan?.rest || startPoint, viewport);
         activeLayers.cursor = {
           active: true,
-          fromX: toX,
-          fromY: toY,
-          toX: rest.x,
-          toY: rest.y,
-          startTime: 0,
-          duration: gestureDuration,
+          x: rest.x,
+          y: rest.y,
         };
 
         currentActionResolver = (r) => {
@@ -2127,10 +2192,14 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
     ink.classList.toggle('is-inking', Boolean(inkPathD));
 
     let activeAnnotation = projected.annotation;
-    cursor.classList.toggle('is-inking', Boolean(activeAnnotation));
+    cursor.classList.toggle('is-inking', Boolean(activeAnnotation && !activeAnnotation.completed));
     let strokePoints = activeAnnotation.points;
     let cursorPoint = activeAnnotation.cursor;
-    setCursor(cursorPoint.x, cursorPoint.y);
+    if (cursorPoint) {
+      setCursor(cursorPoint.x, cursorPoint.y);
+    } else {
+      cursor.style.opacity = '0';
+    }
 
     let pathDigest = 2166136261;
     for (let index = 0; index < inkPathD.length; index += 1) {

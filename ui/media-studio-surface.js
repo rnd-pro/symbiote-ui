@@ -1887,7 +1887,7 @@ function renderMediaStudioCaptionCueMarkup(cue, state) {
 export function renderMediaStudioCaptionOverlayMarkup(options = {}) {
   let state = normalizeMediaStudioCaptionOverlayState(options);
   if (!state.enabled) return '';
-  let { activeCues, profile } = state;
+  let { activeCues, profile, track } = state;
   let ratio = profile.width / profile.height;
   let canvasStyle = [
     `inline-size:min(100cqw, ${ratio * 100}cqh)`,
@@ -1897,7 +1897,7 @@ export function renderMediaStudioCaptionOverlayMarkup(options = {}) {
 
   return `
           <div class="sn-media-studio-caption-overlay" data-media-caption-overlay
-            data-caption-track="caption-presentation-track-v1"
+            data-caption-track="${escapeHtml(track.schemaVersion)}"
             data-caption-style="${escapeHtml(profile.preset)}" aria-hidden="true"
             style="${canvasStyle}">
             ${activeCues.map((cue) => renderMediaStudioCaptionCueMarkup(cue, state)).join('')}

@@ -1,6 +1,6 @@
 {
   "name": "symbiote-ui",
-  "version": "0.3.0-alpha.62",
+  "version": "0.3.0-alpha.63",
   "type": "module",
   "description": "Agent-ready Web Components, layouts, themes, manifests, and UI contracts for Symbiote systems.",
   "main": "index.js",
@@ -247,7 +247,7 @@
     "ssr"
   ],
   "dependencies": {
-    "symbiote-engine": "0.3.0-alpha.12"
+    "symbiote-engine": "0.3.0-alpha.13"
   },
   "peerDependencies": {
     "@symbiotejs/symbiote": "3.8.0-webmcp.2"

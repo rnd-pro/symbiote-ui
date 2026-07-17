@@ -346,15 +346,19 @@ test('shallow target underline stays outside protected content for the full gest
     );
     let safety = analyzePresenterAnnotationSafety({
       pathSamples: frame.pathSamples,
-      cursor: frame.cursor,
+      cursor: frame.cursor || { x: 0, y: 0 },
       cursorSizePx: frame.cursorSizePx,
       targetRect: rect,
     });
 
     if (progress === 0) assert.equal(frame.pathPoints, 0);
-    assert.ok(frame.cursor.y > rect.top + rect.height);
+    if (progress < 1) {
+      assert.ok(frame.cursor.y > rect.top + rect.height);
+      assert.equal(safety.cursorTargetCollision, false);
+    } else {
+      assert.ok(frame.cursor);
+    }
     assert.equal(safety.safe, true, `underline must remain safe at progress ${progress}`);
-    assert.equal(safety.cursorTargetCollision, false);
   }
   cursor.dispose();
 });
@@ -364,18 +368,26 @@ test('deterministic underline flips above a bottom-edge target and clamps every 
   let cursor = createPresenterCursor(window.document);
   let el = target(window.document, { left: 12, top: 152, width: 196, height: 24 });
   let viewport = { width: 220, height: 180 };
-  let frame = cursor.presentAnnotationFrame(
+
+  let frameActive = cursor.presentAnnotationFrame(
+    el,
+    { marker: 'underline' },
+    { progress: 0.5, seed: 13, viewport },
+  );
+  assert.equal(frameActive.placement, 'above');
+  assert.ok(frameActive.cursor.x >= 0 && frameActive.cursor.x + PRESENTER_CURSOR_SIZE_PX <= viewport.width);
+  assert.ok(frameActive.cursor.y >= 0 && frameActive.cursor.y + PRESENTER_CURSOR_SIZE_PX <= viewport.height);
+
+  let frameCompleted = cursor.presentAnnotationFrame(
     el,
     { marker: 'underline' },
     { progress: 1, seed: 13, viewport },
   );
-
-  assert.equal(frame.placement, 'above');
-  assert.equal(frame.safety.safe, true);
-  assert.ok(frame.pathSamples.every((point) => point.x >= 0 && point.x <= viewport.width));
-  assert.ok(frame.pathSamples.every((point) => point.y >= 0 && point.y <= viewport.height));
-  assert.ok(frame.cursor.x >= 0 && frame.cursor.x + PRESENTER_CURSOR_SIZE_PX <= viewport.width);
-  assert.ok(frame.cursor.y >= 0 && frame.cursor.y + PRESENTER_CURSOR_SIZE_PX <= viewport.height);
+  assert.equal(frameCompleted.placement, 'above');
+  assert.equal(frameCompleted.safety.safe, true);
+  assert.ok(frameCompleted.pathSamples.every((point) => point.x >= 0 && point.x <= viewport.width));
+  assert.ok(frameCompleted.pathSamples.every((point) => point.y >= 0 && point.y <= viewport.height));
+  assert.ok(frameCompleted.cursor);
   cursor.dispose();
 });
 
@@ -507,27 +519,66 @@ test('every marker exposes a monotonic three-stage drawing path', () => {
 });
 
 test('presenter layers share one constant 30 FPS projector', () => {
-  let layers = {
-    focus: { active: true, rect: { left: 20, top: 30, width: 540, height: 260 } },
+  let firstTime = PRESENTER_FRAME_MS * 3 + 1;
+  let sameFrameTime = PRESENTER_FRAME_MS * 4 - 1;
+  let nextFrameTime = PRESENTER_FRAME_MS * 4 + 1;
+
+  let focusLayers = {
+    focus: {
+      active: true,
+      rect: { left: 20, top: 30, width: 540, height: 260 },
+      duration: PRESENTER_FOCUS_REVEAL_DURATION_MS,
+    },
+  };
+  let focusFirst = projectPresenterState(focusLayers, firstTime, 17);
+  let focusSame = projectPresenterState(focusLayers, sameFrameTime, 17);
+  let focusNext = projectPresenterState(focusLayers, nextFrameTime, 17);
+  assert.deepEqual(focusSame.focus, focusFirst.focus);
+  assert.notDeepEqual(focusNext.focus, focusFirst.focus);
+
+  let cursorLayers = {
+    cursor: { active: true, fromX: 10, fromY: 10, toX: 240, toY: 180, duration: 850 },
+  };
+  let cursorFirst = projectPresenterState(cursorLayers, firstTime, 17);
+  let cursorSame = projectPresenterState(cursorLayers, sameFrameTime, 17);
+  let cursorNext = projectPresenterState(cursorLayers, nextFrameTime, 17);
+  assert.deepEqual(cursorSame.cursor, cursorFirst.cursor);
+  assert.notDeepEqual(cursorNext.cursor, cursorFirst.cursor);
+
+  let markerLayers = {
     marker: {
       active: true,
       name: 'oval',
       rect: { left: 20, top: 30, width: 540, height: 260 },
       duration: PRESENTER_ANNOTATION_DURATION_MS,
     },
-    click: { active: true, x: 240, y: 180 },
-    cursor: { active: true, fromX: 10, fromY: 10, toX: 240, toY: 180, duration: 850 },
   };
-  let first = projectPresenterState(layers, PRESENTER_FRAME_MS * 3 + 1, 17);
-  let sameFrame = projectPresenterState(layers, PRESENTER_FRAME_MS * 4 - 1, 17);
-  let nextFrame = projectPresenterState(layers, PRESENTER_FRAME_MS * 4 + 1, 17);
+  let markerFirst = projectPresenterState(markerLayers, firstTime, 17);
+  let markerSame = projectPresenterState(markerLayers, sameFrameTime, 17);
+  let markerNext = projectPresenterState(markerLayers, nextFrameTime, 17);
+  assert.deepEqual(markerSame.marker, markerFirst.marker);
+  assert.notDeepEqual(markerNext.marker, markerFirst.marker);
 
-  assert.deepEqual(sameFrame, first);
-  assert.notDeepEqual(nextFrame.marker.points, first.marker.points);
-  assert.notEqual(nextFrame.click.scale, first.click.scale);
-  assert.notDeepEqual(nextFrame.cursor, first.cursor);
-  assert.equal(first.focus.visible, true);
-  assert.equal(first.click.visible, true);
+  let symbolLayers = {
+    symbol: {
+      active: true,
+      name: 'check',
+      rect: { left: 20, top: 30, width: 540, height: 260 },
+      duration: PRESENTER_ANNOTATION_DURATION_MS,
+    },
+  };
+  let symbolFirst = projectPresenterState(symbolLayers, firstTime, 17);
+  let symbolSame = projectPresenterState(symbolLayers, sameFrameTime, 17);
+  let symbolNext = projectPresenterState(symbolLayers, nextFrameTime, 17);
+  assert.deepEqual(symbolSame.symbol, symbolFirst.symbol);
+  assert.notDeepEqual(symbolNext.symbol, symbolFirst.symbol);
+
+  let clickLayers = { click: { active: true, x: 240, y: 180 } };
+  let clickFirst = projectPresenterState(clickLayers, firstTime, 17);
+  let clickSame = projectPresenterState(clickLayers, sameFrameTime, 17);
+  let clickNext = projectPresenterState(clickLayers, nextFrameTime, 17);
+  assert.deepEqual(clickSame.click, clickFirst.click);
+  assert.notDeepEqual(clickNext.click, clickFirst.click);
 });
 
 test('focus reveal stays monotonic and bounded in horizontal, vertical, and square frames', () => {
@@ -645,4 +696,203 @@ test('deterministic click frame rejects hidden targets and is inert without a DO
     { presented: false, reason: 'unsupported' },
   );
   cursor.dispose();
+});
+
+test('projectPresenterState throws when asked to project mutually exclusive active layers simultaneously', () => {
+  let layers = {
+    marker: { active: true, name: 'oval', rect: { left: 20, top: 30, width: 540, height: 260 } },
+    symbol: { active: true, name: 'check', rect: { left: 20, top: 30, width: 540, height: 260 } },
+  };
+  assert.throws(() => {
+    projectPresenterState(layers, 0, 1);
+  }, (err) => {
+    assert.match(err.message, /Mutually exclusive emphasis layers/);
+    assert.equal(err.diagnostics.error, 'Mutually exclusive emphasis layers active simultaneously');
+    assert.deepEqual(err.diagnostics.marker, layers.marker);
+    assert.deepEqual(err.diagnostics.symbol, layers.symbol);
+    return true;
+  });
+});
+
+test('projectPresenterState throws on focus+marker simultaneously', () => {
+  let layers = {
+    focus: { active: true, rect: { left: 20, top: 30, width: 540, height: 260 } },
+    marker: { active: true, name: 'oval', rect: { left: 20, top: 30, width: 540, height: 260 } },
+  };
+  assert.throws(() => {
+    projectPresenterState(layers, 0, 1);
+  }, (err) => {
+    assert.equal(err.code, 'ERR_MUTUALLY_EXCLUSIVE_LAYERS');
+    assert.deepEqual(err.diagnostics.activeLayers, ['focus', 'marker']);
+    return true;
+  });
+});
+
+test('projectPresenterState throws on focus+symbol simultaneously', () => {
+  let layers = {
+    focus: { active: true, rect: { left: 20, top: 30, width: 540, height: 260 } },
+    symbol: { active: true, name: 'check', rect: { left: 20, top: 30, width: 540, height: 260 } },
+  };
+  assert.throws(() => {
+    projectPresenterState(layers, 0, 1);
+  }, (err) => {
+    assert.equal(err.code, 'ERR_MUTUALLY_EXCLUSIVE_LAYERS');
+    assert.deepEqual(err.diagnostics.activeLayers, ['focus', 'symbol']);
+    return true;
+  });
+});
+
+test('projectPresenterState throws on marker+symbol simultaneously', () => {
+  let layers = {
+    marker: { active: true, name: 'oval', rect: { left: 20, top: 30, width: 540, height: 260 } },
+    symbol: { active: true, name: 'check', rect: { left: 20, top: 30, width: 540, height: 260 } },
+  };
+  assert.throws(() => {
+    projectPresenterState(layers, 0, 1);
+  }, (err) => {
+    assert.equal(err.code, 'ERR_MUTUALLY_EXCLUSIVE_LAYERS');
+    assert.deepEqual(err.diagnostics.activeLayers, ['marker', 'symbol']);
+    return true;
+  });
+});
+
+test('projectPresenterState future-start does not trigger mutual exclusion or projection', () => {
+  let layers = {
+    focus: { active: true, rect: { left: 20, top: 30, width: 540, height: 260 }, startMs: 100 },
+    marker: { active: true, name: 'oval', rect: { left: 20, top: 30, width: 540, height: 260 }, startMs: 0 },
+  };
+
+  let frame0 = projectPresenterState(layers, 0, 1);
+  assert.equal(frame0.focus.visible, false);
+  assert.equal(frame0.marker.visible, true);
+
+  assert.throws(() => {
+    projectPresenterState(layers, 100, 1);
+  }, (err) => {
+    assert.equal(err.code, 'ERR_MUTUALLY_EXCLUSIVE_LAYERS');
+    return true;
+  });
+});
+
+test('projectPresenterState treats adjacent cursor travel and focus reveal as sequential phases', () => {
+  let layers = {
+    cursor: {
+      active: true,
+      fromX: 0,
+      fromY: 0,
+      toX: 100,
+      toY: 100,
+      duration: 300,
+    },
+    focus: {
+      active: true,
+      rect: { left: 10, top: 10, width: 100, height: 100 },
+      startMs: 300,
+      duration: 300,
+    },
+  };
+
+  let travel = projectPresenterState(layers, 150, 1);
+  assert.equal(travel.cursor.motorActive, true);
+  assert.equal(travel.focus.visible, false);
+
+  let boundary = projectPresenterState(layers, 300, 1);
+  assert.equal(boundary.cursor.motorActive, false);
+  assert.equal(boundary.focus.motorActive, true);
+
+  let reveal = projectPresenterState(layers, 450, 1);
+  assert.equal(reveal.cursor.motorActive, false);
+  assert.equal(reveal.focus.motorActive, true);
+});
+
+test('projectPresenterState idle-cursor remains visible', () => {
+  let layers = {
+    cursor: { active: true, x: 100, y: 100, duration: 1000 },
+  };
+  let frame = projectPresenterState(layers, 0, 1);
+  assert.equal(frame.cursor.visible, true);
+  assert.equal(frame.cursor.x, 100);
+  assert.equal(frame.cursor.y, 100);
+
+  let layersTravel = {
+    cursor: { active: true, fromX: 0, fromY: 0, toX: 100, toY: 100, duration: 500 },
+  };
+  let frameActive = projectPresenterState(layersTravel, 250, 1);
+  assert.equal(frameActive.cursor.visible, true);
+
+  let frameCompleted = projectPresenterState(layersTravel, 600, 1);
+  assert.equal(frameCompleted.cursor.visible, true);
+  assert.equal(frameCompleted.cursor.x, 100);
+  assert.equal(frameCompleted.cursor.y, 100);
+});
+
+test('projectPresenterState rejects pair conflicts', () => {
+  let phases = {
+    focus: { active: true, rect: { left: 10, top: 10, width: 100, height: 100 }, duration: 600 },
+    marker: { active: true, name: 'underline', rect: { left: 10, top: 10, width: 100, height: 100 }, duration: 600 },
+    symbol: { active: true, name: 'check', rect: { left: 10, top: 10, width: 100, height: 100 }, duration: 600 },
+    cursor: { active: true, fromX: 0, fromY: 0, toX: 100, toY: 100, duration: 600 },
+    click: { active: true, x: 50, y: 50 }
+  };
+  let keys = Object.keys(phases);
+  for (let i = 0; i < keys.length; i++) {
+    for (let j = i + 1; j < keys.length; j++) {
+      let layers = {
+        [keys[i]]: phases[keys[i]],
+        [keys[j]]: phases[keys[j]]
+      };
+      assert.throws(() => {
+        projectPresenterState(layers, 100, 1);
+      }, (err) => {
+        assert.equal(err.code, 'ERR_MUTUALLY_EXCLUSIVE_LAYERS');
+        let expectedOrder = [keys[i], keys[j]].sort();
+        assert.deepEqual(err.diagnostics.activeLayers, expectedOrder);
+        return true;
+      });
+    }
+  }
+});
+
+test('projectPresenterState allows completed-residue coexistence', () => {
+  let layers = {
+    focus: { active: true, rect: { left: 10, top: 10, width: 100, height: 100 }, duration: 100 },
+    marker: { active: true, name: 'underline', rect: { left: 10, top: 10, width: 100, height: 100 }, duration: 100 },
+    cursor: { active: true, fromX: 0, fromY: 0, toX: 100, toY: 100, duration: 100 }
+  };
+  let frame = projectPresenterState(layers, 200, 1);
+  assert.equal(frame.focus.visible, true);
+  assert.equal(frame.focus.motorActive, false);
+  assert.equal(frame.marker.visible, true);
+  assert.equal(frame.marker.motorActive, false);
+  assert.equal(frame.cursor.visible, true);
+  assert.equal(frame.cursor.motorActive, false);
+
+  layers.symbol = { active: true, name: 'check', rect: { left: 20, top: 20, width: 50, height: 50 }, duration: 100, startMs: 200 };
+  let frameCoexist = projectPresenterState(layers, 250, 1);
+  assert.equal(frameCoexist.symbol.visible, true);
+  assert.equal(frameCoexist.symbol.motorActive, true);
+  assert.equal(frameCoexist.focus.visible, true);
+  assert.equal(frameCoexist.focus.motorActive, false);
+  assert.equal(frameCoexist.marker.visible, true);
+  assert.equal(frameCoexist.marker.motorActive, false);
+  assert.equal(frameCoexist.cursor.visible, true);
+  assert.equal(frameCoexist.cursor.motorActive, false);
+});
+
+test('projectPresenterState visible-idle-cursor shows cursor at endpoint or custom position', () => {
+  let layers = {
+    cursor: { active: true, x: 150, y: 250 }
+  };
+  let frameIdle = projectPresenterState(layers, 0, 1);
+  assert.equal(frameIdle.cursor.visible, true);
+  assert.equal(frameIdle.cursor.x, 150);
+  assert.equal(frameIdle.cursor.y, 250);
+
+  let layersTravel = {
+    cursor: { active: true, fromX: 0, fromY: 0, toX: 100, toY: 100, duration: 500 }
+  };
+  let frameCompleted = projectPresenterState(layersTravel, 600, 1);
+  assert.equal(frameCompleted.cursor.visible, true);
+  assert.equal(frameCompleted.cursor.x, 100);
+  assert.equal(frameCompleted.cursor.y, 100);
 });

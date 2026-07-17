@@ -58,7 +58,15 @@ function wordTiming(word = {}) {
   };
 }
 
+function explicitCueId(turn, index) {
+  if (typeof turn?.cueId !== 'string' || !turn.cueId.trim()) {
+    throw new TypeError(`live caption turn ${index} requires a non-empty cueId`);
+  }
+  return turn.cueId;
+}
+
 function authoredCue(turn = {}, index = 0) {
+  let cueId = explicitCueId(turn, index);
   let startSec = finiteTime(turn.startSec ?? turn.start, null);
   let endSec = finiteTime(turn.endSec ?? turn.end, null);
   if (startSec === null && turn.startMs !== undefined) startSec = finiteTime(Number(turn.startMs) / 1000, null);
@@ -70,7 +78,7 @@ function authoredCue(turn = {}, index = 0) {
     ? turn.wordTimings.map(wordTiming)
     : [];
   return {
-    id: turn.id || turn.cueId || `live-cue-${index + 1}`,
+    cueId,
     index,
     speaker: turn.speaker || turn.persona || '',
     text: turn.text || '',
@@ -88,10 +96,11 @@ function authoredCaptionChunks(cue) {
     ...word,
     speaker: cue.speaker,
     cueIndex: cue.index,
+    cueId: cue.cueId,
     timingSource: 'live-authored-timing',
   })));
   return chunks.map((chunk, chunkIndex) => ({
-    id: chunkIndex ? `${cue.id}:${chunkIndex + 1}` : cue.id,
+    cueId: chunkIndex ? `${cue.cueId}:${chunkIndex + 1}` : cue.cueId,
     index: cue.index,
     speaker: cue.speaker,
     text: chunk.words.join(' '),

@@ -9,6 +9,7 @@ import {
   normalizePresenterAnnotation,
   normalizePresenterMarker,
   normalizePresenterSymbol,
+  PRESENTER_FRAME_MS,
   playCursorScenario,
   resolvePresenterHighlightRect,
   resolvePresenterTravelDuration,
@@ -84,7 +85,7 @@ function makeFakeResolver(map = {}) {
   return resolver;
 }
 
-function makePresenterDom() {
+function makePresenterDom(frameStepMs = 1000) {
   let { window } = parseHTML('<!doctype html><html><body></body></html>');
   let now = 0;
   Object.defineProperty(window, 'performance', {
@@ -94,7 +95,7 @@ function makePresenterDom() {
   Object.defineProperty(window, 'innerWidth', { configurable: true, value: 800 });
   Object.defineProperty(window, 'innerHeight', { configurable: true, value: 600 });
   window.requestAnimationFrame = (cb) => {
-    now += 1000;
+    now += frameStepMs;
     return setTimeout(() => cb(now), 0);
   };
   window.cancelAnimationFrame = (id) => clearTimeout(id);
@@ -700,6 +701,22 @@ test('moveTo draws the focus frame around only the visible part of a scrollable 
   assert.equal(marquee.style.transform, 'translate(90px, 80px)');
   assert.equal(marquee.style.width, '240px');
   assert.equal(marquee.style.height, '170px');
+  cursor.dispose();
+});
+
+test('live cursor, focus, marker, and symbol phases remain serialized at 30 FPS', async () => {
+  let window = makePresenterDom(PRESENTER_FRAME_MS);
+  let cursor = createPresenterCursor(window.document);
+  let el = boxElement(window.document, { left: 180, top: 140, width: 180, height: 72 });
+
+  let focusReceipt = await cursor.moveTo(el);
+  let markerReceipt = await cursor.annotateElement(el, { marker: 'underline' });
+  let symbolReceipt = await cursor.annotateElement(el, { kind: 'symbol', symbol: 'check' });
+
+  assert.equal(focusReceipt.status, 'settled');
+  assert.equal(markerReceipt.status, 'settled');
+  assert.equal(symbolReceipt.status, 'settled');
+  assert.equal(window.document.querySelector('.pc-cursor').style.opacity, '1');
   cursor.dispose();
 });
 
