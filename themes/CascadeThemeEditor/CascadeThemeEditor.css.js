@@ -82,7 +82,7 @@ export default css`
       border-radius: var(--sn-badge-radius, 999px);
       background: var(--sn-badge-bg, var(--sn-sys-surface-raised));
       color: var(--sn-badge-color, var(--sn-sys-on-surface-dim));
-      font-size: var(--sn-theme-editor-status-size, var(--sn-badge-font-size, 11px));
+      font-size: var(--sn-theme-editor-status-size, var(--sn-badge-font-size, 12px));
       font-variant-numeric: tabular-nums;
       white-space: nowrap;
     }

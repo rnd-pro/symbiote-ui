@@ -147,7 +147,8 @@ test('live visual, karaoke, and accessibility output use the same placement trac
   assert.equal(visual.style.left, `${cue.measuredRect.x * 0.5}px`);
   assert.equal(visual.style.top, `${cue.measuredRect.y * 0.5}px`);
   assert.equal(visual.style.width, `${cue.measuredRect.width * 0.5}px`);
-  assert.equal(visual.style.fontSize, `${placementTrack.profile.fontSize * 0.5}px`);
+  assert.equal(visual.style.fontSize, `${cue.fontSize * 0.5}px`);
+  assert.equal(visual.style.lineHeight, `${cue.lineHeight * 0.5}px`);
   assert.equal(visual.style.fontWeight, '700');
   assert.match(visual.textContent, /GUIDE: Caption test one/);
   assert.equal(visual.querySelectorAll('.sn-live-captions-word-active').length, 1);
@@ -173,6 +174,50 @@ test('live visual, karaoke, and accessibility output use the same placement trac
   assert.ok(window.document.getElementById('container'));
   assert.equal(container.querySelector('.sn-live-captions-visual'), null);
   assert.equal(container.style.position, '');
+});
+
+test('live captions render the cue-level font selected for a narrow safe shelf', () => {
+  let { window } = parseHTML('<!doctype html><html><body><div id="container"></div></body></html>');
+  let container = window.document.getElementById('container');
+  container.getBoundingClientRect = () => ({ width: 1080, height: 1080 });
+  let placementTrack = createLiveCaptionTrack([{
+    id: 'proof-explain-map:caption-3',
+    speaker: 'ops',
+    text: 'double-clicking empty space to',
+    startSec: 0,
+    endSec: 2,
+  }], {
+    width: 1080,
+    height: 1080,
+    captionStyle: { preset: 'square', fontSize: 43 },
+    safeInsets: { top: 54, right: 54, bottom: 54, left: 54 },
+    avoidRegions: [
+      { id: 'focus', kind: 'focus', x: 54, y: 109, width: 667.609, height: 917, startSec: 0, endSec: 2 },
+      { id: 'action', kind: 'action', x: 54, y: 109, width: 667.609, height: 917, startSec: 0, endSec: 2 },
+      { id: 'annotation', kind: 'annotation', x: 733.609, y: 109, width: 120, height: 40, startSec: 0, endSec: 2 },
+      { id: 'chrome', kind: 'persistent-chrome', x: 0, y: 0, width: 1080, height: 110, startSec: 0, endSec: 2 },
+      { id: 'player', kind: 'critical-control', x: 771.609, y: 794.5, width: 291.391, height: 118, startSec: 0, endSec: 2 },
+      { id: 'composer', kind: 'critical-control', x: 755.609, y: 935, width: 323.391, height: 144, startSec: 0, endSec: 2 },
+    ],
+  });
+  let cue = placementTrack.cues[0];
+  let controller = new LiveCaptionController({
+    container,
+    document: window.document,
+    track: placementTrack,
+  });
+
+  controller.update(0.5);
+  let visual = container.querySelector('.sn-live-captions-visual');
+  assert.equal(placementTrack.profile.fontSize, 43);
+  assert.equal(cue.fontSize, 41);
+  assert.equal(visual.style.fontSize, '41px');
+  assert.equal(visual.style.lineHeight, '53px');
+  assert.deepEqual(
+    [...visual.querySelectorAll('.sn-live-captions-line')].map((line) => line.textContent),
+    ['OPS:', 'double-clicking', 'empty space', 'to'],
+  );
+  controller.dispose();
 });
 
 test('live caption overflow inspection reports clipped lines and vertical content', () => {

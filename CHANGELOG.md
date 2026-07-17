@@ -4,6 +4,21 @@ All notable changes to `symbiote-ui` will be documented in this file.
 
 ## Unreleased
 
+- Status badges now keep a 12px minimum font size across standalone, default,
+  dark, and cascade themes so compact state labels remain presentation-readable.
+- Live captions now apply the canonical cue-level font size and line height
+  chosen by the collision planner, so a narrowly adapted caption renders with
+  the same readable typography in the browser and final ASS/MP4 output.
+
+- Presenter focus frames now reveal from their initial drag point over the shared
+  30 FPS clock and expose reveal/handle geometry to deterministic render proof.
+  Handwritten markers use a slower, more legible high-opacity stroke in live and
+  rendered playback. Compact ovals reserve enough perimeter for their animated
+  marker nib and natural jitter without crossing protected target content.
+- Added `applyPresenterTextSelection()` as a browser-only native text emphasis
+  primitive for exact or whitespace-normalized quotes and explicit ranges across
+  DOM text nodes, inputs, and textareas, with portable receipts, ambiguity
+  failures, and deterministic clear/restore handles.
 - Programmatic chat composer updates now resize and scroll the input to the
   newest text without stealing focus, while changed drafts and real typing
   refresh the workspace's existing background activity.

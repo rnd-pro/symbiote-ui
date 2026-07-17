@@ -101,7 +101,8 @@ const CLICK_RIPPLE_SIZE_PX = 36;
 const CLICK_PRESS_MS = 240;
 const CLICK_FADE_MS = 220;
 export const PRESENTER_CLICK_DURATION_MS = CLICK_PRESS_MS + CLICK_FADE_MS;
-export const PRESENTER_ANNOTATION_DURATION_MS = 720;
+export const PRESENTER_FOCUS_REVEAL_DURATION_MS = 600;
+export const PRESENTER_ANNOTATION_DURATION_MS = 1000;
 export const PRESENTER_FRAME_RATE = 30;
 export const PRESENTER_FRAME_MS = 1000 / PRESENTER_FRAME_RATE;
 
@@ -401,6 +402,21 @@ ${overlaySelector} .pc-ants{
 }
 ${overlaySelector} .pc-ants-black{stroke:#000;}
 ${overlaySelector} .pc-ants-white{stroke:#fff;}
+${overlaySelector} .pc-focus-handle{
+  position:absolute;
+  top:0;
+  left:0;
+  box-sizing:border-box;
+  width:8px;
+  height:8px;
+  border:1px solid #fff;
+  border-radius:2px;
+  background:#111;
+  box-shadow:0 0 0 1px #111;
+  transform:translate(-50%, -50%);
+  pointer-events:none;
+  display:none;
+}
 ${overlaySelector} .pc-ink{
   position:absolute;
   top:0;
@@ -409,12 +425,12 @@ ${overlaySelector} .pc-ink{
   pointer-events:none;
   opacity:0;
 }
-${overlaySelector} .pc-ink.is-inking{opacity:0.55;}
+${overlaySelector} .pc-ink.is-inking{opacity:0.9;}
 ${overlaySelector} .pc-ink path{
   fill:none;
   stroke:var(--sn-presenter-marker, var(--sn-sys-accent));
-  stroke-width:2.6;
-  stroke-opacity:0.86;
+  stroke-width:4.2;
+  stroke-opacity:0.96;
   stroke-linecap:round;
   stroke-linejoin:round;
   shape-rendering:geometricPrecision;
@@ -806,12 +822,20 @@ const GESTURES = {
     let cx = rect.left + rect.width / 2;
     let cy = rect.top + rect.height / 2;
     let shortSide = Math.min(rect.width, rect.height);
-    let gap = 1.5 + Math.min(4.5, Math.max(0, shortSide - 24) * 0.075);
+    let expressiveGap = 1.5 + Math.min(4.5, Math.max(0, shortSide - 24) * 0.075);
+    let targetInset = Math.min(PRESENTER_ANNOTATION_TARGET_INSET_PX, shortSide * 0.25);
+    let jitterScale = Math.max(0.4, Math.min(1, shortSide / 80));
+    let safetyGap = INK_CURSOR_SIZE / 2
+      + PRESENTER_ANNOTATION_COLLISION_ALLOWANCE_PX
+      + GESTURE_JITTER_PX * jitterScale
+      - targetInset
+      + 0.75;
+    let gap = Math.max(expressiveGap, safetyGap);
     let rx = rect.width / 2 + gap + 0.5 + variation(seed, 33) * 0.2;
     let ry = rect.height / 2 + gap + variation(seed, 35) * 0.2;
     return {
       loops: 0.15,
-      jitterScale: Math.max(0.4, Math.min(1, Math.min(rect.width, rect.height) / 80)),
+      jitterScale,
       rest: { x: cx + rx, y: cy },
       point(t) {
         let angle = t * Math.PI * 2 * 1.15;
@@ -1183,22 +1207,59 @@ function projectStroke(layer, timeMs, seed, registry, normalizeName, options = {
   };
 }
 
+function projectFocusLayer(layer, timeMs, viewport) {
+  let hidden = {
+    visible: false,
+    left: 0,
+    top: 0,
+    width: 0,
+    height: 0,
+    opacity: 0,
+    antsDashOffset: 0,
+    revealProgress: 0,
+    revealing: false,
+    dragHandle: null,
+    targetRect: null,
+  };
+  if (!layer?.active || !layer.rect || Number(timeMs) < layerStartMs(layer)) return hidden;
+
+  let targetRect = clampPresenterRect(layer.rect, viewport);
+  let duration = Math.max(
+    PRESENTER_FRAME_MS,
+    Number(layer.durationMs ?? layer.duration) || PRESENTER_FOCUS_REVEAL_DURATION_MS,
+  );
+  let elapsed = frameElapsed(timeMs, layer, duration);
+  let timeProgress = Math.min(1, elapsed / duration);
+  let revealProgress = easeInOutCubic(timeProgress);
+  let width = revealProgress >= 1
+    ? targetRect.width
+    : Math.min(targetRect.width, Math.max(1, targetRect.width * revealProgress));
+  let height = revealProgress >= 1
+    ? targetRect.height
+    : Math.min(targetRect.height, Math.max(1, targetRect.height * revealProgress));
+  let marchTime = frameElapsed(timeMs, layer, Number.MAX_SAFE_INTEGER);
+
+  return {
+    visible: true,
+    left: targetRect.left,
+    top: targetRect.top,
+    width,
+    height,
+    opacity: 1,
+    antsDashOffset: -8 * ((marchTime % MARCH_MS) / MARCH_MS),
+    revealProgress,
+    revealing: timeProgress < 1,
+    dragHandle: {
+      x: targetRect.left + width,
+      y: targetRect.top + height,
+      visible: timeProgress < 1,
+    },
+    targetRect,
+  };
+}
+
 export function projectPresenterState(layers = {}, timeMs = 0, seed = 0, viewport = {}) {
-  let focus = layers.focus;
-  let focusRes = { visible: false, left: 0, top: 0, width: 0, height: 0, opacity: 0, antsDashOffset: 0 };
-  if (focus?.active && focus.rect && Number(timeMs) >= layerStartMs(focus)) {
-    let marchTime = frameElapsed(timeMs, focus, Number.MAX_SAFE_INTEGER);
-    let focusRect = clampPresenterRect(focus.rect, viewport);
-    focusRes = {
-      visible: true,
-      left: focusRect.left,
-      top: focusRect.top,
-      width: focusRect.width,
-      height: focusRect.height,
-      opacity: 1,
-      antsDashOffset: -8 * ((marchTime % MARCH_MS) / MARCH_MS),
-    };
-  }
+  let focusRes = projectFocusLayer(layers.focus, timeMs, viewport);
 
   let markerRes = projectStroke(
     layers.marker,
@@ -1299,6 +1360,9 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
   let { svg, black: rectBlack, white: rectWhite } = buildMarqueeSvg(doc);
   marquee.appendChild(svg);
 
+  let focusHandle = doc.createElement('div');
+  focusHandle.className = 'pc-focus-handle';
+
   // Ink trail: a faint SVG path drawn under the cursor during a gesture so the
   // flourish reads, then fades out. Sits below the cursor in the overlay.
   let ink = doc.createElementNS(SVG_NS, 'svg');
@@ -1314,6 +1378,7 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
   cursor.innerHTML = CURSOR_SVG;
 
   overlay.appendChild(marquee);
+  overlay.appendChild(focusHandle);
   overlay.appendChild(ink);
   overlay.appendChild(clickHalo);
   overlay.appendChild(cursor);
@@ -1385,6 +1450,13 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
         sizeMarqueeSvg(svg, [rectBlack, rectWhite], projected.focus.width, projected.focus.height);
         rectBlack.style.strokeDashoffset = `${projected.focus.antsDashOffset}`;
         rectWhite.style.strokeDashoffset = `${projected.focus.antsDashOffset - 4}`;
+        if (projected.focus.dragHandle?.visible) {
+          focusHandle.style.left = `${projected.focus.dragHandle.x}px`;
+          focusHandle.style.top = `${projected.focus.dragHandle.y}px`;
+          focusHandle.style.display = 'block';
+        } else {
+          focusHandle.style.display = 'none';
+        }
       } else {
         hideMarqueeFrame();
       }
@@ -1416,6 +1488,11 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
       }
 
       let needsNextFrame = false;
+      if (activeLayers.focus?.active
+        && elapsed < layerStartMs(activeLayers.focus)
+          + (activeLayers.focus.duration || PRESENTER_FOCUS_REVEAL_DURATION_MS)) {
+        needsNextFrame = true;
+      }
       if (activeLayers.cursor?.active
         && elapsed < layerStartMs(activeLayers.cursor) + (activeLayers.cursor.duration || TRAVEL_MIN_MS)) {
         needsNextFrame = true;
@@ -1516,6 +1593,7 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
 
   function hideMarqueeFrame() {
     marquee.classList.add('pc-marquee-faded');
+    focusHandle.style.display = 'none';
     marquee.style.width = '0px';
     marquee.style.height = '0px';
     sizeMarqueeSvg(svg, [rectBlack, rectWhite], 0, 0);
@@ -1565,7 +1643,11 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
     let distance = Math.hypot(left - cursorX, top - cursorY);
     let duration = resolvePresenterTravelDuration(distance);
 
-    activeLayers.focus = { active: true, rect: { left, top, width: w, height: h } };
+    activeLayers.focus = {
+      active: true,
+      rect: { left, top, width: w, height: h },
+      duration: PRESENTER_FOCUS_REVEAL_DURATION_MS,
+    };
     activeLayers.cursor = {
       active: true,
       fromX: cursorX,
@@ -1731,7 +1813,11 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
     let mode = frame.mode === 'frame' ? 'frame' : 'cursor';
     let focusRect = resolvePresenterHighlightRect(targetRect, viewport);
     let projected = projectPresenterState({
-      focus: { active: true, rect: focusRect },
+      focus: {
+        active: true,
+        rect: focusRect,
+        duration: Number(frame.durationMs) || PRESENTER_FOCUS_REVEAL_DURATION_MS,
+      },
       marker: null,
       symbol: null,
       click: null,
@@ -1754,6 +1840,13 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
     sizeMarqueeSvg(svg, [rectBlack, rectWhite], projected.focus.width, projected.focus.height);
     rectBlack.style.strokeDashoffset = `${projected.focus.antsDashOffset}`;
     rectWhite.style.strokeDashoffset = `${projected.focus.antsDashOffset - 4}`;
+    if (projected.focus.dragHandle?.visible) {
+      focusHandle.style.left = `${projected.focus.dragHandle.x}px`;
+      focusHandle.style.top = `${projected.focus.dragHandle.y}px`;
+      focusHandle.style.display = 'block';
+    } else {
+      focusHandle.style.display = 'none';
+    }
     if (mode === 'cursor') setCursor(projected.cursor.x, projected.cursor.y);
     else cursor.style.opacity = '0';
 
@@ -1762,6 +1855,8 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
       visible: projected.focus.visible,
       mode,
       elapsedMs,
+      revealProgress: projected.focus.revealProgress,
+      revealing: projected.focus.revealing,
       targetRect,
       frameRect: {
         left: projected.focus.left,
@@ -1772,6 +1867,7 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
         bottom: projected.focus.top + projected.focus.height,
       },
       antsDashOffset: projected.focus.antsDashOffset,
+      dragHandle: projected.focus.dragHandle,
       cursor: mode === 'cursor'
         ? { x: projected.cursor.x, y: projected.cursor.y, visible: projected.cursor.visible }
         : null,

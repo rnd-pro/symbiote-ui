@@ -1725,7 +1725,7 @@ export function createCascadeTheme(options = {}) {
     '--sn-card-title-size': headingToken(11),
     '--sn-banner-font-size': typeToken(12),
     '--sn-banner-icon-size': typeToken(18),
-    '--sn-badge-font-size': typeToken(11),
+    '--sn-badge-font-size': typeToken(12),
     '--sn-tree-label-size': typeToken(12),
     '--sn-tree-icon-size': typeToken(15),
     '--sn-tree-kind-size': typeToken(10),

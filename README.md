@@ -187,6 +187,11 @@ between checkpoints along a curved path. `resolveTarget` maps each agent-authore
 holds `holdMs` (or `defaultHoldMs`), then `onStep` fires. Pass an `AbortSignal`
 as `signal` to stop playback and clear the cursor mid-run.
 
+For native browser text emphasis, import `applyPresenterTextSelection` from
+`symbiote-ui/chat/presenter-text-selection.js`. It selects one exact or
+whitespace-normalized quote (or an explicit offset range), returns a portable
+receipt, and provides deterministic `clear()` and `restore()` operations.
+
 ## Example: Action Message Part
 
 ```js

@@ -1364,6 +1364,7 @@ export function buildWebMcpTourPrompt({
   actions = createWebMcpPresentationActions(),
   taskText = '',
   profile = '',
+  speakerMode = 'single',
   turnBudget = null,
   requestedSurfaceIds = [],
   selectedTabIds = [],
@@ -1379,13 +1380,21 @@ export function buildWebMcpTourPrompt({
   let minTurns = Number(budget.min ?? budget.minTurns);
   let maxTurns = Number(budget.max ?? budget.maxTurns);
   let turnRule = Number.isFinite(minTurns) && Number.isFinite(maxTurns) && minTurns > 0 && maxTurns >= minTurns
-    ? `${Math.floor(minTurns)}-${Math.floor(maxTurns)} turns`
-    : '5-8 turns';
+    ? `Use ${Math.floor(minTurns)}-${Math.floor(maxTurns)} turns because the request explicitly sets that budget.`
+    : 'Choose the number of turns from the user task and grounded UI actions. Do not add a turn only to create an opening or closing.';
+  let dialogue = speakerMode === 'dialogue';
+  let speakerRule = dialogue
+    ? 'Use guide and ops. Both selected voices must contribute, but do not force alternation, reply pairs, an opening, a closing, or any dialogue-act pattern.'
+    : 'Use guide as the single narrator. An opening and closing are optional and must follow only from the user task.';
+  let personaSchema = dialogue
+    ? '{"guide":{"pitch":1.15,"rate":1},"ops":{"pitch":0.8,"rate":1}}'
+    : '{"guide":{"pitch":1,"rate":1}}';
+  let turnPersonaSchema = dialogue ? 'guide|ops' : 'guide';
   let taskLine = safeTask ? `User task: "${safeTask}". ` : '';
   let profileLine = safeProfile ? `Presentation profile: "${safeProfile}". ` : '';
   let requestedLine = requested.length ? `Requested targetIds to cover when possible: ${requested.join(', ')}. ` : '';
   let tabLine = selectedTabs.length ? `Requested tab/window ids to include: ${selectedTabs.join(', ')}. ` : '';
-  return `You are an interface narrator for UI that this agent already created. The request includes browser-level WebMCP context with product views/actions, live runtime surfaces, and narration cues; use it as the source of truth. Generate a guided tour of the current workspace in TWO voices: guide (host, overview) and ops (operator, details). Workspace: "${safeTitle}". ${taskLine}${profileLine}${requestedLine}${tabLine}In cue use ONLY these targetId values:\n${targetLines}\nWrite ALL narration text in ${language}. Return STRICTLY one \`\`\`json block with the schema: {"personas":{"guide":{"pitch":1.15,"rate":1},"ops":{"pitch":0.8,"rate":1}},"turns":[{"persona":"guide|ops","text":"lively spoken ${language} without markdown or symbols","cue":{"targetId":"one of the listed ids"},"annotations":[{"targetId":"optional listed detail id","intent":"detail|question|risk|success|affinity|flourish","kind":"marker|symbol","marker":"underline|box|bracket|slash","symbol":"question|cross|check|heart|flourish","placement":"over|after|before|corner|below"}]}]}. Rules: ${turnRule}, voices may use short natural reactions but every turn must serve the user task, include the requested targets first when they are supplied, and do not repeat the raw target metadata. Keep each spoken text short, conversational, in ${language}, without symbols. cue is for cursor focus and the host draws its own focus frame; do NOT duplicate that focus with box/circle/bracket annotations on the same target. Use marker annotations only for detail targets such as words, values, badges, and small controls; use question/cross/check/heart/flourish symbols for meaning. Do NOT say undefined, null, NaN, or missing raw values; skip unavailable data instead. Do NOT quote raw code tokens from source panels. Do NOT use words about position (left, right, top, bottom, center) — the interface is adaptive and panels can be anywhere; use neutral transitions in ${language}. Some targets may be tagged [collapsed]; the interface reveals them for that turn and restores them afterward, so narrate their purpose normally. ${describeWebMcpTourActionInstructions(actions)} No text outside the json block.`;
+  return `You are an interface narrator for UI that this agent already created. The request includes browser-level WebMCP context with product views/actions, live runtime surfaces, and narration cues; use it as the source of truth. Generate a guided tour of the current workspace. ${speakerRule} Workspace: "${safeTitle}". ${taskLine}${profileLine}${requestedLine}${tabLine}In cue use ONLY these targetId values:\n${targetLines}\nWrite ALL narration text in ${language}. Return STRICTLY one \`\`\`json block with the schema: {"personas":${personaSchema},"turns":[{"persona":"${turnPersonaSchema}","text":"lively spoken ${language} without markdown or symbols","cue":{"targetId":"one of the listed ids"},"annotations":[{"targetId":"optional listed detail id","intent":"detail|question|risk|success|affinity|flourish","kind":"marker|symbol","marker":"underline|box|bracket|slash","symbol":"question|cross|check|heart|flourish","placement":"over|after|before|corner|below"}]}]}. Rules: ${turnRule} Every turn must serve the user task, include the requested targets first when they are supplied, and do not repeat the raw target metadata. Keep each spoken text short, conversational, in ${language}, without symbols. cue is for cursor focus and the host draws its own focus frame; do NOT duplicate that focus with box/circle/bracket annotations on the same target. Use marker annotations only for detail targets such as words, values, badges, and small controls; use question/cross/check/heart/flourish symbols for meaning. Do NOT say undefined, null, NaN, or missing raw values; skip unavailable data instead. Do NOT quote raw code tokens from source panels. Do NOT use words about position (left, right, top, bottom, center) — the interface is adaptive and panels can be anywhere; use neutral transitions in ${language}. Some targets may be tagged [collapsed]; the interface reveals them for that turn and restores them afterward, so narrate their purpose normally. ${describeWebMcpTourActionInstructions(actions)} No text outside the json block.`;
 }
 
 function markerTargetAllowed(targetId, targetMap = new Map()) {
