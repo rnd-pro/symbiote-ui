@@ -1,6 +1,7 @@
 import { getSiteRoute, withSiteBasePath } from './routes.js';
 
 const basePath = process.env.PAGES_BASE_PATH || '/';
+const baseHref = basePath === '/' ? '/' : `${basePath.replace(/\/$/, '')}/`;
 const homeHref = withSiteBasePath(basePath, getSiteRoute('home'));
 const docsHref = withSiteBasePath(basePath, getSiteRoute('docs'));
 const catalogHref = withSiteBasePath(basePath, getSiteRoute('catalog'));
@@ -11,7 +12,7 @@ export default /*html*/ `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<base href="${basePath}">
+<base href="${baseHref}">
 <title>Symbiote UI — Agent-ready UI construction</title>
 <meta name="description" content="Agent-ready Web Components, layouts, themes, manifests, and UI contracts for Symbiote systems.">
 <style>
