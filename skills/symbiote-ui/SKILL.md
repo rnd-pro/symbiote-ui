@@ -232,7 +232,10 @@ import { registerWebMcpTool, triggerWebMcpCommand } from 'symbiote-ui/webmcp';
 let { descriptor, unregister } = await registerWebMcpTool({
   name: 'update-panel',
   description: 'Update panel state',
-  inputSchema: { type: 'object', properties: { label: { type: 'string' } } }
+  inputSchema: { type: 'object', properties: { label: { type: 'string' } } },
+  execute(input) {
+    return { label: input.label };
+  }
 });
 
 // Trigger a command (bubbles to controller via webmcp-command event)

@@ -19,7 +19,7 @@ and whenever `CHROMIUM_BASELINE_TARGET` changes.
 | Declarative Shadow DOM | baseline | - | SSR process HTML, stream rendering, root shadow hydration | `HTMLTemplateElement.prototype.shadowRootMode` |
 | adoptedStyleSheets / rootStyles delivery | baseline | - | SSR rootStyles, cascade themes, constructable stylesheet delivery | `Document.prototype.adoptedStyleSheets`, `ShadowRoot.prototype.adoptedStyleSheets`, `CSSStyleSheet.prototype.replaceSync` |
 | view-transition-name custom idents | baseline | - | Workspace address serialization, panel transition targets, route animations | `CSS.supports("view-transition-name", "workspace-panel-main")` |
-| navigator.modelContext | shimmed | symbiote-webmcp-shim | WebMCP tool registration, tour context, agent-visible component actions | `navigator.modelContext` or `document.modelContext`; otherwise install `symbiote-webmcp-shim` |
+| document.modelContext | shimmed | symbiote-webmcp-shim | WebMCP tool registration, tour context, agent-visible component actions | `document.modelContext`; otherwise install `symbiote-webmcp-shim` |
 
 ## Source Notes
 
@@ -28,5 +28,5 @@ and whenever `CHROMIUM_BASELINE_TARGET` changes.
 - Declarative Shadow DOM and constructable stylesheets are required for SSR and
   rootStyles delivery paths, but hosts still own fallback rendering where a target
   browser does not expose the feature.
-- `navigator.modelContext` is intentionally shimmed until the WebMCP surface is
+- `document.modelContext` is intentionally shimmed until the WebMCP surface is
   stable in Chromium; this row is the R-UI28 exception that must be re-graded first.
