@@ -94,13 +94,26 @@ for (let shellRoute of shellRoutes) {
     );
   }
 
-  assert.match(content, /aria-label="Switch to dark theme"/);
-  assert.match(content, /Switch to light theme/);
-  assert.match(
-    content,
-    /@media \(max-width: 768px\)[\s\S]*?\.header-container\s*\{[\s\S]*?flex-direction: column;/,
-    `${shellRoute.file} must stack its header at tablet widths`
-  );
+  if (shellRoute.file === 'index.html') {
+    assert.match(content, /data-theme-toggle/);
+    assert.match(content, /motion-surface/);
+    for (const [, motionBody] of content.matchAll(/<div class="motion-surface">([\s\S]*?)<\/div>/g)) {
+      assert.doesNotMatch(motionBody, /<(?:button|input)\b/);
+    }
+    assert.match(
+      content,
+      /@media \(max-width: 760px\)[\s\S]*?\.header-inner\s*\{/,
+      `${shellRoute.file} must adapt its compact header at mobile widths`
+    );
+  } else {
+    assert.match(content, /aria-label="Switch to dark theme"/);
+    assert.match(content, /Switch to light theme/);
+    assert.match(
+      content,
+      /@media \(max-width: 768px\)[\s\S]*?\.header-container\s*\{[\s\S]*?flex-direction: column;/,
+      `${shellRoute.file} must stack its header at tablet widths`
+    );
+  }
 }
 
 let docsIndex = fs.readFileSync(path.join(siteDir, 'docs/index.html'), 'utf8');
@@ -125,7 +138,7 @@ for (let route of SITE_ROUTES) {
 console.log('Running permanent focused tests for Symbiote UI Native Web Animation...');
 
 import { parseHTML } from 'linkedom';
-import { hasComponent, COMPONENTS } from '../manifest/component-registry.js';
+import { COMPONENTS } from '../manifest/component-registry.js';
 
 const siteTimeline = await import('../_site/timeline.js');
 const expectedPhases = ['metadata', 'discover', 'select', 'hydrate', 'ready'];
@@ -204,92 +217,23 @@ assert.equal(stateReady.metric, 'Active');
 
 const htmlPath = path.join(siteDir, 'index.html');
 const indexHtmlContent = fs.readFileSync(htmlPath, 'utf8');
-const { document } = parseHTML(indexHtmlContent);
+const { document: landingDocument } = parseHTML(indexHtmlContent);
 
-const fallbackContainer = document.querySelector('.fallback-only');
-assert.ok(fallbackContainer);
-const steps = fallbackContainer.querySelectorAll('.pipeline-step');
-assert.equal(steps.length, 5);
+assert.match(indexHtmlContent, /How it works/);
+assert.ok(landingDocument.querySelectorAll('.motion-surface').length >= 3);
+for (const motionSurface of landingDocument.querySelectorAll('.motion-surface')) {
+  assert.equal(motionSurface.querySelectorAll('button, input, select').length, 0);
+}
+assert.equal(landingDocument.querySelectorAll('#timeline-seek, .phase-btn, #btn-play-pause, #btn-replay').length, 0);
 
-const expectedTitles = [
-  'Provider Metadata',
-  'Manifest Discovery',
-  'Primitive Selection',
-  'UI Hydration',
-  'Ready Composition'
-];
-
-steps.forEach((step, index) => {
-  const stepNum = step.querySelector('.step-num').textContent.trim();
-  const stepTitle = step.querySelector('.step-title').textContent.trim();
-  const stepDesc = step.querySelector('.step-desc').textContent.trim();
-
-  assert.equal(stepNum, `0${index + 1}`);
-  assert.equal(stepTitle, expectedTitles[index]);
-  assert.ok(stepDesc.length > 0);
-});
-
-const sceneContainer = document.querySelector('#scene-container');
-assert.ok(sceneContainer);
-assert.ok(sceneContainer.classList.contains('interactive-only'));
-
-const playPauseBtn = document.querySelector('#btn-play-pause');
-assert.ok(playPauseBtn);
-assert.ok(document.querySelector('#play-pause-icon'));
-assert.ok(document.querySelector('#txt-play-pause'));
-
-const replayBtn = document.querySelector('#btn-replay');
-assert.ok(replayBtn);
-
-const seekSlider = document.querySelector('#timeline-seek');
-assert.ok(seekSlider);
-assert.equal(seekSlider.getAttribute('min'), '0');
-assert.equal(seekSlider.getAttribute('max'), '10000');
-
-const phaseBtns = document.querySelectorAll('.phase-btn');
-assert.equal(phaseBtns.length, 5);
-phaseBtns.forEach((btn, index) => {
-  const expectedPhase = expectedPhases[index];
-  assert.equal(btn.getAttribute('data-phase'), expectedPhase);
-  assert.equal(btn.getAttribute('data-seek-time'), (index * 2000).toString());
-});
-
-const svgElement = document.querySelector('#animation-svg');
-assert.ok(svgElement);
-assert.equal(svgElement.getAttribute('role'), 'img');
-assert.ok(document.querySelector('#svg-title'));
-assert.ok(document.querySelector('#svg-desc'));
-
-expectedPhases.forEach((phase) => {
-  assert.ok(document.querySelector(`#group-${phase}`));
-});
-
-const selectGroup = document.querySelector('#group-select');
-assert.ok(selectGroup);
-const selectTexts = Array.from(selectGroup.querySelectorAll('text'))
-  .map(el => el.textContent.trim())
-  .filter(txt => txt.startsWith('<') && txt.endsWith('>'))
-  .map(txt => txt.slice(1, -1));
-
-assert.equal(selectTexts.length, 2);
-selectTexts.forEach(tag => {
-  assert.ok(hasComponent(tag));
-});
+const animationHtmlContent = fs.readFileSync(path.join(siteDir, 'demo/animation.html'), 'utf8');
+const { document } = parseHTML(animationHtmlContent);
 
 assert.ok(fs.existsSync(path.join(siteDir, 'timeline.js')));
 assert.ok(fs.existsSync(path.join(siteDir, 'animation.js')));
 
-const animationScript = Array.from(document.querySelectorAll('script[type="module"]'))
-  .find((s) => s.getAttribute('src') && s.getAttribute('src').endsWith('animation.js'));
-assert.ok(animationScript);
-
-const sliderElement = document.querySelector('.timeline-slider');
-assert.ok(sliderElement);
-
-const visualViewport = document.querySelector('.scene-visual-area');
-assert.ok(visualViewport);
-assert.equal(visualViewport.getAttribute('tabindex'), '0');
-assert.ok(visualViewport.getAttribute('aria-label'));
+assert.equal(landingDocument.querySelectorAll('script[type="module"][src$="animation.js"]').length, 0);
+assert.ok(document.querySelector('script[type="module"][src$="animation.js"]'));
 
 function getLuminance(hex) {
   let rgb = hex.replace('#', '');
@@ -634,7 +578,7 @@ function captureSnapshot(doc) {
 import { createSymbioteAnimation } from '../site/animation.js';
 
 reducedMotionMatches = true;
-const tempDoc = parseHTML(indexHtmlContent).document;
+const tempDoc = parseHTML(animationHtmlContent).document;
 const tempWin = tempDoc.defaultView;
 tempWin.matchMedia = win.matchMedia;
 tempWin.performance = win.performance;
@@ -742,7 +686,7 @@ win.dispatchEvent(pageshowEventRepeat);
 assert.ok(rafCount - initialRafCount <= 1);
 assert.ok(activeRafHandles.size <= 1);
 
-const pDoc = parseHTML(indexHtmlContent).document;
+const pDoc = parseHTML(animationHtmlContent).document;
 const pWin = pDoc.defaultView;
 pWin.matchMedia = win.matchMedia;
 pWin.performance = win.performance;

@@ -89,6 +89,12 @@ export const SITE_ROUTES = freezeRoutes([
     navLabel: 'Demos',
   },
   {
+    id: 'demo-animation',
+    file: 'demo/animation.html',
+    path: '/demo/animation.html',
+    title: 'Native Web Animation Demo',
+  },
+  {
     id: 'demo-canvas-graph-gravity-lab',
     file: 'demo/canvas-graph-gravity-lab.html',
     path: '/demo/canvas-graph-gravity-lab.html',
