@@ -17,7 +17,7 @@ const requiredFeatures = [
   'Declarative Shadow DOM',
   'adoptedStyleSheets / rootStyles delivery',
   'view-transition-name custom idents',
-  'navigator.modelContext',
+  'document.modelContext',
 ];
 
 function splitTableRow(line) {
@@ -74,7 +74,7 @@ test('feature ledger rows carry valid status, shim, and consumer data', async ()
     }
   }
 
-  assert.equal(rowsByFeature.get('navigator.modelContext').shim, 'symbiote-webmcp-shim');
+  assert.equal(rowsByFeature.get('document.modelContext').shim, 'symbiote-webmcp-shim');
 });
 
 test('platform baseline doc does not carry private machine details', async () => {

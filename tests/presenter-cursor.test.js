@@ -572,8 +572,7 @@ test('annotateElement clears the focus marquee before drawing marker ink', async
   let cursor = createPresenterCursor(window.document);
   let el = boxElement(window.document, { left: 120, top: 80, width: 160, height: 64 });
 
-  cursor.moveTo(el, { animate: false });
-  await nextFrame();
+  await cursor.moveTo(el, { animate: false });
 
   let overlay = window.document.querySelector('.symbiote-presenter-cursor');
   let marquee = window.document.querySelector('.pc-marquee');
@@ -693,8 +692,7 @@ test('moveTo draws the focus frame around only the visible part of a scrollable 
   scroller.appendChild(target);
 
   let cursor = createPresenterCursor(document);
-  cursor.moveTo(target);
-  await nextFrame();
+  await cursor.moveTo(target);
 
   let marquee = document.querySelector('.pc-marquee');
   assert.ok(document.querySelector('.symbiote-presenter-cursor').classList.contains('is-visible'));

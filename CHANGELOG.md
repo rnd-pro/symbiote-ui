@@ -4,6 +4,26 @@ All notable changes to `symbiote-ui` will be documented in this file.
 
 ## Unreleased
 
+## [0.3.0-alpha.64] - 2026-07-18
+
+### Added
+
+- Added `destructiveHint: true` under `annotations` on the descriptor for destructive action descriptors.
+- Added a `bundle` option to `registerProductContextTools()` so products can register the exact executable descriptors already used to construct their adapter and consumer.
+
+### Fixed
+
+- Removed the unused legacy `createNativeToolDescriptor()` export now that
+  registration uses canonical executable plain descriptors directly.
+- Fixed `registerWebMcpTool` to register and return the same canonical plain executable descriptor passed by the product bundle, preserving exact descriptor identity before and after refresh.
+- Fixed registration signal lifecycle using an internal `AbortController` that properly cleans up external listeners on all exits, supports idempotent unregistration, and handles undefined native disposers.
+- Fixed native capability check to read active `modelContext` markers (`nativeActive` and `supportsNativeToolDescriptor`) directly, removing public options bag overrides.
+- Fixed native options forwarding to pass exactly `signal` and `exposedTo` options to `registerTool`.
+- Fixed product registration options resolver to correctly identify options bags containing `signal` or `exposedTo`.
+- Fixed `createProductWebMcpBundle` to bind all allowed actions to their own executable plain descriptor closures, preserving action/descriptor pairing through filtering and refresh in-place, and forwarding out-of-band context arguments.
+- Fixed tool validation to fail fast with tool/action identity before the first native registration, rolling back previous registrations on partial failure.
+- Fixed runtime-context property publication to restore prior property state exactly and made producer refresh publication replacement atomic.
+
 ## [0.3.0-alpha.63] - 2026-07-17
 
 - Keep cascade-theme control foregrounds above WCAG AA after browser RGB quantization.

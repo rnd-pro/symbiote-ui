@@ -401,6 +401,7 @@ test('product context actions become WebMCP descriptors without a browser-only d
   let published = [];
   let unpublished = 0;
   let result = await registerProductContextTools(context, {
+    executeAction() {},
     modelContext: {
       registerTool(tool) {
         registered.push(tool);
@@ -437,6 +438,16 @@ test('product context actions become WebMCP descriptors without a browser-only d
   assert.equal(published[1].value.runtime.cues[0].id, 'window:release-window-updated');
   result.unregister();
   assert.equal(unpublished, 2);
+
+  let destructiveAction = {
+    id: 'delete-card',
+    name: 'delete_card',
+    destructive: true
+  };
+  let destructiveDesc = createProductActionToolDescriptor(context, destructiveAction);
+  assert.equal(destructiveDesc.annotations.destructiveHint, true);
+  assert.equal(destructiveDesc.annotations.destructive, true);
+  assert.ok(!('destructiveHint' in destructiveDesc));
 });
 
 test('createWebMcpObserver records recent events for WebMCP runtime refresh and hooks', () => {
