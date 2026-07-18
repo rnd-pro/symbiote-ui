@@ -4,6 +4,13 @@ All notable changes to `symbiote-ui` will be documented in this file.
 
 ## Unreleased
 
+## [0.3.0-alpha.65] - 2026-07-18
+
+### Fixed
+
+- Kept compact composer parameters on the same action row at narrow widths.
+- Preserved full native select hit areas and explicit accessible names when footer controls collapse to icon-only presentation.
+
 ## [0.3.0-alpha.64] - 2026-07-18
 
 ### Added

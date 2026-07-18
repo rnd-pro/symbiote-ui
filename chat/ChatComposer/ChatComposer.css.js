@@ -417,6 +417,7 @@ sn-button.btn-send[variant="icon"].btn-stop::after {
 
 .composer-footer-select-control {
   padding-right: var(--sn-step-2);
+  position: relative;
 }
 
 .composer-footer-checkbox-control {
@@ -464,20 +465,27 @@ sn-button.btn-send[variant="icon"].btn-stop::after {
   text-overflow: ellipsis;
 }
 
-.composer-param-collapsed .composer-footer-select,
-.composer-param-collapsed .composer-footer-label,
-.composer-param-collapsed .composer-footer-value,
-.composer-param-collapsed .composer-footer-suffix {
-  width: var(--sn-composer-collapsed-control-width);
-  max-width: var(--sn-composer-collapsed-control-width);
-  padding-right: var(--sn-composer-collapsed-control-padding);
-  color: transparent !important;
+.composer-param-collapsed {
+  --sn-is-collapsed: 1;
 }
 
-.composer-param-collapsed .composer-footer-label,
-.composer-param-collapsed .composer-footer-value,
-.composer-param-collapsed .composer-footer-suffix {
-  display: none;
+@container style(--sn-is-collapsed: 1) {
+  .composer-footer-select {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    min-width: var(--sn-composer-collapsed-control-width);
+    height: 100%;
+    box-sizing: border-box;
+    padding-right: var(--sn-composer-collapsed-control-padding);
+    opacity: 0;
+    z-index: 1;
+    cursor: pointer;
+  }
+
+  :is(.composer-footer-label, .composer-footer-value, .composer-footer-suffix) {
+    display: none;
+  }
 }
 
 .composer-footer-details-popover {
@@ -786,108 +794,33 @@ sn-button.btn-send[variant="icon"].btn-stop::after {
 }
 
 @container composer-footer (width <= 560px) {
-  .composer-priority-1 .composer-footer-select,
-  .composer-priority-1 .composer-footer-label,
-  .composer-priority-1 .composer-footer-value,
-  .composer-priority-1 .composer-footer-suffix {
-    width: var(--sn-composer-collapsed-control-width);
-    max-width: var(--sn-composer-collapsed-control-width);
-    padding-right: var(--sn-composer-collapsed-control-padding);
-    color: transparent !important;
-  }
-
-  .composer-priority-1 .composer-footer-label,
-  .composer-priority-1 .composer-footer-value,
-  .composer-priority-1 .composer-footer-suffix {
-    display: none;
+  .composer-priority-1 {
+    --sn-is-collapsed: 1;
   }
 }
 
 @container composer-footer (width <= 500px) {
-  .composer-param-model.composer-long-value .composer-footer-select,
-  .composer-param-model.composer-long-value .composer-footer-label,
-  .composer-param-model.composer-long-value .composer-footer-value,
-  .composer-param-model.composer-long-value .composer-footer-suffix {
-    width: var(--sn-composer-collapsed-control-width);
-    max-width: var(--sn-composer-collapsed-control-width);
-    padding-right: var(--sn-composer-collapsed-control-padding);
-    color: transparent !important;
-  }
-
-  .composer-param-model.composer-long-value .composer-footer-label,
-  .composer-param-model.composer-long-value .composer-footer-value,
-  .composer-param-model.composer-long-value .composer-footer-suffix {
-    display: none;
-  }
-
-  .composer-priority-2 .composer-footer-select,
-  .composer-priority-2 .composer-footer-label,
-  .composer-priority-2 .composer-footer-value,
-  .composer-priority-2 .composer-footer-suffix {
-    width: var(--sn-composer-collapsed-control-width);
-    max-width: var(--sn-composer-collapsed-control-width);
-    padding-right: var(--sn-composer-collapsed-control-padding);
-    color: transparent !important;
-  }
-
-  .composer-priority-2 .composer-footer-label,
-  .composer-priority-2 .composer-footer-value,
-  .composer-priority-2 .composer-footer-suffix {
-    display: none;
+  .composer-param-model.composer-long-value,
+  .composer-priority-2 {
+    --sn-is-collapsed: 1;
   }
 }
 
 @container composer-footer (width <= 440px) {
-  .composer-priority-3 .composer-footer-select,
-  .composer-priority-3 .composer-footer-label,
-  .composer-priority-3 .composer-footer-value,
-  .composer-priority-3 .composer-footer-suffix {
-    width: var(--sn-composer-collapsed-control-width);
-    max-width: var(--sn-composer-collapsed-control-width);
-    padding-right: var(--sn-composer-collapsed-control-padding);
-    color: transparent !important;
-  }
-
-  .composer-priority-3 .composer-footer-label,
-  .composer-priority-3 .composer-footer-value,
-  .composer-priority-3 .composer-footer-suffix {
-    display: none;
+  .composer-priority-3 {
+    --sn-is-collapsed: 1;
   }
 }
 
 @container composer-footer (width <= 380px) {
-  .composer-priority-4 .composer-footer-select,
-  .composer-priority-4 .composer-footer-label,
-  .composer-priority-4 .composer-footer-value,
-  .composer-priority-4 .composer-footer-suffix {
-    width: var(--sn-composer-collapsed-control-width);
-    max-width: var(--sn-composer-collapsed-control-width);
-    padding-right: var(--sn-composer-collapsed-control-padding);
-    color: transparent !important;
-  }
-
-  .composer-priority-4 .composer-footer-label,
-  .composer-priority-4 .composer-footer-value,
-  .composer-priority-4 .composer-footer-suffix {
-    display: none;
+  .composer-priority-4 {
+    --sn-is-collapsed: 1;
   }
 }
 
 @container composer-footer (width <= 320px) {
-  .composer-priority-5 .composer-footer-select,
-  .composer-priority-5 .composer-footer-label,
-  .composer-priority-5 .composer-footer-value,
-  .composer-priority-5 .composer-footer-suffix {
-    width: var(--sn-composer-collapsed-control-width);
-    max-width: var(--sn-composer-collapsed-control-width);
-    padding-right: var(--sn-composer-collapsed-control-padding);
-    color: transparent !important;
-  }
-
-  .composer-priority-5 .composer-footer-label,
-  .composer-priority-5 .composer-footer-value,
-  .composer-priority-5 .composer-footer-suffix {
-    display: none;
+  .composer-priority-5 {
+    --sn-is-collapsed: 1;
   }
 }
 
@@ -1231,67 +1164,6 @@ chat-composer.drag-over .composer-body {
 }
 
 @container chat-composer (width <= 480px) {
-  .composer-body {
-    grid-template-columns: auto minmax(0, 1fr) auto auto;
-    grid-template-rows: minmax(var(--sn-composer-input-min-height), auto) auto auto;
-  }
-
-  :host([leading-controls]) .composer-body,
-  chat-composer[leading-controls] .composer-body {
-    grid-template-columns: auto minmax(0, 1fr) auto auto;
-  }
-
-  :host([leading-controls]) .composer-leading-controls,
-  chat-composer[leading-controls] .composer-leading-controls {
-    grid-column: 1;
-    grid-row: 3;
-  }
-
-  :host([leading-controls]) .composer-body textarea,
-  chat-composer[leading-controls] .composer-body textarea {
-    grid-column: 1 / -1;
-  }
-
-  .composer-footer {
-    grid-column: 1 / -1;
-    grid-row: 2;
-  }
-
-  .composer-actions {
-    grid-column: 2;
-    grid-row: 3;
-    width: auto;
-    max-width: min(54cqi, var(--sn-composer-actions-max-inline-size, 460px));
-    flex-wrap: nowrap;
-    overflow: hidden;
-  }
-
-  .btn-mic {
-    grid-column: 3;
-    grid-row: 3;
-    align-self: end;
-  }
-
-  .composer-body > sn-button.btn-send {
-    grid-column: 4;
-    grid-row: 3;
-  }
-
-  :host([leading-controls]) .composer-actions,
-  chat-composer[leading-controls] .composer-actions {
-    grid-column: 2;
-  }
-
-  :host([leading-controls]) .btn-mic,
-  chat-composer[leading-controls] .btn-mic {
-    grid-column: 3;
-  }
-
-  :host([leading-controls]) .composer-body > sn-button.btn-send,
-  chat-composer[leading-controls] .composer-body > sn-button.btn-send {
-    grid-column: 4;
-  }
-
   .btn-voice-language {
     min-width: calc(var(--sn-composer-send-size) * 2.2);
     max-width: calc(var(--sn-composer-send-size) * 2.6);
