@@ -44349,7 +44349,7 @@
           "name": "CascadeThemeEditor",
           "tagName": "cascade-theme-editor",
           "description": "Reusable cascade theme editor module for host layouts.",
-          "componentDescription": "Reusable cascade theme editor module for host layouts. Use this layout-hosted cascade theme control surface when composing theme UI. Capabilities: cascade-theme-controls, theme-variants, tab-shape-controls, geometry-registers, locale-controls, scope-apply-all, scope-picking, copy-parameters, reset-defaults, local-storage, layout-panel. Data ownership: component-owned normalized theme state persisted through host-selected localStorage key; reset removes cascade-owned storage keys after applying defaults. WebMCP tools: cascade_theme_editor_apply.",
+          "componentDescription": "Reusable cascade theme editor module for host layouts. Use this layout-hosted cascade theme control surface when composing theme UI. Capabilities: cascade-theme-controls, theme-variants, tab-shape-controls, geometry-registers, locale-controls, scope-apply-all, scope-picking, copy-parameters, share-request, reset-defaults, local-storage, layout-panel. Data ownership: component-owned normalized theme state persisted through host-selected localStorage key; reset removes cascade-owned storage keys after applying defaults. WebMCP tools: cascade_theme_editor_apply.",
           "attributes": [
             {
               "name": "storage-key",
@@ -44375,6 +44375,16 @@
               "name": "locale",
               "description": "Optional active UI locale; when present the editor renders EN/RU/ES locale controls and emits cascade-theme-locale-change.",
               "type": "string"
+            },
+            {
+              "name": "theme-name",
+              "type": "string",
+              "description": "Optional display name included in cascade-theme-share-request."
+            },
+            {
+              "name": "share-label",
+              "type": "string",
+              "description": "Localized accessible label for the share action. Defaults to Share theme."
             }
           ],
           "members": [
@@ -44400,6 +44410,14 @@
               "description": "Current locale shown by the optional locale controls."
             },
             {
+              "kind": "field",
+              "name": "shareLabel",
+              "type": {
+                "text": "string"
+              },
+              "description": "Localized accessible label reflected through share-label."
+            },
+            {
               "kind": "method",
               "name": "setLocale",
               "description": "Updates the optional locale control and emits cascade-theme-locale-change."
@@ -44418,9 +44436,39 @@
               "kind": "method",
               "name": "copyParameters",
               "description": "Copies normalized theme parameters as JSON."
+            },
+            {
+              "kind": "method",
+              "name": "shareTheme",
+              "description": "Emits a product-neutral cascade-theme-share-request intent. The host owns URL, history, clipboard, and localization policy."
             }
           ],
           "events": [
+            {
+              "name": "cascade-theme-share-request",
+              "description": "Requests host-owned sharing with a detached state snapshot and optional display name.",
+              "detail": [
+                {
+                  "name": "state",
+                  "type": {
+                    "text": "object"
+                  }
+                },
+                {
+                  "name": "register",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "name",
+                  "type": {
+                    "text": "string"
+                  },
+                  "optional": true
+                }
+              ]
+            },
             {
               "name": "cascade-theme-change",
               "description": "Emits after theme parameters are applied.",
@@ -44593,6 +44641,7 @@
               "scope-apply-all",
               "scope-picking",
               "copy-parameters",
+              "share-request",
               "reset-defaults",
               "local-storage",
               "layout-panel"
@@ -44622,6 +44671,16 @@
                 "name": "locale",
                 "type": "string",
                 "description": "Optional active UI locale; when present the editor renders EN/RU/ES locale controls and emits cascade-theme-locale-change."
+              },
+              {
+                "name": "theme-name",
+                "type": "string",
+                "description": "Optional display name included in cascade-theme-share-request."
+              },
+              {
+                "name": "share-label",
+                "type": "string",
+                "description": "Localized accessible label for the share action. Defaults to Share theme."
               }
             ],
             "properties": [
@@ -44634,6 +44693,11 @@
                 "name": "locale",
                 "type": "string",
                 "description": "Current locale shown by the optional locale controls."
+              },
+              {
+                "name": "shareLabel",
+                "type": "string",
+                "description": "Localized accessible label reflected through share-label."
               }
             ],
             "methods": [
@@ -44661,6 +44725,11 @@
                 "name": "copyParameters",
                 "type": "function",
                 "description": "Copies normalized theme parameters as JSON."
+              },
+              {
+                "name": "shareTheme",
+                "type": "function",
+                "description": "Emits a product-neutral cascade-theme-share-request intent. The host owns URL, history, clipboard, and localization policy."
               }
             ],
             "events": [
@@ -44751,6 +44820,25 @@
                     "type": "string"
                   }
                 ]
+              },
+              {
+                "name": "cascade-theme-share-request",
+                "description": "Requests host-owned sharing with a detached state snapshot and optional display name.",
+                "detail": [
+                  {
+                    "name": "state",
+                    "type": "object"
+                  },
+                  {
+                    "name": "register",
+                    "type": "string"
+                  },
+                  {
+                    "name": "name",
+                    "type": "string",
+                    "optional": true
+                  }
+                ]
               }
             ],
             "slots": [],
@@ -44762,6 +44850,7 @@
               "--sn-sys-outline",
               "--sn-sys-accent",
               "--sn-scrollbar-thumb",
+              "--sn-scroll-shadow-size",
               "--sn-theme-density",
               "--sn-theme-type-scale",
               "--sn-theme-pattern-brightness"
@@ -44912,7 +45001,7 @@
             }
           },
           "agent": {
-            "componentDescription": "Reusable cascade theme editor module for host layouts. Use this layout-hosted cascade theme control surface when composing theme UI. Capabilities: cascade-theme-controls, theme-variants, tab-shape-controls, geometry-registers, locale-controls, scope-apply-all, scope-picking, copy-parameters, reset-defaults, local-storage, layout-panel. Data ownership: component-owned normalized theme state persisted through host-selected localStorage key; reset removes cascade-owned storage keys after applying defaults. WebMCP tools: cascade_theme_editor_apply.",
+            "componentDescription": "Reusable cascade theme editor module for host layouts. Use this layout-hosted cascade theme control surface when composing theme UI. Capabilities: cascade-theme-controls, theme-variants, tab-shape-controls, geometry-registers, locale-controls, scope-apply-all, scope-picking, copy-parameters, share-request, reset-defaults, local-storage, layout-panel. Data ownership: component-owned normalized theme state persisted through host-selected localStorage key; reset removes cascade-owned storage keys after applying defaults. WebMCP tools: cascade_theme_editor_apply.",
             "semanticRole": "layout-hosted cascade theme control surface",
             "usage": "Mount as a layout panel when an agent or user needs bounded live theme controls for a host shell. When opened from cascade-theme-widget, use the same storage-key and target-selector so quick controls and full controls edit one cascade theme state.",
             "dataOwnership": "component-owned normalized theme state persisted through host-selected localStorage key; reset removes cascade-owned storage keys after applying defaults",
@@ -45261,7 +45350,7 @@
           "name": "CascadeThemeWidget",
           "tagName": "cascade-theme-widget",
           "description": "Compact global header widget for cascade theme quick controls.",
-          "componentDescription": "Compact global header widget for cascade theme quick controls. Use this global shell cascade theme quick control when composing theme UI. Capabilities: cascade-theme-quick-controls, theme-variants, tab-shape-controls, copy-parameters, reset-defaults, open-full-editor, local-storage, global-shell-action. Data ownership: component-owned normalized quick theme state persisted through the same host-selected localStorage key as cascade-theme-editor; reset removes cascade-owned storage keys after applying defaults. WebMCP tools: cascade_theme_widget_open_full, cascade_theme_widget_apply_quick.",
+          "componentDescription": "Compact global header widget for cascade theme quick controls. Use this global shell cascade theme quick control when composing theme UI. Capabilities: cascade-theme-quick-controls, theme-variants, tab-shape-controls, copy-parameters, share-request, reset-defaults, open-full-editor, local-storage, global-shell-action. Data ownership: component-owned normalized quick theme state persisted through the same host-selected localStorage key as cascade-theme-editor; reset removes cascade-owned storage keys after applying defaults. WebMCP tools: cascade_theme_widget_open_full, cascade_theme_widget_apply_quick.",
           "attributes": [
             {
               "name": "storage-key",
@@ -45287,6 +45376,16 @@
               "name": "overlay-theme-selector",
               "description": "Optional selector for the overlay theme target when the popover is mounted to document.",
               "type": "string"
+            },
+            {
+              "name": "theme-name",
+              "type": "string",
+              "description": "Optional display name included in cascade-theme-share-request."
+            },
+            {
+              "name": "share-label",
+              "type": "string",
+              "description": "Localized accessible label for the share action. Defaults to Share theme."
             }
           ],
           "members": [
@@ -45297,6 +45396,14 @@
                 "text": "object"
               },
               "description": "Normalized cascade theme state."
+            },
+            {
+              "kind": "field",
+              "name": "shareLabel",
+              "type": {
+                "text": "string"
+              },
+              "description": "Localized accessible label reflected through share-label."
             },
             {
               "kind": "method",
@@ -45312,9 +45419,39 @@
               "kind": "method",
               "name": "copyParameters",
               "description": "Copies normalized theme parameters as JSON."
+            },
+            {
+              "kind": "method",
+              "name": "shareTheme",
+              "description": "Emits a product-neutral cascade-theme-share-request intent. The host owns URL, history, clipboard, and localization policy."
             }
           ],
           "events": [
+            {
+              "name": "cascade-theme-share-request",
+              "description": "Requests host-owned sharing with a detached state snapshot and optional display name.",
+              "detail": [
+                {
+                  "name": "state",
+                  "type": {
+                    "text": "object"
+                  }
+                },
+                {
+                  "name": "register",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "name",
+                  "type": {
+                    "text": "string"
+                  },
+                  "optional": true
+                }
+              ]
+            },
             {
               "name": "cascade-theme-change",
               "description": "Emits after quick theme parameters are applied.",
@@ -45445,6 +45582,7 @@
               "theme-variants",
               "tab-shape-controls",
               "copy-parameters",
+              "share-request",
               "reset-defaults",
               "open-full-editor",
               "local-storage",
@@ -45460,6 +45598,31 @@
                 "name": "target-selector",
                 "type": "string",
                 "description": "Optional CSS selector for the theme cascade target. Defaults to documentElement."
+              },
+              {
+                "name": "default-state",
+                "type": "string",
+                "description": "Optional JSON object or parameter string used as the reset fallback state."
+              },
+              {
+                "name": "scopes",
+                "type": "string",
+                "description": "Optional JSON array of cascade theme scopes for scoped reset and persistence."
+              },
+              {
+                "name": "overlay-theme-selector",
+                "type": "string",
+                "description": "Optional selector for the overlay theme target when the popover is mounted to document."
+              },
+              {
+                "name": "theme-name",
+                "type": "string",
+                "description": "Optional display name included in cascade-theme-share-request."
+              },
+              {
+                "name": "share-label",
+                "type": "string",
+                "description": "Localized accessible label for the share action. Defaults to Share theme."
               }
             ],
             "properties": [
@@ -45467,6 +45630,11 @@
                 "name": "state",
                 "type": "object",
                 "description": "Normalized cascade theme state."
+              },
+              {
+                "name": "shareLabel",
+                "type": "string",
+                "description": "Localized accessible label reflected through share-label."
               }
             ],
             "methods": [
@@ -45484,6 +45652,11 @@
                 "name": "copyParameters",
                 "type": "function",
                 "description": "Copies normalized theme parameters as JSON."
+              },
+              {
+                "name": "shareTheme",
+                "type": "function",
+                "description": "Emits a product-neutral cascade-theme-share-request intent. The host owns URL, history, clipboard, and localization policy."
               }
             ],
             "events": [
@@ -45552,6 +45725,25 @@
                     "type": "string"
                   }
                 ]
+              },
+              {
+                "name": "cascade-theme-share-request",
+                "description": "Requests host-owned sharing with a detached state snapshot and optional display name.",
+                "detail": [
+                  {
+                    "name": "state",
+                    "type": "object"
+                  },
+                  {
+                    "name": "register",
+                    "type": "string"
+                  },
+                  {
+                    "name": "name",
+                    "type": "string",
+                    "optional": true
+                  }
+                ]
               }
             ],
             "slots": [],
@@ -45563,7 +45755,8 @@
               "--sn-sys-accent",
               "--sn-theme-density",
               "--sn-theme-type-scale",
-              "--sn-theme-pattern-brightness"
+              "--sn-theme-pattern-brightness",
+              "--sn-scroll-shadow-size"
             ],
             "status": "draft",
             "schemaVersion": "component-descriptor-v2",
@@ -45670,7 +45863,7 @@
             }
           },
           "agent": {
-            "componentDescription": "Compact global header widget for cascade theme quick controls. Use this global shell cascade theme quick control when composing theme UI. Capabilities: cascade-theme-quick-controls, theme-variants, tab-shape-controls, copy-parameters, reset-defaults, open-full-editor, local-storage, global-shell-action. Data ownership: component-owned normalized quick theme state persisted through the same host-selected localStorage key as cascade-theme-editor; reset removes cascade-owned storage keys after applying defaults. WebMCP tools: cascade_theme_widget_open_full, cascade_theme_widget_apply_quick.",
+            "componentDescription": "Compact global header widget for cascade theme quick controls. Use this global shell cascade theme quick control when composing theme UI. Capabilities: cascade-theme-quick-controls, theme-variants, tab-shape-controls, copy-parameters, share-request, reset-defaults, open-full-editor, local-storage, global-shell-action. Data ownership: component-owned normalized quick theme state persisted through the same host-selected localStorage key as cascade-theme-editor; reset removes cascade-owned storage keys after applying defaults. WebMCP tools: cascade_theme_widget_open_full, cascade_theme_widget_apply_quick.",
             "semanticRole": "global shell cascade theme quick control",
             "usage": "Mount in a layout shell action slot with a host-selected storage-key and target-selector. Pair it with cascade-theme-editor by listening for cascade-theme-open-full and opening a host-approved panel-layout panel that uses the same storage-key and target-selector.",
             "dataOwnership": "component-owned normalized quick theme state persisted through the same host-selected localStorage key as cascade-theme-editor; reset removes cascade-owned storage keys after applying defaults",
@@ -45910,6 +46103,253 @@
           "name": "cascade-theme-widget",
           "declaration": {
             "name": "CascadeThemeWidget"
+          }
+        }
+      ]
+    },
+    {
+      "path": "themes/CascadeThemeImportDialog/CascadeThemeImportDialog.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "customElement": true,
+          "name": "CascadeThemeImportDialog",
+          "tagName": "sn-theme-import-dialog",
+          "description": "Protected accessible browser dialog for previewing and accepting a shared theme token.",
+          "componentDescription": "Protected accessible browser dialog for previewing and accepting a shared theme token. Use this host-controlled shared theme import confirmation when composing theme UI. Capabilities: theme-import, zero-storage-preview, preview-rollback, insert-only-user-preset, focus-trap, accessibility. Data ownership: component owns only the active import transaction; accepted presets are inserted as independent user records and never replace existing presets. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "members": [
+            {
+              "kind": "field",
+              "name": "decoded",
+              "type": {
+                "text": "object|null"
+              },
+              "description": "Decoded share payload while an import transaction is active; cleared on settlement."
+            },
+            {
+              "kind": "method",
+              "name": "show",
+              "description": "Starts a zero-storage preview from exactly one options object: { token, target?, storage?, storageKey?, labels?, messages? }. storageKey is the active theme state key."
+            },
+            {
+              "kind": "method",
+              "name": "close",
+              "description": "Cancels an active preview and restores the exact pre-preview target state."
+            },
+            {
+              "kind": "method",
+              "name": "cancel",
+              "description": "Cancels an active preview with an optional reason and rolls it back."
+            },
+            {
+              "kind": "method",
+              "name": "saveWithoutApplying",
+              "description": "Inserts a new user preset record and restores the pre-preview active theme."
+            },
+            {
+              "kind": "method",
+              "name": "addAndApply",
+              "description": "Inserts a new user preset record, persists it as the active theme, and applies it."
+            }
+          ],
+          "events": [
+            {
+              "name": "cascade-theme-import-success",
+              "description": "Emits when the import finishes successfully.",
+              "detail": [
+                {
+                  "name": "action",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "preset",
+                  "type": {
+                    "text": "object"
+                  }
+                },
+                {
+                  "name": "state",
+                  "type": {
+                    "text": "object"
+                  }
+                },
+                {
+                  "name": "register",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "cascade-theme-import-cancel",
+              "description": "Emits when an active import is cancelled by the user, replaced by another import, rolled back after navigation, or disconnected.",
+              "detail": [
+                {
+                  "name": "reason",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "cascade-theme-import-error",
+              "description": "Emits when an import operation fails.",
+              "detail": [
+                {
+                  "name": "error",
+                  "type": {
+                    "text": "Error"
+                  }
+                },
+                {
+                  "name": "code",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ]
+            }
+          ],
+          "slots": [],
+          "cssProperties": [],
+          "contract": {
+            "capabilities": [
+              "theme-import",
+              "zero-storage-preview",
+              "preview-rollback",
+              "insert-only-user-preset",
+              "focus-trap",
+              "accessibility"
+            ],
+            "attributes": [],
+            "properties": [
+              {
+                "name": "decoded",
+                "type": "object|null",
+                "description": "Decoded share payload while an import transaction is active; cleared on settlement."
+              }
+            ],
+            "methods": [
+              {
+                "name": "show",
+                "type": "function",
+                "description": "Starts a zero-storage preview from exactly one options object: { token, target?, storage?, storageKey?, labels?, messages? }. storageKey is the active theme state key."
+              },
+              {
+                "name": "close",
+                "type": "function",
+                "description": "Cancels an active preview and restores the exact pre-preview target state."
+              },
+              {
+                "name": "cancel",
+                "type": "function",
+                "description": "Cancels an active preview with an optional reason and rolls it back."
+              },
+              {
+                "name": "saveWithoutApplying",
+                "type": "function",
+                "description": "Inserts a new user preset record and restores the pre-preview active theme."
+              },
+              {
+                "name": "addAndApply",
+                "type": "function",
+                "description": "Inserts a new user preset record, persists it as the active theme, and applies it."
+              }
+            ],
+            "events": [
+              {
+                "name": "cascade-theme-import-success",
+                "description": "Emits when the import finishes successfully.",
+                "detail": [
+                  {
+                    "name": "action",
+                    "type": "string"
+                  },
+                  {
+                    "name": "preset",
+                    "type": "object"
+                  },
+                  {
+                    "name": "state",
+                    "type": "object"
+                  },
+                  {
+                    "name": "register",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "name": "cascade-theme-import-cancel",
+                "description": "Emits when an active import is cancelled by the user, replaced by another import, rolled back after navigation, or disconnected.",
+                "detail": [
+                  {
+                    "name": "reason",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "name": "cascade-theme-import-error",
+                "description": "Emits when an import operation fails.",
+                "detail": [
+                  {
+                    "name": "error",
+                    "type": "Error"
+                  },
+                  {
+                    "name": "code",
+                    "type": "string"
+                  }
+                ]
+              }
+            ],
+            "themeAliases": [],
+            "status": "draft",
+            "schemaVersion": "component-descriptor-v2",
+            "dataSchema": "schemas/runtime-ui-v1.json",
+            "ssr": {
+              "mode": "hydrate-only",
+              "importSafe": false,
+              "jsdaRenderable": false,
+              "requiresDom": true,
+              "browserApis": [
+                "events",
+                "localStorage"
+              ],
+              "notes": "Browser dialog module."
+            }
+          },
+          "agent": {
+            "componentDescription": "Protected accessible browser dialog for previewing and accepting a shared theme token. Use this host-controlled shared theme import confirmation when composing theme UI. Capabilities: theme-import, zero-storage-preview, preview-rollback, insert-only-user-preset, focus-trap, accessibility. Data ownership: component owns only the active import transaction; accepted presets are inserted as independent user records and never replace existing presets. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "host-controlled shared theme import confirmation",
+            "usage": "Create in a browser host, then call show({ token, target, storage, storageKey, labels, messages }). The preview writes no storage; the host handles URL cleanup and localized message selection.",
+            "dataOwnership": "component owns only the active import transaction; accepted presets are inserted as independent user records and never replace existing presets",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "custom-element-definition",
+          "name": "sn-theme-import-dialog",
+          "declaration": {
+            "name": "CascadeThemeImportDialog"
           }
         }
       ]

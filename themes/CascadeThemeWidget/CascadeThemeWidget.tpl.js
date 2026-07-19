@@ -34,6 +34,14 @@ export default html`
       <strong>Theme</strong>
       <div class="ctw-header-actions">
         ${cascadeThemeActionButton({ action: 'copy', icon: 'content_copy', label: 'Copy parameters', onClick: 'onCopy' })}
+        <button
+          ref="shareAction"
+          type="button"
+          data-action="share"
+          ${{ onclick: 'onShare', title: 'shareLabel', '@aria-label': 'shareLabel' }}
+        >
+          <span class="material-symbols-outlined" aria-hidden="true">share</span>
+        </button>
         ${cascadeThemeActionButton({ action: 'reset', icon: 'restart_alt', label: 'Reset to defaults', onClick: 'onReset' })}
         ${cascadeThemeActionButton({ action: 'open-full', icon: 'open_in_full', label: 'Open theme layout', onClick: 'onOpenFull' })}
       </div>

@@ -19,6 +19,15 @@ export default html`
       </div>
       <div class="cte-actions">
         ${cascadeThemeActionButton({ action: 'copy', className: 'cte-icon-button', icon: 'content_copy', label: 'Copy parameters', onClick: 'onCopy' })}
+        <button
+          ref="shareAction"
+          type="button"
+          class="cte-icon-button"
+          data-action="share"
+          ${{ onclick: 'onShare', title: 'shareLabel', '@aria-label': 'shareLabel' }}
+        >
+          <span class="material-symbols-outlined" aria-hidden="true">share</span>
+        </button>
         ${cascadeThemeActionButton({ action: 'reset', className: 'cte-icon-button', icon: 'restart_alt', label: 'Reset to defaults', onClick: 'onReset' })}
       </div>
     </header>

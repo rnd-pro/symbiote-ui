@@ -4,6 +4,14 @@ All notable changes to `symbiote-ui` will be documented in this file.
 
 ## Unreleased
 
+## [0.3.0-alpha.66] - 2026-07-18
+
+### Added
+
+- Added Node-safe sharing codec (`encodeCascadeThemeShare`, `decodeCascadeThemeShare`) and insert-only user preset store helpers (`insertCascadeThemeUserPreset`, `getCascadeThemeUserPreset`, `listCascadeThemeUserPresets`) to `symbiote-ui` root entrypoint.
+- Added `<sn-theme-import-dialog>` (`CascadeThemeImportDialog`) component for browser hosts to preview, cancel, and apply shared theme tokens with zero-storage previews and rollback support.
+- Added theme share actions and `share-label`/`shareLabel` properties to `cascade-theme-widget` and `cascade-theme-editor`, which dispatch a composed, bubbling `cascade-theme-share-request` event containing the detached theme state snapshot.
+
 ## [0.3.0-alpha.65] - 2026-07-18
 
 ### Fixed

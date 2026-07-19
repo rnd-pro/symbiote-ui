@@ -83,6 +83,17 @@ export {
   seedCascadeThemeScopeState,
   serializeCascadeThemeBundle,
 } from '../themes/Theme.js';
+export {
+  encodeCascadeThemeShare,
+  decodeCascadeThemeShare,
+  CascadeThemeShareError,
+} from '../themes/cascade-theme-share.js';
+export {
+  insertCascadeThemeUserPreset,
+  listCascadeThemeUserPresets,
+  getCascadeThemeUserPreset,
+  CascadeThemePresetError,
+} from '../themes/cascade-theme-presets.js';
 
 export {
   applyPalette,
@@ -291,6 +302,7 @@ export let OutputGraphPreview;
 export let StatusRibbon;
 export let CascadeThemeEditor;
 export let CascadeThemeWidget;
+export let CascadeThemeImportDialog;
 export let NotificationWidget;
 export let NotificationEditor;
 export let Dialog;
@@ -804,6 +816,7 @@ if (hasDOMGlobals) {
     statusRibbon,
     cascadeThemeEditor,
     cascadeThemeWidget,
+    cascadeThemeImportDialog,
     notificationWidget,
     notificationEditor,
     sliderControl,
@@ -912,6 +925,7 @@ if (hasDOMGlobals) {
     import('../display/StatusRibbon/StatusRibbon.js'),
     import('../themes/CascadeThemeEditor/CascadeThemeEditor.js'),
     import('../themes/CascadeThemeWidget/CascadeThemeWidget.js'),
+    import('../themes/CascadeThemeImportDialog/CascadeThemeImportDialog.js'),
     import('../notifications/NotificationWidget/NotificationWidget.js'),
     import('../notifications/NotificationEditor/NotificationEditor.js'),
     import('../control/Slider/Slider.js'),
@@ -1034,6 +1048,7 @@ if (hasDOMGlobals) {
   ({ StatusRibbon } = statusRibbon);
   ({ CascadeThemeEditor } = cascadeThemeEditor);
   ({ CascadeThemeWidget } = cascadeThemeWidget);
+  ({ CascadeThemeImportDialog } = cascadeThemeImportDialog);
   ({ NotificationWidget } = notificationWidget);
   ({ NotificationEditor } = notificationEditor);
   ({ SliderControl } = sliderControl);
@@ -1144,6 +1159,7 @@ if (hasDOMGlobals) {
     StatusRibbon,
     CascadeThemeEditor,
     CascadeThemeWidget,
+    CascadeThemeImportDialog,
     NotificationWidget,
     NotificationEditor,
     SliderControl,

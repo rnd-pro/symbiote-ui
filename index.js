@@ -93,6 +93,17 @@ export {
   ensureSystemCascade,
   undeclaredSystemRoles,
 } from './themes/Theme.js';
+export {
+  encodeCascadeThemeShare,
+  decodeCascadeThemeShare,
+  CascadeThemeShareError,
+} from './themes/cascade-theme-share.js';
+export {
+  insertCascadeThemeUserPreset,
+  listCascadeThemeUserPresets,
+  getCascadeThemeUserPreset,
+  CascadeThemePresetError,
+} from './themes/cascade-theme-presets.js';
 
 export {
   DEFAULT_PROVIDER_PALETTE,

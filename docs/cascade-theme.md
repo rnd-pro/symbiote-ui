@@ -247,6 +247,81 @@ Geometry registers are stored beside the scope using
 host-driven geometry previews; the visible editor controls use `themeVariant`
 and `tabShape` instead of exposing the register presets directly.
 
+## Theme sharing and user presets
+
+The root `symbiote-ui` entrypoint provides the Node-safe sharing codec and
+insert-only user preset store. The codec produces a bounded, canonical
+`v1.<base64url>` token. Decoding returns a complete normalized state plus an
+optional geometry register and display name.
+
+```js
+import {
+  decodeCascadeThemeShare,
+  encodeCascadeThemeShare,
+  getCascadeThemeUserPreset,
+  insertCascadeThemeUserPreset,
+  listCascadeThemeUserPresets,
+} from 'symbiote-ui';
+
+let token = encodeCascadeThemeShare({
+  state: { mode: 'dark', contrast: 100 },
+  register: '',
+  name: 'Museum dark',
+});
+let shared = decodeCascadeThemeShare(token);
+
+let preset = insertCascadeThemeUserPreset(shared);
+let stored = getCascadeThemeUserPreset(preset.id);
+let presets = listCascadeThemeUserPresets();
+```
+
+Every accepted preset receives a fresh UUID and its own storage record. Insert
+never accepts a caller-owned ID and never replaces a library preset or an
+existing user preset.
+
+`cascade-theme-widget` and `cascade-theme-editor` expose a localized
+`share-label` attribute/property. Their share action emits a bubbling, composed
+`cascade-theme-share-request` event with `{ state, register, name? }`. The state
+is a detached plain snapshot. An explicit theme name or active display label is
+trimmed and included only when it is a non-empty string; other values are never
+coerced. The event is an intent boundary: the library does
+not create URLs, write history, copy to the clipboard, or choose product
+translations.
+
+```js
+themeWidget.shareLabel = 'Поделиться темой';
+themeWidget.addEventListener('cascade-theme-share-request', ({ detail }) => {
+  let token = encodeCascadeThemeShare(detail);
+  // The host decides how to place the token in a URL and how to present sharing.
+});
+```
+
+Browser hosts can import `symbiote-ui/ui` and use
+`<sn-theme-import-dialog>`. `show()` accepts exactly one options object:
+
+```js
+await import('symbiote-ui/ui');
+
+let dialog = document.createElement('sn-theme-import-dialog');
+document.body.append(dialog);
+dialog.show({
+  token,
+  target: document.documentElement,
+  storage: localStorage,
+  storageKey: 'app:active-cascade-theme',
+  labels: localizedLabels,
+  messages: localizedMessages,
+});
+```
+
+`storageKey` is the active theme state key, not the user-preset collection key.
+While the dialog is open, preview changes are applied only to the target and
+write no storage. Cancel, replacement, navigation, or disconnection restores
+the exact pre-preview state. `saveWithoutApplying()` inserts a new preset and
+rolls the preview back; `addAndApply()` inserts a new preset and then commits it
+as the active theme. The host owns `sn-theme` URL parsing/removal, history,
+clipboard fallback, localization, and creation/removal of the dialog element.
+
 ## Standalone document adoption
 
 `applyCascadeTheme(element, options)` adopts the provider foundation and system

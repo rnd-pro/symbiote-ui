@@ -1,6 +1,6 @@
 {
   "name": "symbiote-ui",
-  "version": "0.3.0-alpha.65",
+  "version": "0.3.0-alpha.66",
   "type": "module",
   "description": "Agent-ready Web Components, layouts, themes, manifests, and UI contracts for Symbiote systems.",
   "main": "index.js",
@@ -200,6 +200,7 @@
     "core/base-path.js",
     "themes/CascadeThemeEditor/CascadeThemeEditor.js",
     "themes/CascadeThemeWidget/CascadeThemeWidget.js",
+    "themes/CascadeThemeImportDialog/CascadeThemeImportDialog.js",
     "ui/index.js",
     "canvas/**/*.js",
     "board/**/*.js",

@@ -34,7 +34,7 @@ const CONTROL_ICONS = getCascadeThemeControls()
   .map((control) => control.icon)
   .filter(Boolean);
 const TARGET_ICONS = ['web_asset', 'dashboard', 'tab', 'colorize'];
-const ICONS = [...new Set(['palette', 'content_copy', 'restart_alt', 'open_in_full', ...TARGET_ICONS, ...CONTROL_ICONS])];
+const ICONS = [...new Set(['palette', 'content_copy', 'share', 'restart_alt', 'open_in_full', ...TARGET_ICONS, ...CONTROL_ICONS])];
 
 function parseStoredState(value) {
   if (!value) return null;
@@ -55,8 +55,20 @@ function rangeProgress(value, min, max) {
   return `${Math.min(100, Math.max(0, progress)).toFixed(2)}%`;
 }
 
+function normalizeShareName(value) {
+  if (typeof value !== 'string') return '';
+  return value.trim();
+}
+
 export class CascadeThemeWidget extends Symbiote {
-  static observedAttributes = ['storage-key', 'target-selector', 'default-state', 'scopes', 'overlay-theme-selector'];
+  static observedAttributes = [
+    'storage-key',
+    'target-selector',
+    'default-state',
+    'scopes',
+    'overlay-theme-selector',
+    'share-label',
+  ];
 
   #controls = getCascadeThemeControls().filter((control) => COMPACT_CONTROLS.includes(control.name));
   #state = normalizeCascadeThemeOptions(CASCADE_THEME_DEFAULTS);
@@ -71,6 +83,7 @@ export class CascadeThemeWidget extends Symbiote {
     isOpen: false,
     ariaExpanded: 'false',
     triggerTitle: 'Theme quick controls',
+    shareLabel: 'Share theme',
     // Compact slider list rendered by itemize on .ctw-controls. Reassigning
     // controlsList (see #syncControls) re-renders the values reactively.
     controlsList: [],
@@ -126,6 +139,9 @@ export class CascadeThemeWidget extends Symbiote {
     onCopy: () => {
       void this.copyParameters();
     },
+    onShare: () => {
+      this.shareTheme();
+    },
     onReset: () => {
       this.reset();
     },
@@ -154,7 +170,12 @@ export class CascadeThemeWidget extends Symbiote {
   }
 
   attributeChangedCallback(name, oldValue, newValue) {
-    if (oldValue === newValue || !this.#ready) return;
+    if (oldValue === newValue) return;
+    if (name === 'share-label') {
+      this.$.shareLabel = newValue || 'Share theme';
+      return;
+    }
+    if (!this.#ready) return;
     if (this.#switching) return;
     if (name === 'overlay-theme-selector') {
       this.#syncPopoverTheme();
@@ -176,6 +197,7 @@ export class CascadeThemeWidget extends Symbiote {
   renderCallback() {
     if (this.#ready) return;
     this.#ready = true;
+    this.$.shareLabel = this.shareLabel;
     this.#renderControls();
     this.#bindControlEvents();
     this.#loadStoredState();
@@ -244,6 +266,15 @@ export class CascadeThemeWidget extends Symbiote {
 
   get overlayThemeSelector() {
     return this.getAttribute('overlay-theme-selector') || '';
+  }
+
+  get shareLabel() {
+    return this.getAttribute('share-label') || 'Share theme';
+  }
+
+  set shareLabel(value) {
+    if (value == null || value === '') this.removeAttribute('share-label');
+    else this.setAttribute('share-label', String(value));
   }
 
   setTarget(target = {}, options = {}) {
@@ -357,6 +388,25 @@ export class CascadeThemeWidget extends Symbiote {
       bubbles: true,
       composed: true,
       detail: { state: this.state, register: this.#geometryRegister || 'default', text },
+    }));
+  }
+
+  shareTheme() {
+    let scopes = this.scopes;
+    let activeId = this.#activeScopeId(scopes);
+    let active = scopes.find((entry) => entry.id === activeId);
+    let name = normalizeShareName(this.getAttribute('theme-name'))
+      || normalizeShareName(active?.label);
+    let detail = {
+      state: this.state,
+      register: this.#geometryRegister,
+    };
+    if (name) detail.name = name;
+
+    this.dispatchEvent(new CustomEvent('cascade-theme-share-request', {
+      bubbles: true,
+      composed: true,
+      detail,
     }));
   }
 

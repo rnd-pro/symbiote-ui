@@ -28,7 +28,7 @@ const DEFAULT_STORAGE_KEY = 'symbiote-ui:cascade-theme-editor';
 const CONTROL_ICONS = getCascadeThemeControls()
   .map((control) => control.icon)
   .filter(Boolean);
-const ICONS = [...new Set(['palette', 'content_copy', 'restart_alt', 'data_object', 'language', 'select_all', 'delete', ...CONTROL_ICONS])];
+const ICONS = [...new Set(['palette', 'content_copy', 'share', 'restart_alt', 'data_object', 'language', 'select_all', 'delete', ...CONTROL_ICONS])];
 const LOCALE_VALUES = SUPPORTED_LOCALES.filter((locale) => ['en', 'ru', 'es'].includes(locale));
 
 function parseStoredState(value) {
@@ -55,8 +55,20 @@ function cssIdent(value) {
   return String(value).replace(/[^a-zA-Z0-9_-]/g, (char) => `\\${char}`);
 }
 
+function normalizeShareName(value) {
+  if (typeof value !== 'string') return '';
+  return value.trim();
+}
+
 export class CascadeThemeEditor extends Symbiote {
-  static observedAttributes = ['storage-key', 'target-selector', 'default-state', 'pickable', 'locale'];
+  static observedAttributes = [
+    'storage-key',
+    'target-selector',
+    'default-state',
+    'pickable',
+    'locale',
+    'share-label',
+  ];
 
   #controls = getCascadeThemeControls();
   #state = normalizeCascadeThemeOptions(CASCADE_THEME_DEFAULTS);
@@ -100,6 +112,7 @@ export class CascadeThemeEditor extends Symbiote {
     localeEs: 'false',
     status: 'ready',
     params: '',
+    shareLabel: 'Share theme',
     // eyedropper: when `pickable` (a host selector) is set, the pick button lets the
     // user click any matching element to theme it individually (see #enterPickMode).
     picking: 'false',
@@ -147,6 +160,7 @@ export class CascadeThemeEditor extends Symbiote {
     },
     onApplyAll: () => this.applyToAllTargets(),
     onCopy: () => void this.copyParameters(),
+    onShare: () => this.shareTheme(),
     onReset: () => this.reset(),
   };
 
@@ -169,6 +183,10 @@ export class CascadeThemeEditor extends Symbiote {
 
   attributeChangedCallback(name, oldValue, newValue) {
     if (oldValue === newValue) return;
+    if (name === 'share-label') {
+      this.$.shareLabel = newValue || 'Share theme';
+      return;
+    }
     if (this.#switching) return;
     if ((name === 'storage-key' || name === 'default-state') && this.#ready) {
       this.#loadStoredState();
@@ -191,6 +209,7 @@ export class CascadeThemeEditor extends Symbiote {
   renderCallback() {
     if (this.#ready) return;
     this.#ready = true;
+    this.$.shareLabel = this.shareLabel;
     this.$.pickable = this.getAttribute('pickable') || '';
     this.#locale = normalizeLocale(this.getAttribute('locale'), { fallback: 'en' });
     this.#bindControlEvents();
@@ -236,6 +255,15 @@ export class CascadeThemeEditor extends Symbiote {
 
   set locale(value) {
     this.setLocale(value, { source: 'property' });
+  }
+
+  get shareLabel() {
+    return this.getAttribute('share-label') || 'Share theme';
+  }
+
+  set shareLabel(value) {
+    if (value == null || value === '') this.removeAttribute('share-label');
+    else this.setAttribute('share-label', String(value));
   }
 
   setLocale(value, options = {}) {
@@ -664,6 +692,24 @@ export class CascadeThemeEditor extends Symbiote {
         detail: { error },
       }));
     }
+  }
+
+  shareTheme() {
+    let active = this.#targetDefs.find((entry) => entry.id === this.#activeTargetId);
+    let name = normalizeShareName(this.getAttribute('theme-name'))
+      || normalizeShareName(active?.name)
+      || normalizeShareName(active?.label);
+    let detail = {
+      state: this.state,
+      register: this.#geometryRegister,
+    };
+    if (name) detail.name = name;
+
+    this.dispatchEvent(new CustomEvent('cascade-theme-share-request', {
+      bubbles: true,
+      composed: true,
+      detail,
+    }));
   }
 
   #loadStoredState() {

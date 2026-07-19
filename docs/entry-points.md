@@ -1,13 +1,13 @@
 # Entry Points
 
-- `symbiote-ui` - Node-safe core primitives.
+- `symbiote-ui` - Node-safe core primitives, including the versioned cascade-theme share codec and insert-only user preset store.
 - `symbiote-ui/core` - graph editor data primitives.
 - `symbiote-ui/layout` - SSR-safe layout, behavior, and lifecycle helpers.
 - `symbiote-ui/graph` - provider graph normalization, projection, and deterministic layout-quality analysis.
 - `symbiote-ui/manifest` - component, schema, rule, theme, and provider catalogs.
 - `symbiote-ui/runtime` - Node-safe agent UI construction helpers.
 - `symbiote-ui/runtime/product-context` - Node-safe product context normalization for host-owned agent views.
-- `symbiote-ui/ui` - browser Web Component registration and UI runtime.
+- `symbiote-ui/ui` - browser Web Component registration and UI runtime, including `cascade-theme-widget`, `cascade-theme-editor`, and the hydrate-only `sn-theme-import-dialog`.
 - `symbiote-ui/ui/screencast-recorder.js` - browser Screen Capture API hotkey controller for host-owned screencast recording; default toggle hotkey is `Alt+Shift+R`, captured tab/display audio is requested by default, and no built-in indicator UI is rendered.
 - `symbiote-ui/webmcp` - WebMCP descriptor helpers and registration utilities.
 - `symbiote-ui/xr` - WebXR provider helpers, spatial algorithms, 3D graph layout, and multi-view coordination.

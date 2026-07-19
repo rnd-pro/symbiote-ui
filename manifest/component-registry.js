@@ -1275,6 +1275,7 @@ const UI_NAMED_EXPORTS = new Set([
   'StatusRibbon',
   'CascadeThemeEditor',
   'CascadeThemeWidget',
+  'CascadeThemeImportDialog',
   'SliderControl',
   'RatingControl',
   'SegmentedControl',
@@ -3184,21 +3185,25 @@ export let COMPONENTS = [
       status: 'draft',
       schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
-      capabilities: ['cascade-theme-quick-controls', 'theme-variants', 'tab-shape-controls', 'copy-parameters', 'reset-defaults', 'open-full-editor', 'local-storage', 'global-shell-action'],
+      capabilities: ['cascade-theme-quick-controls', 'theme-variants', 'tab-shape-controls', 'copy-parameters', 'share-request', 'reset-defaults', 'open-full-editor', 'local-storage', 'global-shell-action'],
       attributes: [
         { name: 'storage-key', type: 'string', description: 'Optional localStorage key shared with cascade-theme-editor for automatic theme parameter persistence.' },
         { name: 'target-selector', type: 'string', description: 'Optional CSS selector for the theme cascade target. Defaults to documentElement.' },
         { name: 'default-state', type: 'string', description: 'Optional JSON object or parameter string used as the reset fallback state.' },
         { name: 'scopes', type: 'string', description: 'Optional JSON array of cascade theme scopes for scoped reset and persistence.' },
         { name: 'overlay-theme-selector', type: 'string', description: 'Optional selector for the overlay theme target when the popover is mounted to document.' },
+        { name: 'theme-name', type: 'string', description: 'Optional display name included in cascade-theme-share-request.' },
+        { name: 'share-label', type: 'string', description: 'Localized accessible label for the share action. Defaults to Share theme.' },
       ],
       properties: [
         { name: 'state', type: 'object', description: 'Normalized cascade theme state.' },
+        { name: 'shareLabel', type: 'string', description: 'Localized accessible label reflected through share-label.' },
       ],
       methods: [
         { name: 'setState', type: 'function', description: 'Applies normalized cascade theme parameters.' },
         { name: 'reset', type: 'function', description: 'Restores cascade theme defaults and removes cascade-owned storage keys.' },
         { name: 'copyParameters', type: 'function', description: 'Copies normalized theme parameters as JSON.' },
+        { name: 'shareTheme', type: 'function', description: 'Emits a product-neutral cascade-theme-share-request intent. The host owns URL, history, clipboard, and localization policy.' },
       ],
       events: [
         { name: 'cascade-theme-change', description: 'Emits after quick theme parameters are applied.', detail: [{ name: 'state', type: 'object' }, { name: 'targetSelector', type: 'string' }] },
@@ -3206,6 +3211,7 @@ export let COMPONENTS = [
         { name: 'cascade-geometry-register-change', description: 'Emits after the active geometry register changes.', detail: [{ name: 'source', type: 'string' }, { name: 'register', type: 'string' }, { name: 'targetSelector', type: 'string' }] },
         { name: 'cascade-theme-copy', description: 'Emits after the copy action succeeds.', detail: [{ name: 'text', type: 'string' }] },
         { name: 'cascade-theme-open-full', description: 'Requests the host to open the full theme editor layout.', detail: [{ name: 'storageKey', type: 'string' }] },
+        { name: 'cascade-theme-share-request', description: 'Requests host-owned sharing with a detached state snapshot and optional display name.', detail: [{ name: 'state', type: 'object' }, { name: 'register', type: 'string' }, { name: 'name', type: 'string', optional: true }] },
       ],
       themeAliases: [
         '--sn-sys-surface-panel',
@@ -3243,17 +3249,20 @@ export let COMPONENTS = [
       status: 'draft',
       schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
-      capabilities: ['cascade-theme-controls', 'theme-variants', 'tab-shape-controls', 'geometry-registers', 'locale-controls', 'scope-apply-all', 'scope-picking', 'copy-parameters', 'reset-defaults', 'local-storage', 'layout-panel'],
+      capabilities: ['cascade-theme-controls', 'theme-variants', 'tab-shape-controls', 'geometry-registers', 'locale-controls', 'scope-apply-all', 'scope-picking', 'copy-parameters', 'share-request', 'reset-defaults', 'local-storage', 'layout-panel'],
       attributes: [
         { name: 'storage-key', type: 'string', description: 'Optional localStorage key used for automatic theme parameter persistence.' },
         { name: 'target-selector', type: 'string', description: 'Optional CSS selector for the theme cascade target. Defaults to documentElement.' },
         { name: 'default-state', type: 'string', description: 'Optional JSON object or parameter string used as the reset fallback state.' },
         { name: 'pickable', type: 'string', description: 'Optional CSS selector for host elements the editor can add as individual theme targets.' },
         { name: 'locale', type: 'string', description: 'Optional active UI locale; when present the editor renders EN/RU/ES locale controls and emits cascade-theme-locale-change.' },
+        { name: 'theme-name', type: 'string', description: 'Optional display name included in cascade-theme-share-request.' },
+        { name: 'share-label', type: 'string', description: 'Localized accessible label for the share action. Defaults to Share theme.' },
       ],
       properties: [
         { name: 'state', type: 'object', description: 'Normalized cascade theme state.' },
         { name: 'locale', type: 'string', description: 'Current locale shown by the optional locale controls.' },
+        { name: 'shareLabel', type: 'string', description: 'Localized accessible label reflected through share-label.' },
       ],
       methods: [
         { name: 'setState', type: 'function', description: 'Applies normalized cascade theme parameters.' },
@@ -3261,6 +3270,7 @@ export let COMPONENTS = [
         { name: 'applyToAllTargets', type: 'function', description: 'Applies the active theme state and geometry register to every configured or picked theme target.' },
         { name: 'reset', type: 'function', description: 'Restores cascade theme defaults and removes cascade-owned storage keys.' },
         { name: 'copyParameters', type: 'function', description: 'Copies normalized theme parameters as JSON.' },
+        { name: 'shareTheme', type: 'function', description: 'Emits a product-neutral cascade-theme-share-request intent. The host owns URL, history, clipboard, and localization policy.' },
       ],
       events: [
         { name: 'cascade-theme-change', description: 'Emits after theme parameters are applied.', detail: [{ name: 'state', type: 'object' }, { name: 'targetSelector', type: 'string' }] },
@@ -3269,6 +3279,7 @@ export let COMPONENTS = [
         { name: 'cascade-theme-locale-change', description: 'Emits after the optional locale controls change language.', detail: [{ name: 'locale', type: 'string' }, { name: 'source', type: 'string' }] },
         { name: 'cascade-geometry-register-change', description: 'Emits after the active geometry register changes.', detail: [{ name: 'source', type: 'string' }, { name: 'register', type: 'string' }, { name: 'targetSelector', type: 'string' }] },
         { name: 'cascade-theme-copy', description: 'Emits after the copy action succeeds.', detail: [{ name: 'text', type: 'string' }] },
+        { name: 'cascade-theme-share-request', description: 'Requests host-owned sharing with a detached state snapshot and optional display name.', detail: [{ name: 'state', type: 'object' }, { name: 'register', type: 'string' }, { name: 'name', type: 'string', optional: true }] },
       ],
       themeAliases: [
         '--sn-sys-surface',
@@ -3292,6 +3303,49 @@ export let COMPONENTS = [
         notes: 'Browser layout module; the root theme contract remains available through Node-safe theme helpers.',
       },
     },
+  },
+  {
+    tagName: 'sn-theme-import-dialog',
+    className: 'CascadeThemeImportDialog',
+    module: 'themes/CascadeThemeImportDialog/CascadeThemeImportDialog.js',
+    category: 'theme',
+    description: 'Protected accessible browser dialog for previewing and accepting a shared theme token.',
+    agent: {
+      semanticRole: 'host-controlled shared theme import confirmation',
+      usage: 'Create in a browser host, then call show({ token, target, storage, storageKey, labels, messages }). The preview writes no storage; the host handles URL cleanup and localized message selection.',
+      dataOwnership: 'component owns only the active import transaction; accepted presets are inserted as independent user records and never replace existing presets',
+    },
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['theme-import', 'zero-storage-preview', 'preview-rollback', 'insert-only-user-preset', 'focus-trap', 'accessibility'],
+      attributes: [],
+      properties: [
+        { name: 'decoded', type: 'object|null', description: 'Decoded share payload while an import transaction is active; cleared on settlement.' },
+      ],
+      methods: [
+        { name: 'show', type: 'function', description: 'Starts a zero-storage preview from exactly one options object: { token, target?, storage?, storageKey?, labels?, messages? }. storageKey is the active theme state key.' },
+        { name: 'close', type: 'function', description: 'Cancels an active preview and restores the exact pre-preview target state.' },
+        { name: 'cancel', type: 'function', description: 'Cancels an active preview with an optional reason and rolls it back.' },
+        { name: 'saveWithoutApplying', type: 'function', description: 'Inserts a new user preset record and restores the pre-preview active theme.' },
+        { name: 'addAndApply', type: 'function', description: 'Inserts a new user preset record, persists it as the active theme, and applies it.' },
+      ],
+      events: [
+        { name: 'cascade-theme-import-success', description: 'Emits when the import finishes successfully.', detail: [{ name: 'action', type: 'string' }, { name: 'preset', type: 'object' }, { name: 'state', type: 'object' }, { name: 'register', type: 'string' }] },
+        { name: 'cascade-theme-import-cancel', description: 'Emits when an active import is cancelled by the user, replaced by another import, rolled back after navigation, or disconnected.', detail: [{ name: 'reason', type: 'string' }] },
+        { name: 'cascade-theme-import-error', description: 'Emits when an import operation fails.', detail: [{ name: 'error', type: 'Error' }, { name: 'code', type: 'string' }] },
+      ],
+      themeAliases: [],
+      ssr: {
+        mode: 'hydrate-only',
+        importSafe: false,
+        jsdaRenderable: false,
+        requiresDom: true,
+        browserApis: ['events', 'localStorage'],
+        notes: 'Browser dialog module.',
+      }
+    }
   },
   {
     tagName: 'graph-node',
