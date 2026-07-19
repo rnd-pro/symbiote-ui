@@ -16,6 +16,7 @@ export default /*html*/ `<!doctype html>
   path-label="Component Catalog"
   path-icon="widgets">
 
+  <a class="catalog-site-link" slot="actions" href="../">Docs</a>
   <cascade-theme-widget
     slot="actions"
     storage-key="symbiote-ui:catalog-theme"

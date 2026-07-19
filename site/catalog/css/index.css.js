@@ -403,6 +403,21 @@ catalog-component-card[hidden] {
     grid-template-columns: 1fr;
   }
 }
+.catalog-site-link {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--cat-border, #d0d7de);
+  border-radius: 999px;
+  color: inherit;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+}
+.catalog-site-link:hover {
+  border-color: var(--cat-accent-border, #004085);
+}
 .sn-skip-link {
   position: absolute;
   top: -100px;
