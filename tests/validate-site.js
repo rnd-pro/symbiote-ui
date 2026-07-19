@@ -97,21 +97,21 @@ for (let shellRoute of shellRoutes) {
   if (shellRoute.file === 'index.html') {
     assert.match(content, /data-theme-toggle/);
     assert.match(content, /motion-surface/);
-    for (const [, motionBody] of content.matchAll(/<div class="motion-surface">([\s\S]*?)<\/div>/g)) {
+    for (const [, motionBody] of content.matchAll(/<div class="[^"]*motion-surface[^"]*">([\s\S]*?)<\/div>/g)) {
       assert.doesNotMatch(motionBody, /<(?:button|input)\b/);
     }
     assert.match(
       content,
-      /@media \(max-width: 760px\)[\s\S]*?\.header-inner\s*\{/,
-      `${shellRoute.file} must adapt its compact header at mobile widths`
+      /@media \(max-width: 900px\)[\s\S]*?\.lp-header-nav\s*\{/,
+      `${shellRoute.file} must expose the shared progressive mobile header navigation`
     );
   } else {
-    assert.match(content, /aria-label="Switch to dark theme"/);
-    assert.match(content, /Switch to light theme/);
+    assert.match(content, /data-theme-toggle/);
+    assert.match(content, /aria-label="Toggle Theme"/);
     assert.match(
       content,
-      /@media \(max-width: 768px\)[\s\S]*?\.header-container\s*\{[\s\S]*?flex-direction: column;/,
-      `${shellRoute.file} must stack its header at tablet widths`
+      /@media \(max-width: 900px\)[\s\S]*?\.lp-docs-layout\s*\{[\s\S]*?grid-template-columns:\s*1fr;/,
+      `${shellRoute.file} must collapse the docs layout at mobile widths`
     );
   }
 }

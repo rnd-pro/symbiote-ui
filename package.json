@@ -261,6 +261,7 @@
     "@symbiotejs/symbiote": "3.8.0-webmcp.2",
     "ajv": "^8.20.0",
     "jsda-kit": "1.6.0",
+    "library-pages": "0.1.0-alpha.4",
     "linkedom": "^0.18.12"
   },
   "repository": {

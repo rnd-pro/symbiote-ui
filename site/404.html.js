@@ -1,165 +1,44 @@
-import { getSiteRoute, withSiteBasePath } from './routes.js';
+import { renderPage } from 'library-pages/shell';
+import { buildSearchIndex } from 'library-pages/search';
+import { composeSiteConfig, docsRoutes, resolvePath } from './site.config.js';
 
-const basePath = process.env.PAGES_BASE_PATH || '/';
-const homeHref = withSiteBasePath(basePath, getSiteRoute('home'));
-
-export default /*html*/ `<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>404 Page Not Found — Symbiote UI</title>
-<style>
-:root {
-  --bg: #fcfcfc;
-  --text: #1a1a1a;
-  --text-dim: #555555;
-  --surface: #f0f0f0;
-  --surface-raised: #ffffff;
-  --accent: #2563eb;
-  --border: #e2e8f0;
-  --font: Inter, system-ui, -apple-system, sans-serif;
-  --radius: 8px;
+const errorStyles = /*css*/ `
+.not-found {
+  padding: clamp(4rem, 10vw, 7rem) 0;
 }
-
-[data-theme="dark"] {
-  --bg: #0b0f19;
-  --text: #f1f5f9;
-  --text-dim: #94a3b8;
-  --surface: #1e293b;
-  --surface-raised: #0f172a;
-  --accent: #3b82f6;
-  --border: #334155;
+.not-found h1 {
+  max-width: 620px;
+  margin: 0 0 1.4rem;
+  color: var(--ink);
+  font-size: clamp(2.6rem, 6vw, 4.4rem);
+  line-height: 1.05;
+  letter-spacing: -0.05em;
 }
-
-* {
-  box-sizing: border-box;
+.not-found p {
+  max-width: 560px;
+  margin: 0 0 2.2rem;
+  color: var(--muted);
+  font-size: 1.15rem;
 }
+.not-found-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+`;
 
-html, body {
-  margin: 0;
-  padding: 0;
-  font-family: var(--font);
-  background: var(--bg);
-  color: var(--text);
-  line-height: 1.5;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-header {
-  border-bottom: 1px solid var(--border);
-  background: var(--surface-raised);
-}
-
-.header-container {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 16px 24px;
-  width: 100%;
-}
-
-.logo-group {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-weight: bold;
-  font-size: 1.2rem;
-  color: var(--text);
-  text-decoration: none;
-}
-
-.logo-icon {
-  background: var(--accent);
-  color: white;
-  width: 32px;
-  height: 32px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  font-weight: 800;
-}
-
-main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 48px 24px;
-  text-align: center;
-}
-
-h1 {
-  font-size: 4rem;
-  font-weight: 800;
-  margin: 0;
-  color: var(--accent);
-}
-
-p {
-  font-size: 1.25rem;
-  color: var(--text-dim);
-  max-width: 500px;
-  margin: 16px 0 32px;
-}
-
-.btn {
-  display: inline-block;
-  padding: 12px 24px;
-  border-radius: var(--radius);
-  font-weight: 600;
-  text-decoration: none;
-  font-size: 1rem;
-  background: var(--accent);
-  color: white;
-  transition: background-color 0.2s;
-}
-
-.btn:hover {
-  background: color-mix(in srgb, var(--accent) 90%, black);
-}
-
-footer {
-  border-top: 1px solid var(--border);
-  padding: 24px;
-  text-align: center;
-  color: var(--text-dim);
-  font-size: 0.9rem;
-}
-</style>
-</head>
-<body>
-<header>
-  <div class="header-container">
-    <a href="${homeHref}" class="logo-group">
-      <div class="logo-icon">S</div>
-      <span>Symbiote UI</span>
-    </a>
+export default renderPage({
+  siteConfig: composeSiteConfig({
+    pageStyles: errorStyles,
+    description: 'The requested Symbiote UI page could not be found.',
+  }),
+  pageTitle: 'Page Not Found',
+  contentHtml: /*html*/ `
+<section class="not-found" aria-labelledby="not-found-title">
+  <h1 id="not-found-title">Page Not Found.</h1>
+  <p>The page may have moved, or the route may not be part of this package.</p>
+  <div class="not-found-actions">
+    <a class="lp-cta lp-cta-primary" href="${resolvePath('/')}">Back to home</a>
+    <a class="lp-cta lp-cta-secondary" href="${resolvePath('/docs/')}">Read the guide</a>
   </div>
-</header>
-
-<main>
-  <h1>404</h1>
-  <p>The page you are looking for does not exist or has been moved.</p>
-  <a href="${homeHref}" class="btn">Go Back Home</a>
-</main>
-
-<footer>
-  <p>&copy; 2026 RND-PRO.</p>
-</footer>
-
-<script>
-const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-const storedTheme = localStorage.getItem('theme');
-if (storedTheme === 'dark' || (!storedTheme && prefersDark)) {
-  document.documentElement.setAttribute('data-theme', 'dark');
-  document.documentElement.style.colorScheme = 'dark';
-}
-</script>
-</body>
-</html>`;
+</section>
+`,
+  currentPath: '/404.html',
+  searchIndex: buildSearchIndex(docsRoutes),
+});
