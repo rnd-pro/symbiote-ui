@@ -22,6 +22,8 @@ const CASCADE_THEME_RADIUS_BASE = 17;
 const CASCADE_THEME_TAB_RADIUS_BASE = 17;
 const CASCADE_THEME_CELL_RADIUS_BASE = 17;
 const CASCADE_THEME_OUTLINE_BASE = 21;
+// Keep a measurable margin above WCAG AA after browsers quantize colors to 8-bit RGB.
+const CASCADE_THEME_READABLE_TEXT_CONTRAST_TARGET = 4.55;
 
 export const CASCADE_THEME_TOKEN_TARGETS = Object.freeze({
   color: [
@@ -676,7 +678,7 @@ function hslToRgb(hue, saturation, lightness) {
 
 function relativeLuminance(rgb) {
   let channels = rgb.map((channel) => {
-    let value = channel / 255;
+    let value = clamp(Math.round(channel), 0, 255, 0) / 255;
     return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
   });
   return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
@@ -692,19 +694,25 @@ export function getReadableTextForHsl(hue, saturation, lightness, preferredLight
   let bgLum = relativeLuminance(hslToRgb(hue, saturation, lightness));
   let safeLightness = clamp(lightness, 0, 100, 50);
   let preferred = finiteNumber(preferredLightness, safeLightness > 50 ? 8 : 98);
-  let candidates = [preferred, 7.5, 98].map((candidateLightness) => ({
-    hue: 0,
-    saturation: 0,
-    lightness: candidateLightness,
-  })).map((candidate) => ({
-    ...candidate,
-    ratio: contrastRatio(bgLum, relativeLuminance(hslToRgb(
-      candidate.hue,
-      candidate.saturation,
-      candidate.lightness
-    ))),
-  }));
+  let createCandidate = (candidateLightness) => {
+    let luminance = relativeLuminance(hslToRgb(0, 0, candidateLightness));
+    return {
+      hue: 0,
+      saturation: 0,
+      lightness: candidateLightness,
+      luminance,
+      ratio: contrastRatio(bgLum, luminance),
+    };
+  };
+  let candidates = [preferred, 7.5, 98].map(createCandidate);
   let winner = candidates.sort((a, b) => b.ratio - a.ratio)[0];
+  let direction = winner.luminance <= bgLum ? -1 : 1;
+  let lightnessTenths = Math.round(winner.lightness * 10);
+  while (winner.ratio < CASCADE_THEME_READABLE_TEXT_CONTRAST_TARGET) {
+    lightnessTenths += direction;
+    if (lightnessTenths < 0 || lightnessTenths > 1000) break;
+    winner = createCandidate(lightnessTenths / 10);
+  }
   return `hsl(${winner.hue} ${winner.saturation}% ${winner.lightness.toFixed(1)}%)`;
 }
 
@@ -1725,7 +1733,7 @@ export function createCascadeTheme(options = {}) {
     '--sn-card-title-size': headingToken(11),
     '--sn-banner-font-size': typeToken(12),
     '--sn-banner-icon-size': typeToken(18),
-    '--sn-badge-font-size': typeToken(11),
+    '--sn-badge-font-size': typeToken(12),
     '--sn-tree-label-size': typeToken(12),
     '--sn-tree-icon-size': typeToken(15),
     '--sn-tree-kind-size': typeToken(10),

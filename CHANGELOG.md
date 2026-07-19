@@ -4,6 +4,86 @@ All notable changes to `symbiote-ui` will be documented in this file.
 
 ## Unreleased
 
+## [0.3.0-alpha.65] - 2026-07-18
+
+### Fixed
+
+- Kept compact composer parameters on the same action row at narrow widths.
+- Preserved full native select hit areas and explicit accessible names when footer controls collapse to icon-only presentation.
+
+## [0.3.0-alpha.64] - 2026-07-18
+
+### Added
+
+- Added `destructiveHint: true` under `annotations` on the descriptor for destructive action descriptors.
+- Added a `bundle` option to `registerProductContextTools()` so products can register the exact executable descriptors already used to construct their adapter and consumer.
+
+### Fixed
+
+- Removed the unused legacy `createNativeToolDescriptor()` export now that
+  registration uses canonical executable plain descriptors directly.
+- Fixed `registerWebMcpTool` to register and return the same canonical plain executable descriptor passed by the product bundle, preserving exact descriptor identity before and after refresh.
+- Fixed registration signal lifecycle using an internal `AbortController` that properly cleans up external listeners on all exits, supports idempotent unregistration, and handles undefined native disposers.
+- Fixed native capability check to read active `modelContext` markers (`nativeActive` and `supportsNativeToolDescriptor`) directly, removing public options bag overrides.
+- Fixed native options forwarding to pass exactly `signal` and `exposedTo` options to `registerTool`.
+- Fixed product registration options resolver to correctly identify options bags containing `signal` or `exposedTo`.
+- Fixed `createProductWebMcpBundle` to bind all allowed actions to their own executable plain descriptor closures, preserving action/descriptor pairing through filtering and refresh in-place, and forwarding out-of-band context arguments.
+- Fixed tool validation to fail fast with tool/action identity before the first native registration, rolling back previous registrations on partial failure.
+- Fixed runtime-context property publication to restore prior property state exactly and made producer refresh publication replacement atomic.
+
+## [0.3.0-alpha.63] - 2026-07-17
+
+- Keep cascade-theme control foregrounds above WCAG AA after browser RGB quantization.
+- Updated the presenter projection contract to support idle cursor visibility, completed/motorActive states, validation priority, and completed residue coexistence.
+- Preserve idle cursor visibility and endpoint position after travel is completed.
+- Preserve completed stroke cursor and rest projection to keep completed ink/frame residue visible.
+- Compute presenter projections first, then validate mutual exclusion conflicts on actual active motor phases (`ERR_MUTUALLY_EXCLUSIVE_LAYERS`), ensuring ordered active layer names.
+- Allowed future layers and completed residue (including idle cursors) to coexist with active gestures.
+- Sequence cursor travel before focus reveal and use the annotation projector as the sole drawing motor for live presenter actions.
+- Publish the canonical caption presentation track v2 identifier consistently in live captions, media studio markup, and renderer diagnostics.
+- Require explicit non-empty `cueId` values for live and tour captions, reject
+  legacy `id`/`index` aliases, and preserve the canonical v2 identity through
+  live, preview, and rendered caption consumers; update `symbiote-engine` to
+  `0.3.0-alpha.13`.
+- Status badges now keep a 12px minimum font size across standalone, default,
+  dark, and cascade themes so compact state labels remain presentation-readable.
+- Live captions now apply the canonical cue-level font size and line height
+  chosen by the collision planner, so a narrowly adapted caption renders with
+  the same readable typography in the browser and final ASS/MP4 output.
+
+- Presenter focus frames now reveal from their initial drag point over the shared
+  30 FPS clock and expose reveal/handle geometry to deterministic render proof.
+  Handwritten markers use a slower, more legible high-opacity stroke in live and
+  rendered playback. Compact ovals reserve enough perimeter for their animated
+  marker nib and natural jitter without crossing protected target content.
+- Added `applyPresenterTextSelection()` as a browser-only native text emphasis
+  primitive for exact or whitespace-normalized quotes and explicit ranges across
+  DOM text nodes, inputs, and textareas, with portable receipts, ambiguity
+  failures, and deterministic clear/restore handles.
+- Programmatic chat composer updates now resize and scroll the input to the
+  newest text without stealing focus, while changed drafts and real typing
+  refresh the workspace's existing background activity.
+- Unified timed live-caption segmentation with rendered captions. Authored live
+  speech now keeps exact text and word timing while using the same bounded
+  five-word cue cadence, so large vertical captions remain readable instead of
+  failing on a full spoken turn.
+- Added synchronous `presentFocusFrame()` projection with separate cursor and
+  frame modes, media-time-driven marching ants, and returned target/frame
+  geometry so live capture and offline rendering share the same focus pixels.
+
+### Added
+
+- Added `LiveCaptionController` and `createLiveCaptionTrack` for the same
+  engine-resolved caption profile and collision-aware placement contract in
+  live presentations, Media Studio previews, and deterministic canvas renders;
+  cue hooks now fire after DOM projection and support evidence-only capture
+  without painting caption pixels. Resolved profile font weights now match ASS
+  output, and cue hooks include measured line/container overflow evidence so
+  clipped live text fails verification.
+- Added a registry-derived provider conformance atlas covering every declared
+  component event, component input, native HTML input type, and WebMCP tool
+  input variant, with executable action, result, and reset receipts.
+
 ## [0.3.0-alpha.62] - 2026-07-15
 
 ### Changed
@@ -134,8 +214,9 @@ All notable changes to `symbiote-ui` will be documented in this file.
   motion, keeping animation speed stable when capture cadence changes.
 - Added exact annotation path samples and a public geometry safety analyzer for
   deterministic presenter collision checks against protected targets, captions,
-  controls, and cursor bounds; circle annotations now trace an external rounded
-  perimeter instead of crossing target content.
+  controls, and cursor bounds; oval annotations now trace a compact external
+  rounded perimeter, active drawing uses the marker nib's actual bounds, and
+  live/offline hosts share the public annotation duration contract.
 - Added public `CanvasGraph.getViewport()` and `setViewport()` camera contracts
   for clamped absolute live and deterministic viewport projection.
 - Added ordered v3 interaction-cue planning through
@@ -215,7 +296,9 @@ All notable changes to `symbiote-ui` will be documented in this file.
   import), plus a player for agent-authored
   `{ steps: [{ target, holdMs?, gesture?, label? }] }` scenarios with a host
   `resolveTarget`, per-step `onStep`, configurable `defaultHoldMs`, and
-  `AbortSignal` support.
+  `AbortSignal` support; separate focus frames,
+  handwritten freehand/underline/oval annotations, expanding click feedback,
+  and exactly-once semantic activation on a deterministic 30 FPS projector.
 - Added `actions` and `embed` custom-content message parts to `ChatMessageItem`
   and the message model: an `actions` part
   (`{ type: 'actions', actions: [{ id, label, icon, variant }] }`) renders inline

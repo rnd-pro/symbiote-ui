@@ -59,30 +59,87 @@ function registrationUnregister(registration) {
   return () => registration?.dispose?.() || registration?.unregister?.();
 }
 
-export async function createNativeToolDescriptor(options) {
-  let { ToolDescriptor } = await import('@symbiotejs/symbiote/webmcp');
-  return new ToolDescriptor(options);
+function createRegistrationAbortError() {
+  if (typeof globalThis.DOMException === 'function') {
+    return new DOMException('Registration aborted', 'AbortError');
+  }
+  let error = new Error('Registration aborted');
+  error.name = 'AbortError';
+  return error;
 }
 
 export async function registerWebMcpTool(options, target = globalThis.document, registrationOptions = {}) {
+  let identity = options?.name || 'unknown';
+  if (!options || typeof options.execute !== 'function') {
+    throw new Error(`ToolDescriptor ${identity} requires an execute function`);
+  }
+
+  let externalSignal = registrationOptions?.signal;
+  if (externalSignal?.aborted) {
+    throw externalSignal.reason === undefined
+      ? createRegistrationAbortError()
+      : externalSignal.reason;
+  }
+
   let context = getModelContext(target);
   if (!context || typeof context.registerTool !== 'function') {
-    return { nativeActive: false, descriptor: createToolDescriptor(options), unregister: () => {} };
+    return { nativeActive: false, descriptor: options, unregister: () => {} };
   }
 
   let nativeActive = true;
-  let descriptor;
   if (typeof globalThis.HTMLElement !== 'function') {
     nativeActive = false;
-    descriptor = createToolDescriptor(options);
-  } else try {
-    descriptor = await createNativeToolDescriptor(options);
-  } catch {
-    nativeActive = false;
-    descriptor = createToolDescriptor(options);
   }
-  let registration = await context.registerTool(descriptor, registrationOptions);
-  let unregister = registrationUnregister(registration);
+  if (context.nativeActive === false || context.supportsNativeToolDescriptor === false) {
+    nativeActive = false;
+  }
+
+  let descriptor = options;
+
+  let internalController = new AbortController();
+  let internalSignal = internalController.signal;
+
+  let isUnregistered = false;
+  let unregister = (reason) => {
+    if (isUnregistered) return;
+    isUnregistered = true;
+
+    if (externalSignal) {
+      externalSignal.removeEventListener('abort', onExternalAbort);
+    }
+    if (!internalSignal.aborted) {
+      if (reason !== undefined) {
+        internalController.abort(reason);
+      } else {
+        internalController.abort();
+      }
+    }
+  };
+
+  let onExternalAbort = () => {
+    unregister(externalSignal?.reason);
+  };
+
+  if (externalSignal) {
+    externalSignal.addEventListener('abort', onExternalAbort, { once: true });
+  }
+
+  let nativeOptions = { signal: internalSignal };
+  if (registrationOptions && registrationOptions.exposedTo !== undefined) {
+    nativeOptions.exposedTo = registrationOptions.exposedTo;
+  }
+
+  try {
+    await context.registerTool(descriptor, nativeOptions);
+  } catch (err) {
+    if (externalSignal) {
+      externalSignal.removeEventListener('abort', onExternalAbort);
+    }
+    if (!internalSignal.aborted) {
+      internalController.abort();
+    }
+    throw err;
+  }
 
   return { nativeActive, descriptor, unregister };
 }
@@ -172,12 +229,34 @@ function looksLikeRuntimeContext(value) {
 }
 
 function resolveProductContextToolOptions(targetOrOptions, runtimeInput) {
+  let res;
+  let isOptionsBag = false;
   if (isObject(targetOrOptions)
     && !targetOrOptions.modelContext
     && typeof targetOrOptions.registerTool !== 'function'
-    && typeof targetOrOptions.createElement !== 'function'
-    && ('target' in targetOrOptions || 'runtime' in targetOrOptions || 'publishContext' in targetOrOptions)) {
-    return {
+    && typeof targetOrOptions.createElement !== 'function') {
+    let optionsKeys = [
+      'target',
+      'bundle',
+      'runtime',
+      'publishContext',
+      'executeAction',
+      'registrationOptions',
+      'safeActions',
+      'enrichContext',
+      'enrichRuntime',
+      'enrichActionDescriptor',
+      'signal',
+      'exposedTo'
+    ];
+    if (optionsKeys.some(key => key in targetOrOptions)) {
+      isOptionsBag = true;
+    }
+  }
+
+  if (isOptionsBag) {
+    res = {
+      ...targetOrOptions,
       target: targetOrOptions.target || globalThis.document,
       runtime: targetOrOptions.runtime,
       safeActions: targetOrOptions.safeActions,
@@ -185,20 +264,27 @@ function resolveProductContextToolOptions(targetOrOptions, runtimeInput) {
       enrichRuntime: targetOrOptions.enrichRuntime,
       enrichActionDescriptor: targetOrOptions.enrichActionDescriptor,
       publishContext: targetOrOptions.publishContext !== false,
+      registrationOptions: targetOrOptions.registrationOptions,
     };
-  }
-  if (looksLikeRuntimeContext(targetOrOptions) && runtimeInput === undefined) {
-    return {
+  } else if (looksLikeRuntimeContext(targetOrOptions) && runtimeInput === undefined) {
+    res = {
       target: globalThis.document,
       runtime: targetOrOptions,
       publishContext: true,
     };
+  } else {
+    res = {
+      target: targetOrOptions || globalThis.document,
+      runtime: runtimeInput,
+      publishContext: true,
+    };
+    if (isObject(targetOrOptions)) {
+      res.executeAction = targetOrOptions.executeAction;
+      res.signal = targetOrOptions.signal;
+      res.exposedTo = targetOrOptions.exposedTo;
+    }
   }
-  return {
-    target: targetOrOptions || globalThis.document,
-    runtime: runtimeInput,
-    publishContext: true,
-  };
+  return res;
 }
 
 function createProductRuntimeContextPayload(contextView) {
@@ -227,7 +313,156 @@ function callContextPublisher(modelContext, methodName, payload) {
   };
 }
 
-export function publishProductRuntimeContext(contextView, target = globalThis.document) {
+const PRODUCT_RUNTIME_PUBLICATION_STATE = Symbol('productRuntimePublicationState');
+const PRODUCT_RUNTIME_CONTEXT_PROPERTIES = [PRODUCT_RUNTIME_CONTEXT_NAME, 'productRuntimeContext'];
+
+function snapshotOwnPropertyState(target, property) {
+  let descriptor = Object.getOwnPropertyDescriptor(target, property);
+  try {
+    return { descriptor, valueReadable: true, value: target[property] };
+  } catch {
+    return { descriptor, valueReadable: false, value: undefined };
+  }
+}
+
+function propertyDescriptorsEqual(left, right) {
+  if (!left || !right) return left === right;
+  if (left.configurable !== right.configurable || left.enumerable !== right.enumerable) return false;
+  let leftIsData = 'value' in left || 'writable' in left;
+  let rightIsData = 'value' in right || 'writable' in right;
+  if (leftIsData !== rightIsData) return false;
+  if (leftIsData) {
+    return left.writable === right.writable && Object.is(left.value, right.value);
+  }
+  return left.get === right.get && left.set === right.set;
+}
+
+function propertyStatesEqual(left, right) {
+  if (!propertyDescriptorsEqual(left.descriptor, right.descriptor)) return false;
+  if (left.valueReadable !== right.valueReadable) return false;
+  return !left.valueReadable || Object.is(left.value, right.value);
+}
+
+function restoreOwnPropertyState(target, property, state) {
+  if (state.descriptor) {
+    Object.defineProperty(target, property, state.descriptor);
+    if (!('value' in state.descriptor) && state.valueReadable) {
+      let current = snapshotOwnPropertyState(target, property);
+      let valueDiffers = !current.valueReadable || !Object.is(current.value, state.value);
+      if (typeof state.descriptor.set === 'function' && valueDiffers) {
+        try {
+          Reflect.set(target, property, state.value, target);
+        } catch {}
+        Object.defineProperty(target, property, state.descriptor);
+      } else if (typeof state.descriptor.set !== 'function' && valueDiffers) {
+        throw new Error(`Unable to restore ${property}`);
+      }
+    }
+    if (!propertyStatesEqual(snapshotOwnPropertyState(target, property), state)) {
+      throw new Error(`Unable to restore ${property}`);
+    }
+    return;
+  }
+
+  if (!Reflect.deleteProperty(target, property)) {
+    throw new Error(`Unable to restore ${property}`);
+  }
+  let current = snapshotOwnPropertyState(target, property);
+  if (state.valueReadable && (!current.valueReadable || !Object.is(current.value, state.value))) {
+    if (!Reflect.set(target, property, state.value, target)) {
+      throw new Error(`Unable to restore ${property}`);
+    }
+    if (Object.hasOwn(target, property) && !Reflect.deleteProperty(target, property)) {
+      throw new Error(`Unable to restore ${property}`);
+    }
+  }
+  if (!propertyStatesEqual(snapshotOwnPropertyState(target, property), state)) {
+    throw new Error(`Unable to restore ${property}`);
+  }
+}
+
+function restorePropertyPublication(target, published, baseline) {
+  let errors = [];
+  for (let property of [...PRODUCT_RUNTIME_CONTEXT_PROPERTIES].reverse()) {
+    try {
+      let current = snapshotOwnPropertyState(target, property);
+      if (propertyStatesEqual(current, published.get(property))) {
+        restoreOwnPropertyState(target, property, baseline.get(property));
+      }
+    } catch (error) {
+      errors.push(error);
+    }
+  }
+  if (errors.length) {
+    throw new AggregateError(errors, 'Failed to restore product runtime context publication');
+  }
+}
+
+function createPropertyRuntimeContextPublication(modelContext, payload, replaces) {
+  let immediateBaseline = new Map(PRODUCT_RUNTIME_CONTEXT_PROPERTIES.map((property) => (
+    [property, snapshotOwnPropertyState(modelContext, property)]
+  )));
+  let replacedState = replaces?.[PRODUCT_RUNTIME_PUBLICATION_STATE];
+  let finalBaseline = new Map(PRODUCT_RUNTIME_CONTEXT_PROPERTIES.map((property) => {
+    let current = immediateBaseline.get(property);
+    let canInherit = replacedState?.type === 'property'
+      && replacedState.active
+      && replacedState.modelContext === modelContext
+      && propertyStatesEqual(current, replacedState.published.get(property));
+    return [property, canInherit ? replacedState.finalBaseline.get(property) : current];
+  }));
+  let published = new Map();
+  let attempted = [];
+
+  try {
+    for (let property of PRODUCT_RUNTIME_CONTEXT_PROPERTIES) {
+      attempted.push(property);
+      modelContext[property] = payload.value;
+      published.set(property, snapshotOwnPropertyState(modelContext, property));
+    }
+  } catch (error) {
+    let rollbackErrors = [];
+    for (let property of attempted.reverse()) {
+      try {
+        restoreOwnPropertyState(modelContext, property, immediateBaseline.get(property));
+      } catch (rollbackError) {
+        rollbackErrors.push(rollbackError);
+      }
+    }
+    if (rollbackErrors.length) {
+      throw new AggregateError([error, ...rollbackErrors], error.message, { cause: error });
+    }
+    throw error;
+  }
+
+  let state = {
+    type: 'property',
+    modelContext,
+    published,
+    finalBaseline,
+    active: true,
+    rollback() {
+      if (!state.active) return;
+      state.active = false;
+      restorePropertyPublication(modelContext, published, immediateBaseline);
+    },
+    unregister() {
+      if (!state.active) return;
+      state.active = false;
+      restorePropertyPublication(modelContext, published, finalBaseline);
+    },
+  };
+  return {
+    published: true,
+    nativeActive: false,
+    method: 'property',
+    payload,
+    unregister: state.unregister,
+    [PRODUCT_RUNTIME_PUBLICATION_STATE]: state,
+  };
+}
+
+function publishProductRuntimeContextInternal(contextView, target, replaces = null) {
   let modelContext = getModelContext(target);
   let payload = createProductRuntimeContextPayload(contextView);
   if (!modelContext) {
@@ -243,22 +478,20 @@ export function publishProductRuntimeContext(contextView, target = globalThis.do
     }
   }
 
-  modelContext[PRODUCT_RUNTIME_CONTEXT_NAME] = payload.value;
-  modelContext.productRuntimeContext = payload.value;
-  return {
-    published: true,
-    nativeActive: false,
-    method: 'property',
-    payload,
-    unregister() {
-      if (modelContext[PRODUCT_RUNTIME_CONTEXT_NAME] === payload.value) {
-        delete modelContext[PRODUCT_RUNTIME_CONTEXT_NAME];
-      }
-      if (modelContext.productRuntimeContext === payload.value) {
-        delete modelContext.productRuntimeContext;
-      }
-    },
-  };
+  return createPropertyRuntimeContextPublication(modelContext, payload, replaces);
+}
+
+function rollbackRuntimeContextPublication(publication) {
+  let state = publication?.[PRODUCT_RUNTIME_PUBLICATION_STATE];
+  if (state?.type === 'property') {
+    state.rollback();
+    return;
+  }
+  publication?.unregister?.();
+}
+
+export function publishProductRuntimeContext(contextView, target = globalThis.document) {
+  return publishProductRuntimeContextInternal(contextView, target);
 }
 
 function resolveProductAction(context, action = {}) {
@@ -282,6 +515,7 @@ export function createProductActionToolDescriptor(productContext, action) {
   let context = normalizeProductContext(productContext);
   let actionRecord = resolveProductAction(context, action);
   let productDescription = context.webmcp.productDescription;
+  let isDestructive = Boolean(actionRecord.destructive);
   return createToolDescriptor({
     name: actionRecord.name,
     description: [
@@ -302,7 +536,8 @@ export function createProductActionToolDescriptor(productContext, action) {
       entityRefs: actionRecord.entityRefs || [],
       viewRefs: actionRecord.viewRefs || [],
       permission: actionRecord.permission || '',
-      destructive: Boolean(actionRecord.destructive),
+      destructive: isDestructive,
+      destructiveHint: isDestructive,
       allowed: actionRecord.allowed !== false,
       actionPolicy: context.webmcp.actionPolicy,
       intent: actionRecord.intent || {},
@@ -1364,6 +1599,7 @@ export function buildWebMcpTourPrompt({
   actions = createWebMcpPresentationActions(),
   taskText = '',
   profile = '',
+  speakerMode = 'single',
   turnBudget = null,
   requestedSurfaceIds = [],
   selectedTabIds = [],
@@ -1379,13 +1615,21 @@ export function buildWebMcpTourPrompt({
   let minTurns = Number(budget.min ?? budget.minTurns);
   let maxTurns = Number(budget.max ?? budget.maxTurns);
   let turnRule = Number.isFinite(minTurns) && Number.isFinite(maxTurns) && minTurns > 0 && maxTurns >= minTurns
-    ? `${Math.floor(minTurns)}-${Math.floor(maxTurns)} turns`
-    : '5-8 turns';
+    ? `Use ${Math.floor(minTurns)}-${Math.floor(maxTurns)} turns because the request explicitly sets that budget.`
+    : 'Choose the number of turns from the user task and grounded UI actions. Do not add a turn only to create an opening or closing.';
+  let dialogue = speakerMode === 'dialogue';
+  let speakerRule = dialogue
+    ? 'Use guide and ops. Both selected voices must contribute, but do not force alternation, reply pairs, an opening, a closing, or any dialogue-act pattern.'
+    : 'Use guide as the single narrator. An opening and closing are optional and must follow only from the user task.';
+  let personaSchema = dialogue
+    ? '{"guide":{"pitch":1.15,"rate":1},"ops":{"pitch":0.8,"rate":1}}'
+    : '{"guide":{"pitch":1,"rate":1}}';
+  let turnPersonaSchema = dialogue ? 'guide|ops' : 'guide';
   let taskLine = safeTask ? `User task: "${safeTask}". ` : '';
   let profileLine = safeProfile ? `Presentation profile: "${safeProfile}". ` : '';
   let requestedLine = requested.length ? `Requested targetIds to cover when possible: ${requested.join(', ')}. ` : '';
   let tabLine = selectedTabs.length ? `Requested tab/window ids to include: ${selectedTabs.join(', ')}. ` : '';
-  return `You are an interface narrator for UI that this agent already created. The request includes browser-level WebMCP context with product views/actions, live runtime surfaces, and narration cues; use it as the source of truth. Generate a guided tour of the current workspace in TWO voices: guide (host, overview) and ops (operator, details). Workspace: "${safeTitle}". ${taskLine}${profileLine}${requestedLine}${tabLine}In cue use ONLY these targetId values:\n${targetLines}\nWrite ALL narration text in ${language}. Return STRICTLY one \`\`\`json block with the schema: {"personas":{"guide":{"pitch":1.15,"rate":1},"ops":{"pitch":0.8,"rate":1}},"turns":[{"persona":"guide|ops","text":"lively spoken ${language} without markdown or symbols","cue":{"targetId":"one of the listed ids"},"annotations":[{"targetId":"optional listed detail id","intent":"detail|question|risk|success|affinity|flourish","kind":"marker|symbol","marker":"underline|box|bracket|slash","symbol":"question|cross|check|heart|flourish","placement":"over|after|before|corner|below"}]}]}. Rules: ${turnRule}, voices may use short natural reactions but every turn must serve the user task, include the requested targets first when they are supplied, and do not repeat the raw target metadata. Keep each spoken text short, conversational, in ${language}, without symbols. cue is for cursor focus and the host draws its own focus frame; do NOT duplicate that focus with box/circle/bracket annotations on the same target. Use marker annotations only for detail targets such as words, values, badges, and small controls; use question/cross/check/heart/flourish symbols for meaning. Do NOT say undefined, null, NaN, or missing raw values; skip unavailable data instead. Do NOT quote raw code tokens from source panels. Do NOT use words about position (left, right, top, bottom, center) — the interface is adaptive and panels can be anywhere; use neutral transitions in ${language}. Some targets may be tagged [collapsed]; the interface reveals them for that turn and restores them afterward, so narrate their purpose normally. ${describeWebMcpTourActionInstructions(actions)} No text outside the json block.`;
+  return `You are an interface narrator for UI that this agent already created. The request includes browser-level WebMCP context with product views/actions, live runtime surfaces, and narration cues; use it as the source of truth. Generate a guided tour of the current workspace. ${speakerRule} Workspace: "${safeTitle}". ${taskLine}${profileLine}${requestedLine}${tabLine}In cue use ONLY these targetId values:\n${targetLines}\nWrite ALL narration text in ${language}. Return STRICTLY one \`\`\`json block with the schema: {"personas":${personaSchema},"turns":[{"persona":"${turnPersonaSchema}","text":"lively spoken ${language} without markdown or symbols","cue":{"targetId":"one of the listed ids"},"annotations":[{"targetId":"optional listed detail id","intent":"detail|question|risk|success|affinity|flourish","kind":"marker|symbol","marker":"underline|box|bracket|slash","symbol":"question|cross|check|heart|flourish","placement":"over|after|before|corner|below"}]}]}. Rules: ${turnRule} Every turn must serve the user task, include the requested targets first when they are supplied, and do not repeat the raw target metadata. Keep each spoken text short, conversational, in ${language}, without symbols. cue is for cursor focus and the host draws its own focus frame; do NOT duplicate that focus with box/circle/bracket annotations on the same target. Use marker annotations only for detail targets such as words, values, badges, and small controls; use question/cross/check/heart/flourish symbols for meaning. Do NOT say undefined, null, NaN, or missing raw values; skip unavailable data instead. Do NOT quote raw code tokens from source panels. Do NOT use words about position (left, right, top, bottom, center) — the interface is adaptive and panels can be anywhere; use neutral transitions in ${language}. Some targets may be tagged [collapsed]; the interface reveals them for that turn and restores them afterward, so narrate their purpose normally. ${describeWebMcpTourActionInstructions(actions)} No text outside the json block.`;
 }
 
 function markerTargetAllowed(targetId, targetMap = new Map()) {
@@ -1526,11 +1770,34 @@ export function createProductWebMcpBundle(productContext, options = {}) {
   }
 
   let agentView = createProductContextAgentView(context);
-  let descriptors = createProductContextToolDescriptors(context);
+  let allowedActions = context.actions.filter((action) => action.allowed !== false);
+  let descriptors = allowedActions.map((action) => createProductActionToolDescriptor(context, action));
+
   if (typeof options.enrichActionDescriptor === 'function') {
-    descriptors = descriptors.map((descriptor, index) => (
-      options.enrichActionDescriptor({ ...descriptor }, context.actions[index], context) || descriptor
-    ));
+    descriptors = descriptors.map((descriptor, index) => {
+      let action = allowedActions[index];
+      return options.enrichActionDescriptor({ ...descriptor }, action, context) || descriptor;
+    });
+  }
+
+  if (typeof options.executeAction === 'function') {
+    descriptors.forEach((descriptor, index) => {
+      let action = allowedActions[index];
+      descriptor.execute = function(input, outOfBand) {
+        let oob = (outOfBand && typeof outOfBand === 'object') ? outOfBand : {};
+        let currentDescriptor = oob.descriptor || descriptor;
+        let command = { tool: currentDescriptor.name || descriptor.name, input };
+        let executionContext = {
+          action,
+          descriptor: currentDescriptor,
+          productContext: context,
+          signal: oob.signal,
+          source: oob.source,
+          onSettled: oob.onSettled,
+        };
+        return options.executeAction(command, executionContext);
+      };
+    });
   }
 
   return {
@@ -1542,6 +1809,25 @@ export function createProductWebMcpBundle(productContext, options = {}) {
     safeActions: contextView.runtime.safeActions || [],
     safeActionRefs: contextView.runtime.safeActionRefs || [],
   };
+}
+
+function validateProductWebMcpBundle(bundle) {
+  if (!isObject(bundle)) {
+    throw new Error('Product WebMCP bundle must be an object');
+  }
+  if (!isObject(bundle.context)) {
+    throw new Error('Product WebMCP bundle requires context');
+  }
+  if (!isObject(bundle.contextView)) {
+    throw new Error('Product WebMCP bundle requires contextView');
+  }
+  if (!isObject(bundle.agentView)) {
+    throw new Error('Product WebMCP bundle requires agentView');
+  }
+  if (!Array.isArray(bundle.descriptors)) {
+    throw new Error('Product WebMCP bundle requires a descriptors array');
+  }
+  return bundle;
 }
 
 function entryCandidateValue(entry, key) {
@@ -1753,20 +2039,57 @@ export function createWebMcpHooks({ observer } = {}) {
 
 export async function registerProductContextTools(productContext, targetOrOptions = globalThis.document, runtimeInput) {
   let options = resolveProductContextToolOptions(targetOrOptions, runtimeInput);
+  let bundle = options.bundle === undefined
+    ? createProductWebMcpBundle(productContext, options)
+    : validateProductWebMcpBundle(options.bundle);
   let {
     context,
     agentView,
     contextView,
-    runtime,
     descriptors,
-  } = createProductWebMcpBundle(productContext, options);
-  let registrations = [];
-  for (let descriptor of descriptors) {
-    registrations.push(await registerWebMcpTool(descriptor, options.target));
+  } = bundle;
+
+  for (let [index, descriptor] of descriptors.entries()) {
+    if (!isObject(descriptor)) {
+      throw new Error(`Product WebMCP bundle descriptor ${index} must be an object`);
+    }
+    if (typeof descriptor.execute !== 'function') {
+      let identity = descriptor.name || descriptor.annotations?.actionId || 'unknown';
+      throw new Error(`ToolDescriptor ${identity} requires an execute function`);
+    }
   }
-  let publication = options.publishContext
-    ? publishProductRuntimeContext(contextView, options.target)
-    : { published: false, nativeActive: false, method: '', payload: null, unregister: () => {} };
+
+  let registrations = [];
+  let publication = { published: false, nativeActive: false, method: '', payload: null, unregister: () => {} };
+  try {
+    for (let descriptor of descriptors) {
+      let regOpts = {};
+      if (typeof options.registrationOptions === 'function') {
+        regOpts = options.registrationOptions(descriptor) || {};
+      } else if (isObject(options.registrationOptions)) {
+        regOpts = options.registrationOptions;
+      } else {
+        regOpts = {
+          signal: options.signal,
+          exposedTo: options.exposedTo,
+        };
+      }
+      registrations.push(await registerWebMcpTool(descriptor, options.target, regOpts));
+    }
+    if (options.publishContext) {
+      publication = publishProductRuntimeContext(contextView, options.target);
+    }
+  } catch (err) {
+    try {
+      publication.unregister?.();
+    } catch {}
+    for (let reg of [...registrations].reverse()) {
+      try {
+        reg.unregister?.();
+      } catch {}
+    }
+    throw err;
+  }
   let producer = {
     nativeActive: registrations.some((registration) => registration.nativeActive),
     context,
@@ -1777,19 +2100,88 @@ export async function registerProductContextTools(productContext, targetOrOption
     descriptors,
     registrations,
     refresh(nextRuntime = options.runtime, refreshOptions = {}) {
-      let refreshed = createProductWebMcpBundle(context, {
+      let refreshedOptions = {
         ...options,
         ...refreshOptions,
         runtime: nextRuntime,
         publishContext: false,
-      });
-      contextView = refreshed.contextView;
-      producer.contextView = contextView;
-      producer.runtime = contextView.runtime;
-      if (options.publishContext !== false && refreshOptions.publishContext !== false) {
-        publication.unregister?.();
-        publication = publishProductRuntimeContext(contextView, refreshOptions.target || options.target);
-        producer.publication = publication;
+      };
+      delete refreshedOptions.bundle;
+      let refreshed = createProductWebMcpBundle(context, refreshedOptions);
+      let descriptorUpdates = producer.descriptors.map((descriptor) => ({
+        descriptor,
+        snapshot: Object.getOwnPropertyDescriptors(descriptor),
+        refreshed: refreshed.descriptors.find(
+          (candidate) => candidate.name === descriptor.name
+            || (candidate.annotations?.actionId && candidate.annotations.actionId === descriptor.annotations?.actionId)
+        ),
+      }));
+      let shouldPublish = options.publishContext !== false && refreshOptions.publishContext !== false;
+      let previousPublication = publication;
+      let stagedPublication = shouldPublish
+        ? publishProductRuntimeContextInternal(
+          refreshed.contextView,
+          refreshOptions.target || options.target,
+          previousPublication,
+        )
+        : previousPublication;
+      let producerSnapshot = Object.getOwnPropertyDescriptors(producer);
+
+      try {
+        for (let update of descriptorUpdates) {
+          if (!update.refreshed) continue;
+          let previousExecute = update.descriptor.execute;
+          for (let key of Object.keys(update.descriptor)) {
+            if (key === 'execute' && typeof update.refreshed.execute !== 'function') continue;
+            if (!(key in update.refreshed)) delete update.descriptor[key];
+          }
+          Object.assign(update.descriptor, update.refreshed);
+          if (typeof update.refreshed.execute !== 'function') {
+            update.descriptor.execute = previousExecute;
+          }
+        }
+
+        producer.contextView = refreshed.contextView;
+        producer.runtime = refreshed.contextView.runtime;
+        if (shouldPublish) producer.publication = stagedPublication;
+        contextView = refreshed.contextView;
+        if (shouldPublish) publication = stagedPublication;
+      } catch (error) {
+        let rollbackErrors = [];
+        for (let update of [...descriptorUpdates].reverse()) {
+          try {
+            for (let key of Reflect.ownKeys(update.descriptor)) {
+              if (!Object.hasOwn(update.snapshot, key) && !Reflect.deleteProperty(update.descriptor, key)) {
+                throw new Error(`Unable to restore descriptor ${update.descriptor.name || 'unknown'}`);
+              }
+            }
+            Object.defineProperties(update.descriptor, update.snapshot);
+          } catch (rollbackError) {
+            rollbackErrors.push(rollbackError);
+          }
+        }
+        try {
+          Object.defineProperties(producer, producerSnapshot);
+        } catch (rollbackError) {
+          rollbackErrors.push(rollbackError);
+        }
+        if (shouldPublish) {
+          try {
+            rollbackRuntimeContextPublication(stagedPublication);
+          } catch (rollbackError) {
+            rollbackErrors.push(rollbackError);
+          }
+        }
+        if (rollbackErrors.length) {
+          throw new AggregateError([error, ...rollbackErrors], error.message, { cause: error });
+        }
+        throw error;
+      }
+
+      if (shouldPublish) {
+        try {
+          previousPublication.unregister?.();
+        } catch {}
       }
       return producer;
     },

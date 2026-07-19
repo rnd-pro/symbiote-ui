@@ -47,6 +47,52 @@ function installSsrDom() {
       this.__symbioteSsrSheets = value;
     },
   });
+
+  let HTMLTextAreaElement = window.HTMLTextAreaElement || window.HTMLElement;
+  if (HTMLTextAreaElement) {
+    Object.defineProperty(HTMLTextAreaElement.prototype, 'selectionStart', {
+      configurable: true,
+      get() {
+        return this._selectionStart ?? 0;
+      },
+      set(val) {
+        this._selectionStart = val;
+      },
+    });
+    Object.defineProperty(HTMLTextAreaElement.prototype, 'selectionEnd', {
+      configurable: true,
+      get() {
+        return this._selectionEnd ?? 0;
+      },
+      set(val) {
+        this._selectionEnd = val;
+      },
+    });
+    HTMLTextAreaElement.prototype.setSelectionRange = function (start, end) {
+      this.selectionStart = start;
+      this.selectionEnd = end;
+    };
+  }
+
+  Object.defineProperty(window.HTMLElement.prototype, 'scrollHeight', {
+    configurable: true,
+    get() {
+      return this._scrollHeight ?? (this.value ? 250 : 24);
+    },
+    set(val) {
+      this._scrollHeight = val;
+    },
+  });
+  Object.defineProperty(window.HTMLElement.prototype, 'scrollTop', {
+    configurable: true,
+    get() {
+      return this._scrollTop ?? 0;
+    },
+    set(val) {
+      this._scrollTop = val;
+    },
+  });
+
   return window;
 }
 
@@ -848,6 +894,83 @@ test('embed part exposes a keyed slot and surfaces it through embeds-ready event
   assert.ok(slot);
   assert.equal(slot.dataset.embedKey, 'live-widget-1');
   assert.equal(forwarded.slot, slot);
+
+  workspace.remove();
+});
+
+test('chat composer programmatic updates and background pulse behavior', async () => {
+  let workspace = document.createElement('chat-workspace');
+  document.body.append(workspace);
+  await nextRenderTick();
+
+  let composer = workspace.getComposer();
+  let textarea = composer.getInputElement();
+
+  // Initially background should not have triggered animation
+  let triggeredEvents = [];
+  workspace.addEventListener('chat-workspace-background-change', (event) => {
+    triggeredEvents.push(event.detail);
+  });
+  let composerInputEvents = 0;
+  let nativeChangeEvents = 0;
+  let nativeInputEvents = 0;
+  composer.addEventListener('chat-composer-input', () => composerInputEvents += 1);
+  textarea.addEventListener('change', () => nativeChangeEvents += 1);
+  textarea.addEventListener('input', () => nativeInputEvents += 1);
+
+  textarea.blur();
+  assert.ok(document.activeElement !== textarea);
+
+  let longText = 'a\n'.repeat(50) + 'suffix';
+  workspace.setComposerState({ value: longText });
+
+  await nextRenderTick();
+
+  assert.equal(textarea.value, longText);
+  assert.equal(textarea.selectionStart, longText.length);
+  assert.equal(textarea.selectionEnd, longText.length);
+  assert.equal(textarea.style.height, '200px');
+  assert.equal(textarea.scrollTop, textarea.scrollHeight);
+  assert.ok(document.activeElement !== textarea);
+  assert.equal(composerInputEvents, 0);
+  assert.equal(nativeChangeEvents, 0);
+  assert.equal(nativeInputEvents, 0);
+  assert.ok(triggeredEvents.length > 0);
+  assert.equal(triggeredEvents[triggeredEvents.length - 1].state, 'trigger');
+
+  triggeredEvents = [];
+
+  workspace.setComposerState({ value: longText });
+  await nextRenderTick();
+  assert.equal(triggeredEvents.length, 0);
+
+  workspace.setComposerState({ value: '' });
+  await nextRenderTick();
+  assert.equal(triggeredEvents.length, 0);
+
+  textarea.value = 'user typed text';
+  textarea.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+  await nextRenderTick();
+  assert.equal(composer.$.value, 'user typed text');
+  assert.equal(composerInputEvents, 1);
+  assert.equal(nativeInputEvents, 1);
+  assert.ok(triggeredEvents.length > 0);
+  assert.equal(triggeredEvents[triggeredEvents.length - 1].state, 'trigger');
+
+  triggeredEvents = [];
+
+  composer.setSending(true);
+  workspace.setComposerState({ value: 'another draft change' });
+  await nextRenderTick();
+  assert.equal(triggeredEvents.length, 0);
+
+  composer.dispatchEvent(new CustomEvent('chat-composer-input', {
+    bubbles: true,
+    composed: true,
+    detail: { value: 'user typed text 2', selectionStart: 17 },
+  }));
+  await nextRenderTick();
+  assert.equal(triggeredEvents.length, 0);
 
   workspace.remove();
 });

@@ -164,7 +164,15 @@ export class ChatWorkspace extends Symbiote {
   setComposerState(state = {}) {
     let composer = this.getComposer();
     if (!composer || !state || typeof state !== 'object') return;
-    if ('value' in state) composer.setValue(state.value);
+    if ('value' in state) {
+      let oldValue = composer.$.value;
+      let newValue = state.value || '';
+      composer.setValue(state.value);
+      let isSendingNow = state.sending ?? state.isSending ?? composer.$.isSending;
+      if (newValue !== oldValue && newValue && !isSendingNow) {
+        this.triggerBackground();
+      }
+    }
     if ('attachedContext' in state) composer.setAttachedContext(state.attachedContext);
     if ('leadingControls' in state) composer.setLeadingControls(state.leadingControls);
     if ('footerControls' in state) composer.setFooterControls(state.footerControls);
@@ -282,6 +290,12 @@ export class ChatWorkspace extends Symbiote {
       chatId: event.detail?.chatId || event.detail?.id || '',
     }));
     route('chat-composer-input', 'chat-workspace-input');
+    this.addEventListener('chat-composer-input', (event) => {
+      let value = event.detail?.value || '';
+      if (value && !this.getComposer()?.$.isSending) {
+        this.triggerBackground();
+      }
+    });
     route('chat-composer-key', 'chat-workspace-key');
     route('chat-composer-submit', 'chat-workspace-submit', () => ({ value: this.getComposer()?.$.value || '' }));
     route('chat-composer-send', 'chat-workspace-send', () => ({

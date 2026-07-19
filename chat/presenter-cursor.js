@@ -1,64 +1,22 @@
 /**
- * Presenter cursor: an animated pointer that walks a viewer through any set of
- * on-screen elements.
- *
- * `createPresenterCursor` renders an arrow cursor and a Windows-style
- * marching-ants marquee on a fixed overlay. `moveTo(el)` drag-selects an element
- * by growing the marquee from its top-left corner while the cursor slides to the
- * bottom-right; between checkpoints the cursor visibly travels along a gentle
- * curved (quadratic-bezier) path so the viewer perceives the journey from one
- * element to the next.
- *
- * Markers (`'underline'`, `'box'`, `'bracket'`, `'slash'`, etc.) are semantic
- * annotation gestures, separate from the focus marquee. They live in a small
- * extensible registry keyed by name
- * (an unknown name is a silent no-op) and are hand-drawn: every path carries a
- * small per-frame jitter and slight radius/length/speed variation driven by the
- * same deterministic move counter as the travel arc, so runs differ yet stay
- * reproducible without `Math.random`. A faint, themed ink trail traces under the
- * cursor so the flourish reads, then fades.
- * `presentAnnotationFrame` projects those same paths synchronously from explicit
- * progress and seed values. It uses no animation frame, timer, or prior cursor
- * position, so offline render workers can reproduce any frame independently.
- *
- * `clickElement(el)` is the native-control gesture: the cursor travels to a real
- * button/tab/control, pulses a click target ring, and then calls the element's
- * own `click()` so the host UI changes through its normal event path.
- *
- * `playCursorScenario` plays an agent-authored scenario — a plain list of steps,
- * each naming a `target` the host resolves to a DOM element — by driving the
- * cursor step-by-step with per-step holds, an `onStep` hook, and `AbortSignal`
- * support. When a step carries a `gesture`, the player waits for the flourish to
- * finish before advancing (extending the hold when the gesture runs longer). The
- * step sequencing is host-agnostic and pure enough to unit-test against a fake
- * cursor and fake `resolveTarget` with no real DOM.
- *
- * Node-safe at import time: no top-level DOM, window, document, or rAF access.
- * Every browser touch is lazy and guarded, so importing in a non-browser env
- * never throws; `createPresenterCursor` then returns inert no-op handles and
- * `isSupported()` reports false. `playCursorScenario` works identically against
- * a real cursor or a fake one, so the scenario contract is the agent-facing API.
+ * Browser-safe presenter overlay with one deterministic 30 FPS projector for
+ * live playback and independently rendered frames. Focus frames, handwritten
+ * annotations, pointer travel, and exactly-once semantic clicks stay separate.
+ * Browser access is lazy, so the module remains Node-safe at import time.
  */
 
 const STYLE_ID = 'symbiote-presenter-cursor-style';
 const OVERLAY_CLASS = 'symbiote-presenter-cursor';
 
-export const PRESENTER_MARKERS = Object.freeze(['circle', 'underline', 'box', 'bracket', 'slash']);
+export const PRESENTER_MARKERS = Object.freeze(['freehand', 'underline', 'oval']);
 const PRESENTER_MARKER_SET = new Set(PRESENTER_MARKERS);
 const MARKER_ALIASES = Object.freeze({
-  highlight: 'box',
-  frame: 'box',
-  rectangle: 'box',
-  rect: 'box',
-  marker: 'circle',
-  ring: 'circle',
-  round: 'circle',
+  circle: 'oval',
+  marker: 'oval',
+  ring: 'oval',
+  round: 'oval',
   line: 'underline',
   under: 'underline',
-  brackets: 'bracket',
-  side: 'bracket',
-  stroke: 'slash',
-  diagonal: 'slash',
 });
 export const PRESENTER_SYMBOLS = Object.freeze(['question', 'cross', 'check', 'heart', 'flourish']);
 const PRESENTER_SYMBOL_SET = new Set(PRESENTER_SYMBOLS);
@@ -117,27 +75,24 @@ const INTENT_ALIASES = Object.freeze({
   signature: 'flourish',
 });
 const INTENT_DEFAULTS = Object.freeze({
-  emphasize: { kind: 'marker', marker: 'box' },
+  emphasize: { kind: 'marker', marker: 'freehand' },
   detail: { kind: 'marker', marker: 'underline' },
-  group: { kind: 'marker', marker: 'bracket' },
+  group: { kind: 'marker', marker: 'oval' },
   risk: { kind: 'symbol', symbol: 'cross', placement: 'after' },
   question: { kind: 'symbol', symbol: 'question', placement: 'after' },
   success: { kind: 'symbol', symbol: 'check', placement: 'after' },
   affinity: { kind: 'symbol', symbol: 'heart', placement: 'after' },
   flourish: { kind: 'symbol', symbol: 'flourish', placement: 'below' },
 });
-const ANNOTATION_PLACEMENTS = new Set(['over', 'after', 'before', 'corner', 'below']);
+const ANNOTATION_PLACEMENTS = new Set(['over', 'after', 'before', 'corner', 'below', 'above']);
 
 const CURSOR_SIZE = 18; // px; the hotspot is the arrow's top-left tip
+const INK_CURSOR_SIZE = 4;
 export const PRESENTER_ANNOTATION_COLLISION_ALLOWANCE_PX = 4.4;
 export const PRESENTER_ANNOTATION_TARGET_INSET_PX = 8;
 export const PRESENTER_CURSOR_SIZE_PX = CURSOR_SIZE;
-const DRAG_MS = 720; // cursor + marquee growth duration
-const FADE_MS = 200; // clear() fade-out duration
 const MARCH_MS = 600; // marching-ants loop duration
-const MARQUEE_FADE_MS = 180; // previous marquee fades as the cursor leaves it
 const HIGHLIGHT_PADDING_PX = 10;
-const ANNOTATION_PADDING_PX = 26;
 const HIGHLIGHT_EDGE_INSET_PX = 8;
 const HIGHLIGHT_MIN_SIZE_PX = 8;
 const CLICK_ZONE_PADDING_PX = 6;
@@ -145,6 +100,11 @@ const CLICK_ZONE_MIN_SIZE_PX = 28;
 const CLICK_RIPPLE_SIZE_PX = 36;
 const CLICK_PRESS_MS = 240;
 const CLICK_FADE_MS = 220;
+export const PRESENTER_CLICK_DURATION_MS = CLICK_PRESS_MS + CLICK_FADE_MS;
+export const PRESENTER_FOCUS_REVEAL_DURATION_MS = 600;
+export const PRESENTER_ANNOTATION_DURATION_MS = 1000;
+export const PRESENTER_FRAME_RATE = 30;
+export const PRESENTER_FRAME_MS = 1000 / PRESENTER_FRAME_RATE;
 
 function collisionRect(value = {}) {
   if (!value || typeof value !== 'object') return null;
@@ -218,6 +178,7 @@ export function analyzePresenterAnnotationSafety({
   cursor = null,
   targetRect = null,
   obstacles = [],
+  viewport = null,
   allowancePx = PRESENTER_ANNOTATION_COLLISION_ALLOWANCE_PX,
   targetInsetPx = PRESENTER_ANNOTATION_TARGET_INSET_PX,
   cursorSizePx = PRESENTER_CURSOR_SIZE_PX,
@@ -226,7 +187,9 @@ export function analyzePresenterAnnotationSafety({
     ? pathSamples.map((point) => ({ x: Number(point?.x), y: Number(point?.y) }))
       .filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y))
     : [];
-  let allowance = Number.isFinite(allowancePx) ? Math.max(0, allowancePx) : PRESENTER_ANNOTATION_COLLISION_ALLOWANCE_PX;
+  let allowance = Number.isFinite(allowancePx)
+    ? Math.max(0, allowancePx)
+    : PRESENTER_ANNOTATION_COLLISION_ALLOWANCE_PX;
   let normalizedTarget = collisionRect(targetRect);
   let missingTarget = !normalizedTarget;
   let protectedTarget = null;
@@ -244,10 +207,30 @@ export function analyzePresenterAnnotationSafety({
     ? { x: Number(cursor.x), y: Number(cursor.y) }
     : null;
   let cursorSize = Number.isFinite(cursorSizePx) ? Math.max(0, cursorSizePx) : PRESENTER_CURSOR_SIZE_PX;
-  let cursorRect = cursorPoint ? collisionRect({ ...cursorPoint, width: cursorSize, height: cursorSize }) : null;
+  let cursorRect = cursorPoint
+    ? collisionRect({ ...cursorPoint, width: cursorSize, height: cursorSize })
+    : null;
+  let viewportRect = presenterViewportRect(viewport || {});
+  let inkViewportCollision = Boolean(viewportRect && samples.some((point) => (
+    point.x < viewportRect.left
+      || point.x > viewportRect.right
+      || point.y < viewportRect.top
+      || point.y > viewportRect.bottom
+  )));
+  let cursorViewportCollision = Boolean(viewportRect && cursorRect && (
+    cursorRect.left < viewportRect.left
+      || cursorRect.right > viewportRect.right
+      || cursorRect.top < viewportRect.top
+      || cursorRect.bottom > viewportRect.bottom
+  ));
+  let viewportCollision = inkViewportCollision || cursorViewportCollision;
   let targetCollisionRect = protectedTarget ? expandCollisionRect(protectedTarget, allowance) : null;
-  let targetInteriorCollision = Boolean(targetCollisionRect && pathIntersectsRect(samples, targetCollisionRect));
-  let cursorTargetCollision = Boolean(targetCollisionRect && cursorRect && rectsIntersect(cursorRect, targetCollisionRect));
+  let targetInteriorCollision = Boolean(
+    targetCollisionRect && pathIntersectsRect(samples, targetCollisionRect),
+  );
+  let cursorTargetCollision = Boolean(
+    targetCollisionRect && cursorRect && rectsIntersect(cursorRect, targetCollisionRect),
+  );
   let collisions = [];
   for (let [index, obstacle] of (Array.isArray(obstacles) ? obstacles : []).entries()) {
     let rect = collisionRect(obstacle?.rect || obstacle);
@@ -266,7 +249,11 @@ export function analyzePresenterAnnotationSafety({
     }
   }
   return {
-    safe: !missingTarget && !targetInteriorCollision && !cursorTargetCollision && collisions.length === 0,
+    safe: !missingTarget
+      && !targetInteriorCollision
+      && !cursorTargetCollision
+      && !viewportCollision
+      && collisions.length === 0,
     allowancePx: allowance,
     targetInsetPx: normalizedTarget && protectedTarget ? protectedTarget.left - normalizedTarget.left : 0,
     cursorSizePx: cursorSize,
@@ -274,6 +261,10 @@ export function analyzePresenterAnnotationSafety({
     missingTarget,
     targetInteriorCollision,
     cursorTargetCollision,
+    viewportCollision,
+    inkViewportCollision,
+    cursorViewportCollision,
+    viewportRect,
     collisions,
   };
 }
@@ -284,9 +275,8 @@ const TRAVEL_MAX_MS = 1600;
 const TRAVEL_PX_PER_MS = 0.75; // longer hops take a little more time
 
 // Gesture-flourish tuning.
-const GESTURE_MS = 720; // base duration of a single gesture pass
+const GESTURE_MS = PRESENTER_ANNOTATION_DURATION_MS; // base duration of a single gesture pass
 const GESTURE_JITTER_PX = 2.4; // peak per-frame hand-tremor amplitude
-const INK_FADE_MS = 520; // how long the ink trail lingers before it clears
 const DETERMINISTIC_GESTURE_STEPS = 96;
 
 const DEFAULT_HOLD_MS = 1200;
@@ -382,7 +372,6 @@ ${overlaySelector}{
   pointer-events:none;
   z-index:2147483646;
   opacity:0;
-  transition:opacity ${FADE_MS}ms ease;
   overflow:visible;
 }
 ${overlaySelector}.is-visible{opacity:1;}
@@ -393,7 +382,6 @@ ${overlaySelector} .pc-marquee{
   width:0;
   height:0;
   overflow:visible;
-  transition:opacity ${MARQUEE_FADE_MS}ms ease;
   transform:translate(0,0);
   opacity:1;
   will-change:transform,width,height,opacity;
@@ -411,11 +399,24 @@ ${overlaySelector} .pc-ants{
   stroke-width:1;
   stroke-dasharray:4 4;
   shape-rendering:crispEdges;
-  animation:pc-march ${MARCH_MS}ms linear infinite;
 }
 ${overlaySelector} .pc-ants-black{stroke:#000;}
-${overlaySelector} .pc-ants-white{stroke:#fff;animation-name:pc-march-offset;}
-${overlaySelector}.is-paused .pc-ants{animation-play-state:paused;}
+${overlaySelector} .pc-ants-white{stroke:#fff;}
+${overlaySelector} .pc-focus-handle{
+  position:absolute;
+  top:0;
+  left:0;
+  box-sizing:border-box;
+  width:8px;
+  height:8px;
+  border:1px solid #fff;
+  border-radius:2px;
+  background:#111;
+  box-shadow:0 0 0 1px #111;
+  transform:translate(-50%, -50%);
+  pointer-events:none;
+  display:none;
+}
 ${overlaySelector} .pc-ink{
   position:absolute;
   top:0;
@@ -423,14 +424,13 @@ ${overlaySelector} .pc-ink{
   overflow:visible;
   pointer-events:none;
   opacity:0;
-  transition:opacity ${INK_FADE_MS}ms ease;
 }
-${overlaySelector} .pc-ink.is-inking{opacity:0.55;}
+${overlaySelector} .pc-ink.is-inking{opacity:0.9;}
 ${overlaySelector} .pc-ink path{
   fill:none;
   stroke:var(--sn-presenter-marker, var(--sn-sys-accent));
-  stroke-width:2.6;
-  stroke-opacity:0.86;
+  stroke-width:4.2;
+  stroke-opacity:0.96;
   stroke-linecap:round;
   stroke-linejoin:round;
   shape-rendering:geometricPrecision;
@@ -449,7 +449,6 @@ ${overlaySelector} .pc-click{
     0 0 14px color-mix(in oklab, var(--sn-presenter-click, var(--sn-sys-accent)) 42%, transparent);
   opacity:0;
   transform:translate(-50%, -50%) scale(0.45);
-  transition:opacity ${CLICK_FADE_MS}ms ease, transform ${CLICK_FADE_MS}ms ease;
   pointer-events:none;
   will-change:opacity,transform,left,top;
 }
@@ -471,14 +470,16 @@ ${overlaySelector} .pc-cursor{
   will-change:transform;
   filter:drop-shadow(0 1px 1px rgba(0,0,0,0.35));
 }
-@keyframes pc-march{
-  from{stroke-dashoffset:0;}
-  to{stroke-dashoffset:-8;}
+${overlaySelector} .pc-cursor.is-inking{
+  box-sizing:border-box;
+  width:${INK_CURSOR_SIZE}px;
+  height:${INK_CURSOR_SIZE}px;
+  border:1px solid color-mix(in oklab, var(--sn-presenter-marker, var(--sn-sys-accent)) 78%, #fff);
+  border-radius:50%;
+  background:var(--sn-presenter-marker, var(--sn-sys-accent));
+  box-shadow:0 0 4px color-mix(in oklab, var(--sn-presenter-marker, var(--sn-sys-accent)) 45%, transparent);
 }
-@keyframes pc-march-offset{
-  from{stroke-dashoffset:-4;}
-  to{stroke-dashoffset:-12;}
-}
+${overlaySelector} .pc-cursor.is-inking svg{display:none;}
 `;
 }
 
@@ -561,6 +562,38 @@ function presenterViewportRect(viewport = {}) {
   if (!Number.isFinite(height) || height <= 0) height = 0;
   if (width <= 0 || height <= 0) return null;
   return { left: 0, top: 0, right: width, bottom: height, width, height };
+}
+
+function clampPresenterPoint(point, viewport = {}, cursorSize = CURSOR_SIZE) {
+  let x = Number(point?.x);
+  let y = Number(point?.y);
+  if (!Number.isFinite(x)) x = 0;
+  if (!Number.isFinite(y)) y = 0;
+  let viewportRect = presenterViewportRect(viewport);
+  if (!viewportRect) return { x, y };
+  let size = Math.max(0, Number(cursorSize) || 0);
+  let maxX = Math.max(viewportRect.left, viewportRect.right - size);
+  let maxY = Math.max(viewportRect.top, viewportRect.bottom - size);
+  return {
+    x: Math.min(maxX, Math.max(viewportRect.left, x)),
+    y: Math.min(maxY, Math.max(viewportRect.top, y)),
+  };
+}
+
+function clampPresenterRect(rect, viewport = {}, inset = 0) {
+  let source = normalizePresenterRect(rect);
+  let viewportRect = presenterViewportRect(viewport);
+  if (!viewportRect) return source;
+  let edgeInset = Math.max(0, Number(inset) || 0);
+  let leftEdge = Math.min(viewportRect.right, viewportRect.left + edgeInset);
+  let topEdge = Math.min(viewportRect.bottom, viewportRect.top + edgeInset);
+  let rightEdge = Math.max(leftEdge, viewportRect.right - edgeInset);
+  let bottomEdge = Math.max(topEdge, viewportRect.bottom - edgeInset);
+  let width = Math.min(source.width, rightEdge - leftEdge);
+  let height = Math.min(source.height, bottomEdge - topEdge);
+  let left = Math.min(rightEdge - width, Math.max(leftEdge, source.left));
+  let top = Math.min(bottomEdge - height, Math.max(topEdge, source.top));
+  return { left, top, right: left + width, bottom: top + height, width, height };
 }
 
 function clipsPresenterTarget(el, win) {
@@ -675,6 +708,10 @@ export function resolvePresenterHighlightRect(rect, viewport = {}) {
   };
 }
 
+function presenterAnnotationRect(rect, viewport, annotation) {
+  return clampPresenterRect(rect, viewport, HIGHLIGHT_EDGE_INSET_PX);
+}
+
 export function resolvePresenterTravelDuration(distance) {
   let dist = Math.max(0, Number(distance) || 0);
   return Math.max(
@@ -730,34 +767,38 @@ function variation(seed, salt) {
  * }} GesturePlan
  */
 const GESTURES = {
-  // A hand-drawn rounded perimeter outside the target content. The asymmetric
-  // corners keep the mark organic while preserving room for the cursor body.
-  circle(rect, seed) {
-    let corner = Math.max(8, Math.min(24, Math.min(rect.width, rect.height) * 0.2));
-    let wobble = variation(seed, 11) * 1.5;
-    let points = [
-      { x: rect.left + corner, y: rect.top + wobble },
-      { x: rect.left + rect.width - corner, y: rect.top },
-      { x: rect.left + rect.width, y: rect.top + corner },
-      { x: rect.left + rect.width, y: rect.top + rect.height - corner },
-      { x: rect.left + rect.width - corner, y: rect.top + rect.height },
-      { x: rect.left + corner, y: rect.top + rect.height - wobble },
-      { x: rect.left, y: rect.top + rect.height - corner },
-      { x: rect.left, y: rect.top + corner },
-      { x: rect.left + corner, y: rect.top + wobble },
-    ];
-    return pointListPlan(points, points[0], variation(seed, 7) > 0.35 ? 0.18 : 0);
+  freehand(rect, seed) {
+    let margin = Math.max(9, Math.min(18, rect.height * 0.18));
+    let x0 = rect.left - Math.min(8, rect.width * 0.04);
+    let x1 = rect.left + rect.width + Math.min(8, rect.width * 0.04);
+    let baseY = rect.top + rect.height + margin;
+    let amplitude = 3.5 + (variation(seed, 37) * 0.5 + 0.5) * 3;
+    return {
+      loops: 0,
+      rest: { x: x1, y: baseY },
+      point(t) {
+        let drift = variation(seed, 41) * 2 * t;
+        return {
+          x: x0 + (x1 - x0) * t,
+          y: baseY + Math.sin(t * Math.PI * 3.2) * amplitude * (1 - t * 0.2) + drift,
+        };
+      },
+    };
   },
 
-  // A left-to-right stroke just below the target, as if underlining it, with a
-  // short partial return so the pen lifts naturally. Length and the underline
-  // offset vary slightly per move.
-  underline(rect, seed) {
+  // A left-to-right stroke just below the target, as if underlining it.
+  underline(rect, seed, opts = {}) {
     let pad = rect.width * (0.06 + 0.04 * (variation(seed, 5) * 0.5 + 0.5));
     let x0 = rect.left + pad;
     let x1 = rect.left + rect.width - pad;
     let len = x1 - x0;
-    let y = rect.top + rect.height + Math.min(8, rect.height * 0.12) + variation(seed, 9) * 2;
+    let below = opts.placement !== 'above';
+    let margin = below
+      ? Math.max(10, Math.min(14, rect.height * 0.18))
+      : CURSOR_SIZE + PRESENTER_ANNOTATION_COLLISION_ALLOWANCE_PX + 3;
+    let direction = below ? 1 : -1;
+    let edge = below ? rect.top + rect.height : rect.top;
+    let y = edge + direction * (margin + variation(seed, 9) * 2);
     let droop = 2 + variation(seed, 19) * 2; // slight mid-stroke dip
     let returnFrac = 0.22 + (variation(seed, 23) * 0.5 + 0.5) * 0.12; // short pull-back
     return {
@@ -766,91 +807,46 @@ const GESTURES = {
       point(t) {
         if (t <= 1 - returnFrac) {
           let p = t / (1 - returnFrac);
-          return { x: x0 + len * p, y: y + Math.sin(p * Math.PI) * droop };
+          return { x: x0 + len * p, y: y + direction * Math.sin(p * Math.PI) * droop };
         }
-        // Brief return sweep back to the left before lifting.
         let p = (t - (1 - returnFrac)) / returnFrac;
-        return { x: x1 - len * 0.3 * p, y: y - Math.sin(p * Math.PI) * droop * 0.5 };
-      },
-    };
-  },
-
-  box(rect, seed) {
-    let inset = 2 + (variation(seed, 37) * 0.5 + 0.5) * 5;
-    let left = rect.left + inset;
-    let top = rect.top + inset;
-    let right = rect.left + rect.width - inset;
-    let bottom = rect.top + rect.height - inset;
-    let bow = 2 + variation(seed, 41) * 1.5;
-    let points = [
-      { x: left, y: top + bow },
-      { x: right - bow, y: top },
-      { x: right, y: bottom - bow },
-      { x: left + bow, y: bottom },
-      { x: left, y: top + bow },
-    ];
-    return {
-      loops: 0.35,
-      rest: points[0],
-      point(t) {
-        let total = points.length - 1;
-        let scaled = Math.min(total - 0.001, t * total);
-        let i = Math.floor(scaled);
-        let p = scaled - i;
-        let a = points[i];
-        let b = points[i + 1];
-        return { x: a.x + (b.x - a.x) * p, y: a.y + (b.y - a.y) * p };
-      },
-    };
-  },
-
-  bracket(rect, seed) {
-    let inset = 3 + (variation(seed, 43) * 0.5 + 0.5) * 5;
-    let left = rect.left + inset;
-    let right = rect.left + rect.width - inset;
-    let top = rect.top + rect.height * 0.14;
-    let bottom = rect.top + rect.height * 0.86;
-    let hook = Math.min(rect.width * 0.14, 18) + variation(seed, 47) * 2;
-    let points = [
-      { x: left + hook, y: top },
-      { x: left, y: top },
-      { x: left, y: bottom },
-      { x: left + hook, y: bottom },
-      { x: right - hook, y: bottom },
-      { x: right, y: bottom },
-      { x: right, y: top },
-      { x: right - hook, y: top },
-    ];
-    return {
-      loops: 0,
-      rest: points[points.length - 1],
-      point(t) {
-        let total = points.length - 1;
-        let scaled = Math.min(total - 0.001, t * total);
-        let i = Math.floor(scaled);
-        let p = scaled - i;
-        let a = points[i];
-        let b = points[i + 1];
-        return { x: a.x + (b.x - a.x) * p, y: a.y + (b.y - a.y) * p };
-      },
-    };
-  },
-
-  slash(rect, seed) {
-    let padX = rect.width * (0.08 + (variation(seed, 59) * 0.5 + 0.5) * 0.06);
-    let padY = rect.height * (0.14 + (variation(seed, 61) * 0.5 + 0.5) * 0.08);
-    let x0 = rect.left + padX;
-    let y0 = rect.top + rect.height - padY;
-    let x1 = rect.left + rect.width - padX;
-    let y1 = rect.top + padY;
-    let sag = variation(seed, 67) * Math.min(14, rect.height * 0.16);
-    return {
-      loops: 0,
-      rest: { x: x1, y: y1 },
-      point(t) {
         return {
-          x: x0 + (x1 - x0) * t,
-          y: y0 + (y1 - y0) * t + Math.sin(t * Math.PI) * sag,
+          x: x1 - len * 0.3 * p,
+          y: y - direction * Math.sin(p * Math.PI) * droop * 0.5,
+        };
+      },
+    };
+  },
+
+  oval(rect, seed) {
+    let cx = rect.left + rect.width / 2;
+    let cy = rect.top + rect.height / 2;
+    let shortSide = Math.min(rect.width, rect.height);
+    let expressiveGap = 1.5 + Math.min(4.5, Math.max(0, shortSide - 24) * 0.075);
+    let targetInset = Math.min(PRESENTER_ANNOTATION_TARGET_INSET_PX, shortSide * 0.25);
+    let jitterScale = Math.max(0.4, Math.min(1, shortSide / 80));
+    let safetyGap = INK_CURSOR_SIZE / 2
+      + PRESENTER_ANNOTATION_COLLISION_ALLOWANCE_PX
+      + GESTURE_JITTER_PX * jitterScale
+      - targetInset
+      + 0.75;
+    let gap = Math.max(expressiveGap, safetyGap);
+    let rx = rect.width / 2 + gap + 0.5 + variation(seed, 33) * 0.2;
+    let ry = rect.height / 2 + gap + variation(seed, 35) * 0.2;
+    return {
+      loops: 0.15,
+      jitterScale,
+      rest: { x: cx + rx, y: cy },
+      point(t) {
+        let angle = t * Math.PI * 2 * 1.15;
+        let cosine = Math.cos(angle);
+        let sine = Math.sin(angle);
+        let roundedX = Math.sign(cosine) * Math.pow(Math.abs(cosine), 0.25);
+        let roundedY = Math.sign(sine) * Math.pow(Math.abs(sine), 0.25);
+        let w = 1 + Math.sin(angle * 3) * 0.008 * variation(seed, 37);
+        return {
+          x: cx + rx * w * roundedX,
+          y: cy + ry * w * roundedY,
         };
       },
     };
@@ -870,6 +866,8 @@ function symbolRect(rect, placement = 'after') {
     cy = rect.top + size * 0.1;
   } else if (placement === 'below') {
     cy = rect.top + rect.height + gap + size / 2;
+  } else if (placement === 'above') {
+    cy = rect.top - gap - size / 2;
   }
   return { left: cx - size / 2, top: cy - size / 2, width: size, height: size };
 }
@@ -976,6 +974,65 @@ const SYMBOLS = {
   },
 };
 
+function annotationPlacementCandidates(annotation) {
+  if (annotation.kind === 'marker') {
+    if (annotation.marker !== 'underline') return [annotation.placement || 'over'];
+    return annotation.placement === 'above' ? ['above', 'below'] : ['below', 'above'];
+  }
+  let preferred = annotation.placement || 'after';
+  if (preferred === 'after') return ['after', 'before', 'above', 'below', 'over'];
+  if (preferred === 'below') return ['below', 'above', 'before', 'after', 'over'];
+  if (preferred === 'before') return ['before', 'after', 'above', 'below', 'over'];
+  if (preferred === 'above') return ['above', 'below', 'before', 'after', 'over'];
+  return [preferred];
+}
+
+function presenterPlanOverflow(plan, seed, viewport) {
+  let viewportRect = presenterViewportRect(viewport);
+  if (!viewportRect || !plan?.point) return 0;
+  let maxX = viewportRect.right - INK_CURSOR_SIZE;
+  let maxY = viewportRect.bottom - INK_CURSOR_SIZE;
+  if (maxX < viewportRect.left || maxY < viewportRect.top) return Number.POSITIVE_INFINITY;
+  let points = [];
+  for (let index = 0; index <= DETERMINISTIC_GESTURE_STEPS; index += 1) {
+    points.push(projectStrokePoint(plan, seed, index / DETERMINISTIC_GESTURE_STEPS));
+  }
+  if (plan.rest) points.push(plan.rest);
+  return points.reduce((total, point) => total
+    + Math.max(0, viewportRect.left - point.x)
+    + Math.max(0, point.x - maxX)
+    + Math.max(0, viewportRect.top - point.y)
+    + Math.max(0, point.y - maxY), 0);
+}
+
+function resolvePresenterAnnotationLayout(annotation, targetRect, viewport, seed) {
+  let drawRect = presenterAnnotationRect(targetRect, viewport, annotation);
+  let factory = annotation.kind === 'symbol'
+    ? SYMBOLS[annotation.symbol]
+    : GESTURES[annotation.marker];
+  let best = null;
+  for (let placement of annotationPlacementCandidates(annotation)) {
+    let nextAnnotation = { ...annotation, placement };
+    let plan = factory?.(drawRect, seed, { placement });
+    if (!plan) continue;
+    let overflow = presenterPlanOverflow(plan, seed, viewport);
+    if (!best || overflow < best.overflow) {
+      let rawGeometryRect = annotation.kind === 'symbol'
+        ? symbolRect(drawRect, placement)
+        : drawRect;
+      best = {
+        annotation: nextAnnotation,
+        drawRect,
+        geometryRect: clampPresenterRect(rawGeometryRect, viewport),
+        plan,
+        overflow,
+      };
+    }
+    if (overflow === 0) break;
+  }
+  return best;
+}
+
 function hasDocument(doc) {
   return Boolean(doc && doc.body && typeof doc.createElement === 'function');
 }
@@ -1016,6 +1073,12 @@ function inertCursor() {
     presentAnnotationFrame() {
       return { presented: false, reason: 'unsupported' };
     },
+    presentFocusFrame() {
+      return { presented: false, reason: 'unsupported' };
+    },
+    presentClickFrame() {
+      return { presented: false, reason: 'unsupported' };
+    },
     clear() {},
     dispose() {},
     isSupported() {
@@ -1032,8 +1095,319 @@ function inertCursor() {
  * env this returns inert no-ops and `isSupported()` is false.
  *
  * @param {Document} [doc] - document to render into (defaults to the global one).
- * @returns {{ moveTo: (el: Element, opts?: object) => void, markElement: (el: Element, opts?: object) => void, annotateElement: (el: Element, opts?: object) => void, presentAnnotationFrame: (el: Element, annotation: object, frame: object) => object, clickElement: (el: Element, opts?: object) => void, clear: () => void, dispose: () => void, isSupported: () => boolean }}
+ * @returns {{ moveTo: (el: Element, opts?: object) => void, markElement: (el: Element, opts?: object) => void, annotateElement: (el: Element, opts?: object) => void, presentFocusFrame: (el: Element, frame: object) => object, presentAnnotationFrame: (el: Element, annotation: object, frame: object) => object, presentClickFrame: (el: Element, frame: object) => object, clickElement: (el: Element, opts?: object) => void, clear: () => void, dispose: () => void, isSupported: () => boolean }}
  */
+function layerStartMs(layer) {
+  let value = Number(layer?.startMs ?? layer?.startTime ?? 0);
+  return Number.isFinite(value) ? value : 0;
+}
+
+function frameElapsed(timeMs, layer, durationMs) {
+  let raw = Math.max(0, Number(timeMs) - layerStartMs(layer));
+  if (raw >= durationMs) return durationMs;
+  return Math.floor(raw / PRESENTER_FRAME_MS) * PRESENTER_FRAME_MS;
+}
+
+function smoothPresenterPath(points) {
+  if (points.length < 2) return '';
+  let [first, second, ...rest] = points;
+  let path = `M${first.x.toFixed(1)} ${first.y.toFixed(1)}Q${first.x.toFixed(1)} ${first.y.toFixed(1)} ${second.x.toFixed(1)} ${second.y.toFixed(1)}`;
+  for (let point of rest) path += `T${point.x.toFixed(1)} ${point.y.toFixed(1)}`;
+  return path;
+}
+
+function strokeJitterAmplitude(seed) {
+  return GESTURE_JITTER_PX * (0.85 + (variation(seed, 31) * 0.5 + 0.5) * 0.4);
+}
+
+function projectStrokePoint(
+  plan,
+  seed,
+  t,
+  amplitude = strokeJitterAmplitude(seed),
+  viewport = null,
+) {
+  let eased = easeInOutCubic(t);
+  let ideal = plan.point(eased);
+  let fade = 1 - eased * eased;
+  let jitterScale = Number.isFinite(plan?.jitterScale)
+    ? Math.max(0, Math.min(1, plan.jitterScale))
+    : 1;
+  let point = {
+    x: ideal.x + jitter(seed, eased, amplitude * jitterScale, 0) * fade,
+    y: ideal.y + jitter(seed, eased, amplitude * jitterScale, 1) * fade,
+  };
+  return viewport ? clampPresenterPoint(point, viewport) : point;
+}
+
+function projectStroke(layer, timeMs, seed, registry, normalizeName, options = {}) {
+  let result = {
+    visible: false,
+    path: '',
+    points: [],
+    opacity: 0,
+    name: '',
+    placement: '',
+    rect: null,
+    cursor: null,
+    safety: null,
+    completed: false,
+    motorActive: false,
+  };
+  if (!layer?.active || !layer.rect || Number(timeMs) < layerStartMs(layer)) return result;
+  let name = normalizeName(layer.name);
+  if (!name || !registry[name]) return result;
+  let viewport = presenterViewportRect(layer.viewport || {}) ? layer.viewport : options.viewport;
+  let targetRect = layer.targetRect || layer.rect;
+  let annotation = options.kind === 'symbol'
+    ? { kind: 'symbol', symbol: name, placement: layer.placement || 'after' }
+    : { kind: 'marker', marker: name, placement: layer.placement || 'over' };
+  let layout = layer.layout
+    || resolvePresenterAnnotationLayout(annotation, targetRect, viewport, seed);
+  if (!layout?.plan) return result;
+  let plan = layout.plan;
+  let duration = Math.max(1, Number(layer.durationMs ?? layer.duration) || GESTURE_MS);
+  let progress = frameElapsed(timeMs, layer, duration) / duration;
+  let pointCount = progress > 0
+    ? Math.max(2, Math.floor(progress * DETERMINISTIC_GESTURE_STEPS) + 1)
+    : 0;
+  let amplitude = strokeJitterAmplitude(seed);
+  let points = [];
+  for (let index = 0; index < pointCount; index += 1) {
+    let t = Math.min(1, index / DETERMINISTIC_GESTURE_STEPS);
+    points.push(projectStrokePoint(plan, seed, t, amplitude, viewport));
+  }
+  let strokeTip = points.length
+    ? points[points.length - 1]
+    : projectStrokePoint(plan, seed, 0, amplitude, viewport);
+  if (progress >= 1 && plan.rest) strokeTip = clampPresenterPoint(plan.rest, viewport, 0);
+  let cursorPoint = clampPresenterPoint({
+    x: strokeTip.x - INK_CURSOR_SIZE / 2,
+    y: strokeTip.y - INK_CURSOR_SIZE / 2,
+  }, viewport, INK_CURSOR_SIZE);
+  let obstacles = Array.isArray(layer.obstacles) ? layer.obstacles : options.obstacles;
+  let safety = analyzePresenterAnnotationSafety({
+    pathSamples: points,
+    cursor: cursorPoint,
+    targetRect,
+    obstacles,
+    viewport,
+    cursorSizePx: INK_CURSOR_SIZE,
+  });
+  let hideCursor = layer.hideCursor === true || layer.cursor === false;
+  return {
+    visible: true,
+    path: smoothPresenterPath(points),
+    points,
+    opacity: 1,
+    name,
+    placement: layout.annotation.placement,
+    rect: layout.geometryRect,
+    drawRect: layout.drawRect,
+    cursor: hideCursor ? null : cursorPoint,
+    cursorSizePx: INK_CURSOR_SIZE,
+    safety,
+    completed: progress >= 1,
+    motorActive: progress < 1,
+  };
+}
+
+function projectFocusLayer(layer, timeMs, viewport) {
+  let hidden = {
+    visible: false,
+    left: 0,
+    top: 0,
+    width: 0,
+    height: 0,
+    opacity: 0,
+    antsDashOffset: 0,
+    revealProgress: 0,
+    revealing: false,
+    completed: false,
+    motorActive: false,
+    dragHandle: null,
+    targetRect: null,
+  };
+  if (!layer?.active || !layer.rect || Number(timeMs) < layerStartMs(layer)) return hidden;
+
+  let targetRect = clampPresenterRect(layer.rect, viewport);
+  let duration = Math.max(
+    PRESENTER_FRAME_MS,
+    Number(layer.durationMs ?? layer.duration) || PRESENTER_FOCUS_REVEAL_DURATION_MS,
+  );
+  let elapsed = frameElapsed(timeMs, layer, duration);
+  let timeProgress = Math.min(1, elapsed / duration);
+  let revealProgress = easeInOutCubic(timeProgress);
+  let width = revealProgress >= 1
+    ? targetRect.width
+    : Math.min(targetRect.width, Math.max(1, targetRect.width * revealProgress));
+  let height = revealProgress >= 1
+    ? targetRect.height
+    : Math.min(targetRect.height, Math.max(1, targetRect.height * revealProgress));
+  let marchTime = frameElapsed(timeMs, layer, Number.MAX_SAFE_INTEGER);
+
+  return {
+    visible: true,
+    left: targetRect.left,
+    top: targetRect.top,
+    width,
+    height,
+    opacity: 1,
+    antsDashOffset: -8 * ((marchTime % MARCH_MS) / MARCH_MS),
+    revealProgress,
+    revealing: timeProgress < 1,
+    completed: timeProgress >= 1,
+    motorActive: timeProgress < 1,
+    dragHandle: {
+      x: targetRect.left + width,
+      y: targetRect.top + height,
+      visible: timeProgress < 1,
+    },
+    targetRect,
+  };
+}
+
+export function projectPresenterState(layers = {}, timeMs = 0, seed = 0, viewport = {}) {
+  let focusRes = projectFocusLayer(layers.focus, timeMs, viewport);
+
+  let markerRes = projectStroke(
+    layers.marker,
+    timeMs,
+    seed,
+    GESTURES,
+    normalizePresenterMarker,
+    { kind: 'marker', viewport, obstacles: viewport?.obstacles },
+  );
+  let symbolRes = projectStroke(
+    layers.symbol,
+    timeMs,
+    seed,
+    SYMBOLS,
+    normalizePresenterSymbol,
+    { kind: 'symbol', viewport, obstacles: viewport?.obstacles },
+  );
+
+  let click = layers.click;
+  let clickRes = { visible: false, x: 0, y: 0, scale: 0.45, opacity: 0, completed: false, motorActive: false };
+  let clickDuration = CLICK_PRESS_MS + CLICK_FADE_MS;
+  if (click?.active && Number(timeMs) >= layerStartMs(click)) {
+    let progress = frameElapsed(timeMs, click, clickDuration) / clickDuration;
+    clickRes = {
+      visible: progress <= 1,
+      x: click.x,
+      y: click.y,
+      scale: 0.45 + (2.15 - 0.45) * progress,
+      opacity: progress < 0.5 ? 1 : Math.max(0, 1 - (progress - 0.5) / 0.5),
+      completed: progress >= 1,
+      motorActive: progress < 1,
+    };
+  }
+
+  let cursorLayer = layers.cursor;
+  let cursorRes = { visible: false, x: 0, y: 0, opacity: 1, completed: false, motorActive: false };
+  if (cursorLayer?.active && Number(timeMs) >= layerStartMs(cursorLayer)) {
+    cursorRes.visible = true;
+    let duration = Math.max(1, Number(cursorLayer.durationMs ?? cursorLayer.duration) || TRAVEL_MIN_MS);
+    let progress = frameElapsed(timeMs, cursorLayer, duration) / duration;
+    let isTraveling = cursorLayer.fromX !== undefined && cursorLayer.toX !== undefined && progress < 1;
+
+    cursorRes.motorActive = isTraveling;
+    cursorRes.completed = !isTraveling;
+
+    if (isTraveling) {
+      let eased = easeInOutCubic(progress);
+      let dx = cursorLayer.toX - cursorLayer.fromX;
+      let dy = cursorLayer.toY - cursorLayer.fromY;
+      let distance = Math.hypot(dx, dy);
+      if (distance < 1) {
+        cursorRes.x = cursorLayer.toX;
+        cursorRes.y = cursorLayer.toY;
+      } else {
+        let perpendicularX = -dy / distance;
+        let perpendicularY = dx / distance;
+        let side = seed % 2 === 0 ? 1 : -1;
+        let wobble = ((seed % 5) - 2) * 0.04;
+        let bow = distance * (0.16 + wobble) * side;
+        let controlX = cursorLayer.fromX + dx * 0.5 + perpendicularX * bow;
+        let controlY = cursorLayer.fromY + dy * 0.5 + perpendicularY * bow;
+        let inverse = 1 - eased;
+        cursorRes.x = inverse * inverse * cursorLayer.fromX
+          + 2 * inverse * eased * controlX
+          + eased * eased * cursorLayer.toX;
+        cursorRes.y = inverse * inverse * cursorLayer.fromY
+          + 2 * inverse * eased * controlY
+          + eased * eased * cursorLayer.toY;
+      }
+    } else if (cursorLayer.fromX !== undefined && cursorLayer.toX !== undefined && progress >= 1) {
+      cursorRes.x = cursorLayer.toX;
+      cursorRes.y = cursorLayer.toY;
+    } else {
+      cursorRes.x = cursorLayer.x !== undefined ? Number(cursorLayer.x) : (cursorLayer.toX !== undefined ? Number(cursorLayer.toX) : 0);
+      cursorRes.y = cursorLayer.y !== undefined ? Number(cursorLayer.y) : (cursorLayer.toY !== undefined ? Number(cursorLayer.toY) : 0);
+      if (!Number.isFinite(cursorRes.x)) cursorRes.x = 0;
+      if (!Number.isFinite(cursorRes.y)) cursorRes.y = 0;
+    }
+
+    let clampedCursor = clampPresenterPoint(cursorRes, viewport);
+    cursorRes.x = clampedCursor.x;
+    cursorRes.y = clampedCursor.y;
+  }
+
+  let activeMotorLayers = [];
+  if (focusRes.visible && focusRes.motorActive) {
+    activeMotorLayers.push('focus');
+  }
+  if (markerRes.visible && markerRes.motorActive) {
+    activeMotorLayers.push('marker');
+  }
+  if (symbolRes.visible && symbolRes.motorActive) {
+    activeMotorLayers.push('symbol');
+  }
+  if (cursorRes.visible && cursorRes.motorActive) {
+    activeMotorLayers.push('cursor');
+  }
+  if (clickRes.visible && clickRes.motorActive) {
+    activeMotorLayers.push('click');
+  }
+
+  if (activeMotorLayers.length > 1) {
+    activeMotorLayers.sort();
+    let err = new Error(`Malformed input: Mutually exclusive emphasis layers (${activeMotorLayers.join(', ')}) active simultaneously.`);
+    err.code = 'ERR_MUTUALLY_EXCLUSIVE_LAYERS';
+    err.diagnostics = {
+      error: 'Mutually exclusive emphasis layers active simultaneously',
+      code: 'ERR_MUTUALLY_EXCLUSIVE_LAYERS',
+      activeLayers: activeMotorLayers,
+      focus: layers.focus,
+      marker: layers.marker,
+      symbol: layers.symbol,
+      cursor: layers.cursor,
+      click: layers.click,
+    };
+    throw err;
+  }
+
+  let activeAnnotation = null;
+  if (markerRes.visible && !markerRes.completed) {
+    activeAnnotation = { kind: 'marker', ...markerRes };
+  } else if (symbolRes.visible && !symbolRes.completed) {
+    activeAnnotation = { kind: 'symbol', ...symbolRes };
+  } else if (markerRes.visible) {
+    activeAnnotation = { kind: 'marker', ...markerRes };
+  } else if (symbolRes.visible) {
+    activeAnnotation = { kind: 'symbol', ...symbolRes };
+  }
+
+  return {
+    focus: focusRes,
+    marker: markerRes,
+    symbol: symbolRes,
+    click: clickRes,
+    cursor: cursorRes,
+    annotation: activeAnnotation,
+  };
+}
+
 export function createPresenterCursor(doc = typeof document !== 'undefined' ? document : null) {
   if (!hasDocument(doc)) return inertCursor();
 
@@ -1047,6 +1421,9 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
 
   let { svg, black: rectBlack, white: rectWhite } = buildMarqueeSvg(doc);
   marquee.appendChild(svg);
+
+  let focusHandle = doc.createElement('div');
+  focusHandle.className = 'pc-focus-handle';
 
   // Ink trail: a faint SVG path drawn under the cursor during a gesture so the
   // flourish reads, then fades out. Sits below the cursor in the overlay.
@@ -1063,6 +1440,7 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
   cursor.innerHTML = CURSOR_SVG;
 
   overlay.appendChild(marquee);
+  overlay.appendChild(focusHandle);
   overlay.appendChild(ink);
   overlay.appendChild(clickHalo);
   overlay.appendChild(cursor);
@@ -1080,52 +1458,185 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
     (win && win.cancelAnimationFrame && win.cancelAnimationFrame.bind(win)) ||
     ((id) => clearTimeout(id));
 
+  function resolveViewport(supplied = {}) {
+    let width = Number(supplied?.width);
+    let height = Number(supplied?.height);
+    if (!Number.isFinite(width) || width <= 0) {
+      width = win?.innerWidth || doc.documentElement?.clientWidth || 0;
+    }
+    if (!Number.isFinite(height) || height <= 0) {
+      height = win?.innerHeight || doc.documentElement?.clientHeight || 0;
+    }
+    return { width, height };
+  }
+
   let disposed = false;
-  // Whether a previous checkpoint has been shown, so the first move drag-selects
-  // directly and later moves travel from the current cursor position.
-  let hasPrev = false;
-  // Current cursor tip position (viewport coords), kept in sync across the rAF
-  // travel and the CSS drag step so each hop starts where the last one ended.
   let cursorX = 0;
   let cursorY = 0;
-  // Monotonic counter drives a deterministic (non-random) variation of the
-  // bezier control point and the gesture noise so repeated runs differ slightly.
   let moveIndex = 0;
-  let travelRaf = 0;
-  let gestureRaf = 0;
-  let dragRaf = 0;
-  let inkFadeTimer = 0;
-  let clickTimers = new Set();
-  let clickResolve = null;
-  // Resolver for the in-flight gesture's completion promise, if any.
+  let actionCounter = 0;
+  let currentActionId = null;
+  let currentActionResolver = null;
+  let activeElementTarget = null;
   let gestureResolve = null;
+  let clickActions = new Map();
+
+  let activeLayers = {
+    focus: null,
+    marker: null,
+    symbol: null,
+    click: null,
+    cursor: null,
+    viewport: null,
+  };
+  let animationStartMs = null;
+  let renderLoopId = null;
+
+  function runRenderLoop() {
+    if (renderLoopId) return;
+    function tick(now) {
+      if (disposed) {
+        renderLoopId = 0;
+        return;
+      }
+      let elapsed = now - (animationStartMs ?? now);
+
+      let viewport = resolveViewport(activeLayers.viewport);
+      let projected = projectPresenterState(activeLayers, elapsed, moveIndex, viewport);
+
+      if (projected.focus.visible) {
+        marquee.classList.remove('pc-marquee-faded');
+        marquee.style.transform = `translate(${projected.focus.left}px, ${projected.focus.top}px)`;
+        marquee.style.width = `${projected.focus.width}px`;
+        marquee.style.height = `${projected.focus.height}px`;
+        sizeMarqueeSvg(svg, [rectBlack, rectWhite], projected.focus.width, projected.focus.height);
+        rectBlack.style.strokeDashoffset = `${projected.focus.antsDashOffset}`;
+        rectWhite.style.strokeDashoffset = `${projected.focus.antsDashOffset - 4}`;
+        if (projected.focus.dragHandle?.visible) {
+          focusHandle.style.left = `${projected.focus.dragHandle.x}px`;
+          focusHandle.style.top = `${projected.focus.dragHandle.y}px`;
+          focusHandle.style.display = 'block';
+        } else {
+          focusHandle.style.display = 'none';
+        }
+      } else {
+        hideMarqueeFrame();
+      }
+
+      let dParts = [];
+      if (projected.marker.visible && projected.marker.path) {
+        dParts.push(projected.marker.path);
+      }
+      if (projected.symbol.visible && projected.symbol.path) {
+        dParts.push(projected.symbol.path);
+      }
+      let d = dParts.join(' ');
+      inkPath.setAttribute('d', d);
+      ink.classList.toggle('is-inking', Boolean(d));
+      cursor.classList.toggle('is-inking', Boolean(projected.annotation && !projected.annotation.completed));
+
+      if (projected.click.visible) {
+        clickHalo.style.left = `${projected.click.x}px`;
+        clickHalo.style.top = `${projected.click.y}px`;
+        clickHalo.style.transform = `translate(-50%, -50%) scale(${projected.click.scale})`;
+        clickHalo.style.opacity = projected.click.opacity;
+        clickHalo.style.display = 'block';
+      } else {
+        clickHalo.style.display = 'none';
+      }
+
+      if (projected.annotation?.cursor && !projected.annotation.completed) {
+        setCursor(projected.annotation.cursor.x, projected.annotation.cursor.y);
+      } else if (projected.cursor.visible) {
+        setCursor(projected.cursor.x, projected.cursor.y);
+      } else if (projected.annotation?.cursor) {
+        setCursor(projected.annotation.cursor.x, projected.annotation.cursor.y);
+      } else {
+        cursor.style.opacity = '0';
+      }
+
+      let needsNextFrame = false;
+      if (activeLayers.focus?.active
+        && elapsed < layerStartMs(activeLayers.focus)
+          + (activeLayers.focus.duration || PRESENTER_FOCUS_REVEAL_DURATION_MS)) {
+        needsNextFrame = true;
+      }
+      if (activeLayers.cursor?.active
+        && elapsed < layerStartMs(activeLayers.cursor) + (activeLayers.cursor.duration || TRAVEL_MIN_MS)) {
+        needsNextFrame = true;
+      }
+      if (activeLayers.marker?.active
+        && elapsed < layerStartMs(activeLayers.marker) + (activeLayers.marker.duration || GESTURE_MS)) {
+        needsNextFrame = true;
+      }
+      if (activeLayers.symbol?.active
+        && elapsed < layerStartMs(activeLayers.symbol) + (activeLayers.symbol.duration || GESTURE_MS)) {
+        needsNextFrame = true;
+      }
+      if (activeLayers.click?.active
+        && elapsed < layerStartMs(activeLayers.click) + CLICK_PRESS_MS + CLICK_FADE_MS) {
+        needsNextFrame = true;
+      }
+
+      if (needsNextFrame) {
+        renderLoopId = raf(tick);
+      } else {
+        renderLoopId = 0;
+        if (activeLayers.click && activeLayers.click.active) {
+          activeLayers.click.active = false;
+        }
+        if (currentActionResolver) {
+          let resolve = currentActionResolver;
+          currentActionResolver = null;
+          let receipt = {
+            actionId: currentActionId,
+            status: 'settled',
+            target: activeElementTarget,
+          };
+          if (projected.annotation?.safety) {
+            receipt.annotation = {
+              kind: projected.annotation.kind,
+              name: projected.annotation.name,
+              placement: projected.annotation.placement,
+              rect: projected.annotation.rect,
+            };
+            receipt.placement = projected.annotation.placement;
+            receipt.safety = projected.annotation.safety;
+          }
+          resolve(receipt);
+        }
+        if (gestureResolve) {
+          let resolve = gestureResolve;
+          gestureResolve = null;
+          resolve();
+        }
+      }
+    }
+    animationStartMs = nowMs();
+    renderLoopId = raf(tick);
+  }
 
   function cancelTravel() {
-    if (travelRaf) {
-      caf(travelRaf);
-      travelRaf = 0;
+    if (renderLoopId) {
+      caf(renderLoopId);
+      renderLoopId = 0;
     }
   }
 
   function cancelDrag() {
-    if (dragRaf) {
-      caf(dragRaf);
-      dragRaf = 0;
+    if (renderLoopId) {
+      caf(renderLoopId);
+      renderLoopId = 0;
     }
   }
 
-  // Stop any running gesture, settle its completion promise, and hide the ink
-  // trail. Safe to call when nothing is running.
   function cancelGesture() {
-    if (gestureRaf) {
-      caf(gestureRaf);
-      gestureRaf = 0;
-    }
-    if (inkFadeTimer) {
-      clearTimeout(inkFadeTimer);
-      inkFadeTimer = 0;
+    if (renderLoopId) {
+      caf(renderLoopId);
+      renderLoopId = 0;
     }
     ink.classList.remove('is-inking');
+    cursor.classList.remove('is-inking');
     if (gestureResolve) {
       let resolve = gestureResolve;
       gestureResolve = null;
@@ -1133,258 +1644,56 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
     }
   }
 
-  function setClickTimer(fn, ms) {
-    let timer = setTimeout(() => {
-      clickTimers.delete(timer);
-      fn();
-    }, ms);
-    clickTimers.add(timer);
-    return timer;
-  }
-
   function cancelClick() {
-    for (let timer of clickTimers) clearTimeout(timer);
-    clickTimers.clear();
-    clickHalo.classList.remove('is-clicking', 'pc-click-fired');
-    if (clickResolve) {
-      let resolve = clickResolve;
-      clickResolve = null;
-      resolve();
+    if (renderLoopId) {
+      caf(renderLoopId);
+      renderLoopId = 0;
     }
+    clickHalo.style.display = 'none';
   }
 
   function setCursor(x, y) {
     cursorX = x;
     cursorY = y;
+    cursor.style.opacity = '1';
     cursor.style.transform = `translate(${x}px, ${y}px)`;
   }
 
   function hideMarqueeFrame() {
     marquee.classList.add('pc-marquee-faded');
+    focusHandle.style.display = 'none';
     marquee.style.width = '0px';
     marquee.style.height = '0px';
     sizeMarqueeSvg(svg, [rectBlack, rectWhite], 0, 0);
   }
 
-  // Drag-select the element: grow the marquee from its top-left corner exactly as
-  // the cursor moves to the bottom-right, so the frame appears while it is drawn.
-  function dragSelect(left, top, w, h, done) {
-    cancelDrag();
-    overlay.classList.remove('is-paused');
-    overlay.classList.add('is-visible');
-
-    marquee.classList.remove('pc-marquee-faded');
-    marquee.style.transform = `translate(${left}px, ${top}px)`;
-    marquee.style.width = '0px';
-    marquee.style.height = '0px';
-    sizeMarqueeSvg(svg, [rectBlack, rectWhite], 0, 0);
-
-    setCursor(left, top);
-
-    hasPrev = true;
-
-    let start = nowMs();
-    function frame(now) {
-      if (disposed) return;
-      let elapsed = (now == null ? nowMs() : now) - start;
-      let t = elapsed >= DRAG_MS ? 1 : elapsed / DRAG_MS;
-      let e = easeInOutCubic(t);
-      let currentW = w * e;
-      let currentH = h * e;
-      marquee.style.width = `${currentW}px`;
-      marquee.style.height = `${currentH}px`;
-      sizeMarqueeSvg(svg, [rectBlack, rectWhite], currentW, currentH);
-      setCursor(left + currentW, top + currentH);
-
-      if (t >= 1) {
-        dragRaf = 0;
-        if (typeof done === 'function') done();
-        return;
-      }
-      dragRaf = raf(frame);
-    }
-
-    dragRaf = raf(frame);
-  }
-
-  // Glide from the current position to (toX, toY) along a gentle quadratic-bezier
-  // arc, then invoke done(). The control point is offset perpendicular to the
-  // straight line; its sign and a small magnitude vary by moveIndex so successive
-  // hops are not identical, with no Math.random.
-  function travel(toX, toY, done) {
-    let fromX = cursorX;
-    let fromY = cursorY;
-    let dx = toX - fromX;
-    let dy = toY - fromY;
-    let dist = Math.hypot(dx, dy);
-
-    if (dist < 1) {
-      setCursor(toX, toY);
-      done();
-      return;
-    }
-
-    let duration = resolvePresenterTravelDuration(dist);
-
-    // Perpendicular unit vector to the travel line.
-    let px = -dy / dist;
-    let py = dx / dist;
-
-    // Deterministic-but-varied arc: alternate the bow direction every move and
-    // nudge the bow depth by a small repeating pattern.
-    let side = moveIndex % 2 === 0 ? 1 : -1;
-    let wobble = ((moveIndex % 5) - 2) * 0.04; // -0.08..+0.08
-    let bow = dist * (0.16 + wobble) * side;
-
-    // Quadratic-bezier control point: midpoint pushed out along the normal.
-    let cx = fromX + dx * 0.5 + px * bow;
-    let cy = fromY + dy * 0.5 + py * bow;
-
-    let start = nowMs();
-
-    function frame(now) {
-      if (disposed) return;
-      let elapsed = (now == null ? nowMs() : now) - start;
-      let t = elapsed >= duration ? 1 : elapsed / duration;
-      let e = easeInOutCubic(t);
-      let mt = 1 - e;
-      // Quadratic bezier B(e) = (1-e)^2 P0 + 2(1-e)e C + e^2 P1.
-      let x = mt * mt * fromX + 2 * mt * e * cx + e * e * toX;
-      let y = mt * mt * fromY + 2 * mt * e * cy + e * e * toY;
-      setCursor(x, y);
-
-      if (t >= 1) {
-        travelRaf = 0;
-        done();
-        return;
-      }
-      travelRaf = raf(frame);
-    }
-
-    travelRaf = raf(frame);
-  }
-
-  function runStrokePlan(planFactory, rect, opts = {}) {
-    cancelGesture();
-    if (typeof planFactory !== 'function') return Promise.resolve();
-
-    let seed = moveIndex;
-    let built;
-    try {
-      built = planFactory(rect, seed, opts);
-    } catch (_) {
-      return Promise.resolve();
-    }
-    if (!built || typeof built.point !== 'function') return Promise.resolve();
-
-    // More loops take proportionally longer; a small per-move speed wobble keeps
-    // the timing human.
-    let loops = Math.max(0, built.loops || 0);
-    let speed = 1 + variation(seed, 29) * 0.12; // ~0.88..1.12
-    let duration = Math.max(220, GESTURE_MS * (1 + loops * 0.55) * speed);
-    let amp = GESTURE_JITTER_PX * (0.85 + (variation(seed, 31) * 0.5 + 0.5) * 0.4);
-
-    // Begin the ink trail at the cursor's current point.
-    let pts = [];
-    inkPath.setAttribute('d', '');
-    ink.classList.add('is-inking');
-
-    return new Promise((resolve) => {
-      gestureResolve = resolve;
-      let start = nowMs();
-
-      function frame(now) {
-        if (disposed) return;
-        let elapsed = (now == null ? nowMs() : now) - start;
-        let t = elapsed >= duration ? 1 : elapsed / duration;
-        // Ease the timeline so the flourish accelerates and settles naturally.
-        let e = easeInOutCubic(t);
-        let ideal = built.point(e);
-        // Hand-tremor: a smoothly drifting jitter that eases out near the end so
-        // the cursor lands cleanly on the rest point.
-        let fade = 1 - e * e;
-        let jx = jitter(seed, e, amp, 0) * fade;
-        let jy = jitter(seed, e, amp, 1) * fade;
-        let x = ideal.x + jx;
-        let y = ideal.y + jy;
-        setCursor(x, y);
-
-        pts.push(x, y);
-        if (pts.length >= 4) {
-          let d = `M${pts[0].toFixed(1)} ${pts[1].toFixed(1)}`;
-          for (let i = 2; i < pts.length; i += 2) {
-            d += `L${pts[i].toFixed(1)} ${pts[i + 1].toFixed(1)}`;
-          }
-          inkPath.setAttribute('d', d);
-        }
-
-        if (t >= 1) {
-          gestureRaf = 0;
-          let rest = built.rest || ideal;
-          setCursor(rest.x, rest.y);
-          // Let the ink linger briefly, then fade it out.
-          ink.classList.remove('is-inking');
-          inkFadeTimer = setTimeout(() => {
-            inkFadeTimer = 0;
-            inkPath.setAttribute('d', '');
-          }, INK_FADE_MS);
-          if (gestureResolve === resolve) gestureResolve = null;
-          resolve();
-          return;
-        }
-        gestureRaf = raf(frame);
-      }
-
-      gestureRaf = raf(frame);
-    });
-  }
-
-  // Play a named marker flourish around the just-settled rect, then come to rest
-  // at the marker's rest point. Unknown markers resolve immediately. The path is
-  // jittered per frame and the ink trail traces it, both driven by the deterministic
-  // move seed so each run looks hand-drawn yet reproducible.
-  function runGesture(name, rect) {
-    let marker = normalizePresenterMarker(name);
-    let plan = marker && Object.prototype.hasOwnProperty.call(GESTURES, marker) ? GESTURES[marker] : null;
-    return runStrokePlan(plan, rect);
-  }
-
-  function runSymbol(name, rect, opts = {}) {
-    let symbol = normalizePresenterSymbol(name);
-    let plan = symbol && Object.prototype.hasOwnProperty.call(SYMBOLS, symbol) ? SYMBOLS[symbol] : null;
-    return runStrokePlan(plan, rect, opts);
-  }
-
-  // Fire the optional per-step gesture-settled callback exactly once. Used so
-  // `playCursorScenario` can wait for a flourish to finish (or extend the hold).
-  function settle(opts) {
-    let cb = opts && typeof opts.onGestureSettled === 'function' ? opts.onGestureSettled : null;
-    if (cb) {
-      try {
-        cb();
-      } catch (_) {}
-    }
+  function abortCurrentAction() {
+    if (!currentActionResolver) return;
+    let resolve = currentActionResolver;
+    let actionId = currentActionId;
+    currentActionResolver = null;
+    resolve({ actionId, status: 'aborted', target: activeElementTarget });
   }
 
   function moveTo(el, opts) {
-    if (disposed) return;
+    if (disposed) return Promise.resolve({ status: 'disposed' });
+    let actionId = opts?.actionId || `act-${++actionCounter}`;
+    abortCurrentAction();
+    currentActionId = actionId;
+    activeElementTarget = el;
+
     if (!el || typeof el.getBoundingClientRect !== 'function') {
       clear();
       settle(opts);
-      return;
+      return Promise.resolve({ actionId, status: 'settled', target: el });
     }
 
-    let viewport = {
-      width: win?.innerWidth || doc.documentElement?.clientWidth || 0,
-      height: win?.innerHeight || doc.documentElement?.clientHeight || 0,
-    };
-    // Always recompute against live viewport coords and clip to the part that
-    // can actually be seen inside scroll/overflow containers.
+    let viewport = resolveViewport(opts?.viewport);
     let rect = resolvePresenterVisibleRect(el, viewport);
     if (!rect) {
       clear();
       settle(opts);
-      return;
+      return Promise.resolve({ actionId, status: 'settled', target: el });
     }
 
     let highlightRect = resolvePresenterHighlightRect(rect, viewport);
@@ -1392,42 +1701,48 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
     let top = highlightRect.top;
     let w = highlightRect.width;
     let h = highlightRect.height;
-    let marker = normalizePresenterMarker(opts?.marker || opts?.gesture || '');
 
     cancelTravel();
     cancelDrag();
     cancelGesture();
+    showOverlay();
     moveIndex += 1;
 
-    // After the marquee settles, play the gesture (if any) around the element,
-    // then report the flourish as settled. `settledRect` is the live box the
-    // gesture animates around.
-    let afterSettle = () => {
-      runGesture(marker, { left, top, width: w, height: h }).then(() => settle(opts));
+    let distance = Math.hypot(left - cursorX, top - cursorY);
+    let duration = resolvePresenterTravelDuration(distance);
+
+    activeLayers.focus = {
+      active: true,
+      rect: { left, top, width: w, height: h },
+      startTime: duration,
+      duration: PRESENTER_FOCUS_REVEAL_DURATION_MS,
     };
+    activeLayers.cursor = {
+      active: true,
+      fromX: cursorX,
+      fromY: cursorY,
+      toX: left,
+      toY: top,
+      startTime: 0,
+      duration,
+    };
+    activeLayers.marker = null;
+    activeLayers.symbol = null;
+    activeLayers.click = null;
+    activeLayers.viewport = viewport;
 
-    // First checkpoint (or after a clear/dispose reset): no journey to show, so
-    // drag-select directly from the element's top-left corner.
-    if (!hasPrev) {
-      overlay.classList.add('is-visible');
-      dragSelect(left, top, w, h, afterSettle);
-      return;
-    }
 
-    // Between checkpoints: fade the previous marquee as the cursor leaves it,
-    // travel along a curved path to the new start corner, then drag-select.
-    overlay.classList.remove('is-paused');
-    overlay.classList.add('is-visible');
-
-    marquee.classList.add('pc-marquee-faded');
-
-    travel(left, top, () => {
-      dragSelect(left, top, w, h, afterSettle);
+    return new Promise((resolve) => {
+      currentActionResolver = (receipt) => {
+        settle(opts);
+        resolve(receipt);
+      };
+      runRenderLoop();
     });
   }
 
   function markElement(el, opts = {}) {
-    let marker = normalizePresenterMarker(opts?.marker || opts?.gesture || '', 'circle');
+    let marker = normalizePresenterMarker(opts?.marker || opts?.gesture || '', 'oval');
     return annotateElement(el, { ...opts, kind: 'marker', marker });
   }
 
@@ -1464,20 +1779,21 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
     } catch (_) {}
   }
 
-  function clickElement(el, opts = {}) {
-    if (disposed) return;
+  function performClick(el, opts, actionId) {
+    if (disposed) return Promise.resolve({ actionId, status: 'disposed', target: el, fired: false });
+    abortCurrentAction();
+    currentActionId = actionId;
+    activeElementTarget = el;
+
     if (!el || typeof el.getBoundingClientRect !== 'function') {
       settle(opts);
-      return;
+      return Promise.resolve({ actionId, status: 'settled', target: el, fired: false });
     }
-    let viewport = {
-      width: win?.innerWidth || doc.documentElement?.clientWidth || 0,
-      height: win?.innerHeight || doc.documentElement?.clientHeight || 0,
-    };
+    let viewport = resolveViewport(opts?.viewport);
     let rect = resolvePresenterVisibleRect(el, viewport);
     if (!rect) {
       settle(opts);
-      return;
+      return Promise.resolve({ actionId, status: 'settled', target: el, fired: false });
     }
     let zone = clickZoneRectFor(rect, viewport);
 
@@ -1485,110 +1801,314 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
     cancelDrag();
     cancelGesture();
     cancelClick();
+    showOverlay();
     moveIndex += 1;
-    overlay.classList.remove('is-paused');
-    overlay.classList.add('is-visible');
-    hideMarqueeFrame();
 
-    let finish = () => {
-      clickHalo.classList.remove('is-clicking', 'pc-click-fired');
-      if (clickResolve) {
-        let resolve = clickResolve;
-        clickResolve = null;
-        resolve();
-      }
+    let distance = Math.hypot(zone.x - cursorX, zone.y - cursorY);
+    let duration = resolvePresenterTravelDuration(distance);
+
+    activeLayers.focus = null;
+    activeLayers.cursor = {
+      active: true,
+      fromX: cursorX,
+      fromY: cursorY,
+      toX: zone.x,
+      toY: zone.y,
+      startTime: 0,
+      duration,
     };
-    clickResolve = () => settle(opts);
+    activeLayers.marker = null;
+    activeLayers.symbol = null;
+    activeLayers.click = null;
+    activeLayers.viewport = viewport;
 
-    let pulse = () => {
-      clickHalo.style.left = `${zone.x}px`;
-      clickHalo.style.top = `${zone.y}px`;
-      clickHalo.classList.remove('pc-click-fired');
-      clickHalo.classList.add('is-clicking');
-      setClickTimer(() => {
+
+    return new Promise((resolve) => {
+      currentActionResolver = (receipt) => {
+        if (receipt.status !== 'settled') {
+          settle(opts);
+          resolve({ ...receipt, fired: false });
+          return;
+        }
         fireNativeClick(el, zone);
-        clickHalo.classList.add('pc-click-fired');
-        clickHalo.classList.remove('is-clicking');
-        setClickTimer(finish, CLICK_FADE_MS);
-      }, CLICK_PRESS_MS);
-    };
-
-    if (!hasPrev) {
-      hasPrev = true;
-      setCursor(zone.x, zone.y);
-      pulse();
-    } else {
-      travel(zone.x, zone.y, pulse);
-    }
+        activeLayers.click = { active: true, x: zone.x, y: zone.y, startTime: 0 };
+        activeLayers.cursor = {
+          active: true,
+          x: zone.x,
+          y: zone.y,
+          startTime: 0,
+          duration: CLICK_PRESS_MS + CLICK_FADE_MS,
+        };
+        currentActionResolver = (rippleReceipt) => {
+          settle(opts);
+          resolve({
+            actionId,
+            status: 'settled',
+            target: el,
+            fired: true,
+            rippleStatus: rippleReceipt.status,
+          });
+        };
+        runRenderLoop();
+      };
+      runRenderLoop();
+    });
   }
 
-  function annotationRectFor(rect, viewport, annotation) {
-    let source = rect;
-    if (annotation?.kind === 'marker' && annotation.marker !== 'underline') {
-      source = resolvePresenterHighlightRect({
-        left: rect.left - (ANNOTATION_PADDING_PX - HIGHLIGHT_PADDING_PX),
-        top: rect.top - (ANNOTATION_PADDING_PX - HIGHLIGHT_PADDING_PX),
-        width: rect.width + (ANNOTATION_PADDING_PX - HIGHLIGHT_PADDING_PX) * 2,
-        height: rect.height + (ANNOTATION_PADDING_PX - HIGHLIGHT_PADDING_PX) * 2,
-      }, viewport);
-    }
-    let left = Math.max(HIGHLIGHT_EDGE_INSET_PX, Number(source.left) || 0);
-    let top = Math.max(HIGHLIGHT_EDGE_INSET_PX, Number(source.top) || 0);
-    let maxRight = Math.max(left + HIGHLIGHT_MIN_SIZE_PX, (viewport.width || left + source.width) - HIGHLIGHT_EDGE_INSET_PX);
-    let maxBottom = Math.max(top + HIGHLIGHT_MIN_SIZE_PX, (viewport.height || top + source.height) - HIGHLIGHT_EDGE_INSET_PX);
-    let right = Math.min(maxRight, left + Math.max(HIGHLIGHT_MIN_SIZE_PX, Number(source.width) || HIGHLIGHT_MIN_SIZE_PX));
-    let bottom = Math.min(maxBottom, top + Math.max(HIGHLIGHT_MIN_SIZE_PX, Number(source.height) || HIGHLIGHT_MIN_SIZE_PX));
-    return { left, top, width: Math.max(HIGHLIGHT_MIN_SIZE_PX, right - left), height: Math.max(HIGHLIGHT_MIN_SIZE_PX, bottom - top) };
+  function clickElement(el, opts = {}) {
+    let actionId = opts?.actionId || `act-${++actionCounter}`;
+    if (clickActions.has(actionId)) return clickActions.get(actionId);
+    let action = performClick(el, opts, actionId);
+    clickActions.set(actionId, action);
+    return action;
   }
 
-  function annotateElement(el, opts = {}) {
-    if (disposed) return;
-    let annotation = normalizePresenterAnnotation(opts, { intent: 'emphasize' });
-    if (!annotation) {
-      settle(opts);
-      return;
-    }
+  function presentFocusFrame(el, frame = {}) {
+    if (disposed) return { presented: false, reason: 'disposed' };
     if (!el || typeof el.getBoundingClientRect !== 'function') {
-      settle(opts);
-      return;
+      hideMarqueeFrame();
+      return { presented: false, reason: 'invalid-target' };
     }
-    let viewport = {
-      width: win?.innerWidth || doc.documentElement?.clientWidth || 0,
-      height: win?.innerHeight || doc.documentElement?.clientHeight || 0,
-    };
-    let rect = resolvePresenterVisibleRect(el, viewport);
-    if (!rect) {
-      settle(opts);
-      return;
+    let viewport = resolveViewport(frame.viewport);
+    let targetRect = resolvePresenterVisibleRect(el, viewport);
+    if (!targetRect) {
+      hideMarqueeFrame();
+      return { presented: false, reason: 'hidden-target' };
     }
-    let drawRect = annotationRectFor(rect, viewport, annotation);
-    let start = annotation.kind === 'symbol'
-      ? symbolRect(drawRect, annotation.placement)
-      : drawRect;
-    let toX = start.left + start.width * 0.12;
-    let toY = start.top + start.height * 0.88;
+    let elapsedMs = Number(frame.elapsedMs);
+    if (!Number.isFinite(elapsedMs)) elapsedMs = 0;
+    let seed = Number(frame.seed);
+    if (!Number.isFinite(seed)) seed = 0;
+    let mode = frame.mode === 'frame' ? 'frame' : 'cursor';
+    let focusRect = resolvePresenterHighlightRect(targetRect, viewport);
+    let projected = projectPresenterState({
+      focus: {
+        active: true,
+        rect: focusRect,
+        duration: Number(frame.durationMs) || PRESENTER_FOCUS_REVEAL_DURATION_MS,
+      },
+      marker: null,
+      symbol: null,
+      click: null,
+      cursor: mode === 'cursor'
+        ? { active: true, x: focusRect.left, y: focusRect.top, duration: Number.MAX_SAFE_INTEGER }
+        : null,
+    }, Math.max(0, elapsedMs), seed, viewport);
 
     cancelTravel();
     cancelDrag();
     cancelGesture();
-    moveIndex += 1;
-    overlay.classList.remove('is-paused');
-    overlay.classList.add('is-visible');
-    hideMarqueeFrame();
-
-    let draw = () => {
-      let done = annotation.kind === 'symbol'
-        ? runSymbol(annotation.symbol, drawRect, { placement: annotation.placement })
-        : runGesture(annotation.marker, drawRect);
-      done.then(() => settle(opts));
-    };
-    if (!hasPrev) {
-      setCursor(toX, toY);
-      hasPrev = true;
-      draw();
+    cancelClick();
+    showOverlay();
+    inkPath.setAttribute('d', '');
+    ink.classList.remove('is-inking');
+    marquee.classList.remove('pc-marquee-faded');
+    marquee.style.transform = `translate(${projected.focus.left}px, ${projected.focus.top}px)`;
+    marquee.style.width = `${projected.focus.width}px`;
+    marquee.style.height = `${projected.focus.height}px`;
+    sizeMarqueeSvg(svg, [rectBlack, rectWhite], projected.focus.width, projected.focus.height);
+    rectBlack.style.strokeDashoffset = `${projected.focus.antsDashOffset}`;
+    rectWhite.style.strokeDashoffset = `${projected.focus.antsDashOffset - 4}`;
+    if (projected.focus.dragHandle?.visible) {
+      focusHandle.style.left = `${projected.focus.dragHandle.x}px`;
+      focusHandle.style.top = `${projected.focus.dragHandle.y}px`;
+      focusHandle.style.display = 'block';
     } else {
-      travel(toX, toY, draw);
+      focusHandle.style.display = 'none';
     }
+    if (mode === 'cursor' && projected.cursor.visible) setCursor(projected.cursor.x, projected.cursor.y);
+    else cursor.style.opacity = '0';
+
+    return {
+      presented: true,
+      visible: projected.focus.visible,
+      mode,
+      elapsedMs,
+      revealProgress: projected.focus.revealProgress,
+      revealing: projected.focus.revealing,
+      targetRect,
+      frameRect: {
+        left: projected.focus.left,
+        top: projected.focus.top,
+        width: projected.focus.width,
+        height: projected.focus.height,
+        right: projected.focus.left + projected.focus.width,
+        bottom: projected.focus.top + projected.focus.height,
+      },
+      antsDashOffset: projected.focus.antsDashOffset,
+      dragHandle: projected.focus.dragHandle,
+      cursor: mode === 'cursor'
+        ? { x: projected.cursor.x, y: projected.cursor.y, visible: projected.cursor.visible }
+        : null,
+    };
+  }
+
+  function presentClickFrame(el, frame = {}) {
+    if (disposed) return { presented: false, reason: 'disposed' };
+    if (!el || typeof el.getBoundingClientRect !== 'function') {
+      cancelClick();
+      return { presented: false, reason: 'invalid-target' };
+    }
+    let viewport = resolveViewport(frame.viewport);
+    let rect = resolvePresenterVisibleRect(el, viewport);
+    if (!rect) {
+      cancelClick();
+      return { presented: false, reason: 'hidden-target' };
+    }
+    let elapsedMs = Number(frame.elapsedMs);
+    if (!Number.isFinite(elapsedMs)) elapsedMs = 0;
+    let seed = Number(frame.seed);
+    if (!Number.isFinite(seed)) seed = 0;
+    let zone = clickZoneRectFor(rect, viewport);
+    let inRange = elapsedMs >= 0 && elapsedMs <= PRESENTER_CLICK_DURATION_MS;
+    let projected = projectPresenterState({
+      focus: null,
+      marker: null,
+      symbol: null,
+      click: { active: inRange, x: zone.x, y: zone.y },
+      cursor: { active: inRange, x: zone.x, y: zone.y, duration: PRESENTER_CLICK_DURATION_MS },
+    }, Math.max(0, elapsedMs), seed, viewport);
+
+    cancelTravel();
+    cancelDrag();
+    cancelGesture();
+    cancelClick();
+    showOverlay();
+    hideMarqueeFrame();
+    inkPath.setAttribute('d', '');
+    ink.classList.remove('is-inking');
+
+    if (inRange && projected.click.visible) {
+      clickHalo.style.left = `${projected.click.x}px`;
+      clickHalo.style.top = `${projected.click.y}px`;
+      clickHalo.style.transform = `translate(-50%, -50%) scale(${projected.click.scale})`;
+      clickHalo.style.opacity = projected.click.opacity;
+      clickHalo.style.display = 'block';
+      setCursor(projected.cursor.x, projected.cursor.y);
+    } else {
+      clickHalo.style.display = 'none';
+    }
+
+    return {
+      presented: true,
+      visible: inRange && projected.click.visible && projected.click.opacity > 0,
+      elapsedMs,
+      durationMs: PRESENTER_CLICK_DURATION_MS,
+      progress: Math.max(0, Math.min(1, elapsedMs / PRESENTER_CLICK_DURATION_MS)),
+      rect,
+      hotspot: { x: zone.x, y: zone.y },
+      scale: projected.click.scale,
+      opacity: projected.click.opacity,
+      cursor: { x: projected.cursor.x, y: projected.cursor.y },
+    };
+  }
+
+  function annotateElement(el, opts = {}) {
+    if (disposed) return Promise.resolve({ status: 'disposed' });
+    let actionId = opts?.actionId || `act-${++actionCounter}`;
+    abortCurrentAction();
+    currentActionId = actionId;
+    activeElementTarget = el;
+
+    let annotation = normalizePresenterAnnotation(opts, { intent: 'emphasize' });
+    if (!annotation) {
+      settle(opts);
+      return Promise.resolve({ actionId, status: 'settled', target: el });
+    }
+    if (!el || typeof el.getBoundingClientRect !== 'function') {
+      settle(opts);
+      return Promise.resolve({ actionId, status: 'settled', target: el });
+    }
+    let viewport = resolveViewport(opts.viewport);
+    let rect = resolvePresenterVisibleRect(el, viewport);
+    if (!rect) {
+      settle(opts);
+      return Promise.resolve({ actionId, status: 'settled', target: el });
+    }
+    let nextSeed = moveIndex + 1;
+    let layout = resolvePresenterAnnotationLayout(annotation, rect, viewport, nextSeed);
+    if (!layout) {
+      settle(opts);
+      return Promise.resolve({ actionId, status: 'settled', target: el });
+    }
+    annotation = layout.annotation;
+    let drawRect = layout.drawRect;
+    let plan = layout.plan;
+    let startPoint = projectStrokePoint(plan, nextSeed, 0, strokeJitterAmplitude(nextSeed), viewport);
+    let toX = startPoint.x;
+    let toY = startPoint.y;
+
+    cancelTravel();
+    cancelDrag();
+    cancelGesture();
+    showOverlay();
+    moveIndex = nextSeed;
+
+    let distance = Math.hypot(toX - cursorX, toY - cursorY);
+    let duration = resolvePresenterTravelDuration(distance);
+
+    activeLayers.focus = null;
+    activeLayers.cursor = {
+      active: true,
+      fromX: cursorX,
+      fromY: cursorY,
+      toX,
+      toY,
+      startTime: 0,
+      duration,
+    };
+    activeLayers.marker = null;
+    activeLayers.symbol = null;
+    activeLayers.click = null;
+    activeLayers.viewport = viewport;
+
+
+    return new Promise((resolve) => {
+      currentActionResolver = (receipt) => {
+        if (receipt.status !== 'settled') {
+          settle(opts);
+          resolve(receipt);
+          return;
+        }
+        let activeStroke;
+        let strokeLayer = {
+          active: true,
+          rect: drawRect,
+          targetRect: rect,
+          placement: annotation.placement,
+          obstacles: Array.isArray(opts.obstacles) ? opts.obstacles : [],
+          viewport,
+          layout,
+        };
+        if (annotation.kind === 'symbol') {
+          activeStroke = { ...strokeLayer, name: annotation.symbol };
+          activeLayers.symbol = activeStroke;
+        } else {
+          activeStroke = { ...strokeLayer, name: annotation.marker };
+          activeLayers.marker = activeStroke;
+        }
+
+        let loops = Math.max(0, plan?.loops || 0);
+        let speed = 1 + variation(moveIndex, 29) * 0.12;
+        let gestureDuration = Math.max(220, GESTURE_MS * (1 + loops * 0.55) * speed);
+        activeStroke.startTime = 0;
+        activeStroke.duration = gestureDuration;
+
+        let rest = clampPresenterPoint(plan?.rest || startPoint, viewport);
+        activeLayers.cursor = {
+          active: true,
+          x: rest.x,
+          y: rest.y,
+        };
+
+        currentActionResolver = (r) => {
+          settle(opts);
+          resolve(r);
+        };
+        runRenderLoop();
+      };
+      runRenderLoop();
+    });
   }
 
   function presentAnnotationFrame(el, value, frame = {}) {
@@ -1602,10 +2122,7 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
       clear();
       return { presented: false, reason: 'invalid-target' };
     }
-    let viewport = {
-      width: win?.innerWidth || doc.documentElement?.clientWidth || 0,
-      height: win?.innerHeight || doc.documentElement?.clientHeight || 0,
-    };
+    let viewport = resolveViewport(frame.viewport);
     let rect = resolvePresenterVisibleRect(el, viewport);
     if (!rect) {
       clear();
@@ -1614,73 +2131,114 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
     let progress = Math.max(0, Math.min(1, Number(frame.progress) || 0));
     let seed = Number(frame.seed);
     if (!Number.isFinite(seed)) seed = 0;
-    let drawRect = annotationRectFor(rect, viewport, annotation);
-    let factory = annotation.kind === 'symbol'
-      ? SYMBOLS[annotation.symbol]
-      : GESTURES[annotation.marker];
-    let options = annotation.kind === 'symbol' ? { placement: annotation.placement } : {};
-    let plan = factory?.(drawRect, seed, options);
-    if (!plan || typeof plan.point !== 'function') {
+    let layout = resolvePresenterAnnotationLayout(annotation, rect, viewport, seed);
+    if (!layout) {
       clear();
-      return { presented: false, reason: 'unsupported-annotation' };
+      return { presented: false, reason: 'invalid-annotation' };
     }
+    annotation = layout.annotation;
+    let drawRect = layout.drawRect;
+    let startPoint = projectStrokePoint(
+      layout.plan,
+      seed,
+      0,
+      strokeJitterAmplitude(seed),
+      viewport,
+    );
+    let strokeLayer = {
+      active: true,
+      rect: drawRect,
+      targetRect: rect,
+      placement: annotation.placement,
+      obstacles: Array.isArray(frame.obstacles) ? frame.obstacles : [],
+      viewport,
+      layout,
+    };
+
+    let layers = {
+      focus: { active: false },
+      marker: annotation.kind === 'marker' ? { ...strokeLayer, name: annotation.marker } : null,
+      symbol: annotation.kind === 'symbol' ? { ...strokeLayer, name: annotation.symbol } : null,
+      click: null,
+      cursor: { active: true, x: startPoint.x, y: startPoint.y },
+    };
+
+    let projected = projectPresenterState(layers, progress * GESTURE_MS, seed, viewport);
 
     cancelTravel();
     cancelDrag();
     cancelGesture();
     cancelClick();
-    overlay.classList.remove('is-paused');
-    overlay.classList.add('is-visible');
-    hideMarqueeFrame();
+    showOverlay();
 
-    let pointCount = progress > 0
-      ? Math.max(2, Math.floor(progress * DETERMINISTIC_GESTURE_STEPS) + 1)
-      : 0;
-    let points = [];
-    let amp = GESTURE_JITTER_PX * (0.85 + (variation(seed, 31) * 0.5 + 0.5) * 0.4);
-    for (let index = 0; index < pointCount; index += 1) {
-      let t = Math.min(1, index / DETERMINISTIC_GESTURE_STEPS);
-      let eased = easeInOutCubic(t);
-      let ideal = plan.point(eased);
-      let fade = 1 - eased * eased;
-      points.push({
-        x: ideal.x + jitter(seed, eased, amp, 0) * fade,
-        y: ideal.y + jitter(seed, eased, amp, 1) * fade,
-      });
+    if (projected.focus.visible) {
+      marquee.classList.remove('pc-marquee-faded');
+      marquee.style.transform = `translate(${projected.focus.left}px, ${projected.focus.top}px)`;
+      marquee.style.width = `${projected.focus.width}px`;
+      marquee.style.height = `${projected.focus.height}px`;
+      sizeMarqueeSvg(svg, [rectBlack, rectWhite], projected.focus.width, projected.focus.height);
+    } else {
+      hideMarqueeFrame();
     }
-    let pathSamples = points.map((point) => ({
-      x: Number(point.x.toFixed(1)),
-      y: Number(point.y.toFixed(1)),
-    }));
-    let path = pathSamples.length >= 2
-      ? pathSamples.reduce((d, point, index) => `${d}${index ? 'L' : 'M'}${point.x.toFixed(1)} ${point.y.toFixed(1)}`, '')
-      : '';
-    inkPath.setAttribute('d', path);
-    ink.classList.toggle('is-inking', Boolean(path));
-    let startIdeal = plan.point(0);
-    let startPoint = {
-      x: startIdeal.x + jitter(seed, 0, amp, 0),
-      y: startIdeal.y + jitter(seed, 0, amp, 1),
-    };
-    let cursorPoint = progress >= 1 ? (plan.rest || plan.point(1)) : (points.at(-1) || startPoint);
-    setCursor(cursorPoint.x, cursorPoint.y);
+
+    let inkPathD = '';
+    if (projected.marker.visible && projected.marker.path) {
+      inkPathD = projected.marker.path;
+    } else if (projected.symbol.visible && projected.symbol.path) {
+      inkPathD = projected.symbol.path;
+    }
+
+    inkPath.setAttribute('d', inkPathD);
+    ink.classList.toggle('is-inking', Boolean(inkPathD));
+
+    let activeAnnotation = projected.annotation;
+    cursor.classList.toggle('is-inking', Boolean(activeAnnotation && !activeAnnotation.completed));
+    let strokePoints = activeAnnotation.points;
+    let cursorPoint = activeAnnotation.cursor;
+    if (cursorPoint) {
+      setCursor(cursorPoint.x, cursorPoint.y);
+    } else {
+      cursor.style.opacity = '0';
+    }
+
     let pathDigest = 2166136261;
-    for (let index = 0; index < path.length; index += 1) {
-      pathDigest ^= path.charCodeAt(index);
+    for (let index = 0; index < inkPathD.length; index += 1) {
+      pathDigest ^= inkPathD.charCodeAt(index);
       pathDigest = Math.imul(pathDigest, 16777619);
     }
+
+    let pathSamples = strokePoints.map((point) => ({ x: point.x, y: point.y }));
+
     return {
       presented: true,
-      kind: annotation.kind,
-      name: annotation.marker || annotation.symbol,
+      kind: activeAnnotation.kind,
+      name: activeAnnotation.name,
+      placement: activeAnnotation.placement,
       progress,
       seed,
-      rect: drawRect,
+      rect: activeAnnotation.rect,
+      drawRect: activeAnnotation.drawRect,
       cursor: cursorPoint,
+      cursorSizePx: activeAnnotation.cursorSizePx,
       pathPoints: pathSamples.length,
       pathSamples,
       pathDigest: (pathDigest >>> 0).toString(16).padStart(8, '0'),
+      safety: activeAnnotation.safety,
     };
+  }
+
+  function settle(opts) {
+    let cb = opts && typeof opts.onGestureSettled === 'function' ? opts.onGestureSettled : null;
+    if (cb) {
+      try {
+        cb();
+      } catch (_) {}
+    }
+  }
+
+  function showOverlay() {
+    overlay.classList.remove('is-paused');
+    overlay.classList.add('is-visible');
   }
 
   function clear() {
@@ -1689,11 +2247,10 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
     cancelDrag();
     cancelGesture();
     cancelClick();
+    abortCurrentAction();
     inkPath.setAttribute('d', '');
     overlay.classList.remove('is-visible');
     overlay.classList.add('is-paused');
-    // Next moveTo starts fresh (direct drag-select, no stale travel).
-    hasPrev = false;
   }
 
   function dispose() {
@@ -1702,6 +2259,7 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
     cancelDrag();
     cancelGesture();
     cancelClick();
+    abortCurrentAction();
     disposed = true;
     if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
   }
@@ -1710,7 +2268,9 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
     moveTo,
     markElement,
     annotateElement,
+    presentFocusFrame,
     presentAnnotationFrame,
+    presentClickFrame,
     clickElement,
     clear,
     dispose,
@@ -1725,15 +2285,18 @@ function nonNegative(value, fallback) {
   return Number.isFinite(n) && n >= 0 ? n : fallback;
 }
 
-/** Resolves when `signal` aborts (or never, if there is no signal). */
-function abortPromise(signal) {
+function waitForSettlement(settledPromise, signal, timeoutMs) {
   return new Promise((resolve) => {
-    if (!signal) return; // no abort source: this branch only matters in a race
-    if (signal.aborted) {
+    let timer = setTimeout(done, timeoutMs);
+    let onAbort = () => done();
+    function done() {
+      clearTimeout(timer);
+      signal?.removeEventListener?.('abort', onAbort);
       resolve();
-      return;
     }
-    signal.addEventListener?.('abort', () => resolve(), { once: true });
+    if (signal?.aborted) return done();
+    signal?.addEventListener?.('abort', onAbort, { once: true });
+    Promise.resolve(settledPromise).then(done, done);
   });
 }
 
@@ -1794,7 +2357,7 @@ function delay(ms, signal) {
  * records `moveTo` calls and a fake `resolveTarget`.
  *
  * @param {{ moveTo: Function, clickElement?: Function, clear?: Function }} cursor - a presenter cursor (or fake).
- * @param {{ steps?: Array<{ target:any, holdMs?:number, marker?:string, gesture?:string, label?:string, action?:string, click?:boolean }> }} scenario
+ * @param {{ steps?: Array<object> }} scenario
  * @param {object} [options]
  * @param {(target:any, step:object, index:number) => any} options.resolveTarget - maps a step target to an element.
  * @param {AbortSignal} [options.signal] - abort to stop the run and clear the cursor.
@@ -1851,17 +2414,25 @@ export async function playCursorScenario(
         };
       });
 
-      let moveOpts = { label: step.label, onGestureSettled: onSettled };
+      let moveOpts = {
+        actionId: step.actionId,
+        label: step.label,
+        onGestureSettled: onSettled,
+      };
       if (marker) {
         moveOpts.marker = marker;
         moveOpts.gesture = marker;
       }
+      let cursorAction = null;
       if (wantsClick && typeof cursor.clickElement === 'function') {
-        cursor.clickElement(element, moveOpts);
+        cursorAction = cursor.clickElement(element, moveOpts);
       } else if (marker && typeof cursor.annotateElement === 'function') {
-        cursor.annotateElement(element, { ...moveOpts, kind: 'marker', marker });
+        cursorAction = cursor.annotateElement(element, { ...moveOpts, kind: 'marker', marker });
       } else {
-        cursor.moveTo(element, moveOpts);
+        cursorAction = cursor.moveTo(element, moveOpts);
+      }
+      if (cursorAction && typeof cursorAction.then === 'function') {
+        Promise.resolve(cursorAction).then(onSettled, onSettled);
       }
 
       let hold = nonNegative(step.holdMs, baseHold);
@@ -1871,7 +2442,7 @@ export async function playCursorScenario(
       // settles (or the run aborts). A watchdog caps the extension so a cursor
       // that never reports settlement (e.g. a minimal fake) cannot stall the run.
       if ((marker || wantsClick) && !settled && !signal?.aborted) {
-        await Promise.race([settledPromise, abortPromise(signal), delay(GESTURE_WAIT_CAP_MS, signal)]);
+        await waitForSettlement(settledPromise, signal, GESTURE_WAIT_CAP_MS);
       }
     }
 

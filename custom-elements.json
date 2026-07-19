@@ -4633,7 +4633,7 @@
             {
               "kind": "method",
               "name": "setValue",
-              "description": "Sets input value."
+              "description": "Sets input value and keeps the programmatic caret and scroll viewport at the newest text."
             },
             {
               "kind": "method",
@@ -5377,7 +5377,7 @@
               {
                 "name": "setValue",
                 "type": "function",
-                "description": "Sets input value."
+                "description": "Sets input value and keeps the programmatic caret and scroll viewport at the newest text."
               },
               {
                 "name": "setAttachedContext",
@@ -6189,7 +6189,7 @@
                 {
                   "name": "setValue",
                   "type": "function",
-                  "description": "Sets input value."
+                  "description": "Sets input value and keeps the programmatic caret and scroll viewport at the newest text."
                 },
                 {
                   "name": "setAttachedContext",
@@ -11024,7 +11024,7 @@
             {
               "kind": "method",
               "name": "setComposerState",
-              "description": "Sets composer value, context chips, footer controls, disabled/sending state, voice controls, and voice preview."
+              "description": "Sets composer value, context chips, leading controls, footer controls, disabled/sending state, voice controls, and voice preview; changed non-empty values refresh background activity."
             },
             {
               "kind": "method",
@@ -11407,7 +11407,7 @@
               {
                 "name": "setComposerState",
                 "type": "function",
-                "description": "Sets composer value, context chips, leading controls, footer controls, disabled/sending state, voice controls, and voice preview."
+                "description": "Sets composer value, context chips, leading controls, footer controls, disabled/sending state, voice controls, and voice preview; changed non-empty values refresh background activity."
               },
               {
                 "name": "setVoiceControls",
@@ -11924,7 +11924,7 @@
                 {
                   "name": "setComposerState",
                   "type": "function",
-                  "description": "Sets composer value, context chips, leading controls, footer controls, disabled/sending state, voice controls, and voice preview."
+                  "description": "Sets composer value, context chips, leading controls, footer controls, disabled/sending state, voice controls, and voice preview; changed non-empty values refresh background activity."
                 },
                 {
                   "name": "setVoiceControls",

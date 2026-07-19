@@ -40,6 +40,16 @@ import {
   renderMediaStudioTimelinePanelMarkup,
 } from '../ui/media-studio-surface.js';
 import { createCascadeTheme } from '../themes/cascade-theme.js';
+import { buildCaptionPlacementTrack } from 'symbiote-engine';
+
+function captionTrack(cues, options = {}) {
+  return buildCaptionPlacementTrack(cues, {
+    width: 1080,
+    height: 1920,
+    captionStyle: { preset: 'tiktok' },
+    ...options,
+  });
+}
 
 function createCaptureTarget() {
   class CanvasRenderingContext2D {}
@@ -382,19 +392,20 @@ test('media studio visual layer renders reusable preview, timeline, and progress
       status: 'rendering',
       frames: [{ url: './cache/frame-0001.png' }],
       currentTimeSec: 1.2,
-      captionCues: [
+      captionTrack: captionTrack([
         {
+          cueId: 'welcome',
           startSec: 0.8,
           endSec: 2.1,
           speaker: 'guide',
           text: 'Welcome to the workspace.',
-          words: [
+          wordTimings: [
             { text: 'Welcome', startSec: 0.8, endSec: 1.1 },
             { text: 'to', startSec: 1.1, endSec: 1.5 },
             { text: 'workspace.', startSec: 1.5, endSec: 2.1 },
           ],
         },
-      ],
+      ]),
     },
     renderSettings: { captionsEnabled: true, captionsMode: 'karaoke', captionStyle: { preset: 'tiktok' } },
     renderState: {
@@ -478,8 +489,9 @@ test('media studio visual layer renders reusable preview, timeline, and progress
   assert.doesNotMatch(preview, /clone|iframe|live-dom/i);
   assert.doesNotMatch(preview, /sn-media-studio-preview-footer/);
   assert.match(preview, /data-media-caption-overlay/);
+  assert.match(preview, /data-caption-track="caption-presentation-track-v2"/);
   assert.match(preview, /data-caption-style="tiktok"/);
-  assert.match(preview, /data-caption-speaker="guide"/);
+  assert.match(preview, /data-caption-cue-id="welcome"/);
   assert.match(preview, /sn-media-studio-caption-word/);
   assert.match(preview, /data-caption-word-state="active">to<\/span>/);
   assert.match(preview, /Welcome[\s\S]*workspace\./);
@@ -497,6 +509,11 @@ test('media studio visual layer renders reusable preview, timeline, and progress
   assert.match(inspector, /data-orientation="vertical"/);
   assert.match(inspector, /data-media-setting="autoRender" checked/);
   assert.match(inspector, /data-media-setting="captionsEnabled" checked/);
+  assert.match(inspector, /data-media-setting="captionProfile"/);
+  assert.match(inspector, /<option value="tiktok" selected>TikTok<\/option>/);
+  assert.match(inspector, /data-media-setting="captionPlacement"/);
+  assert.match(inspector, /<option value="bottom" selected>Bottom<\/option>/);
+  assert.doesNotMatch(inspector, /classic|high-contrast|focus-aware|captionHighContrast/i);
   assert.match(inspector, /<option value="vertical" selected>Vertical 9:16<\/option>/);
   assert.match(inspector, /data-media-setting="width" value="1080"/);
   assert.match(inspector, /data-media-setting="height" value="1920"/);
@@ -637,6 +654,27 @@ test('media studio preview renders completed final output as a video surface whe
 });
 
 test('media studio caption overlay normalizes active TikTok-style cues', () => {
+  let placementTrack = captionTrack([
+    { cueId: 'early', startSec: 0, endSec: 1, text: 'Too early' },
+    {
+      cueId: 'active',
+      id: 'legacy-active',
+      startSec: 1,
+      endSec: 2,
+      speaker: 'ops',
+      text: 'Active caption',
+      wordTimings: [
+        { text: 'Active', startSec: 1, endSec: 1.3 },
+        { text: 'caption', startSec: 1.3, endSec: 2 },
+      ],
+    },
+    {
+      cueId: 'simultaneous',
+      startSec: 1.2,
+      endSec: 1.8,
+      text: 'Second active cue',
+    },
+  ]);
   let overlay = normalizeMediaStudioCaptionOverlayState({
     currentTimeSec: 1.4,
     renderSettings: {
@@ -644,44 +682,50 @@ test('media studio caption overlay normalizes active TikTok-style cues', () => {
       captionsMode: 'karaoke',
       captionStyle: { preset: 'tiktok' },
     },
-    captionCues: [
-      { startSec: 0, endSec: 1, text: 'Too early' },
-      {
-        startSec: 1,
-        endSec: 2,
-        speaker: 'ops',
-        words: [
-          { text: 'Active', startSec: 1, endSec: 1.3 },
-          { text: 'caption', startSec: 1.3, endSec: 2 },
-        ],
-      },
-    ],
+    captionTrack: placementTrack,
   });
 
   assert.equal(overlay.enabled, true);
-  assert.equal(overlay.style, 'tiktok');
-  assert.equal(overlay.cue.text, 'Active caption');
-  assert.equal(overlay.cue.speaker, 'ops');
-  assert.deepEqual(overlay.cue.wordEntries.map((word) => word.state), ['past', 'active']);
+  assert.equal(overlay.profile.preset, 'tiktok');
+  assert.equal(overlay.activeCues[0].text, 'Active caption');
+  assert.equal(overlay.activeCues[0].speaker, 'ops');
+  assert.deepEqual(
+    overlay.activeCues[0].wordEntries.map((word) => word.state),
+    ['past', 'active'],
+  );
+  assert.deepEqual(
+    overlay.activeCues.map((cue) => cue.cueId),
+    ['active', 'simultaneous'],
+  );
+  assert.notEqual(overlay.activeCues[0].placement.zone, overlay.activeCues[1].placement.zone);
   assert.match(
-    renderMediaStudioCaptionLineMarkup(overlay.cue, { currentTimeSec: overlay.currentTimeSec }),
+    renderMediaStudioCaptionLineMarkup(
+      overlay.activeCues[0],
+      { currentTimeSec: overlay.currentTimeSec },
+    ),
     /data-caption-word-state="active">caption<\/span>/,
   );
-  assert.match(
-    renderMediaStudioCaptionOverlayMarkup({
-      currentTimeSec: 1.4,
-      renderSettings: { captionsEnabled: true, captionsMode: 'karaoke' },
-      captionCues: [{ startSec: 1, endSec: 2, text: 'Created during playback' }],
-    }),
-    /data-media-caption-overlay/,
-  );
+  let markup = renderMediaStudioCaptionOverlayMarkup({
+    currentTimeSec: 1.4,
+    renderSettings: { captionsEnabled: true, captionsMode: 'karaoke' },
+    captionTrack: placementTrack,
+  });
+  assert.match(markup, /data-caption-track="caption-presentation-track-v2"/);
+  assert.match(markup, /data-caption-cue-id="active"/);
+  assert.match(markup, /data-caption-cue-id="simultaneous"/);
+  assert.match(markup, /Active[\s\S]*Second[\s\S]*active[\s\S]*cue/);
+  assert.equal((markup.match(/class="sn-media-studio-caption-line"/g) || []).length, 2);
 
   let disabled = normalizeMediaStudioCaptionOverlayState({
     currentTimeSec: 1.4,
     renderSettings: { captionsEnabled: false, captionsMode: 'off' },
-    captionCues: [{ startSec: 1, endSec: 2, text: 'Hidden' }],
+    captionTrack: placementTrack,
   });
   assert.equal(disabled.enabled, false);
+  assert.throws(() => normalizeMediaStudioCaptionOverlayState({
+    currentTimeSec: 1.4,
+    captionTrack: { cues: [{ text: 'legacy' }] },
+  }), /caption-presentation-track-v2/);
 });
 
 test('media studio render settings normalize auto-render, captions, and vertical geometry', () => {
@@ -701,6 +745,12 @@ test('media studio render settings normalize auto-render, captions, and vertical
       captionsMode: 'off',
       autoRender: false,
       audioProviderId: 'local-voice-provider',
+      captionStyle: {
+        preset: 'tiktok',
+        fontSize: 72,
+        maxLines: 3,
+        preferredZones: ['top', 'bottom', 'middle'],
+      },
     },
   });
   assert.equal(vertical.autoRender, false);
@@ -711,6 +761,30 @@ test('media studio render settings normalize auto-render, captions, and vertical
   assert.equal(vertical.height, 1920);
   assert.equal(vertical.fps, 12);
   assert.equal(vertical.providerId, 'local-voice-provider');
+  assert.equal(vertical.captionProfile, 'tiktok');
+  assert.equal(vertical.captionPlacement, 'top');
+  assert.deepEqual(vertical.captionStyle, {
+    preset: 'tiktok',
+    fontSize: 72,
+    maxLines: 3,
+    preferredZones: ['top', 'bottom', 'middle'],
+  });
+  assert.deepEqual(
+    normalizeMediaStudioRenderSettings({ renderSettings: vertical }).captionStyle,
+    vertical.captionStyle,
+  );
+
+  for (let renderSettings of [
+    { captionProfile: 'classic' },
+    { captionProfile: 'high-contrast' },
+    { captionPlacement: 'focus-aware' },
+    { captionHighContrast: true },
+  ]) {
+    assert.throws(
+      () => normalizeMediaStudioRenderSettings({ renderSettings }),
+      /canonical caption|Supported caption/i,
+    );
+  }
 });
 
 test('media studio voice provider state normalizes personas, voices, and capabilities', () => {

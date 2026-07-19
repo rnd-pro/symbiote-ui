@@ -1300,6 +1300,27 @@ test('cascade theme normalizes invalid numeric params without NaN tokens', async
   assert.match(themeModule.getReadableTextForHsl(218, 89, 63), /^hsl\(0 0% (7\.5|98\.0)%\)$/);
 });
 
+test('cascade theme keeps quantized editor button contrast above its safety target', async () => {
+  let themeModule = await import(cascadeThemeSource.href);
+  let theme = themeModule.createCascadeTheme({
+    recipe: 'editor-pro',
+    params: { contrast: 74, hue: 230 },
+  });
+  let quantizedForeground = [16, 16, 16];
+  let quantizedBackground = [86, 113, 245];
+  let luminance = (rgb) => rgb.map((channel) => {
+    let value = channel / 255;
+    return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  }).reduce((sum, channel, index) => sum + channel * [0.2126, 0.7152, 0.0722][index], 0);
+  let foregroundLuminance = luminance(quantizedForeground);
+  let backgroundLuminance = luminance(quantizedBackground);
+  let contrast = (backgroundLuminance + 0.05) / (foregroundLuminance + 0.05);
+
+  assert.equal(theme.tokens['--sn-sys-accent'], 'hsl(230 89% 64.92%)');
+  assert.equal(theme.tokens['--sn-button-primary-color'], 'hsl(0 0% 6.4%)');
+  assert.ok(contrast >= 4.55, `expected quantized contrast >= 4.55, got ${contrast}`);
+});
+
 test('component descriptor v2 includes agent-facing WebMCP context', async () => {
   const schema = await readFile(componentDescriptorV2Source, 'utf8');
 
@@ -1485,7 +1506,7 @@ test('cascade theme derives distinct dark and light branches', async () => {
   assert.equal(lightTheme.tokens['--sn-button-primary-color'], 'hsl(0 0% 98.0%)');
   assert.equal(lightTheme.tokens['--sn-button-success-color'], 'hsl(0 0% 7.5%)');
   assert.equal(themeModule.getReadableTextForHsl(218, 89, 63, 94), 'hsl(0 0% 7.5%)');
-  assert.equal(themeModule.getReadableTextForHsl(218, 89, 56.2, 18.9), 'hsl(0 0% 7.5%)');
+  assert.equal(themeModule.getReadableTextForHsl(218, 89, 56.2, 18.9), 'hsl(0 0% 5.2%)');
 });
 
 test('cascade theme visual smoke fixtures cover luminance and chroma states', async () => {
@@ -1935,7 +1956,8 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(chatComposer, /grid-template-rows: minmax\(var\(--sn-composer-input-min-height\), auto\) auto/);
   assert.match(chatComposer, /min-block-size: calc\(var\(--sn-composer-send-size\) \* 2\.75\)/);
   assert.match(chatComposer, /container: chat-composer \/ inline-size/);
-  assert.match(chatComposer, /@container chat-composer \(width <= 480px\)[\s\S]*grid-template-rows: minmax\(var\(--sn-composer-input-min-height\), auto\) auto/);
+  assert.match(chatComposer, /@container chat-composer \(width <= 480px\)/);
+  assert.doesNotMatch(chatComposer, /grid-template-rows:[^;]*auto auto auto/);
   assert.match(chatComposer, /\.composer-actions/);
   assert.match(chatComposer, /--sn-composer-footer-size/);
   assert.match(chatComposer, /--sn-composer-voice-label-size/);
@@ -2668,13 +2690,13 @@ test('chat composer exposes reusable voice controls and agent-facing metadata', 
   assert.match(styles, /\.composer-leading-btn\.composer-leading-collapsed/);
   assert.match(styles, /@container composer-body \(width <= 960px\)/);
   assert.match(styles, /container: chat-composer \/ inline-size/);
-  assert.match(styles, /@container chat-composer \(width <= 480px\)[\s\S]*grid-template-rows: minmax\(var\(--sn-composer-input-min-height\), auto\) auto auto/);
-  assert.match(styles, /@container chat-composer \(width <= 480px\)[\s\S]*\.composer-footer[\s\S]*grid-column: 1 \/ -1;[\s\S]*grid-row: 2/);
-  assert.match(styles, /@container chat-composer \(width <= 480px\)[\s\S]*\.composer-actions[\s\S]*flex-wrap: nowrap/);
-  assert.match(styles, /@container chat-composer \(width <= 480px\)[\s\S]*\.composer-actions[\s\S]*grid-column: 2;[\s\S]*grid-row: 3/);
-  assert.match(styles, /@container chat-composer \(width <= 480px\)[\s\S]*\.btn-mic[\s\S]*grid-column: 3;[\s\S]*grid-row: 3/);
-  assert.match(styles, /@container chat-composer \(width <= 480px\)[\s\S]*\.composer-body > sn-button\.btn-send[\s\S]*grid-column: 4;[\s\S]*grid-row: 3/);
-  assert.match(styles, /@container chat-composer \(width <= 480px\)[\s\S]*\[leading-controls\][\s\S]*\.composer-actions[\s\S]*grid-column: 2/);
+  assert.match(styles, /@container chat-composer \(width <= 480px\)/);
+  assert.doesNotMatch(styles, /grid-template-rows:[^;]*auto auto auto/);
+  assert.doesNotMatch(styles, /grid-row: 3/);
+  assert.match(styles, /@container style\(--sn-is-collapsed: 1\)/);
+  assert.match(styles, /\.composer-footer-select \{[\s\S]*position: absolute;[\s\S]*inset: 0;[\s\S]*opacity: 0/);
+  assert.match(composer, /<select class="composer-footer-select"[^>]*'@aria-label': 'accessibleName'/);
+  assert.match(composer, /<input class="composer-footer-checkbox"[^>]*'@aria-label': 'accessibleName'/);
   assert.match(styles, /@container composer-body \(width <= 340px\)/);
   assert.match(styles, /36cqi/);
   assert.match(styles, /38cqi/);

@@ -1,6 +1,6 @@
 {
   "name": "symbiote-ui",
-  "version": "0.3.0-alpha.62",
+  "version": "0.3.0-alpha.65",
   "type": "module",
   "description": "Agent-ready Web Components, layouts, themes, manifests, and UI contracts for Symbiote systems.",
   "main": "index.js",
@@ -97,6 +97,7 @@
     "./chat/dialogue-timeline.js": "./chat/dialogue-timeline.js",
     "./chat/dialogue-player.js": "./chat/dialogue-player.js",
     "./chat/presenter-cursor.js": "./chat/presenter-cursor.js",
+    "./chat/presenter-text-selection.js": "./chat/presenter-text-selection.js",
     "./chat/chat-title-generation.js": "./chat/chat-title-generation.js",
     "./chat/workflow-summary.js": "./chat/workflow-summary.js",
     "./chat/live-status.js": "./chat/live-status.js",
@@ -121,6 +122,7 @@
     "./ui/tour-screencast.js": "./ui/tour-screencast.js",
     "./ui/tour-audio-provider.js": "./ui/tour-audio-provider.js",
     "./ui/tour-media-renderer.js": "./ui/tour-media-renderer.js",
+    "./ui/live-captions.js": "./ui/live-captions.js",
     "./ui/scrollbar-styles.js": "./ui/scrollbar-styles.js",
     "./webmcp": {
       "import": "./webmcp.js",
@@ -249,7 +251,7 @@
     "ssr"
   ],
   "dependencies": {
-    "symbiote-engine": "0.3.0-alpha.12"
+    "symbiote-engine": "0.3.0-alpha.13"
   },
   "peerDependencies": {
     "@symbiotejs/symbiote": "3.8.0-webmcp.2"

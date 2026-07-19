@@ -12,7 +12,7 @@ sn-badge {
   background: var(--sn-badge-bg, transparent);
   color: var(--sn-badge-color, var(--sn-sys-on-surface-dim));
   font-family: var(--sn-font, sans-serif);
-  font-size: var(--sn-badge-font-size, 11px);
+  font-size: var(--sn-badge-font-size, 12px);
   font-weight: var(--sn-badge-font-weight, 500);
   line-height: var(--sn-badge-line-height, 1.2);
   white-space: nowrap;

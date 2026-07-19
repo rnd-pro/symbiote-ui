@@ -1,3 +1,8 @@
+import {
+  assertCaptionPlacementTrack,
+  buildCaptionPlacementTrack,
+} from 'symbiote-engine/render-captions';
+
 const DEFAULT_WIDTH = 1280;
 const DEFAULT_HEIGHT = 720;
 const DEFAULT_FPS = 30;
@@ -50,6 +55,13 @@ function cleanText(value, fallback = '') {
   return text && text !== 'undefined' && text !== 'null' ? text : String(fallback || '').trim();
 }
 
+function explicitCueId(cue, index) {
+  if (typeof cue?.cueId !== 'string' || !cue.cueId.trim()) {
+    throw new TypeError(`tour caption frame ${index} requires a non-empty cueId`);
+  }
+  return cue.cueId;
+}
+
 function normalizeCaptionMode(value) {
   let mode = cleanText(value, DEFAULT_CAPTION_MODE).toLowerCase();
   return CAPTION_MODES.has(mode) ? mode : DEFAULT_CAPTION_MODE;
@@ -83,6 +95,7 @@ export function normalizeTourMediaTimeline(timeline = {}, options = {}) {
   let turns = (Array.isArray(timeline?.turns) ? timeline.turns : [])
     .map((turn, index) => ({
       index,
+      ...(Object.hasOwn(turn || {}, 'cueId') ? { cueId: turn.cueId } : {}),
       persona: cleanText(turn?.persona, index % 2 ? 'ops' : 'guide') || 'guide',
       text: cleanText(turn?.text, ''),
       cue: turn?.cue && typeof turn.cue === 'object' ? { ...turn.cue } : {},
@@ -122,37 +135,30 @@ function normalizeWordTiming(timing, frame) {
   if (!timing || Number(timing.index) !== Number(frame.index)) return null;
   let text = cleanText(timing.word || timing.text, '');
   if (!text) return null;
-  let startMs = Number(timing.startMs);
-  let endMs = Number(timing.endMs);
-  if (!Number.isFinite(startMs)) startMs = frame.startMs;
-  if (!Number.isFinite(endMs) || endMs < startMs) endMs = startMs + Math.max(80, frame.durationMs / Math.max(1, words(frame.text)));
+  let startMs = timing.startMs === undefined ? Number(timing.startSec) * 1000 : Number(timing.startMs);
+  let endMs = timing.endMs === undefined ? Number(timing.endSec) * 1000 : Number(timing.endMs);
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs
+    || startMs < frame.startMs || endMs > frame.endMs + 1) {
+    throw new TypeError(`caption word timing for frame ${frame.index} is outside its authored cue`);
+  }
   return {
     text,
-    word: text,
-    index: frame.index,
     wordIndex: Number.isFinite(Number(timing.wordIndex)) ? Number(timing.wordIndex) : undefined,
-    startMs,
-    endMs,
+    startSec: startMs / 1000,
+    endSec: endMs / 1000,
   };
 }
 
-function fallbackWordTimings(frame) {
-  let tokens = tokenizeWords(frame.text);
-  if (!tokens.length) return [];
-  let start = frame.startMs + Math.min(320, Math.max(120, frame.durationMs * 0.12));
-  let span = Math.max(100, frame.durationMs - (start - frame.startMs) - 120);
-  let step = span / Math.max(1, tokens.length);
-  return tokens.map((word, wordIndex) => {
-    let startMs = start + wordIndex * step;
-    return {
-      text: word,
-      word,
-      index: frame.index,
-      wordIndex,
-      startMs,
-      endMs: startMs + Math.max(70, step * 0.75),
-    };
-  });
+function captionStyleOptions(options, width, height) {
+  let fallbackPreset = height > width ? 'tiktok' : height === width ? 'square' : 'youtube';
+  let source = options.captionStyle ?? {};
+  if (!source || typeof source !== 'object' || Array.isArray(source)) {
+    throw new TypeError('captionStyle must be a canonical caption profile object');
+  }
+  return {
+    ...source,
+    preset: cleanText(source.preset, fallbackPreset).toLowerCase(),
+  };
 }
 
 export function createTourCaptionTrack(timelineOrPlan = {}, options = {}) {
@@ -161,26 +167,35 @@ export function createTourCaptionTrack(timelineOrPlan = {}, options = {}) {
     : createTourMediaRenderPlan(timelineOrPlan, options);
   let wordTimings = Array.isArray(options.wordTimings) ? options.wordTimings : [];
   let mode = normalizeCaptionMode(options.captionsMode || options.mode);
-  let cues = plan.frames.map((frame) => {
+  let width = Number(options.width) || DEFAULT_WIDTH;
+  let height = Number(options.height) || DEFAULT_HEIGHT;
+  let cues = (captionsEnabled(mode) ? plan.frames : []).map((frame) => {
     let timedWords = wordTimings
       .map((timing) => normalizeWordTiming(timing, frame))
       .filter(Boolean)
-      .sort((a, b) => a.startMs - b.startMs || (a.wordIndex ?? 0) - (b.wordIndex ?? 0));
+      .sort((a, b) => a.startSec - b.startSec || (a.wordIndex ?? 0) - (b.wordIndex ?? 0));
     return {
+      cueId: explicitCueId(frame, frame.index),
       index: frame.index,
-      persona: cleanText(frame.persona, 'guide'),
+      speaker: cleanText(frame.persona, 'guide'),
       text: cleanText(frame.text, ''),
-      startMs: frame.startMs,
-      endMs: frame.endMs,
-      durationMs: frame.durationMs,
-      words: timedWords.length ? timedWords : fallbackWordTimings(frame),
+      startSec: frame.startMs / 1000,
+      endSec: frame.endMs / 1000,
+      wordTimings: timedWords,
     };
   });
+  let placementTrack = buildCaptionPlacementTrack(cues, {
+    width,
+    height,
+    captionStyle: captionStyleOptions(options, width, height),
+    safeInsets: options.safeInsets,
+    avoidRegions: options.avoidRegions,
+  });
   return {
+    ...placementTrack,
     mode,
     title: cleanText(plan.title, 'UI tour'),
-    cues,
-    wordTimingCount: cues.reduce((sum, cue) => sum + cue.words.length, 0),
+    wordTimingCount: placementTrack.cues.reduce((sum, cue) => sum + cue.wordTimings.length, 0),
   };
 }
 
@@ -245,17 +260,124 @@ function createCombinedStream(videoStream, audioTracks, StreamCtor) {
   return new StreamCtor([...videoTracks, ...audioTracks]);
 }
 
+function abortReason(signal) {
+  if (signal?.reason) return signal.reason;
+  if (typeof DOMException === 'function') return new DOMException('Aborted', 'AbortError');
+  let error = new Error('Aborted');
+  error.name = 'AbortError';
+  return error;
+}
+
+function throwIfAborted(signal) {
+  if (signal?.aborted) throw abortReason(signal);
+}
+
 function wait(ms, signal) {
   if (!ms) return Promise.resolve();
-  if (signal?.aborted) return Promise.reject(new DOMException('Aborted', 'AbortError'));
+  if (signal?.aborted) return Promise.reject(abortReason(signal));
   return new Promise((resolve, reject) => {
-    let timer = setTimeout(resolve, ms);
-    if (!signal?.addEventListener) return;
-    signal.addEventListener('abort', () => {
+    let onAbort = () => {
       clearTimeout(timer);
-      reject(new DOMException('Aborted', 'AbortError'));
-    }, { once: true });
+      reject(abortReason(signal));
+    };
+    let timer = setTimeout(() => {
+      signal?.removeEventListener?.('abort', onAbort);
+      resolve();
+    }, ms);
+    signal?.addEventListener?.('abort', onAbort, { once: true });
   });
+}
+
+function defaultFrameClockNow() {
+  if (typeof globalThis.performance?.now === 'function') return globalThis.performance.now();
+  return Date.now();
+}
+
+function resolveFrameClock(options = {}) {
+  let source = options.frameClock;
+  if (source !== undefined && (!source || typeof source !== 'object')) {
+    throw new TourMediaRenderError('invalid-frame-clock', 'frameClock must provide now() and wait().');
+  }
+  let now = source?.now;
+  let waitFor = source?.wait;
+  if (source && (typeof now !== 'function' || typeof waitFor !== 'function')) {
+    throw new TourMediaRenderError('invalid-frame-clock', 'frameClock must provide now() and wait().');
+  }
+  return {
+    now: source ? now.bind(source) : defaultFrameClockNow,
+    wait: source ? waitFor.bind(source) : wait,
+  };
+}
+
+function frameClockNow(clock) {
+  let value = Number(clock.now());
+  if (!Number.isFinite(value)) {
+    throw new TourMediaRenderError('invalid-frame-clock', 'frameClock.now() must return a finite number.');
+  }
+  return value;
+}
+
+async function waitUntilFrameTime(clock, targetMs, signal) {
+  while (true) {
+    throwIfAborted(signal);
+    let before = frameClockNow(clock);
+    let remaining = targetMs - before;
+    if (remaining <= 0) return;
+    await clock.wait(remaining, signal);
+    throwIfAborted(signal);
+    if (frameClockNow(clock) <= before) {
+      throw new TourMediaRenderError(
+        'frame-clock-stalled',
+        'frameClock.wait() completed without advancing toward the scheduled frame.',
+      );
+    }
+  }
+}
+
+function createFrameSchedule(plan, fps) {
+  if (!Number.isFinite(fps) || fps <= 0) {
+    throw new TourMediaRenderError('invalid-frame-rate', 'fps must be a positive finite number.');
+  }
+  if (!Number.isFinite(plan.totalMs) || plan.totalMs <= 0) {
+    throw new TourMediaRenderError(
+      'invalid-timeline-duration',
+      'Tour timeline duration must be positive before video rendering.',
+    );
+  }
+  let intervalMs = 1000 / fps;
+  let frameCount = Math.ceil(plan.totalMs / intervalMs);
+  let timelineIndex = 0;
+  return Array.from({ length: frameCount }, (_, index) => {
+    let scheduledMs = index * intervalMs;
+    while (timelineIndex < plan.frames.length - 1
+      && scheduledMs >= plan.frames[timelineIndex].endMs) {
+      timelineIndex += 1;
+    }
+    return {
+      index,
+      frame: plan.frames[timelineIndex],
+      scheduledMs,
+      deadlineMs: (index + 1) * intervalMs,
+    };
+  });
+}
+
+function assertFrameDeadline(clock, startedAtMs, slot, phase) {
+  let currentMs = frameClockNow(clock);
+  let deadlineAtMs = startedAtMs + slot.deadlineMs;
+  if (currentMs < deadlineAtMs) return;
+  throw new TourMediaRenderError(
+    'frame-deadline-missed',
+    `Tour frame ${slot.index} missed its ${slot.deadlineMs}ms capture deadline.`,
+    {
+      frameIndex: slot.index,
+      timelineFrameIndex: slot.frame.index,
+      scheduledMs: slot.scheduledMs,
+      deadlineMs: slot.deadlineMs,
+      lateByMs: currentMs - deadlineAtMs,
+      phase,
+    },
+  );
 }
 
 function drawWrappedText(ctx, text, x, y, maxWidth, lineHeight, maxLines = 5) {
@@ -276,12 +398,10 @@ function drawWrappedText(ctx, text, x, y, maxWidth, lineHeight, maxLines = 5) {
   lines.slice(0, maxLines).forEach((ln, index) => ctx.fillText(ln, x, y + index * lineHeight));
 }
 
-function activeCaptionCue(track, frame, nowMs) {
-  if (!track?.cues?.length) return null;
-  let current = Number.isFinite(Number(nowMs)) ? Number(nowMs) : frame.startMs;
-  return track.cues.find((cue) => current >= cue.startMs && current <= cue.endMs) ||
-    track.cues.find((cue) => cue.index === frame.index) ||
-    null;
+function activeCaptionCues(track, frame, nowMs) {
+  if (!track?.cues?.length) return [];
+  let currentSec = (Number.isFinite(Number(nowMs)) ? Number(nowMs) : frame.startMs) / 1000;
+  return track.cues.filter((cue) => currentSec >= cue.startSec && currentSec < cue.endSec);
 }
 
 function drawRoundedRect(ctx, x, y, width, height, radius) {
@@ -310,53 +430,73 @@ function drawRoundedRect(ctx, x, y, width, height, radius) {
   ctx.fill?.();
 }
 
-function drawCaptionWords(ctx, cue, nowMs, x, y, maxWidth, lineHeight, palette) {
-  let words = cue.words?.length ? cue.words : fallbackWordTimings(cue);
-  let cursorX = x;
-  let cursorY = y;
-  for (let word of words) {
-    let text = cleanText(word.text || word.word, '');
-    if (!text) continue;
-    let suffix = ' ';
-    let token = text + suffix;
-    let tokenWidth = ctx.measureText(token).width;
-    if (cursorX > x && cursorX + tokenWidth > x + maxWidth) {
-      cursorX = x;
-      cursorY += lineHeight;
-    }
-    let elapsed = Number(nowMs) >= Number(word.endMs);
-    let active = Number(nowMs) >= Number(word.startMs) && Number(nowMs) < Number(word.endMs);
-    ctx.fillStyle = elapsed || active ? palette.accent : palette.text;
-    ctx.fillText(text, cursorX, cursorY);
-    cursorX += ctx.measureText(text).width;
-    ctx.fillStyle = palette.muted;
-    ctx.fillText(suffix, cursorX, cursorY);
-    cursorX += ctx.measureText(suffix).width;
-  }
+function normalizedCaptionWord(value) {
+  return String(value || '')
+    .toLocaleLowerCase()
+    .replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '');
 }
 
-function drawTourCaptions(ctx, frame, plan, options = {}, palette) {
+function drawCaptionLines(ctx, cue, nowSec, rect, profile, scale) {
+  let timings = cue.wordTimings || [];
+  let timingIndex = 0;
+  let lineHeight = profile.lineHeight * scale;
+  ctx.font = `700 ${profile.fontSize * scale}px ${profile.fontName}`;
+  ctx.textBaseline = 'top';
+  ctx.textAlign = 'left';
+  ctx.strokeStyle = profile.outlineColor;
+  ctx.lineWidth = Math.max(1, scale);
+
+  cue.wrappedLines.forEach((lineText, lineIndex) => {
+    let tokens = String(lineText).split(/\s+/).filter(Boolean);
+    let lineWidth = ctx.measureText(lineText).width;
+    let cursorX = rect.x + Math.max(0, (rect.width - lineWidth) / 2);
+    let y = rect.y + lineIndex * lineHeight;
+    tokens.forEach((token, tokenIndex) => {
+      if (tokenIndex) cursorX += ctx.measureText(' ').width;
+      let timing = timings[timingIndex];
+      let matchesTiming = timing
+        && normalizedCaptionWord(timing.text) === normalizedCaptionWord(token);
+      if (matchesTiming) timingIndex += 1;
+      let active = matchesTiming && nowSec >= timing.startSec && nowSec < timing.endSec;
+      ctx.fillStyle = active ? profile.highlightColor : profile.primaryColor;
+      ctx.strokeText?.(token, cursorX, y);
+      ctx.fillText(token, cursorX, y);
+      cursorX += ctx.measureText(token).width;
+    });
+  });
+}
+
+function drawTourCaptions(ctx, frame, plan, options = {}) {
   let mode = normalizeCaptionMode(options.captionsMode);
   if (!captionsEnabled(mode)) return;
-  let track = options.captionTrack || createTourCaptionTrack(plan, { captionsMode: mode });
-  let nowMs = Number.isFinite(Number(options.nowMs)) ? Number(options.nowMs) : frame.startMs;
-  let cue = activeCaptionCue(track, frame, nowMs);
-  if (!cue?.text) return;
-
   let width = Number(options.width) || DEFAULT_WIDTH;
   let height = Number(options.height) || DEFAULT_HEIGHT;
-  let x = Math.round(width * 0.12);
-  let y = Math.round(height * 0.78);
-  let boxWidth = Math.round(width * 0.76);
-  let boxHeight = Math.round(height * 0.14);
+  let track = options.captionTrack || createTourCaptionTrack(plan, {
+    ...options,
+    captionsMode: mode,
+    width,
+    height,
+  });
+  assertCaptionPlacementTrack(track);
+  let nowMs = Number.isFinite(Number(options.nowMs)) ? Number(options.nowMs) : frame.startMs;
+  let cues = activeCaptionCues(track, frame, nowMs);
+  if (!cues.length) return;
 
-  ctx.fillStyle = palette.captionBg || 'rgba(0, 0, 0, 0.55)';
-  drawRoundedRect(ctx, x, y, boxWidth, boxHeight, Math.round(height * 0.025));
-  ctx.fillStyle = palette.muted;
-  ctx.font = '700 15px system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif';
-  ctx.fillText(cleanText(cue.persona, 'guide').toUpperCase(), x + 22, y + 28);
-  ctx.font = '650 24px system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif';
-  drawCaptionWords(ctx, cue, nowMs, x + 22, y + 66, boxWidth - 44, 30, palette);
+  let { profile } = track;
+  let scale = Math.min(width / profile.width, height / profile.height);
+  let offsetX = (width - profile.width * scale) / 2;
+  let offsetY = (height - profile.height * scale) / 2;
+  for (let cue of cues) {
+    let rect = {
+      x: offsetX + cue.measuredRect.x * scale,
+      y: offsetY + cue.measuredRect.y * scale,
+      width: cue.measuredRect.width * scale,
+      height: cue.measuredRect.height * scale,
+    };
+    ctx.fillStyle = profile.backColor;
+    drawRoundedRect(ctx, rect.x, rect.y, rect.width, rect.height, profile.lineHeight * scale * 0.2);
+    drawCaptionLines(ctx, cue, nowMs / 1000, rect, profile, scale);
+  }
 }
 
 function tourMediaPalette(options = {}) {
@@ -372,7 +512,7 @@ function tourMediaPalette(options = {}) {
 }
 
 export function drawTourCaptionOverlay(ctx, frame, plan, options = {}) {
-  drawTourCaptions(ctx, frame, plan, options, tourMediaPalette(options));
+  drawTourCaptions(ctx, frame, plan, options);
 }
 
 export function drawTourMediaFrame(ctx, frame, plan, options = {}) {
@@ -459,6 +599,24 @@ export function getTourMediaSupport(options = {}) {
   };
 }
 
+function validateCaptionTrack(value) {
+  try {
+    return assertCaptionPlacementTrack(value);
+  } catch (cause) {
+    throw new TourMediaRenderError(
+      'invalid-caption-track',
+      `options.captionTrack must use caption-presentation-track-v2: ${cause.message}`,
+      { cause },
+    );
+  }
+}
+
+function captionWordTimingCount(track) {
+  return track.cues.reduce((sum, cue) => (
+    sum + (Array.isArray(cue.wordTimings) ? cue.wordTimings.length : 0)
+  ), 0);
+}
+
 export async function renderTourVideo(timeline = {}, options = {}) {
   let includeAudio = options.includeAudio !== false;
   let plan = createTourMediaRenderPlan(timeline, options);
@@ -480,95 +638,209 @@ export async function renderTourVideo(timeline = {}, options = {}) {
 
   let width = Number(options.width) || DEFAULT_WIDTH;
   let height = Number(options.height) || DEFAULT_HEIGHT;
-  let fps = Number(options.fps) || DEFAULT_FPS;
-  let frameIntervalMs = Number.isFinite(Number(options.frameIntervalMs))
-    ? Math.max(1, Number(options.frameIntervalMs))
-    : Math.max(16, Math.round(1000 / fps));
+  let fps = options.fps === undefined ? DEFAULT_FPS : Number(options.fps);
+  let frameSchedule = createFrameSchedule(plan, fps);
+  let frameClock = resolveFrameClock(options);
+  let captionsMode = normalizeCaptionMode(options.captionsMode);
+  let suppliedCaptionTrack = options.captionTrack === undefined
+    ? null
+    : validateCaptionTrack(options.captionTrack);
   canvas.width = width;
   canvas.height = height;
 
-  let audioInput = await resolveAudioInput(options, plan);
-  let audioTracks = audioTracksFromInput(audioInput);
-  if (includeAudio && !audioTracks.length) {
-    await closeAudioInput(audioInput);
-    throw new TourMediaRenderError('missing-audio-source', 'Tour video rendering with audio requires an audio stream or audio provider.', {
-      includeAudio,
-      audioTrackCount: 0,
-    });
-  }
-  let wordTimings = Array.isArray(audioInput?.wordTimings)
-    ? audioInput.wordTimings
-    : Array.isArray(audioInput?.plan?.wordTimings)
-      ? audioInput.plan.wordTimings
-      : [];
-  let captionsMode = normalizeCaptionMode(options.captionsMode);
-  let captionTrack = createTourCaptionTrack(plan, { captionsMode, wordTimings });
+  let audioInput = null;
+  let audioTracks = [];
+  let wordTimings = [];
+  let captionTrack = suppliedCaptionTrack;
   let frameRenderer = resolveFrameRenderer(options);
   let renderedFrameCount = 0;
-
-  let videoStream = canvas.captureStream(fps);
-  let stream = createCombinedStream(videoStream, includeAudio ? audioTracks : [], StreamCtor);
-  let mimeType = pickMimeType(Recorder, options.preferredMimeTypes) || '';
-  let recorder = new Recorder(stream, mimeType ? { mimeType } : undefined);
+  let requestedFrameCount = 0;
+  let videoStream = null;
+  let stream = null;
+  let recorder = null;
+  let recorderStarted = false;
+  let recorderStopRequested = false;
+  let recorderCompletion = null;
   let chunks = [];
-  let stopped = new Promise((resolve, reject) => {
-    recorder.addEventListener?.('dataavailable', (event) => {
-      if (event?.data?.size > 0) chunks.push(event.data);
-    });
-    recorder.addEventListener?.('stop', resolve, { once: true });
-    recorder.addEventListener?.('error', (event) => reject(event?.error || new Error('Tour video rendering failed')), { once: true });
-  });
+  let primaryError = null;
 
-  recorder.start(options.chunkInterval || 1000);
-  for (let frame of plan.frames) {
-    if (!frame.durationMs) {
-      await renderVideoFrame(ctx, canvas, frame, plan, { ...options, width, height, captionsMode, captionTrack, nowMs: frame.startMs }, frameRenderer, options);
-      renderedFrameCount += 1;
-      continue;
+  try {
+    throwIfAborted(options.signal);
+    audioInput = await resolveAudioInput(options, plan);
+    throwIfAborted(options.signal);
+    audioTracks = audioTracksFromInput(audioInput);
+    if (includeAudio && !audioTracks.length) {
+      throw new TourMediaRenderError(
+        'missing-audio-source',
+        'Tour video rendering with audio requires an audio stream or audio provider.',
+        {
+          includeAudio,
+          audioTrackCount: 0,
+        },
+      );
     }
-    for (let elapsed = 0; elapsed < frame.durationMs; elapsed += frameIntervalMs) {
-      let stepMs = Math.min(frameIntervalMs, frame.durationMs - elapsed);
-      let nowMs = frame.startMs + elapsed;
-      await renderVideoFrame(ctx, canvas, frame, plan, { ...options, width, height, captionsMode, captionTrack, nowMs }, frameRenderer, options);
+    wordTimings = Array.isArray(audioInput?.wordTimings)
+      ? audioInput.wordTimings
+      : Array.isArray(audioInput?.plan?.wordTimings)
+        ? audioInput.plan.wordTimings
+        : [];
+    if (!captionTrack) {
+      captionTrack = createTourCaptionTrack(plan, {
+        ...options,
+        captionsMode,
+        wordTimings,
+        width,
+        height,
+      });
+    }
+
+    try {
+      videoStream = canvas.captureStream(0);
+    } catch (cause) {
+      throw new TourMediaRenderError(
+        'manual-frame-capture-unavailable',
+        'Canvas captureStream(0) failed; manual frame capture is required.',
+        { cause },
+      );
+    }
+    let videoTracks = getVideoTracks(videoStream);
+    let captureTrack = videoTracks.length === 1 ? videoTracks[0] : null;
+    if (!captureTrack || typeof captureTrack.requestFrame !== 'function') {
+      throw new TourMediaRenderError(
+        'manual-frame-capture-unavailable',
+        'Canvas capture must expose one video track with requestFrame().',
+        { videoTrackCount: videoTracks.length },
+      );
+    }
+
+    stream = createCombinedStream(videoStream, includeAudio ? audioTracks : [], StreamCtor);
+    let mimeType = pickMimeType(Recorder, options.preferredMimeTypes) || '';
+    recorder = new Recorder(stream, mimeType ? { mimeType } : undefined);
+    recorderCompletion = new Promise((resolve, reject) => {
+      recorder.addEventListener?.('dataavailable', (event) => {
+        if (event?.data?.size > 0) chunks.push(event.data);
+      });
+      recorder.addEventListener?.('stop', resolve, { once: true });
+      recorder.addEventListener?.('error', (event) => {
+        reject(event?.error || new Error('Tour video rendering failed'));
+      }, { once: true });
+    }).then(
+      () => null,
+      (error) => error,
+    );
+
+    recorderStarted = true;
+    recorder.start(options.chunkInterval ?? 1000);
+    let startedAtMs = frameClockNow(frameClock);
+    for (let slot of frameSchedule) {
+      await waitUntilFrameTime(frameClock, startedAtMs + slot.scheduledMs, options.signal);
+      assertFrameDeadline(frameClock, startedAtMs, slot, 'before-render');
+      await renderVideoFrame(
+        ctx,
+        canvas,
+        slot.frame,
+        plan,
+        {
+          ...options,
+          width,
+          height,
+          captionsMode,
+          captionTrack,
+          nowMs: slot.scheduledMs,
+        },
+        frameRenderer,
+        options,
+      );
       renderedFrameCount += 1;
-      await wait(stepMs, options.signal);
+      throwIfAborted(options.signal);
+      assertFrameDeadline(frameClock, startedAtMs, slot, 'after-render');
+      try {
+        captureTrack.requestFrame();
+      } catch (cause) {
+        throw new TourMediaRenderError(
+          'manual-frame-capture-failed',
+          `Canvas video track requestFrame() failed for frame ${slot.index}.`,
+          { frameIndex: slot.index, cause },
+        );
+      }
+      requestedFrameCount += 1;
+    }
+    let recordingEndMs = startedAtMs + frameSchedule.at(-1).deadlineMs;
+    await waitUntilFrameTime(frameClock, recordingEndMs, options.signal);
+    throwIfAborted(options.signal);
+    recorder.stop();
+    recorderStopRequested = true;
+    let recorderError = await recorderCompletion;
+    if (recorderError) throw recorderError;
+
+    let type = recorder.mimeType || mimeType || 'video/webm';
+    let blob = new BlobCtor(chunks, { type });
+    return {
+      blob,
+      type,
+      mimeType: type,
+      plan,
+      filename: options.filename || 'tour-video.webm',
+      audio: {
+        requested: includeAudio,
+        trackCount: audioTracks.length,
+        hasAudio: audioTracks.length > 0,
+        wordTimingCount: wordTimings.length,
+      },
+      captions: {
+        mode: captionsMode,
+        burnedIn: captionsEnabled(captionsMode),
+        track: captionTrack,
+        wordTimingCount: captionWordTimingCount(captionTrack),
+      },
+      video: {
+        trackCount: getVideoTracks(stream).length || getVideoTracks(videoStream).length,
+        width,
+        height,
+        fps,
+        frameRenderer: frameRenderer ? 'custom' : 'default',
+        renderedFrameCount,
+        requestedFrameCount,
+      },
+    };
+  } catch (error) {
+    primaryError = error;
+    throw error;
+  } finally {
+    let cleanupError = null;
+    if (recorderStarted && !recorderStopRequested && recorder?.state !== 'inactive') {
+      try {
+        recorder.stop();
+        recorderStopRequested = true;
+      } catch (error) {
+        cleanupError = error;
+      }
+    }
+    let tracks = new Set([
+      ...getTracks(stream),
+      ...getTracks(videoStream),
+      ...audioTracks,
+    ]);
+    for (let track of tracks) {
+      try {
+        track?.stop?.();
+      } catch (error) {
+        cleanupError ||= error;
+      }
+    }
+    try {
+      await closeAudioInput(audioInput);
+    } catch (error) {
+      cleanupError ||= error;
+    }
+    if (cleanupError && !primaryError) {
+      throw new TourMediaRenderError(
+        'media-cleanup-failed',
+        'Tour video rendering finished, but media resource cleanup failed.',
+        { cause: cleanupError },
+      );
     }
   }
-  recorder.stop();
-  await stopped;
-
-  for (let track of getTracks(videoStream)) track.stop?.();
-  await closeAudioInput(audioInput);
-
-  let type = recorder.mimeType || mimeType || 'video/webm';
-  let blob = new BlobCtor(chunks, { type });
-  return {
-    blob,
-    type,
-    mimeType: type,
-    plan,
-    filename: options.filename || 'tour-video.webm',
-    audio: {
-      requested: includeAudio,
-      trackCount: audioTracks.length,
-      hasAudio: audioTracks.length > 0,
-      wordTimingCount: wordTimings.length,
-    },
-    captions: {
-      mode: captionsMode,
-      burnedIn: captionsEnabled(captionsMode),
-      track: captionTrack,
-      wordTimingCount: captionTrack.wordTimingCount,
-    },
-    video: {
-      trackCount: getVideoTracks(stream).length || getVideoTracks(videoStream).length,
-      width,
-      height,
-      fps,
-      frameRenderer: frameRenderer ? 'custom' : 'default',
-      renderedFrameCount,
-    },
-  };
 }
 
 export function downloadTourVideoBlob(result, options = {}) {

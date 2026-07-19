@@ -168,6 +168,7 @@ function decorateFooterControl(item) {
   let meterValue = normalizeProgress(meterSource.value ?? meterSource.progress ?? details?.progress ?? item.progress ?? 0);
   let meterLabel = String(meterSource.label || '');
   let meterTitle = String(meterSource.title || details?.title || item.title || item.label || item.id || '');
+  let accessibleName = String(item.title || item.label || item.id || '');
   let hasMeter = Boolean(item.meter || details);
   let baseClass = [
     'composer-footer-btn',
@@ -220,6 +221,7 @@ function decorateFooterControl(item) {
     hasMeter,
     hasMeterLabel: Boolean(meterLabel),
     meterStyle: progressStyle(meterValue),
+    accessibleName,
     options,
   };
 }
@@ -524,9 +526,22 @@ export class ChatComposer extends Symbiote {
   renderCallback() {
     this.sub('value', (value) => {
       let input = this.getInputElement();
-      if (input && input.value !== value) {
-        input.value = value || '';
-        this.resizeInput();
+      if (input) {
+        if (this._isProgrammaticUpdate) {
+          input.value = value || '';
+          this.resizeInput();
+          queueMicrotask(() => {
+            let currentInput = this.getInputElement();
+            if (currentInput) {
+              let len = currentInput.value.length;
+              currentInput.setSelectionRange(len, len);
+              currentInput.scrollTop = currentInput.scrollHeight;
+            }
+          });
+        } else if (input.value !== value) {
+          input.value = value || '';
+          this.resizeInput();
+        }
       }
     });
     this.sub('isSending', () => this._syncSendingState());
@@ -1242,7 +1257,9 @@ export class ChatComposer extends Symbiote {
   }
 
   setValue(value) {
+    this._isProgrammaticUpdate = true;
     this.$.value = value || '';
+    this._isProgrammaticUpdate = false;
   }
 
   setAttachedContext(items) {
@@ -1717,7 +1734,7 @@ ChatComposer.template = html`
           <label ${{ '@class': 'selectClass', '@data-footer-control-id': 'id', '@data-footer-control-kind': 'kind', '@title': 'title', '@hidden': '!isSelect' }}>
             <span class="material-symbols-outlined" ${{ '@hidden': '!hasIcon' }}>{{icon}}</span>
             <span class="composer-footer-label" ${{ '@hidden': '!hasLabel' }}>{{label}}</span>
-            <select class="composer-footer-select" ${{ '@data-footer-control-id': 'id', '@data-footer-control-kind': 'kind', '@disabled': 'disabled' }} itemize="options">
+            <select class="composer-footer-select" ${{ '@data-footer-control-id': 'id', '@data-footer-control-kind': 'kind', '@disabled': 'disabled', '@aria-label': 'accessibleName' }} itemize="options">
               <template>
                 <option ${{ '@value': 'value', '@selected': 'selected' }}>{{label}}</option>
               </template>
@@ -1726,7 +1743,7 @@ ChatComposer.template = html`
           </label>
           <label ${{ '@class': 'checkboxClass', '@data-footer-control-id': 'id', '@data-footer-control-kind': 'kind', '@title': 'title', '@hidden': '!isCheckbox' }}>
             <span class="material-symbols-outlined" ${{ '@hidden': '!hasIcon' }}>{{icon}}</span>
-            <input class="composer-footer-checkbox" type="checkbox" ${{ '@data-footer-control-id': 'id', '@data-footer-control-kind': 'kind', checked: 'checked', '@disabled': 'disabled' }}>
+            <input class="composer-footer-checkbox" type="checkbox" ${{ '@data-footer-control-id': 'id', '@data-footer-control-kind': 'kind', checked: 'checked', '@disabled': 'disabled', '@aria-label': 'accessibleName' }}>
             <span class="composer-footer-label" ${{ '@hidden': '!hasLabel' }}>{{label}}</span>
           </label>
           <button type="button" ${{ '@class': 'buttonClass', '@data-footer-control-id': 'id', '@data-footer-control-kind': 'kind', '@title': 'title', '@disabled': 'disabled', '@hidden': '!isButton' }}>

@@ -8,7 +8,7 @@ Protocol (WebMCP) for model-driven tool registration and command events.
 WebMCP allows Web Components to declare themselves as "tools" that AI models
 can discover and invoke. Symbiote UI provides a bridge layer that:
 
-1. Registers component capabilities with `navigator.modelContext` (if available).
+1. Registers component capabilities with `document.modelContext` (if available).
 2. Falls back gracefully when WebMCP is not supported.
 3. Emits `webmcp-command` custom events that the runtime controller forwards via WebSocket.
 
@@ -22,7 +22,7 @@ Returns the model context provider, or `null`.
 import { getModelContext } from 'symbiote-ui/webmcp';
 
 let ctx = getModelContext(document);
-// ctx = document.modelContext || navigator.modelContext || null
+// ctx = document.modelContext || null
 ```
 
 ## createToolDescriptor(options)
@@ -73,13 +73,14 @@ let descriptor = createComponentToolDescriptor(myPanelElement, {
 | `componentClass` | `component.className` |
 | `semanticRole` | `component.agent?.semanticRole` |
 
-## registerWebMcpTool(options, target)
+## registerWebMcpTool(options, target, registrationOptions)
 
 Registers a tool with the model context provider. Falls back gracefully.
 
 ```javascript
 import { registerWebMcpTool } from 'symbiote-ui/webmcp';
 
+let abortController = new AbortController();
 let { nativeActive, descriptor, unregister } = await registerWebMcpTool({
   name: 'send-chat-message',
   description: 'Send a message in the chat panel',
@@ -87,7 +88,13 @@ let { nativeActive, descriptor, unregister } = await registerWebMcpTool({
     type: 'object',
     properties: { message: { type: 'string' } },
     required: ['message']
+  },
+  execute(input) {
+    return { sent: input.message };
   }
+}, document, {
+  signal: abortController.signal,
+  exposedTo: ['https://agent.example']
 });
 
 if (nativeActive) {
@@ -103,22 +110,37 @@ unregister();
 **Parameters:**
 | Param | Type | Default | Description |
 |-------|------|---------|-------------|
-| `options` | `object` | — | Tool descriptor options (name, description, inputSchema) |
+| `options` | `object` | — | Tool descriptor options (name, description, inputSchema, execute) |
 | `target` | `Document` | `globalThis.document` | Document for model context resolution |
+| `registrationOptions` | `object` | `{}` | Registration configuration options (e.g. signal, exposedTo) |
 
 **Returns:**
 ```javascript
 {
   nativeActive: boolean,  // true if registered with native WebMCP API
-  descriptor: object,     // The tool descriptor object
-  unregister: function    // Cleanup function
+  descriptor: object,     // The tool descriptor object (always the same canonical plain descriptor passed to registration)
+  unregister: function    // Idempotent cleanup function
 }
 ```
 
-**Fallback behavior:**
-- If `modelContext` is not available → returns `nativeActive: false` with a plain descriptor.
-- If native `ToolDescriptor` import fails → falls back to plain object.
-- `unregister()` is always safe to call (noop if no native registration).
+**Validation and Fallback behavior:**
+- **Fail-Fast Verification**: Both `registerWebMcpTool()` and `registerProductContextTools()` throw an error if `descriptor.execute` is not a function.
+- **Registration Options**: an external `signal` is mapped to the internal registration lifecycle signal passed to `document.modelContext.registerTool`; `exposedTo` is forwarded unchanged.
+- If `modelContext` is not available → returns `nativeActive: false` with the same canonical plain descriptor.
+- `unregister()` is always safe to call (noop if no native registration) and is fully idempotent.
+
+`annotations.destructiveHint` is product/MCP policy metadata for consumers such
+as a confirmation gateway. It does not imply that the browser will mediate or
+confirm a destructive execution.
+
+### Execution Context & Out-of-Band Calls
+Standard WebMCP `execute` callbacks in the browser receive exactly one argument: the tool input. In-bound executions from the host platform invoke this callback using only the `input` argument. Internal framework callers can execute the closure with a second out-of-band execution parameter containing advanced metadata like `signal`, `source`, `descriptor`, and `onSettled`.
+
+When a product constructs its adapter and consumer from a prebuilt
+`createProductWebMcpBundle()` result, pass that result as the `bundle` option to
+`registerProductContextTools()`. Registration then uses the exact canonical
+descriptor objects from `bundle.descriptors`; it does not create a second
+descriptor set.
 
 ## triggerWebMcpCommand(element, command, args)
 
