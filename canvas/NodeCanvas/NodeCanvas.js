@@ -120,6 +120,8 @@ function baseFlowMenuActions({ running = false, flowing = false, hasConnections 
 }
 
 export class NodeCanvas extends Symbiote {
+  static observedAttributes = ['presentation'];
+
   init$ = {
     zoom: 1,
     panX: 0,
@@ -128,6 +130,7 @@ export class NodeCanvas extends Symbiote {
     minimapToggleTitle: translate('nodeCanvas.toggleMinimap'),
     '+contentTransform': () =>
       `translate(${this.$.panX}px, ${this.$.panY}px) scale(${this.$.zoom})`,
+    presentation: false,
   };
 
   /** @type {import('../../core/Editor.js').NodeEditor|null} */
@@ -677,6 +680,35 @@ export class NodeCanvas extends Symbiote {
     this._snapEnabled = enabled;
     if (size) this._snapGrid.setSize(size);
     this._viewManager?.setSnapEnabled(enabled);
+  }
+
+  get presentation() {
+    return this.connectedOnce ? this.$.presentation : this.init$.presentation;
+  }
+
+  set presentation(val) {
+    const boolVal = !!val;
+    if (this.connectedOnce) {
+      this.$.presentation = boolVal;
+    } else {
+      this.init$.presentation = boolVal;
+    }
+  }
+
+  attributeChangedCallback(name, oldValue, newValue) {
+    if (oldValue === newValue) return;
+    if (name === 'presentation') {
+      this.presentation = newValue !== null;
+    } else {
+      super.attributeChangedCallback?.(name, oldValue, newValue);
+    }
+  }
+
+  setPresentationMode(enabled) {
+    this.setReadonly(enabled);
+    this.setChrome(!enabled);
+    this.setPanels(!enabled);
+    this.setViewportLocked(enabled);
   }
 
   /**
@@ -2440,6 +2472,18 @@ export class NodeCanvas extends Symbiote {
   }
 
   renderCallback() {
+    let initialPresentationRun = true;
+    this.sub('presentation', (value) => {
+      this.toggleAttribute('presentation', !!value);
+      if (initialPresentationRun) {
+        initialPresentationRun = false;
+        if (!value) {
+          return;
+        }
+      }
+      this.setPresentationMode(!!value);
+    });
+
     ensureMaterialSymbols(['map', 'play_arrow', 'stop', 'timeline']);
     this.addEventListener('panel-menu-action', this._onPanelMenuAction);
 
@@ -2728,6 +2772,15 @@ export class NodeCanvas extends Symbiote {
     this._clearConnectionSettleRefresh();
     this._disconnectNodeResizeObserver();
     this._hideFocusTransitionMarker();
+    this._clearScheduledConnectionUpdates();
+    if (this._suppressedResizeFlushTimer) {
+      clearTimeout(this._suppressedResizeFlushTimer);
+      this._suppressedResizeFlushTimer = 0;
+    }
+    if (this._panAnimFrame) {
+      cancelAnimationFrame(this._panAnimFrame);
+      this._panAnimFrame = null;
+    }
     if (this._viewport) this._viewport.clear();
     if (this._drag) this._drag.destroy();
     if (this._zoom) this._zoom.destroy();

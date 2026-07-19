@@ -651,3 +651,115 @@ test('source-contract: normalizeDiffData keeps line metadata safe and structured
     { severity: 'info', message: 'Unknown severity', code: '' },
   ]);
 });
+
+test('code-block: comprehensive presentation contract', async () => {
+  installDom();
+  await defineSourceViewerElements();
+
+  let cb = document.createElement('code-block');
+  cb.setAttribute('copyable', '');
+  cb.setAttribute('language-label', 'Python');
+  cb.setAttribute('line-numbers', 'hide');
+  cb.setAttribute('frameless', '');
+
+  assert.equal(cb.copyable, true);
+  assert.equal(cb.languageLabel, 'Python');
+  assert.equal(cb.lineNumbers, 'hide');
+  assert.equal(cb.frameless, true);
+
+  document.body.append(cb);
+  await nextRenderTick();
+
+  assert.equal(cb.copyable, true);
+  assert.equal(cb.languageLabel, 'Python');
+  assert.equal(cb.lineNumbers, 'hide');
+  assert.equal(cb.frameless, true);
+
+  assert.equal(cb.hasAttribute('copyable'), true);
+  assert.equal(cb.getAttribute('language-label'), 'Python');
+  assert.equal(cb.getAttribute('line-numbers'), 'hide');
+  assert.equal(cb.hasAttribute('frameless'), true);
+  assert.equal(cb.$.toolbarVisible, true);
+
+  cb.setAttribute('language-label', 'Rust');
+  cb.setAttribute('line-numbers', 'show');
+  await nextRenderTick();
+
+  assert.equal(cb.languageLabel, 'Rust');
+  assert.equal(cb.lineNumbers, 'show');
+  assert.equal(cb.getAttribute('language-label'), 'Rust');
+  assert.equal(cb.getAttribute('line-numbers'), null);
+
+  cb.remove();
+  await nextRenderTick();
+  document.body.append(cb);
+  await nextRenderTick();
+
+  assert.equal(cb.languageLabel, 'Rust');
+  assert.equal(cb.lineNumbers, 'show');
+  assert.equal(cb.getAttribute('language-label'), 'Rust');
+  assert.equal(cb.getAttribute('line-numbers'), null);
+
+  cb.lineNumbers = 'invalid-value';
+  await nextRenderTick();
+  assert.equal(cb.lineNumbers, 'show');
+  assert.equal(cb.getAttribute('line-numbers'), null);
+
+  cb.lineNumbers = 'hide';
+  await nextRenderTick();
+  assert.equal(cb.lineNumbers, 'hide');
+  assert.equal(cb.getAttribute('line-numbers'), 'hide');
+
+  let copyData = null;
+  let simulateError = false;
+  const originalNavigator = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+  Object.defineProperty(globalThis, 'navigator', {
+    value: {
+      clipboard: {
+        writeText: async (text) => {
+          if (simulateError) {
+            throw new Error('Clipboard failed');
+          }
+          copyData = text;
+          return true;
+        }
+      }
+    },
+    configurable: true,
+    writable: true
+  });
+
+  let events = [];
+  cb.addEventListener('code-block-copy', (e) => {
+    events.push(e.detail);
+  });
+
+  cb.setContent('print("Hello")', 'python');
+  await nextRenderTick();
+
+  let success = await cb.copyContent();
+  assert.equal(success, true);
+  assert.equal(copyData, 'print("Hello")');
+  assert.equal(events.length, 1);
+  assert.equal(events[0].success, true);
+  assert.equal(events[0].content, 'print("Hello")');
+
+  simulateError = true;
+  success = await cb.copyContent();
+  assert.equal(success, false);
+  assert.equal(events.length, 2);
+  assert.equal(events[1].success, false);
+  assert.equal(events[1].content, 'print("Hello")');
+  assert.ok(events[1].error);
+  assert.equal(events[1].error.message, 'Clipboard failed');
+
+  assert.ok(cb._copyTimer);
+  cb.remove();
+  assert.equal(cb._copyTimer, null);
+
+  if (originalNavigator) {
+    Object.defineProperty(globalThis, 'navigator', originalNavigator);
+  } else {
+    delete globalThis.navigator;
+  }
+});

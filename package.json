@@ -23,6 +23,10 @@
       "import": "./canvas/index.js",
       "default": "./canvas/index.js"
     },
+    "./canvas/node-canvas": {
+      "import": "./canvas/node-canvas.js",
+      "default": "./canvas/node-canvas.js"
+    },
     "./board": {
       "import": "./board/index.js",
       "default": "./board/index.js"

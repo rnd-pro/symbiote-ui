@@ -165,6 +165,30 @@ flow hosts the real player mounted through the slot the author placed between th
 relevant paragraphs. Route, hash, and media policy stay with the host;
 `symbiote-ui` owns only the generic slot point and the readiness-safe host.
 
+## CodeBlock Presentation Chrome
+
+`code-block` delivers a stable public presentation contract for documentation layouts.
+
+### Attributes
+- `copyable` (boolean): If present, displays a copy code affordance in the toolbar.
+- `language-label` (string): If set, displays a language label in the toolbar.
+- `line-numbers="show|hide"` (default `"show"`): If set to `"hide"`, suppresses the line number gutter.
+- `frameless` (boolean): If present, guarantees no nested `<pre>` borders, background colors, or border radii, so the code block blends into parent containers.
+
+### Methods
+- `setPresentation(options = {})`: Batch updates presentation settings. Options include:
+  - `copyable` (boolean)
+  - `languageLabel` (string)
+  - `lineNumbers` (`"show" | "hide"`)
+  - `frameless` (boolean)
+- `copyContent()`: Triggers a direct write of the code block's text contents to the modern system Clipboard API. Returns a Promise resolving to `true` (success) or `false` (rejection).
+
+### Events
+- `code-block-copy`: Emitted on copy execution. Bubbles and is composed. The event `detail` contract contains:
+  - `success` (boolean): Whether the clipboard write succeeded.
+  - `content` (string): The text payload attempted.
+  - `error` (Error|undefined): The rejection reason if the write failed.
+
 ## Connection and PCB Markers
 
 Edges use `kind`, `direction` (`none`, `forward`, `reverse`, `both`), and

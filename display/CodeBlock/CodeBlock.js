@@ -19,8 +19,11 @@ import {
   normalizeSourceSyntaxTheme,
   normalizeSourceTokenMap,
 } from "../source-contract.js";
+import { translate } from "../../locale/index.js";
 
 export class CodeBlock extends Symbiote {
+  static observedAttributes = ["copyable", "language-label", "line-numbers", "frameless"];
+
   init$ = {
     code: "",
     lang: "js",
@@ -31,6 +34,12 @@ export class CodeBlock extends Symbiote {
     imageSrc: "",
     imageApiBase: "",
     squiggles: [],
+    copyable: false,
+    languageLabel: "",
+    lineNumbers: "show",
+    frameless: false,
+    copyBtnText: translate("codeBlock.copy"),
+    toolbarVisible: false,
   };
 
   _slotComposer = null;
@@ -129,6 +138,100 @@ export class CodeBlock extends Symbiote {
     this.sub("isImage", (value) => {
       this.toggleAttribute("mode-image", value);
     });
+
+    this.sub("copyable", (val) => {
+      this.toggleAttribute("copyable", !!val);
+      this.$.toolbarVisible = !!val || !!this.$.languageLabel;
+    });
+
+    this.sub("languageLabel", (val) => {
+      if (val) {
+        this.setAttribute("language-label", val);
+      } else {
+        this.removeAttribute("language-label");
+      }
+      this.$.toolbarVisible = !!this.$.copyable || !!val;
+    });
+
+    this.sub("lineNumbers", (val) => {
+      if (val === "hide") {
+        this.setAttribute("line-numbers", "hide");
+      } else {
+        this.removeAttribute("line-numbers");
+      }
+    });
+
+    this.sub("frameless", (val) => {
+      this.toggleAttribute("frameless", !!val);
+    });
+  }
+
+  get copyable() {
+    return this.connectedOnce ? this.$.copyable : this.init$.copyable;
+  }
+
+  set copyable(val) {
+    const boolVal = !!val;
+    if (this.connectedOnce) {
+      this.$.copyable = boolVal;
+    } else {
+      this.init$.copyable = boolVal;
+    }
+  }
+
+  get languageLabel() {
+    return this.connectedOnce ? this.$.languageLabel : this.init$.languageLabel;
+  }
+
+  set languageLabel(val) {
+    const strVal = val || "";
+    if (this.connectedOnce) {
+      this.$.languageLabel = strVal;
+    } else {
+      this.init$.languageLabel = strVal;
+    }
+  }
+
+  get lineNumbers() {
+    const val = this.connectedOnce ? this.$.lineNumbers : this.init$.lineNumbers;
+    return val === "hide" ? "hide" : "show";
+  }
+
+  set lineNumbers(val) {
+    const norm = val === "hide" ? "hide" : "show";
+    if (this.connectedOnce) {
+      this.$.lineNumbers = norm;
+    } else {
+      this.init$.lineNumbers = norm;
+    }
+  }
+
+  get frameless() {
+    return this.connectedOnce ? this.$.frameless : this.init$.frameless;
+  }
+
+  set frameless(val) {
+    const boolVal = !!val;
+    if (this.connectedOnce) {
+      this.$.frameless = boolVal;
+    } else {
+      this.init$.frameless = boolVal;
+    }
+  }
+
+  attributeChangedCallback(name, oldValue, newValue) {
+    if (oldValue === newValue) return;
+    if (name === "copyable") {
+      this.copyable = newValue !== null;
+    } else if (name === "language-label") {
+      this.languageLabel = newValue;
+    } else if (name === "line-numbers") {
+      this.lineNumbers = newValue;
+    } else if (name === "frameless") {
+      this.frameless = newValue !== null;
+    } else {
+      super.attributeChangedCallback?.(name, oldValue, newValue);
+    }
   }
 
   setBasePath(path) {
@@ -208,6 +311,67 @@ export class CodeBlock extends Symbiote {
     super.disconnectedCallback?.();
     this._slotObserver?.disconnect();
     this._slotObserver = null;
+    if (this._copyTimer) {
+      clearTimeout(this._copyTimer);
+      this._copyTimer = null;
+    }
+  }
+
+  setPresentation(options = {}) {
+    if (options.copyable !== undefined) {
+      this.copyable = options.copyable;
+    }
+    if (options.languageLabel !== undefined) {
+      this.languageLabel = options.languageLabel;
+    }
+    if (options.lineNumbers !== undefined) {
+      this.lineNumbers = options.lineNumbers;
+    }
+    if (options.frameless !== undefined) {
+      this.frameless = options.frameless;
+    }
+  }
+
+  async copyContent() {
+    if (this._copyTimer) {
+      clearTimeout(this._copyTimer);
+      this._copyTimer = null;
+    }
+    const textToCopy = this.$.code;
+    try {
+      if (!navigator.clipboard) {
+        throw new Error('Clipboard API not available');
+      }
+      await navigator.clipboard.writeText(textToCopy);
+      this.$.copyBtnText = translate('codeBlock.copied');
+      this._copyTimer = setTimeout(() => {
+        this.$.copyBtnText = translate('codeBlock.copy');
+      }, 2000);
+      this.dispatchEvent(new CustomEvent('code-block-copy', {
+        bubbles: true,
+        composed: true,
+        detail: {
+          success: true,
+          content: textToCopy,
+        }
+      }));
+      return true;
+    } catch (err) {
+      this.$.copyBtnText = translate('codeBlock.copyFailed');
+      this._copyTimer = setTimeout(() => {
+        this.$.copyBtnText = translate('codeBlock.copy');
+      }, 2000);
+      this.dispatchEvent(new CustomEvent('code-block-copy', {
+        bubbles: true,
+        composed: true,
+        detail: {
+          success: false,
+          error: err,
+          content: textToCopy,
+        }
+      }));
+      return false;
+    }
   }
 
   scrollToTop(options = {}) {

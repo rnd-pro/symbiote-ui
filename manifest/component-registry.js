@@ -3478,11 +3478,13 @@ export let COMPONENTS = [
       capabilities: ['node-editor-canvas', 'connections', 'frames', 'subgraphs', 'viewport', 'selection', 'multi-node-focus', 'graph-layout', 'layout-lifecycle'],
       attributes: [
         { name: 'connection-engine', type: 'string', description: 'Connection renderer engine selection.' },
+        { name: 'presentation', type: 'boolean', description: 'Enables presentation mode for the canvas when present.' },
       ],
       properties: [
         { name: 'zoom', type: 'number', description: 'Current canvas zoom.' },
         { name: 'panX', type: 'number', description: 'Current horizontal pan.' },
         { name: 'panY', type: 'number', description: 'Current vertical pan.' },
+        { name: 'presentation', type: 'boolean', description: 'Enables presentation mode for the canvas when true.' },
       ],
       methods: [
         { name: 'setEditor', type: 'function', description: 'Connects a host-provided editor model to the canvas.' },
@@ -3493,6 +3495,7 @@ export let COMPONENTS = [
         { name: 'setChrome', type: 'function', description: 'Toggles canvas chrome, menus, and viewport controls.' },
         { name: 'setPanels', type: 'function', description: 'Toggles canvas side panels while preserving node menus.' },
         { name: 'setViewportLocked', type: 'function', description: 'Locks pan and zoom while preserving rendering.' },
+        { name: 'setPresentationMode', type: 'function', description: 'Enables or disables presentation mode (readonly, no chrome, no panels, locked viewport).' },
         { name: 'setCompactMode', type: 'function', description: 'Toggles compact node rendering.' },
         { name: 'setPathStyle', type: 'function', description: 'Sets connection path rendering style.' },
         { name: 'applyLayout', type: 'function', description: 'Applies auto, tree, flow, or crystal node layout and returns top-left positions. Crystal options include rootNodeId, startX, startY, crystalRingDistance, crystalSpokes, and crystalAngleJitter.' },
@@ -4178,12 +4181,20 @@ export let COMPONENTS = [
       capabilities: ['syntax-highlight', 'markdown-render', 'markdown-document-viewer', 'image-render', 'line-gutter', 'diagnostics', 'content-slots'],
       attributes: [
         { name: 'image-api-base', type: 'string', description: 'Optional base URL for resolving image preview sources.' },
+        { name: 'copyable', type: 'boolean', description: 'Displays copy code button in the toolbar when present.' },
+        { name: 'language-label', type: 'string', description: 'Sets the language label text in the toolbar.' },
+        { name: 'line-numbers', type: 'string', description: 'Controls line number gutter visibility ("show" or "hide").' },
+        { name: 'frameless', type: 'boolean', description: 'Removes background, borders, and border-radius from the code block when present.' },
       ],
       properties: [
         { name: 'code', type: 'string', description: 'Source, markdown text, or image path.' },
         { name: 'lang', type: 'string', description: 'Language mode.' },
         { name: 'isMarkdown', type: 'boolean', description: 'Whether markdown rendering is active.' },
         { name: 'isImage', type: 'boolean', description: 'Whether image rendering is active.' },
+        { name: 'copyable', type: 'boolean', description: 'Displays copy code button in the toolbar when true.' },
+        { name: 'languageLabel', type: 'string', description: 'The language label text displayed in the toolbar.' },
+        { name: 'lineNumbers', type: 'string', description: 'Controls line number gutter visibility ("show" or "hide").' },
+        { name: 'frameless', type: 'boolean', description: 'Removes background, borders, and border-radius from the code block when true.' },
       ],
       methods: [
         { name: 'setContent', type: 'function', description: 'Sets source content, language mode, and optional render bases.' },
@@ -4196,8 +4207,12 @@ export let COMPONENTS = [
         { name: 'clearContentSlots', type: 'function', description: 'Drops the registered content-slot composer and disconnects the markdown-root observer.' },
         { name: 'scrollToTop', type: 'function', description: 'Resets the internal scroll viewport to its top-left origin, honoring an explicit scroll behavior or reduced-motion default.' },
         { name: 'scrollToFragment', type: 'function', description: 'Scrolls the internal viewport to a rendered-flow element by id; no-op for a missing id, honoring an explicit scroll behavior or reduced-motion default.' },
+        { name: 'setPresentation', type: 'function', description: 'Batch updates presentation options (copyable, languageLabel, lineNumbers, frameless).' },
+        { name: 'copyContent', type: 'function', description: 'Copies the code text content to the system clipboard and emits a code-block-copy event.' },
       ],
-      events: [],
+      events: [
+        { name: 'code-block-copy', description: 'Emitted when a clipboard write is executed, containing copy success or error details.' }
+      ],
       themeAliases: [
         '--sn-sys-surface',
         '--sn-sys-on-surface',

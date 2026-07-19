@@ -109,6 +109,8 @@ export default `
   code-block[mode-image] .cb-pre { display: none; }
   code-block[mode-image] .cb-img-wrap { display: flex; }
 
+  code-block[line-numbers="hide"] .cb-gutter { display: none; }
+
   /* Markdown styles */
   code-block .md-h { margin: var(--sn-step-9, 20px) 0 var(--sn-step-4, 8px); color: var(--sn-sys-on-surface); font-weight: 700; }
   code-block h1.md-h { font-size: var(--sn-markdown-h1-size, 24px); border-bottom: 2px solid var(--sn-sys-outline); padding-bottom: 8px; }
@@ -217,4 +219,54 @@ export default `
   code-block .cb-squiggle { position: absolute; right: 0; height: calc(var(--sn-code-font-size, 12px) * 1.6); pointer-events: auto; cursor: help; border-radius: 2px; }
   code-block .cb-sev-2 { background: var(--sn-diagnostic-error-bg); border-bottom: 2px wavy var(--sn-diagnostic-error-border); }
   code-block .cb-sev-1 { background: var(--sn-diagnostic-warning-bg); border-bottom: 2px wavy var(--sn-diagnostic-warning-border); }
+
+  code-block .cb-toolbar {
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--sn-code-toolbar-padding, 6px 12px);
+    background: var(--sn-code-toolbar-bg, var(--sn-sys-surface-raised, color-mix(in oklch, var(--sn-sys-surface) 96%, black)));
+    border-bottom: 1px solid var(--sn-sys-outline); /* audit-ok: raw 1px border is standard across UI panels */
+    font-family: var(--sn-font, sans-serif);
+    font-size: var(--sn-code-toolbar-font-size, 11px);
+    color: var(--sn-sys-on-surface-dim);
+  }
+  code-block .cb-toolbar.cb-toolbar-visible {
+    display: flex;
+  }
+  code-block .cb-lang-label {
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px; /* audit-ok: raw 0.5px tracking is standard brand styling for uppercase labels */
+  }
+  code-block .cb-lang-label.cb-lang-hidden {
+    display: none;
+  }
+  code-block .cb-copy-btn {
+    background: transparent;
+    border: 1px solid var(--sn-sys-outline); /* audit-ok: raw 1px border matches default system panel styling */
+    border-radius: var(--sn-radius-xs, 4px);
+    color: var(--sn-sys-on-surface-dim);
+    padding: var(--sn-step-2, 4px) var(--sn-step-4, 8px);
+    cursor: pointer;
+    font-size: var(--sn-code-toolbar-font-size, 11px);
+    transition: background-color var(--sn-transition-fast, 120ms) var(--sn-transition-easing, ease), color var(--sn-transition-fast, 120ms) var(--sn-transition-easing, ease), border-color var(--sn-transition-fast, 120ms) var(--sn-transition-easing, ease);
+    display: inline-flex;
+    align-items: center;
+  }
+  code-block .cb-copy-btn:hover {
+    background: var(--sn-sys-surface-hover, color-mix(in oklch, var(--sn-sys-surface) 90%, black));
+    color: var(--sn-sys-on-surface);
+  }
+  code-block .cb-copy-btn.cb-copy-hidden {
+    display: none;
+  }
+
+  code-block[frameless] .cb-pre,
+  code-block[frameless] .cb-gutter,
+  code-block[frameless] .cb-scroll {
+    border: none !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+  }
 `;

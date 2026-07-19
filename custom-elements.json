@@ -2825,9 +2825,24 @@
                 "text": "string"
               },
               "description": "Connection renderer engine selection."
+            },
+            {
+              "name": "presentation",
+              "type": {
+                "text": "boolean"
+              },
+              "description": "Enables presentation mode for the canvas when present."
             }
           ],
           "members": [
+            {
+              "kind": "field",
+              "name": "presentation",
+              "type": {
+                "text": "boolean"
+              },
+              "description": "Enables presentation mode for the canvas when true."
+            },
             {
               "kind": "field",
               "name": "zoom",
@@ -2891,6 +2906,11 @@
               "kind": "method",
               "name": "setViewportLocked",
               "description": "Locks pan and zoom while preserving rendering."
+            },
+            {
+              "kind": "method",
+              "name": "setPresentationMode",
+              "description": "Enables or disables presentation mode (readonly, no chrome, no panels, locked viewport)."
             },
             {
               "kind": "method",
@@ -3088,6 +3108,11 @@
                 "name": "connection-engine",
                 "type": "string",
                 "description": "Connection renderer engine selection."
+              },
+              {
+                "name": "presentation",
+                "type": "boolean",
+                "description": "Enables presentation mode for the canvas when present."
               }
             ],
             "properties": [
@@ -3105,6 +3130,11 @@
                 "name": "panY",
                 "type": "number",
                 "description": "Current vertical pan."
+              },
+              {
+                "name": "presentation",
+                "type": "boolean",
+                "description": "Enables presentation mode for the canvas when true."
               }
             ],
             "methods": [
@@ -3147,6 +3177,11 @@
                 "name": "setViewportLocked",
                 "type": "function",
                 "description": "Locks pan and zoom while preserving rendering."
+              },
+              {
+                "name": "setPresentationMode",
+                "type": "function",
+                "description": "Enables or disables presentation mode (readonly, no chrome, no panels, locked viewport)."
               },
               {
                 "name": "setCompactMode",
@@ -21783,9 +21818,69 @@
                 "text": "string"
               },
               "description": "Optional base URL for resolving image preview sources."
+            },
+            {
+              "name": "copyable",
+              "type": {
+                "text": "boolean"
+              },
+              "description": "Displays copy code button in the toolbar when present."
+            },
+            {
+              "name": "language-label",
+              "type": {
+                "text": "string"
+              },
+              "description": "Sets the language label text in the toolbar."
+            },
+            {
+              "name": "line-numbers",
+              "type": {
+                "text": "string"
+              },
+              "description": "Controls line number gutter visibility (\"show\" or \"hide\")."
+            },
+            {
+              "name": "frameless",
+              "type": {
+                "text": "boolean"
+              },
+              "description": "Removes background, borders, and border-radius from the code block when present."
             }
           ],
           "members": [
+            {
+              "kind": "field",
+              "name": "copyable",
+              "type": {
+                "text": "boolean"
+              },
+              "description": "Displays copy code button in the toolbar when true."
+            },
+            {
+              "kind": "field",
+              "name": "languageLabel",
+              "type": {
+                "text": "string"
+              },
+              "description": "The language label text displayed in the toolbar."
+            },
+            {
+              "kind": "field",
+              "name": "lineNumbers",
+              "type": {
+                "text": "string"
+              },
+              "description": "Controls line number gutter visibility (\"show\" or \"hide\")."
+            },
+            {
+              "kind": "field",
+              "name": "frameless",
+              "type": {
+                "text": "boolean"
+              },
+              "description": "Removes background, borders, and border-radius from the code block when true."
+            },
             {
               "kind": "field",
               "name": "code",
@@ -21867,9 +21962,24 @@
               "kind": "method",
               "name": "scrollToFragment",
               "description": "Scrolls the internal viewport to a rendered-flow element by id; no-op for a missing id, honoring an explicit scroll behavior or reduced-motion default."
+            },
+            {
+              "kind": "method",
+              "name": "setPresentation",
+              "description": "Batch updates presentation options (copyable, languageLabel, lineNumbers, frameless)."
+            },
+            {
+              "kind": "method",
+              "name": "copyContent",
+              "description": "Copies the code text content to the system clipboard and emits a code-block-copy event."
             }
           ],
-          "events": [],
+          "events": [
+            {
+              "name": "code-block-copy",
+              "description": "Emitted when a clipboard write is executed, containing copy success or error details."
+            }
+          ],
           "slots": [],
           "cssProperties": [
             {
@@ -21980,9 +22090,49 @@
                 "name": "image-api-base",
                 "type": "string",
                 "description": "Optional base URL for resolving image preview sources."
+              },
+              {
+                "name": "copyable",
+                "type": "boolean",
+                "description": "Displays copy code button in the toolbar when present."
+              },
+              {
+                "name": "language-label",
+                "type": "string",
+                "description": "Sets the language label text in the toolbar."
+              },
+              {
+                "name": "line-numbers",
+                "type": "string",
+                "description": "Controls line number gutter visibility (\"show\" or \"hide\")."
+              },
+              {
+                "name": "frameless",
+                "type": "boolean",
+                "description": "Removes background, borders, and border-radius from the code block when present."
               }
             ],
             "properties": [
+              {
+                "name": "copyable",
+                "type": "boolean",
+                "description": "Displays copy code button in the toolbar when true."
+              },
+              {
+                "name": "languageLabel",
+                "type": "string",
+                "description": "The language label text displayed in the toolbar."
+              },
+              {
+                "name": "lineNumbers",
+                "type": "string",
+                "description": "Controls line number gutter visibility (\"show\" or \"hide\")."
+              },
+              {
+                "name": "frameless",
+                "type": "boolean",
+                "description": "Removes background, borders, and border-radius from the code block when true."
+              },
               {
                 "name": "code",
                 "type": "string",
@@ -22054,9 +22204,24 @@
                 "name": "scrollToFragment",
                 "type": "function",
                 "description": "Scrolls the internal viewport to a rendered-flow element by id; no-op for a missing id, honoring an explicit scroll behavior or reduced-motion default."
+              },
+              {
+                "name": "setPresentation",
+                "type": "function",
+                "description": "Batch updates presentation options (copyable, languageLabel, lineNumbers, frameless)."
+              },
+              {
+                "name": "copyContent",
+                "type": "function",
+                "description": "Copies the code text content to the system clipboard and emits a code-block-copy event."
               }
             ],
-            "events": [],
+            "events": [
+              {
+                "name": "code-block-copy",
+                "description": "Emitted when a clipboard write is executed, containing copy success or error details."
+              }
+            ],
             "slots": [],
             "themeAliases": [
               "--sn-sys-surface",

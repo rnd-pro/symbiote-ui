@@ -14,6 +14,9 @@ export const LOCALE_LABELS = Object.freeze({
 });
 
 const EN_MESSAGES = Object.freeze({
+  'codeBlock.copy': 'Copy',
+  'codeBlock.copied': 'Copied',
+  'codeBlock.copyFailed': 'Copy failed',
   'dialog.cancel': 'Cancel',
   'dialog.confirm': 'Confirm',
   'dialog.ok': 'OK',
@@ -187,6 +190,9 @@ const EN_MESSAGES = Object.freeze({
 });
 
 const RU_MESSAGES = Object.freeze({
+  'codeBlock.copy': 'Копировать',
+  'codeBlock.copied': 'Скопировано',
+  'codeBlock.copyFailed': 'Ошибка копирования',
   'dialog.cancel': 'Отмена',
   'dialog.confirm': 'Подтвердить',
   'dialog.ok': 'OK',
@@ -360,6 +366,9 @@ const RU_MESSAGES = Object.freeze({
 });
 
 const ES_MESSAGES = Object.freeze({
+  'codeBlock.copy': 'Copiar',
+  'codeBlock.copied': 'Copiado',
+  'codeBlock.copyFailed': 'Error al copiar',
   'dialog.cancel': 'Cancelar',
   'dialog.confirm': 'Confirmar',
   'dialog.ok': 'OK',
