@@ -216,6 +216,26 @@ test('node-canvas narrow entrypoint registers its internal graph-node dependency
   }
 });
 
+test('node-canvas connection installs the system token cascade', async () => {
+  installDom();
+  try {
+    await import('symbiote-ui/canvas/node-canvas');
+    const canvas = document.createElement('node-canvas');
+    document.body.append(canvas);
+    await nextTick();
+
+    const cascadeAdopted = document.adoptedStyleSheets.some(
+      (sheet) => typeof sheet.cssText === 'string' && sheet.cssText.includes('--sn-sys-surface-raised'),
+    );
+    assert.ok(cascadeAdopted, 'connected node-canvas adopts the system cascade so node visuals resolve without the full bundle');
+
+    canvas.remove();
+    await nextTick();
+  } finally {
+    teardownDom();
+  }
+});
+
 test('node-canvas presentation mode property, attributes, and composition behavior', async () => {
   installDom();
   try {

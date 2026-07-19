@@ -23,6 +23,7 @@ import { Selector } from '../../interactions/Selector.js';
 import { SnapGrid } from '../../interactions/SnapGrid.js';
 import { isNodeInMarquee, isEdgeIntersectingRect } from '../../interactions/SelectionGeometry.js';
 import { applyTheme } from '../../themes/Theme.js';
+import { ensureSystemCascade } from '../../themes/system-cascade.js';
 import { applyPalette } from '../../themes/Palette.js';
 import { applySkin } from '../../themes/Skin.js';
 import { NodeViewManager } from '../NodeViewManager.js';
@@ -2472,6 +2473,8 @@ export class NodeCanvas extends Symbiote {
   }
 
   renderCallback() {
+    ensureSystemCascade(this.ownerDocument ?? globalThis.document);
+
     let initialPresentationRun = true;
     this.sub('presentation', (value) => {
       this.toggleAttribute('presentation', !!value);

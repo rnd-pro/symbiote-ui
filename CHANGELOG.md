@@ -9,6 +9,7 @@ All notable changes to `symbiote-ui` will be documented in this file.
 ### Fixed
 
 - The narrow `symbiote-ui/canvas/node-canvas` entrypoint now self-registers its internal `graph-node` dependency and re-exports `configureMaterialSymbols`, so composition-only hosts get fully upgraded graph nodes without importing the full UI bundle.
+- A connected `node-canvas` now installs the system token cascade (`ensureSystemCascade`), so node card visuals (surface, border, radius, shadow) resolve on pages that never call `applyTheme`; the cascade stays visually inert on already-themed surfaces.
 
 ## [0.3.0-alpha.66] - 2026-07-18
 
