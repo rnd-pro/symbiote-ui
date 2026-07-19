@@ -84,59 +84,6 @@ export const docsRoutes = defineDocsRoutes([
   },
 ]);
 
-const UI_TOKENS = /*css*/ `
-:root {
-  color-scheme: light;
-  --page: #ffffff;
-  --surface: #f7f7f8;
-  --surface-soft: #f0f0f2;
-  --surface-code: #f7f7f8;
-  --ink: #3d3d45;
-  --muted: #68686e;
-  --line: #e3e3e5;
-  --line-strong: #a6a6ad;
-  --brand: #4058bd;
-  --brand-strong: #2f449e;
-  --brand-soft: #ebedf9;
-  --mint: #1c7a65;
-  --mint-soft: #e5f5f1;
-  --amber: #a36200;
-  --amber-soft: #fef5e6;
-  --danger: #b82d3e;
-  --focus: #4058bd;
-  --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-}
-
-:root[data-theme="dark"] {
-  color-scheme: dark;
-  --page: #1c1d22;
-  --surface: #222329;
-  --surface-soft: #2a2b33;
-  --surface-code: #222329;
-  --ink: #e0e0d8;
-  --muted: #9b9ba3;
-  --line: #303137;
-  --line-strong: #50525d;
-  --brand: #8192ff;
-  --brand-strong: #acb7ff;
-  --brand-soft: #25283d;
-  --mint: #33ccaa;
-  --mint-soft: #14352f;
-  --amber: #ffd075;
-  --amber-soft: #382d18;
-  --danger: #ff8c9c;
-  --focus: #8192ff;
-}
-`;
-
-const PROSE_STYLES = /*css*/ `
-.prose blockquote { padding-left: 1rem; border-left: 2px solid var(--brand); color: var(--muted); }
-.prose table { width: 100%; border-collapse: collapse; display: block; overflow-x: auto; margin: 0 0 1.2rem; }
-.prose th, .prose td { padding: 0.65rem; border-bottom: 1px solid var(--line); text-align: left; }
-.prose th { color: var(--ink); }
-`;
-
 const SYMBIOTE_STACK = {
   title: 'The Symbiote stack',
   items: [
@@ -202,7 +149,7 @@ export function composeSiteConfig({ pageStyles = '', clientEntryPath = '/client/
       ...BASE_CONFIG.metadata,
       description: description ?? BASE_CONFIG.metadata.description,
     },
-    pageStyles: `${UI_TOKENS}${pageStyles}`,
+    pageStyles,
     clientEntryPath,
   });
 }
@@ -213,7 +160,7 @@ export function composeSiteConfig({ pageStyles = '', clientEntryPath = '/client/
  */
 export function docsSiteConfig(currentRoute) {
   return composeSiteConfig({
-    pageStyles: PROSE_STYLES,
+    clientEntryPath: '/docs/index.js',
     description: currentRoute.description,
   });
 }
