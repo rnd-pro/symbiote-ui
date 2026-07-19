@@ -122,6 +122,100 @@ test('node-canvas narrow entrypoint exports and registers correctly', async () =
   }
 });
 
+test('node-canvas narrow entrypoint re-exports Material Symbols host control', async () => {
+  installDom();
+  try {
+    const module = await import('symbiote-ui/canvas/node-canvas');
+    assert.equal(typeof module.configureMaterialSymbols, 'function');
+    module.configureMaterialSymbols({ autoload: false });
+
+    const GraphNodeComponent = customElements.get('graph-node');
+    assert.ok(GraphNodeComponent, 'narrow entrypoint registers graph-node');
+
+    const node = document.createElement('graph-node');
+    node._nodeData = {
+      id: 'host-1',
+      label: 'Host node',
+      category: 'default',
+      icon: '',
+      shape: 'rect',
+      type: 'default',
+      params: {},
+      inputs: {},
+      outputs: {},
+      controls: {},
+    };
+    node.setAttribute('node-id', 'host-1');
+    node.setAttribute('node-label', 'Host node');
+    document.body.append(node);
+    await nextTick();
+
+    assert.ok(node instanceof GraphNodeComponent, 'appended graph-node upgraded');
+    assert.ok(node.querySelector('.sn-node-header'), 'graph-node rendered its header');
+    assert.equal(node.$.nodeLabel, 'Host node');
+    assert.equal(
+      document.head.querySelector('link[data-sn-material-symbols="managed"]'),
+      null,
+      'no managed Material Symbols link appended while autoload is disabled',
+    );
+
+    node.remove();
+    await nextTick();
+  } finally {
+    const module = await import('symbiote-ui/canvas/node-canvas');
+    module.configureMaterialSymbols?.({ autoload: true, hrefBuilder: null });
+    teardownDom();
+  }
+});
+
+test('node-canvas narrow entrypoint registers its internal graph-node dependency', async () => {
+  installDom();
+  try {
+    const module = await import('symbiote-ui/canvas/node-canvas');
+    assert.ok(module.NodeCanvas);
+    assert.equal(module.default, module.NodeCanvas);
+
+    const GraphNodeComponent = customElements.get('graph-node');
+    assert.ok(GraphNodeComponent, 'narrow entrypoint registers graph-node');
+
+    const node = document.createElement('graph-node');
+    node._nodeData = {
+      id: 'entry-1',
+      label: 'Entry node',
+      category: 'default',
+      icon: '',
+      shape: 'rect',
+      type: 'default',
+      params: {
+        image: 'https://cdn.example/entry.png',
+        imageAlt: 'Entry cover',
+        href: 'https://example.com/entry',
+      },
+      inputs: {},
+      outputs: {},
+      controls: {},
+    };
+    node.setAttribute('node-id', 'entry-1');
+    node.setAttribute('node-label', 'Entry node');
+    document.body.append(node);
+    await nextTick();
+
+    assert.ok(node instanceof GraphNodeComponent, 'appended graph-node upgraded');
+    assert.ok(node.querySelector('.sn-node-header'), 'graph-node rendered its header');
+    assert.equal(node.$.nodeLabel, 'Entry node');
+
+    const image = node.querySelector('.sn-node-media-img');
+    assert.equal(image?.getAttribute('src'), 'https://cdn.example/entry.png');
+    const link = node.querySelector('.sn-node-link');
+    assert.equal(link?.getAttribute('href'), 'https://example.com/entry');
+
+    node.remove();
+    await nextTick();
+  } finally {
+    teardownDom();
+  }
+});
+
 test('node-canvas presentation mode property, attributes, and composition behavior', async () => {
   installDom();
   try {
