@@ -74,6 +74,15 @@ export const docsRoutes = defineDocsRoutes([
     description: 'Provider metadata, manifests, and WebMCP integration contracts.',
   },
   {
+    path: '/docs/xr-html-in-canvas.html',
+    title: 'XR HTML-in-Canvas Contract',
+    section: 'Platform',
+    markdown: 'xr-html-in-canvas.md',
+    editPath: 'xr-html-in-canvas.md',
+    headers: ['xr', 'html-in-canvas', 'webgl', 'fallback'],
+    description: 'Experimental HTML-in-Canvas ownership, upload receipt, validation, and fallback contracts for XR panels.',
+  },
+  {
     path: '/docs/layout-and-spatial.html',
     title: 'Layout and Spatial',
     section: 'Construction',

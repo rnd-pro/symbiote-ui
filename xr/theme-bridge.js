@@ -103,3 +103,84 @@ export function applyXRThemeToPanel(panel, themeSnapshot) {
 export function getXRThemeTokenMap() {
   return { ...XR_THEME_TOKEN_MAP };
 }
+
+const NATIVE_PANEL_THEME_TOKEN_MAP = Object.freeze({
+  surface: '--sn-sys-surface-panel',
+  'surface-raised': '--sn-sys-surface-raised',
+  'surface-sunken': '--sn-sys-surface-sunken',
+  text: '--sn-sys-on-surface',
+  'text-dim': '--sn-sys-on-surface-dim',
+  outline: '--sn-sys-outline',
+  accent: '--sn-sys-accent',
+  success: '--sn-sys-success',
+  warning: '--sn-sys-warning',
+  danger: '--sn-sys-danger',
+});
+
+const NATIVE_PANEL_METRIC_TOKEN_MAP = Object.freeze({
+  fontSize: '--sn-font-size',
+  labelSize: '--sn-text-xs',
+  radius: '--sn-node-radius',
+  density: '--sn-sys-density',
+});
+
+const NATIVE_PANEL_METRIC_FALLBACKS = Object.freeze({
+  fontSize: 13,
+  labelSize: 11,
+  radius: 6,
+  density: 1,
+});
+
+function resolveColorRole(root, cssVar, computedStyle) {
+  let resolved = resolveCssProperty(root, cssVar, 'color');
+  return resolved || readCssToken(root, cssVar, computedStyle);
+}
+
+function resolveMetricNumber(root, cssVar, property, computedStyle, fallback) {
+  let probed = property ? resolveCssProperty(root, cssVar, property) : '';
+  let raw = probed || readCssToken(root, cssVar, computedStyle);
+  let value = Number.parseFloat(raw);
+  return Number.isFinite(value) ? value : fallback;
+}
+
+/**
+ * Captures semantic native-panel theme roles and numeric layout/type metrics from the
+ * computed cascade at the given root.
+ *
+ * @param {Document|Element} [rootOrDocument] - Cascade theme owner.
+ * @param {Object} [options]
+ * @param {number} [options.revision] - Host-tracked theme revision for diagnostics.
+ * @param {string} [options.themeScope] - Theme scope label.
+ * @returns {Object} `native-panel-theme-v1` snapshot with `roles` and `metrics`.
+ */
+export function createNativePanelThemeSnapshot(rootOrDocument = globalThis.document, options = {}) {
+  let root = resolveThemeRoot(rootOrDocument);
+  let computedStyle = root && typeof globalThis.getComputedStyle === 'function'
+    ? globalThis.getComputedStyle(root)
+    : null;
+  let roles = {};
+  let metrics = {};
+  let tokens = {};
+
+  for (let [role, cssVar] of Object.entries(NATIVE_PANEL_THEME_TOKEN_MAP)) {
+    roles[role] = resolveColorRole(root, cssVar, computedStyle);
+    tokens[cssVar] = readCssToken(root, cssVar, computedStyle);
+  }
+  for (let [metric, cssVar] of Object.entries(NATIVE_PANEL_METRIC_TOKEN_MAP)) {
+    let property = metric === 'density' ? null : 'width';
+    metrics[metric] = resolveMetricNumber(root, cssVar, property, computedStyle, NATIVE_PANEL_METRIC_FALLBACKS[metric]);
+  }
+
+  return {
+    version: 'native-panel-theme-v1',
+    themeScope: options.themeScope || root?.dataset?.themeScope || 'default-provider',
+    revision: Number.isFinite(Number(options.revision)) ? Number(options.revision) : 0,
+    roles,
+    metrics,
+    tokens,
+  };
+}
+
+export function getNativePanelThemeTokenMap() {
+  return { ...NATIVE_PANEL_THEME_TOKEN_MAP };
+}

@@ -4,6 +4,28 @@ All notable changes to `symbiote-ui` will be documented in this file.
 
 ## Unreleased
 
+### Added
+
+- Added the native spatial panel toolchain for XR: deterministic layout compilation, DOM capture, versioned snapshots and parity checks, Three/WebGL rendering, public `symbiote-ui/xr` exports, and the standalone Native Panels WebGL lab.
+
+### Fixed
+
+- Aligned the HTML-in-Canvas WebGL and WebGPU adapters with the current Chromium contracts: WebGL native arity 3 with an optional fourth config argument, the four supported sized formats, grouped config members, a canonical flag-era tuple, and the WebGPU two-dictionary copy signature. Invalid signatures and configurations now fail before native upload with bounded receipts. Updated the origin-trial range through milestone 154.
+
+## [0.3.0-alpha.68] - 2026-07-23
+
+### Added
+
+- Added `docs/xr-html-in-canvas.md` documenting the current-behavior contract of the experimental HTML-in-Canvas path in `symbiote-ui/xr`: the structured WebGL upload receipt, the same-canvas ownership gate, capability failure reporting, and the explicit semantic fallback expectation.
+
+### Changed
+
+- Prepared provider release metadata for the audited HTML-in-Canvas ownership behavior. No runtime behavior changes: the shared-canvas ownership gate, the `xr-html-canvas-upload-receipt-v1` structured upload receipt, and the 3/4-versus-6-argument `texElementImage2D` signature detection ship exactly as audited.
+- `renderPanel` in webgl mode now has a documented receipt contract: every call returns a bounded receipt carrying `version` (`xr-html-canvas-upload-receipt-v1`), `panelId`, `mode`, `rendered`/`uploaded` status booleans, `canvasMatch`, optional `width`/`height`, `signature` (`current` or `flag-era`), and a machine-readable `reason` plus `errorName` on failure — never a thrown control-flow error for capability or ownership failures.
+- Documented the same-canvas gate: a panel element must remain a direct child of the canvas that owns the WebGL context, otherwise the upload is skipped before the native call and the receipt reports `reason: 'canvas-mismatch'` (or `'missing-prepared-canvas'` / `'missing-context-canvas'`).
+- Documented capability failure as data: missing APIs surface as `reason: 'unsupported'` or `'unsupported-signature'` receipts and diagnostics, and hosts are expected to render the declared semantic fallback (`dom-overlay` / provider material fallback) instead of treating failure as an exception.
+- Documented that HTML-in-Canvas remains an experimental, flagged Chromium capability (origin trial, `CanvasDrawElement` flag, Chrome milestone range 148-150) and must never be the only rendering path.
+
 ## [0.3.0-alpha.67] - 2026-07-19
 
 ### Fixed

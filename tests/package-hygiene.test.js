@@ -232,6 +232,12 @@ test('packed package imports from a consumer project with SSR-safe entrypoints',
       const forceLayout = await import('symbiote-ui/xr/force-layout');
       const forceLayoutAdapter = await import('symbiote-ui/xr/force-layout-adapter');
       const dualView = await import('symbiote-ui/xr/dual-view-controller');
+      const nativePanelLayout = await import('symbiote-ui/xr/native-panel-layout');
+      const nativePanelRenderer = await import('symbiote-ui/xr/three-native-panel-renderer');
+      const spatialSnapshot = await import('symbiote-ui/xr/spatial-snapshot');
+      const spatialSnapshotCompile = await import('symbiote-ui/xr/spatial-snapshot-compile');
+      const spatialParity = await import('symbiote-ui/xr/spatial-parity');
+      const domSpatialCapture = await import('symbiote-ui/xr/dom-spatial-capture');
 
       if (typeof root.NodeEditor !== 'function') throw new Error('missing root NodeEditor');
       if (typeof core.NodeEditor !== 'function') throw new Error('missing core NodeEditor');
@@ -253,6 +259,12 @@ test('packed package imports from a consumer project with SSR-safe entrypoints',
       if (typeof forceLayout.createSimulation !== 'function') throw new Error('missing forceLayout.createSimulation');
       if (typeof forceLayoutAdapter.createForceLayoutAdapter !== 'function') throw new Error('missing forceLayoutAdapter.createForceLayoutAdapter');
       if (typeof dualView.createDualViewController !== 'function') throw new Error('missing dualView.createDualViewController');
+      if (typeof nativePanelLayout.compileNativePanelPrimitives !== 'function') throw new Error('missing nativePanelLayout.compileNativePanelPrimitives');
+      if (typeof nativePanelRenderer.createThreeNativePanelRenderer !== 'function') throw new Error('missing nativePanelRenderer.createThreeNativePanelRenderer');
+      if (typeof spatialSnapshot.normalizeSpatialSnapshot !== 'function') throw new Error('missing spatialSnapshot.normalizeSpatialSnapshot');
+      if (typeof spatialSnapshotCompile.compileSpatialSnapshot !== 'function') throw new Error('missing spatialSnapshotCompile.compileSpatialSnapshot');
+      if (typeof spatialParity.createSpatialParityReport !== 'function') throw new Error('missing spatialParity.createSpatialParityReport');
+      if (typeof domSpatialCapture.captureSpatialSnapshot !== 'function') throw new Error('missing domSpatialCapture.captureSpatialSnapshot');
     `;
     run(process.execPath, ['--input-type=module', '-e', smoke], { cwd: consumerDir });
     let cli = run(process.execPath, [join('node_modules', '.bin', 'symbiote-ui'), 'discover'], { cwd: consumerDir });

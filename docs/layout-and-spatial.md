@@ -415,6 +415,205 @@ graph3D.destroy();
 Renders spherical nodes, link lines, and selection/focus color states.
 Meshes are created, updated, and disposed automatically.
 
+### Experimental Native Panels (Three/WebGL Lab)
+
+`symbiote-ui/xr` also ships an experimental, product-neutral pipeline for native
+3D panels, exercised end-to-end by `demo/native-panels-webgl-lab.html`:
+
+1. `projectXRPanelsToPlane(panels, options)` (pure, Node-safe) maps the
+   normalized `relativeRect` produced by `projectLayoutToXR()` onto a centered
+   meter-space plane with a configurable width, height, gap, and Z. Panel IDs
+   and metadata pass through unchanged.
+2. `compileNativePanelPrimitives(panels, familyData)` (pure, Node-safe) compiles
+   projected panels plus generic family data (`list-table`, `workflow-graph`,
+   `detail-actions`) into deterministic panel-local primitives on four finite Z
+   layers (`surface`, `content`, `controls`, `focus`). Primitives carry stable
+   IDs, semantic theme roles, bounds in local meters, hit targets/actions, and
+   counts; `resolveNativePanelHit(panel, point)` resolves normalized 0..1 panel
+   coordinates back to those hit targets. No random or time-derived IDs.
+3. `createThreeNativePanelRenderer(THREE, options)` is the browser adapter: the
+   host injects the `THREE` namespace (the module never imports Three and never
+   touches the DOM at evaluation time). It builds one root group and one group
+   per panel, renders primitives as native meshes, and uses small CanvasTexture
+   planes for text and icons only (not HTML-in-Canvas). Generated label/icon
+   textures are sized from measured source CSS pixels × bounded DPR
+   (`min(devicePixelRatio, 2)`, host-overridable, clamped to a 2048 default cap)
+   — the `measured-source-css` policy — while hand-authored primitives without
+   source CSS boxes use the explicit `fallback-meter-policy` (1200 px/m).
+   Generated color textures are configured for linear sampling without mipmaps
+   (`LinearFilter` min/mag, `generateMipmaps: false`, host anisotropy capped at
+   8, `SRGBColorSpace`). Icon primitives draw Material Symbols ligatures through
+   the same Canvas2D seam with a matching `createIconPlane`/`updateIconPlane`
+   host hook; captured text metrics (font family/size/weight/style, line-height,
+   letter-spacing, direction, ellipsis) are applied exactly, and unsupported
+   Canvas2D controls are reported as data. Theme updates recolor existing
+   materials and redraw label/icon textures without rebuilding the scene;
+   `refreshAppearance(scene, { theme })` applies a recaptured scene in place
+   keyed by primitive ids (redrawing textures and resolved styles with window
+   object identity preserved) and rejects changed bounds/typography or border
+   presence/width with a
+   structured `geometry-invalidated` result; `refreshTextures()` is the explicit
+   quality redraw for late font readiness. Layer explode offsets the four layer
+   groups, stable `panelId`/`primitiveId`/`actionId` metadata rides on every
+   object so recursive Raycaster hits resolve without a second coordinate
+   model, `getTextQualityReport()` exposes the `native-panel-text-quality-v1`
+   diagnostics (policy, source CSS size, texture dimensions, px/m, sampling,
+   font readiness, unsupported controls, glyph misses, icon captured/compiled/
+   drawn coverage, texture-memory estimate), and `dispose()` releases all GPU
+   resources and generated canvases/textures. `getAppearanceReport()` exposes a
+   renderer-neutral `native-panel-appearance-v1` plain-JSON sample of the
+   mounted scene — per-primitive id/provenance, kind/control, visibility,
+   color/opacity/transparent, resolved-style, scene scale, and actual border
+   evidence, sampled in
+   the neutral interaction state with hovered/selected ids reported separately
+   — for visual parity comparison; no THREE objects leak into the report. CSS color functions THREE cannot
+   parse (`oklch()`, `lab()`, `color(…)`, unresolved `var(…)`) are never
+   forwarded to `THREE.Color`; they are counted in renderer diagnostics as
+   `unsupportedColors` (reset per mount/theme pass).
+4. `createNativePanelThemeSnapshot(root, options)` (xr/theme-bridge.js) captures
+   the semantic native-panel roles (surface ladder, text/dim, outline, accent,
+   success, warning, danger) and numeric layout/type metrics from the same
+   computed cascade snapshot the DOM consumes, so a `cascade-theme-change` event
+   re-projects the live theme into the 3D scene.
+
+The same lab can also generate the native scene from a measured live Symbiote
+layout instead of hand-authored family data:
+
+5. `captureSpatialSnapshot(root, options)` (xr/dom-spatial-capture.js,
+   browser-only, evaluation-safe in Node) measures a bounded `panel-layout`
+   subtree after custom elements, fonts, and two animation frames settle. A
+   plain-object adapter registry (`layout-node` panel chrome/splits/resizers,
+   `sn-tree-panel` rows, `source-editor` text) plus explicit structural text
+   selectors own what is captured; `resolveSpatialAdapter(tag)` throws with the
+   supported list on unknown components. Output is a serializable
+   `spatial-snapshot-v1` (xr/spatial-snapshot.js, schema in
+   `schemas/spatial-snapshot-v1.json`): root-relative CSS-pixel boxes, resolved
+   allowlisted styles, text/state/action provenance, and structured diagnostics
+   for unsupported features and unknown visible boxes — never silent drops.
+   Captured color styles are normalized at the seam to renderer-consumable
+   `rgb()`/`rgba()` through a browser-native 1x1 Canvas 2D readback (alpha
+   preserved, no custom CSS color parser), so CSS Color 4 values such as
+   `oklch()` never reach the renderer; unconvertible colors drop the style key
+   and surface as `unconvertible-color` diagnostics instead of claiming color
+   parity. Header controls capture distinct stable intents per button
+   (`SPATIAL_HEADER_CONTROLS`: `panel-collapse-toggle`, `panel-fullscreen`,
+   `panel-menu` for `.panel-menu-toggle`, `panel-type-menu` for `.type-btn`);
+   `resolveHeaderControlSelector(intent)` maps each intent back to its own DOM
+   control so relays cannot fork. Explicit Material Symbols descendants
+   (`SPATIAL_ICON_SELECTOR`: `.material-symbols-outlined`, `.sn-tree-icon`,
+   `.sn-tree-toggle`) of the bounded LayoutNode/TreePanel subtrees become
+   renderer-neutral icon nodes (`part: "icon"`, validated `icon: { name }`
+   ligature, never `text`) parented to their owning control, row, title, or
+   panel; generic structural text capture and tree title/label extraction
+   exclude icon descendants so literal ligature words never leak into text,
+   and invalid glyph names surface as `icon-glyph` diagnostics. Text nodes
+   capture only renderer-consumed properties: color, font family, size, weight,
+   style, line-height, letter-spacing, text-align, direction, white-space,
+   overflow, and text-overflow. Tree rows additionally capture provider-generic
+   `badge` nodes (`.sn-tree-badge` text with resolved background/color), the
+   tree filter becomes a non-editable `field` proxy node (placeholder or current
+   value as text, resolved background/border; the `text-input` interaction
+   stays an unsupported diagnostic), and tree-host chrome (host, title row,
+   toolbar) is captured as `surface` nodes with the toolbar collapse button as
+   a control carrying the `sn-tree-panel-collapse` intent
+   (`SPATIAL_TREE_CONTROLS`). Explicit `surfaceSelectors` opt extra structural
+   surfaces into capture without dropping their child text/icons: matched
+   elements become `surface` nodes and descendants with direct text resolve to
+   text nodes, so opted-in subtrees leave no unknown visible boxes. Surface
+   chrome evidence includes narrow uniform solid borders only: all four sides
+   equal, `solid` style, one normalized color, at or below
+   `SPATIAL_BORDER_MAX_WIDTH_PX` (2 px). Partial-side borders and
+   pseudo-element dividers are excluded and reported as informational
+   `partial-border` diagnostics; radii, shadows, caret/focus editing chrome,
+   and input/IME behavior remain current non-goals and are not rendered.
+6. `compileSpatialSnapshot(snapshot, options)` (pure, Node-safe) compiles the
+   measured snapshot into the same `native-panel-layout-v1` scene. Panel and
+   resizer geometry derives from measured boxes only (never declared ratios),
+   primitives carry `spatialNodeId` provenance plus resolved styles, and hit
+   targets keep stable `actionId`/`targetId`/`intent` identity. Icon nodes
+   compile to `kind: "icon"` primitives on the content layer, raised a fraction
+   of a layer step above their owning control/surface; measured text and icon
+   primitives carry `sourcePixels` (source CSS pixel dimensions) so renderers
+   can size textures from real layout instead of density heuristics, and the
+   exact captured font style passes through `style.font`. The renderer
+   honors resolved per-primitive styles additively; theme-role behavior for the
+   manual family path is unchanged. A single predicate,
+   `hasVisibleControlChrome(node)`, decides control appearance: a control
+   without visible background or border evidence compiles to a transparent
+   `control: "hit"` region (invisible at idle, native hover/selected accent
+   affordance on interaction), while controls with visible chrome stay
+   `control: "button"`. `badge` nodes compile to a resolved surface plus label,
+   `field` nodes to a sunken bordered surface plus a single-line proxy label,
+   and `surface` nodes to content-layer surfaces — evidence-free surfaces
+   compile with an explicit `transparent: true` marker so coverage is reported
+   without painting. Normalized uniform borders compile to `style.border`
+   (`width` in meters, normalized `color`) and the renderer draws them as thin
+   edge meshes on the owning primitive.
+
+   One layout panel is one spatial window: the captured `panel-layout` element
+   is only a transport/layout container, each leaf `layout-node[node-type="panel"]`
+   compiles to exactly one independently renderable and movable native group
+   (`role: "window"`) that owns its own primitives, geometry, hit state, and
+   layers, and child content never leaks into a sibling window. Split resizers
+   are layout controls, not user windows: they compile to `role: "layout-control"`
+   groups (`panelType: "split-resizer"`) that only arrange the windows, even
+   though they travel in the same generic `panels` transport array.
+   `counts.windows` and `counts.layoutControls` report the two roles separately
+   while `counts.panels` stays the total transport-group count.
+7. `createSpatialParityReport(snapshot, compiled, options)` (pure, Node-safe)
+   emits a deterministic `spatial-parity-v1` report: panel/resizer edge
+   round-trip error in CSS px (2 px tolerance by default), title/tree/editor
+   text equality (icon nodes excluded), captured/compiled icon coverage with
+   glyph-name equality, resolved style equality, action/target coverage, and
+   counted unsupported/unknown diagnostics.
+8. `createSpatialVisualParityReport(snapshot, appearance)` (pure, Node-safe,
+   xr/spatial-visual-parity.js) compares the measured snapshot against the
+   renderer's `getAppearanceReport()` sample — a `native-panel-appearance-v1`
+   plain-JSON neutral-state report (hovered/selected ids reported separately,
+   no THREE objects) carrying per-primitive id/provenance, kind/control,
+   visibility, color/opacity/transparent, resolved-style, scene scale, and
+   actual border evidence. Border parity compares both color and CSS-pixel
+   width after normalizing the renderer's meter-space width through that scale.
+   The deterministic `spatial-visual-parity-v1` report fails with stable
+   structured issue ids on expected-transparent controls rendered opaque
+   (`expected-transparent-opaque`), non-transparent surface/style mismatches
+   (`surface-style-mismatch`), text/icon color mismatches
+   (`text-color-mismatch`, `icon-color-mismatch`), missing renderer coverage
+   (`missing-renderer-coverage`), and unknown visible capture boxes
+   (`unknown-visible-box`); unsupported interactions such as `text-input`
+   stay informational and never fail visual parity.
+
+In the lab, the measured `real-layout` source is the default and renders the
+live `cascade-theme-lab.html#multi-agent-dev/source-editor` reference in a
+fixed-size same-origin iframe beside the native scene; the outer lab document
+loads the self-hosted Material Symbols stylesheet (it owns the raster
+canvases), explicitly awaits the icon font before first draw, and issues one
+late-readiness quality redraw when the font arrives after mount; theme changes
+apply to the reference first, then re-capture flows through the renderer
+appearance-refresh seam (dark/light recapture updates resolved colors, text,
+and icon styles in place with window object identity preserved; a
+`geometry-invalidated` result triggers an intentional remount); theme roles
+are normalized to `rgb()`/`rgba()` before reaching Three (unconvertible roles
+are dropped and reported as `unsupportedColors` in the lab report); the lab
+report surfaces `fontReadiness`, `appearanceRefresh`, and the renderer
+`native-panel-text-quality-v1` report; product structural surfaces reach the
+capture only through the explicit generic `surfaceSelectors` option; the lab
+report exposes both parity subreports — `parity.ir` (`spatial-parity-v1`
+summary) and `parity.visual` (`spatial-visual-parity-v1` summary) — and the
+headline `parity.ok` is their conjunction; native row/control activation
+relays to the matching live DOM intent (tree select/toggle/collapse, per-button
+header intents resolved through `resolveHeaderControlSelector`, tree toolbar
+controls through `SPATIAL_TREE_CONTROLS`, resizer drags).
+The explicit `mock-families` source keeps the hand-authored family path
+working unchanged.
+
+The lab demo pins Three `0.180.0` through its own import map; Three is not a
+package dependency. The monolithic Three WebXR adapter
+(`xr/three-webxr-adapter.js`) and the textured HTML/WebGL panel compositors stay
+untouched: this pipeline is separate, and a later WebXR path would reuse the
+same pure compiler output through an XR session host rather than this demo's
+desktop renderer.
+
 ### Dual View Controller
 
 Coordinates state between 2D canvas, 3D desktop preview, and XR immersive
@@ -455,5 +654,12 @@ Each spatial module is available as a standalone subpath export:
 | `symbiote-ui/xr/spatial-drag-controller` | Ray/sphere drag math |
 | `symbiote-ui/xr/dual-view-controller` | 2D/3D/XR state bridge |
 | `symbiote-ui/xr/three-spatial-graph` | Optional Three.js renderer adapter |
+| `symbiote-ui/xr/native-panel-layout` | Pure native-panel plane projection, primitive compiler, hit resolver |
+| `symbiote-ui/xr/three-native-panel-renderer` | Optional Three.js native-panel renderer adapter |
+| `symbiote-ui/xr/spatial-snapshot` | Pure `spatial-snapshot-v1` normalization and validation |
+| `symbiote-ui/xr/spatial-snapshot-compile` | Pure measured-snapshot → native-panel scene compiler |
+| `symbiote-ui/xr/spatial-parity` | Pure deterministic snapshot ↔ scene parity report |
+| `symbiote-ui/xr/spatial-visual-parity` | Pure snapshot ↔ renderer-appearance visual parity report |
+| `symbiote-ui/xr/dom-spatial-capture` | Browser-only DOM/CSSOM measurement adapters (evaluation-safe in Node) |
 
 All modules are also re-exported from the barrel `symbiote-ui/xr`.

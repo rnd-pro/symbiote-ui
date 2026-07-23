@@ -51,6 +51,8 @@ export const WEBXR_RENDERER = Object.freeze({
     'xr-facing-diagnostics',
     'xr-facing-adjustment',
     'xr-html-in-canvas-renderer',
+    'xr-html-canvas-ownership-gate',
+    'xr-html-canvas-upload-receipt',
     'xr-texture-debug-mode',
     'xr-texture-gate-diagnostics',
     'xr-pointer-normalization',

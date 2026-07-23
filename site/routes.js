@@ -77,6 +77,14 @@ export const SITE_ROUTES = freezeRoutes([
     docsNavigation: true,
   },
   {
+    id: 'docs-xr-html-in-canvas',
+    file: 'docs/xr-html-in-canvas.html',
+    path: '/docs/xr-html-in-canvas.html',
+    title: 'XR HTML-in-Canvas Contract',
+    markdown: 'xr-html-in-canvas.md',
+    docsNavigation: true,
+  },
+  {
     id: 'catalog',
     file: 'catalog/index.html',
     path: '/catalog/',
@@ -103,6 +111,11 @@ export const SITE_ROUTES = freezeRoutes([
     id: 'demo-cascade-theme-lab',
     file: 'demo/cascade-theme-lab.html',
     path: '/demo/cascade-theme-lab.html',
+  },
+  {
+    id: 'demo-native-panels-webgl-lab',
+    file: 'demo/native-panels-webgl-lab.html',
+    path: '/demo/native-panels-webgl-lab.html',
   },
   {
     id: 'demo-pcb-router-stress',

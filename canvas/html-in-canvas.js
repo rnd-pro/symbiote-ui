@@ -27,6 +27,8 @@ export const HTML_IN_CANVAS_RENDERER = Object.freeze({
     'native-form-controls',
     'offscreen-worker-snapshots',
     'canvas-texture-upload',
+    'webgl-upload-signature-detection',
+    'webgpu-copy-signature-detection',
     'feature-detected-fallback',
   ],
   apis: HTML_IN_CANVAS_APIS,
@@ -128,7 +130,7 @@ export function closeHtmlElementImage(elementImage) {
 
 export function drawHtmlElement2d(ctx, element, options = {}) {
   if (!hasFn(ctx, HTML_IN_CANVAS_APIS.canvas2dDraw)) {
-    return { rendered: false, mode: 'canvas2d', reason: 'unsupported' };
+    return { rendered: false, mode: 'canvas2d', signature: null, reason: 'unsupported' };
   }
 
   let args = Array.isArray(options.rect)
@@ -143,35 +145,197 @@ export function drawHtmlElement2d(ctx, element, options = {}) {
     element.style.transform = transform.toString();
   }
 
-  return { rendered: true, mode: 'canvas2d', transform };
+  return { rendered: true, mode: 'canvas2d', signature: 'current', reason: null, transform };
+}
+
+function isDirectCanvasChild(canvas, element) {
+  if (!canvas || !element) return false;
+  return element.parentElement === canvas || element.parentNode === canvas;
+}
+
+const CURRENT_WEBGL_INTERNAL_FORMATS = Object.freeze({
+  RGBA8: 0x8058,
+  SRGB8_ALPHA8: 0x8C43,
+  RGBA16F: 0x881A,
+  RGBA32F: 0x8814,
+});
+
+const CURRENT_WEBGL_CONFIG_KEYS = Object.freeze([
+  'sx',
+  'sy',
+  'swidth',
+  'sheight',
+  'width',
+  'height',
+]);
+
+function webglEnum(gl, name) {
+  return gl?.[name] ?? CURRENT_WEBGL_INTERNAL_FORMATS[name];
+}
+
+function isCurrentWebGLInternalFormat(gl, value) {
+  return Object.keys(CURRENT_WEBGL_INTERNAL_FORMATS)
+    .some((name) => value === webglEnum(gl, name));
+}
+
+function normalizeCurrentWebGLConfig(config) {
+  if (config === undefined) return { config: undefined };
+  if (!config || typeof config !== 'object' || Array.isArray(config)) {
+    return { reason: 'invalid-current-config' };
+  }
+
+  let keys = Object.keys(config);
+  if (keys.some((key) => !CURRENT_WEBGL_CONFIG_KEYS.includes(key))) {
+    return { reason: 'invalid-current-config' };
+  }
+
+  let sourceKeys = ['sx', 'sy', 'swidth', 'sheight'];
+  let sourceCount = sourceKeys.filter((key) => key in config).length;
+  let destinationCount = ['width', 'height'].filter((key) => key in config).length;
+  if ((sourceCount !== 0 && sourceCount !== sourceKeys.length)
+    || (destinationCount !== 0 && destinationCount !== 2)) {
+    return { reason: 'invalid-current-config' };
+  }
+
+  return { config: { ...config } };
+}
+
+function resolveTexElementImageCall(gl, upload, element, options) {
+  let arity = Number(upload.length);
+  if (arity === 3) {
+    let target = options.target ?? gl.TEXTURE_2D;
+    let internalFormat = options.internalFormat ?? webglEnum(gl, 'RGBA8');
+    if (!isCurrentWebGLInternalFormat(gl, internalFormat)) {
+      return { signature: 'current', reason: 'invalid-internal-format' };
+    }
+    let normalizedConfig = normalizeCurrentWebGLConfig(options.config);
+    if (normalizedConfig.reason) {
+      return { signature: 'current', reason: normalizedConfig.reason };
+    }
+    let args = normalizedConfig.config === undefined
+      ? [target, internalFormat, element]
+      : [target, internalFormat, element, normalizedConfig.config];
+    return { signature: 'current', args };
+  }
+  if (arity === 6) {
+    let canonical = {
+      target: gl.TEXTURE_2D,
+      level: 0,
+      internalFormat: gl.RGBA,
+      format: gl.RGBA,
+      type: gl.UNSIGNED_BYTE,
+    };
+    if ((options.target !== undefined && options.target !== canonical.target)
+      || (options.level !== undefined && options.level !== canonical.level)
+      || (options.internalFormat !== undefined && options.internalFormat !== canonical.internalFormat)
+      || (options.format !== undefined && options.format !== canonical.format)
+      || (options.type !== undefined && options.type !== canonical.type)
+      || options.config !== undefined) {
+      return { signature: 'flag-era', reason: 'invalid-legacy-format-combination' };
+    }
+    return {
+      signature: 'flag-era',
+      args: [
+        canonical.target,
+        canonical.level,
+        canonical.internalFormat,
+        canonical.format,
+        canonical.type,
+        element,
+      ],
+    };
+  }
+  return { signature: null, reason: 'unsupported-signature' };
 }
 
 export function uploadHtmlElementToWebGLTexture(gl, element, options = {}) {
-  if (!hasFn(gl, HTML_IN_CANVAS_APIS.webglTextureUpload)) {
-    return { rendered: false, mode: 'webgl', reason: 'unsupported' };
+  let upload = gl?.[HTML_IN_CANVAS_APIS.webglTextureUpload];
+  if (typeof upload !== 'function') {
+    return { rendered: false, mode: 'webgl', signature: null, reason: 'unsupported' };
+  }
+  let canvas = gl.canvas || null;
+  if (!canvas) {
+    return { rendered: false, mode: 'webgl', signature: null, reason: 'missing-context-canvas', canvasMatch: false };
+  }
+  if (!isDirectCanvasChild(canvas, element)) {
+    return { rendered: false, mode: 'webgl', signature: null, reason: 'canvas-mismatch', canvasMatch: false };
   }
 
-  let target = options.target ?? gl.TEXTURE_2D;
-  let level = options.level ?? 0;
-  let internalFormat = options.internalFormat ?? gl.RGBA;
-  let format = options.format ?? gl.RGBA;
-  let type = options.type ?? gl.UNSIGNED_BYTE;
-  gl[HTML_IN_CANVAS_APIS.webglTextureUpload](target, level, internalFormat, format, type, element);
-  return { rendered: true, mode: 'webgl' };
+  let call = resolveTexElementImageCall(gl, upload, element, options);
+  if (call.reason) {
+    return {
+      rendered: false,
+      mode: 'webgl',
+      signature: call.signature,
+      reason: call.reason,
+      ...(call.reason === 'unsupported-signature' ? { arity: Number(upload.length) } : {}),
+      canvasMatch: true,
+    };
+  }
+
+  try {
+    upload.apply(gl, call.args);
+  } catch (error) {
+    return {
+      rendered: false,
+      mode: 'webgl',
+      reason: 'upload-failed',
+      errorName: error?.name || 'Error',
+      signature: call.signature,
+      canvasMatch: true,
+    };
+  }
+  return { rendered: true, mode: 'webgl', signature: call.signature, reason: null, canvasMatch: true };
 }
 
 export function copyHtmlElementToWebGPUTexture(queue, element, options = {}) {
-  if (!hasFn(queue, HTML_IN_CANVAS_APIS.webgpuTextureCopy)) {
-    return { rendered: false, mode: 'webgpu', reason: 'unsupported' };
+  let copy = queue?.[HTML_IN_CANVAS_APIS.webgpuTextureCopy];
+  if (typeof copy !== 'function') {
+    return { rendered: false, mode: 'webgpu', signature: null, reason: 'unsupported' };
   }
   if (!options.destination) {
-    return { rendered: false, mode: 'webgpu', reason: 'missing-destination' };
+    return { rendered: false, mode: 'webgpu', signature: null, reason: 'missing-destination' };
+  }
+  if (Number(copy.length) !== 2) {
+    return {
+      rendered: false,
+      mode: 'webgpu',
+      signature: null,
+      reason: 'unsupported-signature',
+      arity: Number(copy.length),
+    };
   }
 
-  let args = [element, options.destination];
-  if (options.copySize) args.push(options.copySize);
-  queue[HTML_IN_CANVAS_APIS.webgpuTextureCopy](...args);
-  return { rendered: true, mode: 'webgpu' };
+  try {
+    let source = element && typeof element === 'object' && 'source' in element
+      ? { ...element }
+      : { source: element };
+    let destination = options.destination
+      && typeof options.destination === 'object'
+      && 'destination' in options.destination
+      ? { ...options.destination }
+      : { destination: options.destination };
+    let copySize = options.copySize ?? options.size;
+    if (copySize !== undefined) {
+      let width = Array.isArray(copySize) ? copySize[0] : copySize?.width;
+      let height = Array.isArray(copySize) ? copySize[1] : copySize?.height;
+      if (width === undefined || height === undefined) {
+        return { rendered: false, mode: 'webgpu', signature: 'current', reason: 'invalid-current-config' };
+      }
+      destination.width = width;
+      destination.height = height;
+    }
+    copy.call(queue, source, destination);
+    return { rendered: true, mode: 'webgpu', signature: 'current', reason: null };
+  } catch (error) {
+    return {
+      rendered: false,
+      mode: 'webgpu',
+      signature: 'current',
+      reason: 'copy-failed',
+      errorName: error?.name || 'Error',
+    };
+  }
 }
 
 export function getHtmlElementCanvasTransform(canvas, element, matrix) {

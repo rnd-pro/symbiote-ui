@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Native Panels WebGL Lab</title>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="../icons/material-symbols.css">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--sn-sys-surface, #151515);
+      color: var(--sn-sys-on-surface, #f0f0f0);
+      font-family: var(--sn-font, Inter, system-ui, sans-serif);
+    }
+
+    body {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 360px;
+    }
+
+    .reference {
+      position: relative;
+      min-width: 0;
+      min-height: 0;
+      overflow: auto;
+      border-right: 1px solid var(--sn-sys-outline, rgba(255, 255, 255, 0.14));
+      background: var(--sn-sys-surface-sunken, #101010);
+    }
+
+    .reference[hidden] {
+      display: none;
+    }
+
+    #reference-frame {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border: 0;
+    }
+
+    .stage {
+      position: relative;
+      min-width: 0;
+      min-height: 0;
+      border-right: 1px solid var(--sn-sys-outline, rgba(255, 255, 255, 0.14));
+    }
+
+    #gl {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .panel {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      min-width: 0;
+      min-height: 0;
+      background: var(--sn-sys-surface-panel, #202020);
+    }
+
+    .panel-head,
+    .diagnostics {
+      padding: 14px;
+      border-bottom: 1px solid var(--sn-sys-outline, rgba(255, 255, 255, 0.14));
+    }
+
+    .panel-head {
+      display: grid;
+      gap: 6px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 17px;
+      line-height: 1.2;
+    }
+
+    .hint {
+      color: var(--sn-sys-on-surface-dim, #aaa);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .controls {
+      display: grid;
+      gap: 12px;
+      align-content: start;
+      min-height: 0;
+      overflow: auto;
+      padding: 14px;
+    }
+
+    .field {
+      display: grid;
+      gap: 7px;
+    }
+
+    .field-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      color: var(--sn-sys-on-surface-dim, #aaa);
+      font-size: 12px;
+      line-height: 1.2;
+    }
+
+    .field-row strong {
+      color: var(--sn-sys-on-surface, #f0f0f0);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--sn-sys-accent, #4c8bf5);
+    }
+
+    select {
+      width: 100%;
+      height: 34px;
+      padding: 0 10px;
+      border: 1px solid var(--sn-sys-outline, rgba(255, 255, 255, 0.14));
+      border-radius: 7px;
+      background: var(--sn-sys-surface-raised, #272727);
+      color: var(--sn-sys-on-surface, #f0f0f0);
+      font: inherit;
+      font-size: 13px;
+    }
+
+    select:focus-visible {
+      border-color: var(--sn-sys-accent, #4c8bf5);
+      outline: none;
+    }
+
+    .diagnostics {
+      display: grid;
+      gap: 8px;
+      border-top: 1px solid var(--sn-sys-outline, rgba(255, 255, 255, 0.14));
+      border-bottom: 0;
+      color: var(--sn-sys-on-surface-dim, #aaa);
+      font-size: 12px;
+    }
+
+    .diagnostics code {
+      display: block;
+      max-height: 220px;
+      overflow: auto;
+      padding: 9px;
+      border: 1px solid var(--sn-sys-outline, rgba(255, 255, 255, 0.14));
+      border-radius: 7px;
+      background: rgba(0, 0, 0, 0.22);
+      color: var(--sn-sys-on-surface, #f0f0f0);
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+
+<body>
+  <main class="reference" id="reference">
+    <iframe
+      id="reference-frame"
+      title="Live Symbiote reference layout"
+      src="./cascade-theme-lab.html#multi-agent-dev/source-editor"
+    ></iframe>
+  </main>
+  <main class="stage">
+    <canvas id="gl"></canvas>
+  </main>
+  <aside class="panel">
+    <header class="panel-head">
+      <h1>Native Panels WebGL Lab</h1>
+      <div class="hint">
+        Experimental native 3D panels: the live Symbiote reference layout is measured into a
+        spatial snapshot and re-rendered as native Three primitives beside it, with
+        deterministic parity diagnostics.
+      </div>
+    </header>
+    <section class="controls">
+      <div class="field">
+        <div class="field-row"><strong>Source</strong></div>
+        <select id="source">
+          <option value="real-layout">Measured real layout</option>
+          <option value="mock-families">Mock families</option>
+        </select>
+      </div>
+      <div class="field">
+        <div class="field-row"><strong>Camera</strong></div>
+        <select id="camera">
+          <option value="front">Front orthographic</option>
+          <option value="perspective">Perspective</option>
+          <option value="spatial">Spatial</option>
+        </select>
+      </div>
+      <div class="field">
+        <div class="field-row"><strong>Theme</strong></div>
+        <select id="theme">
+          <option value="dark">Cascade dark</option>
+          <option value="light">Cascade light</option>
+        </select>
+      </div>
+      <div class="field">
+        <div class="field-row"><strong>Layer explode</strong><span id="explode-value">0.00 m</span></div>
+        <input type="range" id="explode" min="0" max="0.12" step="0.005" value="0">
+      </div>
+    </section>
+    <footer class="diagnostics">
+      <div>Diagnostics</div>
+      <code id="diagnostics">{}</code>
+    </footer>
+  </aside>
+  <script type="module" src="./native-panels-webgl-lab.js?v=native-panels-webgl-lab-v2"></script>
+</body>
+
+</html>

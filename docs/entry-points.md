@@ -11,6 +11,13 @@
 - `symbiote-ui/ui/screencast-recorder.js` - browser Screen Capture API hotkey controller for host-owned screencast recording; default toggle hotkey is `Alt+Shift+R`, captured tab/display audio is requested by default, and no built-in indicator UI is rendered.
 - `symbiote-ui/webmcp` - WebMCP descriptor helpers and registration utilities.
 - `symbiote-ui/xr` - WebXR provider helpers, spatial algorithms, 3D graph layout, and multi-view coordination.
+- `symbiote-ui/xr/native-panel-layout` - Node-safe native-panel plane projection, deterministic primitive compiler, and normalized hit resolver.
+- `symbiote-ui/xr/three-native-panel-renderer` - browser Three adapter for compiled native panels; host injects the `THREE` namespace; honors additive resolved per-primitive styles from measured snapshots; exposes a renderer-neutral `native-panel-appearance-v1` neutral-state sample via `getAppearanceReport()`.
+- `symbiote-ui/xr/spatial-snapshot` - Node-safe `spatial-snapshot-v1` normalization and validation for browser-measured spatial UI snapshots.
+- `symbiote-ui/xr/spatial-snapshot-compile` - Node-safe compiler from measured snapshots to the existing native-panel scene; geometry derives from measured boxes only.
+- `symbiote-ui/xr/spatial-parity` - Node-safe deterministic parity report (geometry edges, text, resolved styles, action coverage, diagnostics) between a snapshot and its compiled scene.
+- `symbiote-ui/xr/spatial-visual-parity` - Node-safe `spatial-visual-parity-v1` visual parity report between a measured snapshot and the renderer `native-panel-appearance-v1` sample (transparent controls, surface/style and text/icon colors, coverage, unknown visible boxes).
+- `symbiote-ui/xr/dom-spatial-capture` - browser-only adapter-registry DOM capture of a bounded `panel-layout` subtree into a spatial snapshot; evaluation-safe to import in Node.
 - `symbiote-ui/locale` - Node-safe locale catalogs and translation helpers.
 - `symbiote-ui/discover` - provider discovery JSON API used by the CLI.
 - `symbiote-ui/chat/voice-input-defaults.js` - Node-safe wake/send/action voice command defaults and matching helpers.

@@ -30,6 +30,12 @@ const DEMOS = [
     desc: 'Standalone graph force controls with fit, focus, appearance animation, and one-node zoom diagnostics.',
   },
   {
+    title: 'Native Panels WebGL Lab',
+    href: 'demo/native-panels-webgl-lab.html',
+    icon: 'deployed_code',
+    desc: 'Experimental native 3D panels: pure layout compiler, Three adapter, layer explode, raycast interaction, live cascade theme.',
+  },
+  {
     title: 'PCB Router Stress',
     href: 'demo/pcb-router-stress.html',
     icon: 'developer_board',

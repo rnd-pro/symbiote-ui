@@ -29,6 +29,11 @@ const DEMOS = [
     description: 'Standalone graph force controls with fit, focus, appearance animation, and one-node zoom diagnostics.',
   },
   {
+    href: '/demo/native-panels-webgl-lab.html',
+    title: 'Native Panels WebGL Lab',
+    description: 'Deterministic spatial layout compilation, measured snapshots, parity diagnostics, and native Three/WebGL panel rendering.',
+  },
+  {
     href: '/demo/cascade-theme-lab.html#video-editor/studio',
     title: 'Video Studio',
     description: 'Timeline editor, canvas viewport, composition preview, and effects, integrated into the layout system.',

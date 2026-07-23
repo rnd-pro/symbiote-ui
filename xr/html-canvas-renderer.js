@@ -4,6 +4,7 @@ import {
 
 const MODE_PRIORITY = Object.freeze(['webgl', 'webgpu', 'canvas2d']);
 export const HTML_IN_CANVAS_ORIGIN_TRIAL_HEADER = 'Origin-Trial';
+export const XR_HTML_CANVAS_UPLOAD_RECEIPT_VERSION = 'xr-html-canvas-upload-receipt-v1';
 
 function selectMode(support, requestedMode) {
   if (requestedMode && support.modes?.[requestedMode]) return requestedMode;
@@ -26,11 +27,33 @@ function isDirectCanvasChild(canvas, element) {
   return element.parentElement === canvas || element.parentNode === canvas;
 }
 
+function finiteDimension(value) {
+  let number = Number(value);
+  return Number.isFinite(number) && number > 0 ? number : null;
+}
+
+function createUploadReceipt(panelId, record, renderOptions, result = {}) {
+  let rendered = result.rendered === true;
+  return {
+    version: XR_HTML_CANVAS_UPLOAD_RECEIPT_VERSION,
+    panelId,
+    mode: 'webgl',
+    rendered,
+    uploaded: rendered,
+    canvasMatch: result.canvasMatch === true,
+    width: finiteDimension(renderOptions.width ?? record.element?.offsetWidth),
+    height: finiteDimension(renderOptions.height ?? record.element?.offsetHeight),
+    signature: result.signature || null,
+    reason: result.reason || null,
+    errorName: result.errorName || null,
+  };
+}
+
 function createOriginTrialSummary(options = {}) {
   return {
     name: 'html-in-canvas',
     status: options.originTrialStatus || 'origin-trial',
-    chromeMilestoneRange: options.chromeMilestoneRange || '148-150',
+    chromeMilestoneRange: options.chromeMilestoneRange || '148-154',
     localTestBrowser: options.localTestBrowser || 'Chrome Canary 149+',
     requiredFlag: options.requiredFlag || 'CanvasDrawElement',
     flagUrl: options.flagUrl || 'chrome://flags/#canvas-draw-element',
@@ -416,32 +439,82 @@ export function createXRHtmlCanvasRenderer(options = {}) {
     };
   }
 
+  function finishWebGLFailure(panelId, record, renderOptions, reason) {
+    let receipt = createUploadReceipt(
+      panelId,
+      record || { element: null },
+      renderOptions,
+      { rendered: false, reason },
+    );
+    lastMode = 'webgl';
+    lastRender = receipt;
+    return receipt;
+  }
+
   function renderPanel(panelId, target, renderOptions = {}) {
     let record = panels.get(panelId);
+    let requestedMode = renderOptions.mode || record?.mode || options.mode || null;
     if (!record) {
-      return { rendered: false, reason: 'panel-not-prepared' };
+      if (requestedMode === 'webgl') {
+        return finishWebGLFailure(panelId, null, renderOptions, 'panel-not-prepared');
+      }
+      lastRender = { panelId, rendered: false, reason: 'panel-not-prepared' };
+      return lastRender;
     }
-    let mode = selectMode(adapter.support, renderOptions.mode || record.mode || options.mode);
+    let mode = selectMode(adapter.support, requestedMode);
     if (!mode) {
-      return { rendered: false, mode: 'unsupported', reason: 'html-in-canvas-unsupported' };
+      if (requestedMode === 'webgl') {
+        return finishWebGLFailure(panelId, record, renderOptions, 'html-in-canvas-unsupported');
+      }
+      lastMode = 'unsupported';
+      lastRender = {
+        panelId,
+        rendered: false,
+        mode: 'unsupported',
+        reason: 'html-in-canvas-unsupported',
+      };
+      return lastRender;
     }
 
     let targetHandle = targetForMode(target, mode);
     if (!targetHandle) {
-      return { rendered: false, mode, reason: 'missing-render-target' };
+      if (mode === 'webgl') {
+        return finishWebGLFailure(panelId, record, renderOptions, 'missing-render-target');
+      }
+      lastMode = mode;
+      lastRender = { panelId, rendered: false, mode, reason: 'missing-render-target' };
+      return lastRender;
     }
 
     lastMode = mode;
-    let result = null;
     if (mode === 'webgl') {
-      result = adapter.uploadWebGLTexture(targetHandle, record.element, renderOptions);
-    } else if (mode === 'webgpu') {
+      let receipt = uploadPanelToWebGLTexture(panelId, record, targetHandle, renderOptions);
+      lastRender = receipt;
+      return receipt;
+    }
+    let result = null;
+    if (mode === 'webgpu') {
       result = adapter.copyWebGPUTexture(targetHandle, record.element, renderOptions);
     } else {
       result = adapter.draw2d(targetHandle, record.element, renderOptions);
     }
     lastRender = { panelId, ...result };
     return result;
+  }
+
+  function uploadPanelToWebGLTexture(panelId, record, gl, renderOptions) {
+    let contextCanvas = gl?.canvas || null;
+    let result = null;
+    if (!record.canvas) {
+      result = { rendered: false, reason: 'missing-prepared-canvas' };
+    } else if (!contextCanvas) {
+      result = { rendered: false, reason: 'missing-context-canvas' };
+    } else if (contextCanvas !== record.canvas || !isDirectCanvasChild(record.canvas, record.element)) {
+      result = { rendered: false, reason: 'canvas-mismatch' };
+    } else {
+      result = adapter.uploadWebGLTexture(gl, record.element, renderOptions);
+    }
+    return createUploadReceipt(panelId, record, renderOptions, result);
   }
 
   function renderPanelPreview(panelId, canvas, renderOptions = {}) {
