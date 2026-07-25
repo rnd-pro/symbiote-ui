@@ -214,6 +214,8 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
       baseOpacity: metadata.opacity ?? 1,
       hoverOpacity: metadata.hoverOpacity ?? 1,
       chromeVisual: metadata.chromeVisual === true,
+      collapsedTexture: metadata.collapsedTexture || null,
+      expandedTexture: metadata.expandedTexture || null,
     };
     interactive.push(mesh);
     return mesh;
@@ -239,11 +241,18 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
       background,
       foreground,
     });
+    let stripTexture = createMetaWindowChromeTexture(THREE, 'grab-strip', {
+      createCanvas: options.createCanvas,
+      anisotropy,
+      color: background,
+    });
     chrome.add(chromeMesh(panel, frame, frame.zones.controlBar, {
       name: 'control-bar',
       actionId: 'drag-panel',
       operation: 'move',
-      texture: barTexture,
+      texture: stripTexture,
+      collapsedTexture: stripTexture,
+      expandedTexture: barTexture,
       chromeVisual: true,
     }));
     for (let [handle, zone] of Object.entries(frame.zones.resize)) {
@@ -790,6 +799,9 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
 
   function disposeObjectTree(object) {
     object.traverse((node) => {
+      if (node.userData?.expandedTexture && node.userData.expandedTexture !== node.material?.map) {
+        node.userData.expandedTexture.dispose?.();
+      }
       if (node.material && !isSharedMaterial(node.material)) {
         node.material.map?.dispose?.();
         node.material.dispose?.();
@@ -863,6 +875,14 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
           object.material.opacity = isHovered
             ? object.userData.hoverOpacity
             : object.userData.baseOpacity;
+          if (object.userData.expandedTexture) {
+            let chromePrefix = `${object.userData.panelId}/window-chrome/`;
+            let expanded = hoveredId === object.userData.primitiveId
+              || (hoveredId?.startsWith(chromePrefix) && hoveredId.includes('/action-'));
+            object.material.map = expanded
+              ? object.userData.expandedTexture
+              : object.userData.collapsedTexture;
+          }
         } else {
           object.material.opacity = 0;
         }
@@ -1099,7 +1119,7 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
       let name = object.name || '';
       let texture = null;
       if (name.endsWith('control-bar')) {
-        texture = createMetaWindowChromeTexture(THREE, 'control-bar', {
+        let expandedTexture = createMetaWindowChromeTexture(THREE, 'control-bar', {
           createCanvas: options.createCanvas,
           anisotropy,
           title: chromeTitle(panel),
@@ -1108,6 +1128,15 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
           background,
           foreground,
         });
+        let collapsedTexture = createMetaWindowChromeTexture(THREE, 'grab-strip', {
+          createCanvas: options.createCanvas,
+          anisotropy,
+          color: background,
+        });
+        object.userData.expandedTexture?.dispose?.();
+        object.userData.expandedTexture = expandedTexture;
+        object.userData.collapsedTexture = collapsedTexture;
+        texture = collapsedTexture;
       } else if (name.includes('resize-')) {
         texture = createMetaWindowChromeTexture(THREE, 'corner', {
           createCanvas: options.createCanvas,

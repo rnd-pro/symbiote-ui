@@ -466,6 +466,11 @@ function removePanelFrameVisuals(mesh) {
     if (typeof object?.material?.map?.dispose === 'function') {
       object.material.map.dispose();
     }
+    if (object?.userData?.expandedTexture &&
+        object.userData.expandedTexture !== object.material?.map &&
+        typeof object.userData.expandedTexture.dispose === 'function') {
+      object.userData.expandedTexture.dispose();
+    }
     if (typeof object?.material?.dispose === 'function') {
       object.material.dispose();
     }
@@ -523,6 +528,7 @@ function buildPanelFrameZoneVisual(THREE, zoneName, zone, size, visual, metadata
     x: Number(zone.x || 0) + Number(zone.width || 0) / 2,
     y: Number(zone.y || 0) + Number(zone.height || 0) / 2,
   };
+  object.userData.zoneBounds = { ...zone };
   if (object.position?.set) {
     object.position.set(rect.x, rect.y, visual.zOffset);
   } else {
@@ -555,20 +561,26 @@ function buildPanelFrameVisuals(THREE, panel, mesh, options = {}) {
   let zones = [];
 
   let actionNames = Object.keys(frame.zones.actions || {});
+  let expandedTexture = createMetaWindowChromeTexture(THREE, 'control-bar', {
+    title: panel?.title || panel?.label || panel?.component || panel?.panelType || panel?.id || 'Window',
+    actions: actionNames,
+    activeAction: frame.state.pinned ? 'pin' : null,
+    background: panelChromeCssColor(visual.headerColor, '#fafafa'),
+    foreground: panelChromeCssColor(visual.foregroundColor, '#272727'),
+  });
+  let collapsedTexture = createMetaWindowChromeTexture(THREE, 'grab-strip', {
+    color: panelChromeCssColor(visual.headerColor, '#fafafa'),
+  });
   let controlBar = buildPanelFrameZoneVisual(THREE, 'control-bar', frame.zones.controlBar, size, visual, {
     zone: 'move',
     operation: 'move',
     color: visual.headerColor,
     opacity: visual.hoverOpacity,
     hoverOpacity: visual.hoverOpacity,
-    texture: createMetaWindowChromeTexture(THREE, 'control-bar', {
-      title: panel?.title || panel?.label || panel?.component || panel?.panelType || panel?.id || 'Window',
-      actions: actionNames,
-      activeAction: frame.state.pinned ? 'pin' : null,
-      background: panelChromeCssColor(visual.headerColor, '#fafafa'),
-      foreground: panelChromeCssColor(visual.foregroundColor, '#272727'),
-    }),
+    texture: collapsedTexture,
   });
+  controlBar.userData.collapsedTexture = collapsedTexture;
+  controlBar.userData.expandedTexture = expandedTexture;
   controlBar.userData.panelId = frame.panelId;
   if (addPanelFrameVisualObject(mesh, controlBar)) {
     objects.push(controlBar);
@@ -673,6 +685,15 @@ function updatePanelFrameHoverVisuals(mesh, hovered, framePoint = null, smoothin
     if (!Number.isFinite(current)) current = base;
     let next = current + (target - current) * smoothing;
     material.opacity = Math.abs(next - target) < 0.004 ? target : next;
+    if (object.userData?.expandedTexture) {
+      let bounds = object.userData.zoneBounds;
+      let expanded = Boolean(framePoint && bounds &&
+        framePoint.x >= bounds.x && framePoint.x <= bounds.x + bounds.width &&
+        framePoint.y >= bounds.y && framePoint.y <= bounds.y + bounds.height);
+      material.map = expanded
+        ? object.userData.expandedTexture
+        : object.userData.collapsedTexture;
+    }
   }
 }
 

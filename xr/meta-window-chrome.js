@@ -176,22 +176,41 @@ function drawEdge(context, width, height, edge, color) {
   context.restore();
 }
 
+function drawGrabStrip(context, width, height, color) {
+  context.fillStyle = color;
+  let stripWidth = width * 0.24;
+  let stripHeight = height * 0.13;
+  roundedRect(
+    context,
+    (width - stripWidth) / 2,
+    (height - stripHeight) / 2,
+    stripWidth,
+    stripHeight,
+    stripHeight / 2,
+  );
+  context.fill();
+}
+
 /**
  * Creates a transparent CanvasTexture for the Meta Horizon-style window shell.
  *
  * @param {Object} THREE Host Three namespace.
- * @param {'control-bar'|'corner'|'edge'} kind Visual kind.
+ * @param {'grab-strip'|'control-bar'|'corner'|'edge'} kind Visual kind.
  * @param {Object} [options] Drawing and theme options.
  * @returns {Object|null} CanvasTexture when canvas APIs are available.
  */
 export function createMetaWindowChromeTexture(THREE, kind, options = {}) {
   if (typeof THREE?.CanvasTexture !== 'function') return null;
-  let dimensions = kind === 'control-bar' ? [768, 128] : kind === 'edge' ? [256, 64] : [160, 160];
+  let dimensions = kind === 'control-bar' || kind === 'grab-strip'
+    ? [768, 128]
+    : kind === 'edge' ? [256, 64] : [160, 160];
   let canvas = canvasFor(dimensions[0], dimensions[1], options.createCanvas);
   let context = canvas?.getContext?.('2d');
   if (!context) return null;
   context.clearRect(0, 0, dimensions[0], dimensions[1]);
-  if (kind === 'control-bar') {
+  if (kind === 'grab-strip') {
+    drawGrabStrip(context, dimensions[0], dimensions[1], options.color || '#fff');
+  } else if (kind === 'control-bar') {
     drawControlBar(context, dimensions[0], dimensions[1], options);
   } else if (kind === 'corner') {
     drawCorner(context, dimensions[0], dimensions[1], options.handle, options.color || '#fff');
