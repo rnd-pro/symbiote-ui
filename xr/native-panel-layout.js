@@ -137,6 +137,7 @@ export function projectXRPanelsToPlane(panels, options = {}) {
     let height = Math.max(rect.height * planeHeight - gap, 0.001);
     let projected = {
       id,
+      role: panel.role || 'window',
       panelType: panel.panelType || panel.component || 'panel',
       relativeRect: rect,
       position: [
@@ -590,6 +591,7 @@ export function compileNativePanelPrimitives(panels, familyData = {}) {
     let compiled = {
       id,
       family: data.family,
+      role: panel.role || 'window',
       panelType: panel.panelType || 'panel',
       position: [...(panel.position || [0, 0, 0])],
       rotation: [...(panel.rotation || [0, 0, 0])],

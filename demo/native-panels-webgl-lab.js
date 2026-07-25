@@ -170,6 +170,7 @@ function windowDiagnostics() {
       measuredPosition: [...panel.position],
       presentationPosition: presentationPosition(panel),
       offset: [...(windowDragOffsets.get(panel.id) || [0, 0, 0])],
+      scale: [...(windowScaleOverrides.get(panel.id) || [1, 1])],
       actions: [...new Set(
         panel.primitives
           .map((primitive) => primitive.hit?.intent)
@@ -184,6 +185,7 @@ function applyWindowPresentation() {
     let panel = compiledById.get(group.userData?.panelId);
     if (!panel) continue;
     group.position.set(...presentationPosition(panel));
+    panelRenderer.setPanelScale(panel.id, windowScaleOverrides.get(panel.id) || [1, 1]);
   }
 }
 
@@ -201,7 +203,9 @@ function computeFrontCameraBounds() {
   let maxY = -Infinity;
   for (let panel of compiled?.panels || []) {
     let [x, y] = presentationPosition(panel);
-    let [width, height] = panel.size;
+    let scale = windowScaleOverrides.get(panel.id) || [1, 1];
+    let width = panel.size[0] * scale[0];
+    let height = panel.size[1] * scale[1];
     minX = Math.min(minX, x - width / 2);
     maxX = Math.max(maxX, x + width / 2);
     minY = Math.min(minY, y - height / 2);
@@ -305,7 +309,9 @@ let raycaster = new THREE.Raycaster();
 let pointerNdc = new THREE.Vector2();
 let spatialDragController = createSpatialDragController();
 let dragState = null;
+let resizeState = null;
 let windowDragOffsets = new Map();
+let windowScaleOverrides = new Map();
 let resizerRelay = null;
 let diagnosticsTimer = null;
 let captureToken = 0;
@@ -544,6 +550,9 @@ function rebuildCompiledMaps() {
   for (let panelId of windowDragOffsets.keys()) {
     if (!compiledById.has(panelId)) windowDragOffsets.delete(panelId);
   }
+  for (let panelId of windowScaleOverrides.keys()) {
+    if (!compiledById.has(panelId)) windowScaleOverrides.delete(panelId);
+  }
   panelSurfaceIds = new Map();
   for (let panel of compiled.panels) {
     let surface = panel.primitives.find((primitive) => primitive.kind === 'surface'
@@ -667,6 +676,7 @@ function setWindowGap(value) {
 
 function resetWindowPositions() {
   windowDragOffsets.clear();
+  windowScaleOverrides.clear();
   applyWindowPresentation();
   resize();
   lab.lastAction = { actionId: 'reset-window-positions' };
@@ -757,6 +767,9 @@ function pickPanelHit(event) {
     }
   }
   if (!panelId) return null;
+  if (primary?.kind === 'window-chrome') {
+    return { panelId, point: primary.point || null, hit: primary };
+  }
   let point = null;
   let surfaceId = panelSurfaceIds.get(panelId);
   for (let hit of hits) {
@@ -937,6 +950,23 @@ function onPointerMove(event) {
     dragState.moved = true;
     return;
   }
+  if (resizeState) {
+    if (event.pointerId !== resizeState.pointerId) return;
+    let handle = resizeState.handle;
+    let dx = (event.clientX - resizeState.startClientX) / Math.max(canvas.clientWidth * 0.28, 1);
+    let dy = (event.clientY - resizeState.startClientY) / Math.max(canvas.clientHeight * 0.28, 1);
+    let nextX = resizeState.startScale[0] + (/east/i.test(handle) ? dx : -dx);
+    let nextY = resizeState.startScale[1] + (/south/i.test(handle) ? dy : -dy);
+    let next = [
+      Math.max(0.5, Math.min(2.5, nextX)),
+      Math.max(0.5, Math.min(2.5, nextY)),
+    ];
+    windowScaleOverrides.set(resizeState.panelId, next);
+    panelRenderer.setPanelScale(resizeState.panelId, next);
+    resizeState.moved = true;
+    resize();
+    return;
+  }
   let picked = pickPanelHit(event);
   let hit = picked?.hit || null;
   lab.hovered = hit
@@ -947,7 +977,9 @@ function onPointerMove(event) {
     : lab.lastNormalizedHit;
   panelRenderer.setHovered(hit?.primitiveId || null);
   canvas.style.cursor = hit
-    ? (canStartWindowDrag(hit) ? 'grab' : hit.actionId === 'drag-resizer' ? 'col-resize' : 'pointer')
+    ? (hit.actionId === 'resize-window'
+        ? (/northEast|southWest/i.test(hit.handle) ? 'nesw-resize' : 'nwse-resize')
+        : canStartWindowDrag(hit) ? 'grab' : hit.actionId === 'drag-resizer' ? 'col-resize' : 'pointer')
     : 'default';
   renderDiagnostics();
 }
@@ -958,6 +990,19 @@ function onPointerDown(event) {
     if (startResizerRelay(event, picked.hit)) {
       canvas.style.cursor = 'col-resize';
     }
+    return;
+  }
+  if (picked?.hit?.actionId === 'resize-window') {
+    resizeState = {
+      panelId: picked.panelId,
+      pointerId: event.pointerId,
+      handle: picked.hit.handle,
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+      startScale: [...(windowScaleOverrides.get(picked.panelId) || [1, 1])],
+      moved: false,
+    };
+    canvas.setPointerCapture(event.pointerId);
     return;
   }
   if (canStartWindowDrag(picked?.hit)) {
@@ -989,6 +1034,23 @@ function onPointerUp(event) {
     return;
   }
   if (dragState && event.pointerId !== dragState.pointerId) return;
+  if (resizeState) {
+    if (event.pointerId !== resizeState.pointerId) return;
+    let finished = resizeState;
+    resizeState = null;
+    if (canvas.hasPointerCapture(finished.pointerId)) {
+      canvas.releasePointerCapture(finished.pointerId);
+    }
+    lab.lastAction = {
+      actionId: 'resize-window',
+      panelId: finished.panelId,
+      handle: finished.handle,
+      scale: [...(windowScaleOverrides.get(finished.panelId) || [1, 1])],
+    };
+    emitIntent({ type: 'panel-resize', ...lab.lastAction });
+    renderDiagnostics();
+    return;
+  }
   let wasDragging = dragState;
   let endRecord = spatialDragController.endDrag();
   dragState = null;
@@ -1022,6 +1084,30 @@ function onPointerUp(event) {
   let picked = pickPanelHit(event);
   let hit = picked?.hit || null;
   if (!hit) return;
+  if (hit.actionId?.startsWith('window-')) {
+    let action = hit.actionId.slice('window-'.length);
+    let group = panelRenderer.getPanelObject(hit.panelId);
+    if (action === 'reset') {
+      windowDragOffsets.delete(hit.panelId);
+      windowScaleOverrides.delete(hit.panelId);
+      applyWindowPresentation();
+      resize();
+    } else if (action === 'fullscreen') {
+      let next = windowScaleOverrides.get(hit.panelId)?.[0] > 1.4 ? [1, 1] : [1.65, 1.65];
+      windowScaleOverrides.set(hit.panelId, next);
+      panelRenderer.setPanelScale(hit.panelId, next);
+      resize();
+    } else if (action === 'pin' && group) {
+      group.userData.pinned = !group.userData.pinned;
+      panelRenderer.setPanelScale(hit.panelId, windowScaleOverrides.get(hit.panelId) || [1, 1]);
+    } else if (action === 'close' && group) {
+      group.visible = false;
+    }
+    lab.lastAction = { actionId: hit.actionId, panelId: hit.panelId };
+    emitIntent({ type: 'window-action', ...lab.lastAction });
+    renderDiagnostics();
+    return;
+  }
   if (hit.actionId === 'drag-resizer') return;
   if (hit.actionId === 'select-row' || hit.actionId === 'select-node' || hit.actionId === 'toggle-row') {
     lab.selected = {
@@ -1048,6 +1134,16 @@ function onPointerUp(event) {
 }
 
 function cancelPointerDrag(event) {
+  if (resizeState && (event.pointerId === undefined || event.pointerId === resizeState.pointerId)) {
+    let cancelledResize = resizeState;
+    resizeState = null;
+    windowScaleOverrides.set(cancelledResize.panelId, cancelledResize.startScale);
+    panelRenderer.setPanelScale(cancelledResize.panelId, cancelledResize.startScale);
+    if (canvas.hasPointerCapture(cancelledResize.pointerId)) {
+      canvas.releasePointerCapture(cancelledResize.pointerId);
+    }
+    return;
+  }
   if (!dragState || (event.pointerId !== undefined && event.pointerId !== dragState.pointerId)) return;
   let cancelled = dragState;
   let panelGroup = panelRenderer.getPanelObject(cancelled.panelId);
@@ -1069,7 +1165,7 @@ function bindPointer() {
   canvas.addEventListener('pointercancel', cancelPointerDrag);
   canvas.addEventListener('lostpointercapture', cancelPointerDrag);
   canvas.addEventListener('pointerleave', () => {
-    if (dragState || resizerRelay) return;
+    if (dragState || resizeState || resizerRelay) return;
     lab.hovered = null;
     panelRenderer.setHovered(null);
     renderDiagnostics();
@@ -1095,6 +1191,9 @@ function getReport() {
     windowGap: lab.windowGap,
     windowOffsets: Object.fromEntries(
       [...windowDragOffsets].map(([panelId, offset]) => [panelId, [...offset]]),
+    ),
+    windowScales: Object.fromEntries(
+      [...windowScaleOverrides].map(([panelId, scale]) => [panelId, [...scale]]),
     ),
     windows: windowDiagnostics(),
     themeRevision: lab.themeRevision,

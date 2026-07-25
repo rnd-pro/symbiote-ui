@@ -532,7 +532,7 @@ test('Three adapter handles world space dragging with a transformed root contain
   assert.equal(Math.abs(mesh.position.z - (-1.0)) < 0.001, true);
 });
 
-test('Three adapter opposite-edge resizing stability', () => {
+test('Three adapter resizes symmetrically from the window center', () => {
   const mockRaycaster = new Raycaster();
   const adapter = createXRThreeWebXRAdapter({ THREE, raycaster: mockRaycaster });
   const renderer = new Renderer();
@@ -584,8 +584,8 @@ test('Three adapter opposite-edge resizing stability', () => {
   assert.equal(updateResult.ok, true);
 
   let currentSize = readPanelSize(mesh);
-  assert.deepEqual(currentSize, [1.0, 0.6]);
-  assert.equal(Math.abs(mesh.position.x - 0.1) < 0.001, true);
+  assert.deepEqual(currentSize, [1.2000000000000002, 0.6]);
+  assert.equal(mesh.position.x, 0);
   assert.equal(mesh.position.y, 0);
   assert.equal(mesh.position.z, 0);
 
@@ -611,9 +611,9 @@ test('Three adapter opposite-edge resizing stability', () => {
   assert.equal(updateResult.ok, true);
 
   currentSize = readPanelSize(mesh);
-  assert.equal(Math.abs(currentSize[0] - 0.6) < 0.001, true);
+  assert.equal(Math.abs(currentSize[0] - 0.4) < 0.001, true);
   assert.equal(Math.abs(currentSize[1] - 0.6) < 0.001, true);
-  assert.equal(Math.abs(mesh.position.x - 0.1) < 0.001, true);
+  assert.equal(mesh.position.x, 0);
 });
 
 test('Three adapter real Three.js conformed tests with rotated root', () => {
@@ -669,7 +669,7 @@ test('Three adapter real Three.js conformed tests with rotated root', () => {
   assert.ok(actualWorldPos.distanceTo(expectedWorldPos) < 1e-5);
   assert.ok(mesh.position.distanceTo(expectedLocalPos) < 1e-5);
 
-  // 2. Prove east resize preserves west world edge
+  // 2. Prove east resize expands symmetrically around the window center
   // Start with a clean setup: panel size 0.8 x 0.6, parent-local position (0.5, 0.2, -0.3)
   mesh.position.set(0.5, 0.2, -0.3);
   mesh.rotation.set(0, 0, 0);
@@ -730,16 +730,16 @@ test('Three adapter real Three.js conformed tests with rotated root', () => {
   assert.equal(updateResult.ok, true);
   scene.updateMatrixWorld(true);
 
-  // Assert size increased to 1.0
+  // A 0.2 m corner delta adds 0.4 m to the full width.
   const currentSize = readPanelSize(mesh);
-  assert.ok(Math.abs(currentSize[0] - 1.0) < 1e-4);
+  assert.ok(Math.abs(currentSize[0] - 1.2) < 1e-4);
 
-  // Verify that the west edge in world space has NOT moved!
-  const finalWestLocal = new THREE_REAL.Vector3(-0.5, 0, 0); // -new_width/2
+  const finalWestLocal = new THREE_REAL.Vector3(-0.6, 0, 0);
   const finalWestWorld = new THREE_REAL.Vector3();
   mesh.localToWorld(finalWestWorld.copy(finalWestLocal));
 
-  assert.ok(finalWestWorld.distanceTo(initialWestWorld) < 1e-5, "West edge shifted! Resizing from east did not keep west edge stable.");
+  assert.ok(finalWestWorld.distanceTo(initialWestWorld) > 0.19);
+  assert.ok(mesh.position.distanceTo(new THREE_REAL.Vector3(0.5, 0.2, -0.3)) < 1e-5);
 
   // 3. Prove frame corners remain aligned and handles have scale (1,1,1)
   const visualSummary = mesh.userData.panelFrameVisuals;
@@ -757,7 +757,7 @@ test('Three adapter real Three.js conformed tests with rotated root', () => {
 
   // Horizon-style grips straddle the corners, so the nwHandle centers on the
   // north-west corner itself.
-  const expectedNWLocalX = -1.0 / 2;
+  const expectedNWLocalX = -1.2 / 2;
   const expectedNWLocalY = 0.6 / 2;
 
   assert.ok(Math.abs(nwHandle.position.x - expectedNWLocalX) < 1e-5);
@@ -766,19 +766,13 @@ test('Three adapter real Three.js conformed tests with rotated root', () => {
 
 
 test('panel frame meter chrome keeps constant physical size across panel sizes', () => {
-  // Absent meter options: zones stay byte-identical to the UV defaults.
   const legacy = createXRPanelFrame({ id: 'p' });
   assert.equal(legacy.version, 'xr-panel-frame-v1');
-  assert.equal(legacy.zones.move.height, 0.085);
-  assert.equal(legacy.zones.move.y, 1.02);
-  assert.equal(legacy.zones.resize.northWest.width, 0.055);
-  assert.equal(legacy.zones.resize.northWest.height, 0.055);
-  assert.equal(legacy.zones.actions.close.width, 0.07);
-  assert.deepEqual(
-    createXRPanelFrame({ id: 'p', size: [2.4, 1.2] }).zones,
-    legacy.zones,
-    'UV-default zones must not depend on panel size',
-  );
+  assert.ok(Math.abs(legacy.zones.move.height * 0.45 - 0.048) < 1e-9);
+  assert.ok(Math.abs((legacy.zones.move.y - 1) * 0.45 - 0.018) < 1e-9);
+  assert.ok(Math.abs(legacy.zones.resize.northWest.width * 0.8 - 0.044) < 1e-9);
+  assert.ok(Math.abs(legacy.zones.actions.close.width * 0.8 - 0.038) < 1e-9);
+  assert.equal(Object.keys(legacy.zones.edges).length, 4);
 
   const meterOptions = {
     handleSizeMeters: 0.024,
@@ -842,7 +836,7 @@ test('Three adapter rebuilds meter-chrome hit zones and chrome surface after res
   assert.ok(Math.abs(extendBefore.y - (0.008 + 0.12 + 0.02)) < 1e-9);
   assert.ok(Math.abs(extendBefore.x - Math.max(0.06, 0.8 * 0.08)) < 1e-9);
 
-  // Simulate an east drag-resize: 0.8 -> 1.0 m wide, height unchanged.
+  // Simulate a center-anchored east drag-resize: 0.8 -> 1.2 m wide.
   mesh.userData.lastFrameTarget = {
     version: 'xr-panel-frame-target-v1',
     panelId: 'p-meter',
@@ -863,14 +857,14 @@ test('Three adapter rebuilds meter-chrome hit zones and chrome surface after res
     return target;
   };
   assert.equal(rayAdapter.updateDrag(mockController).ok, true);
-  assert.deepEqual(readPanelSize(mesh), [1.0, 0.6]);
+  assert.deepEqual(readPanelSize(mesh), [1.2000000000000002, 0.6]);
 
   // The hit-test frame was rebuilt for the new size, not left stale.
   const after = mesh.userData.panelFrame;
   assert.notEqual(after, before);
   assert.ok(Math.abs(after.zones.move.height * 0.6 - 0.12) < 1e-9);
-  assert.ok(Math.abs(after.zones.resize.northWest.width * 1.0 - 0.024) < 1e-9);
-  assert.ok(Math.abs(after.zones.actions.close.width * 1.0 - 0.030) < 1e-9);
+  assert.ok(Math.abs(after.zones.resize.northWest.width * 1.2 - 0.024) < 1e-9);
+  assert.ok(Math.abs(after.zones.actions.close.width * 1.2 - 0.030) < 1e-9);
   assert.ok(after.zones.resize.northWest.width < before.zones.resize.northWest.width);
 
   // Hit-zone correctness: a point inside the OLD grip UV but outside the new
@@ -887,7 +881,7 @@ test('Three adapter rebuilds meter-chrome hit zones and chrome surface after res
   // Chrome surface extents were recomputed from the rebuilt frame.
   const extendAfter = mesh.userData.chromeSurface.userData.extend;
   assert.ok(Math.abs(extendAfter.y - (0.008 + 0.12 + 0.02)) < 1e-9);
-  assert.ok(Math.abs(extendAfter.x - Math.max(0.06, 1.0 * 0.08)) < 1e-9);
+  assert.ok(Math.abs(extendAfter.x - Math.max(0.06, 1.2 * 0.08)) < 1e-9);
 });
 
 // --- Portable panel close/restore (window chrome close action) ---

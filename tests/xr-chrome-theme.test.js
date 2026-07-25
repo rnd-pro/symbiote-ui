@@ -97,8 +97,9 @@ test('three adapter chrome visuals default to the resolved design tokens', () =>
   let visuals = mesh.userData.panelFrameVisuals;
   assert.equal(visuals.ok, true);
   let byName = Object.fromEntries(visuals.objects.map((object) => [object.name, object]));
-  assert.equal(byName['sn-xr-panel-frame-move'].material.color.getHex(), accent);
+  assert.equal(byName['sn-xr-panel-frame-control-bar'].material.color.getHex(), onSurface);
   assert.equal(byName['sn-xr-panel-frame-resize-northWest'].material.color.getHex(), onSurface);
+  assert.equal(byName['sn-xr-panel-frame-edge-north'].material.color.getHex(), onSurface);
   assert.equal(byName['sn-xr-panel-frame-action-close'].material.color.getHex(), onSurface);
   assert.equal(byName['sn-xr-panel-frame-action-pin'].material.color.getHex(), onSurface);
   // Panel material fallback also comes from the surface token now.
@@ -119,7 +120,7 @@ test('explicit chrome color options still win over the token defaults', () => {
   assert.equal(result.ok, true);
   let visuals = adapter.getPanelMesh('p-custom').userData.panelFrameVisuals;
   let byName = Object.fromEntries(visuals.objects.map((object) => [object.name, object]));
-  assert.equal(byName['sn-xr-panel-frame-move'].material.color.getHex(), 0x123456);
+  assert.equal(byName['sn-xr-panel-frame-control-bar'].material.color.getHex(), 0x123456);
   assert.equal(byName['sn-xr-panel-frame-resize-northWest'].material.color.getHex(), 0x654321);
 });
 
@@ -147,6 +148,12 @@ test('chrome controls keep proportional sizes and matching hit zones across pane
       let hit = hitTestXRPanelFrame(frame, zoneCenter(zone));
       assert.equal(hit?.zone, 'resize', `${handle} grip must stay hittable at ${size}`);
       assert.equal(hit?.handle, handle);
+    }
+    for (let [handle, zone] of Object.entries(layout.edges)) {
+      let hit = hitTestXRPanelFrame(frame, zoneCenter(zone));
+      assert.equal(hit?.zone, 'edge', `${handle} edge handle must stay hittable at ${size}`);
+      assert.equal(hit?.handle, handle);
+      assert.equal(hit?.operation, 'move');
     }
     for (let [action, zone] of Object.entries(layout.actions)) {
       let hit = hitTestXRPanelFrame(frame, zoneCenter(zone));

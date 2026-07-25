@@ -13,6 +13,7 @@ export * from './emulation.js';
 export * from './deep-graph.js';
 export * from './workbench.js';
 export * from './panel-frame.js';
+export * from './meta-window-chrome.js';
 export * from './chrome-theme.js';
 export * from './spatial-index.js';
 export * from './spatial-graph.js';

@@ -22,57 +22,59 @@ function bool(value) {
 }
 
 export function computeXRPanelChromeLayout(sizeMeters = [0.8, 0.45], options = {}) {
-  // Single source of truth for chrome geometry (also consumed by IWER prelude
-  // targeting). Zones stay in panel UV; meter inputs convert at build time
-  // (u = meters/width, v = meters/height) so chrome keeps a constant PHYSICAL
-  // size across resizes. Absent meter options keep the historical UV defaults,
-  // byte-identical for existing consumers.
+  // Meta Horizon window chrome keeps a constant physical size: corner resize
+  // brackets and edge grab handles sit outside the panel, while one unified
+  // control bar floats below it. Zones remain normalized for shared hit tests.
   let size = Array.isArray(sizeMeters) ? sizeMeters : [0.8, 0.45];
   let width = Math.max(0.05, numberOr(size[0], 0.8));
   let height = Math.max(0.05, numberOr(size[1], 0.45));
-  // Meter inputs are clamped in METERS (sanity bounds) before conversion;
-  // the historical UV clamps apply to UV inputs only — clamping meter-derived
-  // UV would break the constant-physical-size invariant on large panels.
-  let handleSizeU = options.handleSizeMeters != null
-    ? clamp(numberOr(options.handleSizeMeters, 0), 0, 0.5) / width
-    : clamp(numberOr(options.handleSize, 0.055), 0.02, 0.16);
-  let handleSizeV = options.handleSizeMeters != null
-    ? clamp(numberOr(options.handleSizeMeters, 0), 0, 0.5) / height
-    : handleSizeU;
-  let footerHeight = options.footerHeightMeters != null
-    ? clamp(numberOr(options.footerHeightMeters, 0), 0, 0.5) / height
-    : clamp(numberOr(options.footerHeight ?? options.headerHeight, 0.085), 0.04, 0.22);
-  let actionSize = options.actionSizeMeters != null
-    ? clamp(numberOr(options.actionSizeMeters, 0), 0, 0.5) / width
-    : clamp(numberOr(options.actionSize, 0.07), 0.02, 0.16);
-  let footerTop = 1 + (options.footerGapMeters != null
-    ? clamp(numberOr(options.footerGapMeters, 0), 0, 0.2) / height
-    : clamp(numberOr(options.footerGap, 0.02), 0, 0.1));
-  let barLeft = 0.34;
-  let barWidth = 0.32;
-  let gap = 0.02;
-  // Non-closable panels omit the close zone entirely — a chrome action with
-  // no handler behind it would be a dead control.
+  let handleMeters = clamp(numberOr(options.handleSizeMeters, 0.044), 0.016, 0.12);
+  let handleSizeU = handleMeters / width;
+  let handleSizeV = handleMeters / height;
+  let barHeightMeters = clamp(numberOr(options.footerHeightMeters, 0.048), 0.024, 0.2);
+  let barWidthMeters = clamp(numberOr(options.controlBarWidthMeters, 0.31), 0.22, 0.52);
+  let barWidth = Math.min(0.9, barWidthMeters / width);
+  let footerHeight = barHeightMeters / height;
+  let footerGap = clamp(numberOr(options.footerGapMeters, 0.018), 0.006, 0.05) / height;
+  let footerTop = 1 + footerGap;
+  let barLeft = (1 - barWidth) / 2;
+  let actionSize = clamp(numberOr(options.actionSizeMeters, 0.038), 0.02, 0.08) / width;
+  let edgeLengthMeters = clamp(numberOr(options.edgeLengthMeters, 0.07), 0.04, 0.12);
+  let edgeDepthMeters = clamp(numberOr(options.edgeHitDepthMeters, 0.036), 0.024, 0.06);
+  let edgeGapMeters = clamp(numberOr(options.edgeGapMeters, 0.009), 0.003, 0.024);
+  let edgeLengthU = edgeLengthMeters / width;
+  let edgeLengthV = edgeLengthMeters / height;
+  let edgeDepthU = edgeDepthMeters / width;
+  let edgeDepthV = edgeDepthMeters / height;
+  let edgeGapU = edgeGapMeters / width;
+  let edgeGapV = edgeGapMeters / height;
+  let actionOrder = ['reset', 'fullscreen', 'pin'];
+  if (options.closable !== false) actionOrder.push('close');
   let actions = {};
-  if (options.closable !== false) {
-    actions.close = { x: barLeft - actionSize * 2 - gap * 2, y: footerTop, width: actionSize, height: footerHeight };
-  }
-  actions.reset = { x: barLeft - actionSize - gap, y: footerTop, width: actionSize, height: footerHeight };
-  actions.pin = { x: barLeft + barWidth + gap, y: footerTop, width: actionSize, height: footerHeight };
-  actions.fullscreen = {
-    x: barLeft + barWidth + gap * 2 + actionSize,
-    y: footerTop,
-    width: actionSize,
-    height: footerHeight,
-  };
+  actionOrder.forEach((action, index) => {
+    actions[action] = {
+      x: barLeft + barWidth - actionSize * (actionOrder.length - index),
+      y: footerTop,
+      width: actionSize,
+      height: footerHeight,
+    };
+  });
+  let moveWidth = Math.max(actionSize, barWidth - actionSize * actionOrder.length);
   return {
-    move: { x: barLeft, y: footerTop, width: barWidth, height: footerHeight },
+    controlBar: { x: barLeft, y: footerTop, width: barWidth, height: footerHeight },
+    move: { x: barLeft, y: footerTop, width: moveWidth, height: footerHeight },
     content: { x: 0, y: 0, width: 1, height: 1 },
     resize: {
       northWest: { x: -handleSizeU / 2, y: -handleSizeV / 2, width: handleSizeU, height: handleSizeV },
       northEast: { x: 1 - handleSizeU / 2, y: -handleSizeV / 2, width: handleSizeU, height: handleSizeV },
       southEast: { x: 1 - handleSizeU / 2, y: 1 - handleSizeV / 2, width: handleSizeU, height: handleSizeV },
       southWest: { x: -handleSizeU / 2, y: 1 - handleSizeV / 2, width: handleSizeU, height: handleSizeV },
+    },
+    edges: {
+      north: { x: 0.5 - edgeLengthU / 2, y: -edgeGapV - edgeDepthV, width: edgeLengthU, height: edgeDepthV },
+      east: { x: 1 + edgeGapU, y: 0.5 - edgeLengthV / 2, width: edgeDepthU, height: edgeLengthV },
+      south: { x: 0.5 - edgeLengthU / 2, y: 1 + edgeGapV, width: edgeLengthU, height: edgeDepthV },
+      west: { x: -edgeGapU - edgeDepthU, y: 0.5 - edgeLengthV / 2, width: edgeDepthU, height: edgeLengthV },
     },
     actions,
   };
@@ -147,6 +149,20 @@ export function hitTestXRPanelFrame(frameOrPanel = {}, point = {}, options = {})
         zone: 'resize',
         action: null,
         operation: 'resize',
+        handle,
+        point: normalizedPoint,
+      };
+    }
+  }
+
+  for (let [handle, zone] of Object.entries(frame.zones.edges || {})) {
+    if (contains(zone, normalizedPoint)) {
+      return {
+        version: 'xr-panel-frame-target-v1',
+        panelId: frame.panelId,
+        zone: 'edge',
+        action: null,
+        operation: 'move',
         handle,
         point: normalizedPoint,
       };

@@ -10,6 +10,7 @@ import {
   createXRPanelTextureSourceSummary,
 } from './html-canvas-renderer.js';
 import { createXRPanelFrame, hitTestXRPanelFrame } from './panel-frame.js';
+import { createMetaWindowChromeTexture } from './meta-window-chrome.js';
 import { XR_DEFAULT_DESIGN_TOKENS, xrDesignTokenColorNumber } from './chrome-theme.js';
 import {
   createXRPanelTextureQualitySummary,
@@ -406,9 +407,10 @@ function updatePanelHitReticleVisual(reticle, hit) {
 }
 
 function normalizePanelFrameVisualOptions(options = {}) {
-  let headerColor = options.headerColor ?? options.color ?? XR_CHROME_ACCENT_COLOR;
+  let headerColor = options.headerColor ?? options.color ?? XR_CHROME_ON_SURFACE_COLOR;
   let handleColor = options.handleColor ?? options.color ?? XR_CHROME_ON_SURFACE_COLOR;
   let actionColor = options.actionColor ?? options.color ?? XR_CHROME_ON_SURFACE_COLOR;
+  let foregroundColor = options.foregroundColor ?? XR_PANEL_SURFACE_COLOR;
   let pinnedColor = options.pinnedColor ?? XR_CHROME_PINNED_COLOR;
   let opacity = Number(options.opacity ?? 0.34);
   let handleOpacity = Number(options.handleOpacity ?? 0.62);
@@ -419,6 +421,7 @@ function normalizePanelFrameVisualOptions(options = {}) {
     headerColor,
     handleColor,
     actionColor,
+    foregroundColor,
     pinnedColor,
     opacity: Number.isFinite(opacity) ? Math.max(0.04, Math.min(1, opacity)) : 0.34,
     handleOpacity: Number.isFinite(handleOpacity) ? Math.max(0.04, Math.min(1, handleOpacity)) : 0.62,
@@ -429,133 +432,10 @@ function normalizePanelFrameVisualOptions(options = {}) {
   };
 }
 
-function panelChromeCanvas(width, height) {
-  if (typeof document !== 'undefined' && typeof document.createElement === 'function') {
-    let canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    return canvas;
-  }
-  if (typeof OffscreenCanvas === 'function') {
-    return new OffscreenCanvas(width, height);
-  }
-  return null;
-}
-
-function panelChromeRoundedRect(ctx, x, y, width, height, radius) {
-  let r = Math.min(radius, width / 2, height / 2);
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + width, y, x + width, y + height, r);
-  ctx.arcTo(x + width, y + height, x, y + height, r);
-  ctx.arcTo(x, y + height, x, y, r);
-  ctx.arcTo(x, y, x + width, y, r);
-  ctx.closePath();
-}
-
-function drawPanelChromeGlyph(ctx, kind, size) {
-  let center = size / 2;
-  ctx.strokeStyle = 'rgba(255,255,255,1)';
-  ctx.fillStyle = 'rgba(255,255,255,1)';
-  ctx.lineWidth = size * 0.075;
-  ctx.lineCap = 'round';
-  if (kind === 'pin') {
-    ctx.beginPath();
-    ctx.arc(center, center - size * 0.06, size * 0.12, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(center, center + size * 0.04);
-    ctx.lineTo(center, center + size * 0.24);
-    ctx.stroke();
-  } else if (kind === 'reset') {
-    ctx.beginPath();
-    ctx.arc(center, center, size * 0.2, Math.PI * 0.15, Math.PI * 1.6);
-    ctx.stroke();
-    let tipAngle = Math.PI * 1.6;
-    let tipX = center + Math.cos(tipAngle) * size * 0.2;
-    let tipY = center + Math.sin(tipAngle) * size * 0.2;
-    ctx.beginPath();
-    ctx.moveTo(tipX - size * 0.09, tipY - size * 0.02);
-    ctx.lineTo(tipX, tipY);
-    ctx.lineTo(tipX + size * 0.03, tipY - size * 0.11);
-    ctx.stroke();
-  } else if (kind === 'close') {
-    let arm = size * 0.14;
-    ctx.beginPath();
-    ctx.moveTo(center - arm, center - arm);
-    ctx.lineTo(center + arm, center + arm);
-    ctx.moveTo(center + arm, center - arm);
-    ctx.lineTo(center - arm, center + arm);
-    ctx.stroke();
-  } else if (kind === 'fullscreen') {
-    let inset = size * 0.25;
-    let arm = size * 0.12;
-    ctx.beginPath();
-    ctx.moveTo(inset + arm, inset);
-    ctx.lineTo(inset, inset);
-    ctx.lineTo(inset, inset + arm);
-    ctx.moveTo(size - inset - arm, inset);
-    ctx.lineTo(size - inset, inset);
-    ctx.lineTo(size - inset, inset + arm);
-    ctx.moveTo(inset, size - inset - arm);
-    ctx.lineTo(inset, size - inset);
-    ctx.lineTo(inset + arm, size - inset);
-    ctx.moveTo(size - inset - arm, size - inset);
-    ctx.lineTo(size - inset, size - inset);
-    ctx.lineTo(size - inset, size - inset - arm);
-    ctx.stroke();
-  }
-}
-
-const PANEL_CHROME_CORNER_FLIPS = {
-  northWest: [1, 1],
-  northEast: [-1, 1],
-  southEast: [-1, -1],
-  southWest: [1, -1],
-};
-
-function createPanelChromeTexture(THREE, kind, detail = null) {
-  if (typeof THREE?.CanvasTexture !== 'function') return null;
-  let width = kind === 'bar' ? 256 : 128;
-  let height = kind === 'bar' ? 64 : 128;
-  let canvas = panelChromeCanvas(width, height);
-  let ctx = canvas?.getContext?.('2d');
-  if (!ctx) return null;
-  ctx.clearRect(0, 0, width, height);
-  if (kind === 'bar') {
-    // Horizon-style grab pill: full-width rounded bar centered in the band.
-    ctx.fillStyle = 'rgba(255,255,255,1)';
-    panelChromeRoundedRect(ctx, width * 0.03, height * 0.3, width * 0.94, height * 0.4, height * 0.2);
-    ctx.fill();
-  } else if (kind === 'action') {
-    ctx.fillStyle = 'rgba(255,255,255,0.34)';
-    ctx.beginPath();
-    ctx.arc(width / 2, height / 2, width * 0.42, 0, Math.PI * 2);
-    ctx.fill();
-    drawPanelChromeGlyph(ctx, detail, width);
-  } else if (kind === 'corner') {
-    // Rounded L-bracket grip, drawn for northWest and mirrored per corner.
-    let [flipX, flipY] = PANEL_CHROME_CORNER_FLIPS[detail] || [1, 1];
-    ctx.save();
-    ctx.translate(width / 2, height / 2);
-    ctx.scale(flipX, flipY);
-    ctx.translate(-width / 2, -height / 2);
-    ctx.strokeStyle = 'rgba(255,255,255,1)';
-    ctx.lineWidth = width * 0.11;
-    ctx.lineCap = 'round';
-    let inset = width * 0.16;
-    let arm = width * 0.42;
-    let radius = width * 0.22;
-    ctx.beginPath();
-    ctx.moveTo(inset + arm, inset);
-    ctx.arcTo(inset, inset, inset, inset + arm, radius);
-    ctx.lineTo(inset, inset + arm);
-    ctx.stroke();
-    ctx.restore();
-  }
-  let texture = new THREE.CanvasTexture(canvas);
-  if ('anisotropy' in texture) texture.anisotropy = 4;
-  return texture;
+function panelChromeCssColor(value, fallback) {
+  if (typeof value === 'string') return value;
+  if (Number.isFinite(value)) return `#${Math.max(0, Math.min(0xffffff, value)).toString(16).padStart(6, '0')}`;
+  return fallback;
 }
 
 function frameZoneToPanelRect(zone = {}, size = [0.8, 0.45]) {
@@ -674,18 +554,25 @@ function buildPanelFrameVisuals(THREE, panel, mesh, options = {}) {
   let objects = [];
   let zones = [];
 
-  let moveObject = buildPanelFrameZoneVisual(THREE, 'move', frame.zones.move, size, visual, {
+  let actionNames = Object.keys(frame.zones.actions || {});
+  let controlBar = buildPanelFrameZoneVisual(THREE, 'control-bar', frame.zones.controlBar, size, visual, {
     zone: 'move',
     operation: 'move',
     color: visual.headerColor,
-    opacity: visual.opacity,
+    opacity: visual.hoverOpacity,
     hoverOpacity: visual.hoverOpacity,
-    texture: createPanelChromeTexture(THREE, 'bar'),
+    texture: createMetaWindowChromeTexture(THREE, 'control-bar', {
+      title: panel?.title || panel?.label || panel?.component || panel?.panelType || panel?.id || 'Window',
+      actions: actionNames,
+      activeAction: frame.state.pinned ? 'pin' : null,
+      background: panelChromeCssColor(visual.headerColor, '#fafafa'),
+      foreground: panelChromeCssColor(visual.foregroundColor, '#272727'),
+    }),
   });
-  moveObject.userData.panelId = frame.panelId;
-  if (addPanelFrameVisualObject(mesh, moveObject)) {
-    objects.push(moveObject);
-    zones.push('move');
+  controlBar.userData.panelId = frame.panelId;
+  if (addPanelFrameVisualObject(mesh, controlBar)) {
+    objects.push(controlBar);
+    zones.push('control-bar');
   }
 
   for (let [handle, zone] of Object.entries(frame.zones.resize || {})) {
@@ -696,7 +583,10 @@ function buildPanelFrameVisuals(THREE, panel, mesh, options = {}) {
       opacity: visual.handleRestOpacity,
       hoverOpacity: visual.hoverOpacity,
       square: true,
-      texture: createPanelChromeTexture(THREE, 'corner', handle),
+      texture: createMetaWindowChromeTexture(THREE, 'corner', {
+        handle,
+        color: panelChromeCssColor(visual.handleColor, '#fafafa'),
+      }),
     });
     object.userData.panelId = frame.panelId;
     if (addPanelFrameVisualObject(mesh, object)) {
@@ -705,19 +595,35 @@ function buildPanelFrameVisuals(THREE, panel, mesh, options = {}) {
     }
   }
 
+  for (let [handle, zone] of Object.entries(frame.zones.edges || {})) {
+    let object = buildPanelFrameZoneVisual(THREE, `edge-${handle}`, zone, size, visual, {
+      zone: 'edge',
+      operation: 'move',
+      handle,
+      opacity: visual.handleRestOpacity,
+      hoverOpacity: visual.hoverOpacity,
+      texture: createMetaWindowChromeTexture(THREE, 'edge', {
+        edge: handle,
+        color: panelChromeCssColor(visual.handleColor, '#fafafa'),
+      }),
+    });
+    object.userData.panelId = frame.panelId;
+    if (addPanelFrameVisualObject(mesh, object)) {
+      objects.push(object);
+      zones.push(`edge:${handle}`);
+    }
+  }
+
   for (let [action, zone] of Object.entries(frame.zones.actions || {})) {
-    let pinnedAccent = action === 'pin' && frame.state.pinned;
     let object = buildPanelFrameZoneVisual(THREE, `action-${action}`, zone, size, visual, {
       zone: 'action',
       operation: 'action',
       action,
-      color: pinnedAccent ? visual.pinnedColor : visual.actionColor,
-      opacity: pinnedAccent ? visual.hoverOpacity : visual.opacity,
-      hoverOpacity: visual.hoverOpacity,
-      square: true,
-      visualScale: 0.92,
-      texture: createPanelChromeTexture(THREE, 'action', action),
+      color: action === 'pin' && frame.state.pinned ? visual.pinnedColor : visual.actionColor,
+      opacity: 0,
+      hoverOpacity: 0,
     });
+    object.material.depthWrite = false;
     object.userData.panelId = frame.panelId;
     if (addPanelFrameVisualObject(mesh, object)) {
       objects.push(object);
@@ -733,6 +639,7 @@ function buildPanelFrameVisuals(THREE, panel, mesh, options = {}) {
     zones,
     footer: true,
     resizeHandles: Object.keys(frame.zones.resize || {}).length,
+    edgeHandles: Object.keys(frame.zones.edges || {}).length,
     actionSlots: Object.keys(frame.zones.actions || {}).length,
     objects,
   };
@@ -755,7 +662,7 @@ function updatePanelFrameHoverVisuals(mesh, hovered, framePoint = null, smoothin
     let base = Number(object.userData?.baseOpacity ?? 0);
     let peak = Number(object.userData?.hoverOpacity ?? base);
     let reveal = hovered;
-    if (reveal && object.userData?.zone === 'resize') {
+    if (reveal && (object.userData?.zone === 'resize' || object.userData?.zone === 'edge')) {
       let center = object.userData.zoneCenter;
       reveal = Boolean(framePoint && center &&
         Math.abs((framePoint.x - center.x) * size[0]) < revealRadiusMeters &&
@@ -2012,38 +1919,6 @@ function worldToPanelParentLocal(mesh, worldPosition) {
   return worldPosition;
 }
 
-function worldDirectionToPanelParentLocal(THREE, mesh, direction) {
-  let parent = mesh?.parent;
-  if (!parent || !hasFn(parent, 'getWorldQuaternion') || !THREE?.Vector3 || !THREE?.Quaternion) {
-    return direction;
-  }
-  let inverse = parent.getWorldQuaternion(new THREE.Quaternion());
-  let local = new THREE.Vector3(direction.x, direction.y, direction.z);
-  if (typeof inverse?.invert !== 'function' || typeof local.applyQuaternion !== 'function') {
-    return direction;
-  }
-  return local.applyQuaternion(inverse.invert());
-}
-
-function scaleVector(vector, scalar) {
-  return {
-    x: Number(vector?.x || 0) * scalar,
-    y: Number(vector?.y || 0) * scalar,
-    z: Number(vector?.z || 0) * scalar,
-  };
-}
-
-function addVector(target, vector) {
-  if (!target || !vector) return;
-  if (typeof target.add === 'function') {
-    target.add(vector);
-    return;
-  }
-  target.x = Number(target.x || 0) + Number(vector.x || 0);
-  target.y = Number(target.y || 0) + Number(vector.y || 0);
-  target.z = Number(target.z || 0) + Number(vector.z || 0);
-}
-
 function readPanelSize(mesh, ignoreScale = false) {
   let explicit = mesh?.userData?.xrSize || mesh?.userData?.panel?.size;
   if (Array.isArray(explicit)) {
@@ -2134,36 +2009,16 @@ function resizePanelFromDrag(THREE, dragState, point, options = {}) {
   let yDelta = vectorDot(delta, yAxis);
   let nextWidth = startSize[0];
   let nextHeight = startSize[1];
-  let centerShift = { x: 0, y: 0, z: 0 };
   let east = /east/i.test(handle);
   let west = /west/i.test(handle);
   let north = /north/i.test(handle);
   let south = /south/i.test(handle);
 
-  if (east) {
-    nextWidth += xDelta;
-    centerShift = scaleVector(xAxis, xDelta / 2);
-  }
-  if (west) {
-    nextWidth -= xDelta;
-    centerShift = scaleVector(xAxis, xDelta / 2);
-  }
-  if (north) {
-    nextHeight += yDelta;
-    centerShift = {
-      x: centerShift.x + scaleVector(yAxis, yDelta / 2).x,
-      y: centerShift.y + scaleVector(yAxis, yDelta / 2).y,
-      z: centerShift.z + scaleVector(yAxis, yDelta / 2).z,
-    };
-  }
-  if (south) {
-    nextHeight -= yDelta;
-    centerShift = {
-      x: centerShift.x + scaleVector(yAxis, yDelta / 2).x,
-      y: centerShift.y + scaleVector(yAxis, yDelta / 2).y,
-      z: centerShift.z + scaleVector(yAxis, yDelta / 2).z,
-    };
-  }
+  // Horizon corner resizing expands symmetrically from the window center.
+  if (east) nextWidth += xDelta * 2;
+  if (west) nextWidth -= xDelta * 2;
+  if (north) nextHeight += yDelta * 2;
+  if (south) nextHeight -= yDelta * 2;
 
   nextWidth = Math.max(minWidth, Math.min(maxWidth, nextWidth));
   nextHeight = Math.max(minHeight, Math.min(maxHeight, nextHeight));
@@ -2172,13 +2027,12 @@ function resizePanelFromDrag(THREE, dragState, point, options = {}) {
   if (dragState.startPosition?.clone && dragState.mesh?.position?.copy) {
     dragState.mesh.position.copy(dragState.startPosition.clone());
   }
-  addVector(dragState.mesh?.position, worldDirectionToPanelParentLocal(THREE, dragState.mesh, centerShift));
   return {
     operation: 'resize',
     handle,
     size,
     delta: { x: xDelta, y: yDelta },
-    centerShift,
+    centerShift: { x: 0, y: 0, z: 0 },
   };
 }
 
@@ -3063,7 +2917,12 @@ export function createXRThreeSessionController(options = {}) {
       depthTest: false,
       side: THREE.DoubleSide,
     });
-    let texture = createPanelChromeTexture(THREE, 'action', 'close');
+    let texture = createMetaWindowChromeTexture(THREE, 'control-bar', {
+      title: 'Restore',
+      actions: [],
+      background: panelChromeCssColor(XR_CHROME_ON_SURFACE_COLOR, '#fafafa'),
+      foreground: panelChromeCssColor(XR_PANEL_SURFACE_COLOR, '#272727'),
+    });
     if (texture) material.map = texture;
     let chip = new THREE.Mesh(
       new THREE.PlaneGeometry(RESTORE_CHIP_SIZE[0], RESTORE_CHIP_SIZE[1]),

@@ -257,6 +257,7 @@ test('compileNativePanelPrimitives compiles three families across four finite la
   assert.deepEqual([...NATIVE_PANEL_LAYERS], ['surface', 'content', 'controls', 'focus']);
   assert.equal(compiled.version, NATIVE_PANEL_LAYOUT_VERSION);
   assert.equal(compiled.panels.length, 3);
+  assert.equal(compiled.panels.every((panel) => panel.role === 'window'), true);
   assert.equal(compiled.panels.find((panel) => panel.id === 'activity').family, 'list-table');
   assert.equal(compiled.panels.find((panel) => panel.id === 'pipeline').family, 'workflow-graph');
   assert.equal(compiled.panels.find((panel) => panel.id === 'inspector').family, 'detail-actions');
@@ -371,18 +372,24 @@ test('three native panel renderer constructs Node-safe with a minimal contract m
   assert.equal(renderer.getPanelObject('missing'), null);
 
   let interactive = renderer.getInteractiveObjects();
-  assert.equal(interactive.length, compiled.counts.hitTargets);
+  assert.ok(interactive.length > compiled.counts.hitTargets);
+  assert.equal(
+    interactive.some((object) => object.userData?.primitiveId?.includes('/window-chrome/resize-')),
+    true,
+  );
   for (let object of interactive) {
     assert.equal(typeof object.userData.panelId, 'string');
     assert.equal(typeof object.userData.primitiveId, 'string');
     assert.equal(typeof object.userData.actionId, 'string');
-    assert.ok(NATIVE_PANEL_LAYERS.includes(object.userData.layer));
+    if (object.userData.kind !== 'window-chrome') {
+      assert.ok(NATIVE_PANEL_LAYERS.includes(object.userData.layer));
+    }
   }
 
   let diagnostics = renderer.getDiagnostics();
   assert.equal(diagnostics.panels, 3);
   assert.equal(diagnostics.primitives, compiled.counts.primitives);
-  assert.equal(diagnostics.interactive, compiled.counts.hitTargets);
+  assert.equal(diagnostics.interactive, interactive.length);
   assert.equal(diagnostics.threeRevision, '0.180.0');
   assert.equal(diagnostics.themeRevision, 1);
 
@@ -404,7 +411,8 @@ test('three native panel renderer constructs Node-safe with a minimal contract m
 
   renderer.setLayerExplode(0.05);
   let panelGroup = renderer.group.children[0];
-  let layerZ = panelGroup.children.map((layerGroup) => layerGroup.position.z);
+  let contentGroup = panelGroup.children.find((child) => child.userData?.kind === 'native-panel-content');
+  let layerZ = contentGroup.children.map((layerGroup) => layerGroup.position.z);
   assert.equal(layerZ.length, NATIVE_PANEL_LAYERS.length);
   assert.deepEqual([...layerZ].sort((a, b) => a - b), layerZ);
   assert.ok(layerZ[NATIVE_PANEL_LAYERS.length - 1] > layerZ[0]);
