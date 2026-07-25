@@ -364,6 +364,11 @@ test('three native panel renderer constructs Node-safe with a minimal contract m
   assert.equal(renderer.group.children.length, 3);
   let panelIds = renderer.group.children.map((group) => group.userData.panelId).sort();
   assert.deepEqual(panelIds, ['activity', 'inspector', 'pipeline']);
+  assert.equal(
+    renderer.getPanelObject('activity'),
+    renderer.group.children.find((group) => group.userData.panelId === 'activity'),
+  );
+  assert.equal(renderer.getPanelObject('missing'), null);
 
   let interactive = renderer.getInteractiveObjects();
   assert.equal(interactive.length, compiled.counts.hitTargets);

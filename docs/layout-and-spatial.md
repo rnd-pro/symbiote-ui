@@ -560,10 +560,14 @@ layout instead of hand-authored family data:
    is only a transport/layout container, each leaf `layout-node[node-type="panel"]`
    compiles to exactly one independently renderable and movable native group
    (`role: "window"`) that owns its own primitives, geometry, hit state, and
-   layers, and child content never leaks into a sibling window. Split resizers
-   are layout controls, not user windows: they compile to `role: "layout-control"`
-   groups (`panelType: "split-resizer"`) that only arrange the windows, even
-   though they travel in the same generic `panels` transport array.
+   layers, and child content never leaks into a sibling window. Each measured
+   window header carries the shared `drag-panel` intent. The compiler preserves
+   measured geometry; presentation hosts may add a visual gap and persistent
+   per-window drag offset without changing snapshot or parity data. Split
+   resizers are layout controls, not user windows: they compile to
+   `role: "layout-control"` groups (`panelType: "split-resizer"`) that only
+   arrange the windows, even though they travel in the same generic `panels`
+   transport array.
    `counts.windows` and `counts.layoutControls` report the two roles separately
    while `counts.panels` stays the total transport-group count.
 7. `createSpatialParityReport(snapshot, compiled, options)` (pure, Node-safe)
@@ -594,8 +598,13 @@ live `cascade-theme-lab.html#multi-agent-dev/source-editor` reference in a
 fixed-size same-origin iframe beside the native scene; the outer lab document
 loads the self-hosted Material Symbols stylesheet (it owns the raster
 canvases), explicitly awaits the icon font before first draw, and issues one
-late-readiness quality redraw when the font arrives after mount; theme changes
-apply to the reference first, then re-capture flows through the renderer
+late-readiness quality redraw when the font arrives after mount. Its external
+scene controls consume the same system, field, slider, focus, and state-layer
+roles as the provider controls. One global cascade state is owned by the outer
+root and mirrored without a second notification into the reference root; a
+reference-root theme change is mirrored in the other direction. The resulting
+single theme transition then re-captures the reference and updates Three through
+the renderer
 appearance-refresh seam (dark/light recapture updates resolved colors, text,
 and icon styles in place with window object identity preserved; a
 `geometry-invalidated` result triggers an intentional remount); theme roles
@@ -609,7 +618,15 @@ summary) and `parity.visual` (`spatial-visual-parity-v1` summary) — and the
 headline `parity.ok` is their conjunction; native row/control activation
 relays to the matching live DOM intent (tree select/toggle/collapse, per-button
 header intents resolved through `resolveHeaderControlSelector`, tree toolbar
-controls through `SPATIAL_TREE_CONTROLS`, resizer drags).
+controls through `SPATIAL_TREE_CONTROLS`, resizer drags). Native window headers
+reuse `createSpatialDragController`; the lab stores each final manual offset
+above the measured position and configurable window gap, so theme recapture and
+gap changes do not erase individual placement. Pointer capture keeps the drag
+owned until release, while cancel restores the start position; Reset clears all
+manual offsets. A collapsed rail remains the measured collapsed window rather
+than being expanded behind the reference layout's back. Because its type control
+fills the narrow rail, that control is gesture-disambiguated: a click keeps the
+original action, while pointer movement grabs and moves the window.
 The explicit `mock-families` source keeps the hand-authored family path
 working unchanged.
 

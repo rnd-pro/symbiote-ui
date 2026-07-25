@@ -293,12 +293,23 @@ function compileChromelessControlPrimitives(node, panelNode, scale) {
   }];
 }
 
+function compileHeaderPrimitive(node, panelNode, scale) {
+  let primitive = compileSurfacePrimitive(node, panelNode, scale, 'surface', 'surface-raised');
+  primitive.hit = {
+    id: `${node.id}/hit/drag-panel`,
+    actionId: 'drag-panel',
+    targetId: panelNode.id,
+    intent: 'panel-drag',
+  };
+  return primitive;
+}
+
 function compileNodePrimitives(node, panelNode, scale) {
   switch (node.part) {
     case 'panel':
       return [compileSurfacePrimitive(node, panelNode, scale, 'surface', 'surface')];
     case 'header':
-      return [compileSurfacePrimitive(node, panelNode, scale, 'surface', 'surface-raised')];
+      return [compileHeaderPrimitive(node, panelNode, scale)];
     case 'title':
     case 'text':
     case 'row-label':

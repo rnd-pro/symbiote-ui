@@ -39,8 +39,8 @@
       min-width: 0;
       min-height: 0;
       overflow: auto;
-      border-right: 1px solid var(--sn-sys-outline, rgba(255, 255, 255, 0.14));
-      background: var(--sn-sys-surface-sunken, #101010);
+      border-right: 1px solid var(--sn-sys-outline-subtle, var(--sn-sys-outline));
+      background: var(--sn-sys-surface-sunken, var(--sn-sys-surface));
     }
 
     .reference[hidden] {
@@ -49,8 +49,8 @@
 
     #reference-frame {
       display: block;
-      width: 100%;
-      height: 100%;
+      width: 1280px;
+      height: 720px;
       border: 0;
     }
 
@@ -58,7 +58,8 @@
       position: relative;
       min-width: 0;
       min-height: 0;
-      border-right: 1px solid var(--sn-sys-outline, rgba(255, 255, 255, 0.14));
+      border-right: 1px solid var(--sn-sys-outline-subtle, var(--sn-sys-outline));
+      background: var(--sn-sys-surface-sunken, var(--sn-sys-surface));
     }
 
     #gl {
@@ -72,13 +73,13 @@
       grid-template-rows: auto minmax(0, 1fr) auto;
       min-width: 0;
       min-height: 0;
-      background: var(--sn-sys-surface-panel, #202020);
+      background: var(--sn-sys-surface-panel, var(--sn-sys-surface));
     }
 
     .panel-head,
     .diagnostics {
-      padding: 14px;
-      border-bottom: 1px solid var(--sn-sys-outline, rgba(255, 255, 255, 0.14));
+      padding: 16px;
+      border-bottom: 1px solid var(--sn-sys-outline-subtle, var(--sn-sys-outline));
     }
 
     .panel-head {
@@ -93,18 +94,49 @@
     }
 
     .hint {
-      color: var(--sn-sys-on-surface-dim, #aaa);
+      color: var(--sn-sys-on-surface-dim, var(--sn-sys-on-surface));
       font-size: 12px;
       line-height: 1.35;
     }
 
     .controls {
       display: grid;
-      gap: 12px;
+      gap: 10px;
       align-content: start;
       min-height: 0;
       overflow: auto;
-      padding: 14px;
+      padding: 12px;
+    }
+
+    .control-group {
+      display: grid;
+      gap: 12px;
+      padding: 12px;
+      border: 1px solid var(--sn-sys-outline-subtle, var(--sn-sys-outline));
+      border-radius: var(--sn-card-radius, var(--sn-radius-md));
+      background: var(--sn-sys-surface-raised, var(--sn-sys-surface));
+      box-shadow: var(--sn-sys-shadow-raised, none);
+    }
+
+    .control-group-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .control-kicker {
+      color: var(--sn-sys-on-surface, currentColor);
+      font-size: 12px;
+      font-weight: 650;
+      line-height: 1.2;
+    }
+
+    .control-caption {
+      margin-top: 3px;
+      color: var(--sn-sys-on-surface-dim, var(--sn-sys-on-surface));
+      font-size: 11px;
+      line-height: 1.3;
     }
 
     .field {
@@ -117,45 +149,108 @@
       align-items: center;
       justify-content: space-between;
       gap: 8px;
-      color: var(--sn-sys-on-surface-dim, #aaa);
+      color: var(--sn-sys-on-surface-dim, var(--sn-sys-on-surface));
       font-size: 12px;
       line-height: 1.2;
     }
 
     .field-row strong {
-      color: var(--sn-sys-on-surface, #f0f0f0);
+      color: var(--sn-sys-on-surface, currentColor);
       font-size: 12px;
       font-weight: 600;
     }
 
     input[type="range"] {
+      appearance: none;
       width: 100%;
-      accent-color: var(--sn-sys-accent, #4c8bf5);
+      height: 18px;
+      margin: 0;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-runnable-track {
+      height: 4px;
+      border-radius: 999px;
+      background: var(
+        --sn-slider-track-bg,
+        color-mix(in srgb, var(--sn-sys-on-surface) 12%, transparent)
+      );
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      margin-top: -6px;
+      border: 2px solid var(--sn-slider-thumb-border, var(--sn-sys-accent));
+      border-radius: 50%;
+      background: var(--sn-slider-thumb-bg, var(--sn-sys-on-accent));
+      box-shadow: var(--sn-sys-shadow-raised, none);
+    }
+
+    input[type="range"]:focus-visible {
+      outline: var(--sn-slider-focus-ring, 2px solid var(--sn-sys-focus-ring));
+      outline-offset: 2px;
+      border-radius: 999px;
     }
 
     select {
       width: 100%;
-      height: 34px;
+      min-height: calc(36px * var(--sn-density, 1));
       padding: 0 10px;
-      border: 1px solid var(--sn-sys-outline, rgba(255, 255, 255, 0.14));
-      border-radius: 7px;
-      background: var(--sn-sys-surface-raised, #272727);
-      color: var(--sn-sys-on-surface, #f0f0f0);
+      border: 1px solid var(--sn-field-control-border, var(--sn-sys-outline-subtle));
+      border-radius: var(--sn-field-control-radius, 7px);
+      background: var(--sn-field-control-bg, var(--sn-sys-surface));
+      color: var(--sn-sys-on-surface, currentColor);
       font: inherit;
       font-size: 13px;
     }
 
     select:focus-visible {
-      border-color: var(--sn-sys-accent, #4c8bf5);
+      border-color: var(--sn-sys-accent);
       outline: none;
+      box-shadow: 0 0 0 2px var(--sn-sys-focus-ring);
+    }
+
+    .control-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      min-height: calc(30px * var(--sn-density, 1));
+      padding: 0 9px;
+      border: 1px solid var(--sn-sys-outline-subtle, var(--sn-sys-outline));
+      border-radius: var(--sn-button-radius, var(--sn-radius-sm));
+      background: var(--sn-sys-surface, transparent);
+      color: var(--sn-sys-on-surface, currentColor);
+      font: inherit;
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    .control-button:hover {
+      background: color-mix(
+        in srgb,
+        var(--sn-sys-accent) var(--sn-sys-state-hover-mix),
+        var(--sn-sys-surface)
+      );
+    }
+
+    .control-button:focus-visible {
+      outline: 2px solid var(--sn-sys-focus-ring);
+      outline-offset: 2px;
+    }
+
+    .control-button .material-symbols-outlined {
+      font-size: 16px;
     }
 
     .diagnostics {
       display: grid;
       gap: 8px;
-      border-top: 1px solid var(--sn-sys-outline, rgba(255, 255, 255, 0.14));
+      border-top: 1px solid var(--sn-sys-outline-subtle, var(--sn-sys-outline));
       border-bottom: 0;
-      color: var(--sn-sys-on-surface-dim, #aaa);
+      color: var(--sn-sys-on-surface-dim, var(--sn-sys-on-surface));
       font-size: 12px;
     }
 
@@ -164,10 +259,10 @@
       max-height: 220px;
       overflow: auto;
       padding: 9px;
-      border: 1px solid var(--sn-sys-outline, rgba(255, 255, 255, 0.14));
-      border-radius: 7px;
-      background: rgba(0, 0, 0, 0.22);
-      color: var(--sn-sys-on-surface, #f0f0f0);
+      border: 1px solid var(--sn-sys-outline-subtle, var(--sn-sys-outline));
+      border-radius: var(--sn-card-radius, var(--sn-radius-md));
+      background: var(--sn-sys-surface-sunken, var(--sn-sys-surface));
+      color: var(--sn-sys-on-surface, currentColor);
       white-space: pre-wrap;
     }
   </style>
@@ -193,40 +288,64 @@
         deterministic parity diagnostics.
       </div>
     </header>
-    <section class="controls">
-      <div class="field">
-        <div class="field-row"><strong>Source</strong></div>
-        <select id="source">
-          <option value="real-layout">Measured real layout</option>
-          <option value="mock-families">Mock families</option>
-        </select>
-      </div>
-      <div class="field">
-        <div class="field-row"><strong>Camera</strong></div>
-        <select id="camera">
-          <option value="front">Front orthographic</option>
-          <option value="perspective">Perspective</option>
-          <option value="spatial">Spatial</option>
-        </select>
-      </div>
-      <div class="field">
-        <div class="field-row"><strong>Theme</strong></div>
-        <select id="theme">
-          <option value="dark">Cascade dark</option>
-          <option value="light">Cascade light</option>
-        </select>
-      </div>
-      <div class="field">
-        <div class="field-row"><strong>Layer explode</strong><span id="explode-value">0.00 m</span></div>
-        <input type="range" id="explode" min="0" max="0.12" step="0.005" value="0">
-      </div>
+    <section class="controls" aria-label="Native panel controls">
+      <section class="control-group" aria-labelledby="scene-controls-title">
+        <header class="control-group-head">
+          <div>
+            <div class="control-kicker" id="scene-controls-title">Scene</div>
+            <div class="control-caption">Independent window presentation</div>
+          </div>
+          <button class="control-button" id="reset-windows" type="button">
+            <span class="material-symbols-outlined" aria-hidden="true">restart_alt</span>
+            <span>Reset</span>
+          </button>
+        </header>
+        <label class="field">
+          <span class="field-row"><strong>Source</strong></span>
+          <select id="source">
+            <option value="real-layout">Measured real layout</option>
+            <option value="mock-families">Mock families</option>
+          </select>
+        </label>
+        <label class="field">
+          <span class="field-row"><strong>Camera</strong></span>
+          <select id="camera">
+            <option value="front">Front orthographic</option>
+            <option value="perspective">Perspective</option>
+            <option value="spatial">Spatial</option>
+          </select>
+        </label>
+        <label class="field">
+          <span class="field-row"><strong>Window gap</strong><span id="window-gap-value">0.06 m</span></span>
+          <input type="range" id="window-gap" min="0" max="0.18" step="0.01" value="0.06">
+        </label>
+        <label class="field">
+          <span class="field-row"><strong>Layer explode</strong><span id="explode-value">0.00 m</span></span>
+          <input type="range" id="explode" min="0" max="0.12" step="0.005" value="0">
+        </label>
+      </section>
+      <section class="control-group" aria-labelledby="appearance-controls-title">
+        <header class="control-group-head">
+          <div>
+            <div class="control-kicker" id="appearance-controls-title">Appearance</div>
+            <div class="control-caption">Global cascade theme</div>
+          </div>
+        </header>
+        <label class="field">
+          <span class="field-row"><strong>Theme</strong></span>
+          <select id="theme">
+            <option value="dark">Cascade dark</option>
+            <option value="light">Cascade light</option>
+          </select>
+        </label>
+      </section>
     </section>
     <footer class="diagnostics">
       <div>Diagnostics</div>
       <code id="diagnostics">{}</code>
     </footer>
   </aside>
-  <script type="module" src="./native-panels-webgl-lab.js?v=native-panels-webgl-lab-v2"></script>
+  <script type="module" src="./native-panels-webgl-lab.js?v=native-panels-webgl-lab-v3"></script>
 </body>
 
 </html>

@@ -94,6 +94,18 @@ test('compileSpatialSnapshot keeps text, resolved styles, and action provenance'
   assert.equal(save.style.background, 'rgb(76, 139, 245)');
 });
 
+test('compileSpatialSnapshot wires measured window headers into the native drag-panel contract', () => {
+  let compiled = compileSpatialSnapshot(createReferenceSnapshot(), { planeWidth: 1.28 });
+  let header = primitivesOf(compiled, 'panel:project')
+    .find((primitive) => primitive.spatialNodeId === 'panel:project/header');
+  assert.deepEqual(header.hit, {
+    id: 'panel:project/header/hit/drag-panel',
+    actionId: 'drag-panel',
+    targetId: 'panel:project',
+    intent: 'panel-drag',
+  });
+});
+
 test('compileSpatialSnapshot converts panel-relative bounds to meters', () => {
   let compiled = compileSpatialSnapshot(createReferenceSnapshot(), { planeWidth: 1.28 });
   let title = primitivesOf(compiled, 'panel:project')

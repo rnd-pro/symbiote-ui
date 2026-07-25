@@ -17,7 +17,7 @@ test('native panels webgl lab attaches the native renderer group to the rendered
   );
 });
 
-test('native panels webgl lab harness keeps reference and stage in equal columns with a fill-frame iframe', () => {
+test('native panels webgl lab captures the real layout through a canonical desktop viewport', () => {
   let columns = [...labHarnessHtml.matchAll(/grid-template-columns:\s*([^;]+);/g)]
     .map((match) => match[1].trim().replace(/\s+/g, ' '));
   assert.deepEqual(
@@ -25,17 +25,62 @@ test('native panels webgl lab harness keeps reference and stage in equal columns
     ['minmax(0, 1fr) minmax(0, 1fr) 360px'],
     'reference and stage must share equal flexible columns beside the fixed 360px diagnostics panel',
   );
+  let referenceRule = /\.reference\s*\{[^}]*\}/.exec(labHarnessHtml)?.[0] || '';
+  assert.match(
+    referenceRule,
+    /overflow:\s*auto;/,
+    'the reference column must scroll without shrinking the canonical iframe viewport',
+  );
   let frameRule = /#reference-frame\s*\{[^}]*\}/.exec(labHarnessHtml)?.[0] || '';
   assert.match(
     frameRule,
-    /width:\s*100%;/,
-    'the iframe viewport must fill the reference column width instead of a fixed pixel width',
+    /width:\s*1280px;/,
+    'the iframe must stay above the showcase responsive breakpoint so every layout leaf keeps its desktop position',
   );
   assert.match(
     frameRule,
-    /height:\s*100%;/,
-    'the iframe viewport must fill the reference column height instead of a fixed pixel height',
+    /height:\s*720px;/,
+    'the canonical viewport height must remain deterministic across outer lab window sizes',
   );
+});
+
+test('native panels webgl lab keeps measured windows independently draggable through the shared spatial controller', () => {
+  assert.match(
+    labSource,
+    /import\s*\{\s*createSpatialDragController\s*\}\s*from\s*'\.\.\/xr\/spatial-drag-controller\.js';/,
+    'window dragging must reuse the shared ray-plane controller',
+  );
+  assert.match(labSource, /let windowDragOffsets = new Map\(\)/);
+  assert.match(labSource, /resolveNativePanelPresentationPosition\([\s\S]*windowDragOffsets\.get\(panel\.id\)/);
+  assert.match(labSource, /canvas\.setPointerCapture\(event\.pointerId\)/);
+  assert.match(labSource, /canvas\.addEventListener\('pointercancel', cancelPointerDrag\)/);
+  assert.match(labSource, /function canStartWindowDrag\(hit\)/);
+  assert.match(labSource, /panel\.relativeRect\?\.width <= COLLAPSED_WINDOW_GRAB_MAX_RATIO/);
+  assert.match(labSource, /windows:\s*windowDiagnostics\(\)/);
+  assert.match(labSource, /primitive\.hit\?\.intent/);
+  assert.match(labHarnessHtml, /id="window-gap"/);
+  assert.match(labHarnessHtml, /id="reset-windows"/);
+});
+
+test('native panels webgl lab controls consume the same cascade theme roles as provider controls', () => {
+  assert.match(labHarnessHtml, /--sn-field-control-bg/);
+  assert.match(labHarnessHtml, /--sn-field-control-border/);
+  assert.match(labHarnessHtml, /--sn-slider-track-bg/);
+  assert.match(labHarnessHtml, /--sn-slider-focus-ring/);
+  assert.match(labHarnessHtml, /--sn-sys-state-hover-mix/);
+  assert.match(labHarnessHtml, /Global cascade theme/);
+});
+
+test('native panels webgl lab mirrors one global cascade state across outer controls and the reference', () => {
+  let setThemeBody = /function setTheme\(name\) \{([\s\S]*?)\n\}/.exec(labSource)?.[1] || '';
+  assert.equal(
+    (setThemeBody.match(/applyCascadeTheme\(/g) || []).length,
+    1,
+    'the theme selector writes one owning root and lets the theme event mirror the reference',
+  );
+  assert.match(labSource, /source:\s*'native-panel-lab-theme-mirror'/);
+  assert.match(labSource, /notify:\s*false/);
+  assert.match(labSource, /if \(themeSyncing/);
 });
 
 test('native panels webgl lab relays each header intent to its own DOM control via the capture contract', () => {

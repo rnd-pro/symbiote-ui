@@ -36,7 +36,9 @@ import {
 import { compileSpatialSnapshot } from '../xr/spatial-snapshot-compile.js';
 import { createSpatialParityReport } from '../xr/spatial-parity.js';
 import { createSpatialVisualParityReport } from '../xr/spatial-visual-parity.js';
+import { createSpatialDragController } from '../xr/spatial-drag-controller.js';
 import { createNativePanelLabData } from './native-panels-webgl-lab-data.js';
+import { resolveNativePanelPresentationPosition } from './native-panels-webgl-lab-layout.js';
 
 const PINNED_THREE_REVISION = '0.180.0';
 const ICON_FONT_SPEC = '16px "Material Symbols Outlined"';
@@ -44,6 +46,8 @@ const ICON_FONT_SAMPLE = 'expand_more';
 const SPATIAL_ROOT_POSITION = [0, 1.35, -1.4];
 const FRONT_CAMERA_PADDING = 0.04;
 const FRONT_CAMERA_DISTANCE = 2;
+const DEFAULT_WINDOW_GAP = 0.06;
+const COLLAPSED_WINDOW_GRAB_MAX_RATIO = 0.04;
 const REAL_ROUTE = 'multi-agent-dev/source-editor';
 const REAL_SURFACE_SELECTORS = Object.freeze([
   '.project-files-panel',
@@ -135,6 +139,54 @@ function normalizeThemeRoles(theme, doc) {
   return unconvertible;
 }
 
+function presentationWindows() {
+  let panels = compiled?.panels || [];
+  let windows = panels.filter((panel) => panel.role === 'window');
+  return windows.length
+    ? windows
+    : panels.filter((panel) => panel.role !== 'layout-control');
+}
+
+function basePresentationPosition(panel) {
+  return resolveNativePanelPresentationPosition(panel, presentationWindows(), lab.windowGap);
+}
+
+function presentationPosition(panel) {
+  return resolveNativePanelPresentationPosition(
+    panel,
+    presentationWindows(),
+    lab.windowGap,
+    windowDragOffsets.get(panel.id),
+  );
+}
+
+function windowDiagnostics() {
+  return (compiled?.panels || [])
+    .filter((panel) => panel.role === 'window')
+    .map((panel) => ({
+      id: panel.id,
+      panelType: panel.panelType,
+      size: [...panel.size],
+      measuredPosition: [...panel.position],
+      presentationPosition: presentationPosition(panel),
+      offset: [...(windowDragOffsets.get(panel.id) || [0, 0, 0])],
+      actions: [...new Set(
+        panel.primitives
+          .map((primitive) => primitive.hit?.intent)
+          .filter(Boolean),
+      )].sort(),
+    }));
+}
+
+function applyWindowPresentation() {
+  if (!compiled || !panelRenderer) return;
+  for (let group of panelRenderer.group.children) {
+    let panel = compiledById.get(group.userData?.panelId);
+    if (!panel) continue;
+    group.position.set(...presentationPosition(panel));
+  }
+}
+
 /**
  * Computes the front orthographic frustum from the compiled panel bounds plus a
  * deterministic padding, so every panel border and action stays visible at any
@@ -148,7 +200,7 @@ function computeFrontCameraBounds() {
   let minY = Infinity;
   let maxY = -Infinity;
   for (let panel of compiled?.panels || []) {
-    let [x, y] = panel.position;
+    let [x, y] = presentationPosition(panel);
     let [width, height] = panel.size;
     minX = Math.min(minX, x - width / 2);
     maxX = Math.max(maxX, x + width / 2);
@@ -199,12 +251,16 @@ let cameraSelect = document.getElementById('camera');
 let themeSelect = document.getElementById('theme');
 let explodeInput = document.getElementById('explode');
 let explodeValue = document.getElementById('explode-value');
+let windowGapInput = document.getElementById('window-gap');
+let windowGapValue = document.getElementById('window-gap-value');
+let resetWindowsButton = document.getElementById('reset-windows');
 
 let lab = {
   ready: false,
   status: 'boot',
   source: 'real-layout',
   cameraMode: 'front',
+  windowGap: DEFAULT_WINDOW_GAP,
   themeRevision: 0,
   threeRevision: PINNED_THREE_REVISION,
   counts: null,
@@ -230,6 +286,8 @@ let lab = {
   setCamera,
   setTheme,
   setLayerExplode,
+  setWindowGap,
+  resetWindowPositions,
 };
 window.__nativePanelLab = lab;
 
@@ -245,12 +303,15 @@ let visualParityReport = null;
 let cameras = {};
 let raycaster = new THREE.Raycaster();
 let pointerNdc = new THREE.Vector2();
+let spatialDragController = createSpatialDragController();
 let dragState = null;
+let windowDragOffsets = new Map();
 let resizerRelay = null;
 let diagnosticsTimer = null;
 let captureToken = 0;
 let referenceThemeReady = false;
 let lateFontRedrawUsed = false;
+let themeSyncing = false;
 
 function boot() {
   applyTheme(document.documentElement, DEFAULT_PROVIDER_THEME);
@@ -373,6 +434,7 @@ function captureAndMount() {
     }
     panelRenderer.mount(compiled, { theme });
   }
+  applyWindowPresentation();
   scene.background = new THREE.Color(toOpaqueRgb(theme.roles['surface-sunken']));
   parityReport = createSpatialParityReport(snapshot, compiled);
   visualParityReport = createSpatialVisualParityReport(snapshot, panelRenderer.getAppearanceReport());
@@ -463,6 +525,7 @@ function buildMockScene() {
   lab.parity = null;
   lab.deterministic = null;
   panelRenderer.mount(compiled, { theme: panelRendererTheme() });
+  applyWindowPresentation();
   scene.background = new THREE.Color(toOpaqueRgb(panelRendererTheme().roles['surface-sunken']));
   lab.counts = {
     panels: compiled.counts.panels,
@@ -478,6 +541,9 @@ function buildMockScene() {
 
 function rebuildCompiledMaps() {
   compiledById = new Map(compiled.panels.map((panel) => [panel.id, panel]));
+  for (let panelId of windowDragOffsets.keys()) {
+    if (!compiledById.has(panelId)) windowDragOffsets.delete(panelId);
+  }
   panelSurfaceIds = new Map();
   for (let panel of compiled.panels) {
     let surface = panel.primitives.find((primitive) => primitive.kind === 'surface'
@@ -576,13 +642,6 @@ function setTheme(name) {
     source: 'native-panel-lab-theme-control',
     targetSelector: ':root',
   });
-  let referenceDoc = referenceFrame.contentDocument;
-  if (referenceThemeReady && referenceDoc) {
-    applyCascadeTheme(referenceDoc.documentElement, state, {
-      source: 'native-panel-lab-theme-control',
-      targetSelector: ':root',
-    });
-  }
 }
 
 function setLayerExplode(value) {
@@ -593,7 +652,54 @@ function setLayerExplode(value) {
   renderDiagnostics();
 }
 
-function onCascadeThemeChange() {
+function setWindowGap(value) {
+  let amount = Number(value);
+  if (!Number.isFinite(amount) || amount < 0) {
+    throw new Error(`Window gap must be a non-negative finite number, got ${JSON.stringify(value)}.`);
+  }
+  lab.windowGap = amount;
+  windowGapInput.value = String(amount);
+  windowGapValue.textContent = `${amount.toFixed(2)} m`;
+  applyWindowPresentation();
+  resize();
+  renderDiagnostics();
+}
+
+function resetWindowPositions() {
+  windowDragOffsets.clear();
+  applyWindowPresentation();
+  resize();
+  lab.lastAction = { actionId: 'reset-window-positions' };
+  renderDiagnostics();
+}
+
+function onCascadeThemeChange(event) {
+  if (themeSyncing || (event.detail?.targetSelector && event.detail.targetSelector !== ':root')) return;
+  let state = event.detail?.state;
+  let sourceDoc = event.target?.ownerDocument || null;
+  let referenceDoc = referenceFrame.contentDocument;
+  if (state) {
+    themeSyncing = true;
+    try {
+      if (sourceDoc !== document) {
+        applyCascadeTheme(document.documentElement, state, {
+          notify: false,
+          source: 'native-panel-lab-theme-mirror',
+          targetSelector: ':root',
+        });
+      }
+      if (referenceThemeReady && referenceDoc && sourceDoc !== referenceDoc) {
+        applyCascadeTheme(referenceDoc.documentElement, state, {
+          notify: false,
+          source: 'native-panel-lab-theme-mirror',
+          targetSelector: ':root',
+        });
+      }
+      if (THEME_STATES[state.mode]) themeSelect.value = state.mode;
+    } finally {
+      themeSyncing = false;
+    }
+  }
   if (lab.source === 'real-layout') {
     if (referenceThemeReady) scheduleCapture();
     return;
@@ -617,6 +723,15 @@ function updatePointerNdc(event) {
     -(((event.clientY - rect.top) / Math.max(rect.height, 1)) * 2 - 1),
   );
   raycaster.setFromCamera(pointerNdc, activeCamera());
+}
+
+function currentPointerRay(event) {
+  updatePointerNdc(event);
+  return {
+    kind: 'mouse',
+    origin: raycaster.ray.origin.toArray(),
+    direction: raycaster.ray.direction.toArray(),
+  };
 }
 
 function pickPanelHit(event) {
@@ -656,6 +771,14 @@ function pickPanelHit(event) {
   }
   let resolvedHit = resolveNativePanelHit(compiledById.get(panelId), point);
   return { panelId, point, hit: resolvedHit };
+}
+
+function canStartWindowDrag(hit) {
+  if (hit?.actionId === 'drag-panel') return true;
+  let panel = compiledById.get(hit?.panelId);
+  return Boolean(hit?.actionId)
+    && panel?.role === 'window'
+    && panel.relativeRect?.width <= COLLAPSED_WINDOW_GRAB_MAX_RATIO;
 }
 
 function emitIntent(detail) {
@@ -800,19 +923,18 @@ function onPointerMove(event) {
     return;
   }
   if (dragState) {
-    updatePointerNdc(event);
-    let plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -panelRenderer.group.position.z);
-    let worldPoint = new THREE.Vector3();
-    if (raycaster.ray.intersectPlane(plane, worldPoint)) {
-      let panelGroup = panelRenderer.group.children
-        .find((group) => group.userData.panelId === dragState.panelId);
-      panelGroup.position.set(
-        roundMetric(worldPoint.x + dragState.offsetX),
-        roundMetric(worldPoint.y + dragState.offsetY),
-        panelGroup.position.z,
-      );
-      dragState.moved = true;
-    }
+    if (event.pointerId !== dragState.pointerId) return;
+    let record = spatialDragController.moveDrag(currentPointerRay(event));
+    let panelGroup = panelRenderer.getPanelObject(dragState.panelId);
+    if (!record || !panelGroup) return;
+    let localPosition = new THREE.Vector3(...record.position);
+    panelRenderer.group.worldToLocal(localPosition);
+    panelGroup.position.set(
+      roundMetric(localPosition.x),
+      roundMetric(localPosition.y),
+      roundMetric(localPosition.z),
+    );
+    dragState.moved = true;
     return;
   }
   let picked = pickPanelHit(event);
@@ -825,7 +947,7 @@ function onPointerMove(event) {
     : lab.lastNormalizedHit;
   panelRenderer.setHovered(hit?.primitiveId || null);
   canvas.style.cursor = hit
-    ? (hit.actionId === 'drag-panel' ? 'grab' : hit.actionId === 'drag-resizer' ? 'col-resize' : 'pointer')
+    ? (canStartWindowDrag(hit) ? 'grab' : hit.actionId === 'drag-resizer' ? 'col-resize' : 'pointer')
     : 'default';
   renderDiagnostics();
 }
@@ -838,21 +960,25 @@ function onPointerDown(event) {
     }
     return;
   }
-  if (picked?.hit?.actionId === 'drag-panel') {
-    updatePointerNdc(event);
-    let plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -panelRenderer.group.position.z);
-    let worldPoint = new THREE.Vector3();
-    if (raycaster.ray.intersectPlane(plane, worldPoint)) {
-      let panelGroup = panelRenderer.group.children
-        .find((group) => group.userData.panelId === picked.panelId);
-      dragState = {
-        panelId: picked.panelId,
-        offsetX: panelGroup.position.x - worldPoint.x,
-        offsetY: panelGroup.position.y - worldPoint.y,
-        moved: false,
-      };
-      canvas.style.cursor = 'grabbing';
-    }
+  if (canStartWindowDrag(picked?.hit)) {
+    let panelGroup = panelRenderer.getPanelObject(picked.panelId);
+    if (!panelGroup) return;
+    panelGroup.updateWorldMatrix(true, false);
+    let worldPosition = new THREE.Vector3();
+    panelGroup.getWorldPosition(worldPosition);
+    let record = spatialDragController.startDrag({
+      id: picked.panelId,
+      position: worldPosition.toArray(),
+    }, currentPointerRay(event));
+    if (!record) return;
+    dragState = {
+      panelId: picked.panelId,
+      pointerId: event.pointerId,
+      startPosition: panelGroup.position.toArray(),
+      moved: false,
+    };
+    canvas.setPointerCapture(event.pointerId);
+    canvas.style.cursor = 'grabbing';
   }
 }
 
@@ -862,12 +988,34 @@ function onPointerUp(event) {
     renderDiagnostics();
     return;
   }
+  if (dragState && event.pointerId !== dragState.pointerId) return;
   let wasDragging = dragState;
+  let endRecord = spatialDragController.endDrag();
   dragState = null;
+  if (wasDragging && canvas.hasPointerCapture(wasDragging.pointerId)) {
+    canvas.releasePointerCapture(wasDragging.pointerId);
+  }
   canvas.style.cursor = 'default';
   if (wasDragging?.moved) {
+    let panel = compiledById.get(wasDragging.panelId);
+    let panelGroup = panelRenderer.getPanelObject(wasDragging.panelId);
+    let base = panel && basePresentationPosition(panel);
+    let offset = panelGroup && base
+      ? [
+          roundMetric(panelGroup.position.x - base[0]),
+          roundMetric(panelGroup.position.y - base[1]),
+          roundMetric(panelGroup.position.z - base[2]),
+        ]
+      : [0, 0, 0];
+    windowDragOffsets.set(wasDragging.panelId, offset);
     emitIntent({ type: 'panel-drag', panelId: wasDragging.panelId });
-    lab.lastAction = { actionId: 'drag-panel', panelId: wasDragging.panelId, targetId: wasDragging.panelId };
+    lab.lastAction = {
+      actionId: 'drag-panel',
+      panelId: wasDragging.panelId,
+      targetId: wasDragging.panelId,
+      position: endRecord?.position || null,
+      offset,
+    };
     renderDiagnostics();
     return;
   }
@@ -899,10 +1047,27 @@ function onPointerUp(event) {
   renderDiagnostics();
 }
 
+function cancelPointerDrag(event) {
+  if (!dragState || (event.pointerId !== undefined && event.pointerId !== dragState.pointerId)) return;
+  let cancelled = dragState;
+  let panelGroup = panelRenderer.getPanelObject(cancelled.panelId);
+  if (panelGroup) panelGroup.position.set(...cancelled.startPosition);
+  spatialDragController.cancelDrag();
+  dragState = null;
+  if (canvas.hasPointerCapture(cancelled.pointerId)) {
+    canvas.releasePointerCapture(cancelled.pointerId);
+  }
+  canvas.style.cursor = 'default';
+  lab.lastAction = { actionId: 'cancel-panel-drag', panelId: cancelled.panelId };
+  renderDiagnostics();
+}
+
 function bindPointer() {
   canvas.addEventListener('pointermove', onPointerMove);
   canvas.addEventListener('pointerdown', onPointerDown);
   canvas.addEventListener('pointerup', onPointerUp);
+  canvas.addEventListener('pointercancel', cancelPointerDrag);
+  canvas.addEventListener('lostpointercapture', cancelPointerDrag);
   canvas.addEventListener('pointerleave', () => {
     if (dragState || resizerRelay) return;
     lab.hovered = null;
@@ -916,6 +1081,8 @@ function bindControls() {
   cameraSelect.addEventListener('change', () => setCamera(cameraSelect.value));
   themeSelect.addEventListener('change', () => setTheme(themeSelect.value));
   explodeInput.addEventListener('input', () => setLayerExplode(Number(explodeInput.value)));
+  windowGapInput.addEventListener('input', () => setWindowGap(Number(windowGapInput.value)));
+  resetWindowsButton.addEventListener('click', resetWindowPositions);
 }
 
 function getReport() {
@@ -925,6 +1092,11 @@ function getReport() {
     status: lab.status,
     source: lab.source,
     cameraMode: lab.cameraMode,
+    windowGap: lab.windowGap,
+    windowOffsets: Object.fromEntries(
+      [...windowDragOffsets].map(([panelId, offset]) => [panelId, [...offset]]),
+    ),
+    windows: windowDiagnostics(),
     themeRevision: lab.themeRevision,
     threeRevision: lab.threeRevision,
     threeRuntimeRevision: THREE.REVISION || null,

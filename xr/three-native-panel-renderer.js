@@ -1114,6 +1114,7 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
     setHovered,
     setSelected,
     getInteractiveObjects: () => [...interactive],
+    getPanelObject: (panelId) => panelGroups.get(panelId) || null,
     getPrimitiveObject: (primitiveId) => primitiveObjects.get(primitiveId) || null,
     resolveIntersection,
     getDiagnostics,
