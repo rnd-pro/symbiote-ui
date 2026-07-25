@@ -138,9 +138,9 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
   root.userData = { kind: 'native-panel-root' };
   let unitPlane = new THREE.PlaneGeometry(1, 1);
   let panelGroups = new Map();
-  let panelContentGroups = new Map();
   let panelChromeGroups = new Map();
-  let panelScales = new Map();
+  let panelPreviewSizes = new Map();
+  let panelPreviewSurfaces = new Map();
   let layerGroups = new Map();
   let primitiveObjects = new Map();
   let frameGroups = new Map();
@@ -223,8 +223,7 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
 
   function buildWindowChrome(panel, panelGroup) {
     if (panel.role === 'layout-control') return;
-    let scale = panelScales.get(panel.id) || [1, 1];
-    let size = [panel.size[0] * scale[0], panel.size[1] * scale[1]];
+    let size = panelPreviewSizes.get(panel.id) || panel.size;
     let frame = createXRPanelFrame(panel, { panelSizeMeters: size });
     frame.size = size;
     let chrome = new THREE.Group();
@@ -776,8 +775,6 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
     panelGroup.userData = { kind: 'native-panel', panelId: panel.id, family: panel.family };
     let contentGroup = new THREE.Group();
     contentGroup.userData = { kind: 'native-panel-content', panelId: panel.id };
-    let scale = panelScales.get(panel.id) || [1, 1];
-    contentGroup.scale.set(scale[0], scale[1], 1);
     panelGroup.add(contentGroup);
     let perPanelLayers = new Map();
     for (let layer of NATIVE_PANEL_LAYERS) {
@@ -791,7 +788,6 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
       buildPrimitive(panel, primitive, perPanelLayers.get(primitive.layer));
     }
     panelGroups.set(panel.id, panelGroup);
-    panelContentGroups.set(panel.id, contentGroup);
     layerGroups.set(panel.id, perPanelLayers);
     buildWindowChrome(panel, panelGroup);
     root.add(panelGroup);
@@ -799,6 +795,9 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
 
   function disposeObjectTree(object) {
     object.traverse((node) => {
+      if (node.geometry && node.geometry !== unitPlane) {
+        node.geometry.dispose?.();
+      }
       if (node.userData?.expandedTexture && node.userData.expandedTexture !== node.material?.map) {
         node.userData.expandedTexture.dispose?.();
       }
@@ -822,8 +821,9 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
       root.remove(panelGroup);
     }
     panelGroups.clear();
-    panelContentGroups.clear();
     panelChromeGroups.clear();
+    panelPreviewSizes.clear();
+    panelPreviewSurfaces.clear();
     layerGroups.clear();
     primitiveObjects.clear();
     frameGroups.clear();
@@ -1101,6 +1101,32 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
     return true;
   }
 
+  function layoutWindowChrome(panelId) {
+    let panel = mountedScene?.panels?.find((candidate) => candidate.id === panelId);
+    let chrome = panelChromeGroups.get(panelId);
+    if (!panel || !chrome || panel.role === 'layout-control') return false;
+    let size = panelPreviewSizes.get(panelId) || panel.size;
+    let frame = createXRPanelFrame(panel, { panelSizeMeters: size });
+    frame.size = size;
+    for (let object of chrome.children) {
+      let zone = object.name.endsWith('control-bar')
+        ? frame.zones.controlBar
+        : object.name.includes('resize-')
+          ? frame.zones.resize[object.userData.handle]
+          : object.name.includes('edge-')
+            ? frame.zones.edges[object.userData.handle]
+            : object.name.includes('action-')
+              ? frame.zones.actions[object.userData.handle]
+              : null;
+      if (!zone) continue;
+      let rect = chromeRect(zone, size);
+      object.geometry.dispose?.();
+      object.geometry = new THREE.PlaneGeometry(rect.width, rect.height);
+      object.position.set(rect.x, rect.y, object.position.z);
+    }
+    return true;
+  }
+
   function updateWindowChromeTextures(panelId) {
     let panel = mountedScene?.panels?.find((candidate) => candidate.id === panelId);
     let panelGroup = panelGroups.get(panelId);
@@ -1109,10 +1135,7 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
     let background = theme.roles.text || '#fafafa';
     let foreground = theme.roles.surface || '#202020';
     let frame = createXRPanelFrame(panel, {
-      panelSizeMeters: [
-        panel.size[0] * (panelScales.get(panelId)?.[0] || 1),
-        panel.size[1] * (panelScales.get(panelId)?.[1] || 1),
-      ],
+      panelSizeMeters: panelPreviewSizes.get(panelId) || panel.size,
     });
     let actions = Object.keys(frame.zones.actions);
     for (let object of chrome.children) {
@@ -1161,18 +1184,50 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
     return true;
   }
 
-  function setPanelScale(panelId, value) {
-    let content = panelContentGroups.get(panelId);
-    if (!content) return false;
-    let next = Array.isArray(value) ? value : [value, value];
-    let scale = [
-      Math.max(0.5, Math.min(2.5, Number(next[0]) || 1)),
-      Math.max(0.5, Math.min(2.5, Number(next[1]) || 1)),
+  function previewPanelSize(panelId, size) {
+    let panel = mountedScene?.panels?.find((candidate) => candidate.id === panelId);
+    let panelGroup = panelGroups.get(panelId);
+    if (!panel || !panelGroup || !Array.isArray(size) || size.length !== 2) return false;
+    let width = Number(size[0]);
+    let height = Number(size[1]);
+    if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+      return false;
+    }
+    let targetSize = [
+      Math.max(panel.size[0] * 0.5, Math.min(panel.size[0] * 2.5, width)),
+      Math.max(panel.size[1] * 0.5, Math.min(panel.size[1] * 2.5, height)),
     ];
-    panelScales.set(panelId, scale);
-    content.scale.set(scale[0], scale[1], 1);
-    refreshWindowChrome(panelId);
+    let surface = panelPreviewSurfaces.get(panelId);
+    if (!surface) {
+      surface = new THREE.Mesh(
+        new THREE.PlaneGeometry(targetSize[0], targetSize[1]),
+        roleMaterial('surface'),
+      );
+      surface.name = 'sn-native-window-resize-preview';
+      surface.position.set(0, 0, -0.002);
+      surface.userData = { kind: 'window-resize-preview', panelId };
+      panelPreviewSurfaces.set(panelId, surface);
+      panelGroup.add(surface);
+    } else {
+      surface.geometry.dispose?.();
+      surface.geometry = new THREE.PlaneGeometry(targetSize[0], targetSize[1]);
+    }
+    panelPreviewSizes.set(panelId, targetSize);
+    layoutWindowChrome(panelId);
     return true;
+  }
+
+  function cancelPanelSizePreview(panelId) {
+    let panelGroup = panelGroups.get(panelId);
+    let surface = panelPreviewSurfaces.get(panelId);
+    let hadPreview = panelPreviewSizes.delete(panelId);
+    if (surface) {
+      surface.geometry.dispose?.();
+      panelGroup?.remove(surface);
+      panelPreviewSurfaces.delete(panelId);
+    }
+    if (hadPreview) layoutWindowChrome(panelId);
+    return hadPreview;
   }
 
   function resolveIntersection(intersection) {
@@ -1352,6 +1407,9 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
       materials: materialRecords.length,
       hovered: hoveredId,
       selected: selectedId,
+      resizePreviews: Object.fromEntries(
+        [...panelPreviewSizes].map(([panelId, size]) => [panelId, [...size]]),
+      ),
       unsupportedColors: [...unsupportedColorValues.entries()].map(([value, count]) => ({ value, count })),
     };
   }
@@ -1379,7 +1437,9 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
     setLayerExplode,
     setHovered,
     setSelected,
-    setPanelScale,
+    previewPanelSize,
+    cancelPanelSizePreview,
+    refreshPanelChrome: refreshWindowChrome,
     getInteractiveObjects: () => [...interactive],
     getPanelObject: (panelId) => panelGroups.get(panelId) || null,
     getPrimitiveObject: (primitiveId) => primitiveObjects.get(primitiveId) || null,

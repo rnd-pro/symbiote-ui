@@ -11,8 +11,8 @@
 - `symbiote-ui/ui/screencast-recorder.js` - browser Screen Capture API hotkey controller for host-owned screencast recording; default toggle hotkey is `Alt+Shift+R`, captured tab/display audio is requested by default, and no built-in indicator UI is rendered.
 - `symbiote-ui/webmcp` - WebMCP descriptor helpers and registration utilities.
 - `symbiote-ui/xr` - WebXR provider helpers, spatial evidence contracts, native panel compilation/rendering, 3D graph layout, and multi-view coordination.
-- `symbiote-ui/xr/native-panel-layout` - Node-safe native-panel plane projection, deterministic primitive compiler, and normalized hit resolver.
-- `symbiote-ui/xr/three-native-panel-renderer` - browser Three adapter for compiled native panels; host injects the `THREE` namespace; honors additive resolved per-primitive styles from measured snapshots; exposes a renderer-neutral `native-panel-appearance-v1` neutral-state sample via `getAppearanceReport()`.
+- `symbiote-ui/xr/native-panel-layout` - Node-safe native-panel plane projection, deterministic primitive compiler, absolute-size anchor reflow, and normalized hit resolver.
+- `symbiote-ui/xr/three-native-panel-renderer` - browser Three adapter for compiled native panels; host injects the `THREE` namespace; previews resize shells without scaling content, honors additive resolved per-primitive styles from measured snapshots, and exposes a renderer-neutral `native-panel-appearance-v1` neutral-state sample via `getAppearanceReport()`.
 - `symbiote-ui/xr/spatial-snapshot` - Node-safe `spatial-snapshot-v1` normalization and validation for browser-measured spatial UI snapshots.
 - `symbiote-ui/xr/spatial-snapshot-compile` - Node-safe compiler from measured snapshots to the existing native-panel scene; geometry derives from measured boxes only.
 - `symbiote-ui/xr/spatial-parity` - Node-safe deterministic parity report (geometry edges, text, resolved styles, action coverage, diagnostics) between a snapshot and its compiled scene.

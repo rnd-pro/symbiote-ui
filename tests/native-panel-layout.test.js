@@ -8,6 +8,7 @@ import {
   NATIVE_PANEL_LAYERS,
   compileNativePanelPrimitives,
   projectXRPanelsToPlane,
+  resizeNativePanelScene,
   resolveNativePanelHit,
 } from '../xr/native-panel-layout.js';
 import { createThreeNativePanelRenderer } from '../xr/three-native-panel-renderer.js';
@@ -348,6 +349,52 @@ test('resolveNativePanelHit resolves normalized panel coordinates to stable targ
 
   assert.equal(resolveNativePanelHit(activity, { x: -0.1, y: 0.5 }), null);
   assert.equal(resolveNativePanelHit(activity, { x: 0.5, y: 1.1 }), null);
+});
+
+test('resizeNativePanelScene reflows anchors without scaling text or icon height', () => {
+  let compiled = createCompiled();
+  let source = structuredClone(compiled);
+  let activity = compiled.panels.find((panel) => panel.id === 'activity');
+  let title = activity.primitives.find((primitive) => primitive.id === 'activity/content/title');
+  let rowTitle = activity.primitives.find((primitive) => primitive.id.includes('/row-title-row-a'));
+  let badge = activity.primitives.find((primitive) => primitive.id.includes('/row-badge-row-a'));
+  let surface = activity.primitives.find((primitive) => primitive.id === 'activity/surface/panel');
+  let frame = activity.primitives.find((primitive) => primitive.id === 'activity/focus/frame');
+  let titleLeftGap = title.bounds.x - title.bounds.width / 2 + activity.size[0] / 2;
+  let badgeRightGap = activity.size[0] / 2 - badge.bounds.x - badge.bounds.width / 2;
+  let rowTopGap = activity.size[1] / 2 - rowTitle.bounds.y - rowTitle.bounds.height / 2;
+
+  let resized = resizeNativePanelScene(compiled, 'activity', [0.92, 1.12]);
+  let next = resized.panels.find((panel) => panel.id === 'activity');
+  let nextTitle = next.primitives.find((primitive) => primitive.id === title.id);
+  let nextRowTitle = next.primitives.find((primitive) => primitive.id === rowTitle.id);
+  let nextBadge = next.primitives.find((primitive) => primitive.id === badge.id);
+  let nextSurface = next.primitives.find((primitive) => primitive.id === surface.id);
+  let nextFrame = next.primitives.find((primitive) => primitive.id === frame.id);
+
+  assert.deepEqual(compiled, source, 'resize must not mutate the measured source scene');
+  assert.deepEqual(next.size, [0.92, 1.12]);
+  assert.deepEqual(nextSurface.bounds, { x: 0, y: 0, width: 0.92, height: 1.12 });
+  assert.deepEqual(nextFrame.bounds, { x: 0, y: 0, width: 0.92, height: 1.12 });
+  assert.equal(nextTitle.bounds.height, title.bounds.height, 'title glyph height stays physical');
+  assert.equal(nextRowTitle.bounds.height, rowTitle.bounds.height, 'row glyph height stays physical');
+  assert.equal(nextBadge.bounds.height, badge.bounds.height, 'badge height stays physical');
+  assert.ok(Math.abs(
+    nextTitle.bounds.x - nextTitle.bounds.width / 2 + next.size[0] / 2 - titleLeftGap,
+  ) < 1e-6, 'left anchored content preserves its inset');
+  assert.ok(Math.abs(
+    next.size[0] / 2 - nextBadge.bounds.x - nextBadge.bounds.width / 2 - badgeRightGap,
+  ) < 1e-6, 'right anchored content preserves its inset');
+  assert.ok(Math.abs(
+    next.size[1] / 2 - nextRowTitle.bounds.y - nextRowTitle.bounds.height / 2 - rowTopGap,
+  ) < 1e-6, 'top anchored content preserves its inset');
+});
+
+test('resizeNativePanelScene rejects unknown panels and invalid physical sizes', () => {
+  let compiled = createCompiled();
+  assert.throws(() => resizeNativePanelScene(compiled, 'missing', [1, 1]), /Unknown panel/);
+  assert.throws(() => resizeNativePanelScene(compiled, 'activity', [0, 1]), /positive finite/);
+  assert.throws(() => resizeNativePanelScene(compiled, 'activity', [1]), /size/);
 });
 
 test('three native panel renderer constructs Node-safe with a minimal contract mock', () => {

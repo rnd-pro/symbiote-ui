@@ -8,10 +8,12 @@ import { compileSpatialSnapshot } from '../xr/spatial-snapshot-compile.js';
 import {
   compileNativePanelPrimitives,
   projectXRPanelsToPlane,
+  resizeNativePanelScene,
 } from '../xr/native-panel-layout.js';
 import { createReferenceSnapshot } from './fixtures/spatial-snapshot-reference.js';
 
 const TITLE_PRIMITIVE_ID = 'panel:project/content/panel:project/title';
+const EDITOR_PRIMITIVE_ID = 'panel:source/content/panel:source/editor';
 const ROW_ICON_PRIMITIVE_ID = 'panel:project/content/panel:project/row:src/icon:folder';
 const TOGGLE_ICON_PRIMITIVE_ID = 'panel:project/content/panel:project/row:src/control:toggle-row/icon:expand_more';
 
@@ -103,6 +105,16 @@ function createFakeCanvas(options = {}) {
     save() {},
     restore() {},
     beginPath() {},
+    closePath() {},
+    moveTo() {},
+    lineTo() {},
+    arcTo() {},
+    arc() {},
+    translate() {},
+    rotate() {},
+    scale() {},
+    fill() {},
+    stroke() {},
     rect() {},
     clip() {},
     fillText(text, x, y) {
@@ -479,6 +491,48 @@ test('renderer renders chromeless captured controls as transparent hit materials
   assert.ok(mesh, 'transparent toggle control has a rendered hit mesh');
   assert.equal(mesh.material.transparent, true);
   assert.equal(mesh.material.opacity, 0, 'hit material is invisible at neutral state');
+});
+
+test('renderer previews a larger shell without scaling mounted content', () => {
+  let { renderer } = createRendererHarness();
+  let compiled = mountFixture(renderer);
+  let panel = compiled.panels.find((candidate) => candidate.id === 'panel:project');
+  let panelObject = renderer.getPanelObject(panel.id);
+  let content = panelObject.children.find((child) => child.userData.kind === 'native-panel-content');
+
+  assert.deepEqual([content.scale.x, content.scale.y, content.scale.z], [1, 1, 1]);
+  assert.equal(renderer.previewPanelSize(panel.id, [panel.size[0] + 0.2, panel.size[1] + 0.1]), true);
+  let preview = panelObject.children.find((child) => child.userData.kind === 'window-resize-preview');
+  assert.ok(preview, 'preview adds an empty themed shell behind existing content');
+  assert.equal(preview.geometry.width, panel.size[0] + 0.2);
+  assert.equal(preview.geometry.height, panel.size[1] + 0.1);
+  assert.deepEqual([content.scale.x, content.scale.y, content.scale.z], [1, 1, 1]);
+  assert.deepEqual(renderer.getDiagnostics().resizePreviews, {
+    [panel.id]: [panel.size[0] + 0.2, panel.size[1] + 0.1],
+  });
+
+  assert.equal(renderer.cancelPanelSizePreview(panel.id), true);
+  assert.equal(
+    panelObject.children.some((child) => child.userData.kind === 'window-resize-preview'),
+    false,
+  );
+  assert.deepEqual(renderer.getDiagnostics().resizePreviews, {});
+});
+
+test('committed reflow rerasterizes measured text at the original pixels per meter', () => {
+  let { renderer } = createRendererHarness({ renderer: { texturePixelRatio: 2 } });
+  let compiled = mountFixture(renderer);
+  let panel = compiled.panels.find((candidate) => candidate.id === 'panel:source');
+  let before = renderer.getTextQualityReport().textures
+    .find((entry) => entry.primitiveId === EDITOR_PRIMITIVE_ID);
+  let resized = resizeNativePanelScene(compiled, panel.id, [panel.size[0] * 1.5, panel.size[1]]);
+
+  renderer.mount(resized, { theme: createTestTheme() });
+  let after = renderer.getTextQualityReport().textures
+    .find((entry) => entry.primitiveId === EDITOR_PRIMITIVE_ID);
+  assert.equal(after.pixelsPerMeter, before.pixelsPerMeter);
+  assert.equal(after.height, before.height);
+  assert.ok(after.width > before.width, 'the wider label owns a newly sized raster canvas');
 });
 
 test('renderer exposes a renderer-neutral native-panel-appearance-v1 report', () => {

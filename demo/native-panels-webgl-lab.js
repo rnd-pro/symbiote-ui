@@ -22,6 +22,7 @@ import {
   NATIVE_PANEL_LAYERS,
   compileNativePanelPrimitives,
   projectXRPanelsToPlane,
+  resizeNativePanelScene,
   resolveNativePanelHit,
 } from '../xr/native-panel-layout.js';
 import { createThreeNativePanelRenderer } from '../xr/three-native-panel-renderer.js';
@@ -161,16 +162,20 @@ function presentationPosition(panel) {
 }
 
 function windowDiagnostics() {
+  let measuredById = new Map((measuredCompiled?.panels || []).map((panel) => [panel.id, panel]));
   return (compiled?.panels || [])
     .filter((panel) => panel.role === 'window')
     .map((panel) => ({
       id: panel.id,
       panelType: panel.panelType,
       size: [...panel.size],
+      measuredSize: [...(measuredById.get(panel.id)?.size || panel.size)],
       measuredPosition: [...panel.position],
       presentationPosition: presentationPosition(panel),
       offset: [...(windowDragOffsets.get(panel.id) || [0, 0, 0])],
-      scale: [...(windowScaleOverrides.get(panel.id) || [1, 1])],
+      sizeOverride: windowSizeOverrides.has(panel.id)
+        ? [...windowSizeOverrides.get(panel.id)]
+        : null,
       actions: [...new Set(
         panel.primitives
           .map((primitive) => primitive.hit?.intent)
@@ -185,7 +190,9 @@ function applyWindowPresentation() {
     let panel = compiledById.get(group.userData?.panelId);
     if (!panel) continue;
     group.position.set(...presentationPosition(panel));
-    panelRenderer.setPanelScale(panel.id, windowScaleOverrides.get(panel.id) || [1, 1]);
+    group.userData.pinned = pinnedWindows.has(panel.id);
+    group.visible = !closedWindows.has(panel.id);
+    if (group.userData.pinned) panelRenderer.refreshPanelChrome(panel.id);
   }
 }
 
@@ -203,9 +210,9 @@ function computeFrontCameraBounds() {
   let maxY = -Infinity;
   for (let panel of compiled?.panels || []) {
     let [x, y] = presentationPosition(panel);
-    let scale = windowScaleOverrides.get(panel.id) || [1, 1];
-    let width = panel.size[0] * scale[0];
-    let height = panel.size[1] * scale[1];
+    let preview = resizeState?.panelId === panel.id ? resizeState.previewSize : null;
+    let width = preview?.[0] || panel.size[0];
+    let height = preview?.[1] || panel.size[1];
     minX = Math.min(minX, x - width / 2);
     maxX = Math.max(maxX, x + width / 2);
     minY = Math.min(minY, y - height / 2);
@@ -299,6 +306,7 @@ let renderer = null;
 let scene = null;
 let panelRenderer = null;
 let compiled = null;
+let measuredCompiled = null;
 let compiledById = new Map();
 let panelSurfaceIds = new Map();
 let snapshot = null;
@@ -311,7 +319,9 @@ let spatialDragController = createSpatialDragController();
 let dragState = null;
 let resizeState = null;
 let windowDragOffsets = new Map();
-let windowScaleOverrides = new Map();
+let windowSizeOverrides = new Map();
+let pinnedWindows = new Set();
+let closedWindows = new Set();
 let resizerRelay = null;
 let diagnosticsTimer = null;
 let captureToken = 0;
@@ -423,7 +433,8 @@ function captureAndMount() {
   let second = captureSpatialSnapshot(root, options);
   lab.deterministic = JSON.stringify(first) === JSON.stringify(second);
   snapshot = first;
-  compiled = compileSpatialSnapshot(snapshot);
+  measuredCompiled = compileSpatialSnapshot(snapshot);
+  compiled = applyWindowSizeOverrides(measuredCompiled);
   rebuildCompiledMaps();
   lab.themeRevision += 1;
   let theme = createNativePanelThemeSnapshot(doc, { revision: lab.themeRevision });
@@ -442,7 +453,7 @@ function captureAndMount() {
   }
   applyWindowPresentation();
   scene.background = new THREE.Color(toOpaqueRgb(theme.roles['surface-sunken']));
-  parityReport = createSpatialParityReport(snapshot, compiled);
+  parityReport = createSpatialParityReport(snapshot, measuredCompiled);
   visualParityReport = createSpatialVisualParityReport(snapshot, panelRenderer.getAppearanceReport());
   lab.parity = summarizeParity(parityReport, visualParityReport);
   lab.counts = {
@@ -523,7 +534,8 @@ function buildMockScene() {
     gap: 0.03,
     z: 0,
   });
-  compiled = compileNativePanelPrimitives(projected.panels, createNativePanelLabData());
+  measuredCompiled = compileNativePanelPrimitives(projected.panels, createNativePanelLabData());
+  compiled = applyWindowSizeOverrides(measuredCompiled);
   rebuildCompiledMaps();
   snapshot = null;
   parityReport = null;
@@ -545,13 +557,50 @@ function buildMockScene() {
   renderDiagnostics();
 }
 
+function applyWindowSizeOverrides(scene) {
+  let next = scene;
+  for (let [panelId, size] of windowSizeOverrides) {
+    if (next.panels.some((panel) => panel.id === panelId)) {
+      next = resizeNativePanelScene(next, panelId, size);
+    }
+  }
+  return next;
+}
+
+function remountCommittedWindows() {
+  compiled = applyWindowSizeOverrides(measuredCompiled);
+  rebuildCompiledMaps();
+  panelRenderer.mount(compiled, { theme: panelRendererTheme() });
+  applyWindowPresentation();
+  resize();
+}
+
+function commitWindowSize(panelId, size) {
+  let measured = measuredCompiled?.panels?.find((panel) => panel.id === panelId);
+  if (!measured) return false;
+  let next = size.map((value) => roundMetric(value));
+  if (next[0] === measured.size[0] && next[1] === measured.size[1]) {
+    windowSizeOverrides.delete(panelId);
+  } else {
+    windowSizeOverrides.set(panelId, next);
+  }
+  remountCommittedWindows();
+  return true;
+}
+
 function rebuildCompiledMaps() {
   compiledById = new Map(compiled.panels.map((panel) => [panel.id, panel]));
   for (let panelId of windowDragOffsets.keys()) {
     if (!compiledById.has(panelId)) windowDragOffsets.delete(panelId);
   }
-  for (let panelId of windowScaleOverrides.keys()) {
-    if (!compiledById.has(panelId)) windowScaleOverrides.delete(panelId);
+  for (let panelId of windowSizeOverrides.keys()) {
+    if (!compiledById.has(panelId)) windowSizeOverrides.delete(panelId);
+  }
+  for (let panelId of pinnedWindows) {
+    if (!compiledById.has(panelId)) pinnedWindows.delete(panelId);
+  }
+  for (let panelId of closedWindows) {
+    if (!compiledById.has(panelId)) closedWindows.delete(panelId);
   }
   panelSurfaceIds = new Map();
   for (let panel of compiled.panels) {
@@ -676,9 +725,8 @@ function setWindowGap(value) {
 
 function resetWindowPositions() {
   windowDragOffsets.clear();
-  windowScaleOverrides.clear();
-  applyWindowPresentation();
-  resize();
+  windowSizeOverrides.clear();
+  remountCommittedWindows();
   lab.lastAction = { actionId: 'reset-window-positions' };
   renderDiagnostics();
 }
@@ -955,14 +1003,14 @@ function onPointerMove(event) {
     let handle = resizeState.handle;
     let dx = (event.clientX - resizeState.startClientX) / Math.max(canvas.clientWidth * 0.28, 1);
     let dy = (event.clientY - resizeState.startClientY) / Math.max(canvas.clientHeight * 0.28, 1);
-    let nextX = resizeState.startScale[0] + (/east/i.test(handle) ? dx : -dx);
-    let nextY = resizeState.startScale[1] + (/south/i.test(handle) ? dy : -dy);
+    let nextX = resizeState.startSize[0] * (1 + (/east/i.test(handle) ? dx : -dx));
+    let nextY = resizeState.startSize[1] * (1 + (/south/i.test(handle) ? dy : -dy));
     let next = [
-      Math.max(0.5, Math.min(2.5, nextX)),
-      Math.max(0.5, Math.min(2.5, nextY)),
+      Math.max(resizeState.measuredSize[0] * 0.5, Math.min(resizeState.measuredSize[0] * 2.5, nextX)),
+      Math.max(resizeState.measuredSize[1] * 0.5, Math.min(resizeState.measuredSize[1] * 2.5, nextY)),
     ];
-    windowScaleOverrides.set(resizeState.panelId, next);
-    panelRenderer.setPanelScale(resizeState.panelId, next);
+    resizeState.previewSize = next;
+    panelRenderer.previewPanelSize(resizeState.panelId, next);
     resizeState.moved = true;
     resize();
     return;
@@ -993,13 +1041,18 @@ function onPointerDown(event) {
     return;
   }
   if (picked?.hit?.actionId === 'resize-window') {
+    let panel = compiledById.get(picked.panelId);
+    let measuredPanel = measuredCompiled?.panels?.find((candidate) => candidate.id === picked.panelId);
+    if (!panel || !measuredPanel) return;
     resizeState = {
       panelId: picked.panelId,
       pointerId: event.pointerId,
       handle: picked.hit.handle,
       startClientX: event.clientX,
       startClientY: event.clientY,
-      startScale: [...(windowScaleOverrides.get(picked.panelId) || [1, 1])],
+      startSize: [...panel.size],
+      measuredSize: [...measuredPanel.size],
+      previewSize: [...panel.size],
       moved: false,
     };
     canvas.setPointerCapture(event.pointerId);
@@ -1041,11 +1094,16 @@ function onPointerUp(event) {
     if (canvas.hasPointerCapture(finished.pointerId)) {
       canvas.releasePointerCapture(finished.pointerId);
     }
+    if (finished.moved) {
+      commitWindowSize(finished.panelId, finished.previewSize);
+    } else {
+      panelRenderer.cancelPanelSizePreview(finished.panelId);
+    }
     lab.lastAction = {
       actionId: 'resize-window',
       panelId: finished.panelId,
       handle: finished.handle,
-      scale: [...(windowScaleOverrides.get(finished.panelId) || [1, 1])],
+      size: [...(compiledById.get(finished.panelId)?.size || finished.previewSize)],
     };
     emitIntent({ type: 'panel-resize', ...lab.lastAction });
     renderDiagnostics();
@@ -1089,18 +1147,27 @@ function onPointerUp(event) {
     let group = panelRenderer.getPanelObject(hit.panelId);
     if (action === 'reset') {
       windowDragOffsets.delete(hit.panelId);
-      windowScaleOverrides.delete(hit.panelId);
-      applyWindowPresentation();
-      resize();
+      windowSizeOverrides.delete(hit.panelId);
+      remountCommittedWindows();
     } else if (action === 'fullscreen') {
-      let next = windowScaleOverrides.get(hit.panelId)?.[0] > 1.4 ? [1, 1] : [1.65, 1.65];
-      windowScaleOverrides.set(hit.panelId, next);
-      panelRenderer.setPanelScale(hit.panelId, next);
-      resize();
+      let measured = measuredCompiled.panels.find((panel) => panel.id === hit.panelId);
+      let current = compiledById.get(hit.panelId);
+      let expanded = current.size[0] > measured.size[0] * 1.4;
+      let next = expanded
+        ? [...measured.size]
+        : measured.size.map((value) => roundMetric(value * 1.65));
+      if (expanded) windowSizeOverrides.delete(hit.panelId);
+      commitWindowSize(hit.panelId, next);
     } else if (action === 'pin' && group) {
       group.userData.pinned = !group.userData.pinned;
-      panelRenderer.setPanelScale(hit.panelId, windowScaleOverrides.get(hit.panelId) || [1, 1]);
+      if (group.userData.pinned) {
+        pinnedWindows.add(hit.panelId);
+      } else {
+        pinnedWindows.delete(hit.panelId);
+      }
+      panelRenderer.refreshPanelChrome(hit.panelId);
     } else if (action === 'close' && group) {
+      closedWindows.add(hit.panelId);
       group.visible = false;
     }
     lab.lastAction = { actionId: hit.actionId, panelId: hit.panelId };
@@ -1137,8 +1204,7 @@ function cancelPointerDrag(event) {
   if (resizeState && (event.pointerId === undefined || event.pointerId === resizeState.pointerId)) {
     let cancelledResize = resizeState;
     resizeState = null;
-    windowScaleOverrides.set(cancelledResize.panelId, cancelledResize.startScale);
-    panelRenderer.setPanelScale(cancelledResize.panelId, cancelledResize.startScale);
+    panelRenderer.cancelPanelSizePreview(cancelledResize.panelId);
     if (canvas.hasPointerCapture(cancelledResize.pointerId)) {
       canvas.releasePointerCapture(cancelledResize.pointerId);
     }
@@ -1192,8 +1258,8 @@ function getReport() {
     windowOffsets: Object.fromEntries(
       [...windowDragOffsets].map(([panelId, offset]) => [panelId, [...offset]]),
     ),
-    windowScales: Object.fromEntries(
-      [...windowScaleOverrides].map(([panelId, scale]) => [panelId, [...scale]]),
+    windowSizes: Object.fromEntries(
+      [...windowSizeOverrides].map(([panelId, size]) => [panelId, [...size]]),
     ),
     windows: windowDiagnostics(),
     themeRevision: lab.themeRevision,

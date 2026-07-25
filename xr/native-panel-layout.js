@@ -637,6 +637,128 @@ export function compileNativePanelPrimitives(panels, familyData = {}) {
   };
 }
 
+function reflowAxis(center, length, sourceSize, targetSize) {
+  let negativeGap = center - length / 2 + sourceSize / 2;
+  let positiveGap = sourceSize / 2 - center - length / 2;
+  let tolerance = Math.max(0.006, sourceSize * 0.04);
+  let spansAxis = negativeGap <= tolerance && positiveGap <= tolerance;
+  if (spansAxis) {
+    let nextLength = Math.max(0.001, targetSize - negativeGap - positiveGap);
+    return {
+      center: roundMetric((negativeGap - positiveGap) / 2),
+      length: roundMetric(nextLength),
+    };
+  }
+  if (negativeGap <= tolerance || negativeGap < positiveGap * 0.45) {
+    return {
+      center: roundMetric(-targetSize / 2 + negativeGap + length / 2),
+      length: roundMetric(length),
+    };
+  }
+  if (positiveGap <= tolerance || positiveGap < negativeGap * 0.45) {
+    return {
+      center: roundMetric(targetSize / 2 - positiveGap - length / 2),
+      length: roundMetric(length),
+    };
+  }
+  return {
+    center: roundMetric((center / sourceSize) * targetSize),
+    length: roundMetric(length),
+  };
+}
+
+function reflowPrimitive(primitive, sourceSize, targetSize) {
+  let sourceBounds = primitive.bounds;
+  let horizontal = reflowAxis(
+    sourceBounds.x,
+    sourceBounds.width,
+    sourceSize[0],
+    targetSize[0],
+  );
+  let vertical = reflowAxis(
+    sourceBounds.y,
+    sourceBounds.height,
+    sourceSize[1],
+    targetSize[1],
+  );
+  let bounds = {
+    x: horizontal.center,
+    y: vertical.center,
+    width: horizontal.length,
+    height: vertical.length,
+  };
+  let next = {
+    ...primitive,
+    bounds,
+  };
+  if (primitive.sourcePixels?.width > 0 && primitive.sourcePixels?.height > 0) {
+    next.sourcePixels = {
+      ...primitive.sourcePixels,
+      width: roundMetric(primitive.sourcePixels.width * bounds.width / sourceBounds.width),
+      height: roundMetric(primitive.sourcePixels.height * bounds.height / sourceBounds.height),
+    };
+  }
+  return next;
+}
+
+/**
+ * Reflows one compiled native panel to an absolute meter size without applying a
+ * transform scale. Edge-anchored primitives preserve their physical insets,
+ * full-span primitives fill the new shell, and raster source dimensions track
+ * changed bounds so text and icons retain their pixels-per-meter density.
+ *
+ * @param {Object} panel - Compiled panel from a native panel scene.
+ * @param {Array<number>} size - Target `[width, height]` in meters.
+ * @returns {Object} New compiled panel.
+ */
+export function resizeNativePanel(panel, size) {
+  if (!panel || !Array.isArray(panel.size) || !Array.isArray(panel.primitives)) {
+    throw new Error('resizeNativePanel requires a compiled panel.');
+  }
+  if (!Array.isArray(size) || size.length !== 2) {
+    throw new Error(`resizeNativePanel requires size [width, height], got ${JSON.stringify(size)}.`);
+  }
+  let targetSize = [
+    requirePositiveFinite(size[0], 'width', 'resizeNativePanel'),
+    requirePositiveFinite(size[1], 'height', 'resizeNativePanel'),
+  ].map(roundMetric);
+  let sourceSize = panel.size.map(Number);
+  return {
+    ...panel,
+    size: targetSize,
+    primitives: panel.primitives.map((primitive) => reflowPrimitive(
+      primitive,
+      sourceSize,
+      targetSize,
+    )),
+  };
+}
+
+/**
+ * Reflows one panel inside a compiled native scene while preserving the scene
+ * contract and all other panel identities.
+ *
+ * @param {Object} scene - `native-panel-layout-v1` compiled scene.
+ * @param {string} panelId - Stable panel id.
+ * @param {Array<number>} size - Target `[width, height]` in meters.
+ * @returns {Object} New compiled scene.
+ */
+export function resizeNativePanelScene(scene, panelId, size) {
+  if (scene?.version !== NATIVE_PANEL_LAYOUT_VERSION || !Array.isArray(scene.panels)) {
+    throw new Error(`resizeNativePanelScene requires a ${NATIVE_PANEL_LAYOUT_VERSION} scene.`);
+  }
+  let found = false;
+  let panels = scene.panels.map((panel) => {
+    if (panel.id !== panelId) return panel;
+    found = true;
+    return resizeNativePanel(panel, size);
+  });
+  if (!found) {
+    throw new Error(`Unknown panel "${panelId}" in resizeNativePanelScene.`);
+  }
+  return { ...scene, panels };
+}
+
 /**
  * Resolves the zero-based index of a native panel layer.
  *

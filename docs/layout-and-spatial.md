@@ -436,7 +436,11 @@ Meshes are created, updated, and disposed automatically.
    layers (`surface`, `content`, `controls`, `focus`). Primitives carry stable
    IDs, semantic theme roles, bounds in local meters, hit targets/actions, and
    counts; `resolveNativePanelHit(panel, point)` resolves normalized 0..1 panel
-   coordinates back to those hit targets. No random or time-derived IDs.
+   coordinates back to those hit targets. `resizeNativePanel()` and
+   `resizeNativePanelScene()` commit an absolute meter size by recalculating
+   edge anchors and full-span bounds instead of applying a transform scale.
+   Raster source dimensions follow changed bounds, preserving the original
+   pixels-per-meter density. No random or time-derived IDs.
 3. `createThreeNativePanelRenderer(THREE, options)` is the browser adapter: the
    host injects the `THREE` namespace (the module never imports Three and never
    touches the DOM at evaluation time). It builds one root group and one group
@@ -476,6 +480,11 @@ Meshes are created, updated, and disposed automatically.
    parse (`oklch()`, `lab()`, `color(…)`, unresolved `var(…)`) are never
    forwarded to `THREE.Color`; they are counted in renderer diagnostics as
    `unsupportedColors` (reset per mount/theme pass).
+   Window resizing is two-phase: `previewPanelSize()` moves the native chrome
+   around a themed empty background while mounted content remains at scale 1;
+   after release the host commits a reflowed scene and remounts newly sized
+   geometry and text/icon canvases. `cancelPanelSizePreview()` restores the
+   committed shell without changing content.
 4. `createNativePanelThemeSnapshot(root, options)` (xr/theme-bridge.js) captures
    the semantic native-panel roles (surface ladder, text/dim, outline, accent,
    success, warning, danger) and numeric layout/type metrics from the same

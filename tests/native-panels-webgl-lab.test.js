@@ -57,7 +57,9 @@ test('native panels webgl lab keeps measured windows independently draggable thr
   assert.match(labSource, /function canStartWindowDrag\(hit\)/);
   assert.match(labSource, /let resizeState = null/);
   assert.match(labSource, /hit\.actionId === 'resize-window'/);
-  assert.match(labSource, /panelRenderer\.setPanelScale\(/);
+  assert.match(labSource, /panelRenderer\.previewPanelSize\(/);
+  assert.match(labSource, /resizeNativePanelScene\(/);
+  assert.ok(!labSource.includes('setPanelScale'), 'window content must never use transform scaling');
   assert.match(labSource, /panel\.relativeRect\?\.width <= COLLAPSED_WINDOW_GRAB_MAX_RATIO/);
   assert.match(labSource, /windows:\s*windowDiagnostics\(\)/);
   assert.match(labSource, /primitive\.hit\?\.intent/);
