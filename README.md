@@ -233,6 +233,7 @@ and exits non-zero when analysis fails or is incomplete.
 - [Runtime UI Construction](./docs/runtime-ui-construction.md) — browser registration, agent construction, panels, chat, voice controls, runtime adapters, and localization.
 - [Cascade Theme](./docs/cascade-theme.md) — bounded theme controls, recipes, design policy validation, editor/widget usage, and runtime tokens.
 - [Layout and Spatial Contracts](./docs/layout-and-spatial.md) — responsive layout behavior, panel lifecycle, spatial graph primitives, XR helpers, and standalone subpath imports.
+- [XR Spatial Evidence](./docs/xr-spatial-evidence.md) — placement, audit, and 2×2 projections.
 - [Integration Contracts](./docs/integration-contracts.md) — WebMCP metadata, JSDA SSR expectations, and package boundary rules.
 - [Agent UI Construction Principles](./docs/agent-ui-principles.md) — UX scenarios and workspace rules for agent-built interfaces.
 - [Showcase Demo Structure](./docs/showcase-demo-structure.md) — public demo navigation model and workspace layout patterns.

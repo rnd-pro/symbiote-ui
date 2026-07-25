@@ -189,6 +189,17 @@ const STYLE_COMPARISON_KEYS = Object.freeze([
   ['color', 'color'],
 ]);
 
+function isTransparentStyleValue(value) {
+  if (!value || value === 'transparent') return true;
+  let rgba = /^rgba?\(\s*([^()]+?)\s*\)$/i.exec(String(value).trim());
+  if (rgba) {
+    let parts = rgba[1].split(',').map((part) => Number.parseFloat(part.trim()));
+    return parts.length >= 4 && Number.isFinite(parts[3]) && parts[3] <= 0;
+  }
+  let hex = /^#[0-9a-f]{6}([0-9a-f]{2})$/i.exec(String(value).trim());
+  return Boolean(hex && Number.parseInt(hex[1], 16) === 0);
+}
+
 function compareStyles(snapshot, compiledIndex) {
   let compared = 0;
   let mismatches = [];
@@ -199,7 +210,8 @@ function compareStyles(snapshot, compiledIndex) {
     if (!primitives.length) continue;
     for (let [cssKey, styleKey] of STYLE_COMPARISON_KEYS) {
       let expected = node.style[cssKey];
-      if (expected === undefined || expected === 'transparent' || expected === 'rgba(0, 0, 0, 0)') continue;
+      if (expected === undefined || isTransparentStyleValue(expected)) continue;
+      if (cssKey === 'color' && node.text === undefined && node.part !== 'icon') continue;
       compared += 1;
       let actual = primitives.find((primitive) => primitive.style?.[styleKey] !== undefined)?.style?.[styleKey];
       if (actual !== expected) {

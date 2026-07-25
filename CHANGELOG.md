@@ -7,10 +7,22 @@ All notable changes to `symbiote-ui` will be documented in this file.
 ### Added
 
 - Added the native spatial panel toolchain for XR: deterministic layout compilation, DOM capture, versioned snapshots and parity checks, Three/WebGL rendering, public `symbiote-ui/xr` exports, and the standalone Native Panels WebGL lab.
+- Added strict XR spatial target, same-frame observation, stable audit, immutable content hit-map, and pre-root placement-receipt schemas. The Node-safe XR surface now includes column-major/root-relative math, metric top/front/right and stereo projections, a reference-only nonmetric axonometric pane, exact target/sample/audit verification, 30-frame/750-ms stability tracking, freshness-bound placement and panel select receipts, and Three.js adapter capabilities for world-locked root commit, trusted content selection, and spatial audit capture.
+- Added `xr/chrome-theme.js` to derive concrete XR chrome colors and typography from the live default-provider theme instead of hardcoded values.
+- Added `easeOutCubic` and `createXRScaleFadeTween`, plus an optional `panelTransitions` session setting for scale/fade panel transitions without changing store or receipt settlement.
+- Added `createXRHapticsBridge`, renderer-neutral portable panel state and receipts, frame timing, retained final-session snapshots, and matching discover/schema/package contracts.
+- Added a fullscreen control to each portable WebXR panel frame. It emits a host-owned `xr-panel-fullscreen-intent-v1` toggle intent, matching the existing `layout-node` fullscreen contract without adding viewport policy to persisted spatial pose state.
+
+### Changed
+
+- Three WebXR adapter chrome defaults now resolve from provider design tokens; explicit adapter color options still win.
+- Portable panel state uses nested `canonical` and `current` sub-states.
 
 ### Fixed
 
-- Aligned the HTML-in-Canvas WebGL and WebGPU adapters with the current Chromium contracts: WebGL native arity 3 with an optional fourth config argument, the four supported sized formats, grouped config members, a canonical flag-era tuple, and the WebGPU two-dictionary copy signature. Invalid signatures and configurations now fail before native upload with bounded receipts. Updated the origin-trial range through milestone 154.
+- Aligned the HTML-in-Canvas WebGL and WebGPU adapters with the current Chromium contracts: WebGL native arity 3 with an optional fourth config argument, the four supported sized formats, grouped config members, a canonical flag-era tuple, and the WebGPU two-dictionary copy signature. Invalid signatures and configurations now fail before native upload with bounded receipts. Synchronized the experimental origin-trial metadata with the official milestone range 148-150.
+- Fixed portable panel receipts, deterministic sequence/layout revisions, paired interaction frames, select-end settlement, root-relative move/resize math, unscaled chrome coordinates, nominal frame-rate validation, final snapshot ownership, and resize settlement during panel transitions.
+- Fixed native visual parity for transparent CSS borders and compound surface/text nodes: zero-alpha chrome remains hit-only, compound primitives keep unique identities, and appearance checks no longer report child-icon color as a missing control fill.
 
 ## [0.3.0-alpha.68] - 2026-07-23
 

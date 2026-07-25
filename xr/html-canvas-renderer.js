@@ -53,7 +53,7 @@ function createOriginTrialSummary(options = {}) {
   return {
     name: 'html-in-canvas',
     status: options.originTrialStatus || 'origin-trial',
-    chromeMilestoneRange: options.chromeMilestoneRange || '148-154',
+    chromeMilestoneRange: options.chromeMilestoneRange || '148-150',
     localTestBrowser: options.localTestBrowser || 'Chrome Canary 149+',
     requiredFlag: options.requiredFlag || 'CanvasDrawElement',
     flagUrl: options.flagUrl || 'chrome://flags/#canvas-draw-element',

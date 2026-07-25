@@ -30,7 +30,9 @@ const TEXT_ENTRY_KINDS = Object.freeze(['label']);
 const ICON_ENTRY_KINDS = Object.freeze(['icon']);
 
 function isTransparentValue(value) {
-  return !value || TRANSPARENT_VALUES.includes(value);
+  if (!value || TRANSPARENT_VALUES.includes(value)) return true;
+  let parsed = parseColor(value);
+  return Boolean(parsed && parsed.a <= ALPHA_TOLERANCE);
 }
 
 function parseColor(value) {
@@ -119,13 +121,15 @@ function compareSurfaceStyle(node, entries, issues, compared) {
 function compareBorderStyle(node, entries, issues, scale) {
   let style = node.style || {};
   let width = Number.parseFloat(style['border-width']);
-  if (style['border-style'] !== 'solid' || !(width > 0)) return;
+  if (style['border-style'] !== 'solid'
+    || !(width > 0)
+    || isTransparentValue(style['border-color'])) return;
   let entry = findEntry(entries, SURFACE_ENTRY_KINDS, (candidate) => candidate.border);
   let actualWidth = entry?.border && Number.isFinite(scale) && scale > 0
     ? entry.border.width / scale
     : entry?.border?.width;
   if (!entry?.border
-    || !colorMatches(style['border-color'], entry.border.color, 1)
+    || !colorMatches(style['border-color'], entry.border.color, entry.border.opacity)
     || actualWidth !== width) {
     issues.push({
       id: SPATIAL_VISUAL_PARITY_ISSUES.SURFACE_STYLE_MISMATCH,

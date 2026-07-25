@@ -371,6 +371,46 @@ test('compileSpatialSnapshot keeps controls with background or border chrome as 
   assert.deepEqual(bordered.style.border, { width: 0.001, color: 'rgb(60, 60, 60)' });
 });
 
+test('compileSpatialSnapshot treats zero-alpha borders as chromeless controls', () => {
+  let compiled = compileSpatialSnapshot(createChromeSnapshot([
+    chromeNode({
+      id: 'panel:project/control:collapse-all',
+      part: 'control',
+      style: {
+        'border-width': '1px',
+        'border-style': 'solid',
+        'border-color': 'rgba(158, 158, 158, 0)',
+        color: 'rgb(172, 172, 172)',
+      },
+      actions: [{ id: 'collapse-all', targetId: 'panel:project', intent: 'sn-tree-panel-collapse' }],
+    }),
+  ]), { planeWidth: 1.28 });
+  let control = primitivesOf(compiled, 'panel:project')
+    .find((primitive) => primitive.spatialNodeId === 'panel:project/control:collapse-all');
+  assert.equal(control.control, 'hit');
+  assert.equal(control.style, undefined);
+});
+
+test('compileSpatialSnapshot keeps a zero-alpha surface base transparent', () => {
+  let compiled = compileSpatialSnapshot(createChromeSnapshot([
+    chromeNode({
+      id: 'panel:project/surface:transparent',
+      part: 'surface',
+      style: {
+        'background-color': 'rgba(14, 36, 44, 0)',
+        'border-width': '1px',
+        'border-style': 'solid',
+        'border-color': 'rgb(60, 60, 60)',
+      },
+    }),
+  ]), { planeWidth: 1.28 });
+  let surface = primitivesOf(compiled, 'panel:project')
+    .find((primitive) => primitive.spatialNodeId === 'panel:project/surface:transparent');
+  assert.equal(surface.transparent, true);
+  assert.equal(surface.style.background, undefined);
+  assert.deepEqual(surface.style.border, { width: 0.001, color: 'rgb(60, 60, 60)' });
+});
+
 test('compileSpatialSnapshot compiles badge nodes into surface and label primitives', () => {
   let compiled = compileSpatialSnapshot(createChromeSnapshot([
     chromeNode({
@@ -390,6 +430,7 @@ test('compileSpatialSnapshot compiles badge nodes into surface and label primiti
   assert.ok(label, 'badge compiles a label primitive');
   assert.equal(label.text, 'graph');
   assert.equal(label.style.color, 'rgb(153, 153, 153)');
+  assert.equal(new Set(primitives.map((primitive) => primitive.id)).size, primitives.length);
 });
 
 test('compileSpatialSnapshot compiles field nodes into a sunken bordered surface and proxy label', () => {
@@ -420,6 +461,7 @@ test('compileSpatialSnapshot compiles field nodes into a sunken bordered surface
   assert.ok(label, 'field compiles a proxy label');
   assert.equal(label.text, 'Filter project files');
   assert.equal(label.multiline, undefined, 'field proxy text stays single-line');
+  assert.equal(new Set(primitives.map((primitive) => primitive.id)).size, primitives.length);
 });
 
 test('compileSpatialSnapshot compiles surface nodes and marks evidence-free surfaces transparent', () => {

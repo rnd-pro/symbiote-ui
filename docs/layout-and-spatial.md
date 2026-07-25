@@ -202,6 +202,12 @@ coordination. All algorithmic cores are pure JavaScript, renderer-neutral, and
 Node-safe. Three.js and WebXR adapters accept runtime dependencies through
 injection, never as hard imports.
 
+The strict target/observation/audit lifecycle, pre-root placement receipts,
+portable panel interaction, and deterministic 2×2 projection contract are
+documented in [XR Spatial Evidence](./xr-spatial-evidence.md). The fourth
+axonometric pane is reference-only and nonmetric; it never affects the runtime
+verdict.
+
 ### Octree / Spatial Index
 
 High-performance 3D octree for spatial queries and Barnes-Hut force
@@ -607,12 +613,14 @@ controls through `SPATIAL_TREE_CONTROLS`, resizer drags).
 The explicit `mock-families` source keeps the hand-authored family path
 working unchanged.
 
-The lab demo pins Three `0.180.0` through its own import map; Three is not a
-package dependency. The monolithic Three WebXR adapter
-(`xr/three-webxr-adapter.js`) and the textured HTML/WebGL panel compositors stay
-untouched: this pipeline is separate, and a later WebXR path would reuse the
-same pure compiler output through an XR session host rather than this demo's
-desktop renderer.
+The lab demo pins Three `0.180.0` through its own import map. The package also
+pins Three `0.185.1` as a development dependency for conformance tests while
+runtime adapters continue to require a host-injected Three namespace. The
+native compiler/renderer and HTML-in-Canvas compositor remain independent
+backends over shared layout, intent, and theme contracts. Captured native
+header controls relay the live `panel-fullscreen` intent; portable WebXR frames
+expose the same window action through the host-owned `onPanelFullscreen`
+callback.
 
 ### Dual View Controller
 
@@ -661,5 +669,11 @@ Each spatial module is available as a standalone subpath export:
 | `symbiote-ui/xr/spatial-parity` | Pure deterministic snapshot ↔ scene parity report |
 | `symbiote-ui/xr/spatial-visual-parity` | Pure snapshot ↔ renderer-appearance visual parity report |
 | `symbiote-ui/xr/dom-spatial-capture` | Browser-only DOM/CSSOM measurement adapters (evaluation-safe in Node) |
+| `symbiote-ui/xr/spatial-contract` | Spatial evidence versions, conventions, and tolerances |
+| `symbiote-ui/xr/spatial-math` | Column-major and root-relative geometry |
+| `symbiote-ui/xr/spatial-projection` | Metric, stereo, and reference-only axonometric projections |
+| `symbiote-ui/xr/spatial-evidence` | Target, sample, and audit verification |
+| `symbiote-ui/xr/spatial-stability` | Consecutive-frame stability audit tracking |
+| `symbiote-ui/xr/pointer` | Hit maps and placement/content select receipts |
 
 All modules are also re-exported from the barrel `symbiote-ui/xr`.

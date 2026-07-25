@@ -10,17 +10,43 @@ import {
   createXRPanelTextureSourceSummary,
 } from './html-canvas-renderer.js';
 import { createXRPanelFrame, hitTestXRPanelFrame } from './panel-frame.js';
+import { XR_DEFAULT_DESIGN_TOKENS, xrDesignTokenColorNumber } from './chrome-theme.js';
 import {
   createXRPanelTextureQualitySummary,
   createXRTextureQualityPolicy,
 } from './layout-projection.js';
 import {
+  resolveXRHitMap,
   selectPrimaryXRInputSource,
 } from './pointer.js';
 import {
   createXRSceneRootTransform,
   createXRViewerPoseSnapshot,
 } from './spatial-scene.js';
+import { createXRPortablePanelStore } from './portable-panel-state.js';
+import { createXRFrameTimingTracker } from './frame-timing.js';
+import { createXRScaleFadeTween } from './transitions.js';
+import { XR_SPATIAL_VERSIONS, freezeSpatialValue } from './spatial-contract.js';
+import {
+  isFiniteMatrix4,
+  makeTransform,
+  multiplyMatrices,
+  normalizeQuaternion,
+  poseFromMatrix,
+  relativeMatrix,
+} from './spatial-math.js';
+import { validateTarget } from './spatial-evidence.js';
+
+// Chrome colors default to the provider design tokens (xr/chrome-theme.js):
+// accent carries grab/pointer affordances, neutral on-surface carries window
+// controls, success marks pinned, surface-panel paints the material fallback.
+// The legacy literals remain only as resolution-failure fallbacks; explicit
+// options always win over both.
+const XR_TOKEN_CHROME_COLORS = XR_DEFAULT_DESIGN_TOKENS.colors;
+const XR_CHROME_ACCENT_COLOR = xrDesignTokenColorNumber(XR_TOKEN_CHROME_COLORS.accent) ?? 0x7fd6ff;
+const XR_CHROME_ON_SURFACE_COLOR = xrDesignTokenColorNumber(XR_TOKEN_CHROME_COLORS.onSurface) ?? 0xffffff;
+const XR_CHROME_PINNED_COLOR = xrDesignTokenColorNumber(XR_TOKEN_CHROME_COLORS.success) ?? 0x9fffd8;
+const XR_PANEL_SURFACE_COLOR = xrDesignTokenColorNumber(XR_TOKEN_CHROME_COLORS.surfacePanel) ?? 0x243244;
 
 export const XR_THREE_WEBXR_ADAPTER = Object.freeze({
   name: 'three-webxr',
@@ -74,6 +100,15 @@ export const XR_THREE_WEBXR_ADAPTER = Object.freeze({
     'three-animation-loop',
     'three-panel-material-state',
     'three-session-diagnostics',
+    'three-world-locked-root-commit',
+    'three-trusted-select-receipts',
+    'three-spatial-audit-v1',
+    'three-portable-panel-controls',
+    'three-portable-panel-receipts',
+    'three-portable-panel-close',
+    'three-panel-fullscreen-intent',
+    'three-frame-timing',
+    'three-final-session-snapshot',
     'symbiote-xr-scene-adapter',
     'host-supplied-three',
   ],
@@ -208,7 +243,11 @@ function applyVector(target, values = []) {
 function applyRotation(target, values = []) {
   if (!target) return;
   if (hasFn(target, 'set')) {
-    target.set(...values.map((value) => Number(value || 0) * Math.PI / 180));
+    // The provider Euler contract is Rz*Ry*Rx; without an explicit order the
+    // Three Euler stays 'XYZ' and composed rotations diverge from
+    // eulerToQuaternion and every schema consumer.
+    let radians = [0, 1, 2].map((index) => Number(values[index] || 0) * Math.PI / 180);
+    target.set(radians[0], radians[1], radians[2], 'ZYX');
   }
 }
 
@@ -238,7 +277,7 @@ function nowMs(options = {}) {
 
 function normalizeRayVisualOptions(options = {}) {
   let length = Number(options.rayLength ?? options.length ?? 3);
-  let color = options.rayColor ?? options.color ?? 0x7fd6ff;
+  let color = options.rayColor ?? options.color ?? XR_CHROME_ACCENT_COLOR;
   let opacity = Number(options.rayOpacity ?? options.opacity ?? 0.84);
   return {
     enabled: options.enabled !== false,
@@ -287,7 +326,7 @@ function buildControllerRayVisual(THREE, options = {}) {
 function normalizeHitReticleOptions(options = {}) {
   let innerRadius = Number(options.innerRadius ?? 0.018);
   let outerRadius = Number(options.outerRadius ?? 0.032);
-  let color = options.color ?? 0x9ee7ff;
+  let color = options.color ?? XR_CHROME_ACCENT_COLOR;
   let opacity = Number(options.opacity ?? 0.92);
   return {
     enabled: options.enabled !== false,
@@ -347,7 +386,16 @@ function updatePanelHitReticleVisual(reticle, hit) {
   object.userData.panelId = hit.object.userData?.panelId || null;
   if (object.position?.copy) object.position.copy(hit.point);
   else applyVector(object.position, [hit.point.x, hit.point.y, hit.point.z]);
-  if (object.quaternion?.copy && hit.object.quaternion) object.quaternion.copy(hit.object.quaternion);
+  // The reticle lives at scene level while panels sit under the placed root:
+  // the panel's local quaternion misses the root yaw and lays the ring
+  // sideways on committed scenes — orient by world rotation instead.
+  if (object.quaternion?.copy) {
+    if (typeof hit.object.getWorldQuaternion === 'function') {
+      hit.object.getWorldQuaternion(object.quaternion);
+    } else if (hit.object.quaternion) {
+      object.quaternion.copy(hit.object.quaternion);
+    }
+  }
   return {
     ok: true,
     visible: true,
@@ -358,21 +406,156 @@ function updatePanelHitReticleVisual(reticle, hit) {
 }
 
 function normalizePanelFrameVisualOptions(options = {}) {
-  let headerColor = options.headerColor ?? options.color ?? 0x7fd6ff;
-  let handleColor = options.handleColor ?? options.color ?? 0x9ee7ff;
-  let actionColor = options.actionColor ?? options.color ?? 0xffffff;
+  let headerColor = options.headerColor ?? options.color ?? XR_CHROME_ACCENT_COLOR;
+  let handleColor = options.handleColor ?? options.color ?? XR_CHROME_ON_SURFACE_COLOR;
+  let actionColor = options.actionColor ?? options.color ?? XR_CHROME_ON_SURFACE_COLOR;
+  let pinnedColor = options.pinnedColor ?? XR_CHROME_PINNED_COLOR;
   let opacity = Number(options.opacity ?? 0.34);
   let handleOpacity = Number(options.handleOpacity ?? 0.62);
+  let handleRestOpacity = Number(options.handleRestOpacity ?? 0);
+  let hoverOpacity = Number(options.hoverOpacity ?? 0.95);
   return {
     enabled: options.enabled !== false,
     headerColor,
     handleColor,
     actionColor,
+    pinnedColor,
     opacity: Number.isFinite(opacity) ? Math.max(0.04, Math.min(1, opacity)) : 0.34,
     handleOpacity: Number.isFinite(handleOpacity) ? Math.max(0.04, Math.min(1, handleOpacity)) : 0.62,
+    handleRestOpacity: Number.isFinite(handleRestOpacity) ? Math.max(0, Math.min(1, handleRestOpacity)) : 0,
+    hoverOpacity: Number.isFinite(hoverOpacity) ? Math.max(0.04, Math.min(1, hoverOpacity)) : 0.95,
     zOffset: Number(options.zOffset ?? 0.006),
     renderOrder: Number(options.renderOrder ?? 28),
   };
+}
+
+function panelChromeCanvas(width, height) {
+  if (typeof document !== 'undefined' && typeof document.createElement === 'function') {
+    let canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    return canvas;
+  }
+  if (typeof OffscreenCanvas === 'function') {
+    return new OffscreenCanvas(width, height);
+  }
+  return null;
+}
+
+function panelChromeRoundedRect(ctx, x, y, width, height, radius) {
+  let r = Math.min(radius, width / 2, height / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + width, y, x + width, y + height, r);
+  ctx.arcTo(x + width, y + height, x, y + height, r);
+  ctx.arcTo(x, y + height, x, y, r);
+  ctx.arcTo(x, y, x + width, y, r);
+  ctx.closePath();
+}
+
+function drawPanelChromeGlyph(ctx, kind, size) {
+  let center = size / 2;
+  ctx.strokeStyle = 'rgba(255,255,255,1)';
+  ctx.fillStyle = 'rgba(255,255,255,1)';
+  ctx.lineWidth = size * 0.075;
+  ctx.lineCap = 'round';
+  if (kind === 'pin') {
+    ctx.beginPath();
+    ctx.arc(center, center - size * 0.06, size * 0.12, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(center, center + size * 0.04);
+    ctx.lineTo(center, center + size * 0.24);
+    ctx.stroke();
+  } else if (kind === 'reset') {
+    ctx.beginPath();
+    ctx.arc(center, center, size * 0.2, Math.PI * 0.15, Math.PI * 1.6);
+    ctx.stroke();
+    let tipAngle = Math.PI * 1.6;
+    let tipX = center + Math.cos(tipAngle) * size * 0.2;
+    let tipY = center + Math.sin(tipAngle) * size * 0.2;
+    ctx.beginPath();
+    ctx.moveTo(tipX - size * 0.09, tipY - size * 0.02);
+    ctx.lineTo(tipX, tipY);
+    ctx.lineTo(tipX + size * 0.03, tipY - size * 0.11);
+    ctx.stroke();
+  } else if (kind === 'close') {
+    let arm = size * 0.14;
+    ctx.beginPath();
+    ctx.moveTo(center - arm, center - arm);
+    ctx.lineTo(center + arm, center + arm);
+    ctx.moveTo(center + arm, center - arm);
+    ctx.lineTo(center - arm, center + arm);
+    ctx.stroke();
+  } else if (kind === 'fullscreen') {
+    let inset = size * 0.25;
+    let arm = size * 0.12;
+    ctx.beginPath();
+    ctx.moveTo(inset + arm, inset);
+    ctx.lineTo(inset, inset);
+    ctx.lineTo(inset, inset + arm);
+    ctx.moveTo(size - inset - arm, inset);
+    ctx.lineTo(size - inset, inset);
+    ctx.lineTo(size - inset, inset + arm);
+    ctx.moveTo(inset, size - inset - arm);
+    ctx.lineTo(inset, size - inset);
+    ctx.lineTo(inset + arm, size - inset);
+    ctx.moveTo(size - inset - arm, size - inset);
+    ctx.lineTo(size - inset, size - inset);
+    ctx.lineTo(size - inset, size - inset - arm);
+    ctx.stroke();
+  }
+}
+
+const PANEL_CHROME_CORNER_FLIPS = {
+  northWest: [1, 1],
+  northEast: [-1, 1],
+  southEast: [-1, -1],
+  southWest: [1, -1],
+};
+
+function createPanelChromeTexture(THREE, kind, detail = null) {
+  if (typeof THREE?.CanvasTexture !== 'function') return null;
+  let width = kind === 'bar' ? 256 : 128;
+  let height = kind === 'bar' ? 64 : 128;
+  let canvas = panelChromeCanvas(width, height);
+  let ctx = canvas?.getContext?.('2d');
+  if (!ctx) return null;
+  ctx.clearRect(0, 0, width, height);
+  if (kind === 'bar') {
+    // Horizon-style grab pill: full-width rounded bar centered in the band.
+    ctx.fillStyle = 'rgba(255,255,255,1)';
+    panelChromeRoundedRect(ctx, width * 0.03, height * 0.3, width * 0.94, height * 0.4, height * 0.2);
+    ctx.fill();
+  } else if (kind === 'action') {
+    ctx.fillStyle = 'rgba(255,255,255,0.34)';
+    ctx.beginPath();
+    ctx.arc(width / 2, height / 2, width * 0.42, 0, Math.PI * 2);
+    ctx.fill();
+    drawPanelChromeGlyph(ctx, detail, width);
+  } else if (kind === 'corner') {
+    // Rounded L-bracket grip, drawn for northWest and mirrored per corner.
+    let [flipX, flipY] = PANEL_CHROME_CORNER_FLIPS[detail] || [1, 1];
+    ctx.save();
+    ctx.translate(width / 2, height / 2);
+    ctx.scale(flipX, flipY);
+    ctx.translate(-width / 2, -height / 2);
+    ctx.strokeStyle = 'rgba(255,255,255,1)';
+    ctx.lineWidth = width * 0.11;
+    ctx.lineCap = 'round';
+    let inset = width * 0.16;
+    let arm = width * 0.42;
+    let radius = width * 0.22;
+    ctx.beginPath();
+    ctx.moveTo(inset + arm, inset);
+    ctx.arcTo(inset, inset, inset, inset + arm, radius);
+    ctx.lineTo(inset, inset + arm);
+    ctx.stroke();
+    ctx.restore();
+  }
+  let texture = new THREE.CanvasTexture(canvas);
+  if ('anisotropy' in texture) texture.anisotropy = 4;
+  return texture;
 }
 
 function frameZoneToPanelRect(zone = {}, size = [0.8, 0.45]) {
@@ -400,6 +583,9 @@ function removePanelFrameVisuals(mesh) {
     if (typeof object?.geometry?.dispose === 'function') {
       object.geometry.dispose();
     }
+    if (typeof object?.material?.map?.dispose === 'function') {
+      object.material.map.dispose();
+    }
     if (typeof object?.material?.dispose === 'function') {
       object.material.dispose();
     }
@@ -420,7 +606,17 @@ function addPanelFrameVisualObject(mesh, object) {
 
 function buildPanelFrameZoneVisual(THREE, zoneName, zone, size, visual, metadata = {}) {
   let rect = frameZoneToPanelRect(zone, size);
-  let geometry = new THREE.PlaneGeometry(rect.width, rect.height);
+  let visualWidth = rect.width;
+  let visualHeight = rect.height;
+  if (metadata.square) {
+    let side = Math.min(visualWidth, visualHeight) * (metadata.visualScale ?? 1);
+    visualWidth = side;
+    visualHeight = side;
+  } else if (metadata.visualScale) {
+    visualWidth *= metadata.visualScale;
+    visualHeight *= metadata.visualScale;
+  }
+  let geometry = new THREE.PlaneGeometry(visualWidth, visualHeight);
   let material = new THREE.MeshBasicMaterial({
     color: metadata.color ?? visual.handleColor,
     transparent: true,
@@ -428,6 +624,9 @@ function buildPanelFrameZoneVisual(THREE, zoneName, zone, size, visual, metadata
     depthTest: false,
     side: THREE.DoubleSide,
   });
+  if (metadata.texture) {
+    material.map = metadata.texture;
+  }
   let object = new THREE.Mesh(geometry, material);
   object.name = `sn-xr-panel-frame-${zoneName}`;
   object.renderOrder = visual.renderOrder;
@@ -439,6 +638,11 @@ function buildPanelFrameZoneVisual(THREE, zoneName, zone, size, visual, metadata
   object.userData.action = metadata.action || null;
   object.userData.baseColor = metadata.color ?? visual.handleColor;
   object.userData.baseOpacity = metadata.opacity ?? visual.handleOpacity;
+  object.userData.hoverOpacity = metadata.hoverOpacity ?? object.userData.baseOpacity;
+  object.userData.zoneCenter = {
+    x: Number(zone.x || 0) + Number(zone.width || 0) / 2,
+    y: Number(zone.y || 0) + Number(zone.height || 0) / 2,
+  };
   if (object.position?.set) {
     object.position.set(rect.x, rect.y, visual.zOffset);
   } else {
@@ -462,8 +666,11 @@ function buildPanelFrameVisuals(THREE, panel, mesh, options = {}) {
   }
 
   removePanelFrameVisuals(mesh);
-  let frame = createXRPanelFrame(panel || {}, options.frame || {});
   let size = readPanelSize(mesh);
+  // Live size wins over any pinned panelSizeMeters so resize rebuilds
+  // re-derive meter chrome for the CURRENT panel size.
+  let frameOptions = { pinned: Boolean(panel?.pinned), ...(options.frame || {}), panelSizeMeters: size };
+  let frame = createXRPanelFrame(panel || {}, frameOptions);
   let objects = [];
   let zones = [];
 
@@ -472,6 +679,8 @@ function buildPanelFrameVisuals(THREE, panel, mesh, options = {}) {
     operation: 'move',
     color: visual.headerColor,
     opacity: visual.opacity,
+    hoverOpacity: visual.hoverOpacity,
+    texture: createPanelChromeTexture(THREE, 'bar'),
   });
   moveObject.userData.panelId = frame.panelId;
   if (addPanelFrameVisualObject(mesh, moveObject)) {
@@ -484,6 +693,10 @@ function buildPanelFrameVisuals(THREE, panel, mesh, options = {}) {
       zone: 'resize',
       operation: 'resize',
       handle,
+      opacity: visual.handleRestOpacity,
+      hoverOpacity: visual.hoverOpacity,
+      square: true,
+      texture: createPanelChromeTexture(THREE, 'corner', handle),
     });
     object.userData.panelId = frame.panelId;
     if (addPanelFrameVisualObject(mesh, object)) {
@@ -493,12 +706,17 @@ function buildPanelFrameVisuals(THREE, panel, mesh, options = {}) {
   }
 
   for (let [action, zone] of Object.entries(frame.zones.actions || {})) {
+    let pinnedAccent = action === 'pin' && frame.state.pinned;
     let object = buildPanelFrameZoneVisual(THREE, `action-${action}`, zone, size, visual, {
       zone: 'action',
       operation: 'action',
       action,
-      color: visual.actionColor,
-      opacity: visual.opacity,
+      color: pinnedAccent ? visual.pinnedColor : visual.actionColor,
+      opacity: pinnedAccent ? visual.hoverOpacity : visual.opacity,
+      hoverOpacity: visual.hoverOpacity,
+      square: true,
+      visualScale: 0.92,
+      texture: createPanelChromeTexture(THREE, 'action', action),
     });
     object.userData.panelId = frame.panelId;
     if (addPanelFrameVisualObject(mesh, object)) {
@@ -513,7 +731,7 @@ function buildPanelFrameVisuals(THREE, panel, mesh, options = {}) {
     panelId: frame.panelId,
     objectCount: objects.length,
     zones,
-    header: true,
+    footer: true,
     resizeHandles: Object.keys(frame.zones.resize || {}).length,
     actionSlots: Object.keys(frame.zones.actions || {}).length,
     objects,
@@ -524,13 +742,40 @@ function buildPanelFrameVisuals(THREE, panel, mesh, options = {}) {
   return summary;
 }
 
+function updatePanelFrameHoverVisuals(mesh, hovered, framePoint = null, smoothing = 0.25, options = {}) {
+  let objects = mesh?.userData?.panelFrameVisuals?.objects || [];
+  // Corner grips reveal by pointer proximity (Horizon-style), compared in
+  // meters so the reveal distance is independent of panel size.
+  let revealRadiusMeters = Number(options.revealRadiusMeters ?? 0.12);
+  if (!Number.isFinite(revealRadiusMeters) || revealRadiusMeters <= 0) revealRadiusMeters = 0.12;
+  let size = readPanelSize(mesh);
+  for (let object of objects) {
+    let material = object?.material;
+    if (!material) continue;
+    let base = Number(object.userData?.baseOpacity ?? 0);
+    let peak = Number(object.userData?.hoverOpacity ?? base);
+    let reveal = hovered;
+    if (reveal && object.userData?.zone === 'resize') {
+      let center = object.userData.zoneCenter;
+      reveal = Boolean(framePoint && center &&
+        Math.abs((framePoint.x - center.x) * size[0]) < revealRadiusMeters &&
+        Math.abs((framePoint.y - center.y) * size[1]) < revealRadiusMeters);
+    }
+    let target = reveal ? peak : base;
+    let current = Number(material.opacity);
+    if (!Number.isFinite(current)) current = base;
+    let next = current + (target - current) * smoothing;
+    material.opacity = Math.abs(next - target) < 0.004 ? target : next;
+  }
+}
+
 function createMaterial(THREE, panel, options = {}) {
   let material = panel.material || {};
   let color = options.colorResolver?.(panel) ||
     material.threeColor ||
     material.backgroundColor ||
     panel.color ||
-    0x243244;
+    XR_PANEL_SURFACE_COLOR;
   if (typeof THREE.MeshBasicMaterial === 'function') {
     return new THREE.MeshBasicMaterial({
       color,
@@ -1371,16 +1616,87 @@ function createPanelMesh(THREE, panel, options = {}) {
   applyRotation(mesh.rotation, Array.isArray(panel.rotation) ? panel.rotation : [0, 0, 0]);
   mesh.userData.panelId = panel.id || null;
   mesh.userData.panel = panel;
+  mesh.userData.THREE = THREE;
   mesh.userData.baseSize = [Number(size[0] || 0.8), Number(size[1] || 0.45)];
   mesh.userData.xrSize = [...mesh.userData.baseSize];
-  mesh.userData.panelFrame = createXRPanelFrame(panel, options.panelFrame || {});
+  // Hit-test zones must match the visible chrome, so the frame build shares
+  // the visuals' frame options; panelFrame wins on explicit conflict. Stored
+  // for the stale-frame rebuild in applyPanelSize (meter-derived zones go
+  // stale on resize otherwise).
+  let frameOptions = { ...(options.panelFrameVisuals?.frame || {}), ...(options.panelFrame || {}) };
+  mesh.userData.panelFrameOptions = frameOptions;
+  mesh.userData.panelFrame = createXRPanelFrame(panel, frameOptions);
   mesh.userData.panelFrameVisuals = buildPanelFrameVisuals(THREE, panel, mesh, options.panelFrameVisuals || {});
   mesh.userData.baseColor = options.colorResolver?.(panel) ||
     panel.material?.threeColor ||
     panel.material?.backgroundColor ||
     panel.color ||
     null;
+  attachChromeHitSurface(THREE, mesh);
   return mesh;
+}
+
+function chromeSurfaceExtents(mesh) {
+  let [width, height] = mesh?.userData?.xrSize || [0.8, 0.45];
+  // Legacy fractional floor keeps pre-meter-chrome behavior intact.
+  let extendX = Math.max(0.06, width * 0.08);
+  let extendY = Math.max(0.1, height * 0.18);
+  // Grow (never shrink) the surface from the actual frame chrome: the footer
+  // band below the window and the grips straddling the edges must stay
+  // hittable. The plane is centered, so one extent covers both sides.
+  let margin = 0.02;
+  let zones = mesh?.userData?.panelFrame?.zones || {};
+  if (zones.move) {
+    extendY = Math.max(extendY, (zones.move.y + zones.move.height - 1) * height + margin);
+  }
+  let grip = zones.resize?.northWest;
+  if (grip) {
+    extendY = Math.max(extendY, -grip.y * height + margin);
+    extendX = Math.max(extendX, -grip.x * width + margin);
+  }
+  return { extendX, extendY };
+}
+
+function attachChromeHitSurface(THREE, mesh) {
+  // An invisible, slightly recessed plane larger than the window lets the
+  // controller ray reach the Horizon-style chrome that floats OUTSIDE the
+  // window (footer bar, straddling corner grips). Rays inside the window
+  // still hit the panel first (it is closer), so content behavior is
+  // untouched.
+  if (typeof THREE?.PlaneGeometry !== 'function' || typeof THREE?.MeshBasicMaterial !== 'function') return;
+  let [width, height] = mesh.userData.xrSize || [0.8, 0.45];
+  let { extendX, extendY } = chromeSurfaceExtents(mesh);
+  let surface = new THREE.Mesh(
+    new THREE.PlaneGeometry(width + extendX * 2, height + extendY * 2),
+    new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }),
+  );
+  surface.name = 'sn-xr-panel-chrome-surface';
+  surface.userData ||= {};
+  surface.userData.snChromeSurface = true;
+  surface.userData.panelMesh = mesh;
+  surface.userData.extend = { x: extendX, y: extendY };
+  if (surface.position?.set) surface.position.set(0, 0, -0.002);
+  mesh.add?.(surface);
+  mesh.userData.chromeSurface = surface;
+}
+
+function remapChromeSurfaceHit(hit) {
+  let surface = hit?.object;
+  let panelMesh = surface?.userData?.panelMesh;
+  if (!panelMesh || !hit?.uv) return null;
+  let [width, height] = panelMesh.userData?.xrSize || [0.8, 0.45];
+  let extend = surface.userData.extend || { x: 0, y: 0 };
+  let chromeWidth = width + extend.x * 2;
+  let chromeHeight = height + extend.y * 2;
+  hit.object = panelMesh;
+  hit.framePoint = {
+    x: (Number(hit.uv.x || 0) * chromeWidth - extend.x) / width,
+    y: 0.5 - ((Number(hit.uv.y || 0) - 0.5) * chromeHeight) / height,
+  };
+  // The chrome UV is not panel-content UV; content hit maps must never
+  // consume it.
+  hit.uv = null;
+  return hit;
 }
 
 function createRootGroup(THREE, scene, transform) {
@@ -1503,6 +1819,9 @@ export function createXRThreePanelSceneAdapter(options = {}) {
     getScene() {
       return scene;
     },
+    getRootObject() {
+      return rootGroup;
+    },
     getPanelMesh(panelId) {
       return panels.get(panelId) || null;
     },
@@ -1605,6 +1924,14 @@ function vectorData(vector) {
 }
 
 function framePointFromHit(hit) {
+  // Chrome-surface hits carry an already-remapped frame point that may lie
+  // outside the window UV square.
+  if (hit?.framePoint) {
+    return {
+      x: Number(hit.framePoint.x || 0),
+      y: Number(hit.framePoint.y || 0),
+    };
+  }
   if (hit?.uv) {
     return {
       x: Number(hit.uv.x || 0),
@@ -1657,13 +1984,45 @@ function vectorDot(a, b) {
 
 function axisVector(THREE, mesh, values) {
   let vector = THREE?.Vector3 ? new THREE.Vector3(...values) : { x: values[0], y: values[1], z: values[2] };
-  if (mesh?.quaternion && typeof vector.applyQuaternion === 'function') {
-    vector.applyQuaternion(mesh.quaternion);
+  let quaternion = hasFn(mesh, 'getWorldQuaternion') && THREE?.Quaternion
+    ? mesh.getWorldQuaternion(new THREE.Quaternion())
+    : mesh?.quaternion || null;
+  if (quaternion && typeof vector.applyQuaternion === 'function') {
+    vector.applyQuaternion(quaternion);
   }
   if (typeof vector.normalize === 'function') {
     vector.normalize();
   }
   return vector;
+}
+
+function meshWorldPositionOf(THREE, mesh) {
+  if (hasFn(mesh, 'getWorldPosition') && THREE?.Vector3) {
+    return mesh.getWorldPosition(new THREE.Vector3());
+  }
+  return mesh?.position?.clone?.() || mesh?.position || null;
+}
+
+function worldToPanelParentLocal(mesh, worldPosition) {
+  let parent = mesh?.parent;
+  if (parent && hasFn(parent, 'worldToLocal') && typeof worldPosition?.clone === 'function') {
+    parent.updateWorldMatrix?.(true, false);
+    return parent.worldToLocal(worldPosition.clone());
+  }
+  return worldPosition;
+}
+
+function worldDirectionToPanelParentLocal(THREE, mesh, direction) {
+  let parent = mesh?.parent;
+  if (!parent || !hasFn(parent, 'getWorldQuaternion') || !THREE?.Vector3 || !THREE?.Quaternion) {
+    return direction;
+  }
+  let inverse = parent.getWorldQuaternion(new THREE.Quaternion());
+  let local = new THREE.Vector3(direction.x, direction.y, direction.z);
+  if (typeof inverse?.invert !== 'function' || typeof local.applyQuaternion !== 'function') {
+    return direction;
+  }
+  return local.applyQuaternion(inverse.invert());
 }
 
 function scaleVector(vector, scalar) {
@@ -1685,7 +2044,7 @@ function addVector(target, vector) {
   target.z = Number(target.z || 0) + Number(vector.z || 0);
 }
 
-function readPanelSize(mesh) {
+function readPanelSize(mesh, ignoreScale = false) {
   let explicit = mesh?.userData?.xrSize || mesh?.userData?.panel?.size;
   if (Array.isArray(explicit)) {
     return [
@@ -1694,13 +2053,17 @@ function readPanelSize(mesh) {
     ];
   }
   let parameters = mesh?.geometry?.parameters || {};
+  // ignoreScale is for settle reads while a panel transition tween owns
+  // mesh.scale: the mid-ease value is transient animation, not panel size.
+  let scaleX = ignoreScale ? 1 : Number(mesh?.scale?.x || 1);
+  let scaleY = ignoreScale ? 1 : Number(mesh?.scale?.y || 1);
   return [
-    Math.max(0.05, Number(parameters.width || 0.8) * Number(mesh?.scale?.x || 1)),
-    Math.max(0.05, Number(parameters.height || 0.45) * Number(mesh?.scale?.y || 1)),
+    Math.max(0.05, Number(parameters.width || 0.8) * scaleX),
+    Math.max(0.05, Number(parameters.height || 0.45) * scaleY),
   ];
 }
 
-function applyPanelSize(mesh, size) {
+function applyPanelSize(mesh, size, THREE) {
   if (!mesh || !Array.isArray(size)) return;
   let next = [
     Math.max(0.05, Number(size[0] || 0.8)),
@@ -1711,19 +2074,46 @@ function applyPanelSize(mesh, size) {
   if (mesh.userData.panel) {
     mesh.userData.panel = { ...mesh.userData.panel, size: next };
   }
-  let parameters = mesh.geometry?.parameters || {};
-  let baseWidth = Number(mesh.userData.baseSize?.[0] || parameters.width || next[0]);
-  let baseHeight = Number(mesh.userData.baseSize?.[1] || parameters.height || next[1]);
-  if (mesh.scale && Number.isFinite(baseWidth) && Number.isFinite(baseHeight) && baseWidth > 0 && baseHeight > 0) {
-    if (typeof mesh.scale.set === 'function') {
-      mesh.scale.set(next[0] / baseWidth, next[1] / baseHeight, Number(mesh.scale.z || 1));
-    } else {
-      mesh.scale.x = next[0] / baseWidth;
-      mesh.scale.y = next[1] / baseHeight;
-      mesh.scale.z = Number(mesh.scale.z || 1);
+  let THREE_INST = THREE || mesh.userData.THREE;
+  if (mesh.geometry) {
+    let GeomConstructor = mesh.geometry.constructor || THREE_INST?.PlaneGeometry;
+    if (GeomConstructor) {
+      mesh.geometry.dispose?.();
+      mesh.geometry = new GeomConstructor(next[0], next[1]);
     }
   }
+  if (mesh.scale) {
+    if (typeof mesh.scale.set === 'function') {
+      mesh.scale.set(1, 1, 1);
+    } else {
+      mesh.scale.x = 1;
+      mesh.scale.y = 1;
+      mesh.scale.z = 1;
+    }
+  }
+  // Meter-derived zones go stale on resize: rebuild the hit-test frame for the
+  // new size before refreshing visuals and the chrome hit surface. Only meshes
+  // that already carry a frame (created via createPanelMesh) — foreign meshes
+  // without one must keep their resolveHitFrameTarget-null behavior.
+  if (mesh.userData.panelFrame) {
+    mesh.userData.panelFrame = createXRPanelFrame(
+      mesh.userData.panel || {},
+      { ...(mesh.userData.panelFrameOptions || {}), panelSizeMeters: next },
+    );
+  }
   mesh.userData.updatePanelFrameVisuals?.();
+  refreshChromeHitSurface(mesh);
+}
+
+function refreshChromeHitSurface(mesh) {
+  let surface = mesh?.userData?.chromeSurface;
+  let THREE = mesh?.userData?.THREE;
+  if (!surface || typeof THREE?.PlaneGeometry !== 'function') return;
+  let [width, height] = mesh.userData.xrSize || [0.8, 0.45];
+  let { extendX, extendY } = chromeSurfaceExtents(mesh);
+  surface.geometry?.dispose?.();
+  surface.geometry = new THREE.PlaneGeometry(width + extendX * 2, height + extendY * 2);
+  surface.userData.extend = { x: extendX, y: extendY };
 }
 
 function resizePanelFromDrag(THREE, dragState, point, options = {}) {
@@ -1778,11 +2168,11 @@ function resizePanelFromDrag(THREE, dragState, point, options = {}) {
   nextWidth = Math.max(minWidth, Math.min(maxWidth, nextWidth));
   nextHeight = Math.max(minHeight, Math.min(maxHeight, nextHeight));
   let size = [nextWidth, nextHeight];
-  applyPanelSize(dragState.mesh, size);
+  applyPanelSize(dragState.mesh, size, THREE);
   if (dragState.startPosition?.clone && dragState.mesh?.position?.copy) {
     dragState.mesh.position.copy(dragState.startPosition.clone());
   }
-  addVector(dragState.mesh?.position, centerShift);
+  addVector(dragState.mesh?.position, worldDirectionToPanelParentLocal(THREE, dragState.mesh, centerShift));
   return {
     operation: 'resize',
     handle,
@@ -1879,15 +2269,23 @@ export function createXRThreeControllerRayAdapter(options = {}) {
       diagnostics.lastHit = null;
       return [];
     }
-    let hits = raycaster.intersectObjects(meshes, false).map((hit) => {
-      let frameTarget = resolveHitFrameTarget(hit, options.panelFrameHitTest || {});
-      if (frameTarget) {
-        hit.frameTarget = frameTarget;
-        hit.object.userData ||= {};
-        hit.object.userData.lastFrameTarget = frameTarget;
-      }
-      return hit;
-    });
+    // Recursive: panels carry an invisible oversized chrome hit surface for
+    // the Horizon-style outside-window controls. Frame-visual planes are
+    // filtered out; chrome hits are remapped onto their panel with an
+    // out-of-window frame point.
+    let hits = raycaster.intersectObjects(meshes, true)
+      .filter((hit) => !hit.object?.userData?.snPanelFrameVisual && !hit.object?.userData?.snPanelHitReticle)
+      .map((hit) => (hit.object?.userData?.snChromeSurface ? remapChromeSurfaceHit(hit) : hit))
+      .filter(Boolean)
+      .map((hit) => {
+        let frameTarget = resolveHitFrameTarget(hit, options.panelFrameHitTest || {});
+        if (frameTarget) {
+          hit.frameTarget = frameTarget;
+          hit.object.userData ||= {};
+          hit.object.userData.lastFrameTarget = frameTarget;
+        }
+        return hit;
+      });
     if (hits.length) {
       counters.hits += 1;
       diagnostics.lastMissReason = null;
@@ -1919,25 +2317,60 @@ export function createXRThreeControllerRayAdapter(options = {}) {
       return ray;
     }
     camera?.getWorldPosition?.(cameraPosition);
-    normal.copy(cameraPosition).sub(mesh.position).normalize();
-    dragPlane.setFromNormalAndCoplanarPoint(normal, mesh.position);
+    // The controller ray lives in world space, so the drag plane must anchor in
+    // world space too; mesh.position is parent-local after root placement and
+    // would misplace the plane. The plane sits at the grab point facing back
+    // along the pointing ray: a camera-facing plane through the panel center
+    // degenerates for close-range or grazing rays (nearly parallel, or behind
+    // the ray origin), while the ray-facing grab plane keeps every subsequent
+    // intersection well-conditioned and moves the panel across the view.
+    let meshWorldPosition = meshWorldPositionOf(THREE, mesh);
+    let grabPoint = hit?.point?.clone?.() || meshWorldPosition;
+    normal.copy(raycaster.ray.direction);
+    normal.x = -normal.x;
+    normal.y = -normal.y;
+    normal.z = -normal.z;
+    normal.normalize();
+    dragPlane.setFromNormalAndCoplanarPoint(normal, grabPoint);
     if (!raycaster.ray.intersectPlane(dragPlane, intersection)) {
       counters.dragMisses += 1;
       diagnostics.lastMissReason = 'ray-plane-miss';
       return { ok: false, reason: 'ray-plane-miss' };
     }
+    // Horizon-style carry (opt-in dragModel 'controller-carry'): the window
+    // rides the ray at the grab distance and rotates with the controller, so
+    // the operator can place and angle it freely. Requires world-quaternion
+    // support from the runtime; otherwise the ray-plane model stays in force.
+    let carry = null;
+    if (options.dragModel === 'controller-carry' &&
+      typeof controller?.getWorldQuaternion === 'function' &&
+      typeof THREE.Quaternion === 'function') {
+      let controllerQuaternion = controller.getWorldQuaternion(new THREE.Quaternion());
+      let panelWorldQuaternion = typeof mesh.getWorldQuaternion === 'function'
+        ? mesh.getWorldQuaternion(new THREE.Quaternion())
+        : mesh.quaternion?.clone?.();
+      if (controllerQuaternion?.invert && panelWorldQuaternion) {
+        carry = {
+          grabDistance: grabPoint.distanceTo(raycaster.ray.origin),
+          controllerQuaternionInverse: controllerQuaternion.clone().invert(),
+          panelWorldQuaternion,
+          grabOffset: meshWorldPosition.clone().sub(grabPoint),
+        };
+      }
+    }
     dragging = {
       mesh,
       controller,
+      carry,
       frameTarget: hit?.frameTarget || mesh.userData?.lastFrameTarget || null,
       plane: dragPlane.clone(),
-      offset: mesh.position.clone().sub(intersection),
+      offset: meshWorldPosition.clone().sub(intersection),
       rotation: mesh.quaternion?.clone?.() || null,
       startIntersection: intersection.clone?.() || null,
       startPosition: mesh.position.clone?.() || null,
       startSize: readPanelSize(mesh),
-      lastPosition: mesh.position.clone?.() || null,
-      lastRawPosition: intersection.clone?.() || mesh.position.clone?.() || null,
+      lastPosition: meshWorldPosition.clone?.() || null,
+      lastRawPosition: intersection.clone?.() || meshWorldPosition.clone?.() || null,
     };
     counters.dragStarts += 1;
     diagnostics.lastMissReason = null;
@@ -1950,7 +2383,7 @@ export function createXRThreeControllerRayAdapter(options = {}) {
       rotation: vectorData(mesh.rotation),
       size: readPanelSize(mesh),
       planeNormal: vectorData(normal),
-      planePoint: vectorData(mesh.position),
+      planePoint: vectorData(grabPoint),
       intersection: vectorData(intersection),
       delta: { x: 0, y: 0, z: 0, distance: 0 },
       response: {
@@ -1976,12 +2409,16 @@ export function createXRThreeControllerRayAdapter(options = {}) {
       diagnostics.lastMissReason = ray.reason || 'ray-unavailable';
       return ray;
     }
+    let carryResize = Boolean(dragging.frameTarget?.operation === 'resize' || dragging.frameTarget?.handle);
+    if (dragging.carry && !carryResize) {
+      return updateCarryDrag(controller);
+    }
     if (!raycaster.ray.intersectPlane(dragging.plane, intersection)) {
       counters.dragMisses += 1;
       diagnostics.lastMissReason = 'ray-plane-miss';
       return { ok: false, reason: 'ray-plane-miss' };
     }
-    let previousPosition = dragging.mesh.position.clone?.() || dragging.lastPosition;
+    let previousPosition = meshWorldPositionOf(THREE, dragging.mesh) || dragging.lastPosition;
     let rawPosition = intersection.clone?.() || new THREE.Vector3(intersection.x, intersection.y, intersection.z);
     if (dragging.lastRawPosition && typeof THREE.Vector3.prototype.lerp === 'function') {
       let smoothed = new THREE.Vector3().copy(dragging.lastRawPosition).lerp(rawPosition, dragResponse.smoothing);
@@ -1995,7 +2432,7 @@ export function createXRThreeControllerRayAdapter(options = {}) {
     if (!resize) {
       rawPosition.add(dragging.offset);
       filtered = filteredDragPosition(previousPosition, rawPosition, dragResponse);
-      dragging.mesh.position.copy(filtered.position);
+      dragging.mesh.position.copy(worldToPanelParentLocal(dragging.mesh, filtered.position));
     }
     if (dragging.rotation && dragging.mesh.quaternion?.copy) {
       dragging.mesh.quaternion.copy(dragging.rotation);
@@ -2014,12 +2451,15 @@ export function createXRThreeControllerRayAdapter(options = {}) {
       planeNormal: vectorData(dragging.plane.normal),
       planePoint: vectorData(dragging.plane.point),
       intersection: vectorData(intersection),
-      delta: {
-        x: Number(dragging.mesh.position.x || 0) - Number(previousPosition?.x || 0),
-        y: Number(dragging.mesh.position.y || 0) - Number(previousPosition?.y || 0),
-        z: Number(dragging.mesh.position.z || 0) - Number(previousPosition?.z || 0),
-        distance: distanceBetween(dragging.mesh.position, previousPosition),
-      },
+      delta: (() => {
+        let settledWorldPosition = meshWorldPositionOf(THREE, dragging.mesh) || dragging.mesh.position;
+        return {
+          x: Number(settledWorldPosition.x || 0) - Number(previousPosition?.x || 0),
+          y: Number(settledWorldPosition.y || 0) - Number(previousPosition?.y || 0),
+          z: Number(settledWorldPosition.z || 0) - Number(previousPosition?.z || 0),
+          distance: distanceBetween(settledWorldPosition, previousPosition),
+        };
+      })(),
       rawPosition: vectorData(rawPosition),
       response: resize ? {
         operation: 'resize',
@@ -2028,13 +2468,65 @@ export function createXRThreeControllerRayAdapter(options = {}) {
         size: resize.size,
       } : filtered.diagnostics,
     };
-    dragging.lastPosition = dragging.mesh.position.clone?.() || null;
+    dragging.lastPosition = meshWorldPositionOf(THREE, dragging.mesh) || dragging.lastPosition;
     dragging.lastRawPosition = rawPosition.clone?.() || null;
     return {
       ok: true,
       panelId: dragging.mesh.userData?.panelId || null,
       frameTarget: dragging.frameTarget || null,
       dragModel: 'controller-ray-plane',
+    };
+  }
+
+  function updateCarryDrag(controller) {
+    let carry = dragging.carry;
+    let controllerQuaternion = controller.getWorldQuaternion(new THREE.Quaternion());
+    let deltaQuaternion = controllerQuaternion.clone().multiply(carry.controllerQuaternionInverse);
+    let carryPoint = raycaster.ray.origin.clone()
+      .add(raycaster.ray.direction.clone().multiplyScalar(carry.grabDistance));
+    let worldPosition = carryPoint.clone().add(carry.grabOffset.clone().applyQuaternion(deltaQuaternion));
+    let previousPosition = meshWorldPositionOf(THREE, dragging.mesh) || dragging.lastPosition;
+    let filtered = filteredDragPosition(previousPosition, worldPosition, dragResponse);
+    dragging.mesh.position.copy(worldToPanelParentLocal(dragging.mesh, filtered.position));
+    let worldQuaternion = deltaQuaternion.clone().multiply(carry.panelWorldQuaternion);
+    let parentQuaternion = dragging.mesh.parent?.getWorldQuaternion?.(new THREE.Quaternion()) || null;
+    if (dragging.mesh.quaternion?.copy) {
+      dragging.mesh.quaternion.copy(
+        parentQuaternion?.invert ? parentQuaternion.invert().multiply(worldQuaternion) : worldQuaternion,
+      );
+    }
+    counters.dragUpdates += 1;
+    diagnostics.lastMissReason = null;
+    diagnostics.drag = {
+      active: true,
+      panelId: dragging.mesh.userData?.panelId || null,
+      frameTarget: dragging.frameTarget || null,
+      model: 'controller-carry',
+      position: vectorData(dragging.mesh.position),
+      rotation: vectorData(dragging.mesh.rotation),
+      size: readPanelSize(dragging.mesh),
+      planeNormal: vectorData(dragging.plane.normal),
+      planePoint: vectorData(dragging.plane.point),
+      intersection: vectorData(carryPoint),
+      delta: (() => {
+        let settledWorldPosition = meshWorldPositionOf(THREE, dragging.mesh) || dragging.mesh.position;
+        return {
+          x: Number(settledWorldPosition.x || 0) - Number(previousPosition?.x || 0),
+          y: Number(settledWorldPosition.y || 0) - Number(previousPosition?.y || 0),
+          z: Number(settledWorldPosition.z || 0) - Number(previousPosition?.z || 0),
+          distance: distanceBetween(settledWorldPosition, previousPosition),
+        };
+      })(),
+      rawPosition: vectorData(worldPosition),
+      response: filtered.diagnostics,
+    };
+    dragging.lastPosition = meshWorldPositionOf(THREE, dragging.mesh) || dragging.lastPosition;
+    dragging.lastRawPosition = worldPosition.clone?.() || null;
+    return {
+      ok: true,
+      panelId: dragging.mesh.userData?.panelId || null,
+      frameTarget: dragging.frameTarget || null,
+      dragModel: 'controller-carry',
     };
   }
 
@@ -2144,11 +2636,13 @@ export function createXRThreeWebXRAdapter(options = {}) {
 
   return {
     ...XR_THREE_WEBXR_ADAPTER,
+    THREE,
     createRenderer,
     createCamera,
     setScene,
     setSession,
     applyViewerPose: sceneAdapter.applyViewerPose,
+    getSceneRoot: sceneAdapter.getRootObject,
     getPanelMesh: sceneAdapter.getPanelMesh,
     listPanelMeshes: sceneAdapter.listPanelMeshes,
     updatePanelTextureQuality: sceneAdapter.updatePanelTextureQuality,
@@ -2435,7 +2929,8 @@ function summarizeXRRenderState(session = null) {
 
 function summarizeXRFrameViewports(frame = null, referenceSpace = null, session = null, options = {}) {
   let baseLayer = session?.renderState?.baseLayer || null;
-  let pose = options.viewerPose || null;
+  let viewerPoseProvided = Object.hasOwn(options, 'viewerPose');
+  let pose = viewerPoseProvided ? options.viewerPose : null;
   if (!baseLayer) {
     return {
       version: 'xr-frame-viewport-diagnostics-v1',
@@ -2444,7 +2939,7 @@ function summarizeXRFrameViewports(frame = null, referenceSpace = null, session 
       reason: 'xr-base-layer-missing',
     };
   }
-  if (!pose && frame?.getViewerPose && referenceSpace) {
+  if (!viewerPoseProvided && !pose && frame?.getViewerPose && referenceSpace) {
     pose = frame.getViewerPose(referenceSpace);
   }
   let views = Array.isArray(pose?.views) ? pose.views : [];
@@ -2473,12 +2968,298 @@ function summarizeXRFrameViewports(frame = null, referenceSpace = null, session 
   };
 }
 
+function parsePanelTransitionsOption(value) {
+  if (value === undefined || value === null) {
+    return null;
+  }
+  if (typeof value !== 'object' || Array.isArray(value)) {
+    throw new TypeError('panelTransitions must be an object with a positive finite durationMs.');
+  }
+  if (typeof value.durationMs !== 'number' || !Number.isFinite(value.durationMs) || value.durationMs <= 0) {
+    throw new TypeError('panelTransitions.durationMs must be a positive finite number.');
+  }
+  return { durationMs: value.durationMs };
+}
+
 export function createXRThreeSessionController(options = {}) {
   let target = options.globalThis || globalThis;
   let adapter = options.adapter || createXRThreeWebXRAdapter(options);
+  let THREE = options.THREE || adapter.THREE;
   let activeSession = null;
   let activeTarget = null;
   let controllers = [];
+  let selectStartListeners = [];
+  let selectEndListeners = [];
+  let activeReferenceSpace = null;
+  let referenceSpaceResetEpoch = 0;
+  let activeViewerPose = null;
+  let activeCaptureConfig = null;
+  let activeRootMatrix = null;
+  let activeRootObject = null;
+  let activeFrameRecord = null;
+  let activeGrabState = { active: false, sourceId: null, objectId: null };
+  let activeInteractionHandler = null;
+  let interactionStarts = new Map();
+  let interactionSequence = 0;
+
+  let frameInteractionStarts = new Map();
+  let timingTracker = null;
+  let panelStore = null;
+  let receiptsList = [];
+  let restoreChips = new Map();
+  let panelTransitions = null;
+  let transitionTweens = new Map();
+  let restoreChipOrder = [];
+  let lastRecordedResetEpoch = 0;
+  let instanceFinalSessionSnapshot = null;
+  let controllerInstance = null;
+  let endEventObserved = false;
+  let pendingTeardownReason = null;
+
+  const RESTORE_CHIP_SIZE = [0.12, 0.05];
+  const RESTORE_CHIP_STACK_OFFSET = 0.06;
+  const PANEL_TRANSITION_HIDDEN_SCALE = 0.92;
+
+  function cancelTransitionTween(key) {
+    let entry = transitionTweens.get(key);
+    if (!entry) return;
+    transitionTweens.delete(key);
+    entry.tween.cancel();
+  }
+
+  function startTransitionTween(key, object, kind, phase, tweenOptions) {
+    cancelTransitionTween(key);
+    let tween = createXRScaleFadeTween({
+      object,
+      durationMs: panelTransitions.durationMs,
+      from: tweenOptions.from,
+      to: tweenOptions.to,
+      onDone: () => {
+        transitionTweens.delete(key);
+        tweenOptions.onDone?.();
+      },
+    });
+    transitionTweens.set(key, { tween, object, kind, phase });
+  }
+
+  function tickTransitionTweens(time) {
+    for (let entry of [...transitionTweens.values()]) {
+      entry.tween.tick(time);
+    }
+  }
+
+  function buildRestoreChip(panelId) {
+    if (typeof THREE?.PlaneGeometry !== 'function' ||
+        typeof THREE?.MeshBasicMaterial !== 'function' ||
+        typeof THREE?.Mesh !== 'function') {
+      return null;
+    }
+    // Chips parent to the scene root, never the panel mesh: Three propagates
+    // visible=false to children, which would hide the chip with the panel.
+    let parent = adapter.getSceneRoot?.() || adapter.getScene?.() || null;
+    if (!parent) return null;
+    let material = new THREE.MeshBasicMaterial({
+      transparent: true,
+      depthTest: false,
+      side: THREE.DoubleSide,
+    });
+    let texture = createPanelChromeTexture(THREE, 'action', 'close');
+    if (texture) material.map = texture;
+    let chip = new THREE.Mesh(
+      new THREE.PlaneGeometry(RESTORE_CHIP_SIZE[0], RESTORE_CHIP_SIZE[1]),
+      material,
+    );
+    chip.name = `sn-xr-panel-restore-chip-${panelId}`;
+    chip.userData ||= {};
+    chip.userData.snPanelRestoreChip = true;
+    chip.userData.panelId = panelId;
+    // The restore zone spans the full UV so hitTestXRPanelFrame resolves it
+    // from the actions loop before touching the absent move/resize/content
+    // zones (it reads those unguarded).
+    chip.userData.panelFrame = {
+      version: 'xr-panel-frame-v1',
+      panelId,
+      zones: { actions: { restore: { x: 0, y: 0, width: 1, height: 1 } } },
+      state: {},
+    };
+    parent.add?.(chip);
+    return chip;
+  }
+
+  function disposeRestoreChip(panelId) {
+    let chip = restoreChips.get(panelId);
+    if (!chip) return;
+    restoreChips.delete(panelId);
+    restoreChipOrder = restoreChipOrder.filter((id) => id !== panelId);
+    chip.parent?.remove?.(chip);
+    chip.geometry?.dispose?.();
+    chip.material?.map?.dispose?.();
+    chip.material?.dispose?.();
+  }
+
+  function syncRestoreChip(storePanel) {
+    let chip = restoreChips.get(storePanel.id) || null;
+    if (storePanel.hidden === true) {
+      if (!chip) {
+        chip = buildRestoreChip(storePanel.id);
+        if (!chip) return;
+        restoreChips.set(storePanel.id, chip);
+        restoreChipOrder.push(storePanel.id);
+        if (panelTransitions) {
+          startTransitionTween(`chip:${storePanel.id}`, chip, 'chip', 'fade-in', {
+            from: { opacity: 0 },
+            to: { opacity: 1 },
+          });
+        }
+      } else if (panelTransitions && transitionTweens.get(`chip:${storePanel.id}`)?.phase === 'fade-out') {
+        startTransitionTween(`chip:${storePanel.id}`, chip, 'chip', 'fade-in', {
+          from: { opacity: chip.material.opacity },
+          to: { opacity: 1 },
+        });
+      }
+      // Root-parented, so the chip rides root re-placement in the same local
+      // space the panel mesh occupied; hidden panels stack with a small
+      // vertical offset so simultaneous chips do not overlap.
+      let stackIndex = Math.max(0, restoreChipOrder.indexOf(storePanel.id));
+      chip.position.set(
+        storePanel.current.position[0],
+        storePanel.current.position[1] + stackIndex * RESTORE_CHIP_STACK_OFFSET,
+        storePanel.current.position[2],
+      );
+      chip.quaternion.set(
+        storePanel.current.quaternion[0],
+        storePanel.current.quaternion[1],
+        storePanel.current.quaternion[2],
+        storePanel.current.quaternion[3],
+      );
+    } else if (chip) {
+      if (panelTransitions) {
+        let key = `chip:${storePanel.id}`;
+        if (transitionTweens.get(key)?.phase !== 'fade-out') {
+          startTransitionTween(key, chip, 'chip', 'fade-out', {
+            from: { opacity: chip.material.opacity },
+            to: { opacity: 0 },
+            onDone: () => disposeRestoreChip(storePanel.id),
+          });
+        }
+      } else {
+        disposeRestoreChip(storePanel.id);
+      }
+    }
+  }
+
+  function listInteractionMeshes() {
+    // Three's raycaster ignores `visible`, so store-hidden panels must be
+    // excluded from hit candidates explicitly; restore chips are scene-level
+    // and must be included instead. A chip in its fade-out tween is excluded:
+    // its panel is already restored, so hits on it could only form duplicate
+    // restore receipts in the fade window.
+    let meshes = typeof adapter.listPanelMeshes === 'function' ? adapter.listPanelMeshes() : [];
+    return [
+      ...meshes.filter((mesh) => mesh.visible !== false),
+      ...[...restoreChips.values()].filter((chip) =>
+        transitionTweens.get(`chip:${chip.userData?.panelId}`)?.phase !== 'fade-out'),
+    ];
+  }
+
+  function syncPanelVisibilityWithTransition(mesh, storePanel, prevHidden) {
+    let panelId = storePanel.id;
+    let entry = transitionTweens.get(panelId) || null;
+    if (storePanel.hidden === true) {
+      // A hide tween keeps the mesh ray-visible while it runs; its final tick
+      // hides the mesh and restores an exact unit scale.
+      if (entry?.phase === 'hide') {
+        entry.tween.reapply();
+        return;
+      }
+      if (prevHidden === false || entry?.phase === 'show') {
+        startTransitionTween(panelId, mesh, 'panel', 'hide', {
+          from: { scale: 1 },
+          to: { scale: PANEL_TRANSITION_HIDDEN_SCALE },
+          onDone: () => {
+            mesh.visible = false;
+            mesh.scale?.set?.(1, 1, 1);
+          },
+        });
+        return;
+      }
+      mesh.visible = false;
+      return;
+    }
+    if (mesh.userData.strictTextureHidden === true) return;
+    mesh.visible = true;
+    if (entry?.phase === 'show') {
+      entry.tween.reapply();
+      return;
+    }
+    if (prevHidden === true || entry?.phase === 'hide') {
+      startTransitionTween(panelId, mesh, 'panel', 'show', {
+        from: { scale: PANEL_TRANSITION_HIDDEN_SCALE },
+        to: { scale: 1 },
+      });
+    }
+  }
+
+  function syncMeshWithStore(mesh, storePanel) {
+    if (!mesh || !storePanel) return;
+    let prevHidden = mesh.userData?.panel?.hidden === true;
+    mesh.position.set(storePanel.current.position[0], storePanel.current.position[1], storePanel.current.position[2]);
+    mesh.quaternion.set(storePanel.current.quaternion[0], storePanel.current.quaternion[1], storePanel.current.quaternion[2], storePanel.current.quaternion[3]);
+    mesh.userData.xrSize = [...storePanel.current.size];
+    mesh.userData.panel = {
+      portable: storePanel.portable,
+      pinned: storePanel.pinned,
+      focused: storePanel.focused,
+      hidden: storePanel.hidden === true,
+      closable: mesh.userData.panel?.closable,
+      revision: storePanel.revision,
+      sourceMetadata: structuredClone(storePanel.sourceMetadata),
+      size: [...storePanel.current.size],
+    };
+    // Strict-texture diagnostic hiding owns mesh.visible independently of the
+    // store; only the store's hidden flag may change it here.
+    if (!panelTransitions) {
+      if (storePanel.hidden === true) {
+        mesh.visible = false;
+      } else if (mesh.userData.strictTextureHidden !== true) {
+        mesh.visible = true;
+      }
+    }
+    applyPanelSize(mesh, storePanel.current.size, THREE || mesh.userData.THREE);
+    // applyPanelSize rewrites mesh.scale to unit on every sync, so eased
+    // visibility runs after it and re-asserts in-flight tween values.
+    if (panelTransitions) {
+      syncPanelVisibilityWithTransition(mesh, storePanel, prevHidden);
+    }
+    mesh.userData.updatePanelFrameVisuals?.();
+    syncRestoreChip(storePanel);
+  }
+
+  function syncAllMeshesWithStore() {
+    if (!panelStore) return;
+    let state = panelStore.serialize();
+    for (let storePanel of state.panels) {
+      let mesh = adapter.getPanelMesh(storePanel.id);
+      if (mesh) {
+        syncMeshWithStore(mesh, storePanel);
+      }
+    }
+  }
+  const onSessionEnd = () => {
+    endEventObserved = true;
+    cleanupSession();
+  };
+
+  const onReferenceSpaceReset = () => {
+    referenceSpaceResetEpoch += 1;
+    diagnostics.lastObservation = null;
+    activeGrabState = { active: false, sourceId: null, objectId: null };
+    interactionStarts.clear();
+    frameInteractionStarts.clear();
+    activeFrameRecord = null;
+    options.onSpatialReset?.({ resetEpoch: referenceSpaceResetEpoch });
+  };
+
   let hitReticle = null;
   let lastHoverPanelId = null;
   let lastHoverState = {
@@ -2519,6 +3300,10 @@ export function createXRThreeSessionController(options = {}) {
     frameErrors: 0,
     lastFrameStage: null,
     lastEvent: null,
+    sessionId: null,
+    targetHash: null,
+    buildHash: null,
+    lastObservation: null,
   };
 
   function emit(event, details = {}) {
@@ -2534,46 +3319,511 @@ export function createXRThreeSessionController(options = {}) {
     return createXRThreeSessionOptions(mode, startOptions);
   }
 
+  function matrixData(value) {
+    try {
+      let source = value?.elements || value;
+      if (typeof value?.toArray === 'function') source = value.toArray();
+      if (!Array.isArray(source) && !ArrayBuffer.isView(source)) return null;
+      let matrix = Array.from(source, Number);
+      return isFiniteMatrix4(matrix) ? matrix : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function sourceIdFor(inputSource, index) {
+    try {
+      let resolved = inputSource?.id || activeCaptureConfig?.resolveInputSourceId?.(inputSource, index) || null;
+      return typeof resolved === 'string' && resolved.trim() ? resolved : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function inputKind(inputSource) {
+    if (inputSource?.hand) return 'hand';
+    if (inputSource?.targetRayMode === 'gaze') return 'gaze';
+    if (inputSource?.targetRayMode === 'screen') return 'screen';
+    return 'controller';
+  }
+
+  function resolveCaptureConfig(config) {
+    if (!config?.spatialTarget) return { ok: false, reason: 'spatial-target-required' };
+    let targetValidation = validateTarget(config.spatialTarget);
+    let provenance = config.provenance;
+    let rootPolicy = config.rootPolicy;
+    let requiredStrings = [
+      config.sessionId,
+      config.referenceSpaceId,
+      provenance?.runtimeId,
+      provenance?.runtimeVersion,
+      provenance?.appId,
+      provenance?.buildHash,
+      provenance?.deviceId,
+      rootPolicy?.id,
+      rootPolicy?.commitId,
+    ];
+    let provenanceValid = (
+      ['headset', 'desktop', 'emulator'].includes(provenance?.deviceKind) &&
+      ['native', 'iwer', 'none'].includes(provenance?.emulation)
+    );
+    if (
+      !targetValidation.valid ||
+      requiredStrings.some((value) => typeof value !== 'string' || !value.trim()) ||
+      !provenanceValid ||
+      rootPolicy?.mode !== 'world-locked' ||
+      !Array.isArray(config.spatialObjects)
+    ) {
+      return { ok: false, reason: 'invalid-spatial-evidence-config' };
+    }
+    let objectIds = config.spatialObjects.map((entry) => entry?.id).sort();
+    let targetObjectIds = config.spatialTarget.objects.map((entry) => entry.id).sort();
+    if (
+      objectIds.some((id) => typeof id !== 'string' || !id.trim()) ||
+      new Set(objectIds).size !== objectIds.length ||
+      objectIds.length !== targetObjectIds.length ||
+      objectIds.some((id, index) => id !== targetObjectIds[index])
+    ) {
+      return { ok: false, reason: 'invalid-spatial-object-sources' };
+    }
+    return {
+      ok: true,
+      value: {
+        target: config.spatialTarget,
+        provenance,
+        sessionId: config.sessionId,
+        referenceSpaceId: config.referenceSpaceId,
+        rootPolicy,
+        spatialObjects: config.spatialObjects,
+        resolveInputSourceId: config.resolveInputSourceId,
+        resolvePanelInteraction: config.resolvePanelInteraction,
+      },
+    };
+  }
+
+  function commitSpatialRoot(config) {
+    if (!config) return null;
+    let rootObj = config.rootPolicy.object || adapter.getSceneRoot?.() || null;
+    try {
+      rootObj?.updateMatrixWorld?.(true);
+    } catch {
+      return null;
+    }
+    let worldMatrix;
+    try {
+      worldMatrix = matrixData(config.rootPolicy.matrix || rootObj?.matrixWorld);
+    } catch {
+      return null;
+    }
+    let pose = worldMatrix ? poseFromMatrix(worldMatrix) : null;
+    return pose ? makeTransform(pose.position, pose.quaternion) : null;
+  }
+
+  function commitSpatialEvidence(config) {
+    if (!activeSession) return { ok: false, reason: 'session-not-active' };
+    let resolved = resolveCaptureConfig(config);
+    if (!resolved.ok) return resolved;
+    if (activeCaptureConfig && activeCaptureConfig.sessionId !== resolved.value.sessionId) {
+      return { ok: false, reason: 'session-id-recommit-mismatch' };
+    }
+    let rootMatrix = commitSpatialRoot(resolved.value);
+    if (!rootMatrix) return { ok: false, reason: 'world-locked-root-unavailable' };
+    activeRootObject = resolved.value.rootPolicy.object || adapter.getSceneRoot?.() || null;
+    if (activeRootObject) {
+      activeRootObject.visible = true;
+    }
+    activeCaptureConfig = {
+      ...resolved.value,
+      target: freezeSpatialValue(resolved.value.target),
+      provenance: freezeSpatialValue(resolved.value.provenance),
+      rootPolicy: freezeSpatialValue({
+        mode: resolved.value.rootPolicy.mode,
+        id: resolved.value.rootPolicy.id,
+        commitId: resolved.value.rootPolicy.commitId,
+      }),
+    };
+    activeRootMatrix = freezeSpatialValue(rootMatrix);
+    referenceSpaceResetEpoch += 1;
+    activeInteractionHandler = config.onInteraction || options.onInteraction || null;
+    activeGrabState = { active: false, sourceId: null, objectId: null };
+    interactionStarts.clear();
+    activeFrameRecord = null;
+    diagnostics.sessionId = activeCaptureConfig.sessionId;
+    diagnostics.targetHash = activeCaptureConfig.target.contentHash;
+    diagnostics.buildHash = activeCaptureConfig.provenance.buildHash;
+    diagnostics.lastObservation = null;
+    let committed = freezeSpatialValue({
+      version: XR_SPATIAL_VERSIONS.rootCommit,
+      sessionId: activeCaptureConfig.sessionId,
+      rootId: activeCaptureConfig.rootPolicy.id,
+      rootCommitId: activeCaptureConfig.rootPolicy.commitId,
+      targetHash: activeCaptureConfig.target.contentHash,
+      resetEpoch: referenceSpaceResetEpoch,
+      matrix: activeRootMatrix,
+    });
+    options.onSpatialCommit?.(committed);
+    return { ok: true, committed };
+  }
+
+  function resolveInteractionHit(hit) {
+    let panelId = hit?.object?.userData?.panelId || null;
+    let uv = hit?.uv && Number.isFinite(hit.uv.x) && Number.isFinite(hit.uv.y)
+      ? { x: hit.uv.x, y: 1 - hit.uv.y }
+      : null;
+    if (!panelId || !uv || !activeCaptureConfig || !activeFrameRecord?.id) return null;
+    let descriptor = null;
+    try {
+      descriptor = activeCaptureConfig.resolvePanelInteraction?.(panelId, hit.object) ||
+        hit.object?.userData?.xrPanelInteraction || null;
+    } catch {
+      descriptor = null;
+    }
+    if (!descriptor?.hitMap) return null;
+    let resolved = resolveXRHitMap(uv, descriptor.hitMap, {
+      panelId,
+      contentHash: descriptor.contentHash,
+      revision: descriptor.revision,
+      sessionId: activeCaptureConfig.sessionId,
+      frame: activeFrameRecord,
+      maximumFrameAge: descriptor.maximumFrameAge,
+      maximumAgeMs: descriptor.maximumAgeMs,
+      pointSpace: 'normalized',
+    });
+    if (!resolved.ok) return null;
+    return { panelId, uv, descriptor, resolved };
+  }
+
+  function emitInteractionReceipt(phase, inputSource, hit) {
+    if (!activeCaptureConfig || !activeFrameRecord?.id || !['selectstart', 'selectend'].includes(phase)) return null;
+    let sources = activeSession?.inputSources ? Array.from(activeSession.inputSources) : [];
+    let index = sources.indexOf(inputSource);
+    let inputSourceId = sourceIdFor(inputSource, index);
+    let interaction = resolveInteractionHit(hit);
+    if (!inputSourceId || !interaction) return null;
+    let target = interaction.resolved.target;
+    let contentHash = interaction.descriptor.contentHash;
+    let revision = interaction.descriptor.revision;
+    let start = interactionStarts.get(inputSourceId) || null;
+    if (phase === 'selectend') {
+      interactionStarts.delete(inputSourceId);
+      if (
+        !start ||
+        start.sessionId !== activeCaptureConfig.sessionId ||
+        start.inputSourceId !== inputSourceId ||
+        start.panelId !== interaction.panelId ||
+        start.targetId !== target.id ||
+        start.contentHash !== contentHash ||
+        start.revision !== revision
+      ) return null;
+    }
+    interactionSequence += 1;
+    let receipt = freezeSpatialValue({
+      version: XR_SPATIAL_VERSIONS.interactionPhase,
+      eventId: `${activeCaptureConfig.sessionId}:${activeFrameRecord.id}:${inputSourceId}:${interactionSequence}`,
+      phase,
+      sessionId: activeCaptureConfig.sessionId,
+      frameId: activeFrameRecord.id,
+      frameSequence: activeFrameRecord.sequence,
+      timestamp: activeFrameRecord.time,
+      inputSourceId,
+      inputKind: inputKind(inputSource),
+      handedness: ['left', 'right'].includes(inputSource?.handedness) ? inputSource.handedness : 'none',
+      profiles: normalizeStringList(inputSource?.profiles),
+      uv: interaction.uv,
+      contentPoint: interaction.resolved.contentPoint,
+      panelId: interaction.panelId,
+      targetId: target.id,
+      action: target.action,
+      contentHash,
+      revision,
+      startEventId: phase === 'selectend' ? start.eventId : null,
+      spatialTargetHash: activeCaptureConfig.target.contentHash,
+      rootCommitId: activeCaptureConfig.rootPolicy.commitId,
+    });
+    if (phase === 'selectstart') interactionStarts.set(inputSourceId, receipt);
+    activeInteractionHandler?.(receipt);
+    return receipt;
+  }
+
   function setupControllers(scene, renderer, camera, startOptions = {}) {
     if (!scene || !renderer?.xr?.getController || controllers.length) return;
     for (let index = 0; index < 2; index += 1) {
       let controller = renderer.xr.getController(index);
-      controller.addEventListener?.('selectstart', () => {
+
+      let selectStartListener = (event) => {
+        let inputSource = event?.data;
+        if (!inputSource) {
+          let sources = activeSession?.inputSources ? Array.from(activeSession.inputSources) : [];
+          inputSource = sources[index] || controller.inputSource;
+        }
+        if (!inputSource) {
+          return;
+        }
+        let sources = activeSession?.inputSources ? Array.from(activeSession.inputSources) : [];
+        let srcIndex = sources.indexOf(inputSource);
+        let inputSourceId = sourceIdFor(inputSource, srcIndex);
+
         let hit = adapter.controllerRays.getHits(
           controller,
-          adapter.listPanelMeshes(),
+          listInteractionMeshes(),
         )[0];
         if (hit) {
+          // While a close tween runs the mesh stays ray-visible; reject
+          // gestures whose store panel is already hidden before any receipt
+          // can form. Restore chips are exempt: they exist to un-hide.
+          if (panelTransitions && panelStore && hit.object?.userData?.snPanelRestoreChip !== true) {
+            let hitPanelId = hit.object?.userData?.panelId || null;
+            let hitStorePanel = hitPanelId
+              ? panelStore.serialize().panels.find((panel) => panel.id === hitPanelId)
+              : null;
+            if (hitStorePanel?.hidden === true) {
+              return;
+            }
+          }
           diagnostics.selectedPanelId = hit.object?.userData?.panelId || null;
           diagnostics.interactionEvents += 1;
+
+          let uv = hit.uv ? { x: hit.uv.x, y: hit.uv.y } : null;
+          let receipt = emitInteractionReceipt('selectstart', inputSource, hit);
+
+          let panelId = hit.object?.userData?.panelId;
+          let panelObj = hit.object?.userData?.panel || {};
+          let isPortable = panelObj.portable !== false;
+          let isPinned = panelObj.pinned === true;
+
+          if (inputSourceId && hit.frameTarget && activeFrameRecord && activeCaptureConfig) {
+            frameInteractionStarts.set(inputSourceId, {
+              sessionId: activeCaptureConfig.sessionId,
+              startFrameId: activeFrameRecord.id,
+              panelId,
+              frameTarget: hit.frameTarget,
+              inputSource,
+            });
+          }
+
           if (isXRFrameDragTarget(hit.frameTarget)) {
-            let drag = adapter.controllerRays.beginDrag(controller, hit, camera);
-            if (drag?.ok !== false) {
-              diagnostics.draggingPanelId = diagnostics.selectedPanelId;
-              emit('spatial-three-drag-start', {
-                panelId: diagnostics.draggingPanelId,
-                frameTarget: hit.frameTarget || null,
-              });
-              return;
+            if (isPortable && !isPinned) {
+              let drag = adapter.controllerRays.beginDrag(controller, hit, camera);
+              if (drag?.ok !== false) {
+                diagnostics.draggingPanelId = diagnostics.selectedPanelId;
+                activeGrabState = {
+                  active: true,
+                  sourceId: inputSourceId,
+                  objectId: diagnostics.draggingPanelId,
+                };
+                emit('spatial-three-drag-start', {
+                  panelId: diagnostics.draggingPanelId,
+                  frameTarget: hit.frameTarget || null,
+                  uv,
+                  receipt,
+                });
+                return;
+              }
             }
           }
           emit('spatial-three-select', {
             panelId: diagnostics.selectedPanelId,
             frameTarget: hit.frameTarget || null,
+            uv,
+            receipt,
           });
         }
-      });
-      controller.addEventListener?.('selectend', () => {
+      };
+
+      let selectEndListener = (event) => {
+        let inputSource = event?.data;
+        if (!inputSource) {
+          let sources = activeSession?.inputSources ? Array.from(activeSession.inputSources) : [];
+          inputSource = sources[index] || controller.inputSource;
+        }
+        if (!inputSource) {
+          return;
+        }
+        let sources = activeSession?.inputSources ? Array.from(activeSession.inputSources) : [];
+        let srcIndex = sources.indexOf(inputSource);
+        let inputSourceId = sourceIdFor(inputSource, srcIndex);
+
         let wasDragging = adapter.controllerRays.getState?.().dragging === true;
+        let draggingPanelId = adapter.controllerRays.getState?.().panelId;
+        let draggingMesh = draggingPanelId ? adapter.getPanelMesh(draggingPanelId) : null;
+        let startRecord = inputSourceId ? frameInteractionStarts.get(inputSourceId) : null;
+        if (inputSourceId) {
+          frameInteractionStarts.delete(inputSourceId);
+        }
+
         let result = wasDragging ? adapter.controllerRays.endDrag() : null;
         diagnostics.draggingPanelId = null;
         diagnostics.interactionEvents += 1;
-        emit(wasDragging ? 'spatial-three-drag-end' : 'spatial-three-select-end', {
-          panelId: result?.panelId || diagnostics.selectedPanelId,
-          frameTarget: result?.frameTarget || null,
-          pose: result?.pose || null,
-        });
-      });
+
+        let hit = adapter.controllerRays.getHits(
+          controller,
+          listInteractionMeshes(),
+        )[0] || null;
+        let uv = hit?.uv ? { x: hit.uv.x, y: hit.uv.y } : null;
+        let panelId = draggingPanelId || hit?.object?.userData?.panelId || diagnostics.selectedPanelId;
+        let receipt = emitInteractionReceipt('selectend', inputSource, hit);
+        activeGrabState = { active: false, sourceId: null, objectId: null };
+
+        let context = null;
+        if (inputSourceId && startRecord && activeFrameRecord && activeCaptureConfig) {
+          context = {
+            sessionId: activeCaptureConfig.sessionId,
+            startFrameId: startRecord.startFrameId,
+            endFrameId: activeFrameRecord.id,
+            inputSourceId,
+            inputKind: inputKind(inputSource),
+            handedness: ['left', 'right'].includes(inputSource?.handedness) ? inputSource.handedness : 'none',
+            profiles: normalizeStringList(inputSource?.profiles),
+            timestamp: activeFrameRecord.time,
+          };
+        }
+
+        let portablePanelReceipt = null;
+        if (wasDragging && draggingMesh && startRecord && panelStore) {
+          let op = startRecord.frameTarget.operation;
+          if (op === 'move') {
+            let localPos = [draggingMesh.position.x, draggingMesh.position.y, draggingMesh.position.z];
+            let localQuat = draggingMesh.quaternion ? [draggingMesh.quaternion.x, draggingMesh.quaternion.y, draggingMesh.quaternion.z, draggingMesh.quaternion.w] : [0, 0, 0, 1];
+            portablePanelReceipt = panelStore.settleMove(draggingPanelId, localPos, localQuat, context);
+            if (portablePanelReceipt) {
+              receiptsList.push(portablePanelReceipt);
+              if (!portablePanelReceipt.accepted) {
+                let storePanel = panelStore.serialize().panels.find(p => p.id === draggingPanelId);
+                if (storePanel) {
+                  draggingMesh.position.set(storePanel.current.position[0], storePanel.current.position[1], storePanel.current.position[2]);
+                  draggingMesh.quaternion.set(storePanel.current.quaternion[0], storePanel.current.quaternion[1], storePanel.current.quaternion[2], storePanel.current.quaternion[3]);
+                }
+              }
+            }
+          } else if (op === 'resize') {
+            // A panel transition tween owns mesh.scale while it runs; a
+            // scale-derived size read would fold the mid-ease value into the
+            // store, so settle from scale-free size sources instead.
+            let finalSize = readPanelSize(draggingMesh, transitionTweens.has(draggingPanelId));
+            portablePanelReceipt = panelStore.settleResize(draggingPanelId, finalSize, context);
+            if (portablePanelReceipt) {
+              receiptsList.push(portablePanelReceipt);
+              if (!portablePanelReceipt.accepted) {
+                let storePanel = panelStore.serialize().panels.find(p => p.id === draggingPanelId);
+                if (storePanel) {
+                  applyPanelSize(draggingMesh, storePanel.current.size, THREE || draggingMesh.userData.THREE);
+                }
+              }
+            }
+          }
+        } else if (startRecord && panelStore && (startRecord.frameTarget.operation === 'move' || startRecord.frameTarget.operation === 'resize')) {
+          let op = startRecord.frameTarget.operation;
+          let targetPanelId = startRecord.panelId;
+          let storePanel = panelStore.serialize().panels.find(p => p.id === targetPanelId);
+          if (storePanel) {
+            if (op === 'move') {
+              portablePanelReceipt = panelStore.settleMove(targetPanelId, storePanel.current.position, storePanel.current.quaternion, context);
+            } else if (op === 'resize') {
+              portablePanelReceipt = panelStore.settleResize(targetPanelId, storePanel.current.size, context);
+            }
+            if (portablePanelReceipt) {
+              receiptsList.push(portablePanelReceipt);
+              syncAllMeshesWithStore();
+            }
+          }
+        } else if (!wasDragging && hit && startRecord && panelStore) {
+          let frameTarget = hit.frameTarget || resolveHitFrameTarget(hit);
+          if (frameTarget && startRecord.frameTarget.operation === frameTarget.operation && startRecord.panelId === panelId) {
+            let op = frameTarget.operation;
+            if (op === 'focus') {
+              portablePanelReceipt = panelStore.focus(panelId, context);
+              if (portablePanelReceipt) {
+                receiptsList.push(portablePanelReceipt);
+                if (portablePanelReceipt.accepted && options.panelHost && typeof options.panelHost.focusPanel === 'function') {
+                  options.panelHost.focusPanel(panelId);
+                }
+              }
+            } else if (op === 'action') {
+              if (startRecord.frameTarget.action === frameTarget.action) {
+                let action = frameTarget.action;
+                if (action === 'pin') {
+                  portablePanelReceipt = panelStore.togglePin(panelId, context);
+                  if (portablePanelReceipt) {
+                    receiptsList.push(portablePanelReceipt);
+                    if (portablePanelReceipt.accepted) {
+                      let updated = panelStore.serialize().panels.find(p => p.id === panelId);
+                      if (updated) {
+                        let panelObj = hit.object.userData.panel || {};
+                        panelObj.pinned = updated.pinned;
+                        hit.object.userData.panel = { ...panelObj };
+                        hit.object.userData.updatePanelFrameVisuals?.();
+                      }
+                    }
+                  }
+                } else if (action === 'reset') {
+                  portablePanelReceipt = panelStore.reset(panelId, context);
+                  if (portablePanelReceipt) {
+                    receiptsList.push(portablePanelReceipt);
+                    if (portablePanelReceipt.accepted) {
+                      let updated = panelStore.serialize().panels.find(p => p.id === panelId);
+                      if (updated) {
+                        if (hit.object.position?.set) {
+                          hit.object.position.set(updated.current.position[0], updated.current.position[1], updated.current.position[2]);
+                        } else {
+                          hit.object.position = { x: updated.current.position[0], y: updated.current.position[1], z: updated.current.position[2] };
+                        }
+                        if (hit.object.quaternion?.set) {
+                          hit.object.quaternion.set(updated.current.quaternion[0], updated.current.quaternion[1], updated.current.quaternion[2], updated.current.quaternion[3]);
+                        } else if (hit.object.quaternion) {
+                          hit.object.quaternion.x = updated.current.quaternion[0];
+                          hit.object.quaternion.y = updated.current.quaternion[1];
+                          hit.object.quaternion.z = updated.current.quaternion[2];
+                          hit.object.quaternion.w = updated.current.quaternion[3];
+                        }
+                        applyPanelSize(hit.object, updated.current.size, THREE || hit.object.userData.THREE);
+                      }
+                    }
+                  }
+                } else if (action === 'close') {
+                  // The policy gate runs BEFORE any store call: every receipt
+                  // consumes a store sequence number, so a blocked close must
+                  // emit none (an interleaved receipt deadlocks the demo
+                  // prelude gate permanently).
+                  let closeAllowed = typeof options.panelClosePolicy === 'function'
+                    ? options.panelClosePolicy(panelId) !== false
+                    : true;
+                  if (closeAllowed) {
+                    portablePanelReceipt = panelStore.setVisibility(panelId, true, context);
+                    if (portablePanelReceipt) {
+                      receiptsList.push(portablePanelReceipt);
+                    }
+                  } else {
+                    emit('spatial-three-close-blocked', { panelId });
+                  }
+                } else if (action === 'restore') {
+                  portablePanelReceipt = panelStore.setVisibility(panelId, false, context);
+                  if (portablePanelReceipt) {
+                    receiptsList.push(portablePanelReceipt);
+                  }
+                } else if (action === 'fullscreen') {
+                  options.onPanelFullscreen?.({
+                    version: 'xr-panel-fullscreen-intent-v1',
+                    panelId,
+                    intent: 'panel-fullscreen',
+                    context,
+                  });
+                  emit('spatial-three-panel-fullscreen', { panelId });
+                }
+              }
+            }
+            if (portablePanelReceipt) {
+              syncAllMeshesWithStore();
+            }
+          }
+        }
+      };
+
+      controller.addEventListener?.('selectstart', selectStartListener);
+      controller.addEventListener?.('selectend', selectEndListener);
+
+      selectStartListeners.push({ controller, listener: selectStartListener });
+      selectEndListeners.push({ controller, listener: selectEndListener });
+
       if (startOptions.controllerRayVisuals !== false) {
         let visual = adapter.createControllerRayVisual?.(controller, {
           ...(options.controllerRayVisuals || {}),
@@ -2598,7 +3848,7 @@ export function createXRThreeSessionController(options = {}) {
     if (!controllers.length) return;
     let hit = null;
     for (let controller of controllers) {
-      hit = adapter.controllerRays.getHits(controller, adapter.listPanelMeshes())[0] || null;
+      hit = adapter.controllerRays.getHits(controller, listInteractionMeshes())[0] || null;
       if (hit) break;
     }
     if (hit && hit.point) {
@@ -2638,7 +3888,16 @@ export function createXRThreeSessionController(options = {}) {
       distance: Number(hit?.distance || 0),
       reticleVisible: Boolean(reticle?.visible),
       frameTarget: hit?.frameTarget || null,
+      uv: hit?.uv ? { x: hit.uv.x, y: hit.uv.y } : null,
     };
+    let hoverFramePoint = hit?.frameTarget?.point || null;
+    for (let panelMesh of adapter.listPanelMeshes() || []) {
+      updatePanelFrameHoverVisuals(
+        panelMesh,
+        Boolean(panelId) && panelMesh?.userData?.panelId === panelId,
+        hoverFramePoint,
+      );
+    }
     if (panelId !== lastHoverPanelId) {
       lastHoverPanelId = panelId;
       emit('spatial-three-hover-change', { hover: diagnostics.hover });
@@ -2656,17 +3915,20 @@ export function createXRThreeSessionController(options = {}) {
     }
   }
 
-  function captureViewerPose(frame, referenceSpace, sessionOptions = {}) {
-    if (diagnostics.viewerPoseCaptured) return null;
-    if (!frame?.getViewerPose || !referenceSpace || !adapter.applyViewerPose) {
+  function captureViewerPose(viewerPose, sessionOptions = {}) {
+    activeViewerPose = viewerPose || null;
+    if (!viewerPose) {
       diagnostics.viewerPoseCaptureReason = 'viewer-pose-unavailable';
       return null;
     }
-    let viewerPose = frame.getViewerPose(referenceSpace);
-    if (!viewerPose) {
-      diagnostics.viewerPoseCaptureReason = 'viewer-pose-empty';
-      return null;
+    if (activeCaptureConfig?.rootPolicy.mode === 'world-locked') {
+      diagnostics.viewerPoseCaptured = true;
+      diagnostics.viewerPoseCaptureReason = null;
+      diagnostics.viewerPoseRootTransform = null;
+      return { ok: true, viewerPose, worldLocked: true };
     }
+    if (diagnostics.viewerPoseCaptured) return { ok: true, viewerPose };
+    if (!adapter.applyViewerPose) return { ok: false, viewerPose, reason: 'viewer-pose-apply-unavailable' };
     let result = adapter.applyViewerPose(viewerPose, {
       mode: diagnostics.mode,
       referenceSpaceType: sessionOptions.referenceSpaceType || diagnostics.requestedReferenceSpaceType,
@@ -2683,15 +3945,172 @@ export function createXRThreeSessionController(options = {}) {
   }
 
   function cleanupSession() {
-    activeTarget?.renderer?.setAnimationLoop?.(null);
+    if (instanceFinalSessionSnapshot) return;
+
+    let rootObj = activeRootObject || null;
+    if (rootObj) {
+      rootObj.visible = false;
+    }
+
+    let loopOwner = activeTarget?.renderer?.xr?.setAnimationLoop
+      ? activeTarget.renderer.xr
+      : activeTarget?.renderer;
+    loopOwner?.setAnimationLoop?.(null);
+
     if (activeTarget?.scene) {
       activeTarget.scene.background = originalBackground;
     }
     originalBackground = null;
+    if (activeSession) {
+      activeSession.removeEventListener?.('end', onSessionEnd);
+    }
     activeSession = null;
     if (adapter.controllerRays.getState?.().dragging === true) {
       adapter.controllerRays.endDrag();
     }
+
+    if (activeReferenceSpace) {
+      activeReferenceSpace.removeEventListener?.('reset', onReferenceSpaceReset);
+      activeReferenceSpace = null;
+    }
+    referenceSpaceResetEpoch = 0;
+    activeViewerPose = null;
+    activeCaptureConfig = null;
+    activeRootObject = null;
+    activeRootMatrix = null;
+    activeFrameRecord = null;
+    activeGrabState = { active: false, sourceId: null, objectId: null };
+    activeInteractionHandler = null;
+    interactionStarts.clear();
+    frameInteractionStarts.clear();
+    interactionSequence = 0;
+    lastHoverPanelId = null;
+    lastHoverState = {
+      panelId: null,
+      point: null,
+      uv: null,
+    };
+
+    for (let { controller, listener } of selectStartListeners) {
+      controller.removeEventListener?.('selectstart', listener);
+    }
+    for (let { controller, listener } of selectEndListeners) {
+      controller.removeEventListener?.('selectend', listener);
+    }
+    selectStartListeners = [];
+    selectEndListeners = [];
+
+    let controllersToCleanup = [...controllers];
+    for (let controller of controllersToCleanup) {
+      if (controller.children) {
+        let children = [...controller.children];
+        for (let child of children) {
+          if (child.userData?.snControllerRay) {
+            controller.remove?.(child);
+            if (child.geometry?.dispose) child.geometry.dispose();
+            if (child.material?.dispose) child.material.dispose();
+          }
+        }
+      }
+      if (activeTarget?.scene) {
+        activeTarget.scene.remove?.(controller);
+      }
+    }
+    controllers = [];
+    diagnostics.controllers = 0;
+    diagnostics.controllerRayVisuals = 0;
+
+    if (hitReticle) {
+      if (activeTarget?.scene && hitReticle.object) {
+        activeTarget.scene.remove?.(hitReticle.object);
+        if (hitReticle.object.geometry?.dispose) hitReticle.object.geometry.dispose();
+        if (hitReticle.object.material?.dispose) hitReticle.object.material.dispose();
+      }
+      hitReticle = null;
+      diagnostics.hitReticleVisuals = 0;
+    }
+
+    if (panelTransitions) {
+      // Interrupted tweens must not strand eased values: restore the instant
+      // end-state (unit scale, store-driven visibility, at-rest chip opacity).
+      for (let entry of transitionTweens.values()) {
+        entry.tween.cancel();
+        if (entry.kind === 'chip') {
+          if (entry.object?.material) entry.object.material.opacity = 1;
+        } else {
+          entry.object?.scale?.set?.(1, 1, 1);
+          if (entry.phase === 'hide') entry.object.visible = false;
+        }
+      }
+      transitionTweens.clear();
+      panelTransitions = null;
+    }
+
+    for (let panelId of [...restoreChips.keys()]) {
+      disposeRestoreChip(panelId);
+    }
+
+    let timingMetrics = timingTracker ? timingTracker.getMetrics() : null;
+    let finalPanelState = panelStore ? panelStore.serialize() : { version: 'xr-portable-panel-state-v1', layoutRevision: 0, focusedPanelId: null, panels: [] };
+
+    let rootHidden = rootObj ? (rootObj.visible === false) : false;
+
+    let controllersDestroyed = true;
+    if (activeTarget?.scene) {
+      for (let controller of controllersToCleanup) {
+        if (activeTarget.scene.children?.includes(controller)) {
+          controllersDestroyed = false;
+        }
+      }
+    }
+
+    let captureStopped = (loopOwner !== undefined && loopOwner !== null && typeof loopOwner.setAnimationLoop === 'function');
+    diagnostics.status = 'idle';
+
+    let factEndEventObserved = endEventObserved;
+    let factProviderIdle = (diagnostics.status === 'idle');
+    let factActiveSessionCleared = (activeSession === null);
+    let factRootHidden = rootHidden;
+    let factControllersDestroyed = controllersDestroyed;
+    let factCaptureStopped = captureStopped;
+
+    instanceFinalSessionSnapshot = freezeSpatialValue({
+      version: 'xr-final-session-snapshot-v1',
+      panelState: finalPanelState,
+      receipts: receiptsList ? [...receiptsList] : [],
+      frameTiming: timingMetrics,
+      facts: {
+        endEventObserved: factEndEventObserved,
+        providerIdle: factProviderIdle,
+        activeSessionCleared: factActiveSessionCleared,
+        rootHidden: factRootHidden,
+        controllersDestroyed: factControllersDestroyed,
+        captureStopped: factCaptureStopped,
+        teardownReason: pendingTeardownReason || (factEndEventObserved ? 'end-event' : 'start-failed'),
+      }
+    });
+    pendingTeardownReason = null;
+
+    diagnostics.selectedPanelId = null;
+    diagnostics.draggingPanelId = null;
+    diagnostics.hover = null;
+    diagnostics.frames = 0;
+    diagnostics.visibilityState = null;
+    diagnostics.environmentBlendMode = null;
+    diagnostics.interactionMode = null;
+    diagnostics.enabledFeatures = [];
+    diagnostics.inputSources = [];
+    diagnostics.primaryInputSource = null;
+    diagnostics.viewports = null;
+    diagnostics.viewerPoseCaptured = false;
+    diagnostics.viewerPoseCaptureReason = null;
+    diagnostics.viewerPoseRootTransform = null;
+
+    diagnostics.sessionId = null;
+    diagnostics.targetHash = null;
+    diagnostics.buildHash = null;
+    diagnostics.lastObservation = null;
+
     diagnostics.status = 'idle';
     emit('spatial-three-session-ended');
   }
@@ -2733,7 +4152,261 @@ export function createXRThreeSessionController(options = {}) {
     }
   }
 
+  function normalizedRelativeTransform(worldMatrix) {
+    if (!activeRootMatrix || !worldMatrix) return { matrix: null, pose: null };
+    let relative = relativeMatrix(activeRootMatrix, worldMatrix);
+    let pose = relative ? poseFromMatrix(relative) : null;
+    if (!pose) return { matrix: null, pose: null };
+    let quaternion = normalizeQuaternion(pose.quaternion);
+    if (!quaternion) return { matrix: null, pose: null };
+    let normalizedPose = { position: pose.position, quaternion };
+    return {
+      matrix: makeTransform(normalizedPose.position, normalizedPose.quaternion),
+      pose: normalizedPose,
+    };
+  }
+
+  function captureSpatialViews(frameId, viewerPose, session) {
+    let runtimeViews = Array.isArray(viewerPose?.views) ? viewerPose.views : [];
+    let baseLayer = session?.renderState?.baseLayer || null;
+    return ['left', 'right'].map((eye) => {
+      let view = runtimeViews.find((candidate) => candidate.eye === eye) || null;
+      let referenceViewMatrix = matrixData(view?.transform?.inverse?.matrix);
+      let viewMatrix = referenceViewMatrix && activeRootMatrix
+        ? multiplyMatrices(referenceViewMatrix, activeRootMatrix)
+        : null;
+      let projectionMatrix = matrixData(view?.projectionMatrix);
+      let viewport = null;
+      try {
+        let current = view && baseLayer?.getViewport?.(view);
+        if (
+          current &&
+          [current.x, current.y, current.width, current.height].every((value) => Number.isFinite(Number(value))) &&
+          Number(current.width) > 0 && Number(current.height) > 0
+        ) {
+          viewport = {
+            x: Number(current.x),
+            y: Number(current.y),
+            width: Number(current.width),
+            height: Number(current.height),
+          };
+        }
+      } catch {
+        viewport = null;
+      }
+      return { frameId, eye, viewMatrix, projectionMatrix, viewport };
+    });
+  }
+
+  function captureSpatialObjects(frameId) {
+    let sources = new Map((activeCaptureConfig?.spatialObjects || []).map((source) => [source.id, source]));
+    return (activeCaptureConfig?.target.objects || []).map((targetObject) => {
+      let source = sources.get(targetObject.id) || null;
+      try {
+        source?.object?.updateMatrixWorld?.(true);
+      } catch {}
+      let worldMatrix = null;
+      try {
+        worldMatrix = matrixData(source?.getWorldMatrix?.() || source?.worldMatrix || source?.object?.matrixWorld);
+      } catch {}
+      let transform = normalizedRelativeTransform(worldMatrix);
+
+      function isValidSize(val) {
+        return Array.isArray(val) &&
+               val.length === 3 &&
+               val.every((v) => typeof v === 'number' && Number.isFinite(v) && v > 0);
+      }
+
+      function isValidLiveSize(val) {
+        return Array.isArray(val) &&
+               (val.length === 2 || val.length === 3) &&
+               val.every((v) => typeof v === 'number' && Number.isFinite(v) && v > 0);
+      }
+
+      let size = null;
+      let w = null;
+      let h = null;
+      let d = null;
+
+      let sizeCandidate1 = null;
+      if (source && typeof source.getSize === 'function') {
+        try {
+          sizeCandidate1 = source.getSize();
+        } catch {}
+      }
+      if (isValidSize(sizeCandidate1)) {
+        w = sizeCandidate1[0];
+        h = sizeCandidate1[1];
+        d = sizeCandidate1[2];
+      }
+
+      let obj = source?.object;
+      if (w === null && obj) {
+        let xrSize = obj.userData?.xrSize;
+        if (isValidLiveSize(xrSize)) {
+          w = xrSize[0];
+          h = xrSize[1];
+          d = xrSize[2] ?? null;
+        }
+      }
+
+      if (w === null && obj) {
+        let panelSize = obj.userData?.panel?.size;
+        if (isValidLiveSize(panelSize)) {
+          w = panelSize[0];
+          h = panelSize[1];
+          d = panelSize[2] ?? null;
+        }
+      }
+
+      if (w === null && obj?.geometry) {
+        let params = obj.geometry.parameters || {};
+        let scale = obj.scale || { x: 1, y: 1, z: 1 };
+        let gw = (typeof params.width === 'number' && Number.isFinite(params.width) && params.width > 0) ? params.width * (scale.x ?? 1) : null;
+        let gh = (typeof params.height === 'number' && Number.isFinite(params.height) && params.height > 0) ? params.height * (scale.y ?? 1) : null;
+        let gd = (typeof params.depth === 'number' && Number.isFinite(params.depth) && params.depth > 0) ? params.depth * (scale.z ?? 1) : null;
+        if (gw !== null && gh !== null) {
+          w = gw;
+          h = gh;
+          d = gd;
+        }
+      }
+
+      let staticSize = Array.isArray(source?.size) && source.size.length === 3 ? source.size : null;
+      if (staticSize) {
+        if (w === null) w = staticSize[0];
+        if (h === null) h = staticSize[1];
+        if (d === null) d = staticSize[2];
+      }
+
+      let sizeCandidate2 = [w, h, d];
+      if (isValidSize(sizeCandidate2)) {
+        size = sizeCandidate2;
+      }
+
+      if (!size) {
+        let sizeCandidate3 = Array.isArray(source?.size) && source.size.length === 3 ? source.size.map(Number) : null;
+        if (isValidSize(sizeCandidate3)) {
+          size = sizeCandidate3;
+        }
+      }
+      let state = null;
+      try {
+        state = typeof source?.getState === 'function' ? source.getState() : source?.state ?? null;
+      } catch {}
+      let visible = false;
+      try {
+        visible = typeof source?.visible === 'boolean'
+          ? source.visible
+          : typeof source?.object?.visible === 'boolean' ? source.object.visible : false;
+      } catch {}
+      return {
+        frameId,
+        id: targetObject.id,
+        matrix: transform.matrix,
+        pose: transform.pose,
+        size,
+        visible,
+        state: typeof state === 'string' ? state : null,
+      };
+    });
+  }
+
+  function captureInputTransform(frame, space) {
+    if (!frame?.getPose || !space || !activeReferenceSpace) return { matrix: null, pose: null };
+    try {
+      let pose = frame.getPose(space, activeReferenceSpace);
+      return normalizedRelativeTransform(matrixData(pose?.transform?.matrix));
+    } catch {
+      return { matrix: null, pose: null };
+    }
+  }
+
+  function captureSpatialInputs(frameId, frame, session) {
+    let sources = session?.inputSources ? Array.from(session.inputSources) : [];
+    return sources.map((inputSource, index) => {
+      let ray = captureInputTransform(frame, inputSource.targetRaySpace);
+      let grip = captureInputTransform(frame, inputSource.gripSpace);
+      let direction = ray.matrix
+        ? [-ray.matrix[8], -ray.matrix[9], -ray.matrix[10]]
+        : null;
+      let length = direction ? Math.hypot(...direction) : 0;
+      if (direction && length > 0) direction = direction.map((value) => value / length);
+      else direction = null;
+      return {
+        frameId,
+        sourceId: sourceIdFor(inputSource, index),
+        kind: inputKind(inputSource),
+        handedness: ['left', 'right'].includes(inputSource?.handedness) ? inputSource.handedness : 'none',
+        profiles: normalizeStringList(inputSource?.profiles),
+        targetRay: ray.matrix && direction ? {
+          matrix: ray.matrix,
+          origin: [...ray.pose.position],
+          direction,
+        } : null,
+        grip: grip.matrix ? { matrix: grip.matrix } : null,
+      };
+    });
+  }
+
+  function captureObservation(time, frame, viewerPose = activeViewerPose) {
+    let session = activeSession;
+    if (!session || !activeCaptureConfig) return null;
+    let sequence = Number(diagnostics.frames);
+    let frameTime = Number(time);
+    let predictedDisplayTime = Number(frame?.predictedDisplayTime ?? time);
+    let frameId = `${activeCaptureConfig.sessionId}:${referenceSpaceResetEpoch}:${sequence}`;
+    let viewerWorldMatrix = matrixData(viewerPose?.transform?.matrix);
+    let viewer = normalizedRelativeTransform(viewerWorldMatrix);
+    let views = captureSpatialViews(frameId, viewerPose, session);
+    let objects = captureSpatialObjects(frameId);
+    let inputs = captureSpatialInputs(frameId, frame, session);
+    let rootPose = activeRootMatrix ? poseFromMatrix(activeRootMatrix) : null;
+    let observation = {
+      version: XR_SPATIAL_VERSIONS.observation,
+      observationId: `${frameId}:observation`,
+      targetHash: activeCaptureConfig.target.contentHash,
+      provenance: activeCaptureConfig.provenance,
+      session: {
+        id: activeCaptureConfig.sessionId,
+        mode: diagnostics.mode,
+        visibility: ['visible', 'visible-blurred', 'hidden'].includes(session.visibilityState)
+          ? session.visibilityState
+          : 'hidden',
+      },
+      frame: {
+        id: frameId,
+        sequence,
+        time: frameTime,
+        predictedDisplayTime,
+        captureTime: frameTime,
+      },
+      referenceSpace: {
+        id: activeCaptureConfig.referenceSpaceId,
+        type: diagnostics.requestedReferenceSpaceType,
+        resetEpoch: referenceSpaceResetEpoch,
+      },
+      root: {
+        id: activeCaptureConfig.rootPolicy.id,
+        commitId: activeCaptureConfig.rootPolicy.commitId,
+        matrix: activeRootMatrix,
+        pose: rootPose,
+      },
+      posePhase: 'committed',
+      viewerPose: viewer,
+      activeGrab: activeGrabState,
+      views,
+      objects,
+      inputs,
+    };
+    return freezeSpatialValue(observation);
+  }
+
   async function start(mode = 'immersive-vr', startOptions = {}) {
+    if (activeSession || diagnostics.status === 'starting' || diagnostics.status === 'running') {
+      return { handled: true, ok: false, reason: 'session-already-active', failureStage: 'active-session' };
+    }
+    panelTransitions = parsePanelTransitionsOption(startOptions.panelTransitions);
     activeTarget = startOptions.target || activeTarget;
     if (!activeTarget?.ok) {
       diagnostics.lastError = activeTarget?.reason || 'three-webxr-unavailable';
@@ -2759,6 +4432,11 @@ export function createXRThreeSessionController(options = {}) {
     diagnostics.status = 'starting';
     diagnostics.mode = mode;
     diagnostics.lastError = null;
+
+    diagnostics.sessionId = activeCaptureConfig?.sessionId || null;
+    diagnostics.targetHash = activeCaptureConfig?.target.contentHash || null;
+    diagnostics.buildHash = activeCaptureConfig?.provenance.buildHash || null;
+
     let xrOptions = sessionOptionsFor(mode, startOptions);
     diagnostics.requestedReferenceSpaceType = xrOptions.referenceSpaceType || null;
     diagnostics.requestedOptionalFeatures = normalizeStringList(xrOptions.optionalFeatures);
@@ -2769,6 +4447,10 @@ export function createXRThreeSessionController(options = {}) {
     diagnostics.viewerPoseRootTransform = null;
     diagnostics.frameErrors = 0;
     diagnostics.lastFrameStage = null;
+    diagnostics.frames = 0;
+    diagnostics.lastObservation = null;
+    activeFrameRecord = null;
+    activeGrabState = { active: false, sourceId: null, objectId: null };
     emit('spatial-three-session-start-requested', {
       attemptId: startOptions.attemptId || null,
       requestedMode: mode,
@@ -2780,6 +4462,7 @@ export function createXRThreeSessionController(options = {}) {
       },
     });
 
+    let acquiredSession = null;
     try {
       let adapterOptions = {
         referenceSpaceType: xrOptions.referenceSpaceType,
@@ -2787,6 +4470,9 @@ export function createXRThreeSessionController(options = {}) {
       };
       let sessionResult = await requestWebXRSession(target, mode, xrOptions);
       if (!sessionResult.ok) {
+        activeCaptureConfig = null;
+        activeRootMatrix = null;
+        activeInteractionHandler = null;
         diagnostics.status = 'failed';
         diagnostics.lastError = sessionResult.reason || 'three-session-failed';
         emit('spatial-three-session-failed', {
@@ -2797,9 +4483,14 @@ export function createXRThreeSessionController(options = {}) {
         });
         return { handled: true, ok: false, reason: diagnostics.lastError, failureStage: 'request-session' };
       }
+      acquiredSession = sessionResult.session;
       let setSession = await adapter.setSession(sessionResult.session, adapterOptions);
       if (!setSession.ok) {
         await sessionResult.session.end?.();
+        acquiredSession = null;
+        activeCaptureConfig = null;
+        activeRootMatrix = null;
+        activeInteractionHandler = null;
         diagnostics.status = 'failed';
         diagnostics.lastError = setSession.reason || 'three-session-failed';
         emit('spatial-three-session-failed', {
@@ -2811,6 +4502,68 @@ export function createXRThreeSessionController(options = {}) {
         return { handled: true, ok: false, reason: diagnostics.lastError, failureStage: 'set-session' };
       }
       activeSession = sessionResult.session;
+      instanceFinalSessionSnapshot = null;
+      endEventObserved = false;
+      pendingTeardownReason = null;
+
+      lastRecordedResetEpoch = 0;
+      timingTracker = createXRFrameTimingTracker({
+        nominalFrameRate: activeSession?.frameRate || null,
+        supportedFrameRates: activeSession?.supportedFrameRates ? Array.from(activeSession.supportedFrameRates) : undefined,
+      });
+      receiptsList = [];
+
+      let initialPanels = [];
+      let meshes = adapter.listPanelMeshes?.() || [];
+      let closableByPanelId = new Map();
+      initialPanels = meshes.map(mesh => {
+        let p = mesh.userData?.panel || {};
+        closableByPanelId.set(mesh.userData.panelId, p.closable !== false);
+        return {
+          id: mesh.userData.panelId,
+          canonical: {
+            position: [mesh.position.x, mesh.position.y, mesh.position.z],
+            quaternion: mesh.quaternion ? [mesh.quaternion.x, mesh.quaternion.y, mesh.quaternion.z, mesh.quaternion.w] : [0, 0, 0, 1],
+            size: readPanelSize(mesh) || [0.8, 0.45],
+          },
+          current: {
+            position: [mesh.position.x, mesh.position.y, mesh.position.z],
+            quaternion: mesh.quaternion ? [mesh.quaternion.x, mesh.quaternion.y, mesh.quaternion.z, mesh.quaternion.w] : [0, 0, 0, 1],
+            size: readPanelSize(mesh) || [0.8, 0.45],
+          },
+          portable: p.portable !== false,
+          pinned: p.pinned === true,
+          focused: p.focused === true,
+          hidden: p.hidden === true,
+          revision: p.revision || 0,
+          sourceMetadata: p.sourceMetadata || {}
+        };
+      });
+      panelStore = createXRPortablePanelStore(initialPanels, {
+        isPanelClosable: (panelId) => closableByPanelId.get(panelId) !== false,
+        onReceipt: (receipt) => {
+          if (typeof options.onPortablePanelReceipt === 'function') {
+            options.onPortablePanelReceipt(receipt);
+          }
+          if (typeof controllerInstance?.onPortablePanelReceipt === 'function') {
+            controllerInstance.onPortablePanelReceipt(receipt);
+          }
+        }
+      });
+      if (adapter.controllerRays) {
+        adapter.controllerRays.panelStore = panelStore;
+        adapter.controllerRays.receiptsList = receiptsList;
+      }
+
+      if (activeReferenceSpace) {
+        activeReferenceSpace.removeEventListener?.('reset', onReferenceSpaceReset);
+      }
+      activeReferenceSpace = setSession.referenceSpace;
+      referenceSpaceResetEpoch = 0;
+      if (activeReferenceSpace) {
+        activeReferenceSpace.addEventListener?.('reset', onReferenceSpaceReset);
+      }
+
       originalBackground = activeTarget.scene?.background || null;
       if (mode === 'immersive-ar' && activeTarget.scene) {
         activeTarget.scene.background = null;
@@ -2818,26 +4571,66 @@ export function createXRThreeSessionController(options = {}) {
       diagnostics.status = 'running';
       updateSessionRuntimeDiagnostics();
       setupControllers(activeTarget.scene, activeTarget.renderer, activeTarget.camera, startOptions);
-      activeTarget.renderer.setAnimationLoop?.((time, frame) => {
+      // Register the session loop on the WebXR manager: driving it through the
+      // window-level renderer loop restarts window RAF and interleaves
+      // frameless ticks with the XR timeline.
+      let loopOwner = activeTarget.renderer.xr?.setAnimationLoop ? activeTarget.renderer.xr : activeTarget.renderer;
+      loopOwner?.setAnimationLoop?.((time, frame) => {
+        // A window-RAF tick can interleave with the XR session loop and carries
+        // no XRFrame; letting it through pollutes frames, timing, and
+        // observations with a second non-monotonic timeline.
+        if (activeSession && !frame) return;
+        if (timingTracker) {
+          let discontinuous = false;
+          if (referenceSpaceResetEpoch !== lastRecordedResetEpoch) {
+            discontinuous = true;
+            lastRecordedResetEpoch = referenceSpaceResetEpoch;
+          }
+          let visible = activeSession ? (activeSession.visibilityState === 'visible') : true;
+          timingTracker.recordFrame(time, { visible, discontinuous });
+        }
+        activeViewerPose = null;
         diagnostics.frames += 1;
+        activeFrameRecord = {
+          id: activeCaptureConfig
+            ? `${activeCaptureConfig.sessionId}:${referenceSpaceResetEpoch}:${diagnostics.frames}`
+            : null,
+          sequence: diagnostics.frames,
+          time: Number(time),
+        };
         let frameContext = {
           attemptId: startOptions.attemptId || null,
           frameNumber: diagnostics.frames,
           mode,
         };
         captureFrameStage('runtime-diagnostics', () => updateSessionRuntimeDiagnostics(), frameContext);
-        let capturedPose = captureFrameStage(
+        let viewerPose = captureFrameStage(
+          'viewer-pose-read',
+          () => frame?.getViewerPose?.(setSession.referenceSpace) || null,
+          frameContext,
+        );
+        captureFrameStage(
           'viewer-pose',
-          () => captureViewerPose(frame, setSession.referenceSpace, xrOptions),
+          () => captureViewerPose(viewerPose, xrOptions),
           frameContext,
         );
         captureFrameStage('frame-viewports', () => {
           diagnostics.viewports = summarizeXRFrameViewports(frame, setSession.referenceSpace, activeSession, {
-            viewerPose: capturedPose?.viewerPose || capturedPose?.result?.viewerPose,
+            viewerPose,
           });
         }, frameContext);
         captureFrameStage('hover', () => updateHover(), frameContext);
         captureFrameStage('drag', () => updateDrag(), frameContext);
+        if (panelTransitions) {
+          captureFrameStage('transitions', () => tickTransitionTweens(Number(time)), frameContext);
+        }
+
+        let observation = null;
+        captureFrameStage('observation', () => {
+          observation = captureObservation(time, frame, viewerPose);
+          diagnostics.lastObservation = observation;
+          if (observation) (startOptions.onObservation || options.onObservation)?.(observation);
+        }, frameContext);
 
         if (diagnostics.frames % 45 === 0 && activeTarget.camera && activeTarget.scene) {
           let tempCameraPosition = activeTarget.camera.position.clone();
@@ -2868,7 +4661,7 @@ export function createXRThreeSessionController(options = {}) {
         }
 
         captureFrameStage('frame-callback', () => {
-          options.onFrame?.({ time, frame, target: activeTarget, session: activeSession });
+          options.onFrame?.({ time, frame, target: activeTarget, session: activeSession, observation });
         }, frameContext);
         if (startOptions.renderFrame !== false) {
           captureFrameStage('render', () => {
@@ -2876,13 +4669,22 @@ export function createXRThreeSessionController(options = {}) {
           }, frameContext);
         }
       });
-      activeSession.addEventListener?.('end', cleanupSession, { once: true });
+      activeSession.addEventListener?.('end', onSessionEnd);
       emit('spatial-three-session-started', {
         attemptId: startOptions.attemptId || null,
         mode,
       });
       return { handled: true, ok: true, session: activeSession, diagnostics: getDiagnostics() };
     } catch (error) {
+      try {
+        await acquiredSession?.end?.();
+      } catch {}
+      if (activeSession) cleanupSession();
+      else {
+        activeCaptureConfig = null;
+        activeRootMatrix = null;
+        activeInteractionHandler = null;
+      }
       diagnostics.status = 'failed';
       diagnostics.lastError = error?.name || 'three-session-failed';
       emit('spatial-three-session-failed', {
@@ -2896,13 +4698,23 @@ export function createXRThreeSessionController(options = {}) {
     }
   }
 
-  async function stop() {
+  async function stop(reason) {
+    pendingTeardownReason = 'stop-called';
     let session = activeSession;
-    if (!session?.end) {
+    if (!session) {
       cleanupSession();
       return false;
     }
-    await session.end();
+    if (!session.end) {
+      cleanupSession();
+      return false;
+    }
+    try {
+      await session.end();
+    } catch (error) {
+      cleanupSession();
+      throw error;
+    }
     return true;
   }
 
@@ -2915,12 +4727,29 @@ export function createXRThreeSessionController(options = {}) {
     };
   }
 
-  return {
+  controllerInstance = {
     start,
     stop,
+    commitSpatialEvidence,
     getDiagnostics,
     getState: getDiagnostics,
+    captureObservation,
+    getFinalSessionSnapshot: () => instanceFinalSessionSnapshot,
+    getPortablePanelState() {
+      if (activeSession && panelStore) {
+        return panelStore.getSnapshot();
+      }
+      return instanceFinalSessionSnapshot?.panelState || { version: 'xr-portable-panel-state-v1', layoutRevision: 0, focusedPanelId: null, panels: [] };
+    },
+    getPortablePanelReceipts() {
+      if (activeSession && panelStore) {
+        return panelStore.getReceipts();
+      }
+      return instanceFinalSessionSnapshot?.receipts || [];
+    },
+    onPortablePanelReceipt: null
   };
+  return controllerInstance;
 }
 
 export function createXRThreeSessionTelemetrySnapshot(diagnostics = {}, options = {}) {
@@ -3131,9 +4960,43 @@ export function createXRThreeInteractionReadinessSummary(input = {}, options = {
     count: telemetry.panelFrameVisuals,
     expected: expectedFrameVisuals,
   });
-  add('input-sources-present', telemetry.controllers > 0 || telemetry.inputSources.length > 0 ? 'ready' : telemetry.active ? 'warning' : 'waiting', {
+  let hasLiveInputSource = Array.isArray(telemetry.inputSources) && telemetry.inputSources.length > 0;
+  let hasTrustedReceipt = false;
+  let resolvedActiveId = null;
+  if (typeof options.expectedSessionId === 'string' && options.expectedSessionId.trim() !== '') {
+    resolvedActiveId = options.expectedSessionId;
+  } else if (typeof telemetry?.sessionId === 'string' && telemetry.sessionId.trim() !== '') {
+    resolvedActiveId = telemetry.sessionId;
+  }
+
+  if (resolvedActiveId && typeof options.verifyReceipt === 'function') {
+    let receiptsList = options.retainedReceipts || options.trustedReceipts || options.receipts || telemetry.receipts || [];
+    if (!Array.isArray(receiptsList)) {
+      receiptsList = [receiptsList];
+    }
+    let singleReceipt = options.retainedReceipt || options.trustedReceipt || options.receipt;
+    if (singleReceipt) {
+      receiptsList = [...receiptsList, singleReceipt];
+    }
+    for (let r of receiptsList) {
+      if (r && typeof r === 'object') {
+        let verification = options.verifyReceipt(r);
+        if (verification && typeof verification === 'object' && !Array.isArray(verification) && verification.ok === true) {
+          let receiptSessionId = r.sessionId;
+          if (typeof receiptSessionId === 'string' && receiptSessionId.trim() !== '' && receiptSessionId === resolvedActiveId) {
+            hasTrustedReceipt = true;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  let inputSourcesReady = hasLiveInputSource || hasTrustedReceipt;
+  add('input-sources-present', inputSourcesReady ? 'ready' : telemetry.active ? 'warning' : 'waiting', {
     controllers: telemetry.controllers,
-    inputSources: telemetry.inputSources.length,
+    inputSources: telemetry.inputSources ? telemetry.inputSources.length : 0,
+    hasTrustedReceipt,
   });
   add('controller-rays-visible', telemetry.controllerRayVisuals > 0 ? 'ready' : telemetry.active ? 'warning' : 'waiting', {
     count: telemetry.controllerRayVisuals,

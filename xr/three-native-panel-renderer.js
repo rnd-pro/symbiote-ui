@@ -1016,6 +1016,7 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
         ? {
           width: source?.style?.border?.width ?? null,
           color: materialColors.get(borderMaterial) ?? null,
+          opacity: borderMaterial.opacity,
         }
         : null,
     };

@@ -113,9 +113,20 @@ function sourcePixelsOf(node) {
   return { width: node.rect.width, height: node.rect.height };
 }
 
+function isTransparentColor(value) {
+  if (!value || value === 'transparent') return true;
+  let rgba = /^rgba?\(\s*([^()]+?)\s*\)$/i.exec(String(value).trim());
+  if (rgba) {
+    let parts = rgba[1].split(',').map((part) => Number.parseFloat(part.trim()));
+    return parts.length >= 4 && Number.isFinite(parts[3]) && parts[3] <= 0;
+  }
+  let hex = /^#[0-9a-f]{6}([0-9a-f]{2})$/i.exec(String(value).trim());
+  return Boolean(hex && Number.parseInt(hex[1], 16) === 0);
+}
+
 function extractSurfaceStyle(node) {
   let background = node.style?.['background-color'];
-  if (!background || background === 'transparent' || background === 'rgba(0, 0, 0, 0)') return undefined;
+  if (isTransparentColor(background)) return undefined;
   return { background };
 }
 
@@ -123,7 +134,7 @@ function hasBorderEvidence(node) {
   let style = node?.style || {};
   return style['border-style'] === 'solid'
     && Number.parseFloat(style['border-width']) > 0
-    && Boolean(style['border-color']);
+    && !isTransparentColor(style['border-color']);
 }
 
 /**
@@ -197,19 +208,21 @@ function compileIconPrimitive(node, panelNode, scale) {
   return withStyle(primitive, extractTextStyle(node));
 }
 
-function compileSurfacePrimitive(node, panelNode, scale, layer, themeRole) {
+function compileSurfacePrimitive(node, panelNode, scale, layer, themeRole, idSuffix = '') {
+  let surfaceStyle = extractSurfaceStyle(node);
   let style = {
-    ...extractSurfaceStyle(node),
+    ...surfaceStyle,
     ...extractBorderStyle(node, scale),
   };
   let primitive = {
-    id: `${panelNode.id}/${layer}/${node.id}`,
+    id: `${panelNode.id}/${layer}/${node.id}${idSuffix}`,
     kind: 'surface',
     layer,
     themeRole,
     bounds: toLocalBounds(node, panelNode, scale),
     spatialNodeId: node.id,
   };
+  if (!surfaceStyle) primitive.transparent = true;
   return withStyle(primitive, Object.keys(style).length ? style : undefined);
 }
 
@@ -295,7 +308,7 @@ function compileNodePrimitives(node, panelNode, scale) {
     case 'editor': {
       let primitives = [];
       if (extractSurfaceStyle(node)) {
-        primitives.push(compileSurfacePrimitive(node, panelNode, scale, 'content', 'surface-sunken'));
+        primitives.push(compileSurfacePrimitive(node, panelNode, scale, 'content', 'surface-sunken', '/surface'));
       }
       primitives.push(compileLabelPrimitive(node, panelNode, scale, { multiline: true }));
       return primitives;
@@ -326,13 +339,15 @@ function compileNodePrimitives(node, panelNode, scale) {
         ...extractBorderStyle(node, scale),
       };
       if (Object.keys(style).length) {
-        primitives.push(compileSurfacePrimitive(node, panelNode, scale, 'content', 'surface-raised'));
+        primitives.push(compileSurfacePrimitive(node, panelNode, scale, 'content', 'surface-raised', '/surface'));
       }
       if (node.text !== undefined) primitives.push(compileLabelPrimitive(node, panelNode, scale));
       return primitives;
     }
     case 'field': {
-      let primitives = [compileSurfacePrimitive(node, panelNode, scale, 'content', 'surface-sunken')];
+      let primitives = [
+        compileSurfacePrimitive(node, panelNode, scale, 'content', 'surface-sunken', '/surface'),
+      ];
       if (node.text) primitives.push(compileLabelPrimitive(node, panelNode, scale));
       return primitives;
     }

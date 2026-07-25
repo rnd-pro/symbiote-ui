@@ -8,7 +8,7 @@ from `symbiote-ui`, `symbiote-ui/canvas`, and `symbiote-ui/ui`.
 ## Experimental, flagged platform capability
 
 HTML-in-Canvas is an experimental Chromium capability behind an origin trial
-(Chrome milestone range 148-154, including the first extension) and the `CanvasDrawElement` flag
+(Chrome milestone range 148-150) and the `CanvasDrawElement` flag
 (`chrome://flags/#canvas-draw-element`). It is never the only rendering path:
 every use is gated by runtime feature detection (`getHtmlInCanvasSupport`,
 `createXRHtmlCanvasEnablementSummary`), and unsupported environments must render

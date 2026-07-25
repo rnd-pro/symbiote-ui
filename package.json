@@ -68,6 +68,12 @@
     "./xr/spatial-parity": "./xr/spatial-parity.js",
     "./xr/spatial-visual-parity": "./xr/spatial-visual-parity.js",
     "./xr/dom-spatial-capture": "./xr/dom-spatial-capture.js",
+    "./xr/spatial-contract": "./xr/spatial-contract.js",
+    "./xr/spatial-math": "./xr/spatial-math.js",
+    "./xr/spatial-projection": "./xr/spatial-projection.js",
+    "./xr/spatial-evidence": "./xr/spatial-evidence.js",
+    "./xr/spatial-stability": "./xr/spatial-stability.js",
+    "./xr/pointer": "./xr/pointer.js",
     "./tokens/*": "./tokens/*",
     "./rules/*": "./rules/*",
     "./schemas/*": "./schemas/*",
@@ -269,7 +275,8 @@
     "ajv": "^8.20.0",
     "jsda-kit": "1.6.0",
     "library-pages": "0.1.0-alpha.13",
-    "linkedom": "^0.18.12"
+    "linkedom": "^0.18.12",
+    "three": "0.185.1"
   },
   "repository": {
     "type": "git",

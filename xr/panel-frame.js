@@ -8,9 +8,12 @@ function clamp(value, min, max) {
 }
 
 function normalizePoint(point = {}) {
+  // Chrome lives outside the window (Horizon-style), so frame points are NOT
+  // clamped to the window UV square; the chrome hit surface supplies
+  // coordinates beyond [0, 1].
   return {
-    x: clamp(numberOr(point.x, 0), 0, 1),
-    y: clamp(numberOr(point.y, 0), 0, 1),
+    x: numberOr(point.x, 0),
+    y: numberOr(point.y, 0),
   };
 }
 
@@ -18,10 +21,71 @@ function bool(value) {
   return value === true;
 }
 
+export function computeXRPanelChromeLayout(sizeMeters = [0.8, 0.45], options = {}) {
+  // Single source of truth for chrome geometry (also consumed by IWER prelude
+  // targeting). Zones stay in panel UV; meter inputs convert at build time
+  // (u = meters/width, v = meters/height) so chrome keeps a constant PHYSICAL
+  // size across resizes. Absent meter options keep the historical UV defaults,
+  // byte-identical for existing consumers.
+  let size = Array.isArray(sizeMeters) ? sizeMeters : [0.8, 0.45];
+  let width = Math.max(0.05, numberOr(size[0], 0.8));
+  let height = Math.max(0.05, numberOr(size[1], 0.45));
+  // Meter inputs are clamped in METERS (sanity bounds) before conversion;
+  // the historical UV clamps apply to UV inputs only — clamping meter-derived
+  // UV would break the constant-physical-size invariant on large panels.
+  let handleSizeU = options.handleSizeMeters != null
+    ? clamp(numberOr(options.handleSizeMeters, 0), 0, 0.5) / width
+    : clamp(numberOr(options.handleSize, 0.055), 0.02, 0.16);
+  let handleSizeV = options.handleSizeMeters != null
+    ? clamp(numberOr(options.handleSizeMeters, 0), 0, 0.5) / height
+    : handleSizeU;
+  let footerHeight = options.footerHeightMeters != null
+    ? clamp(numberOr(options.footerHeightMeters, 0), 0, 0.5) / height
+    : clamp(numberOr(options.footerHeight ?? options.headerHeight, 0.085), 0.04, 0.22);
+  let actionSize = options.actionSizeMeters != null
+    ? clamp(numberOr(options.actionSizeMeters, 0), 0, 0.5) / width
+    : clamp(numberOr(options.actionSize, 0.07), 0.02, 0.16);
+  let footerTop = 1 + (options.footerGapMeters != null
+    ? clamp(numberOr(options.footerGapMeters, 0), 0, 0.2) / height
+    : clamp(numberOr(options.footerGap, 0.02), 0, 0.1));
+  let barLeft = 0.34;
+  let barWidth = 0.32;
+  let gap = 0.02;
+  // Non-closable panels omit the close zone entirely — a chrome action with
+  // no handler behind it would be a dead control.
+  let actions = {};
+  if (options.closable !== false) {
+    actions.close = { x: barLeft - actionSize * 2 - gap * 2, y: footerTop, width: actionSize, height: footerHeight };
+  }
+  actions.reset = { x: barLeft - actionSize - gap, y: footerTop, width: actionSize, height: footerHeight };
+  actions.pin = { x: barLeft + barWidth + gap, y: footerTop, width: actionSize, height: footerHeight };
+  actions.fullscreen = {
+    x: barLeft + barWidth + gap * 2 + actionSize,
+    y: footerTop,
+    width: actionSize,
+    height: footerHeight,
+  };
+  return {
+    move: { x: barLeft, y: footerTop, width: barWidth, height: footerHeight },
+    content: { x: 0, y: 0, width: 1, height: 1 },
+    resize: {
+      northWest: { x: -handleSizeU / 2, y: -handleSizeV / 2, width: handleSizeU, height: handleSizeV },
+      northEast: { x: 1 - handleSizeU / 2, y: -handleSizeV / 2, width: handleSizeU, height: handleSizeV },
+      southEast: { x: 1 - handleSizeU / 2, y: 1 - handleSizeV / 2, width: handleSizeU, height: handleSizeV },
+      southWest: { x: -handleSizeU / 2, y: 1 - handleSizeV / 2, width: handleSizeU, height: handleSizeV },
+    },
+    actions,
+  };
+}
+
 export function createXRPanelFrame(panel = {}, options = {}) {
-  let handleSize = clamp(numberOr(options.handleSize, 0.055), 0.02, 0.16);
-  let headerHeight = clamp(numberOr(options.headerHeight, 0.09), 0.04, 0.22);
-  let actionSize = clamp(numberOr(options.actionSize, handleSize), 0.02, 0.16);
+  // Horizon-OS-style chrome, placed OUTSIDE the window like the native shell:
+  // the handlebar and window actions float in a band below the window, and
+  // the resize grips straddle the corners. Content owns the full window UV
+  // square; the chrome hit surface supplies out-of-window coordinates.
+  let sizeMeters = Array.isArray(options.panelSizeMeters)
+    ? options.panelSizeMeters
+    : (Array.isArray(panel.size) ? panel.size : [0.8, 0.45]);
   let state = options.state || panel.state || {};
   return {
     version: 'xr-panel-frame-v1',
@@ -34,25 +98,10 @@ export function createXRPanelFrame(panel = {}, options = {}) {
       shadow: 'var(--sn-xr-panel-shadow)',
       pointer: 'var(--sn-xr-pointer-color)',
     },
-    zones: {
-      move: { x: 0, y: 0, width: 1, height: headerHeight },
-      content: { x: handleSize, y: headerHeight, width: 1 - handleSize * 2, height: 1 - headerHeight - handleSize },
-      resize: {
-        north: { x: handleSize, y: 0, width: 1 - handleSize * 2, height: handleSize },
-        east: { x: 1 - handleSize, y: headerHeight, width: handleSize, height: 1 - headerHeight - handleSize },
-        south: { x: handleSize, y: 1 - handleSize, width: 1 - handleSize * 2, height: handleSize },
-        west: { x: 0, y: headerHeight, width: handleSize, height: 1 - headerHeight - handleSize },
-        northWest: { x: 0, y: 0, width: handleSize, height: handleSize },
-        northEast: { x: 1 - handleSize, y: 0, width: handleSize, height: handleSize },
-        southEast: { x: 1 - handleSize, y: 1 - handleSize, width: handleSize, height: handleSize },
-        southWest: { x: 0, y: 1 - handleSize, width: handleSize, height: handleSize },
-      },
-      actions: {
-        pin: { x: 1 - actionSize * 3, y: 0, width: actionSize, height: headerHeight },
-        reset: { x: 1 - actionSize * 2, y: 0, width: actionSize, height: headerHeight },
-        close: { x: 1 - actionSize, y: 0, width: actionSize, height: headerHeight },
-      },
-    },
+    zones: computeXRPanelChromeLayout(sizeMeters, {
+      ...options,
+      closable: options.closable === false ? false : panel.closable,
+    }),
     state: {
       hovered: bool(state.hovered || options.hovered),
       selected: bool(state.selected || options.selected),
@@ -116,13 +165,18 @@ export function hitTestXRPanelFrame(frameOrPanel = {}, point = {}, options = {})
     };
   }
 
-  return {
-    version: 'xr-panel-frame-target-v1',
-    panelId: frame.panelId,
-    zone: 'content',
-    action: null,
-    operation: options.defaultContentOperation || 'focus',
-    handle: null,
-    point: normalizedPoint,
-  };
+  if (contains(frame.zones.content, normalizedPoint)) {
+    return {
+      version: 'xr-panel-frame-target-v1',
+      panelId: frame.panelId,
+      zone: 'content',
+      action: null,
+      operation: options.defaultContentOperation || 'focus',
+      handle: null,
+      point: normalizedPoint,
+    };
+  }
+
+  // Outside the window and outside every chrome zone: no target at all.
+  return null;
 }

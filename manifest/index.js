@@ -6,3 +6,4 @@ export * from './graph-analysis-catalog.js';
 export * from './project-schema-catalog.js';
 export * from './ui-schema-catalog.js';
 export * from './provider-conformance-atlas.js';
+export * from './xr-spatial-schema-catalog.js';

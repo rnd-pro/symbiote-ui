@@ -1,5 +1,6 @@
 import { createXRPanelContentViewport } from './layout-projection.js';
-import { createXRPanelPointerTarget } from './pointer.js';
+import { createXRPanelPointerTarget, resolveXRHitMap } from './pointer.js';
+import { freezeSpatialValue } from './spatial-contract.js';
 
 function defaultComponentResolver(name) {
   return name;
@@ -167,6 +168,8 @@ export function createXRPanelHost(options = {}) {
   let scene = null;
   let themeSnapshot = options.themeSnapshot || null;
   let dispatchDepth = 0;
+  let activeFocusPanelId = null;
+  let pendingSelections = new Map();
 
   function getState() {
     return {
@@ -174,6 +177,8 @@ export function createXRPanelHost(options = {}) {
       themeSnapshot,
       mounted: panels.size,
       panelIds: [...panels.keys()],
+      activeFocusPanelId,
+      pendingSelectionSourceIds: [...pendingSelections.keys()],
     };
   }
 
@@ -181,7 +186,13 @@ export function createXRPanelHost(options = {}) {
     scene = nextScene || null;
     themeSnapshot = sceneOptions.themeSnapshot || themeSnapshot || null;
     panels.clear();
+    activeFocusPanelId = null;
+    pendingSelections.clear();
     return getState();
+  }
+
+  function getPanelState(record) {
+    return record.panel;
   }
 
   function mountPanel(panel, container) {
@@ -196,7 +207,14 @@ export function createXRPanelHost(options = {}) {
     let contentViewport = applyPanelViewport(element, panel);
     applyPanelViewport(container, { ...panel, contentViewport });
     container.replaceChildren(element);
-    panels.set(panel.id, { panel, container, element, contentViewport });
+
+    panels.set(panel.id, {
+      panel,
+      container,
+      element,
+      contentViewport,
+      focused: false,
+    });
     return element;
   }
 
@@ -209,11 +227,136 @@ export function createXRPanelHost(options = {}) {
     }
     record.container.replaceChildren();
     panels.delete(panelId);
+    for (let [sourceId, pending] of pendingSelections) {
+      if (pending.panelId === panelId) pendingSelections.delete(sourceId);
+    }
+    if (activeFocusPanelId === panelId) {
+      activeFocusPanelId = null;
+    }
     return true;
   }
 
   function getPanelElement(panelId) {
     return panels.get(panelId)?.element || null;
+  }
+
+  function focusPanel(panelId) {
+    let record = panels.get(panelId);
+    if (!record) return false;
+
+    if (activeFocusPanelId && activeFocusPanelId !== panelId) {
+      let prevRecord = panels.get(activeFocusPanelId);
+      if (prevRecord) {
+        prevRecord.focused = false;
+        prevRecord.element.classList.remove('sn-xr-panel-focused');
+        prevRecord.container.classList.remove('sn-xr-panel-focused');
+        prevRecord.element.dispatchEvent(createHostEvent(context, 'xr-panel-blur', {
+          panelId: activeFocusPanelId,
+        }));
+      }
+    }
+
+    activeFocusPanelId = panelId;
+    record.focused = true;
+    record.element.classList.add('sn-xr-panel-focused');
+    record.container.classList.add('sn-xr-panel-focused');
+
+    record.element.dispatchEvent(createHostEvent(context, 'xr-panel-focus', {
+      panelId,
+    }));
+    return true;
+  }
+
+  function cleanup() {
+    for (let panelId of [...panels.keys()]) {
+      unmountPanel(panelId);
+    }
+    panels.clear();
+    activeFocusPanelId = null;
+    pendingSelections.clear();
+    scene = null;
+  }
+
+  function resolveInteraction(pointerEvent, record, options) {
+    let hitMap = options.hitMap || record.panel.hitMap || null;
+    let sourceId = pointerEvent.sourceId || null;
+    let sessionId = pointerEvent.sessionId || options.sessionId || null;
+    let frame = pointerEvent.frame || options.frame || null;
+    if (!sourceId) return { ok: false, reason: 'missing-source-id', target: null, contentPoint: null };
+    if (!sessionId) return { ok: false, reason: 'missing-session-id', target: null, contentPoint: null };
+    return resolveXRHitMap(pointerEvent.point, hitMap, {
+      panelId: record.panel.id,
+      contentHash: options.contentHash || record.panel.contentHash,
+      revision: options.revision ?? record.panel.revision,
+      sessionId,
+      frame,
+      pointSpace: 'normalized',
+      maximumFrameAge: options.maximumFrameAge,
+      maximumAgeMs: options.maximumAgeMs,
+    });
+  }
+
+  function beginSelection(pointerEvent, record, options) {
+    let resolved = resolveInteraction(pointerEvent, record, options);
+    if (!resolved.ok) return resolved;
+    let receipt = freezeSpatialValue({
+      sessionId: pointerEvent.sessionId || options.sessionId,
+      sourceId: pointerEvent.sourceId,
+      panelId: record.panel.id,
+      targetId: resolved.target.id,
+      action: resolved.target.action,
+      contentHash: options.contentHash || record.panel.contentHash,
+      revision: options.revision ?? record.panel.revision,
+      startFrameId: (pointerEvent.frame || options.frame).id,
+      startSequence: (pointerEvent.frame || options.frame).sequence,
+      startTime: (pointerEvent.frame || options.frame).time,
+    });
+    pendingSelections.set(receipt.sourceId, receipt);
+    return { ...resolved, receipt };
+  }
+
+  function endSelection(pointerEvent, record, options) {
+    let sourceId = pointerEvent.sourceId || null;
+    let pending = pendingSelections.get(sourceId);
+    pendingSelections.delete(sourceId);
+    if (!pending) return { ok: false, reason: 'selectstart-missing', target: null, contentPoint: null };
+    let resolved = resolveInteraction(pointerEvent, record, options);
+    if (!resolved.ok) return resolved;
+    let frame = pointerEvent.frame || options.frame;
+    let contentHash = options.contentHash || record.panel.contentHash;
+    let revision = options.revision ?? record.panel.revision;
+    let sessionId = pointerEvent.sessionId || options.sessionId;
+    let duration = frame.time - pending.startTime;
+    let maximumDurationMs = Number.isFinite(options.maximumInteractionDurationMs)
+      ? options.maximumInteractionDurationMs
+      : 1_000;
+    if (
+      pending.sessionId !== sessionId ||
+      pending.sourceId !== sourceId ||
+      pending.panelId !== record.panel.id ||
+      pending.targetId !== resolved.target.id ||
+      pending.contentHash !== contentHash ||
+      pending.revision !== revision ||
+      frame.sequence < pending.startSequence ||
+      duration < 0 || duration > maximumDurationMs
+    ) {
+      return { ok: false, reason: 'selection-mismatch', target: null, contentPoint: resolved.contentPoint };
+    }
+    let receipt = freezeSpatialValue({
+      ...pending,
+      endFrameId: frame.id,
+      endSequence: frame.sequence,
+      endTime: frame.time,
+      durationMs: duration,
+    });
+    record.element.dispatchEvent(createHostEvent(context, 'xr-panel-action', {
+      panelId: record.panel.id,
+      targetId: resolved.target.id,
+      action: resolved.target.action,
+      contentPoint: resolved.contentPoint,
+      receipt,
+    }));
+    return { ...resolved, receipt };
   }
 
   function dispatchPointerEvent(pointerEvent, options = {}) {
@@ -226,21 +369,34 @@ export function createXRPanelHost(options = {}) {
     if (!record?.element?.dispatchEvent) {
       return { ok: false, reason: 'panel-not-mounted', panelId };
     }
+
+    if (
+      pointerEvent.type === 'pointerdown' ||
+      pointerEvent.type === 'selectstart' ||
+      pointerEvent.type === 'click' ||
+      pointerEvent.buttons?.primary
+    ) {
+      focusPanel(panelId);
+    }
+
+    let currentPanel = getPanelState(record);
     let target = createXRPanelPointerTarget({
       panelId,
       point: pointerEvent.point,
-      panel: record.panel,
+      panel: currentPanel,
     }, {
       ...options,
       contentViewport: record.contentViewport,
       source: pointerEvent.source,
     });
+
     let detail = {
       ...pointerEvent,
       targetId: panelId,
       contentPoint: target.contentPoint,
       contentViewport: target.contentViewport,
     };
+
     let domEvent = createPointerDomEvent(context, detail, target);
     dispatchDepth += 1;
     try {
@@ -249,14 +405,25 @@ export function createXRPanelHost(options = {}) {
         record.element.dispatchEvent(domEvent);
       }
       record.element.dispatchEvent(createHostEvent(context, 'xr-panel-pointer', detail));
+
+      let interaction = null;
+      if (pointerEvent.type === 'selectstart') interaction = beginSelection(pointerEvent, record, options);
+      else if (pointerEvent.type === 'selectend') interaction = endSelection(pointerEvent, record, options);
+      else if (pointerEvent.type === 'selectcancel' || pointerEvent.type === 'pointercancel') {
+        pendingSelections.delete(pointerEvent.sourceId);
+        interaction = { ok: false, reason: 'selection-cancelled', target: null, contentPoint: null };
+      }
+      detail.interaction = interaction;
     } finally {
       dispatchDepth -= 1;
     }
+
     return {
       ok: true,
       panelId,
       target,
       dispatched: domEvent ? [detail.type, 'xr-panel-pointer'] : ['xr-panel-pointer'],
+      interaction: detail.interaction || null,
     };
   }
 
@@ -266,6 +433,8 @@ export function createXRPanelHost(options = {}) {
     unmountPanel,
     getPanelElement,
     dispatchPointerEvent,
+    focusPanel,
+    cleanup,
     getState,
   };
 }

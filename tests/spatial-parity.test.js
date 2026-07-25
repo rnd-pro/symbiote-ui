@@ -97,6 +97,16 @@ test('createSpatialParityReport flags resolved style mismatches', () => {
   assert.equal(report.style.mismatches[0].nodeId, 'panel:project');
 });
 
+test('createSpatialParityReport ignores zero-alpha CSS colors consistently with compilation', () => {
+  let snapshot = createReferenceSnapshot();
+  let panel = snapshot.nodes.find((node) => node.id === 'panel:project');
+  panel.style['background-color'] = 'rgba(14, 36, 44, 0)';
+  let compiled = compileSpatialSnapshot(snapshot, { planeWidth: 1.28 });
+  let report = createSpatialParityReport(snapshot, compiled);
+  assert.equal(report.style.mismatches.length, 0);
+  assert.equal(report.ok, true, JSON.stringify(report, null, 2));
+});
+
 test('createSpatialParityReport names unmapped actions and unmatched nodes', () => {
   let snapshot = createReferenceSnapshot();
   let compiled = compileReference();

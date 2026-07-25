@@ -157,6 +157,12 @@ test('npm pack output excludes private memory and scratch artifacts', async () =
   assert.ok(files.includes('ui/index.js'));
   assert.ok(files.includes('runtime/index.js'));
   assert.ok(files.includes('manifest/component-registry.js'));
+  assert.ok(files.includes('manifest/xr-spatial-schema-catalog.js'));
+  assert.ok(files.includes('schemas/xr-spatial-placement-receipt-v1.json'));
+  assert.ok(files.includes('schemas/xr-final-session-snapshot-v1.json'));
+  assert.ok(files.includes('schemas/xr-frame-timing-v1.json'));
+  assert.ok(files.includes('schemas/xr-portable-panel-receipt-v1.json'));
+  assert.ok(files.includes('schemas/xr-portable-panel-state-v1.json'));
   for (let excludedPath of ['site/', '_site/', '.github/', 'tests/', 'scripts/']) {
     assert.equal(
       files.some((file) => file.startsWith(excludedPath)),
@@ -224,6 +230,11 @@ test('packed package imports from a consumer project with SSR-safe entrypoints',
       const tourAudio = await import('symbiote-ui/ui/tour-audio-provider.js');
       const tourMedia = await import('symbiote-ui/ui/tour-media-renderer.js');
 
+      const finalSessionSnapshot = await import('symbiote-ui/schemas/xr-final-session-snapshot-v1.json', { with: { type: 'json' } });
+      const frameTiming = await import('symbiote-ui/schemas/xr-frame-timing-v1.json', { with: { type: 'json' } });
+      const portablePanelReceipt = await import('symbiote-ui/schemas/xr-portable-panel-receipt-v1.json', { with: { type: 'json' } });
+      const portablePanelState = await import('symbiote-ui/schemas/xr-portable-panel-state-v1.json', { with: { type: 'json' } });
+
       const xr = await import('symbiote-ui/xr');
       const spatialIndex = await import('symbiote-ui/xr/spatial-index');
       const spatialGraph = await import('symbiote-ui/xr/spatial-graph');
@@ -238,6 +249,12 @@ test('packed package imports from a consumer project with SSR-safe entrypoints',
       const spatialSnapshotCompile = await import('symbiote-ui/xr/spatial-snapshot-compile');
       const spatialParity = await import('symbiote-ui/xr/spatial-parity');
       const domSpatialCapture = await import('symbiote-ui/xr/dom-spatial-capture');
+      const spatialContract = await import('symbiote-ui/xr/spatial-contract');
+      const spatialMath = await import('symbiote-ui/xr/spatial-math');
+      const spatialProjection = await import('symbiote-ui/xr/spatial-projection');
+      const spatialEvidence = await import('symbiote-ui/xr/spatial-evidence');
+      const spatialStability = await import('symbiote-ui/xr/spatial-stability');
+      const xrPointer = await import('symbiote-ui/xr/pointer');
 
       if (typeof root.NodeEditor !== 'function') throw new Error('missing root NodeEditor');
       if (typeof core.NodeEditor !== 'function') throw new Error('missing core NodeEditor');
@@ -265,6 +282,32 @@ test('packed package imports from a consumer project with SSR-safe entrypoints',
       if (typeof spatialSnapshotCompile.compileSpatialSnapshot !== 'function') throw new Error('missing spatialSnapshotCompile.compileSpatialSnapshot');
       if (typeof spatialParity.createSpatialParityReport !== 'function') throw new Error('missing spatialParity.createSpatialParityReport');
       if (typeof domSpatialCapture.captureSpatialSnapshot !== 'function') throw new Error('missing domSpatialCapture.captureSpatialSnapshot');
+      if (spatialContract.XR_SPATIAL_VERSIONS.audit !== 'xr-spatial-audit-v1') throw new Error('bad spatial contract');
+      if (typeof spatialMath.relativeMatrix !== 'function') throw new Error('missing spatialMath.relativeMatrix');
+      if (typeof spatialProjection.projectAxonometric !== 'function') throw new Error('missing spatialProjection.projectAxonometric');
+      if (typeof spatialEvidence.verifyXRSpatialAuditEnvelope !== 'function') throw new Error('missing spatial audit verifier');
+      if (typeof spatialStability.SpatialStabilityTracker !== 'function') throw new Error('missing spatial stability tracker');
+      if (typeof xrPointer.createXRPlacementReceipt !== 'function') throw new Error('missing placement receipt creator');
+      if (typeof xrPointer.verifyXRPlacementReceipt !== 'function') throw new Error('missing placement receipt verifier');
+      if (typeof xr.createXRPlacementReceipt !== 'function') throw new Error('missing xr placement receipt export');
+
+      if (typeof xr.createXRPortablePanelStore !== 'function') throw new Error('missing xr.createXRPortablePanelStore');
+      if (typeof xr.verifyXRPortablePanelReceipt !== 'function') throw new Error('missing xr.verifyXRPortablePanelReceipt');
+      if (typeof xr.verifyXRPortablePanelStateSnapshot !== 'function') throw new Error('missing xr.verifyXRPortablePanelStateSnapshot');
+      if (typeof xr.createXRFrameTimingTracker !== 'function') throw new Error('missing xr.createXRFrameTimingTracker');
+      if (typeof xr.createXRThreeWebXRAdapter !== 'function') throw new Error('missing xr.createXRThreeWebXRAdapter');
+      if (typeof xr.createXRThreeSessionController !== 'function') throw new Error('missing xr.createXRThreeSessionController');
+      if (typeof xr.createXRThreeInteractionReadinessSummary !== 'function') throw new Error('missing xr.createXRThreeInteractionReadinessSummary');
+
+      if (!finalSessionSnapshot.default || typeof finalSessionSnapshot.default !== 'object') throw new Error('missing finalSessionSnapshot schema');
+      if (!frameTiming.default || typeof frameTiming.default !== 'object') throw new Error('missing frameTiming schema');
+      if (!portablePanelReceipt.default || typeof portablePanelReceipt.default !== 'object') throw new Error('missing portablePanelReceipt schema');
+      if (!portablePanelState.default || typeof portablePanelState.default !== 'object') throw new Error('missing portablePanelState schema');
+
+      const contractSchemas = manifest.XR_SPATIAL_EVIDENCE_CONTRACT?.schemas?.map((entry) => entry.version) || [];
+      for (const version of ['xr-final-session-snapshot-v1', 'xr-frame-timing-v1', 'xr-portable-panel-receipt-v1', 'xr-portable-panel-state-v1']) {
+        if (!contractSchemas.includes(version)) throw new Error('Missing public XR schema contract: ' + version);
+      }
     `;
     run(process.execPath, ['--input-type=module', '-e', smoke], { cwd: consumerDir });
     let cli = run(process.execPath, [join('node_modules', '.bin', 'symbiote-ui'), 'discover'], { cwd: consumerDir });

@@ -36,6 +36,8 @@ import {
   THEME_NAMES,
   UI_SCHEMA_VERSIONS,
   getProviderConformanceAtlas,
+  XR_SPATIAL_EVIDENCE_CONTRACT,
+  listXRSpatialSchemas,
 } from './manifest/index.js';
 import { DEFAULT_LOCALE, LOCALE_CATALOG_KEYS, SUPPORTED_LOCALES } from './locale/index.js';
 import { getGeometryScaleDescriptor, getStepScaleDescriptor, getTypeScaleDescriptor, getRadiusScaleDescriptor, getMotionScaleDescriptor } from './tokens/scale.js';
@@ -184,7 +186,7 @@ const EXPORT_ENTRYPOINTS = [
   {
     specifier: 'symbiote-ui/schemas/*',
     kind: 'metadata',
-    description: 'Graph, UI, runtime, theme, and WebMCP schema JSON files.',
+    description: 'Graph, UI, runtime, theme, WebMCP, and XR spatial evidence schema JSON files.',
   },
 ];
 
@@ -370,6 +372,7 @@ export async function cmdDiscover(options = {}) {
       semanticTokenCatalog: getSemanticTokenCatalog(),
       componentRecipes: getComponentRecipesDescriptor(),
       graphAnalysis: listGraphAnalysisOperations(),
+      xrSpatialEvidence: XR_SPATIAL_EVIDENCE_CONTRACT,
       rulesets: RULESETS.map((rs) => ({
         name: rs.name,
         version: rs.version,
@@ -381,6 +384,7 @@ export async function cmdDiscover(options = {}) {
       schemas: [
         ...listGraphSchemas(),
         ...listProjectSchemas(),
+        ...listXRSpatialSchemas(),
         ...UI_SCHEMA_VERSIONS.map((sv) => ({
           version: sv.version,
           path: sv.path,

@@ -70,7 +70,8 @@ export function getWebXREmulationSupport(target = globalThis, options = {}) {
 
 export async function installWebXREmulationRuntime(options = {}) {
   let target = createInstallTarget(options.globalThis || globalThis);
-  if (hasNativeWebXR(target) && options.preferNative !== false) {
+  let forceInstall = options.forceInstall === true || options.preferNative === false;
+  if (hasNativeWebXR(target) && !forceInstall) {
     return {
       ok: true,
       runtime: 'native',
@@ -135,7 +136,14 @@ export async function installWebXREmulationRuntime(options = {}) {
   }
 
   try {
-    device.installRuntime(target);
+    let runtimeOptions = {
+      globalObject: target,
+      forceInstall,
+    };
+    if (options.polyfillLayers !== undefined) {
+      runtimeOptions.polyfillLayers = options.polyfillLayers === true;
+    }
+    device.installRuntime(runtimeOptions);
   } catch (error) {
     return {
       ok: false,
