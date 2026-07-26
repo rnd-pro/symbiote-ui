@@ -519,6 +519,26 @@ test('renderer previews a larger shell without scaling mounted content', () => {
   assert.deepEqual(renderer.getDiagnostics().resizePreviews, {});
 });
 
+test('renderer preview hides old content outside a smaller shell and restores it on cancel', () => {
+  let { renderer } = createRendererHarness();
+  let compiled = mountFixture(renderer);
+  let panel = compiled.panels.find((candidate) => candidate.id === 'panel:project');
+  let panelObject = renderer.getPanelObject(panel.id);
+  let content = panelObject.children.find((child) => child.userData.kind === 'native-panel-content');
+  let visibleBefore = [];
+  content.traverse((object) => {
+    if (object.userData?.primitiveId && object.visible !== false) visibleBefore.push(object);
+  });
+
+  assert.equal(renderer.previewPanelSize(panel.id, [panel.size[0] * 0.5, panel.size[1] * 0.5]), true);
+  assert.ok(renderer.getDiagnostics().resizePreviewHidden[panel.id] > 0);
+  assert.ok(visibleBefore.some((object) => object.visible === false));
+
+  assert.equal(renderer.cancelPanelSizePreview(panel.id), true);
+  assert.ok(visibleBefore.every((object) => object.visible !== false));
+  assert.deepEqual(renderer.getDiagnostics().resizePreviewHidden, {});
+});
+
 test('committed reflow rerasterizes measured text at the original pixels per meter', () => {
   let { renderer } = createRendererHarness({ renderer: { texturePixelRatio: 2 } });
   let compiled = mountFixture(renderer);
@@ -533,6 +553,27 @@ test('committed reflow rerasterizes measured text at the original pixels per met
   assert.equal(after.pixelsPerMeter, before.pixelsPerMeter);
   assert.equal(after.height, before.height);
   assert.ok(after.width > before.width, 'the wider label owns a newly sized raster canvas');
+});
+
+test('committed shrink omits hidden overflow from textures and hit targets', () => {
+  let { renderer } = createRendererHarness({ renderer: { texturePixelRatio: 2 } });
+  let compiled = mountFixture(renderer);
+  let panel = compiled.panels.find((candidate) => candidate.id === 'panel:project');
+  let resized = resizeNativePanelScene(compiled, panel.id, [0.01, 0.01]);
+  let nextPanel = resized.panels.find((candidate) => candidate.id === panel.id);
+  let hidden = nextPanel.primitives.find((primitive) => primitive.visible === false);
+
+  assert.ok(hidden, 'small panels identify overflow primitives');
+  renderer.mount(resized, { theme: createTestTheme() });
+  assert.equal(renderer.getPrimitiveObject(hidden.id)?.visible, false);
+  assert.equal(
+    renderer.getInteractiveObjects().some((object) => object.userData.primitiveId === hidden.id),
+    false,
+  );
+  assert.equal(
+    renderer.getTextQualityReport().textures.some((entry) => entry.primitiveId === hidden.id),
+    false,
+  );
 });
 
 test('renderer exposes a renderer-neutral native-panel-appearance-v1 report', () => {

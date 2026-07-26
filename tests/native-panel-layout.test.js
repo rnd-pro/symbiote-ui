@@ -390,6 +390,47 @@ test('resizeNativePanelScene reflows anchors without scaling text or icon height
   ) < 1e-6, 'top anchored content preserves its inset');
 });
 
+test('resizeNativePanelScene clips overflow without compressing primitive spacing', () => {
+  let compiled = createCompiled();
+  let activity = compiled.panels.find((panel) => panel.id === 'activity');
+  let firstTitle = activity.primitives.find((primitive) => primitive.id.includes('/row-title-row-a'));
+  let secondTitle = activity.primitives.find((primitive) => primitive.id.includes('/row-title-row-b'));
+  let sourceSpacing = firstTitle.bounds.y - secondTitle.bounds.y;
+  let resized = resizeNativePanelScene(compiled, 'activity', [0.24, 0.16]);
+  let next = resized.panels.find((panel) => panel.id === 'activity');
+  let visible = next.primitives.filter((primitive) => primitive.visible !== false);
+  let clipped = next.primitives.filter((primitive) => {
+    let source = activity.primitives.find((candidate) => candidate.id === primitive.id);
+    return source && (
+      primitive.bounds.width < source.bounds.width
+      || primitive.bounds.height < source.bounds.height
+    );
+  });
+
+  assert.ok(clipped.length > 0, 'content crossing a small shell is clipped instead of squeezed');
+  for (let primitive of visible) {
+    let bounds = primitive.bounds;
+    assert.ok(bounds.x - bounds.width / 2 >= -next.size[0] / 2 - 1e-6);
+    assert.ok(bounds.x + bounds.width / 2 <= next.size[0] / 2 + 1e-6);
+    assert.ok(bounds.y - bounds.height / 2 >= -next.size[1] / 2 - 1e-6);
+    assert.ok(bounds.y + bounds.height / 2 <= next.size[1] / 2 + 1e-6);
+  }
+
+  let nextFirstTitle = next.primitives.find((primitive) => primitive.id === firstTitle.id);
+  let nextSecondTitle = next.primitives.find((primitive) => primitive.id === secondTitle.id);
+  if (nextFirstTitle.visible !== false && nextSecondTitle.visible !== false) {
+    assert.ok(
+      Math.abs(nextFirstTitle.bounds.y - nextSecondTitle.bounds.y - sourceSpacing) < 1e-6,
+      'visible rows retain their physical spacing',
+    );
+  }
+  assert.equal(
+    resized.counts.hitTargets,
+    resized.panels.reduce((count, panel) => count + panel.primitives
+      .filter((primitive) => primitive.visible !== false && primitive.hit).length, 0),
+  );
+});
+
 test('resizeNativePanelScene rejects unknown panels and invalid physical sizes', () => {
   let compiled = createCompiled();
   assert.throws(() => resizeNativePanelScene(compiled, 'missing', [1, 1]), /Unknown panel/);

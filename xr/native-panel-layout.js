@@ -662,8 +662,26 @@ function reflowAxis(center, length, sourceSize, targetSize) {
     };
   }
   return {
-    center: roundMetric((center / sourceSize) * targetSize),
+    center: roundMetric(center),
     length: roundMetric(length),
+  };
+}
+
+function clipAxis(center, length, targetSize) {
+  let start = center - length / 2;
+  let end = center + length / 2;
+  let minimum = -targetSize / 2;
+  let maximum = targetSize / 2;
+  let clippedStart = Math.max(start, minimum);
+  let clippedEnd = Math.min(end, maximum);
+  if (clippedEnd - clippedStart < 0.001) {
+    return { visible: false, center, length };
+  }
+  return {
+    visible: true,
+    center: roundMetric((clippedStart + clippedEnd) / 2),
+    length: roundMetric(clippedEnd - clippedStart),
+    clipped: clippedStart !== start || clippedEnd !== end,
   };
 }
 
@@ -681,17 +699,32 @@ function reflowPrimitive(primitive, sourceSize, targetSize) {
     sourceSize[1],
     targetSize[1],
   );
+  let horizontalClip = clipAxis(horizontal.center, horizontal.length, targetSize[0]);
+  let verticalClip = clipAxis(vertical.center, vertical.length, targetSize[1]);
+  let canCrop = primitive.kind !== 'icon' && primitive.kind !== 'edge';
+  let visible = horizontalClip.visible
+    && verticalClip.visible
+    && (canCrop || (!horizontalClip.clipped && !verticalClip.clipped));
   let bounds = {
-    x: horizontal.center,
-    y: vertical.center,
-    width: horizontal.length,
-    height: vertical.length,
+    x: canCrop && visible ? horizontalClip.center : horizontal.center,
+    y: canCrop && visible ? verticalClip.center : vertical.center,
+    width: canCrop && visible ? horizontalClip.length : horizontal.length,
+    height: canCrop && visible ? verticalClip.length : vertical.length,
   };
   let next = {
     ...primitive,
     bounds,
   };
-  if (primitive.sourcePixels?.width > 0 && primitive.sourcePixels?.height > 0) {
+  if (!visible) {
+    next.visible = false;
+  } else if (primitive.visible === false) {
+    delete next.visible;
+  }
+  if (visible
+    && primitive.sourcePixels?.width > 0
+    && primitive.sourcePixels?.height > 0
+    && sourceBounds.width > 0
+    && sourceBounds.height > 0) {
     next.sourcePixels = {
       ...primitive.sourcePixels,
       width: roundMetric(primitive.sourcePixels.width * bounds.width / sourceBounds.width),
@@ -756,7 +789,16 @@ export function resizeNativePanelScene(scene, panelId, size) {
   if (!found) {
     throw new Error(`Unknown panel "${panelId}" in resizeNativePanelScene.`);
   }
-  return { ...scene, panels };
+  let hitTargets = panels.reduce((count, panel) => count + panel.primitives
+    .filter((primitive) => primitive.visible !== false && primitive.hit).length, 0);
+  return {
+    ...scene,
+    panels,
+    counts: {
+      ...scene.counts,
+      hitTargets,
+    },
+  };
 }
 
 /**
@@ -808,7 +850,11 @@ export function resolveNativePanelHit(panel, point = {}) {
   let localY = (0.5 - y) * panel.size[1];
   let layers = [...NATIVE_PANEL_LAYERS].reverse();
   for (let layer of layers) {
-    let candidates = panel.primitives.filter((primitive) => primitive.layer === layer && primitive.hit);
+    let candidates = panel.primitives.filter((primitive) => (
+      primitive.layer === layer
+      && primitive.visible !== false
+      && primitive.hit
+    ));
     for (let index = candidates.length - 1; index >= 0; index -= 1) {
       let primitive = candidates[index];
       let bounds = primitive.bounds;

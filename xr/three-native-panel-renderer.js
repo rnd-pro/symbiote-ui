@@ -141,6 +141,8 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
   let panelChromeGroups = new Map();
   let panelPreviewSizes = new Map();
   let panelPreviewSurfaces = new Map();
+  let panelPreviewVisibility = new Map();
+  let panelPreviewHiddenCounts = new Map();
   let layerGroups = new Map();
   let primitiveObjects = new Map();
   let frameGroups = new Map();
@@ -623,6 +625,7 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
       kind: 'label-text',
       panelId: primitive.panelId,
       primitiveId: primitive.id,
+      sourcePrimitiveId: entry.sourcePrimitiveId,
       layer: primitive.layer,
     };
     return mesh;
@@ -711,6 +714,22 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
 
   function buildPrimitive(panel, primitive, layerGroup) {
     let object;
+    if (primitive.visible === false) {
+      object = new THREE.Group();
+      object.visible = false;
+      object.userData = {
+        kind: primitive.kind,
+        control: primitive.control || null,
+        panelId: panel.id,
+        primitiveId: primitive.id,
+        layer: primitive.layer,
+        actionId: primitive.hit?.actionId || null,
+        targetId: primitive.hit?.targetId || null,
+      };
+      primitiveObjects.set(primitive.id, object);
+      layerGroup.add(object);
+      return;
+    }
     if (primitive.kind === 'frame') {
       object = createFrameGroup(primitive);
       frameGroups.set(panel.id, object);
@@ -824,6 +843,8 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
     panelChromeGroups.clear();
     panelPreviewSizes.clear();
     panelPreviewSurfaces.clear();
+    panelPreviewVisibility.clear();
+    panelPreviewHiddenCounts.clear();
     layerGroups.clear();
     primitiveObjects.clear();
     frameGroups.clear();
@@ -1193,10 +1214,7 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
     if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
       return false;
     }
-    let targetSize = [
-      Math.max(panel.size[0] * 0.5, Math.min(panel.size[0] * 2.5, width)),
-      Math.max(panel.size[1] * 0.5, Math.min(panel.size[1] * 2.5, height)),
-    ];
+    let targetSize = [width, height];
     let surface = panelPreviewSurfaces.get(panelId);
     if (!surface) {
       surface = new THREE.Mesh(
@@ -1213,6 +1231,34 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
       surface.geometry = new THREE.PlaneGeometry(targetSize[0], targetSize[1]);
     }
     panelPreviewSizes.set(panelId, targetSize);
+    let content = panelGroup.children.find((child) => (
+      child.userData?.kind === 'native-panel-content'
+    ));
+    let visibility = panelPreviewVisibility.get(panelId);
+    if (!visibility) {
+      visibility = new Map();
+      content?.traverse((object) => {
+        if (object.userData?.primitiveId) visibility.set(object, object.visible !== false);
+      });
+      panelPreviewVisibility.set(panelId, visibility);
+    }
+    let hidden = 0;
+    for (let [object, baselineVisible] of visibility) {
+      let primitiveId = object.userData.sourcePrimitiveId || object.userData.primitiveId;
+      let primitive = mountedPrimitives.get(primitiveId);
+      if (!primitive) {
+        object.visible = baselineVisible;
+        continue;
+      }
+      let bounds = primitive.bounds;
+      let contained = bounds.x - bounds.width / 2 >= -targetSize[0] / 2
+        && bounds.x + bounds.width / 2 <= targetSize[0] / 2
+        && bounds.y - bounds.height / 2 >= -targetSize[1] / 2
+        && bounds.y + bounds.height / 2 <= targetSize[1] / 2;
+      object.visible = baselineVisible && contained;
+      if (baselineVisible && !contained) hidden += 1;
+    }
+    panelPreviewHiddenCounts.set(panelId, hidden);
     layoutWindowChrome(panelId);
     return true;
   }
@@ -1221,6 +1267,12 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
     let panelGroup = panelGroups.get(panelId);
     let surface = panelPreviewSurfaces.get(panelId);
     let hadPreview = panelPreviewSizes.delete(panelId);
+    let visibility = panelPreviewVisibility.get(panelId);
+    if (visibility) {
+      for (let [object, baselineVisible] of visibility) object.visible = baselineVisible;
+      panelPreviewVisibility.delete(panelId);
+    }
+    panelPreviewHiddenCounts.delete(panelId);
     if (surface) {
       surface.geometry.dispose?.();
       panelGroup?.remove(surface);
@@ -1275,9 +1327,12 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
         ? false
         : null;
     let compiledIcons = 0;
+    let hiddenIcons = 0;
     for (let panel of mountedScene?.panels || []) {
       for (let primitive of panel.primitives || []) {
-        if (primitive.kind === 'icon') compiledIcons += 1;
+        if (primitive.kind !== 'icon') continue;
+        compiledIcons += 1;
+        if (primitive.visible === false) hiddenIcons += 1;
       }
     }
     let capturedIcons = mountedScene?.counts?.byKind?.icon ?? compiledIcons;
@@ -1307,7 +1362,7 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
         captured: capturedIcons,
         compiled: compiledIcons,
         drawn: iconPlanes.length,
-        coverage: compiledIcons ? iconPlanes.length / compiledIcons : 1,
+        coverage: compiledIcons ? (iconPlanes.length + hiddenIcons) / compiledIcons : 1,
       },
       textures,
       memory: {
@@ -1410,6 +1465,7 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
       resizePreviews: Object.fromEntries(
         [...panelPreviewSizes].map(([panelId, size]) => [panelId, [...size]]),
       ),
+      resizePreviewHidden: Object.fromEntries(panelPreviewHiddenCounts),
       unsupportedColors: [...unsupportedColorValues.entries()].map(([value, count]) => ({ value, count })),
     };
   }

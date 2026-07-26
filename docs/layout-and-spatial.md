@@ -439,8 +439,11 @@ Meshes are created, updated, and disposed automatically.
    coordinates back to those hit targets. `resizeNativePanel()` and
    `resizeNativePanelScene()` commit an absolute meter size by recalculating
    edge anchors and full-span bounds instead of applying a transform scale.
-   Raster source dimensions follow changed bounds, preserving the original
-   pixels-per-meter density. No random or time-derived IDs.
+   Unanchored primitives retain their physical spacing; bounds crossing a
+   smaller window viewport are clipped, and fully excluded primitives are
+   removed from hit testing. Raster source dimensions follow changed bounds,
+   preserving the original pixels-per-meter density. No random or time-derived
+   IDs.
 3. `createThreeNativePanelRenderer(THREE, options)` is the browser adapter: the
    host injects the `THREE` namespace (the module never imports Three and never
    touches the DOM at evaluation time). It builds one root group and one group
@@ -450,6 +453,8 @@ Meshes are created, updated, and disposed automatically.
    (`min(devicePixelRatio, 2)`, host-overridable, clamped to a 2048 default cap)
    — the `measured-source-css` policy — while hand-authored primitives without
    source CSS boxes use the explicit `fallback-meter-policy` (1200 px/m).
+   Resize preview keeps content at scale 1, hides old primitives outside the
+   smaller shell, and restores their visibility if the gesture is cancelled.
    Generated color textures are configured for linear sampling without mipmaps
    (`LinearFilter` min/mag, `generateMipmaps: false`, host anisotropy capped at
    8, `SRGBColorSpace`). Icon primitives draw Material Symbols ligatures through
