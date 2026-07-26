@@ -8,6 +8,7 @@ import {
   NATIVE_PANEL_LAYERS,
   compileNativePanelPrimitives,
   projectXRPanelsToPlane,
+  replaceNativePanelScenePanel,
   resizeNativePanelScene,
   resolveNativePanelHit,
 } from '../xr/native-panel-layout.js';
@@ -436,6 +437,43 @@ test('resizeNativePanelScene rejects unknown panels and invalid physical sizes',
   assert.throws(() => resizeNativePanelScene(compiled, 'missing', [1, 1]), /Unknown panel/);
   assert.throws(() => resizeNativePanelScene(compiled, 'activity', [0, 1]), /positive finite/);
   assert.throws(() => resizeNativePanelScene(compiled, 'activity', [1]), /size/);
+});
+
+test('replaceNativePanelScenePanel swaps one panel and preserves every sibling identity', () => {
+  let scene = createCompiled();
+  let target = scene.panels[1];
+  let sibling = scene.panels[0];
+  let replacement = {
+    ...target,
+    size: [target.size[0] + 0.25, target.size[1] + 0.1],
+    primitives: target.primitives.slice(0, -1),
+    metadata: {
+      ...target.metadata,
+      responsiveCapture: {
+        version: 'responsive-panel-resize-v1',
+        cssSize: [900, 640],
+      },
+    },
+  };
+  let next = replaceNativePanelScenePanel(scene, target.id, replacement);
+
+  assert.notEqual(next, scene);
+  assert.equal(next.panels[0], sibling);
+  assert.equal(next.panels[1], replacement);
+  assert.equal(next.panels.filter((panel) => panel.id === target.id).length, 1);
+  assert.equal(
+    next.counts.primitives,
+    next.panels.reduce((count, panel) => count + panel.primitives.length, 0),
+  );
+  assert.equal(
+    next.counts.hitTargets,
+    next.panels.reduce((count, panel) => count + panel.primitives
+      .filter((primitive) => primitive.visible !== false && primitive.hit).length, 0),
+  );
+  assert.throws(
+    () => replaceNativePanelScenePanel(scene, 'missing', replacement),
+    /Unknown panel "missing"/,
+  );
 });
 
 test('three native panel renderer constructs Node-safe with a minimal contract mock', () => {

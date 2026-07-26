@@ -801,6 +801,61 @@ export function resizeNativePanelScene(scene, panelId, size) {
   };
 }
 
+function countNativePanelScene(panels, previous = {}) {
+  let byLayer = Object.fromEntries(NATIVE_PANEL_LAYERS.map((layer) => [layer, 0]));
+  let byKind = {};
+  let primitives = 0;
+  let hitTargets = 0;
+  for (let panel of panels) {
+    for (let primitive of panel.primitives || []) {
+      primitives += 1;
+      byLayer[primitive.layer] += 1;
+      byKind[primitive.kind] = (byKind[primitive.kind] || 0) + 1;
+      if (primitive.visible !== false && primitive.hit) hitTargets += 1;
+    }
+  }
+  return {
+    ...previous,
+    panels: panels.length,
+    windows: panels.filter((panel) => panel.role === 'window').length,
+    layoutControls: panels.filter((panel) => panel.role === 'layout-control').length,
+    primitives,
+    hitTargets,
+    byLayer,
+    byKind,
+  };
+}
+
+/**
+ * Replaces exactly one panel in a compiled scene while preserving sibling
+ * object identity and recomputing scene counts.
+ *
+ * @param {Object} scene
+ * @param {string} panelId
+ * @param {Object} replacement
+ * @returns {Object}
+ */
+export function replaceNativePanelScenePanel(scene, panelId, replacement) {
+  if (scene?.version !== NATIVE_PANEL_LAYOUT_VERSION || !Array.isArray(scene.panels)) {
+    throw new Error(`replaceNativePanelScenePanel requires a ${NATIVE_PANEL_LAYOUT_VERSION} scene.`);
+  }
+  if (!scene.panels.some((panel) => panel.id === panelId)) {
+    throw new Error(`Unknown panel "${panelId}" in replaceNativePanelScenePanel.`);
+  }
+  if (!replacement || replacement.id !== panelId || !Array.isArray(replacement.primitives)) {
+    throw new Error(`replaceNativePanelScenePanel requires replacement panel "${panelId}".`);
+  }
+  let panels = scene.panels.map((panel) => {
+    if (panel.id !== panelId) return panel;
+    return replacement;
+  });
+  return {
+    ...scene,
+    panels,
+    counts: countNativePanelScene(panels, scene.counts),
+  };
+}
+
 /**
  * Resolves the zero-based index of a native panel layer.
  *

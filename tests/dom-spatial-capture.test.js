@@ -8,6 +8,7 @@ import {
   SPATIAL_HEADER_CONTROLS,
   SPATIAL_ICON_SELECTOR,
   captureSpatialSnapshot,
+  captureSpatialWindowSnapshot,
   createCanvasColorNormalizer,
   resolveHeaderControlSelector,
   resolveSpatialAdapter,
@@ -243,6 +244,25 @@ function createFakePanelLayout(doc) {
     children: [layoutNode],
   });
 }
+
+test('captureSpatialWindowSnapshot captures exactly one leaf layout window', () => {
+  let doc = createFakeDocument(new Map(SENTINEL_CONVERSIONS));
+  let layout = createFakePanelLayout(doc);
+  let snapshot = captureSpatialWindowSnapshot(layout.children[0], {
+    route: 'multi-agent-dev/source-editor',
+    themeScope: 'global',
+  });
+
+  assert.deepEqual(snapshot.capture.viewport, { width: 800, height: 600 });
+  assert.equal(snapshot.capture.route, 'multi-agent-dev/source-editor');
+  assert.equal(snapshot.capture.themeScope, 'global');
+  assert.equal(snapshot.nodes.filter((node) => node.part === 'panel').length, 1);
+  assert.equal(snapshot.nodes.find((node) => node.part === 'panel').id, 'panel:project');
+  assert.throws(
+    () => captureSpatialWindowSnapshot(layout),
+    /leaf layout-node\[node-type="panel"\]/,
+  );
+});
 
 test('captureSpatialSnapshot assigns distinct intents to panel menu and type button controls', () => {
   let doc = createFakeDocument(new Map(SENTINEL_CONVERSIONS));

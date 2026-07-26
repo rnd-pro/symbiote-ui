@@ -486,10 +486,12 @@ Meshes are created, updated, and disposed automatically.
    forwarded to `THREE.Color`; they are counted in renderer diagnostics as
    `unsupportedColors` (reset per mount/theme pass).
    Window resizing is two-phase: `previewPanelSize()` moves the native chrome
-   around a themed empty background while mounted content remains at scale 1;
-   after release the host commits a reflowed scene and remounts newly sized
-   geometry and text/icon canvases. `cancelPanelSizePreview()` restores the
-   committed shell without changing content.
+   around a themed empty background while mounted content remains at scale 1.
+   `replacePanel(scene, panelId)` then atomically swaps only the committed
+   window group, preserving its presentation transform, pinned/closed state,
+   every sibling group identity, and the shared renderer root.
+   `cancelPanelSizePreview()` restores the committed shell without changing
+   content.
 4. `createNativePanelThemeSnapshot(root, options)` (xr/theme-bridge.js) captures
    the semantic native-panel roles (surface ladder, text/dim, outline, accent,
    success, warning, danger) and numeric layout/type metrics from the same
@@ -606,6 +608,31 @@ layout instead of hand-authored family data:
    (`missing-renderer-coverage`), and unknown visible capture boxes
    (`unknown-visible-box`); unsupported interactions such as `text-input`
    stay informational and never fail visual parity.
+9. `symbiote-ui/xr/responsive-panel-capture` owns browser-authoritative
+   responsive resize for one measured window. Pointer-down records an immutable
+   `responsive-panel-resize-v1` context: source snapshot and CSS size, the
+   meter-per-CSS-pixel scale, theme/data revisions, and form/scroll state. It
+   also prepares a same-origin, scriptless `srcdoc` iframe containing only a
+   deep clone of that leaf window, the current document stylesheets/adopted
+   rules, scoped computed custom properties, and component state. The markup,
+   attributes, custom properties, and stylesheet descriptors are copied
+   synchronously before the first asynchronous preparation step, so the packet
+   represents pointer-down rather than a later live DOM state. Pointer-move
+   updates only the target meter/CSS size and native shell preview; it never
+   resizes the iframe or scales committed content. On release,
+   `captureResponsivePanelSnapshot()` assigns the final iframe viewport, waits
+   for fonts and two animation frames, verifies the panel border-box size,
+   reruns browser CSS/container-query layout, and captures exactly one window.
+   The host compiles it at the frozen meter scale, replaces that one scene
+   panel through `replaceNativePanelScenePanel()`, and calls the renderer's
+   `replacePanel()`. Theme or reactive-data revision drift discards the
+   prepared host and rebuilds it from the latest live DOM before capture.
+   Both one-window commits and full recaptures validate their generation and
+   revisions again immediately before publication, preventing an older async
+   capture from overwriting newer theme or data state. Preparation failures
+   always remove their temporary iframe.
+   Server rendering may prepare the markup/state packet and pure resize
+   context, but final computed CSS geometry remains browser-owned.
 
 In the lab, the measured `real-layout` source is the default and renders the
 live `cascade-theme-lab.html#multi-agent-dev/source-editor` reference in a
@@ -636,8 +663,15 @@ controls through `SPATIAL_TREE_CONTROLS`, resizer drags). Native window headers
 reuse `createSpatialDragController`; the lab stores each final manual offset
 above the measured position and configurable window gap, so theme recapture and
 gap changes do not erase individual placement. Pointer capture keeps the drag
-owned until release, while cancel restores the start position; Reset clears all
-manual offsets. A collapsed rail remains the measured collapsed window rather
+owned until release. During resize, the native shell previews the new bounds
+without scaling text or icons; release recaptures and replaces only that
+window, while cancel disposes the prepared measurement host and restores the
+previous group. Reactive DOM/input changes increment a data revision and
+invalidate an in-flight resize context; theme recapture reruns every
+persistently resized window at its committed CSS viewport. The parity report
+composes canonical and responsive per-window snapshots so intentional size
+differences do not become false visual mismatches. Reset clears all manual
+offsets and committed sizes. A collapsed rail remains the measured collapsed window rather
 than being expanded behind the reference layout's back. Because its type control
 fills the narrow rail, that control is gesture-disambiguated: a click keeps the
 original action, while pointer movement grabs and moves the window.

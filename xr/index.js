@@ -30,6 +30,7 @@ export * from './spatial-snapshot-compile.js';
 export * from './spatial-parity.js';
 export * from './spatial-visual-parity.js';
 export * from './dom-spatial-capture.js';
+export * from './responsive-panel-capture.js';
 export * from './spatial-math.js';
 export * from './spatial-projection.js';
 export * from './spatial-evidence.js';

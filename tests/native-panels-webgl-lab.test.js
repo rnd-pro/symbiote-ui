@@ -58,13 +58,45 @@ test('native panels webgl lab keeps measured windows independently draggable thr
   assert.match(labSource, /let resizeState = null/);
   assert.match(labSource, /hit\.actionId === 'resize-window'/);
   assert.match(labSource, /panelRenderer\.previewPanelSize\(/);
-  assert.match(labSource, /resizeNativePanelScene\(/);
+  assert.match(labSource, /prepareResponsivePanelCaptureHost\(/);
+  assert.match(labSource, /updateResponsivePanelResizeTarget\(/);
+  assert.match(labSource, /captureResponsivePanelSnapshot\(/);
+  assert.match(labSource, /panelRenderer\.replacePanel\(/);
+  assert.match(labSource, /isResponsivePanelResizeContextStale\(/);
+  assert.match(labSource, /responsiveCapture/);
   assert.ok(!labSource.includes('setPanelScale'), 'window content must never use transform scaling');
   assert.match(labSource, /panel\.relativeRect\?\.width <= COLLAPSED_WINDOW_GRAB_MAX_RATIO/);
   assert.match(labSource, /windows:\s*windowDiagnostics\(\)/);
   assert.match(labSource, /primitive\.hit\?\.intent/);
   assert.match(labHarnessHtml, /id="window-gap"/);
   assert.match(labHarnessHtml, /id="reset-windows"/);
+});
+
+test('native panels webgl lab publishes only the newest full capture revision', () => {
+  let start = labSource.indexOf('async function captureAndMount(token, revisions)');
+  let end = labSource.indexOf('function scheduleLateFontRedraw()', start);
+  let body = labSource.slice(start, end);
+  let finalRevisionGuard = body.indexOf("revisions.dataRevision !== lab.dataRevision");
+  let firstPublish = body.indexOf('snapshot = nextSnapshot');
+
+  assert.ok(finalRevisionGuard > body.indexOf('await recaptureResponsivePanel('));
+  assert.ok(finalRevisionGuard < firstPublish);
+  assert.match(body, /token !== captureToken/);
+  assert.match(body, /return false/);
+});
+
+test('native panels webgl lab rechecks resize revisions immediately before panel replacement', () => {
+  let start = labSource.indexOf('async function commitResponsiveWindowSize(');
+  let end = labSource.indexOf('async function commitWindowSize(', start);
+  let body = labSource.slice(start, end);
+  let recapture = body.indexOf('await recaptureResponsivePanel(');
+  let staleCheck = body.indexOf('isResponsivePanelResizeContextStale(');
+  let replacement = body.indexOf('panelRenderer.replacePanel(');
+
+  assert.ok(recapture > 0);
+  assert.ok(staleCheck > recapture);
+  assert.ok(replacement > staleCheck);
+  assert.match(body, /for \(let attempt = 0; attempt < 3; attempt \+= 1\)/);
 });
 
 test('native panels webgl lab controls consume the same cascade theme roles as provider controls', () => {
@@ -171,9 +203,10 @@ test('native panels webgl lab computes IR and visual parity with a composite ok'
   );
   assert.match(
     labSource,
-    /createSpatialVisualParityReport\(snapshot, panelRenderer\.getAppearanceReport\(\)\)/,
-    'visual parity compares the snapshot against the renderer appearance sample',
+    /createSpatialVisualParityReport\(\s*paritySnapshot,\s*panelRenderer\.getAppearanceReport\(\),?\s*\)/,
+    'visual parity compares the responsive snapshot composition against the renderer appearance sample',
   );
+  assert.match(labSource, /responsiveParityByPanel/);
   assert.match(
     labSource,
     /ok:\s*ir\.ok\s*&&\s*visual\.ok/,

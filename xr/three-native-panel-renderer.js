@@ -158,6 +158,7 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
   let builds = 0;
   let themeUpdates = 0;
   let appearanceRefreshes = 0;
+  let panelReplacements = 0;
   let disposed = false;
   let unsupportedColorValues = new Map();
   let mountedScene = null;
@@ -948,6 +949,131 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
     applyInteraction();
   }
 
+  function replacePanel(compiledScene, panelId) {
+    if (disposed) {
+      throw new Error(
+        'three-native-panel-renderer has been disposed; create a new renderer to replace a panel.',
+      );
+    }
+    if (compiledScene?.version !== NATIVE_PANEL_LAYOUT_VERSION || !Array.isArray(compiledScene.panels)) {
+      throw new Error(
+        `replacePanel requires a ${NATIVE_PANEL_LAYOUT_VERSION} scene from compileNativePanelPrimitives().`,
+      );
+    }
+    let nextPanel = compiledScene.panels.find((panel) => panel.id === panelId);
+    let previous = panelGroups.get(panelId);
+    if (!nextPanel || !previous) {
+      throw new Error(`replacePanel could not resolve mounted panel "${panelId}".`);
+    }
+
+    let previousObjects = new Set();
+    let previousMaterials = new Set();
+    previous.traverse((object) => {
+      previousObjects.add(object);
+      if (Array.isArray(object.material)) {
+        for (let material of object.material) previousMaterials.add(material);
+      } else if (object.material) {
+        previousMaterials.add(object.material);
+      }
+    });
+    let presentation = {
+      position: [previous.position.x, previous.position.y, previous.position.z],
+      rotation: [previous.rotation.x, previous.rotation.y, previous.rotation.z],
+      scale: [previous.scale.x, previous.scale.y, previous.scale.z],
+      visible: previous.visible,
+      pinned: Boolean(previous.userData.pinned),
+    };
+
+    cancelPanelSizePreview(panelId);
+    let registries = {
+      panelGroups: new Map(panelGroups),
+      panelChromeGroups: new Map(panelChromeGroups),
+      layerGroups: new Map(layerGroups),
+      primitiveObjects: new Map(primitiveObjects),
+      frameGroups: new Map(frameGroups),
+      borderMaterials: new Map(borderMaterials),
+      interactive: [...interactive],
+      materialRecords: [...materialRecords],
+      labelPlanes: [...labelPlanes],
+      iconPlanes: [...iconPlanes],
+    };
+    try {
+      buildPanel(nextPanel);
+    } catch (error) {
+      let failedPanel = panelGroups.get(panelId);
+      if (failedPanel && failedPanel !== previous) {
+        root.remove(failedPanel);
+        disposeObjectTree(failedPanel);
+      } else {
+        let previousObjects = new Set(registries.primitiveObjects.values());
+        for (let object of primitiveObjects.values()) {
+          if (!previousObjects.has(object)) disposeObjectTree(object);
+        }
+        let previousPlanes = new Set([
+          ...registries.labelPlanes.map((entry) => entry.mesh),
+          ...registries.iconPlanes.map((entry) => entry.mesh),
+        ]);
+        for (let entry of [...labelPlanes, ...iconPlanes]) {
+          if (!previousPlanes.has(entry.mesh)) disposeObjectTree(entry.mesh);
+        }
+      }
+      for (let record of materialRecords) {
+        if (!registries.materialRecords.includes(record) && !record.shared) {
+          record.material.map?.dispose?.();
+          record.material.dispose?.();
+        }
+      }
+      panelGroups = registries.panelGroups;
+      panelChromeGroups = registries.panelChromeGroups;
+      layerGroups = registries.layerGroups;
+      primitiveObjects = registries.primitiveObjects;
+      frameGroups = registries.frameGroups;
+      borderMaterials = registries.borderMaterials;
+      interactive = registries.interactive;
+      materialRecords = registries.materialRecords;
+      labelPlanes = registries.labelPlanes;
+      iconPlanes = registries.iconPlanes;
+      throw error;
+    }
+    let replacement = panelGroups.get(panelId);
+    replacement.position.set(...presentation.position);
+    replacement.rotation.x = presentation.rotation[0];
+    replacement.rotation.y = presentation.rotation[1];
+    replacement.rotation.z = presentation.rotation[2];
+    replacement.scale.set(...presentation.scale);
+    replacement.visible = presentation.visible;
+    replacement.userData.pinned = presentation.pinned;
+
+    interactive = interactive.filter((object) => !previousObjects.has(object));
+    labelPlanes = labelPlanes.filter((entry) => !previousObjects.has(entry.mesh));
+    iconPlanes = iconPlanes.filter((entry) => !previousObjects.has(entry.mesh));
+    materialRecords = materialRecords.filter((record) => (
+      record.shared || !previousMaterials.has(record.material)
+    ));
+    for (let [id, object] of primitiveObjects) {
+      if (previousObjects.has(object)) primitiveObjects.delete(id);
+    }
+    for (let [id, group] of frameGroups) {
+      if (previousObjects.has(group)) frameGroups.delete(id);
+    }
+    for (let [id, material] of borderMaterials) {
+      if (previousMaterials.has(material)) borderMaterials.delete(id);
+    }
+
+    root.remove(previous);
+    disposeObjectTree(previous);
+    mountedScene = compiledScene;
+    mountedPrimitives = indexPrimitives(compiledScene);
+    panelReplacements += 1;
+    applyExplode();
+    applyInteraction();
+    return {
+      ok: true,
+      panelId,
+      preservedTransform: true,
+    };
+  }
+
   function recolorRoleMaterials() {
     for (let record of materialRecords) {
       let color = theme.roles[record.role];
@@ -1453,6 +1579,7 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
       themeUpdates,
       builds,
       appearanceRefreshes,
+      panelReplacements,
       explode,
       panels: panelGroups.size,
       layerGroups: panelGroups.size * NATIVE_PANEL_LAYERS.length,
@@ -1487,6 +1614,7 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
   return {
     group: root,
     mount,
+    replacePanel,
     updateTheme,
     refreshAppearance,
     refreshTextures,

@@ -68,6 +68,7 @@
     "./xr/spatial-parity": "./xr/spatial-parity.js",
     "./xr/spatial-visual-parity": "./xr/spatial-visual-parity.js",
     "./xr/dom-spatial-capture": "./xr/dom-spatial-capture.js",
+    "./xr/responsive-panel-capture": "./xr/responsive-panel-capture.js",
     "./xr/spatial-contract": "./xr/spatial-contract.js",
     "./xr/spatial-math": "./xr/spatial-math.js",
     "./xr/spatial-projection": "./xr/spatial-projection.js",

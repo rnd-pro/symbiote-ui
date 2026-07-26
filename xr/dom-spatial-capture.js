@@ -806,6 +806,10 @@ export function captureSpatialSnapshot(root, options = {}) {
   let captureRoot = resolveCaptureRoot(root);
   let ctx = createCaptureContext(captureRoot, options);
   walkChildren(ctx, captureRoot, null);
+  return createSpatialSnapshot(ctx);
+}
+
+function createSpatialSnapshot(ctx) {
   return normalizeSpatialSnapshot({
     version: 'spatial-snapshot-v1',
     unit: 'css-pixel',
@@ -821,4 +825,26 @@ export function captureSpatialSnapshot(root, options = {}) {
       unknownVisible: ctx.unknownVisible,
     },
   });
+}
+
+/**
+ * Captures one rendered leaf layout window using the window itself as the
+ * root-relative CSS viewport.
+ *
+ * @param {Element} panel - Leaf `layout-node[node-type="panel"]`.
+ * @param {Object} [options] - Same capture provenance and selector options as
+ *   `captureSpatialSnapshot`.
+ * @returns {Object} Normalized one-window `spatial-snapshot-v1`.
+ */
+export function captureSpatialWindowSnapshot(panel, options = {}) {
+  if (!isElement(panel)
+    || panel.tagName.toLowerCase() !== 'layout-node'
+    || panel.getAttribute('node-type') !== 'panel') {
+    throw new Error(
+      'captureSpatialWindowSnapshot requires a leaf layout-node[node-type="panel"].',
+    );
+  }
+  let ctx = createCaptureContext(panel, options);
+  captureLayoutNode(panel, ctx, null);
+  return createSpatialSnapshot(ctx);
 }

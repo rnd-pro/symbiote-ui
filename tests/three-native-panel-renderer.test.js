@@ -539,6 +539,83 @@ test('renderer preview hides old content outside a smaller shell and restores it
   assert.deepEqual(renderer.getDiagnostics().resizePreviewHidden, {});
 });
 
+test('renderer atomically replaces one panel while preserving sibling objects and presentation transform', () => {
+  let { renderer } = createRendererHarness();
+  let compiled = mountFixture(renderer);
+  let target = compiled.panels.find((panel) => panel.id === 'panel:source');
+  let sibling = compiled.panels.find((panel) => panel.id === 'panel:project');
+  let targetObject = renderer.getPanelObject(target.id);
+  let siblingObject = renderer.getPanelObject(sibling.id);
+  targetObject.position.set(0.42, -0.17, 0.03);
+  targetObject.userData.pinned = true;
+  targetObject.visible = false;
+
+  let replacement = {
+    ...target,
+    size: [target.size[0] + 0.2, target.size[1]],
+    primitives: target.primitives.map((primitive) => ({
+      ...primitive,
+      bounds: { ...primitive.bounds },
+    })),
+  };
+  let nextScene = {
+    ...compiled,
+    panels: compiled.panels.map((panel) => panel.id === target.id ? replacement : panel),
+  };
+  let result = renderer.replacePanel(nextScene, target.id);
+  let nextTargetObject = renderer.getPanelObject(target.id);
+
+  assert.deepEqual(result, {
+    ok: true,
+    panelId: target.id,
+    preservedTransform: true,
+  });
+  assert.notEqual(nextTargetObject, targetObject);
+  assert.equal(renderer.getPanelObject(sibling.id), siblingObject);
+  assert.deepEqual(
+    [nextTargetObject.position.x, nextTargetObject.position.y, nextTargetObject.position.z],
+    [0.42, -0.17, 0.03],
+  );
+  assert.equal(nextTargetObject.userData.pinned, true);
+  assert.equal(nextTargetObject.visible, false);
+  assert.equal(targetObject.parent, null);
+  assert.equal(renderer.getDiagnostics().panelReplacements, 1);
+  assert.deepEqual(renderer.getDiagnostics().resizePreviews, {});
+});
+
+test('renderer replacement failure leaves the committed scene and registries intact', () => {
+  let { renderer } = createRendererHarness();
+  let compiled = mountFixture(renderer);
+  let target = compiled.panels.find((panel) => panel.id === 'panel:source');
+  let sibling = compiled.panels.find((panel) => panel.id === 'panel:project');
+  let targetObject = renderer.getPanelObject(target.id);
+  let siblingObject = renderer.getPanelObject(sibling.id);
+  let before = renderer.getDiagnostics();
+  let invalidPanel = {
+    ...target,
+    primitives: [
+      ...target.primitives,
+      {
+        ...target.primitives[0],
+        id: `${target.id}/invalid-layer`,
+        layer: 'missing',
+      },
+    ],
+  };
+  let invalidScene = {
+    ...compiled,
+    panels: compiled.panels.map((panel) => panel.id === target.id ? invalidPanel : panel),
+  };
+
+  assert.throws(() => renderer.replacePanel(invalidScene, target.id));
+  assert.equal(renderer.getPanelObject(target.id), targetObject);
+  assert.equal(renderer.getPanelObject(sibling.id), siblingObject);
+  assert.equal(targetObject.parent, renderer.group);
+  assert.equal(renderer.getDiagnostics().panelReplacements, before.panelReplacements);
+  assert.equal(renderer.getDiagnostics().panels, before.panels);
+  assert.equal(renderer.getDiagnostics().primitives, before.primitives);
+});
+
 test('committed reflow rerasterizes measured text at the original pixels per meter', () => {
   let { renderer } = createRendererHarness({ renderer: { texturePixelRatio: 2 } });
   let compiled = mountFixture(renderer);

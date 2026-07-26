@@ -22,6 +22,7 @@ import {
   NATIVE_PANEL_LAYERS,
   compileNativePanelPrimitives,
   projectXRPanelsToPlane,
+  replaceNativePanelScenePanel,
   resizeNativePanelScene,
   resolveNativePanelHit,
 } from '../xr/native-panel-layout.js';
@@ -31,6 +32,7 @@ import {
   SPATIAL_HEADER_CONTROLS,
   SPATIAL_TREE_CONTROLS,
   captureSpatialSnapshot,
+  captureSpatialWindowSnapshot,
   createCanvasColorNormalizer,
   resolveHeaderControlSelector,
 } from '../xr/dom-spatial-capture.js';
@@ -38,6 +40,14 @@ import { compileSpatialSnapshot } from '../xr/spatial-snapshot-compile.js';
 import { createSpatialParityReport } from '../xr/spatial-parity.js';
 import { createSpatialVisualParityReport } from '../xr/spatial-visual-parity.js';
 import { createSpatialDragController } from '../xr/spatial-drag-controller.js';
+import {
+  captureResponsivePanelComponentState,
+  captureResponsivePanelSnapshot,
+  createResponsivePanelResizeContext,
+  isResponsivePanelResizeContextStale,
+  prepareResponsivePanelCaptureHost,
+  updateResponsivePanelResizeTarget,
+} from '../xr/responsive-panel-capture.js';
 import { createNativePanelLabData } from './native-panels-webgl-lab-data.js';
 import { resolveNativePanelPresentationPosition } from './native-panels-webgl-lab-layout.js';
 
@@ -273,6 +283,7 @@ let lab = {
   cameraMode: 'front',
   windowGap: DEFAULT_WINDOW_GAP,
   themeRevision: 0,
+  dataRevision: 0,
   threeRevision: PINNED_THREE_REVISION,
   counts: null,
   hovered: null,
@@ -286,6 +297,7 @@ let lab = {
   unsupportedColors: [],
   fontReadiness: null,
   appearanceRefresh: null,
+  responsiveCapture: null,
   identity: {
     builds: 0,
     themeUpdates: 0,
@@ -312,6 +324,8 @@ let panelSurfaceIds = new Map();
 let snapshot = null;
 let parityReport = null;
 let visualParityReport = null;
+let responsiveSnapshots = new Map();
+let responsiveParityByPanel = new Map();
 let cameras = {};
 let raycaster = new THREE.Raycaster();
 let pointerNdc = new THREE.Vector2();
@@ -325,9 +339,13 @@ let closedWindows = new Set();
 let resizerRelay = null;
 let diagnosticsTimer = null;
 let captureToken = 0;
+let responsiveCommitToken = 0;
 let referenceThemeReady = false;
 let lateFontRedrawUsed = false;
 let themeSyncing = false;
+let referenceMutationObserver = null;
+let referenceMutationTimer = null;
+let referenceMutationPending = false;
 
 function boot() {
   applyTheme(document.documentElement, DEFAULT_PROVIDER_THEME);
@@ -413,6 +431,16 @@ async function prepareReference() {
     targetSelector: ':root',
   });
   doc.addEventListener('cascade-theme-change', onCascadeThemeChange);
+  doc.addEventListener('input', markReferenceDataChanged, true);
+  doc.addEventListener('change', markReferenceDataChanged, true);
+  referenceMutationObserver?.disconnect();
+  referenceMutationObserver = new MutationObserver(markReferenceDataChanged);
+  referenceMutationObserver.observe(doc.querySelector('panel-layout'), {
+    subtree: true,
+    childList: true,
+    characterData: true,
+    attributes: true,
+  });
   await settleReference(win);
   lab.fontReadiness = await resolveIconFontReadiness();
   referenceThemeReady = true;
@@ -424,20 +452,276 @@ async function prepareReference() {
   renderDiagnostics();
 }
 
-function captureAndMount() {
+function markReferenceDataChanged() {
+  lab.dataRevision += 1;
+  clearTimeout(referenceMutationTimer);
+  referenceMutationTimer = setTimeout(() => {
+    referenceMutationTimer = null;
+    if (resizeState) {
+      referenceMutationPending = true;
+      return;
+    }
+    if (lab.source === 'real-layout') scheduleCapture();
+  }, 24);
+}
+
+function responsiveCaptureOptions() {
+  return {
+    route: REAL_ROUTE,
+    surfaceSelectors: REAL_SURFACE_SELECTORS,
+  };
+}
+
+function replaceSnapshotWindow(baseSnapshot, panelId, windowSnapshot) {
+  let nodeId = baseSnapshot.nodes.some((node) => node.id === panelId)
+    ? panelId
+    : panelId.startsWith('panel:') ? panelId.slice('panel:'.length) : panelId;
+  let removed = new Set([nodeId]);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (let node of baseSnapshot.nodes) {
+      if (!removed.has(node.id) && removed.has(node.parentId)) {
+        removed.add(node.id);
+        changed = true;
+      }
+    }
+  }
+  return {
+    ...baseSnapshot,
+    nodes: [
+      ...baseSnapshot.nodes.filter((node) => !removed.has(node.id)),
+      ...windowSnapshot.nodes,
+    ],
+    diagnostics: {
+      unsupported: [
+        ...baseSnapshot.diagnostics.unsupported,
+        ...windowSnapshot.diagnostics.unsupported,
+      ],
+      unknownVisible: [
+        ...baseSnapshot.diagnostics.unknownVisible,
+        ...windowSnapshot.diagnostics.unknownVisible,
+      ],
+    },
+  };
+}
+
+function updateParityDiagnostics() {
+  let paritySnapshot = snapshot;
+  for (let [panelId, panelSnapshot] of responsiveSnapshots) {
+    paritySnapshot = replaceSnapshotWindow(paritySnapshot, panelId, panelSnapshot);
+  }
+  visualParityReport = createSpatialVisualParityReport(
+    paritySnapshot,
+    panelRenderer.getAppearanceReport(),
+  );
+  lab.parity = {
+    ...summarizeParity(parityReport, visualParityReport),
+    responsive: [...responsiveParityByPanel].map(([panelId, report]) => ({
+      panelId,
+      ok: report.ok,
+      maxEdgeErrorPx: report.geometry.maxErrorPx,
+      tolerancePx: report.geometry.tolerancePx,
+    })),
+  };
+}
+
+function currentResponsiveRevisions() {
+  return {
+    themeRevision: lab.themeRevision,
+    dataRevision: lab.dataRevision,
+  };
+}
+
+function createResponsiveResizeRecord(
+  panelId,
+  targetSize,
+  measurementScene = measuredCompiled,
+  revisions = currentResponsiveRevisions(),
+) {
+  let doc = referenceFrame.contentDocument;
+  let sourcePanel = doc && findReferencePanelNode(doc, panelId);
+  let measuredPanel = measurementScene?.panels?.find((panel) => panel.id === panelId);
+  let metersPerCssPixel = measurementScene?.spatialSnapshot?.scale;
+  if (!sourcePanel || !measuredPanel || !metersPerCssPixel) {
+    throw new Error(`Responsive capture could not resolve measured source panel "${panelId}".`);
+  }
+  let rect = sourcePanel.getBoundingClientRect();
+  let componentState = captureResponsivePanelComponentState(sourcePanel);
+  let context = createResponsivePanelResizeContext({
+    panelId,
+    layoutId: sourcePanel.getAttribute('data-panel-id') || panelId,
+    sourceSnapshot: captureSpatialWindowSnapshot(sourcePanel, responsiveCaptureOptions()),
+    sourceCssSize: [rect.width, rect.height],
+    sourceSizeMeters: measuredPanel.size,
+    metersPerCssPixel,
+    themeRevision: revisions.themeRevision,
+    dataRevision: revisions.dataRevision,
+    componentState,
+  });
+  context = updateResponsivePanelResizeTarget(context, targetSize);
+  let hostPromise = prepareResponsivePanelCaptureHost(sourcePanel, {
+    ...responsiveCaptureOptions(),
+    componentState,
+  });
+  hostPromise.catch(() => {});
+  return {
+    context,
+    hostPromise,
+  };
+}
+
+function disposeResponsiveResizeRecord(record) {
+  record?.hostPromise?.then((host) => host.dispose()).catch(() => {});
+}
+
+async function resolveResponsiveResizeRecord(
+  record,
+  panelId,
+  targetSize,
+  measurementScene = measuredCompiled,
+  revisions = currentResponsiveRevisions(),
+) {
+  let stale = !record || isResponsivePanelResizeContextStale(record.context, {
+    themeRevision: revisions.themeRevision,
+    dataRevision: revisions.dataRevision,
+  });
+  if (stale) {
+    disposeResponsiveResizeRecord(record);
+    return createResponsiveResizeRecord(panelId, targetSize, measurementScene, revisions);
+  }
+  return {
+    ...record,
+    context: updateResponsivePanelResizeTarget(record.context, targetSize),
+  };
+}
+
+async function recaptureResponsivePanel(
+  sceneState,
+  panelId,
+  targetSize,
+  record = null,
+  measurementScene = measuredCompiled,
+  revisions = currentResponsiveRevisions(),
+) {
+  let resolved = await resolveResponsiveResizeRecord(
+    record,
+    panelId,
+    targetSize,
+    measurementScene,
+    revisions,
+  );
+  let host = await resolved.hostPromise;
+  try {
+    let captured = await captureResponsivePanelSnapshot(
+      host,
+      resolved.context.targetCssSize,
+      responsiveCaptureOptions(),
+    );
+    let onePanelScene = compileSpatialSnapshot(captured.snapshot, {
+      planeWidth: resolved.context.targetSizeMeters[0],
+    });
+    let replacement = onePanelScene.panels.find((panel) => panel.id === panelId);
+    let previous = sceneState.panels.find((panel) => panel.id === panelId);
+    if (!replacement || !previous || onePanelScene.panels.length !== 1) {
+      throw new Error(
+        `Responsive capture for "${panelId}" must compile to exactly one matching window.`,
+      );
+    }
+    replacement = {
+      ...replacement,
+      position: [...previous.position],
+      rotation: [...previous.rotation],
+      relativeRect: { ...previous.relativeRect },
+      metadata: {
+        ...previous.metadata,
+        ...replacement.metadata,
+        responsiveCapture: {
+          version: captured.version,
+          sourceCssSize: captured.sourceCssSize,
+          targetCssSize: captured.targetCssSize,
+          actualCssSize: captured.actualCssSize,
+          themeRevision: resolved.context.themeRevision,
+          dataRevision: resolved.context.dataRevision,
+          stylesheets: captured.stylesheets,
+        },
+      },
+    };
+    return {
+      scene: replaceNativePanelScenePanel(sceneState, panelId, replacement),
+      context: resolved.context,
+      parity: createSpatialParityReport(captured.snapshot, onePanelScene),
+      snapshot: captured.snapshot,
+      actualCssSize: captured.actualCssSize,
+      stylesheets: captured.stylesheets,
+    };
+  } finally {
+    host.dispose();
+  }
+}
+
+function responsiveCaptureDiagnostics(panelId, responsive) {
+  return {
+    panelId,
+    sourceCssSize: [...responsive.context.sourceCssSize],
+    targetCssSize: [...responsive.context.targetCssSize],
+    actualCssSize: [...responsive.actualCssSize],
+    targetSizeMeters: [...responsive.context.targetSizeMeters],
+    themeRevision: responsive.context.themeRevision,
+    dataRevision: responsive.context.dataRevision,
+    parity: {
+      ok: responsive.parity.ok,
+      maxEdgeErrorPx: responsive.parity.geometry.maxErrorPx,
+      tolerancePx: responsive.parity.geometry.tolerancePx,
+    },
+    stylesheets: responsive.stylesheets,
+  };
+}
+
+async function captureAndMount(token, revisions) {
   let doc = referenceFrame.contentDocument;
   let root = doc?.querySelector('panel-layout');
   if (!root) throw new Error('reference frame has no <panel-layout> subtree');
-  let options = { route: REAL_ROUTE, surfaceSelectors: REAL_SURFACE_SELECTORS };
+  let options = responsiveCaptureOptions();
   let first = captureSpatialSnapshot(root, options);
   let second = captureSpatialSnapshot(root, options);
-  lab.deterministic = JSON.stringify(first) === JSON.stringify(second);
-  snapshot = first;
-  measuredCompiled = compileSpatialSnapshot(snapshot);
-  compiled = applyWindowSizeOverrides(measuredCompiled);
+  let nextDeterministic = JSON.stringify(first) === JSON.stringify(second);
+  let nextSnapshot = first;
+  let nextMeasuredCompiled = compileSpatialSnapshot(nextSnapshot);
+  let nextCompiled = nextMeasuredCompiled;
+  let nextResponsiveSnapshots = new Map();
+  let nextResponsiveParityByPanel = new Map();
+  let nextResponsiveCapture = null;
+  for (let [panelId, size] of windowSizeOverrides) {
+    if (!nextCompiled.panels.some((panel) => panel.id === panelId)) continue;
+    let responsive = await recaptureResponsivePanel(
+      nextCompiled,
+      panelId,
+      size,
+      null,
+      nextMeasuredCompiled,
+      revisions,
+    );
+    nextCompiled = responsive.scene;
+    nextResponsiveSnapshots.set(panelId, responsive.snapshot);
+    nextResponsiveParityByPanel.set(panelId, responsive.parity);
+    nextResponsiveCapture = responsiveCaptureDiagnostics(panelId, responsive);
+  }
+  let theme = createNativePanelThemeSnapshot(doc, { revision: revisions.themeRevision });
+  if (token !== captureToken
+    || lab.source !== 'real-layout'
+    || revisions.themeRevision !== lab.themeRevision
+    || revisions.dataRevision !== lab.dataRevision) {
+    return false;
+  }
+  lab.deterministic = nextDeterministic;
+  snapshot = nextSnapshot;
+  measuredCompiled = nextMeasuredCompiled;
+  compiled = nextCompiled;
+  responsiveSnapshots = nextResponsiveSnapshots;
+  responsiveParityByPanel = nextResponsiveParityByPanel;
+  lab.responsiveCapture = nextResponsiveCapture;
   rebuildCompiledMaps();
-  lab.themeRevision += 1;
-  let theme = createNativePanelThemeSnapshot(doc, { revision: lab.themeRevision });
   lab.unsupportedColors = normalizeThemeRoles(theme, doc);
   let refresh = panelRenderer.refreshAppearance(compiled, { theme });
   lab.appearanceRefresh = {
@@ -454,8 +738,7 @@ function captureAndMount() {
   applyWindowPresentation();
   scene.background = new THREE.Color(toOpaqueRgb(theme.roles['surface-sunken']));
   parityReport = createSpatialParityReport(snapshot, measuredCompiled);
-  visualParityReport = createSpatialVisualParityReport(snapshot, panelRenderer.getAppearanceReport());
-  lab.parity = summarizeParity(parityReport, visualParityReport);
+  updateParityDiagnostics();
   lab.counts = {
     panels: compiled.counts.panels,
     windows: compiled.counts.windows,
@@ -467,6 +750,7 @@ function captureAndMount() {
   resize();
   scheduleLateFontRedraw();
   renderDiagnostics();
+  return true;
 }
 
 function scheduleLateFontRedraw() {
@@ -518,8 +802,12 @@ async function scheduleCapture() {
   if (!win) return;
   await settleReference(win);
   if (token !== captureToken || lab.source !== 'real-layout') return;
+  let revisions = currentResponsiveRevisions();
   try {
-    captureAndMount();
+    let mounted = await captureAndMount(token, revisions);
+    if (!mounted && token === captureToken && lab.source === 'real-layout') {
+      scheduleCapture();
+    }
   } catch (error) {
     lab.errors.push(`capture failed: ${error.message}`);
     renderDiagnostics();
@@ -540,6 +828,8 @@ function buildMockScene() {
   snapshot = null;
   parityReport = null;
   visualParityReport = null;
+  responsiveSnapshots = new Map();
+  responsiveParityByPanel = new Map();
   lab.parity = null;
   lab.deterministic = null;
   panelRenderer.mount(compiled, { theme: panelRendererTheme() });
@@ -568,6 +858,10 @@ function applyWindowSizeOverrides(scene) {
 }
 
 function remountCommittedWindows() {
+  if (lab.source === 'real-layout') {
+    scheduleCapture();
+    return;
+  }
   compiled = applyWindowSizeOverrides(measuredCompiled);
   rebuildCompiledMaps();
   panelRenderer.mount(compiled, { theme: panelRendererTheme() });
@@ -575,7 +869,71 @@ function remountCommittedWindows() {
   resize();
 }
 
-function commitWindowSize(panelId, size) {
+async function commitResponsiveWindowSize(panelId, size, record = null) {
+  let measured = measuredCompiled?.panels?.find((panel) => panel.id === panelId);
+  if (!measured) return false;
+  let next = size.map((value) => roundMetric(value));
+  let resetToMeasured = next[0] === measured.size[0] && next[1] === measured.size[1];
+  let token = ++responsiveCommitToken;
+  lab.status = 'responsive-capture';
+  let responsive = null;
+  let activeRecord = record;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    responsive = await recaptureResponsivePanel(compiled, panelId, next, activeRecord);
+    activeRecord = null;
+    if (token !== responsiveCommitToken || lab.source !== 'real-layout') return false;
+    if (!isResponsivePanelResizeContextStale(
+      responsive.context,
+      currentResponsiveRevisions(),
+    )) {
+      break;
+    }
+    responsive = null;
+  }
+  if (!responsive) {
+    throw new Error(
+      `Responsive capture for "${panelId}" stayed stale while theme or data changed.`,
+    );
+  }
+  if (resetToMeasured) {
+    windowSizeOverrides.delete(panelId);
+  } else {
+    windowSizeOverrides.set(panelId, next);
+  }
+  compiled = responsive.scene;
+  rebuildCompiledMaps();
+  panelRenderer.replacePanel(compiled, panelId);
+  applyWindowPresentation();
+  responsiveSnapshots.set(panelId, responsive.snapshot);
+  responsiveParityByPanel.set(panelId, responsive.parity);
+  updateParityDiagnostics();
+  lab.responsiveCapture = responsiveCaptureDiagnostics(panelId, responsive);
+  lab.counts = {
+    panels: compiled.counts.panels,
+    windows: compiled.counts.windows,
+    layoutControls: compiled.counts.layoutControls,
+    layers: NATIVE_PANEL_LAYERS.length,
+    primitives: compiled.counts.primitives,
+    interactive: compiled.counts.hitTargets,
+  };
+  lab.status = 'ready';
+  resize();
+  renderDiagnostics();
+  return true;
+}
+
+async function commitWindowSize(panelId, size, record = null) {
+  if (lab.source === 'real-layout') {
+    try {
+      return await commitResponsiveWindowSize(panelId, size, record);
+    } catch (error) {
+      panelRenderer.cancelPanelSizePreview(panelId);
+      lab.status = 'error';
+      lab.errors.push(`responsive capture failed: ${error.message}`);
+      renderDiagnostics();
+      return false;
+    }
+  }
   let measured = measuredCompiled?.panels?.find((panel) => panel.id === panelId);
   if (!measured) return false;
   let next = size.map((value) => roundMetric(value));
@@ -619,6 +977,11 @@ function setSource(source) {
     throw new Error(`Unknown source "${source}". Supported: real-layout, mock-families.`);
   }
   lab.source = source;
+  if (resizeState?.responsiveRecord) {
+    disposeResponsiveResizeRecord(resizeState.responsiveRecord);
+  }
+  resizeState = null;
+  responsiveCommitToken += 1;
   sourceSelect.value = source;
   referencePane.hidden = source !== 'real-layout';
   lab.hovered = null;
@@ -726,6 +1089,9 @@ function setWindowGap(value) {
 function resetWindowPositions() {
   windowDragOffsets.clear();
   windowSizeOverrides.clear();
+  responsiveSnapshots.clear();
+  responsiveParityByPanel.clear();
+  lab.responsiveCapture = null;
   remountCommittedWindows();
   lab.lastAction = { actionId: 'reset-window-positions' };
   renderDiagnostics();
@@ -758,12 +1124,18 @@ function onCascadeThemeChange(event) {
       themeSyncing = false;
     }
   }
+  lab.themeRevision += 1;
   if (lab.source === 'real-layout') {
-    if (referenceThemeReady) scheduleCapture();
+    if (referenceThemeReady) {
+      if (resizeState) {
+        referenceMutationPending = true;
+      } else {
+        scheduleCapture();
+      }
+    }
     return;
   }
   let buildsBefore = panelRenderer.getDiagnostics().builds;
-  lab.themeRevision += 1;
   let themeSnapshot = panelRendererTheme();
   panelRenderer.updateTheme(themeSnapshot);
   scene.background = new THREE.Color(toOpaqueRgb(themeSnapshot.roles['surface-sunken']));
@@ -911,7 +1283,9 @@ function relayRealAction(hit) {
     }
   }
   lab.lastRelay = { intent, targetId, relayed };
-  if (relayed) scheduleCapture();
+  if (relayed) {
+    markReferenceDataChanged();
+  }
   return relayed;
 }
 
@@ -972,7 +1346,7 @@ function endResizerRelay() {
     dispatchReferencePointer(win, doc, 'pointerup', resizerRelay.lastClientX, resizerRelay.lastClientY);
     lab.lastRelay = { intent: 'layout-resize', targetId: resizerRelay.targetId, relayed: true };
     resizerRelay = null;
-    scheduleCapture();
+    markReferenceDataChanged();
     return;
   }
   resizerRelay = null;
@@ -1010,6 +1384,15 @@ function onPointerMove(event) {
       Math.max(resizeState.measuredSize[1] * 0.5, Math.min(resizeState.measuredSize[1] * 2.5, nextY)),
     ];
     resizeState.previewSize = next;
+    if (resizeState.responsiveRecord) {
+      resizeState.responsiveRecord = {
+        ...resizeState.responsiveRecord,
+        context: updateResponsivePanelResizeTarget(
+          resizeState.responsiveRecord.context,
+          next,
+        ),
+      };
+    }
     panelRenderer.previewPanelSize(resizeState.panelId, next);
     resizeState.moved = true;
     resize();
@@ -1044,6 +1427,9 @@ function onPointerDown(event) {
     let panel = compiledById.get(picked.panelId);
     let measuredPanel = measuredCompiled?.panels?.find((candidate) => candidate.id === picked.panelId);
     if (!panel || !measuredPanel) return;
+    let responsiveRecord = lab.source === 'real-layout'
+      ? createResponsiveResizeRecord(picked.panelId, panel.size)
+      : null;
     resizeState = {
       panelId: picked.panelId,
       pointerId: event.pointerId,
@@ -1053,6 +1439,7 @@ function onPointerDown(event) {
       startSize: [...panel.size],
       measuredSize: [...measuredPanel.size],
       previewSize: [...panel.size],
+      responsiveRecord,
       moved: false,
     };
     canvas.setPointerCapture(event.pointerId);
@@ -1080,7 +1467,7 @@ function onPointerDown(event) {
   }
 }
 
-function onPointerUp(event) {
+async function onPointerUp(event) {
   if (resizerRelay) {
     endResizerRelay();
     renderDiagnostics();
@@ -1095,8 +1482,13 @@ function onPointerUp(event) {
       canvas.releasePointerCapture(finished.pointerId);
     }
     if (finished.moved) {
-      commitWindowSize(finished.panelId, finished.previewSize);
+      await commitWindowSize(
+        finished.panelId,
+        finished.previewSize,
+        finished.responsiveRecord,
+      );
     } else {
+      disposeResponsiveResizeRecord(finished.responsiveRecord);
       panelRenderer.cancelPanelSizePreview(finished.panelId);
     }
     lab.lastAction = {
@@ -1106,6 +1498,10 @@ function onPointerUp(event) {
       size: [...(compiledById.get(finished.panelId)?.size || finished.previewSize)],
     };
     emitIntent({ type: 'panel-resize', ...lab.lastAction });
+    if (referenceMutationPending) {
+      referenceMutationPending = false;
+      scheduleCapture();
+    }
     renderDiagnostics();
     return;
   }
@@ -1156,8 +1552,7 @@ function onPointerUp(event) {
       let next = expanded
         ? [...measured.size]
         : measured.size.map((value) => roundMetric(value * 1.65));
-      if (expanded) windowSizeOverrides.delete(hit.panelId);
-      commitWindowSize(hit.panelId, next);
+      await commitWindowSize(hit.panelId, next);
     } else if (action === 'pin' && group) {
       group.userData.pinned = !group.userData.pinned;
       if (group.userData.pinned) {
@@ -1204,9 +1599,14 @@ function cancelPointerDrag(event) {
   if (resizeState && (event.pointerId === undefined || event.pointerId === resizeState.pointerId)) {
     let cancelledResize = resizeState;
     resizeState = null;
+    disposeResponsiveResizeRecord(cancelledResize.responsiveRecord);
     panelRenderer.cancelPanelSizePreview(cancelledResize.panelId);
     if (canvas.hasPointerCapture(cancelledResize.pointerId)) {
       canvas.releasePointerCapture(cancelledResize.pointerId);
+    }
+    if (referenceMutationPending) {
+      referenceMutationPending = false;
+      scheduleCapture();
     }
     return;
   }
@@ -1263,6 +1663,8 @@ function getReport() {
     ),
     windows: windowDiagnostics(),
     themeRevision: lab.themeRevision,
+    dataRevision: lab.dataRevision,
+    responsiveCapture: lab.responsiveCapture,
     threeRevision: lab.threeRevision,
     threeRuntimeRevision: THREE.REVISION || null,
     counts: lab.counts,
@@ -1293,6 +1695,10 @@ function renderDiagnostics() {
 }
 
 function cleanup() {
+  disposeResponsiveResizeRecord(resizeState?.responsiveRecord);
+  responsiveCommitToken += 1;
+  referenceMutationObserver?.disconnect();
+  clearTimeout(referenceMutationTimer);
   renderer.setAnimationLoop(null);
   clearInterval(diagnosticsTimer);
   panelRenderer.dispose();
