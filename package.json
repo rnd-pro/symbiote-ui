@@ -1,6 +1,6 @@
 {
   "name": "symbiote-ui",
-  "version": "0.3.0-alpha.68",
+  "version": "0.3.0-alpha.69",
   "type": "module",
   "description": "Agent-ready Web Components, layouts, themes, manifests, and UI contracts for Symbiote systems.",
   "main": "index.js",
@@ -27,6 +27,17 @@
       "import": "./canvas/node-canvas.js",
       "default": "./canvas/node-canvas.js"
     },
+    "./canvas/canvas-graph": {
+      "import": "./canvas/canvas-graph.js",
+      "default": "./canvas/canvas-graph.js"
+    },
+    "./canvas/graph-explorer.js": "./canvas/graph-explorer.js",
+    "./contracts/resource-tree": "./contracts/resource-tree.js",
+    "./icons/material-symbols": "./icons/MaterialSymbols.js",
+    "./control/segmented-control": {
+      "import": "./control/SegmentedControl/SegmentedControl.js",
+      "default": "./control/SegmentedControl/SegmentedControl.js"
+    },
     "./board": {
       "import": "./board/index.js",
       "default": "./board/index.js"
@@ -43,6 +54,11 @@
     "./layout": {
       "import": "./layout/index.js",
       "default": "./layout/index.js"
+    },
+    "./layout/LayoutTree": "./layout/LayoutTree.js",
+    "./layout/panel-layout": {
+      "import": "./layout/Layout/Layout.js",
+      "default": "./layout/Layout/Layout.js"
     },
     "./runtime": {
       "import": "./runtime/index.js",
@@ -132,6 +148,12 @@
       "import": "./ui/index.js",
       "default": "./ui/index.js"
     },
+    "./ui/locale.js": "./ui/locale.js",
+    "./ui/host-adapters.js": "./ui/host-adapters.js",
+    "./ui/media": {
+      "import": "./ui/media/index.js",
+      "default": "./ui/media/index.js"
+    },
     "./ui/screencast-recorder.js": "./ui/screencast-recorder.js",
     "./ui/tour-screencast.js": "./ui/tour-screencast.js",
     "./ui/tour-audio-provider.js": "./ui/tour-audio-provider.js",
@@ -163,6 +185,7 @@
     "index.js",
     "custom-elements.json",
     "core/",
+    "contracts/",
     "graph/",
     "icons/",
     "discover.js",
@@ -216,6 +239,7 @@
     "themes/CascadeThemeWidget/CascadeThemeWidget.js",
     "themes/CascadeThemeImportDialog/CascadeThemeImportDialog.js",
     "ui/index.js",
+    "ui/media/**/*.js",
     "canvas/**/*.js",
     "board/**/*.js",
     "node/**/*.js",

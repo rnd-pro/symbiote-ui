@@ -1122,6 +1122,7 @@
             }
           },
           "metadata": {
+            "specifier": "symbiote-ui/canvas/canvas-graph",
             "contract": {
               "capabilities": [
                 "hierarchical-graph",
@@ -3704,6 +3705,7 @@
             }
           },
           "metadata": {
+            "specifier": "symbiote-ui/canvas/node-canvas",
             "contract": {
               "capabilities": [
                 "node-editor-canvas",
@@ -16011,6 +16013,7 @@
             }
           },
           "metadata": {
+            "specifier": "symbiote-ui/control/segmented-control",
             "contract": {
               "capabilities": [
                 "form-control",
@@ -27574,6 +27577,7 @@
             }
           },
           "metadata": {
+            "specifier": "symbiote-ui/display/source-viewer",
             "contract": {
               "capabilities": [
                 "source-code",
@@ -29940,6 +29944,7 @@
             }
           },
           "metadata": {
+            "specifier": "symbiote-ui/ui/media",
             "contract": {
               "capabilities": [
                 "media-host",
@@ -33398,6 +33403,7 @@
             }
           },
           "metadata": {
+            "specifier": "symbiote-ui/layout/panel-layout",
             "contract": {
               "capabilities": [
                 "layout-tree",
@@ -45021,6 +45027,7 @@
             }
           },
           "metadata": {
+            "specifier": "symbiote-ui/themes/CascadeThemeEditor/CascadeThemeEditor.js",
             "contract": {
               "capabilities": [
                 "cascade-theme-controls",
@@ -45884,6 +45891,7 @@
             }
           },
           "metadata": {
+            "specifier": "symbiote-ui/themes/CascadeThemeWidget/CascadeThemeWidget.js",
             "contract": {
               "capabilities": [
                 "cascade-theme-quick-controls",
@@ -46341,6 +46349,9 @@
                 "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
               ]
             }
+          },
+          "metadata": {
+            "specifier": "symbiote-ui/themes/CascadeThemeImportDialog/CascadeThemeImportDialog.js"
           }
         }
       ],
@@ -47358,6 +47369,7 @@
             }
           },
           "metadata": {
+            "specifier": "symbiote-ui/tree/TreePanel",
             "contract": {
               "capabilities": [
                 "tree-data",
@@ -47864,6 +47876,7 @@
             }
           },
           "metadata": {
+            "specifier": "symbiote-ui/tree/TreeView",
             "contract": {
               "capabilities": [
                 "tree-data",

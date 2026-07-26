@@ -84,6 +84,21 @@ const EXPORT_ENTRYPOINTS = [
     description: 'Node-safe localization catalogs and translation helpers for built-in UI strings.',
   },
   {
+    specifier: 'symbiote-ui/contracts/resource-tree',
+    kind: 'node-safe',
+    description: 'Node-safe resource-tree builder re-exported from the engine contract without the broad contracts catalog.',
+  },
+  {
+    specifier: 'symbiote-ui/canvas/graph-explorer.js',
+    kind: 'node-safe',
+    description: 'Pure graph-view helper constants and menu descriptors for graph explorer hosts.',
+  },
+  {
+    specifier: 'symbiote-ui/layout/LayoutTree',
+    kind: 'node-safe',
+    description: 'Node-safe BSP layout tree model and layout behavior normalization helpers.',
+  },
+  {
     specifier: 'symbiote-ui/manifest',
     kind: 'node-safe',
     description: 'Agent-readable component, theme, token, rule, and schema catalogs.',
@@ -132,6 +147,41 @@ const EXPORT_ENTRYPOINTS = [
     specifier: 'symbiote-ui/ui/tour-media-renderer.js',
     kind: 'browser',
     description: 'Canvas Capture and MediaRecorder helper for rendering agent tour timelines to video, with explicit audio-provider diagnostics.',
+  },
+  {
+    specifier: 'symbiote-ui/ui/locale.js',
+    kind: 'browser',
+    description: 'Browser localization helpers for navigator locale detection and browser localization configuration.',
+  },
+  {
+    specifier: 'symbiote-ui/icons/material-symbols',
+    kind: 'browser',
+    description: 'Material Symbols host control for configuring and ensuring ligature font loading.',
+  },
+  {
+    specifier: 'symbiote-ui/ui/host-adapters.js',
+    kind: 'browser',
+    description: 'Host-adapter helpers for wiring list-item and tree-panel host surfaces.',
+  },
+  {
+    specifier: 'symbiote-ui/ui/media',
+    kind: 'browser-component',
+    description: 'Media provider registry with built-in image and YouTube adapters plus the self-registering sn-media-host element.',
+  },
+  {
+    specifier: 'symbiote-ui/canvas/canvas-graph',
+    kind: 'browser-component',
+    description: 'Direct browser component entrypoint for the hierarchical canvas-graph overview renderer.',
+  },
+  {
+    specifier: 'symbiote-ui/layout/panel-layout',
+    kind: 'browser-component',
+    description: 'Direct browser component entrypoint for the panel-based application layout shell.',
+  },
+  {
+    specifier: 'symbiote-ui/control/segmented-control',
+    kind: 'browser-component',
+    description: 'Direct browser component entrypoint for the segmented radio-group control.',
   },
   {
     specifier: 'symbiote-ui/board',

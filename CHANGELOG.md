@@ -2,9 +2,11 @@
 
 All notable changes to `symbiote-ui` will be documented in this file.
 
-## Unreleased
+## [0.3.0-alpha.69] - 2026-07-26
 
 ### Added
+
+- Added narrow public entrypoints so consumers can import only what they use instead of the full `symbiote-ui/ui` catalog: `symbiote-ui/contracts/resource-tree` (Node-safe resource-tree builder), `symbiote-ui/ui/locale.js`, `symbiote-ui/canvas/graph-explorer.js`, `symbiote-ui/icons/material-symbols`, `symbiote-ui/ui/host-adapters.js`, `symbiote-ui/ui/media` (registry, built-in image/YouTube adapters, and `sn-media-host`), `symbiote-ui/canvas/canvas-graph`, `symbiote-ui/layout/LayoutTree`, `symbiote-ui/layout/panel-layout`, and `symbiote-ui/control/segmented-control`. `ui/media/**/*.js` is now declared side-effectful, and component registry, discover, and Custom Elements metadata advertise the narrowest public specifier for `sn-segmented-control`, `cascade-theme-widget`, `cascade-theme-editor`, `sn-theme-import-dialog`, `sn-tree-panel`, `sn-tree-view`, `node-canvas`, `canvas-graph`, `panel-layout`, `source-viewer`, and `sn-media-host`.
 
 - Added the native spatial panel toolchain for XR: deterministic layout compilation, DOM capture, versioned snapshots and parity checks, Three/WebGL rendering, public `symbiote-ui/xr` exports, and the standalone Native Panels WebGL lab.
 - Added strict XR spatial target, same-frame observation, stable audit, immutable content hit-map, and pre-root placement-receipt schemas. The Node-safe XR surface now includes column-major/root-relative math, metric top/front/right and stereo projections, a reference-only nonmetric axonometric pane, exact target/sample/audit verification, 30-frame/750-ms stability tracking, freshness-bound placement and panel select receipts, and Three.js adapter capabilities for world-locked root commit, trusted content selection, and spatial audit capture.

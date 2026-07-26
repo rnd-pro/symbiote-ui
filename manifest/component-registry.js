@@ -1563,6 +1563,7 @@ const EXPANDED_CATALOG_COMPONENTS = [
     tagName: 'sn-segmented-control',
     className: 'SegmentedControl',
     module: 'control/SegmentedControl/SegmentedControl.js',
+    specifier: 'symbiote-ui/control/segmented-control',
     category: 'control',
     description: 'Linear segmented control of options with radio group keyboard navigation and roving tabindex.',
     contract: {
@@ -3082,6 +3083,7 @@ export let COMPONENTS = [
     tagName: 'sn-media-host',
     className: 'MediaHost',
     module: 'ui/media/MediaHost/MediaHost.js',
+    specifier: 'symbiote-ui/ui/media',
     category: 'display',
     description: 'Accessible lazy media host that mounts exactly one provider adapter on user activation and falls back to poster plus external link.',
     agent: {
@@ -3174,6 +3176,7 @@ export let COMPONENTS = [
     tagName: 'cascade-theme-widget',
     className: 'CascadeThemeWidget',
     module: 'themes/CascadeThemeWidget/CascadeThemeWidget.js',
+    specifier: 'symbiote-ui/themes/CascadeThemeWidget/CascadeThemeWidget.js',
     category: 'theme',
     description: 'Compact global header widget for cascade theme quick controls.',
     agent: {
@@ -3238,6 +3241,7 @@ export let COMPONENTS = [
     tagName: 'cascade-theme-editor',
     className: 'CascadeThemeEditor',
     module: 'themes/CascadeThemeEditor/CascadeThemeEditor.js',
+    specifier: 'symbiote-ui/themes/CascadeThemeEditor/CascadeThemeEditor.js',
     category: 'theme',
     description: 'Reusable cascade theme editor module for host layouts.',
     agent: {
@@ -3308,6 +3312,7 @@ export let COMPONENTS = [
     tagName: 'sn-theme-import-dialog',
     className: 'CascadeThemeImportDialog',
     module: 'themes/CascadeThemeImportDialog/CascadeThemeImportDialog.js',
+    specifier: 'symbiote-ui/themes/CascadeThemeImportDialog/CascadeThemeImportDialog.js',
     category: 'theme',
     description: 'Protected accessible browser dialog for previewing and accepting a shared theme token.',
     agent: {
@@ -3523,6 +3528,7 @@ export let COMPONENTS = [
     tagName: 'node-canvas',
     className: 'NodeCanvas',
     module: 'canvas/NodeCanvas/NodeCanvas.js',
+    specifier: 'symbiote-ui/canvas/node-canvas',
     category: 'canvas',
     description: 'Primary graph canvas custom element.',
     contract: {
@@ -3595,6 +3601,7 @@ export let COMPONENTS = [
     tagName: 'canvas-graph',
     className: 'CanvasGraph',
     module: 'canvas/CanvasGraph/CanvasGraph.js',
+    specifier: 'symbiote-ui/canvas/canvas-graph',
     category: 'canvas',
     description: 'Generic hierarchical graph overview/read renderer with force layout, semantic navigation, selection events, and optional device-orientation parallax.',
     contract: {
@@ -3780,6 +3787,7 @@ export let COMPONENTS = [
     tagName: 'panel-layout',
     className: 'Layout',
     module: 'layout/Layout/Layout.js',
+    specifier: 'symbiote-ui/layout/panel-layout',
     category: 'layout',
     description: 'Panel-based application layout shell.',
     contract: {
@@ -4305,6 +4313,7 @@ export let COMPONENTS = [
     tagName: 'source-viewer',
     className: 'SourceViewer',
     module: 'display/SourceViewer/SourceViewer.js',
+    specifier: 'symbiote-ui/display/source-viewer',
     category: 'display',
     description: 'Source and markdown document viewer with code, rendered markdown, image, directory metadata, save actions, syntax theme tokens, diagnostics, and transform modes.',
     contract: {
@@ -5874,6 +5883,7 @@ export let COMPONENTS = [
     tagName: 'sn-tree-view',
     className: 'TreeView',
     module: 'tree/TreeView/TreeView.js',
+    specifier: 'symbiote-ui/tree/TreeView',
     category: 'tree',
     description: 'Generic tree view with selection, expansion, filtering, drag payloads, and host-owned item data.',
     contract: {
@@ -5924,6 +5934,7 @@ export let COMPONENTS = [
     tagName: 'sn-tree-panel',
     className: 'TreePanel',
     module: 'tree/TreePanel/TreePanel.js',
+    specifier: 'symbiote-ui/tree/TreePanel',
     category: 'tree',
     description: 'Generic tree panel with filter input, collapse action, placeholder state, and an embedded tree view.',
     contract: {
@@ -6586,7 +6597,7 @@ export let COMPONENTS = [
     contract,
     visibility,
     internal,
-    specifier: COMPONENT_UI_SPECIFIER,
+    specifier: component.specifier || COMPONENT_UI_SPECIFIER,
     exportName,
     importKind: internal ? 'side-effect' : 'named',
   };

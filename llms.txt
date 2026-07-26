@@ -38,7 +38,7 @@ Symbiote UI lets agents and host apps assemble dense professional interfaces fro
 
 ## Component and layout guidance
 
-- Use `symbiote-ui/ui` for browser Web Components and shared UI modules.
+- Use `symbiote-ui/ui` for browser Web Components and shared UI modules, or a narrow component subpath (for example `symbiote-ui/canvas/node-canvas`, `symbiote-ui/canvas/canvas-graph`, `symbiote-ui/layout/panel-layout`, `symbiote-ui/control/segmented-control`, `symbiote-ui/ui/media`) to register only the elements a host uses; see the Entry Points doc for the full list.
 - Use `symbiote-ui/layout` for layout shells, routers, sidebars, project tabs, panel menus, and region orchestration.
 - Use `symbiote-ui/canvas` or `symbiote-ui/graph` for graph explorers, node canvases, structured/flat graph modes, graph metadata, transactions, and deterministic layout-quality reports.
 - Use `symbiote-ui/chat` for chat composers, transcripts, message lists, sidebars, and message models.
