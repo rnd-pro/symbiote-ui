@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rnd-pro.github.io/symbiote-ui/schemas/xr-spatial-window-viewport-receipt-v1.json",
+  "title": "XR Spatial Window Viewport Update Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "action",
+    "ok",
+    "reason",
+    "viewport",
+    "previousViewport",
+    "sizeMeters",
+    "preserved",
+    "remounted",
+    "rolledBack",
+    "paintRequested",
+    "texture"
+  ],
+  "properties": {
+    "version": { "const": "xr-spatial-window-viewport-receipt-v1" },
+    "action": { "const": "viewport-update" },
+    "windowId": { "type": "string", "minLength": 1 },
+    "layoutId": { "type": "string", "minLength": 1 },
+    "ok": { "type": "boolean" },
+    "reason": { "type": ["string", "null"] },
+    "viewport": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["width", "height"],
+      "properties": {
+        "width": { "type": "integer", "exclusiveMinimum": 0 },
+        "height": { "type": "integer", "exclusiveMinimum": 0 }
+      }
+    },
+    "previousViewport": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["width", "height"],
+      "properties": {
+        "width": { "type": "integer", "exclusiveMinimum": 0 },
+        "height": { "type": "integer", "exclusiveMinimum": 0 }
+      }
+    },
+    "sizeMeters": {
+      "type": ["array", "null"],
+      "minItems": 2,
+      "maxItems": 2,
+      "items": { "type": "number", "exclusiveMinimum": 0 }
+    },
+    "preserved": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["focus", "formValues", "selection", "scroll"],
+      "properties": {
+        "focus": { "type": "boolean" },
+        "formValues": { "type": "boolean" },
+        "selection": { "type": "boolean" },
+        "scroll": { "type": "boolean" }
+      }
+    },
+    "remounted": { "type": "boolean" },
+    "rolledBack": { "type": "boolean" },
+    "paintRequested": { "type": "boolean" },
+    "texture": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["uploaded", "stage", "reason", "width", "height"],
+      "properties": {
+        "uploaded": { "type": "boolean" },
+        "stage": { "type": ["string", "null"] },
+        "reason": { "type": ["string", "null"] },
+        "width": { "type": ["integer", "null"], "minimum": 1 },
+        "height": { "type": ["integer", "null"], "minimum": 1 }
+      }
+    }
+  }
+}

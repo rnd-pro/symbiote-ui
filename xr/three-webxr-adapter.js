@@ -38,6 +38,17 @@ import {
 } from './spatial-math.js';
 import { validateTarget } from './spatial-evidence.js';
 
+export class PrepareBatchError extends Error {
+  constructor(message, metadata = {}) {
+    super(message);
+    this.name = 'PrepareBatchError';
+    this.code = String(metadata.code || 'prepare-failed');
+    this.count = Number(metadata.count ?? 0);
+    this.cleanupErrorCount = Number(metadata.cleanupErrorCount ?? 0);
+    Object.freeze(this);
+  }
+}
+
 // Chrome colors default to the provider design tokens (xr/chrome-theme.js):
 // accent carries grab/pointer affordances, neutral on-surface carries window
 // controls, success marks pinned, surface-panel paints the material fallback.
@@ -100,6 +111,7 @@ export const XR_THREE_WEBXR_ADAPTER = Object.freeze({
     'three-primary-input-source',
     'three-animation-loop',
     'three-panel-material-state',
+    'three-panel-size-update',
     'three-session-diagnostics',
     'three-world-locked-root-commit',
     'three-trusted-select-receipts',
@@ -1167,6 +1179,10 @@ export function createXRThreeHtmlCanvasTextureResolver(options = {}) {
     if (canvas) resizeTextureCanvas(canvas, panel, { ...options, qualityPolicy: policy });
     let dirtyKey = textureDirtyKey(input, canvas, policy);
     let entry = textures.get(panelId);
+    if (entry?.texture && (entry.texture._disposed || entry.texture.disposed)) {
+      textures.delete(panelId);
+      entry = null;
+    }
     let redrawMode = input.redrawMode || policy.redrawMode || options.redrawMode || 'dirty';
     let textureWidth = canvas?.width || panel.contentViewport?.width || panel.texturePixels?.width || 0;
     let textureHeight = canvas?.height || panel.contentViewport?.height || panel.texturePixels?.height || 0;
@@ -1194,11 +1210,20 @@ export function createXRThreeHtmlCanvasTextureResolver(options = {}) {
         redrawCount: entry.redrawCount || 1,
         lastUploadMs: entry.lastUploadMs ?? null,
       });
-      return entry.texture;
+      return {
+        texture: entry.texture,
+        cacheKey: panelId,
+        ownerKey: panelId,
+        ownership: 'borrowed',
+        owned: false,
+        borrowed: true,
+        release() {}
+      };
     }
     let startedAt = nowMs(options);
     if (htmlTextureSupported) {
-      let texture = entry?.texture || createThreeHtmlElementTexture(THREE, input.element, {
+      let priorEntry = entry || null;
+      let texture = createThreeHtmlElementTexture(THREE, input.element, {
         name: `sn-xr-panel-${panelId}-html-texture`,
         ...(options.texture || {}),
       });
@@ -1252,7 +1277,29 @@ export function createXRThreeHtmlCanvasTextureResolver(options = {}) {
         lastUploadMs,
         textureOptions,
       });
-      return texture;
+      return {
+        texture,
+        cacheKey: panelId,
+        ownerKey: panelId,
+        ownership: 'owned',
+        owned: true,
+        borrowed: false,
+        release() {
+          let currentEntry = textures.get(panelId);
+          if (currentEntry && currentEntry.texture === texture) {
+            if (priorEntry?.texture && !priorEntry.texture._disposed && !priorEntry.texture.disposed) {
+              textures.set(panelId, priorEntry);
+            } else {
+              textures.delete(panelId);
+            }
+          }
+          texture._disposed = true;
+          texture.disposed = true;
+          if (typeof texture.dispose === 'function') {
+            texture.dispose();
+          }
+        }
+      };
     }
     let renderResult = htmlCanvasRenderer.renderPanelPreview(panelId, canvas, {
       width: canvas.width,
@@ -1278,7 +1325,8 @@ export function createXRThreeHtmlCanvasTextureResolver(options = {}) {
       });
       return null;
     }
-    let texture = entry?.texture || createThreeCanvasTexture(THREE, canvas, {
+    let priorEntry = entry || null;
+    let texture = createThreeCanvasTexture(THREE, canvas, {
       name: `sn-xr-panel-${panelId}-texture`,
       ...(options.texture || {}),
     });
@@ -1330,8 +1378,35 @@ export function createXRThreeHtmlCanvasTextureResolver(options = {}) {
       lastUploadMs,
       textureOptions,
     });
-    return texture;
+    return {
+      texture,
+      cacheKey: panelId,
+      ownerKey: panelId,
+      ownership: 'owned',
+      owned: true,
+      borrowed: false,
+      release() {
+        let currentEntry = textures.get(panelId);
+        if (currentEntry && currentEntry.texture === texture) {
+          if (priorEntry?.texture && !priorEntry.texture._disposed && !priorEntry.texture.disposed) {
+            textures.set(panelId, priorEntry);
+          } else {
+            textures.delete(panelId);
+          }
+        }
+        texture._disposed = true;
+        texture.disposed = true;
+        if (typeof texture.dispose === 'function') {
+          texture.dispose();
+        }
+      }
+    };
   }
+
+  resolveTexture.hasTexture = function(panelId, texture) {
+    let entry = textures.get(panelId);
+    return entry?.texture === texture && !(texture._disposed || texture.disposed);
+  };
 
   return {
     resolve: resolveTexture,
@@ -1397,15 +1472,21 @@ export function createXRThreePanelTextureBridge(options = {}) {
     mode: options.mode,
   });
   let records = new Map();
+  let transactionResources = new Map();
+  let tokenCounter = 0;
+  let activeReleases = new Set();
 
   function getSupport() {
     return htmlCanvasRenderer.getSupport();
   }
 
-  function applyPanelTexture(mesh, panel, applyOptions = {}) {
+  function resolveCandidateRecord(mesh, panel, applyOptions = {}) {
     let element = applyOptions.element || resolvePanelElement(panel, { ...options, ...applyOptions });
     if (!mesh || !panel?.id) {
-      return { ok: false, reason: 'missing-panel-mesh', panelId: panel?.id || null };
+      return {
+        record: { ok: false, reason: 'missing-panel-mesh', panelId: panel?.id || null, stage: 'panel-mesh', textureApplied: false, textureKind: null },
+        texture: null
+      };
     }
     if (!element) {
       let support = getSupport();
@@ -1430,23 +1511,14 @@ export function createXRThreePanelTextureBridge(options = {}) {
         support: supportSummary,
         summary,
       };
-      records.set(panel.id, record);
-      mesh.userData ||= {};
-      mesh.userData.textureSource = summary;
-      mesh.userData.textureBridge = {
-        ok: record.ok,
-        stage: record.stage,
-        strictRequired: record.strictRequired,
-        textureApplied: record.textureApplied,
-        reason: record.reason,
-      };
-      return record;
+      return { record, texture: null };
     }
 
     let canvas = applyOptions.canvas || options.canvas || resolveCanvasSource({ element });
     let prepareResult = htmlCanvasRenderer.preparePanel(element, panel, {
       mode: applyOptions.mode || options.mode,
       canvas,
+      onInvalidate: applyOptions.onInvalidate,
     });
     let support = getSupport();
     let supportSummary = summarizeTextureBridgeSupport(support);
@@ -1455,10 +1527,11 @@ export function createXRThreePanelTextureBridge(options = {}) {
       allowMaterialFallback: !strictRequired,
     });
     let textureQuality = createXRPanelTextureQualitySummary(panel, applyOptions.textureQuality || options.textureQuality || {});
+    let resolved = null;
     let texture = null;
     let textureReason = null;
     if (summary.source === 'html-in-canvas' && typeof options.textureResolver === 'function') {
-      texture = options.textureResolver({
+      resolved = options.textureResolver({
         mesh,
         panel,
         element,
@@ -1468,17 +1541,65 @@ export function createXRThreePanelTextureBridge(options = {}) {
         support,
         summary,
       }) || null;
+      if (resolved) {
+        if (typeof resolved === 'object' && resolved.texture) {
+          texture = resolved.texture;
+        } else {
+          texture = resolved;
+        }
+      }
       if (!texture) textureReason = 'texture-resolver-empty';
     } else if (summary.source === 'html-in-canvas') {
       textureReason = 'texture-resolver-missing';
     }
 
-    if (texture && mesh.material) {
-      mesh.material.map = texture;
-      if ('color' in mesh.material && typeof mesh.material.color?.setHex === 'function') {
-        mesh.material.color.setHex(0xffffff);
+    let acquisition = null;
+    if (texture) {
+      let isOwned = true;
+      let originalRelease = null;
+      let explicitOwnership = false;
+      let cacheKey = null;
+      let ownerKey = null;
+      if (resolved && typeof resolved === 'object' && resolved.texture) {
+        cacheKey = resolved.cacheKey ?? null;
+        ownerKey = resolved.ownerKey ?? cacheKey;
+        if (resolved.owned !== undefined) {
+          isOwned = Boolean(resolved.owned);
+          explicitOwnership = true;
+        } else if (resolved.borrowed !== undefined) {
+          isOwned = !resolved.borrowed;
+          explicitOwnership = true;
+        }
+        if (typeof resolved.release === 'function') {
+          originalRelease = resolved.release;
+          explicitOwnership = true;
+        }
       }
-      markMaterialUpdated(mesh.material);
+      if (texture === applyOptions.priorMap && !explicitOwnership) {
+        isOwned = false;
+      }
+      let released = false;
+      let releaseOnce = () => {
+        if (released) return;
+        released = true;
+        if (isOwned) {
+          if (typeof originalRelease === 'function') {
+            originalRelease();
+          } else if (typeof options.disposer === 'function') {
+            options.disposer(texture);
+          } else if (typeof texture.dispose === 'function') {
+            texture.dispose();
+          }
+        }
+      };
+      acquisition = Object.freeze({
+        texture,
+        cacheKey,
+        ownerKey,
+        ownership: isOwned ? 'owned' : 'borrowed',
+        explicitOwnership,
+        releaseOnce,
+      });
     }
 
     let stage = classifyTextureBridgeStage(summary, texture, textureReason);
@@ -1494,24 +1615,822 @@ export function createXRThreePanelTextureBridge(options = {}) {
       textureQuality,
       summary,
     };
-    records.set(panel.id, record);
-    mesh.userData ||= {};
-    mesh.userData.textureSource = summary;
-    mesh.userData.textureBridge = {
-      ok: record.ok,
-      stage: record.stage,
-      strictRequired: record.strictRequired,
-      textureApplied: record.textureApplied,
-      reason: record.reason,
-    };
+    return { record, texture, acquisition };
+  }
+
+  function applyPanelTexture(mesh, panel, applyOptions = {}) {
+    let priorMap = mesh?.material?.map || null;
+    let priorRelease = mesh?.userData?.releaseTexture || mesh?.material?.userData?.releaseTexture || null;
+
+    let { record, texture, acquisition } = resolveCandidateRecord(mesh, panel, {
+      ...applyOptions,
+      priorMap,
+    });
+
+    if (!record.ok || !texture) {
+      records.set(panel.id, record);
+      if (mesh) {
+        mesh.userData ||= {};
+        mesh.userData.textureSource = record.summary;
+        mesh.userData.textureBridge = {
+          ok: record.ok,
+          stage: record.stage,
+          strictRequired: record.strictRequired,
+          textureApplied: record.textureApplied,
+          reason: record.reason,
+        };
+      }
+      return record;
+    }
+
+    if (texture === priorMap) {
+      records.set(panel.id, record);
+      if (mesh) {
+        mesh.userData ||= {};
+        mesh.userData.textureSource = record.summary;
+        mesh.userData.textureBridge = {
+          ok: record.ok,
+          stage: record.stage,
+          strictRequired: record.strictRequired,
+          textureApplied: record.textureApplied,
+          reason: record.reason,
+        };
+      }
+      return record;
+    }
+
+    let priorColorHex = mesh?.material?.color
+      ? (typeof mesh.material.color.getHex === 'function' ? mesh.material.color.getHex() : (typeof mesh.material.color.value === 'number' ? mesh.material.color.value : null))
+      : null;
+    let priorOpacity = mesh?.material ? mesh.material.opacity : 1;
+    let priorTransparent = mesh?.material ? mesh.material.transparent : false;
+    let priorNeedsUpdate = mesh?.material ? mesh.material.needsUpdate : false;
+
+    try {
+      if (mesh.material) {
+        mesh.material.map = texture;
+        if ('color' in mesh.material && typeof mesh.material.color?.setHex === 'function') {
+          mesh.material.color.setHex(0xffffff);
+        }
+        markMaterialUpdated(mesh.material);
+      }
+      records.set(panel.id, record);
+
+      if (mesh) {
+        mesh.userData ||= {};
+        mesh.userData.textureSource = record.summary;
+        mesh.userData.textureBridge = {
+          ok: record.ok,
+          stage: record.stage,
+          strictRequired: record.strictRequired,
+          textureApplied: record.textureApplied,
+          reason: record.reason,
+        };
+      }
+    } catch (err) {
+      if (mesh.material) {
+        mesh.material.map = priorMap;
+        if (mesh.material.color && typeof mesh.material.color.setHex === 'function' && priorColorHex !== null) {
+          mesh.material.color.setHex(priorColorHex);
+        }
+        mesh.material.opacity = priorOpacity;
+        mesh.material.transparent = priorTransparent;
+        mesh.material.needsUpdate = priorNeedsUpdate;
+      }
+      if (acquisition?.ownership === 'owned') {
+        try {
+          acquisition.releaseOnce();
+        } catch (e) {}
+      }
+      throw err;
+    }
+
+    if (acquisition) {
+      if (acquisition.ownership === 'owned') {
+        let released = false;
+        let releaseFn = () => {
+          if (!released) {
+            released = true;
+            activeReleases.delete(releaseFn);
+            acquisition.releaseOnce();
+          }
+        };
+        activeReleases.add(releaseFn);
+        mesh.userData ||= {};
+        mesh.userData.releaseTexture = releaseFn;
+        if (acquisition.cacheKey != null) {
+          mesh.userData.textureCacheKey = acquisition.cacheKey;
+        } else {
+          delete mesh.userData.textureCacheKey;
+        }
+        if (acquisition.ownerKey != null) {
+          mesh.userData.textureOwnerKey = acquisition.ownerKey;
+        } else {
+          delete mesh.userData.textureOwnerKey;
+        }
+
+        let material = mesh.material;
+        if (material) {
+          material.userData ||= {};
+          material.userData.releaseTexture = releaseFn;
+
+          let origDispose = material.dispose;
+          material.dispose = function() {
+            releaseFn();
+            if (typeof origDispose === 'function') {
+              origDispose.apply(this, arguments);
+            }
+          };
+        }
+      } else {
+        if (mesh.userData) {
+          delete mesh.userData.releaseTexture;
+          delete mesh.userData.textureCacheKey;
+          delete mesh.userData.textureOwnerKey;
+        }
+        if (mesh.material?.userData) delete mesh.material.userData.releaseTexture;
+      }
+    }
+
+    if (priorRelease) {
+      try {
+        priorRelease();
+      } catch (e) {}
+    }
+
     return record;
   }
 
+  function deepFreeze(obj) {
+    if (obj === null || typeof obj !== 'object') {
+      return obj;
+    }
+    if (Object.isFrozen(obj)) {
+      return obj;
+    }
+    let proto = Object.getPrototypeOf(obj);
+    if (proto !== null && proto !== Object.prototype && !Array.isArray(obj)) {
+      return obj;
+    }
+    let propNames = Reflect.ownKeys(obj);
+    for (let name of propNames) {
+      let value = obj[name];
+      if (value !== null && (typeof value === 'object' || typeof value === 'function')) {
+        deepFreeze(value);
+      }
+    }
+    return Object.freeze(obj);
+  }
+
+  function prepareBatch(items, batchOptions = {}) {
+    let transactionItems = [];
+    let ok = true;
+    let reason = '';
+    let token = `bridge-tx-token-${++tokenCounter}`;
+    let itemResources = [];
+
+    try {
+      for (let item of items) {
+        let { windowId, mesh, panel, element, canvas, snapshot } = item;
+
+        let priorMap = mesh?.material ? mesh.material.map : null;
+        let priorRelease = mesh?.userData?.releaseTexture || mesh?.material?.userData?.releaseTexture || null;
+        let priorColorHex = mesh?.material && mesh.material.color
+          ? (typeof mesh.material.color.getHex === 'function' ? mesh.material.color.getHex() : (typeof mesh.material.color.value === 'number' ? mesh.material.color.value : null))
+          : null;
+        let priorOpacity = mesh?.material ? mesh.material.opacity : 1;
+        let priorTransparent = mesh?.material ? mesh.material.transparent : false;
+        let priorNeedsUpdate = mesh?.material ? mesh.material.needsUpdate : false;
+        let priorVisible = mesh ? mesh.visible : false;
+
+        let priorUserDataPanel = mesh?.userData?.panel ? { ...mesh.userData.panel } : null;
+        let priorBaseColor = mesh?.userData?.baseColor || null;
+        let priorTextureSource = mesh?.userData?.textureSource ? { ...mesh.userData.textureSource } : null;
+        let priorTextureBridge = mesh?.userData?.textureBridge ? { ...mesh.userData.textureBridge } : null;
+        let priorSnapshotDigest = mesh?.userData?.snapshotDigest || null;
+
+        let priorRecord = records.get(panel.id) ? { ...records.get(panel.id) } : null;
+        // The prior cache key is the panel ID under which the prior texture was
+        // cached — it may differ from the candidate panel.id when a mesh is
+        // repurposed across panel identities.  textureCacheKey is the
+        // authoritative owner identity set alongside the release capability.
+        let priorCacheKey = mesh?.userData?.textureCacheKey ?? null;
+        let priorOwnerKey = mesh?.userData?.textureOwnerKey ?? null;
+
+        let { record: candidateRecord, texture: candidateTexture, acquisition } = resolveCandidateRecord(mesh, panel, {
+          element,
+          canvas,
+          priorMap,
+          ...batchOptions
+        });
+
+        if (!candidateRecord || candidateRecord.ok === false) {
+          ok = false;
+          reason = candidateRecord?.reason || 'prepare-item-failed';
+        }
+
+        let isSameResource = (candidateTexture != null && candidateTexture === priorMap);
+
+        itemResources.push({
+          windowId,
+          mesh,
+          panel: JSON.parse(JSON.stringify(panel)),
+          element,
+          canvas,
+          snapshot,
+          snapshotDigest: item.snapshotDigest || '',
+          candidateTexture,
+          candidateRecord,
+          acquisition,
+          isSameResource,
+          prior: {
+            map: priorMap,
+            releaseTexture: priorRelease,
+            cacheKey: priorCacheKey,
+            ownerKey: priorOwnerKey,
+            colorHex: priorColorHex,
+            opacity: priorOpacity,
+            transparent: priorTransparent,
+            needsUpdate: priorNeedsUpdate,
+            visible: priorVisible,
+            userDataPanel: priorUserDataPanel,
+            baseColor: priorBaseColor,
+            textureSource: priorTextureSource,
+            textureBridge: priorTextureBridge,
+            snapshotDigest: priorSnapshotDigest,
+            record: priorRecord,
+            materialRef: mesh?.material || null,
+          }
+        });
+
+        transactionItems.push({
+          windowId,
+          panel: deepFreeze(JSON.parse(JSON.stringify(panel))),
+          prior: deepFreeze({
+            textureId: priorMap?.uuid || null,
+            colorHex: priorColorHex,
+            opacity: priorOpacity,
+            transparent: priorTransparent,
+            needsUpdate: priorNeedsUpdate,
+            visible: priorVisible,
+            userDataPanel: priorUserDataPanel ? JSON.parse(JSON.stringify(priorUserDataPanel)) : null,
+            baseColor: priorBaseColor,
+            textureSource: priorTextureSource ? JSON.parse(JSON.stringify(priorTextureSource)) : null,
+            textureBridge: priorTextureBridge ? JSON.parse(JSON.stringify(priorTextureBridge)) : null,
+            snapshotDigest: priorSnapshotDigest,
+            record: priorRecord ? JSON.parse(JSON.stringify(priorRecord)) : null,
+          }),
+          candidate: deepFreeze({
+            textureId: candidateTexture?.uuid || null,
+            colorHex: candidateTexture ? 0xffffff : (snapshot?.material?.backgroundColor || snapshot?.material?.threeColor || null),
+            opacity: snapshot?.material?.opacity ?? 1,
+            transparent: snapshot?.material?.transparent ?? false,
+            snapshotDigest: item.snapshotDigest || '',
+            record: candidateRecord ? JSON.parse(JSON.stringify(candidateRecord)) : null,
+            samplerParams: {
+              wrapS: candidateTexture ? candidateTexture.wrapS : undefined,
+              wrapT: candidateTexture ? candidateTexture.wrapT : undefined,
+              minFilter: candidateTexture ? candidateTexture.minFilter : undefined,
+              magFilter: candidateTexture ? candidateTexture.magFilter : undefined,
+            },
+          })
+        });
+      }
+    } catch (err) {
+      ok = false;
+      reason = err.message || 'prepare-exception';
+    }
+
+    let cleanupErrors = [];
+    if (!ok) {
+      for (let res of itemResources) {
+        if (res.acquisition?.ownership === 'owned') {
+          try {
+            res.acquisition.releaseOnce();
+          } catch (err) {
+            cleanupErrors.push(err);
+          }
+        }
+      }
+
+      throw new PrepareBatchError(reason, {
+        code: reason,
+        count: items.length,
+        cleanupErrorCount: cleanupErrors.length,
+      });
+    }
+
+    transactionResources.set(token, itemResources);
+
+    let tx = {
+      version: 'xr-spatial-batch-tx-v18',
+      token,
+    };
+
+    return deepFreeze(tx);
+  }
+
+  function commitBatch(transaction) {
+    if (!transaction || !transaction.token) {
+      return { ok: false, reason: 'invalid-transaction-token' };
+    }
+    let resources = transactionResources.get(transaction.token);
+    if (!resources) {
+      return { ok: false, reason: 'transaction-not-found' };
+    }
+
+    let committed = [];
+    try {
+      for (let i = 0; i < resources.length; i++) {
+        let res = resources[i];
+        let mesh = res.mesh;
+        let texture = res.candidateTexture;
+        let record = res.candidateRecord;
+        let panel = res.panel;
+
+        if (texture && mesh?.material) {
+          mesh.material.map = texture;
+          if ('color' in mesh.material && typeof mesh.material.color?.setHex === 'function') {
+            mesh.material.color.setHex(0xffffff);
+          }
+          mesh.material.needsUpdate = true;
+        }
+
+        records.set(panel.id, record);
+
+        if (mesh) {
+          mesh.userData ||= {};
+          mesh.userData.textureSource = record?.summary;
+          mesh.userData.textureBridge = {
+            ok: record?.ok,
+            stage: record?.stage,
+            strictRequired: record?.strictRequired,
+            textureApplied: record?.textureApplied,
+            reason: record?.reason,
+          };
+          mesh.userData.snapshotDigest = res.snapshotDigest || '';
+        }
+
+        committed.push({ res });
+      }
+    } catch (err) {
+      for (let i = committed.length - 1; i >= 0; i--) {
+        let { res } = committed[i];
+        let mesh = res.mesh;
+        let prior = res.prior;
+        let panel = res.panel;
+
+        if (mesh && mesh.material) {
+          mesh.material.map = prior.map;
+          if (mesh.material.color && typeof mesh.material.color.setHex === 'function' && prior.colorHex !== null) {
+            mesh.material.color.setHex(prior.colorHex);
+          }
+          mesh.material.opacity = prior.opacity;
+          mesh.material.transparent = prior.transparent;
+          mesh.material.needsUpdate = prior.needsUpdate;
+        }
+        if (mesh) {
+          mesh.visible = prior.visible;
+          if (mesh.userData) {
+            if (prior.userDataPanel) {
+              mesh.userData.panel = prior.userDataPanel;
+            } else {
+              delete mesh.userData.panel;
+            }
+            mesh.userData.baseColor = prior.baseColor;
+            mesh.userData.textureSource = prior.textureSource;
+            mesh.userData.textureBridge = prior.textureBridge;
+            mesh.userData.snapshotDigest = prior.snapshotDigest;
+          }
+        }
+        if (prior.record) {
+          records.set(panel.id, prior.record);
+        } else {
+          records.delete(panel.id);
+        }
+      }
+      return { ok: false, reason: err.message };
+    }
+
+    return { ok: true };
+  }
+
+  function inspectBatch(transaction) {
+    if (!transaction || !transaction.token) {
+      return { ok: false, reason: 'missing-transaction-token' };
+    }
+    let resources = transactionResources.get(transaction.token);
+    if (!resources) {
+      return { ok: false, reason: 'transaction-not-found' };
+    }
+
+    let observations = new Map();
+    for (let res of resources) {
+      let { panel, mesh, candidateTexture, candidateRecord, snapshot, snapshotDigest } = res;
+      let map = mesh?.material?.map || null;
+      let colorVal = null;
+      if (mesh?.material?.color) {
+        colorVal = typeof mesh.material.color.getHex === 'function'
+          ? mesh.material.color.getHex()
+          : (typeof mesh.material.color.value === 'number' ? mesh.material.color.value : null);
+      }
+
+      if (!mesh || !mesh.geometry || !mesh.geometry.parameters) {
+        return { ok: false, reason: 'missing-live-geometry' };
+      }
+
+      let cand = {
+        textureId: candidateTexture?.uuid || null,
+        colorHex: candidateTexture ? 0xffffff : (snapshot?.material?.backgroundColor || snapshot?.material?.threeColor || null),
+        opacity: snapshot?.material?.opacity ?? 1,
+        transparent: snapshot?.material?.transparent ?? false,
+        snapshotDigest: snapshotDigest,
+        record: candidateRecord ? JSON.parse(JSON.stringify(candidateRecord)) : null,
+        samplerParams: {
+          wrapS: candidateTexture ? candidateTexture.wrapS : undefined,
+          wrapT: candidateTexture ? candidateTexture.wrapT : undefined,
+          minFilter: candidateTexture ? candidateTexture.minFilter : undefined,
+          magFilter: candidateTexture ? candidateTexture.magFilter : undefined,
+        },
+      };
+
+      observations.set(panel.id, deepFreeze({
+        ok: true,
+        materialId: mesh?.material?.uuid || null,
+        textureId: map?.uuid || null,
+        mapId: map?.uuid || null,
+        color: colorVal,
+        opacity: mesh?.material?.opacity ?? 1,
+        transparent: mesh?.material?.transparent ?? false,
+        dimensions: [mesh.geometry.parameters.width, mesh.geometry.parameters.height],
+        samplerParams: {
+          wrapS: map ? map.wrapS : undefined,
+          wrapT: map ? map.wrapT : undefined,
+          minFilter: map ? map.minFilter : undefined,
+          magFilter: map ? map.magFilter : undefined,
+        },
+        snapshotDigest: mesh?.userData?.snapshotDigest || '',
+        candidate: cand,
+        panel: JSON.parse(JSON.stringify(panel)),
+      }));
+    }
+
+    return deepFreeze({
+      ok: true,
+      observations,
+    });
+  }
+
+  function rollbackBatch(transaction) {
+    if (!transaction || !transaction.token) {
+      return { ok: false, errors: [new Error('missing-transaction-token')] };
+    }
+    let resources = transactionResources.get(transaction.token);
+    if (!resources) {
+      return { ok: false, errors: [new Error('transaction-not-found')] };
+    }
+
+    let rollbackErrors = [];
+    let disposerErrors = [];
+    let verificationErrors = [];
+
+    try {
+      // 1. Release candidate acquisitions first. A staged resolver may restore
+      // the prior cache entry as part of candidate release; rollback must make
+      // that ownership decision before testing whether the prior map is live.
+      for (let i = 0; i < resources.length; i++) {
+        let res = resources[i];
+        if (res.acquisition?.ownership === 'owned') {
+          try {
+            res.acquisition.releaseOnce();
+          } catch (err) {
+            disposerErrors.push(err);
+          }
+        }
+      }
+
+      // 2. Restore prior maps/state and original release capability/cache/liveness
+      for (let i = resources.length - 1; i >= 0; i--) {
+        let res = resources[i];
+        let mesh = res.mesh;
+        let prior = res.prior;
+        let panel = res.panel;
+
+        try {
+          let isDisposed = prior.map ? (prior.map._disposed || prior.map.disposed) : false;
+          let isCacheRemoved = false;
+          // Cache membership uses the stored prior owner/cache key, never
+          // the candidate panel.id — the prior texture may have been cached
+          // under a different panel identity.
+          let cacheCheckId = prior.cacheKey;
+          if (prior.map && cacheCheckId != null && typeof options.textureResolver?.hasTexture === 'function') {
+            isCacheRemoved = !options.textureResolver.hasTexture(cacheCheckId, prior.map);
+          }
+
+          if (mesh && mesh.material) {
+            // "it must never restore a disposed or cache-removed prior texture"
+            if (prior.map && !isDisposed && !isCacheRemoved) {
+              mesh.material.map = prior.map;
+              if (mesh.material.color && typeof mesh.material.color.setHex === 'function' && prior.colorHex !== null) {
+                mesh.material.color.setHex(prior.colorHex);
+              }
+              mesh.material.opacity = prior.opacity;
+              mesh.material.transparent = prior.transparent;
+              mesh.material.needsUpdate = prior.needsUpdate;
+
+              // Restore prior release capability
+              if (mesh.userData) {
+                if (prior.releaseTexture) {
+                  mesh.userData.releaseTexture = prior.releaseTexture;
+                } else {
+                  delete mesh.userData.releaseTexture;
+                }
+                if (prior.cacheKey != null) mesh.userData.textureCacheKey = prior.cacheKey;
+                else delete mesh.userData.textureCacheKey;
+                if (prior.ownerKey != null) mesh.userData.textureOwnerKey = prior.ownerKey;
+                else delete mesh.userData.textureOwnerKey;
+              }
+              if (mesh.material.userData) {
+                if (prior.releaseTexture) {
+                  mesh.material.userData.releaseTexture = prior.releaseTexture;
+                } else {
+                  delete mesh.material.userData.releaseTexture;
+                }
+              }
+            } else {
+              // Clear map and release capability since prior cannot be restored
+              mesh.material.map = null;
+              if (mesh.userData) {
+                delete mesh.userData.releaseTexture;
+                delete mesh.userData.textureCacheKey;
+                delete mesh.userData.textureOwnerKey;
+              }
+              if (mesh.material.userData) {
+                delete mesh.material.userData.releaseTexture;
+              }
+            }
+          }
+          if (mesh) {
+            mesh.visible = prior.visible;
+            if (mesh.userData) {
+              if (prior.userDataPanel) {
+                mesh.userData.panel = prior.userDataPanel;
+              } else {
+                delete mesh.userData.panel;
+              }
+              mesh.userData.baseColor = prior.baseColor;
+              mesh.userData.textureSource = prior.textureSource;
+              mesh.userData.textureBridge = prior.textureBridge;
+              mesh.userData.snapshotDigest = prior.snapshotDigest;
+            }
+          }
+          if (prior.record) {
+            records.set(panel.id, prior.record);
+          } else {
+            records.delete(panel.id);
+          }
+        } catch (err) {
+          rollbackErrors.push(err);
+        }
+      }
+
+      // 3. Verification
+      for (let i = 0; i < resources.length; i++) {
+        let res = resources[i];
+        let mesh = res.mesh;
+        let prior = res.prior;
+        let panel = res.panel;
+
+        if (!mesh) {
+          verificationErrors.push(new Error(`Rollback verification failed for ${panel.id}: missing mesh`));
+          continue;
+        }
+
+        let isDisposed = prior.map ? (prior.map._disposed || prior.map.disposed) : false;
+        let isCacheRemoved = false;
+        let verCacheCheckId = prior.cacheKey;
+        if (prior.map && verCacheCheckId != null && typeof options.textureResolver?.hasTexture === 'function') {
+          isCacheRemoved = !options.textureResolver.hasTexture(verCacheCheckId, prior.map);
+        }
+
+        let map = mesh.material?.map || null;
+        let expectedMap = (prior.map && !isDisposed && !isCacheRemoved) ? prior.map : null;
+
+        if (map !== expectedMap) {
+          verificationErrors.push(new Error(`Rollback verification failed for ${panel.id}: texture/map identity mismatch`));
+        }
+
+        let currentRecord = records.get(panel.id) || null;
+        if (JSON.stringify(currentRecord) !== JSON.stringify(prior.record)) {
+          verificationErrors.push(new Error(`Rollback verification failed for ${panel.id}: record mismatch`));
+        }
+
+        if (mesh.visible !== prior.visible) {
+          verificationErrors.push(new Error(`Rollback verification failed for ${panel.id}: visibility mismatch`));
+        }
+
+        let currentDigest = mesh.userData?.snapshotDigest || null;
+        let priorDigest = prior.snapshotDigest || null;
+        if (currentDigest !== priorDigest) {
+          verificationErrors.push(new Error(`Rollback verification failed for ${panel.id}: snapshotDigest mismatch`));
+        }
+
+        let currentPanel = mesh.userData?.panel || null;
+        let priorPanel = prior.userDataPanel || null;
+        if (JSON.stringify(currentPanel) !== JSON.stringify(priorPanel)) {
+          verificationErrors.push(new Error(`Rollback verification failed for ${panel.id}: userData.panel mismatch`));
+        }
+
+        if (mesh.material && mesh.material.needsUpdate !== prior.needsUpdate) {
+          verificationErrors.push(new Error(`Rollback verification failed for ${panel.id}: needsUpdate mismatch`));
+        }
+
+        let dimWidth = mesh.geometry?.parameters?.width;
+        let dimHeight = mesh.geometry?.parameters?.height;
+        if (dimWidth !== undefined && dimHeight !== undefined) {
+          if (dimWidth !== panel.sizeMeters[0] || dimHeight !== panel.sizeMeters[1]) {
+            verificationErrors.push(new Error(`Rollback verification failed for ${panel.id}: geometry dimensions mismatch`));
+          }
+        }
+      }
+    } finally {
+      transactionResources.delete(transaction.token);
+    }
+
+    let allErrors = [...rollbackErrors, ...disposerErrors, ...verificationErrors];
+    if (allErrors.length > 0) {
+      return {
+        ok: false,
+        errors: allErrors,
+      };
+    }
+
+    return { ok: true };
+  }
+
+  function finalizeBatch(transaction) {
+    if (!transaction || !transaction.token) {
+      return { ok: false, reason: 'invalid-transaction-token' };
+    }
+    let resources = transactionResources.get(transaction.token);
+    if (!resources) {
+      return { ok: false, reason: 'transaction-not-found' };
+    }
+
+    let canAssign = (target, key) => {
+      if (!target || (typeof target !== 'object' && typeof target !== 'function')) return false;
+      let descriptor = Object.getOwnPropertyDescriptor(target, key);
+      if (descriptor) {
+        return !descriptor.get && !descriptor.set && descriptor.writable === true;
+      }
+      if (!Object.isExtensible(target)) return false;
+      let prototype = Object.getPrototypeOf(target);
+      while (prototype) {
+        let inherited = Object.getOwnPropertyDescriptor(prototype, key);
+        if (inherited) {
+          return !inherited.get && !inherited.set && inherited.writable === true;
+        }
+        prototype = Object.getPrototypeOf(prototype);
+      }
+      return true;
+    };
+    let canDelete = (target, key) => {
+      if (!target || (typeof target !== 'object' && typeof target !== 'function')) return false;
+      let descriptor = Object.getOwnPropertyDescriptor(target, key);
+      return !descriptor || descriptor.configurable === true;
+    };
+
+    let plans = [];
+    try {
+      for (let res of resources) {
+        let mesh = res.mesh;
+        let material = mesh?.material || res.prior.materialRef || null;
+        let acquisition = res.acquisition;
+        let priorRelease = res.prior.releaseTexture;
+
+        if (res.isSameResource) {
+          plans.push({
+            apply() {
+              if (acquisition?.ownership === 'owned') {
+                try { acquisition.releaseOnce(); } catch (err) {}
+              }
+            }
+          });
+          continue;
+        }
+
+        if (!mesh || !material) {
+          throw new Error(`ownership-transfer-target-missing:${res.panel.id}`);
+        }
+        let meshUserData = mesh.userData || {};
+        let materialUserData = material.userData || {};
+        if (!mesh.userData && !canAssign(mesh, 'userData')) {
+          throw new Error(`ownership-transfer-target-readonly:${res.panel.id}:userData`);
+        }
+        if (!material.userData && !canAssign(material, 'userData')) {
+          throw new Error(`ownership-transfer-target-readonly:${res.panel.id}:material.userData`);
+        }
+
+        let owned = acquisition?.ownership === 'owned';
+        let operations = owned
+          ? [
+              [meshUserData, 'releaseTexture', 'assign'],
+              [meshUserData, 'textureCacheKey', acquisition.cacheKey != null ? 'assign' : 'delete'],
+              [meshUserData, 'textureOwnerKey', acquisition.ownerKey != null ? 'assign' : 'delete'],
+              [materialUserData, 'releaseTexture', 'assign'],
+            ]
+          : [
+              [meshUserData, 'releaseTexture', 'delete'],
+              [meshUserData, 'textureCacheKey', 'delete'],
+              [meshUserData, 'textureOwnerKey', 'delete'],
+              [materialUserData, 'releaseTexture', 'delete'],
+            ];
+        for (let [target, key, operation] of operations) {
+          let safe = operation === 'assign' ? canAssign(target, key) : canDelete(target, key);
+          if (!safe) {
+            throw new Error(`ownership-transfer-target-readonly:${res.panel.id}:${key}:${operation}`);
+          }
+        }
+
+        let releaseFn = null;
+        let wrappedDispose = null;
+        if (owned) {
+          let released = false;
+          releaseFn = () => {
+            if (released) return;
+            released = true;
+            activeReleases.delete(releaseFn);
+            try { acquisition.releaseOnce(); } catch (err) {}
+          };
+          if (!canAssign(material, 'dispose')) {
+            throw new Error(`ownership-transfer-target-readonly:${res.panel.id}:dispose`);
+          }
+          let originalDispose = material.dispose;
+          wrappedDispose = function() {
+            releaseFn();
+            if (typeof originalDispose === 'function') {
+              return originalDispose.apply(this, arguments);
+            }
+          };
+        }
+
+        let applied = false;
+        plans.push({
+          apply() {
+            if (applied) return;
+            applied = true;
+            if (!mesh.userData) mesh.userData = meshUserData;
+            if (!material.userData) material.userData = materialUserData;
+            if (owned) {
+              activeReleases.add(releaseFn);
+              meshUserData.releaseTexture = releaseFn;
+              materialUserData.releaseTexture = releaseFn;
+              if (acquisition.cacheKey != null) meshUserData.textureCacheKey = acquisition.cacheKey;
+              else delete meshUserData.textureCacheKey;
+              if (acquisition.ownerKey != null) meshUserData.textureOwnerKey = acquisition.ownerKey;
+              else delete meshUserData.textureOwnerKey;
+              material.dispose = wrappedDispose;
+            } else {
+              delete meshUserData.releaseTexture;
+              delete meshUserData.textureCacheKey;
+              delete meshUserData.textureOwnerKey;
+              delete materialUserData.releaseTexture;
+            }
+            if (priorRelease) {
+              try { priorRelease(); } catch (err) {}
+            }
+          }
+        });
+      }
+    } catch (err) {
+      return { ok: false, reason: err.message || 'ownership-transfer-setup-failed' };
+    }
+
+    for (let plan of plans) {
+      plan.apply();
+    }
+    transactionResources.delete(transaction.token);
+    return { ok: true };
+  }
+
   return {
+    isDefault: true,
+    prepareBatch,
+    commitBatch,
+    inspectBatch,
+    rollbackBatch,
+    finalizeBatch,
     applyPanelTexture,
     getSupport,
     dispose() {
       records.clear();
+      transactionResources.clear();
+      for (let releaseFn of activeReleases) {
+        try {
+          releaseFn();
+        } catch (e) {}
+      }
+      activeReleases.clear();
       options.textureResolverDispose?.();
     },
     getState() {
@@ -1675,6 +2594,21 @@ export function createXRThreePanelSceneAdapter(options = {}) {
         scene.remove?.(mesh);
       }
     }
+    // Release existing panel textures before clearing
+    for (let mesh of panels.values()) {
+      if (mesh.userData?.releaseTexture) {
+        try {
+          mesh.userData.releaseTexture();
+        } catch (e) {}
+        delete mesh.userData.releaseTexture;
+      }
+      if (mesh.material?.userData?.releaseTexture) {
+        try {
+          mesh.material.userData.releaseTexture();
+        } catch (e) {}
+        delete mesh.material.userData.releaseTexture;
+      }
+    }
     panels.clear();
     textureRecords.clear();
     activeXRScene = xrScene || null;
@@ -1771,6 +2705,27 @@ export function createXRThreePanelSceneAdapter(options = {}) {
         return { ok: true, record };
       }
       return { ok: false, reason: 'bridge-or-panel-missing' };
+    },
+    setPanelSize(panelId, sizeMeters) {
+      let mesh = panels.get(panelId);
+      if (!mesh) {
+        return { ok: false, reason: 'panel-not-found', panelId, sizeMeters: null };
+      }
+      if (!Array.isArray(sizeMeters) || sizeMeters.length !== 2 || !sizeMeters.every((value) => Number.isFinite(Number(value)) && Number(value) > 0)) {
+        return { ok: false, reason: 'invalid-size', panelId, sizeMeters: null };
+      }
+      let next = [Number(sizeMeters[0]), Number(sizeMeters[1])];
+      let previousSize = readPanelSize(mesh, true);
+      applyPanelSize(mesh, next, THREE || mesh.userData?.THREE);
+      return {
+        ok: true,
+        version: 'xr-three-panel-size-v1',
+        panelId,
+        sizeMeters: next,
+        previousSizeMeters: previousSize,
+        geometrySwapped: true,
+        remeshed: false,
+      };
     },
     getState() {
       let meshList = [...panels.values()];
@@ -2521,6 +3476,7 @@ export function createXRThreeWebXRAdapter(options = {}) {
     getPanelMesh: sceneAdapter.getPanelMesh,
     listPanelMeshes: sceneAdapter.listPanelMeshes,
     updatePanelTextureQuality: sceneAdapter.updatePanelTextureQuality,
+    setPanelSize: sceneAdapter.setPanelSize,
     createControllerRayVisual(controller, visualOptions = {}) {
       let visual = buildControllerRayVisual(THREE, visualOptions);
       if (visual.ok && controller?.add) {

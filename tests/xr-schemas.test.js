@@ -27,6 +27,7 @@ async function createValidators() {
     'xr-spatial-audit-v1.json',
     'xr-content-hit-map-v1.json',
     'xr-spatial-placement-receipt-v1.json',
+    'xr-html-canvas-upload-receipt-v1.json',
   ];
   let schemas = await Promise.all(names.map(async (name) => (
     JSON.parse(await readFile(resolve(directory, '..', 'schemas', name), 'utf8'))
@@ -41,6 +42,7 @@ async function createValidators() {
     validateAudit: ajv.getSchema(schemas[2].$id),
     validateHitMap: ajv.getSchema(schemas[3].$id),
     validatePlacementReceipt: ajv.getSchema(schemas[4].$id),
+    validateUploadReceipt: ajv.getSchema(schemas[5].$id),
   };
 }
 
@@ -69,7 +71,7 @@ test('spatial evidence schemas accept canonical target, capture, audit, and hit 
     true,
     validators.ajv.errorsText(validators.validatePlacementReceipt.errors),
   );
-  assert.deepEqual(validators.schemas.map((schema) => schema.$id), [
+  assert.deepEqual(validators.schemas.slice(0, 5).map((schema) => schema.$id), [
     'https://rnd-pro.github.io/symbiote-ui/schemas/xr-spatial-target-v1.json',
     'https://rnd-pro.github.io/symbiote-ui/schemas/xr-spatial-observation-v1.json',
     'https://rnd-pro.github.io/symbiote-ui/schemas/xr-spatial-audit-v1.json',
@@ -188,4 +190,25 @@ test('portable panel schemas admit close/restore actions and optional hidden fla
   let badAction = structuredClone(closeReceipt);
   badAction.action = 'shred';
   assert.equal(validateReceipt(badAction), false);
+});
+
+test('html canvas upload receipt validates against its schema', async () => {
+  let validators = await createValidators();
+  let receipt = {
+    version: 'xr-html-canvas-upload-receipt-v1',
+    panelId: 'panel-1',
+    mode: 'webgl',
+    rendered: true,
+    uploaded: true,
+    canvasMatch: true,
+    width: 512,
+    height: 256,
+    signature: 'current',
+    reason: null,
+    errorName: null,
+  };
+  assert.equal(validators.validateUploadReceipt(receipt), true, validators.ajv.errorsText(validators.validateUploadReceipt.errors));
+
+  let invalidReceipt = { ...receipt, version: 'wrong-version' };
+  assert.equal(validators.validateUploadReceipt(invalidReceipt), false);
 });

@@ -348,6 +348,7 @@ export function createXRTextureGateSummary(options = {}) {
 
 export function createXRHtmlCanvasRenderer(options = {}) {
   let adapter = createHtmlInCanvasAdapter({ globalThis: options.globalThis || globalThis });
+  let MutationObserverCtor = options.globalThis?.MutationObserver || globalThis.MutationObserver;
   let panels = new Map();
   let lastMode = selectMode(adapter.support, options.mode);
   let lastRender = null;
@@ -389,19 +390,20 @@ export function createXRHtmlCanvasRenderer(options = {}) {
         reason: 'panel-outside-canvas-direct-child',
       };
     }
-    if (panelElement && typeof MutationObserver === 'function') {
+    if (panelElement && typeof MutationObserverCtor === 'function') {
       if (panelElement._snObserver) {
         panelElement._snObserver.disconnect();
         if (panelElement._snDebounceTimeout) clearTimeout(panelElement._snDebounceTimeout);
       }
       let debounceTimeout = null;
-      let observer = new MutationObserver(() => {
+      let observer = new MutationObserverCtor(() => {
         if (debounceTimeout) clearTimeout(debounceTimeout);
         debounceTimeout = setTimeout(() => {
           panelElement._snDebounceTimeout = null;
-          let nextKey = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-          panelElement.dataset.textureKey = nextKey;
-          panelElement.setAttribute('data-texture-key', nextKey);
+          (prepareOptions.onInvalidate || options.onInvalidate)?.({
+            panelId: panel.id,
+            reason: 'dom-mutation',
+          });
           if (prepareOptions.canvas) {
             adapter.requestPaint(prepareOptions.canvas);
           }

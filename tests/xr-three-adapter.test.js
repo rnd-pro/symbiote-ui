@@ -755,10 +755,10 @@ test('Three adapter real Three.js conformed tests with rotated root', () => {
   assert.equal(nwHandle.scale.y, 1);
   assert.equal(nwHandle.scale.z, 1);
 
-  // Horizon-style grips straddle the corners, so the nwHandle centers on the
-  // north-west corner itself.
-  const expectedNWLocalX = -1.2 / 2;
-  const expectedNWLocalY = 0.6 / 2;
+  // Horizon-style grips are placed completely outside the corners, so the nwHandle centers on the
+  // north-west offset corner.
+  const expectedNWLocalX = -1.2 / 2 - 0.044 / 2;
+  const expectedNWLocalY = 0.6 / 2 + 0.044 / 2;
 
   assert.ok(Math.abs(nwHandle.position.x - expectedNWLocalX) < 1e-5);
   assert.ok(Math.abs(nwHandle.position.y - expectedNWLocalY) < 1e-5);
@@ -769,7 +769,7 @@ test('panel frame meter chrome keeps constant physical size across panel sizes',
   const legacy = createXRPanelFrame({ id: 'p' });
   assert.equal(legacy.version, 'xr-panel-frame-v1');
   assert.ok(Math.abs(legacy.zones.move.height * 0.45 - 0.048) < 1e-9);
-  assert.ok(Math.abs((legacy.zones.move.y - 1) * 0.45 - 0.018) < 1e-9);
+  assert.ok(Math.abs((legacy.zones.move.y - 1) * 0.45 - 0.045) < 1e-9);
   assert.ok(Math.abs(legacy.zones.resize.northWest.width * 0.8 - 0.044) < 1e-9);
   assert.ok(Math.abs(legacy.zones.actions.close.width * 0.8 - 0.038) < 1e-9);
   assert.equal(Object.keys(legacy.zones.edges).length, 4);
@@ -779,6 +779,8 @@ test('panel frame meter chrome keeps constant physical size across panel sizes',
     footerHeightMeters: 0.035,
     actionSizeMeters: 0.030,
     footerGapMeters: 0.008,
+    edgeGapMeters: 0.002,
+    edgeHitDepthMeters: 0.005,
   };
   let previous = null;
   for (const size of [[0.8, 0.45], [1.6, 0.9]]) {
@@ -787,7 +789,7 @@ test('panel frame meter chrome keeps constant physical size across panel sizes',
     assert.deepEqual(frame.zones, computeXRPanelChromeLayout(size, meterOptions));
     // UV zone * panel size = constant physical meters at both sizes.
     assert.ok(Math.abs(frame.zones.move.height * size[1] - 0.035) < 1e-9);
-    assert.ok(Math.abs((frame.zones.move.y - 1) * size[1] - 0.008) < 1e-9);
+    assert.ok(Math.abs((frame.zones.move.y - 1) * size[1] - 0.027) < 1e-9);
     assert.ok(Math.abs(frame.zones.actions.close.width * size[0] - 0.030) < 1e-9);
     assert.ok(Math.abs(frame.zones.resize.northWest.width * size[0] - 0.024) < 1e-9);
     assert.ok(Math.abs(frame.zones.resize.northWest.height * size[1] - 0.024) < 1e-9);
@@ -833,7 +835,7 @@ test('Three adapter rebuilds meter-chrome hit zones and chrome surface after res
   // Chrome hit surface extends past the footer band: gap + footer + margin,
   // which here exceeds the legacy fractional floor (max(0.1, 0.6*0.18)).
   const extendBefore = mesh.userData.chromeSurface.userData.extend;
-  assert.ok(Math.abs(extendBefore.y - (0.008 + 0.12 + 0.02)) < 1e-9);
+  assert.ok(Math.abs(extendBefore.y - (0.045 + 0.12 + 0.02)) < 1e-9);
   assert.ok(Math.abs(extendBefore.x - Math.max(0.06, 0.8 * 0.08)) < 1e-9);
 
   // Simulate a center-anchored east drag-resize: 0.8 -> 1.2 m wide.
@@ -869,9 +871,9 @@ test('Three adapter rebuilds meter-chrome hit zones and chrome surface after res
 
   // Hit-zone correctness: a point inside the OLD grip UV but outside the new
   // one must no longer hit resize; the move bar stays hittable at its center.
-  const probe = { x: 0.014, y: 0 };
+  const probe = { x: -0.025, y: -0.01 };
   assert.equal(hitTestXRPanelFrame(before, probe)?.zone, 'resize');
-  assert.equal(hitTestXRPanelFrame(after, probe)?.zone, 'content');
+  assert.equal(hitTestXRPanelFrame(after, probe), null);
   const moveCenter = {
     x: after.zones.move.x + after.zones.move.width / 2,
     y: after.zones.move.y + after.zones.move.height / 2,
@@ -880,7 +882,7 @@ test('Three adapter rebuilds meter-chrome hit zones and chrome surface after res
 
   // Chrome surface extents were recomputed from the rebuilt frame.
   const extendAfter = mesh.userData.chromeSurface.userData.extend;
-  assert.ok(Math.abs(extendAfter.y - (0.008 + 0.12 + 0.02)) < 1e-9);
+  assert.ok(Math.abs(extendAfter.y - (0.045 + 0.12 + 0.02)) < 1e-9);
   assert.ok(Math.abs(extendAfter.x - Math.max(0.06, 1.2 * 0.08)) < 1e-9);
 });
 

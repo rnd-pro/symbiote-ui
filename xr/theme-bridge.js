@@ -24,9 +24,45 @@ const XR_THEME_FALLBACKS = Object.freeze({
   '--sn-layout-resizer-size': '6px',
 });
 
+function isValidCascadeRoot(r) {
+  if (!r || typeof r !== 'object') return false;
+  let nodeType = r.nodeType;
+  let isDoc = (nodeType === 9);
+  let isElem = (nodeType === 1);
+  if (!isDoc && !isElem) return false;
+
+  if (isElem) {
+    let doc = r.ownerDocument;
+    if (!doc || doc.nodeType !== 9) return false;
+    let isAttached = false;
+    if (typeof doc.contains === 'function') {
+      try {
+        isAttached = doc.contains(r);
+      } catch {
+        return false;
+      }
+    } else {
+      let curr = r;
+      while (curr) {
+        if (curr === doc.documentElement || curr === doc.body || curr === doc) {
+          isAttached = true;
+          break;
+        }
+        curr = curr.parentNode;
+      }
+    }
+    if (!isAttached) {
+      return false;
+    }
+  }
+  return true;
+}
+
 function resolveThemeRoot(rootOrDocument) {
   if (!rootOrDocument) return null;
-  if (rootOrDocument.documentElement) return rootOrDocument.documentElement;
+  if (!isValidCascadeRoot(rootOrDocument)) {
+    throw new Error('unsupported-cascade-root');
+  }
   return rootOrDocument;
 }
 
@@ -37,7 +73,7 @@ function readCssToken(root, cssVar, computedStyle) {
 }
 
 function resolveCssProperty(root, cssVar, property) {
-  let documentRef = root?.ownerDocument || root?.documentElement?.ownerDocument || null;
+  let documentRef = root?.ownerDocument || (root?.createElement ? root : null) || root?.documentElement?.ownerDocument || null;
   let parent = documentRef?.body || root;
   if (!documentRef?.createElement || !parent?.append || typeof globalThis.getComputedStyle !== 'function') return '';
   let probe = documentRef.createElement('span');
@@ -54,7 +90,7 @@ function resolveCssProperty(root, cssVar, property) {
 export function createXRThemeSnapshot(rootOrDocument = globalThis.document, options = {}) {
   let root = resolveThemeRoot(rootOrDocument);
   let computedStyle = root && typeof globalThis.getComputedStyle === 'function'
-    ? globalThis.getComputedStyle(root)
+    ? (root.documentElement ? globalThis.getComputedStyle(root.documentElement) : globalThis.getComputedStyle(root))
     : null;
   let tokens = {};
 

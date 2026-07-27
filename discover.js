@@ -109,6 +109,21 @@ const EXPORT_ENTRYPOINTS = [
     description: 'WebXR capability, spatial layout projection, and XR pointer helpers without renderer lock-in.',
   },
   {
+    specifier: 'symbiote-ui/xr/spatial-window-assembly',
+    kind: 'ssr-entry-safe',
+    description: 'Product-neutral spatial-window assembly: one layout instance per XR window with sync reconciliation, session lifecycle, resize phases, ray routing, wheel and select-drag scroll, text selection capture, content focus with IME handoff, per-window viewport updates, dirty-gated uploads, and versioned receipts.',
+  },
+  {
+    specifier: 'symbiote-ui/xr/spatial-window-contract',
+    kind: 'node-safe',
+    description: 'Versioned spatial-window layout descriptors, diff, resize math, chrome surface extents, and scroll, selection, focus, viewport, sync, lifecycle, resize, and relay receipt factories.',
+  },
+  {
+    specifier: 'symbiote-ui/xr/spatial-window-placement',
+    kind: 'node-safe',
+    description: 'Bounded deterministic provider default placement for unplaced spatial windows: a comfortable non-overlapping user-facing two-tier arc lattice with vertical levels inside the 1.0-2.2 m envelope, geometry that adapts to actual window size, a 24-window capacity with structured exhaustion data, and free-slot resolution around explicitly posed and dragged windows.',
+  },
+  {
     specifier: 'symbiote-ui/ui',
     kind: 'browser',
     description: 'Browser Web Components, layout modules, themes, router helpers, chat, navigation, and display modules.',

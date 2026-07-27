@@ -960,11 +960,10 @@ test('independent Three adapter instances keep resize geometry provider-local', 
   let southWest = frameObjects.find((object) => object.userData.handle === 'southWest');
   assert.ok(northEast);
   assert.ok(southWest);
-  // Horizon-style grips straddle the corners: zone centers sit exactly on
-  // the panel edges after a resize.
+  // Horizon-style grips are placed completely outside the corners, so their centers are offset by handleSizeMeters / 2.
   let panelWidth = mesh.geometry.parameters.width;
-  assert.ok(Math.abs(northEast.position.x - panelWidth / 2) < 1e-9);
-  assert.ok(Math.abs(southWest.position.x + panelWidth / 2) < 1e-9);
+  assert.ok(Math.abs(northEast.position.x - (panelWidth / 2 + 0.022)) < 1e-9);
+  assert.ok(Math.abs(southWest.position.x - (-panelWidth / 2 - 0.022)) < 1e-9);
   assert.equal(frameObjects.every((object) => object.scale.equals(new THREE.Vector3(1, 1, 1))), true);
   assert.equal(meshB.geometry, initialGeometryB);
   assert.equal(meshB.geometry.providerTag, 'provider-b');

@@ -1,6 +1,6 @@
 {
   "name": "symbiote-ui",
-  "version": "0.3.0-alpha.68",
+  "version": "0.3.0-alpha.70",
   "type": "module",
   "description": "Agent-ready Web Components, layouts, themes, manifests, and UI contracts for Symbiote systems.",
   "main": "index.js",
@@ -70,6 +70,9 @@
     "./xr/dom-spatial-capture": "./xr/dom-spatial-capture.js",
     "./xr/responsive-panel-capture": "./xr/responsive-panel-capture.js",
     "./xr/spatial-contract": "./xr/spatial-contract.js",
+    "./xr/spatial-window-assembly": "./xr/spatial-window-assembly.js",
+    "./xr/spatial-window-contract": "./xr/spatial-window-contract.js",
+    "./xr/spatial-window-placement": "./xr/spatial-window-placement.js",
     "./xr/spatial-math": "./xr/spatial-math.js",
     "./xr/spatial-projection": "./xr/spatial-projection.js",
     "./xr/spatial-evidence": "./xr/spatial-evidence.js",

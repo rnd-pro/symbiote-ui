@@ -1664,11 +1664,15 @@ export class ChatComposer extends Symbiote {
     if (label) label.textContent = text || '';
   }
 
-  _syncVoiceLanguage({ visible = false, enabled = true, mode = 'auto', options } = {}) {
+  _syncVoiceLanguage({ visible = false, enabled = true, mode = 'auto', options, title = '' } = {}) {
     let btn = this.ref.voiceLanguageBtn;
     if (!btn) return;
     btn.hidden = !visible;
     btn.disabled = Boolean(this.$.disabled) || !enabled;
+    if (title) {
+      btn.title = title;
+      btn.setAttribute('aria-label', title);
+    }
     let normalized = Array.isArray(options) && options.length
       ? options
       : [

@@ -35,13 +35,18 @@ export function computeXRPanelChromeLayout(sizeMeters = [0.8, 0.45], options = {
   let barWidthMeters = clamp(numberOr(options.controlBarWidthMeters, 0.31), 0.22, 0.52);
   let barWidth = Math.min(0.9, barWidthMeters / width);
   let footerHeight = barHeightMeters / height;
-  let footerGap = clamp(numberOr(options.footerGapMeters, 0.018), 0.006, 0.05) / height;
+
+  let edgeDepthMeters = clamp(numberOr(options.edgeHitDepthMeters, 0.036), 0.024, 0.06);
+  let edgeGapMeters = clamp(numberOr(options.edgeGapMeters, 0.009), 0.003, 0.024);
+  let footerGapInput = clamp(numberOr(options.footerGapMeters, 0.018), 0.006, 0.05);
+
+  let minFooterGapMeters = edgeGapMeters + edgeDepthMeters;
+  let footerGapMeters = Math.max(footerGapInput, minFooterGapMeters);
+  let footerGap = footerGapMeters / height;
   let footerTop = 1 + footerGap;
   let barLeft = (1 - barWidth) / 2;
   let actionSize = clamp(numberOr(options.actionSizeMeters, 0.038), 0.02, 0.08) / width;
   let edgeLengthMeters = clamp(numberOr(options.edgeLengthMeters, 0.07), 0.04, 0.12);
-  let edgeDepthMeters = clamp(numberOr(options.edgeHitDepthMeters, 0.036), 0.024, 0.06);
-  let edgeGapMeters = clamp(numberOr(options.edgeGapMeters, 0.009), 0.003, 0.024);
   let edgeLengthU = edgeLengthMeters / width;
   let edgeLengthV = edgeLengthMeters / height;
   let edgeDepthU = edgeDepthMeters / width;
@@ -65,10 +70,10 @@ export function computeXRPanelChromeLayout(sizeMeters = [0.8, 0.45], options = {
     move: { x: barLeft, y: footerTop, width: moveWidth, height: footerHeight },
     content: { x: 0, y: 0, width: 1, height: 1 },
     resize: {
-      northWest: { x: -handleSizeU / 2, y: -handleSizeV / 2, width: handleSizeU, height: handleSizeV },
-      northEast: { x: 1 - handleSizeU / 2, y: -handleSizeV / 2, width: handleSizeU, height: handleSizeV },
-      southEast: { x: 1 - handleSizeU / 2, y: 1 - handleSizeV / 2, width: handleSizeU, height: handleSizeV },
-      southWest: { x: -handleSizeU / 2, y: 1 - handleSizeV / 2, width: handleSizeU, height: handleSizeV },
+      northWest: { x: -handleSizeU, y: -handleSizeV, width: handleSizeU, height: handleSizeV },
+      northEast: { x: 1, y: -handleSizeV, width: handleSizeU, height: handleSizeV },
+      southEast: { x: 1, y: 1, width: handleSizeU, height: handleSizeV },
+      southWest: { x: -handleSizeU, y: 1, width: handleSizeU, height: handleSizeV },
     },
     edges: {
       north: { x: 0.5 - edgeLengthU / 2, y: -edgeGapV - edgeDepthV, width: edgeLengthU, height: edgeDepthV },

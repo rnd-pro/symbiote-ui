@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rnd-pro.github.io/symbiote-ui/schemas/xr-spatial-window-sync-receipt-v1.json",
+  "title": "XR Spatial Window Sync Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "ok",
+    "sequence",
+    "added",
+    "updated",
+    "removed",
+    "unchanged",
+    "windows",
+    "errors",
+    "entered",
+    "sceneSynced"
+  ],
+  "properties": {
+    "version": { "const": "xr-spatial-window-sync-receipt-v1" },
+    "ok": { "type": "boolean" },
+    "sequence": { "type": "integer", "minimum": 0 },
+    "added": { "type": "array", "items": { "type": "string" } },
+    "updated": { "type": "array", "items": { "type": "string" } },
+    "removed": { "type": "array", "items": { "type": "string" } },
+    "unchanged": { "type": "array", "items": { "type": "string" } },
+    "windows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["layoutId", "windowId", "action", "changes", "contentRevision", "themeRevision"],
+        "properties": {
+          "layoutId": { "type": "string", "minLength": 1 },
+          "windowId": { "type": "string", "minLength": 1 },
+          "action": { "enum": ["added", "updated", "removed", "unchanged"] },
+          "changes": { "type": "array", "items": { "type": "string" } },
+          "contentRevision": { "type": "integer", "minimum": 0 },
+          "themeRevision": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["reason"],
+        "properties": {
+          "layoutId": { "type": ["string", "null"] },
+          "reason": { "type": "string", "minLength": 1 },
+          "capacity": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "entered": { "type": "boolean" },
+    "sceneSynced": { "type": "boolean" }
+  }
+}

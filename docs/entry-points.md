@@ -24,6 +24,9 @@
 - `symbiote-ui/xr/spatial-evidence` - target validation, sample evaluation, and audit-envelope verification.
 - `symbiote-ui/xr/spatial-stability` - consecutive-frame stability tracking and audit construction.
 - `symbiote-ui/xr/pointer` - strict content hit maps, trusted panel select receipts, and pre-root placement receipts.
+- `symbiote-ui/xr/spatial-window-assembly` - SSR-safe spatial-window assembly: one layout instance per XR window with idempotent `syncLayouts`, session adopt/release, resize preview/commit/cancel, controller/hand ray routing to chrome or the live DOM relay, wheel/select-drag scroll, text selection capture, content focus with IME handoff, per-window viewport updates without remount, dirty-gated uploads, cascade theme projection, and data-only fallback and diagnostics; DOM and `THREE` are factory-injected.
+- `symbiote-ui/xr/spatial-window-contract` - Node-safe versioned spatial-window layout descriptors, reconciliation diff, resize clamp and viewport math, chrome surface extents, and frozen scroll, selection, focus, viewport, sync, lifecycle, resize, and relay receipt factories.
+- `symbiote-ui/xr/spatial-window-placement` - Node-safe bounded deterministic provider default placement for unplaced spatial windows: a comfortable non-overlapping user-facing two-tier arc lattice with vertical levels, size-adaptive geometry, a 24-window capacity with structured exhaustion data, and free-slot resolution around explicitly posed and dragged windows.
 - `symbiote-ui/locale` - Node-safe locale catalogs and translation helpers.
 - `symbiote-ui/discover` - provider discovery JSON API used by the CLI.
 - `symbiote-ui/chat/voice-input-defaults.js` - Node-safe wake/send/action voice command defaults and matching helpers.

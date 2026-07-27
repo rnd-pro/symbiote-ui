@@ -419,3 +419,12 @@ document.title = translate('app.title');
 Node-safe hosts can call `configureAutoLocalization()` from `symbiote-ui/locale`
 with explicit `preferences` or a supplied `navigator` object. The helper sets
 `document.documentElement.lang` when a document is available.
+
+## Voice Runtime Integration & Maximo Migration Seam
+
+`VoiceRuntime` (`symbiote-ui/chat/voice-runtime.js`) provides browser-level audio capture and speech recognition for host application shells:
+
+- **Held-Stream Ownership & Dead-Stream Fail-Closed**: `VoiceRuntime` manages underlying media track lifecycles. Borrowed held streams (default `owned: false`) are never stopped by runtime cleanup or teardown, remaining live and reusable across starts and cancellations. Owned streams (explicit `owned: true` or internal `getUserMedia` streams) are stopped upon teardown or replacement. Dead audio streams fail closed immediately without emitting stale callbacks or audio events across generation boundaries.
+- **Generation & Stale Callback Protection**: Each start/restart assigns a monotonically increasing `generation` counter. Callbacks bound to older generations are silently suppressed.
+- **Lifecycle & Diagnostics Payload & Cardinality**: Event dispatches emit exactly one generic `lifecycle` event and one corresponding named event (when phase is not `lifecycle`) per state change. Lifecycle payloads contain only fields actually emitted by `_emitLifecycle` (`generation`, `recorderGeneration`, `phase`, `state`, `mode`, `active`, and phase-specific extra fields like `error`, `text`, `isFinal`, `current`, `previous`; `timestamp` and `activeBackend` are omitted from event payloads). Diagnostics are retrieved via `getDiagnostics()`, returning a frozen public snapshot (`state`, `mode`, `activeBackend`, nested frozen `recognition:{generation,active}` and `recorder:{generation,active}`, `heldStream`, `captureOwned`, `timerActive`, `lastPhase`, `lastError`).
+- **Maximo Migration Seam**: Host application shells (such as `Maximo`) adopt voice capabilities via `VoiceRuntime` public intent events (`chat-composer-recorder-intent`, `chat-composer-permission-intent`, `chat-composer-transcription-intent`) rather than directly manipulating native `SpeechRecognition` or `MediaRecorder` instances.

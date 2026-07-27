@@ -120,6 +120,12 @@ function createComponentElement(node, context, panel = node) {
   return element;
 }
 
+function resolveMountElement(panel, node, context) {
+  let adopted = panel?.element;
+  if (adopted && typeof adopted.dispatchEvent === 'function') return adopted;
+  return createComponentElement(node, context, panel);
+}
+
 function createContext(options = {}) {
   let documentRef = options.document || globalThis.document;
   if (!documentRef?.createElement) {
@@ -162,6 +168,150 @@ function createPointerDomEvent(context, pointerEvent, target) {
   });
 }
 
+function createWheelDomEvent(context, scrollEvent, detail) {
+  let EventCtor = context.globalThis?.WheelEvent;
+  if (typeof EventCtor !== 'function') return null;
+  return new EventCtor('wheel', {
+    bubbles: true,
+    composed: true,
+    cancelable: true,
+    clientX: detail.contentPoint?.x ?? 0,
+    clientY: detail.contentPoint?.y ?? 0,
+    deltaX: detail.delta?.x ?? 0,
+    deltaY: detail.delta?.y ?? 0,
+    deltaMode: 0,
+  });
+}
+
+const XR_EDITABLE_TAGS = new Set(['input', 'textarea', 'select']);
+const XR_SCROLL_PHASES = ['begin', 'update', 'end', 'cancel'];
+const XR_SCROLL_KINDS = ['wheel', 'drag'];
+
+function isEditableElement(element) {
+  let tagName = String(element?.tagName || '').toLowerCase();
+  return XR_EDITABLE_TAGS.has(tagName)
+    || element?.isContentEditable === true
+    || element?.getAttribute?.('contenteditable') === 'true'
+    || element?.getAttribute?.('contenteditable') === '';
+}
+
+function safeQuerySelector(element, selector) {
+  if (!element || typeof element.querySelector !== 'function' || !selector) return null;
+  try {
+    return element.querySelector(selector) || null;
+  } catch {
+    return null;
+  }
+}
+
+function resolveContentTarget(record, request = {}) {
+  let element = record.element;
+  if (request.element && typeof element.contains === 'function' && element.contains(request.element)) {
+    return {
+      target: request.element,
+      targetId: request.element.getAttribute?.('data-xr-target-id') || request.element.id || null,
+    };
+  }
+  if (typeof request.target === 'string' && request.target.trim()) {
+    let target = safeQuerySelector(element, request.target.trim());
+    return {
+      target,
+      targetId: target?.getAttribute?.('data-xr-target-id') || target?.id || null,
+    };
+  }
+  if (request.targetId) {
+    let targetId = String(request.targetId).replace(/"/g, '\\"');
+    let target = safeQuerySelector(element, `[data-xr-target-id="${targetId}"]`)
+      || safeQuerySelector(element, `[id="${targetId}"]`);
+    return { target, targetId: String(request.targetId) };
+  }
+  return { target: null, targetId: null };
+}
+
+function detectFocused(context, target) {
+  let documentRef = context.document;
+  if (documentRef && 'activeElement' in documentRef) {
+    return documentRef.activeElement === target;
+  }
+  return null;
+}
+
+function readScrollOffsets(target) {
+  return {
+    left: Number.isFinite(Number(target?.scrollLeft)) ? Number(target.scrollLeft) : 0,
+    top: Number.isFinite(Number(target?.scrollTop)) ? Number(target.scrollTop) : 0,
+  };
+}
+
+function applyScrollDelta(target, delta) {
+  let before = readScrollOffsets(target);
+  let deltaX = Number(delta?.x) || 0;
+  let deltaY = Number(delta?.y) || 0;
+  if (target && (deltaX !== 0 || deltaY !== 0)) {
+    if (typeof target.scrollBy === 'function') {
+      target.scrollBy({ left: deltaX, top: deltaY });
+    } else {
+      target.scrollLeft = Math.max(0, before.left + deltaX);
+      target.scrollTop = Math.max(0, before.top + deltaY);
+    }
+  }
+  let after = readScrollOffsets(target);
+  return {
+    before,
+    after,
+    applied: { x: after.left - before.left, y: after.top - before.top },
+  };
+}
+
+function resolveScrollTarget(record, options = {}) {
+  let element = record.element;
+  let requested = options.scrollTarget;
+  let target = null;
+  if (requested && typeof requested === 'object' && typeof element.contains === 'function' && element.contains(requested)) {
+    target = requested;
+  } else if (typeof requested === 'string' && requested.trim()) {
+    target = safeQuerySelector(element, requested.trim());
+  }
+  if (!target) target = safeQuerySelector(element, '[data-xr-scroll]');
+  if (!target) target = element;
+  let targetId = target.getAttribute?.('data-xr-target-id') || target.id || null;
+  return {
+    target,
+    targetId: targetId || (target === element ? String(record.panel.id) : null),
+  };
+}
+
+function clampNormalizedPoint(point) {
+  if (!point || !Number.isFinite(Number(point.x)) || !Number.isFinite(Number(point.y))) return null;
+  return {
+    x: Math.min(Math.max(Number(point.x), 0), 1),
+    y: Math.min(Math.max(Number(point.y), 0), 1),
+  };
+}
+
+function roundScrollMetric(value) {
+  return Math.round(Number(value) * 1_000_000) / 1_000_000;
+}
+
+function normalizeScrollDelta(delta, record) {
+  if (!delta || typeof delta !== 'object') return null;
+  let mode = delta.mode === 'normalized' || delta.mode === 'lines' ? delta.mode : 'content-pixels';
+  let x = Number(delta.x) || 0;
+  let y = Number(delta.y) || 0;
+  if (mode === 'normalized') {
+    x *= record.contentViewport.width;
+    y *= record.contentViewport.height;
+  } else if (mode === 'lines') {
+    x *= 40;
+    y *= 40;
+  }
+  return { x: roundScrollMetric(x), y: roundScrollMetric(y), mode };
+}
+
+function pointerCaptureKey(panelId, sourceId) {
+  return `${panelId}:${sourceId || ''}`;
+}
+
 export function createXRPanelHost(options = {}) {
   let context = createContext(options);
   let panels = new Map();
@@ -170,6 +320,9 @@ export function createXRPanelHost(options = {}) {
   let dispatchDepth = 0;
   let activeFocusPanelId = null;
   let pendingSelections = new Map();
+  let activePointers = new Map();
+  let activeScrolls = new Map();
+  let contentFocuses = new Map();
 
   function getState() {
     return {
@@ -179,6 +332,9 @@ export function createXRPanelHost(options = {}) {
       panelIds: [...panels.keys()],
       activeFocusPanelId,
       pendingSelectionSourceIds: [...pendingSelections.keys()],
+      activePointerSourceIds: [...activePointers.keys()],
+      activeScrollSourceIds: [...activeScrolls.keys()],
+      contentFocusPanelIds: [...contentFocuses.keys()],
     };
   }
 
@@ -188,6 +344,9 @@ export function createXRPanelHost(options = {}) {
     panels.clear();
     activeFocusPanelId = null;
     pendingSelections.clear();
+    activePointers.clear();
+    activeScrolls.clear();
+    contentFocuses.clear();
     return getState();
   }
 
@@ -201,19 +360,19 @@ export function createXRPanelHost(options = {}) {
     }
 
     let node = panel.layoutNode || panel;
-    let element = createComponentElement(node, context, panel);
+    let element = resolveMountElement(panel, node, context);
     element.dataset.xrPanelId = panel.id;
     element.classList.add('sn-xr-panel-live-root');
     let contentViewport = applyPanelViewport(element, panel);
     applyPanelViewport(container, { ...panel, contentViewport });
-    container.replaceChildren(element);
+    if (element.parentNode !== container) container.replaceChildren(element);
 
     panels.set(panel.id, {
       panel,
       container,
       element,
       contentViewport,
-      focused: false,
+      focused: panels.get(panel.id)?.focused === true,
     });
     return element;
   }
@@ -230,6 +389,13 @@ export function createXRPanelHost(options = {}) {
     for (let [sourceId, pending] of pendingSelections) {
       if (pending.panelId === panelId) pendingSelections.delete(sourceId);
     }
+    for (let [key, capture] of activePointers) {
+      if (capture.panelId === panelId) activePointers.delete(key);
+    }
+    for (let [key, capture] of activeScrolls) {
+      if (capture.panelId === panelId) activeScrolls.delete(key);
+    }
+    contentFocuses.delete(panelId);
     if (activeFocusPanelId === panelId) {
       activeFocusPanelId = null;
     }
@@ -274,6 +440,9 @@ export function createXRPanelHost(options = {}) {
     panels.clear();
     activeFocusPanelId = null;
     pendingSelections.clear();
+    activePointers.clear();
+    activeScrolls.clear();
+    contentFocuses.clear();
     scene = null;
   }
 
@@ -359,6 +528,418 @@ export function createXRPanelHost(options = {}) {
     return { ...resolved, receipt };
   }
 
+  function readPlatformSelection(record) {
+    let documentRef = context.document;
+    let getSelection = typeof documentRef?.getSelection === 'function'
+      ? () => documentRef.getSelection()
+      : typeof context.globalThis?.getSelection === 'function'
+        ? () => context.globalThis.getSelection()
+        : null;
+    if (getSelection) {
+      let selection = getSelection();
+      if (selection) {
+        let text = typeof selection.toString === 'function' ? String(selection) : String(selection.text || '');
+        return {
+          selection: {
+            text,
+            anchorOffset: Number.isFinite(Number(selection.anchorOffset)) ? Number(selection.anchorOffset) : null,
+            focusOffset: Number.isFinite(Number(selection.focusOffset)) ? Number(selection.focusOffset) : null,
+            rangeCount: Number.isFinite(Number(selection.rangeCount)) ? Number(selection.rangeCount) : (text ? 1 : 0),
+          },
+          reason: null,
+        };
+      }
+    }
+    let tracked = contentFocuses.get(record.panel.id)?.element || null;
+    let activeElement = documentRef && 'activeElement' in documentRef ? documentRef.activeElement : null;
+    let editable = tracked
+      || (activeElement && typeof record.element.contains === 'function' && record.element.contains(activeElement) ? activeElement : null);
+    if (
+      editable &&
+      Number.isFinite(Number(editable.selectionStart)) &&
+      Number.isFinite(Number(editable.selectionEnd))
+    ) {
+      let value = typeof editable.value === 'string' ? editable.value : '';
+      let start = Number(editable.selectionStart);
+      let end = Number(editable.selectionEnd);
+      return {
+        selection: {
+          text: value.slice(start, end),
+          anchorOffset: start,
+          focusOffset: end,
+          rangeCount: start === end ? 0 : 1,
+        },
+        reason: null,
+      };
+    }
+    return { selection: null, reason: 'selection-api-unavailable' };
+  }
+
+  function cancelActiveScroll(panelId, sourceId) {
+    let key = pointerCaptureKey(panelId, sourceId);
+    let capture = activeScrolls.get(key);
+    if (!capture) return null;
+    activeScrolls.delete(key);
+    return {
+      ok: true,
+      panelId,
+      phase: 'cancel',
+      kind: capture.kind,
+      point: capture.lastPoint,
+      delta: null,
+      capture: {
+        sourceId: capture.sourceId,
+        sessionId: capture.sessionId,
+        pointerId: capture.pointerId,
+      },
+      scroll: {
+        targetId: capture.targetId,
+        before: capture.startOffsets,
+        after: readScrollOffsets(capture.target),
+        applied: { ...capture.totals },
+      },
+      totals: { ...capture.totals },
+      cancelled: true,
+    };
+  }
+
+  function dispatchScrollEvent(scrollEvent, options = {}) {
+    if (!scrollEvent) return { ok: false, reason: 'missing-scroll-event' };
+    let panelId = scrollEvent.targetId || scrollEvent.panelId;
+    let record = panels.get(panelId);
+    if (!record?.element) return { ok: false, reason: 'panel-not-mounted', panelId };
+    let phase = XR_SCROLL_PHASES.includes(scrollEvent.phase) ? scrollEvent.phase : 'update';
+    let kind = XR_SCROLL_KINDS.includes(scrollEvent.kind) ? scrollEvent.kind : 'wheel';
+    let sourceId = scrollEvent.sourceId || null;
+    if (!sourceId) return { ok: false, reason: 'missing-source-id', panelId };
+    let key = pointerCaptureKey(panelId, sourceId);
+    let capture = activeScrolls.get(key) || null;
+    if (phase === 'begin' && capture) {
+      return { ok: false, reason: 'scroll-already-active', panelId };
+    }
+    if (phase !== 'begin' && !capture) {
+      return { ok: false, reason: 'scroll-not-active', panelId };
+    }
+    if (capture && scrollEvent.sessionId && capture.sessionId && scrollEvent.sessionId !== capture.sessionId) {
+      return { ok: false, reason: 'scroll-capture-mismatch', panelId };
+    }
+    let point = clampNormalizedPoint(scrollEvent.point) || capture?.lastPoint || { x: 0.5, y: 0.5 };
+    let resolvedTarget = capture ? { target: capture.target, targetId: capture.targetId } : resolveScrollTarget(record, options);
+
+    let delta = null;
+    if (phase === 'begin' || phase === 'update' || phase === 'end') {
+      if (scrollEvent.delta) {
+        delta = normalizeScrollDelta(scrollEvent.delta, record);
+      } else if (capture?.lastPoint && scrollEvent.point && (phase === 'update' || phase === 'end')) {
+        delta = {
+          x: roundScrollMetric((capture.lastPoint.x - point.x) * record.contentViewport.width),
+          y: roundScrollMetric((capture.lastPoint.y - point.y) * record.contentViewport.height),
+          mode: 'content-pixels',
+        };
+      }
+    }
+    let gestureDelta = delta && (delta.x !== 0 || delta.y !== 0)
+      ? delta
+      : capture?.lastDelta || delta;
+
+    let detail = {
+      ...scrollEvent,
+      targetId: panelId,
+      contentPoint: {
+        x: point.x * record.contentViewport.width,
+        y: point.y * record.contentViewport.height,
+      },
+      delta,
+      phase,
+      kind,
+    };
+    let dispatched = ['xr-panel-scroll'];
+    let domEvent = phase !== 'cancel' ? createWheelDomEvent(context, scrollEvent, detail) : null;
+    let defaultPrevented = false;
+    if (domEvent) {
+      record.element.dispatchEvent(domEvent);
+      dispatched.unshift(domEvent.type);
+      defaultPrevented = domEvent.defaultPrevented === true;
+    }
+
+    let scroll = null;
+    if (phase === 'cancel') {
+      scroll = {
+        before: capture.startOffsets,
+        after: readScrollOffsets(capture.target),
+        applied: { ...capture.totals },
+      };
+    } else if (delta && !defaultPrevented && (delta.x !== 0 || delta.y !== 0)) {
+      scroll = applyScrollDelta(resolvedTarget.target, delta);
+    } else {
+      let offsets = readScrollOffsets(resolvedTarget.target);
+      scroll = { before: offsets, after: { ...offsets }, applied: { x: 0, y: 0 } };
+    }
+
+    let totals = capture ? { ...capture.totals } : { x: 0, y: 0 };
+    if (phase !== 'cancel') {
+      totals.x = roundScrollMetric(totals.x + scroll.applied.x);
+      totals.y = roundScrollMetric(totals.y + scroll.applied.y);
+    }
+    if (phase === 'end' && capture) {
+      scroll = {
+        before: capture.startOffsets,
+        after: readScrollOffsets(capture.target),
+        applied: { ...totals },
+      };
+    }
+    if (phase === 'begin') {
+      activeScrolls.set(key, {
+        panelId,
+        sourceId,
+        sessionId: scrollEvent.sessionId || null,
+        pointerId: scrollEvent.pointerId || sourceId,
+        kind,
+        target: resolvedTarget.target,
+        targetId: resolvedTarget.targetId,
+        startOffsets: { ...scroll.before },
+        lastPoint: point,
+        lastDelta: delta && (delta.x !== 0 || delta.y !== 0) ? delta : null,
+        totals,
+      });
+    } else if (capture) {
+      capture.lastPoint = point;
+      capture.totals = totals;
+      if (delta && (delta.x !== 0 || delta.y !== 0)) {
+        capture.lastDelta = delta;
+      }
+    }
+    if (phase === 'end' || phase === 'cancel') {
+      activeScrolls.delete(key);
+    }
+
+    let result = {
+      ok: true,
+      panelId,
+      phase,
+      kind,
+      point,
+      delta: gestureDelta,
+      capture: {
+        sourceId,
+        sessionId: capture?.sessionId || scrollEvent.sessionId || null,
+        pointerId: capture?.pointerId || scrollEvent.pointerId || sourceId,
+      },
+      scroll: {
+        targetId: resolvedTarget.targetId,
+        ...scroll,
+      },
+      totals: phase === 'end' || phase === 'cancel' ? totals : null,
+      defaultPrevented,
+      dispatched,
+    };
+    record.element.dispatchEvent(createHostEvent(context, 'xr-panel-scroll', {
+      panelId,
+      phase,
+      kind,
+      scroll: result.scroll,
+      capture: result.capture,
+    }));
+    return result;
+  }
+
+  function samplePreservationSnapshot(record) {
+    let element = record.element;
+    let editables = typeof element.querySelectorAll === 'function'
+      ? [...element.querySelectorAll('input,textarea,select')]
+      : [];
+    let scrollStates = [];
+    let visit = (node) => {
+      if (!node || typeof node !== 'object') return;
+      let top = Number(node.scrollTop) || 0;
+      let left = Number(node.scrollLeft) || 0;
+      if (top !== 0 || left !== 0) scrollStates.push(`${left},${top}`);
+      for (let child of node.children || []) visit(child);
+    };
+    visit(element);
+    let tracked = contentFocuses.get(record.panel.id)?.element || null;
+    let documentRef = context.document;
+    let activeElement = documentRef && 'activeElement' in documentRef ? documentRef.activeElement : null;
+    let selectionData = readPlatformSelection(record);
+    return {
+      focus: tracked
+        ? `tracked:${tracked.getAttribute?.('data-xr-target-id') || tracked.tagName}:${activeElement === tracked}`
+        : activeElement && typeof element.contains === 'function' && element.contains(activeElement)
+          ? `active:${activeElement.tagName}`
+          : 'none',
+      formValues: editables.map((editable) => String(editable?.value ?? '')).join(''),
+      selection: JSON.stringify(selectionData.selection || null),
+      scroll: scrollStates.join('|'),
+    };
+  }
+
+  function updatePanelViewport(panelId, viewport, options = {}) {
+    let record = panels.get(panelId);
+    if (!record?.element) {
+      return { ok: false, reason: 'panel-not-mounted', panelId };
+    }
+    let width = Math.round(Number(viewport?.width));
+    let height = Math.round(Number(viewport?.height));
+    if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+      return { ok: false, reason: 'invalid-viewport', panelId };
+    }
+    let nextViewport = { width, height };
+    let previousViewport = {
+      width: record.contentViewport.width,
+      height: record.contentViewport.height,
+    };
+    let before = samplePreservationSnapshot(record);
+    let panel = {
+      ...record.panel,
+      contentViewport: nextViewport,
+      ...(options.sizeMeters ? { size: [...options.sizeMeters] } : {}),
+    };
+    applyPanelViewport(record.element, panel);
+    applyPanelViewport(record.container, { ...panel, contentViewport: nextViewport });
+    record.panel = panel;
+    record.contentViewport = nextViewport;
+    let paintRequested = typeof options.requestPaint === 'function'
+      ? options.requestPaint(panelId) === true
+      : false;
+    let after = samplePreservationSnapshot(record);
+    return {
+      ok: true,
+      panelId,
+      viewport: nextViewport,
+      previousViewport,
+      preserved: {
+        focus: before.focus === after.focus,
+        formValues: before.formValues === after.formValues,
+        selection: before.selection === after.selection,
+        scroll: before.scroll === after.scroll,
+      },
+      remounted: false,
+      paintRequested,
+    };
+  }
+
+  function focusContent(panelId, request = {}) {
+    let record = panels.get(panelId);
+    if (!record?.element) {
+      return { ok: false, reason: 'panel-not-mounted', panelId };
+    }
+    let { target, targetId } = resolveContentTarget(record, request);
+    if (!target) {
+      return {
+        ok: false,
+        reason: 'target-not-found',
+        panelId,
+        target: null,
+        focused: null,
+        ime: { mode: 'unavailable', reason: 'target-not-found', handoff: null },
+      };
+    }
+    let editable = isEditableElement(target);
+    let focusable = editable || typeof target.focus === 'function';
+    for (let [otherPanelId, tracked] of [...contentFocuses.entries()]) {
+      if (otherPanelId !== panelId || tracked.element !== target) {
+        tracked.element?.blur?.();
+        contentFocuses.delete(otherPanelId);
+      }
+    }
+    let dispatchedFocus = false;
+    if (typeof target.focus === 'function') {
+      target.focus();
+      dispatchedFocus = true;
+    }
+    let focused = detectFocused(context, target);
+    let tagName = String(target.tagName || '').toLowerCase();
+    let handoff = {
+      targetId,
+      editable,
+      inputType: target.getAttribute?.('type') || tagName,
+      multiline: tagName === 'textarea',
+      hasValue: typeof target.value === 'string' ? target.value.length > 0 : false,
+      valueLength: typeof target.value === 'string' ? target.value.length : 0,
+    };
+    let ime;
+    if (!editable) {
+      ime = { mode: 'dom-overlay', reason: 'target-not-editable', handoff };
+    } else if (!dispatchedFocus) {
+      ime = { mode: 'dom-overlay', reason: 'focus-unavailable', handoff };
+    } else if (focused === false) {
+      ime = { mode: 'dom-overlay', reason: 'focus-rejected', handoff };
+    } else {
+      ime = { mode: 'dom-focus', reason: focused === null ? 'focus-unverified' : null, handoff };
+    }
+    if (dispatchedFocus) {
+      contentFocuses.set(panelId, {
+        targetId,
+        element: target,
+        editable,
+        sourceId: request.sourceId || null,
+        sessionId: request.sessionId || null,
+      });
+    }
+    record.element.dispatchEvent(createHostEvent(context, 'xr-panel-content-focus', {
+      panelId,
+      targetId,
+      editable,
+    }));
+    return {
+      ok: true,
+      reason: null,
+      panelId,
+      target: { targetId, tagName, editable, focusable },
+      focused,
+      ime,
+    };
+  }
+
+  function blurContent(panelId) {
+    let record = panels.get(panelId);
+    if (!record?.element) {
+      return { ok: false, reason: 'panel-not-mounted', panelId };
+    }
+    let tracked = contentFocuses.get(panelId) || null;
+    if (!tracked) {
+      return { ok: true, reason: 'no-content-focus', panelId, target: null, focused: false, ime: null };
+    }
+    contentFocuses.delete(panelId);
+    tracked.element?.blur?.();
+    let focused = detectFocused(context, tracked.element);
+    return {
+      ok: true,
+      reason: null,
+      panelId,
+      target: {
+        targetId: tracked.targetId,
+        tagName: String(tracked.element?.tagName || '').toLowerCase() || null,
+        editable: tracked.editable,
+        focusable: true,
+      },
+      focused: focused === true,
+      ime: null,
+    };
+  }
+
+  function cancelContentFocus(panelId, request = {}) {
+    let blurResult = blurContent(panelId);
+    if (blurResult.ok === false) return blurResult;
+    let sourceId = request.sourceId || null;
+    let selectionCancelled = false;
+    if (sourceId && activePointers.delete(pointerCaptureKey(panelId, sourceId))) {
+      selectionCancelled = true;
+    }
+    let scrollCancel = sourceId ? cancelActiveScroll(panelId, sourceId) : null;
+    return {
+      ...blurResult,
+      reason: blurResult.reason === 'no-content-focus' && !selectionCancelled && !scrollCancel
+        ? 'no-content-focus'
+        : null,
+      focused: false,
+      releasedCapture: {
+        selection: selectionCancelled,
+        scroll: Boolean(scrollCancel),
+      },
+    };
+  }
+
   function dispatchPointerEvent(pointerEvent, options = {}) {
     if (!pointerEvent) return { ok: false, reason: 'missing-pointer-event' };
     let panelId = pointerEvent.targetId || pointerEvent.panelId;
@@ -397,6 +978,111 @@ export function createXRPanelHost(options = {}) {
       contentViewport: target.contentViewport,
     };
 
+    let captureKey = pointerCaptureKey(panelId, pointerEvent.sourceId);
+    let pointerCapture = null;
+    if (pointerEvent.type === 'pointerdown' && pointerEvent.buttons?.primary && pointerEvent.sourceId) {
+      pointerCapture = {
+        panelId,
+        sourceId: pointerEvent.sourceId,
+        sessionId: pointerEvent.sessionId || options.sessionId || null,
+        pointerId: pointerEvent.pointerId || pointerEvent.sourceId,
+        startPoint: target.point,
+        lastPoint: target.point,
+      };
+      activePointers.set(captureKey, pointerCapture);
+      if (typeof record.element.setPointerCapture === 'function' && pointerCapture.pointerId != null) {
+        try {
+          record.element.setPointerCapture(pointerCapture.pointerId);
+        } catch {
+          // Capture refusal (inactive pointer) is platform data; provider tracking continues.
+        }
+      }
+    } else if (pointerEvent.sourceId) {
+      pointerCapture = activePointers.get(captureKey) || null;
+    }
+    if (pointerCapture && pointerEvent.type === 'pointermove') {
+      pointerCapture.lastPoint = target.point;
+    }
+
+    let captureEvidence = null;
+    if (pointerCapture) {
+      let phase = pointerEvent.type === 'pointerdown'
+        ? 'begin'
+        : pointerEvent.type === 'pointermove'
+          ? 'update'
+          : pointerEvent.type === 'pointerup'
+            ? 'end'
+            : pointerEvent.type === 'pointercancel'
+              ? 'cancel'
+              : null;
+      if (phase) {
+        captureEvidence = {
+          sourceId: pointerCapture.sourceId,
+          sessionId: pointerCapture.sessionId,
+          pointerId: pointerCapture.pointerId,
+          phase,
+        };
+      }
+    }
+
+    let selectionEvidence = null;
+    let scrollEvidence = null;
+    if (pointerEvent.type === 'pointerup') {
+      if (!pointerCapture) {
+        selectionEvidence = {
+          ok: false,
+          reason: 'selection-not-active',
+          phase: 'end',
+          point: target.point,
+          startPoint: null,
+          capture: null,
+          selection: null,
+        };
+      } else {
+        activePointers.delete(captureKey);
+        if (typeof record.element.releasePointerCapture === 'function' && pointerCapture.pointerId != null) {
+          try {
+            record.element.releasePointerCapture(pointerCapture.pointerId);
+          } catch {
+            // Release refusal mirrors platform capture state; receipt still reports the end phase.
+          }
+        }
+        let selectionData = readPlatformSelection(record);
+        selectionEvidence = {
+          ok: true,
+          reason: selectionData.reason,
+          phase: 'end',
+          point: target.point,
+          startPoint: pointerCapture.startPoint,
+          capture: {
+            sourceId: pointerCapture.sourceId,
+            sessionId: pointerCapture.sessionId,
+            pointerId: pointerCapture.pointerId,
+          },
+          selection: selectionData.selection,
+        };
+      }
+    } else if (pointerEvent.type === 'pointercancel') {
+      if (pointerCapture) {
+        activePointers.delete(captureKey);
+        selectionEvidence = {
+          ok: false,
+          reason: 'selection-cancelled',
+          phase: 'cancel',
+          point: target.point,
+          startPoint: pointerCapture.startPoint,
+          capture: {
+            sourceId: pointerCapture.sourceId,
+            sessionId: pointerCapture.sessionId,
+            pointerId: pointerCapture.pointerId,
+          },
+          selection: null,
+        };
+      }
+      let scrollCancel = cancelActiveScroll(panelId, pointerEvent.sourceId);
+      if (scrollCancel) scrollEvidence = scrollCancel;
+    }
+
     let domEvent = createPointerDomEvent(context, detail, target);
     dispatchDepth += 1;
     try {
@@ -418,12 +1104,24 @@ export function createXRPanelHost(options = {}) {
       dispatchDepth -= 1;
     }
 
+    if (selectionEvidence) {
+      record.element.dispatchEvent(createHostEvent(context, 'xr-panel-selection', {
+        panelId,
+        phase: selectionEvidence.phase,
+        capture: selectionEvidence.capture,
+        selection: selectionEvidence.selection,
+      }));
+    }
+
     return {
       ok: true,
       panelId,
       target,
       dispatched: domEvent ? [detail.type, 'xr-panel-pointer'] : ['xr-panel-pointer'],
       interaction: detail.interaction || null,
+      capture: captureEvidence,
+      selection: selectionEvidence,
+      scroll: scrollEvidence,
     };
   }
 
@@ -433,6 +1131,11 @@ export function createXRPanelHost(options = {}) {
     unmountPanel,
     getPanelElement,
     dispatchPointerEvent,
+    dispatchScrollEvent,
+    focusContent,
+    blurContent,
+    cancelContentFocus,
+    updatePanelViewport,
     focusPanel,
     cleanup,
     getState,

@@ -40,3 +40,6 @@ export * from './portable-panel-state.js';
 export * from './frame-timing.js';
 export * from './haptics.js';
 export * from './transitions.js';
+export * from './spatial-window-contract.js';
+export * from './spatial-window-placement.js';
+export * from './spatial-window-assembly.js';

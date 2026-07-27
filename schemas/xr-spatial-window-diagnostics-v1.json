@@ -1,0 +1,574 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rnd-pro.github.io/symbiote-ui/schemas/xr-spatial-window-diagnostics-v1.json",
+  "title": "XR Spatial Window Assembly Diagnostics",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "status",
+    "disposed",
+    "session",
+    "windows",
+    "counters",
+    "frame",
+    "theme",
+    "shell",
+    "support",
+    "activeGesture"
+  ],
+  "properties": {
+    "version": { "const": "xr-spatial-window-assembly-diagnostics-v1" },
+    "status": { "enum": ["idle", "entered"] },
+    "disposed": { "type": "boolean" },
+    "session": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sessionId", "adopted", "entries", "exits"],
+      "properties": {
+        "sessionId": { "type": ["string", "null"] },
+        "adopted": { "type": "boolean" },
+        "entries": { "type": "integer", "minimum": 0 },
+        "exits": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "windows": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/windowSummary" }
+    },
+    "counters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "syncs",
+        "uploads",
+        "reuses",
+        "relayedEvents",
+        "relayedActions",
+        "scrollGestures",
+        "selectionGestures",
+        "contentFocusHandoffs",
+        "viewportUpdates",
+        "resizePreviews",
+        "resizeCommits",
+        "resizeCancels"
+      ],
+      "properties": {
+        "syncs": { "type": "integer", "minimum": 0 },
+        "uploads": { "type": "integer", "minimum": 0 },
+        "reuses": { "type": "integer", "minimum": 0 },
+        "relayedEvents": { "type": "integer", "minimum": 0 },
+        "relayedActions": { "type": "integer", "minimum": 0 },
+        "scrollGestures": { "type": "integer", "minimum": 0 },
+        "selectionGestures": { "type": "integer", "minimum": 0 },
+        "contentFocusHandoffs": { "type": "integer", "minimum": 0 },
+        "viewportUpdates": { "type": "integer", "minimum": 0 },
+        "resizePreviews": { "type": "integer", "minimum": 0 },
+        "resizeCommits": { "type": "integer", "minimum": 0 },
+        "resizeCancels": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "frame": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "nominalFrameRate",
+        "effectiveFrameRate",
+        "durationMs",
+        "sampleCount",
+        "meanIntervalMs",
+        "p95IntervalMs",
+        "maxIntervalMs",
+        "dropRatio",
+        "supportedFrameRates",
+        "resetCount",
+        "resets"
+      ],
+      "properties": {
+        "version": { "const": "xr-frame-timing-v1" },
+        "nominalFrameRate": { "type": ["number", "null"] },
+        "effectiveFrameRate": { "type": "number" },
+        "durationMs": { "type": "number" },
+        "sampleCount": { "type": "integer", "minimum": 0 },
+        "meanIntervalMs": { "type": "number" },
+        "p95IntervalMs": { "type": "number" },
+        "maxIntervalMs": { "type": "number" },
+        "dropRatio": { "type": "number" },
+        "supportedFrameRates": {
+          "type": ["array", "null"],
+          "items": { "type": "number" }
+        },
+        "resetCount": { "type": "integer", "minimum": 0 },
+        "resets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["sequence", "reason", "previousTimestamp", "timestamp"],
+            "properties": {
+              "sequence": { "type": "integer", "minimum": 1 },
+              "reason": { "enum": ["non-monotonic", "hidden", "discontinuity"] },
+              "previousTimestamp": { "type": ["number", "null"] },
+              "timestamp": { "type": "number" }
+            }
+          }
+        }
+      }
+    },
+    "theme": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["themeScope", "material"],
+      "properties": {
+        "themeScope": { "type": ["string", "null"] },
+        "material": { "$ref": "#/$defs/themeMaterial" }
+      }
+    },
+    "shell": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["present", "panelCount"],
+      "properties": {
+        "present": { "type": "boolean" },
+        "panelCount": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "support": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["supported", "preferredMode", "availability"],
+      "properties": {
+        "supported": { "type": "boolean" },
+        "preferredMode": { "type": ["string", "null"] },
+        "availability": { "type": ["string", "null"] }
+      }
+    },
+    "activeGesture": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["windowId", "operation", "handle"],
+      "properties": {
+        "windowId": { "type": "string" },
+        "operation": { "enum": ["resize", "move"] },
+        "handle": { "type": ["string", "null"] }
+      }
+    }
+  },
+  "$defs": {
+    "windowSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "layoutId",
+        "windowId",
+        "contentKind",
+        "title",
+        "pose",
+        "defaultSlot",
+        "sizeMeters",
+        "viewport",
+        "contentRevision",
+        "themeRevision",
+        "state",
+        "themeScope",
+        "lifecycle",
+        "upload",
+        "relay",
+        "contentFocus",
+        "resize",
+        "fallback",
+        "chrome",
+        "theme"
+      ],
+      "properties": {
+        "layoutId": { "type": "string", "minLength": 1 },
+        "windowId": { "type": "string", "minLength": 1 },
+        "contentKind": { "enum": ["dom", "volumetric"] },
+        "title": { "type": ["string", "null"] },
+        "pose": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["position", "rotation"],
+          "properties": {
+            "position": { "$ref": "#/$defs/vector3" },
+            "rotation": { "$ref": "#/$defs/vector3" }
+          }
+        },
+        "defaultSlot": { "type": ["integer", "null"], "minimum": 0 },
+        "sizeMeters": { "$ref": "#/$defs/size2d" },
+        "viewport": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["width", "height"],
+          "properties": {
+            "width": { "type": "integer", "exclusiveMinimum": 0 },
+            "height": { "type": "integer", "exclusiveMinimum": 0 }
+          }
+        },
+        "contentRevision": { "type": "integer", "minimum": 0 },
+        "themeRevision": { "type": "integer", "minimum": 0 },
+        "state": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["focused", "pinned", "hidden", "closable"],
+          "properties": {
+            "focused": { "type": "boolean" },
+            "pinned": { "type": "boolean" },
+            "hidden": { "type": "boolean" },
+            "closable": { "type": "boolean" }
+          }
+        },
+        "themeScope": { "type": ["string", "null"] },
+        "lifecycle": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mounted", "mounts", "disposals"],
+          "properties": {
+            "mounted": { "type": "boolean" },
+            "mounts": { "type": "integer", "minimum": 0 },
+            "disposals": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "upload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "dirty",
+            "resolves",
+            "uploads",
+            "reuses",
+            "version",
+            "panelId",
+            "mode",
+            "rendered",
+            "uploaded",
+            "canvasMatch",
+            "width",
+            "height",
+            "signature",
+            "reason",
+            "errorName"
+          ],
+          "properties": {
+            "dirty": { "type": "boolean" },
+            "resolves": { "type": "integer", "minimum": 0 },
+            "uploads": { "type": "integer", "minimum": 0 },
+            "reuses": { "type": "integer", "minimum": 0 },
+            "version": { "const": "xr-html-canvas-upload-receipt-v1" },
+            "panelId": { "type": ["string", "null"] },
+            "mode": { "type": "string" },
+            "rendered": { "type": "boolean" },
+            "uploaded": { "type": "boolean" },
+            "canvasMatch": { "type": "boolean" },
+            "width": { "type": ["number", "null"], "exclusiveMinimum": 0 },
+            "height": { "type": ["number", "null"], "exclusiveMinimum": 0 },
+            "signature": { "type": ["string", "null"] },
+            "reason": { "type": ["string", "null"] },
+            "errorName": { "type": ["string", "null"] }
+          }
+        },
+        "relay": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["events", "actions", "lastReason", "scrolls", "selections"],
+          "properties": {
+            "events": { "type": "integer", "minimum": 0 },
+            "actions": { "type": "integer", "minimum": 0 },
+            "lastReason": { "type": ["string", "null"] },
+            "scrolls": { "type": "integer", "minimum": 0 },
+            "selections": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "contentFocus": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "required": ["targetId", "editable", "imeMode"],
+          "properties": {
+            "targetId": { "type": ["string", "null"] },
+            "editable": { "type": "boolean" },
+            "imeMode": { "enum": ["dom-focus", "dom-overlay", "unavailable"] }
+          }
+        },
+        "resize": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["phase", "previews"],
+          "properties": {
+            "phase": { "enum": ["idle", "preview"] },
+            "previews": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "fallback": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "required": ["version", "windowId", "layoutId", "mode", "source", "reason", "upload"],
+          "properties": {
+            "version": { "const": "xr-spatial-window-fallback-v1" },
+            "windowId": { "type": ["string", "null"] },
+            "layoutId": { "type": ["string", "null"] },
+            "mode": { "enum": ["none", "provider-material-fallback", "dom-overlay"] },
+            "source": { "type": ["string", "null"] },
+            "reason": { "type": ["string", "null"] },
+            "upload": {
+              "type": ["object", "null"],
+              "additionalProperties": false,
+              "required": ["uploaded", "stage", "reason"],
+              "properties": {
+                "uploaded": { "type": "boolean" },
+                "stage": { "type": ["string", "null"] },
+                "reason": { "type": ["string", "null"] }
+              }
+            }
+          }
+        },
+        "chrome": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "zones",
+            "surface",
+            "geometry",
+            "overlap"
+          ],
+          "properties": {
+            "zones": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["controlBar", "move", "content", "resize", "edges", "actions"],
+              "properties": {
+                "controlBar": { "$ref": "#/$defs/rectangle" },
+                "move": { "$ref": "#/$defs/rectangle" },
+                "content": { "$ref": "#/$defs/rectangle" },
+                "resize": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["northWest", "northEast", "southEast", "southWest"],
+                  "properties": {
+                    "northWest": { "$ref": "#/$defs/rectangle" },
+                    "northEast": { "$ref": "#/$defs/rectangle" },
+                    "southEast": { "$ref": "#/$defs/rectangle" },
+                    "southWest": { "$ref": "#/$defs/rectangle" }
+                  }
+                },
+                "edges": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["north", "east", "south", "west"],
+                  "properties": {
+                    "north": { "$ref": "#/$defs/rectangle" },
+                    "east": { "$ref": "#/$defs/rectangle" },
+                    "south": { "$ref": "#/$defs/rectangle" },
+                    "west": { "$ref": "#/$defs/rectangle" }
+                  }
+                },
+                "actions": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "reset": { "$ref": "#/$defs/rectangle" },
+                    "fullscreen": { "$ref": "#/$defs/rectangle" },
+                    "pin": { "$ref": "#/$defs/rectangle" },
+                    "close": { "$ref": "#/$defs/rectangle" }
+                  }
+                }
+              }
+            },
+            "surface": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["sizeMeters", "extents"],
+              "properties": {
+                "sizeMeters": { "$ref": "#/$defs/size2d" },
+                "extents": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["x", "y"],
+                  "properties": {
+                    "x": { "type": "number" },
+                    "y": { "type": "number" }
+                  }
+                }
+              }
+            },
+            "geometry": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["sizeMeters", "viewport", "pose"],
+              "properties": {
+                "sizeMeters": { "$ref": "#/$defs/size2d" },
+                "viewport": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["width", "height"],
+                  "properties": {
+                    "width": { "type": "integer", "exclusiveMinimum": 0 },
+                    "height": { "type": "integer", "exclusiveMinimum": 0 }
+                  }
+                },
+                "pose": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["position", "rotation"],
+                  "properties": {
+                    "position": { "$ref": "#/$defs/vector3" },
+                    "rotation": { "$ref": "#/$defs/vector3" }
+                  }
+                }
+              }
+            },
+            "overlap": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["zeroForbiddenOverlap", "verdict", "intersections"],
+              "properties": {
+                "zeroForbiddenOverlap": { "type": "boolean" },
+                "verdict": { "enum": ["PASS", "FAIL"] },
+                "intersections": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["zones", "intersectionArea", "allowed"],
+                    "properties": {
+                      "zones": {
+                        "type": "array",
+                        "minItems": 2,
+                        "maxItems": 2,
+                        "items": { "type": "string" }
+                      },
+                      "intersectionArea": { "type": "number", "minimum": 0 },
+                      "allowed": { "type": "boolean" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "theme": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["themeScope", "snapshot", "bindingHash", "actualMaterial"],
+          "properties": {
+            "themeScope": { "type": ["string", "null"] },
+            "snapshot": {
+              "$ref": "#/$defs/themeSnapshot"
+            },
+            "bindingHash": { "type": ["string", "null"] },
+            "actualMaterial": { "$ref": "#/$defs/themeMaterial" }
+          }
+        }
+      }
+    },
+    "vector3": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": { "type": "number" }
+    },
+    "size2d": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": { "type": "number", "exclusiveMinimum": 0 }
+    },
+    "rectangle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y", "width", "height"],
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "width": { "type": "number" },
+        "height": { "type": "number" }
+      }
+    },
+    "themeMaterial": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": [
+        "background",
+        "backgroundColor",
+        "border",
+        "borderColor",
+        "radius",
+        "shadow",
+        "pointer",
+        "pointerColor",
+        "text",
+        "textColor",
+        "textDim",
+        "textDimColor",
+        "gap",
+        "motion"
+      ],
+      "properties": {
+        "background": { "type": "string" },
+        "backgroundColor": { "anyOf": [{ "type": "string" }, { "type": "number" }] },
+        "border": { "type": "string" },
+        "borderColor": { "anyOf": [{ "type": "string" }, { "type": "number" }] },
+        "radius": { "type": "string" },
+        "shadow": { "type": "string" },
+        "pointer": { "type": "string" },
+        "pointerColor": { "anyOf": [{ "type": "string" }, { "type": "number" }] },
+        "text": { "type": "string" },
+        "textColor": { "anyOf": [{ "type": "string" }, { "type": "number" }] },
+        "textDim": { "type": "string" },
+        "textDimColor": { "anyOf": [{ "type": "string" }, { "type": "number" }] },
+        "gap": { "type": "string" },
+        "motion": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["duration", "easing"],
+          "properties": {
+            "duration": { "type": "string" },
+            "easing": { "type": "string" }
+          }
+        }
+      }
+    },
+    "themeTokens": {
+      "type": "object",
+      "required": [
+        "--sn-xr-panel-bg",
+        "--sn-xr-panel-border",
+        "--sn-xr-panel-radius",
+        "--sn-xr-panel-shadow",
+        "--sn-xr-pointer-color",
+        "--sn-sys-on-surface",
+        "--sn-sys-on-surface-dim",
+        "--sn-duration-fast",
+        "--sn-ease-standard",
+        "--sn-layout-resizer-size"
+      ],
+      "properties": {
+        "--sn-xr-panel-bg": { "type": "string" },
+        "--sn-xr-panel-border": { "type": "string" },
+        "--sn-xr-panel-radius": { "type": "string" },
+        "--sn-xr-panel-shadow": { "type": "string" },
+        "--sn-xr-pointer-color": { "type": "string" },
+        "--sn-sys-on-surface": { "type": "string" },
+        "--sn-sys-on-surface-dim": { "type": "string" },
+        "--sn-duration-fast": { "type": "string" },
+        "--sn-ease-standard": { "type": "string" },
+        "--sn-layout-resizer-size": { "type": "string" }
+      },
+      "propertyNames": {
+        "pattern": "^--"
+      },
+      "additionalProperties": { "type": "string" }
+    },
+    "themeSnapshot": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["version", "themeScope", "tokens", "material"],
+      "properties": {
+        "version": { "const": "xr-theme-snapshot-v1" },
+        "themeScope": { "type": ["string", "null"] },
+        "tokens": { "$ref": "#/$defs/themeTokens" },
+        "material": { "$ref": "#/$defs/themeMaterial" }
+      }
+    }
+  }
+}
