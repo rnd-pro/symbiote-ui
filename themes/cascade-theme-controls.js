@@ -227,32 +227,19 @@ export const CASCADE_THEME_DEFAULTS = Object.freeze(Object.fromEntries(
   CASCADE_THEME_CONTROL_LIST.map((control) => [control.name, control.default])
 ));
 
+/**
+ * Pre-defined theme variants provided by the library.
+ * Architectural Principle (Separation of Concerns): 
+ * Library presets define ONLY structural or layout differences (e.g. tabShape, themeVariant).
+ * Brand-specific parameters (hue, chroma, frameRadius, etc.) MUST NOT be hardcoded here.
+ * Applications consuming the library should provide their own color and spacing defaults
+ * via their specific storage state (e.g. default-state attribute).
+ */
 export const CASCADE_THEME_VARIANT_PRESETS = Object.freeze({
   modern: Object.freeze({
     ...CASCADE_THEME_DEFAULTS,
     themeVariant: 'modern',
     tabShape: 'frame',
-    mode: 'dark',
-    brightness: 0,
-    contrast: 100,
-    chroma: 54,
-    hue: 205,
-    bgLightness: -1,
-    surfaceLightness: -1,
-    accentLightness: -1,
-    accentChroma: -1,
-    pattern: 100,
-    outline: 21,
-    type: 100,
-    heading: 111,
-    density: 114,
-    radius: 17,
-    tabRadius: 17,
-    cellRadius: 17,
-    composerRadius: 100,
-    frameRadius: 80,
-    frameGap: 20,
-    motion: 100,
   }),
   classic: Object.freeze({
     ...CASCADE_THEME_DEFAULTS,
