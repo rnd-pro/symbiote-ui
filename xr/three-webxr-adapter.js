@@ -350,6 +350,19 @@ function normalizeHitReticleOptions(options = {}) {
   };
 }
 
+// Three's raycaster ignores `visible` on the object itself AND on every
+// ancestor: a panel mesh under a suppressed root (lab legacy panels while
+// the parity projection owns the immersive scene) keeps its own flag true
+// and would stay a hit candidate — the joystick reticle then focuses
+// invisible "transparent" frames. Effective visibility walks the whole
+// ancestor chain so hit sets follow what is actually rendered.
+export function isXRThreeObjectEffectivelyVisible(object) {
+  for (let node = object; node; node = node.parent) {
+    if (node.visible === false) return false;
+  }
+  return true;
+}
+
 function buildPanelHitReticleVisual(THREE, options = {}) {
   let visual = normalizeHitReticleOptions(options);
   if (!visual.enabled) {
@@ -3986,14 +3999,17 @@ export function createXRThreeSessionController(options = {}) {
 
   function listInteractionMeshes() {
     // Three's raycaster ignores `visible`, so store-hidden panels must be
-    // excluded from hit candidates explicitly; restore chips are scene-level
-    // and must be included instead. A chip in its fade-out tween is excluded:
-    // its panel is already restored, so hits on it could only form duplicate
-    // restore receipts in the fade window.
+    // excluded from hit candidates explicitly — and not only by their own
+    // flag: suppressed legacy panels sit under an invisible root with their
+    // own flag still true (ancestor walk in isXRThreeObjectEffectivelyVisible).
+    // Restore chips are scene-level and must be included instead. A chip in
+    // its fade-out tween is excluded: its panel is already restored, so hits
+    // on it could only form duplicate restore receipts in the fade window.
     let meshes = typeof adapter.listPanelMeshes === 'function' ? adapter.listPanelMeshes() : [];
     return [
-      ...meshes.filter((mesh) => mesh.visible !== false),
+      ...meshes.filter((mesh) => isXRThreeObjectEffectivelyVisible(mesh)),
       ...[...restoreChips.values()].filter((chip) =>
+        isXRThreeObjectEffectivelyVisible(chip) &&
         transitionTweens.get(`chip:${chip.userData?.panelId}`)?.phase !== 'fade-out'),
     ];
   }

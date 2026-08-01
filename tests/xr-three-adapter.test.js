@@ -9,6 +9,7 @@ import {
   XR_THREE_WEBXR_ADAPTER,
   createXRThreeSessionController,
   createXRThreeWebXRAdapter,
+  isXRThreeObjectEffectivelyVisible,
 } from '../xr/three-webxr-adapter.js';
 import {
   computeXRPanelChromeLayout,
@@ -1237,6 +1238,54 @@ test('Three session controller exposes fullscreen as a host-owned window intent'
   assert.equal(fullscreenIntents[0].intent, 'panel-fullscreen');
   assert.equal(fullscreenIntents[0].context.sessionId, 'session-close');
   assert.ok(harness.diagnosticEvents.includes('spatial-three-panel-fullscreen'));
+
+  await harness.controller.stop();
+});
+
+test('isXRThreeObjectEffectivelyVisible walks the whole ancestor chain', () => {
+  let root = new THREE_REAL.Group();
+  let middle = new THREE_REAL.Group();
+  let leaf = new THREE_REAL.Group();
+  root.add(middle);
+  middle.add(leaf);
+
+  assert.equal(isXRThreeObjectEffectivelyVisible(leaf), true, 'all-visible chain is visible');
+
+  leaf.visible = false;
+  assert.equal(isXRThreeObjectEffectivelyVisible(leaf), false, 'own flag hides');
+  leaf.visible = true;
+
+  middle.visible = false;
+  assert.equal(isXRThreeObjectEffectivelyVisible(leaf), false, 'an invisible ancestor hides the subtree');
+  middle.visible = true;
+
+  root.visible = false;
+  assert.equal(isXRThreeObjectEffectivelyVisible(leaf), false, 'the suppressed root pattern hides every descendant');
+
+  assert.equal(isXRThreeObjectEffectivelyVisible(null), true, 'no object means nothing hides it');
+});
+
+test('Three session controller drops panels under an invisible root from interaction candidates', async () => {
+  let harness = await createCloseHarness();
+  let containsMesh = () => harness.hitMeshCandidates.some((meshes) =>
+    Array.isArray(meshes) && meshes.includes(harness.mesh));
+
+  harness.frame(1000);
+  assert.equal(containsMesh(), true, 'a visible panel is an interaction candidate');
+
+  // The lab parity-suppression pattern: the panel ROOT goes invisible while
+  // every panel mesh keeps its own visible=true — Three's raycaster would
+  // still hit it without the ancestor walk.
+  harness.sceneRoot.visible = false;
+  assert.notEqual(harness.mesh.visible, false);
+  harness.hitMeshCandidates.length = 0;
+  harness.frame(1016);
+  assert.equal(containsMesh(), false, 'a panel under an invisible root leaves every hit candidate set');
+
+  harness.sceneRoot.visible = true;
+  harness.hitMeshCandidates.length = 0;
+  harness.frame(1033);
+  assert.equal(containsMesh(), true, 'unsuppressing the root restores the candidacy');
 
   await harness.controller.stop();
 });
