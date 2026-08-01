@@ -72,6 +72,13 @@ or `dom.component` / `dom.layoutNode` / `dom.props` (built once by the panel
 host). DOM references never appear in receipts; `getWindowDataProjection(id)`
 returns the data-only descriptor projection.
 
+While an XR session is active, the assembly owns the live root's direct parent:
+it must remain the child of that window's private canvas. If external layout
+work moves the same root elsewhere, the assembly reasserts that parentage
+before a content, resize, scene, or theme texture upload. Explicit, component-
+created, and layout-node-created roots keep their identities along with their
+native meshes; the renderer's direct-child safety gate is not relaxed.
+
 ## Default window placement (`xr-spatial-window-placement-v2`)
 
 Unplaced windows never share the neutral `XR_SPATIAL_WINDOW_DEFAULT_POSE`
@@ -299,4 +306,3 @@ resize (phase), fallback, chrome (named zones/actions, normalized zone rectangle
 `selectionGestures`, `contentFocusHandoffs`, `viewportUpdates`), frame timing,
 theme, shell, support, and the active gesture. All public outputs are
 JSON-round-trippable and contain no DOM, Three, or private references.
-
