@@ -845,3 +845,45 @@ test('assembly upload state exposes the packed receipt and receipt validates aga
   assert.equal(validateReceipt(receiptObj), true, ajv.errorsText(validateReceipt.errors));
 });
 
+
+test('theme redraw receipt keeps workspace insertion order (no localeCompare re-sort)', () => {
+  let { assembly, platform } = createAssemblyContext();
+  // Insertion order is intentionally NOT lexicographic: 'zulu' before 'alpha'.
+  // The receipt validator reconstructs the expected windowIds sequence from
+  // listWindows() (Map insertion order); re-sorting the producer by
+  // windowId.localeCompare made every first redraw fail validation with
+  // windowIds-sequence-mismatch on real workspaces (layout order is not
+  // lexicographic). Regression lock: the receipt must keep insertion order.
+  assembly.syncLayouts([
+    createLayoutDescriptor({
+      layoutId: 'layout-zulu',
+      themeScope: 'order-scope',
+      dom: { element: createWindowContentElement(platform.document) },
+    }),
+    createLayoutDescriptor({
+      layoutId: 'layout-alpha',
+      themeScope: 'order-scope',
+      dom: { element: createWindowContentElement(platform.document) },
+    }),
+  ]);
+  assembly.enter({ sessionId: 'session-order' });
+  assembly.applyTheme({
+    version: 'xr-theme-snapshot-v1',
+    themeScope: 'order-scope',
+    tokens: { '--sn-xr-panel-bg': '#123456' },
+    material: { background: '#123456', backgroundColor: 0x123456 },
+  });
+  let redrawReceipt = assembly.getReceipts().find((r) => r.version === 'xr-spatial-window-theme-redraw-receipt-v1');
+  assert.ok(redrawReceipt, 'Theme redraw receipt must be emitted');
+  assert.equal(redrawReceipt.ok, true);
+  assert.deepEqual(
+    redrawReceipt.windowIds,
+    ['window:layout-zulu', 'window:layout-alpha'],
+    'receipt windowIds must follow workspace insertion order, not lexicographic order',
+  );
+  assert.deepEqual(
+    redrawReceipt.affectedWindows,
+    ['window:layout-zulu', 'window:layout-alpha'],
+    'affectedWindows must follow the same insertion order',
+  );
+});
