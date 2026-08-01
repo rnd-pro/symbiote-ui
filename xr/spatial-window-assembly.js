@@ -2129,7 +2129,12 @@ export function createXRSpatialWindowAssembly(options = {}) {
     let targetScope = input?.themeScope || 'xr';
     let isGlobal = input?.global === true || input?.themeScope === '*';
 
-    const sortedWindows = Array.from(windows.values()).sort((a, b) => a.windowId.localeCompare(b.windowId));
+    // Iterate in Map insertion order — the same order listWindows() reports to
+    // the receipt validator's pre-observation. Sorting by windowId here made
+    // the emitted windowIds/affectedWindows sequence diverge from the
+    // validator's expected sequence (insertion order) and every redraw failed
+    // with windowIds-sequence-mismatch.
+    const sortedWindows = Array.from(windows.values());
 
     // Determine prior snapshot and theme change before mutating maps
     let affected = [];
