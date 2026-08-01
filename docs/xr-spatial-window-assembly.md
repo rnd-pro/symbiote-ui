@@ -284,6 +284,12 @@ Per-window fallback is first-class data: `mode` is `'none'`,
 outcome. Unsupported capability and runtime upload failure never throw out of
 `enter`, `syncLayouts`, or resize.
 
+Hosts that cannot safely show an untextured world-space panel can opt into
+`requireTextureUpload: true` together with `hideStrictTextureFailures: true`.
+That strict policy retains the fallback receipt for diagnostics but hides the
+panel mesh until a real HTML-in-Canvas texture is available, so an opaque
+fallback plane cannot write depth over unrelated XR content.
+
 ## Dirty gating and theme
 
 Texture uploads are keyed by `contentRevision`, `themeRevision`, viewport, and

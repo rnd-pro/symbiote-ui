@@ -320,6 +320,7 @@ function buildControllerRayVisual(THREE, options = {}) {
     transparent: true,
     opacity: visual.opacity,
     depthTest: false,
+    depthWrite: false,
   });
   let line = new THREE.Line(geometry, material);
   line.name = 'sn-xr-controller-ray';
@@ -379,6 +380,7 @@ function buildPanelHitReticleVisual(THREE, options = {}) {
     transparent: true,
     opacity: visual.opacity,
     depthTest: false,
+    depthWrite: false,
     side: THREE.DoubleSide,
   });
   let reticle = new THREE.Mesh(geometry, material);
@@ -532,6 +534,7 @@ function buildPanelFrameZoneVisual(THREE, zoneName, zone, size, visual, metadata
     transparent: true,
     opacity: metadata.opacity ?? visual.handleOpacity,
     depthTest: false,
+    depthWrite: false,
     side: THREE.DoubleSide,
   });
   if (metadata.texture) {
@@ -3905,6 +3908,7 @@ export function createXRThreeSessionController(options = {}) {
     let material = new THREE.MeshBasicMaterial({
       transparent: true,
       depthTest: false,
+      depthWrite: false,
       side: THREE.DoubleSide,
     });
     let texture = createMetaWindowChromeTexture(THREE, 'control-bar', {

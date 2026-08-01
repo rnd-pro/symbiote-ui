@@ -190,6 +190,29 @@ export function createXRSpatialWindowAssembly(options = {}) {
     })
     : null);
 
+  // A host may elect a fail-closed texture policy for immersive content. In
+  // that mode an unavailable HTML-in-Canvas texture never leaves an opaque
+  // provider-material panel in the scene where it could write depth and hide
+  // unrelated world geometry. The fallback receipt remains available to the
+  // host for an explicit operator-facing diagnostic.
+  let requireTextureUpload = options.requireTextureUpload === true ||
+    options.hideStrictTextureFailures === true;
+  let hideStrictTextureFailures = options.hideStrictTextureFailures === true;
+
+  function withTextureRequirement(applyOptions = {}) {
+    return requireTextureUpload
+      ? { ...applyOptions, requireTextureUpload: true }
+      : applyOptions;
+  }
+
+  function sceneTextureOptions() {
+    return {
+      textureBridge,
+      ...(requireTextureUpload ? { textureOptions: { requireTextureUpload: true } } : {}),
+      ...(hideStrictTextureFailures ? { hideStrictTextureFailures: true } : {}),
+    };
+  }
+
 
 
   let themeTokens = resolveXRDesignTokens(options.theme || undefined);
@@ -630,17 +653,29 @@ export function createXRSpatialWindowAssembly(options = {}) {
     return resolverRecord || null;
   }
 
+  function restoreTexturedWindowVisibility(windowEntry, record) {
+    if (record?.textureApplied !== true || !shellReady()) return false;
+    let mesh = adapter.getPanelMesh(windowEntry.windowId);
+    if (mesh?.userData?.strictTextureHidden !== true) return false;
+    delete mesh.userData.strictTextureHidden;
+    delete mesh.userData.strictTextureDiagnostic;
+    delete mesh.userData.strictTextureDiagnosticReason;
+    return true;
+  }
+
   function flushWindowTexture(windowEntry) {
     if (!shellReady() || status !== 'entered' || !textureBridge || !windowEntry.mounted) return null;
     if (!ensureWindowCanvasOwnership(windowEntry)) return null;
     let mesh = adapter.getPanelMesh(windowEntry.windowId);
     if (!mesh) return null;
-    let record = textureBridge.applyPanelTexture(mesh, buildPanelDescriptor(windowEntry), {
+    let record = textureBridge.applyPanelTexture(mesh, buildPanelDescriptor(windowEntry), withTextureRequirement({
       element: windowEntry.element,
       canvas: windowEntry.canvas,
       onInvalidate: () => markWindowContentChanged(windowEntry),
-    });
-    return noteTextureOutcome(windowEntry, record);
+    }));
+    let outcome = noteTextureOutcome(windowEntry, record);
+    if (restoreTexturedWindowVisibility(windowEntry, record)) applyMaterialStates();
+    return outcome;
   }
 
   function requestWindowPaint(windowEntry) {
@@ -660,7 +695,7 @@ export function createXRSpatialWindowAssembly(options = {}) {
       ensureWindowCanvasOwnership(windowEntry);
     }
     let scene = projectScene();
-    let result = adapter.setScene(scene, { textureBridge });
+    let result = adapter.setScene(scene, sceneTextureOptions());
     for (let record of result?.textureSources || []) {
       let windowEntry = windows.get(windowIds.get(record.panelId));
       if (windowEntry) noteTextureOutcome(windowEntry, record);
@@ -1110,12 +1145,13 @@ export function createXRSpatialWindowAssembly(options = {}) {
     if (!ensureWindowCanvasOwnership(windowEntry)) return { texture, geometrySwapped: false, mesh: null };
     let mesh = shellReady() && status === 'entered' ? adapter.getPanelMesh(windowEntry.windowId) : null;
     if (mesh && textureBridge && windowEntry.mounted) {
-      let record = textureBridge.applyPanelTexture(mesh, buildPanelDescriptor(windowEntry), {
+      let record = textureBridge.applyPanelTexture(mesh, buildPanelDescriptor(windowEntry), withTextureRequirement({
         element: windowEntry.element,
         canvas: windowEntry.canvas,
         onInvalidate: () => markWindowContentChanged(windowEntry),
-      });
+      }));
       let resolverRecord = noteTextureOutcome(windowEntry, record);
+      restoreTexturedWindowVisibility(windowEntry, record);
       texture = {
         uploaded: record.textureApplied === true,
         stage: record.stage || null,
@@ -2500,7 +2536,7 @@ export function createXRSpatialWindowAssembly(options = {}) {
         };
       });
 
-      transaction = textureBridge.prepareBatch(preparedItems, { themeSnapshot: snapshot });
+      transaction = textureBridge.prepareBatch(preparedItems, withTextureRequirement({ themeSnapshot: snapshot }));
       if (!transaction || transaction.ok === false) {
         let reason = transaction?.reason || 'prepare-batch-failed';
         throw new Error(reason);

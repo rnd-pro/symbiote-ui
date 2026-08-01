@@ -765,6 +765,27 @@ test('Three adapter real Three.js conformed tests with rotated root', () => {
   assert.ok(Math.abs(nwHandle.position.y - expectedNWLocalY) < 1e-5);
 });
 
+test('transparent panel chrome is depth-neutral', () => {
+  let adapter = createXRThreeWebXRAdapter({ THREE: THREE_REAL });
+  let result = adapter.setScene({
+    id: 'depth-hygiene-scene',
+    panels: [{
+      id: 'panel-depth-hygiene',
+      position: [0, 1.35, -1.6],
+      rotation: [0, 0, 0],
+      size: [0.8, 0.45],
+    }],
+  }, { mode: 'immersive-ar' });
+  assert.equal(result.ok, true);
+  let mesh = adapter.getPanelMesh('panel-depth-hygiene');
+  let transparentOverlays = mesh.children.filter((child) => child.material?.transparent === true);
+  assert.ok(transparentOverlays.length > 0, 'panel chrome creates transparent overlays');
+  assert.ok(
+    transparentOverlays.every((child) => child.material.depthWrite === false),
+    'transparent chrome must never occlude scene depth',
+  );
+});
+
 
 test('panel frame meter chrome keeps constant physical size across panel sizes', () => {
   const legacy = createXRPanelFrame({ id: 'p' });
