@@ -2,6 +2,12 @@
 
 All notable changes to `symbiote-ui` will be documented in this file.
 
+## [0.3.0-alpha.71] - 2026-08-02
+
+### Fixed
+
+- Added C++ fenced-code syntax highlighting to the reusable Markdown and code-block renderers.
+
 ## [0.3.0-alpha.69] - 2026-07-26
 
 ### Added
