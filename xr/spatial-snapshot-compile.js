@@ -21,6 +21,7 @@ export const SPATIAL_SNAPSHOT_FAMILY = 'spatial-snapshot';
 export const SPATIAL_SNAPSHOT_COMPILE_DEFAULTS = Object.freeze({
   planeWidth: 1.9,
   z: 0,
+  panelGrouping: 'leaf',
 });
 
 const SPATIAL_SNAPSHOT_PARTS = Object.freeze([
@@ -28,6 +29,7 @@ const SPATIAL_SNAPSHOT_PARTS = Object.freeze([
   'header',
   'title',
   'text',
+  'token',
   'row',
   'row-label',
   'editor',
@@ -36,6 +38,7 @@ const SPATIAL_SNAPSHOT_PARTS = Object.freeze([
   'icon',
   'badge',
   'field',
+  'backdrop',
   'surface',
 ]);
 
@@ -132,9 +135,15 @@ function extractSurfaceStyle(node) {
 
 function hasBorderEvidence(node) {
   let style = node?.style || {};
-  return style['border-style'] === 'solid'
+  let uniform = style['border-style'] === 'solid'
     && Number.parseFloat(style['border-width']) > 0
     && !isTransparentColor(style['border-color']);
+  if (uniform) return true;
+  return ['top', 'right', 'bottom', 'left'].some((side) => (
+    style[`border-${side}-style`] === 'solid'
+    && Number.parseFloat(style[`border-${side}-width`]) > 0
+    && !isTransparentColor(style[`border-${side}-color`])
+  ));
 }
 
 /**
@@ -150,12 +159,31 @@ export function hasVisibleControlChrome(node) {
 }
 
 function extractBorderStyle(node, scale) {
-  if (!hasBorderEvidence(node)) return undefined;
+  let style = node?.style || {};
+  if (style['border-style'] === 'solid'
+    && Number.parseFloat(style['border-width']) > 0
+    && !isTransparentColor(style['border-color'])) {
+    return {
+      border: {
+        width: roundMetric(Number.parseFloat(style['border-width']) * scale),
+        color: style['border-color'],
+      },
+    };
+  }
+  let edges = ['top', 'right', 'bottom', 'left']
+    .filter((side) => (
+      style[`border-${side}-style`] === 'solid'
+      && Number.parseFloat(style[`border-${side}-width`]) > 0
+      && !isTransparentColor(style[`border-${side}-color`])
+    ))
+    .map((side) => ({
+      side,
+      width: roundMetric(Number.parseFloat(style[`border-${side}-width`]) * scale),
+      color: style[`border-${side}-color`],
+    }));
+  if (!edges.length) return undefined;
   return {
-    border: {
-      width: roundMetric(Number.parseFloat(node.style['border-width']) * scale),
-      color: node.style['border-color'],
-    },
+    borderEdges: edges,
   };
 }
 
@@ -314,6 +342,8 @@ function compileNodePrimitives(node, panelNode, scale) {
     case 'text':
     case 'row-label':
       return [compileLabelPrimitive(node, panelNode, scale)];
+    case 'token':
+      return [compileLabelPrimitive(node, panelNode, scale, { exactTextBounds: true })];
     case 'icon':
       return [compileIconPrimitive(node, panelNode, scale)];
     case 'editor': {
@@ -362,6 +392,8 @@ function compileNodePrimitives(node, panelNode, scale) {
       if (node.text) primitives.push(compileLabelPrimitive(node, panelNode, scale));
       return primitives;
     }
+    case 'backdrop':
+      return [compileSurfacePrimitive(node, panelNode, scale, 'surface', 'surface')];
     case 'surface': {
       let style = {
         ...extractSurfaceStyle(node),
@@ -384,7 +416,7 @@ function compileNodePrimitives(node, panelNode, scale) {
   }
 }
 
-function collectDescendants(snapshot, rootId, structuralIds) {
+function collectDescendants(snapshot, rootId, structuralIds, { includeStructural = false } = {}) {
   let byParent = new Map();
   for (let node of snapshot.nodes) {
     if (node.parentId === null) continue;
@@ -395,11 +427,27 @@ function collectDescendants(snapshot, rootId, structuralIds) {
   let stack = [...(byParent.get(rootId) || [])];
   while (stack.length) {
     let node = stack.shift();
-    if (structuralIds.has(node.id)) continue;
+    if (structuralIds.has(node.id) && !includeStructural) continue;
     descendants.push(node);
     stack.push(...(byParent.get(node.id) || []));
   }
   return descendants;
+}
+
+function createGroupedRootPanel(snapshot, id) {
+  return {
+    id,
+    parentId: null,
+    component: 'layout-node',
+    part: 'panel',
+    rect: {
+      x: 0,
+      y: 0,
+      width: snapshot.capture.viewport.width,
+      height: snapshot.capture.viewport.height,
+    },
+    style: {},
+  };
 }
 
 function raiseIconDepths(primitives, snapshot) {
@@ -438,7 +486,14 @@ function compileSpatialPanel(node, children, snapshot, scale, z) {
   let size = [roundMetric(node.rect.width * scale), roundMetric(node.rect.height * scale)];
   let isResizer = node.part === 'resizer';
   let primitives = [];
-  for (let child of [node, ...children]) {
+  // A backdrop is a panel-local base, never a content surface. Compiling it
+  // directly after the panel keeps headers and other chrome above it even
+  // when the measured DOM order is different.
+  let orderedChildren = [
+    ...children.filter((child) => child.part === 'backdrop'),
+    ...children.filter((child) => child.part !== 'backdrop'),
+  ];
+  for (let child of [node, ...orderedChildren]) {
     primitives.push(...compileNodePrimitives(child, node, scale));
   }
   if (isResizer && !node.actions?.length) {
@@ -489,6 +544,9 @@ function compileSpatialPanel(node, children, snapshot, scale, z) {
  * @param {Object} [options]
  * @param {number} [options.planeWidth] - Target plane width in meters.
  * @param {number} [options.z] - Plane Z position in meters.
+ * @param {'leaf'|'root'} [options.panelGrouping] - Render each nested layout
+ * node independently, or compile the whole captured layout into one panel.
+ * @param {string} [options.rootPanelId] - Stable ID for the grouped root panel.
  * @returns {Object} `native-panel-layout-v1` scene with `spatialSnapshot` provenance.
  */
 export function compileSpatialSnapshot(input, options = {}) {
@@ -498,15 +556,27 @@ export function compileSpatialSnapshot(input, options = {}) {
   if (!Number.isFinite(z)) {
     throw new Error(`compileSpatialSnapshot requires z to be a finite number, got ${JSON.stringify(options.z)}.`);
   }
+  let panelGrouping = options.panelGrouping ?? SPATIAL_SNAPSHOT_COMPILE_DEFAULTS.panelGrouping;
+  if (panelGrouping !== 'leaf' && panelGrouping !== 'root') {
+    throw new Error(`compileSpatialSnapshot requires panelGrouping to be "leaf" or "root", got ${JSON.stringify(panelGrouping)}.`);
+  }
   let structural = snapshot.nodes.filter((node) => node.part === 'panel' || node.part === 'resizer');
   if (!structural.length) {
     throw new Error('compileSpatialSnapshot requires at least one panel or resizer node in the snapshot.');
   }
   let structuralIds = new Set(structural.map((node) => node.id));
-  let compiledPanels = structural.map((node) => {
-    let children = collectDescendants(snapshot, node.id, structuralIds);
-    return compileSpatialPanel(node, children, snapshot, scale, z);
-  });
+  let compiledPanels = panelGrouping === 'root'
+    ? [compileSpatialPanel(
+      createGroupedRootPanel(snapshot, options.rootPanelId || 'panel:layout'),
+      snapshot.nodes,
+      snapshot,
+      scale,
+      z,
+    )]
+    : structural.map((node) => {
+      let children = collectDescendants(snapshot, node.id, structuralIds);
+      return compileSpatialPanel(node, children, snapshot, scale, z);
+    });
 
   let byLayer = Object.fromEntries(NATIVE_PANEL_LAYERS.map((layer) => [layer, 0]));
   let byKind = {};

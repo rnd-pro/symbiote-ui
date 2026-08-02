@@ -516,7 +516,7 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
     context.beginPath();
     context.rect(0, 0, canvas.width, canvas.height);
     context.clip();
-    let inset = Math.round(canvas.height * 0.22);
+    let inset = primitive.exactTextBounds ? 0 : Math.round(canvas.height * 0.22);
     let x = primitive.align === 'center' ? canvas.width / 2 : primitive.align === 'end' ? canvas.width - inset : inset;
     if (primitive.multiline) {
       context.textBaseline = 'top';
@@ -687,30 +687,41 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
 
   function addBorderEdges(mesh, primitive) {
     let border = primitive.style?.border;
-    if (!border || !(border.width > 0)) return;
+    let borderEdges = primitive.style?.borderEdges;
+    if ((!border || !(border.width > 0)) && !Array.isArray(borderEdges)) return;
     let { width, height } = primitive.bounds;
     if (!(width > 0) || !(height > 0)) return;
-    let thickness = Math.min(border.width, width / 2, height / 2);
-    let material = new THREE.MeshBasicMaterial({ depthWrite: false });
-    let record = registerMaterial(material, null);
-    record.dedicated = true;
-    applyResolvedStyle(material, border.color);
-    let tx = thickness / width;
-    let ty = thickness / height;
-    let edges = [
-      { x: 0, y: 0.5 - ty / 2, sx: 1, sy: ty },
-      { x: 0, y: -0.5 + ty / 2, sx: 1, sy: ty },
-      { x: -0.5 + tx / 2, y: 0, sx: tx, sy: 1 - 2 * ty },
-      { x: 0.5 - tx / 2, y: 0, sx: tx, sy: 1 - 2 * ty },
-    ];
-    for (let edge of edges) {
+    let definitions = border
+      ? ['top', 'bottom', 'left', 'right'].map((side) => ({ side, ...border }))
+      : borderEdges;
+    let materials = [];
+    for (let definition of definitions) {
+      if (!(definition?.width > 0)) continue;
+      let thickness = Math.min(definition.width, width / 2, height / 2);
+      let material = new THREE.MeshBasicMaterial({ depthWrite: false });
+      let record = registerMaterial(material, null);
+      record.dedicated = true;
+      applyResolvedStyle(material, definition.color);
+      materials.push(material);
+      let tx = thickness / width;
+      let ty = thickness / height;
+      let edge = definition.side === 'top'
+        ? { x: 0, y: 0.5 - ty / 2, sx: 1, sy: ty }
+        : definition.side === 'bottom'
+          ? { x: 0, y: -0.5 + ty / 2, sx: 1, sy: ty }
+          : definition.side === 'left'
+            ? { x: -0.5 + tx / 2, y: 0, sx: tx, sy: 1 - 2 * ty }
+            : definition.side === 'right'
+              ? { x: 0.5 - tx / 2, y: 0, sx: tx, sy: 1 - 2 * ty }
+              : null;
+      if (!edge) continue;
       let edgeMesh = new THREE.Mesh(unitPlane, material);
       edgeMesh.position.set(edge.x, edge.y, 0.0001);
       edgeMesh.scale.set(edge.sx, edge.sy, 1);
       edgeMesh.userData = { kind: 'border-edge' };
       mesh.add(edgeMesh);
     }
-    borderMaterials.set(primitive.id, material);
+    if (materials.length) borderMaterials.set(primitive.id, materials);
   }
 
   function buildPrimitive(panel, primitive, layerGroup) {
@@ -1056,8 +1067,8 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
     for (let [id, group] of frameGroups) {
       if (previousObjects.has(group)) frameGroups.delete(id);
     }
-    for (let [id, material] of borderMaterials) {
-      if (previousMaterials.has(material)) borderMaterials.delete(id);
+    for (let [id, materials] of borderMaterials) {
+      if (materials.some((material) => previousMaterials.has(material))) borderMaterials.delete(id);
     }
 
     root.remove(previous);
@@ -1159,8 +1170,8 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
         || old.bounds.height !== primitive.bounds.height
         || old.style?.font?.size !== primitive.style?.font?.size
         || old.style?.font?.family !== primitive.style?.font?.family
-        || Boolean(old.style?.border) !== Boolean(primitive.style?.border)
-        || old.style?.border?.width !== primitive.style?.border?.width) {
+        || JSON.stringify(old.style?.border ?? null) !== JSON.stringify(primitive.style?.border ?? null)
+        || JSON.stringify(old.style?.borderEdges ?? null) !== JSON.stringify(primitive.style?.borderEdges ?? null)) {
         changed.push(id);
       }
     }
@@ -1185,9 +1196,14 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
         applyRoleColor(object.material, theme.roles[object.userData.themeRole] || theme.roles.surface);
       }
     }
-    for (let [id, material] of borderMaterials) {
+    for (let [id, materials] of borderMaterials) {
       let border = nextPrimitives.get(id)?.style?.border;
-      if (border) applyResolvedStyle(material, border.color);
+      let edges = nextPrimitives.get(id)?.style?.borderEdges;
+      if (border) {
+        for (let material of materials) applyResolvedStyle(material, border.color);
+      } else if (Array.isArray(edges)) {
+        for (let [index, material] of materials.entries()) applyResolvedStyle(material, edges[index]?.color);
+      }
     }
     for (let entry of labelPlanes) refreshPlaneEntry(entry);
     for (let entry of iconPlanes) refreshPlaneEntry(entry);
@@ -1501,7 +1517,7 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
   function meshAppearanceEntry(id, object) {
     let source = mountedPrimitives.get(id);
     let material = object.material || null;
-    let borderMaterial = borderMaterials.get(id) || null;
+    let borderMaterialsForPrimitive = borderMaterials.get(id) || [];
     return {
       id,
       panelId: object.userData.panelId ?? null,
@@ -1514,11 +1530,12 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
       opacity: material ? material.opacity : 1,
       transparent: material ? material.transparent === true : false,
       resolvedStyle: object.userData.resolvedStyle === true,
-      border: borderMaterial
+      border: borderMaterialsForPrimitive.length
         ? {
           width: source?.style?.border?.width ?? null,
-          color: materialColors.get(borderMaterial) ?? null,
-          opacity: borderMaterial.opacity,
+          color: materialColors.get(borderMaterialsForPrimitive[0]) ?? null,
+          opacity: borderMaterialsForPrimitive[0].opacity,
+          edges: source?.style?.borderEdges?.map((edge) => ({ ...edge })) ?? null,
         }
         : null,
     };
