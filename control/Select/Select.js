@@ -3,6 +3,15 @@ import { UID } from '@symbiotejs/symbiote/utils';
 import template from './Select.tpl.js';
 import css from './Select.css.js';
 
+function observeMutations(observer, target, options) {
+  try {
+    observer.observe(target, options);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export class Select extends Symbiote {
   static observedAttributes = ['value', 'disabled', 'required', 'placeholder', 'invalid', 'name'];
 
@@ -132,7 +141,7 @@ export class Select extends Symbiote {
     this.#observer = new MutationObserver(() => {
       this.#syncOptions();
     });
-    this.#observer.observe(this, { childList: true, characterData: true });
+    observeMutations(this.#observer, this, { childList: true, characterData: true });
 
     this.#syncOptions();
   }

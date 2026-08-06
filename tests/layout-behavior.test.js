@@ -937,7 +937,7 @@ test('node canvas fit view avoids microscopic startup zoom', async () => {
   assert.match(source, /const NODE_CANVAS_MIN_FIT_ZOOM = 0\.08;/);
   assert.match(source, /const NODE_CANVAS_MIN_FIT_VIEWPORT_SIZE = 48;/);
   assert.match(source, /resolveFitPadding\(padding, viewport\)/);
-  assert.match(source, /resolveFitPadding\(80, viewport\)/);
+  assert.match(source, /resolveFitPadding\(options\.padding \?\? 80, viewport\)/);
   assert.doesNotMatch(source, /Math\.max\(0\.001,\s*Math\.min\(scaleX,\s*scaleY,\s*1\.5\)\)/);
   assert.doesNotMatch(source, /minZoom = 0\.001/);
 });

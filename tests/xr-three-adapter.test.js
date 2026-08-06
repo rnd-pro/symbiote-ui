@@ -17,6 +17,20 @@ import {
 } from '../xr/panel-frame.js';
 import { createSpatialTarget } from './xr-spatial-fixtures.js';
 
+if (typeof globalThis.OffscreenCanvas !== 'function') {
+  globalThis.OffscreenCanvas = class {
+    constructor(width, height) { this.width = width; this.height = height; }
+    getContext() {
+      return {
+        clearRect() {}, beginPath() {}, moveTo() {}, arcTo() {}, closePath() {}, fill() {},
+        save() {}, restore() {}, translate() {}, arc() {}, stroke() {}, strokeRect() {},
+        lineTo() {}, scale() {}, rotate() {}, fillText() {},
+        measureText(value) { return { width: String(value).length * 10 }; },
+      };
+    }
+  };
+}
+
 function readPanelSize(mesh) {
   return mesh.userData?.xrSize || [0.8, 0.45];
 }
@@ -234,6 +248,9 @@ let THREE = {
   Mesh,
   MeshStandardMaterial: class {},
   MeshBasicMaterial: class {},
+  CanvasTexture: class {
+    constructor(image) { this.image = image; this.source = image; }
+  },
   Raycaster,
   Vector3,
   Quaternion,
@@ -245,6 +262,8 @@ test('Three adapter publishes committed-root, trusted-select, and audit capabili
     'three-world-locked-root-commit',
     'three-trusted-select-receipts',
     'three-spatial-audit-v1',
+    'three-scene-interaction-arbiter',
+    'three-exact-primitive-capture',
   ]) {
     assert.ok(XR_THREE_WEBXR_ADAPTER.capabilities.includes(capability));
   }
@@ -253,6 +272,80 @@ test('Three adapter publishes committed-root, trusted-select, and audit capabili
     false,
     'pre-root hit-test placement remains a pure product-owned composition contract',
   );
+  assert.equal('fallback' in XR_THREE_WEBXR_ADAPTER, false, 'native Three/WebXR has no rendering fallback contract');
+});
+
+test('Three hit reticle aligns its +Z axis to a curved mesh world surface normal', () => {
+  let adapter = createXRThreeWebXRAdapter({ THREE: THREE_REAL });
+  let scene = new THREE_REAL.Scene();
+  let reticle = adapter.createPanelHitReticleVisual(scene);
+  assert.equal(reticle.ok, true);
+
+  let root = new THREE_REAL.Group();
+  root.position.set(0.4, 0.7, -1.2);
+  root.rotation.set(-0.25, 0.6, 0.18);
+  let surface = new THREE_REAL.Mesh(
+    new THREE_REAL.SphereGeometry(0.6, 16, 12),
+    new THREE_REAL.MeshBasicMaterial(),
+  );
+  surface.rotation.set(0.35, -0.45, 0.22);
+  surface.scale.set(0.65, 1.4, 0.85);
+  root.add(surface);
+  scene.add(root);
+  scene.updateMatrixWorld(true);
+
+  let localNormal = new THREE_REAL.Vector3(0.38, 0.81, 0.44).normalize();
+  let point = surface.localToWorld(localNormal.clone().multiplyScalar(0.6));
+  let updated = adapter.updatePanelHitReticleVisual(reticle, {
+    object: surface,
+    point,
+    face: { normal: localNormal },
+    distance: 1.25,
+  });
+  assert.equal(updated.ok, true);
+  assert.equal(updated.visible, true);
+  assert.equal(updated.panelId, null, 'the shared reticle must not require a panel target');
+
+  scene.updateMatrixWorld(true);
+  let actualNormal = new THREE_REAL.Vector3(0, 0, 1)
+    .transformDirection(reticle.object.matrixWorld);
+  let expectedNormal = localNormal.clone()
+    .applyMatrix3(new THREE_REAL.Matrix3().getNormalMatrix(surface.matrixWorld))
+    .normalize();
+  assert.ok(actualNormal.distanceTo(expectedNormal) < 1e-7);
+
+  surface.geometry.dispose();
+  surface.material.dispose();
+  reticle.object.geometry.dispose();
+  reticle.object.material.dispose();
+});
+
+test('Three hit reticle falls back to target world rotation when a face normal is absent', () => {
+  let adapter = createXRThreeWebXRAdapter({ THREE: THREE_REAL });
+  let scene = new THREE_REAL.Scene();
+  let reticle = adapter.createPanelHitReticleVisual(scene);
+  assert.equal(reticle.ok, true);
+
+  let root = new THREE_REAL.Group();
+  root.rotation.set(0.3, -0.5, 0.15);
+  let target = new THREE_REAL.Object3D();
+  target.rotation.set(-0.2, 0.4, -0.35);
+  root.add(target);
+  scene.add(root);
+  scene.updateMatrixWorld(true);
+
+  let point = new THREE_REAL.Vector3(0.2, 1.1, -0.8);
+  let updated = adapter.updatePanelHitReticleVisual(reticle, { object: target, point, distance: 0.9 });
+  assert.equal(updated.ok, true);
+
+  scene.updateMatrixWorld(true);
+  let expectedQuaternion = target.getWorldQuaternion(new THREE_REAL.Quaternion());
+  let actualQuaternion = reticle.object.getWorldQuaternion(new THREE_REAL.Quaternion());
+  assert.ok(actualQuaternion.angleTo(expectedQuaternion) < 1e-7);
+  assert.ok(reticle.object.getWorldPosition(new THREE_REAL.Vector3()).distanceTo(point) < 1e-7);
+
+  reticle.object.geometry.dispose();
+  reticle.object.material.dispose();
 });
 
 test('Three adapter exposes its world-lockable scene root', () => {
@@ -353,7 +446,7 @@ test('Three adapter handles world space dragging with a translated parent root g
   assert.equal(Math.abs(mesh.position.z - 0.072) < 0.001, true);
 });
 
-test('Three session controller manages frame-timing tracking, panel-store updates, and final session snapshot', async () => {
+test('Three session controller manages frame timing, initial panel state, and final session snapshot', async () => {
   let sessionListeners = new Map();
   let session = {
     visibilityState: 'visible',
@@ -381,32 +474,22 @@ test('Three session controller manages frame-timing tracking, panel-store update
     },
   };
 
+  let panelMesh = new Mesh();
+  panelMesh.position.set(1, 2, 3);
+  panelMesh.userData = {
+    panelId: 'panel-a',
+    panel: {
+      portable: true,
+      pinned: false,
+      focused: false,
+    },
+  };
   let adapter = {
     async setSession(s) {
       return { ok: true, session: s, referenceSpace: {} };
     },
     listPanelMeshes() {
-      let mesh = new Mesh();
-      mesh.position.set(1, 2, 3);
-      mesh.userData = {
-        panelId: 'panel-a',
-        panel: {
-          portable: true,
-          pinned: false,
-          focused: false,
-        },
-      };
-      return [mesh];
-    },
-    controllerRays: {
-      panelStore: null,
-      receiptsList: null,
-      getState() {
-        return { dragging: false };
-      },
-      updateDrag() {
-        return { ok: true };
-      },
+      return [panelMesh];
     },
     getDiagnostics() {
       return {};
@@ -441,22 +524,6 @@ test('Three session controller manages frame-timing tracking, panel-store update
   animationLoop(1016, { predictedDisplayTime: 1016 });
   animationLoop(1033, { predictedDisplayTime: 1033 });
 
-  // Settle a move using the synced panelStore
-  let ps = adapter.controllerRays.panelStore;
-  assert.ok(ps);
-  let moveReceipt = ps.settleMove('panel-a', [1.1, 2.1, 3.1], [0, 0, 0, 1], {
-    sessionId: 'session-123',
-    startFrameId: 'frame-1',
-    endFrameId: 'frame-2',
-    inputSourceId: 'controller-1',
-    inputKind: 'controller',
-    handedness: 'none',
-    profiles: [],
-    timestamp: 1033
-  });
-  assert.equal(moveReceipt.accepted, true);
-  adapter.controllerRays.receiptsList.push(moveReceipt);
-
   // Stop the session
   await controller.stop();
 
@@ -465,12 +532,387 @@ test('Three session controller manages frame-timing tracking, panel-store update
   assert.ok(snapshot);
   assert.equal(snapshot.version, 'xr-final-session-snapshot-v1');
   assert.equal(snapshot.facts.teardownReason, 'stop-called');
-  assert.equal(snapshot.receipts.length, 1);
-  assert.equal(snapshot.receipts[0].version, 'xr-portable-panel-receipt-v1');
+  assert.equal(snapshot.receipts.length, 0);
   assert.equal(snapshot.frameTiming.nominalFrameRate, 90);
   assert.equal(snapshot.frameTiming.sampleCount, 3);
   assert.equal(snapshot.panelState.panels[0].id, 'panel-a');
-  assert.deepEqual(snapshot.panelState.panels[0].current.position, [1.1, 2.1, 3.1]);
+  assert.deepEqual(snapshot.panelState.panels[0].current.position, [1, 2, 3]);
+});
+
+test('session controller routes exact primitive capture through one arbiter ray and recreates it on restart', async () => {
+  let targetObject = new THREE_REAL.Object3D();
+  let hit = {
+    object: targetObject,
+    distance: 0.75,
+    point: new THREE_REAL.Vector3(0, 0, -0.75),
+    primitive: 'window/resize-northEast',
+  };
+  let intersections = 0;
+  let interactionRaycaster = {
+    ray: { origin: new THREE_REAL.Vector3(), direction: new THREE_REAL.Vector3(0, 0, -1) },
+    set(origin, direction) {
+      this.ray.origin.copy(origin);
+      this.ray.direction.copy(direction);
+    },
+    intersectObjects(objects) {
+      intersections += 1;
+      assert.deepEqual(objects, [targetObject]);
+      return hit ? [hit] : [];
+    },
+  };
+  let controllerObject = new THREE_REAL.Group();
+  let controllerObjects = [controllerObject, new THREE_REAL.Group()];
+  let controllerGrips = [new THREE_REAL.Group(), new THREE_REAL.Group()];
+  controllerGrips[0].position.set(0.2, 1.3, -0.1);
+  let renderer = {
+    xr: {
+      getController: (index) => controllerObjects[index],
+      getControllerGrip: (index) => controllerGrips[index],
+      setAnimationLoop(callback) { this.loop = callback; },
+    },
+    render() {},
+  };
+  let sessions = [];
+  let makeSession = (source) => {
+    let listeners = new Map();
+    let session = {
+      source,
+      listeners,
+      visibilityState: 'visible',
+      inputSources: [source],
+      addEventListener(type, listener) { listeners.set(type, listener); },
+      removeEventListener(type) { listeners.delete(type); },
+      async end() { listeners.get('end')?.(); },
+    };
+    sessions.push(session);
+    return session;
+  };
+  let sourceOne = { id: 'right-1', handedness: 'right', targetRayMode: 'tracked-pointer', profiles: [] };
+  let sourceTwo = { id: 'right-2', handedness: 'right', targetRayMode: 'tracked-pointer', profiles: [] };
+  let requested = [makeSession(sourceOne), makeSession(sourceTwo)];
+  let adapter = {
+    async setSession(session) { return { ok: true, session, referenceSpace: {} }; },
+    listPanelMeshes: () => [],
+    controllerRays: { getHits() { throw new Error('legacy acquisition path used'); } },
+    getDiagnostics: () => ({}),
+  };
+  let controller = createXRThreeSessionController({
+    globalThis: { navigator: { xr: { requestSession: async () => requested.shift() } } },
+    adapter,
+    THREE: THREE_REAL,
+    interactionRaycaster,
+  });
+  let events = [];
+  controller.registerInteractionTarget({
+    ownerId: 'raster-layouts',
+    id: 'chat',
+    generation: 9,
+    objects: [targetObject],
+    resolveHit: (rawHit) => ({
+      primitiveId: rawHit.primitive,
+      contentPoint: { x: 0.9, y: 0.1 },
+    }),
+    onPress: (identity, details) => events.push(['press', identity, details]),
+    onMove: (identity, details) => events.push(['move', identity, details]),
+    onRelease: (identity, details) => events.push(['release', identity, details]),
+    onCancel: (identity, details) => events.push(['cancel', identity, details]),
+  });
+  let target = { ok: true, renderer, camera: new THREE_REAL.PerspectiveCamera(), scene: new THREE_REAL.Scene() };
+  assert.equal((await controller.start('immersive-vr', {
+    target, controllerRayVisuals: false, panelHitReticle: false, renderFrame: false,
+  })).ok, true);
+  controllerObject.dispatchEvent({ type: 'connected', data: sourceOne });
+  renderer.xr.loop(100, { predictedDisplayTime: 100, getViewerPose: () => null });
+  assert.equal(intersections, 1);
+  controllerObject.dispatchEvent({ type: 'selectstart', data: sourceOne });
+  assert.equal(intersections, 1, 'selectstart consumes the frame winner without re-raycasting');
+  let press = events.at(-1);
+  assert.equal(press[0], 'press');
+  assert.deepEqual(press[1], {
+    sourceId: 'right-1', ownerId: 'raster-layouts', targetId: 'chat', targetGeneration: 9,
+  });
+  assert.equal(press[2].hit.resolved.primitiveId, 'window/resize-northEast');
+  assert.deepEqual(press[2].source.controllerPose.position, { x: 0.2, y: 1.3, z: -0.1 });
+  assert.deepEqual(press[2].source.controllerPose.quaternion, [0, 0, 0, 1]);
+  assert.equal(controller.getDiagnostics().lastPressTransition?.phase, 'selectstart');
+  assert.equal(controller.getDiagnostics().lastPressTransition?.sourceId, 'right-1');
+
+  hit = { ...hit, primitive: 'window/content', distance: 0.5 };
+  renderer.xr.loop(116, { predictedDisplayTime: 116, getViewerPose: () => null });
+  let move = events.find(([phase]) => phase === 'move');
+  assert.equal(move[2].captureHit.resolved.primitiveId, 'window/resize-northEast');
+  assert.equal(move[2].winningHit, null, 'active capture does not raycast or replace its latched hit');
+  controllerObject.dispatchEvent({ type: 'selectend', data: sourceOne });
+  assert.equal(intersections, 1, 'captured frames and selectend avoid re-raycast');
+  let release = events.find(([phase]) => phase === 'release');
+  assert.equal(release[2].captureHit.resolved.primitiveId, 'window/resize-northEast');
+  assert.equal(controller.getDiagnostics().lastReleaseTransition?.phase, 'selectend');
+  assert.equal(controller.getDiagnostics().lastReleaseTransition?.sourceId, 'right-1');
+
+  renderer.xr.loop(132, { predictedDisplayTime: 132, getViewerPose: () => null });
+  controllerObject.dispatchEvent({ type: 'selectstart', data: sourceOne });
+  sessions[0].visibilityState = 'hidden';
+  sessions[0].listeners.get('visibilitychange')?.();
+  assert.equal(events.at(-1)[0], 'cancel');
+  assert.equal(events.at(-1)[2].reason, 'visibility-hidden');
+
+  sessions[0].visibilityState = 'visible';
+  sessions[0].listeners.get('visibilitychange')?.();
+  renderer.xr.loop(148, { predictedDisplayTime: 148, getViewerPose: () => null });
+  controllerObject.dispatchEvent({ type: 'selectstart', data: sourceOne });
+  sessions[0].inputSources = [];
+  sessions[0].listeners.get('inputsourceschange')?.({ removed: [sourceOne], added: [] });
+  assert.equal(events.at(-1)[2].reason, 'source-lost');
+
+  await controller.stop();
+  assert.equal(controller.getInteractionDiagnostics().active, false);
+  assert.deepEqual(controller.getDiagnostics().resources, {
+    geometries: 0,
+    textures: 0,
+    renderTargets: 0,
+    calls: 0,
+    triangles: 0,
+    controllers: 0,
+    controllerGrips: 0,
+    controllerListeners: 0,
+    interactionTargets: 1,
+    interactionCaptures: 0,
+  });
+  assert.equal((await controller.start('immersive-vr', {
+    target, controllerRayVisuals: false, panelHitReticle: false, renderFrame: false,
+  })).ok, true);
+  controllerObject.dispatchEvent({ type: 'connected', data: sourceTwo });
+  renderer.xr.loop(200, { predictedDisplayTime: 200, getViewerPose: () => null });
+  controllerObject.dispatchEvent({ type: 'selectstart', data: sourceTwo });
+  assert.equal(events.at(-1)[0], 'press', 'persistent registration is active on a fresh session arbiter');
+  await controller.stop();
+});
+
+test('session controller keeps independent focus and reticle state for both controllers', async () => {
+  let leftObject = new THREE_REAL.Mesh(new THREE_REAL.PlaneGeometry(0.2, 0.2), new THREE_REAL.MeshBasicMaterial());
+  let rightObject = new THREE_REAL.Mesh(new THREE_REAL.PlaneGeometry(0.2, 0.2), new THREE_REAL.MeshBasicMaterial());
+  leftObject.userData.panelId = 'left-panel';
+  rightObject.userData.panelId = 'right-panel';
+  let controllers = [new THREE_REAL.Group(), new THREE_REAL.Group()];
+  controllers[0].position.x = -0.2;
+  controllers[1].position.x = 0.2;
+  let renderer = {
+    xr: {
+      getController: (index) => controllers[index],
+      getControllerGrip: () => null,
+      setAnimationLoop(callback) { this.loop = callback; },
+    },
+    render() {},
+  };
+  let leftSource = { id: 'left', handedness: 'left', targetRayMode: 'tracked-pointer', profiles: [] };
+  let rightSource = { id: 'right', handedness: 'right', targetRayMode: 'tracked-pointer', profiles: [] };
+  let listeners = new Map();
+  let session = {
+    visibilityState: 'visible',
+    inputSources: [leftSource, rightSource],
+    addEventListener(type, listener) { listeners.set(type, listener); },
+    removeEventListener(type) { listeners.delete(type); },
+    async end() { listeners.get('end')?.(); },
+  };
+  let intersectionsBySide = { left: 0, right: 0 };
+  let raycaster = {
+    ray: { origin: new THREE_REAL.Vector3(), direction: new THREE_REAL.Vector3(0, 0, -1) },
+    set(origin, direction) { this.ray.origin.copy(origin); this.ray.direction.copy(direction); },
+    intersectObjects() {
+      intersectionsBySide[this.ray.origin.x < 0 ? 'left' : 'right'] += 1;
+      let object = this.ray.origin.x < 0 ? leftObject : rightObject;
+      return [{
+        object,
+        distance: 1,
+        point: new THREE_REAL.Vector3(this.ray.origin.x, 0, -1),
+        face: { normal: new THREE_REAL.Vector3(0, 0, 1) },
+      }];
+    },
+  };
+  let visualAdapter = createXRThreeWebXRAdapter({ THREE: THREE_REAL });
+  let adapter = {
+    THREE: THREE_REAL,
+    async setSession(next) { return { ok: true, session: next, referenceSpace: {} }; },
+    listPanelMeshes: () => [],
+    getDiagnostics: () => ({}),
+    createPanelHitReticleVisual: visualAdapter.createPanelHitReticleVisual,
+    updatePanelHitReticleVisual: visualAdapter.updatePanelHitReticleVisual,
+  };
+  let controller = createXRThreeSessionController({
+    globalThis: { navigator: { xr: { requestSession: async () => session } } },
+    adapter,
+    THREE: THREE_REAL,
+    interactionRaycaster: raycaster,
+  });
+  controller.registerInteractionTarget({
+    ownerId: 'workspace',
+    id: 'panels',
+    generation: 1,
+    objects: [leftObject, rightObject],
+    resolveHit: (hit) => ({
+      primitiveId: `${hit.object.userData.panelId}/content`,
+      operation: hit.object.userData.operation || 'focus',
+    }),
+    onPress: (_identity, details) => {
+      if (details.hit?.object?.userData?.kind !== 'equipment-hit-proxy') return;
+      leftObject.position.set(-0.05, 0.12, -0.08);
+      leftObject.rotation.set(-0.17, 0.24, -0.11);
+      leftObject.scale.setScalar(1.2);
+      leftObject.updateMatrixWorld(true);
+    },
+  });
+  let scene = new THREE_REAL.Scene();
+  assert.equal((await controller.start('immersive-ar', {
+    target: { ok: true, renderer, camera: new THREE_REAL.PerspectiveCamera(), scene },
+    controllerRayVisuals: false,
+    renderFrame: false,
+  })).ok, true);
+  controllers[0].dispatchEvent({ type: 'connected', data: leftSource });
+  controllers[1].dispatchEvent({ type: 'connected', data: rightSource });
+  renderer.xr.loop(100, { predictedDisplayTime: 100, getViewerPose: () => null });
+  let diagnostics = controller.getDiagnostics();
+  assert.deepEqual(diagnostics.hovers.map((hover) => [hover.sourceId, hover.panelId]), [
+    ['left', 'left-panel'],
+    ['right', 'right-panel'],
+  ]);
+  let reticles = scene.children.filter((object) => object.userData?.snPanelHitReticle);
+  assert.equal(reticles.length, 2);
+  assert.ok(reticles.every((reticle) => reticle.visible));
+  assert.notEqual(reticles[0].position.x, reticles[1].position.x);
+
+  rightObject.userData.operation = 'move-menu';
+  renderer.xr.loop(108, { predictedDisplayTime: 108, getViewerPose: () => null });
+  let rightStart = reticles[1].position.clone();
+  controllers[1].dispatchEvent({ type: 'selectstart', data: rightSource });
+  controllers[1].position.x = 0.45;
+  renderer.xr.loop(116, { predictedDisplayTime: 116, getViewerPose: () => null });
+  assert.notEqual(reticles[1].position.x, rightStart.x, 'menu capture reticle follows current controller pose without raycasting');
+  assert.equal(controller.getDiagnostics().hovers[1].reticleControllerFollowing, true);
+  controllers[1].dispatchEvent({ type: 'selectend', data: rightSource });
+
+  leftObject.userData.kind = 'equipment-hit-proxy';
+  leftObject.userData.operation = 'move';
+  renderer.xr.loop(132, { predictedDisplayTime: 132, getViewerPose: () => null });
+  let equipmentHitWorld = reticles[0].position.clone();
+  let equipmentLocalAnchor = leftObject.worldToLocal(equipmentHitWorld.clone());
+  controllers[0].dispatchEvent({ type: 'selectstart', data: leftSource });
+  let leftIntersectionsAtCapture = intersectionsBySide.left;
+  leftObject.position.set(0.45, 0.3, -0.25);
+  leftObject.rotation.set(0.32, -0.48, 0.21);
+  leftObject.scale.setScalar(1.6);
+  leftObject.updateMatrixWorld(true);
+  let expectedEquipmentReticle = leftObject.localToWorld(equipmentLocalAnchor.clone());
+  renderer.xr.loop(148, { predictedDisplayTime: 148, getViewerPose: () => null });
+  assert.ok(
+    reticles[0].position.distanceTo(expectedEquipmentReticle) < 1e-9,
+    'equipment reticle follows the original object-local hit through translation, rotation and scale',
+  );
+  assert.equal(
+    intersectionsBySide.left,
+    leftIntersectionsAtCapture,
+    'captured equipment reticle pose never raycasts that controller again',
+  );
+  assert.equal(controller.getDiagnostics().hovers[0].reticleFrozen, true);
+  assert.equal(controller.getDiagnostics().hovers[0].reticleObjectAnchored, true);
+  controllers[0].dispatchEvent({ type: 'selectend', data: leftSource });
+  renderer.xr.loop(164, { predictedDisplayTime: 164, getViewerPose: () => null });
+  assert.ok(intersectionsBySide.left > leftIntersectionsAtCapture, 'ordinary focus raycasts resume after release');
+  await controller.stop();
+  leftObject.geometry.dispose();
+  leftObject.material.dispose();
+  rightObject.geometry.dispose();
+  rightObject.material.dispose();
+});
+
+test('session controller keeps explicit controller bindings when inputSources reorder', async () => {
+  let targetObject = new THREE_REAL.Object3D();
+  let interactionRaycaster = {
+    ray: { origin: new THREE_REAL.Vector3(), direction: new THREE_REAL.Vector3(0, 0, -1) },
+    set(origin, direction) {
+      this.ray.origin.copy(origin);
+      this.ray.direction.copy(direction);
+    },
+    intersectObjects() {
+      return [{
+        object: targetObject,
+        distance: 1,
+        point: new THREE_REAL.Vector3(this.ray.origin.x, 0, -1),
+      }];
+    },
+  };
+  let leftController = new THREE_REAL.Group();
+  leftController.position.x = -1;
+  let rightController = new THREE_REAL.Group();
+  rightController.position.x = 1;
+  let renderer = {
+    xr: {
+      getController: (index) => [leftController, rightController][index],
+      setAnimationLoop(callback) { this.loop = callback; },
+    },
+    render() {},
+  };
+  let left = { id: 'left-source', handedness: 'left', targetRayMode: 'tracked-pointer', profiles: [] };
+  let right = { id: 'right-source', handedness: 'right', targetRayMode: 'tracked-pointer', profiles: [] };
+  let listeners = new Map();
+  let session = {
+    visibilityState: 'visible',
+    inputSources: [right, left],
+    addEventListener(type, listener) { listeners.set(type, listener); },
+    removeEventListener(type) { listeners.delete(type); },
+    async end() { listeners.get('end')?.(); },
+  };
+  let adapter = {
+    async setSession(value) { return { ok: true, session: value, referenceSpace: {} }; },
+    listPanelMeshes: () => [],
+    getDiagnostics: () => ({}),
+  };
+  let controller = createXRThreeSessionController({
+    globalThis: { navigator: { xr: { requestSession: async () => session } } },
+    adapter,
+    THREE: THREE_REAL,
+    interactionRaycaster,
+  });
+  let events = [];
+  controller.registerInteractionTarget({
+    ownerId: 'panels', id: 'chat', generation: 1, objects: [targetObject],
+    resolveHit: () => ({ primitiveId: 'chat/content' }),
+    onPress: (identity, details) => events.push(['press', identity, details.ray.origin.x]),
+    onMove: (identity, details) => events.push(['move', identity, details.ray.origin.x]),
+  });
+  let target = { ok: true, renderer, camera: new THREE_REAL.PerspectiveCamera(), scene: new THREE_REAL.Scene() };
+  assert.equal((await controller.start('immersive-vr', {
+    target, controllerRayVisuals: false, panelHitReticle: false, renderFrame: false,
+  })).ok, true);
+  leftController.dispatchEvent({ type: 'connected', data: left });
+  rightController.dispatchEvent({ type: 'connected', data: right });
+  renderer.xr.loop(100, { predictedDisplayTime: 100, getViewerPose: () => null });
+  leftController.dispatchEvent({ type: 'selectstart', data: left });
+  assert.deepEqual(events[0], [
+    'press',
+    { sourceId: 'left-source', ownerId: 'panels', targetId: 'chat', targetGeneration: 1 },
+    -1,
+  ]);
+
+  session.inputSources = [left, right];
+  renderer.xr.loop(116, { predictedDisplayTime: 116, getViewerPose: () => null });
+  let move = events.find(([phase]) => phase === 'move');
+  assert.equal(move[1].sourceId, 'left-source');
+  assert.equal(move[2], -1, 'reordering session sources cannot transfer the left source to the right controller');
+  leftController.dispatchEvent({ type: 'selectend', data: left });
+  await controller.stop();
+});
+
+test('controller ray visual stops at the nearest winner and fades transparently at both ends', () => {
+  let adapter = createXRThreeWebXRAdapter({ THREE: THREE_REAL });
+  let controller = new THREE_REAL.Group();
+  let visual = adapter.createControllerRayVisual(controller, { length: 4, opacity: 0.8 });
+  assert.equal(visual.ok, true);
+  let line = visual.object;
+  assert.equal(line.material.type, 'ShaderMaterial');
+  assert.deepEqual([...line.geometry.getAttribute('snRayAlpha').array], [0, 0.800000011920929, 0]);
+  assert.equal(line.userData.updateHitDistance(1.5), 1.5);
+  assert.deepEqual([...line.geometry.getAttribute('position').array], [0, 0, 0, 0, 0, -0.75, 0, 0, -1.5]);
+  assert.equal(line.userData.updateHitDistance(Infinity), 4);
 });
 
 test('Three adapter handles world space dragging with a transformed root containing translation and rotation', () => {
@@ -757,8 +1199,8 @@ test('Three adapter real Three.js conformed tests with rotated root', () => {
 
   // Horizon-style grips are placed completely outside the corners, so the nwHandle centers on the
   // north-west offset corner.
-  const expectedNWLocalX = -1.2 / 2 - 0.044 / 2;
-  const expectedNWLocalY = 0.6 / 2 + 0.044 / 2;
+  const expectedNWLocalX = -1.2 / 2;
+  const expectedNWLocalY = 0.6 / 2;
 
   assert.ok(Math.abs(nwHandle.position.x - expectedNWLocalX) < 1e-5);
   assert.ok(Math.abs(nwHandle.position.y - expectedNWLocalY) < 1e-5);
@@ -768,7 +1210,7 @@ test('Three adapter real Three.js conformed tests with rotated root', () => {
 test('panel frame meter chrome keeps constant physical size across panel sizes', () => {
   const legacy = createXRPanelFrame({ id: 'p' });
   assert.equal(legacy.version, 'xr-panel-frame-v1');
-  assert.ok(Math.abs(legacy.zones.move.height * 0.45 - 0.048) < 1e-9);
+  assert.ok(Math.abs(legacy.zones.move.height * 0.45 - 0.064) < 1e-9);
   assert.ok(Math.abs((legacy.zones.move.y - 1) * 0.45 - 0.045) < 1e-9);
   assert.ok(Math.abs(legacy.zones.resize.northWest.width * 0.8 - 0.044) < 1e-9);
   assert.ok(Math.abs(legacy.zones.actions.close.width * 0.8 - 0.038) < 1e-9);
@@ -788,7 +1230,7 @@ test('panel frame meter chrome keeps constant physical size across panel sizes',
     // The exported layout helper is the single source of truth for zones.
     assert.deepEqual(frame.zones, computeXRPanelChromeLayout(size, meterOptions));
     // UV zone * panel size = constant physical meters at both sizes.
-    assert.ok(Math.abs(frame.zones.move.height * size[1] - 0.035) < 1e-9);
+    assert.ok(Math.abs(frame.zones.move.height * size[1] - 0.042) < 1e-9);
     assert.ok(Math.abs((frame.zones.move.y - 1) * size[1] - 0.027) < 1e-9);
     assert.ok(Math.abs(frame.zones.actions.close.width * size[0] - 0.030) < 1e-9);
     assert.ok(Math.abs(frame.zones.resize.northWest.width * size[0] - 0.024) < 1e-9);
@@ -871,7 +1313,7 @@ test('Three adapter rebuilds meter-chrome hit zones and chrome surface after res
 
   // Hit-zone correctness: a point inside the OLD grip UV but outside the new
   // one must no longer hit resize; the move bar stays hittable at its center.
-  const probe = { x: -0.025, y: -0.01 };
+  const probe = { x: -0.012, y: 0 };
   assert.equal(hitTestXRPanelFrame(before, probe)?.zone, 'resize');
   assert.equal(hitTestXRPanelFrame(after, probe), null);
   const moveCenter = {
@@ -948,31 +1390,27 @@ async function createCloseHarness(options = {}) {
     },
     updatePanelFrameVisuals() {},
   };
+  mesh.userData.panelFrame = createXRPanelFrame({
+    id: 'panel-a',
+    size: [0.8, 0.5],
+    closable: options.closable,
+  });
   sceneRoot.add(mesh);
 
   let hit = null;
   let hitMeshCandidates = [];
-  let controllerRays = {
-    panelStore: null,
-    receiptsList: null,
-    getHits(controller, meshes) {
-      hitMeshCandidates.push(meshes);
+  let interactionRaycaster = {
+    ray: {
+      origin: new THREE_REAL.Vector3(),
+      direction: new THREE_REAL.Vector3(0, 0, -1),
+    },
+    set(origin, direction) {
+      this.ray.origin.copy(origin);
+      this.ray.direction.copy(direction);
+    },
+    intersectObjects(objects) {
+      hitMeshCandidates.push([...objects]);
       return hit ? [hit] : [];
-    },
-    beginDrag() {
-      return { ok: false, reason: 'not-supported' };
-    },
-    updateDrag() {
-      return { ok: false, reason: 'not-dragging' };
-    },
-    endDrag() {
-      return { ok: true };
-    },
-    getState() {
-      return { dragging: false, panelId: null };
-    },
-    getDiagnostics() {
-      return {};
     },
   };
   let adapter = {
@@ -989,7 +1427,6 @@ async function createCloseHarness(options = {}) {
     getSceneRoot() {
       return sceneRoot;
     },
-    controllerRays,
     getDiagnostics() {
       return {};
     },
@@ -1008,6 +1445,7 @@ async function createCloseHarness(options = {}) {
     },
     adapter,
     THREE: THREE_REAL,
+    interactionRaycaster,
     panelClosePolicy: options.panelClosePolicy,
     onPanelFullscreen: options.onPanelFullscreen,
     onPortablePanelReceipt(receipt) {
@@ -1029,6 +1467,7 @@ async function createCloseHarness(options = {}) {
     renderFrame: false,
   });
   assert.equal(started.ok, true);
+  controllers[0].dispatchEvent({ type: 'connected', data: source });
 
   let committed = controller.commitSpatialEvidence({
     spatialTarget: createSpatialTarget(),
@@ -1073,25 +1512,22 @@ async function createCloseHarness(options = {}) {
     });
   }
 
-  function actionTarget(action) {
-    return {
-      version: 'xr-panel-frame-target-v1',
-      panelId: 'panel-a',
-      zone: 'action',
-      action,
-      operation: 'action',
-      handle: null,
-      point: { x: 0.5, y: 0.5 },
-    };
+  function actionTarget(object, action) {
+    let zone = object.userData.panelFrame.zones.actions[action];
+    assert.ok(zone, `missing ${action} action zone`);
+    return { x: zone.x + zone.width / 2, y: zone.y + zone.height / 2 };
   }
 
+  let interactionTime = 1100;
   function selectAction(object, action) {
     hit = {
       object,
       point: new THREE_REAL.Vector3(object.position.x, object.position.y, object.position.z),
       uv: null,
-      frameTarget: actionTarget(action),
+      framePoint: actionTarget(object, action),
+      distance: 1,
     };
+    frame(interactionTime += 16);
     controllers[0].dispatchEvent({ type: 'selectstart', data: source });
     controllers[0].dispatchEvent({ type: 'selectend', data: source });
   }
@@ -1201,17 +1637,12 @@ test('Three session controller close policy blocks the store call and emits a di
   await harness.controller.stop();
 });
 
-test('Three session controller rejects close on non-closable panels', async () => {
+test('Three session controller exposes no close primitive for non-closable panels', async () => {
   let harness = await createCloseHarness({ closable: false });
 
   harness.frame(1000);
-  harness.selectAction(harness.mesh, 'close');
-
-  assert.equal(harness.receipts.length, 1);
-  assert.equal(harness.receipts[0].action, 'close');
-  assert.equal(harness.receipts[0].accepted, false);
-  assert.equal(harness.receipts[0].reason, 'panel-not-closable');
-  assert.equal(harness.receipts[0].phase, 'rejected');
+  assert.equal(harness.mesh.userData.panelFrame.zones.actions.close, undefined);
+  assert.equal(harness.receipts.length, 0);
   assert.notEqual(harness.mesh.visible, false);
   assert.equal(harness.findRestoreChip(), null);
 

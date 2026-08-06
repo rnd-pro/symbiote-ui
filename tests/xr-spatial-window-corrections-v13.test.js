@@ -500,7 +500,7 @@ test('Provider theme/chrome v13/v16 corrections validation', async (t) => {
     assert.equal(res2.ok, false);
     assert.equal(res2.reason, 'missing-transaction-token');
 
-    let res3 = bridge.inspectBatch({ version: 'xr-spatial-batch-tx-v18', token: 'non-existent' });
+    let res3 = bridge.inspectBatch({ version: 'xr-spatial-batch-tx-v18', token: 'missing' });
     assert.equal(res3.ok, false);
     assert.equal(res3.reason, 'transaction-not-found');
   });

@@ -256,7 +256,10 @@ and unknown windows are data (`invalid-viewport`, `invalid-size`,
 - `previewResize(windowId, sizeMeters)` changes only the native shell: a
   `sn-xr-window-resize-preview` plane previews the target size and chrome hit
   zones relayout, while the content texture, geometry, and CSS viewport stay at
-  the committed values (`contentScaled: false`, zero uploads).
+  the committed values (`contentScaled: false`, zero uploads). Raster renderers
+  preview by scaling the mounted group and keep the committed hit topology and
+  target generation stable until release, so an active resize capture cannot
+  invalidate itself during the gesture.
 - `commitResize()` runs browser CSS layout at the final viewport through
   `updateWindowViewport` (the live element keeps its state; only viewport
   styles change), uploads the texture first, and only then swaps texture and
@@ -283,7 +286,8 @@ Texture uploads are keyed by `contentRevision`, `themeRevision`, viewport, and
 a theme epoch; the resolver reuses textures (`-reused` stages) whenever the key
 is unchanged, so idle windows perform zero uploads. `syncFrame({ timestamp })`
 returns `xr-spatial-window-frame-v1` with per-frame upload deltas (zero while
-idle) and `xr-frame-timing-v1` metrics. `applyTheme(snapshot)` projects the
+idle) and `xr-frame-timing-v1` metrics, including p50/p95/p99 intervals, total
+missed frames, and the longest consecutive missed-frame run. `applyTheme(snapshot)` projects the
 cascade theme onto window materials and chrome tokens and re-uploads only
 affected windows.
 
@@ -299,4 +303,3 @@ resize (phase), fallback, chrome (named zones/actions, normalized zone rectangle
 `selectionGestures`, `contentFocusHandoffs`, `viewportUpdates`), frame timing,
 theme, shell, support, and the active gesture. All public outputs are
 JSON-round-trippable and contain no DOM, Three, or private references.
-

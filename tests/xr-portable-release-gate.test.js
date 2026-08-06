@@ -11,7 +11,9 @@ import * as THREE from 'three';
 
 import {
   createXRFrameTimingTracker,
+  createXRPanelFrame,
   createXRPortablePanelStore,
+  createXRThreeControllerRayAdapter,
   createXRThreeInteractionReadinessSummary,
   createXRThreeSessionController,
   createXRThreeWebXRAdapter,
@@ -19,8 +21,10 @@ import {
   verifyXRPortablePanelStateSnapshot,
 } from 'symbiote-ui/xr';
 import { createSpatialTarget } from './xr-spatial-fixtures.js';
+import { installFakeCanvas2DGlobal } from './xr-spatial-window-fixtures.js';
 
 let directory = dirname(fileURLToPath(import.meta.url));
+installFakeCanvas2DGlobal();
 
 function panel(overrides = {}) {
   let canonical = overrides.canonical || {
@@ -173,6 +177,11 @@ async function createControllerHarness(options = {}) {
   mesh.userData = {
     panelId: descriptor.id,
     xrSize: [...descriptor.current.size],
+    panelFrame: createXRPanelFrame({
+      id: descriptor.id,
+      size: descriptor.current.size,
+      closable: true,
+    }),
     panel: {
       portable: descriptor.portable,
       pinned: descriptor.pinned,
@@ -188,60 +197,26 @@ async function createControllerHarness(options = {}) {
   };
 
   let hit = null;
-  let dragging = null;
   let beginDragCalls = 0;
   let dragPreviewUpdates = 0;
   let endDragCalls = 0;
-  let settledPosition = options.settledPosition || [0.25, 1.55, -1.15];
   let receipts = [];
   let adapterSceneRoot = options.adapterSceneRoot || null;
-  let controllerRays = {
-    panelStore: null,
-    receiptsList: null,
-    getHits() {
-      return hit ? [hit] : [];
+  let interactionRaycaster = {
+    ray: {
+      origin: new THREE.Vector3(),
+      direction: new THREE.Vector3(0, 0, -1),
     },
-    beginDrag(controller, nextHit) {
-      beginDragCalls += 1;
-      dragging = { controller, hit: nextHit, mesh: nextHit.object };
-      return {
-        ok: true,
-        panelId: nextHit.object.userData.panelId,
-        frameTarget: nextHit.frameTarget,
-      };
+    set(origin, direction) {
+      this.ray.origin.copy(origin);
+      this.ray.direction.copy(direction);
     },
-    updateDrag() {
-      if (!dragging) return { ok: false, reason: 'not-dragging' };
-      dragPreviewUpdates += 1;
-      dragging.mesh.position.fromArray(settledPosition);
-      return { ok: true, panelId: dragging.mesh.userData.panelId };
-    },
-    endDrag() {
-      endDragCalls += 1;
-      let ended = dragging;
-      dragging = null;
-      return {
-        ok: true,
-        panelId: ended?.mesh?.userData?.panelId || null,
-        frameTarget: ended?.hit?.frameTarget || null,
-        pose: ended ? {
-          position: ended.mesh.position.toArray(),
-          rotation: ended.mesh.quaternion.toArray(),
-          size: [...ended.mesh.userData.xrSize],
-        } : null,
-      };
-    },
-    getState() {
-      return {
-        dragging: Boolean(dragging),
-        panelId: dragging?.mesh?.userData?.panelId || null,
-      };
-    },
-    getDiagnostics() {
-      return {};
+    intersectObjects(objects) {
+      return hit && objects.includes(hit.object) ? [hit] : [];
     },
   };
   let adapter = {
+    THREE,
     async setSession(nextSession) {
       return { ok: true, session: nextSession, referenceSpace };
     },
@@ -254,7 +229,6 @@ async function createControllerHarness(options = {}) {
     getSceneRoot() {
       return adapterSceneRoot;
     },
-    controllerRays,
     getDiagnostics() {
       return {};
     },
@@ -281,9 +255,16 @@ async function createControllerHarness(options = {}) {
       },
     },
     adapter,
+    THREE,
+    interactionRaycaster,
     onPortablePanelReceipt(nextReceipt) {
       receipts.push(nextReceipt);
       options.onPortablePanelReceipt?.(nextReceipt);
+    },
+    onDiagnostic(event) {
+      if (event === 'spatial-three-drag-start') beginDragCalls += 1;
+      if (event === 'spatial-three-drag-miss') dragPreviewUpdates += 1;
+      if (event === 'spatial-three-select-end') endDragCalls += 1;
     },
   });
   let started = await controller.start('immersive-ar', {
@@ -293,6 +274,12 @@ async function createControllerHarness(options = {}) {
     renderFrame: false,
   });
   assert.equal(started.ok, true);
+
+  function connect() {
+    controllers[0].dispatchEvent({ type: 'connected', data: source });
+  }
+
+  connect();
 
   let root = options.missingRootObject ? null : (options.rootObject || new THREE.Group());
   root?.updateMatrixWorld?.(true);
@@ -344,12 +331,24 @@ async function createControllerHarness(options = {}) {
     });
   }
 
-  function setFrameTarget(frameTarget) {
+  function setFrameTarget(frameTarget, hitPoint = null) {
+    let zones = mesh.userData.panelFrame.zones;
+    let zone = zones.content;
+    if (frameTarget.operation === 'action') zone = zones.actions[frameTarget.action];
+    if (frameTarget.operation === 'move') zone = zones.move;
+    if (frameTarget.operation === 'resize') {
+      zone = zones.resize[frameTarget.handle] || zones.resize.northEast;
+    }
+    assert.ok(zone, `Missing frame zone for ${frameTarget.operation}.`);
     hit = {
       object: mesh,
-      point: new THREE.Vector3(...mesh.position.toArray()),
-      uv: new THREE.Vector2(0.5, 0.5),
-      frameTarget,
+      point: hitPoint || new THREE.Vector3(...mesh.position.toArray()),
+      uv: null,
+      framePoint: {
+        x: zone.x + zone.width / 2,
+        y: zone.y + zone.height / 2,
+      },
+      distance: 1,
     };
   }
 
@@ -363,6 +362,7 @@ async function createControllerHarness(options = {}) {
 
   return {
     adapter,
+    connect,
     controller,
     controllers,
     dispatch,
@@ -578,7 +578,6 @@ test('frame timing metrics validate against their public schema with exact reset
 
 test('final session snapshot schema composes and enforces all child evidence schemas', async () => {
   let harness = await createControllerHarness();
-  harness.frame(100);
   harness.setFrameTarget({
     version: 'xr-panel-frame-target-v1',
     panelId: 'panel-a',
@@ -586,6 +585,7 @@ test('final session snapshot schema composes and enforces all child evidence sch
     operation: 'move',
     handle: null,
   });
+  harness.frame(100);
   harness.dispatch('selectstart');
   harness.frame(111);
   harness.dispatch('selectend');
@@ -665,7 +665,6 @@ test('pinned and nonportable event paths reject without starting a visual previe
         },
         sessionId: `session-${id}`,
       });
-      harness.frame(100);
       harness.setFrameTarget({
         version: 'xr-panel-frame-target-v1',
         panelId: id,
@@ -673,6 +672,7 @@ test('pinned and nonportable event paths reject without starting a visual previe
         operation,
         handle: operation === 'resize' ? 'east' : null,
       });
+      harness.frame(100);
       let before = harness.mesh.position.toArray();
       let beforeSize = [...harness.mesh.userData.xrSize];
       harness.dispatch('selectstart');
@@ -731,6 +731,36 @@ test('pinned and nonportable event paths reject without starting a visual previe
   ]);
 });
 
+test('eligible drag acquisition failure never settles an accepted portable receipt', async () => {
+  let harness = await createControllerHarness();
+  harness.setFrameTarget({
+    version: 'xr-panel-frame-target-v1',
+    panelId: 'panel-a',
+    zone: 'move',
+    operation: 'move',
+    handle: null,
+  }, new THREE.Vector3(0, 0, 1));
+  harness.frame(100);
+  harness.dispatch('selectstart');
+  harness.frame(111);
+  harness.dispatch('selectend');
+
+  let state = harness.state();
+  let portableState = harness.controller.getPortablePanelState();
+  assert.deepEqual({
+    beginDragCalls: state.beginDragCalls,
+    receipts: harness.controller.getPortablePanelReceipts(),
+    layoutRevision: portableState.layoutRevision,
+    panelRevision: portableState.panels[0].revision,
+  }, {
+    beginDragCalls: 0,
+    receipts: [],
+    layoutRevision: 0,
+    panelRevision: 0,
+  });
+  await harness.controller.stop();
+});
+
 test('controller and hand-shaped input each settle exactly once on selectend', async () => {
   let cases = [
     inputSource(),
@@ -743,7 +773,6 @@ test('controller and hand-shaped input each settle exactly once on selectend', a
   let outcomes = [];
   for (let source of cases) {
     let harness = await createControllerHarness({ inputSource: source });
-    harness.frame(100);
     harness.setFrameTarget({
       version: 'xr-panel-frame-target-v1',
       panelId: 'panel-a',
@@ -751,6 +780,7 @@ test('controller and hand-shaped input each settle exactly once on selectend', a
       operation: 'move',
       handle: null,
     });
+    harness.frame(100);
     harness.dispatch('selectstart');
     harness.frame(111);
     harness.frame(122);
@@ -822,7 +852,6 @@ test('reset synchronizes mesh metadata and frame visuals with restored store sta
   harness.mesh.userData.panel.size = [1.4, 0.9];
   harness.mesh.geometry.dispose();
   harness.mesh.geometry = new THREE.PlaneGeometry(1.4, 0.9);
-  harness.frame(100);
   harness.setFrameTarget({
     version: 'xr-panel-frame-target-v1',
     panelId: 'panel-a',
@@ -830,6 +859,7 @@ test('reset synchronizes mesh metadata and frame visuals with restored store sta
     operation: 'action',
     action: 'reset',
   });
+  harness.frame(100);
   harness.dispatch('selectstart');
   harness.frame(111);
   harness.dispatch('selectend');
@@ -943,9 +973,15 @@ test('independent Three adapter instances keep resize geometry provider-local', 
   controller.updateMatrixWorld(true);
   let intersection = new THREE.Vector3(0.4, 0, -1);
   raycasterA.ray.intersectPlane = (dragPlane, target) => target.copy(intersection);
-  assert.equal(adapterA.controllerRays.beginDrag(controller, mesh, camera).ok, true);
+  let dragAdapter = createXRThreeControllerRayAdapter({
+    THREE: threeA,
+    raycaster: raycasterA,
+    dragSmoothing: 1,
+    maxDragStep: 10,
+  });
+  assert.equal(dragAdapter.beginDrag(controller, mesh, camera).ok, true);
   intersection = new THREE.Vector3(0.6, 0, -1);
-  assert.equal(adapterA.controllerRays.updateDrag(controller).ok, true);
+  assert.equal(dragAdapter.updateDrag(controller).ok, true);
 
   assert.equal(mesh.geometry.providerTag, 'provider-a');
   assert.equal(mesh.geometry instanceof ProviderAPlaneGeometry, true);
@@ -960,10 +996,10 @@ test('independent Three adapter instances keep resize geometry provider-local', 
   let southWest = frameObjects.find((object) => object.userData.handle === 'southWest');
   assert.ok(northEast);
   assert.ok(southWest);
-  // Horizon-style grips are placed completely outside the corners, so their centers are offset by handleSizeMeters / 2.
+  // Proximity grips straddle the visible corner, so the visual and hit target share its center.
   let panelWidth = mesh.geometry.parameters.width;
-  assert.ok(Math.abs(northEast.position.x - (panelWidth / 2 + 0.022)) < 1e-9);
-  assert.ok(Math.abs(southWest.position.x - (-panelWidth / 2 - 0.022)) < 1e-9);
+  assert.ok(Math.abs(northEast.position.x - panelWidth / 2) < 1e-9);
+  assert.ok(Math.abs(southWest.position.x + panelWidth / 2) < 1e-9);
   assert.equal(frameObjects.every((object) => object.scale.equals(new THREE.Vector3(1, 1, 1))), true);
   assert.equal(meshB.geometry, initialGeometryB);
   assert.equal(meshB.geometry.providerTag, 'provider-b');
@@ -1091,11 +1127,6 @@ test('portable panel state is schema-valid before a session starts', async () =>
   let { validatePanelState } = await createSchemaValidators();
   let controller = createXRThreeSessionController({
     adapter: {
-      controllerRays: {
-        getState() {
-          return { dragging: false, panelId: null };
-        },
-      },
       getDiagnostics() {
         return {};
       },
@@ -1181,7 +1212,6 @@ test('rejected session end propagates and never claims that an end event was obs
 
 test('one session controller produces a fresh finalized snapshot after a second start and stop', async () => {
   let harness = await createControllerHarness({ sessionId: 'session-first' });
-  harness.frame(100);
   harness.setFrameTarget({
     version: 'xr-panel-frame-target-v1',
     panelId: 'panel-a',
@@ -1189,6 +1219,7 @@ test('one session controller produces a fresh finalized snapshot after a second 
     operation: 'focus',
     handle: null,
   });
+  harness.frame(100);
   harness.dispatch('selectstart');
   harness.frame(111);
   harness.dispatch('selectend');
@@ -1201,9 +1232,9 @@ test('one session controller produces a fresh finalized snapshot after a second 
     panelHitReticle: false,
     renderFrame: false,
   });
+  harness.connect();
   let secondRoot = new THREE.Group();
   let recommitted = commitHarnessSpatialEvidence(harness, 'session-second', secondRoot);
-  harness.frame(200);
   harness.setFrameTarget({
     version: 'xr-panel-frame-target-v1',
     panelId: 'panel-a',
@@ -1211,6 +1242,7 @@ test('one session controller produces a fresh finalized snapshot after a second 
     operation: 'action',
     action: 'pin',
   });
+  harness.frame(200);
   harness.dispatch('selectstart');
   harness.frame(211);
   harness.dispatch('selectend');
@@ -1265,7 +1297,6 @@ test('reset geometry remains bound to provider A after provider B is instantiate
   harness.mesh.userData.panel.size = [1.4, 0.9];
   harness.mesh.geometry.dispose();
   harness.mesh.geometry = new ProviderAPlaneGeometry(1.4, 0.9);
-  harness.frame(100);
   harness.setFrameTarget({
     version: 'xr-panel-frame-target-v1',
     panelId: 'panel-a',
@@ -1273,6 +1304,7 @@ test('reset geometry remains bound to provider A after provider B is instantiate
     operation: 'action',
     action: 'reset',
   });
+  harness.frame(100);
   harness.dispatch('selectstart');
   harness.frame(111);
   harness.dispatch('selectend');
@@ -1383,8 +1415,8 @@ test('portable action starts are consumed once and invalidated by reference-spac
   };
 
   let duplicateEnd = await createControllerHarness();
-  duplicateEnd.frame(100);
   duplicateEnd.setFrameTarget(frameTarget);
+  duplicateEnd.frame(100);
   duplicateEnd.dispatch('selectstart');
   duplicateEnd.frame(111);
   duplicateEnd.dispatch('selectend');
@@ -1398,8 +1430,8 @@ test('portable action starts are consumed once and invalidated by reference-spac
   await duplicateEnd.controller.stop();
 
   let resetBetweenPhases = await createControllerHarness();
-  resetBetweenPhases.frame(100);
   resetBetweenPhases.setFrameTarget(frameTarget);
+  resetBetweenPhases.frame(100);
   resetBetweenPhases.dispatch('selectstart');
   resetBetweenPhases.dispatchReferenceSpaceReset();
   resetBetweenPhases.frame(111);
@@ -1664,7 +1696,6 @@ test('portable panel receipt callback exceptions propagate by exact identity', a
       throw callbackFailure;
     },
   });
-  harness.frame(100);
   harness.setFrameTarget({
     version: 'xr-panel-frame-target-v1',
     panelId: 'panel-a',
@@ -1672,6 +1703,7 @@ test('portable panel receipt callback exceptions propagate by exact identity', a
     operation: 'focus',
     handle: null,
   });
+  harness.frame(100);
   harness.dispatch('selectstart');
   harness.frame(111);
   let thrown = null;
@@ -1680,14 +1712,37 @@ test('portable panel receipt callback exceptions propagate by exact identity', a
   } catch (error) {
     thrown = error;
   }
+  let interactionDiagnostics = harness.controller.getInteractionDiagnostics();
+  let activeReceipts = harness.controller.getPortablePanelReceipts();
+  let activeState = harness.controller.getPortablePanelState();
   await harness.controller.stop();
+  let finalSnapshot = harness.controller.getFinalSessionSnapshot();
+  assert.deepEqual(activeReceipts[0], harness.receipts[0]);
+  assert.deepEqual(finalSnapshot.receipts[0], activeReceipts[0]);
 
   assert.deepEqual({
     callbackCalls,
     exactFailure: thrown === callbackFailure,
+    hostReceiptCount: harness.receipts.length,
+    activeReceiptCount: activeReceipts.length,
+    finalReceiptCount: finalSnapshot.receipts.length,
+    matchingReceiptId: (
+      harness.receipts[0]?.receiptId === activeReceipts[0]?.receiptId
+      && activeReceipts[0]?.receiptId === finalSnapshot.receipts[0]?.receiptId
+    ),
+    layoutRevision: activeState.layoutRevision,
+    captures: interactionDiagnostics.captures,
+    leases: interactionDiagnostics.leases,
   }, {
     callbackCalls: 1,
     exactFailure: true,
+    hostReceiptCount: 1,
+    activeReceiptCount: 1,
+    finalReceiptCount: 1,
+    matchingReceiptId: true,
+    layoutRevision: 1,
+    captures: 0,
+    leases: 0,
   });
 });
 

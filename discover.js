@@ -109,6 +109,11 @@ const EXPORT_ENTRYPOINTS = [
     description: 'WebXR capability, spatial layout projection, and XR pointer helpers without renderer lock-in.',
   },
   {
+    specifier: 'symbiote-ui/xr/dom-raster-source-deck',
+    kind: 'ssr-entry-safe',
+    description: 'Live DOM raster source activity state with exact accessibility restoration.',
+  },
+  {
     specifier: 'symbiote-ui/xr/spatial-window-assembly',
     kind: 'ssr-entry-safe',
     description: 'Product-neutral spatial-window assembly: one layout instance per XR window with sync reconciliation, session lifecycle, resize phases, ray routing, wheel and select-drag scroll, text selection capture, content focus with IME handoff, per-window viewport updates, dirty-gated uploads, and versioned receipts.',

@@ -842,6 +842,12 @@ function getRectangleIntersection(r1, r2) {
 }
 
 const ALLOWED_OVERLAPS = {
+  'content': {
+    'resize:northWest': 'Corner proximity targets straddle the visible panel corner.',
+    'resize:northEast': 'Corner proximity targets straddle the visible panel corner.',
+    'resize:southEast': 'Corner proximity targets straddle the visible panel corner.',
+    'resize:southWest': 'Corner proximity targets straddle the visible panel corner.',
+  },
   'controlBar': {
     'move': 'The move handlebar is a nested interactive region within the control bar container.',
     'actions:reset': 'The reset action button is nested within the control bar container.',
@@ -2263,4 +2269,3 @@ export async function validateXRSpatialWindowDiagnosticsSelfConsistency(diagnost
 export async function validateXRSpatialWindowDiagnosticsAgainstTrustedObservation(diagnostics, trustedObservation) {
   return validateXRSpatialWindowDiagnosticsAgainstTrustedObservationSync(diagnostics, trustedObservation);
 }
-

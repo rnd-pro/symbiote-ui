@@ -83,6 +83,55 @@ function clampFlowSize(value, min, max) {
   return next;
 }
 
+function rasterCaptureAbortError(signal, componentName) {
+  if (signal?.reason instanceof Error) return signal.reason;
+  let error = new Error(`${componentName} raster capture preparation aborted.`);
+  error.name = 'AbortError';
+  return error;
+}
+
+function throwIfRasterCaptureAborted(signal, componentName) {
+  if (signal?.aborted) throw rasterCaptureAbortError(signal, componentName);
+}
+
+function normalizeRasterCaptureSize(value, label) {
+  if (!Array.isArray(value) || value.length !== 2) {
+    throw new TypeError(`${label} must be [width, height].`);
+  }
+  let size = value.map(Number);
+  if (!size.every((entry) => Number.isFinite(entry) && entry > 0)) {
+    throw new TypeError(`${label} requires positive finite dimensions.`);
+  }
+  return size;
+}
+
+function normalizeRasterCaptureRequest(request, componentName) {
+  if (!request || typeof request !== 'object') {
+    throw new TypeError(`${componentName}.prepareRasterCapture requires a request object.`);
+  }
+  if (typeof request.attemptId !== 'string' || !request.attemptId) {
+    throw new TypeError(`${componentName}.prepareRasterCapture requires a non-empty attemptId.`);
+  }
+  let revision = Number(request.revision);
+  if (!Number.isInteger(revision) || revision < 0) {
+    throw new TypeError(`${componentName}.prepareRasterCapture revision must be a non-negative integer.`);
+  }
+  throwIfRasterCaptureAborted(request.signal, componentName);
+  return {
+    attemptId: request.attemptId,
+    cssSize: normalizeRasterCaptureSize(request.cssSize, `${componentName}.prepareRasterCapture cssSize`),
+    revision,
+    signal: request.signal,
+  };
+}
+
+function resolveRasterViewportSize(rect, componentName) {
+  return normalizeRasterCaptureSize(
+    [rect?.width, rect?.height],
+    `${componentName}.prepareRasterCapture measured viewport`,
+  );
+}
+
 const FLOW_MENU_GROUP = Object.freeze({
   group: 'motion',
   groupLabel: 'Motion',
@@ -305,6 +354,21 @@ export class NodeCanvas extends Symbiote {
 
   /** @type {Object|null} */
   _activeFocusTransitionMarkerState = null;
+
+  /** @type {number} */
+  _rasterRevision = 0;
+
+  /** @type {boolean} */
+  _rasterDirty = false;
+
+  /** @type {boolean} */
+  _rasterReadyFired = false;
+
+  /** @type {Object|null} */
+  _rasterDirtyMetadata = null;
+
+  /** @type {Set<Object>} */
+  _rasterReadyWaiters = new Set();
 
 
   /**
@@ -1245,8 +1309,9 @@ export class NodeCanvas extends Symbiote {
     this._connRenderer?.refreshAll();
   }
 
-  _settleConnectionsAfterViewport(_passes = 3) {
+  _settleConnectionsAfterViewport(passes = 3, metadata = null) {
     this._connRenderer?.refreshViewportTransform?.();
+    this._scheduleConnectionSettleRefresh(passes, metadata);
   }
 
   _readNodeElementSize(el, entry = null) {
@@ -1347,7 +1412,8 @@ export class NodeCanvas extends Symbiote {
     if (changed) this._scheduleConnectionSettleRefresh(2);
   }
 
-  _scheduleConnectionSettleRefresh(passes = 2) {
+  _scheduleConnectionSettleRefresh(passes = 2, metadata = null) {
+    this._markRasterDirty(metadata);
     this._connectionSettlePasses = Math.max(this._connectionSettlePasses, passes);
     if (this._connectionSettleFrame) return;
 
@@ -1355,11 +1421,19 @@ export class NodeCanvas extends Symbiote {
       this._connectionSettleFrame = 0;
       if (!this.isConnected) {
         this._connectionSettlePasses = 0;
+        this._rejectRasterReadyWaiters(
+          new Error('NodeCanvas disconnected before raster capture preparation settled.'),
+        );
         return;
       }
       this.refreshConnections();
       this._connectionSettlePasses -= 1;
-      if (this._connectionSettlePasses <= 0) return;
+      if (this._connectionSettlePasses <= 0) {
+        if (!this._rasterReadyFired) {
+          this._markRasterReady(this._rasterDirtyMetadata);
+        }
+        return;
+      }
       if (typeof requestAnimationFrame === 'function') {
         this._connectionSettleFrame = requestAnimationFrame(tick);
       } else {
@@ -1372,6 +1446,85 @@ export class NodeCanvas extends Symbiote {
     } else {
       tick();
     }
+  }
+
+  _markRasterDirty(metadata = null) {
+    if (this._rasterDirty) {
+      let currentAttempt = this._rasterDirtyMetadata?.origin === 'raster-capture'
+        ? this._rasterDirtyMetadata.attemptId
+        : null;
+      let nextAttempt = metadata?.origin === 'raster-capture' ? metadata.attemptId : null;
+      if (currentAttempt && currentAttempt !== nextAttempt) {
+        this._rasterRevision += 1;
+        this._rasterDirtyMetadata = nextAttempt ? metadata : null;
+        if (typeof this.onRasterDirty === 'function') {
+          this.onRasterDirty(this._rasterRevision, this._rasterDirtyMetadata);
+        }
+      }
+      return this._rasterRevision;
+    }
+    this._rasterRevision += 1;
+    this._rasterDirty = true;
+    this._rasterReadyFired = false;
+    this._rasterDirtyMetadata = metadata;
+    if (typeof this.onRasterDirty === 'function') this.onRasterDirty(this._rasterRevision, metadata);
+    return this._rasterRevision;
+  }
+
+  _markRasterReady(metadata = this._rasterDirtyMetadata) {
+    if (this._rasterReadyFired && !this._rasterDirty) return this._rasterRevision;
+    if (this._rasterRevision === 0) this._rasterRevision = 1;
+    this._rasterDirty = false;
+    this._rasterReadyFired = true;
+    this._rasterDirtyMetadata = null;
+    try {
+      if (typeof this.onRasterReady === 'function') this.onRasterReady(this._rasterRevision, metadata);
+    } catch (error) {
+      this._rejectRasterReadyWaiters(error);
+      throw error;
+    }
+    if (!this._rasterDirty) {
+      for (let waiter of [...(this._rasterReadyWaiters || [])]) {
+        if (this._rasterRevision < waiter.revision) continue;
+        waiter.resolve(this._rasterRevision);
+      }
+    }
+    return this._rasterRevision;
+  }
+
+  _awaitRasterReady(revision, signal) {
+    if (this._rasterReadyFired && !this._rasterDirty && this._rasterRevision >= revision) {
+      return Promise.resolve(this._rasterRevision);
+    }
+    throwIfRasterCaptureAborted(signal, 'NodeCanvas');
+    if (!this._rasterReadyWaiters) this._rasterReadyWaiters = new Set();
+    return new Promise((resolve, reject) => {
+      let cleanup = () => {
+        this._rasterReadyWaiters.delete(waiter);
+        signal?.removeEventListener?.('abort', abort);
+      };
+      let waiter = {
+        revision,
+        resolve: (value) => {
+          cleanup();
+          resolve(value);
+        },
+        reject: (error) => {
+          cleanup();
+          reject(error);
+        },
+      };
+      let abort = () => {
+        cleanup();
+        reject(rasterCaptureAbortError(signal, 'NodeCanvas'));
+      };
+      this._rasterReadyWaiters.add(waiter);
+      signal?.addEventListener?.('abort', abort, { once: true });
+    });
+  }
+
+  _rejectRasterReadyWaiters(error) {
+    for (let waiter of [...(this._rasterReadyWaiters || [])]) waiter.reject(error);
   }
 
   _clearConnectionSettleRefresh() {
@@ -1565,10 +1718,40 @@ export class NodeCanvas extends Symbiote {
    * Fit all nodes into the viewport.
    * Calculates required zoom/pan based on current node layout,
    * accounting for the inspector panel if open.
+   * @param {Object} [options]
    */
-  fitView() {
-    this._viewport?.fitView();
+  fitView(options = {}) {
+    let fitted = this._viewport?.fitView(options);
     this._settleConnectionsAfterViewport(3);
+    return fitted !== false;
+  }
+
+  /**
+   * Prepares the current live graph viewport for one DOM raster capture.
+   * @param {Object} request
+   * @returns {Promise<Object>}
+   */
+  async prepareRasterCapture(request) {
+    let capture = normalizeRasterCaptureRequest(request, 'NodeCanvas');
+    let viewport = this.ref?.canvasContainer;
+    if (!viewport || typeof this._viewport?.fitView !== 'function') {
+      throw new Error('NodeCanvas.prepareRasterCapture requires an initialized canvas viewport.');
+    }
+    let viewportCssSize = resolveRasterViewportSize(viewport.getBoundingClientRect?.(), 'NodeCanvas');
+    let metadata = { origin: 'raster-capture', attemptId: capture.attemptId };
+    this._viewport.fitView({ animate: false, transition: false });
+    this._settleConnectionsAfterViewport(3, metadata);
+    let visualRevision = this._rasterRevision;
+    visualRevision = await this._awaitRasterReady(visualRevision, capture.signal);
+    throwIfRasterCaptureAborted(capture.signal, 'NodeCanvas');
+    viewportCssSize = resolveRasterViewportSize(viewport.getBoundingClientRect?.(), 'NodeCanvas');
+    return {
+      ready: true,
+      attemptId: capture.attemptId,
+      cssSize: [...capture.cssSize],
+      viewportCssSize,
+      visualRevision,
+    };
   }
 
   /**
@@ -2776,6 +2959,9 @@ export class NodeCanvas extends Symbiote {
     this._disconnectNodeResizeObserver();
     this._hideFocusTransitionMarker();
     this._clearScheduledConnectionUpdates();
+    this._rejectRasterReadyWaiters(
+      new Error('NodeCanvas was destroyed during raster capture preparation.'),
+    );
     if (this._suppressedResizeFlushTimer) {
       clearTimeout(this._suppressedResizeFlushTimer);
       this._suppressedResizeFlushTimer = 0;

@@ -114,6 +114,32 @@ function truncateWithEllipsis(context, text, maxWidth) {
   return `${truncated}…`;
 }
 
+function wrapMeasuredText(context, text, maxWidth, maxLines) {
+  let lines = [];
+  for (let paragraph of String(text ?? '').split('\n')) {
+    let words = paragraph.split(/\s+/).filter(Boolean);
+    if (!words.length) {
+      lines.push('');
+      continue;
+    }
+    let line = '';
+    for (let word of words) {
+      let next = line ? `${line} ${word}` : word;
+      if (!line || context.measureText(next).width <= maxWidth) {
+        line = next;
+        continue;
+      }
+      lines.push(line);
+      line = word;
+    }
+    lines.push(line);
+  }
+  if (lines.length <= maxLines) return lines;
+  let visible = lines.slice(0, Math.max(1, maxLines));
+  visible[visible.length - 1] = truncateWithEllipsis(context, visible[visible.length - 1], maxWidth);
+  return visible;
+}
+
 /**
  * Creates a native panel renderer over a host-supplied THREE namespace.
  *
@@ -137,6 +163,9 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
   let root = new THREE.Group();
   root.userData = { kind: 'native-panel-root' };
   let unitPlane = new THREE.PlaneGeometry(1, 1);
+  let unitCircle = typeof THREE.CircleGeometry === 'function'
+    ? new THREE.CircleGeometry(0.5, 16)
+    : unitPlane;
   let panelGroups = new Map();
   let panelChromeGroups = new Map();
   let panelPreviewSizes = new Map();
@@ -490,7 +519,15 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
   function drawLabelCanvas(entry) {
     let { canvas, primitive } = entry;
     let plan = planTexturePixels(primitive);
-    canvas.width = plan.width;
+    // Range line boxes are intentionally exact, but the browser's text raster
+    // may extend a fractional pixel beyond a measured final glyph. Keep a tiny
+    // transparent bleed inside the same Three plane so a line cannot lose its
+    // last antialiased column when Canvas2D re-rasterizes it.
+    let requestedTextBleed = primitive.exactTextBounds && plan.sourceCss
+      ? Math.max(1, Math.ceil(plan.ratio))
+      : 0;
+    let exactTextBleed = Math.min(requestedTextBleed, Math.max(0, Math.floor((maxTextureSize - plan.width) / 2)));
+    canvas.width = plan.width + exactTextBleed * 2;
     canvas.height = plan.height;
     let context = canvas.getContext('2d');
     let style = primitive.style || {};
@@ -516,14 +553,24 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
     context.beginPath();
     context.rect(0, 0, canvas.width, canvas.height);
     context.clip();
-    let inset = primitive.exactTextBounds ? 0 : Math.round(canvas.height * 0.22);
+    let inset = primitive.exactTextBounds ? exactTextBleed : Math.round(canvas.height * 0.22);
     let x = primitive.align === 'center' ? canvas.width / 2 : primitive.align === 'end' ? canvas.width - inset : inset;
     if (primitive.multiline) {
       context.textBaseline = 'top';
-      let lineHeight = font.lineHeight && plan.sourceCss
-        ? Math.max(1, Math.round(Number.parseFloat(font.lineHeight) * plan.ratio))
+      let capturedLineHeight = Number.parseFloat(font.lineHeight);
+      let lineHeight = Number.isFinite(capturedLineHeight) && capturedLineHeight > 0 && plan.sourceCss
+        ? Math.max(1, Math.round(capturedLineHeight * plan.ratio))
         : Math.max(fontPx * 1.45, 1);
-      let lines = String(primitive.text ?? '').split('\n');
+      let availableWidth = primitive.align === 'center'
+        ? canvas.width - inset * 2 - 4
+        : primitive.align === 'end'
+          ? x - 4
+          : canvas.width - x - 4;
+      let maxLines = Math.max(1, Math.floor((canvas.height - Math.round(canvas.height * 0.06)) / lineHeight));
+      let preserveLines = ['nowrap', 'pre'].includes(String(style.whiteSpace || '').toLowerCase());
+      let lines = preserveLines
+        ? String(primitive.text ?? '').split('\n')
+        : wrapMeasuredText(context, primitive.text, availableWidth, maxLines);
       lines.forEach((line, index) => {
         context.fillText(line, x, Math.round(canvas.height * 0.06 + index * lineHeight));
       });
@@ -583,7 +630,15 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
     let canvas = createRasterCanvas();
     let texture = new THREE.CanvasTexture(canvas);
     configureColorTexture(texture);
-    let material = new THREE.MeshBasicMaterial({ map: texture, transparent: true });
+    // Labels and icons are an explicit overlay layer. Their visibility follows
+    // the compiler's deterministic renderOrder rather than whichever later
+    // transparent surface happens to win the WebGL depth buffer.
+    let material = new THREE.MeshBasicMaterial({
+      map: texture,
+      transparent: true,
+      depthTest: false,
+      depthWrite: false,
+    });
     return { mesh: new THREE.Mesh(unitPlane, material), canvas, texture, material, generated: true };
   }
 
@@ -620,8 +675,16 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
     }
     labelPlanes.push(entry);
     let mesh = entry.mesh;
+    if (mesh.material) {
+      mesh.material.depthTest = false;
+      mesh.material.depthWrite = false;
+    }
     mesh.position.set(primitive.bounds.x, primitive.bounds.y, primitive.z + 0.0002);
     mesh.scale.set(primitive.bounds.width, primitive.bounds.height, 1);
+    // Text planes are transparent and intentionally do not depth-test. Keep
+    // their draw order aligned with the compiler Z sequence so a later content
+    // surface cannot randomly cover a native label during WebGL sorting.
+    mesh.renderOrder = 100 + Math.round(primitive.z * 1_000_000);
     mesh.userData = {
       kind: 'label-text',
       panelId: primitive.panelId,
@@ -648,8 +711,13 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
     }
     iconPlanes.push(entry);
     let mesh = entry.mesh;
+    if (mesh.material) {
+      mesh.material.depthTest = false;
+      mesh.material.depthWrite = false;
+    }
     mesh.position.set(primitive.bounds.x, primitive.bounds.y, primitive.z + 0.0002);
     mesh.scale.set(primitive.bounds.width, primitive.bounds.height, 1);
+    mesh.renderOrder = 100 + Math.round(primitive.z * 1_000_000);
     mesh.userData = {
       kind: 'icon',
       panelId: primitive.panelId,
@@ -767,9 +835,10 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
       } else if (primitive.kind === 'icon') {
         object = buildIconPlane({ ...primitive, panelId: panel.id });
       } else {
-        object = new THREE.Mesh(unitPlane, material);
+        object = new THREE.Mesh(primitive.shape === 'circle' ? unitCircle : unitPlane, material);
         object.position.set(primitive.bounds.x, primitive.bounds.y, primitive.z);
         object.scale.set(primitive.bounds.width, primitive.bounds.height, 1);
+        object.renderOrder = Math.round(primitive.z * 1_000_000);
         if (primitive.kind === 'edge') object.rotation.z = primitive.angle || 0;
         object.userData = {
           kind: primitive.kind,
@@ -826,7 +895,7 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
 
   function disposeObjectTree(object) {
     object.traverse((node) => {
-      if (node.geometry && node.geometry !== unitPlane) {
+      if (node.geometry && node.geometry !== unitPlane && node.geometry !== unitCircle) {
         node.geometry.dispose?.();
       }
       if (node.userData?.expandedTexture && node.userData.expandedTexture !== node.material?.map) {
@@ -1623,6 +1692,7 @@ export function createThreeNativePanelRenderer(THREE, options = {}) {
     roleMaterials.clear();
     materialRecords = [];
     unitPlane.dispose?.();
+    if (unitCircle !== unitPlane) unitCircle.dispose?.();
     root.removeFromParent?.();
     root.clear?.();
     disposed = true;

@@ -340,7 +340,10 @@ test('project-tabs coordinates roving tabindex and keys', async () => {
   assert.equal(items[1].getAttribute('data-tab-id'), 'tab2');
   assert.equal(items[1].getAttribute('aria-selected'), 'false');
   assert.equal(items[1].getAttribute('tabindex'), '-1');
-
+  let closes = [];
+  el.addEventListener('project-tabs-close', (event) => closes.push(event.detail));
+  items[1].querySelector('.tab-close').click();
+  assert.deepEqual(closes, [{ id: 'tab2' }]);
   el.remove();
 });
 

@@ -349,6 +349,7 @@ export function createXRTextureGateSummary(options = {}) {
 export function createXRHtmlCanvasRenderer(options = {}) {
   let adapter = createHtmlInCanvasAdapter({ globalThis: options.globalThis || globalThis });
   let MutationObserverCtor = options.globalThis?.MutationObserver || globalThis.MutationObserver;
+  let NodeCtor = options.globalThis?.Node || globalThis.Node;
   let panels = new Map();
   let lastMode = selectMode(adapter.support, options.mode);
   let lastRender = null;
@@ -390,7 +391,14 @@ export function createXRHtmlCanvasRenderer(options = {}) {
         reason: 'panel-outside-canvas-direct-child',
       };
     }
-    if (panelElement && typeof MutationObserverCtor === 'function') {
+    // An integration can hand the adapter a structural source descriptor while
+    // its DOM host is inactive. Native MutationObserver rejects that value;
+    // skip observation rather than throwing from an otherwise optional legacy
+    // paint path. Real browser panels always satisfy the Node contract.
+    let observablePanel = typeof NodeCtor === 'function'
+      ? panelElement instanceof NodeCtor
+      : Boolean(panelElement?.nodeType);
+    if (observablePanel && typeof MutationObserverCtor === 'function') {
       if (panelElement._snObserver) {
         panelElement._snObserver.disconnect();
         if (panelElement._snDebounceTimeout) clearTimeout(panelElement._snDebounceTimeout);
@@ -410,14 +418,19 @@ export function createXRHtmlCanvasRenderer(options = {}) {
         }, 150);
         panelElement._snDebounceTimeout = debounceTimeout;
       });
-      observer.observe(panelElement, {
-        attributes: true,
-        childList: true,
-        subtree: true,
-        characterData: true,
-      });
-      panelElement._snObserver = observer;
-      panelElement._snDebounceTimeout = debounceTimeout;
+      try {
+        observer.observe(panelElement, {
+          attributes: true,
+          childList: true,
+          subtree: true,
+          characterData: true,
+        });
+        panelElement._snObserver = observer;
+        panelElement._snDebounceTimeout = debounceTimeout;
+      } catch {
+        // A panel can be replaced by an element from another document while a
+        // host reconciles. It is still eligible for an explicit paint update.
+      }
     }
 
     panels.set(panel.id, {

@@ -127,29 +127,49 @@ test('content select pair resolves a hit-map action against the live DOM', () =>
 
 test('chrome zones route to window actions instead of the DOM relay', () => {
   let { assembly } = createEnteredContext();
-  // Frame UV y > 1 floats below the window: the control bar move zone sits
-  // below the south edge band, so the ray aims at the bar's lower half.
-  let grab = assembly.routeRay({
-    origin: [0, 1.04, 0],
-    direction: [0, 0, -1],
-  }, { type: 'pointerdown', source: 'xr-controller', sourceId: 'controller-right', sessionId: 'session-1' });
+  let windowEntry = assembly.getWindow('window:layout-alpha');
+  let zones = windowEntry.chrome.zones;
+  let rayAtZone = (zone) => {
+    let point = {
+      x: zone.x + zone.width / 2,
+      y: zone.y + zone.height / 2,
+    };
+    return {
+      origin: [
+        windowEntry.pose.position[0] + (point.x - 0.5) * windowEntry.sizeMeters[0],
+        windowEntry.pose.position[1] + (0.5 - point.y) * windowEntry.sizeMeters[1],
+        0,
+      ],
+      direction: [0, 0, -1],
+    };
+  };
+  let grab = assembly.routeRay(rayAtZone(zones.move), {
+    type: 'pointerdown',
+    source: 'xr-controller',
+    sourceId: 'controller-right',
+    sessionId: 'session-1',
+  });
   assert.equal(grab.ok, true);
   assert.equal(grab.routed, true);
   assert.equal(grab.zone, 'move');
   assert.equal(grab.action, 'move-begin');
 
-  let pinHit = assembly.routeRay({
-    origin: [0.098, 1.04, 0],
-    direction: [0, 0, -1],
-  }, { type: 'pointerdown', source: 'xr-hand', sourceId: 'hand-left', sessionId: 'session-1' });
+  let pinHit = assembly.routeRay(rayAtZone(zones.actions.pin), {
+    type: 'pointerdown',
+    source: 'xr-hand',
+    sourceId: 'hand-left',
+    sessionId: 'session-1',
+  });
   assert.equal(pinHit.zone, 'action');
   assert.equal(pinHit.action, 'pin');
   assert.equal(assembly.getWindow('window:layout-alpha').state.pinned, true);
 
-  let closeHit = assembly.routeRay({
-    origin: [0.136, 1.04, 0],
-    direction: [0, 0, -1],
-  }, { type: 'pointerdown', source: 'xr-controller', sourceId: 'controller-right', sessionId: 'session-1' });
+  let closeHit = assembly.routeRay(rayAtZone(zones.actions.close), {
+    type: 'pointerdown',
+    source: 'xr-controller',
+    sourceId: 'controller-right',
+    sessionId: 'session-1',
+  });
   assert.equal(closeHit.zone, 'action');
   assert.equal(closeHit.action, 'close');
   assert.equal(assembly.getWindow('window:layout-alpha').state.hidden, true);
@@ -579,7 +599,7 @@ test('diagnostics: prove live frame sizes, resize recomputes them, intersections
   let nwStraddle = winAlphaBefore.chrome.overlap.intersections.find(
     (item) => item.zones.includes('content') && item.zones.includes('resize:northWest')
   );
-  assert.equal(nwStraddle, undefined, 'outer resize handle does not intersect with content');
+  assert.equal(nwStraddle?.allowed, true, 'corner proximity overlap is explicit and deterministic');
 
   assembly.beginResize('window:layout-alpha', { handle: 'northWest' });
   assembly.previewResize('window:layout-alpha', [1.6, 0.9]);

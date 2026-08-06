@@ -370,6 +370,44 @@ function chromeNode(overrides) {
   };
 }
 
+test('compileSpatialSnapshot marks genuinely multi-line measured text for native wrapping', () => {
+  let compiled = compileSpatialSnapshot(createChromeSnapshot([
+    chromeNode({
+      id: 'panel:project/text:summary',
+      part: 'text',
+      rect: { x: 8, y: 40, width: 220, height: 96 },
+      style: { 'font-size': '14px', 'line-height': '20px', 'white-space': 'normal' },
+      text: 'A measured summary with enough height for several natural lines.',
+    }),
+    chromeNode({
+      id: 'panel:project/text:single-line',
+      part: 'text',
+      rect: { x: 8, y: 148, width: 220, height: 28 },
+      style: { 'font-size': '14px', 'line-height': '20px', 'white-space': 'normal' },
+      text: 'Single-line action label',
+    }),
+  ]), { planeWidth: 1.28 });
+  let primitives = primitivesOf(compiled, 'panel:project');
+  assert.equal(primitives.find((item) => item.spatialNodeId === 'panel:project/text:summary').multiline, true);
+  assert.equal(primitives.find((item) => item.spatialNodeId === 'panel:project/text:single-line').multiline, undefined);
+});
+
+test('compileSpatialSnapshot preserves exact browser line geometry for the native rasterizer', () => {
+  let compiled = compileSpatialSnapshot(createChromeSnapshot([
+    chromeNode({
+      id: 'panel:project/text:line',
+      part: 'text',
+      rect: { x: 8, y: 40, width: 96, height: 20 },
+      style: { 'font-size': '14px', 'line-height': '20px' },
+      text: 'Measured line',
+      exactTextBounds: true,
+    }),
+  ]), { planeWidth: 1.28 });
+  let primitive = primitivesOf(compiled, 'panel:project')
+    .find((item) => item.spatialNodeId === 'panel:project/text:line');
+  assert.equal(primitive.exactTextBounds, true);
+});
+
 test('compileSpatialSnapshot compiles a chromeless control as a transparent hit, not a button', () => {
   let compiled = compileSpatialSnapshot(createChromeSnapshot([
     chromeNode({

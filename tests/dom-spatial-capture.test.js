@@ -18,6 +18,7 @@ test('dom-spatial-capture evaluates safely in Node without a DOM', () => {
   assert.equal(typeof document, 'undefined');
   assert.deepEqual([...SPATIAL_CAPTURE_COMPONENTS].sort(), [
     'canvas-graph',
+    'cell-bg',
     'chat-transcript',
     'layout-node',
     'node-canvas',
@@ -42,7 +43,7 @@ test('resolveSpatialAdapter returns adapters for registered components', () => {
 test('resolveSpatialAdapter throws with supported options on unknown components', () => {
   assert.throws(
     () => resolveSpatialAdapter('marquee'),
-    /Unknown spatial capture adapter "marquee"\. Supported: canvas-graph, chat-transcript, layout-node, node-canvas, sn-badge, sn-data-table, sn-description-list, sn-metric, sn-scroll-area, sn-tree-panel, source-editor, source-viewer\./,
+    /Unknown spatial capture adapter "marquee"\. Supported: canvas-graph, cell-bg, chat-transcript, layout-node, node-canvas, sn-badge, sn-data-table, sn-description-list, sn-metric, sn-scroll-area, sn-tree-panel, source-editor, source-viewer\./,
   );
 });
 
@@ -78,6 +79,30 @@ test('captureSpatialSnapshot adapts CanvasGraph public nodes into positioned nat
   assert.equal(byId.get(`${graphId}/node:agent/label`).text, 'Dispatcher');
   assert.deepEqual(byId.get(`${graphId}/node:agent/icon:smart_toy`).icon, { name: 'smart_toy' });
   assert.ok(byId.get(`${graphId}/node:service`).rect.x > byId.get(`${graphId}/node:agent`).rect.x);
+});
+
+test('captureSpatialSnapshot adapts a cell background into bounded semantic dots', () => {
+  let doc = createFakeDocument(new Map(SENTINEL_CONVERSIONS));
+  let effect = fakeElement(doc, {
+    tag: 'cell-bg',
+    rect: { left: 12, top: 44, width: 320, height: 180 },
+  });
+  effect.getSpatialPresentation = () => ({
+    width: 320,
+    height: 180,
+    background: 'rgb(18, 22, 28)',
+    dots: [
+      { x: 16, y: 20, radius: 3, color: 'rgba(120, 160, 220, 0.4)' },
+      { x: 48, y: 60, radius: 4, color: 'rgba(180, 210, 255, 0.7)' },
+    ],
+  });
+  let snapshot = captureSpatialSnapshot(createHeaderIconPanelLayout(doc, { contentChildren: [effect] }));
+  let surface = snapshot.nodes.find((node) => node.component === 'cell-bg' && node.id.endsWith('/cell-bg:1'));
+  let dots = snapshot.nodes.filter((node) => node.component === 'cell-bg' && node.id.includes('/dot:'));
+  assert.deepEqual(surface.style, { 'background-color': 'rgb(18, 22, 28)' });
+  assert.equal(dots.length, 2);
+  assert.equal(dots[0].state.shape, 'circle');
+  assert.deepEqual(snapshot.diagnostics.unsupported, []);
 });
 
 test('captureSpatialSnapshot adapts NodeCanvas graph nodes without traversing SVG internals', () => {
@@ -504,6 +529,59 @@ test('captureSpatialSnapshot reaches visible chat content through a zero-size me
   assert.equal(snapshot.diagnostics.unknownVisible.length, 0);
 });
 
+test('captureSpatialSnapshot ignores explicitly declared internal render buffers', () => {
+  let doc = createFakeDocument(new Map(SENTINEL_CONVERSIONS));
+  let renderBuffer = fakeElement(doc, {
+    tag: 'canvas',
+    rect: { left: 16, top: 48, width: 240, height: 120 },
+    attrs: { 'data-spatial-internal': '' },
+  });
+  let snapshot = captureSpatialSnapshot(createHeaderIconPanelLayout(doc, {
+    contentChildren: [renderBuffer],
+  }));
+
+  assert.deepEqual(snapshot.diagnostics.unsupported, []);
+});
+
+test('captureSpatialSnapshot automatically captures arbitrary cascade-styled DOM and open Shadow DOM', () => {
+  let doc = createFakeDocument(new Map(SENTINEL_CONVERSIONS));
+  let label = fakeElement(doc, {
+    tag: 'span',
+    rect: { left: 32, top: 66, width: 152, height: 20 },
+    text: 'Dynamically assembled layout',
+    childNodes: [fakeTextNode('Dynamically assembled layout')],
+    styles: { color: 'rgb(230, 230, 230)', 'font-size': '14px', 'line-height': 'normal' },
+  });
+  let action = fakeElement(doc, {
+    tag: 'button',
+    rect: { left: 32, top: 98, width: 96, height: 28 },
+    attrs: { 'aria-label': 'Open order' },
+    text: 'Open',
+    childNodes: [fakeTextNode('Open')],
+    styles: { 'background-color': 'rgb(42, 72, 108)', color: 'rgb(255, 255, 255)' },
+  });
+  let composer = fakeElement(doc, {
+    tag: 'textarea',
+    rect: { left: 32, top: 132, width: 176, height: 28 },
+    styles: { 'background-color': 'rgb(20, 24, 30)', color: 'rgb(153, 153, 153)', 'font-size': '13px' },
+  });
+  composer.placeholder = 'Describe a task…';
+  let host = fakeElement(doc, {
+    tag: 'agent-composed-card',
+    rect: { left: 20, top: 52, width: 220, height: 100 },
+    styles: { 'background-color': 'rgb(24, 30, 38)', 'border-top-width': '1px', 'border-top-style': 'solid', 'border-top-color': 'rgb(80, 100, 120)', 'border-right-width': '1px', 'border-right-style': 'solid', 'border-right-color': 'rgb(80, 100, 120)', 'border-bottom-width': '1px', 'border-bottom-style': 'solid', 'border-bottom-color': 'rgb(80, 100, 120)', 'border-left-width': '1px', 'border-left-style': 'solid', 'border-left-color': 'rgb(80, 100, 120)' },
+  });
+  host.shadowRoot = { children: [label, action, composer] };
+  let snapshot = captureSpatialSnapshot(createHeaderIconPanelLayout(doc, { contentChildren: [host] }));
+  assert.ok(snapshot.nodes.some((node) => node.component === 'surface' && node.rect.width === 220));
+  assert.ok(snapshot.nodes.some((node) => node.text === 'Dynamically assembled layout'));
+  let control = snapshot.nodes.find((node) => node.component === 'dom-control');
+  assert.deepEqual(control.actions, [{ id: 'dom-activate', targetId: 'Open-order', intent: 'dom-activate' }]);
+  assert.ok(snapshot.nodes.some((node) => node.text === 'Open'));
+  assert.ok(snapshot.nodes.some((node) => node.text === 'Describe a task…' && node.state?.placeholder),
+    'empty editable controls expose their measured placeholder text');
+});
+
 test('captureSpatialSnapshot captures a source viewer header, icons, and only its visible code slice', () => {
   let doc = createFakeDocument(new Map(SENTINEL_CONVERSIONS));
   let saveIcon = fakeIconElement(doc, {
@@ -798,6 +876,44 @@ test('captureSpatialSnapshot normalizes CSS Color 4 styles to rgb()/rgba() and d
 function fakeTextNode(text) {
   return { nodeType: 3, textContent: text };
 }
+
+test('captureSpatialSnapshot preserves browser-measured line boxes for direct text', () => {
+  let doc = createFakeDocument(new Map(SENTINEL_CONVERSIONS));
+  let text = fakeTextNode('First line Second line');
+  text.lineRects = [...text.textContent].map((_, index) => (
+    index < 10
+      ? { left: 24 + index * 6, top: 56, width: 6, height: 18 }
+      : { left: 24 + (index - 10) * 6, top: 76, width: 6, height: 18 }
+  ));
+  doc.createRange = () => ({
+    start: 0,
+    setStart(_node, offset) { this.start = offset; },
+    setEnd() {},
+    getBoundingClientRect() { return text.lineRects[this.start]; },
+  });
+  let paragraph = fakeElement(doc, {
+    tag: 'p',
+    rect: { left: 24, top: 56, width: 120, height: 38 },
+    text: text.textContent,
+    childNodes: [text],
+    styles: { color: 'rgb(240, 240, 240)', 'font-size': '13px', 'line-height': '20px' },
+  });
+  let card = fakeElement(doc, {
+    tag: 'article',
+    rect: { left: 16, top: 48, width: 140, height: 64 },
+    children: [paragraph],
+    childNodes: [paragraph],
+    styles: { 'background-color': 'rgb(34, 34, 34)' },
+  });
+  let snapshot = captureSpatialSnapshot(createHeaderIconPanelLayout(doc, { contentChildren: [card] }));
+  let lines = snapshot.nodes.filter((node) => (
+    node.part === 'text' && (node.text.startsWith('First') || node.text.startsWith('Second'))
+  ));
+  assert.deepEqual(lines.map((node) => ({ text: node.text, rect: node.rect, exactTextBounds: node.exactTextBounds })), [
+    { text: 'First line', rect: { x: 24, y: 56, width: 60, height: 18 }, exactTextBounds: true },
+    { text: 'Second line', rect: { x: 30, y: 76, width: 66, height: 18 }, exactTextBounds: true },
+  ]);
+});
 
 function fakeIconElement(doc, options) {
   let { rect, name, styles = {}, tag = 'span' } = options;
@@ -1433,7 +1549,7 @@ test('captureSpatialSnapshot captures opted-in structural surfaces without dropp
   assert.deepEqual(snapshot.diagnostics.unknownVisible, [], 'opted-in surfaces leave no unknown visible boxes');
 });
 
-test('captureSpatialSnapshot keeps visible unmatched elements as unknown visible diagnostics', () => {
+test('captureSpatialSnapshot automatically captures visible cascade-styled elements without a selector profile', () => {
   let doc = createFakeDocument(new Map(SENTINEL_CONVERSIONS));
   let promo = fakeElement(doc, {
     tag: 'div',
@@ -1446,6 +1562,6 @@ test('captureSpatialSnapshot keeps visible unmatched elements as unknown visible
     createHeaderIconPanelLayout(doc, { contentChildren: [promo] }),
     { surfaceSelectors: ['.project-files-panel'] },
   );
-  assert.equal(snapshot.diagnostics.unknownVisible.length, 1);
-  assert.equal(snapshot.diagnostics.unknownVisible[0].signature, 'div');
+  assert.equal(snapshot.diagnostics.unknownVisible.length, 0);
+  assert.ok(snapshot.nodes.some((node) => node.component === 'surface' && node.rect.width === 280));
 });

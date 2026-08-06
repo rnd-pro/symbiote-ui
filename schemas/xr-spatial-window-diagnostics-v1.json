@@ -78,9 +78,13 @@
         "durationMs",
         "sampleCount",
         "meanIntervalMs",
+        "p50IntervalMs",
         "p95IntervalMs",
+        "p99IntervalMs",
         "maxIntervalMs",
         "dropRatio",
+        "missedFrames",
+        "maxConsecutiveMissedFrames",
         "supportedFrameRates",
         "resetCount",
         "resets"
@@ -92,9 +96,13 @@
         "durationMs": { "type": "number" },
         "sampleCount": { "type": "integer", "minimum": 0 },
         "meanIntervalMs": { "type": "number" },
+        "p50IntervalMs": { "type": "number" },
         "p95IntervalMs": { "type": "number" },
+        "p99IntervalMs": { "type": "number" },
         "maxIntervalMs": { "type": "number" },
         "dropRatio": { "type": "number" },
+        "missedFrames": { "type": "integer", "minimum": 0 },
+        "maxConsecutiveMissedFrames": { "type": "integer", "minimum": 0 },
         "supportedFrameRates": {
           "type": ["array", "null"],
           "items": { "type": "number" }

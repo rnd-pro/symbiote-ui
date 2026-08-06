@@ -1,11 +1,15 @@
 /**
  * @file xr/dom-spatial-capture.js
  * @description Browser-only DOM/CSSOM measurement adapters that capture a bounded,
- * explicitly opted-in Symbiote subtree into a renderer-neutral `spatial-snapshot-v1`.
+ * Symbiote subtree into a renderer-neutral `spatial-snapshot-v1`.
  * The module is evaluation-safe in Node: every DOM touch happens inside functions.
- * Not a generic DOM converter — only registered adapters, explicit text selectors,
- * and explicit surface selectors are captured; everything else becomes structured
- * diagnostics.
+ * Ordinary visual DOM is captured automatically from its resolved cascade: visible
+ * chrome, leaf text, native controls, Material icons, and open Shadow DOM all map
+ * to renderer-neutral primitives. Registered adapters are reserved for components
+ * whose visible state is not represented by measurable DOM (for example a canvas
+ * graph). Optional selectors remain an additive precision hint, never a coverage
+ * requirement, so agent-assembled layouts do not need a product-specific capture
+ * profile before they can be presented in space.
  * @module symbiote-ui/xr/dom-spatial-capture
  */
 
@@ -13,6 +17,7 @@ import { SPATIAL_ICON_NAME_PATTERN, normalizeSpatialSnapshot } from './spatial-s
 
 export const SPATIAL_CAPTURE_COMPONENTS = Object.freeze([
   'canvas-graph',
+  'cell-bg',
   'chat-transcript',
   'layout-node',
   'node-canvas',
@@ -153,8 +158,7 @@ function nextSequence(ctx, prefix) {
   return value;
 }
 
-function measureRect(ctx, element) {
-  let rect = element.getBoundingClientRect();
+function measureClientRect(ctx, rect) {
   let width = rect.width;
   let height = rect.height;
   if (!(width > 0) || !(height > 0)) return null;
@@ -173,6 +177,10 @@ function measureRect(ctx, element) {
   return { x: left, y: top, width: right - left, height: bottom - top };
 }
 
+function measureRect(ctx, element) {
+  return measureClientRect(ctx, element.getBoundingClientRect());
+}
+
 function intersectRects(first, second) {
   if (!first) return second ? { ...second } : null;
   if (!second) return first ? { ...first } : null;
@@ -184,13 +192,13 @@ function intersectRects(first, second) {
   return { x: left, y: top, width: right - left, height: bottom - top };
 }
 
-function computedStyleOf(ctx, element) {
+function computedStyleOf(ctx, element, pseudo = null) {
   let view = ctx.doc?.defaultView;
-  return typeof view?.getComputedStyle === 'function' ? view.getComputedStyle(element) : null;
+  return typeof view?.getComputedStyle === 'function' ? view.getComputedStyle(element, pseudo) : null;
 }
 
-function readStyle(ctx, element, keys) {
-  let computed = computedStyleOf(ctx, element);
+function readStyle(ctx, element, keys, pseudo = null) {
+  let computed = computedStyleOf(ctx, element, pseudo);
   if (!computed) return undefined;
   let style = {};
   for (let key of keys) {
@@ -418,6 +426,10 @@ function captureIconDescendants(ctx, container, parentId, component) {
 function captureTextElement(ctx, element, parentId) {
   let rect = measureRect(ctx, element);
   let text = textExcludingIcons(element);
+  if (text && captureMeasuredDirectTextLines(ctx, element, parentId)) {
+    captureIconDescendants(ctx, element, parentId, 'icon');
+    return;
+  }
   let textId = null;
   if (rect && text) {
     textId = `${parentId}/text:${nextSequence(ctx, `${parentId}/text`)}`;
@@ -431,6 +443,68 @@ function captureTextElement(ctx, element, parentId) {
     }, readStyle(ctx, element, TEXT_STYLE_KEYS)));
   }
   captureIconDescendants(ctx, element, textId || parentId, 'icon');
+}
+
+function captureMeasuredDirectTextLines(ctx, element, parentId) {
+  let createRange = ctx.doc?.createRange;
+  let textNodes = [...(element?.childNodes || [])]
+    .filter((node) => node?.nodeType === 3 && String(node.textContent || '').trim());
+  if (typeof createRange !== 'function' || textNodes.length !== 1) return false;
+  let textNode = textNodes[0];
+  let text = String(textNode.textContent || '');
+  let range = createRange.call(ctx.doc);
+  if (!range?.setStart || !range?.setEnd || !range?.getBoundingClientRect) return false;
+  let lines = [];
+  let current = null;
+  try {
+    for (let index = 0; index < text.length; index += 1) {
+      range.setStart(textNode, index);
+      range.setEnd(textNode, index + 1);
+      let rect = range.getBoundingClientRect();
+      let measured = measureClientRect(ctx, rect);
+      if (!measured) continue;
+      let sameLine = current && Math.abs(current.rect.y - measured.y) < 1;
+      if (!sameLine) {
+        current = { chars: [], rect: { ...measured } };
+        lines.push(current);
+      } else {
+        let left = Math.min(current.rect.x, measured.x);
+        let top = Math.min(current.rect.y, measured.y);
+        let right = Math.max(current.rect.x + current.rect.width, measured.x + measured.width);
+        let bottom = Math.max(current.rect.y + current.rect.height, measured.y + measured.height);
+        current.rect = { x: left, y: top, width: right - left, height: bottom - top };
+      }
+      current.chars.push({ value: text[index], rect: measured });
+    }
+  } catch {
+    return false;
+  }
+  let captured = 0;
+  for (let line of lines) {
+    let first = line.chars.findIndex((entry) => !/\s/.test(entry.value));
+    let last = line.chars.length - 1;
+    while (last >= first && /\s/.test(line.chars[last].value)) last -= 1;
+    if (first < 0 || last < first) continue;
+    let visible = line.chars.slice(first, last + 1);
+    let value = visible.map((entry) => entry.value).join('');
+    let left = Math.min(...visible.map((entry) => entry.rect.x));
+    let top = Math.min(...visible.map((entry) => entry.rect.y));
+    let right = Math.max(...visible.map((entry) => entry.rect.x + entry.rect.width));
+    let bottom = Math.max(...visible.map((entry) => entry.rect.y + entry.rect.height));
+    let rect = { x: left, y: top, width: right - left, height: bottom - top };
+    if (!(rect.width > 0) || !(rect.height > 0)) continue;
+    addNode(ctx, withStyle({
+      id: `${parentId}/text:${nextSequence(ctx, `${parentId}/text`)}`,
+      parentId,
+      component: 'text',
+      part: 'text',
+      rect,
+      text: value,
+      exactTextBounds: true,
+    }, readStyle(ctx, element, TEXT_STYLE_KEYS)));
+    captured += 1;
+  }
+  return captured > 0;
 }
 
 function captureDirectSurfaceText(ctx, element, parentId) {
@@ -448,9 +522,22 @@ function captureDirectSurfaceText(ctx, element, parentId) {
 }
 
 function walkChildren(ctx, element, parentId) {
-  for (let child of element.children) {
+  for (let child of visualChildren(element)) {
     walkElement(ctx, child, parentId);
   }
+}
+
+function visualChildren(element) {
+  let children = [...(element?.children || [])];
+  let shadowChildren = [...(element?.shadowRoot?.children || [])];
+  // A slot is rendered from its assigned light-DOM content rather than from
+  // the slot element itself. Flattening preserves that visible content for
+  // ordinary open-shadow custom elements without needing component recipes.
+  if (String(element?.tagName || '').toLowerCase() === 'slot') {
+    let assigned = element.assignedElements?.({ flatten: true }) || [];
+    if (assigned.length) return [...assigned];
+  }
+  return [...children, ...shadowChildren];
 }
 
 function captureSurfaceElement(ctx, element, parentId) {
@@ -472,6 +559,86 @@ function captureSurfaceElement(ctx, element, parentId) {
   captureDirectSurfaceText(ctx, element, surfaceId);
   walkChildren(ctx, element, surfaceId);
   ctx.surfaceTextDepth -= 1;
+}
+
+function genericControlTargetId(ctx, element, parentId) {
+  let explicit = element.id
+    || element.getAttribute?.('data-action')
+    || element.getAttribute?.('name')
+    || element.getAttribute?.('aria-label');
+  let normalized = String(explicit || `control-${nextSequence(ctx, `${parentId}/control`)}`)
+    .trim()
+    .replace(/[^a-z0-9_-]+/gi, '-');
+  return normalized || `control-${nextSequence(ctx, `${parentId}/control`)}`;
+}
+
+function isGenericControl(element) {
+  let tag = String(element?.tagName || '').toLowerCase();
+  if (['button', 'input', 'textarea', 'select', 'option', 'a'].includes(tag)) return true;
+  let role = element.getAttribute?.('role');
+  return role === 'button' || role === 'checkbox' || role === 'switch' || role === 'tab' || role === 'menuitem';
+}
+
+function genericControlText(element) {
+  let tag = String(element?.tagName || '').toLowerCase();
+  if (tag === 'input' && element.type === 'checkbox') {
+    return element.checked ? { text: '✓', pseudo: null } : null;
+  }
+  if (tag === 'input' || tag === 'textarea') {
+    let value = String(element.value || '');
+    if (value) return { text: value, pseudo: null };
+    let placeholder = String(element.placeholder || element.getAttribute?.('placeholder') || '');
+    return placeholder ? { text: placeholder, pseudo: '::placeholder' } : null;
+  }
+  if (tag === 'select') {
+    let selected = element.selectedOptions?.[0]
+      || [...(element.options || [])].find((option) => option.selected);
+    let text = String(selected?.textContent || selected?.label || selected?.value || '').trim();
+    return text ? { text, pseudo: null } : null;
+  }
+  let text = textExcludingIcons(element);
+  return text ? { text, pseudo: null } : null;
+}
+
+function captureGenericControl(ctx, element, parentId) {
+  let rect = measureRect(ctx, element);
+  if (!rect) return;
+  let targetId = genericControlTargetId(ctx, element, parentId);
+  let controlId = `${parentId}/control:${targetId}`;
+  let tag = String(element.tagName || '').toLowerCase();
+  let intent = tag === 'textarea' || tag === 'input' ? 'dom-edit' : 'dom-activate';
+  addNode(ctx, withStyle({
+    id: controlId,
+    parentId,
+    component: 'dom-control',
+    part: 'control',
+    rect,
+    actions: [{ id: intent, targetId, intent }],
+  }, readChromeStyle(ctx, element, controlId, CONTROL_STYLE_KEYS)));
+  let content = genericControlText(element);
+  if (content) {
+    addNode(ctx, withStyle({
+      id: `${controlId}/${content.pseudo ? 'placeholder' : 'value'}`,
+      parentId: controlId,
+      component: 'text',
+      part: 'text',
+      rect,
+      text: content.text,
+      ...(content.pseudo ? { state: { placeholder: true } } : {}),
+    }, readStyle(ctx, element, TEXT_STYLE_KEYS, content.pseudo)));
+  } else {
+    // A native control is an interaction boundary, not an ordinary layout
+    // container. Its internal spans and implementation buttons frequently
+    // repeat the same label with the control's full bounds; walking that tree
+    // would produce coincident labels in a spatial renderer. Capture its
+    // composed text once and preserve each measured icon separately.
+    captureTextElement(ctx, element, controlId);
+  }
+  captureIconDescendants(ctx, element, controlId, 'icon');
+}
+
+function hasDirectText(element) {
+  return Boolean(directTextOf(element));
 }
 
 function captureScrollChrome(ctx, element, parentId, id, part, component) {
@@ -708,7 +875,48 @@ function captureNodeCanvas(element, ctx, parentId) {
   }
 }
 
+function captureCellBg(element, ctx, parentId) {
+  let rect = measureRect(ctx, element);
+  let presentation = element.getSpatialPresentation?.({ maxDots: 256 });
+  if (!rect || !presentation?.width || !presentation?.height) return;
+  let effectId = `${parentId}/cell-bg:${nextSequence(ctx, `${parentId}/cell-bg`)}`;
+  addNode(ctx, {
+    id: effectId,
+    parentId,
+    component: 'cell-bg',
+    part: 'surface',
+    rect,
+    ...(presentation.background ? { style: { 'background-color': presentation.background } } : {}),
+  });
+  for (let [index, dot] of (presentation.dots || []).entries()) {
+    let radius = Number(dot?.radius);
+    let x = Number(dot?.x);
+    let y = Number(dot?.y);
+    if (!(radius > 0) || !Number.isFinite(x) || !Number.isFinite(y) || typeof dot?.color !== 'string') continue;
+    let diameter = radius * 2;
+    addNode(ctx, {
+      id: `${effectId}/dot:${index}`,
+      parentId: effectId,
+      component: 'cell-bg',
+      part: 'surface',
+      rect: {
+        x: rect.x + (x - radius) * rect.width / presentation.width,
+        y: rect.y + (y - radius) * rect.height / presentation.height,
+        width: Math.max(0.5, diameter * rect.width / presentation.width),
+        height: Math.max(0.5, diameter * rect.height / presentation.height),
+      },
+      style: { 'background-color': dot.color },
+      state: { shape: 'circle' },
+    });
+  }
+}
+
 function walkElement(ctx, element, parentId) {
+  // Components can mark implementation-only descendants whose visual role is
+  // already represented by their measurable host surface. This keeps private
+  // render buffers out of the semantic scene without teaching capture about a
+  // product or component name.
+  if (element.hasAttribute?.('data-spatial-internal')) return;
   let tag = element.tagName.toLowerCase();
   if (UNSUPPORTED_TAG_FEATURES[tag]) {
     addUnsupported(ctx, UNSUPPORTED_TAG_FEATURES[tag], element, `<${tag}> is not reproduced natively`);
@@ -723,7 +931,12 @@ function walkElement(ctx, element, parentId) {
     captureIconElement(ctx, element, parentId, 'icon');
     return;
   }
-  if (ctx.surfaceSelectors.length && matchesSelectorList(ctx.surfaceSelectors, element)) {
+  if (isGenericControl(element)) {
+    captureGenericControl(ctx, element, parentId);
+    return;
+  }
+  if ((ctx.surfaceSelectors.length && matchesSelectorList(ctx.surfaceSelectors, element))
+    || hasOwnVisibleChrome(ctx, element)) {
     captureSurfaceElement(ctx, element, parentId);
     return;
   }
@@ -744,8 +957,12 @@ function walkElement(ctx, element, parentId) {
     return;
   }
   checkMotionDiagnostics(ctx, element);
-  let hasChildren = element.children.length > 0;
+  let hasChildren = visualChildren(element).length > 0;
   if (ctx.surfaceTextDepth > 0 && directTextOf(element)) {
+    captureTextElement(ctx, element, parentId);
+    return;
+  }
+  if (hasDirectText(element)) {
     captureTextElement(ctx, element, parentId);
     return;
   }
@@ -1469,6 +1686,7 @@ function captureDataTable(element, ctx, parentId) {
 
 const SPATIAL_CAPTURE_ADAPTERS = Object.freeze({
   'canvas-graph': Object.freeze({ capture: captureCanvasGraph }),
+  'cell-bg': Object.freeze({ capture: captureCellBg }),
   'chat-transcript': Object.freeze({ capture: captureChatTranscript }),
   'layout-node': Object.freeze({ capture: captureLayoutNode }),
   'node-canvas': Object.freeze({ capture: captureNodeCanvas }),

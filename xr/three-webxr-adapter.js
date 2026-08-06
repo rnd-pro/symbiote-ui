@@ -25,6 +25,7 @@ import {
   createXRViewerPoseSnapshot,
 } from './spatial-scene.js';
 import { createXRPortablePanelStore } from './portable-panel-state.js';
+import { createSceneInteractionArbiter } from './scene-interaction-arbiter.js';
 import { createXRFrameTimingTracker } from './frame-timing.js';
 import { createXRScaleFadeTween } from './transitions.js';
 import { XR_SPATIAL_VERSIONS, freezeSpatialValue } from './spatial-contract.js';
@@ -66,7 +67,6 @@ export const XR_THREE_WEBXR_ADAPTER = Object.freeze({
   specifier: 'symbiote-ui/xr',
   description: 'Optional Three.js WebXR adapter for Symbiote XR scenes. The host supplies the THREE module.',
   modes: ['immersive-vr', 'immersive-ar'],
-  fallback: 'dom-canvas',
   dependency: {
     name: 'three',
     injection: 'host-supplied',
@@ -108,6 +108,8 @@ export const XR_THREE_WEBXR_ADAPTER = Object.freeze({
     'three-scene-decoration',
     'three-camera-resize',
     'three-controller-select-events',
+    'three-scene-interaction-arbiter',
+    'three-exact-primitive-capture',
     'three-primary-input-source',
     'three-animation-loop',
     'three-panel-material-state',
@@ -305,7 +307,7 @@ function buildControllerRayVisual(THREE, options = {}) {
   if (!visual.enabled) {
     return { ok: false, reason: 'disabled' };
   }
-  let missing = ['BufferGeometry', 'Float32BufferAttribute', 'LineBasicMaterial', 'Line']
+  let missing = ['BufferGeometry', 'Float32BufferAttribute', 'ShaderMaterial', 'Line', 'Color']
     .filter((name) => typeof THREE?.[name] !== 'function');
   if (missing.length) {
     return { ok: false, reason: 'missing-three-ray-visual-api', missing };
@@ -313,18 +315,57 @@ function buildControllerRayVisual(THREE, options = {}) {
   let geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute([
     0, 0, 0,
+    0, 0, -visual.length / 2,
     0, 0, -visual.length,
   ], 3));
-  let material = new THREE.LineBasicMaterial({
-    color: visual.color,
+  geometry.setAttribute('snRayAlpha', new THREE.Float32BufferAttribute([
+    0,
+    visual.opacity,
+    0,
+  ], 1));
+  let material = new THREE.ShaderMaterial({
     transparent: true,
-    opacity: visual.opacity,
     depthTest: false,
+    depthWrite: false,
+    uniforms: {
+      rayColor: { value: new THREE.Color(visual.color) },
+    },
+    vertexShader: [
+      'attribute float snRayAlpha;',
+      'varying float vRayAlpha;',
+      'void main() {',
+      '  vRayAlpha = snRayAlpha;',
+      '  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);',
+      '}',
+    ].join('\n'),
+    fragmentShader: [
+      'uniform vec3 rayColor;',
+      'varying float vRayAlpha;',
+      'void main() {',
+      '  gl_FragColor = vec4(rayColor, vRayAlpha);',
+      '}',
+    ].join('\n'),
   });
   let line = new THREE.Line(geometry, material);
   line.name = 'sn-xr-controller-ray';
   line.userData ||= {};
   line.userData.snControllerRay = true;
+  line.userData.maximumLength = visual.length;
+  line.userData.hitDistance = visual.length;
+  line.userData.updateHitDistance = (value) => {
+    let distance = Number(value);
+    let length = Number.isFinite(distance)
+      ? Math.max(0.02, Math.min(visual.length, distance))
+      : visual.length;
+    let position = line.geometry.getAttribute?.('position');
+    if (position?.array?.length >= 9) {
+      position.array[5] = -length / 2;
+      position.array[8] = -length;
+      position.needsUpdate = true;
+    }
+    line.userData.hitDistance = length;
+    return length;
+  };
   line.renderOrder = Number(options.renderOrder ?? 20);
   return {
     ok: true,
@@ -385,7 +426,53 @@ function buildPanelHitReticleVisual(THREE, options = {}) {
   };
 }
 
-function updatePanelHitReticleVisual(reticle, hit) {
+function isUsableDirection(value) {
+  return Number.isFinite(Number(value?.x))
+    && Number.isFinite(Number(value?.y))
+    && Number.isFinite(Number(value?.z))
+    && Math.hypot(Number(value.x), Number(value.y), Number(value.z)) > Number.EPSILON;
+}
+
+function copyWorldQuaternionToObject(THREE, object, worldQuaternion) {
+  if (!object?.quaternion?.copy || !worldQuaternion) return false;
+  let localQuaternion = worldQuaternion;
+  if (typeof object.parent?.getWorldQuaternion === 'function' && typeof THREE?.Quaternion === 'function') {
+    let parentQuaternion = new THREE.Quaternion();
+    object.parent.getWorldQuaternion(parentQuaternion);
+    if (typeof parentQuaternion.invert === 'function' && typeof parentQuaternion.multiply === 'function') {
+      localQuaternion = parentQuaternion.invert().multiply(worldQuaternion);
+    }
+  }
+  object.quaternion.copy(localQuaternion);
+  return true;
+}
+
+function resolveHitWorldNormal(THREE, hit) {
+  let faceNormal = hit?.face?.normal;
+  if (!isUsableDirection(faceNormal)) return null;
+  let worldNormal = typeof faceNormal.clone === 'function'
+    ? faceNormal.clone()
+    : new THREE.Vector3(Number(faceNormal.x), Number(faceNormal.y), Number(faceNormal.z));
+  let matrixWorld = hit.object?.matrixWorld;
+  if (matrixWorld && typeof THREE?.Matrix3 === 'function' && typeof worldNormal.applyMatrix3 === 'function') {
+    let normalMatrix = new THREE.Matrix3();
+    if (typeof normalMatrix.getNormalMatrix === 'function') {
+      worldNormal.applyMatrix3(normalMatrix.getNormalMatrix(matrixWorld));
+    } else if (typeof worldNormal.transformDirection === 'function') {
+      worldNormal.transformDirection(matrixWorld);
+    }
+  } else if (matrixWorld && typeof worldNormal.transformDirection === 'function') {
+    worldNormal.transformDirection(matrixWorld);
+  } else if (typeof hit.object?.getWorldQuaternion === 'function' && typeof worldNormal.applyQuaternion === 'function') {
+    let worldQuaternion = new THREE.Quaternion();
+    hit.object.getWorldQuaternion(worldQuaternion);
+    worldNormal.applyQuaternion(worldQuaternion);
+  }
+  worldNormal.normalize?.();
+  return isUsableDirection(worldNormal) ? worldNormal : null;
+}
+
+function updatePanelHitReticleVisual(THREE, reticle, hit) {
   let object = reticle?.object || reticle;
   if (!object) return { ok: false, reason: 'missing-hit-reticle' };
   if (!hit?.point || !hit?.object) {
@@ -397,17 +484,26 @@ function updatePanelHitReticleVisual(reticle, hit) {
   object.visible = true;
   object.userData ||= {};
   object.userData.panelId = hit.object.userData?.panelId || null;
-  if (object.position?.copy) object.position.copy(hit.point);
-  else applyVector(object.position, [hit.point.x, hit.point.y, hit.point.z]);
-  // The reticle lives at scene level while panels sit under the placed root:
-  // the panel's local quaternion misses the root yaw and lays the ring
-  // sideways on committed scenes — orient by world rotation instead.
-  if (object.quaternion?.copy) {
-    if (typeof hit.object.getWorldQuaternion === 'function') {
-      hit.object.getWorldQuaternion(object.quaternion);
-    } else if (hit.object.quaternion) {
-      object.quaternion.copy(hit.object.quaternion);
+  let localPoint = typeof hit.point.clone === 'function' ? hit.point.clone() : hit.point;
+  if (localPoint !== hit.point && typeof object.parent?.worldToLocal === 'function') {
+    object.parent.worldToLocal(localPoint);
+  }
+  if (object.position?.copy) object.position.copy(localPoint);
+  else applyVector(object.position, [localPoint.x, localPoint.y, localPoint.z]);
+
+  let worldNormal = resolveHitWorldNormal(THREE, hit);
+  if (worldNormal && typeof THREE?.Vector3 === 'function' && typeof THREE?.Quaternion === 'function') {
+    let worldQuaternion = new THREE.Quaternion();
+    if (typeof worldQuaternion.setFromUnitVectors === 'function') {
+      worldQuaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), worldNormal);
+      copyWorldQuaternionToObject(THREE, object, worldQuaternion);
     }
+  } else if (typeof hit.object.getWorldQuaternion === 'function' && typeof THREE?.Quaternion === 'function') {
+    let worldQuaternion = new THREE.Quaternion();
+    hit.object.getWorldQuaternion(worldQuaternion);
+    copyWorldQuaternionToObject(THREE, object, worldQuaternion);
+  } else if (hit.object.quaternion) {
+    object.quaternion?.copy?.(hit.object.quaternion);
   }
   return {
     ok: true,
@@ -2797,6 +2893,16 @@ function setRayFromController(THREE, raycaster, controller) {
   return { ok: true, source: 'world-transform' };
 }
 
+function setRayFromInteractionRay(THREE, raycaster, ray) {
+  if (!ray?.origin || !ray?.direction || typeof raycaster?.set !== 'function') {
+    return { ok: false, reason: 'missing-interaction-ray' };
+  }
+  let origin = new THREE.Vector3(ray.origin.x, ray.origin.y, ray.origin.z);
+  let direction = new THREE.Vector3(ray.direction.x, ray.direction.y, ray.direction.z).normalize();
+  raycaster.set(origin, direction);
+  return { ok: true, source: 'scene-interaction-arbiter' };
+}
+
 function vectorData(vector) {
   if (!vector) return null;
   return {
@@ -3133,13 +3239,15 @@ export function createXRThreeControllerRayAdapter(options = {}) {
     return hits;
   }
 
-  function beginDrag(controller, meshOrHit, camera) {
+  function beginDrag(controller, meshOrHit, camera, interactionRay = null) {
     let hit = meshOrHit?.object ? meshOrHit : null;
     let mesh = hit?.object || meshOrHit;
     if (!THREE || !raycaster || !dragPlane || !intersection || !normal || !mesh) {
       return { ok: false, reason: 'missing-drag-dependency' };
     }
-    let ray = setRayFromController(THREE, raycaster, controller);
+    let ray = interactionRay
+      ? setRayFromInteractionRay(THREE, raycaster, interactionRay)
+      : setRayFromController(THREE, raycaster, controller);
     diagnostics.raySource = ray.source || null;
     if (!ray.ok) {
       counters.dragMisses += 1;
@@ -3155,7 +3263,10 @@ export function createXRThreeControllerRayAdapter(options = {}) {
     // the ray origin), while the ray-facing grab plane keeps every subsequent
     // intersection well-conditioned and moves the panel across the view.
     let meshWorldPosition = meshWorldPositionOf(THREE, mesh);
-    let grabPoint = hit?.point?.clone?.() || meshWorldPosition;
+    let grabPoint = hit?.point?.clone?.()
+      || (hit?.point && [hit.point.x, hit.point.y, hit.point.z].every(Number.isFinite)
+        ? new THREE.Vector3(hit.point.x, hit.point.y, hit.point.z)
+        : meshWorldPosition);
     normal.copy(raycaster.ray.direction);
     normal.x = -normal.x;
     normal.y = -normal.y;
@@ -3230,9 +3341,11 @@ export function createXRThreeControllerRayAdapter(options = {}) {
     };
   }
 
-  function updateDrag(controller = dragging?.controller) {
+  function updateDrag(controller = dragging?.controller, interactionRay = null) {
     if (!dragging || !controller || !raycaster || !intersection) return { ok: false, reason: 'not-dragging' };
-    let ray = setRayFromController(THREE, raycaster, controller);
+    let ray = interactionRay
+      ? setRayFromInteractionRay(THREE, raycaster, interactionRay)
+      : setRayFromController(THREE, raycaster, controller);
     diagnostics.raySource = ray.source || null;
     if (!ray.ok) {
       counters.dragMisses += 1;
@@ -3491,7 +3604,9 @@ export function createXRThreeWebXRAdapter(options = {}) {
       }
       return visual;
     },
-    updatePanelHitReticleVisual,
+    updatePanelHitReticleVisual(reticle, hit) {
+      return updatePanelHitReticleVisual(THREE, reticle, hit);
+    },
     controllerRays: rayAdapter,
     getState() {
       let sceneState = sceneAdapter.getState();
@@ -3819,8 +3934,13 @@ export function createXRThreeSessionController(options = {}) {
   let activeSession = null;
   let activeTarget = null;
   let controllers = [];
+  let controllerGrips = new Map();
   let selectStartListeners = [];
   let selectEndListeners = [];
+  let controllerConnectedListeners = [];
+  let controllerDisconnectedListeners = [];
+  let controllerInputSources = new Map();
+  let inputSourceControllers = new Map();
   let activeReferenceSpace = null;
   let referenceSpaceResetEpoch = 0;
   let activeViewerPose = null;
@@ -3832,6 +3952,18 @@ export function createXRThreeSessionController(options = {}) {
   let activeInteractionHandler = null;
   let interactionStarts = new Map();
   let interactionSequence = 0;
+  let arbiter = null;
+  let registeredInteractionTargets = new Map();
+  let activeInteractionRegistrations = new Map();
+  let internalInteractionTargets = new Map();
+  let internalInteractionTargetGenerations = new Map();
+  let interactionRaycaster = options.interactionRaycaster ||
+    (typeof THREE?.Raycaster === 'function' ? new THREE.Raycaster() : null);
+  let inputSourceIds = new WeakMap();
+  let inputSourceSequence = 0;
+  let visibilityChangeListener = null;
+  let inputSourcesChangeListener = null;
+  let dragAdapters = new Map();
 
   let frameInteractionStarts = new Map();
   let timingTracker = null;
@@ -3998,6 +4130,181 @@ export function createXRThreeSessionController(options = {}) {
     ];
   }
 
+  function interactionTargetKey(targetDefinition) {
+    let ownerId = String(targetDefinition?.ownerId || '').trim();
+    let targetId = String(targetDefinition?.id || '').trim();
+    if (!ownerId || !targetId) {
+      throw new TypeError('Interaction targets require non-empty ownerId and id values.');
+    }
+    return `${ownerId}\u0000${targetId}`;
+  }
+
+  function activateInteractionTarget(key, targetDefinition) {
+    if (!arbiter) return null;
+    activeInteractionRegistrations.get(key)?.();
+    let unregister = arbiter.registerTarget(targetDefinition);
+    activeInteractionRegistrations.set(key, unregister);
+    return unregister;
+  }
+
+  function registerInteractionTarget(targetDefinition) {
+    let key = interactionTargetKey(targetDefinition);
+    let activeKey = `external:${key}`;
+    let previous = registeredInteractionTargets.get(key) || null;
+    registeredInteractionTargets.set(key, targetDefinition);
+    try {
+      activateInteractionTarget(activeKey, targetDefinition);
+    } catch (error) {
+      if (previous) {
+        registeredInteractionTargets.set(key, previous);
+        activateInteractionTarget(activeKey, previous);
+      } else {
+        registeredInteractionTargets.delete(key);
+        activeInteractionRegistrations.delete(activeKey);
+      }
+      throw error;
+    }
+    let active = true;
+    return () => {
+      if (!active || registeredInteractionTargets.get(key) !== targetDefinition) return false;
+      active = false;
+      registeredInteractionTargets.delete(key);
+      let unregister = activeInteractionRegistrations.get(activeKey);
+      activeInteractionRegistrations.delete(activeKey);
+      return unregister?.() ?? true;
+    };
+  }
+
+  function activateInteractionArbiter() {
+    if (arbiter) return arbiter;
+    arbiter = createSceneInteractionArbiter({
+      hitEpsilon: options.interactionHitEpsilon,
+      onError(error, context) {
+        emit('spatial-three-interaction-error', {
+          error: error?.name || 'interaction-error',
+          message: error?.message || '',
+          context,
+        });
+      },
+    });
+    for (let [key, targetDefinition] of registeredInteractionTargets) {
+      activateInteractionTarget(`external:${key}`, targetDefinition);
+    }
+    return arbiter;
+  }
+
+  function deactivateInteractionArbiter(reason = 'session-ended') {
+    if (!arbiter) return false;
+    if (reason === 'session-ended') arbiter.handleSessionEnd();
+    else arbiter.cancelAll(reason);
+    for (let unregister of activeInteractionRegistrations.values()) unregister();
+    activeInteractionRegistrations.clear();
+    internalInteractionTargets.clear();
+    arbiter.dispose();
+    arbiter = null;
+    return true;
+  }
+
+  function panelPrimitiveId(panelId, frameTarget) {
+    if (!frameTarget) return `${panelId}/content`;
+    if (frameTarget.operation === 'action') return `${panelId}/action-${frameTarget.action}`;
+    if (frameTarget.operation === 'resize') return `${panelId}/resize-${frameTarget.handle}`;
+    return `${panelId}/${frameTarget.operation}${frameTarget.handle ? `-${frameTarget.handle}` : ''}`;
+  }
+
+  function resolveInternalInteractionHit(rawHit) {
+    if (rawHit?.object?.userData?.snPanelFrameVisual || rawHit?.object?.userData?.snPanelHitReticle) {
+      return null;
+    }
+    let hit = {
+      ...rawHit,
+      uv: rawHit?.uv ? { x: Number(rawHit.uv.x), y: Number(rawHit.uv.y) } : null,
+    };
+    if (hit.object?.userData?.snChromeSurface) hit = remapChromeSurfaceHit(hit);
+    if (!hit?.object) return null;
+    let panelId = String(hit.object.userData?.panelId || '').trim();
+    if (!panelId) return null;
+    let frameTarget = resolveHitFrameTarget(hit, options.panelFrameHitTest || {});
+    if (!frameTarget && hit.uv) {
+      frameTarget = {
+        version: 'xr-panel-frame-target-v1',
+        panelId,
+        zone: 'content',
+        action: null,
+        operation: 'focus',
+        handle: null,
+        point: { x: hit.uv.x, y: 1 - hit.uv.y },
+      };
+    }
+    if (!frameTarget) return null;
+    hit.frameTarget = frameTarget;
+    let primitiveId = panelPrimitiveId(panelId, frameTarget);
+    return Object.freeze({
+      panelId,
+      primitiveId,
+      operation: frameTarget.operation,
+      action: frameTarget.action || null,
+      handle: frameTarget.handle || null,
+      frameTarget,
+      contentPoint: frameTarget.zone === 'content' ? frameTarget.point : null,
+      acquire: true,
+      hit,
+    });
+  }
+
+  function internalTargetDefinition(object, id, generation) {
+    return {
+      ownerId: 'symbiote-three-session',
+      id,
+      generation,
+      priority: Number(object?.userData?.interactionPriority ?? 0),
+      objects: [object],
+      resolveHit: resolveInternalInteractionHit,
+      onPress: handleInternalTargetPress,
+      onMove: handleInternalTargetMove,
+      onRelease: handleInternalTargetRelease,
+      onCancel: handleInternalTargetCancel,
+    };
+  }
+
+  function syncInternalInteractionTargets() {
+    if (!arbiter) return;
+    let desired = new Map();
+    for (let object of listInteractionMeshes()) {
+      let panelId = String(object?.userData?.panelId || '').trim();
+      if (!panelId) continue;
+      let kind = object.userData?.snPanelRestoreChip === true ? 'restore' : 'panel';
+      let key = `${kind}:${panelId}`;
+      desired.set(key, object);
+      let record = internalInteractionTargets.get(key);
+      if (record?.object === object) continue;
+      let generation = (internalInteractionTargetGenerations.get(key) ?? -1) + 1;
+      record?.unregister?.();
+      let definition = internalTargetDefinition(object, key, generation);
+      let registrationKey = `internal:${key}`;
+      try {
+        let unregister = activateInteractionTarget(registrationKey, definition);
+        internalInteractionTargets.set(key, { object, generation, unregister, registrationKey });
+        internalInteractionTargetGenerations.set(key, generation);
+      } catch (error) {
+        activeInteractionRegistrations.delete(registrationKey);
+        internalInteractionTargets.delete(key);
+        emit('spatial-three-interaction-target-rejected', {
+          panelId,
+          targetId: key,
+          error: error?.name || 'interaction-target-rejected',
+          message: error?.message || '',
+        });
+      }
+    }
+    for (let [key, record] of [...internalInteractionTargets]) {
+      if (desired.get(key) === record.object) continue;
+      record.unregister?.();
+      activeInteractionRegistrations.delete(record.registrationKey);
+      internalInteractionTargets.delete(key);
+    }
+  }
+
   function syncPanelVisibilityWithTransition(mesh, storePanel, prevHidden) {
     let panelId = storePanel.id;
     let entry = transitionTweens.get(panelId) || null;
@@ -4087,6 +4394,9 @@ export function createXRThreeSessionController(options = {}) {
   };
 
   const onReferenceSpaceReset = () => {
+    arbiter?.cancelAll('reference-space-reset');
+    for (let dragAdapter of dragAdapters.values()) dragAdapter.endDrag();
+    dragAdapters.clear();
     referenceSpaceResetEpoch += 1;
     diagnostics.lastObservation = null;
     activeGrabState = { active: false, sourceId: null, objectId: null };
@@ -4096,13 +4406,10 @@ export function createXRThreeSessionController(options = {}) {
     options.onSpatialReset?.({ resetEpoch: referenceSpaceResetEpoch });
   };
 
-  let hitReticle = null;
+  let hitReticles = new Map();
+  let equipmentCaptureReticleAnchors = new Map();
   let lastHoverPanelId = null;
-  let lastHoverState = {
-    panelId: null,
-    point: null,
-    uv: null,
-  };
+  let lastHoverStates = new Map();
   const HOVER_SMOOTHING = 0.35;
   let originalBackground = null;
   let diagnostics = {
@@ -4111,6 +4418,7 @@ export function createXRThreeSessionController(options = {}) {
     mode: null,
     lastError: null,
     controllers: 0,
+    controllerGrips: 0,
     controllerRayVisuals: 0,
     hitReticleVisuals: 0,
     selectedPanelId: null,
@@ -4136,6 +4444,9 @@ export function createXRThreeSessionController(options = {}) {
     frameErrors: 0,
     lastFrameStage: null,
     lastEvent: null,
+    lastInputTransition: null,
+    lastPressTransition: null,
+    lastReleaseTransition: null,
     sessionId: null,
     targetHash: null,
     buildHash: null,
@@ -4170,7 +4481,16 @@ export function createXRThreeSessionController(options = {}) {
   function sourceIdFor(inputSource, index) {
     try {
       let resolved = inputSource?.id || activeCaptureConfig?.resolveInputSourceId?.(inputSource, index) || null;
-      return typeof resolved === 'string' && resolved.trim() ? resolved : null;
+      if (typeof resolved === 'string' && resolved.trim()) return resolved.trim();
+      if (!inputSource || (typeof inputSource !== 'object' && typeof inputSource !== 'function')) return null;
+      let existing = inputSourceIds.get(inputSource);
+      if (existing) return existing;
+      inputSourceSequence += 1;
+      let kind = inputKind(inputSource);
+      let hand = ['left', 'right'].includes(inputSource?.handedness) ? inputSource.handedness : 'none';
+      let generated = `${kind}:${hand}:${inputSourceSequence}`;
+      inputSourceIds.set(inputSource, generated);
+      return generated;
     } catch {
       return null;
     }
@@ -4381,282 +4701,324 @@ export function createXRThreeSessionController(options = {}) {
     return receipt;
   }
 
+  function sceneInteractionEvent(phase, identity, details) {
+    let hit = details.captureHit || details.hit || details.winningHit || null;
+    let resolved = hit?.resolved || null;
+    let event = Object.freeze({
+      version: 'xr-scene-interaction-v1',
+      phase,
+      identity,
+      primitive: resolved ? Object.freeze({
+        panelId: resolved.panelId || null,
+        primitiveId: resolved.primitiveId || null,
+        operation: resolved.operation || null,
+        action: resolved.action || null,
+        handle: resolved.handle || null,
+        contentPoint: resolved.contentPoint || null,
+      }) : null,
+      captureHit: details.captureHit || details.hit || null,
+      winningHit: details.winningHit || details.hit || null,
+      ray: details.ray || null,
+      source: details.source || null,
+      reason: details.reason || null,
+    });
+    options.onSceneInteraction?.(event);
+    return event;
+  }
+
+  function dragAdapterFor(sourceId) {
+    let existing = dragAdapters.get(sourceId);
+    if (existing) return existing;
+    let raycaster = typeof THREE?.Raycaster === 'function' ? new THREE.Raycaster() : null;
+    let dragAdapter = createXRThreeControllerRayAdapter({
+      ...options,
+      THREE,
+      raycaster,
+    });
+    dragAdapters.set(sourceId, dragAdapter);
+    return dragAdapter;
+  }
+
+  function portableInteractionContext(identity, inputSource, startRecord) {
+    if (!startRecord || !activeFrameRecord || !activeCaptureConfig) return null;
+    return {
+      sessionId: activeCaptureConfig.sessionId,
+      startFrameId: startRecord.startFrameId,
+      endFrameId: activeFrameRecord.id,
+      inputSourceId: identity.sourceId,
+      inputKind: inputKind(inputSource),
+      handedness: ['left', 'right'].includes(inputSource?.handedness) ? inputSource.handedness : 'none',
+      profiles: normalizeStringList(inputSource?.profiles),
+      timestamp: activeFrameRecord.time,
+    };
+  }
+
+  function applyPortableAction(panelId, hit, frameTarget, context) {
+    if (!panelStore || !frameTarget) return null;
+    let receipt = null;
+    if (frameTarget.operation === 'focus') {
+      receipt = panelStore.focus(panelId, context);
+      if (receipt?.accepted) options.panelHost?.focusPanel?.(panelId);
+    } else if (frameTarget.operation === 'action') {
+      let action = frameTarget.action;
+      if (action === 'pin') {
+        receipt = panelStore.togglePin(panelId, context);
+      } else if (action === 'reset') {
+        receipt = panelStore.reset(panelId, context);
+      } else if (action === 'close') {
+        let closeAllowed = typeof options.panelClosePolicy === 'function'
+          ? options.panelClosePolicy(panelId) !== false
+          : true;
+        if (closeAllowed) receipt = panelStore.setVisibility(panelId, true, context);
+        else emit('spatial-three-close-blocked', { panelId });
+      } else if (action === 'restore') {
+        receipt = panelStore.setVisibility(panelId, false, context);
+      } else if (action === 'fullscreen') {
+        options.onPanelFullscreen?.({
+          version: 'xr-panel-fullscreen-intent-v1',
+          panelId,
+          intent: 'panel-fullscreen',
+          context,
+        });
+        emit('spatial-three-panel-fullscreen', { panelId });
+      }
+    }
+    if (receipt) {
+      syncAllMeshesWithStore();
+    }
+    return receipt;
+  }
+
+  function handleInternalTargetPress(identity, details) {
+    let resolved = details.hit?.resolved;
+    let hit = resolved?.hit || null;
+    let inputSource = details.source?.inputSource || null;
+    let controller = details.source?.controller || null;
+    if (!hit || !inputSource || !controller) return;
+    let panelId = resolved.panelId;
+    let panelObject = hit.object?.userData?.panel || {};
+    let isDragTarget = isXRFrameDragTarget(resolved.frameTarget);
+    let blockedDrag = isDragTarget && (panelObject.portable === false || panelObject.pinned === true)
+      ? {
+        operation: resolved.frameTarget.operation,
+        reason: panelObject.portable === false ? 'panel-not-portable' : 'panel-pinned',
+      }
+      : null;
+    if (panelStore && hit.object?.userData?.snPanelRestoreChip !== true) {
+      let storePanel = panelStore.serialize().panels.find((panel) => panel.id === panelId);
+      if (storePanel?.hidden === true) throw new Error(`Cannot capture hidden panel "${panelId}".`);
+    }
+    diagnostics.selectedPanelId = panelId;
+    diagnostics.interactionEvents += 1;
+    let receipt = emitInteractionReceipt('selectstart', inputSource, hit);
+    let startRecord = {
+      identity,
+      sessionId: activeCaptureConfig?.sessionId || null,
+      startFrameId: activeFrameRecord?.id || null,
+      panelId,
+      frameTarget: resolved.frameTarget,
+      hit,
+      inputSource,
+      controller,
+      dragging: false,
+      blockedDrag,
+    };
+    frameInteractionStarts.set(identity.sourceId, startRecord);
+    if (isDragTarget && !blockedDrag) {
+      let dragAdapter = dragAdapterFor(identity.sourceId);
+      let drag = dragAdapter.beginDrag(controller, hit, activeTarget?.camera, details.ray);
+      if (drag?.ok) {
+        startRecord.dragging = true;
+        diagnostics.draggingPanelId = panelId;
+        activeGrabState = { active: true, sourceId: identity.sourceId, objectId: panelId };
+        emit('spatial-three-drag-start', {
+          panelId,
+          frameTarget: resolved.frameTarget,
+          receipt,
+        });
+      }
+    }
+    sceneInteractionEvent('press', identity, details);
+    emit('spatial-three-select', {
+      panelId,
+      frameTarget: resolved.frameTarget,
+      receipt,
+    });
+  }
+
+  function handleInternalTargetMove(identity, details) {
+    let startRecord = frameInteractionStarts.get(identity.sourceId);
+    if (startRecord?.dragging) {
+      let drag = dragAdapters.get(identity.sourceId)?.updateDrag(startRecord.controller, details.ray);
+      diagnostics.draggingPanelId = startRecord.panelId;
+      if (drag?.ok === false) {
+        emit('spatial-three-drag-miss', { panelId: startRecord.panelId, error: drag.reason || 'drag-update-failed' });
+      }
+    }
+    sceneInteractionEvent('move', identity, details);
+  }
+
+  function handleInternalTargetRelease(identity, details) {
+    let startRecord = frameInteractionStarts.get(identity.sourceId) || null;
+    frameInteractionStarts.delete(identity.sourceId);
+    let resolved = details.captureHit?.resolved || null;
+    let hit = resolved?.hit || startRecord?.hit || null;
+    let panelId = resolved?.panelId || startRecord?.panelId || null;
+    let frameTarget = resolved?.frameTarget || startRecord?.frameTarget || null;
+    let inputSource = details.source?.inputSource || startRecord?.inputSource || null;
+    let context = portableInteractionContext(identity, inputSource, startRecord);
+    let dragAdapter = dragAdapters.get(identity.sourceId) || null;
+    let wasDragging = startRecord?.dragging === true;
+    let wasBlockedDrag = Boolean(startRecord?.blockedDrag);
+    if (wasDragging) dragAdapter?.endDrag();
+    dragAdapters.delete(identity.sourceId);
+    diagnostics.draggingPanelId = null;
+    diagnostics.interactionEvents += 1;
+    activeGrabState = { active: false, sourceId: null, objectId: null };
+    let receipt = inputSource && hit ? emitInteractionReceipt('selectend', inputSource, hit) : null;
+    let portablePanelReceipt = null;
+    let mesh = panelId ? adapter.getPanelMesh?.(panelId) : null;
+    if ((wasDragging || wasBlockedDrag) && mesh && panelStore) {
+      if (frameTarget?.operation === 'move') {
+        let position = [mesh.position.x, mesh.position.y, mesh.position.z];
+        let quaternion = mesh.quaternion
+          ? [mesh.quaternion.x, mesh.quaternion.y, mesh.quaternion.z, mesh.quaternion.w]
+          : [0, 0, 0, 1];
+        portablePanelReceipt = panelStore.settleMove(panelId, position, quaternion, context);
+      } else if (frameTarget?.operation === 'resize') {
+        portablePanelReceipt = panelStore.settleResize(
+          panelId,
+          readPanelSize(mesh, transitionTweens.has(panelId)),
+          context,
+        );
+      }
+      if (portablePanelReceipt) {
+        syncAllMeshesWithStore();
+      }
+    } else if (!wasDragging && panelId && hit) {
+      portablePanelReceipt = applyPortableAction(panelId, hit, frameTarget, context);
+    }
+    sceneInteractionEvent('release', identity, details);
+    emit('spatial-three-select-end', {
+      panelId,
+      frameTarget,
+      receipt,
+      portablePanelReceipt,
+    });
+  }
+
+  function handleInternalTargetCancel(identity, details) {
+    frameInteractionStarts.delete(identity.sourceId);
+    interactionStarts.delete(identity.sourceId);
+    let dragAdapter = dragAdapters.get(identity.sourceId);
+    dragAdapter?.endDrag();
+    dragAdapters.delete(identity.sourceId);
+    if (activeGrabState.sourceId === identity.sourceId) {
+      activeGrabState = { active: false, sourceId: null, objectId: null };
+      diagnostics.draggingPanelId = null;
+    }
+    sceneInteractionEvent('cancel', identity, details);
+  }
+
+  function releaseControllerInputSource(controller, expectedInputSource = null, reason = 'controller-disconnected') {
+    let inputSource = controllerInputSources.get(controller) || null;
+    if (!inputSource || (expectedInputSource && inputSource !== expectedInputSource)) return false;
+    controllerInputSources.delete(controller);
+    if (inputSourceControllers.get(inputSource) === controller) inputSourceControllers.delete(inputSource);
+    let sourceId = sourceIdFor(inputSource, -1);
+    if (sourceId) {
+      arbiter?.handleSourceLost(sourceId);
+      dragAdapters.get(sourceId)?.endDrag();
+      dragAdapters.delete(sourceId);
+    }
+    return true;
+  }
+
+  function bindControllerInputSource(controller, inputSource) {
+    if (!controller || !inputSource) return false;
+    let previous = controllerInputSources.get(controller) || null;
+    if (previous === inputSource) return true;
+    if (previous) releaseControllerInputSource(controller, previous, 'controller-rebound');
+    let previousController = inputSourceControllers.get(inputSource) || null;
+    if (previousController && previousController !== controller) {
+      releaseControllerInputSource(previousController, inputSource, 'input-source-rebound');
+    }
+    controllerInputSources.set(controller, inputSource);
+    inputSourceControllers.set(inputSource, controller);
+    return true;
+  }
+
   function setupControllers(scene, renderer, camera, startOptions = {}) {
     if (!scene || !renderer?.xr?.getController || controllers.length) return;
     for (let index = 0; index < 2; index += 1) {
       let controller = renderer.xr.getController(index);
+      let grip = typeof renderer.xr.getControllerGrip === 'function'
+        ? renderer.xr.getControllerGrip(index)
+        : null;
+
+      let connectedListener = (event) => bindControllerInputSource(controller, event?.data);
+      let disconnectedListener = (event) => releaseControllerInputSource(controller, event?.data);
 
       let selectStartListener = (event) => {
-        let inputSource = event?.data;
-        if (!inputSource) {
-          let sources = activeSession?.inputSources ? Array.from(activeSession.inputSources) : [];
-          inputSource = sources[index] || controller.inputSource;
-        }
-        if (!inputSource) {
-          return;
-        }
+        let inputSource = event?.data || controllerInputSources.get(controller) || controller.inputSource || null;
+        if (!inputSource) return;
+        bindControllerInputSource(controller, inputSource);
+
         let sources = activeSession?.inputSources ? Array.from(activeSession.inputSources) : [];
         let srcIndex = sources.indexOf(inputSource);
         let inputSourceId = sourceIdFor(inputSource, srcIndex);
 
-        let hit = adapter.controllerRays.getHits(
-          controller,
-          listInteractionMeshes(),
-        )[0];
-        if (hit) {
-          // While a close tween runs the mesh stays ray-visible; reject
-          // gestures whose store panel is already hidden before any receipt
-          // can form. Restore chips are exempt: they exist to un-hide.
-          if (panelTransitions && panelStore && hit.object?.userData?.snPanelRestoreChip !== true) {
-            let hitPanelId = hit.object?.userData?.panelId || null;
-            let hitStorePanel = hitPanelId
-              ? panelStore.serialize().panels.find((panel) => panel.id === hitPanelId)
-              : null;
-            if (hitStorePanel?.hidden === true) {
-              return;
-            }
-          }
-          diagnostics.selectedPanelId = hit.object?.userData?.panelId || null;
-          diagnostics.interactionEvents += 1;
-
-          let uv = hit.uv ? { x: hit.uv.x, y: hit.uv.y } : null;
-          let receipt = emitInteractionReceipt('selectstart', inputSource, hit);
-
-          let panelId = hit.object?.userData?.panelId;
-          let panelObj = hit.object?.userData?.panel || {};
-          let isPortable = panelObj.portable !== false;
-          let isPinned = panelObj.pinned === true;
-
-          if (inputSourceId && hit.frameTarget && activeFrameRecord && activeCaptureConfig) {
-            frameInteractionStarts.set(inputSourceId, {
-              sessionId: activeCaptureConfig.sessionId,
-              startFrameId: activeFrameRecord.id,
-              panelId,
-              frameTarget: hit.frameTarget,
-              inputSource,
-            });
-          }
-
-          if (isXRFrameDragTarget(hit.frameTarget)) {
-            if (isPortable && !isPinned) {
-              let drag = adapter.controllerRays.beginDrag(controller, hit, camera);
-              if (drag?.ok !== false) {
-                diagnostics.draggingPanelId = diagnostics.selectedPanelId;
-                activeGrabState = {
-                  active: true,
-                  sourceId: inputSourceId,
-                  objectId: diagnostics.draggingPanelId,
-                };
-                emit('spatial-three-drag-start', {
-                  panelId: diagnostics.draggingPanelId,
-                  frameTarget: hit.frameTarget || null,
-                  uv,
-                  receipt,
-                });
-                return;
-              }
-            }
-          }
-          emit('spatial-three-select', {
-            panelId: diagnostics.selectedPanelId,
-            frameTarget: hit.frameTarget || null,
-            uv,
-            receipt,
-          });
+        let winner = inputSourceId ? arbiter?.getWinningHit(inputSourceId) : null;
+        let winnerHit = winner ? { ...(winner.resolved?.hit || winner) } : null;
+        if (inputSourceId && winnerHit?.object?.userData?.kind === 'equipment-hit-proxy') {
+          anchoredEquipmentReticleHit(inputSourceId, { pending: true }, winnerHit);
         }
+        let result = inputSourceId ? arbiter?.handlePress(inputSourceId) : null;
+        if (result?.ok === true && inputSourceId) {
+          let capture = arbiter?.getCapture(inputSourceId) || null;
+          let captureHit = capture?.hit ? { ...(capture.hit.resolved?.hit || capture.hit) } : null;
+          anchoredEquipmentReticleHit(inputSourceId, capture, captureHit);
+        } else if (inputSourceId) {
+          equipmentCaptureReticleAnchors.delete(inputSourceId);
+        }
+        diagnostics.lastInputTransition = {
+          phase: 'selectstart',
+          sourceId: inputSourceId,
+          ok: result?.ok === true,
+          reason: result?.reason || (inputSourceId ? null : 'input-source-unresolved'),
+        };
+        diagnostics.lastPressTransition = diagnostics.lastInputTransition;
       };
 
       let selectEndListener = (event) => {
-        let inputSource = event?.data;
-        if (!inputSource) {
-          let sources = activeSession?.inputSources ? Array.from(activeSession.inputSources) : [];
-          inputSource = sources[index] || controller.inputSource;
-        }
-        if (!inputSource) {
-          return;
-        }
+        let inputSource = event?.data || controllerInputSources.get(controller) || controller.inputSource || null;
+        if (!inputSource) return;
+        bindControllerInputSource(controller, inputSource);
+
         let sources = activeSession?.inputSources ? Array.from(activeSession.inputSources) : [];
         let srcIndex = sources.indexOf(inputSource);
         let inputSourceId = sourceIdFor(inputSource, srcIndex);
 
-        let wasDragging = adapter.controllerRays.getState?.().dragging === true;
-        let draggingPanelId = adapter.controllerRays.getState?.().panelId;
-        let draggingMesh = draggingPanelId ? adapter.getPanelMesh(draggingPanelId) : null;
-        let startRecord = inputSourceId ? frameInteractionStarts.get(inputSourceId) : null;
         if (inputSourceId) {
-          frameInteractionStarts.delete(inputSourceId);
-        }
-
-        let result = wasDragging ? adapter.controllerRays.endDrag() : null;
-        diagnostics.draggingPanelId = null;
-        diagnostics.interactionEvents += 1;
-
-        let hit = adapter.controllerRays.getHits(
-          controller,
-          listInteractionMeshes(),
-        )[0] || null;
-        let uv = hit?.uv ? { x: hit.uv.x, y: hit.uv.y } : null;
-        let panelId = draggingPanelId || hit?.object?.userData?.panelId || diagnostics.selectedPanelId;
-        let receipt = emitInteractionReceipt('selectend', inputSource, hit);
-        activeGrabState = { active: false, sourceId: null, objectId: null };
-
-        let context = null;
-        if (inputSourceId && startRecord && activeFrameRecord && activeCaptureConfig) {
-          context = {
-            sessionId: activeCaptureConfig.sessionId,
-            startFrameId: startRecord.startFrameId,
-            endFrameId: activeFrameRecord.id,
-            inputSourceId,
-            inputKind: inputKind(inputSource),
-            handedness: ['left', 'right'].includes(inputSource?.handedness) ? inputSource.handedness : 'none',
-            profiles: normalizeStringList(inputSource?.profiles),
-            timestamp: activeFrameRecord.time,
+          let release = arbiter?.handleRelease(inputSourceId);
+          diagnostics.lastInputTransition = {
+            phase: 'selectend',
+            sourceId: inputSourceId,
+            ok: release?.ok === true,
+            reason: release?.reason || null,
           };
-        }
-
-        let portablePanelReceipt = null;
-        if (wasDragging && draggingMesh && startRecord && panelStore) {
-          let op = startRecord.frameTarget.operation;
-          if (op === 'move') {
-            let localPos = [draggingMesh.position.x, draggingMesh.position.y, draggingMesh.position.z];
-            let localQuat = draggingMesh.quaternion ? [draggingMesh.quaternion.x, draggingMesh.quaternion.y, draggingMesh.quaternion.z, draggingMesh.quaternion.w] : [0, 0, 0, 1];
-            portablePanelReceipt = panelStore.settleMove(draggingPanelId, localPos, localQuat, context);
-            if (portablePanelReceipt) {
-              receiptsList.push(portablePanelReceipt);
-              if (!portablePanelReceipt.accepted) {
-                let storePanel = panelStore.serialize().panels.find(p => p.id === draggingPanelId);
-                if (storePanel) {
-                  draggingMesh.position.set(storePanel.current.position[0], storePanel.current.position[1], storePanel.current.position[2]);
-                  draggingMesh.quaternion.set(storePanel.current.quaternion[0], storePanel.current.quaternion[1], storePanel.current.quaternion[2], storePanel.current.quaternion[3]);
-                }
-              }
-            }
-          } else if (op === 'resize') {
-            // A panel transition tween owns mesh.scale while it runs; a
-            // scale-derived size read would fold the mid-ease value into the
-            // store, so settle from scale-free size sources instead.
-            let finalSize = readPanelSize(draggingMesh, transitionTweens.has(draggingPanelId));
-            portablePanelReceipt = panelStore.settleResize(draggingPanelId, finalSize, context);
-            if (portablePanelReceipt) {
-              receiptsList.push(portablePanelReceipt);
-              if (!portablePanelReceipt.accepted) {
-                let storePanel = panelStore.serialize().panels.find(p => p.id === draggingPanelId);
-                if (storePanel) {
-                  applyPanelSize(draggingMesh, storePanel.current.size, THREE || draggingMesh.userData.THREE);
-                }
-              }
-            }
-          }
-        } else if (startRecord && panelStore && (startRecord.frameTarget.operation === 'move' || startRecord.frameTarget.operation === 'resize')) {
-          let op = startRecord.frameTarget.operation;
-          let targetPanelId = startRecord.panelId;
-          let storePanel = panelStore.serialize().panels.find(p => p.id === targetPanelId);
-          if (storePanel) {
-            if (op === 'move') {
-              portablePanelReceipt = panelStore.settleMove(targetPanelId, storePanel.current.position, storePanel.current.quaternion, context);
-            } else if (op === 'resize') {
-              portablePanelReceipt = panelStore.settleResize(targetPanelId, storePanel.current.size, context);
-            }
-            if (portablePanelReceipt) {
-              receiptsList.push(portablePanelReceipt);
-              syncAllMeshesWithStore();
-            }
-          }
-        } else if (!wasDragging && hit && startRecord && panelStore) {
-          let frameTarget = hit.frameTarget || resolveHitFrameTarget(hit);
-          if (frameTarget && startRecord.frameTarget.operation === frameTarget.operation && startRecord.panelId === panelId) {
-            let op = frameTarget.operation;
-            if (op === 'focus') {
-              portablePanelReceipt = panelStore.focus(panelId, context);
-              if (portablePanelReceipt) {
-                receiptsList.push(portablePanelReceipt);
-                if (portablePanelReceipt.accepted && options.panelHost && typeof options.panelHost.focusPanel === 'function') {
-                  options.panelHost.focusPanel(panelId);
-                }
-              }
-            } else if (op === 'action') {
-              if (startRecord.frameTarget.action === frameTarget.action) {
-                let action = frameTarget.action;
-                if (action === 'pin') {
-                  portablePanelReceipt = panelStore.togglePin(panelId, context);
-                  if (portablePanelReceipt) {
-                    receiptsList.push(portablePanelReceipt);
-                    if (portablePanelReceipt.accepted) {
-                      let updated = panelStore.serialize().panels.find(p => p.id === panelId);
-                      if (updated) {
-                        let panelObj = hit.object.userData.panel || {};
-                        panelObj.pinned = updated.pinned;
-                        hit.object.userData.panel = { ...panelObj };
-                        hit.object.userData.updatePanelFrameVisuals?.();
-                      }
-                    }
-                  }
-                } else if (action === 'reset') {
-                  portablePanelReceipt = panelStore.reset(panelId, context);
-                  if (portablePanelReceipt) {
-                    receiptsList.push(portablePanelReceipt);
-                    if (portablePanelReceipt.accepted) {
-                      let updated = panelStore.serialize().panels.find(p => p.id === panelId);
-                      if (updated) {
-                        if (hit.object.position?.set) {
-                          hit.object.position.set(updated.current.position[0], updated.current.position[1], updated.current.position[2]);
-                        } else {
-                          hit.object.position = { x: updated.current.position[0], y: updated.current.position[1], z: updated.current.position[2] };
-                        }
-                        if (hit.object.quaternion?.set) {
-                          hit.object.quaternion.set(updated.current.quaternion[0], updated.current.quaternion[1], updated.current.quaternion[2], updated.current.quaternion[3]);
-                        } else if (hit.object.quaternion) {
-                          hit.object.quaternion.x = updated.current.quaternion[0];
-                          hit.object.quaternion.y = updated.current.quaternion[1];
-                          hit.object.quaternion.z = updated.current.quaternion[2];
-                          hit.object.quaternion.w = updated.current.quaternion[3];
-                        }
-                        applyPanelSize(hit.object, updated.current.size, THREE || hit.object.userData.THREE);
-                      }
-                    }
-                  }
-                } else if (action === 'close') {
-                  // The policy gate runs BEFORE any store call: every receipt
-                  // consumes a store sequence number, so a blocked close must
-                  // emit none (an interleaved receipt deadlocks the demo
-                  // prelude gate permanently).
-                  let closeAllowed = typeof options.panelClosePolicy === 'function'
-                    ? options.panelClosePolicy(panelId) !== false
-                    : true;
-                  if (closeAllowed) {
-                    portablePanelReceipt = panelStore.setVisibility(panelId, true, context);
-                    if (portablePanelReceipt) {
-                      receiptsList.push(portablePanelReceipt);
-                    }
-                  } else {
-                    emit('spatial-three-close-blocked', { panelId });
-                  }
-                } else if (action === 'restore') {
-                  portablePanelReceipt = panelStore.setVisibility(panelId, false, context);
-                  if (portablePanelReceipt) {
-                    receiptsList.push(portablePanelReceipt);
-                  }
-                } else if (action === 'fullscreen') {
-                  options.onPanelFullscreen?.({
-                    version: 'xr-panel-fullscreen-intent-v1',
-                    panelId,
-                    intent: 'panel-fullscreen',
-                    context,
-                  });
-                  emit('spatial-three-panel-fullscreen', { panelId });
-                }
-              }
-            }
-            if (portablePanelReceipt) {
-              syncAllMeshesWithStore();
-            }
-          }
+          diagnostics.lastReleaseTransition = diagnostics.lastInputTransition;
+          if (release?.reason === 'release-handler-error') throw release.error;
         }
       };
 
+      controller.addEventListener?.('connected', connectedListener);
+      controller.addEventListener?.('disconnected', disconnectedListener);
       controller.addEventListener?.('selectstart', selectStartListener);
       controller.addEventListener?.('selectend', selectEndListener);
 
+      controllerConnectedListeners.push({ controller, listener: connectedListener });
+      controllerDisconnectedListeners.push({ controller, listener: disconnectedListener });
       selectStartListeners.push({ controller, listener: selectStartListener });
       selectEndListeners.push({ controller, listener: selectEndListener });
 
@@ -4668,86 +5030,216 @@ export function createXRThreeSessionController(options = {}) {
         if (visual?.ok) diagnostics.controllerRayVisuals += 1;
       }
       scene.add?.(controller);
+      if (grip && grip !== controller) {
+        scene.add?.(grip);
+        controllerGrips.set(controller, grip);
+      }
       controllers.push(controller);
+      if (controller.inputSource) bindControllerInputSource(controller, controller.inputSource);
     }
     diagnostics.controllers = controllers.length;
-    if (startOptions.panelHitReticle !== false && !hitReticle) {
-      hitReticle = adapter.createPanelHitReticleVisual?.(scene, {
-        ...(options.panelHitReticle || {}),
-        ...(startOptions.panelHitReticle || {}),
-      });
-      if (hitReticle?.ok) diagnostics.hitReticleVisuals = 1;
+    diagnostics.controllerGrips = controllerGrips.size;
+    if (startOptions.panelHitReticle !== false) {
+      for (let controller of controllers) {
+        if (hitReticles.has(controller)) continue;
+        let reticle = adapter.createPanelHitReticleVisual?.(scene, {
+          ...(options.panelHitReticle || {}),
+          ...(startOptions.panelHitReticle || {}),
+        });
+        if (reticle?.ok) hitReticles.set(controller, reticle);
+      }
+      diagnostics.hitReticleVisuals = hitReticles.size;
     }
+  }
+
+  function normalizeInteractionSourceRay(source) {
+    let controller = source?.controller;
+    if (!controller || typeof THREE?.Vector3 !== 'function' || typeof THREE?.Quaternion !== 'function') {
+      throw new Error('Controller world transform is unavailable for scene interaction.');
+    }
+    controller.updateMatrixWorld?.(true);
+    if (typeof controller.getWorldPosition === 'function' && typeof controller.getWorldQuaternion === 'function') {
+      let origin = controller.getWorldPosition(new THREE.Vector3());
+      let quaternion = controller.getWorldQuaternion(new THREE.Quaternion());
+      let direction = new THREE.Vector3(0, 0, -1).applyQuaternion(quaternion).normalize();
+      return { origin: vectorData(origin), direction: vectorData(direction) };
+    }
+    if (typeof interactionRaycaster?.setFromXRController === 'function') {
+      interactionRaycaster.setFromXRController(controller);
+      return {
+        origin: vectorData(interactionRaycaster.ray.origin),
+        direction: vectorData(interactionRaycaster.ray.direction),
+      };
+    }
+    throw new Error('Controller ray normalization is unavailable.');
+  }
+
+  function controllerPose(source) {
+    let object = controllerGrips.get(source?.controller) || source?.controller || null;
+    if (!object || typeof THREE?.Vector3 !== 'function' || typeof THREE?.Quaternion !== 'function') return null;
+    object.updateMatrixWorld?.(true);
+    if (typeof object.getWorldPosition !== 'function' || typeof object.getWorldQuaternion !== 'function') return null;
+    let position = object.getWorldPosition(new THREE.Vector3());
+    let quaternion = object.getWorldQuaternion(new THREE.Quaternion());
+    return {
+      position: vectorData(position),
+      quaternion: [
+        Number(quaternion.x),
+        Number(quaternion.y),
+        Number(quaternion.z),
+        Number(quaternion.w),
+      ],
+    };
+  }
+
+  function intersectInteractionRay({ ray, objects }) {
+    if (!interactionRaycaster || typeof interactionRaycaster.intersectObjects !== 'function') return [];
+    let set = setRayFromInteractionRay(THREE, interactionRaycaster, ray);
+    if (!set.ok) throw new Error(set.reason);
+    return interactionRaycaster.intersectObjects(objects, true)
+      .filter((hit) => !hit.object?.userData?.snPanelFrameVisual && !hit.object?.userData?.snPanelHitReticle);
+  }
+
+  function anchoredEquipmentReticleHit(sourceId, capture, hit) {
+    let object = hit?.object || null;
+    if (!capture || object?.userData?.kind !== 'equipment-hit-proxy' || !hit?.point
+      || typeof object.worldToLocal !== 'function' || typeof object.localToWorld !== 'function') {
+      equipmentCaptureReticleAnchors.delete(sourceId);
+      return null;
+    }
+    let anchor = equipmentCaptureReticleAnchors.get(sourceId) || null;
+    if (!anchor || anchor.object !== object) {
+      object.updateWorldMatrix?.(true, false);
+      object.updateMatrixWorld?.(true);
+      let worldPoint = hit.point.clone?.() || new THREE.Vector3(hit.point.x, hit.point.y, hit.point.z);
+      let localPoint = object.worldToLocal(worldPoint.clone());
+      let localNormal = hit.face?.normal
+        ? (hit.face.normal.clone?.() || new THREE.Vector3(hit.face.normal.x, hit.face.normal.y, hit.face.normal.z))
+        : null;
+      anchor = { object, localPoint, localNormal, hit: { ...hit } };
+      equipmentCaptureReticleAnchors.set(sourceId, anchor);
+    }
+    object.updateWorldMatrix?.(true, false);
+    object.updateMatrixWorld?.(true);
+    let point = object.localToWorld(anchor.localPoint.clone());
+    return {
+      ...anchor.hit,
+      object,
+      point,
+      face: anchor.localNormal
+        ? { ...(anchor.hit.face || {}), normal: anchor.localNormal.clone() }
+        : anchor.hit.face,
+    };
   }
 
   function updateHover() {
-    if (!controllers.length) return;
-    let hit = null;
-    for (let controller of controllers) {
-      hit = adapter.controllerRays.getHits(controller, listInteractionMeshes())[0] || null;
-      if (hit) break;
-    }
-    if (hit && hit.point) {
-      let panelId = hit.object?.userData?.panelId || null;
-      if (lastHoverState.panelId !== panelId) {
-        lastHoverState.panelId = panelId;
-        lastHoverState.point = hit.point.clone();
-        if (hit.uv) lastHoverState.uv = { x: hit.uv.x, y: hit.uv.y };
-      } else {
-        if (lastHoverState.point && typeof lastHoverState.point.lerp === 'function') {
-          lastHoverState.point.lerp(hit.point, HOVER_SMOOTHING);
-          hit.point.copy(lastHoverState.point);
-        }
-        if (lastHoverState.uv && hit.uv) {
-          lastHoverState.uv.x = lastHoverState.uv.x + HOVER_SMOOTHING * (hit.uv.x - lastHoverState.uv.x);
-          lastHoverState.uv.y = lastHoverState.uv.y + HOVER_SMOOTHING * (hit.uv.y - lastHoverState.uv.y);
-          hit.uv.x = lastHoverState.uv.x;
-          hit.uv.y = lastHoverState.uv.y;
-        }
-      }
-      let frameTarget = resolveHitFrameTarget(hit, options.panelFrameHitTest || {});
-      if (frameTarget) {
-        hit.frameTarget = frameTarget;
-        hit.object.userData ||= {};
-        hit.object.userData.lastFrameTarget = frameTarget;
-      }
-    } else {
-      lastHoverState.panelId = null;
-      lastHoverState.point = null;
-      lastHoverState.uv = null;
-    }
-    let reticle = adapter.updatePanelHitReticleVisual?.(hitReticle, hit) || null;
-    let panelId = hit?.object?.userData?.panelId || null;
-    diagnostics.hover = {
-      panelId,
-      point: vectorData(hit?.point),
-      distance: Number(hit?.distance || 0),
-      reticleVisible: Boolean(reticle?.visible),
-      frameTarget: hit?.frameTarget || null,
-      uv: hit?.uv ? { x: hit.uv.x, y: hit.uv.y } : null,
-    };
-    let hoverFramePoint = hit?.frameTarget?.point || null;
-    for (let panelMesh of adapter.listPanelMeshes() || []) {
-      updatePanelFrameHoverVisuals(
-        panelMesh,
-        Boolean(panelId) && panelMesh?.userData?.panelId === panelId,
-        hoverFramePoint,
-      );
-    }
-    if (panelId !== lastHoverPanelId) {
-      lastHoverPanelId = panelId;
-      emit('spatial-three-hover-change', { hover: diagnostics.hover });
-    }
-  }
+    if (!controllers.length || !arbiter) return;
+    syncInternalInteractionTargets();
+    let sessionSources = activeSession?.inputSources ? Array.from(activeSession.inputSources) : [];
+    let sources = controllers.flatMap((controller) => {
+      let inputSource = controllerInputSources.get(controller) || controller.inputSource || null;
+      if (!inputSource) return [];
+      if (!controllerInputSources.has(controller)) bindControllerInputSource(controller, inputSource);
+      let id = sourceIdFor(inputSource, sessionSources.indexOf(inputSource));
+      return id ? [{ id, controller, inputSource, controllerPose: controllerPose({ controller }) }] : [];
+    });
+    arbiter.updateFrame(sources, normalizeInteractionSourceRay, intersectInteractionRay);
 
-  function updateDrag() {
-    if (!adapter.controllerRays.getState().dragging) return;
-    let result = adapter.controllerRays.updateDrag();
-    diagnostics.draggingPanelId = adapter.controllerRays.getState().panelId || diagnostics.draggingPanelId;
-    if (!result.ok) {
-      emit('spatial-three-drag-miss', {
-        error: result.reason || 'drag-update-failed',
+    let sourceHovers = [];
+    let activeEquipmentAnchors = new Set();
+    for (let source of sources) {
+      let winningHit = arbiter.getWinningHit(source.id);
+      let capture = arbiter.getCapture(source.id);
+      let focusHit = capture?.hit || winningHit;
+      let distance = focusHit ? focusHit.distance : Infinity;
+      let rayObject = source.controller.children?.find((child) => child.userData?.snControllerRay);
+      rayObject?.userData?.updateHitDistance?.(distance);
+      let hit = focusHit ? { ...(focusHit.resolved?.hit || focusHit) } : null;
+      let operation = focusHit?.resolved?.operation || focusHit?.resolved?.frameTarget?.operation || null;
+      let capturedKind = hit?.object?.userData?.kind || null;
+      let equipmentCaptureHit = capturedKind === 'equipment-hit-proxy'
+        ? anchoredEquipmentReticleHit(source.id, capture, hit)
+        : null;
+      if (equipmentCaptureHit) {
+        hit = equipmentCaptureHit;
+        activeEquipmentAnchors.add(source.id);
+      } else if (!capture) {
+        equipmentCaptureReticleAnchors.delete(source.id);
+      }
+      let controllerFollowingCapture = Boolean(capture)
+        && capturedKind !== 'equipment-hit-proxy'
+        && ['move', 'resize', 'move-menu', 'move-group'].includes(operation);
+      if (controllerFollowingCapture && hit) {
+        let ray = normalizeInteractionSourceRay(source);
+        let latchedDistance = Number.isFinite(Number(focusHit.distance)) ? Number(focusHit.distance) : 1;
+        hit.point = new THREE.Vector3(
+          ray.origin.x + ray.direction.x * latchedDistance,
+          ray.origin.y + ray.direction.y * latchedDistance,
+          ray.origin.z + ray.direction.z * latchedDistance,
+        );
+      }
+      let panelId = hit?.object?.userData?.panelId || null;
+      let hoverState = lastHoverStates.get(source.id) || { panelId: null, point: null, uv: null };
+      if (hit?.point && !controllerFollowingCapture && !equipmentCaptureHit) {
+        let point = hit.point.clone?.() || new THREE.Vector3(hit.point.x, hit.point.y, hit.point.z);
+        if (hoverState.panelId === panelId && hoverState.point?.lerp) {
+          hoverState.point.lerp(point, HOVER_SMOOTHING);
+          point = hoverState.point.clone?.() || hoverState.point;
+        } else {
+          hoverState.panelId = panelId;
+          hoverState.point = point.clone?.() || point;
+        }
+        hit.point = point;
+        if (hit.uv) {
+          let uv = { x: Number(hit.uv.x), y: Number(hit.uv.y) };
+          if (hoverState.uv && hoverState.panelId === panelId) {
+            uv.x = hoverState.uv.x + HOVER_SMOOTHING * (uv.x - hoverState.uv.x);
+            uv.y = hoverState.uv.y + HOVER_SMOOTHING * (uv.y - hoverState.uv.y);
+          }
+          hoverState.uv = uv;
+          hit.uv = uv;
+        }
+        lastHoverStates.set(source.id, hoverState);
+      } else if (equipmentCaptureHit) {
+        hoverState.panelId = panelId;
+        hoverState.point = hit.point.clone?.() || hit.point;
+        lastHoverStates.set(source.id, hoverState);
+      } else if (!hit?.point) {
+        lastHoverStates.delete(source.id);
+      }
+      let reticleVisual = hitReticles.get(source.controller) || null;
+      let reticle = equipmentCaptureHit
+        ? adapter.updatePanelHitReticleVisual?.(reticleVisual, equipmentCaptureHit) || null
+        : capture && !controllerFollowingCapture
+        ? { ok: true, visible: Boolean(reticleVisual?.object?.visible), frozen: true }
+        : adapter.updatePanelHitReticleVisual?.(reticleVisual, hit) || null;
+      sourceHovers.push({
+        sourceId: source.id,
+        panelId,
+        point: vectorData(hit?.point),
+        distance: Number(hit?.distance || focusHit?.distance || 0),
+        reticleVisible: Boolean(reticle?.visible),
+        reticleFrozen: Boolean(capture) && !controllerFollowingCapture,
+        reticleControllerFollowing: controllerFollowingCapture,
+        reticleObjectAnchored: Boolean(equipmentCaptureHit),
+        frameTarget: hit?.frameTarget || focusHit?.resolved?.frameTarget || null,
+        uv: hit?.uv ? { x: hit.uv.x, y: hit.uv.y } : null,
       });
+    }
+    for (let sourceId of equipmentCaptureReticleAnchors.keys()) {
+      if (!activeEquipmentAnchors.has(sourceId)) equipmentCaptureReticleAnchors.delete(sourceId);
+    }
+    diagnostics.hovers = sourceHovers;
+    diagnostics.hover = sourceHovers[0] || null;
+    let hoveredPanels = new Map(sourceHovers.filter((hover) => hover.panelId).map((hover) => [hover.panelId, hover]));
+    for (let panelMesh of adapter.listPanelMeshes() || []) {
+      let hover = hoveredPanels.get(panelMesh?.userData?.panelId) || null;
+      updatePanelFrameHoverVisuals(panelMesh, Boolean(hover), hover?.frameTarget?.point || null);
+    }
+    let hoverKey = sourceHovers.map((hover) => `${hover.sourceId}:${hover.panelId || ''}`).join('|');
+    if (hoverKey !== lastHoverPanelId) {
+      lastHoverPanelId = hoverKey;
+      emit('spatial-three-hover-change', { hover: diagnostics.hover, hovers: sourceHovers });
     }
   }
 
@@ -4799,11 +5291,17 @@ export function createXRThreeSessionController(options = {}) {
     originalBackground = null;
     if (activeSession) {
       activeSession.removeEventListener?.('end', onSessionEnd);
+      if (visibilityChangeListener) {
+        activeSession.removeEventListener?.('visibilitychange', visibilityChangeListener);
+      }
+      if (inputSourcesChangeListener) {
+        activeSession.removeEventListener?.('inputsourceschange', inputSourcesChangeListener);
+      }
     }
+    deactivateInteractionArbiter('session-ended');
+    for (let dragAdapter of dragAdapters.values()) dragAdapter.endDrag();
+    dragAdapters.clear();
     activeSession = null;
-    if (adapter.controllerRays.getState?.().dragging === true) {
-      adapter.controllerRays.endDrag();
-    }
 
     if (activeReferenceSpace) {
       activeReferenceSpace.removeEventListener?.('reset', onReferenceSpaceReset);
@@ -4820,12 +5318,15 @@ export function createXRThreeSessionController(options = {}) {
     interactionStarts.clear();
     frameInteractionStarts.clear();
     interactionSequence = 0;
+    visibilityChangeListener = null;
+    inputSourcesChangeListener = null;
+    controllerInputSources.clear();
+    inputSourceControllers.clear();
+    inputSourceIds = new WeakMap();
+    inputSourceSequence = 0;
     lastHoverPanelId = null;
-    lastHoverState = {
-      panelId: null,
-      point: null,
-      uv: null,
-    };
+    lastHoverStates.clear();
+    equipmentCaptureReticleAnchors.clear();
 
     for (let { controller, listener } of selectStartListeners) {
       controller.removeEventListener?.('selectstart', listener);
@@ -4833,8 +5334,16 @@ export function createXRThreeSessionController(options = {}) {
     for (let { controller, listener } of selectEndListeners) {
       controller.removeEventListener?.('selectend', listener);
     }
+    for (let { controller, listener } of controllerConnectedListeners) {
+      controller.removeEventListener?.('connected', listener);
+    }
+    for (let { controller, listener } of controllerDisconnectedListeners) {
+      controller.removeEventListener?.('disconnected', listener);
+    }
     selectStartListeners = [];
     selectEndListeners = [];
+    controllerConnectedListeners = [];
+    controllerDisconnectedListeners = [];
 
     let controllersToCleanup = [...controllers];
     for (let controller of controllersToCleanup) {
@@ -4850,21 +5359,25 @@ export function createXRThreeSessionController(options = {}) {
       }
       if (activeTarget?.scene) {
         activeTarget.scene.remove?.(controller);
+        let grip = controllerGrips.get(controller);
+        if (grip && grip !== controller) activeTarget.scene.remove?.(grip);
       }
     }
     controllers = [];
+    controllerGrips.clear();
     diagnostics.controllers = 0;
+    diagnostics.controllerGrips = 0;
     diagnostics.controllerRayVisuals = 0;
 
-    if (hitReticle) {
-      if (activeTarget?.scene && hitReticle.object) {
-        activeTarget.scene.remove?.(hitReticle.object);
-        if (hitReticle.object.geometry?.dispose) hitReticle.object.geometry.dispose();
-        if (hitReticle.object.material?.dispose) hitReticle.object.material.dispose();
+    for (let reticle of hitReticles.values()) {
+      if (activeTarget?.scene && reticle.object) {
+        activeTarget.scene.remove?.(reticle.object);
+        reticle.object.geometry?.dispose?.();
+        reticle.object.material?.dispose?.();
       }
-      hitReticle = null;
-      diagnostics.hitReticleVisuals = 0;
     }
+    hitReticles.clear();
+    diagnostics.hitReticleVisuals = 0;
 
     if (panelTransitions) {
       // Interrupted tweens must not strand eased values: restore the instant
@@ -5378,6 +5891,7 @@ export function createXRThreeSessionController(options = {}) {
       panelStore = createXRPortablePanelStore(initialPanels, {
         isPanelClosable: (panelId) => closableByPanelId.get(panelId) !== false,
         onReceipt: (receipt) => {
+          receiptsList.push(receipt);
           if (typeof options.onPortablePanelReceipt === 'function') {
             options.onPortablePanelReceipt(receipt);
           }
@@ -5386,11 +5900,6 @@ export function createXRThreeSessionController(options = {}) {
           }
         }
       });
-      if (adapter.controllerRays) {
-        adapter.controllerRays.panelStore = panelStore;
-        adapter.controllerRays.receiptsList = receiptsList;
-      }
-
       if (activeReferenceSpace) {
         activeReferenceSpace.removeEventListener?.('reset', onReferenceSpaceReset);
       }
@@ -5406,6 +5915,27 @@ export function createXRThreeSessionController(options = {}) {
       }
       diagnostics.status = 'running';
       updateSessionRuntimeDiagnostics();
+      activateInteractionArbiter();
+      visibilityChangeListener = () => {
+        updateSessionRuntimeDiagnostics();
+        arbiter?.handleVisibilityChange(activeSession?.visibilityState || 'hidden');
+      };
+      inputSourcesChangeListener = (event) => {
+        for (let inputSource of Array.from(event?.removed || [])) {
+          let controller = inputSourceControllers.get(inputSource) || null;
+          if (controller) {
+            releaseControllerInputSource(controller, inputSource, 'input-source-removed');
+          } else {
+            let sourceId = sourceIdFor(inputSource, -1);
+            if (sourceId) arbiter?.handleSourceLost(sourceId);
+            dragAdapters.get(sourceId)?.endDrag();
+            dragAdapters.delete(sourceId);
+          }
+        }
+        updateSessionRuntimeDiagnostics();
+      };
+      activeSession.addEventListener?.('visibilitychange', visibilityChangeListener);
+      activeSession.addEventListener?.('inputsourceschange', inputSourcesChangeListener);
       setupControllers(activeTarget.scene, activeTarget.renderer, activeTarget.camera, startOptions);
       // Register the session loop on the WebXR manager: driving it through the
       // window-level renderer loop restarts window RAF and interleaves
@@ -5456,7 +5986,6 @@ export function createXRThreeSessionController(options = {}) {
           });
         }, frameContext);
         captureFrameStage('hover', () => updateHover(), frameContext);
-        captureFrameStage('drag', () => updateDrag(), frameContext);
         if (panelTransitions) {
           captureFrameStage('transitions', () => tickTransitionTweens(Number(time)), frameContext);
         }
@@ -5556,9 +6085,25 @@ export function createXRThreeSessionController(options = {}) {
 
   function getDiagnostics() {
     updateSessionRuntimeDiagnostics();
+    let rendererInfo = activeTarget?.renderer?.info || null;
     return {
       ...diagnostics,
       active: Boolean(activeSession),
+      resources: {
+        geometries: Number(rendererInfo?.memory?.geometries) || 0,
+        textures: Number(rendererInfo?.memory?.textures) || 0,
+        renderTargets: Number(rendererInfo?.memory?.renderTargets) || 0,
+        calls: Number(rendererInfo?.render?.calls) || 0,
+        triangles: Number(rendererInfo?.render?.triangles) || 0,
+        controllers: controllers.length,
+        controllerGrips: controllerGrips.size,
+        controllerListeners: selectStartListeners.length
+          + selectEndListeners.length
+          + controllerConnectedListeners.length
+          + controllerDisconnectedListeners.length,
+        interactionTargets: registeredInteractionTargets.size,
+        interactionCaptures: arbiter?.getDiagnostics()?.captures || 0,
+      },
       adapter: adapter.getDiagnostics?.() || adapter.getState?.() || null,
     };
   }
@@ -5566,6 +6111,15 @@ export function createXRThreeSessionController(options = {}) {
   controllerInstance = {
     start,
     stop,
+    registerInteractionTarget,
+    getInteractionDiagnostics: () => arbiter?.getDiagnostics() || Object.freeze({
+      targets: registeredInteractionTargets.size,
+      captures: 0,
+      leases: 0,
+      sources: 0,
+      disposed: false,
+      active: false,
+    }),
     commitSpatialEvidence,
     getDiagnostics,
     getState: getDiagnostics,
@@ -5585,6 +6139,9 @@ export function createXRThreeSessionController(options = {}) {
     },
     onPortablePanelReceipt: null
   };
+  for (let targetDefinition of options.interactionTargets || []) {
+    registerInteractionTarget(targetDefinition);
+  }
   return controllerInstance;
 }
 

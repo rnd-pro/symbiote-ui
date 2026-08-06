@@ -221,6 +221,22 @@ function compileLabelPrimitive(node, panelNode, scale, extra = {}) {
   return withStyle(primitive, extractTextStyle(node));
 }
 
+function shouldWrapMeasuredText(node) {
+  let style = node.style || {};
+  let whiteSpace = String(style['white-space'] || '').toLowerCase();
+  if (whiteSpace === 'nowrap' || whiteSpace === 'pre') return false;
+  if (style['text-overflow'] === 'ellipsis') return false;
+  let fontSize = Number.parseFloat(style['font-size']);
+  if (!(fontSize > 0)) return false;
+  let capturedLineHeight = Number.parseFloat(style['line-height']);
+  let lineHeight = capturedLineHeight > 0 ? capturedLineHeight : fontSize * 1.35;
+  // A control-height label can be slightly taller than its font, but a text
+  // box above this threshold is evidence that layout already reserved several
+  // lines. The renderer must use that measured room rather than clipping one
+  // long Canvas2D line at the panel edge.
+  return node.rect.height >= lineHeight * 2.5;
+}
+
 function compileIconPrimitive(node, panelNode, scale) {
   let primitive = {
     id: `${panelNode.id}/content/${node.id}`,
@@ -250,6 +266,7 @@ function compileSurfacePrimitive(node, panelNode, scale, layer, themeRole, idSuf
     bounds: toLocalBounds(node, panelNode, scale),
     spatialNodeId: node.id,
   };
+  if (node.state?.shape === 'circle') primitive.shape = 'circle';
   if (!surfaceStyle) primitive.transparent = true;
   return withStyle(primitive, Object.keys(style).length ? style : undefined);
 }
@@ -341,7 +358,10 @@ function compileNodePrimitives(node, panelNode, scale) {
     case 'title':
     case 'text':
     case 'row-label':
-      return [compileLabelPrimitive(node, panelNode, scale)];
+      return [compileLabelPrimitive(node, panelNode, scale, {
+        ...(shouldWrapMeasuredText(node) ? { multiline: true } : {}),
+        ...(node.exactTextBounds === true ? { exactTextBounds: true } : {}),
+      })];
     case 'token':
       return [compileLabelPrimitive(node, panelNode, scale, { exactTextBounds: true })];
     case 'icon':

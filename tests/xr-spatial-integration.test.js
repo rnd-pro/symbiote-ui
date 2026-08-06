@@ -7,6 +7,7 @@ import { test } from 'node:test';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import Ajv2020 from 'ajv/dist/2020.js';
+import * as THREE_REAL from 'three';
 
 import {
   createXRHitMap,
@@ -88,6 +89,13 @@ function createController() {
     },
     dispatch(type, event) {
       listeners.get(type)?.(event);
+    },
+    updateMatrixWorld() {},
+    getWorldPosition(target) {
+      return target.set(0, 0, 0);
+    },
+    getWorldQuaternion(target) {
+      return target.set(0, 0, 0, 1);
     },
     add() {},
     remove() {},
@@ -212,6 +220,29 @@ test('Three adapter joins committed root evidence, trusted selects, and a schema
   let hits = [];
   let observations = [];
   let interactionPhases = [];
+  let sceneInteractions = [];
+  let panelMesh = new THREE_REAL.Mesh(new THREE_REAL.PlaneGeometry(0.8, 0.45));
+  panelMesh.position.set(0, 0, -1);
+  panelMesh.userData.panelId = 'panel-1';
+  panelMesh.userData.xrSize = [0.8, 0.45];
+  panelMesh.userData.panel = { size: [0.8, 0.45], closable: true };
+  let intersectionCalls = 0;
+  let interactionRaycaster = {
+    ray: {
+      origin: new THREE_REAL.Vector3(),
+      direction: new THREE_REAL.Vector3(0, 0, -1),
+    },
+    set(origin, direction) {
+      this.ray.origin.copy(origin);
+      this.ray.direction.copy(direction);
+    },
+    intersectObjects(objects) {
+      intersectionCalls += 1;
+      assert.equal(objects.length, 1);
+      assert.equal(objects[0], panelMesh);
+      return hits;
+    },
+  };
   let adapter = {
     async setSession(session) {
       return { ok: true, session, referenceSpace: runtime.referenceSpace };
@@ -220,19 +251,11 @@ test('Three adapter joins committed root evidence, trusted selects, and a schema
       applyViewerPoseCalls += 1;
       return { ok: true, rootTransform: { mode: 'viewer-relative' } };
     },
-    controllerRays: {
-      getHits() {
-        return hits;
-      },
-      getState() {
-        return { dragging: false, panelId: null };
-      },
-      updateDrag() {
-        return { ok: true };
-      },
-    },
     listPanelMeshes() {
-      return [];
+      return [panelMesh];
+    },
+    getPanelMesh(panelId) {
+      return panelId === 'panel-1' ? panelMesh : null;
     },
     getDiagnostics() {
       return { ok: true };
@@ -250,8 +273,13 @@ test('Three adapter joins committed root evidence, trusted selects, and a schema
   let controller = createXRThreeSessionController({
     globalThis,
     adapter,
+    THREE: THREE_REAL,
+    interactionRaycaster,
     onObservation(observation) {
       observations.push(observation);
+    },
+    onSceneInteraction(event) {
+      sceneInteractions.push(event);
     },
   });
   let started = await controller.start('immersive-ar', {
@@ -262,6 +290,7 @@ test('Three adapter joins committed root evidence, trusted selects, and a schema
   });
   assert.equal(started.ok, true, JSON.stringify(started));
   assert.equal(runtime.renderer.windowAnimationLoopCalls, 0, 'active XR loop must not restart window RAF');
+  runtime.controllers[0].dispatch('connected', { type: 'connected', data: runtime.inputSource });
 
   runtime.renderer.animationLoop(0, createFrame(0, viewerPoseCalls));
   assert.equal(observations.length, 0, 'capture remains disabled before root commit');
@@ -362,6 +391,20 @@ test('Three adapter joins committed root evidence, trusted selects, and a schema
   tamperedAudit.runtimeVerdict = 'FAIL';
   assert.equal(verifyXRSpatialAuditEnvelope(tamperedAudit).ok, false);
 
+  hits = [{
+    object: panelMesh,
+    distance: 0.75,
+    uv: { x: 0.2, y: 0.8 },
+    point: new THREE_REAL.Vector3(0, 0, -0.75),
+  }];
+  let callsBeforeWinner = intersectionCalls;
+  runtime.renderer.animationLoop(880, createFrame(880, viewerPoseCalls));
+  assert.equal(
+    intersectionCalls,
+    callsBeforeWinner + 1,
+    'the arbiter intersects the scene once per source frame',
+  );
+
   let latest = observations.at(-1).frame;
   let hitMap = createXRHitMap({
     version: XR_SPATIAL_VERSIONS.hitMap,
@@ -387,14 +430,14 @@ test('Three adapter joins committed root evidence, trusted selects, and a schema
     contentHash: 'sha256:panel-content',
     revision: 7,
   };
-  hits = [{
-    object: { userData: { panelId: 'panel-1' } },
-    uv: { x: 0.2, y: 0.8 },
-    point: null,
-    frameTarget: null,
-  }];
+  let callsBeforeSelect = intersectionCalls;
   runtime.controllers[0].dispatch('selectstart', { type: 'selectstart', data: runtime.inputSource });
   runtime.controllers[0].dispatch('selectend', { type: 'selectend', data: runtime.inputSource });
+  assert.equal(
+    intersectionCalls,
+    callsBeforeSelect,
+    'select events consume the arbiter winner without re-raycasting',
+  );
   assert.equal(interactionPhases.length, 2);
   assert.equal(interactionPhases[0].phase, 'selectstart');
   assert.equal(interactionPhases[0].inputSourceId, 'controller-right');
@@ -403,6 +446,15 @@ test('Three adapter joins committed root evidence, trusted selects, and a schema
   assert.equal(interactionPhases[1].targetId, 'replace-action');
   assert.equal(interactionPhases[1].inputSourceId, 'controller-right');
   assert.equal(Object.isFrozen(interactionPhases[1]), true);
+  let [pressInteraction, releaseInteraction] = sceneInteractions.filter((entry) =>
+    entry.phase === 'press' || entry.phase === 'release');
+  assert.deepEqual(pressInteraction.identity, {
+    sourceId: 'controller-right',
+    ownerId: 'symbiote-three-session',
+    targetId: 'panel:panel-1',
+    targetGeneration: 0,
+  });
+  assert.equal(releaseInteraction.identity, pressInteraction.identity, 'capture preserves exact target identity');
   let trustedSelect = createXRTrustedSelectReceipt(interactionPhases[0], interactionPhases[1]);
   assert.deepEqual(verifyXRTrustedSelectReceipt(trustedSelect, {
     sessionId: 'session-1',
@@ -457,4 +509,6 @@ test('Three adapter joins committed root evidence, trusted selects, and a schema
 
   await controller.stop();
   assert.equal(controller.getDiagnostics().status, 'idle');
+  panelMesh.geometry.dispose();
+  panelMesh.material.dispose();
 });

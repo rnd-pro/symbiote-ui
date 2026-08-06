@@ -2,6 +2,79 @@ import { parseHTML } from 'linkedom';
 
 const FAKE_FOCUSABLE_TAGS = new Set(['input', 'textarea', 'select', 'button', 'a']);
 
+class FakeCanvasRenderingContext2D {
+  constructor(options = {}) {
+    this.onDrawElementImage = options.onDrawElementImage || null;
+    this.drawFails = options.drawFails || null;
+  }
+
+  arc() {}
+
+  arcTo() {}
+
+  beginPath() {}
+
+  clearRect() {}
+
+  closePath() {}
+
+  fill() {}
+
+  fillText() {}
+
+  lineTo() {}
+
+  measureText(value) {
+    return { width: String(value || '').length * 8 };
+  }
+
+  moveTo() {}
+
+  restore() {}
+
+  rotate() {}
+
+  save() {}
+
+  scale() {}
+
+  stroke() {}
+
+  strokeRect() {}
+
+  translate() {}
+
+  drawElementImage(...args) {
+    this.onDrawElementImage?.(args);
+    if (this.drawFails?.()) {
+      let error = new Error('fake draw failure');
+      error.name = 'InvalidStateError';
+      throw error;
+    }
+    return null;
+  }
+}
+
+class FakeOffscreenCanvas {
+  constructor(width = 0, height = 0) {
+    this.width = width;
+    this.height = height;
+    this.context = new FakeCanvasRenderingContext2D();
+  }
+
+  getContext(kind) {
+    return kind === '2d' ? this.context : null;
+  }
+}
+
+export function installFakeCanvas2DGlobal() {
+  Object.defineProperty(globalThis, 'OffscreenCanvas', {
+    configurable: true,
+    writable: true,
+    value: FakeOffscreenCanvas,
+  });
+}
+
 export function createFakeXrPlatform(options = {}) {
   let mode = options.mode ?? 'webgl';
   let { document, window } = parseHTML('<html><head></head><body></body></html>');
@@ -26,23 +99,20 @@ export function createFakeXrPlatform(options = {}) {
     }
   }
 
-  class FakeCanvasRenderingContext2D {
-    drawElementImage(...args) {
-      drawCalls.push(args);
-      if (platformState.drawFails) {
-        let error = new Error('fake draw failure');
-        error.name = 'InvalidStateError';
-        throw error;
-      }
-      return null;
-    }
-  }
-
   let platformState = {
     drawFails: options.drawFails === true,
     activeElement: null,
     selection: null,
   };
+
+  installFakeCanvas2DGlobal();
+
+  function createCanvas2DContext() {
+    return new FakeCanvasRenderingContext2D({
+      onDrawElementImage: (args) => drawCalls.push(args),
+      drawFails: () => platformState.drawFails,
+    });
+  }
 
   function isFakeFocusable(element) {
     let tagName = String(element?.tagName || '').toLowerCase();
@@ -110,7 +180,7 @@ export function createFakeXrPlatform(options = {}) {
             element.paintRequests += 1;
           };
           element.getContext = (kind) => (
-            kind === '2d' && mode === 'canvas2d' ? new FakeCanvasRenderingContext2D() : null
+            kind === '2d' && mode === 'canvas2d' ? createCanvas2DContext() : null
           );
         }
         return element;
@@ -329,7 +399,7 @@ class FakeTexture {
   }
 }
 
-class FakeCanvasTexture extends FakeTexture {
+export class FakeCanvasTexture extends FakeTexture {
   constructor(canvas) {
     super(canvas);
     this.isCanvasTexture = true;
