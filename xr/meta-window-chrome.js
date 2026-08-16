@@ -5,6 +5,8 @@
  * safe to import from Node and SSR entrypoints.
  */
 
+import { configureXRUITextureQuality } from './texture-quality.js';
+
 export const META_WINDOW_CHROME_VERSION = 'meta-window-chrome-v1';
 
 const CHROME_TEXTURE_KINDS = new Set([
@@ -394,8 +396,9 @@ export function createMetaWindowChromeTexture(THREE, kind, options = {}) {
     );
   }
   let texture = new THREE.CanvasTexture(canvas);
-  if ('anisotropy' in texture) texture.anisotropy = Math.max(1, Math.min(8, Number(options.anisotropy || 4)));
-  if ('colorSpace' in texture && THREE.SRGBColorSpace) texture.colorSpace = THREE.SRGBColorSpace;
-  texture.needsUpdate = true;
-  return texture;
+  return configureXRUITextureQuality(THREE, texture, {
+    source: 'meta-window-chrome',
+    kind,
+    anisotropy: options.anisotropy ?? 4,
+  });
 }
