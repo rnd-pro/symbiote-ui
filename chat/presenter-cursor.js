@@ -2530,7 +2530,12 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
       : requestedProgress * strokeLayer.duration;
     let progress = Math.max(0, Math.min(1, elapsedMs / strokeLayer.duration));
     let projected = projectPresenterState(layers, elapsedMs, seed, viewport);
-    let suppressUnsafe = layout.fullSafety?.safe === false;
+    let enclosingOval = annotation.kind === 'marker'
+      && annotation.marker === 'oval'
+      && layout.fullSafety?.missingTarget === false
+      && layout.fullSafety?.viewportCollision === false
+      && layout.fullSafety?.collisions?.length === 0;
+    let suppressUnsafe = layout.fullSafety?.safe === false && !enclosingOval;
 
     cancelTravel();
     cancelDrag();

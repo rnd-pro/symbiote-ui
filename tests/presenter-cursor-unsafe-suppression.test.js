@@ -61,5 +61,26 @@ test('unsafe full-panel marker is suppressed before any ink is shown', () => {
   assert.equal(safeFrame.suppressed, false);
   assert.equal(safeFrame.safety.safe, true);
   assert.notEqual(window.document.querySelector('.pc-ink path')?.getAttribute('d') || '', '');
+
+  let panel = window.document.createElement('section');
+  panel.getBoundingClientRect = () => ({
+    left: 180,
+    top: 80,
+    right: 620,
+    bottom: 570,
+    width: 440,
+    height: 490,
+  });
+  window.document.body.appendChild(panel);
+  let groupFrame = cursor.presentAnnotationFrame(panel, { marker: 'oval' }, {
+    progress: 1,
+    seed: 31,
+    viewport: { width: 800, height: 600 },
+  });
+  assert.equal(groupFrame.presented, true);
+  assert.equal(groupFrame.suppressed, false);
+  assert.equal(groupFrame.safety.viewportCollision, false);
+  assert.deepEqual(groupFrame.safety.collisions, []);
+  assert.notEqual(window.document.querySelector('.pc-ink path')?.getAttribute('d') || '', '');
   cursor.dispose();
 });
