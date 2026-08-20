@@ -1147,7 +1147,7 @@ function samplePresenterStrokeArc(arc, distancePx, stepPx = 2) {
   return points;
 }
 
-function resolvePresenterAnnotationLayout(annotation, targetRect, viewport, seed) {
+function resolvePresenterAnnotationLayout(annotation, targetRect, viewport, seed, obstacles = []) {
   let drawRect = presenterAnnotationRect(targetRect, viewport, annotation);
   let factory = annotation.kind === 'symbol'
     ? SYMBOLS[annotation.symbol]
@@ -1158,7 +1158,20 @@ function resolvePresenterAnnotationLayout(annotation, targetRect, viewport, seed
     let plan = factory?.(drawRect, seed, { placement });
     if (!plan) continue;
     let overflow = presenterPlanOverflow(plan, seed, viewport);
-    if (!best || overflow < best.overflow) {
+    let strokeArc = createPresenterStrokeArc(plan, seed, viewport);
+    let fullPathSamples = strokeArc.samples.map((sample) => ({ ...sample.point }));
+    let fullCursor = fullPathSamples.at(-1) || null;
+    let fullSafety = analyzePresenterAnnotationSafety({
+      pathSamples: fullPathSamples,
+      cursor: fullCursor,
+      targetRect,
+      obstacles,
+      viewport,
+      cursorSizePx: INK_CURSOR_SIZE,
+    });
+    if (!best
+      || (fullSafety.safe && !best.fullSafety.safe)
+      || (fullSafety.safe === best.fullSafety.safe && overflow < best.overflow)) {
       let rawGeometryRect = annotation.kind === 'symbol'
         ? symbolRect(drawRect, placement)
         : drawRect;
@@ -1168,12 +1181,15 @@ function resolvePresenterAnnotationLayout(annotation, targetRect, viewport, seed
         geometryRect: clampPresenterRect(rawGeometryRect, viewport),
         plan: {
           ...plan,
-          arcLength: createPresenterStrokeArc(plan, seed, viewport).arcLengthPx,
+          arcLength: strokeArc.arcLengthPx,
         },
+        fullPathSamples,
+        fullCursor,
+        fullSafety,
         overflow,
       };
     }
-    if (overflow === 0) break;
+    if (fullSafety.safe && overflow === 0) break;
   }
   return best;
 }
@@ -2368,7 +2384,7 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
       return Promise.resolve({ actionId, status: 'settled', target: el });
     }
     let nextSeed = moveIndex + 1;
-    let layout = resolvePresenterAnnotationLayout(annotation, rect, viewport, nextSeed);
+    let layout = resolvePresenterAnnotationLayout(annotation, rect, viewport, nextSeed, opts.obstacles);
     if (!layout) {
       settle(opts);
       return Promise.resolve({ actionId, status: 'settled', target: el });
@@ -2474,7 +2490,7 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
     let seed = Number(frame.seed);
     if (!Number.isFinite(seed)) seed = 0;
 
-    let layout = resolvePresenterAnnotationLayout(annotation, rect, viewport, seed);
+    let layout = resolvePresenterAnnotationLayout(annotation, rect, viewport, seed, frame.obstacles);
     if (!layout) {
       clear();
       return { presented: false, reason: 'invalid-annotation' };
@@ -2514,6 +2530,7 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
       : requestedProgress * strokeLayer.duration;
     let progress = Math.max(0, Math.min(1, elapsedMs / strokeLayer.duration));
     let projected = projectPresenterState(layers, elapsedMs, seed, viewport);
+    let suppressUnsafe = layout.fullSafety?.safe === false;
 
     cancelTravel();
     cancelDrag();
@@ -2531,36 +2548,43 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
       hideMarqueeFrame();
     }
 
-    let inkPathD = '';
-    if (projected.marker.visible && projected.marker.path) {
-      inkPathD = projected.marker.path;
+    let evidencePathD = '';
+    if (suppressUnsafe) {
+      evidencePathD = smoothPresenterPath(layout.fullPathSamples);
+    } else if (projected.marker.visible && projected.marker.path) {
+      evidencePathD = projected.marker.path;
     } else if (projected.symbol.visible && projected.symbol.path) {
-      inkPathD = projected.symbol.path;
+      evidencePathD = projected.symbol.path;
     }
+    let inkPathD = suppressUnsafe ? '' : evidencePathD;
 
     inkPath.setAttribute('d', inkPathD);
     ink.classList.toggle('is-inking', Boolean(inkPathD));
 
     let activeAnnotation = projected.annotation;
-    cursor.classList.toggle('is-inking', Boolean(activeAnnotation && !activeAnnotation.completed));
-    let strokePoints = activeAnnotation.points;
-    let cursorPoint = activeAnnotation.cursor;
-    if (cursorPoint) {
+    cursor.classList.toggle('is-inking', Boolean(!suppressUnsafe && activeAnnotation && !activeAnnotation.completed));
+    let evidenceAnnotation = activeAnnotation;
+    let strokePoints = suppressUnsafe ? layout.fullPathSamples : activeAnnotation.points;
+    let cursorPoint = suppressUnsafe ? layout.fullCursor : activeAnnotation.cursor;
+    if (!suppressUnsafe && cursorPoint) {
       setCursor(cursorPoint.x, cursorPoint.y);
     } else {
       cursor.style.opacity = '0';
     }
 
     let pathDigest = 2166136261;
-    for (let index = 0; index < inkPathD.length; index += 1) {
-      pathDigest ^= inkPathD.charCodeAt(index);
+    for (let index = 0; index < evidencePathD.length; index += 1) {
+      pathDigest ^= evidencePathD.charCodeAt(index);
       pathDigest = Math.imul(pathDigest, 16777619);
     }
 
     let pathSamples = strokePoints.map((point) => ({ x: point.x, y: point.y }));
 
     return {
-      presented: true,
+      presented: !suppressUnsafe,
+      visible: !suppressUnsafe,
+      suppressed: suppressUnsafe,
+      ...(suppressUnsafe ? { reason: 'unsafe-annotation' } : {}),
       kind: activeAnnotation.kind,
       name: activeAnnotation.name,
       placement: activeAnnotation.placement,
@@ -2574,7 +2598,7 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
       pathPoints: pathSamples.length,
       pathSamples,
       pathDigest: (pathDigest >>> 0).toString(16).padStart(8, '0'),
-      safety: activeAnnotation.safety,
+      safety: suppressUnsafe ? layout.fullSafety : evidenceAnnotation.safety,
       durationMs: activeAnnotation.durationMs,
       arcLengthPx: activeAnnotation.arcLengthPx,
       drawnLengthPx: activeAnnotation.drawnLengthPx,
