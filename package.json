@@ -116,6 +116,7 @@
     "./chat/dialogue-stage.js": "./chat/dialogue-stage.js",
     "./chat/dialogue-timeline.js": "./chat/dialogue-timeline.js",
     "./chat/dialogue-player.js": "./chat/dialogue-player.js",
+    "./chat/presenter-gesture-policy.js": "./chat/presenter-gesture-policy.js",
     "./chat/presenter-cursor.js": "./chat/presenter-cursor.js",
     "./chat/presenter-text-selection.js": "./chat/presenter-text-selection.js",
     "./chat/chat-title-generation.js": "./chat/chat-title-generation.js",

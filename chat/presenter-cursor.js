@@ -5,6 +5,11 @@
  * Browser access is lazy, so the module remains Node-safe at import time.
  */
 
+import {
+  createPresenterRelationshipPath,
+  resolvePresenterGesturePolicy,
+} from './presenter-gesture-policy.js';
+
 const STYLE_ID = 'symbiote-presenter-cursor-style';
 const OVERLAY_CLASS = 'symbiote-presenter-cursor';
 
@@ -2361,6 +2366,83 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
     };
   }
 
+  function presentRelationshipFrame(sourceEl, destinationEl, relation, frame = {}) {
+    if (disposed) return { presented: false, reason: 'disposed' };
+    if (!sourceEl?.getBoundingClientRect || !destinationEl?.getBoundingClientRect) {
+      clear();
+      return { presented: false, reason: 'invalid-target' };
+    }
+    let viewport = resolveViewport(frame.viewport);
+    let sourceRect = resolvePresenterVisibleRect(sourceEl, viewport);
+    let destinationRect = resolvePresenterVisibleRect(destinationEl, viewport);
+    if (!sourceRect || !destinationRect) {
+      clear();
+      return { presented: false, reason: 'hidden-target' };
+    }
+    let gesturePolicy = resolvePresenterGesturePolicy({
+      cueKind: 'relationship',
+      relation,
+      sourceTargetId: frame.sourceTargetId || relation?.from || relation?.sourceTargetId,
+      destinationTargetId: frame.destinationTargetId || relation?.to || relation?.destinationTargetId,
+      sourceRect,
+      destinationRect,
+      targetRect: destinationRect,
+      viewport,
+    });
+    if (gesturePolicy.selectedKind !== 'arrow') {
+      let focus = presentFocusFrame(destinationEl, { ...frame, mode: 'frame' });
+      return {
+        ...focus,
+        kind: 'focus',
+        name: 'frame',
+        originalKind: 'relationship',
+        gesturePolicy,
+        fallback: true,
+        pathSamples: [],
+      };
+    }
+    let relationshipPath = createPresenterRelationshipPath({ sourceRect, destinationRect });
+    let durationMs = Math.max(PRESENTER_FRAME_MS, Number(frame.durationMs) || resolvePresenterAnnotationDuration(relationshipPath.lengthPx));
+    let elapsedMs = Number(frame.elapsedMs);
+    if (!Number.isFinite(elapsedMs)) elapsedMs = Math.max(0, Math.min(1, Number(frame.progress) || 0)) * durationMs;
+    let progress = Math.max(0, Math.min(1, elapsedMs / durationMs));
+    let tip = {
+      x: relationshipPath.start.x + (relationshipPath.end.x - relationshipPath.start.x) * progress,
+      y: relationshipPath.start.y + (relationshipPath.end.y - relationshipPath.start.y) * progress,
+    };
+    let pathD = `M${relationshipPath.start.x} ${relationshipPath.start.y} L${tip.x} ${tip.y}`;
+    if (progress >= 1) {
+      pathD += ` M${relationshipPath.arrowHead[0].x} ${relationshipPath.arrowHead[0].y} L${relationshipPath.end.x} ${relationshipPath.end.y} L${relationshipPath.arrowHead[1].x} ${relationshipPath.arrowHead[1].y}`;
+    }
+
+    cancelTravel();
+    cancelDrag();
+    cancelGesture();
+    cancelClick();
+    showOverlay();
+    hideMarqueeFrame();
+    inkPath.setAttribute('d', pathD);
+    ink.classList.add('is-inking');
+    if (frame.ownsCursor !== false && progress < 1) setCursor(tip.x, tip.y);
+    else cursor.style.opacity = '0';
+
+    return {
+      presented: true,
+      visible: true,
+      kind: 'relationship',
+      name: 'arrow',
+      progress,
+      elapsedMs,
+      durationMs,
+      sourceRect,
+      destinationRect,
+      cursor: progress < 1 ? tip : null,
+      pathSamples: [relationshipPath.start, tip],
+      relationshipPath,
+      gesturePolicy,
+    };
+  }
+
   function annotateElement(el, opts = {}) {
     if (disposed) return Promise.resolve({ status: 'disposed' });
     let actionId = opts?.actionId || `act-${++actionCounter}`;
@@ -2383,11 +2465,32 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
       settle(opts);
       return Promise.resolve({ actionId, status: 'settled', target: el });
     }
+    let gesturePolicy = resolvePresenterGesturePolicy({
+      cueKind: 'annotation',
+      annotation,
+      semanticRole: opts.semanticRole,
+      targetRect: rect,
+      viewport,
+    });
+    if (gesturePolicy.selectedKind === 'focus-frame') {
+      return moveTo(el, opts).then((receipt) => ({ ...receipt, gesturePolicy }));
+    }
     let nextSeed = moveIndex + 1;
     let layout = resolvePresenterAnnotationLayout(annotation, rect, viewport, nextSeed, opts.obstacles);
     if (!layout) {
       settle(opts);
       return Promise.resolve({ actionId, status: 'settled', target: el });
+    }
+    if (layout.fullSafety?.safe === false) {
+      let fallbackPolicy = resolvePresenterGesturePolicy({
+        cueKind: 'annotation',
+        annotation,
+        semanticRole: opts.semanticRole,
+        targetRect: rect,
+        viewport,
+        safety: layout.fullSafety,
+      });
+      return moveTo(el, opts).then((receipt) => ({ ...receipt, gesturePolicy: fallbackPolicy }));
     }
     annotation = layout.annotation;
     let drawRect = layout.drawRect;
@@ -2486,6 +2589,29 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
       clear();
       return { presented: false, reason: 'hidden-target' };
     }
+    let gesturePolicy = resolvePresenterGesturePolicy({
+      cueKind: 'annotation',
+      annotation,
+      semanticRole: frame.semanticRole,
+      targetRect: rect,
+      viewport,
+    });
+    if (gesturePolicy.selectedKind === 'focus-frame') {
+      let focus = presentFocusFrame(el, {
+        ...frame,
+        mode: 'frame',
+      });
+      return {
+        ...focus,
+        kind: 'focus',
+        name: 'frame',
+        originalKind: 'annotation',
+        gesturePolicy,
+        fallback: true,
+        pathSamples: [],
+        safety: { safe: true, policyFallback: true },
+      };
+    }
     let requestedProgress = Math.max(0, Math.min(1, Number(frame.progress) || 0));
     let seed = Number(frame.seed);
     if (!Number.isFinite(seed)) seed = 0;
@@ -2536,6 +2662,31 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
       && layout.fullSafety?.viewportCollision === false
       && layout.fullSafety?.collisions?.length === 0;
     let suppressUnsafe = layout.fullSafety?.safe === false && !enclosingOval;
+
+    if (suppressUnsafe) {
+      let fallbackPolicy = resolvePresenterGesturePolicy({
+        cueKind: 'annotation',
+        annotation,
+        semanticRole: frame.semanticRole,
+        targetRect: rect,
+        viewport,
+        safety: layout.fullSafety,
+      });
+      let focus = presentFocusFrame(el, {
+        ...frame,
+        mode: 'frame',
+      });
+      return {
+        ...focus,
+        kind: 'focus',
+        name: 'frame',
+        originalKind: 'annotation',
+        gesturePolicy: fallbackPolicy,
+        fallback: true,
+        pathSamples: [],
+        safety: { ...layout.fullSafety, safe: true, policyFallback: true },
+      };
+    }
 
     cancelTravel();
     cancelDrag();
@@ -2610,6 +2761,7 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
       averageSpeedPxPerMs: activeAnnotation.averageSpeedPxPerMs,
       phase: activeAnnotation.completed ? 'complete' : 'draw',
       timing: activeAnnotation.timing,
+      gesturePolicy,
     };
   }
 
@@ -2656,6 +2808,7 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
     annotateElement,
     presentApproachFrame,
     presentFocusFrame,
+    presentRelationshipFrame,
     presentAnnotationFrame,
     presentClickFrame,
     clickElement,
