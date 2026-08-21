@@ -48,7 +48,7 @@ export class TreeView extends Symbiote {
   #expandedIdsLoaded = false;
   #filterText = '';
   #storageKey = '';
-  #toggleBranchesOnSelect = false;
+  #expandBranchOnSelect = false;
   #visibleItems = [];
 
   init$ = {
@@ -64,8 +64,14 @@ export class TreeView extends Symbiote {
       }
 
       this.selectedId = getItemId(item);
-      if (this.#toggleBranchesOnSelect && Array.isArray(item.children) && item.children.length > 0) {
-        this.#toggleItem(item);
+      if (this.#expandBranchOnSelect && Array.isArray(item.children) && item.children.length > 0) {
+        let id = getItemId(item);
+        if (id && !this.#expandedIds.has(id)) {
+          this.#expandedIds.add(id);
+          this.#persistExpandedIds();
+          this.#renderTree();
+          emit(this, 'sn-tree-toggle', { item, expanded: true });
+        }
       }
       emit(this, 'sn-tree-select', { item });
     },
@@ -230,12 +236,22 @@ export class TreeView extends Symbiote {
     this.#renderTree();
   }
 
-  get toggleBranchesOnSelect() {
-    return this.#toggleBranchesOnSelect;
+  get expandBranchOnSelect() {
+    return this.#expandBranchOnSelect;
   }
 
+  set expandBranchOnSelect(value) {
+    this.#expandBranchOnSelect = Boolean(value);
+  }
+
+  /** @deprecated Use expandBranchOnSelect */
+  get toggleBranchesOnSelect() {
+    return this.#expandBranchOnSelect;
+  }
+
+  /** @deprecated Use expandBranchOnSelect */
   set toggleBranchesOnSelect(value) {
-    this.#toggleBranchesOnSelect = Boolean(value);
+    this.#expandBranchOnSelect = Boolean(value);
   }
 
   static filterItems(items = [], filterText = '') {

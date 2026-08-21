@@ -2,6 +2,12 @@
 
 All notable changes to `symbiote-ui` will be documented in this file.
 
+## [0.3.0-alpha.71] - 2026-08-02
+
+### Fixed
+
+- Added C++ fenced-code syntax highlighting to the reusable Markdown and code-block renderers.
+
 ## [0.3.0-alpha.70] - 2026-07-27
 
 ### Added
@@ -29,6 +35,12 @@ All notable changes to `symbiote-ui` will be documented in this file.
 - Aligned the HTML-in-Canvas WebGL and WebGPU adapters with the current Chromium contracts: WebGL native arity 3 with an optional fourth config argument, the four supported sized formats, grouped config members, a canonical flag-era tuple, and the WebGPU two-dictionary copy signature. Invalid signatures and configurations now fail before native upload with bounded receipts. Synchronized the experimental origin-trial metadata with the official milestone range 148-150.
 - Fixed portable panel receipts, deterministic sequence/layout revisions, paired interaction frames, select-end settlement, root-relative move/resize math, unscaled chrome coordinates, nominal frame-rate validation, final snapshot ownership, and resize settlement during panel transitions.
 - Fixed native visual parity for transparent CSS borders and compound surface/text nodes: zero-alpha chrome remains hit-only, compound primitives keep unique identities, and appearance checks no longer report child-icon color as a missing control fill.
+
+## [0.3.0-alpha.69] - 2026-07-26
+
+### Added
+
+- Added narrow public entrypoints so consumers can import only what they use instead of the full `symbiote-ui/ui` catalog: `symbiote-ui/contracts/resource-tree` (Node-safe resource-tree builder), `symbiote-ui/ui/locale.js`, `symbiote-ui/canvas/graph-explorer.js`, `symbiote-ui/icons/material-symbols`, `symbiote-ui/ui/host-adapters.js`, `symbiote-ui/ui/media` (registry, built-in image/YouTube adapters, and `sn-media-host`), `symbiote-ui/canvas/canvas-graph`, `symbiote-ui/layout/LayoutTree`, `symbiote-ui/layout/panel-layout`, and `symbiote-ui/control/segmented-control`. `ui/media/**/*.js` is now declared side-effectful, and component registry, discover, and Custom Elements metadata advertise the narrowest public specifier for `sn-segmented-control`, `cascade-theme-widget`, `cascade-theme-editor`, `sn-theme-import-dialog`, `sn-tree-panel`, `sn-tree-view`, `node-canvas`, `canvas-graph`, `panel-layout`, `source-viewer`, and `sn-media-host`.
 
 ## [0.3.0-alpha.68] - 2026-07-23
 

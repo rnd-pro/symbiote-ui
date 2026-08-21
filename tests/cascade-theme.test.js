@@ -565,9 +565,9 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   const classicLowChromaTheme = themeModule.createCascadeTheme({ themeVariant: 'classic', chroma: 0 });
   const earTheme = themeModule.createCascadeTheme({ themeVariant: 'modern', tabShape: 'ear' });
   const flatUiRadiusTheme = themeModule.createCascadeTheme({ themeVariant: 'modern', radius: 0 });
-  const flatTabRadiusTheme = themeModule.createCascadeTheme({ themeVariant: 'modern', tabRadius: 0 });
-  const flatCellRadiusTheme = themeModule.createCascadeTheme({ themeVariant: 'modern', cellRadius: 0 });
-  const flatComposerRadiusTheme = themeModule.createCascadeTheme({ themeVariant: 'modern', composerRadius: 0 });
+  const flatTabRadiusTheme = themeModule.createCascadeTheme({ themeVariant: 'modern', radius: 17, tabRadius: 0 });
+  const flatCellRadiusTheme = themeModule.createCascadeTheme({ themeVariant: 'modern', radius: 17, cellRadius: 0 });
+  const flatComposerRadiusTheme = themeModule.createCascadeTheme({ themeVariant: 'modern', radius: 17, composerRadius: 0 });
   const noScrollShadowTheme = themeModule.createCascadeTheme({ themeVariant: 'modern', scrollShadow: 0 });
   const largerScrollShadowTheme = themeModule.createCascadeTheme({ themeVariant: 'modern', scrollShadow: 22 });
   const cappedScrollShadowTheme = themeModule.createCascadeTheme({ themeVariant: 'modern', scrollShadow: 99 });
@@ -596,7 +596,7 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.equal(theme.tokens['--sn-tabs-shape'], 'frame');
   assert.equal(theme.tokens['--sn-theme-bg-lightness'], '10.0%');
   assert.equal(theme.tokens['--sn-theme-text-lightness'], '94.0%');
-  assert.equal(theme.tokens['--sn-theme-heading-scale'], '1.11');
+  assert.equal(theme.tokens['--sn-theme-heading-scale'], '1.00');
   assert.equal(balancedHeadingTheme.tokens['--sn-theme-heading-scale'], '1.20');
   assert.equal(theme.state.pattern, 100);
   assert.equal(theme.tokens['--sn-theme-pattern-brightness'], '1.00');

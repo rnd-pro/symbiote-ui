@@ -266,6 +266,7 @@ export function renderMarkdown(src, options = {}) {
       l === 'kotlin' ||
       l === 'swift' ||
       l === 'c' ||
+      l === 'cpp' ||
       l === 'csharp' ||
       l === 'php' ||
       l === 'dart' ||
@@ -551,6 +552,11 @@ const LANG_DEFS = {
     kw: new Set(['auto','break','case','char','const','continue','default','do','double','else','enum','extern','float','for','goto','if','inline','int','long','register','restrict','return','short','signed','sizeof','static','struct','switch','typedef','union','unsigned','void','volatile','while','_Alignas','_Alignof','_Atomic','_Bool','_Complex','_Generic','_Imaginary','_Noreturn','_Static_assert','_Thread_local','#include','#define','#ifdef','#ifndef','#endif','#if','#else','#elif','#pragma','#error','#undef']),
     bi: new Set(['printf','scanf','malloc','calloc','realloc','free','memcpy','memset','memmove','strcmp','strlen','strcpy','strcat','strncpy','strncat','fprintf','sprintf','snprintf','fopen','fclose','fread','fwrite','fgets','fputs','stdin','stdout','stderr','NULL','EOF','size_t','ptrdiff_t','FILE','EXIT_SUCCESS','EXIT_FAILURE','assert','abort','exit']),
     lit: new Set(['true','false','NULL','TRUE','FALSE']),
+  },
+  cpp: {
+    kw: new Set(['alignas','alignof','and','and_eq','asm','auto','bitand','bitor','bool','break','case','catch','char','char8_t','char16_t','char32_t','class','compl','const','consteval','constexpr','constinit','const_cast','continue','co_await','co_return','co_yield','decltype','default','delete','do','double','dynamic_cast','else','enum','explicit','export','extern','false','final','float','for','friend','goto','if','inline','int','long','mutable','namespace','new','noexcept','not','not_eq','nullptr','operator','or','or_eq','private','protected','public','register','reinterpret_cast','requires','return','short','signed','sizeof','static','static_assert','static_cast','struct','switch','template','this','thread_local','throw','true','try','typedef','typeid','typename','union','unsigned','using','virtual','void','volatile','wchar_t','while','xor','xor_eq']),
+    bi: new Set(['std','string','vector','array','map','unordered_map','set','unordered_set','optional','variant','tuple','pair','unique_ptr','shared_ptr','make_unique','make_shared','move','forward','cout','cin','cerr','endl','size_t','uint8_t','uint16_t','uint32_t','uint64_t','int8_t','int16_t','int32_t','int64_t','assert','abort','exit']),
+    lit: new Set(['true','false','nullptr','NULL']),
   },
   csharp: {
     kw: new Set(['abstract','as','base','bool','break','byte','case','catch','char','checked','class','const','continue','decimal','default','delegate','do','double','else','enum','event','explicit','extern','finally','fixed','float','for','foreach','goto','if','implicit','in','int','interface','internal','is','lock','long','namespace','new','object','operator','out','override','params','private','protected','public','readonly','ref','return','sbyte','sealed','short','sizeof','stackalloc','static','string','struct','switch','this','throw','try','typeof','uint','ulong','unchecked','unsafe','ushort','using','var','virtual','void','volatile','while','async','await','dynamic','nameof','record','init','required','yield']),

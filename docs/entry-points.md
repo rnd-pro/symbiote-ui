@@ -28,6 +28,16 @@
 - `symbiote-ui/xr/spatial-window-contract` - Node-safe versioned spatial-window layout descriptors, reconciliation diff, resize clamp and viewport math, chrome surface extents, and frozen scroll, selection, focus, viewport, sync, lifecycle, resize, and relay receipt factories.
 - `symbiote-ui/xr/spatial-window-placement` - Node-safe bounded deterministic provider default placement for unplaced spatial windows: a comfortable non-overlapping user-facing two-tier arc lattice with vertical levels, size-adaptive geometry, a 24-window capacity with structured exhaustion data, and free-slot resolution around explicitly posed and dragged windows.
 - `symbiote-ui/locale` - Node-safe locale catalogs and translation helpers.
+- `symbiote-ui/contracts/resource-tree` - Node-safe `buildResourceTreeFromEntries` re-export from the engine contract, without the broad contracts catalog.
+- `symbiote-ui/canvas/graph-explorer.js` - Node-safe graph-view helper constants and menu descriptors.
+- `symbiote-ui/layout/LayoutTree` - Node-safe BSP layout tree model and behavior normalization helpers.
+- `symbiote-ui/ui/locale.js` - browser localization helpers for navigator detection and configuration.
+- `symbiote-ui/icons/material-symbols` - browser Material Symbols host control for ligature font loading.
+- `symbiote-ui/ui/host-adapters.js` - browser host-adapter helpers for list-item and tree-panel host surfaces.
+- `symbiote-ui/ui/media` - media provider registry with built-in image and YouTube adapters plus the self-registering `sn-media-host` element.
+- `symbiote-ui/canvas/canvas-graph` - direct browser component entrypoint that registers `canvas-graph`.
+- `symbiote-ui/layout/panel-layout` - direct browser component entrypoint that registers `panel-layout`.
+- `symbiote-ui/control/segmented-control` - direct browser component entrypoint that registers `sn-segmented-control`.
 - `symbiote-ui/discover` - provider discovery JSON API used by the CLI.
 - `symbiote-ui/chat/voice-input-defaults.js` - Node-safe wake/send/action voice command defaults and matching helpers.
 - `symbiote-ui/chat/voice-controller.js` - browser wake listening and response speech orchestration for chat hosts.

@@ -103,6 +103,7 @@ export class CodeBlock extends Symbiote {
           lang === "kotlin" ||
           lang === "swift" ||
           lang === "c" ||
+          lang === "cpp" ||
           lang === "csharp" ||
           lang === "php" ||
           lang === "dart" ||
