@@ -107,12 +107,16 @@ button.sn-operations-overview-metric:focus-visible {
 
 .sn-operations-overview-metric-label {
   grid-area: label;
+  display: -webkit-box;
   min-width: 0;
+  min-block-size: 2.6em;
   overflow: hidden;
   color: var(--sn-sys-on-surface-dim);
   font-size: var(--sn-text-xs, 11px);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .sn-operations-overview-metric-value {
@@ -126,12 +130,15 @@ button.sn-operations-overview-metric:focus-visible {
 
 .sn-operations-overview-metric-detail {
   grid-area: detail;
+  display: -webkit-box;
   min-width: 0;
   overflow: hidden;
   color: var(--sn-operations-overview-metric-accent, var(--sn-sys-on-surface-dim));
   font-size: var(--sn-text-xs, 11px);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .sn-operations-overview-charts {
