@@ -153,6 +153,15 @@ export function resolvePresenterGesturePolicy({
     return result(base, 'focus-frame', 'annotation-safety-fallback', 'marker');
   }
 
+  // A pointer arrow terminates outside the target and therefore does not
+  // enclose its geometry. Wide controls such as chat composers are valid
+  // pointer targets even when they exceed the compact-marker envelope used
+  // for ovals and underlines. The later projection safety pass still falls
+  // back when the actual stroke cannot be drawn safely.
+  if (annotation?.kind === 'marker' && annotation?.marker === 'arrow') {
+    return result(base, 'marker', 'pointer-does-not-enclose-target');
+  }
+
   if (FRAME_SEMANTIC_ROLES.has(String(semanticRole || ''))) {
     return result(base, 'focus-frame', 'semantic-region-prefers-frame', 'marker');
   }

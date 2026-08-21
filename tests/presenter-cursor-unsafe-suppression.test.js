@@ -165,7 +165,7 @@ test('relationship arrows require an exact registered pair and separated geometr
   cursor.dispose();
 });
 
-test('pointer marker draws a repeatable hand-made arrow to a compact registered target', () => {
+test('pointer marker draws a repeatable hand-made arrow to a wide registered control', () => {
   assert.equal(PRESENTER_HAND_PROFILE_VERSION, 'symbiote-presenter-hand-profile-v1');
   assert.ok(PRESENTER_MARKERS.includes('arrow'));
 
@@ -175,11 +175,11 @@ test('pointer marker draws a repeatable hand-made arrow to a compact registered 
   window.getComputedStyle = () => ({ overflow: 'visible', overflowX: 'visible', overflowY: 'visible', clipPath: 'none', contain: '' });
   let input = window.document.createElement('textarea');
   input.getBoundingClientRect = () => ({
-    left: 250,
+    left: 300,
     top: 420,
-    right: 610,
+    right: 790,
     bottom: 474,
-    width: 360,
+    width: 490,
     height: 54,
   });
   window.document.body.appendChild(input);
@@ -203,10 +203,11 @@ test('pointer marker draws a repeatable hand-made arrow to a compact registered 
   assert.equal(frame.presented, true);
   assert.equal(frame.kind, 'marker');
   assert.equal(frame.name, 'arrow');
+  assert.equal(frame.gesturePolicy.reason, 'pointer-does-not-enclose-target');
   assert.equal(frame.safety.safe, true);
   assert.equal(frame.safety.targetInteriorCollision, false);
   assert.ok(frame.pathPoints > 20);
-  let targetCenter = { x: 430, y: 447 };
+  let targetCenter = { x: 545, y: 447 };
   let viewportCenter = { x: 400, y: 300 };
   let tip = frame.pathSamples.reduce((nearest, point) => (
     Math.hypot(point.x - targetCenter.x, point.y - targetCenter.y)
