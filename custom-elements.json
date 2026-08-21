@@ -21492,8 +21492,8 @@
           "customElement": true,
           "name": "Chart",
           "tagName": "sn-chart",
-          "description": "Lightweight SVG line and bar chart data visualizer.",
-          "componentDescription": "Lightweight SVG line and bar chart data visualizer. Use this svg data visualization chart when composing display UI. Capabilities: chart, data-viz. Data ownership: visualized datalist array. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "description": "Lightweight semantic SVG chart supporting grouped and stacked bars, lines, areas, scatter, pie, and donut views.",
+          "componentDescription": "Lightweight semantic SVG chart supporting grouped and stacked bars, lines, areas, scatter, pie, and donut views. Use this svg data visualization chart when composing display UI. Capabilities: chart, data-viz, chart.stacked, chart.donut, selection.semantic-target. Data ownership: visualized datalist array. WebMCP tools are not enabled unless an explicit descriptor is declared.",
           "attributes": [
             {
               "name": "title",
@@ -21507,7 +21507,7 @@
               "type": {
                 "text": "string"
               },
-              "description": "Chart plot style: bar or line."
+              "description": "Chart plot style: bar, line, area, scatter, pie, donut, or mixed."
             }
           ],
           "members": [
@@ -21542,12 +21542,21 @@
               "name": "sn-chart-zoom-reset",
               "description": "Fired when zoom is reset.",
               "detail": []
+            },
+            {
+              "name": "sn-chart-select",
+              "description": "Fired when a data point is selected; includes its semantic target when supplied.",
+              "detail": []
             }
           ],
           "slots": [],
           "cssProperties": [
             {
               "name": "--sn-chart-brush-stroke",
+              "description": "Theme CSS custom property consumed by sn-chart."
+            },
+            {
+              "name": "--sn-chart-hover-opacity",
               "description": "Theme CSS custom property consumed by sn-chart."
             },
             {
@@ -21610,7 +21619,10 @@
           "contract": {
             "capabilities": [
               "chart",
-              "data-viz"
+              "data-viz",
+              "chart.stacked",
+              "chart.donut",
+              "selection.semantic-target"
             ],
             "attributes": [
               {
@@ -21621,7 +21633,7 @@
               {
                 "name": "type",
                 "type": "string",
-                "description": "Chart plot style: bar or line."
+                "description": "Chart plot style: bar, line, area, scatter, pie, donut, or mixed."
               }
             ],
             "properties": [],
@@ -21654,11 +21666,16 @@
               {
                 "name": "sn-chart-zoom-reset",
                 "description": "Fired when zoom is reset."
+              },
+              {
+                "name": "sn-chart-select",
+                "description": "Fired when a data point is selected; includes its semantic target when supplied."
               }
             ],
             "slots": [],
             "themeAliases": [
               "--sn-chart-brush-stroke",
+              "--sn-chart-hover-opacity",
               "--sn-font",
               "--sn-panel-radius",
               "--sn-sys-accent",
@@ -21689,9 +21706,9 @@
             }
           },
           "agent": {
-            "componentDescription": "Lightweight SVG line and bar chart data visualizer. Use this svg data visualization chart when composing display UI. Capabilities: chart, data-viz. Data ownership: visualized datalist array. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "componentDescription": "Lightweight semantic SVG chart supporting grouped and stacked bars, lines, areas, scatter, pie, and donut views. Use this svg data visualization chart when composing display UI. Capabilities: chart, data-viz, chart.stacked, chart.donut, selection.semantic-target. Data ownership: visualized datalist array. WebMCP tools are not enabled unless an explicit descriptor is declared.",
             "semanticRole": "svg data visualization chart",
-            "usage": "Use to plot numbers in bar or line formats.",
+            "usage": "Use to plot numeric series and expose optional semantic targets for interactive drill-down.",
             "dataOwnership": "visualized datalist array",
             "webmcp": {
               "mode": "described-only",
@@ -21710,7 +21727,10 @@
             "contract": {
               "capabilities": [
                 "chart",
-                "data-viz"
+                "data-viz",
+                "chart.stacked",
+                "chart.donut",
+                "selection.semantic-target"
               ],
               "attributes": [
                 {
@@ -21721,7 +21741,7 @@
                 {
                   "name": "type",
                   "type": "string",
-                  "description": "Chart plot style: bar or line."
+                  "description": "Chart plot style: bar, line, area, scatter, pie, donut, or mixed."
                 }
               ],
               "properties": [],
@@ -21754,11 +21774,16 @@
                 {
                   "name": "sn-chart-zoom-reset",
                   "description": "Fired when zoom is reset."
+                },
+                {
+                  "name": "sn-chart-select",
+                  "description": "Fired when a data point is selected; includes its semantic target when supplied."
                 }
               ],
               "slots": [],
               "themeAliases": [
                 "--sn-chart-brush-stroke",
+                "--sn-chart-hover-opacity",
                 "--sn-font",
                 "--sn-panel-radius",
                 "--sn-sys-accent",
@@ -21797,6 +21822,205 @@
           "name": "sn-chart",
           "declaration": {
             "name": "Chart"
+          }
+        }
+      ]
+    },
+    {
+      "path": "display/OperationsOverview/OperationsOverview.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "customElement": true,
+          "name": "OperationsOverview",
+          "tagName": "sn-operations-overview",
+          "description": "Responsive provider-owned operations analytics composition built from KPI tiles and semantic charts.",
+          "componentDescription": "Responsive provider-owned operations analytics composition built from KPI tiles and semantic charts. Use this operations analytics overview when composing display UI. Capabilities: analytics.overview, analytics.kpi, chart.composition, selection.semantic-target. Data ownership: consumer-owned analytics model and semantic targets. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "attributes": [],
+          "members": [
+            {
+              "kind": "method",
+              "name": "setModel",
+              "description": "Sets the domain-neutral overview model."
+            },
+            {
+              "kind": "method",
+              "name": "getModel",
+              "description": "Returns the normalized overview model."
+            }
+          ],
+          "events": [
+            {
+              "name": "sn-analytics-select",
+              "description": "Fired when a KPI or chart point is selected.",
+              "detail": []
+            }
+          ],
+          "slots": [],
+          "cssProperties": [
+            {
+              "name": "--sn-operations-overview-gap",
+              "description": "Theme CSS custom property consumed by sn-operations-overview."
+            },
+            {
+              "name": "--sn-operations-overview-padding",
+              "description": "Theme CSS custom property consumed by sn-operations-overview."
+            },
+            {
+              "name": "--sn-operations-overview-metric-accent",
+              "description": "Theme CSS custom property consumed by sn-operations-overview."
+            },
+            {
+              "name": "--sn-icon-font",
+              "description": "Theme CSS custom property consumed by sn-operations-overview."
+            }
+          ],
+          "contract": {
+            "capabilities": [
+              "analytics.overview",
+              "analytics.kpi",
+              "chart.composition",
+              "selection.semantic-target"
+            ],
+            "attributes": [],
+            "properties": [],
+            "methods": [
+              {
+                "name": "setModel",
+                "type": "function",
+                "description": "Sets the domain-neutral overview model."
+              },
+              {
+                "name": "getModel",
+                "type": "function",
+                "description": "Returns the normalized overview model."
+              }
+            ],
+            "events": [
+              {
+                "name": "sn-analytics-select",
+                "description": "Fired when a KPI or chart point is selected."
+              }
+            ],
+            "slots": [],
+            "themeAliases": [
+              "--sn-operations-overview-gap",
+              "--sn-operations-overview-padding",
+              "--sn-operations-overview-metric-accent",
+              "--sn-font",
+              "--sn-font-mono",
+              "--sn-icon-font",
+              "--sn-card-radius",
+              "--sn-sys-accent",
+              "--sn-sys-on-surface",
+              "--sn-sys-on-surface-dim",
+              "--sn-sys-outline",
+              "--sn-sys-outline-subtle",
+              "--sn-sys-state-hover-mix",
+              "--sn-sys-surface-raised",
+              "--sn-theme-type-scale"
+            ],
+            "status": "draft",
+            "schemaVersion": "component-descriptor-v2",
+            "dataSchema": "schemas/chart-spec-v1.json",
+            "ssr": {
+              "mode": "hydrate-only",
+              "importSafe": false,
+              "jsdaRenderable": false,
+              "requiresDom": true,
+              "browserApis": [
+                "events"
+              ],
+              "notes": "Default browser component classification pending component-specific JSDA SSR smoke coverage."
+            }
+          },
+          "agent": {
+            "componentDescription": "Responsive provider-owned operations analytics composition built from KPI tiles and semantic charts.",
+            "semanticRole": "operations analytics overview",
+            "usage": "Use for domain-supplied KPI and chart models that need consistent responsive presentation and drill-down events.",
+            "dataOwnership": "consumer-owned analytics model and semantic targets",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          },
+          "metadata": {
+            "contract": {
+              "capabilities": [
+                "analytics.overview",
+                "analytics.kpi",
+                "chart.composition",
+                "selection.semantic-target"
+              ],
+              "attributes": [],
+              "properties": [],
+              "methods": [
+                {
+                  "name": "setModel",
+                  "type": "function",
+                  "description": "Sets the domain-neutral overview model."
+                },
+                {
+                  "name": "getModel",
+                  "type": "function",
+                  "description": "Returns the normalized overview model."
+                }
+              ],
+              "events": [
+                {
+                  "name": "sn-analytics-select",
+                  "description": "Fired when a KPI or chart point is selected."
+                }
+              ],
+              "slots": [],
+              "themeAliases": [
+                "--sn-operations-overview-gap",
+                "--sn-operations-overview-padding",
+                "--sn-operations-overview-metric-accent",
+                "--sn-font",
+                "--sn-font-mono",
+                "--sn-icon-font",
+                "--sn-card-radius",
+                "--sn-sys-accent",
+                "--sn-sys-on-surface",
+                "--sn-sys-on-surface-dim",
+                "--sn-sys-outline",
+                "--sn-sys-outline-subtle",
+                "--sn-sys-state-hover-mix",
+                "--sn-sys-surface-raised",
+                "--sn-theme-type-scale"
+              ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/chart-spec-v1.json",
+              "ssr": {
+                "mode": "hydrate-only",
+                "importSafe": false,
+                "jsdaRenderable": false,
+                "requiresDom": true,
+                "browserApis": [
+                  "events"
+                ],
+                "notes": "Default browser component classification pending component-specific JSDA SSR smoke coverage."
+              }
+            }
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "custom-element-definition",
+          "name": "sn-operations-overview",
+          "declaration": {
+            "name": "OperationsOverview"
           }
         }
       ]

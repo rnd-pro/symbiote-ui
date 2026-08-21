@@ -12,6 +12,7 @@ sn-kanban-board {
   --sn-kanban-card-border: var(--sn-sys-outline-subtle);
   --sn-kanban-card-hover-border: var(--sn-sys-accent);
   --sn-kanban-drop-border: var(--sn-sys-accent);
+  --sn-kanban-column-tone: var(--sn-sys-accent);
 
   display: block;
   min-width: 0;
@@ -26,6 +27,7 @@ sn-kanban-board[hidden] {
 }
 
 sn-kanban-board .sn-kanban-columns {
+  box-sizing: border-box;
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: var(--sn-kanban-column-width, minmax(232px, 286px));
@@ -34,7 +36,7 @@ sn-kanban-board .sn-kanban-columns {
   min-width: 0;
   min-height: var(--sn-kanban-columns-min-height, 0);
   height: var(--sn-kanban-columns-height, 100%);
-  overflow: auto;
+  overflow: var(--sn-kanban-columns-overflow, auto);
   ${themedScrollFadeInlineStyles}
   padding: var(--sn-kanban-padding, 0 0 var(--sn-step-2));
 }
@@ -52,6 +54,16 @@ sn-kanban-board .sn-kanban-column {
   border-radius: var(--sn-kanban-radius, var(--sn-card-radius));
   background: var(--sn-kanban-column-bg);
   overflow: var(--sn-kanban-column-overflow, hidden);
+}
+
+sn-kanban-board .sn-kanban-column[data-tone="danger"] { --sn-kanban-column-tone: var(--sn-sys-danger); }
+sn-kanban-board .sn-kanban-column[data-tone="warning"] { --sn-kanban-column-tone: var(--sn-sys-warning); }
+sn-kanban-board .sn-kanban-column[data-tone="accent"],
+sn-kanban-board .sn-kanban-column[data-tone="info"] { --sn-kanban-column-tone: var(--sn-sys-accent); }
+sn-kanban-board .sn-kanban-column[data-tone="success"] { --sn-kanban-column-tone: var(--sn-sys-success); }
+
+sn-kanban-board .sn-kanban-column[data-tone]:not([data-tone="neutral"]) {
+  background: var(--sn-kanban-column-tone-bg, color-mix(in oklch, var(--sn-kanban-column-tone) 6%, var(--sn-kanban-column-bg)));
 }
 
 /*
@@ -95,12 +107,18 @@ sn-kanban-board .sn-kanban-column-count {
   align-self: start;
   min-width: 24px;
   padding: var(--sn-step-1) var(--sn-step-3);
-  border: 1px solid var(--sn-kanban-border);
+  border: 1px solid var(--sn-kanban-count-border, var(--sn-kanban-border));
   border-radius: var(--sn-radius-full);
   color: var(--sn-kanban-count-color);
   font-size: var(--sn-text-xs);
   line-height: 1.4;
   text-align: center;
+}
+
+sn-kanban-board .sn-kanban-column[data-tone]:not([data-tone="neutral"]) .sn-kanban-column-count {
+  --sn-kanban-count-border: color-mix(in oklch, var(--sn-kanban-column-tone) 52%, var(--sn-kanban-border));
+  background: color-mix(in oklch, var(--sn-kanban-column-tone) 11%, transparent);
+  color: color-mix(in oklch, var(--sn-kanban-column-tone) 82%, var(--sn-kanban-title-color));
 }
 
 sn-kanban-board .sn-kanban-column-body,

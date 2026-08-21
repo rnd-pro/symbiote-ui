@@ -6,7 +6,7 @@
   "type": "object",
   "properties": {
     "title": { "type": "string" },
-    "type": { "type": "string", "enum": ["bar", "line", "area", "scatter", "pie", "mixed"] },
+    "type": { "type": "string", "enum": ["bar", "line", "area", "scatter", "pie", "donut", "mixed"] },
     "xAxis": {
       "type": "object",
       "properties": {
@@ -31,7 +31,24 @@
           "name": { "type": "string" },
           "type": { "type": "string", "enum": ["bar", "line", "area", "scatter", "pie"] },
           "data": { "type": "array", "items": { "type": "number" } },
-          "color": { "type": "string" }
+          "color": { "type": "string" },
+          "colors": { "type": "array", "items": { "type": "string" } },
+          "stack": { "type": "string" },
+          "semanticTargets": {
+            "type": "array",
+            "items": {
+              "type": ["object", "null"],
+              "properties": {
+                "id": { "type": "string" },
+                "type": { "type": "string" },
+                "resourceType": { "type": "string" },
+                "resourceId": { "type": "string" },
+                "surfaceId": { "type": "string" },
+                "action": { "type": "string" }
+              },
+              "additionalProperties": false
+            }
+          }
         },
         "required": ["name", "data"]
       }
@@ -60,6 +77,15 @@
       "properties": {
         "show": { "type": "boolean" }
       }
+    },
+    "donut": {
+      "type": "object",
+      "properties": {
+        "innerRadiusRatio": { "type": "number", "minimum": 0.2, "maximum": 0.78 },
+        "centerLabel": { "type": "string" },
+        "centerValue": { "type": "string" }
+      },
+      "additionalProperties": false
     }
   },
   "required": ["series"],

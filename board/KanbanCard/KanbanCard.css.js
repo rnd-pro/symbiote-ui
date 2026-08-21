@@ -25,6 +25,57 @@ export default css`
     width: var(--sn-kc-icon-size);
     height: var(--sn-kc-icon-size);
   }
+
+  /* Compact dashboard widgets: the dashboard remains a reusable card variant,
+     while product adapters only choose the variant and provide its data. */
+  sn-kanban-card[data-primary-emphasis="dashboard"] {
+    display: flex;
+    flex-direction: column;
+  }
+
+  sn-kanban-card[data-primary-emphasis="dashboard"] .sn-kc-content {
+    flex: 1;
+    min-height: 0;
+    padding: var(--sn-space-sm);
+    gap: var(--sn-space-sm);
+  }
+
+  sn-kanban-card[data-primary-emphasis="dashboard"] .sn-kc-header-desc {
+    min-block-size: 2.8em;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+  }
+
+  sn-kanban-card[data-primary-emphasis="dashboard"] .sn-kc-dashboard-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 112px), 1fr));
+    gap: var(--sn-space-xs);
+    padding: 0;
+    background: transparent;
+    overflow: visible;
+  }
+
+  sn-kanban-card[data-primary-emphasis="dashboard"] .sn-kc-dash-item {
+    padding: var(--sn-space-sm);
+    border: var(--sn-kanban-card-border-width, var(--sn-card-border-width, thin)) solid var(--sn-sys-outline-subtle);
+    border-radius: var(--sn-radius-sm);
+    background: var(--sn-sys-surface-overlay);
+  }
+
+  sn-kanban-card[data-primary-emphasis="dashboard"] .sn-kc-dash-icon {
+    align-self: center;
+  }
+
+  sn-kanban-card[data-primary-emphasis="dashboard"] .sn-kc-dash-icon svg {
+    width: var(--sn-text-lg);
+    height: var(--sn-text-lg);
+  }
+
+  sn-kanban-card[data-primary-emphasis="dashboard"] .sn-kc-metric-meta {
+    font-size: var(--sn-text-2xs);
+    line-height: 1.3;
+  }
   
   sn-kanban-card[data-size="S"] .sn-kc-content { padding: var(--sn-kanban-card-padding-sm, var(--sn-card-padding-sm, var(--sn-space-sm))); gap: var(--sn-kanban-card-gap-sm, var(--sn-card-gap-sm, var(--sn-space-sm))); }
   sn-kanban-card[data-size="M"] .sn-kc-content { padding: var(--sn-kanban-card-padding-md, var(--sn-card-padding-md, var(--sn-space-md))); gap: var(--sn-kanban-card-gap-md, var(--sn-card-gap-md, var(--sn-space-md))); }
@@ -519,7 +570,7 @@ export default css`
     position: relative;
     display: flex;
     flex-direction: row;
-    align-items: flex-start;
+    align-items: center;
     gap: var(--sn-space-xs);
     padding-block: var(--sn-space-sm);
     padding-inline: var(--sn-space-xs);
@@ -530,12 +581,10 @@ export default css`
   .sn-kc-dash-icon {
     display: flex;
     color: var(--sn-sys-on-surface-dim);
-    position: absolute;
-    inset-block-start: var(--sn-space-sm);
-    inset-inline-end: var(--sn-space-sm);
-  }
-  .sn-kc-dash-item:has(.sn-kc-dash-icon) .sn-kc-dash-label {
-    padding-inline-end: calc(var(--sn-space-md) + var(--sn-space-xs));
+    position: static;
+    align-self: center;
+    order: 2;
+    margin-inline-start: auto;
   }
   
   .sn-kc-dash-content {
@@ -545,6 +594,7 @@ export default css`
     flex: 1;
     min-height: 100%;
     min-width: 0;
+    order: 1;
   }
   .sn-kc-dash-content > .sn-kc-progress-track,
   .sn-kc-dash-content > .sn-kc-segmented-track { margin-block-start: auto; }

@@ -2470,6 +2470,9 @@ test('side-scroll contracts are explicit across reusable surfaces', async () => 
   assert.match(chatMessage, /max-width: 100%/);
   assert.match(chatMessage, /overflow-x: auto/);
   assert.match(treeView, /grid-template-columns: var\(--sn-tree-toggle-width\) var\(--sn-tree-icon-width\) minmax\(0, 1fr\)/);
+  assert.match(treeView, /\.sn-tree-toggle\s*\{[\s\S]*?grid-column: 1/);
+  assert.match(treeView, /\.sn-tree-icon\s*\{[\s\S]*?grid-column: 2/);
+  assert.match(treeView, /\.sn-tree-label\s*\{[\s\S]*?grid-column: 3/);
   assert.match(treeView, /text-overflow: ellipsis/);
   assert.match(listDetailShell, /grid-template-columns: var\(--sn-list-detail-sidebar-width\) minmax\(0, 1fr\)/);
   assert.match(listDetailShell, /overflow: auto/);

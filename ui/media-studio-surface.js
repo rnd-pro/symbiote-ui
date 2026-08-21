@@ -75,6 +75,7 @@ export const MEDIA_STUDIO_CSS_PARTS = Object.freeze([
   'preview-overlay',
   'transport',
   'timeline',
+  'authoring-toolbar',
   'inspector-pane',
   'settings',
   'fallback',
@@ -316,7 +317,7 @@ export const MEDIA_STUDIO_SURFACE_STYLES = `
 
   .sn-media-studio-timeline-panel {
     display: grid;
-    grid-template-rows: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
     gap: 0;
     align-content: stretch;
     min-block-size: var(--sn-media-studio-timeline-height, 172px);
@@ -344,6 +345,152 @@ export const MEDIA_STUDIO_SURFACE_STYLES = `
     border: 0;
     outline: 0;
     box-shadow: none;
+  }
+
+  .sn-media-studio-authoring-toolbar {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: calc(6px * var(--sn-theme-density, 1));
+    min-inline-size: 0;
+    padding: calc(6px * var(--sn-theme-density, 1)) calc(8px * var(--sn-theme-density, 1));
+    border-block-start: 1px solid var(--sn-media-studio-border, color-mix(in srgb, var(--sn-sys-on-surface) 12%, transparent));
+    background: var(--sn-media-studio-pane-bg, var(--sn-sys-surface-panel));
+    color: var(--sn-sys-on-surface);
+  }
+
+  .sn-media-studio-authoring-toolbar-label,
+  .sn-media-studio-authoring-field {
+    display: grid;
+    gap: calc(4px * var(--sn-theme-density, 1));
+    min-inline-size: 0;
+    color: var(--sn-sys-on-surface-dim);
+    font-size: calc(12px * var(--sn-theme-type-scale, 1));
+  }
+
+  .sn-media-studio-authoring-toolbar-label {
+    grid-template-columns: auto minmax(112px, 1fr);
+    align-items: center;
+  }
+
+  .sn-media-studio-authoring-control {
+    box-sizing: border-box;
+    min-inline-size: 0;
+    min-block-size: var(--sn-media-studio-control-height, 28px);
+    padding-inline: calc(8px * var(--sn-theme-density, 1));
+    border: 1px solid var(--sn-media-studio-border, color-mix(in srgb, var(--sn-sys-on-surface) 18%, transparent));
+    border-radius: var(--sn-control-radius, var(--sn-node-radius, 4px));
+    outline: 0;
+    background: var(--sn-sys-surface);
+    color: var(--sn-sys-on-surface);
+    font: inherit;
+  }
+
+  .sn-media-studio-authoring-control:focus-visible {
+    border-color: var(--sn-sys-focus-ring, var(--sn-sys-accent));
+    box-shadow: 0 0 0 1px var(--sn-sys-focus-ring, var(--sn-sys-accent));
+  }
+
+  .sn-media-studio-authoring-control:disabled {
+    opacity: 0.52;
+    cursor: not-allowed;
+  }
+
+  .sn-media-studio-authoring-error {
+    flex: 1 1 100%;
+    min-inline-size: 0;
+    padding: calc(6px * var(--sn-theme-density, 1)) calc(8px * var(--sn-theme-density, 1));
+    border-inline-start: 2px solid var(--sn-sys-error, #d84a4a);
+    background: color-mix(in srgb, var(--sn-sys-error, #d84a4a) 10%, transparent);
+    color: var(--sn-sys-on-surface);
+    overflow-wrap: anywhere;
+  }
+
+  .sn-media-studio-authoring-error[hidden] {
+    display: none;
+  }
+
+  .sn-media-studio-authoring-dialog-form {
+    box-sizing: border-box;
+    display: grid;
+    gap: calc(10px * var(--sn-theme-density, 1));
+    min-inline-size: min(560px, calc(100vw - 48px));
+    max-inline-size: min(720px, calc(100vw - 48px));
+    max-block-size: min(72vh, 720px);
+    overflow: auto;
+    padding: calc(4px * var(--sn-theme-density, 1));
+    color: var(--sn-sys-on-surface);
+  }
+
+  .sn-media-studio-authoring-group {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: calc(10px * var(--sn-theme-density, 1));
+    min-inline-size: 0;
+    margin: 0;
+    padding: calc(10px * var(--sn-theme-density, 1));
+    border: 1px solid var(--sn-media-studio-border, color-mix(in srgb, var(--sn-sys-on-surface) 12%, transparent));
+    border-radius: var(--sn-node-radius, 4px);
+    background: color-mix(in srgb, var(--sn-sys-surface-panel) 84%, transparent);
+  }
+
+  .sn-media-studio-authoring-group > legend {
+    padding-inline: 4px;
+    color: var(--sn-sys-on-surface);
+    font-weight: 650;
+  }
+
+  .sn-media-studio-authoring-field-wide,
+  .sn-media-studio-authoring-group > .sn-media-studio-authoring-group,
+  .sn-media-studio-authoring-group > .sn-media-studio-authoring-error {
+    grid-column: 1 / -1;
+  }
+
+  .sn-media-studio-authoring-check {
+    display: flex;
+    align-items: center;
+    gap: calc(6px * var(--sn-theme-density, 1));
+    color: var(--sn-sys-on-surface);
+  }
+
+  .sn-media-studio-authoring-dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: calc(8px * var(--sn-theme-density, 1));
+    position: sticky;
+    inset-block-end: 0;
+    padding-block-start: calc(8px * var(--sn-theme-density, 1));
+    background: var(--sn-sys-surface-panel);
+  }
+
+  .sn-media-studio-authoring-native-button {
+    min-block-size: var(--sn-media-studio-control-height, 28px);
+    padding-inline: calc(12px * var(--sn-theme-density, 1));
+    border: 1px solid var(--sn-media-studio-border, color-mix(in srgb, var(--sn-sys-on-surface) 18%, transparent));
+    border-radius: var(--sn-control-radius, var(--sn-node-radius, 4px));
+    background: var(--sn-sys-surface-raised, var(--sn-sys-surface));
+    color: var(--sn-sys-on-surface);
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .sn-media-studio-authoring-native-button[data-variant='primary'] {
+    border-color: var(--sn-sys-accent);
+    background: var(--sn-sys-accent);
+    color: var(--sn-sys-on-accent, #fff);
+  }
+
+  @media (max-width: 640px) {
+    .sn-media-studio-authoring-group {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .sn-media-studio-authoring-field-wide,
+    .sn-media-studio-authoring-group > .sn-media-studio-authoring-group,
+    .sn-media-studio-authoring-group > .sn-media-studio-authoring-error {
+      grid-column: auto;
+    }
   }
 
   .sn-media-studio-progress-shell {
@@ -560,35 +707,60 @@ export const MEDIA_STUDIO_SURFACE_STYLES = `
   }
 
   .sn-media-studio-field-row {
-    display: grid;
-    grid-template-columns: minmax(80px, 0.48fr) minmax(0, 1fr);
-    gap: 10px;
-    align-items: center;
+    display: flex;
+    flex-direction: column;
+    gap: calc(4px * var(--sn-theme-density, 1));
     min-width: 0;
+    padding: calc(8px * var(--sn-theme-density, 1));
+    box-sizing: border-box;
+    border: 1px solid var(--sn-sys-outline-subtle);
+    border-radius: var(--sn-radius-sm);
+    background: var(--sn-sys-surface-overlay);
     color: var(--sn-sys-on-surface-dim);
-    font-size: calc(12px * var(--sn-theme-type-scale, 1));
+    font-size: calc(11px * var(--sn-theme-type-scale, 1));
+    line-height: 1.25;
   }
 
   .sn-media-studio-field-value {
     min-width: 0;
-    padding: 5px 8px;
-    border: 1px solid color-mix(in srgb, var(--sn-sys-on-surface) 8%, transparent);
-    border-radius: calc(var(--sn-node-radius, 0px) + 2px);
-    background: color-mix(in srgb, black 18%, transparent);
     color: var(--sn-sys-on-surface);
-    font-family: var(--sn-font-mono, monospace);
+    font-size: calc(12px * var(--sn-theme-type-scale, 1));
+    font-weight: 600;
+    line-height: 1.3;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  .sn-media-studio-progress-shell sn-description-list {
-    grid-column: 1 / -1;
-    --sn-description-list-columns: minmax(min(9ch, 34%), max-content) minmax(0, 1fr);
+  .sn-media-studio-info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: calc(7px * var(--sn-theme-density, 1));
+    min-width: 0;
   }
 
-  .sn-media-studio-progress-shell sn-metric {
-    --sn-metric-value-color: var(--sn-media-studio-progress-color, var(--sn-sys-accent));
+  .sn-media-studio-progress-shell > .sn-media-studio-info-grid {
+    grid-column: 1 / -1;
+  }
+
+  .sn-media-studio-field-row.is-wide {
+    grid-column: 1 / -1;
+  }
+
+  .sn-media-studio-field-row[data-tone='accent'] {
+    border-color: var(--sn-media-studio-progress-color, var(--sn-sys-accent));
+  }
+
+  .sn-media-studio-field-row[data-tone='accent'] .sn-media-studio-field-value {
+    color: var(--sn-media-studio-progress-color, var(--sn-sys-accent));
+  }
+
+  .sn-media-studio-field-row[data-tone='danger'] {
+    border-color: var(--sn-sys-danger);
+  }
+
+  .sn-media-studio-field-row[data-tone='danger'] .sn-media-studio-field-value {
+    color: var(--sn-sys-danger);
   }
 
   .sn-media-studio-progress-failures {
@@ -2604,9 +2776,9 @@ export function hydrateMediaStudioTimelinePanel(root, options = {}) {
 
 function inspectorRows(rows = []) {
   return rows.map((row) => `
-    <div class="sn-media-studio-field-row">
+    <div class="sn-media-studio-field-row${row.wide ? ' is-wide' : ''}" data-tone="${escapeHtml(row.tone || 'neutral')}">
       <span>${escapeHtml(row.label)}</span>
-      <span class="sn-media-studio-field-value">${escapeHtml(row.value)}</span>
+      <strong class="sn-media-studio-field-value" title="${escapeHtml(row.value)}">${escapeHtml(row.value)}</strong>
     </div>`).join('');
 }
 
@@ -2638,15 +2810,15 @@ export function renderMediaStudioInspectorPanelMarkup(options = {}) {
       ${renderMediaStudioVoiceProviderControls(options)}
       <section class="sn-media-studio-inspector-section">
         <h3 class="sn-media-studio-inspector-heading"><i class="material-symbols-outlined">aspect_ratio</i> Format</h3>
-        ${inspectorRows(formatRows)}
+        <div class="sn-media-studio-info-grid">${inspectorRows(formatRows)}</div>
       </section>
       <section class="sn-media-studio-inspector-section">
         <h3 class="sn-media-studio-inspector-heading"><i class="material-symbols-outlined">movie_filter</i> Render</h3>
-        ${inspectorRows(renderRows)}
+        <div class="sn-media-studio-info-grid">${inspectorRows(renderRows)}</div>
       </section>
       <section class="sn-media-studio-inspector-section">
         <h3 class="sn-media-studio-inspector-heading"><i class="material-symbols-outlined">drive_folder_upload</i> Output</h3>
-        ${inspectorRows(outputRows)}
+        <div class="sn-media-studio-info-grid">${inspectorRows(outputRows)}</div>
       </section>
       ${renderMediaStudioProgressPanelMarkup(options)}
     </div>`;
@@ -2662,22 +2834,17 @@ export function renderMediaStudioProgressPanelMarkup(options = {}) {
   let failures = normalizeMediaStudioFailures(
     state.failures || options.failures || state.renderState?.failures || options.renderState?.failures,
   );
+  let progressRows = [
+    { label: 'Status', value: status, tone: 'accent' },
+    { label: 'Frames', value: Number.isFinite(frames) && frames > 0 ? String(frames) : percentLabel(progress) },
+    { label: 'Channel', value: channel, wide: true },
+    { label: 'Source', value: source },
+  ];
+  if (state.cacheKey || options.cacheKey) progressRows.push({ label: 'Cache', value: state.cacheKey || options.cacheKey });
+  if (state.error) progressRows.push({ label: 'Error', value: state.error, wide: true, tone: 'danger' });
   return `
     <div class="sn-media-studio-progress-shell" data-render-status="${escapeHtml(status)}" data-progress-channel="${escapeHtml(channel)}">
-      <sn-metric>
-        <span slot="label">Status</span>
-        <span slot="value">${escapeHtml(status)}</span>
-      </sn-metric>
-      <sn-metric>
-        <span slot="label">Frames</span>
-        <span slot="value">${Number.isFinite(frames) && frames > 0 ? String(frames) : percentLabel(progress)}</span>
-      </sn-metric>
-      <sn-description-list>
-        <sn-description-item label="Channel">${escapeHtml(channel)}</sn-description-item>
-        <sn-description-item label="Source">${escapeHtml(source)}</sn-description-item>
-        ${state.cacheKey || options.cacheKey ? `<sn-description-item label="Cache">${escapeHtml(state.cacheKey || options.cacheKey)}</sn-description-item>` : ''}
-        ${state.error ? `<sn-description-item label="Error">${escapeHtml(state.error)}</sn-description-item>` : ''}
-      </sn-description-list>
+      <div class="sn-media-studio-info-grid">${inspectorRows(progressRows)}</div>
       ${renderMediaStudioFailureRows(failures)}
     </div>`;
 }

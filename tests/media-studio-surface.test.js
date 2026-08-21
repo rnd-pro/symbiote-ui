@@ -501,6 +501,9 @@ test('media studio visual layer renders reusable preview, timeline, and progress
   assert.match(timeline, /sn-timeline-editor/);
   assert.match(timeline, /data-media-studio-timeline-editor/);
   assert.match(MEDIA_STUDIO_SURFACE_STYLES, /\.sn-media-studio-timeline-editor/);
+  assert.match(MEDIA_STUDIO_SURFACE_STYLES, /\.sn-media-studio-timeline-panel \{[\s\S]*?grid-template-rows: minmax\(0, 1fr\) auto/);
+  assert.match(MEDIA_STUDIO_SURFACE_STYLES, /\.sn-media-studio-authoring-toolbar \{[\s\S]*?var\(--sn-media-studio-pane-bg/);
+  assert.match(MEDIA_STUDIO_SURFACE_STYLES, /\.sn-media-studio-authoring-control:focus-visible/);
   assert.doesNotMatch(timeline, /sn-media-studio-track-row/);
   assert.doesNotMatch(timeline, /sn-media-studio-timeline-toolbar/);
   assert.match(inspector, /sn-media-studio-inspector-panel/);

@@ -2849,20 +2849,20 @@ export let COMPONENTS = [
     className: 'Chart',
     module: 'display/Chart/Chart.js',
     category: 'display',
-    description: 'Lightweight SVG line and bar chart data visualizer.',
+    description: 'Lightweight semantic SVG chart supporting grouped and stacked bars, lines, areas, scatter, pie, and donut views.',
     agent: {
       semanticRole: 'svg data visualization chart',
-      usage: 'Use to plot numbers in bar or line formats.',
+      usage: 'Use to plot numeric series and expose optional semantic targets for interactive drill-down.',
       dataOwnership: 'visualized datalist array',
     },
     contract: {
       status: 'draft',
       schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/chart-spec-v1.json',
-      capabilities: ['chart', 'data-viz'],
+      capabilities: ['chart', 'data-viz', 'chart.stacked', 'chart.donut', 'selection.semantic-target'],
       attributes: [
         { name: 'title', type: 'string', description: 'Chart header title.' },
-        { name: 'type', type: 'string', description: 'Chart plot style: bar or line.' }
+        { name: 'type', type: 'string', description: 'Chart plot style: bar, line, area, scatter, pie, donut, or mixed.' }
       ],
       methods: [
         { name: 'setData', type: 'function', description: 'Sets local chart data from numbers or label/value objects.' },
@@ -2872,10 +2872,12 @@ export let COMPONENTS = [
       events: [
         { name: 'sn-chart-zoom', description: 'Fired when selection zoom is applied.' },
         { name: 'sn-chart-brush', description: 'Fired when selection brush is applied.' },
-        { name: 'sn-chart-zoom-reset', description: 'Fired when zoom is reset.' }
+        { name: 'sn-chart-zoom-reset', description: 'Fired when zoom is reset.' },
+        { name: 'sn-chart-select', description: 'Fired when a data point is selected; includes its semantic target when supplied.' }
       ],
       themeAliases: [
         '--sn-chart-brush-stroke',
+        '--sn-chart-hover-opacity',
         '--sn-font',
         '--sn-panel-radius',
         '--sn-sys-accent',
@@ -2890,6 +2892,49 @@ export let COMPONENTS = [
         '--sn-tooltip-bg',
         '--sn-tooltip-color',
         '--sn-transition-fast'
+      ]
+    }
+  },
+  {
+    tagName: 'sn-operations-overview',
+    className: 'OperationsOverview',
+    module: 'display/OperationsOverview/OperationsOverview.js',
+    category: 'display',
+    description: 'Responsive provider-owned operations analytics composition built from KPI tiles and semantic charts.',
+    agent: {
+      semanticRole: 'operations analytics overview',
+      usage: 'Use for domain-supplied KPI and chart models that need consistent responsive presentation and drill-down events.',
+      dataOwnership: 'consumer-owned analytics model and semantic targets',
+    },
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/chart-spec-v1.json',
+      capabilities: ['analytics.overview', 'analytics.kpi', 'chart.composition', 'selection.semantic-target'],
+      attributes: [],
+      methods: [
+        { name: 'setModel', type: 'function', description: 'Sets the domain-neutral overview model.' },
+        { name: 'getModel', type: 'function', description: 'Returns the normalized overview model.' }
+      ],
+      events: [
+        { name: 'sn-analytics-select', description: 'Fired when a KPI or chart point is selected.' }
+      ],
+      themeAliases: [
+        '--sn-operations-overview-gap',
+        '--sn-operations-overview-padding',
+        '--sn-operations-overview-metric-accent',
+        '--sn-font',
+        '--sn-font-mono',
+        '--sn-icon-font',
+        '--sn-card-radius',
+        '--sn-sys-accent',
+        '--sn-sys-on-surface',
+        '--sn-sys-on-surface-dim',
+        '--sn-sys-outline',
+        '--sn-sys-outline-subtle',
+        '--sn-sys-state-hover-mix',
+        '--sn-sys-surface-raised',
+        '--sn-theme-type-scale'
       ]
     }
   },

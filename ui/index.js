@@ -353,6 +353,7 @@ export let ScrollArea;
 export let FloatingPanel;
 export let AspectRatio;
 export let Chart;
+export let OperationsOverview;
 export let RichTextEditor;
 export let Tour;
 export let Carousel;
@@ -859,6 +860,7 @@ if (hasDOMGlobals) {
     floatingPanel,
     aspectRatio,
     chart,
+    operationsOverview,
     richTextEditor,
     tour,
     carousel,
@@ -968,6 +970,7 @@ if (hasDOMGlobals) {
     import('../layout/FloatingPanel/FloatingPanel.js'),
     import('../layout/AspectRatio/AspectRatio.js'),
     import('../display/Chart/Chart.js'),
+    import('../display/OperationsOverview/OperationsOverview.js'),
     import('../control/RichTextEditor/RichTextEditor.js'),
     import('../display/Tour/Tour.js'),
     import('../display/Carousel/Carousel.js'),
@@ -1092,6 +1095,7 @@ if (hasDOMGlobals) {
   ({ default: FloatingPanel } = floatingPanel);
   ({ default: AspectRatio } = aspectRatio);
   ({ default: Chart } = chart);
+  ({ default: OperationsOverview } = operationsOverview);
   ({ default: RichTextEditor } = richTextEditor);
   ({ default: Tour } = tour);
   ({ default: Carousel } = carousel);
@@ -1215,6 +1219,7 @@ if (hasDOMGlobals) {
     FloatingPanel,
     AspectRatio,
     Chart,
+    OperationsOverview,
     RichTextEditor,
     Tour,
     Carousel,

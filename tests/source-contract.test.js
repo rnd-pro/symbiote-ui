@@ -222,7 +222,8 @@ test('code block raw mode preserves long lines for horizontal scrolling', async 
 
   assert.match(styles, /\.cb-scroll \{[\s\S]*?min-inline-size: 0;[\s\S]*?overflow: auto;/);
   assert.match(styles, /\.cb-gutter \{[\s\S]*?color: var\(\s*--sn-code-gutter-color,[\s\S]*?color-mix\(in oklch, var\(--sn-sys-on-surface-dim\) 64%, var\(--sn-sys-surface\)\)[\s\S]*?\);/);
-  assert.match(styles, /\.cb-gutter \{[\s\S]*?background: var\(\s*--sn-code-gutter-bg,[\s\S]*?color-mix\(in oklch, var\(--sn-sys-surface\) 92%, black\)[\s\S]*?\);/);
+  assert.match(styles, /\.cb-gutter \{[\s\S]*?background: var\(\s*--sn-code-gutter-bg,[\s\S]*?var\(--sn-source-editor-bg, var\(--sn-sys-surface\)\)[\s\S]*?\);/);
+  assert.match(styles, /\.cb-gutter \{[\s\S]*?border-right: 1px solid var\(--sn-sys-outline-subtle, var\(--sn-sys-outline\)\);/);
   assert.doesNotMatch(styles, /\.cb-gutter \{[\s\S]*?opacity:/);
   assert.match(styles, /\.cb-pre \{[\s\S]*?flex: 1 0 max-content;[\s\S]*?min-inline-size: var\(--sn-code-content-min-inline-size, 0\);[\s\S]*?white-space: pre;/);
   assert.doesNotMatch(styles, /\.cb-pre \{[^}]*flex: 1;[^}]*min-width: 0;/);
