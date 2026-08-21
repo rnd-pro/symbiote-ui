@@ -884,9 +884,7 @@ export class KanbanBoard extends Symbiote {
 
   #syncCardSelection() {
     this.ref.columns.querySelectorAll('[data-sn-board-card-id]').forEach((cardEl) => {
-      if (cardEl.classList.contains('sn-kanban-card')) {
-        cardEl.setAttribute('aria-selected', String(cardEl.dataset.snBoardCardId === this.#selectedCardId));
-      }
+      cardEl.setAttribute('aria-selected', String(cardEl.dataset.snBoardCardId === this.#selectedCardId));
     });
   }
 
