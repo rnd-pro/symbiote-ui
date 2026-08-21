@@ -33,7 +33,7 @@
     #gesture-overlay rect { fill: rgba(109, 202, 255, .05); stroke: #eaf7ff; stroke-width: 2; stroke-dasharray: 8 7; }
     body[data-focus="pointer"] main { width: min(1600px, calc(100vw - 64px)); }
     body[data-focus="pointer"] .grid { display: block; }
-    body[data-focus="pointer"] .card { min-height: 820px; }
+    body[data-focus="pointer"] .card { min-height: min(820px, calc(100vh - 190px)); }
     body[data-focus="pointer"] .target.input {
       left: auto;
       right: 58px;

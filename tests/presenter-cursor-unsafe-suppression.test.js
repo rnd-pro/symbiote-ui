@@ -226,3 +226,51 @@ test('pointer marker draws a repeatable hand-made arrow to a compact registered 
   assert.notDeepEqual(alternate.pathSamples, frame.pathSamples);
   cursor.dispose();
 });
+
+test('pointer collision correction shortens the center vector without rotating it to a cardinal fallback', () => {
+  let { window } = parseHTML('<!doctype html><html><body></body></html>');
+  Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1920 });
+  Object.defineProperty(window, 'innerHeight', { configurable: true, value: 1080 });
+  window.getComputedStyle = () => ({ overflow: 'visible', overflowX: 'visible', overflowY: 'visible', clipPath: 'none', contain: '' });
+  let input = window.document.createElement('textarea');
+  let targetRect = {
+    left: 1332,
+    top: 962,
+    right: 1904,
+    bottom: 1068,
+    width: 572,
+    height: 106,
+  };
+  input.getBoundingClientRect = () => targetRect;
+  window.document.body.appendChild(input);
+  let cursor = createPresenterCursor(window.document);
+  let frame = cursor.presentAnnotationFrame(input, { intent: 'pointer' }, {
+    progress: 1,
+    seed: 4242,
+    viewport: { width: 1920, height: 1080 },
+    obstacles: [{ left: 1260, top: 760, right: 1425, bottom: 890, width: 165, height: 130 }],
+  });
+
+  assert.equal(frame.presented, true);
+  assert.equal(frame.kind, 'marker');
+  assert.equal(frame.name, 'arrow');
+  assert.equal(frame.safety.safe, true);
+  let targetCenter = {
+    x: targetRect.left + targetRect.width / 2,
+    y: targetRect.top + targetRect.height / 2,
+  };
+  let viewportCenter = { x: 960, y: 540 };
+  let tip = frame.pathSamples.reduce((nearest, point) => (
+    Math.hypot(point.x - targetCenter.x, point.y - targetCenter.y)
+      < Math.hypot(nearest.x - targetCenter.x, nearest.y - targetCenter.y)
+      ? point
+      : nearest
+  ));
+  let start = frame.pathSamples[0];
+  let expected = { x: targetCenter.x - viewportCenter.x, y: targetCenter.y - viewportCenter.y };
+  let actual = { x: tip.x - start.x, y: tip.y - start.y };
+  let cosine = (expected.x * actual.x + expected.y * actual.y)
+    / (Math.hypot(expected.x, expected.y) * Math.hypot(actual.x, actual.y));
+  assert.ok(cosine > 0.95, 'collision handling preserves the viewport-center vector');
+  cursor.dispose();
+});

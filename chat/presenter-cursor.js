@@ -1016,6 +1016,10 @@ const GESTURES = {
       : horizontal
         ? Math.max(108, Math.min(210, rect.width * 0.42 + 88))
         : Math.max(96, Math.min(190, rect.height * 0.8 + 72));
+    if (centerVector) {
+      let reachScale = Number(opts.reachScale);
+      if (Number.isFinite(reachScale)) reach *= Math.max(0.5, Math.min(1, reachScale));
+    }
     let normal = { x: -uy, y: ux };
     let tailOffset = variation(seed, 113) * Math.min(18, reach * 0.08);
     let start = {
@@ -1286,15 +1290,21 @@ function resolvePresenterAnnotationLayout(annotation, targetRect, viewport, seed
   let best = null;
   let placements = annotationPlacementCandidates(annotation);
   let candidates = annotation.kind === 'marker' && annotation.marker === 'arrow'
-    ? [
-      { placement: placements[0], centerVector: true },
-      ...placements.map((placement) => ({ placement, centerVector: false })),
-    ]
+    ? [1, 0.8, 0.64, 0.5].map((reachScale) => ({
+      placement: placements[0],
+      centerVector: true,
+      reachScale,
+    }))
     : placements.map((placement) => ({ placement, centerVector: false }));
   for (let candidate of candidates) {
-    let { placement, centerVector } = candidate;
+    let { placement, centerVector, reachScale } = candidate;
     let nextAnnotation = { ...annotation, placement };
-    let plan = factory?.(drawRect, seed, { placement, viewport, centerVector });
+    let plan = factory?.(drawRect, seed, {
+      placement,
+      viewport,
+      centerVector,
+      reachScale,
+    });
     if (!plan) continue;
     let overflow = presenterPlanOverflow(plan, seed, viewport);
     let strokeArc = createPresenterStrokeArc(plan, seed, viewport);
