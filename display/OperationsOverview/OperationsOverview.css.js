@@ -18,6 +18,12 @@ sn-operations-overview {
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--sn-space-md, 16px);
+  box-sizing: border-box;
+  padding: var(--sn-operations-overview-widget-padding, var(--sn-space-md, 16px));
+  border: 1px solid var(--sn-operations-overview-widget-border, var(--sn-sys-outline-subtle));
+  border-radius: var(--sn-operations-overview-widget-radius, var(--sn-card-radius, var(--sn-radius-md, 8px)));
+  background: var(--sn-operations-overview-widget-bg, var(--sn-sys-surface-overlay));
+  box-shadow: var(--sn-operations-overview-widget-shadow, none);
 }
 
 .sn-operations-overview-heading {
@@ -69,10 +75,11 @@ sn-operations-overview {
   align-items: center;
   gap: 2px var(--sn-space-sm, 10px);
   min-width: 0;
-  padding: var(--sn-space-md, 14px);
-  border: 1px solid var(--sn-sys-outline-subtle);
-  border-radius: var(--sn-card-radius, var(--sn-radius-md, 8px));
-  background: var(--sn-sys-surface-raised);
+  padding: var(--sn-operations-overview-widget-padding, var(--sn-space-md, 14px));
+  border: 1px solid var(--sn-operations-overview-widget-border, var(--sn-sys-outline-subtle));
+  border-radius: var(--sn-operations-overview-widget-radius, var(--sn-card-radius, var(--sn-radius-md, 8px)));
+  background: var(--sn-operations-overview-widget-bg, var(--sn-sys-surface-overlay));
+  box-shadow: var(--sn-operations-overview-widget-shadow, none);
   color: inherit;
   font: inherit;
   text-align: start;
@@ -84,7 +91,7 @@ button.sn-operations-overview-metric {
 
 button.sn-operations-overview-metric:hover {
   border-color: color-mix(in oklch, var(--sn-operations-overview-metric-accent, var(--sn-sys-accent)) 55%, var(--sn-sys-outline));
-  background: color-mix(in oklch, var(--sn-operations-overview-metric-accent, var(--sn-sys-accent)) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-raised));
+  background: color-mix(in oklch, var(--sn-operations-overview-metric-accent, var(--sn-sys-accent)) var(--sn-sys-state-hover-mix), var(--sn-operations-overview-widget-bg, var(--sn-sys-surface-overlay)));
 }
 
 button.sn-operations-overview-metric:focus-visible {
@@ -150,7 +157,16 @@ button.sn-operations-overview-metric:focus-visible {
 
 .sn-operations-overview-chart {
   display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
   min-width: 0;
+  overflow: clip;
+  border: 1px solid var(--sn-operations-overview-widget-border, var(--sn-sys-outline-subtle));
+  border-radius: var(--sn-operations-overview-widget-radius, var(--sn-card-radius, var(--sn-radius-md, 8px)));
+  background: var(--sn-operations-overview-widget-bg, var(--sn-sys-surface-overlay));
+  box-shadow: var(--sn-operations-overview-widget-shadow, none);
+  --sn-chart-bg: transparent;
+  --sn-chart-border: transparent;
+  --sn-chart-radius: 0;
 }
 
 .sn-operations-overview-chart[data-span="wide"] {
@@ -158,12 +174,16 @@ button.sn-operations-overview-metric:focus-visible {
 }
 
 .sn-operations-overview-chart-description {
-  margin: -8px var(--sn-space-md, 16px) var(--sn-space-sm, 10px);
+  margin: calc(-1 * var(--sn-space-sm, 10px)) 0 0;
+  padding: 0 var(--sn-operations-overview-widget-padding, var(--sn-space-md, 16px)) var(--sn-operations-overview-widget-padding, var(--sn-space-md, 16px));
   color: var(--sn-sys-on-surface-dim);
   font-size: var(--sn-text-xs, 11px);
 }
 
-.sn-operations-overview-chart sn-chart,
+.sn-operations-overview-chart sn-chart {
+  min-width: 0;
+}
+
 .sn-operations-overview-chart .sn-chart-container {
   height: 100%;
 }

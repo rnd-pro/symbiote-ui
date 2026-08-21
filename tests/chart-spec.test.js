@@ -225,3 +225,13 @@ test('DOM: operations overview re-emits metric and chart semantic selections', a
   overview.querySelector('.sn-chart-pie-slice').dispatchEvent(new Event('click', { bubbles: true }));
   assert.deepEqual(selections.map((item) => item.semanticTarget.id), ['surface:dispatcher-board', 'priority:1']);
 });
+
+test('operations overview owns one cascade-themed widget surface per content block', async () => {
+  const css = (await import('../display/OperationsOverview/OperationsOverview.css.js')).default;
+  assert.match(css, /--sn-operations-overview-widget-bg/);
+  assert.match(css, /--sn-operations-overview-widget-border/);
+  assert.match(css, /--sn-operations-overview-widget-radius/);
+  assert.match(css, /\.sn-operations-overview-header[\s\S]*background: var\(--sn-operations-overview-widget-bg/);
+  assert.match(css, /\.sn-operations-overview-chart[\s\S]*--sn-chart-bg: transparent/);
+  assert.doesNotMatch(css, /#[0-9a-f]{3,8}\b/i);
+});
