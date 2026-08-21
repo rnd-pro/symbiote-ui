@@ -471,7 +471,7 @@ const DEFAULT_PROVIDER_THEME_TOKENS = {
   '--sn-tree-panel-label-weight': 'var(--sn-tree-label-weight)',
   '--sn-kanban-border': 'var(--sn-sys-outline-subtle)',
   '--sn-kanban-column-bg': 'var(--sn-sys-surface-panel)',
-  '--sn-kanban-header-bg': 'var(--sn-sys-surface-toolbar)',
+  '--sn-kanban-header-bg': 'transparent',
   '--sn-kanban-title-color': 'var(--sn-sys-on-surface)',
   '--sn-kanban-description-color': 'var(--sn-sys-on-surface-dim)',
   '--sn-kanban-count-color': 'var(--sn-sys-on-surface-dim)',

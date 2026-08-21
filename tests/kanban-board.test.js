@@ -388,6 +388,8 @@ test('sn-kanban-board exposes column stretch sizing tokens', async () => {
   assert.match(css, /height: var\(--sn-kanban-column-height, auto\);/);
   assert.match(css, /overflow: var\(--sn-kanban-card-list-overflow, auto\);/);
   assert.match(css, /sn-kanban-board \.sn-kanban-column-header \{[\s\S]*flex: 0 0 auto;/);
+  assert.match(css, /--sn-kanban-header-bg: transparent;/);
+  assert.match(css, /sn-kanban-board \.sn-kanban-column-header \{[\s\S]*border-block-end: 0;/);
   assert.match(css, /sn-kanban-board \.sn-kanban-card \{[\s\S]*flex: 0 0 auto;/);
   // Fixed widget geometry: meta and footer are single non-wrapping clipped lines; the
   // host's chip budget + '+N' overflow chip (U01) guarantee the footer fits.

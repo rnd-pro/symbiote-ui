@@ -4,7 +4,7 @@ export default /*css*/ `
 sn-kanban-board {
   --sn-kanban-border: var(--sn-sys-outline-subtle);
   --sn-kanban-column-bg: var(--sn-sys-surface-panel);
-  --sn-kanban-header-bg: var(--sn-sys-surface-toolbar);
+  --sn-kanban-header-bg: transparent;
   --sn-kanban-title-color: var(--sn-sys-on-surface);
   --sn-kanban-description-color: var(--sn-sys-on-surface-dim);
   --sn-kanban-count-color: var(--sn-sys-on-surface-dim);
@@ -84,7 +84,7 @@ sn-kanban-board .sn-kanban-column-header {
   gap: var(--sn-step-4);
   min-height: var(--sn-kanban-header-min-height, 54px);
   padding: var(--sn-kanban-header-padding, var(--sn-step-4) var(--sn-step-5));
-  border-block-end: 1px solid var(--sn-kanban-border);
+  border-block-end: 0;
   background: var(--sn-kanban-header-bg);
 }
 
