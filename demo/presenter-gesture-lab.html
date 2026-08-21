@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Presenter Gesture Lab</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+      background: #071019;
+      color: #e9f1f7;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: radial-gradient(circle at 14% 8%, #173449 0, #071019 34%, #03080d 100%); }
+    main { width: min(1420px, calc(100vw - 48px)); margin: 0 auto; padding: 34px 0 42px; }
+    header { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 24px; }
+    h1 { margin: 0; font-size: 28px; letter-spacing: -.025em; }
+    header p { margin: 8px 0 0; max-width: 760px; color: #9eb2c2; line-height: 1.5; }
+    .profile { padding: 9px 12px; border: 1px solid #2d4758; border-radius: 999px; color: #9fd7ff; font: 600 12px/1 ui-monospace, monospace; }
+    .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+    .card { position: relative; min-height: 190px; overflow: hidden; border: 1px solid #203a4b; border-radius: 18px; background: linear-gradient(160deg, rgba(26, 48, 63, .86), rgba(8, 18, 27, .9)); box-shadow: 0 18px 48px rgba(0, 0, 0, .24); }
+    .card h2 { margin: 18px 18px 4px; font-size: 14px; font-weight: 650; }
+    .card p { margin: 0 18px; color: #7e97a9; font-size: 12px; }
+    .target { position: absolute; left: 50%; top: 58%; transform: translate(-50%, -50%); min-width: 140px; padding: 12px 16px; border: 1px solid #3b5b70; border-radius: 9px; background: #102433; color: #dbeaf4; text-align: center; font-size: 13px; }
+    .target.wide { width: 250px; }
+    .target.small { min-width: 92px; width: 110px; }
+    .target.region { width: 260px; height: 86px; display: grid; place-items: center; }
+    .target.input { width: 260px; text-align: left; color: #8ea8ba; }
+    .target.input::after { content: ''; display: inline-block; width: 1px; height: 15px; margin-left: 5px; vertical-align: -3px; background: #76cbff; }
+    #gesture-overlay { position: fixed; inset: 0; width: 100vw; height: 100vh; overflow: visible; pointer-events: none; z-index: 2147483645; }
+    #gesture-overlay path { fill: none; stroke: #ffcf3f; stroke-width: 4.2; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 2px 2px rgba(0,0,0,.35)); }
+    #gesture-overlay rect { fill: rgba(109, 202, 255, .05); stroke: #eaf7ff; stroke-width: 2; stroke-dasharray: 8 7; }
+    @media (max-width: 900px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>Presenter gesture lab</h1>
+        <p>Actual runtime projections. Every stroke uses one deterministic hand profile; changing the seed changes the wrist drift without changing semantic geometry.</p>
+      </div>
+      <div class="profile" id="profile"></div>
+    </header>
+    <section class="grid" id="grid"></section>
+  </main>
+  <svg id="gesture-overlay" aria-hidden="true"></svg>
+  <script type="module" src="./presenter-gesture-lab.js"></script>
+</body>
+</html>

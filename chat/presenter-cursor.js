@@ -13,7 +13,8 @@ import {
 const STYLE_ID = 'symbiote-presenter-cursor-style';
 const OVERLAY_CLASS = 'symbiote-presenter-cursor';
 
-export const PRESENTER_MARKERS = Object.freeze(['freehand', 'underline', 'oval']);
+export const PRESENTER_HAND_PROFILE_VERSION = 'symbiote-presenter-hand-profile-v1';
+export const PRESENTER_MARKERS = Object.freeze(['freehand', 'underline', 'oval', 'arrow']);
 const PRESENTER_MARKER_SET = new Set(PRESENTER_MARKERS);
 const MARKER_ALIASES = Object.freeze({
   circle: 'oval',
@@ -22,6 +23,8 @@ const MARKER_ALIASES = Object.freeze({
   round: 'oval',
   line: 'underline',
   under: 'underline',
+  pointer: 'arrow',
+  point: 'arrow',
 });
 export const PRESENTER_SYMBOLS = Object.freeze(['question', 'cross', 'check', 'heart', 'flourish']);
 const PRESENTER_SYMBOL_SET = new Set(PRESENTER_SYMBOLS);
@@ -50,6 +53,7 @@ export const PRESENTER_ANNOTATION_INTENTS = Object.freeze([
   'emphasize',
   'detail',
   'group',
+  'pointer',
   'risk',
   'question',
   'success',
@@ -66,6 +70,8 @@ const INTENT_ALIASES = Object.freeze({
   field: 'detail',
   collection: 'group',
   set: 'group',
+  arrow: 'pointer',
+  point: 'pointer',
   warning: 'risk',
   problem: 'risk',
   error: 'risk',
@@ -83,6 +89,7 @@ const INTENT_DEFAULTS = Object.freeze({
   emphasize: { kind: 'marker', marker: 'freehand' },
   detail: { kind: 'marker', marker: 'underline' },
   group: { kind: 'marker', marker: 'oval' },
+  pointer: { kind: 'marker', marker: 'arrow', placement: 'before' },
   risk: { kind: 'symbol', symbol: 'cross', placement: 'after' },
   question: { kind: 'symbol', symbol: 'question', placement: 'after' },
   success: { kind: 'symbol', symbol: 'check', placement: 'after' },
@@ -824,12 +831,19 @@ function noise(seed, phase) {
 // Smoothly varying jitter offset for a frame: blends two noise samples so the
 // tremor drifts rather than flickering, scaled by `amp`. `axis` separates the x
 // and y streams so they wander independently.
-function jitter(seed, t, amp, axis) {
-  let phase = t * 6.5 + axis * 19.7;
-  let low = noise(seed + axis * 101, Math.floor(phase));
-  let high = noise(seed + axis * 101, Math.floor(phase) + 1);
+function interpolatedNoise(seed, phase) {
+  let low = noise(seed, Math.floor(phase));
+  let high = noise(seed, Math.floor(phase) + 1);
   let frac = phase - Math.floor(phase);
-  return (low + (high - low) * frac) * amp;
+  let smooth = frac * frac * (3 - 2 * frac);
+  return low + (high - low) * smooth;
+}
+
+function jitter(seed, t, amp, axis) {
+  let stream = seed + axis * 101;
+  let wristDrift = interpolatedNoise(stream, t * 3.25 + axis * 19.7);
+  let fingerTremor = interpolatedNoise(stream + 47, t * 10.5 + axis * 7.3);
+  return (wristDrift * 0.72 + fingerTremor * 0.28) * amp;
 }
 
 // A small signed variation factor in roughly [-1, 1] derived from the move
@@ -936,6 +950,60 @@ const GESTURES = {
           x: cx + rx * w * roundedX,
           y: cy + ry * w * roundedY,
         };
+      },
+    };
+  },
+
+  // One continuous felt-tip stroke: a slightly bowed shaft approaches the
+  // target edge, then retraces twice to form the arrow head. Geometry remains
+  // deterministic; the shared hand profile adds low-frequency wrist drift and
+  // a smaller high-frequency tremor during projection.
+  arrow(rect, seed, opts = {}) {
+    let placement = opts.placement || 'before';
+    let cx = rect.left + rect.width / 2;
+    let cy = rect.top + rect.height / 2;
+    let horizontal = placement === 'before' || placement === 'after';
+    let direction = placement === 'before' || placement === 'above' ? -1 : 1;
+    let reach = horizontal
+      ? Math.max(86, Math.min(180, rect.width * 0.42 + 72))
+      : Math.max(72, Math.min(150, rect.height * 0.8 + 54));
+    let tip = horizontal
+      ? { x: direction < 0 ? rect.left - 3 : rect.right + 3, y: cy }
+      : { x: cx, y: direction < 0 ? rect.top - 3 : rect.bottom + 3 };
+    let start = horizontal
+      ? { x: tip.x + direction * reach, y: cy + variation(seed, 113) * Math.min(30, rect.height * 0.48) }
+      : { x: cx + variation(seed, 113) * Math.min(42, rect.width * 0.22), y: tip.y + direction * reach };
+    let normal = horizontal ? { x: 0, y: 1 } : { x: 1, y: 0 };
+    let bend = (14 + Math.abs(variation(seed, 117)) * 14) * (variation(seed, 119) < 0 ? -1 : 1);
+    let headLength = 17 + (variation(seed, 127) * 0.5 + 0.5) * 7;
+    let headWidth = headLength * 0.58;
+    let ux = (tip.x - start.x) / Math.max(1, Math.hypot(tip.x - start.x, tip.y - start.y));
+    let uy = (tip.y - start.y) / Math.max(1, Math.hypot(tip.x - start.x, tip.y - start.y));
+    let leftHead = { x: tip.x - ux * headLength - uy * headWidth, y: tip.y - uy * headLength + ux * headWidth };
+    let rightHead = { x: tip.x - ux * headLength + uy * headWidth, y: tip.y - uy * headLength - ux * headWidth };
+    return {
+      loops: 0,
+      pathMode: 'linear',
+      rest: tip,
+      point(t) {
+        if (t <= 0.72) {
+          let p = t / 0.72;
+          let ease = p * p * (3 - 2 * p);
+          return {
+            x: start.x + (tip.x - start.x) * ease + normal.x * Math.sin(p * Math.PI) * bend,
+            y: start.y + (tip.y - start.y) * ease + normal.y * Math.sin(p * Math.PI) * bend,
+          };
+        }
+        if (t <= 0.82) {
+          let p = (t - 0.72) / 0.1;
+          return { x: tip.x + (leftHead.x - tip.x) * p, y: tip.y + (leftHead.y - tip.y) * p };
+        }
+        if (t <= 0.9) {
+          let p = (t - 0.82) / 0.08;
+          return { x: leftHead.x + (tip.x - leftHead.x) * p, y: leftHead.y + (tip.y - leftHead.y) * p };
+        }
+        let p = (t - 0.9) / 0.1;
+        return { x: tip.x + (rightHead.x - tip.x) * p, y: tip.y + (rightHead.y - tip.y) * p };
       },
     };
   },
@@ -1064,6 +1132,10 @@ const SYMBOLS = {
 
 function annotationPlacementCandidates(annotation) {
   if (annotation.kind === 'marker') {
+    if (annotation.marker === 'arrow') {
+      let preferred = annotation.placement || 'before';
+      return [preferred, ...['before', 'above', 'below', 'after'].filter((placement) => placement !== preferred)];
+    }
     if (annotation.marker !== 'underline') return [annotation.placement || 'over'];
     return annotation.placement === 'above' ? ['above', 'below'] : ['below', 'above'];
   }
@@ -1277,8 +1349,11 @@ function frameElapsed(timeMs, layer, durationMs) {
   return Math.floor(raw / PRESENTER_FRAME_MS) * PRESENTER_FRAME_MS;
 }
 
-function smoothPresenterPath(points) {
+function smoothPresenterPath(points, mode = 'smooth') {
   if (points.length < 2) return '';
+  if (mode === 'linear') {
+    return points.map((point, index) => `${index ? 'L' : 'M'}${point.x.toFixed(1)} ${point.y.toFixed(1)}`).join('');
+  }
   let [first, second, ...rest] = points;
   let path = `M${first.x.toFixed(1)} ${first.y.toFixed(1)}Q${first.x.toFixed(1)} ${first.y.toFixed(1)} ${second.x.toFixed(1)} ${second.y.toFixed(1)}`;
   for (let point of rest) path += `T${point.x.toFixed(1)} ${point.y.toFixed(1)}`;
@@ -1369,7 +1444,7 @@ function projectStroke(layer, timeMs, seed, registry, normalizeName, options = {
     || layer.ownsCursor === false;
   return {
     visible: true,
-    path: smoothPresenterPath(points),
+    path: smoothPresenterPath(points, plan.pathMode),
     points,
     opacity: 1,
     name,

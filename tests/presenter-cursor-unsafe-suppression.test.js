@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { parseHTML } from 'linkedom';
-import { createPresenterCursor } from '../chat/presenter-cursor.js';
+import {
+  PRESENTER_HAND_PROFILE_VERSION,
+  PRESENTER_MARKERS,
+  createPresenterCursor,
+} from '../chat/presenter-cursor.js';
 import {
   PRESENTER_GESTURE_POLICY_VERSION,
   createPresenterRelationshipPath,
@@ -158,5 +162,53 @@ test('relationship arrows require an exact registered pair and separated geometr
   assert.equal(frame.kind, 'relationship');
   assert.equal(frame.name, 'arrow');
   assert.match(window.document.querySelector('.pc-ink path')?.getAttribute('d') || '', /^M/);
+  cursor.dispose();
+});
+
+test('pointer marker draws a repeatable hand-made arrow to a compact registered target', () => {
+  assert.equal(PRESENTER_HAND_PROFILE_VERSION, 'symbiote-presenter-hand-profile-v1');
+  assert.ok(PRESENTER_MARKERS.includes('arrow'));
+
+  let { window } = parseHTML('<!doctype html><html><body></body></html>');
+  Object.defineProperty(window, 'innerWidth', { configurable: true, value: 800 });
+  Object.defineProperty(window, 'innerHeight', { configurable: true, value: 600 });
+  window.getComputedStyle = () => ({ overflow: 'visible', overflowX: 'visible', overflowY: 'visible', clipPath: 'none', contain: '' });
+  let input = window.document.createElement('textarea');
+  input.getBoundingClientRect = () => ({
+    left: 250,
+    top: 420,
+    right: 610,
+    bottom: 474,
+    width: 360,
+    height: 54,
+  });
+  window.document.body.appendChild(input);
+  let cursor = createPresenterCursor(window.document);
+  let frame = cursor.presentAnnotationFrame(input, { intent: 'pointer' }, {
+    progress: 1,
+    seed: 4242,
+    viewport: { width: 800, height: 600 },
+  });
+  let repeated = cursor.presentAnnotationFrame(input, { intent: 'pointer' }, {
+    progress: 1,
+    seed: 4242,
+    viewport: { width: 800, height: 600 },
+  });
+  let alternate = cursor.presentAnnotationFrame(input, { intent: 'pointer' }, {
+    progress: 1,
+    seed: 4243,
+    viewport: { width: 800, height: 600 },
+  });
+
+  assert.equal(frame.presented, true);
+  assert.equal(frame.kind, 'marker');
+  assert.equal(frame.name, 'arrow');
+  assert.equal(frame.safety.safe, true);
+  assert.equal(frame.safety.targetInteriorCollision, false);
+  assert.ok(frame.pathPoints > 20);
+  assert.equal(repeated.pathDigest, frame.pathDigest);
+  assert.notEqual(alternate.pathDigest, frame.pathDigest);
+  assert.deepEqual(repeated.pathSamples, frame.pathSamples);
+  assert.notDeepEqual(alternate.pathSamples, frame.pathSamples);
   cursor.dispose();
 });
