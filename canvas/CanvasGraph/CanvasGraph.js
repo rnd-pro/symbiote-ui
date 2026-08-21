@@ -1941,6 +1941,22 @@ export class CanvasGraph extends Symbiote {
     return activated;
   }
 
+  /** Clear the active-node focus immediately without changing the viewport. */
+  deactivateNode({ emit = false } = {}) {
+    if (!this.activeNode && !this.nextActiveNode && !this.deactivating) return true;
+    this.activeNode = null;
+    this.nextActiveNode = null;
+    this.deactivating = false;
+    this.dragNode = null;
+    this._setHoverAction('');
+    this._resetInfoPanelForActivation();
+    this.updateInteractionDepths();
+    this.needsDraw = true;
+    this._wakeLoop();
+    if (emit) this._emitGraphEvent('nodeDeselected');
+    return true;
+  }
+
   focusSemanticCluster(nodeId) {
     const node = this.graphDB?.nodes.get(nodeId);
     if (!node?.isSemanticCluster) return;

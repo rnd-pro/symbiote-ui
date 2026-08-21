@@ -931,6 +931,19 @@ test('CanvasGraph.activateNode is a viewport-free delegation to the private acti
   assert.match(source, /return activated;/);
 });
 
+test('CanvasGraph.deactivateNode clears public focus without moving the viewport', async () => {
+  await withCanvasGraphGlobals((CanvasGraph) => {
+    let graph = makeActivationGraph(CanvasGraph);
+    assert.equal(graph.activateNode('alpha'), true);
+    let viewportBefore = { zoom: graph.zoom, panX: graph.panX, panY: graph.panY };
+
+    assert.equal(graph.deactivateNode(), true);
+    assert.equal(graph.activeNode, null);
+    assert.equal(graph.nextActiveNode, null);
+    assert.deepEqual({ zoom: graph.zoom, panX: graph.panX, panY: graph.panY }, viewportBefore);
+  });
+});
+
 test('node canvas fit view avoids microscopic startup zoom', async () => {
   let source = await readFile(canvasViewportSource, 'utf8');
 
