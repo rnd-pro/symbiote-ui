@@ -963,35 +963,89 @@ const GESTURES = {
     let cx = rect.left + rect.width / 2;
     let cy = rect.top + rect.height / 2;
     let horizontal = placement === 'before' || placement === 'after';
-    let direction = placement === 'before' || placement === 'above' ? -1 : 1;
-    let reach = horizontal
-      ? Math.max(86, Math.min(180, rect.width * 0.42 + 72))
-      : Math.max(72, Math.min(150, rect.height * 0.8 + 54));
-    let tip = horizontal
-      ? { x: direction < 0 ? rect.left - 3 : rect.right + 3, y: cy }
-      : { x: cx, y: direction < 0 ? rect.top - 3 : rect.bottom + 3 };
-    let start = horizontal
-      ? { x: tip.x + direction * reach, y: cy + variation(seed, 113) * Math.min(30, rect.height * 0.48) }
-      : { x: cx + variation(seed, 113) * Math.min(42, rect.width * 0.22), y: tip.y + direction * reach };
-    let normal = horizontal ? { x: 0, y: 1 } : { x: 1, y: 0 };
-    let bend = (14 + Math.abs(variation(seed, 117)) * 14) * (variation(seed, 119) < 0 ? -1 : 1);
-    let headLength = 17 + (variation(seed, 127) * 0.5 + 0.5) * 7;
-    let headWidth = headLength * 0.58;
-    let ux = (tip.x - start.x) / Math.max(1, Math.hypot(tip.x - start.x, tip.y - start.y));
-    let uy = (tip.y - start.y) / Math.max(1, Math.hypot(tip.x - start.x, tip.y - start.y));
-    let leftHead = { x: tip.x - ux * headLength - uy * headWidth, y: tip.y - uy * headLength + ux * headWidth };
-    let rightHead = { x: tip.x - ux * headLength + uy * headWidth, y: tip.y - uy * headLength - ux * headWidth };
+    let viewportRect = presenterViewportRect(opts.viewport || {});
+    let centerVector = Boolean(opts.centerVector && viewportRect);
+    let ux = 0;
+    let uy = 0;
+
+    if (centerVector) {
+      let viewportCenter = {
+        x: viewportRect.left + viewportRect.width / 2,
+        y: viewportRect.top + viewportRect.height / 2,
+      };
+      let dx = cx - viewportCenter.x;
+      let dy = cy - viewportCenter.y;
+      let distance = Math.hypot(dx, dy);
+      if (distance >= 48) {
+        ux = dx / distance;
+        uy = dy / distance;
+      } else {
+        centerVector = false;
+      }
+    }
+
+    if (!centerVector) {
+      if (horizontal) {
+        ux = placement === 'before' ? 1 : -1;
+        uy = 0;
+      } else {
+        ux = 0;
+        uy = placement === 'above' ? 1 : -1;
+      }
+    }
+
+    let halfWidth = Math.max(1, rect.width / 2);
+    let halfHeight = Math.max(1, rect.height / 2);
+    let edgeDistance = Math.min(
+      Math.abs(ux) > 0.0001 ? halfWidth / Math.abs(ux) : Number.POSITIVE_INFINITY,
+      Math.abs(uy) > 0.0001 ? halfHeight / Math.abs(uy) : Number.POSITIVE_INFINITY,
+    );
+    let targetGap = 12;
+    let tip = {
+      x: cx - ux * (edgeDistance + targetGap),
+      y: cy - uy * (edgeDistance + targetGap),
+    };
+    let viewportCenterDistance = viewportRect
+      ? Math.hypot(
+        tip.x - (viewportRect.left + viewportRect.width / 2),
+        tip.y - (viewportRect.top + viewportRect.height / 2),
+      )
+      : Math.max(rect.width, rect.height) * 0.75 + 96;
+    let reach = centerVector
+      ? Math.max(132, Math.min(270, viewportCenterDistance * 0.48))
+      : horizontal
+        ? Math.max(108, Math.min(210, rect.width * 0.42 + 88))
+        : Math.max(96, Math.min(190, rect.height * 0.8 + 72));
+    let normal = { x: -uy, y: ux };
+    let tailOffset = variation(seed, 113) * Math.min(18, reach * 0.08);
+    let start = {
+      x: tip.x - ux * reach + normal.x * tailOffset,
+      y: tip.y - uy * reach + normal.y * tailOffset,
+    };
+    let bend = (8 + Math.abs(variation(seed, 117)) * 8) * (variation(seed, 119) < 0 ? -1 : 1);
+    let headLength = 30 + (variation(seed, 127) * 0.5 + 0.5) * 6;
+    let headWidth = headLength * (0.82 + variation(seed, 131) * 0.035);
+    let leftHead = {
+      x: tip.x - ux * headLength + normal.x * headWidth,
+      y: tip.y - uy * headLength + normal.y * headWidth,
+    };
+    let rightHead = {
+      x: tip.x - ux * headLength - normal.x * headWidth,
+      y: tip.y - uy * headLength - normal.y * headWidth,
+    };
     return {
       loops: 0,
       pathMode: 'linear',
+      jitterScale: 0.72,
       rest: tip,
       point(t) {
         if (t <= 0.72) {
           let p = t / 0.72;
           let ease = p * p * (3 - 2 * p);
+          let bow = Math.sin(p * Math.PI) * bend * (1 - p);
           return {
-            x: start.x + (tip.x - start.x) * ease + normal.x * Math.sin(p * Math.PI) * bend,
-            y: start.y + (tip.y - start.y) * ease + normal.y * Math.sin(p * Math.PI) * bend,
+            x: start.x + (tip.x - start.x) * ease + normal.x * bow,
+            y: start.y + (tip.y - start.y) * ease + normal.y * bow,
           };
         }
         if (t <= 0.82) {
@@ -1230,9 +1284,17 @@ function resolvePresenterAnnotationLayout(annotation, targetRect, viewport, seed
     ? SYMBOLS[annotation.symbol]
     : GESTURES[annotation.marker];
   let best = null;
-  for (let placement of annotationPlacementCandidates(annotation)) {
+  let placements = annotationPlacementCandidates(annotation);
+  let candidates = annotation.kind === 'marker' && annotation.marker === 'arrow'
+    ? [
+      { placement: placements[0], centerVector: true },
+      ...placements.map((placement) => ({ placement, centerVector: false })),
+    ]
+    : placements.map((placement) => ({ placement, centerVector: false }));
+  for (let candidate of candidates) {
+    let { placement, centerVector } = candidate;
     let nextAnnotation = { ...annotation, placement };
-    let plan = factory?.(drawRect, seed, { placement });
+    let plan = factory?.(drawRect, seed, { placement, viewport, centerVector });
     if (!plan) continue;
     let overflow = presenterPlanOverflow(plan, seed, viewport);
     let strokeArc = createPresenterStrokeArc(plan, seed, viewport);

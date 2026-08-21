@@ -31,6 +31,17 @@
     #gesture-overlay { position: fixed; inset: 0; width: 100vw; height: 100vh; overflow: visible; pointer-events: none; z-index: 2147483645; }
     #gesture-overlay path { fill: none; stroke: #ffcf3f; stroke-width: 4.2; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 2px 2px rgba(0,0,0,.35)); }
     #gesture-overlay rect { fill: rgba(109, 202, 255, .05); stroke: #eaf7ff; stroke-width: 2; stroke-dasharray: 8 7; }
+    body[data-focus="pointer"] main { width: min(1600px, calc(100vw - 64px)); }
+    body[data-focus="pointer"] .grid { display: block; }
+    body[data-focus="pointer"] .card { min-height: 820px; }
+    body[data-focus="pointer"] .target.input {
+      left: auto;
+      right: 58px;
+      top: auto;
+      bottom: 58px;
+      width: min(520px, calc(100% - 116px));
+      transform: none;
+    }
     @media (max-width: 900px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   </style>
 </head>

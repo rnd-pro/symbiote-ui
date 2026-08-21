@@ -206,6 +206,20 @@ test('pointer marker draws a repeatable hand-made arrow to a compact registered 
   assert.equal(frame.safety.safe, true);
   assert.equal(frame.safety.targetInteriorCollision, false);
   assert.ok(frame.pathPoints > 20);
+  let targetCenter = { x: 430, y: 447 };
+  let viewportCenter = { x: 400, y: 300 };
+  let tip = frame.pathSamples.reduce((nearest, point) => (
+    Math.hypot(point.x - targetCenter.x, point.y - targetCenter.y)
+      < Math.hypot(nearest.x - targetCenter.x, nearest.y - targetCenter.y)
+      ? point
+      : nearest
+  ));
+  let start = frame.pathSamples[0];
+  let expected = { x: targetCenter.x - viewportCenter.x, y: targetCenter.y - viewportCenter.y };
+  let actual = { x: tip.x - start.x, y: tip.y - start.y };
+  let cosine = (expected.x * actual.x + expected.y * actual.y)
+    / (Math.hypot(expected.x, expected.y) * Math.hypot(actual.x, actual.y));
+  assert.ok(cosine > 0.95, 'primary pointer approaches the target on the viewport-center vector');
   assert.equal(repeated.pathDigest, frame.pathDigest);
   assert.notEqual(alternate.pathDigest, frame.pathDigest);
   assert.deepEqual(repeated.pathSamples, frame.pathSamples);

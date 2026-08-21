@@ -16,11 +16,17 @@ const samples = [
   { name: 'Flourish', note: 'closing signature stroke', annotation: { intent: 'flourish' }, className: 'wide', label: 'Complete', seed: 430 },
 ];
 
+const focus = new URLSearchParams(location.search).get('focus') || '';
+const visibleSamples = focus === 'pointer'
+  ? samples.filter((sample) => sample.annotation?.intent === 'pointer')
+  : samples;
+document.body.dataset.focus = focus;
+
 const grid = document.querySelector('#grid');
 const overlay = document.querySelector('#gesture-overlay');
 document.querySelector('#profile').textContent = PRESENTER_HAND_PROFILE_VERSION;
 
-for (const [index, sample] of samples.entries()) {
+for (const [index, sample] of visibleSamples.entries()) {
   const card = document.createElement('article');
   card.className = 'card';
   card.innerHTML = `<h2>${sample.name}</h2><p>${sample.note}</p><div class="target ${sample.className || ''}" data-index="${index}">${sample.label}</div>`;
@@ -30,7 +36,7 @@ for (const [index, sample] of samples.entries()) {
 await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 const cursor = createPresenterCursor(document);
 
-for (const [index, sample] of samples.entries()) {
+for (const [index, sample] of visibleSamples.entries()) {
   const target = document.querySelector(`[data-index="${index}"]`);
   if (sample.focus) {
     const frame = cursor.presentFocusFrame(target, { mode: 'frame', elapsedMs: 600, viewport: { width: innerWidth, height: innerHeight } });
