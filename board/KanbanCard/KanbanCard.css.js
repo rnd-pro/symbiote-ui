@@ -507,7 +507,7 @@ export default css`
   
   .sn-kc-dashboard-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 92px), 1fr));
     gap: var(--sn-kanban-card-border-width, var(--sn-card-border-width, thin));
     padding: var(--sn-kanban-card-border-width, var(--sn-card-border-width, thin));
     background: var(--sn-sys-outline);
@@ -573,6 +573,14 @@ export default css`
   .sn-kc-dash-item[data-tone="teal"] .sn-kc-dash-val {
     color: var(--sn-sys-success);
     font-size: var(--sn-text-xl);
+  }
+  .sn-kc-dash-item[data-tone="red"] .sn-kc-dash-icon,
+  .sn-kc-dash-item[data-tone="red"] .sn-kc-dash-val {
+    color: var(--sn-sys-danger);
+  }
+  .sn-kc-dash-item[data-tone="amber"] .sn-kc-dash-icon,
+  .sn-kc-dash-item[data-tone="amber"] .sn-kc-dash-val {
+    color: var(--sn-sys-warning);
   }
   .sn-kc-dash-item[data-tone="agent"] .sn-kc-dash-icon,
   .sn-kc-dash-item[data-tone="agent"] .sn-kc-dash-val {
