@@ -552,9 +552,9 @@ export default css`
   .sn-kc-dash-label {
     font-size: var(--sn-text-2xs);
     color: var(--sn-sys-on-surface-dim);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    line-height: 1.25;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
   
   .sn-kc-dash-val {
