@@ -19,14 +19,18 @@ export default html`
   </div>
   <div class="chat-show-caption" aria-live="polite" ${{ '@hidden': '!showCaption' }}>
     <span class="chat-show-caption-speaker" ${{ textContent: 'captionSpeaker' }}></span>
-    <span class="chat-show-caption-text" ${{ textContent: 'captionText', '@hidden': 'hasCaptionWords' }}></span>
-    <span class="chat-show-caption-words" itemize="captionWords" item-tag="chat-show-caption-word-item" ${{ '@hidden': '!hasCaptionWords' }}>
-      <template><span class="chat-show-caption-word" ${{ textContent: 'text', '@active': 'active', '@spoken': 'spoken' }}></span></template>
+    <span class="chat-show-caption-viewport" ref="captionViewport" tabindex="0">
+      <span class="chat-show-caption-text" ${{ textContent: 'captionText', '@hidden': 'hasCaptionWords' }}></span>
+      <span class="chat-show-caption-words" itemize="captionWords" item-tag="chat-show-caption-word-item" ${{ '@hidden': '!hasCaptionWords' }}>
+        <template><span class="chat-show-caption-word" ${{ textContent: 'text', '@active': 'active', '@spoken': 'spoken' }}></span></template>
+      </span>
     </span>
   </div>
   <div class="chat-show-tts" ${{ '@hidden': '!showTts', '@data-status': 'ttsStatus' }}>
     <span class="chat-show-tts-label" ${{ textContent: 'ttsLabel' }}></span>
-    <span class="chat-show-tts-text" ${{ textContent: 'ttsText' }}></span>
+    <span class="chat-show-tts-viewport" ref="ttsViewport" tabindex="0">
+      <span class="chat-show-tts-text" ${{ textContent: 'ttsText' }}></span>
+    </span>
   </div>
   <div class="chat-show-video-controls" aria-label="Video controls" itemize="videoControls" item-tag="chat-show-video-control-item" ${{ onclick: 'onVideoControl', '@hidden': '!hasVideoControls' }}>
     <template>

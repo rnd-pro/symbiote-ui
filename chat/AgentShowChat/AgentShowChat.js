@@ -20,6 +20,7 @@ export class AgentShowChat extends Symbiote {
 
   connectedCallback() {
     super.connectedCallback?.();
+    this._mountPlayerRegion();
     if (this._eventsBound) return;
     this._eventsBound = true;
     this.addEventListener('chat-workspace-submit', this._onSubmit);
@@ -89,6 +90,12 @@ export class AgentShowChat extends Symbiote {
     return this.ref.workspace || this.querySelector('chat-workspace');
   }
 
+  _mountPlayerRegion() {
+    let region = this.ref.playerRegion;
+    let composer = this.getWorkspace()?.getComposer?.();
+    if (region && composer && region.nextElementSibling !== composer) composer.before(region);
+  }
+
   setAgentProvider(provider) {
     this._conversation.setProvider(assertAgentShowProvider(provider));
     return this;
@@ -107,6 +114,7 @@ export class AgentShowChat extends Symbiote {
     player.bind(config);
     this._shows.set(normalizedKey, { player, config });
     this._activeShowKey = normalizedKey;
+    this._mountPlayerRegion();
     this._syncPlayerRegion();
     return player;
   }

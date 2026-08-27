@@ -172,6 +172,10 @@ test('chat-show-player reflects injected timeline/controller state and autoplays
   assert.equal(player.querySelector('.chat-show-row[current]')?.dataset.index, '1');
   assert.equal(player.querySelector('.chat-show-caption-text').textContent, 'Second recognized caption');
 
+  let followedWords = [];
+  window.HTMLElement.prototype.scrollIntoView = function scrollIntoView(options) {
+    followedWords.push({ text: this.textContent, options });
+  };
   player.setState({
     index: 1,
     caption: {
@@ -182,10 +186,23 @@ test('chat-show-player reflects injected timeline/controller state and autoplays
     },
     tts: { label: 'Speech', text: 'Aligned speech block', status: 'playing' },
   });
+  await settle();
   assert.equal(player.querySelectorAll('.chat-show-caption-word').length, 3);
   assert.equal(player.querySelector('.chat-show-caption-word[active]').textContent, 'recognized');
   assert.equal(player.querySelector('.chat-show-tts-text').textContent, 'Aligned speech block');
   assert.equal(player.querySelector('.chat-show-tts').dataset.status, 'playing');
+  assert.equal(player.querySelector('.chat-show-caption-viewport').getAttribute('tabindex'), '0');
+  assert.equal(player.querySelector('.chat-show-tts-viewport').getAttribute('tabindex'), '0');
+  assert.deepEqual(followedWords, [{
+    text: 'recognized',
+    options: { block: 'nearest', inline: 'nearest', behavior: 'smooth' },
+  }]);
+  delete window.HTMLElement.prototype.scrollIntoView;
+
+  let playerStyles = (await import('../chat/ChatShowPlayer/ChatShowPlayer.css.js')).default;
+  assert.match(playerStyles, /block-size:\s*calc\(3lh \+ var\(--sn-space-xs\)\)/);
+  assert.match(playerStyles, /font-size:\s*var\(--sn-chat-show-font-size, var\(--sn-frame-font-size\)\)/);
+  assert.match(playerStyles, /--sn-chat-show-header-control-size, var\(--sn-button-icon-size\)/);
 
   let videoReceipts = [];
   player.addEventListener('chat-show-video-control', (event) => videoReceipts.push(event.detail));
@@ -199,6 +216,13 @@ test('chat-show-player reflects injected timeline/controller state and autoplays
   player.querySelector('[data-control="next"]').click();
   player.querySelector('.chat-show-row[data-index="1"]').click();
   assert.deepEqual(calls, ['play', 'next', 'preview:1']);
+});
+
+test('mixed system status and action parts stack at narrow chat widths', async () => {
+  let messageStyles = (await import('../chat/ChatMessageItem/ChatMessageItem.css.js')).default;
+  assert.match(messageStyles, /\.message\.system:has\(\.status-board, \.action-card, \.actions-card\)/);
+  assert.match(messageStyles, /flex-direction: column/);
+  assert.match(messageStyles, /\.message\.system \.status-card[\s\S]*max-inline-size: none/);
 });
 
 test('agent-dock-shell owns one standard split layout, collapse/drawer state, and preserves one chat composition', async () => {
@@ -236,6 +260,7 @@ test('agent-dock-shell owns one standard split layout, collapse/drawer state, an
   assert.equal(shell.getChat(), chat);
   let dockPlayer = shell.querySelector('.agent-show-player-region > chat-show-player');
   assert.ok(dockPlayer);
+  assert.equal(dockPlayer.parentElement.nextElementSibling, chat.getWorkspace().getComposer(), 'player is mounted directly above the composer');
   assert.equal(shell.querySelector('[data-embed-key="dock-show"] chat-show-player'), null, 'the live player stays outside transcript scrolling');
 
   let changes = [];
@@ -421,11 +446,8 @@ test('agent-show-chat owns normal submit/history and preserves one fixed live pl
 
   let firstPlayer = chat.querySelector('.agent-show-player-region > chat-show-player');
   assert.ok(firstPlayer, 'show player is mounted in the fixed player region');
-  assert.equal(
-    chat.getWorkspace().nextElementSibling,
-    chat.ref.playerRegion,
-    'the sole live player is pinned below the independently scrolling workspace',
-  );
+  assert.equal(chat.ref.playerRegion.nextElementSibling, composer, 'the sole live player is pinned above the composer');
+  assert.equal(chat.ref.playerRegion.previousElementSibling, chat.getWorkspace().getTranscript(), 'the transcript remains the scrolling region above the player');
   assert.equal(chat.querySelector('[data-embed-key="short"] chat-show-player'), null, 'transcript retains only the embed receipt');
   assert.equal(playCount, 1, 'short narration progresses autonomously');
   assert.equal(requests[0].type, 'message');

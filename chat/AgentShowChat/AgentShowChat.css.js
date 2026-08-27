@@ -1,8 +1,7 @@
 export default /*css*/ `
 agent-show-chat {
   box-sizing: border-box;
-  display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
+  display: block;
   block-size: 100%;
   min-block-size: 0;
   overflow: hidden;
@@ -10,16 +9,18 @@ agent-show-chat {
   background: var(--sn-panel-bg, var(--sn-sys-surface));
 
   > chat-workspace {
-    block-size: auto !important;
-    height: auto !important;
+    block-size: 100% !important;
+    height: 100% !important;
     min-block-size: 0;
     overflow: hidden;
   }
 
-  > .agent-show-player-region {
+  .agent-show-player-region {
     position: relative;
     z-index: var(--sn-agent-show-player-z, 2);
     box-sizing: border-box;
+    flex: 0 0 auto;
+    inline-size: 100%;
     min-inline-size: 0;
     max-block-size: var(--sn-agent-show-player-max-block-size, min(360px, 44dvh));
     overflow: hidden;

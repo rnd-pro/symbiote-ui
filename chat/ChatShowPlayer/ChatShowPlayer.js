@@ -287,6 +287,10 @@ export class ChatShowPlayer extends Symbiote {
       spoken: wordIndex < activeWordIndex,
     }));
     this.$.hasCaptionWords = words.length > 0;
+    if (activeWordIndex >= 0) queueMicrotask(() => {
+      this.ref.captionViewport?.querySelector?.('.chat-show-caption-word[active]')
+        ?.scrollIntoView?.({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+    });
     let tts = this._state?.tts && typeof this._state.tts === 'object' ? this._state.tts : {};
     this.$.ttsLabel = String(tts.label || '');
     this.$.ttsText = String(tts.text || '');

@@ -42,6 +42,13 @@ chat-message-item {
   color: var(--sn-sys-on-surface-dim);
 }
 
+.message.system:has(.status-board, .action-card, .actions-card) {
+  align-self: stretch;
+  flex-direction: column;
+  inline-size: 100%;
+  max-inline-size: 100%;
+}
+
 .message.system .msg-content {
   display: flex;
   align-items: center;
@@ -624,6 +631,10 @@ h4.md-h {
   overflow: hidden;
 }
 
+.message.system .status-card {
+  max-inline-size: none;
+}
+
 .status-card::before {
   content: '';
   position: absolute;
@@ -834,6 +845,14 @@ h4.md-h {
   flex-direction: column;
   gap: var(--sn-step-4);
   width: 100%;
+}
+
+.message.system .action-card {
+  margin-block-start: 0;
+}
+
+.message.system .actions-card {
+  margin-block-start: 0;
 }
 .approval-header,
 .action-header {
