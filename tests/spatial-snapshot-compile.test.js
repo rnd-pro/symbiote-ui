@@ -22,6 +22,7 @@ test('resolveSpatialSnapshotScale derives meters per CSS pixel from the viewport
   let scale = resolveSpatialSnapshotScale(snapshot, { planeWidth: 1.28 });
   assert.equal(scale, 0.001);
   assert.equal(SPATIAL_SNAPSHOT_COMPILE_DEFAULTS.planeWidth, 1.9);
+  assert.equal(SPATIAL_SNAPSHOT_COMPILE_DEFAULTS.panelGrouping, 'leaf');
 });
 
 test('compileSpatialSnapshot emits a native-panel-layout-v1 scene', () => {
@@ -92,6 +93,27 @@ test('compileSpatialSnapshot keeps text, resolved styles, and action provenance'
   assert.equal(save.kind, 'control');
   assert.equal(save.text, 'Save');
   assert.equal(save.style.background, 'rgb(76, 139, 245)');
+});
+
+test('compileSpatialSnapshot preserves per-token source colors above the base editor text', () => {
+  let snapshot = createReferenceSnapshot();
+  snapshot.nodes = [...snapshot.nodes, {
+    id: 'panel:source/editor/token:keyword',
+    parentId: 'panel:source/editor',
+    component: 'source-viewer',
+    part: 'token',
+    rect: { x: 326, y: 34, width: 36, height: 16 },
+    style: { color: 'rgb(255, 120, 160)', 'font-family': 'monospace', 'font-size': '12px' },
+    text: 'const',
+  }];
+  let compiled = compileSpatialSnapshot(snapshot, { planeWidth: 1.28 });
+  let primitives = primitivesOf(compiled, 'panel:source');
+  let editor = primitives.find((primitive) => primitive.spatialNodeId === 'panel:source/editor');
+  let token = primitives.find((primitive) => primitive.spatialNodeId === 'panel:source/editor/token:keyword');
+  assert.equal(token.kind, 'label');
+  assert.equal(token.style.color, 'rgb(255, 120, 160)');
+  assert.equal(token.exactTextBounds, true);
+  assert.ok(token.z > editor.z, 'a syntax token renders above the base editor glyphs');
 });
 
 test('compileSpatialSnapshot wires measured window headers into the native drag-panel contract', () => {
@@ -237,6 +259,19 @@ test('compileSpatialSnapshot keeps nested window content out of the ancestor win
   assert.deepEqual(leaked, [], 'nested window content must not duplicate into the outer window');
 });
 
+test('compileSpatialSnapshot root grouping keeps an entire captured layout in one spatial panel', () => {
+  let snapshot = createReferenceSnapshot();
+  let compiled = compileSpatialSnapshot(snapshot, { planeWidth: 1.28, panelGrouping: 'root' });
+  assert.equal(compiled.counts.windows, 1);
+  assert.equal(compiled.counts.layoutControls, 0);
+  assert.equal(compiled.counts.panels, 1);
+  let [root] = compiled.panels;
+  assert.equal(root.id, 'panel:layout');
+  assert.ok(root.primitives.some((primitive) => primitive.spatialNodeId === 'panel:source/editor'));
+  assert.ok(root.primitives.some((primitive) => primitive.spatialNodeId === 'panel:source/control:save'));
+  assert.ok(root.primitives.some((primitive) => primitive.spatialNodeId === 'split:main/resizer:0'));
+});
+
 test('compileSpatialSnapshot rejects unknown parts with supported options', () => {
   let snapshot = createReferenceSnapshot();
   snapshot.nodes[2] = { ...snapshot.nodes[2], part: 'carousel' };
@@ -253,6 +288,10 @@ test('compileSpatialSnapshot rejects invalid snapshots and invalid plane width',
   assert.throws(
     () => compileSpatialSnapshot(createReferenceSnapshot(), { planeWidth: 0 }),
     /positive finite/,
+  );
+  assert.throws(
+    () => compileSpatialSnapshot(createReferenceSnapshot(), { panelGrouping: 'every-node' }),
+    /panelGrouping to be "leaf" or "root"/,
   );
 });
 
@@ -331,6 +370,44 @@ function chromeNode(overrides) {
   };
 }
 
+test('compileSpatialSnapshot marks genuinely multi-line measured text for native wrapping', () => {
+  let compiled = compileSpatialSnapshot(createChromeSnapshot([
+    chromeNode({
+      id: 'panel:project/text:summary',
+      part: 'text',
+      rect: { x: 8, y: 40, width: 220, height: 96 },
+      style: { 'font-size': '14px', 'line-height': '20px', 'white-space': 'normal' },
+      text: 'A measured summary with enough height for several natural lines.',
+    }),
+    chromeNode({
+      id: 'panel:project/text:single-line',
+      part: 'text',
+      rect: { x: 8, y: 148, width: 220, height: 28 },
+      style: { 'font-size': '14px', 'line-height': '20px', 'white-space': 'normal' },
+      text: 'Single-line action label',
+    }),
+  ]), { planeWidth: 1.28 });
+  let primitives = primitivesOf(compiled, 'panel:project');
+  assert.equal(primitives.find((item) => item.spatialNodeId === 'panel:project/text:summary').multiline, true);
+  assert.equal(primitives.find((item) => item.spatialNodeId === 'panel:project/text:single-line').multiline, undefined);
+});
+
+test('compileSpatialSnapshot preserves exact browser line geometry for the native rasterizer', () => {
+  let compiled = compileSpatialSnapshot(createChromeSnapshot([
+    chromeNode({
+      id: 'panel:project/text:line',
+      part: 'text',
+      rect: { x: 8, y: 40, width: 96, height: 20 },
+      style: { 'font-size': '14px', 'line-height': '20px' },
+      text: 'Measured line',
+      exactTextBounds: true,
+    }),
+  ]), { planeWidth: 1.28 });
+  let primitive = primitivesOf(compiled, 'panel:project')
+    .find((item) => item.spatialNodeId === 'panel:project/text:line');
+  assert.equal(primitive.exactTextBounds, true);
+});
+
 test('compileSpatialSnapshot compiles a chromeless control as a transparent hit, not a button', () => {
   let compiled = compileSpatialSnapshot(createChromeSnapshot([
     chromeNode({
@@ -381,6 +458,46 @@ test('compileSpatialSnapshot keeps controls with background or border chrome as 
     .find((primitive) => primitive.spatialNodeId === 'panel:project/control:collapse-all' && primitive.kind === 'control');
   assert.equal(bordered.control, 'button', 'uniform border chrome stays a visible button');
   assert.deepEqual(bordered.style.border, { width: 0.001, color: 'rgb(60, 60, 60)' });
+});
+
+test('compileSpatialSnapshot preserves solid one-side border evidence', () => {
+  let compiled = compileSpatialSnapshot(createChromeSnapshot([
+    chromeNode({
+      id: 'panel:project/surface:divider',
+      part: 'surface',
+      style: {
+        'border-bottom-width': '1px',
+        'border-bottom-style': 'solid',
+        'border-bottom-color': 'rgb(60, 60, 60)',
+      },
+    }),
+  ]), { planeWidth: 1.28 });
+  let divider = primitivesOf(compiled, 'panel:project')
+    .find((primitive) => primitive.spatialNodeId === 'panel:project/surface:divider');
+  assert.deepEqual(divider.style.borderEdges, [
+    { side: 'bottom', width: 0.001, color: 'rgb(60, 60, 60)' },
+  ]);
+});
+
+test('compileSpatialSnapshot keeps a backdrop behind panel chrome', () => {
+  let compiled = compileSpatialSnapshot(createChromeSnapshot([
+    chromeNode({
+      id: 'panel:project/header',
+      part: 'header',
+      style: { 'background-color': 'rgb(45, 45, 45)' },
+    }),
+    chromeNode({
+      id: 'panel:project/backdrop',
+      part: 'backdrop',
+      rect: { x: 0, y: 0, width: 320, height: 800 },
+      style: { 'background-color': 'rgb(26, 26, 26)' },
+    }),
+  ]), { planeWidth: 1.28 });
+  let primitives = primitivesOf(compiled, 'panel:project');
+  let backdrop = primitives.find((primitive) => primitive.spatialNodeId === 'panel:project/backdrop');
+  let header = primitives.find((primitive) => primitive.spatialNodeId === 'panel:project/header');
+  assert.equal(backdrop.layer, 'surface');
+  assert.ok(backdrop.z < header.z, 'backdrop must not cover panel chrome');
 });
 
 test('compileSpatialSnapshot treats zero-alpha borders as chromeless controls', () => {

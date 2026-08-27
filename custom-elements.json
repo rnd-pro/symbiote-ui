@@ -2818,7 +2818,7 @@
           "name": "NodeCanvas",
           "tagName": "node-canvas",
           "description": "Primary graph canvas custom element.",
-          "componentDescription": "Primary graph canvas custom element. Use this interactive visual graph surface when composing canvas UI. Capabilities: node-editor-canvas, connections, frames, subgraphs, viewport, selection, multi-node-focus, graph-layout, layout-lifecycle. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: node_canvas_set_editor_model, node_canvas_set_path_style, node_canvas_set_flow_layout, node_canvas_apply_layout, node_canvas_focus_nodes.",
+          "componentDescription": "Primary graph canvas custom element. Use this interactive visual graph surface when composing canvas UI. Capabilities: node-editor-canvas, connections, frames, subgraphs, viewport, selection, multi-node-focus, graph-layout, layout-lifecycle, pcb-route-snapshot-adoption. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: node_canvas_set_editor_model, node_canvas_set_path_style, node_canvas_set_flow_layout, node_canvas_apply_layout, node_canvas_focus_nodes.",
           "attributes": [
             {
               "name": "connection-engine",
@@ -2977,6 +2977,26 @@
               "kind": "method",
               "name": "getPositions",
               "description": "Returns node positions."
+            },
+            {
+              "kind": "method",
+              "name": "capturePcbRouteSnapshot",
+              "description": "Captures settled full PCB paths, sampled points, node rectangles, and route signatures as a serializable build artifact."
+            },
+            {
+              "kind": "method",
+              "name": "adoptPcbRouteSnapshot",
+              "description": "Validates and adopts cached full PCB paths into the existing live SVG DOM; mismatches preserve the selected PCB lifecycle for live rerouting."
+            },
+            {
+              "kind": "method",
+              "name": "invalidatePcbRouteSnapshot",
+              "description": "Clears adopted snapshot state and its receipt while preserving the selected PCB path style and live reroute lifecycle."
+            },
+            {
+              "kind": "method",
+              "name": "getPcbRouteSnapshotReceipt",
+              "description": "Returns the latest serializable PCB route snapshot adoption or invalidation receipt."
             }
           ],
           "events": [
@@ -3048,6 +3068,11 @@
               "name": "sn-redo",
               "description": "Emits redo intent.",
               "detail": []
+            },
+            {
+              "name": "node-canvas-render-snapshot-receipt",
+              "description": "Emits a serializable cached-PCB adoption, mismatch, or invalidation receipt.",
+              "detail": "node-canvas-render-snapshot-receipt-v1"
             }
           ],
           "slots": [],
@@ -3102,7 +3127,9 @@
               "viewport",
               "selection",
               "multi-node-focus",
-              "graph-layout"
+              "graph-layout",
+              "layout-lifecycle",
+              "pcb-route-snapshot-adoption"
             ],
             "attributes": [
               {
@@ -3230,6 +3257,16 @@
                 "description": "Agent-facing alias for focusing one or more nodes in the viewport."
               },
               {
+                "name": "suspendLayout",
+                "type": "function",
+                "description": "Pauses transient viewport work while preserving host-owned editor and DOM state for hidden layout groups."
+              },
+              {
+                "name": "resumeLayout",
+                "type": "function",
+                "description": "Resumes viewport sync after a hidden layout group becomes active again."
+              },
+              {
                 "name": "setNodePosition",
                 "type": "function",
                 "description": "Positions one node in canvas coordinates."
@@ -3238,6 +3275,26 @@
                 "name": "getPositions",
                 "type": "function",
                 "description": "Returns node positions."
+              },
+              {
+                "name": "capturePcbRouteSnapshot",
+                "type": "function",
+                "description": "Captures settled full PCB paths, sampled points, node rectangles, and route signatures as a serializable build artifact."
+              },
+              {
+                "name": "adoptPcbRouteSnapshot",
+                "type": "function",
+                "description": "Validates and adopts cached full PCB paths into the existing live SVG DOM; mismatches preserve the selected PCB lifecycle for live rerouting."
+              },
+              {
+                "name": "invalidatePcbRouteSnapshot",
+                "type": "function",
+                "description": "Clears adopted snapshot state and its receipt while preserving the selected PCB path style and live reroute lifecycle."
+              },
+              {
+                "name": "getPcbRouteSnapshotReceipt",
+                "type": "function",
+                "description": "Returns the latest serializable PCB route snapshot adoption or invalidation receipt."
               }
             ],
             "events": [
@@ -3296,6 +3353,11 @@
               {
                 "name": "sn-redo",
                 "description": "Emits redo intent."
+              },
+              {
+                "name": "node-canvas-render-snapshot-receipt",
+                "description": "Emits a serializable cached-PCB adoption, mismatch, or invalidation receipt.",
+                "detail": "node-canvas-render-snapshot-receipt-v1"
               }
             ],
             "slots": [],
@@ -3681,7 +3743,7 @@
             }
           },
           "agent": {
-            "componentDescription": "Primary graph canvas custom element. Use this interactive visual graph surface when composing canvas UI. Capabilities: node-editor-canvas, connections, frames, subgraphs, viewport, selection, multi-node-focus, graph-layout, layout-lifecycle. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: node_canvas_set_editor_model, node_canvas_set_path_style, node_canvas_set_flow_layout, node_canvas_apply_layout, node_canvas_focus_nodes.",
+            "componentDescription": "Primary graph canvas custom element. Use this interactive visual graph surface when composing canvas UI. Capabilities: node-editor-canvas, connections, frames, subgraphs, viewport, selection, multi-node-focus, graph-layout, layout-lifecycle, pcb-route-snapshot-adoption. Data ownership: host-owned model; component renders and emits intent events. WebMCP tools: node_canvas_set_editor_model, node_canvas_set_path_style, node_canvas_set_flow_layout, node_canvas_apply_layout, node_canvas_focus_nodes.",
             "semanticRole": "interactive visual graph surface",
             "usage": "Render or compose <node-canvas> when the host needs primary graph canvas custom element.",
             "dataOwnership": "host-owned model; component renders and emits intent events",
@@ -3715,13 +3777,20 @@
                 "viewport",
                 "selection",
                 "multi-node-focus",
-                "graph-layout"
+                "graph-layout",
+                "layout-lifecycle",
+                "pcb-route-snapshot-adoption"
               ],
               "attributes": [
                 {
                   "name": "connection-engine",
                   "type": "string",
                   "description": "Connection renderer engine selection."
+                },
+                {
+                  "name": "presentation",
+                  "type": "boolean",
+                  "description": "Enables presentation mode for the canvas when present."
                 }
               ],
               "properties": [
@@ -3739,6 +3808,11 @@
                   "name": "panY",
                   "type": "number",
                   "description": "Current vertical pan."
+                },
+                {
+                  "name": "presentation",
+                  "type": "boolean",
+                  "description": "Enables presentation mode for the canvas when true."
                 }
               ],
               "methods": [
@@ -3781,6 +3855,11 @@
                   "name": "setViewportLocked",
                   "type": "function",
                   "description": "Locks pan and zoom while preserving rendering."
+                },
+                {
+                  "name": "setPresentationMode",
+                  "type": "function",
+                  "description": "Enables or disables presentation mode (readonly, no chrome, no panels, locked viewport)."
                 },
                 {
                   "name": "setCompactMode",
@@ -3828,6 +3907,16 @@
                   "description": "Agent-facing alias for focusing one or more nodes in the viewport."
                 },
                 {
+                  "name": "suspendLayout",
+                  "type": "function",
+                  "description": "Pauses transient viewport work while preserving host-owned editor and DOM state for hidden layout groups."
+                },
+                {
+                  "name": "resumeLayout",
+                  "type": "function",
+                  "description": "Resumes viewport sync after a hidden layout group becomes active again."
+                },
+                {
                   "name": "setNodePosition",
                   "type": "function",
                   "description": "Positions one node in canvas coordinates."
@@ -3836,6 +3925,26 @@
                   "name": "getPositions",
                   "type": "function",
                   "description": "Returns node positions."
+                },
+                {
+                  "name": "capturePcbRouteSnapshot",
+                  "type": "function",
+                  "description": "Captures settled full PCB paths, sampled points, node rectangles, and route signatures as a serializable build artifact."
+                },
+                {
+                  "name": "adoptPcbRouteSnapshot",
+                  "type": "function",
+                  "description": "Validates and adopts cached full PCB paths into the existing live SVG DOM; mismatches preserve the selected PCB lifecycle for live rerouting."
+                },
+                {
+                  "name": "invalidatePcbRouteSnapshot",
+                  "type": "function",
+                  "description": "Clears adopted snapshot state and its receipt while preserving the selected PCB path style and live reroute lifecycle."
+                },
+                {
+                  "name": "getPcbRouteSnapshotReceipt",
+                  "type": "function",
+                  "description": "Returns the latest serializable PCB route snapshot adoption or invalidation receipt."
                 }
               ],
               "events": [
@@ -3894,6 +4003,11 @@
                 {
                   "name": "sn-redo",
                   "description": "Emits redo intent."
+                },
+                {
+                  "name": "node-canvas-render-snapshot-receipt",
+                  "description": "Emits a serializable cached-PCB adoption, mismatch, or invalidation receipt.",
+                  "detail": "node-canvas-render-snapshot-receipt-v1"
                 }
               ],
               "slots": [],
@@ -7783,8 +7897,8 @@
           "customElement": true,
           "name": "ChatMessageItem",
           "tagName": "chat-message-item",
-          "description": "Generic chat message renderer for text, tool, board, and thinking messages.",
-          "componentDescription": "Generic chat message renderer for text, tool, board, and thinking messages. Use this chat and conversation surface when composing chat UI. Capabilities: chat-message-render, markdown-text, tool-card, status-board, thinking-state, copy-action. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "description": "Generic chat message renderer for text, tools, status, contextual actions, footnotes, boards, and thinking messages.",
+          "componentDescription": "Generic chat message renderer for text, tools, status, contextual actions, footnotes, boards, and thinking messages. Use this chat and conversation surface when composing chat UI. Capabilities: chat-message-render, markdown-text, tool-card, status-board, contextual-actions, footnote-part, thinking-state, copy-action. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
           "attributes": [],
           "members": [
             {
@@ -7906,9 +8020,23 @@
                 "text": "array"
               },
               "description": "Status card descriptors rendered inside board messages."
+            },
+            {
+              "kind": "field",
+              "name": "parts",
+              "type": {
+                "text": "array"
+              },
+              "description": "Normalized message parts, including status, actions, embed, and footnote parts."
             }
           ],
-          "events": [],
+          "events": [
+            {
+              "name": "chat-message-action",
+              "description": "Requests one host-owned contextual action.",
+              "detail": "{ id: string, actionId: string, payload: unknown }"
+            }
+          ],
           "slots": [],
           "cssProperties": [
             {
@@ -8018,6 +8146,8 @@
               "markdown-text",
               "tool-card",
               "status-board",
+              "contextual-actions",
+              "footnote-part",
               "thinking-state",
               "copy-action"
             ],
@@ -8097,10 +8227,21 @@
                 "name": "cardItems",
                 "type": "array",
                 "description": "Status card descriptors rendered inside board messages."
+              },
+              {
+                "name": "parts",
+                "type": "array",
+                "description": "Normalized message parts, including status, actions, embed, and footnote parts."
               }
             ],
             "methods": [],
-            "events": [],
+            "events": [
+              {
+                "name": "chat-message-action",
+                "description": "Requests one host-owned contextual action.",
+                "detail": "{ id: string, actionId: string, payload: unknown }"
+              }
+            ],
             "slots": [],
             "themeAliases": [
               "--sn-sys-surface",
@@ -8146,9 +8287,9 @@
             }
           },
           "agent": {
-            "componentDescription": "Generic chat message renderer for text, tool, board, and thinking messages. Use this chat and conversation surface when composing chat UI. Capabilities: chat-message-render, markdown-text, tool-card, status-board, thinking-state, copy-action. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "componentDescription": "Generic chat message renderer for text, tools, status, contextual actions, footnotes, boards, and thinking messages. Use this chat and conversation surface when composing chat UI. Capabilities: chat-message-render, markdown-text, tool-card, status-board, contextual-actions, footnote-part, thinking-state, copy-action. Data ownership: host-owned props and attributes; component owns presentation state. WebMCP tools are not enabled unless an explicit descriptor is declared.",
             "semanticRole": "chat and conversation surface",
-            "usage": "Render or compose <chat-message-item> when the host needs generic chat message renderer for text, tool, board, and thinking messages.",
+            "usage": "Render or compose <chat-message-item> when the host needs generic chat message renderer for text, tools, status, contextual actions, footnotes, boards, and thinking messages.",
             "dataOwnership": "host-owned props and attributes; component owns presentation state",
             "webmcp": {
               "mode": "described-only",
@@ -8170,6 +8311,8 @@
                 "markdown-text",
                 "tool-card",
                 "status-board",
+                "contextual-actions",
+                "footnote-part",
                 "thinking-state",
                 "copy-action"
               ],
@@ -8249,10 +8392,21 @@
                   "name": "cardItems",
                   "type": "array",
                   "description": "Status card descriptors rendered inside board messages."
+                },
+                {
+                  "name": "parts",
+                  "type": "array",
+                  "description": "Normalized message parts, including status, actions, embed, and footnote parts."
                 }
               ],
               "methods": [],
-              "events": [],
+              "events": [
+                {
+                  "name": "chat-message-action",
+                  "description": "Requests one host-owned contextual action.",
+                  "detail": "{ id: string, actionId: string, payload: unknown }"
+                }
+              ],
               "slots": [],
               "themeAliases": [
                 "--sn-sys-surface",
@@ -10916,6 +11070,1182 @@
       ]
     },
     {
+      "path": "chat/ChatShowPlayer/ChatShowPlayer.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "customElement": true,
+          "name": "ChatShowPlayer",
+          "tagName": "chat-show-player",
+          "description": "Fixed Show/media player for an agent-chat composition, driven by injected controller, timeline, state, and neutral video hooks.",
+          "componentDescription": "Fixed Show/media player for an agent-chat composition, driven by injected controller, timeline, state, and neutral video hooks. Use this fixed narrated Show player above an independently scrolling agent transcript when composing chat UI. Capabilities: fixed-show-player-region, transcript-embed-receipt, material-header-and-actions, bounded-two-row-timeline, timeline-current-row, optional-karaoke-caption-strip, player-owned-tts-block, detail-video-controls, pointer-only-short-controls, material-transport-controls, controller-injection, autoplay-after-connect. Data ownership: host owns controller, timeline, narration, media, scenario content, and persistence; component owns only visible player projection and control intents. WebMCP tools: chat_show_player_control.",
+          "attributes": [],
+          "members": [
+            {
+              "kind": "field",
+              "name": "controller",
+              "type": {
+                "text": "object"
+              },
+              "description": "Injected Show controller with play/pause/toggle/prev/next/stop/preview or seek methods and readable state."
+            },
+            {
+              "kind": "field",
+              "name": "timeline",
+              "type": {
+                "text": "object"
+              },
+              "description": "Product-owned timeline whose turns provide product-neutral speaker/persona and caption/text fields."
+            },
+            {
+              "kind": "field",
+              "name": "state",
+              "type": {
+                "text": "object"
+              },
+              "description": "Injected visible index, playback, caption, and optional TTS projection."
+            },
+            {
+              "kind": "field",
+              "name": "videoController",
+              "type": { "text": "object" },
+              "description": "Optional product-owned controller for declared detail video actions."
+            },
+            {
+              "kind": "field",
+              "name": "videoControls",
+              "type": { "text": "array" },
+              "description": "Neutral video controls with detail or pointer-only semantics."
+            },
+            {
+              "kind": "field",
+              "name": "autoplay",
+              "type": {
+                "text": "boolean"
+              },
+              "description": "Starts controller.play() once after the fixed player connects."
+            },
+            {
+              "kind": "method",
+              "name": "bind",
+              "description": "Binds controller, timeline, visible state, title, and autoplay policy without taking ownership of them."
+            },
+            {
+              "kind": "method",
+              "name": "setState",
+              "description": "Updates injected visible player state."
+            },
+            {
+              "kind": "method",
+              "name": "control",
+              "description": "Routes one product-neutral transport or preview action to the injected controller."
+            },
+            {
+              "kind": "method",
+              "name": "controlVideo",
+              "description": "Routes a detail video action or emits a non-activating pointer-only receipt."
+            }
+          ],
+          "events": [
+            {
+              "name": "chat-show-control",
+              "description": "Reports a transport or timeline-row action routed to the injected controller.",
+              "detail": [
+                {
+                  "name": "action",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "index",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "chat-show-video-request",
+              "description": "Cancelable request for one host-owned detail video action.",
+              "detail": []
+            },
+            {
+              "name": "chat-show-video-control",
+              "description": "Reports the outcome of a detail or pointer-only video control intent.",
+              "detail": []
+            },
+            {
+              "name": "chat-show-settings-request",
+              "description": "Requests a host-owned settings or menu surface.",
+              "detail": []
+            },
+            {
+              "name": "chat-show-close-request",
+              "description": "Requests removal of the embedded player while preserving host controller ownership.",
+              "detail": []
+            }
+          ],
+          "slots": [
+            {
+              "name": "actions",
+              "description": "Optional host-owned header actions."
+            }
+          ],
+          "cssProperties": [
+            {
+              "name": "--sn-panel-bg",
+              "description": "Theme CSS custom property consumed by chat-show-player."
+            },
+            {
+              "name": "--sn-node-bg",
+              "description": "Theme CSS custom property consumed by chat-show-player."
+            },
+            {
+              "name": "--sn-node-border",
+              "description": "Theme CSS custom property consumed by chat-show-player."
+            },
+            {
+              "name": "--sn-node-border-width",
+              "description": "Theme CSS custom property consumed by chat-show-player."
+            },
+            {
+              "name": "--sn-node-selected",
+              "description": "Theme CSS custom property consumed by chat-show-player."
+            },
+            {
+              "name": "--sn-node-hover",
+              "description": "Theme CSS custom property consumed by chat-show-player."
+            },
+            {
+              "name": "--sn-text",
+              "description": "Theme CSS custom property consumed by chat-show-player."
+            },
+            {
+              "name": "--sn-text-dim",
+              "description": "Theme CSS custom property consumed by chat-show-player."
+            },
+            {
+              "name": "--sn-space-xs",
+              "description": "Theme CSS custom property consumed by chat-show-player."
+            },
+            {
+              "name": "--sn-space-sm",
+              "description": "Theme CSS custom property consumed by chat-show-player."
+            },
+            {
+              "name": "--sn-space-md",
+              "description": "Theme CSS custom property consumed by chat-show-player."
+            },
+            {
+              "name": "--sn-space-xl",
+              "description": "Theme CSS custom property consumed by chat-show-player."
+            },
+            {
+              "name": "--sn-node-radius",
+              "description": "Theme CSS custom property consumed by chat-show-player."
+            },
+            {
+              "name": "--sn-button-font-weight",
+              "description": "Theme CSS custom property consumed by chat-show-player."
+            }
+          ],
+          "contract": {
+            "capabilities": [
+              "fixed-show-player-region",
+              "transcript-embed-receipt",
+              "material-header-and-actions",
+              "bounded-two-row-timeline",
+              "timeline-current-row",
+              "optional-karaoke-caption-strip",
+              "player-owned-tts-block",
+              "detail-video-controls",
+              "pointer-only-short-controls",
+              "material-transport-controls",
+              "controller-injection",
+              "autoplay-after-connect"
+            ],
+            "attributes": [],
+            "properties": [
+              {
+                "name": "controller",
+                "type": "object",
+                "description": "Injected Show controller with play/pause/toggle/prev/next/stop/preview or seek methods and readable state."
+              },
+              {
+                "name": "timeline",
+                "type": "object",
+                "description": "Product-owned timeline whose turns provide product-neutral speaker/persona and caption/text fields."
+              },
+              {
+                "name": "state",
+                "type": "object",
+                "description": "Injected visible index, playback, caption, and optional TTS projection."
+              },
+              {
+                "name": "videoController",
+                "type": "object",
+                "description": "Optional product-owned controller for declared detail video actions."
+              },
+              {
+                "name": "videoControls",
+                "type": "array",
+                "description": "Neutral video controls with detail or pointer-only semantics."
+              },
+              {
+                "name": "autoplay",
+                "type": "boolean",
+                "description": "Starts controller.play() once after the fixed player connects."
+              }
+            ],
+            "methods": [
+              {
+                "name": "bind",
+                "type": "function",
+                "description": "Binds controller, timeline, visible state, title, and autoplay policy without taking ownership of them."
+              },
+              {
+                "name": "setState",
+                "type": "function",
+                "description": "Updates injected visible player state."
+              },
+              {
+                "name": "control",
+                "type": "function",
+                "description": "Routes one product-neutral transport or preview action to the injected controller."
+              },
+              {
+                "name": "controlVideo",
+                "type": "function",
+                "description": "Routes a detail video action or emits a non-activating pointer-only receipt."
+              }
+            ],
+            "events": [
+              {
+                "name": "chat-show-control",
+                "description": "Reports a transport or timeline-row action routed to the injected controller.",
+                "detail": [
+                  {
+                    "name": "action",
+                    "type": "string"
+                  },
+                  {
+                    "name": "index",
+                    "type": "number"
+                  }
+                ]
+              },
+              {
+                "name": "chat-show-video-request",
+                "description": "Cancelable request for one host-owned detail video action."
+              },
+              {
+                "name": "chat-show-video-control",
+                "description": "Reports the outcome of a detail or pointer-only video control intent."
+              },
+              {
+                "name": "chat-show-settings-request",
+                "description": "Requests a host-owned settings or menu surface."
+              },
+              {
+                "name": "chat-show-close-request",
+                "description": "Requests removal of the embedded player while preserving host controller ownership."
+              }
+            ],
+            "slots": [
+              {
+                "name": "actions",
+                "description": "Optional host-owned header actions."
+              }
+            ],
+            "themeAliases": [
+              "--sn-panel-bg",
+              "--sn-node-bg",
+              "--sn-node-border",
+              "--sn-node-border-width",
+              "--sn-node-selected",
+              "--sn-node-hover",
+              "--sn-text",
+              "--sn-text-dim",
+              "--sn-space-xs",
+              "--sn-space-sm",
+              "--sn-space-md",
+              "--sn-space-xl",
+              "--sn-node-radius",
+              "--sn-button-font-weight"
+            ],
+            "status": "draft",
+            "schemaVersion": "component-descriptor-v2",
+            "dataSchema": "schemas/runtime-ui-v1.json",
+            "ssr": {
+              "mode": "hydrate-only",
+              "importSafe": false,
+              "jsdaRenderable": false,
+              "requiresDom": true,
+              "browserApis": [
+                "events",
+                "selection",
+                "focus"
+              ],
+              "notes": "May render shell markup under SSR, but interactive behavior belongs to browser hydration."
+            },
+            "webmcp": {
+              "documentation": "Agent-facing WebMCP documentation for stable component affordances only; host workflow policy remains outside symbiote-ui.",
+              "tools": [
+                {
+                  "name": "chat_show_player_control",
+                  "description": "Drive the injected product-neutral Show controller without taking ownership of the timeline, media, narration, or product content.",
+                  "inputSchema": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "action": {
+                        "enum": [
+                          "play",
+                          "pause",
+                          "toggle",
+                          "prev",
+                          "next",
+                          "stop",
+                          "preview",
+                          "seek"
+                        ]
+                      },
+                      "index": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    },
+                    "required": [
+                      "action"
+                    ]
+                  },
+                  "annotations": {
+                    "readOnlyHint": false,
+                    "destructiveHint": false,
+                    "runtimeMethod": "control",
+                    "intentEvent": "chat-show-control"
+                  },
+                  "exposedTo": [
+                    "agent",
+                    "assistant"
+                  ]
+                }
+              ]
+            }
+          },
+          "agent": {
+            "componentDescription": "Fixed Show/media player for an agent-chat composition, driven by injected controller, timeline, state, and neutral video hooks. Use this fixed narrated Show player above an independently scrolling agent transcript when composing chat UI. Capabilities: fixed-show-player-region, transcript-embed-receipt, material-header-and-actions, bounded-two-row-timeline, timeline-current-row, optional-karaoke-caption-strip, player-owned-tts-block, detail-video-controls, pointer-only-short-controls, material-transport-controls, controller-injection, autoplay-after-connect. Data ownership: host owns controller, timeline, narration, media, scenario content, and persistence; component owns only visible player projection and control intents. WebMCP tools: chat_show_player_control.",
+            "semanticRole": "fixed narrated Show player above an independently scrolling agent transcript",
+            "usage": "Bind a product-owned timeline and independent Show controller, then register it by the transcript embed receipt key. Autoplay is explicit and does not depend on contextual actions.",
+            "dataOwnership": "host owns controller, timeline, narration, media, scenario content, and persistence; component owns only visible player projection and control intents",
+            "webmcp": {
+              "mode": "explicit-descriptor",
+              "toolNames": [
+                "chat_show_player_control"
+              ],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          },
+          "metadata": {
+            "category": "chat",
+            "visibility": "public",
+            "specifier": "symbiote-ui/chat/show-chat",
+            "exportName": "ChatShowPlayer",
+            "importKind": "named",
+            "agent": {
+              "componentDescription": "Fixed Show/media player for an agent-chat composition, driven by injected controller, timeline, state, and neutral video hooks. Use this fixed narrated Show player above an independently scrolling agent transcript when composing chat UI. Capabilities: fixed-show-player-region, transcript-embed-receipt, material-header-and-actions, bounded-two-row-timeline, timeline-current-row, optional-karaoke-caption-strip, player-owned-tts-block, detail-video-controls, pointer-only-short-controls, material-transport-controls, controller-injection, autoplay-after-connect. Data ownership: host owns controller, timeline, narration, media, scenario content, and persistence; component owns only visible player projection and control intents. WebMCP tools: chat_show_player_control.",
+              "semanticRole": "fixed narrated Show player above an independently scrolling agent transcript",
+              "usage": "Bind a product-owned timeline and independent Show controller, then register it by the transcript embed receipt key. Autoplay is explicit and does not depend on contextual actions.",
+              "dataOwnership": "host owns controller, timeline, narration, media, scenario content, and persistence; component owns only visible player projection and control intents",
+              "webmcp": {
+                "mode": "explicit-descriptor",
+                "toolNames": [
+                  "chat_show_player_control"
+                ],
+                "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+                "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+                "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+                "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+                "references": [
+                  "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                  "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+                ]
+              }
+            },
+            "contract": {
+              "capabilities": [
+                "fixed-show-player-region",
+                "transcript-embed-receipt",
+                "material-header-and-actions",
+                "bounded-two-row-timeline",
+                "timeline-current-row",
+                "optional-karaoke-caption-strip",
+                "player-owned-tts-block",
+                "detail-video-controls",
+                "pointer-only-short-controls",
+                "material-transport-controls",
+                "controller-injection",
+                "autoplay-after-connect"
+              ],
+              "attributes": [],
+              "properties": [
+                {
+                  "name": "controller",
+                  "type": "object",
+                  "description": "Injected Show controller with play/pause/toggle/prev/next/stop/preview or seek methods and readable state."
+                },
+                {
+                  "name": "timeline",
+                  "type": "object",
+                  "description": "Product-owned timeline whose turns provide product-neutral speaker/persona and caption/text fields."
+                },
+                {
+                  "name": "state",
+                  "type": "object",
+                  "description": "Injected visible index, playback, caption, and optional TTS projection."
+                },
+                {
+                  "name": "autoplay",
+                  "type": "boolean",
+                  "description": "Starts controller.play() once after the fixed player connects."
+                }
+              ],
+              "methods": [
+                {
+                  "name": "bind",
+                  "type": "function",
+                  "description": "Binds controller, timeline, visible state, title, and autoplay policy without taking ownership of them."
+                },
+                {
+                  "name": "setState",
+                  "type": "function",
+                  "description": "Updates injected visible player state."
+                },
+                {
+                  "name": "control",
+                  "type": "function",
+                  "description": "Routes one product-neutral transport or preview action to the injected controller."
+                }
+              ],
+              "events": [
+                {
+                  "name": "chat-show-control",
+                  "description": "Reports a transport or timeline-row action routed to the injected controller.",
+                  "detail": [
+                    {
+                      "name": "action",
+                      "type": "string"
+                    },
+                    {
+                      "name": "index",
+                      "type": "number"
+                    }
+                  ]
+                },
+                {
+                  "name": "chat-show-settings-request",
+                  "description": "Requests a host-owned settings or menu surface."
+                },
+                {
+                  "name": "chat-show-close-request",
+                  "description": "Requests removal of the embedded player while preserving host controller ownership."
+                }
+              ],
+              "slots": [
+                {
+                  "name": "actions",
+                  "description": "Optional host-owned header actions."
+                }
+              ],
+              "themeAliases": [
+                "--sn-panel-bg",
+                "--sn-node-bg",
+                "--sn-node-border",
+                "--sn-node-border-width",
+                "--sn-node-selected",
+                "--sn-node-hover",
+                "--sn-text",
+                "--sn-text-dim",
+                "--sn-space-xs",
+                "--sn-space-sm",
+                "--sn-space-md",
+                "--sn-space-xl",
+                "--sn-node-radius",
+                "--sn-button-font-weight"
+              ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
+              "ssr": {
+                "mode": "hydrate-only",
+                "importSafe": false,
+                "jsdaRenderable": false,
+                "requiresDom": true,
+                "browserApis": [
+                  "events",
+                  "selection",
+                  "focus"
+                ],
+                "notes": "May render shell markup under SSR, but interactive behavior belongs to browser hydration."
+              },
+              "webmcp": {
+                "documentation": "Agent-facing WebMCP documentation for stable component affordances only; host workflow policy remains outside symbiote-ui.",
+                "tools": [
+                  {
+                    "name": "chat_show_player_control",
+                    "description": "Drive the injected product-neutral Show controller without taking ownership of the timeline, media, narration, or product content.",
+                    "inputSchema": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "action": {
+                          "enum": [
+                            "play",
+                            "pause",
+                            "toggle",
+                            "prev",
+                            "next",
+                            "stop",
+                            "preview",
+                            "seek"
+                          ]
+                        },
+                        "index": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ]
+                    },
+                    "annotations": {
+                      "readOnlyHint": false,
+                      "destructiveHint": false,
+                      "runtimeMethod": "control",
+                      "intentEvent": "chat-show-control"
+                    },
+                    "exposedTo": [
+                      "agent",
+                      "assistant"
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "custom-element-definition",
+          "name": "chat-show-player",
+          "declaration": {
+            "name": "ChatShowPlayer"
+          }
+        }
+      ]
+    },
+    {
+      "path": "chat/AgentShowChat/AgentShowChat.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "customElement": true,
+          "name": "AgentShowChat",
+          "tagName": "agent-show-chat",
+          "description": "Ordinary agent chat composition with one fixed lower Show player region below an independently scrolling transcript workspace.",
+          "componentDescription": "Ordinary agent chat composition with one fixed lower Show player region below an independently scrolling transcript workspace. Use this interactive agent chat with fixed Show playback and accumulating contextual history when composing chat UI. Capabilities: ordinary-agent-chat, enabled-composer, transcript-history, contextual-action-history, current-and-historical-actions, embed-receipt-message, fixed-live-player-region, independent-transcript-scroll, independent-agent-and-show-controllers, scripted-or-api-provider. Data ownership: composition owns transient transcript and current-versus-historical contextual action projection; host owns provider, Show controllers, content, routing, persistence, and APIs. WebMCP tools: agent_show_chat_submit.",
+          "attributes": [],
+          "members": [
+            {
+              "kind": "field",
+              "name": "agentProvider",
+              "type": {
+                "text": "object"
+              },
+              "description": "Injected provider whose only required method is respond(request)."
+            },
+            {
+              "kind": "field",
+              "name": "messages",
+              "type": {
+                "text": "array"
+              },
+              "description": "Conversation history rendered through chat-workspace and the shared message model."
+            },
+            {
+              "kind": "field",
+              "name": "shows",
+              "type": {
+                "text": "object"
+              },
+              "description": "Product-owned embedded Show bindings keyed by embed part key."
+            },
+            {
+              "kind": "method",
+              "name": "getWorkspace",
+              "description": "Returns the composed interactive chat-workspace."
+            },
+            {
+              "kind": "method",
+              "name": "setAgentProvider",
+              "description": "Injects a scripted or API-backed provider exposing respond(request)."
+            },
+            {
+              "kind": "method",
+              "name": "setMessages",
+              "description": "Replaces conversation history without discarding valid action or embed parts."
+            },
+            {
+              "kind": "method",
+              "name": "setShow",
+              "description": "Registers or rebinds one independent Show player by embed key."
+            },
+            {
+              "kind": "method",
+              "name": "removeShow",
+              "description": "Removes one embedded Show binding and optionally stops its controller."
+            },
+            {
+              "kind": "method",
+              "name": "submit",
+              "description": "Submits ordinary composer input through provider.respond(request)."
+            }
+          ],
+          "events": [
+            {
+              "name": "agent-show-action",
+              "description": "Reports a contextual transcript action before routing it through provider.respond(request).",
+              "detail": [
+                {
+                  "name": "id",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "actionId",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "payload",
+                  "type": {
+                    "text": "object"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "agent-show-response",
+              "description": "Reports messages appended from provider.respond(request).",
+              "detail": []
+            },
+            {
+              "name": "agent-show-error",
+              "description": "Reports a provider failure after rendering a product-neutral error part.",
+              "detail": []
+            },
+            {
+              "name": "agent-show-embed-ready",
+              "description": "Reports reattachment of the stable live player instance to an embed slot.",
+              "detail": []
+            },
+            {
+              "name": "agent-show-embed-close",
+              "description": "Reports removal of an embedded Show player through its close request.",
+              "detail": []
+            }
+          ],
+          "slots": [],
+          "cssProperties": [],
+          "contract": {
+            "capabilities": [
+              "ordinary-agent-chat",
+              "enabled-composer",
+              "transcript-history",
+              "contextual-action-history",
+              "current-and-historical-actions",
+              "embed-receipt-message",
+              "fixed-live-player-region",
+              "independent-transcript-scroll",
+              "independent-agent-and-show-controllers",
+              "scripted-or-api-provider"
+            ],
+            "attributes": [],
+            "properties": [
+              {
+                "name": "agentProvider",
+                "type": "object",
+                "description": "Injected provider whose only required method is respond(request)."
+              },
+              {
+                "name": "messages",
+                "type": "array",
+                "description": "Conversation history rendered through chat-workspace and the shared message model."
+              },
+              {
+                "name": "shows",
+                "type": "object",
+                "description": "Product-owned embedded Show bindings keyed by embed part key."
+              }
+            ],
+            "methods": [
+              {
+                "name": "getWorkspace",
+                "type": "function",
+                "description": "Returns the composed interactive chat-workspace."
+              },
+              {
+                "name": "setAgentProvider",
+                "type": "function",
+                "description": "Injects a scripted or API-backed provider exposing respond(request)."
+              },
+              {
+                "name": "setMessages",
+                "type": "function",
+                "description": "Replaces conversation history without discarding valid action or embed parts."
+              },
+              {
+                "name": "setShow",
+                "type": "function",
+                "description": "Registers or rebinds one independent Show player by embed key."
+              },
+              {
+                "name": "removeShow",
+                "type": "function",
+                "description": "Removes one embedded Show binding and optionally stops its controller."
+              },
+              {
+                "name": "submit",
+                "type": "function",
+                "description": "Submits ordinary composer input through provider.respond(request)."
+              }
+            ],
+            "events": [
+              {
+                "name": "agent-show-action",
+                "description": "Reports a contextual transcript action before routing it through provider.respond(request).",
+                "detail": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  },
+                  {
+                    "name": "actionId",
+                    "type": "string"
+                  },
+                  {
+                    "name": "payload",
+                    "type": "object"
+                  }
+                ]
+              },
+              {
+                "name": "agent-show-response",
+                "description": "Reports messages appended from provider.respond(request)."
+              },
+              {
+                "name": "agent-show-error",
+                "description": "Reports a provider failure after rendering a product-neutral error part."
+              },
+              {
+                "name": "agent-show-embed-ready",
+                "description": "Reports reattachment of the stable live player instance to an embed slot."
+              },
+              {
+                "name": "agent-show-embed-close",
+                "description": "Reports removal of an embedded Show player through its close request."
+              }
+            ],
+            "slots": [],
+            "themeAliases": ["--sn-agent-show-player-z", "--sn-agent-show-player-max-block-size", "--sn-agent-show-player-inset"],
+            "status": "draft",
+            "schemaVersion": "component-descriptor-v2",
+            "dataSchema": "schemas/runtime-ui-v1.json",
+            "ssr": {
+              "mode": "hydrate-only",
+              "importSafe": false,
+              "jsdaRenderable": false,
+              "requiresDom": true,
+              "browserApis": [
+                "events",
+                "selection",
+                "focus"
+              ],
+              "notes": "May render shell markup under SSR, but interactive behavior belongs to browser hydration."
+            },
+            "webmcp": {
+              "documentation": "Agent-facing WebMCP documentation for stable component affordances only; host workflow policy remains outside symbiote-ui.",
+              "tools": [
+                {
+                  "name": "agent_show_chat_submit",
+                  "description": "Submit ordinary chat input through the injected agent provider respond() boundary while preserving transcript and embedded Show history.",
+                  "inputSchema": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "value": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "value"
+                    ]
+                  },
+                  "annotations": {
+                    "readOnlyHint": false,
+                    "destructiveHint": false,
+                    "runtimeMethod": "submit",
+                    "intentEvents": [
+                      "agent-show-response",
+                      "agent-show-error"
+                    ]
+                  },
+                  "exposedTo": [
+                    "agent",
+                    "assistant"
+                  ]
+                }
+              ]
+            }
+          },
+          "agent": {
+            "componentDescription": "Ordinary agent chat composition with one fixed lower Show player region below an independently scrolling transcript workspace. Use this interactive agent chat with fixed Show playback and accumulating contextual history when composing chat UI. Capabilities: ordinary-agent-chat, enabled-composer, transcript-history, contextual-action-history, current-and-historical-actions, embed-receipt-message, fixed-live-player-region, independent-transcript-scroll, independent-agent-and-show-controllers, scripted-or-api-provider. Data ownership: composition owns transient transcript and current-versus-historical contextual action projection; host owns provider, Show controllers, content, routing, persistence, and APIs. WebMCP tools: agent_show_chat_submit.",
+            "semanticRole": "interactive agent chat with fixed Show playback and accumulating contextual history",
+            "usage": "Inject one provider exposing respond(request), register product-owned Show controllers by embed key, and keep the normal composer enabled. Replace scripted routing with an API by changing respond() only.",
+            "dataOwnership": "composition owns transient transcript and current-versus-historical contextual action projection; host owns provider, Show controllers, content, routing, persistence, and APIs",
+            "webmcp": {
+              "mode": "explicit-descriptor",
+              "toolNames": [
+                "agent_show_chat_submit"
+              ],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          },
+          "metadata": {
+            "category": "chat",
+            "visibility": "public",
+            "specifier": "symbiote-ui/chat/show-chat",
+            "exportName": "AgentShowChat",
+            "importKind": "named",
+            "agent": {
+              "componentDescription": "Ordinary agent chat composition with one fixed lower Show player region below an independently scrolling transcript workspace. Use this interactive agent chat with fixed Show playback and accumulating contextual history when composing chat UI. Capabilities: ordinary-agent-chat, enabled-composer, transcript-history, contextual-action-history, current-and-historical-actions, embed-receipt-message, fixed-live-player-region, independent-transcript-scroll, independent-agent-and-show-controllers, scripted-or-api-provider. Data ownership: composition owns transient transcript and current-versus-historical contextual action projection; host owns provider, Show controllers, content, routing, persistence, and APIs. WebMCP tools: agent_show_chat_submit.",
+              "semanticRole": "interactive agent chat with fixed Show playback and accumulating contextual history",
+              "usage": "Inject one provider exposing respond(request), register product-owned Show controllers by embed key, and keep the normal composer enabled. Replace scripted routing with an API by changing respond() only.",
+              "dataOwnership": "composition owns transient transcript and current-versus-historical contextual action projection; host owns provider, Show controllers, content, routing, persistence, and APIs",
+              "webmcp": {
+                "mode": "explicit-descriptor",
+                "toolNames": [
+                  "agent_show_chat_submit"
+                ],
+                "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+                "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+                "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+                "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+                "references": [
+                  "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                  "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+                ]
+              }
+            },
+            "contract": {
+              "capabilities": [
+                "ordinary-agent-chat",
+                "enabled-composer",
+                "transcript-history",
+                "contextual-action-history",
+                "current-and-historical-actions",
+                "embed-receipt-message",
+                "fixed-live-player-region",
+                "independent-transcript-scroll",
+                "independent-agent-and-show-controllers",
+                "scripted-or-api-provider"
+              ],
+              "attributes": [],
+              "properties": [
+                {
+                  "name": "agentProvider",
+                  "type": "object",
+                  "description": "Injected provider whose only required method is respond(request)."
+                },
+                {
+                  "name": "messages",
+                  "type": "array",
+                  "description": "Conversation history rendered through chat-workspace and the shared message model."
+                },
+                {
+                  "name": "shows",
+                  "type": "object",
+                  "description": "Product-owned embedded Show bindings keyed by embed part key."
+                }
+              ],
+              "methods": [
+                {
+                  "name": "getWorkspace",
+                  "type": "function",
+                  "description": "Returns the composed interactive chat-workspace."
+                },
+                {
+                  "name": "setAgentProvider",
+                  "type": "function",
+                  "description": "Injects a scripted or API-backed provider exposing respond(request)."
+                },
+                {
+                  "name": "setMessages",
+                  "type": "function",
+                  "description": "Replaces conversation history without discarding valid action or embed parts."
+                },
+                {
+                  "name": "setShow",
+                  "type": "function",
+                  "description": "Registers or rebinds one independent Show player by embed key."
+                },
+                {
+                  "name": "removeShow",
+                  "type": "function",
+                  "description": "Removes one embedded Show binding and optionally stops its controller."
+                },
+                {
+                  "name": "submit",
+                  "type": "function",
+                  "description": "Submits ordinary composer input through provider.respond(request)."
+                }
+              ],
+              "events": [
+                {
+                  "name": "agent-show-action",
+                  "description": "Reports a contextual transcript action before routing it through provider.respond(request).",
+                  "detail": [
+                    {
+                      "name": "id",
+                      "type": "string"
+                    },
+                    {
+                      "name": "actionId",
+                      "type": "string"
+                    },
+                    {
+                      "name": "payload",
+                      "type": "object"
+                    }
+                  ]
+                },
+                {
+                  "name": "agent-show-response",
+                  "description": "Reports messages appended from provider.respond(request)."
+                },
+                {
+                  "name": "agent-show-error",
+                  "description": "Reports a provider failure after rendering a product-neutral error part."
+                },
+                {
+                  "name": "agent-show-embed-ready",
+                  "description": "Reports reattachment of the stable live player instance to an embed slot."
+                },
+                {
+                  "name": "agent-show-embed-close",
+                  "description": "Reports removal of an embedded Show player through its close request."
+                }
+              ],
+              "slots": [],
+              "themeAliases": [],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
+              "ssr": {
+                "mode": "hydrate-only",
+                "importSafe": false,
+                "jsdaRenderable": false,
+                "requiresDom": true,
+                "browserApis": [
+                  "events",
+                  "selection",
+                  "focus"
+                ],
+                "notes": "May render shell markup under SSR, but interactive behavior belongs to browser hydration."
+              },
+              "webmcp": {
+                "documentation": "Agent-facing WebMCP documentation for stable component affordances only; host workflow policy remains outside symbiote-ui.",
+                "tools": [
+                  {
+                    "name": "agent_show_chat_submit",
+                    "description": "Submit ordinary chat input through the injected agent provider respond() boundary while preserving transcript and embedded Show history.",
+                    "inputSchema": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "value": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "required": [
+                        "value"
+                      ]
+                    },
+                    "annotations": {
+                      "readOnlyHint": false,
+                      "destructiveHint": false,
+                      "runtimeMethod": "submit",
+                      "intentEvents": [
+                        "agent-show-response",
+                        "agent-show-error"
+                      ]
+                    },
+                    "exposedTo": [
+                      "agent",
+                      "assistant"
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "custom-element-definition",
+          "name": "agent-show-chat",
+          "declaration": {
+            "name": "AgentShowChat"
+          }
+        }
+      ]
+    },
+    {
+      "path": "chat/AgentDockShell/AgentDockShell.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "customElement": true,
+          "name": "AgentDockShell",
+          "tagName": "agent-dock-shell",
+          "description": "Cascade-themed standard panel-layout split that preserves one ordinary agent chat and fixed Show player across desktop peer and mobile drawer presentation.",
+          "componentDescription": "Cascade-themed standard panel-layout split that keeps an ordinary agent chat and fixed Show player mounted across desktop peer and mobile drawer presentation. Use this responsive Cascade application peer for an interactive agent chat with fixed Show playback when composing chat UI. Capabilities: agent-dock-shell, cascade-frame-surface, standard-panel-layout-split, native-desktop-resizer, native-panel-collapse, native-mobile-end-drawer, provider-owned-stacking-tier, stable-chat-lifecycle, stable-player-lifecycle, presenter-overlay-reserve. Data ownership: shell owns the panel-layout split, native resize/collapse/drawer projection, and visibility; host owns main workspace, provider, Show controllers, content, routing, and persistence. WebMCP tools: agent_dock_visibility.",
+          "attributes": [
+            { "name": "closed", "type": { "text": "boolean" }, "description": "Hides the dock without destroying chat or embedded Show instances." },
+            { "name": "responsive-breakpoint", "type": { "text": "number" }, "description": "Inline-size threshold for mobile projection." },
+            { "name": "min-size", "type": { "text": "number" }, "description": "Minimum desktop dock inline size." }
+          ],
+          "members": [
+            { "kind": "method", "name": "getChat", "description": "Returns the stable mounted agent-show-chat instance." },
+            { "kind": "method", "name": "setAgentProvider", "description": "Forwards a scripted or API-backed provider." },
+            { "kind": "method", "name": "setMessages", "description": "Forwards conversation history without rebuilding the dock." },
+            { "kind": "method", "name": "setShow", "description": "Forwards an independent embedded Show binding." },
+            { "kind": "method", "name": "removeShow", "description": "Removes one embedded Show binding." },
+            { "kind": "method", "name": "open", "description": "Reveals the existing dock instance." },
+            { "kind": "method", "name": "close", "description": "Hides the dock without destroying state." },
+            { "kind": "method", "name": "toggle", "description": "Toggles dock visibility without destroying state." }
+          ],
+          "events": [
+            { "name": "agent-dock-ready", "description": "Reports the stable chat and workspace instances after panel mounting." },
+            { "name": "agent-dock-change", "description": "Reports open and close state changes." },
+            { "name": "agent-dock-responsive-change", "description": "Reports projection changes between the desktop split and mobile end drawer." }
+          ],
+          "slots": [
+            { "name": "main", "description": "Product-owned main workspace moved intact into the primary panel of the provider-owned split." }
+          ],
+          "cssProperties": [
+            { "name": "--sn-agent-dock-z", "description": "Application-shell dock tier above local workspace overlays and below global overlays." },
+            { "name": "--sn-panel-bg", "description": "Cascade-compatible dock surface color." },
+            { "name": "--sn-node-border", "description": "Cascade-compatible split and panel border color." }
+          ],
+          "contract": {
+            "capabilities": ["agent-dock-shell", "cascade-frame-surface", "standard-panel-layout-split", "native-desktop-resizer", "native-panel-collapse", "native-mobile-end-drawer", "provider-owned-stacking-tier", "stable-chat-lifecycle", "stable-player-lifecycle", "presenter-overlay-reserve"],
+            "attributes": [
+              { "name": "closed", "type": "boolean", "description": "Hides the dock while preserving mounted state." },
+              { "name": "responsive-breakpoint", "type": "number", "description": "Inline-size threshold for mobile projection." },
+              { "name": "min-size", "type": "number", "description": "Minimum desktop dock inline size." }
+            ],
+            "properties": [
+              { "name": "agentProvider", "type": "object", "description": "Injected provider forwarded to agent-show-chat." },
+              { "name": "messages", "type": "array", "description": "Conversation history forwarded to agent-show-chat." }
+            ],
+            "methods": [
+              { "name": "getChat", "type": "function", "description": "Returns the stable mounted agent-show-chat instance." },
+              { "name": "setAgentProvider", "type": "function", "description": "Forwards an agent provider." },
+              { "name": "setMessages", "type": "function", "description": "Forwards conversation history." },
+              { "name": "setShow", "type": "function", "description": "Forwards an embedded Show binding." },
+              { "name": "removeShow", "type": "function", "description": "Removes an embedded Show binding." },
+              { "name": "open", "type": "function", "description": "Reveals the existing dock." },
+              { "name": "close", "type": "function", "description": "Hides the dock without destroying state." },
+              { "name": "toggle", "type": "function", "description": "Toggles visibility." }
+            ],
+            "events": [
+              { "name": "agent-dock-ready", "description": "Reports stable mounted instances." },
+              { "name": "agent-dock-change", "description": "Reports visibility changes." },
+              { "name": "agent-dock-responsive-change", "description": "Reports desktop split and mobile drawer projection changes." }
+            ],
+            "slots": [{ "name": "main", "description": "Product-owned main workspace moved into the primary split panel." }],
+            "themeAliases": ["--sn-agent-dock-z", "--sn-panel-bg", "--sn-node-border"],
+            "status": "draft",
+            "schemaVersion": "component-descriptor-v2",
+            "dataSchema": "schemas/runtime-ui-v1.json",
+            "ssr": {
+              "mode": "hydrate-only",
+              "importSafe": false,
+              "jsdaRenderable": false,
+              "requiresDom": true,
+              "browserApis": ["events", "resize-observer", "pointer-capture", "focus"],
+              "notes": "Interactive behavior belongs to browser hydration; the narrow entrypoint remains Node-safe through guarded component loading."
+            }
+          },
+          "agent": {
+            "componentDescription": "Cascade-themed standard panel-layout split that keeps an ordinary agent chat and fixed Show player mounted across desktop peer and mobile drawer presentation. Use this responsive Cascade application peer for an interactive agent chat with fixed Show playback when composing chat UI. Capabilities: agent-dock-shell, cascade-frame-surface, standard-panel-layout-split, native-desktop-resizer, native-panel-collapse, native-mobile-end-drawer, provider-owned-stacking-tier, stable-chat-lifecycle, stable-player-lifecycle, presenter-overlay-reserve. Data ownership: shell owns the panel-layout split, native resize/collapse/drawer projection, and visibility; host owns main workspace, provider, Show controllers, content, routing, and persistence. WebMCP tools: agent_dock_visibility.",
+            "semanticRole": "responsive Cascade application peer for an interactive agent chat with fixed Show playback",
+            "usage": "Place product workspace content in the main slot, inject the agent provider and Show controllers, and use open/close/toggle instead of reconstructing layout CSS or chat state.",
+            "dataOwnership": "shell owns the panel-layout split, native resize/collapse/drawer projection, and visibility; host owns main workspace, provider, Show controllers, content, routing, and persistence",
+            "webmcp": {
+              "mode": "explicit-descriptor",
+              "toolNames": ["agent_dock_visibility"],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          },
+          "metadata": {
+            "category": "chat",
+            "visibility": "public",
+            "specifier": "symbiote-ui/chat/show-chat",
+            "exportName": "AgentDockShell",
+            "importKind": "named"
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "custom-element-definition",
+          "name": "agent-dock-shell",
+          "declaration": { "name": "AgentDockShell" }
+        }
+      ]
+    },
+    {
       "path": "chat/ChatWorkspace/ChatWorkspace.js",
       "declarations": [
         {
@@ -11826,6 +13156,7 @@
             }
           },
           "metadata": {
+            "specifier": "symbiote-ui/chat/workspace",
             "contract": {
               "capabilities": [
                 "chat-workspace",
@@ -16541,6 +17872,7 @@
             }
           },
           "metadata": {
+            "specifier": "symbiote-ui/control/transport",
             "contract": {
               "capabilities": [
                 "transport",
@@ -21495,8 +22827,8 @@
           "customElement": true,
           "name": "Chart",
           "tagName": "sn-chart",
-          "description": "Lightweight SVG line and bar chart data visualizer.",
-          "componentDescription": "Lightweight SVG line and bar chart data visualizer. Use this svg data visualization chart when composing display UI. Capabilities: chart, data-viz. Data ownership: visualized datalist array. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "description": "Lightweight semantic SVG chart supporting grouped and stacked bars, lines, areas, scatter, pie, and donut views.",
+          "componentDescription": "Lightweight semantic SVG chart supporting grouped and stacked bars, lines, areas, scatter, pie, and donut views. Use this svg data visualization chart when composing display UI. Capabilities: chart, data-viz, chart.stacked, chart.donut, selection.semantic-target. Data ownership: visualized datalist array. WebMCP tools are not enabled unless an explicit descriptor is declared.",
           "attributes": [
             {
               "name": "title",
@@ -21510,7 +22842,7 @@
               "type": {
                 "text": "string"
               },
-              "description": "Chart plot style: bar or line."
+              "description": "Chart plot style: bar, line, area, scatter, pie, donut, or mixed."
             }
           ],
           "members": [
@@ -21545,12 +22877,21 @@
               "name": "sn-chart-zoom-reset",
               "description": "Fired when zoom is reset.",
               "detail": []
+            },
+            {
+              "name": "sn-chart-select",
+              "description": "Fired when a data point is selected; includes its semantic target when supplied.",
+              "detail": []
             }
           ],
           "slots": [],
           "cssProperties": [
             {
               "name": "--sn-chart-brush-stroke",
+              "description": "Theme CSS custom property consumed by sn-chart."
+            },
+            {
+              "name": "--sn-chart-hover-opacity",
               "description": "Theme CSS custom property consumed by sn-chart."
             },
             {
@@ -21613,7 +22954,10 @@
           "contract": {
             "capabilities": [
               "chart",
-              "data-viz"
+              "data-viz",
+              "chart.stacked",
+              "chart.donut",
+              "selection.semantic-target"
             ],
             "attributes": [
               {
@@ -21624,7 +22968,7 @@
               {
                 "name": "type",
                 "type": "string",
-                "description": "Chart plot style: bar or line."
+                "description": "Chart plot style: bar, line, area, scatter, pie, donut, or mixed."
               }
             ],
             "properties": [],
@@ -21657,12 +23001,36 @@
               {
                 "name": "sn-chart-zoom-reset",
                 "description": "Fired when zoom is reset."
+              },
+              {
+                "name": "sn-chart-select",
+                "description": "Fired when a data point is selected; includes its semantic target when supplied."
               }
             ],
             "slots": [],
             "themeAliases": [
+              "--sn-chart-bg",
+              "--sn-chart-border",
               "--sn-chart-brush-stroke",
+              "--sn-chart-header-gap",
+              "--sn-chart-header-item-gap",
+              "--sn-chart-height",
+              "--sn-chart-hover-opacity",
+              "--sn-chart-legend-gap",
+              "--sn-chart-legend-item-gap",
+              "--sn-chart-legend-size",
+              "--sn-chart-legend-swatch-height",
+              "--sn-chart-legend-swatch-radius",
+              "--sn-chart-legend-swatch-width",
+              "--sn-chart-padding",
+              "--sn-chart-radius",
+              "--sn-chart-threshold-size",
+              "--sn-chart-title-size",
+              "--sn-chart-tooltip-padding",
+              "--sn-chart-tooltip-radius",
+              "--sn-chart-tooltip-size",
               "--sn-font",
+              "--sn-font-mono",
               "--sn-panel-radius",
               "--sn-sys-accent",
               "--sn-sys-on-surface",
@@ -21692,9 +23060,9 @@
             }
           },
           "agent": {
-            "componentDescription": "Lightweight SVG line and bar chart data visualizer. Use this svg data visualization chart when composing display UI. Capabilities: chart, data-viz. Data ownership: visualized datalist array. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "componentDescription": "Lightweight semantic SVG chart supporting grouped and stacked bars, lines, areas, scatter, pie, and donut views. Use this svg data visualization chart when composing display UI. Capabilities: chart, data-viz, chart.stacked, chart.donut, selection.semantic-target. Data ownership: visualized datalist array. WebMCP tools are not enabled unless an explicit descriptor is declared.",
             "semanticRole": "svg data visualization chart",
-            "usage": "Use to plot numbers in bar or line formats.",
+            "usage": "Use to plot numeric series and expose optional semantic targets for interactive drill-down.",
             "dataOwnership": "visualized datalist array",
             "webmcp": {
               "mode": "described-only",
@@ -21713,7 +23081,10 @@
             "contract": {
               "capabilities": [
                 "chart",
-                "data-viz"
+                "data-viz",
+                "chart.stacked",
+                "chart.donut",
+                "selection.semantic-target"
               ],
               "attributes": [
                 {
@@ -21724,7 +23095,7 @@
                 {
                   "name": "type",
                   "type": "string",
-                  "description": "Chart plot style: bar or line."
+                  "description": "Chart plot style: bar, line, area, scatter, pie, donut, or mixed."
                 }
               ],
               "properties": [],
@@ -21757,12 +23128,36 @@
                 {
                   "name": "sn-chart-zoom-reset",
                   "description": "Fired when zoom is reset."
+                },
+                {
+                  "name": "sn-chart-select",
+                  "description": "Fired when a data point is selected; includes its semantic target when supplied."
                 }
               ],
               "slots": [],
               "themeAliases": [
+                "--sn-chart-bg",
+                "--sn-chart-border",
                 "--sn-chart-brush-stroke",
+                "--sn-chart-header-gap",
+                "--sn-chart-header-item-gap",
+                "--sn-chart-height",
+                "--sn-chart-hover-opacity",
+                "--sn-chart-legend-gap",
+                "--sn-chart-legend-item-gap",
+                "--sn-chart-legend-size",
+                "--sn-chart-legend-swatch-height",
+                "--sn-chart-legend-swatch-radius",
+                "--sn-chart-legend-swatch-width",
+                "--sn-chart-padding",
+                "--sn-chart-radius",
+                "--sn-chart-threshold-size",
+                "--sn-chart-title-size",
+                "--sn-chart-tooltip-padding",
+                "--sn-chart-tooltip-radius",
+                "--sn-chart-tooltip-size",
                 "--sn-font",
+                "--sn-font-mono",
                 "--sn-panel-radius",
                 "--sn-sys-accent",
                 "--sn-sys-on-surface",
@@ -21800,6 +23195,205 @@
           "name": "sn-chart",
           "declaration": {
             "name": "Chart"
+          }
+        }
+      ]
+    },
+    {
+      "path": "display/OperationsOverview/OperationsOverview.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "customElement": true,
+          "name": "OperationsOverview",
+          "tagName": "sn-operations-overview",
+          "description": "Responsive provider-owned operations analytics composition built from KPI tiles and semantic charts.",
+          "componentDescription": "Responsive provider-owned operations analytics composition built from KPI tiles and semantic charts. Use this operations analytics overview when composing display UI. Capabilities: analytics.overview, analytics.kpi, chart.composition, selection.semantic-target. Data ownership: consumer-owned analytics model and semantic targets. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "attributes": [],
+          "members": [
+            {
+              "kind": "method",
+              "name": "setModel",
+              "description": "Sets the domain-neutral overview model."
+            },
+            {
+              "kind": "method",
+              "name": "getModel",
+              "description": "Returns the normalized overview model."
+            }
+          ],
+          "events": [
+            {
+              "name": "sn-analytics-select",
+              "description": "Fired when a KPI or chart point is selected.",
+              "detail": []
+            }
+          ],
+          "slots": [],
+          "cssProperties": [
+            {
+              "name": "--sn-operations-overview-gap",
+              "description": "Theme CSS custom property consumed by sn-operations-overview."
+            },
+            {
+              "name": "--sn-operations-overview-padding",
+              "description": "Theme CSS custom property consumed by sn-operations-overview."
+            },
+            {
+              "name": "--sn-operations-overview-metric-accent",
+              "description": "Theme CSS custom property consumed by sn-operations-overview."
+            },
+            {
+              "name": "--sn-icon-font",
+              "description": "Theme CSS custom property consumed by sn-operations-overview."
+            }
+          ],
+          "contract": {
+            "capabilities": [
+              "analytics.overview",
+              "analytics.kpi",
+              "chart.composition",
+              "selection.semantic-target"
+            ],
+            "attributes": [],
+            "properties": [],
+            "methods": [
+              {
+                "name": "setModel",
+                "type": "function",
+                "description": "Sets the domain-neutral overview model."
+              },
+              {
+                "name": "getModel",
+                "type": "function",
+                "description": "Returns the normalized overview model."
+              }
+            ],
+            "events": [
+              {
+                "name": "sn-analytics-select",
+                "description": "Fired when a KPI or chart point is selected."
+              }
+            ],
+            "slots": [],
+            "themeAliases": [
+              "--sn-operations-overview-gap",
+              "--sn-operations-overview-padding",
+              "--sn-operations-overview-metric-accent",
+              "--sn-font",
+              "--sn-font-mono",
+              "--sn-icon-font",
+              "--sn-card-radius",
+              "--sn-sys-accent",
+              "--sn-sys-on-surface",
+              "--sn-sys-on-surface-dim",
+              "--sn-sys-outline",
+              "--sn-sys-outline-subtle",
+              "--sn-sys-state-hover-mix",
+              "--sn-sys-surface-raised",
+              "--sn-theme-type-scale"
+            ],
+            "status": "draft",
+            "schemaVersion": "component-descriptor-v2",
+            "dataSchema": "schemas/chart-spec-v1.json",
+            "ssr": {
+              "mode": "hydrate-only",
+              "importSafe": false,
+              "jsdaRenderable": false,
+              "requiresDom": true,
+              "browserApis": [
+                "events"
+              ],
+              "notes": "Default browser component classification pending component-specific JSDA SSR smoke coverage."
+            }
+          },
+          "agent": {
+            "componentDescription": "Responsive provider-owned operations analytics composition built from KPI tiles and semantic charts.",
+            "semanticRole": "operations analytics overview",
+            "usage": "Use for domain-supplied KPI and chart models that need consistent responsive presentation and drill-down events.",
+            "dataOwnership": "consumer-owned analytics model and semantic targets",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          },
+          "metadata": {
+            "contract": {
+              "capabilities": [
+                "analytics.overview",
+                "analytics.kpi",
+                "chart.composition",
+                "selection.semantic-target"
+              ],
+              "attributes": [],
+              "properties": [],
+              "methods": [
+                {
+                  "name": "setModel",
+                  "type": "function",
+                  "description": "Sets the domain-neutral overview model."
+                },
+                {
+                  "name": "getModel",
+                  "type": "function",
+                  "description": "Returns the normalized overview model."
+                }
+              ],
+              "events": [
+                {
+                  "name": "sn-analytics-select",
+                  "description": "Fired when a KPI or chart point is selected."
+                }
+              ],
+              "slots": [],
+              "themeAliases": [
+                "--sn-operations-overview-gap",
+                "--sn-operations-overview-padding",
+                "--sn-operations-overview-metric-accent",
+                "--sn-font",
+                "--sn-font-mono",
+                "--sn-icon-font",
+                "--sn-card-radius",
+                "--sn-sys-accent",
+                "--sn-sys-on-surface",
+                "--sn-sys-on-surface-dim",
+                "--sn-sys-outline",
+                "--sn-sys-outline-subtle",
+                "--sn-sys-state-hover-mix",
+                "--sn-sys-surface-raised",
+                "--sn-theme-type-scale"
+              ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/chart-spec-v1.json",
+              "ssr": {
+                "mode": "hydrate-only",
+                "importSafe": false,
+                "jsdaRenderable": false,
+                "requiresDom": true,
+                "browserApis": [
+                  "events"
+                ],
+                "notes": "Default browser component classification pending component-specific JSDA SSR smoke coverage."
+              }
+            }
+          }
+        }
+      ],
+      "exports": [
+        {
+          "kind": "custom-element-definition",
+          "name": "sn-operations-overview",
+          "declaration": {
+            "name": "OperationsOverview"
           }
         }
       ]

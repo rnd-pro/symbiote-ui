@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rnd-pro.github.io/symbiote-ui/schemas/xr-spatial-window-lifecycle-receipt-v1.json",
+  "title": "XR Spatial Window Lifecycle Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "action", "ok", "reason", "details"],
+  "properties": {
+    "version": { "const": "xr-spatial-window-lifecycle-receipt-v1" },
+    "action": {
+      "enum": [
+        "enter",
+        "exit",
+        "adopt-session",
+        "release-session",
+        "focus",
+        "move",
+        "reset",
+        "apply-theme"
+      ]
+    },
+    "windowId": { "type": "string", "minLength": 1 },
+    "layoutId": { "type": "string", "minLength": 1 },
+    "ok": { "type": "boolean" },
+    "reason": { "type": ["string", "null"] },
+    "details": { "type": "object" }
+  }
+}

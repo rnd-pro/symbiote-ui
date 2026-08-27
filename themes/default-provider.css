@@ -83,6 +83,13 @@
   --sn-alpha-faint: 0.06;
   --sn-overlay-z-base: 20000;
   --sn-canvas-overlay-z-base: 12000;
+  --sn-agent-dock-z: 16000;
+  --sn-agent-dock-inline-size: 33%;
+  --sn-agent-dock-min-inline-size: 320px;
+  --sn-agent-dock-max-inline-size: 640px;
+  --sn-agent-dock-mobile-inline-size: 100%;
+  --sn-agent-show-player-max-block-size: min(360px, 44dvh);
+  --sn-agent-show-player-inset: var(--sn-space-sm);
   --sn-sys-danger: hsl(var(--sn-hue-danger) var(--sn-sat-vivid) 58%);
   --sn-sys-success: hsl(var(--sn-hue-success) var(--sn-sat-vivid) 57%);
   --sn-sys-warning: hsl(var(--sn-hue-warning) var(--sn-sat-vivid) 58%);

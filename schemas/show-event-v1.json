@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rnd-pro.github.io/symbiote-ui/schemas/show-event-v1.json",
+  "title": "Symbiote Show Event V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "type", "sequence", "timestampMs", "directive"],
+  "properties": {
+    "version": { "const": "symbiote-show-v1" },
+    "type": {
+      "enum": [
+        "show:speech",
+        "show:footnote",
+        "show:status",
+        "show:actions",
+        "show:branch-enter",
+        "show:branch-return",
+        "show:resume",
+        "show:attention",
+        "show:media"
+      ]
+    },
+    "sequence": { "type": "integer", "minimum": 0 },
+    "timestampMs": { "type": "number", "minimum": 0 },
+    "directive": { "$ref": "#/$defs/directive" }
+  },
+  "$defs": {
+    "playbackSnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["episodeId", "positionMs", "cueIndex", "playbackState", "subjectId"],
+      "properties": {
+        "episodeId": { "type": "string" },
+        "positionMs": { "type": "number", "minimum": 0 },
+        "cueIndex": { "type": "integer", "minimum": 0 },
+        "playbackState": { "enum": ["playing", "paused", "ended"] },
+        "subjectId": { "type": "string" }
+      }
+    },
+    "action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "label": { "type": "string", "minLength": 1 },
+        "variant": { "type": "string" },
+        "icon": { "type": "string" },
+        "payload": true
+      }
+    },
+    "directive": {
+      "type": "object",
+      "required": ["version", "type"],
+      "properties": {
+        "version": { "const": "symbiote-show-v1" },
+        "id": { "type": "string", "minLength": 1 },
+        "type": {
+          "enum": ["speech", "footnote", "status", "actions", "branch-enter", "branch-return", "resume", "attention", "media"]
+        },
+        "text": { "type": "string" },
+        "cueId": { "type": "string" },
+        "voice": { "type": "string" },
+        "referenceId": { "type": "string" },
+        "href": { "type": "string" },
+        "status": { "enum": ["idle", "running", "paused", "done", "error", "cancelled"] },
+        "actions": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/action" } },
+        "context": true,
+        "branchId": { "type": "string" },
+        "snapshot": { "$ref": "#/$defs/playbackSnapshot" },
+        "resume": { "const": "explicit" },
+        "explicit": { "const": true },
+        "mode": { "enum": ["cursor", "frame", "native-selection", "click", "marker", "short-muted-montage", "full-with-media-audio"] },
+        "targetId": { "type": "string" },
+        "marker": { "enum": ["freehand", "underline", "oval", "multi-oval", "arrow", "converging-arrows", "route", "bidirectional-route", "parallel-route", "label", "number", "box", "bracket", "slash"] },
+        "requestedMarker": { "const": "ovals" },
+        "intent": { "enum": ["emphasize", "detail", "group", "pointer", "risk", "question", "success", "affinity", "flourish"] },
+        "seed": { "anyOf": [{ "type": "string", "minLength": 1 }, { "type": "number" }] },
+        "style": {
+          "type": "object",
+          "properties": {
+            "baseWidthPx": { "type": "number", "minimum": 0 },
+            "noiseAmplitudePx": { "type": "number", "minimum": 0 },
+            "minMovingSpeedPxPerMs": { "type": "number", "minimum": 0 },
+            "targetSpeedPxPerMs": { "type": "number", "minimum": 0 },
+            "maxSpeedPxPerMs": { "type": "number", "minimum": 0 },
+            "minDurationMs": { "type": "number", "minimum": 0 }
+          },
+          "additionalProperties": false
+        },
+        "gestureId": { "type": "string", "minLength": 1 },
+        "cueTimeMs": { "type": "number", "minimum": 0 },
+        "mediaTimeMs": { "type": "number", "minimum": 0 },
+        "label": { "type": "string", "minLength": 1 },
+        "quote": { "type": "string" },
+        "occurrence": { "type": "integer", "minimum": 1 },
+        "mediaId": { "type": "string" },
+        "startMs": { "type": "number", "minimum": 0 },
+        "endMs": { "type": "number", "minimum": 0 }
+      },
+      "additionalProperties": false
+    }
+  }
+}

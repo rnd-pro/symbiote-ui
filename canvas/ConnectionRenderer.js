@@ -19,6 +19,14 @@ import {
   resolveContainmentJunctions,
   isConnectionMarkerOccluded,
 } from './ConnectionMarker.js';
+import {
+  createNodeCanvasGeometrySignature,
+  createNodeCanvasRenderSnapshot,
+  createNodeCanvasRenderSnapshotReceipt,
+  matchNodeCanvasRouteFingerprint,
+  readNodeCanvasLogicalSize,
+  validateNodeCanvasRenderSnapshot,
+} from './NodeCanvas/NodeCanvasRenderSnapshot.js';
 
 function getSvgRouteHalfWidth(path) {
   try {
@@ -217,6 +225,10 @@ export class ConnectionRenderer {
   #progressivePcbBatchSize = 4;
   #processingProgressivePcb = false;
 
+  #adoptedPcbRoutes = null;
+  #adoptedPcbGeometrySignature = '';
+  #lastRenderSnapshotReceipt = null;
+
   #batchMode = false;
   #junctionsDirty = false;
 
@@ -273,6 +285,238 @@ export class ConnectionRenderer {
   /** @returns {Map<string, import('../core/Connection.js').Connection>} */
   get data() {
     return this.#connectionData;
+  }
+
+  /** @returns {object|null} */
+  get renderSnapshotReceipt() {
+    return this.#lastRenderSnapshotReceipt
+      ? JSON.parse(JSON.stringify(this.#lastRenderSnapshotReceipt))
+      : null;
+  }
+
+  #invalidateAdoptedPcbSnapshot(
+    reason,
+    invalidatedConnectionIds = [],
+    rerender = true,
+    preserveUnchangedMarkers = false,
+  ) {
+    let routeCount = this.#adoptedPcbRoutes?.size || 0;
+    let adoptedConnectionIds = [...(this.#adoptedPcbRoutes?.keys() || [])];
+    this.#adoptedPcbRoutes = null;
+    this.#adoptedPcbGeometrySignature = '';
+    let markersToClear = preserveUnchangedMarkers
+      ? invalidatedConnectionIds
+      : adoptedConnectionIds;
+    for (let connectionId of markersToClear) {
+      let path = this.#svgLayer.querySelector(`[data-conn-id="${connectionId}"]`);
+      path?.removeAttribute('data-pcb-quality');
+      path?.removeAttribute('data-pcb-signature');
+    }
+    this.#lastRenderSnapshotReceipt = createNodeCanvasRenderSnapshotReceipt({
+      adopted: false,
+      reason,
+      routeCount,
+      invalidatedConnectionIds,
+    });
+    if (rerender) this.#rerenderAllConnections();
+    return this.renderSnapshotReceipt;
+  }
+
+  #nodeRectsForSnapshot() {
+    return this.#nodeRects()
+      .map((rect) => ({
+        id: String(rect.id),
+        x: Number(rect.x),
+        y: Number(rect.y),
+        width: Number(rect.w),
+        height: Number(rect.h),
+      }))
+      .sort((left, right) => left.id.localeCompare(right.id));
+  }
+
+  #measurePcbConnection(conn) {
+    let fromEl = this.#nodeViews.get(conn.from);
+    let toEl = this.#nodeViews.get(conn.to);
+    if (!fromEl?._position || !toEl?._position) return null;
+    let fromPos = fromEl._position;
+    let toPos = toEl._position;
+    let fromSize = this.#getNodeSize(fromEl, 180, 100);
+    let toSize = this.#getNodeSize(toEl, 180, 100);
+    let fromCenter = {
+      x: fromPos.x + fromSize.width / 2,
+      y: fromPos.y + fromSize.height / 2,
+    };
+    let toCenter = {
+      x: toPos.x + toSize.width / 2,
+      y: toPos.y + toSize.height / 2,
+    };
+    let fromOffset = this.getSocketOffset(fromEl, conn.out, 'output', toCenter);
+    let toOffset = this.getSocketOffset(toEl, conn.in, 'input', fromCenter);
+    let geometry = {
+      fromEl,
+      toEl,
+      fromPos,
+      toPos,
+      fromW: fromSize.width,
+      fromH: fromSize.height,
+      toW: toSize.width,
+      toH: toSize.height,
+      fromOffset,
+      toOffset,
+      startX: fromPos.x + fromOffset.x,
+      startY: fromPos.y + fromOffset.y,
+      endX: toPos.x + toOffset.x,
+      endY: toPos.y + toOffset.y,
+    };
+    geometry.signature = this.#pcbPathSignature(conn, 'pcb', {
+      ...geometry,
+      fromAngle: fromOffset.angle ?? 0,
+      toAngle: toOffset.angle ?? 180,
+    });
+    return geometry;
+  }
+
+  #currentGeometrySignature(referenceRoutes) {
+    let routes = [];
+    let connections = [...this.#connectionData.values()]
+      .sort((left, right) => String(left.id).localeCompare(String(right.id)));
+    if (connections.length !== referenceRoutes.length) return '';
+    let referenceById = new Map(referenceRoutes.map((route) => [route.connectionId, route]));
+    for (let conn of connections) {
+      let route = referenceById.get(String(conn.id));
+      let geometry = this.#measurePcbConnection(conn);
+      if (!route || !geometry) return '';
+      routes.push({ ...route, signature: geometry.signature });
+    }
+    try {
+      return createNodeCanvasGeometrySignature(this.#nodeRectsForSnapshot(), routes);
+    } catch {
+      return '';
+    }
+  }
+
+  #validateAdoptedPcbGeometry(rerender = false) {
+    if (!this.#adoptedPcbRoutes) return true;
+    let routes = [...this.#adoptedPcbRoutes.values()];
+    let signature = this.#currentGeometrySignature(routes);
+    if (signature === this.#adoptedPcbGeometrySignature) return true;
+    let invalidated = routes
+      .filter((route) => {
+        let conn = this.#connectionData.get(route.connectionId);
+        let geometry = conn ? this.#measurePcbConnection(conn) : null;
+        return !geometry || geometry.signature !== route.signature;
+      })
+      .map((route) => route.connectionId);
+    this.#invalidateAdoptedPcbSnapshot('geometry-mismatch', invalidated, rerender, true);
+    return false;
+  }
+
+  /**
+   * @param {object} routeFingerprint
+   * @returns {object}
+   */
+  capturePcbRouteSnapshot(routeFingerprint) {
+    if (this.#pathStyle !== 'pcb') {
+      throw new Error('ConnectionRenderer capture requires the settled pcb path style.');
+    }
+    let routes = [...this.#connectionData.values()]
+      .sort((left, right) => String(left.id).localeCompare(String(right.id)))
+      .map((conn) => {
+        let path = this.#svgLayer.querySelector(`[data-conn-id="${conn.id}"]`);
+        let geometry = this.#measurePcbConnection(conn);
+        if (!path || !geometry || path.getAttribute('data-pcb-quality') !== 'full') {
+          throw new Error(`ConnectionRenderer capture requires full PCB route "${conn.id}".`);
+        }
+        let signature = path.getAttribute('data-pcb-signature') || '';
+        if (signature !== geometry.signature) {
+          throw new Error(`ConnectionRenderer capture geometry mismatch for "${conn.id}".`);
+        }
+        let points = sampleSvgPathPoints(path);
+        if (points.length < 2) points = this.#connectionPoints.get(conn.id) || [];
+        return {
+          connectionId: String(conn.id),
+          signature,
+          path: path.getAttribute('d') || '',
+          points,
+        };
+      });
+    return createNodeCanvasRenderSnapshot({
+      routeFingerprint,
+      nodeRects: this.#nodeRectsForSnapshot(),
+      routes,
+    });
+  }
+
+  /**
+   * @param {object} snapshot
+   * @param {object} options
+   * @returns {object}
+   */
+  adoptPcbRouteSnapshot(snapshot, options = {}) {
+    let validation = validateNodeCanvasRenderSnapshot(snapshot);
+    if (!validation.valid) return this.#invalidateAdoptedPcbSnapshot('invalid-snapshot');
+    let normalized = validation.snapshot;
+    if (!options.routeFingerprint) {
+      return this.#invalidateAdoptedPcbSnapshot('missing-route-fingerprint');
+    }
+    if (!matchNodeCanvasRouteFingerprint(normalized.routeFingerprint, options.routeFingerprint)) {
+      return this.#invalidateAdoptedPcbSnapshot('route-fingerprint-mismatch');
+    }
+    let currentGeometry = this.#currentGeometrySignature(normalized.routes);
+    if (!currentGeometry || currentGeometry !== normalized.geometrySignature) {
+      return this.#invalidateAdoptedPcbSnapshot(
+        'geometry-mismatch',
+        normalized.routes.map((route) => route.connectionId),
+      );
+    }
+    let paths = new Map();
+    for (let route of normalized.routes) {
+      let path = this.#svgLayer.querySelector(`[data-conn-id="${route.connectionId}"]`);
+      if (!path) {
+        return this.#invalidateAdoptedPcbSnapshot('live-path-missing', [route.connectionId]);
+      }
+      paths.set(route.connectionId, path);
+    }
+
+    this.#cancelProgressivePcb();
+    this.#adoptedPcbRoutes = new Map(
+      normalized.routes.map((route) => [route.connectionId, route]),
+    );
+    this.#adoptedPcbGeometrySignature = normalized.geometrySignature;
+    this.#pathStyle = 'pcb';
+    for (let route of normalized.routes) {
+      let path = paths.get(route.connectionId);
+      path.setAttribute('d', route.path);
+      path.setAttribute('data-pcb-quality', 'full');
+      path.setAttribute('data-pcb-signature', route.signature);
+      this.#connectionPoints.set(route.connectionId, route.points);
+    }
+    this.#reconcileJunctions();
+    this.#lastRenderSnapshotReceipt = createNodeCanvasRenderSnapshotReceipt({
+      adopted: true,
+      reason: 'adopted',
+      routeCount: normalized.routes.length,
+    });
+    return this.renderSnapshotReceipt;
+  }
+
+  /**
+   * @param {string} [reason]
+   * @returns {object}
+   */
+  invalidatePcbRouteSnapshot(reason = 'explicit-invalidation') {
+    if (!this.#adoptedPcbRoutes) {
+      this.#lastRenderSnapshotReceipt = createNodeCanvasRenderSnapshotReceipt({
+        adopted: false,
+        reason,
+        routeCount: 0,
+      });
+      return this.renderSnapshotReceipt;
+    }
+    return this.#invalidateAdoptedPcbSnapshot(
+      reason,
+      [...this.#adoptedPcbRoutes.keys()],
+    );
   }
 
   getConnectionPathPoints(connId) {
@@ -377,25 +621,49 @@ export class ConnectionRenderer {
   }
 
   /**
-   * Read the current rendered node size. SVG nodes can resize after creation
-   * through params, so offset dimensions must take precedence over stale cache.
+   * Read the current logical CSS node size. NodeCanvas keeps this cache current
+   * through ResizeObserver border-box measurements; integer-rounded offset
+   * dimensions are only an initialization fallback.
    * @param {HTMLElement} nodeEl
    * @param {number} fallbackWidth
    * @param {number} fallbackHeight
    * @returns {{ width: number, height: number }}
    */
   #getNodeSize(nodeEl, fallbackWidth, fallbackHeight) {
-    return {
-      width: nodeEl.offsetWidth || nodeEl._cachedW || fallbackWidth,
-      height: nodeEl.offsetHeight || nodeEl._cachedH || fallbackHeight,
-    };
+    return readNodeCanvasLogicalSize(nodeEl, fallbackWidth, fallbackHeight);
   }
 
   #getLocalElementCenter(nodeEl, childEl) {
+    let logicalX = 0;
+    let logicalY = 0;
+    let current = childEl;
+    let visited = new Set();
+    while (current && current !== nodeEl && !visited.has(current)) {
+      visited.add(current);
+      let offsetLeft = Number(current.offsetLeft);
+      let offsetTop = Number(current.offsetTop);
+      let offsetParent = current.offsetParent;
+      if (!Number.isFinite(offsetLeft) || !Number.isFinite(offsetTop) || !offsetParent) break;
+      logicalX += offsetLeft + Number(offsetParent.clientLeft || 0);
+      logicalY += offsetTop + Number(offsetParent.clientTop || 0);
+      current = offsetParent;
+    }
+    if (current === nodeEl) {
+      let width = Number(childEl.offsetWidth || childEl.clientWidth);
+      let height = Number(childEl.offsetHeight || childEl.clientHeight);
+      if (Number.isFinite(width) && width > 0 && Number.isFinite(height) && height > 0) {
+        return {
+          x: logicalX + width / 2,
+          y: logicalY + height / 2,
+        };
+      }
+    }
+
     let nodeRect = nodeEl.getBoundingClientRect();
     let childRect = childEl.getBoundingClientRect();
-    let localWidth = nodeEl.offsetWidth || nodeEl._cachedW || nodeRect.width;
-    let localHeight = nodeEl.offsetHeight || nodeEl._cachedH || nodeRect.height;
+    let localSize = this.#getNodeSize(nodeEl, nodeRect.width, nodeRect.height);
+    let localWidth = localSize.width;
+    let localHeight = localSize.height;
     let scaleX = nodeRect.width && localWidth ? nodeRect.width / localWidth : this.#getZoom();
     let scaleY = nodeRect.height && localHeight ? nodeRect.height / localHeight : this.#getZoom();
     if (!Number.isFinite(scaleX) || scaleX === 0) scaleX = 1;
@@ -466,12 +734,13 @@ export class ConnectionRenderer {
     const rects = [];
     for (const [nid, el] of this.#nodeViews) {
       if (!el?._position) continue;
+      let size = this.#getNodeSize(el, 180, 100);
       rects.push({
         id: nid,
         x: el._position.x,
         y: el._position.y,
-        w: el.offsetWidth || el._cachedW || 180,
-        h: el.offsetHeight || el._cachedH || 100,
+        w: size.width,
+        h: size.height,
       });
     }
     return rects;
@@ -662,12 +931,13 @@ export class ConnectionRenderer {
     this._nodeRectCache = new Map();
     for (const [nid, el] of this.#nodeViews) {
       if (el) {
+        let size = this.#getNodeSize(el, 180, 100);
         this._nodeRectCache.set(nid, {
           id: nid,
           x: el._position?.x || 0,
           y: el._position?.y || 0,
-          w: el.offsetWidth || el._cachedW || 180,
-          h: el.offsetHeight || el._cachedH || 100,
+          w: size.width,
+          h: size.height,
         });
       }
     }
@@ -763,6 +1033,7 @@ export class ConnectionRenderer {
     }
 
 
+    this.#validateAdoptedPcbGeometry(false);
     renderConnectionBatch(
       conns,
       (conn) => this.#render(conn),
@@ -821,6 +1092,13 @@ export class ConnectionRenderer {
    * @param {'bezier'|'orthogonal'|'straight'|'pcb'} style
    */
   setPathStyle(style) {
+    if (this.#adoptedPcbRoutes && style !== 'pcb') {
+      this.#invalidateAdoptedPcbSnapshot(
+        'path-style-change',
+        [...this.#adoptedPcbRoutes.keys()],
+        false,
+      );
+    }
     this.#pathStyle = style;
     this.#rerenderAllConnections();
   }
@@ -890,6 +1168,7 @@ export class ConnectionRenderer {
   #rerenderAllConnections() {
     this.#cancelProgressivePcb();
     this.#clearAllSlots();
+    this.#validateAdoptedPcbGeometry(false);
     renderConnectionBatch(
       this.#connectionData.values(),
       (conn) => this.#render(conn),
@@ -899,6 +1178,7 @@ export class ConnectionRenderer {
 
   #rerenderConnections(connIds) {
     for (const connId of connIds) this.#progressivePcbQueue.delete(connId);
+    this.#validateAdoptedPcbGeometry(false);
     const connections = Array.from(connIds, (connId) => this.#connectionData.get(connId)).filter(Boolean);
     renderConnectionBatch(
       connections,
@@ -1333,7 +1613,6 @@ export class ConnectionRenderer {
         toAngle: toOffset.angle ?? 180,
       });
       if (
-        !renderFullPcb &&
         path?.getAttribute('data-pcb-quality') === 'full' &&
         path.getAttribute('data-pcb-signature') === pcbSignature
       ) {
@@ -1341,9 +1620,30 @@ export class ConnectionRenderer {
       }
     }
 
+    let adoptedRoute = pathStyle === 'pcb'
+      ? this.#adoptedPcbRoutes?.get(String(conn.id))
+      : null;
+    if (
+      pathStyle === 'pcb' &&
+      this.#adoptedPcbRoutes &&
+      (!adoptedRoute || adoptedRoute.signature !== pcbSignature)
+    ) {
+      this.#invalidateAdoptedPcbSnapshot(
+        'geometry-mismatch',
+        [String(conn.id)],
+        false,
+        true,
+      );
+      adoptedRoute = null;
+    }
+
     let d;
     let points = [];
-    if (pathStyle === 'straight') {
+    if (adoptedRoute) {
+      d = adoptedRoute.path;
+      points = adoptedRoute.points;
+      renderFullPcb = true;
+    } else if (pathStyle === 'straight') {
       d = `M ${startX} ${startY} L ${endX} ${endY}`;
       points = [{ x: startX, y: startY }, { x: endX, y: endY }];
     } else if (pathStyle === 'orthogonal') {

@@ -1664,11 +1664,15 @@ export class ChatComposer extends Symbiote {
     if (label) label.textContent = text || '';
   }
 
-  _syncVoiceLanguage({ visible = false, enabled = true, mode = 'auto', options } = {}) {
+  _syncVoiceLanguage({ visible = false, enabled = true, mode = 'auto', options, title = '' } = {}) {
     let btn = this.ref.voiceLanguageBtn;
     if (!btn) return;
     btn.hidden = !visible;
     btn.disabled = Boolean(this.$.disabled) || !enabled;
+    if (title) {
+      btn.title = title;
+      btn.setAttribute('aria-label', title);
+    }
     let normalized = Array.isArray(options) && options.length
       ? options
       : [
@@ -1689,7 +1693,7 @@ export class ChatComposer extends Symbiote {
 
 ChatComposer.template = html`
 <div ${{ ondragover: 'onDragOver', ondragleave: 'onDragLeave', ondrop: 'onDrop' }}>
-  <div class="chat-context-bar" itemize="attachedContext">
+  <div class="chat-context-bar" itemize="attachedContext" item-tag="chat-composer-context-item">
     <div class="context-chip" ${{ '@title': 'title' }}>
       <span class="material-symbols-outlined icon-sm">{{icon}}</span>
       <span class="context-path">{{name}}</span>
@@ -1717,7 +1721,7 @@ ChatComposer.template = html`
     </div>
   </div>
   <div class="composer-body">
-    <div class="composer-leading-controls" ref="leadingControls" itemize="leadingControls" ${{ onclick: 'onLeadingClick' }}>
+    <div class="composer-leading-controls" ref="leadingControls" itemize="leadingControls" item-tag="chat-composer-leading-control-item" ${{ onclick: 'onLeadingClick' }}>
       <template>
         <button type="button" ${{ '@class': 'itemClass', '@data-leading-control-id': 'id', '@data-leading-control-kind': 'kind', '@title': 'title', '@aria-label': 'title', '@disabled': 'disabled' }}>
           <span class="material-symbols-outlined" ${{ '@hidden': '!hasIcon' }}>{{icon}}</span>
@@ -1728,13 +1732,13 @@ ChatComposer.template = html`
     <textarea ref="chatInput" rows="1"
       ${{ value: 'value', disabled: 'disabled', placeholder: 'placeholder',
           oninput: 'onInput', onkeydown: 'onKeyDown' }}></textarea>
-    <div class="composer-footer" ref="footer" itemize="footerControls" ${{ onchange: 'onParamChange', onclick: 'onFooterClick' }}>
+    <div class="composer-footer" ref="footer" itemize="footerControls" item-tag="chat-composer-footer-control-item" ${{ onchange: 'onParamChange', onclick: 'onFooterClick' }}>
       <template>
         <span ${{ '@class': 'itemClass' }}>
           <label ${{ '@class': 'selectClass', '@data-footer-control-id': 'id', '@data-footer-control-kind': 'kind', '@title': 'title', '@hidden': '!isSelect' }}>
             <span class="material-symbols-outlined" ${{ '@hidden': '!hasIcon' }}>{{icon}}</span>
             <span class="composer-footer-label" ${{ '@hidden': '!hasLabel' }}>{{label}}</span>
-            <select class="composer-footer-select" ${{ '@data-footer-control-id': 'id', '@data-footer-control-kind': 'kind', '@disabled': 'disabled', '@aria-label': 'accessibleName' }} itemize="options">
+            <select class="composer-footer-select" ${{ '@data-footer-control-id': 'id', '@data-footer-control-kind': 'kind', '@disabled': 'disabled', '@aria-label': 'accessibleName' }} itemize="options" item-tag="chat-composer-option-item">
               <template>
                 <option ${{ '@value': 'value', '@selected': 'selected' }}>{{label}}</option>
               </template>
@@ -1766,14 +1770,14 @@ ChatComposer.template = html`
       </button>
       <div class="composer-footer-details-track" ${{ '@style': 'footerDetailsProgressStyle' }}>
         <div class="composer-footer-details-fill"></div>
-        <div class="composer-footer-detail-segments" itemize="footerDetailsSegments" ${{ '@hidden': '!footerDetailsHasSegments' }}>
+        <div class="composer-footer-detail-segments" itemize="footerDetailsSegments" item-tag="chat-composer-detail-segment-item" ${{ '@hidden': '!footerDetailsHasSegments' }}>
           <template>
             <span ${{ '@class': 'segmentClass', '@style': 'segmentStyle', '@title': 'label' }}></span>
           </template>
         </div>
       </div>
       <div class="composer-footer-details-progress-label" ${{ '@hidden': '!footerDetailsHasProgressLabel' }}>{{footerDetailsProgressLabel}}</div>
-      <div id="composer-footer-detail-rows" class="composer-footer-details-rows" itemize="footerDetailsRows" ${{ '@hidden': 'footerDetailsRowsCollapsed' }}>
+      <div id="composer-footer-detail-rows" class="composer-footer-details-rows" itemize="footerDetailsRows" item-tag="chat-composer-detail-row-item" ${{ '@hidden': 'footerDetailsRowsCollapsed' }}>
         <template>
           <div ${{ '@class': 'rowClass' }}>
             <span class="composer-footer-detail-prefix" ${{ '@hidden': '!hasPrefix' }}>{{prefix}}</span>
@@ -1794,7 +1798,7 @@ ChatComposer.template = html`
           <span>{{footerDetailsUsageTitle}}</span>
           <span class="material-symbols-outlined composer-footer-details-action" ${{ '@hidden': '!footerDetailsHasUsageAction' }}>{{footerDetailsUsageAction}}</span>
         </div>
-        <div id="composer-footer-usage-rows" class="composer-footer-usage-rows" itemize="footerDetailsUsageRows" ${{ '@hidden': 'footerDetailsUsageCollapsed' }}>
+        <div id="composer-footer-usage-rows" class="composer-footer-usage-rows" itemize="footerDetailsUsageRows" item-tag="chat-composer-usage-row-item" ${{ '@hidden': 'footerDetailsUsageCollapsed' }}>
           <template>
             <div ${{ '@class': 'rowClass' }}>
               <div class="composer-footer-usage-line">

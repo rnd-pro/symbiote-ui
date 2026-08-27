@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rnd-pro.github.io/symbiote-ui/schemas/xr-spatial-window-frame-v1.json",
+  "title": "XR Spatial Window Frame Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "ok",
+    "uploads",
+    "reuses",
+    "totalUploads",
+    "totalReuses",
+    "dirtyWindows",
+    "frame"
+  ],
+  "properties": {
+    "version": { "const": "xr-spatial-window-frame-v1" },
+    "ok": { "type": "boolean" },
+    "uploads": { "type": "integer", "minimum": 0 },
+    "reuses": { "type": "integer", "minimum": 0 },
+    "totalUploads": { "type": "integer", "minimum": 0 },
+    "totalReuses": { "type": "integer", "minimum": 0 },
+    "dirtyWindows": { "type": "integer", "minimum": 0 },
+    "frame": {
+      "type": "object",
+      "required": ["version"],
+      "properties": {
+        "version": { "const": "xr-frame-timing-v1" }
+      }
+    }
+  }
+}

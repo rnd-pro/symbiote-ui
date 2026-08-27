@@ -1,3 +1,5 @@
+import { SHOW_EVENT_SCHEMA } from './show-runtime-catalog.js';
+
 export let UI_SCHEMA_VERSIONS = [
   {
     version: 'component-descriptor-v1',
@@ -38,6 +40,11 @@ export let UI_SCHEMA_VERSIONS = [
     version: 'message-part-v1',
     path: 'schemas/message-part-v1.json',
     description: 'JSON Schema for agent chat message parts.',
+  },
+  {
+    version: 'show-event-v1',
+    path: 'schemas/show-event-v1.json',
+    description: 'JSON Schema for product-neutral typed Show directives and event envelopes.',
   },
   {
     version: 'data-grid-v1',
@@ -1065,10 +1072,14 @@ UI_SCHEMAS['message-part-v1'] = {
         'tool_call',
         'tool_result',
         'source',
+        'footnote',
         'attachment',
         'artifact',
         'approval',
         'action',
+        'actions',
+        'embed',
+        'confirm',
         'retry',
         'cancel',
         'error',
@@ -1084,10 +1095,17 @@ UI_SCHEMAS['message-part-v1'] = {
     title: { type: 'string' },
     url: { type: 'string' },
     mimeType: { type: 'string' },
-    meta: { type: 'object', additionalProperties: true }
+    meta: { type: 'object', additionalProperties: true },
+    payload: true,
+    action: { type: 'string' },
+    actions: { type: 'array', items: { type: 'object' } },
+    key: { type: 'string' },
+    display: { type: ['object', 'null'] }
   },
   additionalProperties: false
 };
+
+UI_SCHEMAS['show-event-v1'] = SHOW_EVENT_SCHEMA;
 
 UI_SCHEMAS['data-grid-v1'] = {
   $schema: 'https://json-schema.org/draft/2020-12/schema',

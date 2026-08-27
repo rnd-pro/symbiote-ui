@@ -51,6 +51,7 @@ function createFakeObject3D(kind) {
 function createFakeThree() {
   let THREE = {
     REVISION: '0.180.0',
+    LinearMipmapLinearFilter: 1008,
     LinearFilter: 1006,
     SRGBColorSpace: 'srgb',
   };
@@ -308,6 +309,48 @@ test('renderer draws measured labels with the exact captured font metrics', () =
   assert.equal(second.y - first.y, 32, 'captured 16px line-height at DPR 2 drives line spacing');
 });
 
+test('renderer gives an exact browser-measured text line a transparent edge bleed', () => {
+  let { renderer, canvasOf } = createRendererHarness({ renderer: { texturePixelRatio: 2 } });
+  let compiled = compileFixture();
+  let title = compiled.panels
+    .find((panel) => panel.id === 'panel:project')
+    .primitives.find((primitive) => primitive.id === TITLE_PRIMITIVE_ID);
+  title.exactTextBounds = true;
+  renderer.mount(compiled, { theme: createTestTheme() });
+
+  let canvas = canvasOf(TITLE_PRIMITIVE_ID);
+  assert.equal(canvas.width, 364, 'two physical pixels of bleed protect each measured edge');
+  assert.equal(canvas.ctx.fills[0].x, 2, 'the first glyph begins after the transparent left bleed');
+});
+
+test('renderer falls back to measured font spacing when a multiline label has a non-numeric line-height', () => {
+  let { renderer, canvasOf } = createRendererHarness({ renderer: { texturePixelRatio: 2 } });
+  let compiled = compileFixture();
+  let editor = compiled.panels.flatMap((panel) => panel.primitives)
+    .find((primitive) => primitive.id === EDITOR_PRIMITIVE_ID);
+  editor.style.font.lineHeight = 'normal';
+  renderer.mount(compiled, { theme: createTestTheme() });
+
+  let [first, second] = canvasOf(EDITOR_PRIMITIVE_ID).ctx.fills;
+  assert.equal(second.y - first.y, 35, 'fallback line spacing remains finite at DPR 2');
+});
+
+test('renderer wraps measured multiline labels within their native text plane', () => {
+  let { renderer, canvasOf } = createRendererHarness({ renderer: { texturePixelRatio: 1 } });
+  let compiled = compileFixture();
+  let title = compiled.panels
+    .find((panel) => panel.id === 'panel:project')
+    .primitives.find((primitive) => primitive.id === TITLE_PRIMITIVE_ID);
+  title.text = 'A measured message that must wrap instead of clipping at the panel edge.';
+  title.multiline = true;
+  title.sourcePixels = { width: 120, height: 96 };
+  title.style.font = { ...title.style.font, size: '14px', lineHeight: '20px' };
+  renderer.mount(compiled, { theme: createTestTheme() });
+  let fills = canvasOf(TITLE_PRIMITIVE_ID).ctx.fills;
+  assert.ok(fills.length >= 2, 'long measured text is drawn over multiple lines');
+  assert.ok(fills.every((fill) => fill.text.length > 0));
+});
+
 test('renderer reports unsupported Canvas2D controls as data', () => {
   let { renderer } = createRendererHarness({
     canvas: { supportsLetterSpacing: false, supportsDirection: false },
@@ -491,6 +534,20 @@ test('renderer renders chromeless captured controls as transparent hit materials
   assert.ok(mesh, 'transparent toggle control has a rendered hit mesh');
   assert.equal(mesh.material.transparent, true);
   assert.equal(mesh.material.opacity, 0, 'hit material is invisible at neutral state');
+});
+
+test('renderer keeps native text above transparent content surfaces in compiler Z order', () => {
+  let { renderer } = createRendererHarness();
+  let compiled = mountFixture(renderer);
+  let title = renderer.getPrimitiveObject(TITLE_PRIMITIVE_ID);
+  let titlePrimitive = compiled.panels.flatMap((panel) => panel.primitives)
+    .find((primitive) => primitive.id === TITLE_PRIMITIVE_ID);
+  let rootSurface = renderer.getPrimitiveObject('panel:project/surface/panel:project');
+
+  assert.equal(title.renderOrder, 100 + Math.round(titlePrimitive.z * 1_000_000));
+  assert.ok(title.renderOrder > rootSurface.renderOrder, 'transparent label stays in front of the panel surface');
+  assert.equal(title.material.depthTest, false, 'label visibility does not depend on surface depth writes');
+  assert.equal(title.material.depthWrite, false);
 });
 
 test('renderer previews a larger shell without scaling mounted content', () => {

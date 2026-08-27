@@ -39,7 +39,7 @@ function clampIndex(index, total) {
  * @param {object} [timeline.personas] - `{ [id]: profile }`, registered up front.
  * @param {Array} [timeline.turns] - `{ persona, text, cue? }`.
  * @param {object} [options]
- * @param {(cue:any, turn:object, index:number) => void} [options.onCue] - fired at each turn's speak start.
+ * @param {(cue:any, turn:object, index:number) => (void|Promise<void>)} [options.onCue] - fired at each turn's speak start. A returned promise delays advancement without delaying speech start.
  * @param {(index:number) => void} [options.onIndexChange] - fired whenever the cursor moves.
  * @param {(state:string) => void} [options.onStateChange] - 'playing' | 'paused' | 'stopped' | 'finished'.
  * @param {number} [options.defaultGapMs=120] - gap between sequential turns.
@@ -48,7 +48,7 @@ function clampIndex(index, total) {
  * @returns {object} controller (see the shared contract).
  */
 export function createDialoguePlayer(stage, timeline, options = {}) {
-  let { onCue, onIndexChange, onStateChange, defaultGapMs, minTurnMs } = options;
+  let { onCue, onBoundary, onIndexChange, onStateChange, defaultGapMs, minTurnMs } = options;
   let personas = timeline?.personas || {};
   let turns = Array.isArray(timeline?.turns) ? timeline.turns : [];
   let baseGap = nonNegative(defaultGapMs, DEFAULT_GAP_MS);
@@ -140,6 +140,10 @@ export function createDialoguePlayer(stage, timeline, options = {}) {
     let turn = turns[index];
     let cued = false;
     let cueStartedAt = 0;
+    let resolveCueDone;
+    let cueDone = new Promise((resolve) => {
+      resolveCueDone = resolve;
+    });
     let fireCue = () => {
       if (cued) return;
       cued = true;
@@ -147,14 +151,28 @@ export function createDialoguePlayer(stage, timeline, options = {}) {
       let cb = controller.onCue;
       if (typeof cb === 'function') {
         try {
-          cb(turn?.cue, turn, index);
+          Promise.resolve(cb(turn?.cue, turn, index)).catch(() => {}).then(resolveCueDone);
+        } catch (_) {
+          resolveCueDone();
+        }
+      } else {
+        resolveCueDone();
+      }
+    };
+
+    let fireBoundary = (event) => {
+      if (token !== run) return;
+      let cb = controller.onBoundary;
+      if (typeof cb === 'function') {
+        try {
+          cb(event, turn, index);
         } catch (_) {}
       }
     };
 
     let speakPromise = Promise.resolve(
       stage && typeof stage.speak === 'function'
-        ? stage.speak(turn?.persona, turn?.text, { onStart: fireCue })
+        ? stage.speak(turn?.persona, turn?.text, { onStart: fireCue, onBoundary: fireBoundary })
         : undefined,
     ).catch(() => {});
 
@@ -164,7 +182,7 @@ export function createDialoguePlayer(stage, timeline, options = {}) {
       fireCue();
     });
 
-    speakPromise.then(() => {
+    Promise.all([speakPromise, cueDone]).then(() => {
       // Superseded by next/prev/seek/stop — the new owner drives.
       if (token !== run) return;
       // A paused seek-preview spoke this turn on demand; it must never advance,
@@ -253,6 +271,7 @@ export function createDialoguePlayer(stage, timeline, options = {}) {
     // Event handlers are settable so a UI can (re)bind after construction, not
     // only pass them via options at creation time. Initialized from options here.
     onCue,
+    onBoundary,
     onIndexChange,
     onStateChange,
 

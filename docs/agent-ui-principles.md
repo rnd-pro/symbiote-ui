@@ -231,3 +231,21 @@ The composer dispatches a cancelable `chat-composer-recorder-intent` event durin
 The composer dispatches a cancelable `chat-composer-transcription-intent` event when the user approves, cancels, or sends the current voice result.
 - If prevented, the host manages the transcription preview actions.
 - If not prevented, the library falls back to standard behavior (e.g. appending text to composer input, clearing preview states, or triggering standard message submit events).
+
+## Held-Stream Ownership & Maximo Migration Seam
+
+`VoiceRuntime` enforces held-stream ownership and dead-stream fail-closed lifecycle guarantees:
+
+1. **Held-Stream Ownership & Teardown**:
+   - `VoiceRuntime` manages media stream handles internally. Borrowed held streams (default `owned: false`) are never stopped by runtime cleanup or teardown, remaining live and reusable across starts and cancellations.
+   - Owned streams (explicit `owned: true` or internal `getUserMedia` capture streams owned by the runtime) are stopped upon teardown or replacement.
+   - If media capture or recording fails, dead audio streams fail closed immediately: no stale chunks or audio events are emitted across generation boundaries.
+
+2. **Lifecycle & Diagnostics Payload & Cardinality**:
+   - `VoiceRuntime` emits exactly one generic `lifecycle` event and one corresponding named public event (when phase is not `lifecycle`) per state transition.
+   - Every lifecycle event payload includes a frozen, immutable detail object containing fields actually emitted by `_emitLifecycle`: `generation`, `recorderGeneration`, `phase`, `state`, `mode`, `active`, plus phase-specific details (`error`, `text`, `isFinal`, `current`, `previous`). It does not claim fields such as `timestamp` or `activeBackend`.
+   - `getDiagnostics()` returns a safe, frozen public diagnostic snapshot (`state`, `mode`, `activeBackend`, `recognition`, `recorder`, `heldStream`, `captureOwned`, `timerActive`, `lastPhase`, `lastError`) without exposing internal mutable state or private references.
+
+3. **Maximo Migration Seam**:
+   - Consumers (such as Maximo product shells) migrate voice adoption through `VoiceRuntime` and `chat-composer` public intent events (`chat-composer-recorder-intent`, `chat-composer-permission-intent`, `chat-composer-transcription-intent`).
+   - Consumer product shells do not manipulate private recognition handles directly; all lifecycle state transitions flow through the central `VoiceRuntime` event boundary.

@@ -26,9 +26,13 @@ test('createXRFrameTimingTracker records contiguous samples and calculates metri
   assert.equal(metrics.sampleCount, 91);
   assert.ok(Math.abs(metrics.durationMs - 1000) < 10);
   assert.ok(metrics.meanIntervalMs > 11.0 && metrics.meanIntervalMs < 11.2);
+  assert.ok(metrics.p50IntervalMs > 11.0 && metrics.p50IntervalMs < 11.2);
   assert.ok(metrics.p95IntervalMs > 11.0 && metrics.p95IntervalMs < 11.2);
+  assert.ok(metrics.p99IntervalMs > 11.0 && metrics.p99IntervalMs < 11.2);
   assert.ok(metrics.maxIntervalMs > 11.0 && metrics.maxIntervalMs < 11.2);
   assert.equal(metrics.dropRatio, 0); // No dropped frames
+  assert.equal(metrics.missedFrames, 0);
+  assert.equal(metrics.maxConsecutiveMissedFrames, 0);
   assert.ok(metrics.effectiveFrameRate > 89 && metrics.effectiveFrameRate < 91);
 });
 

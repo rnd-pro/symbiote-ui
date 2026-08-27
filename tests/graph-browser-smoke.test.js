@@ -3,18 +3,26 @@ await acquireCurrentTestFileLock(import.meta.url);
 
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
+import { build } from 'esbuild';
 import { createServer } from 'node:http';
 import { createReadStream, existsSync } from 'node:fs';
-import { mkdtemp, rm, stat } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { after, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { inflateSync } from 'node:zlib';
 
 const repoRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const CHROME_ENDPOINT_TIMEOUT_MS = 30000;
 const BROWSER_SMOKE_TIMEOUT_MS = 180000;
 const SHOWCASE_BROWSER_SMOKE_TIMEOUT_MS = 200000;
+const browserPackageConsumerRoot = process.env.SYMBIOTE_UI_PACKAGE_CONSUMER_ROOT
+  ? path.resolve(process.env.SYMBIOTE_UI_PACKAGE_CONSUMER_ROOT)
+  : repoRoot;
+const browserPackageRoot = browserPackageConsumerRoot === repoRoot
+  ? repoRoot
+  : path.join(browserPackageConsumerRoot, 'node_modules', 'symbiote-ui');
 const BROWSER_LAUNCH_ATTEMPTS = Math.max(
   1,
   Number.parseInt(process.env.SYMBIOTE_UI_BROWSER_LAUNCH_ATTEMPTS || '1', 10) || 1
@@ -112,22 +120,76 @@ function contrastRatio(foreground, background) {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
+function readSinglePixelPng(data) {
+  const signature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+  assert.ok(data.subarray(0, 8).equals(signature), 'expected PNG screenshot bytes');
+  let offset = 8;
+  let width = 0;
+  let height = 0;
+  let bitDepth = 0;
+  let colorType = 0;
+  let idat = [];
+  while (offset < data.length) {
+    let length = data.readUInt32BE(offset);
+    let type = data.toString('ascii', offset + 4, offset + 8);
+    let payload = data.subarray(offset + 8, offset + 8 + length);
+    if (type === 'IHDR') {
+      width = payload.readUInt32BE(0);
+      height = payload.readUInt32BE(4);
+      bitDepth = payload[8];
+      colorType = payload[9];
+    } else if (type === 'IDAT') {
+      idat.push(payload);
+    } else if (type === 'IEND') {
+      break;
+    }
+    offset += length + 12;
+  }
+  assert.deepEqual({ width, height, bitDepth }, { width: 1, height: 1, bitDepth: 8 });
+  assert.ok(colorType === 2 || colorType === 6, `expected RGB/RGBA screenshot, got PNG color type ${colorType}`);
+  let raw = inflateSync(Buffer.concat(idat));
+  assert.ok(raw.length >= (colorType === 6 ? 5 : 4), 'expected one filtered PNG pixel');
+  return { r: raw[1], g: raw[2], b: raw[3], a: colorType === 6 ? raw[4] : 255 };
+}
+
 function contentType(filePath) {
   if (filePath.endsWith('.html')) return 'text/html; charset=utf-8';
   if (filePath.endsWith('.js')) return 'text/javascript; charset=utf-8';
   if (filePath.endsWith('.json')) return 'application/json; charset=utf-8';
   if (filePath.endsWith('.css')) return 'text/css; charset=utf-8';
   if (filePath.endsWith('.svg')) return 'image/svg+xml';
+  if (filePath.endsWith('.wav')) return 'audio/wav';
   return 'application/octet-stream';
 }
 
-async function createStaticServer() {
+function silentWav(durationMs, sampleRate = 8000) {
+  let sampleCount = Math.ceil(sampleRate * durationMs / 1000);
+  let dataSize = sampleCount * 2;
+  let buffer = Buffer.alloc(44 + dataSize);
+  buffer.write('RIFF', 0);
+  buffer.writeUInt32LE(36 + dataSize, 4);
+  buffer.write('WAVE', 8);
+  buffer.write('fmt ', 12);
+  buffer.writeUInt32LE(16, 16);
+  buffer.writeUInt16LE(1, 20);
+  buffer.writeUInt16LE(1, 22);
+  buffer.writeUInt32LE(sampleRate, 24);
+  buffer.writeUInt32LE(sampleRate * 2, 28);
+  buffer.writeUInt16LE(2, 32);
+  buffer.writeUInt16LE(16, 34);
+  buffer.write('data', 36);
+  buffer.writeUInt32LE(dataSize, 40);
+  return buffer;
+}
+
+async function createStaticServer(root = repoRoot) {
+  const staticRoot = path.resolve(root);
   const server = createServer(async (request, response) => {
     try {
       const requestUrl = new URL(request.url || '/', 'http://127.0.0.1');
       const decodedPath = decodeURIComponent(requestUrl.pathname);
-      const filePath = path.normalize(path.join(repoRoot, decodedPath));
-      if (!filePath.startsWith(repoRoot)) {
+      const filePath = path.normalize(path.join(staticRoot, decodedPath));
+      if (!filePath.startsWith(staticRoot)) {
         response.writeHead(403);
         response.end('Forbidden');
         return;
@@ -2862,6 +2924,1421 @@ test('showcase chat workspace exercises host event flow through library primitiv
     await page?.close?.();
     await closeChromeSession(chromeSession);
     await server.close();
+  }
+});
+
+// This is intentionally two independent esbuild graphs. It reproduces the
+// package-consumer boundary where a main bundle owns the chat element registry
+// before a later Show chunk is fetched and evaluated.
+test('show-chat reuses pre-registered chat elements across independent browser bundles', { timeout: BROWSER_SMOKE_TIMEOUT_MS }, async () => {
+  const chromePath = findChrome();
+  assertBrowserSmokeRuntime();
+
+  const fixtureRoot = await mkdtemp(path.join(tmpdir(), 'symbiote-ui-show-chat-two-bundle-'));
+  const tags = [
+    'panel-layout',
+    'chat-workspace',
+    'chat-sidebar-shell',
+    'chat-sidebar-item',
+    'chat-sidebar-sub-item',
+    'chat-transcript',
+    'chat-message-item',
+    'chat-composer',
+    'sn-button',
+    'cell-bg',
+  ];
+  const buildOptions = {
+    bundle: true,
+    format: 'esm',
+    platform: 'browser',
+    logLevel: 'silent',
+  };
+  await build({
+    ...buildOptions,
+    stdin: {
+      contents: `
+        import 'symbiote-ui/chat/workspace';
+        import 'symbiote-ui/layout/panel-layout';
+        const tags = ${JSON.stringify(tags)};
+        window.__mainConstructors = Object.fromEntries(tags.map((tag) => [tag, customElements.get(tag)]));
+        const workspace = document.createElement('chat-workspace');
+        workspace.id = 'main-workspace';
+        document.body.append(workspace);
+        workspace.setMessages([{ role: 'agent', text: 'Main bundle ready' }]);
+      `,
+      resolveDir: browserPackageConsumerRoot,
+      sourcefile: 'show-chat-main-entry.js',
+    },
+    outfile: path.join(fixtureRoot, 'main.js'),
+  });
+  await build({
+    ...buildOptions,
+    stdin: {
+      contents: `
+        import Symbiote, { html } from '@symbiotejs/symbiote';
+        class MainAutoTagOwner extends Symbiote {
+          init$ = { one: [], two: [], three: [], four: [], five: [], six: [] };
+        }
+        MainAutoTagOwner.template = html\`
+          <div itemize="one"></div><div itemize="two"></div><div itemize="three"></div>
+          <div itemize="four"></div><div itemize="five"></div><div itemize="six"></div>
+        \`;
+        MainAutoTagOwner.reg('main-auto-tag-owner');
+        document.body.append(document.createElement('main-auto-tag-owner'));
+        window.__mainAutoTags = Array.from({ length: 6 }, (_, index) => Boolean(customElements.get(\`sym-\${index + 1}\`)));
+      `,
+      resolveDir: browserPackageConsumerRoot,
+      sourcefile: 'show-chat-main-auto-tags-entry.js',
+    },
+    outfile: path.join(fixtureRoot, 'main-auto-tags.js'),
+  });
+  await build({
+    ...buildOptions,
+    stdin: {
+      contents: `
+        import * as showChat from 'symbiote-ui/chat/show-chat';
+        window.__showChatModule = showChat;
+      `,
+      resolveDir: browserPackageConsumerRoot,
+      sourcefile: 'show-chat-lazy-entry.js',
+    },
+    outfile: path.join(fixtureRoot, 'show-chat.js'),
+  });
+  await copyFile(path.join(browserPackageRoot, 'icons', 'material-symbols.css'), path.join(fixtureRoot, 'material-symbols.css'));
+  await copyFile(path.join(browserPackageRoot, 'icons', 'material-symbols-outlined-400.ttf'), path.join(fixtureRoot, 'material-symbols-outlined-400.ttf'));
+  await writeFile(path.join(fixtureRoot, 'index.html'), `<!doctype html>
+    <html>
+      <body>
+        <script type="module">
+          const warnings = [];
+          const errors = [];
+          const originalWarn = console.warn.bind(console);
+          console.warn = (...args) => {
+            warnings.push(args.map(String).join(' '));
+            originalWarn(...args);
+          };
+          addEventListener('error', (event) => errors.push(event.error?.stack || event.message));
+          addEventListener('unhandledrejection', (event) => errors.push(event.reason?.stack || String(event.reason)));
+
+          try {
+            await import('./main.js');
+            await import('./show-chat.js');
+            const shell = document.createElement('agent-dock-shell');
+            shell.style.cssText = 'inline-size:100%;block-size:720px';
+            const main = document.createElement('panel-layout');
+            main.setAttribute('slot', 'main');
+            shell.append(main);
+            document.body.append(shell);
+            await new Promise((resolve) => setTimeout(resolve, 100));
+            const mountedChat = shell.getChat();
+            mountedChat.setAgentProvider({
+              async respond() {
+                return { messages: [
+                  { role: 'agent', parts: [{ type: 'actions', id: 'context', actions: [{ id: 'details', label: 'Details' }] }] },
+                  { role: 'agent', parts: [{ type: 'embed', key: 'short' }] },
+                ] };
+              },
+            });
+            mountedChat.setShow('short', {
+              controller: { index: 0, isPlaying: false, play() { this.isPlaying = true; }, toggle() {}, prev() {}, next() {}, stop() {}, preview() {} },
+              timeline: { turns: [{ persona: 'guide', text: 'Two bundle narration' }] },
+              autoplay: true,
+            });
+            await mountedChat.submit('start');
+            await new Promise((resolve) => setTimeout(resolve, 250));
+            window.__twoBundleResult = {
+              warnings,
+              errors,
+              reused: Object.fromEntries(${JSON.stringify(tags)}.map((tag) => [tag, window.__mainConstructors[tag] === customElements.get(tag)])),
+              mounted: Boolean(mountedChat.querySelector('chat-workspace')),
+              shellMounted: Boolean(shell.querySelector('agent-show-chat')),
+              transcriptItems: mountedChat.querySelectorAll('chat-message-item').length,
+              embedded: Boolean(mountedChat.querySelector('.agent-show-player-region > chat-show-player')),
+              playerOutsideTranscript: !mountedChat.querySelector('[data-embed-key="short"] chat-show-player'),
+            };
+          } catch (error) {
+            errors.push(error?.stack || String(error));
+            window.__twoBundleResult = { warnings, errors, reused: {}, mounted: false, transcriptItems: 0, embedded: false };
+          }
+        </script>
+      </body>
+    </html>`);
+  await writeFile(path.join(fixtureRoot, 'lazy-workspace.html'), `<!doctype html>
+    <html>
+      <body>
+        <script type="module">
+          const warnings = [];
+          const errors = [];
+          const originalWarn = console.warn.bind(console);
+          console.warn = (...args) => {
+            warnings.push(args.map(String).join(' '));
+            originalWarn(...args);
+          };
+          addEventListener('error', (event) => errors.push(event.error?.stack || event.message));
+          addEventListener('unhandledrejection', (event) => errors.push(event.reason?.stack || String(event.reason)));
+
+          try {
+            await import('./main-auto-tags.js');
+            await import('./show-chat.js');
+            const chat = document.createElement('agent-show-chat');
+            document.body.append(chat);
+            const composer = chat.getWorkspace().getComposer();
+            composer.setAttachedContext([{ key: 'context', title: 'Context', name: 'Context', icon: 'info' }]);
+            composer.setLeadingControls([{ id: 'attach', label: 'Attach', icon: 'add' }]);
+            composer.setFooterControls([{
+              id: 'model',
+              kind: 'select',
+              label: 'Model',
+              value: 'one',
+              options: [{ value: 'one', label: 'One' }],
+              details: {
+                title: 'Usage',
+                segments: [{ label: 'Used', value: 0.5 }],
+                rowsExpanded: true,
+                rows: [{ label: 'Tokens', value: '10' }],
+                usageTitle: 'Plan',
+                usageExpanded: true,
+                usageRows: [{ label: 'Daily', value: '10%', progress: 0.1 }],
+              },
+            }]);
+            composer.toggleFooterDetails('model');
+            await new Promise((resolve) => setTimeout(resolve, 250));
+            const itemTags = [
+              'chat-composer-context-item',
+              'chat-composer-leading-control-item',
+              'chat-composer-footer-control-item',
+              'chat-composer-option-item',
+              'chat-composer-detail-segment-item',
+              'chat-composer-detail-row-item',
+              'chat-composer-usage-row-item',
+            ];
+            window.__lazyWorkspaceResult = {
+              warnings,
+              errors,
+              mainAutoTags: window.__mainAutoTags,
+              mounted: Boolean(chat.querySelector('chat-workspace')),
+              composerItems: Object.fromEntries(itemTags.map((tag) => [tag, composer.querySelectorAll(tag).length])),
+            };
+          } catch (error) {
+            errors.push(error?.stack || String(error));
+            window.__lazyWorkspaceResult = { warnings, errors, mainAutoTags: window.__mainAutoTags || [], mounted: false, composerItems: {} };
+          }
+        </script>
+      </body>
+    </html>`);
+
+  const server = await createStaticServer(fixtureRoot);
+  let chromeSession;
+  let page;
+  try {
+    chromeSession = await launchChromeSession(chromePath, 'show chat two bundle smoke');
+    page = await withTimeout(
+      openPage(chromeSession.endpoint, `${server.url}/index.html?v=show-chat-two-bundle`),
+      22000,
+      'show chat two bundle page open'
+    );
+    let evaluation = await withTimeout(page.send('Runtime.evaluate', {
+      expression: `(async () => {
+        while (!window.__twoBundleResult) await new Promise((resolve) => setTimeout(resolve, 25));
+        return window.__twoBundleResult;
+      })()`,
+      awaitPromise: true,
+      returnByValue: true,
+    }), 15000, 'show chat two bundle Runtime.evaluate');
+    if (evaluation.exceptionDetails) {
+      throw new Error(evaluation.exceptionDetails.exception?.description || evaluation.exceptionDetails.text);
+    }
+    const result = evaluation.result.value;
+    assert.deepEqual(result.errors, [], JSON.stringify(result, null, 2));
+    assert.deepEqual(result.warnings.filter((warning) => warning.includes('W8')), [], JSON.stringify(result, null, 2));
+    assert.deepEqual(result.reused, Object.fromEntries(tags.map((tag) => [tag, true])));
+    assert.equal(result.mounted, true);
+    assert.equal(result.shellMounted, true);
+    assert.ok(result.transcriptItems >= 3, JSON.stringify(result, null, 2));
+    assert.equal(result.embedded, true);
+    assert.equal(result.playerOutsideTranscript, true);
+
+    await navigatePage(page, `${server.url}/lazy-workspace.html?v=show-chat-lazy-workspace`);
+    evaluation = await withTimeout(page.send('Runtime.evaluate', {
+      expression: `(async () => {
+        while (!window.__lazyWorkspaceResult) await new Promise((resolve) => setTimeout(resolve, 25));
+        return window.__lazyWorkspaceResult;
+      })()`,
+      awaitPromise: true,
+      returnByValue: true,
+    }), 15000, 'show chat lazy workspace Runtime.evaluate');
+    if (evaluation.exceptionDetails) {
+      throw new Error(evaluation.exceptionDetails.exception?.description || evaluation.exceptionDetails.text);
+    }
+    const lazyResult = evaluation.result.value;
+    assert.deepEqual(lazyResult.errors, [], JSON.stringify(lazyResult, null, 2));
+    assert.deepEqual(lazyResult.warnings.filter((warning) => warning.includes('W8')), [], JSON.stringify(lazyResult, null, 2));
+    assert.deepEqual(lazyResult.mainAutoTags, [true, true, true, true, true, true]);
+    assert.equal(lazyResult.mounted, true);
+    assert.deepEqual(lazyResult.composerItems, {
+      'chat-composer-context-item': 1,
+      'chat-composer-leading-control-item': 1,
+      'chat-composer-footer-control-item': 1,
+      'chat-composer-option-item': 1,
+      'chat-composer-detail-segment-item': 1,
+      'chat-composer-detail-row-item': 1,
+      'chat-composer-usage-row-item': 1,
+    });
+  } finally {
+    await page?.close?.();
+    await closeChromeSession(chromeSession);
+    await server.close();
+    await rm(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('aligned runtime preserves paused branch checkpoint across real WAV native seek', { timeout: BROWSER_SMOKE_TIMEOUT_MS }, async () => {
+  const chromePath = findChrome();
+  assertBrowserSmokeRuntime();
+
+  const fixtureRoot = await mkdtemp(path.join(tmpdir(), 'symbiote-ui-show-aligned-wav-'));
+  await build({
+    bundle: true,
+    format: 'esm',
+    platform: 'browser',
+    logLevel: 'silent',
+    stdin: {
+      contents: `
+        import { ShowAlignedMediaRuntime, ShowAttentionController } from 'symbiote-ui/chat/show-runtime';
+        import { createPresenterCursor } from 'symbiote-ui/chat/presenter-cursor.js';
+        window.__ShowAlignedMediaRuntime = ShowAlignedMediaRuntime;
+        window.__ShowAttentionController = ShowAttentionController;
+        window.__createPresenterCursor = createPresenterCursor;
+      `,
+      resolveDir: browserPackageConsumerRoot,
+      sourcefile: 'show-aligned-wav-entry.js',
+    },
+    outfile: path.join(fixtureRoot, 'show-aligned-wav.js'),
+  });
+  await writeFile(path.join(fixtureRoot, 'recognized.wav'), silentWav(3000));
+  await writeFile(path.join(fixtureRoot, 'index.html'), `<!doctype html>
+    <html>
+      <style>
+        body { margin: 0; min-height: 100vh; }
+        .target { position: absolute; left: 80px; top: 80px; width: 240px; min-height: 80px; padding: 16px; }
+      </style>
+      <body>
+        <div id="attention-target" class="target">recognized checkpoint target phrase</div>
+        <script type="module">
+          const warnings = [];
+          const errors = [];
+          let audio = null;
+          let nativeEvents = [];
+          let resets = [];
+          let cues = [];
+          let failures = [];
+          let legacyControl = null;
+          const originalWarn = console.warn.bind(console);
+          console.warn = (...args) => {
+            warnings.push(args.map(String).join(' '));
+            originalWarn(...args);
+          };
+          addEventListener('error', (event) => errors.push(event.error?.stack || event.message));
+          addEventListener('unhandledrejection', (event) => errors.push(event.reason?.stack || String(event.reason)));
+
+          const waitFor = (predicate, label) => new Promise((resolve, reject) => {
+            const started = performance.now();
+            const check = () => {
+              if (predicate()) return resolve();
+              if (performance.now() - started > 5000) return reject(new Error(label));
+              setTimeout(check, 10);
+            };
+            check();
+          });
+
+          try {
+            await import('./show-aligned-wav.js');
+            const wavResponse = await fetch('./recognized.wav');
+            const audioUrl = URL.createObjectURL(await wavResponse.blob());
+
+            const controlAudio = new Audio();
+            const controlEvents = [];
+            for (const type of ['abort', 'emptied', 'loadstart', 'loadedmetadata', 'loadeddata', 'seeking', 'timeupdate', 'seeked']) {
+              controlAudio.addEventListener(type, () => controlEvents.push({
+                type,
+                currentTimeMs: Math.round(controlAudio.currentTime * 1000),
+                readyState: controlAudio.readyState,
+              }));
+            }
+            controlAudio.preload = 'auto';
+            controlAudio.src = audioUrl;
+            controlAudio.load();
+            await new Promise((resolve) => setTimeout(resolve, 1));
+            const prefetchEventCount = controlEvents.length;
+            controlAudio.src = audioUrl;
+            controlAudio.load();
+            controlAudio.currentTime = 0.238;
+            await new Promise((resolve) => setTimeout(resolve, 50));
+            const eventsBeforeRuntime = controlEvents.length;
+            const controlRuntime = new window.__ShowAlignedMediaRuntime({ media: controlAudio, schedule: [] });
+            const legacyReturn = controlRuntime.restorePlayback({ positionMs: 238 }, { reason: 'branch-return' });
+            await waitFor(() => controlAudio.readyState >= 2, 'legacy control WAV did not reach current-data readiness');
+            legacyControl = {
+              physicalTimeMs: Math.round(controlAudio.currentTime * 1000),
+              prefetchEventCount,
+              eventsBeforeRuntime,
+              missedGenerationStart: controlEvents.slice(0, eventsBeforeRuntime).some((event) => (
+                event.type === 'emptied' || event.type === 'loadstart'
+              )),
+              terminalReceiptAvailable: legacyReturn instanceof Promise,
+              events: controlEvents,
+            };
+            controlRuntime.dispose();
+
+            audio = new Audio();
+            for (const type of [
+              'abort',
+              'emptied',
+              'error',
+              'loadstart',
+              'loadedmetadata',
+              'loadeddata',
+              'seeking',
+              'timeupdate',
+              'seeked',
+            ]) {
+              audio.addEventListener(type, () => nativeEvents.push({
+                type,
+                elapsedMs: Math.round(performance.now()),
+                currentTimeMs: Math.round(audio.currentTime * 1000),
+                readyState: audio.readyState,
+                paused: audio.paused,
+                seekable: Array.from({ length: audio.seekable.length }, (_, index) => ({
+                  start: audio.seekable.start(index),
+                  end: audio.seekable.end(index),
+                })),
+              }));
+            }
+            const addNativeMediaListener = audio.addEventListener.bind(audio);
+            let suppressedRuntimeTimeupdateListener = false;
+            audio.addEventListener = (type, listener, options) => {
+              if (type === 'timeupdate') {
+                suppressedRuntimeTimeupdateListener = true;
+                return;
+              }
+              addNativeMediaListener(type, listener, options);
+            };
+            const cursor = window.__createPresenterCursor(document);
+            const attention = new window.__ShowAttentionController({
+              cursor,
+              resolveTarget: (id) => document.getElementById(id),
+            });
+            attention.present({ mode: 'marker', targetId: 'attention-target', marker: 'oval' });
+            await attention.whenSettled();
+            attention.present({ mode: 'frame', targetId: 'attention-target' });
+            await attention.whenSettled();
+            attention.present({
+              mode: 'native-selection',
+              targetId: 'attention-target',
+              quote: 'checkpoint target',
+            });
+            await attention.whenSettled();
+            const seededAttention = {
+              markerCount: attention.snapshot.markerCount,
+              transientMode: attention.snapshot.transientMode,
+              selection: getSelection().toString(),
+            };
+            const playbackDocument = new EventTarget();
+            let playbackVisibilityState = 'visible';
+            Object.defineProperty(playbackDocument, 'visibilityState', {
+              get: () => playbackVisibilityState,
+            });
+
+            const runtime = new window.__ShowAlignedMediaRuntime({
+              media: audio,
+              schedule: [
+                { cueId: 'past-cursor', timeMs: 50, directive: { mode: 'cursor', targetId: 'attention-target' }, alignment: { provenance: { mediaDurationMs: 3000 } } },
+                { cueId: 'past-frame', timeMs: 80, directive: { mode: 'frame', targetId: 'attention-target' }, alignment: { provenance: { mediaDurationMs: 3000 } } },
+                { cueId: 'past-marker', timeMs: 110, directive: { mode: 'marker', targetId: 'attention-target', marker: 'oval' }, alignment: { provenance: { mediaDurationMs: 3000 } } },
+                { cueId: 'past-selection', timeMs: 140, directive: { mode: 'native-selection', targetId: 'attention-target', quote: 'checkpoint target' }, alignment: { provenance: { mediaDurationMs: 3000 } } },
+                { cueId: 'future-frame', timeMs: 280, directive: { mode: 'frame', targetId: 'attention-target' }, alignment: { provenance: { mediaDurationMs: 3000 } } },
+                { cueId: 'future-clock-marker', timeMs: 2320, directive: { mode: 'marker', targetId: 'attention-target', marker: 'oval' }, alignment: { provenance: { mediaDurationMs: 3000 } } },
+                { cueId: 'future-clock-status', timeMs: 2800, directive: { mode: 'cursor', targetId: 'attention-target' }, alignment: { provenance: { mediaDurationMs: 3000 } } },
+                { cueId: 'future-cleanup-sentinel', timeMs: 2950, directive: { mode: 'cursor', targetId: 'attention-target' }, alignment: { provenance: { mediaDurationMs: 3000 } } },
+              ],
+              playbackClock: { document: playbackDocument },
+              onReset: (receipt) => {
+                resets.push(receipt);
+                attention.clearTransient();
+                attention.clearMarkers();
+              },
+              onCue: (receipt) => {
+                cues.push(receipt);
+                attention.present(receipt.cue.directive);
+              },
+              onSeekFailure: (receipt) => failures.push(receipt),
+            });
+            const operation = await runtime.loadAndRestorePlayback({
+              source: audioUrl,
+              positionMs: 238,
+              paused: true,
+              preload: 'auto',
+            }, { reason: 'branch-return' });
+            await new Promise((resolve) => setTimeout(resolve, 700));
+            const overlay = document.querySelector('.symbiote-presenter-cursor');
+            const hiddenAttention = {
+              overlayVisible: overlay?.classList.contains('is-visible') || false,
+              markerCount: attention.snapshot.markerCount,
+              transientMode: attention.snapshot.transientMode,
+              cursorOwner: attention.snapshot.cursorOwner,
+              inkPathData: [...(overlay?.querySelectorAll('.pc-ink path') || [])]
+                .map((path) => path.getAttribute('d') || '')
+                .filter(Boolean),
+              selection: getSelection().toString(),
+            };
+            const owned = {
+              operation,
+              paused: audio.paused,
+              currentTimeMs: Math.round(audio.currentTime * 1000),
+              reset: resets.at(-1),
+              cueCount: cues.length,
+              nativeEvents: [...nativeEvents],
+              seededAttention,
+              hiddenAttention,
+            };
+
+            window.__resumeAlignedWav = async () => {
+              try {
+                await runtime.resume();
+                await waitFor(() => audio.currentTime >= 0.6, 'real WAV did not advance before visibility cleanup');
+                playbackVisibilityState = 'hidden';
+                playbackDocument.dispatchEvent(new Event('visibilitychange'));
+                const hiddenClock = runtime.playbackClockState;
+                playbackVisibilityState = 'visible';
+                playbackDocument.dispatchEvent(new Event('visibilitychange'));
+                const visibleClock = runtime.playbackClockState;
+                await waitFor(
+                  () => cues.filter((receipt) => receipt.cue.cueId === 'future-clock-status').length === 1,
+                  'runtime playback clock did not fire synthetic 2320/2800ms cues once after explicit resume',
+                );
+                const beforePauseClock = runtime.playbackClockState;
+                audio.pause();
+                await waitFor(
+                  () => runtime.playbackClockState.active === false,
+                  'native pause event did not release the playback clock',
+                );
+                const afterPauseClock = runtime.playbackClockState;
+                const resumed = {
+                  futureCueCount: cues.filter((receipt) => receipt.cue.cueId === 'future-frame').length,
+                  playbackClockCueCount: cues.filter((receipt) => receipt.cue.cueId === 'future-clock-marker').length,
+                  playbackClockCueReason: cues.find((receipt) => receipt.cue.cueId === 'future-clock-marker')?.reason,
+                  playbackClockStatusCount: cues.filter((receipt) => receipt.cue.cueId === 'future-clock-status').length,
+                  playbackClockStatusReason: cues.find((receipt) => receipt.cue.cueId === 'future-clock-status')?.reason,
+                  historicalCueCount: cues.filter((receipt) => receipt.cue.cueId.startsWith('past-')).length,
+                  physicalTimeMs: Math.round(audio.currentTime * 1000),
+                  nativeTimeupdateCount: nativeEvents.filter((event) => event.type === 'timeupdate').length,
+                  suppressedRuntimeTimeupdateListener,
+                  hiddenClock,
+                  visibleClock,
+                  beforePauseClock,
+                  afterPauseClock,
+                };
+
+                const priorSeekedCount = nativeEvents.filter((event) => event.type === 'seeked').length;
+                audio.currentTime = 0.4;
+                await waitFor(
+                  () => nativeEvents.filter((event) => event.type === 'seeked').length > priorSeekedCount,
+                  'unrelated WAV seek did not complete',
+                );
+                const unrelated = {
+                  reset: resets.at(-1),
+                  nativeEvents: nativeEvents.slice(owned.nativeEvents.length),
+                };
+                await runtime.resume();
+                const beforeDisposeClock = runtime.playbackClockState;
+                runtime.dispose();
+                const afterDisposeClock = runtime.playbackClockState;
+                audio.pause();
+                attention.dispose();
+                cursor.dispose();
+                URL.revokeObjectURL(audioUrl);
+                window.__alignedWavResult = {
+                  warnings,
+                  errors,
+                  failures,
+                  legacyControl,
+                  owned,
+                  resumed,
+                  unrelated,
+                  disposal: { beforeDisposeClock, afterDisposeClock },
+                };
+              } catch (error) {
+                errors.push(error?.stack || String(error));
+                window.__alignedWavResult = {
+                  warnings,
+                  errors,
+                  debug: { currentTimeMs: Math.round(audio.currentTime * 1000), nativeEvents, resets, cues },
+                };
+              }
+            };
+            window.__alignedWavOwnedReady = true;
+          } catch (error) {
+            errors.push(error?.stack || String(error));
+            window.__alignedWavResult = {
+              warnings,
+              errors,
+              debug: {
+                currentTimeMs: Math.round(Number(audio?.currentTime || 0) * 1000),
+                nativeEvents,
+                resets,
+                cues,
+              },
+            };
+          }
+        </script>
+      </body>
+    </html>`);
+
+  const server = await createStaticServer(fixtureRoot);
+  let chromeSession;
+  let page;
+  try {
+    chromeSession = await launchChromeSession(chromePath, 'show aligned real WAV smoke');
+    page = await withTimeout(
+      openPage(chromeSession.endpoint, `${server.url}/index.html?v=show-aligned-real-wav`),
+      22000,
+      'show aligned real WAV page open'
+    );
+    let readyEvaluation = await withTimeout(page.send('Runtime.evaluate', {
+      expression: `(async () => {
+        while (!window.__alignedWavOwnedReady && !window.__alignedWavResult) {
+          await new Promise((resolve) => setTimeout(resolve, 25));
+        }
+        return window.__alignedWavResult ? 'failed' : 'ready';
+      })()`,
+      awaitPromise: true,
+      returnByValue: true,
+    }), 15000, 'show aligned real WAV owned readiness');
+    if (readyEvaluation.exceptionDetails) {
+      throw new Error(readyEvaluation.exceptionDetails.exception?.description || readyEvaluation.exceptionDetails.text);
+    }
+    if (readyEvaluation.result.value === 'ready') {
+      let resumeEvaluation = await withTimeout(page.send('Runtime.evaluate', {
+        expression: 'window.__resumeAlignedWav()',
+        userGesture: true,
+        awaitPromise: true,
+        returnByValue: true,
+      }), 15000, 'show aligned real WAV user-activated resume');
+      if (resumeEvaluation.exceptionDetails) {
+        throw new Error(resumeEvaluation.exceptionDetails.exception?.description || resumeEvaluation.exceptionDetails.text);
+      }
+    }
+    let evaluation = await withTimeout(page.send('Runtime.evaluate', {
+      expression: 'window.__alignedWavResult',
+      returnByValue: true,
+    }), 5000, 'show aligned real WAV result');
+    if (evaluation.exceptionDetails) {
+      throw new Error(evaluation.exceptionDetails.exception?.description || evaluation.exceptionDetails.text);
+    }
+    const result = evaluation.result.value;
+    assert.deepEqual(result.errors, [], JSON.stringify(result, null, 2));
+    assert.deepEqual(result.warnings.filter((warning) => warning.includes('W8')), [], JSON.stringify(result, null, 2));
+    assert.equal(result.legacyControl.missedGenerationStart, true, JSON.stringify(result, null, 2));
+    assert.equal(result.legacyControl.terminalReceiptAvailable, false, JSON.stringify(result, null, 2));
+    assert.ok(result.legacyControl.eventsBeforeRuntime > result.legacyControl.prefetchEventCount, JSON.stringify(result, null, 2));
+    assert.equal(result.owned.paused, true, JSON.stringify(result, null, 2));
+    assert.deepEqual(result.owned.operation, {
+      status: 'completed',
+      reason: 'branch-return',
+      terminalReason: 'completed',
+      operationId: 1,
+      requestedMs: 238,
+      observedMs: 238,
+      phase: 'completed',
+      source: result.owned.operation.source,
+      generation: 1,
+    }, JSON.stringify(result, null, 2));
+    assert.deepEqual(
+      result.owned.reset,
+      { reason: 'branch-return', mediaTimeMs: 238 },
+      JSON.stringify(result, null, 2),
+    );
+    assert.equal(result.owned.cueCount, 0, JSON.stringify(result, null, 2));
+    assert.ok(Math.abs(result.owned.currentTimeMs - 238) <= 25, JSON.stringify(result, null, 2));
+    assert.ok(result.owned.nativeEvents.some((event) => event.type === 'loadedmetadata'), JSON.stringify(result, null, 2));
+    assert.ok(result.owned.nativeEvents.some((event) => event.type === 'loadeddata'), JSON.stringify(result, null, 2));
+    assert.ok(result.owned.nativeEvents.some((event) => (
+      event.type === 'seeked' && Math.abs(event.currentTimeMs - 238) <= 25
+    )), JSON.stringify(result, null, 2));
+    assert.equal(result.owned.seededAttention.markerCount, 1, JSON.stringify(result, null, 2));
+    assert.equal(result.owned.seededAttention.transientMode, 'native-selection', JSON.stringify(result, null, 2));
+    assert.match(result.owned.seededAttention.selection, /checkpoint target/);
+    assert.deepEqual(result.owned.hiddenAttention, {
+      overlayVisible: false,
+      markerCount: 0,
+      transientMode: '',
+      cursorOwner: '',
+      inkPathData: [],
+      selection: '',
+    });
+    assert.deepEqual(result.failures, [], JSON.stringify(result, null, 2));
+    assert.equal(result.resumed.futureCueCount, 1, JSON.stringify(result, null, 2));
+    assert.equal(result.resumed.playbackClockCueCount, 1, JSON.stringify(result, null, 2));
+    assert.equal(result.resumed.playbackClockCueReason, 'playback-clock', JSON.stringify(result, null, 2));
+    assert.equal(result.resumed.playbackClockStatusCount, 1, JSON.stringify(result, null, 2));
+    assert.equal(result.resumed.playbackClockStatusReason, 'playback-clock', JSON.stringify(result, null, 2));
+    assert.equal(result.resumed.historicalCueCount, 0, JSON.stringify(result, null, 2));
+    assert.ok(result.resumed.physicalTimeMs >= 2800, JSON.stringify(result, null, 2));
+    assert.ok(result.resumed.nativeTimeupdateCount > 0, JSON.stringify(result, null, 2));
+    assert.equal(result.resumed.suppressedRuntimeTimeupdateListener, true, JSON.stringify(result, null, 2));
+    assert.deepEqual(result.resumed.hiddenClock, { active: false, intervalMs: 250, pendingCueCount: 3 });
+    assert.deepEqual(result.resumed.visibleClock, { active: true, intervalMs: 250, pendingCueCount: 3 });
+    assert.deepEqual(result.resumed.beforePauseClock, { active: true, intervalMs: 250, pendingCueCount: 1 });
+    assert.deepEqual(result.resumed.afterPauseClock, { active: false, intervalMs: 250, pendingCueCount: 1 });
+    assert.deepEqual(result.disposal.beforeDisposeClock, { active: true, intervalMs: 250, pendingCueCount: 3 });
+    assert.deepEqual(result.disposal.afterDisposeClock, { active: false, intervalMs: 250, pendingCueCount: 8 });
+    assert.deepEqual(
+      result.unrelated.reset,
+      { reason: 'seeked', mediaTimeMs: 400 },
+      JSON.stringify(result, null, 2),
+    );
+  } finally {
+    await page?.close?.();
+    await closeChromeSession(chromeSession);
+    await server.close();
+    await rm(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('agent dock and compact Show player keep reference desktop/mobile geometry', { timeout: BROWSER_SMOKE_TIMEOUT_MS }, async () => {
+  const chromePath = findChrome();
+  assertBrowserSmokeRuntime();
+
+  const fixtureRoot = await mkdtemp(path.join(tmpdir(), 'symbiote-ui-show-chat-visual-'));
+  const evidenceRoot = process.env.SYMBIOTE_UI_SHOW_VISUAL_EVIDENCE_DIR
+    ? path.resolve(process.env.SYMBIOTE_UI_SHOW_VISUAL_EVIDENCE_DIR)
+    : path.join(fixtureRoot, 'evidence');
+  await mkdir(evidenceRoot, { recursive: true });
+
+  await build({
+    bundle: true,
+    format: 'esm',
+    platform: 'browser',
+    logLevel: 'silent',
+    stdin: {
+      contents: `
+        import 'symbiote-ui/chat/show-chat';
+        import { ShowActionLifecycle } from 'symbiote-ui/chat/show-runtime';
+        import * as LayoutTree from 'symbiote-ui/layout/LayoutTree';
+        window.ShowActionLifecycle = ShowActionLifecycle;
+        window.LayoutTree = LayoutTree;
+      `,
+      resolveDir: browserPackageConsumerRoot,
+      sourcefile: 'show-chat-visual-entry.js',
+    },
+    outfile: path.join(fixtureRoot, 'show-chat.js'),
+  });
+  await copyFile(path.join(browserPackageRoot, 'icons', 'material-symbols.css'), path.join(fixtureRoot, 'material-symbols.css'));
+  await copyFile(path.join(browserPackageRoot, 'icons', 'material-symbols-outlined-400.ttf'), path.join(fixtureRoot, 'material-symbols-outlined-400.ttf'));
+
+  await writeFile(path.join(fixtureRoot, 'index.html'), `<!doctype html>
+    <html>
+      <head>
+        <meta name="viewport" content="width=device-width,initial-scale=1">
+        <style>
+          :root {
+            --sn-font: Inter, system-ui, sans-serif;
+            --sn-text: #1d2025; --sn-text-dim: #68707c;
+            --sn-panel-bg: #fff; --sn-node-bg: #f4f6f8; --sn-node-hover: #e8f1ff;
+            --sn-node-selected: #0f62fe; --sn-node-border: #d6dae0; --sn-node-border-width: 1px;
+            --sn-layout-gap-bg: #d6dae0; --sn-sys-surface-sunken: #eef1f4;
+            --sn-space-xs: 4px; --sn-space-sm: 8px; --sn-space-md: 12px; --sn-space-xl: 24px;
+            --sn-node-radius: 8px; --sn-button-font-weight: 600;
+            --sn-shadow-md: 0 4px 16px rgba(0,0,0,.14); --sn-shadow-lg: 0 12px 32px rgba(0,0,0,.2);
+          }
+          * { box-sizing: border-box; }
+          html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; }
+          body { font: 14px/1.35 var(--sn-font); }
+          agent-dock-shell { width: 100vw; height: 100vh; }
+          .visual-main { position: relative; width: 100%; height: 100%; overflow: hidden; background: linear-gradient(135deg,#f7f9fb,#e5eaf0); }
+          .visual-main-grid { position:absolute; inset:24px; border:1px solid #c9d0d8; border-radius:12px; background:#fff; }
+          .presenter-reserve { position:absolute; inset:15% 12% 16% 10%; border:2px dashed #0f62fe; border-radius:20px; color:#0f62fe; display:grid; place-items:center; }
+          .consumer-local-overlay { position:absolute; inset:0; z-index:12000; background:rgb(255,0,255); pointer-events:auto; }
+          .consumer-global-modal { position:fixed; inset:0; z-index:20000; background:rgb(0,255,255); pointer-events:auto; }
+        </style>
+      </head>
+      <body>
+        <script type="module">
+          const warnings = [];
+          const originalWarn = console.warn.bind(console);
+          console.warn = (...args) => { warnings.push(args.map(String).join(' ')); originalWarn(...args); };
+          await import('./show-chat.js');
+          const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+          const main = document.createElement('panel-layout');
+          main.className = 'visual-main';
+          main.setAttribute('slot', 'main');
+          main.setAttribute('responsive-mode', 'swipe');
+          main.setAttribute('responsive-breakpoint', '760');
+          document.body.append(main);
+          await frame();
+          await frame();
+          main.$.panelChrome = false;
+          main.registerPanelType('visual-grid', {
+            title: 'Workspace',
+            icon: 'dashboard',
+            component: 'section',
+            attributes: { class: 'visual-main-grid' },
+            behavior: { collapse: 'never', responsiveMode: 'swipe', responsiveBreakpoint: 760, mobileDock: 'primary' },
+          });
+          main.registerPanelType('visual-detail', {
+            title: 'Details',
+            icon: 'info',
+            component: 'aside',
+            attributes: { class: 'visual-detail' },
+            behavior: { collapse: 'manual', responsiveMode: 'swipe', responsiveBreakpoint: 760, mobileDock: 'end' },
+          });
+          main.setLayout(window.LayoutTree.createSplit(
+            'horizontal',
+            window.LayoutTree.createPanel('visual-grid', {}, { collapse: 'never', responsiveMode: 'swipe', responsiveBreakpoint: 760, mobileDock: 'primary', importance: 100 }),
+            window.LayoutTree.createPanel('visual-detail', {}, { collapse: 'manual', responsiveMode: 'swipe', responsiveBreakpoint: 760, mobileDock: 'end', importance: 20 }),
+            0.78,
+            { collapse: 'never', responsiveMode: 'swipe', responsiveBreakpoint: 760, mobileDock: 'auto' },
+          ));
+          for (let attempt = 0; attempt < 12; attempt += 1) {
+            const panels = [...main.querySelectorAll('layout-node[node-type="panel"]')];
+            if (panels.length === 2 && panels.every((node) => node.$.nodeId)) break;
+            await frame();
+          }
+          const readyPanels = [...main.querySelectorAll('layout-node[node-type="panel"]')];
+          if (readyPanels.length !== 2 || readyPanels.some((node) => !node.$.nodeId)) {
+            throw new Error('nested panel-layout did not reach the already-connected fixture precondition');
+          }
+          const mainGrid = main.querySelector('.visual-main-grid');
+          mainGrid.innerHTML = '<div class="presenter-reserve">Presenter overlay reserve</div><div class="consumer-local-overlay">Consumer local overlay</div>';
+          const shell = document.createElement('agent-dock-shell');
+          shell.append(main);
+          shell.setMessages([
+            { role: 'user', parts: [{ type: 'text', text: 'Show the overview' }] },
+            ...Array.from({ length: 14 }, (_, index) => ({ role: 'agent', parts: [{ type: 'text', text: 'History row ' + (index + 1) + ' remains in the transcript while the player stays fixed.' }] })),
+            { role: 'agent', parts: [{ type: 'embed', key: 'overview' }] },
+          ]);
+          shell.setShow('overview', {
+            title: 'Guided overview',
+            autoplay: true,
+            state: {
+              index: 1,
+              caption: { speaker: 'Guide', text: 'The current step follows recognized narration.', words: [{text:'The'},{text:'current'},{text:'step'},{text:'follows'},{text:'recognized'},{text:'narration.'}], activeWordIndex: 3 },
+              tts: { label: 'Speech', text: 'Aligned player-owned speech block', status: 'playing' },
+            },
+            timeline: { turns: [
+              { persona: 'Guide', text: 'Open the product workspace and preserve the canvas.' },
+              { persona: 'Guide', text: 'Follow the current narration while contextual cards remain usable.' },
+              { persona: 'Agent', text: 'Continue autonomously to the next short scene.' },
+            ] },
+            controller: { index: 1, isPlaying: false, play() { this.isPlaying = true; this.onStateChange?.('playing'); }, toggle() { this.isPlaying = !this.isPlaying; this.onStateChange?.(this.isPlaying ? 'playing' : 'paused'); }, prev() {}, next() {}, stop() { this.isPlaying = false; }, preview() {} },
+            videoController: {
+              openDetail() { window.__videoActivations = [...(window.__videoActivations || []), 'openDetail']; },
+              preview() { window.__videoActivations = [...(window.__videoActivations || []), 'preview']; },
+            },
+            videoControls: [
+              { id: 'detail-video', label: 'Open video', action: 'openDetail', semantics: 'detail' },
+              { id: 'short-pointer', label: 'Preview only', action: 'preview', semantics: 'pointer-only' },
+            ],
+          });
+          document.body.append(shell);
+          const modal = document.createElement('div');
+          modal.className = 'consumer-global-modal';
+          modal.hidden = true;
+          modal.textContent = 'Consumer global modal';
+          document.body.append(modal);
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          window.__visualReady = true;
+          window.__visualWarnings = warnings;
+        </script>
+      </body>
+    </html>`);
+
+  const server = await createStaticServer(fixtureRoot);
+  let chromeSession;
+  let page;
+  const capture = async (name) => {
+    const result = await page.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
+    const data = Buffer.from(result.data, 'base64');
+    assert.equal(data.subarray(1, 4).toString('ascii'), 'PNG', `${name} screenshot is a PNG`);
+    assert.ok(data.readUInt32BE(16) > 0 && data.readUInt32BE(20) > 0, `${name} screenshot has rendered dimensions`);
+    await writeFile(path.join(evidenceRoot, `${name}.png`), data);
+  };
+  const capturePixel = async (x, y) => {
+    const result = await page.send('Page.captureScreenshot', {
+      format: 'png',
+      fromSurface: true,
+      clip: { x, y, width: 1, height: 1, scale: 1 },
+    });
+    return readSinglePixelPng(Buffer.from(result.data, 'base64'));
+  };
+  const measure = async () => {
+    const evaluation = await page.send('Runtime.evaluate', {
+      expression: `(() => {
+        const shell = document.querySelector('agent-dock-shell');
+        const layout = shell.ref.layout;
+        const chat = shell.getChat();
+        const dock = chat.closest('layout-node');
+        const mainSurface = shell.querySelector('.visual-main');
+        const main = mainSurface.closest('layout-node');
+        const innerPanel = [...mainSurface.querySelectorAll('layout-node[node-type="panel"]')]
+          .find((node) => node.$.panelType === 'visual-grid');
+        const player = shell.querySelector('chat-show-player');
+        const playerRegion = shell.querySelector('.agent-show-player-region');
+        const transcript = shell.querySelector('chat-transcript');
+        const reveal = dock.querySelector('.collapse-btn');
+        const localOverlay = shell.querySelector('.consumer-local-overlay');
+        const globalModal = document.querySelector('.consumer-global-modal');
+        const rect = (el) => { const r = el.getBoundingClientRect(); return { x:r.x, y:r.y, width:r.width, height:r.height, right:r.right, bottom:r.bottom }; };
+        const dockRect = dock.getBoundingClientRect();
+        const dockPoint = { x: Math.floor(dockRect.left + dockRect.width / 2), y: Math.floor(dockRect.top + dockRect.height / 2) };
+        const dockHit = document.elementFromPoint(dockPoint.x, dockPoint.y);
+        const revealRect = reveal.getBoundingClientRect();
+        const revealPoint = { x: Math.floor(revealRect.left + revealRect.width / 2), y: Math.floor(revealRect.top + revealRect.height / 2) };
+        const revealHit = revealRect.width ? document.elementFromPoint(revealPoint.x, revealPoint.y) : null;
+        return {
+          viewport: { width: innerWidth, height: innerHeight },
+          mobile: layout.hasAttribute('drawer-mode-active'),
+          drawerOpen: Boolean(layout.$.drawerEndOpen),
+          open: shell.hasAttribute('open'),
+          shell: rect(shell), dock: rect(dock), main: rect(main), innerLayout: rect(mainSurface), innerPanel: rect(innerPanel), chat: rect(chat), workspace: rect(chat.getWorkspace()), player: rect(player), playerRegion: rect(playerRegion),
+          innerResponsive: mainSurface.hasAttribute('responsive-active'),
+          innerDrawer: mainSurface.hasAttribute('drawer-mode-active'),
+          innerPanels: [...mainSurface.querySelectorAll('layout-node[node-type="panel"]')].map((node) => ({
+            panelType: node.$.panelType,
+            nodeId: node.$.nodeId,
+            rect: rect(node),
+            mobileDock: node.getAttribute('mobile-dock'),
+            collapsed: node.hasAttribute('collapsed'),
+            display: getComputedStyle(node).display,
+            position: getComputedStyle(node).position,
+            inlineWidth: node.style.width,
+          })),
+          innerProjection: mainSurface._drawerProjection,
+          workspaceStyle: { height: getComputedStyle(chat.getWorkspace()).height, minHeight: getComputedStyle(chat.getWorkspace()).minHeight },
+          chatStyle: { position: getComputedStyle(chat).position, height: getComputedStyle(chat).height, rows: getComputedStyle(chat).gridTemplateRows },
+          dockPoint,
+          dockZ: getComputedStyle(layout).zIndex,
+          localOverlayZ: getComputedStyle(localOverlay).zIndex,
+          hitInDock: Boolean(dockHit && dock.contains(dockHit)),
+          hitInGlobalModal: Boolean(dockHit && globalModal.contains(dockHit)),
+          dockHit: dockHit?.tagName || '',
+          revealZ: getComputedStyle(layout).zIndex,
+          revealTopmost: Boolean(revealHit && reveal.contains(revealHit)),
+          missingGlobalLayerTokens: ['--sn-layer-content', '--sn-layer-controls', '--sn-layer-overlay', '--sn-overlay-z-base']
+            .every((name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim() === ''),
+          rows: player.querySelectorAll('.chat-show-row').length,
+          ttsInsidePlayer: Boolean(player.querySelector('.chat-show-tts-text')),
+          videoControls: player.querySelectorAll('.chat-show-video-control').length,
+          playerOutsideTranscript: !transcript?.contains(player),
+          playing: player.querySelector('[data-control="play"]').hasAttribute('aria-pressed'),
+          overflow: { width: document.documentElement.scrollWidth, height: document.documentElement.scrollHeight },
+          warnings: window.__visualWarnings.filter((warning) => warning.includes('W8')),
+        };
+      })()`,
+      returnByValue: true,
+    });
+    if (evaluation.exceptionDetails) throw new Error(evaluation.exceptionDetails.exception?.description || evaluation.exceptionDetails.text);
+    return evaluation.result.value;
+  };
+  const evaluatePlayerScroll = async () => {
+    const evaluation = await page.send('Runtime.evaluate', {
+      expression: `(() => {
+        const chat = document.querySelector('agent-show-chat');
+        const player = chat.querySelector('chat-show-player');
+        const scroller = chat.getWorkspace().getTranscript().getScrollContainer();
+        const before = player.getBoundingClientRect().top;
+        scroller.scrollTop = scroller.scrollHeight;
+        const after = player.getBoundingClientRect().top;
+        return { before, after, scrollTop: scroller.scrollTop, scrollHeight: scroller.scrollHeight, clientHeight: scroller.clientHeight };
+      })()`,
+      returnByValue: true,
+    });
+    if (evaluation.exceptionDetails) throw new Error(evaluation.exceptionDetails.exception?.description || evaluation.exceptionDetails.text);
+    return evaluation.result.value;
+  };
+  const evaluateHiddenPanelLifecycle = async () => {
+    const evaluation = await page.send('Runtime.evaluate', {
+      expression: `(async () => {
+        const shell = document.querySelector('agent-dock-shell');
+        const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+        const settle = async () => { for (let index = 0; index < 5; index += 1) await frame(); };
+        const isOpen = () => shell.hasAttribute('open');
+        const isDrawerOpen = () => Boolean(
+          shell.ref.layout.hasAttribute('drawer-mode-active') && shell.ref.layout.$.drawerEndOpen
+        );
+        const makeLifecycle = (awaitTarget) => new window.ShowActionLifecycle({
+          inspect: () => ({ open: isOpen(), mobile: shell.ref.layout.hasAttribute('drawer-mode-active') }),
+          reveal: ({ inspected }) => {
+            const changed = !inspected.open;
+            if (changed) shell.open('show-action');
+            return { changed, owner: changed ? 'show-action' : 'consumer' };
+          },
+          awaitTransition: settle,
+          awaitTarget,
+          act: ({ target }) => {
+            target.dataset.showActionActed = 'true';
+            return { acted: true };
+          },
+          restore: async ({ reveal }) => {
+            if (reveal.changed) shell.close('show-action-restore');
+            await settle();
+            return { restored: reveal.changed };
+          },
+        });
+
+        shell.close('lifecycle-setup');
+        await settle();
+        const completedLifecycle = makeLifecycle(() => ({ target: shell.querySelector('chat-show-player') }));
+        const completed = await completedLifecycle.run({ id: 'browser-hidden-target' });
+        const afterCompleted = { open: isOpen(), drawerOpen: isDrawerOpen() };
+
+        let manualTargetEntered;
+        const manualTargetReady = new Promise((resolve) => { manualTargetEntered = resolve; });
+        const manualLifecycle = makeLifecycle(({ signal }) => {
+          manualTargetEntered();
+          return new Promise((resolve, reject) => signal.addEventListener('abort', () => reject(signal.reason), { once: true }));
+        });
+        const manualPending = manualLifecycle.run({ id: 'browser-manual-override' });
+        await manualTargetReady;
+        await settle();
+        const manual = await manualLifecycle.meaningfulInteraction();
+        await manualPending;
+        const afterManual = { open: isOpen(), drawerOpen: isDrawerOpen() };
+
+        shell.close('manual-cleanup');
+        await settle();
+        let pauseTargetEntered;
+        const pauseTargetReady = new Promise((resolve) => { pauseTargetEntered = resolve; });
+        const pauseLifecycle = makeLifecycle(({ signal }) => {
+          pauseTargetEntered();
+          return new Promise((resolve, reject) => signal.addEventListener('abort', () => reject(signal.reason), { once: true }));
+        });
+        const pausePending = pauseLifecycle.run({ id: 'browser-pause-cancel' });
+        await pauseTargetReady;
+        await settle();
+        const paused = await pauseLifecycle.pause();
+        await pausePending;
+        const afterPause = { open: isOpen(), drawerOpen: isDrawerOpen() };
+
+        return { completed, manual, paused, afterCompleted, afterManual, afterPause };
+      })()`,
+      awaitPromise: true,
+      returnByValue: true,
+    });
+    if (evaluation.exceptionDetails) throw new Error(evaluation.exceptionDetails.exception?.description || evaluation.exceptionDetails.text);
+    return evaluation.result.value;
+  };
+
+  try {
+    chromeSession = await launchChromeSession(chromePath, 'agent dock visual geometry');
+    page = await openPage(chromeSession.endpoint, `${server.url}/index.html?v=agent-dock-visual`);
+    await setPageViewport(page, { width: 1440, height: 844 });
+    await withTimeout(page.send('Runtime.evaluate', { expression: `(async()=>{while(!window.__visualReady)await new Promise(r=>setTimeout(r,25));await new Promise(r=>setTimeout(r,200));return true})()`, awaitPromise: true }), 10000, 'visual fixture ready');
+
+    let desktop = await measure();
+    assert.deepEqual(desktop.warnings, []);
+    assert.equal(desktop.mobile, false);
+    assert.equal(desktop.innerResponsive, false);
+    assert.equal(desktop.innerDrawer, false);
+    assert.ok(desktop.innerPanel.width > 0 && desktop.innerPanel.height > 0, JSON.stringify(desktop));
+    assert.equal(desktop.rows, 2);
+    assert.equal(desktop.ttsInsidePlayer, true);
+    assert.equal(desktop.videoControls, 2);
+    assert.equal(desktop.playerOutsideTranscript, true);
+    assert.equal(desktop.playing, true);
+    assert.equal(desktop.hitInDock, true, JSON.stringify(desktop));
+    assert.equal(desktop.missingGlobalLayerTokens, true);
+    assert.ok(desktop.dock.width >= 320 && desktop.dock.width <= 640, JSON.stringify(desktop));
+    assert.ok(desktop.main.width >= 760, JSON.stringify(desktop));
+    assert.ok(desktop.player.width <= desktop.dock.width && desktop.player.height <= 360, JSON.stringify(desktop));
+    assert.ok(desktop.player.height >= 120 && desktop.player.bottom <= desktop.dock.bottom, JSON.stringify(desktop));
+    assert.deepEqual(desktop.overflow, desktop.viewport);
+    await capture('desktop-open-playing');
+
+    let fixedPlayer = await evaluatePlayerScroll();
+    assert.equal(fixedPlayer.before, fixedPlayer.after, JSON.stringify(fixedPlayer));
+    await capture('desktop-transcript-scrolled-player-fixed');
+
+    let videoResult = await page.send('Runtime.evaluate', {
+      expression: `(() => {
+        const player = document.querySelector('chat-show-player');
+        player.querySelector('[data-video-control="detail-video"]').click();
+        player.querySelector('[data-video-control="short-pointer"]').click();
+        return window.__videoActivations || [];
+      })()`,
+      returnByValue: true,
+    });
+    assert.deepEqual(videoResult.result.value, ['openDetail'], 'pointer-only Short control never activates detail playback');
+
+    await page.send('Runtime.evaluate', { expression: `document.querySelector('.consumer-global-modal').hidden = false` });
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    const desktopModal = await measure();
+    assert.equal(desktopModal.hitInGlobalModal, true, JSON.stringify(desktopModal));
+    await page.send('Runtime.evaluate', { expression: `document.querySelector('.consumer-global-modal').hidden = true` });
+
+    const desktopLifecycle = await evaluateHiddenPanelLifecycle();
+    assert.equal(desktopLifecycle.completed.status, 'completed');
+    assert.deepEqual(desktopLifecycle.completed.phases.map(({ phase, status }) => `${phase}:${status}`), [
+      'inspect:completed', 'reveal:completed', 'transition:completed', 'target:completed', 'act:completed', 'restore:completed',
+    ]);
+    assert.deepEqual(desktopLifecycle.afterCompleted, { open: false, drawerOpen: false });
+    assert.equal(desktopLifecycle.manual.status, 'cancelled');
+    assert.equal(desktopLifecycle.manual.reason, 'meaningful-interaction');
+    assert.deepEqual(desktopLifecycle.afterManual, { open: true, drawerOpen: false });
+    assert.equal(desktopLifecycle.paused.status, 'cancelled');
+    assert.equal(desktopLifecycle.paused.reason, 'pause');
+    assert.deepEqual(desktopLifecycle.afterPause, { open: false, drawerOpen: false });
+
+    await page.send('Runtime.evaluate', { expression: `document.querySelector('agent-dock-shell').close('visual-test')` });
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    let desktopClosed = await measure();
+    assert.equal(desktopClosed.open, false);
+    assert.ok(desktopClosed.dock.width > 0 && desktopClosed.dock.width <= 40, JSON.stringify(desktopClosed));
+    assert.ok(desktopClosed.main.width >= 1390, JSON.stringify(desktopClosed));
+    assert.equal(desktopClosed.revealTopmost, true, JSON.stringify(desktopClosed));
+    await capture('desktop-closed');
+
+    await page.send('Runtime.evaluate', { expression: `document.querySelector('agent-dock-shell').open('visual-test')` });
+    await setPageViewport(page, { width: 390, height: 844, mobile: true });
+    const mobileReadyEvaluation = await withTimeout(page.send('Runtime.evaluate', {
+      expression: `(async () => {
+        const deadline = performance.now() + 4500;
+        while (performance.now() < deadline) {
+          const shell = document.querySelector('agent-dock-shell');
+          const outerLayout = shell.ref.layout;
+          const layout = document.querySelector('panel-layout.visual-main');
+          const primary = [...layout.querySelectorAll('layout-node[node-type="panel"]')]
+            .find((node) => node.$.panelType === 'visual-grid');
+          if (
+            outerLayout.hasAttribute('drawer-mode-active') &&
+            outerLayout.$.drawerEndOpen &&
+            layout.hasAttribute('responsive-active') &&
+            layout.hasAttribute('drawer-mode-active') &&
+            primary?.getBoundingClientRect().width > 0
+          ) return true;
+          await new Promise((resolve) => setTimeout(resolve, 25));
+        }
+        return false;
+      })()`,
+      awaitPromise: true,
+      returnByValue: true,
+    }), 5000, 'nested panel layout mobile readiness');
+    if (!mobileReadyEvaluation.result.value) {
+      assert.fail(`nested panel layout mobile readiness: ${JSON.stringify(await measure())}`);
+    }
+    let mobile = await measure();
+    assert.equal(mobile.mobile, true);
+    assert.equal(mobile.drawerOpen, true);
+    assert.equal(mobile.innerResponsive, true);
+    assert.equal(mobile.innerDrawer, true);
+    assert.ok(mobile.innerLayout.width > 0 && mobile.innerPanel.width > 0 && mobile.innerPanel.height > 0, JSON.stringify(mobile));
+    assert.equal(mobile.dockZ, '16000');
+    assert.equal(mobile.localOverlayZ, '12000');
+    assert.equal(mobile.hitInDock, true, JSON.stringify(mobile));
+    assert.equal(mobile.missingGlobalLayerTokens, true);
+    assert.equal(mobile.rows, 2);
+    assert.equal(mobile.playerOutsideTranscript, true);
+    assert.ok(mobile.dock.width <= 390 && mobile.dock.right <= 390, JSON.stringify(mobile));
+    assert.ok(mobile.player.width <= mobile.dock.width, JSON.stringify(mobile));
+    assert.ok(mobile.player.height >= 120 && mobile.player.bottom <= mobile.dock.bottom, JSON.stringify(mobile));
+    assert.deepEqual(mobile.overflow, mobile.viewport);
+    let mobilePixel = await capturePixel(mobile.dockPoint.x, mobile.dockPoint.y);
+    assert.notDeepEqual(mobilePixel, { r: 255, g: 0, b: 255, a: 255 }, 'dock pixels replace the underlying consumer overlay');
+    await capture('mobile-open-playing');
+
+    await page.send('Runtime.evaluate', { expression: `document.querySelector('.consumer-global-modal').hidden = false` });
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    let modalOverDock = await measure();
+    assert.equal(modalOverDock.hitInGlobalModal, true, JSON.stringify(modalOverDock));
+    assert.deepEqual(await capturePixel(modalOverDock.dockPoint.x, modalOverDock.dockPoint.y), { r: 0, g: 255, b: 255, a: 255 });
+    await capture('mobile-modal-over-dock');
+    await page.send('Runtime.evaluate', { expression: `document.querySelector('.consumer-global-modal').hidden = true` });
+
+    const mobileLifecycle = await evaluateHiddenPanelLifecycle();
+    assert.equal(mobileLifecycle.completed.status, 'completed');
+    assert.deepEqual(mobileLifecycle.afterCompleted, { open: false, drawerOpen: false });
+    assert.equal(mobileLifecycle.manual.status, 'cancelled');
+    assert.equal(mobileLifecycle.manual.reason, 'meaningful-interaction');
+    assert.deepEqual(mobileLifecycle.afterManual, { open: true, drawerOpen: true });
+    assert.equal(mobileLifecycle.paused.status, 'cancelled');
+    assert.equal(mobileLifecycle.paused.reason, 'pause');
+    assert.deepEqual(mobileLifecycle.afterPause, { open: false, drawerOpen: false });
+
+    await page.send('Runtime.evaluate', { expression: `document.querySelector('agent-dock-shell').close('visual-test')` });
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    let mobileClosed = await measure();
+    assert.equal(mobileClosed.open, false);
+    assert.equal(mobileClosed.drawerOpen, false);
+    assert.ok(mobileClosed.main.width >= 350, JSON.stringify(mobileClosed));
+    assert.equal(mobileClosed.revealZ, '16000');
+    assert.equal(mobileClosed.revealTopmost, true, JSON.stringify(mobileClosed));
+    await capture('mobile-closed');
+  } finally {
+    await page?.close?.();
+    await closeChromeSession(chromeSession);
+    await server.close();
+    await rm(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('Show attention animates presenter frames and persistent marker ink in real browser pixels', { timeout: BROWSER_SMOKE_TIMEOUT_MS }, async () => {
+  const chromePath = findChrome();
+  assertBrowserSmokeRuntime();
+
+  const fixtureRoot = await mkdtemp(path.join(tmpdir(), 'symbiote-ui-show-attention-animation-'));
+  const evidenceRoot = process.env.SYMBIOTE_UI_SHOW_ANIMATION_EVIDENCE_DIR
+    ? path.resolve(process.env.SYMBIOTE_UI_SHOW_ANIMATION_EVIDENCE_DIR)
+    : path.join(fixtureRoot, 'evidence');
+  await mkdir(evidenceRoot, { recursive: true });
+
+  await build({
+    bundle: true,
+    format: 'esm',
+    platform: 'browser',
+    logLevel: 'silent',
+    stdin: {
+      contents: `
+        import { ShowAttentionController } from 'symbiote-ui/chat/show-runtime';
+        import { createPresenterCursor } from 'symbiote-ui/chat/presenter-cursor.js';
+        let cursor = createPresenterCursor(document);
+        let attention = new ShowAttentionController({
+          cursor,
+          resolveTarget: (id) => document.getElementById(id),
+        });
+        window.__attention = attention;
+      `,
+      resolveDir: repoRoot,
+      sourcefile: 'show-attention-animation-entry.js',
+    },
+    outfile: path.join(fixtureRoot, 'show-attention-animation.js'),
+  });
+
+  await writeFile(path.join(fixtureRoot, 'index.html'), `<!doctype html>
+    <html>
+      <head>
+        <meta name="viewport" content="width=device-width,initial-scale=1">
+        <style>
+          :root { --sn-sys-accent: rgb(220, 20, 60); --sn-presenter-marker: rgb(220, 20, 60); }
+          ::selection { background: rgb(0, 110, 230); color: rgb(255, 255, 255); }
+          * { box-sizing: border-box; }
+          html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; }
+          body { background: rgb(240, 248, 255); }
+          .target { position: absolute; background: rgb(224, 230, 236); border: 1px solid rgb(80, 90, 100); }
+          #frame-target { left: 260px; top: 140px; width: 240px; height: 110px; }
+          #marker-target { left: 180px; top: 320px; width: 220px; height: 90px; }
+          #click-target { left: 590px; top: 120px; width: 120px; height: 72px; }
+          #selection-target { left: 440px; top: 320px; width: 310px; height: 90px; padding: 18px; font: 20px/1.5 system-ui; }
+        </style>
+      </head>
+      <body>
+        <div id="frame-target" class="target"></div>
+        <div id="marker-target" class="target"></div>
+        <button id="click-target" class="target">Open</button>
+        <p id="selection-target" class="target">Animate the exact native selection boundary.</p>
+        <script type="module" src="./show-attention-animation.js"></script>
+      </body>
+    </html>`);
+
+  const server = await createStaticServer(fixtureRoot);
+  let chromeSession;
+  let page;
+  const capture = async (name) => {
+    let result = await page.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
+    let data = Buffer.from(result.data, 'base64');
+    assert.equal(data.subarray(1, 4).toString('ascii'), 'PNG');
+    await writeFile(path.join(evidenceRoot, `${name}.png`), data);
+  };
+  const capturePixel = async (x, y) => {
+    let result = await page.send('Page.captureScreenshot', {
+      format: 'png',
+      fromSurface: true,
+      clip: { x, y, width: 1, height: 1, scale: 1 },
+    });
+    return readSinglePixelPng(Buffer.from(result.data, 'base64'));
+  };
+  const evaluate = async (expression, awaitPromise = false) => {
+    let result = await page.send('Runtime.evaluate', { expression, awaitPromise, returnByValue: true });
+    if (result.exceptionDetails) {
+      throw new Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text);
+    }
+    return result.result.value;
+  };
+
+  try {
+    chromeSession = await launchChromeSession(chromePath, 'Show attention presenter animation');
+    page = await openPage(chromeSession.endpoint, `${server.url}/index.html?v=show-attention-animation`);
+    await setPageViewport(page, { width: 800, height: 500 });
+    await withTimeout(page.send('Runtime.evaluate', {
+      expression: `(async()=>{while(!window.__attention)await new Promise(r=>setTimeout(r,20));return true})()`,
+      awaitPromise: true,
+    }), 10000, 'Show attention fixture ready');
+
+    let frameInitial = await evaluate(`(() => {
+      let receipt = window.__attention.present({ mode: 'frame', targetId: 'frame-target' });
+      let marquee = document.querySelector('.pc-marquee');
+      return {
+        receipt,
+        width: parseFloat(marquee.style.width),
+        height: parseFloat(marquee.style.height),
+        animating: window.__attention.snapshot.animating,
+      };
+    })()`);
+    assert.equal(frameInitial.width, 1);
+    assert.equal(frameInitial.height, 1);
+    assert.equal(frameInitial.animating, true);
+    await capture('frame-initial-1px');
+
+    let frameFinal = await evaluate(`(async () => {
+      let settled = await window.__attention.whenSettled();
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      let marquee = document.querySelector('.pc-marquee');
+      return {
+        settled,
+        width: parseFloat(marquee.style.width),
+        height: parseFloat(marquee.style.height),
+        opacity: getComputedStyle(marquee).opacity,
+        animating: window.__attention.snapshot.animating,
+      };
+    })()`, true);
+    assert.equal(frameFinal.settled.status, 'settled');
+    assert.equal(frameFinal.width, frameFinal.settled.receipt.frameRect.width);
+    assert.equal(frameFinal.height, frameFinal.settled.receipt.frameRect.height);
+    assert.ok(frameFinal.width >= 240 && frameFinal.height >= 110, JSON.stringify(frameFinal));
+    assert.equal(frameFinal.opacity, '1');
+    assert.equal(frameFinal.animating, false);
+    let frameRect = frameFinal.settled.receipt.frameRect;
+    let framePixels = [];
+    for (let x = Math.ceil(frameRect.left); x <= Math.floor(frameRect.right); x += 12) {
+      framePixels.push(await capturePixel(x, Math.ceil(frameRect.top)));
+    }
+    assert.ok(framePixels.some((pixel) => (
+      pixel.r < 80 && pixel.g < 80 && pixel.b < 80
+    )), JSON.stringify(framePixels));
+    await capture('frame-settled-visible');
+
+    let markerInitial = await evaluate(`(() => {
+      let receipt = window.__attention.present({
+        mode: 'marker', targetId: 'marker-target', marker: 'oval', frame: { seed: 17 },
+      });
+      return {
+        receipt,
+        path: document.querySelector('.pc-ink path').getAttribute('d'),
+        animating: window.__attention.snapshot.animating,
+      };
+    })()`);
+    assert.equal(markerInitial.animating, true);
+    assert.ok(markerInitial.receipt.progress === 0);
+    await capture('marker-initial-dot');
+
+    let markerFinal = await evaluate(`(async () => {
+      let settled = await window.__attention.whenSettled();
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      return {
+        settled,
+        path: document.querySelector('.pc-ink path').getAttribute('d'),
+        markerCount: window.__attention.snapshot.markerCount,
+        animating: window.__attention.snapshot.animating,
+      };
+    })()`, true);
+    assert.equal(markerFinal.settled.status, 'settled');
+    assert.equal(markerFinal.settled.receipt.progress, 1);
+    assert.ok(markerFinal.path.length > markerInitial.path.length * 4, JSON.stringify(markerFinal));
+    assert.equal(markerFinal.markerCount, 1);
+    assert.equal(markerFinal.animating, false);
+    let markerSamples = markerFinal.settled.receipt.pathSamples;
+    let markerPixels = [];
+    for (let index of [0, 0.25, 0.5, 0.75, 1]) {
+      let sample = markerSamples[Math.min(markerSamples.length - 1, Math.floor(index * markerSamples.length))];
+      markerPixels.push(await capturePixel(Math.round(sample.x), Math.round(sample.y)));
+    }
+    assert.ok(markerPixels.some((pixel) => (
+      pixel.r > 150 && pixel.g < 100 && pixel.b < 120
+    )), JSON.stringify(markerPixels));
+    await capture('marker-settled-persistent');
+
+    let persistent = await evaluate(`(async () => {
+      let before = document.querySelector('.pc-ink path').getAttribute('d');
+      window.__attention.present({ mode: 'frame', targetId: 'frame-target' });
+      await window.__attention.whenSettled();
+      return {
+        before,
+        after: document.querySelector('.pc-ink path').getAttribute('d'),
+        markerCount: window.__attention.snapshot.markerCount,
+      };
+    })()`, true);
+    assert.equal(persistent.after, persistent.before);
+    assert.equal(persistent.markerCount, 1);
+    await capture('marker-persists-with-frame');
+
+    let clickInitial = await evaluate(`(() => {
+      let receipt = window.__attention.present({ mode: 'click', targetId: 'click-target' });
+      let halo = document.querySelector('.pc-click');
+      return { receipt, transform: halo.style.transform, opacity: Number(halo.style.opacity), animating: window.__attention.snapshot.animating };
+    })()`);
+    assert.equal(clickInitial.animating, true);
+    assert.match(clickInitial.transform, /scale\(0\.45\)/);
+    await capture('click-ripple-initial');
+
+    let clickMid = await evaluate(`(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 190));
+      let halo = document.querySelector('.pc-click');
+      let rect = halo.getBoundingClientRect();
+      return {
+        rect: { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom, width: rect.width, height: rect.height },
+        transform: halo.style.transform,
+        opacity: Number(halo.style.opacity),
+      };
+    })()`, true);
+    assert.ok(clickMid.rect.width > 20 && clickMid.opacity > 0, JSON.stringify(clickMid));
+    let clickPixels = [];
+    for (let offset of [-1, 0, 1]) {
+      clickPixels.push(await capturePixel(Math.round(clickMid.rect.left + 2), Math.round((clickMid.rect.top + clickMid.rect.bottom) / 2) + offset));
+    }
+    assert.ok(clickPixels.some((pixel) => (
+      pixel.r > 180 && pixel.r - pixel.g > 14 && pixel.b - pixel.g < 20
+    )), JSON.stringify(clickPixels));
+    await capture('click-ripple-expanded');
+    assert.equal((await evaluate(`window.__attention.whenSettled()`, true)).status, 'settled');
+
+    let selectionInitial = await evaluate(`(() => {
+      let receipt = window.__attention.present({
+        mode: 'native-selection',
+        targetId: 'selection-target',
+        quote: 'exact native selection',
+        durationMs: 600,
+      });
+      return { receipt, text: document.getSelection().toString(), animating: window.__attention.snapshot.animating };
+    })()`);
+    assert.equal(selectionInitial.text, '');
+    assert.equal(selectionInitial.animating, true);
+
+    let selectionMid = await evaluate(`(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 260));
+      let selection = document.getSelection();
+      let rect = selection.getRangeAt(0).getBoundingClientRect();
+      return { text: selection.toString(), rect: { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom } };
+    })()`, true);
+    assert.ok(selectionMid.text.length > 0 && selectionMid.text.length < 'exact native selection'.length, JSON.stringify(selectionMid));
+    let selectionPixels = [];
+    for (let x = Math.ceil(selectionMid.rect.left) + 2; x < Math.floor(selectionMid.rect.right); x += 8) {
+      selectionPixels.push(await capturePixel(x, Math.ceil(selectionMid.rect.top) + 2));
+    }
+    assert.ok(selectionPixels.some((pixel) => pixel.b > 140 && pixel.b > pixel.r * 1.4), JSON.stringify(selectionPixels));
+    await capture('native-selection-progressive');
+
+    let selectionFinal = await evaluate(`(async () => {
+      let settled = await window.__attention.whenSettled();
+      return { settled, text: document.getSelection().toString(), animating: window.__attention.snapshot.animating };
+    })()`, true);
+    assert.equal(selectionFinal.settled.status, 'settled');
+    assert.equal(selectionFinal.text, 'exact native selection');
+    assert.equal(selectionFinal.animating, false);
+    await capture('native-selection-settled');
+  } finally {
+    await page?.close?.();
+    await closeChromeSession(chromeSession);
+    await server.close();
+    await rm(fixtureRoot, { recursive: true, force: true });
   }
 });
 

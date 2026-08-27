@@ -155,6 +155,10 @@ function normalizeNode(node, index, errors) {
     errors.push(`${owner} requires text to be a string when present.`);
     return null;
   }
+  if (node.exactTextBounds !== undefined && typeof node.exactTextBounds !== 'boolean') {
+    errors.push(`${owner} requires exactTextBounds to be a boolean when present.`);
+    return null;
+  }
   let hasIcon = node.icon !== undefined;
   if (node.part === 'icon' && !hasIcon) {
     errors.push(`${owner} requires an icon { name } descriptor.`);
@@ -178,6 +182,7 @@ function normalizeNode(node, index, errors) {
   let style = normalizeStyle(node.style, owner, errors);
   if (style !== undefined) normalized.style = style;
   if (node.text !== undefined) normalized.text = node.text;
+  if (node.exactTextBounds === true) normalized.exactTextBounds = true;
   if (hasIcon) {
     let icon = normalizeIcon(node.icon, owner, errors);
     if (icon !== undefined) normalized.icon = icon;

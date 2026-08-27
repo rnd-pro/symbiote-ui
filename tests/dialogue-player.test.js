@@ -119,6 +119,39 @@ test('player advances through every turn and fires onCue per turn', async () => 
   assert.equal(player.index, 2);
 });
 
+test('player waits for asynchronous cue work before advancing to the next turn', async () => {
+  let { document } = makeSpeechDocument();
+  let stage = createDialogueStage({ document, locale: 'en' });
+  let releaseFirstCue;
+  let firstCueDone = new Promise((resolve) => {
+    releaseFirstCue = resolve;
+  });
+  let events = [];
+  let player = createDialoguePlayer(stage, makeTimeline(), {
+    defaultGapMs: 0,
+    onCue: async (_cue, turn, index) => {
+      events.push(`cue-${index}-started`);
+      if (index === 0) await firstCueDone;
+      events.push(`cue-${index}-done`);
+    },
+    onIndexChange: (index) => events.push(`index-${index}`),
+  });
+
+  player.play();
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.deepEqual(events, ['cue-0-started']);
+
+  releaseFirstCue();
+  await player.done;
+
+  assert.deepEqual(events.slice(0, 4), [
+    'cue-0-started',
+    'cue-0-done',
+    'index-1',
+    'cue-1-started',
+  ]);
+});
+
 test('done resolves and onStateChange reports finished after the last turn', async () => {
   let { document } = makeSpeechDocument();
   let stage = createDialogueStage({ document, locale: 'en' });
@@ -433,6 +466,69 @@ test('a second seek while previewing previews the new turn and stays paused', as
 
   player.stop();
   await player.done;
+});
+
+test('player passes onBoundary from engine and suppresses stale boundary callbacks', async () => {
+  let { document, created } = makeSpeechDocument();
+  let stage = createDialogueStage({ document, locale: 'en' });
+  let boundaries = [];
+  let player = createDialoguePlayer(stage, makeLongTimeline(), {
+    defaultGapMs: 0,
+    onBoundary: (event, turn, index) => boundaries.push({ event, text: turn.text, index }),
+  });
+
+  let synth = document.createElement().contentWindow.speechSynthesis;
+  let originalSpeak = synth.speak;
+  let speakCalls = 0;
+  let bound1 = null;
+  synth.speak = (utterance) => {
+    speakCalls++;
+    if (speakCalls === 1) {
+      bound1 = utterance.onboundary;
+      if (bound1) bound1('test-event-1');
+    }
+    if (speakCalls === 2) {
+      if (utterance.onboundary) utterance.onboundary('test-event-2');
+    }
+    originalSpeak(utterance);
+  };
+
+  player.play();
+  player.seek(2); // cancels utterance1, clears its handlers, starts utterance 2
+
+  if (bound1) bound1('stale-event');
+
+  player.stop();
+  await player.done;
+
+  assert.deepEqual(boundaries, [
+    { event: 'test-event-1', text: 'one', index: 0 },
+    { event: 'test-event-2', text: 'three', index: 2 },
+  ]);
+});
+
+test('dialogue-stage directly suppresses captured stale onboundary callback after cancel', async () => {
+  let { document, created } = makeSpeechDocument();
+  let stage = createDialogueStage({ document, locale: 'en' });
+  let boundaries = [];
+
+  let synth = document.createElement().contentWindow.speechSynthesis;
+  let originalSpeak = synth.speak;
+  let bound = null;
+  synth.speak = (utterance) => {
+    bound = utterance.onboundary;
+    originalSpeak(utterance);
+  };
+
+  let speakPromise = stage.speak('ada', 'one', {
+    onBoundary: () => boundaries.push('stale'),
+  });
+
+  stage.cancel();
+
+  if (bound) bound({});
+
+  assert.deepEqual(boundaries, []);
 });
 
 test('empty timeline finishes immediately on play()', async () => {

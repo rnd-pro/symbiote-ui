@@ -1,3 +1,8 @@
+import {
+  createPresenterKinematicPlan,
+  samplePresenterKinematicPlan,
+} from './presenter-kinematics.js';
+
 export const PRESENTER_TEXT_SELECTION_RECEIPT_VERSION = 'presenter-text-selection-receipt-v1';
 export const PRESENTER_TEXT_SELECTION_MATCH_MODES = Object.freeze(['exact', 'normalized']);
 
@@ -306,4 +311,109 @@ export function applyPresenterTextSelection(target, parameters = {}) {
   return isTextControl(target)
     ? selectControlText(target, options)
     : selectDomText(target, options);
+}
+
+function selectionDistancePx(target, receipt) {
+  let selectedLength = Math.max(1, receipt.endOffset - receipt.startOffset);
+  if (receipt.kind === 'control') {
+    let rect = target?.getBoundingClientRect?.();
+    let width = Number(rect?.width);
+    if (Number.isFinite(width) && width > 0) {
+      return Math.max(8, width * selectedLength / Math.max(1, String(target.value || '').length));
+    }
+  } else {
+    let selection = target?.ownerDocument?.defaultView?.getSelection?.();
+    let range = selection?.rangeCount ? selection.getRangeAt(0) : null;
+    let rects = Array.from(range?.getClientRects?.() || []);
+    let measured = rects.reduce((total, rect) => total + Math.max(0, Number(rect.width) || 0), 0);
+    if (measured > 0) return measured;
+    let width = Number(range?.getBoundingClientRect?.()?.width);
+    if (Number.isFinite(width) && width > 0) return width;
+  }
+  return selectedLength * 8;
+}
+
+function animatedReceipt(receipt, sample, plan) {
+  return Object.freeze({
+    ...receipt,
+    presented: true,
+    status: sample.progress >= 1 ? 'selected' : 'selecting',
+    elapsedMs: sample.elapsedMs,
+    durationMs: plan.durationMs,
+    progress: sample.progress,
+    distancePx: sample.distancePx,
+    speedPxPerMs: sample.speedPxPerMs,
+    normalizedPathHash: plan.normalizedPathHash,
+  });
+}
+
+function progressiveOffsets(receipt, progress) {
+  let length = receipt.endOffset - receipt.startOffset;
+  let visibleLength = Math.min(length, Math.max(0, Math.round(length * progress)));
+  if (receipt.direction === 'backward') {
+    return { start: receipt.endOffset - visibleLength, end: receipt.endOffset };
+  }
+  return { start: receipt.startOffset, end: receipt.startOffset + visibleLength };
+}
+
+/**
+ * Creates a cancelable presenter selection whose frames progressively extend
+ * the browser's real Selection/Range (or text-control selection). The caller
+ * owns the clock and calls presentFrame(elapsedMs); no timestamp is invented.
+ * Duration is derived from measured selection travel, never supplied by the consumer.
+ */
+export function createPresenterTextSelectionAnimation(target, parameters = {}) {
+  let base = applyPresenterTextSelection(target, parameters);
+  let baseReceipt = base.receipt;
+  let distancePx = selectionDistancePx(target, baseReceipt);
+  let plan = createPresenterKinematicPlan({
+    kind: 'underline',
+    seed: parameters.seed ?? parameters.gestureId ?? `${baseReceipt.kind}:${baseReceipt.startOffset}:${baseReceipt.endOffset}`,
+    style: parameters.style,
+    noiseAmplitudePx: 0,
+    pointAt: (progress) => ({ x: distancePx * progress, y: 0 }),
+  });
+  let currentReceipt = animatedReceipt(baseReceipt, samplePresenterKinematicPlan(plan, 0), plan);
+  let applyOffsets;
+
+  if (baseReceipt.kind === 'control') {
+    applyOffsets = ({ start, end }) => target.setSelectionRange(start, end, baseReceipt.direction);
+  } else {
+    let doc = target.ownerDocument;
+    let selection = selectionFor(doc);
+    let flattened = textRuns(target);
+    applyOffsets = ({ start, end }) => {
+      let startBoundary = rangeBoundary(flattened.runs, start, 'start');
+      let endBoundary = rangeBoundary(flattened.runs, end, 'end');
+      let range = doc.createRange();
+      range.setStart(startBoundary.node, startBoundary.offset);
+      range.setEnd(endBoundary.node, endBoundary.offset);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    };
+  }
+
+  applyOffsets(progressiveOffsets(baseReceipt, 0));
+  return Object.freeze({
+    get receipt() {
+      return currentReceipt;
+    },
+    presentFrame(elapsedMs = 0) {
+      let elapsed = Math.min(plan.durationMs, Math.max(0, Number(elapsedMs) || 0));
+      currentReceipt = animatedReceipt(baseReceipt, samplePresenterKinematicPlan(plan, elapsed), plan);
+      applyOffsets(progressiveOffsets(baseReceipt, currentReceipt.progress));
+      return currentReceipt;
+    },
+    clear() {
+      base.clear();
+      return currentReceipt;
+    },
+    restore() {
+      base.restore();
+      return currentReceipt;
+    },
+    get state() {
+      return base.state;
+    },
+  });
 }

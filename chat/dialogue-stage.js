@@ -174,6 +174,7 @@ export function createDialogueStage(options = {}) {
     utterance.onstart = null;
     utterance.onend = null;
     utterance.onerror = null;
+    utterance.onboundary = null;
   }
 
   function cancelChannel(channel) {
@@ -225,7 +226,7 @@ export function createDialogueStage(options = {}) {
      * decorative punctuation stripped via `sanitizeVoiceResponseText`); pass
      * `sanitize: false` to speak the raw text verbatim.
      */
-    speak(personaId, text, { onStart, onEnd, onError, sanitize } = {}) {
+    speak(personaId, text, { onStart, onEnd, onError, sanitize, onBoundary } = {}) {
       if (!supported()) return Promise.resolve();
 
       let channel = ensureChannel(personaId);
@@ -279,12 +280,17 @@ export function createDialogueStage(options = {}) {
         };
 
         utterance.onstart = () => {
+          if (settled || channel.utterance !== utterance) return;
           if (typeof onStart === 'function') onStart();
         };
         utterance.onend = () => finish(null);
         utterance.onerror = (event) => {
           let reason = event?.error || 'speech-error';
           finish(reason instanceof Error ? reason : new Error(String(reason)));
+        };
+        utterance.onboundary = (event) => {
+          if (settled || channel.utterance !== utterance) return;
+          if (typeof onBoundary === 'function') onBoundary(event);
         };
 
         try {

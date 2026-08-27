@@ -318,12 +318,12 @@ describe('SelectionSync Connection Focus', () => {
       'utf8'
     );
 
-    assert.match(source, /_settleConnectionsAfterViewport\(_passes = 3\) \{/);
+    assert.match(source, /_settleConnectionsAfterViewport\(passes = 3, metadata = null\) \{/);
     assert.match(source, /this\._connRenderer\?\.refreshViewportTransform\?\.\(\);/);
-    let settleBlock = source.match(/_settleConnectionsAfterViewport\(_passes = 3\) \{([\s\S]*?)\n  \}/)?.[1] || '';
-    assert.doesNotMatch(settleBlock, /_scheduleConnectionSettleRefresh/);
+    let settleBlock = source.match(/_settleConnectionsAfterViewport\(passes = 3, metadata = null\) \{([\s\S]*?)\n  \}/)?.[1] || '';
+    assert.match(settleBlock, /_scheduleConnectionSettleRefresh\(passes, metadata\)/);
     assert.doesNotMatch(settleBlock, /refreshConnections/);
-    assert.match(source, /fitView\(\) \{\s+this\._viewport\?\.fitView\(\);\s+this\._settleConnectionsAfterViewport\(3\);/);
+    assert.match(source, /fitView\(options = \{\}\) \{\s+let fitted = this\._viewport\?\.fitView\(options\);\s+this\._settleConnectionsAfterViewport\(3\);\s+return fitted !== false;/);
     assert.match(source, /selectNode\(nodeId\) \{\s+let options = this\._activeFocusTransitionOptions \|\| \{\};\s+let prepared = this\._prepareFocusTransition\(nodeId, options\);/);
     assert.match(source, /this\._runFocusTransition\(nodeId, prepared, options\);/);
     assert.match(source, /this\._connRenderer\?\.getRouteBetweenNodes\?\.\(fromId, target\)/);

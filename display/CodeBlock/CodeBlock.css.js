@@ -36,9 +36,9 @@ export default `
     );
     background: var(
       --sn-code-gutter-bg,
-      color-mix(in oklch, var(--sn-sys-surface) 92%, black)
+      var(--sn-source-editor-bg, var(--sn-sys-surface))
     );
-    border-right: 1px solid var(--sn-sys-outline);
+    border-right: 1px solid var(--sn-sys-outline-subtle, var(--sn-sys-outline));
     user-select: none;
     white-space: pre;
     min-width: var(--sn-code-gutter-width, 32px);

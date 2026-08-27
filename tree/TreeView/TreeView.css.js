@@ -72,10 +72,15 @@ sn-tree-view[hidden] {
 }
 
 .sn-tree-toggle {
+  grid-column: 1;
   border: 0;
   padding: 0;
   background: transparent;
   cursor: pointer;
+}
+
+.sn-tree-icon {
+  grid-column: 2;
 }
 
 .sn-tree-toggle[hidden] {
@@ -83,6 +88,7 @@ sn-tree-view[hidden] {
 }
 
 .sn-tree-label {
+  grid-column: 3;
   min-width: 0;
   overflow: hidden;
   color: var(--sn-tree-label-color, var(--sn-sys-on-surface));
@@ -93,6 +99,7 @@ sn-tree-view[hidden] {
 }
 
 .sn-tree-kind {
+  grid-column: 4;
   overflow: hidden;
   max-width: var(--sn-tree-kind-max-width);
   color: var(--sn-tree-kind-color, var(--sn-sys-on-surface-dim));
@@ -102,6 +109,7 @@ sn-tree-view[hidden] {
 }
 
 .sn-tree-badges {
+  grid-column: 5;
   display: inline-flex;
   align-items: center;
   gap: var(--sn-tree-badge-gap, 4px);

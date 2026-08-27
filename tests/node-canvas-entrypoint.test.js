@@ -115,6 +115,10 @@ test('node-canvas narrow entrypoint exports and registers correctly', async () =
   try {
     const module = await import('symbiote-ui/canvas/node-canvas');
     assert.ok(module.NodeCanvas);
+    assert.equal(module.NODE_CANVAS_RENDER_SNAPSHOT_VERSION, 1);
+    assert.equal(module.NODE_CANVAS_RENDER_SNAPSHOT_CONTRACT.mismatchResolution, 'pcb-live-reroute');
+    assert.equal(typeof module.createNodeCanvasRenderSnapshot, 'function');
+    assert.equal(typeof module.validateNodeCanvasRenderSnapshot, 'function');
     const registered = customElements.get('node-canvas');
     assert.ok(registered);
   } finally {

@@ -74,9 +74,13 @@ export function createXRFrameTimingTracker(options = {}) {
           durationMs: 0,
           sampleCount: samples.length,
           meanIntervalMs: 0,
+          p50IntervalMs: 0,
           p95IntervalMs: 0,
+          p99IntervalMs: 0,
           maxIntervalMs: 0,
           dropRatio: 0,
+          missedFrames: 0,
+          maxConsecutiveMissedFrames: 0,
           supportedFrameRates: supportedFrameRates ? [...supportedFrameRates] : null,
           resetCount,
           resets: [...resets]
@@ -93,18 +97,28 @@ export function createXRFrameTimingTracker(options = {}) {
       const maxIntervalMs = Math.max(...intervals);
 
       const sortedIntervals = [...intervals].sort((a, b) => a - b);
+      const p50Idx = Math.ceil(sortedIntervals.length * 0.50) - 1;
       const p95Idx = Math.ceil(sortedIntervals.length * 0.95) - 1;
+      const p99Idx = Math.ceil(sortedIntervals.length * 0.99) - 1;
+      const p50IntervalMs = sortedIntervals[Math.max(0, p50Idx)];
       const p95IntervalMs = sortedIntervals[Math.max(0, p95Idx)];
+      const p99IntervalMs = sortedIntervals[Math.max(0, p99Idx)];
 
       let dropRatio = 0;
+      let missedFrames = 0;
+      let maxConsecutiveMissedFrames = 0;
       if (nominalFrameRate && nominalFrameRate > 0) {
         const nominalInterval = 1000 / nominalFrameRate;
         let totalDropped = 0;
+        let consecutiveDropped = 0;
         for (const dt of intervals) {
           const expected = Math.round(dt / nominalInterval);
           const dropped = Math.max(0, expected - 1);
           totalDropped += dropped;
+          consecutiveDropped = dropped > 0 ? consecutiveDropped + dropped : 0;
+          maxConsecutiveMissedFrames = Math.max(maxConsecutiveMissedFrames, consecutiveDropped);
         }
+        missedFrames = totalDropped;
         const expectedIntervals = intervals.length + totalDropped;
         dropRatio = expectedIntervals > 0 ? totalDropped / expectedIntervals : 0;
       }
@@ -118,9 +132,13 @@ export function createXRFrameTimingTracker(options = {}) {
         durationMs,
         sampleCount: samples.length,
         meanIntervalMs,
+        p50IntervalMs,
         p95IntervalMs,
+        p99IntervalMs,
         maxIntervalMs,
         dropRatio,
+        missedFrames,
+        maxConsecutiveMissedFrames,
         supportedFrameRates: supportedFrameRates ? [...supportedFrameRates] : null,
         resetCount,
         resets: [...resets]

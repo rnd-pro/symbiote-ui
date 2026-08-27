@@ -5,10 +5,55 @@
  * Browser access is lazy, so the module remains Node-safe at import time.
  */
 
+import {
+  createPresenterRelationshipPath,
+  resolvePresenterGesturePolicy,
+} from './presenter-gesture-policy.js';
+import {
+  PRESENTER_KINEMATIC_LIMITS,
+  PRESENTER_KINEMATICS_VERSION,
+  createPresenterKinematicPlan,
+  normalizePresenterSeed,
+  samplePresenterKinematicPlan,
+} from './presenter-kinematics.js';
+
 const STYLE_ID = 'symbiote-presenter-cursor-style';
 const OVERLAY_CLASS = 'symbiote-presenter-cursor';
 
-export const PRESENTER_MARKERS = Object.freeze(['freehand', 'underline', 'oval']);
+export const PRESENTER_HAND_PROFILE_VERSION = 'symbiote-presenter-hand-profile-v1';
+export const PRESENTER_ANNOTATION_SUPPORT_TABLE = Object.freeze({
+  markers: Object.freeze([
+    'freehand',
+    'underline',
+    'oval',
+    'multi-oval',
+    'arrow',
+    'converging-arrows',
+    'route',
+    'bidirectional-route',
+    'parallel-route',
+    'label',
+    'number',
+    'box',
+    'bracket',
+    'slash',
+  ]),
+  symbols: Object.freeze(['question', 'cross', 'check', 'heart', 'flourish']),
+  intents: Object.freeze([
+    'emphasize',
+    'detail',
+    'group',
+    'pointer',
+    'risk',
+    'question',
+    'success',
+    'affinity',
+    'flourish',
+  ]),
+  placements: Object.freeze(['over', 'after', 'before', 'corner', 'below', 'above']),
+});
+
+export const PRESENTER_MARKERS = PRESENTER_ANNOTATION_SUPPORT_TABLE.markers;
 const PRESENTER_MARKER_SET = new Set(PRESENTER_MARKERS);
 const MARKER_ALIASES = Object.freeze({
   circle: 'oval',
@@ -17,8 +62,11 @@ const MARKER_ALIASES = Object.freeze({
   round: 'oval',
   line: 'underline',
   under: 'underline',
+  pointer: 'arrow',
+  point: 'arrow',
+  ovals: 'multi-oval',
 });
-export const PRESENTER_SYMBOLS = Object.freeze(['question', 'cross', 'check', 'heart', 'flourish']);
+export const PRESENTER_SYMBOLS = PRESENTER_ANNOTATION_SUPPORT_TABLE.symbols;
 const PRESENTER_SYMBOL_SET = new Set(PRESENTER_SYMBOLS);
 const SYMBOL_ALIASES = Object.freeze({
   '?': 'question',
@@ -41,16 +89,7 @@ const SYMBOL_ALIASES = Object.freeze({
   signature: 'flourish',
   flourish: 'flourish',
 });
-export const PRESENTER_ANNOTATION_INTENTS = Object.freeze([
-  'emphasize',
-  'detail',
-  'group',
-  'risk',
-  'question',
-  'success',
-  'affinity',
-  'flourish',
-]);
+export const PRESENTER_ANNOTATION_INTENTS = PRESENTER_ANNOTATION_SUPPORT_TABLE.intents;
 const ANNOTATION_INTENT_SET = new Set(PRESENTER_ANNOTATION_INTENTS);
 const INTENT_ALIASES = Object.freeze({
   important: 'emphasize',
@@ -61,6 +100,8 @@ const INTENT_ALIASES = Object.freeze({
   field: 'detail',
   collection: 'group',
   set: 'group',
+  arrow: 'pointer',
+  point: 'pointer',
   warning: 'risk',
   problem: 'risk',
   error: 'risk',
@@ -78,13 +119,25 @@ const INTENT_DEFAULTS = Object.freeze({
   emphasize: { kind: 'marker', marker: 'freehand' },
   detail: { kind: 'marker', marker: 'underline' },
   group: { kind: 'marker', marker: 'oval' },
+  pointer: { kind: 'marker', marker: 'arrow', placement: 'before' },
   risk: { kind: 'symbol', symbol: 'cross', placement: 'after' },
   question: { kind: 'symbol', symbol: 'question', placement: 'after' },
   success: { kind: 'symbol', symbol: 'check', placement: 'after' },
   affinity: { kind: 'symbol', symbol: 'heart', placement: 'after' },
   flourish: { kind: 'symbol', symbol: 'flourish', placement: 'below' },
 });
-const ANNOTATION_PLACEMENTS = new Set(['over', 'after', 'before', 'corner', 'below', 'above']);
+const ANNOTATION_PLACEMENTS = new Set(PRESENTER_ANNOTATION_SUPPORT_TABLE.placements);
+
+export class PresenterAnnotationUnsupportedError extends TypeError {
+  constructor(field, value) {
+    super(`Unsupported presenter annotation ${field}: ${String(value || '(empty)')}`);
+    this.name = 'PresenterAnnotationUnsupportedError';
+    this.code = 'PRESENTER_ANNOTATION_UNSUPPORTED';
+    this.field = field;
+    this.value = value;
+    this.version = 'presenter-annotation-v1';
+  }
+}
 
 const CURSOR_SIZE = 18; // px; the hotspot is the arrow's top-left tip
 const INK_CURSOR_SIZE = 4;
@@ -102,7 +155,84 @@ const CLICK_PRESS_MS = 240;
 const CLICK_FADE_MS = 220;
 export const PRESENTER_CLICK_DURATION_MS = CLICK_PRESS_MS + CLICK_FADE_MS;
 export const PRESENTER_FOCUS_REVEAL_DURATION_MS = 600;
+
+export const PRESENTER_FOCUS_PRESS_MS = 240;
+export const PRESENTER_FOCUS_HOLD_MS = 240;
+export const PRESENTER_FOCUS_RELEASE_MS = 300;
+export const PRESENTER_FOCUS_SPEED_PX_MS = PRESENTER_KINEMATIC_LIMITS.targetSpeedPxPerMs;
+export const PRESENTER_FOCUS_MIN_DRAG_MS = PRESENTER_KINEMATIC_LIMITS.minDurationMs;
+
+export const PRESENTER_ANNOTATION_MIN_SPEED_PX_MS =
+  PRESENTER_KINEMATIC_LIMITS.minMovingSpeedPxPerMs;
+export const PRESENTER_ANNOTATION_TARGET_SPEED_PX_MS =
+  PRESENTER_KINEMATIC_LIMITS.targetSpeedPxPerMs;
+export const PRESENTER_ANNOTATION_MAX_SPEED_PX_MS =
+  PRESENTER_KINEMATIC_LIMITS.maxSpeedPxPerMs;
+export const PRESENTER_ANNOTATION_MIN_DURATION_MS = PRESENTER_KINEMATIC_LIMITS.minDurationMs;
+export const PRESENTER_ANNOTATION_MAX_DURATION_MS = Number.POSITIVE_INFINITY;
+export const PRESENTER_ANNOTATION_MAX_SHORT_SIDE_RATIO = 0.75;
+// Stable authored-frame reference. Live strokes use arc-length timing below;
+// consumers may still supply this value as an explicit deterministic duration.
 export const PRESENTER_ANNOTATION_DURATION_MS = 1000;
+
+export function resolvePresenterAnnotationTiming(arcLengthPx) {
+  let arcLength = Math.max(0, Number(arcLengthPx) || 0);
+  let durationMs = Math.round(Math.max(
+    PRESENTER_ANNOTATION_MIN_DURATION_MS,
+    1.875 * arcLength / PRESENTER_ANNOTATION_TARGET_SPEED_PX_MS,
+    1.875 * arcLength / PRESENTER_ANNOTATION_MAX_SPEED_PX_MS,
+  ));
+  let averageSpeedPxPerMs = durationMs > 0 ? arcLength / durationMs : 0;
+  return Object.freeze({
+    arcLengthPx: arcLength,
+    durationMs,
+    averageSpeedPxPerMs,
+    minSpeedPxPerMs: PRESENTER_ANNOTATION_MIN_SPEED_PX_MS,
+    targetSpeedPxPerMs: PRESENTER_ANNOTATION_TARGET_SPEED_PX_MS,
+    maxSpeedPxPerMs: PRESENTER_ANNOTATION_MAX_SPEED_PX_MS,
+    perceptualFloorApplied: durationMs === PRESENTER_ANNOTATION_MIN_DURATION_MS,
+    perceptualCeilingApplied: false,
+  });
+}
+
+export function resolvePresenterAnnotationDuration(arcLengthPx) {
+  return resolvePresenterAnnotationTiming(arcLengthPx).durationMs;
+}
+
+function createPresenterFrameKinematics(rect = {}, seed = 0, style = {}) {
+  let width = Math.max(0, Number(rect.width) || 0);
+  let height = Math.max(0, Number(rect.height) || 0);
+  return createPresenterKinematicPlan({
+    kind: 'frame',
+    seed,
+    style,
+    noiseAmplitudePx: 0,
+    pointAt: (progress) => ({ x: width * progress, y: height * progress }),
+  });
+}
+
+export function resolvePresenterRectangleTiming(rect = {}) {
+  let width = Math.max(0, Number(rect.width) || 0);
+  let height = Math.max(0, Number(rect.height) || 0);
+  let distancePx = Math.hypot(width, height);
+  let kinematics = createPresenterFrameKinematics({ width, height });
+  let dragMs = kinematics.durationMs;
+  let durationMs = PRESENTER_FOCUS_PRESS_MS
+    + dragMs
+    + PRESENTER_FOCUS_HOLD_MS
+    + PRESENTER_FOCUS_RELEASE_MS;
+  return Object.freeze({
+    pressMs: PRESENTER_FOCUS_PRESS_MS,
+    dragMs,
+    holdMs: PRESENTER_FOCUS_HOLD_MS,
+    releaseMs: PRESENTER_FOCUS_RELEASE_MS,
+    durationMs,
+    distancePx,
+    averageDragSpeedPxPerMs: dragMs > 0 ? distancePx / dragMs : 0,
+    maxSpeedPxPerMs: kinematics.maxObservedSpeedPxPerMs,
+    normalizedPathHash: kinematics.normalizedPathHash,
+  });
+}
 export const PRESENTER_FRAME_RATE = 30;
 export const PRESENTER_FRAME_MS = 1000 / PRESENTER_FRAME_RATE;
 
@@ -271,11 +401,8 @@ export function analyzePresenterAnnotationSafety({
 
 // Travel-between-checkpoints tuning.
 const TRAVEL_MIN_MS = 850;
-const TRAVEL_MAX_MS = 1600;
-const TRAVEL_PX_PER_MS = 0.75; // longer hops take a little more time
 
 // Gesture-flourish tuning.
-const GESTURE_MS = PRESENTER_ANNOTATION_DURATION_MS; // base duration of a single gesture pass
 const GESTURE_JITTER_PX = 2.4; // peak per-frame hand-tremor amplitude
 const DETERMINISTIC_GESTURE_STEPS = 96;
 
@@ -339,7 +466,7 @@ export function normalizePresenterAnnotation(value = {}, fallback = {}) {
   let kind = normalizeAnnotationKind(input.kind, defaults.kind || fallbackInput.kind || (symbol ? 'symbol' : marker ? 'marker' : ''));
   if (kind === 'symbol') {
     symbol = symbol || normalizePresenterSymbol(input.intent || defaults.symbol || fallbackInput.intent);
-    if (!symbol) return null;
+    if (!symbol) throw new PresenterAnnotationUnsupportedError('symbol', symbolCandidate || input.intent);
     return {
       kind,
       intent,
@@ -349,15 +476,18 @@ export function normalizePresenterAnnotation(value = {}, fallback = {}) {
   }
   if (kind === 'marker') {
     marker = marker || normalizePresenterMarker(input.intent || defaults.marker || fallbackInput.intent);
-    if (!marker) return null;
+    if (!marker) throw new PresenterAnnotationUnsupportedError('marker', markerCandidate || input.intent);
     return {
       kind,
       intent,
       marker,
       placement: normalizeAnnotationPlacement(input.placement, defaults.placement || fallbackInput.placement || 'over'),
+      ...(input.label !== undefined || input.number !== undefined
+        ? { label: String(input.label ?? input.number) }
+        : {}),
     };
   }
-  return null;
+  throw new PresenterAnnotationUnsupportedError('kind', input.kind || input.intent);
 }
 
 function styleText(overlaySelector) {
@@ -427,14 +557,19 @@ ${overlaySelector} .pc-ink{
 }
 ${overlaySelector} .pc-ink.is-inking{opacity:0.9;}
 ${overlaySelector} .pc-ink path{
+  fill:var(--sn-presenter-marker, var(--sn-sys-accent));
+  fill-opacity:0.96;
+  stroke:none;
+  shape-rendering:geometricPrecision;
+  filter:drop-shadow(0 0 3px color-mix(in oklab, var(--sn-presenter-marker, var(--sn-sys-accent)) 35%, transparent));
+}
+${overlaySelector} .pc-ink[data-render-mode="stroke"] path{
   fill:none;
   stroke:var(--sn-presenter-marker, var(--sn-sys-accent));
   stroke-width:4.2;
   stroke-opacity:0.96;
   stroke-linecap:round;
   stroke-linejoin:round;
-  shape-rendering:geometricPrecision;
-  filter:drop-shadow(0 0 3px color-mix(in oklab, var(--sn-presenter-marker, var(--sn-sys-accent)) 35%, transparent));
 }
 ${overlaySelector} .pc-click{
   position:absolute;
@@ -709,15 +844,86 @@ export function resolvePresenterHighlightRect(rect, viewport = {}) {
 }
 
 function presenterAnnotationRect(rect, viewport, annotation) {
-  return clampPresenterRect(rect, viewport, HIGHLIGHT_EDGE_INSET_PX);
+  let clamped = clampPresenterRect(rect, viewport, HIGHLIGHT_EDGE_INSET_PX);
+  let viewportRect = presenterViewportRect(viewport);
+  if (!viewportRect
+    || annotation?.kind !== 'marker'
+    || !['freehand', 'underline'].includes(annotation.marker)) return clamped;
+
+  let shortSide = Math.min(viewportRect.width, viewportRect.height);
+  let maxWidth = shortSide * PRESENTER_ANNOTATION_MAX_SHORT_SIDE_RATIO;
+  if (!(maxWidth > 0) || clamped.width <= maxWidth) return clamped;
+
+  let width = maxWidth;
+  let centerX = clamped.left + clamped.width / 2;
+  let left = Math.min(
+    viewportRect.right - HIGHLIGHT_EDGE_INSET_PX - width,
+    Math.max(viewportRect.left + HIGHLIGHT_EDGE_INSET_PX, centerX - width / 2),
+  );
+  return {
+    ...clamped,
+    left,
+    right: left + width,
+    width,
+  };
 }
 
-export function resolvePresenterTravelDuration(distance) {
+export function createPresenterTravelPlan(from = {}, to = {}, seed = 0, style = {}) {
+  let start = {
+    x: Number.isFinite(Number(from.x)) ? Number(from.x) : 0,
+    y: Number.isFinite(Number(from.y)) ? Number(from.y) : 0,
+  };
+  let end = {
+    x: Number.isFinite(Number(to.x)) ? Number(to.x) : 0,
+    y: Number.isFinite(Number(to.y)) ? Number(to.y) : 0,
+  };
+  let dx = end.x - start.x;
+  let dy = end.y - start.y;
+  let directDistance = Math.hypot(dx, dy);
+  let normalizedSeed = normalizePresenterSeed(seed);
+  let side = normalizedSeed % 2 === 0 ? 1 : -1;
+  let seedVariation = ((normalizedSeed >>> 8) % 1000) / 1000 - 0.5;
+  let bow = Math.min(96, directDistance * (0.12 + seedVariation * 0.025)) * side;
+  let normalX = directDistance ? -dy / directDistance : 0;
+  let normalY = directDistance ? dx / directDistance : 0;
+  let control = {
+    x: start.x + dx * 0.5 + normalX * bow,
+    y: start.y + dy * 0.5 + normalY * bow,
+  };
+  return createPresenterKinematicPlan({
+    kind: 'cursor-travel',
+    seed,
+    style: { ...style, baseWidthPx: 1 },
+    noiseAmplitudePx: Number.isFinite(Number(style.noiseAmplitudePx))
+      ? Number(style.noiseAmplitudePx)
+      : Math.min(0.45, directDistance * 0.0015),
+    pointAt(progress) {
+      let inverse = 1 - progress;
+      return {
+        x: inverse * inverse * start.x + 2 * inverse * progress * control.x + progress * progress * end.x,
+        y: inverse * inverse * start.y + 2 * inverse * progress * control.y + progress * progress * end.y,
+      };
+    },
+  });
+}
+
+export function resolvePresenterTravelDuration(distance, seed = 0, style = {}) {
   let dist = Math.max(0, Number(distance) || 0);
-  return Math.max(
-    TRAVEL_MIN_MS,
-    Math.min(TRAVEL_MAX_MS, dist * (1 / TRAVEL_PX_PER_MS) + TRAVEL_MIN_MS * 0.6),
-  );
+  return createPresenterTravelPlan({ x: 0, y: 0 }, { x: dist, y: 0 }, seed, style).durationMs;
+}
+
+function presenterTravelLayer(from, to, seed, style = {}) {
+  let kinematics = createPresenterTravelPlan(from, to, seed, style);
+  return {
+    active: true,
+    fromX: from.x,
+    fromY: from.y,
+    toX: to.x,
+    toY: to.y,
+    startTime: 0,
+    duration: kinematics.durationMs,
+    kinematics,
+  };
 }
 
 // easeInOutCubic — slow start, quick middle, gentle settle: reads as a natural
@@ -738,18 +944,38 @@ function noise(seed, phase) {
 // Smoothly varying jitter offset for a frame: blends two noise samples so the
 // tremor drifts rather than flickering, scaled by `amp`. `axis` separates the x
 // and y streams so they wander independently.
-function jitter(seed, t, amp, axis) {
-  let phase = t * 6.5 + axis * 19.7;
-  let low = noise(seed + axis * 101, Math.floor(phase));
-  let high = noise(seed + axis * 101, Math.floor(phase) + 1);
+function interpolatedNoise(seed, phase) {
+  let low = noise(seed, Math.floor(phase));
+  let high = noise(seed, Math.floor(phase) + 1);
   let frac = phase - Math.floor(phase);
-  return (low + (high - low) * frac) * amp;
+  let smooth = frac * frac * (3 - 2 * frac);
+  return low + (high - low) * smooth;
+}
+
+function jitter(seed, t, amp, axis) {
+  let stream = seed + axis * 101;
+  let wristDrift = interpolatedNoise(stream, t * 3.25 + axis * 19.7);
+  let fingerTremor = interpolatedNoise(stream + 47, t * 10.5 + axis * 7.3);
+  return (wristDrift * 0.72 + fingerTremor * 0.28) * amp;
 }
 
 // A small signed variation factor in roughly [-1, 1] derived from the move
 // counter, so successive gestures differ in radius/length/speed without random.
 function variation(seed, salt) {
   return noise(seed * 0.37 + 1, salt * 1.7);
+}
+
+function semanticGestureSeed(annotation) {
+  // The authored arrow baseline is fixed at the proven collision-safe shape;
+  // replay seeds are reserved for the shared kinematic microvariation layer.
+  if (annotation?.marker === 'arrow') return 4242;
+  let value = `${annotation?.kind || ''}:${annotation?.marker || annotation?.symbol || ''}`;
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
 }
 
 /**
@@ -825,14 +1051,18 @@ const GESTURES = {
     let expressiveGap = 1.5 + Math.min(4.5, Math.max(0, shortSide - 24) * 0.075);
     let targetInset = Math.min(PRESENTER_ANNOTATION_TARGET_INSET_PX, shortSide * 0.25);
     let jitterScale = Math.max(0.4, Math.min(1, shortSide / 80));
-    let safetyGap = INK_CURSOR_SIZE / 2
+    let verticalSafetyGap = INK_CURSOR_SIZE / 2
       + PRESENTER_ANNOTATION_COLLISION_ALLOWANCE_PX
       + GESTURE_JITTER_PX * jitterScale
       - targetInset
       + 0.75;
-    let gap = Math.max(expressiveGap, safetyGap);
-    let rx = rect.width / 2 + gap + 0.5 + variation(seed, 33) * 0.2;
-    let ry = rect.height / 2 + gap + variation(seed, 35) * 0.2;
+    let horizontalSafetyGap = verticalSafetyGap + INK_CURSOR_SIZE / 2
+      + PRESENTER_KINEMATIC_LIMITS.noiseAmplitudePx
+      + 0.75;
+    let horizontalGap = Math.max(expressiveGap, horizontalSafetyGap);
+    let verticalGap = Math.max(expressiveGap, verticalSafetyGap);
+    let rx = rect.width / 2 + horizontalGap + 0.5 + variation(seed, 33) * 0.2;
+    let ry = rect.height / 2 + verticalGap + variation(seed, 35) * 0.2;
     return {
       loops: 0.15,
       jitterScale,
@@ -848,6 +1078,296 @@ const GESTURES = {
           x: cx + rx * w * roundedX,
           y: cy + ry * w * roundedY,
         };
+      },
+    };
+  },
+
+  box(rect, seed) {
+    let pad = Math.min(12, Math.max(5, Math.min(rect.width, rect.height) * 0.06));
+    let wobble = variation(seed, 11) * 2;
+    let left = rect.left - pad;
+    let top = rect.top - pad;
+    let right = rect.left + rect.width + pad;
+    let bottom = rect.top + rect.height + pad;
+    return pointListPlan([
+      { x: left + wobble, y: top },
+      { x: right, y: top - wobble },
+      { x: right + wobble, y: bottom },
+      { x: left, y: bottom + wobble },
+      { x: left - wobble, y: top },
+    ]);
+  },
+
+  bracket(rect, seed, opts = {}) {
+    let after = opts.placement === 'after';
+    let pad = 8;
+    let x = after ? rect.left + rect.width + pad : rect.left - pad;
+    let arm = 12 * (after ? -1 : 1);
+    let y0 = rect.top - 4;
+    let y1 = rect.top + rect.height + 4;
+    let wobble = variation(seed, 13) * 2;
+    return pointListPlan([
+      { x: x + arm + wobble, y: y0 },
+      { x, y: y0 + wobble },
+      { x: x - wobble, y: y1 - wobble },
+      { x: x + arm - wobble, y: y1 },
+    ]);
+  },
+
+  slash(rect, seed) {
+    let pad = 8;
+    let wobble = variation(seed, 17) * 3;
+    return pointListPlan([
+      { x: rect.left + rect.width + pad + wobble, y: rect.top - pad - wobble },
+      { x: rect.left - pad - wobble, y: rect.top + rect.height + pad + wobble },
+    ]);
+  },
+
+  'multi-oval'(rect, seed) {
+    let base = GESTURES.oval(rect, seed);
+    return {
+      ...base,
+      loops: 1,
+      point(t) {
+        let pass = t < 0.5 ? 0 : 1;
+        let local = t < 0.5 ? t * 2 : (t - 0.5) * 2;
+        let point = base.point(local);
+        let cx = rect.left + rect.width / 2;
+        let cy = rect.top + rect.height / 2;
+        let scale = pass === 0 ? 1 : 1.055;
+        return {
+          x: cx + (point.x - cx) * scale,
+          y: cy + (point.y - cy) * scale,
+        };
+      },
+    };
+  },
+
+  'converging-arrows'(rect, seed) {
+    let gap = Math.max(18, Math.min(30, rect.height * 0.3));
+    let y = rect.top - gap;
+    let center = rect.left + rect.width / 2;
+    let reach = Math.max(40, Math.min(100, rect.width * 0.45));
+    let head = 10 + variation(seed, 121) * 1.5;
+    return pointListPlan([
+      { x: center - reach, y: y - 5 },
+      { x: center - 4, y },
+      { x: center - 4 - head, y: y - head * 0.65 },
+      { x: center - 4, y },
+      { x: center - 4 - head, y: y + head * 0.65 },
+      { x: center - 4, y },
+      { x: center + reach, y: y + 5 },
+      { x: center + 4, y },
+      { x: center + 4 + head, y: y - head * 0.65 },
+      { x: center + 4, y },
+      { x: center + 4 + head, y: y + head * 0.65 },
+      { x: center + 4, y },
+    ]);
+  },
+
+  route(rect, seed) {
+    let gap = 12 + Math.abs(variation(seed, 123)) * 3;
+    let y = rect.top + rect.height + gap;
+    let left = rect.left + rect.width * 0.08;
+    let right = rect.left + rect.width * 0.92;
+    let bend = Math.max(10, Math.min(24, rect.height * 0.3));
+    return pointListPlan([
+      { x: left, y },
+      { x: left + (right - left) * 0.32, y: y + bend },
+      { x: left + (right - left) * 0.68, y: y - bend * 0.4 },
+      { x: right, y },
+    ]);
+  },
+
+  'bidirectional-route'(rect, seed) {
+    let base = GESTURES.route(rect, seed);
+    let left = base.point(0);
+    let right = base.point(1);
+    let head = 10;
+    return pointListPlan([
+      { x: left.x + head, y: left.y - head * 0.65 },
+      left,
+      { x: left.x + head, y: left.y + head * 0.65 },
+      left,
+      base.point(0.33),
+      base.point(0.66),
+      right,
+      { x: right.x - head, y: right.y - head * 0.65 },
+      right,
+      { x: right.x - head, y: right.y + head * 0.65 },
+    ]);
+  },
+
+  'parallel-route'(rect, seed) {
+    let gap = 12 + Math.abs(variation(seed, 127)) * 3;
+    let y0 = rect.top + rect.height + gap;
+    let y1 = y0 + 11;
+    let left = rect.left + rect.width * 0.08;
+    let right = rect.left + rect.width * 0.92;
+    return pointListPlan([
+      { x: left, y: y0 },
+      { x: right, y: y0 },
+      { x: right, y: y1 },
+      { x: left, y: y1 },
+    ]);
+  },
+
+  label(rect, seed) {
+    let pad = 7;
+    let notch = Math.max(8, Math.min(16, rect.height * 0.2));
+    let wobble = variation(seed, 131) * 1.5;
+    let left = rect.left - pad;
+    let top = rect.top - pad;
+    let right = rect.left + rect.width + pad;
+    let bottom = rect.top + rect.height + pad;
+    return pointListPlan([
+      { x: left + notch, y: top + wobble },
+      { x: right, y: top },
+      { x: right, y: bottom },
+      { x: left, y: bottom - wobble },
+      { x: left, y: top + notch },
+      { x: left + notch, y: top + wobble },
+    ]);
+  },
+
+  number(rect, seed, opts = {}) {
+    let label = String(opts.label || '1').trim();
+    let digit = /^[1-9]$/.test(label) ? Number(label) : 1;
+    let radius = Math.max(11, Math.min(18, rect.height * 0.3));
+    let cx = rect.left - radius - 10;
+    let cy = rect.top + Math.min(radius + 2, rect.height / 2);
+    let points = [];
+    for (let index = 0; index <= 18; index += 1) {
+      let angle = -Math.PI / 2 + (Math.PI * 2 * index) / 18;
+      points.push({ x: cx + Math.cos(angle) * radius, y: cy + Math.sin(angle) * radius });
+    }
+    let top = cy - radius * 0.48;
+    let bottom = cy + radius * 0.48;
+    let left = cx - radius * 0.32;
+    let right = cx + radius * 0.32;
+    let middle = cy;
+    let digitPoints = {
+      1: [{ x: cx - 2, y: top + 3 }, { x: cx + 2, y: top }, { x: cx + 2, y: bottom }],
+      2: [{ x: left, y: top }, { x: right, y: top }, { x: right, y: middle }, { x: left, y: bottom }, { x: right, y: bottom }],
+      3: [{ x: left, y: top }, { x: right, y: top }, { x: cx, y: middle }, { x: right, y: bottom }, { x: left, y: bottom }],
+      4: [{ x: right, y: bottom }, { x: right, y: top }, { x: left, y: middle }, { x: right, y: middle }],
+      5: [{ x: right, y: top }, { x: left, y: top }, { x: left, y: middle }, { x: right, y: middle }, { x: right, y: bottom }, { x: left, y: bottom }],
+      6: [{ x: right, y: top }, { x: left, y: middle }, { x: left, y: bottom }, { x: right, y: bottom }, { x: right, y: middle }, { x: left, y: middle }],
+      7: [{ x: left, y: top }, { x: right, y: top }, { x: cx, y: bottom }],
+      8: [{ x: cx, y: middle }, { x: left, y: top }, { x: right, y: top }, { x: cx, y: middle }, { x: left, y: bottom }, { x: right, y: bottom }, { x: cx, y: middle }],
+      9: [{ x: right, y: middle }, { x: left, y: middle }, { x: left, y: top }, { x: right, y: top }, { x: right, y: bottom }, { x: left, y: bottom }],
+    }[digit];
+    return pointListPlan([...points, ...digitPoints]);
+  },
+
+  // One continuous felt-tip stroke: a slightly bowed shaft approaches the
+  // target edge, then retraces twice to form the arrow head. Geometry remains
+  // deterministic; the shared hand profile adds low-frequency wrist drift and
+  // a smaller high-frequency tremor during projection.
+  arrow(rect, seed, opts = {}) {
+    let placement = opts.placement || 'before';
+    let cx = rect.left + rect.width / 2;
+    let cy = rect.top + rect.height / 2;
+    let horizontal = placement === 'before' || placement === 'after';
+    let viewportRect = presenterViewportRect(opts.viewport || {});
+    let centerVector = Boolean(opts.centerVector && viewportRect);
+    let ux = 0;
+    let uy = 0;
+
+    if (centerVector) {
+      let viewportCenter = {
+        x: viewportRect.left + viewportRect.width / 2,
+        y: viewportRect.top + viewportRect.height / 2,
+      };
+      let dx = cx - viewportCenter.x;
+      let dy = cy - viewportCenter.y;
+      let distance = Math.hypot(dx, dy);
+      if (distance >= 48) {
+        ux = dx / distance;
+        uy = dy / distance;
+      } else {
+        centerVector = false;
+      }
+    }
+
+    if (!centerVector) {
+      if (horizontal) {
+        ux = placement === 'before' ? 1 : -1;
+        uy = 0;
+      } else {
+        ux = 0;
+        uy = placement === 'above' ? 1 : -1;
+      }
+    }
+
+    let halfWidth = Math.max(1, rect.width / 2);
+    let halfHeight = Math.max(1, rect.height / 2);
+    let edgeDistance = Math.min(
+      Math.abs(ux) > 0.0001 ? halfWidth / Math.abs(ux) : Number.POSITIVE_INFINITY,
+      Math.abs(uy) > 0.0001 ? halfHeight / Math.abs(uy) : Number.POSITIVE_INFINITY,
+    );
+    let targetGap = 12;
+    let tip = {
+      x: cx - ux * (edgeDistance + targetGap),
+      y: cy - uy * (edgeDistance + targetGap),
+    };
+    let viewportCenterDistance = viewportRect
+      ? Math.hypot(
+        tip.x - (viewportRect.left + viewportRect.width / 2),
+        tip.y - (viewportRect.top + viewportRect.height / 2),
+      )
+      : Math.max(rect.width, rect.height) * 0.75 + 96;
+    let reach = centerVector
+      ? Math.max(132, Math.min(270, viewportCenterDistance * 0.48))
+      : horizontal
+        ? Math.max(108, Math.min(210, rect.width * 0.42 + 88))
+        : Math.max(96, Math.min(190, rect.height * 0.8 + 72));
+    if (centerVector) {
+      let reachScale = Number(opts.reachScale);
+      if (Number.isFinite(reachScale)) reach *= Math.max(0.5, Math.min(1, reachScale));
+    }
+    let normal = { x: -uy, y: ux };
+    let tailOffset = variation(seed, 113) * Math.min(18, reach * 0.08);
+    let start = {
+      x: tip.x - ux * reach + normal.x * tailOffset,
+      y: tip.y - uy * reach + normal.y * tailOffset,
+    };
+    let bend = (8 + Math.abs(variation(seed, 117)) * 8) * (variation(seed, 119) < 0 ? -1 : 1);
+    let headLength = 30 + (variation(seed, 127) * 0.5 + 0.5) * 6;
+    let headWidth = headLength * (0.82 + variation(seed, 131) * 0.035);
+    let leftHead = {
+      x: tip.x - ux * headLength + normal.x * headWidth,
+      y: tip.y - uy * headLength + normal.y * headWidth,
+    };
+    let rightHead = {
+      x: tip.x - ux * headLength - normal.x * headWidth,
+      y: tip.y - uy * headLength - normal.y * headWidth,
+    };
+    return {
+      loops: 0,
+      pathMode: 'linear',
+      jitterScale: 0.72,
+      rest: tip,
+      point(t) {
+        if (t <= 0.72) {
+          let p = t / 0.72;
+          let ease = p * p * (3 - 2 * p);
+          let bow = Math.sin(p * Math.PI) * bend * (1 - p);
+          return {
+            x: start.x + (tip.x - start.x) * ease + normal.x * bow,
+            y: start.y + (tip.y - start.y) * ease + normal.y * bow,
+          };
+        }
+        if (t <= 0.82) {
+          let p = (t - 0.72) / 0.1;
+          return { x: tip.x + (leftHead.x - tip.x) * p, y: tip.y + (leftHead.y - tip.y) * p };
+        }
+        if (t <= 0.9) {
+          let p = (t - 0.82) / 0.08;
+          return { x: leftHead.x + (tip.x - leftHead.x) * p, y: leftHead.y + (tip.y - leftHead.y) * p };
+        }
+        let p = (t - 0.9) / 0.1;
+        return { x: tip.x + (rightHead.x - tip.x) * p, y: tip.y + (rightHead.y - tip.y) * p };
       },
     };
   },
@@ -976,6 +1496,10 @@ const SYMBOLS = {
 
 function annotationPlacementCandidates(annotation) {
   if (annotation.kind === 'marker') {
+    if (annotation.marker === 'arrow') {
+      let preferred = annotation.placement || 'before';
+      return [preferred, ...['before', 'above', 'below', 'after'].filter((placement) => placement !== preferred)];
+    }
     if (annotation.marker !== 'underline') return [annotation.placement || 'over'];
     return annotation.placement === 'above' ? ['above', 'below'] : ['below', 'above'];
   }
@@ -994,8 +1518,9 @@ function presenterPlanOverflow(plan, seed, viewport) {
   let maxY = viewportRect.bottom - INK_CURSOR_SIZE;
   if (maxX < viewportRect.left || maxY < viewportRect.top) return Number.POSITIVE_INFINITY;
   let points = [];
-  for (let index = 0; index <= DETERMINISTIC_GESTURE_STEPS; index += 1) {
-    points.push(projectStrokePoint(plan, seed, index / DETERMINISTIC_GESTURE_STEPS));
+  let totalSteps = plan.arcLength ? Math.max(32, Math.floor(plan.arcLength / 2)) : DETERMINISTIC_GESTURE_STEPS;
+  for (let index = 0; index <= totalSteps; index += 1) {
+    points.push(projectStrokePoint(plan, seed, index / totalSteps));
   }
   if (plan.rest) points.push(plan.rest);
   return points.reduce((total, point) => total
@@ -1005,18 +1530,128 @@ function presenterPlanOverflow(plan, seed, viewport) {
     + Math.max(0, point.y - maxY), 0);
 }
 
-function resolvePresenterAnnotationLayout(annotation, targetRect, viewport, seed) {
+function estimatePlanLength(plan) {
+  let length = 0;
+  let prev = plan.point(0);
+  for (let index = 1; index <= 200; index += 1) {
+    let pt = plan.point(index / 200);
+    length += Math.hypot(pt.x - prev.x, pt.y - prev.y);
+    prev = pt;
+  }
+  return length;
+}
+
+function createPresenterStrokeArc(plan, seed, viewport) {
+  if (plan?.kinematics) {
+    return {
+      samples: plan.kinematics.samples.map((sample) => ({
+        point: { x: sample.x, y: sample.y },
+        distancePx: sample.distancePx,
+      })),
+      arcLengthPx: plan.kinematics.arcLengthPx,
+    };
+  }
+  let idealLength = estimatePlanLength(plan);
+  let sampleCount = Math.max(200, Math.min(800, Math.ceil(idealLength / 2)));
+  let amplitude = strokeJitterAmplitude(seed);
+  let samples = [];
+  let totalDistance = 0;
+  let previous = projectStrokePoint(plan, seed, 0, amplitude, viewport);
+  samples.push({ point: previous, distancePx: 0 });
+  for (let index = 1; index <= sampleCount; index += 1) {
+    let point = projectStrokePoint(plan, seed, index / sampleCount, amplitude, viewport);
+    totalDistance += Math.hypot(point.x - previous.x, point.y - previous.y);
+    samples.push({ point, distancePx: totalDistance });
+    previous = point;
+  }
+  return { samples, arcLengthPx: totalDistance };
+}
+
+function presenterArcPointAtDistance(arc, distancePx) {
+  let target = Math.max(0, Math.min(arc.arcLengthPx, Number(distancePx) || 0));
+  let low = 0;
+  let high = arc.samples.length - 1;
+  while (low < high) {
+    let middle = Math.floor((low + high) / 2);
+    if (arc.samples[middle].distancePx < target) low = middle + 1;
+    else high = middle;
+  }
+  let next = arc.samples[low];
+  let previous = arc.samples[Math.max(0, low - 1)];
+  let span = next.distancePx - previous.distancePx;
+  if (span <= 0) return { ...next.point };
+  let ratio = (target - previous.distancePx) / span;
+  return {
+    x: previous.point.x + (next.point.x - previous.point.x) * ratio,
+    y: previous.point.y + (next.point.y - previous.point.y) * ratio,
+  };
+}
+
+function samplePresenterStrokeArc(arc, distancePx, stepPx = 2) {
+  let target = Math.max(0, Math.min(arc.arcLengthPx, Number(distancePx) || 0));
+  if (target <= 0) return [];
+  let points = [{ ...arc.samples[0].point }];
+  for (let distance = stepPx; distance <= target; distance += stepPx) {
+    points.push(presenterArcPointAtDistance(arc, distance));
+  }
+  return points;
+}
+
+function resolvePresenterAnnotationLayout(
+  annotation,
+  targetRect,
+  viewport,
+  seed,
+  obstacles = [],
+  style = {},
+) {
   let drawRect = presenterAnnotationRect(targetRect, viewport, annotation);
   let factory = annotation.kind === 'symbol'
     ? SYMBOLS[annotation.symbol]
     : GESTURES[annotation.marker];
   let best = null;
-  for (let placement of annotationPlacementCandidates(annotation)) {
+  let geometrySeed = semanticGestureSeed(annotation);
+  let placements = annotationPlacementCandidates(annotation);
+  let candidates = annotation.kind === 'marker' && annotation.marker === 'arrow'
+    ? [1, 0.8, 0.64, 0.5].map((reachScale) => ({
+      placement: placements[0],
+      centerVector: true,
+      reachScale,
+    }))
+    : placements.map((placement) => ({ placement, centerVector: false }));
+  for (let candidate of candidates) {
+    let { placement, centerVector, reachScale } = candidate;
     let nextAnnotation = { ...annotation, placement };
-    let plan = factory?.(drawRect, seed, { placement });
+    let plan = factory?.(drawRect, geometrySeed, {
+      placement,
+      viewport,
+      centerVector,
+      reachScale,
+      label: annotation.label,
+    });
     if (!plan) continue;
-    let overflow = presenterPlanOverflow(plan, seed, viewport);
-    if (!best || overflow < best.overflow) {
+    let name = annotation.marker || annotation.symbol;
+    let kinematics = createPresenterKinematicPlan({
+      kind: name,
+      seed,
+      style,
+      pointAt: (progress) => clampPresenterPoint(plan.point(progress), viewport, 0),
+    });
+    plan = { ...plan, kinematics, arcLength: kinematics.arcLengthPx };
+    let overflow = presenterPlanOverflow(plan, geometrySeed, viewport);
+    let fullPathSamples = kinematics.samples.map((sample) => ({ x: sample.x, y: sample.y }));
+    let fullCursor = fullPathSamples.at(-1) || null;
+    let fullSafety = analyzePresenterAnnotationSafety({
+      pathSamples: fullPathSamples,
+      cursor: fullCursor,
+      targetRect,
+      obstacles,
+      viewport,
+      cursorSizePx: INK_CURSOR_SIZE,
+    });
+    if (!best
+      || (fullSafety.safe && !best.fullSafety.safe)
+      || (fullSafety.safe === best.fullSafety.safe && overflow < best.overflow)) {
       let rawGeometryRect = annotation.kind === 'symbol'
         ? symbolRect(drawRect, placement)
         : drawRect;
@@ -1024,11 +1659,17 @@ function resolvePresenterAnnotationLayout(annotation, targetRect, viewport, seed
         annotation: nextAnnotation,
         drawRect,
         geometryRect: clampPresenterRect(rawGeometryRect, viewport),
-        plan,
+        plan: {
+          ...plan,
+          arcLength: kinematics.arcLengthPx,
+        },
+        fullPathSamples,
+        fullCursor,
+        fullSafety,
         overflow,
       };
     }
-    if (overflow === 0) break;
+    if (fullSafety.safe && overflow === 0) break;
   }
   return best;
 }
@@ -1073,12 +1714,16 @@ function inertCursor() {
     presentAnnotationFrame() {
       return { presented: false, reason: 'unsupported' };
     },
+    presentApproachFrame() {
+      return { presented: false, reason: 'unsupported' };
+    },
     presentFocusFrame() {
       return { presented: false, reason: 'unsupported' };
     },
     presentClickFrame() {
       return { presented: false, reason: 'unsupported' };
     },
+    clearAccumulatedAnnotations() {},
     clear() {},
     dispose() {},
     isSupported() {
@@ -1095,7 +1740,7 @@ function inertCursor() {
  * env this returns inert no-ops and `isSupported()` is false.
  *
  * @param {Document} [doc] - document to render into (defaults to the global one).
- * @returns {{ moveTo: (el: Element, opts?: object) => void, markElement: (el: Element, opts?: object) => void, annotateElement: (el: Element, opts?: object) => void, presentFocusFrame: (el: Element, frame: object) => object, presentAnnotationFrame: (el: Element, annotation: object, frame: object) => object, presentClickFrame: (el: Element, frame: object) => object, clickElement: (el: Element, opts?: object) => void, clear: () => void, dispose: () => void, isSupported: () => boolean }}
+ * @returns {{ moveTo: (el: Element, opts?: object) => void, markElement: (el: Element, opts?: object) => void, annotateElement: (el: Element, opts?: object) => void, presentApproachFrame: (el: Element, frame: object) => object, presentFocusFrame: (el: Element, frame: object) => object, presentAnnotationFrame: (el: Element, annotation: object, frame: object) => object, presentClickFrame: (el: Element, frame: object) => object, clickElement: (el: Element, opts?: object) => void, clearAccumulatedAnnotations: () => void, clear: (opts?: object) => void, dispose: () => void, isSupported: () => boolean }}
  */
 function layerStartMs(layer) {
   let value = Number(layer?.startMs ?? layer?.startTime ?? 0);
@@ -1108,8 +1753,11 @@ function frameElapsed(timeMs, layer, durationMs) {
   return Math.floor(raw / PRESENTER_FRAME_MS) * PRESENTER_FRAME_MS;
 }
 
-function smoothPresenterPath(points) {
+function smoothPresenterPath(points, mode = 'smooth') {
   if (points.length < 2) return '';
+  if (mode === 'linear') {
+    return points.map((point, index) => `${index ? 'L' : 'M'}${point.x.toFixed(1)} ${point.y.toFixed(1)}`).join('');
+  }
   let [first, second, ...rest] = points;
   let path = `M${first.x.toFixed(1)} ${first.y.toFixed(1)}Q${first.x.toFixed(1)} ${first.y.toFixed(1)} ${second.x.toFixed(1)} ${second.y.toFixed(1)}`;
   for (let point of rest) path += `T${point.x.toFixed(1)} ${point.y.toFixed(1)}`;
@@ -1127,6 +1775,17 @@ function projectStrokePoint(
   amplitude = strokeJitterAmplitude(seed),
   viewport = null,
 ) {
+  if (plan?.kinematics?.samples?.length) {
+    let samples = plan.kinematics.samples;
+    let scaled = Math.max(0, Math.min(1, Number(t) || 0)) * (samples.length - 1);
+    let left = samples[Math.floor(scaled)];
+    let right = samples[Math.min(samples.length - 1, Math.ceil(scaled))];
+    let ratio = scaled - Math.floor(scaled);
+    return {
+      x: left.x + (right.x - left.x) * ratio,
+      y: left.y + (right.y - left.y) * ratio,
+    };
+  }
   let eased = easeInOutCubic(t);
   let ideal = plan.point(eased);
   let fade = 1 - eased * eased;
@@ -1163,27 +1822,31 @@ function projectStroke(layer, timeMs, seed, registry, normalizeName, options = {
     ? { kind: 'symbol', symbol: name, placement: layer.placement || 'after' }
     : { kind: 'marker', marker: name, placement: layer.placement || 'over' };
   let layout = layer.layout
-    || resolvePresenterAnnotationLayout(annotation, targetRect, viewport, seed);
+    || resolvePresenterAnnotationLayout(
+      annotation,
+      targetRect,
+      viewport,
+      seed,
+      [],
+      layer.style,
+    );
   if (!layout?.plan) return result;
   let plan = layout.plan;
-  let duration = Math.max(1, Number(layer.durationMs ?? layer.duration) || GESTURE_MS);
-  let progress = frameElapsed(timeMs, layer, duration) / duration;
-  let pointCount = progress > 0
-    ? Math.max(2, Math.floor(progress * DETERMINISTIC_GESTURE_STEPS) + 1)
-    : 0;
-  let amplitude = strokeJitterAmplitude(seed);
-  let points = [];
-  for (let index = 0; index < pointCount; index += 1) {
-    let t = Math.min(1, index / DETERMINISTIC_GESTURE_STEPS);
-    points.push(projectStrokePoint(plan, seed, t, amplitude, viewport));
-  }
+  let kinematics = plan.kinematics;
+  let duration = kinematics.durationMs;
+  let elapsedMs = frameElapsed(timeMs, layer, duration);
+  let frame = samplePresenterKinematicPlan(kinematics, elapsedMs);
+  let progress = frame.progress;
+  let drawnLengthPx = frame.distancePx;
+  let points = frame.samples.map((sample) => ({ ...sample }));
+
   let strokeTip = points.length
     ? points[points.length - 1]
-    : projectStrokePoint(plan, seed, 0, amplitude, viewport);
-  if (progress >= 1 && plan.rest) strokeTip = clampPresenterPoint(plan.rest, viewport, 0);
+    : { ...kinematics.samples[0] };
+  if (frame.completed) strokeTip = { ...kinematics.samples.at(-1) };
   let cursorPoint = clampPresenterPoint({
-    x: strokeTip.x - INK_CURSOR_SIZE / 2,
-    y: strokeTip.y - INK_CURSOR_SIZE / 2,
+    x: strokeTip.x - INK_CURSOR_SIZE * 0.35,
+    y: strokeTip.y - INK_CURSOR_SIZE * 0.35,
   }, viewport, INK_CURSOR_SIZE);
   let obstacles = Array.isArray(layer.obstacles) ? layer.obstacles : options.obstacles;
   let safety = analyzePresenterAnnotationSafety({
@@ -1194,27 +1857,50 @@ function projectStroke(layer, timeMs, seed, registry, normalizeName, options = {
     viewport,
     cursorSizePx: INK_CURSOR_SIZE,
   });
-  let hideCursor = layer.hideCursor === true || layer.cursor === false;
+  let hideCursor = layer.hideCursor === true
+    || layer.cursor === false
+    || layer.ownsCursor === false;
   return {
     visible: true,
-    path: smoothPresenterPath(points),
+    path: frame.centerlinePath,
+    ribbonPath: frame.ribbonPath,
     points,
+    widthSamples: points.map((point) => point.widthPx),
     opacity: 1,
     name,
     placement: layout.annotation.placement,
     rect: layout.geometryRect,
     drawRect: layout.drawRect,
     cursor: hideCursor ? null : cursorPoint,
+    ownsCursor: layer.ownsCursor !== false,
     cursorSizePx: INK_CURSOR_SIZE,
     safety,
-    completed: progress >= 1,
-    motorActive: progress < 1,
+    completed: frame.completed,
+    motorActive: !frame.completed,
+    durationMs: duration,
+    elapsedMs,
+    progress,
+    arcLengthPx: kinematics.arcLengthPx,
+    drawnLengthPx,
+    averageSpeedPxPerMs: duration > 0 ? kinematics.arcLengthPx / duration : 0,
+    speedPxPerMs: frame.speedPxPerMs,
+    minWidthPx: kinematics.minWidthPx,
+    maxWidthPx: kinematics.maxWidthPx,
+    pathHash: kinematics.pathHash,
+    tailPolicy: kinematics.tailPolicy,
+    timing: {
+      durationMs: duration,
+      minSpeedPxPerMs: kinematics.limits.minMovingSpeedPxPerMs,
+      targetSpeedPxPerMs: kinematics.limits.targetSpeedPxPerMs,
+      maxSpeedPxPerMs: kinematics.limits.maxSpeedPxPerMs,
+    },
   };
 }
 
 function projectFocusLayer(layer, timeMs, viewport) {
   let hidden = {
     visible: false,
+    activePhase: '',
     left: 0,
     top: 0,
     width: 0,
@@ -1231,43 +1917,115 @@ function projectFocusLayer(layer, timeMs, viewport) {
   if (!layer?.active || !layer.rect || Number(timeMs) < layerStartMs(layer)) return hidden;
 
   let targetRect = clampPresenterRect(layer.rect, viewport);
-  let duration = Math.max(
-    PRESENTER_FRAME_MS,
-    Number(layer.durationMs ?? layer.duration) || PRESENTER_FOCUS_REVEAL_DURATION_MS,
-  );
-  let elapsed = frameElapsed(timeMs, layer, duration);
-  let timeProgress = Math.min(1, elapsed / duration);
-  let revealProgress = easeInOutCubic(timeProgress);
-  let width = revealProgress >= 1
-    ? targetRect.width
-    : Math.min(targetRect.width, Math.max(1, targetRect.width * revealProgress));
-  let height = revealProgress >= 1
-    ? targetRect.height
-    : Math.min(targetRect.height, Math.max(1, targetRect.height * revealProgress));
+  let rawElapsedMs = Math.max(0, Number(timeMs) - layerStartMs(layer));
   let marchTime = frameElapsed(timeMs, layer, Number.MAX_SAFE_INTEGER);
+  if (layer.mode !== 'rectangle-selection') {
+    let durationMs = Math.max(
+      PRESENTER_FRAME_MS,
+      Number(layer.durationMs ?? layer.duration) || PRESENTER_FOCUS_REVEAL_DURATION_MS,
+    );
+    let elapsedMs = frameElapsed(timeMs, layer, durationMs);
+    let progress = Math.min(1, elapsedMs / durationMs);
+    let kinematicFrame = layer.kinematics
+      ? samplePresenterKinematicPlan(layer.kinematics, elapsedMs)
+      : null;
+    let revealProgress = kinematicFrame?.progress ?? easeInOutCubic(progress);
+    let width = progress >= 1
+      ? targetRect.width
+      : Math.min(targetRect.width, Math.max(1, targetRect.width * revealProgress));
+    let height = progress >= 1
+      ? targetRect.height
+      : Math.min(targetRect.height, Math.max(1, targetRect.height * revealProgress));
+    return {
+      visible: true,
+      activePhase: progress >= 1 ? 'complete' : 'reveal',
+      left: targetRect.left,
+      top: targetRect.top,
+      width,
+      height,
+      opacity: 1,
+      antsDashOffset: -8 * ((marchTime % MARCH_MS) / MARCH_MS),
+      revealProgress,
+      revealing: progress < 1,
+      completed: progress >= 1,
+      motorActive: progress < 1,
+      mutationReady: false,
+      dragHandle: {
+        x: targetRect.left + width,
+        y: targetRect.top + height,
+        visible: progress < 1,
+      },
+      cursor: null,
+      targetRect,
+      timing: {
+        durationMs,
+        speedPxPerMs: kinematicFrame?.speedPxPerMs || 0,
+        normalizedPathHash: layer.kinematics?.normalizedPathHash || '',
+      },
+    };
+  }
 
+  let timing = resolvePresenterRectangleTiming(targetRect);
+  let elapsedMs = Math.min(rawElapsedMs, timing.durationMs);
+  let dragStartMs = timing.pressMs;
+  let holdStartMs = dragStartMs + timing.dragMs;
+  let releaseStartMs = holdStartMs + timing.holdMs;
+  let activePhase = 'complete';
+  let revealProgress = 1;
+  let opacity = 0;
+  if (rawElapsedMs < dragStartMs) {
+    activePhase = 'press';
+    revealProgress = 0;
+    opacity = 1;
+  } else if (rawElapsedMs < holdStartMs) {
+    activePhase = 'drag';
+    revealProgress = easeInOutCubic((elapsedMs - dragStartMs) / timing.dragMs);
+    opacity = 1;
+  } else if (rawElapsedMs < releaseStartMs) {
+    activePhase = 'hold';
+    opacity = 1;
+  } else if (rawElapsedMs < timing.durationMs) {
+    activePhase = 'release';
+    opacity = 1 - ((elapsedMs - releaseStartMs) / timing.releaseMs);
+  }
+  let width = revealProgress <= 0
+    ? 1
+    : Math.min(targetRect.width, Math.max(1, targetRect.width * revealProgress));
+  let height = revealProgress <= 0
+    ? 1
+    : Math.min(targetRect.height, Math.max(1, targetRect.height * revealProgress));
+  let complete = activePhase === 'complete';
   return {
-    visible: true,
+    visible: !complete,
+    activePhase,
     left: targetRect.left,
     top: targetRect.top,
     width,
     height,
-    opacity: 1,
+    opacity: Math.max(0, opacity),
     antsDashOffset: -8 * ((marchTime % MARCH_MS) / MARCH_MS),
     revealProgress,
-    revealing: timeProgress < 1,
-    completed: timeProgress >= 1,
-    motorActive: timeProgress < 1,
+    revealing: activePhase === 'press' || activePhase === 'drag',
+    completed: complete,
+    motorActive: !complete,
+    mutationReady: complete,
     dragHandle: {
       x: targetRect.left + width,
       y: targetRect.top + height,
-      visible: timeProgress < 1,
+      visible: false,
+    },
+    cursor: {
+      x: targetRect.left + width,
+      y: targetRect.top + height,
+      visible: !complete,
     },
     targetRect,
+    timing,
   };
 }
 
 export function projectPresenterState(layers = {}, timeMs = 0, seed = 0, viewport = {}) {
+  seed = normalizePresenterSeed(seed);
   let focusRes = projectFocusLayer(layers.focus, timeMs, viewport);
 
   let markerRes = projectStroke(
@@ -1314,7 +2072,20 @@ export function projectPresenterState(layers = {}, timeMs = 0, seed = 0, viewpor
     cursorRes.motorActive = isTraveling;
     cursorRes.completed = !isTraveling;
 
-    if (isTraveling) {
+    if (cursorLayer.kinematics) {
+      let frame = samplePresenterKinematicPlan(
+        cursorLayer.kinematics,
+        frameElapsed(timeMs, cursorLayer, cursorLayer.kinematics.durationMs),
+      );
+      cursorRes.x = frame.point.x;
+      cursorRes.y = frame.point.y;
+      cursorRes.completed = frame.completed;
+      cursorRes.motorActive = !frame.completed;
+      cursorRes.progress = frame.progress;
+      cursorRes.speedPxPerMs = frame.speedPxPerMs;
+      cursorRes.planVersion = cursorLayer.kinematics.version;
+      cursorRes.normalizedPathHash = cursorLayer.kinematics.normalizedPathHash;
+    } else if (isTraveling) {
       let eased = easeInOutCubic(progress);
       let dx = cursorLayer.toX - cursorLayer.fromX;
       let dy = cursorLayer.toY - cursorLayer.fromY;
@@ -1398,6 +2169,10 @@ export function projectPresenterState(layers = {}, timeMs = 0, seed = 0, viewpor
     activeAnnotation = { kind: 'symbol', ...symbolRes };
   }
 
+  if (activeAnnotation && activeAnnotation.ownsCursor === false) {
+    activeAnnotation.cursor = null;
+  }
+
   return {
     focus: focusRes,
     marker: markerRes,
@@ -1415,6 +2190,7 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
 
   let overlay = doc.createElement('div');
   overlay.className = OVERLAY_CLASS;
+  overlay.setAttribute('aria-hidden', 'true');
 
   let marquee = doc.createElement('div');
   marquee.className = 'pc-marquee';
@@ -1437,6 +2213,7 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
 
   let cursor = doc.createElement('div');
   cursor.className = 'pc-cursor';
+  cursor.style.opacity = '0';
   cursor.innerHTML = CURSOR_SVG;
 
   overlay.appendChild(marquee);
@@ -1471,8 +2248,9 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
   }
 
   let disposed = false;
-  let cursorX = 0;
-  let cursorY = 0;
+  let cursorX = null;
+  let cursorY = null;
+  let cursorPositioned = false;
   let moveIndex = 0;
   let actionCounter = 0;
   let currentActionId = null;
@@ -1480,6 +2258,7 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
   let activeElementTarget = null;
   let gestureResolve = null;
   let clickActions = new Map();
+  let accumulatedAnnotationPaths = new Map();
 
   let activeLayers = {
     focus: null,
@@ -1491,6 +2270,19 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
   };
   let animationStartMs = null;
   let renderLoopId = null;
+
+  function defaultCursorPoint(viewport) {
+    return clampPresenterPoint({
+      x: viewport.width * 0.5,
+      y: viewport.height * 0.8,
+    }, viewport);
+  }
+
+  function currentCursorPoint(viewport) {
+    return cursorPositioned
+      ? clampPresenterPoint({ x: cursorX, y: cursorY }, viewport)
+      : defaultCursorPoint(viewport);
+  }
 
   function runRenderLoop() {
     if (renderLoopId) return;
@@ -1524,13 +2316,14 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
       }
 
       let dParts = [];
-      if (projected.marker.visible && projected.marker.path) {
-        dParts.push(projected.marker.path);
+      if (projected.marker.visible && projected.marker.ribbonPath) {
+        dParts.push(projected.marker.ribbonPath);
       }
-      if (projected.symbol.visible && projected.symbol.path) {
-        dParts.push(projected.symbol.path);
+      if (projected.symbol.visible && projected.symbol.ribbonPath) {
+        dParts.push(projected.symbol.ribbonPath);
       }
       let d = dParts.join(' ');
+      ink.dataset.renderMode = 'ribbon';
       inkPath.setAttribute('d', d);
       ink.classList.toggle('is-inking', Boolean(d));
       cursor.classList.toggle('is-inking', Boolean(projected.annotation && !projected.annotation.completed));
@@ -1566,11 +2359,11 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
         needsNextFrame = true;
       }
       if (activeLayers.marker?.active
-        && elapsed < layerStartMs(activeLayers.marker) + (activeLayers.marker.duration || GESTURE_MS)) {
+        && elapsed < layerStartMs(activeLayers.marker) + (activeLayers.marker.duration || resolvePresenterAnnotationDuration(activeLayers.marker.layout?.plan?.arcLength || 0, activeLayers.marker.layout?.plan?.loops || 0))) {
         needsNextFrame = true;
       }
       if (activeLayers.symbol?.active
-        && elapsed < layerStartMs(activeLayers.symbol) + (activeLayers.symbol.duration || GESTURE_MS)) {
+        && elapsed < layerStartMs(activeLayers.symbol) + (activeLayers.symbol.duration || resolvePresenterAnnotationDuration(activeLayers.symbol.layout?.plan?.arcLength || 0, activeLayers.symbol.layout?.plan?.loops || 0))) {
         needsNextFrame = true;
       }
       if (activeLayers.click?.active
@@ -1655,6 +2448,7 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
   function setCursor(x, y) {
     cursorX = x;
     cursorY = y;
+    cursorPositioned = true;
     cursor.style.opacity = '1';
     cursor.style.transform = `translate(${x}px, ${y}px)`;
   }
@@ -1708,24 +2502,19 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
     showOverlay();
     moveIndex += 1;
 
-    let distance = Math.hypot(left - cursorX, top - cursorY);
-    let duration = resolvePresenterTravelDuration(distance);
+    let cursorStart = currentCursorPoint(viewport);
+    let travelSeed = opts?.seed ?? opts?.gestureId ?? actionId;
+    let travel = presenterTravelLayer(cursorStart, { x: left, y: top }, travelSeed, opts?.style);
+    let duration = travel.duration;
 
     activeLayers.focus = {
       active: true,
       rect: { left, top, width: w, height: h },
       startTime: duration,
-      duration: PRESENTER_FOCUS_REVEAL_DURATION_MS,
+      kinematics: createPresenterFrameKinematics({ width: w, height: h }, moveIndex),
     };
-    activeLayers.cursor = {
-      active: true,
-      fromX: cursorX,
-      fromY: cursorY,
-      toX: left,
-      toY: top,
-      startTime: 0,
-      duration,
-    };
+    activeLayers.focus.duration = activeLayers.focus.kinematics.durationMs;
+    activeLayers.cursor = travel;
     activeLayers.marker = null;
     activeLayers.symbol = null;
     activeLayers.click = null;
@@ -1804,19 +2593,13 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
     showOverlay();
     moveIndex += 1;
 
-    let distance = Math.hypot(zone.x - cursorX, zone.y - cursorY);
-    let duration = resolvePresenterTravelDuration(distance);
+    let cursorStart = currentCursorPoint(viewport);
+    let travelSeed = opts?.seed ?? opts?.gestureId ?? actionId;
+    let travel = presenterTravelLayer(cursorStart, { x: zone.x, y: zone.y }, travelSeed, opts?.style);
+    let duration = travel.duration;
 
     activeLayers.focus = null;
-    activeLayers.cursor = {
-      active: true,
-      fromX: cursorX,
-      fromY: cursorY,
-      toX: zone.x,
-      toY: zone.y,
-      startTime: 0,
-      duration,
-    };
+    activeLayers.cursor = travel;
     activeLayers.marker = null;
     activeLayers.symbol = null;
     activeLayers.click = null;
@@ -1877,15 +2660,22 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
     }
     let elapsedMs = Number(frame.elapsedMs);
     if (!Number.isFinite(elapsedMs)) elapsedMs = 0;
-    let seed = Number(frame.seed);
-    if (!Number.isFinite(seed)) seed = 0;
-    let mode = frame.mode === 'frame' ? 'frame' : 'cursor';
+    let seed = normalizePresenterSeed(frame.seed);
+    let mode = frame.mode;
+    if (mode !== 'frame' && mode !== 'cursor' && mode !== 'rectangle-selection') mode = 'cursor';
     let focusRect = resolvePresenterHighlightRect(targetRect, viewport);
+    let rectangleTiming = resolvePresenterRectangleTiming(focusRect);
+    let frameKinematics = createPresenterFrameKinematics(focusRect, seed, frame.style);
+    let durationMs = mode === 'rectangle-selection'
+      ? rectangleTiming.durationMs
+      : frameKinematics.durationMs;
     let projected = projectPresenterState({
       focus: {
         active: true,
         rect: focusRect,
-        duration: Number(frame.durationMs) || PRESENTER_FOCUS_REVEAL_DURATION_MS,
+        ...(mode === 'rectangle-selection' ? {} : { duration: durationMs }),
+        ...(mode === 'rectangle-selection' ? {} : { kinematics: frameKinematics }),
+        mode,
       },
       marker: null,
       symbol: null,
@@ -1900,15 +2690,23 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
     cancelGesture();
     cancelClick();
     showOverlay();
-    inkPath.setAttribute('d', '');
-    ink.classList.remove('is-inking');
-    marquee.classList.remove('pc-marquee-faded');
-    marquee.style.transform = `translate(${projected.focus.left}px, ${projected.focus.top}px)`;
-    marquee.style.width = `${projected.focus.width}px`;
-    marquee.style.height = `${projected.focus.height}px`;
-    sizeMarqueeSvg(svg, [rectBlack, rectWhite], projected.focus.width, projected.focus.height);
-    rectBlack.style.strokeDashoffset = `${projected.focus.antsDashOffset}`;
-    rectWhite.style.strokeDashoffset = `${projected.focus.antsDashOffset - 4}`;
+    if (frame.preserveInk === true) renderAccumulatedAnnotations();
+    else {
+      inkPath.setAttribute('d', '');
+      ink.classList.remove('is-inking');
+    }
+    if (projected.focus.visible) {
+      marquee.classList.remove('pc-marquee-faded');
+      marquee.style.opacity = `${projected.focus.opacity}`;
+      marquee.style.transform = `translate(${projected.focus.left}px, ${projected.focus.top}px)`;
+      marquee.style.width = `${projected.focus.width}px`;
+      marquee.style.height = `${projected.focus.height}px`;
+      sizeMarqueeSvg(svg, [rectBlack, rectWhite], projected.focus.width, projected.focus.height);
+      rectBlack.style.strokeDashoffset = `${projected.focus.antsDashOffset}`;
+      rectWhite.style.strokeDashoffset = `${projected.focus.antsDashOffset - 4}`;
+    } else {
+      hideMarqueeFrame();
+    }
     if (projected.focus.dragHandle?.visible) {
       focusHandle.style.left = `${projected.focus.dragHandle.x}px`;
       focusHandle.style.top = `${projected.focus.dragHandle.y}px`;
@@ -1916,14 +2714,25 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
     } else {
       focusHandle.style.display = 'none';
     }
-    if (mode === 'cursor' && projected.cursor.visible) setCursor(projected.cursor.x, projected.cursor.y);
-    else cursor.style.opacity = '0';
+    if (mode === 'cursor' && projected.cursor.visible) {
+      setCursor(projected.cursor.x, projected.cursor.y);
+    } else if (mode === 'rectangle-selection' && projected.focus.cursor?.visible) {
+      setCursor(projected.focus.cursor.x, projected.focus.cursor.y);
+    } else {
+      cursor.style.opacity = '0';
+    }
 
     return {
       presented: true,
+      planVersion: PRESENTER_KINEMATICS_VERSION,
       visible: projected.focus.visible,
       mode,
       elapsedMs,
+      durationMs,
+      phases: mode === 'rectangle-selection'
+        ? { ...rectangleTiming, totalMs: rectangleTiming.durationMs }
+        : { totalMs: durationMs },
+      activePhase: projected.focus.activePhase,
       revealProgress: projected.focus.revealProgress,
       revealing: projected.focus.revealing,
       targetRect,
@@ -1937,9 +2746,93 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
       },
       antsDashOffset: projected.focus.antsDashOffset,
       dragHandle: projected.focus.dragHandle,
+      mutationReady: projected.focus.mutationReady,
+      speedPxPerMs: projected.focus.timing?.speedPxPerMs || 0,
+      normalizedPathHash: mode === 'rectangle-selection'
+        ? rectangleTiming.normalizedPathHash
+        : frameKinematics.normalizedPathHash,
+      timing: mode === 'rectangle-selection'
+        ? rectangleTiming
+        : {
+          arcLengthPx: frameKinematics.arcLengthPx,
+          durationMs: frameKinematics.durationMs,
+          maxObservedSpeedPxPerMs: frameKinematics.maxObservedSpeedPxPerMs,
+          maxSpeedPxPerMs: frameKinematics.limits.maxSpeedPxPerMs,
+        },
       cursor: mode === 'cursor'
         ? { x: projected.cursor.x, y: projected.cursor.y, visible: projected.cursor.visible }
-        : null,
+        : (mode === 'rectangle-selection' ? projected.focus.cursor : null),
+    };
+  }
+
+  function presentApproachFrame(el, frame = {}) {
+    if (disposed) return { presented: false, reason: 'disposed' };
+    if (!el || typeof el.getBoundingClientRect !== 'function') {
+      cursor.style.opacity = '0';
+      return { presented: false, reason: 'invalid-target' };
+    }
+    let viewport = resolveViewport(frame.viewport);
+    let rect = resolvePresenterVisibleRect(el, viewport);
+    if (!rect) {
+      cursor.style.opacity = '0';
+      return { presented: false, reason: 'hidden-target' };
+    }
+    let seed = normalizePresenterSeed(frame.seed);
+    let elapsedMs = Number(frame.elapsedMs);
+    if (!Number.isFinite(elapsedMs)) elapsedMs = 0;
+    let zone = clickZoneRectFor(rect, viewport);
+    let fallback = defaultCursorPoint(viewport);
+    let fromX = frame.fromX === null || frame.fromX === undefined || frame.fromX === ''
+      ? fallback.x
+      : Number(frame.fromX);
+    let fromY = frame.fromY === null || frame.fromY === undefined || frame.fromY === ''
+      ? fallback.y
+      : Number(frame.fromY);
+    if (!Number.isFinite(fromX)) fromX = fallback.x;
+    if (!Number.isFinite(fromY)) fromY = fallback.y;
+    let start = clampPresenterPoint({ x: fromX, y: fromY }, viewport);
+    let travel = presenterTravelLayer(start, { x: zone.x, y: zone.y }, frame.seed ?? frame.gestureId, frame.style);
+    let durationMs = travel.duration;
+    let projected = projectPresenterState({
+      focus: null,
+      marker: null,
+      symbol: null,
+      click: null,
+      cursor: travel,
+    }, Math.max(0, elapsedMs), seed, viewport);
+
+    cancelTravel();
+    cancelDrag();
+    cancelGesture();
+    cancelClick();
+    showOverlay();
+    hideMarqueeFrame();
+    if (frame.preserveInk === true) renderAccumulatedAnnotations();
+    else {
+      inkPath.setAttribute('d', '');
+      ink.classList.remove('is-inking');
+    }
+    setCursor(projected.cursor.x, projected.cursor.y);
+
+    return {
+      presented: true,
+      visible: projected.cursor.visible,
+      elapsedMs,
+      durationMs,
+      progress: projected.cursor.progress ?? Math.max(0, Math.min(1, elapsedMs / durationMs)),
+      speedPxPerMs: projected.cursor.speedPxPerMs || 0,
+      planVersion: travel.kinematics.version,
+      normalizedPathHash: travel.kinematics.normalizedPathHash,
+      maxSpeedPxPerMs: travel.kinematics.limits.maxSpeedPxPerMs,
+      rect,
+      start,
+      hotspot: { x: zone.x, y: zone.y },
+      cursor: {
+        x: projected.cursor.x,
+        y: projected.cursor.y,
+        visible: projected.cursor.visible,
+      },
+      mutationReady: projected.cursor.completed,
     };
   }
 
@@ -1957,8 +2850,7 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
     }
     let elapsedMs = Number(frame.elapsedMs);
     if (!Number.isFinite(elapsedMs)) elapsedMs = 0;
-    let seed = Number(frame.seed);
-    if (!Number.isFinite(seed)) seed = 0;
+    let seed = normalizePresenterSeed(frame.seed);
     let zone = clickZoneRectFor(rect, viewport);
     let inRange = elapsedMs >= 0 && elapsedMs <= PRESENTER_CLICK_DURATION_MS;
     let projected = projectPresenterState({
@@ -1975,8 +2867,11 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
     cancelClick();
     showOverlay();
     hideMarqueeFrame();
-    inkPath.setAttribute('d', '');
-    ink.classList.remove('is-inking');
+    if (frame.preserveInk === true) renderAccumulatedAnnotations();
+    else {
+      inkPath.setAttribute('d', '');
+      ink.classList.remove('is-inking');
+    }
 
     if (inRange && projected.click.visible) {
       clickHalo.style.left = `${projected.click.x}px`;
@@ -1991,6 +2886,7 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
 
     return {
       presented: true,
+      planVersion: PRESENTER_KINEMATICS_VERSION,
       visible: inRange && projected.click.visible && projected.click.opacity > 0,
       elapsedMs,
       durationMs: PRESENTER_CLICK_DURATION_MS,
@@ -2000,6 +2896,118 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
       scale: projected.click.scale,
       opacity: projected.click.opacity,
       cursor: { x: projected.cursor.x, y: projected.cursor.y },
+    };
+  }
+
+  function presentRelationshipFrame(sourceEl, destinationEl, relation, frame = {}) {
+    if (disposed) return { presented: false, reason: 'disposed' };
+    if (!sourceEl?.getBoundingClientRect || !destinationEl?.getBoundingClientRect) {
+      clear();
+      return { presented: false, reason: 'invalid-target' };
+    }
+    let viewport = resolveViewport(frame.viewport);
+    let sourceRect = resolvePresenterVisibleRect(sourceEl, viewport);
+    let destinationRect = resolvePresenterVisibleRect(destinationEl, viewport);
+    if (!sourceRect || !destinationRect) {
+      clear();
+      return { presented: false, reason: 'hidden-target' };
+    }
+    let gesturePolicy = resolvePresenterGesturePolicy({
+      cueKind: 'relationship',
+      relation,
+      sourceTargetId: frame.sourceTargetId || relation?.from || relation?.sourceTargetId,
+      destinationTargetId: frame.destinationTargetId || relation?.to || relation?.destinationTargetId,
+      sourceRect,
+      destinationRect,
+      targetRect: destinationRect,
+      viewport,
+    });
+    if (gesturePolicy.selectedKind !== 'arrow') {
+      let focus = presentFocusFrame(destinationEl, { ...frame, mode: 'frame' });
+      return {
+        ...focus,
+        kind: 'focus',
+        name: 'frame',
+        originalKind: 'relationship',
+        gesturePolicy,
+        fallback: true,
+        pathSamples: [],
+      };
+    }
+    let relationshipPath = createPresenterRelationshipPath({ sourceRect, destinationRect });
+    let route = [
+      relationshipPath.start,
+      relationshipPath.end,
+      relationshipPath.arrowHead[0],
+      relationshipPath.end,
+      relationshipPath.arrowHead[1],
+    ];
+    let routeLengths = [0];
+    for (let index = 1; index < route.length; index += 1) {
+      routeLengths.push(routeLengths.at(-1) + Math.hypot(
+        route[index].x - route[index - 1].x,
+        route[index].y - route[index - 1].y,
+      ));
+    }
+    let routeLength = routeLengths.at(-1) || 1;
+    let kinematics = createPresenterKinematicPlan({
+      kind: 'arrow',
+      seed: frame.seed ?? frame.gestureId ?? `${frame.sourceTargetId || ''}:${frame.destinationTargetId || ''}`,
+      style: frame.style,
+      pointAt(progress) {
+        let target = Math.max(0, Math.min(routeLength, progress * routeLength));
+        let rightIndex = routeLengths.findIndex((distance) => distance >= target);
+        if (rightIndex <= 0) return { ...route[0] };
+        let leftIndex = rightIndex - 1;
+        let span = routeLengths[rightIndex] - routeLengths[leftIndex] || 1;
+        let ratio = (target - routeLengths[leftIndex]) / span;
+        return {
+          x: route[leftIndex].x + (route[rightIndex].x - route[leftIndex].x) * ratio,
+          y: route[leftIndex].y + (route[rightIndex].y - route[leftIndex].y) * ratio,
+        };
+      },
+    });
+    let durationMs = kinematics.durationMs;
+    let elapsedMs = Number(frame.elapsedMs);
+    if (!Number.isFinite(elapsedMs)) elapsedMs = Math.max(0, Math.min(1, Number(frame.progress) || 0)) * durationMs;
+    let sampled = samplePresenterKinematicPlan(kinematics, elapsedMs);
+    let progress = sampled.progress;
+    let tip = sampled.point;
+    let pathD = sampled.ribbonPath;
+
+    cancelTravel();
+    cancelDrag();
+    cancelGesture();
+    cancelClick();
+    showOverlay();
+    hideMarqueeFrame();
+    inkPath.setAttribute('d', pathD);
+    ink.dataset.renderMode = 'ribbon';
+    ink.classList.add('is-inking');
+    if (frame.ownsCursor !== false && progress < 1) setCursor(tip.x, tip.y);
+    else cursor.style.opacity = '0';
+
+    return {
+      presented: true,
+      planVersion: kinematics.version,
+      visible: true,
+      kind: 'relationship',
+      name: 'arrow',
+      progress,
+      elapsedMs,
+      durationMs,
+      sourceRect,
+      destinationRect,
+      cursor: progress < 1 ? tip : null,
+      pathSamples: sampled.samples,
+      widthSamples: sampled.samples.map((sample) => sample.widthPx),
+      speedPxPerMs: sampled.speedPxPerMs,
+      minWidthPx: kinematics.minWidthPx,
+      maxWidthPx: kinematics.maxWidthPx,
+      normalizedPathHash: kinematics.normalizedPathHash,
+      tailPolicy: kinematics.tailPolicy,
+      relationshipPath,
+      gesturePolicy,
     };
   }
 
@@ -2025,11 +3033,50 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
       settle(opts);
       return Promise.resolve({ actionId, status: 'settled', target: el });
     }
-    let nextSeed = moveIndex + 1;
-    let layout = resolvePresenterAnnotationLayout(annotation, rect, viewport, nextSeed);
+    let gesturePolicy = resolvePresenterGesturePolicy({
+      cueKind: 'annotation',
+      annotation,
+      semanticRole: opts.semanticRole,
+      targetRect: rect,
+      viewport,
+    });
+    if (gesturePolicy.selectedKind === 'focus-frame') {
+      return moveTo(el, opts).then((receipt) => ({ ...receipt, gesturePolicy }));
+    }
+    let nextSeed = normalizePresenterSeed(opts.seed ?? opts.gestureId ?? moveIndex + 1);
+    let layout = resolvePresenterAnnotationLayout(
+      annotation,
+      rect,
+      viewport,
+      nextSeed,
+      opts.obstacles,
+      opts.style,
+    );
     if (!layout) {
       settle(opts);
       return Promise.resolve({ actionId, status: 'settled', target: el });
+    }
+    if (layout.fullSafety?.safe === false) {
+      let fallbackPolicy = resolvePresenterGesturePolicy({
+        cueKind: 'annotation',
+        annotation,
+        semanticRole: opts.semanticRole,
+        targetRect: rect,
+        viewport,
+        safety: layout.fullSafety,
+      });
+      return moveTo(el, opts).then((receipt) => ({
+        ...receipt,
+        annotation: {
+          kind: layout.annotation.kind,
+          name: layout.annotation.marker || layout.annotation.symbol,
+          placement: layout.annotation.placement,
+          rect: layout.geometryRect,
+        },
+        placement: layout.annotation.placement,
+        safety: layout.fullSafety,
+        gesturePolicy: fallbackPolicy,
+      }));
     }
     annotation = layout.annotation;
     let drawRect = layout.drawRect;
@@ -2044,19 +3091,12 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
     showOverlay();
     moveIndex = nextSeed;
 
-    let distance = Math.hypot(toX - cursorX, toY - cursorY);
-    let duration = resolvePresenterTravelDuration(distance);
+    let cursorStart = currentCursorPoint(viewport);
+    let travel = presenterTravelLayer(cursorStart, { x: toX, y: toY }, nextSeed, opts.style);
+    let duration = travel.duration;
 
     activeLayers.focus = null;
-    activeLayers.cursor = {
-      active: true,
-      fromX: cursorX,
-      fromY: cursorY,
-      toX,
-      toY,
-      startTime: 0,
-      duration,
-    };
+    activeLayers.cursor = travel;
     activeLayers.marker = null;
     activeLayers.symbol = null;
     activeLayers.click = null;
@@ -2088,13 +3128,11 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
           activeLayers.marker = activeStroke;
         }
 
-        let loops = Math.max(0, plan?.loops || 0);
-        let speed = 1 + variation(moveIndex, 29) * 0.12;
-        let gestureDuration = Math.max(220, GESTURE_MS * (1 + loops * 0.55) * speed);
+        let gestureDuration = plan.kinematics.durationMs;
         activeStroke.startTime = 0;
         activeStroke.duration = gestureDuration;
 
-        let rest = clampPresenterPoint(plan?.rest || startPoint, viewport);
+        let rest = clampPresenterPoint(plan.kinematics.samples.at(-1) || startPoint, viewport);
         activeLayers.cursor = {
           active: true,
           x: rest.x,
@@ -2128,10 +3166,40 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
       clear();
       return { presented: false, reason: 'hidden-target' };
     }
-    let progress = Math.max(0, Math.min(1, Number(frame.progress) || 0));
-    let seed = Number(frame.seed);
-    if (!Number.isFinite(seed)) seed = 0;
-    let layout = resolvePresenterAnnotationLayout(annotation, rect, viewport, seed);
+    let gesturePolicy = resolvePresenterGesturePolicy({
+      cueKind: 'annotation',
+      annotation,
+      semanticRole: frame.semanticRole,
+      targetRect: rect,
+      viewport,
+    });
+    if (gesturePolicy.selectedKind === 'focus-frame') {
+      let focus = presentFocusFrame(el, {
+        ...frame,
+        mode: 'frame',
+      });
+      return {
+        ...focus,
+        kind: 'focus',
+        name: 'frame',
+        originalKind: 'annotation',
+        gesturePolicy,
+        fallback: true,
+        pathSamples: [],
+        safety: { safe: true, policyFallback: true },
+      };
+    }
+    let requestedProgress = Math.max(0, Math.min(1, Number(frame.progress) || 0));
+    let seed = normalizePresenterSeed(frame.seed);
+
+    let layout = resolvePresenterAnnotationLayout(
+      annotation,
+      rect,
+      viewport,
+      seed,
+      frame.obstacles,
+      frame.style,
+    );
     if (!layout) {
       clear();
       return { presented: false, reason: 'invalid-annotation' };
@@ -2153,6 +3221,8 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
       obstacles: Array.isArray(frame.obstacles) ? frame.obstacles : [],
       viewport,
       layout,
+      ownsCursor: frame.ownsCursor !== false,
+      duration: layout.plan.kinematics.durationMs,
     };
 
     let layers = {
@@ -2163,7 +3233,45 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
       cursor: { active: true, x: startPoint.x, y: startPoint.y },
     };
 
-    let projected = projectPresenterState(layers, progress * GESTURE_MS, seed, viewport);
+    let requestedElapsedMs = Number(frame.elapsedMs);
+    let elapsedMs = Number.isFinite(requestedElapsedMs)
+      ? Math.max(0, requestedElapsedMs)
+      : requestedProgress * strokeLayer.duration;
+    let projected = projectPresenterState(layers, elapsedMs, seed, viewport);
+    let activeAnnotation = projected.annotation;
+    let progress = activeAnnotation?.progress || 0;
+    let enclosingOval = annotation.kind === 'marker'
+      && ['oval', 'multi-oval'].includes(annotation.marker)
+      && layout.fullSafety?.missingTarget === false
+      && layout.fullSafety?.viewportCollision === false
+      && layout.fullSafety?.collisions?.length === 0;
+    let intentionalTargetOverlay = annotation.kind === 'marker' && annotation.marker === 'slash';
+    let suppressUnsafe = layout.fullSafety?.safe === false && !enclosingOval && !intentionalTargetOverlay;
+
+    if (suppressUnsafe) {
+      let fallbackPolicy = resolvePresenterGesturePolicy({
+        cueKind: 'annotation',
+        annotation,
+        semanticRole: frame.semanticRole,
+        targetRect: rect,
+        viewport,
+        safety: layout.fullSafety,
+      });
+      let focus = presentFocusFrame(el, {
+        ...frame,
+        mode: 'frame',
+      });
+      return {
+        ...focus,
+        kind: 'focus',
+        name: 'frame',
+        originalKind: 'annotation',
+        gesturePolicy: fallbackPolicy,
+        fallback: true,
+        pathSamples: [],
+        safety: { ...layout.fullSafety, policyFallback: true, presentationSafe: true },
+      };
+    }
 
     cancelTravel();
     cancelDrag();
@@ -2181,40 +3289,74 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
       hideMarqueeFrame();
     }
 
-    let inkPathD = '';
-    if (projected.marker.visible && projected.marker.path) {
-      inkPathD = projected.marker.path;
+    let evidencePathD = '';
+    if (suppressUnsafe) {
+      evidencePathD = smoothPresenterPath(layout.fullPathSamples);
+    } else if (projected.marker.visible && projected.marker.path) {
+      evidencePathD = projected.marker.path;
     } else if (projected.symbol.visible && projected.symbol.path) {
-      inkPathD = projected.symbol.path;
+      evidencePathD = projected.symbol.path;
     }
+    let projectedRibbonD = activeAnnotation?.ribbonPath || '';
+    let inkPathD = suppressUnsafe ? '' : projectedRibbonD;
 
-    inkPath.setAttribute('d', inkPathD);
-    ink.classList.toggle('is-inking', Boolean(inkPathD));
+    let accumulatedKey = String(frame.annotationId || `${annotation.kind}:${annotation.marker || annotation.symbol}:${seed}:${rect.left}:${rect.top}:${rect.width}:${rect.height}`);
+    if (frame.accumulate && progress >= 1 && inkPathD) {
+      accumulatedAnnotationPaths.set(accumulatedKey, inkPathD);
+    }
+    let visibleInkPathD = frame.accumulate
+      ? [...accumulatedAnnotationPaths.values(), ...(progress < 1 && inkPathD ? [inkPathD] : [])].join(' ')
+      : inkPathD;
+    inkPath.setAttribute('d', visibleInkPathD);
+    ink.dataset.renderMode = 'ribbon';
+    ink.classList.toggle('is-inking', Boolean(visibleInkPathD));
 
-    let activeAnnotation = projected.annotation;
-    cursor.classList.toggle('is-inking', Boolean(activeAnnotation && !activeAnnotation.completed));
-    let strokePoints = activeAnnotation.points;
-    let cursorPoint = activeAnnotation.cursor;
-    if (cursorPoint) {
+    cursor.classList.toggle('is-inking', Boolean(!suppressUnsafe && activeAnnotation && !activeAnnotation.completed));
+    let evidenceAnnotation = activeAnnotation;
+    let strokePoints = suppressUnsafe ? layout.fullPathSamples : activeAnnotation.points;
+    let cursorPoint = suppressUnsafe ? layout.fullCursor : activeAnnotation.cursor;
+    if (!suppressUnsafe
+      && activeAnnotation.safety?.safe === false
+      && activeAnnotation.safety?.collisions?.length
+      && activeAnnotation.safety.collisions.every((collision) => collision.cursor && !collision.ink)
+      && !activeAnnotation.safety.targetInteriorCollision
+      && !activeAnnotation.safety.cursorTargetCollision
+      && !activeAnnotation.safety.viewportCollision) {
+      cursorPoint = null;
+      activeAnnotation.safety = analyzePresenterAnnotationSafety({
+        pathSamples: activeAnnotation.points,
+        cursor: null,
+        targetRect: rect,
+        obstacles: Array.isArray(frame.obstacles) ? frame.obstacles : [],
+        viewport,
+        cursorSizePx: INK_CURSOR_SIZE,
+      });
+    }
+    if (!suppressUnsafe && cursorPoint) {
       setCursor(cursorPoint.x, cursorPoint.y);
     } else {
       cursor.style.opacity = '0';
     }
 
     let pathDigest = 2166136261;
-    for (let index = 0; index < inkPathD.length; index += 1) {
-      pathDigest ^= inkPathD.charCodeAt(index);
+    for (let index = 0; index < evidencePathD.length; index += 1) {
+      pathDigest ^= evidencePathD.charCodeAt(index);
       pathDigest = Math.imul(pathDigest, 16777619);
     }
 
     let pathSamples = strokePoints.map((point) => ({ x: point.x, y: point.y }));
 
     return {
-      presented: true,
+      presented: !suppressUnsafe,
+      planVersion: layout.plan.kinematics.version,
+      visible: !suppressUnsafe,
+      suppressed: suppressUnsafe,
+      ...(suppressUnsafe ? { reason: 'unsafe-annotation' } : {}),
       kind: activeAnnotation.kind,
       name: activeAnnotation.name,
       placement: activeAnnotation.placement,
       progress,
+      elapsedMs: activeAnnotation.elapsedMs,
       seed,
       rect: activeAnnotation.rect,
       drawRect: activeAnnotation.drawRect,
@@ -2223,7 +3365,22 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
       pathPoints: pathSamples.length,
       pathSamples,
       pathDigest: (pathDigest >>> 0).toString(16).padStart(8, '0'),
-      safety: activeAnnotation.safety,
+      normalizedPathHash: activeAnnotation.pathHash,
+      safety: suppressUnsafe ? layout.fullSafety : evidenceAnnotation.safety,
+      durationMs: activeAnnotation.durationMs,
+      arcLengthPx: activeAnnotation.arcLengthPx,
+      drawnLengthPx: activeAnnotation.drawnLengthPx,
+      averageSpeedPxPerMs: activeAnnotation.averageSpeedPxPerMs,
+      speedPxPerMs: activeAnnotation.speedPxPerMs,
+      widthSamples: activeAnnotation.widthSamples,
+      minWidthPx: activeAnnotation.minWidthPx,
+      maxWidthPx: activeAnnotation.maxWidthPx,
+      tailPolicy: activeAnnotation.tailPolicy,
+      phase: activeAnnotation.completed ? 'complete' : 'draw',
+      timing: activeAnnotation.timing,
+      gesturePolicy,
+      accumulated: frame.accumulate === true,
+      accumulatedCount: accumulatedAnnotationPaths.size,
     };
   }
 
@@ -2241,16 +3398,30 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
     overlay.classList.add('is-visible');
   }
 
-  function clear() {
+  function clearAccumulatedAnnotations() {
+    accumulatedAnnotationPaths.clear();
+    inkPath.setAttribute('d', '');
+    ink.classList.remove('is-inking');
+  }
+
+  function renderAccumulatedAnnotations() {
+    let path = [...accumulatedAnnotationPaths.values()].join(' ');
+    inkPath.setAttribute('d', path);
+    ink.classList.toggle('is-inking', Boolean(path));
+    return Boolean(path);
+  }
+
+  function clear(opts = {}) {
     if (disposed) return;
     cancelTravel();
     cancelDrag();
     cancelGesture();
     cancelClick();
     abortCurrentAction();
-    inkPath.setAttribute('d', '');
-    overlay.classList.remove('is-visible');
-    overlay.classList.add('is-paused');
+    let preservedInk = opts.preserveInk === true && renderAccumulatedAnnotations();
+    if (opts.preserveInk !== true) clearAccumulatedAnnotations();
+    overlay.classList.toggle('is-visible', preservedInk);
+    overlay.classList.toggle('is-paused', !preservedInk);
   }
 
   function dispose() {
@@ -2268,10 +3439,13 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
     moveTo,
     markElement,
     annotateElement,
+    presentApproachFrame,
     presentFocusFrame,
+    presentRelationshipFrame,
     presentAnnotationFrame,
     presentClickFrame,
     clickElement,
+    clearAccumulatedAnnotations,
     clear,
     dispose,
     isSupported() {

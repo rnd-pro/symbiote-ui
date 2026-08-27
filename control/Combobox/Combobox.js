@@ -2,6 +2,15 @@ import Symbiote from '@symbiotejs/symbiote';
 import { UID } from '@symbiotejs/symbiote/utils';
 import template from './Combobox.tpl.js';
 import css from './Combobox.css.js';
+
+function observeMutations(observer, target, options) {
+  try {
+    observer.observe(target, options);
+    return true;
+  } catch {
+    return false;
+  }
+}
 import { registerDismissableLayer } from '../../ui/dismissable-layer.js';
 import { positionOverlay } from '../../ui/overlay-positioner.js';
 import { mountOverlayToDocument, restoreOverlayHome } from '../../ui/overlay-stack.js';
@@ -100,10 +109,10 @@ export class Combobox extends Symbiote {
       this.#observer.disconnect();
       this.#syncOptions();
       if (this.#observer) {
-        this.#observer.observe(this, { childList: true, characterData: true, subtree: true });
+        observeMutations(this.#observer, this, { childList: true, characterData: true, subtree: true });
       }
     });
-    this.#observer.observe(this, { childList: true, characterData: true, subtree: true });
+    observeMutations(this.#observer, this, { childList: true, characterData: true, subtree: true });
 
     this.#setupAria();
     this.#syncOptions();

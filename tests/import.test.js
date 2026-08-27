@@ -97,7 +97,7 @@ test('root and metadata entrypoints import in Node', async () => {
 
 test('ui browser entrypoint wires catalog module exports once', async () => {
   let source = await readFile(new URL('../ui/index.js', import.meta.url), 'utf8');
-  let { listComponents } = await import('../manifest/index.js');
+  let { listComponents, COMPONENT_UI_SPECIFIER } = await import('../manifest/index.js');
   let match = source.match(/registerCatalogModules\(\{([\s\S]*?)\n  \}\);/);
 
   assert.ok(match, 'registerCatalogModules object is present');
@@ -112,6 +112,7 @@ test('ui browser entrypoint wires catalog module exports once', async () => {
     .filter(([, count]) => count > 1)
     .map(([key]) => key);
   let expectedExportNames = listComponents({ includeInternal: true, includeExperimental: true })
+    .filter((component) => component.specifier === COMPONENT_UI_SPECIFIER)
     .map((component) => component.exportName)
     .filter(Boolean);
   let missingExportNames = expectedExportNames
@@ -119,8 +120,49 @@ test('ui browser entrypoint wires catalog module exports once', async () => {
 
   assert.deepEqual(duplicateKeys, []);
   assert.deepEqual(missingExportNames, []);
+  for (let narrowExport of ['AgentDockShell', 'AgentShowChat', 'ChatShowPlayer']) {
+    assert.equal(registeredKeys.includes(narrowExport), false, `${narrowExport} stays out of the broad UI bundle`);
+  }
   for (let lateCatalogExport of ['QrCode', 'VideoPlayer', 'TimelineEditor']) {
     assert.ok(registeredKeys.includes(lateCatalogExport), lateCatalogExport);
+  }
+});
+
+test('NodeCanvas registry and CEM mirror snapshot adoption and layout lifecycle', async () => {
+  let { getComponent } = await import('../manifest/index.js');
+  let component = getComponent('node-canvas');
+  let customElements = JSON.parse(await readFile(new URL('../custom-elements.json', import.meta.url), 'utf8'));
+  let declaration = customElements.modules
+    .flatMap((module) => module.declarations || [])
+    .find((item) => item.tagName === 'node-canvas');
+  let capabilities = ['layout-lifecycle', 'pcb-route-snapshot-adoption'];
+  let methods = [
+    'setPresentationMode',
+    'suspendLayout',
+    'resumeLayout',
+    'capturePcbRouteSnapshot',
+    'adoptPcbRouteSnapshot',
+    'invalidatePcbRouteSnapshot',
+    'getPcbRouteSnapshotReceipt',
+  ];
+  let events = ['node-canvas-render-snapshot-receipt'];
+
+  for (let contract of [component.contract, declaration.metadata.contract]) {
+    for (let capability of capabilities) {
+      assert.ok(contract.capabilities.includes(capability), capability);
+    }
+    for (let method of methods) {
+      assert.ok(contract.methods.some((item) => item.name === method), method);
+    }
+    for (let event of events) {
+      assert.ok(contract.events.some((item) => item.name === event), event);
+    }
+  }
+  for (let method of methods) {
+    assert.ok(declaration.members.some((item) => item.name === method), `CEM member ${method}`);
+  }
+  for (let event of events) {
+    assert.ok(declaration.events.some((item) => item.name === event), `CEM event ${event}`);
   }
 });
 

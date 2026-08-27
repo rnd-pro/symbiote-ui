@@ -33,10 +33,13 @@ const STATIC_RENDERABLE_TAGS = new Set([
 ]);
 
 const HYDRATE_ONLY_TAGS = new Set([
+  'agent-dock-shell',
+  'agent-show-chat',
   'chat-composer',
   'chat-list',
   'chat-list-item',
   'chat-message-item',
+  'chat-show-player',
   'chat-sidebar-item',
   'chat-sidebar-shell',
   'chat-sidebar-sub-item',
@@ -66,6 +69,51 @@ const CLIENT_ONLY_CATEGORIES = new Set([
 ]);
 
 const WEBMCP_TOOLS = {
+  'agent-dock-shell': [
+    {
+      name: 'agent_dock_visibility',
+      description: 'Open, close, or toggle the reusable responsive agent dock without recreating its chat or embedded Show state.',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: { action: { enum: ['open', 'close', 'toggle'] } },
+        required: ['action'],
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, runtimeMethods: ['open', 'close', 'toggle'], intentEvent: 'agent-dock-change' },
+      exposedTo: ['agent', 'assistant'],
+    },
+  ],
+  'chat-show-player': [
+    {
+      name: 'chat_show_player_control',
+      description: 'Drive the injected product-neutral Show controller without taking ownership of the timeline, media, narration, or product content.',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          action: { enum: ['play', 'pause', 'toggle', 'prev', 'next', 'stop', 'preview', 'seek'] },
+          index: { type: 'integer', minimum: 0 },
+        },
+        required: ['action'],
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, runtimeMethod: 'control', intentEvent: 'chat-show-control' },
+      exposedTo: ['agent', 'assistant'],
+    },
+  ],
+  'agent-show-chat': [
+    {
+      name: 'agent_show_chat_submit',
+      description: 'Submit ordinary chat input through the injected agent provider respond() boundary while preserving transcript and embedded Show history.',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: { value: { type: 'string', minLength: 1 } },
+        required: ['value'],
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, runtimeMethod: 'submit', intentEvents: ['agent-show-response', 'agent-show-error'] },
+      exposedTo: ['agent', 'assistant'],
+    },
+  ],
   'chat-workspace': [
     {
       name: 'chat_workspace_set_state',
@@ -1215,7 +1263,7 @@ function normalizeContract(component) {
   };
 }
 
-const UI_NAMED_EXPORTS = new Set([
+const UI_BUNDLE_NAMED_EXPORTS = new Set([
   'GraphNode',
   'NodeCallout',
   'NodeSocket',
@@ -1600,6 +1648,7 @@ const EXPANDED_CATALOG_COMPONENTS = [
     tagName: 'sn-transport',
     className: 'Transport',
     module: 'control/Transport/Transport.js',
+    specifier: 'symbiote-ui/control/transport',
     category: 'control',
     description: 'Standalone media/timeline transport bar that drives a host timeline or viewport through events without owning a media element.',
     contract: {
@@ -2850,20 +2899,20 @@ export let COMPONENTS = [
     className: 'Chart',
     module: 'display/Chart/Chart.js',
     category: 'display',
-    description: 'Lightweight SVG line and bar chart data visualizer.',
+    description: 'Lightweight semantic SVG chart supporting grouped and stacked bars, lines, areas, scatter, pie, and donut views.',
     agent: {
       semanticRole: 'svg data visualization chart',
-      usage: 'Use to plot numbers in bar or line formats.',
+      usage: 'Use to plot numeric series and expose optional semantic targets for interactive drill-down.',
       dataOwnership: 'visualized datalist array',
     },
     contract: {
       status: 'draft',
       schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/chart-spec-v1.json',
-      capabilities: ['chart', 'data-viz'],
+      capabilities: ['chart', 'data-viz', 'chart.stacked', 'chart.donut', 'selection.semantic-target'],
       attributes: [
         { name: 'title', type: 'string', description: 'Chart header title.' },
-        { name: 'type', type: 'string', description: 'Chart plot style: bar or line.' }
+        { name: 'type', type: 'string', description: 'Chart plot style: bar, line, area, scatter, pie, donut, or mixed.' }
       ],
       methods: [
         { name: 'setData', type: 'function', description: 'Sets local chart data from numbers or label/value objects.' },
@@ -2873,11 +2922,32 @@ export let COMPONENTS = [
       events: [
         { name: 'sn-chart-zoom', description: 'Fired when selection zoom is applied.' },
         { name: 'sn-chart-brush', description: 'Fired when selection brush is applied.' },
-        { name: 'sn-chart-zoom-reset', description: 'Fired when zoom is reset.' }
+        { name: 'sn-chart-zoom-reset', description: 'Fired when zoom is reset.' },
+        { name: 'sn-chart-select', description: 'Fired when a data point is selected; includes its semantic target when supplied.' }
       ],
       themeAliases: [
+        '--sn-chart-bg',
+        '--sn-chart-border',
         '--sn-chart-brush-stroke',
+        '--sn-chart-header-gap',
+        '--sn-chart-header-item-gap',
+        '--sn-chart-height',
+        '--sn-chart-hover-opacity',
+        '--sn-chart-legend-gap',
+        '--sn-chart-legend-item-gap',
+        '--sn-chart-legend-size',
+        '--sn-chart-legend-swatch-height',
+        '--sn-chart-legend-swatch-radius',
+        '--sn-chart-legend-swatch-width',
+        '--sn-chart-padding',
+        '--sn-chart-radius',
+        '--sn-chart-threshold-size',
+        '--sn-chart-title-size',
+        '--sn-chart-tooltip-padding',
+        '--sn-chart-tooltip-radius',
+        '--sn-chart-tooltip-size',
         '--sn-font',
+        '--sn-font-mono',
         '--sn-panel-radius',
         '--sn-sys-accent',
         '--sn-sys-on-surface',
@@ -2891,6 +2961,49 @@ export let COMPONENTS = [
         '--sn-tooltip-bg',
         '--sn-tooltip-color',
         '--sn-transition-fast'
+      ]
+    }
+  },
+  {
+    tagName: 'sn-operations-overview',
+    className: 'OperationsOverview',
+    module: 'display/OperationsOverview/OperationsOverview.js',
+    category: 'display',
+    description: 'Responsive provider-owned operations analytics composition built from KPI tiles and semantic charts.',
+    agent: {
+      semanticRole: 'operations analytics overview',
+      usage: 'Use for domain-supplied KPI and chart models that need consistent responsive presentation and drill-down events.',
+      dataOwnership: 'consumer-owned analytics model and semantic targets',
+    },
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/chart-spec-v1.json',
+      capabilities: ['analytics.overview', 'analytics.kpi', 'chart.composition', 'selection.semantic-target'],
+      attributes: [],
+      methods: [
+        { name: 'setModel', type: 'function', description: 'Sets the domain-neutral overview model.' },
+        { name: 'getModel', type: 'function', description: 'Returns the normalized overview model.' }
+      ],
+      events: [
+        { name: 'sn-analytics-select', description: 'Fired when a KPI or chart point is selected.' }
+      ],
+      themeAliases: [
+        '--sn-operations-overview-gap',
+        '--sn-operations-overview-padding',
+        '--sn-operations-overview-metric-accent',
+        '--sn-font',
+        '--sn-font-mono',
+        '--sn-icon-font',
+        '--sn-card-radius',
+        '--sn-sys-accent',
+        '--sn-sys-on-surface',
+        '--sn-sys-on-surface-dim',
+        '--sn-sys-outline',
+        '--sn-sys-outline-subtle',
+        '--sn-sys-state-hover-mix',
+        '--sn-sys-surface-raised',
+        '--sn-theme-type-scale'
       ]
     }
   },
@@ -3535,7 +3648,7 @@ export let COMPONENTS = [
       status: 'draft',
       schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/graph-model-v1.json',
-      capabilities: ['node-editor-canvas', 'connections', 'frames', 'subgraphs', 'viewport', 'selection', 'multi-node-focus', 'graph-layout', 'layout-lifecycle'],
+      capabilities: ['node-editor-canvas', 'connections', 'frames', 'subgraphs', 'viewport', 'selection', 'multi-node-focus', 'graph-layout', 'layout-lifecycle', 'pcb-route-snapshot-adoption'],
       attributes: [
         { name: 'connection-engine', type: 'string', description: 'Connection renderer engine selection.' },
         { name: 'presentation', type: 'boolean', description: 'Enables presentation mode for the canvas when present.' },
@@ -3569,6 +3682,10 @@ export let COMPONENTS = [
         { name: 'resumeLayout', type: 'function', description: 'Resumes viewport sync after a hidden layout group becomes active again.' },
         { name: 'setNodePosition', type: 'function', description: 'Positions one node in canvas coordinates.' },
         { name: 'getPositions', type: 'function', description: 'Returns node positions.' },
+        { name: 'capturePcbRouteSnapshot', type: 'function', description: 'Captures settled full PCB paths, sampled points, node rectangles, and route signatures as a serializable build artifact.' },
+        { name: 'adoptPcbRouteSnapshot', type: 'function', description: 'Validates and adopts cached full PCB paths into the existing live SVG DOM; mismatches preserve the selected PCB lifecycle for live rerouting.' },
+        { name: 'invalidatePcbRouteSnapshot', type: 'function', description: 'Clears adopted snapshot state and its receipt while preserving the selected PCB path style and live reroute lifecycle.' },
+        { name: 'getPcbRouteSnapshotReceipt', type: 'function', description: 'Returns the latest serializable PCB route snapshot adoption or invalidation receipt.' },
       ],
       events: [
         { name: 'toolbar-action', description: 'Emits a toolbar action for a selected node.' },
@@ -3582,6 +3699,7 @@ export let COMPONENTS = [
         { name: 'sn-clipboard-paste', description: 'Emits clipboard paste intent.' },
         { name: 'sn-undo', description: 'Emits undo intent.' },
         { name: 'sn-redo', description: 'Emits redo intent.' },
+        { name: 'node-canvas-render-snapshot-receipt', description: 'Emits a serializable cached-PCB adoption, mismatch, or invalidation receipt.', detail: 'node-canvas-render-snapshot-receipt-v1' },
       ],
       themeAliases: [
         '--sn-sys-surface',
@@ -5106,9 +5224,147 @@ export let COMPONENTS = [
     },
   },
   {
+    tagName: 'chat-show-player',
+    className: 'ChatShowPlayer',
+    exportName: 'ChatShowPlayer',
+    module: 'chat/ChatShowPlayer/ChatShowPlayer.js',
+    specifier: 'symbiote-ui/chat/show-chat',
+    category: 'chat',
+    description: 'Fixed Show/media player for an agent-chat composition, driven by injected controller, timeline, state, and neutral video hooks.',
+    agent: {
+      semanticRole: 'fixed narrated Show player above an independently scrolling agent transcript',
+      usage: 'Bind a product-owned timeline and independent Show controller, then register it by the transcript embed receipt key. Autoplay is explicit and does not depend on contextual actions.',
+      dataOwnership: 'host owns controller, timeline, narration, media, scenario content, and persistence; component owns only visible player projection and control intents',
+    },
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['fixed-show-player-region', 'transcript-embed-receipt', 'material-header-and-actions', 'bounded-two-row-timeline', 'timeline-current-row', 'optional-karaoke-caption-strip', 'player-owned-tts-block', 'detail-video-controls', 'pointer-only-short-controls', 'material-transport-controls', 'controller-injection', 'autoplay-after-connect'],
+      properties: [
+        { name: 'controller', type: 'object', description: 'Injected Show controller with play/pause/toggle/prev/next/stop/preview or seek methods and readable state.' },
+        { name: 'timeline', type: 'object', description: 'Product-owned timeline whose turns provide product-neutral speaker/persona and caption/text fields.' },
+        { name: 'state', type: 'object', description: 'Injected visible index, playback, caption, and optional TTS projection.' },
+        { name: 'videoController', type: 'object', description: 'Optional product-owned controller whose detail actions are called by declared video controls.' },
+        { name: 'videoControls', type: 'array', description: 'Neutral video controls with detail or pointer-only semantics; pointer-only controls never activate the controller.' },
+        { name: 'autoplay', type: 'boolean', description: 'Starts controller.play() once after the fixed player connects.' },
+        { name: 'captions', type: 'boolean', description: 'Shows or hides the optional plain-text or word-highlighted caption strip.' },
+        { name: 'settings', type: 'boolean', description: 'Shows or hides the settings request action.' },
+        { name: 'closable', type: 'boolean', description: 'Shows or hides the close request action.' },
+      ],
+      methods: [
+        { name: 'bind', type: 'function', description: 'Binds controller, timeline, visible state, title, and autoplay policy without taking ownership of them.' },
+        { name: 'setState', type: 'function', description: 'Updates injected visible player state.' },
+        { name: 'control', type: 'function', description: 'Routes one product-neutral transport or preview action to the injected controller.' },
+        { name: 'controlVideo', type: 'function', description: 'Routes a declared detail video action or emits a non-activating pointer-only receipt.' },
+      ],
+      events: [
+        { name: 'chat-show-control', description: 'Reports a transport or timeline-row action routed to the injected controller.', detail: [{ name: 'action', type: 'string' }, { name: 'index', type: 'number' }] },
+        { name: 'chat-show-video-request', description: 'Cancelable request for one host-owned detail video action.' },
+        { name: 'chat-show-video-control', description: 'Reports the activated, prevented, unavailable, or pointer-only outcome of a video control intent.' },
+        { name: 'chat-show-settings-request', description: 'Requests a host-owned settings or menu surface without encoding product settings in the player.' },
+        { name: 'chat-show-close-request', description: 'Requests removal of the embedded player while leaving controller ownership with the host.' },
+      ],
+      slots: [
+        { name: 'actions', description: 'Optional host-owned header actions beside the built-in settings and close hooks.' },
+      ],
+      themeAliases: ['--sn-chat-show-player-gap', '--sn-chat-show-player-padding', '--sn-chat-show-header-block-size', '--sn-chat-show-timeline-block-size', '--sn-chat-show-caption-word-gap', '--sn-panel-bg', '--sn-node-bg', '--sn-node-border', '--sn-node-border-width', '--sn-node-selected', '--sn-node-hover', '--sn-text', '--sn-text-dim', '--sn-space-xs', '--sn-space-sm', '--sn-space-md', '--sn-space-xl', '--sn-node-radius', '--sn-button-font-weight'],
+    },
+  },
+  {
+    tagName: 'agent-show-chat',
+    className: 'AgentShowChat',
+    exportName: 'AgentShowChat',
+    module: 'chat/AgentShowChat/AgentShowChat.js',
+    specifier: 'symbiote-ui/chat/show-chat',
+    category: 'chat',
+    description: 'Ordinary agent chat composition with one fixed lower Show player region below an independently scrolling transcript workspace.',
+    agent: {
+      semanticRole: 'interactive agent chat with fixed Show playback and accumulating contextual history',
+      usage: 'Inject one provider exposing respond(request), register product-owned Show controllers by embed key, and keep the normal composer enabled. Replace scripted routing with an API by changing respond() only.',
+      dataOwnership: 'composition owns transient transcript and current-versus-historical contextual action projection; host owns provider, Show controllers, content, routing, persistence, and APIs',
+    },
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['ordinary-agent-chat', 'enabled-composer', 'transcript-history', 'contextual-action-history', 'current-and-historical-actions', 'embed-receipt-message', 'fixed-live-player-region', 'independent-transcript-scroll', 'independent-agent-and-show-controllers', 'scripted-or-api-provider'],
+      properties: [
+        { name: 'agentProvider', type: 'object', description: 'Injected provider whose only required method is respond(request).' },
+        { name: 'messages', type: 'array', description: 'Conversation history rendered through chat-workspace and the shared message model.' },
+        { name: 'shows', type: 'object', description: 'Product-owned embedded Show bindings keyed by embed part key.' },
+      ],
+      methods: [
+        { name: 'getWorkspace', type: 'function', description: 'Returns the composed interactive chat-workspace.' },
+        { name: 'setAgentProvider', type: 'function', description: 'Injects a scripted or API-backed provider exposing respond(request).' },
+        { name: 'setMessages', type: 'function', description: 'Replaces conversation history without discarding valid action or embed parts.' },
+        { name: 'setShow', type: 'function', description: 'Registers or rebinds one independent Show player by embed key.' },
+        { name: 'removeShow', type: 'function', description: 'Removes one embedded Show binding and optionally stops its controller.' },
+        { name: 'submit', type: 'function', description: 'Submits ordinary composer input through provider.respond(request).' },
+      ],
+      events: [
+        { name: 'agent-show-action', description: 'Reports a contextual transcript action before routing it through provider.respond(request).', detail: [{ name: 'id', type: 'string' }, { name: 'actionId', type: 'string' }, { name: 'payload', type: 'object' }] },
+        { name: 'agent-show-response', description: 'Reports messages appended from provider.respond(request).' },
+        { name: 'agent-show-error', description: 'Reports a provider failure after rendering a product-neutral error part.' },
+        { name: 'agent-show-embed-ready', description: 'Reports that an embed receipt resolves to the stable player in the fixed player region.' },
+        { name: 'agent-show-embed-close', description: 'Reports removal of an embedded Show player through its close request.' },
+      ],
+      themeAliases: ['--sn-agent-show-player-z', '--sn-agent-show-player-max-block-size', '--sn-agent-show-player-inset'],
+    },
+  },
+  {
+    tagName: 'agent-dock-shell',
+    className: 'AgentDockShell',
+    exportName: 'AgentDockShell',
+    module: 'chat/AgentDockShell/AgentDockShell.js',
+    specifier: 'symbiote-ui/chat/show-chat',
+    category: 'chat',
+    description: 'Cascade-themed standard panel-layout split that keeps an ordinary agent chat and fixed Show player mounted across desktop peer and mobile drawer presentation.',
+    agent: {
+      semanticRole: 'responsive Cascade application peer for an interactive agent chat with fixed Show playback',
+      usage: 'Place product workspace content in the main slot, inject the agent provider and Show controllers, and use open/close/toggle instead of reconstructing layout CSS or chat state.',
+      dataOwnership: 'shell owns the panel-layout split, native resize/collapse/drawer projection, and visibility; host owns main workspace, provider, Show controllers, content, routing, and persistence',
+    },
+    contract: {
+      status: 'draft',
+      schemaVersion: 'component-descriptor-v2',
+      dataSchema: 'schemas/runtime-ui-v1.json',
+      capabilities: ['agent-dock-shell', 'cascade-frame-surface', 'standard-panel-layout-split', 'native-desktop-resizer', 'native-panel-collapse', 'native-mobile-end-drawer', 'provider-owned-stacking-tier', 'stable-chat-lifecycle', 'stable-player-lifecycle', 'presenter-overlay-reserve'],
+      attributes: [
+        { name: 'closed', type: 'boolean', description: 'Hides the dock while preserving the mounted chat and embedded Show instances.' },
+        { name: 'responsive-breakpoint', type: 'number', description: 'Inline-size threshold used for mobile projection.' },
+        { name: 'min-size', type: 'number', description: 'Minimum desktop dock inline size in CSS pixels.' },
+      ],
+      properties: [
+        { name: 'agentProvider', type: 'object', description: 'Injected provider forwarded to the stable agent-show-chat instance.' },
+        { name: 'messages', type: 'array', description: 'Conversation history forwarded to the stable agent-show-chat instance.' },
+      ],
+      methods: [
+        { name: 'getChat', type: 'function', description: 'Returns the stable mounted agent-show-chat instance.' },
+        { name: 'setAgentProvider', type: 'function', description: 'Forwards a scripted or API provider without coupling it to Show control.' },
+        { name: 'setMessages', type: 'function', description: 'Forwards chat history without rebuilding the dock.' },
+        { name: 'setShow', type: 'function', description: 'Forwards an independent embedded Show binding by key.' },
+        { name: 'removeShow', type: 'function', description: 'Removes one embedded Show binding.' },
+        { name: 'open', type: 'function', description: 'Reveals the existing dock instance.' },
+        { name: 'close', type: 'function', description: 'Hides the dock without destroying state.' },
+        { name: 'toggle', type: 'function', description: 'Toggles dock visibility without destroying state.' },
+      ],
+      events: [
+        { name: 'agent-dock-ready', description: 'Reports the stable chat and workspace instances after panel mounting.' },
+        { name: 'agent-dock-change', description: 'Reports open/close state changes.', detail: [{ name: 'open', type: 'boolean' }, { name: 'mobile', type: 'boolean' }, { name: 'source', type: 'string' }] },
+        { name: 'agent-dock-responsive-change', description: 'Reports projection changes between the desktop split and mobile end drawer.', detail: [{ name: 'mobile', type: 'boolean' }] },
+      ],
+      slots: [
+        { name: 'main', description: 'Product-owned main workspace moved into the primary panel of the provider-owned split.' },
+      ],
+      themeAliases: ['--sn-agent-dock-z', '--sn-panel-bg', '--sn-node-border'],
+    },
+  },
+  {
     tagName: 'chat-workspace',
     className: 'ChatWorkspace',
     module: 'chat/ChatWorkspace/ChatWorkspace.js',
+    specifier: 'symbiote-ui/chat/workspace',
     category: 'chat',
     description: 'Reusable chat workspace shell that composes sidebar, transcript, composer, leading controls, voice intents, footer controls, transient overlay reserve, and animated background lifecycle.',
     contract: {
@@ -5211,12 +5467,12 @@ export let COMPONENTS = [
     className: 'ChatMessageItem',
     module: 'chat/ChatMessageItem/ChatMessageItem.js',
     category: 'chat',
-    description: 'Generic chat message renderer for text, tool, board, and thinking messages.',
+    description: 'Generic chat message renderer for text, tools, status, contextual actions, footnotes, boards, and thinking messages.',
     contract: {
       status: 'draft',
       schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
-      capabilities: ['chat-message-render', 'markdown-text', 'tool-card', 'status-board', 'thinking-state', 'copy-action'],
+      capabilities: ['chat-message-render', 'markdown-text', 'tool-card', 'status-board', 'contextual-actions', 'footnote-part', 'thinking-state', 'copy-action'],
       properties: [
         { name: 'type', type: 'string', description: 'Message item type.' },
         { name: 'role', type: 'string', description: 'Message role used for rendering branch selection.' },
@@ -5233,8 +5489,11 @@ export let COMPONENTS = [
         { name: 'workSummaryHtml', type: 'string', description: 'Trusted host-generated completed work summary markup.' },
         { name: 'copyText', type: 'string', description: 'Plain text copied by the host wrapper.' },
         { name: 'cardItems', type: 'array', description: 'Status card descriptors rendered inside board messages.' },
+        { name: 'parts', type: 'array', description: 'Normalized message parts, including status, actions, embed, and footnote parts.' },
       ],
-      events: [],
+      events: [
+        { name: 'chat-message-action', description: 'Requests one host-owned contextual action.', detail: '{ id: string, actionId: string, payload: unknown }' },
+      ],
       themeAliases: [
         '--sn-sys-surface',
         '--sn-sys-on-surface',
@@ -6585,7 +6844,8 @@ export let COMPONENTS = [
     }
   },
 ].map((component) => {
-  let exportName = UI_NAMED_EXPORTS.has(component.className) ? component.className : null;
+  let exportName = component.exportName
+    || (UI_BUNDLE_NAMED_EXPORTS.has(component.className) ? component.className : null);
   let visibility = component.visibility || (exportName ? COMPONENT_VISIBILITY.public : COMPONENT_VISIBILITY.internal);
   let internal = visibility === COMPONENT_VISIBILITY.internal;
   let contract = normalizeContract(component);

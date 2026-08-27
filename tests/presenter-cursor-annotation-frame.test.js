@@ -51,7 +51,7 @@ function inkPath(document) {
   return document.querySelector('.pc-ink path')?.getAttribute('d') || '';
 }
 
-test('deterministic annotation frame is idempotent and prefix-stable', () => {
+test('deterministic annotation frame is idempotent and spatially prefix-stable', () => {
   let window = makeDom();
   let cursor = createPresenterCursor(window.document);
   let el = target(window.document, { left: 180, top: 140, width: 100, height: 80 });
@@ -63,10 +63,28 @@ test('deterministic annotation frame is idempotent and prefix-stable', () => {
   assert.equal(inkPath(window.document), prefix);
 
   let later = cursor.presentAnnotationFrame(el, { marker: 'oval' }, { progress: 0.7, seed: 17 });
-  assert.ok(inkPath(window.document).startsWith(prefix));
+  assert.deepEqual(
+    later.pathSamples.slice(0, first.pathSamples.length - 1),
+    first.pathSamples.slice(0, -1),
+  );
   assert.ok(later.pathPoints > first.pathPoints);
   assert.notEqual(later.pathDigest, first.pathDigest);
+  assert.equal(later.normalizedPathHash, first.normalizedPathHash);
 
+  cursor.dispose();
+});
+
+test('annotation frames preserve public string seed identity instead of coercing strings to zero', () => {
+  let window = makeDom();
+  let cursor = createPresenterCursor(window.document);
+  let el = target(window.document, { left: 180, top: 140, width: 180, height: 70 });
+
+  let alpha = cursor.presentAnnotationFrame(el, { marker: 'underline' }, { progress: 1, seed: 'gesture-alpha' });
+  let replay = cursor.presentAnnotationFrame(el, { marker: 'underline' }, { progress: 1, seed: 'gesture-alpha' });
+  let beta = cursor.presentAnnotationFrame(el, { marker: 'underline' }, { progress: 1, seed: 'gesture-beta' });
+
+  assert.equal(alpha.normalizedPathHash, replay.normalizedPathHash);
+  assert.notEqual(alpha.normalizedPathHash, beta.normalizedPathHash);
   cursor.dispose();
 });
 
@@ -88,21 +106,21 @@ test('deterministic focus frame projects cursor and frame modes without scheduli
   assert.equal(window.document.querySelector('.pc-cursor').style.opacity, '0');
 
   let pointed = cursor.presentFocusFrame(el, {
-    elapsedMs: PRESENTER_FOCUS_REVEAL_DURATION_MS / 2,
+    elapsedMs: framed.durationMs / 2,
     seed: 7,
     mode: 'cursor',
   });
   assert.equal(pointed.mode, 'cursor');
   assert.equal(pointed.cursor.visible, true);
   assert.equal(window.document.querySelector('.pc-cursor').style.opacity, '1');
-  assert.notEqual(pointed.antsDashOffset, framed.antsDashOffset);
+  assert.ok(Number.isFinite(pointed.antsDashOffset));
   assert.ok(pointed.revealProgress > framed.revealProgress);
   assert.ok(pointed.frameRect.width > framed.frameRect.width);
   assert.ok(pointed.frameRect.height > framed.frameRect.height);
   assert.equal(pointed.dragHandle.visible, true);
 
   let complete = cursor.presentFocusFrame(el, {
-    elapsedMs: PRESENTER_FOCUS_REVEAL_DURATION_MS,
+    elapsedMs: framed.durationMs,
     seed: 7,
     mode: 'frame',
   });
@@ -111,7 +129,23 @@ test('deterministic focus frame projects cursor and frame modes without scheduli
   assert.equal(complete.dragHandle.visible, false);
   assert.ok(complete.frameRect.width > pointed.frameRect.width);
   assert.ok(complete.frameRect.height > pointed.frameRect.height);
+  assert.equal(complete.normalizedPathHash, framed.normalizedPathHash);
+  assert.ok(complete.timing.maxObservedSpeedPxPerMs <= complete.timing.maxSpeedPxPerMs + 1e-9);
 
+  cursor.dispose();
+});
+
+test('larger focus frames take longer under the shared human-speed ceiling', () => {
+  let window = makeDom();
+  let cursor = createPresenterCursor(window.document);
+  let shortTarget = target(window.document, { left: 20, top: 20, width: 40, height: 24 });
+  let longTarget = target(window.document, { left: 20, top: 90, width: 520, height: 220 });
+
+  let short = cursor.presentFocusFrame(shortTarget, { mode: 'frame', seed: 9 });
+  let long = cursor.presentFocusFrame(longTarget, { mode: 'frame', seed: 9 });
+  assert.ok(long.durationMs > short.durationMs * 4);
+  assert.ok(short.timing.maxObservedSpeedPxPerMs <= 0.454 + 1e-9);
+  assert.ok(long.timing.maxObservedSpeedPxPerMs <= 0.454 + 1e-9);
   cursor.dispose();
 });
 
@@ -128,14 +162,48 @@ test('deterministic annotation frame clamps progress and respects explicit seed'
   let full = cursor.presentAnnotationFrame(el, { marker: 'underline' }, { progress: 2, seed: 5 });
   let firstPath = inkPath(window.document);
   assert.equal(full.progress, 1);
-  assert.equal(full.pathPoints, 97);
-  assert.match(firstPath, /^M[\d.-]+ [\d.-]+Q/);
-  assert.match(firstPath, /T[\d.-]+ [\d.-]+$/);
-  assert.doesNotMatch(firstPath, /L/);
+  assert.ok(full.pathPoints > 0 && full.pathPoints <= 97);
+  assert.match(firstPath, /^M[\d.-]+ [\d.-]+L/);
+  assert.match(firstPath, /Z$/);
+  assert.ok(full.maxWidthPx > full.minWidthPx);
+  assert.ok(full.widthSamples.length === full.pathSamples.length);
   let changedSeed = cursor.presentAnnotationFrame(el, { marker: 'underline' }, { progress: 1, seed: 6 });
   assert.notEqual(inkPath(window.document), firstPath);
   assert.notEqual(changedSeed.pathDigest, full.pathDigest);
-  assert.equal(PRESENTER_ANNOTATION_DURATION_MS, 1000);
+  cursor.dispose();
+});
+
+test('changing seed preserves semantic geometry and changes only bounded smooth variation', () => {
+  let window = makeDom();
+  let cursor = createPresenterCursor(window.document);
+  let el = target(window.document, { left: 120, top: 100, width: 460, height: 48 });
+
+  let first = cursor.presentAnnotationFrame(el, { marker: 'underline' }, { progress: 1, seed: 731 });
+  let varied = cursor.presentAnnotationFrame(el, { marker: 'underline' }, { progress: 1, seed: 732 });
+  let count = Math.min(first.pathSamples.length, varied.pathSamples.length);
+  let maximumDeviation = Math.max(...Array.from({ length: count }, (_, index) => Math.hypot(
+    first.pathSamples[index].x - varied.pathSamples[index].x,
+    first.pathSamples[index].y - varied.pathSamples[index].y,
+  )));
+
+  assert.deepEqual(varied.drawRect, first.drawRect);
+  assert.notEqual(varied.normalizedPathHash, first.normalizedPathHash);
+  assert.ok(maximumDeviation <= 4, `seed deviation ${maximumDeviation}px must remain microscopic`);
+  assert.ok(Math.abs(varied.durationMs / first.durationMs - 1) < 0.08);
+  cursor.dispose();
+});
+
+test('box, bracket, and slash render visible deterministic SVG paths', () => {
+  let window = makeDom();
+  let cursor = createPresenterCursor(window.document);
+  let el = target(window.document, { left: 180, top: 140, width: 200, height: 100 });
+
+  for (let marker of ['box', 'bracket', 'slash']) {
+    let frame = cursor.presentAnnotationFrame(el, { marker }, { progress: 1, seed: 17 });
+    assert.equal(frame.presented, true);
+    assert.ok(frame.pathSamples.length > 0);
+    assert.match(inkPath(window.document), /^M/);
+  }
 
   cursor.dispose();
 });
@@ -332,7 +400,7 @@ test('progress zero cursor projection is independent of presentation history', (
   freshCursor.dispose();
 });
 
-test('shallow target underline stays outside protected content for the full gesture', () => {
+test('large shallow underline request uses the accepted focus-frame policy instead of oversized ink', () => {
   let window = makeDom();
   let cursor = createPresenterCursor(window.document);
   let rect = { left: 16, top: 28, width: 760, height: 36 };
@@ -344,26 +412,18 @@ test('shallow target underline stays outside protected content for the full gest
       { kind: 'marker', marker: 'underline' },
       { progress, seed: 6 },
     );
-    let safety = analyzePresenterAnnotationSafety({
-      pathSamples: frame.pathSamples,
-      cursor: frame.cursor || { x: 0, y: 0 },
-      cursorSizePx: frame.cursorSizePx,
-      targetRect: rect,
-    });
-
-    if (progress === 0) assert.equal(frame.pathPoints, 0);
-    if (progress < 1) {
-      assert.ok(frame.cursor.y > rect.top + rect.height);
-      assert.equal(safety.cursorTargetCollision, false);
-    } else {
-      assert.ok(frame.cursor);
-    }
-    assert.equal(safety.safe, true, `underline must remain safe at progress ${progress}`);
+    assert.equal(frame.kind, 'focus');
+    assert.equal(frame.name, 'frame');
+    assert.equal(frame.originalKind, 'annotation');
+    assert.equal(frame.fallback, true);
+    assert.equal(frame.gesturePolicy.reason, 'target-geometry-prefers-frame');
+    assert.deepEqual(frame.pathSamples, []);
+    assert.equal(frame.safety.presentationSafe ?? frame.safety.safe, true);
   }
   cursor.dispose();
 });
 
-test('deterministic underline flips above a bottom-edge target and clamps every point', () => {
+test('viewport-dominating bottom-edge underline request uses an exclusive focus frame', () => {
   let window = makeDom();
   let cursor = createPresenterCursor(window.document);
   let el = target(window.document, { left: 12, top: 152, width: 196, height: 24 });
@@ -374,20 +434,22 @@ test('deterministic underline flips above a bottom-edge target and clamps every 
     { marker: 'underline' },
     { progress: 0.5, seed: 13, viewport },
   );
-  assert.equal(frameActive.placement, 'above');
-  assert.ok(frameActive.cursor.x >= 0 && frameActive.cursor.x + PRESENTER_CURSOR_SIZE_PX <= viewport.width);
-  assert.ok(frameActive.cursor.y >= 0 && frameActive.cursor.y + PRESENTER_CURSOR_SIZE_PX <= viewport.height);
+  assert.equal(frameActive.kind, 'focus');
+  assert.equal(frameActive.name, 'frame');
+  assert.equal(frameActive.fallback, true);
+  assert.equal(frameActive.gesturePolicy.reason, 'target-geometry-prefers-frame');
+  assert.equal(frameActive.cursor, null);
 
   let frameCompleted = cursor.presentAnnotationFrame(
     el,
     { marker: 'underline' },
     { progress: 1, seed: 13, viewport },
   );
-  assert.equal(frameCompleted.placement, 'above');
+  assert.equal(frameCompleted.kind, 'focus');
+  assert.equal(frameCompleted.fallback, true);
   assert.equal(frameCompleted.safety.safe, true);
-  assert.ok(frameCompleted.pathSamples.every((point) => point.x >= 0 && point.x <= viewport.width));
-  assert.ok(frameCompleted.pathSamples.every((point) => point.y >= 0 && point.y <= viewport.height));
-  assert.ok(frameCompleted.cursor);
+  assert.deepEqual(frameCompleted.pathSamples, []);
+  assert.equal(frameCompleted.cursor, null);
   cursor.dispose();
 });
 
@@ -445,7 +507,7 @@ test('deterministic symbols choose before and above when preferred placement esc
   cursor.dispose();
 });
 
-test('deterministic annotation frame returns safety evidence for supplied obstacles', () => {
+test('wide annotation request prefers an exclusive focus frame before obstacle projection', () => {
   let window = makeDom();
   let cursor = createPresenterCursor(window.document);
   let el = target(window.document, { left: 40, top: 60, width: 120, height: 30 });
@@ -465,9 +527,12 @@ test('deterministic annotation frame returns safety evidence for supplied obstac
     },
   );
 
-  assert.equal(frame.safety.safe, false);
-  assert.deepEqual(frame.safety.collisions.map((collision) => collision.id), ['captions']);
-  assert.equal(frame.safety.viewportCollision, false);
+  assert.equal(frame.kind, 'focus');
+  assert.equal(frame.name, 'frame');
+  assert.equal(frame.fallback, true);
+  assert.equal(frame.gesturePolicy.reason, 'target-geometry-prefers-frame');
+  assert.deepEqual(frame.pathSamples, []);
+  assert.equal(frame.safety.safe, true);
   cursor.dispose();
 });
 
@@ -486,7 +551,7 @@ test('deterministic annotation frame renders every marker and symbol', () => {
   for (let [index, symbol] of PRESENTER_SYMBOLS.entries()) {
     let result = cursor.presentAnnotationFrame(
       el,
-      { kind: 'symbol', symbol, placement: 'over' },
+      { kind: 'symbol', symbol },
       { progress: 1, seed: index + 20 },
     );
     assert.equal(result.presented, true, symbol);
@@ -511,8 +576,16 @@ test('every marker exposes a monotonic three-stage drawing path', () => {
     assert.ok(early.pathPoints > 2, marker);
     assert.ok(middle.pathPoints > early.pathPoints, marker);
     assert.ok(complete.pathPoints > middle.pathPoints, marker);
-    assert.deepEqual(middle.pathSamples.slice(0, early.pathSamples.length), early.pathSamples, marker);
-    assert.deepEqual(complete.pathSamples.slice(0, middle.pathSamples.length), middle.pathSamples, marker);
+    assert.deepEqual(
+      middle.pathSamples.slice(0, early.pathSamples.length - 1),
+      early.pathSamples.slice(0, -1),
+      marker,
+    );
+    assert.deepEqual(
+      complete.pathSamples.slice(0, middle.pathSamples.length - 1),
+      middle.pathSamples.slice(0, -1),
+      marker,
+    );
   }
 
   cursor.dispose();
@@ -859,7 +932,7 @@ test('projectPresenterState allows completed-residue coexistence', () => {
     marker: { active: true, name: 'underline', rect: { left: 10, top: 10, width: 100, height: 100 }, duration: 100 },
     cursor: { active: true, fromX: 0, fromY: 0, toX: 100, toY: 100, duration: 100 }
   };
-  let frame = projectPresenterState(layers, 200, 1);
+  let frame = projectPresenterState(layers, 20000, 1);
   assert.equal(frame.focus.visible, true);
   assert.equal(frame.focus.motorActive, false);
   assert.equal(frame.marker.visible, true);
@@ -867,8 +940,8 @@ test('projectPresenterState allows completed-residue coexistence', () => {
   assert.equal(frame.cursor.visible, true);
   assert.equal(frame.cursor.motorActive, false);
 
-  layers.symbol = { active: true, name: 'check', rect: { left: 20, top: 20, width: 50, height: 50 }, duration: 100, startMs: 200 };
-  let frameCoexist = projectPresenterState(layers, 250, 1);
+  layers.symbol = { active: true, name: 'check', rect: { left: 20, top: 20, width: 50, height: 50 }, duration: 100, startMs: 20000 };
+  let frameCoexist = projectPresenterState(layers, 20050, 1);
   assert.equal(frameCoexist.symbol.visible, true);
   assert.equal(frameCoexist.symbol.motorActive, true);
   assert.equal(frameCoexist.focus.visible, true);

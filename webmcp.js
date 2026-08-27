@@ -1576,6 +1576,8 @@ function tourLineList(items = [], formatter) {
 export function formatWebMcpTourTargetLine(target = {}) {
   let tags = [];
   if (target.collapsed) tags.push('collapsed');
+  let actionRefs = Array.isArray(target.actionRefs) ? target.actionRefs.filter(Boolean) : [];
+  if (actionRefs.length) tags.push(`actions: ${actionRefs.join('|')}`);
   let suffix = tags.length ? ` [${tags.join(', ')}]` : '';
   let meta = [
     target.kind,
@@ -1589,7 +1591,7 @@ export function formatWebMcpTourTargetLine(target = {}) {
 
 export function describeWebMcpTourActionInstructions(actions = createWebMcpPresentationActions()) {
   let lines = describeWebMcpPresentationActions(actions);
-  return `A turn MAY include optional "webmcp" — a SAFE UI action during narration. Allowed tools only:\n${lines}\nThe host already selects the cue target and reveals collapsed cue panels, so include webmcp only when you want the gesture to be explicit. Never add other tools, never build new UI, and never change product data.`;
+  return `A turn MAY include optional "webmcp" — a SAFE UI action during narration. Allowed tools only:\n${lines}\nA target line tagged [actions: ...] accepts only those tools. A target without that tag accepts no explicit webmcp action; cue focus still works. The host already selects the cue target and reveals collapsed cue panels, so include webmcp only when you want the gesture to be explicit. Whenever you include a webmcp action, you MUST provide a speechQuote that is an exact substring of the turn text, and an optional speechOccurrence (1-indexed) if the quote appears multiple times. Never add other tools, never build new UI, and never change product data.`;
 }
 
 export function buildWebMcpTourPrompt({
@@ -1629,7 +1631,7 @@ export function buildWebMcpTourPrompt({
   let profileLine = safeProfile ? `Presentation profile: "${safeProfile}". ` : '';
   let requestedLine = requested.length ? `Requested targetIds to cover when possible: ${requested.join(', ')}. ` : '';
   let tabLine = selectedTabs.length ? `Requested tab/window ids to include: ${selectedTabs.join(', ')}. ` : '';
-  return `You are an interface narrator for UI that this agent already created. The request includes browser-level WebMCP context with product views/actions, live runtime surfaces, and narration cues; use it as the source of truth. Generate a guided tour of the current workspace. ${speakerRule} Workspace: "${safeTitle}". ${taskLine}${profileLine}${requestedLine}${tabLine}In cue use ONLY these targetId values:\n${targetLines}\nWrite ALL narration text in ${language}. Return STRICTLY one \`\`\`json block with the schema: {"personas":${personaSchema},"turns":[{"persona":"${turnPersonaSchema}","text":"lively spoken ${language} without markdown or symbols","cue":{"targetId":"one of the listed ids"},"annotations":[{"targetId":"optional listed detail id","intent":"detail|question|risk|success|affinity|flourish","kind":"marker|symbol","marker":"underline|box|bracket|slash","symbol":"question|cross|check|heart|flourish","placement":"over|after|before|corner|below"}]}]}. Rules: ${turnRule} Every turn must serve the user task, include the requested targets first when they are supplied, and do not repeat the raw target metadata. Keep each spoken text short, conversational, in ${language}, without symbols. cue is for cursor focus and the host draws its own focus frame; do NOT duplicate that focus with box/circle/bracket annotations on the same target. Use marker annotations only for detail targets such as words, values, badges, and small controls; use question/cross/check/heart/flourish symbols for meaning. Do NOT say undefined, null, NaN, or missing raw values; skip unavailable data instead. Do NOT quote raw code tokens from source panels. Do NOT use words about position (left, right, top, bottom, center) — the interface is adaptive and panels can be anywhere; use neutral transitions in ${language}. Some targets may be tagged [collapsed]; the interface reveals them for that turn and restores them afterward, so narrate their purpose normally. ${describeWebMcpTourActionInstructions(actions)} No text outside the json block.`;
+  return `You are an interface narrator for UI that this agent already created. The request includes browser-level WebMCP context with product views/actions, live runtime surfaces, and narration cues; use it as the source of truth. Generate a guided tour of the current workspace. ${speakerRule} Workspace: "${safeTitle}". ${taskLine}${profileLine}${requestedLine}${tabLine}In cue use ONLY these targetId values:\n${targetLines}\nWrite ALL narration text in ${language}. Return STRICTLY one \`\`\`json block with the schema: {"personas":${personaSchema},"turns":[{"persona":"${turnPersonaSchema}","text":"lively spoken ${language} without markdown or symbols","cue":{"targetId":"one of the listed ids"},"annotations":[{"targetId":"optional listed detail id","intent":"detail|question|risk|success|affinity|flourish","kind":"marker|symbol","marker":"underline|box|bracket|slash","symbol":"question|cross|check|heart|flourish","placement":"over|after|before|corner|below"}],"webmcp":{"tool":"action name","input":{},"speechQuote":"exact substring of text","speechOccurrence":1}}]}. Rules: ${turnRule} Every turn must serve the user task, include the requested targets first when they are supplied, and do not repeat the raw target metadata. Keep each spoken text short, conversational, in ${language}, without symbols. cue is for cursor focus and the host draws its own focus frame; do NOT duplicate that focus with box/circle/bracket annotations on the same target. Use marker annotations only for detail targets such as words, values, badges, and small controls; use question/cross/check/heart/flourish symbols for meaning. Do NOT say undefined, null, NaN, or missing raw values; skip unavailable data instead. Do NOT quote raw code tokens from source panels. Do NOT use words about position (left, right, top, bottom, center) — the interface is adaptive and panels can be anywhere; use neutral transitions in ${language}. Some targets may be tagged [collapsed]; the interface reveals them for that turn and restores them afterward, so narrate their purpose normally. ${describeWebMcpTourActionInstructions(actions)} No text outside the json block.`;
 }
 
 function markerTargetAllowed(targetId, targetMap = new Map()) {
@@ -1688,6 +1690,7 @@ export function coerceWebMcpTourTimelinePayload(responseText, {
   let resultPersonas = isObject(parsed.personas) ? parsed.personas : cloneJson(personas);
   let targetEntries = Array.isArray(runtimeTargets) ? runtimeTargets.filter(isObject) : [];
   let targetMap = new Map(targetEntries.map((target) => [String(target.id || target.targetId || '').trim(), target]).filter(([id]) => id));
+  let hasTargetActionCapabilities = targetEntries.some((target) => Array.isArray(target.actionRefs));
   let allowedTargets = new Set((Array.isArray(allowedTargetIds) ? allowedTargetIds : []).filter(Boolean));
   for (let id of targetMap.keys()) allowedTargets.add(id);
   let toolNames = (Array.isArray(allowedToolNames) ? allowedToolNames : []).filter(Boolean);
@@ -1723,21 +1726,47 @@ export function coerceWebMcpTourTimelinePayload(responseText, {
       allowedToolNames: toolNames,
       allowedTargetIds,
     });
+    if (webmcp && hasTargetActionCapabilities) {
+      let actionTargetId = String(webmcp.input?.targetId || cue.targetId || '').trim();
+      let actionTarget = targetMap.get(actionTargetId);
+      let actionRefs = Array.isArray(actionTarget?.actionRefs) ? actionTarget.actionRefs : [];
+      let annotationAction = webmcp.tool === 'annotate_ui' || webmcp.tool === 'mark_ui';
+      let annotationAllowed = annotationAction && markerTargetAllowed(actionTargetId, targetMap);
+      if (!actionRefs.includes(webmcp.tool) && !annotationAllowed) webmcp = null;
+    }
     if (webmcp) {
-      if (webmcp.tool === 'annotate_ui' || webmcp.tool === 'mark_ui') {
-        let targetId = String(webmcp.input.targetId || '').trim();
-        let annotation = normalizeTourAnnotation(
-          webmcp.tool === 'mark_ui'
-            ? { ...webmcp.input, kind: 'marker', marker: webmcp.input.marker || webmcp.input.gesture || webmcp.input.shape || 'box' }
-            : webmcp.input,
-          { targetId },
-          { allowedTargets, targetMap },
-        );
-        if (targetId && allowedTargets.has(targetId) && annotation) {
-          turn.webmcp = { tool: 'annotate_ui', input: { targetId, ...annotation } };
+      let isValidQuote = false;
+      let rawQuote = item.webmcp?.speechQuote;
+      let quote = '';
+      let occurrence = 1;
+
+      if (typeof rawQuote === 'string' && rawQuote.trim()) {
+        quote = rawQuote;
+        let rawOccurrence = item.webmcp?.speechOccurrence;
+        if (rawOccurrence !== undefined) {
+          occurrence = Number(rawOccurrence);
         }
-      } else {
-        turn.webmcp = { tool: webmcp.tool, input: webmcp.input };
+        if (Number.isInteger(occurrence) && occurrence >= 1 && text.split(quote).length > occurrence) {
+          isValidQuote = true;
+        }
+      }
+
+      if (isValidQuote) {
+        if (webmcp.tool === 'annotate_ui' || webmcp.tool === 'mark_ui') {
+          let targetId = String(webmcp.input.targetId || '').trim();
+          let annotation = normalizeTourAnnotation(
+            webmcp.tool === 'mark_ui'
+              ? { ...webmcp.input, kind: 'marker', marker: webmcp.input.marker || webmcp.input.gesture || webmcp.input.shape || 'box' }
+              : webmcp.input,
+            { targetId },
+            { allowedTargets, targetMap },
+          );
+          if (targetId && allowedTargets.has(targetId) && annotation) {
+            turn.webmcp = { tool: 'annotate_ui', input: { targetId, ...annotation }, speechQuote: quote, speechOccurrence: occurrence };
+          }
+        } else {
+          turn.webmcp = { tool: webmcp.tool, input: webmcp.input, speechQuote: quote, speechOccurrence: occurrence };
+        }
       }
     }
     turns.push(turn);

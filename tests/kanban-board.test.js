@@ -48,10 +48,17 @@ test('sn-kanban-board renders columns and emits card intents', async () => {
   assert.equal(typeof KanbanBoard, 'function');
   let normalized = normalizeKanbanBoardModel({
     id: 'workflow',
-    columns: [{ id: 'ready', title: 'Ready' }],
+    columns: [{
+      id: 'ready',
+      title: 'Ready',
+      tone: 'warning',
+      semanticTargetId: 'workflow:lane:ready',
+    }],
     cards: [{ id: 'task-1', columnId: 'ready', title: 'Task 1' }],
   });
   assert.equal(normalized.columns[0].cards[0].title, 'Task 1');
+  assert.equal(normalized.columns[0].tone, 'warning');
+  assert.equal(normalized.columns[0].semanticTargetId, 'workflow:lane:ready');
 
   let board = document.createElement('sn-kanban-board');
   let selected = null;
@@ -69,6 +76,8 @@ test('sn-kanban-board renders columns and emits card intents', async () => {
     columns: [{
       id: 'ready',
       title: 'Ready',
+      tone: 'warning',
+      semanticTargetId: 'workflow:lane:ready',
       cards: [{
         id: 'task-1',
         title: 'Task 1',
@@ -81,6 +90,11 @@ test('sn-kanban-board renders columns and emits card intents', async () => {
   });
 
   assert.equal(board.querySelectorAll('.sn-kanban-column').length, 1);
+  let lane = board.querySelector('.sn-kanban-column');
+  assert.equal(lane.dataset.tone, 'warning');
+  assert.equal(lane.dataset.semanticTargetKind, 'column');
+  assert.equal(lane.dataset.semanticTargetId, 'workflow:lane:ready');
+  assert.equal(lane.getAttribute('aria-label'), 'Ready');
   assert.equal(board.querySelector('.sn-kanban-card-title-text')?.textContent, 'Task 1');
   assert.equal(board.querySelector('.sn-kanban-card')?.tagName.toLowerCase(), 'article');
   assert.equal(board.querySelector('.sn-kanban-card')?.getAttribute('role'), 'button');
@@ -374,6 +388,8 @@ test('sn-kanban-board exposes column stretch sizing tokens', async () => {
   assert.match(css, /height: var\(--sn-kanban-column-height, auto\);/);
   assert.match(css, /overflow: var\(--sn-kanban-card-list-overflow, auto\);/);
   assert.match(css, /sn-kanban-board \.sn-kanban-column-header \{[\s\S]*flex: 0 0 auto;/);
+  assert.match(css, /--sn-kanban-header-bg: transparent;/);
+  assert.match(css, /sn-kanban-board \.sn-kanban-column-header \{[\s\S]*border-block-end: 0;/);
   assert.match(css, /sn-kanban-board \.sn-kanban-card \{[\s\S]*flex: 0 0 auto;/);
   // Fixed widget geometry: meta and footer are single non-wrapping clipped lines; the
   // host's chip budget + '+N' overflow chip (U01) guarantee the footer fits.

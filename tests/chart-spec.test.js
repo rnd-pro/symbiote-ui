@@ -124,7 +124,7 @@ test('DOM: sn-chart Spec V1 rendering and events', async () => {
   assert.equal(normalized.series[0].color, undefined);
   assert.deepEqual(normalized.series[0].data, [1, 0]);
   assert.equal(normalized.thresholds[0].value, 0);
-  assert.equal(normalized.thresholds[0].color, 'var(--sn-hue-danger, #f85149)');
+  assert.equal(normalized.thresholds[0].color, 'var(--sn-chart-threshold-color, var(--sn-sys-danger))');
 
   chartEl.setSpec({
     title: '<Unsafe>',
@@ -149,4 +149,89 @@ test('DOM: sn-chart Spec V1 rendering and events', async () => {
 
   assert.equal(chartEl.ref.tooltip.querySelector('img'), null);
   assert.match(chartEl.ref.tooltip.textContent, /<img src=x>/);
+});
+
+test('DOM: sn-chart renders stacked bars and donut selections with semantic targets', async () => {
+  installDom();
+  let { Chart, normalizeChartSpec } = await import('../display/Chart/Chart.js');
+  if (!customElements.get('sn-chart')) customElements.define('sn-chart', Chart);
+
+  const normalized = normalizeChartSpec({
+    type: 'donut',
+    xAxis: { data: ['Priority 1', 'Priority 2'] },
+    series: [{
+      name: 'Orders',
+      data: [4, 2],
+      colors: ['var(--sn-sys-danger)', 'var(--sn-sys-warning)'],
+      semanticTargets: [{ id: 'priority:1', type: 'priority', resourceType: 'dispatcher-board' }, null],
+    }],
+    donut: { centerValue: '6', centerLabel: 'orders' },
+  });
+  assert.equal(normalized.type, 'donut');
+  assert.equal(normalized.series[0].semanticTargets[0].id, 'priority:1');
+
+  const chart = document.createElement('sn-chart');
+  document.body.append(chart);
+  chart.setSpec(normalized);
+  await nextRenderTick();
+  assert.equal(chart.ref.svg.querySelectorAll('.sn-chart-pie-slice').length, 2);
+  assert.equal(chart.ref.svg.querySelector('.sn-chart-donut-value').textContent, '6');
+
+  let selection = null;
+  chart.addEventListener('sn-chart-select', (event) => { selection = event.detail; });
+  chart.ref.svg.querySelector('.sn-chart-pie-slice').dispatchEvent(new Event('click', { bubbles: true }));
+  assert.equal(selection.label, 'Priority 1');
+  assert.equal(selection.semanticTarget.id, 'priority:1');
+
+  chart.setSpec({
+    type: 'bar',
+    xAxis: { data: ['Waiting'] },
+    series: [
+      { name: 'P1', stack: 'orders', data: [3] },
+      { name: 'P2', stack: 'orders', data: [2] },
+    ],
+  });
+  await nextRenderTick();
+  const bars = [...chart.ref.svg.querySelectorAll('.sn-chart-bar')];
+  assert.equal(bars.length, 2);
+  assert.equal(bars[0].getAttribute('x'), bars[1].getAttribute('x'));
+  assert.notEqual(bars[0].getAttribute('y'), bars[1].getAttribute('y'));
+
+  chart.setSpec({
+    type: 'line',
+    xAxis: { data: ['A', 'B'] },
+    series: [{ name: 'Ratio', data: [0.1, 0.4] }],
+  });
+  await nextRenderTick();
+  assert.equal(chart.ref.svg.querySelectorAll('.sn-chart-grid-line').length, 5);
+});
+
+test('DOM: operations overview re-emits metric and chart semantic selections', async () => {
+  installDom();
+  const { OperationsOverview } = await import('../display/OperationsOverview/OperationsOverview.js');
+  if (!customElements.get('sn-operations-overview')) customElements.define('sn-operations-overview', OperationsOverview);
+  const overview = document.createElement('sn-operations-overview');
+  document.body.append(overview);
+  await nextRenderTick();
+  overview.setModel({
+    title: 'Operations Overview',
+    metrics: [{ id: 'open', label: 'Open', value: '7', semanticTarget: { id: 'surface:dispatcher-board' } }],
+    charts: [{ id: 'priority', spec: { type: 'donut', xAxis: { data: ['P1'] }, series: [{ name: 'Orders', data: [7], semanticTargets: [{ id: 'priority:1' }] }] } }],
+  });
+  await nextRenderTick();
+  const selections = [];
+  overview.addEventListener('sn-analytics-select', (event) => selections.push(event.detail));
+  overview.querySelector('button.sn-operations-overview-metric').dispatchEvent(new Event('click', { bubbles: true }));
+  overview.querySelector('.sn-chart-pie-slice').dispatchEvent(new Event('click', { bubbles: true }));
+  assert.deepEqual(selections.map((item) => item.semanticTarget.id), ['surface:dispatcher-board', 'priority:1']);
+});
+
+test('operations overview owns one cascade-themed widget surface per content block', async () => {
+  const css = (await import('../display/OperationsOverview/OperationsOverview.css.js')).default;
+  assert.match(css, /--sn-operations-overview-widget-bg/);
+  assert.match(css, /--sn-operations-overview-widget-border/);
+  assert.match(css, /--sn-operations-overview-widget-radius/);
+  assert.match(css, /\.sn-operations-overview-header[\s\S]*background: var\(--sn-operations-overview-widget-bg/);
+  assert.match(css, /\.sn-operations-overview-chart[\s\S]*--sn-chart-bg: transparent/);
+  assert.doesNotMatch(css, /#[0-9a-f]{3,8}\b/i);
 });

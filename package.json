@@ -38,6 +38,10 @@
       "import": "./control/SegmentedControl/SegmentedControl.js",
       "default": "./control/SegmentedControl/SegmentedControl.js"
     },
+    "./control/transport": {
+      "import": "./control/transport.js",
+      "default": "./control/transport.js"
+    },
     "./board": {
       "import": "./board/index.js",
       "default": "./board/index.js"
@@ -79,13 +83,19 @@
     "./xr/three-spatial-graph": "./xr/three-spatial-graph.js",
     "./xr/native-panel-layout": "./xr/native-panel-layout.js",
     "./xr/three-native-panel-renderer": "./xr/three-native-panel-renderer.js",
+    "./xr/three-raster-panel-renderer": "./xr/three-raster-panel-renderer.js",
     "./xr/spatial-snapshot": "./xr/spatial-snapshot.js",
     "./xr/spatial-snapshot-compile": "./xr/spatial-snapshot-compile.js",
     "./xr/spatial-parity": "./xr/spatial-parity.js",
     "./xr/spatial-visual-parity": "./xr/spatial-visual-parity.js",
     "./xr/dom-spatial-capture": "./xr/dom-spatial-capture.js",
+    "./xr/dom-raster-frame": "./xr/dom-raster-frame.js",
+    "./xr/dom-raster-source-deck": "./xr/dom-raster-source-deck.js",
     "./xr/responsive-panel-capture": "./xr/responsive-panel-capture.js",
     "./xr/spatial-contract": "./xr/spatial-contract.js",
+    "./xr/spatial-window-assembly": "./xr/spatial-window-assembly.js",
+    "./xr/spatial-window-contract": "./xr/spatial-window-contract.js",
+    "./xr/spatial-window-placement": "./xr/spatial-window-placement.js",
     "./xr/spatial-math": "./xr/spatial-math.js",
     "./xr/spatial-projection": "./xr/spatial-projection.js",
     "./xr/spatial-evidence": "./xr/spatial-evidence.js",
@@ -126,6 +136,7 @@
     "./chat/dialogue-stage.js": "./chat/dialogue-stage.js",
     "./chat/dialogue-timeline.js": "./chat/dialogue-timeline.js",
     "./chat/dialogue-player.js": "./chat/dialogue-player.js",
+    "./chat/presenter-gesture-policy.js": "./chat/presenter-gesture-policy.js",
     "./chat/presenter-cursor.js": "./chat/presenter-cursor.js",
     "./chat/presenter-text-selection.js": "./chat/presenter-text-selection.js",
     "./chat/chat-title-generation.js": "./chat/chat-title-generation.js",
@@ -133,6 +144,15 @@
     "./chat/live-status.js": "./chat/live-status.js",
     "./chat/message-window.js": "./chat/message-window.js",
     "./chat/input-state.js": "./chat/input-state.js",
+    "./chat/show-runtime": "./chat/show-runtime.js",
+    "./chat/show-chat": {
+      "import": "./chat/show-chat.js",
+      "default": "./chat/show-chat.js"
+    },
+    "./chat/workspace": {
+      "import": "./chat/workspace.js",
+      "default": "./chat/workspace.js"
+    },
     "./notifications/sound-engine.js": "./notifications/sound-engine.js",
     "./notifications/notification-config.js": "./notifications/notification-config.js",
     "./notifications/NotificationWidget/NotificationWidget.js": "./notifications/NotificationWidget/NotificationWidget.js",

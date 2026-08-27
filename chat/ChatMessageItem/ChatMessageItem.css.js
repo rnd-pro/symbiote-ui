@@ -749,6 +749,27 @@ h4.md-h {
   font-size: var(--sn-text-lg);
 }
 
+.footnote-card {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sn-step-3);
+  margin: var(--sn-step-2) 0;
+  padding: var(--sn-step-3) var(--sn-step-4);
+  border-inline-start: 2px solid var(--sn-sys-accent);
+  color: var(--sn-sys-on-surface-dim);
+  font-size: var(--sn-chat-status-card-size, 12px);
+  line-height: 1.45;
+}
+
+.footnote-card > .material-symbols-outlined {
+  flex: 0 0 auto;
+  font-size: var(--sn-text-lg);
+}
+
+.footnote-card-body {
+  min-width: 0;
+}
+
 .attachment-card {
   display: flex;
   align-items: center;
@@ -1041,6 +1062,10 @@ h4.md-h {
   box-sizing: border-box;
   width: 100%;
   margin: var(--sn-step-3) 0;
+}
+
+.actions-card[data-action-state="historical"] {
+  opacity: var(--sn-sys-state-disabled-opacity);
 }
 .actions-group {
   display: flex;

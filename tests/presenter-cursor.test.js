@@ -6,15 +6,18 @@ import { test } from 'node:test';
 import { parseHTML } from 'linkedom';
 import {
   createPresenterCursor,
+  createPresenterTravelPlan,
   normalizePresenterAnnotation,
   normalizePresenterMarker,
   normalizePresenterSymbol,
+  PRESENTER_ANNOTATION_SUPPORT_TABLE,
   PRESENTER_FRAME_MS,
   playCursorScenario,
   resolvePresenterHighlightRect,
   resolvePresenterTravelDuration,
   resolvePresenterVisibleRect,
 } from '../chat/presenter-cursor.js';
+import { PRESENTER_KINEMATIC_LIMITS, PRESENTER_KINEMATICS_VERSION } from '../chat/presenter-kinematics.js';
 
 /**
  * Fake cursor: records every `moveTo` element (and the opts it was given) plus
@@ -178,7 +181,34 @@ test('normalizePresenterAnnotation separates semantic marks from cursor focus', 
     symbol: 'heart',
     placement: 'after',
   });
-  assert.equal(normalizePresenterAnnotation({ kind: 'symbol', symbol: 'not-a-symbol' }), null);
+  assert.throws(
+    () => normalizePresenterAnnotation({ kind: 'symbol', symbol: 'not-a-symbol' }),
+    (error) => error.code === 'PRESENTER_ANNOTATION_UNSUPPORTED'
+      && error.field === 'symbol'
+      && error.version === 'presenter-annotation-v1',
+  );
+});
+
+test('presenter annotation support table is the canonical vocabulary', () => {
+  assert.deepEqual(PRESENTER_ANNOTATION_SUPPORT_TABLE, {
+    markers: [
+      'freehand', 'underline', 'oval', 'multi-oval', 'arrow', 'converging-arrows', 'route',
+      'bidirectional-route', 'parallel-route', 'label', 'number', 'box', 'bracket', 'slash',
+    ],
+    symbols: ['question', 'cross', 'check', 'heart', 'flourish'],
+    intents: ['emphasize', 'detail', 'group', 'pointer', 'risk', 'question', 'success', 'affinity', 'flourish'],
+    placements: ['over', 'after', 'before', 'corner', 'below', 'above'],
+  });
+});
+
+test('presenter ink overlay is hidden from the accessibility tree', () => {
+  let window = makePresenterDom();
+  let cursor = createPresenterCursor(window.document);
+  assert.equal(
+    window.document.querySelector('.symbiote-presenter-cursor')?.getAttribute('aria-hidden'),
+    'true',
+  );
+  cursor.dispose();
 });
 
 test('playCursorScenario fires onStep(step, index) once per step', async () => {
@@ -736,10 +766,18 @@ test('resolvePresenterHighlightRect keeps edge targets inset from the viewport',
   );
 });
 
-test('resolvePresenterTravelDuration uses human-paced cursor travel bounds', () => {
-  assert.equal(resolvePresenterTravelDuration(0), 850);
-  assert.ok(Math.abs(resolvePresenterTravelDuration(500) - 1176.67) < 0.01);
-  assert.equal(resolvePresenterTravelDuration(2000), 1600);
+test('free cursor travel uses the shared arc-length planner and never exceeds its human speed ceiling', () => {
+  let plan = createPresenterTravelPlan(
+    { x: 0, y: 0 },
+    { x: 2000, y: 0 },
+    'long-cursor-travel',
+  );
+  assert.equal(plan.version, PRESENTER_KINEMATICS_VERSION);
+  assert.equal(resolvePresenterTravelDuration(2000, 'long-cursor-travel'), plan.durationMs);
+  assert.ok(plan.durationMs > 2000 / PRESENTER_KINEMATIC_LIMITS.maxSpeedPxPerMs);
+  assert.ok(plan.maxObservedSpeedPxPerMs <= PRESENTER_KINEMATIC_LIMITS.maxSpeedPxPerMs + 0.001);
+  assert.equal(plan.timeTable[0].speedPxPerMs, 0);
+  assert.equal(plan.timeTable.at(-1).speedPxPerMs, 0);
 });
 
 test('createPresenterCursor drives a scenario end to end through the real player', async () => {

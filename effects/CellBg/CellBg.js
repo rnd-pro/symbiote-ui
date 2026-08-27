@@ -191,9 +191,18 @@ export class CellBg extends Symbiote {
       this._themeObserver = new MutationObserver(() => this._scheduleThemeRefresh());
       let root = this.ownerDocument?.documentElement;
       if (root) {
-        this._themeObserver.observe(root, { attributes: true, attributeFilter: ['class', 'style'] });
+        try {
+          this._themeObserver.observe(root, { attributes: true, attributeFilter: ['class', 'style'] });
+        } catch {
+          // A component can be adopted through an isolated document while its
+          // observer still belongs to the original realm.
+        }
       }
-      this._themeObserver.observe(this, { attributes: true, attributeFilter: ['class', 'style'] });
+      try {
+        this._themeObserver.observe(this, { attributes: true, attributeFilter: ['class', 'style'] });
+      } catch {
+        // Theme refresh remains available through cascade-theme-change.
+      }
     }
 
     // Defer observation to allow DOM to settle
@@ -322,6 +331,47 @@ export class CellBg extends Symbiote {
       gridHash: cellBgRenderHash(this._externalRenderState, this._externalRenderFrame),
       activity: 'continuous',
       reducedMotion: false,
+    };
+  }
+
+  /**
+   * Returns a bounded semantic view of the rendered cellular field for a
+   * renderer that cannot consume the component's private canvas buffer.
+   * The resolved palette and geometry come from the same cascade-driven
+   * state as the visible canvas; callers choose a cap to fit their budget.
+   */
+  getSpatialPresentation({ maxDots = 256 } = {}) {
+    let width = Number(this.canvas?._w) || 0;
+    let height = Number(this.canvas?._h) || 0;
+    let cols = Number(this.cols) || 0;
+    let rows = Number(this.rows) || 0;
+    let radii = this._externalRenderFrame?.radii || this.radii;
+    if (!(width > 0 && height > 0 && cols > 0 && rows > 0) || !radii?.length) return null;
+
+    let cap = Math.max(1, Math.min(1024, Math.floor(Number(maxDots) || 256)));
+    let stride = Math.max(1, Math.ceil(Math.sqrt((cols * rows) / cap)));
+    let palette = Array.isArray(this.palette) && this.palette.length ? this.palette : ['rgba(255, 255, 255, 0.08)'];
+    let span = Math.max(Number(this._maxRadius) - Number(this._minRadius), Number.EPSILON);
+    let dots = [];
+    for (let y = 0; y < rows; y += stride) {
+      for (let x = 0; x < cols; x += stride) {
+        let index = y * cols + x;
+        let radius = Math.max(0, Number(radii[index]) || 0);
+        let ratio = Math.max(0, Math.min(1, (radius - this._minRadius) / span));
+        let paletteIndex = Math.min(palette.length - 1, Math.round(ratio * (palette.length - 1)));
+        dots.push({
+          x: x * this._cellSize,
+          y: y * this._cellSize,
+          radius,
+          color: palette[paletteIndex],
+        });
+      }
+    }
+    return {
+      width,
+      height,
+      background: this._bgFill,
+      dots,
     };
   }
 

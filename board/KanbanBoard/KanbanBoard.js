@@ -118,6 +118,8 @@ export function normalizeKanbanColumn(raw = {}, index = 0, rootCards = []) {
     id,
     title: normalizeText(column.title ?? column.label ?? column.name, titleFromId(id)),
     description: normalizeText(column.description ?? column.summary ?? column.gate),
+    tone: normalizeText(column.tone ?? column.variant ?? column.kind),
+    semanticTargetId: normalizeText(column.semanticTargetId ?? column.targetId),
     count: Number.isFinite(Number(column.count)) ? Number(column.count) : normalizedCards.length,
     cards: normalizedCards,
     raw: column,
@@ -427,6 +429,10 @@ export class KanbanBoard extends Symbiote {
   }
 
   #updateColumn(parts, column) {
+    parts.lane.dataset.tone = column.tone || 'neutral';
+    parts.lane.dataset.semanticTargetKind = 'column';
+    if (column.semanticTargetId) parts.lane.dataset.semanticTargetId = column.semanticTargetId;
+    else delete parts.lane.dataset.semanticTargetId;
     parts.lane.setAttribute('aria-label', column.title);
     let headerChanged = false;
     let headerSignature = toJson({
@@ -884,9 +890,7 @@ export class KanbanBoard extends Symbiote {
 
   #syncCardSelection() {
     this.ref.columns.querySelectorAll('[data-sn-board-card-id]').forEach((cardEl) => {
-      if (cardEl.classList.contains('sn-kanban-card')) {
-        cardEl.setAttribute('aria-selected', String(cardEl.dataset.snBoardCardId === this.#selectedCardId));
-      }
+      cardEl.setAttribute('aria-selected', String(cardEl.dataset.snBoardCardId === this.#selectedCardId));
     });
   }
 

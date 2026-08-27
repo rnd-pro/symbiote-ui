@@ -89,6 +89,16 @@ const EXPORT_ENTRYPOINTS = [
     description: 'Node-safe resource-tree builder re-exported from the engine contract without the broad contracts catalog.',
   },
   {
+    specifier: 'symbiote-ui/chat/show-runtime',
+    kind: 'node-safe',
+    description: 'Product-neutral Show directives, branch state, attention, readiness, interaction, audio/media orchestration, and workspace-aligned-sequence-v3 playback from media.currentTime.',
+  },
+  {
+    specifier: 'symbiote-ui/chat/show-chat',
+    kind: 'browser-component',
+    description: 'Node-safe provider helpers and guarded browser registration for ordinary agent chat, compact embedded Show player, and responsive dock shell with stable contextual and embed history.',
+  },
+  {
     specifier: 'symbiote-ui/canvas/graph-explorer.js',
     kind: 'node-safe',
     description: 'Pure graph-view helper constants and menu descriptors for graph explorer hosts.',
@@ -122,6 +132,26 @@ const EXPORT_ENTRYPOINTS = [
     specifier: 'symbiote-ui/xr',
     kind: 'ssr-entry-safe',
     description: 'WebXR capability, spatial layout projection, and XR pointer helpers without renderer lock-in.',
+  },
+  {
+    specifier: 'symbiote-ui/xr/dom-raster-source-deck',
+    kind: 'ssr-entry-safe',
+    description: 'Live DOM raster source activity state with exact accessibility restoration.',
+  },
+  {
+    specifier: 'symbiote-ui/xr/spatial-window-assembly',
+    kind: 'ssr-entry-safe',
+    description: 'Product-neutral spatial-window assembly: one layout instance per XR window with sync reconciliation, session lifecycle, resize phases, ray routing, wheel and select-drag scroll, text selection capture, content focus with IME handoff, per-window viewport updates, dirty-gated uploads, and versioned receipts.',
+  },
+  {
+    specifier: 'symbiote-ui/xr/spatial-window-contract',
+    kind: 'node-safe',
+    description: 'Versioned spatial-window layout descriptors, diff, resize math, chrome surface extents, and scroll, selection, focus, viewport, sync, lifecycle, resize, and relay receipt factories.',
+  },
+  {
+    specifier: 'symbiote-ui/xr/spatial-window-placement',
+    kind: 'node-safe',
+    description: 'Bounded deterministic provider default placement for unplaced spatial windows: a comfortable non-overlapping user-facing two-tier arc lattice with vertical levels inside the 1.0-2.2 m envelope, geometry that adapts to actual window size, a 24-window capacity with structured exhaustion data, and free-slot resolution around explicitly posed and dragged windows.',
   },
   {
     specifier: 'symbiote-ui/ui',
@@ -167,6 +197,16 @@ const EXPORT_ENTRYPOINTS = [
     specifier: 'symbiote-ui/ui/media',
     kind: 'browser-component',
     description: 'Media provider registry with built-in image and YouTube adapters plus the self-registering sn-media-host element.',
+  },
+  {
+    specifier: 'symbiote-ui/chat/workspace',
+    kind: 'browser-component',
+    description: 'Node-safe import guard and direct browser registration entrypoint for chat-workspace with its transcript, message, composer, sidebar, and background dependencies.',
+  },
+  {
+    specifier: 'symbiote-ui/control/transport',
+    kind: 'browser-component',
+    description: 'Node-safe import guard and direct browser registration entrypoint for the host-driven sn-transport playback control.',
   },
   {
     specifier: 'symbiote-ui/canvas/canvas-graph',

@@ -200,6 +200,16 @@ export class ChatMessageItem extends Symbiote {
           <span class="material-symbols-outlined">menu_book</span>
           ${sourceBody}
         </div>`;
+      } else if (type === 'footnote') {
+        let referenceId = part.meta?.referenceId || part.id || '';
+        let referenceAttr = referenceId ? ` data-reference-id="${escapeHtml(referenceId)}"` : '';
+        let body = part.url
+          ? `<a href="${escapeHtml(part.url)}" class="md-link" target="_blank" rel="noopener noreferrer">${escapeHtml(part.text || part.title || part.url)}</a>`
+          : escapeHtml(part.text || part.title || '');
+        htmlStr += `<aside class="footnote-card"${referenceAttr}>
+          <span class="material-symbols-outlined" aria-hidden="true">info</span>
+          <span class="footnote-card-body">${body}</span>
+        </aside>`;
       } else if (type === 'attachment') {
         let title = part.title || part.name || translate('chat.message.attachment');
         let icon = 'attachment';
@@ -401,13 +411,14 @@ export class ChatMessageItem extends Symbiote {
   _renderActionsPart(part) {
     let id = part.id || '';
     let actions = Array.isArray(part.actions) ? part.actions : [];
+    let actionState = part.meta?.actionState === 'historical' ? 'historical' : 'current';
     let buttons = actions.map((action) => {
       let iconHtml = action.icon
         ? `<span class="material-symbols-outlined">${escapeHtml(action.icon)}</span>`
         : '';
       return `<button class="sn-btn action-btn-group" type="button" data-action-id="${escapeHtml(action.id)}" data-variant="${escapeHtml(action.variant || '')}">${iconHtml}${escapeHtml(action.label)}</button>`;
     }).join('');
-    return `<div class="actions-card" data-actions-id="${escapeHtml(id)}">
+    return `<div class="actions-card" data-actions-id="${escapeHtml(id)}" data-action-state="${actionState}">
       <div class="actions-group">${buttons}</div>
     </div>`;
   }

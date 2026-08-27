@@ -5,11 +5,45 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import * as THREE_REAL from 'three';
 
+import { createXRPanelFrame } from '../xr/panel-frame.js';
 import { easeOutCubic, createXRScaleFadeTween } from '../xr/transitions.js';
 import { createXRThreeSessionController } from '../xr/three-webxr-adapter.js';
 import { createSpatialTarget } from './xr-spatial-fixtures.js';
 
 const TRANSITION_DURATION_MS = 180;
+
+if (typeof globalThis.OffscreenCanvas !== 'function') {
+  globalThis.OffscreenCanvas = class {
+    constructor(width, height) {
+      this.width = width;
+      this.height = height;
+    }
+
+    getContext() {
+      return {
+        clearRect() {},
+        beginPath() {},
+        moveTo() {},
+        arcTo() {},
+        closePath() {},
+        fill() {},
+        save() {},
+        restore() {},
+        translate() {},
+        arc() {},
+        stroke() {},
+        strokeRect() {},
+        lineTo() {},
+        scale() {},
+        rotate() {},
+        fillText() {},
+        measureText(value) {
+          return { width: String(value).length * 10 };
+        },
+      };
+    }
+  };
+}
 
 function approx(actual, expected, epsilon = 1e-9) {
   assert.ok(
@@ -281,35 +315,29 @@ async function createTransitionHarness(options = {}) {
     },
     updatePanelFrameVisuals() {},
   };
+  mesh.userData.panelFrame = createXRPanelFrame({
+    id: 'panel-a',
+    size: [0.8, 0.5],
+    closable: true,
+  });
   sceneRoot.add(mesh);
 
   let hit = null;
+  let reticleUpdates = 0;
+  let reticleObject = new THREE_REAL.Group();
+  reticleObject.visible = false;
   let beginDragCalls = [];
-  let draggingPanel = null;
-  let controllerRays = {
-    panelStore: null,
-    receiptsList: null,
-    getHits() {
-      return hit ? [hit] : [];
+  let interactionRaycaster = {
+    ray: {
+      origin: new THREE_REAL.Vector3(),
+      direction: new THREE_REAL.Vector3(0, 0, -1),
     },
-    beginDrag(controller, dragHit) {
-      beginDragCalls.push(dragHit?.object?.userData?.panelId || null);
-      draggingPanel = dragHit?.object?.userData?.panelId || null;
-      return { ok: true };
+    set(origin, direction) {
+      this.ray.origin.copy(origin);
+      this.ray.direction.copy(direction);
     },
-    updateDrag() {
-      return { ok: false, reason: 'not-dragging' };
-    },
-    endDrag() {
-      let panelId = draggingPanel;
-      draggingPanel = null;
-      return { ok: true, panelId };
-    },
-    getState() {
-      return { dragging: draggingPanel !== null, panelId: draggingPanel };
-    },
-    getDiagnostics() {
-      return {};
+    intersectObjects(objects) {
+      return hit && objects.includes(hit.object) ? [hit] : [];
     },
   };
   let adapter = {
@@ -326,9 +354,17 @@ async function createTransitionHarness(options = {}) {
     getSceneRoot() {
       return sceneRoot;
     },
-    controllerRays,
     getDiagnostics() {
       return {};
+    },
+    createPanelHitReticleVisual(scene) {
+      scene.add(reticleObject);
+      return { ok: true, object: reticleObject };
+    },
+    updatePanelHitReticleVisual(_reticle, nextHit) {
+      reticleUpdates += 1;
+      reticleObject.visible = Boolean(nextHit);
+      return { ok: true, visible: reticleObject.visible };
     },
   };
   let receipts = [];
@@ -345,11 +381,15 @@ async function createTransitionHarness(options = {}) {
     },
     adapter,
     THREE: THREE_REAL,
+    interactionRaycaster,
     onPortablePanelReceipt(receipt) {
       receipts.push(receipt);
     },
-    onDiagnostic(event) {
+    onDiagnostic(event, details) {
       diagnosticEvents.push(event);
+      if (event === 'spatial-three-drag-start') {
+        beginDragCalls.push(details.panelId);
+      }
     },
   });
   let startOptions = {
@@ -360,7 +400,7 @@ async function createTransitionHarness(options = {}) {
       scene: new THREE_REAL.Scene(),
     },
     controllerRayVisuals: false,
-    panelHitReticle: false,
+    panelHitReticle: options.panelHitReticle === true,
     renderFrame: false,
   };
   if (options.panelTransitions) {
@@ -368,6 +408,7 @@ async function createTransitionHarness(options = {}) {
   }
   let started = await controller.start('immersive-ar', startOptions);
   assert.equal(started.ok, true);
+  controllers[0].dispatchEvent({ type: 'connected', data: source });
 
   let committed = controller.commitSpatialEvidence({
     spatialTarget: createSpatialTarget(),
@@ -399,8 +440,10 @@ async function createTransitionHarness(options = {}) {
   });
   assert.equal(committed.ok, true);
 
+  let currentFrameTime = 0;
   function frame(time) {
     assert.equal(typeof animationLoop, 'function');
+    currentFrameTime = Math.max(currentFrameTime, time);
     animationLoop(time, {
       predictedDisplayTime: time,
       getViewerPose() {
@@ -412,62 +455,40 @@ async function createTransitionHarness(options = {}) {
     });
   }
 
-  function actionTarget(action) {
-    return {
-      version: 'xr-panel-frame-target-v1',
-      panelId: 'panel-a',
-      zone: 'action',
-      action,
-      operation: 'action',
-      handle: null,
-      point: { x: 0.5, y: 0.5 },
-    };
+  function zoneCenter(zone) {
+    return { x: zone.x + zone.width / 2, y: zone.y + zone.height / 2 };
   }
 
-  function selectAction(object, action) {
+  function aimAt(object, framePoint) {
     hit = {
       object,
       point: new THREE_REAL.Vector3(object.position.x, object.position.y, object.position.z),
       uv: null,
-      frameTarget: actionTarget(action),
+      framePoint,
+      distance: 1,
     };
+    frame(currentFrameTime + 1);
+  }
+
+  function selectAction(object, action) {
+    let zone = object.userData.panelFrame.zones.actions[action];
+    assert.ok(zone, `missing ${action} action zone`);
+    aimAt(object, zoneCenter(zone));
     controllers[0].dispatchEvent({ type: 'selectstart', data: source });
     controllers[0].dispatchEvent({ type: 'selectend', data: source });
   }
 
   function selectDragTarget(object) {
-    hit = {
-      object,
-      point: new THREE_REAL.Vector3(object.position.x, object.position.y, object.position.z),
-      uv: null,
-      frameTarget: {
-        version: 'xr-panel-frame-target-v1',
-        panelId: 'panel-a',
-        zone: 'move',
-        action: null,
-        operation: 'move',
-        handle: null,
-        point: { x: 0.5, y: 0.5 },
-      },
-    };
+    aimAt(object, zoneCenter(object.userData.panelFrame.zones.move));
     controllers[0].dispatchEvent({ type: 'selectstart', data: source });
   }
 
+  function endSelection() {
+    controllers[0].dispatchEvent({ type: 'selectend', data: source });
+  }
+
   function selectResizeDrag(object) {
-    hit = {
-      object,
-      point: new THREE_REAL.Vector3(object.position.x, object.position.y, object.position.z),
-      uv: null,
-      frameTarget: {
-        version: 'xr-panel-frame-target-v1',
-        panelId: 'panel-a',
-        zone: 'resize',
-        action: null,
-        operation: 'resize',
-        handle: 'east',
-        point: { x: 1, y: 0.5 },
-      },
-    };
+    aimAt(object, zoneCenter(object.userData.panelFrame.zones.resize.northEast));
     controllers[0].dispatchEvent({ type: 'selectstart', data: source });
     controllers[0].dispatchEvent({ type: 'selectend', data: source });
   }
@@ -480,8 +501,11 @@ async function createTransitionHarness(options = {}) {
     beginDragCalls,
     controller,
     diagnosticEvents,
+    endSelection,
     findRestoreChip,
     frame,
+    getReticleUpdates: () => reticleUpdates,
+    reticleObject,
     mesh,
     receipts,
     sceneRoot,
@@ -490,6 +514,27 @@ async function createTransitionHarness(options = {}) {
     selectResizeDrag,
   };
 }
+
+test('captured panel focus circle follows the controller while ray projection stays frozen', async () => {
+  let harness = await createTransitionHarness({ panelHitReticle: true });
+  harness.selectDragTarget(harness.mesh);
+  let beforeCaptureFrame = harness.getReticleUpdates();
+  assert.equal(harness.reticleObject.visible, true);
+  harness.frame(100);
+  harness.frame(116);
+  assert.equal(
+    harness.getReticleUpdates(),
+    beforeCaptureFrame + 2,
+    'captured frames update the visible reticle from controller pose without a new hit projection',
+  );
+  assert.equal(harness.reticleObject.visible, true, 'the last focus circle remains visible');
+  assert.equal(harness.controller.getDiagnostics().hover.reticleFrozen, false);
+  harness.endSelection();
+  harness.frame(132);
+  assert.equal(harness.getReticleUpdates(), beforeCaptureFrame + 3, 'release restores live reticle projection');
+  assert.equal(harness.controller.getDiagnostics().hover.reticleFrozen, false);
+  await harness.controller.stop();
+});
 
 // --- Adapter behavior with panelTransitions enabled ---
 
@@ -614,12 +659,14 @@ test('drag-start guard rejects gestures on a store-hidden panel and accepts afte
   assert.equal(harness.receipts.length, 1);
 
   // The closing mesh is still ray-visible, but the store already owns
-  // hidden=true: the gesture is rejected before any drag, event, or receipt
-  // can form.
+  // hidden=true: the arbiter diagnoses the rejected acquisition without
+  // forming a drag or receipt.
   let eventsBefore = harness.diagnosticEvents.length;
   harness.selectDragTarget(mesh);
   assert.equal(harness.beginDragCalls.length, 0);
-  assert.equal(harness.diagnosticEvents.length, eventsBefore);
+  assert.deepEqual(harness.diagnosticEvents.slice(eventsBefore), [
+    'spatial-three-interaction-error',
+  ]);
   assert.equal(harness.receipts.length, 1);
 
   harness.frame(1100);

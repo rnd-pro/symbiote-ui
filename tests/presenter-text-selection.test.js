@@ -8,6 +8,7 @@ import {
   PRESENTER_TEXT_SELECTION_RECEIPT_VERSION,
   PresenterTextSelectionError,
   applyPresenterTextSelection,
+  createPresenterTextSelectionAnimation,
 } from '../chat/presenter-text-selection.js';
 
 function installSelection(window) {
@@ -171,6 +172,119 @@ test('selects and restores text-control ranges without DOM traversal', () => {
   assert.equal(target.selectionStart, 1);
   assert.equal(target.selectionEnd, 4);
   assert.equal(target.selectionDirection, 'backward');
+});
+
+test('animates the actual text-control selection boundary and settles the exact quote', () => {
+  let target = {
+    value: 'prefix animated selection suffix',
+    selectionStart: 0,
+    selectionEnd: 0,
+    selectionDirection: 'none',
+    focus() {},
+    setSelectionRange(start, end, direction) {
+      this.selectionStart = start;
+      this.selectionEnd = end;
+      this.selectionDirection = direction;
+    },
+  };
+
+  let handle = createPresenterTextSelectionAnimation(target, {
+    quote: 'animated selection',
+    seed: 'selection-17',
+  });
+  assert.equal(target.selectionStart, 7);
+  assert.equal(target.selectionEnd, 7);
+  assert.equal(handle.receipt.status, 'selecting');
+  let halfway = handle.presentFrame(handle.receipt.durationMs / 2);
+  assert.ok(halfway.progress > 0.45 && halfway.progress < 0.55);
+  assert.equal(target.selectionStart, 7);
+  assert.ok(target.selectionEnd > 7 && target.selectionEnd < 25);
+  let settled = handle.presentFrame(handle.receipt.durationMs);
+  assert.equal(settled.status, 'selected');
+  assert.equal(settled.selectedText, 'animated selection');
+  assert.equal(target.selectionStart, 7);
+  assert.equal(target.selectionEnd, 25);
+});
+
+test('backward selection animation grows from the quote end and restores the prior range', () => {
+  let target = {
+    value: 'one two three',
+    selectionStart: 0,
+    selectionEnd: 3,
+    selectionDirection: 'forward',
+    focus() {},
+    setSelectionRange(start, end, direction) {
+      this.selectionStart = start;
+      this.selectionEnd = end;
+      this.selectionDirection = direction;
+    },
+  };
+  let handle = createPresenterTextSelectionAnimation(target, {
+    quote: 'two three',
+    direction: 'backward',
+    seed: 'backward-selection',
+  });
+  assert.equal(target.selectionStart, 13);
+  assert.equal(target.selectionEnd, 13);
+  handle.presentFrame(handle.receipt.durationMs / 2);
+  assert.ok(target.selectionStart > 4 && target.selectionStart < 13);
+  assert.equal(target.selectionEnd, 13);
+  assert.equal(target.selectionDirection, 'backward');
+  handle.restore();
+  assert.equal(target.selectionStart, 0);
+  assert.equal(target.selectionEnd, 3);
+  assert.equal(target.selectionDirection, 'forward');
+});
+
+test('selection duration follows measured travel and ignores consumer duration overrides', () => {
+  function control(value, width) {
+    return {
+      value,
+      selectionStart: 0,
+      selectionEnd: 0,
+      selectionDirection: 'none',
+      focus() {},
+      getBoundingClientRect() { return { width }; },
+      setSelectionRange(start, end, direction) {
+        this.selectionStart = start;
+        this.selectionEnd = end;
+        this.selectionDirection = direction;
+      },
+    };
+  }
+
+  let short = createPresenterTextSelectionAnimation(control('small selection', 160), {
+    quote: 'small', seed: 'same', durationMs: 1,
+  });
+  let long = createPresenterTextSelectionAnimation(control('a substantially longer selected phrase', 640), {
+    quote: 'substantially longer selected phrase', seed: 'same', durationMs: 99999,
+  });
+
+  assert.ok(short.receipt.durationMs >= 220);
+  assert.ok(long.receipt.durationMs > short.receipt.durationMs * 3);
+  assert.ok(short.receipt.speedPxPerMs <= 0.454);
+  assert.ok(long.receipt.speedPxPerMs <= 0.454);
+});
+
+test('selection kinematics are deterministic for the same seed and geometry', () => {
+  let makeTarget = () => ({
+    value: 'deterministic selection',
+    selectionStart: 0,
+    selectionEnd: 0,
+    selectionDirection: 'none',
+    focus() {},
+    getBoundingClientRect() { return { width: 320 }; },
+    setSelectionRange(start, end, direction) {
+      this.selectionStart = start;
+      this.selectionEnd = end;
+      this.selectionDirection = direction;
+    },
+  });
+  let first = createPresenterTextSelectionAnimation(makeTarget(), { quote: 'selection', seed: 4 });
+  let replay = createPresenterTextSelectionAnimation(makeTarget(), { quote: 'selection', seed: 4 });
+
+  assert.equal(first.receipt.normalizedPathHash, replay.receipt.normalizedPathHash);
+  assert.equal(first.receipt.durationMs, replay.receipt.durationMs);
 });
 
 test('rejects a stale explicit range instead of selecting different text', () => {

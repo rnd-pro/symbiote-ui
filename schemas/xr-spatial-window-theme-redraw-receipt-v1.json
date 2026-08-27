@@ -1,0 +1,202 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rnd-pro.github.io/symbiote-ui/schemas/xr-spatial-window-theme-redraw-receipt-v1.json",
+  "title": "XR Spatial Window Theme Redraw Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "action",
+    "ok",
+    "themeScope",
+    "windowIds",
+    "beforeRevision",
+    "afterRevision",
+    "counters",
+    "bindingHash",
+    "affectedWindows",
+    "reusedWindows",
+    "windowResults",
+    "evidenceDigest"
+  ],
+  "properties": {
+    "version": { "const": "xr-spatial-window-theme-redraw-receipt-v1" },
+    "action": { "const": "theme-redraw" },
+    "ok": { "type": "boolean" },
+    "themeScope": { "type": ["string", "null"] },
+    "evidenceDigest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "windowIds": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "beforeRevision": {
+      "type": "object",
+      "additionalProperties": { "type": "integer" }
+    },
+    "afterRevision": {
+      "type": "object",
+      "additionalProperties": { "type": "integer" }
+    },
+    "counters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["beforeUploads", "afterUploads", "beforeReuses", "afterReuses"],
+      "properties": {
+        "beforeUploads": { "type": "integer", "minimum": 0 },
+        "afterUploads": { "type": "integer", "minimum": 0 },
+        "beforeReuses": { "type": "integer", "minimum": 0 },
+        "afterReuses": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "bindingHash": { "type": ["string", "null"] },
+    "affectedWindows": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "reusedWindows": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "windowResults": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "windowId",
+          "themeScope",
+          "beforeRevision",
+          "afterRevision",
+          "snapshot",
+          "requestedMaterial",
+          "actualMaterial",
+          "outcome",
+          "counters",
+          "hash"
+        ],
+        "properties": {
+          "windowId": { "type": "string" },
+          "themeScope": { "type": "string" },
+          "beforeRevision": { "type": "integer", "minimum": 0 },
+          "afterRevision": { "type": "integer", "minimum": 0 },
+          "snapshot": {
+            "$ref": "#/$defs/themeSnapshot"
+          },
+          "requestedMaterial": {
+            "$ref": "#/$defs/themeMaterial"
+          },
+          "actualMaterial": {
+            "$ref": "#/$defs/themeMaterial"
+          },
+          "outcome": {
+            "type": "string",
+            "enum": ["upload", "reuse", "accepted-without-redraw", "skipped"]
+          },
+          "counters": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["beforeUploads", "afterUploads", "beforeReuses", "afterReuses"],
+            "properties": {
+              "beforeUploads": { "type": "integer", "minimum": 0 },
+              "afterUploads": { "type": "integer", "minimum": 0 },
+              "beforeReuses": { "type": "integer", "minimum": 0 },
+              "afterReuses": { "type": "integer", "minimum": 0 }
+            }
+          },
+          "hash": { "type": "string" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "themeTokens": {
+      "type": "object",
+      "required": [
+        "--sn-xr-panel-bg",
+        "--sn-xr-panel-border",
+        "--sn-xr-panel-radius",
+        "--sn-xr-panel-shadow",
+        "--sn-xr-pointer-color",
+        "--sn-sys-on-surface",
+        "--sn-sys-on-surface-dim",
+        "--sn-duration-fast",
+        "--sn-ease-standard",
+        "--sn-layout-resizer-size"
+      ],
+      "properties": {
+        "--sn-xr-panel-bg": { "type": "string" },
+        "--sn-xr-panel-border": { "type": "string" },
+        "--sn-xr-panel-radius": { "type": "string" },
+        "--sn-xr-panel-shadow": { "type": "string" },
+        "--sn-xr-pointer-color": { "type": "string" },
+        "--sn-sys-on-surface": { "type": "string" },
+        "--sn-sys-on-surface-dim": { "type": "string" },
+        "--sn-duration-fast": { "type": "string" },
+        "--sn-ease-standard": { "type": "string" },
+        "--sn-layout-resizer-size": { "type": "string" }
+      },
+      "propertyNames": {
+        "pattern": "^--"
+      },
+      "additionalProperties": { "type": "string" }
+    },
+    "themeMaterial": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": [
+        "background",
+        "backgroundColor",
+        "border",
+        "borderColor",
+        "radius",
+        "shadow",
+        "pointer",
+        "pointerColor",
+        "text",
+        "textColor",
+        "textDim",
+        "textDimColor",
+        "gap",
+        "motion"
+      ],
+      "properties": {
+        "background": { "type": "string" },
+        "backgroundColor": { "anyOf": [{ "type": "string" }, { "type": "number" }] },
+        "border": { "type": "string" },
+        "borderColor": { "anyOf": [{ "type": "string" }, { "type": "number" }] },
+        "radius": { "type": "string" },
+        "shadow": { "type": "string" },
+        "pointer": { "type": "string" },
+        "pointerColor": { "anyOf": [{ "type": "string" }, { "type": "number" }] },
+        "text": { "type": "string" },
+        "textColor": { "anyOf": [{ "type": "string" }, { "type": "number" }] },
+        "textDim": { "type": "string" },
+        "textDimColor": { "anyOf": [{ "type": "string" }, { "type": "number" }] },
+        "gap": { "type": "string" },
+        "motion": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["duration", "easing"],
+          "properties": {
+            "duration": { "type": "string" },
+            "easing": { "type": "string" }
+          }
+        }
+      }
+    },
+    "themeSnapshot": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["version", "themeScope", "tokens", "material"],
+      "properties": {
+        "version": { "const": "xr-theme-snapshot-v1" },
+        "themeScope": { "type": ["string", "null"] },
+        "tokens": { "$ref": "#/$defs/themeTokens" },
+        "material": { "$ref": "#/$defs/themeMaterial" }
+      }
+    }
+  }
+}
