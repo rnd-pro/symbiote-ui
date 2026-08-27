@@ -291,11 +291,6 @@ export class ChatShowPlayer extends Symbiote {
       this.ref.captionViewport?.querySelector?.('.chat-show-caption-word[active]')
         ?.scrollIntoView?.({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
     });
-    let tts = this._state?.tts && typeof this._state.tts === 'object' ? this._state.tts : {};
-    this.$.ttsLabel = String(tts.label || '');
-    this.$.ttsText = String(tts.text || '');
-    this.$.ttsStatus = String(tts.status || '');
-    this.$.showTts = Boolean(this.$.ttsLabel || this.$.ttsText || this.$.ttsStatus);
     let videoControls = (this._videoControls || []).map((control) => ({
       ...control,
       ariaDisabled: control.disabled ? 'true' : 'false',

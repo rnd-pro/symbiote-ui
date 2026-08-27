@@ -26,12 +26,6 @@ export default html`
       </span>
     </span>
   </div>
-  <div class="chat-show-tts" ${{ '@hidden': '!showTts', '@data-status': 'ttsStatus' }}>
-    <span class="chat-show-tts-label" ${{ textContent: 'ttsLabel' }}></span>
-    <span class="chat-show-tts-viewport" ref="ttsViewport" tabindex="0">
-      <span class="chat-show-tts-text" ${{ textContent: 'ttsText' }}></span>
-    </span>
-  </div>
   <div class="chat-show-video-controls" aria-label="Video controls" itemize="videoControls" item-tag="chat-show-video-control-item" ${{ onclick: 'onVideoControl', '@hidden': '!hasVideoControls' }}>
     <template>
       <button type="button" class="chat-show-video-control" ${{ '@data-video-control': 'id', '@data-semantics': 'semantics', '@aria-disabled': 'ariaDisabled' }}>

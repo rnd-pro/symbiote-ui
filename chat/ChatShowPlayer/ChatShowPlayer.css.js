@@ -2,7 +2,7 @@ export default /*css*/ `
 chat-show-player {
   box-sizing: border-box;
   display: grid;
-  grid-template-rows: auto minmax(0, auto) auto auto auto auto;
+  grid-template-rows: auto minmax(0, auto) auto auto auto;
   gap: var(--sn-chat-show-player-gap, var(--sn-space-sm));
   max-inline-size: 100%;
   overflow: clip;
@@ -17,7 +17,6 @@ chat-show-player {
 
   .chat-show-header,
   .chat-show-caption,
-  .chat-show-tts,
   .chat-show-video-controls,
   .chat-show-controls {
     display: flex;
@@ -95,26 +94,17 @@ chat-show-player {
     align-items: flex-start;
     padding: var(--sn-space-sm) var(--sn-space-md);
     background: var(--sn-node-bg);
-    border-radius: var(--sn-node-radius);
-  }
-
-  .chat-show-tts {
-    align-items: flex-start;
-    padding: var(--sn-space-sm) var(--sn-space-md);
-    background: var(--sn-sys-surface-sunken, var(--sn-node-bg));
     border: var(--sn-node-border-width, 1px) solid var(--sn-node-border, var(--sn-sys-outline));
     border-radius: var(--sn-node-radius);
   }
 
-  .chat-show-caption-speaker,
-  .chat-show-tts-label {
+  .chat-show-caption-speaker {
     flex: none;
     color: var(--sn-text-dim);
     font-weight: var(--sn-button-font-weight);
   }
 
-  .chat-show-caption-viewport,
-  .chat-show-tts-viewport {
+  .chat-show-caption-viewport {
     display: block;
     min-inline-size: 0;
     flex: 1 1 auto;
@@ -146,8 +136,7 @@ chat-show-player {
   }
 
   .chat-show-caption-words,
-  .chat-show-caption-text,
-  .chat-show-tts-text { display: inline; }
+  .chat-show-caption-text { display: inline; }
   chat-show-caption-word-item { display: inline; }
   .chat-show-caption-word {
     margin-inline-end: var(--sn-chat-show-caption-word-gap, var(--sn-space-xs));

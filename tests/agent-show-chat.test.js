@@ -189,10 +189,8 @@ test('chat-show-player reflects injected timeline/controller state and autoplays
   await settle();
   assert.equal(player.querySelectorAll('.chat-show-caption-word').length, 3);
   assert.equal(player.querySelector('.chat-show-caption-word[active]').textContent, 'recognized');
-  assert.equal(player.querySelector('.chat-show-tts-text').textContent, 'Aligned speech block');
-  assert.equal(player.querySelector('.chat-show-tts').dataset.status, 'playing');
   assert.equal(player.querySelector('.chat-show-caption-viewport').getAttribute('tabindex'), '0');
-  assert.equal(player.querySelector('.chat-show-tts-viewport').getAttribute('tabindex'), '0');
+  assert.equal(player.querySelector('.chat-show-tts'), null, 'the duplicate TTS text surface is not rendered');
   assert.deepEqual(followedWords, [{
     text: 'recognized',
     options: { block: 'nearest', inline: 'nearest', behavior: 'smooth' },
