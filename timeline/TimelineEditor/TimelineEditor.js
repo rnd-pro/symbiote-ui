@@ -193,7 +193,6 @@ export class TimelineEditor extends Symbiote {
     hasData: false,
     zoomLabel: '4 px/fr',
 
-    timelineClick: (e) => this.#handleTimelineClick(e),
     timelineScroll: () => this.#handleTimelineScroll(),
   };
 
@@ -201,6 +200,7 @@ export class TimelineEditor extends Symbiote {
     super.connectedCallback?.();
 
     this.addEventListener('click', this.#onTransportClick);
+    this.ref.timelineContent?.addEventListener('click', this.#onTimelineClick);
 
     this.#resizeObserver = new ResizeObserver(() => {
       if (this.#data) this.#scheduleRender(true);
@@ -211,6 +211,7 @@ export class TimelineEditor extends Symbiote {
   disconnectedCallback() {
     super.disconnectedCallback?.();
     this.removeEventListener('click', this.#onTransportClick);
+    this.ref.timelineContent?.removeEventListener('click', this.#onTimelineClick);
     this.#stopPlayback();
     if (this.#renderId) cancelAnimationFrame(this.#renderId);
     this.#renderId = null;
@@ -251,6 +252,10 @@ export class TimelineEditor extends Symbiote {
         this.#fitToView();
         break;
     }
+  };
+
+  #onTimelineClick = (e) => {
+    this.#handleTimelineClick(e);
   };
 
   /**

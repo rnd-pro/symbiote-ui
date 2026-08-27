@@ -9,9 +9,11 @@ import {
   normalizePresenterAnnotation,
   normalizePresenterMarker,
   normalizePresenterSymbol,
+  PRESENTER_ANNOTATION_SUPPORT_TABLE,
   PRESENTER_FRAME_MS,
   playCursorScenario,
   resolvePresenterHighlightRect,
+  resolvePresenterRectangleTiming,
   resolvePresenterTravelDuration,
   resolvePresenterVisibleRect,
 } from '../chat/presenter-cursor.js';
@@ -178,7 +180,31 @@ test('normalizePresenterAnnotation separates semantic marks from cursor focus', 
     symbol: 'heart',
     placement: 'after',
   });
-  assert.equal(normalizePresenterAnnotation({ kind: 'symbol', symbol: 'not-a-symbol' }), null);
+  assert.throws(
+    () => normalizePresenterAnnotation({ kind: 'symbol', symbol: 'not-a-symbol' }),
+    (error) => error.code === 'PRESENTER_ANNOTATION_UNSUPPORTED'
+      && error.field === 'symbol'
+      && error.version === 'presenter-annotation-v1',
+  );
+});
+
+test('presenter annotation support table is the canonical vocabulary', () => {
+  assert.deepEqual(PRESENTER_ANNOTATION_SUPPORT_TABLE, {
+    markers: ['freehand', 'underline', 'oval', 'box', 'bracket', 'slash'],
+    symbols: ['question', 'cross', 'check', 'heart', 'flourish'],
+    intents: ['emphasize', 'detail', 'group', 'risk', 'question', 'success', 'affinity', 'flourish'],
+    placements: ['over', 'after', 'before', 'corner', 'below', 'above'],
+  });
+});
+
+test('presenter ink overlay is hidden from the accessibility tree', () => {
+  let window = makePresenterDom();
+  let cursor = createPresenterCursor(window.document);
+  assert.equal(
+    window.document.querySelector('.symbiote-presenter-cursor')?.getAttribute('aria-hidden'),
+    'true',
+  );
+  cursor.dispose();
 });
 
 test('playCursorScenario fires onStep(step, index) once per step', async () => {
@@ -740,6 +766,26 @@ test('resolvePresenterTravelDuration uses human-paced cursor travel bounds', () 
   assert.equal(resolvePresenterTravelDuration(0), 850);
   assert.ok(Math.abs(resolvePresenterTravelDuration(500) - 1176.67) < 0.01);
   assert.equal(resolvePresenterTravelDuration(2000), 1600);
+});
+
+test('rectangle selection timing is deterministic and frames report mutation readiness', () => {
+  assert.deepEqual(
+    resolvePresenterRectangleTiming({ left: 12, top: 18, width: 240, height: 72 }),
+    { durationMs: 600 },
+  );
+
+  let window = makePresenterDom(PRESENTER_FRAME_MS);
+  let cursor = createPresenterCursor(window.document);
+  let el = boxElement(window.document, { left: 180, top: 140, width: 180, height: 72 });
+
+  let first = cursor.presentFocusFrame(el, { elapsedMs: 0, mode: 'rectangle-selection' });
+  let final = cursor.presentFocusFrame(el, { elapsedMs: 600, mode: 'rectangle-selection' });
+
+  assert.equal(first.mode, 'rectangle-selection');
+  assert.equal(first.durationMs, 600);
+  assert.equal(first.mutationReady, false);
+  assert.equal(final.mutationReady, true);
+  cursor.dispose();
 });
 
 test('createPresenterCursor drives a scenario end to end through the real player', async () => {

@@ -697,6 +697,10 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.equal(theme.tokens['--sn-sys-surface'], 'hsl(0 0% 10.0%)');
   assert.equal(theme.tokens['--sn-sys-on-surface'], 'hsl(0 0% 94.0%)');
   assert.equal(theme.tokens['--sn-sys-surface-raised'], 'var(--sn-sys-surface-panel)');
+  assert.equal(
+    theme.tokens['--sn-sys-surface-toolbar'],
+    'color-mix(in oklab, var(--sn-sys-surface-panel) 97%, var(--sn-sys-on-surface) 3%)',
+  );
   assert.equal(theme.tokens['--sn-field-control-bg'], 'var(--sn-sys-surface)');
   assert.equal(theme.tokens['--sn-chat-user-message-bg'], 'color-mix(in oklab, var(--sn-sys-surface-panel) 88%, var(--sn-sys-accent) 12%)');
   assert.equal(theme.tokens['--sn-composer-bg'], 'color-mix(in oklab, var(--sn-sys-surface-panel) 90%, var(--sn-sys-on-surface) 4%)');
@@ -2490,6 +2494,11 @@ test('scroll edge fade is available on reusable scroll hosts', async () => {
   assert.match(scrollFade, /themedScrollFadeBlockStyles/);
   assert.match(scrollFade, /themedScrollFadeInlineStyles/);
   assert.match(scrollFade, /data-sn-scroll-fade-active/);
+  assert.match(scrollFade, /data-sn-scroll-fade-leading/);
+  assert.match(scrollFade, /data-sn-scroll-fade-trailing/);
+  assert.match(scrollFade, /scrollFadeOverflowState/);
+  assert.match(scrollFade, /element\.scrollTop/);
+  assert.match(scrollFade, /element\.scrollLeft/);
   assert.match(scrollFade, /scrollHeight > element\.clientHeight/);
   assert.match(scrollFade, /scrollWidth > element\.clientWidth/);
 

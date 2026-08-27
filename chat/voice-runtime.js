@@ -212,6 +212,10 @@ export class VoiceRuntime extends RuntimeEventTarget {
     return this.start({ language: this.language, mode: 'audio' });
   }
 
+  setHeldAudioStream(stream) {
+    this._heldStream = stream || null;
+  }
+
   async restartSpeechRecognition(language = '', { initialText = this._resultText.trim() } = {}) {
     this.setLanguage(language);
     if (this.state !== 'recording' || !this._recognition) return false;
@@ -311,12 +315,12 @@ export class VoiceRuntime extends RuntimeEventTarget {
   }
 
   async _startMediaRecorder() {
-    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+    if (!this._heldStream && (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia)) {
       throw new Error('MediaDevices API not supported');
     }
-    const stream = await navigator.mediaDevices.getUserMedia(this.mediaConstraints);
+    const stream = this._heldStream || await navigator.mediaDevices.getUserMedia(this.mediaConstraints);
     if (this.state !== 'starting') {
-      stopStreamTracks(stream);
+      if (!this._heldStream) stopStreamTracks(stream);
       return;
     }
 
@@ -367,7 +371,9 @@ export class VoiceRuntime extends RuntimeEventTarget {
     }
     this._startTime = 0;
     if (this._stream) {
-      for (const track of this._stream.getTracks()) track.stop();
+      if (this._stream !== this._heldStream) {
+        for (const track of this._stream.getTracks()) track.stop();
+      }
       this._stream = null;
     }
   }

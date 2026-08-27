@@ -115,6 +115,45 @@ test('deterministic focus frame projects cursor and frame modes without scheduli
   cursor.dispose();
 });
 
+test('wide freehand ink stays proportional at every tour resolution', () => {
+  let window = makeDom();
+  let cursor = createPresenterCursor(window.document);
+  let el = target(window.document, { left: 10, top: 240, width: 1900, height: 500 });
+
+  for (let viewport of [
+    { width: 1920, height: 1080 },
+    { width: 1080, height: 1920 },
+    { width: 1080, height: 1080 },
+  ]) {
+    let frame = cursor.presentAnnotationFrame(
+      el,
+      { marker: 'freehand' },
+      { progress: 1, seed: 17, viewport },
+    );
+    let xs = frame.pathSamples.map((point) => point.x);
+    let span = Math.max(...xs) - Math.min(...xs);
+    assert.ok(span <= viewport.width * 0.45, `${viewport.width}x${viewport.height}: ${span}`);
+    assert.ok(frame.pathSamples.length <= 97);
+  }
+
+  cursor.dispose();
+});
+
+test('box, bracket, and slash render visible deterministic SVG paths', () => {
+  let window = makeDom();
+  let cursor = createPresenterCursor(window.document);
+  let el = target(window.document, { left: 180, top: 140, width: 200, height: 100 });
+
+  for (let marker of ['box', 'bracket', 'slash']) {
+    let frame = cursor.presentAnnotationFrame(el, { marker }, { progress: 1, seed: 17 });
+    assert.equal(frame.presented, true);
+    assert.ok(frame.pathSamples.length > 0);
+    assert.match(inkPath(window.document), /^M/);
+  }
+
+  cursor.dispose();
+});
+
 test('deterministic annotation frame clamps progress and respects explicit seed', () => {
   let window = makeDom();
   let cursor = createPresenterCursor(window.document);

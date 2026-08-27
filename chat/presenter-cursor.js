@@ -8,7 +8,26 @@
 const STYLE_ID = 'symbiote-presenter-cursor-style';
 const OVERLAY_CLASS = 'symbiote-presenter-cursor';
 
-export const PRESENTER_MARKERS = Object.freeze(['freehand', 'underline', 'oval']);
+export const PRESENTER_ANNOTATION_SUPPORT_TABLE = Object.freeze({
+  markers: Object.freeze(['freehand', 'underline', 'oval', 'box', 'bracket', 'slash']),
+  symbols: Object.freeze(['question', 'cross', 'check', 'heart', 'flourish']),
+  intents: Object.freeze([
+    'emphasize',
+    'detail',
+    'group',
+    'risk',
+    'question',
+    'success',
+    'affinity',
+    'flourish',
+  ]),
+  placements: Object.freeze(['over', 'after', 'before', 'corner', 'below', 'above']),
+});
+
+export const PRESENTER_MARKERS = PRESENTER_ANNOTATION_SUPPORT_TABLE.markers;
+export const PRESENTER_SYMBOLS = PRESENTER_ANNOTATION_SUPPORT_TABLE.symbols;
+export const PRESENTER_ANNOTATION_INTENTS = PRESENTER_ANNOTATION_SUPPORT_TABLE.intents;
+
 const PRESENTER_MARKER_SET = new Set(PRESENTER_MARKERS);
 const MARKER_ALIASES = Object.freeze({
   circle: 'oval',
@@ -18,7 +37,6 @@ const MARKER_ALIASES = Object.freeze({
   line: 'underline',
   under: 'underline',
 });
-export const PRESENTER_SYMBOLS = Object.freeze(['question', 'cross', 'check', 'heart', 'flourish']);
 const PRESENTER_SYMBOL_SET = new Set(PRESENTER_SYMBOLS);
 const SYMBOL_ALIASES = Object.freeze({
   '?': 'question',
@@ -41,16 +59,6 @@ const SYMBOL_ALIASES = Object.freeze({
   signature: 'flourish',
   flourish: 'flourish',
 });
-export const PRESENTER_ANNOTATION_INTENTS = Object.freeze([
-  'emphasize',
-  'detail',
-  'group',
-  'risk',
-  'question',
-  'success',
-  'affinity',
-  'flourish',
-]);
 const ANNOTATION_INTENT_SET = new Set(PRESENTER_ANNOTATION_INTENTS);
 const INTENT_ALIASES = Object.freeze({
   important: 'emphasize',
@@ -84,7 +92,18 @@ const INTENT_DEFAULTS = Object.freeze({
   affinity: { kind: 'symbol', symbol: 'heart', placement: 'after' },
   flourish: { kind: 'symbol', symbol: 'flourish', placement: 'below' },
 });
-const ANNOTATION_PLACEMENTS = new Set(['over', 'after', 'before', 'corner', 'below', 'above']);
+const ANNOTATION_PLACEMENTS = new Set(PRESENTER_ANNOTATION_SUPPORT_TABLE.placements);
+
+export class PresenterAnnotationUnsupportedError extends TypeError {
+  constructor(field, value) {
+    super(`Unsupported presenter annotation ${field}: ${String(value || '(empty)')}`);
+    this.name = 'PresenterAnnotationUnsupportedError';
+    this.code = 'PRESENTER_ANNOTATION_UNSUPPORTED';
+    this.field = field;
+    this.value = value;
+    this.version = 'presenter-annotation-v1';
+  }
+}
 
 const CURSOR_SIZE = 18; // px; the hotspot is the arrow's top-left tip
 const INK_CURSOR_SIZE = 4;
@@ -339,7 +358,7 @@ export function normalizePresenterAnnotation(value = {}, fallback = {}) {
   let kind = normalizeAnnotationKind(input.kind, defaults.kind || fallbackInput.kind || (symbol ? 'symbol' : marker ? 'marker' : ''));
   if (kind === 'symbol') {
     symbol = symbol || normalizePresenterSymbol(input.intent || defaults.symbol || fallbackInput.intent);
-    if (!symbol) return null;
+    if (!symbol) throw new PresenterAnnotationUnsupportedError('symbol', symbolCandidate || input.intent);
     return {
       kind,
       intent,
@@ -349,7 +368,7 @@ export function normalizePresenterAnnotation(value = {}, fallback = {}) {
   }
   if (kind === 'marker') {
     marker = marker || normalizePresenterMarker(input.intent || defaults.marker || fallbackInput.intent);
-    if (!marker) return null;
+    if (!marker) throw new PresenterAnnotationUnsupportedError('marker', markerCandidate || input.intent);
     return {
       kind,
       intent,
@@ -357,7 +376,7 @@ export function normalizePresenterAnnotation(value = {}, fallback = {}) {
       placement: normalizeAnnotationPlacement(input.placement, defaults.placement || fallbackInput.placement || 'over'),
     };
   }
-  return null;
+  throw new PresenterAnnotationUnsupportedError('kind', input.kind || input.intent);
 }
 
 function styleText(overlaySelector) {
@@ -708,6 +727,10 @@ export function resolvePresenterHighlightRect(rect, viewport = {}) {
   };
 }
 
+export function resolvePresenterRectangleTiming(_rect = {}) {
+  return { durationMs: PRESENTER_FOCUS_REVEAL_DURATION_MS };
+}
+
 function presenterAnnotationRect(rect, viewport, annotation) {
   return clampPresenterRect(rect, viewport, HIGHLIGHT_EDGE_INSET_PX);
 }
@@ -767,10 +790,18 @@ function variation(seed, salt) {
  * }} GesturePlan
  */
 const GESTURES = {
-  freehand(rect, seed) {
+  freehand(rect, seed, opts = {}) {
+    let pad = Math.min(8, rect.width * 0.04);
+    let viewportWidth = Number(opts.viewport?.width) || 1920;
+    let width = Math.min(
+      rect.width + 2 * pad,
+      Math.max(320, 3 * rect.height),
+      Math.max(0, 0.45 * viewportWidth - GESTURE_JITTER_PX * 2.5),
+    );
+    let cx = rect.left + rect.width / 2;
     let margin = Math.max(9, Math.min(18, rect.height * 0.18));
-    let x0 = rect.left - Math.min(8, rect.width * 0.04);
-    let x1 = rect.left + rect.width + Math.min(8, rect.width * 0.04);
+    let x0 = cx - width / 2;
+    let x1 = cx + width / 2;
     let baseY = rect.top + rect.height + margin;
     let amplitude = 3.5 + (variation(seed, 37) * 0.5 + 0.5) * 3;
     return {
@@ -850,6 +881,47 @@ const GESTURES = {
         };
       },
     };
+  },
+
+  box(rect, seed) {
+    let pad = Math.min(12, Math.max(5, Math.min(rect.width, rect.height) * 0.06));
+    let wobble = variation(seed, 11) * 2;
+    let left = rect.left - pad;
+    let top = rect.top - pad;
+    let right = rect.left + rect.width + pad;
+    let bottom = rect.top + rect.height + pad;
+    return pointListPlan([
+      { x: left + wobble, y: top },
+      { x: right, y: top - wobble },
+      { x: right + wobble, y: bottom },
+      { x: left, y: bottom + wobble },
+      { x: left - wobble, y: top },
+    ]);
+  },
+
+  bracket(rect, seed, opts = {}) {
+    let after = opts.placement === 'after';
+    let pad = 8;
+    let x = after ? rect.left + rect.width + pad : rect.left - pad;
+    let arm = 12 * (after ? -1 : 1);
+    let y0 = rect.top - 4;
+    let y1 = rect.top + rect.height + 4;
+    let wobble = variation(seed, 13) * 2;
+    return pointListPlan([
+      { x: x + arm + wobble, y: y0 },
+      { x, y: y0 + wobble },
+      { x: x - wobble, y: y1 - wobble },
+      { x: x + arm - wobble, y: y1 },
+    ]);
+  },
+
+  slash(rect, seed) {
+    let pad = 8;
+    let wobble = variation(seed, 17) * 3;
+    return pointListPlan([
+      { x: rect.left + rect.width + pad + wobble, y: rect.top - pad - wobble },
+      { x: rect.left - pad - wobble, y: rect.top + rect.height + pad + wobble },
+    ]);
   },
 };
 
@@ -1013,7 +1085,7 @@ function resolvePresenterAnnotationLayout(annotation, targetRect, viewport, seed
   let best = null;
   for (let placement of annotationPlacementCandidates(annotation)) {
     let nextAnnotation = { ...annotation, placement };
-    let plan = factory?.(drawRect, seed, { placement });
+    let plan = factory?.(drawRect, seed, { placement, viewport });
     if (!plan) continue;
     let overflow = presenterPlanOverflow(plan, seed, viewport);
     if (!best || overflow < best.overflow) {
@@ -1415,6 +1487,7 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
 
   let overlay = doc.createElement('div');
   overlay.className = OVERLAY_CLASS;
+  overlay.setAttribute('aria-hidden', 'true');
 
   let marquee = doc.createElement('div');
   marquee.className = 'pc-marquee';
@@ -1879,18 +1952,24 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
     if (!Number.isFinite(elapsedMs)) elapsedMs = 0;
     let seed = Number(frame.seed);
     if (!Number.isFinite(seed)) seed = 0;
-    let mode = frame.mode === 'frame' ? 'frame' : 'cursor';
+    let mode = frame.mode === 'rectangle-selection'
+      ? 'rectangle-selection'
+      : (frame.mode === 'frame' ? 'frame' : 'cursor');
+    let displayMode = mode === 'cursor' ? 'cursor' : 'frame';
     let focusRect = resolvePresenterHighlightRect(targetRect, viewport);
+    let durationMs = mode === 'rectangle-selection'
+      ? resolvePresenterRectangleTiming(focusRect).durationMs
+      : (Number(frame.durationMs) || PRESENTER_FOCUS_REVEAL_DURATION_MS);
     let projected = projectPresenterState({
       focus: {
         active: true,
         rect: focusRect,
-        duration: Number(frame.durationMs) || PRESENTER_FOCUS_REVEAL_DURATION_MS,
+        duration: durationMs,
       },
       marker: null,
       symbol: null,
       click: null,
-      cursor: mode === 'cursor'
+      cursor: displayMode === 'cursor'
         ? { active: true, x: focusRect.left, y: focusRect.top, duration: Number.MAX_SAFE_INTEGER }
         : null,
     }, Math.max(0, elapsedMs), seed, viewport);
@@ -1916,13 +1995,15 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
     } else {
       focusHandle.style.display = 'none';
     }
-    if (mode === 'cursor' && projected.cursor.visible) setCursor(projected.cursor.x, projected.cursor.y);
+    if (displayMode === 'cursor' && projected.cursor.visible) setCursor(projected.cursor.x, projected.cursor.y);
     else cursor.style.opacity = '0';
 
     return {
       presented: true,
       visible: projected.focus.visible,
       mode,
+      durationMs,
+      mutationReady: elapsedMs >= durationMs,
       elapsedMs,
       revealProgress: projected.focus.revealProgress,
       revealing: projected.focus.revealing,
@@ -1937,7 +2018,7 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
       },
       antsDashOffset: projected.focus.antsDashOffset,
       dragHandle: projected.focus.dragHandle,
-      cursor: mode === 'cursor'
+      cursor: displayMode === 'cursor'
         ? { x: projected.cursor.x, y: projected.cursor.y, visible: projected.cursor.visible }
         : null,
     };

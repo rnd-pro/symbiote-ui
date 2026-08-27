@@ -26,7 +26,7 @@ export let timelineEditorTemplate = html`
       </div>
     </div>
     <div class="te-timeline-viewport" ref="timelineScroll" ${{ '@hidden': '!hasData', onscroll: 'timelineScroll' }}>
-      <div class="te-timeline-content" ref="timelineContent" ${{ onclick: 'timelineClick' }}>
+      <div class="te-timeline-content" ref="timelineContent">
         <canvas class="te-ruler-canvas" ref="rulerCanvas"></canvas>
         <canvas class="te-tracks-canvas" ref="tracksCanvas"></canvas>
         <div class="te-playhead" ref="playhead"></div>

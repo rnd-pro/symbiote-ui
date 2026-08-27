@@ -300,6 +300,8 @@ export {
   PRESENTER_ANNOTATION_COLLISION_ALLOWANCE_PX,
   PRESENTER_ANNOTATION_TARGET_INSET_PX,
   PRESENTER_CURSOR_SIZE_PX,
+  PRESENTER_ANNOTATION_SUPPORT_TABLE,
+  PresenterAnnotationUnsupportedError,
   analyzePresenterAnnotationSafety,
   createPresenterCursor,
   playCursorScenario,

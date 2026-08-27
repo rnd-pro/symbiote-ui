@@ -48010,6 +48010,198 @@
       ]
     },
     {
+      "path": "board/KanbanCard/KanbanCard.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "customElement": true,
+          "name": "KanbanCard",
+          "tagName": "sn-kanban-card",
+          "description": "Generic themeable kanban card with severity signals, configurable progress indicators, agent identity colors, metrics, actions, and dependencies.",
+          "componentDescription": "Generic themeable kanban card with severity signals, configurable progress indicators, agent identity colors, metrics, actions, and dependencies. Use this board UI component when composing board UI. Capabilities: kanban-card, severity-signals, configurable-indicators, agent-identity, themeable. Data ownership: host-owned card and view models; component renders and emits intent events. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+          "attributes": [],
+          "members": [
+            { "kind": "method", "name": "setCard", "description": "Sets the card model data." },
+            { "kind": "method", "name": "setView", "description": "Sets the card view configuration (size, modules)." },
+            { "kind": "method", "name": "getCard", "description": "Returns a snapshot of the card model." },
+            { "kind": "method", "name": "getView", "description": "Returns a snapshot of the card view configuration." }
+          ],
+          "events": [
+            { "name": "sn-kanban-card-select", "description": "Emits when the card is selected." },
+            { "name": "sn-kanban-card-action", "description": "Emits when a card action is invoked." }
+          ],
+          "cssProperties": [
+            { "name": "--sn-kanban-card-bg", "description": "Theme CSS custom property consumed by sn-kanban-card." },
+            { "name": "--sn-kanban-card-selected-bg", "description": "Selected card fill; defaults to the provider accent state mix." },
+            { "name": "--sn-kanban-card-fg", "description": "Theme CSS custom property consumed by sn-kanban-card." },
+            { "name": "--sn-kanban-card-border", "description": "Theme CSS custom property consumed by sn-kanban-card." },
+            { "name": "--sn-kanban-card-border-width", "description": "Theme CSS custom property consumed by sn-kanban-card." },
+            { "name": "--sn-kanban-card-radius", "description": "Theme CSS custom property consumed by sn-kanban-card." },
+            { "name": "--sn-kanban-card-hover-border", "description": "Theme CSS custom property consumed by sn-kanban-card." },
+            { "name": "--sn-kanban-card-focus-width", "description": "Theme CSS custom property consumed by sn-kanban-card." },
+            { "name": "--sn-kanban-card-focus-offset", "description": "Theme CSS custom property consumed by sn-kanban-card." },
+            { "name": "--sn-kanban-card-padding-sm", "description": "Theme CSS custom property consumed by sn-kanban-card." },
+            { "name": "--sn-kanban-card-padding-md", "description": "Theme CSS custom property consumed by sn-kanban-card." },
+            { "name": "--sn-kanban-card-padding-lg", "description": "Theme CSS custom property consumed by sn-kanban-card." },
+            { "name": "--sn-kanban-card-padding-xl", "description": "Theme CSS custom property consumed by sn-kanban-card." },
+            { "name": "--sn-kanban-card-gap-sm", "description": "Theme CSS custom property consumed by sn-kanban-card." },
+            { "name": "--sn-kanban-card-gap-md", "description": "Theme CSS custom property consumed by sn-kanban-card." },
+            { "name": "--sn-kanban-card-gap-lg", "description": "Theme CSS custom property consumed by sn-kanban-card." },
+            { "name": "--sn-kanban-card-gap-xl", "description": "Theme CSS custom property consumed by sn-kanban-card." },
+            { "name": "--sn-kanban-card-hero-size", "description": "Theme CSS custom property consumed by sn-kanban-card." },
+            { "name": "--sn-kanban-card-icon-size", "description": "Base icon size supplied by the cascade theme." },
+            { "name": "--sn-kanban-card-hero-icon-size", "description": "Hero attention icon size supplied by the cascade theme." },
+            { "name": "--sn-kanban-card-audit-icon-size", "description": "Audit emphasis icon size supplied by the cascade theme." },
+            { "name": "--sn-kanban-card-idle-icon-size", "description": "Idle emphasis icon size supplied by the cascade theme." },
+            { "name": "--sn-kanban-card-metric-size", "description": "Large metric type size supplied by the cascade theme." },
+            { "name": "--sn-kanban-card-progress-thickness", "description": "Theme CSS custom property consumed by sn-kanban-card." },
+            { "name": "--sn-kanban-card-agent-accent", "description": "Theme CSS custom property consumed by sn-kanban-card." }
+          ],
+          "contract": {
+            "capabilities": ["kanban-card", "severity-signals", "configurable-indicators", "agent-identity", "themeable"],
+            "attributes": [],
+            "properties": [],
+            "methods": [
+              { "name": "setCard", "type": "function", "description": "Sets the card model data." },
+              { "name": "setView", "type": "function", "description": "Sets the card view configuration (size, modules)." },
+              { "name": "getCard", "type": "function", "description": "Returns a snapshot of the card model." },
+              { "name": "getView", "type": "function", "description": "Returns a snapshot of the card view configuration." }
+            ],
+            "events": [
+              { "name": "sn-kanban-card-select", "description": "Emits when the card is selected." },
+              { "name": "sn-kanban-card-action", "description": "Emits when a card action is invoked." }
+            ],
+            "slots": [],
+            "themeAliases": [
+              "--sn-kanban-card-bg",
+              "--sn-kanban-card-selected-bg",
+              "--sn-kanban-card-fg",
+              "--sn-kanban-card-border",
+              "--sn-kanban-card-border-width",
+              "--sn-kanban-card-radius",
+              "--sn-kanban-card-hover-border",
+              "--sn-kanban-card-focus-width",
+              "--sn-kanban-card-focus-offset",
+              "--sn-kanban-card-padding-sm",
+              "--sn-kanban-card-padding-md",
+              "--sn-kanban-card-padding-lg",
+              "--sn-kanban-card-padding-xl",
+              "--sn-kanban-card-gap-sm",
+              "--sn-kanban-card-gap-md",
+              "--sn-kanban-card-gap-lg",
+              "--sn-kanban-card-gap-xl",
+              "--sn-kanban-card-hero-size",
+              "--sn-kanban-card-icon-size",
+              "--sn-kanban-card-hero-icon-size",
+              "--sn-kanban-card-audit-icon-size",
+              "--sn-kanban-card-idle-icon-size",
+              "--sn-kanban-card-metric-size",
+              "--sn-kanban-card-progress-thickness",
+              "--sn-kanban-card-agent-accent"
+            ],
+            "status": "draft",
+            "schemaVersion": "component-descriptor-v2",
+            "dataSchema": "schemas/runtime-ui-v1.json",
+            "ssr": {
+              "mode": "jsda-ssr-renderable",
+              "importSafe": false,
+              "jsdaRenderable": true,
+              "requiresDom": true,
+              "browserApis": [],
+              "notes": "Import after JSDA/linkedom installs DOM globals; verify rendering with JSDA SSR smoke tests."
+            }
+          },
+          "agent": {
+            "componentDescription": "Generic themeable kanban card with severity signals, configurable progress indicators, agent identity colors, metrics, actions, and dependencies. Use this board UI component when composing board UI. Capabilities: kanban-card, severity-signals, configurable-indicators, agent-identity, themeable. Data ownership: host-owned card and view models; component renders and emits intent events. WebMCP tools are not enabled unless an explicit descriptor is declared.",
+            "semanticRole": "board UI component",
+            "usage": "Render or compose <sn-kanban-card> when the host needs generic themeable kanban card with severity signals, configurable progress indicators, agent identity colors, metrics, actions, and dependencies.",
+            "dataOwnership": "host-owned card and view models; component renders and emits intent events",
+            "webmcp": {
+              "mode": "described-only",
+              "toolNames": [],
+              "toolNaming": "Use stable component-scoped tool names and typed input schemas; do not infer actions from pixels.",
+              "componentContext": "componentDescription is agent-facing context appended to component tool descriptions when a host exposes WebMCP tools.",
+              "bindVisibility": "Symbiote bind attributes and custom element tags preserve semantic boundaries for agents and browser tooling.",
+              "globalToolMode": "Do not enable global Symbiote.mcpToolMode by default in symbiote-ui; hosts opt in per component or descriptor.",
+              "references": [
+                "https://rnd-pro.com/pulse/symbiote-webmcp-support/",
+                "https://github.com/symbiotejs/symbiote.js/blob/webmcp/docs/webmcp.md"
+              ]
+            }
+          },
+          "metadata": {
+            "contract": {
+              "capabilities": ["kanban-card", "severity-signals", "configurable-indicators", "agent-identity", "themeable"],
+              "attributes": [],
+              "properties": [],
+              "methods": [
+                { "name": "setCard", "type": "function", "description": "Sets the card model data." },
+                { "name": "setView", "type": "function", "description": "Sets the card view configuration (size, modules)." },
+                { "name": "getCard", "type": "function", "description": "Returns a snapshot of the card model." },
+                { "name": "getView", "type": "function", "description": "Returns a snapshot of the card view configuration." }
+              ],
+              "events": [
+                { "name": "sn-kanban-card-select", "description": "Emits when the card is selected." },
+                { "name": "sn-kanban-card-action", "description": "Emits when a card action is invoked." }
+              ],
+              "slots": [],
+              "themeAliases": [
+                "--sn-kanban-card-bg",
+                "--sn-kanban-card-selected-bg",
+                "--sn-kanban-card-fg",
+                "--sn-kanban-card-border",
+                "--sn-kanban-card-border-width",
+                "--sn-kanban-card-radius",
+                "--sn-kanban-card-hover-border",
+                "--sn-kanban-card-focus-width",
+                "--sn-kanban-card-focus-offset",
+                "--sn-kanban-card-padding-sm",
+                "--sn-kanban-card-padding-md",
+                "--sn-kanban-card-padding-lg",
+                "--sn-kanban-card-padding-xl",
+                "--sn-kanban-card-gap-sm",
+                "--sn-kanban-card-gap-md",
+                "--sn-kanban-card-gap-lg",
+                "--sn-kanban-card-gap-xl",
+                "--sn-kanban-card-hero-size",
+                "--sn-kanban-card-icon-size",
+                "--sn-kanban-card-hero-icon-size",
+                "--sn-kanban-card-audit-icon-size",
+                "--sn-kanban-card-idle-icon-size",
+                "--sn-kanban-card-metric-size",
+                "--sn-kanban-card-progress-thickness",
+                "--sn-kanban-card-agent-accent"
+              ],
+              "status": "draft",
+              "schemaVersion": "component-descriptor-v2",
+              "dataSchema": "schemas/runtime-ui-v1.json",
+              "ssr": {
+                "mode": "jsda-ssr-renderable",
+                "importSafe": false,
+                "jsdaRenderable": true,
+                "requiresDom": true,
+                "browserApis": [],
+                "notes": "Import after JSDA/linkedom installs DOM globals; verify rendering with JSDA SSR smoke tests."
+              }
+            },
+            "specifier": "symbiote-ui/ui",
+            "visibility": "public",
+            "importKind": "named"
+          },
+          "custom-element-exports": [
+            {
+              "name": "sn-kanban-card",
+              "declaration": { "name": "KanbanCard", "module": "board/KanbanCard/KanbanCard.js" }
+            }
+          ]
+        }
+      ],
+      "exports": [
+        { "kind": "js", "name": "KanbanCard", "declaration": { "name": "KanbanCard", "module": "board/KanbanCard/KanbanCard.js" } },
+        { "kind": "custom-element-definition", "name": "sn-kanban-card", "declaration": { "name": "KanbanCard" } }
+      ]
+    },
+    {
       "path": "board/KanbanBoard/KanbanBoard.js",
       "declarations": [
         {

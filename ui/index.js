@@ -224,6 +224,7 @@ export * from '../xr/index.js';
 export let NodeCanvas;
 export let CanvasGraph;
 export let KanbanBoard;
+export let KanbanCard;
 export let GraphExplorerShell;
 export let ContextMenu;
 export let GraphNode;
@@ -761,6 +762,7 @@ if (hasDOMGlobals) {
     nodeCanvas,
     canvasGraph,
     kanbanBoard,
+    kanbanCard,
     graphExplorerShell,
     contextMenu,
     graphNode,
@@ -870,6 +872,7 @@ if (hasDOMGlobals) {
     import('../canvas/NodeCanvas/NodeCanvas.js'),
     import('../canvas/CanvasGraph/CanvasGraph.js'),
     import('../board/KanbanBoard/KanbanBoard.js'),
+    import('../board/KanbanCard/KanbanCard.js'),
     import('../canvas/GraphExplorerShell/GraphExplorerShell.js'),
     import('../menu/ContextMenu/ContextMenu.js'),
     import('../node/GraphNode/GraphNode.js'),
@@ -980,6 +983,7 @@ if (hasDOMGlobals) {
   ({ NodeCanvas } = nodeCanvas);
   ({ CanvasGraph } = canvasGraph);
   ({ KanbanBoard } = kanbanBoard);
+  ({ KanbanCard } = kanbanCard);
   ({ GraphExplorerShell } = graphExplorerShell);
   ({ ContextMenu } = contextMenu);
   ({ GraphNode } = graphNode);
@@ -1103,6 +1107,7 @@ if (hasDOMGlobals) {
     NodeCanvas,
     CanvasGraph,
     KanbanBoard,
+    KanbanCard,
     GraphExplorerShell,
     ContextMenu,
     GraphNode,
