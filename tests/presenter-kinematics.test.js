@@ -142,9 +142,16 @@ test('enclosing gestures declare natural underdraw or controlled overlap instead
 
   assert.equal(box.tailPolicy.mode, 'underdraw');
   assert.ok(distance(box.samples[0], box.samples.at(-1)) > box.maxWidthPx);
-  assert.equal(oval.tailPolicy.mode, 'overlap');
+  assert.equal(oval.tailPolicy.mode, 'displaced-overlap');
   assert.ok(oval.tailPolicy.amount > 0);
-  assert.notDeepEqual(oval.samples[0], oval.samples.at(-1));
+  assert.ok(oval.tailPolicy.lateralOffsetPx >= oval.baseWidthPx);
+  assert.ok(distance(oval.samples[0], oval.samples.at(-1)) > oval.maxWidthPx * 1.5);
+});
+
+test('default presenter motion keeps a human floor without exceeding the existing hard ceiling', () => {
+  assert.ok(PRESENTER_KINEMATIC_LIMITS.minMovingSpeedPxPerMs >= 0.14);
+  assert.ok(PRESENTER_KINEMATIC_LIMITS.targetSpeedPxPerMs >= 0.28);
+  assert.equal(PRESENTER_KINEMATIC_LIMITS.maxSpeedPxPerMs, 0.454);
 });
 
 test('centripetal smoothing bounds corner jumps while retaining source coverage', () => {

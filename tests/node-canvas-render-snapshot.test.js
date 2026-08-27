@@ -323,7 +323,13 @@ function createScopedRenderer(document, options = {}) {
     { id: 'source-b', from: 'source', out: 'out', to: 'target-b', in: 'in' },
     { id: 'source-c', from: 'source', out: 'out', to: 'target-c', in: 'in' },
     { id: 'unrelated', from: 'unrelated-a', out: 'out', to: 'unrelated-b', in: 'in' },
-  ];
+  ].map((connection) => connection.id === options.markerConnectionId
+    ? {
+        ...connection,
+        direction: 'forward',
+        design: { marker: { role: 'flow' } },
+      }
+    : connection);
   let renderer = new ConnectionRenderer({
     svgLayer: svg,
     dotLayer,
@@ -335,8 +341,11 @@ function createScopedRenderer(document, options = {}) {
     onConnectionClick: () => {},
     getZoom: () => 1,
   });
-  if (options.suspend !== false) renderer.suspendProgressiveRendering('snapshot-capture');
-  renderer.setPathStyle('pcb');
+  let pathStyle = options.pathStyle || 'pcb';
+  if (pathStyle === 'pcb' && options.suspend !== false) {
+    renderer.suspendProgressiveRendering('snapshot-capture');
+  }
+  renderer.setPathStyle(pathStyle);
   renderer.addBatch(connections);
   return { renderer, svg, nodeViews, connections };
 }
@@ -502,6 +511,39 @@ test('socket signatures use logical layout coordinates across zoom and raster dr
     live.renderer.refreshAll();
     assert.equal(live.renderer.renderSnapshotReceipt.reason, 'geometry-mismatch');
     assert.equal(live.renderer.pathStyle, 'pcb');
+  } finally {
+    globalThis.document = previousDocument;
+  }
+});
+
+test('snapshot adoption reprojects flow markers from transient bezier geometry onto cached PCB routes', () => {
+  let previousDocument = globalThis.document;
+  let { document } = parseHTML('<!doctype html><html><body></body></html>');
+  globalThis.document = document;
+  try {
+    let markerConnectionId = 'source-a';
+    let build = createScopedRenderer(document, { markerConnectionId });
+    let snapshot = build.renderer.capturePcbRouteSnapshot(routeFingerprint());
+    let expectedTransform = build.svg
+      .querySelector(`[data-conn-marker="${markerConnectionId}"]`)
+      .getAttribute('transform');
+
+    let live = createScopedRenderer(document, { markerConnectionId, suspend: false });
+    let marker = live.svg.querySelector(`[data-conn-marker="${markerConnectionId}"]`);
+    let transientTransform = 'translate(-3,492) rotate(-137)';
+    marker.setAttribute('transform', transientTransform);
+    assert.notEqual(marker.getAttribute('transform'), expectedTransform);
+
+    let receipt = live.renderer.adoptPcbRouteSnapshot(snapshot, {
+      routeFingerprint: routeFingerprint(),
+    });
+
+    assert.equal(receipt.adopted, true);
+    assert.equal(marker.getAttribute('transform'), expectedTransform);
+    assert.equal(
+      live.svg.querySelector(`[data-conn-id="${markerConnectionId}"]`).getAttribute('d'),
+      snapshot.routes.find((route) => route.connectionId === markerConnectionId).path,
+    );
   } finally {
     globalThis.document = previousDocument;
   }

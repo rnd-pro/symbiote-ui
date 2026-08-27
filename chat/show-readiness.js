@@ -45,16 +45,30 @@ function waitForEvent(target, names, { signal, timeoutMs = 0, failureNames = [] 
   });
 }
 
+function waitForAbortablePromise(promise, signal) {
+  if (signal?.aborted) return Promise.reject(abortError(signal));
+  if (!signal) return Promise.resolve(promise);
+  return new Promise((resolve, reject) => {
+    let cleanup = () => signal.removeEventListener('abort', onAbort);
+    let onAbort = () => {
+      cleanup();
+      reject(abortError(signal));
+    };
+    signal.addEventListener('abort', onAbort, { once: true });
+    Promise.resolve(promise).then(
+      (value) => { cleanup(); resolve(value); },
+      (error) => { cleanup(); reject(error); },
+    );
+  });
+}
+
 export async function waitForShowDocumentReady(doc, options = {}) {
   if (!doc) throw new ShowReadinessError('missing-document', 'a document is required');
   if (doc.readyState === 'loading') {
     await waitForEvent(doc, ['DOMContentLoaded'], options);
   }
   if (doc.fonts?.ready && typeof doc.fonts.ready.then === 'function') {
-    await Promise.race([
-      doc.fonts.ready,
-      options.signal?.aborted ? Promise.reject(abortError(options.signal)) : new Promise(() => {}),
-    ]);
+    await waitForAbortablePromise(doc.fonts.ready, options.signal);
   }
   return doc;
 }
@@ -108,7 +122,10 @@ export async function waitForShowDomReadiness(options = {}) {
   await waitForShowDocumentReady(doc, options);
   let target = options.target === undefined ? null : await waitForShowElement(doc, options.target, options);
   if (target && options.scroll !== false && typeof target.scrollIntoView === 'function') {
-    target.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'auto' });
+    let scrollResult = target.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' });
+    if (scrollResult && typeof scrollResult.then === 'function') {
+      await waitForAbortablePromise(scrollResult, options.signal);
+    }
     let requestFrame = doc?.defaultView?.requestAnimationFrame;
     if (typeof requestFrame === 'function') {
       await new Promise((resolve) => requestFrame(() => requestFrame(resolve)));

@@ -491,6 +491,10 @@ export class ConnectionRenderer {
       path.setAttribute('data-pcb-signature', route.signature);
       this.#connectionPoints.set(route.connectionId, route.points);
     }
+    for (let route of normalized.routes) {
+      let conn = this.#connectionData.get(route.connectionId);
+      if (conn) this.#updateConnectionMarker(conn, route.points);
+    }
     this.#reconcileJunctions();
     this.#lastRenderSnapshotReceipt = createNodeCanvasRenderSnapshotReceipt({
       adopted: true,
@@ -1342,6 +1346,21 @@ export class ConnectionRenderer {
     return junctions;
   }
 
+  #updateConnectionMarker(conn, points) {
+    const marker = resolveConnectionMarker(points, conn, {
+      connections: [...this.#connectionData.values()],
+      connectionPoints: this.#connectionPoints,
+    });
+    if (marker && marker.type !== 'none') {
+      this.#markerModels.set(conn.id, marker);
+    } else {
+      this.#markerModels.delete(conn.id);
+    }
+    let fromNode = this.#editor?.getNode?.(conn.from);
+    let fromColor = fromNode?.outputs?.[conn.out]?.socket?.color;
+    updateSvgMarker(conn.id, marker, this.#svgLayer, fromColor);
+  }
+
   #globalTransientPathStyle() {
     let pathStyle = '';
     for (const request of this.#transientPathStyleRequests.values()) {
@@ -1882,17 +1901,7 @@ export class ConnectionRenderer {
     this.#updateDot(conn.id, 'end', endX, endY, 'input', inSocketName);
 
 
-    const marker = resolveConnectionMarker(points, conn, {
-      connections: [...this.#connectionData.values()],
-      connectionPoints: this.#connectionPoints,
-    });
-    if (marker && marker.type !== 'none') {
-      this.#markerModels.set(conn.id, marker);
-    } else {
-      this.#markerModels.delete(conn.id);
-    }
-    let fromColor = fromNode?.outputs?.[conn.out]?.socket?.color;
-    updateSvgMarker(conn.id, marker, this.#svgLayer, fromColor);
+    this.#updateConnectionMarker(conn, points);
 
     let labelText = conn.label || conn.metadata?.label || '';
     let textEl = this.#getConnectionText(conn.id);

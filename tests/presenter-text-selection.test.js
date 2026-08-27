@@ -87,6 +87,23 @@ test('selects a quote across DOM text nodes and restores the prior range', () =>
   assert.equal(handle.state, 'restored');
 });
 
+test('animates the complete target when the consumer supplies only target intent', () => {
+  let { window } = parseHTML('<!doctype html><p id="target">Portable <strong>configuration</strong> remains reusable.</p>');
+  let selection = installSelection(window);
+  let target = window.document.getElementById('target');
+  target.focus = () => {};
+
+  let handle = createPresenterTextSelectionAnimation(target, { seed: 'whole-target' });
+
+  assert.equal(handle.receipt.selectedText, 'Portable configuration remains reusable.');
+  assert.equal(selection.getRangeAt(0).startContainer, target.firstChild);
+  assert.equal(selection.getRangeAt(0).startOffset, 0);
+  assert.equal(selection.getRangeAt(0).endOffset, 0);
+  handle.presentFrame(handle.receipt.durationMs);
+  assert.equal(selection.getRangeAt(0).endContainer.data, ' remains reusable.');
+  assert.equal(selection.getRangeAt(0).endOffset, ' remains reusable.'.length);
+});
+
 test('normalizes whitespace while preserving exact selected DOM offsets', () => {
   let { window } = parseHTML('<!doctype html><p id="target">Alpha   <span>verified\n outcome</span> ready.</p>');
   let selection = installSelection(window);

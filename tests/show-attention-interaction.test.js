@@ -7,6 +7,7 @@ import {
   monitorMeaningfulShowInteractions,
 } from '../chat/show-interaction.js';
 import { ShowActionLifecycle } from '../chat/show-action-lifecycle.js';
+import { waitForShowDomReadiness } from '../chat/show-readiness.js';
 
 function createFrameScheduler() {
   let nextId = 0;
@@ -158,6 +159,51 @@ test('attention controller owns native-selection animation and cancels it on rep
   assert.equal(clears, 1);
   assert.ok(scheduler.cancelled.length >= 1);
   assert.equal((await attention.whenSettled()).mode, 'frame');
+});
+
+test('show DOM readiness requests smooth centered focus and awaits a platform scroll promise', async () => {
+  let releaseScroll;
+  let optionsSeen;
+  let scrollPromise = new Promise((resolve) => { releaseScroll = resolve; });
+  let target = {
+    scrollIntoView(options) {
+      optionsSeen = options;
+      return scrollPromise;
+    },
+  };
+  let doc = {
+    readyState: 'complete',
+    defaultView: { requestAnimationFrame: (callback) => callback(1) },
+  };
+  let pending = waitForShowDomReadiness({ document: doc, target });
+  let settled = false;
+  pending.then(() => { settled = true; });
+  await Promise.resolve();
+  assert.equal(settled, false);
+  releaseScroll();
+  let receipt = await pending;
+  assert.equal(receipt.target, target);
+  assert.deepEqual(optionsSeen, { block: 'center', inline: 'nearest', behavior: 'smooth' });
+});
+
+test('show DOM readiness aborts while a platform smooth scroll is still pending', async () => {
+  let controller = new AbortController();
+  let scrollStarted;
+  let started = new Promise((resolve) => { scrollStarted = resolve; });
+  let target = {
+    scrollIntoView() {
+      scrollStarted();
+      return new Promise(() => {});
+    },
+  };
+  let doc = {
+    readyState: 'complete',
+    defaultView: {},
+  };
+  let pending = waitForShowDomReadiness({ document: doc, target, signal: controller.signal });
+  await started;
+  controller.abort();
+  await assert.rejects(pending, { name: 'AbortError' });
 });
 
 test('attention animation replacement and reset cancel one owned frame without duplicates', async () => {

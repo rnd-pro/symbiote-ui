@@ -23,7 +23,8 @@ agent-show-chat {
     inline-size: 100%;
     min-inline-size: 0;
     max-block-size: var(--sn-agent-show-player-max-block-size, min(360px, 44dvh));
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
     overscroll-behavior: contain;
     padding: var(--sn-agent-show-player-inset, var(--sn-space-sm, 8px));
     background: var(--sn-panel-bg, var(--sn-sys-surface-sunken));
@@ -31,6 +32,7 @@ agent-show-chat {
 
     > chat-show-player {
       inline-size: 100%;
+      max-block-size: 100%;
     }
   }
 

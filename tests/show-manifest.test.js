@@ -65,6 +65,8 @@ test('Show manifest, schema catalog, and JSON file expose one synchronized publi
     completion: 'settled-visible-until-replaced-or-cleared',
     settlementReceipt: 'plan-version-cue-media-first-frame-and-actual-settled-time-with-normalized-path-hash',
     cursorTravel: 'shared-arc-length-minimum-jerk-planner-with-human-speed-ceiling',
+    speedLimitsPxPerMs: { minimumMoving: 0.14, target: 0.3, maximum: 0.454 },
+    enclosingTail: 'displaced-overlap-with-visible-offset',
     markerPersistence: 'accumulate-after-settle',
     controls: ['pause', 'resume', 'seek', 'capture-state', 'restore-state', 'reset'],
     cancellation: ['replacement', 'cancel', 'seek-reset', 'branch-reset', 'dispose'],

@@ -65,7 +65,7 @@ test('DOM readiness scrolls a resolved target and settles two animation frames',
   let result = await waitForShowDomReadiness({ document: doc, target });
 
   assert.equal(result.target, target);
-  assert.deepEqual(scrollOptions, { block: 'center', inline: 'nearest', behavior: 'auto' });
+  assert.deepEqual(scrollOptions, { block: 'center', inline: 'nearest', behavior: 'smooth' });
   assert.equal(frames.length, 2);
 });
 

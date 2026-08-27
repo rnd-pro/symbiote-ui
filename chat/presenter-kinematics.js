@@ -1,8 +1,8 @@
 export const PRESENTER_KINEMATICS_VERSION = 'symbiote-presenter-kinematics-v1';
 
 export const PRESENTER_KINEMATIC_LIMITS = Object.freeze({
-  minMovingSpeedPxPerMs: 0.08,
-  targetSpeedPxPerMs: 0.227,
+  minMovingSpeedPxPerMs: 0.14,
+  targetSpeedPxPerMs: 0.3,
   maxSpeedPxPerMs: 0.454,
   minDurationMs: 220,
   baseWidthPx: 4.2,
@@ -77,14 +77,20 @@ function interpolate(left, right, progress) {
   };
 }
 
-function tailPolicy(kind, seed) {
+function tailPolicy(kind, seed, baseWidthPx) {
   if (UNDERDRAW_KINDS.has(kind)) {
     let amount = 0.0475;
     return Object.freeze({ mode: 'underdraw', amount, sourceEnd: 1 - amount });
   }
   if (OVERLAP_KINDS.has(kind)) {
     let amount = 0.0375;
-    return Object.freeze({ mode: 'overlap', amount, sourceEnd: 1 + amount });
+    return Object.freeze({
+      mode: 'displaced-overlap',
+      amount,
+      sourceEnd: 1 + amount,
+      lateralOffsetPx: baseWidthPx * 1.15,
+      direction: randomUnit(seed, 97) < 0.5 ? -1 : 1,
+    });
   }
   return Object.freeze({ mode: 'open', amount: 0, sourceEnd: 1 });
 }
@@ -145,7 +151,28 @@ function resampleSpatially(points, count) {
 }
 
 function sourceAnchors(pointAt, policy) {
-  let adaptive = adaptiveParametricSamples(pointAt, policy.sourceEnd);
+  let samplePoint = pointAt;
+  if (policy.mode === 'displaced-overlap') {
+    let start = 1 - policy.amount;
+    samplePoint = (parameter) => {
+      let center = point(pointAt(parameter), 'pointAt(progress)');
+      if (parameter <= start) return center;
+      let epsilon = 0.0005;
+      let before = point(pointAt(Math.max(0, parameter - epsilon)), 'pointAt(progress)');
+      let after = point(pointAt(Math.min(policy.sourceEnd, parameter + epsilon)), 'pointAt(progress)');
+      let dx = after.x - before.x;
+      let dy = after.y - before.y;
+      let magnitude = Math.hypot(dx, dy) || 1;
+      let progress = clamp((parameter - start) / (policy.sourceEnd - start), 0, 1);
+      let eased = progress * progress * (3 - 2 * progress);
+      let offset = policy.lateralOffsetPx * eased * policy.direction;
+      return {
+        x: center.x - dy / magnitude * offset,
+        y: center.y + dx / magnitude * offset,
+      };
+    };
+  }
+  let adaptive = adaptiveParametricSamples(samplePoint, policy.sourceEnd);
   let length = spatialMetrics(adaptive).arcLengthPx;
   let count = clamp(Math.ceil(length / 18), 16, 96);
   return {
@@ -479,7 +506,7 @@ export function createPresenterKinematicPlan(request = {}) {
     0,
     3,
   );
-  let policy = tailPolicy(kind, seed);
+  let policy = tailPolicy(kind, seed, baseWidthPx);
   let source = sourceAnchors(request.pointAt, policy);
   let anchors = source.anchors;
   let sourceBounds = bounds(source.sourceSamples);

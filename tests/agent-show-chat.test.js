@@ -201,6 +201,13 @@ test('chat-show-player reflects injected timeline/controller state and autoplays
   assert.match(playerStyles, /block-size:\s*calc\(3lh \+ var\(--sn-space-xs\)\)/);
   assert.match(playerStyles, /font-size:\s*var\(--sn-chat-show-font-size, var\(--sn-frame-font-size\)\)/);
   assert.match(playerStyles, /--sn-chat-show-header-control-size, var\(--sn-button-icon-size\)/);
+  assert.equal((playerStyles.match(/grid-template-columns:\s*max-content minmax\(0, 1fr\)/g) || []).length, 2);
+  assert.match(playerStyles, /chat-show-caption-word-item\s*\{[\s\S]*display:\s*inline-block/);
+  assert.match(playerStyles, /chat-show-caption-word-item\s*\{[\s\S]*margin-inline-end:\s*var\(--sn-chat-show-caption-word-gap/);
+
+  let showStyles = (await import('../chat/AgentShowChat/AgentShowChat.css.js')).default;
+  assert.match(showStyles, /\.agent-show-player-region[\s\S]*overflow-y:\s*auto/);
+  assert.match(showStyles, /> chat-show-player[\s\S]*max-block-size:\s*100%/);
 
   let videoReceipts = [];
   player.addEventListener('chat-show-video-control', (event) => videoReceipts.push(event.detail));
@@ -221,6 +228,7 @@ test('mixed system status and action parts stack at narrow chat widths', async (
   assert.match(messageStyles, /\.message\.system:has\(\.status-board, \.action-card, \.actions-card\)/);
   assert.match(messageStyles, /flex-direction: column/);
   assert.match(messageStyles, /\.message\.system \.status-card[\s\S]*max-inline-size: none/);
+  assert.match(messageStyles, /\.status-board[\s\S]*grid-template-columns:\s*repeat\(auto-fit, minmax\(min\(100%, 14rem\), 1fr\)\)/);
 });
 
 test('agent-dock-shell owns one standard split layout, collapse/drawer state, and preserves one chat composition', async () => {

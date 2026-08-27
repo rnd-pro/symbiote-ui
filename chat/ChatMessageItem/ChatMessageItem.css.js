@@ -609,16 +609,16 @@ h4.md-h {
 }
 
 .status-board {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
   gap: var(--sn-chat-status-card-gap, 8px);
   padding: var(--sn-step-2) 0;
   width: 100%;
 }
 
 .status-card {
-  flex: 1 1 220px;
-  max-width: 320px;
+  min-inline-size: 0;
+  max-inline-size: none;
   background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface));
   border: 1px solid color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface));
   border-radius: var(--sn-radius-lg);

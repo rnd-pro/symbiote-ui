@@ -746,6 +746,9 @@ test('live cursor, focus, marker, and symbol phases remain serialized at 30 FPS'
   assert.equal(markerReceipt.status, 'settled');
   assert.equal(symbolReceipt.status, 'settled');
   assert.equal(window.document.querySelector('.pc-cursor').style.opacity, '1');
+  let cursorStyle = window.document.getElementById('symbiote-presenter-cursor-style').textContent;
+  assert.doesNotMatch(cursorStyle, /\.pc-cursor\.is-inking svg\{display:none;\}/);
+  assert.match(cursorStyle, /\.pc-cursor\.is-inking svg\{display:block;/);
   cursor.dispose();
 });
 

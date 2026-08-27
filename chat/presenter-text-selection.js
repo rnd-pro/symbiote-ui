@@ -307,7 +307,16 @@ export function applyPresenterTextSelection(target, parameters = {}) {
   if (!target || typeof target !== 'object') {
     fail('invalid-target', 'text selection requires a DOM or text-control target');
   }
-  let options = selectionOptions(parameters);
+  let requested = parameters;
+  if (
+    parameters?.quote === undefined
+    && parameters?.startOffset === undefined
+    && parameters?.endOffset === undefined
+  ) {
+    let text = isTextControl(target) ? String(target.value || '') : textRuns(target).text;
+    requested = { ...parameters, startOffset: 0, endOffset: text.length };
+  }
+  let options = selectionOptions(requested);
   return isTextControl(target)
     ? selectControlText(target, options)
     : selectDomText(target, options);

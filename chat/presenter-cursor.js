@@ -140,7 +140,7 @@ export class PresenterAnnotationUnsupportedError extends TypeError {
 }
 
 const CURSOR_SIZE = 18; // px; the hotspot is the arrow's top-left tip
-const INK_CURSOR_SIZE = 4;
+const INK_CURSOR_SIZE = 4; // retained for marker collision safety at the nib hotspot
 export const PRESENTER_ANNOTATION_COLLISION_ALLOWANCE_PX = 4.4;
 export const PRESENTER_ANNOTATION_TARGET_INSET_PX = 8;
 export const PRESENTER_CURSOR_SIZE_PX = CURSOR_SIZE;
@@ -607,14 +607,10 @@ ${overlaySelector} .pc-cursor{
 }
 ${overlaySelector} .pc-cursor.is-inking{
   box-sizing:border-box;
-  width:${INK_CURSOR_SIZE}px;
-  height:${INK_CURSOR_SIZE}px;
-  border:1px solid color-mix(in oklab, var(--sn-presenter-marker, var(--sn-sys-accent)) 78%, #fff);
-  border-radius:50%;
-  background:var(--sn-presenter-marker, var(--sn-sys-accent));
-  box-shadow:0 0 4px color-mix(in oklab, var(--sn-presenter-marker, var(--sn-sys-accent)) 45%, transparent);
+  width:${CURSOR_SIZE}px;
+  height:${CURSOR_SIZE}px;
 }
-${overlaySelector} .pc-cursor.is-inking svg{display:none;}
+${overlaySelector} .pc-cursor.is-inking svg{display:block;}
 `;
 }
 
@@ -1076,7 +1072,7 @@ const GESTURES = {
       jitterScale,
       rest: { x: cx + rx, y: cy },
       point(t) {
-        let angle = t * Math.PI * 2 * 1.15;
+        let angle = t * Math.PI * 2;
         let cosine = Math.cos(angle);
         let sine = Math.sin(angle);
         let roundedX = Math.sign(cosine) * Math.pow(Math.abs(cosine), 0.25);

@@ -116,6 +116,8 @@ export const SHOW_RUNTIME_CONTRACT = Object.freeze({
     completion: 'settled-visible-until-replaced-or-cleared',
     settlementReceipt: 'plan-version-cue-media-first-frame-and-actual-settled-time-with-normalized-path-hash',
     cursorTravel: 'shared-arc-length-minimum-jerk-planner-with-human-speed-ceiling',
+    speedLimitsPxPerMs: Object.freeze({ minimumMoving: 0.14, target: 0.3, maximum: 0.454 }),
+    enclosingTail: 'displaced-overlap-with-visible-offset',
     markerPersistence: 'accumulate-after-settle',
     controls: Object.freeze(['pause', 'resume', 'seek', 'capture-state', 'restore-state', 'reset']),
     cancellation: Object.freeze(['replacement', 'cancel', 'seek-reset', 'branch-reset', 'dispose']),

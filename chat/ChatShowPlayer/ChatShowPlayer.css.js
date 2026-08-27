@@ -5,7 +5,8 @@ chat-show-player {
   grid-template-rows: auto minmax(0, auto) auto auto auto;
   gap: var(--sn-chat-show-player-gap, var(--sn-space-sm));
   max-inline-size: 100%;
-  overflow: clip;
+  overflow-x: hidden;
+  overflow-y: auto;
   color: var(--sn-text);
   font-family: var(--sn-chat-show-font-family, var(--sn-font-ui));
   font-size: var(--sn-chat-show-font-size, var(--sn-frame-font-size));
@@ -63,7 +64,7 @@ chat-show-player {
 
   .chat-show-row {
     display: grid;
-    grid-template-columns: var(--sn-chat-show-label-width, calc(var(--sn-space-xl) * 2)) minmax(0, 1fr);
+    grid-template-columns: max-content minmax(0, 1fr);
     gap: var(--sn-space-sm);
     inline-size: 100%;
     min-block-size: 0;
@@ -89,7 +90,7 @@ chat-show-player {
 
   .chat-show-caption {
     display: grid;
-    grid-template-columns: var(--sn-chat-show-label-width, calc(var(--sn-space-xl) * 2)) minmax(0, 1fr);
+    grid-template-columns: max-content minmax(0, 1fr);
     align-items: start;
     padding: var(--sn-space-sm) var(--sn-space-md);
     background: var(--sn-node-bg);
@@ -136,9 +137,11 @@ chat-show-player {
 
   .chat-show-caption-words,
   .chat-show-caption-text { display: inline; }
-  chat-show-caption-word-item { display: inline; }
-  .chat-show-caption-word {
+  chat-show-caption-word-item {
+    display: inline-block;
     margin-inline-end: var(--sn-chat-show-caption-word-gap, var(--sn-space-xs));
+  }
+  .chat-show-caption-word {
     &[spoken] { color: var(--sn-text-dim); }
     &[active] {
       color: var(--sn-node-selected);
