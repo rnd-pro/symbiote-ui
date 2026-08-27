@@ -993,10 +993,18 @@ function semanticGestureSeed(annotation) {
  * }} GesturePlan
  */
 const GESTURES = {
-  freehand(rect, seed) {
+  freehand(rect, seed, opts = {}) {
+    let pad = Math.min(8, rect.width * 0.04);
+    let viewportWidth = Number(opts.viewport?.width) || 1920;
+    let width = Math.min(
+      rect.width + 2 * pad,
+      Math.max(320, 3 * rect.height),
+      Math.max(0, 0.45 * viewportWidth - GESTURE_JITTER_PX * 2.5),
+    );
+    let cx = rect.left + rect.width / 2;
     let margin = Math.max(9, Math.min(18, rect.height * 0.18));
-    let x0 = rect.left - Math.min(8, rect.width * 0.04);
-    let x1 = rect.left + rect.width + Math.min(8, rect.width * 0.04);
+    let x0 = cx - width / 2;
+    let x1 = cx + width / 2;
     let baseY = rect.top + rect.height + margin;
     let amplitude = 3.5 + (variation(seed, 37) * 0.5 + 0.5) * 3;
     return {

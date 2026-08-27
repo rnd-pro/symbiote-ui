@@ -14,6 +14,7 @@ import {
   PRESENTER_FRAME_MS,
   playCursorScenario,
   resolvePresenterHighlightRect,
+  resolvePresenterRectangleTiming,
   resolvePresenterTravelDuration,
   resolvePresenterVisibleRect,
 } from '../chat/presenter-cursor.js';
@@ -778,6 +779,29 @@ test('free cursor travel uses the shared arc-length planner and never exceeds it
   assert.ok(plan.maxObservedSpeedPxPerMs <= PRESENTER_KINEMATIC_LIMITS.maxSpeedPxPerMs + 0.001);
   assert.equal(plan.timeTable[0].speedPxPerMs, 0);
   assert.equal(plan.timeTable.at(-1).speedPxPerMs, 0);
+});
+
+test('rectangle selection timing is deterministic and frames report mutation readiness', () => {
+  let timing = resolvePresenterRectangleTiming({ left: 12, top: 18, width: 240, height: 72 });
+  assert.deepEqual(
+    resolvePresenterRectangleTiming({ left: 12, top: 18, width: 240, height: 72 }),
+    timing,
+  );
+  assert.ok(timing.durationMs > timing.dragMs);
+
+  let window = makePresenterDom(PRESENTER_FRAME_MS);
+  let cursor = createPresenterCursor(window.document);
+  let el = boxElement(window.document, { left: 180, top: 140, width: 180, height: 72 });
+  let first = cursor.presentFocusFrame(el, { elapsedMs: 0, mode: 'rectangle-selection' });
+  let final = cursor.presentFocusFrame(el, {
+    elapsedMs: first.durationMs,
+    mode: 'rectangle-selection',
+  });
+
+  assert.equal(first.mode, 'rectangle-selection');
+  assert.equal(first.mutationReady, false);
+  assert.equal(final.mutationReady, true);
+  cursor.dispose();
 });
 
 test('createPresenterCursor drives a scenario end to end through the real player', async () => {

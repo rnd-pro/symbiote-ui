@@ -66,7 +66,7 @@ export class LayoutSidebar extends Symbiote {
     },
   };
 
-  /** @type {Array<{id: string, icon: string, label: string}>} */
+  /** @type {Array<{id: string, icon: string, label: string, visible?: boolean}>} */
   #allSections = [];
 
   renderCallback() {
@@ -189,7 +189,7 @@ export class LayoutSidebar extends Symbiote {
 
   /**
    * Configure sidebar sections
-   * @param {Array<{id: string, icon: string, label: string, disabled?: boolean}>} items
+   * @param {Array<{id: string, icon: string, label: string, disabled?: boolean, visible?: boolean}>} items
    * @returns {void}
    */
   setSections(items) {
@@ -249,7 +249,9 @@ export class LayoutSidebar extends Symbiote {
       icon: item.icon,
       label: item.label,
       isActive: false,
-      isVisible: visibilityMap ? (visibilityMap.get(item.id) ?? true) : true,
+      isVisible: visibilityMap
+        ? (visibilityMap.get(item.id) ?? item.visible !== false)
+        : item.visible !== false,
       isDisabled: Boolean(item.disabled),
       isExpanded: false,
       subPanels: item.subPanels || [],

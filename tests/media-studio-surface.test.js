@@ -882,6 +882,9 @@ test('media studio timeline visual geometry is driven by the timeline editor the
   assert.match(editorSource, /#focusPlayhead\(\)/);
   assert.match(editorSource, /#syncHeaderScroll\(\)/);
   assert.match(editorSource, /#manualScrollUntil/);
+  assert.match(editorSource, /this\.ref\.timelineContent\?\.addEventListener\('click', this\.#onTimelineClick\)/);
+  assert.match(editorSource, /this\.ref\.timelineContent\?\.removeEventListener\('click', this\.#onTimelineClick\)/);
+  assert.doesNotMatch(editorTemplate, /onclick: 'timelineClick'/);
   assert.match(editorSource, /selectedClipId: data\.selectedClipId == null \? '' : String\(data\.selectedClipId\)/);
   assert.match(editorSource, /requestedSelectedClipId/);
   assert.match(editorSource, /#readTheme\(\)/);

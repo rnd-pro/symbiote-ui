@@ -395,6 +395,30 @@ host closes or removes UI-invoked panels. Hosts should pass `allowedMethods` or
 `allowMethod()` when applying agent-authored `state.methods`; use the component
 registry or a project policy allowlist to approve method calls.
 
+## Board Construction
+
+Agents constructing workflow boards use `sn-kanban-board` as the top-level
+surface for columns, cards, and drop intents. Cards can be configured using
+`sn-kanban-card`, which provides a structured visual contract for severity
+signals, configurable progress indicators, agent identity colors, metrics,
+actions, and dependencies without prescribing product routing. The board
+column remains the workflow-status source of truth; card progress labels are
+host-defined counters such as subtasks or acceptance criteria, not duplicate
+column statuses. Hosts project arbitrary runtime events into a small visual
+vocabulary (`info`, `success`, `warning`, `danger`, or quiet telemetry) and keep
+the complete event history in an inspector or event feed.
+
+Card geometry is inherited from the active cascade theme. Size presets resolve
+their content padding and module gaps through `--sn-kanban-card-padding-*` and
+`--sn-kanban-card-gap-*`; ordinary SVG icons use
+`--sn-kanban-card-icon-size`, while attention, audit, idle, and large metric
+roles use their dedicated semantic size aliases. Agent accents change color
+through `--sn-kanban-card-agent-accent` without changing icon geometry. The
+agent model may also include `provider` and `model`; the provider is rendered
+on the card while the model remains available as concise detail. Hosts that
+prefer border-only selection can alias `--sn-kanban-card-selected-bg` to the
+card surface token at the board boundary.
+
 ## Localization
 
 `symbiote-ui/locale` supports English, Russian, and Spanish catalogs with an

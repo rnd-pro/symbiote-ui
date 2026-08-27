@@ -130,6 +130,32 @@ test('sn-button hones standard control states', async () => {
   el.remove();
 });
 
+test('layout sidebar keeps declared visibility defaults until the user customizes them', async () => {
+  installSsrDom();
+  await import('../layout/LayoutSidebar/LayoutSidebar.js');
+
+  let el = document.createElement('layout-sidebar');
+  document.body.append(el);
+  await nextRenderTick();
+
+  el.setSections([
+    { id: 'chats', icon: 'forum', label: 'Chats' },
+    { id: 'marketplace', icon: 'storefront', label: 'Marketplace', visible: false },
+  ]);
+
+  assert.deepEqual(
+    el.$.sections.map((section) => [section.sectionId, section.isVisible]),
+    [['chats', true], ['marketplace', false]],
+  );
+
+  el.toggleVisibility('marketplace');
+  assert.equal(el.$.sections[1].isVisible, true);
+
+  el.resetConfig();
+  assert.equal(el.$.sections[1].isVisible, false);
+  el.remove();
+});
+
 test('sn-field links labels, hints, errors, and input state styling', async () => {
   installSsrDom();
   await import('../control/Field/Field.js');

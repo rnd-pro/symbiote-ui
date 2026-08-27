@@ -49,7 +49,7 @@ export default css`
   }
 
   sn-kanban-card[data-primary-emphasis="dashboard"] .sn-kc-dashboard-grid {
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 112px), 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--sn-kanban-card-dashboard-min, calc(var(--sn-step-12) * 2 + var(--sn-step-4)))), 1fr));
     gap: var(--sn-space-xs);
     padding: 0;
     background: transparent;
@@ -64,7 +64,23 @@ export default css`
   }
 
   sn-kanban-card[data-primary-emphasis="dashboard"] .sn-kc-dash-icon {
+    position: static;
     align-self: center;
+    order: 2;
+    margin-inline-start: auto;
+  }
+
+  sn-kanban-card[data-primary-emphasis="dashboard"] .sn-kc-dash-content {
+    order: 1;
+  }
+
+  sn-kanban-card[data-primary-emphasis="dashboard"] .sn-kc-dash-label {
+    line-height: 1.25;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+    padding-inline-end: 0;
   }
 
   sn-kanban-card[data-primary-emphasis="dashboard"] .sn-kc-dash-icon svg {
@@ -558,7 +574,7 @@ export default css`
   
   .sn-kc-dashboard-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 92px), 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: var(--sn-kanban-card-border-width, var(--sn-card-border-width, thin));
     padding: var(--sn-kanban-card-border-width, var(--sn-card-border-width, thin));
     background: var(--sn-sys-outline);
@@ -570,7 +586,7 @@ export default css`
     position: relative;
     display: flex;
     flex-direction: row;
-    align-items: center;
+    align-items: flex-start;
     gap: var(--sn-space-xs);
     padding-block: var(--sn-space-sm);
     padding-inline: var(--sn-space-xs);
@@ -581,10 +597,12 @@ export default css`
   .sn-kc-dash-icon {
     display: flex;
     color: var(--sn-sys-on-surface-dim);
-    position: static;
-    align-self: center;
-    order: 2;
-    margin-inline-start: auto;
+    position: absolute;
+    inset-block-start: var(--sn-space-sm);
+    inset-inline-end: var(--sn-space-sm);
+  }
+  .sn-kc-dash-item:has(.sn-kc-dash-icon) .sn-kc-dash-label {
+    padding-inline-end: calc(var(--sn-space-md) + var(--sn-space-xs));
   }
   
   .sn-kc-dash-content {
@@ -594,7 +612,6 @@ export default css`
     flex: 1;
     min-height: 100%;
     min-width: 0;
-    order: 1;
   }
   .sn-kc-dash-content > .sn-kc-progress-track,
   .sn-kc-dash-content > .sn-kc-segmented-track { margin-block-start: auto; }
@@ -602,9 +619,9 @@ export default css`
   .sn-kc-dash-label {
     font-size: var(--sn-text-2xs);
     color: var(--sn-sys-on-surface-dim);
-    line-height: 1.25;
-    white-space: normal;
-    overflow-wrap: anywhere;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   
   .sn-kc-dash-val {

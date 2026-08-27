@@ -12,10 +12,17 @@ export class SectionRegistry {
     this.layouts = new Map();
   }
 
-  registerSection(id, { icon, label, order = 100, scope = SECTION_SCOPES.BOTH, layout } = {}) {
+  registerSection(id, {
+    icon,
+    label,
+    order = 100,
+    scope = SECTION_SCOPES.BOTH,
+    visible = true,
+    layout,
+  } = {}) {
     if (!id) throw new TypeError('Section id is required');
     let normalizedScope = normalizeSectionScope(scope);
-    this.sections.set(id, { id, icon, label, order, scope: normalizedScope });
+    this.sections.set(id, { id, icon, label, order, scope: normalizedScope, visible: visible !== false });
     if (layout) this.layouts.set(id, layout);
     return this.getSection(id);
   }
