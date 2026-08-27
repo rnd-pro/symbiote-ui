@@ -154,7 +154,7 @@ test('chat-show-player reflects injected timeline/controller state and autoplays
 
   assert.equal(player.querySelector('.chat-show-title').textContent, 'Reusable show');
   assert.equal(player.querySelector('.chat-show-icon').textContent, 'auto_stories');
-  assert.equal(player.querySelectorAll('.chat-show-row').length, 2, 'compact timeline remains bounded to two visible rows');
+  assert.equal(player.querySelectorAll('.chat-show-row').length, 1, 'compact timeline renders only the current row');
   assert.equal(player.querySelector('[data-header-action="settings"]').textContent, 'more_vert');
   assert.equal(player.querySelector('[data-header-action="close"]').textContent, 'close');
   assert.equal(player.querySelector('[data-control="prev"]').textContent, 'skip_previous');

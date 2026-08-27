@@ -50,12 +50,9 @@ chat-show-player {
 
   .chat-show-timeline {
     display: grid;
-    gap: var(--sn-space-xs);
-    grid-template-rows: repeat(2, minmax(0, 1fr));
-    block-size: var(--sn-chat-show-timeline-block-size, calc(var(--sn-space-xl) * 4));
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    scrollbar-gutter: stable;
+    grid-template-rows: minmax(0, 1fr);
+    block-size: var(--sn-chat-show-timeline-block-size, calc(2lh + var(--sn-space-sm)));
+    overflow: hidden;
   }
 
   chat-show-row-item {
@@ -66,11 +63,11 @@ chat-show-player {
 
   .chat-show-row {
     display: grid;
-    grid-template-columns: minmax(max-content, 0.25fr) 1fr;
+    grid-template-columns: var(--sn-chat-show-label-width, calc(var(--sn-space-xl) * 2)) minmax(0, 1fr);
     gap: var(--sn-space-sm);
     inline-size: 100%;
     min-block-size: 0;
-    padding: var(--sn-space-xs) var(--sn-space-sm);
+    padding: var(--sn-space-xs) calc(var(--sn-space-md) + var(--sn-node-border-width, 1px));
     color: inherit;
     text-align: start;
     background: transparent;
@@ -91,7 +88,9 @@ chat-show-player {
   }
 
   .chat-show-caption {
-    align-items: flex-start;
+    display: grid;
+    grid-template-columns: var(--sn-chat-show-label-width, calc(var(--sn-space-xl) * 2)) minmax(0, 1fr);
+    align-items: start;
     padding: var(--sn-space-sm) var(--sn-space-md);
     background: var(--sn-node-bg);
     border: var(--sn-node-border-width, 1px) solid var(--sn-node-border, var(--sn-sys-outline));

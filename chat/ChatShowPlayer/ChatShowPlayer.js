@@ -259,20 +259,13 @@ export class ChatShowPlayer extends Symbiote {
     let current = index >= 0 ? source[index] || {} : {};
     this.$.title = this._title || '';
     this.$.icon = this._icon || 'auto_stories';
-    let firstVisible = source.length <= 2 || index <= 0
-      ? Math.max(0, index)
-      : Math.min(index, source.length - 2);
-    if (index === source.length - 1) firstVisible = Math.max(0, index - 1);
-    this.$.turns = source.slice(firstVisible, firstVisible + 2).map((turn, offset) => {
-      let turnIndex = firstVisible + offset;
-      return {
-      index: turnIndex,
-      speaker: String(turn?.speaker || turn?.persona || ''),
-      text: String(turn?.text || turn?.caption || ''),
-      current: turnIndex === index,
-      ariaCurrent: turnIndex === index ? 'step' : 'false',
-      };
-    });
+    this.$.turns = index < 0 ? [] : [{
+      index,
+      speaker: String(current?.speaker || current?.persona || ''),
+      text: String(current?.text || current?.caption || ''),
+      current: true,
+      ariaCurrent: 'step',
+    }];
     this.$.positionLabel = `${index < 0 ? 0 : index + 1} / ${source.length}`;
     let caption = this._state?.caption && typeof this._state.caption === 'object'
       ? this._state.caption
