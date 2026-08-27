@@ -103,7 +103,7 @@ test('deterministic focus frame projects cursor and frame modes without scheduli
   assert.equal(framed.frameRect.width, 1);
   assert.equal(framed.frameRect.height, 1);
   assert.equal(framed.dragHandle.visible, true);
-  assert.equal(window.document.querySelector('.pc-cursor').style.opacity, '0');
+  assert.equal(window.document.querySelector('.pc-cursor').style.opacity, '1');
 
   let pointed = cursor.presentFocusFrame(el, {
     elapsedMs: framed.durationMs / 2,
@@ -571,6 +571,7 @@ test('deterministic annotation frame renders every marker and symbol', () => {
     assert.equal(result.name, marker);
     assert.ok(result.pathPoints > 2, marker);
     assert.ok(inkPath(window.document).length > 10, marker);
+    assert.equal(window.document.querySelector('.pc-cursor').style.opacity, '1', marker);
   }
   for (let [index, symbol] of PRESENTER_SYMBOLS.entries()) {
     let result = cursor.presentAnnotationFrame(
@@ -582,6 +583,7 @@ test('deterministic annotation frame renders every marker and symbol', () => {
     assert.equal(result.name, symbol);
     assert.ok(result.pathPoints > 2, symbol);
     assert.ok(inkPath(window.document).length > 10, symbol);
+    assert.equal(window.document.querySelector('.pc-cursor').style.opacity, '1', symbol);
   }
 
   cursor.dispose();
@@ -767,6 +769,7 @@ test('deterministic click frame projects the shared ripple without firing a nati
   let repeated = cursor.presentClickFrame(el, { elapsedMs: 200, seed: 7 });
   let finished = cursor.presentClickFrame(el, { elapsedMs: PRESENTER_CLICK_DURATION_MS + 1, seed: 7 });
   let halo = window.document.querySelector('.pc-click');
+  let arrow = window.document.querySelector('.pc-cursor');
 
   assert.equal(start.presented, true);
   assert.equal(start.visible, true);
@@ -776,7 +779,34 @@ test('deterministic click frame projects the shared ripple without firing a nati
   assert.equal(finished.presented, true);
   assert.equal(finished.visible, false);
   assert.equal(halo.style.display, 'none');
+  assert.equal(arrow.style.opacity, '1');
+  assert.equal(arrow.style.transform, 'translate(160px, 100px)');
   assert.equal(nativeClicks, 0);
+  cursor.dispose();
+});
+
+test('replacement clear holds the arrow while terminal clear hides the presenter overlay', () => {
+  let window = makeDom();
+  let cursor = createPresenterCursor(window.document);
+  let el = target(window.document, { left: 120, top: 80, width: 80, height: 40 });
+
+  cursor.clear({ preserveCursor: true });
+  let overlay = window.document.querySelector('.symbiote-presenter-cursor');
+  let arrow = window.document.querySelector('.pc-cursor');
+  assert.equal(overlay.classList.contains('is-visible'), true);
+  assert.equal(arrow.style.opacity, '1');
+
+  cursor.presentClickFrame(el, { elapsedMs: 0, seed: 7 });
+  let transform = arrow.style.transform;
+
+  cursor.clear({ preserveInk: true, preserveCursor: true });
+  assert.equal(overlay.classList.contains('is-visible'), true);
+  assert.equal(arrow.style.opacity, '1');
+  assert.equal(arrow.style.transform, transform);
+
+  cursor.clear();
+  assert.equal(overlay.classList.contains('is-visible'), false);
+  assert.equal(arrow.style.opacity, '0');
   cursor.dispose();
 });
 

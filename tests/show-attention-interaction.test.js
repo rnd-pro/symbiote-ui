@@ -72,6 +72,29 @@ test('attention controller serializes frame selection and click while markers ac
   assert.ok(calls.includes('clear-markers'));
 });
 
+test('attention replacements preserve the arrow and terminal lifecycle clears it', () => {
+  let clearOptions = [];
+  let cursor = {
+    clear: (options) => clearOptions.push(options),
+    clearAccumulatedAnnotations() {},
+    presentFocusFrame: () => ({ presented: true }),
+  };
+  let attention = new ShowAttentionController({
+    cursor,
+    resolveTarget: (id) => ({ id }),
+  });
+
+  attention.present({ mode: 'frame', targetId: 'a' });
+  attention.present({ mode: 'frame', targetId: 'b' });
+  assert.deepEqual(clearOptions.at(-1), { preserveInk: true, preserveCursor: true });
+
+  attention.reset('terminal-reset');
+  assert.deepEqual(clearOptions.at(-1), { preserveInk: false, preserveCursor: false });
+
+  attention.dispose();
+  assert.deepEqual(clearOptions.at(-1), { preserveInk: false, preserveCursor: false });
+});
+
 test('attention controller advances frame and marker receipts to one settled visible state', async () => {
   let scheduler = createFrameScheduler();
   let focusFrames = [];

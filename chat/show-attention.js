@@ -275,17 +275,17 @@ export class ShowAttentionController {
   }
 
   reset(reason = 'branch-reset') {
-    this.clearTransient(reason);
+    this.clearTransient(reason, { preserveInk: false, preserveCursor: false });
     this.clearMarkers();
     this._activeRequest = null;
   }
 
-  clearTransient(status = 'cleared') {
+  clearTransient(status = 'cleared', { preserveInk = true, preserveCursor = false } = {}) {
     this._cancelAnimation(status);
     this._transient?.handle?.clear?.();
     this._transient = null;
     this._cursorOwner = '';
-    this.cursor?.clear?.({ preserveInk: true });
+    this.cursor?.clear?.({ preserveInk, preserveCursor });
   }
 
   clearMarkers() {
@@ -314,7 +314,7 @@ export class ShowAttentionController {
     this._activeRequest = Object.freeze({ ...request });
 
     if (mode === 'marker') {
-      this.clearTransient('replaced');
+      this.clearTransient('replaced', { preserveInk: true, preserveCursor: true });
       let annotation = request.annotation
         || {
           ...(request.intent === undefined ? {} : { intent: request.intent }),
@@ -342,7 +342,7 @@ export class ShowAttentionController {
       return this._animate({ mode, target, receipt, render, onSettled, metadata });
     }
 
-    this.clearTransient('replaced');
+    this.clearTransient('replaced', { preserveInk: true, preserveCursor: true });
     let receipt;
     if (mode === 'native-selection') {
       let handle = this.selectText?.(target, request.selection || request);
@@ -381,7 +381,7 @@ export class ShowAttentionController {
   }
 
   dispose() {
-    this.clearTransient('disposed');
+    this.clearTransient('disposed', { preserveInk: false, preserveCursor: false });
     this.clearMarkers();
     this._activeRequest = null;
   }

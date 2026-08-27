@@ -2288,6 +2288,14 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
       : defaultCursorPoint(viewport);
   }
 
+  function holdCursor(viewport, point = null) {
+    let held = point
+      ? clampPresenterPoint(point, viewport)
+      : currentCursorPoint(viewport);
+    setCursor(held.x, held.y);
+    return held;
+  }
+
   function runRenderLoop() {
     if (renderLoopId) return;
     function tick(now) {
@@ -2349,7 +2357,7 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
       } else if (projected.annotation?.cursor) {
         setCursor(projected.annotation.cursor.x, projected.annotation.cursor.y);
       } else {
-        cursor.style.opacity = '0';
+        holdCursor(viewport);
       }
 
       let needsNextFrame = false;
@@ -2722,8 +2730,10 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
       setCursor(projected.cursor.x, projected.cursor.y);
     } else if (mode === 'rectangle-selection' && projected.focus.cursor?.visible) {
       setCursor(projected.focus.cursor.x, projected.focus.cursor.y);
+    } else if (projected.focus.dragHandle?.visible) {
+      setCursor(projected.focus.dragHandle.x, projected.focus.dragHandle.y);
     } else {
-      cursor.style.opacity = '0';
+      holdCursor(viewport);
     }
 
     return {
@@ -2877,13 +2887,13 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
       ink.classList.remove('is-inking');
     }
 
+    holdCursor(viewport, { x: zone.x, y: zone.y });
     if (inRange && projected.click.visible) {
       clickHalo.style.left = `${projected.click.x}px`;
       clickHalo.style.top = `${projected.click.y}px`;
       clickHalo.style.transform = `translate(-50%, -50%) scale(${projected.click.scale})`;
       clickHalo.style.opacity = projected.click.opacity;
       clickHalo.style.display = 'block';
-      setCursor(projected.cursor.x, projected.cursor.y);
     } else {
       clickHalo.style.display = 'none';
     }
@@ -2988,8 +2998,8 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
     inkPath.setAttribute('d', pathD);
     ink.dataset.renderMode = 'ribbon';
     ink.classList.add('is-inking');
-    if (frame.ownsCursor !== false && progress < 1) setCursor(tip.x, tip.y);
-    else cursor.style.opacity = '0';
+    if (frame.ownsCursor !== false) setCursor(tip.x, tip.y);
+    else holdCursor(viewport);
 
     return {
       presented: true,
@@ -3338,8 +3348,11 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
     }
     if (!suppressUnsafe && cursorPoint) {
       setCursor(cursorPoint.x, cursorPoint.y);
+    } else if (!suppressUnsafe && frame.ownsCursor !== false && strokePoints.length) {
+      let terminalPoint = strokePoints.at(-1);
+      setCursor(terminalPoint.x, terminalPoint.y);
     } else {
-      cursor.style.opacity = '0';
+      holdCursor(viewport);
     }
 
     let pathDigest = 2166136261;
@@ -3423,9 +3436,16 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
     cancelClick();
     abortCurrentAction();
     let preservedInk = opts.preserveInk === true && renderAccumulatedAnnotations();
+    let preservedCursor = opts.preserveCursor === true;
     if (opts.preserveInk !== true) clearAccumulatedAnnotations();
-    overlay.classList.toggle('is-visible', preservedInk);
-    overlay.classList.toggle('is-paused', !preservedInk);
+    hideMarqueeFrame();
+    clickHalo.style.display = 'none';
+    cursor.classList.remove('is-inking');
+    if (preservedCursor) holdCursor(resolveViewport());
+    else cursor.style.opacity = '0';
+    let preserved = preservedInk || preservedCursor;
+    overlay.classList.toggle('is-visible', preserved);
+    overlay.classList.toggle('is-paused', !preserved);
   }
 
   function dispose() {
