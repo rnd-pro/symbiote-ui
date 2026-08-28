@@ -2716,62 +2716,108 @@ export function hydrateMediaStudioPreviewPanel(root, options = {}) {
   return controller;
 }
 
+/**
+ * @typedef {object} MediaStudioTimelineHydration
+ * @property {number} fps
+ * @property {number} duration
+ * @property {Array} tracks
+ * @property {Element|null} host
+ * @property {object} data
+ * @property {Promise<boolean>} ready
+ * @property {Error|null} error
+ * @property {() => void} dispose
+ */
+
+/**
+ * Hydrate one timeline projection and bind its host-owned event callbacks.
+ * Rehydration disposes the previous binding before applying the new projection.
+ *
+ * @param {ParentNode|Element} root
+ * @param {object} [options]
+ * @returns {MediaStudioTimelineHydration|null}
+ */
 export function hydrateMediaStudioTimelinePanel(root, options = {}) {
   let host = root?.matches?.('[data-media-studio-timeline-editor]')
     ? root
     : root?.querySelector?.('[data-media-studio-timeline-editor]');
   if (!host) return null;
-  let hydrationEpoch = Math.max(0, Number(host.__snMediaStudioTimelineEpoch) || 0) + 1;
-  host.__snMediaStudioTimelineEpoch = hydrationEpoch;
-  let isCurrent = () => host.__snMediaStudioTimelineEpoch === hydrationEpoch;
+  host.__snMediaStudioTimelineHydration?.dispose?.();
   let data = normalizeMediaStudioTimelineData(options);
   let currentFrame = Math.round(finiteNumber(options.currentFrame ?? options.frame, 0, 0, data.duration));
+  let listeners = new Map();
+  let abortController = new AbortController();
+  let disposedReady = new Promise((resolve) => {
+    abortController.signal.addEventListener('abort', () => resolve(false), { once: true });
+  });
+  let controller = {
+    ...data,
+    host,
+    data,
+    ready: Promise.resolve(false),
+    error: null,
+    dispose() {
+      if (abortController.signal.aborted) return;
+      abortController.abort();
+      for (let [type, handler] of listeners) host.removeEventListener?.(type, handler);
+      listeners.clear();
+      if (host.__snMediaStudioTimelineHydration === controller) {
+        delete host.__snMediaStudioTimelineHydration;
+      }
+    },
+  };
+  host.__snMediaStudioTimelineHydration = controller;
+  let isCurrent = () => !abortController.signal.aborted
+    && host.__snMediaStudioTimelineHydration === controller;
   let bindEvents = () => {
-    if (typeof host.addEventListener !== 'function') return;
-    let previous = host.__snMediaStudioTimelineHandlers || {};
-    if (previous.playhead && typeof host.removeEventListener === 'function') {
-      host.removeEventListener('playhead-change', previous.playhead);
+    if (typeof host.addEventListener !== 'function' || listeners.size) return;
+    let bindings = [
+      ['playhead-change', options.onPlayheadChange],
+      ['transport-change', options.onTransportChange],
+      ['clip-move', options.onClipMove],
+    ];
+    for (let [type, callback] of bindings) {
+      if (typeof callback !== 'function') continue;
+      let handler = (event) => callback(event?.detail || {}, event);
+      listeners.set(type, handler);
+      host.addEventListener(type, handler);
     }
-    if (previous.transport && typeof host.removeEventListener === 'function') {
-      host.removeEventListener('transport-change', previous.transport);
-    }
-    let next = {};
-    if (typeof options.onPlayheadChange === 'function') {
-      next.playhead = (event) => options.onPlayheadChange(event?.detail || {}, event);
-      host.addEventListener('playhead-change', next.playhead);
-    }
-    if (typeof options.onTransportChange === 'function') {
-      next.transport = (event) => options.onTransportChange(event?.detail || {}, event);
-      host.addEventListener('transport-change', next.transport);
-    }
-    host.__snMediaStudioTimelineHandlers = next;
   };
   let load = () => {
     if (!isCurrent() || typeof host.loadTimeline !== 'function') return false;
-    bindEvents();
     host.loadTimeline(data);
-    try { host.setFrame?.(currentFrame, { silent: true }); } catch {}
-    if (data.focusFrame !== null) {
-      try { host.focusFrame?.(data.focusFrame); } catch {}
-    }
+    host.setFrame?.(currentFrame, { silent: true });
+    if (data.focusFrame !== null) host.focusFrame?.(data.focusFrame);
+    bindEvents();
     return true;
   };
-  if (load()) return data;
+
   try {
-    import('../timeline/TimelineEditor/TimelineEditor.js')
-      .then(() => {
+    if (load()) {
+      controller.ready = Promise.resolve(true);
+      return controller;
+    }
+    let operation = import('../timeline/TimelineEditor/TimelineEditor.js')
+      .then(async () => {
         if (!isCurrent()) return false;
         let registry = globalThis.customElements || globalThis.window?.customElements;
         let ready = registry?.whenDefined?.('sn-timeline-editor');
-        if (ready && typeof ready.then === 'function') return ready.then(() => load());
-        return load();
-      })
-      .then((loaded) => {
-        if (!loaded && isCurrent()) globalThis.setTimeout?.(load, 0);
-      })
-      .catch(() => {});
-  } catch {}
-  return data;
+        if (ready && typeof ready.then === 'function') await ready;
+        if (!isCurrent()) return false;
+        let loaded = load();
+        if (!loaded && isCurrent()) {
+          throw new Error('Timeline editor hydration completed without a loadTimeline() surface.');
+        }
+        return loaded;
+      });
+    controller.ready = Promise.race([operation, disposedReady]);
+    controller.ready.catch((error) => {
+      if (isCurrent()) controller.error = error;
+    });
+  } catch (error) {
+    controller.dispose();
+    throw error;
+  }
+  return controller;
 }
 
 function inspectorRows(rows = []) {

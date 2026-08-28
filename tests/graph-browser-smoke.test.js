@@ -1215,6 +1215,105 @@ async function evaluateFlowScrollDragSmoke(page) {
   return result.result.value;
 }
 
+async function evaluateShowVisualSettlementSmoke(page) {
+  const expression = String.raw`
+    (async () => {
+      const { waitForShowVisualSettlement } = await import('/chat/show-readiness.js');
+      const warnings = [];
+      const errors = [];
+      const originalWarn = console.warn.bind(console);
+      const onError = (event) => errors.push(event.error?.stack || event.message || String(event));
+      const onRejection = (event) => errors.push(event.reason?.stack || String(event.reason));
+      console.warn = (...args) => {
+        warnings.push(args.map(String).join(' '));
+        originalWarn(...args);
+      };
+      addEventListener('error', onError);
+      addEventListener('unhandledrejection', onRejection);
+
+      const scroller = document.createElement('div');
+      scroller.style.cssText = [
+        'position:fixed',
+        'left:20px',
+        'top:20px',
+        'width:320px',
+        'height:180px',
+        'overflow:auto',
+        'scroll-behavior:smooth',
+        'z-index:2147480000'
+      ].join(';');
+      const content = document.createElement('div');
+      content.style.cssText = 'position:relative;height:1400px;width:100%';
+      const target = document.createElement('button');
+      target.textContent = 'Visual settlement target';
+      target.style.cssText = 'position:absolute;left:20px;top:1040px;width:220px;height:44px';
+      content.append(target);
+      scroller.append(content);
+      document.body.append(scroller);
+
+      const records = [];
+      let sampling = true;
+      let scrollEndAtMs = null;
+      let sample = (timestamp) => {
+        const rect = target.getBoundingClientRect();
+        records.push({ timestamp, scrollTop: scroller.scrollTop, targetTop: rect.top });
+        if (sampling) requestAnimationFrame(sample);
+      };
+      scroller.addEventListener('scrollend', (event) => {
+        scrollEndAtMs = event.timeStamp;
+      }, { once: true });
+      requestAnimationFrame(sample);
+
+      let receipt;
+      try {
+        receipt = await waitForShowVisualSettlement(target, {
+          document,
+          inactivityMs: 5000,
+          start: () => target.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' }),
+        });
+        const resolvedRecordIndex = records.length;
+        for (let index = 0; index < 6; index += 1) {
+          await new Promise((resolve) => requestAnimationFrame(resolve));
+        }
+        sampling = false;
+        const terminal = records[resolvedRecordIndex - 1];
+        const afterResolution = records.slice(resolvedRecordIndex);
+        return {
+          receipt,
+          scrollEndAtMs,
+          resolvedRecordIndex,
+          recordCount: records.length,
+          terminal,
+          afterResolution,
+          preResolutionMovingFrames: records.slice(1, resolvedRecordIndex).filter((record, index) => {
+            const before = records[index];
+            return Math.abs(record.scrollTop - before.scrollTop) > 0.1
+              || Math.abs(record.targetTop - before.targetTop) > 0.1;
+          }).length,
+          warnings,
+          errors,
+        };
+      } finally {
+        sampling = false;
+        scroller.remove();
+        console.warn = originalWarn;
+        removeEventListener('error', onError);
+        removeEventListener('unhandledrejection', onRejection);
+      }
+    })()
+  `;
+
+  const result = await withTimeout(page.send('Runtime.evaluate', {
+    expression,
+    awaitPromise: true,
+    returnByValue: true,
+  }), 15000, 'show visual settlement Runtime.evaluate');
+  if (result.exceptionDetails) {
+    throw new Error(result.exceptionDetails.text || 'Show visual settlement evaluation failed');
+  }
+  return result.result.value;
+}
+
 async function evaluateNodeCanvasMultiFocusSmoke(page) {
   const expression = String.raw`
     (async () => {
@@ -2598,6 +2697,28 @@ test('node-canvas flow-scroll drag keeps repeated pan gestures continuous', { ti
       Math.abs(smoke.afterSecond.contentTop - smoke.afterFirst.contentTop) <= 16,
       JSON.stringify(smoke, null, 2)
     );
+    await page.close();
+    page = await withTimeout(
+      openPage(chromeSession.endpoint, `${server.url}/demo/standalone-theme-fixture.html?v=show-visual-settlement-smoke`),
+      22000,
+      'show visual settlement page open'
+    );
+    const settlement = await evaluateShowVisualSettlementSmoke(page);
+    assert.equal(settlement.receipt.status, 'settled', JSON.stringify(settlement, null, 2));
+    assert.equal(settlement.receipt.motion, 'scroll', JSON.stringify(settlement, null, 2));
+    assert.equal(settlement.receipt.reason, 'scrollend-and-stable', JSON.stringify(settlement, null, 2));
+    assert.equal(settlement.receipt.nativeScrollEndSupported, true, JSON.stringify(settlement, null, 2));
+    assert.ok(settlement.receipt.scrollEvents > 0, JSON.stringify(settlement, null, 2));
+    assert.ok(settlement.receipt.scrollEndEvents > 0, JSON.stringify(settlement, null, 2));
+    assert.ok(Number.isFinite(settlement.scrollEndAtMs), JSON.stringify(settlement, null, 2));
+    assert.ok(settlement.preResolutionMovingFrames >= 5, JSON.stringify(settlement, null, 2));
+    assert.ok(settlement.afterResolution.length >= 5, JSON.stringify(settlement, null, 2));
+    for (const record of settlement.afterResolution) {
+      assert.ok(Math.abs(record.scrollTop - settlement.terminal.scrollTop) <= 0.1, JSON.stringify(settlement, null, 2));
+      assert.ok(Math.abs(record.targetTop - settlement.terminal.targetTop) <= 0.1, JSON.stringify(settlement, null, 2));
+    }
+    assert.deepEqual(settlement.warnings, [], JSON.stringify(settlement, null, 2));
+    assert.deepEqual(settlement.errors, [], JSON.stringify(settlement, null, 2));
   } finally {
     await page?.close?.();
     await closeChromeSession(chromeSession);

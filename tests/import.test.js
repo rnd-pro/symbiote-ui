@@ -166,6 +166,37 @@ test('NodeCanvas registry and CEM mirror snapshot adoption and layout lifecycle'
   }
 });
 
+test('TimelineEditor registry and CEM mirror the semantic clip move contract', async () => {
+  let { getComponent } = await import('../manifest/index.js');
+  let component = getComponent('sn-timeline-editor');
+  let customElements = JSON.parse(await readFile(new URL('../custom-elements.json', import.meta.url), 'utf8'));
+  let declaration = customElements.modules
+    .flatMap((module) => module.declarations || [])
+    .find((item) => item.tagName === 'sn-timeline-editor');
+  let expectedDetail = [
+    'clipId',
+    'trackId',
+    'start',
+    'end',
+    'previousStart',
+    'previousEnd',
+    'deltaFrames',
+    'fps',
+    'source',
+    'phase',
+  ];
+  let registryEvent = component.contract.events.find((event) => event.name === 'clip-move');
+  let cemEvent = declaration.metadata.contract.events.find((event) => event.name === 'clip-move');
+  let source = await readFile(new URL('../timeline/TimelineEditor/TimelineEditor.js', import.meta.url), 'utf8');
+
+  assert.deepEqual(registryEvent.detail.map((item) => item.name), expectedDetail);
+  assert.deepEqual(cemEvent.detail.map((item) => item.name), expectedDetail);
+  assert.match(registryEvent.description, /bubbling, composed, and cancelable/);
+  assert.match(declaration.events.find((event) => event.name === 'clip-move').description, /cancelable/);
+  assert.match(component.agent.dataOwnership, /host-owned timeline data/);
+  assert.match(source, /emit\(this, 'clip-move',[\s\S]*?source: 'pointer',[\s\S]*?phase: 'commit',[\s\S]*?cancelable: true/);
+});
+
 test('locale auto mode resolves browser preferences from the library contract', async () => {
   let {
     applyLocalizationToDocument,
@@ -2004,7 +2035,7 @@ test('discover exposes the standalone package contract', async () => {
   assert.ok(codeBlockDeclaration.metadata.contract.themeAliases.includes('--sn-code-gutter-color'));
   assert.ok(sourceEditorDeclaration.agent.webmcp.toolNames.includes('source_editor_save'));
   assert.ok(timelineEditorDeclaration);
-  assert.ok(timelineEditorDeclaration.componentDescription.includes('multi-track timeline editor'));
+  assert.ok(timelineEditorDeclaration.componentDescription.includes('multi-track timeline projection'));
   assert.ok(timelineEditorDeclaration.metadata.contract.methods.some((method) => method.name === 'loadTimeline'));
   assert.ok(checkboxDeclaration.componentDescription.includes('mixed state'));
   assert.ok(checkboxDeclaration.metadata.contract.themeAliases.includes('--sn-selection-checked-bg'));

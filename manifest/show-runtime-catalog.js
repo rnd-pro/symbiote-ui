@@ -23,6 +23,7 @@ export const SHOW_RUNTIME_CONTRACT = Object.freeze({
     'progressive-native-selection',
     'accumulating-marker-gestures',
     'dom-and-media-readiness',
+    'visual-settlement-before-attention',
     'meaningful-interaction-auto-pause',
     'cancelable-hidden-target-action-lifecycle',
     'explicit-resume',
@@ -123,6 +124,14 @@ export const SHOW_RUNTIME_CONTRACT = Object.freeze({
     cancellation: Object.freeze(['replacement', 'cancel', 'seek-reset', 'branch-reset', 'dispose']),
     reducedMotion: 'immediate-final-semantic-state',
     consumerInput: Object.freeze(['intent', 'target', 'style', 'seed', 'gestureId', 'cueTimeMs', 'mediaTimeMs']),
+  }),
+  visualSettlement: Object.freeze({
+    helper: 'waitForShowVisualSettlement',
+    ordering: 'reveal-or-scroll-then-terminal-settlement-then-attention',
+    scrollCompletion: 'latest-native-scrollend-plus-stable-rect-and-offsets',
+    transformCompletion: 'stable-target-rect',
+    timeout: 'progress-aware-inactivity-bound',
+    cancellation: 'abort-signal-owned',
   }),
   actionLifecycle: Object.freeze({
     version: 'symbiote-show-action-lifecycle-v1',

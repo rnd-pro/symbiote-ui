@@ -3243,17 +3243,17 @@ export let COMPONENTS = [
     className: 'TimelineEditor',
     module: 'timeline/TimelineEditor/TimelineEditor.js',
     category: 'timeline',
-    description: 'NLE-style multi-track timeline editor with playhead, clips, zoom, and transport events.',
+    description: 'Canvas-backed multi-track timeline projection with accessible semantic clip authoring, playhead, zoom, and transport events.',
     agent: {
-      semanticRole: 'multi-track timeline editor',
-      usage: 'Use as the bottom timeline surface in media editors, video workflows, and render review workspaces.',
-      dataOwnership: 'component-owned playhead and selection state with host-supplied timeline data',
+      semanticRole: 'provider-neutral multi-track timeline projection and clip-move intent surface',
+      usage: 'Use as the bottom timeline surface in media editors, video workflows, and render review workspaces; hosts decide whether and how to apply emitted clip-move intents.',
+      dataOwnership: 'host-owned timeline data; the component owns ephemeral playhead, selection, and drag-preview state and never mutates source clips',
     },
     contract: {
       status: 'draft',
       schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
-      capabilities: ['timeline-editor', 'nle-timeline', 'multi-track', 'playhead', 'media-editing'],
+      capabilities: ['timeline-editor', 'nle-timeline', 'multi-track', 'playhead', 'media-editing', 'semantic-clip-authoring', 'pointer-capture'],
       properties: [
         { name: 'currentFrame', type: 'number', description: 'Current playhead frame.' },
         { name: 'currentTime', type: 'number', description: 'Current playhead time in seconds.' }
@@ -3264,7 +3264,22 @@ export let COMPONENTS = [
       events: [
         { name: 'playhead-change', description: 'Emits when the playhead frame changes.', detail: [{ name: 'frame', type: 'number' }, { name: 'time', type: 'number' }] },
         { name: 'clip-select', description: 'Emits when a clip is selected.', detail: [{ name: 'clipId', type: 'string' }, { name: 'trackId', type: 'string' }, { name: 'clip', type: 'object' }] },
-        { name: 'clip-move', description: 'Emits when a clip range changes.', detail: [{ name: 'clipId', type: 'string' }, { name: 'start', type: 'number' }, { name: 'end', type: 'number' }] },
+        {
+          name: 'clip-move',
+          description: 'Emits one bubbling, composed, and cancelable host-owned clip move intent when an editable pointer drag commits; hosts apply the detail only when not default-prevented.',
+          detail: [
+            { name: 'clipId', type: 'string' },
+            { name: 'trackId', type: 'string' },
+            { name: 'start', type: 'number' },
+            { name: 'end', type: 'number' },
+            { name: 'previousStart', type: 'number' },
+            { name: 'previousEnd', type: 'number' },
+            { name: 'deltaFrames', type: 'number' },
+            { name: 'fps', type: 'number' },
+            { name: 'source', type: "'pointer'" },
+            { name: 'phase', type: "'commit'" },
+          ],
+        },
         { name: 'transport-change', description: 'Emits when timeline playback transport changes.', detail: [{ name: 'action', type: 'string' }] },
         { name: 'zoom-change', description: 'Emits when timeline zoom changes.', detail: [{ name: 'pixelsPerFrame', type: 'number' }] }
       ],

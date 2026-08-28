@@ -73,6 +73,14 @@ test('Show manifest, schema catalog, and JSON file expose one synchronized publi
     reducedMotion: 'immediate-final-semantic-state',
     consumerInput: ['intent', 'target', 'style', 'seed', 'gestureId', 'cueTimeMs', 'mediaTimeMs'],
   });
+  assert.deepEqual(SHOW_RUNTIME_CONTRACT.visualSettlement, {
+    helper: 'waitForShowVisualSettlement',
+    ordering: 'reveal-or-scroll-then-terminal-settlement-then-attention',
+    scrollCompletion: 'latest-native-scrollend-plus-stable-rect-and-offsets',
+    transformCompletion: 'stable-target-rect',
+    timeout: 'progress-aware-inactivity-bound',
+    cancellation: 'abort-signal-owned',
+  });
   assert.deepEqual(SHOW_RUNTIME_CONTRACT.actionLifecycle.phases, ['inspect', 'reveal', 'transition', 'target', 'act', 'restore']);
   assert.equal(SHOW_RUNTIME_CONTRACT.actionLifecycle.restoration, 'only-provider-owned-change-without-user-supersession');
   assert.ok(SHOW_RUNTIME_CONTRACT.capabilities.includes('provider-owned-presenter-animation'));
@@ -81,6 +89,7 @@ test('Show manifest, schema catalog, and JSON file expose one synchronized publi
   assert.ok(SHOW_RUNTIME_CONTRACT.capabilities.includes('bounded-owned-media-seek'));
   assert.ok(SHOW_RUNTIME_CONTRACT.capabilities.includes('atomic-owned-media-load-generation'));
   assert.ok(SHOW_RUNTIME_CONTRACT.capabilities.includes('runtime-owned-media-playback-clock'));
+  assert.ok(SHOW_RUNTIME_CONTRACT.capabilities.includes('visual-settlement-before-attention'));
 });
 
 test('show-event-v1 validates normalized canonical marker and media events', () => {

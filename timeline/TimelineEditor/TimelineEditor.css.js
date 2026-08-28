@@ -272,6 +272,39 @@ let css = /*css*/`
     display: block;
   }
 
+  .te-clip-hit-layer {
+    position: absolute;
+    left: 0;
+    z-index: 3;
+    pointer-events: none;
+  }
+
+  .te-clip-hit {
+    position: absolute;
+    display: block;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: var(--te-clip-radius);
+    background: none;
+    pointer-events: auto;
+    touch-action: manipulation;
+  }
+
+  .te-clip-hit[data-draggable="true"] {
+    cursor: grab;
+    touch-action: none;
+  }
+
+  sn-timeline-editor[data-clip-dragging] .te-clip-hit[data-draggable="true"] {
+    cursor: grabbing;
+  }
+
+  .te-clip-hit:focus-visible {
+    outline: 2px solid var(--sn-sys-accent);
+    outline-offset: 1px;
+  }
+
   .te-playhead {
     position: absolute;
     top: 0;

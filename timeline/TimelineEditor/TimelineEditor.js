@@ -11,7 +11,8 @@
  * Events:
  * - playhead-change: { frame: number, time: number }
  * - clip-select: { clipId: string, trackId: string }
- * - clip-move: { clipId: string, start: number, end: number }
+ * - clip-move: { clipId, trackId, start, end, previousStart, previousEnd,
+ *   deltaFrames, fps, source: 'pointer', phase: 'commit' }
  * - transport-change: { action: 'play' | 'pause' | 'stop' }
  * - zoom-change: { pixelsPerFrame: number }
  */
@@ -33,8 +34,13 @@ const TRACK_COLOR_VARS = {
   default: '--sn-dom-timeline-clip-default',
 };
 
-function emit(el, type, detail = {}) {
-  el.dispatchEvent(new CustomEvent(type, { bubbles: true, composed: true, detail }));
+function emit(el, type, detail = {}, options = {}) {
+  return el.dispatchEvent(new CustomEvent(type, {
+    bubbles: true,
+    composed: true,
+    cancelable: options.cancelable === true,
+    detail,
+  }));
 }
 
 function finiteNumber(value, fallback = 0) {
@@ -90,6 +96,10 @@ function isSequenceClip(clip = {}) {
     || clip.kind === 'sequence'
     || clip.sequenceFormat
     || Number(clip.sampleCount || clip.frameCount || 0) > 1;
+}
+
+function isEditableClip(clip = {}) {
+  return clip.generated !== true && clip.editable !== false;
 }
 
 function normalizeMarkerFrame(marker, fps) {
@@ -186,6 +196,15 @@ export class TimelineEditor extends Symbiote {
   /** @type {Record<string, string>} */
   #theme = {};
 
+  /** @type {Map<string, HTMLButtonElement>} */
+  #clipHitTargets = new Map();
+
+  /** @type {object|null} */
+  #clipDrag = null;
+
+  /** @type {{ target: Element }|null} */
+  #suppressedClipClick = null;
+
   init$ = {
     timeDisplay: '00:00:00',
     playing: false,
@@ -201,6 +220,12 @@ export class TimelineEditor extends Symbiote {
 
     this.addEventListener('click', this.#onTransportClick);
     this.ref.timelineContent?.addEventListener('click', this.#onTimelineClick);
+    this.ref.clipHitLayer?.addEventListener('click', this.#onClipHitClick);
+    this.ref.clipHitLayer?.addEventListener('pointerdown', this.#onClipPointerDown);
+    this.ref.clipHitLayer?.addEventListener('pointermove', this.#onClipPointerMove);
+    this.ref.clipHitLayer?.addEventListener('pointerup', this.#onClipPointerUp);
+    this.ref.clipHitLayer?.addEventListener('pointercancel', this.#onClipPointerCancel);
+    this.ref.clipHitLayer?.addEventListener('lostpointercapture', this.#onClipLostPointerCapture);
 
     this.#resizeObserver = new ResizeObserver(() => {
       if (this.#data) this.#scheduleRender(true);
@@ -212,6 +237,16 @@ export class TimelineEditor extends Symbiote {
     super.disconnectedCallback?.();
     this.removeEventListener('click', this.#onTransportClick);
     this.ref.timelineContent?.removeEventListener('click', this.#onTimelineClick);
+    this.ref.clipHitLayer?.removeEventListener('click', this.#onClipHitClick);
+    this.ref.clipHitLayer?.removeEventListener('pointerdown', this.#onClipPointerDown);
+    this.ref.clipHitLayer?.removeEventListener('pointermove', this.#onClipPointerMove);
+    this.ref.clipHitLayer?.removeEventListener('pointerup', this.#onClipPointerUp);
+    this.ref.clipHitLayer?.removeEventListener('pointercancel', this.#onClipPointerCancel);
+    this.ref.clipHitLayer?.removeEventListener(
+      'lostpointercapture',
+      this.#onClipLostPointerCapture,
+    );
+    this.#cancelClipDrag();
     this.#stopPlayback();
     if (this.#renderId) cancelAnimationFrame(this.#renderId);
     this.#renderId = null;
@@ -258,11 +293,100 @@ export class TimelineEditor extends Symbiote {
     this.#handleTimelineClick(e);
   };
 
+  #onClipHitClick = (event) => {
+    let target = event.target.closest?.('.te-clip-hit');
+    if (!target) return;
+    if (this.#suppressedClipClick?.target === target) {
+      this.#suppressedClipClick = null;
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    let match = this.#resolveClipHit(target);
+    if (!match) return;
+    event.stopPropagation();
+    this.#selectedClipId = match.clip.id;
+    let frame = Number.isFinite(Number(event.clientX)) && Number(event.clientX) > 0
+      ? this.#frameAtClientX(Number(event.clientX))
+      : match.clip.start;
+    this.#setPlayhead(frame);
+    this.#scheduleRender();
+    emit(this, 'clip-select', {
+      clipId: match.clip.id,
+      trackId: match.track.id,
+      clip: match.clip,
+    });
+  };
+
+  #onClipPointerDown = (event) => {
+    this.#suppressedClipClick = null;
+    if (this.#clipDrag || event.isPrimary === false || event.button !== 0) return;
+    let target = event.target.closest?.('.te-clip-hit');
+    let match = this.#resolveClipHit(target);
+    if (!match || !isEditableClip(match.clip)) return;
+    event.preventDefault();
+    target.setPointerCapture(event.pointerId);
+    this.#selectedClipId = match.clip.id;
+    this.#clipDrag = {
+      pointerId: event.pointerId,
+      target,
+      clip: match.clip,
+      trackId: match.track.id,
+      startClientX: event.clientX,
+      previousStart: match.clip.start,
+      previousEnd: match.clip.end,
+      start: match.clip.start,
+      end: match.clip.end,
+      deltaFrames: 0,
+    };
+    this.toggleAttribute('data-clip-dragging', true);
+    this.#scheduleRender();
+  };
+
+  #onClipPointerMove = (event) => {
+    if (!this.#ownsClipPointer(event)) return;
+    event.preventDefault();
+    this.#updateClipDrag(event.clientX);
+  };
+
+  #onClipPointerUp = (event) => {
+    if (!this.#ownsClipPointer(event)) return;
+    event.preventDefault();
+    this.#updateClipDrag(event.clientX);
+    let drag = this.#clipDrag;
+    this.#finishClipDrag();
+    if (!drag || drag.deltaFrames === 0) return;
+    this.#suppressedClipClick = { target: drag.target };
+    emit(this, 'clip-move', {
+      clipId: drag.clip.id,
+      trackId: drag.trackId,
+      start: drag.start,
+      end: drag.end,
+      previousStart: drag.previousStart,
+      previousEnd: drag.previousEnd,
+      deltaFrames: drag.deltaFrames,
+      fps: this.#data.fps,
+      source: 'pointer',
+      phase: 'commit',
+    }, { cancelable: true });
+  };
+
+  #onClipPointerCancel = (event) => {
+    if (!this.#ownsClipPointer(event)) return;
+    this.#cancelClipDrag();
+  };
+
+  #onClipLostPointerCapture = (event) => {
+    if (!this.#ownsClipPointer(event)) return;
+    this.#cancelClipDrag();
+  };
+
   /**
    * Load timeline data.
    * @param {{ fps: number, duration: number, tracks: Array<{ id: string, type?: string, label: string, clips: Array<{ id: string, start?: number, end?: number, from?: number, duration?: number, label?: string }> }>, markers?: Array<{ frame?: number, time?: number, label?: string }|number> }} data
    */
   loadTimeline(data) {
+    this.#cancelClipDrag();
     this.#stopPlayback();
     this.#data = normalizeTimelineData(data);
     this.#playheadFrame = 0;
@@ -508,6 +632,58 @@ export class TimelineEditor extends Symbiote {
     this.#renderTracks();
   }
 
+  #resolveClipHit(target) {
+    if (!target || !this.#data) return null;
+    let trackId = target.getAttribute('data-track-id');
+    let clipId = target.getAttribute('data-clip-id');
+    let track = this.#data.tracks.find((item) => item.id === trackId);
+    let clip = track?.clips?.find((item) => item.id === clipId);
+    return track && clip ? { target, track, clip } : null;
+  }
+
+  #frameAtClientX(clientX) {
+    let scroll = this.ref.timelineScroll;
+    if (!scroll || !this.#data) return 0;
+    let rect = scroll.getBoundingClientRect();
+    let x = Math.max(0, clientX - rect.left + scroll.scrollLeft);
+    return Math.max(0, Math.min(Math.round(x / this.#pixelsPerFrame), this.#data.duration));
+  }
+
+  #ownsClipPointer(event) {
+    return Boolean(this.#clipDrag)
+      && event.isPrimary !== false
+      && event.pointerId === this.#clipDrag.pointerId;
+  }
+
+  #updateClipDrag(clientX) {
+    let drag = this.#clipDrag;
+    if (!drag || !this.#data) return;
+    let requestedDelta = Math.round((clientX - drag.startClientX) / this.#pixelsPerFrame);
+    let minimumDelta = -drag.previousStart;
+    let maximumDelta = this.#data.duration - drag.previousEnd;
+    let deltaFrames = Math.max(minimumDelta, Math.min(requestedDelta, maximumDelta));
+    if (deltaFrames === drag.deltaFrames) return;
+    drag.deltaFrames = deltaFrames;
+    drag.start = Math.round(drag.previousStart + deltaFrames);
+    drag.end = Math.round(drag.previousEnd + deltaFrames);
+    this.#scheduleRender();
+  }
+
+  #finishClipDrag() {
+    let drag = this.#clipDrag;
+    this.#clipDrag = null;
+    this.toggleAttribute('data-clip-dragging', false);
+    if (drag?.target.hasPointerCapture?.(drag.pointerId)) {
+      drag.target.releasePointerCapture(drag.pointerId);
+    }
+    this.#scheduleRender();
+  }
+
+  #cancelClipDrag() {
+    if (!this.#clipDrag) return;
+    this.#finishClipDrag();
+  }
+
   #scheduleRender(updateTheme = false) {
     if (this.#renderId) cancelAnimationFrame(this.#renderId);
     this.#renderId = requestAnimationFrame(() => {
@@ -550,6 +726,7 @@ export class TimelineEditor extends Symbiote {
     this.#layoutTimeline();
     this.#renderRuler();
     this.#renderTracks();
+    this.#syncClipHitTargets();
     this.#positionPlayhead();
     this.#syncHeaderScroll();
     this.#applyPendingFocusFrame();
@@ -584,6 +761,11 @@ export class TimelineEditor extends Symbiote {
     tracks.style.height = `${tracksH}px`;
     tracks.style.top = `${this.#metrics.rulerH}px`;
     if (this.ref.headersList) this.ref.headersList.style.height = `${tracksH}px`;
+    if (this.ref.clipHitLayer) {
+      this.ref.clipHitLayer.style.width = `${contentW}px`;
+      this.ref.clipHitLayer.style.height = `${tracksH}px`;
+      this.ref.clipHitLayer.style.top = `${this.#metrics.rulerH}px`;
+    }
 
     this.#resizeCanvas(ruler, contentW, this.#metrics.rulerH, dpr);
     this.#resizeCanvas(tracks, contentW, tracksH, dpr);
@@ -671,8 +853,12 @@ export class TimelineEditor extends Symbiote {
 
       let clipColor = this.#clipColor(track.type || 'default');
       for (let clip of track.clips || []) {
-        let cx = clip.start * this.#pixelsPerFrame;
-        let cw = Math.max(1, (clip.end - clip.start) * this.#pixelsPerFrame);
+        let preview = this.#clipDrag?.trackId === track.id
+          && this.#clipDrag.clip.id === clip.id
+          ? this.#clipDrag
+          : clip;
+        let cx = preview.start * this.#pixelsPerFrame;
+        let cw = Math.max(1, (preview.end - preview.start) * this.#pixelsPerFrame);
         let cy = y + 3;
         let ch = Math.max(1, trackH - 6);
         let isSelected = this.#selectedClipId === clip.id;
@@ -753,6 +939,46 @@ export class TimelineEditor extends Symbiote {
         ctx.stroke();
       }
       ctx.setLineDash([]);
+    }
+  }
+
+  #syncClipHitTargets() {
+    let layer = this.ref.clipHitLayer;
+    if (!layer || !this.#data) return;
+    let activeKeys = new Set();
+    this.#data.tracks.forEach((track, trackIndex) => {
+      for (let clip of track.clips || []) {
+        let key = `${track.id}\u0000${clip.id}`;
+        activeKeys.add(key);
+        let target = this.#clipHitTargets.get(key);
+        if (!target) {
+          target = document.createElement('button');
+          target.type = 'button';
+          target.className = 'te-clip-hit';
+          target.setAttribute('data-track-id', track.id);
+          target.setAttribute('data-clip-id', clip.id);
+          layer.append(target);
+          this.#clipHitTargets.set(key, target);
+        }
+        let preview = this.#clipDrag?.trackId === track.id
+          && this.#clipDrag.clip.id === clip.id
+          ? this.#clipDrag
+          : clip;
+        let editable = isEditableClip(clip);
+        let label = `${clip.label} clip on ${track.label} track`;
+        target.setAttribute('aria-label', editable ? `Move ${label}` : label);
+        target.setAttribute('aria-disabled', String(!editable));
+        target.setAttribute('data-draggable', String(editable));
+        target.style.left = `${preview.start * this.#pixelsPerFrame}px`;
+        target.style.top = `${trackIndex * this.#metrics.trackH + 3}px`;
+        target.style.width = `${Math.max(1, (preview.end - preview.start) * this.#pixelsPerFrame)}px`;
+        target.style.height = `${Math.max(1, this.#metrics.trackH - 6)}px`;
+      }
+    });
+    for (let [key, target] of this.#clipHitTargets) {
+      if (activeKeys.has(key)) continue;
+      target.remove();
+      this.#clipHitTargets.delete(key);
     }
   }
 

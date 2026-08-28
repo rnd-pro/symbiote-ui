@@ -219,6 +219,49 @@ the marker lifecycle.
   `data-collision-hidden`. Canvas uses its focused trace width and caches the
   result until graph geometry or selection changes; viewport-only transforms
   do not repeat collision detection.
+
+## Timeline Clip Authoring
+
+`sn-timeline-editor` renders host-owned timeline data and exposes an accessible
+semantic hit layer above its canvas-backed clips. A primary pointer drag uses
+pointer capture and renders only an ephemeral preview. It preserves the clip
+duration, clamps the preview to the timeline bounds, and projects integer frame
+positions. Clips with `generated: true` or `editable: false` remain visible and
+selectable but cannot be dragged.
+
+A successful pointerup emits exactly one bubbling, composed, and cancelable
+`clip-move` event:
+
+```js
+{
+  clipId,
+  trackId,
+  start,
+  end,
+  previousStart,
+  previousEnd,
+  deltaFrames,
+  fps,
+  source: 'pointer',
+  phase: 'commit',
+}
+```
+
+The component never writes the new range into the supplied clip. The host owns
+validation and persistence and applies the intent only when appropriate. A
+pointer cancellation, lost capture, disconnection, or timeline rehydration
+restores the original visual range and emits no `clip-move`. The compatibility
+click following a committed drag is suppressed so it cannot also select or seek.
+
+`hydrateMediaStudioTimelinePanel(root, options)` accepts an optional
+`onClipMove(detail, event)` callback alongside playhead and transport callbacks.
+Its additive result retains the normalized timeline data fields and exposes
+`{ host, data, ready, error, dispose }`. Rehydrating the same editor disposes the
+previous binding first; `dispose()` removes every listener and prevents a pending
+lazy import from applying data later. Product concepts such as speech anchors,
+project hashes, schedule dependencies, or persistence policy do not cross this
+library seam.
+
 ## Package Boundary
 
 `symbiote-ui` owns Web Components, UI/layout primitives, manifests, schemas, rules, tokens, themes, locale helpers, provider-facing graph metadata, WebMCP metadata, and `custom-elements.json`.

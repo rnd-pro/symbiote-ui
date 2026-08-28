@@ -29,6 +29,7 @@ export let timelineEditorTemplate = html`
       <div class="te-timeline-content" ref="timelineContent">
         <canvas class="te-ruler-canvas" ref="rulerCanvas"></canvas>
         <canvas class="te-tracks-canvas" ref="tracksCanvas"></canvas>
+        <div class="te-clip-hit-layer" ref="clipHitLayer"></div>
         <div class="te-playhead" ref="playhead"></div>
       </div>
     </div>

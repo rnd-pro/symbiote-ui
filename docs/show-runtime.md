@@ -41,7 +41,9 @@ Every canonical marker has a deterministic presenter gesture and receipt. Unknow
 
 ## Readiness, audio, and media
 
-`waitForShowDomReadiness()` waits for document readiness, fonts, a consumer-resolved DOM target, smooth centered scrolling, and media readiness. It awaits promise-returning platform scrolling when available, aborts every pending phase through `AbortSignal`, and reports typed timeout/resource errors instead of relying on fixed presentation sleeps.
+`waitForShowDomReadiness()` waits for document readiness, fonts, a consumer-resolved DOM target, smooth centered scrolling, terminal visual settlement, and media readiness. It attaches settlement observation before `scrollIntoView()`, treats the latest native `scrollend` as authoritative whenever scroll offsets actually move, and then requires both the target rectangle and every relevant scroll offset to remain stable. No-motion and transform-only transitions use the same rectangle-stability boundary without inventing scroll activity. If actual scrolling occurs on a platform without native `scrollend`, the operation reports `scrollend-unavailable` instead of installing a timer polyfill. The immutable `visualSettlement` receipt reports motion kind, reason, native capability, frame and event counts, terminal target geometry, and scroll offsets.
+
+Consumers that initiate a product-neutral reveal, panel transition, canvas motion, or viewer scroll themselves may call `waitForShowVisualSettlement(target, { start, signal })`. The provider invokes `start` only after attaching observers, owns one abortable animation-frame operation, and uses a progress-aware inactivity bound only as a failure boundary; it never sequences presentation with a fixed sleep. Attention begins only after this promise resolves, so scroll/reveal and marker, frame, cursor, or native-selection animation do not overlap.
 
 `ShowAudioArbiter` grants one audible source at a time. Audible media preempts and pauses speech before it begins. `ShowMediaController` exposes two canonical modes:
 
@@ -80,6 +82,7 @@ import {
   normalizeShowDirective,
   resolveShowAudioAnchor,
   waitForShowDomReadiness,
+  waitForShowVisualSettlement,
 } from 'symbiote-ui/chat/show-runtime';
 ```
 
