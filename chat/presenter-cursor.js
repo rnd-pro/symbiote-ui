@@ -2661,13 +2661,13 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
   function presentFocusFrame(el, frame = {}) {
     if (disposed) return { presented: false, reason: 'disposed' };
     if (!el || typeof el.getBoundingClientRect !== 'function') {
-      hideMarqueeFrame();
+      if (frame.planOnly !== true) hideMarqueeFrame();
       return { presented: false, reason: 'invalid-target' };
     }
     let viewport = resolveViewport(frame.viewport);
     let targetRect = resolvePresenterVisibleRect(el, viewport);
     if (!targetRect) {
-      hideMarqueeFrame();
+      if (frame.planOnly !== true) hideMarqueeFrame();
       return { presented: false, reason: 'hidden-target' };
     }
     let elapsedMs = Number(frame.elapsedMs);
@@ -2697,46 +2697,7 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
         : null,
     }, Math.max(0, elapsedMs), seed, viewport);
 
-    cancelTravel();
-    cancelDrag();
-    cancelGesture();
-    cancelClick();
-    showOverlay();
-    if (frame.preserveInk === true) renderAccumulatedAnnotations();
-    else {
-      inkPath.setAttribute('d', '');
-      ink.classList.remove('is-inking');
-    }
-    if (projected.focus.visible) {
-      marquee.classList.remove('pc-marquee-faded');
-      marquee.style.opacity = `${projected.focus.opacity}`;
-      marquee.style.transform = `translate(${projected.focus.left}px, ${projected.focus.top}px)`;
-      marquee.style.width = `${projected.focus.width}px`;
-      marquee.style.height = `${projected.focus.height}px`;
-      sizeMarqueeSvg(svg, [rectBlack, rectWhite], projected.focus.width, projected.focus.height);
-      rectBlack.style.strokeDashoffset = `${projected.focus.antsDashOffset}`;
-      rectWhite.style.strokeDashoffset = `${projected.focus.antsDashOffset - 4}`;
-    } else {
-      hideMarqueeFrame();
-    }
-    if (projected.focus.dragHandle?.visible) {
-      focusHandle.style.left = `${projected.focus.dragHandle.x}px`;
-      focusHandle.style.top = `${projected.focus.dragHandle.y}px`;
-      focusHandle.style.display = 'block';
-    } else {
-      focusHandle.style.display = 'none';
-    }
-    if (mode === 'cursor' && projected.cursor.visible) {
-      setCursor(projected.cursor.x, projected.cursor.y);
-    } else if (mode === 'rectangle-selection' && projected.focus.cursor?.visible) {
-      setCursor(projected.focus.cursor.x, projected.focus.cursor.y);
-    } else if (projected.focus.dragHandle?.visible) {
-      setCursor(projected.focus.dragHandle.x, projected.focus.dragHandle.y);
-    } else {
-      holdCursor(viewport);
-    }
-
-    return {
+    let result = {
       presented: true,
       planVersion: PRESENTER_KINEMATICS_VERSION,
       visible: projected.focus.visible,
@@ -2777,6 +2738,48 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
         ? { x: projected.cursor.x, y: projected.cursor.y, visible: projected.cursor.visible }
         : (mode === 'rectangle-selection' ? projected.focus.cursor : null),
     };
+    if (frame.planOnly === true) return result;
+
+    cancelTravel();
+    cancelDrag();
+    cancelGesture();
+    cancelClick();
+    showOverlay();
+    if (frame.preserveInk === true) renderAccumulatedAnnotations();
+    else {
+      inkPath.setAttribute('d', '');
+      ink.classList.remove('is-inking');
+    }
+    if (projected.focus.visible) {
+      marquee.classList.remove('pc-marquee-faded');
+      marquee.style.opacity = `${projected.focus.opacity}`;
+      marquee.style.transform = `translate(${projected.focus.left}px, ${projected.focus.top}px)`;
+      marquee.style.width = `${projected.focus.width}px`;
+      marquee.style.height = `${projected.focus.height}px`;
+      sizeMarqueeSvg(svg, [rectBlack, rectWhite], projected.focus.width, projected.focus.height);
+      rectBlack.style.strokeDashoffset = `${projected.focus.antsDashOffset}`;
+      rectWhite.style.strokeDashoffset = `${projected.focus.antsDashOffset - 4}`;
+    } else {
+      hideMarqueeFrame();
+    }
+    if (projected.focus.dragHandle?.visible) {
+      focusHandle.style.left = `${projected.focus.dragHandle.x}px`;
+      focusHandle.style.top = `${projected.focus.dragHandle.y}px`;
+      focusHandle.style.display = 'block';
+    } else {
+      focusHandle.style.display = 'none';
+    }
+    if (mode === 'cursor' && projected.cursor.visible) {
+      setCursor(projected.cursor.x, projected.cursor.y);
+    } else if (mode === 'rectangle-selection' && projected.focus.cursor?.visible) {
+      setCursor(projected.focus.cursor.x, projected.focus.cursor.y);
+    } else if (projected.focus.dragHandle?.visible) {
+      setCursor(projected.focus.dragHandle.x, projected.focus.dragHandle.y);
+    } else {
+      holdCursor(viewport);
+    }
+
+    return result;
   }
 
   function presentApproachFrame(el, frame = {}) {
@@ -2853,13 +2856,13 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
   function presentClickFrame(el, frame = {}) {
     if (disposed) return { presented: false, reason: 'disposed' };
     if (!el || typeof el.getBoundingClientRect !== 'function') {
-      cancelClick();
+      if (frame.planOnly !== true) cancelClick();
       return { presented: false, reason: 'invalid-target' };
     }
     let viewport = resolveViewport(frame.viewport);
     let rect = resolvePresenterVisibleRect(el, viewport);
     if (!rect) {
-      cancelClick();
+      if (frame.planOnly !== true) cancelClick();
       return { presented: false, reason: 'hidden-target' };
     }
     let elapsedMs = Number(frame.elapsedMs);
@@ -2874,6 +2877,22 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
       click: { active: inRange, x: zone.x, y: zone.y },
       cursor: { active: inRange, x: zone.x, y: zone.y, duration: PRESENTER_CLICK_DURATION_MS },
     }, Math.max(0, elapsedMs), seed, viewport);
+
+    let result = {
+      presented: true,
+      planVersion: PRESENTER_KINEMATICS_VERSION,
+      visible: inRange && projected.click.visible && projected.click.opacity > 0,
+      elapsedMs,
+      durationMs: PRESENTER_CLICK_DURATION_MS,
+      progress: Math.max(0, Math.min(1, elapsedMs / PRESENTER_CLICK_DURATION_MS)),
+      rect,
+      hotspot: { x: zone.x, y: zone.y },
+      scale: projected.click.scale,
+      opacity: projected.click.opacity,
+      normalizedPathHash: '',
+      cursor: { x: projected.cursor.x, y: projected.cursor.y },
+    };
+    if (frame.planOnly === true) return result;
 
     cancelTravel();
     cancelDrag();
@@ -2898,19 +2917,7 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
       clickHalo.style.display = 'none';
     }
 
-    return {
-      presented: true,
-      planVersion: PRESENTER_KINEMATICS_VERSION,
-      visible: inRange && projected.click.visible && projected.click.opacity > 0,
-      elapsedMs,
-      durationMs: PRESENTER_CLICK_DURATION_MS,
-      progress: Math.max(0, Math.min(1, elapsedMs / PRESENTER_CLICK_DURATION_MS)),
-      rect,
-      hotspot: { x: zone.x, y: zone.y },
-      scale: projected.click.scale,
-      opacity: projected.click.opacity,
-      cursor: { x: projected.cursor.x, y: projected.cursor.y },
-    };
+    return result;
   }
 
   function presentRelationshipFrame(sourceEl, destinationEl, relation, frame = {}) {
@@ -3167,17 +3174,17 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
     if (disposed) return { presented: false, reason: 'disposed' };
     let annotation = normalizePresenterAnnotation(value);
     if (!annotation) {
-      clear();
+      if (frame.planOnly !== true) clear();
       return { presented: false, reason: 'invalid-annotation' };
     }
     if (!el || typeof el.getBoundingClientRect !== 'function') {
-      clear();
+      if (frame.planOnly !== true) clear();
       return { presented: false, reason: 'invalid-target' };
     }
     let viewport = resolveViewport(frame.viewport);
     let rect = resolvePresenterVisibleRect(el, viewport);
     if (!rect) {
-      clear();
+      if (frame.planOnly !== true) clear();
       return { presented: false, reason: 'hidden-target' };
     }
     let gesturePolicy = resolvePresenterGesturePolicy({
@@ -3215,7 +3222,7 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
       frame.style,
     );
     if (!layout) {
-      clear();
+      if (frame.planOnly !== true) clear();
       return { presented: false, reason: 'invalid-annotation' };
     }
     annotation = layout.annotation;
@@ -3284,6 +3291,46 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
         fallback: true,
         pathSamples: [],
         safety: { ...layout.fullSafety, policyFallback: true, presentationSafe: true },
+      };
+    }
+
+    if (frame.planOnly === true) {
+      let points = (activeAnnotation?.points || layout.fullPathSamples || [])
+        .map((point) => ({ x: point.x, y: point.y }));
+      return {
+        presented: !suppressUnsafe,
+        planVersion: layout.plan.kinematics.version,
+        visible: !suppressUnsafe,
+        suppressed: suppressUnsafe,
+        ...(suppressUnsafe ? { reason: 'unsafe-annotation' } : {}),
+        kind: activeAnnotation.kind,
+        name: activeAnnotation.name,
+        placement: activeAnnotation.placement,
+        progress,
+        elapsedMs: activeAnnotation.elapsedMs,
+        seed,
+        rect: activeAnnotation.rect,
+        drawRect: activeAnnotation.drawRect,
+        cursor: activeAnnotation.cursor,
+        cursorSizePx: activeAnnotation.cursorSizePx,
+        pathPoints: points.length,
+        pathSamples: points,
+        normalizedPathHash: activeAnnotation.pathHash,
+        safety: suppressUnsafe ? layout.fullSafety : activeAnnotation.safety,
+        durationMs: activeAnnotation.durationMs,
+        arcLengthPx: activeAnnotation.arcLengthPx,
+        drawnLengthPx: activeAnnotation.drawnLengthPx,
+        averageSpeedPxPerMs: activeAnnotation.averageSpeedPxPerMs,
+        speedPxPerMs: activeAnnotation.speedPxPerMs,
+        widthSamples: activeAnnotation.widthSamples,
+        minWidthPx: activeAnnotation.minWidthPx,
+        maxWidthPx: activeAnnotation.maxWidthPx,
+        tailPolicy: activeAnnotation.tailPolicy,
+        phase: activeAnnotation.completed ? 'complete' : 'draw',
+        timing: activeAnnotation.timing,
+        gesturePolicy,
+        accumulated: frame.accumulate === true,
+        accumulatedCount: accumulatedAnnotationPaths.size,
       };
     }
 

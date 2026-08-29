@@ -96,6 +96,9 @@ test('animates the complete target when the consumer supplies only target intent
   let handle = createPresenterTextSelectionAnimation(target, { seed: 'whole-target' });
 
   assert.equal(handle.receipt.selectedText, 'Portable configuration remains reusable.');
+  assert.equal(handle.state, 'planned');
+  assert.equal(selection.rangeCount, 0);
+  handle.presentFrame(0);
   assert.equal(selection.getRangeAt(0).startContainer, target.firstChild);
   assert.equal(selection.getRangeAt(0).startOffset, 0);
   assert.equal(selection.getRangeAt(0).endOffset, 0);
@@ -209,9 +212,13 @@ test('animates the actual text-control selection boundary and settles the exact 
     quote: 'animated selection',
     seed: 'selection-17',
   });
+  assert.equal(target.selectionStart, 0);
+  assert.equal(target.selectionEnd, 0);
+  assert.equal(handle.state, 'planned');
+  assert.equal(handle.receipt.status, 'selecting');
+  handle.presentFrame(0);
   assert.equal(target.selectionStart, 7);
   assert.equal(target.selectionEnd, 7);
-  assert.equal(handle.receipt.status, 'selecting');
   let halfway = handle.presentFrame(handle.receipt.durationMs / 2);
   assert.ok(halfway.progress > 0.45 && halfway.progress < 0.55);
   assert.equal(target.selectionStart, 7);
@@ -241,6 +248,10 @@ test('backward selection animation grows from the quote end and restores the pri
     direction: 'backward',
     seed: 'backward-selection',
   });
+  assert.equal(target.selectionStart, 0);
+  assert.equal(target.selectionEnd, 3);
+  assert.equal(handle.state, 'planned');
+  handle.presentFrame(0);
   assert.equal(target.selectionStart, 13);
   assert.equal(target.selectionEnd, 13);
   handle.presentFrame(handle.receipt.durationMs / 2);
@@ -278,9 +289,9 @@ test('selection duration follows measured travel and ignores consumer duration o
   });
 
   assert.ok(short.receipt.durationMs >= 220);
-  assert.ok(long.receipt.durationMs > short.receipt.durationMs * 3);
-  assert.ok(short.receipt.speedPxPerMs <= 0.454);
-  assert.ok(long.receipt.speedPxPerMs <= 0.454);
+  assert.ok(long.receipt.durationMs > short.receipt.durationMs * 2.5);
+  assert.ok(short.receipt.speedPxPerMs <= 2);
+  assert.ok(long.receipt.speedPxPerMs <= 2);
 });
 
 test('selection kinematics are deterministic for the same seed and geometry', () => {
@@ -302,6 +313,70 @@ test('selection kinematics are deterministic for the same seed and geometry', ()
 
   assert.equal(first.receipt.normalizedPathHash, replay.receipt.normalizedPathHash);
   assert.equal(first.receipt.durationMs, replay.receipt.durationMs);
+});
+
+test('640px native selection settles within budget through progressive exact-range frames', () => {
+  let target = {
+    value: 'progressive selection',
+    selectionStart: 0,
+    selectionEnd: 0,
+    selectionDirection: 'none',
+    focus() {},
+    getBoundingClientRect() { return { width: 640 }; },
+    setSelectionRange(start, end, direction) {
+      this.selectionStart = start;
+      this.selectionEnd = end;
+      this.selectionDirection = direction;
+    },
+  };
+  let handle = createPresenterTextSelectionAnimation(target, {
+    quote: 'progressive selection',
+    seed: 'selection-budget',
+  });
+  let durationMs = handle.receipt.durationMs;
+  let ends = [0, 0.25, 0.5, 0.75, 1].map((progress) => {
+    handle.presentFrame(durationMs * progress);
+    return target.selectionEnd;
+  });
+
+  assert.ok(durationMs <= 650);
+  assert.ok(new Set(ends).size >= 3);
+  assert.equal(target.selectionStart, 0);
+  assert.equal(target.selectionEnd, target.value.length);
+  assert.equal(handle.receipt.speedPxPerMs, 0);
+});
+
+test('planned selection can be rejected and cleared without focus or native Selection mutation', () => {
+  let calls = [];
+  let target = {
+    value: 'provider admission',
+    selectionStart: 2,
+    selectionEnd: 5,
+    selectionDirection: 'backward',
+    focus() { calls.push('focus'); },
+    getBoundingClientRect() { return { width: 320 }; },
+    setSelectionRange(start, end, direction) {
+      calls.push(['selection', start, end, direction]);
+      this.selectionStart = start;
+      this.selectionEnd = end;
+      this.selectionDirection = direction;
+    },
+  };
+
+  let handle = createPresenterTextSelectionAnimation(target, {
+    quote: 'admission',
+    seed: 'selection-admission',
+  });
+
+  assert.equal(handle.state, 'planned');
+  assert.deepEqual(calls, []);
+  assert.equal(target.selectionStart, 2);
+  assert.equal(target.selectionEnd, 5);
+  handle.clear();
+  assert.equal(handle.state, 'cleared');
+  assert.deepEqual(calls, []);
+  assert.equal(target.selectionStart, 2);
+  assert.equal(target.selectionEnd, 5);
 });
 
 test('rejects a stale explicit range instead of selecting different text', () => {

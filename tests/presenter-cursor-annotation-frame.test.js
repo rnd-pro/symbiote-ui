@@ -135,7 +135,7 @@ test('deterministic focus frame projects cursor and frame modes without scheduli
   cursor.dispose();
 });
 
-test('larger focus frames take longer under the shared human-speed ceiling', () => {
+test('larger focus frames take longer under the shared hard-budget speed ceiling', () => {
   let window = makeDom();
   let cursor = createPresenterCursor(window.document);
   let shortTarget = target(window.document, { left: 20, top: 20, width: 40, height: 24 });
@@ -143,9 +143,21 @@ test('larger focus frames take longer under the shared human-speed ceiling', () 
 
   let short = cursor.presentFocusFrame(shortTarget, { mode: 'frame', seed: 9 });
   let long = cursor.presentFocusFrame(longTarget, { mode: 'frame', seed: 9 });
-  assert.ok(long.durationMs > short.durationMs * 4);
-  assert.ok(short.timing.maxObservedSpeedPxPerMs <= 0.454 + 1e-9);
-  assert.ok(long.timing.maxObservedSpeedPxPerMs <= 0.454 + 1e-9);
+  assert.ok(long.durationMs > short.durationMs * 2.3);
+  assert.ok(short.timing.maxObservedSpeedPxPerMs <= 2 + 1e-9);
+  assert.ok(long.timing.maxObservedSpeedPxPerMs <= 2 + 1e-9);
+  cursor.dispose();
+});
+
+test('representative Show focus settles within its hard budget', () => {
+  let window = makeDom();
+  let cursor = createPresenterCursor(window.document);
+  let el = target(window.document, { left: 120, top: 110, width: 280, height: 120 });
+
+  let receipt = cursor.presentFocusFrame(el, { mode: 'frame', seed: 'focus-budget' });
+
+  assert.ok(receipt.durationMs <= 550);
+  assert.ok(receipt.timing.maxObservedSpeedPxPerMs <= 2);
   cursor.dispose();
 });
 
@@ -595,9 +607,10 @@ test('every marker exposes a monotonic three-stage drawing path', () => {
   let el = target(window.document, { left: 180, top: 140, width: 120, height: 84 });
 
   for (let [index, marker] of PRESENTER_MARKERS.entries()) {
-    let early = cursor.presentAnnotationFrame(el, { kind: 'marker', marker }, { progress: 0.25, seed: index + 31 });
-    let middle = cursor.presentAnnotationFrame(el, { kind: 'marker', marker }, { progress: 0.55, seed: index + 31 });
-    let complete = cursor.presentAnnotationFrame(el, { kind: 'marker', marker }, { progress: 1, seed: index + 31 });
+    let annotation = { kind: 'marker', marker };
+    let early = cursor.presentAnnotationFrame(el, annotation, { progress: 0.35, seed: index + 31 });
+    let middle = cursor.presentAnnotationFrame(el, annotation, { progress: 0.65, seed: index + 31 });
+    let complete = cursor.presentAnnotationFrame(el, annotation, { progress: 1, seed: index + 31 });
 
     assert.ok(early.pathPoints > 2, marker);
     assert.ok(middle.pathPoints > early.pathPoints, marker);

@@ -1,9 +1,9 @@
 export const PRESENTER_KINEMATICS_VERSION = 'symbiote-presenter-kinematics-v1';
 
 export const PRESENTER_KINEMATIC_LIMITS = Object.freeze({
-  minMovingSpeedPxPerMs: 0.14,
-  targetSpeedPxPerMs: 0.3,
-  maxSpeedPxPerMs: 0.454,
+  minMovingSpeedPxPerMs: 1.1,
+  targetSpeedPxPerMs: 2,
+  maxSpeedPxPerMs: 2,
   minDurationMs: 220,
   baseWidthPx: 4.2,
   minWidthRatio: 0.7,
@@ -347,6 +347,14 @@ function createTimeTable(samples, arcLengthPx, limits) {
       speedPxPerMs: deltaDistance / deltaTime,
     });
     previousDistance = distancePx;
+  }
+  if (timeMs < limits.minDurationMs) {
+    let scale = limits.minDurationMs / timeMs;
+    for (let sample of table) {
+      sample.timeMs *= scale;
+      sample.speedPxPerMs /= scale;
+    }
+    table.at(-1).timeMs = limits.minDurationMs;
   }
   table[0].speedPxPerMs = 0;
   table.at(-1).speedPxPerMs = 0;

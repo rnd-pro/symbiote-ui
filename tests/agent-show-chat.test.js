@@ -290,6 +290,77 @@ test('agent-dock-shell owns one standard split layout, collapse/drawer state, an
   shell.remove();
 });
 
+test('agent-dock message updates preserve scroll policy through the full composition', async () => {
+  installDom();
+  await import('../chat/show-chat.js');
+
+  let shell = document.createElement('agent-dock-shell');
+  shell.getBoundingClientRect = () => ({ width: 1440, height: 844 });
+  document.body.append(shell);
+  await settle();
+
+  let transcript = shell.getChat().getWorkspace().getTranscript();
+  let scroller = {
+    clientHeight: 300,
+    querySelectorAll: () => [],
+    scrollHeight: 1200,
+    scrollTop: 240,
+  };
+  transcript.getScrollContainer = () => scroller;
+
+  let setMessageItems = transcript.setMessageItems.bind(transcript);
+  transcript.setMessageItems = (items) => {
+    setMessageItems(items);
+    scroller.scrollHeight += 24;
+  };
+
+  let scrollCalls = [];
+  let scrollToBottom = transcript.scrollToBottom.bind(transcript);
+  transcript.scrollToBottom = (options) => {
+    scrollCalls.push(options);
+    scrollToBottom(options);
+  };
+
+  shell.setMessages([{ role: 'agent', text: 'stream frame 1' }]);
+  shell.setMessages([{ role: 'agent', text: 'stream frame 2' }]);
+  await settle();
+  assert.equal(scroller.scrollTop, 240, 'default updates preserve an exact manual position');
+  assert.deepEqual(scrollCalls, []);
+
+  scroller.scrollTop = scroller.scrollHeight - scroller.clientHeight;
+  shell.setMessages([{ role: 'agent', text: 'stream frame 3' }]);
+  await settle();
+  assert.equal(scroller.scrollTop, scroller.scrollHeight, 'a pinned transcript follows the new bottom');
+  assert.equal(scrollCalls.length, 1, 'the transcript sticky-bottom authority scrolls once');
+
+  scroller.scrollTop = 240;
+  scrollCalls = [];
+  shell.setMessages(
+    [{ role: 'agent', text: 'forced replacement' }],
+    { scrollToBottom: true, smooth: true },
+  );
+  assert.equal(scroller.scrollTop, scroller.scrollHeight, 'an explicit force-bottom request is immediate');
+  assert.deepEqual(scrollCalls, [{ smooth: true }], 'the explicit policy reaches the transcript once');
+
+  scroller.scrollTop = 240;
+  scrollCalls = [];
+  assert.throws(
+    () => shell.setMessages(
+      [{ role: 'agent', text: 'invalid policy replacement' }],
+      { scrollToBottom: 'always' },
+    ),
+    /chat message update option "scrollToBottom" must be a boolean/,
+  );
+  shell.setMessages([{ role: 'agent', text: 'replacement after invalid policy' }]);
+  await settle();
+  assert.equal(scroller.scrollTop, 240, 'a rejected policy cannot leak into a later update');
+  assert.deepEqual(scrollCalls, []);
+
+  shell.remove();
+  await settle();
+  assert.equal(scrollCalls.length, 0, 'teardown cannot trigger a late duplicate scroll');
+});
+
 test('agent-dock-shell reparenting keeps a nested panel layout responsive across repeated reconnects', async () => {
   installDom();
   await import('../chat/show-chat.js');

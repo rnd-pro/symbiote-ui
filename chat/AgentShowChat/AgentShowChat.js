@@ -14,7 +14,7 @@ export class AgentShowChat extends Symbiote {
     super();
     this._shows = new Map();
     this._conversation = new AgentShowConversation({
-      onChange: ({ messageItems }) => this._renderMessages(messageItems),
+      onChange: ({ messageItems }) => this._renderMessages(messageItems, this._messageUpdateOptions),
     });
   }
 
@@ -101,8 +101,14 @@ export class AgentShowChat extends Symbiote {
     return this;
   }
 
-  setMessages(messages = []) {
-    this._conversation.setMessages(messages);
+  setMessages(messages = [], options = {}) {
+    let previousOptions = this._messageUpdateOptions;
+    this._messageUpdateOptions = options;
+    try {
+      this._conversation.setMessages(messages);
+    } finally {
+      this._messageUpdateOptions = previousOptions;
+    }
     return this;
   }
 
@@ -161,11 +167,11 @@ export class AgentShowChat extends Symbiote {
     }
   }
 
-  _renderMessages(messageItems = []) {
+  _renderMessages(messageItems = [], options = {}) {
     let workspace = this.getWorkspace();
     if (!workspace) return;
     workspace.setEmpty?.(messageItems.length === 0);
-    workspace.setMessages?.(messageItems);
+    workspace.setMessages?.(messageItems, options);
     queueMicrotask(() => this._syncPlayerRegion());
   }
 

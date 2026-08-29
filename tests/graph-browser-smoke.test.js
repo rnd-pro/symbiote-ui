@@ -4222,9 +4222,15 @@ test('Show attention animates presenter frames and persistent marker ink in real
         import { ShowAttentionController } from 'symbiote-ui/chat/show-runtime';
         import { createPresenterCursor } from 'symbiote-ui/chat/presenter-cursor.js';
         let cursor = createPresenterCursor(document);
+        window.__attentionAdmissions = [];
+        window.__attentionMilestones = [];
+        window.__attentionTerminals = [];
         let attention = new ShowAttentionController({
           cursor,
           resolveTarget: (id) => document.getElementById(id),
+          onAdmission: (receipt) => window.__attentionAdmissions.push(receipt),
+          onMilestone: (receipt) => window.__attentionMilestones.push(receipt),
+          onTerminal: (receipt) => window.__attentionTerminals.push(receipt),
         });
         window.__attention = attention;
       `,
@@ -4295,7 +4301,12 @@ test('Show attention animates presenter frames and persistent marker ink in real
     }), 10000, 'Show attention fixture ready');
 
     let frameInitial = await evaluate(`(() => {
-      let receipt = window.__attention.present({ mode: 'frame', targetId: 'frame-target' });
+      let receipt = window.__attention.present({
+        mode: 'frame',
+        targetId: 'frame-target',
+        gestureId: 'browser-frame',
+        budgetMs: 550,
+      });
       let marquee = document.querySelector('.pc-marquee');
       return {
         receipt,
@@ -4304,10 +4315,11 @@ test('Show attention animates presenter frames and persistent marker ink in real
         animating: window.__attention.snapshot.animating,
       };
     })()`);
-    assert.equal(frameInitial.width, 1);
-    assert.equal(frameInitial.height, 1);
+    assert.equal(frameInitial.width || 0, 0);
+    assert.equal(frameInitial.height || 0, 0);
     assert.equal(frameInitial.animating, true);
-    await capture('frame-initial-1px');
+    assert.equal(frameInitial.receipt.admission.status, 'admitted');
+    await capture('frame-admitted-before-first-frame');
 
     let frameFinal = await evaluate(`(async () => {
       let settled = await window.__attention.whenSettled();
@@ -4321,13 +4333,13 @@ test('Show attention animates presenter frames and persistent marker ink in real
         animating: window.__attention.snapshot.animating,
       };
     })()`, true);
-    assert.equal(frameFinal.settled.status, 'settled');
-    assert.equal(frameFinal.width, frameFinal.settled.receipt.frameRect.width);
-    assert.equal(frameFinal.height, frameFinal.settled.receipt.frameRect.height);
+    assert.equal(frameFinal.settled.status, 'completed');
+    assert.equal(frameFinal.width, frameFinal.settled.providerReceipt.frameRect.width);
+    assert.equal(frameFinal.height, frameFinal.settled.providerReceipt.frameRect.height);
     assert.ok(frameFinal.width >= 240 && frameFinal.height >= 110, JSON.stringify(frameFinal));
     assert.equal(frameFinal.opacity, '1');
     assert.equal(frameFinal.animating, false);
-    let frameRect = frameFinal.settled.receipt.frameRect;
+    let frameRect = frameFinal.settled.providerReceipt.frameRect;
     let framePixels = [];
     for (let x = Math.ceil(frameRect.left); x <= Math.floor(frameRect.right); x += 12) {
       framePixels.push(await capturePixel(x, Math.ceil(frameRect.top)));
@@ -4339,7 +4351,12 @@ test('Show attention animates presenter frames and persistent marker ink in real
 
     let markerInitial = await evaluate(`(() => {
       let receipt = window.__attention.present({
-        mode: 'marker', targetId: 'marker-target', marker: 'oval', frame: { seed: 17 },
+        mode: 'marker',
+        targetId: 'marker-target',
+        marker: 'oval',
+        frame: { seed: 17 },
+        gestureId: 'browser-marker',
+        budgetMs: 1200,
       });
       return {
         receipt,
@@ -4349,7 +4366,9 @@ test('Show attention animates presenter frames and persistent marker ink in real
     })()`);
     assert.equal(markerInitial.animating, true);
     assert.ok(markerInitial.receipt.progress === 0);
-    await capture('marker-initial-dot');
+    assert.equal(markerInitial.receipt.admission.status, 'admitted');
+    assert.equal(markerInitial.path, '');
+    await capture('marker-admitted-before-first-frame');
 
     let markerFinal = await evaluate(`(async () => {
       let settled = await window.__attention.whenSettled();
@@ -4361,12 +4380,12 @@ test('Show attention animates presenter frames and persistent marker ink in real
         animating: window.__attention.snapshot.animating,
       };
     })()`, true);
-    assert.equal(markerFinal.settled.status, 'settled');
-    assert.equal(markerFinal.settled.receipt.progress, 1);
-    assert.ok(markerFinal.path.length > markerInitial.path.length * 4, JSON.stringify(markerFinal));
+    assert.equal(markerFinal.settled.status, 'completed');
+    assert.equal(markerFinal.settled.providerReceipt.progress, 1);
+    assert.ok(markerFinal.path.length > 4, JSON.stringify(markerFinal));
     assert.equal(markerFinal.markerCount, 1);
     assert.equal(markerFinal.animating, false);
-    let markerSamples = markerFinal.settled.receipt.pathSamples;
+    let markerSamples = markerFinal.settled.providerReceipt.pathSamples;
     let markerPixels = [];
     for (let index of [0, 0.25, 0.5, 0.75, 1]) {
       let sample = markerSamples[Math.min(markerSamples.length - 1, Math.floor(index * markerSamples.length))];
@@ -4379,7 +4398,12 @@ test('Show attention animates presenter frames and persistent marker ink in real
 
     let persistent = await evaluate(`(async () => {
       let before = document.querySelector('.pc-ink path').getAttribute('d');
-      window.__attention.present({ mode: 'frame', targetId: 'frame-target' });
+      window.__attention.present({
+        mode: 'frame',
+        targetId: 'frame-target',
+        gestureId: 'browser-persistent-frame',
+        budgetMs: 550,
+      });
       await window.__attention.whenSettled();
       return {
         before,
@@ -4392,13 +4416,18 @@ test('Show attention animates presenter frames and persistent marker ink in real
     await capture('marker-persists-with-frame');
 
     let clickInitial = await evaluate(`(() => {
-      let receipt = window.__attention.present({ mode: 'click', targetId: 'click-target' });
+      let receipt = window.__attention.present({
+        mode: 'click',
+        targetId: 'click-target',
+        gestureId: 'browser-click',
+        budgetMs: 500,
+      });
       let halo = document.querySelector('.pc-click');
       return { receipt, transform: halo.style.transform, opacity: Number(halo.style.opacity), animating: window.__attention.snapshot.animating };
     })()`);
     assert.equal(clickInitial.animating, true);
-    assert.match(clickInitial.transform, /scale\(0\.45\)/);
-    await capture('click-ripple-initial');
+    assert.equal(clickInitial.opacity, 0);
+    await capture('click-admitted-before-first-frame');
 
     let clickMid = await evaluate(`(async () => {
       await new Promise((resolve) => setTimeout(resolve, 190));
@@ -4419,27 +4448,39 @@ test('Show attention animates presenter frames and persistent marker ink in real
       pixel.r > 180 && pixel.r - pixel.g > 14 && pixel.b - pixel.g < 20
     )), JSON.stringify(clickPixels));
     await capture('click-ripple-expanded');
-    assert.equal((await evaluate(`window.__attention.whenSettled()`, true)).status, 'settled');
+    assert.equal((await evaluate(`window.__attention.whenSettled()`, true)).status, 'completed');
 
     let selectionInitial = await evaluate(`(() => {
       let receipt = window.__attention.present({
         mode: 'native-selection',
         targetId: 'selection-target',
         quote: 'exact native selection',
-        durationMs: 600,
+        gestureId: 'browser-selection',
+        budgetMs: 650,
       });
-      return { receipt, text: document.getSelection().toString(), animating: window.__attention.snapshot.animating };
+      return {
+        receipt,
+        text: document.getSelection().toString(),
+        animating: window.__attention.snapshot.animating,
+      };
     })()`);
     assert.equal(selectionInitial.text, '');
     assert.equal(selectionInitial.animating, true);
+    assert.equal(selectionInitial.receipt.admission.status, 'admitted');
 
     let selectionMid = await evaluate(`(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 260));
+      await new Promise((resolve) => setTimeout(resolve, 80));
       let selection = document.getSelection();
       let rect = selection.getRangeAt(0).getBoundingClientRect();
-      return { text: selection.toString(), rect: { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom } };
+      return {
+        text: selection.toString(),
+        rect: { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom },
+      };
     })()`, true);
-    assert.ok(selectionMid.text.length > 0 && selectionMid.text.length < 'exact native selection'.length, JSON.stringify(selectionMid));
+    assert.ok(
+      selectionMid.text.length > 0 && selectionMid.text.length < 'exact native selection'.length,
+      JSON.stringify(selectionMid),
+    );
     let selectionPixels = [];
     for (let x = Math.ceil(selectionMid.rect.left) + 2; x < Math.floor(selectionMid.rect.right); x += 8) {
       selectionPixels.push(await capturePixel(x, Math.ceil(selectionMid.rect.top) + 2));
@@ -4449,11 +4490,33 @@ test('Show attention animates presenter frames and persistent marker ink in real
 
     let selectionFinal = await evaluate(`(async () => {
       let settled = await window.__attention.whenSettled();
-      return { settled, text: document.getSelection().toString(), animating: window.__attention.snapshot.animating };
+      return {
+        settled,
+        text: document.getSelection().toString(),
+        animating: window.__attention.snapshot.animating,
+        milestones: window.__attentionMilestones.filter(
+          (receipt) => receipt.admission.effect.gestureId === 'browser-selection',
+        ),
+      };
     })()`, true);
-    assert.equal(selectionFinal.settled.status, 'settled');
+    assert.equal(selectionFinal.settled.status, 'completed');
     assert.equal(selectionFinal.text, 'exact native selection');
     assert.equal(selectionFinal.animating, false);
+    assert.deepEqual(
+      selectionFinal.milestones.map((receipt) => receipt.milestone),
+      ['first-frame', 'settled'],
+    );
+    assert.ok(
+      selectionFinal.milestones[1].observedAt.monotonicTimeMs
+        - selectionFinal.milestones[0].observedAt.monotonicTimeMs <= 650,
+    );
+    let providerOrder = await evaluate(`({
+      admissions: window.__attentionAdmissions.map((receipt) => receipt.effect.gestureId),
+      milestones: window.__attentionMilestones.map((receipt) => [receipt.admission.effect.gestureId, receipt.milestone]),
+      terminals: window.__attentionTerminals.map((receipt) => [receipt.admission.effect.gestureId, receipt.status]),
+    })`);
+    assert.equal(providerOrder.admissions.length, providerOrder.terminals.length);
+    assert.ok(providerOrder.terminals.every(([, status]) => status === 'completed'));
     await capture('native-selection-settled');
   } finally {
     await page?.close?.();

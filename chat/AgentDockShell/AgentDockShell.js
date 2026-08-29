@@ -62,10 +62,10 @@ export class AgentDockShell extends Symbiote {
     return this;
   }
 
-  setMessages(messages = []) {
+  setMessages(messages = [], options = {}) {
     let chat = this.getChat();
-    if (chat) chat.setMessages?.(messages);
-    else this._pendingMessages = messages;
+    if (chat) chat.setMessages?.(messages, options);
+    else this._pendingMessages = { messages, options };
     return this;
   }
 
@@ -258,8 +258,9 @@ export class AgentDockShell extends Symbiote {
       this._pendingAgentProvider = null;
     }
     if (this._pendingMessages) {
-      chat.setMessages?.(this._pendingMessages);
+      let pendingMessages = this._pendingMessages;
       this._pendingMessages = null;
+      chat.setMessages?.(pendingMessages.messages, pendingMessages.options);
     }
     for (let [key, config] of this._pendingShows) {
       chat.setShow?.(key, config);

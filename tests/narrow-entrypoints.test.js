@@ -328,6 +328,36 @@ test('consumer-visible tags advertise their narrowest public specifier in the re
   }
 });
 
+test('message update policy is synchronized across registry and Custom Elements metadata', async () => {
+  let { getComponent } = await import('../manifest/component-registry.js');
+  let customElements = JSON.parse(await readFile(
+    new URL('../custom-elements.json', import.meta.url),
+    'utf8',
+  ));
+  let description = 'Applies message history with options '
+    + '{ scrollToBottom?: boolean, smooth?: boolean }; defaults preserve transcript sticky-bottom state, '
+    + 'while scrollToBottom: true forces one immediate bottom scroll.';
+
+  for (let tagName of ['agent-dock-shell', 'agent-show-chat', 'chat-workspace']) {
+    let registryMethod = getComponent(tagName).contract.methods
+      .find((method) => method.name === 'setMessages');
+    assert.equal(registryMethod?.description, description, `${tagName} registry option contract`);
+
+    let declaration = customElements.modules
+      .flatMap((module) => module.declarations || [])
+      .find((item) => item.tagName === tagName);
+    let methodCopies = [
+      declaration?.members?.find((method) => method.name === 'setMessages'),
+      declaration?.contract?.methods?.find((method) => method.name === 'setMessages'),
+      declaration?.metadata?.contract?.methods?.find((method) => method.name === 'setMessages'),
+    ].filter(Boolean);
+    assert.ok(methodCopies.length >= 2, `${tagName} CEM method copies`);
+    for (let method of methodCopies) {
+      assert.equal(method.description, description, `${tagName} CEM option contract`);
+    }
+  }
+});
+
 test('package declares media side-effect retention and narrow export subpaths', async () => {
   const pkg = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 

@@ -5314,7 +5314,7 @@ export let COMPONENTS = [
       methods: [
         { name: 'getWorkspace', type: 'function', description: 'Returns the composed interactive chat-workspace.' },
         { name: 'setAgentProvider', type: 'function', description: 'Injects a scripted or API-backed provider exposing respond(request).' },
-        { name: 'setMessages', type: 'function', description: 'Replaces conversation history without discarding valid action or embed parts.' },
+        { name: 'setMessages', type: 'function', description: 'Applies message history with options { scrollToBottom?: boolean, smooth?: boolean }; defaults preserve transcript sticky-bottom state, while scrollToBottom: true forces one immediate bottom scroll.' },
         { name: 'setShow', type: 'function', description: 'Registers or rebinds one independent Show player by embed key.' },
         { name: 'removeShow', type: 'function', description: 'Removes one embedded Show binding and optionally stops its controller.' },
         { name: 'submit', type: 'function', description: 'Submits ordinary composer input through provider.respond(request).' },
@@ -5359,7 +5359,7 @@ export let COMPONENTS = [
       methods: [
         { name: 'getChat', type: 'function', description: 'Returns the stable mounted agent-show-chat instance.' },
         { name: 'setAgentProvider', type: 'function', description: 'Forwards a scripted or API provider without coupling it to Show control.' },
-        { name: 'setMessages', type: 'function', description: 'Forwards chat history without rebuilding the dock.' },
+        { name: 'setMessages', type: 'function', description: 'Applies message history with options { scrollToBottom?: boolean, smooth?: boolean }; defaults preserve transcript sticky-bottom state, while scrollToBottom: true forces one immediate bottom scroll.' },
         { name: 'setShow', type: 'function', description: 'Forwards an independent embedded Show binding by key.' },
         { name: 'removeShow', type: 'function', description: 'Removes one embedded Show binding.' },
         { name: 'open', type: 'function', description: 'Reveals the existing dock instance.' },
@@ -5423,7 +5423,7 @@ export let COMPONENTS = [
         { name: 'setChats', type: 'function', description: 'Sets nested chat descriptors and active selection state using the same product-neutral normalization as buildChatNavTree().' },
         { name: 'setActiveChatId', type: 'function', description: 'Marks a host-owned chat id active in the composed sidebar.' },
         { name: 'setEmpty', type: 'function', description: 'Sets the host-owned empty conversation presentation state.' },
-        { name: 'setMessages', type: 'function', description: 'Sets transcript message descriptors and optionally scrolls to bottom.' },
+        { name: 'setMessages', type: 'function', description: 'Applies message history with options { scrollToBottom?: boolean, smooth?: boolean }; defaults preserve transcript sticky-bottom state, while scrollToBottom: true forces one immediate bottom scroll.' },
         { name: 'replaceMessageWindow', type: 'function', description: 'Replaces the visible transcript message window with host-owned window metadata.' },
         { name: 'prependMessages', type: 'function', description: 'Prepends older transcript message descriptors while preserving the current scroll anchor.' },
         { name: 'getMessageWindow', type: 'function', description: 'Returns the composed transcript message window metadata.' },

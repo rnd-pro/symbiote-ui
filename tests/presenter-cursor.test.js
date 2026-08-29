@@ -202,6 +202,20 @@ test('presenter annotation support table is the canonical vocabulary', () => {
   });
 });
 
+test('representative travel and focus plans satisfy Show hard budgets', () => {
+  let travel = createPresenterTravelPlan(
+    { x: 0, y: 0 },
+    { x: 800, y: 0 },
+    'travel-budget',
+  );
+  let focus = resolvePresenterRectangleTiming({ width: 280, height: 120 });
+
+  assert.ok(travel.durationMs <= 800);
+  assert.ok(travel.maxObservedSpeedPxPerMs <= 2);
+  assert.ok(focus.dragMs <= 550);
+  assert.ok(focus.maxSpeedPxPerMs <= 2);
+});
+
 test('presenter ink overlay is hidden from the accessibility tree', () => {
   let window = makePresenterDom();
   let cursor = createPresenterCursor(window.document);
@@ -209,6 +223,39 @@ test('presenter ink overlay is hidden from the accessibility tree', () => {
     window.document.querySelector('.symbiote-presenter-cursor')?.getAttribute('aria-hidden'),
     'true',
   );
+  cursor.dispose();
+});
+
+test('focus, marker, and click plans expose zero-progress evidence without overlay mutation', () => {
+  let window = makePresenterDom();
+  let target = boxElement(window.document, { left: 180, top: 140, width: 220, height: 90 });
+  let cursor = createPresenterCursor(window.document);
+  let before = window.document.body.innerHTML;
+
+  let focus = cursor.presentFocusFrame(target, {
+    mode: 'frame',
+    seed: 'focus-plan',
+    planOnly: true,
+  });
+  let marker = cursor.presentAnnotationFrame(target, { marker: 'underline' }, {
+    seed: 'marker-plan',
+    planOnly: true,
+  });
+  let click = cursor.presentClickFrame(target, {
+    seed: 'click-plan',
+    planOnly: true,
+  });
+
+  assert.equal(window.document.body.innerHTML, before);
+  assert.equal(focus.presented, true);
+  assert.match(focus.normalizedPathHash, /^[0-9a-f]{8}$/);
+  assert.equal(marker.presented, true);
+  assert.match(marker.normalizedPathHash, /^[0-9a-f]{8}$/);
+  assert.equal(click.presented, true);
+  assert.equal(click.normalizedPathHash, '');
+
+  cursor.presentFocusFrame(target, { mode: 'frame', seed: 'focus-plan', elapsedMs: 0 });
+  assert.notEqual(window.document.body.innerHTML, before);
   cursor.dispose();
 });
 
@@ -770,7 +817,7 @@ test('resolvePresenterHighlightRect keeps edge targets inset from the viewport',
   );
 });
 
-test('free cursor travel uses the shared arc-length planner and never exceeds its human speed ceiling', () => {
+test('free cursor travel uses the shared arc-length planner and never exceeds its hard speed ceiling', () => {
   let plan = createPresenterTravelPlan(
     { x: 0, y: 0 },
     { x: 2000, y: 0 },

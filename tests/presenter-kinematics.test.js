@@ -148,10 +148,28 @@ test('enclosing gestures declare natural underdraw or controlled overlap instead
   assert.ok(distance(oval.samples[0], oval.samples.at(-1)) > oval.maxWidthPx * 1.5);
 });
 
-test('default presenter motion keeps a human floor without exceeding the existing hard ceiling', () => {
-  assert.ok(PRESENTER_KINEMATIC_LIMITS.minMovingSpeedPxPerMs >= 0.14);
-  assert.ok(PRESENTER_KINEMATIC_LIMITS.targetSpeedPxPerMs >= 0.28);
-  assert.equal(PRESENTER_KINEMATIC_LIMITS.maxSpeedPxPerMs, 0.454);
+test('default presenter motion satisfies the shared hard-budget speed tuple', () => {
+  assert.deepEqual(PRESENTER_KINEMATIC_LIMITS, {
+    minMovingSpeedPxPerMs: 1.1,
+    targetSpeedPxPerMs: 2,
+    maxSpeedPxPerMs: 2,
+    minDurationMs: 220,
+    baseWidthPx: 4.2,
+    minWidthRatio: 0.7,
+    maxWidthRatio: 1.3,
+    noiseAmplitudePx: 1.8,
+  });
+
+  let short = createPresenterKinematicPlan({ kind: 'underline', seed: 5, pointAt: line(20) });
+  let medium = createPresenterKinematicPlan({ kind: 'underline', seed: 5, pointAt: line(160) });
+  let marker = createPresenterKinematicPlan({ kind: 'underline', seed: 5, pointAt: line(1200) });
+
+  assert.ok(short.durationMs >= 220);
+  assert.ok(medium.durationMs >= 220);
+  assert.ok(marker.durationMs <= 1200);
+  assert.ok(marker.maxObservedSpeedPxPerMs <= 2);
+  assert.equal(samplePresenterKinematicPlan(marker, 0).speedPxPerMs, 0);
+  assert.equal(samplePresenterKinematicPlan(marker, marker.durationMs).speedPxPerMs, 0);
 });
 
 test('centripetal smoothing bounds corner jumps while retaining source coverage', () => {

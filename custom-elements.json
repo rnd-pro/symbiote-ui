@@ -11703,7 +11703,7 @@
             {
               "kind": "method",
               "name": "setMessages",
-              "description": "Replaces conversation history without discarding valid action or embed parts."
+              "description": "Applies message history with options { scrollToBottom?: boolean, smooth?: boolean }; defaults preserve transcript sticky-bottom state, while scrollToBottom: true forces one immediate bottom scroll."
             },
             {
               "kind": "method",
@@ -11814,7 +11814,7 @@
               {
                 "name": "setMessages",
                 "type": "function",
-                "description": "Replaces conversation history without discarding valid action or embed parts."
+                "description": "Applies message history with options { scrollToBottom?: boolean, smooth?: boolean }; defaults preserve transcript sticky-bottom state, while scrollToBottom: true forces one immediate bottom scroll."
               },
               {
                 "name": "setShow",
@@ -12012,7 +12012,7 @@
                 {
                   "name": "setMessages",
                   "type": "function",
-                  "description": "Replaces conversation history without discarding valid action or embed parts."
+                  "description": "Applies message history with options { scrollToBottom?: boolean, smooth?: boolean }; defaults preserve transcript sticky-bottom state, while scrollToBottom: true forces one immediate bottom scroll."
                 },
                 {
                   "name": "setShow",
@@ -12150,7 +12150,7 @@
           "members": [
             { "kind": "method", "name": "getChat", "description": "Returns the stable mounted agent-show-chat instance." },
             { "kind": "method", "name": "setAgentProvider", "description": "Forwards a scripted or API-backed provider." },
-            { "kind": "method", "name": "setMessages", "description": "Forwards conversation history without rebuilding the dock." },
+            { "kind": "method", "name": "setMessages", "description": "Applies message history with options { scrollToBottom?: boolean, smooth?: boolean }; defaults preserve transcript sticky-bottom state, while scrollToBottom: true forces one immediate bottom scroll." },
             { "kind": "method", "name": "setShow", "description": "Forwards an independent embedded Show binding." },
             { "kind": "method", "name": "removeShow", "description": "Removes one embedded Show binding." },
             { "kind": "method", "name": "open", "description": "Reveals the existing dock instance." },
@@ -12184,7 +12184,7 @@
             "methods": [
               { "name": "getChat", "type": "function", "description": "Returns the stable mounted agent-show-chat instance." },
               { "name": "setAgentProvider", "type": "function", "description": "Forwards an agent provider." },
-              { "name": "setMessages", "type": "function", "description": "Forwards conversation history." },
+              { "name": "setMessages", "type": "function", "description": "Applies message history with options { scrollToBottom?: boolean, smooth?: boolean }; defaults preserve transcript sticky-bottom state, while scrollToBottom: true forces one immediate bottom scroll." },
               { "name": "setShow", "type": "function", "description": "Forwards an embedded Show binding." },
               { "name": "removeShow", "type": "function", "description": "Removes an embedded Show binding." },
               { "name": "open", "type": "function", "description": "Reveals the existing dock." },
@@ -12351,7 +12351,7 @@
             {
               "kind": "method",
               "name": "setMessages",
-              "description": "Sets transcript message descriptors and optionally scrolls to bottom."
+              "description": "Applies message history with options { scrollToBottom?: boolean, smooth?: boolean }; defaults preserve transcript sticky-bottom state, while scrollToBottom: true forces one immediate bottom scroll."
             },
             {
               "kind": "method",
@@ -12734,7 +12734,7 @@
               {
                 "name": "setMessages",
                 "type": "function",
-                "description": "Sets transcript message descriptors and optionally scrolls to bottom."
+                "description": "Applies message history with options { scrollToBottom?: boolean, smooth?: boolean }; defaults preserve transcript sticky-bottom state, while scrollToBottom: true forces one immediate bottom scroll."
               },
               {
                 "name": "setComposerState",
@@ -13252,7 +13252,7 @@
                 {
                   "name": "setMessages",
                   "type": "function",
-                  "description": "Sets transcript message descriptors and optionally scrolls to bottom."
+                  "description": "Applies message history with options { scrollToBottom?: boolean, smooth?: boolean }; defaults preserve transcript sticky-bottom state, while scrollToBottom: true forces one immediate bottom scroll."
                 },
                 {
                   "name": "setComposerState",

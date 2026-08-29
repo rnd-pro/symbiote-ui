@@ -10,6 +10,7 @@ import {
   getUiSchema,
 } from '../manifest/index.js';
 import { createShowEvent } from '../chat/show-contracts.js';
+import * as showRuntime from '../chat/show-runtime.js';
 
 test('Show manifest, schema catalog, and JSON file expose one synchronized public contract', async () => {
   let fileSchema = JSON.parse(await readFile(new URL('../schemas/show-event-v1.json', import.meta.url), 'utf8'));
@@ -17,6 +18,11 @@ test('Show manifest, schema catalog, and JSON file expose one synchronized publi
   assert.deepEqual(getUiSchema('show-event-v1'), fileSchema);
   assert.equal(getShowRuntimeContract(), SHOW_RUNTIME_CONTRACT);
   assert.equal(SHOW_RUNTIME_CONTRACT.specifier, 'symbiote-ui/chat/show-runtime');
+  assert.equal(showRuntime.SHOW_ATTENTION_ADMISSION_VERSION, 'show-attention-admission-v2');
+  assert.equal(showRuntime.SHOW_ATTENTION_MILESTONE_VERSION, 'show-attention-milestone-v2');
+  assert.equal(showRuntime.SHOW_ATTENTION_TERMINAL_VERSION, 'show-attention-terminal-v2');
+  assert.equal(showRuntime.SHOW_ATTENTION_PROVIDER_VERSION, 'show-attention-provider-v1');
+  assert.equal(typeof showRuntime.createShowAttentionAdmission, 'function');
   assert.deepEqual(SHOW_RUNTIME_CONTRACT.markerAliases, { ovals: 'multi-oval' });
   assert.ok(SHOW_RUNTIME_CONTRACT.markerShapes.includes('underline'));
   assert.ok(SHOW_RUNTIME_CONTRACT.markerShapes.includes('box'));
@@ -58,20 +64,69 @@ test('Show manifest, schema catalog, and JSON file expose one synchronized publi
     },
   });
   assert.deepEqual(SHOW_RUNTIME_CONTRACT.attentionAnimation, {
-    clock: 'requestAnimationFrame-callback-timestamp',
-    timing: 'arc-length-minimum-jerk-with-human-speed-ceiling',
+    clock: 'performance-time-origin-with-raf-or-performance-now-monotonic-time',
+    timing: 'arc-length-minimum-jerk-with-hard-budget-speed-ceiling',
     geometry: 'adaptive-geometric-tolerance-centripetal-smoothing-and-normalized-arc-seeded-noise',
     width: 'speed-curvature-and-pressure-derived-ribbon',
     completion: 'settled-visible-until-replaced-or-cleared',
-    settlementReceipt: 'plan-version-cue-media-first-frame-and-actual-settled-time-with-normalized-path-hash',
-    cursorTravel: 'shared-arc-length-minimum-jerk-planner-with-human-speed-ceiling',
-    speedLimitsPxPerMs: { minimumMoving: 0.14, target: 0.3, maximum: 0.454 },
+    settlementReceipt: 'show-attention-terminal-v2-with-exact-nested-provider-evidence',
+    cursorTravel: 'shared-arc-length-minimum-jerk-planner-with-hard-budget-speed-ceiling',
+    speedLimitsPxPerMs: { minimumMoving: 1.1, target: 2, maximum: 2 },
+    minimumDurationMs: 220,
+    admission: {
+      version: 'show-attention-admission-v2',
+      callback: 'onAdmission',
+      provider: {
+        id: 'symbiote-ui/show-attention',
+        version: 'show-attention-provider-v1',
+      },
+      namespaces: ['provider', 'effect', 'target', 'budget', 'plan', 'reason'],
+      budget: 'explicit-budgetMs-hard-maximum',
+      phase: 'immutable-provider-zero-progress-plan-before-any-visual-mutation',
+      statuses: ['admitted', 'rejected'],
+      requiredIdentities: ['target', 'layout', 'geometry', 'plan'],
+      pathIdentity: 'required-except-truthful-non-path-click',
+      rejection: 'exact-structured-provider-reason-no-visual-milestone',
+    },
+    milestones: {
+      version: 'show-attention-milestone-v2',
+      callback: 'onMilestone',
+      sequence: ['first-frame', 'settled'],
+      firstFrame: 'first-provider-render-raf-or-synchronous-terminal-render',
+      settled: 'terminal-visual-settlement-only',
+      observedAt: 'performance-time-origin-and-monotonic-time',
+      providerReceipt: 'exact-immutable-nested-render-evidence',
+      workspaceIdentity: 'none',
+    },
+    terminal: {
+      version: 'show-attention-terminal-v2',
+      callback: 'onTerminal-and-whenSettled',
+      statuses: ['completed', 'rejected', 'cancelled', 'failed'],
+      observedAt: 'performance-time-origin-and-monotonic-time',
+      providerReceipt: 'exact-immutable-nested-plan-or-render-evidence',
+      workspaceIdentity: 'none',
+    },
     enclosingTail: 'displaced-overlap-with-visible-offset',
     markerPersistence: 'accumulate-after-settle',
     controls: ['pause', 'resume', 'seek', 'capture-state', 'restore-state', 'reset'],
     cancellation: ['replacement', 'cancel', 'seek-reset', 'branch-reset', 'dispose'],
     reducedMotion: 'immediate-final-semantic-state',
-    consumerInput: ['intent', 'target', 'style', 'seed', 'gestureId', 'cueTimeMs', 'mediaTimeMs'],
+    consumerInput: [
+      'intent',
+      'target',
+      'style',
+      'seed',
+      'gestureId',
+      'cueTimeMs',
+      'mediaTimeMs',
+      'budgetMs',
+      'targetIdentity',
+      'layoutIdentity',
+      'geometryIdentity',
+      'onAdmission',
+      'onMilestone',
+      'onTerminal',
+    ],
   });
   assert.deepEqual(SHOW_RUNTIME_CONTRACT.visualSettlement, {
     helper: 'waitForShowVisualSettlement',
@@ -86,6 +141,8 @@ test('Show manifest, schema catalog, and JSON file expose one synchronized publi
   assert.ok(SHOW_RUNTIME_CONTRACT.capabilities.includes('provider-owned-presenter-animation'));
   assert.ok(SHOW_RUNTIME_CONTRACT.capabilities.includes('arc-length-natural-presenter-kinematics'));
   assert.ok(SHOW_RUNTIME_CONTRACT.capabilities.includes('progressive-native-selection'));
+  assert.ok(SHOW_RUNTIME_CONTRACT.capabilities.includes('geometry-aware-hard-budget-admission'));
+  assert.ok(SHOW_RUNTIME_CONTRACT.capabilities.includes('actual-attention-milestone-receipts'));
   assert.ok(SHOW_RUNTIME_CONTRACT.capabilities.includes('bounded-owned-media-seek'));
   assert.ok(SHOW_RUNTIME_CONTRACT.capabilities.includes('atomic-owned-media-load-generation'));
   assert.ok(SHOW_RUNTIME_CONTRACT.capabilities.includes('runtime-owned-media-playback-clock'));
