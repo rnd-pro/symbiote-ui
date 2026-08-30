@@ -8,7 +8,7 @@ function emit(el, type, detail = {}) {
 }
 
 export class AgentShowChat extends Symbiote {
-  init$ = { hasPlayer: false };
+  init$ = { hasPlayer: false, showInlinePlayer: false };
 
   constructor() {
     super();
@@ -72,8 +72,9 @@ export class AgentShowChat extends Symbiote {
         key,
         player,
         slot,
-        playerRegion: this.ref.playerRegion || null,
-        fixed: true,
+        playerRegion: this._playerHost?.isConnected
+          ? this._playerHost
+          : (this.ref.playerRegion?.isConnected ? this.ref.playerRegion : null),
       });
     }
   };
@@ -90,10 +91,20 @@ export class AgentShowChat extends Symbiote {
     return this.ref.workspace || this.querySelector('chat-workspace');
   }
 
+  getShowPlayer(key = this._activeShowKey) {
+    return this._shows.get(String(key || ''))?.player || null;
+  }
+
   _mountPlayerRegion() {
     let region = this.ref.playerRegion;
     let composer = this.getWorkspace()?.getComposer?.();
     if (region && composer && region.nextElementSibling !== composer) composer.before(region);
+  }
+
+  setPlayerHost(host = null) {
+    this._playerHost = host || null;
+    this._syncPlayerRegion();
+    return this;
   }
 
   setAgentProvider(provider) {
@@ -178,10 +189,14 @@ export class AgentShowChat extends Symbiote {
   _syncPlayerRegion() {
     let region = this.ref.playerRegion;
     if (!region) return;
-    let player = this._shows.get(this._activeShowKey)?.player || null;
-    if (player && player.parentElement !== region) region.replaceChildren(player);
-    else if (!player && region.childNodes.length) region.replaceChildren();
+    let player = this.getShowPlayer();
+    let externalHost = this._playerHost?.isConnected ? this._playerHost : null;
+    let destination = externalHost || region;
+    if (player && player.parentElement !== destination) destination.replaceChildren(player);
+    else if (!player && destination.childNodes.length) destination.replaceChildren();
+    if (externalHost && region.childNodes.length) region.replaceChildren();
     this.$.hasPlayer = Boolean(player);
+    this.$.showInlinePlayer = Boolean(player && !externalHost);
   }
 }
 

@@ -21,7 +21,8 @@ test('kinematic duration follows smoothed arc length without exceeding the hard 
   let long = createPresenterKinematicPlan({ kind: 'underline', seed: 41, pointAt: line(960) });
 
   assert.ok(long.arcLengthPx > short.arcLengthPx * 3.9);
-  assert.ok(long.durationMs > short.durationMs * 3.7);
+  assert.equal(short.durationMs, PRESENTER_KINEMATIC_LIMITS.minDurationMs);
+  assert.ok(long.durationMs > short.durationMs);
 
   for (let plan of [short, long]) {
     let peak = 0;
@@ -31,6 +32,28 @@ test('kinematic duration follows smoothed arc length without exceeding the hard 
     }
     assert.ok(peak <= PRESENTER_KINEMATIC_LIMITS.maxSpeedPxPerMs + 0.001);
     assert.ok(peak >= PRESENTER_KINEMATIC_LIMITS.minMovingSpeedPxPerMs);
+  }
+});
+
+test('constant-speed ink profile keeps one slower drawing velocity across line lengths', () => {
+  let style = { constantSpeedPxPerMs: 1.2 };
+  let short = createPresenterKinematicPlan({
+    kind: 'underline', seed: 41, noiseAmplitudePx: 0, style, pointAt: line(240),
+  });
+  let long = createPresenterKinematicPlan({
+    kind: 'underline', seed: 41, noiseAmplitudePx: 0, style, pointAt: line(960),
+  });
+
+  assert.equal(short.motionProfile, 'constant-speed');
+  assert.equal(long.motionProfile, 'constant-speed');
+  assert.ok(Math.abs(long.durationMs / short.durationMs - 4) < 0.001);
+  for (let plan of [short, long]) {
+    for (let fraction of [0.1, 0.25, 0.5, 0.75, 0.9]) {
+      assert.ok(Math.abs(
+        samplePresenterKinematicPlan(plan, plan.durationMs * fraction).speedPxPerMs - 1.2,
+      ) < 0.000001);
+    }
+    assert.equal((plan.ribbonPath.match(/C/g) || []).length, 4, 'filled ink has two round two-quarter caps');
   }
 });
 
@@ -114,7 +137,7 @@ test('adaptive arc subdivision makes spatial variation invariant to source param
   }
 });
 
-test('enclosing gestures declare natural underdraw or controlled overlap instead of perfect closure', () => {
+test('enclosing gestures leave a visible open gap instead of perfect closure or overlap', () => {
   let square = (progress) => {
     let side = Math.min(3, Math.floor(progress * 4));
     let local = progress * 4 - side;
@@ -142,17 +165,17 @@ test('enclosing gestures declare natural underdraw or controlled overlap instead
 
   assert.equal(box.tailPolicy.mode, 'underdraw');
   assert.ok(distance(box.samples[0], box.samples.at(-1)) > box.maxWidthPx);
-  assert.equal(oval.tailPolicy.mode, 'displaced-overlap');
+  assert.equal(oval.tailPolicy.mode, 'open-gap');
   assert.ok(oval.tailPolicy.amount > 0);
-  assert.ok(oval.tailPolicy.lateralOffsetPx >= oval.baseWidthPx);
+  assert.ok(oval.tailPolicy.sourceEnd < 1);
   assert.ok(distance(oval.samples[0], oval.samples.at(-1)) > oval.maxWidthPx * 1.5);
 });
 
 test('default presenter motion satisfies the shared hard-budget speed tuple', () => {
   assert.deepEqual(PRESENTER_KINEMATIC_LIMITS, {
-    minMovingSpeedPxPerMs: 1.1,
-    targetSpeedPxPerMs: 2,
-    maxSpeedPxPerMs: 2,
+    minMovingSpeedPxPerMs: 1.6,
+    targetSpeedPxPerMs: 3,
+    maxSpeedPxPerMs: 3,
     minDurationMs: 220,
     baseWidthPx: 4.2,
     minWidthRatio: 0.7,
@@ -167,7 +190,7 @@ test('default presenter motion satisfies the shared hard-budget speed tuple', ()
   assert.ok(short.durationMs >= 220);
   assert.ok(medium.durationMs >= 220);
   assert.ok(marker.durationMs <= 1200);
-  assert.ok(marker.maxObservedSpeedPxPerMs <= 2);
+  assert.ok(marker.maxObservedSpeedPxPerMs <= PRESENTER_KINEMATIC_LIMITS.maxSpeedPxPerMs);
   assert.equal(samplePresenterKinematicPlan(marker, 0).speedPxPerMs, 0);
   assert.equal(samplePresenterKinematicPlan(marker, marker.durationMs).speedPxPerMs, 0);
 });

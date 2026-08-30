@@ -4356,7 +4356,9 @@ test('Show attention animates presenter frames and persistent marker ink in real
         marker: 'oval',
         frame: { seed: 17 },
         gestureId: 'browser-marker',
-        budgetMs: 1200,
+        // The browser fixture draws a full oval. Its event cell must reserve
+        // the path-length-derived duration of the deliberately slower ink.
+        budgetMs: 1800,
       });
       return {
         receipt,

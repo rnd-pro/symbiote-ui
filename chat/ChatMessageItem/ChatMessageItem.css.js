@@ -1083,9 +1083,6 @@ h4.md-h {
   margin: var(--sn-step-3) 0;
 }
 
-.actions-card[data-action-state="historical"] {
-  opacity: var(--sn-sys-state-disabled-opacity);
-}
 .actions-group {
   display: flex;
   flex-wrap: wrap;

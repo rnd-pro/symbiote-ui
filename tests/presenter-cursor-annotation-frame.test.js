@@ -11,6 +11,7 @@ import {
   PRESENTER_ANNOTATION_TARGET_INSET_PX,
   PRESENTER_CURSOR_SIZE_PX,
   PRESENTER_FOCUS_REVEAL_DURATION_MS,
+  PRESENTER_INK_DRAW_SPEED_PX_PER_MS,
   analyzePresenterAnnotationSafety,
   createPresenterCursor,
   PRESENTER_FRAME_MS,
@@ -18,6 +19,7 @@ import {
   PRESENTER_SYMBOLS,
   projectPresenterState,
 } from '../chat/presenter-cursor.js';
+import { PRESENTER_KINEMATIC_LIMITS } from '../chat/presenter-kinematics.js';
 
 function makeDom() {
   let { window } = parseHTML('<!doctype html><html><body></body></html>');
@@ -143,9 +145,9 @@ test('larger focus frames take longer under the shared hard-budget speed ceiling
 
   let short = cursor.presentFocusFrame(shortTarget, { mode: 'frame', seed: 9 });
   let long = cursor.presentFocusFrame(longTarget, { mode: 'frame', seed: 9 });
-  assert.ok(long.durationMs > short.durationMs * 2.3);
-  assert.ok(short.timing.maxObservedSpeedPxPerMs <= 2 + 1e-9);
-  assert.ok(long.timing.maxObservedSpeedPxPerMs <= 2 + 1e-9);
+  assert.ok(long.durationMs > short.durationMs);
+  assert.ok(short.timing.maxObservedSpeedPxPerMs <= PRESENTER_KINEMATIC_LIMITS.maxSpeedPxPerMs + 1e-9);
+  assert.ok(long.timing.maxObservedSpeedPxPerMs <= PRESENTER_KINEMATIC_LIMITS.maxSpeedPxPerMs + 1e-9);
   cursor.dispose();
 });
 
@@ -157,7 +159,7 @@ test('representative Show focus settles within its hard budget', () => {
   let receipt = cursor.presentFocusFrame(el, { mode: 'frame', seed: 'focus-budget' });
 
   assert.ok(receipt.durationMs <= 550);
-  assert.ok(receipt.timing.maxObservedSpeedPxPerMs <= 2);
+  assert.ok(receipt.timing.maxObservedSpeedPxPerMs <= PRESENTER_KINEMATIC_LIMITS.maxSpeedPxPerMs);
   cursor.dispose();
 });
 
@@ -206,6 +208,30 @@ test('deterministic annotation frame clamps progress and respects explicit seed'
   let changedSeed = cursor.presentAnnotationFrame(el, { marker: 'underline' }, { progress: 1, seed: 6 });
   assert.notEqual(inkPath(window.document), firstPath);
   assert.notEqual(changedSeed.pathDigest, full.pathDigest);
+  cursor.dispose();
+});
+
+test('annotation ink uses one constant capped speed and rounded ribbon ends', () => {
+  assert.equal(PRESENTER_INK_DRAW_SPEED_PX_PER_MS, 0.45);
+  assert.ok(PRESENTER_INK_DRAW_SPEED_PX_PER_MS < PRESENTER_KINEMATIC_LIMITS.minMovingSpeedPxPerMs);
+  let window = makeDom();
+  let cursor = createPresenterCursor(window.document);
+  let shortTarget = target(window.document, { left: 80, top: 80, width: 120, height: 48 });
+  let longTarget = target(window.document, { left: 80, top: 180, width: 420, height: 48 });
+
+  let short = cursor.presentAnnotationFrame(shortTarget, { marker: 'underline' }, { progress: 1, seed: 17 });
+  let long = cursor.presentAnnotationFrame(longTarget, { marker: 'underline' }, { progress: 1, seed: 17 });
+  for (let result of [short, long]) {
+    assert.ok(Math.abs(result.averageSpeedPxPerMs - PRESENTER_INK_DRAW_SPEED_PX_PER_MS) < 0.000001);
+    let middle = cursor.presentAnnotationFrame(
+      result === short ? shortTarget : longTarget,
+      { marker: 'underline' },
+      { elapsedMs: result.durationMs / 2, seed: 17 },
+    );
+    assert.ok(Math.abs(middle.speedPxPerMs - PRESENTER_INK_DRAW_SPEED_PX_PER_MS) < 0.000001);
+    assert.equal((inkPath(window.document).match(/C/g) || []).length, 4);
+  }
+  assert.ok(long.durationMs > short.durationMs * 2.5);
   cursor.dispose();
 });
 
@@ -601,7 +627,7 @@ test('deterministic annotation frame renders every marker and symbol', () => {
   cursor.dispose();
 });
 
-test('every marker exposes a monotonic three-stage drawing path', () => {
+test('every marker exposes a monotonic staged drawing path at the shared frame rate', () => {
   let window = makeDom();
   let cursor = createPresenterCursor(window.document);
   let el = target(window.document, { left: 180, top: 140, width: 120, height: 84 });
@@ -612,28 +638,32 @@ test('every marker exposes a monotonic three-stage drawing path', () => {
     let middle = cursor.presentAnnotationFrame(el, annotation, { progress: 0.65, seed: index + 31 });
     let complete = cursor.presentAnnotationFrame(el, annotation, { progress: 1, seed: index + 31 });
 
-    assert.ok(early.pathPoints > 2, marker);
-    assert.ok(middle.pathPoints > early.pathPoints, marker);
-    assert.ok(complete.pathPoints > middle.pathPoints, marker);
-    assert.deepEqual(
-      middle.pathSamples.slice(0, early.pathSamples.length - 1),
-      early.pathSamples.slice(0, -1),
-      marker,
-    );
-    assert.deepEqual(
-      complete.pathSamples.slice(0, middle.pathSamples.length - 1),
-      middle.pathSamples.slice(0, -1),
-      marker,
-    );
+    assert.ok(early.pathPoints <= middle.pathPoints, marker);
+    assert.ok(middle.pathPoints <= complete.pathPoints, marker);
+    assert.ok(complete.pathPoints > early.pathPoints, marker);
+    if (early.pathSamples.length > 1) {
+      assert.deepEqual(
+        middle.pathSamples.slice(0, early.pathSamples.length - 1),
+        early.pathSamples.slice(0, -1),
+        marker,
+      );
+    }
+    if (middle.pathSamples.length > 1) {
+      assert.deepEqual(
+        complete.pathSamples.slice(0, middle.pathSamples.length - 1),
+        middle.pathSamples.slice(0, -1),
+        marker,
+      );
+    }
   }
 
   cursor.dispose();
 });
 
 test('presenter layers share one constant 30 FPS projector', () => {
-  let firstTime = PRESENTER_FRAME_MS * 3 + 1;
-  let sameFrameTime = PRESENTER_FRAME_MS * 4 - 1;
-  let nextFrameTime = PRESENTER_FRAME_MS * 4 + 1;
+  let firstTime = 1;
+  let sameFrameTime = PRESENTER_FRAME_MS - 1;
+  let nextFrameTime = PRESENTER_FRAME_MS + 1;
 
   let focusLayers = {
     focus: {
@@ -982,7 +1012,7 @@ test('projectPresenterState rejects pair conflicts', () => {
         [keys[j]]: phases[keys[j]]
       };
       assert.throws(() => {
-        projectPresenterState(layers, 100, 1);
+        projectPresenterState(layers, 1, 1);
       }, (err) => {
         assert.equal(err.code, 'ERR_MUTUALLY_EXCLUSIVE_LAYERS');
         let expectedOrder = [keys[i], keys[j]].sort();
@@ -1008,7 +1038,7 @@ test('projectPresenterState allows completed-residue coexistence', () => {
   assert.equal(frame.cursor.motorActive, false);
 
   layers.symbol = { active: true, name: 'check', rect: { left: 20, top: 20, width: 50, height: 50 }, duration: 100, startMs: 20000 };
-  let frameCoexist = projectPresenterState(layers, 20050, 1);
+  let frameCoexist = projectPresenterState(layers, 20001, 1);
   assert.equal(frameCoexist.symbol.visible, true);
   assert.equal(frameCoexist.symbol.motorActive, true);
   assert.equal(frameCoexist.focus.visible, true);

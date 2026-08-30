@@ -31,6 +31,30 @@ agent-dock-shell {
     overflow: hidden;
   }
 
+  .agent-show-panel-node > .panel-view > .panel-content {
+    min-inline-size: 0;
+    min-block-size: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .agent-show-panel-host {
+    box-sizing: border-box;
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    min-inline-size: 0;
+    min-block-size: 0;
+
+    > chat-show-player {
+      inline-size: 100%;
+      block-size: 100%;
+      max-block-size: none;
+      border: 0;
+      border-radius: 0;
+    }
+  }
+
   .agent-dock-main-host,
   .agent-dock-main-host > [slot='main'] {
     box-sizing: border-box;

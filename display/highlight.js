@@ -282,6 +282,7 @@ export function renderMarkdown(src, options = {}) {
 
   function inline(text) {
     let escaped = esc(text);
+    const restoreUrlAmpersands = value => String(value || '').replaceAll('&amp;', '&');
 
     // Unescape safe HTML tags commonly used in markdown
     escaped = escaped.replace(/&lt;(\/?)(details|summary|kbd|br|hr|sub|sup)(.*?)&gt;/gi, (m, slash, tag, rest) => {
@@ -293,13 +294,16 @@ export function renderMarkdown(src, options = {}) {
     return escaped
       // Images: ![alt](src)
       .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, alt, src) => {
-        const resolved = resolveImagePath(src, { basePath, resolveImageSrc });
+        const resolved = resolveImagePath(
+          restoreUrlAmpersands(src),
+          { basePath, resolveImageSrc },
+        );
         if (!resolved) return '';
         return `<img class="md-img" src="${escAttr(resolved)}" alt="${escAttr(alt)}" loading="lazy">`;
       })
       // Links: [text](url)
       .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label, url) => {
-        const href = sanitizeMarkdownUrl(url);
+        const href = sanitizeMarkdownUrl(restoreUrlAmpersands(url));
         if (!href) return label;
         return `<a class="md-link" href="${escAttr(href)}" target="_blank" rel="noopener noreferrer">${label}</a>`;
       })

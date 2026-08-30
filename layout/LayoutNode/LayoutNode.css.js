@@ -367,6 +367,7 @@ export let styles = css`
 
       /* Hide fullscreen button, dropdown, and spacer */
       .fullscreen-btn,
+      .header-close-btn,
       .panel-menu-toggle,
       .dropdown-arrow,
       .panel-title,
@@ -443,6 +444,7 @@ export let styles = css`
 
       /* Hide fullscreen button, dropdown, and spacer */
       .fullscreen-btn,
+      .header-close-btn,
       .panel-menu-toggle,
       .dropdown-arrow,
       .panel-title,

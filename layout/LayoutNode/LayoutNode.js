@@ -164,8 +164,10 @@ export class LayoutNode extends Symbiote {
     savedRatio: 0.5,
     isFullscreen: false,
     fullscreenIcon: 'fullscreen',
+    hasHeaderClose: false,
     collapseTitle: translate('layout.collapse'),
     fullscreenTitle: translate('layout.fullscreen'),
+    headerCloseTitle: translate('layout.close'),
 
 
     firstStyle: '',
@@ -186,6 +188,7 @@ export class LayoutNode extends Symbiote {
     onCollapseClick: () => this._toggleCollapse(),
     onExpandClick: () => this._toggleCollapse(),
     onFullscreenClick: () => this._toggleFullscreen(),
+    onHeaderCloseClick: () => this._closePanel(),
   };
 
   renderCallback() {
@@ -375,6 +378,9 @@ export class LayoutNode extends Symbiote {
     let config = panelTypes[this.$.panelType] || {};
     this.$.panelTitle = config.title || this.$.panelType;
     this.$.panelIcon = config.icon || 'dashboard';
+    let panelState = this.$.nodeData?.panelState || {};
+    let closeable = Boolean(panelState.uiInvoked || panelState.removable === true);
+    this.$.hasHeaderClose = config.headerClose === true && closeable;
     ensureMaterialSymbols([this.$.panelIcon]);
     this._syncBehaviorInfo(this.$.nodeData, config.behavior);
 
@@ -948,6 +954,19 @@ export class LayoutNode extends Symbiote {
 
     this.dispatchEvent(
       new CustomEvent('panel-fullscreen', {
+        bubbles: true,
+        composed: true,
+        detail: { panelId: this.$.nodeId },
+      })
+    );
+  }
+
+  _closePanel() {
+    if (this.$.panelChrome === false || this.$['^panelChrome'] === false) return;
+    if (!this.$.hasHeaderClose) return;
+
+    this.dispatchEvent(
+      new CustomEvent('panel-close', {
         bubbles: true,
         composed: true,
         detail: { panelId: this.$.nodeId },

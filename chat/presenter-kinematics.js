@@ -1,9 +1,9 @@
-export const PRESENTER_KINEMATICS_VERSION = 'symbiote-presenter-kinematics-v1';
+export const PRESENTER_KINEMATICS_VERSION = 'symbiote-presenter-kinematics-v2';
 
 export const PRESENTER_KINEMATIC_LIMITS = Object.freeze({
-  minMovingSpeedPxPerMs: 1.1,
-  targetSpeedPxPerMs: 2,
-  maxSpeedPxPerMs: 2,
+  minMovingSpeedPxPerMs: 1.6,
+  targetSpeedPxPerMs: 3,
+  maxSpeedPxPerMs: 3,
   minDurationMs: 220,
   baseWidthPx: 4.2,
   minWidthRatio: 0.7,
@@ -12,7 +12,7 @@ export const PRESENTER_KINEMATIC_LIMITS = Object.freeze({
 });
 
 const UNDERDRAW_KINDS = new Set(['box', 'frame', 'label']);
-const OVERLAP_KINDS = new Set(['oval', 'multi-oval', 'heart']);
+const OPEN_GAP_KINDS = new Set(['oval', 'multi-oval', 'heart']);
 const TIME_SAMPLE_COUNT = 240;
 const GEOMETRY_TOLERANCE_PX = 0.12;
 const MAX_GEOMETRY_DEPTH = 14;
@@ -82,14 +82,12 @@ function tailPolicy(kind, seed, baseWidthPx) {
     let amount = 0.0475;
     return Object.freeze({ mode: 'underdraw', amount, sourceEnd: 1 - amount });
   }
-  if (OVERLAP_KINDS.has(kind)) {
-    let amount = 0.0375;
+  if (OPEN_GAP_KINDS.has(kind)) {
+    let amount = 0.045;
     return Object.freeze({
-      mode: 'displaced-overlap',
+      mode: 'open-gap',
       amount,
-      sourceEnd: 1 + amount,
-      lateralOffsetPx: baseWidthPx * 1.15,
-      direction: randomUnit(seed, 97) < 0.5 ? -1 : 1,
+      sourceEnd: 1 - amount,
     });
   }
   return Object.freeze({ mode: 'open', amount: 0, sourceEnd: 1 });
@@ -151,28 +149,7 @@ function resampleSpatially(points, count) {
 }
 
 function sourceAnchors(pointAt, policy) {
-  let samplePoint = pointAt;
-  if (policy.mode === 'displaced-overlap') {
-    let start = 1 - policy.amount;
-    samplePoint = (parameter) => {
-      let center = point(pointAt(parameter), 'pointAt(progress)');
-      if (parameter <= start) return center;
-      let epsilon = 0.0005;
-      let before = point(pointAt(Math.max(0, parameter - epsilon)), 'pointAt(progress)');
-      let after = point(pointAt(Math.min(policy.sourceEnd, parameter + epsilon)), 'pointAt(progress)');
-      let dx = after.x - before.x;
-      let dy = after.y - before.y;
-      let magnitude = Math.hypot(dx, dy) || 1;
-      let progress = clamp((parameter - start) / (policy.sourceEnd - start), 0, 1);
-      let eased = progress * progress * (3 - 2 * progress);
-      let offset = policy.lateralOffsetPx * eased * policy.direction;
-      return {
-        x: center.x - dy / magnitude * offset,
-        y: center.y + dx / magnitude * offset,
-      };
-    };
-  }
-  let adaptive = adaptiveParametricSamples(samplePoint, policy.sourceEnd);
+  let adaptive = adaptiveParametricSamples(pointAt, policy.sourceEnd);
   let length = spatialMetrics(adaptive).arcLengthPx;
   let count = clamp(Math.ceil(length / 18), 16, 96);
   return {
@@ -361,6 +338,18 @@ function createTimeTable(samples, arcLengthPx, limits) {
   return table;
 }
 
+function createConstantSpeedTimeTable(arcLengthPx, speedPxPerMs) {
+  if (!arcLengthPx) return [{ timeMs: 0, distancePx: 0, speedPxPerMs: 0 }];
+  return [
+    { timeMs: 0, distancePx: 0, speedPxPerMs: 0 },
+    {
+      timeMs: arcLengthPx / speedPxPerMs,
+      distancePx: arcLengthPx,
+      speedPxPerMs,
+    },
+  ];
+}
+
 function widthProfile(samples, seed, limits, baseWidthPx) {
   let widths = samples.map((sample) => {
     let curvature = clamp(sample.curvature * 120, 0, 1);
@@ -456,10 +445,65 @@ function ribbonPath(samples) {
     left.push({ x: samples[index].x + offsetX, y: samples[index].y + offsetY });
     right.push({ x: samples[index].x - offsetX, y: samples[index].y - offsetY });
   }
-  let points = [...left, ...right.reverse()];
-  return `${points.map((sample, index) => (
+  let first = samples[0];
+  let second = samples[1];
+  let last = samples.at(-1);
+  let beforeLast = samples.at(-2);
+  let startMagnitude = Math.hypot(second.x - first.x, second.y - first.y) || 1;
+  let endMagnitude = Math.hypot(last.x - beforeLast.x, last.y - beforeLast.y) || 1;
+  let startRadius = first.widthPx / 2;
+  let endRadius = last.widthPx / 2;
+  let startTangent = {
+    x: (second.x - first.x) / startMagnitude,
+    y: (second.y - first.y) / startMagnitude,
+  };
+  let endTangent = {
+    x: (last.x - beforeLast.x) / endMagnitude,
+    y: (last.y - beforeLast.y) / endMagnitude,
+  };
+  let startNormal = { x: -startTangent.y, y: startTangent.x };
+  let endNormal = { x: -endTangent.y, y: endTangent.x };
+  let startTip = {
+    x: first.x - startTangent.x * startRadius,
+    y: first.y - startTangent.y * startRadius,
+  };
+  let endTip = {
+    x: last.x + endTangent.x * endRadius,
+    y: last.y + endTangent.y * endRadius,
+  };
+  let leftPath = left.map((sample, index) => (
     `${index ? 'L' : 'M'}${sample.x.toFixed(2)} ${sample.y.toFixed(2)}`
-  )).join('')}Z`;
+  )).join('');
+  let reverseRight = right.reverse();
+  let rightStart = reverseRight[0];
+  let rightEnd = reverseRight.at(-1);
+  let rightPath = reverseRight.slice(1)
+    .map((sample) => `L${sample.x.toFixed(2)} ${sample.y.toFixed(2)}`)
+    .join('');
+  const kappa = 0.5522847498;
+  let endControl = endRadius * kappa;
+  let startControl = startRadius * kappa;
+  let endCap = `C${(left.at(-1).x + endTangent.x * endControl).toFixed(2)} `
+    + `${(left.at(-1).y + endTangent.y * endControl).toFixed(2)} `
+    + `${(endTip.x + endNormal.x * endControl).toFixed(2)} `
+    + `${(endTip.y + endNormal.y * endControl).toFixed(2)} `
+    + `${endTip.x.toFixed(2)} ${endTip.y.toFixed(2)}`
+    + `C${(endTip.x - endNormal.x * endControl).toFixed(2)} `
+    + `${(endTip.y - endNormal.y * endControl).toFixed(2)} `
+    + `${(rightStart.x + endTangent.x * endControl).toFixed(2)} `
+    + `${(rightStart.y + endTangent.y * endControl).toFixed(2)} `
+    + `${rightStart.x.toFixed(2)} ${rightStart.y.toFixed(2)}`;
+  let startCap = `C${(rightEnd.x - startTangent.x * startControl).toFixed(2)} `
+    + `${(rightEnd.y - startTangent.y * startControl).toFixed(2)} `
+    + `${(startTip.x - startNormal.x * startControl).toFixed(2)} `
+    + `${(startTip.y - startNormal.y * startControl).toFixed(2)} `
+    + `${startTip.x.toFixed(2)} ${startTip.y.toFixed(2)}`
+    + `C${(startTip.x + startNormal.x * startControl).toFixed(2)} `
+    + `${(startTip.y + startNormal.y * startControl).toFixed(2)} `
+    + `${(left[0].x - startTangent.x * startControl).toFixed(2)} `
+    + `${(left[0].y - startTangent.y * startControl).toFixed(2)} `
+    + `${left[0].x.toFixed(2)} ${left[0].y.toFixed(2)}`;
+  return `${leftPath}${endCap}${rightPath}${startCap}Z`;
 }
 
 function partialSamples(plan, distancePx) {
@@ -483,6 +527,11 @@ export function createPresenterKinematicPlan(request = {}) {
   let kind = String(request.kind || 'freehand').trim().toLowerCase();
   let seed = normalizePresenterSeed(request.seed);
   let style = request.style && typeof request.style === 'object' ? request.style : {};
+  let constantSpeedPxPerMs = clamp(
+    finite(style.constantSpeedPxPerMs, 0),
+    0,
+    PRESENTER_KINEMATIC_LIMITS.maxSpeedPxPerMs,
+  );
   let limits = {
     minMovingSpeedPxPerMs: clamp(
       finite(style.minMovingSpeedPxPerMs, PRESENTER_KINEMATIC_LIMITS.minMovingSpeedPxPerMs),
@@ -508,6 +557,11 @@ export function createPresenterKinematicPlan(request = {}) {
     limits.minMovingSpeedPxPerMs,
     limits.targetSpeedPxPerMs,
   );
+  if (constantSpeedPxPerMs > 0) {
+    limits.minMovingSpeedPxPerMs = constantSpeedPxPerMs;
+    limits.targetSpeedPxPerMs = constantSpeedPxPerMs;
+    limits.maxSpeedPxPerMs = constantSpeedPxPerMs;
+  }
   let baseWidthPx = Math.max(0.5, finite(style.baseWidthPx, PRESENTER_KINEMATIC_LIMITS.baseWidthPx));
   let noiseAmplitudePx = clamp(
     finite(request.noiseAmplitudePx, finite(style.noiseAmplitudePx, PRESENTER_KINEMATIC_LIMITS.noiseAmplitudePx)),
@@ -526,19 +580,27 @@ export function createPresenterKinematicPlan(request = {}) {
   for (let index = 0; index < metrics.samples.length; index += 1) {
     metrics.samples[index].widthPx = widths[index];
   }
-  let semanticTimeTable = createTimeTable(
-    semanticMetrics.samples,
-    semanticMetrics.arcLengthPx,
-    limits,
-  );
-  let distanceScale = semanticMetrics.arcLengthPx
-    ? metrics.arcLengthPx / semanticMetrics.arcLengthPx
-    : 1;
-  let timeTable = semanticTimeTable.map((sample) => ({
-    ...sample,
-    distancePx: sample.distancePx * distanceScale,
-    speedPxPerMs: sample.speedPxPerMs * distanceScale,
-  }));
+  let timeTable;
+  let motionProfile;
+  if (constantSpeedPxPerMs > 0) {
+    motionProfile = 'constant-speed';
+    timeTable = createConstantSpeedTimeTable(metrics.arcLengthPx, constantSpeedPxPerMs);
+  } else {
+    motionProfile = 'minimum-jerk';
+    let semanticTimeTable = createTimeTable(
+      semanticMetrics.samples,
+      semanticMetrics.arcLengthPx,
+      limits,
+    );
+    let distanceScale = semanticMetrics.arcLengthPx
+      ? metrics.arcLengthPx / semanticMetrics.arcLengthPx
+      : 1;
+    timeTable = semanticTimeTable.map((sample) => ({
+      ...sample,
+      distancePx: sample.distancePx * distanceScale,
+      speedPxPerMs: sample.speedPxPerMs * distanceScale,
+    }));
+  }
   let planBounds = bounds(metrics.samples);
   let frozenSamples = Object.freeze(metrics.samples.map((sample) => Object.freeze({ ...sample })));
   let frozenTime = Object.freeze(timeTable.map((sample) => Object.freeze({ ...sample })));
@@ -546,6 +608,7 @@ export function createPresenterKinematicPlan(request = {}) {
   let result = {
     version: PRESENTER_KINEMATICS_VERSION,
     kind,
+    motionProfile,
     seed,
     tailPolicy: policy,
     samples: frozenSamples,

@@ -11,6 +11,7 @@ import {
 } from '../manifest/index.js';
 import { createShowEvent } from '../chat/show-contracts.js';
 import * as showRuntime from '../chat/show-runtime.js';
+import { PRESENTER_INK_DRAW_SPEED_PX_PER_MS } from '../chat/presenter-cursor.js';
 
 test('Show manifest, schema catalog, and JSON file expose one synchronized public contract', async () => {
   let fileSchema = JSON.parse(await readFile(new URL('../schemas/show-event-v1.json', import.meta.url), 'utf8'));
@@ -32,7 +33,12 @@ test('Show manifest, schema catalog, and JSON file expose one synchronized publi
     'short-muted-montage': 'pointer-only',
     'full-with-media-audio': 'detail',
   });
-  assert.equal(SHOW_RUNTIME_CONTRACT.chatComposition.playerPlacement, 'fixed-lower-region-outside-transcript-scroll');
+  assert.ok(SHOW_RUNTIME_CONTRACT.capabilities.includes('stable-chat-show-player-with-inline-and-native-panel-projections'));
+  assert.equal(SHOW_RUNTIME_CONTRACT.chatComposition.embedPart, 'transcript-receipt-for-stable-player');
+  assert.equal(SHOW_RUNTIME_CONTRACT.chatComposition.playerPlacement, 'inline-or-native-layout-panel');
+  assert.deepEqual(SHOW_RUNTIME_CONTRACT.chatComposition.playerPlacementModes, ['inline', 'panel']);
+  assert.equal(SHOW_RUNTIME_CONTRACT.chatComposition.playerPlacementLifecycle, 'same-live-player-reparented-without-controller-recreation');
+  assert.equal(SHOW_RUNTIME_CONTRACT.chatComposition.playerResponsiveFallback, 'native-panel-closes-to-inline-before-mobile-drawer');
   assert.equal(SHOW_RUNTIME_CONTRACT.chatComposition.responsiveShell.desktop, 'single-panel-layout-split-with-native-resizer-and-collapse');
   assert.deepEqual(SHOW_RUNTIME_CONTRACT.chatComposition.responsiveShell.mobile, ['panel-layout-drawer']);
   assert.deepEqual(SHOW_RUNTIME_CONTRACT.chatComposition.videoControlSemantics, ['detail', 'pointer-only']);
@@ -65,13 +71,21 @@ test('Show manifest, schema catalog, and JSON file expose one synchronized publi
   });
   assert.deepEqual(SHOW_RUNTIME_CONTRACT.attentionAnimation, {
     clock: 'performance-time-origin-with-raf-or-performance-now-monotonic-time',
-    timing: 'arc-length-minimum-jerk-with-hard-budget-speed-ceiling',
+    timing: 'profile-specific-arc-length-motion-with-hard-budget',
     geometry: 'adaptive-geometric-tolerance-centripetal-smoothing-and-normalized-arc-seeded-noise',
     width: 'speed-curvature-and-pressure-derived-ribbon',
     completion: 'settled-visible-until-replaced-or-cleared',
     settlementReceipt: 'show-attention-terminal-v2-with-exact-nested-provider-evidence',
     cursorTravel: 'shared-arc-length-minimum-jerk-planner-with-hard-budget-speed-ceiling',
-    speedLimitsPxPerMs: { minimumMoving: 1.1, target: 2, maximum: 2 },
+    speedLimitsPxPerMs: { minimumMoving: 1.6, target: 3, maximum: 3 },
+    speedLimitsScope: 'cursor-travel',
+    markerInk: {
+      motionProfile: 'constant-speed',
+      speedPxPerMs: 0.45,
+      duration: 'arc-length-divided-by-speed',
+      cap: 'rounded',
+      enclosingTail: 'open-gap',
+    },
     minimumDurationMs: 220,
     admission: {
       version: 'show-attention-admission-v2',
@@ -106,7 +120,7 @@ test('Show manifest, schema catalog, and JSON file expose one synchronized publi
       providerReceipt: 'exact-immutable-nested-plan-or-render-evidence',
       workspaceIdentity: 'none',
     },
-    enclosingTail: 'displaced-overlap-with-visible-offset',
+    enclosingTail: 'open-gap-with-rounded-caps',
     markerPersistence: 'accumulate-after-settle',
     controls: ['pause', 'resume', 'seek', 'capture-state', 'restore-state', 'reset'],
     cancellation: ['replacement', 'cancel', 'seek-reset', 'branch-reset', 'dispose'],
@@ -128,6 +142,10 @@ test('Show manifest, schema catalog, and JSON file expose one synchronized publi
       'onTerminal',
     ],
   });
+  assert.equal(
+    SHOW_RUNTIME_CONTRACT.attentionAnimation.markerInk.speedPxPerMs,
+    PRESENTER_INK_DRAW_SPEED_PX_PER_MS,
+  );
   assert.deepEqual(SHOW_RUNTIME_CONTRACT.visualSettlement, {
     helper: 'waitForShowVisualSettlement',
     ordering: 'reveal-or-scroll-then-terminal-settlement-then-attention',

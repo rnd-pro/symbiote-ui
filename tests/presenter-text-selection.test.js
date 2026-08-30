@@ -10,6 +10,7 @@ import {
   applyPresenterTextSelection,
   createPresenterTextSelectionAnimation,
 } from '../chat/presenter-text-selection.js';
+import { PRESENTER_KINEMATIC_LIMITS } from '../chat/presenter-kinematics.js';
 
 function installSelection(window) {
   let ranges = [];
@@ -288,10 +289,16 @@ test('selection duration follows measured travel and ignores consumer duration o
     quote: 'substantially longer selected phrase', seed: 'same', durationMs: 99999,
   });
 
-  assert.ok(short.receipt.durationMs >= 220);
-  assert.ok(long.receipt.durationMs > short.receipt.durationMs * 2.5);
-  assert.ok(short.receipt.speedPxPerMs <= 2);
-  assert.ok(long.receipt.speedPxPerMs <= 2);
+  assert.ok(short.receipt.durationMs > 0 && short.receipt.durationMs < 220);
+  assert.ok(long.receipt.durationMs > short.receipt.durationMs * 5);
+  let shortMiddle = short.presentFrame(short.receipt.durationMs / 2);
+  let longMiddle = long.presentFrame(long.receipt.durationMs / 2);
+  for (let frame of [shortMiddle, longMiddle]) {
+    assert.ok(
+      frame.speedPxPerMs >= PRESENTER_KINEMATIC_LIMITS.minMovingSpeedPxPerMs - 0.001,
+    );
+    assert.ok(frame.speedPxPerMs <= PRESENTER_KINEMATIC_LIMITS.maxSpeedPxPerMs);
+  }
 });
 
 test('selection kinematics are deterministic for the same seed and geometry', () => {

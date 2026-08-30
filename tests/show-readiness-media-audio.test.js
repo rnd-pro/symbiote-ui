@@ -275,6 +275,25 @@ test('audio arbiter preempts speech before granting audible media', async () => 
   assert.deepEqual(arbiter.snapshot, { id: 'media', kind: 'media', tokenId: mediaToken.id });
 });
 
+test('audio arbiter paused release preserves resumable speech while relinquishing ownership', async () => {
+  let paused = 0;
+  let stopped = 0;
+  let arbiter = new ShowAudioArbiter();
+  let token = await arbiter.acquire({
+    id: 'speech',
+    kind: 'speech',
+    pause: () => { paused += 1; },
+    stop: () => { stopped += 1; },
+  });
+
+  assert.equal(await arbiter.release({ ...token, reason: 'paused' }), true);
+  assert.deepEqual({ paused, stopped, snapshot: arbiter.snapshot }, {
+    paused: 1,
+    stopped: 0,
+    snapshot: null,
+  });
+});
+
 test('media modes enforce muted montage, skippable full playback, and exact state restoration', async () => {
   let arbiter = new ShowAudioArbiter();
   let media = eventTarget({

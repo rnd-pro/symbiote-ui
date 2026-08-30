@@ -1,5 +1,6 @@
 import {
   createPresenterKinematicPlan,
+  PRESENTER_KINEMATIC_LIMITS,
   samplePresenterKinematicPlan,
 } from './presenter-kinematics.js';
 
@@ -351,6 +352,22 @@ function selectionTargetRect(target) {
   return Object.keys(result).length ? Object.freeze(result) : null;
 }
 
+function selectionKinematicStyle(style, distancePx) {
+  let source = style && typeof style === 'object' && !Array.isArray(style)
+    ? { ...style }
+    : {};
+  let authoredMinimum = Number(source.minDurationMs);
+  let minimumDurationMs = Number.isFinite(authoredMinimum) && authoredMinimum > 0
+    ? authoredMinimum
+    : PRESENTER_KINEMATIC_LIMITS.minDurationMs;
+  // Minimum-jerk motion peaks at 1.875 × average speed. Cap the
+  // perceptual floor so even short selections reach the shared moving-speed minimum.
+  let minimumSpeedDurationCap = 1.875 * distancePx
+    / PRESENTER_KINEMATIC_LIMITS.minMovingSpeedPxPerMs;
+  source.minDurationMs = Math.max(1, Math.min(minimumDurationMs, minimumSpeedDurationCap));
+  return source;
+}
+
 function animatedReceipt(receipt, sample, plan) {
   return Object.freeze({
     ...receipt,
@@ -458,7 +475,7 @@ export function createPresenterTextSelectionAnimation(target, parameters = {}) {
   let plan = createPresenterKinematicPlan({
     kind: 'underline',
     seed: parameters.seed ?? parameters.gestureId ?? `${baseReceipt.kind}:${baseReceipt.startOffset}:${baseReceipt.endOffset}`,
-    style: parameters.style,
+    style: selectionKinematicStyle(parameters.style, distancePx),
     noiseAmplitudePx: 0,
     pointAt: (progress) => ({ x: distancePx * progress, y: 0 }),
   });

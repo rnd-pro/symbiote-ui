@@ -98,6 +98,24 @@ test('gesture policy projects large regions as focus frames and keeps marker ink
   cursor.dispose();
 });
 
+test('explicit emphasis preserves an authored marker beyond the automatic compact envelope', () => {
+  let policy = resolvePresenterGesturePolicy({
+    cueKind: 'annotation',
+    annotation: { kind: 'marker', marker: 'oval', intent: 'emphasize' },
+    targetRect: {
+      left: 212.515625,
+      top: 335.046875,
+      width: 451.265625,
+      height: 151.40625,
+    },
+    viewport: { width: 1087, height: 719 },
+  });
+
+  assert.equal(policy.targetAreaRatio > 0.08, true);
+  assert.equal(policy.selectedKind, 'marker');
+  assert.equal(policy.reason, 'explicit-emphasis');
+});
+
 test('relationship arrows require an exact registered pair and separated geometry', () => {
   let relation = { id: 'relation:source-detail', from: 'source', to: 'detail' };
   let sourceRect = { left: 80, top: 120, width: 120, height: 60 };

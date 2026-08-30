@@ -166,6 +166,14 @@ export function resolvePresenterGesturePolicy({
     return result(base, 'focus-frame', 'semantic-region-prefers-frame', 'marker');
   }
 
+  // An explicit emphasis intent is an authoring decision, not an automatic
+  // annotation suggestion. Preserve the requested marker here and let the
+  // later path-safety projection reject or frame it only when the concrete
+  // stroke cannot be rendered safely.
+  if (annotation?.kind === 'marker' && annotation?.intent === 'emphasize') {
+    return result(base, 'marker', 'explicit-emphasis');
+  }
+
   if (markerIsCompact(metrics, policy)) {
     return result(base, 'marker', 'compact-target');
   }

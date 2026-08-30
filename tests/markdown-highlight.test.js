@@ -53,3 +53,21 @@ test('renderMarkdown omits class attribute for fenced code blocks with empty/omi
   assert.match(html, /<code>plain text<\/code>/);
   assert.ok(!html.includes('class="language-"'));
 });
+
+test('renderMarkdown escapes query separators exactly once in URL attributes', () => {
+  const markdown = [
+    '[CV Show](/cv/?showMode=short&showEntry=positioning)',
+    '![Preview](/image.png?locale=ru&theme=dark)',
+  ].join('\n');
+  const html = renderMarkdown(markdown);
+
+  assert.match(
+    html,
+    /href="\/cv\/\?showMode=short&amp;showEntry=positioning"/,
+  );
+  assert.match(
+    html,
+    /src="\/image\.png\?locale=ru&amp;theme=dark"/,
+  );
+  assert.doesNotMatch(html, /&amp;amp;/);
+});

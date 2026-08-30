@@ -285,6 +285,7 @@ export let styles = css`
         }
 
         .fullscreen-btn,
+        .header-close-btn,
         .panel-menu-toggle,
         .dropdown-arrow,
         .panel-title,

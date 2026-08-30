@@ -53,7 +53,7 @@ function animatedTarget(view, id) {
 function focusPlan(elapsedMs = 0, durationMs = 300) {
   return {
     presented: true,
-    planVersion: 'symbiote-presenter-kinematics-v1',
+    planVersion: 'symbiote-presenter-kinematics-v2',
     durationMs,
     elapsedMs,
     revealProgress: elapsedMs / durationMs,
@@ -95,7 +95,7 @@ test('attention controller serializes frame selection and click while markers ac
   assert.ok(calls.includes('clear-markers'));
 });
 
-test('attention replacements preserve the arrow and terminal lifecycle clears it', () => {
+test('attention bootstrap and replacements preserve the arrow until terminal lifecycle clears it', () => {
   let clearOptions = [];
   let cursor = {
     clear: (options) => clearOptions.push(options),
@@ -106,6 +106,8 @@ test('attention replacements preserve the arrow and terminal lifecycle clears it
     cursor,
     resolveTarget: (id) => ({ id }),
   });
+
+  assert.deepEqual(clearOptions, [{ preserveInk: false, preserveCursor: true }]);
 
   attention.present({ mode: 'frame', targetId: 'a' });
   attention.present({ mode: 'frame', targetId: 'b' });
@@ -140,7 +142,7 @@ test('attention controller advances frame and marker receipts to one settled vis
       markerFrames.push(elapsedMs);
       return {
         presented: true,
-        planVersion: 'symbiote-presenter-kinematics-v1',
+        planVersion: 'symbiote-presenter-kinematics-v2',
         durationMs: 300,
         progress,
         pathPoints: Math.max(1, Math.round(progress * 24)),
@@ -343,7 +345,7 @@ test('pure attention admission preserves exact nested provider evidence and reje
     layoutIdentity: 'layout:revision-7',
     budgetMs: 650,
     plan: {
-      planVersion: 'symbiote-presenter-kinematics-v1',
+      planVersion: 'symbiote-presenter-kinematics-v2',
       durationMs: 640,
       normalizedPathHash: 'path-selection-42',
       distancePx: 640,
@@ -371,7 +373,7 @@ test('pure attention admission preserves exact nested provider evidence and reje
   });
   assert.equal(admitted.budget.limitMs, 650);
   assert.equal(admitted.budget.plannedDurationMs, 640);
-  assert.equal(admitted.plan.version, 'symbiote-presenter-kinematics-v1');
+  assert.equal(admitted.plan.version, 'symbiote-presenter-kinematics-v2');
   assert.match(admitted.plan.identity, /^show-plan:[0-9a-f]{8}$/);
   assert.equal(admitted.plan.normalizedPathHash, 'path-selection-42');
   assert.equal(admitted.target.geometry.startOffset, 18);
@@ -404,7 +406,7 @@ test('admission allows an empty path hash only for a truthful non-path click', (
     layoutIdentity: 'layout:button.save:1',
     budgetMs: 300,
     plan: {
-      planVersion: 'symbiote-presenter-kinematics-v1',
+      planVersion: 'symbiote-presenter-kinematics-v2',
       durationMs: 220,
       normalizedPathHash: '',
       rect: { left: 10, top: 20, width: 80, height: 32 },
@@ -435,7 +437,7 @@ test('normal attention admits synchronously before first provider mutation and p
       events.push(frame.planOnly ? 'plan' : `render:${elapsedMs}`);
       return {
         presented: true,
-        planVersion: 'symbiote-presenter-kinematics-v1',
+        planVersion: 'symbiote-presenter-kinematics-v2',
         durationMs: 400,
         elapsedMs,
         revealProgress: elapsedMs / 400,
@@ -493,6 +495,87 @@ test('normal attention admits synchronously before first provider mutation and p
   assert.equal(Object.isFrozen(terminal.providerReceipt), true);
 });
 
+test('wall-clock fallback settles an admitted gesture when RAF starves after its first frame', async () => {
+  let now = 0;
+  let frameCallback = null;
+  let fallbackCallback = null;
+  let fallbackDelay = null;
+  let cancelledFrames = [];
+  let clearedFallbacks = [];
+  let nextFrameId = 0;
+  let nextFallbackId = 0;
+  let view = {
+    performance: {
+      timeOrigin: 1700000000000,
+      now: () => now,
+    },
+    requestAnimationFrame(callback) {
+      frameCallback = callback;
+      return ++nextFrameId;
+    },
+    cancelAnimationFrame(id) {
+      cancelledFrames.push(id);
+      frameCallback = null;
+    },
+    setTimeout(callback, delay) {
+      fallbackCallback = callback;
+      fallbackDelay = delay;
+      return ++nextFallbackId;
+    },
+    clearTimeout(id) {
+      clearedFallbacks.push(id);
+      fallbackCallback = null;
+    },
+  };
+  let target = animatedTarget(view, 'fallback-focus');
+  let frames = [];
+  let milestones = [];
+  let terminals = [];
+  let attention = new ShowAttentionController({
+    cursor: {
+      clear() {},
+      presentFocusFrame(_target, frame) {
+        let elapsedMs = Number(frame.elapsedMs) || 0;
+        frames.push(elapsedMs);
+        return focusPlan(elapsedMs, 220);
+      },
+    },
+    resolveTarget: () => target,
+  });
+
+  attention.present({
+    mode: 'frame',
+    targetId: 'fallback-focus',
+    targetIdentity: 'target:fallback-focus',
+    layoutIdentity: 'layout:fallback-focus:1',
+    gestureId: 'fallback-focus',
+    budgetMs: 550,
+    onAdmission() {},
+    onMilestone: (receipt) => milestones.push(receipt.milestone),
+    onTerminal: (receipt) => terminals.push(receipt),
+  });
+
+  assert.equal(fallbackDelay, 220);
+  now = 1_000;
+  let firstFrame = frameCallback;
+  firstFrame(1_000);
+  assert.deepEqual(frames, [0, 0], 'planning and the first visible frame both start at zero');
+  assert.deepEqual(milestones, ['first-frame']);
+
+  now = 1_220;
+  let fallback = fallbackCallback;
+  fallback();
+  let terminal = await attention.whenSettled();
+
+  assert.deepEqual(frames, [0, 0, 220]);
+  assert.deepEqual(milestones, ['first-frame', 'settled']);
+  assert.equal(terminal.status, 'completed');
+  assert.equal(terminal.timing.elapsedMs, 220);
+  assert.equal(terminals.length, 1);
+  assert.ok(cancelledFrames.length >= 1, 'the stale RAF is cancelled on fallback settlement');
+  assert.ok(clearedFallbacks.length >= 0);
+});
+
 test('semantic select admits before native selection and reports first-frame as exact provider evidence', async () => {
   let scheduler = createFrameScheduler();
   let events = [];
@@ -503,7 +586,7 @@ test('semantic select admits before native selection and reports first-frame as 
     selectText: () => ({
       receipt: {
         presented: true,
-        planVersion: 'symbiote-presenter-kinematics-v1',
+        planVersion: 'symbiote-presenter-kinematics-v2',
         durationMs: 300,
         progress: 0,
         normalizedPathHash: 'path-selection-order',
@@ -515,7 +598,7 @@ test('semantic select admits before native selection and reports first-frame as 
         events.push(`selection:${elapsedMs}`);
         return {
           presented: true,
-          planVersion: 'symbiote-presenter-kinematics-v1',
+          planVersion: 'symbiote-presenter-kinematics-v2',
           durationMs: 300,
           elapsedMs,
           progress: elapsedMs / 300,
@@ -558,7 +641,7 @@ test('attention rejects over-budget zero-progress plans before RAF and clears th
     presentAnnotationFrame() {
       return {
         presented: true,
-        planVersion: 'symbiote-presenter-kinematics-v1',
+        planVersion: 'symbiote-presenter-kinematics-v2',
         durationMs: 651,
         progress: 0,
         normalizedPathHash: 'path-over-budget',
@@ -597,7 +680,7 @@ test('budgeted unresolved attention clears a prior generation without stale repl
       let elapsedMs = Number(frame.elapsedMs) || 0;
       return {
         presented: true,
-        planVersion: 'symbiote-presenter-kinematics-v1',
+        planVersion: 'symbiote-presenter-kinematics-v2',
         durationMs: 400,
         elapsedMs,
         revealProgress: elapsedMs / 400,
@@ -669,7 +752,7 @@ test('attention reports actual first-frame and settled milestones exactly once',
       let elapsedMs = Number(frame.elapsedMs) || 0;
       return {
         presented: true,
-        planVersion: 'symbiote-presenter-kinematics-v1',
+        planVersion: 'symbiote-presenter-kinematics-v2',
         durationMs: 400,
         elapsedMs,
         revealProgress: elapsedMs / 400,
@@ -736,7 +819,7 @@ test('replacement and Stop cancellation publish one terminal receipt and suppres
       let elapsedMs = Number(frame.elapsedMs) || 0;
       return {
         presented: true,
-        planVersion: 'symbiote-presenter-kinematics-v1',
+        planVersion: 'symbiote-presenter-kinematics-v2',
         durationMs: 400,
         elapsedMs,
         revealProgress: elapsedMs / 400,
@@ -855,7 +938,7 @@ test('prefers-reduced-motion renders the final semantic state without scheduling
       events.push(frame.planOnly ? 'plan' : `render:${elapsedMs}`);
       return {
         presented: true,
-        planVersion: 'symbiote-presenter-kinematics-v1',
+        planVersion: 'symbiote-presenter-kinematics-v2',
         durationMs: 300,
         elapsedMs,
         progress: elapsedMs / 300,
@@ -911,7 +994,7 @@ test('hostless immediate presentation reports its synchronous render before sett
       events.push(frame.planOnly ? 'plan' : `render:${elapsedMs}`);
       return {
         presented: true,
-        planVersion: 'symbiote-presenter-kinematics-v1',
+        planVersion: 'symbiote-presenter-kinematics-v2',
         durationMs: 300,
         elapsedMs,
         revealProgress: elapsedMs / 300,
@@ -988,7 +1071,7 @@ test('provider-v2 presentation requires a callable admission reporter before pla
 test('provider evidence preserves a JSON own __proto__ key and recursively freezes it', () => {
   let plan = JSON.parse(`{
     "presented": true,
-    "planVersion": "symbiote-presenter-kinematics-v1",
+    "planVersion": "symbiote-presenter-kinematics-v2",
     "durationMs": 300,
     "normalizedPathHash": "path-own-proto",
     "targetRect": { "left": 1, "top": 2, "width": 100, "height": 40 },
@@ -1199,11 +1282,11 @@ test('throwing admission reporters clean resolved and unresolved provisional sta
   for (let resolved of [true, false]) {
     let scheduler = createFrameScheduler();
     let failure = new Error(`admission failed:${resolved}`);
-    let clears = 0;
+    let clears = [];
     let terminals = [];
     let attention = new ShowAttentionController({
       cursor: {
-        clear() { clears += 1; },
+        clear(options) { clears.push(options); },
         presentFocusFrame: () => focusPlan(),
       },
       resolveTarget: () => (resolved ? animatedTarget(scheduler.view, 'focus') : null),
@@ -1223,7 +1306,10 @@ test('throwing admission reporters clean resolved and unresolved provisional sta
     assert.equal(attention.snapshot.animating, false);
     assert.equal(attention.snapshot.cursorOwner, '');
     assert.equal(attention.captureState().request, null);
-    assert.equal(clears, 1);
+    assert.deepEqual(clears, [
+      { preserveInk: false, preserveCursor: true },
+      { preserveInk: true, preserveCursor: false },
+    ]);
     let terminal = await attention.whenSettled();
     assert.equal(terminal.status, 'failed');
     assert.equal(terminal.timing.terminalReason.code, 'admission-callback-failed');

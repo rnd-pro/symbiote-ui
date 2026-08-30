@@ -217,6 +217,7 @@ export class Layout extends Symbiote {
    * @param {string} [config.title] - Default title
    * @param {string} [config.icon] - Material Symbols icon name
    * @param {string} [config.component] - Custom element tag name
+   * @param {boolean} [config.headerClose] - Show a close action that removes UI-invoked or removable panel instances
    * @param {Array} [config.menuActions] - Fold-down header menu action descriptors
    * @param {import('./../LayoutTree.js').LayoutBehavior} [config.behavior] - Default behavior for panels of this type
    */
@@ -1636,11 +1637,14 @@ export class Layout extends Symbiote {
     let panelId = e.detail?.panelId;
     if (!panelId) return;
     e.stopPropagation();
+    if (this.$.fullscreenPanelId === panelId) {
+      this._onPanelFullscreen({ detail: { panelId } });
+    }
     let panelNode = this._findPanelNode(panelId);
     let panelState = panelNode?.$?.nodeData?.panelState || {};
     if (panelState.uiInvoked) {
       let panelType = panelNode?.$?.nodeData?.panelType;
-      if (panelType) this.closeUiPanel(panelType);
+      if (panelType) this._removeUiPanelFromHeaderClose(panelType);
     } else if (panelState.removable === true) {
       this.joinPanels(panelId);
     }
@@ -1922,6 +1926,34 @@ export class Layout extends Symbiote {
         source: result.panel.panelState?.source || '',
       },
     }));
+    return true;
+  }
+
+  _removeUiPanelFromHeaderClose(panelType) {
+    let result = LayoutTree.removeUiPanel(LayoutTree.clone(this.$.layoutTree), panelType, {
+      fallbackRoot: this._uiPanelRestoreTree,
+    });
+    if (!result.removed) return false;
+
+    // Notify close consumers while the panel is still mounted so they can move
+    // any host-owned stateful content out before the layout node is removed.
+    this.dispatchEvent(new CustomEvent('layout-ui-panel-close', {
+      bubbles: true,
+      composed: true,
+      detail: {
+        panelId: result.panel.id,
+        panelType,
+        closed: true,
+        removed: true,
+        restored: Boolean(result.restored),
+        source: result.panel.panelState?.source || '',
+      },
+    }));
+
+    this.$.layoutTree = result.root || LayoutTree.createPanel('default');
+    this._saveLayout();
+    this._scheduleResponsiveLayout();
+    this._clearUiPanelRestoreTreeWhenSettled();
     return true;
   }
 

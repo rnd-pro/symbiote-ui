@@ -211,9 +211,9 @@ test('representative travel and focus plans satisfy Show hard budgets', () => {
   let focus = resolvePresenterRectangleTiming({ width: 280, height: 120 });
 
   assert.ok(travel.durationMs <= 800);
-  assert.ok(travel.maxObservedSpeedPxPerMs <= 2);
-  assert.ok(focus.dragMs <= 550);
-  assert.ok(focus.maxSpeedPxPerMs <= 2);
+  assert.ok(travel.maxObservedSpeedPxPerMs <= 3);
+  assert.ok(focus.dragMs <= 400);
+  assert.ok(focus.maxSpeedPxPerMs <= 3);
 });
 
 test('presenter ink overlay is hidden from the accessibility tree', () => {

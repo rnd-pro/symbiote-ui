@@ -21,6 +21,10 @@ const STYLE_ID = 'symbiote-presenter-cursor-style';
 const OVERLAY_CLASS = 'symbiote-presenter-cursor';
 
 export const PRESENTER_HAND_PROFILE_VERSION = 'symbiote-presenter-hand-profile-v1';
+// Marker ink follows the path at one human-readable velocity. Duration is
+// derived from arc length, so a longer stroke takes proportionally longer
+// instead of being accelerated to fit a fixed animation window.
+export const PRESENTER_INK_DRAW_SPEED_PX_PER_MS = 0.45;
 export const PRESENTER_ANNOTATION_SUPPORT_TABLE = Object.freeze({
   markers: Object.freeze([
     'freehand',
@@ -1030,19 +1034,13 @@ const GESTURES = {
     let edge = below ? rect.top + rect.height : rect.top;
     let y = edge + direction * (margin + variation(seed, 9) * 2);
     let droop = 2 + variation(seed, 19) * 2; // slight mid-stroke dip
-    let returnFrac = 0.22 + (variation(seed, 23) * 0.5 + 0.5) * 0.12; // short pull-back
     return {
       loops: 0,
       rest: { x: x1, y },
       point(t) {
-        if (t <= 1 - returnFrac) {
-          let p = t / (1 - returnFrac);
-          return { x: x0 + len * p, y: y + direction * Math.sin(p * Math.PI) * droop };
-        }
-        let p = (t - (1 - returnFrac)) / returnFrac;
         return {
-          x: x1 - len * 0.3 * p,
-          y: y - direction * Math.sin(p * Math.PI) * droop * 0.5,
+          x: x0 + len * t,
+          y: y + direction * Math.sin(t * Math.PI) * droop,
         };
       },
     };
@@ -1638,7 +1636,10 @@ function resolvePresenterAnnotationLayout(
     let kinematics = createPresenterKinematicPlan({
       kind: name,
       seed,
-      style,
+      style: {
+        ...style,
+        constantSpeedPxPerMs: PRESENTER_INK_DRAW_SPEED_PX_PER_MS,
+      },
       pointAt: (progress) => clampPresenterPoint(plan.point(progress), viewport, 0),
     });
     plan = { ...plan, kinematics, arcLength: kinematics.arcLengthPx };

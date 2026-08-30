@@ -225,13 +225,23 @@ test('chat/workspace entrypoint registers the workspace transcript and message s
   }
 });
 
-test('chat/show-chat entrypoint exports provider helpers and registers the fixed Show composition', async () => {
+test('chat/show-chat entrypoint exports provider helpers and registers the stable Show composition', async () => {
   installDom();
   try {
     const module = await import('symbiote-ui/chat/show-chat');
     assert.equal(typeof module.AgentShowConversation, 'function');
     assert.equal(typeof module.createScriptedAgentProvider, 'function');
-    assert.equal(module.CHAT_SHOW_PLAYER_CONTRACT.placement, 'fixed-composition-region');
+    assert.equal(module.CHAT_SHOW_PLAYER_CONTRACT.version, 'chat-show-player-v2');
+    assert.equal(module.CHAT_SHOW_PLAYER_CONTRACT.placement, 'inline-or-native-layout-panel');
+    assert.deepEqual(module.CHAT_SHOW_PLAYER_CONTRACT.placementModes, ['inline', 'panel']);
+    assert.equal(
+      module.CHAT_SHOW_PLAYER_CONTRACT.placementLifecycle,
+      'same-live-player-reparented-without-controller-recreation',
+    );
+    assert.equal(
+      module.CHAT_SHOW_PLAYER_CONTRACT.responsiveFallback,
+      'native-panel-closes-to-inline-before-mobile-drawer',
+    );
     assert.deepEqual(module.CHAT_SHOW_VIDEO_CONTROL_SEMANTICS, ['detail', 'pointer-only']);
     assert.equal(module.default, module.AgentShowChat);
     assert.equal(typeof module.ChatShowPlayer, 'function');

@@ -1,6 +1,7 @@
 import Symbiote from '@symbiotejs/symbiote';
 import { slotProcessor } from '@symbiotejs/symbiote/core/slotProcessor.js';
 import { ensureMaterialSymbols } from '../../icons/MaterialSymbols.js';
+import { translate } from '../../locale/index.js';
 import { CHAT_SHOW_VIDEO_CONTROL_SEMANTICS } from '../show-player-contract.js';
 import template from './ChatShowPlayer.tpl.js';
 import css from './ChatShowPlayer.css.js';
@@ -9,12 +10,15 @@ const PLAYER_ICONS = [
   'auto_stories',
   'more_vert',
   'close',
+  'first_page',
   'skip_previous',
   'play_arrow',
   'pause',
   'skip_next',
   'stop',
   'play_circle',
+  'open_in_full',
+  'close_fullscreen',
 ];
 
 const VIDEO_SEMANTICS = new Set(CHAT_SHOW_VIDEO_CONTROL_SEMANTICS);
@@ -46,19 +50,123 @@ function readPlaying(controller, state = {}) {
   return false;
 }
 
+function clampProgress(value) {
+  return Math.min(1, Math.max(0, Number.isFinite(value) ? value : 0));
+}
+
+function formatClock(valueMs) {
+  let totalSeconds = Math.max(0, Math.floor(Number(valueMs) / 1_000 || 0));
+  let seconds = totalSeconds % 60;
+  let totalMinutes = Math.floor(totalSeconds / 60);
+  let minutes = totalMinutes % 60;
+  let hours = Math.floor(totalMinutes / 60);
+  return hours > 0
+    ? `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+    : `${minutes}:${String(seconds).padStart(2, '0')}`;
+}
+
+function resolveTimelinePosition(source, requestedMs) {
+  let durations = source.map(({ durationMs }) => Number(durationMs));
+  if (!durations.length || !durations.every((duration) => Number.isFinite(duration) && duration > 0)) {
+    return null;
+  }
+  let totalMs = durations.reduce((total, duration) => total + duration, 0);
+  let absoluteMs = Math.min(totalMs, Math.max(0, Number(requestedMs) || 0));
+  let elapsedMs = 0;
+  for (let index = 0; index < durations.length; index += 1) {
+    let durationMs = durations[index];
+    if (absoluteMs < elapsedMs + durationMs || index === durations.length - 1) {
+      return {
+        index,
+        positionMs: Math.min(durationMs, Math.max(0, absoluteMs - elapsedMs)),
+        absoluteMs,
+        totalMs,
+      };
+    }
+    elapsedMs += durationMs;
+  }
+  return null;
+}
+
+function resolveProgress(source, index, state, caption) {
+  let durations = source.map(({ durationMs }) => Number(durationMs));
+  let weights = durations.every((duration) => Number.isFinite(duration) && duration > 0)
+    ? durations
+    : source.map(() => 1);
+  let progress = state?.progress && typeof state.progress === 'object' ? state.progress : {};
+  let currentDuration = durations[index];
+  let positionMs = Number(progress.positionMs);
+  let fraction = Number(progress.fraction);
+  if (Number.isFinite(positionMs) && Number.isFinite(currentDuration) && currentDuration > 0) {
+    fraction = positionMs / currentDuration;
+  } else if (!Number.isFinite(fraction)) {
+    let activeWordIndex = Number(caption.activeWordIndex ?? caption.wordIndex ?? -1);
+    let words = Array.isArray(caption.words) ? caption.words : [];
+    fraction = activeWordIndex >= 0 && words.length ? (activeWordIndex + 1) / words.length : 0;
+  }
+  if (state?.state === 'completed' && index === source.length - 1) fraction = 1;
+  fraction = clampProgress(fraction);
+  let totalWeight = weights.reduce((total, weight) => total + weight, 0);
+  let completedWeight = weights.slice(0, Math.max(0, index))
+    .reduce((total, weight) => total + weight, 0);
+  let currentWeight = index >= 0 ? weights[index] || 0 : 0;
+  let overall = totalWeight ? (completedWeight + currentWeight * fraction) / totalWeight : 0;
+  let progressNow = Math.round(clampProgress(overall) * 100);
+  let seekable = durations.length > 0
+    && durations.every((duration) => Number.isFinite(duration) && duration > 0);
+  let elapsedMs = seekable ? completedWeight + currentWeight * fraction : 0;
+  let totalMs = seekable ? totalWeight : 0;
+  return {
+    now: progressNow,
+    value: Math.round(elapsedMs / 1_000),
+    max: Math.max(0, Math.round(totalMs / 1_000)),
+    text: `${index < 0 ? 0 : index + 1} / ${source.length} · ${formatClock(elapsedMs)} / ${formatClock(totalMs)}`,
+    elapsedLabel: formatClock(elapsedMs),
+    totalLabel: formatClock(totalMs),
+    elapsedMs,
+    totalMs,
+    seekable,
+    segments: weights.map((weight, segmentIndex) => {
+      let fill = segmentIndex < index ? 1 : segmentIndex === index ? fraction : 0;
+      return {
+        style: `--chat-show-progress-weight:${weight};--chat-show-progress-fill:${fill}`,
+      };
+    }),
+  };
+}
+
 export class ChatShowPlayer extends Symbiote {
   init$ = {
     title: '',
     icon: 'auto_stories',
     turns: [],
     positionLabel: '0 / 0',
-    captionSpeaker: '',
     captionText: '',
     captionWords: [],
     hasCaptionWords: false,
+    progressNow: 0,
+    progressValue: 0,
+    progressMax: 0,
+    progressText: '0 / 0 · 0:00 / 0:00',
+    progressElapsedLabel: '0:00',
+    progressTotalLabel: '0:00',
+    progressSeekable: false,
+    progressTabIndex: '-1',
+    progressDisabled: 'true',
+    progressStyle: '--chat-show-progress-position:0',
+    progressSegments: [],
     showCaption: true,
     showSettings: true,
     showClose: true,
+    menuOpen: false,
+    menuExpanded: 'false',
+    showMenuLabel: translate('chat.show.menu'),
+    quickControlsLabel: translate('chat.show.quickControls'),
+    menuTitle: translate('chat.show.title'),
+    progressLabel: translate('chat.show.progress'),
+    restartLabel: translate('chat.show.restart'),
+    layoutActionLabel: translate('chat.show.openLayout'),
+    layoutActionGlyph: 'open_in_full',
     showTts: false,
     ttsLabel: '',
     ttsText: '',
@@ -68,15 +176,32 @@ export class ChatShowPlayer extends Symbiote {
     playing: false,
     playLabel: 'Play',
     playGlyph: 'play_arrow',
+    onRestart: () => this.control('restart'),
     onPrev: () => this.control('prev'),
     onPlayPause: () => this.control('toggle'),
     onNext: () => this.control('next'),
     onStop: () => this.control('stop'),
-    onSettings: () => this._emitRequest('chat-show-settings-request', {
-      controller: this._controller,
-      timeline: this._timeline,
-      state: this._state,
-    }),
+    onSettings: () => {
+      this.$.menuOpen = !this.$.menuOpen;
+      this.$.menuExpanded = this.$.menuOpen ? 'true' : 'false';
+      this._emitRequest('chat-show-settings-request', {
+        controller: this._controller,
+        timeline: this._timeline,
+        state: this._state,
+        open: this.$.menuOpen,
+      });
+    },
+    onLayoutAction: () => {
+      let placement = this._layoutPlacement === 'panel' ? 'inline' : 'panel';
+      this.$.menuOpen = false;
+      this.$.menuExpanded = 'false';
+      this._emitRequest('chat-show-layout-request', {
+        placement,
+        controller: this._controller,
+        timeline: this._timeline,
+        state: this._state,
+      });
+    },
     onClose: () => this._emitRequest('chat-show-close-request', {
       controller: this._controller,
       timeline: this._timeline,
@@ -93,6 +218,11 @@ export class ChatShowPlayer extends Symbiote {
       if (!button || !this.contains(button)) return;
       this.controlVideo(button.dataset.videoControl, { source: 'user' });
     },
+    onProgressPointerDown: (event) => this._startProgressScrub(event),
+    onProgressPointerMove: (event) => this._moveProgressScrub(event),
+    onProgressPointerUp: (event) => this._finishProgressScrub(event),
+    onProgressPointerCancel: () => this._cancelProgressScrub(),
+    onProgressKeyDown: (event) => this._onProgressKeyDown(event),
   };
 
   constructor() {
@@ -163,6 +293,18 @@ export class ChatShowPlayer extends Symbiote {
     return this;
   }
 
+  setLayoutPlacement(placement = 'inline') {
+    this._layoutPlacement = placement === 'panel' ? 'panel' : 'inline';
+    this.toggleAttribute('panel-layout', this._layoutPlacement === 'panel');
+    this.$.layoutActionLabel = this._layoutPlacement === 'panel'
+      ? translate('chat.show.returnToChat')
+      : translate('chat.show.openLayout');
+    this.$.layoutActionGlyph = this._layoutPlacement === 'panel'
+      ? 'close_fullscreen'
+      : 'open_in_full';
+    return this;
+  }
+
   control(action, index = undefined) {
     let controller = this._controller;
     if (!controller) return false;
@@ -171,6 +313,9 @@ export class ChatShowPlayer extends Symbiote {
       if (typeof controller.toggle === 'function') controller.toggle();
       else if (readPlaying(controller, this._state)) controller.pause?.();
       else controller.play?.();
+    } else if (normalized === 'restart') {
+      if (typeof controller.seek !== 'function') return false;
+      controller.seek(0, 0);
     } else if (normalized === 'preview' || normalized === 'seek') {
       let target = Number(index);
       if (!Number.isInteger(target)) return false;
@@ -185,7 +330,11 @@ export class ChatShowPlayer extends Symbiote {
     this.dispatchEvent(new CustomEvent('chat-show-control', {
       bubbles: true,
       composed: true,
-      detail: { action: normalized, ...(index === undefined ? {} : { index: Number(index) }) },
+      detail: {
+        action: normalized,
+        ...(normalized === 'restart' ? { index: 0, positionMs: 0 } : {}),
+        ...(index === undefined ? {} : { index: Number(index) }),
+      },
     }));
     return true;
   }
@@ -216,6 +365,99 @@ export class ChatShowPlayer extends Symbiote {
     let receipt = Object.freeze({ ...request, activated, reason });
     this._emitRequest('chat-show-video-control', receipt);
     return receipt;
+  }
+
+  _progressPositionAtClientX(clientX) {
+    let source = Array.isArray(this._timeline?.turns) ? this._timeline.turns : [];
+    let track = this.ref.progressTrack;
+    let rect = track?.getBoundingClientRect?.();
+    if (!rect || !(rect.width > 0)) return null;
+    let ratio = clampProgress((Number(clientX) - rect.left) / rect.width);
+    let durations = source.map(({ durationMs }) => Number(durationMs));
+    if (!durations.every((duration) => Number.isFinite(duration) && duration > 0)) return null;
+    return resolveTimelinePosition(source, durations.reduce((total, duration) => total + duration, 0) * ratio);
+  }
+
+  _previewProgressPosition(position) {
+    if (!position) return false;
+    this._state = {
+      ...this._state,
+      index: position.index,
+      progress: { ...this._state?.progress, positionMs: position.positionMs },
+    };
+    this._sync();
+    return true;
+  }
+
+  _commitProgressPosition(position, source = 'pointer') {
+    if (!position || typeof this._controller?.seek !== 'function') return false;
+    this._controller.seek(position.index, position.positionMs);
+    this.dispatchEvent(new CustomEvent('chat-show-control', {
+      bubbles: true,
+      composed: true,
+      detail: {
+        action: 'seek',
+        index: position.index,
+        positionMs: position.positionMs,
+        absoluteMs: position.absoluteMs,
+        source,
+      },
+    }));
+    return true;
+  }
+
+  _startProgressScrub(event) {
+    if (event.button !== undefined && event.button !== 0) return;
+    let position = this._progressPositionAtClientX(event.clientX);
+    if (!position) return;
+    event.preventDefault?.();
+    this._scrub = {
+      pointerId: event.pointerId,
+      originState: this._state,
+      position,
+    };
+    event.currentTarget?.setPointerCapture?.(event.pointerId);
+    this._previewProgressPosition(position);
+  }
+
+  _moveProgressScrub(event) {
+    if (!this._scrub || this._scrub.pointerId !== event.pointerId) return;
+    let position = this._progressPositionAtClientX(event.clientX);
+    if (!position) return;
+    this._scrub.position = position;
+    this._previewProgressPosition(position);
+  }
+
+  _finishProgressScrub(event) {
+    if (!this._scrub || this._scrub.pointerId !== event.pointerId) return;
+    let position = this._progressPositionAtClientX(event.clientX) || this._scrub.position;
+    this._scrub = null;
+    event.currentTarget?.releasePointerCapture?.(event.pointerId);
+    this._previewProgressPosition(position);
+    this._commitProgressPosition(position);
+  }
+
+  _cancelProgressScrub() {
+    if (!this._scrub) return;
+    this._state = this._scrub.originState;
+    this._scrub = null;
+    this._sync();
+  }
+
+  _onProgressKeyDown(event) {
+    let source = Array.isArray(this._timeline?.turns) ? this._timeline.turns : [];
+    let progress = resolveProgress(source, Number(this._state?.index ?? this._controller?.index ?? 0), this._state, {});
+    if (!progress.seekable) return;
+    let requestedMs = progress.elapsedMs;
+    if (event.key === 'ArrowLeft') requestedMs -= 5_000;
+    else if (event.key === 'ArrowRight') requestedMs += 5_000;
+    else if (event.key === 'Home') requestedMs = 0;
+    else if (event.key === 'End') requestedMs = progress.totalMs;
+    else return;
+    event.preventDefault?.();
+    let position = resolveTimelinePosition(source, requestedMs);
+    this._previewProgressPosition(position);
+    this._commitProgressPosition(position, 'keyboard');
   }
 
   _bindControllerHooks() {
@@ -270,7 +512,18 @@ export class ChatShowPlayer extends Symbiote {
     let caption = this._state?.caption && typeof this._state.caption === 'object'
       ? this._state.caption
       : {};
-    this.$.captionSpeaker = String(caption.speaker || current?.speaker || current?.persona || '');
+    let progress = resolveProgress(source, index, this._state, caption);
+    this.$.progressNow = progress.now;
+    this.$.progressValue = progress.value;
+    this.$.progressMax = progress.max;
+    this.$.progressText = progress.text;
+    this.$.progressElapsedLabel = progress.elapsedLabel;
+    this.$.progressTotalLabel = progress.totalLabel;
+    this.$.progressSeekable = progress.seekable;
+    this.$.progressTabIndex = progress.seekable ? '0' : '-1';
+    this.$.progressDisabled = progress.seekable ? 'false' : 'true';
+    this.$.progressStyle = `--chat-show-progress-position:${clampProgress(progress.totalMs ? progress.elapsedMs / progress.totalMs : 0)}`;
+    this.$.progressSegments = progress.segments;
     this.$.captionText = String(caption.text || current?.caption || current?.text || '');
     let activeWordIndex = Number(caption.activeWordIndex ?? caption.wordIndex ?? -1);
     let words = Array.isArray(caption.words) ? caption.words : [];

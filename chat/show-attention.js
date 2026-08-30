@@ -357,14 +357,20 @@ function performanceObservedAt(clock, monotonicTimeMs = clock.now()) {
 function resolveFrameHost(target) {
   let view = target?.ownerDocument?.defaultView;
   let clock = performanceClock(target);
-  if (!view || typeof view.requestAnimationFrame !== 'function'
-    || typeof view.cancelAnimationFrame !== 'function') return { clock };
-  return {
-    request: view.requestAnimationFrame.bind(view),
-    cancel: view.cancelAnimationFrame.bind(view),
-    clock,
-    reducedMotion: () => Boolean(view.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches),
-  };
+  let host = { clock };
+  if (view && typeof view.requestAnimationFrame === 'function'
+    && typeof view.cancelAnimationFrame === 'function') {
+    host.request = view.requestAnimationFrame.bind(view);
+    host.cancel = view.cancelAnimationFrame.bind(view);
+    host.reducedMotion = () => Boolean(
+      view.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches,
+    );
+  }
+  if (view && typeof view.setTimeout === 'function' && typeof view.clearTimeout === 'function') {
+    host.timeout = view.setTimeout.bind(view);
+    host.clearTimeout = view.clearTimeout.bind(view);
+  }
+  return host;
 }
 
 export class ShowAttentionController {
@@ -382,6 +388,11 @@ export class ShowAttentionController {
     this._generation = 0;
     this._activeRequest = null;
     this._admission = null;
+    // A controller instance is one active presenter session. Bootstrap the
+    // arrow immediately so scene setup/navigation cannot leave an invisible
+    // gap before the first authored attention event. reset()/dispose() remain
+    // the terminal owners that hide it.
+    this.cursor?.clear?.({ preserveInk: false, preserveCursor: true });
     let clock = performanceClock(null);
     let observedAt = performanceObservedAt(clock);
     this._settled = Promise.resolve(providerTerminal(
@@ -426,6 +437,10 @@ export class ShowAttentionController {
     if (animation.frameId !== null && animation.host.cancel) {
       animation.host.cancel(animation.frameId);
       animation.frameId = null;
+    }
+    if (animation.timeoutId !== null && animation.host.clearTimeout) {
+      animation.host.clearTimeout(animation.timeoutId);
+      animation.timeoutId = null;
     }
     if (this._animation === animation) this._animation = null;
     let terminal = providerTerminal(
@@ -546,6 +561,7 @@ export class ShowAttentionController {
       gestureId,
       host,
       frameId: null,
+      timeoutId: null,
       frameOriginAt: null,
       startedAt: null,
       firstFrameAt: null,
@@ -563,6 +579,7 @@ export class ShowAttentionController {
       finished: false,
       terminal: null,
       tick: null,
+      armFallback: null,
     };
     this._settled = settled;
 
@@ -603,6 +620,38 @@ export class ShowAttentionController {
 
     this._animation = animation;
 
+    let armFallback = () => {
+      if (!host.timeout || animation.finished || animation.paused) return;
+      if (animation.timeoutId !== null && host.clearTimeout) {
+        host.clearTimeout(animation.timeoutId);
+      }
+      animation.timeoutId = host.timeout(() => {
+        animation.timeoutId = null;
+        if (this._animation !== animation || animation.finished || animation.paused) return;
+        animation.elapsedMs = durationMs;
+        let observedAt = performanceObservedAt(host.clock);
+        try {
+          animation.receipt = render(durationMs);
+          animation.progress = receiptProgress(animation.receipt);
+        } catch (error) {
+          this._failAnimation(animation, observedAt, 'provider-render-failed', error);
+          return;
+        }
+        try {
+          this._reportFirstFrame(animation, observedAt);
+        } catch (error) {
+          this._failAnimation(animation, observedAt, 'provider-milestone-failed', error);
+          return;
+        }
+        try {
+          this._completeVisual(animation, observedAt);
+        } catch (error) {
+          this._failAnimation(animation, observedAt, 'provider-settlement-failed', error);
+        }
+      }, Math.max(0, durationMs - animation.elapsedMs));
+    };
+    animation.armFallback = armFallback;
+
     let tick = (timestamp) => {
       if (this._animation !== animation) return;
       animation.frameId = null;
@@ -636,6 +685,7 @@ export class ShowAttentionController {
     };
     animation.tick = tick;
     animation.frameId = host.request(tick);
+    armFallback();
     return receipt;
   }
 
@@ -647,6 +697,10 @@ export class ShowAttentionController {
       animation.host.cancel(animation.frameId);
       animation.frameId = null;
     }
+    if (animation.timeoutId !== null && animation.host.clearTimeout) {
+      animation.host.clearTimeout(animation.timeoutId);
+      animation.timeoutId = null;
+    }
     return true;
   }
 
@@ -656,6 +710,7 @@ export class ShowAttentionController {
     animation.paused = false;
     animation.frameOriginAt = null;
     animation.frameId = animation.host.request(animation.tick);
+    animation.armFallback?.();
     return true;
   }
 
@@ -665,6 +720,10 @@ export class ShowAttentionController {
     if (animation.frameId !== null) {
       animation.host.cancel(animation.frameId);
       animation.frameId = null;
+    }
+    if (animation.timeoutId !== null && animation.host.clearTimeout) {
+      animation.host.clearTimeout(animation.timeoutId);
+      animation.timeoutId = null;
     }
     animation.elapsedMs = Math.min(animation.durationMs, Math.max(0, Number(elapsedMs) || 0));
     animation.frameOriginAt = null;
@@ -692,6 +751,7 @@ export class ShowAttentionController {
       }
     } else if (!animation.paused) {
       animation.frameId = animation.host.request(animation.tick);
+      animation.armFallback?.();
     }
     return animation.receipt;
   }

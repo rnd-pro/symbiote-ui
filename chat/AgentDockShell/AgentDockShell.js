@@ -7,6 +7,22 @@ import css from './AgentDockShell.css.js';
 
 const DEFAULT_MIN_SIZE = 320;
 const DEFAULT_BREAKPOINT = 760;
+const DEFAULT_DOCK_SPLIT_RATIO = 0.67;
+const DEFAULT_SHOW_PANEL_RATIO = 0.76;
+
+function createDefaultDockTree(main, chat, breakpoint) {
+  return LayoutTree.createSplit('horizontal', main, chat, DEFAULT_DOCK_SPLIT_RATIO, {
+    importance: 100,
+    minInlineSize: 720,
+    minBlockSize: 320,
+    collapse: 'never',
+    overflow: 'scroll-inline',
+    responsiveMode: 'drawer',
+    responsiveBreakpoint: breakpoint,
+    mobileDock: 'auto',
+    swipeControl: 'rail',
+  });
+}
 
 function numberAttr(element, name, fallback) {
   let value = Number(element.getAttribute(name));
@@ -37,6 +53,10 @@ export class AgentDockShell extends Symbiote {
     this.addEventListener('panel-collapse-toggle', this._onPanelCollapseToggle);
     this.addEventListener('panel-close', this._onPanelClose);
     this.addEventListener('chat-workspace-close', this._onPanelClose);
+    this.addEventListener('chat-show-layout-request', this._onShowLayoutRequest);
+    this.addEventListener('agent-show-embed-close', this._onShowEmbedClose);
+    this.ref.layout?.addEventListener('layout-ui-panel-open', this._onLayoutUiPanelOpen);
+    this.ref.layout?.addEventListener('layout-ui-panel-close', this._onLayoutUiPanelClose);
     queueMicrotask(() => {
       this._mountMain();
       this._flushComposition();
@@ -48,6 +68,11 @@ export class AgentDockShell extends Symbiote {
     this.removeEventListener('panel-collapse-toggle', this._onPanelCollapseToggle);
     this.removeEventListener('panel-close', this._onPanelClose);
     this.removeEventListener('chat-workspace-close', this._onPanelClose);
+    this.removeEventListener('chat-show-layout-request', this._onShowLayoutRequest);
+    this.removeEventListener('agent-show-embed-close', this._onShowEmbedClose);
+    this.ref.layout?.removeEventListener('layout-ui-panel-open', this._onLayoutUiPanelOpen);
+    this.ref.layout?.removeEventListener('layout-ui-panel-close', this._onLayoutUiPanelClose);
+    this._restoreShowPlayer();
     super.disconnectedCallback?.();
   }
 
@@ -110,6 +135,36 @@ export class AgentDockShell extends Symbiote {
     return this.$.open ? this.close(source) : this.open(source);
   }
 
+  resetPanelLayout(source = 'api') {
+    let layout = this.ref.layout;
+    let current = layout?.$.layoutTree;
+    if (!layout || !current) return false;
+    let next = LayoutTree.clone(current);
+    let main = LayoutTree.findPanelByType(next, 'agent-dock-main');
+    let chat = LayoutTree.findPanelByType(next, 'agent-chat');
+    if (!main || !chat) return false;
+    let show = LayoutTree.findPanelByType(next, 'agent-show-panel', { uiInvoked: true });
+    let resetRatios = (node) => {
+      if (node?.type !== 'split') return;
+      let childIds = new Set([node.first?.id, node.second?.id]);
+      if (childIds.has(main.id) && childIds.has(chat.id)) node.ratio = DEFAULT_DOCK_SPLIT_RATIO;
+      if (show && childIds.has(show.id)) node.ratio = DEFAULT_SHOW_PANEL_RATIO;
+      resetRatios(node.first);
+      resetRatios(node.second);
+    };
+    resetRatios(next);
+    layout.setLayout(next);
+    queueMicrotask(() => {
+      this._mountMain();
+      if (show && !show.collapsed && show.panelState?.closed !== true) {
+        this._showPanelId = show.id;
+        this._mountShowPanel();
+      }
+    });
+    emit(this, 'agent-dock-layout-reset', { source });
+    return true;
+  }
+
   _configureLayout() {
     let layout = this.ref.layout;
     if (!layout?.registerPanelType || this._layoutConfigured) return;
@@ -151,22 +206,29 @@ export class AgentDockShell extends Symbiote {
         swipeControl: 'rail',
       },
     });
+    layout.registerPanelType('agent-show-panel', {
+      title: 'CV Show',
+      icon: 'auto_stories',
+      headerClose: true,
+      component: 'section',
+      attributes: { 'data-agent-show-panel-host': '' },
+      behavior: {
+        importance: 92,
+        minInlineSize: 320,
+        minBlockSize: 240,
+        collapse: 'manual',
+        responsiveMode: 'drawer',
+        responsiveBreakpoint: breakpoint,
+        mobileDock: 'primary',
+        swipeControl: 'none',
+      },
+    });
     let main = LayoutTree.createPanel('agent-dock-main', { source: 'agent-dock-shell' });
     let chat = LayoutTree.createPanel('agent-chat', { source: 'agent-dock-shell' });
     chat.collapsed = !this.$.open;
     this._mainPanelId = main.id;
     this._dockPanelId = chat.id;
-    layout.setLayout(LayoutTree.createSplit('horizontal', main, chat, 0.67, {
-      importance: 100,
-      minInlineSize: 720,
-      minBlockSize: 320,
-      collapse: 'never',
-      overflow: 'scroll-inline',
-      responsiveMode: 'drawer',
-      responsiveBreakpoint: breakpoint,
-      mobileDock: 'auto',
-      swipeControl: 'rail',
-    }));
+    layout.setLayout(createDefaultDockTree(main, chat, breakpoint));
   }
 
   _mountMain() {
@@ -202,6 +264,7 @@ export class AgentDockShell extends Symbiote {
       previousMobile = mobile;
       this.toggleAttribute('mobile', mobile);
       if (mobile) {
+        if (this._showPanelId) layout.closeUiPanel?.('agent-show-panel');
         if (this.$.open) layout.openDrawer?.('end', this._dockPanelId);
         else layout.closeDrawer?.('end');
       }
@@ -244,6 +307,69 @@ export class AgentDockShell extends Symbiote {
   _onPanelClose = (event) => {
     if (event.target === this || this.contains(event.target)) this.close('panel');
   };
+
+  _onShowLayoutRequest = (event) => {
+    if (!event.detail || event.target?.localName !== 'chat-show-player') return;
+    if (event.detail.placement === 'inline') {
+      this.ref.layout?.closeUiPanel?.('agent-show-panel');
+      return;
+    }
+    if (event.detail.placement !== 'panel') return;
+    if (this._isDrawerMode()) {
+      emit(this, 'agent-show-layout-change', { placement: 'inline', reason: 'responsive-drawer' });
+      return;
+    }
+    this.ref.layout?.openPanel?.('agent-show-panel', {
+      direction: 'vertical',
+      ratio: DEFAULT_SHOW_PANEL_RATIO,
+      source: 'chat-show-player',
+      uiInvoked: true,
+      panelState: { placement: 'panel' },
+    });
+  };
+
+  _onLayoutUiPanelOpen = (event) => {
+    if (event.detail?.panelType !== 'agent-show-panel') return;
+    this._showPanelId = event.detail.panelId;
+    queueMicrotask(() => this._mountShowPanel());
+  };
+
+  _onLayoutUiPanelClose = (event) => {
+    if (event.detail?.panelType !== 'agent-show-panel') return;
+    this._restoreShowPlayer();
+  };
+
+  _onShowEmbedClose = () => {
+    if (this._showPanelId) this.ref.layout?.closeUiPanel?.('agent-show-panel');
+  };
+
+  _mountShowPanel() {
+    let host = this.ref.layout?.querySelector?.('[data-agent-show-panel-host]');
+    let chat = this.getChat();
+    let player = chat?.getShowPlayer?.() || null;
+    if (!host || !chat || !player) {
+      if (this.isConnected && this._showPanelId && typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(() => this._mountShowPanel());
+      }
+      return;
+    }
+    host.classList.add('agent-show-panel-host');
+    host.closest('layout-node')?.classList.add('agent-show-panel-node');
+    chat.setPlayerHost(host);
+    player.setLayoutPlacement?.('panel');
+    emit(this, 'agent-show-layout-change', { placement: 'panel', player, panelId: this._showPanelId });
+  }
+
+  _restoreShowPlayer() {
+    let chat = this.getChat();
+    let player = chat?.getShowPlayer?.() || null;
+    chat?.setPlayerHost?.(null);
+    player?.setLayoutPlacement?.('inline');
+    if (this._showPanelId) {
+      emit(this, 'agent-show-layout-change', { placement: 'inline', player, panelId: this._showPanelId });
+    }
+    this._showPanelId = null;
+  }
 
   _flushComposition() {
     let chat = this.getChat();

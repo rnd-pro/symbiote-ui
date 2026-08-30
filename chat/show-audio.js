@@ -32,7 +32,9 @@ export class ShowAudioArbiter {
     let active = this._active;
     this._active = null;
     let reason = tokenOrOptions?.reason || 'released';
-    if (reason === 'preempted' && typeof active.pause === 'function') await active.pause({ reason });
+    if (['preempted', 'paused'].includes(reason) && typeof active.pause === 'function') {
+      await active.pause({ reason });
+    }
     else if (typeof active.stop === 'function') await active.stop({ reason });
     else if (typeof active.pause === 'function') await active.pause({ reason });
     this._onChange?.(null);
