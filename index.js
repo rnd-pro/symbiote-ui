@@ -298,6 +298,13 @@ export { playDialogueTimeline, buildAlternatingTimeline } from './chat/dialogue-
 export { createDialoguePlayer } from './chat/dialogue-player.js';
 export * from './chat/show-runtime.js';
 export {
+  PRESENTER_MARKER_CATALOG,
+  PRESENTER_MARKER_GEOMETRY_CONSTANTS,
+  PRESENTER_MARKER_GEOMETRY_VERSION,
+  createPresenterMarkerGeometry,
+  createPresenterMarkerPlan,
+} from './chat/presenter-marker-geometry.js';
+export {
   PRESENTER_ANNOTATION_COLLISION_ALLOWANCE_PX,
   PRESENTER_ANNOTATION_TARGET_INSET_PX,
   PRESENTER_CURSOR_SIZE_PX,

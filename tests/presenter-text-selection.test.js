@@ -108,6 +108,76 @@ test('animates the complete target when the consumer supplies only target intent
   assert.equal(selection.getRangeAt(0).endOffset, ' remains reusable.'.length);
 });
 
+test('animation receipts expose the live DOM range endpoint for the presenter cursor', () => {
+  let { window } = parseHTML('<!doctype html><p id="target">abcdefghij</p>');
+  let ranges = [];
+  class MeasuredRange {
+    setStart(node, offset) {
+      this.startContainer = node;
+      this.startOffset = offset;
+    }
+
+    setEnd(node, offset) {
+      this.endContainer = node;
+      this.endOffset = offset;
+    }
+
+    cloneRange() {
+      let copy = new MeasuredRange();
+      copy.setStart(this.startContainer, this.startOffset);
+      copy.setEnd(this.endContainer, this.endOffset);
+      return copy;
+    }
+
+    getClientRects() {
+      return [{
+        left: 100 + this.startOffset * 10,
+        top: 80,
+        right: 100 + this.endOffset * 10,
+        bottom: 100,
+        width: (this.endOffset - this.startOffset) * 10,
+        height: 20,
+      }];
+    }
+
+    getBoundingClientRect() {
+      return this.getClientRects()[0];
+    }
+  }
+  let selection = {
+    get rangeCount() { return ranges.length; },
+    getRangeAt(index) { return ranges[index]; },
+    removeAllRanges() { ranges = []; },
+    addRange(range) { ranges.push(range); },
+  };
+  Object.defineProperty(window, 'getSelection', { configurable: true, value: () => selection });
+  Object.defineProperty(window.document, 'createRange', {
+    configurable: true,
+    value: () => new MeasuredRange(),
+  });
+  let target = window.document.getElementById('target');
+  target.focus = () => {};
+  target.getBoundingClientRect = () => ({
+    left: 100,
+    top: 80,
+    right: 200,
+    bottom: 100,
+    width: 100,
+    height: 20,
+  });
+
+  let handle = createPresenterTextSelectionAnimation(target, {
+    quote: 'cdef',
+    seed: 'measured-selection-endpoint',
+  });
+  let first = handle.presentFrame(0);
+  let final = handle.presentFrame(handle.receipt.durationMs);
+
+  assert.deepEqual(first.cursor, { x: 120, y: 100, visible: true });
+  assert.deepEqual(final.cursor, { x: 160, y: 100, visible: true });
+  assert.equal(selection.getRangeAt(0).endOffset, 6);
+});
+
 test('normalizes whitespace while preserving exact selected DOM offsets', () => {
   let { window } = parseHTML('<!doctype html><p id="target">Alpha   <span>verified\n outcome</span> ready.</p>');
   let selection = installSelection(window);

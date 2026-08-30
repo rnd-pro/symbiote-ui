@@ -691,17 +691,26 @@ export class ShowAttentionController {
 
   pause() {
     let animation = this._animation;
-    if (!animation || animation.paused) return false;
-    animation.paused = true;
-    if (animation.frameId !== null) {
-      animation.host.cancel(animation.frameId);
-      animation.frameId = null;
+    let changed = false;
+    if (animation && !animation.paused) {
+      animation.paused = true;
+      if (animation.frameId !== null) {
+        animation.host.cancel(animation.frameId);
+        animation.frameId = null;
+      }
+      if (animation.timeoutId !== null && animation.host.clearTimeout) {
+        animation.host.clearTimeout(animation.timeoutId);
+        animation.timeoutId = null;
+      }
+      changed = true;
     }
-    if (animation.timeoutId !== null && animation.host.clearTimeout) {
-      animation.host.clearTimeout(animation.timeoutId);
-      animation.timeoutId = null;
+    if (this._transient?.mode === 'native-selection') {
+      let receipt = this._transient.handle?.refresh?.()
+        || this._transient.handle?.receipt;
+      this._transient.renderCursor?.(receipt);
+      changed = true;
     }
-    return true;
+    return changed;
   }
 
   resume() {
@@ -892,6 +901,7 @@ export class ShowAttentionController {
         ...(request.label === undefined ? {} : { label: request.label }),
       };
     let handle = null;
+    let nativeCursorRenderer = null;
     let planReceipt;
     let render;
     let planOnly = requiresAdmission;
@@ -916,9 +926,28 @@ export class ShowAttentionController {
       } else if (mode === 'native-selection') {
         handle = this.selectText?.(target, request.selection || request);
         planReceipt = handle?.receipt || handle || { presented: false, reason: 'selection-unavailable' };
-        render = typeof handle?.presentFrame === 'function'
-          ? (elapsedMs) => handle.presentFrame(elapsedMs)
-          : () => planReceipt;
+        let renderCursor = (selectionReceipt, elapsedMs = 0) => {
+          let point = selectionReceipt?.cursor;
+          if (!point?.visible) return { presented: false, reason: 'selection-cursor-unavailable' };
+          return this.cursor?.presentCursorFrame?.(target, presenterFrame(request, {
+            elapsedMs,
+            durationMs: selectionReceipt.durationMs,
+            point,
+            preserveInk: true,
+          })) || { presented: false, reason: 'cursor-unavailable' };
+        };
+        nativeCursorRenderer = renderCursor;
+        render = (elapsedMs) => {
+          let selectionReceipt = typeof handle?.presentFrame === 'function'
+            ? handle.presentFrame(elapsedMs)
+            : planReceipt;
+          let cursorReceipt = renderCursor(selectionReceipt, elapsedMs);
+          return Object.freeze({
+            ...selectionReceipt,
+            cursor: cursorReceipt?.cursor || selectionReceipt?.cursor || null,
+            cursorPresented: cursorReceipt?.presented === true,
+          });
+        };
       } else if (mode === 'click') {
         render = (elapsedMs) => this.cursor?.presentClickFrame?.(
           target,
@@ -1056,7 +1085,12 @@ export class ShowAttentionController {
         }));
       };
     } else if (mode === 'native-selection') {
-      this._transient = { mode, handle };
+      this._transient = {
+        mode,
+        handle,
+        target,
+        renderCursor: nativeCursorRenderer,
+      };
       this._cursorOwner = 'native-selection';
     } else {
       this._transient = { mode, receipt: planReceipt };

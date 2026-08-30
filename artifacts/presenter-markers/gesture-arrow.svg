@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="700" viewBox="0 0 1920 700" role="img" aria-label="arrow marker reference sheet">
+    <style>
+    .reference-bg{fill:#101217}.reference-frame{fill:none;stroke:#2a3040;stroke-width:1}
+    .target-surface{fill:#e9edf6;stroke:#75819b;stroke-width:1}.target-text{fill:#171b24;font:600 14px ui-sans-serif,system-ui}
+    .marker-ink{fill:#ff4f8b;fill-opacity:.94;stroke:none;filter:drop-shadow(0 0 2px #ff4f8b55)}
+    .safe-area{fill:#55e6a522;stroke:#55e6a5;stroke-width:1.5;stroke-dasharray:5 4}.safe-label{fill:#7df3bd;font:600 10px ui-monospace,monospace}
+    .tail-start{fill:#fff;stroke:#101217;stroke-width:1}.tail-end{fill:#ffdb66;stroke:#101217;stroke-width:1}
+    .seed-label{fill:#dfe5f3;font:600 12px ui-monospace,monospace}.metric-label{fill:#8994ab;font:11px ui-monospace,monospace}
+    .sheet-title{fill:#f7f8fb;font:700 24px ui-sans-serif,system-ui}.sheet-subtitle{fill:#9aa5ba;font:12px ui-monospace,monospace}
+    .contact-title{fill:#f7f8fb;font:700 18px ui-sans-serif,system-ui}.contact-meta{fill:#98a3b8;font:11px ui-monospace,monospace}
+  </style>
+    <rect class="reference-bg" width="1920" height="700"/>
+    <text class="sheet-title" x="24" y="32">arrow</text>
+    <text class="sheet-subtitle" x="24" y="52">directional pointer to one target · core contract</text>
+    <g data-reference-variant="true" data-target-kind="short" data-seed="reference-alpha" transform="translate(0 70)">
+    <rect class="reference-bg" width="640" height="210" rx="12"/>
+    <rect class="reference-frame" x=".5" y=".5" width="639" height="209" rx="11.5"/>
+    <rect class="target-surface" x="294" y="92" width="52" height="26" rx="8"/><text x="320" y="110" text-anchor="middle" class="target-text">15+</text>
+
+      <path data-production-ribbon="true" data-path-hash="14538ae7" data-linecap="round" data-linejoin="round" class="marker-ink" d="M173.04 109.23L177.66 107.33L181.68 105.85L185.28 104.79L188.44 104.26L191.77 103.90L198.71 103.51L212.59 103.24L226.46 103.61L240.34 104.37L254.22 105.45L268.19 106.72L276.57 106.69L279.95 106.80L280.32 106.90L279.53 105.95L279.53 104.80L279.26 105.15L276.67 107.43L269.88 112.55L259.20 121.49L260.07 126.32L270.62 117.48L277.08 113.15L280.12 110.77L281.48 109.07L282.20 107.11L282.11 105.15L281.40 103.34L279.50 100.68L275.02 95.99L272.50 93.56L269.68 91.26L264.12 86.89L253.46 77.92C252.61 77.20 251.33 77.31 250.61 78.16C249.89 79.01 250.00 80.28 250.85 81.00L261.48 90.06L266.95 94.59L269.47 96.85L271.74 99.16L276.01 103.70L277.39 105.72L277.53 106.16L277.56 106.36L277.42 106.70L276.98 107.25L274.37 109.28L267.72 113.72L256.89 122.81L262.11 125.15L272.79 116.16L279.55 111.10L282.54 108.56L283.75 106.96L284.00 104.38L282.15 102.55L280.27 102.14L276.56 102.11L268.39 102.32L254.54 101.30L240.60 100.35L226.63 99.57L212.62 99.11L198.61 99.23L191.52 99.42L187.87 99.65L184.22 100.25L180.20 101.45L175.98 103.04L171.29 104.99C170.12 105.47 169.56 106.81 170.05 107.98C170.53 109.15 171.87 109.71 173.04 109.23Z"/>
+
+      <text data-seed-label="true" class="seed-label" x="16" y="24">short target · 52×26 · seed reference-alpha</text>
+      <text class="metric-label" x="16" y="198">209px · 443ms · 14538ae7</text>
+  </g><g data-reference-variant="true" data-target-kind="short" data-seed="reference-beta" transform="translate(640 70)">
+    <rect class="reference-bg" width="640" height="210" rx="12"/>
+    <rect class="reference-frame" x=".5" y=".5" width="639" height="209" rx="11.5"/>
+    <rect class="target-surface" x="294" y="92" width="52" height="26" rx="8"/><text x="320" y="110" text-anchor="middle" class="target-text">15+</text>
+
+      <path data-production-ribbon="true" data-path-hash="fe82dcab" data-linecap="round" data-linejoin="round" class="marker-ink" d="M172.95 109.06L177.58 107.19L181.60 105.77L185.24 104.77L188.42 104.25L191.76 103.89L198.74 103.50L212.62 102.96L226.46 103.29L240.36 104.32L254.33 104.83L268.24 105.60L276.41 106.15L279.70 106.69L280.09 106.86L279.32 105.74L279.52 104.42L279.22 104.77L276.40 106.84L269.25 111.65L258.06 120.68L260.54 127.64L271.31 118.24L277.57 113.63L280.56 111.07L281.94 109.21L282.62 107.07L282.44 104.97L281.60 103.08L279.54 100.48L274.78 96.05L272.16 93.77L269.31 91.62L263.71 87.34L253.04 78.40C252.11 77.63 250.73 77.75 249.96 78.67C249.18 79.60 249.30 80.98 250.23 81.75L260.95 90.72L266.60 95.12L269.24 97.27L271.62 99.47L276.13 103.77L277.62 105.71L277.81 106.19L277.87 106.51L277.71 106.99L277.21 107.69L274.67 109.90L268.32 114.62L258.19 123.60L261.47 123.84L272.01 115.30L278.98 110.58L282.07 108.38L283.33 107.10L283.89 104.69L282.31 102.74L280.54 102.14L276.74 101.74L268.44 101.47L254.51 100.83L240.59 100.25L226.66 99.14L212.59 98.83L198.58 99.34L191.53 99.55L187.90 99.74L184.26 100.25L180.21 101.35L175.93 102.85L171.21 104.75C170.02 105.23 169.45 106.58 169.93 107.77C170.41 108.96 171.76 109.54 172.95 109.06Z"/>
+
+      <text data-seed-label="true" class="seed-label" x="16" y="24">short target · 52×26 · seed reference-beta</text>
+      <text class="metric-label" x="16" y="198">210px · 446ms · fe82dcab</text>
+  </g><g data-reference-variant="true" data-target-kind="short" data-seed="3931985963" transform="translate(1280 70)">
+    <rect class="reference-bg" width="640" height="210" rx="12"/>
+    <rect class="reference-frame" x=".5" y=".5" width="639" height="209" rx="11.5"/>
+    <rect class="target-surface" x="294" y="92" width="52" height="26" rx="8"/><text x="320" y="110" text-anchor="middle" class="target-text">15+</text>
+
+      <path data-production-ribbon="true" data-path-hash="1017240d" data-linecap="round" data-linejoin="round" class="marker-ink" d="M173.10 109.42L177.72 107.54L181.73 106.11L185.32 105.11L188.46 104.62L191.77 104.29L198.71 103.96L212.57 103.76L226.38 104.35L240.25 105.55L254.16 106.64L268.18 107.70L276.60 107.51L279.93 107.55L280.61 107.72L279.34 106.97L279.04 104.27L278.78 104.73L276.30 107.11L269.78 112.56L259.45 121.75L259.93 125.97L270.41 117.20L276.89 112.90L279.92 110.61L281.26 109.01L282.00 107.13L281.95 105.23L281.30 103.44L279.46 100.76L275.02 96.02L272.51 93.57L269.70 91.26L264.17 86.84L253.57 77.80C252.71 77.07 251.42 77.17 250.68 78.03C249.94 78.88 250.04 80.18 250.90 80.92L261.47 90.04L266.90 94.62L269.41 96.90L271.66 99.22L275.89 103.78L277.22 105.78L277.33 106.16L277.37 106.28L277.25 106.55L276.85 107.04L274.21 109.04L267.54 113.49L256.63 122.70L262.24 125.34L272.72 115.94L279.26 110.55L282.09 107.96L282.96 106.78L282.75 103.80L281.18 103.11L280.10 102.97L276.49 103.01L268.31 103.37L254.45 102.56L240.57 101.57L226.66 100.30L212.64 99.61L198.63 99.69L191.56 99.84L187.94 100.04L184.33 100.56L180.31 101.67L176.05 103.18L171.35 105.10C170.15 105.58 169.58 106.95 170.06 108.14C170.55 109.33 171.91 109.90 173.10 109.42Z"/>
+
+      <text data-seed-label="true" class="seed-label" x="16" y="24">short target · 52×26 · seed 3931985963</text>
+      <text class="metric-label" x="16" y="198">207px · 439ms · 1017240d</text>
+  </g><g data-reference-variant="true" data-target-kind="wide" data-seed="reference-alpha" transform="translate(0 280)">
+    <rect class="reference-bg" width="640" height="210" rx="12"/>
+    <rect class="reference-frame" x=".5" y=".5" width="639" height="209" rx="11.5"/>
+    <rect class="target-surface" x="280" y="88" width="310" height="38" rx="8"/><text x="435" y="112" text-anchor="middle" class="target-text">human decision checkpoint</text>
+
+      <path data-production-ribbon="true" data-path-hash="d4c6a0cd" data-linecap="round" data-linejoin="round" class="marker-ink" d="M58.57 113.05L64.91 111.34L70.44 110.00L75.35 108.98L84.10 107.99L93.00 107.44L110.89 106.73L128.79 106.48L146.70 106.46L164.60 106.65L182.51 107.22L200.47 107.70L218.42 107.68L236.35 107.90L245.62 108.00L250.03 108.23L253.98 108.70L260.44 109.80L262.73 110.53L262.84 110.59L262.62 109.89L262.61 109.71L261.97 110.48L258.34 113.46L249.83 119.67L241.84 126.50L249.80 125.33L254.45 121.62L258.37 118.08L264.31 112.24L266.79 108.96L267.69 106.79L267.85 104.45L267.03 102.06L265.39 99.96L261.55 96.86L257.12 93.99L253.28 91.28L239.61 79.74C238.66 78.93 237.24 79.05 236.43 80.00C235.63 80.96 235.75 82.38 236.70 83.18L250.41 94.80L254.52 97.79L258.84 100.62L262.24 103.36L262.97 104.32L263.25 105.10L263.17 105.69L262.87 106.48L260.93 109.13L255.23 114.83L251.57 118.31L247.11 122.09L244.54 129.74L252.55 123.19L261.11 117.20L265.14 114.01L266.76 112.06L267.38 109.52L266.22 107.22L264.50 106.10L261.43 105.13L254.65 104.00L250.31 103.63L245.65 103.64L236.37 103.78L218.44 103.68L200.51 103.74L182.62 103.28L164.68 102.73L146.72 102.54L128.76 102.56L110.80 102.77L92.84 103.33L83.77 103.66L74.71 104.50L69.41 105.63L63.78 107.15L57.43 108.99C56.31 109.31 55.66 110.47 55.97 111.59C56.29 112.71 57.45 113.37 58.57 113.05Z"/>
+
+      <text data-seed-label="true" class="seed-label" x="16" y="24">wide target · 310×38 · seed reference-alpha</text>
+      <text class="metric-label" x="16" y="198">307px · 651ms · d4c6a0cd</text>
+  </g><g data-reference-variant="true" data-target-kind="wide" data-seed="reference-beta" transform="translate(640 280)">
+    <rect class="reference-bg" width="640" height="210" rx="12"/>
+    <rect class="reference-frame" x=".5" y=".5" width="639" height="209" rx="11.5"/>
+    <rect class="target-surface" x="280" y="88" width="310" height="38" rx="8"/><text x="435" y="112" text-anchor="middle" class="target-text">human decision checkpoint</text>
+
+      <path data-production-ribbon="true" data-path-hash="b411c026" data-linecap="round" data-linejoin="round" class="marker-ink" d="M58.51 112.88L64.85 111.19L70.39 109.90L75.31 108.92L84.08 108.00L93.02 107.45L110.91 106.56L128.79 106.09L146.68 106.25L164.63 106.56L182.57 106.50L200.44 106.75L218.31 107.75L236.24 108.89L245.57 109.20L249.93 109.50L253.79 110.00L260.17 111.11L262.31 111.79L262.72 112.07L261.35 109.30L261.58 108.89L261.11 109.52L257.54 112.46L249.05 118.77L240.56 126.54L250.13 126.05L254.83 121.93L258.59 118.18L264.30 112.11L266.64 108.77L267.44 106.66L267.52 104.42L266.67 102.18L265.06 100.22L261.21 97.26L256.76 94.47L252.87 91.76L239.17 80.25C238.16 79.41 236.66 79.54 235.81 80.54C234.96 81.55 235.09 83.05 236.10 83.90L249.86 95.48L254.09 98.48L258.46 101.24L261.87 103.87L262.52 104.67L262.75 105.25L262.71 105.65L262.48 106.34L260.68 109.03L255.20 114.92L251.61 118.47L247.41 122.16L244.79 128.64L252.00 122.38L260.36 116.13L264.21 112.97L265.45 111.52L265.93 110.29L264.44 107.71L263.92 107.39L261.13 106.53L254.47 105.41L250.26 105.00L245.69 104.93L236.44 104.81L218.54 103.76L200.58 102.77L182.59 102.54L164.65 102.63L146.73 102.32L128.75 102.16L110.77 102.64L92.83 103.45L83.79 103.76L74.74 104.48L69.42 105.50L63.75 106.94L57.37 108.74C56.23 109.05 55.56 110.24 55.87 111.38C56.19 112.52 57.37 113.20 58.51 112.88Z"/>
+
+      <text data-seed-label="true" class="seed-label" x="16" y="24">wide target · 310×38 · seed reference-beta</text>
+      <text class="metric-label" x="16" y="198">303px · 643ms · b411c026</text>
+  </g><g data-reference-variant="true" data-target-kind="wide" data-seed="3931985963" transform="translate(1280 280)">
+    <rect class="reference-bg" width="640" height="210" rx="12"/>
+    <rect class="reference-frame" x=".5" y=".5" width="639" height="209" rx="11.5"/>
+    <rect class="target-surface" x="280" y="88" width="310" height="38" rx="8"/><text x="435" y="112" text-anchor="middle" class="target-text">human decision checkpoint</text>
+
+      <path data-production-ribbon="true" data-path-hash="e2b5a271" data-linecap="round" data-linejoin="round" class="marker-ink" d="M58.62 113.26L64.95 111.55L70.47 110.26L75.37 109.28L84.11 108.37L93.01 107.86L110.90 107.22L128.77 107.06L146.66 107.39L164.57 107.86L182.50 108.37L200.47 108.67L218.44 108.41L236.41 108.12L245.69 107.94L250.09 108.06L254.05 108.44L260.53 109.47L262.86 110.19L263.06 110.30L262.98 109.89L262.92 109.91L262.21 110.75L258.53 113.73L249.97 119.86L242.22 126.34L249.86 125.25L254.39 121.60L258.31 118.05L264.27 112.23L266.77 108.96L267.68 106.80L267.85 104.46L267.04 102.07L265.41 99.96L261.58 96.84L257.17 93.94L253.35 91.21L239.73 79.61C238.76 78.79 237.31 78.91 236.49 79.87C235.67 80.84 235.78 82.28 236.75 83.11L250.40 94.78L254.50 97.80L258.80 100.66L262.18 103.41L262.90 104.36L263.16 105.10L263.09 105.66L262.80 106.43L260.86 109.05L255.12 114.69L251.39 118.05L246.73 121.77L244.59 130.35L252.79 123.50L261.28 117.42L265.31 114.20L267.00 112.17L267.64 109.47L266.44 107.07L264.60 105.86L261.45 104.88L254.64 103.83L250.27 103.52L245.59 103.65L236.31 104.08L218.38 104.49L200.47 104.78L182.58 104.51L164.68 104.04L146.75 103.53L128.80 103.15L110.82 103.26L92.86 103.78L83.81 104.06L74.78 104.80L69.49 105.84L63.83 107.29L57.47 109.11C56.32 109.42 55.65 110.61 55.97 111.76C56.29 112.90 57.47 113.57 58.62 113.26Z"/>
+
+      <text data-seed-label="true" class="seed-label" x="16" y="24">wide target · 310×38 · seed 3931985963</text>
+      <text class="metric-label" x="16" y="198">307px · 652ms · e2b5a271</text>
+  </g><g data-reference-variant="true" data-target-kind="multiline" data-seed="reference-alpha" transform="translate(0 490)">
+    <rect class="reference-bg" width="640" height="210" rx="12"/>
+    <rect class="reference-frame" x=".5" y=".5" width="639" height="209" rx="11.5"/>
+    <rect class="target-surface" x="280" y="48" width="230" height="104" rx="8"/><text x="395" y="87" text-anchor="middle" class="target-text">parallel workers</text><text x="395" y="105" text-anchor="middle" class="target-text">review independently</text><text x="395" y="123" text-anchor="middle" class="target-text">join after evidence</text>
+
+      <path data-production-ribbon="true" data-path-hash="c65f411a" data-linecap="round" data-linejoin="round" class="marker-ink" d="M84.01 105.58L90.15 103.82L95.50 102.45L100.25 101.42L108.76 100.44L117.45 99.91L134.90 99.21L152.36 99.15L169.83 99.30L187.29 99.73L204.79 100.47L222.32 100.69L239.85 100.91L249.29 100.77L253.60 100.96L255.23 101.22L256.55 101.60L258.22 102.39L259.67 103.33L260.48 104.13L260.63 104.42L260.50 104.49L259.73 105.41L256.10 108.37L248.19 114.00L245.80 121.54L251.12 117.45L255.70 113.76L259.48 110.18L264.50 104.39L266.48 101.10L267.13 98.98L267.14 96.78L266.29 94.50L264.68 92.46L260.95 89.44L256.66 86.64L252.95 84.00L239.61 72.74C238.66 71.94 237.24 72.05 236.43 73.00C235.63 73.96 235.75 75.38 236.70 76.18L250.07 87.52L254.06 90.43L258.22 93.18L261.51 95.86L262.25 96.82L262.56 97.64L262.53 98.25L262.31 99.01L260.81 101.52L256.06 107.00L252.66 110.32L248.33 113.93L243.13 117.96L250.87 117.67L258.87 112.14L262.90 108.95L264.57 106.98L265.40 104.36L264.52 101.58L262.69 99.64L260.55 98.23L258.28 97.15L256.20 96.55L253.87 96.26L249.23 96.25L239.82 96.65L222.35 96.63L204.89 96.50L187.42 95.78L169.89 95.37L152.37 95.21L134.82 95.23L117.29 95.78L108.43 96.08L99.59 96.91L94.42 98.06L88.95 99.62L82.80 101.50C81.67 101.83 81.03 103.02 81.36 104.14C81.70 105.27 82.88 105.91 84.01 105.58Z"/>
+
+      <text data-seed-label="true" class="seed-label" x="16" y="24">multiline target · 230×104 · seed reference-alpha</text>
+      <text class="metric-label" x="16" y="198">273px · 581ms · c65f411a</text>
+  </g><g data-reference-variant="true" data-target-kind="multiline" data-seed="reference-beta" transform="translate(640 490)">
+    <rect class="reference-bg" width="640" height="210" rx="12"/>
+    <rect class="reference-frame" x=".5" y=".5" width="639" height="209" rx="11.5"/>
+    <rect class="target-surface" x="280" y="48" width="230" height="104" rx="8"/><text x="395" y="87" text-anchor="middle" class="target-text">parallel workers</text><text x="395" y="105" text-anchor="middle" class="target-text">review independently</text><text x="395" y="123" text-anchor="middle" class="target-text">join after evidence</text>
+
+      <path data-production-ribbon="true" data-path-hash="a6da0f3d" data-linecap="round" data-linejoin="round" class="marker-ink" d="M83.94 105.41L90.08 103.68L95.44 102.36L100.21 101.37L108.75 100.45L117.48 99.93L134.92 98.97L152.35 98.77L169.82 99.23L187.35 99.40L204.81 99.46L222.21 100.43L239.72 101.84L249.24 101.96L253.49 102.21L254.93 102.47L256.06 102.82L257.57 103.55L258.84 104.39L259.43 104.97L259.29 104.46L259.45 103.66L258.84 104.42L255.29 107.33L247.26 113.20L242.56 122.32L251.63 118.06L256.13 114.11L259.78 110.34L264.59 104.33L266.43 100.96L266.98 98.87L266.91 96.73L266.00 94.56L264.39 92.65L260.62 89.78L256.31 87.09L252.55 84.47L239.17 73.25C238.16 72.40 236.65 72.53 235.80 73.54C234.95 74.55 235.08 76.06 236.10 76.91L249.53 88.20L253.65 91.11L257.88 93.77L261.22 96.31L261.91 97.13L262.20 97.82L262.19 98.30L262.03 98.99L260.67 101.54L256.16 107.21L252.84 110.65L248.65 114.37L245.89 118.97L250.43 116.65L258.12 111.06L261.96 107.90L263.28 106.36L263.98 104.37L263.24 102.25L261.78 100.74L259.88 99.47L257.80 98.47L255.96 97.91L253.84 97.62L249.30 97.49L239.93 97.55L222.48 96.31L204.92 95.44L187.37 95.44L169.90 95.27L152.38 94.78L134.79 94.98L117.27 95.87L108.45 96.18L99.61 96.92L94.43 97.96L88.92 99.41L82.74 101.24C81.58 101.57 80.92 102.78 81.25 103.93C81.59 105.08 82.79 105.75 83.94 105.41Z"/>
+
+      <text data-seed-label="true" class="seed-label" x="16" y="24">multiline target · 230×104 · seed reference-beta</text>
+      <text class="metric-label" x="16" y="198">272px · 577ms · a6da0f3d</text>
+  </g><g data-reference-variant="true" data-target-kind="multiline" data-seed="3931985963" transform="translate(1280 490)">
+    <rect class="reference-bg" width="640" height="210" rx="12"/>
+    <rect class="reference-frame" x=".5" y=".5" width="639" height="209" rx="11.5"/>
+    <rect class="target-surface" x="280" y="48" width="230" height="104" rx="8"/><text x="395" y="87" text-anchor="middle" class="target-text">parallel workers</text><text x="395" y="105" text-anchor="middle" class="target-text">review independently</text><text x="395" y="123" text-anchor="middle" class="target-text">join after evidence</text>
+
+      <path data-production-ribbon="true" data-path-hash="a20c858c" data-linecap="round" data-linejoin="round" class="marker-ink" d="M84.06 105.79L90.19 104.04L95.54 102.71L100.26 101.73L108.77 100.83L117.46 100.34L134.90 99.72L152.32 99.82L169.78 100.42L187.27 100.95L204.78 101.52L222.34 101.50L239.91 101.26L249.36 100.78L253.67 100.82L255.32 101.03L256.68 101.39L258.39 102.16L259.88 103.10L260.77 103.95L260.98 104.43L260.79 104.70L259.96 105.68L256.31 108.66L248.46 114.23L246.66 118.82L250.90 117.17L255.49 113.57L259.33 110.09L264.44 104.37L266.44 101.09L267.10 98.99L267.12 96.79L266.28 94.52L264.68 92.47L260.97 89.43L256.71 86.61L253.01 83.95L239.73 72.62C238.76 71.80 237.32 71.91 236.49 72.87C235.67 73.83 235.79 75.28 236.75 76.10L250.06 87.51L254.03 90.45L258.17 93.23L261.45 95.92L262.17 96.86L262.47 97.65L262.44 98.23L262.23 98.96L260.74 101.44L255.96 106.87L252.56 110.16L248.17 113.75L242.44 120.05L250.99 117.94L259.03 112.35L263.08 109.14L264.81 107.09L265.65 104.35L264.72 101.45L262.81 99.46L260.61 98.05L258.29 97.00L256.17 96.43L253.81 96.18L249.16 96.29L239.76 97.03L222.29 97.48L204.84 97.61L187.39 97.09L169.91 96.56L152.41 95.89L134.85 95.73L117.32 96.23L108.48 96.50L99.66 97.23L94.50 98.28L89.01 99.76L82.84 101.60C81.68 101.94 81.02 103.15 81.36 104.31C81.69 105.46 82.90 106.12 84.06 105.79Z"/>
+
+      <text data-seed-label="true" class="seed-label" x="16" y="24">multiline target · 230×104 · seed 3931985963</text>
+      <text class="metric-label" x="16" y="198">273px · 581ms · a20c858c</text>
+  </g>
+  </svg>

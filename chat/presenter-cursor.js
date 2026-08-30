@@ -16,6 +16,11 @@ import {
   normalizePresenterSeed,
   samplePresenterKinematicPlan,
 } from './presenter-kinematics.js';
+import {
+  PRESENTER_MARKER_CATALOG,
+  PRESENTER_MARKER_GEOMETRY_CONSTANTS,
+  createPresenterMarkerPlan,
+} from './presenter-marker-geometry.js';
 
 const STYLE_ID = 'symbiote-presenter-cursor-style';
 const OVERLAY_CLASS = 'symbiote-presenter-cursor';
@@ -24,24 +29,10 @@ export const PRESENTER_HAND_PROFILE_VERSION = 'symbiote-presenter-hand-profile-v
 // Marker ink follows the path at one human-readable velocity. Duration is
 // derived from arc length, so a longer stroke takes proportionally longer
 // instead of being accelerated to fit a fixed animation window.
-export const PRESENTER_INK_DRAW_SPEED_PX_PER_MS = 0.45;
+export const PRESENTER_INK_DRAW_SPEED_PX_PER_MS =
+  PRESENTER_MARKER_GEOMETRY_CONSTANTS.drawSpeedPxPerMs;
 export const PRESENTER_ANNOTATION_SUPPORT_TABLE = Object.freeze({
-  markers: Object.freeze([
-    'freehand',
-    'underline',
-    'oval',
-    'multi-oval',
-    'arrow',
-    'converging-arrows',
-    'route',
-    'bidirectional-route',
-    'parallel-route',
-    'label',
-    'number',
-    'box',
-    'bracket',
-    'slash',
-  ]),
+  markers: Object.freeze(PRESENTER_MARKER_CATALOG.map(({ name }) => name)),
   symbols: Object.freeze(['question', 'cross', 'check', 'heart', 'flourish']),
   intents: Object.freeze([
     'emphasize',
@@ -59,6 +50,9 @@ export const PRESENTER_ANNOTATION_SUPPORT_TABLE = Object.freeze({
 
 export const PRESENTER_MARKERS = PRESENTER_ANNOTATION_SUPPORT_TABLE.markers;
 const PRESENTER_MARKER_SET = new Set(PRESENTER_MARKERS);
+const PRESENTER_MARKER_REGISTRY = Object.freeze(Object.fromEntries(
+  PRESENTER_MARKERS.map((name) => [name, true]),
+));
 const MARKER_ALIASES = Object.freeze({
   circle: 'oval',
   marker: 'oval',
@@ -143,10 +137,12 @@ export class PresenterAnnotationUnsupportedError extends TypeError {
   }
 }
 
-const CURSOR_SIZE = 18; // px; the hotspot is the arrow's top-left tip
-const INK_CURSOR_SIZE = 4; // retained for marker collision safety at the nib hotspot
-export const PRESENTER_ANNOTATION_COLLISION_ALLOWANCE_PX = 4.4;
-export const PRESENTER_ANNOTATION_TARGET_INSET_PX = 8;
+const CURSOR_SIZE = PRESENTER_MARKER_GEOMETRY_CONSTANTS.cursorSizePx;
+const INK_CURSOR_SIZE = PRESENTER_MARKER_GEOMETRY_CONSTANTS.inkCursorSizePx;
+export const PRESENTER_ANNOTATION_COLLISION_ALLOWANCE_PX =
+  PRESENTER_MARKER_GEOMETRY_CONSTANTS.collisionAllowancePx;
+export const PRESENTER_ANNOTATION_TARGET_INSET_PX =
+  PRESENTER_MARKER_GEOMETRY_CONSTANTS.targetInsetPx;
 export const PRESENTER_CURSOR_SIZE_PX = CURSOR_SIZE;
 const MARCH_MS = 600; // marching-ants loop duration
 const HIGHLIGHT_PADDING_PX = 10;
@@ -615,13 +611,14 @@ ${overlaySelector} .pc-cursor.is-inking{
   height:${CURSOR_SIZE}px;
 }
 ${overlaySelector} .pc-cursor.is-inking svg{display:block;}
+${overlaySelector} .pc-cursor svg{display:block;overflow:visible;}
 `;
 }
 
 // Classic arrow pointer; the tip (hotspot) sits at 0,0 of the cursor box.
 const CURSOR_SVG = `
 <svg viewBox="0 0 24 24" xmlns="${SVG_NS}" width="${CURSOR_SIZE}" height="${CURSOR_SIZE}" aria-hidden="true">
-  <path d="M2 1 L2 18 L6.5 13.7 L9.4 20.8 L12.3 19.6 L9.4 12.7 L15.6 12.4 Z"
+  <path d="M0 0 L0 17 L4.5 12.7 L7.4 19.8 L10.3 18.6 L7.4 11.7 L13.6 11.4 Z"
         fill="#000" stroke="#fff" stroke-width="1.1" stroke-linejoin="round"/>
 </svg>`;
 
@@ -978,402 +975,7 @@ function semanticGestureSeed(annotation) {
   return hash >>> 0;
 }
 
-/**
- * Gesture registry. Each entry, given the settled target rect, the move seed,
- * and the cursor's current rest point, returns a parametric path the runner
- * samples over progress `t` in [0, 1]. The runner adds per-frame jitter, eases
- * the timeline, and draws the ink trail, so a gesture only describes its ideal
- * shape. Add a name here to extend the set; an unknown name is a no-op.
- *
- * @typedef {{ x:number, y:number }} Pt
- * @typedef {{
- *   loops?: number,           // extra passes (duration multiplier ~ loops)
- *   point: (t:number) => Pt,  // ideal path position at progress t
- *   rest: Pt,                 // where the cursor comes to rest at the end
- * }} GesturePlan
- */
-const GESTURES = {
-  freehand(rect, seed, opts = {}) {
-    let pad = Math.min(8, rect.width * 0.04);
-    let viewportWidth = Number(opts.viewport?.width) || 1920;
-    let width = Math.min(
-      rect.width + 2 * pad,
-      Math.max(320, 3 * rect.height),
-      Math.max(0, 0.45 * viewportWidth - GESTURE_JITTER_PX * 2.5),
-    );
-    let cx = rect.left + rect.width / 2;
-    let margin = Math.max(9, Math.min(18, rect.height * 0.18));
-    let x0 = cx - width / 2;
-    let x1 = cx + width / 2;
-    let baseY = rect.top + rect.height + margin;
-    let amplitude = 3.5 + (variation(seed, 37) * 0.5 + 0.5) * 3;
-    return {
-      loops: 0,
-      rest: { x: x1, y: baseY },
-      point(t) {
-        let drift = variation(seed, 41) * 2 * t;
-        return {
-          x: x0 + (x1 - x0) * t,
-          y: baseY + Math.sin(t * Math.PI * 3.2) * amplitude * (1 - t * 0.2) + drift,
-        };
-      },
-    };
-  },
-
-  // A left-to-right stroke just below the target, as if underlining it.
-  underline(rect, seed, opts = {}) {
-    let pad = rect.width * (0.06 + 0.04 * (variation(seed, 5) * 0.5 + 0.5));
-    let x0 = rect.left + pad;
-    let x1 = rect.left + rect.width - pad;
-    let len = x1 - x0;
-    let below = opts.placement !== 'above';
-    let margin = below
-      ? Math.max(10, Math.min(14, rect.height * 0.18))
-      : CURSOR_SIZE + PRESENTER_ANNOTATION_COLLISION_ALLOWANCE_PX + 3;
-    let direction = below ? 1 : -1;
-    let edge = below ? rect.top + rect.height : rect.top;
-    let y = edge + direction * (margin + variation(seed, 9) * 2);
-    let droop = 2 + variation(seed, 19) * 2; // slight mid-stroke dip
-    return {
-      loops: 0,
-      rest: { x: x1, y },
-      point(t) {
-        return {
-          x: x0 + len * t,
-          y: y + direction * Math.sin(t * Math.PI) * droop,
-        };
-      },
-    };
-  },
-
-  oval(rect, seed) {
-    let cx = rect.left + rect.width / 2;
-    let cy = rect.top + rect.height / 2;
-    let shortSide = Math.min(rect.width, rect.height);
-    let expressiveGap = 1.5 + Math.min(4.5, Math.max(0, shortSide - 24) * 0.075);
-    let targetInset = Math.min(PRESENTER_ANNOTATION_TARGET_INSET_PX, shortSide * 0.25);
-    let jitterScale = Math.max(0.4, Math.min(1, shortSide / 80));
-    let verticalSafetyGap = INK_CURSOR_SIZE / 2
-      + PRESENTER_ANNOTATION_COLLISION_ALLOWANCE_PX
-      + GESTURE_JITTER_PX * jitterScale
-      - targetInset
-      + 0.75;
-    let horizontalSafetyGap = verticalSafetyGap + INK_CURSOR_SIZE / 2
-      + PRESENTER_KINEMATIC_LIMITS.noiseAmplitudePx
-      + 0.75;
-    let horizontalGap = Math.max(expressiveGap, horizontalSafetyGap);
-    let verticalGap = Math.max(expressiveGap, verticalSafetyGap);
-    let rx = rect.width / 2 + horizontalGap + 0.5 + variation(seed, 33) * 0.2;
-    let ry = rect.height / 2 + verticalGap + variation(seed, 35) * 0.2;
-    return {
-      loops: 0.15,
-      jitterScale,
-      rest: { x: cx + rx, y: cy },
-      point(t) {
-        let angle = t * Math.PI * 2;
-        let cosine = Math.cos(angle);
-        let sine = Math.sin(angle);
-        let roundedX = Math.sign(cosine) * Math.pow(Math.abs(cosine), 0.25);
-        let roundedY = Math.sign(sine) * Math.pow(Math.abs(sine), 0.25);
-        let w = 1 + Math.sin(angle * 3) * 0.008 * variation(seed, 37);
-        return {
-          x: cx + rx * w * roundedX,
-          y: cy + ry * w * roundedY,
-        };
-      },
-    };
-  },
-
-  box(rect, seed) {
-    let pad = Math.min(12, Math.max(5, Math.min(rect.width, rect.height) * 0.06));
-    let wobble = variation(seed, 11) * 2;
-    let left = rect.left - pad;
-    let top = rect.top - pad;
-    let right = rect.left + rect.width + pad;
-    let bottom = rect.top + rect.height + pad;
-    return pointListPlan([
-      { x: left + wobble, y: top },
-      { x: right, y: top - wobble },
-      { x: right + wobble, y: bottom },
-      { x: left, y: bottom + wobble },
-      { x: left - wobble, y: top },
-    ]);
-  },
-
-  bracket(rect, seed, opts = {}) {
-    let after = opts.placement === 'after';
-    let pad = 8;
-    let x = after ? rect.left + rect.width + pad : rect.left - pad;
-    let arm = 12 * (after ? -1 : 1);
-    let y0 = rect.top - 4;
-    let y1 = rect.top + rect.height + 4;
-    let wobble = variation(seed, 13) * 2;
-    return pointListPlan([
-      { x: x + arm + wobble, y: y0 },
-      { x, y: y0 + wobble },
-      { x: x - wobble, y: y1 - wobble },
-      { x: x + arm - wobble, y: y1 },
-    ]);
-  },
-
-  slash(rect, seed) {
-    let pad = 8;
-    let wobble = variation(seed, 17) * 3;
-    return pointListPlan([
-      { x: rect.left + rect.width + pad + wobble, y: rect.top - pad - wobble },
-      { x: rect.left - pad - wobble, y: rect.top + rect.height + pad + wobble },
-    ]);
-  },
-
-  'multi-oval'(rect, seed) {
-    let base = GESTURES.oval(rect, seed);
-    return {
-      ...base,
-      loops: 1,
-      point(t) {
-        let pass = t < 0.5 ? 0 : 1;
-        let local = t < 0.5 ? t * 2 : (t - 0.5) * 2;
-        let point = base.point(local);
-        let cx = rect.left + rect.width / 2;
-        let cy = rect.top + rect.height / 2;
-        let scale = pass === 0 ? 1 : 1.055;
-        return {
-          x: cx + (point.x - cx) * scale,
-          y: cy + (point.y - cy) * scale,
-        };
-      },
-    };
-  },
-
-  'converging-arrows'(rect, seed) {
-    let gap = Math.max(18, Math.min(30, rect.height * 0.3));
-    let y = rect.top - gap;
-    let center = rect.left + rect.width / 2;
-    let reach = Math.max(40, Math.min(100, rect.width * 0.45));
-    let head = 10 + variation(seed, 121) * 1.5;
-    return pointListPlan([
-      { x: center - reach, y: y - 5 },
-      { x: center - 4, y },
-      { x: center - 4 - head, y: y - head * 0.65 },
-      { x: center - 4, y },
-      { x: center - 4 - head, y: y + head * 0.65 },
-      { x: center - 4, y },
-      { x: center + reach, y: y + 5 },
-      { x: center + 4, y },
-      { x: center + 4 + head, y: y - head * 0.65 },
-      { x: center + 4, y },
-      { x: center + 4 + head, y: y + head * 0.65 },
-      { x: center + 4, y },
-    ]);
-  },
-
-  route(rect, seed) {
-    let gap = 12 + Math.abs(variation(seed, 123)) * 3;
-    let y = rect.top + rect.height + gap;
-    let left = rect.left + rect.width * 0.08;
-    let right = rect.left + rect.width * 0.92;
-    let bend = Math.max(10, Math.min(24, rect.height * 0.3));
-    return pointListPlan([
-      { x: left, y },
-      { x: left + (right - left) * 0.32, y: y + bend },
-      { x: left + (right - left) * 0.68, y: y - bend * 0.4 },
-      { x: right, y },
-    ]);
-  },
-
-  'bidirectional-route'(rect, seed) {
-    let base = GESTURES.route(rect, seed);
-    let left = base.point(0);
-    let right = base.point(1);
-    let head = 10;
-    return pointListPlan([
-      { x: left.x + head, y: left.y - head * 0.65 },
-      left,
-      { x: left.x + head, y: left.y + head * 0.65 },
-      left,
-      base.point(0.33),
-      base.point(0.66),
-      right,
-      { x: right.x - head, y: right.y - head * 0.65 },
-      right,
-      { x: right.x - head, y: right.y + head * 0.65 },
-    ]);
-  },
-
-  'parallel-route'(rect, seed) {
-    let gap = 12 + Math.abs(variation(seed, 127)) * 3;
-    let y0 = rect.top + rect.height + gap;
-    let y1 = y0 + 11;
-    let left = rect.left + rect.width * 0.08;
-    let right = rect.left + rect.width * 0.92;
-    return pointListPlan([
-      { x: left, y: y0 },
-      { x: right, y: y0 },
-      { x: right, y: y1 },
-      { x: left, y: y1 },
-    ]);
-  },
-
-  label(rect, seed) {
-    let pad = 7;
-    let notch = Math.max(8, Math.min(16, rect.height * 0.2));
-    let wobble = variation(seed, 131) * 1.5;
-    let left = rect.left - pad;
-    let top = rect.top - pad;
-    let right = rect.left + rect.width + pad;
-    let bottom = rect.top + rect.height + pad;
-    return pointListPlan([
-      { x: left + notch, y: top + wobble },
-      { x: right, y: top },
-      { x: right, y: bottom },
-      { x: left, y: bottom - wobble },
-      { x: left, y: top + notch },
-      { x: left + notch, y: top + wobble },
-    ]);
-  },
-
-  number(rect, seed, opts = {}) {
-    let label = String(opts.label || '1').trim();
-    let digit = /^[1-9]$/.test(label) ? Number(label) : 1;
-    let radius = Math.max(11, Math.min(18, rect.height * 0.3));
-    let cx = rect.left - radius - 10;
-    let cy = rect.top + Math.min(radius + 2, rect.height / 2);
-    let points = [];
-    for (let index = 0; index <= 18; index += 1) {
-      let angle = -Math.PI / 2 + (Math.PI * 2 * index) / 18;
-      points.push({ x: cx + Math.cos(angle) * radius, y: cy + Math.sin(angle) * radius });
-    }
-    let top = cy - radius * 0.48;
-    let bottom = cy + radius * 0.48;
-    let left = cx - radius * 0.32;
-    let right = cx + radius * 0.32;
-    let middle = cy;
-    let digitPoints = {
-      1: [{ x: cx - 2, y: top + 3 }, { x: cx + 2, y: top }, { x: cx + 2, y: bottom }],
-      2: [{ x: left, y: top }, { x: right, y: top }, { x: right, y: middle }, { x: left, y: bottom }, { x: right, y: bottom }],
-      3: [{ x: left, y: top }, { x: right, y: top }, { x: cx, y: middle }, { x: right, y: bottom }, { x: left, y: bottom }],
-      4: [{ x: right, y: bottom }, { x: right, y: top }, { x: left, y: middle }, { x: right, y: middle }],
-      5: [{ x: right, y: top }, { x: left, y: top }, { x: left, y: middle }, { x: right, y: middle }, { x: right, y: bottom }, { x: left, y: bottom }],
-      6: [{ x: right, y: top }, { x: left, y: middle }, { x: left, y: bottom }, { x: right, y: bottom }, { x: right, y: middle }, { x: left, y: middle }],
-      7: [{ x: left, y: top }, { x: right, y: top }, { x: cx, y: bottom }],
-      8: [{ x: cx, y: middle }, { x: left, y: top }, { x: right, y: top }, { x: cx, y: middle }, { x: left, y: bottom }, { x: right, y: bottom }, { x: cx, y: middle }],
-      9: [{ x: right, y: middle }, { x: left, y: middle }, { x: left, y: top }, { x: right, y: top }, { x: right, y: bottom }, { x: left, y: bottom }],
-    }[digit];
-    return pointListPlan([...points, ...digitPoints]);
-  },
-
-  // One continuous felt-tip stroke: a slightly bowed shaft approaches the
-  // target edge, then retraces twice to form the arrow head. Geometry remains
-  // deterministic; the shared hand profile adds low-frequency wrist drift and
-  // a smaller high-frequency tremor during projection.
-  arrow(rect, seed, opts = {}) {
-    let placement = opts.placement || 'before';
-    let cx = rect.left + rect.width / 2;
-    let cy = rect.top + rect.height / 2;
-    let horizontal = placement === 'before' || placement === 'after';
-    let viewportRect = presenterViewportRect(opts.viewport || {});
-    let centerVector = Boolean(opts.centerVector && viewportRect);
-    let ux = 0;
-    let uy = 0;
-
-    if (centerVector) {
-      let viewportCenter = {
-        x: viewportRect.left + viewportRect.width / 2,
-        y: viewportRect.top + viewportRect.height / 2,
-      };
-      let dx = cx - viewportCenter.x;
-      let dy = cy - viewportCenter.y;
-      let distance = Math.hypot(dx, dy);
-      if (distance >= 48) {
-        ux = dx / distance;
-        uy = dy / distance;
-      } else {
-        centerVector = false;
-      }
-    }
-
-    if (!centerVector) {
-      if (horizontal) {
-        ux = placement === 'before' ? 1 : -1;
-        uy = 0;
-      } else {
-        ux = 0;
-        uy = placement === 'above' ? 1 : -1;
-      }
-    }
-
-    let halfWidth = Math.max(1, rect.width / 2);
-    let halfHeight = Math.max(1, rect.height / 2);
-    let edgeDistance = Math.min(
-      Math.abs(ux) > 0.0001 ? halfWidth / Math.abs(ux) : Number.POSITIVE_INFINITY,
-      Math.abs(uy) > 0.0001 ? halfHeight / Math.abs(uy) : Number.POSITIVE_INFINITY,
-    );
-    let targetGap = 12;
-    let tip = {
-      x: cx - ux * (edgeDistance + targetGap),
-      y: cy - uy * (edgeDistance + targetGap),
-    };
-    let viewportCenterDistance = viewportRect
-      ? Math.hypot(
-        tip.x - (viewportRect.left + viewportRect.width / 2),
-        tip.y - (viewportRect.top + viewportRect.height / 2),
-      )
-      : Math.max(rect.width, rect.height) * 0.75 + 96;
-    let reach = centerVector
-      ? Math.max(132, Math.min(270, viewportCenterDistance * 0.48))
-      : horizontal
-        ? Math.max(108, Math.min(210, rect.width * 0.42 + 88))
-        : Math.max(96, Math.min(190, rect.height * 0.8 + 72));
-    if (centerVector) {
-      let reachScale = Number(opts.reachScale);
-      if (Number.isFinite(reachScale)) reach *= Math.max(0.5, Math.min(1, reachScale));
-    }
-    let normal = { x: -uy, y: ux };
-    let tailOffset = variation(seed, 113) * Math.min(18, reach * 0.08);
-    let start = {
-      x: tip.x - ux * reach + normal.x * tailOffset,
-      y: tip.y - uy * reach + normal.y * tailOffset,
-    };
-    let bend = (8 + Math.abs(variation(seed, 117)) * 8) * (variation(seed, 119) < 0 ? -1 : 1);
-    let headLength = 30 + (variation(seed, 127) * 0.5 + 0.5) * 6;
-    let headWidth = headLength * (0.82 + variation(seed, 131) * 0.035);
-    let leftHead = {
-      x: tip.x - ux * headLength + normal.x * headWidth,
-      y: tip.y - uy * headLength + normal.y * headWidth,
-    };
-    let rightHead = {
-      x: tip.x - ux * headLength - normal.x * headWidth,
-      y: tip.y - uy * headLength - normal.y * headWidth,
-    };
-    return {
-      loops: 0,
-      pathMode: 'linear',
-      jitterScale: 0.72,
-      rest: tip,
-      point(t) {
-        if (t <= 0.72) {
-          let p = t / 0.72;
-          let ease = p * p * (3 - 2 * p);
-          let bow = Math.sin(p * Math.PI) * bend * (1 - p);
-          return {
-            x: start.x + (tip.x - start.x) * ease + normal.x * bow,
-            y: start.y + (tip.y - start.y) * ease + normal.y * bow,
-          };
-        }
-        if (t <= 0.82) {
-          let p = (t - 0.72) / 0.1;
-          return { x: tip.x + (leftHead.x - tip.x) * p, y: tip.y + (leftHead.y - tip.y) * p };
-        }
-        if (t <= 0.9) {
-          let p = (t - 0.82) / 0.08;
-          return { x: leftHead.x + (tip.x - leftHead.x) * p, y: leftHead.y + (tip.y - leftHead.y) * p };
-        }
-        let p = (t - 0.9) / 0.1;
-        return { x: tip.x + (rightHead.x - tip.x) * p, y: tip.y + (rightHead.y - tip.y) * p };
-      },
-    };
-  },
-};
+// Marker path factories live in the Node-safe presenter-marker-geometry module.
 
 function symbolRect(rect, placement = 'after') {
   let min = Math.max(18, Math.min(44, Math.min(rect.width || 24, rect.height || 24) * 0.9));
@@ -1610,9 +1212,17 @@ function resolvePresenterAnnotationLayout(
   let drawRect = presenterAnnotationRect(targetRect, viewport, annotation);
   let factory = annotation.kind === 'symbol'
     ? SYMBOLS[annotation.symbol]
-    : GESTURES[annotation.marker];
+    : (rect, geometrySeed, options) => createPresenterMarkerPlan(
+      annotation.marker,
+      rect,
+      { ...options, geometrySeed },
+    );
   let best = null;
-  let geometrySeed = semanticGestureSeed(annotation);
+  let semanticSeed = semanticGestureSeed(annotation);
+  let geometrySeed = annotation?.kind === 'marker'
+    && ['oval', 'multi-oval'].includes(annotation.marker)
+    ? normalizePresenterSeed(`${semanticSeed}:${seed}`)
+    : semanticSeed;
   let placements = annotationPlacementCandidates(annotation);
   let candidates = annotation.kind === 'marker' && annotation.marker === 'arrow'
     ? [1, 0.8, 0.64, 0.5].map((reachScale) => ({
@@ -1725,6 +1335,9 @@ function inertCursor() {
     presentFocusFrame() {
       return { presented: false, reason: 'unsupported' };
     },
+    presentCursorFrame() {
+      return { presented: false, reason: 'unsupported' };
+    },
     presentClickFrame() {
       return { presented: false, reason: 'unsupported' };
     },
@@ -1745,7 +1358,7 @@ function inertCursor() {
  * env this returns inert no-ops and `isSupported()` is false.
  *
  * @param {Document} [doc] - document to render into (defaults to the global one).
- * @returns {{ moveTo: (el: Element, opts?: object) => void, markElement: (el: Element, opts?: object) => void, annotateElement: (el: Element, opts?: object) => void, presentApproachFrame: (el: Element, frame: object) => object, presentFocusFrame: (el: Element, frame: object) => object, presentAnnotationFrame: (el: Element, annotation: object, frame: object) => object, presentClickFrame: (el: Element, frame: object) => object, clickElement: (el: Element, opts?: object) => void, clearAccumulatedAnnotations: () => void, clear: (opts?: object) => void, dispose: () => void, isSupported: () => boolean }}
+ * @returns {{ moveTo: (el: Element, opts?: object) => void, markElement: (el: Element, opts?: object) => void, annotateElement: (el: Element, opts?: object) => void, presentApproachFrame: (el: Element, frame: object) => object, presentFocusFrame: (el: Element, frame: object) => object, presentCursorFrame: (el: Element, frame: object) => object, presentAnnotationFrame: (el: Element, annotation: object, frame: object) => object, presentClickFrame: (el: Element, frame: object) => object, clickElement: (el: Element, opts?: object) => void, clearAccumulatedAnnotations: () => void, clear: (opts?: object) => void, dispose: () => void, isSupported: () => boolean }}
  */
 function layerStartMs(layer) {
   let value = Number(layer?.startMs ?? layer?.startTime ?? 0);
@@ -2037,7 +1650,7 @@ export function projectPresenterState(layers = {}, timeMs = 0, seed = 0, viewpor
     layers.marker,
     timeMs,
     seed,
-    GESTURES,
+    PRESENTER_MARKER_REGISTRY,
     normalizePresenterMarker,
     { kind: 'marker', viewport, obstacles: viewport?.obstacles },
   );
@@ -2698,6 +2311,17 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
         : null,
     }, Math.max(0, elapsedMs), seed, viewport);
 
+    let frameCursor = mode === 'cursor'
+      ? { x: projected.cursor.x, y: projected.cursor.y, visible: projected.cursor.visible }
+      : mode === 'rectangle-selection'
+        ? projected.focus.cursor
+        : mode === 'frame'
+          ? {
+              x: projected.focus.left + projected.focus.width,
+              y: projected.focus.top + projected.focus.height,
+              visible: projected.focus.visible,
+            }
+          : null;
     let result = {
       presented: true,
       planVersion: PRESENTER_KINEMATICS_VERSION,
@@ -2735,9 +2359,7 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
           maxObservedSpeedPxPerMs: frameKinematics.maxObservedSpeedPxPerMs,
           maxSpeedPxPerMs: frameKinematics.limits.maxSpeedPxPerMs,
         },
-      cursor: mode === 'cursor'
-        ? { x: projected.cursor.x, y: projected.cursor.y, visible: projected.cursor.visible }
-        : (mode === 'rectangle-selection' ? projected.focus.cursor : null),
+      cursor: frameCursor,
     };
     if (frame.planOnly === true) return result;
 
@@ -2770,16 +2392,54 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
     } else {
       focusHandle.style.display = 'none';
     }
-    if (mode === 'cursor' && projected.cursor.visible) {
-      setCursor(projected.cursor.x, projected.cursor.y);
-    } else if (mode === 'rectangle-selection' && projected.focus.cursor?.visible) {
-      setCursor(projected.focus.cursor.x, projected.focus.cursor.y);
+    if (frameCursor?.visible) {
+      setCursor(frameCursor.x, frameCursor.y);
     } else if (projected.focus.dragHandle?.visible) {
       setCursor(projected.focus.dragHandle.x, projected.focus.dragHandle.y);
     } else {
       holdCursor(viewport);
     }
 
+    return result;
+  }
+
+  function presentCursorFrame(el, frame = {}) {
+    if (disposed) return { presented: false, reason: 'disposed' };
+    if (!el || typeof el.getBoundingClientRect !== 'function') {
+      return { presented: false, reason: 'invalid-target' };
+    }
+    let viewport = resolveViewport(frame.viewport);
+    let targetRect = resolvePresenterVisibleRect(el, viewport);
+    if (!targetRect) return { presented: false, reason: 'hidden-target' };
+    let sourcePoint = frame.point || frame.cursor || {
+      x: targetRect.left,
+      y: targetRect.bottom,
+    };
+    let hotspot = clampPresenterPoint(sourcePoint, viewport, CURSOR_SIZE);
+    let elapsedMs = Math.max(0, Number(frame.elapsedMs) || 0);
+    let result = {
+      presented: true,
+      planVersion: PRESENTER_KINEMATICS_VERSION,
+      visible: true,
+      elapsedMs,
+      durationMs: Math.max(0, Number(frame.durationMs) || 0),
+      targetRect,
+      cursor: { ...hotspot, visible: true },
+    };
+    if (frame.planOnly === true) return result;
+
+    cancelTravel();
+    cancelDrag();
+    cancelGesture();
+    cancelClick();
+    showOverlay();
+    if (frame.preserveInk === true) renderAccumulatedAnnotations();
+    else {
+      inkPath.setAttribute('d', '');
+      ink.classList.remove('is-inking');
+    }
+    hideMarqueeFrame();
+    setCursor(hotspot.x, hotspot.y);
     return result;
   }
 
@@ -3513,6 +3173,7 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
     annotateElement,
     presentApproachFrame,
     presentFocusFrame,
+    presentCursorFrame,
     presentRelationshipFrame,
     presentAnnotationFrame,
     presentClickFrame,

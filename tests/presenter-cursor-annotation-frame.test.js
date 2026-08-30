@@ -99,7 +99,7 @@ test('deterministic focus frame projects cursor and frame modes without scheduli
   assert.equal(framed.presented, true);
   assert.equal(framed.visible, true);
   assert.equal(framed.mode, 'frame');
-  assert.equal(framed.cursor, null);
+  assert.deepEqual(framed.cursor, { x: 171, y: 131, visible: true });
   assert.equal(framed.revealProgress, 0);
   assert.equal(framed.revealing, true);
   assert.equal(framed.frameRect.width, 1);
@@ -212,7 +212,7 @@ test('deterministic annotation frame clamps progress and respects explicit seed'
 });
 
 test('annotation ink uses one constant capped speed and rounded ribbon ends', () => {
-  assert.equal(PRESENTER_INK_DRAW_SPEED_PX_PER_MS, 0.45);
+  assert.equal(PRESENTER_INK_DRAW_SPEED_PX_PER_MS, 0.471);
   assert.ok(PRESENTER_INK_DRAW_SPEED_PX_PER_MS < PRESENTER_KINEMATIC_LIMITS.minMovingSpeedPxPerMs);
   let window = makeDom();
   let cursor = createPresenterCursor(window.document);
@@ -500,7 +500,11 @@ test('viewport-dominating bottom-edge underline request uses an exclusive focus 
   assert.equal(frameActive.name, 'frame');
   assert.equal(frameActive.fallback, true);
   assert.equal(frameActive.gesturePolicy.reason, 'target-geometry-prefers-frame');
-  assert.equal(frameActive.cursor, null);
+  assert.deepEqual(frameActive.cursor, {
+    x: frameActive.frameRect.right,
+    y: frameActive.frameRect.bottom,
+    visible: true,
+  });
 
   let frameCompleted = cursor.presentAnnotationFrame(
     el,
@@ -511,7 +515,11 @@ test('viewport-dominating bottom-edge underline request uses an exclusive focus 
   assert.equal(frameCompleted.fallback, true);
   assert.equal(frameCompleted.safety.safe, true);
   assert.deepEqual(frameCompleted.pathSamples, []);
-  assert.equal(frameCompleted.cursor, null);
+  assert.deepEqual(frameCompleted.cursor, {
+    x: frameCompleted.frameRect.right,
+    y: frameCompleted.frameRect.bottom,
+    visible: true,
+  });
   cursor.dispose();
 });
 

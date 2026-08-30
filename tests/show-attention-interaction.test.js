@@ -209,6 +209,116 @@ test('attention controller owns native-selection animation and cancels it on rep
   assert.equal((await attention.whenSettled()).status, 'completed');
 });
 
+test('native selection renders its cursor on the same first frame, survives Pause, and clears as a pair on Stop', () => {
+  let scheduler = createFrameScheduler();
+  let target = animatedTarget(scheduler.view, 'selection-pair');
+  let selectionFrames = [];
+  let cursorFrames = [];
+  let selectionClears = 0;
+  let cursorHides = 0;
+  let presentCursorFrame = (frameTarget, frame = {}) => {
+    let elapsedMs = Number(frame.elapsedMs) || 0;
+    if (frame.planOnly !== true) cursorFrames.push({ target: frameTarget, elapsedMs });
+    return {
+      presented: true,
+      planVersion: 'symbiote-presenter-kinematics-v2',
+      durationMs: 400,
+      elapsedMs,
+      progress: elapsedMs / 400,
+      normalizedPathHash: 'path-selection-cursor-pair',
+      targetRect: { left: 20, top: 30, width: 180, height: 60 },
+      cursor: { ...frame.point, visible: true },
+    };
+  };
+  let cursor = {
+    clear(options = {}) {
+      if (options.preserveCursor !== true) cursorHides += 1;
+    },
+    presentCursorFrame,
+  };
+  let attention = new ShowAttentionController({
+    cursor,
+    resolveTarget: () => target,
+    selectText: () => ({
+      receipt: {
+        presented: true,
+        planVersion: 'symbiote-presenter-kinematics-v2',
+        durationMs: 400,
+        progress: 0,
+        normalizedPathHash: 'path-selection-pair',
+        startOffset: 4,
+        endOffset: 18,
+        distancePx: 280,
+        targetRect: { left: 20, top: 30, width: 180, height: 60 },
+        cursor: { x: 20, y: 90, visible: true },
+      },
+      presentFrame(elapsedMs) {
+        selectionFrames.push(elapsedMs);
+        return {
+          presented: true,
+          planVersion: 'symbiote-presenter-kinematics-v2',
+          durationMs: 400,
+          elapsedMs,
+          progress: elapsedMs / 400,
+          normalizedPathHash: 'path-selection-pair',
+          startOffset: 4,
+          endOffset: 18,
+          distancePx: 280,
+          targetRect: { left: 20, top: 30, width: 180, height: 60 },
+          cursor: { x: 20 + elapsedMs / 400 * 180, y: 90, visible: true },
+        };
+      },
+      clear() { selectionClears += 1; },
+    }),
+  });
+
+  attention.present({
+    mode: 'native-selection',
+    targetId: 'selection-pair',
+    targetIdentity: 'target:selection-pair',
+    layoutIdentity: 'layout:selection-pair:1',
+    gestureId: 'selection-pair',
+    budgetMs: 500,
+    onAdmission() {},
+  });
+  scheduler.step(1_000);
+  let framesBeforePause = {
+    selection: selectionFrames.length,
+    cursor: cursorFrames.length,
+  };
+  assert.equal(attention.pause(), true);
+  scheduler.step(1_200);
+  let pausePreservedPair = selectionClears === 0
+    && cursorHides === 0
+    && selectionFrames.length === framesBeforePause.selection
+    && cursorFrames.length >= framesBeforePause.cursor;
+  attention.reset('stop');
+
+  assert.deepEqual({
+    selectionFrames,
+    cursorFrames: cursorFrames.map((frame) => ({
+      sameTarget: frame.target === target,
+      elapsedMs: frame.elapsedMs,
+    })),
+    pausePreservedPair,
+    stopClears: {
+      selection: selectionClears,
+      cursor: cursorHides,
+    },
+  }, {
+    selectionFrames: [0],
+    cursorFrames: [
+      { sameTarget: true, elapsedMs: 0 },
+      { sameTarget: true, elapsedMs: 0 },
+    ],
+    pausePreservedPair: true,
+    stopClears: {
+      selection: 1,
+      cursor: 1,
+    },
+  });
+});
+
 test('show DOM readiness requests smooth centered focus and awaits a platform scroll promise', async () => {
   let releaseScroll;
   let optionsSeen;

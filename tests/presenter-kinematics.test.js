@@ -137,7 +137,7 @@ test('adaptive arc subdivision makes spatial variation invariant to source param
   }
 });
 
-test('enclosing gestures leave a visible open gap instead of perfect closure or overlap', () => {
+test('enclosing gestures overlap longitudinally with visibly displaced terminal tails', () => {
   let square = (progress) => {
     let side = Math.min(3, Math.floor(progress * 4));
     let local = progress * 4 - side;
@@ -165,9 +165,10 @@ test('enclosing gestures leave a visible open gap instead of perfect closure or 
 
   assert.equal(box.tailPolicy.mode, 'underdraw');
   assert.ok(distance(box.samples[0], box.samples.at(-1)) > box.maxWidthPx);
-  assert.equal(oval.tailPolicy.mode, 'open-gap');
+  assert.equal(oval.tailPolicy.mode, 'displaced-overlap');
   assert.ok(oval.tailPolicy.amount > 0);
-  assert.ok(oval.tailPolicy.sourceEnd < 1);
+  assert.ok(oval.tailPolicy.sourceEnd > 1);
+  assert.ok(oval.tailPolicy.lateralOffsetPx > oval.maxWidthPx);
   assert.ok(distance(oval.samples[0], oval.samples.at(-1)) > oval.maxWidthPx * 1.5);
 });
 

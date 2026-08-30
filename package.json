@@ -137,6 +137,7 @@
     "./chat/dialogue-timeline.js": "./chat/dialogue-timeline.js",
     "./chat/dialogue-player.js": "./chat/dialogue-player.js",
     "./chat/presenter-gesture-policy.js": "./chat/presenter-gesture-policy.js",
+    "./chat/presenter-marker-geometry.js": "./chat/presenter-marker-geometry.js",
     "./chat/presenter-cursor.js": "./chat/presenter-cursor.js",
     "./chat/presenter-text-selection.js": "./chat/presenter-text-selection.js",
     "./chat/chat-title-generation.js": "./chat/chat-title-generation.js",
@@ -293,6 +294,7 @@
     "catalog:dev": "jsda ssg",
     "catalog:serve": "npx -y serve _site -l 3001",
     "catalog:site": "npm run catalog:build && node scripts/assemble-site.js && node tests/validate-site.js",
+    "references:presenter-markers": "node scripts/render-presenter-marker-references.js",
     "libs:status": "node ../symbiote-dev-plane/bin/symbiote-libs.js status",
     "libs:link": "node ../symbiote-dev-plane/bin/symbiote-libs.js link",
     "libs:unlink": "node ../symbiote-dev-plane/bin/symbiote-libs.js unlink --install"

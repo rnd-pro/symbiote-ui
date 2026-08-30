@@ -12,7 +12,7 @@ export const PRESENTER_KINEMATIC_LIMITS = Object.freeze({
 });
 
 const UNDERDRAW_KINDS = new Set(['box', 'frame', 'label']);
-const OPEN_GAP_KINDS = new Set(['oval', 'multi-oval', 'heart']);
+const OVERLAP_KINDS = new Set(['oval', 'multi-oval', 'heart']);
 const TIME_SAMPLE_COUNT = 240;
 const GEOMETRY_TOLERANCE_PX = 0.12;
 const MAX_GEOMETRY_DEPTH = 14;
@@ -82,12 +82,16 @@ function tailPolicy(kind, seed, baseWidthPx) {
     let amount = 0.0475;
     return Object.freeze({ mode: 'underdraw', amount, sourceEnd: 1 - amount });
   }
-  if (OPEN_GAP_KINDS.has(kind)) {
-    let amount = 0.045;
+  if (OVERLAP_KINDS.has(kind)) {
+    let amount = 0.0375;
     return Object.freeze({
-      mode: 'open-gap',
+      mode: 'displaced-overlap',
       amount,
-      sourceEnd: 1 - amount,
+      sourceEnd: 1 + amount,
+      lateralOffsetPx: baseWidthPx * 2.6,
+      // Oval factories use clockwise screen-space winding, so the negative
+      // normal keeps the closing tail outside the protected content.
+      direction: -1,
     });
   }
   return Object.freeze({ mode: 'open', amount: 0, sourceEnd: 1 });
@@ -149,7 +153,31 @@ function resampleSpatially(points, count) {
 }
 
 function sourceAnchors(pointAt, policy) {
-  let adaptive = adaptiveParametricSamples(pointAt, policy.sourceEnd);
+  let samplePoint = pointAt;
+  if (policy.mode === 'displaced-overlap') {
+    let start = 1 - policy.amount * 2;
+    samplePoint = (parameter) => {
+      let center = point(pointAt(parameter), 'pointAt(progress)');
+      if (parameter <= start) return center;
+      let epsilon = 0.0005;
+      let before = point(pointAt(Math.max(0, parameter - epsilon)), 'pointAt(progress)');
+      let after = point(
+        pointAt(Math.min(policy.sourceEnd, parameter + epsilon)),
+        'pointAt(progress)',
+      );
+      let dx = after.x - before.x;
+      let dy = after.y - before.y;
+      let magnitude = Math.hypot(dx, dy) || 1;
+      let progress = clamp((parameter - start) / (policy.sourceEnd - start), 0, 1);
+      let eased = progress * progress * (3 - 2 * progress);
+      let offset = policy.lateralOffsetPx * eased * policy.direction;
+      return {
+        x: center.x - dy / magnitude * offset,
+        y: center.y + dx / magnitude * offset,
+      };
+    };
+  }
+  let adaptive = adaptiveParametricSamples(samplePoint, policy.sourceEnd);
   let length = spatialMetrics(adaptive).arcLengthPx;
   let count = clamp(Math.ceil(length / 18), 16, 96);
   return {

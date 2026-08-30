@@ -4,7 +4,7 @@ import {
   samplePresenterKinematicPlan,
 } from './presenter-kinematics.js';
 
-export const PRESENTER_TEXT_SELECTION_RECEIPT_VERSION = 'presenter-text-selection-receipt-v1';
+export const PRESENTER_TEXT_SELECTION_RECEIPT_VERSION = 'presenter-text-selection-receipt-v2';
 export const PRESENTER_TEXT_SELECTION_MATCH_MODES = Object.freeze(['exact', 'normalized']);
 
 const MATCH_MODE_SET = new Set(PRESENTER_TEXT_SELECTION_MATCH_MODES);
@@ -352,6 +352,37 @@ function selectionTargetRect(target) {
   return Object.keys(result).length ? Object.freeze(result) : null;
 }
 
+function selectionCursor(target, offsets, sourceLength, direction, range = null) {
+  if (range && typeof range.getClientRects === 'function') {
+    let rects = Array.from(range.getClientRects() || []).filter((rect) => [
+      rect?.left,
+      rect?.right,
+      rect?.bottom,
+    ].every((value) => Number.isFinite(Number(value))));
+    let endpoint = direction === 'backward' ? rects[0] : rects.at(-1);
+    if (endpoint) {
+      return Object.freeze({
+        x: Number(direction === 'backward' ? endpoint.left : endpoint.right),
+        y: Number(endpoint.bottom),
+        visible: true,
+      });
+    }
+  }
+
+  let rect = selectionTargetRect(target);
+  if (!rect) return null;
+  let length = Math.max(1, Number(sourceLength) || 0);
+  let activeOffset = direction === 'backward' ? offsets.start : offsets.end;
+  let progress = Math.min(1, Math.max(0, activeOffset / length));
+  return Object.freeze({
+    x: Number(rect.left || 0) + Number(rect.width || 0) * progress,
+    y: Number.isFinite(Number(rect.bottom))
+      ? Number(rect.bottom)
+      : Number(rect.top || 0) + Number(rect.height || 0),
+    visible: true,
+  });
+}
+
 function selectionKinematicStyle(style, distancePx) {
   let source = style && typeof style === 'object' && !Array.isArray(style)
     ? { ...style }
@@ -368,7 +399,7 @@ function selectionKinematicStyle(style, distancePx) {
   return source;
 }
 
-function animatedReceipt(receipt, sample, plan) {
+function animatedReceipt(receipt, sample, plan, cursor = null) {
   return Object.freeze({
     ...receipt,
     presented: true,
@@ -380,6 +411,7 @@ function animatedReceipt(receipt, sample, plan) {
     distancePx: sample.distancePx,
     speedPxPerMs: sample.speedPxPerMs,
     normalizedPathHash: plan.normalizedPathHash,
+    ...(cursor ? { cursor } : {}),
     timing: Object.freeze({
       arcLengthPx: plan.arcLengthPx,
       durationMs: plan.durationMs,
@@ -424,6 +456,7 @@ export function createPresenterTextSelectionAnimation(target, parameters = {}) {
   let previous;
   let measurementRange = null;
   let applyOffsets;
+  let measureCursor;
   let clearSelection;
   let restoreSelection;
 
@@ -435,7 +468,16 @@ export function createPresenterTextSelectionAnimation(target, parameters = {}) {
       end: Number.isInteger(target.selectionEnd) ? target.selectionEnd : 0,
       direction: DIRECTION_SET.has(target.selectionDirection) ? target.selectionDirection : 'none',
     };
-    applyOffsets = ({ start, end }) => target.setSelectionRange(start, end, options.direction);
+    applyOffsets = ({ start, end }) => {
+      target.setSelectionRange(start, end, options.direction);
+      return null;
+    };
+    measureCursor = (offsets) => selectionCursor(
+      target,
+      offsets,
+      source.length,
+      options.direction,
+    );
     clearSelection = () => target.setSelectionRange(match.endOffset, match.endOffset, 'none');
     restoreSelection = () => target.setSelectionRange(previous.start, previous.end, previous.direction);
   } else {
@@ -461,7 +503,15 @@ export function createPresenterTextSelectionAnimation(target, parameters = {}) {
       let range = rangeFor(offsets);
       selection.removeAllRanges();
       selection.addRange(range);
+      return range;
     };
+    measureCursor = (offsets, range = null) => selectionCursor(
+      target,
+      offsets,
+      source.length,
+      options.direction,
+      range || rangeFor(offsets),
+    );
     clearSelection = () => selection.removeAllRanges();
     restoreSelection = () => {
       selection.removeAllRanges();
@@ -479,7 +529,13 @@ export function createPresenterTextSelectionAnimation(target, parameters = {}) {
     noiseAmplitudePx: 0,
     pointAt: (progress) => ({ x: distancePx * progress, y: 0 }),
   });
-  let currentReceipt = animatedReceipt(baseReceipt, samplePresenterKinematicPlan(plan, 0), plan);
+  let lastOffsets = progressiveOffsets(baseReceipt, 0);
+  let currentReceipt = animatedReceipt(
+    baseReceipt,
+    samplePresenterKinematicPlan(plan, 0),
+    plan,
+    measureCursor(lastOffsets),
+  );
   let state = 'planned';
   let activated = false;
   return Object.freeze({
@@ -488,12 +544,29 @@ export function createPresenterTextSelectionAnimation(target, parameters = {}) {
     },
     presentFrame(elapsedMs = 0) {
       let elapsed = Math.min(plan.durationMs, Math.max(0, Number(elapsedMs) || 0));
-      currentReceipt = animatedReceipt(baseReceipt, samplePresenterKinematicPlan(plan, elapsed), plan);
       if (!activated) {
         focusTarget(target);
         activated = true;
       }
-      applyOffsets(progressiveOffsets(baseReceipt, currentReceipt.progress));
+      let sample = samplePresenterKinematicPlan(plan, elapsed);
+      lastOffsets = progressiveOffsets(baseReceipt, sample.progress);
+      let activeRange = applyOffsets(lastOffsets);
+      currentReceipt = animatedReceipt(
+        baseReceipt,
+        sample,
+        plan,
+        measureCursor(lastOffsets, activeRange),
+      );
+      state = 'active';
+      return currentReceipt;
+    },
+    refresh() {
+      if (!activated) return currentReceipt;
+      let activeRange = applyOffsets(lastOffsets);
+      currentReceipt = Object.freeze({
+        ...currentReceipt,
+        cursor: measureCursor(lastOffsets, activeRange),
+      });
       state = 'active';
       return currentReceipt;
     },

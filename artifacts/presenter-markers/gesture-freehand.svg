@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="700" viewBox="0 0 1920 700" role="img" aria-label="freehand marker reference sheet">
+    <style>
+    .reference-bg{fill:#101217}.reference-frame{fill:none;stroke:#2a3040;stroke-width:1}
+    .target-surface{fill:#e9edf6;stroke:#75819b;stroke-width:1}.target-text{fill:#171b24;font:600 14px ui-sans-serif,system-ui}
+    .marker-ink{fill:#ff4f8b;fill-opacity:.94;stroke:none;filter:drop-shadow(0 0 2px #ff4f8b55)}
+    .safe-area{fill:#55e6a522;stroke:#55e6a5;stroke-width:1.5;stroke-dasharray:5 4}.safe-label{fill:#7df3bd;font:600 10px ui-monospace,monospace}
+    .tail-start{fill:#fff;stroke:#101217;stroke-width:1}.tail-end{fill:#ffdb66;stroke:#101217;stroke-width:1}
+    .seed-label{fill:#dfe5f3;font:600 12px ui-monospace,monospace}.metric-label{fill:#8994ab;font:11px ui-monospace,monospace}
+    .sheet-title{fill:#f7f8fb;font:700 24px ui-sans-serif,system-ui}.sheet-subtitle{fill:#9aa5ba;font:12px ui-monospace,monospace}
+    .contact-title{fill:#f7f8fb;font:700 18px ui-sans-serif,system-ui}.contact-meta{fill:#98a3b8;font:11px ui-monospace,monospace}
+  </style>
+    <rect class="reference-bg" width="1920" height="700"/>
+    <text class="sheet-title" x="24" y="32">freehand</text>
+    <text class="sheet-subtitle" x="24" y="52">loose emphasis beneath a target · core contract</text>
+    <g data-reference-variant="true" data-target-kind="short" data-seed="reference-alpha" transform="translate(0 70)">
+    <rect class="reference-bg" width="640" height="210" rx="12"/>
+    <rect class="reference-frame" x=".5" y=".5" width="639" height="209" rx="11.5"/>
+    <rect class="target-surface" x="294" y="92" width="52" height="26" rx="8"/><text x="320" y="110" text-anchor="middle" class="target-text">15+</text>
+
+      <path data-production-ribbon="true" data-path-hash="9f9f24f8" data-linecap="round" data-linejoin="round" class="marker-ink" d="M290.23 128.63L293.31 131.81L295.24 133.47L297.59 134.83L300.38 135.35L303.22 135.04L305.67 133.78L307.68 132.15L310.83 129.03L313.91 126.13L315.39 125.13L316.74 124.47L318.14 124.20L319.52 124.20L320.86 124.67L322.30 125.56L325.39 128.39L328.54 131.46L330.54 133.04L332.94 134.27L335.70 134.68L338.48 134.35L340.93 133.22L343.03 131.75L346.40 128.82L349.66 125.91C350.56 125.13 350.65 123.77 349.87 122.88C349.09 121.99 347.73 121.90 346.84 122.68L343.55 125.49L340.24 128.17L338.64 129.17L337.22 129.83L335.79 129.96L334.41 129.76L333.13 129.05L331.69 127.96L328.60 124.98L325.26 121.91L322.91 120.42L320.33 119.54L317.70 119.51L315.20 120.02L312.96 121.16L310.93 122.70L307.72 125.82L304.64 128.78L303.15 129.88L301.88 130.55L300.56 130.67L299.22 130.45L297.97 129.68L296.57 128.46L293.59 125.38C292.70 124.45 291.22 124.43 290.29 125.33C289.36 126.22 289.34 127.70 290.23 128.63Z"/>
+
+      <text data-seed-label="true" class="seed-label" x="16" y="24">short target · 52×26 · seed reference-alpha</text>
+      <text class="metric-label" x="16" y="198">69px · 146ms · 9f9f24f8</text>
+  </g><g data-reference-variant="true" data-target-kind="short" data-seed="reference-beta" transform="translate(640 70)">
+    <rect class="reference-bg" width="640" height="210" rx="12"/>
+    <rect class="reference-frame" x=".5" y=".5" width="639" height="209" rx="11.5"/>
+    <rect class="target-surface" x="294" y="92" width="52" height="26" rx="8"/><text x="320" y="110" text-anchor="middle" class="target-text">15+</text>
+
+      <path data-production-ribbon="true" data-path-hash="60fa4706" data-linecap="round" data-linejoin="round" class="marker-ink" d="M290.33 128.39L293.26 131.71L295.18 133.48L297.63 134.89L300.53 135.29L303.30 134.74L305.53 133.39L307.32 131.89L310.75 129.02L313.93 125.85L315.32 124.34L316.50 123.45L317.84 123.23L319.11 123.47L320.21 124.39L321.51 125.84L324.38 129.22L327.68 132.48L330.06 134.15L332.92 135.28L336.02 135.35L338.92 134.62L341.30 133.11L343.11 131.41L346.15 128.35L349.34 125.49C350.33 124.59 350.41 123.06 349.52 122.07C348.63 121.08 347.10 120.99 346.10 121.89L342.81 124.85L339.72 127.97L338.31 129.34L337.00 130.24L335.48 130.64L333.85 130.65L332.29 130.01L330.77 128.96L327.82 126.03L325.04 122.77L323.39 120.96L321.04 119.21L317.90 118.56L314.72 119.13L312.23 120.83L310.58 122.63L307.65 125.68L304.43 128.44L302.89 129.69L301.66 130.43L300.41 130.65L299.14 130.50L297.96 129.76L296.64 128.53L293.82 125.32C292.97 124.36 291.50 124.27 290.54 125.11C289.58 125.96 289.49 127.43 290.33 128.39Z"/>
+
+      <text data-seed-label="true" class="seed-label" x="16" y="24">short target · 52×26 · seed reference-beta</text>
+      <text class="metric-label" x="16" y="198">70px · 150ms · 60fa4706</text>
+  </g><g data-reference-variant="true" data-target-kind="short" data-seed="3931985963" transform="translate(1280 70)">
+    <rect class="reference-bg" width="640" height="210" rx="12"/>
+    <rect class="reference-frame" x=".5" y=".5" width="639" height="209" rx="11.5"/>
+    <rect class="target-surface" x="294" y="92" width="52" height="26" rx="8"/><text x="320" y="110" text-anchor="middle" class="target-text">15+</text>
+
+      <path data-production-ribbon="true" data-path-hash="3fd297ab" data-linecap="round" data-linejoin="round" class="marker-ink" d="M290.06 128.68L293.03 131.97L294.95 133.75L297.40 135.23L300.34 135.81L303.33 135.51L305.91 134.28L308.01 132.78L311.55 129.98L314.80 127.10L316.16 126.05L317.24 125.42L318.36 125.14L319.47 125.03L320.67 125.36L322.22 126.10L325.63 128.46L328.81 131.26L330.73 132.75L333.04 133.93L335.63 134.37L338.31 134.19L340.82 133.20L342.98 131.77L346.43 128.93L349.76 126.09C350.70 125.30 350.82 123.91 350.03 122.97C349.25 122.03 347.85 121.91 346.92 122.70L343.57 125.45L340.22 128.06L338.65 129.03L337.27 129.60L335.86 129.68L334.50 129.48L333.27 128.82L331.83 127.69L328.50 124.77L324.67 122.12L322.29 121.00L319.90 120.40L317.59 120.57L315.48 121.13L313.58 122.20L311.80 123.57L308.58 126.42L305.20 129.09L303.52 130.29L302.07 131.03L300.57 131.16L299.09 130.88L297.78 130.04L296.40 128.75L293.53 125.56C292.67 124.60 291.19 124.52 290.23 125.38C289.28 126.25 289.20 127.72 290.06 128.68Z"/>
+
+      <text data-seed-label="true" class="seed-label" x="16" y="24">short target · 52×26 · seed 3931985963</text>
+      <text class="metric-label" x="16" y="198">68px · 144ms · 3fd297ab</text>
+  </g><g data-reference-variant="true" data-target-kind="wide" data-seed="reference-alpha" transform="translate(0 280)">
+    <rect class="reference-bg" width="640" height="210" rx="12"/>
+    <rect class="reference-frame" x=".5" y=".5" width="639" height="209" rx="11.5"/>
+    <rect class="target-surface" x="165" y="88" width="310" height="38" rx="8"/><text x="320" y="112" text-anchor="middle" class="target-text">human decision checkpoint</text>
+
+      <path data-production-ribbon="true" data-path-hash="0a1fc777" data-linecap="round" data-linejoin="round" class="marker-ink" d="M178.56 137.09L196.04 140.77L204.97 142.20L213.95 143.17L223.00 143.44L232.04 143.11L241.01 142.13L249.94 140.72L267.43 137.19L284.89 133.88L293.58 132.84L302.33 132.17L311.09 131.93L319.87 132.09L328.63 132.66L337.35 133.67L354.83 136.87L372.35 140.25L381.28 141.56L390.26 142.43L399.28 142.70L408.31 142.44L417.29 141.62L426.23 140.41L443.82 137.35L461.37 134.24C462.42 134.06 463.12 133.07 462.93 132.02C462.75 130.98 461.76 130.28 460.72 130.47L443.16 133.48L425.61 136.36L416.84 137.35L408.07 138.01L399.30 138.19L390.53 137.92L381.79 137.17L373.08 136.04L355.61 132.73L338.05 129.42L329.05 128.26L320.06 127.65L311.07 127.52L302.09 127.78L293.14 128.52L284.18 129.71L266.64 133.13L249.18 136.59L240.47 137.80L231.74 138.61L222.99 138.88L214.24 138.64L205.53 137.81L196.84 136.54L179.43 132.93C178.29 132.69 177.16 133.43 176.92 134.57C176.68 135.72 177.42 136.85 178.56 137.09Z"/>
+
+      <text data-seed-label="true" class="seed-label" x="16" y="24">wide target · 310×38 · seed reference-alpha</text>
+      <text class="metric-label" x="16" y="198">285px · 605ms · 0a1fc777</text>
+  </g><g data-reference-variant="true" data-target-kind="wide" data-seed="reference-beta" transform="translate(640 280)">
+    <rect class="reference-bg" width="640" height="210" rx="12"/>
+    <rect class="reference-frame" x=".5" y=".5" width="639" height="209" rx="11.5"/>
+    <rect class="target-surface" x="165" y="88" width="310" height="38" rx="8"/><text x="320" y="112" text-anchor="middle" class="target-text">human decision checkpoint</text>
+
+      <path data-production-ribbon="true" data-path-hash="f4e8ff17" data-linecap="round" data-linejoin="round" class="marker-ink" d="M178.59 136.86L196.02 140.75L204.95 142.27L213.96 143.23L223.04 143.39L232.06 142.84L240.98 141.72L249.83 140.26L267.39 137.03L284.88 133.59L293.60 132.17L302.31 131.24L311.04 131.09L319.76 131.59L328.46 132.78L337.14 134.33L354.56 138.10L372.13 141.59L381.19 142.82L390.27 143.45L399.37 143.40L408.42 142.84L417.38 141.68L426.24 140.13L443.74 136.71L461.26 133.56C462.37 133.37 463.11 132.31 462.91 131.20C462.71 130.10 461.66 129.36 460.55 129.55L442.99 132.66L425.48 135.96L416.75 137.32L408.01 138.32L399.22 138.83L390.41 138.88L381.61 138.36L372.85 137.36L355.39 134.06L337.98 130.27L329.18 128.51L320.24 127.07L311.13 126.45L301.99 126.67L292.96 127.84L284.10 129.53L266.64 133.08L249.14 136.24L240.41 137.50L231.69 138.42L222.95 138.84L214.23 138.69L205.53 137.86L196.87 136.52L179.50 132.72C178.36 132.47 177.23 133.19 176.97 134.33C176.72 135.48 177.44 136.61 178.59 136.86Z"/>
+
+      <text data-seed-label="true" class="seed-label" x="16" y="24">wide target · 310×38 · seed reference-beta</text>
+      <text class="metric-label" x="16" y="198">285px · 606ms · f4e8ff17</text>
+  </g><g data-reference-variant="true" data-target-kind="wide" data-seed="3931985963" transform="translate(1280 280)">
+    <rect class="reference-bg" width="640" height="210" rx="12"/>
+    <rect class="reference-frame" x=".5" y=".5" width="639" height="209" rx="11.5"/>
+    <rect class="target-surface" x="165" y="88" width="310" height="38" rx="8"/><text x="320" y="112" text-anchor="middle" class="target-text">human decision checkpoint</text>
+
+      <path data-production-ribbon="true" data-path-hash="b1f98245" data-linecap="round" data-linejoin="round" class="marker-ink" d="M178.51 137.24L195.96 141.08L204.90 142.60L213.91 143.61L222.99 143.90L232.07 143.57L241.06 142.64L250.01 141.31L267.61 138.23L285.10 135.08L293.74 133.98L302.42 133.23L311.12 132.89L319.85 132.90L328.59 133.34L337.33 134.11L354.90 136.74L372.43 139.90L381.33 141.20L390.28 142.06L399.27 142.37L408.27 142.25L417.26 141.56L426.22 140.41L443.83 137.44L461.40 134.42C462.46 134.24 463.18 133.22 463.00 132.15C462.82 131.09 461.81 130.37 460.74 130.55L443.17 133.48L425.60 136.27L416.85 137.22L408.09 137.81L399.31 137.92L390.55 137.65L381.82 136.91L373.11 135.77L355.57 132.67L337.88 129.96L328.91 129.07L319.96 128.58L311.04 128.57L302.14 128.93L293.27 129.77L284.42 131.03L266.90 134.27L249.36 137.27L240.57 138.39L231.79 139.14L223.00 139.36L214.22 139.08L205.49 138.21L196.80 136.86L179.42 133.10C178.27 132.85 177.14 133.57 176.90 134.72C176.65 135.86 177.37 136.99 178.51 137.24Z"/>
+
+      <text data-seed-label="true" class="seed-label" x="16" y="24">wide target · 310×38 · seed 3931985963</text>
+      <text class="metric-label" x="16" y="198">285px · 604ms · b1f98245</text>
+  </g><g data-reference-variant="true" data-target-kind="multiline" data-seed="reference-alpha" transform="translate(0 490)">
+    <rect class="reference-bg" width="640" height="210" rx="12"/>
+    <rect class="reference-frame" x=".5" y=".5" width="639" height="209" rx="11.5"/>
+    <rect class="target-surface" x="205" y="48" width="230" height="104" rx="8"/><text x="320" y="87" text-anchor="middle" class="target-text">parallel workers</text><text x="320" y="105" text-anchor="middle" class="target-text">review independently</text><text x="320" y="123" text-anchor="middle" class="target-text">join after evidence</text>
+
+      <path data-production-ribbon="true" data-path-hash="0a1fc777" data-linecap="round" data-linejoin="round" class="marker-ink" d="M196.49 172.13L211.69 175.81L219.52 177.24L227.40 178.21L235.37 178.49L243.32 178.16L251.19 177.19L259.01 175.76L274.24 172.23L289.42 168.94L296.97 167.93L304.58 167.26L312.21 167.02L319.85 167.17L327.47 167.74L335.05 168.72L350.26 171.90L365.52 175.28L373.34 176.61L381.22 177.50L389.15 177.78L397.09 177.52L404.97 176.68L412.80 175.44L428.14 172.35L443.43 169.24C444.47 169.03 445.15 168.02 444.94 166.98C444.73 165.93 443.72 165.26 442.67 165.47L427.37 168.46L412.08 171.32L404.45 172.29L396.81 172.93L389.17 173.10L381.54 172.84L373.94 172.10L366.37 170.99L351.17 167.70L335.87 164.37L327.97 163.18L320.07 162.56L312.18 162.43L304.29 162.70L296.44 163.46L288.59 164.68L273.31 168.10L258.13 171.54L250.56 172.74L242.97 173.55L235.35 173.83L227.75 173.59L220.17 172.75L212.64 171.48L197.51 167.88C196.33 167.60 195.15 168.32 194.87 169.50C194.59 170.67 195.31 171.85 196.49 172.13Z"/>
+
+      <text data-seed-label="true" class="seed-label" x="16" y="24">multiline target · 230×104 · seed reference-alpha</text>
+      <text class="metric-label" x="16" y="198">249px · 529ms · 0a1fc777</text>
+  </g><g data-reference-variant="true" data-target-kind="multiline" data-seed="reference-beta" transform="translate(640 490)">
+    <rect class="reference-bg" width="640" height="210" rx="12"/>
+    <rect class="reference-frame" x=".5" y=".5" width="639" height="209" rx="11.5"/>
+    <rect class="target-surface" x="205" y="48" width="230" height="104" rx="8"/><text x="320" y="87" text-anchor="middle" class="target-text">parallel workers</text><text x="320" y="105" text-anchor="middle" class="target-text">review independently</text><text x="320" y="123" text-anchor="middle" class="target-text">join after evidence</text>
+
+      <path data-production-ribbon="true" data-path-hash="f4e8ff17" data-linecap="round" data-linejoin="round" class="marker-ink" d="M196.51 171.91L211.67 175.79L219.50 177.30L227.41 178.26L235.41 178.42L243.34 177.89L251.16 176.76L258.89 175.28L274.19 172.05L289.41 168.64L296.99 167.22L304.55 166.27L312.14 166.10L319.73 166.60L327.28 167.80L334.81 169.35L349.95 173.12L365.27 176.62L373.23 177.87L381.23 178.51L389.25 178.47L397.22 177.91L405.08 176.73L412.82 175.15L428.04 171.71L443.30 168.57C444.41 168.34 445.13 167.26 444.90 166.15C444.67 165.04 443.59 164.33 442.48 164.55L427.18 167.65L411.93 170.92L404.34 172.26L396.74 173.25L389.08 173.75L381.40 173.82L373.73 173.29L366.11 172.29L350.92 169.02L335.79 165.25L328.11 163.49L320.28 162.06L312.25 161.44L304.18 161.65L296.24 162.81L288.50 164.52L273.31 168.07L258.08 171.21L250.49 172.46L242.91 173.37L235.31 173.80L227.73 173.65L220.18 172.81L212.67 171.46L197.59 167.68C196.42 167.38 195.23 168.09 194.93 169.26C194.64 170.43 195.34 171.61 196.51 171.91Z"/>
+
+      <text data-seed-label="true" class="seed-label" x="16" y="24">multiline target · 230×104 · seed reference-beta</text>
+      <text class="metric-label" x="16" y="198">250px · 530ms · f4e8ff17</text>
+  </g><g data-reference-variant="true" data-target-kind="multiline" data-seed="3931985963" transform="translate(1280 490)">
+    <rect class="reference-bg" width="640" height="210" rx="12"/>
+    <rect class="reference-frame" x=".5" y=".5" width="639" height="209" rx="11.5"/>
+    <rect class="target-surface" x="205" y="48" width="230" height="104" rx="8"/><text x="320" y="87" text-anchor="middle" class="target-text">parallel workers</text><text x="320" y="105" text-anchor="middle" class="target-text">review independently</text><text x="320" y="123" text-anchor="middle" class="target-text">join after evidence</text>
+
+      <path data-production-ribbon="true" data-path-hash="b1f98245" data-linecap="round" data-linejoin="round" class="marker-ink" d="M196.43 172.28L211.60 176.12L219.44 177.65L227.36 178.65L235.36 178.95L243.35 178.63L251.25 177.68L259.09 176.34L274.43 173.25L289.66 170.12L297.16 169.05L304.68 168.31L312.24 167.97L319.82 167.98L327.43 168.41L335.04 169.16L350.34 171.77L365.61 174.93L373.39 176.27L381.24 177.14L389.13 177.45L397.05 177.33L404.94 176.62L412.79 175.44L428.14 172.44L443.45 169.41C444.52 169.21 445.22 168.17 445.01 167.11C444.80 166.04 443.77 165.34 442.70 165.55L427.38 168.46L412.07 171.22L404.45 172.15L396.83 172.73L389.19 172.83L381.56 172.56L373.97 171.84L366.41 170.72L351.13 167.63L335.68 164.91L327.80 164.00L319.96 163.50L312.14 163.48L304.35 163.85L296.59 164.71L288.87 166.00L273.62 169.25L258.33 172.23L250.67 173.33L243.02 174.08L235.36 174.31L227.73 174.03L220.13 173.14L212.59 171.79L197.49 168.05C196.32 167.76 195.14 168.47 194.85 169.64C194.55 170.80 195.26 171.99 196.43 172.28Z"/>
+
+      <text data-seed-label="true" class="seed-label" x="16" y="24">multiline target · 230×104 · seed 3931985963</text>
+      <text class="metric-label" x="16" y="198">249px · 529ms · b1f98245</text>
+  </g>
+  </svg>
