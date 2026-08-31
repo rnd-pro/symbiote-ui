@@ -35,12 +35,13 @@ function createFrameScheduler() {
         callbacks.delete(id);
       },
     },
-    step(timestamp) {
-      now = timestamp;
+    step(timestamp, observedNow = timestamp) {
+      now = observedNow;
       let frame = [...callbacks.values()];
       callbacks.clear();
       for (let callback of frame) callback(timestamp);
     },
+    setNow(value) { now = value; },
     get pending() { return callbacks.size; },
     get cancelled() { return [...cancelled]; },
   };
@@ -444,6 +445,47 @@ test('attention settlement publishes exact cue identity and actual settled frame
   assert.equal(settled.observedAt.monotonicTimeMs, 1300);
   assert.equal(settled.timing.elapsedMs, 300);
   assert.equal(settled.providerReceipt.normalizedPathHash, 'path-17');
+});
+
+test('attention milestones never inherit a RAF timestamp older than the current performance clock', async () => {
+  let scheduler = createFrameScheduler();
+  let target = animatedTarget(scheduler.view, 'stale-frame');
+  let milestones = [];
+  let attention = new ShowAttentionController({
+    cursor: {
+      clear() {},
+      presentFocusFrame(_target, frame) {
+        return focusPlan(Number(frame.elapsedMs) || 0, 200);
+      },
+    },
+    resolveTarget: () => target,
+  });
+
+  let providerCallTime = 26_229.2;
+  scheduler.setNow(providerCallTime);
+  attention.present({
+    mode: 'frame',
+    targetId: 'stale-frame',
+    targetIdentity: 'target:stale-frame',
+    layoutIdentity: 'layout:stale-frame:1',
+    gestureId: 'stale-frame',
+    budgetMs: 550,
+    onAdmission() {},
+    onMilestone: (milestone) => milestones.push(milestone),
+  });
+
+  scheduler.step(26_205.8, providerCallTime);
+  scheduler.step(26_405.8, 26_430.2);
+  let settled = await attention.whenSettled();
+
+  assert.deepEqual(milestones.map((item) => item.milestone), ['first-frame', 'settled']);
+  assert.equal(milestones[0].observedAt.timeOriginMs, 1700000000000);
+  assert.equal(milestones[0].observedAt.monotonicTimeMs, providerCallTime);
+  assert.equal(milestones[1].observedAt.monotonicTimeMs, 26_430.2);
+  assert.ok(
+    milestones[1].observedAt.monotonicTimeMs >= milestones[0].observedAt.monotonicTimeMs,
+  );
+  assert.equal(settled.observedAt, milestones[1].observedAt);
 });
 
 test('pure attention admission preserves exact nested provider evidence and rejects an exceeded hard budget', () => {

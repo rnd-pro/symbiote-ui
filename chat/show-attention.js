@@ -344,9 +344,11 @@ function performanceClock(target) {
   };
 }
 
-function performanceObservedAt(clock, monotonicTimeMs = clock.now()) {
-  let value = Number(monotonicTimeMs);
-  if (!Number.isFinite(value)) throw new TypeError('performance observation must be finite');
+function performanceObservedAt(clock, monotonicTimeMs) {
+  let current = clock.now();
+  let requested = monotonicTimeMs === undefined ? current : Number(monotonicTimeMs);
+  if (!Number.isFinite(requested)) throw new TypeError('performance observation must be finite');
+  let value = Math.max(requested, current);
   return Object.freeze({
     domain: 'performance',
     timeOriginMs: clock.timeOriginMs,
