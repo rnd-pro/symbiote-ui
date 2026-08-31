@@ -101,7 +101,7 @@ test('Show manifest, schema catalog, and JSON file expose one synchronized publi
       speedPxPerMs: 0.471,
       duration: 'arc-length-divided-by-speed',
       cap: 'rounded',
-      enclosingTail: 'open-gap',
+      enclosingTail: 'displaced-overlap-with-lateral-offset',
     },
     minimumDurationMs: 220,
     admission: {
@@ -137,7 +137,7 @@ test('Show manifest, schema catalog, and JSON file expose one synchronized publi
       providerReceipt: 'exact-immutable-nested-plan-or-render-evidence',
       workspaceIdentity: 'none',
     },
-    enclosingTail: 'open-gap-with-rounded-caps',
+    enclosingTail: 'displaced-overlap-with-rounded-separated-caps',
     markerPersistence: 'accumulate-after-settle',
     controls: ['pause', 'resume', 'seek', 'capture-state', 'restore-state', 'reset'],
     cancellation: ['replacement', 'cancel', 'seek-reset', 'branch-reset', 'dispose'],

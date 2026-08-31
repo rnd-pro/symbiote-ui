@@ -143,7 +143,7 @@ export const SHOW_RUNTIME_CONTRACT = Object.freeze({
       speedPxPerMs: 0.471,
       duration: 'arc-length-divided-by-speed',
       cap: 'rounded',
-      enclosingTail: 'open-gap',
+      enclosingTail: 'displaced-overlap-with-lateral-offset',
     }),
     minimumDurationMs: 220,
     admission: Object.freeze({
@@ -179,7 +179,7 @@ export const SHOW_RUNTIME_CONTRACT = Object.freeze({
       providerReceipt: 'exact-immutable-nested-plan-or-render-evidence',
       workspaceIdentity: 'none',
     }),
-    enclosingTail: 'open-gap-with-rounded-caps',
+    enclosingTail: 'displaced-overlap-with-rounded-separated-caps',
     markerPersistence: 'accumulate-after-settle',
     controls: Object.freeze(['pause', 'resume', 'seek', 'capture-state', 'restore-state', 'reset']),
     cancellation: Object.freeze(['replacement', 'cancel', 'seek-reset', 'branch-reset', 'dispose']),

@@ -60,31 +60,28 @@ shapes already cover convergence, feedback, parallelism, and ordered steps.
 
 ## CV master inventory
 
-Read-only inventory of the current CV candidate found 24 authored marker cues:
-22 `underline` and 2 `arrow`. Refinement metadata is more varied (`oval`,
-`ovals`, `route`, `bidirectional-route`, `parallel-route`, `number`), but that
-metadata does not currently diversify the authored cue marker itself.
+Read-only inventory of the current CV candidate found 25 authored marker cues:
+12 `route`, 4 `oval`, 4 `arrow`, 2 `number`, 1 `underline`,
+1 `bidirectional-route`, and 1 `parallel-route`. The scenario therefore uses
+the public marker names directly instead of keeping semantic shape choices only
+in refinement metadata.
 
-The following deterministic assignment is recommended for a later CV Project
-authoring handoff. It is semantic, not seed-randomized:
+The current deterministic assignment is semantic, not seed-randomized:
 
-| Authored cue(s) | Recommended marker | Why |
+| Authored cue(s) | Marker | Why |
 | --- | --- | --- |
-| `positioning.tenure-marker` | `oval` | protects and groups one compact tenure value |
-| `symbiote-engine.workspace-join` | `converging-arrows` | several workspace inputs converge into one read-only graph |
+| `positioning.tenure-marker`, `agent-portal.human-decision`, `mobile-smm.agent-update`, `complexscan.boothbot-catalog-ready` | `oval` | protects and groups one compact subject |
+| `symbiote-ui.show-player-pointer`, `symbiote-ui.details-pointer`, `agent-portal.demo-link`, `symbiote-ui-details.workspace-route` | `arrow` | points to one concrete control, link, or artifact |
+| `symbiote-engine.workspace-join` | `underline` | emphasizes the joining statement without enclosing a large block |
 | `agent-portal.path`, `agent-pool.flow`, `mobile-smm.stable-path` | `route` | each scene explains an ordered execution path |
-| `agent-portal.human-decision` | `oval` | a single decision checkpoint deserves bounded emphasis |
 | `lifecycle.product-number`, `lifecycle.runtime-number` | `number` with authored labels `1` and `2` | the pair is an ordered enumeration, not generic text emphasis |
-| `lifecycle.digital-twin`, `lifecycle-details.twin` | `bidirectional-route` | the subject is synchronized two-way state |
-| `mobile-smm.agent-update`, `autobox.buddha`, `symbiote-ui-details.workspace-route`, `complexscan-details.autobox` | `arrow` | each cue points to one concrete artifact or link |
-| `autobox.renders` | `multi-oval` | a gallery/collection merits stronger group emphasis |
-| `complexscan.platform` | `box` | a precise platform boundary is the semantic subject |
-| `finale.scale-route`, `workspace-details.flow-route`, `video-studio-details.route`, `lifecycle-details.route`, `autobox-details.working-route` | `route` | the named subject is explicitly a flow or route |
-| `agent-pool-details.work`, `agent-pool-details.review`, `agent-pool-details.result` | `number` with authored labels `1`, `2`, `3` | three ordered stages read more clearly as a sequence |
+| `lifecycle.digital-twin` | `bidirectional-route` | the subject is synchronized two-way state |
+| `lifecycle-details.twin` | `parallel-route` | the detailed branch compares linked paths in parallel |
+| `finale.scale-route`, `workspace-details.flow-route`, `video-studio-details.route`, `agent-pool-details.work`, `agent-pool-details.review`, `agent-pool-details.result`, `lifecycle-details.route`, `autobox-details.working-route`, `complexscan-details.autobox` | `route` | the named subject is explicitly a flow, stage, or traversal |
 
-This table is recommendation-only. Applying it requires edits to the CV
-presentation Project, regenerated contract hashes/evidence, and the normal CV
-release handoff. None of those consumer changes belong in this provider task.
+This table is a read-only consumer inventory. The provider remains independent
+of those cue ids; consumer edits still require regenerated hashes and the
+normal CV release handoff.
 
 ## Reproducible references
 
