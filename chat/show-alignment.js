@@ -665,6 +665,21 @@ export class ShowAlignedMediaRuntime {
     return this.restore(observed, { reason, notify: this.media.paused !== true });
   }
 
+  // Project/NLE transport moves physical media without resetting presentation state.
+  seekTransport(mediaTime, { reason = 'transport-seek' } = {}) {
+    let observed = integer(mediaTime, 'transport seek mediaTimeMs', {
+      max: this.durationMs || Number.MAX_SAFE_INTEGER,
+    });
+    let operation = this._beginOwnedSeek(observed, reason, { mode: 'transport' });
+    this._previousMediaTimeMs = observed;
+    this._assignOwnedSeek(operation, 'initial');
+    return Object.freeze({
+      operationId: operation.operationId,
+      requestedMs: observed,
+      reason,
+    });
+  }
+
   restorePlayback(snapshot = {}, { reason = 'branch-return' } = {}) {
     let input = record(snapshot, 'playback snapshot');
     return this.seek(integer(input.positionMs, 'playback snapshot.positionMs'), { reason });

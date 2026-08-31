@@ -351,6 +351,56 @@ test('owned native seek retains a nonzero branch checkpoint through initial zero
   runtime.dispose();
 });
 
+test('Project transport seek owns native seek events without resetting presentation state', () => {
+  let media = new FakeMedia();
+  let clock = new FakePlaybackClock();
+  let resets = [];
+  let cues = [];
+  let runtime = new ShowAlignedMediaRuntime({
+    media,
+    schedule: [
+      { cueId: 'past', timeMs: 1000, alignment: { provenance: { mediaDurationMs: 4000 } } },
+      { cueId: 'future', timeMs: 3000, alignment: { provenance: { mediaDurationMs: 4000 } } },
+    ],
+    onReset: (receipt) => resets.push(receipt),
+    onCue: (receipt) => cues.push(receipt),
+    playbackClock: {
+      request: (callback) => clock.request(callback),
+      cancel: (id) => clock.cancel(id),
+    },
+  });
+
+  media.currentTime = 1.25;
+  runtime.restore(1250, { reason: 'fixture' });
+  resets.length = 0;
+  cues.length = 0;
+  media.paused = false;
+  media.dispatchEvent(new Event('play'));
+  assert.equal(clock.pending, 1);
+
+  runtime.seekTransport(750, { reason: 'project-audio-clip' });
+  runtime.seekTransport(250, { reason: 'project-audio-clip' });
+  assert.equal(media.currentTime, 0.25);
+  assert.equal(clock.pending, 0);
+  media.dispatchEvent(new Event('seeking'));
+  media.dispatchEvent(new Event('seeked'));
+  assert.deepEqual(resets, []);
+  assert.equal(clock.pending, 1);
+  media.at(1500, 'timeupdate');
+  assert.deepEqual(cues, [], 'transport seek keeps previously fired presentation cues owned');
+
+  runtime.seek(500, { reason: 'user-seek' });
+  assert.deepEqual(resets, [{ reason: 'user-seek', mediaTimeMs: 500 }]);
+  assert.equal(clock.pending, 0);
+  media.dispatchEvent(new Event('seeking'));
+  media.dispatchEvent(new Event('seeked'));
+  assert.deepEqual(resets, [{ reason: 'user-seek', mediaTimeMs: 500 }]);
+  assert.equal(clock.pending, 1);
+
+  runtime.dispose();
+  assert.equal(clock.pending, 0);
+});
+
 test('atomic aligned playback owns source load generation before restoring a paused checkpoint', async () => {
   let media = new FakeMedia();
   let resets = [];
