@@ -49,6 +49,34 @@ function throwIfAborted(operation) {
   throw reason instanceof Error ? reason : abortError(String(reason || 'aborted'));
 }
 
+function completionPromiseFor(result) {
+  let completion = result?.completion;
+  if (!completion || typeof completion.then !== 'function') return null;
+  let promise = Promise.resolve(completion);
+  // A rejected start notification may prevent the controller from reaching the
+  // barrier. Keep the target-owned completion observed while cleanup proceeds.
+  void promise.catch(() => {});
+  return promise;
+}
+
+async function awaitOperationCompletion(completion, operation) {
+  let { signal } = operation.controller;
+  throwIfAborted(operation);
+  let onAbort;
+  let aborted = new Promise((_resolve, reject) => {
+    onAbort = () => {
+      let reason = signal.reason;
+      reject(reason instanceof Error ? reason : abortError(String(reason || 'aborted')));
+    };
+    signal.addEventListener('abort', onAbort, { once: true });
+  });
+  try {
+    await Promise.race([completion, aborted]);
+  } finally {
+    signal.removeEventListener('abort', onAbort);
+  }
+}
+
 function normalizeMediaPlayOptions(options = {}) {
   let mode = String(options.mode || 'short-muted-montage');
   if (!MODES.has(mode)) throw new TypeError(`unsupported show media mode "${mode}"`);
@@ -220,7 +248,10 @@ export class ShowMediaController {
 
   _handleEnded(active) {
     if (this._active !== active) return;
-    abortOperation(active.operation, 'ended');
+    // A bounded custom choreography may dispatch `ended` immediately before
+    // resolving its completion barrier. Let that normal terminal signal settle
+    // successfully; lifecycle cleanup remains serialized after `_playOwned`.
+    if (!active.completionPending) abortOperation(active.operation, 'ended');
     void this._enqueueLifecycle(() => this._stopOwned(active, 'ended'))
       .catch((error) => this._reportCleanupError(active, 'ended', error))
       .catch(() => {});
@@ -267,6 +298,7 @@ export class ShowMediaController {
       audioToken: null,
       operation,
       ended: null,
+      completionPending: false,
       pausePromise: null,
       pause(reason) {
         if (!this.pausePromise) {
@@ -301,11 +333,22 @@ export class ShowMediaController {
         throwIfAborted(operation);
       }
       phase = 'play';
-      await playShowMedia(target, element, normalizedOptions, operation.context);
+      let playResult = await playShowMedia(target, element, normalizedOptions, operation.context);
       throwIfAborted(operation);
+      let completion = completionPromiseFor(playResult);
+      active.completionPending = Boolean(completion);
       phase = 'start-notification';
       await this.onEvent?.({ type: 'show:media-start', mode, mediaId: id, ...interaction });
       throwIfAborted(operation);
+      if (completion) {
+        phase = 'completion';
+        try {
+          await awaitOperationCompletion(completion, operation);
+          throwIfAborted(operation);
+        } finally {
+          active.completionPending = false;
+        }
+      }
     } catch (error) {
       let aborted = operation.controller.signal.aborted;
       if (aborted) {

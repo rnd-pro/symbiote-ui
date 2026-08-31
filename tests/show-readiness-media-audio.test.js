@@ -561,6 +561,123 @@ test('custom media targets receive normalized policy and options and restore the
   assert.equal(controller.activeMode, '');
 });
 
+test('custom target completion is an atomic Project media barrier while start remains immediate', async () => {
+  let resolveCompletion;
+  let completion = new Promise((resolve) => { resolveCompletion = resolve; });
+  let events = [];
+  let element = listenerTarget({ muted: false, controls: true });
+  let target = {
+    element,
+    captureShowMediaState() { return Object.freeze({ frame: 2 }); },
+    applyShowMediaPolicy() {},
+    playShowMedia() {
+      return Object.freeze({ running: true, completion });
+    },
+    pauseShowMedia(reason) { events.push(['pause', reason]); },
+    restoreShowMediaState(state) { events.push(['restore', state]); },
+  };
+  let started;
+  let startedPromise = new Promise((resolve) => { started = resolve; });
+  let stopped;
+  let stoppedPromise = new Promise((resolve) => { stopped = resolve; });
+  let controller = new ShowMediaController({
+    onEvent(event) {
+      events.push(['event', event.type]);
+      if (event.type === 'show:media-start') started();
+      if (event.type === 'show:media-stop') stopped();
+    },
+  });
+
+  let pending = controller.play(target, {
+    mediaId: 'project-montage',
+    mode: 'short-muted-montage',
+    segments: [0.2, 0.5, 0.8],
+  });
+  let settled = false;
+  pending.then(() => { settled = true; }, () => { settled = true; });
+  await startedPromise;
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.equal(settled, false, 'the next Project cell must remain gated by target completion');
+  assert.deepEqual(events, [['event', 'show:media-start']], 'media start is observable before completion');
+
+  element.emit('ended');
+  resolveCompletion(Object.freeze({ completed: true }));
+  let result = await pending;
+  assert.equal(result.mediaId, 'project-montage');
+  await stoppedPromise;
+  assert.deepEqual(events, [
+    ['event', 'show:media-start'],
+    ['pause', 'ended'],
+    ['restore', { frame: 2 }],
+    ['event', 'show:media-stop'],
+  ]);
+  assert.equal(controller.activeMode, '');
+});
+
+test('custom target completion failure rejects playback and restores captured state', async () => {
+  let rejectCompletion;
+  let completion = new Promise((_resolve, reject) => { rejectCompletion = reject; });
+  let calls = [];
+  let failure = new Error('montage failed');
+  let target = {
+    captureShowMediaState() { return Object.freeze({ frame: 4 }); },
+    applyShowMediaPolicy() {},
+    playShowMedia() { return Object.freeze({ completion }); },
+    pauseShowMedia(reason) { calls.push(['pause', reason]); },
+    restoreShowMediaState(state) { calls.push(['restore', state]); },
+  };
+  let controller = new ShowMediaController();
+
+  let pending = controller.play(target, {
+    mediaId: 'failed-montage',
+    mode: 'short-muted-montage',
+  });
+  await flushMicrotasks();
+  rejectCompletion(failure);
+
+  await assert.rejects(pending, error => error === failure);
+  assert.deepEqual(calls, [
+    ['pause', 'play-rejected'],
+    ['restore', { frame: 4 }],
+  ]);
+  assert.equal(controller.activeMode, '');
+});
+
+test('explicit stop aborts a custom target completion barrier and then restores state', async () => {
+  let calls = [];
+  let operationSignal;
+  let target = {
+    captureShowMediaState() { return Object.freeze({ frame: 6 }); },
+    applyShowMediaPolicy() {},
+    playShowMedia(_options, { signal }) {
+      operationSignal = signal;
+      return Object.freeze({ completion: new Promise(() => {}) });
+    },
+    pauseShowMedia(reason) { calls.push(['pause', reason]); },
+    restoreShowMediaState(state) { calls.push(['restore', state]); },
+  };
+  let controller = new ShowMediaController();
+  let pending = controller.play(target, {
+    mediaId: 'aborted-montage',
+    mode: 'short-muted-montage',
+  });
+  await flushMicrotasks();
+
+  let stopping = controller.stop('owner-stopped');
+  await assert.rejects(
+    pending,
+    error => error?.name === 'AbortError' && error?.reason === 'owner-stopped',
+  );
+  assert.equal(await stopping, true);
+  assert.equal(operationSignal.aborted, true);
+  assert.deepEqual(calls, [
+    ['pause', 'owner-stopped'],
+    ['restore', { frame: 6 }],
+  ]);
+  assert.equal(controller.activeMode, '');
+});
+
 test('media lifecycle awaits stop notifications and rolls back a rejected start notification', async () => {
   let startError = new Error('start receipt failed');
   let releaseStopReceipt;
