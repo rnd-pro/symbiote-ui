@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import {
   ShowContractError,
   SHOW_MARKER_SHAPES,
+  SHOW_MEDIA_MODES,
   createShowEvent,
   normalizeShowDirective,
   normalizeShowMarkerShape,
@@ -96,6 +97,67 @@ test('footnote, status, contextual actions, and media events have reusable envel
     () => normalizeShowDirective({ type: 'media', mediaId: 'clip', mode: 'full-with-skip' }),
     (error) => error instanceof ShowContractError && error.code === 'invalid-media-mode',
   );
+});
+
+test('media directives normalize reusable segmented, frame, and continuous playback fields', () => {
+  assert.deepEqual(SHOW_MEDIA_MODES, [
+    'short-muted-montage',
+    'short-inline-continuous',
+    'full-with-media-audio',
+  ]);
+
+  let directive = normalizeShowDirective({
+    type: 'media',
+    mediaId: 'consumer-media',
+    mode: 'short-inline-continuous',
+    segments: ['0.2', 0.5, '0.8'],
+    segmentDurationMs: '120',
+    frames: ['1', 4, 7],
+    frameHoldMs: '80',
+    finalFrame: '9',
+    keepPlayingDuringQuote: false,
+  });
+
+  assert.deepEqual(directive, {
+    version: 'symbiote-show-v1',
+    type: 'media',
+    mediaId: 'consumer-media',
+    mode: 'short-inline-continuous',
+    segments: [0.2, 0.5, 0.8],
+    segmentDurationMs: 120,
+    frames: [1, 4, 7],
+    frameHoldMs: 80,
+    finalFrame: 9,
+    keepPlayingDuringQuote: false,
+  });
+  assert.equal(Object.isFrozen(directive.segments), true);
+  assert.equal(Object.isFrozen(directive.frames), true);
+});
+
+test('media directives reject invalid segmented and frame choreography values', () => {
+  let invalidFields = [
+    { segments: [] },
+    { segments: [0, 0.5] },
+    { segments: [0.2, 1] },
+    { segments: [0.5, 0.5] },
+    { segments: [0.8, 0.2] },
+    { segmentDurationMs: 0 },
+    { segmentDurationMs: 1.5 },
+    { frames: [] },
+    { frames: [1, 0] },
+    { frames: [1, 2.5] },
+    { frameHoldMs: 0 },
+    { finalFrame: 1.5 },
+    { keepPlayingDuringQuote: 'true' },
+  ];
+
+  for (let fields of invalidFields) {
+    assert.throws(
+      () => normalizeShowDirective({ type: 'media', mediaId: 'clip', ...fields }),
+      (error) => error instanceof ShowContractError,
+      JSON.stringify(fields),
+    );
+  }
 });
 
 test('branch return restores the exact subject position but stays paused until explicit resume', () => {

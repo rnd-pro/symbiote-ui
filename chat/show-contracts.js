@@ -22,6 +22,7 @@ export const SHOW_ATTENTION_MODES = Object.freeze([
 
 export const SHOW_MEDIA_MODES = Object.freeze([
   'short-muted-montage',
+  'short-inline-continuous',
   'full-with-media-audio',
 ]);
 
@@ -110,6 +111,40 @@ function finite(value, name, { optional = false, min = 0 } = {}) {
     fail('invalid-number', `${name} must be a finite number greater than or equal to ${min}`);
   }
   return result;
+}
+
+function positiveInteger(value, name) {
+  let result = Number(value);
+  if (!Number.isInteger(result) || result <= 0) {
+    fail('invalid-number', `${name} must be a positive integer`);
+  }
+  return result;
+}
+
+function normalizeMediaSegments(value) {
+  if (!Array.isArray(value) || !value.length) {
+    fail('invalid-media-segments', 'segments must be a non-empty ordered array of fractions');
+  }
+  let segments = value.map((segment, index) => {
+    let normalized = Number(segment);
+    if (!Number.isFinite(normalized) || normalized <= 0 || normalized >= 1) {
+      fail('invalid-media-segments', `segments[${index}] must be a fraction greater than 0 and less than 1`);
+    }
+    return normalized;
+  });
+  for (let index = 1; index < segments.length; index += 1) {
+    if (segments[index] <= segments[index - 1]) {
+      fail('invalid-media-segments', 'segments must be ordered from lowest to highest without duplicates');
+    }
+  }
+  return Object.freeze(segments);
+}
+
+function normalizeMediaFrames(value) {
+  if (!Array.isArray(value) || !value.length) {
+    fail('invalid-media-frames', 'frames must be a non-empty array of positive integers');
+  }
+  return Object.freeze(value.map((frame, index) => positiveInteger(frame, `frames[${index}]`)));
 }
 
 function normalizeAction(value, index) {
@@ -223,6 +258,17 @@ export function normalizeShowDirective(value = {}) {
     if (input.endMs !== undefined) result.endMs = finite(input.endMs, 'endMs');
     if (result.endMs !== undefined && result.startMs !== undefined && result.endMs <= result.startMs) {
       fail('invalid-media-range', 'endMs must be greater than startMs');
+    }
+    if (input.segments !== undefined) result.segments = normalizeMediaSegments(input.segments);
+    if (input.segmentDurationMs !== undefined) result.segmentDurationMs = positiveInteger(input.segmentDurationMs, 'segmentDurationMs');
+    if (input.frames !== undefined) result.frames = normalizeMediaFrames(input.frames);
+    if (input.frameHoldMs !== undefined) result.frameHoldMs = positiveInteger(input.frameHoldMs, 'frameHoldMs');
+    if (input.finalFrame !== undefined) result.finalFrame = positiveInteger(input.finalFrame, 'finalFrame');
+    if (input.keepPlayingDuringQuote !== undefined) {
+      if (typeof input.keepPlayingDuringQuote !== 'boolean') {
+        fail('invalid-boolean', 'keepPlayingDuringQuote must be a boolean');
+      }
+      result.keepPlayingDuringQuote = input.keepPlayingDuringQuote;
     }
   }
 

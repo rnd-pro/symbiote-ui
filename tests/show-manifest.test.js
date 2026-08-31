@@ -28,10 +28,27 @@ test('Show manifest, schema catalog, and JSON file expose one synchronized publi
   assert.ok(SHOW_RUNTIME_CONTRACT.markerShapes.includes('underline'));
   assert.ok(SHOW_RUNTIME_CONTRACT.markerShapes.includes('box'));
   assert.deepEqual(SHOW_RUNTIME_CONTRACT.attentionIntents, ['emphasize', 'detail', 'group', 'pointer', 'risk', 'question', 'success', 'affinity', 'flourish']);
-  assert.deepEqual(SHOW_RUNTIME_CONTRACT.mediaModes, ['short-muted-montage', 'full-with-media-audio']);
+  assert.deepEqual(SHOW_RUNTIME_CONTRACT.mediaModes, [
+    'short-muted-montage',
+    'short-inline-continuous',
+    'full-with-media-audio',
+  ]);
   assert.deepEqual(SHOW_RUNTIME_CONTRACT.mediaInteractionSemantics, {
     'short-muted-montage': 'pointer-only',
+    'short-inline-continuous': 'pointer-only',
     'full-with-media-audio': 'detail',
+  });
+  assert.deepEqual(SHOW_RUNTIME_CONTRACT.mediaPlayback, {
+    directiveFields: ['startMs', 'endMs', 'segments', 'segmentDurationMs', 'frames', 'frameHoldMs', 'finalFrame', 'keepPlayingDuringQuote'],
+    targetHooks: ['captureShowMediaState', 'applyShowMediaPolicy', 'playShowMedia', 'pauseShowMedia', 'restoreShowMediaState'],
+    nativeTarget: 'HTMLMediaElement',
+    boundedCancellation: ['start', 'stop', 'replacement'],
+    continuousMode: 'short-inline-continuous',
+    hookContext: 'immutable-operation-id-and-abort-signal',
+    lifecycleOwnership: 'serialized-startup-and-teardown',
+    cleanupFailure: 'failure-independent-aggregate-error',
+    audioAcquisition: 'generation-safe-latest-request-wins',
+    nativeRestoration: 'captured-paused-state-including-resume',
   });
   assert.ok(SHOW_RUNTIME_CONTRACT.capabilities.includes('stable-chat-show-player-with-inline-and-native-panel-projections'));
   assert.equal(SHOW_RUNTIME_CONTRACT.chatComposition.embedPart, 'transcript-receipt-for-stable-player');
@@ -81,7 +98,7 @@ test('Show manifest, schema catalog, and JSON file expose one synchronized publi
     speedLimitsScope: 'cursor-travel',
     markerInk: {
       motionProfile: 'constant-speed',
-      speedPxPerMs: 0.45,
+      speedPxPerMs: 0.471,
       duration: 'arc-length-divided-by-speed',
       cap: 'rounded',
       enclosingTail: 'open-gap',
@@ -164,6 +181,9 @@ test('Show manifest, schema catalog, and JSON file expose one synchronized publi
   assert.ok(SHOW_RUNTIME_CONTRACT.capabilities.includes('bounded-owned-media-seek'));
   assert.ok(SHOW_RUNTIME_CONTRACT.capabilities.includes('atomic-owned-media-load-generation'));
   assert.ok(SHOW_RUNTIME_CONTRACT.capabilities.includes('runtime-owned-media-playback-clock'));
+  assert.ok(SHOW_RUNTIME_CONTRACT.capabilities.includes('custom-show-media-targets'));
+  assert.ok(SHOW_RUNTIME_CONTRACT.capabilities.includes('abortable-bounded-media-choreography'));
+  assert.ok(SHOW_RUNTIME_CONTRACT.capabilities.includes('continuous-inline-media'));
   assert.ok(SHOW_RUNTIME_CONTRACT.capabilities.includes('visual-settlement-before-attention'));
 });
 
@@ -171,7 +191,47 @@ test('show-event-v1 validates normalized canonical marker and media events', () 
   let ajv = new Ajv2020({ strict: true });
   let validate = ajv.compile(SHOW_EVENT_SCHEMA);
   let markerEvent = createShowEvent({ type: 'attention', mode: 'marker', targetId: 'target', marker: 'ovals' });
-  let mediaEvent = createShowEvent({ type: 'media', mediaId: 'clip', mode: 'full-with-media-audio' });
+  let mediaEvent = createShowEvent({
+    type: 'media',
+    mediaId: 'clip',
+    mode: 'short-inline-continuous',
+    segments: [0.2, 0.5, 0.8],
+    segmentDurationMs: 120,
+    frames: [1, 4, 7],
+    frameHoldMs: 80,
+    finalFrame: 9,
+    keepPlayingDuringQuote: true,
+  });
   assert.equal(validate(markerEvent), true, JSON.stringify(validate.errors));
   assert.equal(validate(mediaEvent), true, JSON.stringify(validate.errors));
+
+  let duplicateSegments = JSON.parse(JSON.stringify(mediaEvent));
+  duplicateSegments.directive.segments = [0.2, 0.2];
+  assert.equal(validate(duplicateSegments), false, 'schema rejects duplicate segment fractions');
+
+  let outOfRangeSegments = JSON.parse(JSON.stringify(mediaEvent));
+  outOfRangeSegments.directive.segments = [0, 0.5];
+  assert.equal(validate(outOfRangeSegments), false, 'schema rejects fractions outside the open interval');
+
+  let unorderedSegments = JSON.parse(JSON.stringify(mediaEvent));
+  unorderedSegments.directive.segments = [0.8, 0.2];
+  assert.equal(validate(unorderedSegments), true, JSON.stringify(validate.errors));
+
+  let missingSpeechText = {
+    version: 'symbiote-show-v1',
+    type: 'show:speech',
+    sequence: 0,
+    timestampMs: 0,
+    directive: { version: 'symbiote-show-v1', type: 'speech' },
+  };
+  assert.equal(validate(missingSpeechText), false, 'speech requires its canonical text field');
+
+  let mediaFieldOnSpeech = createShowEvent({ type: 'speech', text: 'Canonical speech' });
+  mediaFieldOnSpeech = JSON.parse(JSON.stringify(mediaFieldOnSpeech));
+  mediaFieldOnSpeech.directive.segments = [0.2, 0.5];
+  assert.equal(validate(mediaFieldOnSpeech), false, 'speech rejects media-only fields');
+
+  let mismatchedEnvelope = JSON.parse(JSON.stringify(mediaEvent));
+  mismatchedEnvelope.type = 'show:speech';
+  assert.equal(validate(mismatchedEnvelope), false, 'envelope type is coupled to directive type');
 });
