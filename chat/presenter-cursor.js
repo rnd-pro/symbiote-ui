@@ -2286,7 +2286,7 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
     }
     let elapsedMs = Number(frame.elapsedMs);
     if (!Number.isFinite(elapsedMs)) elapsedMs = 0;
-    let seed = normalizePresenterSeed(frame.seed);
+    let seed = normalizePresenterSeed(frame.seed ?? frame.gestureId);
     let mode = frame.mode;
     if (mode !== 'frame' && mode !== 'cursor' && mode !== 'rectangle-selection') mode = 'cursor';
     let focusRect = resolvePresenterHighlightRect(targetRect, viewport);
@@ -2455,7 +2455,7 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
       cursor.style.opacity = '0';
       return { presented: false, reason: 'hidden-target' };
     }
-    let seed = normalizePresenterSeed(frame.seed);
+    let seed = normalizePresenterSeed(frame.seed ?? frame.gestureId);
     let elapsedMs = Number(frame.elapsedMs);
     if (!Number.isFinite(elapsedMs)) elapsedMs = 0;
     let zone = clickZoneRectFor(rect, viewport);
@@ -2872,7 +2872,7 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
       };
     }
     let requestedProgress = Math.max(0, Math.min(1, Number(frame.progress) || 0));
-    let seed = normalizePresenterSeed(frame.seed);
+    let seed = normalizePresenterSeed(frame.seed ?? frame.gestureId);
 
     let layout = resolvePresenterAnnotationLayout(
       annotation,
