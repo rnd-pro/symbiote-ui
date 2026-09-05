@@ -120,6 +120,7 @@ export let styles = css`
       display: none;
     }
 
+    @scope (&) to (panel-layout) {
     &[drawer-mode-active] {
       --sn-layout-drawer-size: min(
         var(--sn-layout-drawer-inline-size, 86vw),
@@ -421,6 +422,7 @@ export let styles = css`
           transition-duration: 0ms;
         }
       }
+    }
     }
 
     /* Fullscreen tab bar */
