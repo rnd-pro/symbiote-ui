@@ -244,13 +244,13 @@ const MARKER_FACTORIES = {
     let length = endX - startX;
     let below = options.placement !== 'above';
     let margin = below
-      ? Math.max(10, Math.min(14, rect.height * 0.18))
+      ? Math.max(12, Math.min(14, rect.height * 0.2))
       : PRESENTER_MARKER_GEOMETRY_CONSTANTS.cursorSizePx
         + PRESENTER_MARKER_GEOMETRY_CONSTANTS.collisionAllowancePx + 3;
     let direction = below ? 1 : -1;
     let edge = below ? rect.bottom : rect.top;
-    let y = edge + direction * (margin + variation(seed, 9) * 2);
-    let droop = 2 + variation(seed, 19) * 2;
+    let y = edge + direction * (margin + variation(seed, 9));
+    let droop = 1 + variation(seed, 19);
     let returnFraction = 0.22 + (variation(seed, 23) * 0.5 + 0.5) * 0.12;
     return {
       loops: 0,
