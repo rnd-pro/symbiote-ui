@@ -20,15 +20,25 @@ agent-dock-shell {
     min-block-size: 0;
   }
 
-  .agent-dock-main-node > .panel-view > .panel-header {
-    display: none !important;
-  }
+  .agent-dock-main-node[node-type='panel'] {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
 
-  .agent-dock-main-node > .panel-view > .panel-content {
-    min-inline-size: 0;
-    min-block-size: 0;
-    padding: 0;
-    overflow: hidden;
+    > .panel-view {
+      border: 0;
+    }
+
+    > .panel-view > .panel-header {
+      display: none !important;
+    }
+
+    > .panel-view > .panel-content {
+      min-inline-size: 0;
+      min-block-size: 0;
+      padding: 0;
+      overflow: hidden;
+    }
   }
 
   .agent-show-panel-node > .panel-view > .panel-content {

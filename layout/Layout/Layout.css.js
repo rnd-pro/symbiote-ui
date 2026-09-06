@@ -224,14 +224,13 @@ export let styles = css`
           isolation: isolate;
         }
 
-        .panel-header {
+        &:not([drawer-primary]) .panel-header {
           box-sizing: border-box !important;
           display: grid !important;
           grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) !important;
           align-items: center !important;
           inline-size: 100% !important;
           block-size: var(--sn-layout-header-block-size, calc(var(--sn-layout-header-min-height, 28px) + 3px)) !important;
-          min-block-size: var(--sn-layout-header-block-size, calc(var(--sn-layout-header-min-height, 28px) + 3px)) !important;
           padding: var(--sn-layout-header-padding, 2px 4px) !important;
         }
 

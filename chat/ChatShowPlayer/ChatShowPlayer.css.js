@@ -139,6 +139,11 @@ chat-show-player {
     border-radius: var(--sn-node-radius);
   }
 
+  /* Explicit compact host mode (attribute kept by the mobile footer host). */
+  &[compact-caption] .chat-show-caption {
+    display: none !important;
+  }
+
   .chat-show-caption-viewport {
     display: block;
     min-inline-size: 0;
