@@ -1795,3 +1795,37 @@ test('panel layout drawer API and rail gestures open and close drawer panels wit
   layout.remove();
   railLayout.remove();
 });
+
+test('mobile drawer rails expose icon launchers instead of overlapping strips', async () => {
+  let [layout, styles, template] = await Promise.all([
+    readFile(layoutSource, 'utf8'),
+    readFile(layoutStyles, 'utf8'),
+    readFile(layoutTemplate, 'utf8'),
+  ]);
+
+  // Collapsed rail keeps a visible icon: the drawer-mode .type-btn hide is
+  // overridden for rail-collapsed nodes so the glyph box survives the font.
+  assert.match(styles, /layout-node\[drawer-rail\]\[drawer-rail-collapsed\][\s\S]*?\.type-btn\s*\{[\s\S]*?display:\s*flex !important;/);
+  // Launcher zones: one vertical icon stack per side, itemized per closed rail.
+  assert.match(template, /layout-drawer-launchers-start/);
+  assert.match(template, /layout-drawer-launchers-end/);
+  assert.match(template, /onLauncherClick/);
+  assert.match(template, /startLauncherItems/);
+  assert.match(template, /endLauncherItems/);
+  assert.match(template, /data-drawer-panel-id/);
+  assert.match(layout, /_syncDrawerLaunchers/);
+  assert.match(layout, /onLauncherClick/);
+  assert.match(layout, /hasStartLaunchers/);
+  assert.match(layout, /hasEndLaunchers/);
+  assert.match(layout, /drawer-start-launchers/);
+  assert.match(layout, /drawer-end-launchers/);
+  assert.match(layout, /this\.openDrawer\(dock, panelId\)/);
+  assert.match(styles, /\.layout-drawer-launchers\s*\{[\s\S]*?flex-direction:\s*column;/);
+  assert.match(styles, /\.layout-drawer-launcher:focus-visible\s*\{[\s\S]*?outline:/);
+  assert.match(styles, /\[drawer-start-launchers\] layout-node\[mobile-dock='start'\]/);
+  assert.match(styles, /\[drawer-end-launchers\] layout-node\[mobile-dock='end'\]/);
+  // No handle-stack fork: launchers replace overlapping rails, nothing else.
+  assert.doesNotMatch(layout, /_renderDrawerHandleStack/);
+  assert.doesNotMatch(template, /layout-drawer-handle/);
+  assert.doesNotMatch(styles, /layout-drawer-handle/);
+});

@@ -190,6 +190,10 @@ export class Layout extends Symbiote {
     drawerEndOpen: false,
     drawerStartPanelId: '',
     drawerEndPanelId: '',
+    hasStartLaunchers: false,
+    startLauncherItems: [],
+    hasEndLaunchers: false,
+    endLauncherItems: [],
 
 
     onTabClick: (e) => {
@@ -201,6 +205,15 @@ export class Layout extends Symbiote {
 
 
     onDrawerBackdropClick: () => this.closeDrawer(),
+
+    onLauncherClick: (e) => {
+      let launcher = e.target?.closest?.('[data-drawer-panel-id]');
+      let dock = launcher?.dataset?.drawerDock || '';
+      let panelId = launcher?.dataset?.drawerPanelId || '';
+      if ((dock === 'start' || dock === 'end') && panelId) {
+        this.openDrawer(dock, panelId);
+      }
+    },
   };
 
   connectedCallback() {
@@ -864,6 +877,7 @@ export class Layout extends Symbiote {
         node.style.removeProperty('inset-inline-end');
       }
     }
+    this._syncDrawerLaunchers();
     this._scheduleDrawerRailPeek(startOpen, endOpen);
     let ready = matchedPanelIds.size === projection.panels.length;
     if (ready) {
@@ -903,6 +917,12 @@ export class Layout extends Symbiote {
     this.removeAttribute('drawer-primary-panel-id');
     this.removeAttribute('drawer-start-panel-id');
     this.removeAttribute('drawer-end-panel-id');
+    this.removeAttribute('drawer-start-launchers');
+    this.removeAttribute('drawer-end-launchers');
+    this.$.startLauncherItems = [];
+    this.$.endLauncherItems = [];
+    this.$.hasStartLaunchers = false;
+    this.$.hasEndLaunchers = false;
     this.removeAttribute('drawer-dragging');
     this._drawerProjection = null;
     for (let node of getOwnedLayoutNodes(this, 'layout-node[mobile-dock], layout-node[drawer-open]')) {
@@ -949,6 +969,38 @@ export class Layout extends Symbiote {
     }
     node.removeAttribute('drawer-rail-collapsed');
     this._setDrawerNodeExpanded(node, true);
+  }
+
+  _syncDrawerLaunchers() {
+    let startItems = [];
+    let endItems = [];
+    for (let node of getOwnedLayoutNodes(this)) {
+      let dock = node.dataset?.drawerDock || '';
+      if (dock !== 'start' && dock !== 'end') continue;
+      if (!node.hasAttribute('drawer-rail') || !node.hasAttribute('drawer-rail-collapsed')) continue;
+      if (node.hasAttribute('drawer-open')) continue;
+      let panelId = node.dataset.drawerPanelId || '';
+      if (!panelId) continue;
+      let icon = node.querySelector?.('.panel-icon')?.textContent?.trim() || '';
+      let label = node.querySelector?.('.panel-title')?.textContent?.trim() || panelId;
+      let item = {
+        dock,
+        panelId,
+        icon,
+        label,
+        active: node.hasAttribute('drawer-active-panel'),
+      };
+      if (dock === 'start') startItems.push(item);
+      else endItems.push(item);
+    }
+    let hasStart = startItems.length > 1;
+    let hasEnd = endItems.length > 1;
+    this.$.startLauncherItems = hasStart ? startItems : [];
+    this.$.endLauncherItems = hasEnd ? endItems : [];
+    this.$.hasStartLaunchers = hasStart;
+    this.$.hasEndLaunchers = hasEnd;
+    toggleAttributeIfChanged(this, 'drawer-start-launchers', hasStart);
+    toggleAttributeIfChanged(this, 'drawer-end-launchers', hasEnd);
   }
 
   _scheduleDrawerRailPeek(startOpen, endOpen) {

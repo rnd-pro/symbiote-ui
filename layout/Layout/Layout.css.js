@@ -297,6 +297,7 @@ export let styles = css`
           order: 1;
           position: relative;
           z-index: 1;
+          display: flex !important;
           inline-size: 100%;
           block-size: var(--sn-layout-header-block-size, calc(var(--sn-layout-header-min-height, 28px) + 3px));
           min-block-size: var(--sn-layout-header-block-size, calc(var(--sn-layout-header-min-height, 28px) + 3px));
@@ -334,6 +335,72 @@ export let styles = css`
           align-items: center;
           justify-content: center;
         }
+      }
+
+      /* Drawer launcher zones: one vertical icon stack per side.
+         Rendered only when a dock holds 2+ closed rail panels; the
+         non-active closed rails of that dock collapse into the zone. */
+      .layout-drawer-launchers {
+        position: absolute;
+        inset-block: 0;
+        inline-size: var(--sn-layout-collapsed-horizontal-size, 32px);
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 4px;
+        padding: 4px 0;
+        z-index: var(--sn-layout-drawer-launcher-z, 2);
+        pointer-events: auto;
+      }
+
+      .layout-drawer-launchers[hidden] {
+        display: none !important;
+      }
+
+      .layout-drawer-launchers-start {
+        inset-inline-start: 0;
+      }
+
+      .layout-drawer-launchers-end {
+        inset-inline-end: 0;
+      }
+
+      .launcher-list {
+        display: contents;
+      }
+
+      .layout-drawer-launcher {
+        inline-size: 100%;
+        block-size: 32px;
+        min-block-size: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: var(--sn-layout-collapsed-icon-size, 18px);
+        line-height: 1;
+        background: var(--sn-layout-drawer-launcher-bg, var(--sn-layout-drawer-bg, var(--sn-sys-surface)));
+        border: 0;
+        border-radius: var(--sn-layout-drawer-launcher-radius, 8px);
+        padding: 0;
+        cursor: pointer;
+        color: inherit;
+      }
+
+      .layout-drawer-launcher[data-active='true'] {
+        background: var(--sn-layout-drawer-launcher-active-bg, var(--sn-node-selected, var(--sn-sys-surface)));
+      }
+
+      .layout-drawer-launcher:focus-visible {
+        outline: var(--sn-effect-focus-ring, 2px solid var(--sn-sys-focus-ring));
+        outline-offset: 1px;
+      }
+
+      &[drawer-mode-active][drawer-start-launchers] layout-node[mobile-dock='start'][drawer-rail][drawer-rail-collapsed]:not([drawer-active-panel]) {
+        display: none !important;
+      }
+
+      &[drawer-mode-active][drawer-end-launchers] layout-node[mobile-dock='end'][drawer-rail][drawer-rail-collapsed]:not([drawer-active-panel]) {
+        display: none !important;
       }
 
       layout-node[mobile-dock='start'] {

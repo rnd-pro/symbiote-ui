@@ -287,6 +287,33 @@ chat-show-player {
       color: var(--sn-node-selected);
       background: var(--sn-node-hover);
     }
+
+    .chat-show-controls button:hover {
+      background: var(--sn-node-hover);
+    }
+
+    .chat-show-controls button:focus-visible {
+      outline: var(--sn-effect-focus-ring, 2px solid var(--sn-sys-focus-ring));
+      outline-offset: 1px;
+    }
+
+    .chat-show-controls button:active {
+      background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-pressed-mix, 16%), transparent);
+    }
+
+    .chat-show-controls button:disabled {
+      opacity: var(--sn-button-disabled-opacity, 0.5);
+    }
+
+    @media (hover: none) {
+      .chat-show-controls button:hover {
+        background: var(--sn-node-bg);
+      }
+
+      .chat-show-controls .chat-show-primary-control:hover {
+        background: var(--sn-node-hover);
+      }
+    }
   }
 
   .chat-show-header-action {
