@@ -10,8 +10,6 @@ export let template = html`
   ></button>
   <panel-menu ref="menu"></panel-menu>
 
-  <!-- Mobile drawer launcher zones (one vertical icon stack per side;
-       rendered only when a dock holds 2+ closed rail panels) -->
   <div
     class="layout-drawer-launchers layout-drawer-launchers-start"
     data-drawer-dock="start"
@@ -26,7 +24,6 @@ export let template = html`
             onclick: '^onLauncherClick',
             '@data-drawer-dock': 'dock',
             '@data-drawer-panel-id': 'panelId',
-            '@data-active': 'active',
             '@aria-label': 'label',
             textContent: 'icon',
           }}
@@ -48,7 +45,6 @@ export let template = html`
             onclick: '^onLauncherClick',
             '@data-drawer-dock': 'dock',
             '@data-drawer-panel-id': 'panelId',
-            '@data-active': 'active',
             '@aria-label': 'label',
             textContent: 'icon',
           }}

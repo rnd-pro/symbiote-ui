@@ -337,9 +337,6 @@ export let styles = css`
         }
       }
 
-      /* Drawer launcher zones: one vertical icon stack per side.
-         Rendered only when a dock holds 2+ closed rail panels; the
-         non-active closed rails of that dock collapse into the zone. */
       .layout-drawer-launchers {
         position: absolute;
         inset-block: 0;
@@ -384,10 +381,6 @@ export let styles = css`
         padding: 0;
         cursor: pointer;
         color: inherit;
-      }
-
-      .layout-drawer-launcher[data-active='true'] {
-        background: var(--sn-layout-drawer-launcher-active-bg, var(--sn-node-selected, var(--sn-sys-surface)));
       }
 
       .layout-drawer-launcher:focus-visible {

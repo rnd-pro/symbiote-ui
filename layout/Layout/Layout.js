@@ -978,18 +978,12 @@ export class Layout extends Symbiote {
       let dock = node.dataset?.drawerDock || '';
       if (dock !== 'start' && dock !== 'end') continue;
       if (!node.hasAttribute('drawer-rail') || !node.hasAttribute('drawer-rail-collapsed')) continue;
-      if (node.hasAttribute('drawer-open')) continue;
+      if (node.hasAttribute('drawer-open') || node.hasAttribute('drawer-active-panel')) continue;
       let panelId = node.dataset.drawerPanelId || '';
       if (!panelId) continue;
       let icon = node.querySelector?.('.panel-icon')?.textContent?.trim() || '';
       let label = node.querySelector?.('.panel-title')?.textContent?.trim() || panelId;
-      let item = {
-        dock,
-        panelId,
-        icon,
-        label,
-        active: node.hasAttribute('drawer-active-panel'),
-      };
+      let item = { dock, panelId, icon, label };
       if (dock === 'start') startItems.push(item);
       else endItems.push(item);
     }
