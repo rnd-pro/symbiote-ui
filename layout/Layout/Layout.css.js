@@ -199,6 +199,14 @@ export let styles = css`
         width: auto !important;
       }
 
+      /* Single native END reserve: when the primary hosts a nested layout
+        that owns its own collapsed END rails, the nested layout renders
+        the one shared END column at the viewport edge; the outer primary
+        stays full-bleed instead of reserving a second END column. */
+      &[drawer-end-rail] layout-node[mobile-dock='primary']:has(panel-layout[drawer-end-rail]) {
+        inset-inline-end: 0;
+      }
+
       layout-node[mobile-dock='start'],
       layout-node[mobile-dock='end'] {
         z-index: var(--sn-layout-drawer-z, 3);
@@ -344,6 +352,14 @@ export let styles = css`
           align-items: center;
           justify-content: center;
         }
+
+        /* Collapsed native rail: the centered panel icon is the only
+          visible glyph. The collapse chevron glyph is hidden, while the
+          button keeps its full-rail hit-area, keyboard focus, aria and
+          open/close behavior. */
+        .collapse-btn > .material-symbols-outlined {
+          visibility: hidden;
+        }
       }
 
       /* Native R2 rails: no synthetic buttons. Same-side collapsed panels
@@ -352,7 +368,9 @@ export let styles = css`
         never display:none here; open/close/swipe/focus lifecycle is owned
         by layout-node drawer attributes. */
       &[drawer-mode-active] layout-node[drawer-rail][drawer-rail-collapsed] {
-        --sn-layout-native-rail-gap: var(--sn-layout-rail-gap, 4px);
+        /* Stacked-region gap follows the shared panel-separation baseline
+          (split resizer thickness), never a hardcoded rail-only value. */
+        --sn-layout-native-rail-gap: var(--sn-layout-rail-gap, var(--sn-layout-resizer-thickness, 2px));
         inset-block: auto;
         inset-block-start: calc(
           var(--sn-layout-rail-index, 0) * (100% - (var(--sn-layout-rail-count, 1) - 1) * var(--sn-layout-native-rail-gap)) / var(--sn-layout-rail-count, 1) +

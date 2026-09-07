@@ -130,3 +130,33 @@ test('native R2 rails preserve open/close/swipe/focus lifecycle', async () => {
   // Collapsed rails keep an interactive collapse affordance.
   assert.match(styles, /layout-node\[drawer-rail\]\[drawer-rail-collapsed\][\s\S]*?\.collapse-btn\s*\{/);
 });
+
+test('native R2 rails meet the three accepted visual criteria', async () => {
+  let [layout, styles] = await Promise.all([
+    readFile(layoutSource, 'utf8'),
+    readFile(layoutStyles, 'utf8'),
+  ]);
+
+  // 1. Collapsed rails show only the centered panel icon: the collapse
+  // chevron glyph is hidden while the button keeps hit-area/keyboard/aria.
+  assert.match(
+    styles,
+    /layout-node\[drawer-rail\]\[drawer-rail-collapsed\][\s\S]*?\.collapse-btn\s*>\s*\.material-symbols-outlined\s*\{[\s\S]*?visibility:\s*hidden;/
+  );
+
+  // 2. Stacked-region gap follows the shared panel-separation baseline
+  // (split resizer thickness), never a hardcoded rail-only value.
+  assert.match(styles, /--sn-layout-native-rail-gap:\s*var\(--sn-layout-rail-gap,\s*var\(--sn-layout-resizer-thickness,\s*2px\)\)/);
+
+  // 3. One native END reserve allocation: the outer primary stays
+  // full-bleed when a nested layout owns END rails, so both rails share
+  // the single END column at the viewport edge.
+  assert.match(
+    styles,
+    /layout-node\[mobile-dock='primary'\]:has\(panel-layout\[drawer-end-rail\]\)\s*\{[\s\S]*?inset-inline-end:\s*0;/
+  );
+
+  // Rails sit in natural dock slots: no negative inset overrides that push
+  // nodes under ancestor clipping.
+  assert.doesNotMatch(layout, /inset-inline-end.*offset|parentRight|targetRight/);
+});

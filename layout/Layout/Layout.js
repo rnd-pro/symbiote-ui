@@ -951,7 +951,11 @@ export class Layout extends Symbiote {
   // Native R2 rails: same-side collapsed panels share one dock edge as equal
   // vertical regions with a uniform gap. Single owner (this layout's own
   // nodes, deduped by panel identity); no synthetic buttons, no inner/outer
-  // cross-layout merging. Open/close/swipe/focus lifecycle is untouched.
+  // cross-layout merging. Rails sit in their natural dock slots; the single
+  // shared END column comes from the reserve allocation in Layout.css.js
+  // (outer primary stays full-bleed when a nested layout owns END rails),
+  // never from negative insets that push nodes under ancestor clipping.
+  // Open/close/swipe/focus lifecycle is untouched.
   _syncNativeRailRegions() {
     let layouts = Array.from(new Set([this, ...NATIVE_RAIL_LAYOUTS])).filter((layout) => layout?.isConnected);
     // Nested panel-layouts can live behind a shadow boundary and may not have
@@ -978,12 +982,6 @@ export class Layout extends Symbiote {
         setStylePropertyIfChanged(node.style, '--sn-layout-rail-count', String(unique.length));
         setStylePropertyIfChanged(node.style, '--sn-layout-rail-index', String(index));
         setStylePropertyIfChanged(node.style, '--sn-layout-rail-header-justify', 'center');
-        if (dock === 'end') {
-          let parentRight = node.closest('panel-layout')?.getBoundingClientRect?.().right || 0;
-          let targetRight = Math.max(...layouts.map((layout) => layout.getBoundingClientRect?.().right || parentRight).filter(Boolean));
-          let offset = parentRight - targetRight;
-          setImportantStylePropertyIfChanged(node.style, 'inset-inline-end', `${Math.round(offset)}px`);
-        }
       });
     }
   }
