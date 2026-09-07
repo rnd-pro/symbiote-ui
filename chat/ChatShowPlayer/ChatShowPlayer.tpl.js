@@ -12,7 +12,7 @@ export default html`
     <header class="chat-show-menu-header">
       <strong ${{ textContent: 'menuTitle' }}></strong>
       <div class="chat-show-menu-actions">
-        <button type="button" class="chat-show-menu-action" data-show-menu-action="layout" ${{ onclick: 'onLayoutAction', title: 'layoutActionLabel', '@aria-label': 'layoutActionLabel' }}>
+        <button type="button" class="chat-show-menu-action" data-show-menu-action="layout" ${{ onclick: 'onLayoutAction', title: 'layoutActionLabel', '@aria-label': 'layoutActionLabel', '@hidden': '!showLayoutAction' }}>
           <span class="material-symbols-outlined" aria-hidden="true" ${{ textContent: 'layoutActionGlyph' }}></span>
         </button>
       </div>

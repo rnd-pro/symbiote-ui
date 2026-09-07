@@ -269,6 +269,7 @@ export class ChatShowPlayer extends Symbiote {
     this._showCaption = captions !== false;
     this._showSettings = settings !== false;
     this._showClose = closable !== false;
+    this._showLayoutAction = true;
     this._videoController = videoController;
     this._videoControls = normalizeVideoControls(videoControls);
     ensureMaterialSymbols([this._icon, ...PLAYER_ICONS]);
@@ -289,6 +290,18 @@ export class ChatShowPlayer extends Symbiote {
 
   setState(state = {}) {
     this._state = state && typeof state === 'object' ? { ...state } : {};
+    this._sync();
+    return this;
+  }
+
+  setShowSettings(visible = true) {
+    this._showSettings = visible !== false;
+    this._sync();
+    return this;
+  }
+
+  setShowLayoutAction(visible = true) {
+    this._showLayoutAction = visible !== false;
     this._sync();
     return this;
   }
@@ -546,6 +559,7 @@ export class ChatShowPlayer extends Symbiote {
     this.$.showCaption = this._showCaption !== false;
     this.$.showSettings = this._showSettings !== false;
     this.$.showClose = this._showClose !== false;
+    this.$.showLayoutAction = this._showLayoutAction !== false;
     let playing = readPlaying(this._controller, this._state);
     this.$.playing = playing;
     this.$.playLabel = playing ? 'Pause' : 'Play';
