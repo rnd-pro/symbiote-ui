@@ -1248,7 +1248,7 @@ export class Layout extends Symbiote {
 
   _isDrawerContentSwipeBlocked(target) {
     return Boolean(target?.closest?.(
-      'button, a, input, textarea, select, [contenteditable="true"], .split-resizer, canvas, node-canvas, canvas-graph'
+      'button, a, input, textarea, select, [contenteditable="true"], .sn-tree-row, [role="treeitem"], .split-resizer, canvas, node-canvas, canvas-graph'
     ));
   }
 
