@@ -294,6 +294,11 @@ export class ChatShowPlayer extends Symbiote {
     return this;
   }
 
+  setResizable(visible = true) {
+    this.toggleAttribute('resizable', visible !== false);
+    return this;
+  }
+
   setShowSettings(visible = true) {
     this._showSettings = visible !== false;
     this._sync();
