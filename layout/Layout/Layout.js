@@ -1413,6 +1413,10 @@ export class Layout extends Symbiote {
     let target = e.target;
     let drawerNode = target?.closest?.('layout-node[mobile-dock="start"], layout-node[mobile-dock="end"]');
     if (!drawerNode || !this.contains(drawerNode)) return;
+    // Events retargeted across a shadow boundary can resolve to an outer
+    // mobile-dock node while the actual click is inside an open drawer.
+    // Never suppress normal content interaction for that open drawer.
+    if (drawerNode.hasAttribute('drawer-open')) return;
     let suppressActive = this._drawerNow() < (this._drawerClickSuppressUntil || 0);
     let suppress = suppressActive
       || drawerNode.hasAttribute('drawer-rail-collapsed')
