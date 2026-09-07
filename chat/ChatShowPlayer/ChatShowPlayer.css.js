@@ -68,7 +68,7 @@ chat-show-player {
 
     .chat-show-menu-action:hover,
     .chat-show-menu-action:focus-visible {
-      background: var(--sn-node-hover);
+      background: var(--sn-node-hover, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix, 18%), transparent));
     }
   }
 
@@ -284,34 +284,38 @@ chat-show-player {
     }
 
     .chat-show-primary-control {
-      color: var(--sn-node-selected);
-      background: var(--sn-node-hover);
+      color: var(--sn-node-selected, var(--sn-sys-accent));
+      background: var(--sn-node-hover, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix, 18%), transparent));
     }
 
-    .chat-show-controls button:hover {
-      background: var(--sn-node-hover);
+    button:hover:not(:disabled) {
+      background: var(--sn-node-hover, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix, 18%), transparent));
     }
 
-    .chat-show-controls button:focus-visible {
+    .chat-show-primary-control:hover:not(:disabled) {
+      background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-pressed-mix, 16%), transparent);
+    }
+
+    button:focus-visible {
       outline: var(--sn-effect-focus-ring, 2px solid var(--sn-sys-focus-ring));
       outline-offset: 1px;
     }
 
-    .chat-show-controls button:active {
+    button:active {
       background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-pressed-mix, 16%), transparent);
     }
 
-    .chat-show-controls button:disabled {
+    button:disabled {
       opacity: var(--sn-button-disabled-opacity, 0.5);
     }
 
     @media (hover: none) {
-      .chat-show-controls button:hover {
+      button:hover {
         background: var(--sn-node-bg);
       }
 
-      .chat-show-controls .chat-show-primary-control:hover {
-        background: var(--sn-node-hover);
+      .chat-show-primary-control:hover {
+        background: var(--sn-node-hover, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix, 18%), transparent));
       }
     }
   }
@@ -325,6 +329,20 @@ chat-show-player {
     background: transparent;
     border: 0;
     border-radius: var(--sn-node-radius);
+  }
+
+  .chat-show-header-action:hover:not(:disabled) {
+    color: var(--sn-sys-on-surface);
+    background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix, 18%), transparent);
+  }
+
+  .chat-show-header-action:focus-visible {
+    outline: var(--sn-effect-focus-ring, 2px solid var(--sn-sys-focus-ring));
+    outline-offset: 1px;
+  }
+
+  .chat-show-header-action:active {
+    background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-pressed-mix, 16%), transparent);
   }
 
   &[panel-layout] {

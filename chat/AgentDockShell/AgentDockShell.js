@@ -80,6 +80,28 @@ export class AgentDockShell extends Symbiote {
     return this.ref.layout?.querySelector?.('agent-show-chat') || null;
   }
 
+  /**
+   * Register a nested consumer layout (for example an inner graph+theme
+   * `panel-layout` slotted into the main workspace) as a rail-stack
+   * contributor. The shell's own layout renders its collapsed chat rail plus
+   * each contributor rail identity-preserving in equal vertical regions;
+   * activation routes back to the owning layout.
+   * @param {Object} layout - Nested `panel-layout` instance.
+   * @returns {boolean}
+   */
+  registerRailStackLayout(layout) {
+    return this.ref.layout?.registerRailStackContributor?.(layout) || false;
+  }
+
+  /**
+   * Remove a previously registered nested rail-stack contributor.
+   * @param {Object} layout
+   * @returns {boolean}
+   */
+  unregisterRailStackLayout(layout) {
+    return this.ref.layout?.unregisterRailStackContributor?.(layout) || false;
+  }
+
   setAgentProvider(provider) {
     let chat = this.getChat();
     if (chat) chat.setAgentProvider?.(provider);
@@ -246,6 +268,18 @@ export class AgentDockShell extends Symbiote {
       ...Array.from(this.querySelectorAll('[slot="main"]')),
     ].filter((item) => !host.contains(item));
     for (let item of new Set(mainItems)) host.append(item);
+    this._wireNestedRailStackContributor(host);
+  }
+
+  _wireNestedRailStackContributor(host) {
+    try {
+      let layout = this.ref.layout;
+      if (!layout?.registerRailStackContributor) return;
+      let nested = host.querySelector?.('panel-layout');
+      if (nested && nested !== layout) layout.registerRailStackContributor(nested);
+    } catch {
+      // Rail-stack wiring is best-effort: native rails remain usable.
+    }
   }
 
   _isDrawerMode() {

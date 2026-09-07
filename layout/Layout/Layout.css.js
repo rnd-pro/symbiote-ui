@@ -388,6 +388,58 @@ export let styles = css`
         outline-offset: 1px;
       }
 
+      .layout-rail-stack {
+        position: absolute;
+        inset-block: 0;
+        inset-inline-end: 0;
+        inline-size: var(--sn-layout-collapsed-horizontal-size, 32px);
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 2px;
+        padding: 4px 0;
+        z-index: var(--sn-layout-rail-stack-z, 4);
+        pointer-events: auto;
+      }
+
+      .layout-rail-stack[hidden] {
+        display: none !important;
+      }
+
+      .rail-stack-list {
+        display: contents;
+      }
+
+      .layout-rail-stack-btn {
+        flex: 1 1 0;
+        min-block-size: 32px;
+        inline-size: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: var(--sn-layout-collapsed-icon-size, 18px);
+        line-height: 1;
+        background: var(--sn-layout-drawer-launcher-bg, var(--sn-layout-drawer-bg, var(--sn-sys-surface)));
+        border: 0;
+        border-radius: var(--sn-layout-drawer-launcher-radius, 8px);
+        padding: 0;
+        cursor: pointer;
+        color: inherit;
+      }
+
+      .layout-rail-stack-btn:focus-visible {
+        outline: var(--sn-effect-focus-ring, 2px solid var(--sn-sys-focus-ring));
+        outline-offset: 1px;
+      }
+
+      &[drawer-mode-active][rail-stack-active] layout-node[drawer-rail][drawer-rail-collapsed]:not([drawer-active-panel]) {
+        display: none !important;
+      }
+
+      &[rail-stack-suppressed] layout-node[drawer-rail][drawer-rail-collapsed]:not([drawer-active-panel]) {
+        display: none !important;
+      }
+
       &[drawer-mode-active][drawer-start-launchers] layout-node[mobile-dock='start'][drawer-rail][drawer-rail-collapsed]:not([drawer-active-panel]) {
         display: none !important;
       }

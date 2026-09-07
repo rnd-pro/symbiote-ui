@@ -53,6 +53,29 @@ export let template = html`
     </div>
   </div>
 
+  <div
+    class="layout-rail-stack"
+    data-rail-stack-zone="end"
+    ${{ '@hidden': '!hasRailStack' }}
+  >
+    <div class="rail-stack-list" itemize="railStackItems">
+      <template>
+        <button
+          class="layout-rail-stack-btn material-symbols-outlined"
+          type="button"
+          ${{
+            onclick: '^onRailStackClick',
+            '@data-rail-id': 'railId',
+            '@data-drawer-dock': 'dock',
+            '@data-drawer-panel-id': 'panelId',
+            '@aria-label': 'label',
+            textContent: 'icon',
+          }}
+        ></button>
+      </template>
+    </div>
+  </div>
+
   <!-- Fullscreen tab bar (hidden by default) -->
   <div class="fullscreen-tab-bar" ${{ '@hidden': '!hasFullscreenTabs' }}>
     <div class="tab-list" itemize="tabItems">
