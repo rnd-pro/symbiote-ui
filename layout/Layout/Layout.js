@@ -953,7 +953,16 @@ export class Layout extends Symbiote {
   // nodes, deduped by panel identity); no synthetic buttons, no inner/outer
   // cross-layout merging. Open/close/swipe/focus lifecycle is untouched.
   _syncNativeRailRegions() {
-    let layouts = Array.from(NATIVE_RAIL_LAYOUTS).filter((layout) => layout.isConnected);
+    let layouts = Array.from(new Set([this, ...NATIVE_RAIL_LAYOUTS])).filter((layout) => layout?.isConnected);
+    // Nested panel-layouts can live behind a shadow boundary and may not have
+    // reached the global registry; include their composed ancestors so both
+    // owners participate in one viewport coordinate allocation.
+    let host = this.getRootNode?.().host;
+    while (host) {
+      if (host.tagName === 'PANEL-LAYOUT') layouts.push(host);
+      host = host.getRootNode?.().host;
+    }
+    layouts = Array.from(new Set(layouts)).filter((layout) => layout?.isConnected);
     for (let dock of ['start', 'end']) {
       let rails = layouts.flatMap((layout) => getOwnedLayoutNodes(layout, 'layout-node[drawer-rail][drawer-rail-collapsed]')
         .filter((node) => (node.dataset?.drawerDock || '') === dock && !node.hasAttribute('drawer-open')));
@@ -971,9 +980,9 @@ export class Layout extends Symbiote {
         setStylePropertyIfChanged(node.style, '--sn-layout-rail-header-justify', 'center');
         if (dock === 'end') {
           let parentRight = node.closest('panel-layout')?.getBoundingClientRect?.().right || 0;
-          let targetRight = Math.min(...layouts.map((layout) => layout.getBoundingClientRect?.().right || parentRight).filter(Boolean));
-          let offset = Math.max(0, parentRight - targetRight);
-          setStylePropertyIfChanged(node.style, 'inset-inline-end', `${Math.round(offset)}px`);
+          let targetRight = Math.max(...layouts.map((layout) => layout.getBoundingClientRect?.().right || parentRight).filter(Boolean));
+          let offset = parentRight - targetRight;
+          setImportantStylePropertyIfChanged(node.style, 'inset-inline-end', `${Math.round(offset)}px`);
         }
       });
     }

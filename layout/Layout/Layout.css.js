@@ -273,6 +273,7 @@ export let styles = css`
         }
 
         .panel-header {
+          position: relative;
           display: flex;
           flex-direction: column;
           writing-mode: horizontal-tb;
@@ -282,6 +283,14 @@ export let styles = css`
           align-items: center;
           justify-content: var(--sn-layout-rail-header-justify, center);
           width: var(--sn-layout-collapsed-horizontal-size, 32px);
+        }
+
+        .collapse-btn {
+          position: absolute;
+          inset-inline: 0;
+          inset-block-end: 2px;
+          margin-inline: auto;
+          z-index: 1;
         }
 
         .fullscreen-btn,
