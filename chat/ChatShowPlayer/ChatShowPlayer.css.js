@@ -17,6 +17,25 @@ chat-show-player {
   border-radius: var(--sn-node-radius);
   padding: var(--sn-chat-show-player-padding, var(--sn-space-sm));
 
+  &[resizable] {
+    resize: vertical;
+    min-block-size: var(--sn-chat-show-player-min-block-size, 56px);
+    overflow-y: auto;
+  }
+
+  &[resizable]::after {
+    content: '';
+    position: absolute;
+    inset-block-end: 3px;
+    inset-inline-start: 50%;
+    inline-size: 42px;
+    block-size: 3px;
+    border-radius: 999px;
+    transform: translateX(-50%);
+    background: color-mix(in srgb, currentColor 28%, transparent);
+    pointer-events: none;
+  }
+
   .chat-show-header,
   .chat-show-caption,
   .chat-show-video-controls,
