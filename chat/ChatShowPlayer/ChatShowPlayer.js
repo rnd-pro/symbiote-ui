@@ -305,6 +305,12 @@ export class ChatShowPlayer extends Symbiote {
     return this;
   }
 
+  setShowClose(visible = true) {
+    this._showClose = visible !== false;
+    this._sync();
+    return this;
+  }
+
   setShowLayoutAction(visible = true) {
     this._showLayoutAction = visible !== false;
     this._sync();
@@ -320,6 +326,17 @@ export class ChatShowPlayer extends Symbiote {
     this.$.layoutActionGlyph = this._layoutPlacement === 'panel'
       ? 'close_fullscreen'
       : 'open_in_full';
+    return this;
+  }
+
+  requestLayoutPlacement(placement = 'inline') {
+    let next = placement === 'panel' ? 'panel' : 'inline';
+    this._emitRequest('chat-show-layout-request', { placement: next });
+    return this;
+  }
+
+  requestClose() {
+    this._emitRequest('chat-show-close-request', {}, true);
     return this;
   }
 

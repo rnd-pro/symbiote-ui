@@ -252,6 +252,10 @@ export class AgentDockShell extends Symbiote {
     return Boolean(this.ref.layout?.hasAttribute?.('drawer-mode-active'));
   }
 
+  _allowsShowPanelInMobile() {
+    return this.hasAttribute('show-panel-mobile');
+  }
+
   _observeLayoutMode() {
     let layout = this.ref.layout;
     if (!layout || typeof MutationObserver === 'undefined') return;
@@ -264,7 +268,7 @@ export class AgentDockShell extends Symbiote {
       previousMobile = mobile;
       this.toggleAttribute('mobile', mobile);
       if (mobile) {
-        if (this._showPanelId) layout.closeUiPanel?.('agent-show-panel');
+        if (this._showPanelId && !this._allowsShowPanelInMobile()) layout.closeUiPanel?.('agent-show-panel');
         if (this.$.open) layout.openDrawer?.('end', this._dockPanelId);
         else layout.closeDrawer?.('end');
       }
@@ -276,7 +280,7 @@ export class AgentDockShell extends Symbiote {
   _setLayoutOpen(open) {
     let layout = this.ref.layout;
     if (!layout) return;
-    if (this._isDrawerMode()) {
+    if (this._isDrawerMode() && !this._allowsShowPanelInMobile()) {
       if (open) layout.openDrawer?.('end', this._dockPanelId);
       else layout.closeDrawer?.('end');
       return;
@@ -336,7 +340,12 @@ export class AgentDockShell extends Symbiote {
 
   _onLayoutUiPanelClose = (event) => {
     if (event.detail?.panelType !== 'agent-show-panel') return;
+    let closeShow = this._isDrawerMode()
+      && this.hasAttribute('show-panel-mobile-close-show')
+      && event.detail?.removed === true;
+    let player = this.getChat()?.getShowPlayer?.() || null;
     this._restoreShowPlayer();
+    if (closeShow) player?.requestClose?.();
   };
 
   _onShowEmbedClose = () => {
