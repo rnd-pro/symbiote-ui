@@ -233,18 +233,6 @@ export class Layout extends Symbiote {
     this._syncPeerGroupRegistration();
     this._scheduleConnectedLayoutRefresh();
   }
-
-  /**
-   * Register panel type
-   * @param {string} name - Panel type name
-   * @param {Object} config - Panel configuration
-   * @param {string} [config.title] - Default title
-   * @param {string} [config.icon] - Material Symbols icon name
-   * @param {string} [config.component] - Custom element tag name
-   * @param {boolean} [config.headerClose] - Show a close action that removes UI-invoked or removable panel instances
-   * @param {Array} [config.menuActions] - Fold-down header menu action descriptors
-   * @param {import('./../LayoutTree.js').LayoutBehavior} [config.behavior] - Default behavior for panels of this type
-   */
   registerPanelType(name, config) {
     ensureMaterialSymbols([config.icon || 'dashboard']);
     this.$.panelTypes = {
@@ -1031,13 +1019,6 @@ export class Layout extends Symbiote {
     if (!this._railStackRegistry) this._railStackRegistry = createRailStackRegistry();
     return this._railStackRegistry;
   }
-
-  /**
-   * Rail descriptors for this layout's currently collapsed drawer rails.
-   * Shared host zones render these identity-preserving; clicks route back
-   * here via `openDrawer`, keeping single-active drawer semantics local.
-   * @returns {Array<Object>}
-   */
   getDrawerRailDescriptors() {
     let ownerId = this._ensureRailStackOwnerId();
     let descriptors = [];
@@ -1063,14 +1044,6 @@ export class Layout extends Symbiote {
     }
     return descriptors;
   }
-
-  /**
-   * Register a nested layout as a rail-stack contributor. The host renders
-   * its own collapsed rails plus each contributor's in one shared zone with
-   * equal vertical regions; activation routes to the owning layout.
-   * @param {Object} layout - Nested `panel-layout` instance.
-   * @returns {boolean}
-   */
   registerRailStackContributor(layout) {
     if (!layout || layout === this || typeof layout.getDrawerRailDescriptors !== 'function') return false;
     if (!this._railStackContributors) this._railStackContributors = new Map();
@@ -1083,12 +1056,6 @@ export class Layout extends Symbiote {
     this._syncRailStack();
     return true;
   }
-
-  /**
-   * Remove a previously registered nested contributor.
-   * @param {Object} layout
-   * @returns {boolean}
-   */
   unregisterRailStackContributor(layout) {
     let contributorId = layout?._railStackOwnerId || '';
     let removed = this._railStackContributors?.delete(contributorId) || false;
@@ -1713,11 +1680,6 @@ export class Layout extends Symbiote {
     let panel = this._drawerProjection?.panels?.find((item) => item.id === panelId);
     return panel?.dock === 'start' || panel?.dock === 'end' ? panel.dock : '';
   }
-
-  /**
-   * Show panel type selection menu
-   * @param {CustomEvent} e
-   */
   _onPanelTypeMenu(e) {
     if (this.$.panelChrome === false) return;
     let { panelId, currentType, x, y } = e.detail;
@@ -1733,11 +1695,6 @@ export class Layout extends Symbiote {
 
     menu.show(x, y, panelId, currentType, items);
   }
-
-  /**
-   * Handle panel type change
-   * @param {CustomEvent} e
-   */
   _onPanelTypeSelect(e) {
     if (this.$.panelChrome === false) return;
     let { panelId, type } = e.detail;
@@ -1760,11 +1717,6 @@ export class Layout extends Symbiote {
     this.$.layoutTree = { ...tree };
     this._saveLayout();
   }
-
-  /**
-   * Toggle panel collapse state
-   * @param {CustomEvent} e
-   */
   _onPanelCollapseToggle(e) {
     if (this.$.panelChrome === false) return;
     let { panelId, collapsed } = e.detail;
@@ -1879,11 +1831,6 @@ export class Layout extends Symbiote {
       this.joinPanels(panelId);
     }
   }
-
-  /**
-   * Toggle panel fullscreen
-   * @param {CustomEvent} e
-   */
   _onPanelFullscreen(e) {
     if (this.$.panelChrome === false) return;
     let { panelId } = e.detail;
@@ -1954,13 +1901,6 @@ export class Layout extends Symbiote {
     setStylePropertyIfChanged(this.style, '--sn-layout-fullscreen-host-right', '0px');
     setStylePropertyIfChanged(this.style, '--sn-layout-fullscreen-host-bottom', '0px');
   }
-
-  /**
-   * Update tabItems array for Itemize-based tab bar
-   * @param {NodeListOf<Element>} [allPanels] - Optional, will query DOM if not provided
-   * @param {string} [activePanelId] - Optional, defaults to fullscreenPanelId
-   * @returns {void}
-   */
   _updateTabItems(allPanels, activePanelId) {
     let panels = allPanels || this.querySelectorAll('layout-node[node-type="panel"]');
     let activeId = activePanelId || this.$.fullscreenPanelId;
@@ -1978,11 +1918,6 @@ export class Layout extends Symbiote {
       };
     });
   }
-
-  /**
-   * Switch fullscreen to another panel
-   * @param {string} panelId - Panel ID to switch to
-   */
   _switchFullscreenPanel(panelId) {
     let allPanels = this.querySelectorAll('layout-node[node-type="panel"]');
     let newPanel = this._findPanelNode(panelId);
@@ -2009,12 +1944,6 @@ export class Layout extends Symbiote {
 
     this._updateTabItems(allPanels, panelId);
   }
-
-  /**
-   * Find a panel node by ID
-   * @param {string} panelId
-   * @returns {HTMLElement|null}
-   */
   _findPanelNode(panelId) {
     let nodes = this.querySelectorAll('layout-node[node-type="panel"]');
     for (const node of nodes) {
@@ -2034,14 +1963,6 @@ export class Layout extends Symbiote {
     }
     return null;
   }
-
-  /**
-   * Split a panel
-   * @param {string} panelId - Panel ID to split
-   * @param {'horizontal' | 'vertical'} direction - Split direction
-   * @param {number} [ratio=0.5] - Split ratio
-   * @param {string} [newPanelType] - Type for new panel
-   */
   splitPanel(panelId, direction, ratio = 0.5, newPanelType) {
     let newTree = LayoutTree.splitPanel(
       LayoutTree.clone(this.$.layoutTree),
@@ -2056,11 +1977,6 @@ export class Layout extends Symbiote {
       this._saveLayout();
     }
   }
-
-  /**
-   * Join panels (remove one)
-   * @param {string} panelToRemove - Panel ID to remove
-   */
   joinPanels(panelToRemove) {
     let newTree = LayoutTree.joinPanels(LayoutTree.clone(this.$.layoutTree), panelToRemove);
 
@@ -2069,13 +1985,6 @@ export class Layout extends Symbiote {
       this._saveLayout();
     }
   }
-
-  /**
-   * Duplicate a panel.
-   * @param {string} panelId - Panel ID to duplicate
-   * @param {'horizontal' | 'vertical'} [direction='horizontal'] - Split direction
-   * @param {number} [ratio=0.5] - Split ratio
-   */
   duplicatePanel(panelId, direction = 'horizontal', ratio = 0.5) {
     let newTree = LayoutTree.duplicatePanel(
       LayoutTree.clone(this.$.layoutTree),
@@ -2089,20 +1998,6 @@ export class Layout extends Symbiote {
       this._saveLayout();
     }
   }
-
-  /**
-   * Open a panel type inside the current layout tree.
-   * @param {string} panelType
-   * @param {Object} [options]
-   * @param {'horizontal' | 'vertical'} [options.direction]
-   * @param {number} [options.ratio]
-   * @param {Object} [options.panelState]
-   * @param {import('./../LayoutTree.js').LayoutBehavior} [options.behavior]
-   * @param {boolean} [options.reuseExisting]
-   * @param {boolean} [options.uiInvoked]
-   * @param {string} [options.source]
-   * @returns {string|null} opened or reused panel id
-   */
   openPanel(panelType, options = {}) {
     if (options.uiInvoked) {
       this._captureUiPanelRestoreTree();
@@ -2132,12 +2027,6 @@ export class Layout extends Symbiote {
     }));
     return result.panel.id;
   }
-
-  /**
-   * Close a panel previously opened by UI/agent intent.
-   * @param {string} panelType
-   * @returns {boolean}
-   */
   closeUiPanel(panelType) {
     let result = LayoutTree.closeUiPanel(LayoutTree.clone(this.$.layoutTree), panelType);
     if (!result.closed) return false;
@@ -2186,12 +2075,6 @@ export class Layout extends Symbiote {
     this._clearUiPanelRestoreTreeWhenSettled();
     return true;
   }
-
-  /**
-   * Remove a panel previously opened by UI/agent intent.
-   * @param {string} panelType
-   * @returns {boolean}
-   */
   removeUiPanel(panelType) {
     let result = LayoutTree.removeUiPanel(LayoutTree.clone(this.$.layoutTree), panelType, {
       fallbackRoot: this._uiPanelRestoreTree,
@@ -2233,32 +2116,14 @@ export class Layout extends Symbiote {
       this._uiPanelRestoreTree = null;
     }
   }
-
-  /**
-   * Set the fold-down header menu actions for a panel.
-   * @param {string} panelId
-   * @param {Array<{id: string, label?: string, icon?: string, title?: string, active?: boolean, disabled?: boolean}>} actions
-   */
   setPanelMenuActions(panelId, actions = []) {
     let panelNode = this._findPanelNode(panelId);
     panelNode?.setPanelMenuActions?.(actions);
   }
-
-  /**
-   * Set root layout behavior used for auto-collapse and responsive overflow.
-   * @param {import('./../LayoutTree.js').LayoutBehavior} behavior
-   */
   setLayoutBehavior(behavior = {}) {
     this.$.layoutBehavior = LayoutTree.normalizeLayoutBehavior(behavior, this._getAttributeBehavior());
     this._scheduleResponsiveLayout();
   }
-
-  /**
-   * Set responsive behavior for a concrete layout tree insertion point.
-   * @param {string} nodeId
-   * @param {import('./../LayoutTree.js').LayoutBehavior} behavior
-   * @returns {boolean}
-   */
   setNodeBehavior(nodeId, behavior = {}) {
     let tree = LayoutTree.clone(this.$.layoutTree);
     let updated = LayoutTree.setNodeBehavior(tree, nodeId, behavior, this._getRootBehavior());
@@ -2268,19 +2133,9 @@ export class Layout extends Symbiote {
     this._scheduleResponsiveLayout();
     return true;
   }
-
-  /**
-   * Get current layout
-   * @returns {import('./../LayoutTree.js').LayoutNode}
-   */
   getLayout() {
     return LayoutTree.clone(this.$.layoutTree);
   }
-
-  /**
-   * Set layout
-   * @param {import('./../LayoutTree.js').LayoutNode} layout
-   */
   setLayout(layout) {
     let allPanels = this.querySelectorAll('layout-node[node-type="panel"]');
     allPanels.forEach((panelNode) => {

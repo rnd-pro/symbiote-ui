@@ -79,25 +79,9 @@ export class AgentDockShell extends Symbiote {
   getChat() {
     return this.ref.layout?.querySelector?.('agent-show-chat') || null;
   }
-
-  /**
-   * Register a nested consumer layout (for example an inner graph+theme
-   * `panel-layout` slotted into the main workspace) as a rail-stack
-   * contributor. The shell's own layout renders its collapsed chat rail plus
-   * each contributor rail identity-preserving in equal vertical regions;
-   * activation routes back to the owning layout.
-   * @param {Object} layout - Nested `panel-layout` instance.
-   * @returns {boolean}
-   */
   registerRailStackLayout(layout) {
     return this.ref.layout?.registerRailStackContributor?.(layout) || false;
   }
-
-  /**
-   * Remove a previously registered nested rail-stack contributor.
-   * @param {Object} layout
-   * @returns {boolean}
-   */
   unregisterRailStackLayout(layout) {
     return this.ref.layout?.unregisterRailStackContributor?.(layout) || false;
   }
