@@ -4,160 +4,129 @@ await acquireCurrentTestFileLock(import.meta.url);
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
-import {
-  createRailStackRegistry,
-  layoutRailStack,
-  normalizeRailDescriptor,
-  resolveRailStackRegions,
-  routeRailDescriptor,
-} from '../layout/rail-stack.js';
 
-const railStackSource = new URL('../layout/rail-stack.js', import.meta.url);
 const layoutSource = new URL('../layout/Layout/Layout.js', import.meta.url);
 const layoutStyles = new URL('../layout/Layout/Layout.css.js', import.meta.url);
 const layoutTemplate = new URL('../layout/Layout/Layout.tpl.js', import.meta.url);
 const dockShellSource = new URL('../chat/AgentDockShell/AgentDockShell.js', import.meta.url);
 
-const HOST_HEIGHT = 512;
-
-test('rail stack splits the host into two equal vertical regions for N=2', () => {
-  let regions = resolveRailStackRegions(2, HOST_HEIGHT);
-
-  assert.equal(regions.length, 2);
-  assert.deepEqual(regions[0], { index: 0, top: 0, height: 256 });
-  assert.deepEqual(regions[1], { index: 1, top: 256, height: 256 });
-  assert.equal(regions[0].height, regions[1].height);
-  assert.equal(regions[0].height + regions[1].height, HOST_HEIGHT);
-});
-
-test('rail stack splits the host into three equal vertical regions for N=3', () => {
-  let regions = resolveRailStackRegions(3, HOST_HEIGHT);
-
-  assert.equal(regions.length, 3);
-  for (let region of regions) {
-    assert.ok(Math.abs(region.height - HOST_HEIGHT / 3) < 1e-9);
-  }
-  assert.equal(regions[0].top, 0);
-  assert.ok(Math.abs(regions[1].top - HOST_HEIGHT / 3) < 1e-9);
-  assert.ok(Math.abs(regions[2].top - (2 * HOST_HEIGHT) / 3) < 1e-9);
-  let total = regions.reduce((sum, region) => sum + region.height, 0);
-  assert.ok(Math.abs(total - HOST_HEIGHT) < 1e-9);
-});
-
-test('rail stack keeps a single rail full-height for N=1', () => {
-  assert.deepEqual(resolveRailStackRegions(1, HOST_HEIGHT), [
-    { index: 0, top: 0, height: HOST_HEIGHT },
-  ]);
-});
-
-test('rail stack attaches regions without changing rail identity', () => {
-  let owner = { name: 'inner-layout' };
-  let stacked = layoutRailStack(
-    [
-      { railId: 'inner:end:graph', owner, ownerId: 'inner', panelId: 'graph', dock: 'end', icon: 'hub', label: 'Graph' },
-      { railId: 'inner:end:theme', owner, ownerId: 'inner', panelId: 'theme', dock: 'end', icon: 'palette', label: 'Theme' },
-    ],
-    HOST_HEIGHT
-  );
-
-  assert.equal(stacked.length, 2);
-  assert.equal(stacked[0].railId, 'inner:end:graph');
-  assert.equal(stacked[0].owner, owner);
-  assert.equal(stacked[0].icon, 'hub');
-  assert.deepEqual(stacked[0].region, { index: 0, top: 0, height: 256 });
-  assert.deepEqual(stacked[1].region, { index: 1, top: 256, height: 256 });
-});
-
-test('rail stack registry preserves per-owner identity and routes by rail id', () => {
-  let registry = createRailStackRegistry();
-  let inner = { name: 'inner' };
-  let outer = { name: 'outer' };
-
-  registry.register('inner', [
-    { railId: 'inner:end:graph', owner: inner, panelId: 'graph', dock: 'end' },
-    { railId: 'inner:end:theme', owner: inner, panelId: 'theme', dock: 'end' },
-  ]);
-  registry.register('outer', [
-    { railId: 'outer:end:chat', owner: outer, panelId: 'chat', dock: 'end' },
-  ]);
-
-  assert.equal(registry.count(), 3);
-  assert.deepEqual(registry.list().map((rail) => rail.railId), [
-    'inner:end:graph',
-    'inner:end:theme',
-    'outer:end:chat',
-  ]);
-
-  let routed = routeRailDescriptor(registry.list(), 'outer:end:chat');
-  assert.equal(routed.owner, outer);
-  assert.equal(routed.panelId, 'chat');
-  assert.equal(routeRailDescriptor(registry.list(), 'missing'), null);
-
-  // Re-registering one owner replaces only that owner's slice.
-  registry.register('inner', [
-    { railId: 'inner:end:graph', owner: inner, panelId: 'graph', dock: 'end' },
-  ]);
-  assert.deepEqual(registry.list().map((rail) => rail.railId), [
-    'inner:end:graph',
-    'outer:end:chat',
-  ]);
-
-  registry.unregister('inner');
-  assert.deepEqual(registry.list().map((rail) => rail.railId), ['outer:end:chat']);
-});
-
-test('rail stack rejects descriptors without stable identity', () => {
-  assert.equal(normalizeRailDescriptor({ panelId: 'graph', dock: 'end' }), null);
-  assert.equal(normalizeRailDescriptor({ railId: 'x', dock: 'end' }), null);
-  assert.equal(normalizeRailDescriptor({ railId: 'x', panelId: 'graph', dock: 'middle' }), null);
-});
-
-test('nested layouts contribute rails to a shared host zone routed to the owner', async () => {
-  let [stack, layout, template, styles, shell] = await Promise.all([
-    readFile(railStackSource, 'utf8'),
+test('native R2 rails render without synthetic rail-button presentation', async () => {
+  let [layout, template, styles] = await Promise.all([
     readFile(layoutSource, 'utf8'),
     readFile(layoutTemplate, 'utf8'),
     readFile(layoutStyles, 'utf8'),
+  ]);
+
+  // No synthetic button zones in the template.
+  assert.doesNotMatch(template, /layout-drawer-launcher/);
+  assert.doesNotMatch(template, /layout-rail-stack/);
+  assert.doesNotMatch(template, /rail-stack-btn/);
+  assert.doesNotMatch(template, /launcher-list/);
+  assert.doesNotMatch(template, /rail-stack-list/);
+  assert.doesNotMatch(template, /startLauncherItems/);
+  assert.doesNotMatch(template, /endLauncherItems/);
+  assert.doesNotMatch(template, /railStack\w*Items/);
+  assert.doesNotMatch(template, /onLauncherClick/);
+  assert.doesNotMatch(template, /onRailStackClick/);
+
+  // No synthetic button state or proxy routing in the provider.
+  assert.doesNotMatch(layout, /onLauncherClick/);
+  assert.doesNotMatch(layout, /onRailStackClick/);
+  assert.doesNotMatch(layout, /_syncDrawerLaunchers/);
+  assert.doesNotMatch(layout, /_syncRailStack/);
+  assert.doesNotMatch(layout, /_activateStackedRail/);
+  assert.doesNotMatch(layout, /getDrawerRailDescriptors/);
+  assert.doesNotMatch(layout, /registerRailStackContributor/);
+  assert.doesNotMatch(layout, /unregisterRailStackContributor/);
+  assert.doesNotMatch(layout, /railStack\w*Items/);
+  assert.doesNotMatch(layout, /hasRailStack/);
+  assert.doesNotMatch(layout, /hasStartLaunchers/);
+  assert.doesNotMatch(layout, /hasEndLaunchers/);
+  assert.doesNotMatch(layout, /rail-stack-active/);
+  assert.doesNotMatch(layout, /drawer-start-launchers/);
+  assert.doesNotMatch(layout, /drawer-end-launchers/);
+
+  // No synthetic button styles, and native collapsed rails are never hidden.
+  assert.doesNotMatch(styles, /\.layout-drawer-launcher/);
+  assert.doesNotMatch(styles, /\.layout-rail-stack-btn/);
+  assert.doesNotMatch(styles, /\.rail-stack-list/);
+  assert.doesNotMatch(styles, /\.launcher-list/);
+  assert.doesNotMatch(styles, /\[drawer-rail\]\[drawer-rail-collapsed\][\s\S]{0,160}?display:\s*none/);
+});
+
+test('native R2 rails share one dock edge as equal regions with a gap', async () => {
+  let [layout, styles] = await Promise.all([
+    readFile(layoutSource, 'utf8'),
+    readFile(layoutStyles, 'utf8'),
+  ]);
+
+  // One dock edge per side: START stays inline-start, END stays inline-end.
+  assert.match(styles, /layout-node\[mobile-dock='start'\][\s\S]*?inset-inline-start:\s*0;/);
+  assert.match(styles, /layout-node\[mobile-dock='end'\][\s\S]*?inset-inline-end:\s*0;/);
+
+  // Equal vertical regions driven by per-rail count/index with a uniform gap.
+  assert.match(styles, /--sn-layout-rail-count/);
+  assert.match(styles, /--sn-layout-rail-index/);
+  assert.match(styles, /--sn-layout-rail-gap|--sn-layout-native-rail-gap/);
+  assert.match(
+    styles,
+    /layout-node\[drawer-rail\]\[drawer-rail-collapsed\][\s\S]*?block-size:\s*calc\(/
+  );
+  assert.match(
+    styles,
+    /layout-node\[drawer-rail\]\[drawer-rail-collapsed\][\s\S]*?inset-block-start:\s*calc\(/
+  );
+
+  // Single owner: this layout's own nodes, deduped by dock + panel identity.
+  assert.match(layout, /_syncNativeRailRegions/);
+  assert.match(layout, /getOwnedLayoutNodes\((?:this|layout),\s*'layout-node\[drawer-rail\]\[drawer-rail-collapsed\]'\)/);
+  assert.match(layout, /--sn-layout-rail-count/);
+  assert.match(layout, /--sn-layout-rail-index/);
+  assert.match(layout, /dataset\?\.drawerPanelId/);
+});
+
+test('native R2 rails keep a single owner with no inner/outer duplicates', async () => {
+  let [layout, shell] = await Promise.all([
+    readFile(layoutSource, 'utf8'),
     readFile(dockShellSource, 'utf8'),
   ]);
 
-  // Pure contract stays Node-safe: no window/document in the shared module.
-  assert.doesNotMatch(stack, /window|document/);
-  assert.match(stack, /resolveRailStackRegions/);
-  assert.match(stack, /createRailStackRegistry/);
-  assert.match(stack, /routeRailDescriptor/);
+  // No cross-layout contributor/host registries on the provider.
+  assert.doesNotMatch(layout, /_railStackContributors/);
+  assert.doesNotMatch(layout, /_railStackHosts/);
+  assert.doesNotMatch(layout, /_railStackRegistry/);
+  assert.doesNotMatch(layout, /rail-stack-suppressed/);
+  assert.doesNotMatch(layout, /rail-stack-count/);
 
-  // Host registration/config API on the layout provider.
-  assert.match(layout, /getDrawerRailDescriptors/);
-  assert.match(layout, /registerRailStackContributor/);
-  assert.match(layout, /unregisterRailStackContributor/);
-  assert.match(layout, /onRailStackClick/);
-  assert.match(layout, /_syncRailStack/);
-  assert.match(layout, /_activateStackedRail/);
-  assert.match(layout, /railStackItems/);
-  assert.match(layout, /hasRailStack/);
-  assert.match(layout, /rail-stack-active/);
-  assert.match(layout, /rail-stack-suppressed/);
+  // No nested-layout rail merging from the dock shell: each panel-layout
+  // owns exactly its own collapsed rails.
+  assert.doesNotMatch(shell, /registerRailStackContributor/);
+  assert.doesNotMatch(shell, /unregisterRailStackContributor/);
+  assert.doesNotMatch(shell, /RailStack/i);
+});
 
-  // Shared zone renders one proxy per rail; clicks route to the owner.
-  assert.match(template, /layout-rail-stack/);
-  assert.match(template, /railStackItems/);
-  assert.match(template, /onRailStackClick/);
-  assert.match(template, /data-rail-id/);
-  assert.match(styles, /\.layout-rail-stack\s*\{[\s\S]*?flex-direction:\s*column;/);
-  assert.match(styles, /\.layout-rail-stack-btn\s*\{[\s\S]*?flex:\s*1 1 0;/);
-  assert.match(styles, /rail-stack-suppressed/);
-  assert.match(styles, /\.layout-rail-stack-btn:focus-visible\s*\{[\s\S]*?outline:/);
+test('native R2 rails preserve open/close/swipe/focus lifecycle', async () => {
+  let [layout, styles] = await Promise.all([
+    readFile(layoutSource, 'utf8'),
+    readFile(layoutStyles, 'utf8'),
+  ]);
 
-  // Existing same-layout launchers and single-active drawer semantics stay.
-  assert.match(layout, /_syncDrawerLaunchers/);
-  assert.match(layout, /onLauncherClick/);
-  assert.match(layout, /this\.openDrawer\(dock, panelId\)/);
-  assert.match(template, /layout-drawer-launchers-start/);
-  assert.match(template, /layout-drawer-launchers-end/);
+  // Drawer open/close API and single-active semantics stay on the provider.
+  assert.match(layout, /openDrawer\(dock, panelId\)/);
+  assert.match(layout, /closeDrawer\(/);
+  assert.match(layout, /toggleDrawer\(/);
+  assert.match(layout, /_resyncDrawerProjection/);
 
-  // Minimal CV call-site: the dock shell registers a nested consumer layout.
-  assert.match(shell, /registerRailStackLayout/);
-  assert.match(shell, /unregisterRailStackLayout/);
-  assert.match(shell, /registerRailStackContributor/);
+  // Swipe lifecycle stays on native rail surfaces and drawer content.
+  assert.match(layout, /_onDrawerRailPointerDown/);
+  assert.match(layout, /_onDrawerPointerMove/);
+  assert.match(layout, /_onDrawerPointerUp/);
+  assert.match(layout, /layout-node\[drawer-rail\]\[drawer-rail-collapsed\]\[data-drawer-dock\]/);
+  assert.match(layout, /drawer-open/);
+  assert.match(layout, /drawer-expanded/);
+
+  // Collapsed native rails keep their visible icon affordance.
+  assert.match(styles, /layout-node\[drawer-rail\]\[drawer-rail-collapsed\][\s\S]*?\.type-btn\s*\{[\s\S]*?display:\s*flex !important;/);
+  // Collapsed rails keep an interactive collapse affordance.
+  assert.match(styles, /layout-node\[drawer-rail\]\[drawer-rail-collapsed\][\s\S]*?\.collapse-btn\s*\{/);
 });

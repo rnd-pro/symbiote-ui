@@ -10,71 +10,8 @@ export let template = html`
   ></button>
   <panel-menu ref="menu"></panel-menu>
 
-  <div
-    class="layout-drawer-launchers layout-drawer-launchers-start"
-    data-drawer-dock="start"
-    ${{ '@hidden': '!hasStartLaunchers' }}
-  >
-    <div class="launcher-list" itemize="startLauncherItems">
-      <template>
-        <button
-          class="layout-drawer-launcher material-symbols-outlined"
-          type="button"
-          ${{
-            onclick: '^onLauncherClick',
-            '@data-drawer-dock': 'dock',
-            '@data-drawer-panel-id': 'panelId',
-            '@aria-label': 'label',
-            textContent: 'icon',
-          }}
-        ></button>
-      </template>
-    </div>
-  </div>
-  <div
-    class="layout-drawer-launchers layout-drawer-launchers-end"
-    data-drawer-dock="end"
-    ${{ '@hidden': '!hasEndLaunchers' }}
-  >
-    <div class="launcher-list" itemize="endLauncherItems">
-      <template>
-        <button
-          class="layout-drawer-launcher material-symbols-outlined"
-          type="button"
-          ${{
-            onclick: '^onLauncherClick',
-            '@data-drawer-dock': 'dock',
-            '@data-drawer-panel-id': 'panelId',
-            '@aria-label': 'label',
-            textContent: 'icon',
-          }}
-        ></button>
-      </template>
-    </div>
-  </div>
-
-  <div
-    class="layout-rail-stack"
-    data-rail-stack-zone="end"
-    ${{ '@hidden': '!hasRailStack' }}
-  >
-    <div class="rail-stack-list" itemize="railStackItems">
-      <template>
-        <button
-          class="layout-rail-stack-btn material-symbols-outlined"
-          type="button"
-          ${{
-            onclick: '^onRailStackClick',
-            '@data-rail-id': 'railId',
-            '@data-drawer-dock': 'dock',
-            '@data-drawer-panel-id': 'panelId',
-            '@aria-label': 'label',
-            textContent: 'icon',
-          }}
-        ></button>
-      </template>
-    </div>
-  </div>
+  <!-- Native R2 rails: collapsed drawer panels render as their own
+    layout-node surfaces. No synthetic launcher or rail-stack buttons. -->
 
   <!-- Fullscreen tab bar (hidden by default) -->
   <div class="fullscreen-tab-bar" ${{ '@hidden': '!hasFullscreenTabs' }}>

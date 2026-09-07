@@ -1796,7 +1796,7 @@ test('panel layout drawer API and rail gestures open and close drawer panels wit
   railLayout.remove();
 });
 
-test('mobile drawer rails expose icon launchers instead of overlapping strips', async () => {
+test('mobile drawer rails render as native collapsed surfaces without synthetic buttons', async () => {
   let [layout, styles, template] = await Promise.all([
     readFile(layoutSource, 'utf8'),
     readFile(layoutStyles, 'utf8'),
@@ -1806,26 +1806,28 @@ test('mobile drawer rails expose icon launchers instead of overlapping strips', 
   // Collapsed rail keeps a visible icon: the drawer-mode .type-btn hide is
   // overridden for rail-collapsed nodes so the glyph box survives the font.
   assert.match(styles, /layout-node\[drawer-rail\]\[drawer-rail-collapsed\][\s\S]*?\.type-btn\s*\{[\s\S]*?display:\s*flex !important;/);
-  // Launcher zones: one vertical icon stack per side, itemized per closed rail.
-  assert.match(template, /layout-drawer-launchers-start/);
-  assert.match(template, /layout-drawer-launchers-end/);
-  assert.match(template, /onLauncherClick/);
-  assert.match(template, /startLauncherItems/);
-  assert.match(template, /endLauncherItems/);
-  assert.match(template, /data-drawer-panel-id/);
-  assert.match(layout, /_syncDrawerLaunchers/);
-  assert.match(layout, /onLauncherClick/);
-  assert.match(layout, /hasStartLaunchers/);
-  assert.match(layout, /hasEndLaunchers/);
-  assert.match(layout, /drawer-start-launchers/);
-  assert.match(layout, /drawer-end-launchers/);
-  assert.match(layout, /this\.openDrawer\(dock, panelId\)/);
-  assert.match(styles, /\.layout-drawer-launchers\s*\{[\s\S]*?flex-direction:\s*column;/);
-  assert.match(styles, /\.layout-drawer-launcher:focus-visible\s*\{[\s\S]*?outline:/);
-  assert.match(styles, /\[drawer-start-launchers\] layout-node\[mobile-dock='start'\]/);
-  assert.match(styles, /\[drawer-end-launchers\] layout-node\[mobile-dock='end'\]/);
-  // No handle-stack fork: launchers replace overlapping rails, nothing else.
+  // Native R2 contract: same-side collapsed panels share one dock edge as
+  // equal regions with a gap; no synthetic launcher or rail-stack buttons.
+  assert.match(layout, /_syncNativeRailRegions/);
+  assert.match(styles, /--sn-layout-rail-count/);
+  assert.match(styles, /--sn-layout-rail-index/);
+  assert.doesNotMatch(template, /layout-drawer-launchers-start/);
+  assert.doesNotMatch(template, /layout-drawer-launchers-end/);
+  assert.doesNotMatch(template, /onLauncherClick/);
+  assert.doesNotMatch(template, /startLauncherItems/);
+  assert.doesNotMatch(template, /endLauncherItems/);
+  assert.doesNotMatch(layout, /_syncDrawerLaunchers/);
+  assert.doesNotMatch(layout, /onLauncherClick/);
+  assert.doesNotMatch(layout, /hasStartLaunchers/);
+  assert.doesNotMatch(layout, /hasEndLaunchers/);
+  assert.doesNotMatch(layout, /drawer-start-launchers/);
+  assert.doesNotMatch(layout, /drawer-end-launchers/);
+  assert.doesNotMatch(styles, /\.layout-drawer-launcher/);
+  // No handle-stack fork and no synthetic rail-button fork: native collapsed
+  // rails stay visible, nothing else replaces them.
   assert.doesNotMatch(layout, /_renderDrawerHandleStack/);
   assert.doesNotMatch(template, /layout-drawer-handle/);
   assert.doesNotMatch(styles, /layout-drawer-handle/);
+  assert.doesNotMatch(template, /layout-rail-stack/);
+  assert.doesNotMatch(styles, /\.layout-rail-stack-btn/);
 });

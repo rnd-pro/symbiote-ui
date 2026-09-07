@@ -79,12 +79,6 @@ export class AgentDockShell extends Symbiote {
   getChat() {
     return this.ref.layout?.querySelector?.('agent-show-chat') || null;
   }
-  registerRailStackLayout(layout) {
-    return this.ref.layout?.registerRailStackContributor?.(layout) || false;
-  }
-  unregisterRailStackLayout(layout) {
-    return this.ref.layout?.unregisterRailStackContributor?.(layout) || false;
-  }
 
   setAgentProvider(provider) {
     let chat = this.getChat();
@@ -252,18 +246,6 @@ export class AgentDockShell extends Symbiote {
       ...Array.from(this.querySelectorAll('[slot="main"]')),
     ].filter((item) => !host.contains(item));
     for (let item of new Set(mainItems)) host.append(item);
-    this._wireNestedRailStackContributor(host);
-  }
-
-  _wireNestedRailStackContributor(host) {
-    try {
-      let layout = this.ref.layout;
-      if (!layout?.registerRailStackContributor) return;
-      let nested = host.querySelector?.('panel-layout');
-      if (nested && nested !== layout) layout.registerRailStackContributor(nested);
-    } catch {
-      // Rail-stack wiring is best-effort: native rails remain usable.
-    }
   }
 
   _isDrawerMode() {

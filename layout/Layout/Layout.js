@@ -7,8 +7,6 @@
 import Symbiote from '@symbiotejs/symbiote';
 import { ensureMaterialSymbols } from '../../icons/MaterialSymbols.js';
 import * as LayoutTree from './../LayoutTree.js';
-import { normalizeRailDescriptor } from '../rail-stack.js';
-import { createRailStackRegistry } from '../rail-stack.js';
 import { resumeLayoutSubtree, suspendLayoutSubtree } from './../lifecycle.js';
 import { template } from './Layout.tpl.js';
 import { styles } from './Layout.css.js';
@@ -56,7 +54,7 @@ function drawerTranslateTransform(value) {
 const LAYOUT_PEER_GROUPS = new Map();
 const LAYOUT_PEER_PENDING_GROUPS = new Set();
 let layoutPeerRefreshFrame = 0;
-let railStackOwnerSeq = 0;
+const NATIVE_RAIL_LAYOUTS = new Set();
 
 function normalizeLayoutPeerGroup(value) {
   return String(value || '').trim();
@@ -193,12 +191,6 @@ export class Layout extends Symbiote {
     drawerEndOpen: false,
     drawerStartPanelId: '',
     drawerEndPanelId: '',
-    hasStartLaunchers: false,
-    startLauncherItems: [],
-    hasEndLaunchers: false,
-    endLauncherItems: [],
-    hasRailStack: false,
-    railStackItems: [],
 
 
     onTabClick: (e) => {
@@ -210,24 +202,10 @@ export class Layout extends Symbiote {
 
 
     onDrawerBackdropClick: () => this.closeDrawer(),
-
-    onLauncherClick: (e) => {
-      let launcher = e.target?.closest?.('[data-drawer-panel-id]');
-      let dock = launcher?.dataset?.drawerDock || '';
-      let panelId = launcher?.dataset?.drawerPanelId || '';
-      if ((dock === 'start' || dock === 'end') && panelId) {
-        this.openDrawer(dock, panelId);
-      }
-    },
-
-    onRailStackClick: (e) => {
-      let proxy = e.target?.closest?.('[data-rail-id]');
-      let railId = proxy?.dataset?.railId || '';
-      if (railId) this._activateStackedRail(railId);
-    },
   };
 
   connectedCallback() {
+    NATIVE_RAIL_LAYOUTS.add(this);
     super.connectedCallback?.();
     this._connectLayoutLifecycle();
     this._syncPeerGroupRegistration();
@@ -309,8 +287,8 @@ export class Layout extends Symbiote {
   }
 
   disconnectedCallback() {
+    NATIVE_RAIL_LAYOUTS.delete(this);
     this._unregisterPeerGroup();
-    this._teardownRailStack();
     this._disconnectLayoutLifecycle();
     if (this._responsiveFrame && typeof cancelAnimationFrame !== 'undefined') {
       cancelAnimationFrame(this._responsiveFrame);
@@ -877,7 +855,7 @@ export class Layout extends Symbiote {
         node.style.removeProperty('inset-inline-end');
       }
     }
-    this._syncDrawerLaunchers();
+    this._syncNativeRailRegions();
     this._scheduleDrawerRailPeek(startOpen, endOpen);
     let ready = matchedPanelIds.size === projection.panels.length;
     if (ready) {
@@ -917,26 +895,12 @@ export class Layout extends Symbiote {
     this.removeAttribute('drawer-primary-panel-id');
     this.removeAttribute('drawer-start-panel-id');
     this.removeAttribute('drawer-end-panel-id');
-    this.removeAttribute('drawer-start-launchers');
-    this.removeAttribute('drawer-end-launchers');
-    this.$.startLauncherItems = [];
-    this.$.endLauncherItems = [];
-    this.$.hasStartLaunchers = false;
-    this.$.hasEndLaunchers = false;
-    this.$.railStackItems = [];
-    this.$.hasRailStack = false;
-    this.removeAttribute('rail-stack-active');
-    this.removeAttribute('rail-stack-count');
-    this._setRailStackSuppressed(false);
-    for (let layout of Array.from(this._railStackContributors?.values() || [])) {
-      layout._setRailStackSuppressed?.(false);
-    }
     this.removeAttribute('drawer-dragging');
     this._drawerProjection = null;
     for (let node of getOwnedLayoutNodes(this, 'layout-node[mobile-dock], layout-node[drawer-open]')) {
       this._clearDrawerNode(node);
     }
-    this._syncRailStack();
+    this._clearNativeRailRegions();
   }
 
   _clearDrawerNode(node) {
@@ -957,6 +921,8 @@ export class Layout extends Symbiote {
     node.style.removeProperty('--sn-layout-drawer-translate');
     node.style.removeProperty('inset-inline-start');
     node.style.removeProperty('inset-inline-end');
+    node.style.removeProperty('--sn-layout-rail-count');
+    node.style.removeProperty('--sn-layout-rail-index');
   }
 
   _syncDrawerNodeInteractionState(node, panel, open, rail) {
@@ -977,181 +943,49 @@ export class Layout extends Symbiote {
       return;
     }
     node.removeAttribute('drawer-rail-collapsed');
+    node.style.removeProperty('--sn-layout-rail-count');
+    node.style.removeProperty('--sn-layout-rail-index');
     this._setDrawerNodeExpanded(node, true);
   }
 
-  _syncDrawerLaunchers() {
-    let startItems = [];
-    let endItems = [];
-    for (let node of getOwnedLayoutNodes(this)) {
-      let dock = node.dataset?.drawerDock || '';
-      if (dock !== 'start' && dock !== 'end') continue;
-      if (!node.hasAttribute('drawer-rail') || !node.hasAttribute('drawer-rail-collapsed')) continue;
-      if (node.hasAttribute('drawer-open') || node.hasAttribute('drawer-active-panel')) continue;
-      let panelId = node.dataset.drawerPanelId || '';
-      if (!panelId) continue;
-      let icon = node.querySelector?.('.panel-icon')?.textContent?.trim() || '';
-      let label = node.querySelector?.('.panel-title')?.textContent?.trim() || panelId;
-      let item = { dock, panelId, icon, label };
-      if (dock === 'start') startItems.push(item);
-      else endItems.push(item);
-    }
-    let hasStart = startItems.length > 1;
-    let hasEnd = endItems.length > 1;
-    this.$.startLauncherItems = hasStart ? startItems : [];
-    this.$.endLauncherItems = hasEnd ? endItems : [];
-    this.$.hasStartLaunchers = hasStart;
-    this.$.hasEndLaunchers = hasEnd;
-    toggleAttributeIfChanged(this, 'drawer-start-launchers', hasStart);
-    toggleAttributeIfChanged(this, 'drawer-end-launchers', hasEnd);
-    this._syncRailStack();
-  }
-
-  _ensureRailStackOwnerId() {
-    if (!this._railStackOwnerId) {
-      railStackOwnerSeq += 1;
-      this._railStackOwnerId = `layout-rail-${railStackOwnerSeq}`;
-    }
-    return this._railStackOwnerId;
-  }
-
-  _ensureRailStackRegistry() {
-    if (!this._railStackRegistry) this._railStackRegistry = createRailStackRegistry();
-    return this._railStackRegistry;
-  }
-  getDrawerRailDescriptors() {
-    let ownerId = this._ensureRailStackOwnerId();
-    let descriptors = [];
-    for (let node of getOwnedLayoutNodes(this)) {
-      let dock = node.dataset?.drawerDock || '';
-      if (dock !== 'start' && dock !== 'end') continue;
-      if (!node.hasAttribute('drawer-rail') || !node.hasAttribute('drawer-rail-collapsed')) continue;
-      // Rail stack keeps the active rail: with single-active drawers one of
-      // N=2/N=3 collapsed rails always carries drawer-active-panel, so
-      // skipping it collapses the count to N-1 and the shared zone never
-      // activates. Open drawers stay excluded; activation routes back via
-      // _activateStackedRail -> owner.openDrawer. Launchers intentionally
-      // keep skipping the active rail in _syncDrawerLaunchers.
-      if (node.hasAttribute('drawer-open')) continue;
-      let panelId = node.dataset.drawerPanelId || '';
-      if (!panelId) continue;
-      let icon = node.querySelector?.('.panel-icon')?.textContent?.trim() || '';
-      let label = node.querySelector?.('.panel-title')?.textContent?.trim() || panelId;
-      let descriptor = normalizeRailDescriptor({
-        railId: `${ownerId}:${dock}:${panelId}`,
-        owner: this,
-        ownerId,
-        panelId,
-        dock,
-        icon,
-        label,
-      });
-      if (descriptor) descriptors.push(descriptor);
-    }
-    return descriptors;
-  }
-  registerRailStackContributor(layout) {
-    if (!layout || layout === this || typeof layout.getDrawerRailDescriptors !== 'function') return false;
-    if (!this._railStackContributors) this._railStackContributors = new Map();
-    let contributorId = layout._ensureRailStackOwnerId?.() || layout._railStackOwnerId || '';
-    if (!contributorId) return false;
-    this._railStackContributors.set(contributorId, layout);
-    if (!layout._railStackHosts) layout._railStackHosts = new Set();
-    layout._railStackHosts.add(this);
-    this._ensureRailStackOwnerId();
-    this._syncRailStack();
-    return true;
-  }
-  unregisterRailStackContributor(layout) {
-    let contributorId = layout?._railStackOwnerId || '';
-    let removed = this._railStackContributors?.delete(contributorId) || false;
-    layout?._railStackHosts?.delete?.(this);
-    if (removed) {
-      this._ensureRailStackRegistry().unregister(contributorId);
-      layout?._setRailStackSuppressed?.(false);
-      this._syncRailStack();
-    }
-    return removed;
-  }
-
-  _setRailStackSuppressed(suppressed) {
-    toggleAttributeIfChanged(this, 'rail-stack-suppressed', Boolean(suppressed));
-  }
-
-  _teardownRailStack() {
-    for (let host of Array.from(this._railStackHosts || [])) {
-      host.unregisterRailStackContributor?.(this);
-    }
-    for (let layout of Array.from(this._railStackContributors?.values() || [])) {
-      layout._railStackHosts?.delete?.(this);
-      layout._setRailStackSuppressed?.(false);
-    }
-    this._railStackContributors?.clear?.();
-  }
-
-  _syncRailStack() {
-    if (this._railStackSyncing) return;
-    if (!this.isConnected && !this._railStackRegistry && !this._railStackContributors?.size) return;
-    this._railStackSyncing = true;
-    try {
-      let registry = this._ensureRailStackRegistry();
-      let ownerId = this._ensureRailStackOwnerId();
-      let own = (this.isConnected && this.hasAttribute('drawer-mode-active'))
-        ? this.getDrawerRailDescriptors()
-        : [];
-      registry.register(ownerId, own);
-      let contributors = Array.from(this._railStackContributors?.values() || []);
-      for (let contributor of contributors) {
-        if (!contributor.isConnected) {
-          registry.unregister(contributor._railStackOwnerId || '');
-          contributor._setRailStackSuppressed?.(false);
-          continue;
+  // Native R2 rails: same-side collapsed panels share one dock edge as equal
+  // vertical regions with a uniform gap. Single owner (this layout's own
+  // nodes, deduped by panel identity); no synthetic buttons, no inner/outer
+  // cross-layout merging. Open/close/swipe/focus lifecycle is untouched.
+  _syncNativeRailRegions() {
+    let layouts = Array.from(NATIVE_RAIL_LAYOUTS).filter((layout) => layout.isConnected);
+    for (let dock of ['start', 'end']) {
+      let rails = layouts.flatMap((layout) => getOwnedLayoutNodes(layout, 'layout-node[drawer-rail][drawer-rail-collapsed]')
+        .filter((node) => (node.dataset?.drawerDock || '') === dock && !node.hasAttribute('drawer-open')));
+      let seen = new Set();
+      let unique = [];
+      for (let node of rails) {
+        let panelId = node.dataset?.drawerPanelId || node.$?.nodeId || '';
+        if (panelId && seen.has(`${dock}:${panelId}`)) continue;
+        if (panelId) seen.add(`${dock}:${panelId}`);
+        unique.push(node);
+      }
+      unique.forEach((node, index) => {
+        setStylePropertyIfChanged(node.style, '--sn-layout-rail-count', String(unique.length));
+        setStylePropertyIfChanged(node.style, '--sn-layout-rail-index', String(index));
+        setStylePropertyIfChanged(node.style, '--sn-layout-rail-header-justify', 'center');
+        if (dock === 'end') {
+          let parentRight = node.closest('panel-layout')?.getBoundingClientRect?.().right || 0;
+          let targetRight = Math.min(...layouts.map((layout) => layout.getBoundingClientRect?.().right || parentRight).filter(Boolean));
+          let offset = Math.max(0, parentRight - targetRight);
+          setStylePropertyIfChanged(node.style, 'inset-inline-end', `${Math.round(offset)}px`);
         }
-        let contributed = contributor.hasAttribute('drawer-mode-active')
-          ? contributor.getDrawerRailDescriptors()
-          : [];
-        registry.register(contributor._ensureRailStackOwnerId?.() || '', contributed);
-        contributor._setRailStackSuppressed?.(contributed.length > 0 && (registry.count() > 1));
-      }
-      let stacked = registry.list();
-      this._railStackSnapshot = stacked;
-      let active = stacked.length > 1;
-      this.$.railStackItems = active
-        ? stacked.map(({ railId, dock, panelId, icon, label, ownerId: itemOwnerId }) => ({
-          railId, dock, panelId, icon, label, ownerId: itemOwnerId,
-        }))
-        : [];
-      this.$.hasRailStack = active;
-      toggleAttributeIfChanged(this, 'rail-stack-active', active);
-      if (active) {
-        setAttributeIfChanged(this, 'rail-stack-count', String(stacked.length));
-      } else {
-        this.removeAttribute('rail-stack-count');
-      }
-      let ownStacked = active && own.length > 0;
-      this._setRailStackSuppressed(ownStacked);
-    } finally {
-      this._railStackSyncing = false;
-    }
-    for (let host of Array.from(this._railStackHosts || [])) {
-      if (host !== this) host._syncRailStack?.();
+      });
     }
   }
 
-  _activateStackedRail(railId) {
-    let stacked = Array.from(this._railStackSnapshot || []);
-    let match = stacked.find((item) => item.railId === String(railId || ''));
-    if (!match) return false;
-    let owner = match.owner;
-    if (owner && owner !== this && typeof owner.openDrawer === 'function') {
-      owner.openDrawer(match.dock, match.panelId);
-      return true;
+  _clearNativeRailRegions() {
+    for (let node of getOwnedLayoutNodes(this, 'layout-node[drawer-rail-collapsed]')) {
+      node.style.removeProperty('--sn-layout-rail-count');
+      node.style.removeProperty('--sn-layout-rail-index');
+      node.style.removeProperty('--sn-layout-rail-header-justify');
+      node.style.removeProperty('inset-inline-end');
     }
-    if ((match.owner === this || !match.owner) && (match.dock === 'start' || match.dock === 'end')) {
-      this.openDrawer(match.dock, match.panelId);
-      return true;
-    }
-    return false;
   }
 
   _scheduleDrawerRailPeek(startOpen, endOpen) {

@@ -280,7 +280,7 @@ export let styles = css`
           height: 100%;
           gap: 0;
           align-items: center;
-          justify-content: flex-start;
+          justify-content: var(--sn-layout-rail-header-justify, center);
           width: var(--sn-layout-collapsed-horizontal-size, 32px);
         }
 
@@ -337,115 +337,25 @@ export let styles = css`
         }
       }
 
-      .layout-drawer-launchers {
-        position: absolute;
-        inset-block: 0;
-        inline-size: var(--sn-layout-collapsed-horizontal-size, 32px);
-        display: flex;
-        flex-direction: column;
-        align-items: stretch;
-        gap: 4px;
-        padding: 4px 0;
-        z-index: var(--sn-layout-drawer-launcher-z, 2);
-        pointer-events: auto;
-      }
-
-      .layout-drawer-launchers[hidden] {
-        display: none !important;
-      }
-
-      .layout-drawer-launchers-start {
-        inset-inline-start: 0;
-      }
-
-      .layout-drawer-launchers-end {
-        inset-inline-end: 0;
-      }
-
-      .launcher-list {
-        display: contents;
-      }
-
-      .layout-drawer-launcher {
-        inline-size: 100%;
-        block-size: 32px;
-        min-block-size: 32px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: var(--sn-layout-collapsed-icon-size, 18px);
-        line-height: 1;
-        background: var(--sn-layout-drawer-launcher-bg, var(--sn-layout-drawer-bg, var(--sn-sys-surface)));
-        border: 0;
-        border-radius: var(--sn-layout-drawer-launcher-radius, 8px);
-        padding: 0;
-        cursor: pointer;
-        color: inherit;
-      }
-
-      .layout-drawer-launcher:focus-visible {
-        outline: var(--sn-effect-focus-ring, 2px solid var(--sn-sys-focus-ring));
-        outline-offset: 1px;
-      }
-
-      .layout-rail-stack {
-        position: absolute;
-        inset-block: 0;
-        inset-inline-end: 0;
-        inline-size: var(--sn-layout-collapsed-horizontal-size, 32px);
-        display: flex;
-        flex-direction: column;
-        align-items: stretch;
-        gap: 2px;
-        padding: 4px 0;
-        z-index: var(--sn-layout-rail-stack-z, 4);
-        pointer-events: auto;
-      }
-
-      .layout-rail-stack[hidden] {
-        display: none !important;
-      }
-
-      .rail-stack-list {
-        display: contents;
-      }
-
-      .layout-rail-stack-btn {
-        flex: 1 1 0;
-        min-block-size: 32px;
-        inline-size: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: var(--sn-layout-collapsed-icon-size, 18px);
-        line-height: 1;
-        background: var(--sn-layout-drawer-launcher-bg, var(--sn-layout-drawer-bg, var(--sn-sys-surface)));
-        border: 0;
-        border-radius: var(--sn-layout-drawer-launcher-radius, 8px);
-        padding: 0;
-        cursor: pointer;
-        color: inherit;
-      }
-
-      .layout-rail-stack-btn:focus-visible {
-        outline: var(--sn-effect-focus-ring, 2px solid var(--sn-sys-focus-ring));
-        outline-offset: 1px;
-      }
-
-      &[drawer-mode-active][rail-stack-active] layout-node[drawer-rail][drawer-rail-collapsed] {
-        display: none !important;
-      }
-
-      &[rail-stack-suppressed] layout-node[drawer-rail][drawer-rail-collapsed] {
-        display: none !important;
-      }
-
-      &[drawer-mode-active][drawer-start-launchers] layout-node[mobile-dock='start'][drawer-rail][drawer-rail-collapsed]:not([drawer-active-panel]) {
-        display: none !important;
-      }
-
-      &[drawer-mode-active][drawer-end-launchers] layout-node[mobile-dock='end'][drawer-rail][drawer-rail-collapsed]:not([drawer-active-panel]) {
-        display: none !important;
+      /* Native R2 rails: no synthetic buttons. Same-side collapsed panels
+        share one dock edge as equal vertical regions with a uniform gap.
+        START stays inline-start, END stays inline-end. Native nodes are
+        never display:none here; open/close/swipe/focus lifecycle is owned
+        by layout-node drawer attributes. */
+      &[drawer-mode-active] layout-node[drawer-rail][drawer-rail-collapsed] {
+        --sn-layout-native-rail-gap: var(--sn-layout-rail-gap, 4px);
+        inset-block: auto;
+        inset-block-start: calc(
+          var(--sn-layout-rail-index, 0) * (100% - (var(--sn-layout-rail-count, 1) - 1) * var(--sn-layout-native-rail-gap)) / var(--sn-layout-rail-count, 1) +
+          var(--sn-layout-rail-index, 0) * var(--sn-layout-native-rail-gap)
+        );
+        block-size: calc(
+          (100% - (var(--sn-layout-rail-count, 1) - 1) * var(--sn-layout-native-rail-gap)) / var(--sn-layout-rail-count, 1)
+        ) !important;
+        height: calc(
+          (100% - (var(--sn-layout-rail-count, 1) - 1) * var(--sn-layout-native-rail-gap)) / var(--sn-layout-rail-count, 1)
+        ) !important;
+        min-block-size: 0 !important;
       }
 
       layout-node[mobile-dock='start'] {
