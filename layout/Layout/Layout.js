@@ -1026,7 +1026,13 @@ export class Layout extends Symbiote {
       let dock = node.dataset?.drawerDock || '';
       if (dock !== 'start' && dock !== 'end') continue;
       if (!node.hasAttribute('drawer-rail') || !node.hasAttribute('drawer-rail-collapsed')) continue;
-      if (node.hasAttribute('drawer-open') || node.hasAttribute('drawer-active-panel')) continue;
+      // Rail stack keeps the active rail: with single-active drawers one of
+      // N=2/N=3 collapsed rails always carries drawer-active-panel, so
+      // skipping it collapses the count to N-1 and the shared zone never
+      // activates. Open drawers stay excluded; activation routes back via
+      // _activateStackedRail -> owner.openDrawer. Launchers intentionally
+      // keep skipping the active rail in _syncDrawerLaunchers.
+      if (node.hasAttribute('drawer-open')) continue;
       let panelId = node.dataset.drawerPanelId || '';
       if (!panelId) continue;
       let icon = node.querySelector?.('.panel-icon')?.textContent?.trim() || '';

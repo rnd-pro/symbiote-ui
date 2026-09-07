@@ -432,11 +432,11 @@ export let styles = css`
         outline-offset: 1px;
       }
 
-      &[drawer-mode-active][rail-stack-active] layout-node[drawer-rail][drawer-rail-collapsed]:not([drawer-active-panel]) {
+      &[drawer-mode-active][rail-stack-active] layout-node[drawer-rail][drawer-rail-collapsed] {
         display: none !important;
       }
 
-      &[rail-stack-suppressed] layout-node[drawer-rail][drawer-rail-collapsed]:not([drawer-active-panel]) {
+      &[rail-stack-suppressed] layout-node[drawer-rail][drawer-rail-collapsed] {
         display: none !important;
       }
 
