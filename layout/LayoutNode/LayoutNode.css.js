@@ -534,6 +534,19 @@ export let styles = css`
       border: none;
     }
 
+    &[mobile-dock='primary'][node-type='split'] > .split-view {
+      display: flex !important;
+      width: 100% !important;
+      height: 100% !important;
+      overflow: hidden;
+    }
+
+    &[mobile-dock='primary'][node-type='split'] > .split-view > .split-first,
+    &[mobile-dock='primary'][node-type='split'] > .split-view > .split-second {
+      display: block !important;
+      overflow: hidden;
+    }
+
     .split-view {
       display: flex;
       width: 100%;
