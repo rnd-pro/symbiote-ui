@@ -111,6 +111,37 @@ export let styles = css`
         display: none;
       }
 
+      /* A declared drawer group keeps its native split and resizer inside the
+         one primary mobile surface; only sibling dock panels become drawers. */
+      layout-node[node-type='split'][mobile-dock='primary'] {
+        position: absolute;
+        inset: 0;
+        display: block !important;
+      }
+
+      layout-node[node-type='split'][mobile-dock='primary'] > .split-view {
+        display: flex !important;
+        width: 100% !important;
+        height: 100% !important;
+        overflow: hidden;
+      }
+
+      layout-node[node-type='split'][mobile-dock='primary'] > .split-view > .split-first,
+      layout-node[node-type='split'][mobile-dock='primary'] > .split-view > .split-second {
+        display: block !important;
+        overflow: hidden;
+      }
+
+      layout-node[node-type='split'][mobile-dock='primary'] .split-resizer {
+        display: block !important;
+      }
+
+      layout-node[node-type='split'][mobile-dock='primary'] layout-node[node-type='panel'] {
+        position: relative;
+        inset: auto;
+        transform: none !important;
+      }
+
       layout-node[node-type='panel'] {
         min-height: var(--sn-layout-responsive-panel-min-block-size, 260px);
       }
@@ -152,6 +183,37 @@ export let styles = css`
 
       layout-node[node-type='split'] > .split-view > .split-resizer {
         display: none;
+      }
+
+      /* A declared drawer group keeps its native split and resizer inside the
+         one primary mobile surface; only sibling dock panels become drawers. */
+      layout-node[node-type='split'][mobile-dock='primary'] {
+        position: absolute;
+        inset: 0;
+        display: block !important;
+      }
+
+      layout-node[node-type='split'][mobile-dock='primary'] > .split-view {
+        display: flex !important;
+        width: 100% !important;
+        height: 100% !important;
+        overflow: hidden;
+      }
+
+      layout-node[node-type='split'][mobile-dock='primary'] > .split-view > .split-first,
+      layout-node[node-type='split'][mobile-dock='primary'] > .split-view > .split-second {
+        display: block !important;
+        overflow: hidden;
+      }
+
+      layout-node[node-type='split'][mobile-dock='primary'] .split-resizer {
+        display: block !important;
+      }
+
+      layout-node[node-type='split'][mobile-dock='primary'] layout-node[node-type='panel'] {
+        position: relative;
+        inset: auto;
+        transform: none !important;
       }
 
       layout-node[node-type='panel'] {

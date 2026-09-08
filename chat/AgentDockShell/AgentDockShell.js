@@ -347,6 +347,11 @@ export class AgentDockShell extends Symbiote {
       direction: 'vertical',
       ratio: DEFAULT_SHOW_PANEL_RATIO,
       targetPanelId: this._mainPanelId,
+      targetBehavior: {
+        mobileDock: 'primary',
+        swipeControl: 'none',
+        drawerGroup: true,
+      },
       source: 'chat-show-player',
       uiInvoked: true,
       panelState: { placement: 'panel' },
