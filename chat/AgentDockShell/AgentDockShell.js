@@ -269,7 +269,8 @@ export class AgentDockShell extends Symbiote {
       this.toggleAttribute('mobile', mobile);
       if (mobile) {
         if (this._showPanelId && !this._allowsShowPanelInMobile()) layout.closeUiPanel?.('agent-show-panel');
-        if (this.$.open) layout.openDrawer?.('end', this._dockPanelId);
+        if (this._showPanelId && this._allowsShowPanelInMobile()) layout.openDrawer?.('end', this._showPanelId);
+        else if (this.$.open) layout.openDrawer?.('end', this._dockPanelId);
         else layout.closeDrawer?.('end');
       }
       emit(this, 'agent-dock-responsive-change', { mobile });
@@ -323,13 +324,19 @@ export class AgentDockShell extends Symbiote {
       emit(this, 'agent-show-layout-change', { placement: 'inline', reason: 'responsive-drawer' });
       return;
     }
-    this.ref.layout?.openPanel?.('agent-show-panel', {
+    let panelId = this.ref.layout?.openPanel?.('agent-show-panel', {
       direction: 'vertical',
       ratio: DEFAULT_SHOW_PANEL_RATIO,
       source: 'chat-show-player',
       uiInvoked: true,
       panelState: { placement: 'panel' },
     });
+    if (panelId && this._isDrawerMode()) {
+      // A drawer layout demotes the Show panel to the end dock behind the
+      // primary surface: open its drawer so the player is visible at once
+      // instead of staying mounted off-canvas.
+      this.ref.layout?.openDrawer?.('end', panelId);
+    }
   };
 
   _onLayoutUiPanelOpen = (event) => {
@@ -340,9 +347,11 @@ export class AgentDockShell extends Symbiote {
 
   _onLayoutUiPanelClose = (event) => {
     if (event.detail?.panelType !== 'agent-show-panel') return;
+    // Dismissing the mobile Show panel (collapse or remove) ends the show:
+    // inline restore would land in the closed chat drawer, invisible.
     let closeShow = this._isDrawerMode()
       && this.hasAttribute('show-panel-mobile-close-show')
-      && event.detail?.removed === true;
+      && (event.detail?.removed === true || event.detail?.closed === true);
     let player = this.getChat()?.getShowPlayer?.() || null;
     this._restoreShowPlayer();
     if (closeShow) player?.requestClose?.();

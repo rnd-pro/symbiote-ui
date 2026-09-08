@@ -563,6 +563,95 @@ test('agent-dock-shell opens the native Show panel in drawer mode when show-pane
   assert.equal(shell.querySelector('[data-agent-show-panel-host] > chat-show-player'), player, 'the native mobile panel reparents the same live player');
   assert.equal(player.hasAttribute('panel-layout'), true, 'the player reports the panel placement');
   assert.equal(layoutChanges.at(-1)?.placement, 'panel', 'drawer panel open uses the native panel lifecycle');
+  assert.equal(layout.$.drawerEndOpen, true, 'the mobile Show panel opens its end drawer at once');
+  assert.equal(layout.$.drawerEndPanelId, panel.id, 'the end drawer points at the Show panel, not the chat');
+  shell.remove();
+});
+
+test('agent-dock-shell keeps a desktop Show panel visible when entering drawer mode with show-panel-mobile', async () => {
+  installDom();
+  await import('../chat/show-chat.js');
+
+  let shell = document.createElement('agent-dock-shell');
+  shell.setAttribute('show-panel-mobile', '');
+  shell.setAttribute('show-panel-mobile-close-show', '');
+  shell.getBoundingClientRect = () => ({ width: 1440, height: 844 });
+  document.body.append(shell);
+  await settle();
+
+  shell.setMessages([{ role: 'agent', parts: [{ type: 'embed', key: 'rotate-show' }] }]);
+  shell.setShow('rotate-show', {
+    timeline: { turns: [{ persona: 'guide', text: 'Rotating embedded player' }] },
+    controller: { index: 0, isPlaying: false, play() {}, toggle() {}, prev() {}, next() {}, stop() {}, preview() {} },
+  });
+  await settle();
+
+  let layout = shell.ref.layout;
+  let player = shell.querySelector('.agent-show-player-region > chat-show-player');
+  player.dispatchEvent(new CustomEvent('chat-show-layout-request', {
+    bubbles: true,
+    composed: true,
+    detail: { placement: 'panel' },
+  }));
+  await settle();
+  let desktopPanel = findPanelByType(layout.$.layoutTree, 'agent-show-panel', { uiInvoked: true });
+  assert.ok(desktopPanel && !desktopPanel.collapsed, 'the Show panel starts open on desktop');
+
+  layout.setAttribute('drawer-mode-active', '');
+  await settle();
+  // Pin the dock contract the same way the drawer-open test does: the
+  // linkedom projection measures a zero-width viewport and may clear the
+  // manual drawer marker.
+  shell._isDrawerMode = () => true;
+  layout.removeAttribute('drawer-mode-active');
+  layout.setAttribute('drawer-mode-active', '');
+  await settle();
+
+  let kept = findPanelByType(layout.$.layoutTree, 'agent-show-panel', { uiInvoked: true });
+  assert.ok(kept && !kept.collapsed, 'entering drawer mode with show-panel-mobile keeps the Show panel open');
+  assert.equal(layout.$.drawerEndOpen, true, 'the kept Show panel opens its end drawer');
+  assert.equal(layout.$.drawerEndPanelId, kept.id, 'the end drawer points at the kept Show panel');
+  assert.equal(shell.querySelector('[data-agent-show-panel-host] > chat-show-player'), player, 'rotation keeps the live player mounted in the Show panel');
+  shell.remove();
+});
+
+test('agent-dock-shell ends the show when the mobile Show panel is dismissed', async () => {
+  installDom();
+  await import('../chat/show-chat.js');
+
+  let shell = document.createElement('agent-dock-shell');
+  shell.setAttribute('show-panel-mobile', '');
+  shell.setAttribute('show-panel-mobile-close-show', '');
+  shell.getBoundingClientRect = () => ({ width: 390, height: 844 });
+  document.body.append(shell);
+  await settle();
+
+  shell.setMessages([{ role: 'agent', parts: [{ type: 'embed', key: 'dismiss-show' }] }]);
+  shell.setShow('dismiss-show', {
+    timeline: { turns: [{ persona: 'guide', text: 'Dismissed embedded player' }] },
+    controller: { index: 0, isPlaying: false, play() {}, toggle() {}, prev() {}, next() {}, stop() {}, preview() {} },
+  });
+  await settle();
+
+  let layout = shell.ref.layout;
+  layout.setAttribute('drawer-mode-active', '');
+  await settle();
+  shell._isDrawerMode = () => true;
+
+  let player = shell.querySelector('.agent-show-player-region > chat-show-player');
+  player.dispatchEvent(new CustomEvent('chat-show-layout-request', {
+    bubbles: true,
+    composed: true,
+    detail: { placement: 'panel' },
+  }));
+  await settle();
+  assert.ok(findPanelByType(layout.$.layoutTree, 'agent-show-panel', { uiInvoked: true }) && !findPanelByType(layout.$.layoutTree, 'agent-show-panel', { uiInvoked: true }).collapsed);
+
+  let closeRequests = [];
+  shell.addEventListener('chat-show-close-request', (event) => closeRequests.push(event.target));
+  layout.closeUiPanel('agent-show-panel');
+  await settle();
+  assert.deepEqual(closeRequests, [player], 'dismissing the mobile Show panel requests the player close instead of hiding a running show');
   shell.remove();
 });
 
