@@ -69,11 +69,13 @@ Presentation and activation are split so the graph stays cheap:
   stage is ready is remembered as a single pending activation and fulfilled from
   the Symbiote render lifecycle (not a timer), and a descriptor replacement or
   disconnect cancels a stale pending request so a rapid reselect never mounts the
-  previous host late. Temporary DOM reparenting relies on Symbiote's native
-  delayed destroy lifecycle: reconnecting before terminal destruction preserves
-  the active adapter and mounted DOM stage without a public layout-move API.
-  Terminal destruction releases the adapter and restores the poster; a later
-  reconnect restores activation listeners.
+  previous host late. To survive temporary layout reparents, it implements
+  `suspendLayout({ reason })` and `resumeLayout()`; if suspended with the
+  reason `layout-move`, the subsequent disconnection is treated as a move rather
+  than a terminal removal, preserving the active adapter and mounted DOM stage
+  across the transition. `resumeLayout()` performs terminal teardown when the
+  move ends without reconnecting. A later ordinary reconnect returns to the
+  poster state with its activation listeners restored.
 
 The same descriptor drives the canvas render path. `CanvasGraph` draws a poster
 clipped to the node dot plus a media-kind badge directly from

@@ -265,7 +265,7 @@ test('disconnect unmounts the active adapter', async () => {
   assert.equal(host.querySelectorAll('iframe').length, 1);
 
   host.remove();
-  await new Promise((resolve) => setTimeout(resolve, 150));
+  await nextRenderTick();
   assert.equal(host.querySelectorAll('iframe').length, 0, 'iframe removed on disconnect');
 });
 
@@ -441,7 +441,7 @@ test('disconnect cancels a pending activation', async () => {
   assert.equal(host.querySelectorAll('iframe').length, 0, 'deferred while render is paused');
 
   host.remove();
-  await new Promise((resolve) => setTimeout(resolve, 150));
+  await nextRenderTick();
   assert.equal(host.querySelectorAll('iframe').length, 0, 'nothing mounted late after disconnect');
 });
 
@@ -487,7 +487,9 @@ test('retains active adapter across layout reparenting', async () => {
     assert.equal(provider.unmountCount, 0);
     assert.equal(stage.querySelector('.fake-player'), activeElement);
 
+    host.suspendLayout({ reason: 'layout-move' });
     destination.append(host);
+    host.resumeLayout({ reason: 'layout-move' });
     await nextRenderTick();
 
     assert.equal(provider.mountCount, 1);
@@ -497,7 +499,7 @@ test('retains active adapter across layout reparenting', async () => {
     assert.equal(host.hasAttribute('data-activated'), true);
 
     host.remove();
-    await new Promise((resolve) => setTimeout(resolve, 150));
+    await nextRenderTick();
     assert.equal(provider.unmountCount, 1);
 
     destination.remove();
@@ -521,7 +523,7 @@ test('terminal disconnect restores an activatable poster after reconnect', async
     await nextRenderTick();
 
     host.remove();
-    await new Promise((resolve) => setTimeout(resolve, 150));
+    await nextRenderTick();
     assert.equal(provider.unmountCount, 1);
     assert.equal(host.hasAttribute('data-activated'), false);
     assert.equal(host.ref.poster.hidden, false);
@@ -537,29 +539,31 @@ test('terminal disconnect restores an activatable poster after reconnect', async
     assert.equal(host.ref.stage.querySelector('.fake-player'), provider.activeElement);
 
     host.remove();
-    await new Promise((resolve) => setTimeout(resolve, 150));
+    await nextRenderTick();
     assert.equal(provider.unmountCount, 2);
   } finally {
     unregisterMediaProvider(key);
   }
 });
 
-test('terminal disconnect tears down the active adapter exactly once', async () => {
-  let key = 'counting-terminal-disconnect-fake';
+test('aborted layout move tears down the active adapter exactly once', async () => {
+  let key = 'counting-aborted-move-fake';
 
   try {
     let provider = registerCountingProvider(key);
     let host = await mountHost({
       kind: 'video',
       poster: 'https://example.test/poster.jpg',
-      alt: 'Terminal Disconnect Video',
+      alt: 'Aborted Move Video',
       activation: { provider: key },
     });
     host.activate();
     await nextRenderTick();
 
+    host.suspendLayout({ reason: 'layout-move' });
     host.remove();
-    await new Promise((resolve) => setTimeout(resolve, 150));
+    host.resumeLayout({ reason: 'layout-move' });
+    await nextRenderTick();
 
     assert.equal(provider.mountCount, 1);
     assert.equal(provider.unmountCount, 1);
@@ -571,7 +575,7 @@ test('terminal disconnect tears down the active adapter exactly once', async () 
   }
 });
 
-test('MediaHost public methods are agent-readable in all metadata views', async () => {
+test('MediaHost layout lifecycle is agent-readable in all metadata views', async () => {
   let [{ getComponent }, customElementsSource] = await Promise.all([
     import('../manifest/component-registry.js'),
     readFile(new URL('../custom-elements.json', import.meta.url), 'utf8'),
@@ -580,7 +584,7 @@ test('MediaHost public methods are agent-readable in all metadata views', async 
   let declaration = JSON.parse(customElementsSource).modules
     .flatMap((module) => module.declarations || [])
     .find((item) => item.tagName === 'sn-media-host');
-  let expected = ['activate'];
+  let expected = ['activate', 'suspendLayout', 'resumeLayout'];
 
   assert.deepEqual(component.contract.methods.map((method) => method.name), expected);
   assert.deepEqual(declaration.members.filter((member) => member.kind === 'method').map((method) => method.name), expected);
