@@ -257,7 +257,7 @@ function resolveProductContextToolOptions(targetOrOptions, runtimeInput) {
   if (isOptionsBag) {
     res = {
       ...targetOrOptions,
-      target: targetOrOptions.target || globalThis.document,
+      target: targetOrOptions.target || (targetOrOptions.modelContext || typeof targetOrOptions.registerTool === 'function' ? targetOrOptions : globalThis.document),
       runtime: targetOrOptions.runtime,
       safeActions: targetOrOptions.safeActions,
       enrichContext: targetOrOptions.enrichContext,

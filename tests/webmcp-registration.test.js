@@ -127,6 +127,7 @@ test('registerProductContextTools binds executeAction to native descriptors and 
     assert.ok(capturedDescriptor, 'Should have registered a descriptor');
     assert.equal(capturedDescriptor.name, 'test_action');
 
+    // Invoke the execute callback on the descriptor
     let result = await capturedDescriptor.execute({ key: 'val' });
 
     assert.deepEqual(seenCommand, { tool: 'test_action', input: { key: 'val' } });
@@ -253,6 +254,7 @@ test('registerWebMcpTool and registerProductContextTools honor nativeActive:fals
       actions: [{ id: 'test-action', name: 'test_action', allowed: true }]
     };
 
+    // Case 1: modelContext.nativeActive: false
     let target1 = {
       modelContext: {
         nativeActive: false,
@@ -267,6 +269,7 @@ test('registerWebMcpTool and registerProductContextTools honor nativeActive:fals
     });
     assert.equal(result1.nativeActive, false);
 
+    // Case 2: modelContext.supportsNativeToolDescriptor: false
     let target2 = {
       modelContext: {
         supportsNativeToolDescriptor: false,
