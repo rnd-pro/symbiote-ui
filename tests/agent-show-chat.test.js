@@ -418,7 +418,7 @@ test('agent-dock-shell owns one standard split layout, collapse/drawer state, an
   dockPlayer.querySelector('[data-show-menu-action="layout"]').click();
   await settle();
   assert.equal(shell.ref.layout.$.layoutTree.direction, 'vertical', 'Show panel uses the native bottom split direction');
-  assert.equal(shell.ref.layout.$.layoutTree.ratio, 0.76, 'Show panel opens at the compact default height');
+  assert.equal(shell.ref.layout.$.layoutTree.ratio, 0.62, 'Show panel opens with enough height for its controls');
   assert.equal(shell.ref.layout.$.layoutTree.second.panelType, 'agent-show-panel');
   assert.equal(shell.querySelector('[data-agent-show-panel-host] > chat-show-player'), dockPlayer, 'Show panel reparents the same live player');
   assert.equal(dockPlayer.hasAttribute('panel-layout'), true);
@@ -434,7 +434,7 @@ test('agent-dock-shell owns one standard split layout, collapse/drawer state, an
   shell.addEventListener('agent-dock-layout-reset', (event) => resets.push(event.detail));
   assert.equal(shell.resetPanelLayout('appearance-reset'), true);
   await settle();
-  assert.equal(shell.ref.layout.$.layoutTree.ratio, 0.76, 'reset restores the default Show footer height');
+  assert.equal(shell.ref.layout.$.layoutTree.ratio, 0.62, 'reset restores the default Show panel height');
   assert.equal(shell.ref.layout.$.layoutTree.first.ratio, 0.67, 'reset restores the default workspace/chat ratio');
   assert.equal(shell.getChat(), chat, 'layout reset preserves the live chat component');
   assert.equal(shell.querySelector('[data-agent-show-panel-host] > chat-show-player'), dockPlayer, 'layout reset preserves the live player');

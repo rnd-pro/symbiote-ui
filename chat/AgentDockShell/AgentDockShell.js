@@ -8,7 +8,11 @@ import css from './AgentDockShell.css.js';
 const DEFAULT_MIN_SIZE = 320;
 const DEFAULT_BREAKPOINT = 760;
 const DEFAULT_DOCK_SPLIT_RATIO = 0.67;
-const DEFAULT_SHOW_PANEL_RATIO = 0.76;
+// The Show panel contains both a transport header and playback controls.
+// On a handset-height layout it needs a useful initial block size, while the
+// workspace above still retains enough room to be navigated.  The first split
+// child is the workspace, so 0.62 leaves the Show panel with about 38%.
+const DEFAULT_SHOW_PANEL_RATIO = 0.62;
 
 function createDefaultDockTree(main, chat, breakpoint) {
   return LayoutTree.createSplit('horizontal', main, chat, DEFAULT_DOCK_SPLIT_RATIO, {
@@ -271,6 +275,11 @@ export class AgentDockShell extends Symbiote {
         if (this._showPanelId && this._allowsShowPanelInMobile()) {
           this._showPanelMobileMode = true;
           layout.setAttribute('responsive-mode', 'preserve');
+          // The outer layout preserves its vertical split only for the Show.
+          // Its main surface still needs to switch its own nested layout into
+          // mobile mode, so publish the responsive transition before leaving
+          // drawer mode.
+          emit(this, 'agent-dock-responsive-change', { mobile: true });
           return;
         }
         if (this._showPanelId) layout.closeUiPanel?.('agent-show-panel');
@@ -278,9 +287,22 @@ export class AgentDockShell extends Symbiote {
         else if (this.$.open) layout.openDrawer?.('end', this._dockPanelId);
         else layout.closeDrawer?.('end');
       }
+      // Removing drawer-mode-active is the implementation detail that keeps
+      // the Show as a native vertical split.  It must not tell the embedded
+      // workspace that the viewport became desktop-sized.
+      if (!mobile && this._showPanelMobileMode) {
+        emit(this, 'agent-dock-responsive-change', { mobile: true });
+        return;
+      }
       emit(this, 'agent-dock-responsive-change', { mobile });
     });
     this._layoutModeObserver.observe(layout, { attributes: true, attributeFilter: ['drawer-mode-active'] });
+    // A layout may already be in drawer mode before the observer is attached.
+    // Publish that initial state so an embedded workspace can configure its
+    // own responsive layout immediately.
+    queueMicrotask(() => emit(this, 'agent-dock-responsive-change', {
+      mobile: this._isDrawerMode() || this._showPanelMobileMode,
+    }));
   }
 
   _setLayoutOpen(open) {
