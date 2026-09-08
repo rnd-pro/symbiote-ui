@@ -407,6 +407,8 @@ export class AgentDockShell extends Symbiote {
         node?.style.setProperty('flex', 'none', 'important');
         node?.style.setProperty('width', '100%', 'important');
         node?.style.setProperty('height', '100%', 'important');
+        let splitItem = node?.parentElement;
+        if (splitItem?.style.height) splitItem.style.setProperty('flex', `0 0 ${splitItem.style.height}`, 'important');
       }
     }
     chat.setPlayerHost(host);
@@ -422,6 +424,7 @@ export class AgentDockShell extends Symbiote {
       for (let property of ['position', 'inset', 'transform', 'flex', 'width', 'height']) {
         node.style.removeProperty(property);
       }
+      node.parentElement?.style.removeProperty('flex');
     });
     chat?.setPlayerHost?.(null);
     player?.setLayoutPlacement?.('inline');
