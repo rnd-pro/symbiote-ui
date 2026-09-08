@@ -128,7 +128,8 @@ export let styles = css`
 
       layout-node[node-type='split'][mobile-dock='primary'] > .split-view > .split-first,
       layout-node[node-type='split'][mobile-dock='primary'] > .split-view > .split-second {
-        display: block !important;
+        display: flex !important;
+        flex-direction: column;
         overflow: hidden;
       }
 
@@ -202,7 +203,8 @@ export let styles = css`
 
       layout-node[node-type='split'][mobile-dock='primary'] > .split-view > .split-first,
       layout-node[node-type='split'][mobile-dock='primary'] > .split-view > .split-second {
-        display: block !important;
+        display: flex !important;
+        flex-direction: column;
         overflow: hidden;
       }
 
