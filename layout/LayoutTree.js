@@ -428,6 +428,20 @@ export function isSplitNode(node) {
   return !!node && node.type === 'split'
 }
 
+/**
+ * Replace one node in a layout tree while preserving every other branch.
+ * @param {LayoutNode} root
+ * @param {string} nodeId
+ * @param {LayoutNode} replacement
+ * @returns {LayoutNode}
+ */
+function replaceNode(root, nodeId, replacement) {
+  let parentInfo = findParent(root, nodeId)
+  if (!parentInfo) return root
+  parentInfo.parent[parentInfo.which] = replacement
+  return root
+}
+
 export function findPanel(root, predicate) {
   let panels = collectPanels(root)
   return panels.find((panel) => predicate(panel)) || null
@@ -449,6 +463,7 @@ export function openPanel(root, panelType, options = {}) {
     ratio = 0.68,
     reuseExisting = true,
     source = '',
+    targetPanelId = '',
     uiInvoked = false,
   } = options
 
@@ -477,9 +492,11 @@ export function openPanel(root, panelType, options = {}) {
     ...(uiInvoked ? { uiInvoked: true, closed: false, source } : {}),
   }
   let panel = createPanel(panelType, state, behavior)
-  let nextRoot = root
-    ? createSplit(direction, root, panel, ratio)
-    : panel
+  let target = targetPanelId ? findNode(root, targetPanelId) : null
+  let inserted = target ? createSplit(direction, target, panel, ratio) : null
+  let nextRoot = inserted
+    ? (target === root ? inserted : replaceNode(root, target.id, inserted))
+    : (root ? createSplit(direction, root, panel, ratio) : panel)
 
   return { root: nextRoot, panel, created: true }
 }

@@ -148,11 +148,13 @@ export class AgentDockShell extends Symbiote {
     let chat = LayoutTree.findPanelByType(next, 'agent-chat');
     if (!main || !chat) return false;
     let show = LayoutTree.findPanelByType(next, 'agent-show-panel', { uiInvoked: true });
+    let contains = (node, id) => Boolean(node && (node.id === id || (
+      node.type === 'split' && (contains(node.first, id) || contains(node.second, id))
+    )));
     let resetRatios = (node) => {
       if (node?.type !== 'split') return;
-      let childIds = new Set([node.first?.id, node.second?.id]);
-      if (childIds.has(main.id) && childIds.has(chat.id)) node.ratio = DEFAULT_DOCK_SPLIT_RATIO;
-      if (show && childIds.has(show.id)) node.ratio = DEFAULT_SHOW_PANEL_RATIO;
+      if (contains(node.first, main.id) && contains(node.second, chat.id)) node.ratio = DEFAULT_DOCK_SPLIT_RATIO;
+      if (show && contains(node.first, main.id) && contains(node.second, show.id)) node.ratio = DEFAULT_SHOW_PANEL_RATIO;
       resetRatios(node.first);
       resetRatios(node.second);
     };
@@ -272,27 +274,9 @@ export class AgentDockShell extends Symbiote {
       previousMobile = mobile;
       this.toggleAttribute('mobile', mobile);
       if (mobile) {
-        if (this._showPanelId && this._allowsShowPanelInMobile()) {
-          this._showPanelMobileMode = true;
-          layout.setAttribute('responsive-mode', 'preserve');
-          // The outer layout preserves its vertical split only for the Show.
-          // Its main surface still needs to switch its own nested layout into
-          // mobile mode, so publish the responsive transition before leaving
-          // drawer mode.
-          emit(this, 'agent-dock-responsive-change', { mobile: true });
-          return;
-        }
-        if (this._showPanelId) layout.closeUiPanel?.('agent-show-panel');
-        if (this._showPanelId && this._allowsShowPanelInMobile()) layout.openDrawer?.('end', this._showPanelId);
-        else if (this.$.open) layout.openDrawer?.('end', this._dockPanelId);
+        if (this._showPanelId && !this._allowsShowPanelInMobile()) layout.closeUiPanel?.('agent-show-panel');
+        if (this.$.open) layout.openDrawer?.('end', this._dockPanelId);
         else layout.closeDrawer?.('end');
-      }
-      // Removing drawer-mode-active is the implementation detail that keeps
-      // the Show as a native vertical split.  It must not tell the embedded
-      // workspace that the viewport became desktop-sized.
-      if (!mobile && this._showPanelMobileMode) {
-        emit(this, 'agent-dock-responsive-change', { mobile: true });
-        return;
       }
       emit(this, 'agent-dock-responsive-change', { mobile });
     });
@@ -309,7 +293,7 @@ export class AgentDockShell extends Symbiote {
     let layout = this.ref.layout;
     if (!layout) return;
     let mobile = this._isDrawerMode();
-    if (mobile && !this._allowsShowPanelInMobile()) {
+    if (mobile) {
       if (open) layout.openDrawer?.('end', this._dockPanelId);
       else layout.closeDrawer?.('end');
       return;
@@ -358,19 +342,11 @@ export class AgentDockShell extends Symbiote {
       return;
     }
     let layout = this.ref.layout;
-    if (mobile) {
-      this._showPanelMobileMode = true;
-      // First retire the drawer projection. A collapse while it is active only
-      // closes the drawer; it does not collapse the chat panel in the tree.
-      // The Show panel then owns a real vertical native split with chat in its
-      // collapsed rail.
-      layout?.setAttribute('responsive-mode', 'preserve');
-      layout?.refreshResponsiveLayout?.();
-      this._setLayoutOpen(false);
-    }
+    if (mobile) this._showPanelMobileMode = true;
     layout?.openPanel?.('agent-show-panel', {
       direction: 'vertical',
       ratio: DEFAULT_SHOW_PANEL_RATIO,
+      targetPanelId: this._mainPanelId,
       source: 'chat-show-player',
       uiInvoked: true,
       panelState: { placement: 'panel' },

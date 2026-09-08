@@ -417,9 +417,10 @@ test('agent-dock-shell owns one standard split layout, collapse/drawer state, an
   dockPlayer.querySelector('[data-header-action="settings"]').click();
   dockPlayer.querySelector('[data-show-menu-action="layout"]').click();
   await settle();
-  assert.equal(shell.ref.layout.$.layoutTree.direction, 'vertical', 'Show panel uses the native bottom split direction');
-  assert.equal(shell.ref.layout.$.layoutTree.ratio, 0.62, 'Show panel opens with enough height for its controls');
-  assert.equal(shell.ref.layout.$.layoutTree.second.panelType, 'agent-show-panel');
+  assert.equal(shell.ref.layout.$.layoutTree.direction, 'horizontal', 'the root remains the native chat drawer split');
+  assert.equal(shell.ref.layout.$.layoutTree.first.direction, 'vertical', 'Show uses the native bottom split inside the primary workspace');
+  assert.equal(shell.ref.layout.$.layoutTree.first.ratio, 0.62, 'Show opens with enough default height for its controls');
+  assert.equal(shell.ref.layout.$.layoutTree.first.second.panelType, 'agent-show-panel');
   assert.equal(shell.querySelector('[data-agent-show-panel-host] > chat-show-player'), dockPlayer, 'Show panel reparents the same live player');
   assert.equal(dockPlayer.hasAttribute('panel-layout'), true);
   assert.equal(dockPlayer.querySelector('[data-show-menu-action="layout"]').getAttribute('aria-label'), 'Return Show to chat');
@@ -434,8 +435,8 @@ test('agent-dock-shell owns one standard split layout, collapse/drawer state, an
   shell.addEventListener('agent-dock-layout-reset', (event) => resets.push(event.detail));
   assert.equal(shell.resetPanelLayout('appearance-reset'), true);
   await settle();
-  assert.equal(shell.ref.layout.$.layoutTree.ratio, 0.62, 'reset restores the default Show panel height');
-  assert.equal(shell.ref.layout.$.layoutTree.first.ratio, 0.67, 'reset restores the default workspace/chat ratio');
+  assert.equal(shell.ref.layout.$.layoutTree.first.ratio, 0.62, 'reset restores the default Show panel height');
+  assert.equal(shell.ref.layout.$.layoutTree.ratio, 0.67, 'reset restores the default workspace/chat ratio');
   assert.equal(shell.getChat(), chat, 'layout reset preserves the live chat component');
   assert.equal(shell.querySelector('[data-agent-show-panel-host] > chat-show-player'), dockPlayer, 'layout reset preserves the live player');
   assert.deepEqual(resets, [{ source: 'appearance-reset' }]);
@@ -563,7 +564,9 @@ test('agent-dock-shell preserves the native vertical Show split on mobile', asyn
   assert.equal(shell.querySelector('[data-agent-show-panel-host] > chat-show-player'), player, 'the native mobile panel reparents the same live player');
   assert.equal(player.hasAttribute('panel-layout'), true, 'the player reports the panel placement');
   assert.equal(layoutChanges.at(-1)?.placement, 'panel', 'drawer panel open uses the native panel lifecycle');
-  assert.equal(layout.getAttribute('responsive-mode'), 'preserve', 'the Show panel keeps the native vertical split instead of becoming a drawer');
+  assert.equal(layout.getAttribute('responsive-mode'), 'drawer', 'the root remains a drawer while its primary workspace owns the vertical Show split');
+  assert.equal(layout.$.layoutTree.direction, 'horizontal');
+  assert.equal(layout.$.layoutTree.first.direction, 'vertical');
   shell.remove();
 });
 
@@ -608,8 +611,9 @@ test('agent-dock-shell keeps a desktop Show panel visible when entering drawer m
 
   let kept = findPanelByType(layout.$.layoutTree, 'agent-show-panel', { uiInvoked: true });
   assert.ok(kept && !kept.collapsed, 'entering drawer mode with show-panel-mobile keeps the Show panel open');
-  assert.equal(layout.getAttribute('responsive-mode'), 'preserve', 'the opened Show remains a split when the viewport becomes mobile');
-  assert.equal(layout.$.drawerEndOpen, false, 'the workspace remains visible above the Show panel');
+  assert.equal(layout.getAttribute('responsive-mode'), 'drawer', 'the opened Show remains nested in the primary branch while chat stays a drawer');
+  assert.equal(layout.$.layoutTree.first.direction, 'vertical');
+  assert.equal(layout.$.drawerEndPanelId, shell._dockPanelId, 'the native end drawer continues to target chat');
   assert.equal(shell.querySelector('[data-agent-show-panel-host] > chat-show-player'), player, 'rotation keeps the live player mounted in the Show panel');
   shell.remove();
 });
@@ -685,8 +689,9 @@ test('agent-dock-shell keeps the dock closed while the mobile Show panel owns th
     detail: { placement: 'panel' },
   }));
   await settle();
-  assert.equal(layout.getAttribute('responsive-mode'), 'preserve', 'the Show owns a native split instead of the end drawer');
-  assert.equal(findPanelByType(layout.$.layoutTree, 'agent-chat').collapsed, true, 'the chat is a collapsed native rail beside the Show split');
+  assert.equal(layout.getAttribute('responsive-mode'), 'drawer', 'Show keeps the native split inside the primary branch while chat remains a drawer');
+  assert.equal(layout.$.layoutTree.first.direction, 'vertical', 'the bottom Show split belongs to the main branch');
+  assert.equal(findPanelByType(layout.$.layoutTree, 'agent-chat').collapsed, true, 'the chat stays closed until its drawer is opened');
   assert.equal(shell.hasAttribute('open'), false, 'the dock itself stays closed');
 
   let changes = [];
@@ -697,9 +702,11 @@ test('agent-dock-shell keeps the dock closed while the mobile Show panel owns th
     detail: { panelId: shell._dockPanelId, collapsed: true },
   }));
   await settle();
-  assert.deepEqual(changes, [], 'the shared end drawer showing the Show panel never flips the dock open');
+  assert.deepEqual(changes, [], 'closing an already closed chat leaves the dock state unchanged');
   assert.equal(shell.hasAttribute('open'), false);
-  assert.equal(layout.$.drawerEndOpen, false, 'no drawer is opened while the Show panel is active');
+  shell._setLayoutOpen(true);
+  await settle();
+  assert.equal(layout.$.drawerEndPanelId, shell._dockPanelId, 'opening chat targets the native end drawer, not the Show panel');
   shell.remove();
 });
 
