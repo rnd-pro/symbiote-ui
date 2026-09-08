@@ -298,9 +298,13 @@ export class AgentDockShell extends Symbiote {
   _onPanelCollapseToggle = (event) => {
     if (event.detail?.panelId !== this._dockPanelId) return;
     queueMicrotask(() => {
+      // In drawer mode the dock is open only while the end drawer shows the
+      // chat itself: the mobile Show panel shares the end dock, and its
+      // drawer must not flip the dock open.
+      let layout = this.ref.layout;
       let open = this._isDrawerMode()
-        ? Boolean(this.ref.layout?.$.drawerEndOpen)
-        : !Boolean(LayoutTree.findNode(this.ref.layout?.$.layoutTree, this._dockPanelId)?.collapsed);
+        ? Boolean(layout?.$.drawerEndOpen) && layout?.$.drawerEndPanelId === this._dockPanelId
+        : !Boolean(LayoutTree.findNode(layout?.$.layoutTree, this._dockPanelId)?.collapsed);
       if (open === this.$.open) return;
       this.$.open = open;
       this.toggleAttribute('open', open);

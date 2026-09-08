@@ -655,6 +655,54 @@ test('agent-dock-shell ends the show when the mobile Show panel is dismissed', a
   shell.remove();
 });
 
+test('agent-dock-shell keeps the dock closed while the mobile Show panel owns the end drawer', async () => {
+  installDom();
+  await import('../chat/show-chat.js');
+
+  let shell = document.createElement('agent-dock-shell');
+  shell.setAttribute('show-panel-mobile', '');
+  shell.setAttribute('show-panel-mobile-close-show', '');
+  shell.setAttribute('closed', '');
+  shell.getBoundingClientRect = () => ({ width: 390, height: 844 });
+  document.body.append(shell);
+  await settle();
+
+  shell.setMessages([{ role: 'agent', parts: [{ type: 'embed', key: 'owned-drawer-show' }] }]);
+  shell.setShow('owned-drawer-show', {
+    timeline: { turns: [{ persona: 'guide', text: 'Owned drawer embedded player' }] },
+    controller: { index: 0, isPlaying: false, play() {}, toggle() {}, prev() {}, next() {}, stop() {}, preview() {} },
+  });
+  await settle();
+
+  let layout = shell.ref.layout;
+  layout.setAttribute('drawer-mode-active', '');
+  await settle();
+  shell._isDrawerMode = () => true;
+
+  let player = shell.querySelector('.agent-show-player-region > chat-show-player');
+  player.dispatchEvent(new CustomEvent('chat-show-layout-request', {
+    bubbles: true,
+    composed: true,
+    detail: { placement: 'panel' },
+  }));
+  await settle();
+  assert.equal(layout.$.drawerEndOpen, true, 'the Show drawer is open');
+  assert.equal(shell.hasAttribute('open'), false, 'the dock itself stays closed');
+
+  let changes = [];
+  shell.addEventListener('agent-dock-change', (event) => changes.push(event.detail));
+  layout.dispatchEvent(new CustomEvent('panel-collapse-toggle', {
+    bubbles: true,
+    composed: true,
+    detail: { panelId: shell._dockPanelId, collapsed: true },
+  }));
+  await settle();
+  assert.deepEqual(changes, [], 'the shared end drawer showing the Show panel never flips the dock open');
+  assert.equal(shell.hasAttribute('open'), false);
+  assert.equal(layout.$.drawerEndOpen, true, 'the Show drawer stays open');
+  shell.remove();
+});
+
 test('agent-dock message updates preserve scroll policy through the full composition', async () => {
   installDom();
   await import('../chat/show-chat.js');
