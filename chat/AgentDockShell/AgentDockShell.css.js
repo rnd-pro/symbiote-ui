@@ -48,6 +48,44 @@ agent-dock-shell {
     overflow: hidden;
   }
 
+  /* In mobile Show mode the outer END rail belongs to the workspace
+     above. Keep it out of the lower transport panel so both rails share the
+     same native upper region and the Show uses the full lower inline size. */
+  &[show-panel-mobile-active] > panel-layout[drawer-mode-active] {
+    --sn-agent-dock-mobile-show-main-ratio: 62%;
+
+    > .layout-root > layout-node > .split-view[direction='horizontal'] {
+      > .split-first > layout-node[mobile-dock='primary']:has(.agent-show-panel-node) {
+        inset-inline-end: 0;
+        width: 100% !important;
+
+        > .split-view[direction='vertical'] {
+          > .split-first {
+            width: calc(100% - var(--sn-layout-collapsed-horizontal-size, 32px)) !important;
+            align-self: flex-start;
+          }
+
+          > .split-resizer {
+            width: calc(100% - var(--sn-layout-collapsed-horizontal-size, 32px)) !important;
+            align-self: flex-start;
+          }
+
+          > .split-second {
+            width: 100% !important;
+            align-self: stretch;
+          }
+        }
+      }
+
+      > .split-second > layout-node[drawer-rail][drawer-rail-collapsed][mobile-dock='end'] {
+        inset-block-end: auto;
+        block-size: var(--sn-agent-dock-mobile-show-main-ratio) !important;
+        height: var(--sn-agent-dock-mobile-show-main-ratio) !important;
+        min-block-size: 0 !important;
+      }
+    }
+  }
+
   .agent-show-panel-host {
     box-sizing: border-box;
     display: block;

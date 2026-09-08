@@ -420,6 +420,7 @@ export class AgentDockShell extends Symbiote {
     }
     host.classList.add('agent-show-panel-host');
     host.closest('layout-node')?.classList.add('agent-show-panel-node');
+    this.toggleAttribute('show-panel-mobile-active', this._showPanelMobileMode);
     if (this._showPanelMobileMode) {
       for (let panelId of [this._mainPanelId, this._showPanelId]) {
         let node = Array.from(this.ref.layout?.querySelectorAll?.('layout-node') || [])
@@ -456,6 +457,7 @@ export class AgentDockShell extends Symbiote {
       emit(this, 'agent-show-layout-change', { placement: 'inline', player, panelId: this._showPanelId });
     }
     this._showPanelId = null;
+    this.removeAttribute('show-panel-mobile-active');
   }
 
   _flushComposition() {
