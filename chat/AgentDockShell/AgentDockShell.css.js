@@ -52,7 +52,7 @@ agent-dock-shell {
      above. Keep it out of the lower transport panel so both rails share the
      same native upper region and the Show uses the full lower inline size. */
   &[show-panel-mobile-active] > panel-layout[drawer-mode-active] {
-    --sn-agent-dock-mobile-show-main-ratio: 62%;
+    --sn-agent-dock-mobile-show-main-ratio: 76%;
 
     > .layout-root > layout-node > .split-view[direction='horizontal'] {
       > .split-first > layout-node[mobile-dock='primary']:has(.agent-show-panel-node) {

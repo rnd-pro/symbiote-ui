@@ -11,8 +11,8 @@ const DEFAULT_DOCK_SPLIT_RATIO = 0.67;
 // The Show panel contains both a transport header and playback controls.
 // On a handset-height layout it needs a useful initial block size, while the
 // workspace above still retains enough room to be navigated.  The first split
-// child is the workspace, so 0.62 leaves the Show panel with about 38%.
-const DEFAULT_SHOW_PANEL_RATIO = 0.62;
+// child is the workspace, so 0.76 leaves the Show panel with 24%.
+const DEFAULT_SHOW_PANEL_RATIO = 0.76;
 
 function createDefaultDockTree(main, chat, breakpoint) {
   return LayoutTree.createSplit('horizontal', main, chat, DEFAULT_DOCK_SPLIT_RATIO, {
