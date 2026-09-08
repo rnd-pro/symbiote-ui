@@ -247,8 +247,14 @@ export class AgentDockShell extends Symbiote {
     }
     host.classList.add('agent-dock-main-host');
     host.closest('layout-node')?.classList.add('agent-dock-main-node');
+    const mainSlot = this.ref.source?.querySelector?.('slot[name="main"]');
+    // slotProcessor keeps named content assigned to its source slot, rather
+    // than as a direct child of the hidden source wrapper.  Read the assigned
+    // elements first so the actual workspace is never lost when the dock is
+    // rebuilt or its native mobile drawer projection changes.
     let mainItems = [
-      ...Array.from(this.ref.source?.children || []),
+      ...Array.from(mainSlot?.assignedElements?.() || []),
+      ...Array.from(this.ref.source?.children || []).filter((item) => item !== mainSlot),
       ...Array.from(this.querySelectorAll('[slot="main"]')),
     ].filter((item) => !host.contains(item));
     for (let item of new Set(mainItems)) host.append(item);
