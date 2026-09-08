@@ -360,12 +360,13 @@ export class AgentDockShell extends Symbiote {
     let layout = this.ref.layout;
     if (mobile) {
       this._showPanelMobileMode = true;
-      // `closed` can describe the shell before its layout node has ever been
-      // collapsed.  Collapse the actual chat node before wrapping the tree in
-      // the mobile Show split, otherwise it survives as a desktop-width
-      // second column beside the workspace.
-      this._setLayoutOpen(false);
+      // First retire the drawer projection. A collapse while it is active only
+      // closes the drawer; it does not collapse the chat panel in the tree.
+      // The Show panel then owns a real vertical native split with chat in its
+      // collapsed rail.
       layout?.setAttribute('responsive-mode', 'preserve');
+      layout?.refreshResponsiveLayout?.();
+      this._setLayoutOpen(false);
     }
     layout?.openPanel?.('agent-show-panel', {
       direction: 'vertical',

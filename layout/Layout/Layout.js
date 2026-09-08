@@ -521,6 +521,10 @@ export class Layout extends Symbiote {
     syncOptionalAttribute(this, 'root-collapse-side', rootCollapsed ? rootNode.$.collapseSlot : '');
   }
 
+  refreshResponsiveLayout() {
+    this._applyResponsiveLayout();
+  }
+
   _scheduleResponsiveLayout() {
     if (typeof requestAnimationFrame === 'undefined') {
       this._applyResponsiveLayout();

@@ -686,6 +686,7 @@ test('agent-dock-shell keeps the dock closed while the mobile Show panel owns th
   }));
   await settle();
   assert.equal(layout.getAttribute('responsive-mode'), 'preserve', 'the Show owns a native split instead of the end drawer');
+  assert.equal(findPanelByType(layout.$.layoutTree, 'agent-chat').collapsed, true, 'the chat is a collapsed native rail beside the Show split');
   assert.equal(shell.hasAttribute('open'), false, 'the dock itself stays closed');
 
   let changes = [];
