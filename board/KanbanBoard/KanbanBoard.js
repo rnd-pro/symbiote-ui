@@ -262,7 +262,6 @@ export class KanbanBoard extends Symbiote {
   initCallback() {
     this.ref.columns.addEventListener('click', (event) => this.#onClick(event));
     this.ref.columns.addEventListener('click', (event) => this.#onColumnHeaderInteraction(event));
-    this.ref.columns.addEventListener('keydown', (event) => this.#onKeyDown(event));
     this.ref.columns.addEventListener('dragstart', (event) => this.#onDragStart(event));
     this.ref.columns.addEventListener('dragend', () => this.#clearDropState());
     this.ref.columns.addEventListener('dragover', (event) => this.#onDragOver(event));
@@ -597,8 +596,6 @@ export class KanbanBoard extends Symbiote {
   #renderDefaultCard(card) {
     let cardEl = makeElement('article', 'sn-kanban-card');
     cardEl.dataset.snBoardCardId = card.id;
-    cardEl.tabIndex = 0;
-    cardEl.setAttribute('role', 'button');
     cardEl.append(
       makeElement('div', 'sn-kanban-card-meta'),
       makeElement('div', 'sn-kanban-card-title'),
@@ -613,10 +610,15 @@ export class KanbanBoard extends Symbiote {
   #patchCard(cardEl, card) {
     let [meta, title, ticker, footer] = cardEl.children;
     cardEl.draggable = card.draggable;
-    cardEl.setAttribute('aria-selected', String(card.id === this.#selectedCardId));
-    cardEl.setAttribute('aria-label', card.title);
+    if (card.id === this.#selectedCardId) {
+      cardEl.dataset.selected = 'true';
+    } else {
+      delete cardEl.dataset.selected;
+    }
     if (card.busy) cardEl.dataset.busy = 'true';
     else delete cardEl.dataset.busy;
+    if (card.ticker && card.ticker.kind) cardEl.dataset.kind = card.ticker.kind;
+    else delete cardEl.dataset.kind;
 
     meta.replaceChildren(...card.meta.map(chip => this.#renderChip(chip)));
 
@@ -634,7 +636,13 @@ export class KanbanBoard extends Symbiote {
       spinner.setAttribute('aria-hidden', 'true');
       titleNodes.push(spinner);
     }
-    titleNodes.push(makeElement('span', 'sn-kanban-card-title-text', card.title));
+    let selectBtn = makeElement('button', 'sn-kanban-card-select');
+    selectBtn.type = 'button';
+    selectBtn.setAttribute('aria-pressed', String(card.id === this.#selectedCardId));
+    let titleSpan = makeElement('span', 'sn-kanban-card-title-text');
+    titleSpan.textContent = card.title;
+    selectBtn.append(titleSpan);
+    titleNodes.push(selectBtn);
     title.replaceChildren(...titleNodes);
 
     this.#patchTicker(ticker, card.ticker);
@@ -824,17 +832,13 @@ export class KanbanBoard extends Symbiote {
       return;
     }
     if (event.target.closest?.('.sn-kanban-card-actions')) return;
+    let interactive = event.target.closest?.(
+      'button, a, input, select, textarea, [tabindex], [role="button"], [contenteditable="true"]',
+    );
+    if (interactive && !interactive.classList.contains('sn-kanban-card-select')) return;
+
     let cardEl = event.target.closest?.('[data-sn-board-card-id]');
     if (cardEl) this.selectCard(cardEl.dataset.snBoardCardId);
-  }
-
-  #onKeyDown(event) {
-    if (event.target.closest?.('.sn-kanban-card-actions')) return;
-    if (event.key !== 'Enter' && event.key !== ' ') return;
-    let cardEl = event.target.closest?.('[data-sn-board-card-id]');
-    if (!cardEl) return;
-    event.preventDefault();
-    this.selectCard(cardEl.dataset.snBoardCardId);
   }
 
   #onDragStart(event) {
@@ -890,7 +894,17 @@ export class KanbanBoard extends Symbiote {
 
   #syncCardSelection() {
     this.ref.columns.querySelectorAll('[data-sn-board-card-id]').forEach((cardEl) => {
-      cardEl.setAttribute('aria-selected', String(cardEl.dataset.snBoardCardId === this.#selectedCardId));
+      if (!cardEl.classList.contains('sn-kanban-card')) return;
+      let isSelected = cardEl.dataset.snBoardCardId === this.#selectedCardId;
+      if (isSelected) {
+        cardEl.dataset.selected = 'true';
+      } else {
+        delete cardEl.dataset.selected;
+      }
+      let selectBtn = cardEl.querySelector('.sn-kanban-card-select');
+      if (selectBtn) {
+        selectBtn.setAttribute('aria-pressed', String(isSelected));
+      }
     });
   }
 

@@ -97,7 +97,24 @@ test('sn-kanban-board renders columns and emits card intents', async () => {
   assert.equal(lane.getAttribute('aria-label'), 'Ready');
   assert.equal(board.querySelector('.sn-kanban-card-title-text')?.textContent, 'Task 1');
   assert.equal(board.querySelector('.sn-kanban-card')?.tagName.toLowerCase(), 'article');
-  assert.equal(board.querySelector('.sn-kanban-card')?.getAttribute('role'), 'button');
+  assert.equal(
+    board.querySelector('.sn-kanban-card')?.hasAttribute('role'),
+    false,
+    'card must not expose button semantics',
+  );
+  assert.equal(
+    board.querySelector('.sn-kanban-card')?.hasAttribute('tabindex'),
+    false,
+    'card must not expose tabindex',
+  );
+  let selectBtn = board.querySelector('.sn-kanban-card-title button.sn-kanban-card-select');
+  assert.ok(selectBtn, 'selection must be a native button inside the title row');
+  assert.equal(selectBtn.getAttribute('aria-pressed'), 'true', 'first card is auto-selected');
+  assert.equal(
+    board.querySelector('.sn-kanban-card')?.dataset.selected,
+    'true',
+    'first card has data-selected=true',
+  );
   assert.equal(
     board.querySelector('.sn-kanban-card-actions')?.tagName.toLowerCase(),
     'sn-dropdown',
@@ -137,9 +154,13 @@ test('sn-kanban-board renders columns and emits card intents', async () => {
   let agentChip = board.querySelector('.sn-kanban-chip[data-kind="agent"]');
   assert.ok(agentChip, 'footer renders the agent identity chip');
   assert.equal(agentChip.style.getPropertyValue('--sn-kanban-chip-accent'), '#6A1B9A');
-  board.querySelector('.sn-kanban-card').click();
+  board.querySelector('.sn-kanban-card-select').click();
   assert.equal(selected.card.id, 'task-1');
+  assert.equal(board.querySelector('.sn-kanban-card-select').getAttribute('aria-pressed'), 'true');
+  assert.equal(board.querySelector('.sn-kanban-card').dataset.selected, 'true');
+  selected = null;
   board.querySelector('[data-sn-board-action]').click();
+  assert.equal(selected, null, 'clicking nested interactive controls must not trigger selection');
   assert.equal(action.actionId, 'move-next');
   assert.equal(action.card.id, 'task-1');
 
@@ -173,9 +194,16 @@ test('sn-kanban-board reconciles setBoard by key instead of rebuilding the DOM',
   cardA.testMarker = 'alpha';
   cardB.testMarker = 'beta';
 
+  cardB.querySelector('.sn-kanban-card-select').click();
+  assert.equal(cardA.querySelector('.sn-kanban-card-select').getAttribute('aria-pressed'), 'false');
+  assert.equal(cardA.hasAttribute('data-selected'), false);
+  assert.equal(cardB.querySelector('.sn-kanban-card-select').getAttribute('aria-pressed'), 'true');
+  assert.equal(cardB.dataset.selected, 'true');
+
   // Ticker renders as the dedicated one-line row between title and footer.
   let ticker = cardA.querySelector('.sn-kanban-card-ticker');
   assert.equal(ticker.dataset.kind, 'state');
+  assert.equal(cardA.dataset.kind, 'state', 'card article mirrors ticker kind');
   assert.equal(ticker.querySelector('.sn-kanban-card-ticker-text')?.textContent, 'Reviewing diff');
   assert.equal(ticker.querySelector('.material-symbols-outlined')?.textContent, 'bolt');
   assert.equal([...cardA.children].indexOf(ticker), 2, 'ticker row sits between title and footer');
@@ -198,7 +226,6 @@ test('sn-kanban-board reconciles setBoard by key instead of rebuilding the DOM',
   assert.equal(patchedA, cardA, 'changed card keeps element identity');
   assert.equal(patchedA.testMarker, 'alpha');
   assert.equal(patchedA.querySelector('.sn-kanban-card-title-text').textContent, 'Alpha renamed');
-  assert.equal(patchedA.getAttribute('aria-label'), 'Alpha renamed');
   assert.equal(patchedA.querySelector('.sn-kanban-card-ticker-text').textContent, 'Running tests');
   // Summary is inspector content — the card face never renders it.
   assert.equal(patchedA.querySelector('.sn-kanban-card-summary'), null);
@@ -397,9 +424,17 @@ test('sn-kanban-board exposes column stretch sizing tokens', async () => {
   assert.match(css, /sn-kanban-board \.sn-kanban-card-meta \{[^}]*flex-wrap: nowrap;/);
   assert.doesNotMatch(css, /sn-kanban-board \.sn-kanban-card-footer \{[^}]*display: grid;/);
   // Uniform card height (height, not min-height) with internal clipping.
+  assert.match(css, /sn-kanban-board \.sn-kanban-card \{[^}]*box-sizing: border-box;/);
   assert.match(css, /sn-kanban-board \.sn-kanban-card \{[^}]*height: var\(--sn-kanban-card-height, 148px\);/);
   assert.match(css, /sn-kanban-board \.sn-kanban-card \{[^}]*overflow: hidden;/);
   assert.doesNotMatch(css, /min-height: var\(--sn-kanban-card-min-height/);
+  // Selection, focus, and attention state remain visible on the whole rich-content article.
+  assert.match(css, /sn-kanban-board \.sn-kanban-card:focus-within \{[^}]*outline: 2px solid var\(--sn-sys-accent\);/);
+  assert.match(css, /sn-kanban-board \.sn-kanban-card\[data-selected="true"\] \{/);
+  assert.match(css, /sn-kanban-board \.sn-kanban-card\[data-kind="warning"\]::before \{/);
+  assert.doesNotMatch(css, /\.sn-kanban-card:has\(/);
+  assert.match(css, /sn-kanban-board \.sn-kanban-card-menu \{[^}]*width: var\(--sn-step-12\);/);
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{[\s\S]*animation: none;/);
   // Title clamps to two lines on the fixed card face.
   assert.match(css, /sn-kanban-board \.sn-kanban-card-title-text \{[^}]*-webkit-line-clamp: var\(--sn-kanban-card-title-lines, 2\);/);
   // Ticker row: one ellipsized line with a text-relative icon.
