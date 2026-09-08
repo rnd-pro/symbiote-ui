@@ -256,6 +256,13 @@ test('media studio theme aliases are cascade-authored and consumed by styles', (
   assert.equal(theme.tokens['--sn-media-studio-progress-color'], 'var(--sn-sys-accent)');
   assert.match(theme.tokens['--sn-media-studio-preview-bg'], /var\(--sn-sys-surface\)/);
   assert.match(theme.tokens['--sn-media-studio-pane-bg'], /var\(--sn-sys-surface-panel\)/);
+  assert.equal(theme.tokens['--sn-media-studio-timeline-height'], '220px');
+  assert.equal(theme.tokens['--sn-media-studio-timeline-header-width'], '140px');
+  assert.equal(theme.tokens['--sn-media-studio-ruler-height'], '28px');
+  assert.equal(theme.tokens['--sn-media-studio-track-height'], '36px');
+  assert.match(MEDIA_STUDIO_SURFACE_STYLES, /--te-header-width: var\(--sn-media-studio-timeline-header-width, 140px\)/);
+  assert.match(MEDIA_STUDIO_SURFACE_STYLES, /--te-track-height: var\(--sn-media-studio-track-height, 36px\)/);
+  assert.match(MEDIA_STUDIO_SURFACE_STYLES, /--te-ruler-height: var\(--sn-media-studio-ruler-height, 28px\)/);
 });
 
 test('frame source provider metadata reports browser capability fallbacks', () => {
@@ -315,6 +322,7 @@ test('preview state normalization covers empty, loading, unsupported, and cached
   let loading = normalizeMediaPreviewState({
     status: 'rendering',
     progress: 32,
+    reason: 'Generating narration',
     frameSource: {
       provider: MEDIA_STUDIO_FRAME_SOURCE_TYPES.externalBrowser,
       source: '/workspace/surface',
@@ -323,6 +331,7 @@ test('preview state normalization covers empty, loading, unsupported, and cached
     externalBrowserFrameSource: true,
   });
   assert.equal(loading.state, MEDIA_PREVIEW_STATES.loading);
+  assert.equal(loading.reason, 'Generating narration');
   assert.equal(loading.progress, 0.32);
 
   let cached = normalizeMediaPreviewState({
@@ -868,8 +877,9 @@ test('media studio timeline visual geometry is driven by the timeline editor the
     readFile(new URL('../timeline/TimelineEditor/TimelineEditor.tpl.js', import.meta.url), 'utf8'),
   ]);
 
-  assert.match(MEDIA_STUDIO_SURFACE_STYLES, /--te-track-height: var\(--sn-media-studio-control-height, 28px\)/);
-  assert.match(MEDIA_STUDIO_SURFACE_STYLES, /--te-ruler-height: var\(--sn-media-studio-control-height, 28px\)/);
+  assert.match(MEDIA_STUDIO_SURFACE_STYLES, /--te-header-width: var\(--sn-media-studio-timeline-header-width, 140px\)/);
+  assert.match(MEDIA_STUDIO_SURFACE_STYLES, /--te-track-height: var\(--sn-media-studio-track-height, 36px\)/);
+  assert.match(MEDIA_STUDIO_SURFACE_STYLES, /--te-ruler-height: var\(--sn-media-studio-ruler-height, 28px\)/);
   assert.match(MEDIA_STUDIO_SURFACE_STYLES, /--te-transport-height: var\(--sn-media-studio-control-height, 28px\)/);
   assert.match(editorSource, /cssPixelValue\(computed, '--te-track-height', 36\)/);
   assert.match(editorSource, /cssPixelValue\(computed, '--te-ruler-height', 28\)/);
