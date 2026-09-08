@@ -319,7 +319,7 @@ export class AgentDockShell extends Symbiote {
       return;
     }
     if (event.detail.placement !== 'panel') return;
-    if (this._isDrawerMode()) {
+    if (this._isDrawerMode() && !this._allowsShowPanelInMobile()) {
       emit(this, 'agent-show-layout-change', { placement: 'inline', reason: 'responsive-drawer' });
       return;
     }

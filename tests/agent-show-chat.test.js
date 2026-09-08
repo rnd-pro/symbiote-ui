@@ -521,6 +521,51 @@ test('agent-dock-shell restores an open Show panel inline when responsive drawer
   shell.remove();
 });
 
+test('agent-dock-shell opens the native Show panel in drawer mode when show-panel-mobile is set', async () => {
+  installDom();
+  await import('../chat/show-chat.js');
+
+  let shell = document.createElement('agent-dock-shell');
+  shell.setAttribute('show-panel-mobile', '');
+  shell.setAttribute('show-panel-mobile-close-show', '');
+  shell.getBoundingClientRect = () => ({ width: 390, height: 844 });
+  document.body.append(shell);
+  await settle();
+
+  shell.setMessages([{ role: 'agent', parts: [{ type: 'embed', key: 'mobile-show' }] }]);
+  shell.setShow('mobile-show', {
+    timeline: { turns: [{ persona: 'guide', text: 'Mobile embedded player' }] },
+    controller: { index: 0, isPlaying: false, play() {}, toggle() {}, prev() {}, next() {}, stop() {}, preview() {} },
+  });
+  await settle();
+
+  let layout = shell.ref.layout;
+  layout.setAttribute('drawer-mode-active', '');
+  await settle();
+  // The linkedom projection measures a zero-width viewport and may clear the
+  // manual drawer marker before the request; pin the dock contract directly
+  // the same way the collapse/drawer test does.
+  shell._isDrawerMode = () => true;
+
+  let player = shell.querySelector('.agent-show-player-region > chat-show-player');
+  assert.ok(player, 'drawer mode keeps the live player inline before the panel request');
+  let layoutChanges = [];
+  shell.addEventListener('agent-show-layout-change', (event) => layoutChanges.push(event.detail));
+  player.dispatchEvent(new CustomEvent('chat-show-layout-request', {
+    bubbles: true,
+    composed: true,
+    detail: { placement: 'panel' },
+  }));
+  await settle();
+
+  let panel = findPanelByType(layout.$.layoutTree, 'agent-show-panel', { uiInvoked: true });
+  assert.ok(panel && !panel.collapsed, 'drawer mode with show-panel-mobile opens the native Show panel instead of forcing inline');
+  assert.equal(shell.querySelector('[data-agent-show-panel-host] > chat-show-player'), player, 'the native mobile panel reparents the same live player');
+  assert.equal(player.hasAttribute('panel-layout'), true, 'the player reports the panel placement');
+  assert.equal(layoutChanges.at(-1)?.placement, 'panel', 'drawer panel open uses the native panel lifecycle');
+  shell.remove();
+});
+
 test('agent-dock message updates preserve scroll policy through the full composition', async () => {
   installDom();
   await import('../chat/show-chat.js');
