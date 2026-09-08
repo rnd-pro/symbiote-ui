@@ -396,6 +396,13 @@ export class AgentDockShell extends Symbiote {
     }
     host.classList.add('agent-show-panel-host');
     host.closest('layout-node')?.classList.add('agent-show-panel-node');
+    if (this._showPanelMobileMode) {
+      for (let panelId of [this._mainPanelId, this._showPanelId]) {
+        Array.from(this.ref.layout?.querySelectorAll?.('layout-node') || [])
+          .find((node) => node.$?.nodeId === panelId)
+          ?.setAttribute('drawer-group-member', '');
+      }
+    }
     chat.setPlayerHost(host);
     player.setLayoutPlacement?.('panel');
     emit(this, 'agent-show-layout-change', { placement: 'panel', player, panelId: this._showPanelId });
@@ -404,6 +411,7 @@ export class AgentDockShell extends Symbiote {
   _restoreShowPlayer() {
     let chat = this.getChat();
     let player = chat?.getShowPlayer?.() || null;
+    this.ref.layout?.querySelectorAll?.('layout-node[drawer-group-member]').forEach((node) => node.removeAttribute('drawer-group-member'));
     chat?.setPlayerHost?.(null);
     player?.setLayoutPlacement?.('inline');
     if (this._showPanelId) {

@@ -14,6 +14,12 @@ export let styles = css`
     position: relative;
 
     /* Panel mode */
+    &[drawer-group-member] {
+      position: relative !important;
+      inset: auto !important;
+      transform: none !important;
+    }
+
     &[node-type='panel'] {
       flex-direction: column;
       background: var(--sn-sys-surface-raised);
