@@ -19,6 +19,8 @@ export let styles = css`
       inset: auto !important;
       transform: none !important;
       flex: none !important;
+      width: 100% !important;
+      height: 100% !important;
     }
 
     &[node-type='panel'] {
