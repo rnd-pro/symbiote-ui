@@ -18,6 +18,7 @@ export let styles = css`
       position: relative !important;
       inset: auto !important;
       transform: none !important;
+      flex: none !important;
     }
 
     &[node-type='panel'] {
