@@ -6967,6 +6967,12 @@ export function hasComponent(tagName) {
   return Boolean(getComponent(tagName));
 }
 
+export function hasPublicComponent(tagName) {
+  if (typeof tagName !== 'string') return false;
+  let comp = getComponent(tagName);
+  return comp ? comp.visibility === 'public' : false;
+}
+
 export function getComponentModule(tagName) {
   return getComponent(tagName)?.module;
 }

@@ -5,6 +5,8 @@ export * from './graph-schema.js';
 export * from './graph-analysis-catalog.js';
 export * from './project-schema-catalog.js';
 export * from './ui-schema-catalog.js';
+export * from './component-selection.js';
+export * from './component-scenarios.js';
 export * from './show-runtime-catalog.js';
 export * from './provider-conformance-atlas.js';
 export * from './xr-spatial-schema-catalog.js';

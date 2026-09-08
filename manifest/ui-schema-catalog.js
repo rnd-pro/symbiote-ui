@@ -61,6 +61,11 @@ export let UI_SCHEMA_VERSIONS = [
     path: 'schemas/source-diff-v1.json',
     description: 'JSON Schema for Unified and Side-by-Side Diff datasets.',
   },
+  {
+    version: 'component-selection-v1',
+    path: 'schemas/component-selection-v1.json',
+    description: 'JSON Schema for curated components selection guidance and dynamic projection metadata.',
+  },
 ];
 
 export let UI_SCHEMAS = {
@@ -1268,6 +1273,112 @@ UI_SCHEMAS['source-diff-v1'] = {
   },
   required: ['path', 'hunks'],
   additionalProperties: false
+};
+
+UI_SCHEMAS['component-selection-v1'] = {
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  $id: 'https://rnd-pro.github.io/symbiote-ui/schemas/component-selection-v1.json',
+  title: 'Symbiote UI Component Selection Descriptor',
+  type: 'object',
+  additionalProperties: false,
+  required: ['version', 'package', 'count', 'components'],
+  properties: {
+    version: { const: 'component-selection-v1' },
+    package: {
+      type: 'object',
+      required: ['name', 'version'],
+      properties: {
+        name: { type: 'string' },
+        version: { type: 'string' }
+      }
+    },
+    count: { type: 'integer', minimum: 0 },
+    components: {
+      type: 'array',
+      items: { $ref: '#/$defs/selectionComponent' }
+    }
+  },
+  $defs: {
+    selectionComponent: {
+      type: 'object',
+      required: [
+        'tagName',
+        'className',
+        'category',
+        'description',
+        'agent',
+        'contract',
+        'guidance',
+        'evidence',
+        'scenarios'
+      ],
+      properties: {
+        tagName: { type: 'string', pattern: '^[a-z][a-z0-9]*(-[a-z0-9]+)+$' },
+        className: { type: 'string', minLength: 1 },
+        category: { type: 'string', minLength: 1 },
+        description: { type: 'string', minLength: 1 },
+        agent: {
+          type: 'object',
+          required: ['roles', 'usage', 'dataOwnership'],
+          properties: {
+            roles: {
+              type: 'array',
+              items: { type: 'string' }
+            },
+            usage: { type: ['string', 'null'] },
+            dataOwnership: { type: ['string', 'null'] }
+          }
+        },
+        contract: {
+          type: ['object', 'null']
+        },
+        guidance: {
+          type: ['object', 'null'],
+          required: ['intent', 'when', 'antipattern', 'alternatives'],
+          properties: {
+            intent: { type: 'string', minLength: 1 },
+            when: { type: 'string', minLength: 1 },
+            antipattern: { type: 'string', minLength: 1 },
+            alternatives: {
+              type: 'array',
+              items: { type: 'string' }
+            }
+          }
+        },
+        evidence: {
+          oneOf: [
+            { type: 'null' },
+            { $ref: '#/$defs/componentEvidence' }
+          ]
+        },
+        scenarios: {
+          type: 'array',
+          items: { $ref: '#/$defs/componentScenario' }
+        }
+      }
+    },
+    componentEvidence: {
+      type: 'object',
+      required: ['tagName', 'facets'],
+      properties: {
+        tagName: { type: 'string' },
+        facets: {
+          type: 'object',
+          additionalProperties: {
+            type: 'object',
+            required: ['status'],
+            properties: {
+              status: { enum: ['pass', 'fail', 'unknown', 'not-applicable'] },
+              reference: { type: 'string' }
+            }
+          }
+        }
+      }
+    },
+    componentScenario: {
+      type: 'object'
+    }
+  }
 };
 
 export function listUiSchemaVersions() {
