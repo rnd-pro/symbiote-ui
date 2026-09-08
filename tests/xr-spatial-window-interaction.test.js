@@ -452,6 +452,26 @@ test('unsupported capability stays explicit fallback data', () => {
   assert.equal(windowEntry.upload.uploads, 0);
 });
 
+test('strict texture policy hides unavailable provider planes instead of leaving depth occluders', () => {
+  let { assembly, platform } = createAssemblyContext({
+    mode: 'none',
+    assemblyOptions: {
+      requireTextureUpload: true,
+      hideStrictTextureFailures: true,
+    },
+  });
+  assembly.syncLayouts([createLayoutDescriptor({
+    dom: { element: createWindowContentElement(platform.document) },
+  })]);
+  assembly.enter({ sessionId: 'session-1' });
+
+  let windowEntry = assembly.getWindow('window:layout-alpha');
+  let mesh = assembly.getWindowMesh('window:layout-alpha');
+  assert.equal(windowEntry.fallback.mode, 'provider-material-fallback', 'capability failure remains explicit data');
+  assert.equal(mesh.visible, false, 'an unavailable texture never leaves an opaque panel plane in the scene');
+  assert.equal(mesh.userData.strictTextureHidden, true);
+});
+
 test('runtime upload failure stays explicit fallback data', () => {
   let { assembly, platform } = createAssemblyContext({ mode: 'webgl' });
   failFakeHtmlTexture();

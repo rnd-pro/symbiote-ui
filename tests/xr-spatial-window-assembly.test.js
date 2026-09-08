@@ -205,6 +205,72 @@ test('syncLayouts adds, updates, removes, and reconciles idempotently', () => {
   assert.equal(invalid.errors[0].reason, 'missing-layout-id');
 });
 
+test('active XR reclaims an externally reparented live root before content and theme uploads', () => {
+  let { assembly, platform } = createAssemblyContext();
+  let element = createWindowContentElement(platform.document);
+  let windowId = 'window:layout-alpha';
+  assembly.syncLayouts([createLayoutDescriptor({ dom: { element } })]);
+  assembly.enter({ sessionId: 'session-1' });
+  let canvas = element.parentElement;
+  let mesh = assembly.getWindowMesh(windowId);
+
+  platform.document.body.appendChild(element);
+  let contentSync = assembly.syncLayouts([createLayoutDescriptor({
+    contentRevision: 2,
+    dom: { element },
+  })]);
+
+  assert.deepEqual(contentSync.updated, [windowId]);
+  assert.equal(assembly.getWindowElement(windowId), element, 'the live root identity is preserved');
+  assert.equal(element.parentElement, canvas, 'content upload restores the root to its owned canvas');
+  assert.equal(assembly.getWindowMesh(windowId), mesh, 'the native mesh is reused');
+  assert.equal(assembly.getWindow(windowId).fallback.mode, 'none');
+
+  platform.document.body.appendChild(element);
+  assembly.applyTheme({
+    version: 'xr-theme-snapshot-v1',
+    themeScope: 'xr',
+    tokens: { '--sn-xr-panel-bg': '#101820' },
+    material: {
+      background: '#101820',
+      backgroundColor: 0x101820,
+      border: '#2a3542',
+      borderColor: 0x2a3542,
+      pointer: '#4c8bf5',
+      pointerColor: 0x4c8bf5,
+    },
+  });
+
+  assert.equal(assembly.getWindowElement(windowId), element, 'theme redraw keeps the same live root');
+  assert.equal(element.parentElement, canvas, 'theme redraw repairs the canvas parentage before its batch');
+  assert.equal(assembly.getWindowMesh(windowId), mesh, 'theme redraw keeps the same native mesh');
+  assert.equal(assembly.getWindow(windowId).fallback.mode, 'none');
+});
+
+test('active XR reclaims component-created and layout-node-created live roots without replacing them', () => {
+  for (let [kind, dom] of [
+    ['component', { component: 'article', props: { textContent: 'component-created panel' } }],
+    ['layout node', { layoutNode: { component: 'article', props: { textContent: 'layout-node-created panel' } } }],
+  ]) {
+    let { assembly, platform } = createAssemblyContext();
+    let windowId = 'window:layout-alpha';
+    assembly.syncLayouts([createLayoutDescriptor({ dom })]);
+    assembly.enter({ sessionId: 'session-1' });
+    let element = assembly.getWindowElement(windowId);
+    let canvas = element.parentElement;
+    let mesh = assembly.getWindowMesh(windowId);
+
+    platform.document.body.appendChild(element);
+    let contentSync = assembly.syncLayouts([createLayoutDescriptor({ contentRevision: 2, dom })]);
+
+    assert.deepEqual(contentSync.updated, [windowId]);
+    assert.equal(assembly.getWindowElement(windowId), element, `${kind} root identity is preserved`);
+    assert.equal(element.parentElement, canvas, `${kind} root returns to its canvas`);
+    assert.equal(assembly.getWindowMesh(windowId), mesh, `${kind} native mesh is reused`);
+    assert.equal(assembly.getWindow(windowId).fallback.mode, 'none');
+  }
+});
+
 test('syncLayouts rejects a window-id conflict for a known layoutId', () => {
   let { assembly, platform } = createAssemblyContext();
   assembly.syncLayouts([createLayoutDescriptor({
@@ -845,3 +911,45 @@ test('assembly upload state exposes the packed receipt and receipt validates aga
   assert.equal(validateReceipt(receiptObj), true, ajv.errorsText(validateReceipt.errors));
 });
 
+
+test('theme redraw receipt keeps workspace insertion order (no localeCompare re-sort)', () => {
+  let { assembly, platform } = createAssemblyContext();
+  // Insertion order is intentionally NOT lexicographic: 'zulu' before 'alpha'.
+  // The receipt validator reconstructs the expected windowIds sequence from
+  // listWindows() (Map insertion order); re-sorting the producer by
+  // windowId.localeCompare made every first redraw fail validation with
+  // windowIds-sequence-mismatch on real workspaces (layout order is not
+  // lexicographic). Regression lock: the receipt must keep insertion order.
+  assembly.syncLayouts([
+    createLayoutDescriptor({
+      layoutId: 'layout-zulu',
+      themeScope: 'order-scope',
+      dom: { element: createWindowContentElement(platform.document) },
+    }),
+    createLayoutDescriptor({
+      layoutId: 'layout-alpha',
+      themeScope: 'order-scope',
+      dom: { element: createWindowContentElement(platform.document) },
+    }),
+  ]);
+  assembly.enter({ sessionId: 'session-order' });
+  assembly.applyTheme({
+    version: 'xr-theme-snapshot-v1',
+    themeScope: 'order-scope',
+    tokens: { '--sn-xr-panel-bg': '#123456' },
+    material: { background: '#123456', backgroundColor: 0x123456 },
+  });
+  let redrawReceipt = assembly.getReceipts().find((r) => r.version === 'xr-spatial-window-theme-redraw-receipt-v1');
+  assert.ok(redrawReceipt, 'Theme redraw receipt must be emitted');
+  assert.equal(redrawReceipt.ok, true);
+  assert.deepEqual(
+    redrawReceipt.windowIds,
+    ['window:layout-zulu', 'window:layout-alpha'],
+    'receipt windowIds must follow workspace insertion order, not lexicographic order',
+  );
+  assert.deepEqual(
+    redrawReceipt.affectedWindows,
+    ['window:layout-zulu', 'window:layout-alpha'],
+    'affectedWindows must follow the same insertion order',
+  );
+});

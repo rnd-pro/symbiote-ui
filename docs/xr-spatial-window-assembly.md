@@ -72,6 +72,13 @@ or `dom.component` / `dom.layoutNode` / `dom.props` (built once by the panel
 host). DOM references never appear in receipts; `getWindowDataProjection(id)`
 returns the data-only descriptor projection.
 
+While an XR session is active, the assembly owns the live root's direct parent:
+it must remain the child of that window's private canvas. If external layout
+work moves the same root elsewhere, the assembly reasserts that parentage
+before a content, resize, scene, or theme texture upload. Explicit, component-
+created, and layout-node-created roots keep their identities along with their
+native meshes; the renderer's direct-child safety gate is not relaxed.
+
 ## Default window placement (`xr-spatial-window-placement-v2`)
 
 Unplaced windows never share the neutral `XR_SPATIAL_WINDOW_DEFAULT_POSE`
@@ -279,6 +286,12 @@ Per-window fallback is first-class data: `mode` is `'none'`,
 (no native shell or no DOM host), with `source`, `reason`, and the last upload
 outcome. Unsupported capability and runtime upload failure never throw out of
 `enter`, `syncLayouts`, or resize.
+
+Hosts that cannot safely show an untextured world-space panel can opt into
+`requireTextureUpload: true` together with `hideStrictTextureFailures: true`.
+That strict policy retains the fallback receipt for diagnostics but hides the
+panel mesh until a real HTML-in-Canvas texture is available, so an opaque
+fallback plane cannot write depth over unrelated XR content.
 
 ## Dirty gating and theme
 

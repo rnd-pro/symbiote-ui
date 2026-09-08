@@ -196,6 +196,29 @@ export function createXRSpatialWindowAssembly(options = {}) {
     })
     : null);
 
+  // A host may elect a fail-closed texture policy for immersive content. In
+  // that mode an unavailable HTML-in-Canvas texture never leaves an opaque
+  // provider-material panel in the scene where it could write depth and hide
+  // unrelated world geometry. The fallback receipt remains available to the
+  // host for an explicit operator-facing diagnostic.
+  let requireTextureUpload = options.requireTextureUpload === true ||
+    options.hideStrictTextureFailures === true;
+  let hideStrictTextureFailures = options.hideStrictTextureFailures === true;
+
+  function withTextureRequirement(applyOptions = {}) {
+    return requireTextureUpload
+      ? { ...applyOptions, requireTextureUpload: true }
+      : applyOptions;
+  }
+
+  function sceneTextureOptions() {
+    return {
+      textureBridge,
+      ...(requireTextureUpload ? { textureOptions: { requireTextureUpload: true } } : {}),
+      ...(hideStrictTextureFailures ? { hideStrictTextureFailures: true } : {}),
+    };
+  }
+
 
 
   let themeTokens = resolveXRDesignTokens(options.theme || undefined);
@@ -326,6 +349,21 @@ export function createXRSpatialWindowAssembly(options = {}) {
     return frame;
   }
 
+  function buildDomPanel(windowEntry, { element = windowEntry.dom.element } = {}) {
+    return {
+      id: windowEntry.windowId,
+      component: windowEntry.dom.component || 'section',
+      layoutNode: windowEntry.dom.layoutNode || undefined,
+      element: element || undefined,
+      state: windowEntry.dom.props || undefined,
+      size: [...windowEntry.sizeMeters],
+      contentViewport: { ...windowEntry.viewport },
+      contentHash: windowEntry.contentHash,
+      revision: windowEntry.contentRevision,
+      hitMap: windowEntry.hitMap || undefined,
+    };
+  }
+
   function mountWindow(windowEntry) {
     if (windowEntry.mounted || windowEntry.contentKind !== 'dom') return windowEntry.mounted;
     if (!panelHost || !documentRef?.createElement) {
@@ -337,20 +375,8 @@ export function createXRSpatialWindowAssembly(options = {}) {
     if (canvas.dataset) canvas.dataset.windowId = windowEntry.windowId;
     canvas.width = windowEntry.viewport.width;
     canvas.height = windowEntry.viewport.height;
-    let panel = {
-      id: windowEntry.windowId,
-      component: windowEntry.dom.component || 'section',
-      layoutNode: windowEntry.dom.layoutNode || undefined,
-      element: windowEntry.dom.element || undefined,
-      state: windowEntry.dom.props || undefined,
-      size: [...windowEntry.sizeMeters],
-      contentViewport: { ...windowEntry.viewport },
-      contentHash: windowEntry.contentHash,
-      revision: windowEntry.contentRevision,
-      hitMap: windowEntry.hitMap || undefined,
-    };
     try {
-      windowEntry.element = panelHost.mountPanel(panel, canvas);
+      windowEntry.element = panelHost.mountPanel(buildDomPanel(windowEntry), canvas);
     } catch {
       windowEntry.element = null;
       computeFallback(windowEntry);
@@ -363,6 +389,39 @@ export function createXRSpatialWindowAssembly(options = {}) {
     windowEntry.dirty = true;
     computeFallback(windowEntry);
     return true;
+  }
+
+  function ensureWindowCanvasOwnership(windowEntry) {
+    if (!windowEntry?.mounted || windowEntry.contentKind !== 'dom') return true;
+    if (windowEntry.canvas && windowEntry.element?.parentElement === windowEntry.canvas) return true;
+    if (!panelHost || !windowEntry.canvas) {
+      computeFallback(windowEntry, {
+        textureApplied: false,
+        reason: 'canvas-ownership-unavailable',
+      });
+      return false;
+    }
+    try {
+      let element = panelHost.mountPanel(buildDomPanel(windowEntry, {
+        element: windowEntry.element || windowEntry.dom.element,
+      }), windowEntry.canvas);
+      if (!element || element.parentElement !== windowEntry.canvas) {
+        computeFallback(windowEntry, {
+          textureApplied: false,
+          reason: 'canvas-ownership-unavailable',
+        });
+        return false;
+      }
+      windowEntry.element = element;
+      windowEntry.dirty = true;
+      return true;
+    } catch {
+      computeFallback(windowEntry, {
+        textureApplied: false,
+        reason: 'canvas-ownership-unavailable',
+      });
+      return false;
+    }
   }
 
   function unmountWindow(windowEntry) {
@@ -600,16 +659,29 @@ export function createXRSpatialWindowAssembly(options = {}) {
     return resolverRecord || null;
   }
 
+  function restoreTexturedWindowVisibility(windowEntry, record) {
+    if (record?.textureApplied !== true || !shellReady()) return false;
+    let mesh = adapter.getPanelMesh(windowEntry.windowId);
+    if (mesh?.userData?.strictTextureHidden !== true) return false;
+    delete mesh.userData.strictTextureHidden;
+    delete mesh.userData.strictTextureDiagnostic;
+    delete mesh.userData.strictTextureDiagnosticReason;
+    return true;
+  }
+
   function flushWindowTexture(windowEntry) {
     if (!shellReady() || status !== 'entered' || !textureBridge || !windowEntry.mounted) return null;
+    if (!ensureWindowCanvasOwnership(windowEntry)) return null;
     let mesh = adapter.getPanelMesh(windowEntry.windowId);
     if (!mesh) return null;
-    let record = textureBridge.applyPanelTexture(mesh, buildPanelDescriptor(windowEntry), {
+    let record = textureBridge.applyPanelTexture(mesh, buildPanelDescriptor(windowEntry), withTextureRequirement({
       element: windowEntry.element,
       canvas: windowEntry.canvas,
       onInvalidate: () => markWindowContentChanged(windowEntry),
-    });
-    return noteTextureOutcome(windowEntry, record);
+    }));
+    let outcome = noteTextureOutcome(windowEntry, record);
+    if (restoreTexturedWindowVisibility(windowEntry, record)) applyMaterialStates();
+    return outcome;
   }
 
   function requestWindowPaint(windowEntry) {
@@ -625,8 +697,11 @@ export function createXRSpatialWindowAssembly(options = {}) {
   function flushSceneSync() {
     sceneSyncPending = false;
     if (!shellReady() || status !== 'entered') return null;
+    for (let windowEntry of windows.values()) {
+      ensureWindowCanvasOwnership(windowEntry);
+    }
     let scene = projectScene();
-    let result = adapter.setScene(scene, { textureBridge });
+    let result = adapter.setScene(scene, sceneTextureOptions());
     for (let record of result?.textureSources || []) {
       let windowEntry = windows.get(windowIds.get(record.panelId));
       if (windowEntry) noteTextureOutcome(windowEntry, record);
@@ -1073,14 +1148,16 @@ export function createXRSpatialWindowAssembly(options = {}) {
 
   function applyWindowTextureAndGeometry(windowEntry, sizeMeters) {
     let texture = { uploaded: false, stage: 'native-shell-absent', reason: null, width: null, height: null };
+    if (!ensureWindowCanvasOwnership(windowEntry)) return { texture, geometrySwapped: false, mesh: null };
     let mesh = shellReady() && status === 'entered' ? adapter.getPanelMesh(windowEntry.windowId) : null;
     if (mesh && textureBridge && windowEntry.mounted) {
-      let record = textureBridge.applyPanelTexture(mesh, buildPanelDescriptor(windowEntry), {
+      let record = textureBridge.applyPanelTexture(mesh, buildPanelDescriptor(windowEntry), withTextureRequirement({
         element: windowEntry.element,
         canvas: windowEntry.canvas,
         onInvalidate: () => markWindowContentChanged(windowEntry),
-      });
+      }));
       let resolverRecord = noteTextureOutcome(windowEntry, record);
+      restoreTexturedWindowVisibility(windowEntry, record);
       texture = {
         uploaded: record.textureApplied === true,
         stage: record.stage || null,
@@ -2135,7 +2212,12 @@ export function createXRSpatialWindowAssembly(options = {}) {
     let targetScope = input?.themeScope || 'xr';
     let isGlobal = input?.global === true || input?.themeScope === '*';
 
-    const sortedWindows = Array.from(windows.values()).sort((a, b) => a.windowId.localeCompare(b.windowId));
+    // Iterate in Map insertion order — the same order listWindows() reports to
+    // the receipt validator's pre-observation. Sorting by windowId here made
+    // the emitted windowIds/affectedWindows sequence diverge from the
+    // validator's expected sequence (insertion order) and every redraw failed
+    // with windowIds-sequence-mismatch.
+    const sortedWindows = Array.from(windows.values());
 
     // Determine prior snapshot and theme change before mutating maps
     let affected = [];
@@ -2184,6 +2266,12 @@ export function createXRSpatialWindowAssembly(options = {}) {
     let affectedMounted = affected.filter(id => windows.get(windowIds.get(id))?.lifecycle?.mounted);
     if (affectedMounted.length !== affected.length) {
       throw new Error('Theme redraw receipt validation failed: affected-window-unmounted');
+    }
+    for (let id of affectedMounted) {
+      let windowEntry = windows.get(windowIds.get(id));
+      if (!ensureWindowCanvasOwnership(windowEntry)) {
+        throw new Error(`Theme redraw receipt validation failed: canvas-ownership-unavailable:${id}`);
+      }
     }
 
     let preObservation = JSON.parse(JSON.stringify(listWindows()));
@@ -2454,7 +2542,7 @@ export function createXRSpatialWindowAssembly(options = {}) {
         };
       });
 
-      transaction = textureBridge.prepareBatch(preparedItems, { themeSnapshot: snapshot });
+      transaction = textureBridge.prepareBatch(preparedItems, withTextureRequirement({ themeSnapshot: snapshot }));
       if (!transaction || transaction.ok === false) {
         let reason = transaction?.reason || 'prepare-batch-failed';
         throw new Error(reason);

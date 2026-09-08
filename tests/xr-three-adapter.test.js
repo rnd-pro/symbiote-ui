@@ -9,6 +9,7 @@ import {
   XR_THREE_WEBXR_ADAPTER,
   createXRThreeSessionController,
   createXRThreeWebXRAdapter,
+  isXRThreeObjectEffectivelyVisible,
 } from '../xr/three-webxr-adapter.js';
 import {
   computeXRPanelChromeLayout,
@@ -1209,6 +1210,27 @@ test('Three adapter real Three.js conformed tests with rotated root', () => {
   assert.ok(Math.abs(nwHandle.position.y - expectedNWLocalY) < 1e-5);
 });
 
+test('transparent panel chrome is depth-neutral', () => {
+  let adapter = createXRThreeWebXRAdapter({ THREE: THREE_REAL });
+  let result = adapter.setScene({
+    id: 'depth-hygiene-scene',
+    panels: [{
+      id: 'panel-depth-hygiene',
+      position: [0, 1.35, -1.6],
+      rotation: [0, 0, 0],
+      size: [0.8, 0.45],
+    }],
+  }, { mode: 'immersive-ar' });
+  assert.equal(result.ok, true);
+  let mesh = adapter.getPanelMesh('panel-depth-hygiene');
+  let transparentOverlays = mesh.children.filter((child) => child.material?.transparent === true);
+  assert.ok(transparentOverlays.length > 0, 'panel chrome creates transparent overlays');
+  assert.ok(
+    transparentOverlays.every((child) => child.material.depthWrite === false),
+    'transparent chrome must never occlude scene depth',
+  );
+});
+
 
 test('panel frame meter chrome keeps constant physical size across panel sizes', () => {
   const legacy = createXRPanelFrame({ id: 'p' });
@@ -1671,6 +1693,54 @@ test('Three session controller exposes fullscreen as a host-owned window intent'
   assert.equal(fullscreenIntents[0].intent, 'panel-fullscreen');
   assert.equal(fullscreenIntents[0].context.sessionId, 'session-close');
   assert.ok(harness.diagnosticEvents.includes('spatial-three-panel-fullscreen'));
+
+  await harness.controller.stop();
+});
+
+test('isXRThreeObjectEffectivelyVisible walks the whole ancestor chain', () => {
+  let root = new THREE_REAL.Group();
+  let middle = new THREE_REAL.Group();
+  let leaf = new THREE_REAL.Group();
+  root.add(middle);
+  middle.add(leaf);
+
+  assert.equal(isXRThreeObjectEffectivelyVisible(leaf), true, 'all-visible chain is visible');
+
+  leaf.visible = false;
+  assert.equal(isXRThreeObjectEffectivelyVisible(leaf), false, 'own flag hides');
+  leaf.visible = true;
+
+  middle.visible = false;
+  assert.equal(isXRThreeObjectEffectivelyVisible(leaf), false, 'an invisible ancestor hides the subtree');
+  middle.visible = true;
+
+  root.visible = false;
+  assert.equal(isXRThreeObjectEffectivelyVisible(leaf), false, 'the suppressed root pattern hides every descendant');
+
+  assert.equal(isXRThreeObjectEffectivelyVisible(null), true, 'no object means nothing hides it');
+});
+
+test('Three session controller drops panels under an invisible root from interaction candidates', async () => {
+  let harness = await createCloseHarness();
+  let containsMesh = () => harness.hitMeshCandidates.some((meshes) =>
+    Array.isArray(meshes) && meshes.includes(harness.mesh));
+
+  harness.frame(1000);
+  assert.equal(containsMesh(), true, 'a visible panel is an interaction candidate');
+
+  // The lab parity-suppression pattern: the panel ROOT goes invisible while
+  // every panel mesh keeps its own visible=true — Three's raycaster would
+  // still hit it without the ancestor walk.
+  harness.sceneRoot.visible = false;
+  assert.notEqual(harness.mesh.visible, false);
+  harness.hitMeshCandidates.length = 0;
+  harness.frame(1016);
+  assert.equal(containsMesh(), false, 'a panel under an invisible root leaves every hit candidate set');
+
+  harness.sceneRoot.visible = true;
+  harness.hitMeshCandidates.length = 0;
+  harness.frame(1033);
+  assert.equal(containsMesh(), true, 'unsuppressing the root restores the candidacy');
 
   await harness.controller.stop();
 });
