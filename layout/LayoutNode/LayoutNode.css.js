@@ -540,6 +540,14 @@ export let styles = css`
       border: none;
     }
 
+    &[mobile-dock='primary'][node-type='split'] {
+      flex-direction: column;
+    }
+
+    &[mobile-dock='primary'][node-type='split'] > .panel-view[hidden] {
+      display: none !important;
+    }
+
     &[mobile-dock='primary'][node-type='split'] > .split-view {
       display: flex !important;
       width: 100% !important;
