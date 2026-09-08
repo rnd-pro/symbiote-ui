@@ -268,7 +268,12 @@ export class AgentDockShell extends Symbiote {
       previousMobile = mobile;
       this.toggleAttribute('mobile', mobile);
       if (mobile) {
-        if (this._showPanelId && !this._allowsShowPanelInMobile()) layout.closeUiPanel?.('agent-show-panel');
+        if (this._showPanelId && this._allowsShowPanelInMobile()) {
+          this._showPanelMobileMode = true;
+          layout.setAttribute('responsive-mode', 'preserve');
+          return;
+        }
+        if (this._showPanelId) layout.closeUiPanel?.('agent-show-panel');
         if (this._showPanelId && this._allowsShowPanelInMobile()) layout.openDrawer?.('end', this._showPanelId);
         else if (this.$.open) layout.openDrawer?.('end', this._dockPanelId);
         else layout.closeDrawer?.('end');
@@ -281,7 +286,8 @@ export class AgentDockShell extends Symbiote {
   _setLayoutOpen(open) {
     let layout = this.ref.layout;
     if (!layout) return;
-    if (this._isDrawerMode() && !this._allowsShowPanelInMobile()) {
+    let mobile = this._isDrawerMode();
+    if (mobile && !this._allowsShowPanelInMobile()) {
       if (open) layout.openDrawer?.('end', this._dockPanelId);
       else layout.closeDrawer?.('end');
       return;
@@ -324,23 +330,23 @@ export class AgentDockShell extends Symbiote {
       return;
     }
     if (event.detail.placement !== 'panel') return;
-    if (this._isDrawerMode() && !this._allowsShowPanelInMobile()) {
+    let mobile = this._isDrawerMode();
+    if (mobile && !this._allowsShowPanelInMobile()) {
       emit(this, 'agent-show-layout-change', { placement: 'inline', reason: 'responsive-drawer' });
       return;
     }
-    let panelId = this.ref.layout?.openPanel?.('agent-show-panel', {
+    let layout = this.ref.layout;
+    if (mobile) {
+      this._showPanelMobileMode = true;
+      layout?.setAttribute('responsive-mode', 'preserve');
+    }
+    layout?.openPanel?.('agent-show-panel', {
       direction: 'vertical',
       ratio: DEFAULT_SHOW_PANEL_RATIO,
       source: 'chat-show-player',
       uiInvoked: true,
       panelState: { placement: 'panel' },
     });
-    if (panelId && this._isDrawerMode()) {
-      // A drawer layout demotes the Show panel to the end dock behind the
-      // primary surface: open its drawer so the player is visible at once
-      // instead of staying mounted off-canvas.
-      this.ref.layout?.openDrawer?.('end', panelId);
-    }
   };
 
   _onLayoutUiPanelOpen = (event) => {
@@ -353,11 +359,15 @@ export class AgentDockShell extends Symbiote {
     if (event.detail?.panelType !== 'agent-show-panel') return;
     // Dismissing the mobile Show panel (collapse or remove) ends the show:
     // inline restore would land in the closed chat drawer, invisible.
-    let closeShow = this._isDrawerMode()
+    let closeShow = this._showPanelMobileMode
       && this.hasAttribute('show-panel-mobile-close-show')
       && (event.detail?.removed === true || event.detail?.closed === true);
     let player = this.getChat()?.getShowPlayer?.() || null;
     this._restoreShowPlayer();
+    if (this._showPanelMobileMode) {
+      this._showPanelMobileMode = false;
+      this.ref.layout?.setAttribute('responsive-mode', 'drawer');
+    }
     if (closeShow) player?.requestClose?.();
   };
 

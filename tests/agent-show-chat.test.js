@@ -521,7 +521,7 @@ test('agent-dock-shell restores an open Show panel inline when responsive drawer
   shell.remove();
 });
 
-test('agent-dock-shell opens the native Show panel in drawer mode when show-panel-mobile is set', async () => {
+test('agent-dock-shell preserves the native vertical Show split on mobile', async () => {
   installDom();
   await import('../chat/show-chat.js');
 
@@ -563,8 +563,7 @@ test('agent-dock-shell opens the native Show panel in drawer mode when show-pane
   assert.equal(shell.querySelector('[data-agent-show-panel-host] > chat-show-player'), player, 'the native mobile panel reparents the same live player');
   assert.equal(player.hasAttribute('panel-layout'), true, 'the player reports the panel placement');
   assert.equal(layoutChanges.at(-1)?.placement, 'panel', 'drawer panel open uses the native panel lifecycle');
-  assert.equal(layout.$.drawerEndOpen, true, 'the mobile Show panel opens its end drawer at once');
-  assert.equal(layout.$.drawerEndPanelId, panel.id, 'the end drawer points at the Show panel, not the chat');
+  assert.equal(layout.getAttribute('responsive-mode'), 'preserve', 'the Show panel keeps the native vertical split instead of becoming a drawer');
   shell.remove();
 });
 
@@ -609,8 +608,8 @@ test('agent-dock-shell keeps a desktop Show panel visible when entering drawer m
 
   let kept = findPanelByType(layout.$.layoutTree, 'agent-show-panel', { uiInvoked: true });
   assert.ok(kept && !kept.collapsed, 'entering drawer mode with show-panel-mobile keeps the Show panel open');
-  assert.equal(layout.$.drawerEndOpen, true, 'the kept Show panel opens its end drawer');
-  assert.equal(layout.$.drawerEndPanelId, kept.id, 'the end drawer points at the kept Show panel');
+  assert.equal(layout.getAttribute('responsive-mode'), 'preserve', 'the opened Show remains a split when the viewport becomes mobile');
+  assert.equal(layout.$.drawerEndOpen, false, 'the workspace remains visible above the Show panel');
   assert.equal(shell.querySelector('[data-agent-show-panel-host] > chat-show-player'), player, 'rotation keeps the live player mounted in the Show panel');
   shell.remove();
 });
@@ -655,7 +654,7 @@ test('agent-dock-shell ends the show when the mobile Show panel is dismissed', a
   shell.remove();
 });
 
-test('agent-dock-shell keeps the dock closed while the mobile Show panel owns the end drawer', async () => {
+test('agent-dock-shell keeps the dock closed while the mobile Show panel owns the split', async () => {
   installDom();
   await import('../chat/show-chat.js');
 
@@ -686,7 +685,7 @@ test('agent-dock-shell keeps the dock closed while the mobile Show panel owns th
     detail: { placement: 'panel' },
   }));
   await settle();
-  assert.equal(layout.$.drawerEndOpen, true, 'the Show drawer is open');
+  assert.equal(layout.getAttribute('responsive-mode'), 'preserve', 'the Show owns a native split instead of the end drawer');
   assert.equal(shell.hasAttribute('open'), false, 'the dock itself stays closed');
 
   let changes = [];
@@ -699,7 +698,7 @@ test('agent-dock-shell keeps the dock closed while the mobile Show panel owns th
   await settle();
   assert.deepEqual(changes, [], 'the shared end drawer showing the Show panel never flips the dock open');
   assert.equal(shell.hasAttribute('open'), false);
-  assert.equal(layout.$.drawerEndOpen, true, 'the Show drawer stays open');
+  assert.equal(layout.$.drawerEndOpen, false, 'no drawer is opened while the Show panel is active');
   shell.remove();
 });
 
