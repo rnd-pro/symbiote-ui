@@ -380,7 +380,12 @@ export class AgentDockShell extends Symbiote {
   _onLayoutUiPanelOpen = (event) => {
     if (event.detail?.panelType !== 'agent-show-panel') return;
     this._showPanelId = event.detail.panelId;
-    queueMicrotask(() => this._mountShowPanel());
+    // openPanel rebuilds the target node, so restore the parked main slot
+    // before mounting the sibling Show host.
+    queueMicrotask(() => {
+      this._mountMain();
+      this._mountShowPanel();
+    });
   };
 
   _onLayoutUiPanelClose = (event) => {
