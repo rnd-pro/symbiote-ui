@@ -260,6 +260,16 @@ export class AgentDockShell extends Symbiote {
     for (let item of new Set(mainItems)) host.append(item);
   }
 
+  _preserveMain() {
+    const host = this.ref.layout?.querySelector?.('[data-agent-dock-main-host]');
+    const source = this.ref.source;
+    if (!host || !source) return;
+    // `panel-layout.openPanel()` rebuilds the node that owns this host. Keep
+    // the slotted workspace outside that disposable node first, then
+    // `_mountMain()` attaches it to the replacement host.
+    for (const item of Array.from(host.children)) source.append(item);
+  }
+
   _isDrawerMode() {
     return Boolean(this.ref.layout?.hasAttribute?.('drawer-mode-active'));
   }
@@ -348,6 +358,9 @@ export class AgentDockShell extends Symbiote {
       return;
     }
     let layout = this.ref.layout;
+    // Opening a native panel replaces its target node. Preserve the workspace
+    // before that replacement so the new primary host never becomes blank.
+    this._preserveMain();
     if (mobile) this._showPanelMobileMode = true;
     layout?.openPanel?.('agent-show-panel', {
       direction: 'vertical',
