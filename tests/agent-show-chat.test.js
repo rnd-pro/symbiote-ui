@@ -567,6 +567,13 @@ test('agent-dock-shell preserves the native vertical Show split on mobile', asyn
   assert.equal(layout.getAttribute('responsive-mode'), 'drawer', 'the root remains a drawer while its primary workspace owns the vertical Show split');
   assert.equal(layout.$.layoutTree.direction, 'horizontal');
   assert.equal(layout.$.layoutTree.first.direction, 'vertical');
+  shell.open('test-chat-toggle');
+  await settle();
+  shell.close('test-chat-toggle');
+  await settle();
+  let preservedPanel = findPanelByType(layout.$.layoutTree, 'agent-show-panel', { uiInvoked: true });
+  assert.ok(preservedPanel && !preservedPanel.collapsed, 'closing chat keeps the native Show panel open');
+  assert.equal(shell.querySelector('[data-agent-show-panel-host] > chat-show-player'), player, 'closing chat preserves the live player');
   shell.remove();
 });
 

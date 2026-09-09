@@ -310,8 +310,16 @@ export class AgentDockShell extends Symbiote {
     if (!layout) return;
     let mobile = this._isDrawerMode();
     if (mobile) {
-      if (open) layout.openDrawer?.('end', this._dockPanelId);
-      else layout.closeDrawer?.('end');
+      if (open) {
+        layout.openDrawer?.('end', this._dockPanelId);
+      } else if (this._showPanelMobileMode && this._showPanelId) {
+        // The chat and the native mobile Show share the end drawer. Closing
+        // the chat must reveal the already-mounted Show panel, not close the
+        // drawer itself and tear down the live player/controller.
+        layout.openDrawer?.('end', this._showPanelId);
+      } else {
+        layout.closeDrawer?.('end');
+      }
       return;
     }
     let node = LayoutTree.findNode(layout.$.layoutTree, this._dockPanelId);
