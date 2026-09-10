@@ -1505,12 +1505,18 @@ test('panel layout drawer API and rail gestures open and close drawer panels wit
     detail: { panelId: railNode.$.nodeId, collapsed: false },
   }));
   assert.equal(railLayout.$.drawerStartOpen, true);
+  const immediateTreeRow = document.createElement('div');
+  immediateTreeRow.className = 'sn-tree-row';
+  railNode.append(immediateTreeRow);
+  const immediateTreeClick = new Event('click', { bubbles: true, cancelable: true });
+  immediateTreeRow.dispatchEvent(immediateTreeClick);
+  assert.equal(immediateTreeClick.defaultPrevented, false);
   let drawerClickTarget = document.createElement('div');
   railNode.append(drawerClickTarget);
   let drawerClick = new Event('click', { bubbles: true, cancelable: true });
   drawerClickTarget.dispatchEvent(drawerClick);
   assert.equal(drawerClick.defaultPrevented, true);
-  railLayout._drawerClickSuppressUntil = 0;
+  assert.equal(railLayout._ignoreNextDrawerClick, null);
 
   railLayout.closeDrawer('start');
   railNode = railLayout.querySelector('layout-node[drawer-rail][drawer-rail-collapsed][data-drawer-dock="start"]');
@@ -1537,6 +1543,32 @@ test('panel layout drawer API and rail gestures open and close drawer panels wit
   railLayout.dispatchEvent(railTouchUp);
 
   assert.equal(railLayout.$.drawerStartOpen, true);
+
+  railLayout.closeDrawer('start');
+  railNode = railLayout.querySelector('layout-node[drawer-rail][drawer-rail-collapsed][data-drawer-dock="start"]');
+  const cancelDown = new Event('pointerdown', { bubbles: true });
+  cancelDown.pointerId = 12;
+  cancelDown.pointerType = 'touch';
+  cancelDown.button = 0;
+  cancelDown.clientX = 8;
+  cancelDown.clientY = 80;
+  cancelDown.preventDefault = () => {};
+  railNode.dispatchEvent(cancelDown);
+  const cancelMove = new Event('pointermove');
+  cancelMove.pointerId = 12;
+  cancelMove.pointerType = 'touch';
+  cancelMove.clientX = 220;
+  cancelMove.clientY = 80;
+  cancelMove.preventDefault = () => {};
+  railLayout.dispatchEvent(cancelMove);
+  const cancelEvent = new Event('pointercancel');
+  cancelEvent.pointerId = 12;
+  cancelEvent.pointerType = 'touch';
+  railLayout.dispatchEvent(cancelEvent);
+  assert.equal(railLayout._ignoreNextDrawerClick, null);
+
+  railLayout.openDrawer('start');
+  railNode = railLayout.querySelector('layout-node[drawer-rail][drawer-expanded][data-drawer-dock="start"]');
   railNode.dispatchEvent(new CustomEvent('panel-collapse-toggle', {
     bubbles: true,
     composed: true,
