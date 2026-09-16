@@ -200,6 +200,10 @@
     "./themes/TailwindBridge": {
       "import": "./themes/TailwindBridge.js",
       "default": "./themes/TailwindBridge.js"
+    },
+    "./webmcp/live-observation": {
+      "import": "./webmcp/live-observation.js",
+      "default": "./webmcp/live-observation.js"
     }
   },
   "files": [
