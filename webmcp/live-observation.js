@@ -322,6 +322,9 @@ export function createLiveEnsureToolDescriptor(ensure, options = {}) {
     },
   };
 }
+
+/**
+ * Builds a read-only WebMCP tool descriptor exposing the registry.
  * The descriptor contains no mutation input; `annotations.readOnlyHint`
  * marks the contract so agents and policy engines treat it safely.
  *

@@ -7,6 +7,7 @@ import { test } from 'node:test';
 import {
   LIVE_OBSERVATION_PRESENCE,
   LIVE_OBSERVATION_SCHEMA_VERSION,
+  createLiveEnsureToolDescriptor,
   createLiveInspectToolDescriptor,
   createLiveObservationRegistry,
   normalizeLiveObservation,
@@ -105,4 +106,63 @@ test('live inspect tool descriptor is read-only and returns observations', () =>
   assert.equal(tool.inputSchema.additionalProperties, false);
   let result = tool.execute({ targetId: 'panel.a' });
   assert.equal(result.observation.presence, 'present');
+});
+
+test('capabilities.effects is normalized as per-transition state postconditions', () => {
+  let observation = normalizeLiveObservation({
+    targetId: 'panel.graph',
+    state: { open: false },
+    capabilities: {
+      supported: ['open', 'close'],
+      available: ['open'],
+      effects: { open: { open: true }, close: { open: false } },
+    },
+  });
+  assert.deepEqual(observation.capabilities.effects, {
+    open: { open: true },
+    close: { open: false },
+  });
+});
+
+test('capabilities.effects drops non-objects, unknown ids, and empty maps', () => {
+  let observation = normalizeLiveObservation({
+    targetId: 'panel.graph',
+    capabilities: {
+      supported: ['open'],
+      available: ['open'],
+      effects: {
+        open: { open: true },
+        unknown: { open: true },
+        malformed: 'no',
+        empty: {},
+      },
+    },
+  });
+  assert.deepEqual(observation.capabilities.effects, { open: { open: true } });
+});
+
+test('live ensure tool descriptor wires input shape to the ensure function', async () => {
+  let calls = [];
+  let tool = createLiveEnsureToolDescriptor((input) => {
+    calls.push(input);
+    return { status: 'already-satisfied', targetId: input.targetId };
+  });
+  assert.equal(tool.name, 'live_ensure');
+  assert.equal(tool.annotations.readOnlyHint, false);
+  assert.equal(tool.annotations.domain, 'live-application-state');
+  assert.equal(tool.inputSchema.additionalProperties, false);
+  assert.deepEqual(tool.inputSchema.required, ['targetId', 'state']);
+  await tool.execute({
+    targetId: ' panel.graph ',
+    state: { open: true, ignored: () => {}, bad: BigInt(1) },
+    sync: 'gate',
+  });
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].targetId, 'panel.graph');
+  assert.deepEqual(calls[0].state, { open: true });
+  assert.equal(calls[0].sync, 'gate');
+});
+
+test('createLiveEnsureToolDescriptor rejects a missing ensure function', () => {
+  assert.throws(() => createLiveEnsureToolDescriptor(null), /ensure/);
 });
