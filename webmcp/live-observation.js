@@ -86,15 +86,31 @@ function normalizeStateRecord(value) {
   return result;
 }
 
+function normalizeEffects(value, supportedIds) {
+  if (!isRecord(value)) return {};
+  let result = {};
+  for (let [transitionId, effects] of Object.entries(value)) {
+    let id = normalizeText(transitionId);
+    if (!id || !supportedIds.has(id) || !isRecord(effects)) continue;
+    let state = normalizeStateRecord(effects);
+    if (Object.keys(state).length === 0) continue;
+    result[id] = Object.freeze(state);
+  }
+  return result;
+}
+
 /**
  * Normalizes one live observation into the schema. Input shape:
  * { targetId, role, component?, presence?, state?, visibility?,
- *   capabilities: { supported, available, unavailable? },
+ *   capabilities: { supported, available, unavailable?, effects? },
  *   freshness? }
  * `capabilities.supported` lists what the target semantically can do;
  * `capabilities.available` is the state-dependent subset executable right
  * now; anything supported but not available lands in `unavailable` with a
- * machine-readable reason.
+ * machine-readable reason. `capabilities.effects` (optional, additive)
+ * maps a supported transition id to the state keys it is expected to
+ * produce — the machine-readable postcondition that lets `live_ensure`
+ * pick a transition without guessing.
  * @param {object} input
  */
 export function normalizeLiveObservation(input = {}) {
@@ -123,6 +139,7 @@ export function normalizeLiveObservation(input = {}) {
       supported: Object.freeze(supported),
       available: Object.freeze(available),
       unavailable: Object.freeze(unavailable),
+      effects: Object.freeze(normalizeEffects(capabilities.effects, new Set(supported))),
     }),
   });
 }
@@ -247,7 +264,64 @@ export function createLiveObservationRegistry(options = {}) {
 }
 
 /**
- * Builds a read-only WebMCP tool descriptor exposing the registry.
+ * Builds the semantic ensure WebMCP tool descriptor. Unlike `live_inspect`
+ * this tool MUTATES the live application state through a host-provided
+ * controller: observe → compare desired state keys → pick one available
+ * transition whose declared effects cover the missing keys → invoke →
+ * verify by re-observation. The controller (see
+ * `createEnsureController` in symbiote-workspace) owns retry/staleness
+ * policy; this descriptor only wires input shape and annotations.
+ *
+ * @param {(input: { targetId: string, state: Record<string, unknown>, sync?: string }) => Promise<object> | object} ensure
+ * @param {object} [options]
+ * @param {string} [options.name]
+ * @param {string} [options.description]
+ */
+export function createLiveEnsureToolDescriptor(ensure, options = {}) {
+  if (typeof ensure !== 'function') {
+    throw new TypeError('createLiveEnsureToolDescriptor requires an ensure() function');
+  }
+  return {
+    name: normalizeText(options.name) || 'live_ensure',
+    description: normalizeText(options.description) || [
+      'Semantic reconciliation of LIVE APPLICATION state: bring a target to',
+      'the requested state by invoking an available semantic transition and',
+      'verifying the result by re-observation. Fails explicitly instead of',
+      'guessing when no available transition declares matching effects.',
+    ].join(' '),
+    inputSchema: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['targetId', 'state'],
+      properties: {
+        targetId: {
+          type: 'string',
+          description: 'Stable semantic target id (e.g. panel.graph).',
+        },
+        state: {
+          type: 'object',
+          description: 'Desired semantic state keys, e.g. { "open": true }. Only listed keys are reconciled.',
+        },
+        sync: {
+          type: 'string',
+          description: 'Optional sync mode hint (e.g. "gate"); currently advisory.',
+        },
+      },
+    },
+    annotations: {
+      readOnlyHint: false,
+      schemaVersion: LIVE_OBSERVATION_SCHEMA_VERSION,
+      domain: 'live-application-state',
+    },
+    execute(input = {}) {
+      return ensure({
+        targetId: normalizeText(input?.targetId),
+        state: normalizeStateRecord(input?.state),
+        sync: normalizeText(input?.sync) || undefined,
+      });
+    },
+  };
+}
  * The descriptor contains no mutation input; `annotations.readOnlyHint`
  * marks the contract so agents and policy engines treat it safely.
  *
