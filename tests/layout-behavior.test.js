@@ -1863,3 +1863,72 @@ test('mobile drawer rails render as native collapsed surfaces without synthetic 
   assert.doesNotMatch(template, /layout-rail-stack/);
   assert.doesNotMatch(styles, /\.layout-rail-stack-btn/);
 });
+
+test('nested panel-layout fullscreen is owned by the deepest layout', async () => {
+  let { parseHTML } = await import('linkedom');
+  let { window } = parseHTML('<!doctype html><html><body></body></html>');
+  let TestCSSStyleSheet = class {
+    replaceSync(text) { this.cssText = text; }
+  };
+  Object.assign(globalThis, {
+    window,
+    document: window.document,
+    HTMLElement: window.HTMLElement,
+    Element: window.Element,
+    customElements: window.customElements,
+    Node: window.Node,
+    Event: window.Event,
+    CustomEvent: window.CustomEvent,
+    MutationObserver: window.MutationObserver,
+    CSSStyleSheet: TestCSSStyleSheet,
+    getComputedStyle: window.getComputedStyle || (() => ({ transitionDuration: '0s', animationDuration: '0s' })),
+  });
+  window.document.adoptedStyleSheets = [];
+
+  const div = window.document.createElement('div');
+  const StyleProto = Object.getPrototypeOf(div.style);
+  StyleProto.getPropertyPriority = StyleProto.getPropertyPriority || (() => '');
+
+  // Fresh URLs force both component modules to register their custom
+  // elements against THIS test's window.customElements registry; otherwise
+  // the entrypoint cache serves the previous test's stale window.
+  const fresh = `?fresh=fullscreen-nested-${Date.now()}`;
+  await import(`../layout/LayoutNode/LayoutNode.js${fresh}`);
+  await import(`../layout/Layout/Layout.js${fresh}`);
+  const outer = document.createElement('panel-layout');
+  document.body.append(outer);
+  outer.getBoundingClientRect = () => ({ width: 1280, height: 800, top: 0, left: 0, bottom: 800, right: 1280 });
+  outer.registerPanelType('outer-a', { title: 'A', icon: 'dashboard' });
+
+  // NESTED layout containing the fullscreen target panel.
+  const inner = document.createElement('panel-layout');
+  outer.append(inner);
+  inner.getBoundingClientRect = () => ({ width: 800, height: 600, top: 0, left: 0, bottom: 600, right: 800 });
+  inner.registerPanelType('inner-demo', { title: 'Inner', icon: 'dashboard' });
+
+  outer.setLayout(createPanel('outer-a'));
+  inner.setLayout(createPanel('inner-demo'));
+  await new Promise((r) => setTimeout(r, 0));
+
+  const innerNode = inner.querySelector('layout-node[node-type="panel"]');
+  assert.ok(innerNode, 'nested layout renders its own panel node');
+  assert.ok(innerNode.closest('panel-layout') === inner, 'inner node owned by inner layout');
+
+  // Fire the fullscreen event exactly from the inner panel node.
+  innerNode._toggleFullscreen();
+  await new Promise((r) => setTimeout(r, 0));
+
+  assert.equal(inner.$.fullscreenPanelId, innerNode.$.nodeId,
+    'nested layout claims fullscreen for its own panel');
+  assert.equal(outer.$.fullscreenPanelId, null,
+    'the enclosing agent-dock-like layout MUST stay out of the nested fullscreen');
+  assert.equal(outer.hasAttribute('fullscreen-active'), false,
+    'the outer host retains its regular rendering');
+
+  // Exit must equally belong to the owner; toggling once on the SAME node
+  // returns both layouts to normal mode without leaving stray state.
+  innerNode._toggleFullscreen();
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(inner.$.fullscreenPanelId, null, 'exit fullscreen');
+  assert.equal(outer.$.fullscreenPanelId, null);
+});

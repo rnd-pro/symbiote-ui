@@ -1816,7 +1816,11 @@ export class Layout extends Symbiote {
   _findPanelNode(panelId) {
     let nodes = this.querySelectorAll('layout-node[node-type="panel"]');
     for (const node of nodes) {
-      if (node.$.nodeId === panelId) {
+      // Ownership check: nested panel-layouts manage their own nodes. Without
+      // it, an outer layout (e.g. the application dock host) would claim the
+      // inner layout's fullscreen event and hide its own content, collapsing
+      // the nested app into a zero-size pile.
+      if (node.$.nodeId === panelId && node.closest('panel-layout') === this) {
         return node;
       }
     }
