@@ -51,31 +51,6 @@ function drawerTranslateTransform(value) {
   return `translate3d(${value}, 0, 0)`;
 }
 
-/**
- * Fullscreen portal: a `position: fixed` panel trapped inside a
- * `contain: layout/paint` host (e.g. the agent dock's main host) collapses
- * to zero size — containment makes the host its fixed containing block.
- * Physically reparenting the fullscreen node to document.body escapes the
- * trap; a comment marker restores the original position on exit.
- */
-function enterFullscreenPortal(element) {
-  if (!element || element.__snFsMarker) return;
-  const marker = document.createComment('sn-fullscreen-return');
-  element.parentNode?.insertBefore(marker, element.nextSibling);
-  element.__snFsMarker = marker;
-  document.body.appendChild(element);
-}
-
-function exitFullscreenPortal(element) {
-  if (!element) return;
-  const marker = element.__snFsMarker;
-  if (marker?.parentNode) {
-    marker.parentNode.insertBefore(element, marker);
-    marker.remove();
-  }
-  delete element.__snFsMarker;
-}
-
 const LAYOUT_PEER_GROUPS = new Map();
 const LAYOUT_PEER_PENDING_GROUPS = new Set();
 let layoutPeerRefreshFrame = 0;
@@ -358,8 +333,6 @@ export class Layout extends Symbiote {
               this.$.tabItems = [];
               allPanels.forEach((p) => {
                 p.removeAttribute('fullscreen');
-
-                exitFullscreenPortal(p);
                 p.$.isFullscreen = false;
                 this.#setPanelVisible(p, true);
               });
@@ -1743,18 +1716,12 @@ export class Layout extends Symbiote {
       this._syncFullscreenBounds();
 
       panelNode.removeAttribute('fullscreen');
-
-
-      exitFullscreenPortal(panelNode);
       panelNode.$.isFullscreen = false;
       panelNode.$.fullscreenIcon = 'fullscreen';
-      exitFullscreenPortal(panelNode);
 
 
       allPanels.forEach((p) => {
         p.removeAttribute('fullscreen');
-
-        exitFullscreenPortal(p);
         p.$.isFullscreen = false;
         p.$.fullscreenIcon = 'fullscreen';
         this.#setPanelVisible(p, true);
@@ -1774,7 +1741,6 @@ export class Layout extends Symbiote {
       allPanels.forEach((p) => {
         if (p === panelNode) {
           p.toggleAttribute('fullscreen', true);
-          enterFullscreenPortal(p);
           p.$.isFullscreen = true;
           p.$.fullscreenIcon = 'fullscreen_exit';
           this.#setPanelVisible(p, true);
@@ -1838,8 +1804,6 @@ export class Layout extends Symbiote {
         this.#setPanelVisible(p, true);
       } else {
         p.removeAttribute('fullscreen');
-
-        exitFullscreenPortal(p);
         p.$.isFullscreen = false;
         p.$.fullscreenIcon = 'fullscreen';
         this.#setPanelVisible(p, false);
@@ -2045,8 +2009,6 @@ export class Layout extends Symbiote {
     let allPanels = this.querySelectorAll('layout-node[node-type="panel"]');
     allPanels.forEach((panelNode) => {
       panelNode.removeAttribute('fullscreen');
-
-      exitFullscreenPortal(panelNode);
       panelNode.$.isFullscreen = false;
       panelNode.$.fullscreenIcon = 'fullscreen';
       this.#setPanelVisible(panelNode, true);
@@ -2057,8 +2019,6 @@ export class Layout extends Symbiote {
       let panelNode = this._findPanelNode(this.$.fullscreenPanelId);
       if (panelNode) {
         panelNode.removeAttribute('fullscreen');
-
-        exitFullscreenPortal(panelNode);
         panelNode.$.isFullscreen = false;
         panelNode.$.fullscreenIcon = 'fullscreen';
         this.#clearInlineProperties(panelNode, ['left', 'width']);
