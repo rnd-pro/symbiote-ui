@@ -1932,3 +1932,58 @@ test('nested panel-layout fullscreen is owned by the deepest layout', async () =
   assert.equal(inner.$.fullscreenPanelId, null, 'exit fullscreen');
   assert.equal(outer.$.fullscreenPanelId, null);
 });
+
+test('layout-node keeps split resizer listeners across DOM re-parenting', async () => {
+  let { parseHTML } = await import('linkedom');
+  let { window } = parseHTML('<!doctype html><html><body></body></html>');
+  let TestCSSStyleSheet = class {
+    replaceSync(text) { this.cssText = text; }
+  };
+  Object.assign(globalThis, {
+    window,
+    document: window.document,
+    HTMLElement: window.HTMLElement,
+    Element: window.Element,
+    customElements: window.customElements,
+    Node: window.Node,
+    Event: window.Event,
+    CustomEvent: window.CustomEvent,
+    MutationObserver: window.MutationObserver,
+    ShadowRoot: window.ShadowRoot || class ShadowRootStub {},
+    CSSStyleSheet: TestCSSStyleSheet,
+    getComputedStyle: window.getComputedStyle || (() => ({ transitionDuration: '0s', animationDuration: '0s' })),
+  });
+  window.document.adoptedStyleSheets = [];
+
+  const div = window.document.createElement('div');
+  const StyleProto = Object.getPrototypeOf(div.style);
+  StyleProto.getPropertyPriority = StyleProto.getPropertyPriority || (() => '');
+
+  const fresh = `?fresh=resizer-lifecycle-${Date.now()}`;
+  await import(`../layout/LayoutNode/LayoutNode.js${fresh}`);
+  await import(`../layout/Layout/Layout.js${fresh}`);
+  const layout = document.createElement('panel-layout');
+  document.body.append(layout);
+  layout.setLayout(createSplit('horizontal', createPanel('lifecycle-left'), createPanel('lifecycle-right'), 0.6));
+  await new Promise((r) => setTimeout(r, 0));
+
+  const split = layout.querySelector('layout-node[node-type="split"]');
+  assert.ok(split, 'panel layout renders a split node');
+  const resizer = split.querySelector(':scope > .split-view > .split-resizer');
+  assert.ok(resizer, 'split renders a resizer');
+
+  const startResize = () => {
+    resizer.dispatchEvent(new Event('pointerdown', { bubbles: true, cancelable: true }));
+    const active = split.hasAttribute('resizing');
+    document.dispatchEvent(new Event('pointerup', { bubbles: true, cancelable: true }));
+    return active;
+  };
+  assert.ok(startResize(), 'resizer starts a resize before any move');
+
+  // Simulate exactly what the DOM does when _ensureChildNode re-parents an
+  // existing node: disconnect, then reconnect the same element instance.
+  split.disconnectedCallback();
+  split.connectedCallback();
+
+  assert.ok(startResize(), 'resizer must still start a resize after re-parenting');
+});

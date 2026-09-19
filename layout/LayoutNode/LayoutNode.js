@@ -236,6 +236,19 @@ export class LayoutNode extends Symbiote {
     this.addEventListener('pointerdown', this._onSplitResizerPointerDown);
   }
 
+  connectedCallback() {
+    super.connectedCallback?.();
+    // Symbiote runs initCallback once per instance, but a layout-node can be
+    // re-parented in the DOM (disconnect + reconnect) by layout re-rendering
+    // such as _ensureChildNode reusing a node from another container. The
+    // disconnectedCallback removes these listeners on the way out; re-register
+    // them on the way back in, or the split resizer and the panel menu go
+    // permanently dead after any move.
+    this.addEventListener('panel-menu-actions', this._onPanelMenuActions);
+    this.addEventListener('click', this._onPanelMenuClick);
+    this.addEventListener('pointerdown', this._onSplitResizerPointerDown);
+  }
+
   disconnectedCallback() {
     this.removeEventListener('panel-menu-actions', this._onPanelMenuActions);
     this.removeEventListener('click', this._onPanelMenuClick);
