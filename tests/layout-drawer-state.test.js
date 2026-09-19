@@ -313,3 +313,52 @@ test('a nested layout collapse toggle never bubbles into the outer layout deskto
   assert.equal(outerPanelsAfter.join(','), outerPanelsBefore,
     'outer layout tree must not absorb a collapse event from a nested layout panel');
 });
+
+test('drawerGroup split materializes as the drawer surface', async () => {
+  let { layout } = await makeDrawerFixture();
+
+  let groupSplit = createSplit(
+    'vertical',
+    createPanel('drawer-content'),
+    createPanel('drawer-side'),
+    0.6,
+    { drawerGroup: true, mobileDock: 'primary', swipeControl: 'none' },
+  );
+  layout.setLayout(createSplit('horizontal', createPanel('drawer-nav'), groupSplit, 0.25));
+  await new Promise((r) => setTimeout(r, 0));
+
+  assert.ok(layout.hasAttribute('drawer-mode-active'), 'drawer mode is active');
+
+  let groupNode = Array.from(layout.querySelectorAll('layout-node'))
+    .find((node) => node.$.nodeId === groupSplit.id);
+  assert.ok(groupNode, 'layout-node exists for the drawerGroup split');
+  assert.ok(groupNode.hasAttribute('drawer-group'), 'split node is marked drawer-group');
+  assert.equal(groupNode.getAttribute('mobile-dock'), 'primary');
+  assert.equal(groupNode.dataset.drawerDock, 'primary');
+  assert.equal(groupNode.dataset.drawerPanelId, groupSplit.id);
+  assert.equal(groupNode.dataset.swipeControl, 'none');
+  assert.ok(groupNode.hasAttribute('drawer-primary'), 'group is the primary surface');
+  assert.ok(!groupNode.hasAttribute('drawer-open'), 'primary group never slides open');
+  assert.equal(layout.getAttribute('drawer-primary-panel-id'), groupSplit.id,
+    'projection primary id points at the group split');
+
+  let groupRecord = layout._drawerProjection.panels.find((panel) => panel.id === groupSplit.id);
+  assert.ok(groupRecord, 'projection carries the group record');
+  assert.equal(groupRecord.panelType, '', 'group record has no panel type');
+  assert.equal(groupRecord.dock, 'primary');
+
+  for (let child of groupNode.querySelectorAll('layout-node')) {
+    if (child === groupNode) continue;
+    assert.ok(!child.hasAttribute('mobile-dock'), 'group children stay inline content');
+    assert.ok(!child.hasAttribute('drawer-group'), 'only the split carries drawer-group');
+  }
+
+  let startNode = findDrawerNode(layout, 'start');
+  assert.ok(startNode, 'sibling drawer still docks at start');
+  assert.ok(!startNode.hasAttribute('drawer-group'), 'plain panels are not groups');
+
+  layout.setLayout(createSplit('horizontal', createPanel('drawer-nav'), createPanel('drawer-content'), 0.3));
+  await new Promise((r) => setTimeout(r, 0));
+  assert.ok(!layout.querySelector('layout-node[drawer-group]'),
+    'drawer-group marker clears when the group leaves the tree');
+});

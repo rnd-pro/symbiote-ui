@@ -204,6 +204,7 @@ export let styles = css`
       layout-node[node-type='split'][mobile-dock='primary'] > .split-view > .split-first,
       layout-node[node-type='split'][mobile-dock='primary'] > .split-view > .split-second {
         display: flex !important;
+        flex: none;
         flex-direction: column;
         overflow: hidden;
       }
@@ -216,6 +217,15 @@ export let styles = css`
         position: relative;
         inset: auto;
         transform: none !important;
+      }
+
+      /* Drawer group members render inline inside their group surface; the
+         geometry is owned here, never by imperative inline styles. */
+      layout-node[drawer-group-member] {
+        position: relative;
+        inset: auto;
+        transform: none !important;
+        flex: none;
       }
 
       layout-node[node-type='panel'] {

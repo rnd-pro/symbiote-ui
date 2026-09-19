@@ -813,6 +813,9 @@ export class Layout extends Symbiote {
         continue;
       }
       matchedPanelIds.add(panel.id);
+      let isGroup = !panel.panelType
+        && (node.$?.isSplit || node.getAttribute?.('node-type') === 'split');
+      toggleAttributeIfChanged(node, 'drawer-group', isGroup);
       setAttributeIfChanged(node, 'mobile-dock', panel.dock);
       toggleAttributeIfChanged(node, 'drawer-primary', panel.dock === 'primary');
       let open = (
@@ -821,6 +824,11 @@ export class Layout extends Symbiote {
       );
       let rail = panel.swipeControl === 'rail' && (panel.dock === 'start' || panel.dock === 'end');
       this._syncDrawerNodeInteractionState(node, panel, open, rail);
+      if (isGroup) {
+        node.dataset.drawerDock = panel.dock;
+        node.dataset.drawerPanelId = panel.id;
+        node.dataset.swipeControl = panel.swipeControl;
+      }
       toggleAttributeIfChanged(
         node,
         'drawer-active-panel',
@@ -909,6 +917,7 @@ export class Layout extends Symbiote {
 
   _clearDrawerNode(node) {
     node.removeAttribute('mobile-dock');
+    node.removeAttribute('drawer-group');
     node.removeAttribute('drawer-primary');
     node.removeAttribute('drawer-open');
     node.removeAttribute('drawer-active-panel');
