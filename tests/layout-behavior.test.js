@@ -1987,3 +1987,67 @@ test('layout-node keeps split resizer listeners across DOM re-parenting', async 
 
   assert.ok(startResize(), 'resizer must still start a resize after re-parenting');
 });
+
+test('outer layout fullscreen tab bar lists only its own panels', async () => {
+  let { parseHTML } = await import('linkedom');
+  let { window } = parseHTML('<!doctype html><html><body></body></html>');
+  let TestCSSStyleSheet = class {
+    replaceSync(text) { this.cssText = text; }
+  };
+  Object.assign(globalThis, {
+    window,
+    document: window.document,
+    HTMLElement: window.HTMLElement,
+    Element: window.Element,
+    customElements: window.customElements,
+    Node: window.Node,
+    Event: window.Event,
+    CustomEvent: window.CustomEvent,
+    MutationObserver: window.MutationObserver,
+    ShadowRoot: window.ShadowRoot || class ShadowRootStub {},
+    CSSStyleSheet: TestCSSStyleSheet,
+    getComputedStyle: window.getComputedStyle || (() => ({ transitionDuration: '0s', animationDuration: '0s' })),
+  });
+  window.document.adoptedStyleSheets = [];
+
+  const div = window.document.createElement('div');
+  const StyleProto = Object.getPrototypeOf(div.style);
+  StyleProto.getPropertyPriority = StyleProto.getPropertyPriority || (() => '');
+
+  const fresh = `?fresh=fullscreen-tabs-${Date.now()}`;
+  await import(`../layout/LayoutNode/LayoutNode.js${fresh}`);
+  await import(`../layout/Layout/Layout.js${fresh}`);
+
+  // Outer dock-like layout: Workspace + Agent panels.
+  const outer = document.createElement('panel-layout');
+  document.body.append(outer);
+  outer.getBoundingClientRect = () => ({ width: 1280, height: 800, top: 0, left: 0, bottom: 800, right: 1280 });
+  outer.registerPanelType('outer-workspace', { title: 'Workspace', icon: 'dashboard' });
+  outer.registerPanelType('outer-agent', { title: 'Agent', icon: 'smart_toy' });
+
+  // Nested layout with its own panels: those must NOT leak into the outer tab bar.
+  const inner = document.createElement('panel-layout');
+  outer.append(inner);
+  inner.getBoundingClientRect = () => ({ width: 900, height: 700, top: 0, left: 0, bottom: 700, right: 900 });
+  inner.registerPanelType('inner-tree', { title: 'portfolio-tree', icon: 'folder' });
+  inner.registerPanelType('inner-viewer', { title: 'portfolio-viewer', icon: 'article' });
+  inner.registerPanelType('inner-graph', { title: 'portfolio-graph', icon: 'hub' });
+
+  outer.setLayout(createSplit('horizontal', createPanel('outer-workspace'), createPanel('outer-agent'), 0.75));
+  inner.setLayout(createSplit('horizontal', createPanel('inner-tree'), createSplit('vertical', createPanel('inner-viewer'), createPanel('inner-graph'), 0.5), 0.5));
+  await new Promise((r) => setTimeout(r, 0));
+
+  const agentNode = outer._ownedPanelNodes().find((p) => p.$.nodeData?.panelType === 'outer-agent');
+  assert.ok(agentNode, 'outer layout owns its agent panel');
+  agentNode.dispatchEvent(new CustomEvent('panel-fullscreen', {
+    bubbles: true, composed: true, detail: { panelId: agentNode.$.nodeId },
+  }));
+  await new Promise((r) => setTimeout(r, 0));
+
+  assert.equal(outer.$.fullscreenPanelId, agentNode.$.nodeId, 'outer layout fullscreen active');
+  const tabTitles = outer.$.tabItems.map((t) => t.title).join(',');
+  assert.equal(tabTitles, 'Workspace,Agent',
+    'fullscreen tab bar lists only the panels this layout owns');
+  assert.doesNotMatch(tabTitles, /portfolio/,
+    'nested layout panels must not appear as dead tabs in the outer fullscreen');
+});

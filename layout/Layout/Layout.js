@@ -319,7 +319,7 @@ export class Layout extends Symbiote {
 
         if (typeof requestAnimationFrame !== 'undefined') {
           requestAnimationFrame(() => {
-            let allPanels = this.querySelectorAll('layout-node[node-type="panel"]');
+            let allPanels = this._ownedPanelNodes();
 
             let panelExists = Array.from(allPanels).some(
               (p) => p.$.nodeId === this.$.fullscreenPanelId
@@ -1706,7 +1706,7 @@ export class Layout extends Symbiote {
     let panelNode = this._findPanelNode(panelId);
     if (!panelNode) return;
 
-    let allPanels = this.querySelectorAll('layout-node[node-type="panel"]');
+    let allPanels = this._ownedPanelNodes();
 
     if (this.$.fullscreenPanelId === panelId) {
 
@@ -1771,7 +1771,7 @@ export class Layout extends Symbiote {
     setStylePropertyIfChanged(this.style, '--sn-layout-fullscreen-host-bottom', '0px');
   }
   _updateTabItems(allPanels, activePanelId) {
-    let panels = allPanels || this.querySelectorAll('layout-node[node-type="panel"]');
+    let panels = allPanels || this._ownedPanelNodes();
     let activeId = activePanelId || this.$.fullscreenPanelId;
 
     this.$.tabItems = Array.from(panels).map((p) => {
@@ -1788,7 +1788,7 @@ export class Layout extends Symbiote {
     });
   }
   _switchFullscreenPanel(panelId) {
-    let allPanels = this.querySelectorAll('layout-node[node-type="panel"]');
+    let allPanels = this._ownedPanelNodes();
     let newPanel = this._findPanelNode(panelId);
     if (!newPanel) return;
 
@@ -1813,14 +1813,16 @@ export class Layout extends Symbiote {
 
     this._updateTabItems(allPanels, panelId);
   }
+  _ownedPanelNodes() {
+    // Ownership check: nested panel-layouts manage their own nodes. Their
+    // panels must not appear in this layout's fullscreen tab bar and must not
+    // be toggled by this layout's fullscreen transitions.
+    return Array.from(this.querySelectorAll('layout-node[node-type="panel"]'))
+      .filter((p) => p.closest('panel-layout') === this);
+  }
   _findPanelNode(panelId) {
-    let nodes = this.querySelectorAll('layout-node[node-type="panel"]');
-    for (const node of nodes) {
-      // Ownership check: nested panel-layouts manage their own nodes. Without
-      // it, an outer layout (e.g. the application dock host) would claim the
-      // inner layout's fullscreen event and hide its own content, collapsing
-      // the nested app into a zero-size pile.
-      if (node.$.nodeId === panelId && node.closest('panel-layout') === this) {
+    for (const node of this._ownedPanelNodes()) {
+      if (node.$.nodeId === panelId) {
         return node;
       }
     }
@@ -2010,7 +2012,7 @@ export class Layout extends Symbiote {
     return LayoutTree.clone(this.$.layoutTree);
   }
   setLayout(layout) {
-    let allPanels = this.querySelectorAll('layout-node[node-type="panel"]');
+    let allPanels = this._ownedPanelNodes();
     allPanels.forEach((panelNode) => {
       panelNode.removeAttribute('fullscreen');
       panelNode.$.isFullscreen = false;
