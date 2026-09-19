@@ -1128,10 +1128,10 @@ export class Layout extends Symbiote {
   }
 
   closeDrawer(dock = 'all') {
-    if (dock === 'start' || dock === 'all') this.$.drawerStartOpen = false;
-    if (dock === 'end' || dock === 'all') this.$.drawerEndOpen = false;
-    this._clearDrawerDrag(dock);
-    this._resyncDrawerProjection();
+    // Route every programmatic close through the same funnel as gesture commits
+    // so flags, drag visuals, and the projection cannot drift apart.
+    if (dock === 'start' || dock === 'all') this._setDrawerOpen('start', false);
+    if (dock === 'end' || dock === 'all') this._setDrawerOpen('end', false);
   }
 
   toggleDrawer(dock, panelId = '') {
@@ -1154,6 +1154,29 @@ export class Layout extends Symbiote {
     }
     this._clearDrawerDrag('all');
     this._resyncDrawerProjection();
+    if (open) this._closeVisiblePeerDrawers();
+  }
+
+  // Mobile side-panel surfaces are one system across nested panel-layouts:
+  // the outer dock and any nested portfolio layout each own their own drawer
+  // flags, but on screen only one side panel may be open. When this layout
+  // opens a drawer, every other visible layout still in drawer mode closes
+  // its own, so competing drawers never stack on the shared viewport edge.
+  _closeVisiblePeerDrawers() {
+    let peers = Array.from(new Set([...NATIVE_RAIL_LAYOUTS]));
+    let host = this.getRootNode?.().host;
+    while (host) {
+      if (host.tagName === 'PANEL-LAYOUT') peers.push(host);
+      host = host.getRootNode?.().host;
+    }
+    for (let peer of peers) {
+      if (peer === this || !peer.isConnected) continue;
+      if (typeof peer._isDrawerOpen !== 'function') continue;
+      if (!peer.hasAttribute?.('drawer-mode-active')) continue;
+      if (!isVisibleLayoutPeer(peer)) continue;
+      if (peer._isDrawerOpen('start')) peer._setDrawerOpen('start', false);
+      if (peer._isDrawerOpen('end')) peer._setDrawerOpen('end', false);
+    }
   }
 
   _isDrawerOpen(dock) {
