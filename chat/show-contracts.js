@@ -24,6 +24,7 @@ export const SHOW_MEDIA_MODES = Object.freeze([
   'short-muted-montage',
   'short-inline-continuous',
   'full-with-media-audio',
+  'spinner-rotation',
 ]);
 
 export const SHOW_MARKER_SHAPES = Object.freeze([

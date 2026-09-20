@@ -60,11 +60,12 @@ export const SHOW_RUNTIME_CONTRACT = Object.freeze({
   markerShapes: Object.freeze(['freehand', 'underline', 'oval', 'multi-oval', 'arrow', 'converging-arrows', 'route', 'bidirectional-route', 'parallel-route', 'label', 'number', 'box', 'bracket', 'slash']),
   attentionIntents: Object.freeze(['emphasize', 'detail', 'group', 'pointer', 'risk', 'question', 'success', 'affinity', 'flourish']),
   markerAliases: Object.freeze({ ovals: 'multi-oval' }),
-  mediaModes: Object.freeze(['short-muted-montage', 'short-inline-continuous', 'full-with-media-audio']),
+  mediaModes: Object.freeze(['short-muted-montage', 'short-inline-continuous', 'full-with-media-audio', 'spinner-rotation']),
   mediaInteractionSemantics: Object.freeze({
     'short-muted-montage': 'pointer-only',
     'short-inline-continuous': 'pointer-only',
     'full-with-media-audio': 'detail',
+    'spinner-rotation': 'pointer-only',
   }),
   mediaPlayback: Object.freeze({
     directiveFields: Object.freeze(['startMs', 'endMs', 'segments', 'segmentDurationMs', 'frames', 'frameHoldMs', 'finalFrame', 'keepPlayingDuringQuote']),
