@@ -201,10 +201,18 @@ export let styles = css`
         overflow: hidden;
       }
 
-      layout-node[node-type='split'][mobile-dock='primary'] > .split-view > .split-first,
+      layout-node[node-type='split'][mobile-dock='primary'] > .split-view > .split-first {
+        display: flex !important;
+        flex: 1 1 0%;
+        min-width: 0;
+        min-height: 0;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
       layout-node[node-type='split'][mobile-dock='primary'] > .split-view > .split-second {
         display: flex !important;
-        flex: none;
+        flex: 0 0 auto;
         flex-direction: column;
         overflow: hidden;
       }
