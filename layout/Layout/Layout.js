@@ -269,7 +269,7 @@ export class Layout extends Symbiote {
     this.addEventListener('pointerover', this._drawerRailPointerOverHandler);
     this.addEventListener('mouseover', this._drawerRailPointerOverHandler);
     this.addEventListener('click', this._drawerClickCaptureHandler, true);
-    this.ownerDocument?.addEventListener('keydown', this._drawerEscapeHandler, true);
+    this.ownerDocument?.addEventListener('keydown', this._drawerEscapeHandler);
     if (this._resizeObserver) {
       this._resizeObserver.observe(this);
     } else if (this._resizeFallback && typeof window !== 'undefined') {
@@ -281,7 +281,7 @@ export class Layout extends Symbiote {
     if (!this._layoutConnectionActive) return;
     this._layoutConnectionActive = false;
     this._resizeObserver?.disconnect();
-    this.ownerDocument?.removeEventListener('keydown', this._drawerEscapeHandler, true);
+    this.ownerDocument?.removeEventListener('keydown', this._drawerEscapeHandler);
     if (this._resizeFallback && typeof window !== 'undefined') {
       window.removeEventListener('resize', this._resizeFallback);
     }
@@ -1141,7 +1141,17 @@ export class Layout extends Symbiote {
   }
 
   openDrawer(dock, panelId = '') {
-    this._drawerFocusReturnTarget = this.ownerDocument?.activeElement || null;
+    // Only the first non-drawer opener is remembered; re-opening from
+    // inside the drawer must not overwrite it (focus keeps escaping trap).
+    let active = this.ownerDocument?.activeElement;
+    if (
+      !this._drawerFocusReturnTarget
+      || (
+        this.contains?.(active) === false
+      )
+    ) {
+      this._drawerFocusReturnTarget = active;
+    }
     this._setDrawerOpen(dock, true, panelId);
   }
 
@@ -1354,17 +1364,19 @@ export class Layout extends Symbiote {
 
   _onDrawerEscape(e) {
     // Only in drawer mode do we manage close-on-Escape; plain desktop layouts
-    // keep their own native focus model.
-    if (e.key !== 'Escape') return;
+    // keep their own native focus model. Nested layouts listen too — the
+    // deepest one (its drawer is already open) wins first.
+    if (e.key !== 'Escape' || e.defaultPrevented || e.__snLayoutDrawerSettled) return;
     if (!this.hasAttribute('drawer-mode-active')) return;
     const dock = this.$.drawerStartOpen ? 'start' : this.$.drawerEndOpen ? 'end' : '';
     if (!dock) return;
     e.preventDefault();
     e.stopPropagation();
+    e.__snLayoutDrawerSettled = true;
     this.closeDrawer(dock);
     const returnTo = this._drawerFocusReturnTarget;
     this._drawerFocusReturnTarget = null;
-    if (returnTo && this.ownerDocument && typeof returnTo.focus === 'function') {
+    if (returnTo && returnTo.isConnected && typeof returnTo.focus === 'function') {
       try { returnTo.focus(); } catch {}
     }
   }
