@@ -59,9 +59,7 @@ state and does not save or mutate the host layout tree.
 Drawer projection exposes `drawer-mode-active`, `drawer-start-open`, and
 `drawer-end-open` runtime attributes; opening drawers changes only presentation
 state and does not save or mutate the host layout tree. Rail and edge swipes
-share one gesture contract: direction, distance and velocity othakaze resolve
-through identical
-thresholds for both docks, and pointer capture owns the gesture once an axis
+share one gesture contract: direction, distance and velocity resolve through identical thresholds for both docks, and pointer capture owns the gesture once an axis
 is chosen. The click that concludes a completed swipe is consumed by the
 drawer (also when it lands on a tree row or a nested control), while plain
 taps on content rows and collapse toggles continue to work immediately; there
