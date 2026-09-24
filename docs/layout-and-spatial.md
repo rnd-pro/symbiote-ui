@@ -56,6 +56,16 @@ collapse axis/side from peer geometry and reflects `layout-peer-active`,
 Drawer projection exposes `drawer-mode-active`, `drawer-start-open`, and
 `drawer-end-open` runtime attributes; opening drawers changes only presentation
 state and does not save or mutate the host layout tree.
+Drawer projection exposes `drawer-mode-active`, `drawer-start-open`, and
+`drawer-end-open` runtime attributes; opening drawers changes only presentation
+state and does not save or mutate the host layout tree. Rail and edge swipes
+share one gesture contract: direction, distance and velocity othakaze resolve
+through identical
+thresholds for both docks, and pointer capture owns the gesture once an axis
+is chosen. The click that concludes a completed swipe is consumed by the
+drawer (also when it lands on a tree row or a nested control), while plain
+taps on content rows and collapse toggles continue to work immediately; there
+is no global click-block around gestures.
 `layout-sidebar` owns only its sidebar configuration and width persistence; its
 reset control clears that state and emits `layout-sidebar-reset` for host-owned
 layout resets instead of clearing host storage or reloading the page.
