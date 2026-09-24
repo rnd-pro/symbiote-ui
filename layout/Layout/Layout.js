@@ -1554,8 +1554,11 @@ export class Layout extends Symbiote {
   }
 
   _isDrawerContentSwipeBlocked(target) {
+    // Tree rows are intentionally NOT blocked: a horizontal drag starting on a
+    // row must still drive the drawer (the click gate swallows the trailing
+    // synthetic click); only a genuine tap selects the row.
     return Boolean(target?.closest?.(
-      'button, a, input, textarea, select, [contenteditable="true"], .sn-tree-row, [role="treeitem"], .split-resizer, canvas, node-canvas, canvas-graph'
+      'button, a, input, textarea, select, [contenteditable="true"], .split-resizer, canvas, node-canvas, canvas-graph'
     ));
   }
 

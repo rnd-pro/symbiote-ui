@@ -833,3 +833,41 @@ test('modal drawer traps Tab inside itself and cycles with Shift+Tab', async () 
   let afterClose = tab();
   assert.equal(afterClose.defaultPrevented, false, 'no trap after close');
 });
+
+test('a horizontal drag starting on a tree row still drives the drawer; the trailing click is swallowed', async () => {
+  // Regression for CV mobile P1: rows are the drawer's main surface — if the
+  // gesture is blocked there, the release click selects the row under the
+  // finger. Expect the drag to close the drawer and the click to die.
+  let { layout } = await makeDrawerFixture();
+  layout._getFallbackDrawerWidth = () => 335;
+  layout.openDrawer('start');
+  await new Promise((r) => setTimeout(r, 0));
+  let drawerNode = findDrawerNode(layout, 'start');
+  let row = document.createElement('div');
+  row.setAttribute('class', 'sn-tree-row');
+  drawerNode.append(row);
+  let rowClicks = 0;
+  row.addEventListener('click', () => { rowClicks += 1; });
+
+  row.dispatchEvent(pointerEvent('pointerdown', { x: 250, y: 400 }));
+  layout.dispatchEvent(pointerEvent('pointermove', { x: 120, y: 400 }));
+  layout.dispatchEvent(pointerEvent('pointermove', { x: 30, y: 400 }));
+  layout.dispatchEvent(pointerEvent('pointerup', { x: 30, y: 400 }));
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(layout.$.drawerStartOpen, false, 'drag from a row closes the drawer');
+
+  // The browser now dispatches the trailing click at the release point:
+  // The browser now dispatches the trailing click at the release point:
+  // the capture gate must cancel it before any row listener is reached.
+  // (linkedom ignores capture-phase stopPropagation — asserted in real Chrome
+  // via the drawer-focus-lab probe; here the cancellable flag is checked.)
+  let trailing = new window.Event('click', { bubbles: true, cancelable: true, composed: true });
+  row.dispatchEvent(trailing);
+  assert.equal(trailing.defaultPrevented, true, 'trailing gesture click is cancelled at capture');
+
+  // A genuine tap afterwards still selects: no leftover token.
+  let freshTap = new window.Event('click', { bubbles: true, cancelable: true, composed: true });
+  row.dispatchEvent(freshTap);
+  assert.equal(freshTap.defaultPrevented, false,
+    'independent tap is never cancelled (token consumed by the gesture click)');
+});

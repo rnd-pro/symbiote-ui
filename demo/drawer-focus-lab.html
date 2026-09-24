@@ -54,6 +54,22 @@
     ));
     opener.addEventListener('click', () => layout.openDrawer('start'));
 
+    // Replica of the CV structure: a tree row INSIDE the drawer node's
+    // shadow root, with its own click listener — a trailing gesture click
+    // on it must never toggle it.
+    window.__labAddRowContent = () => {
+      const node = layout.querySelector('layout-node[mobile-dock="start"]');
+      const view = node?.shadowRoot?.querySelector('.panel-view') || node;
+      const row = document.createElement('div');
+      row.className = 'sn-tree-row';
+      row.textContent = 'row-A';
+      row.style.cssText = 'display:block;padding:12px 24px;min-height:24px;cursor:pointer';
+      row.addEventListener('click', () => { window.__lab.rowClicks = (window.__lab.rowClicks || 0) + 1; });
+      view.append(row);
+      window.__lab.row = row;
+      return true;
+    };
+
     window.__lab = { layout, host, opener, deepActive: () => {
       let chain = [];
       let node = document.activeElement;
@@ -66,6 +82,7 @@
       }
       return chain;
     } };
+    window.__lab.addRowContent = window.__labAddRowContent;
   </script>
 </body>
 
