@@ -1233,7 +1233,6 @@ export class Layout extends Symbiote {
     if (width <= 0) width = this._getFallbackDrawerWidth();
     this._drawerGesture = {
       pointerId: e.pointerId,
-      startedAt: globalThis.performance?.now?.() ?? Date.now(),
       dock,
       panelId,
       startX: e.clientX,
@@ -1286,7 +1285,6 @@ export class Layout extends Symbiote {
     if (width <= 0) width = this._getFallbackDrawerWidth();
     this._drawerGesture = {
       pointerId: e.pointerId,
-      startedAt: globalThis.performance?.now?.() ?? Date.now(),
       dock,
       panelId,
       startX: e.clientX,
@@ -1315,7 +1313,6 @@ export class Layout extends Symbiote {
     if (!target || !this.contains(target)) return;
     this._drawerGesture = {
       pointerId: e.pointerId,
-      startedAt: globalThis.performance?.now?.() ?? Date.now(),
       dock: '',
       panelId: '',
       startX: e.clientX,
@@ -1395,24 +1392,9 @@ export class Layout extends Symbiote {
     let delta = e.clientX - gesture.startX;
     let progress = this._getDrawerGestureProgress(gesture, delta);
     let committedDrag = gesture.moved && Math.abs(delta) >= this._getDrawerGestureDragThreshold(gesture);
-    // Flick: if the gesture was very fast, commit in the swipe direction
-    // even when the travel distance stayed below the drag threshold.
-    // >0.5 px/ms ≈ 500px/sec at a 60Hz sample, which is a solid flick.
-    let durationMs = Math.max(1, (globalThis.performance?.now?.() ?? Date.now()) - (gesture.startedAt || this._drawerNow()));
-    let velocity = Math.abs(delta) / durationMs;
-    let flickCommit = gesture.moved && velocity > 0.5;
-    let open;
-    if (flickCommit) {
-      // Fast flick: direction alone commits. For start dock a rightward
-      // flick opens, leftward closes; end dock mirrors it.
-      open = gesture.source === 'rail'
-        ? (gesture.dock === 'start' ? delta > 0 : delta < 0)
-        : progress >= 0.5;
-    } else {
-      open = committedDrag
-        ? progress >= 0.5
-        : gesture.source === 'rail' ? !gesture.startOpen : progress >= 0.5;
-    }
+    let open = committedDrag
+      ? progress >= 0.5
+      : gesture.source === 'rail' ? !gesture.startOpen : progress >= 0.5;
     if (gesture.moved) {
       this._ignoreNextDrawerClick = {
         pointerId: gesture.pointerId,
