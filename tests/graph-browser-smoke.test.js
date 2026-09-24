@@ -2459,6 +2459,161 @@ async function evaluateChatWorkspaceEventFlow(page) {
 
 // Browser smoke is justified here: zero-height graph nodes, SVG trace geometry,
 // and compact-mode body visibility are CSS/layout regressions that linkedom cannot prove.
+test('layout drawer restores real focus to a shadow-root opener via Escape, backdrop and swipe in a real browser', { timeout: BROWSER_SMOKE_TIMEOUT_MS }, async () => {
+  const chromePath = findChrome();
+  assertBrowserSmokeRuntime();
+
+  const server = await createStaticServer();
+  let chromeSession;
+  let page;
+  try {
+    chromeSession = await launchChromeSession(chromePath, 'drawer focus smoke');
+    page = await withTimeout(
+      openPage(chromeSession.endpoint, `${server.url}/demo/drawer-focus-lab.html?v=drawer-focus-smoke`),
+      22000,
+      'drawer focus lab page open'
+    );
+
+    const evaluate = async (expression) => {
+      const result = await withTimeout(
+        page.send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true }),
+        10000,
+        'drawer focus evaluate'
+      );
+      if (result.result?.exceptionDetails) {
+        throw new Error(`evaluate failed: ${JSON.stringify(result.result.exceptionDetails).slice(0, 300)}`);
+      }
+      return result.result?.value;
+    };
+
+    await setPageViewport(page, { width: 390, height: 844, mobile: true });
+    await delay(600); // let the responsive projection settle into drawer mode
+
+    const ready = await evaluate(`(() => {
+      const l = window.__lab.layout;
+      return { drawerMode: l.hasAttribute('drawer-mode-active') };
+    })()`);
+    assert.equal(ready.drawerMode, true, `drawer mode active at 390px: ${JSON.stringify(ready)}`);
+
+    const pressEscape = async () => {
+      await page.send('Input.dispatchKeyEvent', { type: 'rawKeyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
+      await page.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
+    };
+    const swipeCloseStart = async () => {
+      const rect = await evaluate(`(() => {
+        const n = window.__lab.layout.querySelector('layout-node[mobile-dock="start"][drawer-active-panel]');
+        const r = n.getBoundingClientRect();
+        return { left: r.left, right: r.right, midY: r.top + r.height / 2 };
+      })()`);
+      const startX = Math.round(Math.max(rect.left + 40, Math.min(rect.right - 40, rect.right - 60)));
+      const y = Math.round(rect.midY);
+      await page.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: startX, y, button: 'left', buttons: 1, clickCount: 1 });
+      for (let i = 1; i <= 6; i += 1) {
+        await page.send('Input.dispatchMouseEvent', {
+          type: 'mouseMoved',
+          x: Math.round(startX - (startX - 10) * (i / 6)),
+          y, button: 'left', buttons: 1,
+        });
+      }
+      await page.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: 10, y, button: 'left', buttons: 0, clickCount: 1 });
+    };
+
+    // --- 1) Escape close: real focus returns to the shadow opener.
+    await evaluate(`(() => { window.__lab.opener.focus(); return true; })()`);
+    let chain = await evaluate(`window.__lab.deepActive()`);
+    assert.deepEqual(chain, ['#opener-host', '#opener'], `opener focused before open: ${chain}`);
+
+    await evaluate(`(() => { window.__lab.layout.openDrawer('start'); return true; })()`);
+    await delay(400);
+    let openState = await evaluate(`(() => {
+      const l = window.__lab.layout;
+      const d = l.querySelector('layout-node[mobile-dock="start"][drawer-active-panel]');
+      return {
+        open: l.hasAttribute('drawer-start-open'),
+        role: d?.getAttribute('role'),
+        modal: d?.getAttribute('aria-modal'),
+        chain: window.__lab.deepActive(),
+        siblingsInert: Array.from(l.querySelectorAll('layout-node'))
+          .filter((n) => n !== d && !n.contains(d) && !d.contains(n))
+          .every((n) => n.hasAttribute('inert')),
+      };
+    })()`);
+    assert.equal(openState.open, true, 'drawer open');
+    assert.equal(openState.role, 'dialog', 'role=dialog while open');
+    assert.equal(openState.modal, 'true', 'aria-modal while open');
+    assert.equal(openState.siblingsInert, true, 'background inert while open');
+    assert.equal(openState.chain[0], 'layout-node', `focus moved into the open drawer: ${openState.chain}`);
+
+    await pressEscape();
+    await delay(300);
+    let afterEscape = await evaluate(`(() => ({
+      open: window.__lab.layout.hasAttribute('drawer-start-open'),
+      chain: window.__lab.deepActive(),
+    }))()`);
+    assert.equal(afterEscape.open, false, 'Escape closes the drawer');
+    assert.deepEqual(afterEscape.chain, ['#opener-host', '#opener'],
+      `real focus returns to the shadow opener after Escape: ${afterEscape.chain}`);
+
+    // --- 2) Backdrop click close: same return contract.
+    await evaluate(`(() => { window.__lab.opener.focus(); window.__lab.layout.openDrawer('start'); return true; })()`);
+    await delay(300);
+    let backdropRect = await evaluate(`(() => {
+      const b = window.__lab.layout.querySelector('.layout-drawer-backdrop');
+      const d = window.__lab.layout.querySelector('layout-node[mobile-dock="start"][drawer-active-panel]');
+      const r = b?.getBoundingClientRect?.();
+      const dr = d?.getBoundingClientRect?.();
+      // Click the backdrop area NOT covered by the open drawer (far right).
+      return r && { x: Math.round(Math.max(dr.right + 20, r.right - 20)), y: Math.round(r.top + r.height / 2) };
+    })()`);
+    assert.ok(backdropRect, 'backdrop found');
+    await page.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: backdropRect.x, y: backdropRect.y, button: 'left', buttons: 1, clickCount: 1 });
+    await page.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: backdropRect.x, y: backdropRect.y, button: 'left', buttons: 0, clickCount: 1 });
+    await delay(300);
+    let afterBackdrop = await evaluate(`(() => ({
+      open: window.__lab.layout.hasAttribute('drawer-start-open'),
+      chain: window.__lab.deepActive(),
+    }))()`);
+    assert.equal(afterBackdrop.open, false, 'backdrop click closes the drawer');
+    assert.deepEqual(afterBackdrop.chain, ['#opener-host', '#opener'],
+      `real focus returns after backdrop close: ${afterBackdrop.chain}`);
+
+    // --- 3) Swipe close: same return contract.
+    await evaluate(`(() => { window.__lab.opener.focus(); window.__lab.layout.openDrawer('start'); return true; })()`);
+    await delay(300);
+    await swipeCloseStart();
+    await delay(500);
+    let afterSwipe = await evaluate(`(() => ({
+      open: window.__lab.layout.hasAttribute('drawer-start-open'),
+      chain: window.__lab.deepActive(),
+    }))()`);
+    assert.equal(afterSwipe.open, false, 'swipe closes the drawer');
+    assert.deepEqual(afterSwipe.chain, ['#opener-host', '#opener'],
+      `real focus returns after swipe close: ${afterSwipe.chain}`);
+
+    // --- 4) Opener removed before close: no crash, no focus hijack to a
+    //        detached node; the record must not leak into the next opening.
+    await evaluate(`(() => {
+      window.__lab.opener.focus();
+      window.__lab.layout.openDrawer('start');
+      window.__lab.opener.remove();
+      return true;
+    })()`);
+    await delay(200);
+    await pressEscape();
+    await delay(300);
+    let afterRemoval = await evaluate(`(() => ({
+      open: window.__lab.layout.hasAttribute('drawer-start-open'),
+      target: window.__lab.layout._drawerFocusReturnTarget,
+    }))()`);
+    assert.equal(afterRemoval.open, false, 'drawer closes after opener removal');
+    assert.equal(afterRemoval.target, null, 'stale opener record is dropped');
+  } finally {
+    if (page) await page.close().catch(() => {});
+    if (chromeSession) await closeChromeSession(chromeSession);
+    await server.close();
+  }
+});
+
 test('cascade lab graph nodes render non-empty with route styles and compact mode in a real browser', { timeout: BROWSER_SMOKE_TIMEOUT_MS }, async () => {
   const chromePath = findChrome();
   assertBrowserSmokeRuntime();

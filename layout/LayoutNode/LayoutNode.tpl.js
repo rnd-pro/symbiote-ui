@@ -4,36 +4,36 @@ export let template = html`
   <div class="panel-view" ${{ '@hidden': '!isPanel' }}>
     <div class="panel-header" ${{ '@hidden': '!panelChrome' }}>
       <button class="header-btn type-btn" ${{ onclick: 'onTypeClick' }}>
-        <span class="material-symbols-outlined panel-icon" ${{ textContent: 'panelIcon' }}></span>
+        <span class="material-symbols-outlined panel-icon" aria-hidden="true" ${{ textContent: 'panelIcon' }}></span>
         <span class="panel-title" ${{ textContent: 'panelTitle' }}></span>
-        <span class="material-symbols-outlined dropdown-arrow">arrow_drop_down</span>
+        <span class="material-symbols-outlined dropdown-arrow" aria-hidden="true">arrow_drop_down</span>
       </button>
       <div class="header-spacer"></div>
       <button
         class="header-btn panel-menu-toggle"
-        ${{ onclick: 'onPanelMenuToggle', '@hidden': '!hasPanelMenuActions', '@active': 'isPanelMenuOpen', title: 'panelMenuTitle' }}
+        ${{ onclick: 'onPanelMenuToggle', '@hidden': '!hasPanelMenuActions', '@active': 'isPanelMenuOpen', title: 'panelMenuTitle', '@aria-label': 'panelMenuTitle' }}
       >
-        <span class="material-symbols-outlined">more_horiz</span>
-        <span class="material-symbols-outlined" ${{ textContent: 'panelMenuIcon' }}></span>
+        <span class="material-symbols-outlined" aria-hidden="true">more_horiz</span>
+        <span class="material-symbols-outlined" aria-hidden="true" ${{ textContent: 'panelMenuIcon' }}></span>
       </button>
       <div class="panel-actions">
         <button
           class="header-btn collapse-btn"
-          ${{ onclick: 'onCollapseClick', '@hidden': '!canCollapse', title: 'collapseTitle' }}
+          ${{ onclick: 'onCollapseClick', '@hidden': '!canCollapse', title: 'collapseTitle', '@aria-label': 'collapseTitle' }}
         >
-          <span class="material-symbols-outlined" ${{ textContent: 'collapseIcon' }}></span>
+          <span class="material-symbols-outlined" aria-hidden="true" ${{ textContent: 'collapseIcon' }}></span>
         </button>
         <button
           class="header-btn fullscreen-btn"
-          ${{ onclick: 'onFullscreenClick', title: 'fullscreenTitle' }}
+          ${{ onclick: 'onFullscreenClick', title: 'fullscreenTitle', '@aria-label': 'fullscreenTitle' }}
         >
-          <span class="material-symbols-outlined" ${{ textContent: 'fullscreenIcon' }}></span>
+          <span class="material-symbols-outlined" aria-hidden="true" ${{ textContent: 'fullscreenIcon' }}></span>
         </button>
         <button
           class="header-btn header-close-btn"
-          ${{ onclick: 'onHeaderCloseClick', '@hidden': '!hasHeaderClose', title: 'headerCloseTitle' }}
+          ${{ onclick: 'onHeaderCloseClick', '@hidden': '!hasHeaderClose', title: 'headerCloseTitle', '@aria-label': 'headerCloseTitle' }}
         >
-          <span class="material-symbols-outlined">close</span>
+          <span class="material-symbols-outlined" aria-hidden="true">close</span>
         </button>
       </div>
     </div>

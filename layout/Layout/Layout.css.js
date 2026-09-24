@@ -236,6 +236,13 @@ export let styles = css`
         flex: none;
       }
 
+      layout-node[mobile-dock='start'],
+      layout-node[mobile-dock='end'] {
+        /* WCAG 2.5.8 (24x24) floor for tree toggles inside modal drawers;
+           desktop density tokens stay untouched outside drawer mode. */
+        --sn-tree-toggle-width: 24px;
+      }
+
       layout-node[node-type='panel'] {
         position: absolute;
         inset-block: 0;

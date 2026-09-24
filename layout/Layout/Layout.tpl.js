@@ -5,8 +5,7 @@ export let template = html`
   <button
     class="layout-drawer-backdrop"
     type="button"
-    aria-label="Close drawer"
-    ${{ onclick: 'onDrawerBackdropClick' }}
+    ${{ onclick: 'onDrawerBackdropClick', '@aria-label': 'drawerBackdropLabel' }}
   ></button>
   <panel-menu ref="menu"></panel-menu>
 

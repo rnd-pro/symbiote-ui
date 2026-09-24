@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>symbiote-ui Drawer Focus Lab</title>
+  <script type="importmap">
+    {
+      "imports": {
+        "@symbiotejs/symbiote": "../node_modules/@symbiotejs/symbiote/core/index.js",
+        "@symbiotejs/symbiote/": "../node_modules/@symbiotejs/symbiote/"
+      }
+    }
+  </script>
+  <style>
+    html, body { margin: 0; height: 100%; }
+    panel-layout { position: fixed; inset: 0; }
+  </style>
+</head>
+
+<body>
+  <script type="module">
+    import '../layout/Layout/Layout.js';
+    import * as LayoutTree from '../layout/LayoutTree.js';
+
+    // Opener lives inside an OPEN shadow root, outside the layout: the modal
+    // contract must return focus across the shadow boundary.
+    const host = document.createElement('div');
+    host.id = 'opener-host';
+    const shadow = host.attachShadow({ mode: 'open' });
+    const opener = document.createElement('button');
+    opener.id = 'opener';
+    opener.textContent = 'Open drawer';
+    shadow.append(opener);
+    document.body.append(host);
+
+    const layout = document.createElement('panel-layout');
+    document.body.append(layout);
+    layout.setAttribute('responsive-mode', 'swipe');
+    layout.registerPanelType('nav', {
+      title: 'Nav', icon: 'folder',
+      behavior: { mobileDock: 'start', swipeControl: 'rail' },
+    });
+    layout.registerPanelType('content', {
+      title: 'Content', icon: 'article',
+      behavior: { mobileDock: 'primary' },
+    });
+    layout.setLayout(LayoutTree.createSplit(
+      'horizontal',
+      LayoutTree.createPanel('nav'),
+      LayoutTree.createPanel('content'),
+      0.3,
+    ));
+    opener.addEventListener('click', () => layout.openDrawer('start'));
+
+    window.__lab = { layout, host, opener, deepActive: () => {
+      let chain = [];
+      let node = document.activeElement;
+      while (node) {
+        chain.push(node === host ? '#opener-host' : node === opener ? '#opener'
+          : node.tagName ? node.tagName.toLowerCase() : '?');
+        let inner = node.shadowRoot?.activeElement;
+        if (!inner || inner === node) break;
+        node = inner;
+      }
+      return chain;
+    } };
+  </script>
+</body>
+
+</html>

@@ -718,3 +718,143 @@ test('focus returns on button- and swipe-driven closes, reopens with a fresh ope
   assert.equal(focusCalls.get(opener2), opener2FocusBefore,
     'close with outside focus does not steal it back');
 });
+
+// Focus-division election proof: neither layout is on the event path, so the
+// owner must come from the focus chain — and it must be the DEEPEST (inner)
+// layout, not the outer one, regardless of listener registration order.
+async function runFocusBranchElection(registrationOrder) {
+  await makeEscapeEnv(`escape-focus-branch-${registrationOrder}`);
+  let first = registrationOrder === 'outer-first'
+    ? await buildDrawerLayout(document.body, 0)
+    : null;
+  let inner;
+  let outer;
+  if (first) {
+    outer = first;
+    inner = await buildDrawerLayout(document.body, 1);
+    nestInto(inner, outer);
+  } else {
+    inner = await buildDrawerLayout(document.body, 1);
+    outer = await buildDrawerLayout(document.body, 0);
+    nestInto(inner, outer);
+  }
+
+  outer.openDrawer('start');
+  await new Promise((r) => setTimeout(r, 0));
+  hideFromPeers(outer);
+  inner.openDrawer('start');
+  await new Promise((r) => setTimeout(r, 0));
+  assert.ok(outer._isDrawerOpen('start'));
+  assert.ok(inner._isDrawerOpen('start'));
+
+  // Focus sits inside the INNER layout's open drawer. The keydown target is
+  // an unrelated element next to both layouts — the composed path contains
+  // no layout at all, so only the focus chain can elect the owner.
+  let innerFocus = findDrawerNode(inner, 'start') || inner;
+  document.activeElement = innerFocus;
+  let neutral = document.createElement('div');
+  document.body.append(neutral);
+
+  neutral.dispatchEvent(escapeKeydown());
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(inner.$.drawerStartOpen, false,
+    `focus branch elects the deepest focused layout (${registrationOrder})`);
+  assert.equal(outer.$.drawerStartOpen, true,
+    `outer layout survives a focus-owned Escape (${registrationOrder})`);
+}
+
+test('Escape owner by focus when the event path is empty: outer registered first', async () => {
+  await runFocusBranchElection('outer-first');
+});
+
+test('Escape owner by focus when the event path is empty: inner registered first', async () => {
+  await runFocusBranchElection('inner-first');
+});
+
+test('modal drawer marks itself role=dialog/aria-modal and inerts background; closing reverts', async () => {
+  await makeEscapeEnv('drawer-modal-contract');
+  let layout = await buildDrawerLayout(document.body, 0);
+
+  layout.openDrawer('start');
+  await new Promise((r) => setTimeout(r, 0));
+  let drawerNode = findDrawerNode(layout, 'start');
+  assert.equal(drawerNode.getAttribute('role'), 'dialog', 'open drawer is a dialog');
+  assert.equal(drawerNode.getAttribute('aria-modal'), 'true', 'modal semantics on');
+  assert.equal(drawerNode.getAttribute('tabindex'), '-1', 'drawer surface is focusable');
+
+  // Drawer lives inside the layout-node tree: its ancestors must stay
+  // non-inert (inert would swallow the dialog itself), every other sibling
+  // subtree becomes inert.
+  let nodes = Array.from(layout.querySelectorAll('layout-node'));
+  let ancestorOfDrawer = (n) => n === drawerNode || n.contains?.(drawerNode);
+  let siblings = nodes.filter((n) => !ancestorOfDrawer(n) && !drawerNode.contains?.(n));
+  assert.ok(siblings.length > 0, 'background sibling nodes exist');
+  assert.ok(siblings.every((n) => n.hasAttribute('inert')), 'background nodes are inert while open');
+  assert.ok(nodes.filter(ancestorOfDrawer).every((n) => !n.hasAttribute('inert')),
+    'drawer ancestors are never inert');
+
+  layout.closeDrawer('start');
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(drawerNode.hasAttribute('role'), false, 'role removed on close');
+  assert.equal(drawerNode.hasAttribute('aria-modal'), false);
+  assert.equal(drawerNode.hasAttribute('tabindex'), false);
+  assert.ok(siblings.every((n) => !n.hasAttribute('inert')), 'inert removed on close');
+});
+
+test('modal drawer traps Tab inside itself and cycles with Shift+Tab', async () => {
+  await makeEscapeEnv('drawer-modal-tab-trap');
+  let layout = await buildDrawerLayout(document.body, 0);
+
+  layout.openDrawer('end');
+  await new Promise((r) => setTimeout(r, 0));
+  let drawerNode = findDrawerNode(layout, 'end');
+  assert.ok(drawerNode);
+
+  // The trap cycles over exactly the focusables visible to the collector.
+  // linkedom has no layout/display model, so the contract is asserted against
+  // the collector result itself; the browser smoke proof covers real focus.
+  let focusables = layout._collectDrawerFocusables(drawerNode);
+  assert.ok(focusables.length >= 2, 'drawer surface exposes focusable controls');
+  let focused = [];
+  for (let el of focusables) el.focus = () => focused.push(el);
+
+  let tab = (shift = false) => {
+    const e = new window.Event('keydown', { bubbles: true, cancelable: true });
+    e.key = 'Tab';
+    e.shiftKey = shift;
+    drawerNode.dispatchEvent(e);
+    return e;
+  };
+
+  // Focus sits on the drawer surface (as after modal open).
+  document.activeElement = drawerNode;
+  let first = tab();
+  assert.equal(first.defaultPrevented, true, 'Tab on the surface starts the cycle');
+  assert.equal(focused.at(-1), focusables[0], 'first Tab enters the first focusable');
+
+  document.activeElement = focusables[0];
+  tab();
+  assert.equal(focused.at(-1), focusables[1], 'Tab moves forward inside the drawer');
+
+  document.activeElement = focusables.at(-1);
+  tab();
+  assert.equal(focused.at(-1), focusables[0], 'Tab on the last wraps to the first');
+
+  document.activeElement = focusables[0];
+  tab(true);
+  assert.equal(focused.at(-1), focusables.at(-1), 'Shift+Tab on the first wraps to the last');
+
+  // Focus outside the drawer: Tab is left to the browser (background is inert).
+  let outside = document.createElement('button');
+  document.body.append(outside);
+  document.activeElement = outside;
+  let untouched = tab();
+  assert.equal(untouched.defaultPrevented, false, 'outside focus is not trapped');
+
+  // Closing releases the trap entirely.
+  layout.closeDrawer('end');
+  await new Promise((r) => setTimeout(r, 0));
+  document.activeElement = drawerNode;
+  let afterClose = tab();
+  assert.equal(afterClose.defaultPrevented, false, 'no trap after close');
+});
