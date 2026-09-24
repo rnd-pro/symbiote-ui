@@ -466,3 +466,255 @@ test('Escape while no drawer is open has no effect', async () => {
 
 
 
+
+// --- Escape owner election: real DOM dispatch regression tests -------------
+// These tests always go through document-level dispatch of a real bubbling,
+// composed keydown event. They never call _consumeDrawerEscape/closeDrawer
+// directly: direct sequential method calls cannot prove anything about DOM
+// event ordering.
+
+async function makeEscapeEnv(tag) {
+  let { parseHTML } = await import('linkedom');
+  let { window } = parseHTML('<!doctype html><html><body></body></html>');
+  let TestCSSStyleSheet = class { replaceSync(text) { this.cssText = text; } };
+  Object.assign(globalThis, {
+    window,
+    document: window.document,
+    HTMLElement: window.HTMLElement,
+    Element: window.Element,
+    customElements: window.customElements,
+    Node: window.Node,
+    Event: window.Event,
+    CustomEvent: window.CustomEvent,
+    MutationObserver: window.MutationObserver,
+    ShadowRoot: window.ShadowRoot || class ShadowRootStub {},
+    CSSStyleSheet: TestCSSStyleSheet,
+    getComputedStyle: window.getComputedStyle || (() => ({ transitionDuration: '0s', animationDuration: '0s' })),
+  });
+  window.document.adoptedStyleSheets = [];
+  const div = window.document.createElement('div');
+  const StyleProto = Object.getPrototypeOf(div.style);
+  StyleProto.getPropertyPriority = StyleProto.getPropertyPriority || (() => '');
+  const fresh = `?fresh=${tag}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  await import(`../layout/LayoutNode/LayoutNode.js${fresh}`);
+  await import(`../layout/Layout/Layout.js${fresh}`);
+  return { window };
+}
+
+function escapeKeydown() {
+  const e = new window.Event('keydown', { bubbles: true, cancelable: true, composed: true });
+  e.key = 'Escape';
+  return e;
+}
+
+function nestInto(innerIntoOuterHost, outer) {
+  let host = outer.querySelector('layout-node').shadowRoot?.querySelector('.panel-view')
+    || outer.querySelector('layout-node .panel-view')
+    || outer.querySelector('layout-node');
+  host.append(innerIntoOuterHost);
+  return host;
+}
+
+function hideFromPeers(layout) {
+  layout.getBoundingClientRect = () => ({ width: 0, height: 0, top: 0, left: 0, bottom: 0, right: 0 });
+}
+
+test('Escape owner follows the event path: outer layout registered before inner', async () => {
+  await makeEscapeEnv('escape-nested-out-first');
+  let outer = await buildDrawerLayout(document.body, 0);
+  let inner = await buildDrawerLayout(document.body, 1); // registered second
+  nestInto(inner, outer);
+  inner.style.width = '100%';
+  inner.style.height = '100%';
+
+  outer.openDrawer('start');
+  await new Promise((r) => setTimeout(r, 0));
+  // Keep both drawers' state open: the peer rule is about *visible* surfaces,
+  // so while outer is hidden the inner opening does not close it.
+  hideFromPeers(outer);
+  inner.openDrawer('start');
+  await new Promise((r) => setTimeout(r, 0));
+  assert.ok(outer._isDrawerOpen('start'), 'outer drawer still open');
+  assert.ok(inner._isDrawerOpen('start'), 'inner drawer open');
+
+  // Real dispatched keydown from inside the inner layout: the inner layout
+  // owns the escape even though the outer listener was registered first.
+  let target = findDrawerNode(inner, 'start') || inner;
+  target.dispatchEvent(escapeKeydown());
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(inner.$.drawerStartOpen, false, 'one Escape closes the inner (event-path) drawer');
+  assert.equal(outer.$.drawerStartOpen, true, 'outer drawer survives: exactly one layer per keypress');
+
+  // A keypress whose path covers only the outer layout closes the outer one.
+  outer.dispatchEvent(escapeKeydown());
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(outer.$.drawerStartOpen, false, 'second Escape closes the outer layer');
+});
+
+test('Escape owner is independent of the registration order (inner registered first)', async () => {
+  await makeEscapeEnv('escape-nested-in-first');
+  let inner = await buildDrawerLayout(document.body, 0); // registered first
+  let outer = await buildDrawerLayout(document.body, 1);
+  nestInto(inner, outer); // DOM nesting reversed vs registration order
+
+  outer.openDrawer('start');
+  await new Promise((r) => setTimeout(r, 0));
+  hideFromPeers(outer);
+  inner.openDrawer('start');
+  await new Promise((r) => setTimeout(r, 0));
+  assert.ok(outer._isDrawerOpen('start'));
+  assert.ok(inner._isDrawerOpen('start'));
+
+  let target = findDrawerNode(inner, 'start') || inner;
+  target.dispatchEvent(escapeKeydown());
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(inner.$.drawerStartOpen, false, 'deepest layout on the event path owns Escape');
+  assert.equal(outer.$.drawerStartOpen, true, 'outer (registered later, open) is untouched');
+});
+
+test('two sibling layouts: Escape closes only the layout on the event path', async () => {
+  await makeEscapeEnv('escape-siblings');
+  let first = await buildDrawerLayout(document.body, 0);
+  let second = await buildDrawerLayout(document.body, 1);
+
+  second.openDrawer('end');
+  await new Promise((r) => setTimeout(r, 0));
+  // The one-drawer rule skips invisible peers, so with the second layout
+  // hidden the first can open its own drawer alongside.
+  hideFromPeers(second);
+  first.openDrawer('start');
+  await new Promise((r) => setTimeout(r, 0));
+  assert.ok(first._isDrawerOpen('start'));
+  assert.ok(second._isDrawerOpen('end'));
+
+  (findDrawerNode(second, 'end') || second).dispatchEvent(escapeKeydown());
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(second.$.drawerEndOpen, false, 'targeted sibling closes');
+  assert.equal(first.$.drawerStartOpen, true, 'adjacent sibling stays open');
+
+  (findDrawerNode(first, 'start') || first).dispatchEvent(escapeKeydown());
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(first.$.drawerStartOpen, false, 'the other sibling closes on its own Escape');
+});
+
+test('a nested dialog above the drawer consumes Escape first; the drawer closes on the next one', async () => {
+  await makeEscapeEnv('escape-dialog');
+  let layout = await buildDrawerLayout(document.body, 0);
+  layout.openDrawer('start');
+  await new Promise((r) => setTimeout(r, 0));
+  assert.ok(layout._isDrawerOpen('start'));
+
+  // A top-layer dialog outside the layout that handles its own Escape
+  // (menu/dialog contract: preventDefault on the handled keydown).
+  let dialog = document.createElement('div');
+  dialog.setAttribute('role', 'dialog');
+  document.body.append(dialog);
+  let dialogContent = document.createElement('button');
+  dialog.append(dialogContent);
+  let dialogOpen = true;
+  let onDialogKeydown = (e) => {
+    if (e.key !== 'Escape') return;
+    e.preventDefault(); // accepted Escape handling by the dialog
+    dialogOpen = false;
+    dialog.removeEventListener('keydown', onDialogKeydown);
+  };
+  dialog.addEventListener('keydown', onDialogKeydown);
+
+  dialogContent.dispatchEvent(escapeKeydown());
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(dialogOpen, false, 'dialog consumed the first Escape');
+  assert.equal(layout.$.drawerStartOpen, true, 'drawer stays open under the handled dialog Escape');
+
+  // Dialog gone: the next Escape is owned by the drawer layer.
+  document.body.dispatchEvent(escapeKeydown());
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(layout.$.drawerStartOpen, false, 'drawer closes on the following Escape');
+});
+
+test('focus returns on button- and swipe-driven closes, reopens with a fresh opener, drops removed openers', async () => {
+  await makeEscapeEnv('escape-focus-matrix');
+  let layout = await buildDrawerLayout(document.body, 0);
+  layout._getFallbackDrawerWidth = () => 335;
+
+  let host = document.createElement('div');
+  document.body.append(host);
+  let shadow = host.attachShadow({ mode: 'open' });
+  let shadowOpener = document.createElement('button');
+  shadow.append(shadowOpener);
+  let focusCalls = new Map();
+  let trackFocus = (el) => { focusCalls.set(el, 0); let orig = el.focus?.bind(el); el.focus = () => { focusCalls.set(el, focusCalls.get(el) + 1); orig?.(); }; };
+  trackFocus(shadowOpener);
+
+  let drawerInnards = () => findDrawerNode(layout, 'start');
+
+  // (a) Shadow-DOM opener, close via the public "button" path (closeDrawer).
+  layout.ownerDocument.activeElement = shadowOpener;
+  layout.openDrawer('start');
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(layout._drawerFocusReturnTarget, shadowOpener, 'shadow opener recorded');
+  layout.ownerDocument.activeElement = drawerInnards();
+  layout.closeDrawer('start'); // e.g. header close button / backdrop
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(focusCalls.get(shadowOpener), 1, 'focus returned to the shadow opener on close');
+  assert.equal(layout._drawerFocusReturnTarget, null, 'return target cleared after close');
+
+  // (b) Independent reopening with a different opener — no stale target.
+  let opener2 = document.createElement('button');
+  document.body.append(opener2);
+  trackFocus(opener2);
+  layout.ownerDocument.activeElement = opener2;
+  layout.openDrawer('start');
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(layout._drawerFocusReturnTarget, opener2, 'second opening records its own opener');
+  layout.ownerDocument.activeElement = drawerInnards();
+  // Swipe close: committed drag past the threshold.
+  drawerInnards().dispatchEvent(pointerEvent('pointerdown', { x: 150, y: 400 }));
+  layout.dispatchEvent(pointerEvent('pointermove', { x: -110, y: 400 }));
+  layout.dispatchEvent(pointerEvent('pointerup', { x: -110, y: 400 }));
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(layout.$.drawerStartOpen, false, 'swipe closes the drawer');
+  assert.equal(focusCalls.get(opener2), 1, 'focus returned to the second opener after swipe close');
+  assert.equal(focusCalls.get(shadowOpener), 1, 'first opener not refocused');
+  assert.equal(layout._drawerFocusReturnTarget, null);
+
+  // (c) Reopening from inside the drawer does not overwrite the opener.
+  layout.ownerDocument.activeElement = opener2;
+  layout.openDrawer('start');
+  await new Promise((r) => setTimeout(r, 0));
+  layout.ownerDocument.activeElement = drawerInnards();
+  layout.openDrawer('start'); // re-open driven from inside (e.g. another panel id)
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(layout._drawerFocusReturnTarget, opener2, 'inner reopening keeps the original opener');
+  layout.closeDrawer('start');
+  await new Promise((r) => setTimeout(r, 0));
+
+  // (d) Opener removed from the document: no crash, no stale record, next
+  // opening works normally.
+  let doomed = document.createElement('button');
+  document.body.append(doomed);
+  trackFocus(doomed);
+  layout.ownerDocument.activeElement = doomed;
+  layout.openDrawer('start');
+  await new Promise((r) => setTimeout(r, 0));
+  layout.ownerDocument.activeElement = drawerInnards();
+  doomed.remove();
+  layout.closeDrawer('start');
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(focusCalls.get(doomed), 0, 'removed opener is never focused');
+  assert.equal(layout._drawerFocusReturnTarget, null, 'stale opener dropped');
+
+  layout.ownerDocument.activeElement = opener2;
+  layout.openDrawer('start');
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(layout._drawerFocusReturnTarget, opener2, 'fresh opening after removal works');
+
+  // (e) Focus that already left the layout is not hijacked on close.
+  let outside = document.createElement('button');
+  document.body.append(outside);
+  let opener2FocusBefore = focusCalls.get(opener2);
+  layout.ownerDocument.activeElement = outside;
+  layout.closeDrawer('start');
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(focusCalls.get(opener2), opener2FocusBefore,
+    'close with outside focus does not steal it back');
+});

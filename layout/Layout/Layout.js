@@ -56,6 +56,96 @@ const LAYOUT_PEER_PENDING_GROUPS = new Set();
 let layoutPeerRefreshFrame = 0;
 const NATIVE_RAIL_LAYOUTS = new Set();
 
+// --- Drawer Escape ownership ----------------------------------------------
+// Historically every Layout attached its own keydown listener to
+// ownerDocument and guarded the event with a per-event settle marker. Under
+// bubble phase document listeners fire in *registration* order, so the marker
+// merely made the first-registered layout the winner — regardless of which
+// layout actually owned the interaction (nested layout, focused drawer, top
+// overlay). Instead, one shared listener per document elects the Escape owner
+// from live DOM evidence: event composed path → focus chain (shadow-aware,
+// nesting-aware) → most recent drawer activity. Already-handed Escape (nested
+// menu/dialog that called preventDefault or stopped propagation earlier on
+// the path) is still honored by bailing out up front.
+const DRAWER_ESCAPE_CONTEXTS = new WeakMap();
+let drawerActivitySeq = 0;
+
+function getDrawerEscapeContext(documentRef) {
+  let context = DRAWER_ESCAPE_CONTEXTS.get(documentRef);
+  if (!context) {
+    context = { layouts: new Set(), handler: null };
+    context.handler = (e) => dispatchDrawerEscape(context, e);
+    DRAWER_ESCAPE_CONTEXTS.set(documentRef, context);
+    documentRef.addEventListener('keydown', context.handler);
+  }
+  return context;
+}
+
+function registerDrawerEscapeListener(layout) {
+  let documentRef = layout.ownerDocument;
+  if (!documentRef) return;
+  getDrawerEscapeContext(documentRef).layouts.add(layout);
+}
+
+function unregisterDrawerEscapeListener(layout) {
+  let documentRef = layout.ownerDocument;
+  let context = documentRef && DRAWER_ESCAPE_CONTEXTS.get(documentRef);
+  if (!context) return;
+  context.layouts.delete(layout);
+  if (!context.layouts.size) {
+    documentRef.removeEventListener('keydown', context.handler);
+    DRAWER_ESCAPE_CONTEXTS.delete(documentRef);
+  }
+}
+
+// Deepest-first chain of active elements across shadow boundaries: a layout
+// whose shadow subtree holds focus appears in the chain as its shadow host.
+function getDeepFocusChain(documentRef) {
+  let chain = [];
+  let node = documentRef?.activeElement || null;
+  while (node) {
+    chain.push(node);
+    let root = node.getRootNode?.();
+    node = root && root !== documentRef && root.host ? root.host : null;
+  }
+  return chain;
+}
+
+function dispatchDrawerEscape(context, e) {
+  if (e.key !== 'Escape' || e.defaultPrevented || e.__snLayoutDrawerSettled) return;
+  let candidates = [];
+  for (let layout of context.layouts) {
+    if (!layout.isConnected || !layout.hasAttribute?.('drawer-mode-active')) continue;
+    if (layout._isDrawerOpen('start') || layout._isDrawerOpen('end')) candidates.push(layout);
+  }
+  if (!candidates.length) return;
+  let owner = electDrawerEscapeOwner(candidates, e);
+  owner?._consumeDrawerEscape(e);
+}
+
+function electDrawerEscapeOwner(candidates, e) {
+  if (candidates.length === 1) return candidates[0];
+  // (1) Event path: the deepest layout on the composed path owns the key,
+  //     independent of listener registration order.
+  let path = typeof e.composedPath === 'function' ? e.composedPath() : null;
+  if (path?.length) {
+    let hit = path.find((node) => candidates.includes(node));
+    if (hit) return hit;
+  }
+  // (2) Focus: the deepest layout whose subtree (shadow included) holds focus.
+  let focusChain = getDeepFocusChain(candidates[0].ownerDocument);
+  for (let node of focusChain) {
+    let matches = candidates.filter((layout) => layout === node || layout.contains?.(node));
+    if (matches.length) {
+      return matches.find((layout) => !matches.some((other) => other !== layout && other.contains?.(layout)))
+        || matches[0];
+    }
+  }
+  // (3) Topmost interactive layer: the drawer most recently (re)opened.
+  return candidates.reduce((top, layout) =>
+    (layout._drawerActivityStamp >= top._drawerActivityStamp ? layout : top));
+}
+
 function normalizeLayoutPeerGroup(value) {
   return String(value || '').trim();
 }
@@ -239,11 +329,16 @@ export class Layout extends Symbiote {
     this._drawerRailPointerDownHandler = (e) => this._onDrawerRailPointerDown(e);
     this._drawerRailPointerOverHandler = (e) => this._onDrawerRailHover(e);
     this._drawerClickCaptureHandler = (e) => this._onDrawerClickCapture(e);
-    // Escape push-closes whatever drawer is open and returns focus to the
-    // opener record, keeping modal drawers non-silent for keyboard users.
-    this._drawerEscapeHandler = (e) => this._onDrawerEscape(e);
+    // Escape ownership is coordinated per document (see the module-level
+    // DRAWER_ESCAPE_CONTEXTS block); each instance only registers itself.
+    // Monotonic stamp of the last drawer open on this layout; used as the
+    // "topmost interactive layer" tiebreak when neither the event path nor
+    // the focus chain identifies the Escape owner.
+    this._drawerActivityStamp = 0;
     // The element that was focused when the drawer was opened; restored on
     // close so keyboard state does not stay trapped inside the closed panel.
+    // Cleared whenever the last open drawer closes, so a later independent
+    // opening never restores focus to a stale opener.
     this._drawerFocusReturnTarget = null;
 
 
@@ -269,7 +364,7 @@ export class Layout extends Symbiote {
     this.addEventListener('pointerover', this._drawerRailPointerOverHandler);
     this.addEventListener('mouseover', this._drawerRailPointerOverHandler);
     this.addEventListener('click', this._drawerClickCaptureHandler, true);
-    this.ownerDocument?.addEventListener('keydown', this._drawerEscapeHandler);
+    registerDrawerEscapeListener(this);
     if (this._resizeObserver) {
       this._resizeObserver.observe(this);
     } else if (this._resizeFallback && typeof window !== 'undefined') {
@@ -281,7 +376,7 @@ export class Layout extends Symbiote {
     if (!this._layoutConnectionActive) return;
     this._layoutConnectionActive = false;
     this._resizeObserver?.disconnect();
-    this.ownerDocument?.removeEventListener('keydown', this._drawerEscapeHandler);
+    unregisterDrawerEscapeListener(this);
     if (this._resizeFallback && typeof window !== 'undefined') {
       window.removeEventListener('resize', this._resizeFallback);
     }
@@ -1141,15 +1236,15 @@ export class Layout extends Symbiote {
   }
 
   openDrawer(dock, panelId = '') {
-    // Only the first non-drawer opener is remembered; re-opening from
-    // inside the drawer must not overwrite it (focus keeps escaping trap).
+    // Remember the opener: the first opening after a fully closed state
+    // always records the current focus (the previous target was cleared on
+    // close, so a stale opener is never kept across independent openings).
+    // Re-opening from inside the drawer must not overwrite it (shadow-aware
+    // containment check — focus inside a shadow subtree still counts as "in").
     let active = this.ownerDocument?.activeElement;
-    if (
-      !this._drawerFocusReturnTarget
-      || (
-        this.contains?.(active) === false
-      )
-    ) {
+    if (!this._drawerFocusReturnTarget) {
+      this._drawerFocusReturnTarget = active || null;
+    } else if (active && !this._isDrawerFocusWithin(active)) {
       this._drawerFocusReturnTarget = active;
     }
     this._setDrawerOpen(dock, true, panelId);
@@ -1182,7 +1277,42 @@ export class Layout extends Symbiote {
     }
     this._clearDrawerDrag('all');
     this._resyncDrawerProjection();
-    if (open) this._closeVisiblePeerDrawers();
+    if (open) {
+      this._drawerActivityStamp = ++drawerActivitySeq;
+      this._closeVisiblePeerDrawers();
+    } else if (!this.$.drawerStartOpen && !this.$.drawerEndOpen) {
+      this._restoreDrawerFocusToOpener();
+    }
+  }
+
+  // True when `node` is this layout or lives in its subtree, looking through
+  // shadow boundaries (a node inside our shadow root is reached via the host
+  // chain even though `contains` stops at shadow edges).
+  _isDrawerFocusWithin(node) {
+    while (node) {
+      if (node === this || this.contains?.(node)) return true;
+      let root = node.getRootNode?.();
+      node = root && root.host ? root.host : null;
+    }
+    return false;
+  }
+
+  // Closing the last open drawer hands focus back to the recorded opener —
+  // regardless of the close path (Escape, backdrop, button, or swipe) — but
+  // only if focus still sits inside this layout. Focus that already moved
+  // elsewhere (a dialog, another surface) is never hijacked. A disconnected
+  // opener is dropped silently. The record is always cleared, so independent
+  // openings never share a stale return target.
+  _restoreDrawerFocusToOpener() {
+    let returnTo = this._drawerFocusReturnTarget;
+    this._drawerFocusReturnTarget = null;
+    if (!returnTo) return;
+    let documentRef = this.ownerDocument;
+    let active = documentRef?.activeElement;
+    if (active && active !== documentRef?.body && !this._isDrawerFocusWithin(active)) return;
+    if (returnTo.isConnected && typeof returnTo.focus === 'function') {
+      try { returnTo.focus(); } catch {}
+    }
   }
 
   // Mobile side-panel surfaces are one system across nested panel-layouts:
@@ -1362,23 +1492,19 @@ export class Layout extends Symbiote {
   }
 
 
-  _onDrawerEscape(e) {
-    // Only in drawer mode do we manage close-on-Escape; plain desktop layouts
-    // keep their own native focus model. Nested layouts listen too — the
-    // deepest one (its drawer is already open) wins first.
-    if (e.key !== 'Escape' || e.defaultPrevented || e.__snLayoutDrawerSettled) return;
-    if (!this.hasAttribute('drawer-mode-active')) return;
+  // Called by the per-document Escape coordinator after this layout was
+  // elected the owner of the keypress (see electDrawerEscapeOwner). This
+  // layout closes exactly its own open drawer; focus is returned by the
+  // shared close path (_restoreDrawerFocusToOpener).
+  _consumeDrawerEscape(e) {
     const dock = this.$.drawerStartOpen ? 'start' : this.$.drawerEndOpen ? 'end' : '';
     if (!dock) return;
     e.preventDefault();
     e.stopPropagation();
+    // Legacy settle marker: any out-of-band listener from an older copy of
+    // this module on the same document still sees the event as handled.
     e.__snLayoutDrawerSettled = true;
     this.closeDrawer(dock);
-    const returnTo = this._drawerFocusReturnTarget;
-    this._drawerFocusReturnTarget = null;
-    if (returnTo && returnTo.isConnected && typeof returnTo.focus === 'function') {
-      try { returnTo.focus(); } catch {}
-    }
   }
 
   _onDrawerPointerUp(e) {
