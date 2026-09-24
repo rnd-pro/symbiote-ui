@@ -239,6 +239,12 @@ export class Layout extends Symbiote {
     this._drawerRailPointerDownHandler = (e) => this._onDrawerRailPointerDown(e);
     this._drawerRailPointerOverHandler = (e) => this._onDrawerRailHover(e);
     this._drawerClickCaptureHandler = (e) => this._onDrawerClickCapture(e);
+    // Escape push-closes whatever drawer is open and returns focus to the
+    // opener record, keeping modal drawers non-silent for keyboard users.
+    this._drawerEscapeHandler = (e) => this._onDrawerEscape(e);
+    // The element that was focused when the drawer was opened; restored on
+    // close so keyboard state does not stay trapped inside the closed panel.
+    this._drawerFocusReturnTarget = null;
 
 
     this._resizeFallback = () => {
@@ -263,6 +269,7 @@ export class Layout extends Symbiote {
     this.addEventListener('pointerover', this._drawerRailPointerOverHandler);
     this.addEventListener('mouseover', this._drawerRailPointerOverHandler);
     this.addEventListener('click', this._drawerClickCaptureHandler, true);
+    this.ownerDocument?.addEventListener('keydown', this._drawerEscapeHandler, true);
     if (this._resizeObserver) {
       this._resizeObserver.observe(this);
     } else if (this._resizeFallback && typeof window !== 'undefined') {
@@ -274,6 +281,7 @@ export class Layout extends Symbiote {
     if (!this._layoutConnectionActive) return;
     this._layoutConnectionActive = false;
     this._resizeObserver?.disconnect();
+    this.ownerDocument?.removeEventListener('keydown', this._drawerEscapeHandler, true);
     if (this._resizeFallback && typeof window !== 'undefined') {
       window.removeEventListener('resize', this._resizeFallback);
     }
@@ -1133,6 +1141,7 @@ export class Layout extends Symbiote {
   }
 
   openDrawer(dock, panelId = '') {
+    this._drawerFocusReturnTarget = this.ownerDocument?.activeElement || null;
     this._setDrawerOpen(dock, true, panelId);
   }
 
@@ -1340,6 +1349,24 @@ export class Layout extends Symbiote {
     let progress = this._getDrawerGestureProgress(gesture, delta);
     this._applyDrawerProgress(gesture.dock, progress, gesture.width, gesture.panelId);
     e.preventDefault();
+  }
+
+
+  _onDrawerEscape(e) {
+    // Only in drawer mode do we manage close-on-Escape; plain desktop layouts
+    // keep their own native focus model.
+    if (e.key !== 'Escape') return;
+    if (!this.hasAttribute('drawer-mode-active')) return;
+    const dock = this.$.drawerStartOpen ? 'start' : this.$.drawerEndOpen ? 'end' : '';
+    if (!dock) return;
+    e.preventDefault();
+    e.stopPropagation();
+    this.closeDrawer(dock);
+    const returnTo = this._drawerFocusReturnTarget;
+    this._drawerFocusReturnTarget = null;
+    if (returnTo && this.ownerDocument && typeof returnTo.focus === 'function') {
+      try { returnTo.focus(); } catch {}
+    }
   }
 
   _onDrawerPointerUp(e) {

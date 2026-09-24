@@ -425,3 +425,35 @@ test('a drag-borne click on a tree row is suppressed when the panel token matche
   let passTap = { target: row, preventDefault(){ calls.push('tap-prevent'); } };
   assert.equal(gate(passTap), false);
 });
+
+test('Escape closes the open drawer and returns focus to its opener', async () => {
+  let { layout } = await makeDrawerFixture();
+
+  let opener = layout.ownerDocument.createElement('button');
+  layout.ownerDocument.body.appendChild(opener);
+  opener.focus?.();
+  layout.setAttribute('drawer-mode-active', '');
+
+  layout.ownerDocument.activeElement = opener;
+  layout.openDrawer('start');
+  assert.equal(layout.$.drawerStartOpen, true);
+  // Once the drawer is open the opener keeps focus; leaving it to Escape
+  // must close the drawer and put focus back at the opener, not drop it.
+  const escapeEvent = new window.Event('keydown', { bubbles: true, cancelable: true });
+  escapeEvent.key = 'Escape';
+  layout.ownerDocument.dispatchEvent(escapeEvent);
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(layout.$.drawerStartOpen, false, 'Escape closes the open drawer');
+  assert.equal(layout.ownerDocument.activeElement, opener, 'focus returns to the element that opened the drawer');
+});
+
+test('Escape while no drawer is open has no effect', async () => {
+  let { layout } = await makeDrawerFixture();
+  layout.setAttribute('drawer-mode-active', '');
+  const escapeEvent = new window.Event('keydown', { bubbles: true, cancelable: true });
+  escapeEvent.key = 'Escape';
+  layout.ownerDocument.dispatchEvent(escapeEvent);
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(layout.$.drawerStartOpen, false);
+  assert.equal(layout.$.drawerEndOpen, false);
+});
