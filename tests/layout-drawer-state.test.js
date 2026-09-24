@@ -363,67 +363,42 @@ test('drawerGroup split materializes as the drawer surface', async () => {
     'drawer-group marker clears when the group leaves the tree');
 });
 
-test('a drag-borne click on a tree row is suppressed when the panel token matches', () => {
-  // The gate must swallow the gesture-synthesized click even when the event
-  // path crosses a tree row; raw user taps on rows remain free.
-  let row = { closest: (selector) => (selector.includes('sn-tree-row') ? row : null), textContent: '' };
-  row = new Proxy(row, {
-    get(target, prop) {
-      if (prop === 'closest') return (selector) => selector.includes('sn-tree-row') ? row : null;
-      return target[prop];
-    },
-  });
-  let panelId = 'nav';
-  let calls = [];
-  // Minimal shape of _onDrawerClickCapture's reachable surface.
-  let drawerNode = {
-    dataset: { drawerPanelId: panelId },
-    hasAttribute: () => false,
-    contains: () => true,
-  };
-  let layout = {
-    hasAttribute: (name) => name === 'drawer-mode-active',
-    contains: () => true,
-    _ignoreNextDrawerClick: { pointerId: 7, panelId, target: drawerNode, expiresAt: Number.POSITIVE_INFINITY },
-    _drawerNow: () => 0,
-  };
-  // Reach the gate through its actual code path: bind a synthetic event into
-  // a thin scaffold extracted from the handler.
-  let gate = (event) => {
-    let target = event.target;
-    let node = target?.closest?.('layout-node[mobile-dock="start"], layout-node[mobile-dock="end"]') || drawerNode;
-    if (!layout.hasAttribute('drawer-mode-active')) return false;
-    if (!layout.contains(node)) return false;
-    let panelId = node.dataset?.drawerPanelId || '';
-    let token = layout._ignoreNextDrawerClick;
-    if (token && token.expiresAt <= layout._drawerNow()) {
-      layout._ignoreNextDrawerClick = null;
-      token = null;
-    }
-    let contentClick = target.closest?.('.sn-tree-row, [role="treeitem"], [data-tree-row]');
-    let syntheticClick = token
-      && token.panelId === panelId
-      && (!token.target || token.target === target || token.target.contains?.(target));
-    let suppress = syntheticClick
-      || node.hasAttribute('drawer-rail-collapsed')
-      || node.hasAttribute('drawer-dragging');
-    if (!suppress) return false;
-    if (!syntheticClick && contentClick
-      && !node.hasAttribute('drawer-rail-collapsed')
-      && !node.hasAttribute('drawer-dragging')) return false;
-    if (syntheticClick) layout._ignoreNextDrawerClick = null;
-    return true;
-  };
+test('a drag-borne click on a tree row is suppressed even when the gesture started on another surface', async () => {
+  // Regression: the trailing click is dispatched at the RELEASE point — the
+  // drawer that just slid open/closed under the finger — while token.target
+  // is the surface where the gesture STARTED. Suppression must key off the
+  // panel identity for gesture tokens, not geometric target containment.
+  let { layout } = await makeDrawerFixture();
+  layout.openDrawer('start');
+  await new Promise((r) => setTimeout(r, 0));
+  let drawerNode = findDrawerNode(layout, 'start');
+  assert.ok(drawerNode);
+  let primaryNode = layout.querySelector('layout-node[mobile-dock="primary"]');
+  assert.ok(primaryNode);
 
-  // A gesture-synthesized click inside the drawer:
-  let gestureClick = { target: row, preventDefault(){ calls.push('prevent'); } };
-  row.closest = (selector) => selector.includes('layout-node') ? drawerNode : row;
-  assert.equal(gate(gestureClick), true);
-  assert.equal(layout._ignoreNextDrawerClick, null, 'the bypass token is consumed on capture');
+  let row = document.createElement('div');
+  row.setAttribute('class', 'sn-tree-row');
+  drawerNode.append(row);
 
-  // A fresh tap afterward is free (no token, no drag state):
-  let passTap = { target: row, preventDefault(){ calls.push('tap-prevent'); } };
-  assert.equal(gate(passTap), false);
+  // Token exactly as _onDrawerPointerUp records it: target = gesture origin
+  // surface (the primary content node), panelId = the drawer's panel.
+  layout._ignoreNextDrawerClick = {
+    pointerId: 7,
+    panelId: drawerNode.dataset.drawerPanelId,
+    target: primaryNode,
+    gesture: true,
+    expiresAt: layout._drawerNow() + 700,
+  };
+  let gestureClick = new window.Event('click', { bubbles: true, cancelable: true });
+  row.dispatchEvent(gestureClick);
+  assert.equal(gestureClick.defaultPrevented, true,
+    'trailing gesture click on a tree row is swallowed despite a different gesture-origin target');
+  assert.equal(layout._ignoreNextDrawerClick, null, 'the token is consumed');
+
+  // A fresh independent tap afterwards is free (no token, no drag state).
+  let freshTap = new window.Event('click', { bubbles: true, cancelable: true });
+  row.dispatchEvent(freshTap);
+  assert.equal(freshTap.defaultPrevented, false, 'independent row tap remains usable');
 });
 
 test('Escape closes the open drawer and returns focus to its opener', async () => {
