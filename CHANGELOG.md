@@ -6,6 +6,18 @@ All notable changes to `symbiote-ui` will be documented in this file.
 
 ### Fixed
 
+### Fixed
+
+- Gesture-derived click suppression inside drawers no longer lets a tree row or
+  other interactive content steal the synthesized click that concludes a
+  completed rail swipe: the drawer click-capture gate now distinguishes
+  gesture-tagged tokens from rail-collapse tokens, always consuming the
+  gesture's own click while leaving bona fide user taps on content rows
+  free. (`Layout._ignoreNextDrawerClick` now carries `gesture: true` only
+  when the token originated from a drag.)
+
+
+
 - Added C++ fenced-code syntax highlighting to the reusable Markdown and code-block renderers.
 - Aligned the shared agent Show composition with the accepted compact-player interaction model: the player now stays in a fixed region outside transcript scrolling, owns caption and optional TTS blocks, exposes detail and non-activating pointer-only video hooks, and sits inside a Cascade-themed responsive dock without consumer layout CSS. Native text selection now progressively extends the real Selection/Range on the provider-owned attention scheduler, and presenter clicks retain an expanding-circle receipt and browser-pixel coverage.
 
