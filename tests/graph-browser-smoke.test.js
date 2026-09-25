@@ -2772,7 +2772,7 @@ test('drawer modal owns focus of the opening panel and cycles Tab over a real le
   }
 });
 
-test('drawer panel controls scale with theme density on both docks at 320/390/430 without overlapping hit areas', { timeout: BROWSER_SMOKE_TIMEOUT_MS }, async () => {
+test('drawer panel controls scale with theme density on both docks at 320/390/430 plus narrow desktop mouse drag, without overlapping hit areas', { timeout: BROWSER_SMOKE_TIMEOUT_MS }, async () => {
   const chromePath = findChrome();
   assertBrowserSmokeRuntime();
 
@@ -3000,6 +3000,87 @@ test('drawer panel controls scale with theme density on both docks at 320/390/43
         await evaluate(`window.__lab.closeDrawer('${dock}')`);
       }
 
+    }
+
+    // Narrow desktop with a real mouse pointer: the same gesture surface must
+    // work without touch emulation, and the drawer modal contract must hold
+    // for a pointer-driven open as well.
+    await page.send('Emulation.setTouchEmulationEnabled', { enabled: false });
+    await setPageViewport(page, { width: 680, height: 900, mobile: false });
+    await waitForPredicate(evaluate, `window.__lab.drawerMode()`, 'drawer mode on a narrow desktop viewport');
+    await waitForLab('narrow desktop mount');
+
+    for (const dock of ['start', 'end']) {
+      const open = dock === 'start' ? 'drawer-start-open' : 'drawer-end-open';
+      await evaluate(`window.__lab.setDensity(1)`);
+      await evaluate(`window.__lab.closeDrawer('${dock}')`);
+      const closedBox = await evaluate(`(() => {
+        const node = window.__lab.headerReport('${dock}')?.node;
+        const r = node?.getBoundingClientRect?.();
+        return r ? { left: r.left, right: r.right, top: r.top, height: r.height, inner: window.innerWidth } : null;
+      })()`);
+      assert.ok(closedBox, `narrow desktop: ${dock} rail geometry available`);
+
+      // Drag away from the closed rail edge: to the right for the start dock,
+      // to the left for the end dock. The distance is a share of the measured
+      // layout width, never a fixed control size.
+      const y = Math.round(closedBox.top + closedBox.height / 2);
+      const from = dock === 'start'
+        ? Math.round(closedBox.left + 16)
+        : Math.round(closedBox.right - 16);
+      const to = dock === 'start'
+        ? Math.round(closedBox.inner * 0.6)
+        : Math.round(closedBox.inner * 0.4);
+      await swipe({ from, to, y, steps: 8 });
+
+      assert.equal(await waitForPredicate(evaluate, `window.__lab.layout.hasAttribute('${open}')`,
+        `${dock} opens by mouse drag on a narrow desktop`), true,
+        `${dock} did not open by mouse drag on a narrow desktop`);
+
+      const modalState = await evaluate(`(() => {
+        const panel = document.querySelector('layout-node[mobile-dock="${dock}"][drawer-active-panel]');
+        const active = document.activeElement;
+        const nodes = [...document.querySelectorAll('layout-node')];
+        return {
+          role: panel?.getAttribute('role') || null,
+          ariaModal: panel?.getAttribute('aria-modal') || null,
+          focusInside: Boolean(active && panel?.contains?.(active)),
+          backgroundInert: nodes.some((n) => n.hasAttribute('inert') && n !== panel && !panel?.contains?.(n)),
+        };
+      })()`);
+      assert.equal(modalState.role, 'dialog', `narrow desktop ${dock}: opening panel owns role=dialog`);
+      assert.equal(modalState.ariaModal, 'true', `narrow desktop ${dock}: opening panel owns aria-modal`);
+      assert.equal(modalState.focusInside, true,
+        `narrow desktop ${dock}: pointer-driven open moves focus into the opening panel (${JSON.stringify(modalState)})`);
+      assert.equal(modalState.backgroundInert, true,
+        `narrow desktop ${dock}: background panel nodes are inert (${JSON.stringify(modalState)})`);
+
+      const openBox = await evaluate(`(() => {
+        const r = window.__lab.headerReport('${dock}')?.node?.getBoundingClientRect?.();
+        return r ? { left: r.left, right: r.right, top: r.top, height: r.height } : null;
+      })()`);
+      const closeY = Math.round(openBox.top + openBox.height / 2);
+      await swipe({
+        from: dock === 'start' ? Math.round(openBox.right - 24) : Math.round(openBox.left + 24),
+        to: dock === 'start' ? 8 : Math.round(closedBox.inner - 8),
+        y: closeY,
+        steps: 8,
+      });
+      assert.equal(await waitForPredicate(evaluate, `!window.__lab.layout.hasAttribute('${open}')`,
+        `${dock} closes by mouse drag on a narrow desktop`), true,
+        `${dock} did not close by mouse drag on a narrow desktop`);
+
+      const released = await evaluate(`(() => {
+        const panel = document.querySelector('layout-node[mobile-dock="${dock}"][drawer-active-panel]');
+        return {
+          role: panel?.getAttribute('role') || null,
+          ariaModal: panel?.getAttribute('aria-modal') || null,
+          inertNodes: [...document.querySelectorAll('layout-node[inert]')].length,
+        };
+      })()`);
+      assert.equal(released.role, null, `narrow desktop ${dock}: role released on close`);
+      assert.equal(released.ariaModal, null, `narrow desktop ${dock}: aria-modal released on close`);
+      assert.equal(released.inertNodes, 0, `narrow desktop ${dock}: no background node stays inert after close`);
     }
   } finally {
     if (page) await page.close().catch(() => {});
