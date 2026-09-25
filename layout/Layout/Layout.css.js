@@ -236,6 +236,22 @@ export let styles = css`
         flex: none;
       }
 
+
+      /* The header sits flush with the panel edge, so a target centred on its
+         controls still lost the part above the panel, and the drawer marks its
+         own header padding !important. Naming the panel attribute gives this
+         rule enough weight to reserve the room the target claims around a
+         control, taken from the same theme tokens the target is built from. */
+      layout-node[mobile-dock='start'][node-type='panel'],
+      layout-node[mobile-dock='end'][node-type='panel'] {
+        .panel-header {
+          padding-block: max(
+            var(--sn-layout-header-padding-block, 0px),
+            calc(var(--sn-layout-header-button-hit-size, 44px) - var(--sn-layout-header-button-min-block-size, 24px)) / 2
+          ) !important;
+        }
+      }
+
       layout-node[mobile-dock='start'],
       layout-node[mobile-dock='end'] {
         /* Touch-sized toggle column for the drawer surfaces. The value comes
@@ -271,22 +287,8 @@ export let styles = css`
            two: at 31px tall it held the target at 29px even with the room
            available. The title keeps its own clip for the ellipsis, so nothing
            that was being hidden by the header needs it. */
-        /* Spelled with the panel's own attributes so it outweighs the
-           drawer's !important header padding, which is otherwise injected
-           later and wins the tie on equal weight. */
-        &[node-type='panel'] .panel-header {
+        .panel-header {
           overflow: visible;
-          /* The header sits flush with the panel edge, so a target centred on
-             its controls still lost the part above the panel. Reserving the
-             same room INSIDE the header as the target claims around a control
-             is what makes the target whole, and it is the same theme token
-             that already sizes the header's padding. */
-          /* The primary drawer header marks its own padding !important, so the
-             reservation has to answer in the same terms. */
-          padding-block: max(
-            var(--sn-layout-header-padding-block, 0px),
-            calc(var(--sn-layout-header-button-hit-size, 44px) - var(--sn-layout-header-button-min-block-size, 24px)) / 2
-          ) !important;
         }
 
         /* Panel content paints directly below the header and covered the lower
