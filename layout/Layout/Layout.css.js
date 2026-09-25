@@ -242,14 +242,27 @@ export let styles = css`
          own header padding !important. Naming the panel attribute gives this
          rule enough weight to reserve the room the target claims around a
          control, taken from the same theme tokens the target is built from. */
-      layout-node[mobile-dock='start'][node-type='panel'],
-      layout-node[mobile-dock='end'][node-type='panel'] {
-        .panel-header {
-          padding-block: max(
-            var(--sn-layout-header-padding-block, 0px),
-            calc(var(--sn-layout-header-button-hit-size, 44px) - var(--sn-layout-header-button-min-block-size, 24px)) / 2
-          ) !important;
-        }
+      layout-node[mobile-dock='start'][node-type='panel'] .panel-header,
+      layout-node[mobile-dock='end'][node-type='panel'] .panel-header {
+        padding-block: max(
+          var(--sn-layout-header-padding-block, 0px),
+          calc(var(--sn-layout-header-button-hit-size, 44px) - var(--sn-layout-header-button-min-block-size, 24px)) / 2
+        ) !important;
+      }
+
+      layout-node[mobile-dock='start'][drawer-open] .panel-actions,
+      layout-node[mobile-dock='end'][drawer-open] .panel-actions {
+        overflow: visible;
+      }
+
+      layout-node[mobile-dock='start'][drawer-open] .panel-header,
+      layout-node[mobile-dock='end'][drawer-open] .panel-header {
+        overflow: visible;
+      }
+
+      layout-node[mobile-dock='start'][drawer-open] .header-btn,
+      layout-node[mobile-dock='end'][drawer-open] .header-btn {
+        z-index: 1;
       }
 
       layout-node[mobile-dock='start'],
@@ -279,25 +292,16 @@ export let styles = css`
            hit box back to the painted height, which is why a 44px target still
            measured 25px. The target is transparent, so letting it pass the
            column edge changes what a tap can reach, never what is painted. */
-        .panel-actions {
-          overflow: visible;
-        }
 
         /* The header clips for the same reason, and it is the tighter of the
            two: at 31px tall it held the target at 29px even with the room
            available. The title keeps its own clip for the ellipsis, so nothing
            that was being hidden by the header needs it. */
-        .panel-header {
-          overflow: visible;
-        }
 
         /* Panel content paints directly below the header and covered the lower
            half of the grown target, so a tap in that strip went to the content.
            Lifting the control above it is what lets the requested target be
            real; the strip it takes is the space the theme asked to reserve. */
-        .header-btn {
-          z-index: 1;
-        }
       }
 
       /* Safe-area insets keep drawer CONTENT out of a notch or home indicator
