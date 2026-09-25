@@ -270,6 +270,12 @@ chat-show-player {
     overflow: hidden;
     background: var(--sn-node-border, var(--sn-accent-border, var(--sn-sys-outline)));
     border-radius: var(--sn-radius-full);
+    /* A host-absolute composition omits turns it does not play, so the skipped
+       span renders as empty space ahead of the segment that resumes the
+       composition clock. The variable is absent on a duration-weighted
+       timeline, which keeps the legacy bar unchanged; it lives on the segment
+       because the container gap already separates every pair of segments. */
+    margin-inline-start: calc(var(--chat-show-progress-gap, 0) * 1%);
   }
 
   .chat-show-progress-fill {
