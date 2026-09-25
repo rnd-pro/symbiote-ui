@@ -438,8 +438,7 @@ export class Layout extends Symbiote {
     if (!gesture || gesture.pending) return false;
     let dock = gesture.dock;
     if (dock !== 'start' && dock !== 'end') return false;
-    let node = this._getDrawerNode(dock, gesture.panelId);
-    let current = node?.getBoundingClientRect?.().width || this._getFallbackDrawerWidth();
+    let current = this._getDrawerCommitWidth(dock, gesture.panelId, gesture.usedFallbackWidth);
     if (!current || !gesture.width) return false;
     return Math.abs(current - gesture.width) > DRAWER_GEOMETRY_TOLERANCE_PX;
   }
@@ -1587,17 +1586,20 @@ export class Layout extends Symbiote {
     let activePanelId = this._getActiveDrawerPanelId(dock);
     let startOpen = this._isDrawerOpen(dock) && (!panelId || panelId === activePanelId);
     let drawerNode = this._getDrawerNode(dock, panelId);
-    let width = drawerNode?.getBoundingClientRect?.().width || this._getFallbackDrawerWidth();
-    if (target?.dataset?.swipeControl === 'rail') {
-      width = this._getFallbackDrawerWidth();
-    }
-    if (width <= 0) width = this._getFallbackDrawerWidth();
+    let measuredWidth = drawerNode?.getBoundingClientRect?.().width || 0;
+    let useFallbackWidth = target?.dataset?.swipeControl === 'rail' || measuredWidth <= 0;
+    let width = useFallbackWidth ? this._getFallbackDrawerWidth() : measuredWidth;
     this._drawerGesture = {
       pointerId: e.pointerId,
       dock,
       panelId,
       startX: e.clientX,
       width,
+      // The source is recorded so the release-time geometry check can measure
+      // the same thing it measured here: a collapsed drawer is a rail on
+      // screen, and comparing that box against an open-panel width would look
+      // like a geometry change on every single swipe.
+      usedFallbackWidth: useFallbackWidth,
       startOpen,
       prepared: false,
       moved: false,
@@ -1606,6 +1608,17 @@ export class Layout extends Symbiote {
     this._setDrawerGestureDragging(this._drawerGesture);
     target?.setPointerCapture?.(e.pointerId);
     e.preventDefault();
+  }
+
+  // The inline size a drawer gesture commits against, measured exactly the way
+  // the gesture started. `useFallback` covers a gesture that never had a
+  // laid-out panel under the finger.
+  _getDrawerCommitWidth(dock, panelId, useFallback) {
+    if (useFallback) return this._getFallbackDrawerWidth();
+    let drawerNode = this._getDrawerNode(dock, panelId);
+    let width = drawerNode?.getBoundingClientRect?.().width || 0;
+    if (width <= 0) return this._getFallbackDrawerWidth();
+    return width;
   }
 
   _onDrawerRailPointerDown(e) {
