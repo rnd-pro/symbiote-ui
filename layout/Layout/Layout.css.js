@@ -246,17 +246,14 @@ export let styles = css`
         --sn-tree-toggle-width: var(--sn-tree-toggle-touch-width, 24px);
 
         /* A header control can only grow its pressable box into the space its
-           neighbours leave: the clamp halves the SMALLER of the in-group
-           button gap and the between-group header gap. The default header gap
-           is 2px, so a theme asking for a 44px target silently got 26px. On
-           a touch surface both theme gaps are raised to the room the requested
-           target actually needs. This reuses the theme's own tokens — no second
-           sizing system — and a theme that already asks for more keeps it. */
-        --sn-layout-header-button-gap: max(
-          var(--sn-layout-header-button-gap, 4px),
-          calc(var(--sn-layout-header-button-hit-size, 44px) - var(--sn-layout-header-button-min-inline-size, 24px))
-        );
-        --sn-layout-header-gap: max(
+           neighbours leave, and the drawer header leaves --sn-layout-header-gap
+           (2px by default). A theme asking for a 44px target therefore got a
+           26px one, silently. This is the effective gap for the touch surface:
+           the theme's own value, or the room the requested target needs,
+           whichever is larger. It is read by BOTH the header layout and the
+           hit-area clamp, so the two can never disagree, and it is defined
+           once here rather than through a second sizing system. */
+        --header-effective-gap: max(
           var(--sn-layout-header-gap, 2px),
           calc(var(--sn-layout-header-button-hit-size, 44px) - var(--sn-layout-header-button-min-block-size, 24px))
         );

@@ -64,7 +64,9 @@ export let styles = css`
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
       align-items: center;
-      gap: var(--sn-layout-header-gap, 2px);
+      /* The same gap the header button hit clamp reads, so the space a target
+         may grow into is the space the layout actually leaves. */
+      gap: var(--header-effective-gap, var(--sn-layout-header-gap, 2px));
       padding: var(--sn-layout-header-padding, 2px 4px);
       background: var(--sn-node-header-bg);
       border-bottom: 1px solid var(--sn-layout-border);
@@ -107,14 +109,16 @@ export let styles = css`
          (--sn-layout-header-icon-size), the painted control size
          (--sn-layout-header-*-size) and the target
          (--sn-layout-header-button-hit-size) are three independent theme
-         parameters. The expansion is bounded by HALF the smallest distance
-         that separates two header controls — the button gap inside an action
-         group, and the header gap between groups — so a 44px request degrades
-         gracefully instead of stealing the neighbour's area. Two targets can
-         therefore never intersect, whatever the theme asks for. */
+         parameters. The expansion is bounded by HALF the gap the header
+         actually lays its controls out with — the same value .panel-header
+         and .panel-actions use, so a 44px request degrades to the room the
+         layout really leaves instead of stealing a neighbour's area, and two
+         targets can never intersect whatever the theme asks for. A surface
+         that has the room (a touch drawer) widens that gap through
+         --header-effective-gap and then gets the full target. */
       --header-btn-hit-expand: calc(min(
         (var(--sn-layout-header-button-hit-size, 44px) - var(--sn-layout-header-button-min-inline-size, 24px)) / 2,
-        min(var(--sn-layout-header-button-gap, 4px), var(--sn-layout-header-gap, 2px)) / 2
+        var(--header-effective-gap, var(--sn-layout-header-gap, 2px)) / 2
       ));
 
       &::before {
@@ -196,7 +200,7 @@ export let styles = css`
       display: flex;
       align-items: center;
       justify-content: flex-end;
-      gap: var(--sn-layout-header-gap, 2px);
+      gap: var(--header-effective-gap, var(--sn-layout-header-gap, 2px));
       min-width: 0;
       overflow: hidden;
     }
