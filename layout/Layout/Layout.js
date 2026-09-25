@@ -431,16 +431,16 @@ export class Layout extends Symbiote {
     return true;
   }
 
-  // True when the surface this gesture measured no longer matches the one the
-  // finger is on. A two-pixel tolerance keeps sub-pixel layout rounding from
-  // cancelling ordinary drags.
+  // True when the viewport no longer has the inline size this gesture started
+  // on, which is what a rotation or a window resize does. A two-pixel
+  // tolerance keeps layout rounding from cancelling ordinary drags.
   _drawerGestureGeometryChanged(gesture) {
     if (!gesture || gesture.pending) return false;
-    let dock = gesture.dock;
-    if (dock !== 'start' && dock !== 'end') return false;
-    let current = this._getDrawerCommitWidth(dock, gesture.panelId, gesture.usedFallbackWidth);
-    if (!current || !gesture.width) return false;
-    return Math.abs(current - gesture.width) > DRAWER_GEOMETRY_TOLERANCE_PX;
+    let startWidth = gesture.viewportWidth;
+    if (!startWidth) return false;
+    let current = this._getDrawerViewportWidth();
+    if (!current) return false;
+    return Math.abs(current - startWidth) > DRAWER_GEOMETRY_TOLERANCE_PX;
   }
 
   _connectLayoutLifecycle() {
@@ -1586,20 +1586,18 @@ export class Layout extends Symbiote {
     let activePanelId = this._getActiveDrawerPanelId(dock);
     let startOpen = this._isDrawerOpen(dock) && (!panelId || panelId === activePanelId);
     let drawerNode = this._getDrawerNode(dock, panelId);
-    let measuredWidth = drawerNode?.getBoundingClientRect?.().width || 0;
-    let useFallbackWidth = target?.dataset?.swipeControl === 'rail' || measuredWidth <= 0;
-    let width = useFallbackWidth ? this._getFallbackDrawerWidth() : measuredWidth;
+    let width = drawerNode?.getBoundingClientRect?.().width || this._getFallbackDrawerWidth();
+    if (target?.dataset?.swipeControl === 'rail') {
+      width = this._getFallbackDrawerWidth();
+    }
+    if (width <= 0) width = this._getFallbackDrawerWidth();
     this._drawerGesture = {
       pointerId: e.pointerId,
       dock,
       panelId,
       startX: e.clientX,
       width,
-      // The source is recorded so the release-time geometry check can measure
-      // the same thing it measured here: a collapsed drawer is a rail on
-      // screen, and comparing that box against an open-panel width would look
-      // like a geometry change on every single swipe.
-      usedFallbackWidth: useFallbackWidth,
+      viewportWidth: this._getDrawerViewportWidth(),
       startOpen,
       prepared: false,
       moved: false,
@@ -1610,15 +1608,13 @@ export class Layout extends Symbiote {
     e.preventDefault();
   }
 
-  // The inline size a drawer gesture commits against, measured exactly the way
-  // the gesture started. `useFallback` covers a gesture that never had a
-  // laid-out panel under the finger.
-  _getDrawerCommitWidth(dock, panelId, useFallback) {
-    if (useFallback) return this._getFallbackDrawerWidth();
-    let drawerNode = this._getDrawerNode(dock, panelId);
-    let width = drawerNode?.getBoundingClientRect?.().width || 0;
-    if (width <= 0) return this._getFallbackDrawerWidth();
-    return width;
+  // The inline size the viewport had for this gesture. The drawer node's own
+  // box cannot be used for this: while an opening drag runs, the node tracks
+  // the finger and its width changes as a result of the gesture, which is not
+  // a geometry change at all.
+  _getDrawerViewportWidth() {
+    if (typeof window !== 'undefined' && window.innerWidth) return window.innerWidth;
+    return this.clientWidth || 0;
   }
 
   _onDrawerRailPointerDown(e) {
@@ -1664,6 +1660,7 @@ export class Layout extends Symbiote {
       startX: e.clientX,
       startY: e.clientY,
       width,
+      viewportWidth: this._getDrawerViewportWidth(),
       startOpen: true,
       prepared: false,
       moved: false,
@@ -1695,6 +1692,7 @@ export class Layout extends Symbiote {
       startX: e.clientX,
       startY: e.clientY,
       width: this._getFallbackDrawerWidth(),
+      viewportWidth: this._getDrawerViewportWidth(),
       startOpen: false,
       prepared: false,
       moved: false,

@@ -3138,19 +3138,19 @@ test('drawer panel controls scale with theme density on both docks at 320/390/43
     await page.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: Math.round(midDragBox.right - 160), y: dragY, button: 'left', buttons: 1 });
     const gestureLive = await evaluate(`Boolean(window.__lab.layout._drawerGesture)`);
     assert.equal(gestureLive, true, 'a drag is in flight before the rotation');
-    // 320 is chosen deliberately: between 390 and 430 the drawer width is
-    // capped and identical, so only this viewport actually moves the surface
-    // under the finger. The premise is asserted below rather than assumed.
+    // The premise is asserted rather than assumed: the cancellation keys off
+    // the viewport, so a viewport that did not change must not cancel.
     await setPageViewport(page, { width: 320, height: 568, mobile: true });
     const premise = await evaluate(`(() => {
       const g = window.__lab.layout._drawerGesture;
-      const node = g ? window.__lab.layout._getDrawerNode(g.dock, g.panelId) : null;
-      return { gestureWidth: g?.width ?? null, currentWidth: node?.getBoundingClientRect?.().width ?? null };
+      return {
+        gestureViewport: g?.viewportWidth ?? null,
+        currentViewport: window.innerWidth,
+        geometryChanged: g ? window.__lab.layout._drawerGestureGeometryChanged(g) : null,
+      };
     })()`);
-    assert.ok(premise.gestureWidth && premise.currentWidth,
-      `the drag is still measurable during the rotation (${JSON.stringify(premise)})`);
-    assert.ok(Math.abs(premise.currentWidth - premise.gestureWidth) > 2,
-      `the rotation really changes the drawer width (${JSON.stringify(premise)})`);
+    assert.ok(premise.geometryChanged,
+      `the rotation really changes the viewport under the drag (${JSON.stringify(premise)})`);
     await page.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: 40, y: dragY, button: 'left', buttons: 0, clickCount: 1 });
     const afterMidDragRotation = await evaluate(`(() => ({
       gesture: Boolean(window.__lab.layout._drawerGesture),

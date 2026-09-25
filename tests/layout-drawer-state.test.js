@@ -1244,63 +1244,72 @@ test('a geometry change during a drag cancels the gesture instead of committing 
   assert.ok(layout.querySelectorAll('layout-node[inert]').length > 0, 'background is inert again');
 });
 
-test('a release after the drawer width changed is treated as a cancel, not a commit', async () => {
+test('a release after the viewport changed is treated as a cancel, not a commit', async () => {
   const { layout } = await makeDrawerFixture();
-  layout._getFallbackDrawerWidth = () => 335;
-  const node = findDrawerNode(layout, 'start');
-  let width = 335;
-  node.getBoundingClientRect = () => ({ width, height: 844, top: 0, left: 0, right: width, bottom: 844 });
+  // The fixture publishes its own window, so the viewport is read from there.
+  const win = globalThis.window;
+  const originalInnerWidth = win.innerWidth;
+  const setViewport = (value) => { win.innerWidth = value; };
+  try {
+    setViewport(390);
+    layout._getFallbackDrawerWidth = () => 335;
+    setViewport(390);
+    layout.openDrawer('start');
+    await new Promise((r) => setTimeout(r, 0));
+    const node = findDrawerNode(layout, 'start');
 
-  // A drag starts on a 335px surface and pulls it most of the way closed.
-  layout.openDrawer('start');
-  await new Promise((r) => setTimeout(r, 0));
-  node.dispatchEvent(pointerEvent('pointerdown', { x: 300, y: 400 }));
-  layout.dispatchEvent(pointerEvent('pointermove', { x: 120, y: 400 }));
-  assert.ok(layout._drawerGesture, 'the drag is in flight');
-  assert.equal(layout.$.drawerStartOpen, true, 'the drawer is open before the gesture');
+    // A drag starts on a 390px viewport and pulls the drawer most of the way
+    // closed.
+    node.dispatchEvent(pointerEvent('pointerdown', { x: 300, y: 400 }));
+    layout.dispatchEvent(pointerEvent('pointermove', { x: 120, y: 400 }));
+    assert.ok(layout._drawerGesture, 'the drag is in flight');
+    assert.equal(layout._drawerGesture.viewportWidth, 390, 'the gesture records the viewport it started on');
+    assert.equal(layout.$.drawerStartOpen, true, 'the drawer is open before the release');
 
-  // The surface moves under the finger. Whether the release or the resize
-  // event arrives first must not change the outcome: the commit is only
-  // meaningful against the geometry the drag started on.
-  width = 280;
-  assert.equal(layout._drawerGestureGeometryChanged(layout._drawerGesture), true,
-    'the changed surface is detected at release time');
-  layout.dispatchEvent(pointerEvent('pointerup', { x: 100, y: 400 }));
-  assert.equal(layout._drawerGesture, null, 'the gesture is consumed');
-  assert.equal(layout.$.drawerStartOpen, true,
-    'the release cannot close a drawer whose surface moved');
-  assert.equal(layout.querySelectorAll('layout-node[drawer-dragging]').length, 0,
-    'no node is left in the dragging state');
+    // The rotation arrives. Whether the resize event or the release is handled
+    // first, the commit cannot be decided against the old viewport.
+    setViewport(844);
+    assert.equal(layout._drawerGestureGeometryChanged(layout._drawerGesture), true,
+      'the changed viewport is detected at release time');
+    layout.dispatchEvent(pointerEvent('pointerup', { x: 100, y: 400 }));
+    assert.equal(layout._drawerGesture, null, 'the gesture is consumed');
+    assert.equal(layout.$.drawerStartOpen, true,
+      'the release cannot close a drawer whose viewport moved');
+    assert.equal(layout.querySelectorAll('layout-node[drawer-dragging]').length, 0,
+      'no node is left in the dragging state');
 
-  // Ordinary sub-pixel layout rounding must NOT cancel a drag.
-  const fixture2 = await makeDrawerFixture();
-  fixture2.layout._getFallbackDrawerWidth = () => 335;
-  const node2 = findDrawerNode(fixture2.layout, 'start');
-  let width2 = 335;
-  node2.getBoundingClientRect = () => ({ width: width2, height: 844, top: 0, left: 0, right: width2, bottom: 844 });
-  node2.dispatchEvent(pointerEvent('pointerdown', { x: 300, y: 400 }));
-  fixture2.layout.dispatchEvent(pointerEvent('pointermove', { x: 120, y: 400 }));
-  width2 = 334.5;
-  assert.equal(fixture2.layout._drawerGestureGeometryChanged(fixture2.layout._drawerGesture), false,
-    'sub-pixel rounding is not treated as a geometry change');
-  fixture2.layout.dispatchEvent(pointerEvent('pointerup', { x: 20, y: 400 }));
-  assert.equal(fixture2.layout.$.drawerStartOpen, false,
-    'a real drag on an unchanged surface still commits the close');
+    // Sub-pixel layout rounding must NOT cancel a drag.
+    const fixture2 = await makeDrawerFixture();
+    fixture2.layout._getFallbackDrawerWidth = () => 335;
+    setViewport(390);
+    fixture2.layout.openDrawer('start');
+    await new Promise((r) => setTimeout(r, 0));
+    findDrawerNode(fixture2.layout, 'start').dispatchEvent(pointerEvent('pointerdown', { x: 300, y: 400 }));
+    fixture2.layout.dispatchEvent(pointerEvent('pointermove', { x: 120, y: 400 }));
+    setViewport(391);
+    assert.equal(fixture2.layout._drawerGestureGeometryChanged(fixture2.layout._drawerGesture), false,
+      'sub-pixel viewport rounding is not treated as a geometry change');
+    fixture2.layout.dispatchEvent(pointerEvent('pointerup', { x: 20, y: 400 }));
+    assert.equal(fixture2.layout.$.drawerStartOpen, false,
+      'a real drag on an unchanged viewport still commits the close');
 
-  // Guard against a vacuous pass: the same drag with no geometry change at all
-  // must not be reported as changed.
-  const fixture3 = await makeDrawerFixture();
-  fixture3.layout._getFallbackDrawerWidth = () => 335;
-  const node3 = findDrawerNode(fixture3.layout, 'start');
-  let width3 = 335;
-  node3.getBoundingClientRect = () => ({ width: width3, height: 844, top: 0, left: 0, right: width3, bottom: 844 });
-  fixture3.layout.openDrawer('start');
-  await new Promise((r) => setTimeout(r, 0));
-  node3.dispatchEvent(pointerEvent('pointerdown', { x: 300, y: 400 }));
-  fixture3.layout.dispatchEvent(pointerEvent('pointermove', { x: 120, y: 400 }));
-  assert.equal(fixture3.layout._drawerGestureGeometryChanged(fixture3.layout._drawerGesture), false,
-    'an unchanged surface is not a geometry change');
-  fixture3.layout.dispatchEvent(pointerEvent('pointerup', { x: 100, y: 400 }));
-  assert.equal(fixture3.layout.$.drawerStartOpen, false,
-    'the same drag without a geometry change closes the drawer as usual');
+    // A drawer that grows while the finger drags it is NOT a geometry change:
+    // the node box follows the gesture, so only the viewport may cancel.
+    const fixture3 = await makeDrawerFixture();
+    fixture3.layout._getFallbackDrawerWidth = () => 335;
+    let nodeWidth = 32;
+    const node3 = findDrawerNode(fixture3.layout, 'start');
+    node3.getBoundingClientRect = () => ({ width: nodeWidth, height: 844, top: 0, left: 0, right: nodeWidth, bottom: 844 });
+    setViewport(390);
+    node3.dispatchEvent(pointerEvent('pointerdown', { x: 300, y: 400 }));
+    fixture3.layout.dispatchEvent(pointerEvent('pointermove', { x: 120, y: 400 }));
+    nodeWidth = 335;
+    assert.equal(fixture3.layout._drawerGestureGeometryChanged(fixture3.layout._drawerGesture), false,
+      'a drawer that tracks the finger is not a viewport change');
+    fixture3.layout.dispatchEvent(pointerEvent('pointerup', { x: 100, y: 400 }));
+    assert.equal(fixture3.layout.$.drawerStartOpen, false,
+      'the opening drag still commits when only the drawer box changed');
+  } finally {
+    window.innerWidth = originalInnerWidth;
+  }
 });
