@@ -6,8 +6,6 @@ All notable changes to `symbiote-ui` will be documented in this file.
 
 ### Fixed
 
-### Fixed
-
 - Gesture-derived click suppression inside drawers no longer lets a tree row or
   other interactive content steal the synthesized click that concludes a
   completed rail swipe: the drawer click-capture gate now distinguishes
@@ -15,6 +13,35 @@ All notable changes to `symbiote-ui` will be documented in this file.
   gesture's own click while leaving bona fide user taps on content rows
   free. (`Layout._ignoreNextDrawerClick` now carries `gesture: true` only
   when the token originated from a drag.)
+- A drawer that was open before a rotation came back open without its modal
+  contract: `_syncDrawerProjection` re-applies `role`, `aria-modal` and the
+  background `inert` state for a dock that is still open, so crossing a
+  breakpoint no longer leaves a live background and no focus trap.
+- A drag that outlived a rotation no longer commits against geometry that no
+  longer exists. A resize cancels the gesture the way `pointercancel` does, and
+  a release that follows a rotation is treated as a cancel as well, because the
+  resize event is not guaranteed to arrive first. The signal is the viewport
+  inline size with a two-pixel tolerance, since a drawer tracking the finger
+  changes its own box.
+- The `window` resize listener is attached even when a `ResizeObserver` is
+  available: the event lands in the same turn, the observer callback on a later
+  frame.
+- A short quick swipe can open a drawer again. The commit rule compared the
+  whole travel against half the drawer width, so anything shorter was ignored no
+  matter how fast the finger moved. Velocity is now taken from the trailing
+  100ms of the gesture and a flick commits on direction alone, for every source
+  and for both docks; slow drags keep the distance rule.
+
+### Added
+
+- Drawer panels keep the screen edge and move their content out from under
+  notches and home indicators. `--sn-layout-drawer-safe-area-block-end`,
+  `--sn-layout-drawer-safe-area-inline-start` and
+  `--sn-layout-drawer-safe-area-inline-end` default to the matching
+  `env(safe-area-inset-*)` value and fall back to `0px`, applied as padding with
+  `background-clip: padding-box`.
+- Drawer controls take icon size, visual control size and hit area as separate
+  parameters and scale with the theme density tokens on both docks.
 
 
 

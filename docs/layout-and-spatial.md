@@ -53,17 +53,74 @@ controls even when each layout has a single panel; the component resolves the
 collapse axis/side from peer geometry and reflects `layout-peer-active`,
 `layout-peer-collapse-dir`, `layout-peer-collapse-side`, `root-collapsed`,
 `root-collapse-dir`, and `root-collapse-side` for host flex/dock chrome.
-Drawer projection exposes `drawer-mode-active`, `drawer-start-open`, and
-`drawer-end-open` runtime attributes; opening drawers changes only presentation
-state and does not save or mutate the host layout tree.
-Drawer projection exposes `drawer-mode-active`, `drawer-start-open`, and
-`drawer-end-open` runtime attributes; opening drawers changes only presentation
-state and does not save or mutate the host layout tree. Rail and edge swipes
-share one gesture contract: direction, distance and velocity resolve through identical thresholds for both docks, and pointer capture owns the gesture once an axis
-is chosen. The click that concludes a completed swipe is consumed by the
-drawer (also when it lands on a tree row or a nested control), while plain
-taps on content rows and collapse toggles continue to work immediately; there
-is no global click-block around gestures.
+Drawer projection exposes `drawer-mode-active`, `drawer-start-open`,
+`drawer-end-open`, `drawer-start-rail`, `drawer-end-rail`, and the
+`drawer-start-panel-id` / `drawer-end-panel-id` / `drawer-primary-panel-id`
+selectors; opening drawers changes only presentation state and does not save
+or mutate the host layout tree.
+
+### Drawer gesture contract
+
+Rail and edge swipes share one contract across both docks, and no control
+size is baked into it. A swipe from the primary surface activates once it has
+moved at least 16px horizontally and further horizontally than vertically; a
+swipe from a rail starts on the rail itself. Pointer capture owns the gesture
+once an axis is chosen, and the click that concludes a completed swipe is
+consumed by the drawer, including when it lands on a tree row or a nested
+control. Plain taps on content rows and collapse toggles still work
+immediately, and there is no global click block around gestures.
+
+The release resolves through one rule for every source:
+
+- a flick — trailing 100ms velocity of at least 0.35px/ms (350px/s) — commits
+  on direction alone, so a short quick swipe opens or closes without having to
+  travel half the panel;
+- a slow drag keeps the distance rule and commits at half the drawer width;
+- a rail gesture that never moved past the drag threshold stays a tap and
+  toggles.
+
+Velocity is measured from gesture samples, never from a fixed control size, so
+the same numbers hold at 320px and on a narrow desktop.
+
+### Drawer modal contract
+
+An open backdrop drawer is a modal dialog surface. The panel that opened it
+receives `role="dialog"`, `aria-modal="true"` and `tabindex="-1"` — only where
+the host does not already own those values — while background layout nodes
+become inert. Tab cycles inside the drawer through the same focus mechanism
+the rest of the library uses, including controls inside open shadow roots;
+disabled, hidden and inert nodes are skipped. Escape closes the drawer and
+returns focus to whatever opened it, including an opener inside a shadow
+root.
+
+### Breakpoint and rotation
+
+Drawer state is presentation state, so it survives a breakpoint change: the
+open dock is remembered, the modal contract is released when the projection is
+cleared, and it is restored when the projection is rebuilt. A drag in flight
+does not survive one. A resize cancels the gesture exactly as `pointercancel`
+would, and a release that arrives after a rotation is treated as a cancel too,
+because the event order between the two is not guaranteed. The signal is the
+viewport inline size with a two-pixel tolerance: a rotation changes it, and a
+drawer that tracks the finger under it does not.
+
+### Drawer safe areas and control sizing
+
+Panels keep the screen edge and move their content out from under notches and
+home indicators. `--sn-layout-drawer-safe-area-block-end`,
+`--sn-layout-drawer-safe-area-inline-start` and
+`--sn-layout-drawer-safe-area-inline-end` default to the matching
+`env(safe-area-inset-*)` value and fall back to `0px`; the panel applies them
+as padding with `background-clip: padding-box`, so the surface still runs
+under the inset. A host that owns its own insets can set the tokens to `0px`.
+
+Icon size, visual control size and hit area are separate parameters. Drawer
+controls take their size from the theme density tokens, so both docks scale
+with the active theme and their hit areas do not overlap at any of the
+matrix widths.
+
+Under `prefers-reduced-motion: reduce` the rail peek is suppressed; the drawer
+state, thresholds and focus behavior are unchanged.
 `layout-sidebar` owns only its sidebar configuration and width persistence; its
 reset control clears that state and emits `layout-sidebar-reset` for host-owned
 layout resets instead of clearing host storage or reloading the page.
