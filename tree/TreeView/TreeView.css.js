@@ -96,6 +96,21 @@ sn-tree-view[hidden] {
   visibility: hidden;
 }
 
+/* A theme may set the toggle column on the tree host itself, and a value set
+   there always beats an inherited one — so a dock cannot widen the column by
+   setting a token on an ancestor. The grid reads the touch column directly
+   when the tree is in a drawer, which is the room the theme already reserves
+   for a thumb. Desktop trees keep the column their theme set. */
+layout-node[mobile-dock='start'] .sn-tree-row,
+layout-node[mobile-dock='end'] .sn-tree-row {
+  grid-template-columns: var(--sn-tree-toggle-touch-width, var(--sn-tree-toggle-width)) var(--sn-tree-icon-width) minmax(0, 1fr) auto auto;
+}
+
+layout-node[mobile-dock='start'] .sn-tree-toggle,
+layout-node[mobile-dock='end'] .sn-tree-toggle {
+  inline-size: var(--sn-tree-toggle-touch-width, var(--sn-tree-toggle-width, 100%));
+}
+
 .sn-tree-label {
   grid-column: 3;
   min-width: 0;
