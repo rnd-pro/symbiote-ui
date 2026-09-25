@@ -248,6 +248,12 @@ export let styles = css`
           var(--sn-layout-header-padding-block, 0px),
           calc(var(--sn-layout-header-button-hit-size, 44px) - var(--sn-layout-header-button-min-block-size, 24px)) / 2
         ) !important;
+        /* A drawer sits flush to the screen edge, so the outermost control
+           could not grow outward. It gets the same room, inward. */
+        padding-inline-end: max(
+          var(--sn-layout-header-padding-inline-end, 4px),
+          calc(var(--sn-layout-header-button-hit-size, 44px) - var(--sn-layout-header-button-min-inline-size, 24px)) / 2
+        ) !important;
       }
 
       layout-node[mobile-dock='start'][drawer-open] .panel-actions,
