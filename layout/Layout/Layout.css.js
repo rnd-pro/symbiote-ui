@@ -266,6 +266,14 @@ export let styles = css`
         .panel-actions {
           overflow: visible;
         }
+
+        /* Panel content paints directly below the header and covered the lower
+           half of the grown target, so a tap in that strip went to the content.
+           Lifting the control above it is what lets the requested target be
+           real; the strip it takes is the space the theme asked to reserve. */
+        .header-btn {
+          z-index: 1;
+        }
       }
 
       /* Safe-area insets keep drawer CONTENT out of a notch or home indicator
