@@ -245,6 +245,28 @@ export let styles = css`
         --sn-tree-toggle-width: var(--sn-tree-toggle-touch-width, calc(18px * var(--sn-theme-density)));
       }
 
+      /* Safe-area insets keep drawer CONTENT out of a notch or home indicator
+         while the panel itself stays flush to the screen edge: the background
+         is clipped to the padding box, so the surface still covers the inset.
+         env() is 0 on devices without insets, which leaves every existing
+         rendering untouched; a host that already pads its own content sets the
+         token to 0px. */
+      layout-node[node-type='panel'][mobile-dock='start'],
+      layout-node[node-type='panel'][mobile-dock='end'] {
+        --sn-layout-drawer-safe-area-block-end: env(safe-area-inset-bottom, 0px);
+        --sn-layout-drawer-safe-area-inline-start: env(safe-area-inset-left, 0px);
+        --sn-layout-drawer-safe-area-inline-end: env(safe-area-inset-right, 0px);
+        padding-block-end: var(--sn-layout-drawer-safe-area-block-end, 0px);
+      }
+
+      layout-node[node-type='panel'][mobile-dock='start'] {
+        padding-inline-start: var(--sn-layout-drawer-safe-area-inline-start, 0px);
+      }
+
+      layout-node[node-type='panel'][mobile-dock='end'] {
+        padding-inline-end: var(--sn-layout-drawer-safe-area-inline-end, 0px);
+      }
+
       layout-node[node-type='panel'] {
         position: absolute;
         inset-block: 0;

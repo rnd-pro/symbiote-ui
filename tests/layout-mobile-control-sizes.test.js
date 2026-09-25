@@ -75,3 +75,26 @@ test('drawer scope reads the touch column from the theme instead of a fixed pixe
   assert.ok(!/:\s*\d+px;/.test(block),
     'the drawer block declares no hard-coded pixel size');
 });
+
+test('drawer panels keep content out of the safe-area insets', () => {
+  const css = read('../layout/Layout/Layout.css.js');
+
+  // The panel stays flush to the screen edge; only its content is inset, and
+  // the inset is the environment value, not a library pixel.
+  const safeAreaStart = css.indexOf("layout-node[node-type='panel'][mobile-dock='start'],");
+  const panelBlock = css.slice(safeAreaStart, css.indexOf("layout-node[node-type='panel'] {", safeAreaStart));
+  assert.match(panelBlock, /--sn-layout-drawer-safe-area-block-end:\s*env\(safe-area-inset-bottom, 0px\);/);
+  assert.match(panelBlock, /--sn-layout-drawer-safe-area-inline-start:\s*env\(safe-area-inset-left, 0px\);/);
+  assert.match(panelBlock, /--sn-layout-drawer-safe-area-inline-end:\s*env\(safe-area-inset-right, 0px\);/);
+  assert.match(panelBlock, /padding-block-end: var\(--sn-layout-drawer-safe-area-block-end, 0px\);/);
+
+  // Each dock insets the edge that touches the screen, never the inner edge.
+  assert.match(css, /layout-node\[node-type='panel'\]\[mobile-dock='start'\] \{\s*padding-inline-start: var\(--sn-layout-drawer-safe-area-inline-start, 0px\);/);
+  assert.match(css, /layout-node\[node-type='panel'\]\[mobile-dock='end'\] \{\s*padding-inline-end: var\(--sn-layout-drawer-safe-area-inline-end, 0px\);/);
+  assert.doesNotMatch(css, /layout-node\[node-type='panel'\]\[mobile-dock='start'\] \{[^}]*padding-inline-end/,
+    'the start drawer must not inset its inner edge');
+
+  // A host that already pads its own content can neutralise the inset.
+  assert.match(panelBlock, /var\(--sn-layout-drawer-safe-area-[^,]+, 0px\)/,
+    'every safe-area padding is token-driven with a 0px fallback');
+});

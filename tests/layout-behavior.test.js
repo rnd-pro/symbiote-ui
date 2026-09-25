@@ -1831,6 +1831,131 @@ test('panel layout drawer API and rail gestures open and close drawer panels wit
   railLayout.remove();
 });
 
+test('reduced motion suppresses the rail peek without changing drawer state', async () => {
+  const { parseHTML } = await import('linkedom');
+  const { window } = parseHTML('<!doctype html><html><body></body></html>');
+  const TestCSSStyleSheet = class {
+    replaceSync(text) { this.cssText = text; }
+  };
+  const saved = {
+    window: globalThis.window,
+    document: globalThis.document,
+    HTMLElement: globalThis.HTMLElement,
+    Element: globalThis.Element,
+    customElements: globalThis.customElements,
+    Node: globalThis.Node,
+    Event: globalThis.Event,
+    CustomEvent: globalThis.CustomEvent,
+    MutationObserver: globalThis.MutationObserver,
+    CSSStyleSheet: globalThis.CSSStyleSheet,
+    getComputedStyle: globalThis.getComputedStyle,
+  };
+  Object.assign(globalThis, {
+    window,
+    document: window.document,
+    HTMLElement: window.HTMLElement,
+    Element: window.Element,
+    customElements: window.customElements,
+    Node: window.Node,
+    Event: window.Event,
+    CustomEvent: window.CustomEvent,
+    MutationObserver: window.MutationObserver,
+    CSSStyleSheet: TestCSSStyleSheet,
+    getComputedStyle: window.getComputedStyle || (() => ({ transitionDuration: '0s', animationDuration: '0s' })),
+  });
+  window.document.adoptedStyleSheets = [];
+  const styleProto = Object.getPrototypeOf(window.document.createElement('div').style);
+  styleProto.getPropertyPriority = styleProto.getPropertyPriority || (() => '');
+
+  // Fresh URLs force both component modules to register their custom elements
+  // against THIS test's window.customElements registry; otherwise the entry
+  // point cache serves the previous test's stale window.
+  const fresh = `?fresh=reduced-motion-${Date.now()}`;
+  await import(`../layout/LayoutNode/LayoutNode.js${fresh}`);
+  await import(`../layout/Layout/Layout.js${fresh}`);
+
+  // The peek guard reads matchMedia from the window global, which linkedom does
+  // not provide; the stub is what makes the reduced-motion branch reachable.
+  const setMotionPreference = (reduce) => {
+    window.matchMedia = (query) => ({
+      media: query,
+      matches: reduce && String(query).includes('prefers-reduced-motion'),
+    });
+  };
+
+  const buildRailLayout = () => {
+    const railLayout = document.createElement('panel-layout');
+    document.body.append(railLayout);
+    railLayout.getBoundingClientRect = () => ({
+      width: 300, height: 600, top: 0, left: 0, bottom: 600, right: 300,
+    });
+    railLayout.$.layoutBehavior = {
+      responsiveMode: 'drawer',
+      responsiveBreakpoint: 720,
+      swipeControl: 'rail',
+      drawerHoverOpen: true,
+    };
+    railLayout.registerPanelType('nav', {
+      title: 'Navigation', icon: 'folder',
+      behavior: { mobileDock: 'start', swipeControl: 'rail', drawerHoverOpen: true },
+    });
+    railLayout.registerPanelType('main', {
+      title: 'Main', icon: 'article',
+      behavior: { mobileDock: 'primary', minInlineSize: 320, minBlockSize: 240 },
+    });
+    railLayout.setLayout(createSplit('horizontal', createPanel('nav'), createPanel('main'), 0.25));
+    return railLayout;
+  };
+
+  try {
+    // Motion allowed: the peek is armed and plays on the rail.
+    setMotionPreference(false);
+    const withMotion = buildRailLayout();
+    withMotion._applyResponsiveLayout();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.equal(withMotion._drawerRailPeekPlayed, true,
+      'the peek is armed when motion is allowed');
+    assert.ok(withMotion._drawerRailPeekTimer, 'a peek timer is scheduled');
+    // Let the scheduled timer fire through the real path, so the contrast
+    // below is about scheduling and not about calling a private painter.
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    assert.ok(withMotion.querySelectorAll('[drawer-rail-peeking]').length > 0,
+      'the scheduled peek actually plays on the rail');
+    withMotion.remove();
+
+    // Reduced motion: the peek is never armed, so no timer and no transform.
+    setMotionPreference(true);
+    const reduced = buildRailLayout();
+    reduced._applyResponsiveLayout();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    // The latch still records that the peek was considered, so it is never
+    // replayed later; what reduced motion removes is the animation itself.
+    assert.equal(Boolean(reduced._drawerRailPeekTimer), false,
+      'reduced motion schedules no peek timer');
+    assert.equal(Boolean(reduced._drawerRailPeekClearTimer), false,
+      'reduced motion schedules no peek clear timer');
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    assert.equal(reduced.querySelectorAll('[drawer-rail-peeking]').length, 0,
+      'reduced motion never peeks');
+
+    // The state contract is untouched: opening and closing still work.
+    reduced.openDrawer('start');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.equal(reduced.hasAttribute('drawer-start-open'), true,
+      'reduced motion does not block opening');
+    reduced.closeDrawer('start');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.equal(reduced.hasAttribute('drawer-start-open'), false,
+      'reduced motion does not block closing');
+    reduced.remove();
+  } finally {
+    for (const [key, value] of Object.entries(saved)) {
+      if (value === undefined) delete globalThis[key];
+      else globalThis[key] = value;
+    }
+  }
+});
+
 test('mobile drawer rails render as native collapsed surfaces without synthetic buttons', async () => {
   let [layout, styles, template] = await Promise.all([
     readFile(layoutSource, 'utf8'),

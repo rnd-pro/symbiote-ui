@@ -3082,6 +3082,110 @@ test('drawer panel controls scale with theme density on both docks at 320/390/43
       assert.equal(released.ariaModal, null, `narrow desktop ${dock}: aria-modal released on close`);
       assert.equal(released.inertNodes, 0, `narrow desktop ${dock}: no background node stays inert after close`);
     }
+
+    // Safe areas: real notch/indicator insets, not a device. The panel must
+    // stay flush to the screen edge while its CONTENT moves out of the inset,
+    // and the opposite inline edge must not move.
+    const INSETS = { top: 47, left: 44, bottom: 34, right: 44 };
+    try {
+      await page.send('Emulation.setSafeAreaInsetsOverride', { insets: INSETS });
+    } catch (error) {
+      assert.fail(`safe-area insets could not be emulated in this browser: ${error.message}`);
+    }
+    for (const dock of ['start', 'end']) {
+      const openAttribute = dock === 'start' ? 'drawer-start-open' : 'drawer-end-open';
+      await evaluate(`window.__lab.closeDrawer('${dock}')`);
+      await evaluate(`window.__lab.openDrawer('${dock}')`);
+      assert.equal(await waitForPredicate(evaluate, `window.__lab.layout.hasAttribute('${openAttribute}')`,
+        `${dock} open with safe-area insets`), true, `${dock} did not open for the safe-area probe`);
+      await waitForStableGeometry(evaluate,
+        `(() => { const r = window.__lab.headerReport('${dock}')?.node?.getBoundingClientRect?.(); return r ? [r.left, r.width] : null; })()`,
+        `${dock} open with safe-area insets`
+      );
+      const insets = await evaluate(`(() => {
+        const node = document.querySelector('layout-node[node-type="panel"][mobile-dock="${dock}"][drawer-active-panel]');
+        const style = node ? getComputedStyle(node) : null;
+        const rect = node?.getBoundingClientRect?.();
+        const content = node?.querySelector('.panel-content');
+        return {
+          panelLeft: rect ? Math.round(rect.left) : null,
+          panelRight: rect ? Math.round(window.innerWidth - rect.right) : null,
+          paddingInlineStart: style ? parseFloat(style.paddingInlineStart) || 0 : null,
+          paddingInlineEnd: style ? parseFloat(style.paddingInlineEnd) || 0 : null,
+          paddingBlockEnd: style ? parseFloat(style.paddingBlockEnd) || 0 : null,
+          contentLeft: content ? Math.round(content.getBoundingClientRect().left) : null,
+          backgroundClipsToPaddingBox: style ? style.backgroundClip === 'padding-box' : null,
+        };
+      })()`);
+      const outerGap = dock === 'start' ? INSETS.left : INSETS.right;
+      assert.equal(insets.paddingInlineEnd ?? 0, dock === 'start' ? 0 : INSETS.right,
+        `safe areas ${dock}: the edge away from the screen is not inset (${JSON.stringify(insets)})`);
+      assert.equal(insets.paddingInlineStart ?? 0, dock === 'start' ? INSETS.left : 0,
+        `safe areas ${dock}: content clears the screen-edge inset (${JSON.stringify(insets)})`);
+      assert.equal(insets.paddingBlockEnd ?? 0, INSETS.bottom,
+        `safe areas ${dock}: content clears the home indicator (${JSON.stringify(insets)})`);
+      // The panel surface itself still reaches the screen edge on the side it
+      // is docked to, so the notch area shows panel background rather than the
+      // page behind it. The opposite gap is just the rest of the viewport.
+      const edgeGap = dock === 'start' ? insets.panelLeft : insets.panelRight;
+      assert.equal(edgeGap, 0,
+        `safe areas ${dock}: panel stays flush to its screen edge (${JSON.stringify(insets)})`);
+      assert.equal(insets.backgroundClipsToPaddingBox, true,
+        `safe areas ${dock}: background covers the inset area`);
+      assert.ok((insets.contentLeft ?? 0) >= outerGap,
+        `safe areas ${dock}: panel content starts past the inset (${JSON.stringify(insets)})`);
+      await evaluate(`window.__lab.closeDrawer('${dock}')`);
+    }
+    // Without insets nothing moves: env() resolves to 0 and the drawer renders
+    // exactly as it did before safe-area support existed.
+    await page.send('Emulation.setSafeAreaInsetsOverride', { insets: { top: 0, left: 0, bottom: 0, right: 0 } });
+    await evaluate(`window.__lab.openDrawer('start')`);
+    await waitForStableGeometry(evaluate,
+      `(() => { const r = window.__lab.headerReport('start')?.node?.getBoundingClientRect?.(); return r ? [r.left, r.width] : null; })()`,
+      'start open without insets'
+    );
+    const noInsets = await evaluate(`(() => {
+      const node = window.__lab.headerReport('start')?.node;
+      const style = node ? getComputedStyle(node) : null;
+      return style ? {
+        paddingInlineStart: parseFloat(style.paddingInlineStart) || 0,
+        paddingBlockEnd: parseFloat(style.paddingBlockEnd) || 0,
+      } : null;
+    })()`);
+    assert.deepEqual(noInsets, { paddingInlineStart: 0, paddingBlockEnd: 0 },
+      `without safe-area insets the drawer padding is zero (${JSON.stringify(noInsets)})`);
+    await evaluate(`window.__lab.closeDrawer('start')`);
+
+    // Reduced motion: the drawer transition collapses to zero, so opening and
+    // closing a drawer is a state change rather than an animation. The rail
+    // peek's JS guard is covered by a deterministic unit test instead, where
+    // matchMedia can be controlled exactly.
+    await page.send('Emulation.setEmulatedMedia', {
+      features: [{ name: 'prefers-reduced-motion', value: 'reduce' }],
+    });
+    const reduced = await evaluate(`(() => {
+      const node = document.querySelector('layout-node[node-type="panel"][mobile-dock="start"]');
+      const style = node ? getComputedStyle(node) : null;
+      return {
+        matches: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+        duration: style?.transitionDuration || null,
+      };
+    })()`);
+    assert.equal(reduced.matches, true, 'reduced-motion media feature is emulated');
+    assert.ok(/^(0m?s)(,\s*0m?s)*$/.test(reduced.duration || ''),
+      `drawer panels have no transition under reduced motion (${JSON.stringify(reduced)})`);
+
+    // The state contract still holds with motion disabled: the drawer opens
+    // and closes exactly as before, just without the transition.
+    await evaluate(`window.__lab.openDrawer('start')`);
+    assert.equal(await waitForPredicate(evaluate, `window.__lab.layout.hasAttribute('drawer-start-open')`,
+      'start drawer opens with reduced motion'), true,
+      'reduced motion must not change the open state');
+    await evaluate(`window.__lab.closeDrawer('start')`);
+    assert.equal(await waitForPredicate(evaluate, `!window.__lab.layout.hasAttribute('drawer-start-open')`,
+      'start drawer closes with reduced motion'), true,
+      'reduced motion must not change the closed state');
+    await page.send('Emulation.setEmulatedMedia', { features: [] });
   } finally {
     if (page) await page.close().catch(() => {});
     if (chromeSession) await closeChromeSession(chromeSession);
