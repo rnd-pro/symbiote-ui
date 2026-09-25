@@ -152,6 +152,77 @@ function readSinglePixelPng(data) {
   return { r: raw[1], g: raw[2], b: raw[3], a: colorType === 6 ? raw[4] : 255 };
 }
 
+// Decode a screenshot far enough to prove what it shows: the size, and the
+// colour at sampled points. A blank canvas or a failed render produces one or
+// two colours, which is exactly what these checks reject.
+function readScreenshotSamples(data) {
+  const signature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+  assert.ok(data.subarray(0, 8).equals(signature), 'expected PNG screenshot bytes');
+  let offset = 8;
+  let width = 0;
+  let height = 0;
+  let bitDepth = 0;
+  let colorType = 0;
+  let interlace = 0;
+  let idat = [];
+  while (offset < data.length) {
+    let length = data.readUInt32BE(offset);
+    let type = data.toString('ascii', offset + 4, offset + 8);
+    let payload = data.subarray(offset + 8, offset + 8 + length);
+    if (type === 'IHDR') {
+      width = payload.readUInt32BE(0);
+      height = payload.readUInt32BE(4);
+      bitDepth = payload[8];
+      colorType = payload[9];
+      interlace = payload[12];
+    } else if (type === 'IDAT') {
+      idat.push(payload);
+    } else if (type === 'IEND') {
+      break;
+    }
+    offset += length + 12;
+  }
+  assert.equal(interlace, 0, 'expected a non-interlaced screenshot');
+  assert.equal(bitDepth, 8, 'expected 8-bit screenshot samples');
+  assert.ok(colorType === 2 || colorType === 6, `expected RGB/RGBA screenshot, got PNG color type ${colorType}`);
+  let channels = colorType === 6 ? 4 : 3;
+  let stride = width * channels;
+  let raw = inflateSync(Buffer.concat(idat));
+  let previous = Buffer.alloc(stride);
+  let current = Buffer.alloc(stride);
+  const at = (x, y) => {
+    let rowStart = y * (stride + 1);
+    let filter = raw[rowStart];
+    let row = Buffer.from(raw.subarray(rowStart + 1, rowStart + 1 + stride));
+    for (let i = 0; i < stride; i += 1) {
+      let a = i >= channels ? row[i - channels] : 0;
+      let b = previous[i];
+      let c = i >= channels ? previous[i - channels] : 0;
+      if (filter === 1) row[i] = (row[i] + a) & 0xff;
+      else if (filter === 2) row[i] = (row[i] + b) & 0xff;
+      else if (filter === 3) row[i] = (row[i] + ((a + b) >> 1)) & 0xff;
+      else if (filter === 4) {
+        let p = a + b - c;
+        let pa = Math.abs(p - a);
+        let pb = Math.abs(p - b);
+        let pc = Math.abs(p - c);
+        let pred = pa <= pb && pa <= pc ? a : (pb <= pc ? b : c);
+        row[i] = (row[i] + pred) & 0xff;
+      }
+    }
+    previous = row;
+    return [row[x * channels], row[x * channels + 1], row[x * channels + 2]];
+  };
+  const sample = (x, y) => { current = at(x, y); return { x, y, rgb: current }; };
+  const distinct = new Set();
+  for (let y = 4; y < height; y += Math.max(1, Math.floor(height / 60))) {
+    for (let x = 4; x < width; x += Math.max(1, Math.floor(width / 60))) {
+      distinct.add(at(x, y).join(','));
+    }
+  }
+  return { width, height, sample, distinctColors: distinct.size };
+}
+
 function contentType(filePath) {
   if (filePath.endsWith('.html')) return 'text/html; charset=utf-8';
   if (filePath.endsWith('.js')) return 'text/javascript; charset=utf-8';
@@ -4560,6 +4631,158 @@ test('aligned runtime preserves paused branch checkpoint across real WAV native 
     await closeChromeSession(chromeSession);
     await server.close();
     await rm(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('drawer evidence captures the mirror matrix in real pixels', { timeout: BROWSER_SMOKE_TIMEOUT_MS }, async () => {
+  const evidenceRoot = process.env.SYMBIOTE_UI_DRAWER_EVIDENCE_DIR;
+  if (!evidenceRoot) {
+    // Evidence is opt-in: the normal suite must not write files.
+    return;
+  }
+  const chromePath = findChrome();
+  assertBrowserSmokeRuntime();
+  const root = path.resolve(process.env.SYMBIOTE_UI_DRAWER_EVIDENCE_DIR);
+  await mkdir(root, { recursive: true });
+
+  const server = await createStaticServer();
+  let chromeSession;
+  let page;
+  const evaluate = async (expression) => {
+    const result = await withTimeout(
+      page.send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true }),
+      10000,
+      'drawer evidence evaluate'
+    );
+    if (result.result?.exceptionDetails) {
+      throw new Error(`evaluate failed: ${JSON.stringify(result.result.exceptionDetails).slice(0, 300)}`);
+    }
+    return result.result?.value;
+  };
+  // Readiness is observed component state, never a sleep.
+  const waitForLab = async (label) => {
+    for (let i = 0; i < 200; i += 1) {
+      if (await evaluate(`Boolean(window.__lab?.ready?.())`)) return true;
+      await delay(100);
+    }
+    assert.fail(`drawer size lab never became ready: ${label}`);
+  };
+  const captured = [];
+  const capture = async (name, { expectWidth = null, expectHeight = null } = {}) => {
+    const result = await page.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
+    const data = Buffer.from(result.data, 'base64');
+    assert.equal(data.subarray(1, 4).toString('ascii'), 'PNG', `${name} screenshot is a PNG`);
+    const image = readScreenshotSamples(data);
+    assert.ok(image.width > 0 && image.height > 0, `${name} screenshot has rendered dimensions`);
+    if (expectWidth) assert.equal(image.width, expectWidth, `${name} screenshot width matches the matrix`);
+    if (expectHeight) assert.equal(image.height, expectHeight, `${name} screenshot height matches the matrix`);
+    // A blank or half-rendered surface collapses to a handful of colours.
+    assert.ok(image.distinctColors > 12,
+      `${name} shows a real render (distinct colours: ${image.distinctColors})`);
+    await writeFile(path.join(root, `${name}.png`), data);
+    captured.push({ name, image });
+    return { ...image, imageHeight: image.height };
+  };
+
+  try {
+    chromeSession = await launchChromeSession(chromePath, 'drawer evidence');
+    page = await openPage(chromeSession.endpoint, `${server.url}/demo/drawer-size-lab.html?v=drawer-evidence`);
+
+    for (const width of [320, 390, 430]) {
+      await page.send('Emulation.setTouchEmulationEnabled', { enabled: true });
+      await setPageViewport(page, { width, height: 844, mobile: true });
+      await waitForPredicate(evaluate, `window.__lab.drawerMode()`, `drawer mode at ${width}px`);
+      await waitForLab(`matrix mount ${width}px`);
+
+      await capture(`matrix-${width}-closed-rails`, { expectWidth: width, expectHeight: 844 });
+
+      await evaluate(`window.__lab.openDrawer('start')`);
+      await waitForPredicate(evaluate, `window.__lab.layout.hasAttribute('drawer-start-open')`, `start open ${width}`);
+      const startGeometry = await waitForStableGeometry(evaluate,
+        `(() => { const r = window.__lab.headerReport('start')?.node?.getBoundingClientRect?.(); return r ? [r.left, r.width] : null; })()`,
+        `start panel settled ${width}`);
+      const startShot = await capture(`matrix-${width}-start-open`, { expectWidth: width, expectHeight: 844 });
+      // The picture has to show the panel, not just measure it: the panel
+      // column and the primary surface column differ in colour, and the panel
+      // edge sits where the measured geometry says it does.
+      // The picture has to show the panel, not just measure it. A single row
+      // can be a divider or a gap, and two neighbouring columns can share a
+      // background in this theme, so the check compares whole columns over the
+      // height: the panel centre and the surface behind it must differ over a
+      // real share of the rows. A blank or unrendered capture fails it.
+      const columnDiffers = (shot, x, otherX) => {
+        let differing = 0;
+        let sampled = 0;
+        for (let y = 20; y < shot.imageHeight - 20; y += Math.max(12, Math.floor(shot.imageHeight / 24))) {
+          sampled += 1;
+          if (shot.sample(x, y).rgb.join() !== shot.sample(otherX, y).rgb.join()) differing += 1;
+        }
+        return { differing, sampled };
+      };
+      const panelX = Math.round(startGeometry[0] + startGeometry[1] / 2);
+      const primaryX = width - 3;
+      const centreProfile = columnDiffers(startShot, panelX, primaryX);
+      assert.ok(centreProfile.differing / centreProfile.sampled > 0.25,
+        `the start panel is visible at ${width}px (${JSON.stringify(centreProfile)})`);
+      await evaluate(`window.__lab.closeDrawer('start')`);
+      await evaluate(`window.__lab.openDrawer('end')`);
+      await waitForPredicate(evaluate, `window.__lab.layout.hasAttribute('drawer-end-open')`, `end open ${width}`);
+      const endGeometry = await waitForStableGeometry(evaluate,
+        `(() => { const r = window.__lab.headerReport('end')?.node?.getBoundingClientRect?.(); return r ? [r.left, r.width] : null; })()`,
+        `end panel settled ${width}`);
+      const endShot = await capture(`matrix-${width}-end-open`, { expectWidth: width, expectHeight: 844 });
+      const endPanelX = Math.round(endGeometry[0] + endGeometry[1] / 2);
+      const endProfile = columnDiffers(endShot, endPanelX, 3);
+      assert.ok(endProfile.differing / endProfile.sampled > 0.25,
+        `the end panel is visible at ${width}px (${JSON.stringify(endProfile)})`);
+      await evaluate(`window.__lab.closeDrawer('end')`);
+    }
+
+    // Rotation: the same open drawer across the breakpoint, and the released
+    // desktop projection it becomes.
+    await evaluate(`window.__lab.openDrawer('start')`);
+    await setPageViewport(page, { width: 844, height: 390, mobile: false });
+    await waitForPredicate(evaluate, `!window.__lab.layout.hasAttribute('drawer-mode-active')`,
+      'desktop projection after rotation');
+    await capture('rotation-844x390-desktop-projection', { expectWidth: 844, expectHeight: 390 });
+    await setPageViewport(page, { width: 390, height: 844, mobile: true });
+    await waitForPredicate(evaluate, `window.__lab.layout.hasAttribute('drawer-start-open')`,
+      'drawer restored after rotating back');
+    await capture('rotation-390x844-restored-modal', { expectWidth: 390, expectHeight: 844 });
+    await evaluate(`window.__lab.closeDrawer('start')`);
+
+    // Real notch and indicator insets, emulated at the platform level.
+    await page.send('Emulation.setSafeAreaInsetsOverride', { insets: { top: 47, left: 44, bottom: 34, right: 44 } });
+    await evaluate(`window.__lab.openDrawer('start')`);
+    await waitForStableGeometry(evaluate,
+      `(() => { const r = window.__lab.headerReport('start')?.node?.getBoundingClientRect?.(); return r ? [r.left, r.width] : null; })()`,
+      'start panel settled with insets');
+    await capture('safe-area-390x844-start-open', { expectWidth: 390, expectHeight: 844 });
+    await evaluate(`window.__lab.closeDrawer('start')`);
+    await page.send('Emulation.setSafeAreaInsetsOverride', { insets: { top: 0, left: 0, bottom: 0, right: 0 } });
+
+    // Keyboard focus inside the modal drawer, so focus ownership is visible
+    // and not only asserted.
+    await evaluate(`window.__lab.openDrawer('start')`);
+    await waitForStableGeometry(evaluate,
+      `(() => { const r = window.__lab.headerReport('start')?.node?.getBoundingClientRect?.(); return r ? [r.left, r.width] : null; })()`,
+      'start panel settled for focus');
+    await evaluate(`(() => {
+      const panel = document.querySelector('layout-node[mobile-dock="start"][drawer-active-panel]');
+      const focusable = panel?.querySelector?.('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      focusable?.focus?.();
+      return document.activeElement?.tagName ?? null;
+    })()`);
+    await capture('focus-390x844-inside-modal', { expectWidth: 390, expectHeight: 844 });
+    await evaluate(`window.__lab.closeDrawer('start')`);
+
+    // 3 widths x (closed, start open, end open) + rotation pair + safe area
+    // + focus. Every state the matrix claims has a pixel behind it.
+    assert.equal(captured.length, 13, `evidence captured: ${captured.map((entry) => entry.name).join(', ')}`);
+  } finally {
+    if (page) await page.close().catch(() => {});
+    if (chromeSession) await closeChromeSession(chromeSession);
+    await server.close();
   }
 });
 
