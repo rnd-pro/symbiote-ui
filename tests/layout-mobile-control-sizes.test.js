@@ -56,8 +56,11 @@ test('header control hit area expands outside the visual box but stays gap-clamp
   assert.match(hitRule, /::before/, 'the target is realised by a pseudo-element, not by padding');
   assert.match(hitRule, /--sn-layout-header-button-hit-size/,
     'the target size comes from the theme, not a literal');
-  assert.match(hitRule, /min\(var\(--sn-layout-header-button-gap,[^)]*\),\s*var\(--sn-layout-header-gap,[^)]*\)\)\s*\/\s*2/,
-    'expansion is clamped to half the smallest distance between header controls');
+  assert.match(hitRule, /var\(--header-effective-gap,\s*var\(--sn-layout-header-gap,[^)]*\)\)\s*\/\s*2/,
+    'expansion is clamped to half the gap the header really lays its controls out with');
+  const expandDecl = hitRule.slice(hitRule.indexOf('--header-btn-hit-expand:'));
+  assert.ok(!/sn-layout-header-button-gap/.test(expandDecl),
+    'the icon-to-label gap inside a control is not a proxy for the space between controls');
   const declarations = hitRule.replace(/\/\*[\s\S]*?\*\//g, '').replace(/var\([^)]*\)/g, '');
   assert.ok(!/\b(?:44|24|32)px\b/.test(declarations),
     'no fixed pixel sizes inside the hit-area declarations');
@@ -74,6 +77,27 @@ test('drawer scope reads the touch column from the theme instead of a fixed pixe
     'drawer mode maps the theme touch token onto the toggle column');
   assert.ok(!/:\s*\d+px;/.test(block),
     'the drawer block declares no hard-coded pixel size');
+});
+
+test('a touch dock gives the header the room its requested target needs', () => {
+  const css = read('../layout/Layout/Layout.css.js');
+  // The effective gap is what both the header layout and the hit clamp read, so
+  // a touch surface can reach the target a theme asks for instead of silently
+  // getting the painted box back.
+  assert.match(css, /--header-effective-gap: max\(\s*var\(--sn-layout-header-gap/,
+    'the dock derives the gap from the theme value and the requested target');
+  assert.match(css, /--sn-layout-header-button-hit-size/,
+    'the room is reserved from the theme target token, not a literal');
+
+  // The reservation has to outrank the drawer header, which marks its own
+  // padding !important, and it must not depend on the panel being open.
+  const headerRule = css.slice(
+    css.indexOf("layout-node[mobile-dock='start'][node-type='panel'] .panel-view > .panel-header"),
+  );
+  assert.match(headerRule, /padding-block:[^;]*!important/,
+    'the header reserves room with the same weight the drawer padding uses');
+  assert.ok(!/drawer-open/.test(headerRule.slice(0, 400)),
+    'the room is reserved whether or not the drawer is open, so opening does not shift the header');
 });
 
 test('drawer panels keep content out of the safe-area insets', () => {
