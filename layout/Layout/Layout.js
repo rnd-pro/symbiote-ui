@@ -1668,7 +1668,11 @@ export class Layout extends Symbiote {
       target,
       source: 'content',
     };
-    this._captureDrawerGesturePointer(this._drawerGesture);
+    // No pointer capture while the gesture is only pending. Capturing here
+    // retargets the compatibility mouse events, so the browser refuses to
+    // synthesise a click and a plain tap on a row reached nothing at all —
+    // the row was visible, hittable, and inert. Capture happens when the
+    // gesture activates, which is where a swipe needs to own the pointer.
   }
 
   _isDrawerContentSwipeBlocked(target) {
