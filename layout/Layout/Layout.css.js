@@ -267,6 +267,14 @@ export let styles = css`
           overflow: visible;
         }
 
+        /* The header clips for the same reason, and it is the tighter of the
+           two: at 31px tall it held the target at 29px even with the room
+           available. The title keeps its own clip for the ellipsis, so nothing
+           that was being hidden by the header needs it. */
+        .panel-header {
+          overflow: visible;
+        }
+
         /* Panel content paints directly below the header and covered the lower
            half of the grown target, so a tap in that strip went to the content.
            Lifting the control above it is what lets the requested target be
