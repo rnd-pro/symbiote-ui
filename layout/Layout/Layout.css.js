@@ -278,10 +278,12 @@ export let styles = css`
              same room INSIDE the header as the target claims around a control
              is what makes the target whole, and it is the same theme token
              that already sizes the header's padding. */
+          /* The primary drawer header marks its own padding !important, so the
+             reservation has to answer in the same terms. */
           padding-block: max(
             var(--sn-layout-header-padding-block, 0px),
             calc(var(--sn-layout-header-button-hit-size, 44px) - var(--sn-layout-header-button-min-block-size, 24px)) / 2
-          );
+          ) !important;
         }
 
         /* Panel content paints directly below the header and covered the lower
