@@ -271,7 +271,10 @@ export let styles = css`
            two: at 31px tall it held the target at 29px even with the room
            available. The title keeps its own clip for the ellipsis, so nothing
            that was being hidden by the header needs it. */
-        .panel-header {
+        /* Spelled with the panel's own attributes so it outweighs the
+           drawer's !important header padding, which is otherwise injected
+           later and wins the tie on equal weight. */
+        &[node-type='panel'] .panel-header {
           overflow: visible;
           /* The header sits flush with the panel edge, so a target centred on
              its controls still lost the part above the panel. Reserving the
