@@ -252,7 +252,10 @@ test('layout node panel header adapts without overlapping actions', async () => 
   assert.match(styles, /\.panel-view\s*\{[\s\S]*?container-type: inline-size;[\s\S]*?container-name: layout-panel;/);
   assert.match(styles, /\.panel-header\s*\{[\s\S]*?box-sizing: border-box;[\s\S]*?display: grid;[\s\S]*?grid-template-columns: minmax\(0, 1fr\) auto minmax\(0, 1fr\);[\s\S]*?block-size: var\(--sn-layout-header-block-size,/);
   assert.match(styles, /\.type-btn\s*\{[\s\S]*?grid-column: 1;[\s\S]*?overflow: hidden;/);
-  assert.match(styles, /\.panel-menu-toggle\s*\{[\s\S]*?grid-column: 2;[\s\S]*?position: static;[\s\S]*?transform: none;/);
+  // The menu toggle is the containing block of the header-btn press area: a
+  // static position made its pseudo-element resolve percentages against the
+  // whole panel header, so the invisible target swallowed its neighbours.
+  assert.match(styles, /\.panel-menu-toggle\s*\{[\s\S]*?grid-column: 2;[\s\S]*?position: relative;[\s\S]*?transform: none;/);
   assert.match(styles, /\.panel-actions\s*\{[\s\S]*?grid-column: 3;[\s\S]*?justify-content: flex-end;[\s\S]*?overflow: hidden;/);
   assert.match(styles, /\.panel-title\s*\{[\s\S]*?font-size: var\(--sn-layout-header-title-size, var\(--sn-layout-header-button-size, 0\.75rem\)\);[\s\S]*?line-height: var\(--sn-layout-header-title-line-height, 1\.2\);/);
   assert.match(styles, /\.panel-content\s*\{[\s\S]*?box-sizing: border-box;[\s\S]*?min-inline-size: 0;[\s\S]*?min-block-size: 0;/);

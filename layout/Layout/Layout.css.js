@@ -238,9 +238,11 @@ export let styles = css`
 
       layout-node[mobile-dock='start'],
       layout-node[mobile-dock='end'] {
-        /* WCAG 2.5.8 (24x24) floor for tree toggles inside modal drawers;
-           desktop density tokens stay untouched outside drawer mode. */
-        --sn-tree-toggle-width: 24px;
+        /* Touch-sized toggle column for the drawer surfaces. The value comes
+           from the theme scale (--sn-tree-toggle-touch-width, density-driven),
+           not from a pixel written here; the fallback mirrors the base token so
+           an unthemed page keeps the same column. */
+        --sn-tree-toggle-width: var(--sn-tree-toggle-touch-width, calc(18px * var(--sn-theme-density)));
       }
 
       layout-node[node-type='panel'] {

@@ -135,6 +135,7 @@
   --sn-layout-header-button-min-inline-size: calc(24px * var(--sn-theme-density));
   --sn-layout-header-button-min-block-size: calc(24px * var(--sn-theme-density));
   --sn-layout-header-button-block-size: var(--sn-layout-header-button-min-block-size);
+  --sn-layout-header-button-hit-size: 44px;
   --sn-layout-menu-min-height: calc(34px * var(--sn-theme-density));
   --sn-layout-menu-row-height: calc(30px * var(--sn-theme-density));
   --sn-layout-menu-padding: calc(3px * var(--sn-theme-density)) calc(6px * var(--sn-theme-density));
@@ -425,8 +426,9 @@
   --sn-tabs-corner-cut: 11.5px;
   --sn-tree-gap: var(--sn-space-xs);
   --sn-tree-indent: var(--sn-step-8);
-  --sn-tree-toggle-width: 18px;
-  --sn-tree-icon-width: 18px;
+  --sn-tree-toggle-width: calc(18px * var(--sn-theme-density));
+  --sn-tree-toggle-touch-width: calc(24px * var(--sn-theme-density));
+  --sn-tree-icon-width: calc(18px * var(--sn-theme-density));
   --sn-tree-row-height: calc(22px * var(--sn-theme-density));
   --sn-tree-row-min-height: calc(22px * var(--sn-theme-density));
   --sn-tree-row-padding-block: var(--sn-step-1);

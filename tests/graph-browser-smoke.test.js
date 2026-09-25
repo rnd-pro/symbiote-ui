@@ -2528,11 +2528,18 @@ test('layout drawer restores real focus to a shadow-root opener via Escape, back
     let openState = await evaluate(`(() => {
       const l = window.__lab.layout;
       const d = l.querySelector('layout-node[mobile-dock="start"][drawer-active-panel]');
+      const deep = (node) => {
+        while (node?.shadowRoot?.activeElement && node.shadowRoot.activeElement !== node) node = node.shadowRoot.activeElement;
+        return node;
+      };
+      const active = deep(document.activeElement);
       return {
         open: l.hasAttribute('drawer-start-open'),
         role: d?.getAttribute('role'),
         modal: d?.getAttribute('aria-modal'),
         chain: window.__lab.deepActive(),
+        focusInDrawer: Boolean(d && active && (d === active || d.contains(active))),
+        activeTag: active ? (active.id || active.className || active.localName) : null,
         siblingsInert: Array.from(l.querySelectorAll('layout-node'))
           .filter((n) => n !== d && !n.contains(d) && !d.contains(n))
           .every((n) => n.hasAttribute('inert')),
@@ -2542,7 +2549,10 @@ test('layout drawer restores real focus to a shadow-root opener via Escape, back
     assert.equal(openState.role, 'dialog', 'role=dialog while open');
     assert.equal(openState.modal, 'true', 'aria-modal while open');
     assert.equal(openState.siblingsInert, true, 'background inert while open');
-    assert.equal(openState.chain[0], 'layout-node', `focus moved into the open drawer: ${openState.chain}`);
+    // Focus belongs to the OPENING panel: the dialog surface or any control
+    // inside it (the first reachable control is preferred over the surface).
+    assert.equal(openState.focusInDrawer, true,
+      `focus moved into the open drawer (active: ${openState.activeTag}, chain: ${openState.chain})`);
 
     await pressEscape();
     await delay(300);
@@ -2607,6 +2617,390 @@ test('layout drawer restores real focus to a shadow-root opener via Escape, back
     }))()`);
     assert.equal(afterRemoval.open, false, 'drawer closes after opener removal');
     assert.equal(afterRemoval.target, null, 'stale opener record is dropped');
+  } finally {
+    if (page) await page.close().catch(() => {});
+    if (chromeSession) await closeChromeSession(chromeSession);
+    await server.close();
+  }
+});
+
+
+// Geometry stability: two consecutive equal samples. Drawer transitions and
+// density changes are observable in layout, so probes wait for the layout to
+// settle instead of guessing a delay.
+async function waitForStableGeometry(evaluate, expression, message, attempts = 120) {
+  let previous = null;
+  for (let i = 0; i < attempts; i += 1) {
+    const sample = JSON.stringify(await evaluate(expression));
+    if (sample === previous) return JSON.parse(sample);
+    previous = sample;
+    await delay(50);
+  }
+  throw new Error(`geometry never settled: ${message}`);
+}
+
+// Poll an observable predicate instead of sleeping a fixed amount.
+async function waitForPredicate(evaluate, expression, message, attempts = 120) {
+  for (let i = 0; i < attempts; i += 1) {
+    if (await evaluate(expression)) return true;
+    await delay(50);
+  }
+  throw new Error(`timed out waiting for: ${message}`);
+}
+
+test('drawer modal owns focus of the opening panel and cycles Tab over a real left+right composition', { timeout: BROWSER_SMOKE_TIMEOUT_MS }, async () => {
+  const chromePath = findChrome();
+  assertBrowserSmokeRuntime();
+
+  const server = await createStaticServer();
+  let chromeSession;
+  let page;
+  try {
+    chromeSession = await launchChromeSession(chromePath, 'drawer modal focus smoke');
+    page = await withTimeout(
+      openPage(chromeSession.endpoint, `${server.url}/demo/drawer-size-lab.html?v=drawer-modal-focus-smoke`),
+      22000,
+      'drawer modal lab page open'
+    );
+    const evaluate = async (expression) => {
+      const result = await withTimeout(
+        page.send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true }),
+        10000,
+        'drawer modal evaluate'
+      );
+      if (result.result?.exceptionDetails) {
+        throw new Error(`evaluate failed: ${JSON.stringify(result.result.exceptionDetails).slice(0, 300)}`);
+      }
+      return result.result?.value;
+    };
+
+    for (let i = 0; i < 200; i += 1) {
+      if (await evaluate(`Boolean(window.__lab?.ready?.())`)) break;
+      if (i === 199) assert.fail('drawer modal lab never became ready');
+      await delay(100);
+    }
+    await setPageViewport(page, { width: 390, height: 844, mobile: true });
+    await waitForPredicate(evaluate, `window.__lab.drawerMode()`, 'drawer mode at 390px');
+
+    const pressTab = async (shift = false) => {
+      for (const type of ['rawKeyDown', 'keyUp']) {
+        await page.send('Input.dispatchKeyEvent', {
+          type, key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9, nativeVirtualKeyCode: 9,
+          modifiers: shift ? 8 : 0,
+        });
+      }
+      await delay(60);
+    };
+    // Deep active element plus the modal contract, read from the real DOM.
+    const focusState = () => evaluate(`(() => {
+      const deep = (node) => {
+        while (node?.shadowRoot?.activeElement && node.shadowRoot.activeElement !== node) node = node.shadowRoot.activeElement;
+        return node;
+      };
+      const active = deep(document.activeElement);
+      const layout = window.__lab.layout;
+      const nodeOf = (component) => [...layout.querySelectorAll('layout-node')].find((n) => {
+        const view = [...n.children].find((c) => c.classList?.contains('panel-view'));
+        const content = view && [...view.children].find((c) => c.classList?.contains('panel-content'));
+        return content?.querySelector(':scope > ' + component);
+      });
+      const startNode = nodeOf('lab-tree-panel');
+      const endNode = nodeOf('lab-agent-panel');
+      const inNode = (node, el) => Boolean(node && el && (node === el || node.contains(el)));
+      return {
+        active: active ? (active.id || active.className || active.localName) : null,
+        inStart: inNode(startNode, active),
+        inEnd: inNode(endNode, active),
+        startModal: startNode?.getAttribute('aria-modal') || null,
+        endModal: endNode?.getAttribute('aria-modal') || null,
+        inertNodes: [...layout.querySelectorAll('layout-node[inert]')].length,
+        totalNodes: layout.querySelectorAll('layout-node').length,
+      };
+    })()`);
+
+    // (1) The opener is a control of the same layout.
+    const opener = await evaluate(`(() => {
+      const layout = window.__lab.layout;
+      const rail = layout.querySelector('layout-node[data-drawer-dock="end"] .panel-header .header-btn');
+      return rail ? { inLayout: layout.contains(rail), label: rail.getAttribute('aria-label') || rail.className } : null;
+    })()`);
+    assert.ok(opener?.inLayout, `opener is inside the same layout: ${JSON.stringify(opener)}`);
+
+    // (2) Open the agent panel and check ownership of focus + background.
+    await evaluate(`window.__lab.openDrawer('end')`);
+    await waitForPredicate(evaluate, `document.querySelector('layout-node[data-drawer-dock="end"][drawer-open]')`, 'agent drawer open');
+    await waitForStableGeometry(
+      evaluate,
+      `(() => { const r = window.__lab.headerReport('end')?.node?.getBoundingClientRect?.(); return r ? [r.left, r.width] : null; })()`,
+      'agent drawer open geometry'
+    );
+
+    const opened = await focusState();
+    assert.equal(opened.endModal, 'true', 'the opening panel carries the modal contract');
+    assert.ok(opened.inEnd, `focus is inside the opening panel (active: ${opened.active})`);
+    assert.ok(!opened.inStart, 'focus did not stay in the other dock');
+    assert.ok(opened.inertNodes > 0, `background nodes are inert while open: ${opened.inertNodes}/${opened.totalNodes}`);
+
+    // (3) Tab cycles inside the agent panel, over its real input and buttons.
+    const seen = [];
+    for (let i = 0; i < 6; i += 1) {
+      const state = await focusState();
+      assert.ok(state.inEnd, `Tab keeps focus in the drawer (step ${i}, active: ${state.active})`);
+      seen.push(state.active);
+      await pressTab();
+    }
+    assert.ok(new Set(seen).size > 1, `Tab visits more than one control: ${JSON.stringify(seen)}`);
+    assert.ok(seen.some((id) => String(id).includes('agent')), `the agent input takes part in the cycle: ${JSON.stringify(seen)}`);
+
+    // (4) Shift+Tab walks back inside the same panel, never out to the page.
+    for (let i = 0; i < 6; i += 1) {
+      await pressTab(true);
+      const state = await focusState();
+      assert.ok(state.inEnd, `Shift+Tab keeps focus in the drawer (step ${i}, active: ${state.active})`);
+    }
+
+    // (5) Closing releases the contract and the background is interactive again.
+    await evaluate(`window.__lab.closeDrawer('end')`);
+    await waitForPredicate(evaluate, `!document.querySelector('layout-node[data-drawer-dock="end"][drawer-open]')`, 'agent drawer closed');
+    const closed = await focusState();
+    assert.equal(closed.endModal, null, 'aria-modal released on close');
+    assert.equal(closed.inertNodes, 0, 'no background node stays inert after close');
+  } finally {
+    await page?.close?.();
+    await chromeSession?.close?.();
+    await server?.close?.();
+  }
+});
+
+test('drawer panel controls scale with theme density on both docks at 320/390/430 without overlapping hit areas', { timeout: BROWSER_SMOKE_TIMEOUT_MS }, async () => {
+  const chromePath = findChrome();
+  assertBrowserSmokeRuntime();
+
+  const server = await createStaticServer();
+  let chromeSession;
+  let page;
+  try {
+    chromeSession = await launchChromeSession(chromePath, 'drawer size smoke');
+    page = await withTimeout(
+      openPage(chromeSession.endpoint, `${server.url}/demo/drawer-size-lab.html?v=drawer-size-smoke`),
+      22000,
+      'drawer size lab page open'
+    );
+
+    const evaluate = async (expression) => {
+      const result = await withTimeout(
+        page.send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true }),
+        10000,
+        'drawer size evaluate'
+      );
+      if (result.result?.exceptionDetails) {
+        throw new Error(`evaluate failed: ${JSON.stringify(result.result.exceptionDetails).slice(0, 300)}`);
+      }
+      return result.result?.value;
+    };
+
+    // Scroll input the browser actually performs in this environment: CDP touch
+    // events reach the page but do not drive the compositor gesture, so a wheel
+    // is the honest in-VM evidence that the list scrolls while the drawer holds.
+    const wheel = async ({ x, y, deltaY }) => {
+      await page.send('Input.dispatchMouseEvent', {
+        type: 'mouseWheel', x, y, deltaX: 0, deltaY, pointerType: 'mouse',
+      });
+    };
+
+    const swipe = async ({ from, to, y, steps = 6 }) => {
+      await page.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: from, y, button: 'left', buttons: 1, clickCount: 1 });
+      for (let i = 1; i <= steps; i += 1) {
+        await page.send('Input.dispatchMouseEvent', {
+          type: 'mouseMoved', x: Math.round(from + (to - from) * (i / steps)), y, button: 'left', buttons: 1,
+        });
+      }
+      await page.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: Math.round(to), y, button: 'left', buttons: 0, clickCount: 1 });
+    };
+
+    const hitsOverlap = (a, b) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+
+    // Readiness is observed component state (both docks injected their app
+    // component, the tree rendered rows), never a sleep.
+    const waitForLab = async (label) => {
+      for (let i = 0; i < 200; i += 1) {
+        if (await evaluate(`Boolean(window.__lab?.ready?.())`)) return true;
+        await delay(100);
+      }
+      assert.fail(`drawer size lab never became ready: ${label}`);
+    };
+
+    // Drive the viewport first: the matrix under test is the mobile one.
+    await setPageViewport(page, { width: 320, height: 844, mobile: true });
+    await waitForLab('initial mount');
+
+    for (const width of [320, 390, 430]) {
+      if (width !== 320) await setPageViewport(page, { width, height: 844, mobile: true });
+      // The responsive projection is its own observable, independent of mount.
+      await waitForPredicate(evaluate, `window.__lab.drawerMode()`, `drawer mode at ${width}px`);
+      await waitForLab(`panels mounted at ${width}px`);
+
+      for (const dock of ['start', 'end']) {
+        await evaluate(`window.__lab.openDrawer('${dock}')`);
+        await waitForStableGeometry(evaluate, 
+          `(() => { const r = window.__lab.headerReport('${dock}')?.node?.getBoundingClientRect?.(); return r ? [r.left, r.width] : null; })()`,
+          `${dock}@${width} open`
+        );
+        const baseline = await evaluate(`(() => {
+          const report = window.__lab.headerReport('${dock}');
+          return {
+            controls: report?.controls?.map((c) => ({ label: c.label, rect: c.rect, hit: c.hit })) || [],
+            tree: window.__lab.treeReport(),
+          };
+        })()`);
+        assert.ok(baseline.controls.length >= 2,
+          `${dock}@${width}: header exposes real controls (${JSON.stringify(baseline.controls.map((c) => c.label))})`);
+
+        for (const control of baseline.controls) {
+          assert.ok(control.hit.width > control.rect.width && control.hit.height > control.rect.height,
+            `${dock}@${width}: pressable area exceeds the painted box (${control.label}: ${JSON.stringify(control)})`);
+        }
+        for (let i = 1; i < baseline.controls.length; i += 1) {
+          assert.equal(hitsOverlap(baseline.controls[i - 1].hit, baseline.controls[i].hit), false,
+            `${dock}@${width}: neighbouring targets must not intersect (${baseline.controls[i - 1].label} / ${baseline.controls[i].label})`);
+        }
+
+        // Theme-driven resize: density moves the control box and the touch
+        // parameters; the target keeps its non-overlap guarantee.
+        await evaluate(`window.__lab.setDensity(1.8)`);
+        await waitForStableGeometry(evaluate, 
+          `(() => { const r = window.__lab.headerReport('${dock}')?.node?.getBoundingClientRect?.(); return r ? [r.left, r.width] : null; })()`,
+          `${dock}@${width} density 1.8`
+        );
+        const scaled = await evaluate(`(() => {
+          const report = window.__lab.headerReport('${dock}');
+          return {
+            controls: report?.controls?.map((c) => ({ label: c.label, rect: c.rect, hit: c.hit })) || [],
+            tree: window.__lab.treeReport(),
+          };
+        })()`);
+        for (let i = 0; i < scaled.controls.length; i += 1) {
+          assert.ok(scaled.controls[i].rect.height > baseline.controls[i].rect.height,
+            `${dock}@${width}: control box scales with theme density (${scaled.controls[i].label}: ${baseline.controls[i].rect.height} -> ${scaled.controls[i].rect.height})`);
+        }
+        for (let i = 1; i < scaled.controls.length; i += 1) {
+          assert.equal(hitsOverlap(scaled.controls[i - 1].hit, scaled.controls[i].hit), false,
+            `${dock}@${width}: scaled targets must not intersect either`);
+        }
+        const overflow = await evaluate(`(() => {
+          const report = window.__lab.headerReport('${dock}');
+          const node = report?.node;
+          return node ? { scrollWidth: node.scrollWidth, clientWidth: node.clientWidth } : null;
+        })()`);
+        assert.ok(overflow && overflow.scrollWidth <= overflow.clientWidth + 1,
+          `${dock}@${width}: panel does not overflow horizontally after resize (${JSON.stringify(overflow)})`);
+
+        // Gestures stay valid at the new density: coordinates come from the
+        // measured panel box, never from a fixed control size.
+        await evaluate(`window.__lab.closeDrawer('${dock}')`);
+        const box = await evaluate(`(() => {
+          const node = window.__lab.headerReport('${dock}')?.node;
+          const r = node?.getBoundingClientRect?.();
+          return r ? { left: r.left, right: r.right, top: r.top, height: r.height, inner: window.innerWidth, innerH: window.innerHeight } : null;
+        })()`);
+        assert.ok(box, `${dock}@${width}: panel geometry available for gestures`);
+
+        if (dock === 'start') {
+          // Open by dragging from the rail: distance is a share of the measured
+          // layout width, so it works whatever the control sizes are.
+          const y = Math.round(box.top + box.height / 2);
+          await swipe({ from: Math.round(box.left + 16), to: Math.round(box.inner * 0.6), y });
+          const openedState = await waitForPredicate(evaluate, `window.__lab.layout.hasAttribute('drawer-start-open')`,
+            `start drawer opens by swipe at ${width}px with density 1.8`);
+          assert.equal(openedState, true, `start drawer did not open at ${width}px with density 1.8`);
+
+          const openBox = await evaluate(`(() => {
+            const r = window.__lab.headerReport('start')?.node?.getBoundingClientRect?.();
+            return r ? { left: r.left, right: r.right, top: r.top, height: r.height } : null;
+          })()`);
+          const closeY = Math.round(openBox.top + openBox.height / 2);
+          await swipe({ from: Math.round(openBox.right - 24), to: 8, y: closeY });
+          const closedState = await waitForPredicate(evaluate, `!window.__lab.layout.hasAttribute('drawer-start-open')`,
+            `start drawer closes by swipe at ${width}px with density 1.8`);
+          assert.equal(closedState, true, `start drawer did not close at ${width}px with density 1.8`);
+
+          // The list really scrolls while the drawer stays put: content
+          // scrolling must not be hijacked by the drawer surface.
+          await evaluate(`window.__lab.openDrawer('start')`);
+          await waitForStableGeometry(evaluate, 
+            `(() => { const r = window.__lab.headerReport('start')?.node?.getBoundingClientRect?.(); return r ? [r.left, r.width] : null; })()`,
+            `start@${width} re-open for the scroll probe`
+          );
+          const scrollBox = await evaluate(`(() => {
+            const box = window.__lab.scrollBox();
+            return box ? { scrollHeight: box.scrollHeight, clientHeight: box.clientHeight, scrollTop: box.scrollTop } : null;
+          })()`);
+          assert.ok(scrollBox && scrollBox.scrollHeight > scrollBox.clientHeight + 1,
+            `tree list really scrolls at ${width}px: ${JSON.stringify(scrollBox)}`);
+          // Each width starts from a known position: a list left at its end by
+          // the previous width could not prove that scrolling still works.
+          await evaluate(`window.__lab.resetScroll()`);
+          const scrollStart = await evaluate(`window.__lab.scrollBox()?.scrollTop`);
+          // Measure the OPEN panel: the closed rail is only ~32px wide, so
+          // reusing its centre would aim the wheel at the rail, not the list.
+          const openPanelBox = await evaluate(`(() => {
+            const r = window.__lab.headerReport('start')?.node?.getBoundingClientRect?.();
+            return r ? { left: r.left, right: r.right, top: r.top, height: r.height } : null;
+          })()`);
+          assert.ok(openPanelBox && openPanelBox.right - openPanelBox.left > 120,
+            `start drawer is open for the scroll probe at ${width}px: ${JSON.stringify(openPanelBox)}`);
+          const wheelPoint = await evaluate(`(() => {
+            const n = window.__lab.headerReport('start')?.node?.getBoundingClientRect?.();
+            const box = window.__lab.scrollBox()?.getBoundingClientRect?.();
+            if (!n || !box) return null;
+            const x = Math.round((n.left + n.right) / 2);
+            const y = Math.round((box.top + box.bottom) / 2);
+            const el = document.elementFromPoint(x, y);
+            return { x, y, insideScroller: x >= box.left && x <= box.right && y >= box.top && y <= box.bottom, hit: el?.className || null };
+          })()`);
+          assert.ok(wheelPoint?.insideScroller,
+            `wheel point lands inside the scrolling list at ${width}px: ${JSON.stringify(wheelPoint)}`);
+          const wheelX = wheelPoint.x;
+          const wheelY = wheelPoint.y;
+          for (let i = 0; i < 4; i += 1) await wheel({ x: wheelX, y: wheelY, deltaY: 120 });
+          const scrolled = await waitForPredicate(evaluate, `(() => {
+            const box = window.__lab.scrollBox();
+            return box && box.scrollTop > ${scrollStart};
+          })()`, `list scrolls at ${width}px`);
+          assert.equal(scrolled, true, `list did not scroll at ${width}px`);
+          assert.equal(await evaluate(`window.__lab.layout.hasAttribute('drawer-start-open')`), true,
+            `scrolling the list must not close the drawer at ${width}px`);
+
+          // Tree touch parameters follow the same theme: the toggle column and
+          // the row height scale with density, and the row never overflows.
+          await evaluate(`window.__lab.setDensity(1)`);
+          const treeBase = await waitForStableGeometry(evaluate, 
+            `(() => { const t = window.__lab.treeReport(); return [t.toggle?.width, t.row?.height]; })()`,
+            `tree base @${width}`
+          ) && await evaluate(`window.__lab.treeReport()`);
+          await evaluate(`window.__lab.setDensity(1.8)`);
+          await waitForStableGeometry(evaluate, 
+            `(() => { const t = window.__lab.treeReport(); return [t.toggle?.width, t.row?.height]; })()`,
+            `tree scaled @${width}`
+          );
+          const treeScaled = await evaluate(`window.__lab.treeReport()`);
+          assert.ok(treeBase.toggle && treeScaled.toggle,
+            `tree geometry measured at ${width}px: ${JSON.stringify({ base: treeBase.toggle, scaled: treeScaled.toggle })}`);
+          assert.ok(treeScaled.toggle.width > treeBase.toggle.width,
+            `tree toggle column scales with theme density at ${width}px (${treeBase.toggle.width} -> ${treeScaled.toggle.width})`);
+          assert.ok(treeScaled.row.height > treeBase.row.height,
+            `tree row height scales with theme density at ${width}px (${treeBase.row.height} -> ${treeScaled.row.height})`);
+          assert.ok(treeScaled.row.scrollWidth <= treeScaled.row.clientWidth + 1,
+            `tree row does not overflow after resize at ${width}px: ${JSON.stringify(treeScaled.row)}`);
+          assert.ok(treeScaled.label.clientWidth > 0,
+            `tree label keeps its column after resize at ${width}px: ${JSON.stringify(treeScaled.label)}`);
+        }
+
+        await evaluate(`window.__lab.setDensity(1)`);
+        await evaluate(`window.__lab.closeDrawer('${dock}')`);
+      }
+
+    }
   } finally {
     if (page) await page.close().catch(() => {});
     if (chromeSession) await closeChromeSession(chromeSession);

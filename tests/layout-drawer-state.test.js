@@ -871,3 +871,220 @@ test('a horizontal drag starting on a tree row still drives the drawer; the trai
   assert.equal(freshTap.defaultPrevented, false,
     'independent tap is never cancelled (token consumed by the gesture click)');
 });
+
+// --- focus ownership of the opening panel, and modal attribute ownership ---
+
+test('focus moves into the OPENING panel, not merely somewhere inside the layout', async () => {
+  await makeEscapeEnv('drawer-modal-focus-owner');
+  let layout = await buildDrawerLayout(document.body, 0);
+
+  layout.openDrawer('end');
+  await new Promise((r) => setTimeout(r, 0));
+  let endNode = findDrawerNode(layout, 'end');
+  layout.openDrawer('start');
+  await new Promise((r) => setTimeout(r, 0));
+  let startNode = findDrawerNode(layout, 'start');
+  assert.ok(startNode && endNode, 'both drawer surfaces exist');
+
+  // Record which control actually received focus. Comparing DOM nodes with
+  // deepEqual is not safe here: linkedom elements reference each other in
+  // cycles and the differ walks them forever, so identity checks are used.
+  const focusCalls = [];
+  for (const node of [startNode, endNode]) {
+    for (const el of layout._collectDrawerFocusables(node)) {
+      el.focus = () => focusCalls.push(el);
+    }
+  }
+
+  // Focus outside both panels: the move must land inside the requested one.
+  layout._moveFocusIntoDrawer(startNode);
+  assert.equal(focusCalls.length, 1, 'focus moved once');
+  assert.ok(startNode.contains(focusCalls[0]), 'focus target belongs to the opening panel');
+  assert.ok(!endNode.contains(focusCalls[0]), 'focus target is not in the other dock');
+
+  // The other dock is closed here, so its controls are not reachable: the
+  // dialog surface itself is the focus target, and it is still that surface's
+  // own focus — never the panel that happened to be open.
+  const surfaceCalls = [];
+  endNode.focus = () => surfaceCalls.push(endNode);
+  layout._moveFocusIntoDrawer(endNode);
+  assert.equal(surfaceCalls.length, 1, 'a control-less drawer focuses its own surface');
+  assert.equal(focusCalls.length, 1, 'the previously focused panel is not re-focused');
+});
+
+test('modal attributes are restored to the host values, and host edits during open survive', async () => {
+  await makeEscapeEnv('drawer-modal-attr-ownership');
+  let layout = await buildDrawerLayout(document.body, 0);
+  let startNode = findDrawerNode(layout, 'start') || layout.querySelector('layout-node');
+  startNode.setAttribute('role', 'region');
+  startNode.setAttribute('tabindex', '3');
+  // The node that will actually become the modal surface.
+  layout.openDrawer('start');
+  await new Promise((r) => setTimeout(r, 0));
+  let drawerNode = findDrawerNode(layout, 'start');
+  drawerNode.setAttribute('role', 'complementary');
+  drawerNode.setAttribute('aria-label', 'Portfolio');
+
+  layout.closeDrawer('start');
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(drawerNode.getAttribute('aria-modal'), null, 'our aria-modal is removed on close');
+  // role was changed by the host while open: that value is the host's now.
+  assert.equal(drawerNode.getAttribute('role'), 'complementary', 'host role edit survives the close');
+  assert.equal(drawerNode.getAttribute('aria-label'), 'Portfolio', 'host attributes are untouched');
+
+  // A node that already carried host semantics gets them back verbatim.
+  layout.openDrawer('end');
+  await new Promise((r) => setTimeout(r, 0));
+  let endNode = findDrawerNode(layout, 'end');
+  layout.closeDrawer('end');
+  await new Promise((r) => setTimeout(r, 0));
+  endNode.setAttribute('role', 'region');
+  endNode.setAttribute('aria-modal', 'false');
+  endNode.setAttribute('tabindex', '2');
+
+  layout.openDrawer('end');
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(endNode.getAttribute('role'), 'dialog', 'modal role applies while open');
+  assert.equal(endNode.getAttribute('aria-modal'), 'true');
+  assert.equal(endNode.getAttribute('tabindex'), '-1');
+  layout.closeDrawer('end');
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(endNode.getAttribute('role'), 'region', 'host role restored');
+  assert.equal(endNode.getAttribute('aria-modal'), 'false', 'host aria-modal restored');
+  assert.equal(endNode.getAttribute('tabindex'), '2', 'host tabindex restored');
+});
+
+test('modal cleanup runs on breakpoint change, panel switch and disconnect', async () => {
+  await makeEscapeEnv('drawer-modal-cleanup');
+  let layout = await buildDrawerLayout(document.body, 0);
+  layout.openDrawer('start');
+  await new Promise((r) => setTimeout(r, 0));
+  let drawerNode = findDrawerNode(layout, 'start');
+  let background = Array.from(layout.querySelectorAll('layout-node'))
+    .filter((n) => n !== drawerNode && !n.contains?.(drawerNode) && !drawerNode.contains?.(n));
+  assert.ok(background.every((n) => n.hasAttribute('inert')), 'background inert while open');
+
+  // (1) panel switch inside the open dock moves the modal to the new surface
+  layout.openDrawer('start', 'drawer-content');
+  await new Promise((r) => setTimeout(r, 0));
+  let switched = findDrawerNode(layout, 'start');
+  if (switched && switched !== drawerNode) {
+    assert.equal(switched.getAttribute('aria-modal'), 'true', 'new surface carries the modal');
+    assert.equal(drawerNode.getAttribute('aria-modal'), null, 'previous surface released');
+  }
+
+  // (2) leaving drawer mode (breakpoint change) clears the contract
+  layout._clearDrawerProjection();
+  assert.ok(Array.from(layout.querySelectorAll('layout-node')).every((n) => !n.hasAttribute('inert')),
+    'inert cleared when the layout leaves drawer mode');
+
+  layout.openDrawer('start');
+  await new Promise((r) => setTimeout(r, 0));
+  let liveNode = findDrawerNode(layout, 'start');
+  assert.equal(liveNode.getAttribute('aria-modal'), 'true');
+
+  // (3) disconnect must not leave modal state on surviving nodes
+  layout.remove();
+  assert.equal(liveNode.getAttribute('aria-modal'), null, 'aria-modal cleared on disconnect');
+  assert.equal(liveNode.getAttribute('role'), null, 'role cleared on disconnect');
+  assert.equal(liveNode.getAttribute('tabindex'), null, 'tabindex cleared on disconnect');
+  assert.ok(Array.from(liveNode.ownerDocument.querySelectorAll('layout-node')).every((n) => !n.hasAttribute('inert')),
+    'inert cleared on disconnect');
+});
+
+test('focusable collection reaches nested open shadow roots and slotted content in tab order', async () => {
+  await makeEscapeEnv('drawer-focus-deep');
+  let layout = await buildDrawerLayout(document.body, 0);
+  layout.openDrawer('end');
+  await new Promise((r) => setTimeout(r, 0));
+  let drawerNode = findDrawerNode(layout, 'end');
+
+  const light = document.createElement('button');
+  light.textContent = 'light first';
+  drawerNode.append(light);
+
+  const host = document.createElement('div');
+  drawerNode.append(host);
+  const shadow = host.attachShadow({ mode: 'open' });
+  const shadowFirst = document.createElement('button');
+  shadowFirst.textContent = 'shadow first';
+  const slot = document.createElement('slot');
+  const nestedHost = document.createElement('div');
+  shadow.append(shadowFirst, slot, nestedHost);
+
+  const slotted = document.createElement('button');
+  slotted.textContent = 'slotted';
+  const afterHost = document.createElement('button');
+  afterHost.textContent = 'after host';
+  host.after(slotted, afterHost);
+
+  const nestedShadow = nestedHost.attachShadow({ mode: 'open' });
+  const nestedButton = document.createElement('button');
+  nestedButton.textContent = 'nested shadow';
+  nestedShadow.append(nestedButton);
+
+  // Excluded candidates: disabled, hidden, inert subtree, aria-hidden.
+  const disabled = document.createElement('button');
+  disabled.disabled = true;
+  const hidden = document.createElement('button');
+  hidden.hidden = true;
+  const inertWrap = document.createElement('div');
+  inertWrap.setAttribute('inert', '');
+  const inertButton = document.createElement('button');
+  inertWrap.append(inertButton);
+  const ariaHidden = document.createElement('button');
+  ariaHidden.setAttribute('aria-hidden', 'true');
+  drawerNode.append(disabled, hidden, inertWrap, ariaHidden);
+
+  const { getFocusableElements } = await import('../ui/focus-trap.js');
+  const order = getFocusableElements(drawerNode);
+  const labels = order.map((el) => el.textContent).filter(Boolean);
+  assert.ok(labels.includes('light first'), 'light DOM control collected');
+  assert.ok(labels.includes('shadow first'), 'open shadow control collected');
+  assert.ok(labels.includes('slotted'), 'slotted light-DOM control collected');
+  assert.ok(labels.includes('nested shadow'), 'nested open shadow control collected');
+  assert.ok(labels.includes('after host'), 'controls after the island still collected');
+  assert.ok(!order.includes(disabled), 'disabled excluded');
+  assert.ok(!order.includes(hidden), 'hidden excluded');
+  assert.ok(!order.includes(inertButton), 'inert subtree excluded');
+  assert.ok(!order.includes(ariaHidden), 'aria-hidden excluded');
+  assert.ok(order.indexOf(light) < order.indexOf(shadowFirst), 'light DOM precedes shadow content');
+  assert.ok(order.indexOf(slotted) < order.indexOf(afterHost), 'slotted order follows light DOM order');
+});
+
+test('Escape inside a layout nested in an open shadow root closes the INNER panel', async () => {
+  await makeEscapeEnv('escape-shadow-nested');
+  let outer = await buildDrawerLayout(document.body, 0);
+  let inner = await buildDrawerLayout(document.body, 1);
+
+  // The inner layout lives behind an open shadow root inside the outer layout:
+  // the composed event path of a key press elsewhere cannot name either layout.
+  let host = document.createElement('div');
+  outer.querySelector('layout-node .panel-view').append(host);
+  let shadow = host.attachShadow({ mode: 'open' });
+  shadow.append(inner);
+
+  outer.openDrawer('start');
+  await new Promise((r) => setTimeout(r, 0));
+  hideFromPeers(outer);
+  inner.openDrawer('start');
+  await new Promise((r) => setTimeout(r, 0));
+  assert.ok(outer._isDrawerOpen('start') && inner._isDrawerOpen('start'), 'both drawers open');
+
+  // Focus sits on a control inside the INNER drawer's shadow-backed layout.
+  let innerDrawer = inner.querySelector('layout-node[data-drawer-dock="start"]');
+  let control = document.createElement('button');
+  control.textContent = 'inner control';
+  innerDrawer.append(control);
+  document.activeElement = control;
+
+  // The key is pressed on an element outside both layouts: only the focus chain
+  // can decide the owner.
+  let neutral = document.createElement('div');
+  document.body.append(neutral);
+  neutral.dispatchEvent(escapeKeydown());
+  await new Promise((r) => setTimeout(r, 0));
+
+  assert.equal(inner._isDrawerOpen('start'), false, 'the inner panel closes');
+  assert.equal(outer._isDrawerOpen('start'), true, 'the outer layout keeps its drawer open');
+});

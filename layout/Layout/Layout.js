@@ -13,6 +13,7 @@ import { template } from './Layout.tpl.js';
 import { styles } from './Layout.css.js';
 import './../LayoutNode/LayoutNode.js';
 import './../PanelMenu/PanelMenu.js';
+import { getFocusableElements } from '../../ui/focus-trap.js';
 
 function setAttributeIfChanged(element, name, value) {
   let next = String(value);
@@ -99,30 +100,48 @@ function unregisterDrawerEscapeListener(layout) {
   }
 }
 
-// Focus chain for Escape ownership, deepest-first. Two passes:
-// (a) descend from document.activeElement through OPEN shadow roots as far as
-//     reachable — the deepest focused element first;
-// (b) climb from that deepest node across shadow hosts and parents so that
-//     an ancestor layout whose (shadowed) subtree holds focus still matches.
-// Closed shadow roots are opaque from the outside by design: descent stops at
-// them silently and the chain degrades to the host level — that is a real
+// Deepest open-shadow descendant of `node` (or null). Closed shadow roots are
+// opaque from the outside by design: the walk stops at their host — a real
 // platform boundary, not an error.
+function getDeepActiveElement(node) {
+  let current = node || null;
+  // A visited set makes the walk total: environments whose shadow focus is
+  // synthesized can report a cycle that would otherwise spin forever.
+  const visited = new Set();
+  while (current && !visited.has(current)) {
+    visited.add(current);
+    let inner = current.shadowRoot?.activeElement || null;
+    if (!inner || inner === current) break;
+    current = inner;
+  }
+  return current;
+}
+
+// Shadow-aware containment: `root` owns `node` when node is in its subtree or
+// in the subtree of any open shadow root it hosts. `contains` alone stops at
+// shadow edges, which made focus appear to live outside its own surface.
+function deepContains(root, node) {
+  if (!root || !node) return false;
+  for (let current = node; current; current = current.getRootNode?.()?.host) {
+    if (current === root || root.contains?.(current)) return true;
+  }
+  return false;
+}
+
+// Focus chain for Escape ownership, ordered OUTERMOST FIRST: document
+// .activeElement, then the shadow hosts it lives behind, and finally the
+// deepest focused element. Outer-first matches how ownership is read (the page
+// before the island inside it), so callers can stop at the first ancestor they
+// recognise; the innermost owner is selected by walking the chain backwards.
 function getDeepFocusChain(documentRef) {
+  let deepest = getDeepActiveElement(documentRef?.activeElement || null);
+  if (!deepest) return [];
   let chain = [];
-  let node = documentRef?.activeElement || null;
-  while (node) {
+  for (let node = deepest; node; node = node.parentElement || node.getRootNode?.()?.host) {
     chain.push(node);
-    let inner = node.shadowRoot?.activeElement || null; // closed root -> null
-    if (!inner || inner === node) break;
-    node = inner;
+    if (node === documentRef) break;
   }
-  let deep = chain[chain.length - 1] || null;
-  let climb = deep && deep.getRootNode?.();
-  while (climb && climb !== documentRef && climb.host) {
-    chain.push(climb.host);
-    climb = climb.host.getRootNode?.();
-  }
-  return chain;
+  return chain.reverse();
 }
 
 function dispatchDrawerEscape(context, e) {
@@ -149,10 +168,14 @@ function electDrawerEscapeOwner(candidates, e) {
   // (2) Focus: the DEEPEST layout whose subtree (shadow included) holds
   //     focus. A match `c` is deepest when no other match is its descendant.
   let focusChain = getDeepFocusChain(candidates[0].ownerDocument);
-  for (let node of focusChain) {
-    let matches = candidates.filter((layout) => layout === node || layout.contains?.(node));
+  // The chain runs outermost first, so the innermost owning layout is the LAST
+  // match in document order; shadow containment decides which of the matches
+  // for one node is the most specific.
+  for (let index = focusChain.length - 1; index >= 0; index -= 1) {
+    let node = focusChain[index];
+    let matches = candidates.filter((layout) => deepContains(layout, node));
     if (matches.length) {
-      return matches.find((layout) => !matches.some((other) => other !== layout && layout.contains?.(other)))
+      return matches.find((layout) => !matches.some((other) => other !== layout && deepContains(layout, other)))
         || matches[0];
     }
   }
@@ -416,6 +439,9 @@ export class Layout extends Symbiote {
   disconnectedCallback() {
     NATIVE_RAIL_LAYOUTS.delete(this);
     this._unregisterPeerGroup();
+    // A disconnected layout must not leave role/aria-modal/tabindex or inert
+    // behind on nodes that outlive it (they get re-inserted elsewhere).
+    this._clearDrawerModal();
     this._disconnectLayoutLifecycle();
     if (this._responsiveFrame && typeof cancelAnimationFrame !== 'undefined') {
       cancelAnimationFrame(this._responsiveFrame);
@@ -887,7 +913,6 @@ export class Layout extends Symbiote {
     let active = Boolean(responsiveState.drawerActive) && !this.$.fullscreenPanelId;
     toggleAttributeIfChanged(this, 'drawer-mode-active', active);
     if (!active) {
-      this._clearDrawerModal();
       this._clearDrawerProjection();
       return true;
     }
@@ -1021,6 +1046,9 @@ export class Layout extends Symbiote {
   }
 
   _clearDrawerProjection() {
+    // Single teardown path: every route that leaves drawer mode (breakpoint
+    // change, mode switch, teardown) releases the modal contract here.
+    this._clearDrawerModal();
     this._responsiveProjectionRetryCount = 0;
     if (this._responsiveProjectionRetryFrame && typeof cancelAnimationFrame !== 'undefined') {
       cancelAnimationFrame(this._responsiveProjectionRetryFrame);
@@ -1270,10 +1298,7 @@ export class Layout extends Symbiote {
     // shadowed trigger, document.activeElement is the non-focusable host and
     // focusing it later would be a silent no-op. Closed shadow roots are
     // opaque from outside — descent stops at their host (platform boundary).
-    let active = this.ownerDocument?.activeElement;
-    while (active?.shadowRoot?.activeElement && active.shadowRoot.activeElement !== active) {
-      active = active.shadowRoot.activeElement;
-    }
+    let active = getDeepActiveElement(this.ownerDocument?.activeElement || null);
     if (!this._drawerFocusReturnTarget) {
       this._drawerFocusReturnTarget = active || null;
     } else if (active && !this._isDrawerFocusWithin(active)) {
@@ -1327,9 +1352,21 @@ export class Layout extends Symbiote {
   // return runs.
   _applyDrawerModal(dock) {
     let drawerNode = this._getDrawerNode(dock, this._getActiveDrawerPanelId(dock));
-    if (!drawerNode || this._drawerModalNode === drawerNode) return;
-    this._clearDrawerModal();
+    if (!drawerNode) return;
+    // A panel switch inside an open dock moves the modal to the new surface:
+    // release the previous one first so no stale role/inert survives.
+    if (this._drawerModalNode && this._drawerModalNode !== drawerNode) this._clearDrawerModal();
+    if (this._drawerModalNode === drawerNode) return;
     this._drawerModalNode = drawerNode;
+    // Remember what the host owned before we overwrote it. The modal contract
+    // is ours; the values underneath are the product's, and a close must put
+    // them back exactly as they were instead of stripping them.
+    this._drawerModalOwned = {
+      node: drawerNode,
+      role: drawerNode.getAttribute('role'),
+      ariaModal: drawerNode.getAttribute('aria-modal'),
+      tabindex: drawerNode.getAttribute('tabindex'),
+    };
     drawerNode.setAttribute('role', 'dialog');
     drawerNode.setAttribute('aria-modal', 'true');
     drawerNode.setAttribute('tabindex', '-1');
@@ -1341,21 +1378,42 @@ export class Layout extends Symbiote {
         this._drawerModalInerted.push(node);
       }
     }
-    let active = this.ownerDocument?.activeElement;
-    if (active && (active === this.ownerDocument.body || !this._isDrawerFocusWithin(active))) {
-      try { drawerNode.focus?.(); } catch {}
-    }
+    this._moveFocusIntoDrawer(drawerNode);
+  }
+
+  // Focus ownership belongs to the OPENING PANEL, not to the whole layout: the
+  // modal is this surface, so focus left anywhere else — background chrome, the
+  // other dock, another surface — is moved into it, landing on the first
+  // reachable control or on the dialog surface itself.
+  _moveFocusIntoDrawer(drawerNode) {
+    let doc = this.ownerDocument;
+    let active = getDeepActiveElement(doc?.activeElement || null);
+    if (active && active !== doc?.body && deepContains(drawerNode, active)) return;
+    let target = this._collectDrawerFocusables(drawerNode)[0] || drawerNode;
+    try { target?.focus?.(); } catch {}
   }
 
   _clearDrawerModal() {
-    let drawerNode = this._drawerModalNode;
-    if (drawerNode) {
-      drawerNode.removeAttribute('role');
-      drawerNode.removeAttribute('aria-modal');
-      drawerNode.removeAttribute('tabindex');
-      this._drawerModalNode = null;
+    let owned = this._drawerModalOwned;
+    if (owned?.node) {
+      // Restore only what still holds OUR value: if the host changed the
+      // attribute while the drawer was open, that value now belongs to the
+      // host and must survive the close.
+      for (let [name, previous, applied] of [
+        ['role', owned.role, 'dialog'],
+        ['aria-modal', owned.ariaModal, 'true'],
+        ['tabindex', owned.tabindex, '-1'],
+      ]) {
+        if (owned.node.getAttribute(name) !== applied) continue;
+        if (previous === null) owned.node.removeAttribute(name);
+        else owned.node.setAttribute(name, previous);
+      }
     }
+    this._drawerModalOwned = null;
+    this._drawerModalNode = null;
     if (this._drawerModalInerted) {
+      // Only nodes this layout made inert are touched; a node that already
+      // carried `inert` (host-owned) was never recorded here.
       for (let node of this._drawerModalInerted) node.removeAttribute('inert');
       this._drawerModalInerted = null;
     }
@@ -1377,8 +1435,7 @@ export class Layout extends Symbiote {
     if (index === -1) {
       // Focus is not on a focusable inside the drawer; if it is within the
       // drawer at all (e.g. the drawer surface itself), start the cycle.
-      if (deep && (deep === drawerNode || drawerNode.contains?.(deep)
-          || drawerNode.shadowRoot?.contains?.(deep))) {
+      if (deep && deepContains(drawerNode, deep)) {
         e.preventDefault();
         try { focusables[e.shiftKey ? focusables.length - 1 : 0].focus?.(); } catch {}
       }
@@ -1391,21 +1448,11 @@ export class Layout extends Symbiote {
     try { focusables[nextIndex].focus?.(); } catch {}
   }
 
+  // The drawer uses the library's shared focusable collector, so nested open
+  // shadow roots and their slotted content take part in the cycle, in composed
+  // tab order, with disabled/hidden/inert candidates excluded.
   _collectDrawerFocusables(drawerNode) {
-    let selector = 'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])';
-    let found = [];
-    for (let root of [drawerNode, drawerNode.shadowRoot]) {
-      if (!root?.querySelectorAll) continue;
-      for (let el of root.querySelectorAll(selector)) {
-        if (el.closest?.('[inert], [hidden], [aria-hidden="true"]')) continue;
-        // Skip invisible controls (e.g. drawer-mode hides the type button):
-        // focus must never land on a display:none element.
-        let style = el.ownerDocument?.defaultView?.getComputedStyle?.(el);
-        if (style && (style.display === 'none' || style.visibility === 'hidden')) continue;
-        found.push(el);
-      }
-    }
-    return found;
+    return getFocusableElements(drawerNode);
   }
 
   // True when `node` is this layout or lives in its subtree, looking through

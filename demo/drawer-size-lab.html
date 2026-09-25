@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>symbiote-ui Drawer Size Lab</title>
+  <script type="importmap">
+    {
+      "imports": {
+        "@symbiotejs/symbiote": "../node_modules/@symbiotejs/symbiote/core/index.js",
+        "@symbiotejs/symbiote/": "../node_modules/@symbiotejs/symbiote/"
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="../themes/default-provider.css">
+  <style>
+    html, body { margin: 0; height: 100%; }
+    panel-layout { position: fixed; inset: 0; }
+    /* Application-owned panel content, as CV renders it: plain light DOM that
+       inherits the library theme. No shadow roots are involved. */
+    lab-tree-panel, lab-agent-panel { display: block; height: 100%; min-height: 0; }
+    lab-tree-panel > sn-tree-panel, lab-agent-panel { height: 100%; }
+    .agent-composer { display: flex; flex-direction: column; gap: 8px; padding: 12px; }
+    .agent-composer input { font: inherit; padding: 8px; }
+    .agent-composer .row { display: flex; gap: 6px; }
+    .agent-composer button { font: inherit; padding: 6px 10px; }
+  </style>
+</head>
+
+<body>
+  <script type="module">
+    import '../layout/Layout/Layout.js';
+    import '../tree/TreeView/TreeView.js';
+    import '../tree/TreePanel/TreePanel.js';
+    import * as LayoutTree from '../layout/LayoutTree.js';
+
+    // App-level panel components, the same shape CV uses: a thin custom element
+    // that renders the real library components in LIGHT DOM. The layout engine
+    // injects them through the registered `component:` option
+    // (LayoutNode._injectPanelComponent), so no manual DOM surgery is involved.
+    class LabTreePanel extends HTMLElement {
+      connectedCallback() {
+        if (this.querySelector('sn-tree-panel')) return;
+        // Same composition as the product's tree panel: the library
+        // sn-tree-panel owns the toolbar and the scrolling content box; the app
+        // only feeds it items.
+        this.innerHTML = '<sn-tree-panel title="Portfolio" filter-placeholder="Filter" collapse-title="Collapse all"></sn-tree-panel>';
+        const panel = this.querySelector('sn-tree-panel');
+        const attach = () => {
+          const items = [
+            { id: 'work', label: 'Work', icon: 'folder', children: [
+              ...Array.from({ length: 40 }, (_, i) => ({
+                id: `w${i}`,
+                label: `Portfolio project ${String(i + 1).padStart(2, '0')} — release notes and accessibility pass`,
+                icon: 'article',
+              })),
+            ] },
+            { id: 'lab', label: 'Lab', icon: 'folder', children: [
+              ...Array.from({ length: 40 }, (_, i) => ({
+                id: `l${i}`,
+                label: `Gesture probe ${String(i + 1).padStart(2, '0')} — browser acceptance evidence`,
+                icon: 'article',
+              })),
+            ] },
+          ];
+          panel.items = items;
+          // The panel shows its placeholder until the app says the data is
+          // there (TreePanel.showTree), exactly as the product's tree does.
+          panel.showTree();
+          panel.tree && (panel.tree.expandedIds = ['work', 'lab']);
+        };
+        // The panel exposes its tree through a ref that only exists after the
+        // first render: assigning items before that is a silent no-op, so wait
+        // for the observable state instead of guessing a delay.
+        const attachWhenReady = () => {
+          if (panel.tree) { attach(); return; }
+          requestAnimationFrame(attachWhenReady);
+        };
+        attachWhenReady();
+      }
+    }
+
+    class LabAgentPanel extends HTMLElement {
+      connectedCallback() {
+        if (this.querySelector('.agent-composer')) return;
+        const composer = document.createElement('div');
+        composer.className = 'agent-composer';
+        composer.innerHTML = `
+          <div>Agent</div>
+          <input id="agent-input" type="text" placeholder="Ask the agent" aria-label="Agent prompt" />
+          <div class="row">
+            <button id="agent-send" type="button">Send</button>
+            <button id="agent-voice" type="button">Voice</button>
+          </div>`;
+        this.append(composer);
+      }
+    }
+
+    customElements.define('lab-tree-panel', LabTreePanel);
+    customElements.define('lab-agent-panel', LabAgentPanel);
+
+    const layout = document.createElement('panel-layout');
+    document.body.append(layout);
+    layout.setAttribute('responsive-mode', 'swipe');
+
+    layout.registerPanelType('tree', {
+      title: 'Portfolio', icon: 'folder',
+      component: 'lab-tree-panel',
+      behavior: { mobileDock: 'start', swipeControl: 'rail' },
+    });
+    layout.registerPanelType('article', {
+      title: 'Article', icon: 'article',
+      behavior: { mobileDock: 'primary' },
+    });
+    layout.registerPanelType('agent', {
+      title: 'Agent', icon: 'smart_toy',
+      component: 'lab-agent-panel',
+      behavior: {
+        importance: 88,
+        minInlineSize: 320,
+        minBlockSize: 280,
+        collapse: 'manual',
+        mobileDock: 'end',
+        swipeControl: 'rail',
+      },
+    });
+    layout.setLayout(LayoutTree.createSplit(
+      'horizontal',
+      LayoutTree.createPanel('tree'),
+      LayoutTree.createPanel('article'),
+      0.3,
+    ));
+    layout.openPanel('agent', {
+      direction: 'horizontal',
+      ratio: 0.72,
+      source: 'drawer-size-lab',
+      uiInvoked: true,
+    });
+
+    // Panel identity is semantic, exactly as the product resolves it: the
+    // hosted app component names the panel, while the layout node is only its
+    // current shell (mobile-dock attributes exist in drawer mode only).
+    const DOCK_COMPONENT = { start: 'lab-tree-panel', end: 'lab-agent-panel' };
+    // The component is injected by LayoutNode._injectPanelComponent into the
+    // node's `.panel-content` (LayoutNode.tpl.js: `layout-node > .panel-view >
+    // .panel-content > <component>`). Anchoring the query on that exact path
+    // keeps the match on the hosting node: a loose query would also answer on
+    // ancestor group nodes and mix both docks' chrome into one report.
+    const panelNode = (dock) => [...layout.querySelectorAll('layout-node')].find((node) => {
+      const view = [...node.children].find((c) => c.classList?.contains('panel-view'));
+      const content = view && [...view.children].find((c) => c.classList?.contains('panel-content'));
+      return Boolean(content?.querySelector(`:scope > ${DOCK_COMPONENT[dock]}`));
+    }) || null;
+
+    const rectOf = (el) => {
+      const r = el.getBoundingClientRect();
+      return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width, height: r.height };
+    };
+
+    /**
+     * Geometry of the panel chrome: the painted control box and the pressable
+     * area (the ::before target a click really hits), measured from computed
+     * styles. Everything is light DOM here, so plain queries are correct.
+     */
+    const headerReport = (dock) => {
+      const node = panelNode(dock);
+      if (!node) return null;
+      const buttons = [...node.querySelectorAll('.panel-header .header-btn')]
+        .filter((btn) => btn.getClientRects().length);
+      return {
+        node,
+        controls: buttons.map((btn) => {
+          const rect = rectOf(btn);
+          const pseudo = getComputedStyle(btn, '::before');
+          const hitW = parseFloat(pseudo.inlineSize || pseudo.width) || rect.width;
+          const hitH = parseFloat(pseudo.blockSize || pseudo.height) || rect.height;
+          return {
+            label: btn.getAttribute('aria-label') || btn.className,
+            rect,
+            hit: {
+              left: rect.left - (hitW - rect.width) / 2,
+              right: rect.right + (hitW - rect.width) / 2,
+              top: rect.top - (hitH - rect.height) / 2,
+              bottom: rect.bottom + (hitH - rect.height) / 2,
+              width: hitW,
+              height: hitH,
+            },
+          };
+        }),
+      };
+    };
+
+    const treeReport = () => {
+      const view = layout.querySelector('sn-tree-view');
+      const row = view?.querySelector('.sn-tree-row');
+      const toggle = row?.querySelector('.sn-tree-toggle');
+      const icon = row?.querySelector('.sn-tree-icon');
+      const label = row?.querySelector('.sn-tree-label');
+      const scroll = document.querySelector('.sn-tree-panel-content');
+      return {
+        row: row ? { ...rectOf(row), scrollWidth: row.scrollWidth, clientWidth: row.clientWidth } : null,
+        toggle: toggle ? rectOf(toggle) : null,
+        icon: icon ? rectOf(icon) : null,
+        label: label ? { ...rectOf(label), scrollWidth: label.scrollWidth, clientWidth: label.clientWidth } : null,
+        tokens: row ? {
+          toggleWidth: getComputedStyle(row).getPropertyValue('--sn-tree-toggle-width').trim(),
+          rowMinHeight: getComputedStyle(row).getPropertyValue('--sn-tree-row-min-height').trim(),
+        } : null,
+        scroll: scroll
+          ? { scrollHeight: scroll.scrollHeight, clientHeight: scroll.clientHeight, scrollTop: scroll.scrollTop }
+          : null,
+      };
+    };
+
+    /**
+     * Mount readiness is observable component state, never a sleep: both docks
+     * exist, the layout engine injected both app components, and the tree has
+     * rendered its rows. The responsive projection is a separate observable
+     * (`drawerMode()`), because it depends on the viewport, not on the mount.
+     */
+    const ready = () => {
+      const start = panelNode('start');
+      const end = panelNode('end');
+      const treeView = layout.querySelector('sn-tree-view');
+      return Boolean(
+        start && end
+        && start.querySelector('lab-tree-panel')
+        && end.querySelector('lab-agent-panel')
+        && treeView?.querySelectorAll('.sn-tree-row').length
+      );
+    };
+    const drawerMode = () => layout.hasAttribute('drawer-mode-active');
+
+    window.__lab = {
+      layout,
+      ready,
+      drawerMode,
+      headerReport,
+      treeReport,
+      scrollBox: () => document.querySelector('.sn-tree-panel-content'),
+      resetScroll: () => {
+        const box = document.querySelector('.sn-tree-panel-content');
+        if (!box) return false;
+        box.scrollTop = 0;
+        return true;
+      },
+      setDensity: (value) => {
+        document.documentElement.style.setProperty('--sn-theme-density', String(value));
+        return true;
+      },
+      openDrawer: (dock) => layout.openDrawer(dock),
+      closeDrawer: (dock) => layout.closeDrawer(dock),
+    };
+  </script>
+</body>
+
+</html>

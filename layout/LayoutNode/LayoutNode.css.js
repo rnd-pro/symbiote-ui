@@ -98,9 +98,40 @@ export let styles = css`
       min-block-size: var(--sn-layout-header-button-block-size, var(--sn-layout-header-button-min-block-size, 24px));
       min-width: 0;
       line-height: 1;
+      position: relative;
       transition:
         background var(--sn-transition-fast) var(--sn-transition-easing),
         color var(--sn-transition-fast) var(--sn-transition-easing);
+
+      /* Pressable area, decoupled from the visual box: the icon size
+         (--sn-layout-header-icon-size), the painted control size
+         (--sn-layout-header-*-size) and the target
+         (--sn-layout-header-button-hit-size) are three independent theme
+         parameters. The expansion is bounded by HALF the smallest distance
+         that separates two header controls — the button gap inside an action
+         group, and the header gap between groups — so a 44px request degrades
+         gracefully instead of stealing the neighbour's area. Two targets can
+         therefore never intersect, whatever the theme asks for. */
+      --header-btn-hit-expand: calc(min(
+        (var(--sn-layout-header-button-hit-size, 44px) - var(--sn-layout-header-button-min-inline-size, 24px)) / 2,
+        min(var(--sn-layout-header-button-gap, 4px), var(--sn-layout-header-gap, 2px)) / 2
+      ));
+
+      &::before {
+        content: '';
+        position: absolute;
+        inset-block-start: 50%;
+        inset-inline-start: 50%;
+        inline-size: max(100%, calc(100% + 2 * var(--header-btn-hit-expand)));
+        block-size: max(
+          100%,
+          calc(100% + 2 * min(
+            (var(--sn-layout-header-button-hit-size, 44px) - var(--sn-layout-header-button-min-block-size, 24px)) / 2,
+            var(--header-btn-hit-expand)
+          ))
+        );
+        transform: translate(-50%, -50%);
+      }
 
       &[hidden] {
         display: none;
@@ -143,7 +174,10 @@ export let styles = css`
     .panel-menu-toggle {
       grid-column: 2;
       justify-self: center;
-      position: static;
+      /* Containing block for the header-btn press-area pseudo-element: while
+         this stayed 'static', its percentages resolved against the whole panel
+         header and the target silently swallowed its neighbours. */
+      position: relative;
       transform: none;
 
       &[active] {

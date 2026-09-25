@@ -14,6 +14,8 @@ const chromiumSmokeEnv = 'SYMBIOTE_UI_CHROMIUM_SMOKE';
 const chromiumSmokeFlags = new Set(['--chromium-smoke', '--run-chromium-smoke']);
 const browserSmokeSegments = [
   'layout drawer restores real focus to a shadow-root opener via Escape, backdrop and swipe in a real browser',
+  'drawer panel controls scale with theme density on both docks at 320/390/430 without overlapping hit areas',
+  'drawer modal owns focus of the opening panel and cycles Tab over a real left+right composition',
   'cascade lab graph nodes render non-empty with route styles and compact mode in a real browser',
   'design protocol applies recipe themes and policy diagnostics in a real browser',
   'node-canvas flow-scroll drag keeps repeated pan gestures continuous',
