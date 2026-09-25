@@ -273,6 +273,15 @@ export let styles = css`
            that was being hidden by the header needs it. */
         .panel-header {
           overflow: visible;
+          /* The header sits flush with the panel edge, so a target centred on
+             its controls still lost the part above the panel. Reserving the
+             same room INSIDE the header as the target claims around a control
+             is what makes the target whole, and it is the same theme token
+             that already sizes the header's padding. */
+          padding-block: max(
+            var(--sn-layout-header-padding-block, 0px),
+            calc(var(--sn-layout-header-button-hit-size, 44px) - var(--sn-layout-header-button-min-block-size, 24px)) / 2
+          );
         }
 
         /* Panel content paints directly below the header and covered the lower
