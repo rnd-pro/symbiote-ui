@@ -71,8 +71,17 @@ sn-tree-view[hidden] {
   line-height: 1;
 }
 
+/* The disclosure is its own target, not a glyph-sized box inside a wider
+   column. It fills the column the theme gives it (--sn-tree-toggle-width,
+   which a touch dock sets from --sn-tree-toggle-touch-width) and the full
+   row height, so a thumb aims at the column and a tap on the row next to it
+   still selects the article. The icon keeps its own type-scale size. */
 .sn-tree-toggle {
   grid-column: 1;
+  inline-size: var(--sn-tree-toggle-width, 100%);
+  align-self: stretch;
+  min-block-size: var(--sn-tree-row-min-height, var(--sn-tree-row-height, 24px));
+  block-size: auto;
   border: 0;
   padding: 0;
   background: transparent;
