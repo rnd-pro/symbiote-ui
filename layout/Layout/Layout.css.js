@@ -242,8 +242,8 @@ export let styles = css`
          own header padding !important. Naming the panel attribute gives this
          rule enough weight to reserve the room the target claims around a
          control, taken from the same theme tokens the target is built from. */
-      layout-node[mobile-dock='start'][node-type='panel'] .panel-header,
-      layout-node[mobile-dock='end'][node-type='panel'] .panel-header {
+      layout-node[mobile-dock='start'][node-type='panel'] .panel-view > .panel-header,
+      layout-node[mobile-dock='end'][node-type='panel'] .panel-view > .panel-header {
         padding-block: max(
           var(--sn-layout-header-padding-block, 0px),
           calc(var(--sn-layout-header-button-hit-size, 44px) - var(--sn-layout-header-button-min-block-size, 24px)) / 2
