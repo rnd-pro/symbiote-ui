@@ -257,6 +257,15 @@ export let styles = css`
           var(--sn-layout-header-gap, 2px),
           calc(var(--sn-layout-header-button-hit-size, 44px) - var(--sn-layout-header-button-min-block-size, 24px))
         );
+
+        /* The action group clips its overflow so a crowded header cannot paint
+           outside its column. On a touch surface that also clipped the grown
+           hit box back to the painted height, which is why a 44px target still
+           measured 25px. The target is transparent, so letting it pass the
+           column edge changes what a tap can reach, never what is painted. */
+        .panel-actions {
+          overflow: visible;
+        }
       }
 
       /* Safe-area insets keep drawer CONTENT out of a notch or home indicator
