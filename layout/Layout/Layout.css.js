@@ -240,9 +240,10 @@ export let styles = css`
       layout-node[mobile-dock='end'] {
         /* Touch-sized toggle column for the drawer surfaces. The value comes
            from the theme scale (--sn-tree-toggle-touch-width, density-driven),
-           not from a pixel written here; the fallback mirrors the base token so
-           an unthemed page keeps the same column. */
-        --sn-tree-toggle-width: var(--sn-tree-toggle-touch-width, calc(18px * var(--sn-theme-density)));
+           not from a pixel written here. The fallback is that same touch column
+           at the base density: a component token may not read the source-tier
+           density token directly, so scaling stays the theme's job. */
+        --sn-tree-toggle-width: var(--sn-tree-toggle-touch-width, 24px);
       }
 
       /* Safe-area insets keep drawer CONTENT out of a notch or home indicator
