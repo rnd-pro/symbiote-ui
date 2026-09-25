@@ -80,6 +80,10 @@ let drawerActivitySeq = 0;
 const DRAWER_FLICK_VELOCITY_WINDOW_MS = 100;
 const DRAWER_FLICK_MIN_VELOCITY = 0.35;
 
+// Layout rounding tolerance when checking that a drag still runs on the
+// surface it started on.
+const DRAWER_GEOMETRY_TOLERANCE_PX = 2;
+
 function getDrawerEscapeContext(documentRef) {
   let context = DRAWER_ESCAPE_CONTEXTS.get(documentRef);
   if (!context) {
@@ -396,15 +400,48 @@ export class Layout extends Symbiote {
 
 
     this._resizeFallback = () => {
+      this._cancelDrawerGestureOnGeometryChange();
       this._scheduleResponsiveLayout();
       scheduleLayoutPeerGroupRefresh(this._layoutPeerGroup);
     };
     if (typeof ResizeObserver !== 'undefined') {
       this._resizeObserver = new ResizeObserver(() => {
+        this._cancelDrawerGestureOnGeometryChange();
         this._scheduleResponsiveLayout();
         scheduleLayoutPeerGroupRefresh(this._layoutPeerGroup);
       });
     }
+  }
+
+  // A rotation or window resize during a drag invalidates the gesture: its
+  // width was measured at pointerdown, and the surface under the finger has
+  // moved. Platform drawers cancel here, and leaving the drag alive would let
+  // a stale width decide the commit. This is the pointercancel path, so the
+  // drawer returns to exactly the state it had when the gesture began.
+  _cancelDrawerGestureOnGeometryChange() {
+    let gesture = this._drawerGesture;
+    if (!gesture) return false;
+    gesture.target?.releasePointerCapture?.(gesture.pointerId);
+    if (!gesture.pending) {
+      this._clearDrawerDrag(gesture.dock);
+    }
+    this._ignoreNextDrawerClick = null;
+    this._drawerGesture = null;
+    this._setDrawerOpen(gesture.dock, gesture.startOpen, gesture.panelId);
+    return true;
+  }
+
+  // True when the surface this gesture measured no longer matches the one the
+  // finger is on. A two-pixel tolerance keeps sub-pixel layout rounding from
+  // cancelling ordinary drags.
+  _drawerGestureGeometryChanged(gesture) {
+    if (!gesture || gesture.pending) return false;
+    let dock = gesture.dock;
+    if (dock !== 'start' && dock !== 'end') return false;
+    let node = this._getDrawerNode(dock, gesture.panelId);
+    let current = node?.getBoundingClientRect?.().width || this._getFallbackDrawerWidth();
+    if (!current || !gesture.width) return false;
+    return Math.abs(current - gesture.width) > DRAWER_GEOMETRY_TOLERANCE_PX;
   }
 
   _connectLayoutLifecycle() {
@@ -421,7 +458,12 @@ export class Layout extends Symbiote {
     registerDrawerEscapeListener(this);
     if (this._resizeObserver) {
       this._resizeObserver.observe(this);
-    } else if (this._resizeFallback && typeof window !== 'undefined') {
+    }
+    // The window listener is attached even when an observer exists: rotation
+    // reaches it in the same turn as the event, while a ResizeObserver
+    // callback lands on a later frame. A pointerup delivered in between would
+    // otherwise commit a drag against the new geometry.
+    if (this._resizeFallback && typeof window !== 'undefined') {
       window.addEventListener('resize', this._resizeFallback);
     }
   }
@@ -1030,6 +1072,17 @@ export class Layout extends Symbiote {
     }
     this._syncNativeRailRegions();
     this._scheduleDrawerRailPeek(startOpen, endOpen);
+    // A projection can be rebuilt while a drawer is already open (rotation,
+    // peer refresh, mode switch). The DOM state is re-applied above, so the
+    // modal contract has to follow: otherwise the drawer comes back open with
+    // a live background, no role and no focus trap.
+    let openDock = startOpen ? 'start' : endOpen ? 'end' : '';
+    if (openDock) {
+      this._drawerActivityStamp = ++drawerActivitySeq;
+      this._applyDrawerModal(openDock);
+    } else if (this._drawerModalNode) {
+      this._clearDrawerModal();
+    }
     let ready = matchedPanelIds.size === projection.panels.length;
     if (ready) {
       this._responsiveProjectionRetryCount = 0;
@@ -1698,6 +1751,15 @@ export class Layout extends Symbiote {
       return;
     }
     let delta = e.clientX - gesture.startX;
+    // The commit is only meaningful against the geometry the drag started on.
+    // A rotation can reach pointerup before the resize event is delivered, so
+    // the width is re-checked here instead of trusting event ordering: a
+    // changed surface turns this release into a cancel, exactly like
+    // pointercancel, and the drawer returns to its pre-gesture state.
+    if (this._drawerGestureGeometryChanged(gesture)) {
+      this._cancelDrawerGestureOnGeometryChange();
+      return;
+    }
     let progress = this._getDrawerGestureProgress(gesture, delta);
     let committedDrag = gesture.moved && Math.abs(delta) >= this._getDrawerGestureDragThreshold(gesture);
     // A fast flick commits on direction alone, even below the drag threshold:

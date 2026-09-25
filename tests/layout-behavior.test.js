@@ -2179,3 +2179,43 @@ test('outer layout fullscreen tab bar lists only its own panels', async () => {
   assert.doesNotMatch(tabTitles, /portfolio/,
     'nested layout panels must not appear as dead tabs in the outer fullscreen');
 });
+
+test('both resize entry points cancel an in-flight drawer gesture before re-projecting', async () => {
+  const layout = await readFile(layoutSource, 'utf8');
+
+  // A rotation or window resize re-projects the layout. If a drag were still
+  // live, its measured width would decide the commit against new geometry, and
+  // the scheduler would re-enter with a gesture in flight. Both hooks must
+  // cancel first; the behavioural counterpart is in layout-drawer-state.
+  const resizeFallback = layout.slice(
+    layout.indexOf('this._resizeFallback = () => {'),
+    layout.indexOf('if (typeof ResizeObserver'),
+  );
+  assert.match(resizeFallback, /_cancelDrawerGestureOnGeometryChange\(\);/,
+    'the resize fallback cancels an in-flight gesture');
+  assert.ok(
+    resizeFallback.indexOf('_cancelDrawerGestureOnGeometryChange')
+      < resizeFallback.indexOf('_scheduleResponsiveLayout'),
+    'the gesture is cancelled BEFORE the responsive layout is scheduled'
+  );
+
+  const observer = layout.slice(
+    layout.indexOf('this._resizeObserver = new ResizeObserver'),
+    layout.indexOf('this._resizeObserver.observe'),
+  );
+  assert.match(observer, /_cancelDrawerGestureOnGeometryChange\(\);/,
+    'the resize observer cancels an in-flight gesture');
+  assert.ok(
+    observer.indexOf('_cancelDrawerGestureOnGeometryChange')
+      < observer.indexOf('_scheduleResponsiveLayout'),
+    'the gesture is cancelled before re-projection in the observer path too'
+  );
+
+  // A rebuilt projection must restore the modal contract for a drawer that is
+  // still open, otherwise the panel comes back open with a live background.
+  const projection = layout.slice(
+    layout.indexOf('this._syncNativeRailRegions();\n    this._scheduleDrawerRailPeek'),
+  );
+  assert.match(projection.slice(0, 900), /_applyDrawerModal\(openDock\)/,
+    'a rebuilt projection re-applies the modal contract of an open drawer');
+});

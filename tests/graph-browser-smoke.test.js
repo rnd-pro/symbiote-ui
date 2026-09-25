@@ -3083,6 +3083,94 @@ test('drawer panel controls scale with theme density on both docks at 320/390/43
       assert.equal(released.inertNodes, 0, `narrow desktop ${dock}: no background node stays inert after close`);
     }
 
+    // Rotation: a viewport change during a drag must not leave the panel
+    // half-open, and a drawer that was open before the rotation must come back
+    // with its full modal contract rather than as a plain open panel.
+    await evaluate(`window.__lab.openDrawer('start')`);
+    assert.equal(await waitForPredicate(evaluate, `window.__lab.layout.hasAttribute('drawer-start-open')`,
+      'start drawer open before rotation'), true);
+    const beforeRotation = await evaluate(`(() => {
+      const node = document.querySelector('layout-node[mobile-dock="start"][drawer-active-panel]');
+      return { role: node?.getAttribute('role') || null, inert: document.querySelectorAll('layout-node[inert]').length };
+    })()`);
+    assert.equal(beforeRotation.role, 'dialog', 'drawer is modal before the rotation');
+    assert.ok(beforeRotation.inert > 0, 'background is inert before the rotation');
+
+    await setPageViewport(page, { width: 844, height: 390, mobile: false });
+    const crossed = await waitForPredicate(evaluate, `!window.__lab.layout.hasAttribute('drawer-mode-active')`,
+      'desktop projection after rotation');
+    assert.equal(crossed, true, 'rotating to a wide viewport leaves drawer mode');
+    const afterCross = await evaluate(`(() => ({
+      inert: document.querySelectorAll('layout-node[inert]').length,
+      role: document.querySelector('layout-node[mobile-dock="start"]')?.getAttribute('role') ?? null,
+      dragging: document.querySelectorAll('layout-node[drawer-dragging]').length,
+    }))()`);
+    assert.equal(afterCross.inert, 0, 'the modal contract is released for the desktop projection');
+    assert.equal(afterCross.role, null, 'no dialog role survives the projection change');
+    assert.equal(afterCross.dragging, 0, 'no node is left in the dragging state');
+
+    await setPageViewport(page, { width: 390, height: 844, mobile: true });
+    assert.equal(await waitForPredicate(evaluate, `window.__lab.layout.hasAttribute('drawer-mode-active')`,
+      'drawer mode after rotating back'), true);
+    assert.equal(await waitForPredicate(evaluate, `window.__lab.layout.hasAttribute('drawer-start-open')`,
+      'the drawer is open again after rotating back'), true);
+    const restored = await evaluate(`(() => {
+      const node = document.querySelector('layout-node[mobile-dock="start"][drawer-active-panel]');
+      return { role: node?.getAttribute('role') || null, inert: document.querySelectorAll('layout-node[inert]').length };
+    })()`);
+    assert.equal(restored.role, 'dialog', 'the modal contract is restored with the projection');
+    assert.ok(restored.inert > 0, 'the background is inert again after rotating back');
+    await evaluate(`window.__lab.closeDrawer('start')`);
+
+    // A rotation in the middle of a drag cancels the gesture instead of
+    // committing it against the new geometry.
+    await evaluate(`window.__lab.openDrawer('start')`);
+    await waitForStableGeometry(evaluate,
+      `(() => { const r = window.__lab.headerReport('start')?.node?.getBoundingClientRect?.(); return r ? [r.left, r.width] : null; })()`,
+      'start open for the mid-drag rotation'
+    );
+    const midDragBox = await evaluate(`(() => {
+      const r = window.__lab.headerReport('start')?.node?.getBoundingClientRect?.();
+      return r ? { left: r.left, right: r.right, top: r.top, height: r.height } : null;
+    })()`);
+    const dragY = Math.round(midDragBox.top + midDragBox.height / 2);
+    await page.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: Math.round(midDragBox.right - 40), y: dragY, button: 'left', buttons: 1, clickCount: 1 });
+    await page.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: Math.round(midDragBox.right - 160), y: dragY, button: 'left', buttons: 1 });
+    const gestureLive = await evaluate(`Boolean(window.__lab.layout._drawerGesture)`);
+    assert.equal(gestureLive, true, 'a drag is in flight before the rotation');
+    // 320 is chosen deliberately: between 390 and 430 the drawer width is
+    // capped and identical, so only this viewport actually moves the surface
+    // under the finger. The premise is asserted below rather than assumed.
+    await setPageViewport(page, { width: 320, height: 568, mobile: true });
+    const premise = await evaluate(`(() => {
+      const g = window.__lab.layout._drawerGesture;
+      const node = g ? window.__lab.layout._getDrawerNode(g.dock, g.panelId) : null;
+      return { gestureWidth: g?.width ?? null, currentWidth: node?.getBoundingClientRect?.().width ?? null };
+    })()`);
+    assert.ok(premise.gestureWidth && premise.currentWidth,
+      `the drag is still measurable during the rotation (${JSON.stringify(premise)})`);
+    assert.ok(Math.abs(premise.currentWidth - premise.gestureWidth) > 2,
+      `the rotation really changes the drawer width (${JSON.stringify(premise)})`);
+    await page.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: 40, y: dragY, button: 'left', buttons: 0, clickCount: 1 });
+    const afterMidDragRotation = await evaluate(`(() => ({
+      gesture: Boolean(window.__lab.layout._drawerGesture),
+      open: window.__lab.layout.hasAttribute('drawer-start-open'),
+      dragging: document.querySelectorAll('layout-node[drawer-dragging]').length,
+      inert: document.querySelectorAll('layout-node[inert]').length,
+      role: document.querySelector('layout-node[mobile-dock="start"][drawer-active-panel]')?.getAttribute('role') ?? null,
+    }))()`);
+    assert.equal(afterMidDragRotation.gesture, false, 'the rotation cancels the in-flight gesture');
+    assert.equal(afterMidDragRotation.dragging, 0, 'no node stays in the dragging state');
+    // The drawer was open when the drag began, so cancellation restores it to
+    // open WITH its modal contract: that is the pre-gesture state, not a leak.
+    assert.equal(afterMidDragRotation.open, true,
+      `the drawer returns to the state it had when the drag began (${JSON.stringify(afterMidDragRotation)})`);
+    assert.equal(afterMidDragRotation.role, 'dialog',
+      `the restored open drawer is modal again (${JSON.stringify(afterMidDragRotation)})`);
+    assert.ok(afterMidDragRotation.inert > 0,
+      `the background is inert again for the restored open drawer (${JSON.stringify(afterMidDragRotation)})`);
+    await evaluate(`window.__lab.closeDrawer('start')`);
+
     // Safe areas: real notch/indicator insets, not a device. The panel must
     // stay flush to the screen edge while its CONTENT moves out of the inset,
     // and the opposite inline edge must not move.
