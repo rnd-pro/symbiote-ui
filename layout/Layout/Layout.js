@@ -72,6 +72,14 @@ const NATIVE_RAIL_LAYOUTS = new Set();
 const DRAWER_ESCAPE_CONTEXTS = new WeakMap();
 let drawerActivitySeq = 0;
 
+// Flick detection. The trailing window decides the velocity, so a slow drag
+// that ends with a nudge is not mistaken for a flick. 0.35 px/ms is 350 px/s,
+// brisk but reachable for a deliberate short swipe. No separate minimum
+// travel is needed: a primary gesture only activates past 16px, and a rail
+// gesture under 5px is a tap, which toggles by contract.
+const DRAWER_FLICK_VELOCITY_WINDOW_MS = 100;
+const DRAWER_FLICK_MIN_VELOCITY = 0.35;
+
 function getDrawerEscapeContext(documentRef) {
   let context = DRAWER_ESCAPE_CONTEXTS.get(documentRef);
   if (!context) {
@@ -1654,6 +1662,7 @@ export class Layout extends Symbiote {
     let delta = e.clientX - gesture.startX;
     if (gesture.pending && !this._activatePendingDrawerGesture(gesture, e, delta)) return;
     if (Math.abs(delta) > 4) gesture.moved = true;
+    this._recordDrawerGestureSample(gesture, e.clientX);
     if (gesture.moved && !gesture.prepared) {
       this._setActiveDrawerPanelId(gesture.dock, gesture.panelId);
       this._prepareDrawerPanelForGesture(gesture.dock, gesture.panelId);
@@ -1691,9 +1700,15 @@ export class Layout extends Symbiote {
     let delta = e.clientX - gesture.startX;
     let progress = this._getDrawerGestureProgress(gesture, delta);
     let committedDrag = gesture.moved && Math.abs(delta) >= this._getDrawerGestureDragThreshold(gesture);
-    let open = committedDrag
-      ? progress >= 0.5
-      : gesture.source === 'rail' ? !gesture.startOpen : progress >= 0.5;
+    // A fast flick commits on direction alone, even below the drag threshold:
+    // that is what makes a short, quick swipe feel responsive. Slow drags keep
+    // the distance rule, so a half-width pull is still the boundary.
+    let flick = this._isDrawerFlick(gesture, delta, e.clientX);
+    let open = flick
+      ? (gesture.dock === 'start' ? delta > 0 : delta < 0)
+      : committedDrag
+        ? progress >= 0.5
+        : gesture.source === 'rail' ? !gesture.startOpen : progress >= 0.5;
     if (gesture.moved) {
       this._ignoreNextDrawerClick = {
         pointerId: gesture.pointerId,
@@ -1773,6 +1788,47 @@ export class Layout extends Symbiote {
   _getDrawerGestureDragThreshold(gesture) {
     if (gesture.source !== 'rail') return 4;
     return Math.min(48, Math.max(16, gesture.width * 0.08));
+  }
+
+  // A flick is decided by the speed of the LAST part of the gesture, the way
+  // platform drawers behave: a long slow drag that ends with a nudge and a
+  // short fast one must not be classified the same. Samples are pruned to a
+  // short trailing window, so the velocity is px/ms over that window.
+  _recordDrawerGestureSample(gesture, clientX) {
+    if (!gesture.samples) gesture.samples = [];
+    const now = this._drawerNow();
+    gesture.samples.push({ t: now, x: clientX });
+    const windowMs = DRAWER_FLICK_VELOCITY_WINDOW_MS;
+    while (gesture.samples.length > 2 && now - gesture.samples[0].t > windowMs) {
+      gesture.samples.shift();
+    }
+  }
+
+  _getDrawerFlickVelocity(gesture, clientX) {
+    const samples = gesture.samples;
+    if (!samples || samples.length < 2) return 0;
+    const last = { t: this._drawerNow(), x: clientX ?? samples[samples.length - 1].x };
+    // Sample ages shrink with the index, so the FIRST sample inside the
+    // window is the oldest one that still describes the current motion.
+    let first = samples[samples.length - 1];
+    for (let index = 0; index < samples.length; index += 1) {
+      if (last.t - samples[index].t <= DRAWER_FLICK_VELOCITY_WINDOW_MS) {
+        first = samples[index];
+        break;
+      }
+    }
+    const duration = last.t - first.t;
+    if (duration <= 0) return 0;
+    return (last.x - first.x) / duration;
+  }
+
+  // Commit rule for a flick: the finger travels toward the side it opens, for
+  // every source. start opens rightwards, end leftwards; the same formula is
+  // correct whether the drawer was open or closed, so no startOpen special
+  // case can drift out of sync with the progress mapping above.
+  _isDrawerFlick(gesture, delta, clientX) {
+    if (!gesture.moved) return false;
+    return Math.abs(this._getDrawerFlickVelocity(gesture, clientX)) >= DRAWER_FLICK_MIN_VELOCITY;
   }
 
   _drawerNow() {

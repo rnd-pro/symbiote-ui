@@ -1088,3 +1088,94 @@ test('Escape inside a layout nested in an open shadow root closes the INNER pane
   assert.equal(inner._isDrawerOpen('start'), false, 'the inner panel closes');
   assert.equal(outer._isDrawerOpen('start'), true, 'the outer layout keeps its drawer open');
 });
+
+test('a fast short flick commits on direction where a slow drag of the same distance would not', async () => {
+  const withClock = async (layout) => {
+    let now = 1000;
+    layout._drawerNow = () => now;
+    return {
+      advance: (ms) => { now += ms; },
+      now: () => now,
+    };
+  };
+  const drag = async (layout, clock, { from, to, durationMs, steps = 4, target }) => {
+    target.dispatchEvent(pointerEvent('pointerdown', { x: from, y: 400 }));
+    for (let step = 1; step <= steps; step += 1) {
+      clock.advance(Math.round(durationMs / steps));
+      layout.dispatchEvent(pointerEvent('pointermove', { x: from + (to - from) * (step / steps), y: 400 }));
+    }
+    clock.advance(Math.max(1, Math.round(durationMs / steps / 2)));
+    layout.dispatchEvent(pointerEvent('pointerup', { x: to, y: 400 }));
+    await new Promise((r) => setTimeout(r, 0));
+  };
+
+  // 60px of a 335px drawer is far below the 50% distance rule.
+  const shortTravel = 60;
+
+  {
+    let { layout } = await makeDrawerFixture();
+    layout._getFallbackDrawerWidth = () => 335;
+    let clock = await withClock(layout);
+    let rail = findDrawerNode(layout, 'start');
+    await drag(layout, clock, { from: 16, to: 16 + shortTravel, durationMs: 20, target: rail });
+    assert.equal(layout.$.drawerStartOpen, true,
+      'a fast flick opens the drawer below the distance threshold');
+  }
+
+  {
+    let { layout } = await makeDrawerFixture();
+    layout._getFallbackDrawerWidth = () => 335;
+    let clock = await withClock(layout);
+    let rail = findDrawerNode(layout, 'start');
+    await drag(layout, clock, { from: 16, to: 16 + shortTravel, durationMs: 400, target: rail });
+    assert.equal(layout.$.drawerStartOpen, false,
+      'the same distance dragged slowly still does not open the drawer');
+  }
+
+  {
+    // The end dock mirrors: a leftward flick opens it.
+    let { layout } = await makeDrawerFixture();
+    layout._getFallbackDrawerWidth = () => 335;
+    let clock = await withClock(layout);
+    let rail = findDrawerNode(layout, 'end');
+    await drag(layout, clock, { from: 380, to: 380 - shortTravel, durationMs: 20, target: rail });
+    assert.equal(layout.$.drawerEndOpen, true,
+      'a leftward flick opens the end drawer');
+  }
+
+  {
+    // Direction decides, so a flick toward the closed side closes an open one.
+    let { layout } = await makeDrawerFixture();
+    layout._getFallbackDrawerWidth = () => 335;
+    let clock = await withClock(layout);
+    let drawerNode = findDrawerNode(layout, 'start');
+    layout.openDrawer('start');
+    await new Promise((r) => setTimeout(r, 0));
+    await drag(layout, clock, { from: 200, to: 200 - shortTravel, durationMs: 20, target: drawerNode });
+    assert.equal(layout.$.drawerStartOpen, false,
+      'a flick away from the docked side closes the drawer');
+  }
+
+  {
+    // Below the movement threshold a rail gesture stays a tap, and a tap
+    // toggles by contract. Flick detection must not change that.
+    let { layout } = await makeDrawerFixture();
+    layout._getFallbackDrawerWidth = () => 335;
+    let clock = await withClock(layout);
+    let rail = findDrawerNode(layout, 'start');
+    await drag(layout, clock, { from: 16, to: 19, durationMs: 4, target: rail });
+    assert.equal(layout.$.drawerStartOpen, true,
+      'a sub-threshold rail gesture is still a tap that opens the drawer');
+  }
+
+  {
+    // Slow long drags keep the distance rule: a half-width pull still commits.
+    let { layout } = await makeDrawerFixture();
+    layout._getFallbackDrawerWidth = () => 335;
+    let clock = await withClock(layout);
+    let rail = findDrawerNode(layout, 'start');
+    await drag(layout, clock, { from: 16, to: 16 + 168, durationMs: 900, target: rail });
+    assert.equal(layout.$.drawerStartOpen, true,
+      'a slow drag past the half-width boundary still opens the drawer');
+  }
+});
