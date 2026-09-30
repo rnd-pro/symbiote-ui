@@ -251,7 +251,7 @@ test('creates karaoke caption tracks from audio word timings', () => {
   });
 
   assert.equal(track.mode, 'karaoke');
-  assert.equal(track.schemaVersion, 'caption-presentation-track-v2');
+  assert.equal(track.schemaVersion, 'caption-presentation-track-v3');
   assert.equal(track.cues[0].cueId, 'caption:hello-board');
   assert.equal(track.wordTimingCount, 2);
   assert.deepEqual(
@@ -291,7 +291,7 @@ test('live and tour preview captions share canonical v2 cue identity', () => {
     captionStyle: { preset: 'youtube' },
   });
 
-  assert.equal(liveTrack.schemaVersion, 'caption-presentation-track-v2');
+  assert.equal(liveTrack.schemaVersion, 'caption-presentation-track-v3');
   assert.equal(previewTrack.schemaVersion, liveTrack.schemaVersion);
   assert.equal(liveTrack.cues[0].cueId, cueId);
   assert.equal(previewTrack.cues[0].cueId, cueId);
@@ -542,7 +542,7 @@ test('rejects a non-canonical caption track before acquiring audio', async () =>
     (error) => {
       assert.ok(error instanceof TourMediaRenderError);
       assert.equal(error.code, 'invalid-caption-track');
-      assert.match(error.message, /caption-presentation-track-v2/);
+      assert.match(error.message, /caption-presentation-track-v3/);
       return true;
     },
   );

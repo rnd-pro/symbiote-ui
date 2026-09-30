@@ -50,7 +50,7 @@ test('live captions remain Node-safe while retaining the engine track contract',
   delete globalThis.document;
   try {
     let controller = new LiveCaptionController({ track: track() });
-    assert.equal(controller.track.schemaVersion, 'caption-presentation-track-v2');
+    assert.equal(controller.track.schemaVersion, 'caption-presentation-track-v3');
     assert.equal(controller.update(0.2).cueId, 'intro');
     assert.doesNotThrow(() => controller.dispose());
   } finally {
@@ -64,7 +64,7 @@ test('authored live turns require real timing and reject ad hoc tracks', () => {
   ], { width: 1280, height: 720 }), /requires explicit start and end timing/);
   assert.throws(() => new LiveCaptionController({
     track: { cues: [{ text: 'legacy' }] },
-  }), /caption-presentation-track-v2/);
+  }), /caption-presentation-track-v3/);
 });
 
 test('live captions require explicit cueId and reject legacy identity aliases', () => {
