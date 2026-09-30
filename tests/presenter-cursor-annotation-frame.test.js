@@ -197,14 +197,37 @@ test('deterministic focus frame projects cursor and frame modes without scheduli
   assert.equal(framed.visible, true);
   assert.equal(framed.mode, 'frame');
   assert.equal(framed.cursor, null);
+  assert.equal(framed.revealProgress, 0);
+  assert.equal(framed.revealing, true);
+  assert.equal(framed.frameRect.width, 1);
+  assert.equal(framed.frameRect.height, 1);
+  assert.equal(framed.dragHandle.visible, true);
   assert.equal(window.document.querySelector('.pc-cursor').style.opacity, '0');
 
-  let pointed = cursor.presentFocusFrame(el, { elapsedMs: 250, seed: 7, mode: 'cursor' });
+  let pointed = cursor.presentFocusFrame(el, {
+    elapsedMs: PRESENTER_FOCUS_REVEAL_DURATION_MS / 2,
+    seed: 7,
+    mode: 'cursor',
+  });
   assert.equal(pointed.mode, 'cursor');
   assert.equal(pointed.cursor.visible, true);
   assert.equal(window.document.querySelector('.pc-cursor').style.opacity, '1');
   assert.notEqual(pointed.antsDashOffset, framed.antsDashOffset);
-  assert.deepEqual(pointed.frameRect, framed.frameRect);
+  assert.ok(pointed.revealProgress > framed.revealProgress);
+  assert.ok(pointed.frameRect.width > framed.frameRect.width);
+  assert.ok(pointed.frameRect.height > framed.frameRect.height);
+  assert.equal(pointed.dragHandle.visible, true);
+
+  let complete = cursor.presentFocusFrame(el, {
+    elapsedMs: PRESENTER_FOCUS_REVEAL_DURATION_MS,
+    seed: 7,
+    mode: 'frame',
+  });
+  assert.equal(complete.revealProgress, 1);
+  assert.equal(complete.revealing, false);
+  assert.equal(complete.dragHandle.visible, false);
+  assert.ok(complete.frameRect.width > pointed.frameRect.width);
+  assert.ok(complete.frameRect.height > pointed.frameRect.height);
 
   cursor.dispose();
 });
@@ -571,6 +594,32 @@ test('explicit above underline avoids the adjacent control from the square captu
   cursor.dispose();
 });
 
+test('explicit above underline avoids the adjacent control from the square capture geometry', () => {
+  let window = makeDom();
+  Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1080 });
+  Object.defineProperty(window, 'innerHeight', { configurable: true, value: 1080 });
+  let cursor = createPresenterCursor(window.document);
+  let el = target(window.document, { left: 927, top: 707, width: 24, height: 24 });
+  let obstacle = {
+    id: 'tour-control-39',
+    kind: 'critical-control',
+    rect: { left: 778.6, top: 749, width: 277.4, height: 47.6 },
+  };
+
+  for (let progress of [0, 0.25, 0.5, 0.75, 1]) {
+    let frame = cursor.presentAnnotationFrame(
+      el,
+      { marker: 'underline', placement: 'above' },
+      { progress, seed: 2544744498, viewport: { width: 1080, height: 1080 }, obstacles: [obstacle] },
+    );
+    assert.equal(frame.placement, 'above');
+    assert.equal(frame.safety.safe, true, `above underline must remain safe at progress ${progress}`);
+    assert.deepEqual(frame.safety.collisions, []);
+  }
+
+  cursor.dispose();
+});
+
 test('deterministic symbols choose before and above when preferred placement escapes', () => {
   let window = makeDom();
   let cursor = createPresenterCursor(window.document);
@@ -690,6 +739,26 @@ test('every marker exposes a monotonic staged drawing path at the shared frame r
   cursor.dispose();
 });
 
+test('every marker exposes a monotonic three-stage drawing path', () => {
+  let window = makeDom();
+  let cursor = createPresenterCursor(window.document);
+  let el = target(window.document, { left: 180, top: 140, width: 120, height: 84 });
+
+  for (let [index, marker] of PRESENTER_MARKERS.entries()) {
+    let early = cursor.presentAnnotationFrame(el, { kind: 'marker', marker }, { progress: 0.25, seed: index + 31 });
+    let middle = cursor.presentAnnotationFrame(el, { kind: 'marker', marker }, { progress: 0.55, seed: index + 31 });
+    let complete = cursor.presentAnnotationFrame(el, { kind: 'marker', marker }, { progress: 1, seed: index + 31 });
+
+    assert.ok(early.pathPoints > 2, marker);
+    assert.ok(middle.pathPoints > early.pathPoints, marker);
+    assert.ok(complete.pathPoints > middle.pathPoints, marker);
+    assert.deepEqual(middle.pathSamples.slice(0, early.pathSamples.length), early.pathSamples, marker);
+    assert.deepEqual(complete.pathSamples.slice(0, middle.pathSamples.length), middle.pathSamples, marker);
+  }
+
+  cursor.dispose();
+});
+
 test('presenter layers share one constant 30 FPS projector', () => {
   let firstTime = 1;
   let sameFrameTime = PRESENTER_FRAME_MS - 1;
@@ -751,6 +820,30 @@ test('presenter layers share one constant 30 FPS projector', () => {
   let clickNext = projectPresenterState(clickLayers, nextFrameTime, 17);
   assert.deepEqual(clickSame.click, clickFirst.click);
   assert.notDeepEqual(clickNext.click, clickFirst.click);
+});
+
+test('focus reveal stays monotonic and bounded in horizontal, vertical, and square frames', () => {
+  let cases = [
+    { viewport: { width: 1920, height: 1080 }, rect: { left: 240, top: 160, width: 880, height: 420 } },
+    { viewport: { width: 1080, height: 1920 }, rect: { left: 90, top: 420, width: 760, height: 620 } },
+    { viewport: { width: 1080, height: 1080 }, rect: { left: 140, top: 210, width: 720, height: 480 } },
+  ];
+
+  for (let { viewport, rect } of cases) {
+    let layers = { focus: { active: true, rect, duration: PRESENTER_FOCUS_REVEAL_DURATION_MS } };
+    let first = projectPresenterState(layers, 0, 11, viewport).focus;
+    let middle = projectPresenterState(layers, PRESENTER_FOCUS_REVEAL_DURATION_MS / 2, 11, viewport).focus;
+    let complete = projectPresenterState(layers, PRESENTER_FOCUS_REVEAL_DURATION_MS, 11, viewport).focus;
+
+    assert.ok(first.width < middle.width && middle.width < complete.width);
+    assert.ok(first.height < middle.height && middle.height < complete.height);
+    assert.ok(first.revealProgress < middle.revealProgress && middle.revealProgress < complete.revealProgress);
+    assert.equal(complete.width, rect.width);
+    assert.equal(complete.height, rect.height);
+    assert.equal(complete.dragHandle.visible, false);
+    assert.ok(complete.left + complete.width <= viewport.width);
+    assert.ok(complete.top + complete.height <= viewport.height);
+  }
 });
 
 test('focus reveal stays monotonic and bounded in horizontal, vertical, and square frames', () => {
