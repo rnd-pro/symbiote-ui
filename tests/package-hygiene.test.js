@@ -158,6 +158,21 @@ test('npm pack output excludes private memory and scratch artifacts', async () =
   assert.ok(files.includes('runtime/index.js'));
   assert.ok(files.includes('manifest/component-registry.js'));
   assert.ok(files.includes('manifest/xr-spatial-schema-catalog.js'));
+  assert.ok(files.includes('canvas/NodeCanvas/NodeCanvasRenderSnapshot.js'));
+  assert.ok(files.includes('manifest/show-runtime-catalog.js'));
+  assert.ok(files.includes('chat/show-runtime.js'));
+  assert.ok(files.includes('chat/show-chat.js'));
+  assert.ok(files.includes('chat/agent-show.js'));
+  assert.ok(files.includes('chat/AgentDockShell/AgentDockShell.js'));
+  assert.ok(files.includes('chat/AgentShowChat/AgentShowChat.js'));
+  assert.ok(files.includes('chat/ChatShowPlayer/ChatShowPlayer.js'));
+  assert.ok(files.includes('chat/show-alignment.js'));
+  assert.ok(files.includes('chat/presenter-kinematics.js'));
+  assert.ok(files.includes('chat/workspace.js'));
+  assert.ok(files.includes('control/transport.js'));
+  assert.ok(files.includes('ui/loadBrowserComponent.js'));
+  assert.ok(files.includes('schemas/show-event-v1.json'));
+  assert.ok(files.includes('docs/show-runtime.md'));
   assert.ok(files.includes('schemas/xr-spatial-placement-receipt-v1.json'));
   assert.ok(files.includes('schemas/xr-final-session-snapshot-v1.json'));
   assert.ok(files.includes('schemas/xr-frame-timing-v1.json'));
@@ -177,7 +192,7 @@ test('npm pack output excludes private memory and scratch artifacts', async () =
   assertNoPrivatePackFiles(files);
 });
 
-test('packed package imports from a consumer project with SSR-safe entrypoints', async () => {
+test('packed package imports from a consumer project through public entrypoints', async () => {
   let tmpRoot = await mkdtemp(join(tmpdir(), 'symbiote-ui-pack-'));
   try {
     let packResult = run('npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', tmpRoot]);
@@ -208,6 +223,11 @@ test('packed package imports from a consumer project with SSR-safe entrypoints',
       'dir'
     );
     await symlink(
+      resolve(repoRoot, 'node_modules', 'linkedom'),
+      join(consumerDir, 'node_modules', 'linkedom'),
+      'dir'
+    );
+    await symlink(
       resolve(repoRoot, 'node_modules', '@symbiotejs', 'symbiote'),
       join(tmpNodeModules, '@symbiotejs', 'symbiote'),
       'dir'
@@ -225,6 +245,10 @@ test('packed package imports from a consumer project with SSR-safe entrypoints',
       const runtime = await import('symbiote-ui/runtime');
       const manifest = await import('symbiote-ui/manifest');
       const webmcp = await import('symbiote-ui/webmcp');
+      const showRuntime = await import('symbiote-ui/chat/show-runtime');
+      const showChat = await import('symbiote-ui/chat/show-chat');
+      const workspaceEntrypoint = await import('symbiote-ui/chat/workspace');
+      const transportEntrypoint = await import('symbiote-ui/control/transport');
       const screencast = await import('symbiote-ui/ui/screencast-recorder.js');
       const tourScreencast = await import('symbiote-ui/ui/tour-screencast.js');
       const tourAudio = await import('symbiote-ui/ui/tour-audio-provider.js');
@@ -261,7 +285,24 @@ test('packed package imports from a consumer project with SSR-safe entrypoints',
       if (typeof basePath.withAppBasePath !== 'function') throw new Error('missing core base-path helper');
       if (runtime.RUNTIME_UI_CONTRACT.version !== 'runtime-ui-v1') throw new Error('bad runtime contract');
       if (typeof manifest.listComponents !== 'function') throw new Error('missing manifest listComponents');
+      if (typeof manifest.createNodeCanvasRenderSnapshot !== 'function') throw new Error('missing NodeCanvas render snapshot creator');
+      if (typeof manifest.validateNodeCanvasRenderSnapshot !== 'function') throw new Error('missing NodeCanvas render snapshot validator');
+      if (manifest.NODE_CANVAS_RENDER_SNAPSHOT_CONTRACT?.mismatchResolution !== 'pcb-live-reroute') throw new Error('bad NodeCanvas snapshot contract');
       if (typeof webmcp.createToolDescriptor !== 'function') throw new Error('missing webmcp helper');
+      if (showRuntime.SHOW_CONTRACT_VERSION !== 'symbiote-show-v1') throw new Error('bad show runtime contract');
+      if (typeof showRuntime.ShowSessionState !== 'function') throw new Error('missing ShowSessionState');
+      if (typeof showRuntime.ShowAlignedMediaRuntime !== 'function') throw new Error('missing ShowAlignedMediaRuntime');
+      if (typeof showRuntime.resolveShowAudioAnchor !== 'function') throw new Error('missing resolveShowAudioAnchor');
+      if (showRuntime.SHOW_ALIGNED_SEQUENCE_VERSION !== 'workspace-aligned-sequence-v3') throw new Error('bad aligned sequence version');
+      if (typeof showRuntime.ShowActionLifecycle !== 'function') throw new Error('missing ShowActionLifecycle');
+      if (typeof showChat.AgentShowConversation !== 'function') throw new Error('missing AgentShowConversation');
+      if (typeof showChat.createScriptedAgentProvider !== 'function') throw new Error('missing scripted agent provider');
+      if (showChat.AgentDockShell !== undefined || showChat.AgentShowChat !== undefined || showChat.ChatShowPlayer !== undefined) throw new Error('Show chat components loaded without DOM');
+      if (!('ChatWorkspace' in workspaceEntrypoint)) throw new Error('missing ChatWorkspace export');
+      if (!('Transport' in transportEntrypoint)) throw new Error('missing Transport export');
+      if (workspaceEntrypoint.ChatWorkspace !== undefined) throw new Error('ChatWorkspace loaded without DOM');
+      if (transportEntrypoint.Transport !== undefined) throw new Error('Transport loaded without DOM');
+      if (globalThis.document !== undefined) throw new Error('browser entrypoint created DOM globals');
       if (typeof screencast.installScreencastHotkeys !== 'function') throw new Error('missing screencast hotkey helper');
       if (typeof tourScreencast.recordTourScreencast !== 'function') throw new Error('missing tour screencast helper');
       if (typeof tourAudio.createTourAudioProvider !== 'function') throw new Error('missing tour audio provider registry');
@@ -310,6 +351,43 @@ test('packed package imports from a consumer project with SSR-safe entrypoints',
       }
     `;
     run(process.execPath, ['--input-type=module', '-e', smoke], { cwd: consumerDir });
+    let browserSmoke = `
+      const { parseHTML } = await import('linkedom');
+      const { window } = parseHTML('<!doctype html><html><body></body></html>');
+      class TestCSSStyleSheet { replaceSync(text) { this.cssText = text; } }
+      Object.assign(globalThis, {
+        window,
+        document: window.document,
+        HTMLElement: window.HTMLElement,
+        Element: window.Element,
+        customElements: window.customElements,
+        Node: window.Node,
+        Event: window.Event,
+        CustomEvent: window.CustomEvent,
+        MutationObserver: window.MutationObserver,
+        CSSStyleSheet: TestCSSStyleSheet,
+        localStorage: { getItem: () => null, setItem: () => {} },
+        requestAnimationFrame: (callback) => setTimeout(() => callback(Date.now()), 0),
+        cancelAnimationFrame: clearTimeout,
+        getComputedStyle: window.getComputedStyle || (() => ({})),
+      });
+      window.document.adoptedStyleSheets = [];
+
+      const workspace = await import('symbiote-ui/chat/workspace');
+      const showChat = await import('symbiote-ui/chat/show-chat');
+      const transport = await import('symbiote-ui/control/transport');
+      if (typeof workspace.ChatWorkspace !== 'function') throw new Error('missing ChatWorkspace');
+      if (workspace.default !== workspace.ChatWorkspace) throw new Error('bad ChatWorkspace default');
+      if (typeof transport.Transport !== 'function') throw new Error('missing Transport');
+      if (typeof showChat.AgentShowChat !== 'function') throw new Error('missing AgentShowChat');
+      if (typeof showChat.ChatShowPlayer !== 'function') throw new Error('missing ChatShowPlayer');
+      if (typeof showChat.AgentDockShell !== 'function') throw new Error('missing AgentDockShell');
+      if (transport.default !== transport.Transport) throw new Error('bad Transport default');
+      for (const tagName of ['agent-dock-shell', 'agent-show-chat', 'chat-show-player', 'chat-workspace', 'chat-transcript', 'chat-message-item', 'chat-composer', 'sn-transport']) {
+        if (!customElements.get(tagName)) throw new Error('missing registered element ' + tagName);
+      }
+    `;
+    run(process.execPath, ['--input-type=module', '-e', browserSmoke], { cwd: consumerDir });
     let cli = run(process.execPath, [join('node_modules', '.bin', 'symbiote-ui'), 'discover'], { cwd: consumerDir });
     let data = JSON.parse(cli.stdout);
     assert.equal(data.command, 'discover');

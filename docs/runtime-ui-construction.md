@@ -395,6 +395,30 @@ host closes or removes UI-invoked panels. Hosts should pass `allowedMethods` or
 `allowMethod()` when applying agent-authored `state.methods`; use the component
 registry or a project policy allowlist to approve method calls.
 
+## Board Construction
+
+Agents constructing workflow boards use `sn-kanban-board` as the top-level
+surface for columns, cards, and drop intents. Cards can be configured using
+`sn-kanban-card`, which provides a structured visual contract for severity
+signals, configurable progress indicators, agent identity colors, metrics,
+actions, and dependencies without prescribing product routing. The board
+column remains the workflow-status source of truth; card progress labels are
+host-defined counters such as subtasks or acceptance criteria, not duplicate
+column statuses. Hosts project arbitrary runtime events into a small visual
+vocabulary (`info`, `success`, `warning`, `danger`, or quiet telemetry) and keep
+the complete event history in an inspector or event feed.
+
+Card geometry is inherited from the active cascade theme. Size presets resolve
+their content padding and module gaps through `--sn-kanban-card-padding-*` and
+`--sn-kanban-card-gap-*`; ordinary SVG icons use
+`--sn-kanban-card-icon-size`, while attention, audit, idle, and large metric
+roles use their dedicated semantic size aliases. Agent accents change color
+through `--sn-kanban-card-agent-accent` without changing icon geometry. The
+agent model may also include `provider` and `model`; the provider is rendered
+on the card while the model remains available as concise detail. Hosts that
+prefer border-only selection can alias `--sn-kanban-card-selected-bg` to the
+card surface token at the board boundary.
+
 ## Localization
 
 `symbiote-ui/locale` supports English, Russian, and Spanish catalogs with an
@@ -419,3 +443,12 @@ document.title = translate('app.title');
 Node-safe hosts can call `configureAutoLocalization()` from `symbiote-ui/locale`
 with explicit `preferences` or a supplied `navigator` object. The helper sets
 `document.documentElement.lang` when a document is available.
+
+## Voice Runtime Integration & Maximo Migration Seam
+
+`VoiceRuntime` (`symbiote-ui/chat/voice-runtime.js`) provides browser-level audio capture and speech recognition for host application shells:
+
+- **Held-Stream Ownership & Dead-Stream Fail-Closed**: `VoiceRuntime` manages underlying media track lifecycles. Borrowed held streams (default `owned: false`) are never stopped by runtime cleanup or teardown, remaining live and reusable across starts and cancellations. Owned streams (explicit `owned: true` or internal `getUserMedia` streams) are stopped upon teardown or replacement. Dead audio streams fail closed immediately without emitting stale callbacks or audio events across generation boundaries.
+- **Generation & Stale Callback Protection**: Each start/restart assigns a monotonically increasing `generation` counter. Callbacks bound to older generations are silently suppressed.
+- **Lifecycle & Diagnostics Payload & Cardinality**: Event dispatches emit exactly one generic `lifecycle` event and one corresponding named event (when phase is not `lifecycle`) per state change. Lifecycle payloads contain only fields actually emitted by `_emitLifecycle` (`generation`, `recorderGeneration`, `phase`, `state`, `mode`, `active`, and phase-specific extra fields like `error`, `text`, `isFinal`, `current`, `previous`; `timestamp` and `activeBackend` are omitted from event payloads). Diagnostics are retrieved via `getDiagnostics()`, returning a frozen public snapshot (`state`, `mode`, `activeBackend`, nested frozen `recognition:{generation,active}` and `recorder:{generation,active}`, `heldStream`, `captureOwned`, `timerActive`, `lastPhase`, `lastError`).
+- **Maximo Migration Seam**: Host application shells (such as `Maximo`) adopt voice capabilities via `VoiceRuntime` public intent events (`chat-composer-recorder-intent`, `chat-composer-permission-intent`, `chat-composer-transcription-intent`) rather than directly manipulating native `SpeechRecognition` or `MediaRecorder` instances.

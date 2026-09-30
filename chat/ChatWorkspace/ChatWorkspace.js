@@ -135,12 +135,20 @@ export class ChatWorkspace extends Symbiote {
     this.toggleAttribute('empty', Boolean(empty));
   }
 
-  setMessages(items = [], { scrollToBottom = true, smooth = false } = {}) {
+  setMessages(items = [], options = {}) {
+    if (!options || typeof options !== 'object' || Array.isArray(options)) {
+      throw new TypeError('chat message update options must be an object');
+    }
+    let { scrollToBottom = false, smooth = false } = options;
+    if (typeof scrollToBottom !== 'boolean') {
+      throw new TypeError('chat message update option "scrollToBottom" must be a boolean');
+    }
+    if (typeof smooth !== 'boolean') {
+      throw new TypeError('chat message update option "smooth" must be a boolean');
+    }
     let transcript = this.getTranscript();
     transcript?.setMessageItems(Array.isArray(items) ? items : []);
-    if (scrollToBottom) {
-      queueMicrotask(() => transcript?.scrollToBottom?.({ smooth }));
-    }
+    if (scrollToBottom) transcript?.scrollToBottom?.({ smooth });
   }
 
   replaceMessageWindow(items = [], window = {}) {

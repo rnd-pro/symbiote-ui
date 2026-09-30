@@ -48,6 +48,7 @@ const DEFAULT_DARK_TOKENS = {
   '--sn-alpha-faint': '0.06',
   '--sn-overlay-z-base': '20000',
   '--sn-canvas-overlay-z-base': '12000',
+  '--sn-agent-dock-z': '16000',
   '--sn-fullscreen-panel-z': '30010',
   '--sn-fullscreen-tab-bar-z': '30020',
 

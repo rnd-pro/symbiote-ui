@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rnd-pro.github.io/symbiote-ui/schemas/xr-spatial-window-scroll-receipt-v1.json",
+  "title": "XR Spatial Window Scroll Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "action",
+    "ok",
+    "reason",
+    "phase",
+    "kind",
+    "point",
+    "delta",
+    "capture",
+    "scroll",
+    "totals",
+    "paintRequested",
+    "source"
+  ],
+  "properties": {
+    "version": { "const": "xr-spatial-window-scroll-receipt-v1" },
+    "action": { "const": "scroll" },
+    "windowId": { "type": "string", "minLength": 1 },
+    "layoutId": { "type": "string", "minLength": 1 },
+    "ok": { "type": "boolean" },
+    "reason": { "type": ["string", "null"] },
+    "phase": { "enum": ["begin", "update", "end", "cancel"] },
+    "kind": { "enum": ["wheel", "drag"] },
+    "point": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["x", "y"],
+      "properties": {
+        "x": { "type": ["number", "null"] },
+        "y": { "type": ["number", "null"] }
+      }
+    },
+    "delta": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["x", "y", "mode"],
+      "properties": {
+        "x": { "type": ["number", "null"] },
+        "y": { "type": ["number", "null"] },
+        "mode": { "enum": ["content-pixels", "normalized", "lines"] }
+      }
+    },
+    "capture": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["sourceId", "sessionId", "pointerId"],
+      "properties": {
+        "sourceId": { "type": ["string", "null"] },
+        "sessionId": { "type": ["string", "null"] },
+        "pointerId": { "type": ["string", "null"] }
+      }
+    },
+    "scroll": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["targetId", "before", "after", "applied"],
+      "properties": {
+        "targetId": { "type": ["string", "null"] },
+        "before": { "$ref": "#/$defs/scrollOffsets" },
+        "after": { "$ref": "#/$defs/scrollOffsets" },
+        "applied": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "required": ["x", "y"],
+          "properties": {
+            "x": { "type": ["number", "null"] },
+            "y": { "type": ["number", "null"] }
+          }
+        }
+      }
+    },
+    "totals": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["x", "y"],
+      "properties": {
+        "x": { "type": ["number", "null"] },
+        "y": { "type": ["number", "null"] }
+      }
+    },
+    "paintRequested": { "type": "boolean" },
+    "source": { "type": ["string", "null"] }
+  },
+  "$defs": {
+    "scrollOffsets": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["left", "top"],
+      "properties": {
+        "left": { "type": ["number", "null"] },
+        "top": { "type": ["number", "null"] }
+      }
+    }
+  }
+}

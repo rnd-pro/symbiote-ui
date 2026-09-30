@@ -77,6 +77,15 @@ export class FlowSimulator {
     this.#followPaused = false;
     this.#canvas.addEventListener('manualviewport', this.#handleManualViewport);
 
+    // A simulator instance may be replayed (for example by an autoplay loop).
+    // Completed states belong to the previous execution, so clear them before
+    // the next trace starts instead of layering a new processing state over an
+    // already-completed graph. User selection is intentionally independent.
+    for (const node of this.#editor.getNodes()) {
+      this.#clearNodeState(node.id);
+    }
+    this.#canvas.setAllFlowing(false);
+
     let order = this.#topologicalSort();
     let connections = this.#editor.getConnections();
     this.#editor.emit('flowstart', { nodes: order });

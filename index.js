@@ -296,10 +296,20 @@ export { NotificationNarrator } from './chat/notification-narrator.js';
 export { createDialogueStage } from './chat/dialogue-stage.js';
 export { playDialogueTimeline, buildAlternatingTimeline } from './chat/dialogue-timeline.js';
 export { createDialoguePlayer } from './chat/dialogue-player.js';
+export * from './chat/show-runtime.js';
+export {
+  PRESENTER_MARKER_CATALOG,
+  PRESENTER_MARKER_GEOMETRY_CONSTANTS,
+  PRESENTER_MARKER_GEOMETRY_VERSION,
+  createPresenterMarkerGeometry,
+  createPresenterMarkerPlan,
+} from './chat/presenter-marker-geometry.js';
 export {
   PRESENTER_ANNOTATION_COLLISION_ALLOWANCE_PX,
   PRESENTER_ANNOTATION_TARGET_INSET_PX,
   PRESENTER_CURSOR_SIZE_PX,
+  PRESENTER_ANNOTATION_SUPPORT_TABLE,
+  PresenterAnnotationUnsupportedError,
   analyzePresenterAnnotationSafety,
   createPresenterCursor,
   playCursorScenario,

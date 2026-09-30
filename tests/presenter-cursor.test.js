@@ -6,15 +6,20 @@ import { test } from 'node:test';
 import { parseHTML } from 'linkedom';
 import {
   createPresenterCursor,
+  createPresenterTravelPlan,
   normalizePresenterAnnotation,
   normalizePresenterMarker,
   normalizePresenterSymbol,
+  PRESENTER_ANNOTATION_SUPPORT_TABLE,
   PRESENTER_FRAME_MS,
+  PRESENTER_INK_DRAW_SPEED_PX_PER_MS,
   playCursorScenario,
   resolvePresenterHighlightRect,
+  resolvePresenterRectangleTiming,
   resolvePresenterTravelDuration,
   resolvePresenterVisibleRect,
 } from '../chat/presenter-cursor.js';
+import { PRESENTER_KINEMATIC_LIMITS, PRESENTER_KINEMATICS_VERSION } from '../chat/presenter-kinematics.js';
 
 /**
  * Fake cursor: records every `moveTo` element (and the opts it was given) plus
@@ -120,6 +125,129 @@ function boxElement(document, rect) {
   return el;
 }
 
+function completedMarkerPlan(cursor, target, marker, seed, style = {}) {
+  return cursor.presentAnnotationFrame(target, { marker }, {
+    seed,
+    progress: 1,
+    planOnly: true,
+    style,
+  });
+}
+
+function pathGeometry(points) {
+  let xs = points.map((point) => point.x);
+  let ys = points.map((point) => point.y);
+  let left = Math.min(...xs);
+  let right = Math.max(...xs);
+  let top = Math.min(...ys);
+  let bottom = Math.max(...ys);
+  let centerX = points.reduce((sum, point) => sum + point.x, 0) / points.length;
+  let centerY = points.reduce((sum, point) => sum + point.y, 0) / points.length;
+  let xx = 0;
+  let yy = 0;
+  let xy = 0;
+  for (let point of points) {
+    let dx = point.x - centerX;
+    let dy = point.y - centerY;
+    xx += dx * dx;
+    yy += dy * dy;
+    xy += dx * dy;
+  }
+  let signedArea = 0;
+  for (let index = 0; index < points.length; index += 1) {
+    let current = points[index];
+    let next = points[(index + 1) % points.length];
+    signedArea += current.x * next.y - next.x * current.y;
+  }
+  let width = right - left;
+  let height = bottom - top;
+  return {
+    width,
+    height,
+    centerX: (left + right) / 2,
+    centerY: (top + bottom) / 2,
+    aspect: width / height,
+    tilt: 0.5 * Math.atan2(2 * xy, xx - yy),
+    roundness: Math.abs(signedArea / 2) / (width * height),
+    endpointGap: Math.hypot(
+      points.at(-1).x - points[0].x,
+      points.at(-1).y - points[0].y,
+    ),
+  };
+}
+
+function valueRange(values) {
+  return Math.max(...values) - Math.min(...values);
+}
+
+function interquartileRange(values) {
+  let sorted = [...values].sort((left, right) => left - right);
+  return sorted[Math.floor(sorted.length * 0.75)] - sorted[Math.floor(sorted.length * 0.25)];
+}
+
+function segmentsIntersect(a, b, c, d) {
+  let orientation = (p, q, r) => (q.x - p.x) * (r.y - p.y) - (q.y - p.y) * (r.x - p.x);
+  let abC = orientation(a, b, c);
+  let abD = orientation(a, b, d);
+  let cdA = orientation(c, d, a);
+  let cdB = orientation(c, d, b);
+  return abC * abD <= 0 && cdA * cdB <= 0;
+}
+
+function polylinesIntersect(left, right) {
+  for (let leftIndex = 1; leftIndex < left.length; leftIndex += 1) {
+    for (let rightIndex = 1; rightIndex < right.length; rightIndex += 1) {
+      if (segmentsIntersect(
+        left[leftIndex - 1],
+        left[leftIndex],
+        right[rightIndex - 1],
+        right[rightIndex],
+      )) return true;
+    }
+  }
+  return false;
+}
+
+function minimumPointDistance(left, right) {
+  return Math.min(...left.flatMap((a) => right.map((b) => Math.hypot(a.x - b.x, a.y - b.y))));
+}
+
+function projectedOverlap(left, right) {
+  let dx = left.at(-1).x - left[0].x;
+  let dy = left.at(-1).y - left[0].y;
+  let magnitude = Math.hypot(dx, dy) || 1;
+  let project = (point) => (point.x * dx + point.y * dy) / magnitude;
+  let leftProjection = left.map(project);
+  let rightProjection = right.map(project);
+  return Math.min(Math.max(...leftProjection), Math.max(...rightProjection))
+    - Math.max(Math.min(...leftProjection), Math.min(...rightProjection));
+}
+
+function splitMultiOvalPasses(points) {
+  let searchStart = Math.floor(points.length * 0.35);
+  let searchEnd = Math.ceil(points.length * 0.65);
+  let transition = searchStart;
+  for (let index = searchStart + 1; index < searchEnd; index += 1) {
+    if (points[index].x > points[transition].x) transition = index;
+  }
+  return [points.slice(0, transition), points.slice(transition + 1)];
+}
+
+function radialProfile(points, center, binCount = 24) {
+  let bins = Array.from({ length: binCount }, () => []);
+  for (let point of points) {
+    let angle = Math.atan2(point.y - center.y, point.x - center.x);
+    if (angle < 0) angle += Math.PI * 2;
+    let bin = Math.min(binCount - 1, Math.floor(angle / (Math.PI * 2) * binCount));
+    bins[bin].push(Math.hypot(point.x - center.x, point.y - center.y));
+  }
+  return bins.map((samples) => {
+    if (!samples.length) return null;
+    samples.sort((left, right) => left - right);
+    return samples[Math.floor(samples.length / 2)];
+  });
+}
+
 function nextFrame() {
   return new Promise((resolve) => setTimeout(resolve, 5));
 }
@@ -178,7 +306,267 @@ test('normalizePresenterAnnotation separates semantic marks from cursor focus', 
     symbol: 'heart',
     placement: 'after',
   });
-  assert.equal(normalizePresenterAnnotation({ kind: 'symbol', symbol: 'not-a-symbol' }), null);
+  assert.throws(
+    () => normalizePresenterAnnotation({ kind: 'symbol', symbol: 'not-a-symbol' }),
+    (error) => error.code === 'PRESENTER_ANNOTATION_UNSUPPORTED'
+      && error.field === 'symbol'
+      && error.version === 'presenter-annotation-v1',
+  );
+});
+
+test('presenter annotation support table is the canonical vocabulary', () => {
+  assert.deepEqual(PRESENTER_ANNOTATION_SUPPORT_TABLE, {
+    markers: [
+      'freehand', 'underline', 'oval', 'multi-oval', 'arrow', 'converging-arrows', 'route',
+      'bidirectional-route', 'parallel-route', 'label', 'number', 'box', 'bracket', 'slash',
+    ],
+    symbols: ['question', 'cross', 'check', 'heart', 'flourish'],
+    intents: ['emphasize', 'detail', 'group', 'pointer', 'risk', 'question', 'success', 'affinity', 'flourish'],
+    placements: ['over', 'after', 'before', 'corner', 'below', 'above'],
+  });
+});
+
+test('oval marker geometry varies meaningfully and deterministically by authored seed', () => {
+  let window = makePresenterDom();
+  let target = boxElement(window.document, { left: 210, top: 190, width: 280, height: 104 });
+  let cursor = createPresenterCursor(window.document);
+  let seeds = ['oval-alpha', 'oval-bravo', 'oval-charlie', 'oval-delta', 'oval-echo', 'oval-foxtrot'];
+  let plans = seeds.map((seed) => completedMarkerPlan(
+    cursor,
+    target,
+    'oval',
+    seed,
+    { noiseAmplitudePx: 0 },
+  ));
+  let geometries = plans.map((plan) => pathGeometry(plan.pathSamples));
+  let repeat = completedMarkerPlan(
+    cursor,
+    target,
+    'oval',
+    seeds[0],
+    { noiseAmplitudePx: 0 },
+  );
+
+  assert.deepEqual(repeat.pathSamples, plans[0].pathSamples);
+  assert.ok(valueRange(geometries.map((geometry) => geometry.aspect)) > 0.08, 'aspect must vary');
+  assert.ok(valueRange(geometries.map((geometry) => geometry.tilt)) > 0.04, 'tilt must vary');
+  assert.ok(valueRange(geometries.map((geometry) => geometry.roundness)) > 0.015, 'roundness must vary');
+  assert.ok(
+    Math.max(
+      valueRange(geometries.map((geometry) => geometry.centerX)),
+      valueRange(geometries.map((geometry) => geometry.centerY)),
+    ) > 1.5,
+    'center must vary',
+  );
+  assert.ok(valueRange(geometries.map((geometry) => geometry.endpointGap)) > 1.5, 'tail gap must vary');
+  cursor.dispose();
+});
+
+test('oval terminal tails overlap longitudinally while marker ribbons stay separated', () => {
+  let window = makePresenterDom();
+  let target = boxElement(window.document, { left: 210, top: 190, width: 280, height: 104 });
+  let cursor = createPresenterCursor(window.document);
+
+  for (let seed of ['tail-alpha', 'tail-bravo', 'tail-charlie', 'tail-delta']) {
+    let plan = completedMarkerPlan(cursor, target, 'oval', seed);
+    let tailLength = Math.max(8, Math.floor(plan.pathSamples.length * 0.03));
+    let openingTail = plan.pathSamples.slice(0, tailLength);
+    let closingTail = plan.pathSamples.slice(-tailLength);
+    let centerlineGap = minimumPointDistance(openingTail, closingTail);
+    let overlap = projectedOverlap(openingTail, closingTail);
+
+    assert.ok(overlap > 4, `${seed}: tails must overlap along their stroke direction (${overlap}px)`);
+    assert.equal(polylinesIntersect(openingTail, closingTail), false, `${seed}: tail centerlines must not cross`);
+    assert.ok(
+      centerlineGap > plan.maxWidthPx + 0.75,
+      `${seed}: visible ribbons need a positive gap (centerline ${centerlineGap}, width ${plan.maxWidthPx})`,
+    );
+  }
+  cursor.dispose();
+});
+
+test('wide CV ovals retain one hundred milliseconds of runtime headroom', () => {
+  let window = makePresenterDom();
+  let target = boxElement(window.document, {
+    left: 170,
+    top: 210,
+    width: 451.27,
+    height: 75.7,
+  });
+  let cursor = createPresenterCursor(window.document);
+  let hardCellMs = 2500;
+  let requiredHeadroomMs = 100;
+  let maxArcLengthPx = (hardCellMs - requiredHeadroomMs) * PRESENTER_INK_DRAW_SPEED_PX_PER_MS;
+
+  for (let seed of [
+    'agent-portal.human-decision',
+    'cv-show:cue:agent-portal.human-decision',
+    'cv-show:cue:positioning.tenure-marker',
+    'cv-show:cue:mobile-smm.agent-update',
+    'wide-oval-alpha',
+    'wide-oval-bravo',
+    'wide-oval-charlie',
+    'wide-oval-delta',
+  ]) {
+    let plan = cursor.presentAnnotationFrame(target, { marker: 'oval', intent: 'emphasize' }, {
+      seed,
+      progress: 1,
+      planOnly: true,
+    });
+    let headroomMs = hardCellMs - plan.durationMs;
+    assert.ok(
+      plan.arcLengthPx <= maxArcLengthPx,
+      `${seed}: arc ${plan.arcLengthPx}px leaves only ${headroomMs}ms headroom`,
+    );
+    assert.ok(headroomMs >= requiredHeadroomMs, `${seed}: runtime headroom must be at least 100ms`);
+  }
+  cursor.dispose();
+});
+
+test('multi-oval produces deterministic related passes that are not scaled copies', () => {
+  let window = makePresenterDom();
+  let target = boxElement(window.document, { left: 210, top: 190, width: 280, height: 104 });
+  let cursor = createPresenterCursor(window.document);
+  let plan = completedMarkerPlan(
+    cursor,
+    target,
+    'multi-oval',
+    'multi-related',
+    { noiseAmplitudePx: 0 },
+  );
+  let repeat = completedMarkerPlan(
+    cursor,
+    target,
+    'multi-oval',
+    'multi-related',
+    { noiseAmplitudePx: 0 },
+  );
+  let center = { x: 350, y: 242 };
+  let [firstPass, secondPass] = splitMultiOvalPasses(plan.pathSamples);
+  let firstProfile = radialProfile(firstPass, center);
+  let secondProfile = radialProfile(secondPass, center);
+  let radialScales = firstProfile.flatMap((radius, index) => (
+    index >= 6 && radius && secondProfile[index] ? [secondProfile[index] / radius] : []
+  ));
+
+  assert.deepEqual(repeat.pathSamples, plan.pathSamples);
+  assert.ok(radialScales.length >= 18, 'both related passes must cover the oval contour');
+  assert.ok(
+    interquartileRange(radialScales) > 0.04,
+    `the second pass must vary in shape, not only scale (${interquartileRange(radialScales)})`,
+  );
+  cursor.dispose();
+});
+
+test('representative travel and focus plans satisfy Show hard budgets', () => {
+  let travel = createPresenterTravelPlan(
+    { x: 0, y: 0 },
+    { x: 800, y: 0 },
+    'travel-budget',
+  );
+  let focus = resolvePresenterRectangleTiming({ width: 280, height: 120 });
+
+  assert.ok(travel.durationMs <= 800);
+  assert.ok(travel.maxObservedSpeedPxPerMs <= 3);
+  assert.ok(focus.dragMs <= 400);
+  assert.ok(focus.maxSpeedPxPerMs <= 3);
+});
+
+test('presenter ink overlay is hidden from the accessibility tree', () => {
+  let window = makePresenterDom();
+  let cursor = createPresenterCursor(window.document);
+  assert.equal(
+    window.document.querySelector('.symbiote-presenter-cursor')?.getAttribute('aria-hidden'),
+    'true',
+  );
+  cursor.dispose();
+});
+
+test('focus, marker, and click plans expose zero-progress evidence without overlay mutation', () => {
+  let window = makePresenterDom();
+  let target = boxElement(window.document, { left: 180, top: 140, width: 220, height: 90 });
+  let cursor = createPresenterCursor(window.document);
+  let before = window.document.body.innerHTML;
+
+  let focus = cursor.presentFocusFrame(target, {
+    mode: 'frame',
+    seed: 'focus-plan',
+    planOnly: true,
+  });
+  let marker = cursor.presentAnnotationFrame(target, { marker: 'underline' }, {
+    seed: 'marker-plan',
+    planOnly: true,
+  });
+  let click = cursor.presentClickFrame(target, {
+    seed: 'click-plan',
+    planOnly: true,
+  });
+
+  assert.equal(window.document.body.innerHTML, before);
+  assert.equal(focus.presented, true);
+  assert.match(focus.normalizedPathHash, /^[0-9a-f]{8}$/);
+  assert.equal(marker.presented, true);
+  assert.match(marker.normalizedPathHash, /^[0-9a-f]{8}$/);
+  assert.equal(click.presented, true);
+  assert.equal(click.normalizedPathHash, '');
+
+  cursor.presentFocusFrame(target, { mode: 'frame', seed: 'focus-plan', elapsedMs: 0 });
+  assert.notEqual(window.document.body.innerHTML, before);
+  cursor.dispose();
+});
+
+test('frame cursor keeps the reported authored corner at the visible classic-arrow tip', () => {
+  let window = makePresenterDom();
+  let target = boxElement(window.document, { left: 180, top: 140, width: 220, height: 90 });
+  let cursor = createPresenterCursor(window.document);
+  let firstFrame = cursor.presentFocusFrame(target, {
+    mode: 'frame',
+    seed: 'frame-arrow-hotspot',
+    elapsedMs: 0,
+  });
+  let frame = cursor.presentFocusFrame(target, {
+    mode: 'frame',
+    seed: 'frame-arrow-hotspot',
+    elapsedMs: firstFrame.durationMs,
+  });
+  let arrow = window.document.querySelector('.pc-cursor');
+  let arrowSvg = arrow.querySelector('svg');
+  let arrowPath = arrowSvg.querySelector('path');
+  let transform = arrow.style.transform.match(
+    /^translate\((-?[\d.]+)px, (-?[\d.]+)px\)$/,
+  );
+  let pathTip = arrowPath.getAttribute('d').trim().match(
+    /^M\s*(-?[\d.]+)(?:\s+|,)\s*(-?[\d.]+)/i,
+  );
+  let viewBox = arrowSvg.getAttribute('viewBox').trim().split(/\s+/).map(Number);
+  let [, , viewBoxWidth, viewBoxHeight] = viewBox;
+  let arrowWidth = Number(arrowSvg.getAttribute('width'));
+  let arrowHeight = Number(arrowSvg.getAttribute('height'));
+  let authoredCorner = {
+    x: frame.frameRect.right,
+    y: frame.frameRect.bottom,
+  };
+  let reportedHotspot = {
+    x: frame.cursor.x,
+    y: frame.cursor.y,
+  };
+  let visibleArrowTip = {
+    x: Number(transform[1]) + Number(pathTip[1]) * arrowWidth / viewBoxWidth,
+    y: Number(transform[2]) + Number(pathTip[2]) * arrowHeight / viewBoxHeight,
+  };
+  let authoredSvgTip = {
+    x: Number(pathTip[1]),
+    y: Number(pathTip[2]),
+  };
+
+  assert.equal(arrow.style.opacity, '1');
+  assert.deepEqual({ authoredCorner, reportedHotspot, visibleArrowTip, authoredSvgTip }, {
+    authoredCorner,
+    reportedHotspot: { ...authoredCorner },
+    visibleArrowTip: { ...authoredCorner },
+    authoredSvgTip: { x: 0, y: 0 },
+  });
+  cursor.dispose();
 });
 
 test('playCursorScenario fires onStep(step, index) once per step', async () => {
@@ -715,6 +1103,9 @@ test('live cursor, focus, marker, and symbol phases remain serialized at 30 FPS'
   assert.equal(markerReceipt.status, 'settled');
   assert.equal(symbolReceipt.status, 'settled');
   assert.equal(window.document.querySelector('.pc-cursor').style.opacity, '1');
+  let cursorStyle = window.document.getElementById('symbiote-presenter-cursor-style').textContent;
+  assert.doesNotMatch(cursorStyle, /\.pc-cursor\.is-inking svg\{display:none;\}/);
+  assert.match(cursorStyle, /\.pc-cursor\.is-inking svg\{display:block;/);
   cursor.dispose();
 });
 
@@ -736,10 +1127,41 @@ test('resolvePresenterHighlightRect keeps edge targets inset from the viewport',
   );
 });
 
-test('resolvePresenterTravelDuration uses human-paced cursor travel bounds', () => {
-  assert.equal(resolvePresenterTravelDuration(0), 850);
-  assert.ok(Math.abs(resolvePresenterTravelDuration(500) - 1176.67) < 0.01);
-  assert.equal(resolvePresenterTravelDuration(2000), 1600);
+test('free cursor travel uses the shared arc-length planner and never exceeds its hard speed ceiling', () => {
+  let plan = createPresenterTravelPlan(
+    { x: 0, y: 0 },
+    { x: 2000, y: 0 },
+    'long-cursor-travel',
+  );
+  assert.equal(plan.version, PRESENTER_KINEMATICS_VERSION);
+  assert.equal(resolvePresenterTravelDuration(2000, 'long-cursor-travel'), plan.durationMs);
+  assert.ok(plan.durationMs > 2000 / PRESENTER_KINEMATIC_LIMITS.maxSpeedPxPerMs);
+  assert.ok(plan.maxObservedSpeedPxPerMs <= PRESENTER_KINEMATIC_LIMITS.maxSpeedPxPerMs + 0.001);
+  assert.equal(plan.timeTable[0].speedPxPerMs, 0);
+  assert.equal(plan.timeTable.at(-1).speedPxPerMs, 0);
+});
+
+test('rectangle selection timing is deterministic and frames report mutation readiness', () => {
+  let timing = resolvePresenterRectangleTiming({ left: 12, top: 18, width: 240, height: 72 });
+  assert.deepEqual(
+    resolvePresenterRectangleTiming({ left: 12, top: 18, width: 240, height: 72 }),
+    timing,
+  );
+  assert.ok(timing.durationMs > timing.dragMs);
+
+  let window = makePresenterDom(PRESENTER_FRAME_MS);
+  let cursor = createPresenterCursor(window.document);
+  let el = boxElement(window.document, { left: 180, top: 140, width: 180, height: 72 });
+  let first = cursor.presentFocusFrame(el, { elapsedMs: 0, mode: 'rectangle-selection' });
+  let final = cursor.presentFocusFrame(el, {
+    elapsedMs: first.durationMs,
+    mode: 'rectangle-selection',
+  });
+
+  assert.equal(first.mode, 'rectangle-selection');
+  assert.equal(first.mutationReady, false);
+  assert.equal(final.mutationReady, true);
+  cursor.dispose();
 });
 
 test('createPresenterCursor drives a scenario end to end through the real player', async () => {

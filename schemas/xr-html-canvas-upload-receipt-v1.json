@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rnd-pro.github.io/symbiote-ui/schemas/xr-html-canvas-upload-receipt-v1.json",
+  "title": "XR HTML Canvas Upload Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "panelId",
+    "mode",
+    "rendered",
+    "uploaded",
+    "canvasMatch",
+    "width",
+    "height",
+    "signature",
+    "reason",
+    "errorName"
+  ],
+  "properties": {
+    "version": { "const": "xr-html-canvas-upload-receipt-v1" },
+    "panelId": { "type": ["string", "null"] },
+    "mode": { "type": "string" },
+    "rendered": { "type": "boolean" },
+    "uploaded": { "type": "boolean" },
+    "canvasMatch": { "type": "boolean" },
+    "width": { "type": ["number", "null"], "exclusiveMinimum": 0 },
+    "height": { "type": ["number", "null"], "exclusiveMinimum": 0 },
+    "signature": { "type": ["string", "null"] },
+    "reason": { "type": ["string", "null"] },
+    "errorName": { "type": ["string", "null"] }
+  }
+}

@@ -16,10 +16,14 @@
         "tool_call",
         "tool_result",
         "source",
+        "footnote",
         "attachment",
         "artifact",
         "approval",
         "action",
+        "actions",
+        "embed",
+        "confirm",
         "retry",
         "cancel",
         "error",
@@ -35,7 +39,12 @@
     "title": { "type": "string" },
     "url": { "type": "string" },
     "mimeType": { "type": "string" },
-    "meta": { "type": "object", "additionalProperties": true }
+    "meta": { "type": "object", "additionalProperties": true },
+    "payload": true,
+    "action": { "type": "string" },
+    "actions": { "type": "array", "items": { "type": "object" } },
+    "key": { "type": "string" },
+    "display": { "type": ["object", "null"] }
   },
   "additionalProperties": false
 }

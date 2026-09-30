@@ -74,3 +74,19 @@ test('getComponentRecipesDescriptor wraps the grounded index', () => {
   assert.equal(descriptor.count, listComponentRecipes().length);
   assert.ok(descriptor.count >= 15, 'descriptor must reflect a meaningful count');
 });
+
+test('recipes are a runtime projection of component selection guidance', async () => {
+  const { listComponentSelections } = await import('../manifest/component-selection.js');
+  let recipes = listComponentRecipes();
+  let selections = listComponentSelections();
+
+  for (let recipe of recipes) {
+    let matchingSelection = selections.find((s) => s.tagName === recipe.component);
+    assert.ok(matchingSelection, `recipe component "${recipe.component}" must exist in selections`);
+    assert.ok(matchingSelection.guidance, `matching selection for "${recipe.component}" must have guidance`);
+    assert.equal(recipe.intent, matchingSelection.guidance.intent);
+    assert.equal(recipe.when, matchingSelection.guidance.when);
+    assert.equal(recipe.antipattern, matchingSelection.guidance.antipattern);
+  }
+});
+

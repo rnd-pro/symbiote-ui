@@ -54,6 +54,7 @@ function drawerTranslateTransform(value) {
 const LAYOUT_PEER_GROUPS = new Map();
 const LAYOUT_PEER_PENDING_GROUPS = new Set();
 let layoutPeerRefreshFrame = 0;
+const NATIVE_RAIL_LAYOUTS = new Set();
 
 function normalizeLayoutPeerGroup(value) {
   return String(value || '').trim();
@@ -68,6 +69,11 @@ function hasHiddenAncestor(element) {
 
 function getLayoutPeerRect(layout) {
   return layout.getBoundingClientRect?.() || { left: 0, top: 0, width: 0, height: 0 };
+}
+
+function getOwnedLayoutNodes(layout, selector = 'layout-node') {
+  return Array.from(layout.querySelectorAll(selector))
+    .filter((node) => node.closest('panel-layout') === layout);
 }
 
 function isVisibleLayoutPeer(layout) {
@@ -199,20 +205,12 @@ export class Layout extends Symbiote {
   };
 
   connectedCallback() {
+    NATIVE_RAIL_LAYOUTS.add(this);
     super.connectedCallback?.();
+    this._connectLayoutLifecycle();
     this._syncPeerGroupRegistration();
+    this._scheduleConnectedLayoutRefresh();
   }
-
-  /**
-   * Register panel type
-   * @param {string} name - Panel type name
-   * @param {Object} config - Panel configuration
-   * @param {string} [config.title] - Default title
-   * @param {string} [config.icon] - Material Symbols icon name
-   * @param {string} [config.component] - Custom element tag name
-   * @param {Array} [config.menuActions] - Fold-down header menu action descriptors
-   * @param {import('./../LayoutTree.js').LayoutBehavior} [config.behavior] - Default behavior for panels of this type
-   */
   registerPanelType(name, config) {
     ensureMaterialSymbols([config.icon || 'dashboard']);
     this.$.panelTypes = {
@@ -238,16 +236,9 @@ export class Layout extends Symbiote {
     this._drawerPointerMoveHandler = (e) => this._onDrawerPointerMove(e);
     this._drawerPointerUpHandler = (e) => this._onDrawerPointerUp(e);
     this._drawerPointerCancelHandler = (e) => this._onDrawerPointerCancel(e);
-    this.addEventListener('pointermove', this._drawerPointerMoveHandler);
-    this.addEventListener('pointerup', this._drawerPointerUpHandler);
-    this.addEventListener('pointercancel', this._drawerPointerCancelHandler);
     this._drawerRailPointerDownHandler = (e) => this._onDrawerRailPointerDown(e);
     this._drawerRailPointerOverHandler = (e) => this._onDrawerRailHover(e);
-    this.addEventListener('pointerdown', this._drawerRailPointerDownHandler);
-    this.addEventListener('pointerover', this._drawerRailPointerOverHandler);
-    this.addEventListener('mouseover', this._drawerRailPointerOverHandler);
     this._drawerClickCaptureHandler = (e) => this._onDrawerClickCapture(e);
-    this.addEventListener('click', this._drawerClickCaptureHandler, true);
 
 
     this._resizeFallback = () => {
@@ -259,35 +250,59 @@ export class Layout extends Symbiote {
         this._scheduleResponsiveLayout();
         scheduleLayoutPeerGroupRefresh(this._layoutPeerGroup);
       });
+    }
+  }
+
+  _connectLayoutLifecycle() {
+    if (this._layoutConnectionActive) return;
+    this._layoutConnectionActive = true;
+    this.addEventListener('pointermove', this._drawerPointerMoveHandler);
+    this.addEventListener('pointerup', this._drawerPointerUpHandler);
+    this.addEventListener('pointercancel', this._drawerPointerCancelHandler);
+    this.addEventListener('pointerdown', this._drawerRailPointerDownHandler);
+    this.addEventListener('pointerover', this._drawerRailPointerOverHandler);
+    this.addEventListener('mouseover', this._drawerRailPointerOverHandler);
+    this.addEventListener('click', this._drawerClickCaptureHandler, true);
+    if (this._resizeObserver) {
       this._resizeObserver.observe(this);
-    } else if (typeof window !== 'undefined') {
+    } else if (this._resizeFallback && typeof window !== 'undefined') {
       window.addEventListener('resize', this._resizeFallback);
     }
   }
 
-  disconnectedCallback() {
-    this._unregisterPeerGroup();
+  _disconnectLayoutLifecycle() {
+    if (!this._layoutConnectionActive) return;
+    this._layoutConnectionActive = false;
     this._resizeObserver?.disconnect();
     if (this._resizeFallback && typeof window !== 'undefined') {
       window.removeEventListener('resize', this._resizeFallback);
     }
+    this.removeEventListener('pointermove', this._drawerPointerMoveHandler);
+    this.removeEventListener('pointerup', this._drawerPointerUpHandler);
+    this.removeEventListener('pointercancel', this._drawerPointerCancelHandler);
+    this.removeEventListener('pointerdown', this._drawerRailPointerDownHandler);
+    this.removeEventListener('pointerover', this._drawerRailPointerOverHandler);
+    this.removeEventListener('mouseover', this._drawerRailPointerOverHandler);
+    this.removeEventListener('click', this._drawerClickCaptureHandler, true);
+  }
+
+  disconnectedCallback() {
+    NATIVE_RAIL_LAYOUTS.delete(this);
+    this._unregisterPeerGroup();
+    this._disconnectLayoutLifecycle();
     if (this._responsiveFrame && typeof cancelAnimationFrame !== 'undefined') {
       cancelAnimationFrame(this._responsiveFrame);
       this._responsiveFrame = 0;
     }
-    if (this._drawerPointerMoveHandler) {
-      this.removeEventListener('pointermove', this._drawerPointerMoveHandler);
-      this.removeEventListener('pointerup', this._drawerPointerUpHandler);
-      this.removeEventListener('pointercancel', this._drawerPointerCancelHandler);
+    if (this._connectedLayoutRefreshFrame && typeof cancelAnimationFrame !== 'undefined') {
+      cancelAnimationFrame(this._connectedLayoutRefreshFrame);
+      this._connectedLayoutRefreshFrame = 0;
     }
-    if (this._drawerRailPointerDownHandler) {
-      this.removeEventListener('pointerdown', this._drawerRailPointerDownHandler);
-      this.removeEventListener('pointerover', this._drawerRailPointerOverHandler);
-      this.removeEventListener('mouseover', this._drawerRailPointerOverHandler);
+    if (this._responsiveProjectionRetryFrame && typeof cancelAnimationFrame !== 'undefined') {
+      cancelAnimationFrame(this._responsiveProjectionRetryFrame);
+      this._responsiveProjectionRetryFrame = 0;
     }
-    if (this._drawerClickCaptureHandler) {
-      this.removeEventListener('click', this._drawerClickCaptureHandler, true);
-    }
+    this._responsiveProjectionRetryCount = 0;
     this._clearDrawerRailPeek();
     super.disconnectedCallback?.();
   }
@@ -506,6 +521,10 @@ export class Layout extends Symbiote {
     syncOptionalAttribute(this, 'root-collapse-side', rootCollapsed ? rootNode.$.collapseSlot : '');
   }
 
+  refreshResponsiveLayout() {
+    this._applyResponsiveLayout();
+  }
+
   _scheduleResponsiveLayout() {
     if (typeof requestAnimationFrame === 'undefined') {
       this._applyResponsiveLayout();
@@ -515,6 +534,18 @@ export class Layout extends Symbiote {
     this._responsiveFrame = requestAnimationFrame(() => {
       this._responsiveFrame = 0;
       this._applyResponsiveLayout();
+    });
+  }
+
+  _scheduleConnectedLayoutRefresh() {
+    this._scheduleResponsiveLayout();
+    scheduleLayoutPeerGroupRefresh(this._layoutPeerGroup);
+    if (typeof requestAnimationFrame === 'undefined' || this._connectedLayoutRefreshFrame) return;
+    this._connectedLayoutRefreshFrame = requestAnimationFrame(() => {
+      this._connectedLayoutRefreshFrame = 0;
+      if (!this.isConnected) return;
+      this._scheduleResponsiveLayout();
+      scheduleLayoutPeerGroupRefresh(this._layoutPeerGroup);
     });
   }
 
@@ -730,7 +761,7 @@ export class Layout extends Symbiote {
     toggleAttributeIfChanged(this, 'drawer-mode-active', active);
     if (!active) {
       this._clearDrawerProjection();
-      return;
+      return true;
     }
 
     let projection = LayoutTree.resolveMobileDrawerLayout(tree, {
@@ -774,12 +805,14 @@ export class Layout extends Symbiote {
     }
 
     let panelMap = new Map(projection.panels.map((panel) => [panel.id, panel]));
-    for (let node of this.querySelectorAll('layout-node[node-type="panel"]')) {
-      let panel = panelMap.get(node.$?.nodeId);
+    let matchedPanelIds = new Set();
+    for (let node of getOwnedLayoutNodes(this)) {
+      let panel = panelMap.get(node.$?.nodeId || node.$?.nodeData?.id);
       if (!panel) {
         this._clearDrawerNode(node);
         continue;
       }
+      matchedPanelIds.add(panel.id);
       setAttributeIfChanged(node, 'mobile-dock', panel.dock);
       toggleAttributeIfChanged(node, 'drawer-primary', panel.dock === 'primary');
       let open = (
@@ -826,10 +859,37 @@ export class Layout extends Symbiote {
         node.style.removeProperty('inset-inline-end');
       }
     }
+    this._syncNativeRailRegions();
     this._scheduleDrawerRailPeek(startOpen, endOpen);
+    let ready = matchedPanelIds.size === projection.panels.length;
+    if (ready) {
+      this._responsiveProjectionRetryCount = 0;
+    } else {
+      this._scheduleResponsiveProjectionRetry();
+    }
+    return ready;
+  }
+
+  _scheduleResponsiveProjectionRetry() {
+    if (
+      !this.isConnected ||
+      typeof requestAnimationFrame === 'undefined' ||
+      this._responsiveProjectionRetryFrame ||
+      (this._responsiveProjectionRetryCount || 0) >= 12
+    ) return;
+    this._responsiveProjectionRetryCount = (this._responsiveProjectionRetryCount || 0) + 1;
+    this._responsiveProjectionRetryFrame = requestAnimationFrame(() => {
+      this._responsiveProjectionRetryFrame = 0;
+      if (this.isConnected) this._scheduleResponsiveLayout();
+    });
   }
 
   _clearDrawerProjection() {
+    this._responsiveProjectionRetryCount = 0;
+    if (this._responsiveProjectionRetryFrame && typeof cancelAnimationFrame !== 'undefined') {
+      cancelAnimationFrame(this._responsiveProjectionRetryFrame);
+      this._responsiveProjectionRetryFrame = 0;
+    }
     this._clearDrawerRailPeek();
     this.removeAttribute('drawer-mode-active');
     this.removeAttribute('drawer-start-open');
@@ -841,9 +901,10 @@ export class Layout extends Symbiote {
     this.removeAttribute('drawer-end-panel-id');
     this.removeAttribute('drawer-dragging');
     this._drawerProjection = null;
-    for (let node of this.querySelectorAll('layout-node[mobile-dock], layout-node[drawer-open]')) {
+    for (let node of getOwnedLayoutNodes(this, 'layout-node[mobile-dock], layout-node[drawer-open]')) {
       this._clearDrawerNode(node);
     }
+    this._clearNativeRailRegions();
   }
 
   _clearDrawerNode(node) {
@@ -864,6 +925,8 @@ export class Layout extends Symbiote {
     node.style.removeProperty('--sn-layout-drawer-translate');
     node.style.removeProperty('inset-inline-start');
     node.style.removeProperty('inset-inline-end');
+    node.style.removeProperty('--sn-layout-rail-count');
+    node.style.removeProperty('--sn-layout-rail-index');
   }
 
   _syncDrawerNodeInteractionState(node, panel, open, rail) {
@@ -884,13 +947,62 @@ export class Layout extends Symbiote {
       return;
     }
     node.removeAttribute('drawer-rail-collapsed');
+    node.style.removeProperty('--sn-layout-rail-count');
+    node.style.removeProperty('--sn-layout-rail-index');
     this._setDrawerNodeExpanded(node, true);
+  }
+
+  // Native R2 rails: same-side collapsed panels share one dock edge as equal
+  // vertical regions with a uniform gap. Single owner (this layout's own
+  // nodes, deduped by panel identity); no synthetic buttons, no inner/outer
+  // cross-layout merging. Rails sit in their natural dock slots; the single
+  // shared END column comes from the reserve allocation in Layout.css.js
+  // (outer primary stays full-bleed when a nested layout owns END rails),
+  // never from negative insets that push nodes under ancestor clipping.
+  // Open/close/swipe/focus lifecycle is untouched.
+  _syncNativeRailRegions() {
+    let layouts = Array.from(new Set([this, ...NATIVE_RAIL_LAYOUTS])).filter((layout) => layout?.isConnected);
+    // Nested panel-layouts can live behind a shadow boundary and may not have
+    // reached the global registry; include their composed ancestors so both
+    // owners participate in one viewport coordinate allocation.
+    let host = this.getRootNode?.().host;
+    while (host) {
+      if (host.tagName === 'PANEL-LAYOUT') layouts.push(host);
+      host = host.getRootNode?.().host;
+    }
+    layouts = Array.from(new Set(layouts)).filter((layout) => layout?.isConnected);
+    for (let dock of ['start', 'end']) {
+      let rails = layouts.flatMap((layout) => getOwnedLayoutNodes(layout, 'layout-node[drawer-rail][drawer-rail-collapsed]')
+        .filter((node) => (node.dataset?.drawerDock || '') === dock && !node.hasAttribute('drawer-open')));
+      let seen = new Set();
+      let unique = [];
+      for (let node of rails) {
+        let panelId = node.dataset?.drawerPanelId || node.$?.nodeId || '';
+        if (panelId && seen.has(`${dock}:${panelId}`)) continue;
+        if (panelId) seen.add(`${dock}:${panelId}`);
+        unique.push(node);
+      }
+      unique.forEach((node, index) => {
+        setStylePropertyIfChanged(node.style, '--sn-layout-rail-count', String(unique.length));
+        setStylePropertyIfChanged(node.style, '--sn-layout-rail-index', String(index));
+        setStylePropertyIfChanged(node.style, '--sn-layout-rail-header-justify', 'center');
+      });
+    }
+  }
+
+  _clearNativeRailRegions() {
+    for (let node of getOwnedLayoutNodes(this, 'layout-node[drawer-rail-collapsed]')) {
+      node.style.removeProperty('--sn-layout-rail-count');
+      node.style.removeProperty('--sn-layout-rail-index');
+      node.style.removeProperty('--sn-layout-rail-header-justify');
+      node.style.removeProperty('inset-inline-end');
+    }
   }
 
   _scheduleDrawerRailPeek(startOpen, endOpen) {
     if (this._drawerRailPeekPlayed || this._drawerRailPeekTimer || this._drawerRailPeekClearTimer) return;
     if (startOpen || endOpen || this.$.fullscreenPanelId) return;
-    let nodes = this.querySelectorAll('layout-node[drawer-rail][drawer-rail-collapsed][data-drawer-dock]');
+    let nodes = getOwnedLayoutNodes(this, 'layout-node[drawer-rail][drawer-rail-collapsed][data-drawer-dock]');
     if (!nodes.length) return;
     this._drawerRailPeekPlayed = true;
     if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) {
@@ -904,7 +1016,7 @@ export class Layout extends Symbiote {
 
   _runDrawerRailPeek() {
     if (!this.hasAttribute('drawer-mode-active') || this.$.drawerStartOpen || this.$.drawerEndOpen) return;
-    let nodes = this.querySelectorAll('layout-node[drawer-rail][drawer-rail-collapsed][data-drawer-dock]');
+    let nodes = getOwnedLayoutNodes(this, 'layout-node[drawer-rail][drawer-rail-collapsed][data-drawer-dock]');
     if (!nodes.length) return;
     for (let node of nodes) {
       let dock = node.dataset.drawerDock;
@@ -929,7 +1041,7 @@ export class Layout extends Symbiote {
       clearTimeout(this._drawerRailPeekClearTimer);
       this._drawerRailPeekClearTimer = 0;
     }
-    for (let node of this.querySelectorAll('layout-node[drawer-rail-peeking]')) {
+    for (let node of getOwnedLayoutNodes(this, 'layout-node[drawer-rail-peeking]')) {
       node.removeAttribute('drawer-rail-peeking');
       if (!node.hasAttribute('drawer-rail-collapsed')) continue;
       let dock = node.dataset.drawerDock;
@@ -1095,7 +1207,6 @@ export class Layout extends Symbiote {
       if (openDock && openDock !== dock) {
         this._ignoreNextRailCollapseToggle = target.dataset.drawerPanelId || '';
         this.closeDrawer(openDock);
-        this._suppressDrawerContentClicks();
         e.preventDefault();
         return;
       }
@@ -1140,7 +1251,7 @@ export class Layout extends Symbiote {
 
   _isDrawerContentSwipeBlocked(target) {
     return Boolean(target?.closest?.(
-      'button, a, input, textarea, select, [contenteditable="true"], .split-resizer, canvas, node-canvas, canvas-graph'
+      'button, a, input, textarea, select, [contenteditable="true"], .sn-tree-row, [role="treeitem"], .split-resizer, canvas, node-canvas, canvas-graph'
     ));
   }
 
@@ -1214,8 +1325,12 @@ export class Layout extends Symbiote {
       ? progress >= 0.5
       : gesture.source === 'rail' ? !gesture.startOpen : progress >= 0.5;
     if (gesture.moved) {
-      this._ignoreNextDrawerClick = true;
-      this._suppressDrawerContentClicks();
+      this._ignoreNextDrawerClick = {
+        pointerId: gesture.pointerId,
+        panelId: gesture.panelId,
+        target: gesture.target,
+        expiresAt: this._drawerNow() + 700,
+      };
       e.preventDefault();
     }
     if (gesture.source === 'rail') {
@@ -1225,7 +1340,6 @@ export class Layout extends Symbiote {
     this._clearDrawerDrag(gesture.dock);
     this._drawerGesture = null;
     this._setDrawerOpen(gesture.dock, open, gesture.panelId);
-    if (open && !gesture.startOpen) this._suppressDrawerContentClicks();
   }
 
   _onDrawerPointerCancel(e) {
@@ -1235,6 +1349,7 @@ export class Layout extends Symbiote {
     if (!gesture.pending) {
       this._clearDrawerDrag(gesture.dock);
     }
+    this._ignoreNextDrawerClick = null;
     this._drawerGesture = null;
     this._setDrawerOpen(gesture.dock, gesture.startOpen, gesture.panelId);
   }
@@ -1293,23 +1408,32 @@ export class Layout extends Symbiote {
     return globalThis.performance?.now?.() || Date.now();
   }
 
-  _suppressDrawerContentClicks(duration = 360) {
-    this._drawerClickSuppressUntil = Math.max(
-      this._drawerClickSuppressUntil || 0,
-      this._drawerNow() + duration
-    );
-  }
-
   _onDrawerClickCapture(e) {
     if (!this.hasAttribute('drawer-mode-active')) return;
     let target = e.target;
     let drawerNode = target?.closest?.('layout-node[mobile-dock="start"], layout-node[mobile-dock="end"]');
     if (!drawerNode || !this.contains(drawerNode)) return;
-    let suppressActive = this._drawerNow() < (this._drawerClickSuppressUntil || 0);
-    let suppress = suppressActive
+    let panelId = drawerNode.dataset.drawerPanelId || '';
+    let token = this._ignoreNextDrawerClick;
+    if (token && token.expiresAt <= this._drawerNow()) {
+      this._ignoreNextDrawerClick = null;
+      token = null;
+    }
+    // A real content click must remain usable immediately after opening a
+    // drawer. The synthetic click generated by a rail gesture is identified by
+    // the matching panel token and, when available, the original gesture target.
+    let contentClick = target.closest?.('.sn-tree-row, [role="treeitem"], [data-tree-row]');
+    if (contentClick) return;
+    let syntheticClick = token
+      && token.panelId === panelId
+      && (!token.target || token.target === target || token.target.contains?.(target));
+    let suppress = syntheticClick
       || drawerNode.hasAttribute('drawer-rail-collapsed')
       || drawerNode.hasAttribute('drawer-dragging');
     if (!suppress) return;
+    if (syntheticClick) {
+      this._ignoreNextDrawerClick = null;
+    }
     if (target.closest?.('.collapse-btn')) return;
     e.preventDefault();
     e.stopPropagation();
@@ -1317,7 +1441,7 @@ export class Layout extends Symbiote {
   }
 
   _prepareDrawerPanelForGesture(dock, panelId) {
-    for (let node of this.querySelectorAll(`layout-node[mobile-dock="${dock}"]`)) {
+    for (let node of getOwnedLayoutNodes(this, `layout-node[mobile-dock="${dock}"]`)) {
       let active = node.$?.nodeId === panelId;
       toggleAttributeIfChanged(node, 'drawer-active-panel', active);
       if (active && node.hasAttribute('drawer-rail')) {
@@ -1374,24 +1498,24 @@ export class Layout extends Symbiote {
   _clearDrawerDrag(dock) {
     this.removeAttribute('drawer-dragging');
     if (dock === 'all') {
-      for (let node of this.querySelectorAll('layout-node[drawer-dragging]')) {
+      for (let node of getOwnedLayoutNodes(this, 'layout-node[drawer-dragging]')) {
         node.removeAttribute('drawer-dragging');
       }
       return;
     }
-    for (let node of this.querySelectorAll(`layout-node[mobile-dock="${dock}"]`)) {
+    for (let node of getOwnedLayoutNodes(this, `layout-node[mobile-dock="${dock}"]`)) {
       node.removeAttribute('drawer-dragging');
     }
   }
 
   _getDrawerNode(dock, panelId = '') {
     if (panelId) {
-      for (let node of this.querySelectorAll(`layout-node[mobile-dock="${dock}"]`)) {
+      for (let node of getOwnedLayoutNodes(this, `layout-node[mobile-dock="${dock}"]`)) {
         if (node.$?.nodeId === panelId) return node;
       }
     }
-    return this.querySelector(`layout-node[mobile-dock="${dock}"][drawer-active-panel]`) ||
-      this.querySelector(`layout-node[mobile-dock="${dock}"]`);
+    let drawerNodes = getOwnedLayoutNodes(this, `layout-node[mobile-dock="${dock}"]`);
+    return drawerNodes.find((node) => node.hasAttribute('drawer-active-panel')) || drawerNodes[0] || null;
   }
 
   _getFallbackDrawerWidth() {
@@ -1419,11 +1543,6 @@ export class Layout extends Symbiote {
     let panel = this._drawerProjection?.panels?.find((item) => item.id === panelId);
     return panel?.dock === 'start' || panel?.dock === 'end' ? panel.dock : '';
   }
-
-  /**
-   * Show panel type selection menu
-   * @param {CustomEvent} e
-   */
   _onPanelTypeMenu(e) {
     if (this.$.panelChrome === false) return;
     let { panelId, currentType, x, y } = e.detail;
@@ -1439,11 +1558,6 @@ export class Layout extends Symbiote {
 
     menu.show(x, y, panelId, currentType, items);
   }
-
-  /**
-   * Handle panel type change
-   * @param {CustomEvent} e
-   */
   _onPanelTypeSelect(e) {
     if (this.$.panelChrome === false) return;
     let { panelId, type } = e.detail;
@@ -1466,11 +1580,6 @@ export class Layout extends Symbiote {
     this.$.layoutTree = { ...tree };
     this._saveLayout();
   }
-
-  /**
-   * Toggle panel collapse state
-   * @param {CustomEvent} e
-   */
   _onPanelCollapseToggle(e) {
     if (this.$.panelChrome === false) return;
     let { panelId, collapsed } = e.detail;
@@ -1486,7 +1595,13 @@ export class Layout extends Symbiote {
       if (collapsed) {
         this.closeDrawer(drawerDock);
       } else {
-        this._suppressDrawerContentClicks();
+        let rail = e.target?.closest?.('layout-node[drawer-rail], [data-drawer-dock]');
+        this._ignoreNextDrawerClick = {
+          pointerId: null,
+          panelId,
+          target: rail && this.contains(rail) ? rail : null,
+          expiresAt: this._drawerNow() + 700,
+        };
         this.openDrawer(drawerDock, panelId);
       }
       return;
@@ -1573,20 +1688,18 @@ export class Layout extends Symbiote {
     let panelId = e.detail?.panelId;
     if (!panelId) return;
     e.stopPropagation();
+    if (this.$.fullscreenPanelId === panelId) {
+      this._onPanelFullscreen({ detail: { panelId } });
+    }
     let panelNode = this._findPanelNode(panelId);
     let panelState = panelNode?.$?.nodeData?.panelState || {};
     if (panelState.uiInvoked) {
       let panelType = panelNode?.$?.nodeData?.panelType;
-      if (panelType) this.closeUiPanel(panelType);
+      if (panelType) this._removeUiPanelFromHeaderClose(panelType);
     } else if (panelState.removable === true) {
       this.joinPanels(panelId);
     }
   }
-
-  /**
-   * Toggle panel fullscreen
-   * @param {CustomEvent} e
-   */
   _onPanelFullscreen(e) {
     if (this.$.panelChrome === false) return;
     let { panelId } = e.detail;
@@ -1657,13 +1770,6 @@ export class Layout extends Symbiote {
     setStylePropertyIfChanged(this.style, '--sn-layout-fullscreen-host-right', '0px');
     setStylePropertyIfChanged(this.style, '--sn-layout-fullscreen-host-bottom', '0px');
   }
-
-  /**
-   * Update tabItems array for Itemize-based tab bar
-   * @param {NodeListOf<Element>} [allPanels] - Optional, will query DOM if not provided
-   * @param {string} [activePanelId] - Optional, defaults to fullscreenPanelId
-   * @returns {void}
-   */
   _updateTabItems(allPanels, activePanelId) {
     let panels = allPanels || this.querySelectorAll('layout-node[node-type="panel"]');
     let activeId = activePanelId || this.$.fullscreenPanelId;
@@ -1681,11 +1787,6 @@ export class Layout extends Symbiote {
       };
     });
   }
-
-  /**
-   * Switch fullscreen to another panel
-   * @param {string} panelId - Panel ID to switch to
-   */
   _switchFullscreenPanel(panelId) {
     let allPanels = this.querySelectorAll('layout-node[node-type="panel"]');
     let newPanel = this._findPanelNode(panelId);
@@ -1712,12 +1813,6 @@ export class Layout extends Symbiote {
 
     this._updateTabItems(allPanels, panelId);
   }
-
-  /**
-   * Find a panel node by ID
-   * @param {string} panelId
-   * @returns {HTMLElement|null}
-   */
   _findPanelNode(panelId) {
     let nodes = this.querySelectorAll('layout-node[node-type="panel"]');
     for (const node of nodes) {
@@ -1737,14 +1832,6 @@ export class Layout extends Symbiote {
     }
     return null;
   }
-
-  /**
-   * Split a panel
-   * @param {string} panelId - Panel ID to split
-   * @param {'horizontal' | 'vertical'} direction - Split direction
-   * @param {number} [ratio=0.5] - Split ratio
-   * @param {string} [newPanelType] - Type for new panel
-   */
   splitPanel(panelId, direction, ratio = 0.5, newPanelType) {
     let newTree = LayoutTree.splitPanel(
       LayoutTree.clone(this.$.layoutTree),
@@ -1759,11 +1846,6 @@ export class Layout extends Symbiote {
       this._saveLayout();
     }
   }
-
-  /**
-   * Join panels (remove one)
-   * @param {string} panelToRemove - Panel ID to remove
-   */
   joinPanels(panelToRemove) {
     let newTree = LayoutTree.joinPanels(LayoutTree.clone(this.$.layoutTree), panelToRemove);
 
@@ -1772,13 +1854,6 @@ export class Layout extends Symbiote {
       this._saveLayout();
     }
   }
-
-  /**
-   * Duplicate a panel.
-   * @param {string} panelId - Panel ID to duplicate
-   * @param {'horizontal' | 'vertical'} [direction='horizontal'] - Split direction
-   * @param {number} [ratio=0.5] - Split ratio
-   */
   duplicatePanel(panelId, direction = 'horizontal', ratio = 0.5) {
     let newTree = LayoutTree.duplicatePanel(
       LayoutTree.clone(this.$.layoutTree),
@@ -1792,20 +1867,6 @@ export class Layout extends Symbiote {
       this._saveLayout();
     }
   }
-
-  /**
-   * Open a panel type inside the current layout tree.
-   * @param {string} panelType
-   * @param {Object} [options]
-   * @param {'horizontal' | 'vertical'} [options.direction]
-   * @param {number} [options.ratio]
-   * @param {Object} [options.panelState]
-   * @param {import('./../LayoutTree.js').LayoutBehavior} [options.behavior]
-   * @param {boolean} [options.reuseExisting]
-   * @param {boolean} [options.uiInvoked]
-   * @param {string} [options.source]
-   * @returns {string|null} opened or reused panel id
-   */
   openPanel(panelType, options = {}) {
     if (options.uiInvoked) {
       this._captureUiPanelRestoreTree();
@@ -1835,12 +1896,6 @@ export class Layout extends Symbiote {
     }));
     return result.panel.id;
   }
-
-  /**
-   * Close a panel previously opened by UI/agent intent.
-   * @param {string} panelType
-   * @returns {boolean}
-   */
   closeUiPanel(panelType) {
     let result = LayoutTree.closeUiPanel(LayoutTree.clone(this.$.layoutTree), panelType);
     if (!result.closed) return false;
@@ -1862,11 +1917,33 @@ export class Layout extends Symbiote {
     return true;
   }
 
-  /**
-   * Remove a panel previously opened by UI/agent intent.
-   * @param {string} panelType
-   * @returns {boolean}
-   */
+  _removeUiPanelFromHeaderClose(panelType) {
+    let result = LayoutTree.removeUiPanel(LayoutTree.clone(this.$.layoutTree), panelType, {
+      fallbackRoot: this._uiPanelRestoreTree,
+    });
+    if (!result.removed) return false;
+
+    // Notify close consumers while the panel is still mounted so they can move
+    // any host-owned stateful content out before the layout node is removed.
+    this.dispatchEvent(new CustomEvent('layout-ui-panel-close', {
+      bubbles: true,
+      composed: true,
+      detail: {
+        panelId: result.panel.id,
+        panelType,
+        closed: true,
+        removed: true,
+        restored: Boolean(result.restored),
+        source: result.panel.panelState?.source || '',
+      },
+    }));
+
+    this.$.layoutTree = result.root || LayoutTree.createPanel('default');
+    this._saveLayout();
+    this._scheduleResponsiveLayout();
+    this._clearUiPanelRestoreTreeWhenSettled();
+    return true;
+  }
   removeUiPanel(panelType) {
     let result = LayoutTree.removeUiPanel(LayoutTree.clone(this.$.layoutTree), panelType, {
       fallbackRoot: this._uiPanelRestoreTree,
@@ -1908,32 +1985,14 @@ export class Layout extends Symbiote {
       this._uiPanelRestoreTree = null;
     }
   }
-
-  /**
-   * Set the fold-down header menu actions for a panel.
-   * @param {string} panelId
-   * @param {Array<{id: string, label?: string, icon?: string, title?: string, active?: boolean, disabled?: boolean}>} actions
-   */
   setPanelMenuActions(panelId, actions = []) {
     let panelNode = this._findPanelNode(panelId);
     panelNode?.setPanelMenuActions?.(actions);
   }
-
-  /**
-   * Set root layout behavior used for auto-collapse and responsive overflow.
-   * @param {import('./../LayoutTree.js').LayoutBehavior} behavior
-   */
   setLayoutBehavior(behavior = {}) {
     this.$.layoutBehavior = LayoutTree.normalizeLayoutBehavior(behavior, this._getAttributeBehavior());
     this._scheduleResponsiveLayout();
   }
-
-  /**
-   * Set responsive behavior for a concrete layout tree insertion point.
-   * @param {string} nodeId
-   * @param {import('./../LayoutTree.js').LayoutBehavior} behavior
-   * @returns {boolean}
-   */
   setNodeBehavior(nodeId, behavior = {}) {
     let tree = LayoutTree.clone(this.$.layoutTree);
     let updated = LayoutTree.setNodeBehavior(tree, nodeId, behavior, this._getRootBehavior());
@@ -1943,19 +2002,9 @@ export class Layout extends Symbiote {
     this._scheduleResponsiveLayout();
     return true;
   }
-
-  /**
-   * Get current layout
-   * @returns {import('./../LayoutTree.js').LayoutNode}
-   */
   getLayout() {
     return LayoutTree.clone(this.$.layoutTree);
   }
-
-  /**
-   * Set layout
-   * @param {import('./../LayoutTree.js').LayoutNode} layout
-   */
   setLayout(layout) {
     let allPanels = this.querySelectorAll('layout-node[node-type="panel"]');
     allPanels.forEach((panelNode) => {

@@ -17,9 +17,9 @@ import {
   createRuntimeUiInstance,      // Create a single component instance from JSON
   createRuntimeUiController,    // Create the full controller
   applyRuntimeLayoutAction,     // Apply layout panel action (open/close/remove)
-  executeAgentIntent,           // Run transactional agent intents
+  executeAgentIntent,           // Run intents with best-effort rollback
   createDynamicComponentRegistry, // Create component registry
-  validateComponentCode,        // Validate code string for security
+  validateComponentCode,        // Apply lexical validation to trusted source
 } from 'symbiote-ui/runtime';
 ```
 
@@ -63,7 +63,7 @@ Applies normalized state to a DOM element.
 **Host method gate (options):**
 - `options.allowMethod(name, element)` — function returning boolean.
 - `options.allowedMethods` — array of allowed method names.
-- If neither is set, all methods are allowed.
+- If neither is set, method calls are skipped.
 
 ## createRuntimeUiInstance(node, options)
 

@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rnd-pro.github.io/symbiote-ui/schemas/xr-spatial-window-layout-v1.json",
+  "title": "XR Spatial Window Layout",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "layoutId",
+    "windowId",
+    "contentKind",
+    "title",
+    "pose",
+    "sizeMeters",
+    "viewport",
+    "contentRevision",
+    "themeRevision",
+    "state",
+    "themeScope",
+    "contentHash",
+    "volumetric"
+  ],
+  "properties": {
+    "version": { "const": "xr-spatial-window-layout-v1" },
+    "layoutId": { "type": "string", "minLength": 1 },
+    "windowId": { "type": "string", "minLength": 1 },
+    "contentKind": { "enum": ["dom", "volumetric"] },
+    "title": { "type": ["string", "null"] },
+    "pose": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["position", "rotation"],
+      "properties": {
+        "position": { "$ref": "#/$defs/vector3" },
+        "rotation": { "$ref": "#/$defs/vector3" }
+      }
+    },
+    "sizeMeters": { "$ref": "#/$defs/size2d" },
+    "viewport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["width", "height"],
+      "properties": {
+        "width": { "type": "integer", "exclusiveMinimum": 0 },
+        "height": { "type": "integer", "exclusiveMinimum": 0 }
+      }
+    },
+    "contentRevision": { "type": "integer", "minimum": 0 },
+    "themeRevision": { "type": "integer", "minimum": 0 },
+    "state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["focused", "pinned", "hidden", "closable"],
+      "properties": {
+        "focused": { "type": "boolean" },
+        "pinned": { "type": "boolean" },
+        "hidden": { "type": "boolean" },
+        "closable": { "type": "boolean" }
+      }
+    },
+    "themeScope": { "type": ["string", "null"] },
+    "contentHash": { "type": ["string", "null"] },
+    "volumetric": {
+      "type": "array",
+      "items": { "type": "object" }
+    }
+  },
+  "$defs": {
+    "vector3": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": { "type": "number" }
+    },
+    "size2d": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": { "type": "number", "exclusiveMinimum": 0 }
+    }
+  }
+}

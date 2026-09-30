@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rnd-pro.github.io/symbiote-ui/schemas/xr-spatial-window-fallback-v1.json",
+  "title": "XR Spatial Window Fallback",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "windowId", "layoutId", "mode", "source", "reason", "upload"],
+  "properties": {
+    "version": { "const": "xr-spatial-window-fallback-v1" },
+    "windowId": { "type": ["string", "null"] },
+    "layoutId": { "type": ["string", "null"] },
+    "mode": { "enum": ["none", "provider-material-fallback", "dom-overlay"] },
+    "source": { "type": ["string", "null"] },
+    "reason": { "type": ["string", "null"] },
+    "upload": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["uploaded", "stage", "reason"],
+      "properties": {
+        "uploaded": { "type": "boolean" },
+        "stage": { "type": ["string", "null"] },
+        "reason": { "type": ["string", "null"] }
+      }
+    }
+  }
+}

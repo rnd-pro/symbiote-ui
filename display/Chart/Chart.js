@@ -6,7 +6,7 @@ function emit(el, type, detail = {}) {
   el.dispatchEvent(new CustomEvent(type, { bubbles: true, composed: true, detail }));
 }
 
-const CHART_TYPES = new Set(['bar', 'line', 'area', 'scatter', 'pie', 'mixed']);
+const CHART_TYPES = new Set(['bar', 'line', 'area', 'scatter', 'pie', 'donut', 'mixed']);
 const SERIES_TYPES = new Set(['bar', 'line', 'area', 'scatter', 'pie']);
 
 function normalizeNumber(value, fallback = 0) {
@@ -23,6 +23,15 @@ function normalizeAxis(axis, fallbackType = 'value') {
   if (data.max != null) result.max = normalizeNumber(data.max);
   if (data.label != null) result.label = String(data.label);
   return result;
+}
+
+function normalizeSemanticTarget(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const target = {};
+  for (const key of ['id', 'type', 'resourceType', 'resourceId', 'surfaceId', 'action']) {
+    if (value[key] != null && String(value[key]).trim()) target[key] = String(value[key]).trim();
+  }
+  return Object.keys(target).length ? target : null;
 }
 
 export function normalizeChartColor(value, fallback = '') {
@@ -50,6 +59,13 @@ function normalizeSeries(series, index, chartType) {
     type,
     data: Array.isArray(data.data) ? data.data.map((item) => normalizeNumber(item)) : [],
   };
+  if (data.stack != null && String(data.stack).trim()) normalized.stack = String(data.stack).trim();
+  if (Array.isArray(data.semanticTargets)) {
+    normalized.semanticTargets = data.semanticTargets.map(normalizeSemanticTarget);
+  }
+  if (Array.isArray(data.colors)) {
+    normalized.colors = data.colors.map((value) => normalizeChartColor(value));
+  }
   let color = normalizeChartColor(data.color);
   if (color) normalized.color = color;
   return normalized;
@@ -79,7 +95,7 @@ export function normalizeChartSpec(spec = {}) {
       ? data.thresholds.map((threshold) => ({
           value: normalizeNumber(threshold?.value),
           label: threshold?.label != null ? String(threshold.label) : '',
-          color: normalizeChartColor(threshold?.color, 'var(--sn-hue-danger, #f85149)'),
+          color: normalizeChartColor(threshold?.color, 'var(--sn-chart-threshold-color, var(--sn-sys-danger))'),
         }))
       : [],
     legend: {
@@ -88,6 +104,11 @@ export function normalizeChartSpec(spec = {}) {
     },
     tooltip: {
       show: data.tooltip?.show !== false,
+    },
+    donut: {
+      innerRadiusRatio: Math.min(0.78, Math.max(0.2, normalizeNumber(data.donut?.innerRadiusRatio, 0.58))),
+      centerLabel: data.donut?.centerLabel != null ? String(data.donut.centerLabel) : '',
+      centerValue: data.donut?.centerValue != null ? String(data.donut.centerValue) : '',
     },
   };
 }
@@ -322,7 +343,7 @@ export class Chart extends Symbiote {
     const chartWidth = width - padding * 2;
     const chartHeight = height - padding * 2;
 
-    const isPie = this.#spec.type === 'pie' || seriesList.some(s => s.type === 'pie');
+    const isPie = this.#spec.type === 'pie' || this.#spec.type === 'donut' || seriesList.some(s => s.type === 'pie');
 
     if (isPie) {
       this.#renderPieChart(svg, seriesList, categories, width, height, padding);
@@ -337,6 +358,14 @@ export class Chart extends Symbiote {
       }
     });
     (this.#spec.thresholds || []).forEach(t => allValues.push(Number(t.value || 0)));
+    const stackedTotals = new Map();
+    seriesList.filter((series) => series.type === 'bar' && series.stack).forEach((series) => {
+      series.data.forEach((value, index) => {
+        const key = `${series.stack}\u0000${index}`;
+        stackedTotals.set(key, (stackedTotals.get(key) || 0) + Math.max(0, Number(value || 0)));
+      });
+    });
+    allValues.push(...stackedTotals.values());
 
     let maxVal = this.#spec.yAxis?.max != null ? Number(this.#spec.yAxis.max) : Math.max(...allValues, 1);
     let minVal = this.#spec.yAxis?.min != null ? Number(this.#spec.yAxis.min) : Math.min(...allValues, 0);
@@ -363,7 +392,14 @@ export class Chart extends Symbiote {
     svg.appendChild(xAxis);
     svg.appendChild(yAxis);
 
-    const gridLinesCount = 4;
+    // Integer count charts should not produce duplicate rounded labels (for
+    // example 3, 2, 2, 1, 0). Continuous charts retain the usual four bands.
+    const usesIntegerScale = Number.isInteger(minVal)
+      && Number.isInteger(maxVal)
+      && allValues.every((value) => Number.isInteger(Number(value)));
+    const gridLinesCount = usesIntegerScale
+      ? Math.max(1, Math.min(4, Math.ceil(range)))
+      : 4;
     for (let i = 0; i <= gridLinesCount; i++) {
       const y = padding + (chartHeight / gridLinesCount) * i;
       const val = maxVal - (range / gridLinesCount) * i;
@@ -392,7 +428,7 @@ export class Chart extends Symbiote {
     // Draw Thresholds / Reference Bands
     (this.#spec.thresholds || []).forEach((t) => {
       const y = yForValue(t.value);
-      const color = normalizeChartColor(t.color, 'var(--sn-hue-danger, #f85149)');
+      const color = normalizeChartColor(t.color, 'var(--sn-chart-threshold-color, var(--sn-sys-danger))');
       const line = this.#createSvgElement('line', {
         x1: padding,
         y1: y,
@@ -431,34 +467,41 @@ export class Chart extends Symbiote {
 
     // Render Series Elements
     const barSeriesList = seriesList.filter(s => s.type === 'bar');
-    const barCount = barSeriesList.length;
+    const barGroups = [...new Set(barSeriesList.map((series) => series.stack ? `stack:${series.stack}` : `series:${series.name}`))];
+    const stackedOffsets = new Map();
 
     seriesList.forEach((series, sIndex) => {
       const color = normalizeChartColor(series.color, `var(--sn-tab-accent-${sIndex % 6}, #2e90fa)`);
       const data = series.data || [];
 
       if (series.type === 'bar') {
-        const barSeriesIndex = barSeriesList.indexOf(series);
+        const barGroup = series.stack ? `stack:${series.stack}` : `series:${series.name}`;
+        const barSeriesIndex = barGroups.indexOf(barGroup);
         const groupWidth = chartWidth / categoryCount;
-        const barWidth = (groupWidth * 0.7) / (barCount || 1);
+        const barWidth = (groupWidth * 0.7) / (barGroups.length || 1);
         const gap = groupWidth * 0.3;
 
         data.forEach((val, idx) => {
           if (idx >= categoryCount) return;
           const x = padding + gap / 2 + groupWidth * idx + barWidth * barSeriesIndex;
-          const y = yForValue(Math.max(Number(val), minVal));
-          const valHeight = Math.max(1, Math.abs(baselineY - y));
+          const stackKey = series.stack ? `${series.stack}\u0000${idx}` : '';
+          const previousValue = stackKey ? (stackedOffsets.get(stackKey) || 0) : 0;
+          const nextValue = previousValue + Number(val || 0);
+          if (stackKey) stackedOffsets.set(stackKey, nextValue);
+          const y = yForValue(Math.max(nextValue, minVal));
+          const previousY = stackKey ? yForValue(Math.max(previousValue, minVal)) : baselineY;
+          const valHeight = Math.max(1, Math.abs(previousY - y));
 
           const rect = this.#createSvgElement('rect', {
             x,
-            y: Math.min(y, baselineY),
+            y: Math.min(y, previousY),
             width: barWidth,
             height: valHeight,
             class: 'sn-chart-bar',
             fill: color,
           });
 
-          this.#addTooltipEvents(rect, series.name, categories[idx] || `Index ${idx}`, val);
+          this.#addTooltipEvents(rect, series.name, categories[idx] || `Index ${idx}`, val, idx, series.semanticTargets?.[idx]);
           svg.appendChild(rect);
         });
       } else if (series.type === 'line' || series.type === 'area') {
@@ -503,7 +546,7 @@ export class Chart extends Symbiote {
             stroke: color,
             fill: 'var(--sn-sys-surface-panel)',
           });
-          this.#addTooltipEvents(circle, series.name, categories[idx] || `Index ${idx}`, val);
+          this.#addTooltipEvents(circle, series.name, categories[idx] || `Index ${idx}`, val, idx, series.semanticTargets?.[idx]);
           svg.appendChild(circle);
         });
       } else if (series.type === 'scatter') {
@@ -520,7 +563,7 @@ export class Chart extends Symbiote {
             stroke: color,
             fill: color,
           });
-          this.#addTooltipEvents(circle, series.name, categories[idx] || `Index ${idx}`, val);
+          this.#addTooltipEvents(circle, series.name, categories[idx] || `Index ${idx}`, val, idx, series.semanticTargets?.[idx]);
           svg.appendChild(circle);
         });
       }
@@ -531,6 +574,8 @@ export class Chart extends Symbiote {
     const centerX = width / 2;
     const centerY = height / 2 + 10;
     const radius = Math.min(width, height) / 2 - padding;
+    const isDonut = this.#spec.type === 'donut';
+    const innerRadius = isDonut ? radius * this.#spec.donut.innerRadiusRatio : 0;
 
     // Sum values for category items
     let data = [];
@@ -557,25 +602,58 @@ export class Chart extends Symbiote {
       const y2 = centerY + radius * Math.sin(accumulatedAngle + angle);
 
       const largeArc = angle > Math.PI ? 1 : 0;
-      const pathData = [
-        `M ${centerX} ${centerY}`,
-        `L ${x1} ${y1}`,
-        `A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2}`,
-        'Z'
-      ].join(' ');
+      const innerX2 = centerX + innerRadius * Math.cos(accumulatedAngle + angle);
+      const innerY2 = centerY + innerRadius * Math.sin(accumulatedAngle + angle);
+      const innerX1 = centerX + innerRadius * Math.cos(accumulatedAngle);
+      const innerY1 = centerY + innerRadius * Math.sin(accumulatedAngle);
+      const pathData = isDonut
+        ? [
+            `M ${x1} ${y1}`,
+            `A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2}`,
+            `L ${innerX2} ${innerY2}`,
+            `A ${innerRadius} ${innerRadius} 0 ${largeArc} 0 ${innerX1} ${innerY1}`,
+            'Z',
+          ].join(' ')
+        : [
+            `M ${centerX} ${centerY}`,
+            `L ${x1} ${y1}`,
+            `A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2}`,
+            'Z',
+          ].join(' ');
 
-      const color = `var(--sn-tab-accent-${index % 6}, #2e90fa)`;
+      const color = normalizeChartColor(series.colors?.[index], `var(--sn-tab-accent-${index % 6}, #2e90fa)`);
       const path = this.#createSvgElement('path', {
         d: pathData,
         fill: color,
         class: 'sn-chart-pie-slice',
       });
 
-      this.#addTooltipEvents(path, series.name, item.label, item.value);
+      this.#addTooltipEvents(path, series.name, item.label, item.value, index, series.semanticTargets?.[index]);
       svg.appendChild(path);
 
       accumulatedAngle += angle;
     });
+
+    if (isDonut) {
+      const value = this.#createSvgElement('text', {
+        x: centerX,
+        y: centerY - 1,
+        'text-anchor': 'middle',
+        class: 'sn-chart-donut-value',
+      });
+      value.textContent = this.#spec.donut.centerValue || String(seriesData.reduce((sum, item) => sum + Number(item || 0), 0));
+      svg.appendChild(value);
+      if (this.#spec.donut.centerLabel) {
+        const label = this.#createSvgElement('text', {
+          x: centerX,
+          y: centerY + 17,
+          'text-anchor': 'middle',
+          class: 'sn-chart-donut-label',
+        });
+        label.textContent = this.#spec.donut.centerLabel;
+        svg.appendChild(label);
+      }
+    }
   }
 
   #renderLegend() {
@@ -585,6 +663,24 @@ export class Chart extends Symbiote {
     legendContainer.innerHTML = '';
 
     if (this.#spec.legend?.show === false) return;
+
+    if ((this.#spec.type === 'pie' || this.#spec.type === 'donut') && this.#spec.series?.[0]) {
+      const series = this.#spec.series[0];
+      (this.#spec.xAxis?.data || []).forEach((labelText, index) => {
+        const item = document.createElement('div');
+        item.className = 'sn-chart-legend-item';
+        item.setAttribute('data-chart-category', String(index));
+        const marker = document.createElement('span');
+        marker.className = 'sn-chart-legend-color';
+        marker.style.backgroundColor = normalizeChartColor(series.colors?.[index], `var(--sn-tab-accent-${index % 6}, #2e90fa)`);
+        const label = document.createElement('span');
+        label.textContent = String(labelText);
+        item.append(marker, label);
+        item.addEventListener('click', () => this.#emitPointSelection(series, index, labelText, series.data?.[index]));
+        legendContainer.appendChild(item);
+      });
+      return;
+    }
 
     (this.#spec.series || []).forEach((series, sIndex) => {
       if (!series) return;
@@ -617,7 +713,28 @@ export class Chart extends Symbiote {
     });
   }
 
-  #addTooltipEvents(el, seriesName, label, value) {
+  #emitPointSelection(series, index, label, value) {
+    emit(this, 'sn-chart-select', {
+      seriesName: String(series?.name || ''),
+      categoryIndex: Number(index),
+      label: String(label || ''),
+      value: normalizeNumber(value),
+      semanticTarget: series?.semanticTargets?.[index] || null,
+      spec: this.#spec,
+    });
+  }
+
+  #addTooltipEvents(el, seriesName, label, value, index, semanticTarget = null) {
+    const series = (this.#spec.series || []).find((item) => item?.name === seriesName) || { name: seriesName, semanticTargets: [] };
+    el.setAttribute('tabindex', '0');
+    el.setAttribute('role', 'button');
+    el.setAttribute('aria-label', `${seriesName}, ${label}: ${value}`);
+    el.addEventListener('click', () => this.#emitPointSelection({ ...series, semanticTargets: series.semanticTargets || [semanticTarget] }, index, label, value));
+    el.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      this.#emitPointSelection({ ...series, semanticTargets: series.semanticTargets || [semanticTarget] }, index, label, value);
+    });
     el.addEventListener('mousemove', (event) => {
       let tooltip = this.ref.tooltip;
       if (!tooltip) return;

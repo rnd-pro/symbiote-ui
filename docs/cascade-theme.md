@@ -114,7 +114,9 @@ rounded composer surfaces.
 scroll-edge fade used by reusable scroll hosts. The reusable scroll-fade
 controller keeps the CSS mask disabled until the host actually overflows on its
 configured single axis, so empty or not-yet-scrollable regions do not show edge
-gradients.
+gradients. While scrolling, each edge is controlled independently: an edge
+fade appears only when more content exists beyond that edge and disappears when
+the viewport reaches its boundary.
 Set `scrollShadow: 0` to disable the fade.
 Pan/drag canvases such as `node-canvas` and `canvas-graph` do not use the
 scroll-edge fade; it is reserved for conventional one-axis scroll surfaces such

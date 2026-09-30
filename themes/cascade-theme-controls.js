@@ -229,7 +229,7 @@ export const CASCADE_THEME_DEFAULTS = Object.freeze(Object.fromEntries(
 
 /**
  * Pre-defined theme variants provided by the library.
- * Architectural Principle (Separation of Concerns): 
+ * Architectural Principle (Separation of Concerns):
  * Library presets define ONLY structural or layout differences (e.g. tabShape, themeVariant).
  * Brand-specific parameters (hue, chroma, frameRadius, etc.) MUST NOT be hardcoded here.
  * Applications consuming the library should provide their own color and spacing defaults

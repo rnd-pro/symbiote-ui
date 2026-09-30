@@ -22,6 +22,20 @@ test('XR spatial schema catalog exposes every published evidence contract', () =
     'xr-portable-panel-receipt-v1',
     'xr-frame-timing-v1',
     'xr-final-session-snapshot-v1',
+    'xr-spatial-window-layout-v1',
+    'xr-spatial-window-sync-receipt-v1',
+    'xr-spatial-window-lifecycle-receipt-v1',
+    'xr-spatial-window-resize-receipt-v1',
+    'xr-spatial-window-relay-receipt-v1',
+    'xr-spatial-window-scroll-receipt-v1',
+    'xr-spatial-window-selection-receipt-v1',
+    'xr-spatial-window-focus-receipt-v1',
+    'xr-spatial-window-viewport-receipt-v1',
+    'xr-spatial-window-theme-redraw-receipt-v1',
+    'xr-spatial-window-fallback-v1',
+    'xr-spatial-window-assembly-diagnostics-v1',
+    'xr-spatial-window-frame-v1',
+    'xr-html-canvas-upload-receipt-v1',
   ]);
   assert.ok(schemas.every((schema) => schema.path.startsWith('schemas/')));
   assert.ok(schemas.every((schema) => schema.$id.endsWith(schema.path)));

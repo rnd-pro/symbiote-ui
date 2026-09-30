@@ -37,6 +37,7 @@ import {
   createWebMcpObserver,
   describeWebMcpPresentationActions,
   formatWebMcpTargetLine,
+  formatWebMcpTourTargetLine,
   getWebMcpPresentationActionPhase,
   matchesWebMcpHookTrigger,
   normalizeWebMcpTargetText,
@@ -985,6 +986,151 @@ test('WebMCP tour prompt carries task scope and turn budget when provided', () =
   assert.match(prompt, /do not force alternation, reply pairs, an opening, a closing/);
 });
 
+test('WebMCP tour timeline coercion validates exact speechQuote requirement for webmcp actions', () => {
+  let payload = coerceWebMcpTourTimelinePayload(`
+    \`\`\`json
+    {
+      "turns": [
+        {
+          "persona": "guide",
+          "text": "This is a valid quote turn.",
+          "cue": { "targetId": "window:release-board" },
+          "webmcp": {
+            "tool": "select_window",
+            "input": { "targetId": "window:release-board" },
+            "speechQuote": "valid quote",
+            "speechOccurrence": 1
+          }
+        },
+        {
+          "persona": "guide",
+          "text": "This is a missing quote turn.",
+          "cue": { "targetId": "window:release-board" },
+          "webmcp": {
+            "tool": "select_window",
+            "input": { "targetId": "window:release-board" }
+          }
+        },
+        {
+          "persona": "guide",
+          "text": "This is a bad quote turn.",
+          "cue": { "targetId": "window:release-board" },
+          "webmcp": {
+            "tool": "select_window",
+            "input": { "targetId": "window:release-board" },
+            "speechQuote": "invalid quote"
+          }
+        },
+        {
+          "persona": "guide",
+          "text": "repeat repeat repeat.",
+          "cue": { "targetId": "window:release-board" },
+          "webmcp": {
+            "tool": "select_window",
+            "input": { "targetId": "window:release-board" },
+            "speechQuote": "repeat",
+            "speechOccurrence": 3
+          }
+        },
+        {
+          "persona": "guide",
+          "text": "fractional fails",
+          "cue": { "targetId": "window:release-board" },
+          "webmcp": {
+            "tool": "select_window",
+            "input": { "targetId": "window:release-board" },
+            "speechQuote": "fractional",
+            "speechOccurrence": 1.5
+          }
+        },
+        {
+          "persona": "guide",
+          "text": "whitespace quote fails",
+          "cue": { "targetId": "window:release-board" },
+          "webmcp": {
+            "tool": "select_window",
+            "input": { "targetId": "window:release-board" },
+            "speechQuote": "   "
+          }
+        }
+      ]
+    }
+    \`\`\`
+  `, {
+    runtimeTargets: [
+      { id: 'window:release-board', kind: 'window' }
+    ],
+    allowedToolNames: ['select_window']
+  });
+
+  assert.equal(payload.turns.length, 6);
+  assert.equal(payload.turns[0].text, 'This is a valid quote turn.');
+  assert.deepEqual(payload.turns[0].webmcp, {
+    tool: 'select_window',
+    input: { targetId: 'window:release-board' },
+    speechQuote: 'valid quote',
+    speechOccurrence: 1
+  });
+
+  assert.equal(payload.turns[1].text, 'This is a missing quote turn.');
+  assert.equal(payload.turns[1].webmcp, undefined);
+
+  assert.equal(payload.turns[2].text, 'This is a bad quote turn.');
+  assert.equal(payload.turns[2].webmcp, undefined);
+
+  assert.equal(payload.turns[3].text, 'repeat repeat repeat.');
+  assert.deepEqual(payload.turns[3].webmcp, {
+    tool: 'select_window',
+    input: { targetId: 'window:release-board' },
+    speechQuote: 'repeat',
+    speechOccurrence: 3
+  });
+
+  assert.equal(payload.turns[4].text, 'fractional fails');
+  assert.equal(payload.turns[4].webmcp, undefined);
+
+  assert.equal(payload.turns[5].text, 'whitespace quote fails');
+  assert.equal(payload.turns[5].webmcp, undefined);
+});
+
+test('WebMCP tour timeline coercion enforces runtime target action capabilities', () => {
+  let payload = coerceWebMcpTourTimelinePayload(`
+    \`\`\`json
+    {
+      "turns": [
+        {
+          "text": "Open the release board.",
+          "cue": { "targetId": "window:release-board" },
+          "webmcp": { "tool": "select_window", "input": { "targetId": "window:release-board" }, "speechQuote": "release board" }
+        },
+        {
+          "text": "Use the chat to describe the task.",
+          "cue": { "targetId": "chat" },
+          "webmcp": { "tool": "select_window", "input": { "targetId": "chat" }, "speechQuote": "chat" }
+        },
+        {
+          "text": "The tab strip keeps workspaces available.",
+          "cue": { "targetId": "tabs" },
+          "webmcp": { "tool": "select_window", "input": { "targetId": "tabs" }, "speechQuote": "tab strip" }
+        }
+      ]
+    }
+    \`\`\`
+  `, {
+    runtimeTargets: [
+      { id: 'window:release-board', kind: 'window', actionRefs: ['select_window'] },
+      { id: 'chat', kind: 'agent-chat' },
+      { id: 'tabs', kind: 'workspace-tabs', actionRefs: ['mark_ui'] },
+    ],
+    allowedToolNames: ['select_window', 'mark_ui'],
+  });
+
+  assert.equal(payload.turns[0].webmcp.tool, 'select_window');
+  assert.equal(payload.turns[1].webmcp, undefined);
+  assert.equal(payload.turns[2].webmcp, undefined);
+  assert.match(formatWebMcpTourTargetLine({ id: 'tabs', title: 'Tabs', actionRefs: ['mark_ui'] }), /\[actions: mark_ui\]/);
+});
+
 test('WebMCP tour timeline coercion validates targets annotations and safe actions', () => {
   let payload = coerceWebMcpTourTimelinePayload(`
     Intro text ignored.
@@ -1006,7 +1152,8 @@ test('WebMCP tour timeline coercion validates targets annotations and safe actio
               "targetId": "element:release-board:publish-pages:0",
               "marker": "underline",
               "intent": "detail"
-            }
+            },
+            "speechQuote": "release card"
           }
         },
         {
@@ -1016,7 +1163,8 @@ test('WebMCP tour timeline coercion validates targets annotations and safe actio
           "marker": "box",
           "webmcp": {
             "tool": "select_window",
-            "input": { "targetId": "window:release-board" }
+            "input": { "targetId": "window:release-board" },
+            "speechQuote": "open the board"
           }
         },
         {
@@ -1057,10 +1205,14 @@ test('WebMCP tour timeline coercion validates targets annotations and safe actio
       marker: 'underline',
       placement: 'over',
     },
+    speechQuote: 'release card',
+    speechOccurrence: 1
   });
   assert.deepEqual(payload.turns[1].webmcp, {
     tool: 'select_window',
     input: { targetId: 'window:release-board' },
+    speechQuote: 'open the board',
+    speechOccurrence: 1
   });
   assert.equal(payload.turns[1].annotations, undefined);
   assert.equal(payload.turns.find((turn) => turn.text === 'This turn is invalid.'), undefined);

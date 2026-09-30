@@ -13,6 +13,12 @@ import {
   resolveNativePanelHit,
 } from '../xr/native-panel-layout.js';
 import { createThreeNativePanelRenderer } from '../xr/three-native-panel-renderer.js';
+import {
+  FakeCanvasTexture,
+  installFakeCanvas2DGlobal,
+} from './xr-spatial-window-fixtures.js';
+
+installFakeCanvas2DGlobal();
 
 function createPanels() {
   return [
@@ -207,8 +213,12 @@ function createMockThree() {
     Mesh: MockMesh,
     PlaneGeometry: MockPlaneGeometry,
     MeshBasicMaterial: MockMeshBasicMaterial,
+    CanvasTexture: FakeCanvasTexture,
     Color: MockColor,
     REVISION: '180',
+    LinearMipmapLinearFilter: 1008,
+    LinearFilter: 1006,
+    SRGBColorSpace: 'srgb',
   };
 }
 

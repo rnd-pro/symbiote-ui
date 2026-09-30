@@ -1,4 +1,5 @@
 import { hasComponent } from './component-registry.js';
+import { listComponentSelections } from './component-selection.js';
 
 /**
  * @typedef {object} ComponentRecipe
@@ -8,208 +9,67 @@ import { hasComponent } from './component-registry.js';
  * @property {string} antipattern One-line "don't hand-roll a …" reminder.
  */
 
-/**
- * Curated intent → existing component reuse index. Every entry points an author
- * at a real `symbiote-ui` component instead of inventing a bespoke one, so new
- * modules stay consistent with the existing UI surface.
- *
- * Entries are filtered against the live registry by {@link listComponentRecipes}
- * so a component that disappears from the registry drops out of the index
- * rather than dangling.
- *
- * @type {ComponentRecipe[]}
- */
-const RECIPES = [
-  {
-    intent: 'tabular data',
-    component: 'sn-data-table',
-    when: 'use when rows and columns need sorting, selection, or aligned cells',
-    antipattern: "don't hand-roll a <table> grid with custom row markup",
-  },
-  {
-    intent: 'key/value details',
-    component: 'sn-description-list',
-    when: 'use when showing labelled term/value pairs for a single record',
-    antipattern: "don't hand-roll a two-column <dl> or label/value flex layout",
-  },
-  {
-    intent: 'status indicator',
-    component: 'sn-status-light',
-    when: 'use when surfacing a discrete health or state dot (online, error, idle)',
-    antipattern: "don't hand-roll a colored <span> dot with bespoke state classes",
-  },
-  {
-    intent: 'count or label badge',
-    component: 'sn-badge',
-    when: 'use when annotating an item with a small count, tag, or state label',
-    antipattern: "don't hand-roll a pill <span> with custom background colors",
-  },
-  {
-    intent: 'titled bordered container',
-    component: 'sn-card',
-    when: 'use when grouping related content in a bordered, optionally titled surface',
-    antipattern: "don't hand-roll a <div> with border, radius, and padding tokens",
-  },
-  {
-    intent: 'modal dialog',
-    component: 'sn-dialog',
-    when: 'use when a focused, blocking task or confirmation interrupts the flow',
-    antipattern: "don't hand-roll a fixed overlay <div> with manual focus trapping",
-  },
-  {
-    intent: 'slide-over panel',
-    component: 'sn-drawer',
-    when: 'use when secondary content slides in from an edge without leaving the page',
-    antipattern: "don't hand-roll an off-canvas <aside> with manual transitions",
-  },
-  {
-    intent: 'transient notification',
-    component: 'sn-toast',
-    when: 'use when confirming an action with a brief, auto-dismissing message',
-    antipattern: "don't hand-roll a floating <div> with a setTimeout dismiss",
-  },
-  {
-    intent: 'inline alert',
-    component: 'sn-banner',
-    when: 'use when a persistent in-flow message warns or informs about context',
-    antipattern: "don't hand-roll a colored callout <div> with an icon and message",
-  },
-  {
-    intent: 'empty or zero state',
-    component: 'sn-empty-state',
-    when: 'use when a list or view has no data and needs guidance or a next action',
-    antipattern: "don't hand-roll a centered <div> with an icon and 'nothing here' text",
-  },
-  {
-    intent: 'single metric',
-    component: 'sn-metric',
-    when: 'use when highlighting one headline number with a label and optional delta',
-    antipattern: "don't hand-roll a stat block with bespoke number and caption styles",
-  },
-  {
-    intent: 'hierarchical data',
-    component: 'sn-tree-view',
-    when: 'use when nested, expandable parent/child nodes need to be navigated',
-    antipattern: "don't hand-roll nested <ul> lists with manual expand/collapse state",
-  },
-  {
-    intent: 'selectable list',
-    component: 'sn-listbox',
-    when: 'use when a single- or multi-select list needs keyboard and roving focus',
-    antipattern: "don't hand-roll a <ul> of clickable items with custom selection logic",
-  },
-  {
-    intent: 'collapsible sections',
-    component: 'sn-accordion',
-    when: 'use when stacked sections expand and collapse to manage vertical space',
-    antipattern: "don't hand-roll <details>/<summary> blocks with bespoke animation",
-  },
-  {
-    intent: 'contextual overlay',
-    component: 'sn-popover',
-    when: 'use when transient content anchors to a trigger and dismisses on outside click',
-    antipattern: "don't hand-roll an absolutely positioned <div> with manual placement",
-  },
-  {
-    intent: 'form text input',
-    component: 'sn-field',
-    when: 'use when collecting a labelled text value with validation and help text',
-    antipattern: "don't hand-roll a <label> + <input> pair with custom error markup",
-  },
-  {
-    intent: 'choice from many options',
-    component: 'sn-select',
-    when: 'use when picking one value from a known, bounded list of options',
-    antipattern: "don't hand-roll a styled native <select> or custom dropdown menu",
-  },
-  {
-    intent: 'searchable choice from many',
-    component: 'sn-combobox',
-    when: 'use when picking from a long list that benefits from type-ahead filtering',
-    antipattern: "don't hand-roll an <input> with a filtered results <ul> beneath it",
-  },
-  {
-    intent: 'on/off toggle',
-    component: 'sn-switch',
-    when: 'use when toggling a single boolean setting on or off immediately',
-    antipattern: "don't hand-roll a checkbox restyled to look like a toggle track",
-  },
-  {
-    intent: 'determinate progress',
-    component: 'sn-progress-bar',
-    when: 'use when showing linear completion toward a known total',
-    antipattern: "don't hand-roll a track <div> with a width-percentage fill",
-  },
-  {
-    intent: 'compact circular progress',
-    component: 'sn-progress-ring',
-    when: 'use when completion is shown in a small, radial footprint',
-    antipattern: "don't hand-roll an SVG circle with stroke-dashoffset math",
-  },
-  {
-    intent: 'user avatar',
-    component: 'sn-avatar',
-    when: 'use when representing a person or entity with an image or initials',
-    antipattern: "don't hand-roll a rounded <img> with initials fallback logic",
-  },
-  {
-    intent: 'tag or chip',
-    component: 'sn-tag',
-    when: 'use when labelling or categorizing an item with a small, optionally removable chip',
-    antipattern: "don't hand-roll a pill <span> with a close button and remove handler",
-  },
-  {
-    intent: 'code snippet',
-    component: 'code-block',
-    when: 'use when displaying syntax-highlighted code with copy affordance',
-    antipattern: "don't hand-roll a <pre><code> block with bespoke highlighting",
-  },
-  {
-    intent: 'tooltip',
-    component: 'sn-tooltip',
-    when: 'use when a brief hint appears on hover or focus of a trigger',
-    antipattern: "don't hand-roll a title attribute or absolutely positioned hint <div>",
-  },
-  {
-    intent: 'chronological timeline',
-    component: 'sn-timeline',
-    when: 'use when events are shown in ordered, time-anchored steps',
-    antipattern: "don't hand-roll a vertical rail with bespoke dot-and-line markup",
-  },
-  {
-    intent: 'multi-step progress',
-    component: 'sn-stepper',
-    when: 'use when guiding through ordered stages of a task or wizard',
-    antipattern: "don't hand-roll numbered step circles with manual active state",
-  },
-  {
-    intent: 'navigation breadcrumb',
-    component: 'sn-breadcrumb',
-    when: 'use when showing the current location within a hierarchy path',
-    antipattern: "don't hand-roll a separator-joined list of links",
-  },
-  {
-    intent: 'paginated navigation',
-    component: 'sn-pagination',
-    when: 'use when splitting a long result set across navigable pages',
-    antipattern: "don't hand-roll prev/next buttons with custom page-number state",
-  },
-  {
-    intent: 'loading placeholder',
-    component: 'sn-skeleton',
-    when: 'use when reserving layout with a shimmer while content loads',
-    antipattern: "don't hand-roll gray placeholder <div>s with a custom shimmer animation",
-  },
+const RECIPES_ORDER = [
+  'sn-data-table',
+  'sn-description-list',
+  'sn-status-light',
+  'sn-badge',
+  'sn-card',
+  'sn-dialog',
+  'sn-drawer',
+  'sn-toast',
+  'sn-banner',
+  'sn-empty-state',
+  'sn-metric',
+  'sn-tree-view',
+  'sn-listbox',
+  'sn-accordion',
+  'sn-popover',
+  'sn-field',
+  'sn-select',
+  'sn-combobox',
+  'sn-switch',
+  'sn-progress-bar',
+  'sn-progress-ring',
+  'sn-avatar',
+  'sn-tag',
+  'code-block',
+  'sn-tooltip',
+  'sn-timeline',
+  'sn-stepper',
+  'sn-breadcrumb',
+  'sn-pagination',
+  'sn-skeleton'
 ];
 
 /**
- * Live intent → component reuse index, filtered so every recipe targets a
- * component that currently exists in the registry.
+ * Live intent → component reuse index, projected at runtime from selection guidance
+ * and filtered against the live registry.
  *
  * @returns {ComponentRecipe[]} Grounded recipes whose component passes `hasComponent`.
  */
 export function listComponentRecipes() {
-  return RECIPES.filter((recipe) => hasComponent(recipe.component));
+  let selections = listComponentSelections();
+  let recipeMap = new Map();
+  for (let s of selections) {
+    if (s.guidance !== null && hasComponent(s.tagName)) {
+      recipeMap.set(s.tagName, {
+        intent: s.guidance.intent,
+        component: s.tagName,
+        when: s.guidance.when,
+        antipattern: s.guidance.antipattern,
+      });
+    }
+  }
+
+  let ordered = [];
+  for (let tagName of RECIPES_ORDER) {
+    let recipe = recipeMap.get(tagName);
+    if (recipe) {
+      ordered.push(recipe);
+    }
+  }
+  return ordered;
 }
 
 /**

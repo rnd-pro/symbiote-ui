@@ -931,13 +931,26 @@ test('CanvasGraph.activateNode is a viewport-free delegation to the private acti
   assert.match(source, /return activated;/);
 });
 
+test('CanvasGraph.deactivateNode clears public focus without moving the viewport', async () => {
+  await withCanvasGraphGlobals((CanvasGraph) => {
+    let graph = makeActivationGraph(CanvasGraph);
+    assert.equal(graph.activateNode('alpha'), true);
+    let viewportBefore = { zoom: graph.zoom, panX: graph.panX, panY: graph.panY };
+
+    assert.equal(graph.deactivateNode(), true);
+    assert.equal(graph.activeNode, null);
+    assert.equal(graph.nextActiveNode, null);
+    assert.deepEqual({ zoom: graph.zoom, panX: graph.panX, panY: graph.panY }, viewportBefore);
+  });
+});
+
 test('node canvas fit view avoids microscopic startup zoom', async () => {
   let source = await readFile(canvasViewportSource, 'utf8');
 
   assert.match(source, /const NODE_CANVAS_MIN_FIT_ZOOM = 0\.08;/);
   assert.match(source, /const NODE_CANVAS_MIN_FIT_VIEWPORT_SIZE = 48;/);
   assert.match(source, /resolveFitPadding\(padding, viewport\)/);
-  assert.match(source, /resolveFitPadding\(80, viewport\)/);
+  assert.match(source, /resolveFitPadding\(options\.padding \?\? 80, viewport\)/);
   assert.doesNotMatch(source, /Math\.max\(0\.001,\s*Math\.min\(scaleX,\s*scaleY,\s*1\.5\)\)/);
   assert.doesNotMatch(source, /minZoom = 0\.001/);
 });
@@ -1492,12 +1505,18 @@ test('panel layout drawer API and rail gestures open and close drawer panels wit
     detail: { panelId: railNode.$.nodeId, collapsed: false },
   }));
   assert.equal(railLayout.$.drawerStartOpen, true);
+  const immediateTreeRow = document.createElement('div');
+  immediateTreeRow.className = 'sn-tree-row';
+  railNode.append(immediateTreeRow);
+  const immediateTreeClick = new Event('click', { bubbles: true, cancelable: true });
+  immediateTreeRow.dispatchEvent(immediateTreeClick);
+  assert.equal(immediateTreeClick.defaultPrevented, false);
   let drawerClickTarget = document.createElement('div');
   railNode.append(drawerClickTarget);
   let drawerClick = new Event('click', { bubbles: true, cancelable: true });
   drawerClickTarget.dispatchEvent(drawerClick);
   assert.equal(drawerClick.defaultPrevented, true);
-  railLayout._drawerClickSuppressUntil = 0;
+  assert.equal(railLayout._ignoreNextDrawerClick, null);
 
   railLayout.closeDrawer('start');
   railNode = railLayout.querySelector('layout-node[drawer-rail][drawer-rail-collapsed][data-drawer-dock="start"]');
@@ -1524,6 +1543,32 @@ test('panel layout drawer API and rail gestures open and close drawer panels wit
   railLayout.dispatchEvent(railTouchUp);
 
   assert.equal(railLayout.$.drawerStartOpen, true);
+
+  railLayout.closeDrawer('start');
+  railNode = railLayout.querySelector('layout-node[drawer-rail][drawer-rail-collapsed][data-drawer-dock="start"]');
+  const cancelDown = new Event('pointerdown', { bubbles: true });
+  cancelDown.pointerId = 12;
+  cancelDown.pointerType = 'touch';
+  cancelDown.button = 0;
+  cancelDown.clientX = 8;
+  cancelDown.clientY = 80;
+  cancelDown.preventDefault = () => {};
+  railNode.dispatchEvent(cancelDown);
+  const cancelMove = new Event('pointermove');
+  cancelMove.pointerId = 12;
+  cancelMove.pointerType = 'touch';
+  cancelMove.clientX = 220;
+  cancelMove.clientY = 80;
+  cancelMove.preventDefault = () => {};
+  railLayout.dispatchEvent(cancelMove);
+  const cancelEvent = new Event('pointercancel');
+  cancelEvent.pointerId = 12;
+  cancelEvent.pointerType = 'touch';
+  railLayout.dispatchEvent(cancelEvent);
+  assert.equal(railLayout._ignoreNextDrawerClick, null);
+
+  railLayout.openDrawer('start');
+  railNode = railLayout.querySelector('layout-node[drawer-rail][drawer-expanded][data-drawer-dock="start"]');
   railNode.dispatchEvent(new CustomEvent('panel-collapse-toggle', {
     bubbles: true,
     composed: true,
@@ -1781,4 +1826,40 @@ test('panel layout drawer API and rail gestures open and close drawer panels wit
 
   layout.remove();
   railLayout.remove();
+});
+
+test('mobile drawer rails render as native collapsed surfaces without synthetic buttons', async () => {
+  let [layout, styles, template] = await Promise.all([
+    readFile(layoutSource, 'utf8'),
+    readFile(layoutStyles, 'utf8'),
+    readFile(layoutTemplate, 'utf8'),
+  ]);
+
+  // Collapsed rail keeps a visible icon: the drawer-mode .type-btn hide is
+  // overridden for rail-collapsed nodes so the glyph box survives the font.
+  assert.match(styles, /layout-node\[drawer-rail\]\[drawer-rail-collapsed\][\s\S]*?\.type-btn\s*\{[\s\S]*?display:\s*flex !important;/);
+  // Native R2 contract: same-side collapsed panels share one dock edge as
+  // equal regions with a gap; no synthetic launcher or rail-stack buttons.
+  assert.match(layout, /_syncNativeRailRegions/);
+  assert.match(styles, /--sn-layout-rail-count/);
+  assert.match(styles, /--sn-layout-rail-index/);
+  assert.doesNotMatch(template, /layout-drawer-launchers-start/);
+  assert.doesNotMatch(template, /layout-drawer-launchers-end/);
+  assert.doesNotMatch(template, /onLauncherClick/);
+  assert.doesNotMatch(template, /startLauncherItems/);
+  assert.doesNotMatch(template, /endLauncherItems/);
+  assert.doesNotMatch(layout, /_syncDrawerLaunchers/);
+  assert.doesNotMatch(layout, /onLauncherClick/);
+  assert.doesNotMatch(layout, /hasStartLaunchers/);
+  assert.doesNotMatch(layout, /hasEndLaunchers/);
+  assert.doesNotMatch(layout, /drawer-start-launchers/);
+  assert.doesNotMatch(layout, /drawer-end-launchers/);
+  assert.doesNotMatch(styles, /\.layout-drawer-launcher/);
+  // No handle-stack fork and no synthetic rail-button fork: native collapsed
+  // rails stay visible, nothing else replaces them.
+  assert.doesNotMatch(layout, /_renderDrawerHandleStack/);
+  assert.doesNotMatch(template, /layout-drawer-handle/);
+  assert.doesNotMatch(styles, /layout-drawer-handle/);
+  assert.doesNotMatch(template, /layout-rail-stack/);
+  assert.doesNotMatch(styles, /\.layout-rail-stack-btn/);
 });

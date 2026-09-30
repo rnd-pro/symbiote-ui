@@ -103,6 +103,7 @@ export const MESSAGE_PART_KINDS = {
   TOOL_CALL: 'tool_call',
   TOOL_RESULT: 'tool_result',
   SOURCE: 'source',
+  FOOTNOTE: 'footnote',
   ATTACHMENT: 'attachment',
   ARTIFACT: 'artifact',
   APPROVAL: 'approval',

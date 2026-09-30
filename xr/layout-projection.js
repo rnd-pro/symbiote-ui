@@ -60,6 +60,8 @@ const DEFAULT_POSE_COMFORT = Object.freeze({
   maxVerticalAngle: 16,
 });
 
+export const XR_PANEL_POSE_COMFORT_DEFAULTS = DEFAULT_POSE_COMFORT;
+
 const DEFAULT_FACING = Object.freeze({
   maxYawError: 6,
 });

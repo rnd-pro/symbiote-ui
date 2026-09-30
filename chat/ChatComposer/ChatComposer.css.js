@@ -12,6 +12,16 @@ chat-composer {
   z-index: 2;
 }
 
+chat-composer-context-item,
+chat-composer-leading-control-item,
+chat-composer-footer-control-item,
+chat-composer-option-item,
+chat-composer-detail-segment-item,
+chat-composer-detail-row-item,
+chat-composer-usage-row-item {
+  display: contents;
+}
+
 .composer-body {
   container: composer-body / inline-size;
   display: grid;

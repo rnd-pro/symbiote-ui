@@ -1,0 +1,179 @@
+{
+  "version": "symbiote-presenter-marker-references-v1",
+  "generatedBy": "npm run references:presenter-markers",
+  "productionGeometryModule": "chat/presenter-marker-geometry.js",
+  "targets": [
+    {
+      "id": "short",
+      "label": "short target · 52×26",
+      "rect": {
+        "left": 294,
+        "top": 92,
+        "width": 52,
+        "height": 26
+      }
+    },
+    {
+      "id": "wide",
+      "label": "wide target · 310×38",
+      "rect": {
+        "left": 165,
+        "top": 88,
+        "width": 310,
+        "height": 38
+      }
+    },
+    {
+      "id": "multiline",
+      "label": "multiline target · 230×104",
+      "rect": {
+        "left": 205,
+        "top": 48,
+        "width": 230,
+        "height": 104
+      }
+    }
+  ],
+  "seeds": [
+    "reference-alpha",
+    "reference-beta",
+    3931985963
+  ],
+  "files": [
+    {
+      "name": "contact-sheet.svg",
+      "path": "artifacts/presenter-markers/contact-sheet.svg",
+      "kind": "contact-sheet",
+      "dimensions": {
+        "width": 1600,
+        "height": 1120
+      }
+    },
+    {
+      "name": "gesture-freehand.svg",
+      "path": "artifacts/presenter-markers/gesture-freehand.svg",
+      "kind": "per-gesture-reference-sheet",
+      "dimensions": {
+        "width": 1920,
+        "height": 700
+      }
+    },
+    {
+      "name": "gesture-underline.svg",
+      "path": "artifacts/presenter-markers/gesture-underline.svg",
+      "kind": "per-gesture-reference-sheet",
+      "dimensions": {
+        "width": 1920,
+        "height": 700
+      }
+    },
+    {
+      "name": "gesture-oval.svg",
+      "path": "artifacts/presenter-markers/gesture-oval.svg",
+      "kind": "per-gesture-reference-sheet",
+      "dimensions": {
+        "width": 1920,
+        "height": 700
+      }
+    },
+    {
+      "name": "gesture-multi-oval.svg",
+      "path": "artifacts/presenter-markers/gesture-multi-oval.svg",
+      "kind": "per-gesture-reference-sheet",
+      "dimensions": {
+        "width": 1920,
+        "height": 700
+      }
+    },
+    {
+      "name": "gesture-arrow.svg",
+      "path": "artifacts/presenter-markers/gesture-arrow.svg",
+      "kind": "per-gesture-reference-sheet",
+      "dimensions": {
+        "width": 1920,
+        "height": 700
+      }
+    },
+    {
+      "name": "gesture-converging-arrows.svg",
+      "path": "artifacts/presenter-markers/gesture-converging-arrows.svg",
+      "kind": "per-gesture-reference-sheet",
+      "dimensions": {
+        "width": 1920,
+        "height": 700
+      }
+    },
+    {
+      "name": "gesture-route.svg",
+      "path": "artifacts/presenter-markers/gesture-route.svg",
+      "kind": "per-gesture-reference-sheet",
+      "dimensions": {
+        "width": 1920,
+        "height": 700
+      }
+    },
+    {
+      "name": "gesture-bidirectional-route.svg",
+      "path": "artifacts/presenter-markers/gesture-bidirectional-route.svg",
+      "kind": "per-gesture-reference-sheet",
+      "dimensions": {
+        "width": 1920,
+        "height": 700
+      }
+    },
+    {
+      "name": "gesture-parallel-route.svg",
+      "path": "artifacts/presenter-markers/gesture-parallel-route.svg",
+      "kind": "per-gesture-reference-sheet",
+      "dimensions": {
+        "width": 1920,
+        "height": 700
+      }
+    },
+    {
+      "name": "gesture-label.svg",
+      "path": "artifacts/presenter-markers/gesture-label.svg",
+      "kind": "per-gesture-reference-sheet",
+      "dimensions": {
+        "width": 1920,
+        "height": 700
+      }
+    },
+    {
+      "name": "gesture-number.svg",
+      "path": "artifacts/presenter-markers/gesture-number.svg",
+      "kind": "per-gesture-reference-sheet",
+      "dimensions": {
+        "width": 1920,
+        "height": 700
+      }
+    },
+    {
+      "name": "gesture-box.svg",
+      "path": "artifacts/presenter-markers/gesture-box.svg",
+      "kind": "per-gesture-reference-sheet",
+      "dimensions": {
+        "width": 1920,
+        "height": 700
+      }
+    },
+    {
+      "name": "gesture-bracket.svg",
+      "path": "artifacts/presenter-markers/gesture-bracket.svg",
+      "kind": "per-gesture-reference-sheet",
+      "dimensions": {
+        "width": 1920,
+        "height": 700
+      }
+    },
+    {
+      "name": "gesture-slash.svg",
+      "path": "artifacts/presenter-markers/gesture-slash.svg",
+      "kind": "per-gesture-reference-sheet",
+      "dimensions": {
+        "width": 1920,
+        "height": 700
+      }
+    }
+  ]
+}

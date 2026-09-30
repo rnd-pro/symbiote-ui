@@ -130,17 +130,28 @@ class ProjectTabItem extends Symbiote {
     disabled: false,
     isActive: false,
     closeTitle: translate('tabs.close'),
-    onClick: (e) => {
-      if (e.target.closest('.tab-close')) return;
-      if (this.$.disabled) return;
-      emit(this, 'project-tabs-select', { id: this.$.id });
-    },
-    onCloseClick: (e) => {
+  };
+
+  #onClick = (e) => {
+    if (e.target.closest('.tab-close')) {
       e.stopPropagation();
       if (this.$.disabled || !this.$.closeable) return;
       emit(this, 'project-tabs-close', { id: this.$.id });
-    },
+      return;
+    }
+    if (this.$.disabled) return;
+    emit(this, 'project-tabs-select', { id: this.$.id });
   };
+
+  connectedCallback() {
+    super.connectedCallback?.();
+    this.addEventListener('click', this.#onClick);
+  }
+
+  disconnectedCallback() {
+    this.removeEventListener('click', this.#onClick);
+    super.disconnectedCallback?.();
+  }
 
   renderCallback() {
     this.setAttribute('role', 'tab');
@@ -167,14 +178,13 @@ class ProjectTabItem extends Symbiote {
         this.tabIndex = -1;
       }
     });
-    this.onclick = this.$.onClick;
   }
 }
 
 ProjectTabItem.template = html`
   <span class="tab-lead">
     <span class="material-symbols-outlined" ${{ textContent: 'icon' }}></span>
-    <button class="tab-close" ${{ title: 'closeTitle', 'aria-label': 'closeTitle', onclick: 'onCloseClick', '@hidden': '!closeable' }}>×</button>
+    <button class="tab-close" ${{ title: 'closeTitle', 'aria-label': 'closeTitle', '@hidden': '!closeable' }}>×</button>
   </span>
   <span ${{ textContent: 'name' }}></span>
 `;

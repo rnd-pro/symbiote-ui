@@ -111,6 +111,38 @@ export let styles = css`
         display: none;
       }
 
+      /* A declared drawer group keeps its native split and resizer inside the
+         one primary mobile surface; only sibling dock panels become drawers. */
+      layout-node[node-type='split'][mobile-dock='primary'] {
+        position: absolute;
+        inset: 0;
+        display: block !important;
+      }
+
+      layout-node[node-type='split'][mobile-dock='primary'] > .split-view {
+        display: flex !important;
+        width: 100% !important;
+        height: 100% !important;
+        overflow: hidden;
+      }
+
+      layout-node[node-type='split'][mobile-dock='primary'] > .split-view > .split-first,
+      layout-node[node-type='split'][mobile-dock='primary'] > .split-view > .split-second {
+        display: flex !important;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      layout-node[node-type='split'][mobile-dock='primary'] .split-resizer {
+        display: block !important;
+      }
+
+      layout-node[node-type='split'][mobile-dock='primary'] layout-node[node-type='panel'] {
+        position: relative;
+        inset: auto;
+        transform: none !important;
+      }
+
       layout-node[node-type='panel'] {
         min-height: var(--sn-layout-responsive-panel-min-block-size, 260px);
       }
@@ -120,6 +152,7 @@ export let styles = css`
       display: none;
     }
 
+    @scope (&) to (panel-layout) {
     &[drawer-mode-active] {
       --sn-layout-drawer-size: min(
         var(--sn-layout-drawer-inline-size, 86vw),
@@ -151,6 +184,38 @@ export let styles = css`
 
       layout-node[node-type='split'] > .split-view > .split-resizer {
         display: none;
+      }
+
+      /* A declared drawer group keeps its native split and resizer inside the
+         one primary mobile surface; only sibling dock panels become drawers. */
+      layout-node[node-type='split'][mobile-dock='primary'] {
+        position: absolute;
+        inset: 0;
+        display: block !important;
+      }
+
+      layout-node[node-type='split'][mobile-dock='primary'] > .split-view {
+        display: flex !important;
+        width: 100% !important;
+        height: 100% !important;
+        overflow: hidden;
+      }
+
+      layout-node[node-type='split'][mobile-dock='primary'] > .split-view > .split-first,
+      layout-node[node-type='split'][mobile-dock='primary'] > .split-view > .split-second {
+        display: flex !important;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      layout-node[node-type='split'][mobile-dock='primary'] .split-resizer {
+        display: block !important;
+      }
+
+      layout-node[node-type='split'][mobile-dock='primary'] layout-node[node-type='panel'] {
+        position: relative;
+        inset: auto;
+        transform: none !important;
       }
 
       layout-node[node-type='panel'] {
@@ -198,6 +263,14 @@ export let styles = css`
         width: auto !important;
       }
 
+      /* Single native END reserve: when the primary hosts a nested layout
+        that owns its own collapsed END rails, the nested layout renders
+        the one shared END column at the viewport edge; the outer primary
+        stays full-bleed instead of reserving a second END column. */
+      &[drawer-end-rail] layout-node[mobile-dock='primary']:has(panel-layout[drawer-end-rail]) {
+        inset-inline-end: 0;
+      }
+
       layout-node[mobile-dock='start'],
       layout-node[mobile-dock='end'] {
         z-index: var(--sn-layout-drawer-z, 3);
@@ -223,14 +296,13 @@ export let styles = css`
           isolation: isolate;
         }
 
-        .panel-header {
+        &:not([drawer-primary]) .panel-header {
           box-sizing: border-box !important;
           display: grid !important;
           grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) !important;
           align-items: center !important;
           inline-size: 100% !important;
           block-size: var(--sn-layout-header-block-size, calc(var(--sn-layout-header-min-height, 28px) + 3px)) !important;
-          min-block-size: var(--sn-layout-header-block-size, calc(var(--sn-layout-header-min-height, 28px) + 3px)) !important;
           padding: var(--sn-layout-header-padding, 2px 4px) !important;
         }
 
@@ -273,6 +345,7 @@ export let styles = css`
         }
 
         .panel-header {
+          position: relative;
           display: flex;
           flex-direction: column;
           writing-mode: horizontal-tb;
@@ -280,11 +353,20 @@ export let styles = css`
           height: 100%;
           gap: 0;
           align-items: center;
-          justify-content: flex-start;
+          justify-content: var(--sn-layout-rail-header-justify, center);
           width: var(--sn-layout-collapsed-horizontal-size, 32px);
         }
 
+        .collapse-btn {
+          position: absolute;
+          inset-inline: 0;
+          inset-block-end: 2px;
+          margin-inline: auto;
+          z-index: 1;
+        }
+
         .fullscreen-btn,
+        .header-close-btn,
         .panel-menu-toggle,
         .dropdown-arrow,
         .panel-title,
@@ -296,6 +378,7 @@ export let styles = css`
           order: 1;
           position: relative;
           z-index: 1;
+          display: flex !important;
           inline-size: 100%;
           block-size: var(--sn-layout-header-block-size, calc(var(--sn-layout-header-min-height, 28px) + 3px));
           min-block-size: var(--sn-layout-header-block-size, calc(var(--sn-layout-header-min-height, 28px) + 3px));
@@ -333,6 +416,37 @@ export let styles = css`
           align-items: center;
           justify-content: center;
         }
+
+        /* Collapsed native rail: the centered panel icon is the only
+          visible glyph. The collapse chevron glyph is hidden, while the
+          button keeps its full-rail hit-area, keyboard focus, aria and
+          open/close behavior. */
+        .collapse-btn > .material-symbols-outlined {
+          visibility: hidden;
+        }
+      }
+
+      /* Native R2 rails: no synthetic buttons. Same-side collapsed panels
+        share one dock edge as equal vertical regions with a uniform gap.
+        START stays inline-start, END stays inline-end. Native nodes are
+        never display:none here; open/close/swipe/focus lifecycle is owned
+        by layout-node drawer attributes. */
+      &[drawer-mode-active] layout-node[drawer-rail][drawer-rail-collapsed] {
+        /* Stacked-region gap follows the shared panel-separation baseline
+          (split resizer thickness), never a hardcoded rail-only value. */
+        --sn-layout-native-rail-gap: var(--sn-layout-rail-gap, var(--sn-layout-resizer-thickness, 2px));
+        inset-block: auto;
+        inset-block-start: calc(
+          var(--sn-layout-rail-index, 0) * (100% - (var(--sn-layout-rail-count, 1) - 1) * var(--sn-layout-native-rail-gap)) / var(--sn-layout-rail-count, 1) +
+          var(--sn-layout-rail-index, 0) * var(--sn-layout-native-rail-gap)
+        );
+        block-size: calc(
+          (100% - (var(--sn-layout-rail-count, 1) - 1) * var(--sn-layout-native-rail-gap)) / var(--sn-layout-rail-count, 1)
+        ) !important;
+        height: calc(
+          (100% - (var(--sn-layout-rail-count, 1) - 1) * var(--sn-layout-native-rail-gap)) / var(--sn-layout-rail-count, 1)
+        ) !important;
+        min-block-size: 0 !important;
       }
 
       layout-node[mobile-dock='start'] {
@@ -420,6 +534,7 @@ export let styles = css`
           transition-duration: 0ms;
         }
       }
+    }
     }
 
     /* Fullscreen tab bar */

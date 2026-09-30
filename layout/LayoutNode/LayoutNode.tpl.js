@@ -29,6 +29,12 @@ export let template = html`
         >
           <span class="material-symbols-outlined" ${{ textContent: 'fullscreenIcon' }}></span>
         </button>
+        <button
+          class="header-btn header-close-btn"
+          ${{ onclick: 'onHeaderCloseClick', '@hidden': '!hasHeaderClose', title: 'headerCloseTitle' }}
+        >
+          <span class="material-symbols-outlined">close</span>
+        </button>
       </div>
     </div>
     <div class="panel-menu-drawer" ${{ '@hidden': '!isPanelMenuOpen' }}>

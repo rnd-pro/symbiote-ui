@@ -1,4 +1,10 @@
-export const PRESENTER_TEXT_SELECTION_RECEIPT_VERSION = 'presenter-text-selection-receipt-v1';
+import {
+  createPresenterKinematicPlan,
+  PRESENTER_KINEMATIC_LIMITS,
+  samplePresenterKinematicPlan,
+} from './presenter-kinematics.js';
+
+export const PRESENTER_TEXT_SELECTION_RECEIPT_VERSION = 'presenter-text-selection-receipt-v2';
 export const PRESENTER_TEXT_SELECTION_MATCH_MODES = Object.freeze(['exact', 'normalized']);
 
 const MATCH_MODE_SET = new Set(PRESENTER_TEXT_SELECTION_MATCH_MODES);
@@ -302,8 +308,280 @@ export function applyPresenterTextSelection(target, parameters = {}) {
   if (!target || typeof target !== 'object') {
     fail('invalid-target', 'text selection requires a DOM or text-control target');
   }
-  let options = selectionOptions(parameters);
+  let requested = parameters;
+  if (
+    parameters?.quote === undefined
+    && parameters?.startOffset === undefined
+    && parameters?.endOffset === undefined
+  ) {
+    let text = isTextControl(target) ? String(target.value || '') : textRuns(target).text;
+    requested = { ...parameters, startOffset: 0, endOffset: text.length };
+  }
+  let options = selectionOptions(requested);
   return isTextControl(target)
     ? selectControlText(target, options)
     : selectDomText(target, options);
+}
+
+function selectionDistancePx(target, receipt, measurementRange = null) {
+  let selectedLength = Math.max(1, receipt.endOffset - receipt.startOffset);
+  if (receipt.kind === 'control') {
+    let rect = target?.getBoundingClientRect?.();
+    let width = Number(rect?.width);
+    if (Number.isFinite(width) && width > 0) {
+      return Math.max(8, width * selectedLength / Math.max(1, String(target.value || '').length));
+    }
+  } else {
+    let rects = Array.from(measurementRange?.getClientRects?.() || []);
+    let measured = rects.reduce((total, rect) => total + Math.max(0, Number(rect.width) || 0), 0);
+    if (measured > 0) return measured;
+    let width = Number(measurementRange?.getBoundingClientRect?.()?.width);
+    if (Number.isFinite(width) && width > 0) return width;
+  }
+  return selectedLength * 8;
+}
+
+function selectionTargetRect(target) {
+  let source = target?.getBoundingClientRect?.();
+  if (!source) return null;
+  let result = {};
+  for (let field of ['left', 'top', 'right', 'bottom', 'width', 'height']) {
+    let value = Number(source[field]);
+    if (Number.isFinite(value)) result[field] = value;
+  }
+  return Object.keys(result).length ? Object.freeze(result) : null;
+}
+
+function selectionCursor(target, offsets, sourceLength, direction, range = null) {
+  if (range && typeof range.getClientRects === 'function') {
+    let rects = Array.from(range.getClientRects() || []).filter((rect) => [
+      rect?.left,
+      rect?.right,
+      rect?.bottom,
+    ].every((value) => Number.isFinite(Number(value))));
+    let endpoint = direction === 'backward' ? rects[0] : rects.at(-1);
+    if (endpoint) {
+      return Object.freeze({
+        x: Number(direction === 'backward' ? endpoint.left : endpoint.right),
+        y: Number(endpoint.bottom),
+        visible: true,
+      });
+    }
+  }
+
+  let rect = selectionTargetRect(target);
+  if (!rect) return null;
+  let length = Math.max(1, Number(sourceLength) || 0);
+  let activeOffset = direction === 'backward' ? offsets.start : offsets.end;
+  let progress = Math.min(1, Math.max(0, activeOffset / length));
+  return Object.freeze({
+    x: Number(rect.left || 0) + Number(rect.width || 0) * progress,
+    y: Number.isFinite(Number(rect.bottom))
+      ? Number(rect.bottom)
+      : Number(rect.top || 0) + Number(rect.height || 0),
+    visible: true,
+  });
+}
+
+function selectionKinematicStyle(style, distancePx) {
+  let source = style && typeof style === 'object' && !Array.isArray(style)
+    ? { ...style }
+    : {};
+  let authoredMinimum = Number(source.minDurationMs);
+  let minimumDurationMs = Number.isFinite(authoredMinimum) && authoredMinimum > 0
+    ? authoredMinimum
+    : PRESENTER_KINEMATIC_LIMITS.minDurationMs;
+  // Minimum-jerk motion peaks at 1.875 × average speed. Cap the
+  // perceptual floor so even short selections reach the shared moving-speed minimum.
+  let minimumSpeedDurationCap = 1.875 * distancePx
+    / PRESENTER_KINEMATIC_LIMITS.minMovingSpeedPxPerMs;
+  source.minDurationMs = Math.max(1, Math.min(minimumDurationMs, minimumSpeedDurationCap));
+  return source;
+}
+
+function animatedReceipt(receipt, sample, plan, cursor = null) {
+  return Object.freeze({
+    ...receipt,
+    presented: true,
+    planVersion: plan.version,
+    status: sample.progress >= 1 ? 'selected' : 'selecting',
+    elapsedMs: sample.elapsedMs,
+    durationMs: plan.durationMs,
+    progress: sample.progress,
+    distancePx: sample.distancePx,
+    speedPxPerMs: sample.speedPxPerMs,
+    normalizedPathHash: plan.normalizedPathHash,
+    ...(cursor ? { cursor } : {}),
+    timing: Object.freeze({
+      arcLengthPx: plan.arcLengthPx,
+      durationMs: plan.durationMs,
+      maxObservedSpeedPxPerMs: plan.maxObservedSpeedPxPerMs,
+      maxSpeedPxPerMs: plan.limits.maxSpeedPxPerMs,
+    }),
+  });
+}
+
+function progressiveOffsets(receipt, progress) {
+  let length = receipt.endOffset - receipt.startOffset;
+  let visibleLength = Math.min(length, Math.max(0, Math.round(length * progress)));
+  if (receipt.direction === 'backward') {
+    return { start: receipt.endOffset - visibleLength, end: receipt.endOffset };
+  }
+  return { start: receipt.startOffset, end: receipt.startOffset + visibleLength };
+}
+
+/**
+ * Creates a cancelable presenter selection whose frames progressively extend
+ * the browser's real Selection/Range (or text-control selection). The caller
+ * owns the clock and calls presentFrame(elapsedMs); no timestamp is invented.
+ * Duration is derived from measured selection travel, never supplied by the consumer.
+ */
+export function createPresenterTextSelectionAnimation(target, parameters = {}) {
+  if (!target || typeof target !== 'object') {
+    fail('invalid-target', 'text selection requires a DOM or text-control target');
+  }
+  let requested = parameters;
+  if (
+    parameters?.quote === undefined
+    && parameters?.startOffset === undefined
+    && parameters?.endOffset === undefined
+  ) {
+    let text = isTextControl(target) ? String(target.value || '') : textRuns(target).text;
+    requested = { ...parameters, startOffset: 0, endOffset: text.length };
+  }
+  let options = selectionOptions(requested);
+  let kind = isTextControl(target) ? 'control' : 'dom-range';
+  let source;
+  let match;
+  let previous;
+  let measurementRange = null;
+  let applyOffsets;
+  let measureCursor;
+  let clearSelection;
+  let restoreSelection;
+
+  if (kind === 'control') {
+    source = String(target.value || '');
+    match = quoteMatches(source, options);
+    previous = {
+      start: Number.isInteger(target.selectionStart) ? target.selectionStart : 0,
+      end: Number.isInteger(target.selectionEnd) ? target.selectionEnd : 0,
+      direction: DIRECTION_SET.has(target.selectionDirection) ? target.selectionDirection : 'none',
+    };
+    applyOffsets = ({ start, end }) => {
+      target.setSelectionRange(start, end, options.direction);
+      return null;
+    };
+    measureCursor = (offsets) => selectionCursor(
+      target,
+      offsets,
+      source.length,
+      options.direction,
+    );
+    clearSelection = () => target.setSelectionRange(match.endOffset, match.endOffset, 'none');
+    restoreSelection = () => target.setSelectionRange(previous.start, previous.end, previous.direction);
+  } else {
+    let doc = target?.ownerDocument;
+    if (!doc || typeof doc.createRange !== 'function') {
+      fail('range-unsupported', 'the target document does not expose the Range API');
+    }
+    let selection = selectionFor(doc);
+    previous = priorRanges(selection);
+    let flattened = textRuns(target);
+    source = flattened.text;
+    match = quoteMatches(source, options);
+    let rangeFor = ({ start, end }) => {
+      let startBoundary = rangeBoundary(flattened.runs, start, 'start');
+      let endBoundary = rangeBoundary(flattened.runs, end, 'end');
+      let range = doc.createRange();
+      range.setStart(startBoundary.node, startBoundary.offset);
+      range.setEnd(endBoundary.node, endBoundary.offset);
+      return range;
+    };
+    measurementRange = rangeFor({ start: match.startOffset, end: match.endOffset });
+    applyOffsets = (offsets) => {
+      let range = rangeFor(offsets);
+      selection.removeAllRanges();
+      selection.addRange(range);
+      return range;
+    };
+    measureCursor = (offsets, range = null) => selectionCursor(
+      target,
+      offsets,
+      source.length,
+      options.direction,
+      range || rangeFor(offsets),
+    );
+    clearSelection = () => selection.removeAllRanges();
+    restoreSelection = () => {
+      selection.removeAllRanges();
+      for (let previousRange of previous) selection.addRange(previousRange);
+    };
+  }
+
+  let baseReceipt = receipt(kind, match, options);
+  baseReceipt.targetRect = selectionTargetRect(target);
+  let distancePx = selectionDistancePx(target, baseReceipt, measurementRange);
+  let plan = createPresenterKinematicPlan({
+    kind: 'underline',
+    seed: parameters.seed ?? parameters.gestureId ?? `${baseReceipt.kind}:${baseReceipt.startOffset}:${baseReceipt.endOffset}`,
+    style: selectionKinematicStyle(parameters.style, distancePx),
+    noiseAmplitudePx: 0,
+    pointAt: (progress) => ({ x: distancePx * progress, y: 0 }),
+  });
+  let lastOffsets = progressiveOffsets(baseReceipt, 0);
+  let currentReceipt = animatedReceipt(
+    baseReceipt,
+    samplePresenterKinematicPlan(plan, 0),
+    plan,
+    measureCursor(lastOffsets),
+  );
+  let state = 'planned';
+  let activated = false;
+  return Object.freeze({
+    get receipt() {
+      return currentReceipt;
+    },
+    presentFrame(elapsedMs = 0) {
+      let elapsed = Math.min(plan.durationMs, Math.max(0, Number(elapsedMs) || 0));
+      if (!activated) {
+        focusTarget(target);
+        activated = true;
+      }
+      let sample = samplePresenterKinematicPlan(plan, elapsed);
+      lastOffsets = progressiveOffsets(baseReceipt, sample.progress);
+      let activeRange = applyOffsets(lastOffsets);
+      currentReceipt = animatedReceipt(
+        baseReceipt,
+        sample,
+        plan,
+        measureCursor(lastOffsets, activeRange),
+      );
+      state = 'active';
+      return currentReceipt;
+    },
+    refresh() {
+      if (!activated) return currentReceipt;
+      let activeRange = applyOffsets(lastOffsets);
+      currentReceipt = Object.freeze({
+        ...currentReceipt,
+        cursor: measureCursor(lastOffsets, activeRange),
+      });
+      state = 'active';
+      return currentReceipt;
+    },
+    clear() {
+      if (activated) clearSelection();
+      state = 'cleared';
+      return currentReceipt;
+    },
+    restore() {
+      if (activated) restoreSelection();
+      state = 'restored';
+      return currentReceipt;
+    },
+    get state() {
+      return state;
+    },
+  });
 }

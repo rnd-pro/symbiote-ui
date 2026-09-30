@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rnd-pro.github.io/symbiote-ui/schemas/xr-spatial-window-resize-receipt-v1.json",
+  "title": "XR Spatial Window Resize Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "action",
+    "ok",
+    "phase",
+    "reason",
+    "handle",
+    "committedSizeMeters",
+    "previewSizeMeters",
+    "sizeMeters",
+    "viewport",
+    "contentScaled",
+    "geometrySwapped",
+    "rolledBack",
+    "texture"
+  ],
+  "properties": {
+    "version": { "const": "xr-spatial-window-resize-receipt-v1" },
+    "action": { "const": "resize" },
+    "windowId": { "type": "string", "minLength": 1 },
+    "layoutId": { "type": "string", "minLength": 1 },
+    "ok": { "type": "boolean" },
+    "phase": { "enum": ["begin", "preview", "commit", "cancel"] },
+    "reason": { "type": ["string", "null"] },
+    "handle": { "type": ["string", "null"] },
+    "committedSizeMeters": { "$ref": "#/$defs/size2dOrNull" },
+    "previewSizeMeters": { "$ref": "#/$defs/size2dOrNull" },
+    "sizeMeters": { "$ref": "#/$defs/size2dOrNull" },
+    "viewport": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["width", "height"],
+      "properties": {
+        "width": { "type": "integer", "exclusiveMinimum": 0 },
+        "height": { "type": "integer", "exclusiveMinimum": 0 }
+      }
+    },
+    "contentScaled": { "type": "boolean" },
+    "geometrySwapped": { "type": "boolean" },
+    "rolledBack": { "type": "boolean" },
+    "texture": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["uploaded", "stage", "reason", "width", "height"],
+      "properties": {
+        "uploaded": { "type": "boolean" },
+        "stage": { "type": ["string", "null"] },
+        "reason": { "type": ["string", "null"] },
+        "width": { "type": ["integer", "null"], "minimum": 1 },
+        "height": { "type": ["integer", "null"], "minimum": 1 }
+      }
+    }
+  },
+  "$defs": {
+    "size2dOrNull": {
+      "type": ["array", "null"],
+      "minItems": 2,
+      "maxItems": 2,
+      "items": { "type": "number", "exclusiveMinimum": 0 }
+    }
+  }
+}

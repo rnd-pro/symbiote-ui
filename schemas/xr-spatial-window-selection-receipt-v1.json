@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rnd-pro.github.io/symbiote-ui/schemas/xr-spatial-window-selection-receipt-v1.json",
+  "title": "XR Spatial Window Selection Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "action",
+    "ok",
+    "reason",
+    "phase",
+    "point",
+    "startPoint",
+    "capture",
+    "selection",
+    "source"
+  ],
+  "properties": {
+    "version": { "const": "xr-spatial-window-selection-receipt-v1" },
+    "action": { "const": "selection" },
+    "windowId": { "type": "string", "minLength": 1 },
+    "layoutId": { "type": "string", "minLength": 1 },
+    "ok": { "type": "boolean" },
+    "reason": { "type": ["string", "null"] },
+    "phase": { "enum": ["begin", "update", "end", "cancel"] },
+    "point": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["x", "y"],
+      "properties": {
+        "x": { "type": ["number", "null"] },
+        "y": { "type": ["number", "null"] }
+      }
+    },
+    "startPoint": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["x", "y"],
+      "properties": {
+        "x": { "type": ["number", "null"] },
+        "y": { "type": ["number", "null"] }
+      }
+    },
+    "capture": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["sourceId", "sessionId", "pointerId"],
+      "properties": {
+        "sourceId": { "type": ["string", "null"] },
+        "sessionId": { "type": ["string", "null"] },
+        "pointerId": { "type": ["string", "null"] }
+      }
+    },
+    "selection": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["text", "anchorOffset", "focusOffset", "rangeCount"],
+      "properties": {
+        "text": { "type": "string" },
+        "anchorOffset": { "type": ["number", "null"] },
+        "focusOffset": { "type": ["number", "null"] },
+        "rangeCount": { "type": ["number", "null"] }
+      }
+    },
+    "source": { "type": ["string", "null"] }
+  }
+}

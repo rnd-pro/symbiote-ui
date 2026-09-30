@@ -64,6 +64,9 @@ const chatWorkspaceSource = new URL('../chat/ChatWorkspace/ChatWorkspace.js', im
 const chatNavTreeSource = new URL('../chat/ChatWorkspace/chat-nav-tree.js', import.meta.url);
 const chatWorkspaceTemplate = new URL('../chat/ChatWorkspace/ChatWorkspace.tpl.js', import.meta.url);
 const chatWorkspaceStyles = new URL('../chat/ChatWorkspace/ChatWorkspace.css.js', import.meta.url);
+const agentDockShellStyles = new URL('../chat/AgentDockShell/AgentDockShell.css.js', import.meta.url);
+const agentShowChatStyles = new URL('../chat/AgentShowChat/AgentShowChat.css.js', import.meta.url);
+const chatShowPlayerStyles = new URL('../chat/ChatShowPlayer/ChatShowPlayer.css.js', import.meta.url);
 const chatSidebarItemSource = new URL('../chat/ChatSidebarItem/ChatSidebarItem.js', import.meta.url);
 const chatSidebarItemStyles = new URL('../chat/ChatSidebarItem/ChatSidebarItem.css.js', import.meta.url);
 const graphThemeContractSource = new URL('../graph/theme-contract.js', import.meta.url);
@@ -162,7 +165,7 @@ test('theme scroll chrome helpers use cascade tokens', async () => {
   assert.match(scrollFade, /const SCROLL_FADE_MASK_PROPERTY = '--sn-scroll-fade-mask'/);
   assert.match(scrollFade, /const SCROLL_FADE_THRESHOLD = 1/);
   assert.match(scrollFade, /\$\{SCROLL_FADE_AXIS_PROPERTY\}: \$\{axis\};/);
-  assert.match(scrollFade, /\$\{SCROLL_FADE_ACTIVE_MASK_PROPERTY\}: \$\{mask\};/);
+  assert.match(scrollFade, /\$\{SCROLL_FADE_ACTIVE_MASK_PROPERTY\}: \$\{scrollFadeMask\(direction\)\};/);
   assert.match(scrollFade, /-webkit-mask-image: var\(\$\{SCROLL_FADE_MASK_PROPERTY\}\);/);
   assert.match(scrollFade, /mask-image: var\(\$\{SCROLL_FADE_MASK_PROPERTY\}\);/);
   assert.match(scrollFade, /maskSize\.includes\('100% 100%'\)/);
@@ -171,6 +174,32 @@ test('theme scroll chrome helpers use cascade tokens', async () => {
   assert.match(scrollFade, /blockOverflow && !inlineOverflow/);
   assert.match(scrollFade, /updateScrollFadeAncestors/);
   assert.match(scrollFade, /ResizeObserver/);
+});
+
+test('Show chat surfaces end color chains at T2 system roles', async () => {
+  const [dock, chat, player] = await Promise.all([
+    readFile(agentDockShellStyles, 'utf8'),
+    readFile(agentShowChatStyles, 'utf8'),
+    readFile(chatShowPlayerStyles, 'utf8'),
+  ]);
+  const sources = [dock, chat, player];
+  const literalEndedColors = sources.flatMap((source) => (
+    [...source.matchAll(/(?:color|background|border(?:-block-(?:start|end))?):[^;\n]*#[\da-f]{3,8}[^;\n]*;/gi)]
+      .map((match) => match[0])
+  ));
+
+  assert.deepEqual(literalEndedColors, []);
+  assert.match(dock, /color: var\(--sn-text, var\(--sn-sys-on-surface\)\);/);
+  assert.match(dock, /background: var\(--sn-panel-bg, var\(--sn-sys-surface-sunken\)\);/);
+  assert.match(chat, /color: var\(--sn-text, var\(--sn-sys-on-surface\)\);/);
+  assert.match(chat, /background: var\(--sn-panel-bg, var\(--sn-sys-surface\)\);/);
+  assert.match(chat, /background: var\(--sn-panel-bg, var\(--sn-sys-surface-sunken\)\);/);
+  assert.match(chat, /border-block-start: var\(--sn-node-border-width, 1px\) solid var\(--sn-node-border, var\(--sn-sys-outline\)\);/);
+  assert.match(player, /background: var\(--sn-panel-bg, var\(--sn-sys-surface-raised\)\);/);
+  assert.equal(
+    [...player.matchAll(/border: var\(--sn-node-border-width, 1px\) solid var\(--sn-node-border, var\(--sn-sys-outline\)\);/g)].length,
+    2,
+  );
 });
 
 test('cascade theme lab mutates root tokens instead of applying local component themes', async () => {
@@ -565,9 +594,9 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   const classicLowChromaTheme = themeModule.createCascadeTheme({ themeVariant: 'classic', chroma: 0 });
   const earTheme = themeModule.createCascadeTheme({ themeVariant: 'modern', tabShape: 'ear' });
   const flatUiRadiusTheme = themeModule.createCascadeTheme({ themeVariant: 'modern', radius: 0 });
-  const flatTabRadiusTheme = themeModule.createCascadeTheme({ themeVariant: 'modern', tabRadius: 0 });
-  const flatCellRadiusTheme = themeModule.createCascadeTheme({ themeVariant: 'modern', cellRadius: 0 });
-  const flatComposerRadiusTheme = themeModule.createCascadeTheme({ themeVariant: 'modern', composerRadius: 0 });
+  const flatTabRadiusTheme = themeModule.createCascadeTheme({ themeVariant: 'modern', radius: 17, tabRadius: 0 });
+  const flatCellRadiusTheme = themeModule.createCascadeTheme({ themeVariant: 'modern', radius: 17, cellRadius: 0 });
+  const flatComposerRadiusTheme = themeModule.createCascadeTheme({ themeVariant: 'modern', radius: 17, composerRadius: 0 });
   const noScrollShadowTheme = themeModule.createCascadeTheme({ themeVariant: 'modern', scrollShadow: 0 });
   const largerScrollShadowTheme = themeModule.createCascadeTheme({ themeVariant: 'modern', scrollShadow: 22 });
   const cappedScrollShadowTheme = themeModule.createCascadeTheme({ themeVariant: 'modern', scrollShadow: 99 });
@@ -596,7 +625,7 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.equal(theme.tokens['--sn-tabs-shape'], 'frame');
   assert.equal(theme.tokens['--sn-theme-bg-lightness'], '10.0%');
   assert.equal(theme.tokens['--sn-theme-text-lightness'], '94.0%');
-  assert.equal(theme.tokens['--sn-theme-heading-scale'], '1.11');
+  assert.equal(theme.tokens['--sn-theme-heading-scale'], '1.00');
   assert.equal(balancedHeadingTheme.tokens['--sn-theme-heading-scale'], '1.20');
   assert.equal(theme.state.pattern, 100);
   assert.equal(theme.tokens['--sn-theme-pattern-brightness'], '1.00');
@@ -697,6 +726,10 @@ test('cascade theme is a reusable library contract with WebMCP metadata', async 
   assert.equal(theme.tokens['--sn-sys-surface'], 'hsl(0 0% 10.0%)');
   assert.equal(theme.tokens['--sn-sys-on-surface'], 'hsl(0 0% 94.0%)');
   assert.equal(theme.tokens['--sn-sys-surface-raised'], 'var(--sn-sys-surface-panel)');
+  assert.equal(
+    theme.tokens['--sn-sys-surface-toolbar'],
+    'color-mix(in oklab, var(--sn-sys-surface-panel) 97%, var(--sn-sys-on-surface) 3%)',
+  );
   assert.equal(theme.tokens['--sn-field-control-bg'], 'var(--sn-sys-surface)');
   assert.equal(theme.tokens['--sn-chat-user-message-bg'], 'color-mix(in oklab, var(--sn-sys-surface-panel) 88%, var(--sn-sys-accent) 12%)');
   assert.equal(theme.tokens['--sn-composer-bg'], 'color-mix(in oklab, var(--sn-sys-surface-panel) 90%, var(--sn-sys-on-surface) 4%)');
@@ -2470,6 +2503,9 @@ test('side-scroll contracts are explicit across reusable surfaces', async () => 
   assert.match(chatMessage, /max-width: 100%/);
   assert.match(chatMessage, /overflow-x: auto/);
   assert.match(treeView, /grid-template-columns: var\(--sn-tree-toggle-width\) var\(--sn-tree-icon-width\) minmax\(0, 1fr\)/);
+  assert.match(treeView, /\.sn-tree-toggle\s*\{[\s\S]*?grid-column: 1/);
+  assert.match(treeView, /\.sn-tree-icon\s*\{[\s\S]*?grid-column: 2/);
+  assert.match(treeView, /\.sn-tree-label\s*\{[\s\S]*?grid-column: 3/);
   assert.match(treeView, /text-overflow: ellipsis/);
   assert.match(listDetailShell, /grid-template-columns: var\(--sn-list-detail-sidebar-width\) minmax\(0, 1fr\)/);
   assert.match(listDetailShell, /overflow: auto/);
@@ -2490,6 +2526,11 @@ test('scroll edge fade is available on reusable scroll hosts', async () => {
   assert.match(scrollFade, /themedScrollFadeBlockStyles/);
   assert.match(scrollFade, /themedScrollFadeInlineStyles/);
   assert.match(scrollFade, /data-sn-scroll-fade-active/);
+  assert.match(scrollFade, /data-sn-scroll-fade-leading/);
+  assert.match(scrollFade, /data-sn-scroll-fade-trailing/);
+  assert.match(scrollFade, /scrollFadeOverflowState/);
+  assert.match(scrollFade, /element\.scrollTop/);
+  assert.match(scrollFade, /element\.scrollLeft/);
   assert.match(scrollFade, /scrollHeight > element\.clientHeight/);
   assert.match(scrollFade, /scrollWidth > element\.clientWidth/);
 

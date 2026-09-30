@@ -207,6 +207,169 @@ test('opening a UI panel preserves existing layout panel components by node id',
   assert.equal(themeLifecycle.connected, 1);
 });
 
+test('header close renders only for opted-in closeable panels', async () => {
+  installLayoutDom();
+  let [{ createPanel, createSplit }] = await Promise.all([
+    import('../layout/LayoutTree.js'),
+    import('../layout/Layout/Layout.js'),
+  ]);
+
+  let layout = document.createElement('panel-layout');
+  document.body.append(layout);
+  layout.registerPanelType('plain', { headerClose: true });
+  layout.registerPanelType('temporary-default', {});
+  layout.registerPanelType('temporary-closeable', { headerClose: true });
+  layout.setLayout(createSplit(
+    'horizontal',
+    createPanel('plain'),
+    createSplit(
+      'horizontal',
+      createPanel('temporary-default', { uiInvoked: true }),
+      createPanel('temporary-closeable', { uiInvoked: true }),
+      0.5
+    ),
+    0.34
+  ));
+  await nextLayoutRenderTick();
+
+  let nodes = Array.from(layout.querySelectorAll('layout-node[node-type="panel"]'));
+  let plain = nodes.find((node) => node.$.panelType === 'plain');
+  let temporaryDefault = nodes.find((node) => node.$.panelType === 'temporary-default');
+  let temporaryCloseable = nodes.find((node) => node.$.panelType === 'temporary-closeable');
+
+  assert.equal(plain.querySelector('.header-close-btn')?.hidden, true);
+  assert.equal(temporaryDefault.querySelector('.header-close-btn')?.hidden, true);
+  assert.equal(temporaryCloseable.querySelector('.header-close-btn')?.hidden, false);
+});
+
+test('header close removes an opted-in dynamic panel without leaving a collapsed rail', async () => {
+  installLayoutDom();
+  let [{ createPanel }] = await Promise.all([
+    import('../layout/LayoutTree.js'),
+    import('../layout/Layout/Layout.js'),
+  ]);
+  let temporaryLifecycle = { connected: 0, disconnected: 0, teardown: 0, suspended: 0, resumed: 0 };
+  defineLayoutTestElement('test-header-close-temporary-panel', temporaryLifecycle);
+
+  let layout = document.createElement('panel-layout');
+  document.body.append(layout);
+  layout.registerPanelType('main', {});
+  layout.registerPanelType('temporary', {
+    component: 'test-header-close-temporary-panel',
+    headerClose: true,
+  });
+  layout.setLayout(createPanel('main'));
+  let panelId = layout.openPanel('temporary', { uiInvoked: true, source: 'test' });
+  await nextLayoutRenderTick();
+
+  let panelNode = layout._findPanelNode(panelId);
+  panelNode.querySelector('.fullscreen-btn').click();
+  assert.equal(layout.$.fullscreenPanelId, panelId);
+
+  let closeEvents = 0;
+  let lifecycleEvents = 0;
+  let lifecycleDetail = null;
+  panelNode.addEventListener('panel-close', (event) => {
+    closeEvents += 1;
+    assert.deepEqual(event.detail, { panelId });
+    assert.equal(event.bubbles, true);
+  });
+  layout.addEventListener('layout-ui-panel-close', (event) => {
+    lifecycleEvents += 1;
+    lifecycleDetail = event.detail;
+  });
+  panelNode.querySelector('.header-close-btn').click();
+  await nextLayoutRenderTick();
+
+  assert.equal(closeEvents, 1);
+  assert.equal(lifecycleEvents, 1);
+  assert.deepEqual(lifecycleDetail, {
+    panelId,
+    panelType: 'temporary',
+    closed: true,
+    removed: true,
+    restored: true,
+    source: 'test',
+  });
+  assert.equal(layout.$.fullscreenPanelId, null);
+  assert.equal(layout.hasAttribute('fullscreen-active'), false);
+  assert.equal(layout.getLayout().panelType, 'main');
+  assert.equal(layout._findPanelNode(panelId), null);
+  assert.equal(panelNode.isConnected, false);
+  assert.equal(layout.querySelector('test-header-close-temporary-panel'), null);
+
+  let reopenedId = layout.openPanel('temporary', { uiInvoked: true, source: 'test' });
+  await nextLayoutRenderTick();
+  let reopenedNode = layout._findPanelNode(reopenedId);
+  reopenedNode.querySelector('.collapse-btn').click();
+  await nextLayoutRenderTick();
+
+  assert.equal(layout._findPanelNode(reopenedId), reopenedNode);
+  assert.equal(reopenedNode.isConnected, true);
+  assert.equal(reopenedNode.hasAttribute('collapsed'), true);
+  assert.equal(closeEvents, 1);
+  assert.equal(lifecycleEvents, 1);
+});
+
+test('header close joins an opted-in removable panel', async () => {
+  installLayoutDom();
+  let [{ createPanel, createSplit }] = await Promise.all([
+    import('../layout/LayoutTree.js'),
+    import('../layout/Layout/Layout.js'),
+  ]);
+  let survivorLifecycle = { connected: 0, disconnected: 0, teardown: 0, suspended: 0, resumed: 0 };
+  defineLayoutTestElement('test-header-close-survivor-panel', survivorLifecycle);
+
+  let removablePanel = createPanel('removable', { removable: true });
+  let survivorPanel = createPanel('survivor');
+  let layout = document.createElement('panel-layout');
+  document.body.append(layout);
+  layout.registerPanelType('removable', { headerClose: true });
+  layout.registerPanelType('survivor', { component: 'test-header-close-survivor-panel' });
+  layout.setLayout(createSplit('horizontal', removablePanel, survivorPanel, 0.5));
+  await nextLayoutRenderTick();
+
+  let survivorComponent = layout.querySelector('test-header-close-survivor-panel');
+  let removableNode = layout._findPanelNode(removablePanel.id);
+  assert.equal(removableNode.querySelector('.header-close-btn')?.hidden, false);
+  removableNode.querySelector('.header-close-btn').click();
+  await nextLayoutRenderTick();
+
+  assert.equal(layout.getLayout().id, survivorPanel.id);
+  assert.equal(layout.querySelector('test-header-close-survivor-panel'), survivorComponent);
+  assert.equal(survivorLifecycle.teardown, 0);
+});
+
+test('header close option and lifecycle event are published in provider metadata', async () => {
+  let [{ getComponent }, { createTranslator }, customElementsSource] = await Promise.all([
+    import('../manifest/component-registry.js'),
+    import('../locale/index.js'),
+    readFile(new URL('../custom-elements.json', import.meta.url), 'utf8'),
+  ]);
+  let layout = getComponent('panel-layout');
+  let node = getComponent('layout-node');
+  let registerTool = layout.contract.webmcp.tools
+    .find((tool) => tool.name === 'panel_layout_register_panel_type');
+
+  assert.deepEqual(registerTool.inputSchema.properties.headerClose, { type: 'boolean' });
+  assert.ok(node.contract.capabilities.includes('header-close'));
+  assert.ok(node.contract.events.some((event) => event.name === 'panel-close'));
+  assert.match(
+    layout.contract.events.find((event) => event.name === 'layout-ui-panel-close')?.description || '',
+    /detail\.removed is true for native header close removal/,
+  );
+
+  let customElements = JSON.parse(customElementsSource);
+  let serialized = JSON.stringify(customElements);
+  assert.match(serialized, /"headerClose":\{"type":"boolean"\}/);
+  assert.match(serialized, /"header-close"/);
+  assert.match(serialized, /"name":"panel-close"/);
+  assert.match(serialized, /detail\.removed is true for native header close removal/);
+  assert.equal(createTranslator({ locale: 'en' })('layout.close'), 'Close');
+  assert.equal(createTranslator({ locale: 'ru' })('layout.close'), 'Закрыть');
+  assert.equal(createTranslator({ locale: 'es' })('layout.close'), 'Cerrar');
+});
+
 test('joining panels promotes the surviving layout node without recreating its component', async () => {
   installLayoutDom();
   let [{ createPanel, createSplit }] = await Promise.all([

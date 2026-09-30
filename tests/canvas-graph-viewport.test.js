@@ -90,3 +90,63 @@ test('CanvasViewport grid LOD keeps dots legible across deep zoom', async () => 
     assert.equal(resolveGridLOD(invalidZoom), 1);
   }
 });
+
+test('CanvasViewport fitView can apply the final viewport without animation', async () => {
+  let prior = Object.fromEntries(['requestAnimationFrame', 'cancelAnimationFrame', 'getComputedStyle']
+    .map((name) => [name, globalThis[name]]));
+  let scheduledFrames = 0;
+  globalThis.requestAnimationFrame = () => {
+    scheduledFrames += 1;
+    return scheduledFrames;
+  };
+  globalThis.cancelAnimationFrame = () => {};
+  globalThis.getComputedStyle = () => ({
+    getPropertyValue: () => '',
+  });
+  try {
+    let { CanvasViewport } = await import('../canvas/CanvasViewport.js');
+    let viewportAttributes = new Map();
+    let canvas = {
+      $: { zoom: 1, panX: 0, panY: 0 },
+      ref: {
+        canvasContainer: {
+          getBoundingClientRect: () => ({ width: 800, height: 600 }),
+        },
+        inspector: null,
+        quickToolbar: null,
+      },
+      style: {},
+      querySelector: () => null,
+      toggleAttribute(name, active) {
+        if (active) viewportAttributes.set(name, '');
+        else viewportAttributes.delete(name);
+      },
+    };
+    let nodeViews = new Map([['node', {
+      _position: { x: 1000, y: 400 },
+      offsetWidth: 200,
+      offsetHeight: 100,
+    }]]);
+    let viewport = new CanvasViewport({
+      canvas,
+      nodeViews,
+      viewManager: {},
+      getConnRenderer: () => ({
+        resumeProgressiveRendering() {},
+        refreshViewportTransform() {},
+      }),
+    });
+
+    assert.equal(viewport.fitView({ animate: false, transition: false }), true);
+    assert.notEqual(canvas.$.panX, 0);
+    assert.notEqual(canvas.$.panY, 0);
+    assert.equal(canvas._viewportAnimating, false);
+    assert.equal(viewportAttributes.has('data-viewport-animating'), false);
+    assert.equal(scheduledFrames, 1, 'only deferred culling is scheduled; no viewport animation frame is queued');
+  } finally {
+    for (let [name, value] of Object.entries(prior)) {
+      if (value === undefined) delete globalThis[name];
+      else globalThis[name] = value;
+    }
+  }
+});

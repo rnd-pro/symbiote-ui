@@ -710,9 +710,11 @@ export class CanvasViewport {
 
   /**
    * Fit all nodes (phantom and DOM) within the viewport
+   * @param {Object} [options]
+   * @param {boolean} [options.animate=true]
    */
-  fitView() {
-    if (this.#nodeViews.size === 0 && this.#phantomData.size === 0) return;
+  fitView(options = {}) {
+    if (this.#nodeViews.size === 0 && this.#phantomData.size === 0) return false;
 
     let minX = Infinity,
       minY = Infinity,
@@ -738,13 +740,13 @@ export class CanvasViewport {
       if (pd.y + pd.h > maxY) maxY = pd.y + pd.h;
     }
 
-    if (minX === Infinity) return;
+    if (minX === Infinity) return false;
 
     let graphW = maxX - minX;
     let graphH = maxY - minY;
     let viewport = this.#getVisibleViewportSize();
-    let safePadding = resolveFitPadding(80, viewport);
-    if (safePadding === null) return;
+    let safePadding = resolveFitPadding(options.padding ?? 80, viewport);
+    if (safePadding === null) return false;
     let scaleX = (viewport.width - safePadding * 2) / graphW;
     let scaleY = (viewport.height - safePadding * 2) / graphH;
     let scale = Math.max(NODE_CANVAS_MIN_FIT_ZOOM, Math.min(scaleX, scaleY, 1.5));
@@ -757,8 +759,10 @@ export class CanvasViewport {
       panX: viewport.width / 2 - centerX * scale,
       panY: viewport.height / 2 - centerY * scale,
     }, {
+      ...options,
       viewportRouteCenter: { x: viewport.width / 2, y: viewport.height / 2 },
     });
+    return true;
   }
 
   /**

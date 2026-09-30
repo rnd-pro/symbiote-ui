@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rnd-pro.github.io/symbiote-ui/schemas/xr-spatial-window-focus-receipt-v1.json",
+  "title": "XR Spatial Window Content Focus Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "action",
+    "ok",
+    "reason",
+    "target",
+    "focused",
+    "ime",
+    "releasedCapture",
+    "source"
+  ],
+  "properties": {
+    "version": { "const": "xr-spatial-window-focus-receipt-v1" },
+    "action": { "enum": ["content-focus", "content-blur", "content-focus-cancel"] },
+    "windowId": { "type": "string", "minLength": 1 },
+    "layoutId": { "type": "string", "minLength": 1 },
+    "ok": { "type": "boolean" },
+    "reason": { "type": ["string", "null"] },
+    "target": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["targetId", "tagName", "editable", "focusable"],
+      "properties": {
+        "targetId": { "type": ["string", "null"] },
+        "tagName": { "type": ["string", "null"] },
+        "editable": { "type": "boolean" },
+        "focusable": { "type": "boolean" }
+      }
+    },
+    "focused": { "type": ["boolean", "null"] },
+    "ime": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["mode", "reason", "handoff"],
+      "properties": {
+        "mode": { "enum": ["dom-focus", "dom-overlay", "unavailable"] },
+        "reason": { "type": ["string", "null"] },
+        "handoff": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "required": ["targetId", "editable", "inputType", "multiline", "hasValue", "valueLength"],
+          "properties": {
+            "targetId": { "type": ["string", "null"] },
+            "editable": { "type": "boolean" },
+            "inputType": { "type": ["string", "null"] },
+            "multiline": { "type": "boolean" },
+            "hasValue": { "type": "boolean" },
+            "valueLength": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    },
+    "releasedCapture": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["selection", "scroll"],
+      "properties": {
+        "selection": { "type": "boolean" },
+        "scroll": { "type": "boolean" }
+      }
+    },
+    "source": { "type": ["string", "null"] }
+  }
+}

@@ -180,6 +180,15 @@ const fixtures = {
     el.appendChild(content);
     return 'Drawer content';
   },
+  'sn-kanban-card': (el) => {
+    el.setView({ modules: ['header', 'currentAction', 'agent'] });
+    el.setCard({
+      title: 'Review payment flow',
+      currentAction: 'Running checks',
+      agent: { name: 'Maya', accent: '#6A1B9A' },
+    });
+    return 'Review payment flow';
+  },
 };
 
 test('jsda-ssr-renderable components render under a linkedom SSR fixture', async () => {

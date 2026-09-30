@@ -39,6 +39,7 @@
  * @property {LayoutMobileDock} [mobileDock] Mobile drawer placement preference.
  * @property {LayoutSwipeControl} [swipeControl] Mobile swipe source.
  * @property {boolean} [drawerHoverOpen] Whether mouse hover over a drawer rail opens the drawer.
+ * @property {boolean} [drawerGroup] Treat a split branch as one primary drawer surface.
  */
 
 /**
@@ -80,6 +81,7 @@ export const DEFAULT_LAYOUT_BEHAVIOR = Object.freeze({
   mobileDock: 'auto',
   swipeControl: 'edge',
   drawerHoverOpen: false,
+  drawerGroup: false,
 })
 
 export const COLLAPSED_PANEL_INLINE_SIZE = 32
@@ -132,6 +134,9 @@ export function normalizeLayoutBehavior(behavior = {}, fallback = DEFAULT_LAYOUT
   let drawerHoverOpen = 'drawerHoverOpen' in input
     ? Boolean(input.drawerHoverOpen)
     : Boolean(base.drawerHoverOpen ?? DEFAULT_LAYOUT_BEHAVIOR.drawerHoverOpen)
+  let drawerGroup = 'drawerGroup' in input
+    ? Boolean(input.drawerGroup)
+    : Boolean(base.drawerGroup ?? DEFAULT_LAYOUT_BEHAVIOR.drawerGroup)
 
   return {
     importance: finiteNumber(input.importance, base.importance ?? DEFAULT_LAYOUT_BEHAVIOR.importance, 0, 100),
@@ -148,6 +153,7 @@ export function normalizeLayoutBehavior(behavior = {}, fallback = DEFAULT_LAYOUT
     mobileDock,
     swipeControl,
     drawerHoverOpen,
+    drawerGroup,
   }
 }
 
@@ -162,7 +168,8 @@ export function hasLayoutBehaviorMetadata(behavior) {
     RESPONSIVE_MODES.has(behavior.responsiveMode) &&
     MOBILE_DOCKS.has(behavior.mobileDock) &&
     SWIPE_CONTROLS.has(behavior.swipeControl) &&
-    typeof behavior.drawerHoverOpen === 'boolean'
+    typeof behavior.drawerHoverOpen === 'boolean' &&
+    typeof behavior.drawerGroup === 'boolean'
   )
 }
 
@@ -428,6 +435,20 @@ export function isSplitNode(node) {
   return !!node && node.type === 'split'
 }
 
+/**
+ * Replace one node in a layout tree while preserving every other branch.
+ * @param {LayoutNode} root
+ * @param {string} nodeId
+ * @param {LayoutNode} replacement
+ * @returns {LayoutNode}
+ */
+function replaceNode(root, nodeId, replacement) {
+  let parentInfo = findParent(root, nodeId)
+  if (!parentInfo) return root
+  parentInfo.parent[parentInfo.which] = replacement
+  return root
+}
+
 export function findPanel(root, predicate) {
   let panels = collectPanels(root)
   return panels.find((panel) => predicate(panel)) || null
@@ -449,6 +470,8 @@ export function openPanel(root, panelType, options = {}) {
     ratio = 0.68,
     reuseExisting = true,
     source = '',
+    targetPanelId = '',
+    targetBehavior,
     uiInvoked = false,
   } = options
 
@@ -477,9 +500,11 @@ export function openPanel(root, panelType, options = {}) {
     ...(uiInvoked ? { uiInvoked: true, closed: false, source } : {}),
   }
   let panel = createPanel(panelType, state, behavior)
-  let nextRoot = root
-    ? createSplit(direction, root, panel, ratio)
-    : panel
+  let target = targetPanelId ? findNode(root, targetPanelId) : null
+  let inserted = target ? createSplit(direction, target, panel, ratio, targetBehavior) : null
+  let nextRoot = inserted
+    ? (target === root ? inserted : replaceNode(root, target.id, inserted))
+    : (root ? createSplit(direction, root, panel, ratio) : panel)
 
   return { root: nextRoot, panel, created: true }
 }
@@ -760,6 +785,19 @@ export function applyPriorityCompression(root, viewport = {}, options = {}) {
   function collect(node, share, fallback) {
     if (!node || node.collapsed) return
     let branchBehavior = getNodeBehavior(node, fallback)
+    if (node.type === 'split' && branchBehavior.drawerGroup) {
+      records.push({
+        id: node.id,
+        panelType: '',
+        dock: branchBehavior.mobileDock,
+        requestedDock: branchBehavior.mobileDock,
+        importance: branchBehavior.importance,
+        swipeControl: branchBehavior.swipeControl,
+        drawerHoverOpen: branchBehavior.drawerHoverOpen,
+        order: records.length,
+      })
+      return
+    }
     if (isPanelNode(node)) {
       let behavior = resolvePanelBehavior(node, branchBehavior)
       panels.push({
@@ -950,6 +988,19 @@ export function resolveMobileDrawerLayout(root, options = {}) {
   function walk(node, fallback) {
     if (!node) return
     let branchBehavior = getNodeBehavior(node, fallback)
+    if (node.type === 'split' && branchBehavior.drawerGroup) {
+      records.push({
+        id: node.id,
+        panelType: '',
+        dock: branchBehavior.mobileDock,
+        requestedDock: branchBehavior.mobileDock,
+        importance: branchBehavior.importance,
+        swipeControl: branchBehavior.swipeControl,
+        drawerHoverOpen: branchBehavior.drawerHoverOpen,
+        order: records.length,
+      })
+      return
+    }
     if (isPanelNode(node)) {
       let behavior = resolvePanelBehavior(node, branchBehavior)
       records.push({

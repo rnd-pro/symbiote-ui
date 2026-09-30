@@ -20,6 +20,21 @@ import {
   hitTestXRPanelFrame,
 } from '../xr/panel-frame.js';
 import { createXRThreeWebXRAdapter } from '../xr/three-webxr-adapter.js';
+import { createMetaWindowChromeTexture } from '../xr/meta-window-chrome.js';
+
+if (typeof globalThis.OffscreenCanvas !== 'function') {
+  globalThis.OffscreenCanvas = class {
+    constructor(width, height) { this.width = width; this.height = height; }
+    getContext() {
+      return {
+        clearRect() {}, beginPath() {}, moveTo() {}, arcTo() {}, closePath() {}, fill() {},
+        save() {}, restore() {}, translate() {}, arc() {}, stroke() {}, strokeRect() {},
+        lineTo() {}, scale() {}, rotate() {}, fillText() {},
+        measureText(value) { return { width: String(value).length * 10 }; },
+      };
+    }
+  };
+}
 
 function zoneCenter(zone) {
   return { x: zone.x + zone.width / 2, y: zone.y + zone.height / 2 };
@@ -77,6 +92,40 @@ test('color normalization keeps alpha, passes literals through, and leaves css-o
   assert.equal(xrDesignTokenColorNumber('rgba(1, 2, 3, 0.5)'), null);
 });
 
+test('custom action rectangles reserve their actual space for the control-bar title', () => {
+  let labels = [];
+  let context = {
+    beginPath() {}, moveTo() {}, arcTo() {}, closePath() {}, fill() {}, save() {}, restore() {},
+    translate() {}, arc() {}, stroke() {}, strokeRect() {}, lineTo() {}, clearRect() {},
+    measureText(value) { return { width: String(value).length * 20 }; },
+    fillText(value) { labels.push(String(value)); },
+  };
+  let canvas = { width: 0, height: 0, getContext: () => context };
+  class CanvasTexture {
+    constructor(source) { this.source = source; this.anisotropy = 0; }
+  }
+  createMetaWindowChromeTexture({
+    CanvasTexture,
+    LinearMipmapLinearFilter: 1008,
+    LinearFilter: 1006,
+    SRGBColorSpace: 'srgb',
+  }, 'control-bar', {
+    createCanvas: () => canvas,
+    title: 'Panels',
+    actions: ['reset', 'planetary-gear', 'hover-engine', 'lego-motor', 'pneumatic-engine', 'exit-xr'],
+    actionRects: [
+      { action: 'reset', x: 0.47, width: 0.106 },
+      { action: 'planetary-gear', x: 0.576, width: 0.106 },
+      { action: 'hover-engine', x: 0.682, width: 0.106 },
+      { action: 'lego-motor', x: 0.788, width: 0.106 },
+      { action: 'pneumatic-engine', x: 0.894, width: 0.106 },
+      { action: 'exit-xr', x: 0.94, width: 0.06 },
+    ],
+  });
+  assert.deepEqual(labels, ['Panels'], 'model actions use vector glyphs rather than letter placeholders');
+  assert.equal(canvas.height, 384, 'island chrome uses a high-resolution texture');
+});
+
 test('three adapter chrome visuals default to the resolved design tokens', () => {
   let adapter = createXRThreeWebXRAdapter({ THREE: THREE_REAL });
   let result = adapter.setScene({
@@ -130,6 +179,8 @@ test('chrome controls keep proportional sizes and matching hit zones across pane
     footerHeightMeters: 0.035,
     actionSizeMeters: 0.030,
     footerGapMeters: 0.008,
+    actionInsetMeters: 0.012,
+    actionGapMeters: 0.004,
   };
   for (let size of [[0.5, 0.28], [0.8, 0.45], [1.6, 0.9]]) {
     let layout = computeXRPanelChromeLayout(size, meterOptions);
@@ -138,7 +189,7 @@ test('chrome controls keep proportional sizes and matching hit zones across pane
 
     // Constant physical size: UV zone * panel size is size-independent, so the
     // controls scale proportionally in UV as the panel resizes.
-    assert.ok(Math.abs(layout.move.height * size[1] - 0.035) < 1e-9);
+    assert.ok(Math.abs(layout.move.height * size[1] - 0.042) < 1e-9, 'menu preserves vertical padding around 30 mm actions');
     assert.ok(Math.abs(layout.actions.close.width * size[0] - 0.030) < 1e-9);
     assert.ok(Math.abs(layout.resize.northWest.width * size[0] - 0.024) < 1e-9);
     assert.ok(Math.abs(layout.resize.southEast.height * size[1] - 0.024) < 1e-9);
@@ -160,10 +211,57 @@ test('chrome controls keep proportional sizes and matching hit zones across pane
       assert.equal(hit?.zone, 'action', `${action} button must stay hittable at ${size}`);
       assert.equal(hit?.action, action);
     }
+    let firstAction = Object.values(layout.actions)[0];
+    let lastAction = Object.values(layout.actions).at(-1);
+    assert.ok(firstAction.x > layout.move.x + layout.move.width, 'buttons keep a gap after the move zone');
+    assert.ok(lastAction.x + lastAction.width < layout.controlBar.x + layout.controlBar.width, 'outer button clears the rounded end');
     assert.equal(hitTestXRPanelFrame(frame, zoneCenter(layout.move))?.zone, 'move');
     assert.equal(hitTestXRPanelFrame(frame, { x: 0.5, y: 0.5 })?.zone, 'content');
     // Grips straddle the window corners at every size (out-of-window chrome).
     assert.ok(layout.resize.northWest.x < 0 && layout.resize.northWest.y < 0);
     assert.ok(layout.resize.southEast.x + layout.resize.southEast.width > 1);
+  }
+});
+
+test('a large vertical-panel island may extend beyond the panel without shrinking its action targets', () => {
+  let size = [0.62, 1.1];
+  let options = {
+    controlBarWidthMeters: 0.72,
+    footerHeightMeters: 0.09,
+    actionSizeMeters: 0.075,
+    closable: true,
+  };
+  let layout = computeXRPanelChromeLayout(size, options);
+  let frame = createXRPanelFrame({ id: 'vertical', size }, options);
+  assert.ok(Math.abs(layout.controlBar.width * size[0] - 0.72) < 1e-9);
+  assert.ok(layout.controlBar.x < 0, 'the larger island is centered outside a narrow panel');
+  for (let [action, zone] of Object.entries(layout.actions)) {
+    assert.ok(Math.abs(zone.width * size[0] - 0.075) < 1e-9);
+    assert.equal(hitTestXRPanelFrame(frame, zoneCenter(zone))?.action, action);
+  }
+});
+
+test('corner grips perfectly center over the physical panel corners at all sizes', () => {
+  for (let size of [[0.8, 0.45], [1.2, 1.2], [0.3, 0.9]]) {
+    let options = {
+      handleSizeMeters: 0.024,
+    };
+    let layout = computeXRPanelChromeLayout(size, options);
+
+    let nw = layout.resize.northWest;
+    assert.ok(Math.abs((nw.x + nw.width/2) - 0) < 1e-9);
+    assert.ok(Math.abs((nw.y + nw.height/2) - 0) < 1e-9);
+
+    let ne = layout.resize.northEast;
+    assert.ok(Math.abs((ne.x + ne.width/2) - 1) < 1e-9);
+    assert.ok(Math.abs((ne.y + ne.height/2) - 0) < 1e-9);
+
+    let sw = layout.resize.southWest;
+    assert.ok(Math.abs((sw.x + sw.width/2) - 0) < 1e-9);
+    assert.ok(Math.abs((sw.y + sw.height/2) - 1) < 1e-9);
+
+    let se = layout.resize.southEast;
+    assert.ok(Math.abs((se.x + se.width/2) - 1) < 1e-9);
+    assert.ok(Math.abs((se.y + se.height/2) - 1) < 1e-9);
   }
 });

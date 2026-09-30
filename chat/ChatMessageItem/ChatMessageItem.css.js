@@ -42,6 +42,13 @@ chat-message-item {
   color: var(--sn-sys-on-surface-dim);
 }
 
+.message.system:has(.status-board, .action-card, .actions-card) {
+  align-self: stretch;
+  flex-direction: column;
+  inline-size: 100%;
+  max-inline-size: 100%;
+}
+
 .message.system .msg-content {
   display: flex;
   align-items: center;
@@ -602,16 +609,16 @@ h4.md-h {
 }
 
 .status-board {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
   gap: var(--sn-chat-status-card-gap, 8px);
   padding: var(--sn-step-2) 0;
   width: 100%;
 }
 
 .status-card {
-  flex: 1 1 220px;
-  max-width: 320px;
+  min-inline-size: 0;
+  max-inline-size: none;
   background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface));
   border: 1px solid color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface));
   border-radius: var(--sn-radius-lg);
@@ -622,6 +629,10 @@ h4.md-h {
   transition: border-color var(--sn-transition-normal) var(--sn-transition-easing), box-shadow var(--sn-transition-normal) var(--sn-transition-easing);
   position: relative;
   overflow: hidden;
+}
+
+.message.system .status-card {
+  max-inline-size: none;
 }
 
 .status-card::before {
@@ -749,6 +760,27 @@ h4.md-h {
   font-size: var(--sn-text-lg);
 }
 
+.footnote-card {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sn-step-3);
+  margin: var(--sn-step-2) 0;
+  padding: var(--sn-step-3) var(--sn-step-4);
+  border-inline-start: 2px solid var(--sn-sys-accent);
+  color: var(--sn-sys-on-surface-dim);
+  font-size: var(--sn-chat-status-card-size, 12px);
+  line-height: 1.45;
+}
+
+.footnote-card > .material-symbols-outlined {
+  flex: 0 0 auto;
+  font-size: var(--sn-text-lg);
+}
+
+.footnote-card-body {
+  min-width: 0;
+}
+
 .attachment-card {
   display: flex;
   align-items: center;
@@ -813,6 +845,14 @@ h4.md-h {
   flex-direction: column;
   gap: var(--sn-step-4);
   width: 100%;
+}
+
+.message.system .action-card {
+  margin-block-start: 0;
+}
+
+.message.system .actions-card {
+  margin-block-start: 0;
 }
 .approval-header,
 .action-header {
@@ -1042,6 +1082,7 @@ h4.md-h {
   width: 100%;
   margin: var(--sn-step-3) 0;
 }
+
 .actions-group {
   display: flex;
   flex-wrap: wrap;

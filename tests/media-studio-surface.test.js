@@ -256,6 +256,13 @@ test('media studio theme aliases are cascade-authored and consumed by styles', (
   assert.equal(theme.tokens['--sn-media-studio-progress-color'], 'var(--sn-sys-accent)');
   assert.match(theme.tokens['--sn-media-studio-preview-bg'], /var\(--sn-sys-surface\)/);
   assert.match(theme.tokens['--sn-media-studio-pane-bg'], /var\(--sn-sys-surface-panel\)/);
+  assert.equal(theme.tokens['--sn-media-studio-timeline-height'], '220px');
+  assert.equal(theme.tokens['--sn-media-studio-timeline-header-width'], '140px');
+  assert.equal(theme.tokens['--sn-media-studio-ruler-height'], '28px');
+  assert.equal(theme.tokens['--sn-media-studio-track-height'], '36px');
+  assert.match(MEDIA_STUDIO_SURFACE_STYLES, /--te-header-width: var\(--sn-media-studio-timeline-header-width, 140px\)/);
+  assert.match(MEDIA_STUDIO_SURFACE_STYLES, /--te-track-height: var\(--sn-media-studio-track-height, 36px\)/);
+  assert.match(MEDIA_STUDIO_SURFACE_STYLES, /--te-ruler-height: var\(--sn-media-studio-ruler-height, 28px\)/);
 });
 
 test('frame source provider metadata reports browser capability fallbacks', () => {
@@ -315,6 +322,7 @@ test('preview state normalization covers empty, loading, unsupported, and cached
   let loading = normalizeMediaPreviewState({
     status: 'rendering',
     progress: 32,
+    reason: 'Generating narration',
     frameSource: {
       provider: MEDIA_STUDIO_FRAME_SOURCE_TYPES.externalBrowser,
       source: '/workspace/surface',
@@ -323,6 +331,7 @@ test('preview state normalization covers empty, loading, unsupported, and cached
     externalBrowserFrameSource: true,
   });
   assert.equal(loading.state, MEDIA_PREVIEW_STATES.loading);
+  assert.equal(loading.reason, 'Generating narration');
   assert.equal(loading.progress, 0.32);
 
   let cached = normalizeMediaPreviewState({
@@ -501,6 +510,9 @@ test('media studio visual layer renders reusable preview, timeline, and progress
   assert.match(timeline, /sn-timeline-editor/);
   assert.match(timeline, /data-media-studio-timeline-editor/);
   assert.match(MEDIA_STUDIO_SURFACE_STYLES, /\.sn-media-studio-timeline-editor/);
+  assert.match(MEDIA_STUDIO_SURFACE_STYLES, /\.sn-media-studio-timeline-panel \{[\s\S]*?grid-template-rows: minmax\(0, 1fr\) auto/);
+  assert.match(MEDIA_STUDIO_SURFACE_STYLES, /\.sn-media-studio-authoring-toolbar \{[\s\S]*?var\(--sn-media-studio-pane-bg/);
+  assert.match(MEDIA_STUDIO_SURFACE_STYLES, /\.sn-media-studio-authoring-control:focus-visible/);
   assert.doesNotMatch(timeline, /sn-media-studio-track-row/);
   assert.doesNotMatch(timeline, /sn-media-studio-timeline-toolbar/);
   assert.match(inspector, /sn-media-studio-inspector-panel/);
@@ -865,8 +877,9 @@ test('media studio timeline visual geometry is driven by the timeline editor the
     readFile(new URL('../timeline/TimelineEditor/TimelineEditor.tpl.js', import.meta.url), 'utf8'),
   ]);
 
-  assert.match(MEDIA_STUDIO_SURFACE_STYLES, /--te-track-height: var\(--sn-media-studio-control-height, 28px\)/);
-  assert.match(MEDIA_STUDIO_SURFACE_STYLES, /--te-ruler-height: var\(--sn-media-studio-control-height, 28px\)/);
+  assert.match(MEDIA_STUDIO_SURFACE_STYLES, /--te-header-width: var\(--sn-media-studio-timeline-header-width, 140px\)/);
+  assert.match(MEDIA_STUDIO_SURFACE_STYLES, /--te-track-height: var\(--sn-media-studio-track-height, 36px\)/);
+  assert.match(MEDIA_STUDIO_SURFACE_STYLES, /--te-ruler-height: var\(--sn-media-studio-ruler-height, 28px\)/);
   assert.match(MEDIA_STUDIO_SURFACE_STYLES, /--te-transport-height: var\(--sn-media-studio-control-height, 28px\)/);
   assert.match(editorSource, /cssPixelValue\(computed, '--te-track-height', 36\)/);
   assert.match(editorSource, /cssPixelValue\(computed, '--te-ruler-height', 28\)/);
@@ -879,6 +892,9 @@ test('media studio timeline visual geometry is driven by the timeline editor the
   assert.match(editorSource, /#focusPlayhead\(\)/);
   assert.match(editorSource, /#syncHeaderScroll\(\)/);
   assert.match(editorSource, /#manualScrollUntil/);
+  assert.match(editorSource, /this\.ref\.timelineContent\?\.addEventListener\('click', this\.#onTimelineClick\)/);
+  assert.match(editorSource, /this\.ref\.timelineContent\?\.removeEventListener\('click', this\.#onTimelineClick\)/);
+  assert.doesNotMatch(editorTemplate, /onclick: 'timelineClick'/);
   assert.match(editorSource, /selectedClipId: data\.selectedClipId == null \? '' : String\(data\.selectedClipId\)/);
   assert.match(editorSource, /requestedSelectedClipId/);
   assert.match(editorSource, /#readTheme\(\)/);
@@ -914,9 +930,12 @@ test('media studio timeline visual geometry is driven by the timeline editor the
   assert.match(editorSource, /this\.\$\.playIcon = 'pause'/);
   let mediaStudioSource = await readFile(new URL('../ui/media-studio-surface.js', import.meta.url), 'utf8');
   assert.match(mediaStudioSource, /import\('\.\.\/timeline\/TimelineEditor\/TimelineEditor\.js'\)/);
-  assert.match(mediaStudioSource, /ready\.then\(\(\) => load\(\)\)/);
-  assert.match(mediaStudioSource, /setTimeout\?\.\(load, 0\)/);
-  assert.doesNotMatch(mediaStudioSource, /defined && load\(\)/);
+  assert.match(mediaStudioSource, /host\.__snMediaStudioTimelineHydration\?\.dispose\?\.\(\)/);
+  assert.match(mediaStudioSource, /let abortController = new AbortController\(\)/);
+  assert.match(mediaStudioSource, /registry\?\.whenDefined\?\.\('sn-timeline-editor'\)/);
+  assert.match(mediaStudioSource, /\['clip-move', options\.onClipMove\]/);
+  assert.doesNotMatch(mediaStudioSource, /setTimeout\?\.\(load, 0\)/);
+  assert.doesNotMatch(mediaStudioSource, /\.catch\(\(\) => \{\}\)/);
   assert.match(mediaStudioSource, /selectedClipId/);
   assert.match(editorSource, /material-symbols-outlined[\s\S]*?volume_off/);
   assert.doesNotMatch(editorSource, />M<\/button>/);
@@ -936,7 +955,7 @@ test('media studio timeline visual geometry is driven by the timeline editor the
   assert.doesNotMatch(frameStyle, /box-shadow: 0 0 0 1px/);
 });
 
-test('media studio timeline uses the library timeline editor data contract', () => {
+test('media studio timeline uses the library timeline editor data contract', async () => {
   let empty = normalizeMediaStudioTimelineData({ durationFrames: 300 });
   assert.equal(empty.duration, 300);
   assert.equal(empty.tracks.length, 0);
@@ -1017,6 +1036,7 @@ test('media studio timeline uses the library timeline editor data contract', () 
   let focusedFrame = null;
   let playheadDetail = null;
   let transportDetail = null;
+  let clipMoveDetail = null;
   let listeners = new Map();
   let editor = {
     loadTimeline(value) { loaded = value; },
@@ -1044,17 +1064,64 @@ test('media studio timeline uses the library timeline editor data contract', () 
     clips: [{ lane: 'video', id: 'video-main', label: 'Current UI frames', startPercent: 0, sizePercent: 50 }],
     onPlayheadChange(detail) { playheadDetail = detail; },
     onTransportChange(detail) { transportDetail = detail; },
+    onClipMove(detail) { clipMoveDetail = detail; },
   });
+  assert.equal(await hydrated.ready, true);
   assert.equal(loaded.duration, 300);
   assert.equal(loaded.focusFrame, 120);
   assert.equal(loaded.selectedClipId, 'video-main');
-  assert.equal(hydrated.tracks.length, 1);
+  assert.equal(hydrated.tracks.length, 1, 'the additive lifecycle result retains timeline data fields');
+  assert.equal(hydrated.data.tracks.length, 1);
+  assert.equal(typeof hydrated.dispose, 'function');
   assert.equal(frame, 42);
   assert.equal(focusedFrame, 120);
   listeners.get('playhead-change')({ detail: { frame: 43, time: 1.4 } });
   listeners.get('transport-change')({ detail: { action: 'play' } });
+  listeners.get('clip-move')({ detail: { clipId: 'video-main', deltaFrames: 12 } });
   assert.deepEqual(playheadDetail, { frame: 43, time: 1.4 });
   assert.deepEqual(transportDetail, { action: 'play' });
+  assert.deepEqual(clipMoveDetail, { clipId: 'video-main', deltaFrames: 12 });
+
+  hydrated.dispose();
+  assert.equal(listeners.size, 0, 'the explicit disposer removes every timeline listener');
+});
+
+test('media studio timeline rehydrate disposes the prior binding and suppresses a late import', async () => {
+  let listeners = new Map();
+  let loads = 0;
+  let host = {
+    matches(selector) { return selector === '[data-media-studio-timeline-editor]'; },
+    querySelector() { return null; },
+    addEventListener(type, handler) { listeners.set(type, handler); },
+    removeEventListener(type, handler) {
+      if (listeners.get(type) === handler) listeners.delete(type);
+    },
+    loadTimeline() { loads += 1; },
+  };
+  let first = hydrateMediaStudioTimelinePanel(host, {
+    durationFrames: 60,
+    onClipMove() {},
+  });
+  let second = hydrateMediaStudioTimelinePanel(host, {
+    durationFrames: 120,
+    onClipMove() {},
+  });
+  assert.equal(await first.ready, true);
+  assert.equal(await second.ready, true);
+  assert.equal(loads, 2);
+  assert.equal(listeners.size, 1, 'rehydration replaces rather than duplicates event listeners');
+  first.dispose();
+  assert.equal(listeners.size, 1, 'a stale disposer cannot remove the current binding');
+  second.dispose();
+  assert.equal(listeners.size, 0);
+
+  delete host.loadTimeline;
+  let late = hydrateMediaStudioTimelinePanel(host, { durationFrames: 180 });
+  late.dispose();
+  host.loadTimeline = () => { loads += 1; };
+  assert.equal(await late.ready, false);
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.equal(loads, 2, 'disposed lazy hydration cannot apply after its import settles');
 });
 
 test('media studio sequence playback helpers map time and bound cached frames', () => {

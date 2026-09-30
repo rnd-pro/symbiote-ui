@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rnd-pro.github.io/symbiote-ui/schemas/xr-spatial-window-relay-receipt-v1.json",
+  "title": "XR Spatial Window Relay Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "action",
+    "ok",
+    "routed",
+    "reason",
+    "zone",
+    "point",
+    "source",
+    "relay"
+  ],
+  "properties": {
+    "version": { "const": "xr-spatial-window-relay-receipt-v1" },
+    "action": { "type": "string", "minLength": 1 },
+    "windowId": { "type": "string", "minLength": 1 },
+    "layoutId": { "type": "string", "minLength": 1 },
+    "ok": { "type": "boolean" },
+    "routed": { "type": "boolean" },
+    "reason": { "type": ["string", "null"] },
+    "zone": {
+      "type": ["string", "null"],
+      "enum": ["content", "action", "move", "resize", "edge", null]
+    },
+    "point": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["x", "y"],
+      "properties": {
+        "x": { "type": "number", "minimum": 0, "maximum": 1 },
+        "y": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "source": { "type": ["string", "null"] },
+    "relay": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["ok", "dispatched", "interaction", "scroll", "selection", "capture"],
+      "properties": {
+        "ok": { "type": "boolean" },
+        "dispatched": { "type": "array", "items": { "type": "string" } },
+        "interaction": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "required": ["ok", "reason", "action", "targetId"],
+          "properties": {
+            "ok": { "type": "boolean" },
+            "reason": { "type": ["string", "null"] },
+            "action": { "type": ["string", "null"] },
+            "targetId": { "type": ["string", "null"] }
+          }
+        },
+        "scroll": {
+          "anyOf": [
+            { "type": "null" },
+            { "$ref": "https://rnd-pro.github.io/symbiote-ui/schemas/xr-spatial-window-scroll-receipt-v1.json" }
+          ]
+        },
+        "selection": {
+          "anyOf": [
+            { "type": "null" },
+            { "$ref": "https://rnd-pro.github.io/symbiote-ui/schemas/xr-spatial-window-selection-receipt-v1.json" }
+          ]
+        },
+        "capture": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "required": ["sourceId", "sessionId", "pointerId", "phase"],
+          "properties": {
+            "sourceId": { "type": ["string", "null"] },
+            "sessionId": { "type": ["string", "null"] },
+            "pointerId": { "type": ["string", "null"] },
+            "phase": { "enum": ["begin", "update", "end", "cancel", null] }
+          }
+        }
+      }
+    }
+  }
+}

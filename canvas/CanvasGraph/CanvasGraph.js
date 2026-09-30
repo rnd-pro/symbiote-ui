@@ -89,6 +89,48 @@ const ENTERING_LAYOUT_SIZE_WARMUP_TICKS = 72;
 const DEFAULT_CANVAS_GRAPH_FOCUS_ZOOM = 1.6;
 const MAX_CANVAS_GRAPH_FOCUS_ZOOM = 2.4;
 
+function canvasGraphRasterAbortError(signal) {
+  if (signal?.reason instanceof Error) return signal.reason;
+  let error = new Error('CanvasGraph raster capture preparation aborted.');
+  error.name = 'AbortError';
+  return error;
+}
+
+function throwIfCanvasGraphRasterAborted(signal) {
+  if (signal?.aborted) throw canvasGraphRasterAbortError(signal);
+}
+
+function normalizeCanvasGraphRasterSize(value, label) {
+  if (!Array.isArray(value) || value.length !== 2) {
+    throw new TypeError(`${label} must be [width, height].`);
+  }
+  let size = value.map(Number);
+  if (!size.every((entry) => Number.isFinite(entry) && entry > 0)) {
+    throw new TypeError(`${label} requires positive finite dimensions.`);
+  }
+  return size;
+}
+
+function normalizeCanvasGraphRasterRequest(request) {
+  if (!request || typeof request !== 'object') {
+    throw new TypeError('CanvasGraph.prepareRasterCapture requires a request object.');
+  }
+  if (typeof request.attemptId !== 'string' || !request.attemptId) {
+    throw new TypeError('CanvasGraph.prepareRasterCapture requires a non-empty attemptId.');
+  }
+  let revision = Number(request.revision);
+  if (!Number.isInteger(revision) || revision < 0) {
+    throw new TypeError('CanvasGraph.prepareRasterCapture revision must be a non-negative integer.');
+  }
+  throwIfCanvasGraphRasterAborted(request.signal);
+  return {
+    attemptId: request.attemptId,
+    cssSize: normalizeCanvasGraphRasterSize(request.cssSize, 'CanvasGraph.prepareRasterCapture cssSize'),
+    revision,
+    signal: request.signal,
+  };
+}
+
 function normalizeFocusNodeIds(nodeIds) {
   let ids = Array.isArray(nodeIds) ? nodeIds : [nodeIds];
   let normalized = [];
@@ -720,6 +762,10 @@ export class CanvasGraph extends Symbiote {
 
     this.frameCount = 0;
     this.tickCount = 0;
+    this._rasterRevision = 0;
+    this._rasterDirty = false;
+    this._rasterReadyFired = false;
+    this._rasterDirtyMetadata = null;
     this._lastRenderTime = null;
     this.lastFpsTime = performance.now();
     this.lastAlpha = 0;
@@ -881,7 +927,41 @@ export class CanvasGraph extends Symbiote {
     if (this._loopRunning) return;
     this._loopRunning = true;
     this._idleFrames = 0;
+    if (this._rasterReadyFired) this._markRasterDirty();
     this._animationFrame = requestAnimationFrame(() => this.draw());
+  }
+
+  _markRasterDirty(metadata = null) {
+    if (this._rasterDirty) {
+      let currentAttempt = this._rasterDirtyMetadata?.origin === 'raster-capture'
+        ? this._rasterDirtyMetadata.attemptId
+        : null;
+      let nextAttempt = metadata?.origin === 'raster-capture' ? metadata.attemptId : null;
+      if (currentAttempt && currentAttempt !== nextAttempt) {
+        this._rasterRevision += 1;
+        this._rasterDirtyMetadata = nextAttempt ? metadata : null;
+        if (typeof this.onRasterDirty === 'function') {
+          this.onRasterDirty(this._rasterRevision, this._rasterDirtyMetadata);
+        }
+      }
+      return this._rasterRevision;
+    }
+    this._rasterRevision += 1;
+    this._rasterDirty = true;
+    this._rasterReadyFired = false;
+    this._rasterDirtyMetadata = metadata;
+    if (typeof this.onRasterDirty === 'function') this.onRasterDirty(this._rasterRevision, metadata);
+    return this._rasterRevision;
+  }
+
+  _markRasterReady(metadata = this._rasterDirtyMetadata) {
+    if (this._rasterReadyFired && !this._rasterDirty) return this._rasterRevision;
+    if (this._rasterRevision === 0) this._rasterRevision = 1;
+    this._rasterDirty = false;
+    this._rasterReadyFired = true;
+    this._rasterDirtyMetadata = null;
+    if (typeof this.onRasterReady === 'function') this.onRasterReady(this._rasterRevision, metadata);
+    return this._rasterRevision;
   }
 
   setFrameDriver(mode = 'self') {
@@ -1108,6 +1188,51 @@ export class CanvasGraph extends Symbiote {
     this.needsDraw = true;
     this._wakeLoop();
     return true;
+  }
+
+  /**
+   * Presents a fitted current frame for one DOM raster capture.
+   * @param {Object} request
+   * @returns {Promise<Object>}
+   */
+  async prepareRasterCapture(request) {
+    let capture = normalizeCanvasGraphRasterRequest(request);
+    if (!this.canvas || typeof this.resizeCanvas !== 'function') {
+      throw new Error('CanvasGraph.prepareRasterCapture requires an initialized canvas.');
+    }
+    let metadata = { origin: 'raster-capture', attemptId: capture.attemptId };
+    let visualRevision = this._markRasterDirty(metadata);
+    this.resizeCanvas();
+    throwIfCanvasGraphRasterAborted(capture.signal);
+    let canvasRect = this.canvas.getBoundingClientRect?.();
+    let viewportCssSize = normalizeCanvasGraphRasterSize(
+      [canvasRect?.width, canvasRect?.height],
+      'CanvasGraph.prepareRasterCapture measured viewport',
+    );
+    if (!(Number(this.canvas.width) > 0) || !(Number(this.canvas.height) > 0)) {
+      throw new Error('CanvasGraph.prepareRasterCapture requires a positive backing viewport.');
+    }
+    this.fitView(60, false);
+    if (this.presentFrame() !== true) {
+      throw new Error('CanvasGraph.prepareRasterCapture could not present current canvas pixels.');
+    }
+    throwIfCanvasGraphRasterAborted(capture.signal);
+    visualRevision = this._markRasterReady(this._rasterDirtyMetadata);
+    if (this._rasterDirty || !this._rasterReadyFired) {
+      throw new Error('CanvasGraph.prepareRasterCapture pixels changed before readiness was acknowledged.');
+    }
+    canvasRect = this.canvas.getBoundingClientRect?.();
+    viewportCssSize = normalizeCanvasGraphRasterSize(
+      [canvasRect?.width, canvasRect?.height],
+      'CanvasGraph.prepareRasterCapture measured viewport',
+    );
+    return {
+      ready: true,
+      attemptId: capture.attemptId,
+      cssSize: [...capture.cssSize],
+      viewportCssSize,
+      visualRevision,
+    };
   }
 
   fitNodes(nodeIds, options = {}) {
@@ -1814,6 +1939,22 @@ export class CanvasGraph extends Symbiote {
       this._infoPanel._centeredForNode = id;
     }
     return activated;
+  }
+
+  /** Clear the active-node focus immediately without changing the viewport. */
+  deactivateNode({ emit = false } = {}) {
+    if (!this.activeNode && !this.nextActiveNode && !this.deactivating) return true;
+    this.activeNode = null;
+    this.nextActiveNode = null;
+    this.deactivating = false;
+    this.dragNode = null;
+    this._setHoverAction('');
+    this._resetInfoPanelForActivation();
+    this.updateInteractionDepths();
+    this.needsDraw = true;
+    this._wakeLoop();
+    if (emit) this._emitGraphEvent('nodeDeselected');
+    return true;
   }
 
   focusSemanticCluster(nodeId) {
@@ -2993,6 +3134,7 @@ export class CanvasGraph extends Symbiote {
     if (this._layoutSuspended) return;
     const workerGeneration = this._workerGeneration;
     this.layoutSettled = false;
+    this._markRasterDirty();
     this.worker = new ForceLayout(ForceLayout.defaultWorkerUrl());
 
     this.worker.onTick = (positions, meta = {}) => {
@@ -3733,6 +3875,9 @@ export class CanvasGraph extends Symbiote {
     if (idle.shouldStop) {
       this._loopRunning = false;
       this._animationFrame = 0;
+      if (this.layoutSettled && !this._rasterReadyFired) {
+        this._markRasterReady();
+      }
       return true;
     }
 

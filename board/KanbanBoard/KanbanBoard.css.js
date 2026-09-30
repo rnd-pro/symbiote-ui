@@ -4,7 +4,7 @@ export default /*css*/ `
 sn-kanban-board {
   --sn-kanban-border: var(--sn-sys-outline-subtle);
   --sn-kanban-column-bg: var(--sn-sys-surface-panel);
-  --sn-kanban-header-bg: var(--sn-sys-surface-toolbar);
+  --sn-kanban-header-bg: transparent;
   --sn-kanban-title-color: var(--sn-sys-on-surface);
   --sn-kanban-description-color: var(--sn-sys-on-surface-dim);
   --sn-kanban-count-color: var(--sn-sys-on-surface-dim);
@@ -12,6 +12,7 @@ sn-kanban-board {
   --sn-kanban-card-border: var(--sn-sys-outline-subtle);
   --sn-kanban-card-hover-border: var(--sn-sys-accent);
   --sn-kanban-drop-border: var(--sn-sys-accent);
+  --sn-kanban-column-tone: var(--sn-sys-accent);
 
   display: block;
   min-width: 0;
@@ -26,6 +27,7 @@ sn-kanban-board[hidden] {
 }
 
 sn-kanban-board .sn-kanban-columns {
+  box-sizing: border-box;
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: var(--sn-kanban-column-width, minmax(232px, 286px));
@@ -34,7 +36,7 @@ sn-kanban-board .sn-kanban-columns {
   min-width: 0;
   min-height: var(--sn-kanban-columns-min-height, 0);
   height: var(--sn-kanban-columns-height, 100%);
-  overflow: auto;
+  overflow: var(--sn-kanban-columns-overflow, auto);
   ${themedScrollFadeInlineStyles}
   padding: var(--sn-kanban-padding, 0 0 var(--sn-step-2));
 }
@@ -52,6 +54,16 @@ sn-kanban-board .sn-kanban-column {
   border-radius: var(--sn-kanban-radius, var(--sn-card-radius));
   background: var(--sn-kanban-column-bg);
   overflow: var(--sn-kanban-column-overflow, hidden);
+}
+
+sn-kanban-board .sn-kanban-column[data-tone="danger"] { --sn-kanban-column-tone: var(--sn-sys-danger); }
+sn-kanban-board .sn-kanban-column[data-tone="warning"] { --sn-kanban-column-tone: var(--sn-sys-warning); }
+sn-kanban-board .sn-kanban-column[data-tone="accent"],
+sn-kanban-board .sn-kanban-column[data-tone="info"] { --sn-kanban-column-tone: var(--sn-sys-accent); }
+sn-kanban-board .sn-kanban-column[data-tone="success"] { --sn-kanban-column-tone: var(--sn-sys-success); }
+
+sn-kanban-board .sn-kanban-column[data-tone]:not([data-tone="neutral"]) {
+  background: var(--sn-kanban-column-tone-bg, color-mix(in oklch, var(--sn-kanban-column-tone) 6%, var(--sn-kanban-column-bg)));
 }
 
 /*
@@ -72,7 +84,7 @@ sn-kanban-board .sn-kanban-column-header {
   gap: var(--sn-step-4);
   min-height: var(--sn-kanban-header-min-height, 54px);
   padding: var(--sn-kanban-header-padding, var(--sn-step-4) var(--sn-step-5));
-  border-block-end: 1px solid var(--sn-kanban-border);
+  border-block-end: 0;
   background: var(--sn-kanban-header-bg);
 }
 
@@ -95,12 +107,18 @@ sn-kanban-board .sn-kanban-column-count {
   align-self: start;
   min-width: 24px;
   padding: var(--sn-step-1) var(--sn-step-3);
-  border: 1px solid var(--sn-kanban-border);
+  border: 1px solid var(--sn-kanban-count-border, var(--sn-kanban-border));
   border-radius: var(--sn-radius-full);
   color: var(--sn-kanban-count-color);
   font-size: var(--sn-text-xs);
   line-height: 1.4;
   text-align: center;
+}
+
+sn-kanban-board .sn-kanban-column[data-tone]:not([data-tone="neutral"]) .sn-kanban-column-count {
+  --sn-kanban-count-border: color-mix(in oklch, var(--sn-kanban-column-tone) 52%, var(--sn-kanban-border));
+  background: color-mix(in oklch, var(--sn-kanban-column-tone) 11%, transparent);
+  color: color-mix(in oklch, var(--sn-kanban-column-tone) 82%, var(--sn-kanban-title-color));
 }
 
 sn-kanban-board .sn-kanban-column-body,
@@ -143,6 +161,7 @@ sn-kanban-board .sn-kanban-column-empty {
  * footer (1 line, no wrap — the host's chip budget + overflow chip guarantee fit).
  */
 sn-kanban-board .sn-kanban-card {
+  box-sizing: border-box;
   display: grid;
   flex: 0 0 auto;
   grid-template-rows: auto auto 1fr auto;
@@ -167,16 +186,43 @@ sn-kanban-board .sn-kanban-card:active {
 }
 
 sn-kanban-board .sn-kanban-card:hover,
-sn-kanban-board .sn-kanban-card:focus-visible {
+sn-kanban-board .sn-kanban-card:focus-within {
   border-color: var(--sn-kanban-card-hover-border);
   background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-kanban-card-bg));
+  box-shadow: var(--sn-sys-shadow-raised);
   outline: none;
 }
 
-sn-kanban-board .sn-kanban-card[aria-selected="true"] {
+sn-kanban-board .sn-kanban-card:focus-within {
+  outline: 2px solid var(--sn-sys-accent);
+  outline-offset: 2px;
+}
+
+sn-kanban-board .sn-kanban-card[data-selected="true"] {
   border-color: var(--sn-sys-accent);
   background: color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-selected-mix), var(--sn-kanban-card-bg));
-  box-shadow: inset 0 0 0 1px var(--sn-sys-accent);
+  box-shadow: inset 0 0 0 1px var(--sn-sys-accent), var(--sn-sys-shadow-raised);
+}
+
+sn-kanban-board .sn-kanban-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--sn-step-1);
+  background: transparent; /* audit-ok: indicator strip is intentionally unpainted until kinded */
+}
+
+sn-kanban-board .sn-kanban-card[data-kind="state"]::before,
+sn-kanban-board .sn-kanban-card[data-busy="true"]::before {
+  background: var(--sn-sys-accent);
+}
+
+sn-kanban-board .sn-kanban-card[data-kind="warning"]::before {
+  background: var(--sn-sys-warning);
+}
+
+sn-kanban-board .sn-kanban-card[data-kind="error"]::before {
+  background: var(--sn-sys-danger);
 }
 
 /* U08: explicit drag-handle affordance alongside the whole-card grab cursor. */
@@ -214,6 +260,25 @@ sn-kanban-board .sn-kanban-card-title-text {
   overflow-wrap: anywhere;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: var(--sn-kanban-card-title-lines, 2);
+}
+
+sn-kanban-board .sn-kanban-card-select {
+  appearance: none;
+  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+sn-kanban-board .sn-kanban-card-select:focus-visible {
+  outline: none;
 }
 
 /*
@@ -280,8 +345,12 @@ sn-kanban-board .sn-kanban-card-spinner {
   border-radius: 50%;
   animation: sn-kanban-card-spin var(--sn-animation-duration-fast) linear infinite;
 }
-sn-kanban-board .sn-kanban-card[data-busy] {
-  border-color: color-mix(in oklch, var(--sn-sys-accent) 45%, var(--sn-kanban-card-border));
+
+@media (prefers-reduced-motion: reduce) {
+  sn-kanban-board .sn-kanban-card-spinner,
+  sn-kanban-board .sn-kanban-chip[data-kind="state"] {
+    animation: none;
+  }
 }
 
 /* Fixed geometry: the meta row is a single clipped line inside the uniform-height card. */
@@ -474,8 +543,8 @@ sn-kanban-board .sn-kanban-card-actions {
 sn-kanban-board .sn-kanban-card-menu {
   display: inline-grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
+  width: var(--sn-step-12);
+  height: var(--sn-step-12);
   border: 1px solid var(--sn-kanban-card-border);
   border-radius: var(--sn-radius-full);
   background: var(--sn-sys-surface-overlay);

@@ -4,7 +4,16 @@ Complete reference for `createDynamicComponentRegistry` and `validateComponentCo
 
 ## validateComponentCode(code, options)
 
-Validates a JavaScript code string against security policies before dynamic loading.
+Performs trusted-host lexical validation before dynamically loading a JavaScript
+source string. It applies a case-sensitive substring deny-list and an optional
+custom callback; it does not establish a security boundary.
+
+**Security model:**
+String input is turned into Blob/data ESM and dynamically imported in the
+current page realm. There is no iframe, worker, separate realm, capability
+isolation, or sandbox. A class-constructor input bypasses string validation.
+Direct registry calls have no host-approval gate. This API is only for trusted
+local/host-authored input; remote/community code is forbidden.
 
 ```javascript
 import { validateComponentCode } from 'symbiote-ui/runtime';
@@ -20,10 +29,10 @@ validateComponentCode(myCode, {
 | Param | Type | Description |
 |-------|------|-------------|
 | `code` | `string` | JavaScript source code to validate |
-| `options.blockedKeywords` | `string[]` | Keywords to reject (overrides defaults) |
+| `options.blockedKeywords` | `string[]` | Additional keywords to reject; extends defaults rather than replacing them |
 | `options.validate` | `function(code): boolean` | Custom validation function |
 
-**Default blocked keywords:**
+**Default blocked keywords (default deny-list):**
 ```javascript
 [
   'document.cookie',
@@ -62,7 +71,7 @@ let registry = createDynamicComponentRegistry({
 |--------|------|-------------|
 | `customElements` | `object` | Override for `globalThis.customElements` |
 | `validate` | `function(code): boolean` | Global custom validator |
-| `blockedKeywords` | `string[]` | Global blocked keyword list |
+| `blockedKeywords` | `string[]` | Global blocked keyword list (extends default deny-list) |
 | `importModule` | `async function(url)` | Dynamic import override |
 
 ## Registry Methods
@@ -113,9 +122,9 @@ await registry.register('my-dynamic', `
 | Param | Type | Description |
 |-------|------|-------------|
 | `tagName` | `string` | Must contain a hyphen (Custom Element spec requirement) |
-| `codeOrClass` | `string \| Function` | Source code or class constructor |
+| `codeOrClass` | `string \| Function` | Source code or class constructor; a constructor bypasses string validation |
 | `registerOptions.allowOverride` | `boolean` | If `true`, silently reuses existing registration |
-| `registerOptions.blockedKeywords` | `string[]` | Override blocked keywords for this registration |
+| `registerOptions.blockedKeywords` | `string[]` | Additional blocked keywords for this registration (extends default deny-list) |
 | `registerOptions.validate` | `function` | Override validator for this registration |
 | `registerOptions.exportName` | `string` | Named export to use (default: `default`) |
 
@@ -131,8 +140,13 @@ await registry.register('my-dynamic', `
 
 When a code string is provided:
 
-1. **Validation** — `validateComponentCode()` checks for blocked keywords and custom validators.
-2. **Module creation** — Code is wrapped in a `Blob` with `application/javascript` MIME type, and a temporary object URL is created. Falls back to `data:` URI if `Blob` is unavailable.
+1. **Validation** — `validateComponentCode()` performs a case-sensitive substring deny-list check plus an optional custom callback.
+2. **Module creation** — Source is wrapped in an `application/javascript` Blob
+   and imported from a temporary object URL. When Blob URLs are unavailable,
+   the implementation attempts a Buffer-backed `data:` URI; that fallback is
+   environment-dependent, not a browser compatibility guarantee. Import occurs
+   in the current page realm, with no iframe, worker, separate realm, capability
+   isolation, or sandbox.
 3. **Dynamic import** — The URL is imported via `importModule()` (configurable for testing).
 4. **Export resolution** — Extracts `default` export, or `exportName`, or the single named export.
 5. **Cleanup** — Revokes the Blob URL.
@@ -149,4 +163,5 @@ The registry handles this gracefully:
 3. If the tag exists **but code/class differs** → throw an error (unless `allowOverride: true`).
 4. If `allowOverride: true` → return the existing class without re-defining.
 
-This prevents the common agent mistake of calling `customElements.define()` twice, which is a **fatal, unrecoverable browser error**.
+This avoids a catchable duplicate-definition exception. The browser keeps the
+original definition, which cannot be replaced or unregistered.

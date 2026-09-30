@@ -224,6 +224,7 @@ export * from '../xr/index.js';
 export let NodeCanvas;
 export let CanvasGraph;
 export let KanbanBoard;
+export let KanbanCard;
 export let GraphExplorerShell;
 export let ContextMenu;
 export let GraphNode;
@@ -353,6 +354,7 @@ export let ScrollArea;
 export let FloatingPanel;
 export let AspectRatio;
 export let Chart;
+export let OperationsOverview;
 export let RichTextEditor;
 export let Tour;
 export let Carousel;
@@ -543,6 +545,7 @@ export { sanitizeVoiceResponseText } from '../chat/voice-response-sanitizer.js';
 export { createDialogueStage } from '../chat/dialogue-stage.js';
 export { playDialogueTimeline, buildAlternatingTimeline } from '../chat/dialogue-timeline.js';
 export { createDialoguePlayer } from '../chat/dialogue-player.js';
+export * from '../chat/show-runtime.js';
 export {
   PRESENTER_ANNOTATION_COLLISION_ALLOWANCE_PX,
   PRESENTER_ANNOTATION_TARGET_INSET_PX,
@@ -761,6 +764,7 @@ if (hasDOMGlobals) {
     nodeCanvas,
     canvasGraph,
     kanbanBoard,
+    kanbanCard,
     graphExplorerShell,
     contextMenu,
     graphNode,
@@ -859,6 +863,7 @@ if (hasDOMGlobals) {
     floatingPanel,
     aspectRatio,
     chart,
+    operationsOverview,
     richTextEditor,
     tour,
     carousel,
@@ -870,6 +875,7 @@ if (hasDOMGlobals) {
     import('../canvas/NodeCanvas/NodeCanvas.js'),
     import('../canvas/CanvasGraph/CanvasGraph.js'),
     import('../board/KanbanBoard/KanbanBoard.js'),
+    import('../board/KanbanCard/KanbanCard.js'),
     import('../canvas/GraphExplorerShell/GraphExplorerShell.js'),
     import('../menu/ContextMenu/ContextMenu.js'),
     import('../node/GraphNode/GraphNode.js'),
@@ -968,6 +974,7 @@ if (hasDOMGlobals) {
     import('../layout/FloatingPanel/FloatingPanel.js'),
     import('../layout/AspectRatio/AspectRatio.js'),
     import('../display/Chart/Chart.js'),
+    import('../display/OperationsOverview/OperationsOverview.js'),
     import('../control/RichTextEditor/RichTextEditor.js'),
     import('../display/Tour/Tour.js'),
     import('../display/Carousel/Carousel.js'),
@@ -980,6 +987,7 @@ if (hasDOMGlobals) {
   ({ NodeCanvas } = nodeCanvas);
   ({ CanvasGraph } = canvasGraph);
   ({ KanbanBoard } = kanbanBoard);
+  ({ KanbanCard } = kanbanCard);
   ({ GraphExplorerShell } = graphExplorerShell);
   ({ ContextMenu } = contextMenu);
   ({ GraphNode } = graphNode);
@@ -1092,6 +1100,7 @@ if (hasDOMGlobals) {
   ({ default: FloatingPanel } = floatingPanel);
   ({ default: AspectRatio } = aspectRatio);
   ({ default: Chart } = chart);
+  ({ default: OperationsOverview } = operationsOverview);
   ({ default: RichTextEditor } = richTextEditor);
   ({ default: Tour } = tour);
   ({ default: Carousel } = carousel);
@@ -1103,6 +1112,7 @@ if (hasDOMGlobals) {
     NodeCanvas,
     CanvasGraph,
     KanbanBoard,
+    KanbanCard,
     GraphExplorerShell,
     ContextMenu,
     GraphNode,
@@ -1215,6 +1225,7 @@ if (hasDOMGlobals) {
     FloatingPanel,
     AspectRatio,
     Chart,
+    OperationsOverview,
     RichTextEditor,
     Tour,
     Carousel,

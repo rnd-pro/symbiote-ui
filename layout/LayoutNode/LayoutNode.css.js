@@ -14,6 +14,15 @@ export let styles = css`
     position: relative;
 
     /* Panel mode */
+    &[drawer-group-member] {
+      position: relative !important;
+      inset: auto !important;
+      transform: none !important;
+      flex: none !important;
+      width: 100% !important;
+      height: 100% !important;
+    }
+
     &[node-type='panel'] {
       flex-direction: column;
       background: var(--sn-sys-surface-raised);
@@ -367,6 +376,7 @@ export let styles = css`
 
       /* Hide fullscreen button, dropdown, and spacer */
       .fullscreen-btn,
+      .header-close-btn,
       .panel-menu-toggle,
       .dropdown-arrow,
       .panel-title,
@@ -443,6 +453,7 @@ export let styles = css`
 
       /* Hide fullscreen button, dropdown, and spacer */
       .fullscreen-btn,
+      .header-close-btn,
       .panel-menu-toggle,
       .dropdown-arrow,
       .panel-title,
@@ -530,6 +541,27 @@ export let styles = css`
     &[node-type='split'] {
       background: transparent;
       border: none;
+    }
+
+    &[mobile-dock='primary'][node-type='split'] {
+      flex-direction: column;
+    }
+
+    &[mobile-dock='primary'][node-type='split'] > .panel-view[hidden] {
+      display: none !important;
+    }
+
+    &[mobile-dock='primary'][node-type='split'] > .split-view {
+      display: flex !important;
+      width: 100% !important;
+      height: 100% !important;
+      overflow: hidden;
+    }
+
+    &[mobile-dock='primary'][node-type='split'] > .split-view > .split-first,
+    &[mobile-dock='primary'][node-type='split'] > .split-view > .split-second {
+      display: block !important;
+      overflow: hidden;
     }
 
     .split-view {

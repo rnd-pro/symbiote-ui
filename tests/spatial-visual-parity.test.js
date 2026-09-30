@@ -39,7 +39,7 @@ function createFakeObject3D() {
 }
 
 function createFakeThree() {
-  let THREE = { REVISION: '0.180.0', LinearFilter: 1006, SRGBColorSpace: 'srgb' };
+  let THREE = { REVISION: '0.180.0', LinearMipmapLinearFilter: 1008, LinearFilter: 1006, SRGBColorSpace: 'srgb' };
   THREE.Group = function () {
     return createFakeObject3D();
   };
@@ -78,6 +78,16 @@ function createFakeCanvas() {
     save() {},
     restore() {},
     beginPath() {},
+    closePath() {},
+    moveTo() {},
+    lineTo() {},
+    arcTo() {},
+    arc() {},
+    translate() {},
+    rotate() {},
+    scale() {},
+    fill() {},
+    stroke() {},
     rect() {},
     clip() {},
     fillText() {},

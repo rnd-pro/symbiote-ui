@@ -10,6 +10,9 @@ export let template = html`
   ></button>
   <panel-menu ref="menu"></panel-menu>
 
+  <!-- Native R2 rails: collapsed drawer panels render as their own
+    layout-node surfaces. No synthetic launcher or rail-stack buttons. -->
+
   <!-- Fullscreen tab bar (hidden by default) -->
   <div class="fullscreen-tab-bar" ${{ '@hidden': '!hasFullscreenTabs' }}>
     <div class="tab-list" itemize="tabItems">

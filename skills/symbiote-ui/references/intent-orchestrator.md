@@ -1,7 +1,7 @@
 # Intent Orchestrator Reference
 
-Complete reference for `executeAgentIntent` — the transactional agent intent
-orchestrator with automatic rollback.
+Complete reference for `executeAgentIntent` — the agent intent orchestrator
+with best-effort rollback for supported reversible effects.
 
 ## Function Signature
 
@@ -13,14 +13,17 @@ async function executeAgentIntent(controller, intent, options)
 | Param | Type | Description |
 |-------|------|-------------|
 | `controller` | `object` | A `createRuntimeUiController` instance |
-| `intent` | `object` | The agent intent transaction object |
+| `intent` | `object` | The agent intent operation object |
 | `options.document` | `Document` | DOM document for selectors |
 | `options.root` | `Element` | Root element for layout actions |
 | `options.onRegisterDriver` | `async function(params)` | Callback for `register-driver` operations |
+| `options.allowIrreversible` | `boolean` | Host approval for one dedicated irreversible operation |
+| `options.intentPolicy` | `object` | Host operation, component, target, method, and validation policy |
 
 **Returns:** `{ success: true, executedCount: number }`
 
-**Throws:** On any operation failure (after rollback completes).
+**Throws:** On validation or execution failure, after attempting best-effort
+rollback for supported prior effects.
 
 ## Intent Schema (agent-intent-v1)
 
@@ -59,12 +62,23 @@ async function executeAgentIntent(controller, intent, options)
 
 Registers a Web Component via `controller.dynamicRegistry.register()`.
 
+This operation is **irreversible** because the browser has no unregister API.
+It has no rollback action and must not share an intent with another operation.
+
+**Security and routing requirements:**
+
+- Requires host `allowIrreversible` policy.
+- Must run in a **dedicated single-operation intent**.
+- Accepts only trusted local/host-authored component source. Dynamic-registry
+  validation is lexical and loads code in the current page realm; it is not
+  isolation.
+
 ```json
 {
   "type": "register-component",
   "params": {
     "tagName": "my-widget",
-    "code": "export default class MyWidget extends HTMLElement { ... }",
+    "code": "export default class DynamicWidget extends HTMLElement {}",
     "options": { "allowOverride": false }
   }
 }
@@ -74,7 +88,7 @@ Accepts `params.codeOrClass` or `params.code` for the component source.
 
 ### register-driver
 
-Delegates to `options.onRegisterDriver(params)`.
+Invokes `options.onRegisterDriver(params)` when the host supplies that callback.
 
 ```json
 {
@@ -83,7 +97,11 @@ Delegates to `options.onRegisterDriver(params)`.
 }
 ```
 
-The orchestrator does not manage drivers directly — the host provides the callback.
+The orchestrator does not manage drivers directly. Without
+`options.onRegisterDriver`, the current runtime records a successful
+irreversible no-op and increments `executedCount`; hosts that require a real
+driver load must supply the callback or deny this operation. Driver registration
+requires `allowIrreversible` and a dedicated single-operation intent.
 
 ### layout
 
@@ -100,6 +118,8 @@ Applies a layout panel action via `applyRuntimeLayoutAction()`.
 ```
 
 **Rollback:** If the action was `open-panel`, rollback generates `remove-ui-panel`.
+The `remove-ui-panel` action itself is irreversible and requires a dedicated,
+host-approved intent.
 
 ### ui
 
@@ -127,6 +147,8 @@ Creates or destroys component instances.
 ```
 
 **Rollback for `create`:** calls `controller.destroy(id)`.
+The `destroy` action itself is irreversible and requires a dedicated,
+host-approved intent.
 
 ### theme
 
@@ -167,19 +189,25 @@ Updates an existing component's state.
 ```
 
 **Rollback:** Captures original prop values and attribute values before updating,
-and restores them on failure.
+and attempts to restore them on failure. Invoked method effects are not
+reversible.
 
 ## Rollback Algorithm
 
 1. Operations execute **sequentially** (order matters).
 2. Each successful operation is pushed to an `executed` stack with rollback data.
-3. On **any failure**, the stack is iterated in **reverse order**:
+3. On **any failure**, the stack is iterated in **reverse order** and the listed
+   rollback actions are attempted:
+   - `register-component` and `register-driver` (irreversible) → skipped (no
+     rollback action)
    - `ui-create` → `controller.destroy(id)`
    - `layout` with rollback action → `applyRuntimeLayoutAction(root, rollbackAction)`
    - `theme` → restore original CSS custom properties on the target element
    - `state` → `controller.update(id, originalState)`
-4. After rollback completes, the original error is re-thrown.
-5. Rollback errors are logged but do not prevent other rollbacks from executing.
+4. Layout actions without a generated rollback action and invoked state methods
+   are not reversed.
+5. After rollback attempts finish, the original error is re-thrown.
+6. Rollback errors are logged and suppressed so the remaining attempts continue.
 
 ## Complete Example
 
@@ -221,7 +249,7 @@ try {
 
   console.log('Success:', result.executedCount, 'operations');
 } catch (err) {
-  // All successful operations have been rolled back already
-  console.error('Intent failed (rolled back):', err.message);
+  // Best-effort rollback has been attempted for supported prior effects.
+  console.error('Intent failed:', err.message);
 }
 ```
