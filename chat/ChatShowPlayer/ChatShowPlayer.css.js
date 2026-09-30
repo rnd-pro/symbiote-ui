@@ -125,6 +125,7 @@ chat-show-player {
   chat-show-progress-segment-item { display: contents; }
 
   .chat-show-row {
+    position: relative;
     display: grid;
     grid-template-columns: max-content minmax(0, 1fr);
     gap: var(--sn-space-sm);
@@ -140,6 +141,28 @@ chat-show-player {
     &[current] {
       background: var(--sn-node-hover);
       outline: var(--sn-node-border-width) solid var(--sn-node-selected);
+    }
+
+    /* Animated dashed contour ("marching ants") over the active entry. */
+    &[current]::after {
+      content: '';
+      position: absolute;
+      inset: calc(-1 * (var(--sn-chat-show-active-stroke, 2px) + var(--sn-space-xs) / 2));
+      border-radius: var(--sn-node-radius);
+      pointer-events: none;
+      --sn-chat-show-dash-cycle: calc(var(--sn-chat-show-active-dash, 8px) + var(--sn-chat-show-active-gap, 8px));
+      background:
+        repeating-linear-gradient(90deg, var(--sn-node-selected, var(--sn-sys-accent)) 0 var(--sn-chat-show-active-dash, 8px), transparent var(--sn-chat-show-active-dash, 8px) var(--sn-chat-show-dash-cycle)) 0 0 / 100% var(--sn-chat-show-active-stroke, 2px) no-repeat,
+        repeating-linear-gradient(-90deg, var(--sn-node-selected, var(--sn-sys-accent)) 0 var(--sn-chat-show-active-dash, 8px), transparent var(--sn-chat-show-active-dash, 8px) var(--sn-chat-show-dash-cycle)) 0 100% / 100% var(--sn-chat-show-active-stroke, 2px) no-repeat,
+        repeating-linear-gradient(0deg, var(--sn-node-selected, var(--sn-sys-accent)) 0 var(--sn-chat-show-active-dash, 8px), transparent var(--sn-chat-show-active-dash, 8px) var(--sn-chat-show-dash-cycle)) 100% 0 / var(--sn-chat-show-active-stroke, 2px) 100% no-repeat,
+        repeating-linear-gradient(180deg, var(--sn-node-selected, var(--sn-sys-accent)) 0 var(--sn-chat-show-active-dash, 8px), transparent var(--sn-chat-show-active-dash, 8px) var(--sn-chat-show-dash-cycle)) 0 0 / var(--sn-chat-show-active-stroke, 2px) 100% no-repeat;
+      animation: chat-show-active-marching var(--sn-chat-show-active-marching-duration, 1.6s) linear infinite;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      &[current]::after {
+        animation: none;
+      }
     }
 
     .chat-show-row-text {
@@ -247,6 +270,12 @@ chat-show-player {
     overflow: hidden;
     background: var(--sn-node-border, var(--sn-accent-border, var(--sn-sys-outline)));
     border-radius: var(--sn-radius-full);
+    /* A host-absolute composition omits turns it does not play, so the skipped
+       span renders as empty space ahead of the segment that resumes the
+       composition clock. The variable is absent on a duration-weighted
+       timeline, which keeps the legacy bar unchanged; it lives on the segment
+       because the container gap already separates every pair of segments. */
+    margin-inline-start: calc(var(--chat-show-progress-gap, 0) * 1%);
   }
 
   .chat-show-progress-fill {
@@ -404,5 +433,15 @@ chat-show-player {
   }
 
   [hidden] { display: none !important; }
+}
+
+@keyframes chat-show-active-marching {
+  to {
+    background-position:
+      var(--sn-chat-show-dash-cycle, 16px) 0,
+      calc(-1 * var(--sn-chat-show-dash-cycle, 16px)) 100%,
+      100% calc(-1 * var(--sn-chat-show-dash-cycle, 16px)),
+      0 var(--sn-chat-show-dash-cycle, 16px);
+  }
 }
 `;

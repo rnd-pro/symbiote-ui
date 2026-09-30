@@ -64,7 +64,9 @@ export let styles = css`
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
       align-items: center;
-      gap: var(--sn-layout-header-gap, 2px);
+      /* The same gap the header button hit clamp reads, so the space a target
+         may grow into is the space the layout actually leaves. */
+      gap: var(--header-effective-gap, var(--sn-layout-header-gap, 2px));
       padding: var(--sn-layout-header-padding, 2px 4px);
       background: var(--sn-node-header-bg);
       border-bottom: 1px solid var(--sn-layout-border);
@@ -98,9 +100,42 @@ export let styles = css`
       min-block-size: var(--sn-layout-header-button-block-size, var(--sn-layout-header-button-min-block-size, 24px));
       min-width: 0;
       line-height: 1;
+      position: relative;
       transition:
         background var(--sn-transition-fast) var(--sn-transition-easing),
         color var(--sn-transition-fast) var(--sn-transition-easing);
+
+      /* Pressable area, decoupled from the visual box: the icon size
+         (--sn-layout-header-icon-size), the painted control size
+         (--sn-layout-header-*-size) and the target
+         (--sn-layout-header-button-hit-size) are three independent theme
+         parameters. The expansion is bounded by HALF the gap the header
+         actually lays its controls out with — the same value .panel-header
+         and .panel-actions use, so a 44px request degrades to the room the
+         layout really leaves instead of stealing a neighbour's area, and two
+         targets can never intersect whatever the theme asks for. A surface
+         that has the room (a touch drawer) widens that gap through
+         --header-effective-gap and then gets the full target. */
+      --header-btn-hit-expand: calc(min(
+        (var(--sn-layout-header-button-hit-size, 44px) - var(--sn-layout-header-button-min-inline-size, 24px)) / 2,
+        var(--header-effective-gap, var(--sn-layout-header-gap, 2px)) / 2
+      ));
+
+      &::before {
+        content: '';
+        position: absolute;
+        inset-block-start: 50%;
+        inset-inline-start: 50%;
+        inline-size: max(100%, calc(100% + 2 * var(--header-btn-hit-expand)));
+        block-size: max(
+          100%,
+          calc(100% + 2 * min(
+            (var(--sn-layout-header-button-hit-size, 44px) - var(--sn-layout-header-button-min-block-size, 24px)) / 2,
+            var(--header-btn-hit-expand)
+          ))
+        );
+        transform: translate(-50%, -50%);
+      }
 
       &[hidden] {
         display: none;
@@ -143,7 +178,10 @@ export let styles = css`
     .panel-menu-toggle {
       grid-column: 2;
       justify-self: center;
-      position: static;
+      /* Containing block for the header-btn press-area pseudo-element: while
+         this stayed 'static', its percentages resolved against the whole panel
+         header and the target silently swallowed its neighbours. */
+      position: relative;
       transform: none;
 
       &[active] {
@@ -162,7 +200,7 @@ export let styles = css`
       display: flex;
       align-items: center;
       justify-content: flex-end;
-      gap: var(--sn-layout-header-gap, 2px);
+      gap: var(--header-effective-gap, var(--sn-layout-header-gap, 2px));
       min-width: 0;
       overflow: hidden;
     }

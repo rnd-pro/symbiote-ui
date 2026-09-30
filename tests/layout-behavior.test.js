@@ -252,7 +252,10 @@ test('layout node panel header adapts without overlapping actions', async () => 
   assert.match(styles, /\.panel-view\s*\{[\s\S]*?container-type: inline-size;[\s\S]*?container-name: layout-panel;/);
   assert.match(styles, /\.panel-header\s*\{[\s\S]*?box-sizing: border-box;[\s\S]*?display: grid;[\s\S]*?grid-template-columns: minmax\(0, 1fr\) auto minmax\(0, 1fr\);[\s\S]*?block-size: var\(--sn-layout-header-block-size,/);
   assert.match(styles, /\.type-btn\s*\{[\s\S]*?grid-column: 1;[\s\S]*?overflow: hidden;/);
-  assert.match(styles, /\.panel-menu-toggle\s*\{[\s\S]*?grid-column: 2;[\s\S]*?position: static;[\s\S]*?transform: none;/);
+  // The menu toggle is the containing block of the header-btn press area: a
+  // static position made its pseudo-element resolve percentages against the
+  // whole panel header, so the invisible target swallowed its neighbours.
+  assert.match(styles, /\.panel-menu-toggle\s*\{[\s\S]*?grid-column: 2;[\s\S]*?position: relative;[\s\S]*?transform: none;/);
   assert.match(styles, /\.panel-actions\s*\{[\s\S]*?grid-column: 3;[\s\S]*?justify-content: flex-end;[\s\S]*?overflow: hidden;/);
   assert.match(styles, /\.panel-title\s*\{[\s\S]*?font-size: var\(--sn-layout-header-title-size, var\(--sn-layout-header-button-size, 0\.75rem\)\);[\s\S]*?line-height: var\(--sn-layout-header-title-line-height, 1\.2\);/);
   assert.match(styles, /\.panel-content\s*\{[\s\S]*?box-sizing: border-box;[\s\S]*?min-inline-size: 0;[\s\S]*?min-block-size: 0;/);
@@ -1828,6 +1831,131 @@ test('panel layout drawer API and rail gestures open and close drawer panels wit
   railLayout.remove();
 });
 
+test('reduced motion suppresses the rail peek without changing drawer state', async () => {
+  const { parseHTML } = await import('linkedom');
+  const { window } = parseHTML('<!doctype html><html><body></body></html>');
+  const TestCSSStyleSheet = class {
+    replaceSync(text) { this.cssText = text; }
+  };
+  const saved = {
+    window: globalThis.window,
+    document: globalThis.document,
+    HTMLElement: globalThis.HTMLElement,
+    Element: globalThis.Element,
+    customElements: globalThis.customElements,
+    Node: globalThis.Node,
+    Event: globalThis.Event,
+    CustomEvent: globalThis.CustomEvent,
+    MutationObserver: globalThis.MutationObserver,
+    CSSStyleSheet: globalThis.CSSStyleSheet,
+    getComputedStyle: globalThis.getComputedStyle,
+  };
+  Object.assign(globalThis, {
+    window,
+    document: window.document,
+    HTMLElement: window.HTMLElement,
+    Element: window.Element,
+    customElements: window.customElements,
+    Node: window.Node,
+    Event: window.Event,
+    CustomEvent: window.CustomEvent,
+    MutationObserver: window.MutationObserver,
+    CSSStyleSheet: TestCSSStyleSheet,
+    getComputedStyle: window.getComputedStyle || (() => ({ transitionDuration: '0s', animationDuration: '0s' })),
+  });
+  window.document.adoptedStyleSheets = [];
+  const styleProto = Object.getPrototypeOf(window.document.createElement('div').style);
+  styleProto.getPropertyPriority = styleProto.getPropertyPriority || (() => '');
+
+  // Fresh URLs force both component modules to register their custom elements
+  // against THIS test's window.customElements registry; otherwise the entry
+  // point cache serves the previous test's stale window.
+  const fresh = `?fresh=reduced-motion-${Date.now()}`;
+  await import(`../layout/LayoutNode/LayoutNode.js${fresh}`);
+  await import(`../layout/Layout/Layout.js${fresh}`);
+
+  // The peek guard reads matchMedia from the window global, which linkedom does
+  // not provide; the stub is what makes the reduced-motion branch reachable.
+  const setMotionPreference = (reduce) => {
+    window.matchMedia = (query) => ({
+      media: query,
+      matches: reduce && String(query).includes('prefers-reduced-motion'),
+    });
+  };
+
+  const buildRailLayout = () => {
+    const railLayout = document.createElement('panel-layout');
+    document.body.append(railLayout);
+    railLayout.getBoundingClientRect = () => ({
+      width: 300, height: 600, top: 0, left: 0, bottom: 600, right: 300,
+    });
+    railLayout.$.layoutBehavior = {
+      responsiveMode: 'drawer',
+      responsiveBreakpoint: 720,
+      swipeControl: 'rail',
+      drawerHoverOpen: true,
+    };
+    railLayout.registerPanelType('nav', {
+      title: 'Navigation', icon: 'folder',
+      behavior: { mobileDock: 'start', swipeControl: 'rail', drawerHoverOpen: true },
+    });
+    railLayout.registerPanelType('main', {
+      title: 'Main', icon: 'article',
+      behavior: { mobileDock: 'primary', minInlineSize: 320, minBlockSize: 240 },
+    });
+    railLayout.setLayout(createSplit('horizontal', createPanel('nav'), createPanel('main'), 0.25));
+    return railLayout;
+  };
+
+  try {
+    // Motion allowed: the peek is armed and plays on the rail.
+    setMotionPreference(false);
+    const withMotion = buildRailLayout();
+    withMotion._applyResponsiveLayout();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.equal(withMotion._drawerRailPeekPlayed, true,
+      'the peek is armed when motion is allowed');
+    assert.ok(withMotion._drawerRailPeekTimer, 'a peek timer is scheduled');
+    // Let the scheduled timer fire through the real path, so the contrast
+    // below is about scheduling and not about calling a private painter.
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    assert.ok(withMotion.querySelectorAll('[drawer-rail-peeking]').length > 0,
+      'the scheduled peek actually plays on the rail');
+    withMotion.remove();
+
+    // Reduced motion: the peek is never armed, so no timer and no transform.
+    setMotionPreference(true);
+    const reduced = buildRailLayout();
+    reduced._applyResponsiveLayout();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    // The latch still records that the peek was considered, so it is never
+    // replayed later; what reduced motion removes is the animation itself.
+    assert.equal(Boolean(reduced._drawerRailPeekTimer), false,
+      'reduced motion schedules no peek timer');
+    assert.equal(Boolean(reduced._drawerRailPeekClearTimer), false,
+      'reduced motion schedules no peek clear timer');
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    assert.equal(reduced.querySelectorAll('[drawer-rail-peeking]').length, 0,
+      'reduced motion never peeks');
+
+    // The state contract is untouched: opening and closing still work.
+    reduced.openDrawer('start');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.equal(reduced.hasAttribute('drawer-start-open'), true,
+      'reduced motion does not block opening');
+    reduced.closeDrawer('start');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.equal(reduced.hasAttribute('drawer-start-open'), false,
+      'reduced motion does not block closing');
+    reduced.remove();
+  } finally {
+    for (const [key, value] of Object.entries(saved)) {
+      if (value === undefined) delete globalThis[key];
+      else globalThis[key] = value;
+    }
+  }
+});
+
 test('mobile drawer rails render as native collapsed surfaces without synthetic buttons', async () => {
   let [layout, styles, template] = await Promise.all([
     readFile(layoutSource, 'utf8'),
@@ -1862,4 +1990,232 @@ test('mobile drawer rails render as native collapsed surfaces without synthetic 
   assert.doesNotMatch(styles, /layout-drawer-handle/);
   assert.doesNotMatch(template, /layout-rail-stack/);
   assert.doesNotMatch(styles, /\.layout-rail-stack-btn/);
+});
+
+test('nested panel-layout fullscreen is owned by the deepest layout', async () => {
+  let { parseHTML } = await import('linkedom');
+  let { window } = parseHTML('<!doctype html><html><body></body></html>');
+  let TestCSSStyleSheet = class {
+    replaceSync(text) { this.cssText = text; }
+  };
+  Object.assign(globalThis, {
+    window,
+    document: window.document,
+    HTMLElement: window.HTMLElement,
+    Element: window.Element,
+    customElements: window.customElements,
+    Node: window.Node,
+    Event: window.Event,
+    CustomEvent: window.CustomEvent,
+    MutationObserver: window.MutationObserver,
+    CSSStyleSheet: TestCSSStyleSheet,
+    getComputedStyle: window.getComputedStyle || (() => ({ transitionDuration: '0s', animationDuration: '0s' })),
+  });
+  window.document.adoptedStyleSheets = [];
+
+  const div = window.document.createElement('div');
+  const StyleProto = Object.getPrototypeOf(div.style);
+  StyleProto.getPropertyPriority = StyleProto.getPropertyPriority || (() => '');
+
+  // Fresh URLs force both component modules to register their custom
+  // elements against THIS test's window.customElements registry; otherwise
+  // the entrypoint cache serves the previous test's stale window.
+  const fresh = `?fresh=fullscreen-nested-${Date.now()}`;
+  await import(`../layout/LayoutNode/LayoutNode.js${fresh}`);
+  await import(`../layout/Layout/Layout.js${fresh}`);
+  const outer = document.createElement('panel-layout');
+  document.body.append(outer);
+  outer.getBoundingClientRect = () => ({ width: 1280, height: 800, top: 0, left: 0, bottom: 800, right: 1280 });
+  outer.registerPanelType('outer-a', { title: 'A', icon: 'dashboard' });
+
+  // NESTED layout containing the fullscreen target panel.
+  const inner = document.createElement('panel-layout');
+  outer.append(inner);
+  inner.getBoundingClientRect = () => ({ width: 800, height: 600, top: 0, left: 0, bottom: 600, right: 800 });
+  inner.registerPanelType('inner-demo', { title: 'Inner', icon: 'dashboard' });
+
+  outer.setLayout(createPanel('outer-a'));
+  inner.setLayout(createPanel('inner-demo'));
+  await new Promise((r) => setTimeout(r, 0));
+
+  const innerNode = inner.querySelector('layout-node[node-type="panel"]');
+  assert.ok(innerNode, 'nested layout renders its own panel node');
+  assert.ok(innerNode.closest('panel-layout') === inner, 'inner node owned by inner layout');
+
+  // Fire the fullscreen event exactly from the inner panel node.
+  innerNode._toggleFullscreen();
+  await new Promise((r) => setTimeout(r, 0));
+
+  assert.equal(inner.$.fullscreenPanelId, innerNode.$.nodeId,
+    'nested layout claims fullscreen for its own panel');
+  assert.equal(outer.$.fullscreenPanelId, null,
+    'the enclosing agent-dock-like layout MUST stay out of the nested fullscreen');
+  assert.equal(outer.hasAttribute('fullscreen-active'), false,
+    'the outer host retains its regular rendering');
+
+  // Exit must equally belong to the owner; toggling once on the SAME node
+  // returns both layouts to normal mode without leaving stray state.
+  innerNode._toggleFullscreen();
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(inner.$.fullscreenPanelId, null, 'exit fullscreen');
+  assert.equal(outer.$.fullscreenPanelId, null);
+});
+
+test('layout-node keeps split resizer listeners across DOM re-parenting', async () => {
+  let { parseHTML } = await import('linkedom');
+  let { window } = parseHTML('<!doctype html><html><body></body></html>');
+  let TestCSSStyleSheet = class {
+    replaceSync(text) { this.cssText = text; }
+  };
+  Object.assign(globalThis, {
+    window,
+    document: window.document,
+    HTMLElement: window.HTMLElement,
+    Element: window.Element,
+    customElements: window.customElements,
+    Node: window.Node,
+    Event: window.Event,
+    CustomEvent: window.CustomEvent,
+    MutationObserver: window.MutationObserver,
+    ShadowRoot: window.ShadowRoot || class ShadowRootStub {},
+    CSSStyleSheet: TestCSSStyleSheet,
+    getComputedStyle: window.getComputedStyle || (() => ({ transitionDuration: '0s', animationDuration: '0s' })),
+  });
+  window.document.adoptedStyleSheets = [];
+
+  const div = window.document.createElement('div');
+  const StyleProto = Object.getPrototypeOf(div.style);
+  StyleProto.getPropertyPriority = StyleProto.getPropertyPriority || (() => '');
+
+  const fresh = `?fresh=resizer-lifecycle-${Date.now()}`;
+  await import(`../layout/LayoutNode/LayoutNode.js${fresh}`);
+  await import(`../layout/Layout/Layout.js${fresh}`);
+  const layout = document.createElement('panel-layout');
+  document.body.append(layout);
+  layout.setLayout(createSplit('horizontal', createPanel('lifecycle-left'), createPanel('lifecycle-right'), 0.6));
+  await new Promise((r) => setTimeout(r, 0));
+
+  const split = layout.querySelector('layout-node[node-type="split"]');
+  assert.ok(split, 'panel layout renders a split node');
+  const resizer = split.querySelector(':scope > .split-view > .split-resizer');
+  assert.ok(resizer, 'split renders a resizer');
+
+  const startResize = () => {
+    resizer.dispatchEvent(new Event('pointerdown', { bubbles: true, cancelable: true }));
+    const active = split.hasAttribute('resizing');
+    document.dispatchEvent(new Event('pointerup', { bubbles: true, cancelable: true }));
+    return active;
+  };
+  assert.ok(startResize(), 'resizer starts a resize before any move');
+
+  // Simulate exactly what the DOM does when _ensureChildNode re-parents an
+  // existing node: disconnect, then reconnect the same element instance.
+  split.disconnectedCallback();
+  split.connectedCallback();
+
+  assert.ok(startResize(), 'resizer must still start a resize after re-parenting');
+});
+
+test('outer layout fullscreen tab bar lists only its own panels', async () => {
+  let { parseHTML } = await import('linkedom');
+  let { window } = parseHTML('<!doctype html><html><body></body></html>');
+  let TestCSSStyleSheet = class {
+    replaceSync(text) { this.cssText = text; }
+  };
+  Object.assign(globalThis, {
+    window,
+    document: window.document,
+    HTMLElement: window.HTMLElement,
+    Element: window.Element,
+    customElements: window.customElements,
+    Node: window.Node,
+    Event: window.Event,
+    CustomEvent: window.CustomEvent,
+    MutationObserver: window.MutationObserver,
+    ShadowRoot: window.ShadowRoot || class ShadowRootStub {},
+    CSSStyleSheet: TestCSSStyleSheet,
+    getComputedStyle: window.getComputedStyle || (() => ({ transitionDuration: '0s', animationDuration: '0s' })),
+  });
+  window.document.adoptedStyleSheets = [];
+
+  const div = window.document.createElement('div');
+  const StyleProto = Object.getPrototypeOf(div.style);
+  StyleProto.getPropertyPriority = StyleProto.getPropertyPriority || (() => '');
+
+  const fresh = `?fresh=fullscreen-tabs-${Date.now()}`;
+  await import(`../layout/LayoutNode/LayoutNode.js${fresh}`);
+  await import(`../layout/Layout/Layout.js${fresh}`);
+
+  // Outer dock-like layout: Workspace + Agent panels.
+  const outer = document.createElement('panel-layout');
+  document.body.append(outer);
+  outer.getBoundingClientRect = () => ({ width: 1280, height: 800, top: 0, left: 0, bottom: 800, right: 1280 });
+  outer.registerPanelType('outer-workspace', { title: 'Workspace', icon: 'dashboard' });
+  outer.registerPanelType('outer-agent', { title: 'Agent', icon: 'smart_toy' });
+
+  // Nested layout with its own panels: those must NOT leak into the outer tab bar.
+  const inner = document.createElement('panel-layout');
+  outer.append(inner);
+  inner.getBoundingClientRect = () => ({ width: 900, height: 700, top: 0, left: 0, bottom: 700, right: 900 });
+  inner.registerPanelType('inner-tree', { title: 'portfolio-tree', icon: 'folder' });
+  inner.registerPanelType('inner-viewer', { title: 'portfolio-viewer', icon: 'article' });
+  inner.registerPanelType('inner-graph', { title: 'portfolio-graph', icon: 'hub' });
+
+  outer.setLayout(createSplit('horizontal', createPanel('outer-workspace'), createPanel('outer-agent'), 0.75));
+  inner.setLayout(createSplit('horizontal', createPanel('inner-tree'), createSplit('vertical', createPanel('inner-viewer'), createPanel('inner-graph'), 0.5), 0.5));
+  await new Promise((r) => setTimeout(r, 0));
+
+  const agentNode = outer._ownedPanelNodes().find((p) => p.$.nodeData?.panelType === 'outer-agent');
+  assert.ok(agentNode, 'outer layout owns its agent panel');
+  agentNode.dispatchEvent(new CustomEvent('panel-fullscreen', {
+    bubbles: true, composed: true, detail: { panelId: agentNode.$.nodeId },
+  }));
+  await new Promise((r) => setTimeout(r, 0));
+
+  assert.equal(outer.$.fullscreenPanelId, agentNode.$.nodeId, 'outer layout fullscreen active');
+  const tabTitles = outer.$.tabItems.map((t) => t.title).join(',');
+  assert.equal(tabTitles, 'Workspace,Agent',
+    'fullscreen tab bar lists only the panels this layout owns');
+  assert.doesNotMatch(tabTitles, /portfolio/,
+    'nested layout panels must not appear as dead tabs in the outer fullscreen');
+});
+
+test('both resize entry points cancel an in-flight drawer gesture before re-projecting', async () => {
+  const layout = await readFile(layoutSource, 'utf8');
+
+  // A rotation or window resize re-projects the layout. If a drag were still
+  // live, its measured width would decide the commit against new geometry, and
+  // the scheduler would re-enter with a gesture in flight. Both hooks must
+  // cancel first; the behavioural counterpart is in layout-drawer-state.
+  const resizeFallback = layout.slice(
+    layout.indexOf('this._resizeFallback = () => {'),
+    layout.indexOf('if (typeof ResizeObserver'),
+  );
+  assert.match(resizeFallback, /_cancelDrawerGestureOnGeometryChange\(\);/,
+    'the resize fallback cancels an in-flight gesture');
+  assert.ok(
+    resizeFallback.indexOf('_cancelDrawerGestureOnGeometryChange')
+      < resizeFallback.indexOf('_scheduleResponsiveLayout'),
+    'the gesture is cancelled BEFORE the responsive layout is scheduled'
+  );
+
+  const observer = layout.slice(
+    layout.indexOf('this._resizeObserver = new ResizeObserver'),
+    layout.indexOf('this._resizeObserver.observe'),
+  );
+  assert.match(observer, /_cancelDrawerGestureOnGeometryChange\(\);/,
+    'the resize observer cancels an in-flight gesture');
+  assert.ok(
+    observer.indexOf('_cancelDrawerGestureOnGeometryChange')
+      < observer.indexOf('_scheduleResponsiveLayout'),
+    'the gesture is cancelled before re-projection in the observer path too'
+  );
+
+  // A rebuilt projection must restore the modal contract for a drawer that is
+  // still open, otherwise the panel comes back open with a live background.
+  const projection = layout.slice(
+    layout.indexOf('this._syncNativeRailRegions();\n    this._scheduleDrawerRailPeek'),
+  );
+  assert.match(projection.slice(0, 900), /_applyDrawerModal\(openDock\)/,
+    'a rebuilt projection re-applies the modal contract of an open drawer');
 });

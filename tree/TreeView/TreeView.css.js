@@ -71,8 +71,17 @@ sn-tree-view[hidden] {
   line-height: 1;
 }
 
+/* The disclosure is its own target, not a glyph-sized box inside a wider
+   column. It fills the column the theme gives it (--sn-tree-toggle-width,
+   which a touch dock sets from --sn-tree-toggle-touch-width) and the full
+   row height, so a thumb aims at the column and a tap on the row next to it
+   still selects the article. The icon keeps its own type-scale size. */
 .sn-tree-toggle {
   grid-column: 1;
+  inline-size: var(--sn-tree-toggle-width, 100%);
+  align-self: stretch;
+  min-block-size: var(--sn-tree-row-min-height, var(--sn-tree-row-height, 24px));
+  block-size: auto;
   border: 0;
   padding: 0;
   background: transparent;
@@ -85,6 +94,21 @@ sn-tree-view[hidden] {
 
 .sn-tree-toggle[hidden] {
   visibility: hidden;
+}
+
+/* A theme may set the toggle column on the tree host itself, and a value set
+   there always beats an inherited one — so a dock cannot widen the column by
+   setting a token on an ancestor. The grid reads the touch column directly
+   when the tree is in a drawer, which is the room the theme already reserves
+   for a thumb. Desktop trees keep the column their theme set. */
+layout-node[mobile-dock='start'] .sn-tree-row,
+layout-node[mobile-dock='end'] .sn-tree-row {
+  grid-template-columns: var(--sn-tree-toggle-touch-width, var(--sn-tree-toggle-width)) var(--sn-tree-icon-width) minmax(0, 1fr) auto auto;
+}
+
+layout-node[mobile-dock='start'] .sn-tree-toggle,
+layout-node[mobile-dock='end'] .sn-tree-toggle {
+  inline-size: var(--sn-tree-toggle-touch-width, var(--sn-tree-toggle-width, 100%));
 }
 
 .sn-tree-label {

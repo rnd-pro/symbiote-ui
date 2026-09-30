@@ -16,6 +16,7 @@ export const SHOW_MEDIA_INTERACTION_POLICIES = Object.freeze({
   'short-muted-montage': Object.freeze({ semantics: 'pointer-only', nativeControls: false, skippable: false }),
   'short-inline-continuous': Object.freeze({ semantics: 'pointer-only', nativeControls: false, skippable: false }),
   'full-with-media-audio': Object.freeze({ semantics: 'detail', nativeControls: true, skippable: true }),
+  'spinner-rotation': Object.freeze({ semantics: 'pointer-only', nativeControls: false, skippable: false }),
 });
 
 function mediaElementFor(target) {

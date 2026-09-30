@@ -3,8 +3,20 @@ import { slotProcessor } from '@symbiotejs/symbiote/core/slotProcessor.js';
 import { ensureMaterialSymbols } from '../../icons/MaterialSymbols.js';
 import { translate } from '../../locale/index.js';
 import { CHAT_SHOW_VIDEO_CONTROL_SEMANTICS } from '../show-player-contract.js';
+import {
+  clampChatShowProgress,
+  resolveChatShowProgress,
+  resolveChatShowTimelineGeometry,
+  resolveChatShowTimelinePosition,
+} from '../chat-show-time-base.js';
 import template from './ChatShowPlayer.tpl.js';
 import css from './ChatShowPlayer.css.js';
+
+export {
+  resolveChatShowTimelineGeometry,
+  resolveChatShowProgress,
+  resolveChatShowTimelinePosition,
+} from '../chat-show-time-base.js';
 
 const PLAYER_ICONS = [
   'auto_stories',
@@ -48,91 +60,6 @@ function readPlaying(controller, state = {}) {
   if (typeof controller?.isPlaying === 'boolean') return controller.isPlaying;
   if (typeof controller?.isPaused === 'boolean') return !controller.isPaused;
   return false;
-}
-
-function clampProgress(value) {
-  return Math.min(1, Math.max(0, Number.isFinite(value) ? value : 0));
-}
-
-function formatClock(valueMs) {
-  let totalSeconds = Math.max(0, Math.floor(Number(valueMs) / 1_000 || 0));
-  let seconds = totalSeconds % 60;
-  let totalMinutes = Math.floor(totalSeconds / 60);
-  let minutes = totalMinutes % 60;
-  let hours = Math.floor(totalMinutes / 60);
-  return hours > 0
-    ? `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
-    : `${minutes}:${String(seconds).padStart(2, '0')}`;
-}
-
-function resolveTimelinePosition(source, requestedMs) {
-  let durations = source.map(({ durationMs }) => Number(durationMs));
-  if (!durations.length || !durations.every((duration) => Number.isFinite(duration) && duration > 0)) {
-    return null;
-  }
-  let totalMs = durations.reduce((total, duration) => total + duration, 0);
-  let absoluteMs = Math.min(totalMs, Math.max(0, Number(requestedMs) || 0));
-  let elapsedMs = 0;
-  for (let index = 0; index < durations.length; index += 1) {
-    let durationMs = durations[index];
-    if (absoluteMs < elapsedMs + durationMs || index === durations.length - 1) {
-      return {
-        index,
-        positionMs: Math.min(durationMs, Math.max(0, absoluteMs - elapsedMs)),
-        absoluteMs,
-        totalMs,
-      };
-    }
-    elapsedMs += durationMs;
-  }
-  return null;
-}
-
-function resolveProgress(source, index, state, caption) {
-  let durations = source.map(({ durationMs }) => Number(durationMs));
-  let weights = durations.every((duration) => Number.isFinite(duration) && duration > 0)
-    ? durations
-    : source.map(() => 1);
-  let progress = state?.progress && typeof state.progress === 'object' ? state.progress : {};
-  let currentDuration = durations[index];
-  let positionMs = Number(progress.positionMs);
-  let fraction = Number(progress.fraction);
-  if (Number.isFinite(positionMs) && Number.isFinite(currentDuration) && currentDuration > 0) {
-    fraction = positionMs / currentDuration;
-  } else if (!Number.isFinite(fraction)) {
-    let activeWordIndex = Number(caption.activeWordIndex ?? caption.wordIndex ?? -1);
-    let words = Array.isArray(caption.words) ? caption.words : [];
-    fraction = activeWordIndex >= 0 && words.length ? (activeWordIndex + 1) / words.length : 0;
-  }
-  if (state?.state === 'completed' && index === source.length - 1) fraction = 1;
-  fraction = clampProgress(fraction);
-  let totalWeight = weights.reduce((total, weight) => total + weight, 0);
-  let completedWeight = weights.slice(0, Math.max(0, index))
-    .reduce((total, weight) => total + weight, 0);
-  let currentWeight = index >= 0 ? weights[index] || 0 : 0;
-  let overall = totalWeight ? (completedWeight + currentWeight * fraction) / totalWeight : 0;
-  let progressNow = Math.round(clampProgress(overall) * 100);
-  let seekable = durations.length > 0
-    && durations.every((duration) => Number.isFinite(duration) && duration > 0);
-  let elapsedMs = seekable ? completedWeight + currentWeight * fraction : 0;
-  let totalMs = seekable ? totalWeight : 0;
-  return {
-    now: progressNow,
-    value: Math.round(elapsedMs / 1_000),
-    max: Math.max(0, Math.round(totalMs / 1_000)),
-    text: `${index < 0 ? 0 : index + 1} / ${source.length} · ${formatClock(elapsedMs)} / ${formatClock(totalMs)}`,
-    elapsedLabel: formatClock(elapsedMs),
-    totalLabel: formatClock(totalMs),
-    elapsedMs,
-    totalMs,
-    seekable,
-    segments: weights.map((weight, segmentIndex) => {
-      let fill = segmentIndex < index ? 1 : segmentIndex === index ? fraction : 0;
-      return {
-        style: `--chat-show-progress-weight:${weight};--chat-show-progress-fill:${fill}`,
-      };
-    }),
-  };
 }
 
 export class ChatShowPlayer extends Symbiote {
@@ -403,14 +330,15 @@ export class ChatShowPlayer extends Symbiote {
   }
 
   _progressPositionAtClientX(clientX) {
-    let source = Array.isArray(this._timeline?.turns) ? this._timeline.turns : [];
+    let geometry = resolveChatShowTimelineGeometry(this._timeline);
     let track = this.ref.progressTrack;
     let rect = track?.getBoundingClientRect?.();
     if (!rect || !(rect.width > 0)) return null;
-    let ratio = clampProgress((Number(clientX) - rect.left) / rect.width);
-    let durations = source.map(({ durationMs }) => Number(durationMs));
-    if (!durations.every((duration) => Number.isFinite(duration) && duration > 0)) return null;
-    return resolveTimelinePosition(source, durations.reduce((total, duration) => total + duration, 0) * ratio);
+    // The pointer ratio is a coordinate on the host's clock, so it maps through
+    // the geometry total: on an absolute composition that total includes the
+    // spans no turn covers, and the ratio still lands on the right turn.
+    let ratio = clampChatShowProgress((Number(clientX) - rect.left) / rect.width);
+    return resolveChatShowTimelinePosition(geometry, geometry.totalMs * ratio);
   }
 
   _previewProgressPosition(position) {
@@ -436,6 +364,11 @@ export class ChatShowPlayer extends Symbiote {
         positionMs: position.positionMs,
         absoluteMs: position.absoluteMs,
         source,
+        // Only an absolute composition reports the snap, so a duration-weighted
+        // host keeps receiving exactly the detail shape it always received.
+        ...(position.snapped === undefined
+          ? {}
+          : { snapped: position.snapped, gapMs: position.gapMs }),
       },
     }));
     return true;
@@ -480,8 +413,8 @@ export class ChatShowPlayer extends Symbiote {
   }
 
   _onProgressKeyDown(event) {
-    let source = Array.isArray(this._timeline?.turns) ? this._timeline.turns : [];
-    let progress = resolveProgress(source, Number(this._state?.index ?? this._controller?.index ?? 0), this._state, {});
+    let geometry = resolveChatShowTimelineGeometry(this._timeline);
+    let progress = resolveChatShowProgress(geometry, Number(this._state?.index ?? this._controller?.index ?? 0), this._state, {});
     if (!progress.seekable) return;
     let requestedMs = progress.elapsedMs;
     if (event.key === 'ArrowLeft') requestedMs -= 5_000;
@@ -490,7 +423,7 @@ export class ChatShowPlayer extends Symbiote {
     else if (event.key === 'End') requestedMs = progress.totalMs;
     else return;
     event.preventDefault?.();
-    let position = resolveTimelinePosition(source, requestedMs);
+    let position = resolveChatShowTimelinePosition(geometry, requestedMs);
     this._previewProgressPosition(position);
     this._commitProgressPosition(position, 'keyboard');
   }
@@ -547,7 +480,8 @@ export class ChatShowPlayer extends Symbiote {
     let caption = this._state?.caption && typeof this._state.caption === 'object'
       ? this._state.caption
       : {};
-    let progress = resolveProgress(source, index, this._state, caption);
+    let geometry = resolveChatShowTimelineGeometry(this._timeline);
+    let progress = resolveChatShowProgress(geometry, index, this._state, caption);
     this.$.progressNow = progress.now;
     this.$.progressValue = progress.value;
     this.$.progressMax = progress.max;
@@ -557,7 +491,7 @@ export class ChatShowPlayer extends Symbiote {
     this.$.progressSeekable = progress.seekable;
     this.$.progressTabIndex = progress.seekable ? '0' : '-1';
     this.$.progressDisabled = progress.seekable ? 'false' : 'true';
-    this.$.progressStyle = `--chat-show-progress-position:${clampProgress(progress.totalMs ? progress.elapsedMs / progress.totalMs : 0)}`;
+    this.$.progressStyle = `--chat-show-progress-position:${clampChatShowProgress(progress.totalMs ? progress.elapsedMs / progress.totalMs : 0)}`;
     this.$.progressSegments = progress.segments;
     this.$.captionText = String(caption.text || current?.caption || current?.text || '');
     let activeWordIndex = Number(caption.activeWordIndex ?? caption.wordIndex ?? -1);

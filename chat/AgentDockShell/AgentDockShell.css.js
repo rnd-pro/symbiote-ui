@@ -123,7 +123,13 @@ agent-dock-shell {
 
   .agent-dock-main-host {
     overflow: hidden;
-    contain: layout paint;
+    /*
+     * NOTE (2026-09-18): DO NOT reintroduce 'contain: layout paint' here.
+     * CSS containment makes this host the containing block for every
+     * position:fixed descendant, so a panel-layout fullscreen inside the
+     * dock collapsed to a 0-size heap and the fullscreen tab bar was lost.
+     * overflow:hidden keeps the clipping guarantee without the trap.
+     */
   }
 
   .agent-dock-source[hidden] { display: none !important; }

@@ -181,6 +181,7 @@
     "./ui/tour-media-renderer.js": "./ui/tour-media-renderer.js",
     "./ui/live-captions.js": "./ui/live-captions.js",
     "./ui/scrollbar-styles.js": "./ui/scrollbar-styles.js",
+    "./ui/click-ripple.js": "./ui/click-ripple.js",
     "./webmcp": {
       "import": "./webmcp.js",
       "default": "./webmcp.js"
@@ -200,6 +201,10 @@
     "./themes/TailwindBridge": {
       "import": "./themes/TailwindBridge.js",
       "default": "./themes/TailwindBridge.js"
+    },
+    "./webmcp/live-observation": {
+      "import": "./webmcp/live-observation.js",
+      "default": "./webmcp/live-observation.js"
     }
   },
   "files": [

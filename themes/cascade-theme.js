@@ -322,6 +322,7 @@ export const CASCADE_THEME_TOKEN_TARGETS = Object.freeze({
     '--sn-layout-header-button-min-inline-size',
     '--sn-layout-header-button-min-block-size',
     '--sn-layout-header-button-block-size',
+    '--sn-layout-header-button-hit-size',
     '--sn-layout-panel-card-radius',
     '--sn-layout-panel-card-inline-size',
     '--sn-layout-panel-card-min-block-size',
@@ -2025,6 +2026,10 @@ export function createCascadeTheme(options = {}) {
     '--sn-tree-row-min-height': densityToken(22),
     '--sn-tree-row-padding-block': densityToken(2),
     '--sn-tree-toggle-width': densityToken(18),
+    // Touch-sized toggle column. The glyph box stays 18px (icon parameter); the
+    // drawer scope maps THIS token onto --sn-tree-toggle-width so the pressable
+    // column grows with density instead of being a fixed pixel in drawer CSS.
+    '--sn-tree-toggle-touch-width': densityToken(24),
     '--sn-tree-icon-width': densityToken(18),
     '--sn-tree-kind-max-width': densityToken(120),
     '--sn-tree-badge-max-width': densityToken(88),
@@ -2311,6 +2316,12 @@ export function createCascadeTheme(options = {}) {
     '--sn-layout-header-button-min-inline-size': densityToken(24),
     '--sn-layout-header-button-min-block-size': densityToken(24),
     '--sn-layout-header-button-block-size': 'var(--sn-layout-header-button-min-block-size)',
+    // Pressable area of a header control, deliberately NOT density-scaled: the
+    // visual box follows density/type scale, while the target keeps the
+    // WCAG 2.5.5 floor. The pseudo-element that realises it is clamped to half
+    // the sibling gap, so adjacent targets can never intersect (see
+    // layout/LayoutNode/LayoutNode.css.js `.header-btn::before`).
+    '--sn-layout-header-button-hit-size': '44px',
     '--sn-sidebar-collapsed-width': 'var(--sn-layout-header-block-size, calc(var(--sn-layout-header-min-height, 28px) + 3px))',
     '--sn-sidebar-collapsed-item-size': 'var(--sn-layout-sidebar-item-block-size)',
     '--sn-sidebar-collapsed-item-radius': radiusToken(4),

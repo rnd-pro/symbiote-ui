@@ -126,6 +126,10 @@ const DEFAULT_PROVIDER_THEME_TOKENS = {
   '--sn-layout-header-button-min-inline-size': 'calc(24px * var(--sn-theme-density))',
   '--sn-layout-header-button-min-block-size': 'calc(24px * var(--sn-theme-density))',
   '--sn-layout-header-button-block-size': 'var(--sn-layout-header-button-min-block-size)',
+  // Pressable area of a header control: an absolute WCAG 2.5.5 floor, NOT
+  // density-scaled (the visual box is), clamped to half the sibling gap at the
+  // use site so neighbouring targets never intersect.
+  '--sn-layout-header-button-hit-size': '44px',
   '--sn-layout-menu-min-height': 'calc(34px * var(--sn-theme-density))',
   '--sn-layout-menu-row-height': 'calc(30px * var(--sn-theme-density))',
   '--sn-layout-menu-padding': 'calc(3px * var(--sn-theme-density)) calc(6px * var(--sn-theme-density))',
@@ -438,6 +442,10 @@ const DEFAULT_PROVIDER_THEME_TOKENS = {
   '--sn-tree-gap': 'var(--sn-space-xs)',
   '--sn-tree-indent': 'var(--sn-step-8)',
   '--sn-tree-toggle-width': 'calc(18px * var(--sn-theme-density))',
+  // Touch-sized toggle column: the drawer scope maps it onto
+  // --sn-tree-toggle-width, so the pressable column follows the theme density
+  // instead of a fixed pixel written into drawer CSS.
+  '--sn-tree-toggle-touch-width': 'calc(24px * var(--sn-theme-density))',
   '--sn-tree-icon-width': 'calc(18px * var(--sn-theme-density))',
   '--sn-tree-row-height': 'calc(22px * var(--sn-theme-density))',
   '--sn-tree-row-min-height': 'calc(22px * var(--sn-theme-density))',

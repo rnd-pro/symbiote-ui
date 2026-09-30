@@ -104,6 +104,7 @@ test('media directives normalize reusable segmented, frame, and continuous playb
     'short-muted-montage',
     'short-inline-continuous',
     'full-with-media-audio',
+    'spinner-rotation',
   ]);
 
   let directive = normalizeShowDirective({

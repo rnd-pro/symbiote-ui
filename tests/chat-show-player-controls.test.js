@@ -35,6 +35,27 @@ test('show transport buttons reuse the shared button-state recipe', async () => 
   assert.doesNotMatch(styles, /\.chat-show-control\s+button/);
 });
 
+test('current row carries an animated dashed contour marker', async () => {
+  let styles = await readFile(playerStyles, 'utf8');
+
+  // The marker lives on a dedicated ::after pseudo-element of the current row
+  // so the row itself keeps its resting background/outline layout.
+  assert.match(styles, /&\[current\]::after\s*\{/);
+
+  // Dashed contour: repeating gradient stripes confined to the edges must be
+  // animated ("marching ants"), not a static dash pattern.
+  let marker = styles.match(/&\[current\]::after\s*\{[\s\S]*?\n {4}\}/);
+  assert.ok(marker, 'current-row ::after block must exist');
+  assert.match(marker[0], /repeating-linear-gradient/);
+  assert.match(marker[0], /animation:\s*chat-show-active-marching\s+var\(--sn-chat-show-active-marching-duration/);
+
+  // The keyframes advance background-position so the dashes cycle.
+  assert.match(styles, /@keyframes chat-show-active-marching\s*\{[\s\S]*?background-position/);
+
+  // Reduced-motion users get a static marker.
+  assert.match(styles, /prefers-reduced-motion: reduce[\s\S]*?&\[current\]::after\s*\{\s*animation:\s*none/);
+});
+
 test('show header actions expose the shared icon-button state recipe', async () => {
   let styles = await readFile(playerStyles, 'utf8');
 

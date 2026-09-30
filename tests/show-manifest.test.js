@@ -32,11 +32,13 @@ test('Show manifest, schema catalog, and JSON file expose one synchronized publi
     'short-muted-montage',
     'short-inline-continuous',
     'full-with-media-audio',
+    'spinner-rotation',
   ]);
   assert.deepEqual(SHOW_RUNTIME_CONTRACT.mediaInteractionSemantics, {
     'short-muted-montage': 'pointer-only',
     'short-inline-continuous': 'pointer-only',
     'full-with-media-audio': 'detail',
+    'spinner-rotation': 'pointer-only',
   });
   assert.deepEqual(SHOW_RUNTIME_CONTRACT.mediaPlayback, {
     directiveFields: ['startMs', 'endMs', 'segments', 'segmentDurationMs', 'frames', 'frameHoldMs', 'finalFrame', 'keepPlayingDuringQuote'],

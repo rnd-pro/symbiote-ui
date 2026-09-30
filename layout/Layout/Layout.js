@@ -8,10 +8,12 @@ import Symbiote from '@symbiotejs/symbiote';
 import { ensureMaterialSymbols } from '../../icons/MaterialSymbols.js';
 import * as LayoutTree from './../LayoutTree.js';
 import { resumeLayoutSubtree, suspendLayoutSubtree } from './../lifecycle.js';
+import { translate } from '../../locale/index.js';
 import { template } from './Layout.tpl.js';
 import { styles } from './Layout.css.js';
 import './../LayoutNode/LayoutNode.js';
 import './../PanelMenu/PanelMenu.js';
+import { getFocusableElements } from '../../ui/focus-trap.js';
 
 function setAttributeIfChanged(element, name, value) {
   let next = String(value);
@@ -55,6 +57,144 @@ const LAYOUT_PEER_GROUPS = new Map();
 const LAYOUT_PEER_PENDING_GROUPS = new Set();
 let layoutPeerRefreshFrame = 0;
 const NATIVE_RAIL_LAYOUTS = new Set();
+
+// --- Drawer Escape ownership ----------------------------------------------
+// Historically every Layout attached its own keydown listener to
+// ownerDocument and guarded the event with a per-event settle marker. Under
+// bubble phase document listeners fire in *registration* order, so the marker
+// merely made the first-registered layout the winner — regardless of which
+// layout actually owned the interaction (nested layout, focused drawer, top
+// overlay). Instead, one shared listener per document elects the Escape owner
+// from live DOM evidence: event composed path → focus chain (shadow-aware,
+// nesting-aware) → most recent drawer activity. Already-handed Escape (nested
+// menu/dialog that called preventDefault or stopped propagation earlier on
+// the path) is still honored by bailing out up front.
+const DRAWER_ESCAPE_CONTEXTS = new WeakMap();
+let drawerActivitySeq = 0;
+
+// Flick detection. The trailing window decides the velocity, so a slow drag
+// that ends with a nudge is not mistaken for a flick. 0.35 px/ms is 350 px/s,
+// brisk but reachable for a deliberate short swipe. No separate minimum
+// travel is needed: a primary gesture only activates past 16px, and a rail
+// gesture under 5px is a tap, which toggles by contract.
+const DRAWER_FLICK_VELOCITY_WINDOW_MS = 100;
+const DRAWER_FLICK_MIN_VELOCITY = 0.35;
+
+// Layout rounding tolerance when checking that a drag still runs on the
+// surface it started on.
+const DRAWER_GEOMETRY_TOLERANCE_PX = 2;
+
+function getDrawerEscapeContext(documentRef) {
+  let context = DRAWER_ESCAPE_CONTEXTS.get(documentRef);
+  if (!context) {
+    context = { layouts: new Set(), handler: null };
+    context.handler = (e) => dispatchDrawerEscape(context, e);
+    DRAWER_ESCAPE_CONTEXTS.set(documentRef, context);
+    documentRef.addEventListener('keydown', context.handler);
+  }
+  return context;
+}
+
+function registerDrawerEscapeListener(layout) {
+  let documentRef = layout.ownerDocument;
+  if (!documentRef) return;
+  getDrawerEscapeContext(documentRef).layouts.add(layout);
+}
+
+function unregisterDrawerEscapeListener(layout) {
+  let documentRef = layout.ownerDocument;
+  let context = documentRef && DRAWER_ESCAPE_CONTEXTS.get(documentRef);
+  if (!context) return;
+  context.layouts.delete(layout);
+  if (!context.layouts.size) {
+    documentRef.removeEventListener('keydown', context.handler);
+    DRAWER_ESCAPE_CONTEXTS.delete(documentRef);
+  }
+}
+
+// Deepest open-shadow descendant of `node` (or null). Closed shadow roots are
+// opaque from the outside by design: the walk stops at their host — a real
+// platform boundary, not an error.
+function getDeepActiveElement(node) {
+  let current = node || null;
+  // A visited set makes the walk total: environments whose shadow focus is
+  // synthesized can report a cycle that would otherwise spin forever.
+  const visited = new Set();
+  while (current && !visited.has(current)) {
+    visited.add(current);
+    let inner = current.shadowRoot?.activeElement || null;
+    if (!inner || inner === current) break;
+    current = inner;
+  }
+  return current;
+}
+
+// Shadow-aware containment: `root` owns `node` when node is in its subtree or
+// in the subtree of any open shadow root it hosts. `contains` alone stops at
+// shadow edges, which made focus appear to live outside its own surface.
+function deepContains(root, node) {
+  if (!root || !node) return false;
+  for (let current = node; current; current = current.getRootNode?.()?.host) {
+    if (current === root || root.contains?.(current)) return true;
+  }
+  return false;
+}
+
+// Focus chain for Escape ownership, ordered OUTERMOST FIRST: document
+// .activeElement, then the shadow hosts it lives behind, and finally the
+// deepest focused element. Outer-first matches how ownership is read (the page
+// before the island inside it), so callers can stop at the first ancestor they
+// recognise; the innermost owner is selected by walking the chain backwards.
+function getDeepFocusChain(documentRef) {
+  let deepest = getDeepActiveElement(documentRef?.activeElement || null);
+  if (!deepest) return [];
+  let chain = [];
+  for (let node = deepest; node; node = node.parentElement || node.getRootNode?.()?.host) {
+    chain.push(node);
+    if (node === documentRef) break;
+  }
+  return chain.reverse();
+}
+
+function dispatchDrawerEscape(context, e) {
+  if (e.key !== 'Escape' || e.defaultPrevented || e.__snLayoutDrawerSettled) return;
+  let candidates = [];
+  for (let layout of context.layouts) {
+    if (!layout.isConnected || !layout.hasAttribute?.('drawer-mode-active')) continue;
+    if (layout._isDrawerOpen('start') || layout._isDrawerOpen('end')) candidates.push(layout);
+  }
+  if (!candidates.length) return;
+  let owner = electDrawerEscapeOwner(candidates, e);
+  owner?._consumeDrawerEscape(e);
+}
+
+function electDrawerEscapeOwner(candidates, e) {
+  if (candidates.length === 1) return candidates[0];
+  // (1) Event path: the deepest layout on the composed path owns the key,
+  //     independent of listener registration order.
+  let path = typeof e.composedPath === 'function' ? e.composedPath() : null;
+  if (path?.length) {
+    let hit = path.find((node) => candidates.includes(node));
+    if (hit) return hit;
+  }
+  // (2) Focus: the DEEPEST layout whose subtree (shadow included) holds
+  //     focus. A match `c` is deepest when no other match is its descendant.
+  let focusChain = getDeepFocusChain(candidates[0].ownerDocument);
+  // The chain runs outermost first, so the innermost owning layout is the LAST
+  // match in document order; shadow containment decides which of the matches
+  // for one node is the most specific.
+  for (let index = focusChain.length - 1; index >= 0; index -= 1) {
+    let node = focusChain[index];
+    let matches = candidates.filter((layout) => deepContains(layout, node));
+    if (matches.length) {
+      return matches.find((layout) => !matches.some((other) => other !== layout && deepContains(layout, other)))
+        || matches[0];
+    }
+  }
+  // (3) Topmost interactive layer: the drawer most recently (re)opened.
+  return candidates.reduce((top, layout) =>
+    (layout._drawerActivityStamp >= top._drawerActivityStamp ? layout : top));
+}
 
 function normalizeLayoutPeerGroup(value) {
   return String(value || '').trim();
@@ -191,6 +331,9 @@ export class Layout extends Symbiote {
     drawerEndOpen: false,
     drawerStartPanelId: '',
     drawerEndPanelId: '',
+    // Accessible name of the modal drawer backdrop; hosts may override per
+    // locale, defaults follow the UI locale.
+    drawerBackdropLabel: translate('layout.closeDrawer'),
 
 
     onTabClick: (e) => {
@@ -239,18 +382,65 @@ export class Layout extends Symbiote {
     this._drawerRailPointerDownHandler = (e) => this._onDrawerRailPointerDown(e);
     this._drawerRailPointerOverHandler = (e) => this._onDrawerRailHover(e);
     this._drawerClickCaptureHandler = (e) => this._onDrawerClickCapture(e);
+    // Tab trap active only while a modal drawer is open (_drawerModalNode).
+    this._drawerKeydownTrapHandler = (e) => this._onDrawerKeydownTrap(e);
+    this._drawerModalNode = null;
+    this._drawerModalInerted = null;
+    // Escape ownership is coordinated per document (see the module-level
+    // DRAWER_ESCAPE_CONTEXTS block); each instance only registers itself.
+    // Monotonic stamp of the last drawer open on this layout; used as the
+    // "topmost interactive layer" tiebreak when neither the event path nor
+    // the focus chain identifies the Escape owner.
+    this._drawerActivityStamp = 0;
+    // The element that was focused when the drawer was opened; restored on
+    // close so keyboard state does not stay trapped inside the closed panel.
+    // Cleared whenever the last open drawer closes, so a later independent
+    // opening never restores focus to a stale opener.
+    this._drawerFocusReturnTarget = null;
 
 
     this._resizeFallback = () => {
+      this._cancelDrawerGestureOnGeometryChange();
       this._scheduleResponsiveLayout();
       scheduleLayoutPeerGroupRefresh(this._layoutPeerGroup);
     };
     if (typeof ResizeObserver !== 'undefined') {
       this._resizeObserver = new ResizeObserver(() => {
+        this._cancelDrawerGestureOnGeometryChange();
         this._scheduleResponsiveLayout();
         scheduleLayoutPeerGroupRefresh(this._layoutPeerGroup);
       });
     }
+  }
+
+  // A rotation or window resize during a drag invalidates the gesture: its
+  // width was measured at pointerdown, and the surface under the finger has
+  // moved. Platform drawers cancel here, and leaving the drag alive would let
+  // a stale width decide the commit. This is the pointercancel path, so the
+  // drawer returns to exactly the state it had when the gesture began.
+  _cancelDrawerGestureOnGeometryChange() {
+    let gesture = this._drawerGesture;
+    if (!gesture) return false;
+    gesture.target?.releasePointerCapture?.(gesture.pointerId);
+    if (!gesture.pending) {
+      this._clearDrawerDrag(gesture.dock);
+    }
+    this._ignoreNextDrawerClick = null;
+    this._drawerGesture = null;
+    this._setDrawerOpen(gesture.dock, gesture.startOpen, gesture.panelId);
+    return true;
+  }
+
+  // True when the viewport no longer has the inline size this gesture started
+  // on, which is what a rotation or a window resize does. A two-pixel
+  // tolerance keeps layout rounding from cancelling ordinary drags.
+  _drawerGestureGeometryChanged(gesture) {
+    if (!gesture || gesture.pending) return false;
+    let startWidth = gesture.viewportWidth;
+    if (!startWidth) return false;
+    let current = this._getDrawerViewportWidth();
+    if (!current) return false;
+    return Math.abs(current - startWidth) > DRAWER_GEOMETRY_TOLERANCE_PX;
   }
 
   _connectLayoutLifecycle() {
@@ -263,9 +453,16 @@ export class Layout extends Symbiote {
     this.addEventListener('pointerover', this._drawerRailPointerOverHandler);
     this.addEventListener('mouseover', this._drawerRailPointerOverHandler);
     this.addEventListener('click', this._drawerClickCaptureHandler, true);
+    this.addEventListener('keydown', this._drawerKeydownTrapHandler);
+    registerDrawerEscapeListener(this);
     if (this._resizeObserver) {
       this._resizeObserver.observe(this);
-    } else if (this._resizeFallback && typeof window !== 'undefined') {
+    }
+    // The window listener is attached even when an observer exists: rotation
+    // reaches it in the same turn as the event, while a ResizeObserver
+    // callback lands on a later frame. A pointerup delivered in between would
+    // otherwise commit a drag against the new geometry.
+    if (this._resizeFallback && typeof window !== 'undefined') {
       window.addEventListener('resize', this._resizeFallback);
     }
   }
@@ -274,6 +471,7 @@ export class Layout extends Symbiote {
     if (!this._layoutConnectionActive) return;
     this._layoutConnectionActive = false;
     this._resizeObserver?.disconnect();
+    unregisterDrawerEscapeListener(this);
     if (this._resizeFallback && typeof window !== 'undefined') {
       window.removeEventListener('resize', this._resizeFallback);
     }
@@ -284,11 +482,15 @@ export class Layout extends Symbiote {
     this.removeEventListener('pointerover', this._drawerRailPointerOverHandler);
     this.removeEventListener('mouseover', this._drawerRailPointerOverHandler);
     this.removeEventListener('click', this._drawerClickCaptureHandler, true);
+    this.removeEventListener('keydown', this._drawerKeydownTrapHandler);
   }
 
   disconnectedCallback() {
     NATIVE_RAIL_LAYOUTS.delete(this);
     this._unregisterPeerGroup();
+    // A disconnected layout must not leave role/aria-modal/tabindex or inert
+    // behind on nodes that outlive it (they get re-inserted elsewhere).
+    this._clearDrawerModal();
     this._disconnectLayoutLifecycle();
     if (this._responsiveFrame && typeof cancelAnimationFrame !== 'undefined') {
       cancelAnimationFrame(this._responsiveFrame);
@@ -319,7 +521,7 @@ export class Layout extends Symbiote {
 
         if (typeof requestAnimationFrame !== 'undefined') {
           requestAnimationFrame(() => {
-            let allPanels = this.querySelectorAll('layout-node[node-type="panel"]');
+            let allPanels = this._ownedPanelNodes();
 
             let panelExists = Array.from(allPanels).some(
               (p) => p.$.nodeId === this.$.fullscreenPanelId
@@ -813,6 +1015,9 @@ export class Layout extends Symbiote {
         continue;
       }
       matchedPanelIds.add(panel.id);
+      let isGroup = !panel.panelType
+        && (node.$?.isSplit || node.getAttribute?.('node-type') === 'split');
+      toggleAttributeIfChanged(node, 'drawer-group', isGroup);
       setAttributeIfChanged(node, 'mobile-dock', panel.dock);
       toggleAttributeIfChanged(node, 'drawer-primary', panel.dock === 'primary');
       let open = (
@@ -821,6 +1026,11 @@ export class Layout extends Symbiote {
       );
       let rail = panel.swipeControl === 'rail' && (panel.dock === 'start' || panel.dock === 'end');
       this._syncDrawerNodeInteractionState(node, panel, open, rail);
+      if (isGroup) {
+        node.dataset.drawerDock = panel.dock;
+        node.dataset.drawerPanelId = panel.id;
+        node.dataset.swipeControl = panel.swipeControl;
+      }
       toggleAttributeIfChanged(
         node,
         'drawer-active-panel',
@@ -861,6 +1071,17 @@ export class Layout extends Symbiote {
     }
     this._syncNativeRailRegions();
     this._scheduleDrawerRailPeek(startOpen, endOpen);
+    // A projection can be rebuilt while a drawer is already open (rotation,
+    // peer refresh, mode switch). The DOM state is re-applied above, so the
+    // modal contract has to follow: otherwise the drawer comes back open with
+    // a live background, no role and no focus trap.
+    let openDock = startOpen ? 'start' : endOpen ? 'end' : '';
+    if (openDock) {
+      this._drawerActivityStamp = ++drawerActivitySeq;
+      this._applyDrawerModal(openDock);
+    } else if (this._drawerModalNode) {
+      this._clearDrawerModal();
+    }
     let ready = matchedPanelIds.size === projection.panels.length;
     if (ready) {
       this._responsiveProjectionRetryCount = 0;
@@ -885,6 +1106,9 @@ export class Layout extends Symbiote {
   }
 
   _clearDrawerProjection() {
+    // Single teardown path: every route that leaves drawer mode (breakpoint
+    // change, mode switch, teardown) releases the modal contract here.
+    this._clearDrawerModal();
     this._responsiveProjectionRetryCount = 0;
     if (this._responsiveProjectionRetryFrame && typeof cancelAnimationFrame !== 'undefined') {
       cancelAnimationFrame(this._responsiveProjectionRetryFrame);
@@ -909,6 +1133,7 @@ export class Layout extends Symbiote {
 
   _clearDrawerNode(node) {
     node.removeAttribute('mobile-dock');
+    node.removeAttribute('drawer-group');
     node.removeAttribute('drawer-primary');
     node.removeAttribute('drawer-open');
     node.removeAttribute('drawer-active-panel');
@@ -1124,14 +1349,29 @@ export class Layout extends Symbiote {
   }
 
   openDrawer(dock, panelId = '') {
+    // Remember the opener: the first opening after a fully closed state
+    // always records the current focus (the previous target was cleared on
+    // close, so a stale opener is never kept across independent openings).
+    // Re-opening from inside the drawer must not overwrite it (shadow-aware
+    // containment check — focus inside a shadow subtree still counts as "in").
+    // Record the DEEPEST open-shadow focused element as the opener: with a
+    // shadowed trigger, document.activeElement is the non-focusable host and
+    // focusing it later would be a silent no-op. Closed shadow roots are
+    // opaque from outside — descent stops at their host (platform boundary).
+    let active = getDeepActiveElement(this.ownerDocument?.activeElement || null);
+    if (!this._drawerFocusReturnTarget) {
+      this._drawerFocusReturnTarget = active || null;
+    } else if (active && !this._isDrawerFocusWithin(active)) {
+      this._drawerFocusReturnTarget = active;
+    }
     this._setDrawerOpen(dock, true, panelId);
   }
 
   closeDrawer(dock = 'all') {
-    if (dock === 'start' || dock === 'all') this.$.drawerStartOpen = false;
-    if (dock === 'end' || dock === 'all') this.$.drawerEndOpen = false;
-    this._clearDrawerDrag(dock);
-    this._resyncDrawerProjection();
+    // Route every programmatic close through the same funnel as gesture commits
+    // so flags, drag visuals, and the projection cannot drift apart.
+    if (dock === 'start' || dock === 'all') this._setDrawerOpen('start', false);
+    if (dock === 'end' || dock === 'all') this._setDrawerOpen('end', false);
   }
 
   toggleDrawer(dock, panelId = '') {
@@ -1154,6 +1394,177 @@ export class Layout extends Symbiote {
     }
     this._clearDrawerDrag('all');
     this._resyncDrawerProjection();
+    let openDock = this.$.drawerStartOpen ? 'start' : this.$.drawerEndOpen ? 'end' : '';
+    if (openDock) {
+      this._drawerActivityStamp = ++drawerActivitySeq;
+      this._applyDrawerModal(openDock);
+    } else {
+      this._clearDrawerModal();
+      this._restoreDrawerFocusToOpener();
+    }
+    if (open) this._closeVisiblePeerDrawers();
+  }
+
+  // Modal semantics for the backdrop drawer: while a drawer is open it is a
+  // modal dialog surface — background layout-nodes become inert, Tab cycles
+  // inside the drawer, and focus moves into the drawer on open (unless it is
+  // already there). On close everything is reverted and the shared focus
+  // return runs.
+  _applyDrawerModal(dock) {
+    let drawerNode = this._getDrawerNode(dock, this._getActiveDrawerPanelId(dock));
+    if (!drawerNode) return;
+    // A panel switch inside an open dock moves the modal to the new surface:
+    // release the previous one first so no stale role/inert survives.
+    if (this._drawerModalNode && this._drawerModalNode !== drawerNode) this._clearDrawerModal();
+    if (this._drawerModalNode === drawerNode) return;
+    this._drawerModalNode = drawerNode;
+    // Remember what the host owned before we overwrote it. The modal contract
+    // is ours; the values underneath are the product's, and a close must put
+    // them back exactly as they were instead of stripping them.
+    this._drawerModalOwned = {
+      node: drawerNode,
+      role: drawerNode.getAttribute('role'),
+      ariaModal: drawerNode.getAttribute('aria-modal'),
+      tabindex: drawerNode.getAttribute('tabindex'),
+    };
+    drawerNode.setAttribute('role', 'dialog');
+    drawerNode.setAttribute('aria-modal', 'true');
+    drawerNode.setAttribute('tabindex', '-1');
+    this._drawerModalInerted = [];
+    for (let node of this.querySelectorAll('layout-node')) {
+      if (node === drawerNode || node.contains?.(drawerNode) || drawerNode.contains?.(node)) continue;
+      if (!node.hasAttribute('inert')) {
+        node.setAttribute('inert', '');
+        this._drawerModalInerted.push(node);
+      }
+    }
+    this._moveFocusIntoDrawer(drawerNode);
+  }
+
+  // Focus ownership belongs to the OPENING PANEL, not to the whole layout: the
+  // modal is this surface, so focus left anywhere else — background chrome, the
+  // other dock, another surface — is moved into it, landing on the first
+  // reachable control or on the dialog surface itself.
+  _moveFocusIntoDrawer(drawerNode) {
+    let doc = this.ownerDocument;
+    let active = getDeepActiveElement(doc?.activeElement || null);
+    if (active && active !== doc?.body && deepContains(drawerNode, active)) return;
+    let target = this._collectDrawerFocusables(drawerNode)[0] || drawerNode;
+    try { target?.focus?.(); } catch {}
+  }
+
+  _clearDrawerModal() {
+    let owned = this._drawerModalOwned;
+    if (owned?.node) {
+      // Restore only what still holds OUR value: if the host changed the
+      // attribute while the drawer was open, that value now belongs to the
+      // host and must survive the close.
+      for (let [name, previous, applied] of [
+        ['role', owned.role, 'dialog'],
+        ['aria-modal', owned.ariaModal, 'true'],
+        ['tabindex', owned.tabindex, '-1'],
+      ]) {
+        if (owned.node.getAttribute(name) !== applied) continue;
+        if (previous === null) owned.node.removeAttribute(name);
+        else owned.node.setAttribute(name, previous);
+      }
+    }
+    this._drawerModalOwned = null;
+    this._drawerModalNode = null;
+    if (this._drawerModalInerted) {
+      // Only nodes this layout made inert are touched; a node that already
+      // carried `inert` (host-owned) was never recorded here.
+      for (let node of this._drawerModalInerted) node.removeAttribute('inert');
+      this._drawerModalInerted = null;
+    }
+  }
+
+  _onDrawerKeydownTrap(e) {
+    let drawerNode = this._drawerModalNode;
+    if (!drawerNode || e.key !== 'Tab') return;
+    let focusables = this._collectDrawerFocusables(drawerNode);
+    if (!focusables.length) {
+      e.preventDefault();
+      return;
+    }
+    let deep = drawerNode.ownerDocument?.activeElement;
+    while (deep?.shadowRoot?.activeElement && deep.shadowRoot.activeElement !== deep) {
+      deep = deep.shadowRoot.activeElement;
+    }
+    let index = focusables.indexOf(deep);
+    if (index === -1) {
+      // Focus is not on a focusable inside the drawer; if it is within the
+      // drawer at all (e.g. the drawer surface itself), start the cycle.
+      if (deep && deepContains(drawerNode, deep)) {
+        e.preventDefault();
+        try { focusables[e.shiftKey ? focusables.length - 1 : 0].focus?.(); } catch {}
+      }
+      return;
+    }
+    e.preventDefault();
+    let nextIndex = e.shiftKey
+      ? (index - 1 + focusables.length) % focusables.length
+      : (index + 1) % focusables.length;
+    try { focusables[nextIndex].focus?.(); } catch {}
+  }
+
+  // The drawer uses the library's shared focusable collector, so nested open
+  // shadow roots and their slotted content take part in the cycle, in composed
+  // tab order, with disabled/hidden/inert candidates excluded.
+  _collectDrawerFocusables(drawerNode) {
+    return getFocusableElements(drawerNode);
+  }
+
+  // True when `node` is this layout or lives in its subtree, looking through
+  // shadow boundaries (a node inside our shadow root is reached via the host
+  // chain even though `contains` stops at shadow edges).
+  _isDrawerFocusWithin(node) {
+    while (node) {
+      if (node === this || this.contains?.(node)) return true;
+      let root = node.getRootNode?.();
+      node = root && root.host ? root.host : null;
+    }
+    return false;
+  }
+
+  // Closing the last open drawer hands focus back to the recorded opener —
+  // regardless of the close path (Escape, backdrop, button, or swipe) — but
+  // only if focus still sits inside this layout. Focus that already moved
+  // elsewhere (a dialog, another surface) is never hijacked. A disconnected
+  // opener is dropped silently. The record is always cleared, so independent
+  // openings never share a stale return target.
+  _restoreDrawerFocusToOpener() {
+    let returnTo = this._drawerFocusReturnTarget;
+    this._drawerFocusReturnTarget = null;
+    if (!returnTo) return;
+    let documentRef = this.ownerDocument;
+    let active = documentRef?.activeElement;
+    if (active && active !== documentRef?.body && !this._isDrawerFocusWithin(active)) return;
+    if (returnTo.isConnected && typeof returnTo.focus === 'function') {
+      try { returnTo.focus(); } catch {}
+    }
+  }
+
+  // Mobile side-panel surfaces are one system across nested panel-layouts:
+  // the outer dock and any nested portfolio layout each own their own drawer
+  // flags, but on screen only one side panel may be open. When this layout
+  // opens a drawer, every other visible layout still in drawer mode closes
+  // its own, so competing drawers never stack on the shared viewport edge.
+  _closeVisiblePeerDrawers() {
+    let peers = Array.from(new Set([...NATIVE_RAIL_LAYOUTS]));
+    let host = this.getRootNode?.().host;
+    while (host) {
+      if (host.tagName === 'PANEL-LAYOUT') peers.push(host);
+      host = host.getRootNode?.().host;
+    }
+    for (let peer of peers) {
+      if (peer === this || !peer.isConnected) continue;
+      if (typeof peer._isDrawerOpen !== 'function') continue;
+      if (!peer.hasAttribute?.('drawer-mode-active')) continue;
+      if (!isVisibleLayoutPeer(peer)) continue;
+      if (peer._isDrawerOpen('start')) peer._setDrawerOpen('start', false);
+      if (peer._isDrawerOpen('end')) peer._setDrawerOpen('end', false);
+    }
   }
 
   _isDrawerOpen(dock) {
@@ -1186,6 +1597,7 @@ export class Layout extends Symbiote {
       panelId,
       startX: e.clientX,
       width,
+      viewportWidth: this._getDrawerViewportWidth(),
       startOpen,
       prepared: false,
       moved: false,
@@ -1194,6 +1606,15 @@ export class Layout extends Symbiote {
     this._setDrawerGestureDragging(this._drawerGesture);
     target?.setPointerCapture?.(e.pointerId);
     e.preventDefault();
+  }
+
+  // The inline size the viewport had for this gesture. The drawer node's own
+  // box cannot be used for this: while an opening drag runs, the node tracks
+  // the finger and its width changes as a result of the gesture, which is not
+  // a geometry change at all.
+  _getDrawerViewportWidth() {
+    if (typeof window !== 'undefined' && window.innerWidth) return window.innerWidth;
+    return this.clientWidth || 0;
   }
 
   _onDrawerRailPointerDown(e) {
@@ -1239,6 +1660,7 @@ export class Layout extends Symbiote {
       startX: e.clientX,
       startY: e.clientY,
       width,
+      viewportWidth: this._getDrawerViewportWidth(),
       startOpen: true,
       prepared: false,
       moved: false,
@@ -1246,12 +1668,19 @@ export class Layout extends Symbiote {
       target,
       source: 'content',
     };
-    this._captureDrawerGesturePointer(this._drawerGesture);
+    // No pointer capture while the gesture is only pending. Capturing here
+    // retargets the compatibility mouse events, so the browser refuses to
+    // synthesise a click and a plain tap on a row reached nothing at all —
+    // the row was visible, hittable, and inert. Capture happens when the
+    // gesture activates, which is where a swipe needs to own the pointer.
   }
 
   _isDrawerContentSwipeBlocked(target) {
+    // Tree rows are intentionally NOT blocked: a horizontal drag starting on a
+    // row must still drive the drawer (the click gate swallows the trailing
+    // synthetic click); only a genuine tap selects the row.
     return Boolean(target?.closest?.(
-      'button, a, input, textarea, select, [contenteditable="true"], .sn-tree-row, [role="treeitem"], .split-resizer, canvas, node-canvas, canvas-graph'
+      'button, a, input, textarea, select, [contenteditable="true"], .split-resizer, canvas, node-canvas, canvas-graph'
     ));
   }
 
@@ -1267,6 +1696,7 @@ export class Layout extends Symbiote {
       startX: e.clientX,
       startY: e.clientY,
       width: this._getFallbackDrawerWidth(),
+      viewportWidth: this._getDrawerViewportWidth(),
       startOpen: false,
       prepared: false,
       moved: false,
@@ -1300,6 +1730,7 @@ export class Layout extends Symbiote {
     let delta = e.clientX - gesture.startX;
     if (gesture.pending && !this._activatePendingDrawerGesture(gesture, e, delta)) return;
     if (Math.abs(delta) > 4) gesture.moved = true;
+    this._recordDrawerGestureSample(gesture, e.clientX);
     if (gesture.moved && !gesture.prepared) {
       this._setActiveDrawerPanelId(gesture.dock, gesture.panelId);
       this._prepareDrawerPanelForGesture(gesture.dock, gesture.panelId);
@@ -1308,6 +1739,22 @@ export class Layout extends Symbiote {
     let progress = this._getDrawerGestureProgress(gesture, delta);
     this._applyDrawerProgress(gesture.dock, progress, gesture.width, gesture.panelId);
     e.preventDefault();
+  }
+
+
+  // Called by the per-document Escape coordinator after this layout was
+  // elected the owner of the keypress (see electDrawerEscapeOwner). This
+  // layout closes exactly its own open drawer; focus is returned by the
+  // shared close path (_restoreDrawerFocusToOpener).
+  _consumeDrawerEscape(e) {
+    const dock = this.$.drawerStartOpen ? 'start' : this.$.drawerEndOpen ? 'end' : '';
+    if (!dock) return;
+    e.preventDefault();
+    e.stopPropagation();
+    // Legacy settle marker: any out-of-band listener from an older copy of
+    // this module on the same document still sees the event as handled.
+    e.__snLayoutDrawerSettled = true;
+    this.closeDrawer(dock);
   }
 
   _onDrawerPointerUp(e) {
@@ -1319,16 +1766,32 @@ export class Layout extends Symbiote {
       return;
     }
     let delta = e.clientX - gesture.startX;
+    // The commit is only meaningful against the geometry the drag started on.
+    // A rotation can reach pointerup before the resize event is delivered, so
+    // the width is re-checked here instead of trusting event ordering: a
+    // changed surface turns this release into a cancel, exactly like
+    // pointercancel, and the drawer returns to its pre-gesture state.
+    if (this._drawerGestureGeometryChanged(gesture)) {
+      this._cancelDrawerGestureOnGeometryChange();
+      return;
+    }
     let progress = this._getDrawerGestureProgress(gesture, delta);
     let committedDrag = gesture.moved && Math.abs(delta) >= this._getDrawerGestureDragThreshold(gesture);
-    let open = committedDrag
-      ? progress >= 0.5
-      : gesture.source === 'rail' ? !gesture.startOpen : progress >= 0.5;
+    // A fast flick commits on direction alone, even below the drag threshold:
+    // that is what makes a short, quick swipe feel responsive. Slow drags keep
+    // the distance rule, so a half-width pull is still the boundary.
+    let flick = this._isDrawerFlick(gesture, delta, e.clientX);
+    let open = flick
+      ? (gesture.dock === 'start' ? delta > 0 : delta < 0)
+      : committedDrag
+        ? progress >= 0.5
+        : gesture.source === 'rail' ? !gesture.startOpen : progress >= 0.5;
     if (gesture.moved) {
       this._ignoreNextDrawerClick = {
         pointerId: gesture.pointerId,
         panelId: gesture.panelId,
         target: gesture.target,
+        gesture: true,
         expiresAt: this._drawerNow() + 700,
       };
       e.preventDefault();
@@ -1404,6 +1867,47 @@ export class Layout extends Symbiote {
     return Math.min(48, Math.max(16, gesture.width * 0.08));
   }
 
+  // A flick is decided by the speed of the LAST part of the gesture, the way
+  // platform drawers behave: a long slow drag that ends with a nudge and a
+  // short fast one must not be classified the same. Samples are pruned to a
+  // short trailing window, so the velocity is px/ms over that window.
+  _recordDrawerGestureSample(gesture, clientX) {
+    if (!gesture.samples) gesture.samples = [];
+    const now = this._drawerNow();
+    gesture.samples.push({ t: now, x: clientX });
+    const windowMs = DRAWER_FLICK_VELOCITY_WINDOW_MS;
+    while (gesture.samples.length > 2 && now - gesture.samples[0].t > windowMs) {
+      gesture.samples.shift();
+    }
+  }
+
+  _getDrawerFlickVelocity(gesture, clientX) {
+    const samples = gesture.samples;
+    if (!samples || samples.length < 2) return 0;
+    const last = { t: this._drawerNow(), x: clientX ?? samples[samples.length - 1].x };
+    // Sample ages shrink with the index, so the FIRST sample inside the
+    // window is the oldest one that still describes the current motion.
+    let first = samples[samples.length - 1];
+    for (let index = 0; index < samples.length; index += 1) {
+      if (last.t - samples[index].t <= DRAWER_FLICK_VELOCITY_WINDOW_MS) {
+        first = samples[index];
+        break;
+      }
+    }
+    const duration = last.t - first.t;
+    if (duration <= 0) return 0;
+    return (last.x - first.x) / duration;
+  }
+
+  // Commit rule for a flick: the finger travels toward the side it opens, for
+  // every source. start opens rightwards, end leftwards; the same formula is
+  // correct whether the drawer was open or closed, so no startOpen special
+  // case can drift out of sync with the progress mapping above.
+  _isDrawerFlick(gesture, delta, clientX) {
+    if (!gesture.moved) return false;
+    return Math.abs(this._getDrawerFlickVelocity(gesture, clientX)) >= DRAWER_FLICK_MIN_VELOCITY;
+  }
+
   _drawerNow() {
     return globalThis.performance?.now?.() || Date.now();
   }
@@ -1411,7 +1915,15 @@ export class Layout extends Symbiote {
   _onDrawerClickCapture(e) {
     if (!this.hasAttribute('drawer-mode-active')) return;
     let target = e.target;
-    let drawerNode = target?.closest?.('layout-node[mobile-dock="start"], layout-node[mobile-dock="end"]');
+    // Shadow-aware lookup: a click target inside a layout-node shadow root
+    // does not reach the node via `closest` — the composed path does.
+    let path = typeof e.composedPath === 'function' ? e.composedPath() : null;
+    let drawerNode = path?.length
+      ? path.find((node) => node?.matches?.('layout-node[mobile-dock="start"], layout-node[mobile-dock="end"]')) || null
+      : null;
+    if (!drawerNode) {
+      drawerNode = target?.closest?.('layout-node[mobile-dock="start"], layout-node[mobile-dock="end"]');
+    }
     if (!drawerNode || !this.contains(drawerNode)) return;
     let panelId = drawerNode.dataset.drawerPanelId || '';
     let token = this._ignoreNextDrawerClick;
@@ -1422,19 +1934,37 @@ export class Layout extends Symbiote {
     // A real content click must remain usable immediately after opening a
     // drawer. The synthetic click generated by a rail gesture is identified by
     // the matching panel token and, when available, the original gesture target.
-    let contentClick = target.closest?.('.sn-tree-row, [role="treeitem"], [data-tree-row]');
-    if (contentClick) return;
-    let syntheticClick = token
-      && token.panelId === panelId
-      && (!token.target || token.target === target || token.target.contains?.(target));
-    let suppress = syntheticClick
-      || drawerNode.hasAttribute('drawer-rail-collapsed')
-      || drawerNode.hasAttribute('drawer-dragging');
+    let isContentRow = (node) => node?.matches?.('.sn-tree-row, [role="treeitem"], [data-tree-row]');
+    let contentClick = path?.length
+      ? path.find(isContentRow) || null
+      : target.closest?.('.sn-tree-row, [role="treeitem"], [data-tree-row]');
+    // Gesture-derived tokens suppress by panel identity alone: the trailing
+    // click is dispatched at the RELEASE point, which belongs to the drawer
+    // that just slid under the finger — never to the surface where the
+    // gesture started (recorded in token.target). The legacy rail-collapse
+    // toggle token keeps the strict target containment, so a row tap is free.
+    let syntheticClick = token && token.panelId === panelId
+      && (token.gesture === true
+        || !token.target
+        || token.target === target
+        || token.target.contains?.(target));
+    // A gesture-derived token swallows the synthetic click regardless of
+    // where on the panel it lands (incl. tree rows); a plain rail-collapse
+    // toggle token only swallows the non-content area it owns, leaving a
+    // row tap free.
+    if (syntheticClick && token.gesture !== true && contentClick) return;
+    // Only clicks belonging to an in-flight gesture surface are swallowed;
+    // a live user tap on a tree row never is.
+    let suppress = syntheticClick || drawerNode.hasAttribute('drawer-dragging');
     if (!suppress) return;
+    if (!syntheticClick && contentClick) return;
+    let onCollapseBtn = path?.length
+      ? path.some((node) => node?.matches?.('.collapse-btn'))
+      : Boolean(target.closest?.('.collapse-btn'));
+    if (onCollapseBtn) return;
     if (syntheticClick) {
       this._ignoreNextDrawerClick = null;
     }
-    if (target.closest?.('.collapse-btn')) return;
     e.preventDefault();
     e.stopPropagation();
     e.stopImmediatePropagation?.();
@@ -1706,7 +2236,7 @@ export class Layout extends Symbiote {
     let panelNode = this._findPanelNode(panelId);
     if (!panelNode) return;
 
-    let allPanels = this.querySelectorAll('layout-node[node-type="panel"]');
+    let allPanels = this._ownedPanelNodes();
 
     if (this.$.fullscreenPanelId === panelId) {
 
@@ -1771,7 +2301,7 @@ export class Layout extends Symbiote {
     setStylePropertyIfChanged(this.style, '--sn-layout-fullscreen-host-bottom', '0px');
   }
   _updateTabItems(allPanels, activePanelId) {
-    let panels = allPanels || this.querySelectorAll('layout-node[node-type="panel"]');
+    let panels = allPanels || this._ownedPanelNodes();
     let activeId = activePanelId || this.$.fullscreenPanelId;
 
     this.$.tabItems = Array.from(panels).map((p) => {
@@ -1788,7 +2318,7 @@ export class Layout extends Symbiote {
     });
   }
   _switchFullscreenPanel(panelId) {
-    let allPanels = this.querySelectorAll('layout-node[node-type="panel"]');
+    let allPanels = this._ownedPanelNodes();
     let newPanel = this._findPanelNode(panelId);
     if (!newPanel) return;
 
@@ -1813,9 +2343,15 @@ export class Layout extends Symbiote {
 
     this._updateTabItems(allPanels, panelId);
   }
+  _ownedPanelNodes() {
+    // Ownership check: nested panel-layouts manage their own nodes. Their
+    // panels must not appear in this layout's fullscreen tab bar and must not
+    // be toggled by this layout's fullscreen transitions.
+    return Array.from(this.querySelectorAll('layout-node[node-type="panel"]'))
+      .filter((p) => p.closest('panel-layout') === this);
+  }
   _findPanelNode(panelId) {
-    let nodes = this.querySelectorAll('layout-node[node-type="panel"]');
-    for (const node of nodes) {
+    for (const node of this._ownedPanelNodes()) {
       if (node.$.nodeId === panelId) {
         return node;
       }
@@ -2006,7 +2542,7 @@ export class Layout extends Symbiote {
     return LayoutTree.clone(this.$.layoutTree);
   }
   setLayout(layout) {
-    let allPanels = this.querySelectorAll('layout-node[node-type="panel"]');
+    let allPanels = this._ownedPanelNodes();
     allPanels.forEach((panelNode) => {
       panelNode.removeAttribute('fullscreen');
       panelNode.$.isFullscreen = false;

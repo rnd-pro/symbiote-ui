@@ -4074,6 +4074,7 @@ export let COMPONENTS = [
         '--sn-layout-header-button-min-inline-size',
         '--sn-layout-header-button-min-block-size',
         '--sn-layout-header-button-block-size',
+        '--sn-layout-header-button-hit-size',
         '--sn-layout-sidebar-header-bg',
         '--sn-layout-sidebar-header-border',
         '--sn-layout-sidebar-header-button-hover-bg',
@@ -6211,6 +6212,7 @@ export let COMPONENTS = [
       themeAliases: [
         '--sn-tree-row-height',
         '--sn-tree-indent',
+        '--sn-tree-toggle-touch-width',
         '--sn-tree-icon-size',
         '--sn-tree-row-radius',
         '--sn-tree-row-selected-bg',

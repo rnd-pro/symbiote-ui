@@ -1256,4 +1256,11 @@ export {
 } from './live-captions.js';
 export { Collection } from './collection.js';
 export { setupRovingFocus } from './roving-focus.js';
+export {
+  CLICK_RIPPLE_CLASS,
+  CLICK_RIPPLE_DURATION_MS,
+  CLICK_RIPPLE_STYLE_ID,
+  ensureClickRippleStyles,
+  showClickRipple,
+} from './click-ripple.js';
 export { Typeahead } from './typeahead.js';

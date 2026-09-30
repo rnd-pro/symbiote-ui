@@ -201,9 +201,18 @@ export let styles = css`
         overflow: hidden;
       }
 
-      layout-node[node-type='split'][mobile-dock='primary'] > .split-view > .split-first,
+      layout-node[node-type='split'][mobile-dock='primary'] > .split-view > .split-first {
+        display: flex !important;
+        flex: 1 1 0%;
+        min-width: 0;
+        min-height: 0;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
       layout-node[node-type='split'][mobile-dock='primary'] > .split-view > .split-second {
         display: flex !important;
+        flex: 0 0 auto;
         flex-direction: column;
         overflow: hidden;
       }
@@ -216,6 +225,111 @@ export let styles = css`
         position: relative;
         inset: auto;
         transform: none !important;
+      }
+
+      /* Drawer group members render inline inside their group surface; the
+         geometry is owned here, never by imperative inline styles. */
+      layout-node[drawer-group-member] {
+        position: relative;
+        inset: auto;
+        transform: none !important;
+        flex: none;
+      }
+
+
+      /* The header sits flush with the panel edge, so a target centred on its
+         controls still lost the part above the panel, and the drawer marks its
+         own header padding !important. Naming the panel attribute gives this
+         rule enough weight to reserve the room the target claims around a
+         control, taken from the same theme tokens the target is built from. */
+      layout-node[mobile-dock='start'][node-type='panel'] .panel-view > .panel-header,
+      layout-node[mobile-dock='end'][node-type='panel'] .panel-view > .panel-header {
+        padding-block: max(
+          var(--sn-layout-header-padding-block, 0px),
+          calc(var(--sn-layout-header-button-hit-size, 44px) - var(--sn-layout-header-button-min-block-size, 24px)) / 2
+        ) !important;
+        /* A drawer sits flush to the screen edge, so the outermost control
+           could not grow outward. It gets the same room, inward. */
+        padding-inline-end: max(
+          var(--sn-layout-header-padding-inline-end, 4px),
+          calc(var(--sn-layout-header-button-hit-size, 44px) - var(--sn-layout-header-button-min-inline-size, 24px)) / 2
+        ) !important;
+      }
+
+      layout-node[mobile-dock='start'][drawer-open] .panel-actions,
+      layout-node[mobile-dock='end'][drawer-open] .panel-actions {
+        overflow: visible;
+      }
+
+      layout-node[mobile-dock='start'][drawer-open] .panel-header,
+      layout-node[mobile-dock='end'][drawer-open] .panel-header {
+        overflow: visible;
+      }
+
+      layout-node[mobile-dock='start'][drawer-open] .header-btn,
+      layout-node[mobile-dock='end'][drawer-open] .header-btn {
+        z-index: 1;
+      }
+
+      layout-node[mobile-dock='start'],
+      layout-node[mobile-dock='end'] {
+        /* Touch-sized toggle column for the drawer surfaces. The value comes
+           from the theme scale (--sn-tree-toggle-touch-width, density-driven),
+           not from a pixel written here. The fallback is that same touch column
+           at the base density: a component token may not read the source-tier
+           density token directly, so scaling stays the theme's job. */
+        --sn-tree-toggle-width: var(--sn-tree-toggle-touch-width, 24px);
+
+        /* A header control can only grow its pressable box into the space its
+           neighbours leave, and the drawer header leaves --sn-layout-header-gap
+           (2px by default). A theme asking for a 44px target therefore got a
+           26px one, silently. This is the effective gap for the touch surface:
+           the theme's own value, or the room the requested target needs,
+           whichever is larger. It is read by BOTH the header layout and the
+           hit-area clamp, so the two can never disagree, and it is defined
+           once here rather than through a second sizing system. */
+        --header-effective-gap: max(
+          var(--sn-layout-header-gap, 2px),
+          calc(var(--sn-layout-header-button-hit-size, 44px) - var(--sn-layout-header-button-min-block-size, 24px))
+        );
+
+        /* The action group clips its overflow so a crowded header cannot paint
+           outside its column. On a touch surface that also clipped the grown
+           hit box back to the painted height, which is why a 44px target still
+           measured 25px. The target is transparent, so letting it pass the
+           column edge changes what a tap can reach, never what is painted. */
+
+        /* The header clips for the same reason, and it is the tighter of the
+           two: at 31px tall it held the target at 29px even with the room
+           available. The title keeps its own clip for the ellipsis, so nothing
+           that was being hidden by the header needs it. */
+
+        /* Panel content paints directly below the header and covered the lower
+           half of the grown target, so a tap in that strip went to the content.
+           Lifting the control above it is what lets the requested target be
+           real; the strip it takes is the space the theme asked to reserve. */
+      }
+
+      /* Safe-area insets keep drawer CONTENT out of a notch or home indicator
+         while the panel itself stays flush to the screen edge: the background
+         is clipped to the padding box, so the surface still covers the inset.
+         env() is 0 on devices without insets, which leaves every existing
+         rendering untouched; a host that already pads its own content sets the
+         token to 0px. */
+      layout-node[node-type='panel'][mobile-dock='start'],
+      layout-node[node-type='panel'][mobile-dock='end'] {
+        --sn-layout-drawer-safe-area-block-end: env(safe-area-inset-bottom, 0px);
+        --sn-layout-drawer-safe-area-inline-start: env(safe-area-inset-left, 0px);
+        --sn-layout-drawer-safe-area-inline-end: env(safe-area-inset-right, 0px);
+        padding-block-end: var(--sn-layout-drawer-safe-area-block-end, 0px);
+      }
+
+      layout-node[node-type='panel'][mobile-dock='start'] {
+        padding-inline-start: var(--sn-layout-drawer-safe-area-inline-start, 0px);
+      }
+
+      layout-node[node-type='panel'][mobile-dock='end'] {
+        padding-inline-end: var(--sn-layout-drawer-safe-area-inline-end, 0px);
       }
 
       layout-node[node-type='panel'] {

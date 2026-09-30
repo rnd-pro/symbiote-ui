@@ -81,7 +81,7 @@
         "snapshot": { "$ref": "#/$defs/playbackSnapshot" },
         "resume": { "const": "explicit" },
         "explicit": { "const": true },
-        "mode": { "enum": ["cursor", "frame", "native-selection", "click", "marker", "short-muted-montage", "short-inline-continuous", "full-with-media-audio"] },
+        "mode": { "enum": ["cursor", "frame", "native-selection", "click", "marker", "short-muted-montage", "short-inline-continuous", "full-with-media-audio", "spinner-rotation"] },
         "targetId": { "type": "string" },
         "marker": { "enum": ["freehand", "underline", "oval", "multi-oval", "arrow", "converging-arrows", "route", "bidirectional-route", "parallel-route", "label", "number", "box", "bracket", "slash"] },
         "requestedMarker": { "const": "ovals" },
@@ -183,7 +183,7 @@
           "type": "object",
           "properties": {
             "type": { "const": "media" },
-            "mode": { "enum": ["short-muted-montage", "short-inline-continuous", "full-with-media-audio"] },
+            "mode": { "enum": ["short-muted-montage", "short-inline-continuous", "full-with-media-audio", "spinner-rotation"] },
             "mediaId": true
           },
           "required": ["mediaId", "mode"],
