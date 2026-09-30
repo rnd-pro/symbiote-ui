@@ -1642,56 +1642,6 @@ function projectFocusLayer(layer, timeMs, viewport) {
   };
 }
 
-function projectFocusLayer(layer, timeMs, viewport) {
-  let hidden = {
-    visible: false,
-    left: 0,
-    top: 0,
-    width: 0,
-    height: 0,
-    opacity: 0,
-    antsDashOffset: 0,
-    revealProgress: 0,
-    revealing: false,
-    dragHandle: null,
-    targetRect: null,
-  };
-  if (!layer?.active || !layer.rect || Number(timeMs) < layerStartMs(layer)) return hidden;
-
-  let targetRect = clampPresenterRect(layer.rect, viewport);
-  let duration = Math.max(
-    PRESENTER_FRAME_MS,
-    Number(layer.durationMs ?? layer.duration) || PRESENTER_FOCUS_REVEAL_DURATION_MS,
-  );
-  let elapsed = frameElapsed(timeMs, layer, duration);
-  let timeProgress = Math.min(1, elapsed / duration);
-  let revealProgress = easeInOutCubic(timeProgress);
-  let width = revealProgress >= 1
-    ? targetRect.width
-    : Math.min(targetRect.width, Math.max(1, targetRect.width * revealProgress));
-  let height = revealProgress >= 1
-    ? targetRect.height
-    : Math.min(targetRect.height, Math.max(1, targetRect.height * revealProgress));
-  let marchTime = frameElapsed(timeMs, layer, Number.MAX_SAFE_INTEGER);
-
-  return {
-    visible: true,
-    left: targetRect.left,
-    top: targetRect.top,
-    width,
-    height,
-    opacity: 1,
-    antsDashOffset: -8 * ((marchTime % MARCH_MS) / MARCH_MS),
-    revealProgress,
-    revealing: timeProgress < 1,
-    dragHandle: {
-      x: targetRect.left + width,
-      y: targetRect.top + height,
-      visible: timeProgress < 1,
-    },
-    targetRect,
-  };
-}
 
 export function projectPresenterState(layers = {}, timeMs = 0, seed = 0, viewport = {}) {
   seed = normalizePresenterSeed(seed);
@@ -3045,35 +2995,6 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
         accumulatedCount: accumulatedAnnotationPaths.size,
       };
     }
-    annotation = layout.annotation;
-    let drawRect = layout.drawRect;
-    let startPoint = projectStrokePoint(
-      layout.plan,
-      seed,
-      0,
-      strokeJitterAmplitude(seed),
-      viewport,
-    );
-    let strokeLayer = {
-      active: true,
-      rect: drawRect,
-      targetRect: rect,
-      placement: annotation.placement,
-      obstacles: Array.isArray(frame.obstacles) ? frame.obstacles : [],
-      viewport,
-      layout,
-    };
-
-    let layers = {
-      focus: { active: false },
-      marker: annotation.kind === 'marker' ? { ...strokeLayer, name: annotation.marker } : null,
-      symbol: annotation.kind === 'symbol' ? { ...strokeLayer, name: annotation.symbol } : null,
-      click: null,
-      cursor: { active: true, x: startPoint.x, y: startPoint.y },
-    };
-
-    let projected = projectPresenterState(layers, progress * GESTURE_MS, seed, viewport);
-
     cancelTravel();
     cancelDrag();
     cancelGesture();
