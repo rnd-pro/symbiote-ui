@@ -2994,6 +2994,34 @@ export function createPresenterCursor(doc = typeof document !== 'undefined' ? do
         accumulatedCount: accumulatedAnnotationPaths.size,
       };
     }
+    annotation = layout.annotation;
+    let drawRect = layout.drawRect;
+    let startPoint = projectStrokePoint(
+      layout.plan,
+      seed,
+      0,
+      strokeJitterAmplitude(seed),
+      viewport,
+    );
+    let strokeLayer = {
+      active: true,
+      rect: drawRect,
+      targetRect: rect,
+      placement: annotation.placement,
+      obstacles: Array.isArray(frame.obstacles) ? frame.obstacles : [],
+      viewport,
+      layout,
+    };
+
+    let layers = {
+      focus: { active: false },
+      marker: annotation.kind === 'marker' ? { ...strokeLayer, name: annotation.marker } : null,
+      symbol: annotation.kind === 'symbol' ? { ...strokeLayer, name: annotation.symbol } : null,
+      click: null,
+      cursor: { active: true, x: startPoint.x, y: startPoint.y },
+    };
+
+    let projected = projectPresenterState(layers, progress * GESTURE_MS, seed, viewport);
 
     cancelTravel();
     cancelDrag();

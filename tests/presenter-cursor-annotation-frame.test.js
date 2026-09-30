@@ -187,6 +187,28 @@ test('wide freehand ink stays proportional at every tour resolution', () => {
   cursor.dispose();
 });
 
+test('deterministic focus frame projects cursor and frame modes without scheduling animation', () => {
+  let window = makeDom();
+  let cursor = createPresenterCursor(window.document);
+  let el = target(window.document, { left: 180, top: 140, width: 100, height: 80 });
+
+  let framed = cursor.presentFocusFrame(el, { elapsedMs: 0, seed: 7, mode: 'frame' });
+  assert.equal(framed.presented, true);
+  assert.equal(framed.visible, true);
+  assert.equal(framed.mode, 'frame');
+  assert.equal(framed.cursor, null);
+  assert.equal(window.document.querySelector('.pc-cursor').style.opacity, '0');
+
+  let pointed = cursor.presentFocusFrame(el, { elapsedMs: 250, seed: 7, mode: 'cursor' });
+  assert.equal(pointed.mode, 'cursor');
+  assert.equal(pointed.cursor.visible, true);
+  assert.equal(window.document.querySelector('.pc-cursor').style.opacity, '1');
+  assert.notEqual(pointed.antsDashOffset, framed.antsDashOffset);
+  assert.deepEqual(pointed.frameRect, framed.frameRect);
+
+  cursor.dispose();
+});
+
 test('deterministic annotation frame clamps progress and respects explicit seed', () => {
   let window = makeDom();
   let cursor = createPresenterCursor(window.document);

@@ -32,6 +32,17 @@ All notable changes to `symbiote-ui` will be documented in this file.
   100ms of the gesture and a flick commits on direction alone, for every source
   and for both docks; slow drags keep the distance rule.
 
+- Programmatic chat composer updates now resize and scroll the input to the
+  newest text without stealing focus, while changed drafts and real typing
+  refresh the workspace's existing background activity.
+- Unified timed live-caption segmentation with rendered captions. Authored live
+  speech now keeps exact text and word timing while using the same bounded
+  five-word cue cadence, so large vertical captions remain readable instead of
+  failing on a full spoken turn.
+- Added synchronous `presentFocusFrame()` projection with separate cursor and
+  frame modes, media-time-driven marching ants, and returned target/frame
+  geometry so live capture and offline rendering share the same focus pixels.
+
 ### Added
 
 - Drawer panels keep the screen edge and move their content out from under
