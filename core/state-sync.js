@@ -108,13 +108,56 @@ export function createStateSync(config = {}) {
     // Notify all known keys
     let keys = new Set([...Object.keys(_state), ..._listeners.keys()])
     _notify([...keys])
+    return 'applied'
   }
 
-  /** Apply a delta patch. */
+  /**
+   * Apply one protocol message from a transport this object does not own.
+   *
+   * `connect` handles a WebSocket it opens itself, which is the right answer
+   * when the page holds the socket. It is the wrong answer when the data arrives
+   * from somewhere else — a service worker, a message channel, a socket held by
+   * somebody upstream — and those consumers were left reaching into `__test` to
+   * apply a message, because there was no other way in.
+   *
+   * @param {{method?: string, params?: object}} msg
+   * @returns {'applied'|'ignored'|'gap'} `gap` means the stream skipped a version
+   *   and the caller should ask for a fresh snapshot rather than patch onwards.
+   */
+  function ingest(msg) {
+    if (!msg || typeof msg !== 'object') return 'ignored'
+    if (msg.method === 'snapshot') return _applySnapshot(msg.params || {})
+    if (msg.method === 'patch') return _applyPatch(msg.params || {})
+    return 'ignored'
+  }
+
+  /**
+   * Apply a delta patch — the whole batch, or none of it.
+   *
+   * A batch is the unit. Either every op in it lands and one notification goes
+   * out, or the state is left exactly as it was: a half-applied batch is a UI
+   * showing two facts from different moments, which is the thing a versioned
+   * store exists to prevent.
+   *
+   * @returns {'applied'|'ignored'|'gap'} what the batch did
+   */
   function _applyPatch(params) {
-    let { v, ops } = params
-    if (!ops) return
-    _version = v
+    let { base, v, ops } = params
+    if (!Array.isArray(ops) || ops.length === 0) return 'ignored'
+    // A malformed op must not be discovered halfway through, after the earlier
+    // ones have already moved the state.
+    for (let op of ops) {
+      if (!op || typeof op.path !== 'string' || op.path === '') return 'ignored'
+    }
+    // Versions only ever move forward. A batch at or below what we hold is a
+    // duplicate or a straggler from a reconnect — applying it would undo newer
+    // state, and idempotence here is cheaper than a resync.
+    if (typeof v === 'number' && v <= _version) return 'ignored'
+    // A batch claiming to follow a version we never got is a hole in the
+    // stream. The caller must resync; guessing is what this prevents.
+    if (typeof base === 'number' && base !== _version) return 'gap'
+
+    let nextVersion = typeof v === 'number' ? v : _version + 1
     let affected = []
     for (let op of ops) {
       let path = op.path
@@ -151,7 +194,9 @@ export function createStateSync(config = {}) {
         obj[parts[parts.length - 1]] = op.value
       }
     }
+    _version = nextVersion
     _notify(affected)
+    return 'applied'
   }
 
   /**
@@ -184,8 +229,7 @@ export function createStateSync(config = {}) {
       try {
         let msg = JSON.parse(data)
         if (_onMessage) _onMessage(msg)
-        if (msg.method === 'snapshot') _applySnapshot(msg.params)
-        else if (msg.method === 'patch') _applyPatch(msg.params)
+        ingest(msg)
       } catch (e) {
         console.error('[stateSync] parse error:', e)
       }
@@ -216,8 +260,11 @@ export function createStateSync(config = {}) {
     on,
     get,
     commit,
+    ingest,
     connect,
     disconnect,
+    /** The version currently held. */
+    get version() { return _version },
     __test: {
       applySnapshot: _applySnapshot,
       applyPatch: _applyPatch,
