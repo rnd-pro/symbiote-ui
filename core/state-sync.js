@@ -24,6 +24,8 @@ export function createStateSync(config = {}) {
   let _reconnectTimer = null
   /** @type {number} last known version */
   let _version = 0
+  /** @type {string|null} which publisher run these versions came from */
+  let _epoch = null
   /** @type {object} local state mirror */
   let _state = {}
   /** @type {Map<string, Set<Function>>} */
@@ -105,6 +107,7 @@ export function createStateSync(config = {}) {
   function _applySnapshot(params) {
     _state = params.state || {}
     _version = params.v || 0
+    if (params.epoch != null) _epoch = params.epoch
     // Notify all known keys
     let keys = new Set([...Object.keys(_state), ..._listeners.keys()])
     _notify([...keys])
@@ -149,6 +152,11 @@ export function createStateSync(config = {}) {
     for (let op of ops) {
       if (!op || typeof op.path !== 'string' || op.path === '') return 'ignored'
     }
+    // A different generation is a different publisher, not a straggler: a
+    // restarted server starts its versions again from zero. Ignoring its batches
+    // would leave the consumer holding the previous run's state forever, without
+    // any signal that anything was wrong — so this asks for a resync instead.
+    if (params.epoch != null && _epoch != null && params.epoch !== _epoch) return 'gap'
     // Versions only ever move forward. A batch at or below what we hold is a
     // duplicate or a straggler from a reconnect — applying it would undo newer
     // state, and idempotence here is cheaper than a resync.
@@ -195,6 +203,7 @@ export function createStateSync(config = {}) {
       }
     }
     _version = nextVersion
+    if (params.epoch != null) _epoch = params.epoch
     _notify(affected)
     return 'applied'
   }
@@ -265,6 +274,8 @@ export function createStateSync(config = {}) {
     disconnect,
     /** The version currently held. */
     get version() { return _version },
+    /** Which publisher run the held version came from. */
+    get epoch() { return _epoch },
     __test: {
       applySnapshot: _applySnapshot,
       applyPatch: _applyPatch,

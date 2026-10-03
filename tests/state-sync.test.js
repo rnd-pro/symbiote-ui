@@ -82,6 +82,22 @@ describe('applying a message from an external transport', () => {
     assert.equal(sync.get('title'), 'after restart')
   })
 
+  it('asks to resync when a new publisher generation starts counting again', () => {
+    // A restarted server begins its versions from zero. Its batches are not
+    // stragglers, and ignoring them would leave this consumer on the previous
+    // run's state with no signal that anything was wrong.
+    const sync = createStateSync()
+    sync.ingest({ method: 'snapshot', params: { v: 40, epoch: 'run-a', state: { title: 'before' } } })
+    const verdict = sync.ingest({ method: 'patch', params: { v: 1, epoch: 'run-b', ops: [{ op: 'set', path: 'title', value: 'after' }] } })
+
+    assert.equal(verdict, 'gap')
+    assert.equal(sync.get('title'), 'before')
+    // The fresh snapshot that answers it is taken as authoritative.
+    assert.equal(sync.ingest({ method: 'snapshot', params: { v: 1, epoch: 'run-b', state: { title: 'after' } } }), 'applied')
+    assert.equal(sync.get('title'), 'after')
+    assert.equal(sync.epoch, 'run-b')
+  })
+
   it('merges without dropping what it already had', () => {
     const sync = createStateSync()
     sync.ingest({ method: 'snapshot', params: { v: 1, state: { chats: { c1: { id: 'c1', name: 'Chat' } } } } })
