@@ -8,7 +8,7 @@ sn-button {
   min-width: 0;
   min-height: var(--sn-button-min-height, 28px);
   padding: var(--sn-button-padding, 4px 12px);
-  border: 1px solid var(--sn-button-border);
+  border: var(--sn-button-border-width, 1px) solid var(--sn-button-border);
   border-radius: var(--sn-button-radius, 4px);
   background: var(--sn-button-bg);
   color: var(--sn-button-color);
@@ -31,10 +31,12 @@ sn-button[hidden] {
 sn-button:hover:not([disabled]):not([loading]) {
   border-color: var(--sn-button-hover-border, var(--sn-sys-outline));
   background: var(--sn-button-hover-bg, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-raised)));
+  background-image: var(--sn-button-hover-marks, none);
 }
 
 sn-button:focus-visible {
-  outline: var(--sn-button-focus-ring, 2px solid var(--sn-sys-focus-ring, currentColor));
+  outline: var(--sn-button-focus-outline, none);
+  box-shadow: var(--sn-button-focus-ring, 0 0 0 2px var(--sn-sys-focus-ring, currentColor));
   outline-offset: 2px;
 }
 

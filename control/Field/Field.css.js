@@ -49,14 +49,15 @@ sn-field textarea {
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
-  border: 1px solid var(--sn-field-control-border);
-  border-radius: var(--sn-field-control-radius);
+  border: var(--sn-field-control-border-width, 1px) solid var(--sn-field-control-border);
+  border-radius: var(--sn-field-control-radius, 0);
   background: var(--sn-field-control-bg);
   color: var(--sn-field-control-color);
   padding: var(--sn-field-control-padding);
   font-family: var(--sn-font);
   font-size: var(--sn-field-control-font-size);
   line-height: var(--sn-field-control-line-height);
+  min-height: var(--sn-field-control-min-height, 0);
   transition: border-color var(--sn-transition-fast, 150ms) ease, background var(--sn-transition-fast, 150ms) ease, box-shadow var(--sn-transition-fast, 150ms) ease;
 }
 

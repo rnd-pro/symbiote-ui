@@ -1,4 +1,6 @@
 import { DEFAULT_PROVIDER_THEME } from '../themes/default-provider.js';
+import { RND } from '../themes/rnd.js';
+import { RND_DARK } from '../themes/rnd-dark.js';
 import {
   createCascadeTheme,
   getCascadeThemeControls,
@@ -11,6 +13,8 @@ import {
 
 export let THEME_NAMES = [
   'default-provider',
+  'rnd',
+  'rnd-dark',
 ];
 
 export let THEME_METADATA = {
@@ -48,6 +52,46 @@ export let THEME_METADATA = {
     ],
     tokenFamilies: ['source-control', 'source-accent', 'color-cascade', 'geometry-cascade', 'semantic-alias', 'component-alias', 'motion-effects'],
   },
+  'rnd': {
+    role: 'brand-light',
+    aliases: ['rnd', 'rnd-paper', 'RND'],
+    defaultExport: 'RND',
+    description: 'RND brand theme: light paper #dddddd surface, ink #2b2b2b text, binary ink↔paper accent flip, square geometry, hard offset shadows, corner-mark hover.',
+    origin: 'design-system/iso/tokens/primitives.js — measured brand contract verified against rnd-pro.com renders.',
+    cascade: 'Apply once at :root or an app shell; components inherit --sn-* tokens through the CSS cascade. Hover marks arrive through --sn-button-hover-marks.',
+    colorModel: ['binary-ink-paper', 'neutral-alpha-layers'],
+    engineStates: ['idle', 'running', 'success', 'error'],
+    controlTokens: [
+      '--sn-sys-surface',
+      '--sn-sys-on-surface',
+      '--sn-sys-accent',
+      '--sn-sys-on-accent',
+      '--sn-shadow-color',
+      '--sn-hover-mark-size',
+      '--sn-hover-mark-thickness',
+    ],
+    tokenFamilies: ['source-accent', 'color-cascade', 'geometry-cascade', 'typography-cascade', 'semantic-alias', 'component-alias', 'motion-effects'],
+  },
+  'rnd-dark': {
+    role: 'brand-dark',
+    aliases: ['rnd-dark', 'rnd-ink', 'RND_DARK'],
+    defaultExport: 'RND_DARK',
+    description: 'RND brand pair inverted: ink #2b2b2b surface, paper #dddddd text. Same square geometry, hard shadows, and corner-mark hover grammar.',
+    origin: 'design-system/iso/tokens/primitives.js — dark variant of the measured brand contract.',
+    cascade: 'Apply once at :root or an app shell; components inherit --sn-* tokens through the CSS cascade.',
+    colorModel: ['binary-ink-paper', 'neutral-alpha-layers'],
+    engineStates: ['idle', 'running', 'success', 'error'],
+    controlTokens: [
+      '--sn-sys-surface',
+      '--sn-sys-on-surface',
+      '--sn-sys-accent',
+      '--sn-sys-on-accent',
+      '--sn-shadow-color',
+      '--sn-hover-mark-size',
+      '--sn-hover-mark-thickness',
+    ],
+    tokenFamilies: ['source-accent', 'color-cascade', 'geometry-cascade', 'typography-cascade', 'semantic-alias', 'component-alias', 'motion-effects'],
+  },
 };
 
 export let TOKEN_FILES = [
@@ -73,6 +117,8 @@ export let THEME_RECIPES = listCascadeThemeRecipes();
 
 const RUNTIME_THEMES = {
   'default-provider': DEFAULT_PROVIDER_THEME,
+  'rnd': RND,
+  'rnd-dark': RND_DARK,
 };
 
 const CSS_TOKEN_CLASSIFIERS = [
@@ -582,6 +628,49 @@ export let THEME_RULE_BLOCKS = [
       { output: '--sn-syntax-comment', inputs: ['--sn-sys-on-surface-dim'], expression: 'var(--sn-sys-on-surface-dim)', description: 'Code comments inherit muted text.' },
       { output: '--sn-diagnostic-error-bg', inputs: ['--sn-sys-danger'], expression: 'color-mix(in oklab, var(--sn-sys-danger) 7%, transparent)', description: 'Diagnostic error backgrounds derive from danger color.' },
       { output: '--sn-diagnostic-warning-bg', inputs: ['--sn-sys-warning'], expression: 'color-mix(in oklab, var(--sn-sys-warning) 5%, transparent)', description: 'Diagnostic warning backgrounds derive from warning color.' },
+    ],
+  },
+  {
+    name: 'rnd-brand-grammar',
+    theme: 'rnd',
+    kind: 'geometry-cascade',
+    description: 'RND brand grammar: square corners, 2px brand borders with 1px hairline dividers, hard offset shadows in currentColor, corner-mark hover, binary ink↔paper accent.',
+    parameters: [
+      { name: 'surface', type: 'color', default: '#dddddd', description: 'Paper background; fixed by the brand contract.' },
+      { name: 'text', type: 'color', default: '#2b2b2b', description: 'Ink foreground; also the accent (binary flip).' },
+      { name: 'onAccent', type: 'color', default: '#dddddd', description: 'Paper text on ink accent surfaces for readable selected states.' },
+      { name: 'markSize', type: 'dimension', default: '12px', description: 'Corner-mark leg length for button hover (cssVar --sn-hover-mark-size).' },
+      { name: 'markThickness', type: 'dimension', default: '2px', description: 'Corner-mark stroke width (cssVar --sn-hover-mark-thickness).' },
+    ],
+    inputs: ['surface', 'text'],
+    outputs: ['color.accent', 'color.onAccent', 'radius.node', 'shadow.node', 'shadow.focus', 'size.control'],
+    formula: 'The binary ink↔paper pair is the whole palette; geometry rungs collapse to square with hard offsets.',
+    derivations: [
+      { output: '--sn-node-radius', inputs: ['brand'], expression: '0', description: 'Brand grammar is square: no radius on nodes, cards, controls, dialogs.' },
+      { output: '--sn-node-border-width', inputs: ['brand'], expression: '2px', description: 'Brand surfaces carry 2px ink borders; hairline 1px only for in-card dividers.' },
+      { output: '--sn-shadow-color', inputs: ['text'], expression: 'currentColor', description: 'Hard shadows are ink (currentColor), never rgba blur.' },
+      { output: '--sn-shadow-lg', inputs: ['--sn-shadow-color'], expression: '5px 5px 0 0 var(--sn-shadow-color)', description: 'Card/featured elevation is a 5px hard offset with zero blur.' },
+      { output: '--sn-effect-focus-ring', inputs: ['--sn-shadow-color'], expression: '3px 3px 0 0 var(--sn-shadow-color)', description: 'Focus elevation is a 3px hard offset.' },
+      { output: '--sn-button-min-height', inputs: ['brand'], expression: '40px', description: 'Brand control height.' },
+      { output: '--sn-button-hover-marks', inputs: ['themes/hover-marks-styles'], expression: '8 × linear-gradient corner marks', description: 'Button hover paints 8 corner marks (12px legs, 2px stroke) via the shared helper.' },
+    ],
+  },
+  {
+    name: 'rnd-dark-brand-grammar',
+    theme: 'rnd-dark',
+    kind: 'geometry-cascade',
+    description: 'RND brand pair inverted: same square geometry, hard shadows, and corner-mark hover on an ink surface with paper text.',
+    parameters: [
+      { name: 'surface', type: 'color', default: '#2b2b2b', description: 'Ink background; fixed by the brand contract.' },
+      { name: 'text', type: 'color', default: '#dddddd', description: 'Paper foreground; also the accent (binary flip).' },
+      { name: 'onAccent', type: 'color', default: '#2b2b2b', description: 'Ink text on paper accent surfaces for readable selected states.' },
+    ],
+    inputs: ['surface', 'text'],
+    outputs: ['color.accent', 'color.onAccent', 'radius.node', 'shadow.node', 'shadow.focus', 'size.control'],
+    formula: 'Invert the binary pair; every other brand rule is identical to rnd.',
+    derivations: [
+      { output: '--sn-node-radius', inputs: ['brand'], expression: '0', description: 'Square geometry survives the inversion.' },
+      { output: '--sn-shadow-color', inputs: ['text'], expression: 'currentColor', description: 'Shadows follow the inverted foreground.' },
     ],
   },
 ];
@@ -2365,6 +2454,128 @@ export let THEME_TOKENS = {
         "$type": "shadow",
         "$value": "0 -8px calc(28px * var(--sn-theme-elevation-scale)) hsl(var(--sn-hue-base) var(--sn-sat-muted) 0% / 0.32)"
       }
+    }
+  },
+  "rnd": {
+    "name": "rnd",
+    "extends": "../base.json",
+    "$description": "RND brand theme: light paper surface, ink text, binary ink↔paper accent flip, 0 radius, 2px borders, hard offset shadows colored currentColor, corner-mark hover, Roboto body.",
+    "$extensions": {
+      "symbioteUi": {
+        "role": "brand-light",
+        "origin": "design-system/iso/tokens/primitives.js — measured brand contract.",
+        "cascade": "Apply once at :root or an app shell; components inherit --sn-* tokens through the CSS cascade.",
+        "engineStates": ["idle", "running", "success", "error"],
+        "colorModel": ["binary-ink-paper", "neutral-alpha-layers"],
+        "controlTokens": [
+          "--sn-sys-surface",
+          "--sn-sys-on-surface",
+          "--sn-sys-accent",
+          "--sn-sys-on-accent",
+          "--sn-shadow-color",
+          "--sn-hover-mark-size",
+          "--sn-hover-mark-thickness"
+        ],
+        "geometryFamilies": ["radius", "border", "control", "graph", "shadow"]
+      }
+    },
+    "color": {
+      "background": { "$type": "color", "$value": "#dddddd" },
+      "surface": { "$type": "color", "$value": "#dddddd" },
+      "border": { "$type": "color", "$value": "#2b2b2b" },
+      "text": { "$type": "color", "$value": "#2b2b2b" },
+      "textDim": { "$type": "color", "$value": "#888888" },
+      "accent": { "$type": "color", "$value": "#2b2b2b" },
+      "onAccent": { "$type": "color", "$value": "#dddddd" },
+      "success": { "$type": "color", "$value": "#388e3c" },
+      "warning": { "$type": "color", "$value": "#b06000" },
+      "danger": { "$type": "color", "$value": "#c5221f" }
+    },
+    "borderWidth": {
+      "surface": { "$type": "dimension", "$value": "2px" },
+      "divider": { "$type": "dimension", "$value": "1px" }
+    },
+    "size": {
+      "grid": { "$type": "dimension", "$value": "20px" },
+      "socket": { "$type": "dimension", "$value": "12px" },
+      "socketBorder": { "$type": "dimension", "$value": "2px" },
+      "control": { "$type": "dimension", "$value": "40px" }
+    },
+    "radius": {
+      "node": { "$type": "dimension", "$value": "0px" },
+      "comment": { "$type": "dimension", "$value": "0px" },
+      "card": { "$type": "dimension", "$value": "0px" },
+      "control": { "$type": "dimension", "$value": "0px" }
+    },
+    "shadow": {
+      "node": { "$type": "shadow", "$value": "5px 5px 0 0 currentColor" },
+      "card": { "$type": "shadow", "$value": "5px 5px 0 0 currentColor" },
+      "cardHover": { "$type": "shadow", "$value": "5px 5px 0 0 currentColor" },
+      "focus": { "$type": "shadow", "$value": "3px 3px 0 0 currentColor" }
+    },
+    "font": {
+      "family": { "$type": "fontFamily", "$value": "'Roboto', system-ui, sans-serif" }
+    }
+  },
+  "rnd-dark": {
+    "name": "rnd-dark",
+    "extends": "../base.json",
+    "$description": "RND brand pair inverted: ink surface, paper text. Same square geometry, hard shadows, and corner-mark hover grammar.",
+    "$extensions": {
+      "symbioteUi": {
+        "role": "brand-dark",
+        "origin": "design-system/iso/tokens/primitives.js — dark variant of the measured brand contract.",
+        "cascade": "Apply once at :root or an app shell; components inherit --sn-* tokens through the CSS cascade.",
+        "engineStates": ["idle", "running", "success", "error"],
+        "colorModel": ["binary-ink-paper", "neutral-alpha-layers"],
+        "controlTokens": [
+          "--sn-sys-surface",
+          "--sn-sys-on-surface",
+          "--sn-sys-accent",
+          "--sn-sys-on-accent",
+          "--sn-shadow-color",
+          "--sn-hover-mark-size",
+          "--sn-hover-mark-thickness"
+        ],
+        "geometryFamilies": ["radius", "border", "control", "graph", "shadow"]
+      }
+    },
+    "color": {
+      "background": { "$type": "color", "$value": "#2b2b2b" },
+      "surface": { "$type": "color", "$value": "#2b2b2b" },
+      "border": { "$type": "color", "$value": "#dddddd" },
+      "text": { "$type": "color", "$value": "#dddddd" },
+      "textDim": { "$type": "color", "$value": "#888888" },
+      "accent": { "$type": "color", "$value": "#dddddd" },
+      "onAccent": { "$type": "color", "$value": "#2b2b2b" },
+      "success": { "$type": "color", "$value": "#388e3c" },
+      "warning": { "$type": "color", "$value": "#b06000" },
+      "danger": { "$type": "color", "$value": "#c5221f" }
+    },
+    "borderWidth": {
+      "surface": { "$type": "dimension", "$value": "2px" },
+      "divider": { "$type": "dimension", "$value": "1px" }
+    },
+    "size": {
+      "grid": { "$type": "dimension", "$value": "20px" },
+      "socket": { "$type": "dimension", "$value": "12px" },
+      "socketBorder": { "$type": "dimension", "$value": "2px" },
+      "control": { "$type": "dimension", "$value": "40px" }
+    },
+    "radius": {
+      "node": { "$type": "dimension", "$value": "0px" },
+      "comment": { "$type": "dimension", "$value": "0px" },
+      "card": { "$type": "dimension", "$value": "0px" },
+      "control": { "$type": "dimension", "$value": "0px" }
+    },
+    "shadow": {
+      "node": { "$type": "shadow", "$value": "5px 5px 0 0 currentColor" },
+      "card": { "$type": "shadow", "$value": "5px 5px 0 0 currentColor" },
+      "cardHover": { "$type": "shadow", "$value": "5px 5px 0 0 currentColor" },
+      "focus": { "$type": "shadow", "$value": "3px 3px 0 0 currentColor" }
+    },
+    "font": {
+      "family": { "$type": "fontFamily", "$value": "'Roboto', system-ui, sans-serif" }
     }
   }
 };

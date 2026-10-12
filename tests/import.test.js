@@ -2049,7 +2049,7 @@ test('discover exposes the standalone package contract', async () => {
   }
 
   assert.ok(data.manifest.themePresets);
-  assert.deepEqual(data.manifest.themePresets.colors, ['carbon', 'neon', 'pcb', 'ebook', 'dark', 'light']);
+  assert.deepEqual(data.manifest.themePresets.colors, ['carbon', 'neon', 'pcb', 'ebook', 'dark', 'light', 'rnd', 'rnd-dark']);
   assert.deepEqual(data.manifest.themePresets.skins, ['modern', 'compact', 'rounded']);
   assert.deepEqual(data.manifest.themePresets.panels.chat, { color: 'dark', skin: 'modern', motion: 'smooth' });
 });

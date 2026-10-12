@@ -7,6 +7,7 @@
     "text": { "$type": "color", "$value": "var(--sn-sys-on-surface)" },
     "textDim": { "$type": "color", "$value": "var(--sn-sys-on-surface-dim)" },
     "accent": { "$type": "color", "$value": "var(--sn-sys-accent)" },
+    "onAccent": { "$type": "color", "$value": "var(--sn-sys-on-accent)" },
     "success": { "$type": "color", "$value": "var(--sn-sys-success)" },
     "warning": { "$type": "color", "$value": "var(--sn-sys-warning)" },
     "danger": { "$type": "color", "$value": "var(--sn-sys-danger)" }
@@ -14,14 +15,24 @@
   "size": {
     "grid": { "$type": "dimension", "$value": "var(--sn-grid-size)" },
     "socket": { "$type": "dimension", "$value": "var(--sn-socket-size)" },
-    "socketBorder": { "$type": "dimension", "$value": "var(--sn-socket-border-width)" }
+    "socketBorder": { "$type": "dimension", "$value": "var(--sn-socket-border-width)" },
+    "control": { "$type": "dimension", "$value": "var(--sn-button-min-height)" }
+  },
+  "borderWidth": {
+    "surface": { "$type": "dimension", "$value": "var(--sn-node-border-width)" },
+    "divider": { "$type": "dimension", "$value": "1px" }
   },
   "radius": {
     "node": { "$type": "dimension", "$value": "var(--sn-node-radius)" },
-    "comment": { "$type": "dimension", "$value": "var(--sn-comment-radius)" }
+    "comment": { "$type": "dimension", "$value": "var(--sn-comment-radius)" },
+    "card": { "$type": "dimension", "$value": "var(--sn-card-radius)" },
+    "control": { "$type": "dimension", "$value": "var(--sn-button-radius)" }
   },
   "shadow": {
-    "node": { "$type": "shadow", "$value": "var(--sn-node-shadow)" }
+    "node": { "$type": "shadow", "$value": "var(--sn-node-shadow)" },
+    "card": { "$type": "shadow", "$value": "var(--sn-card-shadow)" },
+    "cardHover": { "$type": "shadow", "$value": "var(--sn-card-shadow-hover)" },
+    "focus": { "$type": "shadow", "$value": "var(--sn-effect-focus-ring)" }
   },
   "font": {
     "family": { "$type": "fontFamily", "$value": "var(--sn-font)" }

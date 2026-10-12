@@ -103,6 +103,9 @@ export {
 
 export { applySkin, MODERN_SKIN, COMPACT_SKIN, ROUNDED_SKIN } from '../themes/Skin.js';
 export { CARBON, CARBON_PALETTE } from '../themes/carbon.js';
+export { RND, RND_PALETTE } from '../themes/rnd.js';
+export { RND_DARK, RND_DARK_PALETTE } from '../themes/rnd-dark.js';
+export { hoverMarksBackgroundImage, hoverMarksStyles } from '../themes/hover-marks-styles.js';
 export { PCB_DARK } from '../themes/pcb.js';
 export { EBOOK, EBOOK_PALETTE } from '../themes/ebook.js';
 export { NEON_PALETTE } from '../themes/neon.js';

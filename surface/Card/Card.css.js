@@ -9,8 +9,9 @@ sn-card {
   min-width: 0;
   padding: var(--sn-card-padding, 12px);
   margin-block-end: var(--sn-card-margin-block-end, 0);
-  border: 1px solid var(--sn-card-border);
+  border: var(--sn-card-border-width, 1px) solid var(--sn-card-border);
   border-radius: var(--sn-card-radius, 4px);
+  box-shadow: var(--sn-card-shadow, none);
   background: var(--sn-card-bg);
   color: var(--sn-sys-on-surface);
   font-family: var(--sn-font);
@@ -35,6 +36,7 @@ sn-card[interactive]:focus-visible {
 sn-card[interactive]:hover {
   border-color: var(--sn-card-hover-border);
   background: var(--sn-card-hover-bg, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-raised)));
+  box-shadow: var(--sn-card-shadow-hover, none);
 }
 
 sn-card[variant="flat"] {

@@ -1,0 +1,41 @@
+{
+  "name": "rnd-dark",
+  "extends": "../base.json",
+  "color": {
+    "background": { "$type": "color", "$value": "#2b2b2b" },
+    "surface": { "$type": "color", "$value": "#2b2b2b" },
+    "border": { "$type": "color", "$value": "#dddddd" },
+    "text": { "$type": "color", "$value": "#dddddd" },
+    "textDim": { "$type": "color", "$value": "#888888" },
+    "accent": { "$type": "color", "$value": "#dddddd" },
+    "onAccent": { "$type": "color", "$value": "#2b2b2b" },
+    "success": { "$type": "color", "$value": "#388e3c" },
+    "warning": { "$type": "color", "$value": "#b06000" },
+    "danger": { "$type": "color", "$value": "#c5221f" }
+  },
+  "borderWidth": {
+    "surface": { "$type": "dimension", "$value": "2px" },
+    "divider": { "$type": "dimension", "$value": "1px" }
+  },
+  "size": {
+    "grid": { "$type": "dimension", "$value": "20px" },
+    "socket": { "$type": "dimension", "$value": "12px" },
+    "socketBorder": { "$type": "dimension", "$value": "2px" },
+    "control": { "$type": "dimension", "$value": "40px" }
+  },
+  "radius": {
+    "node": { "$type": "dimension", "$value": "0px" },
+    "comment": { "$type": "dimension", "$value": "0px" },
+    "card": { "$type": "dimension", "$value": "0px" },
+    "control": { "$type": "dimension", "$value": "0px" }
+  },
+  "shadow": {
+    "node": { "$type": "shadow", "$value": "5px 5px 0 0 currentColor" },
+    "card": { "$type": "shadow", "$value": "5px 5px 0 0 currentColor" },
+    "cardHover": { "$type": "shadow", "$value": "5px 5px 0 0 currentColor" },
+    "focus": { "$type": "shadow", "$value": "3px 3px 0 0 currentColor" }
+  },
+  "font": {
+    "family": { "$type": "fontFamily", "$value": "'Roboto', system-ui, sans-serif" }
+  }
+}
