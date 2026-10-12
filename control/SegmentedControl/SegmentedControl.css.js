@@ -5,7 +5,7 @@ sn-segmented-control {
   display: inline-flex;
   box-sizing: border-box;
   background: var(--sn-segmented-bg, color-mix(in oklab, var(--sn-sys-on-surface) 5%, transparent));
-  border: 1px solid var(--sn-segmented-border, color-mix(in oklab, var(--sn-sys-on-surface) 12%, transparent));
+  border: var(--sn-segmented-border-width, 1px) solid var(--sn-segmented-border, color-mix(in oklab, var(--sn-sys-on-surface) 12%, transparent));
   border-radius: var(--sn-segmented-radius, var(--sn-field-control-radius, 4px));
   padding: var(--sn-step-1);
   max-width: 100%;
@@ -57,7 +57,8 @@ sn-segmented-control > *[aria-checked="true"] {
 }
 
 sn-segmented-control > *:focus-visible {
-  outline: var(--sn-segmented-focus-ring, 2px solid var(--sn-sys-focus-ring, currentColor));
+  outline: var(--sn-segmented-focus-outline, none);
+  box-shadow: var(--sn-segmented-focus-ring, 0 0 0 2px var(--sn-sys-focus-ring, currentColor));
   outline-offset: -1px;
 }
 `;

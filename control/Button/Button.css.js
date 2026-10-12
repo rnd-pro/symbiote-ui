@@ -32,6 +32,9 @@ sn-button:hover:not([disabled]):not([loading]) {
   border-color: var(--sn-button-hover-border, var(--sn-sys-outline));
   background: var(--sn-button-hover-bg, color-mix(in oklch, var(--sn-sys-accent) var(--sn-sys-state-hover-mix), var(--sn-sys-surface-raised)));
   background-image: var(--sn-button-hover-marks, none);
+  background-position: var(--sn-button-hover-marks-position, 0 0, 0 100%, 100% 0, 100% 100%, 0 0, 100% 0, 0 100%, 100% 100%);
+  background-repeat: no-repeat;
+  background-size: var(--sn-button-hover-mark-size, var(--sn-hover-mark-size, 12px)) var(--sn-button-hover-mark-size, var(--sn-hover-mark-size, 12px));
 }
 
 sn-button:focus-visible {
