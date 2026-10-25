@@ -251,11 +251,7 @@ export let styles = css`
         --drawer-header-extra-start: 0px;
         --drawer-header-extra-end: 0px;
         --drawer-header-menu-offset: calc((var(--drawer-header-extra-end) - var(--drawer-header-extra-start)) / 2);
-        --drawer-header-actions-offset: var(--drawer-header-extra-end);
         --drawer-header-type-offset: calc(0px - var(--drawer-header-extra-start));
-        --drawer-header-gap-offset: calc(
-          (var(--header-effective-gap, var(--sn-layout-header-gap, 2px)) - var(--sn-layout-header-gap, 2px)) / 2
-        );
         padding-block: max(
           var(--sn-layout-header-padding-block, 0px),
           calc(var(--sn-layout-header-button-hit-size, 44px) - var(--sn-layout-header-button-min-block-size, 24px)) / 2
@@ -293,18 +289,6 @@ export let styles = css`
       layout-node[mobile-dock='end'][drawer-open] .panel-view > .panel-header .type-btn > :is(.panel-icon, .panel-title, .dropdown-arrow) {
         position: relative;
         inset-inline-start: var(--drawer-header-type-offset, 0px);
-      }
-
-      layout-node[mobile-dock='start'][drawer-open] .panel-view > .panel-header .panel-actions > .collapse-btn > .material-symbols-outlined,
-      layout-node[mobile-dock='end'][drawer-open] .panel-view > .panel-header .panel-actions > .collapse-btn > .material-symbols-outlined {
-        position: relative;
-        inset-inline-start: calc(var(--drawer-header-actions-offset, 0px) + var(--drawer-header-gap-offset, 0px));
-      }
-
-      layout-node[mobile-dock='start'][drawer-open] .panel-view > .panel-header .panel-actions > .fullscreen-btn > .material-symbols-outlined,
-      layout-node[mobile-dock='end'][drawer-open] .panel-view > .panel-header .panel-actions > .fullscreen-btn > .material-symbols-outlined {
-        position: relative;
-        inset-inline-start: calc(var(--drawer-header-actions-offset, 0px) - var(--drawer-header-gap-offset, 0px));
       }
 
       layout-node[mobile-dock='start'][drawer-open] .panel-actions,

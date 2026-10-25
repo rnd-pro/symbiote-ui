@@ -2942,6 +2942,9 @@ test('drawer touch swipe closes; rails align at 320/390/430', { timeout: BROWSER
           let headerStyle = header ? getComputedStyle(header) : null;
           let menu = header?.querySelector('.panel-menu-toggle');
           let menuRect = menu?.getBoundingClientRect?.();
+          let menuGlyphRects = [...(menu?.querySelectorAll('.material-symbols-outlined') || [])]
+            .filter((glyph) => glyph.getClientRects().length)
+            .map((glyph) => glyph.getBoundingClientRect());
           let actionIcons = [...(header?.querySelectorAll('.panel-actions > .header-btn') || [])]
             .filter((button) => button.getClientRects().length)
             .map((button) => {
@@ -2951,6 +2954,7 @@ test('drawer touch swipe closes; rails align at 320/390/430', { timeout: BROWSER
               return iconRect ? {
                 label: button.getAttribute('aria-label') || button.className,
                 buttonWidth: rect.width,
+                buttonCenter: rect.left + rect.width / 2,
                 iconCenter: iconRect.left + iconRect.width / 2,
               } : null;
             }).filter(Boolean);
@@ -2959,6 +2963,9 @@ test('drawer touch swipe closes; rails align at 320/390/430', { timeout: BROWSER
             controls: report?.controls?.map((c) => ({ label: c.label, rect: c.rect, hit: c.hit })) || [],
             headerCenter: headerRect ? headerRect.left + headerRect.width / 2 : null,
             menuCenter: menuRect ? menuRect.left + menuRect.width / 2 : null,
+            menuGlyphGroupCenter: menuGlyphRects.length
+              ? (menuGlyphRects[0].left + menuGlyphRects[menuGlyphRects.length - 1].right) / 2
+              : null,
             actionIcons,
             themeGap: headerStyle ? parseFloat(headerStyle.getPropertyValue('--sn-layout-header-gap')) || 2 : null,
             headerPadding: headerStyle ? {
@@ -2975,15 +2982,18 @@ test('drawer touch swipe closes; rails align at 320/390/430', { timeout: BROWSER
         assert.ok(Math.abs(baseline.menuCenter - baseline.headerCenter) <= 1,
           `${dock}@${width}: menu controls stay centered on the full header despite edge touch padding ` +
           `(${JSON.stringify({ menuCenter: baseline.menuCenter, headerCenter: baseline.headerCenter })})`);
+        assert.ok(Math.abs(baseline.menuGlyphGroupCenter - baseline.menuCenter) <= 1,
+          `${dock}@${width}: the menu's painted icon group stays centered in its button ` +
+          `(${JSON.stringify({ menuGlyphGroupCenter: baseline.menuGlyphGroupCenter, menuCenter: baseline.menuCenter })})`);
         let collapseIcon = baseline.actionIcons.find((icon) => icon.label.toLowerCase().includes('collapse'));
         let fullscreenIcon = baseline.actionIcons.find((icon) => icon.label.toLowerCase().includes('fullscreen'));
         assert.ok(collapseIcon && fullscreenIcon,
           `${dock}@${width}: collapse and fullscreen controls are measurable`);
-        let expectedActionIconGap = collapseIcon.buttonWidth / 2 + fullscreenIcon.buttonWidth / 2 + baseline.themeGap;
-        let actualActionIconGap = Math.abs(collapseIcon.iconCenter - fullscreenIcon.iconCenter);
-        assert.ok(Math.abs(actualActionIconGap - expectedActionIconGap) <= 1,
-          `${dock}@${width}: visual action icons retain the normal header gap while touch targets stay separate ` +
-          `(${JSON.stringify({ actualActionIconGap, expectedActionIconGap })})`);
+        for (const icon of [collapseIcon, fullscreenIcon]) {
+          assert.ok(Math.abs(icon.iconCenter - icon.buttonCenter) <= 1,
+            `${dock}@${width}: ${icon.label} glyph remains centered in its own control ` +
+            `(${JSON.stringify({ iconCenter: icon.iconCenter, buttonCenter: icon.buttonCenter })})`);
+        }
         let edgePadding = dock === 'start' ? baseline.headerPadding.start : baseline.headerPadding.end;
         let innerPadding = dock === 'start' ? baseline.headerPadding.end : baseline.headerPadding.start;
         assert.ok(
