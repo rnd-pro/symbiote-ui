@@ -97,6 +97,7 @@ sn-tree-panel[hidden] {
   flex: 1 1 auto;
   min-block-size: 0;
   overflow: auto;
+  touch-action: pan-y;
   ${themedScrollFadeBlockStyles}
   padding: var(--sn-tree-panel-content-padding);
 }

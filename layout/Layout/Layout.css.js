@@ -248,6 +248,20 @@ export let styles = css`
           var(--sn-layout-header-padding-block, 0px),
           calc(var(--sn-layout-header-button-hit-size, 44px) - var(--sn-layout-header-button-min-block-size, 24px)) / 2
         ) !important;
+      }
+
+      /* Reserve touch-target room on the screen edge of each drawer. The
+         start dock grows inward from inline-start; the end dock grows inward
+         from inline-end. Applying end padding to both docks shifts the start
+         rail's centered icon and header controls toward the screen edge. */
+      layout-node[mobile-dock='start'][node-type='panel'] .panel-view > .panel-header {
+        padding-inline-start: max(
+          var(--sn-layout-header-padding-inline-start, 4px),
+          calc(var(--sn-layout-header-button-hit-size, 44px) - var(--sn-layout-header-button-min-inline-size, 24px)) / 2
+        ) !important;
+      }
+
+      layout-node[mobile-dock='end'][node-type='panel'] .panel-view > .panel-header {
         /* A drawer sits flush to the screen edge, so the outermost control
            could not grow outward. It gets the same room, inward. */
         padding-inline-end: max(
