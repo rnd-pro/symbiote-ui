@@ -2959,9 +2959,21 @@ test('drawer touch swipe closes; rails align at 320/390/430', { timeout: BROWSER
               } : null;
             }).filter(Boolean);
           let headerRect = header?.getBoundingClientRect();
+          let glyphs = [...(header?.querySelectorAll('.header-btn .material-symbols-outlined') || [])]
+            .filter((glyph) => glyph.getClientRects().length)
+            .map((glyph) => {
+              let rect = glyph.getBoundingClientRect();
+              return { label: glyph.textContent.trim(), centerY: rect.top + rect.height / 2 };
+            });
           return {
             controls: report?.controls?.map((c) => ({ label: c.label, rect: c.rect, hit: c.hit })) || [],
             headerCenter: headerRect ? headerRect.left + headerRect.width / 2 : null,
+            headerCenterY: headerRect && headerStyle
+              ? headerRect.top + (headerRect.height
+                + parseFloat(headerStyle.borderTopWidth)
+                - parseFloat(headerStyle.borderBottomWidth)) / 2
+              : null,
+            glyphs,
             menuCenter: menuRect ? menuRect.left + menuRect.width / 2 : null,
             menuGlyphGroupCenter: menuGlyphRects.length
               ? (menuGlyphRects[0].left + menuGlyphRects[menuGlyphRects.length - 1].right) / 2
@@ -2979,6 +2991,17 @@ test('drawer touch swipe closes; rails align at 320/390/430', { timeout: BROWSER
           `${dock}@${width}: header exposes real controls (${JSON.stringify(baseline.controls.map((c) => c.label))})`);
         assert.ok(baseline.headerPadding,
           `${dock}@${width}: computed logical header padding is measurable`);
+        assert.deepEqual(baseline.glyphs.map((glyph) => glyph.label).sort(), [
+          'more_horiz',
+          'keyboard_arrow_down',
+          dock === 'start' ? 'chevron_left' : 'chevron_right',
+          'fullscreen',
+        ].sort(), `${dock}@${width}: every expected header glyph is measurable`);
+        for (let glyph of baseline.glyphs) {
+          assert.ok(Math.abs(glyph.centerY - baseline.headerCenterY) <= 1,
+            `${dock}@${width}: ${glyph.label} stays vertically centered in the header ` +
+            `(${JSON.stringify({ glyph: glyph.centerY, header: baseline.headerCenterY })})`);
+        }
         assert.ok(Math.abs(baseline.menuCenter - baseline.headerCenter) <= 1,
           `${dock}@${width}: menu controls stay centered on the full header despite edge touch padding ` +
           `(${JSON.stringify({ menuCenter: baseline.menuCenter, headerCenter: baseline.headerCenter })})`);

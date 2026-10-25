@@ -252,6 +252,7 @@ export let styles = css`
         --drawer-header-extra-end: 0px;
         --drawer-header-menu-offset: calc((var(--drawer-header-extra-end) - var(--drawer-header-extra-start)) / 2);
         --drawer-header-type-offset: calc(0px - var(--drawer-header-extra-start));
+        block-size: auto !important;
         padding-block: max(
           var(--sn-layout-header-padding-block, 0px),
           calc(var(--sn-layout-header-button-hit-size, 44px) - var(--sn-layout-header-button-min-block-size, 24px)) / 2
