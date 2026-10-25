@@ -218,6 +218,7 @@
     "audit.js",
     "cli.js",
     "webmcp.js",
+    "webmcp/",
     "manifest/",
     "tokens/",
     "rules/",
