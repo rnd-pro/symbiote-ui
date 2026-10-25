@@ -3109,15 +3109,13 @@ test('drawer touch swipe closes; rails align at 320/390/430', { timeout: BROWSER
           if (!header || !icon) return null;
           let headerRect = header.getBoundingClientRect();
           let iconRect = icon.getBoundingClientRect();
-          let style = getComputedStyle(header);
-          let contentCenter = headerRect.left + parseFloat(style.paddingLeft) +
-            (headerRect.width - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)) / 2;
-          return { contentCenter, iconCenter: iconRect.left + iconRect.width / 2 };
+          let railCenter = headerRect.left + headerRect.width / 2;
+          return { railCenter, iconCenter: iconRect.left + iconRect.width / 2 };
         })()`);
         assert.ok(collapsedIcon,
           `${dock}@${width}: collapsed rail icon geometry is measurable`);
-        assert.ok(Math.abs(collapsedIcon.contentCenter - collapsedIcon.iconCenter) <= 1,
-          `${dock}@${width}: icon stays centered in the rail's usable width ` +
+        assert.ok(Math.abs(collapsedIcon.railCenter - collapsedIcon.iconCenter) <= 1,
+          `${dock}@${width}: icon stays centered in the actual rail ` +
           `(${JSON.stringify(collapsedIcon)})`);
       }
 

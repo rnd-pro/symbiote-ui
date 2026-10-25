@@ -242,8 +242,8 @@ export let styles = css`
          own header padding !important. Naming the panel attribute gives this
          rule enough weight to reserve the room the target claims around a
          control, taken from the same theme tokens the target is built from. */
-      layout-node[mobile-dock='start'][node-type='panel'] .panel-view > .panel-header,
-      layout-node[mobile-dock='end'][node-type='panel'] .panel-view > .panel-header {
+      layout-node[mobile-dock='start'][node-type='panel'][drawer-open] .panel-view > .panel-header,
+      layout-node[mobile-dock='end'][node-type='panel'][drawer-open] .panel-view > .panel-header {
         padding-block: max(
           var(--sn-layout-header-padding-block, 0px),
           calc(var(--sn-layout-header-button-hit-size, 44px) - var(--sn-layout-header-button-min-block-size, 24px)) / 2
@@ -254,7 +254,7 @@ export let styles = css`
          start dock grows inward from inline-start; the end dock grows inward
          from inline-end. Applying end padding to both docks shifts the start
          rail's centered icon and header controls toward the screen edge. */
-      layout-node[mobile-dock='start'][node-type='panel'] .panel-view > .panel-header {
+      layout-node[mobile-dock='start'][node-type='panel'][drawer-open] .panel-view > .panel-header {
         padding-inline-start: max(
           var(--sn-layout-header-padding-inline-start, 4px),
           calc(
@@ -264,7 +264,7 @@ export let styles = css`
         ) !important;
       }
 
-      layout-node[mobile-dock='end'][node-type='panel'] .panel-view > .panel-header {
+      layout-node[mobile-dock='end'][node-type='panel'][drawer-open] .panel-view > .panel-header {
         /* A drawer sits flush to the screen edge, so the outermost control
            could not grow outward. It gets the same room, inward. */
         padding-inline-end: max(
