@@ -257,7 +257,10 @@ export let styles = css`
       layout-node[mobile-dock='start'][node-type='panel'] .panel-view > .panel-header {
         padding-inline-start: max(
           var(--sn-layout-header-padding-inline-start, 4px),
-          calc(var(--sn-layout-header-button-hit-size, 44px) - var(--sn-layout-header-button-min-inline-size, 24px)) / 2
+          calc(
+            var(--sn-layout-header-button-hit-size, 44px) -
+              var(--sn-layout-header-button-min-inline-size, 24px)
+          ) / 2
         ) !important;
       }
 

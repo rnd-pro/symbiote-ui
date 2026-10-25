@@ -15,13 +15,17 @@ test('tree panel owns a resilient scroll container', async () => {
     readFile(treePanelStyles, 'utf8'),
     readFile(treePanelTemplate, 'utf8'),
   ]);
+  let contentStyles = styles.match(/\.sn-tree-panel-content \{[^}]*\}/)?.[0] || '';
 
   assert.match(template, /class="sn-tree-panel-shell"/);
   assert.match(styles, /:host,\s*sn-tree-panel \{[\s\S]*?height: 100%;[\s\S]*?min-block-size: 0;[\s\S]*?overflow: hidden;/);
   assert.match(styles, /\.sn-tree-panel-shell \{[\s\S]*?display: flex;[\s\S]*?block-size: 100%;[\s\S]*?min-block-size: 0;[\s\S]*?overflow: hidden;/);
   assert.match(styles, /\.sn-tree-panel-title\[hidden\] \{[\s\S]*?display: none;/);
   assert.match(styles, /\.sn-tree-panel-toolbar \{[\s\S]*?flex: 0 0 auto;/);
-  assert.match(styles, /\.sn-tree-panel-content \{[\s\S]*?flex: 1 1 auto;[\s\S]*?min-block-size: 0;[\s\S]*?overflow: auto;[\s\S]*?touch-action: pan-y;/);
+  assert.match(contentStyles, /flex: 1 1 auto;/);
+  assert.match(contentStyles, /min-block-size: 0;/);
+  assert.match(contentStyles, /overflow: auto;/);
+  assert.match(contentStyles, /touch-action: pan-y;/);
   assert.match(styles, /sn-tree-view \{[\s\S]*?display: block;[\s\S]*?min-block-size: 0;/);
 });
 

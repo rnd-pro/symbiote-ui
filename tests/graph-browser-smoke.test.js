@@ -2843,7 +2843,7 @@ test('drawer modal owns focus of the opening panel and cycles Tab over a real le
   }
 });
 
-test('drawer panel controls scale with theme density and reverse touch swipe closes at 320/390/430', { timeout: BROWSER_SMOKE_TIMEOUT_MS }, async () => {
+test('drawer touch swipe closes; rails align at 320/390/430', { timeout: BROWSER_SMOKE_TIMEOUT_MS }, async () => {
   const chromePath = findChrome();
   assertBrowserSmokeRuntime();
 
@@ -2899,9 +2899,10 @@ test('drawer panel controls scale with theme density and reverse touch swipe clo
         touchPoints: [{ id: 1, x: from, y, radiusX: 1, radiusY: 1, force: 1 }],
       });
       for (let i = 1; i <= steps; i += 1) {
+        const x = Math.round(from + (to - from) * (i / steps));
         await page.send('Input.dispatchTouchEvent', {
           type: 'touchMove',
-          touchPoints: [{ id: 1, x: Math.round(from + (to - from) * (i / steps)), y, radiusX: 1, radiusY: 1, force: 1 }],
+          touchPoints: [{ id: 1, x, y, radiusX: 1, radiusY: 1, force: 1 }],
         });
       }
       await page.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
@@ -2954,8 +2955,11 @@ test('drawer panel controls scale with theme density and reverse touch swipe clo
           `${dock}@${width}: computed logical header padding is measurable`);
         const edgePadding = dock === 'start' ? baseline.headerPadding.start : baseline.headerPadding.end;
         const innerPadding = dock === 'start' ? baseline.headerPadding.end : baseline.headerPadding.start;
-        assert.ok(edgePadding > innerPadding,
-          `${dock}@${width}: touch room is reserved on the outer edge, away from the screen edge (${JSON.stringify(baseline.headerPadding)})`);
+        assert.ok(
+          edgePadding > innerPadding,
+          `${dock}@${width}: touch room follows the panel edge ` +
+          `(${JSON.stringify(baseline.headerPadding)})`
+        );
 
         for (const control of baseline.controls) {
           assert.ok(control.hit.width > control.rect.width && control.hit.height > control.rect.height,
@@ -3022,8 +3026,9 @@ test('drawer panel controls scale with theme density and reverse touch swipe clo
           const closeY = Math.round(openBox.top + openBox.height / 2);
           await touchSwipe({ from: Math.round(openBox.right - 24), to: 8, y: closeY });
           const closedState = await waitForPredicate(evaluate, `!window.__lab.layout.hasAttribute('drawer-start-open')`,
-            `start drawer closes by reverse touch swipe at ${width}px with density 1.8`);
-          assert.equal(closedState, true, `start drawer did not close by reverse touch swipe at ${width}px with density 1.8`);
+            `start drawer closes by reverse touch swipe at ${width}px`);
+          assert.equal(closedState, true,
+            `start drawer did not close by reverse touch swipe at ${width}px`);
 
           // The list really scrolls while the drawer stays put: content
           // scrolling must not be hijacked by the drawer surface.
@@ -3109,9 +3114,11 @@ test('drawer panel controls scale with theme density and reverse touch swipe clo
             (headerRect.width - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)) / 2;
           return { contentCenter, iconCenter: iconRect.left + iconRect.width / 2 };
         })()`);
-        assert.ok(collapsedIcon, `${dock}@${width}: collapsed rail panel icon geometry is measurable`);
+        assert.ok(collapsedIcon,
+          `${dock}@${width}: collapsed rail icon geometry is measurable`);
         assert.ok(Math.abs(collapsedIcon.contentCenter - collapsedIcon.iconCenter) <= 1,
-          `${dock}@${width}: collapsed rail icon stays centered in its usable width (${JSON.stringify(collapsedIcon)})`);
+          `${dock}@${width}: icon stays centered in the rail's usable width ` +
+          `(${JSON.stringify(collapsedIcon)})`);
       }
 
     }
