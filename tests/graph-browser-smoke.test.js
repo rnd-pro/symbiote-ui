@@ -2940,8 +2940,27 @@ test('drawer touch swipe closes; rails align at 320/390/430', { timeout: BROWSER
           const report = window.__lab.headerReport('${dock}');
           let header = report?.node?.querySelector('.panel-header');
           let headerStyle = header ? getComputedStyle(header) : null;
+          let menu = header?.querySelector('.panel-menu-toggle');
+          let menuRect = menu?.getBoundingClientRect?.();
+          let actionIcons = [...(header?.querySelectorAll('.panel-actions > .header-btn') || [])]
+            .filter((button) => button.getClientRects().length)
+            .map((button) => {
+              let rect = button.getBoundingClientRect();
+              let icon = button.querySelector('.material-symbols-outlined');
+              let iconRect = icon?.getBoundingClientRect();
+              return iconRect ? {
+                label: button.getAttribute('aria-label') || button.className,
+                buttonWidth: rect.width,
+                iconCenter: iconRect.left + iconRect.width / 2,
+              } : null;
+            }).filter(Boolean);
+          let headerRect = header?.getBoundingClientRect();
           return {
             controls: report?.controls?.map((c) => ({ label: c.label, rect: c.rect, hit: c.hit })) || [],
+            headerCenter: headerRect ? headerRect.left + headerRect.width / 2 : null,
+            menuCenter: menuRect ? menuRect.left + menuRect.width / 2 : null,
+            actionIcons,
+            themeGap: headerStyle ? parseFloat(headerStyle.getPropertyValue('--sn-layout-header-gap')) || 2 : null,
             headerPadding: headerStyle ? {
               start: parseFloat(headerStyle.paddingInlineStart),
               end: parseFloat(headerStyle.paddingInlineEnd),
@@ -2953,6 +2972,18 @@ test('drawer touch swipe closes; rails align at 320/390/430', { timeout: BROWSER
           `${dock}@${width}: header exposes real controls (${JSON.stringify(baseline.controls.map((c) => c.label))})`);
         assert.ok(baseline.headerPadding,
           `${dock}@${width}: computed logical header padding is measurable`);
+        assert.ok(Math.abs(baseline.menuCenter - baseline.headerCenter) <= 1,
+          `${dock}@${width}: menu controls stay centered on the full header despite edge touch padding ` +
+          `(${JSON.stringify({ menuCenter: baseline.menuCenter, headerCenter: baseline.headerCenter })})`);
+        let collapseIcon = baseline.actionIcons.find((icon) => icon.label.toLowerCase().includes('collapse'));
+        let fullscreenIcon = baseline.actionIcons.find((icon) => icon.label.toLowerCase().includes('fullscreen'));
+        assert.ok(collapseIcon && fullscreenIcon,
+          `${dock}@${width}: collapse and fullscreen controls are measurable`);
+        let expectedActionIconGap = collapseIcon.buttonWidth / 2 + fullscreenIcon.buttonWidth / 2 + baseline.themeGap;
+        let actualActionIconGap = Math.abs(collapseIcon.iconCenter - fullscreenIcon.iconCenter);
+        assert.ok(Math.abs(actualActionIconGap - expectedActionIconGap) <= 1,
+          `${dock}@${width}: visual action icons retain the normal header gap while touch targets stay separate ` +
+          `(${JSON.stringify({ actualActionIconGap, expectedActionIconGap })})`);
         let edgePadding = dock === 'start' ? baseline.headerPadding.start : baseline.headerPadding.end;
         let innerPadding = dock === 'start' ? baseline.headerPadding.end : baseline.headerPadding.start;
         assert.ok(

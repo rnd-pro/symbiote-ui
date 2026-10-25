@@ -244,6 +244,18 @@ export let styles = css`
          control, taken from the same theme tokens the target is built from. */
       layout-node[mobile-dock='start'][node-type='panel'][drawer-open] .panel-view > .panel-header,
       layout-node[mobile-dock='end'][node-type='panel'][drawer-open] .panel-view > .panel-header {
+        /* Keep visible chrome on the same visual grid as the undocked header.
+           Edge padding and the wider touch-target gap remain on the buttons;
+           these compensations move only the painted labels/icons, leaving the
+           non-overlapping press areas in their touch-safe positions. */
+        --drawer-header-extra-start: 0px;
+        --drawer-header-extra-end: 0px;
+        --drawer-header-menu-offset: calc((var(--drawer-header-extra-end) - var(--drawer-header-extra-start)) / 2);
+        --drawer-header-actions-offset: var(--drawer-header-extra-end);
+        --drawer-header-type-offset: calc(0px - var(--drawer-header-extra-start));
+        --drawer-header-gap-offset: calc(
+          (var(--header-effective-gap, var(--sn-layout-header-gap, 2px)) - var(--sn-layout-header-gap, 2px)) / 2
+        );
         padding-block: max(
           var(--sn-layout-header-padding-block, 0px),
           calc(var(--sn-layout-header-button-hit-size, 44px) - var(--sn-layout-header-button-min-block-size, 24px)) / 2
@@ -252,25 +264,47 @@ export let styles = css`
 
       /* Reserve touch-target room on the screen edge of each drawer. The
          start dock grows inward from inline-start; the end dock grows inward
-         from inline-end. Applying end padding to both docks shifts the start
-         rail's centered icon and header controls toward the screen edge. */
+         from inline-end. Visible chrome is compensated above so this room does
+         not move the header's visual alignment. */
       layout-node[mobile-dock='start'][node-type='panel'][drawer-open] .panel-view > .panel-header {
-        padding-inline-start: max(
-          var(--sn-layout-header-padding-inline-start, 4px),
-          calc(
-            var(--sn-layout-header-button-hit-size, 44px) -
-              var(--sn-layout-header-button-min-inline-size, 24px)
-          ) / 2
-        ) !important;
+        --drawer-header-extra-start: max(
+          0px,
+          calc((var(--sn-layout-header-button-hit-size, 44px) - var(--sn-layout-header-button-min-inline-size, 24px)) / 2 - var(--sn-layout-header-padding-inline-start, 4px))
+        );
+        padding-inline-start: calc(var(--sn-layout-header-padding-inline-start, 4px) + var(--drawer-header-extra-start)) !important;
       }
 
       layout-node[mobile-dock='end'][node-type='panel'][drawer-open] .panel-view > .panel-header {
+        --drawer-header-extra-end: max(
+          0px,
+          calc((var(--sn-layout-header-button-hit-size, 44px) - var(--sn-layout-header-button-min-inline-size, 24px)) / 2 - var(--sn-layout-header-padding-inline-end, 4px))
+        );
         /* A drawer sits flush to the screen edge, so the outermost control
            could not grow outward. It gets the same room, inward. */
-        padding-inline-end: max(
-          var(--sn-layout-header-padding-inline-end, 4px),
-          calc(var(--sn-layout-header-button-hit-size, 44px) - var(--sn-layout-header-button-min-inline-size, 24px)) / 2
-        ) !important;
+        padding-inline-end: calc(var(--sn-layout-header-padding-inline-end, 4px) + var(--drawer-header-extra-end)) !important;
+      }
+
+      layout-node[mobile-dock='start'][drawer-open] .panel-view > .panel-header .panel-menu-toggle,
+      layout-node[mobile-dock='end'][drawer-open] .panel-view > .panel-header .panel-menu-toggle {
+        inset-inline-start: var(--drawer-header-menu-offset, 0px);
+      }
+
+      layout-node[mobile-dock='start'][drawer-open] .panel-view > .panel-header .type-btn > :is(.panel-icon, .panel-title, .dropdown-arrow),
+      layout-node[mobile-dock='end'][drawer-open] .panel-view > .panel-header .type-btn > :is(.panel-icon, .panel-title, .dropdown-arrow) {
+        position: relative;
+        inset-inline-start: var(--drawer-header-type-offset, 0px);
+      }
+
+      layout-node[mobile-dock='start'][drawer-open] .panel-view > .panel-header .panel-actions > .collapse-btn > .material-symbols-outlined,
+      layout-node[mobile-dock='end'][drawer-open] .panel-view > .panel-header .panel-actions > .collapse-btn > .material-symbols-outlined {
+        position: relative;
+        inset-inline-start: calc(var(--drawer-header-actions-offset, 0px) + var(--drawer-header-gap-offset, 0px));
+      }
+
+      layout-node[mobile-dock='start'][drawer-open] .panel-view > .panel-header .panel-actions > .fullscreen-btn > .material-symbols-outlined,
+      layout-node[mobile-dock='end'][drawer-open] .panel-view > .panel-header .panel-actions > .fullscreen-btn > .material-symbols-outlined {
+        position: relative;
+        inset-inline-start: calc(var(--drawer-header-actions-offset, 0px) - var(--drawer-header-gap-offset, 0px));
       }
 
       layout-node[mobile-dock='start'][drawer-open] .panel-actions,
