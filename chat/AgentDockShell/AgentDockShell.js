@@ -264,7 +264,7 @@ export class AgentDockShell extends Symbiote {
       this._releaseMainFullscreen();
       this._fullscreenMainHost = host;
       this._mainFullscreenObserver = new MutationObserver((records) => {
-        if (records.some((record) => record.type === 'childList'
+        if (records.some((record) => (record.type === 'childList' && record.target === host)
           || (record.type === 'attributes' && record.target.parentElement === host))) {
           this._syncMainFullscreen(host);
         }
