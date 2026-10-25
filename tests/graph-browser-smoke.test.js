@@ -2872,7 +2872,7 @@ test('drawer touch swipe closes; rails align at 320/390/430', { timeout: BROWSER
 
     // A synthesized touch gesture drives the compositor scroll path; raw
     // dispatchTouchEvent only reaches page handlers in this test harness.
-    const touchScroll = async ({ x, y, distance }) => {
+    let touchScroll = async ({ x, y, distance }) => {
       await page.send('Input.synthesizeScrollGesture', {
         x,
         y,
@@ -2892,14 +2892,14 @@ test('drawer touch swipe closes; rails align at 320/390/430', { timeout: BROWSER
       await page.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: Math.round(to), y, button: 'left', buttons: 0, clickCount: 1 });
     };
 
-    const touchSwipe = async ({ from, to, y, steps = 6 }) => {
+    let touchSwipe = async ({ from, to, y, steps = 6 }) => {
       await page.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 1 });
       await page.send('Input.dispatchTouchEvent', {
         type: 'touchStart',
         touchPoints: [{ id: 1, x: from, y, radiusX: 1, radiusY: 1, force: 1 }],
       });
       for (let i = 1; i <= steps; i += 1) {
-        const x = Math.round(from + (to - from) * (i / steps));
+        let x = Math.round(from + (to - from) * (i / steps));
         await page.send('Input.dispatchTouchEvent', {
           type: 'touchMove',
           touchPoints: [{ id: 1, x, y, radiusX: 1, radiusY: 1, force: 1 }],
@@ -2938,8 +2938,8 @@ test('drawer touch swipe closes; rails align at 320/390/430', { timeout: BROWSER
         );
         const baseline = await evaluate(`(() => {
           const report = window.__lab.headerReport('${dock}');
-          const header = report?.node?.querySelector('.panel-header');
-          const headerStyle = header ? getComputedStyle(header) : null;
+          let header = report?.node?.querySelector('.panel-header');
+          let headerStyle = header ? getComputedStyle(header) : null;
           return {
             controls: report?.controls?.map((c) => ({ label: c.label, rect: c.rect, hit: c.hit })) || [],
             headerPadding: headerStyle ? {
@@ -2953,8 +2953,8 @@ test('drawer touch swipe closes; rails align at 320/390/430', { timeout: BROWSER
           `${dock}@${width}: header exposes real controls (${JSON.stringify(baseline.controls.map((c) => c.label))})`);
         assert.ok(baseline.headerPadding,
           `${dock}@${width}: computed logical header padding is measurable`);
-        const edgePadding = dock === 'start' ? baseline.headerPadding.start : baseline.headerPadding.end;
-        const innerPadding = dock === 'start' ? baseline.headerPadding.end : baseline.headerPadding.start;
+        let edgePadding = dock === 'start' ? baseline.headerPadding.start : baseline.headerPadding.end;
+        let innerPadding = dock === 'start' ? baseline.headerPadding.end : baseline.headerPadding.start;
         assert.ok(
           edgePadding > innerPadding,
           `${dock}@${width}: touch room follows the panel edge ` +
@@ -3055,13 +3055,13 @@ test('drawer touch swipe closes; rails align at 320/390/430', { timeout: BROWSER
           })()`);
           assert.ok(openPanelBox && openPanelBox.right - openPanelBox.left > 120,
             `start drawer is open for the scroll probe at ${width}px: ${JSON.stringify(openPanelBox)}`);
-          const touchPoint = await evaluate(`(() => {
+          let touchPoint = await evaluate(`(() => {
             const n = window.__lab.headerReport('start')?.node?.getBoundingClientRect?.();
             const box = window.__lab.scrollBox()?.getBoundingClientRect?.();
             if (!n || !box) return null;
-            const x = Math.round((n.left + n.right) / 2);
-            const y = Math.round((box.top + box.bottom) / 2);
-            const el = document.elementFromPoint(x, y);
+            let x = Math.round((n.left + n.right) / 2);
+            let y = Math.round((box.top + box.bottom) / 2);
+            let el = document.elementFromPoint(x, y);
             return { x, y, insideScroller: x >= box.left && x <= box.right && y >= box.top && y <= box.bottom, hit: el?.className || null };
           })()`);
           assert.ok(touchPoint?.insideScroller,
@@ -3102,15 +3102,15 @@ test('drawer touch swipe closes; rails align at 320/390/430', { timeout: BROWSER
 
         await evaluate(`window.__lab.setDensity(1)`);
         await evaluate(`window.__lab.closeDrawer('${dock}')`);
-        const collapsedIcon = await evaluate(`(() => {
-          const report = window.__lab.headerReport('${dock}');
-          const header = report?.node?.querySelector('.panel-header');
-          const icon = header?.querySelector('.type-btn .panel-icon');
+        let collapsedIcon = await evaluate(`(() => {
+          let report = window.__lab.headerReport('${dock}');
+          let header = report?.node?.querySelector('.panel-header');
+          let icon = header?.querySelector('.type-btn .panel-icon');
           if (!header || !icon) return null;
-          const headerRect = header.getBoundingClientRect();
-          const iconRect = icon.getBoundingClientRect();
-          const style = getComputedStyle(header);
-          const contentCenter = headerRect.left + parseFloat(style.paddingLeft) +
+          let headerRect = header.getBoundingClientRect();
+          let iconRect = icon.getBoundingClientRect();
+          let style = getComputedStyle(header);
+          let contentCenter = headerRect.left + parseFloat(style.paddingLeft) +
             (headerRect.width - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)) / 2;
           return { contentCenter, iconCenter: iconRect.left + iconRect.width / 2 };
         })()`);
