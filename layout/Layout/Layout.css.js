@@ -688,6 +688,17 @@ export let styles = css`
     }
 
     /* Fullscreen tab bar */
+    &[fullscreen-composition-active] [fullscreen-ancestor] {
+      contain: none !important;
+      container-type: normal !important;
+      transform: none !important;
+      will-change: auto !important;
+      filter: none !important;
+      backdrop-filter: none !important;
+      perspective: none !important;
+      overflow: visible !important;
+    }
+
     .fullscreen-tab-bar {
       position: fixed;
       top: 0;
@@ -709,11 +720,16 @@ export let styles = css`
     }
 
     .tab-list {
-      display: contents;
+      display: flex;
+      min-inline-size: 0;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scrollbar-width: none;
     }
 
     .fullscreen-tab {
       display: flex;
+      flex: 0 0 auto;
       align-items: center;
       gap: var(--sn-fullscreen-tab-gap, 6px);
       padding: var(--sn-fullscreen-tab-padding, 0 12px);

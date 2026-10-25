@@ -68,6 +68,7 @@ export class AgentDockShell extends Symbiote {
   }
 
   disconnectedCallback() {
+    this._releaseMainFullscreen();
     this._layoutModeObserver?.disconnect();
     this.removeEventListener('panel-collapse-toggle', this._onPanelCollapseToggle);
     this.removeEventListener('panel-close', this._onPanelClose);
@@ -181,6 +182,7 @@ export class AgentDockShell extends Symbiote {
     layout.setAttribute('responsive-mode', 'drawer');
     layout.setAttribute('responsive-breakpoint', String(breakpoint));
     layout.setAttribute('swipe-control', 'rail');
+    layout.setAttribute('fullscreen-scope', 'composition');
     layout.registerPanelType('agent-dock-main', {
       title: 'Workspace',
       icon: 'dashboard',
@@ -258,9 +260,66 @@ export class AgentDockShell extends Symbiote {
       ...Array.from(this.querySelectorAll('[slot="main"]')),
     ].filter((item) => !host.contains(item));
     for (let item of new Set(mainItems)) host.append(item);
+    if (this._fullscreenMainHost !== host) {
+      this._releaseMainFullscreen();
+      this._fullscreenMainHost = host;
+      this._mainFullscreenObserver = new MutationObserver((records) => {
+        if (records.some((record) => record.type === 'childList'
+          || (record.type === 'attributes' && record.target.parentElement === host))) {
+          this._syncMainFullscreen(host);
+        }
+      });
+      this._mainFullscreenObserver.observe(host, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['fullscreen-scope'],
+      });
+    }
+    this._syncMainFullscreen(host);
+  }
+
+  _syncMainFullscreen(host) {
+    let panel = host.closest('layout-node');
+    if (host !== this._fullscreenMainHost || !panel) return;
+    let items = [...host.children];
+    let eligible = items.length > 0 && items.every((item) => item.localName === 'panel-layout'
+      && (!item.hasAttribute('fullscreen-scope') || item.getAttribute('fullscreen-scope') === 'parent'));
+    let links = this._mainFullscreenLinks ||= new Set();
+    let changed = eligible !== panel.hasAttribute('fullscreen-container')
+      || [...links].some((layout) => !items.includes(layout) || !eligible)
+      || (eligible && items.some((layout) => !layout.hasAttribute('fullscreen-scope')));
+    if (!changed) return;
+    this.ref.layout._endCompositionFullscreen();
+    for (let layout of links) {
+      if (eligible && items.includes(layout)) continue;
+      if (layout.getAttribute('fullscreen-scope') === 'parent') layout.removeAttribute('fullscreen-scope');
+      links.delete(layout);
+    }
+    panel.toggleAttribute('fullscreen-container', eligible);
+    if (eligible) {
+      for (let layout of items) {
+        if (layout.hasAttribute('fullscreen-scope')) continue;
+        links.add(layout);
+        layout.setAttribute('fullscreen-scope', 'parent');
+      }
+    }
+  }
+
+  _releaseMainFullscreen() {
+    this._mainFullscreenObserver?.disconnect();
+    this._mainFullscreenObserver = null;
+    this.ref.layout?._endCompositionFullscreen();
+    for (let layout of this._mainFullscreenLinks || []) {
+      if (layout.getAttribute('fullscreen-scope') === 'parent') layout.removeAttribute('fullscreen-scope');
+    }
+    this._mainFullscreenLinks?.clear();
+    this._fullscreenMainHost?.closest('layout-node')?.removeAttribute('fullscreen-container');
+    this._fullscreenMainHost = null;
   }
 
   _preserveMain() {
+    this._releaseMainFullscreen();
     const host = this.ref.layout?.querySelector?.('[data-agent-dock-main-host]');
     const source = this.ref.source;
     if (!host || !source) return;

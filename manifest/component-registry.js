@@ -3932,7 +3932,7 @@ export let COMPONENTS = [
       status: 'draft',
       schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
-      capabilities: ['layout-tree', 'split-panels', 'cross-layout-peer-collapse', 'edge-collapse', 'panel-registry', 'panel-menu-actions', 'ui-invoked-panels', 'responsive-behavior', 'importance-auto-collapse', 'min-size-fit', 'scroll-fallback', 'mobile-stack', 'mobile-drawer', 'mobile-swipe-mode', 'local-storage'],
+      capabilities: ['layout-tree', 'split-panels', 'cross-layout-peer-collapse', 'edge-collapse', 'panel-registry', 'panel-menu-actions', 'ui-invoked-panels', 'responsive-behavior', 'importance-auto-collapse', 'min-size-fit', 'scroll-fallback', 'mobile-stack', 'mobile-drawer', 'mobile-swipe-mode', 'fullscreen-composition', 'local-storage'],
       attributes: [
         { name: 'storage-key', type: 'string', description: 'Optional key for persisted layout state.' },
         { name: 'min-panel-size', type: 'number', description: 'Minimum panel size in pixels.' },
@@ -3944,6 +3944,8 @@ export let COMPONENTS = [
         { name: 'overflow-mode', type: 'string', description: 'Overflow fallback: collapse, scroll-inline, scroll-block, or scroll.' },
         { name: 'edge-collapse', type: 'boolean', description: 'When the root panel is collapsed, removes the theme frame gap only on the outer collapsed edge so rails can sit flush with a viewport or app edge.' },
         { name: 'layout-peer-group', type: 'string', description: 'Optional group id for separate panel-layout roots that should expose root-panel collapse controls when visible peers exist.' },
+        { name: 'fullscreen-scope', type: 'string', description: 'Fullscreen boundary: local (default), composition (shared root), or parent (joins the immediate composition through a fullscreen-container host panel).' },
+        { name: 'fullscreen-composition-active', type: 'boolean', description: 'Read-only marker on the root while explicitly linked layouts share one fullscreen tab bar.' },
         { name: 'layout-peer-active', type: 'boolean', description: 'Read-only runtime marker set when this layout has a visible peer in its layout-peer-group.' },
         { name: 'layout-peer-collapse-dir', type: 'string', description: 'Read-only runtime collapse axis resolved from the visible peer geometry: horizontal or vertical.' },
         { name: 'layout-peer-collapse-side', type: 'string', description: 'Read-only runtime collapse side for the root panel: first or second.' },
@@ -4200,6 +4202,7 @@ export let COMPONENTS = [
         { name: 'importance', type: 'number', description: 'Normalized layout importance used by auto-collapse sorting.' },
         { name: 'collapse-policy', type: 'string', description: 'Collapse policy: auto, manual, or never.' },
         { name: 'overflow-policy', type: 'string', description: 'Overflow fallback inherited by this layout node.' },
+        { name: 'fullscreen-container', type: 'boolean', description: 'Explicitly transparent structural host: fullscreen tabs represent its parent-linked child layouts instead of this wrapper panel.' },
       ],
       events: [
         { name: 'layout-change', description: 'Emits after layout node structure changes.' },
@@ -5355,7 +5358,7 @@ export let COMPONENTS = [
       status: 'draft',
       schemaVersion: 'component-descriptor-v2',
       dataSchema: 'schemas/runtime-ui-v1.json',
-      capabilities: ['agent-dock-shell', 'cascade-frame-surface', 'standard-panel-layout-split', 'native-desktop-resizer', 'native-panel-collapse', 'native-mobile-end-drawer', 'native-bottom-show-panel', 'responsive-show-inline-fallback', 'layout-default-reset', 'provider-owned-stacking-tier', 'stable-chat-lifecycle', 'stable-player-lifecycle', 'presenter-overlay-reserve'],
+      capabilities: ['agent-dock-shell', 'cascade-frame-surface', 'standard-panel-layout-split', 'native-desktop-resizer', 'native-panel-collapse', 'native-mobile-end-drawer', 'native-bottom-show-panel', 'responsive-show-inline-fallback', 'layout-default-reset', 'provider-owned-stacking-tier', 'stable-chat-lifecycle', 'stable-player-lifecycle', 'fullscreen-composition', 'presenter-overlay-reserve'],
       attributes: [
         { name: 'closed', type: 'boolean', description: 'Hides the dock while preserving the mounted chat and embedded Show instances.' },
         { name: 'responsive-breakpoint', type: 'number', description: 'Inline-size threshold used for mobile projection.' },
@@ -5384,7 +5387,7 @@ export let COMPONENTS = [
         { name: 'agent-show-layout-change', description: 'Reports that the same live Show player moved between inline and native-panel placement.', detail: [{ name: 'placement', type: 'string' }, { name: 'panelId', type: 'string' }, { name: 'reason', type: 'string' }] },
       ],
       slots: [
-        { name: 'main', description: 'Product-owned main workspace moved into the primary panel of the provider-owned split.' },
+        { name: 'main', description: 'Product-owned workspace moved into the primary panel. Direct layouts without an explicit fullscreen boundary join the shell fullscreen tabs; mixed content and explicit local/composition scopes retain Workspace isolation.' },
       ],
       themeAliases: ['--sn-agent-dock-z', '--sn-panel-bg', '--sn-node-border'],
     },

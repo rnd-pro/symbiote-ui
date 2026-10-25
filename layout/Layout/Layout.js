@@ -14,6 +14,7 @@ import { styles } from './Layout.css.js';
 import './../LayoutNode/LayoutNode.js';
 import './../PanelMenu/PanelMenu.js';
 import { getFocusableElements } from '../../ui/focus-trap.js';
+import FullscreenComposition from './FullscreenComposition.js';
 
 function setAttributeIfChanged(element, name, value) {
   let next = String(value);
@@ -310,6 +311,7 @@ export class Layout extends Symbiote {
     '@auto-collapse': true,
     '@drawer-hover-open': false,
     '@layout-peer-group': '',
+    '@fullscreen-scope': 'local',
 
 
     layoutTree: null,
@@ -486,6 +488,7 @@ export class Layout extends Symbiote {
   }
 
   disconnectedCallback() {
+    this._endCompositionFullscreen();
     NATIVE_RAIL_LAYOUTS.delete(this);
     this._unregisterPeerGroup();
     // A disconnected layout must not leave role/aria-modal/tabindex or inert
@@ -513,7 +516,12 @@ export class Layout extends Symbiote {
     this._renderRoot();
     this._scheduleResponsiveLayout();
     this.sub('@layout-peer-group', () => this._syncPeerGroupRegistration());
+    this.sub('@fullscreen-scope', () => {
+      this._endCompositionFullscreen();
+      this._exitLocalFullscreen();
+    });
     this.sub('layoutTree', () => {
+      this._endCompositionFullscreen();
       this._renderRoot();
       this._scheduleResponsiveLayout();
 
@@ -521,6 +529,7 @@ export class Layout extends Symbiote {
 
         if (typeof requestAnimationFrame !== 'undefined') {
           requestAnimationFrame(() => {
+            if (this._fullscreenComposition) return;
             let allPanels = this._ownedPanelNodes();
 
             let panelExists = Array.from(allPanels).some(
@@ -752,6 +761,7 @@ export class Layout extends Symbiote {
   }
 
   _applyResponsiveLayout() {
+    if (this._fullscreenComposition) return;
     if (!this.$.layoutTree || !this.isConnected) return;
     let behavior = this._getRootBehavior();
     let rect = this.getBoundingClientRect();
@@ -959,7 +969,7 @@ export class Layout extends Symbiote {
   }
 
   _syncDrawerProjection(responsiveState, behavior, tree) {
-    let active = Boolean(responsiveState.drawerActive) && !this.$.fullscreenPanelId;
+    let active = Boolean(responsiveState.drawerActive) && !this._isFullscreenActive();
     toggleAttributeIfChanged(this, 'drawer-mode-active', active);
     if (!active) {
       this._clearDrawerProjection();
@@ -1226,7 +1236,7 @@ export class Layout extends Symbiote {
 
   _scheduleDrawerRailPeek(startOpen, endOpen) {
     if (this._drawerRailPeekPlayed || this._drawerRailPeekTimer || this._drawerRailPeekClearTimer) return;
-    if (startOpen || endOpen || this.$.fullscreenPanelId) return;
+    if (startOpen || endOpen || this._isFullscreenActive()) return;
     let nodes = getOwnedLayoutNodes(this, 'layout-node[drawer-rail][drawer-rail-collapsed][data-drawer-dock]');
     if (!nodes.length) return;
     this._drawerRailPeekPlayed = true;
@@ -2251,35 +2261,28 @@ export class Layout extends Symbiote {
   }
   _onPanelFullscreen(e) {
     if (this.$.panelChrome === false) return;
+    let origin = e.target?.closest?.('panel-layout');
+    if (origin && origin !== this) return;
     let { panelId } = e.detail;
     let panelNode = this._findPanelNode(panelId);
     if (!panelNode) return;
+    e.stopPropagation?.();
+    let root = FullscreenComposition.resolveRoot(this);
+    if (root) {
+      let session = root._fullscreenComposition;
+      if (session?.matches(this, panelNode)) {
+        session.exit();
+      } else {
+        session ||= new FullscreenComposition(root);
+        if (!session.select(this, panelNode)) session.exit();
+      }
+      return;
+    }
 
     let allPanels = this._ownedPanelNodes();
 
     if (this.$.fullscreenPanelId === panelId) {
-
-      this.$.fullscreenPanelId = null;
-      this.$.hasFullscreenTabs = false;
-      this.$.tabItems = [];
-      this._syncFullscreenBounds();
-
-      panelNode.removeAttribute('fullscreen');
-      panelNode.$.isFullscreen = false;
-      panelNode.$.fullscreenIcon = 'fullscreen';
-
-
-      allPanels.forEach((p) => {
-        p.removeAttribute('fullscreen');
-        p.$.isFullscreen = false;
-        p.$.fullscreenIcon = 'fullscreen';
-        this.#setPanelVisible(p, true);
-      });
-
-
-      this._renderRoot();
-      this._scheduleResponsiveLayout();
-      this.dispatchEvent(new CustomEvent('layout-change', { bubbles: true }));
+      this._exitLocalFullscreen();
     } else {
 
       this.$.fullscreenPanelId = panelId;
@@ -2304,8 +2307,35 @@ export class Layout extends Symbiote {
     }
   }
 
+  _exitLocalFullscreen() {
+    if (!this.$.fullscreenPanelId) return;
+    this.$.fullscreenPanelId = null;
+    this.$.hasFullscreenTabs = false;
+    this.$.tabItems = [];
+    this._syncFullscreenBounds();
+    for (let panel of this._ownedPanelNodes()) {
+      panel.removeAttribute('fullscreen');
+      panel.$.isFullscreen = false;
+      panel.$.fullscreenIcon = 'fullscreen';
+      this.#setPanelVisible(panel, true);
+    }
+    this._renderRoot();
+    this._scheduleResponsiveLayout();
+    this.dispatchEvent(new CustomEvent('layout-change', { bubbles: true }));
+  }
+
+  _isFullscreenActive() {
+    return Boolean(this.$.fullscreenPanelId || this._fullscreenComposition);
+  }
+
+  _endCompositionFullscreen() {
+    let session = this._fullscreenComposition
+      || FullscreenComposition.resolveRoot(this)?._fullscreenComposition;
+    session?.exit();
+  }
+
   _syncFullscreenBounds() {
-    if (!this.$.fullscreenPanelId) {
+    if (!this._isFullscreenActive()) {
       this.removeAttribute('fullscreen-active');
       this.style.removeProperty('--sn-layout-fullscreen-host-top');
       this.style.removeProperty('--sn-layout-fullscreen-host-right');
@@ -2337,6 +2367,10 @@ export class Layout extends Symbiote {
     });
   }
   _switchFullscreenPanel(panelId) {
+    if (this._fullscreenComposition) {
+      this._fullscreenComposition.selectTab(panelId);
+      return;
+    }
     let allPanels = this._ownedPanelNodes();
     let newPanel = this._findPanelNode(panelId);
     if (!newPanel) return;
@@ -2561,6 +2595,7 @@ export class Layout extends Symbiote {
     return LayoutTree.clone(this.$.layoutTree);
   }
   setLayout(layout) {
+    this._endCompositionFullscreen();
     let allPanels = this._ownedPanelNodes();
     allPanels.forEach((panelNode) => {
       panelNode.removeAttribute('fullscreen');

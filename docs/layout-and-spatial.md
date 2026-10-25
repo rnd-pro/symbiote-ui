@@ -59,6 +59,31 @@ Drawer projection exposes `drawer-mode-active`, `drawer-start-open`,
 selectors; opening drawers changes only presentation state and does not save
 or mutate the host layout tree.
 
+### Fullscreen composition
+
+Fullscreen is local to a `panel-layout` by default. A layout with
+`fullscreen-scope="composition"` can share one fullscreen tab bar with structural
+child layouts marked `fullscreen-scope="parent"`. Each child must be hosted by a
+panel marked `fullscreen-container`; the wrapper is then replaced by its child
+panels in the tab bar. A local layout is a boundary: embedded editors and demos
+do not join an enclosing composition implicitly.
+
+`agent-dock-shell` applies this composition to directly assigned main layouts
+and its Agent/Show panels. It links only main content consisting entirely of
+layouts that accept the parent scope; explicit local/composition scopes or
+mixed main content preserve the Workspace panel and nested isolation. Links
+owned by the shell are released when the assignment ends.
+
+Fullscreen changes presentation without moving mounted content or saving
+collapse/ratio changes. All tabs use the owning layout's title and icon, and
+owner identity separates equal panel IDs. Selecting a collapsed panel reveals
+its content temporarily; switching or exiting restores its prior presentation.
+The `fullscreen-composition-active` root marker and shared participation state
+suspend drawer projection and modal restrictions. Resize keeps fullscreen;
+exit restores responsive presentation and valid drawer intent. A participant
+tree replacement, scope/membership change, or disconnection ends the session
+before subsequent composition changes are applied.
+
 ### Drawer gesture contract
 
 Rail and edge swipes share one contract across both docks, and no control
