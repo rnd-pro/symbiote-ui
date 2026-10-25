@@ -2870,12 +2870,15 @@ test('drawer panel controls scale with theme density on both docks at 320/390/43
       return result.result?.value;
     };
 
-    // Scroll input the browser actually performs in this environment: CDP touch
-    // events reach the page but do not drive the compositor gesture, so a wheel
-    // is the honest in-VM evidence that the list scrolls while the drawer holds.
-    const wheel = async ({ x, y, deltaY }) => {
-      await page.send('Input.dispatchMouseEvent', {
-        type: 'mouseWheel', x, y, deltaX: 0, deltaY, pointerType: 'mouse',
+    // A synthesized touch gesture drives the compositor scroll path; raw
+    // dispatchTouchEvent only reaches page handlers in this test harness.
+    const touchScroll = async ({ x, y, distance }) => {
+      await page.send('Input.synthesizeScrollGesture', {
+        x,
+        y,
+        yDistance: distance,
+        speed: 700,
+        gestureSourceType: 'touch',
       });
     };
 
@@ -3020,7 +3023,7 @@ test('drawer panel controls scale with theme density on both docks at 320/390/43
           })()`);
           assert.ok(openPanelBox && openPanelBox.right - openPanelBox.left > 120,
             `start drawer is open for the scroll probe at ${width}px: ${JSON.stringify(openPanelBox)}`);
-          const wheelPoint = await evaluate(`(() => {
+          const touchPoint = await evaluate(`(() => {
             const n = window.__lab.headerReport('start')?.node?.getBoundingClientRect?.();
             const box = window.__lab.scrollBox()?.getBoundingClientRect?.();
             if (!n || !box) return null;
@@ -3029,11 +3032,9 @@ test('drawer panel controls scale with theme density on both docks at 320/390/43
             const el = document.elementFromPoint(x, y);
             return { x, y, insideScroller: x >= box.left && x <= box.right && y >= box.top && y <= box.bottom, hit: el?.className || null };
           })()`);
-          assert.ok(wheelPoint?.insideScroller,
-            `wheel point lands inside the scrolling list at ${width}px: ${JSON.stringify(wheelPoint)}`);
-          const wheelX = wheelPoint.x;
-          const wheelY = wheelPoint.y;
-          for (let i = 0; i < 4; i += 1) await wheel({ x: wheelX, y: wheelY, deltaY: 120 });
+          assert.ok(touchPoint?.insideScroller,
+            `touch point lands inside the scrolling list at ${width}px: ${JSON.stringify(touchPoint)}`);
+          await touchScroll({ x: touchPoint.x, y: touchPoint.y, distance: -480 });
           const scrolled = await waitForPredicate(evaluate, `(() => {
             const box = window.__lab.scrollBox();
             return box && box.scrollTop > ${scrollStart};

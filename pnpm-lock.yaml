@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       symbiote-engine:
-        specifier: 0.3.0-alpha.14
-        version: 0.3.0-alpha.14
+        specifier: 0.3.0-alpha.15
+        version: 0.3.0-alpha.15
     devDependencies:
       '@symbiotejs/symbiote':
         specifier: 3.8.0-webmcp.2
@@ -18,6 +18,9 @@ importers:
       ajv:
         specifier: ^8.20.0
         version: 8.20.0
+      esbuild:
+        specifier: 0.25.12
+        version: 0.25.12
       jsda-kit:
         specifier: 1.6.0
         version: 1.6.0
@@ -399,8 +402,8 @@ packages:
     resolution: {integrity: sha512-Xf0nWe6RseziFMu+Ap9biiUbmplq6S9/p+7w7YXP/JBHhrUDDUhwa+vANyubuqfZWTveU//DYVGsDG7RKL/vEw==}
     engines: {node: '>=0.10.0'}
 
-  symbiote-engine@0.3.0-alpha.14:
-    resolution: {integrity: sha512-RdPwJfkE2782d9Sp+x4O7+DRVfnzvEzKYg1VR9XaLwR1oa0SJEt96V7302hGrfArARELPk/NId4c86SDlg75cg==}
+  symbiote-engine@0.3.0-alpha.15:
+    resolution: {integrity: sha512-w1CErBo8UL2+qwatlvhenWHMR5GHnXNLRhTw4WQeXXC1GzPs2shD6jpV3XaEY9lkiudh69IFFoDbcLmoRz4uCg==}
     engines: {node: '>=18.0.0'}
     hasBin: true
     peerDependencies:
@@ -718,7 +721,7 @@ snapshots:
 
   require-from-string@2.0.2: {}
 
-  symbiote-engine@0.3.0-alpha.14: {}
+  symbiote-engine@0.3.0-alpha.15: {}
 
   three@0.185.1: {}
 
