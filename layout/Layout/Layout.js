@@ -1571,6 +1571,14 @@ export class Layout extends Symbiote {
     return dock === 'start' ? Boolean(this.$.drawerStartOpen) : Boolean(this.$.drawerEndOpen);
   }
 
+  _ownsDrawerGesture(e) {
+    let path = e.composedPath?.() || [];
+    let owner = path.find((node) => node?.tagName === 'PANEL-LAYOUT'
+      && node.hasAttribute?.('drawer-mode-active'));
+    if (!owner) owner = e.target?.closest?.('panel-layout[drawer-mode-active]');
+    return !owner || owner === this;
+  }
+
   _resyncDrawerProjection() {
     if (!this._lastResponsiveState || !this._lastDrawerBehavior || !this.$.layoutTree) return;
     this._syncDrawerProjection(this._lastResponsiveState, this._lastDrawerBehavior, this.$.layoutTree);
@@ -1620,6 +1628,7 @@ export class Layout extends Symbiote {
   _onDrawerRailPointerDown(e) {
     if (!this.hasAttribute('drawer-mode-active')) return;
     if (e.button !== undefined && e.button !== 0) return;
+    if (!this._ownsDrawerGesture(e)) return;
     this._clearDrawerRailPeek();
     let target = e.target?.closest?.('layout-node[drawer-rail][drawer-rail-collapsed][data-drawer-dock]');
     if (target && this.contains(target)) {
@@ -1710,6 +1719,7 @@ export class Layout extends Symbiote {
   _onDrawerRailHover(e) {
     if (!this.hasAttribute('drawer-mode-active')) return;
     if (e.pointerType && e.pointerType !== 'mouse') return;
+    if (!this._ownsDrawerGesture(e)) return;
     let target = e.target?.closest?.('layout-node[drawer-rail][drawer-rail-collapsed][drawer-hover-open][data-drawer-dock]');
     if (!target || !this.contains(target)) return;
     let dock = target.dataset.drawerDock;

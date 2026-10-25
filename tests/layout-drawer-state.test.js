@@ -208,6 +208,42 @@ async function buildDrawerLayout(body, index) {
   return layout;
 }
 
+async function makeNestedDrawerFixture(freshName) {
+  let { parseHTML } = await import('linkedom');
+  let { window } = parseHTML('<!doctype html><html><body></body></html>');
+  let TestCSSStyleSheet = class { replaceSync(text) { this.cssText = text; } };
+  Object.assign(globalThis, {
+    window,
+    document: window.document,
+    HTMLElement: window.HTMLElement,
+    Element: window.Element,
+    customElements: window.customElements,
+    Node: window.Node,
+    Event: window.Event,
+    CustomEvent: window.CustomEvent,
+    MutationObserver: window.MutationObserver,
+    ShadowRoot: window.ShadowRoot || class ShadowRootStub {},
+    CSSStyleSheet: TestCSSStyleSheet,
+    getComputedStyle: window.getComputedStyle || (() => ({ transitionDuration: '0s', animationDuration: '0s' })),
+  });
+  window.document.adoptedStyleSheets = [];
+  const div = window.document.createElement('div');
+  const StyleProto = Object.getPrototypeOf(div.style);
+  StyleProto.getPropertyPriority = StyleProto.getPropertyPriority || (() => '');
+  const fresh = `?fresh=${freshName}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  await import(`../layout/LayoutNode/LayoutNode.js${fresh}`);
+  await import(`../layout/Layout/Layout.js${fresh}`);
+
+  let outer = await buildDrawerLayout(document.body, 0);
+  let outerPrimary = outer.querySelector('layout-node[mobile-dock="primary"]');
+  assert.ok(outerPrimary, 'outer primary panel exists');
+  let innerHost = outerPrimary.shadowRoot?.querySelector('.panel-content') || outerPrimary;
+  let inner = await buildDrawerLayout(innerHost, 1);
+  inner.style.width = '100%';
+  inner.style.height = '100%';
+  return { outer, inner };
+}
+
 test('opening a drawer in one visible layout closes drawers in a peer layout', async () => {
   let { parseHTML } = await import('linkedom');
   let { window } = parseHTML('<!doctype html><html><body></body></html>');
@@ -248,53 +284,53 @@ test('opening a drawer in one visible layout closes drawers in a peer layout', a
     'opening in one layout closes the open drawer in the other visible layout');
 });
 
-test('a nested layout collapse toggle never bubbles into the outer layout desktop path', async () => {
-  let { parseHTML } = await import('linkedom');
-  let { window } = parseHTML('<!doctype html><html><body></body></html>');
-  let TestCSSStyleSheet = class { replaceSync(text) { this.cssText = text; } };
-  Object.assign(globalThis, {
-    window,
-    document: window.document,
-    HTMLElement: window.HTMLElement,
-    Element: window.Element,
-    customElements: window.customElements,
-    Node: window.Node,
-    Event: window.Event,
-    CustomEvent: window.CustomEvent,
-    MutationObserver: window.MutationObserver,
-    ShadowRoot: window.ShadowRoot || class ShadowRootStub {},
-    CSSStyleSheet: TestCSSStyleSheet,
-    getComputedStyle: window.getComputedStyle || (() => ({ transitionDuration: '0s', animationDuration: '0s' })),
-  });
-  window.document.adoptedStyleSheets = [];
-  const div = window.document.createElement('div');
-  const StyleProto = Object.getPrototypeOf(div.style);
-  StyleProto.getPropertyPriority = StyleProto.getPropertyPriority || (() => '');
-  const fresh = `?fresh=nested-collapse-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  await import(`../layout/LayoutNode/LayoutNode.js${fresh}`);
-  await import(`../layout/Layout/Layout.js${fresh}`);
+test('nested swipe stays in its layout and vertical cancel preserves the open drawer', async () => {
+  let { outer, inner } = await makeNestedDrawerFixture('nested-gesture');
 
-  let outer = await buildDrawerLayout(document.body, 0);
-  let innerHost = outer.querySelector('layout-node').shadowRoot?.querySelector('.panel-view')
-    || outer.querySelector('layout-node .panel-view')
-    || outer.querySelector('layout-node');
-  let inner = await buildDrawerLayout(innerHost, 1);
-  inner.style.width = '100%';
-  inner.style.height = '100%';
+  let innerNode = findDrawerNode(inner, 'start');
+  assert.ok(innerNode, 'inner drawer rail exists');
+  innerNode.dispatchEvent(pointerEvent('pointerdown', { x: 16, y: 400 }));
+  assert.ok(inner._drawerGesture, 'inner layout owns the rail gesture');
+  assert.equal(outer._drawerGesture ?? null, null, 'outer layout ignores the nested rail gesture');
+  inner.dispatchEvent(pointerEvent('pointermove', { x: 300, y: 400 }));
+  inner.dispatchEvent(pointerEvent('pointerup', { x: 300, y: 400 }));
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(inner.$.drawerStartOpen, true, 'inner rail swipe opens its drawer');
+  assert.equal(outer.$.drawerStartOpen, false, 'inner rail swipe does not open the outer drawer');
+
+  innerNode.dispatchEvent(pointerEvent('pointerdown', { x: 150, y: 400 }));
+  assert.ok(inner._drawerGesture, 'inner layout owns the open-content touch gesture');
+  assert.equal(outer._drawerGesture ?? null, null, 'outer layout ignores the nested content gesture');
+  inner.dispatchEvent(pointerEvent('pointermove', { x: 150, y: 430 }));
+  inner.dispatchEvent(pointerEvent('pointercancel', { x: 150, y: 430 }));
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(inner.$.drawerStartOpen, true, 'vertical touch cancel keeps the inner drawer open');
+  assert.equal(outer.$.drawerStartOpen, false, 'vertical touch cancel leaves the outer drawer closed');
+  assert.equal(outer._drawerGesture ?? null, null, 'outer layout never captures the nested pointer');
+
+  outer.openDrawer('end');
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(outer.$.drawerEndOpen, true, 'outer end drawer opens');
+  assert.equal(inner.$.drawerStartOpen, false,
+    'opening the outer end drawer closes the nested start drawer');
+});
+
+test('a nested layout collapse toggle never bubbles into the outer layout desktop path', async () => {
+  let { outer, inner } = await makeNestedDrawerFixture('nested-collapse');
 
   inner.openDrawer('start');
   await new Promise((r) => setTimeout(r, 0));
   let innerNode = findDrawerNode(inner, 'start');
   assert.ok(innerNode, 'inner drawer node exists');
   let innerPanelId = innerNode.$.nodeId;
-
-  const outerTreePanels = [];
-  (function collect(node) {
+  let outerPanelsBefore = [];
+  const collectOuterPanels = (node, panels) => {
     if (!node) return;
-    if (node.type === 'panel') outerTreePanels.push({ id: node.id, collapsed: !!node.collapsed });
-    collect(node.first); collect(node.second);
-  })(outer.$.layoutTree);
-  const outerPanelsBefore = outerTreePanels.map((p) => p.collapsed).join(',');
+    if (node.type === 'panel') panels.push(!!node.collapsed);
+    collectOuterPanels(node.first, panels);
+    collectOuterPanels(node.second, panels);
+  };
+  collectOuterPanels(outer.$.layoutTree, outerPanelsBefore);
 
   innerNode.dispatchEvent(new CustomEvent('panel-collapse-toggle', {
     bubbles: true, composed: true,
@@ -304,13 +340,9 @@ test('a nested layout collapse toggle never bubbles into the outer layout deskto
 
   assert.equal(inner.$.drawerStartOpen, false, 'inner drawer closed via the drawer route');
   assert.ok(!innerNode.hasAttribute('collapsed'), 'inner node has no collapsed attr');
-  const outerPanelsAfter = [];
-  (function collect(node) {
-    if (!node) return;
-    if (node.type === 'panel') outerPanelsAfter.push(!!node.collapsed);
-    collect(node.first); collect(node.second);
-  })(outer.$.layoutTree);
-  assert.equal(outerPanelsAfter.join(','), outerPanelsBefore,
+  let outerPanelsAfter = [];
+  collectOuterPanels(outer.$.layoutTree, outerPanelsAfter);
+  assert.deepEqual(outerPanelsAfter, outerPanelsBefore,
     'outer layout tree must not absorb a collapse event from a nested layout panel');
 });
 
