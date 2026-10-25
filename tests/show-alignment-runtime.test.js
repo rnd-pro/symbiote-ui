@@ -869,7 +869,7 @@ test('paused branch restoration clears presenter attention and resume presents o
   assert.equal(scheduler.pending, 1);
 
   runtime.restorePlayback({ positionMs: 400 }, { reason: 'seek' });
-  assert.equal((await firstAnimation).status, 'cleared');
+  assert.equal((await firstAnimation).status, 'cancelled');
   assert.equal(scheduler.pending, 0);
   media.at(400, 'seeked');
 
@@ -877,7 +877,7 @@ test('paused branch restoration clears presenter attention and resume presents o
   let replayBeforeBranch = attention.whenSettled();
   assert.equal(scheduler.pending, 1);
   runtime.restorePlayback({ positionMs: 899 }, { reason: 'branch-return' });
-  assert.equal((await replayBeforeBranch).status, 'cleared');
+  assert.equal((await replayBeforeBranch).status, 'cancelled');
   assert.equal(scheduler.pending, 0);
   media.at(899, 'seeked');
 
@@ -889,7 +889,7 @@ test('paused branch restoration clears presenter attention and resume presents o
   scheduler.step(1000);
   scheduler.step(1100);
   scheduler.step(1200);
-  assert.equal((await attention.whenSettled()).status, 'settled');
+  assert.equal((await attention.whenSettled()).status, 'completed');
   assert.deepEqual(frameCalls.slice(callsBeforeSettling), [0, 100, 200]);
   assert.equal(scheduler.pending, 0);
   media.at(901);

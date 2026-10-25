@@ -419,9 +419,13 @@ test('a drag-borne click on a tree row is suppressed even when the gesture start
     panelId: drawerNode.dataset.drawerPanelId,
     target: primaryNode,
     gesture: true,
+    clientX: 120,
+    clientY: 240,
+    recordedAt: layout._drawerNow(),
     expiresAt: layout._drawerNow() + 700,
   };
   let gestureClick = new window.Event('click', { bubbles: true, cancelable: true });
+  Object.assign(gestureClick, { pointerId: 7, clientX: 120, clientY: 240 });
   row.dispatchEvent(gestureClick);
   assert.equal(gestureClick.defaultPrevented, true,
     'trailing gesture click on a tree row is swallowed despite a different gesture-origin target');
@@ -431,6 +435,43 @@ test('a drag-borne click on a tree row is suppressed even when the gesture start
   let freshTap = new window.Event('click', { bubbles: true, cancelable: true });
   row.dispatchEvent(freshTap);
   assert.equal(freshTap.defaultPrevented, false, 'independent row tap remains usable');
+});
+
+test('a release click on the primary surface is swallowed without delaying the next drawer tap', async () => {
+  let { layout } = await makeDrawerFixture();
+  layout.openDrawer('start');
+  await new Promise((r) => setTimeout(r, 0));
+  let drawerNode = findDrawerNode(layout, 'start');
+  let primaryNode = layout.querySelector('layout-node[mobile-dock="primary"]');
+  assert.ok(drawerNode);
+  assert.ok(primaryNode);
+
+  let row = document.createElement('div');
+  row.setAttribute('class', 'sn-tree-row');
+  drawerNode.append(row);
+  let releasePoint = { clientX: 12, clientY: 420 };
+  layout._ignoreNextDrawerClick = {
+    pointerId: 7,
+    panelId: drawerNode.dataset.drawerPanelId,
+    target: primaryNode,
+    gesture: true,
+    ...releasePoint,
+    recordedAt: layout._drawerNow(),
+    expiresAt: layout._drawerNow() + 700,
+  };
+
+  let releaseClick = new window.Event('click', { bubbles: true, cancelable: true });
+  Object.assign(releaseClick, { pointerId: 7, ...releasePoint });
+  primaryNode.dispatchEvent(releaseClick);
+  assert.equal(releaseClick.defaultPrevented, true,
+    'the gesture click is swallowed even when its release point is outside the drawer');
+  assert.equal(layout._ignoreNextDrawerClick, null, 'the release token is consumed');
+
+  let freshTap = new window.Event('click', { bubbles: true, cancelable: true });
+  Object.assign(freshTap, { pointerId: 8, clientX: 48, clientY: 360 });
+  row.dispatchEvent(freshTap);
+  assert.equal(freshTap.defaultPrevented, false,
+    'the next independent drawer tap is not delayed by a gesture timeout');
 });
 
 test('Escape closes the open drawer and returns focus to its opener', async () => {
@@ -889,16 +930,17 @@ test('a horizontal drag starting on a tree row still drives the drawer; the trai
   assert.equal(layout.$.drawerStartOpen, false, 'drag from a row closes the drawer');
 
   // The browser now dispatches the trailing click at the release point:
-  // The browser now dispatches the trailing click at the release point:
   // the capture gate must cancel it before any row listener is reached.
   // (linkedom ignores capture-phase stopPropagation — asserted in real Chrome
   // via the drawer-focus-lab probe; here the cancellable flag is checked.)
   let trailing = new window.Event('click', { bubbles: true, cancelable: true, composed: true });
+  Object.assign(trailing, { pointerId: 7, clientX: 30, clientY: 400 });
   row.dispatchEvent(trailing);
   assert.equal(trailing.defaultPrevented, true, 'trailing gesture click is cancelled at capture');
 
   // A genuine tap afterwards still selects: no leftover token.
   let freshTap = new window.Event('click', { bubbles: true, cancelable: true, composed: true });
+  Object.assign(freshTap, { pointerId: 8, clientX: 36, clientY: 400 });
   row.dispatchEvent(freshTap);
   assert.equal(freshTap.defaultPrevented, false,
     'independent tap is never cancelled (token consumed by the gesture click)');

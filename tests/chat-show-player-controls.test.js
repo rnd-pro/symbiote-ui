@@ -31,7 +31,7 @@ test('show transport buttons reuse the shared button-state recipe', async () => 
   assert.match(styles, /button:active\s*\{[\s\S]*?--sn-sys-state-pressed-mix/);
   assert.match(styles, /button:disabled\s*\{[\s\S]*?opacity:\s*var\(--sn-button-disabled-opacity/);
   // Touch: no sticky hover — resting backgrounds restored.
-  assert.match(styles, /@media \(hover: none\)\s*\{[\s\S]*?button:hover\s*\{[\s\S]*?background:\s*var\(--sn-node-bg\);/);
+  assert.match(styles, /@media \(hover: none\)\s*\{[\s\S]*?button:hover\s*\{[\s\S]*?--sn-node-hover:\s*var\(--sn-node-bg\);/);
   assert.doesNotMatch(styles, /\.chat-show-control\s+button/);
 });
 

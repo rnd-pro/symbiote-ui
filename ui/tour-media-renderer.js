@@ -191,12 +191,16 @@ export function createTourCaptionTrack(timelineOrPlan = {}, options = {}) {
     safeInsets: options.safeInsets,
     avoidRegions: options.avoidRegions,
   });
-  return {
-    ...placementTrack,
-    mode,
-    title: cleanText(plan.title, 'UI tour'),
-    wordTimingCount: placementTrack.cues.reduce((sum, cue) => sum + cue.wordTimings.length, 0),
-  };
+  // Keep renderer metadata readable without adding fields to the engine's
+  // hash-validated canonical placement-track shape.
+  Object.defineProperties(placementTrack, {
+    mode: { value: mode },
+    title: { value: cleanText(plan.title, 'UI tour') },
+    wordTimingCount: {
+      value: placementTrack.cues.reduce((sum, cue) => sum + cue.wordTimings.length, 0),
+    },
+  });
+  return placementTrack;
 }
 
 function createCanvas(options = {}) {

@@ -359,7 +359,7 @@ chat-show-player {
 
     @media (hover: none) {
       button:hover {
-        background: var(--sn-node-bg);
+        --sn-node-hover: var(--sn-node-bg);
       }
 
       .chat-show-primary-control:hover {

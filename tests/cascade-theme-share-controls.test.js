@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
 import { parseHTML } from 'linkedom';
+import { installLinkedomCSSStyleDeclaration } from './helpers/linkedom-css-style.js';
 
 class TestCSSStyleSheet {
   replaceSync(text) {
@@ -38,6 +39,7 @@ class MemoryStorage {
 
 function installDom() {
   const { window } = parseHTML('<!doctype html><html><body></body></html>');
+  installLinkedomCSSStyleDeclaration(window);
   const localStorage = new MemoryStorage();
   Object.defineProperty(window, 'localStorage', { configurable: true, value: localStorage });
   Object.assign(globalThis, {

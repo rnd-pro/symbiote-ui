@@ -9,6 +9,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
+import { normalizeNpmPackJson } from './helpers/npm-pack-json.js';
 
 let repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 let expectedExports = [
@@ -69,9 +70,7 @@ test('J2 packed artifact exposes the complete XR contract to an isolated consume
     '--pack-destination',
     temporaryRoot,
   ]);
-  let packs = JSON.parse(packResult.stdout);
-  assert.equal(packs.length, 1);
-  let pack = packs[0];
+  let pack = normalizeNpmPackJson(JSON.parse(packResult.stdout));
   let sourceManifest = JSON.parse(await readFile(join(repoRoot, 'package.json'), 'utf8'));
   assert.equal(pack.name, 'symbiote-ui');
   assert.equal(pack.version, sourceManifest.version);

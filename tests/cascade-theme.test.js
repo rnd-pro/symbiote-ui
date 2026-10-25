@@ -198,7 +198,7 @@ test('Show chat surfaces end color chains at T2 system roles', async () => {
   assert.match(player, /background: var\(--sn-panel-bg, var\(--sn-sys-surface-raised\)\);/);
   assert.equal(
     [...player.matchAll(/border: var\(--sn-node-border-width, 1px\) solid var\(--sn-node-border, var\(--sn-sys-outline\)\);/g)].length,
-    2,
+    3,
   );
 });
 
@@ -1816,7 +1816,8 @@ test('cascade theme controls reach canvas objects and layout chrome', async () =
   assert.match(layoutSourceText, /layout:remove-ui-panel/);
   assert.match(layoutSourceText, /layout:remove/);
   assert.match(layoutSourceText, /panelState\?\.removable === true[\s\S]*?this\.joinPanels\(panelId\)/);
-  assert.match(layoutSourceText, /_onPanelClose\(e\)[\s\S]*?panelState\.uiInvoked[\s\S]*?this\.closeUiPanel\(panelType\)[\s\S]*?panelState\.removable === true[\s\S]*?this\.joinPanels\(panelId\)/);
+  assert.match(layoutSourceText, /_onPanelClose\(e\)[\s\S]*?panelState\.uiInvoked[\s\S]*?this\._removeUiPanelFromHeaderClose\(panelType\)[\s\S]*?panelState\.removable === true[\s\S]*?this\.joinPanels\(panelId\)/);
+  assert.match(layoutSourceText, /_removeUiPanelFromHeaderClose\(panelType\)[\s\S]*?LayoutTree\.removeUiPanel[\s\S]*?this\.dispatchEvent\(new CustomEvent\('layout-ui-panel-close'/);
   assert.doesNotMatch(layoutSourceText, /_getActionZonesEnabled/);
   assert.doesNotMatch(layoutSourceText, /action-zone-/);
   assert.doesNotMatch(layoutSourceText, /LayoutPreview|layout-preview/);

@@ -4,6 +4,7 @@ await acquireCurrentTestFileLock(import.meta.url);
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { parseHTML } from 'linkedom';
+import { installLinkedomCSSStyleDeclaration } from './helpers/linkedom-css-style.js';
 
 class TestCSSStyleSheet {
   replaceSync(text) {
@@ -13,6 +14,7 @@ class TestCSSStyleSheet {
 
 function installDom() {
   let { window } = parseHTML('<!doctype html><html><body></body></html>');
+  installLinkedomCSSStyleDeclaration(window);
   Object.assign(globalThis, {
     window,
     document: window.document,

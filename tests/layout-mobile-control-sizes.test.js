@@ -89,15 +89,19 @@ test('a touch dock gives the header the room its requested target needs', () => 
   assert.match(css, /--sn-layout-header-button-hit-size/,
     'the room is reserved from the theme target token, not a literal');
 
-  // The reservation has to outrank the drawer header, which marks its own
-  // padding !important, and it must not depend on the panel being open.
-  const headerRule = css.slice(
-    css.indexOf("layout-node[mobile-dock='start'][node-type='panel'] .panel-view > .panel-header"),
+  // The open drawer header marks its own padding !important, so the mobile
+  // drawer rule must reserve the requested block room at that same weight.
+  // Drawer rails do not render this header while collapsed; scope the check to
+  // the rendered drawer header instead of requiring a closed-state selector.
+  let headerRuleStart = css.indexOf(
+    "layout-node[mobile-dock='start'][node-type='panel'][drawer-open] .panel-view > .panel-header",
   );
+  assert.notEqual(headerRuleStart, -1, 'the open drawer header rule exists');
+  let headerRule = css.slice(headerRuleStart, css.indexOf('\n      }', headerRuleStart));
   assert.match(headerRule, /padding-block:[^;]*!important/,
     'the header reserves room with the same weight the drawer padding uses');
-  assert.ok(!/drawer-open/.test(headerRule.slice(0, 400)),
-    'the room is reserved whether or not the drawer is open, so opening does not shift the header');
+  assert.match(headerRule, /drawer-open/,
+    'the reservation applies while the drawer header is rendered');
 });
 
 test('drawer panels keep content out of the safe-area insets', () => {

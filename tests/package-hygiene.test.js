@@ -8,6 +8,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
+import { normalizeNpmPackJson } from './helpers/npm-pack-json.js';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -140,7 +141,7 @@ test('public repository files and pending additions pass private hygiene scan', 
 
 test('npm pack output excludes private memory and scratch artifacts', async () => {
   let result = run('npm', ['pack', '--dry-run', '--json', '--ignore-scripts']);
-  let [pack] = JSON.parse(result.stdout);
+  let pack = normalizeNpmPackJson(JSON.parse(result.stdout));
   let files = pack.files.map((file) => file.path);
   let uiSource = await readFile(join(repoRoot, 'ui', 'index.js'), 'utf8');
   let uiDynamicImports = [...uiSource.matchAll(/import\(['"]\.\.\/([^'"]+)['"]\)/g)]
@@ -196,7 +197,7 @@ test('packed package imports from a consumer project through public entrypoints'
   let tmpRoot = await mkdtemp(join(tmpdir(), 'symbiote-ui-pack-'));
   try {
     let packResult = run('npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', tmpRoot]);
-    let [pack] = JSON.parse(packResult.stdout);
+    let pack = normalizeNpmPackJson(JSON.parse(packResult.stdout));
     let tarball = join(tmpRoot, pack.filename);
     let packageDir = join(tmpRoot, 'package');
     let consumerDir = join(tmpRoot, 'consumer');
