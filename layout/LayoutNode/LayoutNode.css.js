@@ -407,9 +407,14 @@ export let styles = css`
         display: none !important;
       }
 
+      /* The rail is shorter than a regular header: the header fills it exactly,
+         so the icon and the expand arrow sit on the rail's centre line. */
       .panel-header {
         position: relative;
         display: flex;
+        align-items: center;
+        block-size: 100%;
+        min-block-size: 0;
       }
 
       /* Hide fullscreen button, dropdown, and spacer */

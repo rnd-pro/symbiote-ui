@@ -3254,7 +3254,10 @@ export function createPresenterCursor(
           showOverlay();
           if (!hinted) {
             hinted = true;
-            hose?.setTarget?.(to);
+            hose?.setTarget?.(to, {
+              left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom,
+              width: rect.width, height: rect.height,
+            });
           }
           setCursor(projected.cursor.x, projected.cursor.y);
         },

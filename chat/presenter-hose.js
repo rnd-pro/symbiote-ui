@@ -1,7 +1,28 @@
 let nextId = 0;
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
-export function resolvePresenterHoseGeometry({ anchor, cursor, angle = 0, midpoints, reducedMotion = false, mirror = 1, sagScale = 1 }) {
+const cubicPoint = ([p0, p1, p2, p3], t) => {
+  let u = 1 - t;
+  return {
+    x: u * u * u * p0.x + 3 * u * u * t * p1.x + 3 * u * t * t * p2.x + t * t * t * p3.x,
+    y: u * u * u * p0.y + 3 * u * u * t * p1.y + 3 * u * t * t * p2.y + t * t * t * p3.y,
+  };
+};
+const segmentsPath = (segments) => `M${segments[0][0].x} ${segments[0][0].y}${segments.map(([, c1, c2, end]) => ` C${c1.x} ${c1.y} ${c2.x} ${c2.y} ${end.x} ${end.y}`).join('')}`;
+const sampleSegments = (segments, count) => Array.from({ length: count + 1 }, (_, index) => {
+  let along = index / count * segments.length;
+  let segment = Math.min(segments.length - 1, Math.floor(along));
+  return cubicPoint(segments[segment], along - segment);
+});
+// Between the straight and the hanging pose the arm morphs point by point, so
+// the default pose is reached by a continuous motion, never a snap.
+const blendedPath = (from, to, weight, count = 36) => {
+  let a = sampleSegments(from, count);
+  let b = sampleSegments(to, count);
+  return a.map((point, index) => `${index ? 'L' : 'M'}${point.x + (b[index].x - point.x) * weight} ${point.y + (b[index].y - point.y) * weight}`).join(' ');
+};
+
+export function resolvePresenterHoseGeometry({ anchor, cursor, angle = 0, midpoints, reducedMotion = false, mirror = 1, sagScale = 1, hang = 0, sway = null }) {
   let radians = Number(angle) || 0;
   let cos = Math.cos(radians);
   let sin = Math.sin(radians);
@@ -26,17 +47,34 @@ export function resolvePresenterHoseGeometry({ anchor, cursor, angle = 0, midpoi
     x: anchor.x + dx * 0.68,
     y: anchor.y + dy * 0.68 + sag * 0.82,
   };
+  if (sway) {
+    // Water drift: the bends swing sideways, the tip more than the base.
+    baseBend = { x: baseBend.x - tangent.y * sway.base, y: baseBend.y + tangent.x * sway.base };
+    tipBend = { x: tipBend.x - tangent.y * sway.tip, y: tipBend.y + tangent.x * sway.tip };
+  }
   let baseReach = Math.min(reach, distance * 0.12);
   let centerReach = Math.min(reach, distance * 0.16);
   let tipReach = Math.min(reach, distance * 0.12);
-  let anchorControl = {
-    x: anchor.x + tangent.x * baseReach,
-    y: anchor.y + tangent.y * baseReach,
-  };
+  let anchorControl = { x: anchor.x + tangent.x * baseReach, y: anchor.y + tangent.y * baseReach };
   let tailControl = {
     x: tail.x - tangent.x * tipReach,
     y: tail.y - tangent.y * tipReach,
   };
+  let at = (point, k) => ({ x: point.x + tangent.x * k, y: point.y + tangent.y * k });
+  let straightSegments = [
+    [anchor, anchorControl, at(baseBend, -baseReach), baseBend],
+    [baseBend, at(baseBend, centerReach), at(tipBend, -centerReach), tipBend],
+    [tipBend, at(tipBend, tipReach), tailControl, tail],
+  ];
+  // A hanging arm leaves its connector level and bends progressively more
+  // toward the claw, like a cable stiff at the base and limp at the end.
+  let hangSegments = [[
+    anchor,
+    { x: anchor.x - mirror * Math.abs(dx) * 0.85, y: anchor.y + (sway?.base || 0) },
+    { x: tail.x + (sway?.tip || 0), y: tail.y - Math.abs(dy) * 0.4 },
+    tail,
+  ]];
+  let weight = Math.max(0, Math.min(1, Number(hang) || 0));
   return {
     tail,
     center: cursor,
@@ -45,16 +83,9 @@ export function resolvePresenterHoseGeometry({ anchor, cursor, angle = 0, midpoi
     tipBend,
     anchorControl,
     tailControl,
-    hosePath: `M${anchor.x} ${anchor.y}
-      C${anchorControl.x} ${anchorControl.y}
-      ${baseBend.x - tangent.x * baseReach} ${baseBend.y - tangent.y * baseReach}
-      ${baseBend.x} ${baseBend.y}
-      C${baseBend.x + tangent.x * centerReach} ${baseBend.y + tangent.y * centerReach}
-      ${tipBend.x - tangent.x * centerReach} ${tipBend.y - tangent.y * centerReach}
-      ${tipBend.x} ${tipBend.y}
-      C${tipBend.x + tangent.x * tipReach} ${tipBend.y + tangent.y * tipReach}
-      ${tailControl.x} ${tailControl.y}
-      ${tail.x} ${tail.y}`,
+    hosePath: weight <= 0 ? segmentsPath(straightSegments)
+      : weight >= 1 ? segmentsPath(hangSegments)
+        : blendedPath(straightSegments, hangSegments, weight),
     portPath: `M${anchor.x} ${anchor.y - 4} V${anchor.y + 4}`,
   };
 }
@@ -93,6 +124,10 @@ export default function createPresenterHose(overlay, resolveAnchor, { side = 'le
   let mirror = side === 'right' ? -1 : 1;
   // A telescopic hose barely sags: it stays nearly straight at the base.
   let bendScale = rigid ? 0.3 : 1;
+  let hanging = false;
+  let wave = 0;
+  let wavePhase = side === 'right' ? 2.1 : 0;
+  let hangWeight = 0;
   let anchorPoint = (rect) => ({
     x: side === 'right' ? rect.right : rect.left,
     y: rect.top + rect.height / 2,
@@ -118,6 +153,8 @@ export default function createPresenterHose(overlay, resolveAnchor, { side = 'le
     <circle data-claw-hinge cx="${CLAW_WRIST.x}" cy="${CLAW_WRIST.y}" r="${CLAW_HINGE_RADIUS}" fill="var(--presenter-hose-ink, #22251f)" stroke="none"/></g></g>`;
   overlay.insertBefore(svg, overlay.firstChild);
   let hose = svg.querySelector('[data-hose]');
+  // Robot arms carry a denser stripe pattern than the player hose.
+  if (rigid) hose.setAttribute('stroke-dasharray', '3 4.5');
   let port = svg.querySelector('[data-port]');
   let arrow = svg.querySelector('[data-arrow]');
   let fingers = [...svg.querySelectorAll('[data-claw-finger]')];
@@ -204,7 +241,7 @@ export default function createPresenterHose(overlay, resolveAnchor, { side = 'le
     angle += media.matches ? delta : delta * (1 - Math.exp(-dt * 12));
     let cos = Math.cos(angle);
     let sin = Math.sin(angle);
-    let desired = resolvePresenterHoseGeometry({ anchor, cursor: position, angle, reducedMotion: media.matches, mirror, sagScale: bendScale });
+    let desired = resolvePresenterHoseGeometry({ anchor, cursor: position, angle, reducedMotion: media.matches, mirror, sagScale: bendScale, hang: hangWeight });
     // A rigid (telescopic) hose has no springy bends: its length follows the
     // distance to the claw and it never trails behind like a tail.
     if (rigid) {
@@ -234,6 +271,9 @@ export default function createPresenterHose(overlay, resolveAnchor, { side = 'le
       angle = wanted;
     }
     if (!returningHome && settled) finishHome('home');
+    let hangGoal = hanging ? 1 : 0;
+    hangWeight = media.matches ? hangGoal : hangWeight + (hangGoal - hangWeight) * (1 - Math.exp(-dt / 0.4));
+    if (Math.abs(hangGoal - hangWeight) < 0.004) hangWeight = hangGoal;
     let geometry = resolvePresenterHoseGeometry({
       anchor,
       cursor: position,
@@ -241,7 +281,10 @@ export default function createPresenterHose(overlay, resolveAnchor, { side = 'le
       midpoints: { base: bends.base, tip: bends.tip },
       reducedMotion: media.matches,
       mirror,
-      sagScale: bendScale,
+      sagScale: bendScale, hang: hangWeight,
+      sway: wave > 0 && !media.matches
+        ? { base: wave * 0.1 * Math.sin(time / 520 + wavePhase), tip: wave * 1.3 * Math.sin(time / 380 + wavePhase + 1.3) }
+        : null,
     });
     hose.setAttribute('d', geometry.hosePath);
     port.setAttribute('d', geometry.portPath);
@@ -261,7 +304,7 @@ export default function createPresenterHose(overlay, resolveAnchor, { side = 'le
       ripple.setAttribute('opacity', String(Math.max(0, 1 - age / 550)));
       if (age >= 550) clickPosition = null;
     }
-    if (anchorChanged || (!settled && !media.matches) || (clickPosition && clickElapsed === null) || returningHome
+    if (anchorChanged || (!settled && !media.matches) || (wave > 0 && !media.matches) || hangWeight !== (hanging ? 1 : 0) || (clickPosition && clickElapsed === null) || returningHome
       || grip !== gripTarget) {
       frame = win.requestAnimationFrame(draw);
     }
@@ -290,6 +333,10 @@ export default function createPresenterHose(overlay, resolveAnchor, { side = 'le
   media.addEventListener?.('change', wake);
   return {
     getPosition() { return position && { ...position }; },
+    // A parked arm droops under its own weight instead of staying straight.
+    // Amplitude (px) of the water-like undulation along the arm.
+    setWave(amount) { let next = Math.max(0, Number(amount) || 0); if (next !== wave) { wave = next; wake(); } },
+    setHang(value) { if (hanging !== (value === true)) { hanging = value === true; wake(); } },
     // Redraw after the anchor moved without a resize (a flying body).
     refresh: wake,
     // Retracted rest point: the claw is folded into the player edge until the
