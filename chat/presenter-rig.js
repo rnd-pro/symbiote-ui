@@ -1,4 +1,5 @@
 import { routeAround as routeBodyAround } from './presenter-rig-route.js';
+import { DEFAULT_MASK, MASK_ORDER, MASK_VARIANTS } from './presenter-rig-masks.js';
 import createPresenterHose from './presenter-hose.js';
 
 // Experimental presenter body: a round avatar that flies over the page with a
@@ -49,6 +50,36 @@ const PHRASE_WORDS = 4;
 const PHRASE_CHARS = 26;
 const PHRASE_END = /[,;:\u2014\u2013.!?\u2026]["')\]]*$/;
 const SPEECH_HOLD_MS = 1400;
+
+// Cartoon mouth: a stylised oval that follows the letters of the word being said.
+// Each letter gives a [width, height] of the mouth (0..1 of its largest oval);
+// vowels open wide, round or narrow, lip sounds close it, other consonants only
+// part the lips. Vowels also last longer than consonants inside a word.
+const MOUTH_REST = [0.6, 0.07];
+const MOUTH_DEFAULT = [0.62, 0.22];
+const MOUTH_SHAPES = new Map(Object.entries({
+  а: [0.82, 1], я: [0.78, 0.9], о: [0.55, 0.85], ё: [0.55, 0.8], у: [0.38, 0.5], ю: [0.4, 0.55],
+  э: [0.88, 0.6], е: [0.85, 0.55], и: [0.92, 0.28], ы: [0.8, 0.3], й: [0.8, 0.25],
+  a: [0.82, 1], e: [0.85, 0.55], i: [0.92, 0.28], o: [0.55, 0.85], u: [0.38, 0.5], y: [0.8, 0.3],
+  м: [0.62, 0.07], б: [0.62, 0.07], п: [0.62, 0.07], m: [0.62, 0.07], b: [0.62, 0.07], p: [0.62, 0.07],
+  ф: [0.72, 0.16], в: [0.72, 0.16], f: [0.72, 0.16], v: [0.72, 0.16], w: [0.5, 0.3],
+  ш: [0.45, 0.32], щ: [0.45, 0.32], ж: [0.45, 0.32], ч: [0.45, 0.3],
+}));
+const MOUTH_VOWELS = /[аяоёуюэеиыaeiouy]/u;
+const MOUTH_TAU_S = 0.045;
+const MOUTH_LETTER_MS = 80;
+// A pause shorter than this between two words keeps the last sound's shape.
+const MOUTH_HOLD_MS = 160;
+// The mouth leads the narration clock by this much (the sound reaches the ear later).
+const MOUTH_LEAD_MS = 0;
+
+// Face mask: while the show plays the presenter wears a faceplate (dark metal, the
+// site's orange accent, slanted eye slits); on pause it lifts. The eyes in the
+// slits look toward the accent: the claw, or the area being marked.
+const MASK_OFF_DELAY_MS = 260;
+const EYE_TAU_S = 0.09;
+const BLINK_MS = 120;
+const BLINK_GAP_MS = [2600, 6200];
 const SENTENCE_END = /[.!?\u2026]["')\]]*$/;
 
 // The free arm throws to an anchor beyond the perch, grips, and reels the body in.
@@ -72,7 +103,9 @@ const TRACE_SAMPLE_MS = 150;
 
 // `onTrace(type, data)` is an optional diagnostics sink: state changes and a
 // periodic state sample, so a bug in the motion can be read back afterwards.
-export default function createPresenterRig(overlay, resolvePlayer, { avatarSrc = '', onTrace = null } = {}) {
+export default function createPresenterRig(overlay, resolvePlayer, {
+  avatarSrc = '', onTrace = null, speechClock = null, mask: maskName = DEFAULT_MASK, onMaskChange = null,
+} = {}) {
   let trace = (type, data) => { if (typeof onTrace === 'function') onTrace(type, data); };
   let lastTraceAt = 0;
   let lastTraceSample = null;
@@ -89,6 +122,50 @@ export default function createPresenterRig(overlay, resolvePlayer, { avatarSrc =
     background:#22251f ${avatarSrc ? `url("${avatarSrc}")` : ''} 50% 50% / 120% no-repeat`;
   // Connectors where the hoses leave the body, drawn like the hose ports on
   // the claws (the body sits above the hose layer and would hide those).
+  let mask = doc.createElement('span');
+  mask.setAttribute('data-rig-mask', 'up');
+  mask.style.cssText = `position:absolute;inset:0;border-radius:50%;overflow:hidden;pointer-events:none`;
+  body.appendChild(mask);
+  let maskSvg = null;
+  let eyeNodes = [];
+  let maskKind = MASK_VARIANTS[maskName] ? maskName : DEFAULT_MASK;
+  let maskState = { on: false, offSince: 0 };
+  let eyeState = { x: 0, y: 0, blinkAt: 0, blinkEnd: 0 };
+  // (Re)draws the face mask; the lifted or lowered position is kept.
+  let buildMask = () => {
+    mask.innerHTML = `<svg viewBox="0 0 54 54" width="100%" height="100%" aria-hidden="true"
+      style="display:block;transform:translateY(${maskState.on ? '0' : '-110%'})">${MASK_VARIANTS[maskKind].svg}</svg>`;
+    maskSvg = mask.firstElementChild;
+    eyeNodes = [...mask.querySelectorAll('[data-eye]')];
+  };
+  buildMask();
+  let setMask = (name) => {
+    if (!MASK_VARIANTS[name] || name === maskKind) return maskKind;
+    maskKind = name;
+    buildMask();
+    trace('mask', { kind: name });
+    if (typeof onMaskChange === 'function') onMaskChange(name);
+    return maskKind;
+  };
+  // A double click on the presenter tries the next face.
+  body.addEventListener('dblclick', (event) => {
+    event.stopPropagation();
+    setMask(MASK_ORDER[(MASK_ORDER.indexOf(maskKind) + 1) % MASK_ORDER.length]);
+    // Show the mask even if the show is paused, so the new face can be judged.
+    maskState.on = true;
+    maskState.offSince = 0;
+    maskSvg.style.transform = 'translateY(0)';
+  });
+  let mouth = doc.createElement('span');
+  mouth.style.cssText = `position:absolute;left:50%;top:68%;box-sizing:border-box;border-radius:50%;
+    transform:translate(-50%,-50%);opacity:0;overflow:hidden;
+    background:#240a0c;border:1.5px solid var(--presenter-hose-outline, #fff);
+    box-shadow:0 0 0 1px rgba(0,0,0,.35)`;
+  let tongue = doc.createElement('span');
+  tongue.style.cssText = `position:absolute;left:50%;bottom:-18%;width:70%;height:55%;border-radius:50%;
+    transform:translateX(-50%);background:#c47a72`;
+  mouth.appendChild(tongue);
+  body.appendChild(mouth);
   let connectors = ['left', 'right'].map((side) => {
     let connector = doc.createElement('span');
     connector.style.cssText = `position:absolute;top:50%;${side}:-8px;width:6px;height:14px;margin-top:-7px;
@@ -159,6 +236,8 @@ export default function createPresenterRig(overlay, resolvePlayer, { avatarSrc =
   let free = { index: -1, phase: 'idle', claw: null, anchor: null, reelAt: 0 };
   let pinned = false;
   let speech = { key: '', words: [], active: -1, spans: [], lastPollAt: -1e9, lastActiveAt: -1e9 };
+  let speechNow = null;
+  let mouthState = { w: MOUTH_REST[0], h: MOUTH_REST[1], opacity: 0, word: null, msPerLetter: MOUTH_LETTER_MS, clockIndex: 0 };
   let cloudState = { x: 0, y: 0, scale: 0, ready: false, width: 0, height: 0, below: false };
   let reel = 1;
   let clawPrev = null;
@@ -435,6 +514,15 @@ export default function createPresenterRig(overlay, resolvePlayer, { avatarSrc =
     speech.lastPollAt = time;
     let nodes = [...doc.querySelectorAll('.chat-show-caption-word')];
     let activeIndex = nodes.findIndex((node) => node.hasAttribute('active'));
+    // The caption highlight only moves on the player's coarse time updates and
+    // trails the voice; the narration clock (same words, read now) does not.
+    let clock = speechNow;
+    if (clock && clock.playing && clock.words && clock.words.length === nodes.length) {
+      let at = clock.positionMs + MOUTH_LEAD_MS;
+      let index = -1;
+      for (let k = 0; k < clock.words.length && clock.words[k].startMs <= at; k++) index = k;
+      if (index >= 0 && at <= clock.words[index].endMs + MOUTH_HOLD_MS) activeIndex = index;
+    }
     if (activeIndex < 0) return;
     speech.lastActiveAt = time;
     let texts = nodes.map((node) => node.textContent || '');
@@ -477,6 +565,18 @@ export default function createPresenterRig(overlay, resolvePlayer, { avatarSrc =
       cloudState.measureAt = 2;
     }
     speech.active = activeIndex;
+    let current = mouthState.word;
+    if (!current || current.index !== activeIndex || current.text !== texts[activeIndex]) {
+      // The pace of the speech: how long the previous word took per letter.
+      if (current && current.letters.length >= 3) {
+        let spent = time - current.since;
+        if (spent > 80 && spent < 1600) {
+          mouthState.msPerLetter += (clamp(spent / current.letters.length, 45, 150) - mouthState.msPerLetter) * 0.5;
+        }
+      }
+      let letters = [...(texts[activeIndex] || '').toLowerCase()].filter((ch) => /\p{L}/u.test(ch));
+      mouthState.word = { index: activeIndex, text: texts[activeIndex], since: time, letters };
+    }
     speech.spans.forEach((span, offset) => {
       let index = speech.first + offset;
       let current = index === activeIndex;
@@ -488,6 +588,115 @@ export default function createPresenterRig(overlay, resolvePlayer, { avatarSrc =
 
   // The cloud floats above the avatar (below it near the top edge), on the
   // side away from the working claw, and lags behind with a springy bob.
+  // The mouth for this frame: the letter of the word being said (vowels last
+  // longer), eased to its shape so one sound melts into the next.
+  // Mask on while the narration plays, off after a short pause in playing (so the
+  // gap between two scenes does not make it flicker); the eyes follow the accent.
+  let updateMask = (time, dt, talking) => {
+    let playing = speechNow ? Boolean(speechNow.playing) : talking;
+    let wantOn = playing && !docked && scale > 0.5;
+    if (wantOn) {
+      maskState.offSince = 0;
+      maskState.on = true;
+    } else if (maskState.on) {
+      if (!maskState.offSince) maskState.offSince = time;
+      if (time - maskState.offSince >= MASK_OFF_DELAY_MS) maskState.on = false;
+    }
+    let state = maskState.on ? 'down' : 'up';
+    if (mask.getAttribute('data-rig-mask') !== state) {
+      mask.setAttribute('data-rig-mask', state);
+      maskSvg.style.transition = media.matches ? 'none'
+        : state === 'down' ? 'transform .38s cubic-bezier(.34,1.56,.64,1)' : 'transform .26s cubic-bezier(.5,0,.75,0)';
+      maskSvg.style.transform = state === 'down' ? 'translateY(0)' : 'translateY(-110%)';
+      // On the mask the mouth is a lit slot, without the cartoon lips.
+      mouth.style.borderColor = state === 'down' ? '#e9e7e2' : 'var(--presenter-hose-outline, #fff)';
+      mouth.style.background = state === 'down' ? '#0d0d10' : '#240a0c';
+    }
+    if (!maskState.on || media.matches) return;
+    // Look at the accent: the claw at work, else the middle of what is marked.
+    let from = { x: pos.x, y: pos.y };
+    let at = cursorPoint && active !== null ? cursorPoint : null;
+    if (!at) {
+      let zone = focusZones(time)[0];
+      if (zone) at = { x: (zone.left + zone.right) / 2, y: (zone.top + zone.bottom) / 2 };
+    }
+    let goalX = 0;
+    let goalY = 0;
+    if (at) {
+      let dx = at.x - from.x;
+      let dy = at.y - from.y;
+      let dist = Math.hypot(dx, dy) || 1;
+      let reach = Math.min(1, dist / 140);
+      let travel = MASK_VARIANTS[maskKind].travel * unit;
+      goalX = dx / dist * reach * travel;
+      goalY = dy / dist * reach * travel * 0.7;
+    }
+    let follow = 1 - Math.exp(-dt / EYE_TAU_S);
+    eyeState.x += (goalX - eyeState.x) * follow;
+    eyeState.y += (goalY - eyeState.y) * follow;
+    if (!eyeState.blinkAt) eyeState.blinkAt = time + 1800;
+    if (time >= eyeState.blinkAt) {
+      eyeState.blinkEnd = time + BLINK_MS;
+      eyeState.blinkAt = time + BLINK_GAP_MS[0] + Math.random() * (BLINK_GAP_MS[1] - BLINK_GAP_MS[0]);
+    }
+    let squint = time < eyeState.blinkEnd ? 0.12 : 1;
+    for (let eye of eyeNodes) eye.style.transform = `translate(${eyeState.x}px, ${eyeState.y}px) scaleY(${squint})`;
+  };
+
+  let lettersOf = (text) => [...String(text || '').toLowerCase()].filter((ch) => /\p{L}/u.test(ch));
+  // The shape for the point `fraction` (0..1) of a word's letters, vowels weighing more.
+  let shapeAt = (letters, fraction) => {
+    let weights = letters.map((ch) => (MOUTH_VOWELS.test(ch) ? 1.6 : 0.8));
+    let total = weights.reduce((sum, weight) => sum + weight, 0);
+    let at = clamp(fraction, 0, 0.999) * total;
+    let index = 0;
+    while (index < weights.length - 1 && at >= weights[index]) { at -= weights[index]; index += 1; }
+    return MOUTH_SHAPES.get(letters[index]) || MOUTH_DEFAULT;
+  };
+  let updateMouth = (time, dt, talking) => {
+    if (media.matches) {
+      mouth.style.opacity = '0';
+      return;
+    }
+    let target = MOUTH_REST;
+    let speaking = talking;
+    let clock = speechNow;
+    if (clock && clock.words && clock.words.length) {
+      // The narration clock gives the word and the point inside it every frame.
+      let words = clock.words;
+      let position = clock.positionMs + MOUTH_LEAD_MS;
+      speaking = Boolean(clock.playing);
+      let index = clamp(mouthState.clockIndex, 0, words.length - 1);
+      while (index > 0 && words[index].startMs > position) index -= 1;
+      while (index < words.length - 1 && words[index + 1].startMs <= position) index += 1;
+      mouthState.clockIndex = index;
+      let word = words[index];
+      let next = words[index + 1];
+      let letters = lettersOf(word.text);
+      let held = next ? Math.min(MOUTH_HOLD_MS, Math.max(0, next.startMs - word.endMs)) : 0;
+      if (speaking && letters.length && position >= word.startMs && position <= word.endMs + held) {
+        let span = Math.max(60, word.endMs - word.startMs);
+        target = shapeAt(letters, (position - word.startMs) / span);
+      }
+    } else if (talking && mouthState.word && mouthState.word.letters.length
+      && time - speech.lastActiveAt < SPEECH_POLL_MS * 2.2) {
+      // No narration clock: estimate from the highlighted word and the pace so far.
+      let word = mouthState.word;
+      target = shapeAt(word.letters, (time - word.since) / (mouthState.msPerLetter * word.letters.length));
+    }
+    let ease = 1 - Math.exp(-dt / MOUTH_TAU_S);
+    mouthState.w += (target[0] - mouthState.w) * ease;
+    mouthState.h += (target[1] - mouthState.h) * ease;
+    mouthState.opacity += ((speaking ? 1 : 0) - mouthState.opacity) * (1 - Math.exp(-dt / 0.12));
+    let maxW = BODY_RADIUS * 0.72;
+    let maxH = BODY_RADIUS * 0.56;
+    mouth.style.opacity = String(mouthState.opacity < 0.02 ? 0 : mouthState.opacity);
+    mouth.style.width = `${Math.max(3, mouthState.w * maxW)}px`;
+    mouth.style.height = `${Math.max(2.5, mouthState.h * maxH)}px`;
+    // The cartoon tongue belongs to the human face; a robot's mouth is just a lit slot.
+    tongue.style.opacity = maskState.on ? '0' : String(Math.min(1, Math.max(0, (mouthState.h - 0.3) * 2.2)));
+  };
+
   // What the presenter is marking right now (the selection frame and the ink
   // stroke): the speech cloud must not cover it. Cached for a few frames.
   let focusCache = { at: -1e9, zones: [] };
@@ -747,8 +956,11 @@ export default function createPresenterRig(overlay, resolvePlayer, { avatarSrc =
     body.dataset.rigSide = plan ? plan.side : '';
     body.style.transform = `translate(${pos.x + drift}px, ${pos.y + bob}px) rotate(${tilt + (docked || media.matches ? 0 : Math.sin(time / 1100) * 3)}deg) scale(${Math.max(0.02, scale)})`;
     // Subtitles: the cloud speaks the words currently being said.
+    speechNow = typeof speechClock === 'function' ? speechClock() : null;
     readSpeech(time);
     let talking = scale > 0 && time - speech.lastActiveAt < SPEECH_HOLD_MS;
+    updateMask(time, dt, talking);
+    updateMouth(time, dt, talking);
     placeCloud(time, dt, talking, { x: pos.x + drift, y: pos.y + bob });
     // An action that ended without a planned return still draws the arm in.
     // (Never while a selection frame is still on screen: the claw that made
@@ -953,6 +1165,8 @@ export default function createPresenterRig(overlay, resolvePlayer, { avatarSrc =
     },
     // End of a gesture: the active arm retracts to the body, which keeps
     // hovering for the next event.
+    setMask(name) { return setMask(name); },
+    getMask() { return maskKind; },
     planHomeReturn(from) {
       if (active === null || !pos) return Object.freeze({ durationMs: 0, destination: null });
       let plan = arms[active].planHomeReturn(from);
